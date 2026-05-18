@@ -11,7 +11,7 @@
 // NumericalStabilitySanitizer statistics.
 //===----------------------------------------------------------------------===//
 
-#include "nsan/nsan_stats.h"
+#include "nsan_stats.h"
 
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_placement_new.h"

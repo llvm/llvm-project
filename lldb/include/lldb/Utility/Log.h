@@ -255,11 +255,7 @@ public:
   /// Prefer using LLDB_LOGF whenever possible.
   void Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
-  void Error(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
-
   void Verbose(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
-
-  void Warning(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
   const Flags GetOptions() const;
 
@@ -268,9 +264,14 @@ public:
   bool GetVerbose() const;
 
   void VAPrintf(const char *format, va_list args);
-  void VAError(const char *format, va_list args);
   void VAFormatf(llvm::StringRef file, llvm::StringRef function,
                  const char *format, va_list args);
+
+  void Enable(const std::shared_ptr<LogHandler> &handler_sp,
+              std::optional<MaskType> flags = std::nullopt,
+              uint32_t options = 0);
+
+  void Disable(std::optional<MaskType> flags = std::nullopt);
 
 private:
   Channel &m_channel;
@@ -296,11 +297,6 @@ private:
     llvm::sys::ScopedReader lock(m_mutex);
     return m_handler;
   }
-
-  void Enable(const std::shared_ptr<LogHandler> &handler_sp, uint32_t options,
-              MaskType flags);
-
-  void Disable(MaskType flags);
 
   bool Dump(llvm::raw_ostream &stream);
 
@@ -334,6 +330,15 @@ template <typename Cat> Log *GetLog(Cat mask) {
   return LogChannelFor<Cat>().GetLog(Log::MaskType(mask));
 }
 
+/// Getter and setter for the error log (see g_error_log).
+/// The error log is set to the system log in SystemInitializerFull. We can't
+/// use the system log directly because that would violate the layering between
+/// Utility and Host.
+/// @{
+void SetLLDBErrorLog(Log *log);
+Log *GetLLDBErrorLog();
+/// @}
+
 } // namespace lldb_private
 
 /// The LLDB_LOG* macros defined below are the way to emit log messages.
@@ -363,6 +368,13 @@ template <typename Cat> Log *GetLog(Cat mask) {
       log_private->Format(__FILE__, __func__, __VA_ARGS__);                    \
   } while (0)
 
+#define LLDB_LOG_VERBOSE(log, ...)                                             \
+  do {                                                                         \
+    ::lldb_private::Log *log_private = (log);                                  \
+    if (log_private && log_private->GetVerbose())                              \
+      log_private->Format(__FILE__, __func__, __VA_ARGS__);                    \
+  } while (0)
+
 #define LLDB_LOGF(log, ...)                                                    \
   do {                                                                         \
     ::lldb_private::Log *log_private = (log);                                  \
@@ -370,11 +382,11 @@ template <typename Cat> Log *GetLog(Cat mask) {
       log_private->Formatf(__FILE__, __func__, __VA_ARGS__);                   \
   } while (0)
 
-#define LLDB_LOGV(log, ...)                                                    \
+#define LLDB_LOGF_VERBOSE(log, ...)                                            \
   do {                                                                         \
     ::lldb_private::Log *log_private = (log);                                  \
     if (log_private && log_private->GetVerbose())                              \
-      log_private->Format(__FILE__, __func__, __VA_ARGS__);                    \
+      log_private->Formatf(__FILE__, __func__, __VA_ARGS__);                   \
   } while (0)
 
 // Write message to log, if error is set. In the log message refer to the error
@@ -383,6 +395,8 @@ template <typename Cat> Log *GetLog(Cat mask) {
   do {                                                                         \
     ::lldb_private::Log *log_private = (log);                                  \
     ::llvm::Error error_private = (error);                                     \
+    if (!log_private)                                                          \
+      log_private = lldb_private::GetLLDBErrorLog();                           \
     if (log_private && error_private) {                                        \
       log_private->FormatError(::std::move(error_private), __FILE__, __func__, \
                                __VA_ARGS__);                                   \

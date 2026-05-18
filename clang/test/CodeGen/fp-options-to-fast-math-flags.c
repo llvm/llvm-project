@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck -check-prefix CHECK-PRECISE %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -menable-no-nans -emit-llvm -o - %s | FileCheck -check-prefix CHECK-NO-NANS %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -menable-no-infs -emit-llvm -o - %s | FileCheck -check-prefix CHECK-NO-INFS %s
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ffinite-math-only -emit-llvm -o - %s | FileCheck -check-prefix CHECK-FINITE %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -menable-no-infs -menable-no-nans -emit-llvm -o - %s | FileCheck -check-prefix CHECK-FINITE %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -fno-signed-zeros -emit-llvm -o - %s | FileCheck -check-prefix CHECK-NO-SIGNED-ZEROS %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -mreassociate -emit-llvm -o - %s | FileCheck -check-prefix CHECK-REASSOC %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -freciprocal-math -emit-llvm -o - %s | FileCheck -check-prefix CHECK-RECIP %s

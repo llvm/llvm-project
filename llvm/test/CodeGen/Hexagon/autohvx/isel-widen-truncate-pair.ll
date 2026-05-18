@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This has a v32i8 = truncate v16i32 (64b mode), which was legalized to
 ; 64i8 = vpackl v32i32, for which there were no selection patterns provided.

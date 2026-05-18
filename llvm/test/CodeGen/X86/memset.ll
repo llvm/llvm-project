@@ -92,3 +92,48 @@ define void @PR15348(ptr %a) {
   call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 17, i1 false)
   ret void
 }
+
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
+
+define void @PR83077(ptr %a) {
+; X86-LABEL: PR83077:
+; X86:       ## %bb.0:
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %edi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl $-1, %eax
+; X86-NEXT:    movl $22, %ecx
+; X86-NEXT:    movl %edx, %edi
+; X86-NEXT:    rep;stosl %eax, %es:(%edi)
+; X86-NEXT:    movw $-1, 88(%edx)
+; X86-NEXT:    popl %edi
+; X86-NEXT:    retl
+;
+; XMM-LABEL: PR83077:
+; XMM:       ## %bb.0:
+; XMM-NEXT:    pushl %edi
+; XMM-NEXT:    .cfi_def_cfa_offset 8
+; XMM-NEXT:    .cfi_offset %edi, -8
+; XMM-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; XMM-NEXT:    movl $-1, %eax
+; XMM-NEXT:    movl $22, %ecx
+; XMM-NEXT:    movl %edx, %edi
+; XMM-NEXT:    rep;stosl %eax, %es:(%edi)
+; XMM-NEXT:    movw $-1, 88(%edx)
+; XMM-NEXT:    popl %edi
+; XMM-NEXT:    retl
+;
+; YMM-LABEL: PR83077:
+; YMM:       ## %bb.0:
+; YMM-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; YMM-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; YMM-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
+; YMM-NEXT:    vmovups %ymm0, 58(%eax)
+; YMM-NEXT:    vmovups %ymm0, 32(%eax)
+; YMM-NEXT:    vmovups %ymm0, (%eax)
+; YMM-NEXT:    vzeroupper
+; YMM-NEXT:    retl
+  call void @llvm.memset.p0.i32(ptr noundef nonnull align 4 dereferenceable(90) %a, i8 -1, i32 90, i1 false)
+  ret void
+}

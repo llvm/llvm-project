@@ -23,7 +23,7 @@ Available options:
   General:
     -h|--help               show this help message
   Docker-specific:
-    -s|--source             image source dir (i.e. debian10, nvidia-cuda, etc)
+    -s|--source             image source dir (i.e. debian12, nvidia-cuda, etc)
     -d|--docker-repository  docker repository for the image
     -t|--docker-tag         docker tag for the image
   Checkout arguments:
@@ -38,7 +38,7 @@ Available options:
     -p|--llvm-project   Add the project to a list LLVM_ENABLE_PROJECTS, passed to
                         CMake.
                         Can be specified multiple times.
-    -c|--checksums      name of a file, containing checksums of llvm checkout.
+    --checksums         name of a file, containing checksums of llvm checkout.
                         Script will fail if checksums of the checkout do not
                         match.
   Build-specific:
@@ -51,18 +51,18 @@ Required options: --source and --docker-repository, at least one
 All options after '--' are passed to CMake invocation.
 
 For example, running:
-$ build_docker_image.sh -s debian10 -d mydocker/debian10-clang -t latest \
+$ build_docker_image.sh -s debian12 -d mydocker/debian12-clang -t latest \
   -p clang -i install-clang -i install-clang-resource-headers
 will produce two docker images:
-    mydocker/debian10-clang-build:latest - an intermediate image used to compile
+    mydocker/debian12-clang-build:latest - an intermediate image used to compile
       clang.
-    mydocker/clang-debian10:latest       - a small image with preinstalled clang.
+    mydocker/clang-debian12:latest       - a small image with preinstalled clang.
 Please note that this example produces a not very useful installation, since it
 doesn't override CMake defaults, which produces a Debug and non-boostrapped
 version of clang.
 
 To get a 2-stage clang build, you could use this command:
-$ ./build_docker_image.sh -s debian10 -d mydocker/clang-debian10 -t "latest" \
+$ ./build_docker_image.sh -s debian12 -d mydocker/clang-debian12 -t "latest" \
     -p clang -i stage2-install-clang -i stage2-install-clang-resource-headers \ 
     -- \ 
     -DLLVM_TARGETS_TO_BUILD=Native -DCMAKE_BUILD_TYPE=Release \ 
@@ -110,7 +110,7 @@ while [[ $# -gt 0 ]]; do
       CMAKE_ENABLED_PROJECTS="$CMAKE_ENABLED_PROJECTS;$PROJ"
       shift 2
       ;;
-    -c|--checksums)
+    --checksums)
       shift
       CHECKSUMS_FILE="$1"
       shift
@@ -160,7 +160,7 @@ if [ $SEEN_INSTALL_TARGET -eq 0 ]; then
   exit 1
 fi
 
-SOURCE_DIR=$(dirname $0)
+SOURCE_DIR=$(dirname "$0")
 if [ ! -d "$SOURCE_DIR/$IMAGE_SOURCE" ]; then
   echo "No sources for '$IMAGE_SOURCE' were found in $SOURCE_DIR"
   exit 1

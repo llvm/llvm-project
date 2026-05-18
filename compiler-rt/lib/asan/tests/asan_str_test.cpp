@@ -638,3 +638,27 @@ TEST(AddressSanitizer, StrtolOOBTest) {
   RunStrtolOOBTest(&CallStrtol);
 }
 #endif
+
+TEST(AddressSanitizer, StrtolOverflow) {
+  if (sizeof(long) == 4) {
+    // Check that errno gets set correctly on 32-bit strtol overflow.
+    long res;
+    errno = 0;
+    res = Ident(strtol("2147483647", NULL, 0));
+    EXPECT_EQ(errno, 0);
+    EXPECT_EQ(res, 2147483647);
+
+    res = Ident(strtol("2147483648", NULL, 0));
+    EXPECT_EQ(errno, ERANGE);
+    EXPECT_EQ(res, 2147483647);
+
+    errno = 0;
+    res = Ident(strtol("-2147483648", NULL, 0));
+    EXPECT_EQ(errno, 0);
+    EXPECT_EQ(res, -2147483648);
+
+    res = Ident(strtol("-2147483649", NULL, 0));
+    EXPECT_EQ(errno, ERANGE);
+    EXPECT_EQ(res, -2147483648);
+  }
+}

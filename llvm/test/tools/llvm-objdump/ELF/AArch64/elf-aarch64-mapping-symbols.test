@@ -4,11 +4,11 @@
 
 # CHECK:       Disassembly of section .mysection:
 # CHECK-EMPTY:
-# ALL-NEXT:    <$x.0>:
+# ALL-NEXT:    <$x>:
 # CHECK-NEXT:  <_start>:
 # CHECK-NEXT:         0:       10000021        adr     x1, 0x4
 # CHECK-EMPTY:
-# ALL-NEXT:    <$d.1>:
+# ALL-NEXT:    <$d>:
 # CHECK-NEXT:  <msg>:
 # CHECK-NEXT:         4:       48 65 6c 6c     .word
 # CHECK-NEXT:         8:       6f 2c 20 77     .word
@@ -18,10 +18,10 @@
 # CHECK-NEXT:  Disassembly of section .myothersection:
 # CHECK-EMPTY:
 # NOALL-NEXT:  <.myothersection>:
-# ALL-NEXT:    <$x.2>:
+# ALL-NEXT:    <$x>:
 # CHECK-NEXT:         0:       90000001        adrp    x1, 0x0
 # CHECK-EMPTY:
-# ALL-NEXT:    <$d.3>:
+# ALL-NEXT:    <$d>:
 # CHECK-NEXT:  <mystr>:
 # CHECK-NEXT:         4:       62 6c 61 68     .word
 # CHECK-NEXT:         8:       9a              .byte   0x9a

@@ -12,12 +12,10 @@
 
 #include "NVPTXInstrInfo.h"
 #include "NVPTX.h"
-#include "NVPTXTargetMachine.h"
-#include "llvm/ADT/STLExtras.h"
+#include "NVPTXSubtarget.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/Function.h"
 
 using namespace llvm;
 
@@ -27,41 +25,35 @@ using namespace llvm;
 // Pin the vtable to this file.
 void NVPTXInstrInfo::anchor() {}
 
-NVPTXInstrInfo::NVPTXInstrInfo() : RegInfo() {}
+NVPTXInstrInfo::NVPTXInstrInfo(const NVPTXSubtarget &STI)
+    : NVPTXGenInstrInfo(STI, RegInfo), RegInfo() {}
 
 void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
-                                 const DebugLoc &DL, MCRegister DestReg,
-                                 MCRegister SrcReg, bool KillSrc) const {
+                                 const DebugLoc &DL, Register DestReg,
+                                 Register SrcReg, bool KillSrc,
+                                 bool RenamableDest, bool RenamableSrc) const {
   const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   const TargetRegisterClass *DestRC = MRI.getRegClass(DestReg);
   const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
 
-  if (RegInfo.getRegSizeInBits(*DestRC) != RegInfo.getRegSizeInBits(*SrcRC))
+  if (DestRC != SrcRC)
     report_fatal_error("Copy one register into another with a different width");
 
   unsigned Op;
-  if (DestRC == &NVPTX::Int1RegsRegClass) {
-    Op = NVPTX::IMOV1rr;
-  } else if (DestRC == &NVPTX::Int16RegsRegClass) {
-    Op = NVPTX::IMOV16rr;
-  } else if (DestRC == &NVPTX::Int32RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Int32RegsRegClass ? NVPTX::IMOV32rr
-                                             : NVPTX::BITCONVERT_32_F2I);
-  } else if (DestRC == &NVPTX::Int64RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Int64RegsRegClass ? NVPTX::IMOV64rr
-                                             : NVPTX::BITCONVERT_64_F2I);
-  } else if (DestRC == &NVPTX::Int128RegsRegClass) {
-    Op = NVPTX::IMOV128rr;
-  } else if (DestRC == &NVPTX::Float32RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Float32RegsRegClass ? NVPTX::FMOV32rr
-                                               : NVPTX::BITCONVERT_32_I2F);
-  } else if (DestRC == &NVPTX::Float64RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Float64RegsRegClass ? NVPTX::FMOV64rr
-                                               : NVPTX::BITCONVERT_64_I2F);
-  } else {
+  if (DestRC == &NVPTX::B1RegClass)
+    Op = NVPTX::MOV_B1_r;
+  else if (DestRC == &NVPTX::B16RegClass)
+    Op = NVPTX::MOV_B16_r;
+  else if (DestRC == &NVPTX::B32RegClass)
+    Op = NVPTX::MOV_B32_r;
+  else if (DestRC == &NVPTX::B64RegClass)
+    Op = NVPTX::MOV_B64_r;
+  else if (DestRC == &NVPTX::B128RegClass)
+    Op = NVPTX::MOV_B128_r;
+  else
     llvm_unreachable("Bad register copy");
-  }
+
   BuildMI(MBB, I, DL, get(Op), DestReg)
       .addReg(SrcReg, getKillRegState(KillSrc));
 }
@@ -111,6 +103,7 @@ bool NVPTXInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       // Block ends with fall-through condbranch.
       TBB = LastInst.getOperand(1).getMBB();
       Cond.push_back(LastInst.getOperand(0));
+      Cond.push_back(LastInst.getOperand(2));
       return false;
     }
     // Otherwise, don't know what this is.
@@ -129,6 +122,7 @@ bool NVPTXInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       LastInst.getOpcode() == NVPTX::GOTO) {
     TBB = SecondLastInst.getOperand(1).getMBB();
     Cond.push_back(SecondLastInst.getOperand(0));
+    Cond.push_back(SecondLastInst.getOperand(2));
     FBB = LastInst.getOperand(0).getMBB();
     return false;
   }
@@ -184,7 +178,7 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
-  assert((Cond.size() == 1 || Cond.size() == 0) &&
+  assert((Cond.size() == 2 || Cond.size() == 0) &&
          "NVPTX branch conditions have two components!");
 
   // One-way branch.
@@ -192,12 +186,22 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
     if (Cond.empty()) // Unconditional branch
       BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(TBB);
     else // Conditional branch
-      BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
+      BuildMI(&MBB, DL, get(NVPTX::CBranch))
+          .add(Cond[0])
+          .addMBB(TBB)
+          .add(Cond[1]);
     return 1;
   }
 
   // Two-way Conditional Branch.
-  BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
+  BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB).add(Cond[1]);
   BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(FBB);
   return 2;
+}
+
+bool NVPTXInstrInfo::reverseBranchCondition(
+    SmallVectorImpl<MachineOperand> &Cond) const {
+  assert(Cond.size() == 2 && "Invalid NVPTX branch condition!");
+  Cond[1].setImm(!Cond[1].getImm());
+  return false;
 }

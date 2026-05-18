@@ -48,7 +48,7 @@ struct __lce_alg_picker {
       : _Schrage ? _LCE_Schrage
                  : _LCE_Promote;
 
-#ifdef _LIBCPP_HAS_NO_INT128
+#if !_LIBCPP_HAS_INT128
   static_assert(_Mp != (unsigned long long)(-1) || _Full || _Part || _Schrage,
                 "The current values for a, c, and m are not currently supported on platforms without __int128");
 #endif
@@ -63,7 +63,7 @@ struct __lce_ta;
 
 // 64
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#if _LIBCPP_HAS_INT128
 template <unsigned long long _Ap, unsigned long long _Cp, unsigned long long _Mp>
 struct __lce_ta<_Ap, _Cp, _Mp, (unsigned long long)(-1), _LCE_Promote> {
   typedef unsigned long long result_type;
@@ -220,7 +220,7 @@ struct __lce_ta<__a, __c, __m, (unsigned short)(-1), __mode> {
 };
 
 template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-class _LIBCPP_TEMPLATE_VIS linear_congruential_engine;
+class linear_congruential_engine;
 
 template <class _CharT, class _Traits, class _Up, _Up _Ap, _Up _Cp, _Up _Np>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
@@ -231,7 +231,7 @@ _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is, linear_congruential_engine<_Up, _Ap, _Cp, _Np>& __x);
 
 template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-class _LIBCPP_TEMPLATE_VIS linear_congruential_engine {
+class linear_congruential_engine {
 public:
   // types
   typedef _UIntType result_type;
@@ -251,12 +251,12 @@ public:
   static_assert(_Min < _Max, "linear_congruential_engine invalid parameters");
 
   // engine characteristics
-  static _LIBCPP_CONSTEXPR const result_type multiplier = __a;
-  static _LIBCPP_CONSTEXPR const result_type increment  = __c;
-  static _LIBCPP_CONSTEXPR const result_type modulus    = __m;
+  static inline _LIBCPP_CONSTEXPR const result_type multiplier = __a;
+  static inline _LIBCPP_CONSTEXPR const result_type increment  = __c;
+  static inline _LIBCPP_CONSTEXPR const result_type modulus    = __m;
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
-  static _LIBCPP_CONSTEXPR const result_type default_seed = 1u;
+  static inline _LIBCPP_CONSTEXPR const result_type default_seed = 1u;
 
   // constructors and seeding functions
 #ifndef _LIBCPP_CXX03_LANG
@@ -265,19 +265,34 @@ public:
 #else
   _LIBCPP_HIDE_FROM_ABI explicit linear_congruential_engine(result_type __s = default_seed) { seed(__s); }
 #endif
-  template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, linear_congruential_engine>::value, int> = 0>
+  template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, linear_congruential_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit linear_congruential_engine(_Sseq& __q) {
     seed(__q);
   }
+
   _LIBCPP_HIDE_FROM_ABI void seed(result_type __s = default_seed) {
-    seed(integral_constant<bool, __m == 0>(), integral_constant<bool, __c == 0>(), __s);
+    if _LIBCPP_CONSTEXPR (__m == 0) {
+      if _LIBCPP_CONSTEXPR (__c == 0)
+        __x_ = __s == 0 ? 1 : __s;
+      else
+        __x_ = __s;
+    } else {
+      if _LIBCPP_CONSTEXPR (__c == 0)
+        __x_ = __s % __m == 0 ? 1 : __s % __m;
+      else
+        __x_ = __s % __m;
+    }
   }
-  template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, linear_congruential_engine>::value, int> = 0>
+
+  template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, linear_congruential_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
-    __seed(
-        __q,
-        integral_constant<unsigned,
-                          1 + (__m == 0 ? (sizeof(result_type) * __CHAR_BIT__ - 1) / 32 : (__m > 0x100000000ull))>());
+    const _LIBCPP_CONSTEXPR unsigned __k =
+        1 + (__m == 0 ? (sizeof(result_type) * __CHAR_BIT__ - 1) / 32 : (__m > 0x100000000ull));
+    static_assert(__k <= 2);
+    uint32_t __ar[__k + 3];
+    __q.generate(__ar, __ar + __k + 3);
+    result_type __s = static_cast<result_type>((__ar[3] + (__k == 1 ? 0 : (uint64_t)__ar[4] << 32)) % __m);
+    __x_            = __c == 0 && __s == 0 ? result_type(1) : __s;
   }
 
   // generating functions
@@ -299,16 +314,6 @@ public:
   }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI void seed(true_type, true_type, result_type __s) { __x_ = __s == 0 ? 1 : __s; }
-  _LIBCPP_HIDE_FROM_ABI void seed(true_type, false_type, result_type __s) { __x_ = __s; }
-  _LIBCPP_HIDE_FROM_ABI void seed(false_type, true_type, result_type __s) { __x_ = __s % __m == 0 ? 1 : __s % __m; }
-  _LIBCPP_HIDE_FROM_ABI void seed(false_type, false_type, result_type __s) { __x_ = __s % __m; }
-
-  template <class _Sseq>
-  _LIBCPP_HIDE_FROM_ABI void __seed(_Sseq& __q, integral_constant<unsigned, 1>);
-  template <class _Sseq>
-  _LIBCPP_HIDE_FROM_ABI void __seed(_Sseq& __q, integral_constant<unsigned, 2>);
-
   template <class _CharT, class _Traits, class _Up, _Up _Ap, _Up _Cp, _Up _Np>
   friend basic_ostream<_CharT, _Traits>&
   operator<<(basic_ostream<_CharT, _Traits>& __os, const linear_congruential_engine<_Up, _Ap, _Cp, _Np>&);
@@ -317,42 +322,6 @@ private:
   friend basic_istream<_CharT, _Traits>&
   operator>>(basic_istream<_CharT, _Traits>& __is, linear_congruential_engine<_Up, _Ap, _Cp, _Np>& __x);
 };
-
-template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-_LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
-    linear_congruential_engine<_UIntType, __a, __c, __m>::multiplier;
-
-template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-_LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
-    linear_congruential_engine<_UIntType, __a, __c, __m>::increment;
-
-template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-_LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
-    linear_congruential_engine<_UIntType, __a, __c, __m>::modulus;
-
-template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-_LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
-    linear_congruential_engine<_UIntType, __a, __c, __m>::default_seed;
-
-template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-template <class _Sseq>
-void linear_congruential_engine<_UIntType, __a, __c, __m>::__seed(_Sseq& __q, integral_constant<unsigned, 1>) {
-  const unsigned __k = 1;
-  uint32_t __ar[__k + 3];
-  __q.generate(__ar, __ar + __k + 3);
-  result_type __s = static_cast<result_type>(__ar[3] % __m);
-  __x_            = __c == 0 && __s == 0 ? result_type(1) : __s;
-}
-
-template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-template <class _Sseq>
-void linear_congruential_engine<_UIntType, __a, __c, __m>::__seed(_Sseq& __q, integral_constant<unsigned, 2>) {
-  const unsigned __k = 2;
-  uint32_t __ar[__k + 3];
-  __q.generate(__ar, __ar + __k + 3);
-  result_type __s = static_cast<result_type>((__ar[3] + ((uint64_t)__ar[4] << 32)) % __m);
-  __x_            = __c == 0 && __s == 0 ? result_type(1) : __s;
-}
 
 template <class _CharT, class _Traits, class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
 inline _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&

@@ -1,6 +1,6 @@
 ; REQUIRES: to-be-fixed
 ; This requires further patches.
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ;
 ; Split all andp/orp instructions (by boosting the profitability of their
 ; operands, which happen to be word masks).

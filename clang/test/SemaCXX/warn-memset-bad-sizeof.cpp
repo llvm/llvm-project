@@ -188,3 +188,119 @@ void strcpy_and_friends() {
   strndup(FOO, sizeof(FOO)); // \
       // expected-warning {{'strndup' call operates on objects of type 'const char' while the size is based on a different type 'const char *'}} expected-note{{did you mean to provide an explicit length?}}
 }
+
+extern "C" int snprintf(char* buffer, __SIZE_TYPE__ buf_size, const char* format, ...);
+extern "C" int vsnprintf(char* buffer, __SIZE_TYPE__ buf_size, const char* format, __builtin_va_list arg);
+extern "C" void* malloc(unsigned size);
+
+// This is a dependent context by none of the actual operations are dependent.
+template <class T> void fooNone() {
+   char* a = (char*) malloc(20);
+   const char* b = "Hello World";
+   snprintf(a, sizeof(a), "%s", b); // #fooNone_diagnostic
+    // expected-warning@#fooNone_diagnostic {{'snprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
+    // expected-note@#fooNone_diagnostic {{did you mean to provide an explicit length?}}
+}
+
+template <class T> void fooType() {
+   T a = (T) malloc(20); // #fooType_error
+   const char* b = "Hello World";
+   snprintf((char *)a, sizeof(a), "%s", b);// #fooType_diagnostic
+}
+
+template <class T> void fooTypePtr() {
+   T *a = (T *) malloc(20);
+   const char* b = "Hello World";
+   snprintf((char *)a, sizeof(a), "%s", b);// #fooTypePtr_diagnostic
+}
+
+void check_prints(){
+    char* a = (char*) malloc(20);
+    const char* b = "Hello World";
+    snprintf(a, sizeof(a), "%s", b); // #CheckBasePrint
+    // expected-warning@#CheckBasePrint {{'snprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
+    // expected-note@#CheckBasePrint {{did you mean to provide an explicit length?}}
+
+    snprintf((char*)a, sizeof(a), "%s", b); // #CheckCastPrint
+    // expected-warning@#CheckCastPrint {{'snprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
+    // expected-note@#CheckCastPrint {{did you mean to provide an explicit length?}}
+
+    snprintf((char*)(char*)a, sizeof(a), "%s", b); // #CheckDoubleCastPrint
+    // expected-warning@#CheckDoubleCastPrint {{'snprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
+    // expected-note@#CheckDoubleCastPrint {{did you mean to provide an explicit length?}}
+
+    __builtin_va_list list;
+    vsnprintf(a, sizeof(a), "%s", list);  // #VSNprintCheck
+    // expected-warning@#VSNprintCheck {{'vsnprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
+    // expected-note@#VSNprintCheck {{did you mean to provide an explicit length?}}
+
+    vsnprintf((char*)a, sizeof(a), "%s", list);  // #VSNprintCastCheck
+    // expected-warning@#VSNprintCastCheck {{'vsnprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
+    // expected-note@#VSNprintCastCheck {{did you mean to provide an explicit length?}}
+
+    vsnprintf((char*)(char*)a, sizeof(a), "%s", list);  // #VSNprintDoubleCastCheck
+    // expected-warning@#VSNprintDoubleCastCheck {{'vsnprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
+    // expected-note@#VSNprintDoubleCastCheck {{did you mean to provide an explicit length?}}
+
+    //No diagnostic output when dest is an array
+    char c[20];
+    const char* d = "Hello World";
+    snprintf(c, sizeof(c), "%s", d); // expected-none
+
+    //No diagnostic output when len is a exact number
+    char* e = (char*) malloc(20);
+    const char* f = "Hello World";
+    snprintf(e, 20, "%s", f); // expected-none
+
+    //Template tests
+    fooNone<int>(); // #fooNone_int_call
+    // expected-warning@#fooNone_diagnostic {{'snprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
+    // expected-note@#fooNone_diagnostic {{did you mean to provide an explicit length?}}
+    // expected-note@#fooNone_int_call {{in instantiation of function template specialization 'fooNone<int>' requested here}}
+
+    fooNone<char>();// #fooNone_char_call
+    // expected-warning@#fooNone_diagnostic {{'snprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
+    // expected-note@#fooNone_diagnostic {{did you mean to provide an explicit length?}}
+    // expected-note@#fooNone_char_call {{in instantiation of function template specialization 'fooNone<char>' requested here}}
+
+    fooNone<char*>();// #fooNone_charptr_call
+    // expected-warning@#fooNone_diagnostic {{'snprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
+    // expected-note@#fooNone_diagnostic {{did you mean to provide an explicit length?}}
+    // expected-note@#fooNone_charptr_call {{in instantiation of function template specialization 'fooNone<char *>' requested here}}
+
+
+    fooNone<void>();// #fooNone_void_call
+    // expected-warning@#fooNone_diagnostic {{'snprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
+    // expected-note@#fooNone_diagnostic {{did you mean to provide an explicit length?}}
+    // expected-note@#fooNone_void_call {{in instantiation of function template specialization 'fooNone<void>' requested here}}
+
+    fooType<char*>();// #fooType_charptr_call
+    // expected-warning@#fooType_diagnostic {{'snprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
+    // expected-note@#fooType_diagnostic {{did you mean to provide an explicit length?}}
+    // expected-note@#fooType_charptr_call {{in instantiation of function template specialization 'fooType<char *>' requested here}}
+
+    fooType<void*>();// #fooType_voidptr_call
+    // expected-warning@#fooType_diagnostic {{'snprintf' call operates on objects of type 'void' while the size is based on a different type 'void *'}}
+    // expected-note@#fooType_diagnostic {{did you mean to dereference the argument to 'sizeof' (and multiply it by the number of elements)?}}
+    // expected-note@#fooType_voidptr_call {{in instantiation of function template specialization 'fooType<void *>' requested here}}
+    
+    fooType<char>(); // #fooType_char_call
+    // expected-error@#fooType_error {{cast from pointer to smaller type 'char' loses information}}
+    // expected-note@#fooType_char_call {{in instantiation of function template specialization 'fooType<char>' requested here}}
+
+    fooTypePtr<char>(); // #fooTypePtr_char_call
+    // expected-warning@#fooTypePtr_diagnostic {{'snprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}}
+    // expected-note@#fooTypePtr_diagnostic {{did you mean to provide an explicit length?}}
+    // expected-note@#fooTypePtr_char_call {{in instantiation of function template specialization 'fooTypePtr<char>' requested here}}
+
+    fooTypePtr<char*>(); // #fooTypePtr_charptr_call
+    // expected-warning@#fooTypePtr_diagnostic {{'snprintf' call operates on objects of type 'char *' while the size is based on a different type 'char **'}}
+    // expected-note@#fooTypePtr_diagnostic {{did you mean to dereference the argument to 'sizeof' (and multiply it by the number of elements)?}}
+    // expected-note@#fooTypePtr_charptr_call {{in instantiation of function template specialization 'fooTypePtr<char *>' requested here}}
+
+    fooTypePtr<void*>(); // #fooTypePtr_void_call
+    // expected-warning@#fooTypePtr_diagnostic {{'snprintf' call operates on objects of type 'void *' while the size is based on a different type 'void **'}}
+    // expected-note@#fooTypePtr_diagnostic {{did you mean to dereference the argument to 'sizeof' (and multiply it by the number of elements)?}}
+    // expected-note@#fooTypePtr_void_call {{in instantiation of function template specialization 'fooTypePtr<void *>' requested here}}
+
+}

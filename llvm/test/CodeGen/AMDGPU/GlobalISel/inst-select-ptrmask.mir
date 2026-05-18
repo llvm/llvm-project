@@ -314,8 +314,8 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 0
-    ; CHECK-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], [[S_MOV_B]], implicit-def dead $scc
+    ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
+    ; CHECK-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], [[S_MOV_B64_]], implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B64_]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_CONSTANT i64 0
@@ -337,10 +337,8 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4042322160
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -252645136
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-    ; CHECK-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], [[REG_SEQUENCE]], implicit-def dead $scc
+    ; CHECK-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -1085102592571150096
+    ; CHECK-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], [[S_MOV_B]], implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B64_]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_CONSTANT i64 -1085102592571150096
@@ -362,9 +360,7 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
-    ; CHECK-NEXT: %const:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; CHECK-NEXT: %const:sreg_64 = S_MOV_B64_IMM_PSEUDO -9223372036854775808
     ; CHECK-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], %const, implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B64_]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
@@ -387,9 +383,7 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; CHECK-NEXT: %const:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; CHECK-NEXT: %const:sreg_64 = S_MOV_B64_IMM_PSEUDO -4294967296
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY %const.sub0
@@ -416,9 +410,7 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-    ; CHECK-NEXT: %const:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; CHECK-NEXT: %const:sreg_64 = S_MOV_B64_IMM_PSEUDO 4294967296
     ; CHECK-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], %const, implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B64_]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
@@ -441,7 +433,7 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: %const:sreg_64 = S_MOV_B64_IMM_PSEUDO -2
+    ; CHECK-NEXT: %const:sreg_64 = S_MOV_B64 -2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY %const.sub0
@@ -468,7 +460,7 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: %const:sreg_64 = S_MOV_B64_IMM_PSEUDO -4
+    ; CHECK-NEXT: %const:sreg_64 = S_MOV_B64 -4
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY %const.sub0
@@ -495,7 +487,7 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: %const:sreg_64 = S_MOV_B64_IMM_PSEUDO -8
+    ; CHECK-NEXT: %const:sreg_64 = S_MOV_B64 -8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY %const.sub0
@@ -522,7 +514,7 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: %const:sreg_64 = S_MOV_B64_IMM_PSEUDO -16
+    ; CHECK-NEXT: %const:sreg_64 = S_MOV_B64 -16
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY %const.sub0
@@ -743,17 +735,15 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4042322160, implicit $exec
-    ; CHECK-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -252645136, implicit $exec
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
+    ; CHECK-NEXT: [[V_MOV_B:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO -1085102592571150096, implicit $exec
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[V_MOV_B]].sub0
     ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], [[COPY3]], implicit $exec
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[V_MOV_B]].sub1
     ; CHECK-NEXT: [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], [[COPY4]], implicit $exec
-    ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE1]]
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_CONSTANT i64 -1085102592571150096
     %2:vgpr(p0) = G_PTRMASK %0, %1

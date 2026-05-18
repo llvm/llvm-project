@@ -150,8 +150,8 @@
 	lui $2, %hi(sym1)
 
 # CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_hilo_8b {
-# CHECK-NEXT:    0x8 R_MIPS_HI16 sym1
 # CHECK-NEXT:    0x0 R_MIPS_LO16 sym1
+# CHECK-NEXT:    0x8 R_MIPS_HI16 sym1
 # CHECK-NEXT:    0x4 R_MIPS_LO16 sym1
 # CHECK-NEXT:  }
 
@@ -331,8 +331,8 @@
 	lui $2, %got(local1)
 
 # CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_8b {
-# CHECK-NEXT:    0x8 R_MIPS_GOT16 .text
 # CHECK-NEXT:    0x0 R_MIPS_LO16 .text
+# CHECK-NEXT:    0x8 R_MIPS_GOT16 .text
 # CHECK-NEXT:    0x4 R_MIPS_LO16 .text
 # CHECK-NEXT:  }
 
@@ -372,9 +372,9 @@
 # CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_10 {
 # CHECK-NEXT:    0x0 R_MIPS_GOT16 .text
 # CHECK-NEXT:    0x4 R_MIPS_LO16 .text
+# CHECK-NEXT:    0x8 R_MIPS_GOT16 .text
 # CHECK-NEXT:    0xC R_MIPS_GOT16 .text
 # CHECK-NEXT:    0x10 R_MIPS_LO16 .text
-# CHECK-NEXT:    0x8 R_MIPS_GOT16 .text
 # CHECK-NEXT:  }
 
 # Finally, do test 2 for R_MIPS_GOT16 on external symbols to prove they are

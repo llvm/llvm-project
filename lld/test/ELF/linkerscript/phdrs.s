@@ -1,143 +1,116 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-# RUN: echo "PHDRS {all PT_LOAD FILEHDR PHDRS ;} \
-# RUN:       SECTIONS { \
-# RUN:           . = 0x10000200; \
-# RUN:           .text : {*(.text*)} :all \
-# RUN:           .foo : {*(.foo.*)} :all \
-# RUN:           .data : {*(.data.*)} :all}" > %t.script
-# RUN: ld.lld -o %t1 --script %t.script %t
-# RUN: llvm-readobj -l %t1 | FileCheck %s
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
 
+#--- 1.lds
+PHDRS {all PT_LOAD FILEHDR PHDRS ;}
+SECTIONS {
+  . = 0x10000200;
+  .text : {*(.text*)} :all
+  .foo : {*(.foo.*)} :"all"
+  .data : {*(.data.*)} : "all"}
+
+# RUN: ld.lld -o 1 -T 1.lds a.o
+# RUN: llvm-readelf -Sl 1 | FileCheck %s
+# CHECK:      [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+# CHECK:      [ 1] .text             PROGBITS        0000000010000200 000200 000001 00  AX  0   0  4
+# CHECK-NEXT: [ 2] .foo              PROGBITS        0000000010000201 000201 000008 00  WA  0   0  1
+
+# CHECK:      Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK-NEXT: LOAD           0x000000 0x0000000010000000 0x0000000010000000 0x000209 0x000209 RWE 0x1000
+
+#--- 2.lds
 ## Check that program headers are not written, unless we explicitly tell
 ## lld to do this.
-# RUN: echo "PHDRS {all PT_LOAD;} \
-# RUN:       SECTIONS { \
-# RUN:           . = 0x10000200; \
-# RUN:           /DISCARD/ : {*(.text*)}  \
-# RUN:           .foo : {*(.foo.*)} :all \
-# RUN:       }" > %t.script
-# RUN: ld.lld -o %t1 --script %t.script %t
-# RUN: llvm-readobj -l %t1 | FileCheck --check-prefix=NOPHDR %s
+PHDRS {all PT_LOAD;}
+SECTIONS {
+    . = 0x10000200;
+    /DISCARD/ : {*(.text*)}
+    .foo : {*(.foo.*)} :all
+}
 
+# RUN: ld.lld -o 2 -T 2.lds a.o
+# RUN: llvm-readelf -l 2 | FileCheck --check-prefix=NOPHDR %s
+# NOPHDR:      Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# NOPHDR-NEXT: LOAD           0x000200 0x0000000010000200 0x0000000010000200 0x000008 0x000008 RW  0x1000
+
+#--- 3.lds
+PHDRS {all PT_LOAD FILEHDR PHDRS ;}
+SECTIONS {
+    . = 0x10000200;
+    .text : {*(.text*)} :all
+    .foo : {*(.foo.*)}
+    .data : {*(.data.*)} }
+
+# RUN: ld.lld -o 3 -T 3.lds a.o
+# RUN: llvm-readelf -l 3 | FileCheck --check-prefix=DEFHDR %s
+# DEFHDR:      Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# DEFHDR-NEXT: LOAD           0x000000 0x0000000010000000 0x0000000010000000 0x000209 0x000209 RWE 0x1000
+
+#--- at.lds
 ## Check the AT(expr)
-# RUN: echo "PHDRS {all PT_LOAD FILEHDR PHDRS AT(0x500 + 0x500) ;} \
-# RUN:       SECTIONS { \
-# RUN:           . = 0x10000200; \
-# RUN:           .text : {*(.text*)} :all \
-# RUN:           .foo : {*(.foo.*)} :all \
-# RUN:           .data : {*(.data.*)} :all}" > %t.script
-# RUN: ld.lld -o %t1 --script %t.script %t
-# RUN: llvm-readobj -l %t1 | FileCheck --check-prefix=AT %s
+PHDRS {all PT_LOAD FILEHDR PHDRS AT(0x500 + 0x500) ;}
+SECTIONS {
+    . = 0x10000200;
+    .text : {*(.text*)} :all
+    .foo : {*(.foo.*)} :all
+    .data : {*(.data.*)} :all}
 
-# RUN: echo "PHDRS {all PT_LOAD FILEHDR PHDRS ;} \
-# RUN:       SECTIONS { \
-# RUN:           . = 0x10000200; \
-# RUN:           .text : {*(.text*)} :all \
-# RUN:           .foo : {*(.foo.*)}  \
-# RUN:           .data : {*(.data.*)} }" > %t.script
-# RUN: ld.lld -o %t1 --script %t.script %t
-# RUN: llvm-readobj -l %t1 | FileCheck --check-prefix=DEFHDR %s
+# RUN: ld.lld -o at -T at.lds a.o
+# RUN: llvm-readelf -l at | FileCheck --check-prefix=AT %s
+# AT:      Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# AT-NEXT: LOAD           0x000000 0x0000000010000000 0x0000000000000a00 0x000209 0x000209 RWE 0x1000
 
+#--- int.lds
+## Check the numetic values for PHDRS.
+PHDRS {text PT_LOAD FILEHDR PHDRS; foo 0x11223344; }
+SECTIONS { . = SIZEOF_HEADERS; .foo : { *(.foo* .text*) } : text : foo}
+
+# RUN: ld.lld -o int -T int.lds a.o
+# RUN: llvm-readelf -l int | FileCheck --check-prefix=INT-PHDRS %s
+# INT-PHDRS:      Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# INT-PHDRS-NEXT: LOAD           0x000000 0x0000000000000000 0x0000000000000000 0x0000b9 0x0000b9 RWE 0x1000
+# INT-PHDRS-NEXT: <unknown>: 0x11223344 0x0000b0 0x00000000000000b0 0x00000000000000b0 0x000009 0x000009 RWE 0x4
+
+#--- unspecified.lds
 ## Check that error is reported when trying to use phdr which is not listed
 ## inside PHDRS {} block
 ## TODO: If script doesn't contain PHDRS {} block then default phdr is always
 ## created and error is not reported.
-# RUN: echo "PHDRS { all PT_LOAD; } \
-# RUN:       SECTIONS { .baz : {*(.foo.*)} :bar }" > %t.script
-# RUN: not ld.lld -o /dev/null --script %t.script %t 2>&1 | FileCheck --check-prefix=BADHDR %s
+PHDRS { all PT_LOAD; }
+SECTIONS { .baz : {*(.foo.*)} :bar }
 
-# CHECK:     ProgramHeaders [
-# CHECK-NEXT:  ProgramHeader {
-# CHECK-NEXT:    Type: PT_LOAD (0x1)
-# CHECK-NEXT:    Offset: 0x0
-# CHECK-NEXT:    VirtualAddress: 0x10000000
-# CHECK-NEXT:    PhysicalAddress: 0x10000000
-# CHECK-NEXT:    FileSize: 521
-# CHECK-NEXT:    MemSize: 521
-# CHECK-NEXT:    Flags [ (0x7)
-# CHECK-NEXT:      PF_R (0x4)
-# CHECK-NEXT:      PF_W (0x2)
-# CHECK-NEXT:      PF_X (0x1)
-# CHECK-NEXT:    ]
+# RUN: not ld.lld -T unspecified.lds a.o 2>&1 | FileCheck --check-prefix=UNSPECIFIED %s
+# UNSPECIFIED: unspecified.lds:6: program header 'bar' is not listed in PHDRS
 
-# NOPHDR:     ProgramHeaders [
-# NOPHDR-NEXT:  ProgramHeader {
-# NOPHDR-NEXT:    Type: PT_LOAD (0x1)
-# NOPHDR-NEXT:    Offset: 0x200
-# NOPHDR-NEXT:    VirtualAddress: 0x10000200
-# NOPHDR-NEXT:    PhysicalAddress: 0x10000200
-# NOPHDR-NEXT:    FileSize: 8
-# NOPHDR-NEXT:    MemSize: 8
-# NOPHDR-NEXT:    Flags [ (0x6)
-# NOPHDR-NEXT:      PF_R (0x4)
-# NOPHDR-NEXT:      PF_W (0x2)
-# NOPHDR-NEXT:    ]
-# NOPHDR-NEXT:    Alignment: 4096
-# NOPHDR-NEXT:  }
-# NOPHDR-NEXT: ]
+#--- foohdr.lds
+PHDRS { text PT_LOAD FOOHDR; }
 
-# AT:       ProgramHeaders [
-# AT-NEXT:    ProgramHeader {
-# AT-NEXT:      Type: PT_LOAD (0x1)
-# AT-NEXT:      Offset: 0x0
-# AT-NEXT:      VirtualAddress: 0x10000000
-# AT-NEXT:      PhysicalAddress: 0xA00
-# AT-NEXT:      FileSize: 521
-# AT-NEXT:      MemSize: 521
-# AT-NEXT:      Flags [ (0x7)
-# AT-NEXT:        PF_R (0x4)
-# AT-NEXT:        PF_W (0x2)
-# AT-NEXT:        PF_X (0x1)
-# AT-NEXT:      ]
+# RUN: not ld.lld -T foohdr.lds a.o 2>&1 | FileCheck --check-prefix=FOOHDR %s
+# FOOHDR: error: foohdr.lds:1: unexpected header attribute: FOOHDR
 
-## Check the numetic values for PHDRS.
-# RUN: echo "PHDRS {text PT_LOAD FILEHDR PHDRS; foo 0x11223344; } \
-# RUN:       SECTIONS { . = SIZEOF_HEADERS; .foo : { *(.foo* .text*) } : text : foo}" > %t1.script
-# RUN: ld.lld -o %t2 --script %t1.script %t
-# RUN: llvm-readobj -l %t2 | FileCheck --check-prefix=INT-PHDRS %s
+#--- pt_foo.lds
+PHDRS { text PT_FOO FOOHDR; }
 
-# INT-PHDRS:      ProgramHeaders [
-# INT-PHDRS:        ProgramHeader {
-# INT-PHDRS:           Type: Unknown (0x11223344)
-# INT-PHDRS-NEXT:      Offset: 0xB0
-# INT-PHDRS-NEXT:      VirtualAddress: 0xB0
-# INT-PHDRS-NEXT:      PhysicalAddress: 0xB0
-# INT-PHDRS-NEXT:      FileSize:
-# INT-PHDRS-NEXT:      MemSize:
-# INT-PHDRS-NEXT:      Flags [
-# INT-PHDRS-NEXT:        PF_R
-# INT-PHDRS-NEXT:        PF_W
-# INT-PHDRS-NEXT:        PF_X
-# INT-PHDRS-NEXT:      ]
-# INT-PHDRS-NEXT:      Alignment:
-# INT-PHDRS-NEXT:    }
-# INT-PHDRS-NEXT:  ]
+# RUN: not ld.lld -T pt_foo.lds a.o 2>&1 | FileCheck --check-prefix=PTFOO %s --strict-whitespace
+#      PTFOO:{{.*}}error: pt_foo.lds:1: invalid program header type: PT_FOO
+# PTFOO-NEXT:>>> PHDRS { text PT_FOO FOOHDR; }
+# PTFOO-NEXT:>>>              ^
 
-# DEFHDR:     ProgramHeaders [
-# DEFHDR-NEXT:  ProgramHeader {
-# DEFHDR-NEXT:    Type: PT_LOAD (0x1)
-# DEFHDR-NEXT:    Offset: 0x0
-# DEFHDR-NEXT:    VirtualAddress: 0x10000000
-# DEFHDR-NEXT:    PhysicalAddress: 0x10000000
-# DEFHDR-NEXT:    FileSize: 521
-# DEFHDR-NEXT:    MemSize: 521
-# DEFHDR-NEXT:    Flags [ (0x7)
-# DEFHDR-NEXT:      PF_R (0x4)
-# DEFHDR-NEXT:      PF_W (0x2)
-# DEFHDR-NEXT:      PF_X (0x1)
-# DEFHDR-NEXT:    ]
+#--- unclosed.lds
+PHDRS { text PT_LOAD ;
 
-# BADHDR:       {{.*}}.script:1: program header 'bar' is not listed in PHDRS
+# RUN: not ld.lld -T unclosed.lds a.o 2>&1 | FileCheck --check-prefix=UNCLOSED %s
+#     UNCLOSED:error: unclosed.lds:1: unexpected EOF
+# UNCLOSED-NOT:{{.}}
 
-# RUN: echo "PHDRS { text PT_LOAD FOOHDR; }" > %t1.script
-# RUN: not ld.lld -o /dev/null --script %t1.script %t 2>&1 | FileCheck --check-prefix=FOOHDR %s
-# FOOHDR: error: {{.*}}.script:1: unexpected header attribute: FOOHDR
+#--- unclosed2.lds
+PHDRS { text PT_LOAD
 
-# RUN: echo "PHDRS { text PT_FOO FOOHDR; }" > %t1.script
-# RUN: not ld.lld -o /dev/null --script %t1.script %t 2>&1 | FileCheck --check-prefix=PTFOO %s
-# PTFOO: invalid program header type: PT_FOO
+# RUN: not ld.lld -T unclosed2.lds a.o 2>&1 | FileCheck --check-prefix=UNCLOSED2 %s
+# UNCLOSED2: error: unclosed2.lds:1: unexpected header attribute:
 
+#--- a.s
 .global _start
 _start:
  nop

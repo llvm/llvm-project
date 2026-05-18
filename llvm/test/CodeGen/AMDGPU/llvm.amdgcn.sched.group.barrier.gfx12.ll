@@ -7,7 +7,7 @@ declare <8 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v8f16.v8f16.v16f16..i16(
 define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_cluster(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_SWMMAC_cluster:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GCN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GCN-NEXT:    v_mov_b32_e32 v48, 0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
@@ -59,7 +59,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_cluster(ptr 
 ;
 ; EXACTCUTOFF-LABEL: test_sched_group_barrier_pipeline_SWMMAC_cluster:
 ; EXACTCUTOFF:       ; %bb.0: ; %entry
-; EXACTCUTOFF-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; EXACTCUTOFF-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v48, 0
 ; EXACTCUTOFF-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
@@ -149,7 +149,7 @@ entry:
 define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_interleaved(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_SWMMAC_interleaved:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GCN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    v_and_b32_e32 v16, 0x3ff, v0
 ; GCN-NEXT:    v_mov_b32_e32 v18, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
@@ -214,7 +214,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_interleaved(
 ;
 ; EXACTCUTOFF-LABEL: test_sched_group_barrier_pipeline_SWMMAC_interleaved:
 ; EXACTCUTOFF:       ; %bb.0: ; %entry
-; EXACTCUTOFF-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; EXACTCUTOFF-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; EXACTCUTOFF-NEXT:    v_and_b32_e32 v16, 0x3ff, v0
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v18, 0
 ; EXACTCUTOFF-NEXT:    s_wait_kmcnt 0x0

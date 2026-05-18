@@ -21,20 +21,23 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::unordered_multimap<int, std::string> C;
-        const C c;
-        assert(c.max_bucket_count() > 0);
-    }
+int main(int, char**) {
+  {
+    typedef std::unordered_multimap<int, std::string> C;
+    const C c;
+    assert(c.max_bucket_count() > 0);
+  }
 #if TEST_STD_VER >= 11
-    {
-        typedef std::unordered_multimap<int, std::string, std::hash<int>, std::equal_to<int>,
-                            min_allocator<std::pair<const int, std::string>>> C;
-        const C c;
-        assert(c.max_bucket_count() > 0);
-    }
+  {
+    typedef std::unordered_multimap<int,
+                                    std::string,
+                                    std::hash<int>,
+                                    std::equal_to<int>,
+                                    min_allocator<std::pair<const int, std::string>>>
+        C;
+    const C c;
+    assert(c.max_bucket_count() > 0);
+  }
 #endif
 
   return 0;

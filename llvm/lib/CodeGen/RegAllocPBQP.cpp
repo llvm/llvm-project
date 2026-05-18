@@ -64,7 +64,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -119,12 +118,7 @@ public:
 
   /// Construct a PBQP register allocator.
   RegAllocPBQP(char *cPassID = nullptr)
-      : MachineFunctionPass(ID), customPassID(cPassID) {
-    initializeSlotIndexesWrapperPassPass(*PassRegistry::getPassRegistry());
-    initializeLiveIntervalsWrapperPassPass(*PassRegistry::getPassRegistry());
-    initializeLiveStacksPass(*PassRegistry::getPassRegistry());
-    initializeVirtRegMapPass(*PassRegistry::getPassRegistry());
-  }
+      : MachineFunctionPass(ID), customPassID(cPassID) {}
 
   /// Return the pass name.
   StringRef getPassName() const override { return "PBQP Register Allocator"; }
@@ -136,13 +130,11 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().set(
-      MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 
 private:
@@ -551,16 +543,16 @@ void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   //au.addRequiredID(SplitCriticalEdgesID);
   if (customPassID)
     au.addRequiredID(*customPassID);
-  au.addRequired<LiveStacks>();
-  au.addPreserved<LiveStacks>();
+  au.addRequired<LiveStacksWrapperLegacy>();
+  au.addPreserved<LiveStacksWrapperLegacy>();
   au.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   au.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   au.addRequired<MachineLoopInfoWrapperPass>();
   au.addPreserved<MachineLoopInfoWrapperPass>();
   au.addRequired<MachineDominatorTreeWrapperPass>();
   au.addPreserved<MachineDominatorTreeWrapperPass>();
-  au.addRequired<VirtRegMap>();
-  au.addPreserved<VirtRegMap>();
+  au.addRequired<VirtRegMapWrapperLegacy>();
+  au.addPreserved<VirtRegMapWrapperLegacy>();
   MachineFunctionPass::getAnalysisUsage(au);
 }
 
@@ -795,7 +787,10 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   MachineBlockFrequencyInfo &MBFI =
       getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
 
-  VirtRegMap &VRM = getAnalysis<VirtRegMap>();
+  auto &LiveStks = getAnalysis<LiveStacksWrapperLegacy>().getLS();
+  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+
+  VirtRegMap &VRM = getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
 
   PBQPVirtRegAuxInfo VRAI(
       MF, LIS, VRM, getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI);
@@ -808,7 +803,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   VirtRegAuxInfo DefaultVRAI(
       MF, LIS, VRM, getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI);
   std::unique_ptr<Spiller> VRegSpiller(
-      createInlineSpiller(*this, MF, VRM, DefaultVRAI));
+      createInlineSpiller({LIS, LiveStks, MDT, MBFI}, MF, VRM, DefaultVRAI));
 
   MF.getRegInfo().freezeReservedRegs();
 

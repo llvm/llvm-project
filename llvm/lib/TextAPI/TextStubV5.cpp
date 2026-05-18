@@ -12,6 +12,7 @@
 #include "TextStubCommon.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/JSON.h"
+#include <optional>
 #include <utility>
 
 // clang-format off
@@ -82,6 +83,33 @@ struct JSONSymbol {
 using AttrToTargets = std::map<std::string, TargetList>;
 using TargetsToSymbols =
     SmallVector<std::pair<TargetList, std::vector<JSONSymbol>>>;
+
+/// Wrapper over a vector for handling textstub attributes, mapped to target
+/// triples, that require insertion order to be intact in the resulting \c
+/// InterfaceFile.
+class InOrderAttrToTargets {
+  using EntryT = std::pair<std::string, TargetList>;
+
+public:
+  void insert(EntryT &&Entry) {
+    auto &Element = get(Entry.first);
+    Element.second = Entry.second;
+  }
+
+  const EntryT *begin() { return Container.begin(); }
+  const EntryT *end() { return Container.end(); }
+
+private:
+  EntryT &get(std::string &Key) {
+    auto *It = find_if(Container,
+                       [&Key](EntryT &Input) { return Input.first == Key; });
+    if (It != Container.end())
+      return *It;
+    Container.push_back(EntryT(Key, {}));
+    return Container.back();
+  }
+  llvm::SmallVector<EntryT> Container;
+};
 
 enum TBDKey : size_t {
   TBDVersion = 0U,
@@ -252,6 +280,15 @@ Expected<FileType> getVersion(const Object *File) {
   return *VersionOrErr;
 }
 
+Expected<std::optional<MachO::Target>> parseTargetStr(StringRef Str) {
+  auto TargetOrErr = MachO::Target::create(Str);
+  if (!TargetOrErr)
+    return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Target));
+  if (!TargetOrErr->isValid())
+    return std::nullopt;
+  return *TargetOrErr;
+}
+
 Expected<TargetList> getTargets(const Object *Section) {
   const auto *Targets = Section->getArray(Keys[TBDKey::Targets]);
   if (!Targets)
@@ -262,10 +299,12 @@ Expected<TargetList> getTargets(const Object *Section) {
     auto TargetStr = JSONTarget.getAsString();
     if (!TargetStr.has_value())
       return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Target));
-    auto TargetOrErr = Target::create(TargetStr.value());
+    auto TargetOrErr = parseTargetStr(TargetStr.value());
     if (!TargetOrErr)
-      return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Target));
-    IFTargets.push_back(*TargetOrErr);
+      return TargetOrErr.takeError();
+    if (!TargetOrErr->has_value())
+      continue;
+    IFTargets.push_back(**TargetOrErr);
   }
   return std::move(IFTargets);
 }
@@ -284,20 +323,22 @@ Expected<TargetList> getTargetsSection(const Object *Section) {
         getRequiredValue<StringRef>(TBDKey::Target, Obj, &Object::getString);
     if (!TargetStr)
       return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Target));
-    auto TargetOrErr = Target::create(*TargetStr);
+    auto TargetOrErr = parseTargetStr(*TargetStr);
     if (!TargetOrErr)
-      return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Target));
+      return TargetOrErr.takeError();
+    if (!TargetOrErr->has_value())
+      continue;
 
     auto VersionStr = Obj->getString(Keys[TBDKey::Deployment]);
     VersionTuple Version;
     if (VersionStr && Version.tryParse(*VersionStr))
       return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Deployment));
-    TargetOrErr->MinDeployment = Version;
+    (*TargetOrErr)->MinDeployment = Version;
 
     // Convert to LLVM::Triple to accurately compute minOS + platform + arch
     // pairing.
     IFTargets.push_back(
-        MachO::Target(Triple(getTargetTripleName(*TargetOrErr))));
+        MachO::Target(Triple(getTargetTripleName(**TargetOrErr))));
   }
   return std::move(IFTargets);
 }
@@ -437,14 +478,14 @@ Expected<TargetsToSymbols> getSymbolSection(const Object *File, TBDKey Key,
   return std::move(Result);
 }
 
-Expected<AttrToTargets> getLibSection(const Object *File, TBDKey Key,
-                                      TBDKey SubKey,
-                                      const TargetList &Targets) {
+template <typename ReturnT = AttrToTargets>
+Expected<ReturnT> getLibSection(const Object *File, TBDKey Key, TBDKey SubKey,
+                                const TargetList &Targets) {
   auto *Section = File->getArray(Keys[Key]);
   if (!Section)
-    return AttrToTargets();
+    return ReturnT();
 
-  AttrToTargets Result;
+  ReturnT Result;
   TargetList MappedTargets;
   for (auto Val : *Section) {
     auto *Obj = Val.getAsObject();
@@ -460,7 +501,7 @@ Expected<AttrToTargets> getLibSection(const Object *File, TBDKey Key,
     }
     auto Err =
         collectFromArray(SubKey, Obj, [&Result, &MappedTargets](StringRef Key) {
-          Result[Key.str()] = MappedTargets;
+          Result.insert({Key.str(), MappedTargets});
         });
     if (Err)
       return std::move(Err);
@@ -615,13 +656,13 @@ Expected<IFPtr> parseToInterfaceFile(const Object *File) {
   auto UmbrellasOrErr = getUmbrellaSection(File, Targets);
   if (!UmbrellasOrErr)
     return UmbrellasOrErr.takeError();
-  AttrToTargets Umbrellas = *UmbrellasOrErr;
+  const AttrToTargets &Umbrellas = *UmbrellasOrErr;
 
   auto ClientsOrErr =
       getLibSection(File, TBDKey::AllowableClients, TBDKey::Clients, Targets);
   if (!ClientsOrErr)
     return ClientsOrErr.takeError();
-  AttrToTargets Clients = *ClientsOrErr;
+  const AttrToTargets &Clients = *ClientsOrErr;
 
   auto RLOrErr =
       getLibSection(File, TBDKey::ReexportLibs, TBDKey::Names, Targets);
@@ -629,10 +670,11 @@ Expected<IFPtr> parseToInterfaceFile(const Object *File) {
     return RLOrErr.takeError();
   AttrToTargets ReexportLibs = std::move(*RLOrErr);
 
-  auto RPathsOrErr = getLibSection(File, TBDKey::RPath, TBDKey::Paths, Targets);
+  auto RPathsOrErr = getLibSection<InOrderAttrToTargets>(
+      File, TBDKey::RPath, TBDKey::Paths, Targets);
   if (!RPathsOrErr)
     return RPathsOrErr.takeError();
-  AttrToTargets RPaths = std::move(*RPathsOrErr);
+  InOrderAttrToTargets RPaths = std::move(*RPathsOrErr);
 
   auto ExportsOrErr = getSymbolSection(File, TBDKey::Exports, Targets);
   if (!ExportsOrErr)
@@ -673,15 +715,24 @@ Expected<IFPtr> parseToInterfaceFile(const Object *File) {
   for (auto &[Path, Targets] : RPaths)
     for (auto Target : Targets)
       F->addRPath(Path, Target);
-  for (auto &[Targets, Symbols] : Exports)
+  for (auto &[Targets, Symbols] : Exports) {
+    if (Targets.empty())
+      continue;
     for (auto &Sym : Symbols)
       F->addSymbol(Sym.Kind, Sym.Name, Targets, Sym.Flags);
-  for (auto &[Targets, Symbols] : Reexports)
+  }
+  for (auto &[Targets, Symbols] : Reexports) {
+    if (Targets.empty())
+      continue;
     for (auto &Sym : Symbols)
       F->addSymbol(Sym.Kind, Sym.Name, Targets, Sym.Flags);
-  for (auto &[Targets, Symbols] : Undefineds)
+  }
+  for (auto &[Targets, Symbols] : Undefineds) {
+    if (Targets.empty())
+      continue;
     for (auto &Sym : Symbols)
       F->addSymbol(Sym.Kind, Sym.Name, Targets, Sym.Flags);
+  }
 
   return std::move(F);
 }
@@ -802,6 +853,8 @@ Array serializeAttrToTargets(AggregateT &Entries, TBDKey Key) {
   return Container;
 }
 
+/// When there is no significance in order, the common case, serialize all
+/// attributes in a stable order.
 template <typename ValueT = std::string,
           typename AggregateT = std::vector<std::pair<MachO::Target, ValueT>>>
 Array serializeField(TBDKey Key, const AggregateT &Values,
@@ -831,6 +884,21 @@ Array serializeField(TBDKey Key, const std::vector<InterfaceFileRef> &Values,
     FinalEntries[serializeTargets(Targets, ActiveTargets)].emplace_back(
         Ref.getInstallName());
   }
+  return serializeAttrToTargets(FinalEntries, Key);
+}
+
+template <
+    typename AggregateT = std::vector<std::pair<MachO::Target, std::string>>>
+Array serializeFieldInInsertionOrder(TBDKey Key, const AggregateT &Values,
+                                     const TargetList &ActiveTargets) {
+  MapVector<StringRef, std::set<MachO::Target>> Entries;
+  for (const auto &[Target, Val] : Values)
+    Entries[Val].insert(Target);
+
+  TargetsToValuesMap FinalEntries;
+  for (const auto &[Val, Targets] : Entries)
+    FinalEntries[serializeTargets(Targets, ActiveTargets)].emplace_back(
+        Val.str());
   return serializeAttrToTargets(FinalEntries, Key);
 }
 
@@ -895,6 +963,12 @@ Array serializeSymbols(InterfaceFile::const_filtered_symbol_range Symbols,
                                 SymbolFields::SymbolTypes &SymField) {
     if (SymField.empty())
       return;
+    llvm::sort(SymField.Globals);
+    llvm::sort(SymField.TLV);
+    llvm::sort(SymField.Weaks);
+    llvm::sort(SymField.ObjCClasses);
+    llvm::sort(SymField.EHTypes);
+    llvm::sort(SymField.IVars);
     Object Segment;
     insertNonEmptyValues(Segment, TBDKey::Globals, std::move(SymField.Globals));
     insertNonEmptyValues(Segment, TBDKey::ThreadLocal, std::move(SymField.TLV));
@@ -963,7 +1037,8 @@ Expected<Object> serializeIF(const InterfaceFile *File) {
       TBDKey::ABI, File->getSwiftABIVersion(), 0u);
   insertNonEmptyValues(Library, TBDKey::SwiftABI, std::move(SwiftABI));
 
-  Array RPaths = serializeField(TBDKey::Paths, File->rpaths(), ActiveTargets);
+  Array RPaths = serializeFieldInInsertionOrder(TBDKey::Paths, File->rpaths(),
+                                                ActiveTargets);
   insertNonEmptyValues(Library, TBDKey::RPath, std::move(RPaths));
 
   Array Umbrellas = serializeField(TBDKey::Umbrella, File->umbrellas(),

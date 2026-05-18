@@ -1,4 +1,4 @@
-//===--- InefficientVectorOperationCheck.h - clang-tidy----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_INEFFICIENT_VECTOR_OPERATION_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_INEFFICIENT_VECTOR_OPERATION_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_INEFFICIENTVECTOROPERATIONCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_INEFFICIENTVECTOROPERATIONCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -20,11 +20,11 @@ namespace clang::tidy::performance {
 /// field without calling Reserve() first.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance/inefficient-vector-operation.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/performance/inefficient-vector-operation.html
 class InefficientVectorOperationCheck : public ClangTidyCheck {
 public:
   InefficientVectorOperationCheck(StringRef Name, ClangTidyContext *Context);
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override{
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
@@ -44,4 +44,4 @@ private:
 
 } // namespace clang::tidy::performance
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_INEFFICIENT_VECTOR_OPERATION_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_INEFFICIENTVECTOROPERATIONCHECK_H

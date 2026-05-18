@@ -75,7 +75,7 @@ define i1 @t4_commutative(i8 %x, i8 %y) {
 ; CHECK-LABEL: @t4_commutative(
 ; CHECK-NEXT:    [[T0:%.*]] = add i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[T0]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[Y]], [[T0]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = add i8 %x, %y
@@ -104,7 +104,7 @@ define i1 @t5_commutative(i8 %x) {
 define i1 @t6_no_extrause(i8 %x, i8 %y) {
 ; CHECK-LABEL: @t6_no_extrause(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = add i8 %x, %y

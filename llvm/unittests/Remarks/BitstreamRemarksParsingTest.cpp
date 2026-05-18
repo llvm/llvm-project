@@ -14,7 +14,7 @@
 
 using namespace llvm;
 
-template <size_t N> void parseGood(const char (&Buf)[N]) {
+template <size_t N> static void parseGood(const char (&Buf)[N]) {
   // 1. Parse the YAML remark -> FromYAMLRemark
   // 2. Serialize it to bitstream -> BSStream
   // 3. Parse it back -> FromBSRemark
@@ -48,11 +48,11 @@ template <size_t N> void parseGood(const char (&Buf)[N]) {
   std::string BSBuf;
   raw_string_ostream BSStream(BSBuf);
   Expected<std::unique_ptr<remarks::RemarkSerializer>> BSSerializer =
-      remarks::createRemarkSerializer(remarks::Format::Bitstream,
-                                      remarks::SerializerMode::Standalone,
-                                      BSStream, std::move(BSStrTab));
+      remarks::createRemarkSerializer(remarks::Format::Bitstream, BSStream,
+                                      std::move(BSStrTab));
   EXPECT_FALSE(errorToBool(BSSerializer.takeError()));
   (*BSSerializer)->emit(*FromYAMLRemark);
+  (*BSSerializer)->finalize();
 
   // 3.
   Expected<std::unique_ptr<remarks::RemarkParser>> MaybeBSParser =
@@ -256,11 +256,11 @@ TEST(BitstreamRemarks, ContentsCAPI) {
   std::string BSBuf;
   raw_string_ostream BSStream(BSBuf);
   Expected<std::unique_ptr<remarks::RemarkSerializer>> BSSerializer =
-      remarks::createRemarkSerializer(remarks::Format::Bitstream,
-                                      remarks::SerializerMode::Standalone,
-                                      BSStream, std::move(BSStrTab));
+      remarks::createRemarkSerializer(remarks::Format::Bitstream, BSStream,
+                                      std::move(BSStrTab));
   EXPECT_FALSE(errorToBool(BSSerializer.takeError()));
   (*BSSerializer)->emit(ToSerializeRemark);
+  (*BSSerializer)->finalize();
 
   StringRef Buf = BSStream.str();
   LLVMRemarkParserRef Parser =

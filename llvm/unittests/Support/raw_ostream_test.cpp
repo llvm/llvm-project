@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
@@ -176,6 +177,49 @@ TEST(raw_ostreamTest, Justify) {
   EXPECT_EQ("none",    printToString(center_justify("none", 1), 1));
 }
 
+TEST(raw_ostreamTest, Indent) {
+  indent Indent(4);
+  auto Spaces = [](int N) { return std::string(N, ' '); };
+  EXPECT_EQ(Spaces(4), printToString(Indent));
+  EXPECT_EQ("", printToString(indent(0)));
+  EXPECT_EQ(Spaces(5), printToString(Indent + 1));
+  EXPECT_EQ(Spaces(3), printToString(Indent - 1));
+  Indent += 1;
+  EXPECT_EQ(Spaces(5), printToString(Indent));
+  Indent -= 1;
+  EXPECT_EQ(Spaces(4), printToString(Indent));
+
+  // Scaled indent.
+  indent Scaled(4, 2);
+  EXPECT_EQ(Spaces(8), printToString(Scaled));
+  EXPECT_EQ(Spaces(10), printToString(Scaled + 1));
+  EXPECT_EQ(Spaces(6), printToString(Scaled - 1));
+  Scaled += 1;
+  EXPECT_EQ(Spaces(10), printToString(Scaled));
+  Scaled -= 1;
+  EXPECT_EQ(Spaces(8), printToString(Scaled));
+
+  // Operators.
+  Indent = 10;
+  EXPECT_EQ(Spaces(10), printToString(Indent));
+
+  indent Temp = Indent++;
+  EXPECT_EQ(Spaces(11), printToString(Indent));
+  EXPECT_EQ(Spaces(10), printToString(Temp));
+
+  Temp = Indent--;
+  EXPECT_EQ(Spaces(10), printToString(Indent));
+  EXPECT_EQ(Spaces(11), printToString(Temp));
+
+  Temp = ++Indent;
+  EXPECT_EQ(Spaces(11), printToString(Indent));
+  EXPECT_EQ(Spaces(11), printToString(Temp));
+
+  Temp = --Indent;
+  EXPECT_EQ(Spaces(10), printToString(Indent));
+  EXPECT_EQ(Spaces(10), printToString(Temp));
+}
+
 TEST(raw_ostreamTest, FormatHex) {  
   EXPECT_EQ("0x1234",     printToString(format_hex(0x1234, 6), 6));
   EXPECT_EQ("0x001234",   printToString(format_hex(0x1234, 8), 8));
@@ -212,7 +256,6 @@ formatted_bytes_str(ArrayRef<uint8_t> Bytes,
   std::string S;
   raw_string_ostream Str(S);
   Str << format_bytes(Bytes, Offset, NumPerLine, ByteGroupSize);
-  Str.flush();
   return S;
 }
 
@@ -222,7 +265,6 @@ static std::string format_bytes_with_ascii_str(
   std::string S;
   raw_string_ostream Str(S);
   Str << format_bytes_with_ascii(Bytes, Offset, NumPerLine, ByteGroupSize);
-  Str.flush();
   return S;
 }
 
@@ -509,7 +551,6 @@ TEST(raw_ostreamTest, reserve_stream) {
   OS << "hello";
   OS << 1;
   OS << 'w' << 'o' << 'r' << 'l' << 'd';
-  OS.flush();
   EXPECT_EQ("11111111111111111111hello1world", Str);
 }
 
@@ -580,6 +621,11 @@ TEST(raw_ostreamTest, writeToDevNull) {
       Succeeded());
 
   EXPECT_TRUE(DevNullIsUsed);
+}
+
+TEST(raw_ostreamTest, nullStreamZeroBufferSize) {
+  raw_ostream &NullStream = nulls();
+  EXPECT_EQ(NullStream.GetBufferSize(), 0u);
 }
 
 TEST(raw_ostreamTest, writeToStdOut) {

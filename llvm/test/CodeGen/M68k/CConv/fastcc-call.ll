@@ -13,8 +13,8 @@ define i32 @foo1() nounwind uwtable {
 ; CHECK-NEXT:    move.l #5, (%sp)
 ; CHECK-NEXT:    moveq #1, %d0
 ; CHECK-NEXT:    moveq #2, %d1
-; CHECK-NEXT:    move.l #3, %a0
-; CHECK-NEXT:    move.l #4, %a1
+; CHECK-NEXT:    move.w #3, %a0
+; CHECK-NEXT:    move.w #4, %a1
 ; CHECK-NEXT:    jsr (bar1@PLT,%pc)
 ; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    adda.l #4, %sp

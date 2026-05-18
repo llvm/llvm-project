@@ -27,7 +27,7 @@ public:
     for (auto iter = block_store.begin(); iter != end; ++iter, ++i) {
       Element &e = *iter;
       if (REVERSE) {
-        int j = ELEMENT_COUNT - 1 - i;
+        int j = static_cast<int>(ELEMENT_COUNT - 1) - i;
         ASSERT_EQ(e.a, j);
         ASSERT_EQ(e.b, long(j * 2));
         ASSERT_EQ(e.c, unsigned(j * 3));
@@ -183,11 +183,10 @@ TEST_F(LlvmLibcBlockStoreTest, PopulateAndIterateReverse10) {
   populate_and_iterate<4, 10, true>();
 }
 
-TEST_F(LlvmLibcBlockStoreTest, Back) { back_test<false>(); }
-
-// FIXME: Combing this test with the above test makes the AMDGPU backend
-// generate code which hangs. This should be fixed in the clang compiler.
-TEST_F(LlvmLibcBlockStoreTest, BackReverse) { back_test<true>(); }
+TEST_F(LlvmLibcBlockStoreTest, Back) {
+  back_test<false>();
+  back_test<true>();
+}
 
 TEST_F(LlvmLibcBlockStoreTest, Empty) {
   empty_test<false>();

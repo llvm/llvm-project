@@ -47,11 +47,22 @@ struct ReturnOpConversion : public ConvertOpToLLVMPattern<func::ReturnOp> {
   LogicalResult
   matchAndRewrite(func::ReturnOp returnOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(returnOp,
-                                                returnOp->getOperands());
+    SmallVector<Type> resTys;
+    if (failed(typeConverter->convertTypes(returnOp->getResultTypes(), resTys)))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(returnOp, resTys,
+                                                adaptor.getOperands());
     return success();
   }
 };
+
+static std::optional<Type>
+convertSimpleATypeToStruct(test::SimpleAType simpleTy) {
+  MLIRContext *ctx = simpleTy.getContext();
+  SmallVector<Type> memberTys(2, IntegerType::get(ctx, /*width=*/8));
+  return LLVM::LLVMStructType::getLiteral(ctx, memberTys);
+}
 
 struct TestConvertFuncOp
     : public PassWrapper<TestConvertFuncOp, OperationPass<ModuleOp>> {
@@ -74,6 +85,7 @@ struct TestConvertFuncOp
     LowerToLLVMOptions options(ctx);
     // Populate type conversions.
     LLVMTypeConverter typeConverter(ctx, options);
+    typeConverter.addConversion(convertSimpleATypeToStruct);
 
     RewritePatternSet patterns(ctx);
     patterns.add<FuncOpConversion>(typeConverter);

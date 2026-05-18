@@ -10,7 +10,7 @@ include Makefile.rules
 all: a.out.stripped
 
 a.out.stripped:
-	strip -o a.out.stripped a.out
+	$(STRIP) -o a.out.stripped a.out
 
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -fs - a.out.stripped

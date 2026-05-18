@@ -6,15 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/Driver/XRayArgs.h"
-#include "ToolChains/CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -53,6 +50,9 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
     case llvm::Triple::mipsel:
     case llvm::Triple::mips64:
     case llvm::Triple::mips64el:
+    case llvm::Triple::systemz:
+    case llvm::Triple::riscv32:
+    case llvm::Triple::riscv64:
       break;
     default:
       D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -61,6 +61,27 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
   } else {
     D.Diag(diag::err_drv_unsupported_opt_for_target)
         << XRayInstrument->getSpelling() << Triple.str();
+  }
+
+  if (Args.hasFlag(options::OPT_fxray_shared, options::OPT_fno_xray_shared,
+                   false)) {
+    XRayShared = true;
+
+    // Certain targets support DSO instrumentation
+    switch (Triple.getArch()) {
+    case llvm::Triple::aarch64:
+    case llvm::Triple::x86_64:
+      break;
+    default:
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-fxray-shared" << Triple.str();
+    }
+
+    unsigned PICLvl = std::get<1>(tools::ParsePICArgs(TC, Args));
+    if (!PICLvl) {
+      D.Diag(diag::err_opt_not_valid_without_opt) << "-fxray-shared"
+                                                  << "-fPIC";
+    }
   }
 
   // Both XRay and -fpatchable-function-entry use
@@ -84,8 +105,9 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
       for (const auto &P : BundleParts) {
         // TODO: Automate the generation of the string case table.
         auto Valid = llvm::StringSwitch<bool>(P)
-                         .Cases("none", "all", "function", "function-entry",
-                                "function-exit", "custom", true)
+                         .Cases({"none", "all", "function", "function-entry",
+                                 "function-exit", "custom"},
+                                true)
                          .Default(false);
 
         if (!Valid) {
@@ -136,7 +158,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
   // Get the list of modes we want to support.
   auto SpecifiedModes = Args.getAllArgValues(options::OPT_fxray_modes);
   if (SpecifiedModes.empty())
-    llvm::copy(XRaySupportedModes, std::back_inserter(Modes));
+    llvm::append_range(Modes, XRaySupportedModes);
   else
     for (const auto &Arg : SpecifiedModes) {
       // Parse CSV values for -fxray-modes=...
@@ -146,14 +168,14 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
         if (M == "none")
           Modes.clear();
         else if (M == "all")
-          llvm::copy(XRaySupportedModes, std::back_inserter(Modes));
+          llvm::append_range(Modes, XRaySupportedModes);
         else
           Modes.push_back(std::string(M));
     }
 
   // Then we want to sort and unique the modes we've collected.
   llvm::sort(Modes);
-  Modes.erase(std::unique(Modes.begin(), Modes.end()), Modes.end());
+  Modes.erase(llvm::unique(Modes), Modes.end());
 }
 
 void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
@@ -176,6 +198,10 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
                     options::OPT_fno_xray_ignore_loops);
   Args.addOptOutFlag(CmdArgs, options::OPT_fxray_function_index,
                      options::OPT_fno_xray_function_index);
+
+  if (XRayShared)
+    Args.addOptInFlag(CmdArgs, options::OPT_fxray_shared,
+                      options::OPT_fno_xray_shared);
 
   if (const Arg *A =
           Args.getLastArg(options::OPT_fxray_instruction_threshold_EQ)) {

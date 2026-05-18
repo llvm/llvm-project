@@ -36,8 +36,8 @@ void test1() {
 
   // CHECK-1: define {{.*}} void @_ZN9TestClass10MemberFuncEv
   // CHECK-1:   alloca %struct.anon
-  // CHECK-1:   getelementptr inbounds %[[Capture]], ptr %{{[^,]*}}, i32 0, i32 0
-  // CHECK-1:   getelementptr inbounds %[[Capture]], ptr %{{[^,]*}}, i32 0, i32 1
+  // CHECK-1:   getelementptr inbounds nuw %[[Capture]], ptr %{{[^,]*}}, i32 0, i32 0
+  // CHECK-1:   getelementptr inbounds nuw %[[Capture]], ptr %{{[^,]*}}, i32 0, i32 1
   // CHECK-1:   store ptr %f, ptr
   // CHECK-1:   call void @[[HelperName:[\.A-Za-z0-9_]+]](ptr
   // CHECK-1:   call {{.*}}FooD1Ev
@@ -45,12 +45,12 @@ void test1() {
 }
 
 // CHECK-1: define internal {{.*}}void @[[HelperName]]
-// CHECK-1:   getelementptr inbounds %[[Capture]], ptr {{[^,]*}}, i32 0, i32 0
+// CHECK-1:   getelementptr inbounds nuw %[[Capture]], ptr {{[^,]*}}, i32 0, i32 0
 // CHECK-1:   call {{.*}}i32 @__cxa_guard_acquire(
 // CHECK-1:   store double %{{.+}}, ptr [[INNER]],
 // CHECK-1:   call {{.*}}void @__cxa_guard_release(
-// CHECK-1:   getelementptr inbounds %struct.TestClass, ptr {{[^,]*}}, i32 0, i32 0
-// CHECK-1:   getelementptr inbounds %[[Capture]], ptr {{[^,]*}}, i32 0, i32 1
+// CHECK-1:   getelementptr inbounds nuw %struct.TestClass, ptr {{[^,]*}}, i32 0, i32 0
+// CHECK-1:   getelementptr inbounds nuw %[[Capture]], ptr {{[^,]*}}, i32 0, i32 1
 
 void test2(int x) {
   int y = [&]() {
@@ -68,7 +68,7 @@ void test2(int x) {
   // CHECK-2:   call void @[[HelperName:["$_A-Za-z0-9]+]](ptr
   //
   // CHECK-2: define internal {{.*}}void @[[HelperName]]
-  // CHECK-2:   getelementptr inbounds %[[Capture:.*]], ptr
+  // CHECK-2:   getelementptr inbounds nuw %[[Capture:.*]], ptr
   // CHECK-2:   load ptr, ptr
   // CHECK-2:   load i32, ptr
 }

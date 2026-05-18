@@ -55,7 +55,7 @@ define <2 x i32> @select_sdiv_lhs_const_v2i32(i1 %cond) {
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0x594
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %select = select i1 %cond, <2 x i32> <i32 5, i32 undef>, <2 x i32> <i32 6, i32 7>
+  %select = select i1 %cond, <2 x i32> <i32 5, i32 poison>, <2 x i32> <i32 6, i32 7>
   %op = sdiv <2 x i32> <i32 3333, i32 9999>, %select
   ret <2 x i32> %op
 }
@@ -93,7 +93,7 @@ define i32 @select_sdiv_lhs_opaque_const0_i32(i1 %cond) {
 ; IR-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], [[TMP1]]
 ; IR-NEXT:    [[TMP5:%.*]] = uitofp i32 [[TMP4]] to float
 ; IR-NEXT:    [[TMP6:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP5]])
-; IR-NEXT:    [[TMP7:%.*]] = fmul fast float [[TMP6]], 0x41EFFFFFC0000000
+; IR-NEXT:    [[TMP7:%.*]] = fmul fast float [[TMP6]], f0x4F7FFFFE
 ; IR-NEXT:    [[TMP8:%.*]] = fptoui float [[TMP7]] to i32
 ; IR-NEXT:    [[TMP9:%.*]] = sub i32 0, [[TMP4]]
 ; IR-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], [[TMP8]]
@@ -136,11 +136,11 @@ define i32 @select_sdiv_lhs_opaque_const0_i32(i1 %cond) {
 ; GCN-NEXT:    v_mov_b32_e32 v1, s4
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, 5, v1, vcc
 ; GCN-NEXT:    v_sub_u32_e32 v1, vcc, 0, v0
-; GCN-NEXT:    v_max_i32_e32 v1, v0, v1
+; GCN-NEXT:    v_max_i32_e32 v1, v1, v0
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v2, v1
 ; GCN-NEXT:    v_sub_u32_e32 v3, vcc, 0, v1
 ; GCN-NEXT:    s_mov_b32 s4, 0xf4240
-; GCN-NEXT:    v_rcp_iflag_f32_e32 v2, v2
+; GCN-NEXT:    v_rcp_f32_e32 v2, v2
 ; GCN-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
 ; GCN-NEXT:    v_mul_f32_e32 v2, 0x4f7ffffe, v2
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v2, v2
@@ -175,7 +175,7 @@ define i32 @select_sdiv_lhs_opaque_const1_i32(i1 %cond) {
 ; IR-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], [[TMP1]]
 ; IR-NEXT:    [[TMP5:%.*]] = uitofp i32 [[TMP4]] to float
 ; IR-NEXT:    [[TMP6:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP5]])
-; IR-NEXT:    [[TMP7:%.*]] = fmul fast float [[TMP6]], 0x41EFFFFFC0000000
+; IR-NEXT:    [[TMP7:%.*]] = fmul fast float [[TMP6]], f0x4F7FFFFE
 ; IR-NEXT:    [[TMP8:%.*]] = fptoui float [[TMP7]] to i32
 ; IR-NEXT:    [[TMP9:%.*]] = sub i32 0, [[TMP4]]
 ; IR-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], [[TMP8]]
@@ -218,11 +218,11 @@ define i32 @select_sdiv_lhs_opaque_const1_i32(i1 %cond) {
 ; GCN-NEXT:    v_mov_b32_e32 v1, s4
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 5, vcc
 ; GCN-NEXT:    v_sub_u32_e32 v1, vcc, 0, v0
-; GCN-NEXT:    v_max_i32_e32 v1, v0, v1
+; GCN-NEXT:    v_max_i32_e32 v1, v1, v0
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v2, v1
 ; GCN-NEXT:    v_sub_u32_e32 v3, vcc, 0, v1
 ; GCN-NEXT:    s_mov_b32 s4, 0xf4240
-; GCN-NEXT:    v_rcp_iflag_f32_e32 v2, v2
+; GCN-NEXT:    v_rcp_f32_e32 v2, v2
 ; GCN-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
 ; GCN-NEXT:    v_mul_f32_e32 v2, 0x4f7ffffe, v2
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v2, v2
@@ -387,23 +387,25 @@ define i32 @select_mul_rhs_const_i32(i1 %cond) {
 define amdgpu_kernel void @select_add_lhs_const_i16(i1 %cond) {
 ; IR-LABEL: @select_add_lhs_const_i16(
 ; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i16 128, i16 131
-; IR-NEXT:    store i16 [[OP]], ptr addrspace(1) undef, align 2
+; IR-NEXT:    store i16 [[OP]], ptr addrspace(1) poison, align 2
 ; IR-NEXT:    ret void
 ;
 ; GCN-LABEL: select_add_lhs_const_i16:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s0, s[6:7], 0x0
-; GCN-NEXT:    v_mov_b32_e32 v0, 0x83
-; GCN-NEXT:    v_mov_b32_e32 v1, 0x80
+; GCN-NEXT:    s_load_dword s0, s[8:9], 0x0
+; GCN-NEXT:    s_add_i32 s12, s12, s17
+; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s0, 0
-; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    s_movk_i32 s0, 0x80
+; GCN-NEXT:    s_cselect_b32 s0, s0, 0x83
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    flat_store_short v[0:1], v0
 ; GCN-NEXT:    s_endpgm
   %select = select i1 %cond, i16 5, i16 8
   %op = add i16 %select, 123
-  store i16 %op, ptr addrspace(1) undef
+  store i16 %op, ptr addrspace(1) poison
   ret void
 }
 
@@ -484,7 +486,7 @@ define i32 @select_add_bitcast_select(i1 %cond) {
 ; multiple uses.
 define <2 x half> @multi_use_cast_regression(i1 %cond) {
 ; IR-LABEL: @multi_use_cast_regression(
-; IR-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], half 0xH3C00, half 0xH0000
+; IR-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], half 1.000000e+00, half 0.000000e+00
 ; IR-NEXT:    [[FPEXT:%.*]] = fpext half [[SELECT]] to float
 ; IR-NEXT:    [[FSUB:%.*]] = fsub nsz float 1.000000e+00, [[FPEXT]]
 ; IR-NEXT:    [[CALL:%.*]] = call nsz <2 x half> @llvm.amdgcn.cvt.pkrtz(float [[FPEXT]], float [[FSUB]])

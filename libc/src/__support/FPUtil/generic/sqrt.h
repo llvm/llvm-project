@@ -9,17 +9,21 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_H
 
-#include "sqrt_80_bit_long_double.h"
 #include "src/__support/CPP/bit.h" // countl_zero
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/uint128.h"
 
 #include "hdr/fenv_macros.h"
+
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+#include "sqrt_80_bit_long_double.h"
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
@@ -51,7 +55,7 @@ template <>
 LIBC_INLINE void normalize<long double>(int &exponent, uint64_t &mantissa) {
   normalize<double>(exponent, mantissa);
 }
-#elif !defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
 template <>
 LIBC_INLINE void normalize<long double>(int &exponent, UInt128 &mantissa) {
   const uint64_t hi_bits = static_cast<uint64_t>(mantissa >> 64);
@@ -68,15 +72,17 @@ LIBC_INLINE void normalize<long double>(int &exponent, UInt128 &mantissa) {
 // Correctly rounded IEEE 754 SQRT for all rounding modes.
 // Shift-and-add algorithm.
 template <typename OutType, typename InType>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
-                                 cpp::is_floating_point_v<InType> &&
-                                 sizeof(OutType) <= sizeof(InType),
-                             OutType>
+LIBC_INLINE static constexpr cpp::enable_if_t<
+    cpp::is_floating_point_v<OutType> && cpp::is_floating_point_v<InType> &&
+        sizeof(OutType) <= sizeof(InType),
+    OutType>
 sqrt(InType x) {
   if constexpr (internal::SpecialLongDouble<OutType>::VALUE &&
                 internal::SpecialLongDouble<InType>::VALUE) {
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
     // Special 80-bit long double.
     return x86::sqrt(x);
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
   } else {
     // IEEE floating points formats.
     using OutFPBits = FPBits<OutType>;
@@ -96,7 +102,7 @@ sqrt(InType x) {
       // sqrt(-0) = -0
       // sqrt(NaN) = NaN
       // sqrt(-NaN) = -NaN
-      return static_cast<OutType>(x);
+      return cast<OutType>(x);
     } else if (bits.is_neg()) {
       // sqrt(-Inf) = NaN
       // sqrt(-x) = NaN
@@ -138,7 +144,8 @@ sqrt(InType x) {
       for (InStorageType current_bit = ONE >> 1; current_bit;
            current_bit >>= 1) {
         r <<= 1;
-        InStorageType tmp = (y << 1) + current_bit; // 2*y(n - 1) + 2^(-n-1)
+        // 2*y(n - 1) + 2^(-n-1)
+        InStorageType tmp = static_cast<InStorageType>((y << 1) + current_bit);
         if (r >= tmp) {
           r -= tmp;
           y += current_bit;

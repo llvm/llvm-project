@@ -16,6 +16,7 @@
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/Baton.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Event.h"
@@ -100,8 +101,7 @@ public:
                                LazyBool stop_on_error, LazyBool stop_on_crash,
                                LazyBool echo_commands, LazyBool echo_comments,
                                LazyBool print_results, LazyBool print_errors,
-                               LazyBool add_to_history,
-                               LazyBool handle_repeats)
+                               LazyBool add_to_history, LazyBool handle_repeats)
       : m_stop_on_continue(stop_on_continue), m_stop_on_error(stop_on_error),
         m_stop_on_crash(stop_on_crash), m_echo_commands(echo_commands),
         m_echo_comment_commands(echo_comments), m_print_results(print_results),
@@ -246,15 +246,19 @@ public:
   };
 
   enum CommandTypes {
-    eCommandTypesBuiltin = 0x0001, //< native commands such as "frame"
-    eCommandTypesUserDef = 0x0002, //< scripted commands
-    eCommandTypesUserMW  = 0x0004, //< multiword commands (command containers)
-    eCommandTypesAliases = 0x0008, //< aliases such as "po"
-    eCommandTypesHidden  = 0x0010, //< commands prefixed with an underscore
-    eCommandTypesAllThem = 0xFFFF  //< all commands
+    eCommandTypesBuiltin = 0x0001, ///< native commands such as "frame"
+    eCommandTypesUserDef = 0x0002, ///< scripted commands
+    eCommandTypesUserMW = 0x0004,  ///< multiword commands (command containers)
+    eCommandTypesAliases = 0x0008, ///< aliases such as "po"
+    eCommandTypesHidden = 0x0010,  ///< commands prefixed with an underscore
+    eCommandTypesAllThem = 0xFFFF  ///< all commands
   };
 
-  // The CommandAlias and CommandInterpreter both have a hand in 
+  using CommandReturnObjectCallback =
+      std::function<lldb::CommandReturnObjectCallbackResult(
+          CommandReturnObject &)>;
+
+  // The CommandAlias and CommandInterpreter both have a hand in
   // substituting for alias commands.  They work by writing special tokens
   // in the template form of the Alias command, and then detecting them when the
   // command is executed.  These are the special tokens:
@@ -295,6 +299,10 @@ public:
                                       StringList *matches = nullptr,
                                       StringList *descriptions = nullptr) const;
 
+  CommandObject *
+  GetAliasCommandObject(llvm::StringRef cmd, StringList *matches = nullptr,
+                        StringList *descriptions = nullptr) const;
+
   /// Determine whether a root level, built-in command with this name exists.
   bool CommandExists(llvm::StringRef cmd) const;
 
@@ -330,9 +338,8 @@ public:
   ///         dummy "contains everything MWC, so we return null here, but
   ///         in this case error.Success is true.
 
-  CommandObjectMultiword *VerifyUserMultiwordCmdPath(Args &path,
-                                                     bool leaf_is_command,
-                                                     Status &result);
+  CommandObjectMultiword *
+  VerifyUserMultiwordCmdPath(Args &path, bool leaf_is_command, Status &result);
 
   CommandAlias *AddAlias(llvm::StringRef alias_name,
                          lldb::CommandObjectSP &command_obj_sp,
@@ -442,12 +449,14 @@ public:
 
   void GetAliasHelp(const char *alias_name, StreamString &help_string);
 
-  void OutputFormattedHelpText(Stream &strm, llvm::StringRef prefix,
-                               llvm::StringRef help_text);
+  void OutputFormattedHelpText(
+      Stream &strm, llvm::StringRef prefix, llvm::StringRef help_text,
+      std::optional<Stream::HighlightSettings> highlight = std::nullopt);
 
-  void OutputFormattedHelpText(Stream &stream, llvm::StringRef command_word,
-                               llvm::StringRef separator,
-                               llvm::StringRef help_text, size_t max_word_len);
+  void OutputFormattedHelpText(
+      Stream &stream, llvm::StringRef command_word, llvm::StringRef separator,
+      llvm::StringRef help_text, size_t max_word_len,
+      std::optional<Stream::HighlightSettings> highlight = std::nullopt);
 
   // this mimics OutputFormattedHelpText but it does perform a much simpler
   // formatting, basically ensuring line alignment. This is only good if you
@@ -461,6 +470,14 @@ public:
 
   Debugger &GetDebugger() { return m_debugger; }
 
+  /// Get the target selected by the user at the command line. All commands
+  /// should prefer this over any other notion of a "current" target, so that
+  /// the user's explicit `target select` stays authoritative within the
+  /// command layer. Non-command code should use the execution context instead.
+  lldb::TargetSP GetSelectedTarget() {
+    return m_debugger.GetTargetList().GetSelectedTarget();
+  }
+
   ExecutionContext GetExecutionContext() const;
 
   lldb::PlatformSP GetPlatform(bool prefer_target_platform);
@@ -468,6 +485,8 @@ public:
   const char *ProcessEmbeddedScriptCommands(const char *arg);
 
   void UpdatePrompt(llvm::StringRef prompt);
+
+  void UpdateUseColor(bool use_color);
 
   bool Confirm(llvm::StringRef message, bool default_answer);
 
@@ -592,7 +611,7 @@ public:
   void SetEchoCommentCommands(bool enable);
 
   bool GetRepeatPreviousCommand() const;
-  
+
   bool GetRequireCommandOverwrite() const;
 
   const CommandObject::CommandMap &GetUserCommands() const {
@@ -662,6 +681,8 @@ public:
     ++m_command_usages[cmd_obj.GetCommandName()];
   }
 
+  void SetPrintCallback(CommandReturnObjectCallback callback);
+
   llvm::json::Value GetStatistics();
   const StructuredData::Array &GetTranscript() const;
 
@@ -719,6 +740,12 @@ private:
   bool EchoCommandNonInteractive(llvm::StringRef line,
                                  const Flags &io_handler_flags) const;
 
+  /// Return the language specific command object for the current frame.
+  ///
+  /// For example, when stopped on a C++ frame, this returns the command object
+  /// for "language cplusplus" (`CommandObjectMultiwordItaniumABI`).
+  lldb::CommandObjectSP GetFrameLanguageCommand() const;
+
   // A very simple state machine which models the command handling transitions
   enum class CommandHandlingState {
     eIdle,
@@ -771,6 +798,9 @@ private:
   std::vector<FileSpec> m_command_source_dirs;
   std::vector<uint32_t> m_command_source_flags;
   CommandInterpreterRunResult m_result;
+
+  /// An optional callback to handle printing the CommandReturnObject.
+  CommandReturnObjectCallback m_print_callback;
 
   // The exit code the user has requested when calling the 'quit' command.
   // No value means the user hasn't set a custom exit code so far.

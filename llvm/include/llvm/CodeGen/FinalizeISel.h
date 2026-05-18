@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class FinalizeISelPass : public PassInfoMixin<FinalizeISelPass> {
+class FinalizeISelPass : public RequiredPassInfoMixin<FinalizeISelPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &);
 };

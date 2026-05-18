@@ -51,13 +51,9 @@ public:
   virtual ~NativeProcessProtocol() = default;
 
   typedef std::vector<std::unique_ptr<NativeThreadProtocol>> thread_collection;
-  template <typename I>
-  static NativeThreadProtocol &thread_list_adapter(I &iter) {
-    assert(*iter);
-    return **iter;
-  }
-  typedef LockingAdaptedIterable<thread_collection, NativeThreadProtocol &,
-                                 thread_list_adapter, std::recursive_mutex>
+  typedef LockingAdaptedIterable<
+      std::recursive_mutex, thread_collection,
+      llvm::pointee_iterator<thread_collection::const_iterator>>
       ThreadIterable;
 
   virtual Status Resume(const ResumeActionList &resume_actions) = 0;
@@ -161,6 +157,10 @@ public:
                                bool hardware) = 0;
 
   virtual Status RemoveBreakpoint(lldb::addr_t addr, bool hardware = false);
+
+  bool HasSoftwareBreakpoint(lldb::addr_t addr) {
+    return m_software_breakpoints.find(addr) != m_software_breakpoints.end();
+  }
 
   // Hardware Breakpoint functions
   virtual const HardwareBreakpointMap &GetHardwareBreakpointMap() const;
@@ -413,9 +413,16 @@ public:
                                    "Not implemented");
   }
 
+  /// Get the list of structured data plugins supported by this process. They
+  /// must match the `type` field used by the corresponding
+  /// StructuredDataPlugins in the client.
+  ///
+  /// \return
+  ///     A vector of structured data plugin names.
+  virtual std::vector<std::string> GetStructuredDataPlugins() { return {}; };
+
 protected:
   struct SoftwareBreakpoint {
-    uint32_t ref_count;
     llvm::SmallVector<uint8_t, 4> saved_opcodes;
     llvm::ArrayRef<uint8_t> breakpoint_opcodes;
   };

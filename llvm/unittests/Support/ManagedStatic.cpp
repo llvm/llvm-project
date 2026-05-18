@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
+#include "llvm/Support/Allocator.h"
+#include "gtest/gtest.h"
 #ifdef HAVE_PTHREAD_H
 #include <pthread.h>
 #endif
-
-#include "gtest/gtest.h"
 
 using namespace llvm;
 

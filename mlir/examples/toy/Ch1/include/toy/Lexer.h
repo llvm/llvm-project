@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringRef.h"
 
+#include <cstdlib>
 #include <memory>
 #include <string>
 

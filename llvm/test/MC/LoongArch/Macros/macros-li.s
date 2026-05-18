@@ -45,8 +45,7 @@ li.d $a0, 0x7ffff00000800
 
 li.d $a0, 0x8000000000fff
 # CHECK:      ori $a0, $zero, 4095
-# CHECK-NEXT: lu32i.d $a0, -524288
-# CHECK-NEXT: lu52i.d $a0, $a0, 0
+# CHECK-NEXT: bstrins.d $a0, $a0, 51, 51
 
 li.d $a0, 0x8000080000800
 # CHECK:      lu12i.w $a0, -524288

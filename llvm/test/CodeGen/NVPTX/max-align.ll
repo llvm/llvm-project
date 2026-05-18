@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -O0 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -O0 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -O0 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -O0 | %ptxas-verify %}
 
 
 ; CHECK: .visible .func  (.param .align 128 .b8 func_retval0[256]) repro()

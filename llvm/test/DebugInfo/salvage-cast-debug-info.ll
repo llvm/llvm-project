@@ -1,5 +1,4 @@
 ; RUN: opt %s -passes=debugify,early-cse -earlycse-debug-hash -S | FileCheck %s
-; RUN: opt --experimental-debuginfo-iterators=false %s -passes=debugify,early-cse -earlycse-debug-hash -S | FileCheck %s
 define i32 @foo(i64 %nose, i32 %more) {
 ; CHECK-LABEL: @foo(
 ; CHECK: #dbg_value(i64 %nose, [[V1:![0-9]+]], !DIExpression(DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 
 ; CHECK-DAG: r[[REG:[0-9]+]] = memw(r{{[0-9]+<<#[0-9]+}}+##.LJTI{{.*}})
 ; CHECK-DAG: jumpr r[[REG]]

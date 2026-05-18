@@ -18,19 +18,23 @@
 #define _LIBCPP___MDSPAN_LAYOUT_STRIDE_H
 
 #include <__assert>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__fwd/mdspan.h>
 #include <__mdspan/extents.h>
+#include <__memory/addressof.h>
+#include <__type_traits/common_type.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
+#include <__type_traits/is_integral.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_same.h>
 #include <__utility/as_const.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/swap.h>
 #include <array>
-#include <cinttypes>
-#include <cstddef>
 #include <limits>
+#include <span>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -68,9 +72,9 @@ public:
                 "layout_stride::mapping template argument must be a specialization of extents.");
 
   using extents_type = _Extents;
-  using index_type   = typename extents_type::index_type;
-  using size_type    = typename extents_type::size_type;
-  using rank_type    = typename extents_type::rank_type;
+  using index_type   = extents_type::index_type;
+  using size_type    = extents_type::size_type;
+  using rank_type    = extents_type::rank_type;
   using layout_type  = layout_stride;
 
 private:
@@ -83,7 +87,7 @@ private:
 
     index_type __prod = __ext.extent(0);
     for (rank_type __r = 1; __r < __rank_; __r++) {
-      bool __overflowed = __builtin_mul_overflow(__prod, __ext.extent(__r), &__prod);
+      bool __overflowed = __builtin_mul_overflow(__prod, __ext.extent(__r), std::addressof(__prod));
       if (__overflowed)
         return false;
     }
@@ -106,11 +110,12 @@ private:
       }
       if (__ext.extent(__r) == static_cast<index_type>(0))
         return true;
-      index_type __prod     = (__ext.extent(__r) - 1);
-      bool __overflowed_mul = __builtin_mul_overflow(__prod, static_cast<index_type>(__strides[__r]), &__prod);
+      index_type __prod = (__ext.extent(__r) - 1);
+      bool __overflowed_mul =
+          __builtin_mul_overflow(__prod, static_cast<index_type>(__strides[__r]), std::addressof(__prod));
       if (__overflowed_mul)
         return false;
-      bool __overflowed_add = __builtin_add_overflow(__size, __prod, &__size);
+      bool __overflowed_add = __builtin_add_overflow(__size, __prod, std::addressof(__size));
       if (__overflowed_add)
         return false;
     }
@@ -267,11 +272,10 @@ public:
       return [&]<size_t... _Pos>(index_sequence<_Pos...>) {
         if ((__extents_.extent(_Pos) * ... * 1) == 0)
           return static_cast<index_type>(0);
-        else
-          return static_cast<index_type>(
-              static_cast<index_type>(1) +
-              (((__extents_.extent(_Pos) - static_cast<index_type>(1)) * __strides_[_Pos]) + ... +
-               static_cast<index_type>(0)));
+
+        return static_cast<index_type>(
+            static_cast<index_type>(1) + (((__extents_.extent(_Pos) - static_cast<index_type>(1)) * __strides_[_Pos]) +
+                                          ... + static_cast<index_type>(0)));
       }(make_index_sequence<__rank_>());
     }
   }
@@ -292,38 +296,26 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_unique() noexcept { return true; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_exhaustive() noexcept { return false; }
+  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_exhaustive() noexcept {
+    if constexpr (__rank_ == 0)
+      return true;
+    for (size_t __r = 0; __r < __rank_; ++__r)
+      if (extents_type::static_extent(__r) == 0)
+        return true;
+    return false;
+  }
   _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_strided() noexcept { return true; }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr bool is_unique() noexcept { return true; }
-  // The answer of this function is fairly complex in the case where one or more
-  // extents are zero.
-  // Technically it is meaningless to query is_exhaustive() in that case, but unfortunately
-  // the way the standard defines this function, we can't give a simple true or false then.
   _LIBCPP_HIDE_FROM_ABI constexpr bool is_exhaustive() const noexcept {
-    if constexpr (__rank_ == 0)
+    if constexpr (is_always_exhaustive())
       return true;
-    else {
-      index_type __span_size = required_span_size();
-      if (__span_size == static_cast<index_type>(0)) {
-        if constexpr (__rank_ == 1)
-          return __strides_[0] == 1;
-        else {
-          rank_type __r_largest = 0;
-          for (rank_type __r = 1; __r < __rank_; __r++)
-            if (__strides_[__r] > __strides_[__r_largest])
-              __r_largest = __r;
-          for (rank_type __r = 0; __r < __rank_; __r++)
-            if (__extents_.extent(__r) == 0 && __r != __r_largest)
-              return false;
-          return true;
-        }
-      } else {
-        return required_span_size() == [&]<size_t... _Pos>(index_sequence<_Pos...>) {
-          return (__extents_.extent(_Pos) * ... * static_cast<index_type>(1));
-        }(make_index_sequence<__rank_>());
-      }
-    }
+    index_type __span_size = required_span_size();
+    if (__span_size == static_cast<index_type>(0))
+      return true;
+    return __span_size == [&]<size_t... _Pos>(index_sequence<_Pos...>) {
+      return (__extents_.extent(_Pos) * ... * static_cast<index_type>(1));
+    }(make_index_sequence<__rank_>());
   }
   _LIBCPP_HIDE_FROM_ABI static constexpr bool is_strided() noexcept { return true; }
 

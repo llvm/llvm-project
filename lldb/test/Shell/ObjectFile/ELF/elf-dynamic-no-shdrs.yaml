@@ -1,0 +1,93 @@
+## This test verifies that loading an ELF file that has no section headers can
+## find the contents on the .dynamic section and the strings associated with
+## the .dynamic seciton.
+## - Loading the .dynamic section from the PT_DYNAMIC
+## This test will make a simple executable that links against libc.so and we
+## verify that we can find the DT_NEEDED entry with the shared library found
+## in the .dynamic dump from "image dump objfile"
+
+# RUN: yaml2obj %s -o %t
+
+# RUN: %lldb -b \
+# RUN:   -o "target create -d '%t'" \
+# RUN:   -o "image dump objfile" \
+# RUN:   | FileCheck %s --dump-input=always
+# CHECK: (lldb) image dump objfile
+# CHECK: Dumping headers for 1 module(s).
+# CHECK: ObjectFileELF, file =
+# CHECK: ELF Header
+# Make sure there are no section headers
+# CHECK: e_shnum = 0x00000000
+
+# Make sure we find the program headers and see a PT_DYNAMIC entry.
+# CHECK: Program Headers
+# CHECK: IDX  p_type          p_offset p_vaddr  p_paddr  p_filesz p_memsz  p_flags                   p_align
+# CHECK: ==== --------------- -------- -------- -------- -------- -------- ------------------------- --------
+# CHECK: [ 0] PT_LOAD         000000b0 00000000 00000000 00000170 00000170 00000000 (              ) 00000001
+# CHECK: [ 1] PT_DYNAMIC      000001b0 00000100 00000100 00000070 00000070 00000000 (              ) 00000008
+
+# CHECK: Dependent Modules:
+# CHECK:    ccc
+# CHECK:    aaa
+# CHECK:    bbb
+
+# Make sure we see some sections created from the program headers
+# MAIN: SectID
+# MAIN: PT_LOAD[0]
+
+# CHECK: .dynamic:
+# CHECK: IDX  d_tag            d_val/d_ptr
+# CHECK: ==== ---------------- ------------------
+# CHECK: [ 0] STRTAB           0x0000000000000000
+# CHECK: [ 1] NEEDED           0x0000000000000009 "ccc"
+# CHECK: [ 2] NEEDED           0x0000000000000001 "aaa"
+# CHECK: [ 3] NEEDED           0x0000000000000005 "bbb"
+# CHECK: [ 4] STRSZ            0x0000000000000100
+# CHECK: [ 5] DEBUG            0x00000000deadbeef
+# CHECK: [ 6] NULL             0x0000000000000000
+
+# Make sure the ObjectFileELF::GetImageInfoAddress() works.
+# CHECK: image_info_address = 0x0000000000000158
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Type:      SectionHeaderTable
+    NoHeaders: true
+  - Name:  .dynstr
+    Type:  SHT_STRTAB
+    Flags: [ SHF_ALLOC ]
+    Content: '00616161006262620063636300' ## 0,a,a,a,0,b,b,b,0,c,c,c,0
+    Size:    0x100
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x100
+    Entries:
+      - Tag:   DT_STRTAB
+        Value: 0x0000000000000000
+      - Tag:   DT_NEEDED
+        Value: 9
+      - Tag:   DT_NEEDED
+        Value: 1
+      - Tag:   DT_NEEDED
+        Value: 5
+      - Tag:   DT_STRSZ
+        Value: 0x100
+      - Tag:   DT_DEBUG
+        Value: 0xdeadbeef
+      - Tag:   DT_NULL
+        Value: 0x0
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x0
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:            PT_DYNAMIC
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x100
+    Align:           0x8

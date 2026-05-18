@@ -22,10 +22,9 @@ entry:
 define <16 x i8> @test2(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld1r { v0.8b }, [x0]
 ; CHECK-NEXT:    ld1r { v1.8b }, [x1]
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    dup v0.8b, w8
-; CHECK-NEXT:    mov v1.b[7], w8
+; CHECK-NEXT:    ext v1.8b, v1.8b, v0.8b, #1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -78,9 +77,9 @@ entry:
 define <16 x i8> @test5(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test5:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr b0, [x0]
 ; CHECK-NEXT:    adrp x8, .LCPI4_0
 ; CHECK-NEXT:    ld1r { v1.16b }, [x1]
+; CHECK-NEXT:    ldr b0, [x0]
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI4_0]
 ; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-NEXT:    ret
@@ -188,11 +187,11 @@ entry:
 define <8 x i8> @test11(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test11:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld1r { v1.8b }, [x0]
-; CHECK-NEXT:    ld1r { v2.8b }, [x1]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-NEXT:    mov v0.h[3], v1.h[0]
+; CHECK-NEXT:    ld1r { v0.8b }, [x0]
+; CHECK-NEXT:    ld1r { v1.8b }, [x1]
+; CHECK-NEXT:    fmov d2, d0
+; CHECK-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-NEXT:    mov v0.h[3], v2.h[0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:

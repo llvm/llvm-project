@@ -3,11 +3,12 @@
 # work with DLLs on Windows (where a shared library can't have undefined
 # references), so just skip this testcase on Windows.
 if (NOT WIN32 AND NOT CYGWIN)
-  set(LLVM_LINK_COMPONENTS Support Passes Core AsmParser)
+  set(LLVM_LINK_COMPONENTS Support Passes Plugins Core AsmParser)
   add_llvm_unittest(PluginsTests
     PluginsTest.cpp
+
+    EXPORT_SYMBOLS
     )
-  export_executable_symbols_for_plugins(PluginsTests)
   target_link_libraries(PluginsTests PRIVATE LLVMTestingSupport)
 
   unset(LLVM_LINK_COMPONENTS)

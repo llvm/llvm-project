@@ -35,13 +35,17 @@ bool lowerLoongArchMachineOperandToMCOperand(const MachineOperand &MO,
 
 FunctionPass *createLoongArchDeadRegisterDefinitionsPass();
 FunctionPass *createLoongArchExpandAtomicPseudoPass();
-FunctionPass *createLoongArchISelDag(LoongArchTargetMachine &TM);
+FunctionPass *createLoongArchISelDag(LoongArchTargetMachine &TM,
+                                     CodeGenOptLevel OptLevel);
+FunctionPass *createLoongArchMergeBaseOffsetOptPass();
 FunctionPass *createLoongArchOptWInstrsPass();
 FunctionPass *createLoongArchPreRAExpandPseudoPass();
 FunctionPass *createLoongArchExpandPseudoPass();
+void initializeLoongArchAsmPrinterPass(PassRegistry &);
 void initializeLoongArchDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeLoongArchDeadRegisterDefinitionsPass(PassRegistry &);
 void initializeLoongArchExpandAtomicPseudoPass(PassRegistry &);
+void initializeLoongArchMergeBaseOffsetOptPass(PassRegistry &);
 void initializeLoongArchOptWInstrsPass(PassRegistry &);
 void initializeLoongArchPreRAExpandPseudoPass(PassRegistry &);
 void initializeLoongArchExpandPseudoPass(PassRegistry &);

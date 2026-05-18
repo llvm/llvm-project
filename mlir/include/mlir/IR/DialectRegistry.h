@@ -14,11 +14,14 @@
 #define MLIR_IR_DIALECTREGISTRY_H
 
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/LogicalResult.h"
 
 #include <map>
+#include <string>
 #include <tuple>
 
 namespace mlir {
@@ -45,7 +48,7 @@ public:
 
   /// Return the dialects that our required by this extension to be loaded
   /// before applying. If empty then the extension is invoked for every loaded
-  /// dialect indepently.
+  /// dialect independently.
   ArrayRef<StringRef> getRequiredDialects() const { return dialectNames; }
 
   /// Apply this extension to the given context and the required dialects.
@@ -60,7 +63,7 @@ protected:
   /// If the list is empty, the extension is invoked for every loaded dialect
   /// independently.
   DialectExtensionBase(ArrayRef<StringRef> dialectNames)
-      : dialectNames(dialectNames.begin(), dialectNames.end()) {}
+      : dialectNames(dialectNames) {}
 
 private:
   /// The names of the dialects affected by this extension.
@@ -136,12 +139,25 @@ bool hasPromisedInterface(Dialect &dialect) {
 /// "available" from the dialects loaded in the Context. The parser in
 /// particular will lazily load dialects in the Context as operations are
 /// encountered.
+///
+/// In addition to allocator-backed registrations, the registry can also carry
+/// a set of dialect *names* that some caller has asked to be preloaded into
+/// the context (see `addDialectToPreload(StringRef)`). The registry itself
+/// does not load those dialects — it merely records the request; the
+/// allocator is expected to live in the MLIRContext's own registry, and
+/// actually loading them is the caller's responsibility via
+/// `preloadSelectDialects(MLIRContext *)`.
 class DialectRegistry {
   using MapTy =
-      std::map<std::string, std::pair<TypeID, DialectAllocatorFunction>>;
+      std::map<std::string, std::pair<TypeID, DialectAllocatorFunction>,
+               std::less<>>;
 
 public:
   explicit DialectRegistry();
+  DialectRegistry(const DialectRegistry &) = delete;
+  DialectRegistry &operator=(const DialectRegistry &other) = delete;
+  DialectRegistry(DialectRegistry &&) = default;
+  DialectRegistry &operator=(DialectRegistry &&other) = default;
 
   template <typename ConcreteDialect>
   void insert() {
@@ -167,6 +183,13 @@ public:
   void insert(TypeID typeID, StringRef name,
               const DialectAllocatorFunction &ctor);
 
+  /// Request that the dialect with the given name be preloaded into the
+  /// MLIRContext, without providing an allocator. Useful when a caller knows a
+  /// dialect is required but expects its allocator to be available in the
+  /// MLIRContext's own registry at load time (e.g. a pass learning dialect
+  /// names from string-valued options).
+  void addDialectToPreload(StringRef name);
+
   /// Add a new dynamic dialect constructor in the registry. The constructor
   /// provides as argument the created dynamic dialect, and is expected to
   /// register the dialect types, attributes, and ops, using the
@@ -185,17 +208,40 @@ public:
       destination.insert(nameAndRegistrationIt.second.first,
                          nameAndRegistrationIt.first,
                          nameAndRegistrationIt.second.second);
+    for (const std::string &name : dialectsToPreload)
+      destination.addDialectToPreload(StringRef(name));
     // Merge the extensions.
     for (const auto &extension : extensions)
-      destination.extensions.push_back(extension->clone());
+      destination.extensions.try_emplace(extension.first,
+                                         extension.second->clone());
   }
 
-  /// Return the names of dialects known to this registry.
-  auto getDialectNames() const {
-    return llvm::map_range(
-        registry,
-        [](const MapTy::value_type &item) -> StringRef { return item.first; });
+  /// Return the names of dialects registered in this registry with an
+  /// allocator function. Does not include preload-only entries added via
+  /// `addDialectToPreload(StringRef)` — use `getDialectsToPreload()` for those.
+  SmallVector<StringRef> getRegisteredDialectNames() const {
+    SmallVector<StringRef> names;
+    names.reserve(registry.size());
+    for (const auto &item : registry)
+      names.push_back(item.first);
+    return names;
   }
+
+  /// Return the names of dialects that should be preloaded into the context
+  /// but whose allocator is expected to be resolved from the context's own
+  /// registry (added via `addDialectToPreload(StringRef)`).
+  ArrayRef<std::string> getDialectsToPreload() const {
+    return dialectsToPreload;
+  }
+
+  /// Load into `ctx` every dialect previously added via
+  /// `addDialectToPreload(StringRef)`. The allocator is resolved from the
+  /// context's own registry. On failure, if `emitError` is provided, it is
+  /// invoked to produce a diagnostic naming the offending dialect; otherwise
+  /// the failure is silent.
+  LogicalResult preloadSelectDialects(
+      MLIRContext *ctx,
+      function_ref<InFlightDiagnostic()> emitError = {}) const;
 
   /// Apply any held extensions that require the given dialect. Users are not
   /// expected to call this directly.
@@ -206,39 +252,37 @@ public:
   void applyExtensions(MLIRContext *ctx) const;
 
   /// Add the given extension to the registry.
-  void addExtension(std::unique_ptr<DialectExtensionBase> extension) {
-    extensions.push_back(std::move(extension));
+  bool addExtension(TypeID extensionID,
+                    std::unique_ptr<DialectExtensionBase> extension) {
+    return extensions.try_emplace(extensionID, std::move(extension)).second;
   }
 
   /// Add the given extensions to the registry.
   template <typename... ExtensionsT>
   void addExtensions() {
-    (addExtension(std::make_unique<ExtensionsT>()), ...);
+    (addExtension(TypeID::get<ExtensionsT>(), std::make_unique<ExtensionsT>()),
+     ...);
   }
 
   /// Add an extension function that requires the given dialects.
   /// Note: This bare functor overload is provided in addition to the
   /// std::function variant to enable dialect type deduction, e.g.:
-  ///  registry.addExtension(+[](MLIRContext *ctx, MyDialect *dialect) { ... })
+  ///  registry.addExtension(+[](MLIRContext *ctx, MyDialect *dialect) {
+  ///  ... })
   ///
   /// is equivalent to:
   ///  registry.addExtension<MyDialect>(
   ///     [](MLIRContext *ctx, MyDialect *dialect){ ... }
   ///  )
   template <typename... DialectsT>
-  void addExtension(void (*extensionFn)(MLIRContext *, DialectsT *...)) {
-    addExtension<DialectsT...>(
-        std::function<void(MLIRContext *, DialectsT * ...)>(extensionFn));
-  }
-  template <typename... DialectsT>
-  void
-  addExtension(std::function<void(MLIRContext *, DialectsT *...)> extensionFn) {
-    using ExtensionFnT = std::function<void(MLIRContext *, DialectsT * ...)>;
+  bool addExtension(void (*extensionFn)(MLIRContext *, DialectsT *...)) {
+    using ExtensionFnT = void (*)(MLIRContext *, DialectsT *...);
 
     struct Extension : public DialectExtension<Extension, DialectsT...> {
       Extension(const Extension &) = default;
       Extension(ExtensionFnT extensionFn)
-          : extensionFn(std::move(extensionFn)) {}
+          : DialectExtension<Extension, DialectsT...>(),
+            extensionFn(extensionFn) {}
       ~Extension() override = default;
 
       void apply(MLIRContext *context, DialectsT *...dialects) const final {
@@ -246,7 +290,9 @@ public:
       }
       ExtensionFnT extensionFn;
     };
-    addExtension(std::make_unique<Extension>(std::move(extensionFn)));
+    return addExtension(TypeID::getFromOpaquePointer(
+                            reinterpret_cast<const void *>(extensionFn)),
+                        std::make_unique<Extension>(extensionFn));
   }
 
   /// Returns true if the current registry is a subset of 'rhs', i.e. if 'rhs'
@@ -255,7 +301,12 @@ public:
 
 private:
   MapTy registry;
-  std::vector<std::unique_ptr<DialectExtensionBase>> extensions;
+  /// Names of dialects that should be preloaded into the MLIRContext but for
+  /// which no allocator has been registered here. The allocator is expected
+  /// to be resolved from the MLIRContext's own registry when the dialect is
+  /// loaded (e.g. via MLIRContext::getOrLoadDialect).
+  SmallVector<std::string> dialectsToPreload;
+  llvm::MapVector<TypeID, std::unique_ptr<DialectExtensionBase>> extensions;
 };
 
 } // namespace mlir

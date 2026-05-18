@@ -1,0 +1,47 @@
+// Check if BOLT can process ifunc symbols from .plt section
+// RUN: %clang %cflags -nostdlib -no-pie %p/../Inputs/ifunc.c -fuse-ld=lld \
+// RUN:    -o %t.exe -Wl,-q
+// RUN: llvm-bolt %t.exe -o %t.bolt.exe \
+// RUN:   --print-disasm --print-only=_start | \
+// RUN:   FileCheck --check-prefix=CHECK %s
+// RUN: llvm-readelf -aW %t.bolt.exe | \
+// RUN:   FileCheck --check-prefix=REL_CHECK %s
+
+// Check if BOLT can process ifunc symbols from .plt section in non-pie static
+// executable case.
+// RUN: %clang %cflags -nostdlib %p/../Inputs/ifunc.c -fuse-ld=lld -no-pie \
+// RUN:   -o %t.nopie.exe -Wl,-q
+// RUN: llvm-readelf -l %t.nopie.exe | \
+// RUN:   FileCheck --check-prefix=NON_DYN_CHECK %s
+// RUN: llvm-bolt %t.nopie.exe -o %t.nopie.bolt.exe  \
+// RUN:   --print-disasm --print-only=_start | \
+// RUN:   FileCheck --check-prefix=CHECK %s
+// RUN: llvm-readelf -aW %t.nopie.bolt.exe | \
+// RUN:   FileCheck --check-prefix=REL_CHECK %s
+
+// Check if BOLT can process ifunc symbols from .plt section in pie executable
+// case.
+// RUN: %clang %cflags -nostdlib %p/../Inputs/ifunc.c -fuse-ld=lld -fPIC -pie \
+// RUN:   -o %t.pie.exe -Wl,-q
+// RUN: llvm-bolt %t.pie.exe -o %t.pie.bolt.exe  \
+// RUN:   --print-disasm --print-only=_start | \
+// RUN:   FileCheck --check-prefix=CHECK %s
+// RUN: llvm-readelf -aW %t.pie.bolt.exe | \
+// RUN:   FileCheck --check-prefix=REL_CHECK %s
+
+// Check that IPLT trampoline located in .plt section are normally handled by
+// BOLT. The gnu-ld linker doesn't use separate .iplt section.
+// RUN: %clang %cflags -nostdlib %p/../Inputs/ifunc.c -fuse-ld=lld -fPIC -pie \
+// RUN:   -T %p/../Inputs/iplt.ld -o %t.iplt_pie.exe -Wl,-q
+// RUN: llvm-bolt %t.iplt_pie.exe -o %t.iplt_pie.bolt.exe  \
+// RUN:   --print-disasm --print-only=_start  | \
+// RUN:   FileCheck --check-prefix=CHECK %s
+// RUN: llvm-readelf -aW %t.iplt_pie.bolt.exe | \
+// RUN:   FileCheck --check-prefix=REL_CHECK %s
+
+// NON_DYN_CHECK-NOT: DYNAMIC
+
+// CHECK: callq "resolver_foo/1@PLT"
+
+// REL_CHECK: R_X86_64_IRELATIVE [[#%x,REL_SYMB_ADDR:]]
+// REL_CHECK: [[#REL_SYMB_ADDR]] {{.*}} FUNC {{.*}} resolver_foo

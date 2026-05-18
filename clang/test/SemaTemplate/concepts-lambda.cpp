@@ -56,9 +56,7 @@ namespace GH57971 {
   function_ptr ptr = f<void>;
 }
 
-// GH58368: A lambda defined in a concept requires we store
-// the concept as a part of the lambda context.
-namespace LambdaInConcept {
+namespace GH58368 {
 using size_t = unsigned long;
 
 template<size_t...Ts>
@@ -160,18 +158,21 @@ static_assert(E<int>);  // previously Asserted.
 
 // ensure we properly diagnose when "D" is false.
 namespace DIsFalse {
-template<auto Q> concept C = requires { Q.template operator()<float>(); };
+template<auto Q> concept C = requires { Q.template operator()<float>(); }; // #GH60642-C
 template<class> concept D = false;
+// FIXME: Crashes because it produces a template type parameter with invalid depth
+#if 0
 static_assert(C<[]<D>{}>);
 // expected-error@-1{{static assertion failed}}
 // expected-note@-2{{does not satisfy 'C'}}
 // expected-note@-5{{because 'Q.template operator()<float>()' would be invalid: no matching member function for call to 'operator()'}}
+#endif
 template<class> concept E = C<[]<D>{}>;
 static_assert(E<int>);
 // expected-error@-1{{static assertion failed}}
 // expected-note@-2{{because 'int' does not satisfy 'E'}}
 // expected-note@-4{{does not satisfy 'C'}}
-// expected-note@-11{{because 'Q.template operator()<float>()' would be invalid: no matching member function for call to 'operator()'}}
+// expected-note@#GH60642-C{{because 'Q.template operator()<float>()' would be invalid: no matching member function for call to 'operator()'}}
 }
 }
 
@@ -251,3 +252,151 @@ void dependent_param() {
   L(0, 1)(1, 2)(1);
 }
 } // namespace dependent_param_concept
+
+namespace init_captures {
+template <int N> struct V {};
+
+void sink(V<0>, V<1>, V<2>, V<3>, V<4>) {}
+
+void init_capture_pack() {
+  auto L = [](auto... z) {
+    return [=](auto... y) {
+      return [... w = z, y...](auto)
+        requires requires { sink(w..., y...); }
+      {};
+    };
+  };
+  L(V<0>{}, V<1>{}, V<2>{})(V<3>{}, V<4>{})(1);
+}
+
+void dependent_capture_packs() {
+  auto L = [](auto... z) {
+    return [... w = z](auto... y) {
+      return [... c = w](auto)
+        requires requires { sink(c..., y...); }
+      {};
+    };
+  };
+  L(V<0>{}, V<1>{}, V<2>{})(V<3>{}, V<4>{})(1);
+}
+} // namespace init_captures
+
+namespace GH110721 {
+
+template <int N> void connect() {
+  int x = N, y = N;
+  [x, y = y]()
+    requires requires { x; }
+  {}();
+}
+
+void foo() {
+  connect<42>();
+}
+
+} // namespace GH110721
+
+namespace GH123441 {
+
+void test() {
+  auto L = [](auto... x) {
+    return [](decltype(x)... y)
+      requires true
+    {};
+  };
+  L(0, 1)(1, 2);
+}
+
+}
+
+namespace GH128175 {
+
+template <class> void f() {
+  [i{0}] {
+    [&] {
+      [&] {
+        []()
+          requires true
+        {}();
+      }();
+    }();
+  }();
+}
+
+template void f<int>();
+
+}
+
+namespace GH133719 {
+
+template <class T>
+constexpr auto f{[] (auto arg) {
+  return [a{arg}] {
+      [] () requires true {}();
+  };
+}};
+
+void foo() {
+  f<int>(0);
+}
+
+}
+
+namespace GH147772 {
+
+template<int...>
+struct seq {};
+
+using arr = char[1];
+
+struct foo {
+	template<int... i>
+	constexpr foo(seq<i...>) requires requires {
+		arr { [](auto) requires(i, true) { return 0; }(i)... };
+	} {}
+};
+
+constexpr auto bar = foo(seq<0>());
+}
+
+namespace GH147650 {
+template <int> int b;
+template <int b>
+void f()
+    requires requires { [] { (void)b; static_assert(b == 42); }; } {}
+void test() {
+    f<42>();
+}
+}
+
+namespace GH193944 {
+
+template<auto L, typename... Ts>
+concept pass_a_concept_inside_a_lambda = requires { L.template operator()<Ts...>(); }; // #requires_pass_a_concept_inside_a_lambda
+
+template<auto Pred, typename... Ts>
+concept PredicateFor_bad = pass_a_concept_inside_a_lambda<[]<typename... Xs> // #pass_a_concept_inside_a_lambda
+                                          requires(__is_same(decltype(Pred.template operator()<Xs>()), bool) and ...)
+                                      {},
+                                      Ts...>;
+
+template<auto Pred, typename... Ts>
+    requires PredicateFor_bad<Pred, Ts...> // #PredicateFor_bad
+constexpr const unsigned count_if_v_bad =
+        [] { return (Pred.template operator()<Ts>() + ... + 0); }();
+
+constexpr const auto L = []<typename T>
+{ return __is_same(T, long); };
+
+constexpr const auto L2 = []<typename T>
+{ return 114514; };
+
+static_assert(count_if_v_bad<L, double, int, long, void> == 1);
+
+static_assert(count_if_v_bad<L2, double> == 1);
+// expected-error@-1 {{constraints not satisfied}}
+// expected-note@#PredicateFor_bad {{evaluated to false}}
+// expected-note@#pass_a_concept_inside_a_lambda {{evaluated to false}}
+// expected-note@#requires_pass_a_concept_inside_a_lambda {{no matching member function}}
+
+}

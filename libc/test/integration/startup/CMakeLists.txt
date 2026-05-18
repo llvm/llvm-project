@@ -32,7 +32,7 @@ function(add_startup_test target_name)
     PRIVATE
       ${LIBC_SOURCE_DIR}
       ${LIBC_BUILD_DIR}
-      ${LIBC_BUILD_DIR}/include
+      ${LIBC_INCLUDE_DIR}
   )
 
   if(ADD_STARTUP_TEST_DEPENDS)

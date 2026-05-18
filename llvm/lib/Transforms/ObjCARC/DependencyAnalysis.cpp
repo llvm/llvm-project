@@ -67,7 +67,15 @@ bool llvm::objcarc::CanDecrementRefCount(const Instruction *Inst,
                                          const Value *Ptr,
                                          ProvenanceAnalysis &PA,
                                          ARCInstKind Class) {
-  // First perform a quick check if Class can not touch ref counts.
+  // Atomic stores, RMW, and CmpXchg may make a pointer visible to another
+  // thread, which could release it. Treat such instructions as potentially
+  // decrementing refcounts.
+  if (const auto *SI = dyn_cast<StoreInst>(Inst); SI && SI->isAtomic())
+    return true;
+  if (isa<AtomicRMWInst>(Inst) || isa<AtomicCmpXchgInst>(Inst))
+    return true;
+
+  // Perform a quick check if Class can not touch ref counts.
   if (!CanDecrementRefCount(Class))
     return false;
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 @v0 = global <16 x i32> zeroinitializer, align 64
 @v1 = global <16 x i32> zeroinitializer, align 64

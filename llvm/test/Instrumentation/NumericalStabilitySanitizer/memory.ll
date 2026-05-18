@@ -5,35 +5,64 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; Tests with memory manipulation (memcpy, llvm.memcpy, ...).
 
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(ptr, ptr, i64, i1)
 
-define void @call_memcpy_intrinsic(i8* nonnull align 8 dereferenceable(16) %a, i8* nonnull align 8 dereferenceable(16) %b) sanitize_numerical_stability {
-; CHECK-LABEL: @call_memcpy_intrinsic(
+define void @call_memcpy_intrinsics(ptr nonnull align 8 dereferenceable(16) %a, ptr nonnull align 8 dereferenceable(16) %b) sanitize_numerical_stability {
+; CHECK-LABEL: @call_memcpy_intrinsics(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @__nsan_copy_values(ptr [[A:%.*]], ptr [[B:%.*]], i64 16)
+; CHECK-NEXT:    call void @__nsan_copy_4(ptr [[A:%.*]], ptr [[B:%.*]])
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(16) [[A]], ptr nonnull align 8 dereferenceable(16) [[B]], i64 4, i1 false)
+; CHECK-NEXT:    call void @__nsan_copy_8(ptr [[A:%.*]], ptr [[B:%.*]])
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(16) [[A]], ptr nonnull align 8 dereferenceable(16) [[B]], i64 8, i1 false)
+; CHECK-NEXT:    call void @__nsan_copy_16(ptr [[A:%.*]], ptr [[B:%.*]])
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(16) [[A]], ptr nonnull align 8 dereferenceable(16) [[B]], i64 16, i1 false)
+; CHECK-NEXT:    call void @__nsan_copy_values(ptr [[A:%.*]], ptr [[B:%.*]], i64 15)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(16) [[A]], ptr nonnull align 8 dereferenceable(16) [[B]], i64 15, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(ptr nonnull align 8 dereferenceable(16) %a, ptr nonnull align 8 dereferenceable(16) %b, i64 4, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(ptr nonnull align 8 dereferenceable(16) %a, ptr nonnull align 8 dereferenceable(16) %b, i64 8, i1 false)
   tail call void @llvm.memcpy.p0i8.p0i8.i64(ptr nonnull align 8 dereferenceable(16) %a, ptr nonnull align 8 dereferenceable(16) %b, i64 16, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(ptr nonnull align 8 dereferenceable(16) %a, ptr nonnull align 8 dereferenceable(16) %b, i64 15, i1 false)
   ret void
 }
 
-declare dso_local i8* @memcpy(i8*, i8*, i64) local_unnamed_addr
+declare dso_local ptr @memcpy(ptr, ptr, i64) local_unnamed_addr
 
-define void @call_memcpy(i8* nonnull align 8 dereferenceable(16) %a, i8* nonnull align 8 dereferenceable(16) %b) sanitize_numerical_stability {
+define void @call_memcpy(ptr nonnull align 8 dereferenceable(16) %a, ptr nonnull align 8 dereferenceable(16) %b) sanitize_numerical_stability {
 ; CHECK-LABEL: @call_memcpy(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr @memcpy(ptr nonnull align 8 dereferenceable(16) [[A:%.*]], ptr nonnull align 8 dereferenceable(16) [[B:%.*]], i64 16) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  tail call i8* @memcpy(ptr nonnull align 8 dereferenceable(16) %a, ptr nonnull align 8 dereferenceable(16) %b, i64 16)
+  tail call ptr @memcpy(ptr nonnull align 8 dereferenceable(16) %a, ptr nonnull align 8 dereferenceable(16) %b, i64 16)
   ret void
 }
 
+define void @call_memset_intrinsics(ptr nonnull align 8 dereferenceable(16) %a) sanitize_numerical_stability {
+; CHECK-LABEL: @call_memset_intrinsics(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @__nsan_set_value_unknown_4(ptr [[A:%.*]])
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(16) [[A]], i8 0, i64 4, i1 false)
+; CHECK-NEXT:    call void @__nsan_set_value_unknown_8(ptr [[A:%.*]])
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(16) [[A]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    call void @__nsan_set_value_unknown_16(ptr [[A:%.*]])
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(16) [[A]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    call void @__nsan_set_value_unknown(ptr [[A:%.*]], i64 15)
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(16) [[A]], i8 0, i64 15, i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(16) %a, i8 0, i64 4, i1 false)
+  tail call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(16) %a, i8 0, i64 8, i1 false)
+  tail call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(16) %a, i8 0, i64 16, i1 false)
+  tail call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(16) %a, i8 0, i64 15, i1 false)
+  ret void
+}
 
-define void @transfer_float(float* %dst, float* %src) sanitize_numerical_stability {
+define void @transfer_float(ptr %dst, ptr %src) sanitize_numerical_stability {
 ; CHECK-LABEL: @transfer_float(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[T:%.*]] = load float, ptr [[SRC:%.*]], align 4
@@ -169,7 +198,7 @@ define void @swap_untyped2(i64* nonnull align 8 %p, i64* nonnull align 8 %q) san
   ret void
 }
 
-define void @swap_ft1(float* nonnull align 8 %p, float* nonnull align 8 %q) sanitize_numerical_stability {
+define void @swap_ft1(ptr nonnull align 8 %p, ptr nonnull align 8 %q) sanitize_numerical_stability {
 ; CHECK-LABEL: @swap_ft1(
 ; CHECK-NEXT:    [[QV:%.*]] = load float, ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @__nsan_get_shadow_ptr_for_float_load(ptr [[Q]], i64 1)
@@ -221,7 +250,7 @@ define void @swap_ft1(float* nonnull align 8 %p, float* nonnull align 8 %q) sani
 }
 
 ; Same as swap_ft1, but the load/stores are in the opposite order.
-define void @swap_ft2(float* nonnull align 8 %p, float* nonnull align 8 %q) sanitize_numerical_stability {
+define void @swap_ft2(ptr nonnull align 8 %p, ptr nonnull align 8 %q) sanitize_numerical_stability {
 ; CHECK-LABEL: @swap_ft2(
 ; CHECK-NEXT:    [[PV:%.*]] = load float, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @__nsan_get_shadow_ptr_for_float_load(ptr [[P]], i64 1)

@@ -31,7 +31,11 @@
     !__has_builtin(__underlying_type) || \
     !__has_builtin(__is_trivial) || \
     !__has_builtin(__is_same_as) || \
-    !__has_builtin(__has_unique_object_representations)
+    !__has_builtin(__has_unique_object_representations) || \
+    !__has_builtin(__is_trivially_equality_comparable) || \
+    !__has_builtin(__reference_constructs_from_temporary) || \
+    !__has_builtin(__reference_binds_to_temporary) || \
+    !__has_builtin(__reference_converts_from_temporary)
 #error Clang should have these
 #endif
 
@@ -54,7 +58,17 @@
 
 // Check __has_constexpr_builtin
 #if  !__has_constexpr_builtin(__builtin_fmax) || \
-     !__has_constexpr_builtin(__builtin_fmin)
+     !__has_constexpr_builtin(__builtin_fmin) || \
+     !__has_constexpr_builtin(__builtin_fmaximum_num) || \
+     !__has_constexpr_builtin(__builtin_fminimum_num)
+#error Clang should have these constexpr builtins
+#endif
+
+#if !__has_constexpr_builtin(__builtin_convertvector)
+#error Clang should have these constexpr builtins
+#endif
+
+#if !__has_constexpr_builtin(__builtin_shufflevector)
 #error Clang should have these constexpr builtins
 #endif
 

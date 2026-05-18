@@ -14,6 +14,7 @@
 #include <__concepts/totally_ordered.h>
 #include <__config>
 #include <__type_traits/desugars_to.h>
+#include <__type_traits/is_generic_transparent_comparator.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -100,7 +101,19 @@ template <class _Tp, class _Up>
 inline const bool __desugars_to_v<__equal_tag, ranges::equal_to, _Tp, _Up> = true;
 
 template <class _Tp, class _Up>
+inline const bool __desugars_to_v<__totally_ordered_less_tag, ranges::less, _Tp, _Up> = true;
+
+template <class _Tp, class _Up>
 inline const bool __desugars_to_v<__less_tag, ranges::less, _Tp, _Up> = true;
+
+template <class _Tp, class _Up>
+inline const bool __desugars_to_v<__greater_tag, ranges::greater, _Tp, _Up> = true;
+
+template <>
+inline const bool __is_generic_transparent_comparator_v<ranges::less> = true;
+
+template <>
+inline const bool __is_generic_transparent_comparator_v<ranges::greater> = true;
 
 #endif // _LIBCPP_STD_VER >= 20
 

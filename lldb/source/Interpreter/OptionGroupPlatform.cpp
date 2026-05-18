@@ -25,7 +25,7 @@ PlatformSP OptionGroupPlatform::CreatePlatformWithOptions(
   if (!m_platform_name.empty()) {
     platform_sp = platforms.Create(m_platform_name);
     if (!platform_sp) {
-      error.SetErrorStringWithFormatv(
+      error = Status::FromErrorStringWithFormatv(
           "unable to find a plug-in for the platform named \"{0}\"",
           m_platform_name);
     }
@@ -33,9 +33,9 @@ PlatformSP OptionGroupPlatform::CreatePlatformWithOptions(
       if (platform_arch.IsValid() &&
           !platform_sp->IsCompatibleArchitecture(
               arch, {}, ArchSpec::CompatibleMatch, &platform_arch)) {
-        error.SetErrorStringWithFormatv("platform '{0}' doesn't support '{1}'",
-                                        platform_sp->GetPluginName(),
-                                        arch.GetTriple().getTriple());
+        error = Status::FromErrorStringWithFormatv(
+            "platform '{0}' doesn't support '{1}'",
+            platform_sp->GetPluginName(), arch.GetTriple().getTriple());
         platform_sp.reset();
         return platform_sp;
       }
@@ -108,8 +108,8 @@ OptionGroupPlatform::SetOptionValue(uint32_t option_idx,
 
   case 'v':
     if (m_os_version.tryParse(option_arg))
-      error.SetErrorStringWithFormatv("invalid version string '{0}'",
-                                      option_arg);
+      error = Status::FromErrorStringWithFormatv("invalid version string '{0}'",
+                                                 option_arg);
     break;
 
   case 'b':

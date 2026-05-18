@@ -22,6 +22,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_HIDDEN __iostream_category : public __do_message {
 public:
@@ -102,21 +103,16 @@ void ios_base::__call_callbacks(event ev) {
 // locale
 
 locale ios_base::imbue(const locale& newloc) {
-  static_assert(sizeof(locale) == sizeof(__loc_), "");
-  locale& loc_storage = *reinterpret_cast<locale*>(&__loc_);
-  locale oldloc       = loc_storage;
-  loc_storage         = newloc;
+  locale loc = newloc;
+  std::swap(__loc_, loc);
   __call_callbacks(imbue_event);
-  return oldloc;
+  return loc;
 }
 
-locale ios_base::getloc() const {
-  const locale& loc_storage = *reinterpret_cast<const locale*>(&__loc_);
-  return loc_storage;
-}
+locale ios_base::getloc() const { return __loc_; }
 
 // xalloc
-#if defined(_LIBCPP_HAS_C_ATOMIC_IMP) && !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_C_ATOMIC_IMP && _LIBCPP_HAS_THREADS
 atomic<int> ios_base::__xindex_{0};
 #else
 int ios_base::__xindex_ = 0;
@@ -180,12 +176,16 @@ void ios_base::register_callback(event_callback fn, int index) {
   if (req_size > __event_cap_) {
     size_t newcap       = __ios_new_cap<event_callback>(req_size, __event_cap_);
     event_callback* fns = static_cast<event_callback*>(realloc(__fn_, newcap * sizeof(event_callback)));
-    if (fns == 0)
+    if (fns == 0) {
       setstate(badbit);
+      return;
+    }
     __fn_      = fns;
     int* indxs = static_cast<int*>(realloc(__index_, newcap * sizeof(int)));
-    if (indxs == 0)
+    if (indxs == 0) {
       setstate(badbit);
+      return;
+    }
     __index_     = indxs;
     __event_cap_ = newcap;
   }
@@ -197,11 +197,10 @@ void ios_base::register_callback(event_callback fn, int index) {
 ios_base::~ios_base() {
   // Avoid UB when not properly initialized. See ios_base::ios_base for
   // more information.
-  if (!__loc_)
+  if (!__loc_.__locale_)
     return;
   __call_callbacks(erase_event);
-  locale& loc_storage = *reinterpret_cast<locale*>(&__loc_);
-  loc_storage.~locale();
+  __loc_.~locale();
   free(__fn_);
   free(__index_);
   free(__iarray_);
@@ -217,7 +216,7 @@ void ios_base::clear(iostate state) {
     __rdstate_ = state | badbit;
 
   if (((state | (__rdbuf_ ? goodbit : badbit)) & __exceptions_) != 0)
-    __throw_failure("ios_base::clear");
+    std::__throw_failure("ios_base::clear");
 }
 
 // init
@@ -253,32 +252,30 @@ void ios_base::copyfmt(const ios_base& rhs) {
     size_t newesize = sizeof(event_callback) * rhs.__event_size_;
     new_callbacks.reset(static_cast<event_callback*>(malloc(newesize)));
     if (!new_callbacks)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
 
     size_t newisize = sizeof(int) * rhs.__event_size_;
     new_ints.reset(static_cast<int*>(malloc(newisize)));
     if (!new_ints)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
   }
   if (__iarray_cap_ < rhs.__iarray_size_) {
     size_t newsize = sizeof(long) * rhs.__iarray_size_;
     new_longs.reset(static_cast<long*>(malloc(newsize)));
     if (!new_longs)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
   }
   if (__parray_cap_ < rhs.__parray_size_) {
     size_t newsize = sizeof(void*) * rhs.__parray_size_;
     new_pointers.reset(static_cast<void**>(malloc(newsize)));
     if (!new_pointers)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
   }
   // Got everything we need.  Copy everything but __rdstate_, __rdbuf_ and __exceptions_
-  __fmtflags_           = rhs.__fmtflags_;
-  __precision_          = rhs.__precision_;
-  __width_              = rhs.__width_;
-  locale& lhs_loc       = *reinterpret_cast<locale*>(&__loc_);
-  const locale& rhs_loc = *reinterpret_cast<const locale*>(&rhs.__loc_);
-  lhs_loc               = rhs_loc;
+  __fmtflags_  = rhs.__fmtflags_;
+  __precision_ = rhs.__precision_;
+  __width_     = rhs.__width_;
+  __loc_       = rhs.__loc_;
   if (__event_cap_ < rhs.__event_size_) {
     free(__fn_);
     __fn_ = new_callbacks.release();
@@ -308,14 +305,13 @@ void ios_base::copyfmt(const ios_base& rhs) {
 
 void ios_base::move(ios_base& rhs) {
   // *this is uninitialized
-  __fmtflags_     = rhs.__fmtflags_;
-  __precision_    = rhs.__precision_;
-  __width_        = rhs.__width_;
-  __rdstate_      = rhs.__rdstate_;
-  __exceptions_   = rhs.__exceptions_;
-  __rdbuf_        = 0;
-  locale& rhs_loc = *reinterpret_cast<locale*>(&rhs.__loc_);
-  ::new (&__loc_) locale(rhs_loc);
+  __fmtflags_   = rhs.__fmtflags_;
+  __precision_  = rhs.__precision_;
+  __width_      = rhs.__width_;
+  __rdstate_    = rhs.__rdstate_;
+  __exceptions_ = rhs.__exceptions_;
+  __rdbuf_      = 0;
+  ::new (&__loc_) locale(rhs.__loc_);
   __fn_              = rhs.__fn_;
   rhs.__fn_          = 0;
   __index_           = rhs.__index_;
@@ -344,9 +340,7 @@ void ios_base::swap(ios_base& rhs) noexcept {
   std::swap(__width_, rhs.__width_);
   std::swap(__rdstate_, rhs.__rdstate_);
   std::swap(__exceptions_, rhs.__exceptions_);
-  locale& lhs_loc = *reinterpret_cast<locale*>(&__loc_);
-  locale& rhs_loc = *reinterpret_cast<locale*>(&rhs.__loc_);
-  std::swap(lhs_loc, rhs_loc);
+  std::swap(__loc_, rhs.__loc_);
   std::swap(__fn_, rhs.__fn_);
   std::swap(__index_, rhs.__index_);
   std::swap(__event_size_, rhs.__event_size_);
@@ -361,18 +355,18 @@ void ios_base::swap(ios_base& rhs) noexcept {
 
 void ios_base::__set_badbit_and_consider_rethrow() {
   __rdstate_ |= badbit;
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   if (__exceptions_ & badbit)
     throw;
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 void ios_base::__set_failbit_and_consider_rethrow() {
   __rdstate_ |= failbit;
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   if (__exceptions_ & failbit)
     throw;
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 bool ios_base::sync_with_stdio(bool sync) {
@@ -382,6 +376,7 @@ bool ios_base::sync_with_stdio(bool sync) {
   return r;
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

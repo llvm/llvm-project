@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "R600Subtarget.h"
+#include "AMDGPUSelectionDAGInfo.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 
 using namespace llvm;
@@ -29,15 +30,20 @@ R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
       FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
       TLInfo(TM, initializeSubtargetDependencies(TT, GPU, FS)),
       InstrItins(getInstrItineraryForCPU(GPU)) {
-  AddressableLocalMemorySize = LocalMemorySize;
+  LocalMemorySize = AddressableLocalMemorySize;
+  TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
+}
+
+R600Subtarget::~R600Subtarget() = default;
+
+const SelectionDAGTargetInfo *R600Subtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
 }
 
 R600Subtarget &R600Subtarget::initializeSubtargetDependencies(const Triple &TT,
                                                               StringRef GPU,
                                                               StringRef FS) {
-  SmallString<256> FullFS("+promote-alloca,");
-  FullFS += FS;
-  ParseSubtargetFeatures(GPU, /*TuneCPU*/ GPU, FullFS);
+  ParseSubtargetFeatures(GPU, /*TuneCPU*/ GPU, FS);
 
   HasMulU24 = getGeneration() >= EVERGREEN;
   HasMulI24 = hasCaymanISA();

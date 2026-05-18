@@ -17,7 +17,7 @@
 define i32 @p(i32 %x, i32 %y, i32 %m) {
 ; CHECK-LABEL: @p(
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[NEG]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[M]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i32 [[OR]], [[OR1]]
 ; CHECK-NEXT:    ret i32 [[RET]]
@@ -31,8 +31,8 @@ define i32 @p(i32 %x, i32 %y, i32 %m) {
 
 define <2 x i32> @p_splatvec(<2 x i32> %x, <2 x i32> %y, <2 x i32> %m) {
 ; CHECK-LABEL: @p_splatvec(
-; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i32> [[M:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i32> [[M:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[X:%.*]], [[NEG]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or <2 x i32> [[Y:%.*]], [[M]]
 ; CHECK-NEXT:    [[RET:%.*]] = and <2 x i32> [[OR]], [[OR1]]
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
@@ -78,8 +78,8 @@ define i32 @p_constmask(i32 %x, i32 %y) {
 
 define <2 x i32> @p_constmask_splatvec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p_constmask_splatvec(
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[X:%.*]], <i32 -65281, i32 -65281>
-; CHECK-NEXT:    [[OR1:%.*]] = or <2 x i32> [[Y:%.*]], <i32 65280, i32 65280>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[X:%.*]], splat (i32 -65281)
+; CHECK-NEXT:    [[OR1:%.*]] = or <2 x i32> [[Y:%.*]], splat (i32 65280)
 ; CHECK-NEXT:    [[RET:%.*]] = and <2 x i32> [[OR]], [[OR1]]
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
@@ -125,7 +125,7 @@ declare i32 @gen32()
 define i32 @p_commutative0(i32 %x, i32 %y, i32 %m) {
 ; CHECK-LABEL: @p_commutative0(
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[NEG]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[M]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i32 [[OR]], [[OR1]]
 ; CHECK-NEXT:    ret i32 [[RET]]
@@ -141,8 +141,8 @@ define i32 @p_commutative1(i32 %x, i32 %m) {
 ; CHECK-LABEL: @p_commutative1(
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y]], [[M]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[NEG]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[M]], [[Y]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i32 [[OR]], [[OR1]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
@@ -157,7 +157,7 @@ define i32 @p_commutative1(i32 %x, i32 %m) {
 define i32 @p_commutative2(i32 %x, i32 %y, i32 %m) {
 ; CHECK-LABEL: @p_commutative2(
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[NEG]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[M]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i32 [[OR1]], [[OR]]
 ; CHECK-NEXT:    ret i32 [[RET]]
@@ -173,8 +173,8 @@ define i32 @p_commutative3(i32 %x, i32 %m) {
 ; CHECK-LABEL: @p_commutative3(
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y]], [[M]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[NEG]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[M]], [[Y]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i32 [[OR]], [[OR1]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
@@ -189,7 +189,7 @@ define i32 @p_commutative3(i32 %x, i32 %m) {
 define i32 @p_commutative4(i32 %x, i32 %y, i32 %m) {
 ; CHECK-LABEL: @p_commutative4(
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[NEG]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[M]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i32 [[OR1]], [[OR]]
 ; CHECK-NEXT:    ret i32 [[RET]]
@@ -205,8 +205,8 @@ define i32 @p_commutative5(i32 %x, i32 %m) {
 ; CHECK-LABEL: @p_commutative5(
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y]], [[M]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[NEG]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[M]], [[Y]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i32 [[OR1]], [[OR]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
@@ -222,8 +222,8 @@ define i32 @p_commutative6(i32 %x, i32 %m) {
 ; CHECK-LABEL: @p_commutative6(
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y]], [[M]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[NEG]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[M]], [[Y]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i32 [[OR1]], [[OR]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
@@ -259,7 +259,7 @@ declare void @use32(i32)
 define i32 @n0_oneuse_of_neg_is_ok_0(i32 %x, i32 %y, i32 %m) {
 ; CHECK-LABEL: @n0_oneuse_of_neg_is_ok_0(
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[NEG]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[M]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i32 [[OR]], [[OR1]]
 ; CHECK-NEXT:    call void @use32(i32 [[NEG]])
@@ -276,7 +276,7 @@ define i32 @n0_oneuse_of_neg_is_ok_0(i32 %x, i32 %y, i32 %m) {
 define i32 @n0_oneuse_1(i32 %x, i32 %y, i32 %m) {
 ; CHECK-LABEL: @n0_oneuse_1(
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[NEG]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[M]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i32 [[OR]], [[OR1]]
 ; CHECK-NEXT:    call void @use32(i32 [[OR]])
@@ -293,7 +293,7 @@ define i32 @n0_oneuse_1(i32 %x, i32 %y, i32 %m) {
 define i32 @n0_oneuse_2(i32 %x, i32 %y, i32 %m) {
 ; CHECK-LABEL: @n0_oneuse_2(
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[NEG]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[M]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i32 [[OR]], [[OR1]]
 ; CHECK-NEXT:    call void @use32(i32 [[OR1]])
@@ -310,7 +310,7 @@ define i32 @n0_oneuse_2(i32 %x, i32 %y, i32 %m) {
 define i32 @n0_oneuse_3(i32 %x, i32 %y, i32 %m) {
 ; CHECK-LABEL: @n0_oneuse_3(
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[NEG]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[M]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i32 [[OR]], [[OR1]]
 ; CHECK-NEXT:    call void @use32(i32 [[NEG]])
@@ -329,7 +329,7 @@ define i32 @n0_oneuse_3(i32 %x, i32 %y, i32 %m) {
 define i32 @n0_oneuse_4(i32 %x, i32 %y, i32 %m) {
 ; CHECK-LABEL: @n0_oneuse_4(
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[NEG]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[M]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i32 [[OR]], [[OR1]]
 ; CHECK-NEXT:    call void @use32(i32 [[NEG]])
@@ -348,7 +348,7 @@ define i32 @n0_oneuse_4(i32 %x, i32 %y, i32 %m) {
 define i32 @n0_oneuse_5(i32 %x, i32 %y, i32 %m) {
 ; CHECK-LABEL: @n0_oneuse_5(
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[NEG]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[M]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i32 [[OR]], [[OR1]]
 ; CHECK-NEXT:    call void @use32(i32 [[NEG]])
@@ -369,7 +369,7 @@ define i32 @n0_oneuse_5(i32 %x, i32 %y, i32 %m) {
 define i32 @n0_oneuse_6(i32 %x, i32 %y, i32 %m) {
 ; CHECK-LABEL: @n0_oneuse_6(
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[NEG]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[M]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i32 [[OR]], [[OR1]]
 ; CHECK-NEXT:    call void @use32(i32 [[OR]])
@@ -456,7 +456,7 @@ define i32 @n1_badxor(i32 %x, i32 %y, i32 %m) {
 define i32 @n2_badmask(i32 %x, i32 %y, i32 %m1, i32 %m2) {
 ; CHECK-LABEL: @n2_badmask(
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M2:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[NEG]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[M1:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i32 [[OR]], [[OR1]]
 ; CHECK-NEXT:    ret i32 [[RET]]

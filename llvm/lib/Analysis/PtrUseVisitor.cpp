@@ -17,7 +17,7 @@
 
 using namespace llvm;
 
-void detail::PtrUseVisitorBase::enqueueUsers(Instruction &I) {
+void detail::PtrUseVisitorBase::enqueueUsers(Value &I) {
   for (Use &U : I.uses()) {
     if (VisitedUses.insert(&U).second) {
       UseToVisit NewU = {

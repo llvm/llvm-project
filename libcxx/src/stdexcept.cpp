@@ -18,13 +18,15 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-_LIBCPP_NORETURN void __throw_runtime_error(const char* msg) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+void __throw_runtime_error(const char* msg) {
+#if _LIBCPP_HAS_EXCEPTIONS
   throw runtime_error(msg);
 #else
   _LIBCPP_VERBOSE_ABORT("runtime_error was thrown in -fno-exceptions mode with message \"%s\"", msg);
 #endif
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

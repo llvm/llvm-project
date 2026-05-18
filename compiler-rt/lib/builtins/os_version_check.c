@@ -14,6 +14,7 @@
 #ifdef __APPLE__
 
 #include <TargetConditionals.h>
+#include <assert.h>
 #include <dispatch/dispatch.h>
 #include <dlfcn.h>
 #include <stdint.h>
@@ -270,6 +271,8 @@ static inline uint32_t ConstructVersion(uint32_t Major, uint32_t Minor,
   return ((Major & 0xffff) << 16) | ((Minor & 0xff) << 8) | (Subminor & 0xff);
 }
 
+#define PLATFORM_MACOS 1
+
 int32_t __isPlatformVersionAtLeast(uint32_t Platform, uint32_t Major,
                                    uint32_t Minor, uint32_t Subminor) {
   dispatch_once_f(&DispatchOnceCounter, NULL, initializeAvailabilityCheck);
@@ -281,6 +284,29 @@ int32_t __isPlatformVersionAtLeast(uint32_t Platform, uint32_t Major,
       {Platform, ConstructVersion(Major, Minor, Subminor)}};
   return AvailabilityVersionCheck(1, Versions);
 }
+
+#if TARGET_OS_OSX
+
+int32_t __isPlatformOrVariantPlatformVersionAtLeast(
+    uint32_t Platform, uint32_t Major, uint32_t Minor, uint32_t Subminor,
+    uint32_t Platform2, uint32_t Major2, uint32_t Minor2, uint32_t Subminor2) {
+  dispatch_once_f(&DispatchOnceCounter, NULL, initializeAvailabilityCheck);
+
+  if (!AvailabilityVersionCheck) {
+    // Handle case of back-deployment for older macOS.
+    if (Platform == PLATFORM_MACOS) {
+      return __isOSVersionAtLeast(Major, Minor, Subminor);
+    }
+    assert(Platform2 == PLATFORM_MACOS && "unexpected platform");
+    return __isOSVersionAtLeast(Major2, Minor2, Subminor2);
+  }
+  dyld_build_version_t Versions[] = {
+      {Platform, ConstructVersion(Major, Minor, Subminor)},
+      {Platform2, ConstructVersion(Major2, Minor2, Subminor2)}};
+  return AvailabilityVersionCheck(2, Versions);
+}
+
+#endif
 
 #elif __ANDROID__
 

@@ -25,8 +25,19 @@ module transitive { header "transitive.h" }
 }]
 
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-name=root > %t/result.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-names=root > %t/result.json
 // RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
+
+//--- cdb.cc1.json.template
+[{
+  "file": "",
+  "directory": "DIR",
+  "command": "clang -cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -I DIR -x c"
+}]
+
+// RUN: sed "s|DIR|%/t|g" %t/cdb.cc1.json.template > %t/cdb.cc1.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.cc1.json -format experimental-full -module-names=root > %t/result.cc1.json
+// RUN: cat %t/result.cc1.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
@@ -42,8 +53,8 @@ module transitive { header "transitive.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/direct.h"
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "direct"
@@ -60,8 +71,8 @@ module transitive { header "transitive.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]/root.h"
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/root.h",
 // CHECK-NEXT:         "[[PREFIX]]/root/textual.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
@@ -74,7 +85,7 @@ module transitive { header "transitive.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/transitive.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],

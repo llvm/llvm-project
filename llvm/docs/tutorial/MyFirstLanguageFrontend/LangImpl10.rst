@@ -129,7 +129,7 @@ course, C source code is not actually portable in general either - ever
 port a really old application from 32- to 64-bits?).
 
 The problem with C (again, in its full generality) is that it is heavily
-laden with target specific assumptions. As one simple example, the
+laden with target-specific assumptions. As one simple example, the
 preprocessor often destructively removes target-independence from the
 code when it processes the input text:
 

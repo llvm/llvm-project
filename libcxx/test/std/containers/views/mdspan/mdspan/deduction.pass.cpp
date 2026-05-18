@@ -46,15 +46,16 @@
 //                typename MappingType::layout_type>;
 //
 //  template<class MappingType, class AccessorType>
-//    mdspan(const typename AccessorType::data_handle_type&, const MappingType&,
+//    mdspan(typename AccessorType::data_handle_type, const MappingType&,
 //           const AccessorType&)
 //      -> mdspan<typename AccessorType::element_type, typename MappingType::extents_type,
 //                typename MappingType::layout_type, AccessorType>;
 
 #include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <concepts>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -165,6 +166,11 @@ constexpr bool test() {
   // deduction from array alone
   float a[12];
   ASSERT_SAME_TYPE(decltype(std::mdspan(a)), std::mdspan<float, std::extents<size_t, 12>>);
+
+  float* volatile p = a;
+  ASSERT_SAME_TYPE(decltype(std::mdspan(
+                       p, std::layout_right::mapping<std::extents<std::size_t, 1>>{}, std::default_accessor<float>{})),
+                   std::mdspan<float, std::extents<std::size_t, 1>, std::layout_right, std::default_accessor<float>>);
 
   return true;
 }

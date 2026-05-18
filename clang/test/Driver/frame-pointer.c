@@ -80,11 +80,15 @@
 // RUN: %clang --target=loongarch64 -### -S -O3 %s -o %t.s 2>&1 | FileCheck -check-prefix=CHECK3-64 %s
 // RUN: %clang --target=loongarch64 -### -S -Os %s -o %t.s 2>&1 | FileCheck -check-prefix=CHECKs-64 %s
 
+// RUN: %clang --target=armv7-apple-macho -### -S %s -o %t.s 2>&1 | FileCheck -check-prefix=CHECK-MACHO-32 %s
+
 // CHECK0-32: -mframe-pointer=all
 // CHECK1-32-NOT: -mframe-pointer=all
 // CHECK2-32-NOT: -mframe-pointer=all
 // CHECK3-32-NOT: -mframe-pointer=all
 // CHECKs-32-NOT: -mframe-pointer=all
+
+// CHECK-MACHO-32: -mframe-pointer=non-leaf
 
 // CHECK0-64: -mframe-pointer=all
 // CHECK1-64-NOT: -mframe-pointer=all

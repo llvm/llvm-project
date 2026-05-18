@@ -10,20 +10,37 @@
 #define LLDB_HOST_POSIX_DOMAINSOCKET_H
 
 #include "lldb/Host/Socket.h"
+#include <string>
+#include <vector>
 
 namespace lldb_private {
 class DomainSocket : public Socket {
 public:
-  DomainSocket(bool should_close, bool child_processes_inherit);
+  DomainSocket(NativeSocket socket, bool should_close);
+  explicit DomainSocket(bool should_close);
+
+  using Pair =
+      std::pair<std::unique_ptr<DomainSocket>, std::unique_ptr<DomainSocket>>;
+  static llvm::Expected<Pair> CreatePair();
 
   Status Connect(llvm::StringRef name) override;
   Status Listen(llvm::StringRef name, int backlog) override;
-  Status Accept(Socket *&socket) override;
+
+  using Socket::Accept;
+  llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>>
+  Accept(MainLoopBase &loop,
+         std::function<void(std::unique_ptr<Socket> socket)> sock_cb) override;
 
   std::string GetRemoteConnectionURI() const override;
 
+  std::vector<std::string> GetListeningConnectionURI() const override;
+
+  static llvm::Expected<std::unique_ptr<DomainSocket>>
+  FromBoundNativeSocket(NativeSocket sockfd, bool should_close);
+
 protected:
-  DomainSocket(SocketProtocol protocol, bool child_processes_inherit);
+  DomainSocket(SocketProtocol protocol);
+  DomainSocket(SocketProtocol protocol, NativeSocket socket, bool should_close);
 
   virtual size_t GetNameOffset() const;
   virtual void DeleteSocketFile(llvm::StringRef name);

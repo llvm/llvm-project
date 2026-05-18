@@ -1,8 +1,0 @@
-# RUN: lldb-dap --help | FileCheck %s
-# CHECK: -g
-# CHECK: --help
-# CHECK: -h
-# CHECK: --port
-# CHECK: -p
-# CHECK: --wait-for-debugger
-

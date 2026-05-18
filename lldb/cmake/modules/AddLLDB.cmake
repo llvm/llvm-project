@@ -31,22 +31,45 @@ function(lldb_tablegen)
     add_public_tablegen_target(${LTG_TARGET})
     set_property(GLOBAL APPEND PROPERTY LLDB_TABLEGEN_TARGETS ${LTG_TARGET})
   endif()
+  if("-dump-json" IN_LIST ARGN)
+    set_property(GLOBAL APPEND PROPERTY LLDB_DOCS_JSON_OUTPUTS "${TABLEGEN_OUTPUT}")
+  endif()
 endfunction(lldb_tablegen)
+
+# Returns TRUE in `out_var` if any of `libs` is `liblldb` or already carries
+# the LLDB_LINKS_LIBLLDB property.
+function(_lldb_links_liblldb_check out_var libs)
+  set(${out_var} FALSE PARENT_SCOPE)
+  foreach(lib ${libs})
+    if("${lib}" STREQUAL "liblldb")
+      set(${out_var} TRUE PARENT_SCOPE)
+      return()
+    endif()
+    if(TARGET "${lib}")
+      get_target_property(_p "${lib}" LLDB_LINKS_LIBLLDB)
+      if(_p)
+        set(${out_var} TRUE PARENT_SCOPE)
+        return()
+      endif()
+    endif()
+  endforeach()
+endfunction()
+
+function(_lldb_propagate_links_liblldb name libs)
+  _lldb_links_liblldb_check(_links_liblldb "${libs}")
+  set_target_properties(${name} PROPERTIES LLDB_LINKS_LIBLLDB ${_links_liblldb})
+endfunction()
 
 function(add_lldb_library name)
   include_directories(BEFORE
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-  # only supported parameters to this macro are the optional
-  # MODULE;SHARED;STATIC library type and source files
   cmake_parse_arguments(PARAM
     "MODULE;SHARED;STATIC;OBJECT;PLUGIN;FRAMEWORK;NO_INTERNAL_DEPENDENCIES;NO_PLUGIN_DEPENDENCIES"
-    "INSTALL_PREFIX;ENTITLEMENTS"
-    "EXTRA_CXXFLAGS;DEPENDS;LINK_LIBS;LINK_COMPONENTS;CLANG_LIBS"
+    "INSTALL_PREFIX"
+    "LINK_LIBS;CLANG_LIBS"
     ${ARGN})
-  llvm_process_sources(srcs ${PARAM_UNPARSED_ARGUMENTS})
-  list(APPEND LLVM_LINK_COMPONENTS ${PARAM_LINK_COMPONENTS})
 
   if(PARAM_NO_INTERNAL_DEPENDENCIES)
     foreach(link_lib ${PARAM_LINK_LIBS})
@@ -72,19 +95,16 @@ function(add_lldb_library name)
     set_property(GLOBAL APPEND PROPERTY LLDB_PLUGINS ${name})
   endif()
 
-  if (MSVC_IDE OR XCODE)
-    string(REGEX MATCHALL "/[^/]+" split_path ${CMAKE_CURRENT_SOURCE_DIR})
-    list(GET split_path -1 dir)
-    file(GLOB_RECURSE headers
-      ../../include/lldb${dir}/*.h)
-    set(srcs ${srcs} ${headers})
-  endif()
   if (PARAM_MODULE)
     set(libkind MODULE)
   elseif (PARAM_SHARED)
     set(libkind SHARED)
   elseif (PARAM_OBJECT)
-    set(libkind OBJECT)
+    # Pass STATIC alongside OBJECT so that under BUILD_SHARED_LIBS=ON the
+    # secondary library variant llvm_add_library produces is a STATIC archive
+    # rather than a SHARED library. OBJECT consumers in LLDB carry no LINK_LIBS
+    # of their own (consumers add them), so a SHARED variant would fail to link.
+    set(libkind "OBJECT;STATIC")
   else ()
     # PARAM_STATIC or library type unspecified. BUILD_SHARED_LIBS
     # does not control the kind of libraries created for LLDB,
@@ -93,36 +113,23 @@ function(add_lldb_library name)
     set(libkind STATIC)
   endif()
 
-  #PIC not needed on Win
-  # FIXME: Setting CMAKE_CXX_FLAGS here is a no-op, use target_compile_options
-  # or omit this logic instead.
-  if (NOT WIN32)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+  if(LLDB_NO_INSTALL_DEFAULT_RPATH)
+    set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
   endif()
 
-  if (PARAM_OBJECT)
-    add_library(${name} ${libkind} ${srcs})
+  llvm_add_library(${name} ${libkind}
+    ${PARAM_UNPARSED_ARGUMENTS}
+    LINK_LIBS ${PARAM_LINK_LIBS}
+    ${pass_NO_INSTALL_RPATH}
+  )
+
+  # Mark whether this library transitively pulls in liblldb.
+  _lldb_propagate_links_liblldb(${name} "${PARAM_LINK_LIBS}")
+
+  if(CLANG_LINK_CLANG_DYLIB)
+    target_link_libraries(${name} PRIVATE clang-cpp)
   else()
-    if(PARAM_ENTITLEMENTS)
-      set(pass_ENTITLEMENTS ENTITLEMENTS ${PARAM_ENTITLEMENTS})
-    endif()
-
-    if(LLDB_NO_INSTALL_DEFAULT_RPATH)
-      set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
-    endif()
-
-    llvm_add_library(${name} ${libkind} ${srcs}
-      LINK_LIBS ${PARAM_LINK_LIBS}
-      DEPENDS ${PARAM_DEPENDS}
-      ${pass_ENTITLEMENTS}
-      ${pass_NO_INSTALL_RPATH}
-    )
-
-    if(CLANG_LINK_CLANG_DYLIB)
-      target_link_libraries(${name} PRIVATE clang-cpp)
-    else()
-      target_link_libraries(${name} PRIVATE ${PARAM_CLANG_LIBS})
-    endif()
+    target_link_libraries(${name} PRIVATE ${PARAM_CLANG_LIBS})
   endif()
 
   # A target cannot be changed to a FRAMEWORK after calling install() because
@@ -157,9 +164,6 @@ function(add_lldb_library name)
     add_dependencies(${name} clang-tablegen-targets)
   endif()
 
-  # Add in any extra C++ compilation flags for this library.
-  target_compile_options(${name} PRIVATE ${PARAM_EXTRA_CXXFLAGS})
-
   if(PARAM_PLUGIN)
     get_property(parent_dir DIRECTORY PROPERTY PARENT_DIRECTORY)
     if(EXISTS ${parent_dir})
@@ -181,14 +185,10 @@ endfunction(add_lldb_library)
 function(add_lldb_executable name)
   cmake_parse_arguments(ARG
     "GENERATE_INSTALL"
-    "INSTALL_PREFIX;ENTITLEMENTS"
+    "INSTALL_PREFIX"
     "LINK_LIBS;CLANG_LIBS;LINK_COMPONENTS;BUILD_RPATH;INSTALL_RPATH"
     ${ARGN}
     )
-
-  if(ARG_ENTITLEMENTS)
-    set(pass_ENTITLEMENTS ENTITLEMENTS ${ARG_ENTITLEMENTS})
-  endif()
 
   if(LLDB_NO_INSTALL_DEFAULT_RPATH)
     set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
@@ -196,12 +196,31 @@ function(add_lldb_executable name)
 
   list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
   add_llvm_executable(${name}
-    ${pass_ENTITLEMENTS}
     ${pass_NO_INSTALL_RPATH}
     ${ARG_UNPARSED_ARGUMENTS}
   )
 
   target_link_libraries(${name} PRIVATE ${ARG_LINK_LIBS})
+  if(WIN32)
+    list(FIND ARG_LINK_LIBS liblldb LIBLLDB_INDEX)
+    if(NOT LIBLLDB_INDEX EQUAL -1)
+      if (MSVC)
+        target_link_options(${name} PRIVATE
+          "LINKER:/DELAYLOAD:$<TARGET_FILE_NAME:liblldb>")
+        target_link_libraries(${name} PRIVATE delayimp)
+      elseif (MINGW AND LINKER_IS_LLD)
+        # LLD can delay load just by passing a --delayload flag, as long as the import
+        # library is a short type import library (which LLD and MS link.exe produce).
+        # With ld.bfd, with long import libraries (as produced by GNU binutils), one
+        # has to generate a separate delayload import library with dlltool.
+        target_link_options(${name} PRIVATE "-Wl,--delayload=$<TARGET_FILE_NAME:liblldb>")
+      elseif (DEFINED LLDB_PYTHON_DLL_RELATIVE_PATH)
+        # If liblldb can't be delayloaded, then LLDB_PYTHON_DLL_RELATIVE_PATH will not
+        # have any effect.
+        message(WARNING "liblldb is not delay loaded, LLDB_PYTHON_DLL_RELATIVE_PATH has no effect")
+      endif()
+    endif()
+  endif()
   if(CLANG_LINK_CLANG_DYLIB)
     target_link_libraries(${name} PRIVATE clang-cpp)
   else()
@@ -232,6 +251,20 @@ function(add_lldb_executable name)
       add_llvm_install_targets(install-${name}
                                DEPENDS ${name}
                                COMPONENT ${name})
+      # An installed tool that links liblldb won't run without liblldb
+      # installed alongside it. Record it on a global list so other
+      # runtime components (e.g. the Python/Lua script packages) can
+      # attach themselves to the same install targets.
+      _lldb_links_liblldb_check(_links_liblldb "${ARG_LINK_LIBS}")
+      if(_links_liblldb)
+        set_property(GLOBAL APPEND PROPERTY LLDB_TOOLS_LINKING_LIBLLDB ${name})
+        if(TARGET install-liblldb)
+          add_dependencies(install-${name} install-liblldb)
+          if(TARGET install-${name}-stripped AND TARGET install-liblldb-stripped)
+            add_dependencies(install-${name}-stripped install-liblldb-stripped)
+          endif()
+        endif()
+      endif()
     endif()
     if(APPLE AND ARG_INSTALL_PREFIX)
       lldb_add_post_install_steps_darwin(${name} ${ARG_INSTALL_PREFIX})
@@ -258,6 +291,7 @@ function(add_lldb_tool name)
   endif()
 
   add_lldb_executable(${name} GENERATE_INSTALL ${ARG_UNPARSED_ARGUMENTS})
+  set_target_properties(${name} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endfunction()
 
 # The test suite relies on finding LLDB.framework binary resources in the

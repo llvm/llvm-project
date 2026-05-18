@@ -14,7 +14,7 @@ module module1
     integer(kind=ik) :: ix = int(0,kind=ik)
     real(kind=rk) :: rx = real(0.,kind=rk)
     complex(kind=zk) :: zx = cmplx(0.,0.,kind=zk)
-    !ERROR: Initialization expression for 'cx' (%SET_LENGTH(" ",len)) cannot be computed as a constant value
+    !ERROR: Initialization expression for 'cx' (" ") cannot be computed as a constant value
     character(kind=ck,len=len) :: cx = ' '
     logical(kind=lk) :: lx = .false.
     real(kind=rk), pointer :: rp => NULL()

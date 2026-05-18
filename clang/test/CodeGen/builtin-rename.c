@@ -4,5 +4,5 @@
 int printf(const char *, ...);
 
 int foo(void) {
-  return printf(printf);
+  return printf((const char*)printf);
 }

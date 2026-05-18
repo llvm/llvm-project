@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv66 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv66 < %s | FileCheck %s
 
 ; CHECK-LABEL: @test1
 ; CHECK: r0 -= mpyi(r1,r2)

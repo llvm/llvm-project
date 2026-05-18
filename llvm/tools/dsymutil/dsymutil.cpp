@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
@@ -38,10 +39,13 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/thread.h"
 #include "llvm/TargetParser/Triple.h"
@@ -64,12 +68,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -80,7 +85,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class DsymutilOptTable : public opt::GenericOptTable {
 public:
-  DsymutilOptTable() : opt::GenericOptTable(InfoTable) {}
+  DsymutilOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 } // namespace
 
@@ -108,9 +114,13 @@ struct DsymutilOptions {
   bool Flat = false;
   bool InputIsYAMLDebugMap = false;
   bool ForceKeepFunctionForStatic = false;
+  bool NoObjectTimestamp = false;
   std::string OutputFile;
   std::string Toolchain;
+  std::string CodesignIdentity;
   std::string ReproducerPath;
+  std::string AllowFile;
+  std::string DisallowFile;
   std::vector<std::string> Archs;
   std::vector<std::string> InputFiles;
   unsigned NumThreads;
@@ -180,17 +190,6 @@ static Error verifyOptions(const DsymutilOptions &Options) {
                                    errc::invalid_argument);
   }
 
-  if (Options.LinkOpts.Update && llvm::is_contained(Options.InputFiles, "-")) {
-    // FIXME: We cannot use stdin for an update because stdin will be
-    // consumed by the BinaryHolder during the debugmap parsing, and
-    // then we will want to consume it again in DwarfLinker. If we
-    // used a unique BinaryHolder object that could cache multiple
-    // binaries this restriction would go away.
-    return make_error<StringError>(
-        "standard input cannot be used as input for a dSYM update.",
-        errc::invalid_argument);
-  }
-
   if (!Options.Flat && Options.OutputFile == "-")
     return make_error<StringError>(
         "cannot emit to standard output without --flat.",
@@ -206,6 +205,32 @@ static Error verifyOptions(const DsymutilOptions &Options) {
       Options.ReproMode != ReproducerMode::Use)
     return make_error<StringError>(
         "cannot combine --gen-reproducer and --use-reproducer.",
+        errc::invalid_argument);
+
+  if (Options.InputIsYAMLDebugMap &&
+      (!Options.AllowFile.empty() || !Options.DisallowFile.empty()))
+    return make_error<StringError>(
+        "-y and --allow/--disallow cannot be specified together",
+        errc::invalid_argument);
+
+  if (!Options.AllowFile.empty() && !Options.DisallowFile.empty())
+    return make_error<StringError>(
+        "--allow and --disallow cannot be specified together",
+        errc::invalid_argument);
+
+  if (Options.Flat && !Options.LinkOpts.EmbedResources.empty())
+    return make_error<StringError>(
+        "--embed-resource is not supported with --flat",
+        errc::invalid_argument);
+
+  if (!Options.CodesignIdentity.empty() && Options.Flat)
+    return make_error<StringError>(
+        "--codesign is not supported with --flat: no bundle to sign",
+        errc::invalid_argument);
+
+  if (!Options.CodesignIdentity.empty() && Options.LinkOpts.NoOutput)
+    return make_error<StringError>(
+        "--codesign is not supported with --no-output: nothing to sign",
         errc::invalid_argument);
 
   return Error::success();
@@ -303,6 +328,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.DumpStab = Args.hasArg(OPT_symtab);
   Options.Flat = Args.hasArg(OPT_flat);
   Options.InputIsYAMLDebugMap = Args.hasArg(OPT_yaml_input);
+  Options.NoObjectTimestamp = Args.hasArg(OPT_no_object_timestamp);
 
   if (Expected<DWARFVerify> Verify = getVerifyKind(Args)) {
     Options.Verify = *Verify;
@@ -322,6 +348,8 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.LinkOpts.Fat64 = Args.hasArg(OPT_fat64);
   Options.LinkOpts.KeepFunctionForStatic =
       Args.hasArg(OPT_keep_func_for_static);
+  Options.LinkOpts.AllowSectionHeaderOffsetOverflow =
+      Args.hasArg(OPT_allow_section_header_offset_overflow);
 
   if (opt::Arg *ReproducerPath = Args.getLastArg(OPT_use_reproducer)) {
     Options.ReproMode = ReproducerMode::Use;
@@ -372,6 +400,9 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   if (opt::Arg *Toolchain = Args.getLastArg(OPT_toolchain))
     Options.Toolchain = Toolchain->getValue();
 
+  if (opt::Arg *Codesign = Args.getLastArg(OPT_codesign))
+    Options.CodesignIdentity = Codesign->getValue();
+
   if (Args.hasArg(OPT_assembly))
     Options.LinkOpts.FileType = DWARFLinkerBase::OutputFileType::Assembly;
 
@@ -398,11 +429,41 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.LinkOpts.RemarksKeepAll =
       !Args.hasArg(OPT_remarks_drop_without_debug);
 
+  Options.LinkOpts.IncludeSwiftModulesFromInterface =
+      Args.hasArg(OPT_include_swiftmodules_from_interface);
+
   if (opt::Arg *BuildVariantSuffix = Args.getLastArg(OPT_build_variant_suffix))
     Options.LinkOpts.BuildVariantSuffix = BuildVariantSuffix->getValue();
 
+  for (auto *Arg : Args.filtered(OPT_embed_resource)) {
+    StringRef Val = Arg->getValue();
+    auto [Src, Dst] = Val.split('=');
+    if (Src.empty() || Dst.empty())
+      return make_error<StringError>("invalid --embed-resource argument '" +
+                                         Val +
+                                         "': expected <src-path>=<dst-path>",
+                                     inconvertibleErrorCode());
+
+    // Reject destinations that would escape the Resources directory.
+    SmallString<128> NormalizedDst(Dst);
+    sys::path::remove_dots(NormalizedDst, /*remove_dot_dot=*/true);
+    if (sys::path::is_absolute(NormalizedDst) ||
+        NormalizedDst.starts_with(".."))
+      return make_error<StringError>(
+          "invalid --embed-resource destination '" + Dst +
+              "': must be a relative path within the bundle",
+          inconvertibleErrorCode());
+    Options.LinkOpts.EmbedResources[NormalizedDst] = Src.str();
+  }
+
   for (auto *SearchPath : Args.filtered(OPT_dsym_search_path))
     Options.LinkOpts.DSYMSearchPaths.push_back(SearchPath->getValue());
+
+  if (opt::Arg *AllowArg = Args.getLastArg(OPT_allow))
+    Options.AllowFile = AllowArg->getValue();
+
+  if (opt::Arg *DisallowArg = Args.getLastArg(OPT_disallow))
+    Options.DisallowFile = DisallowArg->getValue();
 
   if (Error E = verifyOptions(Options))
     return std::move(E);
@@ -611,6 +672,33 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
   return OutputLocation(std::string(Path), ResourceDir);
 }
 
+static Error codesignBundle(StringRef BundlePath, StringRef Identity,
+                            StringRef SDKPath) {
+  auto Path = sys::findProgramByName("codesign", ArrayRef(SDKPath));
+  if (!Path)
+    Path = sys::findProgramByName("codesign");
+
+  if (!Path)
+    return make_error<StringError>(
+        "codesign not found: " + Path.getError().message(), Path.getError());
+
+  SmallVector<StringRef, 5> Args;
+  Args.push_back("codesign");
+  Args.push_back("-f");
+  Args.push_back("-s");
+  Args.push_back(Identity);
+  Args.push_back(BundlePath);
+
+  std::string ErrMsg;
+  int Result =
+      sys::ExecuteAndWait(*Path, Args, std::nullopt, {}, 0, 0, &ErrMsg);
+  if (Result)
+    return make_error<StringError>("codesign failed: " + ErrMsg,
+                                   inconvertibleErrorCode());
+
+  return Error::success();
+}
+
 int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
   // Parse arguments.
   DsymutilOptTable T;
@@ -674,9 +762,15 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     }
 
   for (auto &InputFile : Options.InputFiles) {
+    // Shared a single binary holder for all the link steps.
+    BinaryHolder::Options BinOpts;
+    BinOpts.Verbose = Options.LinkOpts.Verbose;
+    BinOpts.Warn = !Options.NoObjectTimestamp;
+    BinaryHolder BinHolder(Options.LinkOpts.VFS, BinOpts);
+
     // Dump the symbol table for each input file and requested arch
     if (Options.DumpStab) {
-      if (!dumpStab(Options.LinkOpts.VFS, InputFile, Options.Archs,
+      if (!dumpStab(BinHolder, InputFile, Options.Archs,
                     Options.LinkOpts.DSYMSearchPaths,
                     Options.LinkOpts.PrependPath,
                     Options.LinkOpts.BuildVariantSuffix))
@@ -684,11 +778,63 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       continue;
     }
 
+    // Parse allow/disallow object list YAML files if specified.
+    std::optional<StringSet<>> ObjectFilter;
+    enum ObjectFilterType ObjectFilterType = Allow;
+
+    auto ParseAllowDisallowFile =
+        [&](const std::string &FilePath) -> Expected<StringSet<>> {
+      auto BufOrErr = MemoryBuffer::getFile(FilePath);
+      if (!BufOrErr)
+        return make_error<StringError>(
+            Twine("cannot open allow/disallow file '") + FilePath +
+                "': " + BufOrErr.getError().message(),
+            BufOrErr.getError());
+
+      StringSet<> Result;
+      StringRef Content = (*BufOrErr)->getBuffer();
+      if (!Content.trim().empty()) {
+        yaml::Input YAMLIn(Content);
+        std::unique_ptr<DebugMapFilter> DebugMapFilter;
+        YAMLIn >> DebugMapFilter;
+        if (YAMLIn.error())
+          return make_error<StringError>(
+              Twine("cannot parse allow/disallow file '") + FilePath + "'",
+              YAMLIn.error());
+        for (const auto &Entry : *DebugMapFilter) {
+          SmallString<80> Path(Options.LinkOpts.PrependPath);
+          sys::path::append(Path, Entry->getObjectFilename());
+          Result.insert(Path);
+        }
+      }
+      return Result;
+    };
+
+    if (!Options.AllowFile.empty()) {
+      auto AllowedOrErr = ParseAllowDisallowFile(Options.AllowFile);
+      if (!AllowedOrErr) {
+        WithColor::error() << toString(AllowedOrErr.takeError()) << '\n';
+        return EXIT_FAILURE;
+      }
+      ObjectFilter = std::move(*AllowedOrErr);
+      ObjectFilterType = Allow;
+    }
+
+    if (!Options.DisallowFile.empty()) {
+      auto DisallowedOrErr = ParseAllowDisallowFile(Options.DisallowFile);
+      if (!DisallowedOrErr) {
+        WithColor::error() << toString(DisallowedOrErr.takeError()) << '\n';
+        return EXIT_FAILURE;
+      }
+      ObjectFilter = std::move(*DisallowedOrErr);
+      ObjectFilterType = Disallow;
+    }
+
     auto DebugMapPtrsOrErr = parseDebugMap(
-        Options.LinkOpts.VFS, InputFile, Options.Archs,
-        Options.LinkOpts.DSYMSearchPaths, Options.LinkOpts.PrependPath,
-        Options.LinkOpts.BuildVariantSuffix, Options.LinkOpts.Verbose,
-        Options.InputIsYAMLDebugMap);
+        BinHolder, InputFile, Options.Archs, Options.LinkOpts.DSYMSearchPaths,
+        Options.LinkOpts.PrependPath, Options.LinkOpts.BuildVariantSuffix,
+        Options.LinkOpts.Verbose, Options.InputIsYAMLDebugMap, ObjectFilter,
+        ObjectFilterType);
 
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       WithColor::error() << "cannot parse the debug map for '" << InputFile
@@ -714,14 +860,11 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       return EXIT_FAILURE;
     }
 
-    // Shared a single binary holder for all the link steps.
-    BinaryHolder BinHolder(Options.LinkOpts.VFS);
-
     // Compute the output location and update the resource directory.
     Expected<OutputLocation> OutputLocationOrErr =
         getOutputFileName(InputFile, Options);
     if (!OutputLocationOrErr) {
-      WithColor::error() << toString(OutputLocationOrErr.takeError());
+      WithColor::error() << toString(OutputLocationOrErr.takeError()) << "\n";
       return EXIT_FAILURE;
     }
     Options.LinkOpts.ResourceDir = OutputLocationOrErr->getResourceDir();
@@ -799,7 +942,7 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
               Options.LinkOpts.NoOutput ? "-" : OutputFile, EC,
               sys::fs::OF_None);
           if (EC) {
-            WithColor::error() << OutputFile << ": " << EC.message();
+            WithColor::error() << OutputFile << ": " << EC.message() << "\n";
             AllOK.fetch_and(false);
             return;
           }
@@ -835,19 +978,19 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     if (Crashed)
       (*Repro)->generate();
 
-    if (!AllOK)
+    if (!AllOK || Crashed)
       return EXIT_FAILURE;
 
     if (NeedsTempFiles) {
-      const bool Fat64 = Options.LinkOpts.Fat64;
+      bool Fat64 = Options.LinkOpts.Fat64;
       if (!Fat64) {
         // Universal Mach-O files can't have an archicture slice that starts
         // beyond the 4GB boundary. "lipo" can create a 64 bit universal
-        // header, but not all tools can parse these files so we want to return
-        // an error if the file can't be encoded as a file with a 32 bit
+        // header, but older tools may not support these files so we want to
+        // emit a warning if the file can't be encoded as a file with a 32 bit
         // universal header. To detect this, we check the size of each
         // architecture's skinny Mach-O file and add up the offsets. If they
-        // exceed 4GB, then we return an error.
+        // exceed 4GB, we emit a warning.
 
         // First we compute the right offset where the first architecture will
         // fit followin the 32 bit universal header. The 32 bit universal header
@@ -866,14 +1009,15 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
           if (!stat)
             break;
           if (FileOffset > UINT32_MAX) {
-            WithColor::error()
-                << formatv("the universal binary has a slice with a starting "
-                           "offset ({0:x}) that exceeds 4GB and will produce "
-                           "an invalid Mach-O file. Use the -fat64 flag to "
-                           "generate a universal binary with a 64-bit header "
-                           "but note that not all tools support this format.",
-                           FileOffset);
-            return EXIT_FAILURE;
+            Fat64 = true;
+            WithColor::warning() << formatv(
+                "the universal binary has a slice with a starting offset "
+                "({0:x}) that exceeds 4GB. To avoid producing an invalid "
+                "Mach-O file, a universal binary with a 64-bit header will be "
+                "generated, which may not be supported by older tools. Use the "
+                "-fat64 flag to force a 64-bit header and silence this "
+                "warning.",
+                FileOffset);
           }
           FileOffset += stat->getSize();
         }
@@ -882,6 +1026,21 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
               TempFiles, OutputLocationOrErr->DWARFFile, Options.LinkOpts,
               SDKPath, Fat64))
         return EXIT_FAILURE;
+    }
+
+    if (!Options.CodesignIdentity.empty()) {
+      StringRef DWARFFile = OutputLocationOrErr->DWARFFile;
+      auto Pos = DWARFFile.find(".dSYM/");
+      if (Pos == StringRef::npos)
+        Pos = DWARFFile.find(".dSYM");
+      if (Pos != StringRef::npos) {
+        std::string BundlePath = DWARFFile.substr(0, Pos + 5).str();
+        if (auto E =
+                codesignBundle(BundlePath, Options.CodesignIdentity, SDKPath)) {
+          WithColor::error() << toString(std::move(E)) << '\n';
+          return EXIT_FAILURE;
+        }
+      }
     }
   }
 

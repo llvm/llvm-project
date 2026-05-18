@@ -9,7 +9,6 @@
 // REQUIRES: can-create-symlinks
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
-// UNSUPPORTED: availability-filesystem-missing
 
 // The string reported on errors changed, which makes those tests fail when run
 // against a built library that doesn't contain 0aa637b2037d.
@@ -300,7 +299,7 @@ static const bool SupportsMinRoundTrip = [] {
   return min_val == file_time_type::min();
 }();
 
-} // end namespace
+} // namespace
 
 static bool CompareTime(TimeSpec t1, TimeSpec t2) {
   if (SupportsNanosecondRoundTrip)

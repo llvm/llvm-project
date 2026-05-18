@@ -12,6 +12,7 @@ static_library("LTO") {
     "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Passes",
+    "//llvm/lib/Plugins",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
@@ -27,7 +28,6 @@ static_library("LTO") {
     "LTOBackend.cpp",
     "LTOCodeGenerator.cpp",
     "LTOModule.cpp",
-    "SummaryBasedOptimizations.cpp",
     "ThinLTOCodeGenerator.cpp",
     "UpdateCompilerUsed.cpp",
   ]

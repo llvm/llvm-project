@@ -37,12 +37,12 @@ void test_block() {
 // UNINIT-LABEL:  test_block_self_init(
 // ZERO-LABEL:    test_block_self_init(
 // ZERO:          %block = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
-// ZERO:          %captured1 = getelementptr inbounds %struct.__block_byref_captured, ptr %captured, i32 0, i32 4
+// ZERO:          %captured1 = getelementptr inbounds nuw %struct.__block_byref_captured, ptr %captured, i32 0, i32 4
 // ZERO-NEXT:     store ptr null, ptr %captured1, align 8, !annotation [[AUTO_INIT:!.+]]
 // ZERO:          %call = call ptr @create(
 // PATTERN-LABEL: test_block_self_init(
 // PATTERN:       %block = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
-// PATTERN:       %captured1 = getelementptr inbounds %struct.__block_byref_captured, ptr %captured, i32 0, i32 4
+// PATTERN:       %captured1 = getelementptr inbounds nuw %struct.__block_byref_captured, ptr %captured, i32 0, i32 4
 // PATTERN-NEXT:  store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %captured1, align 8, !annotation [[AUTO_INIT:!.+]]
 // PATTERN:       %call = call ptr @create(
 using Block = void (^)();
@@ -61,12 +61,12 @@ void test_block_self_init() {
 // UNINIT-LABEL:  test_block_captures_self_after_init(
 // ZERO-LABEL:    test_block_captures_self_after_init(
 // ZERO:          %block = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
-// ZERO:          %captured1 = getelementptr inbounds %struct.__block_byref_captured.1, ptr %captured, i32 0, i32 4
+// ZERO:          %captured1 = getelementptr inbounds nuw %struct.__block_byref_captured.1, ptr %captured, i32 0, i32 4
 // ZERO-NEXT:     store ptr null, ptr %captured1, align 8, !annotation [[AUTO_INIT:!.+]]
 // ZERO:          %call = call ptr @create(
 // PATTERN-LABEL: test_block_captures_self_after_init(
 // PATTERN:       %block = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
-// PATTERN:       %captured1 = getelementptr inbounds %struct.__block_byref_captured.1, ptr %captured, i32 0, i32 4
+// PATTERN:       %captured1 = getelementptr inbounds nuw %struct.__block_byref_captured.1, ptr %captured, i32 0, i32 4
 // PATTERN-NEXT:  store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %captured1, align 8, !annotation [[AUTO_INIT:!.+]]
 // PATTERN:       %call = call ptr @create(
 void test_block_captures_self_after_init() {

@@ -11,6 +11,7 @@ void *ThreadFn(void *) {
   __hwasan_enable_allocator_tagging();
   // This will trigger memory deallocation in __strerror_thread_freeres,
   // at a point when HwasanThread is already gone.
+  return NULL;
 }
 
 int main() {

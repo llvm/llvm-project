@@ -17,6 +17,7 @@ class NamelistChecker : public virtual BaseChecker {
 public:
   NamelistChecker(SemanticsContext &context) : context_{context} {}
   void Leave(const parser::NamelistStmt &);
+  void Leave(const parser::LocalitySpec::Reduce &);
 
 private:
   SemanticsContext &context_;

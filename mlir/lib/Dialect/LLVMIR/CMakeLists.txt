@@ -4,28 +4,27 @@ add_mlir_dialect_library(MLIRLLVMDialect
   IR/FunctionCallUtils.cpp
   IR/LLVMAttrs.cpp
   IR/LLVMDialect.cpp
-  IR/LLVMInlining.cpp
   IR/LLVMInterfaces.cpp
   IR/LLVMMemorySlot.cpp
   IR/LLVMTypes.cpp
   IR/LLVMTypeSyntax.cpp
+  IR/LLVMDialectBytecode.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
   DEPENDS
-  MLIRLLVMOpsIncGen
-  MLIRLLVMTypesIncGen
-  MLIRLLVMIntrinsicOpsIncGen
+  MLIRLLVMDialectBytecodeIncGen
   MLIRLLVMInterfacesIncGen
+  MLIRLLVMIntrinsicOpsIncGen
+  MLIRLLVMOpsIncGen
+  MLIRLLVMTranslationDialectInterfaceIncGen
+  MLIRLLVMTypesIncGen
   MLIROpenMPOpsIncGen
   intrinsics_gen
 
   LINK_COMPONENTS
-  AsmParser
   BinaryFormat
-  BitReader
-  BitWriter
   Core
 
   LINK_LIBS PUBLIC
@@ -33,9 +32,11 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
   MLIRFunctionInterfaces
+  MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemorySlotInterfaces
+  MLIRPtrMemorySpaceInterfaces
   MLIRSideEffectInterfaces
   MLIRSupport
   )
@@ -43,6 +44,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
 add_mlir_dialect_library(MLIRNVVMDialect
   IR/NVVMDialect.cpp
   IR/BasicPtxBuilderInterface.cpp
+  IR/NVVMRequiresSMTraits.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
@@ -52,16 +54,21 @@ add_mlir_dialect_library(MLIRNVVMDialect
   MLIRNVVMOpsIncGen
   MLIRNVVMConversionsIncGen
   MLIRBasicPtxBuilderInterfaceIncGen
+  MLIRNVVMRequiresSMTraitsIncGen
   intrinsics_gen
 
   LINK_COMPONENTS
   AsmParser
   Core
+  TargetParser
 
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRLLVMDialect
+  MLIRGPUDialect
+  MLIROpenMPDialect
   MLIRSideEffectInterfaces
+  MLIRInferIntRangeInterface
   )
 
 add_mlir_dialect_library(MLIRROCDLDialect
@@ -107,3 +114,28 @@ add_mlir_dialect_library(MLIRVCIXDialect
   MLIRLLVMDialect
   MLIRSideEffectInterfaces
   )
+
+add_mlir_dialect_library(MLIRXeVMDialect
+  IR/XeVMDialect.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
+
+  DEPENDS
+  MLIRGPUCompilationAttrInterfacesIncGen
+  MLIRXeVMOpsIncGen
+  MLIRXeVMConversionsIncGen
+  intrinsics_gen
+
+  LINK_COMPONENTS
+  AsmParser
+  Core
+  TargetParser
+
+  LINK_LIBS PUBLIC
+  MLIRDialectUtils
+  MLIRIR
+  MLIRLLVMDialect
+  MLIROpenMPDialect
+  MLIRSideEffectInterfaces
+)

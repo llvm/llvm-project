@@ -2,21 +2,21 @@
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f128:128:128-v128:128:128-n32:64"
 target triple = "powerpc64le-unknown-linux"
 
-define fastcc void @do_update_md(ptr nocapture readonly %x) #0 {
+define fastcc void @do_update_md(ptr nocapture readonly %x, i1 %arg, i16 %arg2) #0 {
 entry:
-  br i1 undef, label %if.end365, label %lor.lhs.false134
+  br i1 %arg, label %if.end365, label %lor.lhs.false134
 
 lor.lhs.false134:                                 ; preds = %entry
-  br i1 undef, label %lor.lhs.false138, label %if.end365
+  br i1 %arg, label %lor.lhs.false138, label %if.end365
 
 lor.lhs.false138:                                 ; preds = %lor.lhs.false134
-  br i1 undef, label %lor.lhs.false142, label %if.end365
+  br i1 %arg, label %lor.lhs.false142, label %if.end365
 
 lor.lhs.false142:                                 ; preds = %lor.lhs.false138
-  br i1 undef, label %for.body276.lr.ph, label %if.end365
+  br i1 %arg, label %for.body276.lr.ph, label %if.end365
 
 for.body276.lr.ph:                                ; preds = %lor.lhs.false142
-  switch i16 undef, label %if.then288 [
+  switch i16 %arg2, label %if.then288 [
     i16 4, label %for.body344
     i16 2, label %for.body344
   ]

@@ -1,8 +1,8 @@
 # CMakeLists.txt file for unit testing OpenMP offloading runtime library.
-if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR
-   CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0.0)
+if(NOT OPENMP_TEST_COMPILER_ID STREQUAL "Clang" OR
+   OPENMP_TEST_COMPILER_VERSION VERSION_LESS 6.0.0)
   message(STATUS "Can only test with Clang compiler in version 6.0.0 or later.")
-  libomptarget_warning_say("The check-libomptarget target will not be available!")
+  message(WARNING "The check-offload target will not be available!")
   return()
 endif()
 
@@ -16,10 +16,15 @@ endif()
 # char into the lit command.
 string(REPLACE " " ";" LIBOMPTARGET_LIT_ARG_LIST "${LIBOMPTARGET_LIT_ARGS}")
 
-find_package(CUDAToolkit QUIET)
+find_package(CUDAToolkit QUIET ${OFFLOAD_MIN_CUDA_VERSION})
 if(CUDAToolkit_FOUND)
   get_filename_component(CUDA_ROOT "${CUDAToolkit_BIN_DIR}" DIRECTORY ABSOLUTE)
   get_filename_component(CUDA_LIBDIR "${CUDA_cudart_static_LIBRARY}" DIRECTORY)
+endif()
+
+set(OMP_DEPEND)
+if(TARGET omp)
+  set(OMP_DEPEND omp)
 endif()
 
 string(REGEX MATCHALL "([^\ ]+\ |[^\ ]+$)" SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}")
@@ -29,7 +34,7 @@ foreach(CURRENT_TARGET IN LISTS SYSTEM_TARGETS)
   add_offload_testsuite(check-libomptarget-${CURRENT_TARGET}
     "Running libomptarget tests"
     ${CMAKE_CURRENT_BINARY_DIR}/${CURRENT_TARGET}
-    DEPENDS omptarget omp ${LIBOMPTARGET_TESTED_PLUGINS}
+    DEPENDS omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
     ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
   list(APPEND LIBOMPTARGET_LIT_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CURRENT_TARGET})
 
@@ -43,12 +48,26 @@ add_offload_testsuite(check-libomptarget
   "Running libomptarget tests"
   ${LIBOMPTARGET_LIT_TESTSUITES}
   EXCLUDE_FROM_CHECK_ALL
-  DEPENDS omptarget omp ${LIBOMPTARGET_TESTED_PLUGINS}
+  DEPENDS llvm-offload-device-info omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
   ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
 
+# Add liboffload unit tests - the test binary will run on all available devices
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.site.cfg.in
+  ${CMAKE_CURRENT_BINARY_DIR}/unit/lit.site.cfg
+  MAIN_CONFIG
+  ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.cfg.py)
+
 add_offload_testsuite(check-offload
-  "Running libomptarget tests"
+  "Running offload tests"
   ${LIBOMPTARGET_LIT_TESTSUITES}
+  ${CMAKE_CURRENT_BINARY_DIR}/unit
   EXCLUDE_FROM_CHECK_ALL
-  DEPENDS omptarget omp ${LIBOMPTARGET_TESTED_PLUGINS}
+  DEPENDS llvm-offload-device-info omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
+          LLVMOffload OffloadUnitTests
   ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
+
+add_lit_testsuite(check-offload-unit "Running offload unittest suites"
+  ${CMAKE_CURRENT_BINARY_DIR}/unit
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS LLVMOffload OffloadUnitTests)

@@ -33,10 +33,10 @@ public:
     ASSERT_FP_EQ(inf, func(inf, &exponent));
     ASSERT_FP_EQ(neg_inf, func(neg_inf, &exponent));
 
-    ASSERT_FP_EQ(0.0, func(0.0, &exponent));
+    ASSERT_FP_EQ(zero, func(zero, &exponent));
     ASSERT_EQ(exponent, 0);
 
-    ASSERT_FP_EQ(-0.0, func(-0.0, &exponent));
+    ASSERT_FP_EQ(neg_zero, func(neg_zero, &exponent));
     ASSERT_EQ(exponent, 0);
   }
 
@@ -99,7 +99,7 @@ public:
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x == 0.0l)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x == 0.0l)
         continue;
 
       mpfr::BinaryOutput<T> result;

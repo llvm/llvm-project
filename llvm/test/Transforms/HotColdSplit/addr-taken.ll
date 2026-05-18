@@ -9,8 +9,8 @@ define void @foo() noreturn cold {
 }
 
 ; CHECK: define {{.*}} @bar.cold.1{{.*}}#[[outlined_func_attr]]
-define void @bar() {
-  br i1 undef, label %normal, label %exit
+define void @bar(i1 %arg) {
+  br i1 %arg, label %normal, label %exit
 
 normal:
   unreachable

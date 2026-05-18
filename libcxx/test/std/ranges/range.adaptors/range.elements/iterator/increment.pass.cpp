@@ -14,6 +14,7 @@
 
 #include <array>
 #include <cassert>
+#include <iterator>
 #include <ranges>
 #include <tuple>
 
@@ -23,15 +24,14 @@ template <class Iter, class Sent = sentinel_wrapper<Iter>>
 constexpr void testOne() {
   using Range          = std::ranges::subrange<Iter, Sent>;
   std::tuple<int> ts[] = {{1}, {2}, {3}};
-  auto ev              = Range{Iter{&ts[0]}, Sent{Iter{&ts[0] + 3}}} | std::views::elements<0>;
-
-  using ElementIter = std::ranges::iterator_t<decltype(ev)>;
 
   // ++i
   {
+    auto ev               = Range{Iter{std::begin(ts)}, Sent{Iter{std::end(ts)}}} | std::views::elements<0>;
     auto it               = ev.begin();
     decltype(auto) result = ++it;
 
+    using ElementIter = std::ranges::iterator_t<decltype(ev)>;
     static_assert(std::is_same_v<decltype(result), ElementIter&>);
     assert(&result == &it);
 
@@ -40,10 +40,12 @@ constexpr void testOne() {
 
   // i++
   {
+    auto ev = Range{Iter{std::begin(ts)}, Sent{Iter{std::end(ts)}}} | std::views::elements<0>;
     if constexpr (std::forward_iterator<Iter>) {
       auto it               = ev.begin();
       decltype(auto) result = it++;
 
+      using ElementIter = std::ranges::iterator_t<decltype(ev)>;
       static_assert(std::is_same_v<decltype(result), ElementIter>);
 
       assert(base(it.base()) == &ts[1]);

@@ -10,7 +10,6 @@
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AsmState.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
@@ -36,7 +35,7 @@ using namespace bufferization;
 //===----------------------------------------------------------------------===//
 
 static Value buildBoolValue(OpBuilder &builder, Location loc, bool value) {
-  return builder.create<arith::ConstantOp>(loc, builder.getBoolAttr(value));
+  return arith::ConstantOp::create(builder, loc, builder.getBoolAttr(value));
 }
 
 static bool isMemref(Value v) { return isa<BaseMemRefType>(v.getType()); }
@@ -94,7 +93,9 @@ void Ownership::combine(Ownership other) { *this = getCombined(other); }
 // DeallocationState
 //===----------------------------------------------------------------------===//
 
-DeallocationState::DeallocationState(Operation *op) : liveness(op) {}
+DeallocationState::DeallocationState(Operation *op,
+                                     SymbolTableCollection &symbolTables)
+    : symbolTable(symbolTables), liveness(op) {}
 
 void DeallocationState::updateOwnership(Value memref, Ownership ownership,
                                         Block *block) {
@@ -123,10 +124,21 @@ void DeallocationState::dropMemrefToDeallocate(Value memref, Block *block) {
   llvm::erase(memrefsToDeallocatePerBlock[block], memref);
 }
 
+void DeallocationState::mapValue(Value oldValue, Value newValue) {
+  valueMapping[oldValue] = newValue;
+}
+
 void DeallocationState::getLiveMemrefsIn(Block *block,
                                          SmallVectorImpl<Value> &memrefs) {
-  SmallVector<Value> liveMemrefs(
-      llvm::make_filter_range(liveness.getLiveIn(block), isMemref));
+  SmallVector<Value> liveMemrefs;
+  for (Value val : liveness.getLiveIn(block)) {
+    // Translate any value that was replaced (e.g., by appendOpResults) to its
+    // current equivalent before checking whether it is a MemRef.
+    if (Value mapped = valueMapping.lookup(val))
+      val = mapped;
+    if (isMemref(val))
+      liveMemrefs.push_back(val);
+  }
   llvm::sort(liveMemrefs, ValueComparator());
   memrefs.append(liveMemrefs);
 }
@@ -149,7 +161,7 @@ DeallocationState::getMemrefWithUniqueOwnership(OpBuilder &builder,
   // ownerships more intelligently to not end up with an 'Unknown' ownership in
   // the first place.
   auto cloneOp =
-      builder.create<bufferization::CloneOp>(memref.getLoc(), memref);
+      bufferization::CloneOp::create(builder, memref.getLoc(), memref);
   Value condition = buildBoolValue(builder, memref.getLoc(), true);
   Value newMemref = cloneOp.getResult();
   updateOwnership(newMemref, condition);
@@ -166,19 +178,37 @@ void DeallocationState::getMemrefsToRetain(
     toRetain.push_back(operand);
   }
 
+  // Translate any value replaced during the transformation (e.g., when an op
+  // was cloned with extra results via appendOpResults) before checking whether
+  // it is a MemRef. The liveness analysis is computed once and may contain
+  // stale values after IR modifications.
+  auto translateValue = [&](Value val) -> Value {
+    if (Value mapped = valueMapping.lookup(val))
+      return mapped;
+    return val;
+  };
+
   SmallPtrSet<Value, 16> liveOut;
-  for (auto val : liveness.getLiveOut(fromBlock))
+  for (auto val : liveness.getLiveOut(fromBlock)) {
+    val = translateValue(val);
     if (isMemref(val))
       liveOut.insert(val);
+  }
 
-  if (toBlock)
-    llvm::set_intersect(liveOut, liveness.getLiveIn(toBlock));
+  if (toBlock) {
+    SmallPtrSet<Value, 16> liveIn;
+    for (auto val : liveness.getLiveIn(toBlock)) {
+      val = translateValue(val);
+      if (isMemref(val))
+        liveIn.insert(val);
+    }
+    llvm::set_intersect(liveOut, liveIn);
+  }
 
   // liveOut has non-deterministic order because it was constructed by iterating
   // over a hash-set.
   SmallVector<Value> retainedByLiveness(liveOut.begin(), liveOut.end());
-  std::sort(retainedByLiveness.begin(), retainedByLiveness.end(),
-            ValueComparator());
+  llvm::sort(retainedByLiveness, ValueComparator());
   toRetain.append(retainedByLiveness);
 }
 
@@ -196,16 +226,18 @@ LogicalResult DeallocationState::getMemrefsAndConditionsToDeallocate(
     // Simply cast unranked MemRefs to ranked memrefs with 0 dimensions such
     // that we can call extract_strided_metadata on it.
     if (auto unrankedMemRefTy = dyn_cast<UnrankedMemRefType>(memref.getType()))
-      memref = builder.create<memref::ReinterpretCastOp>(
-          loc, MemRefType::get({}, unrankedMemRefTy.getElementType()), memref,
-          0, SmallVector<int64_t>{}, SmallVector<int64_t>{});
+      memref = memref::ReinterpretCastOp::create(
+          builder, loc, memref,
+          /*offset=*/builder.getIndexAttr(0),
+          /*sizes=*/ArrayRef<OpFoldResult>{},
+          /*strides=*/ArrayRef<OpFoldResult>{});
 
     // Use the `memref.extract_strided_metadata` operation to get the base
     // memref. This is needed because the same MemRef that was produced by the
     // alloc operation has to be passed to the dealloc operation. Passing
     // subviews, etc. to a dealloc operation is not allowed.
     memrefs.push_back(
-        builder.create<memref::ExtractStridedMetadataOp>(loc, memref)
+        memref::ExtractStridedMetadataOp::create(builder, loc, memref)
             .getResult(0));
     conditions.push_back(ownership.getIndicator());
   }
@@ -246,7 +278,12 @@ bool ValueComparator::operator()(const Value &lhs, const Value &rhs) const {
     lhsRegion = lhs.getDefiningOp()->getParentRegion();
     rhsRegion = rhs.getDefiningOp()->getParentRegion();
     if (lhsRegion == rhsRegion) {
-      return lhs.getDefiningOp()->isBeforeInBlock(rhs.getDefiningOp());
+      Block *lhsBlock = lhs.getDefiningOp()->getBlock();
+      Block *rhsBlock = rhs.getDefiningOp()->getBlock();
+      if (lhsBlock == rhsBlock) {
+        return lhs.getDefiningOp()->isBeforeInBlock(rhs.getDefiningOp());
+      }
+      return lhsBlock->computeBlockNumber() < rhsBlock->computeBlockNumber();
     }
   }
 
@@ -260,8 +297,14 @@ bool ValueComparator::operator()(const Value &lhs, const Value &rhs) const {
       return lhsRegion->getRegionNumber() < rhsRegion->getRegionNumber();
     }
     if (lhsRegion->getParentRegion() == rhsRegion->getParentRegion()) {
-      return lhsRegion->getParentOp()->isBeforeInBlock(
-          rhsRegion->getParentOp());
+      Block *lhsParentOpBlock = lhsRegion->getParentOp()->getBlock();
+      Block *rhsParentOpBlock = rhsRegion->getParentOp()->getBlock();
+      if (lhsParentOpBlock == rhsParentOpBlock) {
+        return lhsRegion->getParentOp()->isBeforeInBlock(
+            rhsRegion->getParentOp());
+      }
+      return lhsParentOpBlock->computeBlockNumber() <
+             rhsParentOpBlock->computeBlockNumber();
     }
     lhsRegion = lhsRegion->getParentRegion();
     rhsRegion = rhsRegion->getParentRegion();
@@ -294,8 +337,8 @@ FailureOr<Operation *> deallocation_impl::insertDeallocOpForReturnLike(
   if (memrefs.empty() && toRetain.empty())
     return op;
 
-  auto deallocOp = builder.create<bufferization::DeallocOp>(
-      op->getLoc(), memrefs, conditions, toRetain);
+  auto deallocOp = bufferization::DeallocOp::create(
+      builder, op->getLoc(), memrefs, conditions, toRetain);
 
   // We want to replace the current ownership of the retained values with the
   // result values of the dealloc operation as they are always unique.

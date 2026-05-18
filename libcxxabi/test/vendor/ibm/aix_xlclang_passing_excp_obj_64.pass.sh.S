@@ -14,7 +14,7 @@
 // xlclang++ compiler included in this file. This file tests for the 64-bit
 // mode.
 
-# REQUIRES: target=powerpc64-ibm-aix
+# REQUIRES: target=powerpc64-ibm-aix{{.*}}
 # UNSUPPORTED: no-exceptions
 
 // RUN: %{cxx} -c %s -o %t1_64.o -DT1_CPP_CODE %{flags} %{compile_flags}

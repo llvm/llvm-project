@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-vector-width=4 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 | FileCheck %s
 ; Make sure we vectorize with debugging turned on.
 
 source_filename = "test/Transforms/LoopVectorize/dbg.value.ll"
@@ -9,13 +9,12 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @C = global [1024 x i32] zeroinitializer, align 16, !dbg !9
 ; CHECK-LABEL: @test(
 
-; Function Attrs: nounwind ssp uwtable
 define i32 @test() #0 !dbg !15 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 0, metadata !19, metadata !21), !dbg !22
   br label %for.body, !dbg !22
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   ;CHECK: load <4 x i32>
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds [1024 x i32], ptr @B, i64 0, i64 %indvars.iv, !dbg !23
@@ -31,19 +30,12 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp ne i32 %lftr.wideiv, 1024, !dbg !22
   br i1 %exitcond, label %for.body, label %for.end, !dbg !22
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0, !dbg !25
 }
 
-; Function Attrs: nounwind readnone
 
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-
-; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-
-attributes #0 = { nounwind ssp uwtable "fp-contract-model"="standard" "frame-pointer"="non-leaf" "relocation-model"="pic" "ssp-buffers-size"="8" }
-attributes #1 = { nounwind readnone }
+attributes #0 = { "fp-contract-model"="standard" "frame-pointer"="non-leaf" "relocation-model"="pic" "ssp-buffers-size"="8" }
 
 !llvm.dbg.cu = !{!11}
 !llvm.module.flags = !{!14}
@@ -51,10 +43,8 @@ attributes #1 = { nounwind readnone }
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "A", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "test", directory: "/path/to/somewhere")
-!3 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 32768, align: 32, elements: !5)
+!3 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 32768, align: 32)
 !4 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!5 = !{!6}
-!6 = !{i32 786465, i64 0, i64 1024}
 !7 = !DIGlobalVariableExpression(var: !8, expr: !DIExpression())
 !8 = !DIGlobalVariable(name: "B", scope: null, file: !2, line: 2, type: !3, isLocal: false, isDefinition: true)
 !9 = !DIGlobalVariableExpression(var: !10, expr: !DIExpression())

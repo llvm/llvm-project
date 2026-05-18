@@ -40,7 +40,7 @@ class ArrayAttr;
 /// Assuming `sizes` is `[s0, .. sn]`, return the vector<int64_t>
 ///   `[s1 * ... * sn, s2 * ... * sn, ..., sn, 1]`.
 ///
-/// `sizes` elements are asserted to be non-negative.
+/// `sizes` elements `s1` to `sn` are asserted to be non-negative.
 ///
 /// Return an empty vector if `sizes` is empty.
 SmallVector<int64_t> computeSuffixProduct(ArrayRef<int64_t> sizes);
@@ -81,7 +81,7 @@ int64_t linearize(ArrayRef<int64_t> offsets, ArrayRef<int64_t> basis);
 ///
 /// Let `li = linearIndex`, assuming `strides` are `[s0, .. sn]`, return the
 /// vector of int64_t
-///   `[li % s0, (li / s0) % s1, ..., (li / s0 / .. / sn-1) % sn]`
+///   `[li / s0, (li % s0) / s1, ..., (li % s0 % .. % sn-1) / sn]`
 SmallVector<int64_t> delinearize(int64_t linearIndex,
                                  ArrayRef<int64_t> strides);
 
@@ -181,7 +181,7 @@ AffineExpr linearize(MLIRContext *ctx, ArrayRef<AffineExpr> offsets,
 ///
 /// Let `li = linearIndex`, assuming `strides` are `[s0, .. sn]`, return the
 /// vector of AffineExpr
-///   `[li % s0, (li / s0) % s1, ..., (li / s0 / .. / sn-1) % sn]`
+///   `[li / s0, (li % s0) / s1, ..., (li % s0 % .. % sn-1) / sn]`
 ///
 /// It is the caller's responsibility to pass proper AffineExpr kind that result
 /// in valid AffineExpr (i.e. cannot multiply 2 AffineDimExpr or divide by an
@@ -202,6 +202,9 @@ SmallVector<T> applyPermutation(ArrayRef<T> input,
                                 ArrayRef<int64_t> permutation) {
   assert(input.size() == permutation.size() &&
          "expected input rank to equal permutation rank");
+  assert(
+      llvm::all_of(permutation, [&](size_t s) { return s < input.size(); }) &&
+      "permutation must be within input bounds");
   auto permutationRange = llvm::map_range(
       llvm::seq<unsigned>(0, input.size()),
       [&](int64_t idx) -> T { return input[permutation[idx]]; });
@@ -242,6 +245,14 @@ bool isPermutationVector(ArrayRef<int64_t> interchange);
 SmallVector<int64_t>
 computePermutationVector(int64_t permSize, ArrayRef<int64_t> positions,
                          ArrayRef<int64_t> desiredPositions);
+
+/// Returns a permutation vector that drop the input dims in
+/// dropPositions from inputPerm.
+///
+/// For example, inputPerm = {2, 4, 0, 1, 3} and dropPositions= {1, 2} would
+/// result in a {2, 0, 1} permutation vector.
+SmallVector<int64_t> dropDims(ArrayRef<int64_t> inputPerm,
+                              ArrayRef<int64_t> dropPositions);
 
 /// Helper to return a subset of `arrayAttr` as a vector of int64_t.
 // TODO: Port everything relevant to DenseArrayAttr and drop this util.

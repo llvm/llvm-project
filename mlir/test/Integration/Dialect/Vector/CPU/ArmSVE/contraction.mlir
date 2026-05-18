@@ -2,7 +2,7 @@
 // DEFINE:    -cse -canonicalize -convert-vector-to-scf -arm-sve-legalize-vector-storage\
 // DEFINE:    -convert-vector-to-llvm="enable-arm-sve" -test-lower-to-llvm -o %t
 // DEFINE: %{entry} =
-// DEFINE: %{run} = %mcr_aarch64_cmd %t -e=%{entry} -entry-point-result=void --march=aarch64 --mattr="+sve" -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext
+// DEFINE: %{run} = %mcr_aarch64_cmd %t -e=%{entry} -entry-point-result=void --march=aarch64 --mattr="+sve" -shared-libs=%native_mlir_c_runner_utils
 
 // This check whether the files compiles and generates a temporary that will be executed further down.
 // RUN: %{compile}
@@ -106,7 +106,7 @@ func.func @matvec_i32() {
   //    val = (123 * 314) * 4 * vscale
   // so ...
   %vscale = vector.vscale
-  %vscale_v = vector.splat %vscale : vector<3xindex>
+  %vscale_v = vector.broadcast %vscale : index to vector<3xindex>
   %vscale_i32 = arith.index_cast %vscale_v : vector<3xindex> to vector<3xi32>
   %mv1_div = arith.divui %mv1, %vscale_i32 : vector<3xi32>
   // ... val / vscale = 123 * 314 * 4 = 154488

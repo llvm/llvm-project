@@ -8,7 +8,7 @@
 #
 # RUN: not llvm-jitlink -noexec %t/COFF_main.o %t/COFF_weak_1.o %t/COFF_strong.o \
 # RUN:                  -slab-allocate 64Kb -slab-address 0xfff00000 \
-# RUN:                  -slab-page-size 4096 -show-graph 2>&1 | FileCheck %s
+# RUN:                  -slab-page-size 4096 -show-graphs=".*" 2>&1 | FileCheck %s
 #
 # Check that a combination of comdat any definition and strong definition
 # generate duplicate definition error.

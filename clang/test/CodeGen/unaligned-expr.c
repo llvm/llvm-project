@@ -87,8 +87,8 @@ void test8(void) {
 // -------------
 __unaligned int a[10];
 void test9(void) {
-  // CHECK: {{%.*}} = load i32, ptr getelementptr inbounds ([10 x i32], ptr @a, i64 0, i64 3), align 1
-  // CHECK: store i32 {{%.*}}, ptr getelementptr inbounds ([10 x i32], ptr @a, i64 0, i64 3), align 1
+  // CHECK: {{%.*}} = load i32, ptr getelementptr inbounds nuw (i8, ptr @a, i64 12), align 1
+  // CHECK: store i32 {{%.*}}, ptr getelementptr inbounds nuw (i8, ptr @a, i64 12), align 1
   (a[3])++;
 }
 
@@ -180,14 +180,14 @@ struct S1 {
 
 __unaligned S1 s1;
 void test20(void) {
-    // CHECK: {{%.*}} = load i32, ptr getelementptr inbounds (%struct.S1, ptr @s1, i32 0, i32 1), align 1
-    // CHECK: store i32 {{%.*}}, ptr getelementptr inbounds (%struct.S1, ptr @s1, i32 0, i32 1), align 1
+    // CHECK: {{%.*}} = load i32, ptr getelementptr inbounds nuw (i8, ptr @s1, i64 4), align 1
+    // CHECK: store i32 {{%.*}}, ptr getelementptr inbounds nuw (i8, ptr @s1, i64 4), align 1
     s1.x++;
 }
 
 void test21(void) {
   // CHECK: {{%.*}} = alloca %struct.S1, align 1
-  // CHECK: {{%.*}} = getelementptr inbounds %struct.S1, ptr {{%.*}}, i32 0, i32 1
+  // CHECK: {{%.*}} = getelementptr inbounds nuw %struct.S1, ptr {{%.*}}, i32 0, i32 1
   // CHECK: {{%.*}} = load i32, ptr {{%.*}}, align 1
   // CHECK: store i32 {{%.*}}, ptr {{%.*}}, align 1
   __unaligned S1 s1_2;
@@ -202,14 +202,14 @@ struct __attribute__((packed)) S2 {
 
 __unaligned S2 s2;
 void test22(void) {
-    // CHECK: {{%.*}} = load i32, ptr getelementptr inbounds (%struct.S2, ptr @s2, i32 0, i32 1), align 1
-    // CHECK: store i32 {{%.*}}, ptr getelementptr inbounds (%struct.S2, ptr @s2, i32 0, i32 1), align 1
+    // CHECK: {{%.*}} = load i32, ptr getelementptr inbounds nuw (i8, ptr @s2, i64 1), align 1
+    // CHECK: store i32 {{%.*}}, ptr getelementptr inbounds nuw (i8, ptr @s2, i64 1), align 1
     s2.x++;
 }
 
 void test23(void) {
   // CHECK: {{%.*}} = alloca %struct.S2, align 1
-  // CHECK: {{%.*}} = getelementptr inbounds %struct.S2, ptr {{%.*}}, i32 0, i32 1
+  // CHECK: {{%.*}} = getelementptr inbounds nuw %struct.S2, ptr {{%.*}}, i32 0, i32 1
   // CHECK: {{%.*}} = load i32, ptr {{%.*}}, align 1
   // CHECK: store i32 {{%.*}}, ptr {{%.*}}, align 1
   __unaligned S2 s2_2;

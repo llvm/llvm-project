@@ -17,7 +17,6 @@
 
 #include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/SSAContext.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
@@ -57,19 +56,24 @@ public:
   /// Run the analysis pass over a function and produce a dominator tree.
   CycleInfo run(Function &F, FunctionAnalysisManager &);
 
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
+
   // TODO: verify analysis?
 };
 
-/// Printer pass for the \c DominatorTree.
-class CycleInfoPrinterPass : public PassInfoMixin<CycleInfoPrinterPass> {
+class CycleInfoPrinterPass
+    : public RequiredPassInfoMixin<CycleInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit CycleInfoPrinterPass(raw_ostream &OS);
-
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
 
-  static bool isRequired() { return true; }
+struct CycleInfoVerifierPass
+    : public RequiredPassInfoMixin<CycleInfoVerifierPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

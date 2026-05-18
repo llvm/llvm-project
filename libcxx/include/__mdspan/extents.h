@@ -19,17 +19,22 @@
 
 #include <__assert>
 #include <__config>
+
+#include <__concepts/arithmetic.h>
+#include <__concepts/same_as.h>
 #include <__type_traits/common_type.h>
+#include <__type_traits/integer_traits.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_same.h>
+#include <__type_traits/is_signed.h>
 #include <__type_traits/make_unsigned.h>
+#include <__type_traits/remove_cvref.h>
+#include <__utility/as_const.h>
+#include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/unreachable.h>
 #include <array>
-#include <cinttypes>
 #include <concepts>
-#include <cstddef>
 #include <limits>
 #include <span>
 
@@ -128,14 +133,14 @@ private:
   // Static values member
   static constexpr size_t __size_         = sizeof...(_Values);
   static constexpr size_t __size_dynamic_ = ((_Values == _DynTag) + ... + 0);
-  using _StaticValues                     = __static_array<_TStatic, _Values...>;
-  using _DynamicValues                    = __possibly_empty_array<_TDynamic, __size_dynamic_>;
+  using _StaticValues _LIBCPP_NODEBUG     = __static_array<_TStatic, _Values...>;
+  using _DynamicValues _LIBCPP_NODEBUG    = __possibly_empty_array<_TDynamic, __size_dynamic_>;
 
   // Dynamic values member
   _LIBCPP_NO_UNIQUE_ADDRESS _DynamicValues __dyn_vals_;
 
   // static mapping of indices to the position in the dynamic values array
-  using _DynamicIdxMap = __static_partial_sums<static_cast<size_t>(_Values == _DynTag)...>;
+  using _DynamicIdxMap _LIBCPP_NODEBUG = __static_partial_sums<static_cast<size_t>(_Values == _DynTag)...>;
 
   template <size_t... _Indices>
   _LIBCPP_HIDE_FROM_ABI static constexpr _DynamicValues __zeros(index_sequence<_Indices...>) noexcept {
@@ -251,19 +256,6 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __is_representable_as(_From __value) {
   return true;
 }
 
-template <integral _To, class... _From>
-_LIBCPP_HIDE_FROM_ABI constexpr bool __are_representable_as(_From... __values) {
-  return (__mdspan_detail::__is_representable_as<_To>(__values) && ... && true);
-}
-
-template <integral _To, class _From, size_t _Size>
-_LIBCPP_HIDE_FROM_ABI constexpr bool __are_representable_as(span<_From, _Size> __values) {
-  for (size_t __i = 0; __i < _Size; __i++)
-    if (!__mdspan_detail::__is_representable_as<_To>(__values[__i]))
-      return false;
-  return true;
-}
-
 } // namespace __mdspan_detail
 
 // ------------------------------------------------------------------
@@ -282,7 +274,7 @@ public:
   using size_type  = make_unsigned_t<index_type>;
   using rank_type  = size_t;
 
-  static_assert(is_integral<index_type>::value && !is_same<index_type, bool>::value,
+  static_assert(__signed_or_unsigned_integer<index_type>,
                 "extents::index_type must be a signed or unsigned integer type");
   static_assert(((__mdspan_detail::__is_representable_as<index_type>(_Extents) || (_Extents == dynamic_extent)) && ...),
                 "extents ctor: arguments must be representable as index_type and nonnegative");
@@ -292,16 +284,55 @@ private:
   static constexpr rank_type __rank_dynamic_ = ((_Extents == dynamic_extent) + ... + 0);
 
   // internal storage type using __maybe_static_array
-  using _Values = __mdspan_detail::__maybe_static_array<_IndexType, size_t, dynamic_extent, _Extents...>;
+  using _Values _LIBCPP_NODEBUG =
+      __mdspan_detail::__maybe_static_array<_IndexType, size_t, dynamic_extent, _Extents...>;
   [[no_unique_address]] _Values __vals_;
+
+  template <class _OtherIndexType>
+  _LIBCPP_HIDE_FROM_ABI static constexpr index_type __checked_index_cast(_OtherIndexType&& __value) noexcept {
+    using _OtherType = remove_cvref_t<_OtherIndexType>;
+    if constexpr (integral<_OtherType> && !same_as<_OtherType, bool>) {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          __mdspan_detail::__is_representable_as<index_type>(__value),
+          "extents ctor: arguments must be representable as index_type and nonnegative");
+      return static_cast<index_type>(__value);
+    } else {
+      auto __converted_val = static_cast<index_type>(std::forward<_OtherIndexType>(__value));
+      if constexpr (is_signed_v<index_type>) {
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+            __converted_val >= 0, "extents ctor: arguments must be representable as index_type and nonnegative");
+      }
+      return __converted_val;
+    }
+  }
+
+  template <class... _OtherIndexTypes>
+  _LIBCPP_HIDE_FROM_ABI static constexpr _Values
+  __representability_checked_cast(_OtherIndexTypes&&... __values) noexcept {
+    return _Values{__checked_index_cast(std::forward<_OtherIndexTypes>(__values))...};
+  }
+
+  template <class _OtherIndexType, size_t _Size, size_t... _Idxs>
+  _LIBCPP_HIDE_FROM_ABI static constexpr _Values
+  __representability_checked_cast(const array<_OtherIndexType, _Size>& __exts, index_sequence<_Idxs...>) noexcept {
+    return __representability_checked_cast(__exts[_Idxs]...);
+  }
+
+  template <class _OtherIndexType, size_t _Size, size_t... _Idxs>
+  _LIBCPP_HIDE_FROM_ABI static constexpr _Values
+  __representability_checked_cast(const span<_OtherIndexType, _Size>& __exts, index_sequence<_Idxs...>) noexcept {
+    return __representability_checked_cast(std::as_const(__exts[_Idxs])...);
+  }
 
 public:
   // [mdspan.extents.obs], observers of multidimensional index space
-  _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank() noexcept { return __rank_; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank_dynamic() noexcept { return __rank_dynamic_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank() noexcept { return __rank_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank_dynamic() noexcept { return __rank_dynamic_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr index_type extent(rank_type __r) const noexcept { return __vals_.__value(__r); }
-  _LIBCPP_HIDE_FROM_ABI static constexpr size_t static_extent(rank_type __r) noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr index_type extent(rank_type __r) const noexcept {
+    return __vals_.__value(__r);
+  }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr size_t static_extent(rank_type __r) noexcept {
     return _Values::__static_value(__r);
   }
 
@@ -315,12 +346,9 @@ public:
              (is_nothrow_constructible_v<index_type, _OtherIndexTypes> && ...) &&
              (sizeof...(_OtherIndexTypes) == __rank_ || sizeof...(_OtherIndexTypes) == __rank_dynamic_))
   _LIBCPP_HIDE_FROM_ABI constexpr explicit extents(_OtherIndexTypes... __dynvals) noexcept
-      : __vals_(static_cast<index_type>(__dynvals)...) {
-    // Not catching this could lead to out of bounds errors later
-    // e.g. mdspan m(ptr, dextents<char, 1>(200u)); leads to an extent of -56 on m
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__mdspan_detail::__are_representable_as<index_type>(__dynvals...),
-                                        "extents ctor: arguments must be representable as index_type and nonnegative");
-  }
+      // Not catching this could lead to out of bounds errors later
+      // e.g. mdspan m(ptr, dextents<char, 1>(200u)); leads to an extent of -56 on m
+      : __vals_(__representability_checked_cast(std::move(__dynvals)...)) {}
 
   template <class _OtherIndexType, size_t _Size>
     requires(is_convertible_v<const _OtherIndexType&, index_type> &&
@@ -328,12 +356,9 @@ public:
              (_Size == __rank_ || _Size == __rank_dynamic_))
   explicit(_Size != __rank_dynamic_)
       _LIBCPP_HIDE_FROM_ABI constexpr extents(const array<_OtherIndexType, _Size>& __exts) noexcept
-      : __vals_(span(__exts)) {
-    // Not catching this could lead to out of bounds errors later
-    // e.g. mdspan m(ptr, dextents<char, 1>(array<unsigned,1>(200))); leads to an extent of -56 on m
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__mdspan_detail::__are_representable_as<index_type>(span(__exts)),
-                                        "extents ctor: arguments must be representable as index_type and nonnegative");
-  }
+      // Not catching this could lead to out of bounds errors later
+      // e.g. mdspan m(ptr, dextents<char, 1>(200u)); leads to an extent of -56 on m
+      : __vals_(__representability_checked_cast(__exts, make_index_sequence<_Size>())) {}
 
   template <class _OtherIndexType, size_t _Size>
     requires(is_convertible_v<const _OtherIndexType&, index_type> &&
@@ -341,13 +366,9 @@ public:
              (_Size == __rank_ || _Size == __rank_dynamic_))
   explicit(_Size != __rank_dynamic_)
       _LIBCPP_HIDE_FROM_ABI constexpr extents(const span<_OtherIndexType, _Size>& __exts) noexcept
-      : __vals_(__exts) {
-    // Not catching this could lead to out of bounds errors later
-    // e.g. array a{200u}; mdspan<int, dextents<char,1>> m(ptr, extents(span<unsigned,1>(a))); leads to an extent of -56
-    // on m
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__mdspan_detail::__are_representable_as<index_type>(__exts),
-                                        "extents ctor: arguments must be representable as index_type and nonnegative");
-  }
+      // Not catching this could lead to out of bounds errors later
+      // e.g. mdspan m(ptr, dextents<char, 1>(200u)); leads to an extent of -56 on m
+      : __vals_(__representability_checked_cast(__exts, make_index_sequence<_Size>())) {}
 
 private:
   // Function to construct extents storage from other extents.
@@ -429,6 +450,15 @@ public:
     }
     return true;
   }
+
+  template <class _OtherIndexType>
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __index_cast(_OtherIndexType&& __i) noexcept {
+    using _OtherIndex = remove_cvref_t<_OtherIndexType>;
+    if constexpr (integral<_OtherIndex> && !same_as<_OtherIndex, bool>)
+      return __i;
+    else
+      return static_cast<index_type>(std::forward<_OtherIndexType>(__i));
+  }
 };
 
 // Recursive helper classes to implement dextents alias for extents
@@ -439,16 +469,16 @@ struct __make_dextents;
 
 template <class _IndexType, size_t _Rank, size_t... _ExtentsPack>
 struct __make_dextents< _IndexType, _Rank, extents<_IndexType, _ExtentsPack...>> {
-  using type =
+  using type _LIBCPP_NODEBUG =
       typename __make_dextents< _IndexType, _Rank - 1, extents<_IndexType, dynamic_extent, _ExtentsPack...>>::type;
 };
 
 template <class _IndexType, size_t... _ExtentsPack>
 struct __make_dextents< _IndexType, 0, extents<_IndexType, _ExtentsPack...>> {
-  using type = extents<_IndexType, _ExtentsPack...>;
+  using type _LIBCPP_NODEBUG = extents<_IndexType, _ExtentsPack...>;
 };
 
-} // end namespace __mdspan_detail
+} // namespace __mdspan_detail
 
 // [mdspan.extents.dextents], alias template
 template <class _IndexType, size_t _Rank>

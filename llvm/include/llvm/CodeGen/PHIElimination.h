@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class PHIEliminationPass : public PassInfoMixin<PHIEliminationPass> {
+class PHIEliminationPass : public RequiredPassInfoMixin<PHIEliminationPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

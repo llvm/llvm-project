@@ -35,9 +35,7 @@ SlotIndexesPrinterPass::run(MachineFunction &MF,
 }
 char SlotIndexesWrapperPass::ID = 0;
 
-SlotIndexesWrapperPass::SlotIndexesWrapperPass() : MachineFunctionPass(ID) {
-  initializeSlotIndexesWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+SlotIndexesWrapperPass::SlotIndexesWrapperPass() : MachineFunctionPass(ID) {}
 
 SlotIndexes::~SlotIndexes() {
   // The indexList's nodes are all allocated in the BumpPtrAllocator.
@@ -176,6 +174,7 @@ void SlotIndexes::renumberIndexes(IndexList::iterator curItr) {
 
   IndexList::iterator startItr = std::prev(curItr);
   unsigned index = startItr->getIndex();
+  unsigned BeginIndex = index;
   do {
     curItr->setIndex(index += Space);
     ++curItr;
@@ -184,6 +183,14 @@ void SlotIndexes::renumberIndexes(IndexList::iterator curItr) {
 
   LLVM_DEBUG(dbgs() << "\n*** Renumbered SlotIndexes " << startItr->getIndex()
                     << '-' << index << " ***\n");
+
+  // If we repack more than 20% of a function, add spacing in between the
+  // instructions so that future renumberings are able to catch up
+  // without also renumbering so much.
+  if (index - BeginIndex >
+      (getLastIndex().getIndex() - getZeroIndex().getIndex()) / 5)
+    packIndexes();
+
   ++NumLocalRenum;
 }
 
@@ -212,6 +219,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
   IndexList::iterator ListI = endIdx.listEntry()->getIterator();
   MachineBasicBlock::iterator MBBI = End;
   bool pastStart = false;
+  bool OldIndexesRemoved = false;
   while (ListI != ListB || MBBI != Begin || (includeStart && !pastStart)) {
     assert(ListI->getIndex() >= startIdx.getIndex() &&
            (includeStart || !pastStart) &&
@@ -220,6 +228,8 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
     MachineInstr *SlotMI = ListI->getInstr();
     MachineInstr *MI = (MBBI != MBB->end() && !pastStart) ? &*MBBI : nullptr;
     bool MBBIAtBegin = MBBI == Begin && (!includeStart || pastStart);
+    bool MIIndexNotFound = MI && !mi2iMap.contains(MI);
+    bool SlotMIRemoved = false;
 
     if (SlotMI == MI && !MBBIAtBegin) {
       --ListI;
@@ -227,25 +237,31 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
         --MBBI;
       else
         pastStart = true;
-    } else if (MI && !mi2iMap.contains(MI)) {
+    } else if (MIIndexNotFound || OldIndexesRemoved) {
       if (MBBI != Begin)
         --MBBI;
       else
         pastStart = true;
     } else {
-      --ListI;
-      if (SlotMI)
+      // We ran through all the indexes on the interval
+      //   -> The only thing left is to go through all the
+      //   remaining MBB instructions and update their indexes
+      if (ListI == ListB)
+        OldIndexesRemoved = true;
+      else
+        --ListI;
+      if (SlotMI) {
         removeMachineInstrFromMaps(*SlotMI);
+        SlotMIRemoved = true;
+      }
     }
-  }
 
-  // In theory this could be combined with the previous loop, but it is tricky
-  // to update the IndexList while we are iterating it.
-  for (MachineBasicBlock::iterator I = End; I != Begin;) {
-    --I;
-    MachineInstr &MI = *I;
-    if (!MI.isDebugOrPseudoInstr() && !mi2iMap.contains(&MI))
-      insertMachineInstrInMaps(MI);
+    MachineInstr *InstrToInsert = SlotMIRemoved ? SlotMI : MI;
+
+    // Insert instruction back into the maps after passing it/removing the index
+    if ((MIIndexNotFound || SlotMIRemoved) && InstrToInsert->getParent() &&
+        !InstrToInsert->isDebugOrPseudoInstr())
+      insertMachineInstrInMaps(*InstrToInsert);
   }
 }
 

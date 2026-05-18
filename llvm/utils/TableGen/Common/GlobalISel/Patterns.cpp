@@ -18,8 +18,8 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
-namespace llvm {
-namespace gi {
+using namespace llvm;
+using namespace gi;
 
 //===- PatternType --------------------------------------------------------===//
 
@@ -46,6 +46,33 @@ std::optional<PatternType> PatternType::get(ArrayRef<SMLoc> DiagLoc,
     return PT;
   }
 
+  if (R->isSubClassOf(VariadicClassName)) {
+    const int64_t Min = R->getValueAsInt("MinArgs");
+    const int64_t Max = R->getValueAsInt("MaxArgs");
+
+    if (Min == 0) {
+      PrintError(
+          DiagLoc,
+          DiagCtx +
+              ": minimum number of arguments must be greater than zero in " +
+              VariadicClassName);
+      return std::nullopt;
+    }
+
+    if (Max <= Min && Max != 0) {
+      PrintError(DiagLoc, DiagCtx + ": maximum number of arguments (" +
+                              Twine(Max) +
+                              ") must be zero, or greater "
+                              "than the minimum number of arguments (" +
+                              Twine(Min) + ") in " + VariadicClassName);
+      return std::nullopt;
+    }
+
+    PatternType PT(PT_VariadicPack);
+    PT.Data.VPTI = {unsigned(Min), unsigned(Max)};
+    return PT;
+  }
+
   PrintError(DiagLoc, DiagCtx + ": unknown type '" + R->getName() + "'");
   return std::nullopt;
 }
@@ -66,6 +93,11 @@ const Record *PatternType::getLLTRecord() const {
   return Data.Def;
 }
 
+VariadicPackTypeInfo PatternType::getVariadicPackTypeInfo() const {
+  assert(isVariadicPack());
+  return Data.VPTI;
+}
+
 bool PatternType::operator==(const PatternType &Other) const {
   if (Kind != Other.Kind)
     return false;
@@ -77,6 +109,8 @@ bool PatternType::operator==(const PatternType &Other) const {
     return Data.Def == Other.Data.Def;
   case PT_TypeOf:
     return Data.Str == Other.Data.Str;
+  case PT_VariadicPack:
+    return Data.VPTI == Other.Data.VPTI;
   }
 
   llvm_unreachable("Unknown Type Kind");
@@ -90,6 +124,10 @@ std::string PatternType::str() const {
     return Data.Def->getName().str();
   case PT_TypeOf:
     return (TypeOfClassName + "<$" + getTypeOfOpName() + ">").str();
+  case PT_VariadicPack:
+    return (VariadicClassName + "<" + Twine(Data.VPTI.Min) + "," +
+            Twine(Data.VPTI.Max) + ">")
+        .str();
   }
 
   llvm_unreachable("Unknown type!");
@@ -130,8 +168,7 @@ void Pattern::printImpl(raw_ostream &OS, bool PrintName,
 void AnyOpcodePattern::print(raw_ostream &OS, bool PrintName) const {
   printImpl(OS, PrintName, [&OS, this]() {
     OS << "["
-       << join(map_range(Insts,
-                         [](const auto *I) { return I->TheDef->getName(); }),
+       << join(map_range(Insts, [](const auto *I) { return I->getName(); }),
                ", ")
        << "]";
   });
@@ -328,7 +365,7 @@ void MIFlagsInfo::addCopyFlag(StringRef InstName) { CopyF.insert(InstName); }
 //===- CodeGenInstructionPattern ------------------------------------------===//
 
 bool CodeGenInstructionPattern::is(StringRef OpcodeName) const {
-  return I.TheDef->getName() == OpcodeName;
+  return I.getName() == OpcodeName;
 }
 
 bool CodeGenInstructionPattern::isVariadic() const {
@@ -344,7 +381,7 @@ bool CodeGenInstructionPattern::hasVariadicDefs() const {
   if (I.variadicOpsAreDefs)
     return true;
 
-  DagInit *OutOps = I.TheDef->getValueAsDag("OutOperandList");
+  const DagInit *OutOps = I.TheDef->getValueAsDag("OutOperandList");
   if (OutOps->arg_empty())
     return false;
 
@@ -378,9 +415,7 @@ MIFlagsInfo &CodeGenInstructionPattern::getOrCreateMIFlagsInfo() {
   return *FI;
 }
 
-StringRef CodeGenInstructionPattern::getInstName() const {
-  return I.TheDef->getName();
-}
+StringRef CodeGenInstructionPattern::getInstName() const { return I.getName(); }
 
 void CodeGenInstructionPattern::printExtras(raw_ostream &OS) const {
   if (isIntrinsic())
@@ -525,6 +560,7 @@ bool PatFrag::checkSemantics() {
       case Pattern::K_CXX:
         continue;
       case Pattern::K_CodeGenInstruction:
+        // TODO: Allow VarArgs?
         if (cast<CodeGenInstructionPattern>(Pat.get())->diagnoseAllSpecialTypes(
                 Def.getLoc(), PatternType::SpecialTyClassName +
                                   " is not supported in " + ClassName))
@@ -542,7 +578,7 @@ bool PatFrag::checkSemantics() {
 
   StringSet<> SeenOps;
   for (const auto &Op : in_params()) {
-    if (SeenOps.count(Op.Name)) {
+    if (SeenOps.contains(Op.Name)) {
       PrintError("duplicate parameter '" + Op.Name + "'");
       return false;
     }
@@ -570,7 +606,7 @@ bool PatFrag::checkSemantics() {
       return false;
     }
 
-    if (SeenOps.count(Op.Name)) {
+    if (SeenOps.contains(Op.Name)) {
       PrintError("duplicate parameter '" + Op.Name + "'");
       return false;
     }
@@ -801,8 +837,9 @@ bool PatFragPattern::mapInputCodeExpansions(const CodeExpansions &ParentCEs,
       if (It == ParentCEs.end()) {
         if (!PF.handleUnboundInParam(ParamName, ArgName, DiagLoc))
           return false;
-      } else
+      } else {
         PatFragCEs.declare(ParamName, It->second);
+      }
       continue;
     }
 
@@ -847,6 +884,3 @@ bool BuiltinPattern::checkSemantics(ArrayRef<SMLoc> Loc) {
 
   return true;
 }
-
-} // namespace gi
-} // namespace llvm

@@ -12,7 +12,7 @@ define void @pointer_add_unknown_offset(ptr %base, i32 %offset) !dbg !7 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:i64regs = COPY $i1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:i64regs = COPY $i0
   ; CHECK-NEXT:   [[SRAri:%[0-9]+]]:i64regs = SRAri [[COPY]], 0
-  ; CHECK-NEXT:   [[SLLXri:%[0-9]+]]:i64regs = SLLXri killed [[SRAri]], 2
+  ; CHECK-NEXT:   [[SLLXri:%[0-9]+]]:i64regs = nsw SLLXri killed [[SRAri]], 2
   ; CHECK-NEXT:   DBG_VALUE_LIST !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), [[COPY1]], [[SLLXri]], debug-location !16
   ; CHECK-NEXT:   DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_plus_uconst, 3, DW_OP_stack_value), [[COPY1]], [[SLLXri]], debug-location !16
   ; CHECK-NEXT:   DBG_VALUE_LIST !15, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 2, DW_OP_plus, DW_OP_LLVM_arg, 1, DW_OP_LLVM_arg, 3, DW_OP_plus, DW_OP_plus, DW_OP_stack_value), [[COPY1]], [[COPY1]], [[SLLXri]], [[SLLXri]], debug-location !16

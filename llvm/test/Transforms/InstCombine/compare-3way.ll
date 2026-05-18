@@ -3,7 +3,7 @@
 
 declare void @use(i32)
 
-; These 18 exercise all combinations of signed comparison
+; These exercise all combinations of signed comparison
 ; for each of the three values produced by your typical
 ; 3way compare function (-1, 0, 1)
 
@@ -15,8 +15,7 @@ define void @test_low_sgt(i64 %a, i64 %b) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[EQ:%.*]] = icmp ne i64 [[A]], [[B]]
-; CHECK-NEXT:    [[RESULT:%.*]] = zext i1 [[EQ]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -62,10 +61,7 @@ define void @test_low_sge(i64 %a, i64 %b) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[A]], [[B]]
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[SLT]], i32 -1, i32 1
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[EQ]], i32 0, i32 [[DOT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -85,8 +81,8 @@ unreached:
 define void @test_low_sle(i64 %a, i64 %b) {
 ; CHECK-LABEL: define void @test_low_sle
 ; CHECK-SAME: (i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[UNREACHED:%.*]], label [[NORMAL:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[UNREACHED:%.*]], label [[NORMAL:%.*]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
@@ -109,13 +105,12 @@ unreached:
 define void @test_low_ne(i64 %a, i64 %b) {
 ; CHECK-LABEL: define void @test_low_ne
 ; CHECK-SAME: (i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[NORMAL:%.*]], label [[UNREACHED:%.*]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[NORMAL:%.*]], label [[UNREACHED:%.*]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[EQ:%.*]] = icmp ne i64 [[A]], [[B]]
-; CHECK-NEXT:    [[RESULT:%.*]] = zext i1 [[EQ]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -135,8 +130,8 @@ unreached:
 define void @test_low_eq(i64 %a, i64 %b) {
 ; CHECK-LABEL: define void @test_low_eq
 ; CHECK-SAME: (i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[UNREACHED:%.*]], label [[NORMAL:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[UNREACHED:%.*]], label [[NORMAL:%.*]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
@@ -159,8 +154,8 @@ unreached:
 define void @test_mid_sgt(i64 %a, i64 %b) {
 ; CHECK-LABEL: define void @test_mid_sgt
 ; CHECK-SAME: (i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[UNREACHED:%.*]], label [[NORMAL:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[UNREACHED:%.*]], label [[NORMAL:%.*]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
@@ -183,8 +178,8 @@ unreached:
 define void @test_mid_slt(i64 %a, i64 %b) {
 ; CHECK-LABEL: define void @test_mid_slt
 ; CHECK-SAME: (i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[UNREACHED:%.*]], label [[NORMAL:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[UNREACHED:%.*]], label [[NORMAL:%.*]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
@@ -212,8 +207,7 @@ define void @test_mid_sge(i64 %a, i64 %b) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[EQ:%.*]] = icmp ne i64 [[A]], [[B]]
-; CHECK-NEXT:    [[RESULT:%.*]] = zext i1 [[EQ]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -238,10 +232,7 @@ define void @test_mid_sle(i64 %a, i64 %b) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[A]], [[B]]
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[SLT]], i32 -1, i32 1
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[EQ]], i32 0, i32 [[DOT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -261,14 +252,13 @@ unreached:
 define void @test_mid_ne(i64 %a, i64 %b) {
 ; CHECK-LABEL: define void @test_mid_ne
 ; CHECK-SAME: (i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[EQ]], label [[NORMAL:%.*]], label [[UNREACHED:%.*]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[NORMAL:%.*]], label [[UNREACHED:%.*]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[SLT]], i32 -1, i32 1
-; CHECK-NEXT:    call void @use(i32 [[DOT]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
   %eq = icmp eq i64 %a, %b
@@ -287,8 +277,8 @@ unreached:
 define void @test_mid_eq(i64 %a, i64 %b) {
 ; CHECK-LABEL: define void @test_mid_eq
 ; CHECK-SAME: (i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[EQ]], label [[UNREACHED:%.*]], label [[NORMAL:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[UNREACHED:%.*]], label [[NORMAL:%.*]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
@@ -338,10 +328,7 @@ define void @test_high_slt(i64 %a, i64 %b) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[A]], [[B]]
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[SLT]], i32 -1, i32 1
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[EQ]], i32 0, i32 [[DOT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -361,8 +348,8 @@ unreached:
 define void @test_high_sge(i64 %a, i64 %b) {
 ; CHECK-LABEL: define void @test_high_sge
 ; CHECK-SAME: (i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[UNREACHED:%.*]], label [[NORMAL:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[UNREACHED:%.*]], label [[NORMAL:%.*]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
@@ -389,10 +376,7 @@ define void @test_high_sle(i64 %a, i64 %b) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[A]], [[B]]
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[SLT]], i32 -1, i32 1
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[EQ]], i32 0, i32 [[DOT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -412,15 +396,12 @@ unreached:
 define void @test_high_ne(i64 %a, i64 %b) {
 ; CHECK-LABEL: define void @test_high_ne
 ; CHECK-SAME: (i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[NORMAL:%.*]], label [[UNREACHED:%.*]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp sgt i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[NORMAL:%.*]], label [[UNREACHED:%.*]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[A]], [[B]]
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[SLT]], i32 -1, i32 1
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[EQ]], i32 0, i32 [[DOT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -440,8 +421,8 @@ unreached:
 define void @test_high_eq(i64 %a, i64 %b) {
 ; CHECK-LABEL: define void @test_high_eq
 ; CHECK-SAME: (i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[UNREACHED:%.*]], label [[NORMAL:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[UNREACHED:%.*]], label [[NORMAL:%.*]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
@@ -578,4 +559,76 @@ normal:
 unreached:
   call void @use(i32 %result)
   ret void
+}
+
+define i32 @smax_smin_to_scmp(i32 %x) {
+; CHECK-LABEL: define i32 @smax_smin_to_scmp
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[COND5:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X]], i32 0)
+; CHECK-NEXT:    ret i32 [[COND5]]
+;
+  %cond = call i32 @llvm.smax.i32(i32 %x, i32 -1)
+  %cond5 = call i32 @llvm.smin.i32(i32 %cond, i32 1)
+  ret i32 %cond5
+}
+
+define i16 @smax_smin_to_scmp_i16(i16 %x) {
+; CHECK-LABEL: define i16 @smax_smin_to_scmp_i16
+; CHECK-SAME: (i16 [[X:%.*]]) {
+; CHECK-NEXT:    [[COND5:%.*]] = call i16 @llvm.scmp.i16.i16(i16 [[X]], i16 0)
+; CHECK-NEXT:    ret i16 [[COND5]]
+;
+  %cond = call i16 @llvm.smax.i16(i16 %x, i16 -1)
+  %cond5 = call i16 @llvm.smin.i16(i16 %cond, i16 1)
+  ret i16 %cond5
+}
+
+; Test the reversed pattern: smax(smin(X, 1), -1) -> scmp(X, 0)
+define i32 @smin_smax_to_scmp(i32 %x) {
+; CHECK-LABEL: define i32 @smin_smax_to_scmp
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[COND5:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X]], i32 0)
+; CHECK-NEXT:    ret i32 [[COND5]]
+;
+  %cond = call i32 @llvm.smin.i32(i32 %x, i32 1)
+  %cond5 = call i32 @llvm.smax.i32(i32 %cond, i32 -1)
+  ret i32 %cond5
+}
+
+define i32 @test_max_min_neg(i32 %x) {
+; CHECK-LABEL: define i32 @test_max_min_neg
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 -2)
+; CHECK-NEXT:    [[COND5:%.*]] = call i32 @llvm.smin.i32(i32 [[COND]], i32 1)
+; CHECK-NEXT:    ret i32 [[COND5]]
+;
+  %cond = call i32 @llvm.smax.i32(i32 %x, i32 -2)
+  %cond5 = call i32 @llvm.smin.i32(i32 %cond, i32 1)
+  ret i32 %cond5
+}
+
+define i32 @test_max_min_neg_2(i32 %x) {
+; CHECK-LABEL: define i32 @test_max_min_neg_2
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 -1)
+; CHECK-NEXT:    [[COND5:%.*]] = call i32 @llvm.smin.i32(i32 [[COND]], i32 2)
+; CHECK-NEXT:    ret i32 [[COND5]]
+;
+  %cond = call i32 @llvm.smax.i32(i32 %x, i32 -1)
+  %cond5 = call i32 @llvm.smin.i32(i32 %cond, i32 2)
+  ret i32 %cond5
+}
+
+define i32 @test_multiple_uses(i32 %x) {
+; CHECK-LABEL: define i32 @test_multiple_uses
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 -1)
+; CHECK-NEXT:    [[COND5:%.*]] = call i32 @llvm.smin.i32(i32 [[COND]], i32 1)
+; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[COND]], [[COND5]]
+; CHECK-NEXT:    ret i32 [[SUM]]
+;
+  %cond = call i32 @llvm.smax.i32(i32 %x, i32 -1)
+  %cond5 = call i32 @llvm.smin.i32(i32 %cond, i32 1)
+  %sum = add i32 %cond, %cond5
+  ret i32 %sum
 }

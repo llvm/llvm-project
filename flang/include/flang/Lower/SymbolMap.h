@@ -14,6 +14,7 @@
 #define FORTRAN_LOWER_SYMBOLMAP_H
 
 #include "flang/Common/reference.h"
+#include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
@@ -128,10 +129,45 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
                                        const SymbolBox &symBox);
 
   /// Dump the map. For debugging.
-  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << '\n'; }
+  LLVM_DUMP_METHOD void dump() const;
 
 private:
   VT box;
+};
+
+/// Helper class to map `Fortran::evaluate::Component` references to IR values.
+/// This is used when the evaluation of a component reference must be
+/// overridden with a pre-computed address.
+class ComponentMap {
+public:
+  void insert(const Fortran::evaluate::Component &component,
+              fir::FortranVariableOpInterface definingOp) {
+    auto iter = componentMap.find(&component);
+    if (iter != componentMap.end()) {
+      iter->second = definingOp;
+      return;
+    }
+    componentStorage.push_back(
+        std::make_unique<Fortran::evaluate::Component>(component));
+    componentMap.insert({componentStorage.back().get(), definingOp});
+  }
+
+  std::optional<fir::FortranVariableOpInterface>
+  lookup(const Fortran::evaluate::Component *component) const {
+    auto iter = componentMap.find(component);
+    if (iter != componentMap.end())
+      return iter->second;
+    return std::nullopt;
+  }
+
+  LLVM_DUMP_METHOD void dump() const;
+
+private:
+  llvm::DenseMap<const Fortran::evaluate::Component *,
+                 fir::FortranVariableOpInterface>
+      componentMap;
+  llvm::SmallVector<std::unique_ptr<Fortran::evaluate::Component>>
+      componentStorage;
 };
 
 //===----------------------------------------------------------------------===//
@@ -146,14 +182,25 @@ private:
 class SymMap {
 public:
   using AcDoVar = llvm::StringRef;
+  /// Descriptor of a symbol's storage consists of the base address
+  /// of the storage and the offset within that storage.
+  using StorageDesc = std::pair<mlir::Value, std::uint64_t>;
 
   SymMap() { pushScope(); }
   SymMap(const SymMap &) = delete;
 
-  void pushScope() { symbolMapStack.emplace_back(); }
+  void pushScope() {
+    symbolMapStack.emplace_back();
+    storageMapStack.emplace_back();
+    componentMapStack.emplace_back();
+  }
   void popScope() {
     symbolMapStack.pop_back();
     assert(symbolMapStack.size() >= 1);
+    storageMapStack.pop_back();
+    assert(storageMapStack.size() >= 1);
+    componentMapStack.pop_back();
+    assert(componentMapStack.size() >= 1);
   }
 
   /// Add an extended value to the symbol table.
@@ -252,6 +299,10 @@ public:
     return lookupSymbol(*sym);
   }
 
+  /// Find a symbol by name and return its value if it appears in the current
+  /// mappings. This lookup is more expensive as it iterates over the map.
+  const semantics::Symbol *lookupSymbolByName(llvm::StringRef symName);
+
   /// Find `symbol` and return its value if it appears in the inner-most level
   /// map.
   SymbolBox shallowLookupSymbol(semantics::SymbolRef sym);
@@ -287,13 +338,17 @@ public:
     symbolMapStack.emplace_back();
     assert(symbolMapStack.size() == 1);
     impliedDoStack.clear();
+    storageMapStack.clear();
+    storageMapStack.emplace_back();
+    componentMapStack.clear();
+    componentMapStack.emplace_back();
   }
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                        const SymMap &symMap);
 
   /// Dump the map. For debugging.
-  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << '\n'; }
+  LLVM_DUMP_METHOD void dump() const;
 
   void addVariableDefinition(semantics::SymbolRef symRef,
                              fir::FortranVariableOpInterface definingOp,
@@ -315,6 +370,43 @@ public:
     return std::nullopt;
   }
 
+  /// Register a mapping from a front-end component reference to the FIR
+  /// variable that should be used to implement it. This is used to override
+  /// the default lowering of component references in specific contexts.
+  void addComponentOverride(const Fortran::evaluate::Component &component,
+                            fir::FortranVariableOpInterface definingOp) {
+    assert(!componentMapStack.empty() && "component map stack is empty");
+    if (!componentMapStack.back())
+      componentMapStack.back() = std::make_unique<ComponentMap>();
+    componentMapStack.back().value()->insert(component, definingOp);
+  }
+
+  /// Lookup an overridden FIR variable definition for a given component
+  /// reference, if any.
+  std::optional<fir::FortranVariableOpInterface>
+  lookupComponentOverride(const Fortran::evaluate::Component &component) const {
+    for (auto jmap = componentMapStack.rbegin(),
+              jend = componentMapStack.rend();
+         jmap != jend; ++jmap) {
+      if (*jmap) {
+        auto iter = (**jmap)->lookup(&component);
+        if (iter != std::nullopt)
+          return iter;
+      }
+    }
+    return std::nullopt;
+  }
+
+  /// Register the symbol's storage at the innermost level
+  /// of the symbol table. If the storage is already registered,
+  /// it will be replaced.
+  void registerStorage(semantics::SymbolRef sym, StorageDesc storage);
+  /// Lookup the symbol's storage at the innermost level of the symbol table.
+  StorageDesc lookupStorage(semantics::SymbolRef sym);
+  StorageDesc lookupStorage(const semantics::Symbol *sym) {
+    return lookupStorage(*sym);
+  }
+
 private:
   /// Bind `box` to `symRef` in the symbol map.
   void makeSym(semantics::SymbolRef symRef, const SymbolBox &box,
@@ -332,6 +424,26 @@ private:
   // Implied DO induction variables are not represented as Se::Symbol in
   // Ev::Expr. Keep the variable markers in their own stack.
   llvm::SmallVector<std::pair<AcDoVar, mlir::Value>> impliedDoStack;
+
+  // A stack of maps between the symbols and their storage descriptors.
+  llvm::SmallVector<llvm::DenseMap<const semantics::Symbol *, StorageDesc>>
+      storageMapStack;
+
+  // A stack of maps from front-end component references to the FIR variables
+  // that should be used to implement them. This allows overriding component
+  // references in specific lowering contexts.
+  llvm::SmallVector<std::optional<std::unique_ptr<ComponentMap>>>
+      componentMapStack;
+};
+
+/// RAII wrapper for SymMap.
+class SymMapScope {
+public:
+  explicit SymMapScope(SymMap &map) : map(map) { map.pushScope(); }
+  ~SymMapScope() { map.popScope(); }
+
+private:
+  SymMap &map;
 };
 
 } // namespace Fortran::lower

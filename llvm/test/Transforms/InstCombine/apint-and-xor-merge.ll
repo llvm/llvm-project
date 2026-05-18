@@ -8,7 +8,7 @@
 define i57 @test1(i57 %x, i57 %y, i57 %z) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[TMP61:%.*]] = xor i57 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP7:%.*]] = and i57 [[TMP61]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP7:%.*]] = and i57 [[Z:%.*]], [[TMP61]]
 ; CHECK-NEXT:    ret i57 [[TMP7]]
 ;
   %tmp3 = and i57 %z, %x

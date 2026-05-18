@@ -14,12 +14,14 @@
 #ifndef LLVM_CODEGEN_SCHEDULEDAGMUTATION_H
 #define LLVM_CODEGEN_SCHEDULEDAGMUTATION_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class ScheduleDAGInstrs;
 
 /// Mutate the DAG as a postpass after normal DAG building.
-class ScheduleDAGMutation {
+class LLVM_ABI ScheduleDAGMutation {
   virtual void anchor();
 
 public:

@@ -167,7 +167,7 @@ public:
 template <typename Check>
 std::string runCheckOnCode(StringRef Code, StringRef Filename) {
   std::vector<ClangTidyError> Errors;
-  return test::runCheckOnCode<Check>(Code, &Errors, Filename, std::nullopt,
+  return test::runCheckOnCode<Check>(Code, &Errors, Filename, {},
                                      ClangTidyOptions(),
                                      {// Main file include
                                       {"clang_tidy/tests/"

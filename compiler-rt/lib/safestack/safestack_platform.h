@@ -54,7 +54,8 @@ extern "C" void *__mmap(void *, size_t, int, int, int, int, off_t);
 // but it still needs to use 64-bit syscalls.
 #if SANITIZER_LINUX &&                                \
     (defined(__x86_64__) || defined(__powerpc64__) || \
-     SANITIZER_WORDSIZE == 64 || (defined(__mips__) && _MIPS_SIM == _ABIN32))
+     SANITIZER_WORDSIZE == 64 ||                      \
+     (defined(__mips__) && defined(_ABIN32) && _MIPS_SIM == _ABIN32))
 #  define SANITIZER_LINUX_USES_64BIT_SYSCALLS 1
 #else
 #  define SANITIZER_LINUX_USES_64BIT_SYSCALLS 0
@@ -143,6 +144,8 @@ inline void *Mmap(void *addr, size_t length, int prot, int flags, int fd,
   return __mmap(addr, length, prot, flags, fd, 0, offset);
 #elif SANITIZER_FREEBSD && (defined(__aarch64__) || defined(__x86_64__))
   return (void *)__syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
+#elif SANITIZER_FREEBSD && (defined(__i386__))
+  return (void *)syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
 #elif SANITIZER_SOLARIS
   return _REAL64(mmap)(addr, length, prot, flags, fd, offset);
 #elif SANITIZER_LINUX_USES_64BIT_SYSCALLS

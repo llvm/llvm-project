@@ -15,8 +15,8 @@
 
 #else // Overlay mode
 
-#include <fcntl.h>
+#include "hdr/fcntl_overlay.h"
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_FCNTL_MACROS_H

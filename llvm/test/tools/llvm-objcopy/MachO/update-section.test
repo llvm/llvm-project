@@ -16,7 +16,7 @@
 # RUN: not llvm-objcopy --update-section __TEXT,__text=%t.noexist %t /dev/null
 
 # RUN: not llvm-objcopy --update-section __NOEXIST,__text=%t.diff %t /dev/null 2>&1 | FileCheck %s --check-prefix=NO-SEGMENT
-# NO-SEGMENT: error: {{.*}}could not find segment with name '__NOEXIST'
+# NO-SEGMENT: error: {{.*}}could not find section with name '__text' in '__NOEXIST' segment
 
 # RUN: not llvm-objcopy --update-section __TEXT,__noexist=%t.diff %t /dev/null 2>&1 | FileCheck %s --check-prefix=NO-SECTION
 # NO-SECTION: error: {{.*}}could not find section with name '__noexist'

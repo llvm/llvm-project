@@ -1215,7 +1215,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP1:%.*]] = load i32, ptr [[R]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP1]], ptr [[R_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i64, ptr [[R_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267(i64 [[TMP2]]) #[[ATTR2:[0-9]+]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267(i64 [[TMP2]], ptr null) #[[ATTR2:[0-9]+]]
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i32, ptr [[R]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
@@ -1256,7 +1256,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -1315,7 +1315,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -1336,7 +1336,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -1357,7 +1357,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -1365,11 +1365,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267
-// CHECK-NTARGET-SAME: (i64 noundef [[R:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-NTARGET-SAME: (i64 noundef [[R:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[R_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[R_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-NEXT:    store i64 [[R]], ptr [[R_ADDR]], align 8
+// CHECK-NTARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = load i32, ptr [[R_ADDR]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP0]], ptr [[R_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP1:%.*]] = load i64, ptr [[R_CASTED]], align 8
@@ -1461,12 +1463,12 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_ZN2SAD1Ev
-// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-NEXT:    call void @_ZN2SAD2Ev(ptr noundef nonnull align 4 dereferenceable(16) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @_ZN2SAD2Ev(ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[THIS1]]) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -1490,7 +1492,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_ZN2SAD2Ev
-// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -1535,12 +1537,12 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_ZN2SBD1Ev
-// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dereferenceable(32) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dead_on_return(32) dereferenceable(32) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-NEXT:    call void @_ZN2SBD2Ev(ptr noundef nonnull align 4 dereferenceable(32) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @_ZN2SBD2Ev(ptr noundef nonnull align 4 dead_on_return(32) dereferenceable(32) [[THIS1]]) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -1564,7 +1566,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_ZN2SBD2Ev
-// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dereferenceable(32) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dead_on_return(32) dereferenceable(32) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -1609,12 +1611,12 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_ZN2SCD1Ev
-// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dereferenceable(64) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dead_on_return(64) dereferenceable(64) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-NEXT:    call void @_ZN2SCD2Ev(ptr noundef nonnull align 4 dereferenceable(64) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @_ZN2SCD2Ev(ptr noundef nonnull align 4 dead_on_return(64) dereferenceable(64) [[THIS1]]) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -1632,7 +1634,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -1640,11 +1642,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148
-// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -1718,7 +1722,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_ZN2SCD2Ev
-// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dereferenceable(64) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dead_on_return(64) dereferenceable(64) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -1755,12 +1759,12 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_ZN2SDD1Ev
-// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dereferenceable(128) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dead_on_return(128) dereferenceable(128) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-NEXT:    call void @_ZN2SDD2Ev(ptr noundef nonnull align 4 dereferenceable(128) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @_ZN2SDD2Ev(ptr noundef nonnull align 4 dead_on_return(128) dereferenceable(128) [[THIS1]]) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -1784,7 +1788,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_ZN2SDD2Ev
-// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dereferenceable(128) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dead_on_return(128) dereferenceable(128) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -1797,7 +1801,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -1805,11 +1809,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174
-// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -1901,12 +1907,12 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_ZN2SED1Ev
-// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dereferenceable(256) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dead_on_return(256) dereferenceable(256) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-NEXT:    call void @_ZN2SED2Ev(ptr noundef nonnull align 4 dereferenceable(256) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @_ZN2SED2Ev(ptr noundef nonnull align 4 dead_on_return(256) dereferenceable(256) [[THIS1]]) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -1924,7 +1930,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -1932,11 +1938,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192
-// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -2010,7 +2018,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_ZN2SED2Ev
-// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dereferenceable(256) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dead_on_return(256) dereferenceable(256) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -2023,7 +2031,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -2031,11 +2039,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199
-// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -2127,12 +2137,12 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_ZN2STILi100EED1Ev
-// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dereferenceable(912) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dead_on_return(912) dereferenceable(912) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-NEXT:    call void @_ZN2STILi100EED2Ev(ptr noundef nonnull align 4 dereferenceable(912) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @_ZN2STILi100EED2Ev(ptr noundef nonnull align 4 dead_on_return(912) dereferenceable(912) [[THIS1]]) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -2150,7 +2160,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -2158,11 +2168,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218
-// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -2236,7 +2248,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_ZN2STILi100EED2Ev
-// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dereferenceable(912) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dead_on_return(912) dereferenceable(912) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -2249,7 +2261,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -2257,11 +2269,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225
-// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -2353,12 +2367,12 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_ZN2STILi1000EED1Ev
-// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dereferenceable(4512) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dead_on_return(4512) dereferenceable(4512) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-NEXT:    call void @_ZN2STILi1000EED2Ev(ptr noundef nonnull align 4 dereferenceable(4512) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @_ZN2STILi1000EED2Ev(ptr noundef nonnull align 4 dead_on_return(4512) dereferenceable(4512) [[THIS1]]) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -2376,7 +2390,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -2384,11 +2398,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218
-// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -2462,7 +2478,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_ZN2STILi1000EED2Ev
-// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dereferenceable(4512) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
+// CHECK-NTARGET-SAME: (ptr noundef nonnull align 4 dead_on_return(4512) dereferenceable(4512) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -2475,7 +2491,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -2483,11 +2499,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225
-// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -2561,11 +2579,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122
-// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -2639,11 +2659,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185
-// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -2717,11 +2739,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211
-// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -2795,11 +2819,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211
-// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -2918,12 +2944,12 @@ int bar(int a){
 //
 //
 // SIMD-ONLY2-LABEL: define {{[^@]+}}@_ZN2SAD1Ev
-// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // SIMD-ONLY2-NEXT:  entry:
 // SIMD-ONLY2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY2-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY2-NEXT:    call void @_ZN2SAD2Ev(ptr noundef nonnull align 4 dereferenceable(16) [[THIS1]]) #[[ATTR2]]
+// SIMD-ONLY2-NEXT:    call void @_ZN2SAD2Ev(ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[THIS1]]) #[[ATTR2]]
 // SIMD-ONLY2-NEXT:    ret void
 //
 //
@@ -2954,12 +2980,12 @@ int bar(int a){
 //
 //
 // SIMD-ONLY2-LABEL: define {{[^@]+}}@_ZN2SBD1Ev
-// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dereferenceable(32) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dead_on_return(32) dereferenceable(32) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // SIMD-ONLY2-NEXT:  entry:
 // SIMD-ONLY2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY2-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY2-NEXT:    call void @_ZN2SBD2Ev(ptr noundef nonnull align 4 dereferenceable(32) [[THIS1]]) #[[ATTR2]]
+// SIMD-ONLY2-NEXT:    call void @_ZN2SBD2Ev(ptr noundef nonnull align 4 dead_on_return(32) dereferenceable(32) [[THIS1]]) #[[ATTR2]]
 // SIMD-ONLY2-NEXT:    ret void
 //
 //
@@ -2990,12 +3016,12 @@ int bar(int a){
 //
 //
 // SIMD-ONLY2-LABEL: define {{[^@]+}}@_ZN2SCD1Ev
-// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dereferenceable(64) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dead_on_return(64) dereferenceable(64) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // SIMD-ONLY2-NEXT:  entry:
 // SIMD-ONLY2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY2-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY2-NEXT:    call void @_ZN2SCD2Ev(ptr noundef nonnull align 4 dereferenceable(64) [[THIS1]]) #[[ATTR2]]
+// SIMD-ONLY2-NEXT:    call void @_ZN2SCD2Ev(ptr noundef nonnull align 4 dead_on_return(64) dereferenceable(64) [[THIS1]]) #[[ATTR2]]
 // SIMD-ONLY2-NEXT:    ret void
 //
 //
@@ -3018,12 +3044,12 @@ int bar(int a){
 //
 //
 // SIMD-ONLY2-LABEL: define {{[^@]+}}@_ZN2SDD1Ev
-// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dereferenceable(128) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dead_on_return(128) dereferenceable(128) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // SIMD-ONLY2-NEXT:  entry:
 // SIMD-ONLY2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY2-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY2-NEXT:    call void @_ZN2SDD2Ev(ptr noundef nonnull align 4 dereferenceable(128) [[THIS1]]) #[[ATTR2]]
+// SIMD-ONLY2-NEXT:    call void @_ZN2SDD2Ev(ptr noundef nonnull align 4 dead_on_return(128) dereferenceable(128) [[THIS1]]) #[[ATTR2]]
 // SIMD-ONLY2-NEXT:    ret void
 //
 //
@@ -3046,12 +3072,12 @@ int bar(int a){
 //
 //
 // SIMD-ONLY2-LABEL: define {{[^@]+}}@_ZN2SED1Ev
-// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dereferenceable(256) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dead_on_return(256) dereferenceable(256) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // SIMD-ONLY2-NEXT:  entry:
 // SIMD-ONLY2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY2-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY2-NEXT:    call void @_ZN2SED2Ev(ptr noundef nonnull align 4 dereferenceable(256) [[THIS1]]) #[[ATTR2]]
+// SIMD-ONLY2-NEXT:    call void @_ZN2SED2Ev(ptr noundef nonnull align 4 dead_on_return(256) dereferenceable(256) [[THIS1]]) #[[ATTR2]]
 // SIMD-ONLY2-NEXT:    ret void
 //
 //
@@ -3074,12 +3100,12 @@ int bar(int a){
 //
 //
 // SIMD-ONLY2-LABEL: define {{[^@]+}}@_ZN2STILi100EED1Ev
-// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dereferenceable(912) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dead_on_return(912) dereferenceable(912) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // SIMD-ONLY2-NEXT:  entry:
 // SIMD-ONLY2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY2-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY2-NEXT:    call void @_ZN2STILi100EED2Ev(ptr noundef nonnull align 4 dereferenceable(912) [[THIS1]]) #[[ATTR2]]
+// SIMD-ONLY2-NEXT:    call void @_ZN2STILi100EED2Ev(ptr noundef nonnull align 4 dead_on_return(912) dereferenceable(912) [[THIS1]]) #[[ATTR2]]
 // SIMD-ONLY2-NEXT:    ret void
 //
 //
@@ -3102,12 +3128,12 @@ int bar(int a){
 //
 //
 // SIMD-ONLY2-LABEL: define {{[^@]+}}@_ZN2STILi1000EED1Ev
-// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dereferenceable(4512) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dead_on_return(4512) dereferenceable(4512) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // SIMD-ONLY2-NEXT:  entry:
 // SIMD-ONLY2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY2-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY2-NEXT:    call void @_ZN2STILi1000EED2Ev(ptr noundef nonnull align 4 dereferenceable(4512) [[THIS1]]) #[[ATTR2]]
+// SIMD-ONLY2-NEXT:    call void @_ZN2STILi1000EED2Ev(ptr noundef nonnull align 4 dead_on_return(4512) dereferenceable(4512) [[THIS1]]) #[[ATTR2]]
 // SIMD-ONLY2-NEXT:    ret void
 //
 //
@@ -3144,7 +3170,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC1:%.*]] = add nsw i32 [[TMP3]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC1]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP2:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP1:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[R]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
@@ -3198,7 +3224,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP4:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP3:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3270,7 +3296,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP5:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP4:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3304,7 +3330,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP6:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP5:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3338,7 +3364,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP7:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP6:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3366,7 +3392,7 @@ int bar(int a){
 //
 //
 // SIMD-ONLY2-LABEL: define {{[^@]+}}@_ZN2SAD2Ev
-// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // SIMD-ONLY2-NEXT:  entry:
 // SIMD-ONLY2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY2-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -3404,7 +3430,7 @@ int bar(int a){
 //
 //
 // SIMD-ONLY2-LABEL: define {{[^@]+}}@_ZN2SBD2Ev
-// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dereferenceable(32) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dead_on_return(32) dereferenceable(32) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // SIMD-ONLY2-NEXT:  entry:
 // SIMD-ONLY2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY2-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -3448,7 +3474,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP8:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP7:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3457,7 +3483,7 @@ int bar(int a){
 //
 //
 // SIMD-ONLY2-LABEL: define {{[^@]+}}@_ZN2SCD2Ev
-// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dereferenceable(64) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dead_on_return(64) dereferenceable(64) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // SIMD-ONLY2-NEXT:  entry:
 // SIMD-ONLY2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY2-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -3495,7 +3521,7 @@ int bar(int a){
 //
 //
 // SIMD-ONLY2-LABEL: define {{[^@]+}}@_ZN2SDD2Ev
-// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dereferenceable(128) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dead_on_return(128) dereferenceable(128) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // SIMD-ONLY2-NEXT:  entry:
 // SIMD-ONLY2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY2-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -3520,7 +3546,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP9:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP8:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3554,7 +3580,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP10:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP9:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3563,7 +3589,7 @@ int bar(int a){
 //
 //
 // SIMD-ONLY2-LABEL: define {{[^@]+}}@_ZN2SED2Ev
-// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dereferenceable(256) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dead_on_return(256) dereferenceable(256) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // SIMD-ONLY2-NEXT:  entry:
 // SIMD-ONLY2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY2-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -3588,7 +3614,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP11:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP10:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3622,7 +3648,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP12:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP11:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3631,7 +3657,7 @@ int bar(int a){
 //
 //
 // SIMD-ONLY2-LABEL: define {{[^@]+}}@_ZN2STILi100EED2Ev
-// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dereferenceable(912) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dead_on_return(912) dereferenceable(912) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // SIMD-ONLY2-NEXT:  entry:
 // SIMD-ONLY2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY2-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -3656,7 +3682,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP13:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP12:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3690,7 +3716,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP14:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP13:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3699,7 +3725,7 @@ int bar(int a){
 //
 //
 // SIMD-ONLY2-LABEL: define {{[^@]+}}@_ZN2STILi1000EED2Ev
-// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dereferenceable(4512) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// SIMD-ONLY2-SAME: (ptr noundef nonnull align 4 dead_on_return(4512) dereferenceable(4512) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // SIMD-ONLY2-NEXT:  entry:
 // SIMD-ONLY2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY2-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -3724,7 +3750,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP15:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP14:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -4001,12 +4027,12 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@_ZN2SAD1Ev
-// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// OMP-DEfAULT-NEXT:    call void @_ZN2SAD2Ev(ptr noundef nonnull align 4 dereferenceable(16) [[THIS1]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @_ZN2SAD2Ev(ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[THIS1]]) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -4030,7 +4056,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@_ZN2SAD2Ev
-// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -4075,12 +4101,12 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@_ZN2SBD1Ev
-// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(32) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(32) dereferenceable(32) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// OMP-DEfAULT-NEXT:    call void @_ZN2SBD2Ev(ptr noundef nonnull align 4 dereferenceable(32) [[THIS1]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @_ZN2SBD2Ev(ptr noundef nonnull align 4 dead_on_return(32) dereferenceable(32) [[THIS1]]) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -4104,7 +4130,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@_ZN2SBD2Ev
-// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(32) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(32) dereferenceable(32) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -4149,12 +4175,12 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@_ZN2SCD1Ev
-// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(64) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(64) dereferenceable(64) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// OMP-DEfAULT-NEXT:    call void @_ZN2SCD2Ev(ptr noundef nonnull align 4 dereferenceable(64) [[THIS1]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @_ZN2SCD2Ev(ptr noundef nonnull align 4 dead_on_return(64) dereferenceable(64) [[THIS1]]) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -4164,9 +4190,9 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x ptr], align 4
 // OMP-DEfAULT-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
@@ -4176,59 +4202,67 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP5]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP6]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
-// OMP-DEfAULT-NEXT:    store ptr [[TMP7]], ptr [[TMP11]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// OMP-DEfAULT-NEXT:    store ptr [[TMP8]], ptr [[TMP12]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes, ptr [[TMP13]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes, ptr [[TMP14]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP15]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP16]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP17]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP18]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP19]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP20]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP21]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2:[0-9]+]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148.region_id, ptr [[KERNEL_ARGS]])
-// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = icmp ne i32 [[TMP22]], 0
-// OMP-DEfAULT-NEXT:    br i1 [[TMP23]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP7]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP8]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    store i32 4, ptr [[TMP12]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP13]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// OMP-DEfAULT-NEXT:    store ptr [[TMP10]], ptr [[TMP14]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// OMP-DEfAULT-NEXT:    store ptr [[TMP11]], ptr [[TMP15]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes, ptr [[TMP16]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes, ptr [[TMP17]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP18]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP19]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP20]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP21]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP22]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2:[0-9]+]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
+// OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
-// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148(i32 [[TMP3]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148(i32 [[TMP3]], ptr null) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // OMP-DEfAULT:       omp_offload.cont:
-// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = load i32, ptr [[A]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = load ptr, ptr @R, align 4
-// OMP-DEfAULT-NEXT:    store i32 [[TMP24]], ptr [[TMP25]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP27:%.*]] = load i32, ptr [[A]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP28:%.*]] = load ptr, ptr @R, align 4
+// OMP-DEfAULT-NEXT:    store i32 [[TMP27]], ptr [[TMP28]], align 4
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148
-// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]]) #[[ATTR3:[0-9]+]] {
+// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3:[0-9]+]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// OMP-DEfAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
+// OMP-DEfAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
@@ -4302,7 +4336,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@_ZN2SCD2Ev
-// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(64) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(64) dereferenceable(64) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -4339,12 +4373,12 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@_ZN2SDD1Ev
-// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(128) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(128) dereferenceable(128) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// OMP-DEfAULT-NEXT:    call void @_ZN2SDD2Ev(ptr noundef nonnull align 4 dereferenceable(128) [[THIS1]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @_ZN2SDD2Ev(ptr noundef nonnull align 4 dead_on_return(128) dereferenceable(128) [[THIS1]]) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -4368,14 +4402,14 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@_ZN2SDD2Ev
-// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(128) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(128) dereferenceable(128) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x ptr], align 4
 // OMP-DEfAULT-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
@@ -4385,59 +4419,67 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP5]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP6]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
-// OMP-DEfAULT-NEXT:    store ptr [[TMP7]], ptr [[TMP11]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// OMP-DEfAULT-NEXT:    store ptr [[TMP8]], ptr [[TMP12]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.6, ptr [[TMP13]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.7, ptr [[TMP14]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP15]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP16]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP17]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP18]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP19]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP20]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP21]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174.region_id, ptr [[KERNEL_ARGS]])
-// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = icmp ne i32 [[TMP22]], 0
-// OMP-DEfAULT-NEXT:    br i1 [[TMP23]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP7]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP8]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    store i32 4, ptr [[TMP12]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP13]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// OMP-DEfAULT-NEXT:    store ptr [[TMP10]], ptr [[TMP14]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// OMP-DEfAULT-NEXT:    store ptr [[TMP11]], ptr [[TMP15]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.6, ptr [[TMP16]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.7, ptr [[TMP17]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP18]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP19]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP20]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP21]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP22]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
+// OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
-// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174(i32 [[TMP3]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174(i32 [[TMP3]], ptr null) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // OMP-DEfAULT:       omp_offload.cont:
-// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = load i32, ptr [[A]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = load ptr, ptr @R, align 4
-// OMP-DEfAULT-NEXT:    store i32 [[TMP24]], ptr [[TMP25]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP27:%.*]] = load i32, ptr [[A]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP28:%.*]] = load ptr, ptr @R, align 4
+// OMP-DEfAULT-NEXT:    store i32 [[TMP27]], ptr [[TMP28]], align 4
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174
-// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// OMP-DEfAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
+// OMP-DEfAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
@@ -4529,12 +4571,12 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@_ZN2SED1Ev
-// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(256) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(256) dereferenceable(256) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// OMP-DEfAULT-NEXT:    call void @_ZN2SED2Ev(ptr noundef nonnull align 4 dereferenceable(256) [[THIS1]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @_ZN2SED2Ev(ptr noundef nonnull align 4 dead_on_return(256) dereferenceable(256) [[THIS1]]) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -4544,9 +4586,9 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x ptr], align 4
 // OMP-DEfAULT-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
@@ -4556,59 +4598,67 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP5]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP6]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
-// OMP-DEfAULT-NEXT:    store ptr [[TMP7]], ptr [[TMP11]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// OMP-DEfAULT-NEXT:    store ptr [[TMP8]], ptr [[TMP12]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.9, ptr [[TMP13]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.10, ptr [[TMP14]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP15]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP16]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP17]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP18]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP19]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP20]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP21]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192.region_id, ptr [[KERNEL_ARGS]])
-// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = icmp ne i32 [[TMP22]], 0
-// OMP-DEfAULT-NEXT:    br i1 [[TMP23]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP7]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP8]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    store i32 4, ptr [[TMP12]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP13]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// OMP-DEfAULT-NEXT:    store ptr [[TMP10]], ptr [[TMP14]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// OMP-DEfAULT-NEXT:    store ptr [[TMP11]], ptr [[TMP15]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.9, ptr [[TMP16]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.10, ptr [[TMP17]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP18]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP19]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP20]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP21]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP22]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
+// OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
-// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192(i32 [[TMP3]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192(i32 [[TMP3]], ptr null) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // OMP-DEfAULT:       omp_offload.cont:
-// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = load i32, ptr [[A]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = load ptr, ptr @R, align 4
-// OMP-DEfAULT-NEXT:    store i32 [[TMP24]], ptr [[TMP25]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP27:%.*]] = load i32, ptr [[A]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP28:%.*]] = load ptr, ptr @R, align 4
+// OMP-DEfAULT-NEXT:    store i32 [[TMP27]], ptr [[TMP28]], align 4
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192
-// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// OMP-DEfAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
+// OMP-DEfAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
@@ -4682,14 +4732,14 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@_ZN2SED2Ev
-// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(256) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(256) dereferenceable(256) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x ptr], align 4
 // OMP-DEfAULT-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
@@ -4699,59 +4749,67 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP5]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP6]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
-// OMP-DEfAULT-NEXT:    store ptr [[TMP7]], ptr [[TMP11]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// OMP-DEfAULT-NEXT:    store ptr [[TMP8]], ptr [[TMP12]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.11, ptr [[TMP13]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.12, ptr [[TMP14]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP15]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP16]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP17]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP18]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP19]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP20]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP21]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199.region_id, ptr [[KERNEL_ARGS]])
-// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = icmp ne i32 [[TMP22]], 0
-// OMP-DEfAULT-NEXT:    br i1 [[TMP23]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP7]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP8]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    store i32 4, ptr [[TMP12]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP13]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// OMP-DEfAULT-NEXT:    store ptr [[TMP10]], ptr [[TMP14]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// OMP-DEfAULT-NEXT:    store ptr [[TMP11]], ptr [[TMP15]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.11, ptr [[TMP16]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.12, ptr [[TMP17]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP18]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP19]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP20]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP21]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP22]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
+// OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
-// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199(i32 [[TMP3]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199(i32 [[TMP3]], ptr null) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // OMP-DEfAULT:       omp_offload.cont:
-// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = load i32, ptr [[A]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = load ptr, ptr @R, align 4
-// OMP-DEfAULT-NEXT:    store i32 [[TMP24]], ptr [[TMP25]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP27:%.*]] = load i32, ptr [[A]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP28:%.*]] = load ptr, ptr @R, align 4
+// OMP-DEfAULT-NEXT:    store i32 [[TMP27]], ptr [[TMP28]], align 4
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199
-// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// OMP-DEfAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
+// OMP-DEfAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
@@ -4843,12 +4901,12 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@_ZN2STILi100EED1Ev
-// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(912) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(912) dereferenceable(912) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// OMP-DEfAULT-NEXT:    call void @_ZN2STILi100EED2Ev(ptr noundef nonnull align 4 dereferenceable(912) [[THIS1]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @_ZN2STILi100EED2Ev(ptr noundef nonnull align 4 dead_on_return(912) dereferenceable(912) [[THIS1]]) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -4858,9 +4916,9 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x ptr], align 4
 // OMP-DEfAULT-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
@@ -4870,59 +4928,67 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP5]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP6]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
-// OMP-DEfAULT-NEXT:    store ptr [[TMP7]], ptr [[TMP11]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// OMP-DEfAULT-NEXT:    store ptr [[TMP8]], ptr [[TMP12]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.14, ptr [[TMP13]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.15, ptr [[TMP14]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP15]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP16]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP17]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP18]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP19]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP20]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP21]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218.region_id, ptr [[KERNEL_ARGS]])
-// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = icmp ne i32 [[TMP22]], 0
-// OMP-DEfAULT-NEXT:    br i1 [[TMP23]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP7]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP8]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    store i32 4, ptr [[TMP12]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP13]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// OMP-DEfAULT-NEXT:    store ptr [[TMP10]], ptr [[TMP14]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// OMP-DEfAULT-NEXT:    store ptr [[TMP11]], ptr [[TMP15]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.14, ptr [[TMP16]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.15, ptr [[TMP17]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP18]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP19]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP20]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP21]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP22]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
+// OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
-// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218(i32 [[TMP3]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218(i32 [[TMP3]], ptr null) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // OMP-DEfAULT:       omp_offload.cont:
-// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = load i32, ptr [[A]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = load ptr, ptr @R, align 4
-// OMP-DEfAULT-NEXT:    store i32 [[TMP24]], ptr [[TMP25]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP27:%.*]] = load i32, ptr [[A]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP28:%.*]] = load ptr, ptr @R, align 4
+// OMP-DEfAULT-NEXT:    store i32 [[TMP27]], ptr [[TMP28]], align 4
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218
-// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// OMP-DEfAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
+// OMP-DEfAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
@@ -4996,14 +5062,14 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@_ZN2STILi100EED2Ev
-// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(912) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(912) dereferenceable(912) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x ptr], align 4
 // OMP-DEfAULT-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
@@ -5013,59 +5079,67 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP5]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP6]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
-// OMP-DEfAULT-NEXT:    store ptr [[TMP7]], ptr [[TMP11]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// OMP-DEfAULT-NEXT:    store ptr [[TMP8]], ptr [[TMP12]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.16, ptr [[TMP13]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.17, ptr [[TMP14]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP15]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP16]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP17]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP18]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP19]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP20]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP21]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225.region_id, ptr [[KERNEL_ARGS]])
-// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = icmp ne i32 [[TMP22]], 0
-// OMP-DEfAULT-NEXT:    br i1 [[TMP23]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP7]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP8]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    store i32 4, ptr [[TMP12]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP13]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// OMP-DEfAULT-NEXT:    store ptr [[TMP10]], ptr [[TMP14]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// OMP-DEfAULT-NEXT:    store ptr [[TMP11]], ptr [[TMP15]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.16, ptr [[TMP16]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.17, ptr [[TMP17]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP18]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP19]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP20]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP21]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP22]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
+// OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
-// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225(i32 [[TMP3]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225(i32 [[TMP3]], ptr null) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // OMP-DEfAULT:       omp_offload.cont:
-// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = load i32, ptr [[A]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = load ptr, ptr @R, align 4
-// OMP-DEfAULT-NEXT:    store i32 [[TMP24]], ptr [[TMP25]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP27:%.*]] = load i32, ptr [[A]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP28:%.*]] = load ptr, ptr @R, align 4
+// OMP-DEfAULT-NEXT:    store i32 [[TMP27]], ptr [[TMP28]], align 4
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225
-// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// OMP-DEfAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
+// OMP-DEfAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
@@ -5157,12 +5231,12 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@_ZN2STILi1000EED1Ev
-// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(4512) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(4512) dereferenceable(4512) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// OMP-DEfAULT-NEXT:    call void @_ZN2STILi1000EED2Ev(ptr noundef nonnull align 4 dereferenceable(4512) [[THIS1]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @_ZN2STILi1000EED2Ev(ptr noundef nonnull align 4 dead_on_return(4512) dereferenceable(4512) [[THIS1]]) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -5172,9 +5246,9 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x ptr], align 4
 // OMP-DEfAULT-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
@@ -5184,59 +5258,67 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP5]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP6]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
-// OMP-DEfAULT-NEXT:    store ptr [[TMP7]], ptr [[TMP11]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// OMP-DEfAULT-NEXT:    store ptr [[TMP8]], ptr [[TMP12]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.19, ptr [[TMP13]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.20, ptr [[TMP14]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP15]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP16]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP17]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP18]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP19]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP20]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP21]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218.region_id, ptr [[KERNEL_ARGS]])
-// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = icmp ne i32 [[TMP22]], 0
-// OMP-DEfAULT-NEXT:    br i1 [[TMP23]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP7]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP8]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    store i32 4, ptr [[TMP12]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP13]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// OMP-DEfAULT-NEXT:    store ptr [[TMP10]], ptr [[TMP14]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// OMP-DEfAULT-NEXT:    store ptr [[TMP11]], ptr [[TMP15]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.19, ptr [[TMP16]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.20, ptr [[TMP17]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP18]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP19]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP20]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP21]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP22]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
+// OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
-// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218(i32 [[TMP3]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218(i32 [[TMP3]], ptr null) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // OMP-DEfAULT:       omp_offload.cont:
-// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = load i32, ptr [[A]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = load ptr, ptr @R, align 4
-// OMP-DEfAULT-NEXT:    store i32 [[TMP24]], ptr [[TMP25]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP27:%.*]] = load i32, ptr [[A]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP28:%.*]] = load ptr, ptr @R, align 4
+// OMP-DEfAULT-NEXT:    store i32 [[TMP27]], ptr [[TMP28]], align 4
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218
-// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// OMP-DEfAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
+// OMP-DEfAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
@@ -5310,14 +5392,14 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@_ZN2STILi1000EED2Ev
-// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(4512) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// OMP-DEfAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(4512) dereferenceable(4512) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x ptr], align 4
 // OMP-DEfAULT-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
@@ -5327,59 +5409,67 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP5]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP6]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
-// OMP-DEfAULT-NEXT:    store ptr [[TMP7]], ptr [[TMP11]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// OMP-DEfAULT-NEXT:    store ptr [[TMP8]], ptr [[TMP12]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.21, ptr [[TMP13]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.22, ptr [[TMP14]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP15]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP16]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP17]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP18]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP19]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP20]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP21]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225.region_id, ptr [[KERNEL_ARGS]])
-// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = icmp ne i32 [[TMP22]], 0
-// OMP-DEfAULT-NEXT:    br i1 [[TMP23]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP7]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP8]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    store i32 4, ptr [[TMP12]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP13]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// OMP-DEfAULT-NEXT:    store ptr [[TMP10]], ptr [[TMP14]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// OMP-DEfAULT-NEXT:    store ptr [[TMP11]], ptr [[TMP15]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.21, ptr [[TMP16]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.22, ptr [[TMP17]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP18]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP19]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP20]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP21]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP22]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
+// OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
-// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225(i32 [[TMP3]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225(i32 [[TMP3]], ptr null) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // OMP-DEfAULT:       omp_offload.cont:
-// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = load i32, ptr [[A]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = load ptr, ptr @R, align 4
-// OMP-DEfAULT-NEXT:    store i32 [[TMP24]], ptr [[TMP25]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP27:%.*]] = load i32, ptr [[A]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP28:%.*]] = load ptr, ptr @R, align 4
+// OMP-DEfAULT-NEXT:    store i32 [[TMP27]], ptr [[TMP28]], align 4
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225
-// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// OMP-DEfAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
+// OMP-DEfAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
@@ -5458,9 +5548,9 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    [[R:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    [[R_CASTED:%.*]] = alloca i32, align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x ptr], align 4
 // OMP-DEfAULT-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // OMP-DEfAULT-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
@@ -5477,51 +5567,57 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[R]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP1]], ptr [[R_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[R_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP2]], ptr [[TMP4]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP5]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP8]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP9]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
-// OMP-DEfAULT-NEXT:    store ptr [[TMP6]], ptr [[TMP10]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// OMP-DEfAULT-NEXT:    store ptr [[TMP7]], ptr [[TMP11]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.23, ptr [[TMP12]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.24, ptr [[TMP13]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP14]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP15]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP16]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP17]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP18]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP19]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP20]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267.region_id, ptr [[KERNEL_ARGS]])
-// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[TMP21]], 0
-// OMP-DEfAULT-NEXT:    br i1 [[TMP22]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP6]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP7]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP8]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    store i32 4, ptr [[TMP11]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP12]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// OMP-DEfAULT-NEXT:    store ptr [[TMP9]], ptr [[TMP13]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// OMP-DEfAULT-NEXT:    store ptr [[TMP10]], ptr [[TMP14]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.23, ptr [[TMP15]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.24, ptr [[TMP16]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP17]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP18]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP19]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP20]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP21]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP22]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP23]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = icmp ne i32 [[TMP24]], 0
+// OMP-DEfAULT-NEXT:    br i1 [[TMP25]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
-// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267(i32 [[TMP2]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267(i32 [[TMP2]], ptr null) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // OMP-DEfAULT:       omp_offload.cont:
-// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = load i32, ptr [[R]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = load ptr, ptr @R, align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
-// OMP-DEfAULT-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP23]], [[TMP25]]
+// OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = load i32, ptr [[R]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP27:%.*]] = load ptr, ptr @R, align 4
+// OMP-DEfAULT-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP27]], align 4
+// OMP-DEfAULT-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP26]], [[TMP28]]
 // OMP-DEfAULT-NEXT:    ret i32 [[ADD]]
 //
 //
@@ -5550,9 +5646,9 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x ptr], align 4
 // OMP-DEfAULT-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
@@ -5562,50 +5658,56 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP5]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP6]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
-// OMP-DEfAULT-NEXT:    store ptr [[TMP7]], ptr [[TMP11]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// OMP-DEfAULT-NEXT:    store ptr [[TMP8]], ptr [[TMP12]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.25, ptr [[TMP13]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.26, ptr [[TMP14]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP15]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP16]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP17]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP18]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP19]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP20]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP21]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122.region_id, ptr [[KERNEL_ARGS]])
-// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = icmp ne i32 [[TMP22]], 0
-// OMP-DEfAULT-NEXT:    br i1 [[TMP23]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP7]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP8]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    store i32 4, ptr [[TMP12]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP13]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// OMP-DEfAULT-NEXT:    store ptr [[TMP10]], ptr [[TMP14]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// OMP-DEfAULT-NEXT:    store ptr [[TMP11]], ptr [[TMP15]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.25, ptr [[TMP16]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.26, ptr [[TMP17]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP18]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP19]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP20]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP21]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP22]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
+// OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
-// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122(i32 [[TMP3]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122(i32 [[TMP3]], ptr null) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // OMP-DEfAULT:       omp_offload.cont:
-// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = load i32, ptr [[A]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = load ptr, ptr @R, align 4
-// OMP-DEfAULT-NEXT:    store i32 [[TMP24]], ptr [[TMP25]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP27:%.*]] = load i32, ptr [[A]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP28:%.*]] = load ptr, ptr @R, align 4
+// OMP-DEfAULT-NEXT:    store i32 [[TMP27]], ptr [[TMP28]], align 4
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -5661,7 +5763,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185(i32 [[TMP3]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185(i32 [[TMP3]], ptr null) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -5674,9 +5776,9 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x ptr], align 4
 // OMP-DEfAULT-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
@@ -5686,50 +5788,56 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP5]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP6]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
-// OMP-DEfAULT-NEXT:    store ptr [[TMP7]], ptr [[TMP11]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// OMP-DEfAULT-NEXT:    store ptr [[TMP8]], ptr [[TMP12]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.27, ptr [[TMP13]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.28, ptr [[TMP14]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP15]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP16]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP17]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP18]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP19]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP20]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP21]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211.region_id, ptr [[KERNEL_ARGS]])
-// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = icmp ne i32 [[TMP22]], 0
-// OMP-DEfAULT-NEXT:    br i1 [[TMP23]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP7]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP8]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    store i32 4, ptr [[TMP12]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP13]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// OMP-DEfAULT-NEXT:    store ptr [[TMP10]], ptr [[TMP14]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// OMP-DEfAULT-NEXT:    store ptr [[TMP11]], ptr [[TMP15]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.27, ptr [[TMP16]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.28, ptr [[TMP17]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP18]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP19]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP20]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP21]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP22]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
+// OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
-// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211(i32 [[TMP3]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211(i32 [[TMP3]], ptr null) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // OMP-DEfAULT:       omp_offload.cont:
-// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = load i32, ptr [[A]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = load ptr, ptr @R, align 4
-// OMP-DEfAULT-NEXT:    store i32 [[TMP24]], ptr [[TMP25]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP27:%.*]] = load i32, ptr [[A]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP28:%.*]] = load ptr, ptr @R, align 4
+// OMP-DEfAULT-NEXT:    store i32 [[TMP27]], ptr [[TMP28]], align 4
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -5739,9 +5847,9 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
-// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x ptr], align 4
+// OMP-DEfAULT-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x ptr], align 4
 // OMP-DEfAULT-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // OMP-DEfAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
@@ -5751,59 +5859,67 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store i32 [[TMP3]], ptr [[TMP5]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
 // OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP6]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// OMP-DEfAULT-NEXT:    store i32 3, ptr [[TMP9]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// OMP-DEfAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
-// OMP-DEfAULT-NEXT:    store ptr [[TMP7]], ptr [[TMP11]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// OMP-DEfAULT-NEXT:    store ptr [[TMP8]], ptr [[TMP12]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.29, ptr [[TMP13]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.30, ptr [[TMP14]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP15]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP16]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP17]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP18]], align 8
-// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP19]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP20]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP21]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211.region_id, ptr [[KERNEL_ARGS]])
-// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = icmp ne i32 [[TMP22]], 0
-// OMP-DEfAULT-NEXT:    br i1 [[TMP23]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// OMP-DEfAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP7]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP8]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP9]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// OMP-DEfAULT-NEXT:    store i32 4, ptr [[TMP12]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// OMP-DEfAULT-NEXT:    store i32 2, ptr [[TMP13]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// OMP-DEfAULT-NEXT:    store ptr [[TMP10]], ptr [[TMP14]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// OMP-DEfAULT-NEXT:    store ptr [[TMP11]], ptr [[TMP15]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// OMP-DEfAULT-NEXT:    store ptr @.offload_sizes.29, ptr [[TMP16]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// OMP-DEfAULT-NEXT:    store ptr @.offload_maptypes.30, ptr [[TMP17]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP18]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// OMP-DEfAULT-NEXT:    store ptr null, ptr [[TMP19]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP20]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// OMP-DEfAULT-NEXT:    store i64 0, ptr [[TMP21]], align 8
+// OMP-DEfAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// OMP-DEfAULT-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP22]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
+// OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
-// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211(i32 [[TMP3]]) #[[ATTR2]]
+// OMP-DEfAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211(i32 [[TMP3]], ptr null) #[[ATTR2]]
 // OMP-DEfAULT-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // OMP-DEfAULT:       omp_offload.cont:
-// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = load i32, ptr [[A]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = load ptr, ptr @R, align 4
-// OMP-DEfAULT-NEXT:    store i32 [[TMP24]], ptr [[TMP25]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP27:%.*]] = load i32, ptr [[A]], align 4
+// OMP-DEfAULT-NEXT:    [[TMP28:%.*]] = load ptr, ptr @R, align 4
+// OMP-DEfAULT-NEXT:    store i32 [[TMP27]], ptr [[TMP28]], align 4
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267
-// OMP-DEfAULT-SAME: (i32 noundef [[R:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (i32 noundef [[R:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[R_ADDR:%.*]] = alloca i32, align 4
+// OMP-DEfAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[R_CASTED:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    store i32 [[R]], ptr [[R_ADDR]], align 4
+// OMP-DEfAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[R_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[R_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[R_CASTED]], align 4
@@ -5877,11 +5993,13 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122
-// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// OMP-DEfAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
+// OMP-DEfAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
@@ -5955,11 +6073,13 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185
-// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// OMP-DEfAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
+// OMP-DEfAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
@@ -6033,11 +6153,13 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211
-// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// OMP-DEfAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
+// OMP-DEfAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
@@ -6111,11 +6233,13 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211
-// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// OMP-DEfAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
+// OMP-DEfAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
@@ -6680,12 +6804,12 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@_ZN2SAD1Ev
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @_ZN2SAD2Ev(ptr noundef nonnull align 4 dereferenceable(16) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @_ZN2SAD2Ev(ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[THIS1]]) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    ret void
 //
 //
@@ -6709,7 +6833,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@_ZN2SAD2Ev
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -6754,12 +6878,12 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@_ZN2SBD1Ev
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(32) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(32) dereferenceable(32) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @_ZN2SBD2Ev(ptr noundef nonnull align 4 dereferenceable(32) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @_ZN2SBD2Ev(ptr noundef nonnull align 4 dead_on_return(32) dereferenceable(32) [[THIS1]]) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    ret void
 //
 //
@@ -6783,7 +6907,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@_ZN2SBD2Ev
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(32) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(32) dereferenceable(32) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -6828,12 +6952,12 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@_ZN2SCD1Ev
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(64) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(64) dereferenceable(64) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @_ZN2SCD2Ev(ptr noundef nonnull align 4 dereferenceable(64) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @_ZN2SCD2Ev(ptr noundef nonnull align 4 dead_on_return(64) dereferenceable(64) [[THIS1]]) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    ret void
 //
 //
@@ -6851,7 +6975,7 @@ int bar(int a){
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -6859,11 +6983,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -6937,7 +7063,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@_ZN2SCD2Ev
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(64) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(64) dereferenceable(64) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -6974,12 +7100,12 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@_ZN2SDD1Ev
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(128) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(128) dereferenceable(128) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @_ZN2SDD2Ev(ptr noundef nonnull align 4 dereferenceable(128) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @_ZN2SDD2Ev(ptr noundef nonnull align 4 dead_on_return(128) dereferenceable(128) [[THIS1]]) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    ret void
 //
 //
@@ -7003,7 +7129,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@_ZN2SDD2Ev
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(128) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(128) dereferenceable(128) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -7016,7 +7142,7 @@ int bar(int a){
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -7024,11 +7150,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -7120,12 +7248,12 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@_ZN2SED1Ev
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(256) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(256) dereferenceable(256) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @_ZN2SED2Ev(ptr noundef nonnull align 4 dereferenceable(256) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @_ZN2SED2Ev(ptr noundef nonnull align 4 dead_on_return(256) dereferenceable(256) [[THIS1]]) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    ret void
 //
 //
@@ -7143,7 +7271,7 @@ int bar(int a){
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -7151,11 +7279,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -7229,7 +7359,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@_ZN2SED2Ev
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(256) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(256) dereferenceable(256) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -7242,7 +7372,7 @@ int bar(int a){
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -7250,11 +7380,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -7346,12 +7478,12 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@_ZN2STILi100EED1Ev
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(912) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(912) dereferenceable(912) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @_ZN2STILi100EED2Ev(ptr noundef nonnull align 4 dereferenceable(912) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @_ZN2STILi100EED2Ev(ptr noundef nonnull align 4 dead_on_return(912) dereferenceable(912) [[THIS1]]) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    ret void
 //
 //
@@ -7369,7 +7501,7 @@ int bar(int a){
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -7377,11 +7509,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -7455,7 +7589,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@_ZN2STILi100EED2Ev
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(912) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(912) dereferenceable(912) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -7468,7 +7602,7 @@ int bar(int a){
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -7476,11 +7610,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -7572,12 +7708,12 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@_ZN2STILi1000EED1Ev
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(4512) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(4512) dereferenceable(4512) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @_ZN2STILi1000EED2Ev(ptr noundef nonnull align 4 dereferenceable(4512) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @_ZN2STILi1000EED2Ev(ptr noundef nonnull align 4 dead_on_return(4512) dereferenceable(4512) [[THIS1]]) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    ret void
 //
 //
@@ -7595,7 +7731,7 @@ int bar(int a){
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -7603,11 +7739,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -7681,7 +7819,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@_ZN2STILi1000EED2Ev
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dereferenceable(4512) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noundef nonnull align 4 dead_on_return(4512) dereferenceable(4512) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -7694,7 +7832,7 @@ int bar(int a){
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -7702,11 +7840,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -7800,7 +7940,7 @@ int bar(int a){
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[R]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP1]], ptr [[R_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP2:%.*]] = load i64, ptr [[R_CASTED]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267(i64 [[TMP2]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267(i64 [[TMP2]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[R]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP4:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
@@ -7841,7 +7981,7 @@ int bar(int a){
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -7900,7 +8040,7 @@ int bar(int a){
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -7921,7 +8061,7 @@ int bar(int a){
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -7942,7 +8082,7 @@ int bar(int a){
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211(i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211(i64 [[TMP3]], ptr null) #[[ATTR2]]
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -7950,11 +8090,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[R:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[R:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[R_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[R_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i64 [[R]], ptr [[R_ADDR]], align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[R_ADDR]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[R_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[R_CASTED]], align 8
@@ -8028,11 +8170,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -8106,11 +8250,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -8184,11 +8330,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
@@ -8262,11 +8410,13 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (i64 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+// CHECK-NTARGET-OMP-DEFAULT-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8

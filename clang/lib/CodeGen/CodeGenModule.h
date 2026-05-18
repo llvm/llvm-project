@@ -17,6 +17,7 @@
 #include "CodeGenTypeCache.h"
 #include "CodeGenTypes.h"
 #include "SanitizerMetadata.h"
+#include "TrapReasonBuilder.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
@@ -26,6 +27,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/ProfileList.h"
+#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -36,6 +38,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 #include <optional>
 
@@ -53,6 +56,13 @@ class IndexedInstrProfReader;
 namespace vfs {
 class FileSystem;
 }
+
+namespace abi {
+class ArgInfo;
+class IRTypeMapper;
+class TargetInfo;
+class TypeBuilder;
+} // namespace abi
 }
 
 namespace clang {
@@ -93,12 +103,58 @@ class CGOpenCLRuntime;
 class CGOpenMPRuntime;
 class CGCUDARuntime;
 class CGHLSLRuntime;
+class CGFunctionInfo;
 class CoverageMappingModuleGen;
+class QualTypeMapper;
 class TargetCodeGenInfo;
 
 enum ForDefinition_t : bool {
   NotForDefinition = false,
   ForDefinition = true
+};
+
+/// The Counter with an optional additional Counter for
+/// branches. `Skipped` counter can be calculated with `Executed` and
+/// a common Counter (like `Parent`) as `(Parent-Executed)`.
+///
+/// In SingleByte mode, Counters are binary. Subtraction is not
+/// applicable (but addition is capable). In this case, both
+/// `Executed` and `Skipped` counters are required.  `Skipped` is
+/// `None` by default. It is allocated in the coverage mapping.
+///
+/// There might be cases that `Parent` could be induced with
+/// `(Executed+Skipped)`. This is not always applicable.
+class CounterPair {
+public:
+  /// Optional value.
+  class ValueOpt {
+  private:
+    static constexpr uint32_t None = (1u << 31); /// None is allocated.
+    static constexpr uint32_t Mask = None - 1;
+
+    uint32_t Val;
+
+  public:
+    ValueOpt() : Val(None) {}
+
+    ValueOpt(unsigned InitVal) {
+      assert(!(InitVal & ~Mask));
+      Val = InitVal;
+    }
+
+    bool hasValue() const { return !(Val & None); }
+
+    operator uint32_t() const { return Val; }
+  };
+
+  ValueOpt Executed;
+  ValueOpt Skipped; /// May be None.
+
+  /// Initialized with Skipped=None.
+  CounterPair(unsigned Val) : Executed(Val) {}
+
+  // FIXME: Should work with {None, None}
+  CounterPair() : Executed(0) {}
 };
 
 struct OrderGlobalInitsOrStermFinalizers {
@@ -317,10 +373,22 @@ private:
 
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
 
+  /// Cached LLVMABI target lowering info, lazily constructed when the
+  /// experimental ABI lowering path is taken.
+  mutable std::unique_ptr<llvm::abi::TargetInfo> TheLLVMABITargetInfo;
+
+  /// Allocator and mappers used by the experimental LLVMABI-based lowering
+  /// path (gated on -fexperimental-abi-lowering). Constructed unconditionally
+  /// so the path can be entered without re-checking initialization, but the
+  /// caches stay empty when the flag is off.
+  llvm::BumpPtrAllocator AbiAlloc;
+  std::unique_ptr<QualTypeMapper> AbiMapper;
+  std::unique_ptr<llvm::abi::IRTypeMapper> AbiReverseMapper;
+
   // This should not be moved earlier, since its initialization depends on some
   // of the previous reference members being already initialized and also checks
   // if TheTargetCodeGenInfo is NULL
-  CodeGenTypes Types;
+  std::unique_ptr<CodeGenTypes> Types;
 
   /// Holds information about C++ vtables.
   CodeGenVTables VTables;
@@ -336,6 +404,7 @@ private:
   std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader;
   InstrProfStats PGOStats;
   std::unique_ptr<llvm::SanitizerStatReport> SanStats;
+  StackExhaustionHandler StackHandler;
 
   // A set of references that have only been seen via a weakref so far. This is
   // used to remove the weak of the reference if we ever see a direct reference
@@ -409,6 +478,11 @@ private:
   /// A queue of (optional) vtables to consider emitting.
   std::vector<const CXXRecordDecl*> DeferredVTables;
 
+  /// In incremental compilation, the set of vtable classes whose vtable
+  /// definitions were emitted into a previous PTU's module. Carried forward
+  /// by moveLazyEmissionStates() so later PTUs skip re-defining them.
+  llvm::SmallPtrSet<const CXXRecordDecl *, 8> EmittedVTables;
+
   /// A queue of (optional) vtables that may be emitted opportunistically.
   std::vector<const CXXRecordDecl *> OpportunisticVTables;
 
@@ -481,6 +555,11 @@ private:
   /// order. Once the decl is emitted, the index is replaced with ~0U to ensure
   /// that we don't re-emit the initializer.
   llvm::DenseMap<const Decl*, unsigned> DelayedCXXInitPosition;
+
+  /// To remember which types did require a vector deleting destructor body.
+  /// This set basically contains classes that have virtual destructor and new[]
+  /// was emitted for the class.
+  llvm::SmallPtrSet<const CXXRecordDecl *, 16> RequireVectorDeletingDtor;
 
   typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
       GlobalInitData;
@@ -601,6 +680,9 @@ private:
   /// void @llvm.lifetime.end(i64 %size, i8* nocapture <ptr>)
   llvm::Function *LifetimeEndFn = nullptr;
 
+  /// void @llvm.fake.use(...)
+  llvm::Function *FakeUseFn = nullptr;
+
   std::unique_ptr<SanitizerMetadata> SanitizerMD;
 
   llvm::MapVector<const Decl *, bool> DeferredEmptyCoverageMappingDecls;
@@ -627,6 +709,13 @@ private:
   std::optional<PointerAuthQualifier>
   computeVTPointerAuthentication(const CXXRecordDecl *ThisClass);
 
+  AtomicOptions AtomicOpts;
+
+  // A set of functions which should be hot-patched; see
+  // -fms-hotpatch-functions-file (and -list). This will nearly always be empty.
+  // The list is sorted for binary-searching.
+  std::vector<std::string> MSHotPatchFunctions;
+
 public:
   CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                 const HeaderSearchOptions &headersearchopts,
@@ -642,6 +731,12 @@ public:
   /// Finalize LLVM code generation.
   void Release();
 
+  /// Get the current Atomic options.
+  AtomicOptions getAtomicOpts() { return AtomicOpts; }
+
+  /// Set the current Atomic options.
+  void setAtomicOpts(AtomicOptions AO) { AtomicOpts = AO; }
+
   /// Return true if we should emit location information for expressions.
   bool getExpressionLocationsEnabled() const;
 
@@ -653,6 +748,39 @@ public:
 
   /// Return true iff an Objective-C runtime has been configured.
   bool hasObjCRuntime() { return !!ObjCRuntime; }
+
+  /// Check if the precondition thunk optimization is enabled.
+  /// This checks runtime support and codegen options, but does NOT check
+  /// whether a specific method is eligible for thunks or inline preconditions.
+  ///
+  /// TODO: Add support for GNUStep as well, currently only supports NeXT
+  /// family.
+  bool isObjCDirectPreconditionThunkEnabled() const {
+    return getLangOpts().ObjCRuntime.allowsDirectDispatch() &&
+           getLangOpts().ObjCRuntime.isNeXTFamily() &&
+           getCodeGenOpts().ObjCDirectPreconditionThunk;
+  }
+
+  /// Check if a direct method should use precondition thunks at call sites.
+  /// Returns false if OMD is null, not a direct method, or variadic.
+  ///
+  /// Variadic methods use inline preconditions instead of thunks to avoid
+  /// musttail complexity across different architectures.
+  bool shouldHavePreconditionThunk(const ObjCMethodDecl *OMD) const {
+    return OMD && OMD->isDirectMethod() && !OMD->isVariadic() &&
+           isObjCDirectPreconditionThunkEnabled();
+  }
+
+  /// Check if a direct method should have inline precondition checks at call
+  /// sites.
+  /// Returns false if OMD is null, not a direct method, or not variadic.
+  ///
+  /// Variadic direct methods use inline preconditions rather than thunks
+  /// to avoid musttail complexity across different architectures.
+  bool shouldHavePreconditionInline(const ObjCMethodDecl *OMD) const {
+    return OMD && OMD->isDirectMethod() && OMD->isVariadic() &&
+           isObjCDirectPreconditionThunkEnabled();
+  }
 
   const std::string &getModuleNameHash() const { return ModuleNameHash; }
 
@@ -751,8 +879,7 @@ public:
 
   llvm::MDNode *getNoObjCARCExceptionsMetadata() {
     if (!NoObjCARCExceptionsMetadata)
-      NoObjCARCExceptionsMetadata =
-          llvm::MDNode::get(getLLVMContext(), std::nullopt);
+      NoObjCARCExceptionsMetadata = llvm::MDNode::get(getLLVMContext(), {});
     return NoObjCARCExceptionsMetadata;
   }
 
@@ -776,6 +903,22 @@ public:
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const Decl &D, llvm::GlobalObject &GO);
 
+  const ABIInfo &getABIInfo();
+
+  /// Lazily build and return the LLVMABI library's TargetInfo for the current
+  /// target. Used by the experimental ABI lowering path
+  /// (-fexperimental-abi-lowering).
+  const llvm::abi::TargetInfo &getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB);
+
+  /// True when -fexperimental-abi-lowering is in effect AND the active target
+  /// has an LLVMABI implementation we can route to.
+  bool shouldUseLLVMABILowering() const;
+
+  /// Drive the experimental LLVMABI-based lowering path: map argument and
+  /// return types into the LLVMABI library, ask its target lowering to fill
+  /// in classification, and write the results back into FI.
+  void computeABIInfoUsingLib(CGFunctionInfo &FI);
+
   CGCXXABI &getCXXABI() const { return *ABI; }
   llvm::LLVMContext &getLLVMContext() { return VMContext; }
 
@@ -783,7 +926,7 @@ public:
 
   const TargetCodeGenInfo &getTargetCodeGenInfo();
 
-  CodeGenTypes &getTypes() { return Types; }
+  CodeGenTypes &getTypes() { return *Types; }
 
   CodeGenVTables &getVTables() { return VTables; }
 
@@ -973,7 +1116,15 @@ public:
   llvm::Constant *getFunctionPointer(llvm::Constant *Pointer,
                                      QualType FunctionType);
 
+  llvm::Constant *getMemberFunctionPointer(const FunctionDecl *FD,
+                                           llvm::Type *Ty = nullptr);
+
+  llvm::Constant *getMemberFunctionPointer(llvm::Constant *Pointer,
+                                           QualType FT);
+
   CGPointerAuthInfo getFunctionPointerAuthInfo(QualType T);
+
+  CGPointerAuthInfo getMemberFunctionPointerAuthInfo(QualType FT);
 
   CGPointerAuthInfo getPointerAuthInfoForPointeeType(QualType type);
 
@@ -1008,9 +1159,8 @@ public:
 
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool ForEH = false) {
-    return (ForEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
-           !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
-             (getTriple().isNVPTX() || getTriple().isAMDGPU()));
+    return (ForEH || getLangOpts().RTTI) &&
+           (!getLangOpts().isTargetDevice() || !getTriple().isGPU());
   }
 
   /// Get the address of the RTTI descriptor for the given type.
@@ -1116,9 +1266,8 @@ public:
   ///
   /// \param GlobalName If provided, the name to use for the global (if one is
   /// created).
-  ConstantAddress
-  GetAddrOfConstantCString(const std::string &Str,
-                           const char *GlobalName = nullptr);
+  ConstantAddress GetAddrOfConstantCString(const std::string &Str,
+                                           StringRef GlobalName = ".str");
 
   /// Returns a pointer to a constant global variable for the given file-scope
   /// compound literal expression.
@@ -1170,8 +1319,9 @@ public:
   llvm::Constant *getBuiltinLibFunction(const FunctionDecl *FD,
                                         unsigned BuiltinID);
 
-  llvm::Function *getIntrinsic(unsigned IID,
-                               ArrayRef<llvm::Type *> Tys = std::nullopt);
+  llvm::Function *getIntrinsic(unsigned IID, ArrayRef<llvm::Type *> Tys = {});
+
+  void AddCXXGlobalInit(llvm::Function *F) { CXXGlobalInits.push_back(F); }
 
   /// Emit code for a single top level declaration.
   void EmitTopLevelDecl(Decl *D);
@@ -1238,8 +1388,20 @@ public:
   /// Create or return a runtime function declaration with the specified type
   /// and name. If \p AssumeConvergent is true, the call will have the
   /// convergent attribute added.
+  ///
+  /// For new code, please use the overload that takes a QualType; it sets
+  /// function attributes more accurately.
   llvm::FunctionCallee
   CreateRuntimeFunction(llvm::FunctionType *Ty, StringRef Name,
+                        llvm::AttributeList ExtraAttrs = llvm::AttributeList(),
+                        bool Local = false, bool AssumeConvergent = false);
+
+  /// Create or return a runtime function declaration with the specified type
+  /// and name. If \p AssumeConvergent is true, the call will have the
+  /// convergent attribute added.
+  llvm::FunctionCallee
+  CreateRuntimeFunction(QualType ReturnTy, ArrayRef<QualType> ArgTys,
+                        StringRef Name,
                         llvm::AttributeList ExtraAttrs = llvm::AttributeList(),
                         bool Local = false, bool AssumeConvergent = false);
 
@@ -1259,6 +1421,7 @@ public:
 
   llvm::Function *getLLVMLifetimeStartFn();
   llvm::Function *getLLVMLifetimeEndFn();
+  llvm::Function *getLLVMFakeUseFn();
 
   // Make sure that this type is translated.
   void UpdateCompletedType(const TagDecl *TD);
@@ -1285,8 +1448,18 @@ public:
   /// Print out an error that codegen doesn't support the specified stmt yet.
   void ErrorUnsupported(const Stmt *S, const char *Type);
 
+  /// Print out an error that codegen doesn't support the specified stmt yet.
+  void ErrorUnsupported(const Stmt *S, llvm::StringRef Type);
+
   /// Print out an error that codegen doesn't support the specified decl yet.
   void ErrorUnsupported(const Decl *D, const char *Type);
+
+  /// Run some code with "sufficient" stack space. (Currently, at least 256K is
+  /// guaranteed). Produces a warning if we're low on stack space and allocates
+  /// more in that case. Use this in code that may recurse deeply to avoid stack
+  /// overflow.
+  void runWithSufficientStackSpace(SourceLocation Loc,
+                                   llvm::function_ref<void()> Fn);
 
   /// Set the attributes on the LLVM function for the given decl and function
   /// info. This applies attributes necessary for handling the ABI as well as
@@ -1456,7 +1629,15 @@ public:
   /// are emitted lazily.
   void EmitGlobal(GlobalDecl D);
 
+  /// Record that new[] was called for the class, transform vector deleting
+  /// destructor definition in a form of alias to the actual definition.
+  void requireVectorDestructorDefinition(const CXXRecordDecl *RD);
+
+  /// Check that class need vector deleting destructor body.
+  bool classNeedsVectorDestructor(const CXXRecordDecl *RD);
+
   bool TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
+  void EmitDefinitionAsAlias(GlobalDecl Alias, GlobalDecl Target);
 
   llvm::GlobalValue *GetGlobalValue(StringRef Ref);
 
@@ -1481,6 +1662,13 @@ public:
   /// Emit a code for declare mapper construct.
   void EmitOMPDeclareMapper(const OMPDeclareMapperDecl *D,
                             CodeGenFunction *CGF = nullptr);
+
+  // Emit code for the OpenACC Declare declaration.
+  void EmitOpenACCDeclare(const OpenACCDeclareDecl *D,
+                          CodeGenFunction *CGF = nullptr);
+  // Emit code for the OpenACC Routine declaration.
+  void EmitOpenACCRoutine(const OpenACCRoutineDecl *D,
+                          CodeGenFunction *CGF = nullptr);
 
   /// Emit a code for requires directive.
   /// \param D Requires declaration
@@ -1524,7 +1712,10 @@ public:
   llvm::ConstantInt *CreateCrossDsoCfiTypeId(llvm::Metadata *MD);
 
   /// Generate a KCFI type identifier for T.
-  llvm::ConstantInt *CreateKCFITypeId(QualType T);
+  llvm::ConstantInt *CreateKCFITypeId(QualType T, StringRef Salt);
+
+  /// Create a metadata identifier for the given function type.
+  llvm::Metadata *CreateMetadataIdentifierForFnType(QualType T);
 
   /// Create a metadata identifier for the given type. This may either be an
   /// MDString (for external identifiers) or a distinct unnamed MDNode (for
@@ -1541,8 +1732,15 @@ public:
   llvm::Metadata *CreateMetadataIdentifierGeneralized(QualType T);
 
   /// Create and attach type metadata to the given function.
-  void CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
+  void createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                           llvm::Function *F);
+
+  /// Create and attach type metadata if the function is a potential indirect
+  /// call target to support call graph section.
+  void createIndirectFunctionTypeMD(const FunctionDecl *FD, llvm::Function *F);
+
+  /// Create and attach type metadata to the given call.
+  void createCalleeTypeMetadataForIcall(const QualType &QT, llvm::CallBase *CB);
 
   /// Set type metadata to the given function.
   void setKCFIType(const FunctionDecl *FD, llvm::Function *F);
@@ -1667,7 +1865,91 @@ public:
     MustTailCallUndefinedGlobals.insert(Global);
   }
 
+  bool shouldZeroInitPadding() const {
+    // In C23 (N3096) $6.7.10:
+    // """
+    // If any object is initialized with an empty iniitializer, then it is
+    // subject to default initialization:
+    //  - if it is an aggregate, every member is initialized (recursively)
+    //  according to these rules, and any padding is initialized to zero bits;
+    //  - if it is a union, the first named member is initialized (recursively)
+    //  according to these rules, and any padding is initialized to zero bits.
+    //
+    // If the aggregate or union contains elements or members that are
+    // aggregates or unions, these rules apply recursively to the subaggregates
+    // or contained unions.
+    //
+    // If there are fewer initializers in a brace-enclosed list than there are
+    // elements or members of an aggregate, or fewer characters in a string
+    // literal used to initialize an array of known size than there are elements
+    // in the array, the remainder of the aggregate is subject to default
+    // initialization.
+    // """
+    //
+    // From my understanding, the standard is ambiguous in the following two
+    // areas:
+    // 1. For a union type with empty initializer, if the first named member is
+    // not the largest member, then the bytes comes after the first named member
+    // but before padding are left unspecified. An example is:
+    //    union U { int a; long long b;};
+    //    union U u = {};  // The first 4 bytes are 0, but 4-8 bytes are left
+    //    unspecified.
+    //
+    // 2. It only mentions padding for empty initializer, but doesn't mention
+    // padding for a non empty initialization list. And if the aggregation or
+    // union contains elements or members that are aggregates or unions, and
+    // some are non empty initializers, while others are empty initiailizers,
+    // the padding initialization is unclear. An example is:
+    //    struct S1 { int a; long long b; };
+    //    struct S2 { char c; struct S1 s1; };
+    //    // The values for paddings between s2.c and s2.s1.a, between s2.s1.a
+    //    and s2.s1.b are unclear.
+    //    struct S2 s2 = { 'c' };
+    //
+    // Here we choose to zero initiailize left bytes of a union type. Because
+    // projects like the Linux kernel are relying on this behavior. If we don't
+    // explicitly zero initialize them, the undef values can be optimized to
+    // return gabage data. We also choose to zero initialize paddings for
+    // aggregates and unions, no matter they are initialized by empty
+    // initializers or non empty initializers. This can provide a consistent
+    // behavior. So projects like the Linux kernel can rely on it.
+    return !getLangOpts().CPlusPlus;
+  }
+
+  // Helper to get the alignment for a variable.
+  unsigned getVtableGlobalVarAlignment(const VarDecl *D = nullptr) {
+    LangAS AS = GetGlobalVarAddressSpace(D);
+    unsigned PAlign = Context.getLangOpts().RelativeCXXABIVTables
+                          ? 32
+                          : getTarget().getPointerAlign(AS);
+    return PAlign;
+  }
+
+  /// Helper function to construct a TrapReasonBuilder
+  TrapReasonBuilder BuildTrapReason(unsigned DiagID, TrapReason &TR) {
+    return TrapReasonBuilder(&getDiags(), DiagID, TR);
+  }
+
+  llvm::Constant *performAddrSpaceCast(llvm::Constant *Src,
+                                       llvm::Type *DestTy) {
+    // Since target may map different address spaces in AST to the same address
+    // space, an address space conversion may end up as a bitcast.
+    return llvm::ConstantExpr::getPointerCast(Src, DestTy);
+  }
+
+  std::optional<llvm::Attribute::AttrKind>
+  StackProtectorAttribute(const Decl *D) const;
+
+  std::string getPFPFieldName(const FieldDecl *FD);
+  llvm::GlobalValue *getPFPDeactivationSymbol(const FieldDecl *FD);
+
 private:
+  /// Translate an llvm::abi::ArgInfo (computed by the LLVMABI library) into
+  /// the clang ABIArgInfo consumed by the rest of CodeGen. Used by the
+  /// experimental ABI lowering path.
+  ABIArgInfo convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
+                               QualType Type);
+
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
 
   llvm::Constant *GetOrCreateLLVMFunction(
@@ -1685,6 +1967,15 @@ private:
   // will be for an ifunc (llvm::GlobalIFunc) if the current target supports
   // that feature and for a regular function (llvm::GlobalValue) otherwise.
   llvm::Constant *GetOrCreateMultiVersionResolver(GlobalDecl GD);
+
+  // Set attributes to a resolver function generated by Clang.
+  // GD is either the cpu_dispatch declaration or an arbitrarily chosen
+  // function declaration that triggered the implicit generation of this
+  // resolver function.
+  //
+  /// NOTE: This should only be called for definitions.
+  void setMultiVersionResolverAttributes(llvm::Function *Resolver,
+                                         GlobalDecl GD);
 
   // In scenarios where a function is not known to be a multiversion function
   // until a later declaration, it is sometimes necessary to change the
@@ -1709,8 +2000,6 @@ private:
   void EmitMultiVersionFunctionDefinition(GlobalDecl GD, llvm::GlobalValue *GV);
 
   void EmitGlobalVarDefinition(const VarDecl *D, bool IsTentative = false);
-  void EmitExternalVarDeclaration(const VarDecl *D);
-  void EmitExternalFunctionDeclaration(const FunctionDecl *D);
   void EmitAliasDefinition(GlobalDecl GD);
   void emitIFuncDefinition(GlobalDecl GD);
   void emitCPUDispatchDefinition(GlobalDecl GD);
@@ -1829,6 +2118,18 @@ private:
   /// .gcda files in a way that persists in .bc files.
   void EmitCoverageFile();
 
+  /// Given a sycl_kernel_entry_point attributed function, emit the
+  /// corresponding SYCL kernel caller offload entry point function.
+  void EmitSYCLKernelCaller(const FunctionDecl *KernelEntryPointFn,
+                            ASTContext &Ctx);
+
+  /// Attach the "sycl-module-id" function attribute to \p Fn, to record the
+  /// module ID for the translation unit. This attribute is applied to SYCL
+  /// kernel entry point functions and functions declared with the
+  /// sycl_external attribute to enable them to be identified as entry points
+  /// by clang-sycl-linker during device-code splitting.
+  void addSYCLModuleIdAttr(llvm::Function *Fn);
+
   /// Determine whether the definition must be emitted; if this returns \c
   /// false, the definition can be emitted lazily if it's used.
   bool MustBeEmitted(const ValueDecl *D);
@@ -1858,6 +2159,10 @@ private:
 
   llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
                                                StringRef Suffix);
+
+  /// Emit deactivation symbols for any PFP fields whose offset is taken with
+  /// offsetof.
+  void emitPFPFieldsWithEvaluatedOffset();
 };
 
 }  // end namespace CodeGen

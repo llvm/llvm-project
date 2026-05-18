@@ -28,6 +28,9 @@
 #include <fstream>
 #include <stdlib.h>
 #include <string>
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 using namespace llvm;
 using llvm::unittest::TempDir;
@@ -97,7 +100,7 @@ TEST(CommandLineTest, ModifyExisitingOption) {
   static const char ArgString[] = "new-test-option";
   static const char ValueString[] = "Integer";
 
-  StringMap<cl::Option *> &Map =
+  DenseMap<StringRef, cl::Option *> &Map =
       cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
 
   ASSERT_EQ(Map.count("test-option"), 1u) << "Could not find option in map.";
@@ -219,6 +222,71 @@ TEST(CommandLineTest, TokenizeGNUCommandLine) {
       "foo bar",     "foo bar",   "foo bar",          "foo\\bar",
       "-DFOO=bar()", "foobarbaz", "C:\\src\\foo.cpp", "C:srcfoo.cpp"};
   testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineEmptyQuotes) {
+  // Explicit '' and "" should be treated as an empty string argument, as shells
+  // and gcc do.
+  const char Input1[] = R"(a b c "" d)";
+  const char *const Output1[] = {"a", "b", "c", "", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+
+  const char Input2[] = R"(a b c '' d)";
+  const char *const Output2[] = {"a", "b", "c", "", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input2, Output2);
+
+  // Check that empty arguments are preserved at the beginning/end of the
+  // input.
+  const char Input3[] = R"('' a b c d "")";
+  const char *const Output3[] = {"", "a", "b", "c", "d", ""};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input3, Output3);
+
+  // Check that an input containing only empty arguments is handled
+  // correctly.
+  const char Input4[] = R"("" '')";
+  const char *const Output4[] = {"", ""};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input4, Output4);
+
+  // Each sequence of juxtaposed empty string segments is still just one
+  // empty string.
+  const char Input5[] = R"('''' """" ''"")";
+  const char *const Output5[] = {"", "", ""};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input5, Output5);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineWhitespace) {
+  // Leading/trailing whitespace should be ignored.
+  const char Input1[] = R"(  a b c '' d  )";
+  const char *const Output1[] = {"a", "b", "c", "", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineJuxtaposedQuotedSegments) {
+  const char Input1[] = R"(a""a ""b c"" d''d ''e f'')";
+  const char *const Output1[] = {"aa", "b", "c", "dd", "e", "f"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+
+  const char Input2[] = R"("'a'"'"b"')";
+  const char *const Output2[] = {R"('a'"b")"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input2, Output2);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineUnterminatedQuotes) {
+  // Unterminated quotes are implicitly terminated at EOF.
+  const char Input1[] = R"(a b ')";
+  const char *const Output1[] = {"a", "b", ""};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+
+  const char Input2[] = R"(a b 'c d)";
+  const char *const Output2[] = {"a", "b", "c d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input2, Output2);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineNewlines) {
+  // Newlines are also treated literally inside quotes.
+  const char Input1[] = "a 'b\nc' d";
+  const char *const Output1[] = {"a", "b\nc", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
 }
 
 TEST(CommandLineTest, TokenizeWindowsCommandLine1) {
@@ -418,7 +486,7 @@ TEST(CommandLineTest, HideUnrelatedOptions) {
   ASSERT_EQ(cl::NotHidden, TestOption2.getOptionHiddenFlag())
       << "Hid extra option that should be visable.";
 
-  StringMap<cl::Option *> &Map =
+  DenseMap<StringRef, cl::Option *> &Map =
       cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
   ASSERT_TRUE(Map.count("help") == (size_t)0 ||
               cl::NotHidden == Map["help"]->getOptionHiddenFlag())
@@ -444,7 +512,7 @@ TEST(CommandLineTest, HideUnrelatedOptionsMulti) {
   ASSERT_EQ(cl::NotHidden, TestOption3.getOptionHiddenFlag())
       << "Hid extra option that should be visable.";
 
-  StringMap<cl::Option *> &Map =
+  DenseMap<StringRef, cl::Option *> &Map =
       cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
   ASSERT_TRUE(Map.count("help") == (size_t)0 ||
               cl::NotHidden == Map["help"]->getOptionHiddenFlag())
@@ -520,7 +588,6 @@ TEST(CommandLineTest, LookupFailsInWrongSubCommand) {
 
   const char *args[] = {"prog", "sc1", "-sc2"};
   EXPECT_FALSE(cl::ParseCommandLineOptions(3, args, StringRef(), &OS));
-  OS.flush();
   EXPECT_FALSE(Errs.empty());
 }
 
@@ -616,7 +683,6 @@ TEST(CommandLineTest, AddToAllSubCommands) {
   EXPECT_TRUE(AllOpt);
 
   // Since all parsing succeeded, the error message should be empty.
-  OS.flush();
   EXPECT_TRUE(Errs.empty());
 }
 
@@ -657,14 +723,12 @@ TEST(CommandLineTest, RemoveFromRegularSubCommand) {
   EXPECT_FALSE(RemoveOption);
   EXPECT_TRUE(cl::ParseCommandLineOptions(3, args, StringRef(), &OS));
   EXPECT_TRUE(RemoveOption);
-  OS.flush();
   EXPECT_TRUE(Errs.empty());
 
   RemoveOption.removeArgument();
 
   cl::ResetAllOptionOccurrences();
   EXPECT_FALSE(cl::ParseCommandLineOptions(3, args, StringRef(), &OS));
-  OS.flush();
   EXPECT_FALSE(Errs.empty());
 }
 
@@ -838,14 +902,23 @@ TEST(CommandLineTest, DefaultOptions) {
 }
 
 TEST(CommandLineTest, ArgumentLimit) {
-  std::string args(32 * 4096, 'a');
-  EXPECT_FALSE(llvm::sys::commandLineFitsWithinSystemLimits("cl", args.data()));
+#if HAVE_UNISTD_H && defined(_SC_ARG_MAX)
+  if (sysconf(_SC_ARG_MAX) != -1) {
+#endif
+    std::string args(32 * 4096, 'a');
+    EXPECT_FALSE(
+        llvm::sys::commandLineFitsWithinSystemLimits("cl", args.data()));
+#if HAVE_UNISTD_H && defined(_SC_ARG_MAX)
+  }
+#endif
   std::string args2(256, 'a');
   EXPECT_TRUE(llvm::sys::commandLineFitsWithinSystemLimits("cl", args2.data()));
 }
 
 TEST(CommandLineTest, ArgumentLimitWindows) {
-  if (!Triple(sys::getProcessTriple()).isOSWindows())
+  Triple processTriple(sys::getProcessTriple());
+  if (!processTriple.isOSWindows() ||
+      processTriple.isWindowsCygwinEnvironment())
     GTEST_SKIP();
   // We use 32000 as a limit for command line length. Program name ('cl'),
   // separating spaces and termination null character occupy 5 symbols.
@@ -858,7 +931,9 @@ TEST(CommandLineTest, ArgumentLimitWindows) {
 }
 
 TEST(CommandLineTest, ResponseFileWindows) {
-  if (!Triple(sys::getProcessTriple()).isOSWindows())
+  Triple processTriple(sys::getProcessTriple());
+  if (!processTriple.isOSWindows() ||
+      processTriple.isWindowsCygwinEnvironment())
     GTEST_SKIP();
 
   StackOption<std::string, cl::list<std::string>> InputFilenames(
@@ -940,7 +1015,7 @@ TEST(CommandLineTest, ResponseFiles) {
 TEST(CommandLineTest, RecursiveResponseFiles) {
   vfs::InMemoryFileSystem FS;
 #ifdef _WIN32
-  const char *TestRoot = "C:\\";
+  const char *TestRoot = LLVM_WINDOWS_PREFER_FORWARD_SLASH ? "C:/" : "C:\\";
 #else
   const char *TestRoot = "/";
 #endif
@@ -1010,7 +1085,7 @@ TEST(CommandLineTest, RecursiveResponseFiles) {
 TEST(CommandLineTest, ResponseFilesAtArguments) {
   vfs::InMemoryFileSystem FS;
 #ifdef _WIN32
-  const char *TestRoot = "C:\\";
+  const char *TestRoot = LLVM_WINDOWS_PREFER_FORWARD_SLASH ? "C:/" : "C:\\";
 #else
   const char *TestRoot = "/";
 #endif
@@ -1277,15 +1352,15 @@ TEST(CommandLineTest, PositionalEatArgsError) {
 
   std::string Errs;
   raw_string_ostream OS(Errs);
-  EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS)); OS.flush();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS));
   EXPECT_FALSE(Errs.empty()); Errs.clear();
-  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args2, StringRef(), &OS)); OS.flush();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args2, StringRef(), &OS));
   EXPECT_FALSE(Errs.empty()); Errs.clear();
-  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args3, StringRef(), &OS)); OS.flush();
+  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args3, StringRef(), &OS));
   EXPECT_TRUE(Errs.empty()); Errs.clear();
 
   cl::ResetAllOptionOccurrences();
-  EXPECT_TRUE(cl::ParseCommandLineOptions(6, args4, StringRef(), &OS)); OS.flush();
+  EXPECT_TRUE(cl::ParseCommandLineOptions(6, args4, StringRef(), &OS));
   EXPECT_EQ(PosEatArgs.size(), 1u);
   EXPECT_EQ(PosEatArgs2.size(), 2u);
   EXPECT_TRUE(Errs.empty());
@@ -1875,7 +1950,7 @@ TEST(CommandLineTest, LongOptions) {
   //
 
   EXPECT_TRUE(
-      cl::ParseCommandLineOptions(4, args1, StringRef(), &OS)); OS.flush();
+      cl::ParseCommandLineOptions(4, args1, StringRef(), &OS));
   EXPECT_TRUE(OptA);
   EXPECT_FALSE(OptBLong);
   EXPECT_STREQ("val1", OptAB.c_str());
@@ -1883,7 +1958,7 @@ TEST(CommandLineTest, LongOptions) {
   cl::ResetAllOptionOccurrences();
 
   EXPECT_TRUE(
-      cl::ParseCommandLineOptions(4, args2, StringRef(), &OS)); OS.flush();
+      cl::ParseCommandLineOptions(4, args2, StringRef(), &OS));
   EXPECT_TRUE(OptA);
   EXPECT_FALSE(OptBLong);
   EXPECT_STREQ("val1", OptAB.c_str());
@@ -1893,7 +1968,7 @@ TEST(CommandLineTest, LongOptions) {
   // Fails because `-ab` and `--ab` are treated the same and appear more than
   // once.  Also, `val1` is unexpected.
   EXPECT_FALSE(
-      cl::ParseCommandLineOptions(4, args3, StringRef(), &OS)); OS.flush();
+      cl::ParseCommandLineOptions(4, args3, StringRef(), &OS));
   outs()<< Errs << "\n";
   EXPECT_FALSE(Errs.empty()); Errs.clear();
   cl::ResetAllOptionOccurrences();
@@ -1905,24 +1980,23 @@ TEST(CommandLineTest, LongOptions) {
 
   // Fails because `-ab` is treated as `-a -b`, so `-a` is seen twice, and
   // `val1` is unexpected.
-  EXPECT_FALSE(cl::ParseCommandLineOptions(4, args1, StringRef(),
-                                           &OS, nullptr, true)); OS.flush();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(4, args1, StringRef(), &OS, nullptr,
+                                           nullptr, true));
   EXPECT_FALSE(Errs.empty()); Errs.clear();
   cl::ResetAllOptionOccurrences();
 
   // Works because `-a` is treated differently than `--ab`.
-  EXPECT_TRUE(cl::ParseCommandLineOptions(4, args2, StringRef(),
-                                           &OS, nullptr, true)); OS.flush();
+  EXPECT_TRUE(cl::ParseCommandLineOptions(4, args2, StringRef(), &OS, nullptr,
+                                          nullptr, true));
   EXPECT_TRUE(Errs.empty()); Errs.clear();
   cl::ResetAllOptionOccurrences();
 
   // Works because `-ab` is treated as `-a -b`, and `--ab` is a long option.
-  EXPECT_TRUE(cl::ParseCommandLineOptions(4, args3, StringRef(),
-                                           &OS, nullptr, true));
+  EXPECT_TRUE(cl::ParseCommandLineOptions(4, args3, StringRef(), &OS, nullptr,
+                                          nullptr, true));
   EXPECT_TRUE(OptA);
   EXPECT_TRUE(OptBLong);
   EXPECT_STREQ("val1", OptAB.c_str());
-  OS.flush();
   EXPECT_TRUE(Errs.empty()); Errs.clear();
   cl::ResetAllOptionOccurrences();
 }
@@ -1941,12 +2015,10 @@ TEST(CommandLineTest, OptionErrorMessage) {
   raw_string_ostream OS(Errs);
 
   OptA.error("custom error", OS);
-  OS.flush();
   EXPECT_NE(Errs.find("for the -a option:"), std::string::npos);
   Errs.clear();
 
   OptLong.error("custom error", OS);
-  OS.flush();
   EXPECT_NE(Errs.find("for the --long option:"), std::string::npos);
   Errs.clear();
 
@@ -1969,7 +2041,6 @@ TEST(CommandLineTest, OptionErrorMessageSuggest) {
   raw_string_ostream OS(Errs);
 
   EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS));
-  OS.flush();
   EXPECT_NE(Errs.find("prog: Did you mean '--aluminium'?\n"),
             std::string::npos);
   Errs.clear();
@@ -1992,7 +2063,6 @@ TEST(CommandLineTest, OptionErrorMessageSuggestNoHidden) {
   raw_string_ostream OS(Errs);
 
   EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS));
-  OS.flush();
   EXPECT_NE(Errs.find("prog: Did you mean '--aluminium'?\n"),
             std::string::npos);
   Errs.clear();
@@ -2082,7 +2152,6 @@ TEST(CommandLineTest, ConsumeAfterOnePositional) {
   std::string Errs;
   raw_string_ostream OS(Errs);
   EXPECT_TRUE(cl::ParseCommandLineOptions(4, Args, StringRef(), &OS));
-  OS.flush();
   EXPECT_EQ("input", Input);
   EXPECT_EQ(ExtraArgs.size(), 2u);
   EXPECT_EQ(ExtraArgs[0], "arg1");
@@ -2105,12 +2174,27 @@ TEST(CommandLineTest, ConsumeAfterTwoPositionals) {
   std::string Errs;
   raw_string_ostream OS(Errs);
   EXPECT_TRUE(cl::ParseCommandLineOptions(5, Args, StringRef(), &OS));
-  OS.flush();
   EXPECT_EQ("input1", Input1);
   EXPECT_EQ("input2", Input2);
   EXPECT_EQ(ExtraArgs.size(), 2u);
   EXPECT_EQ(ExtraArgs[0], "arg1");
   EXPECT_EQ(ExtraArgs[1], "arg2");
+  EXPECT_TRUE(Errs.empty());
+}
+
+TEST(CommandLineTest, ConsumeOptionalString) {
+  cl::ResetCommandLineParser();
+
+  StackOption<std::optional<std::string>, cl::opt<std::optional<std::string>>>
+      Input("input");
+
+  const char *Args[] = {"prog", "--input=\"value\""};
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+  ASSERT_TRUE(cl::ParseCommandLineOptions(2, Args, StringRef(), &OS));
+  ASSERT_TRUE(Input.has_value());
+  EXPECT_EQ("\"value\"", *Input);
   EXPECT_TRUE(Errs.empty());
 }
 

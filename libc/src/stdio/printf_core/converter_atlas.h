@@ -26,7 +26,11 @@
 // defines convert_float_decimal
 // defines convert_float_dec_exp
 // defines convert_float_dec_auto
+#ifdef LIBC_COPT_FLOAT_TO_STR_USE_FLOAT320
+#include "src/stdio/printf_core/float_dec_converter_limited.h"
+#else
 #include "src/stdio/printf_core/float_dec_converter.h"
+#endif
 // defines convert_float_hex_exp
 #include "src/stdio/printf_core/float_hex_converter.h"
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
@@ -42,5 +46,10 @@
 
 // defines convert_pointer
 #include "src/stdio/printf_core/ptr_converter.h"
+
+#ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
+// defines convert_strerror
+#include "src/stdio/printf_core/strerror_converter.h"
+#endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_ATLAS_H

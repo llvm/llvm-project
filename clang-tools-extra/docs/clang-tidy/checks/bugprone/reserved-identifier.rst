@@ -28,7 +28,7 @@ Violating the naming rules above results in undefined behavior.
   int _g(); // disallowed in global namespace only
 
 The check can also be inverted, i.e. it can be configured to flag any
-identifier that is _not_ a reserved identifier. This mode is for use by e.g.
+identifier that is *not* a reserved identifier. This mode is for use by e.g.
 standard library implementors, to ensure they don't infringe on the user
 namespace.
 

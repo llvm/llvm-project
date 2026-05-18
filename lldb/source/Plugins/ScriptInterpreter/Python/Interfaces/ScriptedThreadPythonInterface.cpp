@@ -6,15 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lldb-python.h"
+
 #include "lldb/Host/Config.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
-
-#if LLDB_ENABLE_PYTHON
-
-// LLDB Python header must be included first
-#include "../lldb-python.h"
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
@@ -144,4 +141,19 @@ StructuredData::ArraySP ScriptedThreadPythonInterface::GetExtendedInfo() {
   return arr;
 }
 
-#endif
+std::optional<std::string>
+ScriptedThreadPythonInterface::GetScriptedFramePluginName() {
+  Status error;
+  StructuredData::ObjectSP obj = Dispatch("get_scripted_frame_plugin", error);
+
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
+    return {};
+
+  return obj->GetStringValue().str();
+}
+
+lldb::ScriptedFrameInterfaceSP
+ScriptedThreadPythonInterface::CreateScriptedFrameInterface() {
+  return m_interpreter.CreateScriptedFrameInterface();
+}

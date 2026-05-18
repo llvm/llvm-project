@@ -31,14 +31,14 @@ bool testBuildAttr(unsigned Tag, unsigned Value,
   raw_string_ostream OS(buffer);
   AttributeSection Section(Tag, Value);
   Section.write(OS);
-  ArrayRef<uint8_t> Bytes(
-    reinterpret_cast<const uint8_t*>(OS.str().c_str()), OS.str().size());
+  ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(buffer.c_str()),
+                          buffer.size());
 
   ARMAttributeParser Parser;
   cantFail(Parser.parse(Bytes, llvm::endianness::little));
 
-  std::optional<unsigned> Attr = Parser.getAttributeValue(ExpectedTag);
-  return Attr && *Attr == ExpectedValue;
+  std::optional<unsigned> Attr = Parser.getAttributeValue("", ExpectedTag);
+  return Attr == ExpectedValue;
 }
 
 void testParseError(ArrayRef<uint8_t> bytes, const char *msg) {

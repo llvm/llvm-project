@@ -18,13 +18,13 @@ declare <4 x i32> @split_spill(double, double, double, ...)
 ; CHECK-DAG: [[ELEMENT1:%[0-9]+]]:gprc = LWZ 48, $r1 :: (load (s32))
 ; CHECK-DAG: [[ELEMENT2:%[0-9]+]]:gprc = LWZ 52, $r1 :: (load (s32))
 ; CHECK:     [[FLOAT1SPLAT:%[0-9]+]]:vrrc = VSPLTISW 1
-; CHECK:     [[FLOAT1COPY:%[0-9]+]]:vsrc = COPY [[FLOAT1SPLAT]]
+; CHECK:     [[FLOAT1COPY:%[0-9]+]]:vsrc = COPY killed [[FLOAT1SPLAT]]
 ; CHECK:     [[DOUBLE1:%[0-9]+]]:vsrc = XVCVSXWDP killed [[FLOAT1COPY]], implicit $rm
-; CHECK:     [[DOUBLE1COPY:%[0-9]+]]:vsfrc = COPY [[DOUBLE1]]
+; CHECK:     [[DOUBLE1COPY:%[0-9]+]]:vsfrc = COPY killed [[DOUBLE1]]
 ; CHECK:     [[FLOAT2SPLAT:%[0-9]+]]:vrrc = VSPLTISW 2
-; CHECK:     [[FLOAT2COPY:%[0-9]+]]:vsrc = COPY [[FLOAT2SPLAT]]
+; CHECK:     [[FLOAT2COPY:%[0-9]+]]:vsrc = COPY killed [[FLOAT2SPLAT]]
 ; CHECK:     [[DOUBLE2:%[0-9]+]]:vsrc = XVCVSXWDP killed [[FLOAT2COPY]], implicit $rm
-; CHECK:     [[DOUBLE2COPY:%[0-9]+]]:vsfrc = COPY [[DOUBLE2]]
+; CHECK:     [[DOUBLE2COPY:%[0-9]+]]:vsfrc = COPY killed [[DOUBLE2]]
 
 ; CHECK:     [[DZERO:%[0-9]+]]:vsfrc = XXLXORdpz
 ; CHECK:     [[DTOI1:%[0-9]+]]:gprc = LIS 16368

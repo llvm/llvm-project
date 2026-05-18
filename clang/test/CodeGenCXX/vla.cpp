@@ -83,7 +83,7 @@ void test2(int b) {
   
   //CHECK: [[VLA_SIZEOF:%.*]] = mul nuw i64 4, [[VLA_NUM_ELEMENTS_PRE]]
   //CHECK-NEXT: [[VLA_NUM_ELEMENTS_POST:%.*]] = udiv i64 [[VLA_SIZEOF]], 4
-  //CHECK-NEXT: [[VLA_END_PTR:%.*]] = getelementptr inbounds i32, ptr {{%.*}}, i64 [[VLA_NUM_ELEMENTS_POST]]
+  //CHECK-NEXT: [[VLA_END_PTR:%.*]] = getelementptr inbounds nuw i32, ptr {{%.*}}, i64 [[VLA_NUM_ELEMENTS_POST]]
   //X64-NEXT: store ptr [[VLA_END_PTR]], ptr %__end1
   //AMDGCN-NEXT: store ptr [[VLA_END_PTR]], ptr [[END]]
   for (int d : varr) 0;
@@ -116,7 +116,7 @@ void test3(int b, int c) {
   //CHECK-NEXT: [[VLA_SIZEOF_DIM2:%.*]] = mul nuw i64 4, [[VLA_DIM2_PRE]]
   //CHECK-NEXT: [[VLA_NUM_ELEMENTS:%.*]] = udiv i64 [[VLA_SIZEOF]], [[VLA_SIZEOF_DIM2]]
   //CHECK-NEXT: [[VLA_END_INDEX:%.*]] = mul nsw i64 [[VLA_NUM_ELEMENTS]], [[VLA_DIM2_PRE]]
-  //CHECK-NEXT: [[VLA_END_PTR:%.*]] = getelementptr inbounds i32, ptr {{%.*}}, i64 [[VLA_END_INDEX]]
+  //CHECK-NEXT: [[VLA_END_PTR:%.*]] = getelementptr inbounds nuw i32, ptr {{%.*}}, i64 [[VLA_END_INDEX]]
   //X64-NEXT: store ptr [[VLA_END_PTR]], ptr %__end
   //AMDGCN-NEXT: store ptr [[VLA_END_PTR]], ptr [[END]]
  

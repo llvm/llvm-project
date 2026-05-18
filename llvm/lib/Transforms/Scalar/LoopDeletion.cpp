@@ -404,9 +404,9 @@ breakBackedgeIfNotTaken(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   if (!L->getLoopLatch())
     return LoopDeletionResult::Unmodified;
 
-  auto *BTCMax = SE.getConstantMaxBackedgeTakenCount(L);
+  const SCEV *BTCMax = SE.getConstantMaxBackedgeTakenCount(L);
   if (!BTCMax->isZero()) {
-    auto *BTC = SE.getBackedgeTakenCount(L);
+    const SCEV *BTC = SE.getBackedgeTakenCount(L);
     if (!BTC->isZero()) {
       if (!isa<SCEVCouldNotCompute>(BTC) && SE.isKnownNonZero(BTC))
         return LoopDeletionResult::Unmodified;
@@ -467,8 +467,7 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
     SE.forgetLoop(L);
     // Set incoming value to poison for phi nodes in the exit block.
     for (PHINode &P : ExitBlock->phis()) {
-      std::fill(P.incoming_values().begin(), P.incoming_values().end(),
-                PoisonValue::get(P.getType()));
+      llvm::fill(P.incoming_values(), PoisonValue::get(P.getType()));
     }
     ORE.emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "NeverExecutes", L->getStartLoc(),

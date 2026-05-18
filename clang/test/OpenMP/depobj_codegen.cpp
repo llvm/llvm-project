@@ -17,6 +17,15 @@
 typedef void *omp_depend_t;
 
 void foo() {}
+void tmainc(){
+   omp_depend_t obj;
+#pragma omp depobj(obj) depend(inout: omp_all_memory)
+{
+   volatile omp_depend_t temp = obj;
+   char* char_ptr = reinterpret_cast<char*>(temp);
+   char_ptr[0] = 1;
+}
+}
 
 template <class T>
 T tmain(T argc) {
@@ -35,29 +44,44 @@ int main(int argc, char **argv) {
 #pragma omp depobj(b) destroy
 #pragma omp depobj(b) update(mutexinoutset)
 #pragma omp depobj(a) depend(iterator(char *p = argv[argc]:argv[0]:-1), out: p[0])
-  (void)tmain(a), tmain(b);
+ (void)tmain(a), tmain(b);
+ tmainc();
   return 0;
 }
-
+// CHECK-LABEL: tmainc
+// CHECK: [[D_ADDR:%obj]] = alloca ptr,
+// CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(
+// CHECK: [[DEP_ADDR_ADDR2:%.+]] = call ptr @__kmpc_alloc(i32 [[GTID]], i64 48, ptr null)
+// CHECK: [[SZ_DEOOBJ:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[DEP_ADDR_ADDR2]], i{{.+}} 0, i{{.+}} 0
+// CHECK: store i64 1, ptr [[SZ_DEOOBJ]], align 8
+// CHECK: [[DEPOBJ_BASE_ADDR:%.+]] = getelementptr %struct.kmp_depend_info, ptr [[DEP_ADDR_ADDR2]], i{{.+}} 1
+// CHECK: [[ADDR_ONE:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[DEPOBJ_BASE_ADDR]], i{{.+}} 0, i{{.+}} 0
+// CHECK: store i64 0, ptr [[ADDR_ONE]], align 8
+// CHECK: [[SZ_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[DEPOBJ_BASE_ADDR]], i{{.+}} 0, i{{.+}} 1
+// CHECK: store i64 0, ptr [[SZ_ADDR]], align 8
+// CHECK: [[SZ_ADDR_NEW:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[DEPOBJ_BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
+// CHECK: store {{i[0-9]+}} {{-?[0-9]+}}, ptr [[SZ_ADDR_NEW]], align 8
+// CHECK: [[DEP_NEW:%.+]] = getelementptr   %struct.kmp_depend_info, ptr [[DEP_ADDR_ADDR2]], i{{.+}} 1
+// CHECK: store ptr [[DEP_NEW]], ptr [[D_ADDR]], align 8
 // CHECK-LABEL: @main
 // CHECK: [[B_ADDR:%b]] = alloca ptr,
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(
 // CHECK: [[DEP_ADDR_VOID:%.+]] = call ptr @__kmpc_alloc(i32 [[GTID]], i64 72, ptr null)
-// CHECK: [[SZ_BASE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[DEP_ADDR_VOID]], i{{.+}} 0, i{{.+}} 0
+// CHECK: [[SZ_BASE:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[DEP_ADDR_VOID]], i{{.+}} 0, i{{.+}} 0
 // CHECK: store i64 2, ptr [[SZ_BASE]], align 8
 // CHECK: [[BASE_ADDR:%.+]] = getelementptr %struct.kmp_depend_info, ptr [[DEP_ADDR_VOID]], i{{.+}} 1
-// CHECK: [[ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 0
+// CHECK: [[ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 0
 // CHECK: store i64 %{{.+}}, ptr [[ADDR]], align 8
-// CHECK: [[SZ_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 1
+// CHECK: [[SZ_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 1
 // CHECK: store i64 4, ptr [[SZ_ADDR]], align 8
-// CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
+// CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
 // CHECK: store i8 3, ptr [[FLAGS_ADDR]], align 8
 // CHECK: [[BASE_ADDR:%.+]] = getelementptr %struct.kmp_depend_info, ptr [[DEP_ADDR_VOID]], i{{.+}} 2
-// CHECK: [[ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 0
+// CHECK: [[ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 0
 // CHECK: store i64 %{{.+}}, ptr [[ADDR]], align 8
-// CHECK: [[SZ_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 1
+// CHECK: [[SZ_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 1
 // CHECK: store i64 8, ptr [[SZ_ADDR]], align 8
-// CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
+// CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
 // CHECK: store i8 3, ptr [[FLAGS_ADDR]], align 8
 // CHECK: [[BASE_ADDR:%.+]] = getelementptr %struct.kmp_depend_info, ptr [[DEP_ADDR_VOID]], i{{.+}} 1
 // CHECK: store ptr [[BASE_ADDR]], ptr [[MAIN_A]], align 8
@@ -66,13 +90,15 @@ int main(int argc, char **argv) {
 // CHECK: call void @__kmpc_free(i32 [[GTID]], ptr [[B_REF]], ptr null)
 // CHECK: [[B_BASE:%.+]] = load ptr, ptr [[B_ADDR]], align 8
 // CHECK: [[NUMDEPS_BASE:%.+]] = getelementptr %struct.kmp_depend_info, ptr [[B_BASE]], i64 -1
-// CHECK: [[NUMDEPS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[NUMDEPS_BASE]], i{{.+}} 0, i{{.+}} 0
+// CHECK: [[NUMDEPS_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[NUMDEPS_BASE]], i{{.+}} 0, i{{.+}} 0
 // CHECK: [[NUMDEPS:%.+]] = load i64, ptr [[NUMDEPS_ADDR]], align 8
 // CHECK: [[END:%.+]] = getelementptr %struct.kmp_depend_info, ptr [[B_BASE]], i64 [[NUMDEPS]]
+
+
 // CHECK: br label %[[BODY:.+]]
 // CHECK: [[BODY]]:
 // CHECK: [[EL:%.+]] = phi ptr [ [[B_BASE]], %{{.+}} ], [ [[EL_NEXT:%.+]], %[[BODY]] ]
-// CHECK: [[FLAG_BASE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[EL]], i{{.+}} 0, i{{.+}} 2
+// CHECK: [[FLAG_BASE:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[EL]], i{{.+}} 0, i{{.+}} 2
 // CHECK: store i8 4, ptr [[FLAG_BASE]], align 8
 // CHECK: [[EL_NEXT]] = getelementptr %struct.kmp_depend_info, ptr [[EL]], i{{.+}} 1
 // CHECK: [[IS_DONE:%.+]] = icmp eq ptr [[EL_NEXT]], [[END]]
@@ -107,7 +133,7 @@ int main(int argc, char **argv) {
 // CHECK: [[DEP_ADDR_VOID:%.+]] = call ptr @__kmpc_alloc(i32 %{{.+}}, i64 [[SIZE]], ptr null)
 
 // dep[0].base_addr = NELEMS.
-// CHECK: [[BASE_ADDR_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[DEP_ADDR_VOID]], i{{.+}} 0, i{{.+}} 0
+// CHECK: [[BASE_ADDR_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[DEP_ADDR_VOID]], i{{.+}} 0, i{{.+}} 0
 // CHECK: store i64 [[NELEMS]], ptr [[BASE_ADDR_ADDR]], align 8
 
 // iterator_counter = 1;
@@ -159,14 +185,14 @@ int main(int argc, char **argv) {
 // dep[ITERATOR_COUNTER].base_addr = &p[0];
 // CHECK: [[ITERATOR_COUNTER:%.+]] = load i64, ptr [[ITERATOR_COUNTER_ADDR]], align 8
 // CHECK: [[DEP_IC:%.+]] = getelementptr %struct.kmp_depend_info, ptr [[DEP_ADDR_VOID]], i64 [[ITERATOR_COUNTER]]
-// CHECK: [[DEP_IC_BASE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[DEP_IC]], i{{.+}} 0, i{{.+}} 0
+// CHECK: [[DEP_IC_BASE_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[DEP_IC]], i{{.+}} 0, i{{.+}} 0
 // CHECK: store i64 [[P0_ADDR]], ptr [[DEP_IC_BASE_ADDR]], align 8
 
 // dep[ITERATOR_COUNTER].size = sizeof(p[0]);
-// CHECK: [[DEP_IC_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[DEP_IC]], i{{.+}} 0, i{{.+}} 1
+// CHECK: [[DEP_IC_SIZE:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[DEP_IC]], i{{.+}} 0, i{{.+}} 1
 // CHECK: store i64 1, ptr [[DEP_IC_SIZE]], align 8
 // dep[ITERATOR_COUNTER].flags = in_out;
-// CHECK: [[DEP_IC_FLAGS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[DEP_IC]], i{{.+}} 0, i{{.+}} 2
+// CHECK: [[DEP_IC_FLAGS:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[DEP_IC]], i{{.+}} 0, i{{.+}} 2
 // CHECK: store i8 3, ptr [[DEP_IC_FLAGS]], align 8
 
 // ITERATOR_COUNTER = ITERATOR_COUNTER + 1;
@@ -190,25 +216,25 @@ int main(int argc, char **argv) {
 // CHECK: [[ARGC_ADDR:%.+]] = alloca ptr,
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(
 // CHECK: [[DEP_ADDR_VOID:%.+]] = call ptr @__kmpc_alloc(i32 [[GTID]], i64 72, ptr null)
-// CHECK: [[SZ_BASE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[DEP_ADDR_VOID]], i{{.+}} 0, i{{.+}} 0
+// CHECK: [[SZ_BASE:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[DEP_ADDR_VOID]], i{{.+}} 0, i{{.+}} 0
 // CHECK: store i64 2, ptr [[SZ_BASE]], align 8
 // CHECK: [[BASE_ADDR:%.+]] = getelementptr %struct.kmp_depend_info, ptr [[DEP_ADDR_VOID]], i{{.+}} 1
-// CHECK: [[ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 0
+// CHECK: [[ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 0
 // CHECK: store i64 %{{.+}}, ptr [[ADDR]], align 8
-// CHECK: [[SZ_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 1
+// CHECK: [[SZ_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 1
 // CHECK: store i64 8, ptr [[SZ_ADDR]], align 8
-// CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
+// CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
 // CHECK: store i8 1, ptr [[FLAGS_ADDR]], align 8
 // CHECK: [[SHAPE_ADDR:%.+]] = load ptr, ptr [[ARGV_ADDR:%.+]], align 8
 // CHECK: [[SZ1:%.+]] = mul nuw i64 12, %{{.+}}
 // CHECK: [[SZ:%.+]] = mul nuw i64 [[SZ1]], 4
 // CHECK: [[SHAPE:%.+]] = ptrtoint ptr [[SHAPE_ADDR]] to i64
 // CHECK: [[BASE_ADDR:%.+]] = getelementptr %struct.kmp_depend_info, ptr [[DEP_ADDR_VOID]], i{{.+}} 2
-// CHECK: [[ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 0
+// CHECK: [[ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 0
 // CHECK: store i64 [[SHAPE]], ptr [[ADDR]], align 8
-// CHECK: [[SZ_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 1
+// CHECK: [[SZ_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 1
 // CHECK: store i64 [[SZ]], ptr [[SZ_ADDR]], align 8
-// CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
+// CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
 // CHECK: store i8 1, ptr [[FLAGS_ADDR]], align 8
 // CHECK: [[BASE_ADDR:%.+]] = getelementptr %struct.kmp_depend_info, ptr [[DEP_ADDR_VOID]], i{{.+}} 1
 // CHECK: store ptr [[BASE_ADDR]], ptr [[TMAIN_A]], align 8
@@ -217,17 +243,19 @@ int main(int argc, char **argv) {
 // CHECK: call void @__kmpc_free(i32 [[GTID]], ptr [[ARGC_REF]], ptr null)
 // CHECK: [[ARGC_BASE:%.+]] = load ptr, ptr [[ARGC_ADDR]], align 8
 // CHECK: [[NUMDEPS_BASE:%.+]] = getelementptr %struct.kmp_depend_info, ptr [[ARGC_BASE]], i64 -1
-// CHECK: [[NUMDEPS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[NUMDEPS_BASE]], i{{.+}} 0, i{{.+}} 0
+// CHECK: [[NUMDEPS_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[NUMDEPS_BASE]], i{{.+}} 0, i{{.+}} 0
 // CHECK: [[NUMDEPS:%.+]] = load i64, ptr [[NUMDEPS_ADDR]], align 8
 // CHECK: [[END:%.+]] = getelementptr %struct.kmp_depend_info, ptr [[ARGC_BASE]], i64 [[NUMDEPS]]
 // CHECK: br label %[[BODY:.+]]
 // CHECK: [[BODY]]:
 // CHECK: [[EL:%.+]] = phi ptr [ [[ARGC_BASE]], %{{.+}} ], [ [[EL_NEXT:%.+]], %[[BODY]] ]
-// CHECK: [[FLAG_BASE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, ptr [[EL]], i{{.+}} 0, i{{.+}} 2
+// CHECK: [[FLAG_BASE:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[EL]], i{{.+}} 0, i{{.+}} 2
 // CHECK: store i8 3, ptr [[FLAG_BASE]], align 8
 // CHECK: [[EL_NEXT]] = getelementptr %struct.kmp_depend_info, ptr [[EL]], i{{.+}} 1
 // CHECK: [[IS_DONE:%.+]] = icmp eq ptr [[EL_NEXT]], [[END]]
 // CHECK: br i1 [[IS_DONE]], label %[[DONE:.+]], label %[[BODY]]
+
 // CHECK: [[DONE]]:
+
 
 #endif

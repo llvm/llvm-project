@@ -11,10 +11,8 @@
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-; VCP-X86: @__typeid_typeid1_0_1_byte = external hidden global [0 x i8], !absolute_symbol !0
-; VCP-X86: @__typeid_typeid1_0_1_bit = external hidden global [0 x i8], !absolute_symbol !1
-; VCP-X86: @__typeid_typeid2_8_3_byte = external hidden global [0 x i8], !absolute_symbol !0
-; VCP-X86: @__typeid_typeid2_8_3_bit = external hidden global [0 x i8], !absolute_symbol !1
+; VCP-X86: @__typeid_typeid1_0_1_bit = external hidden global [0 x i8], !absolute_symbol !0
+; VCP-X86: @__typeid_typeid2_8_3_bit = external hidden global [0 x i8], !absolute_symbol !0
 
 ; Test cases where the argument values are known and we can apply virtual
 ; constant propagation.
@@ -28,8 +26,7 @@ define i32 @call1(ptr %obj) #0 {
   ; SINGLE-IMPL: call i32 @singleimpl1
   %result = call i32 %fptr(ptr %obj, i32 1)
   ; UNIFORM-RET-VAL: ret i32 42
-  ; VCP-X86: [[GEP1:%.*]] = getelementptr i8, ptr %vtable, i32 ptrtoint (ptr @__typeid_typeid1_0_1_byte to i32)
-  ; VCP-ARM: [[GEP1:%.*]] = getelementptr i8, ptr %vtable, i32 42
+  ; VCP: [[GEP1:%.*]] = getelementptr i8, ptr %vtable, i32 42
   ; VCP: [[LOAD1:%.*]] = load i32, ptr [[GEP1]]
   ; VCP: ret i32 [[LOAD1]]
   ; BRANCH-FUNNEL-NOVCP: call i32 @__typeid_typeid1_0_branch_funnel(ptr nest %vtable, ptr %obj, i32 1)
@@ -40,7 +37,7 @@ define i32 @call1(ptr %obj) #0 {
 ; constant propagation.
 
 ; CHECK: define i1 @call2
-define i1 @call2(ptr %obj) #0 {
+define i1 @call2(ptr %obj, i32 %arg1) #0 {
   %vtable = load ptr, ptr %obj
   %pair = call {ptr, i1} @llvm.type.checked.load(ptr %vtable, i32 8, metadata !"typeid2")
   %fptr = extractvalue {ptr, i1} %pair, 0
@@ -51,8 +48,8 @@ define i1 @call2(ptr %obj) #0 {
 cont:
   ; SINGLE-IMPL: call i1 @singleimpl2
   ; INDIR: call i1 %
-  ; BRANCH-FUNNEL: call i1 @__typeid_typeid2_8_branch_funnel(ptr nest %vtable, ptr %obj, i32 undef)
-  %result = call i1 %fptr(ptr %obj, i32 undef)
+  ; BRANCH-FUNNEL: call i1 @__typeid_typeid2_8_branch_funnel(ptr nest %vtable, ptr %obj, i32 %arg1)
+  %result = call i1 %fptr(ptr %obj, i32 %arg1)
   ret i1 %result
 
 trap:
@@ -72,8 +69,7 @@ cont:
   %result = call i1 %fptr(ptr %obj, i32 3)
   ; UNIQUE-RET-VAL0: icmp ne ptr %vtable, @__typeid_typeid2_8_3_unique_member
   ; UNIQUE-RET-VAL1: icmp eq ptr %vtable, @__typeid_typeid2_8_3_unique_member
-  ; VCP-X86: [[GEP2:%.*]] = getelementptr i8, ptr %vtable, i32 ptrtoint (ptr @__typeid_typeid2_8_3_byte to i32)
-  ; VCP-ARM: [[GEP2:%.*]] = getelementptr i8, ptr %vtable, i32 43
+  ; VCP: [[GEP2:%.*]] = getelementptr i8, ptr %vtable, i32 43
   ; VCP: [[LOAD2:%.*]] = load i8, ptr [[GEP2]]
   ; VCP-X86: [[AND2:%.*]] = and i8 [[LOAD2]], ptrtoint (ptr @__typeid_typeid2_8_3_bit to i8)
   ; VCP-ARM: [[AND2:%.*]] = and i8 [[LOAD2]], -128
@@ -90,11 +86,8 @@ trap:
 ; SINGLE-IMPL-DAG: declare void @singleimpl1()
 ; SINGLE-IMPL-DAG: declare void @singleimpl2()
 
-; VCP32: !0 = !{i32 -1, i32 -1}
-; VCP64: !0 = !{i64 0, i64 4294967296}
-
-; VCP32: !1 = !{i32 0, i32 256}
-; VCP64: !1 = !{i64 0, i64 256}
+; VCP32: !0 = !{i32 0, i32 256}
+; VCP64: !0 = !{i64 0, i64 256}
 
 declare void @llvm.assume(i1)
 declare void @llvm.trap()

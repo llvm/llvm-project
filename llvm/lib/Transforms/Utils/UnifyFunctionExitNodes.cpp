@@ -16,7 +16,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Transforms/Utils.h"
 using namespace llvm;
 
 namespace {
@@ -37,7 +36,7 @@ bool unifyUnreachableBlocks(Function &F) {
 
   for (BasicBlock *BB : UnreachableBlocks) {
     BB->back().eraseFromParent(); // Remove the unreachable inst.
-    BranchInst::Create(UnreachableBlock, BB);
+    UncondBrInst::Create(UnreachableBlock, BB);
   }
 
   return true;
@@ -79,7 +78,7 @@ bool unifyReturnBlocks(Function &F) {
       PN->addIncoming(BB->getTerminator()->getOperand(0), BB);
 
     BB->back().eraseFromParent(); // Remove the return insn
-    BranchInst::Create(NewRetBlock, BB);
+    UncondBrInst::Create(NewRetBlock, BB);
   }
 
   return true;

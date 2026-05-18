@@ -17,7 +17,7 @@ entry:
 define <2 x i32> @a_vec(<2 x i32> %b) nounwind  {
 ; CHECK-LABEL: @a_vec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i32> [[B:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i32> [[B:%.*]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP0]]
 ;
 entry:

@@ -1,13 +1,13 @@
-; RUN: llc < %s -march=sparc -mattr=-v9 | FileCheck %s -check-prefix=V8
-; RUN: llc < %s -march=sparc -mattr=+v9,+popc | FileCheck %s -check-prefix=V9
-; RUN: llc < %s -march=sparc -mcpu=v9 | FileCheck %s -check-prefix=V8
-; RUN: llc < %s -march=sparc -mcpu=ultrasparc  | FileCheck %s -check-prefix=V8
-; RUN: llc < %s -march=sparc -mcpu=ultrasparc3 | FileCheck %s -check-prefix=V8
-; RUN: llc < %s -march=sparc -mcpu=niagara     | FileCheck %s -check-prefix=V8
-; RUN: llc < %s -march=sparc -mcpu=niagara2    | FileCheck %s -check-prefix=V9
-; RUN: llc < %s -march=sparc -mcpu=niagara3    | FileCheck %s -check-prefix=V9
-; RUN: llc < %s -march=sparc -mcpu=niagara4    | FileCheck %s -check-prefix=V9
-; RUN: llc < %s -march=sparcv9 -mattr=+popc | FileCheck %s -check-prefix=SPARC64
+; RUN: llc < %s -mtriple=sparc -mattr=-v9 | FileCheck %s -check-prefix=V8
+; RUN: llc < %s -mtriple=sparc -mattr=+v9,+popc | FileCheck %s -check-prefix=V9
+; RUN: llc < %s -mtriple=sparc -mcpu=v9 | FileCheck %s -check-prefix=V8
+; RUN: llc < %s -mtriple=sparc -mcpu=ultrasparc | FileCheck %s -check-prefix=V8
+; RUN: llc < %s -mtriple=sparc -mcpu=ultrasparc3 | FileCheck %s -check-prefix=V8
+; RUN: llc < %s -mtriple=sparc -mcpu=niagara | FileCheck %s -check-prefix=V8
+; RUN: llc < %s -mtriple=sparc -mcpu=niagara2 | FileCheck %s -check-prefix=V9
+; RUN: llc < %s -mtriple=sparc -mcpu=niagara3 | FileCheck %s -check-prefix=V9
+; RUN: llc < %s -mtriple=sparc -mcpu=niagara4 | FileCheck %s -check-prefix=V9
+; RUN: llc < %s -mtriple=sparcv9 -mattr=+popc | FileCheck %s -check-prefix=SPARC64
 
 declare i32 @llvm.ctpop.i32(i32)
 

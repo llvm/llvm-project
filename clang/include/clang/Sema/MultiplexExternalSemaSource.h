@@ -40,7 +40,7 @@ class MultiplexExternalSemaSource : public ExternalSemaSource {
   static char ID;
 
 private:
-  SmallVector<ExternalSemaSource *, 2> Sources;
+  SmallVector<llvm::IntrusiveRefCntPtr<ExternalSemaSource>, 2> Sources;
 
 public:
   /// Constructs a new multiplexing external sema source and appends the
@@ -49,15 +49,14 @@ public:
   ///\param[in] S1 - A non-null (old) ExternalSemaSource.
   ///\param[in] S2 - A non-null (new) ExternalSemaSource.
   ///
-  MultiplexExternalSemaSource(ExternalSemaSource *S1, ExternalSemaSource *S2);
-
-  ~MultiplexExternalSemaSource() override;
+  MultiplexExternalSemaSource(llvm::IntrusiveRefCntPtr<ExternalSemaSource> S1,
+                              llvm::IntrusiveRefCntPtr<ExternalSemaSource> S2);
 
   /// Appends new source to the source list.
   ///
   ///\param[in] Source - An ExternalSemaSource.
   ///
-  void AddSource(ExternalSemaSource *Source);
+  void AddSource(llvm::IntrusiveRefCntPtr<ExternalSemaSource> Source);
 
   //===--------------------------------------------------------------------===//
   // ExternalASTSource.
@@ -92,10 +91,19 @@ public:
 
   ExtKind hasExternalDefinitions(const Decl *D) override;
 
+  bool wasThisDeclarationADefinition(const FunctionDecl *FD) override;
+
   /// Find all declarations with the given name in the
   /// given context.
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                      DeclarationName Name) override;
+                                      DeclarationName Name,
+                                      const DeclContext *OriginalDC) override;
+
+  bool LoadExternalSpecializations(const Decl *D, bool OnlyPartial) override;
+
+  bool
+  LoadExternalSpecializations(const Decl *D,
+                              ArrayRef<TemplateArgument> TemplateArgs) override;
 
   /// Ensures that the table of all visible declarations inside this
   /// context is up to date.
@@ -302,6 +310,17 @@ public:
   void ReadWeakUndeclaredIdentifiers(
            SmallVectorImpl<std::pair<IdentifierInfo*, WeakInfo> > &WI) override;
 
+  /// Read the set of #pragma redefine_extname'd, undeclared identifiers known
+  /// to the external Sema source.
+  ///
+  /// The external source should append its own #pragma redefine_extname'd,
+  /// undeclared identifiers to the given vector. Note that this routine may be
+  /// invoked multiple times; the external source should take care not to
+  /// introduce the same identifiers repeatedly.
+  void ReadExtnameUndeclaredIdentifiers(
+      SmallVectorImpl<std::pair<IdentifierInfo *, AsmLabelAttr *>> &EI)
+      override;
+
   /// Read the set of used vtables known to the external Sema source.
   ///
   /// The external source should append its own used vtables to the given
@@ -361,7 +380,7 @@ public:
                                         QualType T) override;
 
   // Inform all attached sources that a mangling number was assigned.
-  void AssignedLambdaNumbering(const CXXRecordDecl *Lambda) override;
+  void AssignedLambdaNumbering(CXXRecordDecl *Lambda) override;
 
   /// LLVM-style RTTI.
   /// \{

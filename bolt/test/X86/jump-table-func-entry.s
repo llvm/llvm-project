@@ -7,7 +7,7 @@
 # RUN: %clang %cflags %t.o -o %t.exe -no-pie -Wl,-q
 
 # RUN: llvm-bolt %t.exe --print-normalized --print-only=foo -o %t.out \
-# RUN:   |& FileCheck %s
+# RUN:   2>&1 | FileCheck %s
 
 
 

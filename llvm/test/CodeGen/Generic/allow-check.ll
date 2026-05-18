@@ -1,11 +1,12 @@
 ; Avoid `!DL->isLittleEndian() && !CLI->enableBigEndian()` missmatch on PPC64BE.
-; REQUIRES: host-byteorder-little-endian
+; REQUIRES: target-byteorder-little-endian
 
 ; -global-isel=1 is unsupported.
 ; XFAIL: target=loongarch{{.*}}
 ; XFAIL: target=nvptx{{.*}}
 ; XFAIL: target=sparc{{.*}}
 ; XFAIL: target=hexagon-{{.*}}
+; XFAIL: target=arm64ec-{{.*}}
 
 ; RUN: llc < %s -O3 -global-isel=0 -fast-isel=0
 ; RUN: llc < %s -O3 -global-isel=1 -fast-isel=0

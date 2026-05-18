@@ -31,7 +31,7 @@ TEST(SanitizerCommon, ChainedOriginDepotBasic) {
 
 TEST(SanitizerCommon, ChainedOriginDepotAbsent) {
   u32 prev_id;
-  EXPECT_EQ(0U, chainedOriginDepot.Get(99, &prev_id));
+  EXPECT_EQ(0U, chainedOriginDepot.Get(123456, &prev_id));
   EXPECT_EQ(0U, prev_id);
 }
 

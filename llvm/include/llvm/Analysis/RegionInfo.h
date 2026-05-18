@@ -41,7 +41,6 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -56,7 +55,6 @@
 
 namespace llvm {
 
-class BasicBlock;
 class DominanceFrontier;
 class Loop;
 class LoopInfo;
@@ -976,21 +974,19 @@ public:
 };
 
 /// Printer pass for the \c RegionInfo.
-class RegionInfoPrinterPass : public PassInfoMixin<RegionInfoPrinterPass> {
+class RegionInfoPrinterPass
+    : public RequiredPassInfoMixin<RegionInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit RegionInfoPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for the \c RegionInfo.
-struct RegionInfoVerifierPass : PassInfoMixin<RegionInfoVerifierPass> {
+struct RegionInfoVerifierPass : RequiredPassInfoMixin<RegionInfoVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 template <>

@@ -100,7 +100,7 @@ extern "C" void f0() {
   // CHECK: call i8 @llvm.coro.suspend(token %[[FINALSP_ID]], i1 true)
 
   // Await suspend wrapper
-  // CHECK: define{{.*}} @f0.__await_suspend_wrapper__await(ptr {{[^,]*}} %[[AWAITABLE_ARG:.+]], ptr {{[^,]*}} %[[FRAME_ARG:.+]])
+  // CHECK: define internal {{.*}} @f0.__await_suspend_wrapper__await(ptr {{[^,]*}} %[[AWAITABLE_ARG:.+]], ptr {{[^,]*}} %[[FRAME_ARG:.+]])
   // CHECK: store ptr %[[AWAITABLE_ARG]], ptr %[[AWAITABLE_TMP:.+]],
   // CHECK: store ptr %[[FRAME_ARG]], ptr %[[FRAME_TMP:.+]],
   // CHECK: %[[AWAITABLE:.+]] = load ptr, ptr %[[AWAITABLE_TMP]]
@@ -162,7 +162,7 @@ extern "C" void f1(int) {
   // CHECK:     call void @_ZN13suspend_maybe12await_resumeEv(ptr {{[^,]*}} %[[AWAITABLE]])
 
   // Await suspend wrapper
-  // CHECK: define {{.*}} i1 @f1.__await_suspend_wrapper__yield(ptr {{[^,]*}} %[[AWAITABLE_ARG:.+]], ptr {{[^,]*}} %[[FRAME_ARG:.+]])
+  // CHECK: define internal {{.*}} i1 @f1.__await_suspend_wrapper__yield(ptr {{[^,]*}} %[[AWAITABLE_ARG:.+]], ptr {{[^,]*}} %[[FRAME_ARG:.+]])
   // CHECK: store ptr %[[AWAITABLE_ARG]], ptr %[[AWAITABLE_TMP:.+]],
   // CHECK: store ptr %[[FRAME_ARG]], ptr %[[FRAME_TMP:.+]],
   // CHECK: %[[AWAITABLE:.+]] = load ptr, ptr %[[AWAITABLE_TMP]]
@@ -379,7 +379,7 @@ extern "C" void TestTailcall() {
   // CHECK-NEXT: ]
 
   // Await suspend wrapper
-  // CHECK: define {{.*}} ptr @TestTailcall.__await_suspend_wrapper__await(ptr {{[^,]*}} %[[AWAITABLE_ARG:.+]], ptr {{[^,]*}} %[[FRAME_ARG:.+]])
+  // CHECK: define internal {{.*}} ptr @TestTailcall.__await_suspend_wrapper__await(ptr {{[^,]*}} %[[AWAITABLE_ARG:.+]], ptr {{[^,]*}} %[[FRAME_ARG:.+]])
   // CHECK: store ptr %[[AWAITABLE_ARG]], ptr %[[AWAITABLE_TMP:.+]],
   // CHECK: store ptr %[[FRAME_ARG]], ptr %[[FRAME_TMP:.+]],
   // CHECK: %[[AWAITABLE:.+]] = load ptr, ptr %[[AWAITABLE_TMP]]
@@ -388,7 +388,7 @@ extern "C" void TestTailcall() {
   //   ... many lines of code to coerce coroutine_handle into an ptr scalar
   // CHECK: %[[CH:.+]] = load ptr, ptr %{{.+}}
   // CHECK-NEXT: %[[RESULT:.+]] = call ptr @_ZN13TailCallAwait13await_suspendESt16coroutine_handleIvE(ptr {{[^,]*}} %[[AWAITABLE]], ptr %[[CH]]) 
-  // CHECK-NEXT: %[[COERCE:.+]] = getelementptr inbounds %"struct.std::coroutine_handle", ptr %[[TMP:.+]], i32 0, i32 0
+  // CHECK-NEXT: %[[COERCE:.+]] = getelementptr inbounds nuw %"struct.std::coroutine_handle", ptr %[[TMP:.+]], i32 0, i32 0
   // CHECK-NEXT: store ptr %[[RESULT]], ptr %[[COERCE]]
   // CHECK-NEXT: %[[ADDR:.+]] = call ptr @_ZNSt16coroutine_handleIvE7addressEv(ptr {{[^,]*}} %[[TMP]])
   // CHECK-NEXT: ret ptr %[[ADDR]]

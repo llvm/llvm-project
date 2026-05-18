@@ -1,0 +1,13 @@
+# RUN: not llc -run-pass=none -filetype=null %s 2>&1 | FileCheck %s --check-prefix=ERR
+
+---
+name:  flags
+registers:
+  - { id: 0, class: _, flags: [ 'VFLAG_ERR' ] }
+body: |
+  bb.0:
+    liveins: $w0
+    %0 = G_ADD $w0, $w0
+...
+# ERR: use of undefined register flag
+# ERR: VFLAG_ERR

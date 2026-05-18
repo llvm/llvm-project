@@ -160,3 +160,33 @@ llvm.func @redundant_args_complex(%cond : i1) {
 ^bb3:
   llvm.return
 }
+
+llvm.func @blocks_with_args() {
+  %0 = llvm.mlir.zero : !llvm.ptr
+  %1 = llvm.call @rand() : () -> i1
+  // CHECK: %[[c1:.*]] = llvm.mlir.constant(1 : i64)
+  // CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : i64)
+  // CHECK: %[[cond:.*]] = llvm.call @rand
+  %3 = llvm.mlir.constant(0) : i64
+  %4 = llvm.mlir.constant(1) : i64
+  // CHECK: llvm.cond_br %[[cond]], ^bb1(%[[c1]] : i64), ^bb1(%[[c0]] : i64)
+  // CHECK: ^bb1(%{{.*}}: i64):
+  // CHECK  ^bb2:
+  // CHECK  ^bb3:
+  // CHECK  llvm.return
+  llvm.cond_br %1, ^bb7(%0 : !llvm.ptr), ^bb1(%0 : !llvm.ptr)
+^bb1(%5: !llvm.ptr):
+  llvm.store %5, %0 : !llvm.ptr, !llvm.ptr
+  llvm.cond_br %1, ^bb2(%3 : i64), ^bb4(%3 : i64)
+^bb7(%6: !llvm.ptr):
+  llvm.store %6, %0 : !llvm.ptr, !llvm.ptr
+  llvm.cond_br %1, ^bb2(%4 : i64), ^bb4(%4 : i64)
+^bb2(%7: i64):
+  llvm.call @foo(%7) : (i64) -> ()
+  llvm.br ^bb8
+^bb4(%8: i64):
+  llvm.call @foo(%8) : (i64) -> ()
+  llvm.br ^bb8
+^bb8:
+  llvm.return
+}

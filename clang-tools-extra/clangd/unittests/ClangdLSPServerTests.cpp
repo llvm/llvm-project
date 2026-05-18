@@ -208,12 +208,13 @@ TEST_F(LSPTest, ClangTidyRename) {
   Annotations Source(R"cpp(
     void [[foo]]() {}
   )cpp");
-  Opts.ClangTidyProvider = [](tidy::ClangTidyOptions &ClangTidyOpts,
-                              llvm::StringRef) {
+  constexpr auto ClangTidyProvider = [](tidy::ClangTidyOptions &ClangTidyOpts,
+                                        llvm::StringRef) {
     ClangTidyOpts.Checks = {"-*,readability-identifier-naming"};
     ClangTidyOpts.CheckOptions["readability-identifier-naming.FunctionCase"] =
         "CamelCase";
   };
+  Opts.ClangTidyProvider = ClangTidyProvider;
   auto &Client = start();
   Client.didOpen("foo.hpp", Header.code());
   Client.didOpen("foo.cpp", Source.code());
@@ -234,7 +235,8 @@ TEST_F(LSPTest, ClangTidyRename) {
             .takeValue()
             .getAsArray())[0];
 
-  ASSERT_EQ((*RenameCommand.getAsObject())["title"], "change 'foo' to 'Foo'");
+  ASSERT_EQ((*RenameCommand.getAsObject())["title"],
+            "Apply fix: change 'foo' to 'Foo'");
 
   Client.expectServerCall("workspace/applyEdit");
   Client.call("workspace/executeCommand", RenameCommand);
@@ -260,6 +262,23 @@ TEST_F(LSPTest, ClangTidyRename) {
 
                     }}}}};
   EXPECT_EQ(Params, std::vector{llvm::json::Value(std::move(ExpectedEdit))});
+}
+
+TEST_F(LSPTest, ClangTidyCrash_Issue109367) {
+  // This test requires clang-tidy checks to be linked in.
+  if (!CLANGD_TIDY_CHECKS)
+    return;
+  constexpr auto ClangTidyProvider = [](tidy::ClangTidyOptions &ClangTidyOpts,
+                                        llvm::StringRef) {
+    ClangTidyOpts.Checks = {"-*,boost-use-ranges"};
+  };
+  Opts.ClangTidyProvider = ClangTidyProvider;
+  // Check that registering the boost-use-ranges checker's matchers
+  // on two different threads does not cause a crash.
+  auto &Client = start();
+  Client.didOpen("a.cpp", "");
+  Client.didOpen("b.cpp", "");
+  Client.sync();
 }
 
 TEST_F(LSPTest, IncomingCalls) {
@@ -473,6 +492,26 @@ TEST_F(LSPTest, DiagModuleTest) {
   EXPECT_THAT(Client.diagnostics("foo.cpp"),
               llvm::ValueIs(testing::ElementsAre(diagMessage(DiagMsg))));
 }
+
+// Regression test for https://github.com/llvm/llvm-project/issues/196072.
+TEST_F(LSPTest, CompletionOutOfRangePosition) {
+  auto &Client = start();
+  Client.didOpen("foo.cpp", "int x;");
+  auto &Reply = Client.call(
+      "textDocument/completion",
+      llvm::json::Object{
+          {"textDocument", Client.documentID("foo.cpp")},
+          {"position", llvm::json::Object{{"line", 97}, {"character", 0}}},
+          {"context",
+           llvm::json::Object{
+               {"triggerKind", 2},
+               {"triggerCharacter", ">"},
+           }},
+      });
+  auto Result = Reply.take();
+  ASSERT_TRUE(!!Result) << "Expected a response, not a server crash";
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

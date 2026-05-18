@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,immediate %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-late-parse-attributes %s -verify=expected,late
 
 #define __counted_by(f)  __attribute__((counted_by(f)))
 
@@ -80,7 +81,9 @@ struct found_outside_of_struct {
 
 struct self_referrential {
   int bork;
-  struct bar *self[] __counted_by(self); // expected-error {{use of undeclared identifier 'self'}}
+  // immediate-error@+2{{use of undeclared identifier 'self'}}
+  // late-error@+1{{'counted_by' requires a non-boolean integer type argument}}
+  struct bar *self[] __counted_by(self);
 };
 
 struct non_int_count {
@@ -95,8 +98,7 @@ struct array_of_ints_count {
 
 struct not_a_fam {
   int count;
-  // expected-error@+1{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'struct bar' is an incomplete type}}
-  struct bar *non_fam __counted_by(count);
+  struct bar *non_fam __counted_by(count); // ok
 };
 
 struct not_a_c99_fam {

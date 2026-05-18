@@ -1,5 +1,9 @@
-// RUN: %clang_cc1 -verify %s
-// expected-no-diagnostics
+// RUN: %clang_cc1 -verify=no-diag %s
+// RUN: %clang_cc1 -complex-range=promoted -triple x86_64-unknown-linux \
+// RUN: -verify=no-diag %s
+// RUN: %clang_cc1 -complex-range=promoted -triple x86_64-unknown-windows \
+// RUN: -verify=div-precision %s
+// no-diag-no-diagnostics
 
 // This tests evaluation of _Complex arithmetic at compile time.
 
@@ -21,6 +25,7 @@ void a() {
   EVALF((2. + 3i) + (4. + 5i), 6. + 8i);
   EVALF((2. + 3i) - (4. + 5i), -2. - 2i);
   EVALF((2. + 3i) * (4. + 5i), -7. + 22i);
+  // div-precision-warning@+1 {{excess precision is requested but the target does not support excess precision which may result in observable differences in complex division behavior, additional uses where the requested higher precision cannot be honored were found but not diagnosed}}
   EVALF((2. + 3i) / (4. + 5i), .5609 + .0487i);
 }
 

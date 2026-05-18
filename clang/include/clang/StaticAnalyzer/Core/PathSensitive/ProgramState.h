@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the state of the program along the analysisa path.
+// This file defines the state of the program along the analysis path.
 //
 //===----------------------------------------------------------------------===//
 
@@ -70,8 +70,7 @@ template <typename T> struct ProgramStateTrait {
 ///  values will never change.
 class ProgramState : public llvm::FoldingSetNode {
 public:
-  typedef llvm::ImmutableSet<llvm::APSInt*>                IntSetTy;
-  typedef llvm::ImmutableMap<void*, void*>                 GenericDataMap;
+  typedef llvm::ImmutableMap<const void *, void *> GenericDataMap;
 
 private:
   void operator=(const ProgramState& R) = delete;
@@ -79,7 +78,6 @@ private:
   friend class ProgramStateManager;
   friend class ExplodedGraph;
   friend class ExplodedNode;
-  friend class NodeBuilder;
 
   ProgramStateManager *stateMgr;
   Environment Env;           // Maps a Stmt to its current SVal.
@@ -117,6 +115,11 @@ private:
   // overconstrained-related functions. We want to keep this API inaccessible
   // for Checkers.
   friend class ConstraintManager;
+  // The CoreEngine also needs to be a friend to mark nodes as sinks if they
+  // are generated with a PosteriorlyOverconstrained state.
+  // FIXME: Perform this check in the relevant methods of `ExplodedGraph` and
+  // remove this `friend` declaration.
+  friend class CoreEngine;
   bool isPosteriorlyOverconstrained() const {
     return PosteriorlyOverconstrained;
   }
@@ -127,6 +130,7 @@ private:
   /// makeWithStore - Return a ProgramState with the same values as the current
   ///  state with the exception of using the specified Store.
   ProgramStateRef makeWithStore(const StoreRef &store) const;
+  ProgramStateRef makeWithStore(const BindResult &BindRes) const;
 
   void setStore(const StoreRef &storeRef);
 
@@ -160,7 +164,6 @@ public:
   /// Return the store associated with this state.  The store
   ///  is a mapping from locations to values.
   Store getStore() const { return store; }
-
 
   /// getGDM - Return the generic data map associated with this state.
   GenericDataMap getGDM() const { return GDM; }
@@ -275,9 +278,9 @@ public:
   // Binding and retrieving values to/from the environment and symbolic store.
   //==---------------------------------------------------------------------==//
 
-  /// Create a new state by binding the value 'V' to the statement 'S' in the
-  /// state's environment.
-  [[nodiscard]] ProgramStateRef BindExpr(const Stmt *S,
+  /// Create a new state by binding the value \p V to the expression \p E in
+  /// the state's environment.
+  [[nodiscard]] ProgramStateRef BindExpr(const Expr *E,
                                          const LocationContext *LCtx, SVal V,
                                          bool Invalidate = true) const;
 
@@ -304,43 +307,46 @@ public:
 
   [[nodiscard]] ProgramStateRef killBinding(Loc LV) const;
 
-  /// Returns the state with bindings for the given regions
-  ///  cleared from the store.
+  /// Returns the state with bindings for the given regions cleared from the
+  /// store. If \p Call is non-null, also invalidates global regions (but if
+  /// \p Call is from a system header, then this is limited to globals declared
+  /// in system headers).
   ///
-  /// Optionally invalidates global regions as well.
+  /// This calls the lower-level method \c StoreManager::invalidateRegions to
+  /// do the actual invalidation, then calls the checker callbacks which should
+  /// be triggered by this event.
   ///
   /// \param Regions the set of regions to be invalidated.
-  /// \param E the expression that caused the invalidation.
+  /// \param Elem The CFG Element that caused the invalidation.
   /// \param BlockCount The number of times the current basic block has been
-  //         visited.
-  /// \param CausesPointerEscape the flag is set to true when
-  ///        the invalidation entails escape of a symbol (representing a
-  ///        pointer). For example, due to it being passed as an argument in a
-  ///        call.
+  ///        visited.
+  /// \param CausesPointerEscape the flag is set to true when the invalidation
+  ///        entails escape of a symbol (representing a pointer). For example,
+  ///        due to it being passed as an argument in a call.
   /// \param IS the set of invalidated symbols.
   /// \param Call if non-null, the invalidated regions represent parameters to
   ///        the call and should be considered directly invalidated.
-  /// \param ITraits information about special handling for a particular
-  ///        region/symbol.
+  /// \param ITraits information about special handling for particular regions
+  ///        or symbols.
   [[nodiscard]] ProgramStateRef
-  invalidateRegions(ArrayRef<const MemRegion *> Regions, const Expr *E,
-                    unsigned BlockCount, const LocationContext *LCtx,
-                    bool CausesPointerEscape, InvalidatedSymbols *IS = nullptr,
+  invalidateRegions(ArrayRef<const MemRegion *> Regions,
+                    ConstCFGElementRef Elem, unsigned BlockCount,
+                    const LocationContext *LCtx, bool CausesPointerEscape,
+                    InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,
                     RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 
   [[nodiscard]] ProgramStateRef
-  invalidateRegions(ArrayRef<SVal> Regions, const Expr *E, unsigned BlockCount,
-                    const LocationContext *LCtx, bool CausesPointerEscape,
-                    InvalidatedSymbols *IS = nullptr,
+  invalidateRegions(ArrayRef<SVal> Values, ConstCFGElementRef Elem,
+                    unsigned BlockCount, const LocationContext *LCtx,
+                    bool CausesPointerEscape, InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,
                     RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 
   /// enterStackFrame - Returns the state for entry to the given stack frame,
   ///  preserving the current state.
   [[nodiscard]] ProgramStateRef
-  enterStackFrame(const CallEvent &Call,
-                  const StackFrameContext *CalleeCtx) const;
+  enterStackFrame(const CallEvent &Call, const StackFrame *CalleeSF) const;
 
   /// Return the value of 'self' if available in the given context.
   SVal getSelfSVal(const LocationContext *LC) const;
@@ -370,16 +376,16 @@ public:
   /// Get the lvalue for an array index.
   SVal getLValue(QualType ElementType, SVal Idx, SVal Base) const;
 
-  /// Returns the SVal bound to the statement 'S' in the state's environment.
-  SVal getSVal(const Stmt *S, const LocationContext *LCtx) const;
+  /// Returns the SVal bound to the expression \p E in the state's environment.
+  SVal getSVal(const Expr *E, const LocationContext *LCtx) const;
 
-  SVal getSValAsScalarOrLoc(const Stmt *Ex, const LocationContext *LCtx) const;
+  SVal getSValAsScalarOrLoc(const Expr *E, const LocationContext *LCtx) const;
 
   /// Return the value bound to the specified location.
   /// Returns UnknownVal() if none found.
   SVal getSVal(Loc LV, QualType T = QualType()) const;
 
-  /// Returns the "raw" SVal bound to LV before any value simplfication.
+  /// Returns the "raw" SVal bound to LV before any value simplification.
   SVal getRawSVal(Loc LV, QualType T= QualType()) const;
 
   /// Return the value bound to the specified location.
@@ -416,7 +422,7 @@ public:
   // Accessing the Generic Data Map (GDM).
   //==---------------------------------------------------------------------==//
 
-  void *const* FindGDM(void *K) const;
+  void *const *FindGDM(const void *K) const;
 
   template <typename T>
   [[nodiscard]] ProgramStateRef
@@ -484,17 +490,7 @@ private:
   friend void ProgramStateRetain(const ProgramState *state);
   friend void ProgramStateRelease(const ProgramState *state);
 
-  /// \sa invalidateValues()
-  /// \sa invalidateRegions()
-  ProgramStateRef
-  invalidateRegionsImpl(ArrayRef<SVal> Values,
-                        const Expr *E, unsigned BlockCount,
-                        const LocationContext *LCtx,
-                        bool ResultsInSymbolEscape,
-                        InvalidatedSymbols *IS,
-                        RegionAndSymbolInvalidationTraits *HTraits,
-                        const CallEvent *Call) const;
-
+  SVal desugarReference(SVal Val) const;
   SVal wrapSymbolicRegion(SVal Base) const;
 };
 
@@ -515,7 +511,8 @@ private:
 
   ProgramState::GenericDataMap::Factory     GDMFactory;
 
-  typedef llvm::DenseMap<void*,std::pair<void*,void (*)(void*)> > GDMContextsTy;
+  typedef llvm::DenseMap<const void *, std::pair<void *, void (*)(void *)>>
+      GDMContextsTy;
   GDMContextsTy GDMContexts;
 
   /// StateSet - FoldingSet containing all the states created for analyzing
@@ -579,13 +576,15 @@ public:
   CallEventManager &getCallEventManager() { return *CallEventMgr; }
 
   StoreManager &getStoreManager() { return *StoreMgr; }
+  const StoreManager &getStoreManager() const { return *StoreMgr; }
   ConstraintManager &getConstraintManager() { return *ConstraintMgr; }
+  const ConstraintManager &getConstraintManager() const {
+    return *ConstraintMgr;
+  }
   ExprEngine &getOwningEngine() { return *Eng; }
 
-  ProgramStateRef
-  removeDeadBindingsFromEnvironmentAndStore(ProgramStateRef St,
-                                            const StackFrameContext *LCtx,
-                                            SymbolReaper &SymReaper);
+  ProgramStateRef removeDeadBindingsFromEnvironmentAndStore(
+      ProgramStateRef St, const StackFrame *SF, SymbolReaper &SymReaper);
 
 public:
 
@@ -594,8 +593,8 @@ public:
   }
 
   // Methods that manipulate the GDM.
-  ProgramStateRef addGDM(ProgramStateRef St, void *Key, void *Data);
-  ProgramStateRef removeGDM(ProgramStateRef state, void *Key);
+  ProgramStateRef addGDM(ProgramStateRef St, const void *Key, void *Data);
+  ProgramStateRef removeGDM(ProgramStateRef state, const void *Key);
 
   // Methods that query & manipulate the Store.
 
@@ -676,9 +675,9 @@ public:
     return removeGDM(st, ProgramStateTrait<T>::GDMIndex());
   }
 
-  void *FindGDMContext(void *index,
-                       void *(*CreateContext)(llvm::BumpPtrAllocator&),
-                       void  (*DeleteContext)(void*));
+  void *FindGDMContext(const void *index,
+                       void *(*CreateContext)(llvm::BumpPtrAllocator &),
+                       void (*DeleteContext)(void *));
 
   template <typename T>
   typename ProgramStateTrait<T>::context_type get_context() {
@@ -790,22 +789,17 @@ inline SVal ProgramState::getLValue(QualType ElementType, SVal Idx, SVal Base) c
   return UnknownVal();
 }
 
-inline SVal ProgramState::getSVal(const Stmt *Ex,
-                                  const LocationContext *LCtx) const{
-  return Env.getSVal(EnvironmentEntry(Ex, LCtx),
-                     *getStateManager().svalBuilder);
+inline SVal ProgramState::getSVal(const Expr *E,
+                                  const LocationContext *LCtx) const {
+  return Env.getSVal(EnvironmentEntry(E, LCtx), *getStateManager().svalBuilder);
 }
 
 inline SVal
-ProgramState::getSValAsScalarOrLoc(const Stmt *S,
+ProgramState::getSValAsScalarOrLoc(const Expr *E,
                                    const LocationContext *LCtx) const {
-  if (const Expr *Ex = dyn_cast<Expr>(S)) {
-    QualType T = Ex->getType();
-    if (Ex->isGLValue() || Loc::isLocType(T) ||
-        T->isIntegralOrEnumerationType())
-      return getSVal(S, LCtx);
-  }
-
+  QualType T = E->getType();
+  if (E->isGLValue() || Loc::isLocType(T) || T->isIntegralOrEnumerationType())
+    return getSVal(E, LCtx);
   return UnknownVal();
 }
 

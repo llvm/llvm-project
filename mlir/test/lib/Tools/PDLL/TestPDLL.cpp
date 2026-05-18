@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/Interfaces/CastInterfaces.h"
@@ -39,7 +40,7 @@ struct TestPDLLPass : public PassWrapper<TestPDLLPass, OperationPass<>> {
 
   void runOnOperation() final {
     // Invoke the pattern driver with the provided patterns.
-    (void)applyPatternsAndFoldGreedily(getOperation(), patterns);
+    (void)applyPatternsGreedily(getOperation(), patterns);
   }
 
   FrozenRewritePatternSet patterns;

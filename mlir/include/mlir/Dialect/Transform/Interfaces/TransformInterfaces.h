@@ -16,6 +16,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 
+#include "mlir/Dialect/Transform/Interfaces/TransformAttrInterfaces.h.inc"
 #include "mlir/Dialect/Transform/Interfaces/TransformTypeInterfaces.h.inc"
 
 namespace mlir {
@@ -81,6 +82,21 @@ TransformState makeTransformStateForTesting(Region *region,
 /// Returns all operands that are handles and being consumed by the given op.
 SmallVector<OpOperand *>
 getConsumedHandleOpOperands(transform::TransformOpInterface transformOp);
+
+/// Checks that the given payload operations satisfy the normal form
+/// constraints, reports the first encountered definite failure or the first
+/// encountered silenceable failure if there were no definite failures. Normal
+/// forms are checked in order, so trailing normal forms may assume earlier
+/// normal forms did not produce definite failures.
+mlir::DiagnosedSilenceableFailure checkNormalForms(
+    llvm::ArrayRef<mlir::transform::NormalFormAttrInterface> normalForms,
+    llvm::ArrayRef<mlir::Operation *> payload);
+
+/// Checks that the given list does not contain duplicate normal forms of the
+/// same class.
+llvm::LogicalResult verifyNormalFormList(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    llvm::ArrayRef<mlir::transform::NormalFormAttrInterface> normalForms);
 } // namespace detail
 } // namespace transform
 } // namespace mlir
@@ -131,11 +147,13 @@ private:
 /// will be executed following the internal logic of the operation. It must
 /// have the `PossibleTopLevelTransformOp` trait and not have any operands.
 /// This function internally keeps track of the transformation state.
-LogicalResult
-applyTransforms(Operation *payloadRoot, TransformOpInterface transform,
-                const RaggedArray<MappedValue> &extraMapping = {},
-                const TransformOptions &options = TransformOptions(),
-                bool enforceToplevelTransformOp = true);
+LogicalResult applyTransforms(
+    Operation *payloadRoot, TransformOpInterface transform,
+    const RaggedArray<MappedValue> &extraMapping = {},
+    const TransformOptions &options = TransformOptions(),
+    bool enforceToplevelTransformOp = true,
+    function_ref<void(TransformState &)> stateInitializer = nullptr,
+    function_ref<LogicalResult(TransformState &)> stateExporter = nullptr);
 
 /// The state maintained across applications of various ops implementing the
 /// TransformOpInterface. The operations implementing this interface and the
@@ -194,7 +212,7 @@ private:
   /// should be emitted when the value is used.
   using InvalidatedHandleMap = DenseMap<Value, std::function<void(Location)>>;
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// Debug only: A timestamp is associated with each transform IR value, so
   /// that invalid iterator usage can be detected more reliably.
   using TransformIRTimestampMapping = DenseMap<Value, int64_t>;
@@ -209,15 +227,17 @@ private:
     ValueMapping values;
     ValueMapping reverseValues;
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     TransformIRTimestampMapping timestamps;
     void incrementTimestamp(Value value) { ++timestamps[value]; }
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
   };
 
-  friend LogicalResult applyTransforms(Operation *, TransformOpInterface,
-                                       const RaggedArray<MappedValue> &,
-                                       const TransformOptions &, bool);
+  friend LogicalResult
+  applyTransforms(Operation *, TransformOpInterface,
+                  const RaggedArray<MappedValue> &, const TransformOptions &,
+                  bool, function_ref<void(TransformState &)>,
+                  function_ref<LogicalResult(TransformState &)>);
 
   friend TransformState
   detail::makeTransformStateForTesting(Region *region, Operation *payloadRoot);
@@ -244,7 +264,7 @@ public:
   auto getPayloadOps(Value value) const {
     ArrayRef<Operation *> view = getPayloadOpsView(value);
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     // Memorize the current timestamp and make sure that it has not changed
     // when incrementing or dereferencing the iterator returned by this
     // function. The timestamp is incremented when the "direct" mapping is
@@ -255,7 +275,7 @@ public:
     // When ops are replaced/erased, they are replaced with nullptr (until
     // the data structure is compacted). Do not enumerate these ops.
     return llvm::make_filter_range(view, [=](Operation *op) {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
       [[maybe_unused]] bool sameTimestamp =
           currentTimestamp == this->getMapping(value).timestamps.lookup(value);
       assert(sameTimestamp && "iterator was invalidated during iteration");
@@ -273,7 +293,7 @@ public:
   auto getPayloadValues(Value handleValue) const {
     ArrayRef<Value> view = getPayloadValuesView(handleValue);
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     // Memorize the current timestamp and make sure that it has not changed
     // when incrementing or dereferencing the iterator returned by this
     // function. The timestamp is incremented when the "values" mapping is
@@ -696,7 +716,7 @@ private:
   ///  - `throughValue` is the payload value the handle to which is consumed,
   ///     when it is the case, null when the operation handle is consumed
   ///     directly.
-  /// Looks at the payload opreations associated with `otherHandle` and if any
+  /// Looks at the payload operations associated with `otherHandle` and if any
   /// of these operations has an ancestor (or is itself) listed in
   /// `potentialAncestors`, records the error message describing the use of the
   /// invalidated handle. Does nothing if `otherHandle` already has a reporter
@@ -1070,10 +1090,18 @@ public:
   /// resets the error state to "success".
   DiagnosedSilenceableFailure checkAndResetError();
 
+  /// Return the latest match notification message. Returns an empty string
+  /// when no error message was captured.
+  std::string getLatestMatchFailureMessage();
+
   /// Return "true" if this tracking listener had a failure.
   bool failed() const;
 
 protected:
+  void
+  notifyMatchFailure(Location loc,
+                     function_ref<void(Diagnostic &)> reasonCallback) override;
+
   void
   notifyPayloadReplacementNotFound(Operation *op, ValueRange values,
                                    DiagnosedSilenceableFailure &&diag) override;
@@ -1085,6 +1113,9 @@ private:
 
   /// The number of errors that have been encountered.
   int64_t errorCounter = 0;
+
+  /// Latest message from match failure notification.
+  std::optional<Diagnostic> matchFailure;
 };
 
 /// This is a special rewriter to be used in transform op implementations,
@@ -1154,9 +1185,12 @@ public:
   /// Populates `effects` with side effects implied by this trait.
   void getPotentialTopLevelEffects(
       SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+    Region &region = this->getOperation()->getRegion(0);
+    if (region.empty())
+      return;
     detail::getPotentialTopLevelEffects(
         this->getOperation(), cast<OpTy>(this->getOperation()).getRoot(),
-        *getBodyBlock(), effects);
+        region.front(), effects);
   }
 
   /// Sets up the mapping between the entry block of the given region of this op
@@ -1241,7 +1275,7 @@ public:
 // as CSE/DCE to work.
 struct TransformMappingResource
     : public SideEffects::Resource::Base<TransformMappingResource> {
-  StringRef getName() override { return "transform.mapping"; }
+  StringRef getName() const override { return "transform.mapping"; }
 };
 
 /// Side effect resource corresponding to the Payload IR itself. Only Read and
@@ -1252,7 +1286,7 @@ struct TransformMappingResource
 /// while still allowing the reordering of those that only access it.
 struct PayloadIRResource
     : public SideEffects::Resource::Base<PayloadIRResource> {
-  StringRef getName() override { return "transform.payload_ir"; }
+  StringRef getName() const override { return "transform.payload_ir"; }
 };
 
 /// Populates `effects` with the memory effects indicating the operation on the
@@ -1605,5 +1639,17 @@ mlir::transform::TransformEachOpTrait<OpTy>::verifyTrait(Operation *op) {
 
   return success();
 }
+
+namespace llvm {
+template <>
+struct PointerLikeTypeTraits<mlir::transform::NormalFormAttrInterface>
+    : public PointerLikeTypeTraits<mlir::Attribute> {
+  static inline mlir::transform::NormalFormAttrInterface
+  getFromVoidPointer(void *p) {
+    return cast<mlir::transform::NormalFormAttrInterface>(
+        mlir::Attribute::getFromOpaquePointer(p));
+  }
+};
+} // namespace llvm
 
 #endif // DIALECT_TRANSFORM_INTERFACES_TRANSFORMINTERFACES_H

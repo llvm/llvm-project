@@ -38,9 +38,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <iterator>
 #include <vector>
 
@@ -193,7 +191,7 @@ BasicBlock *NewLeafBlock(CaseRange &Leaf, Value *Val, ConstantInt *LowerBound,
 
   // Make the conditional branch...
   BasicBlock *Succ = Leaf.BB;
-  BranchInst::Create(Succ, Default, Comp, NewLeaf);
+  CondBrInst::Create(Comp, Succ, Default, NewLeaf);
 
   // Update the PHI incoming value/block for the default.
   for (auto &I : Default->phis()) {
@@ -299,7 +297,7 @@ BasicBlock *SwitchConvert(CaseItr Begin, CaseItr End, ConstantInt *LowerBound,
   F->insert(++OrigBlock->getIterator(), NewNode);
   Comp->insertInto(NewNode, NewNode->end());
 
-  BranchInst::Create(LBranch, RBranch, Comp, NewNode);
+  CondBrInst::Create(Comp, LBranch, RBranch, NewNode);
   return NewNode;
 }
 
@@ -379,7 +377,7 @@ void ProcessSwitchInst(SwitchInst *SI,
 
   // If there is only the default destination, just branch.
   if (Cases.empty()) {
-    BranchInst::Create(Default, OrigBlock);
+    UncondBrInst::Create(Default, OrigBlock);
     // Remove all the references from Default's PHIs to OrigBlock, but one.
     FixPhis(Default, OrigBlock, OrigBlock, UnsignedMax);
     SI->eraseFromParent();
@@ -390,7 +388,7 @@ void ProcessSwitchInst(SwitchInst *SI,
   ConstantInt *UpperBound = nullptr;
   bool DefaultIsUnreachableFromSwitch = false;
 
-  if (isa<UnreachableInst>(Default->getFirstNonPHIOrDbg())) {
+  if (SI->defaultDestUnreachable()) {
     // Make the bounds tightly fitted around the case value range, because we
     // know that the value passed to the switch must be exactly one of the case
     // values.
@@ -408,7 +406,7 @@ void ProcessSwitchInst(SwitchInst *SI,
     //    roughly C icmp's per switch, where C is the number of cases in the
     //    switch, while LowerSwitch only needs to call LVI once per switch.
     const DataLayout &DL = F->getDataLayout();
-    KnownBits Known = computeKnownBits(Val, DL, /*Depth=*/0, AC, SI);
+    KnownBits Known = computeKnownBits(Val, DL, AC, SI);
     // TODO Shouldn't this create a signed range?
     ConstantRange KnownBitsRange =
         ConstantRange::fromKnownBits(Known, /*IsSigned=*/false);
@@ -494,7 +492,7 @@ void ProcessSwitchInst(SwitchInst *SI,
 
     // If there are no cases left, just branch.
     if (Cases.empty()) {
-      BranchInst::Create(Default, OrigBlock);
+      UncondBrInst::Create(Default, OrigBlock);
       SI->eraseFromParent();
       // As all the cases have been replaced with a single branch, only keep
       // one entry in the PHI nodes.
@@ -523,7 +521,7 @@ void ProcessSwitchInst(SwitchInst *SI,
     FixPhis(Default, OrigBlock, nullptr, UnsignedMax);
 
   // Branch to our shiny new if-then stuff...
-  BranchInst::Create(SwitchBlock, OrigBlock);
+  UncondBrInst::Create(SwitchBlock, OrigBlock);
 
   // We are now done with the switch instruction, delete it.
   BasicBlock *OldDefault = SI->getDefaultDest();

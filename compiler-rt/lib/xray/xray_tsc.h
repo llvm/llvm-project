@@ -43,7 +43,7 @@ inline uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
 #elif defined(__powerpc64__)
 #include "xray_powerpc64.inc"
 #elif defined(__arm__) || defined(__aarch64__) || defined(__mips__) ||         \
-    defined(__hexagon__) || defined(__loongarch_lp64)
+    defined(__hexagon__) || defined(__loongarch_lp64) || defined(__riscv)
 // Emulated TSC.
 // There is no instruction like RDTSCP in user mode on ARM. ARM's CP15 does
 //   not have a constant frequency like TSC on x86(_64), it may go faster
@@ -75,6 +75,35 @@ ALWAYS_INLINE uint64_t readTSC(uint8_t &CPU) XRAY_NEVER_INSTRUMENT {
   }
   CPU = 0;
   return TS.tv_sec * NanosecondsPerSecond + TS.tv_nsec;
+}
+
+inline uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
+  return NanosecondsPerSecond;
+}
+
+} // namespace __xray
+
+#elif defined(__s390x__)
+#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
+#include "xray_defs.h"
+#include <cerrno>
+#include <cstdint>
+#include <time.h>
+
+namespace __xray {
+
+inline bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT { return true; }
+
+ALWAYS_INLINE uint64_t readTSC(uint8_t &CPU) XRAY_NEVER_INSTRUMENT {
+  CPU = 0;
+#if __has_builtin(__builtin_readcyclecounter)
+  return __builtin_readcyclecounter();
+#else
+  uint64_t Cycles;
+  asm volatile("stckf %0" : : "Q"(Cycles) : "cc");
+  return Cycles;
+#endif
 }
 
 inline uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {

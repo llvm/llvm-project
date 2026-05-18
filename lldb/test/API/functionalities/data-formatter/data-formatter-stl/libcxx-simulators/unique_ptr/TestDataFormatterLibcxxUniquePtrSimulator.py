@@ -7,13 +7,16 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+import functools
 
 
 class LibcxxUniquePtrDataFormatterSimulatorTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
-    def test(self):
-        self.build()
+    def _run_test(self, defines):
+        cxxflags_extras = " ".join(["-D%s" % d for d in defines])
+        self.build(dictionary=dict(CXXFLAGS_EXTRAS=cxxflags_extras))
         lldbutil.run_to_source_breakpoint(
             self, "Break here", lldb.SBFileSpec("main.cpp")
         )
@@ -22,3 +25,14 @@ class LibcxxUniquePtrDataFormatterSimulatorTestCase(TestBase):
         self.expect(
             "frame variable var_with_deleter_up", substrs=["pointer =", "deleter ="]
         )
+
+
+for r in range(5):
+    name = "test_r%d" % r
+    defines = ["COMPRESSED_PAIR_REV=%d" % r]
+
+    @functools.wraps(LibcxxUniquePtrDataFormatterSimulatorTestCase._run_test)
+    def test_method(self, defines=defines):
+        LibcxxUniquePtrDataFormatterSimulatorTestCase._run_test(self, defines)
+
+    setattr(LibcxxUniquePtrDataFormatterSimulatorTestCase, name, test_method)

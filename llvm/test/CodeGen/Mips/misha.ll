@@ -1,4 +1,4 @@
-; RUN: llc  -march=mipsel -mattr=mips16 -relocation-model=pic -O3 < %s | FileCheck %s -check-prefix=16
+; RUN: llc  -mtriple=mipsel -mattr=mips16 -relocation-model=pic -O3 < %s | FileCheck %s -check-prefix=16
 
 define i32 @sumc(ptr nocapture %to, ptr nocapture %from, i32) nounwind {
 entry:

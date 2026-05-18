@@ -16,7 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUIGroupLP.h"
-#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
@@ -25,7 +24,10 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 
+#include <type_traits>
+
 using namespace llvm;
+using namespace llvm::AMDGPU;
 
 #define DEBUG_TYPE "igrouplp"
 
@@ -76,8 +78,9 @@ enum class SchedGroupMask {
   DS_READ = 1u << 8,
   DS_WRITE = 1u << 9,
   TRANS = 1u << 10,
+  LDSDMA = 1u << 11,
   ALL = ALU | VALU | SALU | MFMA | VMEM | VMEM_READ | VMEM_WRITE | DS |
-        DS_READ | DS_WRITE | TRANS,
+        DS_READ | DS_WRITE | TRANS | LDSDMA,
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
 };
 
@@ -140,9 +143,6 @@ private:
   // Count of the number of created SchedGroups, used to initialize SGID.
   static unsigned NumSchedGroups;
 
-  // Try to add and edge from SU A to SU B.
-  bool tryAddEdge(SUnit *A, SUnit *B);
-
   // Use SGMask to determine whether we can classify MI as a member of this
   // SchedGroup object.
   bool canAddMI(const MachineInstr &MI) const;
@@ -153,6 +153,9 @@ public:
 
   ScheduleDAGInstrs *DAG;
   const SIInstrInfo *TII;
+
+  // Try to add and edge from SU A to SU B.
+  bool tryAddEdge(SUnit *A, SUnit *B);
 
   // Returns true if SU can be added to this SchedGroup.
   bool canAddSU(SUnit &SU) const;
@@ -165,7 +168,7 @@ public:
   // Add DAG dependencies and track which edges are added, and the count of
   // missed edges
   int link(SUnit &SU, bool MakePred,
-           std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
+           std::list<std::pair<SUnit *, SUnit *>> &AddedEdges);
 
   // Add DAG dependencies from all SUnits in this SchedGroup and this SU.
   // Use the predicate to determine whether SU should be a predecessor (P =
@@ -191,7 +194,7 @@ public:
   bool allowedByRules(const SUnit *SU,
                       SmallVectorImpl<SchedGroup> &SyncPipe) const {
     for (auto &Rule : Rules) {
-      if (!Rule.get()->apply(SU, Collection, SyncPipe))
+      if (!Rule->apply(SU, Collection, SyncPipe))
         return false;
     }
     return true;
@@ -208,18 +211,14 @@ public:
   // Remove last element in the SchedGroup
   void pop() { Collection.pop_back(); }
 
-  // Identify and add all relevant SUs from the DAG to this SchedGroup.
-  void initSchedGroup();
+  template <class T>
+  void findCandidateSUnits(T Begin, T End,
+                           SUnitsToCandidateSGsMap &SyncedInstrs);
 
-  // Add instructions to the SchedGroup bottom up starting from RIter.
-  // PipelineInstrs is a set of instructions that should not be added to the
-  // SchedGroup even when the other conditions for adding it are satisfied.
-  // RIter will be added to the SchedGroup as well, and dependencies will be
-  // added so that RIter will always be scheduled at the end of the group.
-  void initSchedGroup(std::vector<SUnit>::reverse_iterator RIter,
-                      SUnitsToCandidateSGsMap &SyncedInstrs);
-
-  void initSchedGroup(SUnitsToCandidateSGsMap &SyncedInstrs);
+  /// Find each SUnit in the DAG that could potentially be added to
+  /// this SchedGroup and add the SGID to the candidate SchedGroups
+  /// for SU in \p SyncedInstrs.
+  void findCandidateSUnits(SUnitsToCandidateSGsMap &SyncedInstrs);
 
   int getSyncID() { return SyncID; }
 
@@ -240,23 +239,6 @@ public:
   }
 };
 
-// Remove all existing edges from a SCHED_BARRIER or SCHED_GROUP_BARRIER.
-static void resetEdges(SUnit &SU, ScheduleDAGInstrs *DAG) {
-  assert(SU.getInstr()->getOpcode() == AMDGPU::SCHED_BARRIER ||
-         SU.getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER ||
-         SU.getInstr()->getOpcode() == AMDGPU::IGLP_OPT);
-
-  while (!SU.Preds.empty())
-    for (auto &P : SU.Preds)
-      SU.removePred(P);
-
-  while (!SU.Succs.empty())
-    for (auto &S : SU.Succs)
-      for (auto &SP : S.getSUnit()->Preds)
-        if (SP.getSUnit() == &SU)
-          S.getSUnit()->removePred(SP);
-}
-
 using SUToCandSGsPair = std::pair<SUnit *, SmallVector<int, 4>>;
 using SUsToCandSGsVec = SmallVector<SUToCandSGsPair, 4>;
 
@@ -270,7 +252,7 @@ using SUsToCandSGsVec = SmallVector<SUToCandSGsPair, 4>;
 // only be used for small sized problems or medium sized problems where an exact
 // solution is highly desired.
 class PipelineSolver {
-  ScheduleDAGMI *DAG;
+  [[maybe_unused]] ScheduleDAGMI *DAG;
 
   // Instructions that can be assigned to multiple SchedGroups
   DenseMap<int, SUnitsToCandidateSGsMap> SyncedInstrs;
@@ -323,8 +305,7 @@ class PipelineSolver {
   // current information. One step in the greedy algorithm. Templated against
   // the SchedGroup iterator (either reverse or forward).
   template <typename T>
-  void greedyFind(std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges, T I,
-                  T E);
+  void greedyFind(std::list<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E);
   // Whether or not the current solution is optimal
   bool checkOptimal();
   // Populate the ready list, prioiritizing fewest missed edges first
@@ -340,15 +321,15 @@ class PipelineSolver {
   // Add the edges from the SU to the other SchedGroups in pipeline, and
   // return the number of edges missed.
   int addEdges(SmallVectorImpl<SchedGroup> &SyncPipeline, SUnit *SU, int SGID,
-               std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
+               std::list<std::pair<SUnit *, SUnit *>> &AddedEdges);
   /// Link the pipeline as if \p SU was in the SchedGroup with ID \p SGID. It
   /// returns the cost (in terms of missed pipeline edges), and tracks the edges
   /// added in \p AddedEdges
   template <typename T>
   int linkSUnit(SUnit *SU, int SGID,
-                std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E);
+                std::list<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E);
   /// Remove the edges passed via \p AddedEdges
-  void removeEdges(const std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
+  void removeEdges(const std::list<std::pair<SUnit *, SUnit *>> &AddedEdges);
   // Convert the passed in maps to arrays for bidirectional iterators
   void convertSyncMapsToArrays();
 
@@ -366,7 +347,7 @@ public:
         SyncedSchedGroups(SyncedSchedGroups), IsBottomUp(IsBottomUp) {
 
     for (auto &PipelineInstrs : SyncedInstrs) {
-      if (PipelineInstrs.second.size() > 0) {
+      if (!PipelineInstrs.second.empty()) {
         NeedsSolver = true;
         break;
       }
@@ -380,7 +361,7 @@ public:
     CurrPipeline = BestPipeline;
 
     while (static_cast<size_t>(BeginSyncGroupIdx) < PipelineInstrs.size() &&
-           PipelineInstrs[BeginSyncGroupIdx].size() == 0)
+           PipelineInstrs[BeginSyncGroupIdx].empty())
       ++BeginSyncGroupIdx;
 
     if (static_cast<size_t>(BeginSyncGroupIdx) >= PipelineInstrs.size())
@@ -394,7 +375,7 @@ void PipelineSolver::reset() {
     for (auto &SG : SyncPipeline) {
       SmallVector<SUnit *, 32> TempCollection = SG.Collection;
       SG.Collection.clear();
-      auto SchedBarr = llvm::find_if(TempCollection, [](SUnit *SU) {
+      auto *SchedBarr = llvm::find_if(TempCollection, [](SUnit *SU) {
         return SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER;
       });
       if (SchedBarr != TempCollection.end())
@@ -416,12 +397,12 @@ void PipelineSolver::convertSyncMapsToArrays() {
   PipelineInstrs.resize(SyncedInstrs.size());
   for (auto &SyncInstrMap : SyncedInstrs) {
     for (auto &SUsToCandSGs : SyncInstrMap.second) {
-      if (PipelineInstrs[PipelineIDx].size() == 0) {
+      if (PipelineInstrs[PipelineIDx].empty()) {
         PipelineInstrs[PipelineIDx].push_back(
             std::pair(SUsToCandSGs.first, SUsToCandSGs.second));
         continue;
       }
-      auto SortPosition = PipelineInstrs[PipelineIDx].begin();
+      auto *SortPosition = PipelineInstrs[PipelineIDx].begin();
       // Insert them in sorted order -- this allows for good parsing order in
       // the greedy algorithm
       while (SortPosition != PipelineInstrs[PipelineIDx].end() &&
@@ -460,7 +441,6 @@ void PipelineSolver::makePipeline() {
       // Command line requested IGroupLP doesn't have SGBarr
       if (!SGBarr)
         continue;
-      resetEdges(*SGBarr, DAG);
       SG.link(*SGBarr, false);
     }
   }
@@ -473,7 +453,7 @@ void PipelineSolver::makePipeline() {
 
 template <typename T>
 int PipelineSolver::linkSUnit(
-    SUnit *SU, int SGID, std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges,
+    SUnit *SU, int SGID, std::list<std::pair<SUnit *, SUnit *>> &AddedEdges,
     T I, T E) {
   bool MakePred = false;
   int AddedCost = 0;
@@ -491,7 +471,7 @@ int PipelineSolver::linkSUnit(
 
 int PipelineSolver::addEdges(
     SmallVectorImpl<SchedGroup> &SyncPipeline, SUnit *SU, int SGID,
-    std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges) {
+    std::list<std::pair<SUnit *, SUnit *>> &AddedEdges) {
 
   // For IsBottomUp, the first SchedGroup in SyncPipeline contains the
   // instructions that are the ultimate successors in the resultant mutation.
@@ -508,14 +488,14 @@ int PipelineSolver::addEdges(
 }
 
 void PipelineSolver::removeEdges(
-    const std::vector<std::pair<SUnit *, SUnit *>> &EdgesToRemove) {
+    const std::list<std::pair<SUnit *, SUnit *>> &EdgesToRemove) {
   // Only remove the edges that we have added when testing
   // the fit.
   for (auto &PredSuccPair : EdgesToRemove) {
     SUnit *Pred = PredSuccPair.first;
     SUnit *Succ = PredSuccPair.second;
 
-    auto Match = llvm::find_if(
+    auto *Match = llvm::find_if(
         Succ->Preds, [&Pred](SDep &P) { return P.getSUnit() == Pred; });
     if (Match != Succ->Preds.end()) {
       assert(Match->isArtificial());
@@ -533,7 +513,7 @@ void PipelineSolver::advancePosition() {
     ++CurrSyncGroupIdx;
     // Advance to next non-trivial pipeline
     while (static_cast<size_t>(CurrSyncGroupIdx) < PipelineInstrs.size() &&
-           PipelineInstrs[CurrSyncGroupIdx].size() == 0)
+           PipelineInstrs[CurrSyncGroupIdx].empty())
       ++CurrSyncGroupIdx;
   }
 }
@@ -555,7 +535,7 @@ void PipelineSolver::retreatPosition() {
 
     --CurrSyncGroupIdx;
     // Go to previous non-trivial pipeline
-    while (PipelineInstrs[CurrSyncGroupIdx].size() == 0)
+    while (PipelineInstrs[CurrSyncGroupIdx].empty())
       --CurrSyncGroupIdx;
 
     CurrConflInstNo = PipelineInstrs[CurrSyncGroupIdx].size() - 1;
@@ -587,7 +567,7 @@ void PipelineSolver::populateReadyList(
   assert(CurrSU.second.size() >= 1);
 
   for (; I != E; ++I) {
-    std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
+    std::list<std::pair<SUnit *, SUnit *>> AddedEdges;
     int CandSGID = *I;
     SchedGroup *Match = llvm::find_if(SyncPipeline, [CandSGID](SchedGroup &SG) {
       return SG.getSGID() == CandSGID;
@@ -607,12 +587,8 @@ void PipelineSolver::populateReadyList(
       ReadyList.push_back(std::pair(*I, -1));
   }
 
-  if (UseCostHeur) {
-    std::sort(ReadyList.begin(), ReadyList.end(),
-              [](std::pair<int, int> A, std::pair<int, int> B) {
-                return A.second < B.second;
-              });
-  }
+  if (UseCostHeur)
+    std::sort(ReadyList.begin(), ReadyList.end(), llvm::less_second());
 
   assert(ReadyList.size() == CurrSU.second.size());
 }
@@ -639,8 +615,8 @@ bool PipelineSolver::solveExact() {
              : populateReadyList(ReadyList, CurrSU.second.begin(),
                                  CurrSU.second.end());
 
-  auto I = ReadyList.begin();
-  auto E = ReadyList.end();
+  auto *I = ReadyList.begin();
+  auto *E = ReadyList.end();
   for (; I != E; ++I) {
     // If we are trying SGs in least cost order, and the current SG is cost
     // infeasible, then all subsequent SGs will also be cost infeasible, so we
@@ -650,7 +626,7 @@ bool PipelineSolver::solveExact() {
 
     int CandSGID = I->first;
     int AddedCost = 0;
-    std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
+    std::list<std::pair<SUnit *, SUnit *>> AddedEdges;
     auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
     SchedGroup *Match;
     for (auto &SG : SyncPipeline) {
@@ -717,12 +693,16 @@ bool PipelineSolver::solveExact() {
 
 template <typename T>
 void PipelineSolver::greedyFind(
-    std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E) {
+    std::list<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E) {
   SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
-  int BestNodeCost = -1;
-  int TempCost;
-  SchedGroup *BestGroup = nullptr;
-  int BestGroupID = -1;
+
+  struct GroupInfo {
+    SchedGroup *SG;
+    std::list<std::pair<SUnit *, SUnit *>> Edges;
+    int Cost = 0;
+  };
+  std::optional<GroupInfo> Best;
+
   auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
   LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
                     << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
@@ -732,7 +712,6 @@ void PipelineSolver::greedyFind(
   // first. If we fail to do this for the greedy algorithm, the solution will
   // likely not be good in more complex cases.
   for (; I != E; ++I) {
-    std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
     int CandSGID = *I;
     SchedGroup *Match = llvm::find_if(SyncPipeline, [CandSGID](SchedGroup &SG) {
       return SG.getSGID() == CandSGID;
@@ -750,33 +729,45 @@ void PipelineSolver::greedyFind(
       LLVM_DEBUG(dbgs() << "SGID # " << CandSGID << " has conflicting rule\n");
       continue;
     }
-    TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, AddedEdges);
+
+    std::list<std::pair<SUnit *, SUnit *>> TempEdges;
+    int TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, TempEdges);
     LLVM_DEBUG(dbgs() << "Cost of Group " << TempCost << "\n");
-    if (TempCost < BestNodeCost || BestNodeCost == -1) {
-      BestGroup = Match;
-      BestNodeCost = TempCost;
-      BestGroupID = CandSGID;
+
+    if (!Best || TempCost < Best->Cost) {
+      Best = {Match, TempEdges, TempCost};
+      if (Best->Cost == 0)
+        break;
     }
-    removeEdges(AddedEdges);
-    if (BestNodeCost == 0)
-      break;
+
+    removeEdges(TempEdges);
   }
 
-  if (BestGroupID != -1) {
-    BestGroup->add(*CurrSU.first);
-    addEdges(SyncPipeline, CurrSU.first, BestGroupID, AddedEdges);
-    LLVM_DEBUG(dbgs() << "Best Group has ID: " << BestGroupID << " and Mask"
-                      << (int)BestGroup->getMask() << "\n");
-    BestCost += TempCost;
+  if (Best) {
+    SchedGroup *SG = Best->SG;
+    std::list<std::pair<SUnit *, SUnit *>> &Edges = Best->Edges;
+
+    SG->add(*CurrSU.first);
+    if (AddedEdges.empty())
+      AddedEdges = Edges;
+    else
+      AddedEdges.splice(std::prev(AddedEdges.cend()), Edges);
+
+    for (const std::pair<SUnit *, SUnit *> &E : Edges) {
+      if (!SG->tryAddEdge(E.first, E.second))
+        llvm_unreachable("Edges known to be insertable.");
+    }
+
+    LLVM_DEBUG(dbgs() << "Best Group has ID: " << SG->getSGID() << " and Mask"
+                      << (int)SG->getMask() << "\n");
+    BestCost += Best->Cost;
   } else
     BestCost += MissPenalty;
-
-  CurrPipeline[CurrSyncGroupIdx] = SyncPipeline;
 }
 
 bool PipelineSolver::solveGreedy() {
   BestCost = 0;
-  std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
+  std::list<std::pair<SUnit *, SUnit *>> AddedEdges;
 
   while (static_cast<size_t>(CurrSyncGroupIdx) < PipelineInstrs.size()) {
     SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
@@ -823,18 +814,13 @@ void PipelineSolver::solve() {
   } else { // Use the Greedy Algorithm by default
     LLVM_DEBUG(dbgs() << "Starting GREEDY pipeline solver\n");
     solveGreedy();
+    LLVM_DEBUG(dbgs() << "Greedy produced best cost of " << BestCost << "\n");
   }
 
   makePipeline();
   LLVM_DEBUG(dbgs() << "After applying mutation\n");
   LLVM_DEBUG(DAG->dump());
 }
-
-enum IGLPStrategyID : int {
-  MFMASmallGemmOptID = 0,
-  MFMASmallGemmSingleWaveOptID = 1,
-  MFMAExpInterleave = 2
-};
 
 // Implement a IGLP scheduling strategy.
 class IGLPStrategy {
@@ -896,11 +882,11 @@ bool MFMASmallGemmOpt::applyIGLPStrategy(
   for (unsigned I = 0; I < MFMACount * 3; ++I) {
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::DS, 2, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
   }
 
   return true;
@@ -920,8 +906,6 @@ private:
   static unsigned ExpRequirement;
   // The count of independent "chains" of MFMA instructions in the pipeline
   static unsigned MFMAChains;
-  // The length of each independent "chain" of MFMA instructions
-  static unsigned MFMAChainLength;
   // Whether or not the pipeline has V_CVT instructions
   static bool HasCvt;
   // Whether or not there are instructions between the TRANS instruction and
@@ -942,7 +926,7 @@ private:
     bool apply(const SUnit *SU, const ArrayRef<SUnit *> Collection,
                SmallVectorImpl<SchedGroup> &SyncPipe) override {
 
-      auto DAG = SyncPipe[0].DAG;
+      auto *DAG = SyncPipe[0].DAG;
 
       if (Cache->empty()) {
         auto I = DAG->SUnits.rbegin();
@@ -955,10 +939,9 @@ private:
           return false;
       }
 
-      auto Reaches = (std::any_of(
-          Cache->begin(), Cache->end(), [&SU, &DAG](SUnit *TargetSU) {
-            return DAG->IsReachable(TargetSU, const_cast<SUnit *>(SU));
-          }));
+      auto Reaches = any_of(*Cache, [&SU, &DAG](SUnit *TargetSU) {
+        return DAG->IsReachable(TargetSU, const_cast<SUnit *>(SU));
+      });
 
       return Reaches;
     }
@@ -977,11 +960,9 @@ private:
                SmallVectorImpl<SchedGroup> &SyncPipe) override {
       bool FoundTrans = false;
       unsigned Counter = 1;
-      auto DAG = SyncPipe[0].DAG;
+      auto *DAG = SyncPipe[0].DAG;
 
       if (Cache->empty()) {
-        SmallVector<SUnit *, 8> Worklist;
-
         auto I = DAG->SUnits.begin();
         auto E = DAG->SUnits.end();
         for (; I != E; I++) {
@@ -1017,13 +998,13 @@ private:
   public:
     bool apply(const SUnit *SU, const ArrayRef<SUnit *> Collection,
                SmallVectorImpl<SchedGroup> &SyncPipe) override {
-      auto DAG = SyncPipe[0].DAG;
+      auto *DAG = SyncPipe[0].DAG;
 
       if (!SU || !TII->isMFMAorWMMA(*ChainSeed->getInstr()))
         return false;
 
       if (Cache->empty()) {
-        auto TempSU = ChainSeed;
+        auto *TempSU = ChainSeed;
         auto Depth = Number;
         while (Depth > 0) {
           --Depth;
@@ -1069,17 +1050,16 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      auto SuccSize = std::count_if(
-          SU->Succs.begin(), SU->Succs.end(),
-          [](const SDep &Succ) { return Succ.getKind() == SDep::Data; });
+      unsigned SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
+        return Succ.getKind() == SDep::Data;
+      });
       if (SuccSize >= Size)
         return false;
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          auto SuccSize = std::count_if(
-              Succ.getSUnit()->Succs.begin(), Succ.getSUnit()->Succs.end(),
-              [](const SDep &SuccSucc) {
+          unsigned SuccSize =
+              llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
           if (SuccSize >= Size)
@@ -1110,17 +1090,16 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      auto SuccSize = std::count_if(
-          SU->Succs.begin(), SU->Succs.end(),
-          [](const SDep &Succ) { return Succ.getKind() == SDep::Data; });
+      unsigned SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
+        return Succ.getKind() == SDep::Data;
+      });
       if (SuccSize >= Size)
         return true;
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          auto SuccSize = std::count_if(
-              Succ.getSUnit()->Succs.begin(), Succ.getSUnit()->Succs.end(),
-              [](const SDep &SuccSucc) {
+          unsigned SuccSize =
+              llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
           if (SuccSize >= Size)
@@ -1233,7 +1212,7 @@ private:
       if (!OtherGroup->Collection.size())
         return true;
 
-      auto DAG = SyncPipe[0].DAG;
+      auto *DAG = SyncPipe[0].DAG;
 
       for (auto &OtherEle : OtherGroup->Collection)
         if (DAG->IsReachable(const_cast<SUnit *>(SU), OtherEle))
@@ -1276,7 +1255,7 @@ private:
         return false;
 
       if (Cache->empty()) {
-        auto TempSU = ChainSeed;
+        auto *TempSU = ChainSeed;
         auto Depth = Number;
         while (Depth > 0) {
           --Depth;
@@ -1315,8 +1294,7 @@ private:
     bool apply(const SUnit *SU, const ArrayRef<SUnit *> Collection,
                SmallVectorImpl<SchedGroup> &SyncPipe) override {
 
-      SmallVector<SUnit *, 12> Worklist;
-      auto DAG = SyncPipe[0].DAG;
+      auto *DAG = SyncPipe[0].DAG;
       if (Cache->empty()) {
         for (auto &SU : DAG->SUnits)
           if (TII->isTRANS(SU.getInstr()->getOpcode())) {
@@ -1356,7 +1334,6 @@ unsigned MFMAExpInterleaveOpt::AddPipeCount = 0;
 unsigned MFMAExpInterleaveOpt::MFMAEnablement = 0;
 unsigned MFMAExpInterleaveOpt::ExpRequirement = 0;
 unsigned MFMAExpInterleaveOpt::MFMAChains = 0;
-unsigned MFMAExpInterleaveOpt::MFMAChainLength = 0;
 bool MFMAExpInterleaveOpt::HasCvt = false;
 bool MFMAExpInterleaveOpt::HasChainBetweenCvt = false;
 std::optional<unsigned> MFMAExpInterleaveOpt::FirstPipeDSR = std::nullopt;
@@ -1430,19 +1407,16 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   if (!(TempExp && TempMFMA))
     return false;
 
-  HasChainBetweenCvt =
-      std::find_if((*TempExp)->Succs.begin(), (*TempExp)->Succs.end(),
-                   [&isCvt](SDep &Succ) {
-                     return isCvt(Succ.getSUnit()->getInstr()->getOpcode());
-                   }) == (*TempExp)->Succs.end();
+  HasChainBetweenCvt = none_of((*TempExp)->Succs, [&isCvt](SDep &Succ) {
+    return isCvt(Succ.getSUnit()->getInstr()->getOpcode());
+  });
 
   // Count the number of MFMAs that are reached by an EXP
   for (auto &SuccSU : MFMAPipeCands) {
     if (MFMAPipeSUs.size() &&
-        std::find_if(MFMAPipeSUs.begin(), MFMAPipeSUs.end(),
-                     [&SuccSU](SUnit *PotentialMatch) {
-                       return PotentialMatch->NodeNum == SuccSU->NodeNum;
-                     }) != MFMAPipeSUs.end())
+        any_of(MFMAPipeSUs, [&SuccSU](SUnit *PotentialMatch) {
+          return PotentialMatch->NodeNum == SuccSU->NodeNum;
+        }))
       continue;
 
     for (auto &PredSU : ExpPipeCands) {
@@ -1480,10 +1454,9 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   for (auto &MFMAPipeSU : MFMAPipeSUs) {
     if (is_contained(MFMAChainSeeds, MFMAPipeSU))
       continue;
-    if (!std::any_of(MFMAPipeSU->Preds.begin(), MFMAPipeSU->Preds.end(),
-                     [&TII](SDep &Succ) {
-                       return TII->isMFMAorWMMA(*Succ.getSUnit()->getInstr());
-                     })) {
+    if (none_of(MFMAPipeSU->Preds, [&TII](SDep &Succ) {
+          return TII->isMFMAorWMMA(*Succ.getSUnit()->getInstr());
+        })) {
       MFMAChainSeeds.push_back(MFMAPipeSU);
       ++MFMAChains;
     }
@@ -1498,28 +1471,23 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
       FirstPipeDSR = Pred.getSUnit()->NodeNum;
   }
 
-  MFMAChainLength = MFMAPipeCount / MFMAChains;
-
   // The number of bit pack operations that depend on a single V_EXP
-  unsigned PackSuccCount = std::count_if(
-      PackSUs.begin(), PackSUs.end(), [this, &TempExp](SUnit *VPack) {
+  unsigned PackSuccCount =
+      llvm::count_if(PackSUs, [this, &TempExp](SUnit *VPack) {
         return DAG->IsReachable(VPack, *TempExp);
       });
 
   // The number of bit pack operations an MFMA depends on
   unsigned PackPredCount =
-      std::count_if((*TempMFMA)->Preds.begin(), (*TempMFMA)->Preds.end(),
-                    [&isBitPack](SDep &Pred) {
-                      auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
-                      return isBitPack(Opc);
-                    });
+      llvm::count_if((*TempMFMA)->Preds, [&isBitPack](SDep &Pred) {
+        auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
+        return isBitPack(Opc);
+      });
 
-  auto PackPred =
-      std::find_if((*TempMFMA)->Preds.begin(), (*TempMFMA)->Preds.end(),
-                   [&isBitPack](SDep &Pred) {
-                     auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
-                     return isBitPack(Opc);
-                   });
+  auto *PackPred = llvm::find_if((*TempMFMA)->Preds, [&isBitPack](SDep &Pred) {
+    auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
+    return isBitPack(Opc);
+  });
 
   if (PackPred == (*TempMFMA)->Preds.end())
     return false;
@@ -1528,20 +1496,18 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   ExpRequirement = 0;
   // How many MFMAs depend on a single bit pack operation
   MFMAEnablement =
-      std::count_if(PackPred->getSUnit()->Succs.begin(),
-                    PackPred->getSUnit()->Succs.end(), [&TII](SDep &Succ) {
-                      return TII->isMFMAorWMMA(*Succ.getSUnit()->getInstr());
-                    });
+      llvm::count_if(PackPred->getSUnit()->Succs, [&TII](SDep &Succ) {
+        return TII->isMFMAorWMMA(*Succ.getSUnit()->getInstr());
+      });
 
   // The number of MFMAs that depend on a single V_EXP
   MFMAEnablement *= PackSuccCount;
 
   // The number of V_EXPs required to resolve all dependencies for an MFMA
   ExpRequirement =
-      std::count_if(ExpPipeCands.begin(), ExpPipeCands.end(),
-                    [this, &PackPred](SUnit *ExpBase) {
-                      return DAG->IsReachable(PackPred->getSUnit(), ExpBase);
-                    });
+      llvm::count_if(ExpPipeCands, [this, &PackPred](SUnit *ExpBase) {
+        return DAG->IsReachable(PackPred->getSUnit(), ExpBase);
+      });
 
   ExpRequirement *= PackPredCount;
   return true;
@@ -1632,7 +1598,7 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
       SG->addRule(
           std::make_shared<EnablesNthMFMA>(1, TII, SG->getSGID(), true));
     SG->addRule(std::make_shared<IsFMA>(TII, SG->getSGID()));
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     // Second Round FMA
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
@@ -1645,7 +1611,7 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
       SG->addRule(std::make_shared<EnablesNthMFMA>(MFMAEnablement + 1, TII,
                                                    SG->getSGID(), true));
     SG->addRule(std::make_shared<IsFMA>(TII, SG->getSGID()));
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
   }
 
   if (UsesDSRead) {
@@ -1653,7 +1619,7 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
         SchedGroupMask::DS_READ, 2, PipelineSyncID, DAG, TII);
     SG->addRule(std::make_shared<OccursAtOrAfterNode>(*FirstPipeDSR, TII,
                                                       SG->getSGID()));
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
   }
 
   // First Round EXP
@@ -1667,7 +1633,7 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
   SG->addRule(std::make_shared<IsPipeExp>(TII, SG->getSGID(), true));
   SG->addRule(std::make_shared<LessThanNSuccs>(8, TII, SG->getSGID(),
                                                HasChainBetweenCvt));
-  SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+  SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
   incrementTransPosition();
 
@@ -1684,7 +1650,7 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
       else
         SG->addRule(std::make_shared<IsSuccOfPrevNthGroup>(
             1 + (2 + UsesFMA) * I, TII, SG->getSGID()));
-      SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+      SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
     }
 
     // Third Round FMA
@@ -1699,7 +1665,7 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
         SG->addRule(std::make_shared<EnablesNthMFMA>(2 * MFMAEnablement + 1,
                                                      TII, SG->getSGID(), true));
       SG->addRule(std::make_shared<IsFMA>(TII, SG->getSGID()));
-      SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+      SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
     }
 
     // Second Round EXP
@@ -1715,7 +1681,7 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
     SG->addRule(std::make_shared<IsPipeExp>(TII, SG->getSGID(), true));
     SG->addRule(std::make_shared<LessThanNSuccs>(8, TII, SG->getSGID(),
                                                  HasChainBetweenCvt));
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
   }
 
   // The "extra" EXP which enables all MFMA
@@ -1725,7 +1691,7 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
   SG->addRule(std::make_shared<IsPipeExp>(TII, SG->getSGID(), true));
   SG->addRule(std::make_shared<GreaterThanOrEqualToNSuccs>(
       8, TII, SG->getSGID(), HasChainBetweenCvt));
-  SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+  SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
   // PHASE 2: Main Interleave Loop
 
@@ -1762,14 +1728,14 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
           SG->getSGID(), true));
     else
       SG->addRule(std::make_shared<OccursAfterExp>(TII, SG->getSGID(), true));
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
     incrementMFMAPosition();
 
     if (UsesVALU) {
       SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
           SchedGroupMask::VALU, VALUOps, PipelineSyncID, DAG, TII);
       SG->addRule(std::make_shared<IsPipeAdd>(TII, SG->getSGID()));
-      SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+      SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
     }
 
     if (UsesDSRead && !(I % 4)) {
@@ -1777,7 +1743,7 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
           SchedGroupMask::DS_READ, 2, PipelineSyncID, DAG, TII);
       SG->addRule(std::make_shared<OccursAtOrAfterNode>(*FirstPipeDSR, TII,
                                                         SG->getSGID()));
-      SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+      SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
     }
 
     // CVT, EXP, FMA Interleaving
@@ -1805,7 +1771,7 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
         else
           SG->addRule(std::make_shared<IsSuccOfPrevNthGroup>(CurrentOffset, TII,
                                                              SG->getSGID()));
-        SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+        SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
       }
 
       // Round N + 3 FMA
@@ -1822,7 +1788,7 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
               (((I * ExpRatio + J) / ExpRequirement) + 3) * MFMAEnablement + 1,
               TII, SG->getSGID(), true));
         SG->addRule(std::make_shared<IsFMA>(TII, SG->getSGID()));
-        SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+        SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
       }
 
       // Round N + 2 Exp
@@ -1839,7 +1805,7 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
       SG->addRule(std::make_shared<IsPipeExp>(TII, SG->getSGID(), true));
       SG->addRule(std::make_shared<LessThanNSuccs>(8, TII, SG->getSGID(),
                                                    HasChainBetweenCvt));
-      SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+      SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
     }
   }
 
@@ -1847,7 +1813,49 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
   SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
       SchedGroupMask::MFMA, MFMAEnablement * 2, PipelineSyncID, DAG, TII);
   SG->addRule(std::make_shared<OccursAfterExp>(TII, SG->getSGID(), true));
-  SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+  SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
+  return true;
+}
+
+class MFMAExpSimpleInterleaveOpt final : public IGLPStrategy {
+public:
+  bool applyIGLPStrategy(
+      DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
+      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+      AMDGPU::SchedulingPhase Phase) override;
+
+  bool shouldApplyStrategy(ScheduleDAGInstrs *DAG,
+                           AMDGPU::SchedulingPhase Phase) override {
+    return true;
+  }
+
+  MFMAExpSimpleInterleaveOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
+      : IGLPStrategy(DAG, TII) {
+    IsBottomUp = true;
+  }
+};
+
+bool MFMAExpSimpleInterleaveOpt::applyIGLPStrategy(
+    DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
+    DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+    AMDGPU::SchedulingPhase Phase) {
+  // Count the number of MFMA instructions.
+  unsigned MFMACount = 0;
+  for (const MachineInstr &I : *DAG)
+    if (TII->isMFMAorWMMA(I))
+      ++MFMACount;
+
+  const unsigned PipelineSyncID = 0;
+  for (unsigned I = 0; I < MFMACount * 3; ++I) {
+    SchedGroup *SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::TRANS, 1, PipelineSyncID, DAG, TII);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
+
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
+  }
+
   return true;
 }
 
@@ -1872,8 +1880,7 @@ private:
         }
       }
 
-      assert(Cache->size());
-      auto DAG = SyncPipe[0].DAG;
+      auto *DAG = SyncPipe[0].DAG;
       for (auto &Elt : *Cache) {
         if (DAG->IsReachable(Elt, const_cast<SUnit *>(SU)))
           return true;
@@ -1891,7 +1898,7 @@ private:
   public:
     bool apply(const SUnit *SU, const ArrayRef<SUnit *> Collection,
                SmallVectorImpl<SchedGroup> &SyncPipe) override {
-      auto MI = SU->getInstr();
+      auto *MI = SU->getInstr();
       if (MI->getOpcode() != AMDGPU::V_PERM_B32_e64)
         return false;
 
@@ -1908,8 +1915,6 @@ private:
         }
         return FitsInGroup;
       }
-
-      assert(Cache->size());
 
       // Does the VALU have a DS_WRITE successor that is the same as other
       // VALU already in the group. The V_PERMs will all share 1 DS_W succ
@@ -1942,14 +1947,10 @@ private:
         return true;
 
       // Does the previous VALU have this DS_Write as a successor
-      return (std::any_of(OtherGroup->Collection.begin(),
-                          OtherGroup->Collection.end(), [&SU](SUnit *Elt) {
-                            return std::any_of(Elt->Succs.begin(),
-                                               Elt->Succs.end(),
-                                               [&SU](SDep &Succ) {
-                                                 return Succ.getSUnit() == SU;
-                                               });
-                          }));
+      return any_of(OtherGroup->Collection, [&SU](SUnit *Elt) {
+        return any_of(Elt->Succs,
+                      [&SU](SDep &Succ) { return Succ.getSUnit() == SU; });
+      });
     }
     IsSuccOfPrevGroup(const SIInstrInfo *TII, unsigned SGID,
                       bool NeedsCache = false)
@@ -1961,7 +1962,7 @@ private:
   public:
     bool apply(const SUnit *SU, const ArrayRef<SUnit *> Collection,
                SmallVectorImpl<SchedGroup> &SyncPipe) override {
-      auto MI = SU->getInstr();
+      auto *MI = SU->getInstr();
       if (MI->getOpcode() == TargetOpcode::BUNDLE)
         return false;
       if (!Collection.size())
@@ -1970,7 +1971,7 @@ private:
       int NumBits = 0;
 
       auto TRI = TII->getRegisterInfo();
-      auto &MRI = MI->getParent()->getParent()->getRegInfo();
+      auto &MRI = MI->getMF()->getRegInfo();
       for (auto &Elt : Collection) {
         auto Op = Elt->getInstr()->getOperand(0);
         auto Size =
@@ -2032,7 +2033,7 @@ private:
           return false;
       }
 
-      auto DAG = SyncPipe[0].DAG;
+      auto *DAG = SyncPipe[0].DAG;
       // Does the previous DS_WRITE share a V_PERM predecessor with this
       // VMEM_READ
       return llvm::any_of(*Cache, [&SU, &DAG](SUnit *Elt) {
@@ -2079,7 +2080,7 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
          "DSWCounters should be zero in pre-RA scheduling!");
   SmallVector<SUnit *, 6> DSWithPerms;
   for (auto &SU : DAG->SUnits) {
-    auto I = SU.getInstr();
+    auto *I = SU.getInstr();
     if (TII->isMFMAorWMMA(*I))
       ++MFMACount;
     else if (TII->isDS(*I)) {
@@ -2100,8 +2101,8 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
 
   if (IsInitial) {
     DSWWithPermCount = DSWithPerms.size();
-    auto I = DSWithPerms.begin();
-    auto E = DSWithPerms.end();
+    auto *I = DSWithPerms.begin();
+    auto *E = DSWithPerms.end();
 
     // Get the count of DS_WRITES with V_PERM predecessors which
     // have loop carried dependencies (WAR) on the same VMEM_READs.
@@ -2122,7 +2123,7 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
           break;
 
         for (auto &Succ : Pred.getSUnit()->Succs) {
-          auto MI = Succ.getSUnit()->getInstr();
+          auto *MI = Succ.getSUnit()->getInstr();
           if (!TII->isVMEM(*MI) || !MI->mayLoad())
             continue;
 
@@ -2132,13 +2133,13 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
             continue;
           }
 
-          if (!VMEMLookup.contains(MI)) {
+          auto [It, Inserted] = VMEMLookup.try_emplace(MI, *I);
+          if (Inserted) {
             MissedAny = true;
-            VMEMLookup[MI] = *I;
             continue;
           }
 
-          Cand = VMEMLookup[MI];
+          Cand = It->second;
           if (llvm::is_contained(Counted, Cand)) {
             MissedAny = true;
             break;
@@ -2161,11 +2162,11 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     for (unsigned I = 0; I < MFMACount; I++) {
       SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
           SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
-      SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+      SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
       SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
           SchedGroupMask::VALU, 2, PipelineSyncID, DAG, TII);
-      SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+      SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
     }
   }
 
@@ -2178,76 +2179,76 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
   SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
       SchedGroupMask::DS_READ, 4, PipelineSyncID, DAG, TII);
   SG->addRule(std::make_shared<EnablesInitialMFMA>(TII, SG->getSGID(), true));
-  SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+  SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
   SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
       SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
-  SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+  SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
   // Interleave MFMA with DS_READ prefetch
-  for (unsigned I = 0; I < DSRCount - 4; ++I) {
+  for (unsigned I = 4; I < DSRCount; ++I) {
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::DS_READ, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
   }
 
   // Phase 2a: Loop carried dependency with V_PERM
   // Schedule VPerm & DS_WRITE as closely as possible to the VMEM_READ they
   // depend on. Interleave MFMA to keep XDL unit busy throughout.
-  for (unsigned I = 0; I < DSWWithPermCount - DSWWithSharedVMEMCount; ++I) {
+  for (unsigned I = DSWWithSharedVMEMCount; I < DSWWithPermCount; ++I) {
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::VALU, 4, PipelineSyncID, DAG, TII);
     SG->addRule(std::make_shared<IsPermForDSW>(TII, SG->getSGID(), true));
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::DS_WRITE, 1, PipelineSyncID, DAG, TII);
     SG->addRule(std::make_shared<IsSuccOfPrevGroup>(TII, SG->getSGID()));
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::VMEM_READ, 4, PipelineSyncID, DAG, TII);
     SG->addRule(std::make_shared<SharesPredWithPrevNthGroup>(
         1, TII, SG->getSGID(), true));
     SG->addRule(std::make_shared<VMEMSize>(TII, SG->getSGID()));
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::VMEM_READ, 4, PipelineSyncID, DAG, TII);
     SG->addRule(std::make_shared<SharesPredWithPrevNthGroup>(
         3, TII, SG->getSGID(), true));
     SG->addRule(std::make_shared<VMEMSize>(TII, SG->getSGID()));
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
   }
 
   // Phase 2b: Loop carried dependency without V_PERM
   // Schedule DS_WRITE as closely as possible to the VMEM_READ they depend on.
   // Interleave MFMA to keep XDL unit busy throughout.
-  for (unsigned I = 0; I < DSWCount - DSWWithPermCount; I++) {
+  for (unsigned I = DSWWithPermCount; I < DSWCount; I++) {
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::DS_WRITE, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::VMEM_READ, 4, PipelineSyncID, DAG, TII);
     SG->addRule(std::make_shared<VMEMSize>(TII, SG->getSGID()));
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
   }
 
   // Phase 2c: Loop carried dependency with V_PERM, VMEM_READs are
@@ -2259,52 +2260,52 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::VALU, 4, PipelineSyncID, DAG, TII);
     SG->addRule(std::make_shared<IsPermForDSW>(TII, SG->getSGID(), true));
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::DS_WRITE, 1, PipelineSyncID, DAG, TII);
     SG->addRule(std::make_shared<IsSuccOfPrevGroup>(TII, SG->getSGID()));
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::VALU, 4, PipelineSyncID, DAG, TII);
     SG->addRule(std::make_shared<IsPermForDSW>(TII, SG->getSGID(), true));
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::DS_WRITE, 1, PipelineSyncID, DAG, TII);
     SG->addRule(std::make_shared<IsSuccOfPrevGroup>(TII, SG->getSGID()));
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::VMEM_READ, 4, PipelineSyncID, DAG, TII);
     SG->addRule(std::make_shared<SharesPredWithPrevNthGroup>(
         2, TII, SG->getSGID(), true));
     SG->addRule(std::make_shared<VMEMSize>(TII, SG->getSGID()));
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::VMEM_READ, 4, PipelineSyncID, DAG, TII);
     SG->addRule(std::make_shared<SharesPredWithPrevNthGroup>(
         4, TII, SG->getSGID(), true));
     SG->addRule(std::make_shared<VMEMSize>(TII, SG->getSGID()));
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
   }
 
   return true;
@@ -2318,8 +2319,10 @@ createIGLPStrategy(IGLPStrategyID ID, ScheduleDAGInstrs *DAG,
     return std::make_unique<MFMASmallGemmOpt>(DAG, TII);
   case MFMASmallGemmSingleWaveOptID:
     return std::make_unique<MFMASmallGemmSingleWaveOpt>(DAG, TII);
-  case MFMAExpInterleave:
+  case MFMAExpInterleaveID:
     return std::make_unique<MFMAExpInterleaveOpt>(DAG, TII);
+  case MFMAExpSimpleInterleaveID:
+    return std::make_unique<MFMAExpSimpleInterleaveOpt>(DAG, TII);
   }
 
   llvm_unreachable("Unknown IGLPStrategyID");
@@ -2379,11 +2382,7 @@ public:
 unsigned SchedGroup::NumSchedGroups = 0;
 
 bool SchedGroup::tryAddEdge(SUnit *A, SUnit *B) {
-  if (A != B && DAG->canAddEdge(B, A)) {
-    DAG->addEdge(B, SDep(A, SDep::Artificial));
-    return true;
-  }
-  return false;
+  return A != B && DAG->addEdge(B, SDep(A, SDep::Artificial));
 }
 
 bool SchedGroup::canAddMI(const MachineInstr &MI) const {
@@ -2391,39 +2390,97 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
   if (MI.isMetaInstruction())
     Result = false;
 
+  else if (MI.isInlineAsm()) {
+    const SIRegisterInfo &TRI = TII->getRegisterInfo();
+    auto &MRI = MI.getParent()->getParent()->getRegInfo();
+    bool SGPR_used = false, SGPR_big_def = false, VGPR_used = false,
+         VMFMA_used = false, VReg32_used = false, MayLoad = MI.mayLoad(),
+         MayStore = MI.mayStore();
+    for (const MachineOperand &Operand : MI.operands())
+      if (Operand.isReg()) {
+        const TargetRegisterClass &RegClass =
+            *TRI.getRegClassForOperandReg(MRI, Operand);
+        if (TRI.hasVGPRs(&RegClass)) {
+          VGPR_used = true;
+          if (Operand.isUse() && TRI.getRegSizeInBits(RegClass) == 32)
+            VReg32_used = true;
+        }
+        // > 128 bit registers are usually only used by MFMA instructions, so
+        // we're using that as a heuristic to guess the schedule group mask of
+        // the inline asm.
+        if (TRI.hasAGPRs(&RegClass) || TRI.getRegSizeInBits(RegClass) > 128)
+          VMFMA_used = true;
+        if (TRI.hasSGPRs(&RegClass))
+          SGPR_used = true;
+        if (TRI.getRegSizeInBits(RegClass) > 64 && Operand.isDef())
+          SGPR_big_def = true;
+      }
+
+    typedef std::underlying_type_t<SchedGroupMask> SGMask_t;
+    SGMask_t InlineAsmMask = 0;
+    if (VGPR_used && !VMFMA_used && !MayLoad && !MayStore)
+      InlineAsmMask |= (SGMask_t)SchedGroupMask::VALU;
+    if (SGPR_used && !VGPR_used && !MayLoad && !MayStore)
+      InlineAsmMask |= (SGMask_t)SchedGroupMask::SALU;
+    if (VMFMA_used)
+      InlineAsmMask |= (SGMask_t)SchedGroupMask::MFMA;
+    if (VGPR_used && MayLoad)
+      InlineAsmMask |= (SGMask_t)(VReg32_used ? SchedGroupMask::DS_READ
+                                              : SchedGroupMask::VMEM_READ);
+    if (VGPR_used && MayStore)
+      InlineAsmMask |= (SGMask_t)(VReg32_used ? SchedGroupMask::DS_WRITE
+                                              : SchedGroupMask::VMEM_WRITE);
+    if (SGPR_big_def)
+      InlineAsmMask |= (SGMask_t)SchedGroupMask::DS_READ;
+    if (InlineAsmMask & (SGMask_t)SchedGroupMask::VALU ||
+        InlineAsmMask & (SGMask_t)SchedGroupMask::SALU)
+      InlineAsmMask |= (SGMask_t)SchedGroupMask::ALU;
+    if (InlineAsmMask & (SGMask_t)SchedGroupMask::DS_READ ||
+        InlineAsmMask & (SGMask_t)SchedGroupMask::DS_WRITE)
+      InlineAsmMask |= (SGMask_t)SchedGroupMask::DS;
+    if (InlineAsmMask & (SGMask_t)SchedGroupMask::VMEM_READ ||
+        InlineAsmMask & (SGMask_t)SchedGroupMask::VMEM_WRITE)
+      InlineAsmMask |= (SGMask_t)SchedGroupMask::VMEM;
+
+    Result = ((SGMask_t)SGMask & InlineAsmMask) != 0;
+  }
+
   else if (((SGMask & SchedGroupMask::ALU) != SchedGroupMask::NONE) &&
            (TII->isVALU(MI) || TII->isMFMAorWMMA(MI) || TII->isSALU(MI) ||
             TII->isTRANS(MI)))
-    Result = true;
+    Result = !MI.mayLoadOrStore();
 
   else if (((SGMask & SchedGroupMask::VALU) != SchedGroupMask::NONE) &&
-           TII->isVALU(MI) && !TII->isMFMAorWMMA(MI) && !TII->isTRANS(MI))
-    Result = true;
+           TII->isVALU(MI) && !TII->isMFMAorWMMA(MI) && !TII->isTRANS(MI) &&
+           !TII->isLDSDMA(MI)) {
+    // Some memory instructions may be marked as VALU (e.g. BUFFER_LOAD_*_LDS).
+    // For our purposes, these shall not be classified as VALU as this results
+    // in unexpected behavior.
+    Result = !MI.mayLoadOrStore();
+  }
 
   else if (((SGMask & SchedGroupMask::SALU) != SchedGroupMask::NONE) &&
            TII->isSALU(MI))
-    Result = true;
+    Result = !MI.mayLoadOrStore();
 
   else if (((SGMask & SchedGroupMask::MFMA) != SchedGroupMask::NONE) &&
            TII->isMFMAorWMMA(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM) != SchedGroupMask::NONE) &&
-           (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI))))
+           (TII->isVMEM(MI) || TII->isLDSDMA(MI)))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_READ) != SchedGroupMask::NONE) &&
-           MI.mayLoad() &&
-           (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI))))
+           MI.mayLoad() && TII->isVMEM(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_WRITE) != SchedGroupMask::NONE) &&
-           MI.mayStore() &&
-           (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI))))
+           MI.mayStore() && TII->isVMEM(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS) != SchedGroupMask::NONE) &&
-           TII->isDS(MI))
+           (TII->isDS(MI) || TII->isLDSDMA(MI)))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS_READ) != SchedGroupMask::NONE) &&
@@ -2438,6 +2495,10 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
            TII->isTRANS(MI))
     Result = true;
 
+  else if (((SGMask & SchedGroupMask::LDSDMA) != SchedGroupMask::NONE) &&
+           TII->isLDSDMA(MI))
+    Result = true;
+
   LLVM_DEBUG(
       dbgs() << "For SchedGroup with mask " << format_hex((int)SGMask, 10, true)
              << (Result ? " could classify " : " unable to classify ") << MI);
@@ -2446,7 +2507,7 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
 }
 
 int SchedGroup::link(SUnit &SU, bool MakePred,
-                     std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges) {
+                     std::list<std::pair<SUnit *, SUnit *>> &AddedEdges) {
   int MissedEdges = 0;
   for (auto *A : Collection) {
     SUnit *B = &SU;
@@ -2513,43 +2574,17 @@ bool SchedGroup::canAddSU(SUnit &SU) const {
   return std::all_of(B, E, [this](MachineInstr &MI) { return canAddMI(MI); });
 }
 
-void SchedGroup::initSchedGroup() {
-  for (auto &SU : DAG->SUnits) {
-    if (isFull())
-      break;
-
-    if (canAddSU(SU))
-      add(SU);
-  }
-}
-
-void SchedGroup::initSchedGroup(std::vector<SUnit>::reverse_iterator RIter,
-                                SUnitsToCandidateSGsMap &SyncedInstrs) {
-  SUnit &InitSU = *RIter;
-  for (auto E = DAG->SUnits.rend(); RIter != E; ++RIter) {
-    auto &SU = *RIter;
-    if (isFull())
-      break;
-
+template <class T>
+void SchedGroup::findCandidateSUnits(T Begin, T End,
+                                     SUnitsToCandidateSGsMap &SyncedInstrs) {
+  for (SUnit &SU : make_range(Begin, End)) {
     if (canAddSU(SU))
       SyncedInstrs[&SU].push_back(SGID);
   }
-
-  add(InitSU);
-  assert(MaxSize);
-  (*MaxSize)++;
 }
 
-void SchedGroup::initSchedGroup(SUnitsToCandidateSGsMap &SyncedInstrs) {
-  auto I = DAG->SUnits.rbegin();
-  auto E = DAG->SUnits.rend();
-  for (; I != E; ++I) {
-    auto &SU = *I;
-    if (isFull())
-      break;
-    if (canAddSU(SU))
-      SyncedInstrs[&SU].push_back(SGID);
-  }
+void SchedGroup::findCandidateSUnits(SUnitsToCandidateSGsMap &SyncedInstrs) {
+  findCandidateSUnits(DAG->SUnits.rbegin(), DAG->SUnits.rend(), SyncedInstrs);
 }
 
 void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
@@ -2576,7 +2611,6 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
       initSchedGroupBarrierPipelineStage(R);
       FoundSB = true;
     } else if (Opc == AMDGPU::IGLP_OPT) {
-      resetEdges(*R, DAG);
       if (!FoundSB && !FoundIGLP) {
         FoundIGLP = true;
         ShouldApplyIGLP = initIGLPOpt(*R);
@@ -2596,15 +2630,15 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
 void IGroupLPDAGMutation::addSchedBarrierEdges(SUnit &SchedBarrier) {
   MachineInstr &MI = *SchedBarrier.getInstr();
   assert(MI.getOpcode() == AMDGPU::SCHED_BARRIER);
-  // Remove all existing edges from the SCHED_BARRIER that were added due to the
-  // instruction having side effects.
-  resetEdges(SchedBarrier, DAG);
   LLVM_DEBUG(dbgs() << "Building SchedGroup for SchedBarrier with Mask: "
                     << MI.getOperand(0).getImm() << "\n");
   auto InvertedMask =
       invertSchedBarrierMask((SchedGroupMask)MI.getOperand(0).getImm());
   SchedGroup SG(InvertedMask, std::nullopt, DAG, TII);
-  SG.initSchedGroup();
+
+  for (SUnit &SU : DAG->SUnits)
+    if (SG.canAddSU(SU))
+      SG.add(SU);
 
   // Preserve original instruction ordering relative to the SCHED_BARRIER.
   SG.link(
@@ -2630,17 +2664,21 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
            (InvertedMask & SchedGroupMask::TRANS) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::ALU;
 
-  // VMEM implies VMEM_READ, VMEM_WRITE.
+  // VMEM implies VMEM_READ, VMEM_WRITE, LDSDMA.
   if ((InvertedMask & SchedGroupMask::VMEM) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::VMEM_READ & ~SchedGroupMask::VMEM_WRITE;
-  // VMEM_READ, VMEM_WRITE implies VMEM.
+    InvertedMask &= ~SchedGroupMask::VMEM_READ & ~SchedGroupMask::VMEM_WRITE &
+                    ~SchedGroupMask::LDSDMA;
+  // VMEM_READ, VMEM_WRITE, LDSDMA implies VMEM.
   else if ((InvertedMask & SchedGroupMask::VMEM_READ) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::VMEM_WRITE) == SchedGroupMask::NONE)
+           (InvertedMask & SchedGroupMask::VMEM_WRITE) ==
+               SchedGroupMask::NONE ||
+           (InvertedMask & SchedGroupMask::LDSDMA) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::VMEM;
 
-  // DS implies DS_READ, DS_WRITE.
+  // DS implies DS_READ, DS_WRITE, LDSDMA.
   if ((InvertedMask & SchedGroupMask::DS) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::DS_READ & ~SchedGroupMask::DS_WRITE;
+    InvertedMask &= ~SchedGroupMask::DS_READ & ~SchedGroupMask::DS_WRITE &
+                    ~SchedGroupMask::LDSDMA;
   // DS_READ, DS_WRITE implies DS.
   else if ((InvertedMask & SchedGroupMask::DS_READ) == SchedGroupMask::NONE ||
            (InvertedMask & SchedGroupMask::DS_WRITE) == SchedGroupMask::NONE)
@@ -2654,19 +2692,18 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
 
 void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
     std::vector<SUnit>::reverse_iterator RIter) {
-  // Remove all existing edges from the SCHED_GROUP_BARRIER that were added due
-  // to the instruction having side effects.
-  resetEdges(*RIter, DAG);
   MachineInstr &SGB = *RIter->getInstr();
   assert(SGB.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER);
   int32_t SGMask = SGB.getOperand(0).getImm();
   int32_t Size = SGB.getOperand(1).getImm();
   int32_t SyncID = SGB.getOperand(2).getImm();
 
+  Size++; // Make room for the SCHED_GROUP_BARRIER instruction
   auto &SG = SyncedSchedGroups[SyncID].emplace_back((SchedGroupMask)SGMask,
                                                     Size, SyncID, DAG, TII);
-
-  SG.initSchedGroup(RIter, SyncedInstrs[SG.getSyncID()]);
+  SG.add(*RIter);
+  SG.findCandidateSUnits(RIter, SG.DAG->SUnits.rend(),
+                         SyncedInstrs[SG.getSyncID()]);
 }
 
 bool IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
@@ -2682,16 +2719,12 @@ bool IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
 
 } // namespace
 
-namespace llvm {
-
 /// \p Phase specifes whether or not this is a reentry into the
 /// IGroupLPDAGMutation. Since there may be multiple scheduling passes on the
 /// same scheduling region (e.g. pre and post-RA scheduling / multiple
 /// scheduling "phases"), we can reenter this mutation framework more than once
 /// for a given region.
 std::unique_ptr<ScheduleDAGMutation>
-createIGroupLPDAGMutation(AMDGPU::SchedulingPhase Phase) {
+llvm::createIGroupLPDAGMutation(AMDGPU::SchedulingPhase Phase) {
   return std::make_unique<IGroupLPDAGMutation>(Phase);
 }
-
-} // end namespace llvm

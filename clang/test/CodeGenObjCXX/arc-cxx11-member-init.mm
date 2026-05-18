@@ -21,7 +21,7 @@ class XClipboardDataSet
 }
 @end
 
-// CHECK: [[mClipData:%.*]] = getelementptr inbounds %class.XClipboardDataSet, ptr
+// CHECK: [[mClipData:%.*]] = getelementptr inbounds nuw %class.XClipboardDataSet, ptr
 // CHECK: [[CLS:%.*]] = load ptr, ptr @"OBJC_CLASSLIST_REFERENCES_$_"
 // CHECK: [[SEL:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_
 // CHECK: [[CALL:%.*]] = call noundef ptr @objc_msgSend(ptr noundef [[CLS]], ptr noundef [[SEL]])

@@ -17,6 +17,12 @@
 
 #include <time.h>
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
+
+// TODO: For now, on windows, let's always include the extension header.
+// We will need to decide how to export this header.
+#ifdef _WIN32
+#include "include/llvm-libc-macros/windows/time-macros-ext.h"
+#endif // _WIN32
 
 #endif // LLVM_LIBC_HDR_TIME_MACROS_H

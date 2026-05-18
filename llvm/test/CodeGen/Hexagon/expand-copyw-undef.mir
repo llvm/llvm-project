@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass postrapseudos -run-pass machineverifier -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass postrapseudos -run-pass machineverifier -o - %s | FileCheck %s
 
 # Check that v3 is marked as "undef".
 # CHECK: $w0 = V6_vcombine undef $v3, $v2

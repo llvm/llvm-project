@@ -10,7 +10,7 @@
 
 // <forward_list>
 
-// forward_list(initializer_list<value_type> il, const allocator_type& a);
+// forward_list(initializer_list<value_type> il, const allocator_type& a); // constexpr since C++26
 
 #include <forward_list>
 #include <cassert>
@@ -19,30 +19,38 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-        typedef int T;
-        typedef test_allocator<T> A;
-        typedef std::forward_list<T, A> C;
-        C c({0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, A(14));
-        int n = 0;
-        for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, ++n)
-            assert(*i == n);
-        assert(n == 10);
-        assert(c.get_allocator() == A(14));
-    }
-    {
-        typedef int T;
-        typedef min_allocator<T> A;
-        typedef std::forward_list<T, A> C;
-        C c({0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, A());
-        int n = 0;
-        for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, ++n)
-            assert(*i == n);
-        assert(n == 10);
-        assert(c.get_allocator() == A());
-    }
+TEST_CONSTEXPR_CXX26 bool test() {
+  {
+    typedef int T;
+    typedef test_allocator<T> A;
+    typedef std::forward_list<T, A> C;
+    C c({0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, A(14));
+    int n = 0;
+    for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, ++n)
+      assert(*i == n);
+    assert(n == 10);
+    assert(c.get_allocator() == A(14));
+  }
+  {
+    typedef int T;
+    typedef min_allocator<T> A;
+    typedef std::forward_list<T, A> C;
+    C c({0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, A());
+    int n = 0;
+    for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, ++n)
+      assert(*i == n);
+    assert(n == 10);
+    assert(c.get_allocator() == A());
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

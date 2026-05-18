@@ -13,7 +13,7 @@ void init(void * __attribute__((pass_dynamic_object_size(0))));
 // CHECK-LABEL: define dso_local void @_ZN3foo3barC1Ev(
 // CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(1) [[THIS:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @_Z4initPvU25pass_dynamic_object_size0(ptr noundef nonnull [[THIS]], i64 noundef -1) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    tail call void @_Z4initPvU25pass_dynamic_object_size0(ptr noundef nonnull align 4 dereferenceable(1) [[THIS]], i64 noundef -1) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 foo::bar::bar() {

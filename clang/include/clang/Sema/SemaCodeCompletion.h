@@ -13,26 +13,27 @@
 #ifndef LLVM_CLANG_SEMA_SEMACODECOMPLETION_H
 #define LLVM_CLANG_SEMA_SEMACODECOMPLETION_H
 
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclCXX.h"
-#include "clang/AST/Expr.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Designator.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "clang/Sema/Ownership.h"
-#include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 
 namespace clang {
+class DeclGroupRef;
+class MacroInfo;
+class Scope;
+class TemplateName;
 
 class SemaCodeCompletion : public SemaBase {
 public:
@@ -43,6 +44,7 @@ public:
 
   /// Code-completion consumer.
   CodeCompleteConsumer *CodeCompleter;
+  HeuristicResolver Resolver;
 
   /// Describes the context in which code completion occurs.
   enum ParserCompletionContext {
@@ -99,9 +101,11 @@ public:
                             bool AllowNestedNameSpecifiers);
 
   struct CodeCompleteExpressionData;
-  void CodeCompleteExpression(Scope *S, const CodeCompleteExpressionData &Data);
+  void CodeCompleteExpression(Scope *S, const CodeCompleteExpressionData &Data,
+                              bool IsAddressOfOperand = false);
   void CodeCompleteExpression(Scope *S, QualType PreferredType,
-                              bool IsParenthesized = false);
+                              bool IsParenthesized = false,
+                              bool IsAddressOfOperand = false);
   void CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base, Expr *OtherOpBase,
                                        SourceLocation OpLoc, bool IsArrow,
                                        bool IsBaseExprStatement,
@@ -150,10 +154,12 @@ public:
   void CodeCompleteDesignator(const QualType BaseType,
                               llvm::ArrayRef<Expr *> InitExprs,
                               const Designation &D);
+  void CodeCompleteKeywordAfterIf(bool AfterExclaim) const;
   void CodeCompleteAfterIf(Scope *S, bool IsBracedThen);
 
   void CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS, bool EnteringContext,
-                               bool IsUsingDeclaration, QualType BaseType,
+                               bool IsUsingDeclaration, bool IsAddressOfOperand,
+                               bool IsInDeclarationContext, QualType BaseType,
                                QualType PreferredType);
   void CodeCompleteUsing(Scope *S);
   void CodeCompleteUsingDirective(Scope *S);
@@ -190,8 +196,7 @@ public:
   void CodeCompleteObjCForCollection(Scope *S, DeclGroupPtrTy IterationVar);
   void CodeCompleteObjCSelector(Scope *S,
                                 ArrayRef<const IdentifierInfo *> SelIdents);
-  void
-  CodeCompleteObjCProtocolReferences(ArrayRef<IdentifierLocPair> Protocols);
+  void CodeCompleteObjCProtocolReferences(ArrayRef<IdentifierLoc> Protocols);
   void CodeCompleteObjCProtocolDecl(Scope *S);
   void CodeCompleteObjCInterfaceDecl(Scope *S);
   void CodeCompleteObjCClassForwardDecl(Scope *S);

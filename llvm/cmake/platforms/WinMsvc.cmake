@@ -95,6 +95,7 @@ list(APPEND CMAKE_TRY_COMPILE_PLATFORM_VARIABLES
   LLVM_WINSYSROOT
   MSVC_VER
   WINSDK_VER
+  msvc_lib_symlinks_dir
   winsdk_lib_symlinks_dir
   winsdk_vfs_overlay_path
   )
@@ -152,6 +153,24 @@ function(generate_winsdk_lib_symlinks winsdk_um_lib_dir output_dir)
                               -E create_symlink
                               "${winsdk_um_lib_dir}/${library}"
                               "${output_dir}/${lowercase_ext_symlink_name}")
+    endif()
+  endforeach()
+endfunction()
+
+function(generate_msvc_lib_symlinks msvc_lib_dir output_dir)
+  execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${output_dir}")
+  file(GLOB libraries RELATIVE "${msvc_lib_dir}" "${msvc_lib_dir}/*.lib")
+  foreach(library ${libraries})
+    get_filename_component(name_wle "${library}" NAME_WLE)
+    get_filename_component(ext "${library}" LAST_EXT)
+    string(TOLOWER "${ext}" lowercase_ext)
+    string(TOUPPER "${name_wle}" all_uppercase_symlink_name_wle)
+    set(uppercase_symlink_name "${all_uppercase_symlink_name_wle}${lowercase_ext}")
+    if(NOT library STREQUAL uppercase_symlink_name)
+      execute_process(COMMAND "${CMAKE_COMMAND}"
+                              -E create_symlink
+                              "${msvc_lib_dir}/${library}"
+                              "${output_dir}/${uppercase_symlink_name}")
     endif()
   endforeach()
 endfunction()
@@ -240,6 +259,7 @@ set(CMAKE_C_COMPILER "${LLVM_NATIVE_TOOLCHAIN}/bin/clang-cl" CACHE FILEPATH "")
 set(CMAKE_CXX_COMPILER "${LLVM_NATIVE_TOOLCHAIN}/bin/clang-cl" CACHE FILEPATH "")
 set(CMAKE_LINKER "${LLVM_NATIVE_TOOLCHAIN}/bin/lld-link" CACHE FILEPATH "")
 set(CMAKE_AR "${LLVM_NATIVE_TOOLCHAIN}/bin/llvm-lib" CACHE FILEPATH "")
+set(CMAKE_ASM_MASM_COMPILER "${LLVM_NATIVE_TOOLCHAIN}/bin/llvm-ml" CACHE FILEPATH "")
 
 # Even though we're cross-compiling, we need some native tools (e.g. llvm-tblgen), and those
 # native tools have to be built before we can start doing the cross-build.  LLVM supports
@@ -257,7 +277,7 @@ set(CROSS_TOOLCHAIN_FLAGS_NATIVE "${_CTF_NATIVE_DEFAULT}" CACHE STRING "")
 set(COMPILE_FLAGS
     -D_CRT_SECURE_NO_WARNINGS
     --target=${TRIPLE_ARCH}-windows-msvc
-    -fms-compatibility-version=19.27
+    -fms-compatibility-version=19.28
     -vctoolsversion ${MSVC_VER}
     -winsdkversion ${WINSDK_VER}
     -winsysroot ${LLVM_WINSYSROOT})
@@ -275,6 +295,9 @@ endif()
 string(REPLACE ";" " " COMPILE_FLAGS "${COMPILE_FLAGS}")
 string(APPEND CMAKE_C_FLAGS_INIT " ${COMPILE_FLAGS}")
 string(APPEND CMAKE_CXX_FLAGS_INIT " ${COMPILE_FLAGS}")
+if(TRIPLE_ARCH STREQUAL "x86_64")
+  string(APPEND CMAKE_ASM_MASM_FLAGS_INIT " -m64")
+endif()
 
 set(LINK_FLAGS
     # Prevent CMake from attempting to invoke mt.exe. It only recognizes the slashed form and not the dashed form.
@@ -293,6 +316,16 @@ if(case_sensitive_filesystem)
   endif()
   list(APPEND LINK_FLAGS
        -libpath:"${winsdk_lib_symlinks_dir}")
+  if(NOT msvc_lib_symlinks_dir)
+    set(msvc_lib_symlinks_dir "${CMAKE_BINARY_DIR}/msvc_lib_symlinks")
+    generate_msvc_lib_symlinks("${MSVC_LIB}/${WINSDK_ARCH}" "${msvc_lib_symlinks_dir}")
+  endif()
+  list(APPEND LINK_FLAGS
+       -libpath:"${msvc_lib_symlinks_dir}")
+endif()
+
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.25")
+  list(TRANSFORM LINK_FLAGS PREPEND "${CMAKE_CXX_LINKER_WRAPPER_FLAG}")
 endif()
 
 string(REPLACE ";" " " LINK_FLAGS "${LINK_FLAGS}")

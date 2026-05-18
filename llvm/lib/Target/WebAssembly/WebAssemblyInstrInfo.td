@@ -30,6 +30,14 @@ def HasBulkMemory :
     Predicate<"Subtarget->hasBulkMemory()">,
     AssemblerPredicate<(all_of FeatureBulkMemory), "bulk-memory">;
 
+def HasBulkMemoryOpt :
+    Predicate<"Subtarget->hasBulkMemoryOpt()">,
+    AssemblerPredicate<(all_of FeatureBulkMemoryOpt), "bulk-memory-opt">;
+
+def HasCallIndirectOverlong :
+    Predicate<"Subtarget->hasCallIndirectOverlong()">,
+    AssemblerPredicate<(all_of FeatureCallIndirectOverlong), "call-indirect-overlong">;
+
 def HasExceptionHandling :
     Predicate<"Subtarget->hasExceptionHandling()">,
     AssemblerPredicate<(all_of FeatureExceptionHandling), "exception-handling">;
@@ -38,9 +46,12 @@ def HasExtendedConst :
     Predicate<"Subtarget->hasExtendedConst()">,
     AssemblerPredicate<(all_of FeatureExtendedConst), "extended-const">;
 
-def HasHalfPrecision :
-    Predicate<"Subtarget->hasHalfPrecision()">,
-    AssemblerPredicate<(all_of FeatureHalfPrecision), "half-precision">;
+def HasFP16 :
+    Predicate<"Subtarget->hasFP16()">,
+    AssemblerPredicate<(all_of FeatureFP16), "fp16">;
+
+def HasGC : Predicate<"Subtarget->hasGC()">,
+            AssemblerPredicate<(all_of FeatureGC), "gc">;
 
 def HasMultiMemory :
     Predicate<"Subtarget->hasMultiMemory()">,
@@ -68,6 +79,10 @@ def HasReferenceTypes :
     Predicate<"Subtarget->hasReferenceTypes()">,
     AssemblerPredicate<(all_of FeatureReferenceTypes), "reference-types">;
 
+def HasRelaxedAtomics :
+    Predicate<"Subtarget->hasRelaxedAtomics()">,
+    AssemblerPredicate<(all_of FeatureRelaxedAtomics), "relaxed-atomics">;
+
 def HasRelaxedSIMD :
     Predicate<"Subtarget->hasRelaxedSIMD()">,
     AssemblerPredicate<(all_of FeatureRelaxedSIMD), "relaxed-simd">;
@@ -78,11 +93,15 @@ def HasSignExt :
 
 def HasSIMD128 :
     Predicate<"Subtarget->hasSIMD128()">,
-    AssemblerPredicate<(all_of FeatureSIMD128), "simd128">;
+    AssemblerPredicate<(any_of FeatureSIMD128, FeatureRelaxedSIMD), "simd128">;
 
 def HasTailCall :
     Predicate<"Subtarget->hasTailCall()">,
     AssemblerPredicate<(all_of FeatureTailCall), "tail-call">;
+
+def HasWideArithmetic :
+    Predicate<"Subtarget->hasWideArithmetic()">,
+    AssemblerPredicate<(all_of FeatureWideArithmetic), "wide-arithmetic">;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.
@@ -215,6 +234,12 @@ def tag_op : Operand<i32>;
 
 } // OperandType = "OPERAND_P2ALIGN"
 
+let OperandType = "OPERAND_MEMORDER" in {
+def MemOrder : Operand<i32> {
+  let PrintMethod = "printWebAssemblyMemOrderOperand";
+}
+} // OperandType = "OPERAND_MEMORDER"
+
 let OperandType = "OPERAND_SIGNATURE" in
 def Signature : Operand<i32> {
   let PrintMethod = "printWebAssemblySignatureOperand";
@@ -227,7 +252,12 @@ def TypeIndex : Operand<i32>;
 
 // TODO: Find more places to use this.
 def bool_node : PatLeaf<(i32 I32:$cond), [{
-  return CurDAG->computeKnownBits(SDValue(N, 0)).countMinLeadingZeros() == 31;
+  return CurDAG->computeKnownBits(Op).countMinLeadingZeros() == 31;
+}]>;
+
+/// Floating point constants
+def fpimm0    : PatLeaf<(fpimm), [{
+  return N->isExactlyValue(+0.0);
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -445,8 +475,8 @@ def : Pat<(i64 (WebAssemblyWrapperREL texternalsym:$addr)),
 include "WebAssemblyInstrMemory.td"
 include "WebAssemblyInstrCall.td"
 include "WebAssemblyInstrControl.td"
-include "WebAssemblyInstrInteger.td"
 include "WebAssemblyInstrConv.td"
+include "WebAssemblyInstrInteger.td"
 include "WebAssemblyInstrFloat.td"
 include "WebAssemblyInstrAtomics.td"
 include "WebAssemblyInstrSIMD.td"

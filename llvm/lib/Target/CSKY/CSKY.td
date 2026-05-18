@@ -97,28 +97,28 @@ def iHasFLOAT7E60 : Predicate<"Subtarget->hasFLOAT7E60()">,
              "Support CSKY float7e60 instructions">;
 
 def FeatureHWDiv : SubtargetFeature<"hwdiv", "HasHardwareDivide", "true",
-                                    "Enable divide instrutions">;
+                                    "Enable divide instructions">;
 def HasHWDiv : Predicate<"Subtarget->hasHardwareDivide()">,
                AssemblerPredicate<(all_of FeatureHWDiv),
-               "Enable divide instrutions">;
+               "Enable divide instructions">;
 
 def FeatureSTM : SubtargetFeature<"multiple_stld", "HasSTM", "true",
-                                  "Enable multiple load/store instrutions">;
+                                  "Enable multiple load/store instructions">;
 def HasSTM : Predicate<"Subtarget->hasSTM()">,
              AssemblerPredicate<(all_of FeatureSTM),
-             "Enable multiple load/store instrutions">;
+             "Enable multiple load/store instructions">;
 
 def FeaturePushPop : SubtargetFeature<"pushpop", "HasPushPop", "true",
-                                      "Enable push/pop instrutions">;
+                                      "Enable push/pop instructions">;
 def HasPushPop : Predicate<"Subtarget->hasPushPop()">,
                  AssemblerPredicate<(all_of FeaturePushPop),
-                 "Enable push/pop instrutions">;
+                 "Enable push/pop instructions">;
 
 def FeatureDSP
-    : SubtargetFeature<"edsp", "HasDSP", "true", "Enable DSP instrutions">;
+    : SubtargetFeature<"edsp", "HasDSP", "true", "Enable DSP instructions">;
 def HasDSP : Predicate<"Subtarget->hasDSP()">,
              AssemblerPredicate<(all_of FeatureDSP),
-             "Enable DSP instrutions">;
+             "Enable DSP instructions">;
 
 def HasDSP1E2
     : SubtargetFeature<"dsp1e2", "HasDSP1E2", "true", "Support CSKY dsp1e2 instructions">;
@@ -133,16 +133,16 @@ def iHasDSPE60 : Predicate<"Subtarget->hasDSPE60()">,
              "Support CSKY dspe60 instructions">;
 
 def FeatureDSPV2 : SubtargetFeature<"dspv2", "HasDSPV2", "true",
-                                    "Enable DSP V2.0 instrutions">;
+                                    "Enable DSP V2.0 instructions">;
 def HasDSPV2 : Predicate<"Subtarget->hasDSPV2()">,
                AssemblerPredicate<(all_of FeatureDSPV2),
-               "Enable DSP V2.0 instrutions">;
+               "Enable DSP V2.0 instructions">;
 
 def FeatureDSP_Silan : SubtargetFeature<"dsp_silan", "HasDSP_Silan", "true",
-                                    "Enable DSP Silan instrutions">;
+                                    "Enable DSP Silan instructions">;
 def HasDSP_Silan : Predicate<"Subtarget->hasDSP_Silan()">,
                AssemblerPredicate<(all_of FeatureDSP_Silan),
-               "Enable DSP Silan instrutions">;
+               "Enable DSP Silan instructions">;
 
 // Atomic Support
 def FeatureBTST16 : SubtargetFeature<"btst16", "HasBTST16", "true",
@@ -232,11 +232,11 @@ def FeatureSoftTP : SubtargetFeature<"soft-tp", "ReadTPHard", "false",
                                      "Disable TLS Pointer register">;
 
 def FeatureIstack : SubtargetFeature<"istack", "EnableInterruptAttribute",
-                                     "true", "Enable interrput attribute">;
+                                     "true", "Enable interrupt attribute">;
 def EnableInterruptAttribute
     : Predicate<"Subtarget->enableInterruptAttribute()">,
       AssemblerPredicate<(all_of FeatureIstack),
-      "Enable interrput attribute">;
+      "Enable interrupt attribute">;
 
 def FeatureConstPool : SubtargetFeature<"constpool", "DumpConstPool", "true",
                                         "Dump the constant pool by compiler">;
@@ -568,7 +568,7 @@ class CK807<string n, SchedMachineModel m, list<SubtargetFeature> f,
 def : CK807<"ck807", NoSchedModel, []>;
 def : CK807<"c807", NoSchedModel, []>;
 def : CK807<"r807", NoSchedModel, []>;
-def : CK807<"ck807e", NoSchedModel, [FeatureDSP, HasDSP1E2, HasDSPE60]>;
+def : CK807<"ck807e", NoSchedModel, []>;
 def : CK807<"ck807f", NoSchedModel,
             [FeatureFPUV2_SF, FeatureFPUV2_DF, FeatureFdivdu,
              HasFLOATE1, HasFLOAT1E2, HasFLOAT1E3, HasFLOAT3E4]>;
@@ -579,7 +579,7 @@ def : CK807<"r807f", NoSchedModel,
             [FeatureFPUV2_SF, FeatureFPUV2_DF, FeatureFdivdu,
              HasFLOATE1, HasFLOAT1E2, HasFLOAT1E3, HasFLOAT3E4]>;
 def : CK807<"ck807ef", NoSchedModel, [
-  FeatureDSP, HasDSP1E2, HasDSPE60, FeatureFPUV2_SF, FeatureFPUV2_DF,
+  FeatureFPUV2_SF, FeatureFPUV2_DF,
   FeatureFdivdu, HasFLOATE1, HasFLOAT1E2, HasFLOAT1E3, HasFLOAT3E4]>;
 
 // CK810 series
@@ -670,6 +670,8 @@ def : CK860V<"ck860fv", NoSchedModel,
 //===----------------------------------------------------------------------===//
 // Define the CSKY target.
 //===----------------------------------------------------------------------===//
+
+defm : RemapAllTargetPseudoPointerOperands<GPR>;
 
 def CSKYInstrInfo : InstrInfo;
 

@@ -134,8 +134,8 @@ static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C,
   // routine arguments in the heap.
   while (const MemRegion *MR = Sym->getOriginRegion()) {
     const auto *VR = dyn_cast<VarRegion>(MR);
-    if (VR && VR->hasStackParametersStorage() &&
-           VR->getStackFrame()->inTopFrame())
+    if (VR && VR->hasMemorySpace<StackArgumentsSpaceRegion>(C.getState()) &&
+        VR->getStackFrame()->inTopFrame())
       return cast<ParmVarDecl>(VR->getDecl());
 
     const SymbolicRegion *SR = MR->getSymbolicBase();
@@ -152,14 +152,14 @@ static bool isInMIGCall(CheckerContext &C) {
   const LocationContext *LC = C.getLocationContext();
   assert(LC && "Unknown location context");
 
-  const StackFrameContext *SFC;
+  const StackFrame *SF;
   // Find the top frame.
   while (LC) {
-    SFC = LC->getStackFrame();
-    LC = SFC->getParent();
+    SF = LC->getStackFrame();
+    LC = SF->getParent();
   }
 
-  const Decl *D = SFC->getDecl();
+  const Decl *D = SF->getDecl();
 
   if (std::optional<AnyCall> AC = AnyCall::forDecl(D)) {
     // Even though there's a Sema warning when the return type of an annotated
@@ -270,7 +270,7 @@ void MIGChecker::checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const {
   if (!State->get<ReleasedParameter>())
     return;
 
-  SVal V = C.getSVal(RS);
+  SVal V = RS->getRetValue() ? C.getSVal(RS->getRetValue()) : UndefinedVal();
   if (mayBeSuccess(V, C))
     return;
 

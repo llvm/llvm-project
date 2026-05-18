@@ -12,7 +12,7 @@ static_library("Passes") {
     "//llvm/utils/gn/build/libs/pthread",
   ]
   sources = [
-    "ADRRelaxationPass.cpp",
+    "AArch64RelaxationPass.cpp",
     "Aligner.cpp",
     "AllocCombiner.cpp",
     "AsmDump.cpp",
@@ -36,9 +36,13 @@ static_library("Passes") {
     "LongJmp.cpp",
     "LoopInversionPass.cpp",
     "MCF.cpp",
+    "PAuthGadgetScanner.cpp",
     "PLTCall.cpp",
     "PatchEntries.cpp",
     "PettisAndHansen.cpp",
+    "PointerAuthCFIAnalyzer.cpp",
+    "PointerAuthCFIFixup.cpp",
+    "ProfileQualityStats.cpp",
     "RegAnalysis.cpp",
     "RegReAssign.cpp",
     "ReorderAlgorithm.cpp",

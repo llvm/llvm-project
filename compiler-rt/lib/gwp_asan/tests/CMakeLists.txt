@@ -28,7 +28,9 @@ set(GWP_ASAN_UNITTESTS
   late_init.cpp
   options.cpp
   recoverable.cpp
-  never_allocated.cpp)
+  never_allocated.cpp
+  utilities.cpp
+)
 
 set(GWP_ASAN_UNIT_TEST_HEADERS
   ${GWP_ASAN_HEADERS}

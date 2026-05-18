@@ -206,7 +206,7 @@ class FP_LOAD_3R<bits<32> op, RegisterClass rc = FPR32>
     : FPFmtMEM<op, (outs rc:$fd), (ins GPR:$rj, GPR:$rk),
                "$fd, $rj, $rk">;
 class FP_LOAD_2RI12<bits<32> op, RegisterClass rc = FPR32>
-    : FPFmt2RI12<op, (outs rc:$fd), (ins GPR:$rj, simm12:$imm12),
+    : FPFmt2RI12<op, (outs rc:$fd), (ins GPR:$rj, simm12_addlike:$imm12),
                  "$fd, $rj, $imm12">;
 } // hasSideEffects = 0, mayLoad = 1, mayStore = 0
 
@@ -215,7 +215,7 @@ class FP_STORE_3R<bits<32> op, RegisterClass rc = FPR32>
     : FPFmtMEM<op, (outs), (ins rc:$fd, GPR:$rj, GPR:$rk),
                "$fd, $rj, $rk">;
 class FP_STORE_2RI12<bits<32> op, RegisterClass rc = FPR32>
-    : FPFmt2RI12<op, (outs), (ins rc:$fd, GPR:$rj, simm12:$imm12),
+    : FPFmt2RI12<op, (outs), (ins rc:$fd, GPR:$rj, simm12_addlike:$imm12),
                  "$fd, $rj, $imm12">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 1
 

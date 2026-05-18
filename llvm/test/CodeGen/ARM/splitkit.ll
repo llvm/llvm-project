@@ -94,7 +94,7 @@ declare ptr @bar(ptr returned)
 
 declare i32 @__cxa_atexit(ptr, ptr, ptr)
 
-declare ptr @wobble(ptr returned, ptr ) 
+declare ptr @wobble(ptr returned, ptr )
 
 declare i32 @quux(...)
 
@@ -234,6 +234,20 @@ bbunwind:
   %tmp75 = landingpad { ptr, i32 }
           cleanup
   resume { ptr, i32 } undef
+}
+
+; CHECK-LABEL: func_reduced_remat_regclass_error:
+define void @func_reduced_remat_regclass_error(ptr %global.10, ptr %global.15) {
+bb14:
+  store i32 999, ptr %global.10, align 4
+  call void @llvm.memset.p0.i32(ptr null, i8 0, i32 12, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr null, ptr null, i32 60, i1 false)
+  %tmp34 = call ptr @_Znwm()
+  store i32 999, ptr %global.15, align 4
+  call void @llvm.memcpy.p0.p0.i32(ptr %global.10, ptr null, i32 52, i1 false)
+  call void @llvm.memset.p0.i32(ptr null, i8 0, i32 12, i1 false)
+  call void @llvm.memset.p0.i32(ptr null, i8 0, i32 12, i1 false)
+  ret void
 }
 
 declare void @llvm.trap()

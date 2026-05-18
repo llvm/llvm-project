@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 %s \
-// RUN:   -analyzer-checker=core,alpha.security.taint \
+// RUN:   -analyzer-checker=core,optin.taint \
 // RUN:   -mllvm -debug-only=taint-checker \
 // RUN:   2>&1 | FileCheck %s
 

@@ -16,7 +16,6 @@
 #include "llvm/Transforms/Instrumentation/NumericalStabilitySanitizer.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -32,15 +31,12 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/EscapeEnumerator.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -165,7 +161,7 @@ template <char NsanTypeId>
 class ShadowTypeConfigImpl : public ShadowTypeConfig {
 public:
   char getNsanTypeId() const override { return NsanTypeId; }
-  static constexpr const char kNsanTypeId = NsanTypeId;
+  static constexpr char kNsanTypeId = NsanTypeId;
 };
 
 // `double` (`d`) shadow type.
@@ -443,9 +439,7 @@ public:
 
   // Returns true if the value already has a shadow (including if the value is a
   // constant). If true, calling getShadow() is valid.
-  bool hasShadow(Value *V) const {
-    return isa<Constant>(V) || (Map.find(V) != Map.end());
-  }
+  bool hasShadow(Value *V) const { return isa<Constant>(V) || Map.contains(V); }
 
   // Returns the shadow value for a given value. Asserts that the value has
   // a shadow value. Lazily creates shadows for constant values.
@@ -474,7 +468,8 @@ private:
       // Floating-point constants.
       Type *Ty = Config.getExtendedFPType(CFP->getType());
       return ConstantFP::get(
-          Ty, extendConstantFP(CFP->getValueAPF(), Ty->getFltSemantics()));
+          Ty, extendConstantFP(CFP->getValueAPF(),
+                               Ty->getScalarType()->getFltSemantics()));
     }
     // Vector, array, or aggregate constants.
     if (C->getType()->isVectorTy()) {
@@ -492,6 +487,60 @@ private:
   const MappingConfig &Config;
   DenseMap<Value *, Value *> Map;
 };
+
+class NsanMemOpFn {
+public:
+  NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized, StringRef Fallback,
+              size_t NumArgs);
+  FunctionCallee getFunctionFor(uint64_t MemOpSize) const;
+  FunctionCallee getFallback() const;
+
+private:
+  SmallVector<FunctionCallee> Funcs;
+  size_t NumSizedFuncs;
+};
+
+NsanMemOpFn::NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized,
+                         StringRef Fallback, size_t NumArgs) {
+  LLVMContext &Ctx = M.getContext();
+  AttributeList Attr;
+  Attr = Attr.addFnAttribute(Ctx, Attribute::NoUnwind);
+  Type *PtrTy = PointerType::getUnqual(Ctx);
+  Type *VoidTy = Type::getVoidTy(Ctx);
+  IntegerType *IntptrTy = M.getDataLayout().getIntPtrType(Ctx);
+  FunctionType *SizedFnTy = nullptr;
+
+  NumSizedFuncs = Sized.size();
+
+  // First entry is fallback function
+  if (NumArgs == 3) {
+    Funcs.push_back(
+        M.getOrInsertFunction(Fallback, Attr, VoidTy, PtrTy, PtrTy, IntptrTy));
+    SizedFnTy = FunctionType::get(VoidTy, {PtrTy, PtrTy}, false);
+  } else if (NumArgs == 2) {
+    Funcs.push_back(
+        M.getOrInsertFunction(Fallback, Attr, VoidTy, PtrTy, IntptrTy));
+    SizedFnTy = FunctionType::get(VoidTy, {PtrTy}, false);
+  } else {
+    llvm_unreachable("Unexpected value of sized functions arguments");
+  }
+
+  for (size_t i = 0; i < NumSizedFuncs; ++i)
+    Funcs.push_back(M.getOrInsertFunction(Sized[i], SizedFnTy, Attr));
+}
+
+FunctionCallee NsanMemOpFn::getFunctionFor(uint64_t MemOpSize) const {
+  // Now `getFunctionFor` operates on `Funcs` of size 4 (at least) and the
+  // following code assumes that the number of functions in `Func` is sufficient
+  assert(NumSizedFuncs >= 3 && "Unexpected number of sized functions");
+
+  size_t Idx =
+      MemOpSize == 4 ? 1 : (MemOpSize == 8 ? 2 : (MemOpSize == 16 ? 3 : 0));
+
+  return Funcs[Idx];
+}
+
+FunctionCallee NsanMemOpFn::getFallback() const { return Funcs[0]; }
 
 /// Instantiating NumericalStabilitySanitizer inserts the nsan runtime library
 /// API function declarations into the module if they don't exist already.
@@ -550,12 +599,16 @@ private:
   LLVMContext &Context;
   MappingConfig Config;
   IntegerType *IntptrTy = nullptr;
+
+  // TODO: Use std::array instead?
   FunctionCallee NsanGetShadowPtrForStore[FTValueType::kNumValueTypes] = {};
   FunctionCallee NsanGetShadowPtrForLoad[FTValueType::kNumValueTypes] = {};
   FunctionCallee NsanCheckValue[FTValueType::kNumValueTypes] = {};
   FunctionCallee NsanFCmpFail[FTValueType::kNumValueTypes] = {};
-  FunctionCallee NsanCopyValues;
-  FunctionCallee NsanSetValueUnknown;
+
+  NsanMemOpFn NsanCopyFns;
+  NsanMemOpFn NsanSetUnknownFns;
+
   FunctionCallee NsanGetRawShadowTypePtr;
   FunctionCallee NsanGetRawShadowPtr;
   GlobalValue *NsanShadowRetTag = nullptr;
@@ -590,15 +643,22 @@ NumericalStabilitySanitizerPass::run(Module &M, ModuleAnalysisManager &MAM) {
 }
 
 static GlobalValue *createThreadLocalGV(const char *Name, Module &M, Type *Ty) {
-  return dyn_cast<GlobalValue>(M.getOrInsertGlobal(Name, Ty, [&M, Ty, Name] {
+  return M.getOrInsertGlobal(Name, Ty, [&M, Ty, Name] {
     return new GlobalVariable(M, Ty, false, GlobalVariable::ExternalLinkage,
                               nullptr, Name, nullptr,
                               GlobalVariable::InitialExecTLSModel);
-  }));
+  });
 }
 
 NumericalStabilitySanitizer::NumericalStabilitySanitizer(Module &M)
-    : DL(M.getDataLayout()), Context(M.getContext()), Config(Context) {
+    : DL(M.getDataLayout()), Context(M.getContext()), Config(Context),
+      NsanCopyFns(M, {"__nsan_copy_4", "__nsan_copy_8", "__nsan_copy_16"},
+                  "__nsan_copy_values", /*NumArgs=*/3),
+      NsanSetUnknownFns(M,
+                        {"__nsan_set_value_unknown_4",
+                         "__nsan_set_value_unknown_8",
+                         "__nsan_set_value_unknown_16"},
+                        "__nsan_set_value_unknown", /*NumArgs=*/2) {
   IntptrTy = DL.getIntPtrType(Context);
   Type *PtrTy = PointerType::getUnqual(Context);
   Type *Int32Ty = Type::getInt32Ty(Context);
@@ -633,11 +693,6 @@ NumericalStabilitySanitizer::NumericalStabilitySanitizer(Module &M)
             ShadowConfig.getNsanTypeId(),
         Attr, VoidTy, VTTy, VTTy, ShadowTy, ShadowTy, Int32Ty, Int1Ty, Int1Ty);
   }
-
-  NsanCopyValues = M.getOrInsertFunction("__nsan_copy_values", Attr, VoidTy,
-                                         PtrTy, PtrTy, IntptrTy);
-  NsanSetValueUnknown = M.getOrInsertFunction("__nsan_set_value_unknown", Attr,
-                                              VoidTy, PtrTy, IntptrTy);
 
   // TODO: Add attributes nofree, nosync, readnone, readonly,
   NsanGetRawShadowTypePtr = M.getOrInsertFunction(
@@ -704,7 +759,7 @@ void NumericalStabilitySanitizer::createShadowArguments(
       }))
     return;
 
-  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHI());
+  IRBuilder<> Builder(&F.getEntryBlock(), F.getEntryBlock().getFirstNonPHIIt());
   // The function has shadow args if the shadow args tag matches the function
   // address.
   Value *HasShadowArgs = Builder.CreateICmpEQ(
@@ -756,7 +811,7 @@ static bool shouldCheckArgs(CallBase &CI, const TargetLibraryInfo &TLI,
     return false;
 
   const auto ID = Fn->getIntrinsicID();
-  LibFunc LFunc = LibFunc::NumLibFuncs;
+  LibFunc LFunc = LibFunc::NotLibFunc;
   // Always check args of unknown functions.
   if (ID == Intrinsic::ID() && !TLI.getLibFunc(*Fn, LFunc))
     return true;
@@ -1054,7 +1109,7 @@ PHINode *NumericalStabilitySanitizer::maybeCreateShadowPhi(
   // created. They will be populated in a final phase, once all shadow values
   // have been created.
   PHINode *Shadow = PHINode::Create(ExtendedVT, Phi.getNumIncomingValues());
-  Shadow->insertAfter(&Phi);
+  Shadow->insertAfter(Phi.getIterator());
   return Shadow;
 }
 
@@ -1343,14 +1398,11 @@ const KnownIntrinsic::WidenedIntrinsic KnownIntrinsic::kWidenedIntrinsics[] = {
     {"llvm.log2.f64", Intrinsic::log2, makeX86FP80X86FP80},
     {"llvm.log2.f80", Intrinsic::log2, makeX86FP80X86FP80},
     {"llvm.fma.f32", Intrinsic::fma, makeDoubleDoubleDoubleDouble},
-
-    {"llvm.fmuladd.f32", Intrinsic::fmuladd, makeDoubleDoubleDoubleDouble},
-
     {"llvm.fma.f64", Intrinsic::fma, makeX86FP80X86FP80X86FP80X86FP80},
-
-    {"llvm.fmuladd.f64", Intrinsic::fma, makeX86FP80X86FP80X86FP80X86FP80},
-
     {"llvm.fma.f80", Intrinsic::fma, makeX86FP80X86FP80X86FP80X86FP80},
+    {"llvm.fmuladd.f32", Intrinsic::fmuladd, makeDoubleDoubleDoubleDouble},
+    {"llvm.fmuladd.f64", Intrinsic::fmuladd, makeX86FP80X86FP80X86FP80X86FP80},
+    {"llvm.fmuladd.f80", Intrinsic::fmuladd, makeX86FP80X86FP80X86FP80X86FP80},
     {"llvm.fabs.f32", Intrinsic::fabs, makeDoubleDouble},
     {"llvm.fabs.f64", Intrinsic::fabs, makeX86FP80X86FP80},
     {"llvm.fabs.f80", Intrinsic::fabs, makeX86FP80X86FP80},
@@ -1366,6 +1418,12 @@ const KnownIntrinsic::WidenedIntrinsic KnownIntrinsic::kWidenedIntrinsics[] = {
     {"llvm.maximum.f32", Intrinsic::maximum, makeDoubleDoubleDouble},
     {"llvm.maximum.f64", Intrinsic::maximum, makeX86FP80X86FP80X86FP80},
     {"llvm.maximum.f80", Intrinsic::maximum, makeX86FP80X86FP80X86FP80},
+    {"llvm.minimumnum.f32", Intrinsic::minimumnum, makeDoubleDoubleDouble},
+    {"llvm.minimumnum.f64", Intrinsic::minimumnum, makeX86FP80X86FP80X86FP80},
+    {"llvm.minimumnum.f80", Intrinsic::minimumnum, makeX86FP80X86FP80X86FP80},
+    {"llvm.maximumnum.f32", Intrinsic::maximumnum, makeDoubleDoubleDouble},
+    {"llvm.maximumnum.f64", Intrinsic::maximumnum, makeX86FP80X86FP80X86FP80},
+    {"llvm.maximumnum.f80", Intrinsic::maximumnum, makeX86FP80X86FP80X86FP80},
     {"llvm.copysign.f32", Intrinsic::copysign, makeDoubleDoubleDouble},
     {"llvm.copysign.f64", Intrinsic::copysign, makeX86FP80X86FP80X86FP80},
     {"llvm.copysign.f80", Intrinsic::copysign, makeX86FP80X86FP80X86FP80},
@@ -1383,22 +1441,10 @@ const KnownIntrinsic::WidenedIntrinsic KnownIntrinsic::kWidenedIntrinsics[] = {
     {"llvm.rint.f80", Intrinsic::rint, makeX86FP80X86FP80},
     {"llvm.nearbyint.f32", Intrinsic::nearbyint, makeDoubleDouble},
     {"llvm.nearbyint.f64", Intrinsic::nearbyint, makeX86FP80X86FP80},
-    {"llvm.nearbyin80f64", Intrinsic::nearbyint, makeX86FP80X86FP80},
+    {"llvm.nearbyint.f80", Intrinsic::nearbyint, makeX86FP80X86FP80},
     {"llvm.round.f32", Intrinsic::round, makeDoubleDouble},
     {"llvm.round.f64", Intrinsic::round, makeX86FP80X86FP80},
     {"llvm.round.f80", Intrinsic::round, makeX86FP80X86FP80},
-    {"llvm.lround.f32", Intrinsic::lround, makeDoubleDouble},
-    {"llvm.lround.f64", Intrinsic::lround, makeX86FP80X86FP80},
-    {"llvm.lround.f80", Intrinsic::lround, makeX86FP80X86FP80},
-    {"llvm.llround.f32", Intrinsic::llround, makeDoubleDouble},
-    {"llvm.llround.f64", Intrinsic::llround, makeX86FP80X86FP80},
-    {"llvm.llround.f80", Intrinsic::llround, makeX86FP80X86FP80},
-    {"llvm.lrint.f32", Intrinsic::lrint, makeDoubleDouble},
-    {"llvm.lrint.f64", Intrinsic::lrint, makeX86FP80X86FP80},
-    {"llvm.lrint.f80", Intrinsic::lrint, makeX86FP80X86FP80},
-    {"llvm.llrint.f32", Intrinsic::llrint, makeDoubleDouble},
-    {"llvm.llrint.f64", Intrinsic::llrint, makeX86FP80X86FP80},
-    {"llvm.llrint.f80", Intrinsic::llrint, makeX86FP80X86FP80},
 };
 
 const KnownIntrinsic::LFEntry KnownIntrinsic::kLibfuncIntrinsics[] = {
@@ -1444,6 +1490,12 @@ const KnownIntrinsic::LFEntry KnownIntrinsic::kLibfuncIntrinsics[] = {
     {LibFunc_fminf, "llvm.minnum.f32"},
     {LibFunc_fmin, "llvm.minnum.f64"},
     {LibFunc_fminl, "llvm.minnum.f80"},
+    {LibFunc_fmaximum_numf, "llvm.maximumnum.f32"},
+    {LibFunc_fmaximum_num, "llvm.maximumnum.f64"},
+    {LibFunc_fmaximum_numl, "llvm.maximumnum.f80"},
+    {LibFunc_fminimum_numf, "llvm.minimumnum.f32"},
+    {LibFunc_fminimum_num, "llvm.minimumnum.f64"},
+    {LibFunc_fminimum_numl, "llvm.minimumnum.f80"},
     {LibFunc_ceilf, "llvm.ceil.f32"},
     {LibFunc_ceil, "llvm.ceil.f64"},
     {LibFunc_ceill, "llvm.ceil.f80"},
@@ -1526,14 +1578,10 @@ Value *NumericalStabilitySanitizer::maybeHandleKnownCallBase(
   }
 
   // Check that the widened intrinsic is valid.
-  SmallVector<Intrinsic::IITDescriptor, 8> Table;
-  getIntrinsicInfoTableEntries(WidenedId, Table);
-  SmallVector<Type *, 4> ArgTys;
-  ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
-  [[maybe_unused]] Intrinsic::MatchIntrinsicTypesResult MatchResult =
-      Intrinsic::matchIntrinsicSignature(WidenedFnTy, TableRef, ArgTys);
-  assert(MatchResult == Intrinsic::MatchIntrinsicTypes_Match &&
-         "invalid widened intrinsic");
+  SmallVector<Type *, 4> OverloadTys;
+  [[maybe_unused]] bool IsValid =
+      Intrinsic::isSignatureValid(WidenedId, WidenedFnTy, OverloadTys);
+  assert(IsValid && "invalid widened intrinsic");
   // For known intrinsic functions, we create a second call to the same
   // intrinsic with a different type.
   SmallVector<Value *, 4> Args;
@@ -1559,7 +1607,7 @@ Value *NumericalStabilitySanitizer::maybeHandleKnownCallBase(
     // There is no intrinsic with his level of precision, truncate the shadow.
     Args.push_back(Builder.CreateFPTrunc(Shadow, IntrinsicArgTy));
   }
-  Value *IntrinsicCall = Builder.CreateIntrinsic(WidenedId, ArgTys, Args);
+  Value *IntrinsicCall = Builder.CreateIntrinsic(WidenedId, OverloadTys, Args);
   return WidenedFnTy->getReturnType() == ExtendedVT
              ? IntrinsicCall
              : Builder.CreateFPExt(IntrinsicCall, ExtendedVT);
@@ -1655,7 +1703,7 @@ Value *NumericalStabilitySanitizer::createShadowValueWithOperandsAvailable(
                                Map.getShadow(BinOp->getOperand(1)));
 
   if (isa<UIToFPInst>(&Inst) || isa<SIToFPInst>(&Inst)) {
-    auto *Cast = dyn_cast<CastInst>(&Inst);
+    auto *Cast = cast<CastInst>(&Inst);
     return Builder.CreateCast(Cast->getOpcode(), Cast->getOperand(0),
                               ExtendedVT);
   }
@@ -1664,6 +1712,9 @@ Value *NumericalStabilitySanitizer::createShadowValueWithOperandsAvailable(
     return Builder.CreateSelect(S->getCondition(),
                                 Map.getShadow(S->getTrueValue()),
                                 Map.getShadow(S->getFalseValue()));
+
+  if (auto *Freeze = dyn_cast<FreezeInst>(&Inst))
+    return Builder.CreateFreeze(Map.getShadow(Freeze->getOperand(0)));
 
   if (auto *Extract = dyn_cast<ExtractElementInst>(&Inst))
     return Builder.CreateExtractElement(
@@ -1831,8 +1882,8 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
     // This might be a fp constant stored as an int. Bitcast and store if it has
     // appropriate size.
     Type *BitcastTy = nullptr; // The FT type to bitcast to.
-    if (auto *CInt = dyn_cast<ConstantInt>(C)) {
-      switch (CInt->getType()->getScalarSizeInBits()) {
+    if (isa<ConstantInt, ConstantDataVector>(C)) {
+      switch (C->getType()->getScalarSizeInBits()) {
       case 32:
         BitcastTy = Type::getFloatTy(Context);
         break;
@@ -1845,25 +1896,9 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
       default:
         break;
       }
-    } else if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
-      const int NumElements =
-          cast<VectorType>(CDV->getType())->getElementCount().getFixedValue();
-      switch (CDV->getType()->getScalarSizeInBits()) {
-      case 32:
-        BitcastTy =
-            VectorType::get(Type::getFloatTy(Context), NumElements, false);
-        break;
-      case 64:
-        BitcastTy =
-            VectorType::get(Type::getDoubleTy(Context), NumElements, false);
-        break;
-      case 80:
-        BitcastTy =
-            VectorType::get(Type::getX86_FP80Ty(Context), NumElements, false);
-        break;
-      default:
-        break;
-      }
+
+      if (auto *VectorTy = dyn_cast<VectorType>(C->getType()))
+        BitcastTy = VectorType::get(BitcastTy, VectorTy->getElementCount());
     }
     if (BitcastTy) {
       const MemoryExtents Extents = getMemoryExtentsOrDie(BitcastTy);
@@ -1880,7 +1915,7 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
     }
   }
   // All other stores just reset the shadow value to unknown.
-  Builder.CreateCall(NsanSetValueUnknown, {Dst, ValueSize});
+  Builder.CreateCall(NsanSetUnknownFns.getFallback(), {Dst, ValueSize});
 }
 
 void NumericalStabilitySanitizer::propagateShadowValues(
@@ -1962,9 +1997,6 @@ static void moveFastMathFlags(Function &F,
     F.removeFnAttr(attr);                                                      \
     FMF.set##setter();                                                         \
   }
-  MOVE_FLAG("unsafe-fp-math", Fast)
-  MOVE_FLAG("no-infs-fp-math", NoInfs)
-  MOVE_FLAG("no-nans-fp-math", NoNaNs)
   MOVE_FLAG("no-signed-zeros-fp-math", NoSignedZeros)
 #undef MOVE_FLAG
 
@@ -1975,15 +2007,14 @@ static void moveFastMathFlags(Function &F,
 
 bool NumericalStabilitySanitizer::sanitizeFunction(
     Function &F, const TargetLibraryInfo &TLI) {
-  if (!F.hasFnAttribute(Attribute::SanitizeNumericalStability))
+  if (!F.hasFnAttribute(Attribute::SanitizeNumericalStability) ||
+      F.isDeclaration())
     return false;
 
   // This is required to prevent instrumenting call to __nsan_init from within
   // the module constructor.
   if (F.getName() == kNsanModuleCtorName)
     return false;
-  SmallVector<Instruction *, 8> AllLoadsAndStores;
-  SmallVector<Instruction *, 8> LocalLoadsAndStores;
 
   // The instrumentation maintains:
   //  - for each IR value `v` of floating-point (or vector floating-point) type
@@ -2105,7 +2136,7 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
 
   // The last pass populates shadow phis with shadow values.
   for (PHINode *Phi : OriginalPhis) {
-    PHINode *ShadowPhi = dyn_cast<PHINode>(ValueToShadow.getShadow(Phi));
+    PHINode *ShadowPhi = cast<PHINode>(ValueToShadow.getShadow(Phi));
     for (unsigned I : seq(Phi->getNumOperands())) {
       Value *V = Phi->getOperand(I);
       Value *Shadow = ValueToShadow.getShadow(V);
@@ -2123,21 +2154,45 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
   return !ValueToShadow.empty();
 }
 
+static uint64_t GetMemOpSize(Value *V) {
+  uint64_t OpSize = 0;
+  if (Constant *C = dyn_cast<Constant>(V)) {
+    auto *CInt = dyn_cast<ConstantInt>(C);
+    if (CInt && CInt->getValue().getBitWidth() <= 64)
+      OpSize = CInt->getValue().getZExtValue();
+  }
+
+  return OpSize;
+}
+
 // Instrument the memory intrinsics so that they properly modify the shadow
 // memory.
 bool NumericalStabilitySanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
   IRBuilder<> Builder(MI);
   if (auto *M = dyn_cast<MemSetInst>(MI)) {
-    Builder.CreateCall(
-        NsanSetValueUnknown,
-        {/*Address=*/M->getArgOperand(0),
-         /*Size=*/Builder.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
+    FunctionCallee SetUnknownFn =
+        NsanSetUnknownFns.getFunctionFor(GetMemOpSize(M->getArgOperand(2)));
+    if (SetUnknownFn.getFunctionType()->getNumParams() == 1)
+      Builder.CreateCall(SetUnknownFn, {/*Address=*/M->getArgOperand(0)});
+    else
+      Builder.CreateCall(SetUnknownFn,
+                         {/*Address=*/M->getArgOperand(0),
+                          /*Size=*/Builder.CreateIntCast(M->getArgOperand(2),
+                                                         IntptrTy, false)});
+
   } else if (auto *M = dyn_cast<MemTransferInst>(MI)) {
-    Builder.CreateCall(
-        NsanCopyValues,
-        {/*Destination=*/M->getArgOperand(0),
-         /*Source=*/M->getArgOperand(1),
-         /*Size=*/Builder.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
+    FunctionCallee CopyFn =
+        NsanCopyFns.getFunctionFor(GetMemOpSize(M->getArgOperand(2)));
+
+    if (CopyFn.getFunctionType()->getNumParams() == 2)
+      Builder.CreateCall(CopyFn, {/*Destination=*/M->getArgOperand(0),
+                                  /*Source=*/M->getArgOperand(1)});
+    else
+      Builder.CreateCall(CopyFn, {/*Destination=*/M->getArgOperand(0),
+                                  /*Source=*/M->getArgOperand(1),
+                                  /*Size=*/
+                                  Builder.CreateIntCast(M->getArgOperand(2),
+                                                        IntptrTy, false)});
   }
   return false;
 }

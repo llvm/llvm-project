@@ -10,6 +10,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include <unordered_set>
@@ -88,6 +89,12 @@ static cl::opt<bool>
                               "always print a module IR"),
                      cl::init(false), cl::Hidden);
 
+static cl::opt<bool> LoopPrintFuncScope(
+    "print-loop-func-scope",
+    cl::desc("When printing IR for print-[before|after]{-all} "
+             "for a loop pass, always print function IR"),
+    cl::init(false), cl::Hidden);
+
 // See the description for -print-changed for an explanation of the use
 // of this option.
 static cl::list<std::string> FilterPasses(
@@ -140,6 +147,8 @@ std::vector<std::string> llvm::printAfterPasses() {
 }
 
 bool llvm::forcePrintModuleIR() { return PrintModuleScope; }
+
+bool llvm::forcePrintFuncIR() { return LoopPrintFuncScope; }
 
 bool llvm::isPassInPrintList(StringRef PassName) {
   static std::unordered_set<std::string> Set(FilterPasses.begin(),
@@ -207,6 +216,8 @@ std::error_code llvm::cleanUpTempFiles(ArrayRef<std::string> FileName) {
 std::string llvm::doSystemDiff(StringRef Before, StringRef After,
                                StringRef OldLineFormat, StringRef NewLineFormat,
                                StringRef UnchangedLineFormat) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   // Store the 2 bodies into temporary files and call diff on them
   // to get the body of the node.
   static SmallVector<int> FD{-1, -1, -1};

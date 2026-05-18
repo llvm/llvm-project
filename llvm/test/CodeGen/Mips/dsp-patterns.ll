@@ -1,5 +1,5 @@
-; RUN: llc -march=mips -mcpu=mips32r2 -mattr=dsp < %s | FileCheck %s -check-prefix=R1
-; RUN: llc -march=mips -mcpu=mips32r2 -mattr=dspr2 < %s | FileCheck %s -check-prefix=R2
+; RUN: llc -mtriple=mips -mcpu=mips32r2 -mattr=dsp < %s | FileCheck %s -check-prefix=R1
+; RUN: llc -mtriple=mips -mcpu=mips32r2 -mattr=dspr2 < %s | FileCheck %s -check-prefix=R2
 
 ; R1-LABEL: test_lbux:
 ; R1: lbux ${{[0-9]+}}

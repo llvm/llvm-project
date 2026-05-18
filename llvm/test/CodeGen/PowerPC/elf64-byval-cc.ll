@@ -403,11 +403,10 @@ define void @call_test_byval_mem32_2() #0 {
 ; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    addis 3, 2, .LC5@toc@ha
 ; CHECK-NEXT:    vspltisw 2, 1
+; CHECK-NEXT:    addis 3, 2, .LC5@toc@ha
 ; CHECK-NEXT:    ld 3, .LC5@toc@l(3)
 ; CHECK-NEXT:    xvcvsxwdp 1, 34
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    ld 7, 24(3)
 ; CHECK-NEXT:    ld 6, 16(3)
 ; CHECK-NEXT:    ld 5, 8(3)
@@ -453,9 +452,7 @@ define void @call_test_byval_mem32_3() #0 {
 ; CHECK-NEXT:    li 7, 2
 ; CHECK-NEXT:    ld 3, .LC5@toc@l(3)
 ; CHECK-NEXT:    xvcvsxwdp 1, 34
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    xvcvsxwdp 2, 35
-; CHECK-NEXT:    # kill: def $f2 killed $f2 killed $vsl2
 ; CHECK-NEXT:    lxvd2x 0, 3, 4
 ; CHECK-NEXT:    li 4, 88
 ; CHECK-NEXT:    stxvd2x 0, 1, 4

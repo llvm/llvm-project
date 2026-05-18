@@ -9,7 +9,7 @@
 # CHECK-NEXT: >>> referenced by undef-multi.s
 # CHECK-NEXT: >>>               {{.*}}:(.text+0x6)
 # CHECK-NEXT: >>> referenced by undef-multi.s
-# CHECK-NEXT: >>>               {{.*}}:(.text+0xB)
+# CHECK-NEXT: >>>               {{.*}}:(.text+0xb)
 # CHECK-NEXT: >>> referenced 2 more times
 
 # All references to a single undefined symbol count as a single error -- but
@@ -33,7 +33,7 @@
 # LIMIT-NEXT: >>> referenced by undef-multi.s
 # LIMIT-NEXT: >>>               {{.*}}:(.text+0x6)
 # LIMIT-NEXT: >>> referenced by undef-multi.s
-# LIMIT-NEXT: >>>               {{.*}}:(.text+0xB)
+# LIMIT-NEXT: >>>               {{.*}}:(.text+0xb)
 # LIMIT-NEXT: >>> referenced 9 more times
 
 .file "undef-multi.s"

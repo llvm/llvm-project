@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 %s -Wno-c++23-extensions -verify
 // RUN: %clang_cc1 -std=c++23 %s -verify
 
-
 template <auto> struct Nothing {};
 Nothing<[]() { return 0; }()> nothing;
 
@@ -70,21 +69,23 @@ void use_g() { g<6>(&"hello"); } // expected-error {{ambiguous}}
 namespace GH51416 {
 
 template <class T>
-struct A {
+struct A { // #defined-here-A
   void spam(decltype([] {}));
 };
 
 template <class T>
 void A<T>::spam(decltype([] {})) // expected-error{{out-of-line definition of 'spam' does not match}}
+                                 // expected-note@#defined-here-A{{defined here}}
 {}
 
-struct B {
+struct B { // #defined-here-B
   template <class T>
   void spam(decltype([] {}));
 };
 
 template <class T>
 void B::spam(decltype([] {})) {} // expected-error{{out-of-line definition of 'spam' does not match}}
+                                 // expected-note@#defined-here-B{{defined here}}
 
 } // namespace GH51416
 
@@ -172,7 +173,7 @@ int* func(T) requires requires { []() { T::foo(); }; }; // expected-error{{type 
 double* func(...);
 
 static_assert(__is_same(decltype(func(0)), double*)); // expected-note {{while checking constraint satisfaction for template 'func<int>' required here}}
-                                                      // expected-note@-1 {{in instantiation of function template specialization 'lambda_in_constraints::func<int>'}}
+                                                      // expected-note@-1 {{while substituting deduced template arguments into function template 'func' [with T = int]}}
 static_assert(__is_same(decltype(func(WithFoo())), int*));
 
 template <class T>
@@ -250,7 +251,7 @@ S s("a"); // #use
 // expected-note@#S-requires {{substituting template arguments into constraint expression here}}
 // expected-note@#S-requires {{in instantiation of requirement here}}
 // expected-note@#use {{checking constraint satisfaction for template 'S<const char *>' required here}}
-// expected-note@#use {{requested here}}
+// expected-note@#use {{while substituting deduced template arguments into function template 'S' [with value:auto = const char *]}}
 // expected-note-re@#S 2{{candidate constructor {{.*}} not viable}}
 // expected-note@#S-ctor {{constraints not satisfied}}
 // expected-note-re@#S-requires {{because {{.*}} would be invalid}}
@@ -264,3 +265,56 @@ void func() {
 }
 
 } // namespace GH88081
+
+namespace GH138018 {
+
+template <typename T> struct vec {};
+
+auto structure_to_typelist(auto)  {
+    return []<template <typename> typename T>(T<int>) {
+        return 0;
+    }(vec<int>{});
+}
+
+template <typename T> using helper = decltype(structure_to_typelist(T{}));
+static_assert(__is_same_as(int, helper<int>));
+
+
+} // namespace GH138018
+
+namespace GH172814 {
+auto t() {
+  int x = 0;
+  return [](auto w = [&] { return x; }) { }; // expected-error {{lambda expression in default argument cannot capture any entity}}
+};
+}
+
+namespace GH176534 {
+struct S {
+  // expected-error@+9 {{reference to local variable 'x' declared in enclosing function 'GH176534::S::a'}}
+  // expected-error@+8 {{variable 'x' cannot be implicitly captured in a lambda with no capture-default specified}}
+  // expected-note@+7 {{'x' declared here}}
+  // expected-note@+6 {{'x' declared here}}
+  // expected-note@+5 {{lambda expression begins here}}
+  // expected-note@+4 {{capture 'x' by value}}
+  // expected-note@+3 {{capture 'x' by reference}}
+  // expected-note@+2 {{default capture by value}}
+  // expected-note@+1 {{default capture by reference}}
+  void a(int x, int = sizeof([x] { return x; }()));
+
+  // expected-error@+8 {{'this' cannot be captured in this context}}
+  // expected-error@+7 {{variable 'x' cannot be implicitly captured in a lambda with no capture-default specified}}
+  // expected-note@+6 {{default capture by reference}}
+  // expected-note@+5 {{lambda expression begins here}}
+  // expected-note@+4 {{capture 'x' by value}}
+  // expected-note@+3 {{capture 'x' by reference}}
+  // expected-note@+2 {{'x' declared here}}
+  // expected-note@+1 {{default capture by value}}
+  void b(int x, int = sizeof([this] { return x; }));
+
+  // expected-error@+3 {{non-local lambda expression cannot have a capture-default}}
+  // expected-error@+2 {{reference to local variable 'x' declared in enclosing function 'GH176534::S::c'}}
+  // expected-note@+1 {{'x' declared here}}
+  void c(int x, int = sizeof([=] { return x; }));
+};
+}

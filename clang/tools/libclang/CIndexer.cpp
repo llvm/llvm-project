@@ -16,6 +16,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Driver.h"
+#include "clang/Options/OptionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
@@ -25,12 +26,6 @@
 #include "llvm/Support/YAMLParser.h"
 #include <cstdio>
 #include <mutex>
-
-#ifdef __CYGWIN__
-#include <cygwin/version.h>
-#include <sys/cygwin.h>
-#define _WIN32 1
-#endif
 
 #ifdef _WIN32
 #include <windows.h>
@@ -112,16 +107,6 @@ const std::string &CIndexer::getClangResourcesPath() {
                sizeof(mbi));
   GetModuleFileNameA((HINSTANCE)mbi.AllocationBase, path, MAX_PATH);
 
-#ifdef __CYGWIN__
-  char w32path[MAX_PATH];
-  strcpy(w32path, path);
-#if CYGWIN_VERSION_API_MAJOR > 0 || CYGWIN_VERSION_API_MINOR >= 181
-  cygwin_conv_path(CCP_WIN_A_TO_POSIX, w32path, path, MAX_PATH);
-#else
-  cygwin_conv_to_full_posix_path(w32path, path);
-#endif
-#endif
-
   LibClangPath += path;
 #elif defined(_AIX)
   getClangResourcesPathImplAIX(LibClangPath);
@@ -153,7 +138,7 @@ const std::string &CIndexer::getClangResourcesPath() {
 #endif
 
   // Cache our result.
-  ResourcesPath = driver::Driver::GetResourcesPath(LibClangPath);
+  ResourcesPath = GetResourcesPath(LibClangPath);
   return ResourcesPath;
 }
 

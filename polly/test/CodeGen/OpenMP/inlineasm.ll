@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-opt-isl,polly-codegen' -polly-parallel -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts;opt-isl>' -polly-parallel -S < %s | FileCheck %s
 ; llvm.org/PR51960
 
 ; CHECK-LABEL: define internal void @foo_polly_subfn

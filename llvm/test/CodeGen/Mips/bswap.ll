@@ -1,10 +1,10 @@
-; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 \
+; RUN: llc  < %s -mtriple=mipsel -mcpu=mips32r2 \
 ; RUN:   | FileCheck %s -check-prefix=MIPS32
-; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 -mattr=+micromips \
+; RUN: llc  < %s -mtriple=mipsel -mcpu=mips32r2 -mattr=+micromips \
 ; RUN:   | FileCheck %s -check-prefix=MM
-; RUN: llc  < %s -march=mips64el -mcpu=mips64r2 \
+; RUN: llc  < %s -mtriple=mips64el -mcpu=mips64r2 \
 ; RUN:   | FileCheck %s -check-prefix=MIPS64
-; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 -mattr=+mips16 \
+; RUN: llc  < %s -mtriple=mipsel -mcpu=mips32r2 -mattr=+mips16 \
 ; RUN:   | FileCheck %s -check-prefix=MIPS16
 
 define i32 @bswap32(i32 signext %x) nounwind readnone {

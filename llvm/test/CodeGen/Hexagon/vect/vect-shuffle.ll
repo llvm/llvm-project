@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -disable-hsdr --stats -o - 2>&1 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -disable-hsdr --stats -o - 2>&1 < %s | FileCheck %s
 
 ; Check that store is post-incremented.
 ; CHECK-NOT: extractu(r{{[0-9]+}},#32,
@@ -43,7 +43,7 @@ polly.loop_body:                                  ; preds = %entry, %polly.loop_
 
 declare i64 @llvm.hexagon.A2.combinew(i32, i32) #1
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
 

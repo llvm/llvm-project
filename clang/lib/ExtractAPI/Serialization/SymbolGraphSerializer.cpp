@@ -19,14 +19,12 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
 #include <optional>
-#include <type_traits>
 
 using namespace clang;
 using namespace clang::extractapi;
@@ -104,6 +102,10 @@ Object serializePlatform(const Triple &T) {
   Object Platform;
   Platform["architecture"] = T.getArchName();
   Platform["vendor"] = T.getVendorName();
+
+  if (!T.getEnvironmentName().empty())
+    Platform["environment"] = T.getEnvironmentName();
+
   Platform["operatingSystem"] = serializeOperatingSystem(T);
   return Platform;
 }
@@ -171,22 +173,25 @@ std::optional<Array> serializeAvailability(const AvailabilityInfo &Avail) {
     UnconditionallyDeprecated["isUnconditionallyDeprecated"] = true;
     AvailabilityArray.emplace_back(std::move(UnconditionallyDeprecated));
   }
-  Object Availability;
 
-  Availability["domain"] = Avail.Domain;
+  if (Avail.Domain.str() != "") {
+    Object Availability;
+    Availability["domain"] = Avail.Domain;
 
-  if (Avail.isUnavailable()) {
-    Availability["isUnconditionallyUnavailable"] = true;
-  } else {
-    serializeObject(Availability, "introduced",
-                    serializeSemanticVersion(Avail.Introduced));
-    serializeObject(Availability, "deprecated",
-                    serializeSemanticVersion(Avail.Deprecated));
-    serializeObject(Availability, "obsoleted",
-                    serializeSemanticVersion(Avail.Obsoleted));
+    if (Avail.isUnavailable()) {
+      Availability["isUnconditionallyUnavailable"] = true;
+    } else {
+      serializeObject(Availability, "introduced",
+                      serializeSemanticVersion(Avail.Introduced));
+      serializeObject(Availability, "deprecated",
+                      serializeSemanticVersion(Avail.Deprecated));
+      serializeObject(Availability, "obsoleted",
+                      serializeSemanticVersion(Avail.Obsoleted));
+    }
+
+    AvailabilityArray.emplace_back(std::move(Availability));
   }
 
-  AvailabilityArray.emplace_back(std::move(Availability));
   return AvailabilityArray;
 }
 
@@ -206,7 +211,6 @@ StringRef getLanguageName(Language Lang) {
   case Language::OpenCL:
   case Language::OpenCLCXX:
   case Language::CUDA:
-  case Language::RenderScript:
   case Language::HIP:
   case Language::HLSL:
 
@@ -337,6 +341,22 @@ Object serializeNames(const APIRecord *Record) {
   serializeArray(Names, "subHeading",
                  serializeDeclarationFragments(Record->SubHeading));
   DeclarationFragments NavigatorFragments;
+  // The +/- prefix for Objective-C methods is important information, and
+  // should be included in the navigator fragment. The entire subheading is
+  // not included as it can contain too much information for other records.
+  switch (Record->getKind()) {
+  case APIRecord::RK_ObjCClassMethod:
+    NavigatorFragments.append("+ ", DeclarationFragments::FragmentKind::Text,
+                              /*PreciseIdentifier*/ "");
+    break;
+  case APIRecord::RK_ObjCInstanceMethod:
+    NavigatorFragments.append("- ", DeclarationFragments::FragmentKind::Text,
+                              /*PreciseIdentifier*/ "");
+    break;
+  default:
+    break;
+  }
+
   NavigatorFragments.append(Record->Name,
                             DeclarationFragments::FragmentKind::Identifier,
                             /*PreciseIdentifier*/ "");
@@ -666,14 +686,6 @@ bool SymbolGraphSerializer::shouldSkip(const APIRecord *Record) const {
   if (Record->Availability.isUnconditionallyUnavailable())
     return true;
 
-  // Filter out symbols without a name as we can generate correct symbol graphs
-  // for them. In practice these are anonymous record types that aren't attached
-  // to a declaration.
-  if (auto *Tag = dyn_cast<TagRecord>(Record)) {
-    if (Tag->IsEmbeddedInVarDeclarator)
-      return true;
-  }
-
   // Filter out symbols prefixed with an underscored as they are understood to
   // be symbols clients should not use.
   if (Record->Name.starts_with("_"))
@@ -929,8 +941,8 @@ bool SymbolGraphSerializer::traverseObjCCategoryRecord(
     return true;
 
   auto *CurrentModule = ModuleForCurrentSymbol;
-  if (Record->isExtendingExternalModule())
-    ModuleForCurrentSymbol = &ExtendedModules[Record->Interface.Source];
+  if (auto ModuleExtendedByRecord = Record->getExtendedExternalModule())
+    ModuleForCurrentSymbol = &ExtendedModules[*ModuleExtendedByRecord];
 
   if (!walkUpFromObjCCategoryRecord(Record))
     return false;
@@ -1069,9 +1081,8 @@ void SymbolGraphSerializer::serializeWithExtensionGraphs(
 
   for (auto &ExtensionSGF : Serializer.ExtendedModules) {
     if (auto ExtensionOS =
-            CreateOutputStream(ExtensionSGF.getKey() + "@" + API.ProductName))
-      Serializer.serializeGraphToStream(*ExtensionOS, Options,
-                                        ExtensionSGF.getKey(),
+            CreateOutputStream(API.ProductName + "@" + ExtensionSGF.getKey()))
+      Serializer.serializeGraphToStream(*ExtensionOS, Options, API.ProductName,
                                         std::move(ExtensionSGF.getValue()));
   }
 }

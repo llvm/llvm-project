@@ -27,6 +27,103 @@ class MemInit {
   C m = s;
 };
 
+namespace std {
+typedef decltype(sizeof(int)) size_t;
+
+// libc++'s implementation
+template <class _E> class initializer_list {
+  const _E *__begin_;
+  size_t __size_;
+
+  initializer_list(const _E *__b, size_t __s) : __begin_(__b), __size_(__s) {}
+
+public:
+  typedef _E value_type;
+  typedef const _E &reference;
+  typedef const _E &const_reference;
+  typedef size_t size_type;
+
+  typedef const _E *iterator;
+  typedef const _E *const_iterator;
+
+  initializer_list() : __begin_(nullptr), __size_(0) {}
+
+  size_t size() const { return __size_; }
+  const _E *begin() const { return __begin_; }
+  const _E *end() const { return __begin_ + __size_; }
+};
+} // namespace std
+
+#if __cplusplus >= 201703L
+
+// Test CXXDefaultInitExpr rebuild issue in 
+// https://github.com/llvm/llvm-project/pull/87933
+namespace test_rebuild {
+template <typename T, int> class C {
+public:
+  C(std::initializer_list<T>);
+};
+
+template <typename T> using Ptr = __remove_pointer(T) *;
+template <typename T> C(T) -> C<Ptr<T>, sizeof(T)>;
+
+class A {
+public:
+  template <typename T1, typename T2> T1 *some_func(T2 &&);
+};
+
+struct B : A {
+  int *ar = some_func<int>(C{some_func<int>(0)});
+  B() {}
+};
+
+int TestBody_got;
+template <int> class Vector {
+public:
+  Vector(std::initializer_list<int>);
+};
+template <typename... Ts> Vector(Ts...) -> Vector<sizeof...(Ts)>;
+class ProgramBuilder {
+public:
+  template <typename T, typename ARGS> int *create(ARGS);
+};
+
+struct TypeTest : ProgramBuilder {
+  int *str_f16 = create<int>(Vector{0});
+  TypeTest() {}
+};
+class TypeTest_Element_Test : TypeTest {
+  void TestBody();
+};
+void TypeTest_Element_Test::TestBody() {
+  int *expect = str_f16;
+  &TestBody_got != expect; // expected-warning {{inequality comparison result unused}}
+}
+} //  namespace test_rebuild
+
+// Test CXXDefaultInitExpr rebuild issue in 
+// https://github.com/llvm/llvm-project/pull/92527
+namespace test_rebuild2 {
+struct F {
+  int g;
+};
+struct H {};
+struct I {
+  I(const F &);
+  I(H);
+};
+struct L {
+  I i = I({.g = 0});
+};
+struct N : L {};
+
+void f() {
+  delete new L; // Ok
+  delete new N; // Ok
+}
+} // namespace test_rebuild2
+#endif // __cplusplus >= 201703L
+
 #if __cplusplus >= 202002L
 // This test ensures cleanup expressions are correctly produced
 // in the presence of default member initializers.

@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++11 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -Wno-c++17-extensions  %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++14 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -Wno-c++17-extensions  %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++17 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted  %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++20 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++11 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -fenable-matrix -Wno-c++17-extensions  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++14 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -fenable-matrix -Wno-c++17-extensions  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++17 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -fenable-matrix  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++20 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -fenable-matrix  %s
 
 
 struct NonPOD { NonPOD(int); };
@@ -18,7 +18,7 @@ enum class SignedEnumClass : signed int {};
 enum class UnsignedEnumClass : unsigned int {};
 struct POD { Enum e; int i; float f; NonPOD* p; };
 struct Empty {};
-struct IncompleteStruct;
+struct IncompleteStruct; // expected-note {{forward declaration of 'IncompleteStruct'}}
 typedef Empty EmptyAr[10];
 typedef Empty EmptyArNB[];
 typedef Empty EmptyArMB[1][2];
@@ -45,6 +45,8 @@ struct HasAnonymousUnion {
 typedef int Vector __attribute__((vector_size(16)));
 typedef int VectorExt __attribute__((ext_vector_type(4)));
 
+typedef float __attribute__((matrix_type(2, 3))) fm2x3;
+typedef int   __attribute__((matrix_type(4, 4))) im4x4;
 using ComplexFloat = _Complex float;
 using ComplexInt = _Complex int;
 
@@ -414,6 +416,9 @@ struct PotentiallyFinal<T*> final { };
 template<>
 struct PotentiallyFinal<int> final { };
 
+struct FwdDeclFinal;
+using FwdDeclFinalAlias = FwdDeclFinal;
+struct FwdDeclFinal final {};
 
 
 
@@ -423,6 +428,8 @@ void is_final()
 	static_assert(__is_final(FinalClass));
 	static_assert(__is_final(PotentiallyFinal<float*>));
 	static_assert(__is_final(PotentiallyFinal<int>));
+        static_assert(__is_final(FwdDeclFinal));
+        static_assert(__is_final(FwdDeclFinalAlias));
 
 	static_assert(!__is_final(int));
 	static_assert(!__is_final(Union));
@@ -779,36 +786,6 @@ void is_unbounded_array(int n) {
   (void)__is_unbounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported in '__is_unbounded_array'}}
 }
 
-void is_referenceable() {
-  static_assert(__is_referenceable(int));
-  static_assert(__is_referenceable(const int));
-  static_assert(__is_referenceable(volatile int));
-  static_assert(__is_referenceable(const volatile int));
-  static_assert(__is_referenceable(int *));
-  static_assert(__is_referenceable(int &));
-  static_assert(__is_referenceable(int &&));
-  static_assert(__is_referenceable(int (*)()));
-  static_assert(__is_referenceable(int (&)()));
-  static_assert(__is_referenceable(int(&&)()));
-  static_assert(__is_referenceable(IntAr));
-  static_assert(__is_referenceable(IntArNB));
-  static_assert(__is_referenceable(decltype(nullptr)));
-  static_assert(__is_referenceable(Empty));
-  static_assert(__is_referenceable(Union));
-  static_assert(__is_referenceable(Derives));
-  static_assert(__is_referenceable(Enum));
-  static_assert(__is_referenceable(EnumClass));
-  static_assert(__is_referenceable(int Empty::*));
-  static_assert(__is_referenceable(int(Empty::*)()));
-  static_assert(__is_referenceable(AnIncompleteType));
-  static_assert(__is_referenceable(struct AnIncompleteType));
-
-  using function_type = void(int);
-  static_assert(__is_referenceable(function_type));
-
-  static_assert(!__is_referenceable(void));
-}
-
 template <typename T> void tmpl_func(T&) {}
 
 template <typename T> struct type_wrapper {
@@ -1039,42 +1016,6 @@ void is_pointer()
   static_assert(!__is_pointer(StructWithMembers));
   static_assert(!__is_pointer(int StructWithMembers::*));
   static_assert(!__is_pointer(void (StructWithMembers::*) ()));
-}
-
-void is_null_pointer() {
-  StructWithMembers x;
-
-  static_assert(__is_nullptr(decltype(nullptr)));
-  static_assert(!__is_nullptr(void *));
-  static_assert(!__is_nullptr(cvoid *));
-  static_assert(!__is_nullptr(cvoid *));
-  static_assert(!__is_nullptr(char *));
-  static_assert(!__is_nullptr(int *));
-  static_assert(!__is_nullptr(int **));
-  static_assert(!__is_nullptr(ClassType *));
-  static_assert(!__is_nullptr(Derives *));
-  static_assert(!__is_nullptr(Enum *));
-  static_assert(!__is_nullptr(IntArNB *));
-  static_assert(!__is_nullptr(Union *));
-  static_assert(!__is_nullptr(UnionAr *));
-  static_assert(!__is_nullptr(StructWithMembers *));
-  static_assert(!__is_nullptr(void (*)()));
-
-  static_assert(!__is_nullptr(void));
-  static_assert(!__is_nullptr(cvoid));
-  static_assert(!__is_nullptr(cvoid));
-  static_assert(!__is_nullptr(char));
-  static_assert(!__is_nullptr(int));
-  static_assert(!__is_nullptr(int));
-  static_assert(!__is_nullptr(ClassType));
-  static_assert(!__is_nullptr(Derives));
-  static_assert(!__is_nullptr(Enum));
-  static_assert(!__is_nullptr(IntArNB));
-  static_assert(!__is_nullptr(Union));
-  static_assert(!__is_nullptr(UnionAr));
-  static_assert(!__is_nullptr(StructWithMembers));
-  static_assert(!__is_nullptr(int StructWithMembers::*));
-  static_assert(!__is_nullptr(void(StructWithMembers::*)()));
 }
 
 void is_member_object_pointer()
@@ -1420,6 +1361,8 @@ void is_trivially_copyable2()
   static_assert(__is_trivially_copyable(NonTrivialStruct));
   static_assert(__is_trivially_copyable(AllDefaulted));
   static_assert(__is_trivially_copyable(AllDeleted));
+  static_assert(__is_trivially_copyable(fm2x3));
+  static_assert(__is_trivially_copyable(im4x4));
 
   static_assert(!__is_trivially_copyable(void));
   static_assert(!__is_trivially_copyable(SuperNonTrivialStruct));
@@ -1738,6 +1681,11 @@ struct CStructWithFMA2 {
   int f[];
 };
 
+template<int N>
+struct UniqueEmpty {};
+template<typename... Bases>
+struct D : Bases... {};
+
 void is_layout_compatible(int n)
 {
   static_assert(__is_layout_compatible(void, void));
@@ -1841,6 +1789,12 @@ void is_layout_compatible(int n)
   static_assert(!__is_layout_compatible(EnumClassLayout, int));
   static_assert(!__is_layout_compatible(EnumForward, int));
   static_assert(!__is_layout_compatible(EnumClassForward, int));
+  static_assert(__is_layout_compatible(CStruct, D<CStruct>));
+  static_assert(__is_layout_compatible(CStruct, D<UniqueEmpty<0>, CStruct>));
+  static_assert(__is_layout_compatible(CStruct, D<UniqueEmpty<0>, D<UniqueEmpty<1>, CStruct>, D<UniqueEmpty<2>>>));
+  static_assert(__is_layout_compatible(CStruct, D<CStructWithQualifiers>));
+  static_assert(__is_layout_compatible(CStruct, D<UniqueEmpty<0>, CStructWithQualifiers>));
+  static_assert(__is_layout_compatible(CStructWithQualifiers, D<UniqueEmpty<0>, D<UniqueEmpty<1>, CStruct>, D<UniqueEmpty<2>>>));
 }
 
 namespace IPIBO {
@@ -1861,6 +1815,11 @@ struct DerivedVirtual : virtual Base {};
 union Union {};
 union UnionIncomplete;
 struct StructIncomplete; // #StructIncomplete
+
+#if __cplusplus >= 201402L
+template<class _Base, class _Derived>
+inline constexpr bool IsPointerInterconvertibleBaseOfV = __is_pointer_interconvertible_base_of(_Base, _Derived);
+#endif
 
 void is_pointer_interconvertible_base_of(int n)
 {
@@ -1930,7 +1889,249 @@ void is_pointer_interconvertible_base_of(int n)
   static_assert(!__is_pointer_interconvertible_base_of(void(&)(int), void(&)(char)));
   static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(int)));
   static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(char)));
+
+#if __cplusplus >= 201402L
+  static_assert(IsPointerInterconvertibleBaseOfV<const Base, Base>);
+  static_assert(IsPointerInterconvertibleBaseOfV<const Base, Derived>);
+#endif
 }
+}
+
+struct NoEligibleTrivialContructor {
+  NoEligibleTrivialContructor() {};
+  NoEligibleTrivialContructor(const NoEligibleTrivialContructor&) {}
+  NoEligibleTrivialContructor(NoEligibleTrivialContructor&&) {}
+};
+
+struct OnlyDefaultConstructorIsTrivial {
+  OnlyDefaultConstructorIsTrivial() = default;
+  OnlyDefaultConstructorIsTrivial(const OnlyDefaultConstructorIsTrivial&) {}
+  OnlyDefaultConstructorIsTrivial(OnlyDefaultConstructorIsTrivial&&) {}
+};
+
+struct AllContstructorsAreTrivial {
+  AllContstructorsAreTrivial() = default;
+  AllContstructorsAreTrivial(const AllContstructorsAreTrivial&) = default;
+  AllContstructorsAreTrivial(AllContstructorsAreTrivial&&) = default;
+};
+
+struct InheritedNoEligibleTrivialConstructor : NoEligibleTrivialContructor {
+  using NoEligibleTrivialContructor::NoEligibleTrivialContructor;
+};
+
+struct InheritedOnlyDefaultConstructorIsTrivial : OnlyDefaultConstructorIsTrivial {
+  using OnlyDefaultConstructorIsTrivial::OnlyDefaultConstructorIsTrivial;
+};
+
+struct InheritedAllContstructorsAreTrivial : AllContstructorsAreTrivial {
+  using AllContstructorsAreTrivial::AllContstructorsAreTrivial;
+};
+
+struct UserDeclaredDestructor {
+  ~UserDeclaredDestructor() = default;
+};
+
+struct UserProvidedDestructor {
+  ~UserProvidedDestructor() {}
+};
+
+struct UserDeletedDestructorInAggregate {
+  ~UserDeletedDestructorInAggregate() = delete;
+};
+
+struct UserDeletedDestructorInNonAggregate {
+  virtual void NonAggregate();
+  ~UserDeletedDestructorInNonAggregate() = delete;
+};
+
+struct DeletedDestructorViaBaseInAggregate : UserDeletedDestructorInAggregate {};
+struct DeletedDestructorViaBaseInNonAggregate : UserDeletedDestructorInNonAggregate {};
+
+#if __cplusplus >= 202002L
+template<bool B>
+struct ConstrainedUserDeclaredDefaultConstructor{
+  ConstrainedUserDeclaredDefaultConstructor() requires B = default;
+  ConstrainedUserDeclaredDefaultConstructor(const ConstrainedUserDeclaredDefaultConstructor&) {}
+};
+
+template<bool B>
+struct ConstrainedUserProvidedDestructor {
+  ~ConstrainedUserProvidedDestructor() = default;
+  ~ConstrainedUserProvidedDestructor() requires B {}
+};
+#endif
+
+struct StructWithFAM {
+  int a[];
+};
+
+struct StructWithZeroSizedArray {
+  int a[0];
+};
+
+typedef float float4 __attribute__((ext_vector_type(4)));
+typedef int *align_value_int __attribute__((align_value(16)));
+
+struct [[clang::enforce_read_only_placement]] EnforceReadOnlyPlacement {};
+struct [[clang::type_visibility("hidden")]] TypeVisibility {};
+
+void is_implicit_lifetime(int n) {
+  static_assert(__builtin_is_implicit_lifetime(decltype(nullptr)));
+  static_assert(!__builtin_is_implicit_lifetime(void));
+  static_assert(!__builtin_is_implicit_lifetime(const void));
+  static_assert(!__builtin_is_implicit_lifetime(volatile void));
+  static_assert(__builtin_is_implicit_lifetime(int));
+  static_assert(!__builtin_is_implicit_lifetime(int&));
+  static_assert(!__builtin_is_implicit_lifetime(int&&));
+  static_assert(__builtin_is_implicit_lifetime(float));
+  static_assert(__builtin_is_implicit_lifetime(double));
+  static_assert(__builtin_is_implicit_lifetime(long double));
+  static_assert(__builtin_is_implicit_lifetime(int*));
+  static_assert(__builtin_is_implicit_lifetime(int[]));
+  static_assert(__builtin_is_implicit_lifetime(int[5]));
+  static_assert(__builtin_is_implicit_lifetime(int[n]));
+  // expected-error@-1 {{variable length arrays are not supported in '__builtin_is_implicit_lifetime'}}
+  static_assert(__builtin_is_implicit_lifetime(Enum));
+  static_assert(__builtin_is_implicit_lifetime(EnumClass));
+  static_assert(!__builtin_is_implicit_lifetime(void()));
+  static_assert(!__builtin_is_implicit_lifetime(void() &));
+  static_assert(!__builtin_is_implicit_lifetime(void() const));
+  static_assert(!__builtin_is_implicit_lifetime(void(&)()));
+  static_assert(__builtin_is_implicit_lifetime(void(*)()));
+  static_assert(__builtin_is_implicit_lifetime(decltype(nullptr)));
+  static_assert(__builtin_is_implicit_lifetime(int UserDeclaredDestructor::*));
+  static_assert(__builtin_is_implicit_lifetime(int (UserDeclaredDestructor::*)()));
+  static_assert(__builtin_is_implicit_lifetime(int (UserDeclaredDestructor::*)() const));
+  static_assert(__builtin_is_implicit_lifetime(int (UserDeclaredDestructor::*)() &));
+  static_assert(__builtin_is_implicit_lifetime(int (UserDeclaredDestructor::*)() &&));
+  static_assert(!__builtin_is_implicit_lifetime(IncompleteStruct));
+  // expected-error@-1 {{incomplete type 'IncompleteStruct' used in type trait expression}}
+  static_assert(__builtin_is_implicit_lifetime(IncompleteStruct[]));
+  static_assert(__builtin_is_implicit_lifetime(IncompleteStruct[5]));
+  static_assert(__builtin_is_implicit_lifetime(UserDeclaredDestructor));
+  static_assert(__builtin_is_implicit_lifetime(const UserDeclaredDestructor));
+  static_assert(__builtin_is_implicit_lifetime(volatile UserDeclaredDestructor));
+  static_assert(!__builtin_is_implicit_lifetime(UserProvidedDestructor));
+  static_assert(!__builtin_is_implicit_lifetime(NoEligibleTrivialContructor));
+  static_assert(__builtin_is_implicit_lifetime(OnlyDefaultConstructorIsTrivial));
+  static_assert(__builtin_is_implicit_lifetime(AllContstructorsAreTrivial));
+  static_assert(!__builtin_is_implicit_lifetime(InheritedNoEligibleTrivialConstructor));
+  static_assert(__builtin_is_implicit_lifetime(InheritedOnlyDefaultConstructorIsTrivial));
+  static_assert(__builtin_is_implicit_lifetime(InheritedAllContstructorsAreTrivial));
+  static_assert(__builtin_is_implicit_lifetime(UserDeletedDestructorInAggregate));
+  static_assert(!__builtin_is_implicit_lifetime(UserDeletedDestructorInNonAggregate));
+  static_assert(__builtin_is_implicit_lifetime(DeletedDestructorViaBaseInAggregate) == __cplusplus >= 201703L);
+  static_assert(!__builtin_is_implicit_lifetime(DeletedDestructorViaBaseInNonAggregate));
+#if __cplusplus >= 202002L
+  static_assert(__builtin_is_implicit_lifetime(ConstrainedUserDeclaredDefaultConstructor<true>));
+  static_assert(!__builtin_is_implicit_lifetime(ConstrainedUserDeclaredDefaultConstructor<false>));
+  static_assert(!__builtin_is_implicit_lifetime(ConstrainedUserProvidedDestructor<true>));
+  static_assert(__builtin_is_implicit_lifetime(ConstrainedUserProvidedDestructor<false>));
+#endif
+
+  static_assert(__builtin_is_implicit_lifetime(__int128));
+  static_assert(__builtin_is_implicit_lifetime(_BitInt(8)));
+  static_assert(__builtin_is_implicit_lifetime(_BitInt(128)));
+  static_assert(__builtin_is_implicit_lifetime(int[0]));
+  static_assert(__builtin_is_implicit_lifetime(StructWithFAM));
+  static_assert(__builtin_is_implicit_lifetime(StructWithZeroSizedArray));
+  static_assert(__builtin_is_implicit_lifetime(__fp16));
+  static_assert(__builtin_is_implicit_lifetime(__bf16));
+  static_assert(__builtin_is_implicit_lifetime(_Complex double));
+  static_assert(__builtin_is_implicit_lifetime(float4));
+  static_assert(__builtin_is_implicit_lifetime(align_value_int));
+  static_assert(__builtin_is_implicit_lifetime(int[[clang::annotate_type("category2")]] *));
+  static_assert(__builtin_is_implicit_lifetime(EnforceReadOnlyPlacement));
+  static_assert(__builtin_is_implicit_lifetime(int __attribute__((noderef)) *));
+  static_assert(__builtin_is_implicit_lifetime(TypeVisibility));
+  static_assert(__builtin_is_implicit_lifetime(int * _Nonnull));
+  static_assert(__builtin_is_implicit_lifetime(int * _Null_unspecified));
+  static_assert(__builtin_is_implicit_lifetime(int * _Nullable));
+  static_assert(!__builtin_is_implicit_lifetime(_Atomic int));
+  // expected-error@-1 {{atomic types are not supported in '__builtin_is_implicit_lifetime'}}
+  static_assert(__builtin_is_implicit_lifetime(int * __restrict));
+}
+
+namespace GH160610 {
+class NonAggregate {
+public:
+    NonAggregate() = default;
+
+    NonAggregate(const NonAggregate&)            = delete;
+    NonAggregate& operator=(const NonAggregate&) = delete;
+private:
+    int num;
+};
+
+class DataMemberInitializer {
+public:
+    DataMemberInitializer() = default;
+
+    DataMemberInitializer(const DataMemberInitializer&)            = delete;
+    DataMemberInitializer& operator=(const DataMemberInitializer&) = delete;
+private:
+    int num = 0;
+};
+
+class UserProvidedConstructor {
+public:
+    UserProvidedConstructor() {}
+
+    UserProvidedConstructor(const UserProvidedConstructor&)            = delete;
+    UserProvidedConstructor& operator=(const UserProvidedConstructor&) = delete;
+};
+struct Ctr {
+  Ctr();
+};
+struct Ctr2 {
+  Ctr2();
+private:
+  NoEligibleTrivialContructor inner;
+};
+
+struct NonCopyable{
+    NonCopyable() = default;
+    NonCopyable(const NonCopyable&) = delete;
+};
+
+class C {
+    NonCopyable nc;
+};
+
+static_assert(__builtin_is_implicit_lifetime(Ctr));
+static_assert(!__builtin_is_implicit_lifetime(Ctr2));
+static_assert(__builtin_is_implicit_lifetime(C));
+static_assert(!__builtin_is_implicit_lifetime(NoEligibleTrivialContructor));
+static_assert(__builtin_is_implicit_lifetime(NonAggregate));
+static_assert(!__builtin_is_implicit_lifetime(DataMemberInitializer));
+static_assert(!__builtin_is_implicit_lifetime(UserProvidedConstructor));
+
+#if __cplusplus >= 202002L
+template <typename T>
+class Tpl {
+    Tpl() requires false = default ;
+};
+static_assert(__builtin_is_implicit_lifetime(Tpl<int>));
+
+template <typename>
+class MultipleDefaults {
+  MultipleDefaults() {};
+  MultipleDefaults() requires true = default;
+};
+static_assert(__builtin_is_implicit_lifetime(MultipleDefaults<int>));
+template <typename>
+class MultipleDefaults2 {
+  MultipleDefaults2() requires true {};
+  MultipleDefaults2() = default;
+};
+
+static_assert(__builtin_is_implicit_lifetime(MultipleDefaults2<int>));
+
+
+#endif
+
+
+
 }
 
 void is_signed()
@@ -2402,11 +2603,11 @@ template<typename T> struct DerivedB : BaseA<T> { };
 template<typename T> struct CrazyDerived : T { };
 
 
-class class_forward; // expected-note 2 {{forward declaration of 'class_forward'}}
+class class_forward; // expected-note 4 {{forward declaration of 'class_forward'}}
 
 template <class T> class DerivedTemp : Base {};
 template <class T> class NonderivedTemp {};
-template <class T> class UndefinedTemp; // expected-note {{declared here}}
+template <class T> class UndefinedTemp; // expected-note 2 {{declared here}}
 
 void is_base_of() {
   static_assert(__is_base_of(Base, Derived));
@@ -2457,6 +2658,76 @@ void is_base_of() {
   static_assert(!__is_base_of(DerivedB<int>, BaseA<int>));
 }
 
+struct DerivedTransitiveViaNonVirtual : Derived3 {};
+struct DerivedTransitiveViaVirtual : virtual Derived3 {};
+
+template <typename T>
+struct CrazyDerivedVirtual : virtual T {};
+
+struct DerivedPrivate : private virtual Base {};
+struct DerivedProtected : protected virtual Base {};
+struct DerivedPrivatePrivate : private DerivedPrivate {};
+struct DerivedPrivateProtected : private DerivedProtected {};
+struct DerivedProtectedPrivate : protected DerivedProtected {};
+struct DerivedProtectedProtected : protected DerivedProtected {};
+
+void is_virtual_base_of(int n) {
+  static_assert(!__builtin_is_virtual_base_of(Base, Derived));
+  static_assert(!__builtin_is_virtual_base_of(const Base, Derived));
+  static_assert(!__builtin_is_virtual_base_of(Derived, Base));
+  static_assert(!__builtin_is_virtual_base_of(Derived, int));
+  static_assert(!__builtin_is_virtual_base_of(Base, Base));
+  static_assert(!__builtin_is_virtual_base_of(Base, Derived3));
+  static_assert(!__builtin_is_virtual_base_of(Derived, Derived3));
+  static_assert(__builtin_is_virtual_base_of(Derived2b, Derived3));
+  static_assert(__builtin_is_virtual_base_of(Derived2a, Derived3));
+  static_assert(!__builtin_is_virtual_base_of(BaseA<int>, DerivedB<int>));
+  static_assert(!__builtin_is_virtual_base_of(DerivedB<int>, BaseA<int>));
+  static_assert(!__builtin_is_virtual_base_of(Union, Union));
+  static_assert(!__builtin_is_virtual_base_of(Empty, Empty));
+  static_assert(!__builtin_is_virtual_base_of(class_forward, class_forward)); // expected-error {{incomplete type 'class_forward' where a complete type is required}}
+  static_assert(!__builtin_is_virtual_base_of(Empty, class_forward)); // expected-error {{incomplete type 'class_forward' where a complete type is required}}
+  static_assert(!__builtin_is_virtual_base_of(class_forward, Empty));
+  static_assert(!__builtin_is_virtual_base_of(Base&, Derived&));
+  static_assert(!__builtin_is_virtual_base_of(Base[10], Derived[10]));
+  static_assert(!__builtin_is_virtual_base_of(Base[n], Derived[n])); // expected-error 2 {{variable length arrays are not supported in '__builtin_is_virtual_base_of'}}
+  static_assert(!__builtin_is_virtual_base_of(int, int));
+  static_assert(!__builtin_is_virtual_base_of(int[], int[]));
+  static_assert(!__builtin_is_virtual_base_of(long, int));
+  static_assert(!__builtin_is_virtual_base_of(Base, DerivedTemp<int>));
+  static_assert(!__builtin_is_virtual_base_of(Base, NonderivedTemp<int>));
+  static_assert(!__builtin_is_virtual_base_of(Base, UndefinedTemp<int>)); // expected-error {{implicit instantiation of undefined template 'UndefinedTemp<int>'}}
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedPrivate));
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedProtected));
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedPrivatePrivate));
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedPrivateProtected));
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedProtectedPrivate));
+  static_assert(__builtin_is_virtual_base_of(Base, DerivedProtectedProtected));
+  static_assert(__builtin_is_virtual_base_of(Derived2a, DerivedTransitiveViaNonVirtual));
+  static_assert(__builtin_is_virtual_base_of(Derived2b, DerivedTransitiveViaNonVirtual));
+  static_assert(__builtin_is_virtual_base_of(Derived2a, DerivedTransitiveViaVirtual));
+  static_assert(__builtin_is_virtual_base_of(Derived2b, DerivedTransitiveViaVirtual));
+  static_assert(!__builtin_is_virtual_base_of(Base, CrazyDerived<Base>));
+  static_assert(!__builtin_is_virtual_base_of(CrazyDerived<Base>, Base));
+  static_assert(__builtin_is_virtual_base_of(Base, CrazyDerivedVirtual<Base>));
+  static_assert(!__builtin_is_virtual_base_of(CrazyDerivedVirtual<Base>, Base));
+
+  static_assert(!__builtin_is_virtual_base_of(IncompleteUnion, IncompleteUnion));
+  static_assert(!__builtin_is_virtual_base_of(Union, IncompleteUnion));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteUnion, Union));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteStruct, IncompleteUnion));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteUnion, IncompleteStruct));
+  static_assert(!__builtin_is_virtual_base_of(Empty, IncompleteUnion));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteUnion, Empty));
+  static_assert(!__builtin_is_virtual_base_of(int, IncompleteUnion));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteUnion, int));
+  static_assert(!__builtin_is_virtual_base_of(Empty, Union));
+  static_assert(!__builtin_is_virtual_base_of(Union, Empty));
+  static_assert(!__builtin_is_virtual_base_of(int, Empty));
+  static_assert(!__builtin_is_virtual_base_of(Union, int));
+  static_assert(!__builtin_is_virtual_base_of(IncompleteStruct, IncompleteStruct[n])); // expected-error {{variable length arrays are not supported in '__builtin_is_virtual_base_of'}}
+}
+
 template<class T, class U>
 class TemplateClass {};
 
@@ -2503,6 +2774,9 @@ struct FloatWrapper
   }
 };
 
+template<typename A, typename B, bool result = __is_convertible(A, B)>
+static constexpr bool is_convertible_sfinae() { return result; }
+
 void is_convertible()
 {
   static_assert(__is_convertible(IntWrapper, IntWrapper));
@@ -2527,6 +2801,10 @@ void is_convertible()
   static_assert(__is_convertible(FloatWrapper, const float&));
   static_assert(__is_convertible(float, FloatWrapper&&));
   static_assert(__is_convertible(float, const FloatWrapper&));
+
+  static_assert(!__is_convertible(AllPrivate, AllPrivate));
+  // Make sure we don't emit "calling a private constructor" in SFINAE context.
+  static_assert(!is_convertible_sfinae<AllPrivate, AllPrivate>());
 }
 
 void is_nothrow_convertible()
@@ -2651,6 +2929,9 @@ void is_trivial()
 }
 
 template<typename T> struct TriviallyConstructibleTemplate {};
+
+template<typename A, typename B, bool result = __is_assignable(A, B)>
+static constexpr bool is_assignable_sfinae() { return result; }
 
 void trivial_checks()
 {
@@ -2825,6 +3106,10 @@ void trivial_checks()
   static_assert(!__is_assignable(AnIncompleteType[1], AnIncompleteType[1])); // expected-error {{incomplete type}}
   static_assert(!__is_assignable(void, void));
   static_assert(!__is_assignable(const volatile void, const volatile void));
+
+  static_assert(!__is_assignable(AllPrivate, AllPrivate));
+  // Make sure we don't emit "'operator=' is a private member" in SFINAE context.
+  static_assert(!is_assignable_sfinae<AllPrivate, AllPrivate>());
 }
 
 void constructible_checks() {
@@ -2954,6 +3239,10 @@ void reference_binds_to_temporary_checks() {
   static_assert(!(__reference_binds_to_temporary(int, long)));
 
   static_assert((__reference_binds_to_temporary(const int &, long)));
+
+  // Test that function references are never considered bound to temporaries.
+  static_assert(!__reference_binds_to_temporary(void(&)(), void()));
+  static_assert(!__reference_binds_to_temporary(void(&&)(), void()));
 }
 
 
@@ -2965,6 +3254,14 @@ struct ExplicitConversionRvalueRef {
 struct ExplicitConversionRef {
     operator int();
     explicit operator int&();
+};
+
+struct NonMovable {
+  NonMovable(NonMovable&&) = delete;
+};
+
+struct ConvertsFromNonMovable {
+  ConvertsFromNonMovable(NonMovable);
 };
 
 void reference_constructs_from_temporary_checks() {
@@ -3004,6 +3301,16 @@ void reference_constructs_from_temporary_checks() {
 
   static_assert(__reference_constructs_from_temporary(const int &, long));
 
+  // Test that function references are never considered bound to temporaries.
+  static_assert(!__reference_constructs_from_temporary(void(&&)(), void()));
+  static_assert(!__reference_constructs_from_temporary(void(&)(), void()));
+
+  // LWG3819: reference_meows_from_temporary should not use is_meowible
+  static_assert(__reference_constructs_from_temporary(ConvertsFromNonMovable&&, NonMovable) == __cplusplus >= 201703L);
+  // For scalar types, cv-qualifications are dropped first for prvalues.
+  static_assert(__reference_constructs_from_temporary(int&&, const int));
+  static_assert(__reference_constructs_from_temporary(int&&, volatile int));
+
   // Additional checks
   static_assert(__reference_constructs_from_temporary(POD const&, Derives));
   static_assert(__reference_constructs_from_temporary(int&&, int));
@@ -3020,6 +3327,9 @@ void reference_constructs_from_temporary_checks() {
 
 
 }
+
+template<typename A, typename B, bool result = __reference_converts_from_temporary(A, B)>
+static constexpr bool reference_converts_from_temporary_sfinae() { return result; }
 
 void reference_converts_from_temporary_checks() {
   static_assert(!__reference_converts_from_temporary(int &, int &));
@@ -3058,6 +3368,16 @@ void reference_converts_from_temporary_checks() {
 
   static_assert(__reference_converts_from_temporary(const int &, long));
 
+  // Test that function references are never considered bound to temporaries.
+  static_assert(!__reference_converts_from_temporary(void(&)(), void()));
+  static_assert(!__reference_converts_from_temporary(void(&&)(), void()));
+
+  // LWG3819: reference_meows_from_temporary should not use is_meowible
+  static_assert(__reference_converts_from_temporary(ConvertsFromNonMovable&&, NonMovable) == __cplusplus >= 201703L);
+  // For scalar types, cv-qualifications are dropped first for prvalues.
+  static_assert(__reference_converts_from_temporary(int&&, const int));
+  static_assert(__reference_converts_from_temporary(int&&, volatile int));
+
   // Additional checks
   static_assert(__reference_converts_from_temporary(POD const&, Derives));
   static_assert(__reference_converts_from_temporary(int&&, int));
@@ -3071,6 +3391,9 @@ void reference_converts_from_temporary_checks() {
   static_assert(__reference_converts_from_temporary(const int&, ExplicitConversionRef));
   static_assert(__reference_converts_from_temporary(int&&, ExplicitConversionRvalueRef));
 
+  static_assert(!__reference_converts_from_temporary(AllPrivate, AllPrivate));
+  // Make sure we don't emit "calling a private constructor" in SFINAE context.
+  static_assert(!reference_converts_from_temporary_sfinae<AllPrivate, AllPrivate>());
 }
 
 void array_rank() {
@@ -3212,6 +3535,16 @@ static_assert(!__has_unique_object_representations(decltype(nullptr)), "or nullp
 static_assert(!__has_unique_object_representations(float), "definitely not Floating Point");
 static_assert(!__has_unique_object_representations(double), "definitely not Floating Point");
 static_assert(!__has_unique_object_representations(long double), "definitely not Floating Point");
+
+
+static_assert(!__has_unique_object_representations(AnIncompleteType[]));
+//expected-error@-1 {{incomplete type 'AnIncompleteType' used in type trait expression}}
+static_assert(!__has_unique_object_representations(AnIncompleteType[][1]));
+//expected-error@-1 {{incomplete type 'AnIncompleteType' used in type trait expression}}
+static_assert(!__has_unique_object_representations(AnIncompleteType[1]));
+//expected-error@-1 {{incomplete type 'AnIncompleteType' used in type trait expression}}
+static_assert(!__has_unique_object_representations(AnIncompleteType));
+//expected-error@-1 {{incomplete type 'AnIncompleteType' used in type trait expression}}
 
 struct NoPadding {
   int a;
@@ -3674,6 +4007,14 @@ namespace is_trivially_equality_comparable {
 struct ForwardDeclared; // expected-note {{forward declaration of 'is_trivially_equality_comparable::ForwardDeclared'}}
 static_assert(!__is_trivially_equality_comparable(ForwardDeclared)); // expected-error {{incomplete type 'ForwardDeclared' used in type trait expression}}
 
+enum Byte : unsigned char {};
+enum ByteWithOpEq : unsigned char {};
+bool operator==(ByteWithOpEq, ByteWithOpEq);
+
+enum Enum {};
+enum EnumWithOpEq {};
+bool operator==(EnumWithOpEq, EnumWithOpEq);
+
 static_assert(!__is_trivially_equality_comparable(void));
 static_assert(__is_trivially_equality_comparable(int));
 static_assert(!__is_trivially_equality_comparable(int[]));
@@ -3681,6 +4022,10 @@ static_assert(!__is_trivially_equality_comparable(int[3]));
 static_assert(!__is_trivially_equality_comparable(float));
 static_assert(!__is_trivially_equality_comparable(double));
 static_assert(!__is_trivially_equality_comparable(long double));
+static_assert(__is_trivially_equality_comparable(Byte));
+static_assert(!__is_trivially_equality_comparable(ByteWithOpEq));
+static_assert(__is_trivially_equality_comparable(Enum));
+static_assert(!__is_trivially_equality_comparable(EnumWithOpEq));
 
 struct NonTriviallyEqualityComparableNoComparator {
   int i;
@@ -3714,19 +4059,26 @@ struct TriviallyEqualityComparable {
 };
 static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparable));
 
-struct TriviallyEqualityComparableContainsArray {
-  int a[4];
+template <class T>
+struct TriviallyEqualityComparableContains {
+  T t;
 
-  bool operator==(const TriviallyEqualityComparableContainsArray&) const = default;
+  bool operator==(const TriviallyEqualityComparableContains&) const = default;
 };
-static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContainsArray));
 
-struct TriviallyEqualityComparableContainsMultiDimensionArray {
-  int a[4][4];
-
-  bool operator==(const TriviallyEqualityComparableContainsMultiDimensionArray&) const = default;
-};
-static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContainsMultiDimensionArray));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int&>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<float>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<double>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<long double>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int[4]>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int[4][4]>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<Enum>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<Enum[2]>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<Enum[2][2]>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<EnumWithOpEq>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<EnumWithOpEq[2]>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<EnumWithOpEq[2][2]>));
 
 auto GetNonCapturingLambda() { return [](){ return 42; }; }
 
@@ -3855,13 +4207,6 @@ struct NotTriviallyEqualityComparableImplicitlyDeletedOperatorByStruct {
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableImplicitlyDeletedOperatorByStruct));
 
-struct NotTriviallyEqualityComparableHasReferenceMember {
-  int& i;
-
-  bool operator==(const NotTriviallyEqualityComparableHasReferenceMember&) const = default;
-};
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasReferenceMember));
-
 struct NotTriviallyEqualityComparableNonTriviallyComparableBaseBase {
   int i;
 
@@ -3877,33 +4222,19 @@ struct NotTriviallyEqualityComparableNonTriviallyComparableBase : NotTriviallyEq
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyComparableBase));
 
-enum E {
-  a,
-  b
+struct NotTriviallyEqualityComparablePrivateComparison {
+  int i;
+
+private:
+  bool operator==(const NotTriviallyEqualityComparablePrivateComparison&) const = default;
 };
-bool operator==(E, E) { return false; }
-static_assert(!__is_trivially_equality_comparable(E));
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparablePrivateComparison));
 
-struct NotTriviallyEqualityComparableHasEnum {
-  E e;
-  bool operator==(const NotTriviallyEqualityComparableHasEnum&) const = default;
-};
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasEnum));
+template<typename T, bool result = __is_trivially_equality_comparable(T)>
+static constexpr bool is_trivially_equality_comparable_sfinae() { return result; }
 
-struct NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs {
-  E e[1];
-
-  bool operator==(const NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs&) const = default;
-};
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs));
-
-struct NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2 {
-  E e[1][1];
-
-  bool operator==(const NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2&) const = default;
-};
-
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2));
+// Make sure we don't emit "'operator==' is a private member" in SFINAE context.
+static_assert(!is_trivially_equality_comparable_sfinae<NotTriviallyEqualityComparablePrivateComparison>());
 
 template<bool B>
 struct MaybeTriviallyEqualityComparable {
@@ -3947,6 +4278,24 @@ class Template {};
 // Make sure we don't crash when instantiating a type
 static_assert(!__is_trivially_equality_comparable(Template<Template<int>>));
 
+
+struct S operator==(S, S);
+
+template <class> struct basic_string_view {};
+
+struct basic_string {
+  operator basic_string_view<int>() const;
+};
+
+template <class T>
+const bool is_trivially_equality_comparable = __is_trivially_equality_comparable(T);
+
+template <int = is_trivially_equality_comparable<basic_string> >
+void find();
+
+void func() { find(); }
+
+
 namespace hidden_friend {
 
 struct TriviallyEqualityComparable {
@@ -3959,6 +4308,27 @@ struct TriviallyEqualityComparable {
   friend bool operator==(const TriviallyEqualityComparable&, const TriviallyEqualityComparable&) = default;
 };
 static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparable));
+
+template <class T>
+struct TriviallyEqualityComparableContains {
+  T t;
+
+  friend bool operator==(const TriviallyEqualityComparableContains&, const TriviallyEqualityComparableContains&) = default;
+};
+
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int&>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<float>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<double>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<long double>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int[4]>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int[4][4]>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<Enum>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<Enum[2]>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<Enum[2][2]>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<EnumWithOpEq>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<EnumWithOpEq[2]>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<EnumWithOpEq[2][2]>));
 
 struct TriviallyEqualityComparableNonTriviallyCopyable {
   TriviallyEqualityComparableNonTriviallyCopyable(const TriviallyEqualityComparableNonTriviallyCopyable&);
@@ -4076,26 +4446,6 @@ struct NotTriviallyEqualityComparableImplicitlyDeletedOperatorByStruct {
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableImplicitlyDeletedOperatorByStruct));
 
-struct NotTriviallyEqualityComparableHasReferenceMember {
-  int& i;
-
-  friend bool operator==(const NotTriviallyEqualityComparableHasReferenceMember&, const NotTriviallyEqualityComparableHasReferenceMember&) = default;
-};
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasReferenceMember));
-
-enum E {
-  a,
-  b
-};
-bool operator==(E, E) { return false; }
-static_assert(!__is_trivially_equality_comparable(E));
-
-struct NotTriviallyEqualityComparableHasEnum {
-  E e;
-  friend bool operator==(const NotTriviallyEqualityComparableHasEnum&, const NotTriviallyEqualityComparableHasEnum&) = default;
-};
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasEnum));
-
 struct NonTriviallyEqualityComparableValueComparisonNonTriviallyCopyable {
   int i;
   NonTriviallyEqualityComparableValueComparisonNonTriviallyCopyable(const NonTriviallyEqualityComparableValueComparisonNonTriviallyCopyable&);
@@ -4114,7 +4464,7 @@ static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableRefC
 }
 
 #endif // __cplusplus >= 202002L
-};
+}
 
 namespace can_pass_in_regs {
 
@@ -4521,8 +4871,6 @@ struct CheckAbominableFunction<M S::*> {
     static_assert(__is_same(remove_cvref_t<M>, M));
     static_assert(__is_same(remove_pointer_t<M>, M));
     static_assert(__is_same(remove_reference_t<M>, M));
-
-    static_assert(!__is_referenceable(M));
   }
 };
 
@@ -4812,4 +5160,19 @@ void remove_all_extents() {
 
   using SomeArray = int[1][2];
   static_assert(__is_same(remove_all_extents_t<const SomeArray>, const int));
+}
+
+namespace GH121278 {
+// https://cplusplus.github.io/LWG/lwg-active.html#3929
+#if __cplusplus >= 202002L
+template <typename B, typename D>
+concept C = __is_base_of(B, D);
+// expected-error@-1 {{incomplete type 'S' used in type trait expression}}
+// expected-note@-2 {{while substituting template arguments into constraint expression here}}
+
+struct T;
+struct S;
+bool b = C<T, S>;
+// expected-note@-1 {{while checking the satisfaction of concept 'C<T, S>' requested here}}
+#endif
 }

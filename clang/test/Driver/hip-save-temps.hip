@@ -1,31 +1,31 @@
 // -fno-gpu-rdc without -o with -c
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   -nogpuinc --offload-arch=gfx900 -c %s 2>&1 | \
+// RUN:   --no-offload-new-driver -nogpuinc --offload-arch=gfx900 -c %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,NORDC %s
 
 // -fno-gpu-rdc without -o
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   -nogpuinc --offload-arch=gfx900 %s 2>&1 | \
+// RUN:   --no-offload-new-driver -nogpuinc --offload-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,NORDC,NOUT %s
 
 // -fno-gpu-rdc with -o
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   -nogpuinc -o executable --offload-arch=gfx900 %s 2>&1 | \
+// RUN:   --no-offload-new-driver -nogpuinc -o executable --offload-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,NORDC,WOUT %s
 
 // -fgpu-rdc without -o with -c
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   -nogpuinc -fgpu-rdc --offload-arch=gfx900 -c %s 2>&1 | \
+// RUN:   --no-offload-new-driver -nogpuinc -fgpu-rdc --offload-arch=gfx900 -c %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,RDC,RDCC %s
 
 // -fgpu-rdc without -o
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   -nogpuinc -fgpu-rdc --offload-arch=gfx900 %s 2>&1 | \
+// RUN:   --no-offload-new-driver -nogpuinc -fgpu-rdc --offload-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,RDC,RDCL,NOUT %s
 
 // -fgpu-rdc with -o
 // UN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// UN:   -nogpuinc -o executable -fgpu-rdc --offload-arch=gfx900 %s 2>&1 | \
+// UN:   --offload-new-driver -nogpuinc -o executable -fgpu-rdc --offload-arch=gfx900 %s 2>&1 | \
 // UN:   FileCheck -check-prefixes=CHECK,RDC,RDCL,WOUT %s
 
 // -fgpu-rdc host object path
@@ -58,7 +58,7 @@
 // RDCC: "{{.*clang.*}}" "-cc1as" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.o"
 // RDCC: "{{.*clang-offload-bundler.*}}" {{.*}} "-output=hip-save-temps.o"
 // RDCL: "{{.*clang-offload-bundler.*}}" {{.*}} "-output=hip-save-temps-hip-amdgcn-amd-amdhsa.hipfb"
-// RDCL: {{.*}}llvm-mc{{.*}}"-o" "hip-save-temps-hip-amdgcn-amd-amdhsa.o" "hip-save-temps-hip-amdgcn-amd-amdhsa.mcin" "--filetype=obj"
+// RDCL: "{{.*clang.*}}" "-target" "x86_64-unknown-linux-gnu" "-o" "{{.*}}.o" "-x" "assembler" "{{.*}}.mcin" "-c"
 
 // -fno-gpu-rdc host object path
 // NORDC: "{{.*clang.*}}" "-cc1" {{.*}} "-E" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.hipi"
@@ -69,3 +69,22 @@
 // output to default a.out or -o specified file name
 // NOUT: {{.*}}ld{{.*}}"-o" "a.out"
 // WOUT: {{.*}}ld{{.*}}"-o" "executable"
+
+// Check to ensure we have a .tmp for unoptimized bitcode with -fno-gpu-rdc.
+// RUN: %clang -### -ccc-print-bindings --target=x86_64-linux-gnu -nogpulib \
+// RUN:   -save-temps -fno-gpu-rdc -nogpuinc --offload-arch=gfx906 -c %s 2>&1 | \
+// RUN:   FileCheck -check-prefixes=NORDC-BINDINGS %s
+//      NORDC-BINDINGS: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HIPI:.+]]"
+// NORDC-BINDINGS-NEXT: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[HIPI]]"], output: "[[TMP_BC:.+]]"
+// NORDC-BINDINGS-NEXT: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[TMP_BC]]"], output: "[[BC:.+]]"
+// NORDC-BINDINGS-NEXT: "amdgcn-amd-amdhsa" - "Offload::Packager", inputs: ["[[BC]]"], output: "[[OUTPUT:.+]]"
+// NORDC-BINDINGS-NEXT: "amdgcn-amd-amdhsa" - "Offload::Linker", inputs: ["[[OUTPUT]]"], output: "[[FATBIN:.+]]"
+
+// Check to ensure we have a .tmp for unoptimized bitcode with -fgpu-rdc.
+// RUN: %clang -### -ccc-print-bindings --target=x86_64-linux-gnu -nogpulib \
+// RUN:   -save-temps -fgpu-rdc -nogpuinc --offload-arch=gfx906 -c %s 2>&1 | \
+// RUN:   FileCheck -check-prefixes=RDC-BINDINGS %s
+//      RDC-BINDINGS: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HIPI:.+]]"
+// RDC-BINDINGS-NEXT: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[HIPI]]"], output: "[[TMP_BC:.+]]"
+// RDC-BINDINGS-NEXT: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[TMP_BC]]"], output: "[[BC:.+]]"
+// RDC-BINDINGS-NEXT: # "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[BC]]"], output: "[[OUTPUT:.+]]"

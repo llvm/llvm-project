@@ -77,7 +77,7 @@ protected:
         process->GetMemoryTagManager();
 
     if (!tag_manager_or_err) {
-      result.SetError(Status(tag_manager_or_err.takeError()));
+      result.SetError(Status::FromError(tag_manager_or_err.takeError()));
       return;
     }
 
@@ -102,7 +102,7 @@ protected:
         tag_manager->MakeTaggedRange(start_addr, end_addr, memory_regions);
 
     if (!tagged_range) {
-      result.SetError(Status(tagged_range.takeError()));
+      result.SetError(Status::FromError(tagged_range.takeError()));
       return;
     }
 
@@ -110,7 +110,7 @@ protected:
         tagged_range->GetRangeBase(), tagged_range->GetByteSize());
 
     if (!tags) {
-      result.SetError(Status(tags.takeError()));
+      result.SetError(Status::FromError(tags.takeError()));
       return;
     }
 
@@ -218,8 +218,7 @@ protected:
       // getAsInteger returns true on failure
       if (entry.ref().getAsInteger(0, tag_value)) {
         result.AppendErrorWithFormat(
-            "'%s' is not a valid unsigned decimal string value.\n",
-            entry.c_str());
+            "'%s' is not a valid unsigned decimal string value", entry.c_str());
         return;
       }
       tags.push_back(tag_value);
@@ -230,7 +229,7 @@ protected:
         process->GetMemoryTagManager();
 
     if (!tag_manager_or_err) {
-      result.SetError(Status(tag_manager_or_err.takeError()));
+      result.SetError(Status::FromError(tag_manager_or_err.takeError()));
       return;
     }
 
@@ -282,7 +281,7 @@ protected:
                                      memory_regions);
 
     if (!tagged_range) {
-      result.SetError(Status(tagged_range.takeError()));
+      result.SetError(Status::FromError(tagged_range.takeError()));
       return;
     }
 
@@ -290,7 +289,7 @@ protected:
                                              tagged_range->GetByteSize(), tags);
 
     if (status.Fail()) {
-      result.SetError(status);
+      result.SetError(std::move(status));
       return;
     }
 
@@ -303,7 +302,7 @@ protected:
 
 CommandObjectMemoryTag::CommandObjectMemoryTag(CommandInterpreter &interpreter)
     : CommandObjectMultiword(
-          interpreter, "tag", "Commands for manipulating memory tags",
+          interpreter, "tag", "Commands for manipulating memory tags.",
           "memory tag <sub-command> [<sub-command-options>]") {
   CommandObjectSP read_command_object(
       new CommandObjectMemoryTagRead(interpreter));

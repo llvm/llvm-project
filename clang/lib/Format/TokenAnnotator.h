@@ -33,14 +33,18 @@ enum LineType {
   LT_VirtualFunctionDecl,
   LT_ArrayOfStructInitializer,
   LT_CommentAbovePPDirective,
+  LT_RequiresExpression,
+  LT_SimpleRequirement,
 };
 
 enum ScopeType {
   // Contained in class declaration/definition.
   ST_Class,
-  // Contained within function definition.
-  ST_Function,
-  // Contained within other scope block (loop, if/else, etc).
+  // Contained in enum declaration/definition.
+  ST_Enum,
+  // Contained in compound requirement.
+  ST_CompoundRequirement,
+  // Contained in other blocks (function, lambda, loop, if/else, child, etc).
   ST_Other,
 };
 
@@ -152,6 +156,11 @@ public:
            startsWith(tok::kw_export, tok::kw_namespace);
   }
 
+  /// \c true if this line starts a C++ export block.
+  bool startsWithExportBlock() const {
+    return startsWith(tok::kw_export, tok::l_brace);
+  }
+
   FormatToken *getFirstNonComment() const {
     assert(First);
     return First->is(tok::comment) ? First->getNextNonComment() : First;
@@ -181,6 +190,9 @@ public:
 
   /// \c True if this line contains a macro call for which an expansion exists.
   bool ContainsMacroCall = false;
+
+  /// \c True if calculateFormattingInformation() has been called on this line.
+  bool Computed = false;
 
   /// \c True if this line should be formatted, i.e. intersects directly or
   /// indirectly with one of the input ranges.
@@ -214,9 +226,7 @@ class TokenAnnotator {
 public:
   TokenAnnotator(const FormatStyle &Style, const AdditionalKeywords &Keywords)
       : Style(Style), IsCpp(Style.isCpp()),
-        LangOpts(getFormattingLangOpts(Style)), Keywords(Keywords) {
-    assert(IsCpp == LangOpts.CXXOperatorNames);
-  }
+        LangOpts(getFormattingLangOpts(Style)), Keywords(Keywords) {}
 
   /// Adapts the indent levels of comment lines to the indent of the
   /// subsequent line.
@@ -239,13 +249,14 @@ private:
   bool spaceRequiredBefore(const AnnotatedLine &Line,
                            const FormatToken &Right) const;
 
-  bool mustBreakBefore(const AnnotatedLine &Line,
-                       const FormatToken &Right) const;
+  bool mustBreakBefore(AnnotatedLine &Line, const FormatToken &Right) const;
 
   bool canBreakBefore(const AnnotatedLine &Line,
                       const FormatToken &Right) const;
 
   bool mustBreakForReturnType(const AnnotatedLine &Line) const;
+
+  bool mustBreakBeforeReturnType(const AnnotatedLine &Line) const;
 
   void printDebugInfo(const AnnotatedLine &Line) const;
 
@@ -269,7 +280,7 @@ private:
 
   const AdditionalKeywords &Keywords;
 
-  SmallVector<ScopeType> Scopes;
+  SmallVector<ScopeType> Scopes, MacroBodyScopes;
 };
 
 } // end namespace format

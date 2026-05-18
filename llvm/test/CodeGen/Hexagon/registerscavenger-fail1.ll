@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -machine-sink-split=0 < %s
+; RUN: llc -mtriple=hexagon -machine-sink-split=0 < %s
 ; REQUIRES: asserts
 
 target triple = "hexagon-unknown-linux-gnu"

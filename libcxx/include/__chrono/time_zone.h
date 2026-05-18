@@ -14,7 +14,7 @@
 
 #include <version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
-#if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#if _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #  include <__chrono/calendar.h>
 #  include <__chrono/duration.h>
@@ -36,9 +36,9 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-#  if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&   \
-      !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
 namespace chrono {
 
@@ -104,9 +104,13 @@ public:
   to_sys(const local_time<_Duration>& __time, choose __z) const {
     local_info __info = get_info(__time);
     switch (__info.result) {
-    case local_info::unique:
-    case local_info::nonexistent: // first and second are the same
+    case local_info::unique: // first and second are the same
       return sys_time<common_type_t<_Duration, seconds>>{__time.time_since_epoch() - __info.first.offset};
+
+    case local_info::nonexistent:
+      // first and second are the same
+      // All non-existing values are converted to the same time.
+      return sys_time<common_type_t<_Duration, seconds>>{__info.first.end};
 
     case local_info::ambiguous:
       switch (__z) {
@@ -170,13 +174,14 @@ operator<=>(const time_zone& __x, const time_zone& __y) noexcept {
 
 } // namespace chrono
 
-#  endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
-         // && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM &&
+         // _LIBCPP_HAS_LOCALIZATION
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #endif // _LIBCPP___CHRONO_TIME_ZONE_H

@@ -269,7 +269,7 @@ void FormattedStackTracePrinter::RenderFrame(InternalScopedString *buffer,
       break;
     default:
       Report("Unsupported specifier in stack frame format: %c (%p)!\n", *p,
-             (void *)p);
+             (const void *)p);
       Die();
     }
   }
@@ -323,7 +323,7 @@ void FormattedStackTracePrinter::RenderData(InternalScopedString *buffer,
         break;
       default:
         Report("Unsupported specifier in stack frame format: %c (%p)!\n", *p,
-               (void *)p);
+               (const void *)p);
         Die();
     }
   }

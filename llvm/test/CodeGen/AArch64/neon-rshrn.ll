@@ -110,11 +110,10 @@ define <16 x i8> @rshrn_v16i16_9(<16 x i16> %a) {
 ; CHECK-LABEL: rshrn_v16i16_9:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.8h, #1, lsl #8
-; CHECK-NEXT:    add v0.8h, v0.8h, v2.8h
 ; CHECK-NEXT:    add v1.8h, v1.8h, v2.8h
-; CHECK-NEXT:    ushr v1.8h, v1.8h, #9
-; CHECK-NEXT:    ushr v0.8h, v0.8h, #9
-; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    add v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ushr v0.16b, v0.16b, #1
 ; CHECK-NEXT:    ret
 entry:
   %b = add <16 x i16> %a, <i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256>
@@ -336,11 +335,10 @@ define <8 x i16> @rshrn_v8i32_17(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_17:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.4s, #1, lsl #16
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    ushr v1.4s, v1.4s, #17
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #17
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ushr v0.8h, v0.8h, #1
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 65536, i32 65536, i32 65536, i32 65536, i32 65536, i32 65536, i32 65536, i32 65536>
@@ -771,11 +769,10 @@ define <4 x i32> @rshrn_v4i64_33(<4 x i64> %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov x8, #4294967296 // =0x100000000
 ; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
 ; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    ushr v1.2d, v1.2d, #33
-; CHECK-NEXT:    ushr v0.2d, v0.2d, #33
-; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #1
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 4294967296, i64 4294967296, i64 4294967296, i64 4294967296>
@@ -871,10 +868,9 @@ define void @rshrn_v2i32_4(<2 x i32> %a, ptr %p) {
 ; CHECK-NEXT:    movi v1.2s, #8
 ; CHECK-NEXT:    add v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ushr v0.2s, v0.2s, #4
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    strh w9, [x0]
-; CHECK-NEXT:    strh w8, [x0, #2]
+; CHECK-NEXT:    mov s1, v0.s[1]
+; CHECK-NEXT:    str h0, [x0]
+; CHECK-NEXT:    str h1, [x0, #2]
 ; CHECK-NEXT:    ret
 entry:
   %b = add <2 x i32> %a, <i32 8, i32 8>
@@ -897,4 +893,80 @@ entry:
   %m = trunc <1 x i64> %s to <1 x i32>
   store <1 x i32> %m, ptr %p
   ret void
+}
+
+
+define <16 x i8> @or_rshrn_v16i16_7(<16 x i16> %a) {
+; CHECK-LABEL: or_rshrn_v16i16_7:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    shrn v0.8b, v0.8h, #7
+; CHECK-NEXT:    shrn2 v0.16b, v1.8h, #7
+; CHECK-NEXT:    ret
+entry:
+  %b = or disjoint <16 x i16> %a, <i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64>
+  %s = lshr <16 x i16> %b, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
+  %m = trunc <16 x i16> %s to <16 x i8>
+  ret <16 x i8> %m
+}
+
+define <16 x i8> @or_rshrn_v16i16_8(<16 x i16> %a) {
+; CHECK-LABEL: or_rshrn_v16i16_8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+entry:
+  %b = or disjoint <16 x i16> %a, <i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128>
+  %s = lshr <16 x i16> %b, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %m = trunc <16 x i16> %s to <16 x i8>
+  ret <16 x i8> %m
+}
+
+define <8 x i16> @or_rshrn_v8i32_15(<8 x i32> %a) {
+; CHECK-LABEL: or_rshrn_v8i32_15:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    shrn v0.4h, v0.4s, #15
+; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #15
+; CHECK-NEXT:    ret
+entry:
+  %b = or disjoint <8 x i32> %a, <i32 16384, i32 16384, i32 16384, i32 16384, i32 16384, i32 16384, i32 16384, i32 16384>
+  %s = lshr <8 x i32> %b, <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
+  %m = trunc <8 x i32> %s to <8 x i16>
+  ret <8 x i16> %m
+}
+
+define <8 x i16> @or_rshrn_v8i32_16(<8 x i32> %a) {
+; CHECK-LABEL: or_rshrn_v8i32_16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+entry:
+  %b = or disjoint <8 x i32> %a, <i32 32768, i32 32768, i32 32768, i32 32768, i32 32768, i32 32768, i32 32768, i32 32768>
+  %s = lshr <8 x i32> %b, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %m = trunc <8 x i32> %s to <8 x i16>
+  ret <8 x i16> %m
+}
+
+define <4 x i32> @or_rshrn_v4i64_31(<4 x i64> %a) {
+; CHECK-LABEL: or_rshrn_v4i64_31:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    shrn v0.2s, v0.2d, #31
+; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #31
+; CHECK-NEXT:    ret
+entry:
+  %b = or disjoint <4 x i64> %a, <i64 1073741824, i64 1073741824, i64 1073741824, i64 1073741824>
+  %s = lshr <4 x i64> %b, <i64 31, i64 31, i64 31, i64 31>
+  %m = trunc <4 x i64> %s to <4 x i32>
+  ret <4 x i32> %m
+}
+
+define <4 x i32> @or_rshrn_v4i64_32(<4 x i64> %a) {
+; CHECK-LABEL: or_rshrn_v4i64_32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+entry:
+  %b = or disjoint <4 x i64> %a, <i64 2147483648, i64 2147483648, i64 2147483648, i64 2147483648>
+  %s = lshr <4 x i64> %b, <i64 32, i64 32, i64 32, i64 32>
+  %m = trunc <4 x i64> %s to <4 x i32>
+  ret <4 x i32> %m
 }

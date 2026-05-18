@@ -183,3 +183,8 @@ int *const_cast_check(NODEREF const int *x) {
 const int *const_cast_check(NODEREF int *x) {
   return const_cast<const int *>(x); // expected-warning{{casting to dereferenceable pointer removes 'noderef' attribute}}
 }
+
+namespace GH116124 {
+// This declaration would previously cause a failed assertion.
+int *_Atomic a __attribute__((noderef));
+}

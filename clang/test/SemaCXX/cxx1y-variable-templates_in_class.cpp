@@ -9,12 +9,12 @@
 #endif
 
 class A {
-  template<typename T> CONST T wrong;           // expected-error {{member 'wrong' declared as a template}}
-  template<typename T> CONST T wrong_init = 5;      // expected-error {{member 'wrong_init' declared as a template}}
+  template<typename T> CONST T wrong;           // expected-error {{non-static data member 'wrong' cannot be declared as a template}}
+  template<typename T> CONST T wrong_init = 5;      // expected-error {{non-static data member 'wrong_init' cannot be declared as a template}}
   template<typename T, typename T0> static CONST T right = T(100);
   template<typename T> static CONST T right<T,int> = 5;
-  template<typename T> CONST int right<int,T>;  // expected-error {{member 'right' declared as a template}}
-  template<typename T> CONST float right<float,T> = 5;  // expected-error {{member 'right' declared as a template}}
+  template<typename T> CONST int right<int,T>;  // expected-error {{non-static data member 'right' cannot be declared as a template}}
+  template<typename T> CONST float right<float,T> = 5;  // expected-error {{non-static data member 'right' cannot be declared as a template}}
 #ifdef PRECXX11
                                                         // expected-warning@-2 {{in-class initializer for static data member of type 'const float' is a GNU extension}}
 #else
@@ -161,14 +161,14 @@ namespace non_const_init {
 #ifndef PRECXX11
 namespace constexpred {
   class A {
-    template<typename T> constexpr T wrong;           // expected-error {{member 'wrong' declared as a template}}
+    template<typename T> constexpr T wrong;           // expected-error {{non-static data member 'wrong' cannot be declared as a template}}
                                                       // expected-error@-1 {{declaration of constexpr static data member 'wrong' requires an initializer}}
-    template<typename T> constexpr T wrong_init = 5;  // expected-error {{member 'wrong_init' declared as a template}}
+    template<typename T> constexpr T wrong_init = 5;  // expected-error {{non-static data member 'wrong_init' cannot be declared as a template}}
     template<typename T, typename T0> static constexpr T right = T(100);
     template<typename T> static constexpr T right<T,int> = 5;
-    template<typename T> constexpr int right<int,T>;         // expected-error {{member 'right' declared as a template}}
+    template<typename T> constexpr int right<int,T>;         // expected-error {{non-static data member 'right' cannot be declared as a template}}
                                                              // expected-error@-1 {{declaration of constexpr static data member 'right<int, T>' requires an initializer}}
-    template<typename T> constexpr float right<float,T> = 5; // expected-error {{member 'right' declared as a template}}
+    template<typename T> constexpr float right<float,T> = 5; // expected-error {{non-static data member 'right' cannot be declared as a template}}
     template<> constexpr int right<int,int> = 7;
     template<> constexpr float right<float, int>; // expected-error {{declaration of constexpr static data member 'right<float, int>' requires an initializer}}
     template static constexpr int right<int,int>;     // expected-error {{expected '<' after 'template'}}
@@ -302,17 +302,17 @@ namespace in_class_template {
     };
 
     template<typename T> void f() {
-      typename T::template A<int> a; // expected-error {{template name refers to non-type template 'S::template A'}}
+      typename T::template A<int> a; // expected-error {{template name refers to non-type template 'in_class_template::bad_reference::S::template A'}}
     }
     template<typename T> void g() {
-      T::template A<int>::B = 0; // expected-error {{template name refers to non-type template 'S::template A'}}
+      T::template A<int>::B = 0; // expected-error {{template name refers to non-type template 'in_class_template::bad_reference::S::template A'}}
     }
     template<typename T> void h() {
-      class T::template A<int> c; // expected-error {{template name refers to non-type template 'S::template A'}}
+      class T::template A<int> c; // expected-error {{template name refers to non-type template 'in_class_template::bad_reference::S::template A'}}
     }
 
     template<typename T>
-    struct X : T::template A<int> {}; // expected-error {{template name refers to non-type template 'S::template A'}}
+    struct X : T::template A<int> {}; // expected-error {{template name refers to non-type template 'in_class_template::bad_reference::S::template A'}}
 
     template void f<S>(); // expected-note {{in instantiation of}}
     template void g<S>(); // expected-note {{in instantiation of}}
@@ -393,7 +393,7 @@ namespace dependent_static_var_template {
   int &r = A::template n; // expected-error {{use of variable template 'A::template n' requires template arguments}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 
   template<typename T>
-  int &f() { return T::template n; } // expected-error {{use of variable template 'A::template n' requires template arguments}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
+  int &f() { return T::template n; } // expected-error {{use of variable template 'dependent_static_var_template::A::template n' requires template arguments}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
   int &s = f<A>(); // expected-note {{instantiation of}}
 
   namespace B {
@@ -412,6 +412,26 @@ namespace dependent_static_var_template {
   }
 
   int cf() { return F<int>(); }
+
+#ifdef CPP1Y
+  namespace GH55872 {
+    struct s {
+      template<typename T>
+      static CONST auto f = [] { return T::template g<s>; };
+      // expected-note@-1 {{in instantiation of static data member 'dependent_static_var_template::GH55872::t::g' requested here}}
+      // expected-note@-2 {{while substituting into a lambda expression here}}
+    };
+
+    struct t {
+      template<typename T>
+      static CONST auto g = [] { return T::template f<t>; };
+      // expected-error@-1 {{the type of variable template specialization 'f<dependent_static_var_template::GH55872::t>' declared with deduced type 'const auto' depends on itself}}
+      // expected-note@-2 {{while substituting into a lambda expression here}}
+    };
+
+    void test() { s::f<t>()(); } // expected-note {{in instantiation of static data member 'dependent_static_var_template::GH55872::s::f' requested here}}
+  }
+#endif
 }
 
 #ifndef PRECXX11

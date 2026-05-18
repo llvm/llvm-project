@@ -49,10 +49,8 @@ private:
               for (const auto &range : ranges) {
                 auto pair{ComputeBounds(range)};
                 if (pair.first && pair.second && *pair.first > *pair.second) {
-                  if (context_.ShouldWarn(common::UsageWarning::EmptyCase)) {
-                    context_.Say(stmt.source,
-                        "CASE has lower bound greater than upper bound"_warn_en_US);
-                  }
+                  context_.Warn(common::UsageWarning::EmptyCase, stmt.source,
+                      "CASE has lower bound greater than upper bound"_warn_en_US);
                 } else {
                   if constexpr (T::category == TypeCategory::Logical) { // C1148
                     if ((pair.first || pair.second) &&
@@ -74,7 +72,7 @@ private:
   }
 
   std::optional<Value> GetValue(const parser::CaseValue &caseValue) {
-    const parser::Expr &expr{caseValue.thing.thing.value()};
+    const auto &expr{parser::UnwrapRef<parser::Expr>(caseValue)};
     auto *x{expr.typedExpr.get()};
     if (x && x->v) { // C1147
       auto type{x->v->GetType()};
@@ -95,11 +93,9 @@ private:
               x->v = converted;
               return value;
             } else {
-              if (context_.ShouldWarn(common::UsageWarning::CaseOverflow)) {
-                context_.Say(expr.source,
-                    "CASE value (%s) overflows type (%s) of SELECT CASE expression"_warn_en_US,
-                    folded.AsFortran(), caseExprType_.AsFortran());
-              }
+              context_.Warn(common::UsageWarning::CaseOverflow, expr.source,
+                  "CASE value (%s) overflows type (%s) of SELECT CASE expression"_warn_en_US,
+                  folded.AsFortran(), caseExprType_.AsFortran());
               hasErrors_ = true;
               return std::nullopt;
             }
@@ -121,26 +117,27 @@ private:
 
   using PairOfValues = std::pair<std::optional<Value>, std::optional<Value>>;
   PairOfValues ComputeBounds(const parser::CaseValueRange &range) {
-    return common::visit(
-        common::visitors{
-            [&](const parser::CaseValue &x) {
-              auto value{GetValue(x)};
-              return PairOfValues{value, value};
-            },
-            [&](const parser::CaseValueRange::Range &x) {
-              std::optional<Value> lo, hi;
-              if (x.lower) {
-                lo = GetValue(*x.lower);
-              }
-              if (x.upper) {
-                hi = GetValue(*x.upper);
-              }
-              if ((x.lower && !lo) || (x.upper && !hi)) {
-                return PairOfValues{}; // error case
-              }
-              return PairOfValues{std::move(lo), std::move(hi)};
-            },
-        },
+    return common::visit(common::visitors{
+                             [&](const parser::CaseValue &x) {
+                               auto value{GetValue(x)};
+                               return PairOfValues{value, value};
+                             },
+                             [&](const parser::CaseValueRange::Range &x) {
+                               const auto &[lower, upper]{x.t};
+                               std::optional<Value> lo, hi;
+                               if (lower) {
+                                 lo = GetValue(*lower);
+                               }
+                               if (upper) {
+                                 hi = GetValue(*upper);
+                               }
+                               if ((lower && !lo) || (upper && !hi)) {
+                                 return PairOfValues{}; // error case
+                               }
+                               return PairOfValues{
+                                   std::move(lo), std::move(hi)};
+                             },
+                         },
         range.u);
   }
 
@@ -257,6 +254,10 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
       common::SearchTypes(
           TypeVisitor<TypeCategory::Integer>{context_, *exprType, caseList});
       return;
+    case TypeCategory::Unsigned:
+      common::SearchTypes(
+          TypeVisitor<TypeCategory::Unsigned>{context_, *exprType, caseList});
+      return;
     case TypeCategory::Logical:
       CaseValues<evaluate::Type<TypeCategory::Logical, 1>>{context_, *exprType}
           .Check(caseList);
@@ -270,6 +271,8 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
     }
   }
   context_.Say(selectExpr.source,
-      "SELECT CASE expression must be integer, logical, or character"_err_en_US);
+      context_.IsEnabled(common::LanguageFeature::Unsigned)
+          ? "SELECT CASE expression must be integer, unsigned, logical, or character"_err_en_US
+          : "SELECT CASE expression must be integer, logical, or character"_err_en_US);
 }
 } // namespace Fortran::semantics

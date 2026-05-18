@@ -14,13 +14,12 @@
 namespace llvm {
 
 class TwoAddressInstructionPass
-    : public PassInfoMixin<TwoAddressInstructionPass> {
+    : public OptionalPassInfoMixin<TwoAddressInstructionPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-  MachineFunctionProperties getSetProperties() {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::TiedOpsRewritten);
+  MachineFunctionProperties getSetProperties() const {
+    return MachineFunctionProperties().setTiedOpsRewritten();
   }
 };
 

@@ -21,7 +21,7 @@ using namespace llvm;
 using namespace bolt;
 
 namespace opts {
-cl::OptionCategory StokeOptCategory("STOKE pass options");
+static cl::OptionCategory StokeOptCategory("STOKE pass options");
 
 static cl::opt<std::string>
 StokeOutputDataFilename("stoke-out",
@@ -146,6 +146,11 @@ bool StokeInfo::checkFunction(BinaryFunction &BF, DataflowInfoManager &DInfo,
 }
 
 Error StokeInfo::runOnFunctions(BinaryContext &BC) {
+  if (!BC.isX86()) {
+    BC.errs() << "BOLT-ERROR: " << getName() << " is specific to X86\n";
+    exit(1);
+  }
+
   BC.outs() << "STOKE-INFO: begin of stoke pass\n";
 
   std::ofstream Outfile;

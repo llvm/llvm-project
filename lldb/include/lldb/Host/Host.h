@@ -31,6 +31,25 @@ class ProcessInstanceInfo;
 class ProcessInstanceInfoMatch;
 typedef std::vector<ProcessInstanceInfo> ProcessInstanceInfoList;
 
+// System log category and channel. This log channel is always enabled and
+// therefore is supposed to be used sparsely. Use this log channel to log
+// critical information that is expected to be relevant to the majority of bug
+// reports.
+enum class SystemLog : Log::MaskType {
+  System = Log::ChannelFlag<0>,
+  LLVM_MARK_AS_BITMASK_ENUM(System)
+};
+
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
+class LogChannelSystem {
+public:
+  static void Initialize();
+  static void Terminate();
+};
+
+template <> Log::Channel &LogChannelFor<SystemLog>();
+
 // Exit Type for inferior processes
 struct WaitStatus {
   enum Type : uint8_t {
@@ -176,69 +195,123 @@ public:
   static Status ShellExpandArguments(ProcessLaunchInfo &launch_info);
 
   /// Run a shell command.
-  /// \arg command  shouldn't be empty
-  /// \arg working_dir Pass empty FileSpec to use the current working directory
-  /// \arg status_ptr  Pass NULL if you don't want the process exit status
-  /// \arg signo_ptr   Pass NULL if you don't want the signal that caused the
-  ///                  process to exit
-  /// \arg command_output  Pass NULL if you don't want the command output
-  /// \arg hide_stderr if this is false, redirect stderr to stdout
+  /// \param[in] command
+  ///            Command to execute, should not be empty.
+  /// \param[in] working_dir
+  ///            Pass empty FileSpec to use the current working directory
+  /// \param[out] status_ptr
+  ///            Pass nullptr if you don't want the process exit status
+  /// \param[out] signo_ptr
+  ///            Pass nullptr if you don't want the signal that caused the
+  ///            process to exit
+  /// \param[out] command_output
+  ///            Pass nullptr if you don't want the command output
+  /// \param[out] separated_error_output
+  ///            If a std::string is specified, error output is routed
+  ///            into a separate string.  If nullptr is provided,
+  ///            command output and error text will be returned combined
+  ///            in \a command_output.
+  /// \param[in] timeout
+  ///            Timeout duration to enforce
+  /// \param[in] run_in_shell
+  ///            Run in a subshell, with glob expansion of args
   static Status RunShellCommand(llvm::StringRef command,
                                 const FileSpec &working_dir, int *status_ptr,
                                 int *signo_ptr, std::string *command_output,
+                                std::string *error_output,
                                 const Timeout<std::micro> &timeout,
-                                bool run_in_shell = true,
-                                bool hide_stderr = false);
+                                bool run_in_shell = true);
 
   /// Run a shell command.
-  /// \arg shell  Pass an empty string if you want to use the default shell
-  /// interpreter \arg command \arg working_dir  Pass empty FileSpec to use the
-  /// current working directory \arg status_ptr   Pass NULL if you don't want
-  /// the process exit status \arg signo_ptr    Pass NULL if you don't want the
-  /// signal that caused
-  ///                   the process to exit
-  /// \arg command_output  Pass NULL if you don't want the command output
-  /// \arg hide_stderr  If this is \b false, redirect stderr to stdout
+  /// \param[in] shell
+  ///            Pass an empty string to use the default shell
+  /// \param[in] command
+  ///            Command to execute, should not be empty.
+  /// \param[in] working_dir
+  ///            Pass empty FileSpec to use the current working directory
+  /// \param[out] status_ptr
+  ///            Pass nullptr if you don't want the process exit status
+  /// \param[out] signo_ptr
+  ///            Pass nullptr if you don't want the signal that caused the
+  ///            process to exit
+  /// \param[out] command_output
+  ///            Pass nullptr if you don't want the command output
+  /// \param[out] separated_error_output
+  ///            If a std::string is specified, error output is routed
+  ///            into a separate string.  If nullptr is provided,
+  ///            command output and error text will be returned combined
+  /// \param[in] timeout
+  ///            Timeout duration to enforce
+  /// \param[in] run_in_shell
+  ///            Run in a subshell, with glob expansion of args
   static Status RunShellCommand(llvm::StringRef shell, llvm::StringRef command,
                                 const FileSpec &working_dir, int *status_ptr,
                                 int *signo_ptr, std::string *command_output,
+                                std::string *separated_error_output,
                                 const Timeout<std::micro> &timeout,
-                                bool run_in_shell = true,
-                                bool hide_stderr = false);
+                                bool run_in_shell = true);
 
   /// Run a shell command.
-  /// \arg working_dir Pass empty FileSpec to use the current working directory
-  /// \arg status_ptr  Pass NULL if you don't want the process exit status
-  /// \arg signo_ptr   Pass NULL if you don't want the signal that caused the
-  ///                  process to exit
-  /// \arg command_output  Pass NULL if you don't want the command output
-  /// \arg hide_stderr if this is false, redirect stderr to stdout
+  /// \param[in] args
+  ///            Command to execute
+  /// \param[in] working_dir
+  ///            Pass empty FileSpec to use the current working directory
+  /// \param[out] status_ptr
+  ///            Pass nullptr if you don't want the process exit status
+  /// \param[out] signo_ptr
+  ///            Pass nullptr if you don't want the signal that caused the
+  ///            process to exit
+  /// \param[out] command_output
+  ///            Pass nullptr if you don't want the command output
+  /// \param[out] separated_error_output
+  ///            If a std::string is specified, error output is routed
+  ///            into a separate string.  If nullptr is provided,
+  ///            command output and error text will be returned combined
+  /// \param[in] timeout
+  ///            Timeout duration to enforce
+  /// \param[in] run_in_shell
+  ///            Run in a subshell, with glob expansion of args
   static Status RunShellCommand(const Args &args, const FileSpec &working_dir,
                                 int *status_ptr, int *signo_ptr,
                                 std::string *command_output,
+                                std::string *separated_error_output,
                                 const Timeout<std::micro> &timeout,
-                                bool run_in_shell = true,
-                                bool hide_stderr = false);
+                                bool run_in_shell = true);
 
   /// Run a shell command.
-  /// \arg shell            Pass an empty string if you want to use the default
-  /// shell interpreter \arg command \arg working_dir Pass empty FileSpec to use
-  /// the current working directory \arg status_ptr    Pass NULL if you don't
-  /// want the process exit status \arg signo_ptr     Pass NULL if you don't
-  /// want the signal that caused the
-  ///               process to exit
-  /// \arg command_output  Pass NULL if you don't want the command output
-  /// \arg hide_stderr If this is \b false, redirect stderr to stdout
+  /// \param[in] shell
+  ///            Pass an empty string to use the default shell
+  /// \param[in] args
+  ///            Command to execute
+  /// \param[in] working_dir
+  ///            Pass empty FileSpec to use the current working directory
+  /// \param[out] status_ptr
+  ///            Pass nullptr if you don't want the process exit status
+  /// \param[out] signo_ptr
+  ///            Pass nullptr if you don't want the signal that caused the
+  ///            process to exit
+  /// \param[out] command_output
+  ///            Pass nullptr if you don't want the command output
+  /// \param[out] separated_error_output
+  ///            If a std::string is specified, error output is routed
+  ///            into a separate string.  If nullptr is provided,
+  ///            command output and error text will be returned combined
+  /// \param[in] timeout
+  ///            Timeout duration to enforce
+  /// \param[in] run_in_shell
+  ///            Run in a subshell, with glob expansion of args
   static Status RunShellCommand(llvm::StringRef shell, const Args &args,
                                 const FileSpec &working_dir, int *status_ptr,
                                 int *signo_ptr, std::string *command_output,
+                                std::string *separated_error_output,
                                 const Timeout<std::micro> &timeout,
-                                bool run_in_shell = true,
-                                bool hide_stderr = false);
+                                bool run_in_shell = true);
 
   static llvm::Error OpenFileInExternalEditor(llvm::StringRef editor,
                                               const FileSpec &file_spec,
                                               uint32_t line_no);
+
+  static llvm::Error OpenURL(llvm::StringRef url);
 
   /// Check if we're running in an interactive graphical session.
   ///

@@ -1,0 +1,25 @@
+# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -verify-machineinstrs -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+
+# FIXME: Value error messages are misleading.
+---
+name: test
+body: |
+  bb.0:
+    %0:av_64 = IMPLICIT_DEF
+
+    ; CHECK: *** Bad machine code: Expected immediate, but got non-immediate ***
+    %1:av_64 = AV_MOV_B64_IMM_PSEUDO %1, implicit $exec
+
+    ; Low half isn't inline imm
+    ; CHECK: *** Bad machine code: VOP3 instruction uses literal ***
+    %2:av_64 = AV_MOV_B64_IMM_PSEUDO 65, implicit $exec
+
+    ; High half isn't inline imm
+    ; CHECK: *** Bad machine code: VOP3 instruction uses literal ***
+    %2:av_64 = AV_MOV_B64_IMM_PSEUDO 279172874240, implicit $exec
+
+    ; Neither half is inline imm
+    ; CHECK: *** Bad machine code: VOP3 instruction uses literal ***
+    %3:av_64 = AV_MOV_B64_IMM_PSEUDO 279172874306, implicit $exec
+
+...

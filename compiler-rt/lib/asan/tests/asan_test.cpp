@@ -369,8 +369,7 @@ void *ManyThreadsWorker(void *a) {
   return 0;
 }
 
-#if !defined(__aarch64__) && !defined(__powerpc64__)
-// FIXME: Infinite loop in AArch64 (PR24389).
+#if !defined(__powerpc64__)
 // FIXME: Also occasional hang on powerpc.  Maybe same problem as on AArch64?
 TEST(AddressSanitizer, ManyThreadsTest) {
   const size_t kNumThreads =
@@ -396,7 +395,8 @@ TEST(AddressSanitizer, ReallocTest) {
   }
   free(ptr);
   // Realloc pointer returned by malloc(0).
-  int *ptr2 = Ident((int*)malloc(0));
+  void *ptr0 = malloc(0);
+  int *ptr2 = Ident((int *)ptr0);
   ptr2 = Ident((int*)realloc(ptr2, sizeof(*ptr2)));
   *ptr2 = 42;
   EXPECT_EQ(42, *ptr2);
@@ -631,7 +631,7 @@ NOINLINE void SigLongJmpFunc1(sigjmp_buf buf) {
 
 #if !defined(__ANDROID__) && !defined(__arm__) && !defined(__aarch64__) && \
     !defined(__mips__) && !defined(__mips64) && !defined(__s390__) &&      \
-    !defined(__riscv) && !defined(__loongarch__)
+    !defined(__riscv) && !defined(__loongarch__) && !defined(__sparc__)
 NOINLINE void BuiltinLongJmpFunc1(jmp_buf buf) {
   // create three red zones for these two stack objects.
   int a;
@@ -1115,15 +1115,37 @@ TEST(AddressSanitizer, StressStackReuseTest) {
   LotsOfStackReuse();
 }
 
+// On some platform (ex: AIX), the default thread stack size (~96 KB) is
+// insufficient for this test and can lead to stack overflows.
+#define MIN_STACK_SIZE (128 * 1024)  // 128 KB
 TEST(AddressSanitizer, ThreadedStressStackReuseTest) {
   const int kNumThreads = 20;
   pthread_t t[kNumThreads];
+// pthread_attr isn't supported on Windows.
+#ifndef _WIN32
+  size_t curStackSize = 0;
+  pthread_attr_t attr;
+  pthread_attr_init(&attr);
+  // Get the current (default) thread stack size
+  pthread_attr_getstacksize(&attr, &curStackSize);
+  if (curStackSize < MIN_STACK_SIZE) {
+    int rc = pthread_attr_setstacksize(&attr, MIN_STACK_SIZE);
+    ASSERT_EQ(0, rc);
+  }
+#endif
   for (int i = 0; i < kNumThreads; i++) {
-    PTHREAD_CREATE(&t[i], 0, (void* (*)(void *x))LotsOfStackReuse, 0);
+#ifdef _WIN32
+    PTHREAD_CREATE(&t[i], 0, (void* (*)(void* x))LotsOfStackReuse, 0);
+#else
+    PTHREAD_CREATE(&t[i], &attr, (void* (*)(void* x))LotsOfStackReuse, 0);
+#endif
   }
   for (int i = 0; i < kNumThreads; i++) {
     PTHREAD_JOIN(t[i], 0);
   }
+#ifndef _WIN32
+  pthread_attr_destroy(&attr);
+#endif
 }
 
 // pthread_exit tries to perform unwinding stuff that leads to dlopen'ing
@@ -1164,15 +1186,11 @@ TEST(AddressSanitizer, DISABLED_StressStackReuseAndExceptionsTest) {
 }
 #endif
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__HAIKU__)
 TEST(AddressSanitizer, MlockTest) {
-#if !defined(__ANDROID__) || __ANDROID_API__ >= 17
   EXPECT_EQ(0, mlockall(MCL_CURRENT));
-#endif
-  EXPECT_EQ(0, mlock((void*)0x12345, 0x5678));
-#if !defined(__ANDROID__) || __ANDROID_API__ >= 17
+  EXPECT_EQ(0, mlock((void *)0x12345, 0x5678));
   EXPECT_EQ(0, munlockall());
-#endif
   EXPECT_EQ(0, munlock((void*)0x987, 0x654));
 }
 #endif

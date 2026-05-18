@@ -68,3 +68,8 @@ sys #6, c8, c7, #4
 // CHECK-NO-RME: sys #6, c8, c4, #7
 // CHECK-NO-RME: sys #6, c8, c1, #4
 // CHECK-NO-RME: sys #6, c8, c7, #4
+
+dc cigdpapa, x0
+dc cipapa, x0
+// CHECK: dc cigdpapa, x0                    // encoding: [0xa0,0x7e,0x0e,0xd5]
+// CHECK: dc cipapa, x0                      // encoding: [0x20,0x7e,0x0e,0xd5]

@@ -16,7 +16,7 @@ define i32 @PR65895() {
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.lr.ph
 ; CHECK-NEXT:    movb %al, b(%rip)
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp .LBB0_2

@@ -55,7 +55,7 @@ class BoUpSLP;
 
 } // end namespace slpvectorizer
 
-struct SLPVectorizerPass : public PassInfoMixin<SLPVectorizerPass> {
+struct SLPVectorizerPass : public OptionalPassInfoMixin<SLPVectorizerPass> {
   using StoreList = SmallVector<StoreInst *, 8>;
   using StoreListMap = MapVector<Value *, StoreList>;
   using GEPList = SmallVector<GetElementPtrInst *, 8>;
@@ -122,15 +122,13 @@ private:
   /// or a horizontal reduction was not matched or not possible.
   bool vectorizeHorReduction(PHINode *P, Instruction *Root, BasicBlock *BB,
                              slpvectorizer::BoUpSLP &R,
-                             TargetTransformInfo *TTI,
                              SmallVectorImpl<WeakTrackingVH> &PostponedInsts);
 
   /// Make an attempt to vectorize reduction and then try to vectorize
   /// postponed binary operations.
   /// \returns true on any successfull vectorization.
   bool vectorizeRootInstruction(PHINode *P, Instruction *Root, BasicBlock *BB,
-                                slpvectorizer::BoUpSLP &R,
-                                TargetTransformInfo *TTI);
+                                slpvectorizer::BoUpSLP &R);
 
   /// Try to vectorize trees that start at insertvalue instructions.
   bool vectorizeInsertValueInst(InsertValueInst *IVI, BasicBlock *BB,
@@ -144,6 +142,12 @@ private:
   template <typename ItT>
   bool vectorizeCmpInsts(iterator_range<ItT> CmpInsts, BasicBlock *BB,
                          slpvectorizer::BoUpSLP &R);
+
+  /// Tries to vectorize the operand chains of the non-vectorizable
+  /// instructions in \p Insts.
+  template <typename ItT>
+  bool vectorizeNonVectorizableInsts(iterator_range<ItT> Insts, BasicBlock *BB,
+                                     slpvectorizer::BoUpSLP &R);
 
   /// Tries to vectorize constructs started from InsertValueInst or
   /// InsertElementInst instructions.

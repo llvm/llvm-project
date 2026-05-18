@@ -30,11 +30,7 @@ define i128 @f2(i128 %val) {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
-; CHECK-NEXT:    vrepib %v1, 96
-; CHECK-NEXT:    vrepib %v2, 32
-; CHECK-NEXT:    vsrlb %v1, %v0, %v1
-; CHECK-NEXT:    vslb %v0, %v0, %v2
-; CHECK-NEXT:    vo %v0, %v0, %v1
+; CHECK-NEXT:    vsldb %v0, %v0, %v0, 4
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
 
@@ -55,10 +51,11 @@ define i128 @f3(i128 %val, i128 %amt) {
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vrepb %v1, %v1, 15
 ; CHECK-NEXT:    vslb %v2, %v0, %v1
-; CHECK-NEXT:    lhi %r1, 128
-; CHECK-NEXT:    sr %r1, %r0
 ; CHECK-NEXT:    vsl %v1, %v2, %v1
-; CHECK-NEXT:    vlvgp %v2, %r1, %r1
+; CHECK-NEXT:    vrepib %v2, 1
+; CHECK-NEXT:    xilf %r0, 4294967295
+; CHECK-NEXT:    vsrl %v0, %v0, %v2
+; CHECK-NEXT:    vlvgp %v2, %r0, %r0
 ; CHECK-NEXT:    vrepb %v2, %v2, 15
 ; CHECK-NEXT:    vsrlb %v0, %v0, %v2
 ; CHECK-NEXT:    vsrl %v0, %v0, %v2

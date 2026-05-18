@@ -8,8 +8,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=20000000
+
 // template<container-compatible-range<T> R>
-//   constexpr iterator insert_range_after(const_iterator position, R&& rg); // C++23
+//   constexpr iterator insert_range_after(const_iterator position, R&& rg); // C++23; constexpr since C++26
 
 #include <forward_list>
 
@@ -17,9 +19,7 @@
 #include "test_macros.h"
 
 template <class Container, class Range>
-concept HasInsertRangeAfter = requires (Container& c, Range&& range) {
-  c.insert_range_after(c.begin(), range);
-};
+concept HasInsertRangeAfter = requires(Container& c, Range&& range) { c.insert_range_after(c.begin(), range); };
 
 template <template <class...> class Container, class T, class U>
 constexpr bool test_constraints_insert_range_after() {
@@ -53,12 +53,12 @@ constexpr void test_sequence_insert_range_after() {
     return std::ranges::next(c.before_begin(), test_case.index + test_case.input.size());
   };
 
-  { // Empty container.
+  {   // Empty container.
     { // empty_c.insert_range_after(end, empty_range)
       auto& test_case = EmptyContainer_EmptyRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -70,7 +70,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = EmptyContainer_OneElementRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -82,7 +82,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = EmptyContainer_MidRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -91,12 +91,12 @@ constexpr void test_sequence_insert_range_after() {
     }
   }
 
-  { // One-element container.
+  {   // One-element container.
     { // one_element_c.insert_range_after(begin, empty_range)
       auto& test_case = OneElementContainer_Begin_EmptyRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -108,7 +108,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = OneElementContainer_End_EmptyRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -120,7 +120,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = OneElementContainer_Begin_OneElementRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -132,7 +132,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = OneElementContainer_End_OneElementRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -144,7 +144,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = OneElementContainer_Begin_MidRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -156,7 +156,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = OneElementContainer_End_MidRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -165,12 +165,12 @@ constexpr void test_sequence_insert_range_after() {
     }
   }
 
-  { // Full container.
+  {   // Full container.
     { // full_container.insert_range_after(begin, empty_range)
       auto& test_case = FullContainer_Begin_EmptyRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -182,7 +182,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = FullContainer_Mid_EmptyRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -194,7 +194,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = FullContainer_End_EmptyRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -206,7 +206,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = FullContainer_Begin_OneElementRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -218,7 +218,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = FullContainer_Mid_OneElementRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -230,7 +230,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = FullContainer_End_OneElementRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -242,7 +242,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = FullContainer_Begin_MidRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -254,7 +254,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = FullContainer_Mid_MidRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -266,7 +266,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = FullContainer_End_MidRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -278,7 +278,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = FullContainer_Begin_LongRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -290,7 +290,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = FullContainer_Mid_LongRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -302,7 +302,7 @@ constexpr void test_sequence_insert_range_after() {
       auto& test_case = FullContainer_End_LongRange<T>;
 
       Container c(test_case.initial.begin(), test_case.initial.end());
-      auto in = wrap_input<Iter, Sent>(test_case.input);
+      auto in  = wrap_input<Iter, Sent>(test_case.input);
       auto pos = get_insert_pos(c, test_case);
 
       auto result = c.insert_range_after(pos, in);
@@ -323,7 +323,7 @@ constexpr void test_sequence_insert_range_after() {
   }
 }
 
-void test_sequence_insert_range_after_move_only() {
+TEST_CONSTEXPR_CXX26 void test_sequence_insert_range_after_move_only() {
   MoveOnly input[5];
   std::ranges::subrange in(std::move_iterator{input}, std::move_iterator{input + 5});
 
@@ -368,7 +368,7 @@ void test_insert_range_after_exception_safety_throwing_allocator() {
 #endif
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   static_assert(test_constraints_insert_range_after<std::forward_list, int, double>());
 
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {
@@ -376,8 +376,19 @@ int main(int, char**) {
   });
   test_sequence_insert_range_after_move_only();
 
-  test_insert_range_after_exception_safety_throwing_copy();
-  test_insert_range_after_exception_safety_throwing_allocator<int>();
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    test_insert_range_after_exception_safety_throwing_copy();
+    test_insert_range_after_exception_safety_throwing_allocator<int>();
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

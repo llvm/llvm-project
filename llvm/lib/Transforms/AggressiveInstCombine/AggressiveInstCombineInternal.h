@@ -20,8 +20,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Support/KnownBits.h"
 
-using namespace llvm;
-
 //===----------------------------------------------------------------------===//
 // TruncInstCombine - looks for expression graphs dominated by trunc
 // instructions and for each eligible graph, it will create a reduced bit-width
@@ -109,15 +107,14 @@ private:
   Type *getBestTruncatedType();
 
   KnownBits computeKnownBits(const Value *V) const {
-    return llvm::computeKnownBits(V, DL, /*Depth=*/0, &AC,
+    return llvm::computeKnownBits(V, DL, &AC,
                                   /*CtxI=*/cast<Instruction>(CurrentTruncInst),
                                   &DT);
   }
 
   unsigned ComputeNumSignBits(const Value *V) const {
     return llvm::ComputeNumSignBits(
-        V, DL, /*Depth=*/0, &AC, /*CtxI=*/cast<Instruction>(CurrentTruncInst),
-        &DT);
+        V, DL, &AC, /*CtxI=*/cast<Instruction>(CurrentTruncInst), &DT);
   }
 
   /// Given a \p V value and a \p SclTy scalar type return the generated reduced
@@ -137,4 +134,4 @@ private:
 };
 } // end namespace llvm.
 
-#endif
+#endif // LLVM_LIB_TRANSFORMS_AGGRESSIVEINSTCOMBINE_COMBINEINTERNAL_H

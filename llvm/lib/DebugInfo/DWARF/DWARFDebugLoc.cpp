@@ -11,11 +11,14 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cinttypes>
@@ -113,11 +116,11 @@ static void dumpExpression(raw_ostream &OS, DIDumpOptions DumpOpts,
                            ArrayRef<uint8_t> Data, bool IsLittleEndian,
                            unsigned AddressSize, DWARFUnit *U) {
   DWARFDataExtractor Extractor(Data, IsLittleEndian, AddressSize);
-  // Note. We do not pass any format to DWARFExpression, even if the
-  // corresponding unit is known. For now, there is only one operation,
-  // DW_OP_call_ref, which depends on the format; it is rarely used, and
-  // is unexpected in location tables.
-  DWARFExpression(Extractor, AddressSize).print(OS, DumpOpts, U);
+  std::optional<dwarf::DwarfFormat> Format;
+  if (U)
+    Format = U->getFormat();
+  DWARFExpression E(Extractor, AddressSize, Format);
+  printDwarfExpression(&E, OS, DumpOpts, U);
 }
 
 bool DWARFLocationTable::dumpLocationList(
@@ -130,7 +133,7 @@ bool DWARFLocationTable::dumpLocationList(
           return U->getAddrOffsetSectionItem(Index);
         return std::nullopt;
       });
-  OS << format("0x%8.8" PRIx64 ": ", *Offset);
+  OS << formatv("{0:x+8}: ", *Offset);
   Error E = visitLocationList(Offset, [&](const DWARFLocationEntry &E) {
     Expected<std::optional<DWARFLocationExpression>> Loc = Interp.Interpret(E);
     if (!Loc || DumpOpts.DisplayRawContents)
@@ -353,7 +356,8 @@ void DWARFDebugLoclists::dumpRawEntry(const DWARFLocationEntry &Entry,
   StringRef EncodingString = dwarf::LocListEncodingString(Entry.Kind);
   // Unsupported encodings should have been reported during parsing.
   assert(!EncodingString.empty() && "Unknown loclist entry encoding");
-  OS << format("%-*s(", MaxEncodingStringLength, EncodingString.data());
+  OS << formatv("{0}(", fmt_align(EncodingString, AlignStyle::Left,
+                                  MaxEncodingStringLength));
   unsigned FieldSize = 2 + 2 * Data.getAddressSize();
   switch (Entry.Kind) {
   case dwarf::DW_LLE_end_of_list:
@@ -405,8 +409,8 @@ void DWARFDebugLoclists::dumpRange(uint64_t StartOffset, uint64_t Size,
 }
 
 void llvm::ResolverError::log(raw_ostream &OS) const {
-  OS << format("unable to resolve indirect address %u for: %s", Index,
-               dwarf::LocListEncodingString(Kind).data());
+  OS << formatv("unable to resolve indirect address {0} for: {1}", Index,
+                dwarf::LocListEncodingString(Kind).data());
 }
 
 char llvm::ResolverError::ID;

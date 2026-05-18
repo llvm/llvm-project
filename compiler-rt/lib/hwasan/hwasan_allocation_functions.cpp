@@ -17,7 +17,7 @@
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_mallinfo.h"
-#include "sanitizer_common/sanitizer_tls_get_addr.h"
+#include "sanitizer_common/sanitizer_platform_interceptors.h"
 
 using namespace __hwasan;
 
@@ -62,10 +62,7 @@ void *__sanitizer_aligned_alloc(uptr alignment, uptr size) {
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__sanitizer___libc_memalign(uptr alignment, uptr size) {
   GET_MALLOC_STACK_TRACE;
-  void *ptr = hwasan_memalign(alignment, size, &stack);
-  if (ptr)
-    DTLS_on_libc_memalign(ptr, size);
-  return ptr;
+  return hwasan_memalign(alignment, size, &stack);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -99,6 +96,30 @@ void __sanitizer_cfree(void *ptr) {
   GET_MALLOC_STACK_TRACE;
   hwasan_free(ptr, &stack);
 }
+
+#if SANITIZER_INTERCEPT_FREE_SIZED
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_free_sized(void* ptr, uptr size) {
+  if (!ptr)
+    return;
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+  GET_MALLOC_STACK_TRACE;
+  hwasan_free(ptr, &stack);
+}
+#endif
+
+#if SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_free_aligned_sized(void* ptr, uptr alignment, uptr size) {
+  if (!ptr)
+    return;
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+  GET_MALLOC_STACK_TRACE;
+  hwasan_free(ptr, &stack);
+}
+#endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
 uptr __sanitizer_malloc_usable_size(const void *ptr) {
@@ -174,6 +195,13 @@ INTERCEPTOR_ALIAS(void *, aligned_alloc, SIZE_T alignment, SIZE_T size);
 INTERCEPTOR_ALIAS(void *, __libc_memalign, SIZE_T alignment, SIZE_T size);
 INTERCEPTOR_ALIAS(void *, valloc, SIZE_T size);
 INTERCEPTOR_ALIAS(void, free, void *ptr);
+#  if SANITIZER_INTERCEPT_FREE_SIZED
+INTERCEPTOR_ALIAS(void, free_sized, void* ptr, SIZE_T size);
+#  endif
+#  if SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
+INTERCEPTOR_ALIAS(void, free_aligned_sized, void* ptr, SIZE_T alignment,
+                  SIZE_T size);
+#  endif
 INTERCEPTOR_ALIAS(uptr, malloc_usable_size, const void *ptr);
 INTERCEPTOR_ALIAS(void *, calloc, SIZE_T nmemb, SIZE_T size);
 INTERCEPTOR_ALIAS(void *, realloc, void *ptr, SIZE_T size);

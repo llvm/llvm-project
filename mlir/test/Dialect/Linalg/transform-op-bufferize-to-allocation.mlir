@@ -9,7 +9,7 @@
 //   CHECK-DAG:   %[[c0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[c50:.*]] = arith.constant 50 : index
 //   CHECK-DAG:   %[[dim0:.*]] = tensor.dim %[[t]], %[[c0]]
-//   CHECK-DAG:   %[[size0:.*]] = affine.apply #[[$map]]()[%[[h1]], %[[dim0]]]
+//   CHECK-DAG:   %[[size0:.*]] = affine.apply #[[$map]]()[%[[dim0]], %[[h1]]]
 //   CHECK-DAG:   %[[size1:.*]] = affine.apply #[[$map1]]()[%[[l2]], %[[h2]]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%[[size0]], %[[size1]]) : memref<?x?xindex>
 //       CHECK:   linalg.fill ins(%[[c50]] : index) outs(%[[alloc]] : memref<?x?xindex>)
@@ -101,7 +101,7 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: func @tensor_pad_constant(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x10xindex>
-//       CHECK:   %[[src:.*]] = bufferization.to_memref %[[t]]
+//       CHECK:   %[[src:.*]] = bufferization.to_buffer %[[t]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc
 //       CHECK:   %[[subview:.*]] = memref.subview %[[alloc]]
 //       CHECK:   memref.copy %[[src]], %[[subview]]
@@ -130,7 +130,7 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: func @tensor_insert(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x10xindex>
-//       CHECK:   %[[m:.*]] = bufferization.to_memref %[[t]]
+//       CHECK:   %[[m:.*]] = bufferization.to_buffer %[[t]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}}) : memref<?x10xindex, 4>
 //       CHECK:   memref.copy %[[m]], %[[alloc]]
 //       CHECK:   memref.store %{{.*}}, %[[alloc]]

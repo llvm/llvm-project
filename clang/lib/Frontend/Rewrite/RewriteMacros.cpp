@@ -11,16 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Rewrite/Frontend/Rewriters.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/raw_ostream.h"
+#include "clang/Rewrite/Frontend/Rewriters.h"
+#include "llvm/ADT/RewriteBuffer.h"
 #include <cstdio>
-#include <memory>
 
 using namespace clang;
+using llvm::RewriteBuffer;
 
 /// isSameToken - Return true if the two specified tokens start have the same
 /// content.

@@ -41,9 +41,6 @@
 #include "llvm/ADT/StringMap.h"
 
 namespace lldb_private {
-namespace repro {
-class Loader;
-}
 namespace process_gdb_remote {
 
 class ThreadGDBRemote;
@@ -111,7 +108,9 @@ public:
   // Process Control
   Status WillResume() override;
 
-  Status DoResume() override;
+  bool SupportsReverseDirection() override;
+
+  Status DoResume(lldb::RunDirection direction) override;
 
   Status DoHalt(bool &caused_stop) override;
 
@@ -138,6 +137,22 @@ public:
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       Status &error) override;
 
+  /// Override of ReadMemoryRanges that uses MultiMemRead to optimize this
+  /// operation.
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                   llvm::MutableArrayRef<uint8_t> buf) override;
+
+private:
+  llvm::Expected<StringExtractorGDBRemote>
+  SendMultiMemReadPacket(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges);
+
+  llvm::Error ParseMultiMemReadPacket(
+      llvm::StringRef response_str, llvm::MutableArrayRef<uint8_t> buffer,
+      unsigned expected_num_ranges,
+      llvm::SmallVectorImpl<llvm::MutableArrayRef<uint8_t>> &memory_regions);
+
+public:
   Status
   WriteObjectFile(std::vector<ObjectFile::LoadableData> entries) override;
 
@@ -154,6 +169,9 @@ public:
 
   // Process Breakpoints
   Status EnableBreakpointSite(BreakpointSite *bp_site) override;
+
+  llvm::Error UpdateBreakpointSites(
+      const BreakpointSiteToActionMap &site_to_action) override;
 
   Status DisableBreakpointSite(BreakpointSite *bp_site) override;
 
@@ -218,9 +236,11 @@ public:
   ConfigureStructuredData(llvm::StringRef type_name,
                           const StructuredData::ObjectSP &config_sp) override;
 
-  StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos() override;
+  StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level) override;
 
   StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level,
       const std::vector<lldb::addr_t> &load_addresses) override;
 
   StructuredData::ObjectSP
@@ -233,8 +253,10 @@ public:
   std::string HarmonizeThreadIdsForProfileData(
       StringExtractorGDBRemote &inputStringExtractor);
 
-  void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) override;
-  void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) override;
+  void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+               bool is_expression_fork = false) override;
+  void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+                bool is_expression_fork = false) override;
   void DidVForkDone() override;
   void DidExec() override;
 
@@ -246,6 +268,8 @@ protected:
   friend class GDBRemoteRegisterContext;
 
   ProcessGDBRemote(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
+
+  virtual std::shared_ptr<ThreadGDBRemote> CreateThread(lldb::tid_t tid);
 
   bool SupportsMemoryTagging() override;
 
@@ -280,6 +304,8 @@ protected:
                                               // registers and memory for all
                                               // threads if "jThreadsInfo"
                                               // packet is supported
+  StructuredData::ObjectSP m_shared_cache_info_sp;
+  std::mutex m_shared_cache_info_mutex;
   tid_collection m_continue_c_tids;           // 'c' for continue
   tid_sig_collection m_continue_C_tids;       // 'C' for continue with signal
   tid_collection m_continue_s_tids;           // 's' for step
@@ -373,7 +399,9 @@ protected:
                     lldb::addr_t thread_dispatch_qaddr, bool queue_vars_valid,
                     lldb_private::LazyBool associated_with_libdispatch_queue,
                     lldb::addr_t dispatch_queue_t, std::string &queue_name,
-                    lldb::QueueKind queue_kind, uint64_t queue_serial);
+                    lldb::QueueKind queue_kind, uint64_t queue_serial,
+                    std::vector<lldb::addr_t> &added_binaries,
+                    StructuredData::ObjectSP &detailed_binaries_info);
 
   void ClearThreadIDList();
 
@@ -399,7 +427,7 @@ protected:
   void AddRemoteRegisters(std::vector<DynamicRegisterInfo::Register> &registers,
                           const ArchSpec &arch_to_use);
   // Query remote GDBServer for register information
-  bool GetGDBServerRegisterInfo(ArchSpec &arch);
+  llvm::Error GetGDBServerRegisterInfo(ArchSpec &arch);
 
   lldb::ModuleSP LoadModuleAtAddress(const FileSpec &file,
                                      lldb::addr_t link_map,
@@ -429,16 +457,34 @@ private:
   std::map<uint64_t, uint32_t> m_thread_id_to_used_usec_map;
   uint64_t m_last_signals_version = 0;
 
+  /// Enable a single breakpoint site by trying Z0 (software), then Z1
+  /// (hardware), then manual memory write as a last resort.
+  llvm::Error DoEnableBreakpointSite(BreakpointSite &bp_site);
+
+  /// Disable a single breakpoint site directly by sending the appropriate
+  /// z packet or restoring the original instruction.
+  llvm::Error DoDisableBreakpointSite(BreakpointSite &bp_site);
+
+  llvm::Error UpdateBreakpointSitesNotBatched(
+      const BreakpointSiteToActionMap &site_to_action);
+
   static bool NewThreadNotifyBreakpointHit(void *baton,
                                            StoppointCallbackContext *context,
                                            lldb::user_id_t break_id,
                                            lldb::user_id_t break_loc_id);
+
+  /// Remove the breakpoints associated with thread creation from the Target.
+  void RemoveNewThreadBreakpoints();
 
   // ContinueDelegate interface
   void HandleAsyncStdout(llvm::StringRef out) override;
   void HandleAsyncMisc(llvm::StringRef data) override;
   void HandleStopReply() override;
   void HandleAsyncStructuredDataPacket(llvm::StringRef data) override;
+
+  lldb::ThreadSP
+  HandleThreadAsyncInterrupt(uint8_t signo,
+                             const std::string &description) override;
 
   void SetThreadPc(const lldb::ThreadSP &thread_sp, uint64_t index);
   using ModuleCacheKey = std::pair<std::string, std::string>;
@@ -470,7 +516,8 @@ private:
   const ProcessGDBRemote &operator=(const ProcessGDBRemote &) = delete;
 
   // fork helpers
-  void DidForkSwitchSoftwareBreakpoints(bool enable);
+  void DidForkSwitchSoftwareBreakpoints(bool enable,
+                                        bool is_expression_fork = false);
   void DidForkSwitchHardwareTraps(bool enable);
 
   void ParseExpeditedRegisters(ExpeditedRegisterMap &expedited_register_map,

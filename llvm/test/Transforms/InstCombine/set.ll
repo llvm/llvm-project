@@ -135,7 +135,7 @@ define i1 @test12(i1 %A) {
 define i1 @test13(i1 %A, i1 %B) {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[B:%.*]], true
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %C = icmp uge i1 %A, %B
@@ -144,8 +144,8 @@ define i1 @test13(i1 %A, i1 %B) {
 
 define <2 x i1> @test13vec(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test13vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[B:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[C:%.*]] = or <2 x i1> [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[B:%.*]], splat (i1 true)
+; CHECK-NEXT:    [[C:%.*]] = or <2 x i1> [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %C = icmp uge <2 x i1> %A, %B
@@ -165,7 +165,7 @@ define i1 @test14(i1 %A, i1 %B) {
 define <3 x i1> @test14vec(<3 x i1> %A, <3 x i1> %B) {
 ; CHECK-LABEL: @test14vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i1> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = xor <3 x i1> [[TMP1]], <i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[C:%.*]] = xor <3 x i1> [[TMP1]], splat (i1 true)
 ; CHECK-NEXT:    ret <3 x i1> [[C]]
 ;
   %C = icmp eq <3 x i1> %A, %B
@@ -257,7 +257,7 @@ define i1 @xor_of_icmps_neg_to_ne(i64 %a) {
 
 define <2 x i1> @xor_of_icmps_to_ne_vector(<2 x i64> %a) {
 ; CHECK-LABEL: @xor_of_icmps_to_ne_vector(
-; CHECK-NEXT:    [[XOR:%.*]] = icmp ne <2 x i64> [[A:%.*]], <i64 5, i64 5>
+; CHECK-NEXT:    [[XOR:%.*]] = icmp ne <2 x i64> [[A:%.*]], splat (i64 5)
 ; CHECK-NEXT:    ret <2 x i1> [[XOR]]
 ;
   %b = icmp sgt <2 x i64> %a, <i64 4, i64 4>
@@ -419,7 +419,7 @@ define i32 @test20(i32 %A) {
 
 define <2 x i32> @test20vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test20vec(
-; CHECK-NEXT:    [[D:%.*]] = and <2 x i32> [[A:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[D:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %B = and <2 x i32> %A, <i32 1, i32 1>
@@ -442,8 +442,8 @@ define i32 @test21(i32 %a) {
 
 define <2 x i32> @test21vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test21vec(
-; CHECK-NEXT:    [[TMP_6:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 2, i32 2>
-; CHECK-NEXT:    [[TMP_6_LOBIT:%.*]] = and <2 x i32> [[TMP_6]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP_6:%.*]] = lshr <2 x i32> [[A:%.*]], splat (i32 2)
+; CHECK-NEXT:    [[TMP_6_LOBIT:%.*]] = and <2 x i32> [[TMP_6]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP_6_LOBIT]]
 ;
   %tmp.6 = and <2 x i32> %a, <i32 4, i32 4>
@@ -490,8 +490,8 @@ define i32 @test23(i32 %a) {
 
 define <2 x i32> @test23vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test23vec(
-; CHECK-NEXT:    [[TMP_1:%.*]] = and <2 x i32> [[A:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP_3:%.*]] = xor <2 x i32> [[TMP_1]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP_1:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[TMP_3:%.*]] = xor <2 x i32> [[TMP_1]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP_3]]
 ;
   %tmp.1 = and <2 x i32> %a, <i32 1, i32 1>
@@ -516,9 +516,9 @@ define i32 @test24(i32 %a) {
 
 define <2 x i32> @test24vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test24vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 2, i32 2>
-; CHECK-NEXT:    [[DOTLOBIT:%.*]] = and <2 x i32> [[TMP1]], <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP_3:%.*]] = xor <2 x i32> [[DOTLOBIT]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[A:%.*]], splat (i32 2)
+; CHECK-NEXT:    [[DOTLOBIT:%.*]] = and <2 x i32> [[TMP1]], splat (i32 1)
+; CHECK-NEXT:    [[TMP_3:%.*]] = xor <2 x i32> [[DOTLOBIT]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP_3]]
 ;
   %tmp1 = and <2 x i32> %a, <i32 4, i32 4>

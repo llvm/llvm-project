@@ -15,7 +15,7 @@
 
 #include "interval_map.h"
 
-namespace __orc_rt {
+namespace orc_rt {
 
 /// Implements a coalescing interval set.
 ///
@@ -82,6 +82,6 @@ private:
   ImplMap Map;
 };
 
-} // End namespace __orc_rt
+} // End namespace orc_rt
 
 #endif // ORC_RT_INTERVAL_SET_H

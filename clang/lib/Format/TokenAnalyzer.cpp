@@ -22,13 +22,10 @@
 #include "UnwrappedLineParser.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
-#include <type_traits>
 
 #define DEBUG_TYPE "format-formatter"
 
@@ -106,7 +103,7 @@ TokenAnalyzer::process(bool SkipAnnotation) {
                        Env.getFirstStartColumn(), Style, Encoding, Allocator,
                        IdentTable);
   ArrayRef<FormatToken *> Toks(Lex.lex());
-  SmallVector<FormatToken *, 10> Tokens(Toks.begin(), Toks.end());
+  SmallVector<FormatToken *, 10> Tokens(Toks);
   UnwrappedLineParser Parser(Env.getSourceManager(), Style, Lex.getKeywords(),
                              Env.getFirstStartColumn(), Tokens, *this,
                              Allocator, IdentTable);

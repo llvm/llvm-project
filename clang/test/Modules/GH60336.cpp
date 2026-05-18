@@ -1,5 +1,7 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -x c++ -std=c++20 %s -verify -fmodules -fmodules-cache-path=%t
+// expected-no-diagnostics
+
 #pragma clang module build std
 module std   [system] {
   module concepts     [system] {
@@ -65,14 +67,3 @@ constexpr bool ntsf_subsumes_sf(std::nothrow_sentinel_for<char*> auto) requires 
 }
 constexpr bool ntsf_subsumes_sf(std::sentinel_for<char*> auto);
 static_assert(ntsf_subsumes_sf("foo"));
-
-// Note: Doing diagnostics verify lines in the individual modules isn't
-// permitted, and using 'bookmarks' in a module also doesn't work, so we're 
-// forced to diagnose this by line-number.
-//
-// Check to ensure that this error happens, prior to a revert of a concepts
-// sugaring patch, this diagnostic didn't happen correctly.
-
-// expected-error@* {{partial specialization of 'common_reference<_Tp, _Up>' must be imported from module 'std.type_traits' before it is required}}
-// expected-note@63 {{while substituting into concept arguments here}}
-// expected-note@*{{partial specialization declared here is not reachable}}

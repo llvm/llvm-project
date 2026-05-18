@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
+// RUN: mlir-opt %s -test-lower-to-llvm  | \
+// RUN: mlir-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
@@ -31,6 +31,15 @@ func.func @entry() {
   // CHECK: ( 1, 1, 1, 0, 0 )
   // CHECK: ( 1, 1, 1, 1, 0 )
   // CHECK: ( 1, 1, 1, 1, 1 )
+  // CHECK: ( 1, 1, 1, 1, 1 )
+
+  // Verify that bounds larger than INT32_MAX produce an all-true mask.
+  // With force-32bit-vector-indices (the default), a naive truncating cast of
+  // 2^51 to i32 wraps to 0 and produces an all-false mask; the fix clamps the
+  // bound to INT32_MAX before casting.
+  %large = arith.constant 2251799813685248 : index  // 2^51
+  %9 = func.call @create_mask_large_bound(%large) : (index) -> vector<5xi1>
+  vector.print %9 : vector<5xi1>
   // CHECK: ( 1, 1, 1, 1, 1 )
 
   //
@@ -111,4 +120,11 @@ func.func @entry() {
   // CHECK: ( ( 1, 1, 1, 1, 1 ), ( 1, 1, 1, 1, 1 ), ( 1, 1, 1, 1, 1 ), ( 1, 1, 1, 1, 1 ), ( 1, 1, 1, 1, 1 ) )
 
   return
+}
+
+// Helper for the large-bound overflow regression test: takes a runtime index
+// so that vector.create_mask cannot be constant-folded before lowering.
+func.func @create_mask_large_bound(%n : index) -> vector<5xi1> {
+  %0 = vector.create_mask %n : vector<5xi1>
+  return %0 : vector<5xi1>
 }

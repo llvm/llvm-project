@@ -14,15 +14,12 @@
 #include <concepts>
 
 #include <array>
+#include <cstddef>
 #include <deque>
 #include <forward_list>
 #include <list>
 #include <map>
-#include <memory>
 #include <optional>
-#include <set>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include "compare_types.h"
@@ -92,7 +89,12 @@ static_assert(!check_totally_ordered_with<int, int (S::*)() const volatile&&>())
 static_assert(!check_totally_ordered_with < int, int (S::*)() const volatile&& noexcept > ());
 
 static_assert(check_totally_ordered_with<int*, int*>());
+// Array comparisons are ill-formed in C++26, but Clang doesn't implement this yet.
+#if TEST_STD_VER <= 23 || defined(TEST_COMPILER_CLANG)
 static_assert(check_totally_ordered_with<int*, int[5]>());
+#else
+static_assert(!check_totally_ordered_with<int*, int[5]>());
+#endif
 static_assert(!check_totally_ordered_with<int*, int (*)()>());
 static_assert(!check_totally_ordered_with<int*, int (&)()>());
 static_assert(!check_totally_ordered_with<int*, int (S::*)()>());
@@ -120,7 +122,12 @@ static_assert(!check_totally_ordered_with < int*, int (S::*)() volatile&& noexce
 static_assert(!check_totally_ordered_with<int*, int (S::*)() const volatile&&>());
 static_assert(!check_totally_ordered_with < int*, int (S::*)() const volatile&& noexcept > ());
 
+// Array comparisons are ill-formed in C++26, but Clang doesn't implement this yet.
+#if TEST_STD_VER <= 23 || defined(TEST_COMPILER_CLANG)
 static_assert(check_totally_ordered_with<int[5], int[5]>());
+#else
+static_assert(!check_totally_ordered_with<int[5], int[5]>());
+#endif
 static_assert(!check_totally_ordered_with<int[5], int (*)()>());
 static_assert(!check_totally_ordered_with<int[5], int (&)()>());
 static_assert(!check_totally_ordered_with<int[5], int (S::*)()>());

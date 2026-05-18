@@ -241,6 +241,22 @@ function(add_target_with_flags target_name)
     list(APPEND ADD_TO_EXPAND_FLAGS ${ADD_TO_EXPAND_ADD_FLAGS})
   endif()
   list(APPEND ADD_TO_EXPAND_FLAGS ${deps_flag_list})
+
+  # If any flag with the __ONLY modifier is unavailable (i.e. its
+  # SKIP_FLAG_EXPANSION is set), skip this target entirely.  The __ONLY
+  # modifier means the target must only be built with that flag active;
+  # building without it would produce incorrect results.
+  foreach(flag_with_modifier IN LISTS ADD_TO_EXPAND_FLAGS)
+    extract_flag_modifier(${flag_with_modifier} flag modifier)
+    if("${modifier}" STREQUAL "ONLY" AND SKIP_FLAG_EXPANSION_${flag})
+      if(SHOW_INTERMEDIATE_OBJECTS)
+        message(STATUS "Not generating ${fq_target_name} since "
+                       "${flag} is not available on the host.")
+      endif()
+      return()
+    endif()
+  endforeach()
+
   remove_duplicated_flags("${ADD_TO_EXPAND_FLAGS}" flags)
   list(SORT flags)
 
@@ -263,21 +279,45 @@ set(FMA_OPT_FLAG "FMA_OPT")
 set(ROUND_OPT_FLAG "ROUND_OPT")
 # This flag controls whether we use explicit SIMD instructions or not.
 set(EXPLICIT_SIMD_OPT_FLAG "EXPLICIT_SIMD_OPT")
+# This flag controls whether we use compiler builtin functions to implement
+# various basic math operations or not.
+set(MISC_MATH_BASIC_OPS_OPT_FLAG "MISC_MATH_BASIC_OPS_OPT")
 
 # Skip FMA_OPT flag for targets that don't support fma.
-if(NOT((LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "FMA")) OR
-       LIBC_TARGET_ARCHITECTURE_IS_RISCV64))
-  set(SKIP_FLAG_EXPANSION_FMA_OPT TRUE)
+if(NOT DEFINED SKIP_FLAG_EXPANSION_FMA_OPT)
+  if(NOT((LIBC_TARGET_ARCHITECTURE_IS_X86_64 AND (LIBC_CPU_FEATURES MATCHES "FMA")) OR
+        LIBC_TARGET_ARCHITECTURE_IS_ANY_RISCV))
+    set(SKIP_FLAG_EXPANSION_FMA_OPT TRUE)
+  endif()
 endif()
 
 # Skip EXPLICIT_SIMD_OPT flag for targets that don't support SSE2.
 # Note: one may want to revisit it if they want to control other explicit SIMD
-if(NOT(LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "SSE2")))
-  set(SKIP_FLAG_EXPANSION_EXPLICIT_SIMD_OPT TRUE)
+if(NOT DEFINED SKIP_FLAG_EXPANSION_EXPLICIT_SIMD_OPT)
+  if(NOT(LIBC_TARGET_ARCHITECTURE_IS_X86_64 AND (LIBC_CPU_FEATURES MATCHES "SSE2")))
+    set(SKIP_FLAG_EXPANSION_EXPLICIT_SIMD_OPT TRUE)
+  endif()
 endif()
 
-# Skip ROUND_OPT flag for targets that don't support SSE 4.2.
-if(NOT((LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "SSE4_2")) OR
-       LIBC_TARGET_ARCHITECTURE_IS_AARCH64))
-  set(SKIP_FLAG_EXPANSION_ROUND_OPT TRUE)
+# Skip ROUND_OPT flag for targets that don't support rounding instructions. On
+# x86, these are SSE4.1 instructions, but we already had code to check for
+# SSE4.2 support.
+if(NOT DEFINED SKIP_FLAG_EXPANSION_ROUND_OPT)
+  if(NOT((LIBC_TARGET_ARCHITECTURE_IS_X86_64 AND (LIBC_CPU_FEATURES MATCHES "SSE4_2")) OR
+        LIBC_TARGET_ARCHITECTURE_IS_AARCH64 OR LIBC_TARGET_OS_IS_GPU))
+    set(SKIP_FLAG_EXPANSION_ROUND_OPT TRUE)
+  endif()
+endif()
+
+# Choose whether time_t is 32- or 64-bit, based on target architecture
+# and config options. This will be used to set a #define during the
+# library build, and also to select the right version of time_t.h for
+# the output headers.
+if(LIBC_TARGET_ARCHITECTURE_IS_ARM AND NOT (LIBC_CONF_TIME_64BIT))
+  # Set time_t to 32 bit for compatibility with glibc, unless
+  # configuration says otherwise
+  set(LIBC_TYPES_TIME_T_IS_32_BIT TRUE)
+else()
+  # Other platforms default to 64-bit time_t
+  set(LIBC_TYPES_TIME_T_IS_32_BIT FALSE)
 endif()

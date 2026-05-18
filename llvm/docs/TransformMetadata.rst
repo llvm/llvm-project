@@ -168,6 +168,27 @@ has unroll metadata).
 The attributes specified by ``llvm.loop.vectorize.followup_all`` are
 added to both loops.
 
+In addition to the above, the vectorizer automatically annotates the
+generated loops with two metadata attributes for remark quality:
+
+- ``llvm.loop.vectorize.body`` is added to the vectorized loop.
+- ``llvm.loop.vectorize.epilogue`` is added to the scalar
+  remainder (epilogue) loop.
+
+Together these provide a four-way classification:
+
+- ``body`` only: main vectorized loop body
+- ``epilogue`` only: scalar epilogue loop after vectorization
+- Both: vectorized epilogue (a remainder that was itself
+  vectorized during epilogue vectorization)
+- Neither: a plain loop not produced by the vectorizer
+
+This is used by subsequent passes (e.g., the loop unroller and
+``WarnMissedTransforms``) to produce more precise optimization remarks.
+For instance, instead of reporting both "loop unrolled" and "loop not
+unrolled" for the same source line, the unroller can clarify that a
+*vectorized* loop was unrolled while its *scalar epilogue* was not.
+
 When using a follow-up attribute, it replaces any automatically deduced
 attributes for the generated loop in question. Therefore it is
 recommended to add ``llvm.loop.isvectorized`` to
@@ -345,6 +366,18 @@ It is recommended to add ``llvm.loop.disable_nonforced`` to
 ``llvm.loop.distribute.followup_fallback``. This avoids that the
 fallback version (which is likely never executed) is further optimized
 which would increase the code size.
+
+Attributes defined in ``llvm.loop.isdistributed`` are added to successfully
+distributed loops to prevent subsequent reprocessing.
+
+As an example, the following instructs a loop to be ignored during
+loop distribution.
+
+.. code-block:: llvm
+
+    !4 = distinct !{!4, !5, !6}
+    !5 = !{!"llvm.loop.mustprogress"}
+    !6 = !{!"llvm.loop.isdistributed", i32 1}
 
 Versioning LICM
 ---------------

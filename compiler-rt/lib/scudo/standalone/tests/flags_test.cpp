@@ -110,12 +110,28 @@ TEST(ScudoFlagsTest, AllocatorFlags) {
   Flags.setDefaults();
   Flags.dealloc_type_mismatch = false;
   Flags.delete_size_mismatch = false;
+  Flags.dealloc_align_mismatch = false;
   Flags.quarantine_max_chunk_size = 1024;
-  Parser.parseString("dealloc_type_mismatch=true:delete_size_mismatch=true:"
-                     "quarantine_max_chunk_size=2048");
+  Parser.parseString(
+      "dealloc_type_mismatch=true:delete_size_mismatch=true:"
+      "dealloc_align_mismatch=true:quarantine_max_chunk_size=2048");
   EXPECT_TRUE(Flags.dealloc_type_mismatch);
   EXPECT_TRUE(Flags.delete_size_mismatch);
+  EXPECT_TRUE(Flags.dealloc_align_mismatch);
   EXPECT_EQ(2048, Flags.quarantine_max_chunk_size);
+}
+
+TEST(ScudoFlagsTest, InitFlagsEnv) {
+  const char *OldValue = getenv("SCUDO_ALLOCATION_RING_BUFFER_SIZE");
+  setenv("SCUDO_ALLOCATION_RING_BUFFER_SIZE", "123", 1);
+  scudo::initFlags();
+  scudo::Flags *F = scudo::getFlags();
+  EXPECT_EQ(123, F->allocation_ring_buffer_size);
+  if (OldValue) {
+    setenv("SCUDO_ALLOCATION_RING_BUFFER_SIZE", OldValue, 1);
+  } else {
+    unsetenv("SCUDO_ALLOCATION_RING_BUFFER_SIZE");
+  }
 }
 
 #ifdef GWP_ASAN_HOOKS

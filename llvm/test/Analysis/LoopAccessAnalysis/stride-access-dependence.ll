@@ -276,7 +276,7 @@ for.body:                                         ; preds = %entry, %for.body
 define void @vectorizable_Read_Write(ptr nocapture %A) {
 ; CHECK-LABEL: 'vectorizable_Read_Write'
 ; CHECK-NEXT:    for.body:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 64 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 64 bits, with a maximum safe store-load forward width of 64 bits
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %0 = load i32, ptr %arrayidx, align 4 ->

@@ -19,6 +19,8 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
+#include "llvm/Support/Endian.h"
+
 using namespace lldb_private;
 using namespace lldb;
 
@@ -76,8 +78,7 @@ lldb::addr_t ArchitectureMips::GetBreakableLoadAddress(lldb::addr_t addr,
 
   Address resolved_addr;
 
-  SectionLoadList &section_load_list = target.GetSectionLoadList();
-  if (section_load_list.IsEmpty())
+  if (!target.HasLoadedSections())
     // No sections are loaded, so we must assume we are not running yet and
     // need to operate only on file address.
     target.ResolveFileAddress(addr, resolved_addr);
@@ -97,7 +98,7 @@ lldb::addr_t ArchitectureMips::GetBreakableLoadAddress(lldb::addr_t addr,
       resolve_scope, sc);
     Address sym_addr;
     if (sc.function)
-      sym_addr = sc.function->GetAddressRange().GetBaseAddress();
+      sym_addr = sc.function->GetAddress();
     else if (sc.symbol)
       sym_addr = sc.symbol->GetAddress();
 
@@ -114,7 +115,7 @@ lldb::addr_t ArchitectureMips::GetBreakableLoadAddress(lldb::addr_t addr,
   if (current_offset == 0)
     return addr;
 
-  auto insn = GetInstructionAtAddress(target, current_offset, addr);
+  auto insn = GetInstructionAtAddress(target, Address(current_offset), addr);
 
   if (nullptr == insn || !insn->HasDelaySlot())
     return addr;
@@ -150,7 +151,7 @@ Instruction *ArchitectureMips::GetInstructionAtAddress(
 
   // Create Disassembler Instance
   lldb::DisassemblerSP disasm_sp(
-    Disassembler::FindPlugin(m_arch, nullptr, nullptr));
+      Disassembler::FindPlugin(m_arch, nullptr, nullptr, nullptr, nullptr));
 
   InstructionList instruction_list;
   InstructionSP prev_insn;
@@ -229,4 +230,13 @@ Instruction *ArchitectureMips::GetInstructionAtAddress(
   }
 
   return nullptr;
+}
+
+bool ArchitectureMips::IsValidTrapInstruction(
+    llvm::ArrayRef<uint8_t> reference, llvm::ArrayRef<uint8_t> observed) const {
+  // The middle twenty bits of BREAK can be anything, so zero them
+  uint32_t mask = 0xFC00003F;
+  auto ref_bytes = llvm::support::endian::read32le(reference.data());
+  auto bytes = llvm::support::endian::read32le(observed.data());
+  return (ref_bytes & mask) == (bytes & mask);
 }

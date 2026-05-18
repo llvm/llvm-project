@@ -1,8 +1,8 @@
 ! Test delayed privatization for the `private` clause.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %s 2>&1 | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %s 2>&1 \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - %s 2>&1 \
 ! RUN:   | FileCheck %s
 
 subroutine delayed_privatization_private
@@ -15,12 +15,8 @@ subroutine delayed_privatization_private
 end subroutine
 
 ! CHECK-LABEL: omp.private {type = private}
-! CHECK-SAME: @[[PRIVATIZER_SYM:.*]] : !fir.ref<i32> alloc {
-! CHECK-NEXT: ^bb0(%[[PRIV_ARG:.*]]: !fir.ref<i32>):
-! CHECK-NEXT:   %[[PRIV_ALLOC:.*]] = fir.alloca i32 {bindc_name = "var1", pinned, uniq_name = "_QFdelayed_privatization_privateEvar1"}
-! CHECK-NEXT:   %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[PRIV_ALLOC]] {uniq_name = "_QFdelayed_privatization_privateEvar1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK-NEXT:   omp.yield(%[[PRIV_DECL]]#0 : !fir.ref<i32>)
-! CHECK-NOT: } copy {
+! CHECK-SAME: @[[PRIVATIZER_SYM:.*]] : i32
+! CHECK-NOT: copy {
 
 ! CHECK-LABEL: @_QPdelayed_privatization_private
 ! CHECK: %[[ORIG_ALLOC:.*]] = fir.alloca i32 {bindc_name = "var1", uniq_name = "_QFdelayed_privatization_privateEvar1"}

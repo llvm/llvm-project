@@ -18,26 +18,29 @@ using namespace lldb;
 
 TEST(StatusTest, Formatv) {
   EXPECT_EQ("", llvm::formatv("{0}", Status()).str());
-  EXPECT_EQ("Hello Status", llvm::formatv("{0}", Status("Hello Status")).str());
-  EXPECT_EQ("Hello", llvm::formatv("{0:5}", Status("Hello Error")).str());
+  EXPECT_EQ(
+      "Hello Status",
+      llvm::formatv("{0}", Status::FromErrorString("Hello Status")).str());
+  EXPECT_EQ(
+      "Hello",
+      llvm::formatv("{0:5}", Status::FromErrorString("Hello Error")).str());
 }
 
 TEST(StatusTest, ErrorConstructor) {
-  EXPECT_TRUE(Status(llvm::Error::success()).Success());
+  EXPECT_TRUE(Status::FromError(llvm::Error::success()).Success());
 
-  Status eagain(
+  Status eagain = Status::FromError(
       llvm::errorCodeToError(std::error_code(EAGAIN, std::generic_category())));
   EXPECT_TRUE(eagain.Fail());
   EXPECT_EQ(eErrorTypePOSIX, eagain.GetType());
   EXPECT_EQ(Status::ValueType(EAGAIN), eagain.GetError());
 
-  Status foo(llvm::make_error<llvm::StringError>(
-      "foo", llvm::inconvertibleErrorCode()));
+  Status foo = Status::FromError(llvm::createStringError("foo"));
   EXPECT_TRUE(foo.Fail());
   EXPECT_EQ(eErrorTypeGeneric, foo.GetType());
   EXPECT_STREQ("foo", foo.AsCString());
 
-  foo = llvm::Error::success();
+  foo = Status::FromError(llvm::Error::success());
   EXPECT_TRUE(foo.Success());
 }
 
@@ -48,6 +51,11 @@ TEST(StatusTest, ErrorCodeConstructor) {
   EXPECT_TRUE(eagain.Fail());
   EXPECT_EQ(eErrorTypePOSIX, eagain.GetType());
   EXPECT_EQ(Status::ValueType(EAGAIN), eagain.GetError());
+
+  llvm::Error list = llvm::joinErrors(llvm::createStringError("foo"),
+                                      llvm::createStringError("bar"));
+  Status foobar = Status::FromError(std::move(list));
+  EXPECT_EQ(std::string("foo\nbar"), std::string(foobar.AsCString()));
 }
 
 TEST(StatusTest, ErrorConversion) {
@@ -59,9 +67,17 @@ TEST(StatusTest, ErrorConversion) {
   EXPECT_EQ(EAGAIN, ec.value());
   EXPECT_EQ(std::generic_category(), ec.category());
 
-  llvm::Error foo = Status("foo").ToError();
+  llvm::Error foo = Status::FromErrorString("foo").ToError();
   EXPECT_TRUE(bool(foo));
   EXPECT_EQ("foo", llvm::toString(std::move(foo)));
+
+  llvm::Error eperm = llvm::errorCodeToError({EPERM, std::generic_category()});
+  llvm::Error eintr = llvm::errorCodeToError({EINTR, std::generic_category()});
+  llvm::Error elist = llvm::joinErrors(std::move(eperm), std::move(eintr));
+  elist = llvm::joinErrors(std::move(elist), llvm::createStringError("foo"));
+  Status list = Status::FromError(std::move(elist));
+  EXPECT_EQ((int)list.GetError(), EPERM);
+  EXPECT_EQ(list.GetType(), eErrorTypePOSIX);
 }
 
 #ifdef _WIN32
@@ -80,16 +96,16 @@ TEST(StatusTest, ErrorWin32) {
   // formatted messages will be different.
   bool skip = wcscmp(L"en-US", name) != 0;
 
-  auto s = Status(ERROR_ACCESS_DENIED, ErrorType::eErrorTypeWin32);
+  Status s = Status(ERROR_ACCESS_DENIED, ErrorType::eErrorTypeWin32);
   EXPECT_TRUE(s.Fail());
   if (!skip)
     EXPECT_STREQ("Access is denied. ", s.AsCString());
 
-  s.SetError(ERROR_IPSEC_IKE_TIMED_OUT, ErrorType::eErrorTypeWin32);
+  s = Status(ERROR_IPSEC_IKE_TIMED_OUT, ErrorType::eErrorTypeWin32);
   if (!skip)
     EXPECT_STREQ("Negotiation timed out ", s.AsCString());
 
-  s.SetError(16000, ErrorType::eErrorTypeWin32);
+  s = Status(16000, ErrorType::eErrorTypeWin32);
   if (!skip)
     EXPECT_STREQ("unknown error", s.AsCString());
 }

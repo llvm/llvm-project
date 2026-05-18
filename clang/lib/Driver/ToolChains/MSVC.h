@@ -9,10 +9,11 @@
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MSVC_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MSVC_H
 
-#include "AMDGPU.h"
-#include "Cuda.h"
-#include "LazyDetector.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/CudaInstallationDetector.h"
+#include "clang/Driver/LazyDetector.h"
+#include "clang/Driver/RocmInstallationDetector.h"
+#include "clang/Driver/SyclInstallationDetector.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/Frontend/Debug/Options.h"
@@ -97,8 +98,11 @@ public:
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const override;
 
-  void AddHIPRuntimeLibArgs(const llvm::opt::ArgList &Args,
-                            llvm::opt::ArgStringList &CmdArgs) const override;
+  void addOffloadRTLibs(unsigned ActiveKinds, const llvm::opt::ArgList &Args,
+                        llvm::opt::ArgStringList &CmdArgs) const override;
+
+  void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                          llvm::opt::ArgStringList &CC1Args) const override;
 
   bool getWindowsSDKLibraryPath(
       const llvm::opt::ArgList &Args, std::string &path) const;
@@ -110,6 +114,7 @@ public:
                      const llvm::opt::ArgList &Args) const override;
 
   std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
+                                          llvm::StringRef BoundArch,
                                           types::ID InputType) const override;
   SanitizerMask getSupportedSanitizers() const override;
 
@@ -138,6 +143,7 @@ private:
   llvm::ToolsetLayout VSLayout = llvm::ToolsetLayout::OlderVS;
   LazyDetector<CudaInstallationDetector> CudaInstallation;
   LazyDetector<RocmInstallationDetector> RocmInstallation;
+  LazyDetector<SYCLInstallationDetector> SYCLInstallation;
 };
 
 } // end namespace toolchains

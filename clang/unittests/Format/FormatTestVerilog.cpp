@@ -160,6 +160,8 @@ TEST_F(FormatTestVerilog, Block) {
   // Test that 'disable fork' and 'rand join' don't get mistaken as blocks.
   verifyFormat("disable fork;\n"
                "x = x;");
+  verifyFormat("wait fork;\n"
+               "x = x;");
   verifyFormat("rand join x x;\n"
                "x = x;");
   // The begin keyword should not be indented if it is too long to fit on the
@@ -421,6 +423,11 @@ TEST_F(FormatTestVerilog, Declaration) {
   verifyFormat("wire (strong1, pull0) mynet, mynet1 = enable;");
   verifyFormat("wire (strong1, pull0) mynet, //\n"
                "                      mynet1 = enable;");
+
+  // The type or variable can be a C++ keyword.
+  verifyFormat("private mynet;");
+  verifyFormat("switch mynet;");
+  verifyFormat("wire try;");
 }
 
 TEST_F(FormatTestVerilog, Delay) {
@@ -674,6 +681,16 @@ TEST_F(FormatTestVerilog, Hierarchy) {
                "  endprogram\n"
                "endmodule");
   // Test that an extern declaration doesn't change the indentation.
+  verifyFormat("import \"DPI-C\" context MyCFunc = function integer MapID\n"
+               "    (int portID);\n"
+               "x = x;");
+  verifyFormat("export \"DPI-C\" function exported_sv_func;\n"
+               "x = x;");
+  verifyFormat("import \"DPI-C\" function void f1\n"
+               "    (input int i1,\n"
+               "     pair i2,\n"
+               "     output logic [63 : 0] o3);\n"
+               "x = x;");
   verifyFormat("extern module x;\n"
                "x = x;");
   // Test complex headers
@@ -702,6 +719,18 @@ TEST_F(FormatTestVerilog, Hierarchy) {
                "  generate\n"
                "  endgenerate\n"
                "endfunction : x");
+  // Type names with '::' should be recognized.
+  verifyFormat("function automatic x::x x\n"
+               "    (input x);\n"
+               "endfunction : x");
+  // Names having to do macros should be recognized.
+  verifyFormat("function automatic x::x x``x\n"
+               "    (input x);\n"
+               "endfunction : x");
+  verifyFormat("function automatic x::x `x\n"
+               "    (input x);\n"
+               "endfunction : x");
+  verifyNoCrash("x x(x x, x x);");
 }
 
 TEST_F(FormatTestVerilog, Identifiers) {
@@ -964,6 +993,7 @@ TEST_F(FormatTestVerilog, Instantiation) {
                "        .qbar(out1),\n"
                "        .clear(in1),\n"
                "        .preset(in2));");
+  verifyNoCrash(", ff1();");
   // With breaking between instance ports disabled.
   auto Style = getDefaultStyle();
   Style.VerilogBreakBetweenInstancePorts = false;
@@ -982,6 +1012,8 @@ TEST_F(FormatTestVerilog, Instantiation) {
 
 TEST_F(FormatTestVerilog, Loop) {
   verifyFormat("foreach (x[x])\n"
+               "  x = x;");
+  verifyFormat("(* x = \"x\" *) foreach (x[x])\n"
                "  x = x;");
   verifyFormat("repeat (x)\n"
                "  x = x;");
@@ -1223,6 +1255,53 @@ TEST_F(FormatTestVerilog, Primitive) {
                "endprimitive");
 }
 
+TEST_F(FormatTestVerilog, Protected) {
+  // The mess-up function does not know that the pragma needs to be on its own
+  // line. So the 1-argument version of `verifyFormat` is avoided here.
+
+  // Stuff inside the block should not change.
+  verifyNoChange("`pragma protect data_block\n"
+                 " 0+\n"
+                 "0=\n"
+                 "`pragma protect end_protected");
+  verifyNoChange("`pragma protect data_block\n"
+                 "`pragma protect end_protected");
+  verifyNoChange("`pragma protect data_block\n"
+                 " 0+0=\n"
+                 "`pragma protect end_protected");
+  verifyNoChange("`pragma protect data_block\n"
+                 "0+0=\n"
+                 "`pragma protect end_protected");
+
+  // Stuff around the block should be formatted.
+  verifyFormat("x = 0;\n"
+               "`pragma protect data_block\n"
+               "0+0=\n"
+               "`pragma protect end_protected\n"
+               "x = 0;",
+               "x=0;\n"
+               "`pragma protect data_block\n"
+               "0+0=\n"
+               "`pragma protect end_protected\n"
+               "x=0;");
+  verifyFormat("x = 0;\n"
+               "`pragma protect data_block\n"
+               "`pragma protect end_protected\n"
+               "x = 0;",
+               "x=0;\n"
+               "`pragma protect data_block\n"
+               "`pragma protect end_protected\n"
+               "x=0;");
+
+  // Stuff between `begin` and `end` is ordinary code. It should be formatted.
+  verifyFormat("`pragma protect begin\n"
+               "x = 0;\n"
+               "`pragma protect end",
+               "`pragma protect begin\n"
+               "x=0;\n"
+               "`pragma protect end");
+}
+
 TEST_F(FormatTestVerilog, Streaming) {
   verifyFormat("x = {>>{j}};");
   verifyFormat("x = {>>byte{j}};");
@@ -1272,7 +1351,7 @@ TEST_F(FormatTestVerilog, StringLiteral) {
                getStyleWithColumns(getDefaultStyle(), 32));
   // Space around braces should be correct.
   auto Style = getStyleWithColumns(getDefaultStyle(), 24);
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   verifyFormat(R"(x({ "xxxxxxxxxxxxxxxx ",
     "xxxx" });)",
                R"(x("xxxxxxxxxxxxxxxx xxxx");)", Style);
@@ -1310,6 +1389,21 @@ TEST_F(FormatTestVerilog, StringLiteral) {
                 getStyleWithColumns(getDefaultStyle(), 23));
   verifyNoCrash(R"(x(_T("xxxxxxxxxxxxxxxx xxxx"));)",
                 getStyleWithColumns(getDefaultStyle(), 23));
+
+  // The protected block is internally a string literal. But the program should
+  // not try to break it into multiple lines.
+  verifyNoChange("`pragma protect data_block\n"
+                 "'00000000000000000000000000000000000000000+0='\n"
+                 "`pragma protect end_protected",
+                 getStyleWithColumns(getDefaultStyle(), 29));
+  verifyNoChange("`pragma protect data_block\n"
+                 "\"00000000000000000000000000000000000000000+0=\"\n"
+                 "`pragma protect end_protected",
+                 getStyleWithColumns(getDefaultStyle(), 29));
+  verifyNoChange("`pragma protect data_block\n"
+                 "00000000000000000000000000000000000000000+0=\n"
+                 "`pragma protect end_protected",
+                 getStyleWithColumns(getDefaultStyle(), 29));
 }
 
 TEST_F(FormatTestVerilog, StructLiteral) {

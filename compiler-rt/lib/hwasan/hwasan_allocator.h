@@ -74,7 +74,8 @@ struct AP64 {
 #if defined(HWASAN_ALIASING_MODE)
   static const uptr kSpaceSize = 1ULL << kAddressTagShift;
   typedef __sanitizer::DefaultSizeClassMap SizeClassMap;
-#elif SANITIZER_LINUX && !SANITIZER_ANDROID
+#elif SANITIZER_LINUX && !SANITIZER_ANDROID && \
+    !defined(SANITIZER_AARCH64_39BIT_VA)
   static const uptr kSpaceSize = 0x40000000000ULL;  // 4T.
   typedef __sanitizer::DefaultSizeClassMap SizeClassMap;
 #else

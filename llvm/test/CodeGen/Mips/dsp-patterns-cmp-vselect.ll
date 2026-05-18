@@ -1,4 +1,4 @@
-; RUN: llc -march=mips -mattr=dsp < %s | FileCheck %s
+; RUN: llc -mtriple=mips -mattr=dsp < %s | FileCheck %s
 
 ; CHECK-LABEL: select_v2q15_eq_:
 ; CHECK: cmp.eq.ph ${{[0-9]+}}, ${{[0-9]+}}

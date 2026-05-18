@@ -12,8 +12,8 @@
 define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ; OPT-GFX7-LABEL: @test_sinkable_flat_small_offset_i32(
 ; OPT-GFX7-NEXT:  entry:
-; OPT-GFX7-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
-; OPT-GFX7-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr [[IN:%.*]], i64 7
+; OPT-GFX7-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
+; OPT-GFX7-NEXT:    [[IN_GEP:%.*]] = getelementptr inbounds i32, ptr [[IN:%.*]], i64 7
 ; OPT-GFX7-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-GFX7-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX7:       if:
@@ -28,8 +28,8 @@ define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ;
 ; OPT-GFX8-LABEL: @test_sinkable_flat_small_offset_i32(
 ; OPT-GFX8-NEXT:  entry:
-; OPT-GFX8-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
-; OPT-GFX8-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr [[IN:%.*]], i64 7
+; OPT-GFX8-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
+; OPT-GFX8-NEXT:    [[IN_GEP:%.*]] = getelementptr inbounds i32, ptr [[IN:%.*]], i64 7
 ; OPT-GFX8-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-GFX8-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX8:       if:
@@ -44,11 +44,11 @@ define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ;
 ; OPT-GFX9-LABEL: @test_sinkable_flat_small_offset_i32(
 ; OPT-GFX9-NEXT:  entry:
-; OPT-GFX9-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
+; OPT-GFX9-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
 ; OPT-GFX9-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-GFX9-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX9:       if:
-; OPT-GFX9-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 28
+; OPT-GFX9-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr [[IN:%.*]], i64 28
 ; OPT-GFX9-NEXT:    [[LOAD:%.*]] = load i32, ptr [[SUNKADDR]], align 4
 ; OPT-GFX9-NEXT:    br label [[ENDIF]]
 ; OPT-GFX9:       endif:
@@ -58,11 +58,11 @@ define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ;
 ; OPT-GFX10-LABEL: @test_sinkable_flat_small_offset_i32(
 ; OPT-GFX10-NEXT:  entry:
-; OPT-GFX10-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
+; OPT-GFX10-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
 ; OPT-GFX10-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-GFX10-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX10:       if:
-; OPT-GFX10-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 28
+; OPT-GFX10-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr [[IN:%.*]], i64 28
 ; OPT-GFX10-NEXT:    [[LOAD:%.*]] = load i32, ptr [[SUNKADDR]], align 4
 ; OPT-GFX10-NEXT:    br label [[ENDIF]]
 ; OPT-GFX10:       endif:
@@ -73,81 +73,81 @@ define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ; GFX7-LABEL: test_sinkable_flat_small_offset_i32:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; GFX7-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX7-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX7-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX7-NEXT:  ; %bb.1: ; %if
 ; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 28, v2
 ; GFX7-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
-; GFX7-NEXT:    flat_load_dword v4, v[2:3]
+; GFX7-NEXT:    flat_load_dword v5, v[2:3]
 ; GFX7-NEXT:  .LBB0_2: ; %endif
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 0x3d08fc, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    flat_store_dword v[0:1], v4
+; GFX7-NEXT:    flat_store_dword v[0:1], v5
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: test_sinkable_flat_small_offset_i32:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; GFX8-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX8-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX8-NEXT:  ; %bb.1: ; %if
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 28, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
-; GFX8-NEXT:    flat_load_dword v4, v[2:3]
+; GFX8-NEXT:    flat_load_dword v5, v[2:3]
 ; GFX8-NEXT:  .LBB0_2: ; %endif
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 0x3d08fc, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    flat_store_dword v[0:1], v4
+; GFX8-NEXT:    flat_store_dword v[0:1], v5
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: test_sinkable_flat_small_offset_i32:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX9-NEXT:  ; %bb.1: ; %if
-; GFX9-NEXT:    flat_load_dword v4, v[2:3] offset:28
+; GFX9-NEXT:    flat_load_dword v5, v[2:3] offset:28
 ; GFX9-NEXT:  .LBB0_2: ; %endif
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x3d0000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    flat_store_dword v[0:1], v4 offset:2300
+; GFX9-NEXT:    flat_store_dword v[0:1], v5 offset:2300
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: test_sinkable_flat_small_offset_i32:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v4
-; GFX10-NEXT:    v_mov_b32_e32 v4, 0
-; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
+; GFX10-NEXT:    v_mov_b32_e32 v5, 0
+; GFX10-NEXT:    s_mov_b32 s4, exec_lo
+; GFX10-NEXT:    v_cmpx_ne_u32_e32 0, v4
 ; GFX10-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX10-NEXT:  ; %bb.1: ; %if
-; GFX10-NEXT:    flat_load_dword v4, v[2:3] offset:28
+; GFX10-NEXT:    flat_load_dword v5, v[2:3] offset:28
 ; GFX10-NEXT:  .LBB0_2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3d0800, v0
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    flat_store_dword v[0:1], v4 offset:252
+; GFX10-NEXT:    flat_store_dword v[0:1], v5 offset:252
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %out.gep = getelementptr i32, ptr %out, i64 999999
-  %in.gep = getelementptr i32, ptr %in, i64 7
+  %out.gep = getelementptr inbounds i32, ptr %out, i64 999999
+  %in.gep = getelementptr inbounds i32, ptr %in, i64 7
   %cmp0 = icmp eq i32 %cond, 0
   br i1 %cmp0, label %endif, label %if
 
@@ -167,12 +167,12 @@ done:
 define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, i32 %cond) {
 ; OPT-GFX7-LABEL: @test_sink_noop_addrspacecast_flat_to_global_i32(
 ; OPT-GFX7-NEXT:  entry:
-; OPT-GFX7-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
+; OPT-GFX7-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
 ; OPT-GFX7-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-GFX7-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX7:       if:
 ; OPT-GFX7-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[IN:%.*]] to ptr addrspace(1)
-; OPT-GFX7-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr addrspace(1) [[TMP0]], i64 28
+; OPT-GFX7-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0]], i64 28
 ; OPT-GFX7-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[SUNKADDR]], align 4
 ; OPT-GFX7-NEXT:    br label [[ENDIF]]
 ; OPT-GFX7:       endif:
@@ -182,8 +182,8 @@ define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, 
 ;
 ; OPT-GFX8-LABEL: @test_sink_noop_addrspacecast_flat_to_global_i32(
 ; OPT-GFX8-NEXT:  entry:
-; OPT-GFX8-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
-; OPT-GFX8-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr [[IN:%.*]], i64 7
+; OPT-GFX8-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
+; OPT-GFX8-NEXT:    [[IN_GEP:%.*]] = getelementptr inbounds i32, ptr [[IN:%.*]], i64 7
 ; OPT-GFX8-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-GFX8-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX8:       if:
@@ -197,12 +197,12 @@ define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, 
 ;
 ; OPT-GFX9-LABEL: @test_sink_noop_addrspacecast_flat_to_global_i32(
 ; OPT-GFX9-NEXT:  entry:
-; OPT-GFX9-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
+; OPT-GFX9-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
 ; OPT-GFX9-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-GFX9-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX9:       if:
 ; OPT-GFX9-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[IN:%.*]] to ptr addrspace(1)
-; OPT-GFX9-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr addrspace(1) [[TMP0]], i64 28
+; OPT-GFX9-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0]], i64 28
 ; OPT-GFX9-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[SUNKADDR]], align 4
 ; OPT-GFX9-NEXT:    br label [[ENDIF]]
 ; OPT-GFX9:       endif:
@@ -212,12 +212,12 @@ define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, 
 ;
 ; OPT-GFX10-LABEL: @test_sink_noop_addrspacecast_flat_to_global_i32(
 ; OPT-GFX10-NEXT:  entry:
-; OPT-GFX10-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
+; OPT-GFX10-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
 ; OPT-GFX10-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-GFX10-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX10:       if:
 ; OPT-GFX10-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[IN:%.*]] to ptr addrspace(1)
-; OPT-GFX10-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr addrspace(1) [[TMP0]], i64 28
+; OPT-GFX10-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0]], i64 28
 ; OPT-GFX10-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[SUNKADDR]], align 4
 ; OPT-GFX10-NEXT:    br label [[ENDIF]]
 ; OPT-GFX10:       endif:
@@ -228,83 +228,83 @@ define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, 
 ; GFX7-LABEL: test_sink_noop_addrspacecast_flat_to_global_i32:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_mov_b32 s6, 0
+; GFX7-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; GFX7-NEXT:    v_mov_b32_e32 v4, 0
-; GFX7-NEXT:    s_and_saveexec_b64 s[8:9], vcc
+; GFX7-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX7-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX7-NEXT:  ; %bb.1: ; %if
-; GFX7-NEXT:    s_mov_b32 s7, 0xf000
-; GFX7-NEXT:    s_mov_b32 s4, s6
-; GFX7-NEXT:    s_mov_b32 s5, s6
-; GFX7-NEXT:    buffer_load_dword v4, v[2:3], s[4:7], 0 addr64 offset:28
+; GFX7-NEXT:    s_mov_b32 s10, 0
+; GFX7-NEXT:    s_mov_b32 s11, 0xf000
+; GFX7-NEXT:    s_mov_b32 s8, s10
+; GFX7-NEXT:    s_mov_b32 s9, s10
+; GFX7-NEXT:    buffer_load_dword v5, v[2:3], s[8:11], 0 addr64 offset:28
 ; GFX7-NEXT:  .LBB1_2: ; %endif
-; GFX7-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 0x3d08fc, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    flat_store_dword v[0:1], v4
+; GFX7-NEXT:    flat_store_dword v[0:1], v5
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: test_sink_noop_addrspacecast_flat_to_global_i32:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; GFX8-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX8-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX8-NEXT:  ; %bb.1: ; %if
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 28, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
-; GFX8-NEXT:    flat_load_dword v4, v[2:3]
+; GFX8-NEXT:    flat_load_dword v5, v[2:3]
 ; GFX8-NEXT:  .LBB1_2: ; %endif
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 0x3d08fc, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    flat_store_dword v[0:1], v4
+; GFX8-NEXT:    flat_store_dword v[0:1], v5
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: test_sink_noop_addrspacecast_flat_to_global_i32:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX9-NEXT:  ; %bb.1: ; %if
-; GFX9-NEXT:    global_load_dword v4, v[2:3], off offset:28
+; GFX9-NEXT:    global_load_dword v5, v[2:3], off offset:28
 ; GFX9-NEXT:  .LBB1_2: ; %endif
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x3d0000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    flat_store_dword v[0:1], v4 offset:2300
+; GFX9-NEXT:    flat_store_dword v[0:1], v5 offset:2300
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: test_sink_noop_addrspacecast_flat_to_global_i32:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v4
-; GFX10-NEXT:    v_mov_b32_e32 v4, 0
-; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
+; GFX10-NEXT:    v_mov_b32_e32 v5, 0
+; GFX10-NEXT:    s_mov_b32 s4, exec_lo
+; GFX10-NEXT:    v_cmpx_ne_u32_e32 0, v4
 ; GFX10-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX10-NEXT:  ; %bb.1: ; %if
-; GFX10-NEXT:    global_load_dword v4, v[2:3], off offset:28
+; GFX10-NEXT:    global_load_dword v5, v[2:3], off offset:28
 ; GFX10-NEXT:  .LBB1_2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3d0800, v0
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    flat_store_dword v[0:1], v4 offset:252
+; GFX10-NEXT:    flat_store_dword v[0:1], v5 offset:252
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %out.gep = getelementptr i32, ptr %out, i64 999999
-  %in.gep = getelementptr i32, ptr %in, i64 7
+  %out.gep = getelementptr inbounds i32, ptr %out, i64 999999
+  %in.gep = getelementptr inbounds i32, ptr %in, i64 7
   %cast = addrspacecast ptr %in.gep to ptr addrspace(1)
   %cmp0 = icmp eq i32 %cond, 0
   br i1 %cmp0, label %endif, label %if
@@ -325,12 +325,12 @@ done:
 define void @test_sink_noop_addrspacecast_flat_to_constant_i32(ptr %out, ptr %in, i32 %cond) {
 ; OPT-LABEL: @test_sink_noop_addrspacecast_flat_to_constant_i32(
 ; OPT-NEXT:  entry:
-; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
+; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
 ; OPT-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT:       if:
 ; OPT-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[IN:%.*]] to ptr addrspace(4)
-; OPT-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr addrspace(4) [[TMP0]], i64 28
+; OPT-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP0]], i64 28
 ; OPT-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(4) [[SUNKADDR]], align 4
 ; OPT-NEXT:    br label [[ENDIF]]
 ; OPT:       endif:
@@ -341,83 +341,83 @@ define void @test_sink_noop_addrspacecast_flat_to_constant_i32(ptr %out, ptr %in
 ; GFX7-LABEL: test_sink_noop_addrspacecast_flat_to_constant_i32:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_mov_b32 s6, 0
+; GFX7-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; GFX7-NEXT:    v_mov_b32_e32 v4, 0
-; GFX7-NEXT:    s_and_saveexec_b64 s[8:9], vcc
+; GFX7-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX7-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX7-NEXT:  ; %bb.1: ; %if
-; GFX7-NEXT:    s_mov_b32 s7, 0xf000
-; GFX7-NEXT:    s_mov_b32 s4, s6
-; GFX7-NEXT:    s_mov_b32 s5, s6
-; GFX7-NEXT:    buffer_load_dword v4, v[2:3], s[4:7], 0 addr64 offset:28
+; GFX7-NEXT:    s_mov_b32 s10, 0
+; GFX7-NEXT:    s_mov_b32 s11, 0xf000
+; GFX7-NEXT:    s_mov_b32 s8, s10
+; GFX7-NEXT:    s_mov_b32 s9, s10
+; GFX7-NEXT:    buffer_load_dword v5, v[2:3], s[8:11], 0 addr64 offset:28
 ; GFX7-NEXT:  .LBB2_2: ; %endif
-; GFX7-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 0x3d08fc, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    flat_store_dword v[0:1], v4
+; GFX7-NEXT:    flat_store_dword v[0:1], v5
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: test_sink_noop_addrspacecast_flat_to_constant_i32:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; GFX8-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX8-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX8-NEXT:  ; %bb.1: ; %if
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 28, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
-; GFX8-NEXT:    flat_load_dword v4, v[2:3]
+; GFX8-NEXT:    flat_load_dword v5, v[2:3]
 ; GFX8-NEXT:  .LBB2_2: ; %endif
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 0x3d08fc, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    flat_store_dword v[0:1], v4
+; GFX8-NEXT:    flat_store_dword v[0:1], v5
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: test_sink_noop_addrspacecast_flat_to_constant_i32:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX9-NEXT:  ; %bb.1: ; %if
-; GFX9-NEXT:    global_load_dword v4, v[2:3], off offset:28
+; GFX9-NEXT:    global_load_dword v5, v[2:3], off offset:28
 ; GFX9-NEXT:  .LBB2_2: ; %endif
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x3d0000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    flat_store_dword v[0:1], v4 offset:2300
+; GFX9-NEXT:    flat_store_dword v[0:1], v5 offset:2300
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: test_sink_noop_addrspacecast_flat_to_constant_i32:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v4
-; GFX10-NEXT:    v_mov_b32_e32 v4, 0
-; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
+; GFX10-NEXT:    v_mov_b32_e32 v5, 0
+; GFX10-NEXT:    s_mov_b32 s4, exec_lo
+; GFX10-NEXT:    v_cmpx_ne_u32_e32 0, v4
 ; GFX10-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX10-NEXT:  ; %bb.1: ; %if
-; GFX10-NEXT:    global_load_dword v4, v[2:3], off offset:28
+; GFX10-NEXT:    global_load_dword v5, v[2:3], off offset:28
 ; GFX10-NEXT:  .LBB2_2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3d0800, v0
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    flat_store_dword v[0:1], v4 offset:252
+; GFX10-NEXT:    flat_store_dword v[0:1], v5 offset:252
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %out.gep = getelementptr i32, ptr %out, i64 999999
-  %in.gep = getelementptr i32, ptr %in, i64 7
+  %out.gep = getelementptr inbounds i32, ptr %out, i64 999999
+  %in.gep = getelementptr inbounds i32, ptr %in, i64 7
   %cast = addrspacecast ptr %in.gep to ptr addrspace(4)
   %cmp0 = icmp eq i32 %cond, 0
   br i1 %cmp0, label %endif, label %if
@@ -438,8 +438,8 @@ done:
 define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ; OPT-GFX7-LABEL: @test_sink_flat_small_max_flat_offset(
 ; OPT-GFX7-NEXT:  entry:
-; OPT-GFX7-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i32 1024
-; OPT-GFX7-NEXT:    [[IN_GEP:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 4095
+; OPT-GFX7-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i32 1024
+; OPT-GFX7-NEXT:    [[IN_GEP:%.*]] = getelementptr inbounds i8, ptr [[IN:%.*]], i64 4095
 ; OPT-GFX7-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #[[ATTR3:[0-9]+]]
 ; OPT-GFX7-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[TID]], 0
 ; OPT-GFX7-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
@@ -456,8 +456,8 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ;
 ; OPT-GFX8-LABEL: @test_sink_flat_small_max_flat_offset(
 ; OPT-GFX8-NEXT:  entry:
-; OPT-GFX8-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i32 1024
-; OPT-GFX8-NEXT:    [[IN_GEP:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 4095
+; OPT-GFX8-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i32 1024
+; OPT-GFX8-NEXT:    [[IN_GEP:%.*]] = getelementptr inbounds i8, ptr [[IN:%.*]], i64 4095
 ; OPT-GFX8-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #[[ATTR3:[0-9]+]]
 ; OPT-GFX8-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[TID]], 0
 ; OPT-GFX8-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
@@ -474,12 +474,12 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ;
 ; OPT-GFX9-LABEL: @test_sink_flat_small_max_flat_offset(
 ; OPT-GFX9-NEXT:  entry:
-; OPT-GFX9-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i32 1024
+; OPT-GFX9-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i32 1024
 ; OPT-GFX9-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #[[ATTR3:[0-9]+]]
 ; OPT-GFX9-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[TID]], 0
 ; OPT-GFX9-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX9:       if:
-; OPT-GFX9-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 4095
+; OPT-GFX9-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr [[IN:%.*]], i64 4095
 ; OPT-GFX9-NEXT:    [[LOAD:%.*]] = load i8, ptr [[SUNKADDR]], align 1
 ; OPT-GFX9-NEXT:    [[CAST:%.*]] = sext i8 [[LOAD]] to i32
 ; OPT-GFX9-NEXT:    br label [[ENDIF]]
@@ -490,8 +490,8 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ;
 ; OPT-GFX10-LABEL: @test_sink_flat_small_max_flat_offset(
 ; OPT-GFX10-NEXT:  entry:
-; OPT-GFX10-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i32 1024
-; OPT-GFX10-NEXT:    [[IN_GEP:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 4095
+; OPT-GFX10-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i32 1024
+; OPT-GFX10-NEXT:    [[IN_GEP:%.*]] = getelementptr inbounds i8, ptr [[IN:%.*]], i64 4095
 ; OPT-GFX10-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #[[ATTR3:[0-9]+]]
 ; OPT-GFX10-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[TID]], 0
 ; OPT-GFX10-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
@@ -570,26 +570,26 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX10-LABEL: test_sink_flat_small_max_flat_offset:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mbcnt_lo_u32_b32 v4, -1, 0
-; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v4
+; GFX10-NEXT:    v_mbcnt_lo_u32_b32 v5, -1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
-; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
+; GFX10-NEXT:    s_mov_b32 s4, exec_lo
+; GFX10-NEXT:    v_cmpx_ne_u32_e32 0, v5
 ; GFX10-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, 0x800, v2
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX10-NEXT:    flat_load_sbyte v4, v[2:3] offset:2047
 ; GFX10-NEXT:  .LBB3_2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v4
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %out.gep = getelementptr i32, ptr %out, i32 1024
-  %in.gep = getelementptr i8, ptr %in, i64 4095
+  %out.gep = getelementptr inbounds i32, ptr %out, i32 1024
+  %in.gep = getelementptr inbounds i8, ptr %in, i64 4095
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %endif, label %if
@@ -611,8 +611,8 @@ done:
 define void @test_sink_flat_small_max_plus_1_flat_offset(ptr %out, ptr %in) #1 {
 ; OPT-LABEL: @test_sink_flat_small_max_plus_1_flat_offset(
 ; OPT-NEXT:  entry:
-; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 99999
-; OPT-NEXT:    [[IN_GEP:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 4096
+; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 99999
+; OPT-NEXT:    [[IN_GEP:%.*]] = getelementptr inbounds i8, ptr [[IN:%.*]], i64 4096
 ; OPT-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #[[ATTR3:[0-9]+]]
 ; OPT-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[TID]], 0
 ; OPT-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
@@ -693,26 +693,26 @@ define void @test_sink_flat_small_max_plus_1_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX10-LABEL: test_sink_flat_small_max_plus_1_flat_offset:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mbcnt_lo_u32_b32 v4, -1, 0
-; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v4
+; GFX10-NEXT:    v_mbcnt_lo_u32_b32 v5, -1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
-; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
+; GFX10-NEXT:    s_mov_b32 s4, exec_lo
+; GFX10-NEXT:    v_cmpx_ne_u32_e32 0, v5
 ; GFX10-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, 0x1000, v2
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX10-NEXT:    flat_load_sbyte v4, v[2:3]
 ; GFX10-NEXT:  .LBB4_2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x61800, v0
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v4 offset:636
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %out.gep = getelementptr i32, ptr %out, i64 99999
-  %in.gep = getelementptr i8, ptr %in, i64 4096
+  %out.gep = getelementptr inbounds i32, ptr %out, i64 99999
+  %in.gep = getelementptr inbounds i8, ptr %in, i64 4096
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %endif, label %if
@@ -734,8 +734,8 @@ done:
 define void @test_sinkable_flat_reg_offset(ptr %out, ptr %in, i64 %reg) #1 {
 ; OPT-LABEL: @test_sinkable_flat_reg_offset(
 ; OPT-NEXT:  entry:
-; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i32 1024
-; OPT-NEXT:    [[IN_GEP:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 [[REG:%.*]]
+; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i32 1024
+; OPT-NEXT:    [[IN_GEP:%.*]] = getelementptr inbounds i8, ptr [[IN:%.*]], i64 [[REG:%.*]]
 ; OPT-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #[[ATTR3]]
 ; OPT-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[TID]], 0
 ; OPT-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
@@ -816,26 +816,26 @@ define void @test_sinkable_flat_reg_offset(ptr %out, ptr %in, i64 %reg) #1 {
 ; GFX10-LABEL: test_sinkable_flat_reg_offset:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mbcnt_lo_u32_b32 v6, -1, 0
-; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v6
+; GFX10-NEXT:    v_mbcnt_lo_u32_b32 v7, -1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v6, 0
-; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
+; GFX10-NEXT:    s_mov_b32 s4, exec_lo
+; GFX10-NEXT:    v_cmpx_ne_u32_e32 0, v7
 ; GFX10-NEXT:    s_cbranch_execz .LBB5_2
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v3, v5, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v3, null, v3, v5, vcc_lo
 ; GFX10-NEXT:    flat_load_sbyte v6, v[2:3]
 ; GFX10-NEXT:  .LBB5_2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v6
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %out.gep = getelementptr i32, ptr %out, i32 1024
-  %in.gep = getelementptr i8, ptr %in, i64 %reg
+  %out.gep = getelementptr inbounds i32, ptr %out, i32 1024
+  %in.gep = getelementptr inbounds i8, ptr %in, i64 %reg
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %endif, label %if
