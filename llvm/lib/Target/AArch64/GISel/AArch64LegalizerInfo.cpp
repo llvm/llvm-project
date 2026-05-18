@@ -297,6 +297,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({i64, v16i8, v8i16, v4i32})
       .lower();
 
+  getActionDefinitionsBuilder({G_SMULFIX, G_UMULFIX}).lower();
+
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
       .legalFor({v8i8, v16i8, v4i16, v8i16, v2i32, v4i32})
       .legalFor(HasCSSC, {i32, i64})
@@ -397,7 +399,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarizeIf(scalarOrEltWiderThan(0, 32), 0)
       .scalarSameSizeAs(0, 1);
 
-  getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).lower();
+  getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON).lower();
 
   getActionDefinitionsBuilder(G_CTTZ)
       .lowerIf(isVector(0))
@@ -407,7 +409,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(HasCSSC, {s32, s64})
       .customFor(!HasCSSC, {s32, s64});
 
-  getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).lower();
+  getActionDefinitionsBuilder(G_CTTZ_ZERO_POISON).lower();
 
   getActionDefinitionsBuilder(G_BITREVERSE)
       .legalFor({i32, i64, v8i8, v16i8})
@@ -450,7 +452,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(HasFP16, {f16, v4f16, v8f16})
       .libcallFor({f128})
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
-      .minScalarOrElt(0, MinFPScalar)
+      .widenScalarIf(
+          [=](const LegalityQuery &Q) {
+            return (!HasFP16 && Q.Types[0].getScalarType().isFloat16()) ||
+                   Q.Types[0].getScalarType().isBFloat16();
+          },
+          changeElementTo(0, f32))
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
@@ -772,7 +779,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(HasFP16, {{i32, f16}, {v4i16, v4f16}, {v8i16, v8f16}})
       .widenScalarOrEltToNextPow2(1)
       .clampScalar(0, s32, s32)
-      .minScalarOrElt(1, MinFPScalar)
+      .widenScalarIf(
+          [=](const LegalityQuery &Q) {
+            return (!HasFP16 && Q.Types[1].getScalarType().isFloat16()) ||
+                   Q.Types[1].getScalarType().isBFloat16();
+          },
+          changeElementTo(1, f32))
       .scalarizeIf(scalarOrEltWiderThan(1, 64), 1)
       .minScalarEltSameAsIf(
           [=](const LegalityQuery &Query) {
@@ -1496,6 +1508,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_PREFETCH).custom();
 
   getActionDefinitionsBuilder({G_SCMP, G_UCMP}).lower();
+
+  getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS})
+      .alwaysLegal();
+  getActionDefinitionsBuilder(G_FENCE).alwaysLegal();
+  getActionDefinitionsBuilder(G_INVOKE_REGION_START).alwaysLegal();
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());

@@ -5153,8 +5153,8 @@ struct OmpErrorDirective {
   WRAPPER_CLASS_BOILERPLATE(OmpErrorDirective, OmpDirectiveSpecification);
 };
 
-struct OpenMPUtilityConstruct {
-  UNION_CLASS_BOILERPLATE(OpenMPUtilityConstruct);
+struct OmpUtilityDirective {
+  UNION_CLASS_BOILERPLATE(OmpUtilityDirective);
   CharBlock source;
   std::variant<OmpErrorDirective, OmpNothingDirective> u;
 };
@@ -5164,9 +5164,8 @@ struct OpenMPUtilityConstruct {
 // assumes-construct ->
 //   ASSUMES absent-clause | contains-clause | holds-clause | no-openmp-clause |
 //          no-openmp-routines-clause | no-parallelism-clause
-struct OpenMPDeclarativeAssumes {
-  WRAPPER_CLASS_BOILERPLATE(
-      OpenMPDeclarativeAssumes, OmpDirectiveSpecification);
+struct OmpAssumesDirective {
+  WRAPPER_CLASS_BOILERPLATE(OmpAssumesDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
@@ -5176,8 +5175,8 @@ struct OpenMPDeclarativeAssumes {
 //   ASSUME assumption-clause...
 //     block
 //   [END ASSUME]
-struct OpenMPAssumeConstruct : public OmpBlockConstruct {
-  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPAssumeConstruct, OmpBlockConstruct);
+struct OmpAssumeDirective : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpAssumeDirective, OmpBlockConstruct);
 };
 
 // 2.7.2 SECTIONS
@@ -5196,8 +5195,8 @@ struct OmpEndSectionsDirective : public OmpEndDirective {
 // [!$omp section
 //    structured-block]
 // ...
-struct OpenMPSectionConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPSectionConstruct);
+struct OmpSectionDirective {
+  TUPLE_CLASS_BOILERPLATE(OmpSectionDirective);
   std::tuple<std::optional<OmpDirectiveSpecification>, Block> t;
   CharBlock source;
 };
@@ -5212,7 +5211,7 @@ struct OpenMPSectionsConstruct {
     return std::get<std::optional<OmpEndSectionsDirective>>(t);
   }
   // Each of the OpenMPConstructs in the list below contains an
-  // OpenMPSectionConstruct. This is guaranteed by the parser.
+  // OmpSectionDirective. This is guaranteed by the parser.
   // The end sections directive is optional here because it is difficult to
   // generate helpful error messages for a missing end directive within the
   // parser. Semantics will generate an error if this is absent.
@@ -5271,20 +5270,22 @@ struct OmpDeclareSimdDirective {
 //
 // groupprivate-directive ->
 //    GROUPPRIVATE (variable-list-item...)          // since 6.0
-struct OpenMPGroupprivate {
-  WRAPPER_CLASS_BOILERPLATE(OpenMPGroupprivate, OmpDirectiveSpecification);
+struct OmpGroupprivateDirective {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpGroupprivateDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
 // 2.4 requires -> REQUIRES requires-clause[ [ [,] requires-clause]...]
-struct OpenMPRequiresConstruct {
-  WRAPPER_CLASS_BOILERPLATE(OpenMPRequiresConstruct, OmpDirectiveSpecification);
+struct OmpRequiresDirective {
+  WRAPPER_CLASS_BOILERPLATE(OmpRequiresDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
 // 2.15.2 threadprivate -> THREADPRIVATE (variable-name-list)
-struct OpenMPThreadprivate {
-  WRAPPER_CLASS_BOILERPLATE(OpenMPThreadprivate, OmpDirectiveSpecification);
+struct OmpThreadprivateDirective {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpThreadprivateDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
@@ -5323,11 +5324,11 @@ struct OmpAllocateDirective : public OmpBlockConstruct {
 struct OpenMPDeclarativeConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPDeclarativeConstruct);
   CharBlock source;
-  std::variant<OmpAllocateDirective, OpenMPDeclarativeAssumes,
+  std::variant<OmpAllocateDirective, OmpAssumesDirective,
       OmpDeclareMapperDirective, OmpDeclareReductionDirective,
       OmpDeclareSimdDirective, OmpDeclareTargetDirective,
-      OmpDeclareVariantDirective, OpenMPGroupprivate, OpenMPThreadprivate,
-      OpenMPRequiresConstruct, OpenMPUtilityConstruct,
+      OmpDeclareVariantDirective, OmpGroupprivateDirective,
+      OmpThreadprivateDirective, OmpRequiresDirective, OmpUtilityDirective,
       OmpMetadirectiveDirective>
       u;
 };
@@ -5471,9 +5472,9 @@ struct OpenMPExecDirective {
 struct OpenMPConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPConstruct);
   std::variant<OpenMPStandaloneConstruct, OpenMPSectionsConstruct,
-      OpenMPSectionConstruct, OpenMPLoopConstruct, OmpBlockConstruct,
+      OmpSectionDirective, OpenMPLoopConstruct, OmpBlockConstruct,
       OpenMPAtomicConstruct, OmpAllocateDirective, OpenMPDispatchConstruct,
-      OpenMPUtilityConstruct, OpenMPAllocatorsConstruct, OpenMPAssumeConstruct,
+      OmpUtilityDirective, OpenMPAllocatorsConstruct, OmpAssumeDirective,
       OpenMPCriticalConstruct, OmpDelimitedMetadirectiveDirective>
       u;
 };

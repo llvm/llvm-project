@@ -1041,6 +1041,11 @@ def err_ptrauth_indirect_goto_addrlabel_arithmetic : Error<
   "%select{subtraction|addition}0 of address-of-label expressions is not "
   "supported with ptrauth indirect gotos">;
 
+def warn_fe_access_without_fenv_access : Warning<
+  "'%0' used without enabling floating-point exception behavior; use 'pragma STDC "
+  "FENV_ACCESS ON' or compile with '-ffp-exception-behavior=maytrap'">,
+  InGroup<DiagGroup<"fenv-access">>;
+
 // __ptrauth qualifier
 def err_ptrauth_qualifier_invalid : Error<
   "%select{return type|parameter type|property}1 may not be qualified with "
@@ -6027,8 +6032,6 @@ def note_checking_constraints_for_function_here : Note<
   "while checking constraint satisfaction for function '%0' required here">;
 def note_constraint_substitution_here : Note<
   "while substituting template arguments into constraint expression here">;
-def note_constraint_normalization_here : Note<
-  "while calculating associated constraint of template %0 here">;
 def note_parameter_mapping_substitution_here : Note<
   "while substituting into concept arguments here; substitution failures not "
   "allowed in concept arguments">;
@@ -10985,6 +10988,14 @@ def warn_lifetime_safety_invalidation
     : Warning<"%select{object whose reference is captured|parameter}0 is later invalidated">,
       InGroup<LifetimeSafetyInvalidation>,
       DefaultIgnore;
+def warn_lifetime_safety_invalidated_field
+    : Warning<"%select{object whose reference|parameter which}0 escapes to a field is later invalidated">,
+      InGroup<LifetimeSafetyInvalidation>,
+      DefaultIgnore;
+def warn_lifetime_safety_invalidated_global
+    : Warning<"%select{object whose reference|parameter which}0 escapes to global or static storage is later invalidated">,
+      InGroup<LifetimeSafetyInvalidation>,
+      DefaultIgnore;
 
 def warn_lifetime_safety_dangling_field
     : Warning<"address of stack memory escapes to a field">,
@@ -11005,6 +11016,11 @@ def warn_lifetime_safety_dangling_global_moved
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingGlobalMoved>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_lifetimebound_violation
+    : Warning<"could not verify that the return value can be lifetime bound to %select{an unnamed parameter|'%1'|the implicit this parameter}0">,
+      InGroup<LifetimeSafetyLifetimeboundViolation>,
       DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
@@ -12174,6 +12190,10 @@ def err_omp_declare_target_var_in_both_clauses
 def err_omp_declare_target_local_host_only
     : Error<"'local' clause is incompatible with 'device_type(host)'; "
             "local variables exist only on the device">;
+def warn_omp_declare_target_local_nohost
+    : Warning<"'device_type(nohost)' is not yet supported with 'local' clause; "
+              "treating as 'device_type(any)'">,
+      InGroup<OpenMPTarget>;
 def warn_omp_not_in_target_context : Warning<
   "declaration is not declared in any declare target region">,
   InGroup<OpenMPTarget>;
@@ -12596,11 +12616,6 @@ def err_omp_declare_target_has_local_vars : Error<
 def warn_omp_declare_target_after_first_use : Warning<
   "declaration marked as declare target after first use, it may lead to incorrect results">,
   InGroup<OpenMPTarget>;
-def warn_omp_declare_target_local_not_implemented
-    : Warning<"'local' clause on 'declare_target' directive is not yet fully "
-              "implemented; "
-              "variable will be treated as 'enter'">,
-      InGroup<OpenMPTarget>;
 def err_omp_declare_variant_incompat_attributes : Error<
   "'#pragma omp declare variant' is not compatible with any target-specific attributes">;
 def warn_omp_declare_variant_score_not_constant
@@ -13424,6 +13439,8 @@ def warn_sycl_kernel_return_type : Warning<
 def err_sycl_special_type_num_init_method : Error<
   "types with 'sycl_special_class' attribute must have one and only one '__init' "
   "method defined">;
+def err_sycl_device_invalid_target : Error<
+  "%0 is not a supported SYCL device target">;
 
 // SYCL external attribute diagnostics
 def err_sycl_external_invalid_linkage : Error<

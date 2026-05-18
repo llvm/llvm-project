@@ -408,5 +408,9 @@ void test() {
   // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::fold_right(iter, iter, 0, std::plus());
   // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::fold_right_last(range, std::plus());
+  // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::fold_right_last(iter, iter, std::plus());
+  // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 }
