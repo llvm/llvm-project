@@ -109,3 +109,29 @@ void f5() {
     //   expected-note@#A5 {{'A' defined here}}
   }
 }
+
+decltype(auto) f6() {
+  struct S { struct A; }; // #S
+  return S();
+}
+
+using X = decltype(f6());
+struct X::A {};
+// expected-error@-1 {{nested local class 'A' must be defined in the same block scope as its parent class 'S'}}
+//   expected-note@#S {{'S' defined here}}
+
+auto f7 = [] {
+  struct L { struct B; }; // #L
+  {
+    struct L::B {};
+    // expected-error@-1 {{nested local class 'B' must be defined in the same block scope as its parent class 'L'}}
+    //   expected-note@#L {{'L' defined here}}
+  }
+};
+
+struct A {
+  void f() {
+    struct B { struct C; };
+    { struct B::C {}; }
+  }
+};
