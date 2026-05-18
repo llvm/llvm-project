@@ -2164,29 +2164,29 @@ define <2 x i64> @v_urem_v2i64_24bit(<2 x i64> %num, <2 x i64> %den) {
 ; GISEL-NEXT:    v_cmp_ge_u32_e32 vcc, v10, v3
 ; GISEL-NEXT:    v_cndmask_b32_e64 v11, 0, -1, vcc
 ; GISEL-NEXT:    v_sub_i32_e32 v12, vcc, v8, v1
-; GISEL-NEXT:    v_subbrev_u32_e32 v13, vcc, 0, v0, vcc
+; GISEL-NEXT:    v_subbrev_u32_e32 v0, vcc, 0, v0, vcc
 ; GISEL-NEXT:    v_cmp_ge_u32_e32 vcc, v12, v1
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
+; GISEL-NEXT:    v_cndmask_b32_e64 v13, 0, -1, vcc
 ; GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GISEL-NEXT:    v_cndmask_b32_e32 v11, -1, v11, vcc
 ; GISEL-NEXT:    v_sub_i32_e32 v3, vcc, v10, v3
 ; GISEL-NEXT:    v_subbrev_u32_e32 v14, vcc, 0, v2, vcc
-; GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v13
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc
+; GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GISEL-NEXT:    v_cndmask_b32_e32 v13, -1, v13, vcc
 ; GISEL-NEXT:    v_sub_i32_e32 v1, vcc, v12, v1
-; GISEL-NEXT:    v_subbrev_u32_e32 v15, vcc, 0, v13, vcc
+; GISEL-NEXT:    v_subbrev_u32_e32 v15, vcc, 0, v0, vcc
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v11
 ; GISEL-NEXT:    v_cndmask_b32_e32 v3, v10, v3, vcc
-; GISEL-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v0
-; GISEL-NEXT:    v_cndmask_b32_e64 v1, v12, v1, s[4:5]
-; GISEL-NEXT:    v_cndmask_b32_e32 v10, v2, v14, vcc
+; GISEL-NEXT:    v_cndmask_b32_e32 v2, v2, v14, vcc
+; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v13
+; GISEL-NEXT:    v_cndmask_b32_e32 v10, v12, v1, vcc
+; GISEL-NEXT:    v_cndmask_b32_e32 v11, v0, v15, vcc
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v5, v3, vcc
-; GISEL-NEXT:    v_cndmask_b32_e64 v3, v13, v15, s[4:5]
-; GISEL-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v4
-; GISEL-NEXT:    v_cndmask_b32_e64 v2, v8, v1, s[4:5]
-; GISEL-NEXT:    v_cndmask_b32_e32 v1, v6, v10, vcc
-; GISEL-NEXT:    v_cndmask_b32_e64 v3, v9, v3, s[4:5]
+; GISEL-NEXT:    v_cndmask_b32_e32 v1, v6, v2, vcc
+; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
+; GISEL-NEXT:    v_cndmask_b32_e32 v2, v8, v10, vcc
+; GISEL-NEXT:    v_cndmask_b32_e32 v3, v9, v11, vcc
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; CGP-LABEL: v_urem_v2i64_24bit:

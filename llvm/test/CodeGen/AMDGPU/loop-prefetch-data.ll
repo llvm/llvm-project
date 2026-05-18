@@ -532,16 +532,16 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v2, s1, s6, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, s7, 0, s1
 ; GFX12-NEXT:    v_add_co_u32 v0, s1, s4, v0
-; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, s5, 0, s1
+; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX12-NEXT:  .LBB4_2: ; %for.body
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_u32 v4, vcc_lo, 0xffffff50, v2
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v5, null, -1, v3, vcc_lo
@@ -574,16 +574,16 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX12-SPREFETCH-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX12-SPREFETCH-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v2, s1, s6, v0
-; GFX12-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX12-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v3, null, s7, 0, s1
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v0, s1, s4, v0
-; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
 ; GFX12-SPREFETCH-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v1, null, s5, 0, s1
+; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX12-SPREFETCH-NEXT:  .LBB4_2: ; %for.body
 ; GFX12-SPREFETCH-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX12-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v4, vcc_lo, 0xffffff50, v2
 ; GFX12-SPREFETCH-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v5, null, -1, v3, vcc_lo
@@ -617,16 +617,16 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX12ES2-SPREFETCH-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_kmcnt 0x0
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v2, s1, s6, v0
-; GFX12ES2-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX12ES2-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v3, null, s7, 0, s1
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v0, s1, s4, v0
-; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v1, null, s5, 0, s1
+; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX12ES2-SPREFETCH-NEXT:  .LBB4_2: ; %for.body
 ; GFX12ES2-SPREFETCH-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12ES2-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX12ES2-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v4, vcc_lo, 0xffffff50, v2
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v5, null, -1, v3, vcc_lo
@@ -719,12 +719,12 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v2, s1, s6, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, s7, 0, s1
 ; GFX12-NEXT:    v_add_co_u32 v0, s1, s4, v0
-; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, s5, 0, s1
+; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX12-NEXT:  .LBB5_2: ; %for.body
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -757,12 +757,12 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ; GFX12-SPREFETCH-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX12-SPREFETCH-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v2, s1, s6, v0
-; GFX12-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX12-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v3, null, s7, 0, s1
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v0, s1, s4, v0
-; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
 ; GFX12-SPREFETCH-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v1, null, s5, 0, s1
+; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX12-SPREFETCH-NEXT:  .LBB5_2: ; %for.body
 ; GFX12-SPREFETCH-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -796,12 +796,12 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ; GFX12ES2-SPREFETCH-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_kmcnt 0x0
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v2, s1, s6, v0
-; GFX12ES2-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX12ES2-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v3, null, s7, 0, s1
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v0, s1, s4, v0
-; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v1, null, s5, 0, s1
+; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX12ES2-SPREFETCH-NEXT:  .LBB5_2: ; %for.body
 ; GFX12ES2-SPREFETCH-NEXT:    ; =>This Inner Loop Header: Depth=1

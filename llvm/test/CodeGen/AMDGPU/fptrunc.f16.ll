@@ -672,12 +672,12 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; VI-SDAG-NEXT:    v_readfirstlane_b32 s4, v1
 ; VI-SDAG-NEXT:    s_and_b32 s5, s4, 0x1ff
-; VI-SDAG-NEXT:    v_or_b32_e32 v0, s5, v0
 ; VI-SDAG-NEXT:    s_lshr_b32 s7, s4, 8
 ; VI-SDAG-NEXT:    s_bfe_u32 s8, s4, 0xb0014
-; VI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; VI-SDAG-NEXT:    v_or_b32_e32 v0, s5, v0
 ; VI-SDAG-NEXT:    s_and_b32 s5, s7, 0xffe
 ; VI-SDAG-NEXT:    s_sub_i32 s7, 0x3f1, s8
+; VI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; VI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; VI-SDAG-NEXT:    v_med3_i32 v1, s7, 0, 13
 ; VI-SDAG-NEXT:    v_readfirstlane_b32 s7, v0
@@ -785,12 +785,12 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-SDAG-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX9-SDAG-NEXT:    s_and_b32 s6, s5, 0x1ff
-; GFX9-SDAG-NEXT:    v_or_b32_e32 v0, s6, v0
 ; GFX9-SDAG-NEXT:    s_lshr_b32 s7, s5, 8
 ; GFX9-SDAG-NEXT:    s_bfe_u32 s8, s5, 0xb0014
-; GFX9-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX9-SDAG-NEXT:    v_or_b32_e32 v0, s6, v0
 ; GFX9-SDAG-NEXT:    s_and_b32 s6, s7, 0xffe
 ; GFX9-SDAG-NEXT:    s_sub_i32 s7, 0x3f1, s8
+; GFX9-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9-SDAG-NEXT:    v_med3_i32 v1, s7, 0, 13
 ; GFX9-SDAG-NEXT:    v_readfirstlane_b32 s7, v0
@@ -898,17 +898,18 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX950-SDAG-NEXT:    s_and_b32 s6, s5, 0x1ff
-; GFX950-SDAG-NEXT:    v_or_b32_e32 v0, s6, v0
 ; GFX950-SDAG-NEXT:    s_lshr_b32 s7, s5, 8
 ; GFX950-SDAG-NEXT:    s_bfe_u32 s8, s5, 0xb0014
-; GFX950-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX950-SDAG-NEXT:    v_or_b32_e32 v0, s6, v0
 ; GFX950-SDAG-NEXT:    s_and_b32 s6, s7, 0xffe
 ; GFX950-SDAG-NEXT:    s_sub_i32 s7, 0x3f1, s8
-; GFX950-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX950-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GFX950-SDAG-NEXT:    v_med3_i32 v1, s7, 0, 13
+; GFX950-SDAG-NEXT:    s_nop 0
+; GFX950-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s9, v1
 ; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s7, v0
 ; GFX950-SDAG-NEXT:    s_or_b32 s6, s6, s7
-; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s9, v1
 ; GFX950-SDAG-NEXT:    s_or_b32 s7, s6, 0x1000
 ; GFX950-SDAG-NEXT:    s_lshr_b32 s10, s7, s9
 ; GFX950-SDAG-NEXT:    s_lshl_b32 s9, s10, s9
@@ -1015,11 +1016,11 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX11-SDAG-TRUE16-NEXT:    s_sub_i32 s4, 0x3f1, s3
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; GFX11-SDAG-TRUE16-NEXT:    v_med3_i32 v1, s4, 0, 13
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s8, v1
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_med3_i32 v1, s4, 0, 13
 ; GFX11-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s8, v1
 ; GFX11-SDAG-TRUE16-NEXT:    s_or_b32 s4, s5, s4
 ; GFX11-SDAG-TRUE16-NEXT:    s_or_b32 s5, s4, 0x1000
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
@@ -1082,11 +1083,11 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX11-SDAG-FAKE16-NEXT:    s_sub_i32 s4, 0x3f1, s3
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; GFX11-SDAG-FAKE16-NEXT:    v_med3_i32 v1, s4, 0, 13
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s8, v1
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-SDAG-FAKE16-NEXT:    v_med3_i32 v1, s4, 0, 13
 ; GFX11-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s8, v1
 ; GFX11-SDAG-FAKE16-NEXT:    s_or_b32 s4, s5, s4
 ; GFX11-SDAG-FAKE16-NEXT:    s_or_b32 s5, s4, 0x1000
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
@@ -1266,11 +1267,11 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX1250-SDAG-TRUE16-NEXT:    s_sub_co_i32 s4, 0x3f1, s3
 ; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1250-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; GFX1250-SDAG-TRUE16-NEXT:    v_med3_i32 v1, s4, 0, 13
 ; GFX1250-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s8, v1
-; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-TRUE16-NEXT:    v_med3_i32 v1, s4, 0, 13
 ; GFX1250-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s8, v1
 ; GFX1250-SDAG-TRUE16-NEXT:    s_or_b32 s4, s5, s4
 ; GFX1250-SDAG-TRUE16-NEXT:    s_or_b32 s5, s4, 0x1000
 ; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
@@ -1334,11 +1335,11 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX1250-SDAG-FAKE16-NEXT:    s_sub_co_i32 s4, 0x3f1, s3
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; GFX1250-SDAG-FAKE16-NEXT:    v_med3_i32 v1, s4, 0, 13
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s8, v1
-; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-FAKE16-NEXT:    v_med3_i32 v1, s4, 0, 13
 ; GFX1250-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s8, v1
 ; GFX1250-SDAG-FAKE16-NEXT:    s_or_b32 s4, s5, s4
 ; GFX1250-SDAG-FAKE16-NEXT:    s_or_b32 s5, s4, 0x1000
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
@@ -2315,12 +2316,12 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; VI-SDAG-NEXT:    v_readfirstlane_b32 s4, v3
 ; VI-SDAG-NEXT:    s_and_b32 s7, s4, 0x1ff
 ; VI-SDAG-NEXT:    v_readfirstlane_b32 s5, v1
-; VI-SDAG-NEXT:    v_or_b32_e32 v1, s7, v2
 ; VI-SDAG-NEXT:    s_lshr_b32 s8, s4, 8
 ; VI-SDAG-NEXT:    s_bfe_u32 s9, s4, 0xb0014
-; VI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
+; VI-SDAG-NEXT:    v_or_b32_e32 v1, s7, v2
 ; VI-SDAG-NEXT:    s_and_b32 s7, s8, 0xffe
 ; VI-SDAG-NEXT:    s_sub_i32 s8, 0x3f1, s9
+; VI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
 ; VI-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; VI-SDAG-NEXT:    v_med3_i32 v2, s8, 0, 13
 ; VI-SDAG-NEXT:    v_readfirstlane_b32 s8, v1
@@ -2352,12 +2353,12 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; VI-SDAG-NEXT:    s_cmpk_eq_i32 s9, 0x40f
 ; VI-SDAG-NEXT:    s_cselect_b32 s7, s7, s8
 ; VI-SDAG-NEXT:    s_and_b32 s8, s5, 0x1ff
-; VI-SDAG-NEXT:    v_or_b32_e32 v0, s8, v0
 ; VI-SDAG-NEXT:    s_lshr_b32 s4, s4, 16
-; VI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; VI-SDAG-NEXT:    v_or_b32_e32 v0, s8, v0
 ; VI-SDAG-NEXT:    s_lshr_b32 s9, s5, 8
 ; VI-SDAG-NEXT:    s_bfe_u32 s10, s5, 0xb0014
 ; VI-SDAG-NEXT:    s_and_b32 s4, s4, 0x8000
+; VI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; VI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; VI-SDAG-NEXT:    s_and_b32 s8, s9, 0xffe
 ; VI-SDAG-NEXT:    s_sub_i32 s9, 0x3f1, s10
@@ -2517,12 +2518,12 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX9-SDAG-NEXT:    v_readfirstlane_b32 s5, v3
 ; GFX9-SDAG-NEXT:    s_and_b32 s7, s5, 0x1ff
 ; GFX9-SDAG-NEXT:    v_readfirstlane_b32 s6, v1
-; GFX9-SDAG-NEXT:    v_or_b32_e32 v1, s7, v2
 ; GFX9-SDAG-NEXT:    s_lshr_b32 s8, s5, 8
 ; GFX9-SDAG-NEXT:    s_bfe_u32 s9, s5, 0xb0014
-; GFX9-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
+; GFX9-SDAG-NEXT:    v_or_b32_e32 v1, s7, v2
 ; GFX9-SDAG-NEXT:    s_and_b32 s7, s8, 0xffe
 ; GFX9-SDAG-NEXT:    s_sub_i32 s8, 0x3f1, s9
+; GFX9-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX9-SDAG-NEXT:    v_med3_i32 v2, s8, 0, 13
 ; GFX9-SDAG-NEXT:    v_readfirstlane_b32 s8, v1
@@ -2554,12 +2555,12 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX9-SDAG-NEXT:    s_cmpk_eq_i32 s9, 0x40f
 ; GFX9-SDAG-NEXT:    s_cselect_b32 s7, s7, s8
 ; GFX9-SDAG-NEXT:    s_and_b32 s8, s6, 0x1ff
-; GFX9-SDAG-NEXT:    v_or_b32_e32 v0, s8, v0
 ; GFX9-SDAG-NEXT:    s_lshr_b32 s5, s5, 16
-; GFX9-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX9-SDAG-NEXT:    v_or_b32_e32 v0, s8, v0
 ; GFX9-SDAG-NEXT:    s_lshr_b32 s9, s6, 8
 ; GFX9-SDAG-NEXT:    s_bfe_u32 s10, s6, 0xb0014
 ; GFX9-SDAG-NEXT:    s_and_b32 s5, s5, 0x8000
+; GFX9-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9-SDAG-NEXT:    s_and_b32 s8, s9, 0xffe
 ; GFX9-SDAG-NEXT:    s_sub_i32 s9, 0x3f1, s10
@@ -2714,17 +2715,18 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s5, v3
 ; GFX950-SDAG-NEXT:    s_and_b32 s7, s5, 0x1ff
 ; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s6, v1
-; GFX950-SDAG-NEXT:    v_or_b32_e32 v1, s7, v2
 ; GFX950-SDAG-NEXT:    s_lshr_b32 s8, s5, 8
 ; GFX950-SDAG-NEXT:    s_bfe_u32 s9, s5, 0xb0014
-; GFX950-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
+; GFX950-SDAG-NEXT:    v_or_b32_e32 v1, s7, v2
 ; GFX950-SDAG-NEXT:    s_and_b32 s7, s8, 0xffe
 ; GFX950-SDAG-NEXT:    s_sub_i32 s8, 0x3f1, s9
-; GFX950-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX950-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
 ; GFX950-SDAG-NEXT:    v_med3_i32 v2, s8, 0, 13
+; GFX950-SDAG-NEXT:    s_nop 0
+; GFX950-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s10, v2
 ; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s8, v1
 ; GFX950-SDAG-NEXT:    s_or_b32 s7, s7, s8
-; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s10, v2
 ; GFX950-SDAG-NEXT:    s_or_b32 s8, s7, 0x1000
 ; GFX950-SDAG-NEXT:    s_lshr_b32 s11, s8, s10
 ; GFX950-SDAG-NEXT:    s_lshl_b32 s10, s11, s10
@@ -2751,15 +2753,15 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX950-SDAG-NEXT:    s_cmpk_eq_i32 s9, 0x40f
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s7, s7, s8
 ; GFX950-SDAG-NEXT:    s_and_b32 s8, s6, 0x1ff
-; GFX950-SDAG-NEXT:    v_or_b32_e32 v0, s8, v0
 ; GFX950-SDAG-NEXT:    s_lshr_b32 s5, s5, 16
-; GFX950-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX950-SDAG-NEXT:    v_or_b32_e32 v0, s8, v0
 ; GFX950-SDAG-NEXT:    s_lshr_b32 s9, s6, 8
 ; GFX950-SDAG-NEXT:    s_bfe_u32 s10, s6, 0xb0014
 ; GFX950-SDAG-NEXT:    s_and_b32 s5, s5, 0x8000
-; GFX950-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX950-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GFX950-SDAG-NEXT:    s_and_b32 s8, s9, 0xffe
 ; GFX950-SDAG-NEXT:    s_sub_i32 s9, 0x3f1, s10
+; GFX950-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX950-SDAG-NEXT:    s_or_b32 s5, s5, s7
 ; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s7, v0
 ; GFX950-SDAG-NEXT:    v_med3_i32 v1, s9, 0, 13
@@ -2914,11 +2916,11 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX11-SDAG-TRUE16-NEXT:    s_sub_i32 s4, 0x3f1, s3
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v2
-; GFX11-SDAG-TRUE16-NEXT:    v_med3_i32 v3, s4, 0, 13
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s8, v3
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_med3_i32 v3, s4, 0, 13
 ; GFX11-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s8, v3
 ; GFX11-SDAG-TRUE16-NEXT:    s_or_b32 s4, s5, s4
 ; GFX11-SDAG-TRUE16-NEXT:    s_or_b32 s5, s4, 0x1000
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
@@ -2959,14 +2961,14 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX11-SDAG-TRUE16-NEXT:    s_sub_i32 s9, 0x3f1, s5
 ; GFX11-SDAG-TRUE16-NEXT:    s_lshr_b32 s2, s2, 16
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_med3_i32 v1, s9, 0, 13
 ; GFX11-SDAG-TRUE16-NEXT:    s_and_b32 s2, s2, 0x8000
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-TRUE16-NEXT:    s_or_b32 s2, s2, s3
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s11, v1
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s9, v0
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s11, v1
 ; GFX11-SDAG-TRUE16-NEXT:    s_or_b32 s9, s10, s9
 ; GFX11-SDAG-TRUE16-NEXT:    s_or_b32 s10, s9, 0x1000
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
@@ -3030,11 +3032,11 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX11-SDAG-FAKE16-NEXT:    s_sub_i32 s4, 0x3f1, s3
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v2
-; GFX11-SDAG-FAKE16-NEXT:    v_med3_i32 v3, s4, 0, 13
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s8, v3
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-SDAG-FAKE16-NEXT:    v_med3_i32 v3, s4, 0, 13
 ; GFX11-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s8, v3
 ; GFX11-SDAG-FAKE16-NEXT:    s_or_b32 s4, s5, s4
 ; GFX11-SDAG-FAKE16-NEXT:    s_or_b32 s5, s4, 0x1000
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
@@ -3075,14 +3077,14 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX11-SDAG-FAKE16-NEXT:    s_sub_i32 s9, 0x3f1, s5
 ; GFX11-SDAG-FAKE16-NEXT:    s_lshr_b32 s2, s2, 16
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
+; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_med3_i32 v1, s9, 0, 13
 ; GFX11-SDAG-FAKE16-NEXT:    s_and_b32 s2, s2, 0x8000
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-FAKE16-NEXT:    s_or_b32 s2, s2, s3
-; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s11, v1
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s9, v0
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s11, v1
 ; GFX11-SDAG-FAKE16-NEXT:    s_or_b32 s9, s10, s9
 ; GFX11-SDAG-FAKE16-NEXT:    s_or_b32 s10, s9, 0x1000
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
@@ -3357,11 +3359,11 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1250-SDAG-TRUE16-NEXT:    s_sub_co_i32 s4, 0x3f1, s3
 ; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1250-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v2
-; GFX1250-SDAG-TRUE16-NEXT:    v_med3_i32 v3, s4, 0, 13
 ; GFX1250-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
-; GFX1250-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s8, v3
-; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-TRUE16-NEXT:    v_med3_i32 v3, s4, 0, 13
 ; GFX1250-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s8, v3
 ; GFX1250-SDAG-TRUE16-NEXT:    s_or_b32 s4, s5, s4
 ; GFX1250-SDAG-TRUE16-NEXT:    s_or_b32 s5, s4, 0x1000
 ; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
@@ -3402,14 +3404,14 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1250-SDAG-TRUE16-NEXT:    s_sub_co_i32 s9, 0x3f1, s5
 ; GFX1250-SDAG-TRUE16-NEXT:    s_lshr_b32 s2, s2, 16
 ; GFX1250-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
+; GFX1250-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX1250-SDAG-TRUE16-NEXT:    v_med3_i32 v1, s9, 0, 13
 ; GFX1250-SDAG-TRUE16-NEXT:    s_and_b32 s2, s2, 0x8000
-; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-SDAG-TRUE16-NEXT:    s_or_b32 s2, s2, s3
-; GFX1250-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s11, v1
-; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s9, v0
+; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-TRUE16-NEXT:    v_readfirstlane_b32 s11, v1
 ; GFX1250-SDAG-TRUE16-NEXT:    s_or_b32 s9, s10, s9
 ; GFX1250-SDAG-TRUE16-NEXT:    s_or_b32 s10, s9, 0x1000
 ; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
@@ -3474,11 +3476,11 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1250-SDAG-FAKE16-NEXT:    s_sub_co_i32 s4, 0x3f1, s3
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v2
-; GFX1250-SDAG-FAKE16-NEXT:    v_med3_i32 v3, s4, 0, 13
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
-; GFX1250-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s8, v3
-; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-FAKE16-NEXT:    v_med3_i32 v3, s4, 0, 13
 ; GFX1250-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s8, v3
 ; GFX1250-SDAG-FAKE16-NEXT:    s_or_b32 s4, s5, s4
 ; GFX1250-SDAG-FAKE16-NEXT:    s_or_b32 s5, s4, 0x1000
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
@@ -3519,14 +3521,14 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1250-SDAG-FAKE16-NEXT:    s_sub_co_i32 s9, 0x3f1, s5
 ; GFX1250-SDAG-FAKE16-NEXT:    s_lshr_b32 s2, s2, 16
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
+; GFX1250-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX1250-SDAG-FAKE16-NEXT:    v_med3_i32 v1, s9, 0, 13
 ; GFX1250-SDAG-FAKE16-NEXT:    s_and_b32 s2, s2, 0x8000
-; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-SDAG-FAKE16-NEXT:    s_or_b32 s2, s2, s3
-; GFX1250-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s11, v1
-; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s9, v0
+; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-FAKE16-NEXT:    v_readfirstlane_b32 s11, v1
 ; GFX1250-SDAG-FAKE16-NEXT:    s_or_b32 s9, s10, s9
 ; GFX1250-SDAG-FAKE16-NEXT:    s_or_b32 s10, s9, 0x1000
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)

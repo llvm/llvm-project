@@ -121,9 +121,9 @@ define i64 @v_uadd_n1(i64 %val0, i64 %val1, ptr %ptrval) {
 ; CHECK-NEXT:    v_add_co_u32_e32 v2, vcc, -1, v0
 ; CHECK-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v1, vcc
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
-; CHECK-NEXT:    flat_store_dwordx2 v[4:5], v[2:3]
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v0
+; CHECK-NEXT:    flat_store_dwordx2 v[4:5], v[2:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %pair = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %val0, i64 -1)

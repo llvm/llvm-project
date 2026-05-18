@@ -1750,8 +1750,8 @@ define amdgpu_kernel void @v_ctlz_i64_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-GISEL-NEXT:    v_min_u32_e32 v0, 64, v0
 ; GFX10-GISEL-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 64, v[0:1]
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e32 v2, -1, v0, vcc_lo
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v3, -1, 0, vcc_lo
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e32 v2, -1, v0, vcc_lo
 ; GFX10-GISEL-NEXT:    global_store_dwordx2 v1, v[2:3], s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
 ;

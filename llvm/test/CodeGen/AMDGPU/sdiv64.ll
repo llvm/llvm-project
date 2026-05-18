@@ -350,19 +350,19 @@ define i64 @v_test_sdiv(i64 %x, i64 %y) {
 ; GCN-NEXT:    v_cmp_ge_u32_e64 s[4:5], v10, v3
 ; GCN-NEXT:    v_cndmask_b32_e64 v10, 0, -1, s[4:5]
 ; GCN-NEXT:    v_cmp_eq_u32_e64 s[4:5], v9, v2
+; GCN-NEXT:    v_subb_u32_e32 v1, vcc, v1, v8, vcc
 ; GCN-NEXT:    v_cndmask_b32_e64 v9, v11, v10, s[4:5]
 ; GCN-NEXT:    v_add_i32_e64 v10, s[4:5], 2, v5
-; GCN-NEXT:    v_subb_u32_e32 v1, vcc, v1, v8, vcc
-; GCN-NEXT:    v_addc_u32_e64 v11, s[4:5], 0, v6, s[4:5]
 ; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v2
-; GCN-NEXT:    v_add_i32_e64 v12, s[4:5], 1, v5
+; GCN-NEXT:    v_addc_u32_e64 v11, s[4:5], 0, v6, s[4:5]
 ; GCN-NEXT:    v_cndmask_b32_e64 v8, 0, -1, vcc
 ; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v3
-; GCN-NEXT:    v_addc_u32_e64 v13, s[4:5], 0, v6, s[4:5]
+; GCN-NEXT:    v_add_i32_e64 v12, s[4:5], 1, v5
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
-; GCN-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v9
+; GCN-NEXT:    v_addc_u32_e64 v13, s[4:5], 0, v6, s[4:5]
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v8, v0, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v9
 ; GCN-NEXT:    v_cndmask_b32_e64 v9, v13, v11, s[4:5]
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    v_cndmask_b32_e64 v1, v12, v10, s[4:5]
@@ -1426,10 +1426,10 @@ define i64 @v_test_sdiv_k_num_i64(i64 %x) {
 ; GCN-NEXT:    v_add_i32_e64 v7, s[4:5], 2, v3
 ; GCN-NEXT:    v_addc_u32_e64 v8, s[4:5], 0, 0, s[4:5]
 ; GCN-NEXT:    v_add_i32_e64 v9, s[4:5], 1, v3
-; GCN-NEXT:    v_addc_u32_e64 v10, s[4:5], 0, 0, s[4:5]
 ; GCN-NEXT:    v_subb_u32_e32 v4, vcc, 0, v4, vcc
-; GCN-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v6
+; GCN-NEXT:    v_addc_u32_e64 v10, s[4:5], 0, 0, s[4:5]
 ; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, v4, v1
+; GCN-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v6
 ; GCN-NEXT:    v_cndmask_b32_e64 v6, v10, v8, s[4:5]
 ; GCN-NEXT:    v_cndmask_b32_e64 v8, 0, -1, vcc
 ; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, v5, v0
@@ -1617,10 +1617,10 @@ define i64 @v_test_sdiv_pow2_k_num_i64(i64 %x) {
 ; GCN-NEXT:    v_add_i32_e64 v7, s[4:5], 2, v3
 ; GCN-NEXT:    v_addc_u32_e64 v8, s[4:5], 0, 0, s[4:5]
 ; GCN-NEXT:    v_add_i32_e64 v9, s[4:5], 1, v3
-; GCN-NEXT:    v_addc_u32_e64 v10, s[4:5], 0, 0, s[4:5]
 ; GCN-NEXT:    v_subb_u32_e32 v4, vcc, 0, v4, vcc
-; GCN-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v6
+; GCN-NEXT:    v_addc_u32_e64 v10, s[4:5], 0, 0, s[4:5]
 ; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, v4, v1
+; GCN-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v6
 ; GCN-NEXT:    v_cndmask_b32_e64 v6, v10, v8, s[4:5]
 ; GCN-NEXT:    v_cndmask_b32_e64 v8, 0, -1, vcc
 ; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, v5, v0

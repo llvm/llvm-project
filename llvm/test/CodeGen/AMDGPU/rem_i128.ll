@@ -60,20 +60,20 @@ define i128 @v_srem_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-NEXT:    v_add_co_u32_e32 v10, vcc, 64, v10
 ; GFX9-NEXT:    v_addc_co_u32_e64 v11, s[6:7], 0, 0, vcc
 ; GFX9-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[2:3]
-; GFX9-NEXT:    v_mov_b32_e32 v9, 0
-; GFX9-NEXT:    v_cndmask_b32_e32 v7, v10, v7, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v11, v11, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v7, v10, v7, vcc
 ; GFX9-NEXT:    v_sub_co_u32_e32 v6, vcc, v6, v7
+; GFX9-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX9-NEXT:    v_subb_co_u32_e32 v7, vcc, v8, v11, vcc
 ; GFX9-NEXT:    v_subb_co_u32_e32 v8, vcc, 0, v9, vcc
 ; GFX9-NEXT:    v_subb_co_u32_e32 v9, vcc, 0, v9, vcc
 ; GFX9-NEXT:    s_mov_b64 s[6:7], 0x7f
 ; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, s[6:7], v[6:7]
-; GFX9-NEXT:    v_mov_b32_e32 v21, v20
 ; GFX9-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
 ; GFX9-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[8:9]
 ; GFX9-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[8:9]
+; GFX9-NEXT:    v_mov_b32_e32 v21, v20
 ; GFX9-NEXT:    v_cndmask_b32_e32 v10, v11, v10, vcc
 ; GFX9-NEXT:    v_and_b32_e32 v10, 1, v10
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v10
@@ -1494,14 +1494,14 @@ define i128 @v_urem_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-NEXT:    v_add_co_u32_e32 v11, vcc, 64, v11
 ; GFX9-NEXT:    v_addc_co_u32_e64 v12, s[6:7], 0, 0, vcc
 ; GFX9-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[2:3]
-; GFX9-NEXT:    s_mov_b64 s[6:7], 0x7f
-; GFX9-NEXT:    v_cndmask_b32_e32 v9, v11, v9, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v12, v12, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v9, v11, v9, vcc
 ; GFX9-NEXT:    v_sub_co_u32_e32 v8, vcc, v8, v9
 ; GFX9-NEXT:    v_subb_co_u32_e32 v9, vcc, v10, v12, vcc
 ; GFX9-NEXT:    v_mov_b32_e32 v11, 0
 ; GFX9-NEXT:    v_subb_co_u32_e32 v10, vcc, 0, v11, vcc
 ; GFX9-NEXT:    v_subb_co_u32_e32 v11, vcc, 0, v11, vcc
+; GFX9-NEXT:    s_mov_b64 s[6:7], 0x7f
 ; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, s[6:7], v[8:9]
 ; GFX9-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc
 ; GFX9-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]

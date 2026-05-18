@@ -125,12 +125,11 @@ define i32 @cmpxchg_private_i32(ptr addrspace(5) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; GCN-NEXT:    v_cndmask_b32_e64 v2, v1, 1, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
 ; GCN-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GCN-NEXT:    buffer_store_byte v0, off, s[4:7], 0
-; GCN-NEXT:    s_waitcnt expcnt(0)
+; GCN-NEXT:    buffer_store_byte v3, off, s[4:7], 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
-; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %result = cmpxchg ptr addrspace(5) %ptr, i32 0, i32 1 acq_rel monotonic
   %result.0 = extractvalue { i32, i1 } %result, 0
@@ -164,13 +163,12 @@ define i64 @cmpxchg_private_i64(ptr addrspace(5) %ptr) {
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
+; GCN-NEXT:    v_cndmask_b32_e64 v5, v0, 1, vcc
 ; GCN-NEXT:    v_cndmask_b32_e64 v4, v1, 0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
+; GCN-NEXT:    buffer_store_dword v5, v2, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_store_dword v4, v3, s[0:3], 0 offen
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v0, 1, vcc
-; GCN-NEXT:    s_waitcnt expcnt(0)
-; GCN-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; GCN-NEXT:    buffer_store_dword v3, v2, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_byte v4, off, s[4:7], 0
+; GCN-NEXT:    buffer_store_byte v6, off, s[4:7], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %result = cmpxchg ptr addrspace(5) %ptr, i64 0, i64 1 acq_rel monotonic

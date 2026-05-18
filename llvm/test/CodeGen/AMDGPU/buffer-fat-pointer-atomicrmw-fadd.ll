@@ -8993,8 +8993,8 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fadd_ret_v2bf16__offset__amdgpu
 ; GFX10-NEXT:    v_add3_u32 v5, v5, v0, 0x7fff
 ; GFX10-NEXT:    v_add3_u32 v7, v7, v1, 0x7fff
 ; GFX10-NEXT:    v_cmp_u_f32_e64 s4, v0, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, v5, v8, s4
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_perm_b32 v5, v1, v0, 0x7060302
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v6
@@ -9124,8 +9124,8 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fadd_ret_v2bf16__offset__amdgpu
 ; GFX8-NEXT:    v_or_b32_e32 v9, 0x400000, v1
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; GFX8-NEXT:    v_or_b32_e32 v7, 0x400000, v0
-; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v1, v8, v9, vcc
+; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, v5, v7, s[4:5]
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX8-NEXT:    v_alignbit_b32 v5, v1, v0, 16
@@ -9421,8 +9421,8 @@ define void @buffer_fat_ptr_agent_atomic_fadd_noret_v2bf16__offset__amdgpu_no_fi
 ; GFX10-NEXT:    v_add3_u32 v6, v6, v0, 0x7fff
 ; GFX10-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX10-NEXT:    v_cmp_u_f32_e64 s4, v0, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, v6, v8, s4
+; GFX10-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_perm_b32 v0, v5, v0, 0x7060302
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v0
@@ -9549,8 +9549,8 @@ define void @buffer_fat_ptr_agent_atomic_fadd_noret_v2bf16__offset__amdgpu_no_fi
 ; GFX8-NEXT:    v_or_b32_e32 v9, 0x400000, v5
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v5, v5
 ; GFX8-NEXT:    v_or_b32_e32 v7, 0x400000, v0
-; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc
+; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, v6, v7, s[4:5]
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
 ; GFX8-NEXT:    v_alignbit_b32 v0, v5, v0, 16
@@ -10587,8 +10587,8 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fadd_ret_v2bf16__offset(ptr add
 ; GFX10-NEXT:    v_add3_u32 v5, v5, v0, 0x7fff
 ; GFX10-NEXT:    v_add3_u32 v7, v7, v1, 0x7fff
 ; GFX10-NEXT:    v_cmp_u_f32_e64 s4, v0, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, v5, v8, s4
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_perm_b32 v5, v1, v0, 0x7060302
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v6
@@ -10718,8 +10718,8 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fadd_ret_v2bf16__offset(ptr add
 ; GFX8-NEXT:    v_or_b32_e32 v9, 0x400000, v1
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; GFX8-NEXT:    v_or_b32_e32 v7, 0x400000, v0
-; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v1, v8, v9, vcc
+; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, v5, v7, s[4:5]
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX8-NEXT:    v_alignbit_b32 v5, v1, v0, 16
@@ -11015,8 +11015,8 @@ define void @buffer_fat_ptr_agent_atomic_fadd_noret_v2bf16__offset(ptr addrspace
 ; GFX10-NEXT:    v_add3_u32 v6, v6, v0, 0x7fff
 ; GFX10-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX10-NEXT:    v_cmp_u_f32_e64 s4, v0, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, v6, v8, s4
+; GFX10-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_perm_b32 v0, v5, v0, 0x7060302
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v0
@@ -11143,8 +11143,8 @@ define void @buffer_fat_ptr_agent_atomic_fadd_noret_v2bf16__offset(ptr addrspace
 ; GFX8-NEXT:    v_or_b32_e32 v9, 0x400000, v5
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v5, v5
 ; GFX8-NEXT:    v_or_b32_e32 v7, 0x400000, v0
-; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc
+; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, v6, v7, s[4:5]
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
 ; GFX8-NEXT:    v_alignbit_b32 v0, v5, v0, 16
@@ -11444,8 +11444,8 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fadd_ret_v2bf16__offset__amdgpu
 ; GFX10-NEXT:    v_add3_u32 v5, v5, v0, 0x7fff
 ; GFX10-NEXT:    v_add3_u32 v7, v7, v1, 0x7fff
 ; GFX10-NEXT:    v_cmp_u_f32_e64 s4, v0, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, v5, v8, s4
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_perm_b32 v5, v1, v0, 0x7060302
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v6
@@ -11575,8 +11575,8 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fadd_ret_v2bf16__offset__amdgpu
 ; GFX8-NEXT:    v_or_b32_e32 v9, 0x400000, v1
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; GFX8-NEXT:    v_or_b32_e32 v7, 0x400000, v0
-; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v1, v8, v9, vcc
+; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, v5, v7, s[4:5]
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX8-NEXT:    v_alignbit_b32 v5, v1, v0, 16
@@ -11872,8 +11872,8 @@ define void @buffer_fat_ptr_agent_atomic_fadd_noret_v2bf16__offset__amdgpu_no_re
 ; GFX10-NEXT:    v_add3_u32 v6, v6, v0, 0x7fff
 ; GFX10-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX10-NEXT:    v_cmp_u_f32_e64 s4, v0, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, v6, v8, s4
+; GFX10-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_perm_b32 v0, v5, v0, 0x7060302
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v0
@@ -12000,8 +12000,8 @@ define void @buffer_fat_ptr_agent_atomic_fadd_noret_v2bf16__offset__amdgpu_no_re
 ; GFX8-NEXT:    v_or_b32_e32 v9, 0x400000, v5
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v5, v5
 ; GFX8-NEXT:    v_or_b32_e32 v7, 0x400000, v0
-; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc
+; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, v6, v7, s[4:5]
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
 ; GFX8-NEXT:    v_alignbit_b32 v0, v5, v0, 16
@@ -12290,8 +12290,8 @@ define void @buffer_fat_ptr_agent_atomic_fadd_noret_v2bf16__offset__amdgpu_no_fi
 ; GFX10-NEXT:    v_add3_u32 v6, v6, v0, 0x7fff
 ; GFX10-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX10-NEXT:    v_cmp_u_f32_e64 s4, v0, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, v6, v8, s4
+; GFX10-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_perm_b32 v0, v5, v0, 0x7060302
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v0
@@ -12418,8 +12418,8 @@ define void @buffer_fat_ptr_agent_atomic_fadd_noret_v2bf16__offset__amdgpu_no_fi
 ; GFX8-NEXT:    v_or_b32_e32 v9, 0x400000, v5
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v5, v5
 ; GFX8-NEXT:    v_or_b32_e32 v7, 0x400000, v0
-; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc
+; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, v6, v7, s[4:5]
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
 ; GFX8-NEXT:    v_alignbit_b32 v0, v5, v0, 16

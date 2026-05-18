@@ -777,8 +777,8 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; CI-NEXT:    v_cmp_nlg_f64_e64 vcc, s[4:5], 0
 ; CI-NEXT:    v_mov_b32_e32 v2, 0x7ff80000
 ; CI-NEXT:    v_cndmask_b32_e64 v3, v0, 0, vcc
-; CI-NEXT:    v_cndmask_b32_e32 v4, v1, v2, vcc
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
+; CI-NEXT:    v_cndmask_b32_e32 v4, v1, v2, vcc
 ; CI-NEXT:    v_mov_b32_e32 v1, 0x7ff00000
 ; CI-NEXT:    v_cmp_nge_f64_e64 vcc, |s[2:3]|, v[0:1]
 ; CI-NEXT:    s_mov_b32 s2, -1
@@ -886,8 +886,8 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; VI-NEXT:    v_cmp_nlg_f64_e64 vcc, s[4:5], 0
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7ff80000
 ; VI-NEXT:    v_cndmask_b32_e64 v3, v0, 0, vcc
-; VI-NEXT:    v_cndmask_b32_e32 v4, v1, v2, vcc
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    v_cndmask_b32_e32 v4, v1, v2, vcc
 ; VI-NEXT:    v_mov_b32_e32 v1, 0x7ff00000
 ; VI-NEXT:    v_cmp_nge_f64_e64 vcc, |s[2:3]|, v[0:1]
 ; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc
@@ -3323,9 +3323,9 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
 ; CI-NEXT:    v_mov_b32_e32 v4, 0
 ; CI-NEXT:    v_mov_b32_e32 v5, 0x7ff00000
+; CI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
-; CI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
 ; CI-NEXT:    v_cndmask_b32_e32 v1, v1, v6, vcc
 ; CI-NEXT:    v_cmp_nge_f64_e64 vcc, |s[4:5]|, v[4:5]
 ; CI-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc

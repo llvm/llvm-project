@@ -266,14 +266,14 @@ define amdgpu_kernel void @clmem_read_simplified(ptr addrspace(1)  %buffer) {
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v8, vcc_lo, 0x1000, v0
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v1, vcc_lo
-; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_clause 0x2
 ; GFX11-NEXT:    global_load_b64 v[10:11], v[6:7], off offset:-4096
 ; GFX11-NEXT:    global_load_b64 v[8:9], v[8:9], off offset:2048
-; GFX11-NEXT:    v_add_co_u32 v12, vcc_lo, 0x2000, v0
 ; GFX11-NEXT:    global_load_b64 v[6:7], v[6:7], off
+; GFX11-NEXT:    v_add_co_u32 v12, vcc_lo, 0x2000, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v13, null, 0, v1, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3000, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-NEXT:    s_clause 0x2
 ; GFX11-NEXT:    global_load_b64 v[12:13], v[12:13], off offset:2048
@@ -1983,19 +1983,21 @@ define amdgpu_kernel void @DiffBase(ptr addrspace(1) %buffer1,
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_and_b32_e32 v12, 0xffff8000, v0
 ; GFX11-NEXT:    v_add_co_u32 v2, s0, s36, v12
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, s37, 0, s0
 ; GFX11-NEXT:    v_add_co_u32 v8, s0, s38, v12
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v9, null, s39, 0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v3, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 0x2000
-; GFX11-NEXT:    v_add_co_ci_u32_e64 v9, null, s39, 0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v4, vcc_lo, 0x2000, v8
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v9, vcc_lo
-; GFX11-NEXT:    v_add_co_u32 v8, vcc_lo, 0x3000, v8
 ; GFX11-NEXT:    global_load_b64 v[6:7], v[2:3], off offset:-4096
+; GFX11-NEXT:    v_add_co_u32 v8, vcc_lo, 0x3000, v8
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v9, vcc_lo
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off offset:2048
 ; GFX11-NEXT:    s_clause 0x1
@@ -2314,14 +2316,14 @@ define amdgpu_kernel void @ReverseOrder(ptr addrspace(1) %buffer) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, 0x3000, v0
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v1, vcc_lo
-; GFX11-NEXT:    v_add_co_u32 v8, vcc_lo, 0x2000, v0
 ; GFX11-NEXT:    s_clause 0x2
 ; GFX11-NEXT:    global_load_b64 v[4:5], v[0:1], off
 ; GFX11-NEXT:    global_load_b64 v[6:7], v[2:3], off offset:2048
 ; GFX11-NEXT:    global_load_b64 v[2:3], v[2:3], off
+; GFX11-NEXT:    v_add_co_u32 v8, vcc_lo, 0x2000, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v1, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v10, vcc_lo, 0x1000, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v1, vcc_lo
 ; GFX11-NEXT:    s_clause 0x4
 ; GFX11-NEXT:    global_load_b64 v[12:13], v[8:9], off offset:2048

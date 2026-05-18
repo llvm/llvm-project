@@ -810,6 +810,22 @@ void GCNSubtarget::adjustSchedDependency(
     Dep.setLatency(InstrInfo.getSchedModel().computeOperandLatency(
         DefI, DefOpIdx, UseI, UseOpIdx));
   }
+
+  // Handle "fast-forward" cases for VALU dependencies via a lanemask-like SGPR:
+  //   V_CMP* -> V_CNDMASK_B32
+  //   V_ADD/SUB with carryout -> V_ADD/SUB with carryin (on GFX10+)
+  switch (UseI->getOpcode()) {
+  case AMDGPU::V_ADDC_U32_e64:
+  case AMDGPU::V_SUBB_U32_e64:
+  case AMDGPU::V_SUBBREV_U32_e64:
+    if (getGeneration() < GFX10)
+      break;
+    [[fallthrough]];
+  case AMDGPU::V_CNDMASK_B32_e64:
+    if (SIInstrInfo::isVALU(*DefI) &&
+        UseOpIdx == AMDGPU::getNamedOperandIdx(UseI->getOpcode(), AMDGPU::OpName::src2))
+      Dep.setLatency(0);
+  }
 }
 
 unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {

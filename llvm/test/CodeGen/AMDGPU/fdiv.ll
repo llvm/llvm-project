@@ -4895,8 +4895,8 @@ define float @v_fdiv_neglhs_f32_ieee_25ulp(float %x, float %y) #1 {
 ; GFX6-NEXT:    v_cndmask_b32_e32 v2, v1, v2, vcc
 ; GFX6-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX6-NEXT:    v_frexp_mant_f32_e64 v3, -v0
-; GFX6-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; GFX6-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
+; GFX6-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; GFX6-NEXT:    v_cndmask_b32_e64 v3, -v0, v3, s[4:5]
 ; GFX6-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v2, v3, v2
@@ -5101,8 +5101,8 @@ define float @v_fdiv_neglhs_f32_dynamic_25ulp(float %x, float %y) #2 {
 ; GFX6-NEXT:    v_cndmask_b32_e32 v2, v1, v2, vcc
 ; GFX6-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX6-NEXT:    v_frexp_mant_f32_e64 v3, -v0
-; GFX6-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; GFX6-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
+; GFX6-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; GFX6-NEXT:    v_cndmask_b32_e64 v3, -v0, v3, s[4:5]
 ; GFX6-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v2, v3, v2

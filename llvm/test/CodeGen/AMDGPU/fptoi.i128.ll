@@ -265,8 +265,8 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; SDAG-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v7
 ; SDAG-NEXT:    v_lshlrev_b64 v[0:1], v7, v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
-; SDAG-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v7
 ; SDAG-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
+; SDAG-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v7
 ; SDAG-NEXT:    v_cndmask_b32_e64 v3, 0, v3, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, v2, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e32 v5, 0, v1, vcc
@@ -326,10 +326,10 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_lshrrev_b64 v[2:3], v2, v[4:5]
 ; GISEL-NEXT:    v_lshlrev_b64 v[4:5], v6, v[4:5]
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v7
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
-; GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
+; GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v7
 ; GISEL-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
@@ -657,10 +657,10 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_lshrrev_b64 v[2:3], v2, v[4:5]
 ; GISEL-NEXT:    v_lshlrev_b64 v[4:5], v6, v[4:5]
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v7
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
-; GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
+; GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v7
 ; GISEL-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
@@ -960,8 +960,8 @@ define i128 @fptoui_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_cmp_gt_u16_e32 vcc, 64, v6
 ; SDAG-NEXT:    v_lshlrev_b64 v[0:1], v6, v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
-; SDAG-NEXT:    v_cmp_ne_u16_e64 s[4:5], 0, v6
 ; SDAG-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
+; SDAG-NEXT:    v_cmp_ne_u16_e64 s[4:5], 0, v6
 ; SDAG-NEXT:    v_cndmask_b32_e64 v3, 0, v3, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, v2, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc

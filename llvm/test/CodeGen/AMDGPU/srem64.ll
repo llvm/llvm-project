@@ -329,23 +329,23 @@ define i64 @v_test_srem(i64 %x, i64 %y) {
 ; GCN-NEXT:    v_subb_u32_e64 v4, s[4:5], v7, v2, vcc
 ; GCN-NEXT:    v_sub_i32_e64 v7, s[4:5], v0, v3
 ; GCN-NEXT:    v_subbrev_u32_e64 v8, s[6:7], 0, v4, s[4:5]
+; GCN-NEXT:    v_subb_u32_e32 v1, vcc, v1, v5, vcc
 ; GCN-NEXT:    v_cmp_ge_u32_e64 s[6:7], v8, v2
+; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v2
 ; GCN-NEXT:    v_cndmask_b32_e64 v9, 0, -1, s[6:7]
 ; GCN-NEXT:    v_cmp_ge_u32_e64 s[6:7], v7, v3
-; GCN-NEXT:    v_subb_u32_e32 v1, vcc, v1, v5, vcc
 ; GCN-NEXT:    v_cndmask_b32_e64 v10, 0, -1, s[6:7]
-; GCN-NEXT:    v_cmp_eq_u32_e64 s[6:7], v8, v2
 ; GCN-NEXT:    v_subb_u32_e64 v4, s[4:5], v4, v2, s[4:5]
-; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v9, v9, v10, s[6:7]
-; GCN-NEXT:    v_sub_i32_e64 v10, s[4:5], v7, v3
 ; GCN-NEXT:    v_cndmask_b32_e64 v5, 0, -1, vcc
 ; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v3
-; GCN-NEXT:    v_subbrev_u32_e64 v4, s[4:5], 0, v4, s[4:5]
+; GCN-NEXT:    v_cmp_eq_u32_e64 s[6:7], v8, v2
+; GCN-NEXT:    v_cndmask_b32_e64 v9, v9, v10, s[6:7]
+; GCN-NEXT:    v_sub_i32_e64 v10, s[4:5], v7, v3
 ; GCN-NEXT:    v_cndmask_b32_e64 v3, 0, -1, vcc
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
-; GCN-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v9
+; GCN-NEXT:    v_subbrev_u32_e64 v4, s[4:5], 0, v4, s[4:5]
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v5, v3, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v9
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
 ; GCN-NEXT:    v_cndmask_b32_e64 v2, v7, v10, s[4:5]
 ; GCN-NEXT:    v_cndmask_b32_e64 v4, v8, v4, s[4:5]
@@ -1576,8 +1576,8 @@ define i64 @v_test_srem_k_num_i64(i64 %x) {
 ; GCN-NEXT:    v_cndmask_b32_e64 v7, 0, -1, s[6:7]
 ; GCN-NEXT:    v_cmp_ge_u32_e64 s[6:7], v5, v0
 ; GCN-NEXT:    v_cndmask_b32_e64 v8, 0, -1, s[6:7]
-; GCN-NEXT:    v_cmp_eq_u32_e64 s[6:7], v6, v1
 ; GCN-NEXT:    v_subb_u32_e64 v4, s[4:5], v4, v1, s[4:5]
+; GCN-NEXT:    v_cmp_eq_u32_e64 s[6:7], v6, v1
 ; GCN-NEXT:    v_cndmask_b32_e64 v7, v7, v8, s[6:7]
 ; GCN-NEXT:    v_sub_i32_e64 v8, s[4:5], v5, v0
 ; GCN-NEXT:    v_subb_u32_e32 v3, vcc, 0, v3, vcc
@@ -1765,8 +1765,8 @@ define i64 @v_test_srem_pow2_k_num_i64(i64 %x) {
 ; GCN-NEXT:    v_cndmask_b32_e64 v7, 0, -1, s[6:7]
 ; GCN-NEXT:    v_cmp_ge_u32_e64 s[6:7], v5, v0
 ; GCN-NEXT:    v_cndmask_b32_e64 v8, 0, -1, s[6:7]
-; GCN-NEXT:    v_cmp_eq_u32_e64 s[6:7], v6, v1
 ; GCN-NEXT:    v_subb_u32_e64 v4, s[4:5], v4, v1, s[4:5]
+; GCN-NEXT:    v_cmp_eq_u32_e64 s[6:7], v6, v1
 ; GCN-NEXT:    v_cndmask_b32_e64 v7, v7, v8, s[6:7]
 ; GCN-NEXT:    v_sub_i32_e64 v8, s[4:5], v5, v0
 ; GCN-NEXT:    v_subb_u32_e32 v3, vcc, 0, v3, vcc

@@ -740,7 +740,7 @@ define <16 x ptr> @addrspacecast_v16p5_to_v16p0(<16 x ptr addrspace(5)> %ptr) {
 ; CI-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; CI-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; CI-NEXT:    v_cmp_ne_u32_e64 s[6:7], -1, v5
-; CI-NEXT:    v_cmp_ne_u32_e64 s[8:9], -1, v6
+; CI-NEXT:    v_cndmask_b32_e64 v37, 0, v5, s[6:7]
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v31, s4
 ; CI-NEXT:    v_cndmask_b32_e32 v49, 0, v31, vcc
@@ -751,28 +751,28 @@ define <16 x ptr> @addrspacecast_v16p5_to_v16p0(<16 x ptr addrspace(5)> %ptr) {
 ; CI-NEXT:    v_cndmask_b32_e32 v35, 0, v2, vcc
 ; CI-NEXT:    v_cndmask_b32_e32 v32, 0, v31, vcc
 ; CI-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v3
-; CI-NEXT:    v_cmp_ne_u32_e64 s[4:5], -1, v4
-; CI-NEXT:    v_cmp_ne_u32_e64 s[10:11], -1, v7
 ; CI-NEXT:    v_cndmask_b32_e32 v36, 0, v3, vcc
+; CI-NEXT:    v_cmp_ne_u32_e64 s[4:5], -1, v4
 ; CI-NEXT:    v_cndmask_b32_e64 v48, 0, v4, s[4:5]
-; CI-NEXT:    v_cndmask_b32_e64 v37, 0, v5, s[6:7]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[8:9], -1, v6
 ; CI-NEXT:    v_cndmask_b32_e64 v33, 0, v6, s[8:9]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[10:11], -1, v7
 ; CI-NEXT:    v_cndmask_b32_e64 v38, 0, v7, s[10:11]
 ; CI-NEXT:    v_cmp_ne_u32_e64 s[12:13], -1, v8
-; CI-NEXT:    v_cmp_ne_u32_e64 s[14:15], -1, v9
-; CI-NEXT:    v_cmp_ne_u32_e64 s[16:17], -1, v10
-; CI-NEXT:    v_cmp_ne_u32_e64 s[18:19], -1, v11
-; CI-NEXT:    v_cmp_ne_u32_e64 s[20:21], -1, v12
-; CI-NEXT:    v_cmp_ne_u32_e64 s[22:23], -1, v13
-; CI-NEXT:    v_cmp_ne_u32_e64 s[24:25], -1, v14
-; CI-NEXT:    v_cmp_ne_u32_e64 s[26:27], -1, v15
 ; CI-NEXT:    v_cndmask_b32_e64 v16, 0, v8, s[12:13]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[14:15], -1, v9
 ; CI-NEXT:    v_cndmask_b32_e64 v18, 0, v9, s[14:15]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[16:17], -1, v10
 ; CI-NEXT:    v_cndmask_b32_e64 v20, 0, v10, s[16:17]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[18:19], -1, v11
 ; CI-NEXT:    v_cndmask_b32_e64 v22, 0, v11, s[18:19]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[20:21], -1, v12
 ; CI-NEXT:    v_cndmask_b32_e64 v24, 0, v12, s[20:21]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[22:23], -1, v13
 ; CI-NEXT:    v_cndmask_b32_e64 v26, 0, v13, s[22:23]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[24:25], -1, v14
 ; CI-NEXT:    v_cndmask_b32_e64 v28, 0, v14, s[24:25]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[26:27], -1, v15
 ; CI-NEXT:    v_cndmask_b32_e64 v30, 0, v15, s[26:27]
 ; CI-NEXT:    v_cndmask_b32_e32 v7, 0, v31, vcc
 ; CI-NEXT:    v_cndmask_b32_e64 v9, 0, v31, s[4:5]
@@ -814,30 +814,30 @@ define <16 x ptr> @addrspacecast_v16p5_to_v16p0(<16 x ptr addrspace(5)> %ptr) {
 ; GFX9-NEXT:    v_cndmask_b32_e32 v35, 0, v2, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v32, 0, v31, vcc
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v3
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[4:5], -1, v4
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[6:7], -1, v5
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[8:9], -1, v6
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[10:11], -1, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v36, 0, v3, vcc
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[4:5], -1, v4
 ; GFX9-NEXT:    v_cndmask_b32_e64 v48, 0, v4, s[4:5]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[6:7], -1, v5
 ; GFX9-NEXT:    v_cndmask_b32_e64 v37, 0, v5, s[6:7]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[8:9], -1, v6
 ; GFX9-NEXT:    v_cndmask_b32_e64 v33, 0, v6, s[8:9]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[10:11], -1, v7
 ; GFX9-NEXT:    v_cndmask_b32_e64 v38, 0, v7, s[10:11]
 ; GFX9-NEXT:    v_cmp_ne_u32_e64 s[12:13], -1, v8
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[14:15], -1, v9
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[16:17], -1, v10
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[18:19], -1, v11
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[20:21], -1, v12
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[22:23], -1, v13
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[24:25], -1, v14
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[26:27], -1, v15
 ; GFX9-NEXT:    v_cndmask_b32_e64 v16, 0, v8, s[12:13]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[14:15], -1, v9
 ; GFX9-NEXT:    v_cndmask_b32_e64 v18, 0, v9, s[14:15]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[16:17], -1, v10
 ; GFX9-NEXT:    v_cndmask_b32_e64 v20, 0, v10, s[16:17]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[18:19], -1, v11
 ; GFX9-NEXT:    v_cndmask_b32_e64 v22, 0, v11, s[18:19]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[20:21], -1, v12
 ; GFX9-NEXT:    v_cndmask_b32_e64 v24, 0, v12, s[20:21]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[22:23], -1, v13
 ; GFX9-NEXT:    v_cndmask_b32_e64 v26, 0, v13, s[22:23]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[24:25], -1, v14
 ; GFX9-NEXT:    v_cndmask_b32_e64 v28, 0, v14, s[24:25]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[26:27], -1, v15
 ; GFX9-NEXT:    v_cndmask_b32_e64 v30, 0, v15, s[26:27]
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, 0, v31, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v9, 0, v31, s[4:5]
@@ -1192,7 +1192,7 @@ define <16 x ptr> @addrspacecast_v16p3_to_v16p0(<16 x ptr addrspace(3)> %ptr) {
 ; CI-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; CI-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; CI-NEXT:    v_cmp_ne_u32_e64 s[6:7], -1, v5
-; CI-NEXT:    v_cmp_ne_u32_e64 s[8:9], -1, v6
+; CI-NEXT:    v_cndmask_b32_e64 v37, 0, v5, s[6:7]
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v31, s4
 ; CI-NEXT:    v_cndmask_b32_e32 v49, 0, v31, vcc
@@ -1203,28 +1203,28 @@ define <16 x ptr> @addrspacecast_v16p3_to_v16p0(<16 x ptr addrspace(3)> %ptr) {
 ; CI-NEXT:    v_cndmask_b32_e32 v35, 0, v2, vcc
 ; CI-NEXT:    v_cndmask_b32_e32 v32, 0, v31, vcc
 ; CI-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v3
-; CI-NEXT:    v_cmp_ne_u32_e64 s[4:5], -1, v4
-; CI-NEXT:    v_cmp_ne_u32_e64 s[10:11], -1, v7
 ; CI-NEXT:    v_cndmask_b32_e32 v36, 0, v3, vcc
+; CI-NEXT:    v_cmp_ne_u32_e64 s[4:5], -1, v4
 ; CI-NEXT:    v_cndmask_b32_e64 v48, 0, v4, s[4:5]
-; CI-NEXT:    v_cndmask_b32_e64 v37, 0, v5, s[6:7]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[8:9], -1, v6
 ; CI-NEXT:    v_cndmask_b32_e64 v33, 0, v6, s[8:9]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[10:11], -1, v7
 ; CI-NEXT:    v_cndmask_b32_e64 v38, 0, v7, s[10:11]
 ; CI-NEXT:    v_cmp_ne_u32_e64 s[12:13], -1, v8
-; CI-NEXT:    v_cmp_ne_u32_e64 s[14:15], -1, v9
-; CI-NEXT:    v_cmp_ne_u32_e64 s[16:17], -1, v10
-; CI-NEXT:    v_cmp_ne_u32_e64 s[18:19], -1, v11
-; CI-NEXT:    v_cmp_ne_u32_e64 s[20:21], -1, v12
-; CI-NEXT:    v_cmp_ne_u32_e64 s[22:23], -1, v13
-; CI-NEXT:    v_cmp_ne_u32_e64 s[24:25], -1, v14
-; CI-NEXT:    v_cmp_ne_u32_e64 s[26:27], -1, v15
 ; CI-NEXT:    v_cndmask_b32_e64 v16, 0, v8, s[12:13]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[14:15], -1, v9
 ; CI-NEXT:    v_cndmask_b32_e64 v18, 0, v9, s[14:15]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[16:17], -1, v10
 ; CI-NEXT:    v_cndmask_b32_e64 v20, 0, v10, s[16:17]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[18:19], -1, v11
 ; CI-NEXT:    v_cndmask_b32_e64 v22, 0, v11, s[18:19]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[20:21], -1, v12
 ; CI-NEXT:    v_cndmask_b32_e64 v24, 0, v12, s[20:21]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[22:23], -1, v13
 ; CI-NEXT:    v_cndmask_b32_e64 v26, 0, v13, s[22:23]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[24:25], -1, v14
 ; CI-NEXT:    v_cndmask_b32_e64 v28, 0, v14, s[24:25]
+; CI-NEXT:    v_cmp_ne_u32_e64 s[26:27], -1, v15
 ; CI-NEXT:    v_cndmask_b32_e64 v30, 0, v15, s[26:27]
 ; CI-NEXT:    v_cndmask_b32_e32 v7, 0, v31, vcc
 ; CI-NEXT:    v_cndmask_b32_e64 v9, 0, v31, s[4:5]
@@ -1266,30 +1266,30 @@ define <16 x ptr> @addrspacecast_v16p3_to_v16p0(<16 x ptr addrspace(3)> %ptr) {
 ; GFX9-NEXT:    v_cndmask_b32_e32 v35, 0, v2, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v32, 0, v31, vcc
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v3
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[4:5], -1, v4
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[6:7], -1, v5
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[8:9], -1, v6
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[10:11], -1, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v36, 0, v3, vcc
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[4:5], -1, v4
 ; GFX9-NEXT:    v_cndmask_b32_e64 v48, 0, v4, s[4:5]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[6:7], -1, v5
 ; GFX9-NEXT:    v_cndmask_b32_e64 v37, 0, v5, s[6:7]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[8:9], -1, v6
 ; GFX9-NEXT:    v_cndmask_b32_e64 v33, 0, v6, s[8:9]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[10:11], -1, v7
 ; GFX9-NEXT:    v_cndmask_b32_e64 v38, 0, v7, s[10:11]
 ; GFX9-NEXT:    v_cmp_ne_u32_e64 s[12:13], -1, v8
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[14:15], -1, v9
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[16:17], -1, v10
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[18:19], -1, v11
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[20:21], -1, v12
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[22:23], -1, v13
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[24:25], -1, v14
-; GFX9-NEXT:    v_cmp_ne_u32_e64 s[26:27], -1, v15
 ; GFX9-NEXT:    v_cndmask_b32_e64 v16, 0, v8, s[12:13]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[14:15], -1, v9
 ; GFX9-NEXT:    v_cndmask_b32_e64 v18, 0, v9, s[14:15]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[16:17], -1, v10
 ; GFX9-NEXT:    v_cndmask_b32_e64 v20, 0, v10, s[16:17]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[18:19], -1, v11
 ; GFX9-NEXT:    v_cndmask_b32_e64 v22, 0, v11, s[18:19]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[20:21], -1, v12
 ; GFX9-NEXT:    v_cndmask_b32_e64 v24, 0, v12, s[20:21]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[22:23], -1, v13
 ; GFX9-NEXT:    v_cndmask_b32_e64 v26, 0, v13, s[22:23]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[24:25], -1, v14
 ; GFX9-NEXT:    v_cndmask_b32_e64 v28, 0, v14, s[24:25]
+; GFX9-NEXT:    v_cmp_ne_u32_e64 s[26:27], -1, v15
 ; GFX9-NEXT:    v_cndmask_b32_e64 v30, 0, v15, s[26:27]
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, 0, v31, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v9, 0, v31, s[4:5]

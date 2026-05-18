@@ -233,36 +233,33 @@ define void @icmp_i16_divergent(i16 %a, i16 %b, ptr addrspace(1) %p) {
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_i16_e32 vcc_lo, v0.l, v1.l
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add_nc_u32_e32 v4, v4, v5
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_i16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_nc_u32_e32 v4, v4, v5
 ; GFX12-NEXT:    v_cmp_le_i16_e32 vcc_lo, v0.l, v1.l
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add3_u32 v4, v4, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_i16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add3_u32 v4, v4, v6, v7
 ; GFX12-NEXT:    v_cmp_lt_u16_e32 vcc_lo, v0.l, v1.l
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add3_u32 v4, v4, v5, v8
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add3_u32 v4, v4, v5, v8
 ; GFX12-NEXT:    v_cmp_le_u16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_u16_e32 vcc_lo, v0.l, v1.l
-; GFX12-NEXT:    v_add3_u32 v1, v4, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add3_u32 v1, v4, v6, v7
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add3_u32 v0, v1, v5, v0
 ; GFX12-NEXT:    global_store_b32 v[2:3], v0, off
@@ -518,36 +515,33 @@ define void @icmp_i32_divergent(i32 %a, i32 %b, ptr addrspace(1) %p) {
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add_nc_u32_e32 v4, v4, v5
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_nc_u32_e32 v4, v4, v5
 ; GFX12-NEXT:    v_cmp_le_i32_e32 vcc_lo, v0, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add3_u32 v4, v4, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_i32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add3_u32 v4, v4, v6, v7
 ; GFX12-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add3_u32 v4, v4, v5, v8
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add3_u32 v4, v4, v5, v8
 ; GFX12-NEXT:    v_cmp_le_u32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v0, v1
-; GFX12-NEXT:    v_add3_u32 v1, v4, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add3_u32 v1, v4, v6, v7
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add3_u32 v0, v1, v5, v0
 ; GFX12-NEXT:    global_store_b32 v[2:3], v0, off
@@ -590,13 +584,10 @@ define void @icmp_i64_divergent(i64 %a, i64 %b, ptr addrspace(1) %p) {
 ; HAWAII:       ; %bb.0:
 ; HAWAII-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; HAWAII-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    s_mov_b32 s6, 0
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
 ; HAWAII-NEXT:    v_cmp_ne_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
 ; HAWAII-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    s_mov_b64 s[4:5], 0
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
 ; HAWAII-NEXT:    v_cmp_gt_i64_e32 vcc, v[0:1], v[2:3]
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
@@ -621,6 +612,9 @@ define void @icmp_i64_divergent(i64 %a, i64 %b, ptr addrspace(1) %p) {
 ; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v13
 ; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v14
 ; HAWAII-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
+; HAWAII-NEXT:    s_mov_b32 s6, 0
+; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
+; HAWAII-NEXT:    s_mov_b64 s[4:5], 0
 ; HAWAII-NEXT:    buffer_store_dword v0, v[4:5], s[4:7], 0 addr64
 ; HAWAII-NEXT:    s_waitcnt vmcnt(0)
 ; HAWAII-NEXT:    s_setpc_b64 s[30:31]
@@ -639,36 +633,33 @@ define void @icmp_i64_divergent(i64 %a, i64 %b, ptr addrspace(1) %p) {
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add_nc_u32_e32 v6, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_i64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_nc_u32_e32 v6, v6, v7
 ; GFX12-NEXT:    v_cmp_le_i64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add3_u32 v6, v6, v8, v9
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_i64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add3_u32 v6, v6, v8, v9
 ; GFX12-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add3_u32 v6, v6, v7, v10
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add3_u32 v6, v6, v7, v10
 ; GFX12-NEXT:    v_cmp_le_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    v_add3_u32 v1, v6, v8, v9
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add3_u32 v1, v6, v8, v9
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add3_u32 v0, v1, v7, v0
 ; GFX12-NEXT:    global_store_b32 v[4:5], v0, off
@@ -857,20 +848,19 @@ define void @icmp_p3_divergent(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr add
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add_nc_u32_e32 v4, v4, v5
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_nc_u32_e32 v4, v4, v5
 ; GFX12-NEXT:    v_cmp_le_u32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v0, v1
-; GFX12-NEXT:    v_add3_u32 v1, v4, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add3_u32 v1, v4, v6, v7
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add3_u32 v0, v1, v5, v0
 ; GFX12-NEXT:    global_store_b32 v[2:3], v0, off
@@ -1046,20 +1036,19 @@ define void @icmp_p5_divergent(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr add
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add_nc_u32_e32 v4, v4, v5
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_nc_u32_e32 v4, v4, v5
 ; GFX12-NEXT:    v_cmp_le_u32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v0, v1
-; GFX12-NEXT:    v_add3_u32 v1, v4, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add3_u32 v1, v4, v6, v7
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add3_u32 v0, v1, v5, v0
 ; GFX12-NEXT:    global_store_b32 v[2:3], v0, off
@@ -1212,13 +1201,10 @@ define void @icmp_p0_divergent(ptr %a, ptr %b, ptr addrspace(1) %p) {
 ; HAWAII:       ; %bb.0:
 ; HAWAII-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; HAWAII-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    s_mov_b32 s6, 0
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
 ; HAWAII-NEXT:    v_cmp_ne_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
 ; HAWAII-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    s_mov_b64 s[4:5], 0
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
 ; HAWAII-NEXT:    v_cmp_gt_u64_e32 vcc, v[0:1], v[2:3]
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
@@ -1231,6 +1217,9 @@ define void @icmp_p0_divergent(ptr %a, ptr %b, ptr addrspace(1) %p) {
 ; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v9
 ; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v10
 ; HAWAII-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
+; HAWAII-NEXT:    s_mov_b32 s6, 0
+; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
+; HAWAII-NEXT:    s_mov_b64 s[4:5], 0
 ; HAWAII-NEXT:    buffer_store_dword v0, v[4:5], s[4:7], 0 addr64
 ; HAWAII-NEXT:    s_waitcnt vmcnt(0)
 ; HAWAII-NEXT:    s_setpc_b64 s[30:31]
@@ -1249,20 +1238,19 @@ define void @icmp_p0_divergent(ptr %a, ptr %b, ptr addrspace(1) %p) {
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add_nc_u32_e32 v6, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_nc_u32_e32 v6, v6, v7
 ; GFX12-NEXT:    v_cmp_le_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    v_add3_u32 v1, v6, v8, v9
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add3_u32 v1, v6, v8, v9
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add3_u32 v0, v1, v7, v0
 ; GFX12-NEXT:    global_store_b32 v[4:5], v0, off
@@ -1413,13 +1401,10 @@ define void @icmp_p1_divergent(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr add
 ; HAWAII:       ; %bb.0:
 ; HAWAII-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; HAWAII-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    s_mov_b32 s6, 0
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
 ; HAWAII-NEXT:    v_cmp_ne_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
 ; HAWAII-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    s_mov_b64 s[4:5], 0
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
 ; HAWAII-NEXT:    v_cmp_gt_u64_e32 vcc, v[0:1], v[2:3]
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
@@ -1432,6 +1417,9 @@ define void @icmp_p1_divergent(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr add
 ; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v9
 ; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v10
 ; HAWAII-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
+; HAWAII-NEXT:    s_mov_b32 s6, 0
+; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
+; HAWAII-NEXT:    s_mov_b64 s[4:5], 0
 ; HAWAII-NEXT:    buffer_store_dword v0, v[4:5], s[4:7], 0 addr64
 ; HAWAII-NEXT:    s_waitcnt vmcnt(0)
 ; HAWAII-NEXT:    s_setpc_b64 s[30:31]
@@ -1450,20 +1438,19 @@ define void @icmp_p1_divergent(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr add
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add_nc_u32_e32 v6, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_nc_u32_e32 v6, v6, v7
 ; GFX12-NEXT:    v_cmp_le_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    v_add3_u32 v1, v6, v8, v9
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add3_u32 v1, v6, v8, v9
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add3_u32 v0, v1, v7, v0
 ; GFX12-NEXT:    global_store_b32 v[4:5], v0, off

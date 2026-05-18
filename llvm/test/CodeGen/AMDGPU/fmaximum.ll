@@ -302,7 +302,6 @@ define amdgpu_ps <16 x float> @test_fmaximum_v16f32(<16 x float> %a, <16 x float
 ; GFX9-NEXT:    v_mov_b32_e32 v33, 0x7fc00000
 ; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, v1, v17
 ; GFX9-NEXT:    v_max_f32_e32 v1, v0, v16
-; GFX9-NEXT:    v_cmp_o_f32_e64 s[12:13], v0, v16
 ; GFX9-NEXT:    v_max_f32_e32 v17, v2, v18
 ; GFX9-NEXT:    v_cmp_o_f32_e64 s[0:1], v2, v18
 ; GFX9-NEXT:    v_max_f32_e32 v18, v3, v19
@@ -316,6 +315,7 @@ define amdgpu_ps <16 x float> @test_fmaximum_v16f32(<16 x float> %a, <16 x float
 ; GFX9-NEXT:    v_max_f32_e32 v22, v7, v23
 ; GFX9-NEXT:    v_cmp_o_f32_e64 s[10:11], v7, v23
 ; GFX9-NEXT:    v_max_f32_e32 v23, v8, v24
+; GFX9-NEXT:    v_cmp_o_f32_e64 s[12:13], v0, v16
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, v33, v1, s[12:13]
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v33, v32, vcc
 ; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, v8, v24
@@ -512,8 +512,8 @@ define amdgpu_ps <2 x half> @test_fmaximum_v2f16_vv(<2 x half> %a, <2 x half> %b
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    v_pk_max_f16 v2, v0, v1
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, 0x7e00
-; GFX9-GISEL-NEXT:    v_cmp_o_f16_e64 s[0:1], v0, v1
 ; GFX9-GISEL-NEXT:    v_cmp_o_f16_sdwa vcc, v0, v1 src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9-GISEL-NEXT:    v_cmp_o_f16_e64 s[0:1], v0, v1
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v0, v3, v2, s[0:1]
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_sdwa v1, v3, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
@@ -792,8 +792,8 @@ define amdgpu_ps <4 x half> @test_fmaximum_v4f16(<4 x half> %a, <4 x half> %b) {
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v4
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
 ; GFX9-GISEL-NEXT:    v_pk_max_f16 v2, v1, v3
-; GFX9-GISEL-NEXT:    v_cmp_o_f16_e64 s[0:1], v1, v3
 ; GFX9-GISEL-NEXT:    v_cmp_o_f16_sdwa vcc, v1, v3 src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9-GISEL-NEXT:    v_cmp_o_f16_e64 s[0:1], v1, v3
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, v6, v2, s[0:1]
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_sdwa v2, v6, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
@@ -908,18 +908,18 @@ define amdgpu_ps <2 x float> @test_fmaximum_f64_vv(double %a, double %b) {
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
 ; GFX9-SDAG-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v1, v5, v6, vcc
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-GISEL-LABEL: test_fmaximum_f64_vv:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
 ; GFX9-GISEL-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[2:3]
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, v6, v5, vcc
 ; GFX9-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX1170-LABEL: test_fmaximum_f64_vv:
@@ -943,9 +943,9 @@ define amdgpu_ps <2 x float> @test_fmaximum_f64_ss(double inreg %a, double inreg
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX9-SDAG-NEXT:    v_max_f64 v[2:3], s[0:1], v[0:1]
 ; GFX9-SDAG-NEXT:    v_cmp_u_f64_e32 vcc, s[0:1], v[0:1]
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v4, 0x7ff80000
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v1, v3, v4, vcc
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-GISEL-LABEL: test_fmaximum_f64_ss:
@@ -1006,15 +1006,15 @@ define amdgpu_ps <4 x float> @test_fmaximum_v2f64_ss(<2 x double> inreg %a, <2 x
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-SDAG-NEXT:    v_max_f64 v[2:3], s[0:1], v[0:1]
 ; GFX9-SDAG-NEXT:    v_cmp_u_f64_e32 vcc, s[0:1], v[0:1]
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s7
-; GFX9-SDAG-NEXT:    v_max_f64 v[4:5], s[2:3], v[0:1]
-; GFX9-SDAG-NEXT:    v_cmp_u_f64_e64 s[0:1], s[2:3], v[0:1]
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v4, s6
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v5, s7
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v8, 0x7ff80000
+; GFX9-SDAG-NEXT:    v_max_f64 v[6:7], s[2:3], v[4:5]
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v1, v3, v6, vcc
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v2, v4, 0, s[0:1]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v3, v5, v6, s[0:1]
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v1, v3, v8, vcc
+; GFX9-SDAG-NEXT:    v_cmp_u_f64_e32 vcc, s[2:3], v[4:5]
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v2, v6, 0, vcc
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v3, v7, v8, vcc
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-GISEL-LABEL: test_fmaximum_v2f64_ss:
@@ -1095,42 +1095,42 @@ define amdgpu_ps <8 x float> @test_fmaximum_v4f64(<4 x double> %a, <4 x double> 
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    v_max_f64 v[16:17], v[0:1], v[8:9]
 ; GFX9-SDAG-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[8:9]
-; GFX9-SDAG-NEXT:    v_max_f64 v[8:9], v[2:3], v[10:11]
+; GFX9-SDAG-NEXT:    v_max_f64 v[8:9], v[4:5], v[12:13]
+; GFX9-SDAG-NEXT:    v_max_f64 v[18:19], v[2:3], v[10:11]
 ; GFX9-SDAG-NEXT:    v_cmp_u_f64_e64 s[0:1], v[2:3], v[10:11]
-; GFX9-SDAG-NEXT:    v_max_f64 v[10:11], v[4:5], v[12:13]
-; GFX9-SDAG-NEXT:    v_cmp_u_f64_e64 s[2:3], v[4:5], v[12:13]
-; GFX9-SDAG-NEXT:    v_max_f64 v[12:13], v[6:7], v[14:15]
-; GFX9-SDAG-NEXT:    v_cmp_u_f64_e64 s[4:5], v[6:7], v[14:15]
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v7, 0x7ff80000
+; GFX9-SDAG-NEXT:    v_max_f64 v[10:11], v[6:7], v[14:15]
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v0, v16, 0, vcc
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v1, v17, v7, vcc
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v2, v8, 0, s[0:1]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v3, v9, v7, s[0:1]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v4, v10, 0, s[2:3]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v5, v11, v7, s[2:3]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v6, v12, 0, s[4:5]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v7, v13, v7, s[4:5]
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v16, 0x7ff80000
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v1, v17, v16, vcc
+; GFX9-SDAG-NEXT:    v_cmp_u_f64_e32 vcc, v[4:5], v[12:13]
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v4, v8, 0, vcc
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v2, v18, 0, s[0:1]
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v3, v19, v16, s[0:1]
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v5, v9, v16, vcc
+; GFX9-SDAG-NEXT:    v_cmp_u_f64_e32 vcc, v[6:7], v[14:15]
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v6, v10, 0, vcc
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v7, v11, v16, vcc
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-GISEL-LABEL: test_fmaximum_v4f64:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    v_max_f64 v[16:17], v[0:1], v[8:9]
 ; GFX9-GISEL-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[8:9]
-; GFX9-GISEL-NEXT:    v_max_f64 v[8:9], v[2:3], v[10:11]
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v20, 0x7ff80000
+; GFX9-GISEL-NEXT:    v_max_f64 v[8:9], v[4:5], v[12:13]
+; GFX9-GISEL-NEXT:    v_max_f64 v[18:19], v[2:3], v[10:11]
 ; GFX9-GISEL-NEXT:    v_cmp_o_f64_e64 s[0:1], v[2:3], v[10:11]
-; GFX9-GISEL-NEXT:    v_max_f64 v[10:11], v[4:5], v[12:13]
-; GFX9-GISEL-NEXT:    v_cmp_o_f64_e64 s[2:3], v[4:5], v[12:13]
-; GFX9-GISEL-NEXT:    v_max_f64 v[12:13], v[6:7], v[14:15]
-; GFX9-GISEL-NEXT:    v_cmp_o_f64_e64 s[4:5], v[6:7], v[14:15]
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v18, 0x7ff80000
+; GFX9-GISEL-NEXT:    v_max_f64 v[10:11], v[6:7], v[14:15]
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v16, vcc
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, v18, v17, vcc
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, v8, s[0:1]
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v3, v18, v9, s[0:1]
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, v10, s[2:3]
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v5, v18, v11, s[2:3]
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v6, 0, v12, s[4:5]
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v7, v18, v13, s[4:5]
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, v20, v17, vcc
+; GFX9-GISEL-NEXT:    v_cmp_o_f64_e32 vcc, v[4:5], v[12:13]
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, v18, s[0:1]
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v3, v20, v19, s[0:1]
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v4, 0, v8, vcc
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v5, v20, v9, vcc
+; GFX9-GISEL-NEXT:    v_cmp_o_f64_e32 vcc, v[6:7], v[14:15]
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v6, 0, v10, vcc
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v7, v20, v11, vcc
 ; GFX9-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX1170-LABEL: test_fmaximum_v4f64:
@@ -1160,27 +1160,27 @@ define amdgpu_ps <8 x float> @test_fmaximum_v4f64_ss(<4 x double> inreg %a, <4 x
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX9-SDAG-NEXT:    v_max_f64 v[2:3], s[0:1], v[0:1]
 ; GFX9-SDAG-NEXT:    v_cmp_u_f64_e32 vcc, s[0:1], v[0:1]
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v10, 0x7ff80000
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v4, s10
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v5, s11
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v16, 0x7ff80000
+; GFX9-SDAG-NEXT:    v_max_f64 v[6:7], s[2:3], v[4:5]
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v8, s12
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v9, s13
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s10
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, s11
-; GFX9-SDAG-NEXT:    v_max_f64 v[4:5], s[2:3], v[1:2]
-; GFX9-SDAG-NEXT:    v_cmp_u_f64_e64 s[0:1], s[2:3], v[1:2]
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s12
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, s13
-; GFX9-SDAG-NEXT:    v_max_f64 v[6:7], s[4:5], v[1:2]
-; GFX9-SDAG-NEXT:    v_cmp_u_f64_e64 s[2:3], s[4:5], v[1:2]
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s14
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, s15
-; GFX9-SDAG-NEXT:    v_max_f64 v[8:9], s[6:7], v[1:2]
-; GFX9-SDAG-NEXT:    v_cmp_u_f64_e64 s[4:5], s[6:7], v[1:2]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v1, v3, v10, vcc
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v2, v4, 0, s[0:1]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v3, v5, v10, s[0:1]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v4, v6, 0, s[2:3]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v5, v7, v10, s[2:3]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v6, v8, 0, s[4:5]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v7, v9, v10, s[4:5]
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v1, v3, v16, vcc
+; GFX9-SDAG-NEXT:    v_cmp_u_f64_e32 vcc, s[2:3], v[4:5]
+; GFX9-SDAG-NEXT:    v_max_f64 v[10:11], s[4:5], v[8:9]
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v12, s14
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v2, v6, 0, vcc
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v13, s15
+; GFX9-SDAG-NEXT:    v_max_f64 v[14:15], s[6:7], v[12:13]
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v3, v7, v16, vcc
+; GFX9-SDAG-NEXT:    v_cmp_u_f64_e32 vcc, s[4:5], v[8:9]
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v4, v10, 0, vcc
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v5, v11, v16, vcc
+; GFX9-SDAG-NEXT:    v_cmp_u_f64_e32 vcc, s[6:7], v[12:13]
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v6, v14, 0, vcc
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v7, v15, v16, vcc
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-GISEL-LABEL: test_fmaximum_v4f64_ss:

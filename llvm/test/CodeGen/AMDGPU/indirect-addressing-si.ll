@@ -4451,19 +4451,19 @@ define amdgpu_kernel void @insert_neg_offset_vgpr(ptr addrspace(1) %in, ptr addr
 ; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 10, v12
 ; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v10, 11, 33, vcc
 ; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 9, v12
+; SI-MOVREL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
 ; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v9, 10, 33, vcc
 ; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 8, v12
-; SI-MOVREL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
 ; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v8, 9, 33, vcc
 ; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 15, v12
 ; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v15, 16, 33, vcc
 ; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 14, v12
 ; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v14, 15, 33, vcc
 ; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 13, v12
-; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v13, 14, 33, vcc
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v12
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
+; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v13, 14, 33, vcc
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v12
 ; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v12, 13, 33, vcc
 ; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:48
@@ -4486,9 +4486,9 @@ define amdgpu_kernel void @insert_neg_offset_vgpr(ptr addrspace(1) %in, ptr addr
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v12
 ; VI-NEXT:    v_cndmask_b32_e64 v7, 8, 33, vcc
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 6, v12
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
 ; VI-NEXT:    v_cndmask_b32_e64 v6, 7, 33, vcc
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v12
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
 ; VI-NEXT:    v_cndmask_b32_e64 v5, 6, 33, vcc
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v12
 ; VI-NEXT:    v_cndmask_b32_e64 v4, 5, 33, vcc
@@ -4499,20 +4499,20 @@ define amdgpu_kernel void @insert_neg_offset_vgpr(ptr addrspace(1) %in, ptr addr
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 9, v12
 ; VI-NEXT:    v_cndmask_b32_e64 v9, 10, 33, vcc
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 8, v12
-; VI-NEXT:    v_cndmask_b32_e64 v8, 9, 33, vcc
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 15, v12
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s2, s0, 48
+; VI-NEXT:    v_cndmask_b32_e64 v8, 9, 33, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 15, v12
+; VI-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-NEXT:    v_cndmask_b32_e64 v15, 16, 33, vcc
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 14, v12
-; VI-NEXT:    s_addc_u32 s3, s1, 0
+; VI-NEXT:    v_mov_b32_e32 v17, s3
 ; VI-NEXT:    v_cndmask_b32_e64 v14, 15, 33, vcc
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 13, v12
-; VI-NEXT:    v_mov_b32_e32 v17, s3
-; VI-NEXT:    v_cndmask_b32_e64 v13, 14, 33, vcc
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v12
 ; VI-NEXT:    v_mov_b32_e32 v16, s2
 ; VI-NEXT:    s_add_u32 s2, s0, 32
+; VI-NEXT:    v_cndmask_b32_e64 v13, 14, 33, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v12
 ; VI-NEXT:    v_cndmask_b32_e64 v12, 13, 33, vcc
 ; VI-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-NEXT:    flat_store_dwordx4 v[16:17], v[12:15]
@@ -4556,18 +4556,18 @@ define amdgpu_kernel void @insert_neg_offset_vgpr(ptr addrspace(1) %in, ptr addr
 ; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 10, v12
 ; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e64 v10, 11, 33, vcc
 ; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 9, v12
+; GFX9-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
 ; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e64 v9, 10, 33, vcc
 ; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 8, v12
-; GFX9-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
 ; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e64 v8, 9, 33, vcc
 ; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 15, v12
 ; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e64 v15, 16, 33, vcc
 ; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 14, v12
 ; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e64 v14, 15, 33, vcc
 ; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 13, v12
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v16, 0
 ; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e64 v13, 14, 33, vcc
 ; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v12
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v16, 0
 ; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e64 v12, 13, 33, vcc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v16, v[12:15], s[0:1] offset:48

@@ -185,8 +185,8 @@ define amdgpu_kernel void @s_saddo_i32(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX9-NEXT:    s_add_i32 s4, s6, s7
 ; GFX9-NEXT:    v_add_i32 v1, s6, v1 clamp
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s4
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v1
 ; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX9-NEXT:    global_store_dword v0, v2, s[0:1]
 ; GFX9-NEXT:    global_store_byte v0, v1, s[2:3]
@@ -297,8 +297,8 @@ define amdgpu_kernel void @v_saddo_i32(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_add_i32 v3, v1, v2 clamp
 ; GFX9-NEXT:    v_add_u32_e32 v1, v1, v2
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, v1, v3
 ; GFX9-NEXT:    global_store_dword v0, v1, s[8:9]
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, v1, v3
 ; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX9-NEXT:    global_store_byte v0, v1, s[10:11]
 ; GFX9-NEXT:    s_endpgm

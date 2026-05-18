@@ -12,8 +12,8 @@ define amdgpu_cs <2 x i32> @f() {
 ; CHECK-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[0:1]
-; CHECK-NEXT:    v_mov_b32_e32 v1, s4
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; CHECK-NEXT:    v_mov_b32_e32 v1, s4
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; CHECK-NEXT:    ; return to shader part epilog

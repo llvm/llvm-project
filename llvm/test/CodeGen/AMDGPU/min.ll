@@ -3161,9 +3161,9 @@ define amdgpu_kernel void @v_test_umin_ult_i16_multi_use(ptr addrspace(1) %out0,
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    v_cmp_lt_u32_e32 vcc, v4, v5
 ; CI-NEXT:    v_cndmask_b32_e32 v4, v5, v4, vcc
+; CI-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
 ; CI-NEXT:    flat_store_short v[0:1], v4
-; CI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; CI-NEXT:    flat_store_byte v[2:3], v0
+; CI-NEXT:    flat_store_byte v[2:3], v5
 ; CI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: v_test_umin_ult_i16_multi_use:
@@ -3189,9 +3189,9 @@ define amdgpu_kernel void @v_test_umin_ult_i16_multi_use(ptr addrspace(1) %out0,
 ; VI-NEXT:    v_and_b32_e32 v7, 0xffff, v5
 ; VI-NEXT:    v_cmp_lt_u32_e32 vcc, v7, v6
 ; VI-NEXT:    v_cndmask_b32_e32 v4, v4, v5, vcc
+; VI-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
 ; VI-NEXT:    flat_store_short v[0:1], v4
-; VI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; VI-NEXT:    flat_store_byte v[2:3], v0
+; VI-NEXT:    flat_store_byte v[2:3], v5
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: v_test_umin_ult_i16_multi_use:
@@ -3204,9 +3204,9 @@ define amdgpu_kernel void @v_test_umin_ult_i16_multi_use(ptr addrspace(1) %out0,
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_cmp_lt_u32_sdwa vcc, v1, v2 src0_sel:WORD_0 src1_sel:WORD_0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX9-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
-; GFX9-NEXT:    global_store_byte v0, v1, s[2:3]
+; GFX9-NEXT:    global_store_byte v0, v2, s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: v_test_umin_ult_i16_multi_use:

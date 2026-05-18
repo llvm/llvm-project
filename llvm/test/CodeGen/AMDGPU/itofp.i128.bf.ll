@@ -89,8 +89,8 @@ define bfloat @sitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v14
 ; GCN-NEXT:    v_lshlrev_b64 v[0:1], v14, v[0:1]
 ; GCN-NEXT:    v_cndmask_b32_e32 v8, v8, v11, vcc
-; GCN-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v14
 ; GCN-NEXT:    v_cndmask_b32_e32 v7, v7, v10, vcc
+; GCN-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v14
 ; GCN-NEXT:    v_cndmask_b32_e64 v5, v8, v5, s[4:5]
 ; GCN-NEXT:    v_cndmask_b32_e64 v4, v7, v4, s[4:5]
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
@@ -218,8 +218,8 @@ define bfloat @uitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v13
 ; GCN-NEXT:    v_lshlrev_b64 v[0:1], v13, v[0:1]
 ; GCN-NEXT:    v_cndmask_b32_e32 v7, v7, v10, vcc
-; GCN-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v13
 ; GCN-NEXT:    v_cndmask_b32_e32 v6, v6, v9, vcc
+; GCN-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v13
 ; GCN-NEXT:    v_cndmask_b32_e64 v3, v7, v3, s[4:5]
 ; GCN-NEXT:    v_cndmask_b32_e64 v2, v6, v2, s[4:5]
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc

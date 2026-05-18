@@ -6871,8 +6871,8 @@ define <2 x bfloat> @local_atomic_fadd_ret_v2bf16(ptr addrspace(3) %ptr, <2 x bf
 ; GFX10-NEXT:    v_add3_u32 v6, v6, v2, 0x7fff
 ; GFX10-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX10-NEXT:    v_cmp_u_f32_e64 s4, v2, v2
-; GFX10-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, v6, v8, s4
+; GFX10-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_perm_b32 v2, v5, v2, 0x7060302
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    ds_cmpst_rtn_b32 v2, v0, v4, v2
@@ -6990,8 +6990,8 @@ define <2 x bfloat> @local_atomic_fadd_ret_v2bf16(ptr addrspace(3) %ptr, <2 x bf
 ; GFX8-NEXT:    v_or_b32_e32 v9, 0x400000, v5
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v5, v5
 ; GFX8-NEXT:    v_or_b32_e32 v7, 0x400000, v2
-; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v2, v2
 ; GFX8-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc
+; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v2, v2
 ; GFX8-NEXT:    v_cndmask_b32_e64 v2, v6, v7, s[4:5]
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
 ; GFX8-NEXT:    v_alignbit_b32 v2, v5, v2, 16
@@ -7232,8 +7232,8 @@ define <2 x bfloat> @local_atomic_fadd_ret_v2bf16__offset(ptr addrspace(3) %ptr,
 ; GFX10-NEXT:    v_add3_u32 v6, v6, v2, 0x7fff
 ; GFX10-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX10-NEXT:    v_cmp_u_f32_e64 s4, v2, v2
-; GFX10-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, v6, v8, s4
+; GFX10-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_perm_b32 v2, v5, v2, 0x7060302
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    ds_cmpst_rtn_b32 v2, v0, v4, v2 offset:65532
@@ -7351,8 +7351,8 @@ define <2 x bfloat> @local_atomic_fadd_ret_v2bf16__offset(ptr addrspace(3) %ptr,
 ; GFX8-NEXT:    v_or_b32_e32 v9, 0x400000, v5
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v5, v5
 ; GFX8-NEXT:    v_or_b32_e32 v7, 0x400000, v2
-; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v2, v2
 ; GFX8-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc
+; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v2, v2
 ; GFX8-NEXT:    v_cndmask_b32_e64 v2, v6, v7, s[4:5]
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
 ; GFX8-NEXT:    v_alignbit_b32 v2, v5, v2, 16
@@ -7590,8 +7590,8 @@ define void @local_atomic_fadd_noret_v2bf16(ptr addrspace(3) %ptr, <2 x bfloat> 
 ; GFX10-NEXT:    v_add3_u32 v6, v6, v4, 0x7fff
 ; GFX10-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX10-NEXT:    v_cmp_u_f32_e64 s4, v4, v4
-; GFX10-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v4, v6, v8, s4
+; GFX10-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_perm_b32 v4, v5, v4, 0x7060302
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    ds_cmpst_rtn_b32 v4, v0, v3, v4
@@ -7706,8 +7706,8 @@ define void @local_atomic_fadd_noret_v2bf16(ptr addrspace(3) %ptr, <2 x bfloat> 
 ; GFX8-NEXT:    v_or_b32_e32 v9, 0x400000, v5
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v5, v5
 ; GFX8-NEXT:    v_or_b32_e32 v7, 0x400000, v4
-; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v4, v4
 ; GFX8-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc
+; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v4, v4
 ; GFX8-NEXT:    v_cndmask_b32_e64 v4, v6, v7, s[4:5]
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
 ; GFX8-NEXT:    v_alignbit_b32 v4, v5, v4, 16
@@ -7934,8 +7934,8 @@ define void @local_atomic_fadd_noret_v2bf16__ofset(ptr addrspace(3) %ptr, <2 x b
 ; GFX10-NEXT:    v_add3_u32 v6, v6, v4, 0x7fff
 ; GFX10-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX10-NEXT:    v_cmp_u_f32_e64 s4, v4, v4
-; GFX10-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v4, v6, v8, s4
+; GFX10-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX10-NEXT:    v_perm_b32 v4, v5, v4, 0x7060302
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    ds_cmpst_rtn_b32 v4, v0, v3, v4 offset:65532
@@ -8050,8 +8050,8 @@ define void @local_atomic_fadd_noret_v2bf16__ofset(ptr addrspace(3) %ptr, <2 x b
 ; GFX8-NEXT:    v_or_b32_e32 v9, 0x400000, v5
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v5, v5
 ; GFX8-NEXT:    v_or_b32_e32 v7, 0x400000, v4
-; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v4, v4
 ; GFX8-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc
+; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], v4, v4
 ; GFX8-NEXT:    v_cndmask_b32_e64 v4, v6, v7, s[4:5]
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
 ; GFX8-NEXT:    v_alignbit_b32 v4, v5, v4, 16

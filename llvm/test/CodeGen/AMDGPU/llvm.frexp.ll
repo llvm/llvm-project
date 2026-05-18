@@ -385,12 +385,12 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
 ; GFX6-SDAG-NEXT:    v_cmp_lt_f32_e64 vcc, |v1|, s4
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX6-SDAG-NEXT:    v_frexp_mant_f32_e32 v2, v3
-; GFX6-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v3|, s4
 ; GFX6-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v3|, s4
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e64 v2, v3, v2, s[4:5]
 ; GFX6-SDAG-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
 ; GFX6-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
 ; GFX6-SDAG-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
 ; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f32_e32 v1, v3
@@ -1456,8 +1456,8 @@ define { <2 x float>, <2 x i32> } @test_frexp_v2f32_v2i32(<2 x float> %a) {
 ; GFX6-SDAG-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v4, v0, v2, vcc
 ; GFX6-SDAG-NEXT:    v_frexp_mant_f32_e32 v2, v1
-; GFX6-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v1|, s4
 ; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; GFX6-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v1|, s4
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e64 v5, v1, v2, s[4:5]
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
 ; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f32_e32 v0, v1
@@ -1866,11 +1866,11 @@ define { <2 x double>, <2 x i32> } @test_frexp_v2f64_v2i32(<2 x double> %a) {
 ; GFX6-SDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v6
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v8, v0, v4, vcc
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v9, v1, v5, vcc
-; GFX6-SDAG-NEXT:    v_and_b32_e32 v6, 0x7fffffff, v3
 ; GFX6-SDAG-NEXT:    v_frexp_mant_f64_e32 v[4:5], v[2:3]
-; GFX6-SDAG-NEXT:    v_cmp_gt_i32_e64 s[4:5], s4, v6
+; GFX6-SDAG-NEXT:    v_and_b32_e32 v6, 0x7fffffff, v3
 ; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f64_e32 v0, v[0:1]
 ; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f64_e32 v1, v[2:3]
+; GFX6-SDAG-NEXT:    v_cmp_gt_i32_e64 s[4:5], s4, v6
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e64 v6, v2, v4, s[4:5]
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e64 v7, v3, v5, s[4:5]
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v0, vcc

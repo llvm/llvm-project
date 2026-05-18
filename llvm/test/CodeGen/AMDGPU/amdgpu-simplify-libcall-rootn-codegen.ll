@@ -11,8 +11,8 @@ define float @test_rootn_afn_f32(float %x, i32 %y) #0 {
 ; CHECK-LABEL: test_rootn_afn_f32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 s4, 0x800000
 ; CHECK-NEXT:    v_cvt_f32_i32_e32 v2, v1
+; CHECK-NEXT:    s_mov_b32 s4, 0x800000
 ; CHECK-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
 ; CHECK-NEXT:    v_cndmask_b32_e64 v4, 0, 32, vcc
 ; CHECK-NEXT:    v_ldexp_f32 v4, |v0|, v4
@@ -62,15 +62,15 @@ define <2 x float> @test_rootn_afn_v2f32(<2 x float> %x, <2 x i32> %y) #0 {
 ; CHECK-LABEL: test_rootn_afn_v2f32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 s4, 0x800000
 ; CHECK-NEXT:    v_cvt_f32_i32_e32 v5, v3
+; CHECK-NEXT:    s_mov_b32 s4, 0x800000
+; CHECK-NEXT:    v_cvt_f32_i32_e32 v4, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0x42000000
 ; CHECK-NEXT:    v_cmp_lt_f32_e64 vcc, |v1|, s4
-; CHECK-NEXT:    v_cvt_f32_i32_e32 v4, v2
-; CHECK-NEXT:    v_cndmask_b32_e32 v7, 0, v6, vcc
 ; CHECK-NEXT:    v_cndmask_b32_e64 v8, 0, 32, vcc
-; CHECK-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
+; CHECK-NEXT:    v_cndmask_b32_e32 v7, 0, v6, vcc
 ; CHECK-NEXT:    v_ldexp_f32 v8, |v1|, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
 ; CHECK-NEXT:    v_cndmask_b32_e64 v9, 0, 32, vcc
 ; CHECK-NEXT:    v_log_f32_e32 v8, v8
 ; CHECK-NEXT:    v_ldexp_f32 v9, |v0|, v9
@@ -86,8 +86,8 @@ define <2 x float> @test_rootn_afn_v2f32(<2 x float> %x, <2 x i32> %y) #0 {
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0x42800000
 ; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v5
 ; CHECK-NEXT:    v_cndmask_b32_e32 v7, 0, v6, vcc
-; CHECK-NEXT:    v_cmp_gt_f32_e64 s[4:5], s4, v4
 ; CHECK-NEXT:    v_add_f32_e32 v5, v5, v7
+; CHECK-NEXT:    v_cmp_gt_f32_e64 s[4:5], s4, v4
 ; CHECK-NEXT:    v_cndmask_b32_e64 v6, 0, v6, s[4:5]
 ; CHECK-NEXT:    v_exp_f32_e32 v5, v5
 ; CHECK-NEXT:    v_add_f32_e32 v4, v4, v6
@@ -99,14 +99,14 @@ define <2 x float> @test_rootn_afn_v2f32(<2 x float> %x, <2 x i32> %y) #0 {
 ; CHECK-NEXT:    v_ldexp_f32 v4, v4, v6
 ; CHECK-NEXT:    v_and_b32_e32 v6, 1, v3
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v6
-; CHECK-NEXT:    v_and_b32_e32 v7, 1, v2
 ; CHECK-NEXT:    v_cndmask_b32_e64 v6, v1, 1.0, vcc
 ; CHECK-NEXT:    s_brev_b32 s18, -2
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v7
+; CHECK-NEXT:    v_and_b32_e32 v7, 1, v2
 ; CHECK-NEXT:    v_bfi_b32 v5, s18, v5, v6
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0x204
 ; CHECK-NEXT:    v_cmp_eq_f32_e64 s[10:11], 0, v1
 ; CHECK-NEXT:    v_cmp_gt_i32_e64 s[14:15], 0, v3
+; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v7
 ; CHECK-NEXT:    v_cndmask_b32_e64 v7, v0, 1.0, s[4:5]
 ; CHECK-NEXT:    v_cmp_class_f32_e64 s[6:7], v1, v6
 ; CHECK-NEXT:    v_cmp_class_f32_e64 s[8:9], v0, v6

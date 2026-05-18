@@ -540,10 +540,9 @@ define amdgpu_kernel void @v_usubo_i64(ptr addrspace(1) %out, ptr addrspace(1) %
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_sub_i32_e32 v0, vcc, v0, v2
 ; SI-NEXT:    v_subb_u32_e32 v1, vcc, v1, v3, vcc
+; SI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[8:11], 0
-; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; SI-NEXT:    buffer_store_byte v0, off, s[4:7], 0
+; SI-NEXT:    buffer_store_byte v2, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: v_usubo_i64:
@@ -563,9 +562,9 @@ define amdgpu_kernel void @v_usubo_i64(ptr addrspace(1) %out, ptr addrspace(1) %
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_sub_u32_e32 v0, vcc, v0, v2
 ; VI-NEXT:    v_subb_u32_e32 v1, vcc, v1, v3, vcc
+; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; VI-NEXT:    flat_store_dwordx2 v[4:5], v[0:1]
-; VI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; VI-NEXT:    flat_store_byte v[6:7], v0
+; VI-NEXT:    flat_store_byte v[6:7], v2
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: v_usubo_i64:
@@ -578,9 +577,9 @@ define amdgpu_kernel void @v_usubo_i64(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v2
 ; GFX9-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v3, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX9-NEXT:    global_store_dwordx2 v4, v[0:1], s[8:9]
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX9-NEXT:    global_store_byte v4, v0, s[10:11]
+; GFX9-NEXT:    global_store_byte v4, v2, s[10:11]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: v_usubo_i64:
@@ -653,8 +652,8 @@ define amdgpu_kernel void @v_usubo_i16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v0
-; SI-NEXT:    v_cmp_ne_u32_e32 vcc, v1, v0
 ; SI-NEXT:    buffer_store_short v0, off, s[8:11], 0
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, v1, v0
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; SI-NEXT:    buffer_store_byte v0, off, s[4:7], 0
@@ -678,8 +677,8 @@ define amdgpu_kernel void @v_usubo_i16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; VI-NEXT:    v_sub_u32_e32 v5, vcc, v4, v5
 ; VI-NEXT:    v_and_b32_e32 v4, 0xffff, v4
 ; VI-NEXT:    v_and_b32_e32 v6, 0xffff, v5
-; VI-NEXT:    v_cmp_gt_u32_e32 vcc, v6, v4
 ; VI-NEXT:    flat_store_short v[0:1], v5
+; VI-NEXT:    v_cmp_gt_u32_e32 vcc, v6, v4
 ; VI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; VI-NEXT:    flat_store_byte v[2:3], v0
 ; VI-NEXT:    s_endpgm

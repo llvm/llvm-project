@@ -561,8 +561,8 @@ define <2 x i32> @test_D139469_v2f16(<2 x half> %arg) {
 ; GFX9-SDAG-NEXT:    v_pk_min_f16 v1, v1, v0
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-SDAG-NEXT:    v_cmp_gt_f16_e32 vcc, 0, v1
-; GFX9-SDAG-NEXT:    v_cmp_lt_f16_sdwa s[4:5], v1, v2 src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX9-SDAG-NEXT:    v_cmp_lt_f16_sdwa s[4:5], v1, v2 src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -593,8 +593,8 @@ define <2 x i32> @test_D139469_v2f16(<2 x half> %arg) {
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-SDAG-NEXT:    v_pk_min_f16 v1, v1, v0
 ; GFX10-SDAG-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v1
-; GFX10-SDAG-NEXT:    v_cmp_lt_f16_sdwa s4, v1, v2 src0_sel:WORD_1 src1_sel:DWORD
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX10-SDAG-NEXT:    v_cmp_lt_f16_sdwa s4, v1, v2 src0_sel:WORD_1 src1_sel:DWORD
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s4
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
