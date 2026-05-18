@@ -4225,6 +4225,17 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(Register R,
     Register LHS = getSrcRegIgnoringCopies(MI->getOperand(1).getReg(), MRI);
     Register RHS = getSrcRegIgnoringCopies(MI->getOperand(2).getReg(), MRI);
 
+    // op(X, X): both sides would share a Src slot, and recursing into X may
+    // replace that slot via the "replace parent operator" path, invalidating
+    // the truth-table bits cached for the other use.
+    if (LHS == RHS) {
+      uint8_t Bits;
+      if (!getOperandBits(LHS, Bits))
+        return std::make_pair(0, 0);
+      uint8_t TTbl = MI->getOpcode() == TargetOpcode::G_XOR ? 0 : Bits;
+      return std::make_pair(1, TTbl);
+    }
+
     SmallVector<Register, 3> Backup(Src.begin(), Src.end());
     if (!getOperandBits(LHS, LHSBits) ||
         !getOperandBits(RHS, RHSBits)) {
