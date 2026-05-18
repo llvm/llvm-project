@@ -5703,6 +5703,22 @@ entry:
   ret <2 x i64> %r
 }
 
+define <2 x i64> @no_fold_scalar_cond_vec_select_neg_not(i1 %c, <2 x i64> %y) {
+; CHECK-LABEL: define <2 x i64> @no_fold_scalar_cond_vec_select_neg_not(
+; CHECK-SAME: i1 [[C:%.*]], <2 x i64> [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i64> zeroinitializer, [[Y]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i64> [[Y]], splat (i64 -1)
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], <2 x i64> [[NEG]], <2 x i64> [[NOT]]
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+entry:
+  %neg = sub <2 x i64> zeroinitializer, %y
+  %not = xor <2 x i64> %y, <i64 -1, i64 -1>
+  %r = select i1 %c, <2 x i64> %neg, <2 x i64> %not
+  ret <2 x i64> %r
+}
+
 define <2 x i64> @no_fold_vec_multuse(<2 x i1> %c, <2 x i64> %y) {
 ; CHECK-LABEL: define <2 x i64> @no_fold_vec_multuse(
 ; CHECK-SAME: <2 x i1> [[C:%.*]], <2 x i64> [[Y:%.*]]) {

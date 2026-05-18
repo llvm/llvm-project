@@ -4417,11 +4417,11 @@ static Value *foldSelectBitTest(SelectInst &Sel, Value *CondVal, Value *TrueVal,
   return nullptr;
 }
 
-// This function makes the following folds:
-// select C, (sub 0, X), (xor X, -1)
-//   -> sub (sext !C), X
-// select C, (xor X, -1), (sub 0, X)
-//   -> sub (sext C), X
+/// This function makes the following folds:
+/// select C, (sub 0, X), (xor X, -1)
+///   -> sub (sext !C), X
+/// select C, (xor X, -1), (sub 0, X)
+///   -> sub (sext C), X
 static Instruction *foldSelectNegNot(SelectInst &SI,
                                      InstCombiner::BuilderTy &Builder) {
   auto *CondVal = SI.getCondition();
@@ -4437,7 +4437,7 @@ static Instruction *foldSelectNegNot(SelectInst &SI,
 
   auto matchNegNot = [&](Value *Neg, Value *Not, Value *&X) -> bool {
     return match(Neg, m_OneUse(m_Sub(m_Zero(), m_Value(X)))) &&
-           match(Not, m_OneUse(m_c_Xor(m_Specific(X), m_AllOnes())));
+           match(Not, m_OneUse(m_Not(m_Specific(X))));
   };
 
   Value *X;
