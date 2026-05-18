@@ -105,6 +105,57 @@ int64_t test_vqshld_n_s64(int64_t a) {
 // TODO: Implement the remaining intrinsics in this group
 //===------------------------------------------------------===//
 
+// ALL-LABEL: {{.*}}@test_vqrshrunh_n_s16(
+uint8_t test_vqrshrunh_n_s16(int16_t a) {
+  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
+
+  // LLVM-SAME: i16 noundef {{.*}})
+  // LLVM:      call {{.*}}@llvm.aarch64.neon.sqrshrun.{{(v8i8|i8)}}(
+  // LLVM:      ret i8 {{%.*}}
+  return (uint8_t)vqrshrunh_n_s16(a, 8);
+}
+
+//ALL-LABEL: {{.*}} @test_vqrshrund_n_s64(
+uint32_t test_vqrshrund_n_s64(int64_t a) {
+  //CIR: {{%.*}} =  cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
+  // 
+  // 
+  // LLVM-SAME: i64 {{.*}}[[A:%.*]])
+  // LLVM:   [[VQRSHRUND_N_S64:%.*]] = call i32 @llvm.aarch64.neon.sqrshrun.i32(i64 {{.*}}, i32 32)
+  // LLVM:  ret i32 [[VQRSHRUND_N_S64]]
+  return (uint32_t)vqrshrund_n_s64(a, 32);
+}
+
+// ALL-LABEL: {{.*}}@test_vqrshrn_n_s16(
+int8x8_t test_vqrshrn_n_s16(int16x8_t a) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
+
+  // LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]])
+  // LLVM:      [[VQRSHRN_N1:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqrshrn.v8i8(<8 x i16> {{.*}}, i32 3)
+  // LLVM:      ret <8 x i8> [[VQRSHRN_N1]]
+  return vqrshrn_n_s16(a, 3);
+}
+
+//ALL-LABEL: {{.*}} @test_vqrshrn_n_s32(
+int16x4_t test_vqrshrn_n_s32(int32x4_t a) {
+//CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
+// 
+// LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]])
+// LLVM:     [[VQRSHRN_N1:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrn.v4i16(<4 x i32> {{.*}}, i32 9)
+// LLVM:     ret <4 x i16> [[VQRSHRN_N1]]
+  return vqrshrn_n_s32(a, 9);
+}
+
+//ALL-LABEL: {{.*}} @test_vqrshrn_n_s64(
+int32x2_t test_vqrshrn_n_s64(int64x2_t a) {
+  //CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
+  // 
+  //LLVM-SAME:  <2 x i64> noundef [[A:%.*]])
+  // LLVM:      [[VQRSHRN_N1:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqrshrn.v2i32(<2 x i64> {{.*}}, i32 19)
+  // LLVM:      ret <2 x i32> [[VQRSHRN_N1]]
+  return vqrshrn_n_s64(a, 19);
+}
+
 // LLVM-LABEL: @test_vnegd_s64
 // CIR-LABEL: @vnegd_s64
 int64_t test_vnegd_s64(int64_t a) {
