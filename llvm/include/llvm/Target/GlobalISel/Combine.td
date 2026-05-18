@@ -1264,6 +1264,47 @@ def double_icmp_zero_or_combine: GICombineRule<
          (G_ICMP $root, $p, $ordst, 0))
 >;
 
+// Mirrors InstCombine's canonicalizeICmpBool: every i1 comparison can be
+// expressed in pure and/or/xor/not.
+class canonicalize_icmp_bool_rule<string pred, dag apply_pat> : GICombineRule<
+  (defs root:$dst),
+  (match (G_ICMP i1:$dst, $cc, i1:$lhs, i1:$rhs),
+         "return ${cc}.getPredicate() == CmpInst::" # pred # ";"),
+  apply_pat>;
+
+// ne X, Y -> X ^ Y;  eq X, Y -> ~(X ^ Y)
+def canonicalize_icmp_bool_ne : canonicalize_icmp_bool_rule<"ICMP_NE",
+  (apply (G_XOR $dst, $lhs, $rhs))>;
+def canonicalize_icmp_bool_eq : canonicalize_icmp_bool_rule<"ICMP_EQ",
+  (apply (G_XOR $tmp, $lhs, $rhs), (G_XOR $dst, $tmp, -1))>;
+
+// ult/sgt X, Y -> ~X & Y;  ugt/slt X, Y -> X & ~Y
+def canonicalize_icmp_bool_ult : canonicalize_icmp_bool_rule<"ICMP_ULT",
+  (apply (G_XOR $nlhs, $lhs, -1), (G_AND $dst, $nlhs, $rhs))>;
+def canonicalize_icmp_bool_sgt : canonicalize_icmp_bool_rule<"ICMP_SGT",
+  (apply (G_XOR $nlhs, $lhs, -1), (G_AND $dst, $nlhs, $rhs))>;
+def canonicalize_icmp_bool_ugt : canonicalize_icmp_bool_rule<"ICMP_UGT",
+  (apply (G_XOR $nrhs, $rhs, -1), (G_AND $dst, $lhs, $nrhs))>;
+def canonicalize_icmp_bool_slt : canonicalize_icmp_bool_rule<"ICMP_SLT",
+  (apply (G_XOR $nrhs, $rhs, -1), (G_AND $dst, $lhs, $nrhs))>;
+
+// ule/sge X, Y -> ~X | Y;  uge/sle X, Y -> X | ~Y
+def canonicalize_icmp_bool_ule : canonicalize_icmp_bool_rule<"ICMP_ULE",
+  (apply (G_XOR $nlhs, $lhs, -1), (G_OR $dst, $nlhs, $rhs))>;
+def canonicalize_icmp_bool_sge : canonicalize_icmp_bool_rule<"ICMP_SGE",
+  (apply (G_XOR $nlhs, $lhs, -1), (G_OR $dst, $nlhs, $rhs))>;
+def canonicalize_icmp_bool_uge : canonicalize_icmp_bool_rule<"ICMP_UGE",
+  (apply (G_XOR $nrhs, $rhs, -1), (G_OR $dst, $lhs, $nrhs))>;
+def canonicalize_icmp_bool_sle : canonicalize_icmp_bool_rule<"ICMP_SLE",
+  (apply (G_XOR $nrhs, $rhs, -1), (G_OR $dst, $lhs, $nrhs))>;
+
+def canonicalize_icmp_bool : GICombineGroup<[
+  canonicalize_icmp_bool_eq, canonicalize_icmp_bool_ne,
+  canonicalize_icmp_bool_ult, canonicalize_icmp_bool_sgt,
+  canonicalize_icmp_bool_ugt, canonicalize_icmp_bool_slt,
+  canonicalize_icmp_bool_ule, canonicalize_icmp_bool_sge,
+  canonicalize_icmp_bool_uge, canonicalize_icmp_bool_sle]>;
+
 def and_or_disjoint_mask : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_AND):$root,
@@ -2310,7 +2351,8 @@ def cmp_combines: GICombineGroup<[
   icmp_to_lhs_known_bits,
   double_icmp_zero_and_combine,
   double_icmp_zero_or_combine,
-  redundant_binop_in_equality
+  redundant_binop_in_equality,
+  canonicalize_icmp_bool
 ]>;
 
 
