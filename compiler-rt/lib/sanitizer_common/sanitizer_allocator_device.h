@@ -58,9 +58,9 @@ class DeviceAllocatorT {
   void* Allocate(AllocatorStats* stat, uptr size, uptr alignment,
                  DeviceAllocationInfo* da_info) {
     if (!da_info || !InitMemFuncs()) {
-      if (da_info && da_info->type_ == DAT_AMDGPU)
-        reinterpret_cast<AmdgpuAllocationInfo*>(da_info)->EnsureFailureStatus(
-            HSA_STATUS_ERROR_NOT_INITIALIZED);
+      if (da_info)
+        DeviceMemFuncs::NoteDeviceAllocatorFailure(
+            da_info, DeviceMemFuncs::kNotInitialized);
       return nullptr;
     }
 
@@ -78,16 +78,14 @@ class DeviceAllocatorT {
           "WARNING: %s: DeviceAllocator allocation overflow: "
           "0x%zx bytes with 0x%zx alignment requested\n",
           SanitizerToolName, map_size, alignment);
-      if (da_info->type_ == DAT_AMDGPU)
-        reinterpret_cast<AmdgpuAllocationInfo*>(da_info)->EnsureFailureStatus(
-            HSA_STATUS_ERROR_OUT_OF_RESOURCES);
+      DeviceMemFuncs::NoteDeviceAllocatorFailure(
+          da_info, DeviceMemFuncs::kOutOfResources);
       return nullptr;
     }
     void* ptr = DeviceMemFuncs::Allocate(map_size, alignment, da_info);
     if (!ptr) {
-      if (da_info->type_ == DAT_AMDGPU)
-        reinterpret_cast<AmdgpuAllocationInfo*>(da_info)->EnsureFailureStatus(
-            HSA_STATUS_ERROR_OUT_OF_RESOURCES);
+      DeviceMemFuncs::NoteDeviceAllocatorFailure(
+          da_info, DeviceMemFuncs::kOutOfResources);
       return nullptr;
     }
     uptr map_beg = reinterpret_cast<uptr>(ptr);
