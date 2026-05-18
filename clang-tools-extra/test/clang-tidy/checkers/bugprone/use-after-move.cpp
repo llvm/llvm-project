@@ -17,6 +17,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -1814,3 +1815,92 @@ namespace GH62206 {
     (d) = b; // Should not warn
   }
 } // namespace GH62206
+
+
+std::pair<std::string, std::string> makeStringPair(std::string a,
+                                                   std::string b);
+
+void stdTieIsReinit() {
+  std::string a, b;
+  std::move(a);
+  std::move(b);
+  std::tie(a, b) = makeStringPair("x", "y");
+  a.size();
+  b.size();
+}
+
+void stdTieWithIgnore() {
+  std::string a;
+  std::move(a);
+  std::tie(a, std::ignore) = makeStringPair("x", "y");
+  a.size();
+}
+
+void stdTieIgnoreFlipped() {
+  std::string a;
+  std::move(a);
+  std::tie(std::ignore, a) = makeStringPair("x", "y");
+  a.size();
+}
+
+void stdTieThreeVars() {
+  std::string a, b, c;
+  std::move(a);
+  std::move(b);
+  std::move(c);
+  std::tie(a, b, c) =
+      std::make_tuple(std::string("x"), std::string("y"), std::string("z"));
+  a.size();
+  b.size();
+  c.size();
+}
+
+void stdTiePartialReinit() {
+  std::string a, b, c;
+  std::move(a);
+  std::move(b);
+  std::move(c);
+  std::tie(b) = std::make_tuple(std::string("y"));
+  b.size();
+  std::tie(c, b, std::ignore) =
+      std::make_tuple(std::string("x"), std::string("y"), std::string("z"));
+  b.size();
+  c.size();
+  a.size();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'a' used after it was moved
+  // CHECK-NOTES: [[@LINE-11]]:3: note: move occurred here
+}
+
+void stdTieInLoop() {
+  std::string a, b;
+  while (true) {
+    std::tie(a, b) = makeStringPair(std::move(a), std::move(b));
+    std::tie(a, b) = makeStringPair(std::move(a), std::move(b));
+  }
+}
+
+template <typename T>
+void stdTieReinitInTemplate() {
+  T a, b;
+  std::move(a);
+  std::move(b);
+  std::tie(a, b) = std::make_tuple(T(), T());
+  a.size();
+  b.size();
+}
+
+template <typename T>
+void stdTiePartialReinitInTemplate() {
+  T a, b;
+  std::move(a);
+  std::tie(b) = std::make_tuple(T());
+  b.size();
+  a.size();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'a' used after it was moved
+  // CHECK-NOTES: [[@LINE-5]]:3: note: move occurred here
+}
+
+void callStdTieTemplateTests() {
+  stdTieReinitInTemplate<std::string>();
+  stdTiePartialReinitInTemplate<std::string>();
+}
