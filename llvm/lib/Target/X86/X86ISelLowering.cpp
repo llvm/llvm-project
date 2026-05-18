@@ -3563,8 +3563,9 @@ bool X86TargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   // Mask vectors support all subregister combinations and operations that
   // extract half of vector.
   if (ResVT.getVectorElementType() == MVT::i1)
-    return Index == 0 || ((ResVT.getSizeInBits() == SrcVT.getSizeInBits()*2) &&
-                          (Index == ResVT.getVectorNumElements()));
+    return Index == 0 ||
+           ((ResVT.getSizeInBits() * 2 == SrcVT.getSizeInBits()) &&
+            (Index == ResVT.getVectorNumElements()));
 
   return (Index % ResVT.getVectorNumElements()) == 0;
 }
@@ -8486,7 +8487,7 @@ static SDValue LowerBUILD_VECTORvXbf16(SDValue Op, SelectionDAG &DAG,
   return DAG.getBitcast(VT, Res);
 }
 
-// Lower BUILD_VECTOR operation for v8i1 and v16i1 types.
+// Lower BUILD_VECTOR operation for vXi1 types.
 static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
                                      SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
@@ -8547,6 +8548,25 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
       Select = DAG.getBitcast(VecVT, Select);
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, Select,
                          DAG.getVectorIdxConstant(0, dl));
+    }
+  }
+
+  // See if we can cheaply generate a vXi8 vector and convert to vXi1.
+  // TODO: Add handling for sub-128bit vXi8 vectors.
+  MVT OpVT = Op.getOperand(0).getSimpleValueType();
+  if (NonConstIdx.size() > 1 && OpVT == MVT::i8) {
+    // On pre-BWI targets, we must extend to vXi32 instead.
+    MVT ByteVT = VT.changeVectorElementType(MVT::i8);
+    MVT WideVT =
+        Subtarget.hasBWI() ? ByteVT : VT.changeVectorElementType(MVT::i32);
+    if (DAG.getTargetLoweringInfo().isTypeLegal(ByteVT) &&
+        DAG.getTargetLoweringInfo().isTypeLegal(WideVT)) {
+      SDValue ByteBV = DAG.getBuildVector(ByteVT, dl, Op->ops());
+      SDValue WideBV = DAG.getNode(ISD::ANY_EXTEND, dl, WideVT, ByteBV);
+      WideBV = DAG.getNode(ISD::AND, dl, WideVT, WideBV,
+                           DAG.getConstant(1, dl, WideVT));
+      return DAG.getSetCC(dl, VT, WideBV, DAG.getConstant(0, dl, WideVT),
+                          ISD::SETNE);
     }
   }
 
@@ -20941,7 +20961,7 @@ std::pair<SDValue, SDValue> X86TargetLowering::BuildFILD(
 /// Horizontal vector math instructions may be slower than normal math with
 /// shuffles. Limit horizontal op codegen based on size/speed trade-offs, uarch
 /// implementation, and likely shuffle complexity of the alternate sequence.
-static bool shouldUseHorizontalOp(bool IsSingleSource, SelectionDAG &DAG,
+static bool shouldUseHorizontalOp(bool IsSingleSource, const SelectionDAG &DAG,
                                   const X86Subtarget &Subtarget) {
   bool IsOptimizingSize = DAG.shouldOptForSize();
   bool HasFastHOps = Subtarget.hasFastHorizontalOps();
@@ -29675,7 +29695,7 @@ static SDValue LowerCTTZ(SDValue Op, const X86Subtarget &Subtarget,
 
 // Generic x86 vector reduction expansion.
 static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
-                              SelectionDAG &DAG) {
+                              SelectionDAG &DAG, bool AllowScalarization) {
   ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(Op.getOpcode());
   assert(DAG.getTargetLoweringInfo().isBinOp(BinOp) &&
          "Only binops expected to be used by reductions");
@@ -29703,7 +29723,7 @@ static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
   unsigned NumSrcElts = SrcVT.getVectorNumElements();
   for (unsigned NumElts = NumSrcElts; NumElts != 1; NumElts /= 2) {
     // Scalarize the last 2 elements if the vector binop isn't legal.
-    if (NumElts == 2 && !Subtarget.hasAVX512() &&
+    if (NumElts == 2 && AllowScalarization &&
         !TLI.isOperationLegal(BinOp, SrcVT) && TLI.isTypeLegal(ExtractVT)) {
       return DAG.getNode(BinOp, DL, ExtractVT,
                          DAG.getExtractVectorElt(DL, ExtractVT, Src, 0),
@@ -29912,13 +29932,13 @@ static SDValue LowerMINMAX_REDUCE(SDValue Op, const X86Subtarget &Subtarget,
                                   SelectionDAG &DAG) {
   EVT ExtractVT = Op.getValueType();
   if (!Subtarget.hasSSE41() || (ExtractVT != MVT::i16 && ExtractVT != MVT::i8))
-    return LowerVECREDUCE(Op, Subtarget, DAG);
+    return LowerVECREDUCE(Op, Subtarget, DAG, !Subtarget.hasAVX512());
 
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
   EVT SrcSVT = SrcVT.getScalarType();
   if (SrcSVT != ExtractVT || (SrcVT.getSizeInBits() % 128) != 0)
-    return LowerVECREDUCE(Op, Subtarget, DAG);
+    return LowerVECREDUCE(Op, Subtarget, DAG, !Subtarget.hasAVX512());
 
   SDLoc DL(Op);
   SDValue MinPos = Src;
@@ -34544,7 +34564,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VECREDUCE_UMIN:     return LowerMINMAX_REDUCE(Op, Subtarget, DAG);
   case ISD::VECREDUCE_AND:
   case ISD::VECREDUCE_OR:
-  case ISD::VECREDUCE_XOR:      return LowerVECREDUCE(Op, Subtarget, DAG);
+  case ISD::VECREDUCE_XOR:      return LowerVECREDUCE(Op, Subtarget, DAG, true);
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
   case ISD::FMINIMUMNUM:
@@ -57779,7 +57799,7 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
     // Both of these patterns can be better optimized in
     // DAGCombiner::foldAndOrOfSETCC. Note this only applies for scalar
     // integers which is checked above.
-    if (LHS.getOpcode() == ISD::ABS && LHS.hasOneUse()) {
+    if (ISD::isAbsOpcode(LHS.getOpcode()) && LHS.hasOneUse()) {
       if (auto *C = dyn_cast<ConstantSDNode>(RHS)) {
         const APInt &CInt = C->getAPIntValue();
         // We can better optimize this case in DAGCombiner::foldAndOrOfSETCC.

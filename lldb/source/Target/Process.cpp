@@ -410,7 +410,7 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
                               ListenerSP listener_sp,
                               const FileSpec *crash_file_path,
                               bool can_connect) {
-  static uint32_t g_process_unique_id = 0;
+  static std::atomic<uint32_t> g_process_unique_id{0};
 
   ProcessSP process_sp;
   ProcessCreateInstance create_callback = nullptr;

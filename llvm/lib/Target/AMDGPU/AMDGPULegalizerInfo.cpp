@@ -1582,6 +1582,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                       {V4S32, ConstantPtr, V4S32, GlobalAlign32},
                                       {S64, ConstantPtr, S64, GlobalAlign32},
                                       {V2S32, ConstantPtr, V2S32, GlobalAlign32}});
+
+    Actions.legalForTypesWithMemDesc(ST.useRealTrue16Insts(), /* Pred */
+                                     {{S16, GlobalPtr, S8, GlobalAlign8},
+                                      {S16, GlobalPtr, S16, GlobalAlign16},
+                                      {S16, LocalPtr, S8, 8},
+                                      {S16, LocalPtr, S16, 16},
+                                      {S16, PrivatePtr, S8, 8},
+                                      {S16, PrivatePtr, S16, 16}});
+
     Actions.legalIf(
       [=](const LegalityQuery &Query) -> bool {
         return isLoadStoreLegal(ST, Query);
@@ -1750,6 +1759,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // inserting addrspacecasts.
   ExtLoads.customIf(typeIs(1, Constant32Ptr));
 
+  ExtLoads.narrowScalarIf(
+      [](const LegalityQuery &Query) {
+        LLT MemTy = Query.MMODescrs[0].MemoryTy;
+        return MemTy.isAnyScalar() && MemTy.getSizeInBits() > 32 &&
+               Query.Types[0].getSizeInBits() > MemTy.getSizeInBits();
+      }, // For large MemSize, narrowscalar to MemSize (load MemSize + ext)
+      getScalarTypeFromMemDesc(0));
   ExtLoads.clampScalar(0, S32, S32)
           .widenScalarToNextPow2(0)
           .lower();
@@ -4626,7 +4642,7 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
   assert(Ty.isScalar());
 
   unsigned Size = Ty.getSizeInBits();
-  if (ST.hasVectorMulU64() && Size == 64)
+  if (ST.hasVMulU64Inst() && Size == 64)
     return true;
 
   unsigned NumParts = Size / 32;
