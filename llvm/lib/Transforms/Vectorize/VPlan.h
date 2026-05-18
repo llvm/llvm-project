@@ -599,18 +599,18 @@ protected:
     return R->getVPRecipeID() == VPRecipeID;                                   \
   }
 
-/// VPSingleDef is a base class for recipes for modeling a sequence of one or
-/// more output IR that define a single result VPValue.
-/// Note that VPRecipeBase must be inherited from before VPValue.
-class VPSingleDefRecipe : public VPRecipeBase, public VPRecipeValue {
+/// VPSingleDefRecipe is a base class for recipes that model a sequence of one
+/// or more output IR that define a single result VPValue. Note that
+/// VPSingleDefRecipe must inherit from VPRecipeBase before VPSingleDefValue.
+class VPSingleDefRecipe : public VPRecipeBase, public VPSingleDefValue {
 public:
   VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
                     DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeBase(SC, Operands, DL), VPRecipeValue(this) {}
+      : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this) {}
 
   VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
                     Value *UV, DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeBase(SC, Operands, DL), VPRecipeValue(this, UV) {}
+      : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this, UV) {}
 
   static inline bool classof(const VPRecipeBase *R) {
     switch (R->getVPRecipeID()) {
@@ -1146,18 +1146,6 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
   /// Compute the cost for this recipe for \p VF, using \p Opcode and \p Ctx.
   InstructionCost getCostForRecipeWithOpcode(unsigned Opcode, ElementCount VF,
                                              VPCostContext &Ctx) const;
-};
-
-/// Helper to access the operand that contains the unroll part for this recipe
-/// after unrolling.
-template <unsigned PartOpIdx> class LLVM_ABI_FOR_TEST VPUnrollPartAccessor {
-protected:
-  /// Return the VPValue operand containing the unroll part or null if there is
-  /// no such operand.
-  VPValue *getUnrollPartOperand(const VPUser &U) const;
-
-  /// Return the unroll part.
-  unsigned getUnrollPart(const VPUser &U) const;
 };
 
 /// Helper to manage IR metadata for recipes. It filters out metadata that
@@ -2879,7 +2867,7 @@ protected:
     if (StoredValues.empty()) {
       for (Instruction *Inst : IG->members()) {
         assert(!Inst->getType()->isVoidTy() && "must have result");
-        new VPRecipeValue(this, Inst);
+        new VPMultiDefValue(this, Inst);
       }
     } else {
       for (auto *SV : StoredValues)
@@ -3877,8 +3865,9 @@ protected:
 };
 
 /// A Recipe for widening the canonical induction variable of the vector loop.
-class VPWidenCanonicalIVRecipe : public VPSingleDefRecipe,
-                                 public VPUnrollPartAccessor<1> {
+/// First operand is the canonical IV recipe, a second step operand  (VF * Part)
+/// is added during unrolling.
+class VPWidenCanonicalIVRecipe : public VPSingleDefRecipe {
 public:
   VPWidenCanonicalIVRecipe(VPRegionValue *CanonicalIV)
       : VPSingleDefRecipe(VPRecipeBase::VPWidenCanonicalIVSC, {CanonicalIV}) {}
@@ -3886,15 +3875,17 @@ public:
   ~VPWidenCanonicalIVRecipe() override = default;
 
   VPWidenCanonicalIVRecipe *clone() override {
-    return new VPWidenCanonicalIVRecipe(getCanonicalIV());
+    auto *WideCanIV = new VPWidenCanonicalIVRecipe(getCanonicalIV());
+    if (VPValue *Step = getStepValue())
+      WideCanIV->addOperand(Step);
+    return WideCanIV;
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenCanonicalIVSC)
 
-  /// Generate a canonical vector induction variable of the vector loop, with
-  /// start = {<Part*VF, Part*VF+1, ..., Part*VF+VF-1> for 0 <= Part < UF}, and
-  /// step = <VF*UF, VF*UF, ..., VF*UF>.
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("Expected prior expansion of WidenCanonicalIV recipes");
+  }
 
   /// Return the cost of this VPWidenCanonicalIVPHIRecipe.
   InstructionCost computeCost(ElementCount VF,
@@ -3906,6 +3897,10 @@ public:
   /// Return the canonical IV being widened.
   VPRegionValue *getCanonicalIV() const {
     return cast<VPRegionValue>(getOperand(0));
+  }
+
+  VPValue *getStepValue() const {
+    return getNumOperands() == 2 ? getOperand(1) : nullptr;
   }
 
 protected:

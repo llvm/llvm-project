@@ -30,7 +30,7 @@ define i32 @more_than_one_use(ptr %a, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%i> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%r> = phi vp<[[VP4]]>, ir<%tmp3>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%r> = phi (add) vp<[[VP4]]>, ir<%tmp3>
 ; CHECK-NEXT:      WIDEN ir<%i.next> = add nuw nsw ir<%i>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%cond> = icmp sge ir<%i.next>, ir<%n>
 ; CHECK-NEXT:      WIDEN ir<%tmp0> = select ir<%cond>, ir<0>, ir<%i.next>

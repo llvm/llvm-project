@@ -56,8 +56,8 @@ TypedefInfo *InfoAsTypedef(Info *I) {
 
 void CheckCommentInfo(ArrayRef<CommentInfo> Expected,
                       ArrayRef<CommentInfo> Actual);
-void CheckCommentInfo(const OwningVec<CommentInfo> &Expected,
-                      const OwningVec<CommentInfo> &Actual);
+void CheckCommentInfo(const DocList<CommentInfo> &Expected,
+                      const DocList<CommentInfo> &Actual);
 
 void CheckCommentInfo(const CommentInfo &Expected, const CommentInfo &Actual) {
   EXPECT_EQ(Expected.Kind, Actual.Kind);
@@ -96,8 +96,8 @@ void CheckCommentInfo(ArrayRef<CommentInfo> Expected,
   EXPECT_TRUE(ItE == Expected.end() && ItA == Actual.end());
 }
 
-void CheckCommentInfo(const OwningVec<CommentInfo> &Expected,
-                      const OwningVec<CommentInfo> &Actual) {
+void CheckCommentInfo(const DocList<CommentInfo> &Expected,
+                      const DocList<CommentInfo> &Actual) {
   auto ItE = Expected.begin();
   auto ItA = Actual.begin();
   while (ItE != Expected.end() && ItA != Actual.end()) {

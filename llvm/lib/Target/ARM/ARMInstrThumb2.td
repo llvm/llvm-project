@@ -4399,6 +4399,9 @@ def t2LDRLIT_ga_pcrel : PseudoInst<(outs rGPR:$dst), (ins i32imm:$addr),
                        Requires<[IsThumb, HasV8MBaseline, DontUseMovtInPic]>;
 }
 
+// Exception Handling
+def : T2Pat<(ARMLocalRecover mcsym:$sym), (t2MOVi32imm mcsym:$sym)>;
+
 // TLS globals
 def : Pat<(ARMWrapperPIC tglobaltlsaddr:$addr),
           (t2LDRLIT_ga_pcrel tglobaltlsaddr:$addr)>,

@@ -285,6 +285,7 @@ struct GPUInlinerInterface : public DialectInlinerInterface {
 void GPUDialect::initialize() {
   addTypes<AsyncTokenType>();
   addTypes<MMAMatrixType>();
+  addTypes<NamedBarrierType>();
   addTypes<SparseDnTensorHandleType>();
   addTypes<SparseSpMatHandleType>();
   addTypes<SparseSpGEMMOpHandleType>();
@@ -365,6 +366,9 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
                                      shape, elementType, operand);
   }
 
+  if (keyword == "named_barrier")
+    return NamedBarrierType::get(context);
+
   if (keyword == getSparseHandleKeyword(SparseHandleKind::DnTensor))
     return SparseDnTensorHandleType::get(context);
   if (keyword == getSparseHandleKeyword(SparseHandleKind::SpMat))
@@ -380,6 +384,7 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
 void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<AsyncTokenType>([&](Type) { os << "async.token"; })
+      .Case<NamedBarrierType>([&](Type) { os << "named_barrier"; })
       .Case<SparseDnTensorHandleType>([&](Type) {
         os << getSparseHandleKeyword(SparseHandleKind::DnTensor);
       })
@@ -1516,11 +1521,28 @@ LogicalResult RotateOp::verify() {
 // BarrierOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult BarrierOp::verify() {
+  BarrierScope scope = getScope();
+
+  if (getNamedBarrier() && scope != BarrierScope::Workgroup)
+    return emitOpError("named barriers require workgroup scope");
+
+  return success();
+}
+
 /// Remove gpu.barrier after gpu.barrier, the threads are already synchronized!
 static LogicalResult eraseRedundantGpuBarrierOps(BarrierOp op,
                                                  PatternRewriter &rewriter) {
   auto nextOp = dyn_cast_or_null<BarrierOp>(op->getNextNode());
   if (!nextOp)
+    return failure();
+
+  // Cannot merge barriers of different scopes.
+  if (op.getScope() != nextOp.getScope())
+    return failure();
+
+  // Cannot merge named barriers unless both refer to the same handle.
+  if (op.getNamedBarrier() != nextOp.getNamedBarrier())
     return failure();
 
   std::optional<ArrayAttr> thisMemfence = op.getAddressSpaces();
@@ -1562,7 +1584,9 @@ void BarrierOp::build(mlir::OpBuilder &odsBuilder,
   if (addressSpace)
     addressSpacesAttr = odsBuilder.getArrayAttr(
         AddressSpaceAttr::get(odsBuilder.getContext(), addressSpace.value()));
-  build(odsBuilder, odsState, addressSpacesAttr);
+  build(
+      odsBuilder, odsState, addressSpacesAttr, /*named_barrier=*/Value{},
+      BarrierScopeAttr::get(odsBuilder.getContext(), BarrierScope::Workgroup));
 }
 
 /// Builds a barrier that causes memory operations affecting `memrefToFence` to

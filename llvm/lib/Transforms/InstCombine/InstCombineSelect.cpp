@@ -3653,7 +3653,7 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
 /// already poison. For example, if ValAssumedPoison is `icmp samesign X, 10`
 /// and V is `icmp ne X, 5`, impliesPoisonOrCond returns true.
 static bool impliesPoisonOrCond(const Value *ValAssumedPoison, const Value *V,
-                                bool Expected) {
+                                bool Expected, const SimplifyQuery &SQ) {
   if (impliesPoison(ValAssumedPoison, V))
     return true;
 
@@ -3677,6 +3677,14 @@ static bool impliesPoisonOrCond(const Value *ValAssumedPoison, const Value *V,
       return CRX.icmp(Expected ? Pred : ICmpInst::getInverseCmpPredicate(Pred),
                       *RHSC2);
     }
+  }
+  Value *A;
+  if (match(ValAssumedPoison, m_NUWTrunc(m_Value(A))) &&
+      isGuaranteedNotToBePoison(A)) {
+    assert(ValAssumedPoison->getType()->isIntOrIntVectorTy(1));
+    return computeKnownBits(
+               A, SQ.getWithInstruction(cast<Instruction>(ValAssumedPoison)))
+               .getMaxValue() == 1;
   }
 
   return false;
@@ -3703,13 +3711,13 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // checks whether folding it does not convert a well-defined value into
   // poison.
   if (match(TrueVal, m_One())) {
-    if (impliesPoisonOrCond(FalseVal, CondVal, /*Expected=*/false)) {
+    if (impliesPoisonOrCond(FalseVal, CondVal, /*Expected=*/false, SQ)) {
       // Change: A = select B, true, C --> A = or B, C
       return BinaryOperator::CreateOr(CondVal, FalseVal);
     }
 
     if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_One(), m_Value(B)))) &&
-        impliesPoisonOrCond(FalseVal, B, /*Expected=*/false)) {
+        impliesPoisonOrCond(FalseVal, B, /*Expected=*/false, SQ)) {
       // (A || B) || C --> A || (B | C)
       Value *LOr = Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal));
       if (auto *I = dyn_cast<Instruction>(LOr)) {
@@ -3749,13 +3757,13 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   }
 
   if (match(FalseVal, m_Zero())) {
-    if (impliesPoisonOrCond(TrueVal, CondVal, /*Expected=*/true)) {
+    if (impliesPoisonOrCond(TrueVal, CondVal, /*Expected=*/true, SQ)) {
       // Change: A = select B, C, false --> A = and B, C
       return BinaryOperator::CreateAnd(CondVal, TrueVal);
     }
 
     if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_Value(B), m_Zero()))) &&
-        impliesPoisonOrCond(TrueVal, B, /*Expected=*/true)) {
+        impliesPoisonOrCond(TrueVal, B, /*Expected=*/true, SQ)) {
       // (A && B) && C --> A && (B & C)
       Value *LAnd = Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal));
       if (auto *I = dyn_cast<Instruction>(LAnd)) {

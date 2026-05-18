@@ -734,6 +734,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   const LLT MinScalarFPTy = ST.has16BitInsts() ? S16 : S32;
 
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
+
   // s1 for VCC branches, s32 for SCC branches.
   getActionDefinitionsBuilder(G_BRCOND).legalFor({S1, S32});
 
@@ -2248,6 +2250,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .legalFor(AllVectors)
       .scalarize(1)
       .lower();
+
+  getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS,
+                               G_INTRINSIC_CONVERGENT,
+                               G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS})
+      .alwaysLegal();
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());

@@ -283,9 +283,11 @@ static void emitUseStmtOp(Fortran::lower::AbstractConverter &converter,
   mlir::ArrayAttr renamesAttr =
       renameAttrs.empty() ? mlir::ArrayAttr()
                           : mlir::ArrayAttr::get(context, renameAttrs);
+  mlir::BoolAttr hasOnlyWithRenamesAttr =
+      mlir::BoolAttr::get(context, stmt.hasOnlyWithRenames);
 
   fir::UseStmtOp::create(builder, loc, moduleNameAttr, onlySymbolsAttr,
-                         renamesAttr);
+                         renamesAttr, hasOnlyWithRenamesAttr);
 }
 
 /// Emit fir.module_debug_imports for USE statements in a module.

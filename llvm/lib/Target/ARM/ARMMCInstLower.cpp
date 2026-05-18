@@ -100,6 +100,9 @@ bool ARMAsmPrinter::lowerOperand(const MachineOperand &MO,
     MCOp = MCOperand::createExpr(MCSymbolRefExpr::create(
         MO.getMBB()->getSymbol(), OutContext));
     break;
+  case MachineOperand::MO_MCSymbol:
+    MCOp = GetSymbolRef(MO, MO.getMCSymbol());
+    break;
   case MachineOperand::MO_GlobalAddress:
     MCOp = GetSymbolRef(MO,
                         GetARMGVSymbol(MO.getGlobal(), MO.getTargetFlags()));

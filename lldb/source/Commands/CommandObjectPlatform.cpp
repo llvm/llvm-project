@@ -250,7 +250,9 @@ protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     Stream &ostrm = result.GetOutputStream();
 
-    Target *target = GetTarget();
+    Target *target = &GetTarget();
+    if (target->IsDummyTarget())
+      target = nullptr;
     PlatformSP platform_sp;
     if (target)
       platform_sp = target->GetPlatform();
@@ -1069,8 +1071,7 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target *target = &GetTarget();
     PlatformSP platform_sp = target->GetPlatform();
     if (!platform_sp) {
       platform_sp = GetDebugger().GetPlatformList().GetSelectedPlatform();
@@ -1114,7 +1115,7 @@ protected:
         Debugger &debugger = GetDebugger();
 
         if (argc == 0) {
-          // If no arguments were given to the command, use target->run-args.
+          // If no arguments were given to the command, use target.run-args.
           Args target_run_args;
           target->GetRunArguments(target_run_args);
           m_options.launch_info.GetArguments().AppendArguments(target_run_args);
@@ -1218,7 +1219,9 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetTarget();
+    Target *target = &GetTarget();
+    if (target->IsDummyTarget())
+      target = nullptr;
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
@@ -1465,7 +1468,9 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetTarget();
+    Target *target = &GetTarget();
+    if (target->IsDummyTarget())
+      target = nullptr;
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();

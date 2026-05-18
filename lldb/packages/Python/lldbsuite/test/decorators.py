@@ -1132,11 +1132,14 @@ def skipUnlessMSVC(func):
     """Decorate the item to skip test unless msvc is available."""
 
     def is_msvc_in_path():
-        result = subprocess.run(
-            ["cl.exe"],
-            capture_output=True,
-            text=True,
-        )
+        try:
+            result = subprocess.run(
+                ["cl.exe"],
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError:
+            return f"Test requires MSVC to be in the Path."
         if result.returncode != 0:
             return f"Test requires MSVC to be in the Path."
         return None

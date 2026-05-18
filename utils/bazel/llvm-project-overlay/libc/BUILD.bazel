@@ -2212,6 +2212,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
+        ":__support_error_or",
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_macros_properties_architectures",
@@ -2452,10 +2453,12 @@ libc_support_library(
     }),
     deps = [
         ":__support_common",
+        ":__support_osutil_linux_syscall_wrappers_mmap",
         ":__support_osutil_syscall",
         ":__support_threads_callonce",
         ":hdr_fcntl_macros",
         ":hdr_sys_auxv_macros",
+        ":hdr_sys_mman_macros",
     ],
 )
 

@@ -236,6 +236,7 @@ constexpr bool isGenericCastablePtr(SPIRV::StorageClass::StorageClass SC) {
   case SPIRV::StorageClass::Workgroup:
   case SPIRV::StorageClass::CrossWorkgroup:
   case SPIRV::StorageClass::Function:
+  case SPIRV::StorageClass::CodeSectionINTEL:
     return true;
   default:
     return false;

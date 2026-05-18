@@ -152,3 +152,6 @@ check_cxx_compiler_flag("-nostdlib++" LIBC_CC_SUPPORTS_NOSTDLIBPP)
 
 # clang-3.0+
 check_cxx_compiler_flag("-nostdlibinc" LIBC_CC_SUPPORTS_NOSTDLIBINC)
+
+# clang-23+, post llvm.org/pr187860
+check_cxx_compiler_flag("-Werror -Wno-fenv-access" LIBC_CC_SUPPORTS_NO_FENV_ACCESS)

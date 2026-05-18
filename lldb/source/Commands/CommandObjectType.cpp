@@ -2764,8 +2764,7 @@ public:
 protected:
   void DoExecute(llvm::StringRef command,
                  CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresFrame");
+    Target *target = &GetTarget();
     Thread *thread = GetDefaultThread();
     if (!thread) {
       result.AppendError("no default thread");

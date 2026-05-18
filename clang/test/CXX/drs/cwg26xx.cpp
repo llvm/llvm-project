@@ -274,6 +274,8 @@ void f() {
 }
 } // namespace cwg2654
 
+// cwg2660: na
+
 namespace cwg2681 { // cwg2681: 17
 #if __cplusplus >= 202002L
 using size_t = decltype(sizeof(int));

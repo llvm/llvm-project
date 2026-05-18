@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=wasm32 -mattr=+simd128 -passes=slp-vectorizer -slp-vectorize-non-power-of-2=false %s | llc -mtriple=wasm32 -mattr=+simd128 -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
+; RUN: opt -mtriple=wasm32 -mattr=+simd128 -passes=slp-vectorizer %s | llc -mtriple=wasm32 -mattr=+simd128 -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
 
 %struct.TwoBytes = type { i8, i8 }
 %struct.FourBytes = type { i8, i8, i8, i8 }

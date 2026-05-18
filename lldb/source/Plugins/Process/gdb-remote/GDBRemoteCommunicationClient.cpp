@@ -2628,18 +2628,7 @@ void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
 bool GDBRemoteCommunicationClient::SendSpeedTestPacket(uint32_t send_size,
                                                        uint32_t recv_size) {
   StreamString packet;
-  packet.Printf("qSpeedTest:response_size:%i;data:", recv_size);
-  uint32_t bytes_left = send_size;
-  while (bytes_left > 0) {
-    if (bytes_left >= 26) {
-      packet.PutCString("abcdefghijklmnopqrstuvwxyz");
-      bytes_left -= 26;
-    } else {
-      packet.Printf("%*.*s;", bytes_left, bytes_left,
-                    "abcdefghijklmnopqrstuvwxyz");
-      bytes_left = 0;
-    }
-  }
+  MakeSpeedTestPacket(packet, send_size, recv_size);
 
   StringExtractorGDBRemote response;
   return SendPacketAndWaitForResponse(packet.GetString(), response) ==

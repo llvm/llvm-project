@@ -348,7 +348,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit extents(_OtherIndexTypes... __dynvals) noexcept
       // Not catching this could lead to out of bounds errors later
       // e.g. mdspan m(ptr, dextents<char, 1>(200u)); leads to an extent of -56 on m
-      : __vals_(__representability_checked_cast(__dynvals...)) {}
+      : __vals_(__representability_checked_cast(std::move(__dynvals)...)) {}
 
   template <class _OtherIndexType, size_t _Size>
     requires(is_convertible_v<const _OtherIndexType&, index_type> &&

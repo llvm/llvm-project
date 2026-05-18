@@ -1256,6 +1256,57 @@ func.func @transpose_identity_perm(%input: tensor<16x32x64xf32>,
 
 // -----
 
+// CHECK-LABEL: @transpose_splat_constant_to_dense
+//       CHECK:   %[[CST:.+]] = arith.constant dense<1.000000e+00> : tensor<3x2xf32>
+//   CHECK-NOT:   linalg.transpose
+//       CHECK:   return %[[CST]] : tensor<3x2xf32>
+func.func @transpose_splat_constant_to_dense(%init: tensor<3x2xf32>) -> tensor<3x2xf32> {
+  %cst = arith.constant dense<1.000000e+00> : tensor<2x3xf32>
+  %transpose = linalg.transpose
+      ins(%cst:tensor<2x3xf32>)
+      outs(%init:tensor<3x2xf32>)
+      permutation = [1, 0]
+  func.return %transpose : tensor<3x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @transpose_splat_constant_same_shape_permutations
+//       CHECK:   %[[CST:.+]] = arith.constant dense<1.000000e+00> : tensor<3x3x3xf32>
+//   CHECK-NOT:   linalg.transpose
+//       CHECK:   return %[[CST]], %[[CST]] : tensor<3x3x3xf32>, tensor<3x3x3xf32>
+func.func @transpose_splat_constant_same_shape_permutations(
+    %init0: tensor<3x3x3xf32>,
+    %init1: tensor<3x3x3xf32>) -> (tensor<3x3x3xf32>, tensor<3x3x3xf32>) {
+  %cst = arith.constant dense<1.000000e+00> : tensor<3x3x3xf32>
+  %transpose0 = linalg.transpose
+      ins(%cst:tensor<3x3x3xf32>)
+      outs(%init0:tensor<3x3x3xf32>)
+      permutation = [0, 1, 2]
+  %transpose1 = linalg.transpose
+      ins(%cst:tensor<3x3x3xf32>)
+      outs(%init1:tensor<3x3x3xf32>)
+      permutation = [2, 0, 1]
+  func.return %transpose0, %transpose1 : tensor<3x3x3xf32>, tensor<3x3x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @transpose_non_splat_constant
+//       CHECK:   %[[CST:.+]] = arith.constant dense<{{\[}}[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf32>
+//       CHECK:   %[[TRANSPOSE:.+]] = linalg.transpose ins(%[[CST]] : tensor<2x3xf32>) outs({{.*}} : tensor<3x2xf32>) permutation = [1, 0]
+//       CHECK:   return %[[TRANSPOSE]] : tensor<3x2xf32>
+func.func @transpose_non_splat_constant(%init: tensor<3x2xf32>) -> tensor<3x2xf32> {
+  %cst = arith.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf32>
+  %transpose = linalg.transpose
+      ins(%cst:tensor<2x3xf32>)
+      outs(%init:tensor<3x2xf32>)
+      permutation = [1, 0]
+  func.return %transpose : tensor<3x2xf32>
+}
+
+// -----
+
 func.func @transpose_transpose_cancel(%input: tensor<5x4x3xf32>,
                                       %init1: tensor<4x3x5xf32>,
                                       %init2: tensor<5x4x3xf32>) -> tensor<5x4x3xf32> {

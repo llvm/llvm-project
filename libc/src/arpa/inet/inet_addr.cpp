@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/arpa/inet/inet_addr.h"
-#include "include/llvm-libc-macros/netinet-in-macros.h"
-#include "include/llvm-libc-types/in_addr_t.h"
-#include "include/llvm-libc-types/struct_in_addr.h"
+#include "hdr/netinet_in_macros.h"
+#include "hdr/types/in_addr_t.h"
+#include "hdr/types/struct_in_addr.h"
 #include "src/__support/common.h"
 #include "src/arpa/inet/inet_aton.h"
 

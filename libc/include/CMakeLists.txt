@@ -312,6 +312,18 @@ add_header_macro(
 )
 
 add_header_macro(
+  regex
+  ../libc/include/regex.yaml
+  regex.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.regex_t
+    .llvm-libc-types.regmatch_t
+    .llvm-libc-types.regoff_t
+    .llvm-libc-types.size_t
+)
+
+add_header_macro(
   time
   ../libc/include/time.yaml
   time.h

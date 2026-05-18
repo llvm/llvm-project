@@ -34,6 +34,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 
@@ -844,81 +845,183 @@ bool Intrinsic::hasConstrainedFPRoundingModeOperand(Intrinsic::ID QID) {
   }
 }
 
-using DeferredIntrinsicMatchPair =
-    std::pair<Type *, ArrayRef<Intrinsic::IITDescriptor>>;
+// This class represents a position in the intrinsic's type signature and is
+// used to generate error messages in `matchIntrinsicType`. The printed position
+// can be of the following forms:
+//
+//   return
+//   return struct element 3
+//   return vector element
+//   return struct element 3 vector element
+//   argument 3
+//   argument 3 vector element
+//
+// To support deferred checks also being able to generate these error messages
+// we need to encode the position compactly so that it can be stashed into
+// DeferredIntrinsicMatchInfo below (without materializing it into a string).
+// The class below serves that purpose.
+//
+namespace {
+struct MatchPosition {
+  uint16_t IsRet : 1;
+  uint16_t Num : 15; // Argument number (when IsRet = false).
+  struct Index {
+    uint16_t IsStruct : 1; // If true, this is a struct element with element
+                           // index `Num`, else its a vector element.
+    uint16_t Num : 15;     // Struct element index.
+  };
+  // We expect this to be just 2 levels deep, since nested structs are not
+  // supported.
+  static constexpr unsigned INDEX_TABLE_SIZE = 2;
+  Index Indices[INDEX_TABLE_SIZE];
+  uint16_t NumIndices = 0;
+
+  void pop_index() {
+    assert(NumIndices > 0 && "cannot pop from empty indices");
+    --NumIndices;
+  }
+
+  void push_struct_element(unsigned ElementNum) {
+    assert(NumIndices < INDEX_TABLE_SIZE && "index table overflow");
+    assert(isInt<15>(ElementNum) && "Element index overflow");
+    Indices[NumIndices].IsStruct = true;
+    Indices[NumIndices++].Num = ElementNum;
+  }
+
+  void push_vector_element() {
+    assert(NumIndices < INDEX_TABLE_SIZE && "index table overflow");
+    Indices[NumIndices].IsStruct = false;
+    Indices[NumIndices++].Num = 0;
+  }
+};
+} // namespace
+
+static raw_ostream &operator<<(raw_ostream &OS, const MatchPosition &Pos) {
+  OS << "intrinsic ";
+
+  if (Pos.IsRet)
+    OS << "return";
+  else
+    OS << "argument " << Pos.Num;
+
+  for (const MatchPosition::Index &Idx :
+       ArrayRef(Pos.Indices).take_front(Pos.NumIndices)) {
+    if (Idx.IsStruct)
+      OS << " struct element " << Idx.Num;
+    else
+      OS << " vector element";
+  }
+  return OS;
+}
+
+using DeferredIntrinsicMatchInfo =
+    std::tuple<Type *, ArrayRef<Intrinsic::IITDescriptor>, MatchPosition>;
 
 static bool
 matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                   SmallVectorImpl<Type *> &OverloadTys,
-                   SmallVectorImpl<DeferredIntrinsicMatchPair> &DeferredChecks,
-                   bool IsDeferredCheck) {
+                   MatchPosition Position, SmallVectorImpl<Type *> &OverloadTys,
+                   SmallVectorImpl<DeferredIntrinsicMatchInfo> &DeferredChecks,
+                   bool IsDeferredCheck, raw_ostream &OS) {
   using namespace Intrinsic;
 
-  // If we ran out of descriptors, there are too many arguments.
-  if (Infos.empty())
+  // If we ran out of descriptors, there are too many arguments or returns.
+  if (Infos.empty()) {
+    OS << Position << " too many "
+       << (Position.IsRet ? "returns" : "arguments");
     return true;
+  }
 
   // Do this before slicing off the 'front' part
   auto InfosRef = Infos;
-  auto DeferCheck = [&DeferredChecks, &InfosRef](Type *T) {
-    DeferredChecks.emplace_back(T, InfosRef);
+  auto DeferCheck = [&DeferredChecks, &InfosRef, &Position](Type *T) {
+    DeferredChecks.emplace_back(T, InfosRef, Position);
     return false;
   };
 
   IITDescriptor D = Infos.consume_front();
 
+  auto PrintMsg = [&OS, &Position, Ty](bool IsValid,
+                                       const Twine &Expected) -> bool {
+    if (IsValid)
+      return false;
+    OS << Position << " type expected " << Expected << ", but got " << *Ty;
+    return true;
+  };
+
   switch (D.Kind) {
   case IITDescriptor::Void:
-    return !Ty->isVoidTy();
+    assert(Position.IsRet && Position.NumIndices == 0 &&
+           "void descriptor expected only for return type");
+    return PrintMsg(Ty->isVoidTy(), "void");
   case IITDescriptor::MMX: {
     FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty);
-    return !VT || VT->getNumElements() != 1 ||
-           !VT->getElementType()->isIntegerTy(64);
+    return PrintMsg(VT && VT->getNumElements() == 1 &&
+                        VT->getElementType()->isIntegerTy(64),
+                    "x86_mmx (<1 x i64>)");
   }
   case IITDescriptor::AMX:
-    return !Ty->isX86_AMXTy();
+    return PrintMsg(Ty->isX86_AMXTy(), "x86_amx");
   case IITDescriptor::Token:
-    return !Ty->isTokenTy();
+    return PrintMsg(Ty->isTokenTy(), "token");
   case IITDescriptor::Metadata:
-    return !Ty->isMetadataTy();
+    return PrintMsg(Ty->isMetadataTy(), "metadata");
   case IITDescriptor::Half:
-    return !Ty->isHalfTy();
+    return PrintMsg(Ty->isHalfTy(), "half");
   case IITDescriptor::BFloat:
-    return !Ty->isBFloatTy();
+    return PrintMsg(Ty->isBFloatTy(), "bfloat");
   case IITDescriptor::Float:
-    return !Ty->isFloatTy();
+    return PrintMsg(Ty->isFloatTy(), "float");
   case IITDescriptor::Double:
-    return !Ty->isDoubleTy();
+    return PrintMsg(Ty->isDoubleTy(), "double");
   case IITDescriptor::Quad:
-    return !Ty->isFP128Ty();
+    return PrintMsg(Ty->isFP128Ty(), "fp128");
   case IITDescriptor::PPCQuad:
-    return !Ty->isPPC_FP128Ty();
+    return PrintMsg(Ty->isPPC_FP128Ty(), "ppc_fp128");
   case IITDescriptor::Integer:
-    return !Ty->isIntegerTy(D.IntegerWidth);
+    return PrintMsg(Ty->isIntegerTy(D.IntegerWidth),
+                    "i" + Twine(D.IntegerWidth));
   case IITDescriptor::AArch64Svcount:
-    return !isa<TargetExtType>(Ty) ||
-           cast<TargetExtType>(Ty)->getName() != "aarch64.svcount";
+    return PrintMsg(isa<TargetExtType>(Ty) &&
+                        cast<TargetExtType>(Ty)->getName() == "aarch64.svcount",
+                    "aarch64.svcount");
   case IITDescriptor::Vector: {
     VectorType *VT = dyn_cast<VectorType>(Ty);
-    return !VT || VT->getElementCount() != D.VectorWidth ||
-           matchIntrinsicType(VT->getElementType(), Infos, OverloadTys,
-                              DeferredChecks, IsDeferredCheck);
+    StringRef Scalable = D.VectorWidth.isScalable() ? "vscale " : "";
+    bool HasError =
+        PrintMsg(VT && VT->getElementCount() == D.VectorWidth,
+                 Twine(Scalable) + "vector with " +
+                     Twine(D.VectorWidth.getKnownMinValue()) + " elements");
+    if (HasError)
+      return true;
+    Position.push_vector_element();
+    return matchIntrinsicType(VT->getElementType(), Infos, Position,
+                              OverloadTys, DeferredChecks, IsDeferredCheck, OS);
   }
   case IITDescriptor::Pointer: {
     PointerType *PT = dyn_cast<PointerType>(Ty);
-    return !PT || PT->getAddressSpace() != D.PointerAddressSpace;
+    unsigned AS = D.PointerAddressSpace;
+    bool IsValid = PT && PT->getAddressSpace() == AS;
+    if (AS == 0)
+      return PrintMsg(IsValid, "ptr");
+    return PrintMsg(IsValid, "ptr addrspace(" + Twine(AS) + ")");
   }
 
   case IITDescriptor::Struct: {
     StructType *ST = dyn_cast<StructType>(Ty);
-    if (!ST || !ST->isLiteral() || ST->isPacked() ||
-        ST->getNumElements() != D.StructNumElements)
+    unsigned EC = D.StructNumElements;
+    bool HasError = PrintMsg(
+        ST && ST->isLiteral() && !ST->isPacked() && ST->getNumElements() == EC,
+        "literal non-packed struct with " + Twine(EC) + " elements");
+    if (HasError)
       return true;
 
-    for (unsigned i = 0, e = D.StructNumElements; i != e; ++i)
-      if (matchIntrinsicType(ST->getElementType(i), Infos, OverloadTys,
-                             DeferredChecks, IsDeferredCheck))
+    for (const auto &[Idx, ETy] : llvm::enumerate(ST->elements())) {
+      Position.push_struct_element(Idx);
+      if (matchIntrinsicType(ETy, Infos, Position, OverloadTys, DeferredChecks,
+                             IsDeferredCheck, OS))
         return true;
+      Position.pop_index();
+    }
     return false;
   }
 
@@ -997,9 +1100,10 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
       if (ReferenceType->getElementCount() != ThisArgType->getElementCount())
         return true;
       EltTy = ThisArgType->getElementType();
+      Position.push_vector_element();
     }
-    return matchIntrinsicType(EltTy, Infos, OverloadTys, DeferredChecks,
-                              IsDeferredCheck);
+    return matchIntrinsicType(EltTy, Infos, Position, OverloadTys,
+                              DeferredChecks, IsDeferredCheck, OS);
   }
   case IITDescriptor::VecOfAnyPtrsToElt: {
     unsigned RefOverloadIndex = D.getRefOverloadIndex();
@@ -1079,10 +1183,27 @@ static bool isSignatureValid(FunctionType *FTy,
                              unsigned NumArgs, bool IsVarArg,
                              SmallVectorImpl<Type *> &OverloadTys,
                              raw_ostream &OS) {
-  SmallVector<DeferredIntrinsicMatchPair, 2> DeferredChecks;
-  if (matchIntrinsicType(FTy->getReturnType(), Infos, OverloadTys,
-                         DeferredChecks, false)) {
-    OS << "intrinsic has incorrect return type!";
+  SmallVector<DeferredIntrinsicMatchInfo, 2> DeferredChecks;
+
+  assert(!Infos.empty() && "Table consistency error");
+
+  MatchPosition Pos;
+  Pos.IsRet = true;
+  Pos.Num = 0;
+
+  // Temporary fix to print an error message if `matchIntrinsicType` fails but
+  // does not print an error message. This will be removed once all failing
+  // cases in `matchIntrinsicType` start generating error messages.
+  uint64_t OSPos = OS.tell();
+  auto PrintMsg = [OSPos, &OS](StringRef Msg) {
+    if (OS.tell() != OSPos)
+      return;
+    OS << Msg;
+  };
+
+  if (matchIntrinsicType(FTy->getReturnType(), Infos, Pos, OverloadTys,
+                         DeferredChecks, false, OS)) {
+    PrintMsg("intrinsic has incorrect return type!");
     return false;
   }
   unsigned NumDeferredReturnChecks = DeferredChecks.size();
@@ -1093,22 +1214,25 @@ static bool isSignatureValid(FunctionType *FTy,
     return false;
   }
 
-  for (Type *Ty : FTy->params()) {
-    if (matchIntrinsicType(Ty, Infos, OverloadTys, DeferredChecks, false)) {
-      OS << "intrinsic has incorrect argument type!";
+  Pos.IsRet = false;
+  for (const auto &[Idx, Ty] : llvm::enumerate(FTy->params())) {
+    Pos.Num = Idx;
+    if (matchIntrinsicType(Ty, Infos, Pos, OverloadTys, DeferredChecks, false,
+                           OS)) {
+      PrintMsg("intrinsic has incorrect argument type!");
       return false;
     }
   }
 
   for (unsigned I = 0, E = DeferredChecks.size(); I != E; ++I) {
-    DeferredIntrinsicMatchPair &Check = DeferredChecks[I];
-    if (!matchIntrinsicType(Check.first, Check.second, OverloadTys,
-                            DeferredChecks, true))
+    auto &[DefTy, DefInfos, DefPosition] = DeferredChecks[I];
+    if (!matchIntrinsicType(DefTy, DefInfos, DefPosition, OverloadTys,
+                            DeferredChecks, true, OS))
       continue;
     if (I < NumDeferredReturnChecks)
-      OS << "intrinsic has incorrect return type!";
+      PrintMsg("intrinsic has incorrect return type!");
     else
-      OS << "intrinsic has incorrect argument type!";
+      PrintMsg("intrinsic has incorrect argument type!");
     return false;
   }
 

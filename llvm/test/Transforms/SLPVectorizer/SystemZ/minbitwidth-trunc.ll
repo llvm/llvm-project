@@ -6,11 +6,15 @@ define void @test() {
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 0 to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 0 to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <7 x i32> <i32 poison, i32 0, i32 0, i32 0, i32 0, i32 poison, i32 poison>, i32 [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <7 x i32> [[TMP3]], i32 [[TMP1]], i32 5
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <7 x i32> [[TMP4]], <7 x i32> poison, <7 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = select <7 x i1> zeroinitializer, <7 x i32> zeroinitializer, <7 x i32> [[TMP5]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = call i32 @llvm.vector.reduce.xor.v7i32(<7 x i32> [[TMP6]])
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, i32 [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> zeroinitializer, <4 x i32> zeroinitializer, <4 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 false, i32 0, i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 false, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 false, i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> [[TMP4]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = xor i32 [[TMP8]], [[TMP5]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = xor i32 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = xor i32 [[OP_RDX]], [[OP_RDX1]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[OP_RDX2]] to i16
 ; CHECK-NEXT:    store i16 [[TMP9]], ptr null, align 2
 ; CHECK-NEXT:    ret void

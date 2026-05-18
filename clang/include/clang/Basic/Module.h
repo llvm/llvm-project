@@ -74,6 +74,8 @@ using ModuleId = SmallVector<std::pair<std::string, SourceLocation>, 2>;
 /// This uses \c FileManager's inode-based canonicalization of the user-provided
 /// module file path. Because input explicitly-built modules do not change
 /// during the lifetime of the compiler, inode recycling is not of concern here.
+///
+/// For in-memory modules, this is the \c MemoryBuffer in InMemoryModuleCache.
 class ModuleFileKey {
   /// The entity used for deduplication.
   const void *Ptr;
@@ -105,17 +107,42 @@ public:
 /// path and the module file name with the (optional) context hash. For all
 /// other types of module files, this is just the file system path.
 class ModuleFileName {
+  enum Kind : unsigned {
+    InMemory = 0,
+    Explicit = 1,
+    ImplicitSuffixLength,
+  };
+
   std::string Path;
-  unsigned ImplicitModuleSuffixLength = 0;
+  /// The kind of the module file (\c Kind), or the length of the implicit
+  /// module file name suffix in \c Path (integer values 2+).
+  Kind KindOrSuffixLength;
 
 public:
   /// Creates an empty module file name.
   ModuleFileName() = default;
 
+  /// Creates a file name from the raw kind value.
+  static ModuleFileName makeFromRaw(StringRef Name, unsigned RawKind) {
+    ModuleFileName File;
+    File.Path = Name;
+    File.KindOrSuffixLength = static_cast<Kind>(RawKind);
+    return File;
+  }
+
+  /// Creates a file name for an in-memory module.
+  static ModuleFileName makeInMemory(StringRef Name) {
+    ModuleFileName File;
+    File.Path = Name;
+    File.KindOrSuffixLength = InMemory;
+    return File;
+  }
+
   /// Creates a file name for an explicit module.
   static ModuleFileName makeExplicit(std::string Name) {
     ModuleFileName File;
     File.Path = std::move(Name);
+    File.KindOrSuffixLength = Explicit;
     return File;
   }
 
@@ -126,12 +153,12 @@ public:
 
   /// Creates a file name for an implicit module.
   static ModuleFileName makeImplicit(std::string Name, unsigned SuffixLength) {
-    assert(SuffixLength != 0 && "Empty suffix for implicit module file name");
+    assert(SuffixLength >= 2 && "Invalid suffix for implicit module file name");
     assert(SuffixLength <= Name.size() &&
            "Suffix for implicit module file name out-of-bounds");
     ModuleFileName File;
     File.Path = std::move(Name);
-    File.ImplicitModuleSuffixLength = SuffixLength;
+    File.KindOrSuffixLength = static_cast<Kind>(SuffixLength);
     return File;
   }
 
@@ -142,8 +169,20 @@ public:
 
   /// Returns the suffix length for an implicit module name, zero otherwise.
   unsigned getImplicitModuleSuffixLength() const {
-    return ImplicitModuleSuffixLength;
+    switch (KindOrSuffixLength) {
+    case InMemory:
+    case Explicit:
+      return 0;
+    default:
+      return KindOrSuffixLength;
+    }
   }
+
+  /// Returns \c true iff this is an in-memory module file, \c false otherwise.
+  bool isInMemory() const { return KindOrSuffixLength == InMemory; }
+
+  /// Returns the raw value representing the kind of the module file.
+  unsigned getRawKind() const { return KindOrSuffixLength; }
 
   /// Returns the plain module file name.
   StringRef str() const { return Path; }

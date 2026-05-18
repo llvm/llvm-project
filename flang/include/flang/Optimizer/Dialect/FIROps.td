@@ -3314,12 +3314,14 @@ def fir_UseStmtOp
   }];
 
   let arguments = (ins StrAttr:$module_name,
-      OptionalAttr<ArrayAttr>:$only_symbols, OptionalAttr<ArrayAttr>:$renames);
+      OptionalAttr<ArrayAttr>:$only_symbols, OptionalAttr<ArrayAttr>:$renames,
+      DefaultValuedAttr<BoolAttr, "false">:$hasOnlyWithRenames);
 
   let assemblyFormat = [{
     $module_name
     (`only_symbols` `[` $only_symbols^ `]`)?
     (`renames` `[` $renames^ `]`)?
+    (`hasOnlyWithRenames` $hasOnlyWithRenames^)?
     attr-dict
   }];
 
@@ -3331,7 +3333,10 @@ def fir_UseStmtOp
     bool hasRenames() { return getRenames().has_value(); }
 
     /// Returns true if this imports the entire module (no ONLY clause)
-    bool importsAll() { return !hasOnlyClause(); }
+    bool importsAll() { return !(hasOnlyClause() || getHasOnlyWithRenames()); }
+
+    /// Returns true if this USE statement has both ONLY clause and renames
+    bool hasOnlyWithRenames() { return getHasOnlyWithRenames(); }
   }];
 }
 

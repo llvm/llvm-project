@@ -474,31 +474,37 @@ void OptionValueProperties::DumpAllDescriptions(CommandInterpreter &interpreter,
 }
 
 void OptionValueProperties::Apropos(
-    llvm::StringRef keyword,
-    std::vector<const Property *> &matching_properties) const {
+    llvm::StringRef keyword, std::vector<const Property *> &matching_properties,
+    std::vector<const Property *> &matching_property_paths) const {
   const size_t num_properties = m_properties.size();
-  StreamString strm;
   for (size_t i = 0; i < num_properties; ++i) {
     const Property *property = ProtectedGetPropertyAtIndex(i);
-    if (property) {
-      const OptionValueProperties *properties =
-          property->GetValue()->GetAsProperties();
-      if (properties) {
-        properties->Apropos(keyword, matching_properties);
-      } else {
-        bool match = false;
-        llvm::StringRef name = property->GetName();
-        if (name.contains_insensitive(keyword))
-          match = true;
-        else {
-          llvm::StringRef desc = property->GetDescription();
-          if (desc.contains_insensitive(keyword))
-            match = true;
-        }
-        if (match) {
-          matching_properties.push_back(property);
-        }
-      }
+    if (!property)
+      continue;
+
+    const OptionValueProperties *properties =
+        property->GetValue()->GetAsProperties();
+    if (properties)
+      properties->Apropos(keyword, matching_properties,
+                          matching_property_paths);
+
+    bool matched = false;
+
+    if (llvm::StringRef name = property->GetName();
+        !matched && name.contains_insensitive(keyword))
+      matched = true;
+
+    if (llvm::StringRef desc = property->GetDescription();
+        !matched && desc.contains_insensitive(keyword))
+      matched = true;
+
+    if (!matched)
+      continue;
+
+    if (properties) {
+      matching_property_paths.push_back(property);
+    } else {
+      matching_properties.push_back(property);
     }
   }
 }

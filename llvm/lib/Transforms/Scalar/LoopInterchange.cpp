@@ -1524,6 +1524,20 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     return false;
   }
 
+  if (any_of(OuterLoop->getLoopLatch()->phis(),
+             [](PHINode &PHI) { return PHI.getNumIncomingValues() != 1; })) {
+    LLVM_DEBUG(dbgs() << "Only outer loop latch PHI nodes with one incoming "
+                         "value are supported.\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLatchPHI",
+                                      OuterLoop->getStartLoc(),
+                                      OuterLoop->getHeader())
+             << "Only outer loop latch PHI nodes with one incoming value are "
+                "supported.";
+    });
+    return false;
+  }
+
   return true;
 }
 

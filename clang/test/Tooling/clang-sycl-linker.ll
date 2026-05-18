@@ -73,6 +73,11 @@
 ; RUN:   | FileCheck %s --check-prefix=NOTARGET
 ; NOTARGET: Target triple must be specified
 ;
+; Check parser error reporting for unknown options.
+; RUN: not clang-sycl-linker --dry-run --not-a-real-flag -triple=spirv64 %t/input1.bc -o a.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=BADOPT
+; BADOPT: unknown argument '--not-a-real-flag'
+;
 ; Input with no entry points still produces an offload image.
 ; RUN: llvm-as %t/no-entry-points.ll -o %t/no-entry-points.bc
 ; RUN: clang-sycl-linker -triple=spirv64 %t/no-entry-points.bc -o %t/no-entry-points.out

@@ -3738,10 +3738,8 @@ define <4 x i32> @test_compress_const_mask_const_passthrough(<4 x i32> %vec) nou
 ; CHECK-LABEL: test_compress_const_mask_const_passthrough:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,3,2,3]
-; CHECK-NEXT:    movl $7, %eax
-; CHECK-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; CHECK-NEXT:    movl $8, %eax
-; CHECK-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    movabsq $34359738375, %rax # imm = 0x800000007
+; CHECK-NEXT:    vpinsrq $1, %rax, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
     %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> <i1 1, i1 0, i1 0, i1 1>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>)
     ret <4 x i32> %out
@@ -3903,22 +3901,13 @@ define <3 x i32> @test_compress_narrow(<3 x i32> %vec, <3 x i1> %mask) nounwind 
 ; AVX512F-LABEL: test_compress_narrow:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    andl $1, %edi
-; AVX512F-NEXT:    kmovw %edi, %k0
-; AVX512F-NEXT:    kmovw %esi, %k1
-; AVX512F-NEXT:    kshiftlw $15, %k1, %k1
-; AVX512F-NEXT:    kshiftrw $14, %k1, %k1
-; AVX512F-NEXT:    korw %k1, %k0, %k0
-; AVX512F-NEXT:    movw $-5, %ax
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    kandw %k1, %k0, %k0
-; AVX512F-NEXT:    kmovw %edx, %k1
-; AVX512F-NEXT:    kshiftlw $15, %k1, %k1
-; AVX512F-NEXT:    kshiftrw $13, %k1, %k1
-; AVX512F-NEXT:    korw %k1, %k0, %k0
+; AVX512F-NEXT:    vmovd %edi, %xmm1
+; AVX512F-NEXT:    vpinsrb $1, %esi, %xmm1, %xmm1
+; AVX512F-NEXT:    vpinsrb $2, %edx, %xmm1, %xmm1
+; AVX512F-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; AVX512F-NEXT:    movb $7, %al
 ; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    kandw %k1, %k0, %k0
+; AVX512F-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %k0 {%k1}
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
 ; AVX512F-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
@@ -3928,22 +3917,13 @@ define <3 x i32> @test_compress_narrow(<3 x i32> %vec, <3 x i1> %mask) nounwind 
 ;
 ; AVX512VL-LABEL: test_compress_narrow:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    andl $1, %edi
-; AVX512VL-NEXT:    kmovw %edi, %k0
-; AVX512VL-NEXT:    kmovd %esi, %k1
-; AVX512VL-NEXT:    kshiftlw $15, %k1, %k1
-; AVX512VL-NEXT:    kshiftrw $14, %k1, %k1
-; AVX512VL-NEXT:    korw %k1, %k0, %k0
-; AVX512VL-NEXT:    movw $-5, %ax
-; AVX512VL-NEXT:    kmovd %eax, %k1
-; AVX512VL-NEXT:    kandw %k1, %k0, %k0
-; AVX512VL-NEXT:    kmovd %edx, %k1
-; AVX512VL-NEXT:    kshiftlw $15, %k1, %k1
-; AVX512VL-NEXT:    kshiftrw $13, %k1, %k1
-; AVX512VL-NEXT:    korw %k1, %k0, %k0
 ; AVX512VL-NEXT:    movb $7, %al
 ; AVX512VL-NEXT:    kmovd %eax, %k1
-; AVX512VL-NEXT:    kandw %k1, %k0, %k1
+; AVX512VL-NEXT:    vmovd %edi, %xmm1
+; AVX512VL-NEXT:    vpinsrb $1, %esi, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpinsrb $2, %edx, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
+; AVX512VL-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k1 {%k1}
 ; AVX512VL-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z}
 ; AVX512VL-NEXT:    retq
     %out = call <3 x i32> @llvm.experimental.vector.compress(<3 x i32> %vec, <3 x i1> %mask, <3 x i32> undef)
@@ -3976,22 +3956,13 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
 ;
 ; AVX512F-LABEL: test_compress_narrow_illegal_element_type:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    andl $1, %ecx
-; AVX512F-NEXT:    kmovw %ecx, %k0
-; AVX512F-NEXT:    kmovw %r8d, %k1
-; AVX512F-NEXT:    kshiftlw $15, %k1, %k1
-; AVX512F-NEXT:    kshiftrw $14, %k1, %k1
-; AVX512F-NEXT:    korw %k1, %k0, %k0
-; AVX512F-NEXT:    movw $-5, %ax
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    kandw %k1, %k0, %k0
-; AVX512F-NEXT:    kmovw %r9d, %k1
-; AVX512F-NEXT:    kshiftlw $15, %k1, %k1
-; AVX512F-NEXT:    kshiftrw $13, %k1, %k1
-; AVX512F-NEXT:    korw %k1, %k0, %k0
+; AVX512F-NEXT:    vmovd %ecx, %xmm0
+; AVX512F-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
+; AVX512F-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
+; AVX512F-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; AVX512F-NEXT:    movb $7, %al
 ; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    kandw %k1, %k0, %k0
+; AVX512F-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0 {%k1}
 ; AVX512F-NEXT:    vmovd %edi, %xmm0
 ; AVX512F-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
@@ -4009,22 +3980,13 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
 ;
 ; AVX512VL-LABEL: test_compress_narrow_illegal_element_type:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    andl $1, %ecx
-; AVX512VL-NEXT:    kmovw %ecx, %k0
-; AVX512VL-NEXT:    kmovd %r8d, %k1
-; AVX512VL-NEXT:    kshiftlw $15, %k1, %k1
-; AVX512VL-NEXT:    kshiftrw $14, %k1, %k1
-; AVX512VL-NEXT:    korw %k1, %k0, %k0
-; AVX512VL-NEXT:    movw $-5, %ax
-; AVX512VL-NEXT:    kmovd %eax, %k1
-; AVX512VL-NEXT:    kandw %k1, %k0, %k0
-; AVX512VL-NEXT:    kmovd %r9d, %k1
-; AVX512VL-NEXT:    kshiftlw $15, %k1, %k1
-; AVX512VL-NEXT:    kshiftrw $13, %k1, %k1
-; AVX512VL-NEXT:    korw %k1, %k0, %k0
 ; AVX512VL-NEXT:    movb $7, %al
 ; AVX512VL-NEXT:    kmovd %eax, %k1
-; AVX512VL-NEXT:    kandw %k1, %k0, %k1
+; AVX512VL-NEXT:    vmovd %ecx, %xmm0
+; AVX512VL-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX512VL-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1 {%k1}
 ; AVX512VL-NEXT:    vmovd %edi, %xmm0
 ; AVX512VL-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0

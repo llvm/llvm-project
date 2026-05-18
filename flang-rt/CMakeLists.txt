@@ -151,6 +151,18 @@ if (FLANG_RT_INCLUDE_CUF)
   find_package(CUDAToolkit REQUIRED)
 endif()
 
+# A recently added check in clang emits warnings for feclearexcept and fesetround:
+#   'fesetround' used without enabling floating-point exception behavior; use
+#         'pragma STDC FENV_ACCESS ON' or compile with
+#         '-ffp-exception-behavior=maytrap' [-Werror,-Wfenv-access]
+# This breaks the CI build (because of -Werror).
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  check_cxx_compiler_flag("-Werror -Wno-fenv-access" CXX_SUPPORTS_NO_FENV_ACCESS_FLAG)
+  if (CXX_SUPPORTS_NO_FENV_ACCESS_FLAG)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-fenv-access")
+  endif()
+endif()  # Clang
+
 
 ########################
 # System Introspection #

@@ -1643,7 +1643,7 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
     Type *Ty = CFP->getType();
 
     if (Ty->isVectorTy()) {
-      if (CFP->isPosZero()) {
+      if (CFP->getValue().bitcastToAPInt().isZero()) {
         Out << "zeroinitializer";
         return;
       }

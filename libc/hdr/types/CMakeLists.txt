@@ -421,6 +421,24 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_in_addr
+  HDRS
+    struct_in_addr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_in_addr
+    libc.include.arpa_inet
+)
+
+add_proxy_header_library(
+  in_addr_t
+  HDRS
+    in_addr_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.in_addr_t
+    libc.include.arpa_inet
+)
+
+add_proxy_header_library(
   struct_sockaddr
   HDRS
     struct_sockaddr.h
@@ -985,4 +1003,28 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.VISIT
     libc.include.search
+)
+
+add_proxy_header_library(
+  regex_t
+  HDRS
+    regex_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.regex_t
+)
+
+add_proxy_header_library(
+  regoff_t
+  HDRS
+    regoff_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.regoff_t
+)
+
+add_proxy_header_library(
+  regmatch_t
+  HDRS
+    regmatch_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.regmatch_t
 )

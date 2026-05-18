@@ -10,11 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -23,6 +25,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include <optional>
 #include <sstream>
@@ -39,11 +42,11 @@ static cl::opt<int> FrameHelperSizeThreshold(
 
 namespace {
 
-class AArch64LowerHomogeneousPE {
+class AArch64LowerHomogeneousPrologEpilogImpl {
 public:
   const AArch64InstrInfo *TII;
 
-  AArch64LowerHomogeneousPE(Module *M, MachineModuleInfo *MMI)
+  AArch64LowerHomogeneousPrologEpilogImpl(Module *M, MachineModuleInfo *MMI)
       : M(M), MMI(MMI) {}
 
   bool run();
@@ -69,11 +72,11 @@ private:
                    MachineBasicBlock::iterator &NextMBBI);
 };
 
-class AArch64LowerHomogeneousPrologEpilog : public ModulePass {
+class AArch64LowerHomogeneousPrologEpilogLegacy : public ModulePass {
 public:
   static char ID;
 
-  AArch64LowerHomogeneousPrologEpilog() : ModulePass(ID) {}
+  AArch64LowerHomogeneousPrologEpilogLegacy() : ModulePass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineModuleInfoWrapperPass>();
     AU.addPreserved<MachineModuleInfoWrapperPass>();
@@ -89,22 +92,34 @@ public:
 
 } // end anonymous namespace
 
-char AArch64LowerHomogeneousPrologEpilog::ID = 0;
+char AArch64LowerHomogeneousPrologEpilogLegacy::ID = 0;
 
-INITIALIZE_PASS(AArch64LowerHomogeneousPrologEpilog,
+INITIALIZE_PASS(AArch64LowerHomogeneousPrologEpilogLegacy,
                 "aarch64-lower-homogeneous-prolog-epilog",
                 AARCH64_LOWER_HOMOGENEOUS_PROLOG_EPILOG_NAME, false, false)
 
-bool AArch64LowerHomogeneousPrologEpilog::runOnModule(Module &M) {
+bool AArch64LowerHomogeneousPrologEpilogLegacy::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
 
   MachineModuleInfo *MMI =
       &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-  return AArch64LowerHomogeneousPE(&M, MMI).run();
+  return AArch64LowerHomogeneousPrologEpilogImpl(&M, MMI).run();
 }
 
-bool AArch64LowerHomogeneousPE::run() {
+PreservedAnalyses
+AArch64LowerHomogeneousPrologEpilogPass::run(Module &M,
+                                             ModuleAnalysisManager &MAM) {
+  MachineModuleInfo *MMI = &MAM.getResult<MachineModuleAnalysis>(M).getMMI();
+  bool Changed = AArch64LowerHomogeneousPrologEpilogImpl(&M, MMI).run();
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<MachineModuleAnalysis>();
+  return PA;
+}
+
+bool AArch64LowerHomogeneousPrologEpilogImpl::run() {
   bool Changed = false;
   for (auto &F : *M) {
     if (F.empty())
@@ -455,7 +470,7 @@ static bool shouldUseFrameHelper(MachineBasicBlock &MBB,
 ///    ldp x29, x30, [sp, #32]
 ///    ldp x20, x19, [sp, #16]
 ///    ldp x22, x21, [sp], #48
-bool AArch64LowerHomogeneousPE::lowerEpilog(
+bool AArch64LowerHomogeneousPrologEpilogImpl::lowerEpilog(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI) {
   auto &MF = *MBB.getParent();
@@ -545,7 +560,7 @@ bool AArch64LowerHomogeneousPE::lowerEpilog(
 ///    stp	x22, x21, [sp, #-48]!
 ///    stp	x20, x19, [sp, #16]
 ///    stp	x29, x30, [sp, #32]
-bool AArch64LowerHomogeneousPE::lowerProlog(
+bool AArch64LowerHomogeneousPrologEpilogImpl::lowerProlog(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI) {
   auto &MF = *MBB.getParent();
@@ -626,9 +641,9 @@ bool AArch64LowerHomogeneousPE::lowerProlog(
 /// @param MBBI current instruction iterator
 /// @param NextMBBI next instruction iterator which can be updated
 /// @return True when IR is changed.
-bool AArch64LowerHomogeneousPE::runOnMI(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator MBBI,
-                                        MachineBasicBlock::iterator &NextMBBI) {
+bool AArch64LowerHomogeneousPrologEpilogImpl::runOnMI(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
   switch (Opcode) {
@@ -642,7 +657,7 @@ bool AArch64LowerHomogeneousPE::runOnMI(MachineBasicBlock &MBB,
   return false;
 }
 
-bool AArch64LowerHomogeneousPE::runOnMBB(MachineBasicBlock &MBB) {
+bool AArch64LowerHomogeneousPrologEpilogImpl::runOnMBB(MachineBasicBlock &MBB) {
   bool Modified = false;
 
   MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
@@ -655,7 +670,8 @@ bool AArch64LowerHomogeneousPE::runOnMBB(MachineBasicBlock &MBB) {
   return Modified;
 }
 
-bool AArch64LowerHomogeneousPE::runOnMachineFunction(MachineFunction &MF) {
+bool AArch64LowerHomogeneousPrologEpilogImpl::runOnMachineFunction(
+    MachineFunction &MF) {
   TII = MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
 
   bool Modified = false;
@@ -665,5 +681,5 @@ bool AArch64LowerHomogeneousPE::runOnMachineFunction(MachineFunction &MF) {
 }
 
 ModulePass *llvm::createAArch64LowerHomogeneousPrologEpilogPass() {
-  return new AArch64LowerHomogeneousPrologEpilog();
+  return new AArch64LowerHomogeneousPrologEpilogLegacy();
 }

@@ -11,27 +11,29 @@ define dso_local void @l(i1 %arg) local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i16> [ undef, [[BB:%.*]] ], [ [[TMP9:%.*]], [[BB25:%.*]] ]
 ; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB3:%.*]], label [[BB11:%.*]]
 ; CHECK:       bb3:
+; CHECK-NEXT:    [[I4:%.*]] = zext i1 undef to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i16> [[TMP0]], undef
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <2 x i16> [[TMP1]], splat (i16 8)
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> poison, <3 x i32> <i32 0, i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <3 x i1> <i1 poison, i1 poison, i1 undef>, <3 x i1> [[TMP10]], <3 x i32> <i32 3, i32 4, i32 2>
 ; CHECK-NEXT:    br label [[BB25]]
 ; CHECK:       bb11:
+; CHECK-NEXT:    [[I12:%.*]] = zext i1 undef to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i16> [[TMP0]], undef
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <2 x i16> [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule <2 x i64> undef, [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = zext <2 x i1> [[TMP5]] to <2 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i8> [[TMP8]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP5]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult <2 x i32> undef, [[TMP6]]
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i1> [[TMP7]], <2 x i1> poison, <3 x i32> <i32 0, i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <3 x i1> <i1 poison, i1 poison, i1 undef>, <3 x i1> [[TMP11]], <3 x i32> <i32 3, i32 4, i32 2>
 ; CHECK-NEXT:    br label [[BB25]]
 ; CHECK:       bb25:
+; CHECK-NEXT:    [[I28:%.*]] = phi i32 [ [[I12]], [[BB11]] ], [ [[I4]], [[BB3]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i1> [ [[TMP7]], [[BB11]] ], [ [[TMP2]], [[BB3]] ]
 ; CHECK-NEXT:    [[TMP9]] = phi <2 x i16> [ [[TMP3]], [[BB11]] ], [ [[TMP1]], [[BB3]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = phi <3 x i1> [ [[TMP16]], [[BB11]] ], [ [[TMP15]], [[BB3]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.and.v3i1(<3 x i1> [[TMP14]])
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = zext i1 [[TMP10]] to i32
+; CHECK-NEXT:    [[I31:%.*]] = and i32 undef, [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP8]], i32 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i1 [[TMP12]] to i32
-; CHECK-NEXT:    [[I33:%.*]] = and i32 [[TMP13]], undef
+; CHECK-NEXT:    [[I32:%.*]] = and i32 [[I31]], [[TMP13]]
+; CHECK-NEXT:    [[I33:%.*]] = and i32 [[I32]], [[I28]]
 ; CHECK-NEXT:    br i1 [[ARG]], label [[BB34:%.*]], label [[BB1]]
 ; CHECK:       bb34:
 ; CHECK-NEXT:    [[I35:%.*]] = phi i32 [ [[I33]], [[BB25]] ]

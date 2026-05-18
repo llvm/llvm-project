@@ -340,8 +340,9 @@ LIBC_INLINE double pow(double x, double y) {
 
     // Normalize denormal inputs.
     if (x_a < FPBits::min_normal().uintval()) {
-      e_x -= 64.0;
-      x_mant = FPBits(x * 0x1.0p64).get_mantissa();
+      FPBits x_norm(x * 0x1.0p64);
+      e_x = static_cast<double>(x_norm.get_exponent()) - 64.0;
+      x_mant = x_norm.get_mantissa();
     }
 
     // x is finite and negative, and y is a finite integer.

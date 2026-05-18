@@ -742,9 +742,7 @@ class Base(unittest.TestCase):
         remote_test_dir = configuration.lldb_platform_working_dir
         for c in components:
             remote_test_dir = lldbutil.join_remote_paths(remote_test_dir, c)
-            error = lldb.remote_platform.MakeDirectory(
-                remote_test_dir, 448
-            )  # 448 = 0o700
+            error = lldb.remote_platform.MakeDirectory(remote_test_dir, 0o700)
             if error.Fail():
                 raise Exception(
                     "making remote directory '%s': %s" % (remote_test_dir, error)

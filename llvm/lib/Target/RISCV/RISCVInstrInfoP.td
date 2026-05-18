@@ -1840,7 +1840,12 @@ let Predicates = [HasStdExtP, IsRV32] in {
 // Codegen patterns
 //===----------------------------------------------------------------------===//
 
-// Pattern class for GPRPair operations
+class PatGprSplatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT,
+                     ValueType ScalarVT = XLenVT>
+    : Pat<(VecVT (OpNode GPR:$rs1, (splat_vector (ScalarVT GPR:$rs2)))),
+          (Inst GPR:$rs1, GPR:$rs2)>;
+
+// Pattern classes for GPRPair operations
 class PatGprPairGprPair<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), (vt GPRPair:$rs2))),
           (Inst GPRPair:$rs1, GPRPair:$rs2)>;
@@ -1854,6 +1859,11 @@ class PatGprPairShiftMask<SDPatternOperator OpNode, RVInst Inst,
                           ComplexPattern ShiftMask, ValueType vt>
     : Pat<(vt (OpNode GPRPair:$rs1, ShiftMask:$rs2)),
           (Inst GPRPair:$rs1, ShiftMask:$rs2)>;
+
+class PatGprPairSplatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT,
+                         ValueType ScalarVT = XLenVT>
+    : Pat<(VecVT (OpNode GPRPair:$rs1, (splat_vector (ScalarVT GPR:$rs2)))),
+          (Inst GPRPair:$rs1, GPR:$rs2)>;
 
 def riscv_absw : RVSDNode<"ABSW", SDT_RISCVIntUnaryOpW>;
 def riscv_clsw : RVSDNode<"CLSW", SDT_RISCVIntUnaryOpW>;
@@ -2225,14 +2235,17 @@ let Predicates = [HasStdExtP, IsRV32] in {
   // Basic 8-bit arithmetic patterns
   def : PatGprPairGprPair<add, PADD_DB, v8i8>;
   def : PatGprPairGprPair<sub, PSUB_DB, v8i8>;
+  def : PatGprPairSplatGpr<add, PADD_DBS, v8i8>;
 
   // Basic 16-bit arithmetic patterns
   def : PatGprPairGprPair<add, PADD_DH, v4i16>;
   def : PatGprPairGprPair<sub, PSUB_DH, v4i16>;
+  def : PatGprPairSplatGpr<add, PADD_DHS, v4i16>;
 
   // Basic 32-bit arithmetic patterns
   def : PatGprPairGprPair<add, PADD_DW, v2i32>;
   def : PatGprPairGprPair<sub, PSUB_DW, v2i32>;
+  def : PatGprPairSplatGpr<add, PADD_DWS, v2i32>;
 
   // 8-bit saturating add/sub patterns
   def : PatGprPairGprPair<saddsat, PSADD_DB, v8i8>;

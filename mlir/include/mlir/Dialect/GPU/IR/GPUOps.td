@@ -1427,13 +1427,21 @@ def GPU_RotateOp : GPU_Op<
 }
 
 def GPU_BarrierOp : GPU_Op<"barrier">,
-    Arguments<(ins OptionalAttr<GPU_AddressSpaceAttrArray> :$address_spaces)> {
-  let summary = "Synchronizes all work items of a workgroup.";
+    Arguments<(ins
+      OptionalAttr<GPU_AddressSpaceAttrArray>:$address_spaces,
+      Optional<GPU_NamedBarrier>:$named_barrier,
+      DefaultValuedAttr<GPU_BarrierScopeAttr,
+        "::mlir::gpu::BarrierScope::Workgroup">:$scope
+    )> {
+  let summary = "Synchronizes work items within an execution scope.";
   let description = [{
-    The `barrier` op synchronizes all work items of a workgroup. It is used
-    to coordinate communication between the work items of the workgroup.
+    The `barrier` op synchronizes work items within the specified execution
+    scope. By default, the scope is `workgroup`, synchronizing all work items
+    in a workgroup.
 
     ```mlir
+    // Synchronize all work items in the workgroup, making all prior
+    // memory accesses visible.
     gpu.barrier
     ```
 
@@ -1443,17 +1451,35 @@ def GPU_BarrierOp : GPU_Op<"barrier">,
     accessing the same memory can be avoided by synchronizing work items
     in-between these accesses.
 
-    If the `memfence` attribute is specified, the set of memory accesses that must
-    by completed after the barrier resolves is limited to only those accesses that
-    read from or write to the specified address spaces (though accesses to other
-    address spaces may be completed as well, especially if a particular combination
-    of address spaces is not supported on a given backend). In particular,
-    specifying `memfence []` creates a barrier that is not required to affect
-    the visibility of any memory operations and is purely used for synchronizing
-    work items.
+    The `scope` attribute controls the execution scope of the barrier:
 
     ```mlir
-    // Only workgroup address spaces accesses required to be visible.
+    // Synchronize within a subgroup (warp/wavefront).
+    gpu.barrier scope <subgroup>
+    // Synchronize within a cluster.
+    gpu.barrier scope <cluster>
+    ```
+
+    A `named` barrier allows synchronizing a specific subset of subgroups
+    that have been associated with a named barrier handle. Named barriers
+    require workgroup scope.
+
+    ```mlir
+    // Initialize a named barrier for 4 participating members.
+    %nb = gpu.initialize_named_barrier %c4 : i32 -> !gpu.named_barrier
+    // Wait on the named barrier.
+    gpu.barrier named(%nb : !gpu.named_barrier)
+    ```
+
+    If the `memfence` attribute is specified, the set of memory accesses that
+    must be completed after the barrier resolves is limited to only those
+    accesses that read from or write to the specified address spaces. In
+    particular, specifying `memfence []` creates a barrier that is not required
+    to affect the visibility of any memory operations and is purely used for
+    synchronizing work items.
+
+    ```mlir
+    // Only workgroup address space accesses required to be visible.
     gpu.barrier memfence [#gpu.address_space<workgroup>]
     // No memory accesses required to be visible.
     gpu.barrier memfence []
@@ -1461,15 +1487,56 @@ def GPU_BarrierOp : GPU_Op<"barrier">,
     gpu.barrier
     ```
 
-    Either none or all work items of a workgroup need to execute this op
-    in convergence.
+    The three clauses can be combined in any order, but not all combinations may
+    be supported on a given target:
+
+    ```mlir
+    // Named barrier with a workgroup-only memory fence.
+    gpu.barrier named(%nb : !gpu.named_barrier) memfence [#gpu.address_space<workgroup>]
+    // Subgroup barrier with a global fence.
+    gpu.barrier memfence [#gpu.address_space<global>] scope <subgroup>
+    ```
+
+    Once one thread of execution in a given scope (say, thread in a workgroup)
+    has executed a particular dynamic instance of `gpu.barrier`, all other threads
+    in that scope are required to execute the same dynamic instance of `gpu.barrier`
+    before any thread executes any other instance of it. That is, you cannot, for
+    example, have the two subgroups of a workgroup arrive at `gpu.barrier` ops in
+    different branches of an if statement and have this work.
   }];
-  let assemblyFormat = "(`memfence` $address_spaces^)? attr-dict";
+  let assemblyFormat = [{
+    oilist(
+        `named` `(` $named_barrier `:` type($named_barrier) `)`
+      | `memfence` $address_spaces
+      | `scope` $scope
+    ) attr-dict
+  }];
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
   let builders = [OpBuilder<(
                       ins CArg<"std::optional<::mlir::gpu::AddressSpace>",
                                "std::nullopt">:$addressSpace)>,
                   OpBuilder<(ins "Value":$memrefToFence)>];
+}
+
+def GPU_InitializeNamedBarrierOp
+    : GPU_Op<"initialize_named_barrier",
+             [MemoryEffects<[MemAlloc<DefaultResource>]>]> {
+  let summary = "Initialize a named barrier with a member count.";
+  let description = [{
+    Initializes a named barrier object with the given number of participating
+    members (subgroups) and returns a handle to it. All members that will
+    synchronize on this barrier must be accounted for in the count.
+
+    ```mlir
+    %nb = gpu.initialize_named_barrier %num_members : i32 -> !gpu.named_barrier
+    ```
+  }];
+  let arguments = (ins I32:$member_count);
+  let results = (outs GPU_NamedBarrier:$result);
+  let assemblyFormat = [{
+    $member_count attr-dict `:` type($member_count) `->` type($result)
+  }];
 }
 
 def GPU_GPUModuleOp : GPU_Op<"module", [

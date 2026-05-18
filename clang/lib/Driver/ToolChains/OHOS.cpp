@@ -176,12 +176,12 @@ ToolChain::RuntimeLibType OHOS::GetRuntimeLibType(
     const ArgList &Args) const {
   if (Arg *A = Args.getLastArg(options::OPT_rtlib_EQ)) {
     StringRef Value = A->getValue();
-    if (Value != "compiler-rt")
-      getDriver().Diag(clang::diag::err_drv_invalid_rtlib_name)
-          << A->getAsString(Args);
+    if (Value != "compiler-rt" && Value != "platform")
+      getDriver().Diag(clang::diag::err_drv_unsupported_rtlib_for_platform)
+          << Value << "OHOS";
   }
 
-  return ToolChain::RLT_CompilerRT;
+  return ToolChain::GetRuntimeLibType(Args);
 }
 
 ToolChain::CXXStdlibType

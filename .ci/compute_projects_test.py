@@ -90,11 +90,12 @@ class TestComputeProjects(unittest.TestCase):
             "check-clang check-clang-tools check-cross-project check-lldb",
         )
         self.assertEqual(
-            env_variables["runtimes_to_build"], "compiler-rt;libcxx;libcxxabi;libunwind"
+            env_variables["runtimes_to_build"],
+            "compiler-rt;libc;libcxx;libcxxabi;libunwind",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt",
+            "check-compiler-rt check-libc",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -167,11 +168,12 @@ class TestComputeProjects(unittest.TestCase):
             "check-clang check-clang-cir check-clang-tools check-cross-project check-lldb",
         )
         self.assertEqual(
-            env_variables["runtimes_to_build"], "compiler-rt;libcxx;libcxxabi;libunwind"
+            env_variables["runtimes_to_build"],
+            "compiler-rt;libc;libcxx;libcxxabi;libunwind",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt",
+            "check-compiler-rt check-libc",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],

@@ -135,6 +135,7 @@ public:
 
   // Call related instructions
   int64_t IntrinsicCount = 0;
+  int64_t NoReturnCallCount = 0;
   int64_t DirectCallCount = 0;
   int64_t IndirectCallCount = 0;
   int64_t CallReturnsIntegerCount = 0;

@@ -1249,6 +1249,17 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerSplitTo32Select(MI);
   case SplitTo32SExtInReg:
     return lowerSplitTo32SExtInReg(MI);
+  case CtPop64To32: {
+    auto Unmerge = B.buildUnmerge({VgprRB, S32}, MI.getOperand(1).getReg());
+    auto LoPopCnt = B.buildCTPOP({VgprRB, S32}, Unmerge.getReg(0));
+    auto HiPopCnt = B.buildCTPOP({VgprRB, S32}, Unmerge.getReg(1));
+    // Max popcount of two 32-bit values is 64, so this add cannot overflow.
+    B.buildAdd(MI.getOperand(0).getReg(), LoPopCnt, HiPopCnt,
+               MachineInstr::NoSWrap | MachineInstr::NoUWrap);
+
+    MI.eraseFromParent();
+    break;
+  }
   case SplitLoad: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     unsigned Size = DstTy.getSizeInBits();

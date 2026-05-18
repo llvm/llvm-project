@@ -30,6 +30,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
@@ -88,6 +89,16 @@ static Operation *getSlice(OpBuilder &b, Location loc, Value source,
                                          strides);
       })
       .Default([&](Type t) -> Operation * { return nullptr; });
+}
+
+static std::optional<TypedAttr>
+getScalarConstantAttrFromDenseSplat(Value input) {
+  DenseElementsAttr splatAttr;
+  matchPattern(input, m_Constant<DenseElementsAttr>(&splatAttr));
+  if (!splatAttr || !splatAttr.isSplat())
+    return std::nullopt;
+
+  return splatAttr.getSplatValue<TypedAttr>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2150,6 +2161,31 @@ struct FoldTransposeWithTranspose : OpRewritePattern<linalg::TransposeOp> {
   }
 };
 
+/// Rewrite a transpose of a dense splat constant into a dense splat constant of
+/// the transposed output shape.
+struct FoldTransposeSplatConstant : OpRewritePattern<linalg::TransposeOp> {
+  using OpRewritePattern<linalg::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    if (!transposeOp.hasPureTensorSemantics())
+      return failure();
+
+    auto splatValue =
+        getScalarConstantAttrFromDenseSplat(transposeOp.getInput());
+    if (!splatValue.has_value())
+      return failure();
+
+    auto resultType =
+        cast<RankedTensorType>(transposeOp.getResult()[0].getType());
+
+    auto resultAttr = DenseElementsAttr::get(resultType, splatValue.value());
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(transposeOp, resultType,
+                                                   resultAttr);
+    return success();
+  }
+};
+
 /// This pattern canonicalize transpose by swapping the order of
 /// broadcast and transpose:
 ///   transpose(broadcast(input)) -> broadcast(transpose(input))
@@ -2210,7 +2246,8 @@ struct SwapTransposeWithBroadcast : OpRewritePattern<linalg::TransposeOp> {
 
 void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<FoldTransposeWithTranspose, SwapTransposeWithBroadcast>(context);
+  results.add<FoldTransposeWithTranspose, FoldTransposeSplatConstant,
+              SwapTransposeWithBroadcast>(context);
 }
 
 //===----------------------------------------------------------------------===//

@@ -7,9 +7,9 @@ define void @test_and(i16 %in) {
 ; CHECK-LABEL: 'test_and'
 ; CHECK-NEXT:  Classifying expressions for: @test_and
 ; CHECK-NEXT:    %_tmp25.i = phi i16 [ %in, %bb2 ], [ %_tmp6.i, %bb1.i ]
-; CHECK-NEXT:    --> {%in,+,1}<nsw><%bb1.i> U: full-set S: full-set Exits: 1 LoopDispositions: { %bb1.i: Computable, %bb2: Variant }
+; CHECK-NEXT:    --> {%in,+,1}<nsw><%bb1.i> U: full-set S: full-set Exits: 1 LoopDispositions: { %bb1.i: Computable, %bb2: Uniform }
 ; CHECK-NEXT:    %_tmp6.i = add nsw i16 %_tmp25.i, 1
-; CHECK-NEXT:    --> {(1 + %in),+,1}<nsw><%bb1.i> U: full-set S: full-set Exits: 2 LoopDispositions: { %bb1.i: Computable, %bb2: Variant }
+; CHECK-NEXT:    --> {(1 + %in),+,1}<nsw><%bb1.i> U: full-set S: full-set Exits: 2 LoopDispositions: { %bb1.i: Computable, %bb2: Uniform }
 ; CHECK-NEXT:    %or.cond = and i1 %_tmp10.i, %exitcond.i
 ; CHECK-NEXT:    --> (%_tmp10.i umin %exitcond.i) U: full-set S: full-set Exits: true LoopDispositions: { %bb1.i: Variant, %bb2: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_and
