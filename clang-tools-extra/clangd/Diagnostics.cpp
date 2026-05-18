@@ -236,9 +236,7 @@ bool tryMoveToMainFile(Diag &D, FullSourceLoc DiagLoc) {
   return true;
 }
 
-bool isNote(DiagnosticsEngine::Level L) {
-  return L == DiagnosticsEngine::Note || L == DiagnosticsEngine::Remark;
-}
+bool isNote(DiagnosticsEngine::Level L) { return L == DiagnosticsEngine::Note; }
 
 llvm::StringRef diagLeveltoString(DiagnosticsEngine::Level Lvl) {
   switch (Lvl) {

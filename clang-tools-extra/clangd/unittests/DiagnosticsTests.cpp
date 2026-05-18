@@ -1168,6 +1168,11 @@ TEST(DiagnosticsTest, PragmaSystemHeader) {
   EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
 }
 
+TEST(DiagnosticsTest, PragmaDebugSlocUsage) {
+  auto TU = TestTU::withCode("#pragma clang __debug sloc_usage\n");
+  (void)TU.build().getDiagnostics();
+}
+
 TEST(ClangdTest, MSAsm) {
   // Parsing MS assembly tries to use the target MCAsmInfo, which we don't link.
   // We used to crash here. Now clang emits a diagnostic, which we filter out.
