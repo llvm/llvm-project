@@ -45,7 +45,7 @@ SHADER_FEATURE_FLAG(23, 28, AtomicInt64OnGroupShared, "64-bit Atomics on Group S
 SHADER_FEATURE_FLAG(24, 29, DerivativesInMeshAndAmpShaders, "Derivatives in mesh and amplification shaders")
 SHADER_FEATURE_FLAG(25, 30, ResourceDescriptorHeapIndexing, "Resource descriptor heap indexing")
 SHADER_FEATURE_FLAG(26, 31, SamplerDescriptorHeapIndexing, "Sampler descriptor heap indexing")
-SHADER_FEATURE_FLAG(27, 36, RESERVED, "<RESERVED>")
+SHADER_FEATURE_FLAG(27, 36, WaveMMA, "Wave Matrix Multiply Accumulate")
 SHADER_FEATURE_FLAG(28, 32, AtomicInt64OnHeapResource, "64-bit Atomics on Heap Resources")
 SHADER_FEATURE_FLAG(29, 34, AdvancedTextureOps, "Advanced Texture Ops")
 SHADER_FEATURE_FLAG(30, 35, WriteableMSAATextures, "Writeable MSAA Textures")

@@ -40,7 +40,7 @@ Parts:
       DerivativesInMeshAndAmpShaders: false
       ResourceDescriptorHeapIndexing: false
       SamplerDescriptorHeapIndexing: false
-      RESERVED:        false
+      WaveMMA:         false
       AtomicInt64OnHeapResource: false
       AdvancedTextureOps: false
       WriteableMSAATextures: false

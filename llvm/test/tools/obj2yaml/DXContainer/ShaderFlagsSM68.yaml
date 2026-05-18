@@ -1,0 +1,94 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+# This test verifies round-tripping of the shader feature flags added for
+# Shader Model 6.8 and the experimental SM 6.9+ WaveMMA flag (see issue
+# llvm/llvm-project#83177):
+#   - WaveMMA                     (bit 27, value 0x0000000008000000)
+#   - SampleCmpWithGradientOrBias (bit 31, value 0x0000000080000000)
+#   - ExtendedCommandInfo         (bit 32, value 0x0000000100000000)
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       1
+Parts:
+  - Name:            SFI0
+    Size:            8
+    Flags:
+      Doubles:         false
+      ComputeShadersPlusRawAndStructuredBuffers: false
+      UAVsAtEveryStage: false
+      Max64UAVs:       false
+      MinimumPrecision: false
+      DX11_1_DoubleExtensions: false
+      DX11_1_ShaderExtensions: false
+      LEVEL9ComparisonFiltering: false
+      TiledResources:  false
+      StencilRef:      false
+      InnerCoverage:   false
+      TypedUAVLoadAdditionalFormats: false
+      ROVs:            false
+      ViewportAndRTArrayIndexFromAnyShaderFeedingRasterizer: false
+      WaveOps:         false
+      Int64Ops:        false
+      ViewID:          false
+      Barycentrics:    false
+      NativeLowPrecision: false
+      ShadingRate:     false
+      Raytracing_Tier_1_1: false
+      SamplerFeedback: false
+      AtomicInt64OnTypedResource: false
+      AtomicInt64OnGroupShared: false
+      DerivativesInMeshAndAmpShaders: false
+      ResourceDescriptorHeapIndexing: false
+      SamplerDescriptorHeapIndexing: false
+      WaveMMA:         true
+      AtomicInt64OnHeapResource: false
+      AdvancedTextureOps: false
+      WriteableMSAATextures: false
+      SampleCmpWithGradientOrBias: true
+      ExtendedCommandInfo: true
+      NextUnusedBit:   false
+...
+
+# CHECK: Parts:
+# CHECK-NEXT:   - Name:            SFI0
+# CHECK-NEXT:     Size:            8
+# CHECK-NEXT:     Flags:
+# CHECK-NEXT:       Doubles:         false
+# CHECK-NEXT:       ComputeShadersPlusRawAndStructuredBuffers: false
+# CHECK-NEXT:       UAVsAtEveryStage: false
+# CHECK-NEXT:       Max64UAVs:       false
+# CHECK-NEXT:       MinimumPrecision: false
+# CHECK-NEXT:       DX11_1_DoubleExtensions: false
+# CHECK-NEXT:       DX11_1_ShaderExtensions: false
+# CHECK-NEXT:       LEVEL9ComparisonFiltering: false
+# CHECK-NEXT:       TiledResources:  false
+# CHECK-NEXT:       StencilRef:      false
+# CHECK-NEXT:       InnerCoverage:   false
+# CHECK-NEXT:       TypedUAVLoadAdditionalFormats: false
+# CHECK-NEXT:       ROVs:            false
+# CHECK-NEXT:       ViewportAndRTArrayIndexFromAnyShaderFeedingRasterizer: false
+# CHECK-NEXT:       WaveOps:         false
+# CHECK-NEXT:       Int64Ops:        false
+# CHECK-NEXT:       ViewID:          false
+# CHECK-NEXT:       Barycentrics:    false
+# CHECK-NEXT:       NativeLowPrecision: false
+# CHECK-NEXT:       ShadingRate:     false
+# CHECK-NEXT:       Raytracing_Tier_1_1: false
+# CHECK-NEXT:       SamplerFeedback: false
+# CHECK-NEXT:       AtomicInt64OnTypedResource: false
+# CHECK-NEXT:       AtomicInt64OnGroupShared: false
+# CHECK-NEXT:       DerivativesInMeshAndAmpShaders: false
+# CHECK-NEXT:       ResourceDescriptorHeapIndexing: false
+# CHECK-NEXT:       SamplerDescriptorHeapIndexing: false
+# CHECK-NEXT:       WaveMMA:         true
+# CHECK-NEXT:       AtomicInt64OnHeapResource: false
+# CHECK-NEXT:       AdvancedTextureOps: false
+# CHECK-NEXT:       WriteableMSAATextures: false
+# CHECK-NEXT:       SampleCmpWithGradientOrBias: true
+# CHECK-NEXT:       ExtendedCommandInfo: true
+# CHECK-NEXT:       NextUnusedBit:   false
