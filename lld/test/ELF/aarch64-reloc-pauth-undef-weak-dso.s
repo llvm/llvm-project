@@ -37,7 +37,7 @@ _start:
   adrp  x0,  :tlsdesc_auth:undef
   ldr   x16, [x0, :tlsdesc_auth_lo12:undef]
   add   x0,  x0, :tlsdesc_auth_lo12:undef
-  .tlsdesccall undef
+  .tlsdescauthcall undef
   blraa x16, x0
 
 .data
