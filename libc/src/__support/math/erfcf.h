@@ -161,18 +161,12 @@ LIBC_INLINE float erfcf(float x) {
   FPBits xbits(x);
   uint32_t x_abs = xbits.abs().uintval();
 
-  constexpr size_t N_ERFCF_EXCEPTS = 2;
-  constexpr fputil::ExceptValues<float, N_ERFCF_EXCEPTS> ERFCF_EXCEPTS = {{
-      // (input, RZ output, RU offset, RD offset, RN offset)
-      // x = 0.000014103805, erfc(x) = 0.9999841...
-      {0x376C9F62, 0x3f7ffef5, 1, 0, 0},
-      // x = -0.000014103805, erfc(x) = 1.0000159...
-      {0xB76C9F62, 0x3F800085, 1, 0, 0},
-  }};
-
-  if (auto r = ERFCF_EXCEPTS.lookup(xbits.uintval());
-      LIBC_UNLIKELY(r.has_value()))
-    return r.value();
+  if (LIBC_UNLIKELY(x_abs == 0x376C9F62U)) {
+    // x = +/-0.000014103805
+    uint32_t out = xbits.is_neg() ? 0x3F800085U : 0x3f7ffef5U;
+    return fputil::round_result_slightly_up(
+        fputil::FPBits<float>(out).get_val());
+  }
 
   // Special cases: NaN and Inf
   if (LIBC_UNLIKELY(x_abs >= 0x7f800000U)) {
