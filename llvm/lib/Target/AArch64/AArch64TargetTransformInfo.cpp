@@ -6064,11 +6064,6 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   //      partial_reduce_umls  acc, lhs, rhs
   // <=> -partial_reduce_umla -acc, lhs, rhs
   InstructionCost INegCost = IsSub ? 2 * InputLT.first * TTI::TCC_Basic : 0;
-  // FP partial sub-reductions that don't map to a specific instruction,
-  // carry an extra cost for implementing an extra negation:
-  //      partial_reduce_umls  acc, lhs, rhs
-  // <=>  partial_reduce_umla  acc, lhs, -rhs
-  InstructionCost FNegCost = IsSub ? InputLT.first * TTI::TCC_Basic : 0;
 
   if (AccumLT.second.getScalarType() == MVT::i32 &&
       InputLT.second.getScalarType() == MVT::i8) {
@@ -6133,6 +6128,12 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     if (IsSupported(ST->hasSVE2p1() || ST->hasSME2(), false) &&
         InVT == MVT::bf16 && IsSub)
       return Cost * 2;
+
+    // FP partial sub-reductions that don't map to a specific instruction,
+    // carry an extra cost for implementing an extra negation:
+    //      partial_reduce_fmls  acc, lhs, rhs
+    // <=>  partial_reduce_fmla  acc, lhs, -rhs
+    InstructionCost FNegCost = IsSub ? InputLT.first * TTI::TCC_Basic : 0;
 
     // SVE and NEON bfmlalb/t
     if (IsSupported(ST->hasBF16(), ST->hasBF16()) && InVT == MVT::bf16)
