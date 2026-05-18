@@ -441,6 +441,16 @@ TEST(Support, AbsolutePathIteratorEnd) {
   }
 }
 
+TEST(Support, PathStartsWith) {
+  EXPECT_TRUE(path::starts_with("/foo", "/foo"));
+  EXPECT_TRUE(path::starts_with("/foo/", "/foo"));
+  // FIXME: This should probably work too.
+  // EXPECT_TRUE(path::starts_with("/foo", "/foo/"));
+  EXPECT_TRUE(path::starts_with("/foo/", "/foo/"));
+  EXPECT_FALSE(path::starts_with("/foo", "/fooo"));
+  EXPECT_FALSE(path::starts_with("/fooo", "/foo"));
+}
+
 #ifdef _WIN32
 std::string getEnvWin(const wchar_t *Var) {
   std::string expected;

@@ -200,18 +200,8 @@ bool dependencies::isPathInStableDir(const ArrayRef<StringRef> Directories,
   if (!path::is_absolute(Input))
     return false;
 
-  auto PathStartsWith = [](StringRef Prefix, StringRef Path) {
-    auto PrefixIt = path::begin(Prefix), PrefixEnd = path::end(Prefix);
-    for (auto PathIt = path::begin(Path), PathEnd = path::end(Path);
-         PrefixIt != PrefixEnd && PathIt != PathEnd; ++PrefixIt, ++PathIt) {
-      if (*PrefixIt != *PathIt)
-        return false;
-    }
-    return PrefixIt == PrefixEnd;
-  };
-
   return any_of(Directories, [&](StringRef Dir) {
-    return !Dir.empty() && PathStartsWith(Dir, Input);
+    return !Dir.empty() && path::starts_with(Input, Dir);
   });
 }
 
