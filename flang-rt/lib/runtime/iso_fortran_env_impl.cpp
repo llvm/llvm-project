@@ -19,22 +19,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Common/float128.h"
+#include "flang/Common/float80.h"
 #include "flang/Common/type-kinds.h"
 #include <cstdint>
-
-/// Real kind 10 (x87 extended) is only available on x86-64.
-#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
-#define FLANG_RT_HAS_REAL_10 1
-#else
-#define FLANG_RT_HAS_REAL_10 0
-#endif
-
-/// Real kind 16 (IEEE quad) requires a float128 runtime math library.
-#if defined(FLANG_RUNTIME_F128_MATH_LIB) || HAS_LDBL128
-#define FLANG_RT_HAS_REAL_16 1
-#else
-#define FLANG_RT_HAS_REAL_16 0
-#endif
 
 // Fortran merge(tsource, fsource, mask) to match the source module style.
 static constexpr std::int32_t Merge(
@@ -122,18 +109,18 @@ static constexpr std::int32_t selectedBfloat16{3};
 static constexpr std::int32_t selectedReal32{4};
 static constexpr std::int32_t selectedReal64{8};
 
-#if FLANG_RT_HAS_REAL_10
+#if HAS_FLOAT80
 static constexpr std::int32_t selectedReal80{10};
-#elif FLANG_RT_HAS_REAL_16
+#elif HAS_LDBL128 || HAS_FLOAT128
 static constexpr std::int32_t selectedReal80{16};
 #else
 static constexpr std::int32_t selectedReal80{-3};
 #endif
 
-#if FLANG_RT_HAS_REAL_16
+#if HAS_LDBL128 || HAS_FLOAT128
 static constexpr std::int32_t selectedReal64x2{16};
 static constexpr std::int32_t selectedReal128{16};
-#elif FLANG_RT_HAS_REAL_10
+#elif HAS_FLOAT80
 static constexpr std::int32_t selectedReal64x2{-1};
 static constexpr std::int32_t selectedReal128{-1};
 #else
@@ -257,10 +244,10 @@ extern const std::int32_t FORTRAN_NAMED_CONST(__builtin_real_kinds)[]{
     3,
     4,
     8,
-#if FLANG_RT_HAS_REAL_10
+#if HAS_FLOAT80
     10,
 #endif
-#if FLANG_RT_HAS_REAL_16
+#if HAS_LDBL128 || HAS_FLOAT128
     16,
 #endif
 };
