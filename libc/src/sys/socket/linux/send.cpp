@@ -8,7 +8,6 @@
 
 #include "src/sys/socket/send.h"
 
-#include <linux/net.h>   // For SYS_SOCKET socketcall number.
 #include <sys/syscall.h> // For syscall numbers.
 
 #include "hdr/types/socklen_t.h"
@@ -23,19 +22,12 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(ssize_t, send,
                    (int sockfd, const void *buf, size_t len, int flags)) {
 #ifdef SYS_send
-  ssize_t ret =
-      LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_send, sockfd, buf, len, flags);
+  ssize_t ret = syscall_impl<ssize_t>(SYS_send, sockfd, buf, len, flags);
 #elif defined(SYS_sendto)
-  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_sendto, sockfd, buf,
-                                                      len, flags, nullptr, 0);
-#elif defined(SYS_socketcall)
-  unsigned long sockcall_args[4] = {
-      static_cast<unsigned long>(sockfd), reinterpret_cast<unsigned long>(buf),
-      static_cast<unsigned long>(len), static_cast<unsigned long>(flags)};
-  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_socketcall, SYS_SEND,
-                                                      sockcall_args);
+  ssize_t ret =
+      syscall_impl<ssize_t>(SYS_sendto, sockfd, buf, len, flags, nullptr, 0);
 #else
-#error "socket and socketcall syscalls unavailable for this platform."
+#error "send or sendto syscalls unavailable for this platform."
 #endif
   if (ret < 0) {
     libc_errno = static_cast<int>(-ret);

@@ -39,7 +39,7 @@ end subroutine sub1
 !UNPARSE:  PRINT *, r
 !UNPARSE: END SUBROUTINE sub1
 
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAssumeConstruct
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAssumeDirective
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = assume
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> NoOpenmp
@@ -49,7 +49,7 @@ end subroutine sub1
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = assume
 !PARSE-TREE: | | OmpClauseList ->
 !PARSE-TREE: | | Flags = {}
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAssumeConstruct
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAssumeDirective
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = assume
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> NoParallelism
@@ -59,7 +59,7 @@ end subroutine sub1
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = assume
 !PARSE-TREE: | | OmpClauseList ->
 !PARSE-TREE: | | Flags = {}
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAssumeConstruct
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAssumeDirective
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = assume
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> NoOpenmpRoutines
@@ -69,7 +69,7 @@ end subroutine sub1
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = assume
 !PARSE-TREE: | | OmpClauseList ->
 !PARSE-TREE: | | Flags = {}
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAssumeConstruct
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAssumeDirective
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = assume
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Absent -> OmpAbsentClause -> llvm::omp::Directive = allocate
@@ -83,7 +83,7 @@ end subroutine sub1
 !PARSE-TREE: | | | | ImplicitPart ->
 !PARSE-TREE: | | | Block
 !PARSE-TREE: | | | EndBlockStmt ->
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAssumeConstruct
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAssumeDirective
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = assume
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Holds -> OmpHoldsClause -> Expr -> EQ
@@ -120,7 +120,7 @@ end subroutine sub2
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt
 !PARSE-TREE: | Variable -> Designator -> DataRef -> Name = 'v'
 !PARSE-TREE: | Expr -> LiteralConstant -> IntLiteralConstant = '87'
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAssumeConstruct
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAssumeDirective
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = assume
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> NoOpenmp
@@ -144,7 +144,7 @@ end program p
 !UNPARSE: !$OMP ASSUMES NO_OPENMP
 !UNPARSE: END PROGRAM p
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclarativeAssumes -> OmpDirectiveSpecification
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpAssumesDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = assumes
 !PARSE-TREE: | OmpClauseList -> OmpClause -> NoOpenmp
 !PARSE-TREE: | Flags = {}
