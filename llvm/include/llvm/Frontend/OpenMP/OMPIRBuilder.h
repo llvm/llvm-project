@@ -1534,7 +1534,7 @@ public:
   /// \param Dependencies Vector of DependData objects holding information of
   ///        dependencies as specified by the 'depend' clause.
   LLVM_ABI void createTaskwait(const LocationDescription &Loc,
-                               SmallVector<DependData> Dependencies = {});
+                               ArrayRef<DependData> Dependencies = {});
 
   ///  Return the LLVM struct type matching runtime `kmp_task_affinity_info_t`.
   /// `{ kmp_intptr_t base_addr; size_t len; flags (bitfield storage as i32) }`

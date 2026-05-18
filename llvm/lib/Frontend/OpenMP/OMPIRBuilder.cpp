@@ -2032,17 +2032,22 @@ void OpenMPIRBuilder::emitTaskwaitImpl(const LocationDescription &Loc) {
 }
 
 void OpenMPIRBuilder::createTaskwait(const LocationDescription &Loc,
-                                     SmallVector<DependData> Dependencies) {
+                                     ArrayRef<DependData> Dependencies) {
   if (!updateToLocation(Loc))
     return;
 
   if (Dependencies.size()) {
-    Builder.SetInsertPoint(
-        &Builder.GetInsertBlock()->getParent()->getEntryBlock());
+    InsertPointTy OldIP = Builder.saveIP();
+    BasicBlock &entryBB =
+        Builder.GetInsertBlock()->getParent()->getEntryBlock();
+    Builder.SetInsertPoint(&entryBB, entryBB.getFirstInsertionPt());
 
     Value *DepArray = nullptr;
     Type *DepArrayTy = ArrayType::get(DependInfo, Dependencies.size());
     DepArray = Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
+
+    Builder.restoreIP(OldIP);
+
     for (const auto &[DepIdx, Dep] : enumerate(Dependencies)) {
       Value *Base =
           Builder.CreateConstInBoundsGEP2_64(DepArrayTy, DepArray, 0, DepIdx);
