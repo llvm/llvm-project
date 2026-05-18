@@ -151,7 +151,7 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
   case UniB512:
     return MRI.getType(Reg).getSizeInBits() == 512 && MUI.isUniformAtDef(Reg);
   case UniBRC: {
-    if (!MUI.isUniformAtDef(Reg))
+    if (MUI.isDivergentAtDef(Reg))
       return false;
     // Check if there is SGPR register class of same size as the LLT.
     const SIRegisterInfo *TRI =
@@ -219,7 +219,7 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
   case DivB512:
     return MRI.getType(Reg).getSizeInBits() == 512 && MUI.isDivergentAtDef(Reg);
   case DivBRC: {
-    if (!MUI.isDivergentAtDef(Reg))
+    if (MUI.isUniformAtDef(Reg))
       return false;
     // Check if there is VGPR register class of same size as the LLT.
     const SIRegisterInfo *TRI =
@@ -903,6 +903,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS64, P1, S64}, {{Vgpr64}, {VgprP1, Vgpr64}}})
       .Any({{DivS32, P3, S32}, {{Vgpr32}, {VgprP3, Vgpr32}}})
       .Any({{DivS64, P3, S64}, {{Vgpr64}, {VgprP3, Vgpr64}}});
+
+  addRulesForGOpcs({G_ATOMICRMW_USUB_SAT, G_ATOMICRMW_USUB_COND})
+      .Any({{DivS32, P0}, {{Vgpr32}, {VgprP0, Vgpr32}}})
+      .Any({{DivS32, P1}, {{Vgpr32}, {VgprP1, Vgpr32}}})
+      .Any({{DivS32, P3}, {{Vgpr32}, {VgprP3, Vgpr32}}});
 
   bool HasAtomicFlatPkAdd16Insts = ST->hasAtomicFlatPkAdd16Insts();
   bool HasAtomicBufferGlobalPkAddF16Insts =

@@ -283,7 +283,7 @@ def get_src_dst_prefix(frag):
 def gen_wmma_ldst_tests(results):
     load_template = """
   // CHECK${check_suffix}: call {{.*}} @${intrinsic}
-  // expected-error-re@+1 {{'${builtin}' needs target feature (sm_${min_sm}{{.*}},(ptx${min_ptx}{{.*}}}}
+  // expected-error-re@+1 {{'${builtin}' needs target feature {{.*}}sm_${min_sm}{{.*}}ptx${min_ptx}}}
   ${builtin}(${dst}, ${src}, ldm, ${blayout});
 """.rstrip()
     intrinsic_template = (
@@ -348,7 +348,7 @@ def get_ilayout(a, b):
 def gen_wmma_mma_tests(results):
     mma_template = """
   // CHECK${check_suffix}: call {{.*}} @${intrinsic}
-  // expected-error-re@+1 {{'${builtin}' needs target feature (sm_${min_sm}{{.*}},(ptx${min_ptx}{{.*}}}}
+  // expected-error-re@+1 {{'${builtin}' needs target feature {{.*}}sm_${min_sm}{{.*}}ptx${min_ptx}}}
   ${builtin}(${dst}, ${asrc}, ${asrc}, ${csrc}, ${ilayout}${maybe_satf});
 """.rstrip()
     intrinsic_template = "llvm.nvvm.wmma.${geom}.mma${b1op}.${alayout}.${blayout}.${intrinsic_signature}${satf}"
@@ -411,7 +411,7 @@ def gen_tests():
 // ${run}: %clang_cc1 -triple nvptx64-unknown-unknown -target-cpu sm_${sm} \
 // ${run}:            -fcuda-is-device -target-feature +ptx${ptx} \
 // ${run}:            -DPTX=${ptx} -DSM=${sm} \
-// ${run}:            -S -emit-llvm -o - -x cuda %s \
+// ${run}:            -emit-llvm -o - -x cuda %s \
 // ${run}:   | FileCheck -check-prefixes=${check_labels} %s
 // Verify that all builtins have correct constraints.
 // ${run}: %clang_cc1 -triple nvptx-unknown-unknown \
