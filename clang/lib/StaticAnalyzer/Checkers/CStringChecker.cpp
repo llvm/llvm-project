@@ -455,10 +455,11 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   ASTContext &Ctx = SVB.getContext();
 
   const QualType ElemTy = Ctx.getBaseElementType(SuperR->getValueType());
-  const NonLoc Zero = SVB.makeZeroArrayIndex();
+
+  const NonLoc StartIdx = ER->getIndex();
 
   std::optional<Loc> FirstElementVal =
-      State->getLValue(ElemTy, Zero, loc::MemRegionVal(SuperR)).getAs<Loc>();
+      State->getLValue(ElemTy, StartIdx, loc::MemRegionVal(SuperR)).getAs<Loc>();
   if (!FirstElementVal)
     return State;
 
@@ -478,8 +479,8 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   // We won't check whether the entire region is fully initialized -- let's just
   // check that the first and the last element is. So, onto checking the last
   // element:
-  const QualType IdxTy = SVB.getArrayIndexType();
 
+  const QualType IdxTy = SVB.getArrayIndexType();
   NonLoc ElemSize =
       SVB.makeIntVal(Ctx.getTypeSizeInChars(ElemTy).getQuantity(), IdxTy)
           .castAs<NonLoc>();
@@ -514,8 +515,11 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   const NonLoc One = SVB.makeIntVal(1, IdxTy).castAs<NonLoc>();
   SVal LastIdx = SVB.evalBinOpNN(State, BO_Sub, *Offset, One, IdxTy);
 
+  const SVal AbsLastIdx =
+      SVB.evalBinOp(State, BO_Add, StartIdx, LastIdx, IdxTy);
+
   SVal LastElementVal =
-      State->getLValue(ElemTy, LastIdx, loc::MemRegionVal(SuperR));
+      State->getLValue(ElemTy, AbsLastIdx, loc::MemRegionVal(SuperR));
   if (!isa<Loc>(LastElementVal))
     return State;
 
@@ -653,7 +657,7 @@ CStringChecker::CheckBufferAccess(CheckerContext &C, ProgramStateRef State,
         svalBuilder.evalBinOpLN(State, BO_Add, *BufLoc, LastOffset, PtrTy);
     State = CheckLocation(C, State, Buffer, BufEnd, Access, CK);
     if (Access == AccessKind::read)
-      State = checkInit(C, State, Buffer, BufEnd, *Length);
+      State = checkInit(C, State, Buffer, BufStart, *Length);
 
     // If the buffer isn't large enough, abort.
     if (!State)
