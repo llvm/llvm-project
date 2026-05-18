@@ -41,6 +41,7 @@ class LoopInfo;
 class MDNode;
 class StringRef;
 class TargetLibraryInfo;
+class TargetTransformInfo;
 class IntrinsicInst;
 template <typename T> class ArrayRef;
 
@@ -561,18 +562,18 @@ LLVM_ABI bool isSafeToSpeculativelyExecute(
     const Instruction *I, const Instruction *CtxI = nullptr,
     AssumptionCache *AC = nullptr, const DominatorTree *DT = nullptr,
     const TargetLibraryInfo *TLI = nullptr, bool UseVariableInfo = true,
-    bool IgnoreUBImplyingAttrs = true);
+    bool IgnoreUBImplyingAttrs = true,
+    const TargetTransformInfo *TTI = nullptr);
 
-inline bool isSafeToSpeculativelyExecute(const Instruction *I,
-                                         BasicBlock::iterator CtxI,
-                                         AssumptionCache *AC = nullptr,
-                                         const DominatorTree *DT = nullptr,
-                                         const TargetLibraryInfo *TLI = nullptr,
-                                         bool UseVariableInfo = true,
-                                         bool IgnoreUBImplyingAttrs = true) {
+inline bool isSafeToSpeculativelyExecute(
+    const Instruction *I, BasicBlock::iterator CtxI,
+    AssumptionCache *AC = nullptr, const DominatorTree *DT = nullptr,
+    const TargetLibraryInfo *TLI = nullptr, bool UseVariableInfo = true,
+    bool IgnoreUBImplyingAttrs = true,
+    const TargetTransformInfo *TTI = nullptr) {
   // Take an iterator, and unwrap it into an Instruction *.
   return isSafeToSpeculativelyExecute(I, &*CtxI, AC, DT, TLI, UseVariableInfo,
-                                      IgnoreUBImplyingAttrs);
+                                      IgnoreUBImplyingAttrs, TTI);
 }
 
 /// Don't use information from its non-constant operands. This helper is used
@@ -605,7 +606,8 @@ LLVM_ABI bool isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI = nullptr,
     AssumptionCache *AC = nullptr, const DominatorTree *DT = nullptr,
     const TargetLibraryInfo *TLI = nullptr, bool UseVariableInfo = true,
-    bool IgnoreUBImplyingAttrs = true);
+    bool IgnoreUBImplyingAttrs = true,
+    const TargetTransformInfo *TTI = nullptr);
 
 /// Returns true if the result or effects of the given instructions \p I
 /// depend values not reachable through the def use graph.
