@@ -122,17 +122,22 @@ void VPRecipeBase::dump() const {
 #endif
 
 #if !defined(NDEBUG)
-bool VPRecipeValue::isDefinedBy(const VPDef *D) const { return Def == D; }
+bool VPRecipeValue::isDefinedBy(const VPDef *D) const {
+  return getDefiningRecipe() == D;
+}
 #endif
 
 VPRecipeBase *VPValue::getDefiningRecipe() {
-  auto *DefValue = dyn_cast<VPRecipeValue>(this);
-  return DefValue ? DefValue->Def : nullptr;
+  auto *RecipeValue = dyn_cast<VPRecipeValue>(this);
+  if (!RecipeValue)
+    return nullptr;
+  if (auto *MultiDef = dyn_cast<VPMultiDefValue>(RecipeValue))
+    return MultiDef->getDef();
+  return static_cast<VPSingleDefRecipe *>(RecipeValue);
 }
 
 const VPRecipeBase *VPValue::getDefiningRecipe() const {
-  auto *DefValue = dyn_cast<VPRecipeValue>(this);
-  return DefValue ? DefValue->Def : nullptr;
+  return const_cast<VPValue *>(this)->getDefiningRecipe();
 }
 
 Value *VPValue::getLiveInIRValue() const {
@@ -141,16 +146,22 @@ Value *VPValue::getLiveInIRValue() const {
 
 Type *VPIRValue::getType() const { return getUnderlyingValue()->getType(); }
 
-VPRecipeValue::VPRecipeValue(VPRecipeBase *Def, Value *UV)
-    : VPValue(VPVRecipeValueSC, UV), Def(Def) {
-  assert(Def && "VPRecipeValue requires a defining recipe");
-  Def->addDefinedValue(this);
-}
-
 VPRecipeValue::~VPRecipeValue() {
   assert(Users.empty() &&
          "trying to delete a VPRecipeValue with remaining users");
-  Def->removeDefinedValue(this);
+  getDefiningRecipe()->removeDefinedValue(this);
+}
+
+VPSingleDefValue::VPSingleDefValue(VPSingleDefRecipe *Def, Value *UV)
+    : VPRecipeValue(VPVSingleDefValueSC, UV) {
+  assert(Def && "VPSingleDefValue requires a defining recipe");
+  Def->addDefinedValue(this);
+}
+
+VPMultiDefValue::VPMultiDefValue(VPRecipeBase *Def, Value *UV)
+    : VPRecipeValue(VPVMultiDefValueSC, UV), Def(Def) {
+  assert(Def && "VPMultiDefValue requires a defining recipe");
+  Def->addDefinedValue(this);
 }
 
 // Get the top-most entry block of \p Start. This is the entry block of the
