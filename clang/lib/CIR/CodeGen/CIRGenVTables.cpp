@@ -1032,6 +1032,7 @@ cir::FuncOp CIRGenVTables::maybeEmitThunk(GlobalDecl gd,
       return thunkFn;
     cgm.errorNYI("varargs thunk cloning");
   } else {
+    llvm::errs() << "generateThunk\n";
     // Normal thunk body generation.
     mlir::OpBuilder::InsertionGuard guard(cgm.getBuilder());
     CIRGenFunction cgf(cgm, cgm.getBuilder());
