@@ -634,9 +634,9 @@ std::error_code FileManager::getStatValue(StringRef Path,
     // If not, close the file if opened.
     if (F)
       *F = nullptr;
-    return std::make_error_code(
-        Status.isDirectory() ?
-            std::errc::is_a_directory : std::errc::not_a_directory);
+    return std::make_error_code(Status.isDirectory()
+                                    ? std::errc::is_a_directory
+                                    : std::errc::not_a_directory);
   }
 
   return std::error_code();
