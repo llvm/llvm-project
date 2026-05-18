@@ -278,7 +278,10 @@ Makes programs 10x faster by doing Special New Thing.
 * Breakpoint commands now accept `.` to refer to the location(s) at which the current thread is stopped. For
   example, `breakpoint disable .` disables the just-hit breakpoint location. Another usage is to automate a
   command to run at the current location: `breakpoint command add -o 'p my_var' .`.
-* The `apropos` command now highlights matching keywords in its output when color is enabled.
+* The `apropos` command now:
+  * Highlights matching keywords in its output when color is enabled.
+  * Searches the components of settings paths. For example `apropos qemu-user` will now
+    show `platform.plugin.qemu-user` as one of the results.
 
 #### Deprecated APIs
 
