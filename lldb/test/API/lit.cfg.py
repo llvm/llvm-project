@@ -361,9 +361,7 @@ if platform.system() == "Windows":
     use_server = lit_config.params.get("lldb-use-lldb-server", None)
     if use_server is None:
         use_server = getattr(config, "lldb_use_lldb_server", None)
-    if use_server is not None and str(use_server).lower() in (
-        "1", "on", "yes", "true"
-    ):
+    if use_server is not None and str(use_server).lower() in ("1", "on", "yes", "true"):
         lit_config.note("Running API tests with LLDB_USE_LLDB_SERVER=1")
         config.environment["LLDB_USE_LLDB_SERVER"] = "1"
 
