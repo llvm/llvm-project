@@ -2287,7 +2287,7 @@ func.func @ext_array_coor3(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:         %[[GEPSTRIDE:.*]] = llvm.getelementptr %[[ARG0]][0, 7, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[LOADEDSTRIDE:.*]] = llvm.load %[[GEPSTRIDE]] : !llvm.ptr -> i64
 // CHECK:         %[[SC:.*]] = llvm.mul %[[DIFF0]], %[[LOADEDSTRIDE]] overflow<nsw> : i64
-// CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]] overflow<nsw, nuw> : i64
+// CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]] overflow<nsw> : i64
 // CHECK:         %[[GEPADDR:.*]] = llvm.getelementptr %[[ARG0]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[LOADEDADDR:.*]] = llvm.load %[[GEPADDR]] : !llvm.ptr -> !llvm.ptr
 // CHECK:         %[[GEPADDROFFSET:.*]] = llvm.getelementptr nusw %[[LOADEDADDR]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8

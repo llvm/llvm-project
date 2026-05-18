@@ -115,7 +115,7 @@ func.func @f5(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf
     // CHECK: %[[B_STRIDE_GEP:.*]] = getelementptr {{.*}}, ptr %[[B]], i32 0, i32 7, i32 0, i32 2
     // CHECK: %[[B_STRIDE:.*]] = load i64, ptr %[[B_STRIDE_GEP]]
     // CHECK: %[[B_DIM_OFFSET:.*]] = mul nsw i64 %{{.*}}, %[[B_STRIDE]]
-    // CHECK: %[[B_OFFSET:.*]] =  add nuw nsw i64 %[[B_DIM_OFFSET]], 0
+    // CHECK: %[[B_OFFSET:.*]] =  add nsw i64 %[[B_DIM_OFFSET]], 0
     // CHECK: %[[B_BASE_GEP:.*]] = getelementptr {{.*}}, ptr %{{.*}}, i32 0, i32 0
     // CHECK: %[[B_BASE:.*]] = load ptr, ptr %[[B_BASE_GEP]]
     // CHECK: %[[B_VOID_ADDR:.*]] = getelementptr nusw i8, ptr %[[B_BASE]], i64 %[[B_OFFSET]]

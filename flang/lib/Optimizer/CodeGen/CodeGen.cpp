@@ -2885,8 +2885,8 @@ struct XArrayCoorOpConversion
             getStrideFromBox(loc, baseBoxTyPair, operands[0], i, rewriter);
         auto sc =
             mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, stride, nsw);
-        offset = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset,
-                                           addMulFlags);
+        offset =
+            mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset, nsw);
       } else {
         // Use stride computed at last iteration.
         auto sc = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, prevExt,
