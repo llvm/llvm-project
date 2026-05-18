@@ -54,7 +54,7 @@ C++ Specific Potentially Breaking Changes
   matching the deduction of array sizes from ``int(&)[N]``.
   This is a breaking change for code that depended on the previously deduced type. (#GH195033)
 
-- Clang now correctly rejects nested local classes defined in a different
+- Clang now rejects nested local classes defined in a different
   block scope than their parent class. (#GH193472)
 
 ABI Changes in This Version
