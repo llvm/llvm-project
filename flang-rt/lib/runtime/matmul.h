@@ -28,7 +28,7 @@
 #include "flang/Common/optional.h"
 #include "flang/Runtime/c-or-cpp.h"
 #include "flang/Runtime/cpp-type.h"
-#include "flang/Runtime/matmul.h"
+#include "flang/Runtime/entry-names.h"
 #include <cstring>
 
 namespace {
@@ -59,6 +59,23 @@ private:
   Result sum_{};
 };
 
+// Contiguous numeric matrix*matrix multiplication
+//   matrix(rows,n) * matrix(n,cols) -> matrix(rows,cols)
+// Straightforward algorithm:
+//   DO 1 I = 1, NROWS
+//    DO 1 J = 1, NCOLS
+//     RES(I,J) = 0
+//     DO 1 K = 1, N
+//   1  RES(I,J) = RES(I,J) + X(I,K)*Y(K,J)
+// With loop distribution and transposition to avoid the inner sum
+// reduction and to avoid non-unit strides:
+//   DO 1 I = 1, NROWS
+//    DO 1 J = 1, NCOLS
+//   1 RES(I,J) = 0
+//   DO 2 K = 1, N
+//    DO 2 J = 1, NCOLS
+//     DO 2 I = 1, NROWS
+//   2  RES(I,J) = RES(I,J) + X(I,K)*Y(K,J) ! loop-invariant last term
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT,
     bool X_HAS_STRIDED_COLUMNS, bool Y_HAS_STRIDED_COLUMNS>
 inline RT_API_ATTRS void MatrixTimesMatrix(
@@ -118,6 +135,20 @@ inline RT_API_ATTRS void MatrixTimesMatrixHelper(
   }
 }
 
+// Contiguous numeric matrix*vector multiplication
+//   matrix(rows,n) * column vector(n) -> column vector(rows)
+// Straightforward algorithm:
+//   DO 1 J = 1, NROWS
+//    RES(J) = 0
+//    DO 1 K = 1, N
+//   1 RES(J) = RES(J) + X(J,K)*Y(K)
+// With loop distribution and transposition to avoid the inner
+// sum reduction and to avoid non-unit strides:
+//   DO 1 J = 1, NROWS
+//   1 RES(J) = 0
+//   DO 2 K = 1, N
+//    DO 2 J = 1, NROWS
+//   2 RES(J) = RES(J) + X(J,K)*Y(K)
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT,
     bool X_HAS_STRIDED_COLUMNS>
 inline RT_API_ATTRS void MatrixTimesVector(
@@ -154,6 +185,20 @@ inline RT_API_ATTRS void MatrixTimesVectorHelper(
   }
 }
 
+// Contiguous numeric vector*matrix multiplication
+//   row vector(n) * matrix(n,cols) -> row vector(cols)
+// Straightforward algorithm:
+//   DO 1 J = 1, NCOLS
+//    RES(J) = 0
+//    DO 1 K = 1, N
+//   1 RES(J) = RES(J) + X(K)*Y(K,J)
+// With loop distribution and transposition to avoid the inner
+// sum reduction and one non-unit stride (the other remains):
+//   DO 1 J = 1, NCOLS
+//   1 RES(J) = 0
+//   DO 2 K = 1, N
+//    DO 2 J = 1, NCOLS
+//   2 RES(J) = RES(J) + X(K)*Y(K,J)
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT,
     bool Y_HAS_STRIDED_COLUMNS>
 inline RT_API_ATTRS void VectorTimesMatrix(
@@ -192,6 +237,7 @@ inline RT_API_ATTRS void VectorTimesMatrixHelper(
   }
 }
 
+// Implements an instance of MATMUL for given argument types.
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
 static inline RT_API_ATTRS void DoMatmul(Descriptor &result,
     const Descriptor &x, const Descriptor &y, Terminator &terminator,
@@ -225,6 +271,8 @@ static inline RT_API_ATTRS void DoMatmul(Descriptor &result,
   }
   SubscriptValue n{x.GetDimension(xRank - 1).Extent()};
   if (n != y.GetDimension(0).Extent()) {
+    // At this point, we know that there's a shape error.  There are three
+    // possibilities, x is rank 1, y is rank 1, or both are rank 2.
     if (xRank == 1) {
       terminator.Crash("MATMUL: unacceptable operand shapes (%jd, %jdx%jd)",
           static_cast<std::intmax_t>(n),
@@ -249,8 +297,11 @@ static inline RT_API_ATTRS void DoMatmul(Descriptor &result,
   if constexpr (RCAT != TypeCategory::Logical) {
     if (x.IsContiguous(1) && y.IsContiguous(1) &&
         (isAllocating || result.IsContiguous())) {
+      // Contiguous numeric matrices (maybe with columns
+      // separated by a stride).
       Fortran::common::optional<std::size_t> xColumnByteStride;
       if (!x.IsContiguous()) {
+        // X's columns are strided.
         SubscriptValue xAt[2]{};
         x.GetLowerBounds(xAt);
         xAt[1]++;
@@ -258,11 +309,16 @@ static inline RT_API_ATTRS void DoMatmul(Descriptor &result,
       }
       Fortran::common::optional<std::size_t> yColumnByteStride;
       if (!y.IsContiguous()) {
+        // Y's columns are strided.
         SubscriptValue yAt[2]{};
         y.GetLowerBounds(yAt);
         yAt[1]++;
         yColumnByteStride = y.SubscriptsToByteOffset(yAt);
       }
+      // Note that BLAS GEMM can be used for the strided
+      // columns by setting proper leading dimension size.
+      // This implies that the column stride is divisible
+      // by the element size, which is usually true.
       if (resRank == 2) { // M*M -> M
         if (std::is_same_v<XT, YT>) {
           if constexpr (std::is_same_v<XT, float>) {
@@ -316,6 +372,7 @@ static inline RT_API_ATTRS void DoMatmul(Descriptor &result,
       }
     }
   }
+  // General algorithms for LOGICAL and noncontiguity
   SubscriptValue xAt[2], yAt[2], resAt[2];
   x.GetLowerBounds(xAt);
   y.GetLowerBounds(yAt);
