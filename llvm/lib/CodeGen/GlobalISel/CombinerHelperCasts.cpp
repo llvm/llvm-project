@@ -10,7 +10,9 @@
 // G_ZEXT, and G_BITCAST
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -415,20 +417,60 @@ bool CombinerHelper::matchRedundantSextInReg(MachineInstr &Root,
 }
 
 bool CombinerHelper::matchConstantFoldBitcast(MachineOperand &DstOp,
-                                              const APInt &Bits,
+                                              Register SrcReg,
                                               BuildFnTy &MatchInfo) const {
   Register DstReg = DstOp.getReg();
   LLT DstTy = MRI.getType(DstReg);
+  LLT SrcTy = MRI.getType(SrcReg);
 
-  if (!DstTy.isScalar())
+  // Only handle same-shape bitcasts: scalar->scalar, or fixed-vector->
+  // fixed-vector with matching element counts (so the fold is a per-element
+  // bitcast and avoids any endianness-dependent repacking).
+  if (!((DstTy.isScalar() && SrcTy.isScalar()) ||
+        (DstTy.isFixedVector() && SrcTy.isFixedVector() &&
+         DstTy.getNumElements() == SrcTy.getNumElements())))
     return false;
 
-  if (DstTy.isFloat()) {
-    const fltSemantics &Sem = APFloat::EnumToSemantics(DstTy.getFpSemantics());
-    APFloat FPVal(Sem, Bits);
-    MatchInfo = [=](MachineIRBuilder &B) { B.buildFConstant(DstReg, FPVal); };
+  // Collect one APInt bit-pattern per destination element. For a scalar dst
+  // the source must itself be an (F)CONSTANT; for a vector dst the source
+  // must be a G_BUILD_VECTOR whose operands are all (F)CONSTANTs.
+  SmallVector<APInt, 8> ElBits;
+  if (DstTy.isScalar()) {
+    auto C = getAnyConstantVRegValWithLookThrough(SrcReg, MRI);
+    if (!C)
+      return false;
+    ElBits.push_back(std::move(C->Value));
   } else {
-    MatchInfo = [=](MachineIRBuilder &B) { B.buildConstant(DstReg, Bits); };
+    auto *BV = getOpcodeDef<GBuildVector>(SrcReg, MRI);
+    if (!BV)
+      return false;
+    ElBits.reserve(BV->getNumSources());
+    for (unsigned I = 0, E = BV->getNumSources(); I != E; ++I) {
+      auto C = getAnyConstantVRegValWithLookThrough(BV->getSourceReg(I), MRI);
+      if (!C)
+        return false;
+      ElBits.push_back(std::move(C->Value));
+    }
+  }
+
+  if (DstTy.isFloatOrFloatVector()) {
+    const fltSemantics &Sem =
+        APFloat::EnumToSemantics(DstTy.getScalarType().getFpSemantics());
+    auto FPElts = map_to_vector<8>(
+        ElBits, [&Sem](const APInt &Bits) { return APFloat(Sem, Bits); });
+    MatchInfo = [=, FPElts = std::move(FPElts)](MachineIRBuilder &B) {
+      if (DstTy.isScalar())
+        B.buildFConstant(DstReg, FPElts[0]);
+      else
+        B.buildBuildVectorFConstant(DstReg, FPElts);
+    };
+  } else {
+    MatchInfo = [=, ElBits = std::move(ElBits)](MachineIRBuilder &B) {
+      if (DstTy.isScalar())
+        B.buildConstant(DstReg, ElBits[0]);
+      else
+        B.buildBuildVectorConstant(DstReg, ElBits);
+    };
   }
   return true;
 }

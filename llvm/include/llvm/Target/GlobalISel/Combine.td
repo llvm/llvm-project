@@ -1413,22 +1413,10 @@ def constant_fold_cast_op : GICombineRule<
    [{ return Helper.matchConstantFoldCastOp(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
 
-
-def constant_fold_bitcast_of_const : BuildFnCombineRule<
-  (match (G_CONSTANT $src, $imm),
-         (G_BITCAST $d, $src):$root,
+def constant_fold_bitcast : BuildFnCombineRule<
+  (match (G_BITCAST $d, $src):$root,
    [{ return Helper.matchConstantFoldBitcast(
-        ${d}, ${imm}.getCImm()->getValue(), ${matchinfo}); }])>;
-
-def constant_fold_bitcast_of_fconst : BuildFnCombineRule<
-  (match (G_FCONSTANT $src, $imm),
-         (G_BITCAST $d, $src):$root,
-   [{ return Helper.matchConstantFoldBitcast(
-        ${d}, ${imm}.getFPImm()->getValueAPF().bitcastToAPInt(),
-        ${matchinfo}); }])>;
-
-def constant_fold_bitcast : GICombineGroup<[constant_fold_bitcast_of_const,
-                                            constant_fold_bitcast_of_fconst]>;
+        ${d}, ${src}.getReg(), ${matchinfo}); }])>;
 
 def unary_int_op_frags : GICombinePatFrag<
   (outs root:$dst), (ins),

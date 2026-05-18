@@ -732,7 +732,7 @@ public:
   bool matchConstantFoldCastOp(MachineInstr &MI, APInt &MatchInfo) const;
 
   /// Do constant folding when opportunities are exposed after MIR building.
-  bool matchConstantFoldBitcast(MachineOperand &DstOp, const APInt &Bits,
+  bool matchConstantFoldBitcast(MachineOperand &DstOp, Register SrcReg,
                                 BuildFnTy &MatchInfo) const;
 
   /// Do constant folding when opportunities are exposed after MIR building.

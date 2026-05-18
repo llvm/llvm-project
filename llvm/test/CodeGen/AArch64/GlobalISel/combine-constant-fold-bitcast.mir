@@ -79,12 +79,12 @@ body:             |
     RET_ReallyLR implicit $s0
 ...
 
-# Vector destination should not be folded.
+# Scalar source bitcast to vector dst: element counts differ, no fold.
 ---
-name:            vector_dst_no_fold
+name:            scalar_to_vector_no_fold
 body:             |
   bb.0:
-    ; CHECK-LABEL: name: vector_dst_no_fold
+    ; CHECK-LABEL: name: scalar_to_vector_no_fold
     ; CHECK: %src:_(i64) = G_CONSTANT i64 4607182418800017408
     ; CHECK-NEXT: %dst:_(<2 x i32>) = G_BITCAST %src(i64)
     ; CHECK-NEXT: $x0 = COPY %dst(<2 x i32>)
@@ -93,4 +93,114 @@ body:             |
     %dst:_(<2 x i32>) = G_BITCAST %src(i64)
     $x0 = COPY %dst(<2 x i32>)
     RET_ReallyLR implicit $x0
+...
+
+# Per-element bitcast of a constant integer build_vector with distinct values.
+---
+name:            bv_int_to_float_distinct
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: bv_int_to_float_distinct
+    ; CHECK: [[E0:%[0-9]+]]:_(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[E1:%[0-9]+]]:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: [[E2:%[0-9]+]]:_(f32) = G_FCONSTANT float 3.000000e+00
+    ; CHECK-NEXT: [[E3:%[0-9]+]]:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: %dst:_(<4 x f32>) = G_BUILD_VECTOR [[E0]](f32), [[E1]](f32), [[E2]](f32), [[E3]](f32)
+    ; CHECK-NEXT: $q0 = COPY %dst(<4 x f32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %e0:_(i32) = G_CONSTANT i32 1065353216
+    %e1:_(i32) = G_CONSTANT i32 1073741824
+    %e2:_(i32) = G_CONSTANT i32 1077936128
+    %e3:_(i32) = G_CONSTANT i32 1082130432
+    %src:_(<4 x i32>) = G_BUILD_VECTOR %e0(i32), %e1(i32), %e2(i32), %e3(i32)
+    %dst:_(<4 x f32>) = G_BITCAST %src(<4 x i32>)
+    $q0 = COPY %dst(<4 x f32>)
+    RET_ReallyLR implicit $q0
+...
+
+# Per-element bitcast of a constant float build_vector with distinct values.
+---
+name:            bv_float_to_int_distinct
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: bv_float_to_int_distinct
+    ; CHECK: [[E0:%[0-9]+]]:_(i32) = G_CONSTANT i32 1065353216
+    ; CHECK-NEXT: [[E1:%[0-9]+]]:_(i32) = G_CONSTANT i32 1073741824
+    ; CHECK-NEXT: [[E2:%[0-9]+]]:_(i32) = G_CONSTANT i32 1077936128
+    ; CHECK-NEXT: [[E3:%[0-9]+]]:_(i32) = G_CONSTANT i32 1082130432
+    ; CHECK-NEXT: %dst:_(<4 x i32>) = G_BUILD_VECTOR [[E0]](i32), [[E1]](i32), [[E2]](i32), [[E3]](i32)
+    ; CHECK-NEXT: $q0 = COPY %dst(<4 x i32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %e0:_(f32) = G_FCONSTANT float 1.0
+    %e1:_(f32) = G_FCONSTANT float 2.0
+    %e2:_(f32) = G_FCONSTANT float 3.0
+    %e3:_(f32) = G_FCONSTANT float 4.0
+    %src:_(<4 x f32>) = G_BUILD_VECTOR %e0(f32), %e1(f32), %e2(f32), %e3(f32)
+    %dst:_(<4 x i32>) = G_BITCAST %src(<4 x f32>)
+    $q0 = COPY %dst(<4 x i32>)
+    RET_ReallyLR implicit $q0
+...
+
+# A constant splat build_vector also folds (degenerate case of the above).
+---
+name:            bv_int_splat_to_float_splat
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: bv_int_splat_to_float_splat
+    ; CHECK: [[E:%[0-9]+]]:_(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: %dst:_(<4 x f32>) = G_BUILD_VECTOR [[E]](f32), [[E]](f32), [[E]](f32), [[E]](f32)
+    ; CHECK-NEXT: $q0 = COPY %dst(<4 x f32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %e:_(i32) = G_CONSTANT i32 1065353216
+    %src:_(<4 x i32>) = G_BUILD_VECTOR %e(i32), %e(i32), %e(i32), %e(i32)
+    %dst:_(<4 x f32>) = G_BITCAST %src(<4 x i32>)
+    $q0 = COPY %dst(<4 x f32>)
+    RET_ReallyLR implicit $q0
+...
+
+# Non-constant element in build_vector blocks the fold.
+---
+name:            bv_non_constant_no_fold
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2, $w3
+    ; CHECK-LABEL: name: bv_non_constant_no_fold
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %e0:_(i32) = COPY $w0
+    ; CHECK-NEXT: %e1:_(i32) = COPY $w1
+    ; CHECK-NEXT: %e2:_(i32) = COPY $w2
+    ; CHECK-NEXT: %e3:_(i32) = COPY $w3
+    ; CHECK-NEXT: %src:_(<4 x i32>) = G_BUILD_VECTOR %e0(i32), %e1(i32), %e2(i32), %e3(i32)
+    ; CHECK-NEXT: %dst:_(<4 x f32>) = G_BITCAST %src(<4 x i32>)
+    ; CHECK-NEXT: $q0 = COPY %dst(<4 x f32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %e0:_(i32) = COPY $w0
+    %e1:_(i32) = COPY $w1
+    %e2:_(i32) = COPY $w2
+    %e3:_(i32) = COPY $w3
+    %src:_(<4 x i32>) = G_BUILD_VECTOR %e0(i32), %e1(i32), %e2(i32), %e3(i32)
+    %dst:_(<4 x f32>) = G_BITCAST %src(<4 x i32>)
+    $q0 = COPY %dst(<4 x f32>)
+    RET_ReallyLR implicit $q0
+...
+
+# Mismatched element count: <4 x i32> -> <2 x i64> requires endianness-aware
+# bit re-packing, which this fold deliberately does not perform.
+---
+name:            bv_mismatched_count_no_fold
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: bv_mismatched_count_no_fold
+    ; CHECK: %e:_(i32) = G_CONSTANT i32 1065353216
+    ; CHECK-NEXT: %src:_(<4 x i32>) = G_BUILD_VECTOR %e(i32), %e(i32), %e(i32), %e(i32)
+    ; CHECK-NEXT: %dst:_(<2 x i64>) = G_BITCAST %src(<4 x i32>)
+    ; CHECK-NEXT: $q0 = COPY %dst(<2 x i64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %e:_(i32) = G_CONSTANT i32 1065353216
+    %src:_(<4 x i32>) = G_BUILD_VECTOR %e(i32), %e(i32), %e(i32), %e(i32)
+    %dst:_(<2 x i64>) = G_BITCAST %src(<4 x i32>)
+    $q0 = COPY %dst(<2 x i64>)
+    RET_ReallyLR implicit $q0
 ...
