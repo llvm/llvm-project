@@ -1,10 +1,13 @@
-//===-- lib/runtime/dot-product.cpp -----------------------------*- C++ -*-===//
+//===-- lib/runtime/dot-product.h -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+#ifndef FLANG_RT_RUNTIME_DOT_PRODUCT_H_
+#define FLANG_RT_RUNTIME_DOT_PRODUCT_H_
 
 #include "float.h"
 #include "flang-rt/runtime/descriptor.h"
@@ -154,106 +157,6 @@ template <TypeCategory RCAT, int RKIND> struct DotProduct {
   }
 };
 
-extern "C" {
-RT_EXT_API_GROUP_BEGIN
-
-CppTypeFor<TypeCategory::Integer, 1> RTDEF(DotProductInteger1)(
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Integer, 1>{}(x, y, source, line);
-}
-CppTypeFor<TypeCategory::Integer, 2> RTDEF(DotProductInteger2)(
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Integer, 2>{}(x, y, source, line);
-}
-CppTypeFor<TypeCategory::Integer, 4> RTDEF(DotProductInteger4)(
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Integer, 4>{}(x, y, source, line);
-}
-CppTypeFor<TypeCategory::Integer, 8> RTDEF(DotProductInteger8)(
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Integer, 8>{}(x, y, source, line);
-}
-#ifdef __SIZEOF_INT128__
-CppTypeFor<TypeCategory::Integer, 16> RTDEF(DotProductInteger16)(
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Integer, 16>{}(x, y, source, line);
-}
-#endif
-
-CppTypeFor<TypeCategory::Unsigned, 1> RTDEF(DotProductUnsigned1)(
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Unsigned, 1>{}(x, y, source, line);
-}
-CppTypeFor<TypeCategory::Unsigned, 2> RTDEF(DotProductUnsigned2)(
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Unsigned, 2>{}(x, y, source, line);
-}
-CppTypeFor<TypeCategory::Unsigned, 4> RTDEF(DotProductUnsigned4)(
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Unsigned, 4>{}(x, y, source, line);
-}
-CppTypeFor<TypeCategory::Unsigned, 8> RTDEF(DotProductUnsigned8)(
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Unsigned, 8>{}(x, y, source, line);
-}
-#ifdef __SIZEOF_INT128__
-CppTypeFor<TypeCategory::Unsigned, 16> RTDEF(DotProductUnsigned16)(
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Unsigned, 16>{}(x, y, source, line);
-}
-#endif
-
-// TODO: REAL/COMPLEX(2 & 3)
-// Intermediate results and operations are at least 64 bits
-CppTypeFor<TypeCategory::Real, 4> RTDEF(DotProductReal4)(
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Real, 4>{}(x, y, source, line);
-}
-CppTypeFor<TypeCategory::Real, 8> RTDEF(DotProductReal8)(
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Real, 8>{}(x, y, source, line);
-}
-#if HAS_FLOAT80
-CppTypeFor<TypeCategory::Real, 10> RTDEF(DotProductReal10)(
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Real, 10>{}(x, y, source, line);
-}
-#endif
-#if HAS_LDBL128 || HAS_FLOAT128
-CppTypeFor<TypeCategory::Real, 16> RTDEF(DotProductReal16)(
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Real, 16>{}(x, y, source, line);
-}
-#endif
-
-void RTDEF(CppDotProductComplex4)(CppTypeFor<TypeCategory::Complex, 4> &result,
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  result = DotProduct<TypeCategory::Complex, 4>{}(x, y, source, line);
-}
-void RTDEF(CppDotProductComplex8)(CppTypeFor<TypeCategory::Complex, 8> &result,
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  result = DotProduct<TypeCategory::Complex, 8>{}(x, y, source, line);
-}
-#if HAS_FLOAT80
-void RTDEF(CppDotProductComplex10)(
-    CppTypeFor<TypeCategory::Complex, 10> &result, const Descriptor &x,
-    const Descriptor &y, const char *source, int line) {
-  result = DotProduct<TypeCategory::Complex, 10>{}(x, y, source, line);
-}
-#endif
-#if HAS_LDBL128 || HAS_FLOAT128
-void RTDEF(CppDotProductComplex16)(
-    CppTypeFor<TypeCategory::Complex, 16> &result, const Descriptor &x,
-    const Descriptor &y, const char *source, int line) {
-  result = DotProduct<TypeCategory::Complex, 16>{}(x, y, source, line);
-}
-#endif
-
-bool RTDEF(DotProductLogical)(
-    const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Logical, 1>{}(x, y, source, line);
-}
-
-RT_EXT_API_GROUP_END
-} // extern "C"
 } // namespace Fortran::runtime
+
+#endif // FLANG_RT_RUNTIME_DOT_PRODUCT_H_
