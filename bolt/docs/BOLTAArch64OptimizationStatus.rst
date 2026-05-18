@@ -18,6 +18,7 @@ The following flags are supported for AArch64.
 .. list-table::
      :header-rows: 1
      :widths: 34 42
+     :align: left
 
      * - Flag
        - Optimization
@@ -52,6 +53,7 @@ an error or perform no transformation.
 .. list-table::
      :header-rows: 1
      :widths: 30 28 44
+     :align: left
 
      * - Flag
        - Optimization
@@ -88,6 +90,7 @@ target.
 .. list-table::
      :header-rows: 1
      :widths: 30 28 42
+     :align: left
 
      * - Flag
        - Optimization
