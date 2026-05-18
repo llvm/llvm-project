@@ -112,6 +112,7 @@ void MappingTraits<PdbObject>::mapping(IO &IO, PdbObject &Obj) {
   IO.mapOptional("TpiStream", Obj.TpiStream);
   IO.mapOptional("IpiStream", Obj.IpiStream);
   IO.mapOptional("PublicsStream", Obj.PublicsStream);
+  IO.mapOptional("DXContainerStream", Obj.DXContainerStream);
 }
 
 void MappingTraits<MSFHeaders>::mapping(IO &IO, MSFHeaders &Obj) {
@@ -238,4 +239,9 @@ void MappingTraits<PdbDbiModuleInfo>::mapping(IO &IO, PdbDbiModuleInfo &Obj) {
   IO.mapOptional("SourceFiles", Obj.SourceFiles);
   IO.mapOptional("Subsections", Obj.Subsections);
   IO.mapOptional("Modi", Obj.Modi);
+}
+
+void MappingTraits<DXContainerStream>::mapping(
+    IO &IO, pdb::yaml::DXContainerStream &Obj) {
+  IO.mapRequired("DXContainer", Obj.DXC);
 }
