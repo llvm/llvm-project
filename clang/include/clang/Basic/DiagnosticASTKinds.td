@@ -1098,4 +1098,9 @@ def warn_unpacked_field
 def warn_unaligned_access : Warning<
   "field %1 within %0 is less aligned than %2 and is usually due to %0 being "
   "packed, which can lead to unaligned accesses">, InGroup<UnalignedAccess>, DefaultIgnore;
+
+// -Wweakened-alignment
+def warn_explicit_alignment_weakened : Warning<
+  "explicit alignment of %0 (%1 bytes) was weakened to %2 bytes">,
+  InGroup<WeakenedAlignment>;
 }

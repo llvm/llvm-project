@@ -1268,6 +1268,14 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
     UnpackedAlignTo = std::min(UnpackedAlignTo, MaxFieldAlignment);
   }
 
+  CharUnits MaxAlignmentInChars =
+      Context.toCharUnitsFromBits(Base->Class->getMaxAlignment());
+  if (!MaxAlignmentInChars.isZero() && MaxAlignmentInChars > BaseAlign) {
+    Diag(Base->Class->getLocation(), diag::warn_explicit_alignment_weakened)
+        << Base->Class->getName() << MaxAlignmentInChars.getQuantity()
+        << BaseAlign.getQuantity();
+  }
+
   CharUnits AlignTo =
       !DefaultsToAIXPowerAlignment ? BaseAlign : PreferredBaseAlign;
   if (!HasExternalLayout) {
@@ -2047,6 +2055,13 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
 
   CharUnits AlignTo =
       !DefaultsToAIXPowerAlignment ? FieldAlign : PreferredAlign;
+
+  if (!MaxAlignmentInChars.isZero() && MaxAlignmentInChars > AlignTo) {
+    Diag(D->getLocation(), diag::warn_explicit_alignment_weakened)
+        << D->getName() << MaxAlignmentInChars.getQuantity()
+        << AlignTo.getQuantity();
+  }
+
   // Round up the current record size to the field's alignment boundary.
   FieldOffset = FieldOffset.alignTo(AlignTo);
   UnpackedFieldOffset = UnpackedFieldOffset.alignTo(UnpackedFieldAlign);
