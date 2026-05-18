@@ -91,7 +91,8 @@ if(LLVM_DEFAULT_TARGET_TRIPLE)
 endif()
 install(TARGETS libompdevice
         PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
-        DESTINATION ${OPENMP_INSTALL_LIBDIR})
+        DESTINATION ${OPENMP_INSTALL_LIBDIR}
+        COMPONENT openmp)
 
 add_library(ompdevice.all_objs OBJECT IMPORTED)
 set_property(TARGET ompdevice.all_objs APPEND PROPERTY IMPORTED_OBJECTS
@@ -105,6 +106,7 @@ set_target_properties(ompdevice PROPERTIES
   LINKER_LANGUAGE CXX
 )
 target_link_libraries(ompdevice PRIVATE ompdevice.all_objs)
-install(TARGETS ompdevice ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+install(TARGETS ompdevice ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}"
+        COMPONENT openmp)
 
 openmp_register_meta_dep(ompdevice)

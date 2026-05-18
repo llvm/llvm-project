@@ -399,12 +399,7 @@ endif()
 target_include_directories(LLVMSupport
   PRIVATE
   ${LLVM_THIRD_PARTY_DIR}/siphash/include
-  ${LLVM_SOURCE_DIR}/../libc
 )
-
-if(NOT MSVC)
-  target_compile_options(LLVMSupport PRIVATE "-Wno-c99-extensions") # _Complex warnings.
-endif()
 
 # SupportLSP depends on Support and therefore must be included afterwards.
 add_subdirectory(LSP)

@@ -74,10 +74,9 @@ inline void printTagged(llvm::raw_ostream &os, const void *ptr, {0} value, size_
     if (Type == "char[]") {
       OS << formatv(TAB_2 "printPtr(os, (const char*) ptr);\n");
     } else {
-      if (Type.ends_with("*"))
-        OS << formatv(TAB_2 "const {0} const * tptr = (const {0} "
-                            "const *)ptr;\n",
-                      Type);
+      if (Type == "void *")
+        OS << formatv(TAB_2 "void * const * const tptr = (void * "
+                            "const * const)ptr;\n");
       else
         OS << formatv(
             TAB_2 "const {0} * const tptr = (const {0} * const)ptr;\n", Type);

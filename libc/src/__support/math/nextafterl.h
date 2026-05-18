@@ -16,8 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR long double nextafterl(long double x,
-                                                  long double y) {
+LIBC_INLINE constexpr long double nextafterl(long double x, long double y) {
   return fputil::nextafter(x, y);
 }
 

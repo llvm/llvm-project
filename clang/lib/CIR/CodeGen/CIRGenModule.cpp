@@ -3695,10 +3695,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
     materializedType = mte->getType();
 
   CharUnits align = getASTContext().getTypeAlignInChars(materializedType);
-
-  auto insertResult = materializedGlobalTemporaryMap.insert({mte, nullptr});
-  if (!insertResult.second)
-    errorNYI(mte->getSourceRange(), "duplicate materialized temporaries");
+  mlir::Location loc = getLoc(mte->getSourceRange());
 
   // FIXME: If an externally-visible declaration extends multiple temporaries,
   // we need to give each temporary the same name in every translation unit (and
@@ -3707,6 +3704,20 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
   llvm::raw_svector_ostream out(name);
   getCXXABI().getMangleContext().mangleReferenceTemporary(
       varDecl, mte->getManglingNumber(), out);
+
+  auto insertResult = materializedGlobalTemporaryMap.insert({mte, nullptr});
+  if (!insertResult.second) {
+    mlir::Type type = getTypes().convertTypeForMem(materializedType);
+    // We've seen this before: either we already created it or we're in the
+    // process of doing so.
+    if (!insertResult.first->second) {
+      // We recursively re-entered this function, probably during emission of
+      // the initializer. Create a placeholder.
+      insertResult.first->second =
+          createGlobalOp(loc, name, type, /*isConstant=*/false);
+    }
+    return insertResult.first->second;
+  }
 
   APValue *value = nullptr;
   if (mte->getStorageDuration() == SD_Static && varDecl->evaluateValue()) {
@@ -3760,7 +3771,6 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
       linkage = cir::GlobalLinkageKind::InternalLinkage;
     }
   }
-  mlir::Location loc = getLoc(mte->getSourceRange());
   cir::GlobalOp gv = createGlobalOp(loc, name, type, isConstant);
   gv.setInitialValueAttr(initialValue);
 
@@ -3784,7 +3794,10 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
   assert(!cir::MissingFeatures::addressSpace());
 
   // Update the map with the new temporary. If we created a placeholder above,
-  // replace it with the new global now.
+  // erase it as well, the name will have been the same, so our symbol
+  // references would have been correct. We still do a 'replaceAllUsesWith' in
+  // case some sort of expression formed a reference to the placeholder
+  // temporary.
   mlir::Operation *&entry = materializedGlobalTemporaryMap[mte];
   if (entry) {
     entry->replaceAllUsesWith(cv);

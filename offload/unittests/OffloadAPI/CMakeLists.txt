@@ -23,8 +23,7 @@ target_compile_definitions("init.unittests" PRIVATE DISABLE_WRAPPER)
 
 add_offload_unittest("kernel"
     kernel/olCalculateOptimalOccupancy.cpp
-    kernel/olLaunchKernel.cpp
-    kernel/olLaunchKernelCooperative.cpp)
+    kernel/olLaunchKernel.cpp)
 
 add_offload_unittest("memory"
     memory/olMemAlloc.cpp

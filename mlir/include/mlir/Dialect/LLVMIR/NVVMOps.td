@@ -6545,6 +6545,41 @@ def NVVM_FmaOp : NVVM_Op<"fma", [Pure, SameOperandsAndResultType]> {
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM sqrt op definitions
+//===----------------------------------------------------------------------===//
+
+def NVVM_SqrtOp
+    : NVVM_SingleResultIntrinsicOp<"sqrt", [Pure, SameOperandsAndResultType]> {
+  let summary = "Take the square root of a value";
+  let description = [{
+    Compute sqrt(src) and store the result in res.
+
+    For more information, see PTX ISA:
+    [sqrt](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sqrt)
+  }];
+  let arguments = (ins AnyTypeOf<[F32, F64]>:$src, FPArithRoundingMode:$rnd,
+      DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs AnyTypeOf<[F32, F64]>:$res);
+  let assemblyFormat = "$src attr-dict `:` type($src)";
+  let hasVerifier = 1;
+}
+
+def NVVM_SqrtApproxOp : NVVM_F32UnaryApproxOp<"sqrt.approx"> {
+  let summary = "Square root (fast approximation)";
+  let description = [{
+    Computes a fast approximation of the square root of the input value
+    (`res = sqrt(src)`). The maximum relative error over the entire positive
+    finite range is 2^-23.
+
+    The `ftz` attribute, when set, flushes subnormal inputs and results to
+    sign-preserving zero.
+
+    For more information, see PTX ISA:
+    [sqrt](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sqrt)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM tensormap.replace Op
 //===----------------------------------------------------------------------===//
 

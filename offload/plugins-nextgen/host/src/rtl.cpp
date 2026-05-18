@@ -102,10 +102,6 @@ struct GenELF64KernelTy : public GenericKernelTy {
     if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION)
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "Incompatible kernel argument version for plugin");
-    // Cooperative kernel launch is not supported for host
-    if (KernelArgs.Flags.Cooperative)
-      return Plugin::error(ErrorCode::UNSUPPORTED,
-                           "cooperative kernel launch not supported for host");
     // TODO: The data will need to be copied locally if we ever support
     //       asynchronous kernel launches in the host interface.
     Func(LaunchParams.Data);

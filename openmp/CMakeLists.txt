@@ -151,6 +151,15 @@ add_custom_target(openmp ALL
   COMMENT "OpenMP meta-target. Use 'ninja openmp' to build all OpenMP runtime targets."
 )
 
+if (NOT CMAKE_CONFIGURATION_TYPES)
+  add_custom_target(install-openmp
+    DEPENDS openmp
+    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component openmp)
+  add_custom_target(install-openmp-stripped
+    DEPENDS openmp
+    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component openmp --strip)
+endif()
+
 # Use the current compiler target to determine the appropriate runtime to build.
 if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx|^spirv64" OR
    "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn|^nvptx|^spirv64")
