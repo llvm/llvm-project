@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -convert-math-to-llvm-spv='extension-set-name=OpenCL.std' -gpu-module-to-binary | FileCheck %s 
+// RUN: mlir-opt %s -split-input-file -convert-math-to-llvm-spv='extension-set-name=OpenCL.std' | FileCheck %s 
 
 module @test_module {
   // CHECK: llvm.func spir_funccc @_Z{{.*}}__spirv_ocl_copysignf(f32, f32) -> f32
