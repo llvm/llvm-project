@@ -385,7 +385,7 @@ Register FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
 }
 
 Register FunctionLoweringInfo::CreateRegs(const Value *V) {
-  return CreateRegs(V->getType(), UA && UA->isDivergent(V) &&
+  return CreateRegs(V->getType(), UA && UA->isDivergentAtDef(V) &&
                                       !TLI->requiresUniformRegister(*MF, V));
 }
 

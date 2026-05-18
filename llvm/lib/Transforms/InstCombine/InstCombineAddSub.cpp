@@ -951,13 +951,12 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
     if (C2->isSignMask())
       return BinaryOperator::CreateAdd(X, ConstantInt::get(Ty, *C2 ^ *C));
 
-    // If X has no high-bits set above an xor mask:
-    // add (xor X, LowMaskC), C --> sub (LowMaskC + C), X
-    if (C2->isMask()) {
-      KnownBits LHSKnown = computeKnownBits(X, &Add);
-      if ((*C2 | LHSKnown.Zero).isAllOnes())
-        return BinaryOperator::CreateSub(ConstantInt::get(Ty, *C2 + *C), X);
-    }
+    // If X has no bits set other than an xor mask,
+    // xor is equivalent to sub with no borrow between bits:
+    // add (xor X, C2), C --> sub (C2 + C), X
+    KnownBits LHSKnown = computeKnownBits(X, &Add);
+    if ((*C2 | LHSKnown.Zero).isAllOnes())
+      return BinaryOperator::CreateSub(ConstantInt::get(Ty, *C2 + *C), X);
 
     // Look for a math+logic pattern that corresponds to sext-in-register of a
     // value with cleared high bits. Convert that into a pair of shifts:
@@ -2509,16 +2508,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     return Sub;
   }
 
+  // (X + C0) - (Y + C1) --> (X - Y) + (C0 - C1)
   {
-    // (X + Z) - (Y + Z) --> (X - Y)
-    // This is done in other passes, but we want to be able to consume this
-    // pattern in InstCombine so we can generate it without creating infinite
-    // loops.
-    if (match(Op0, m_Add(m_Value(X), m_Value(Z))) &&
-        match(Op1, m_c_Add(m_Value(Y), m_Specific(Z))))
-      return BinaryOperator::CreateSub(X, Y);
-
-    // (X + C0) - (Y + C1) --> (X - Y) + (C0 - C1)
     Constant *CX, *CY;
     if (match(Op0, m_OneUse(m_Add(m_Value(X), m_ImmConstant(CX)))) &&
         match(Op1, m_OneUse(m_Add(m_Value(Y), m_ImmConstant(CY))))) {
@@ -2528,6 +2519,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     }
   }
 
+  // (X + Z) - (Y + Z) --> (X - Y)
   {
     Value *W, *Z;
     if (match(Op0, m_AddLike(m_Value(W), m_Value(X))) &&

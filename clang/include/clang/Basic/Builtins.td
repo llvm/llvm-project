@@ -974,6 +974,17 @@ def StdcBitCeilTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
   let Prototype = "T(T)";
 }
 
+def StdcRotateLeftTyped : LibBuiltin<"stdbit.h", "C2Y_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_rotate_left"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "T(T, unsigned int)";
+}
+
+def StdcRotateRightTyped : LibBuiltin<"stdbit.h", "C2Y_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_rotate_right"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "T(T, unsigned int)";
+}
 
 
 // Random GCC builtins
@@ -4587,6 +4598,61 @@ def BlockObjectDispose : LibBuiltin<"blocks.h"> {
   let Prototype = "void(void const*, int const)";
 }
 // FIXME: Also declare NSConcreteGlobalBlock and NSConcreteStackBlock.
+
+def FeClearExcept : LibBuiltin<"fenv.h"> {
+  let Spellings = ["feclearexcept"];
+  let Prototype = "int(int)";
+}
+
+def FeGetExceptFlag : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fegetexceptflag"];
+  let Prototype = "int(fexcept_t*, int)";
+}
+
+def FeRaiseExcept : LibBuiltin<"fenv.h"> {
+  let Spellings = ["feraiseexcept"];
+  let Prototype = "int(int)";
+}
+
+def FeSetExceptFlag : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fesetexceptflag"];
+  let Prototype = "int(fexcept_t const*, int)";
+}
+
+def FeTestExcept : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fetestexcept"];
+  let Prototype = "int(int)";
+}
+
+def FeGetRound : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fegetround"];
+  let Prototype = "int()";
+}
+
+def FeSetRound : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fesetround"];
+  let Prototype = "int(int)";
+}
+
+def FeGetEnv : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fegetenv"];
+  let Prototype = "int(fenv_t*)";
+}
+
+def FeHoldExcept : LibBuiltin<"fenv.h"> {
+  let Spellings = ["feholdexcept"];
+  let Prototype = "int(fenv_t*)";
+}
+
+def FeSetEnv : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fesetenv"];
+  let Prototype = "int(fenv_t const*)";
+}
+
+def FeUpdateEnv : LibBuiltin<"fenv.h"> {
+  let Spellings = ["feupdateenv"];
+  let Prototype = "int(fenv_t const*)";
+}
 
 def __Addressof : LangBuiltin<"CXX_LANG"> {
   let Spellings = ["__addressof"];
