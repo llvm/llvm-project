@@ -181,10 +181,7 @@ LIBC_INLINE float erfcf(float x) {
     return xbits.is_neg() ? fputil::cast<float>(2.0) : fputil::cast<float>(0.0);
   }
 
-  if (LIBC_UNLIKELY(x_abs == 0))
-    return 1.0f;
-
-  if (LIBC_UNLIKELY(x_abs < 0x33000000U)) { // |x| < 2^-25
+  if (LIBC_UNLIKELY(x_abs < 0x33000000U)) { // |x| < 2^-25, includes x = 0
     constexpr double NEG_TWO_OVER_SQRT_PI = -0x1.20dd750429b6dp0;
     double xd = fputil::cast<double>(x);
     return fputil::cast<float>(
@@ -194,9 +191,7 @@ LIBC_INLINE float erfcf(float x) {
   // erfc(x) rounds to 0 or 2 for |x| >= 10.125.
   if (LIBC_UNLIKELY(x_abs >= 0x41220000U)) { // |x| >= 10.125
     if (xbits.is_neg()) {
-      if (fputil::fenv_is_round_down() || fputil::fenv_is_round_to_zero())
-        return FPBits(0x3FFFFFFFU).get_val(); // next float below 2.0
-      return 2.0f;
+      return fputil::round_result_slightly_down(2.0f);
     }
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
@@ -211,7 +206,7 @@ LIBC_INLINE float erfcf(float x) {
 
   // erfc(|x|) is evaluated using a degree-10 polynomial on each sub-interval.
 
-  int shift = 147 - (x_abs >> 23);
+  unsigned shift = 147 - (x_abs >> 23);
   uint64_t mantissa = (x_abs & 0x007FFFFFU) | 0x00800000U;
   int idx = static_cast<int>(mantissa >> shift);
 
