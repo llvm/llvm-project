@@ -57184,6 +57184,9 @@ static SDValue peekThroughBitPosExtTrunc(SDValue V, unsigned BW) {
 // set CF from the pre-op bit value, so one instruction subsumes the other.
 static SDValue combineBTToBitOpFlag(SDNode *N, SelectionDAG &DAG) {
   using namespace SDPatternMatch;
+  // Src is the BT source; matching against it with m_Specific requires
+  // SDValue identity with the modify's operand, so no peek-through is needed
+  // here (only the bit *position* may differ by ext/trunc/and-mask).
   SDValue Src = N->getOperand(0);
   SDValue BitNo = N->getOperand(1);
   EVT VT = Src.getValueType();

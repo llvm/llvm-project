@@ -107,6 +107,31 @@ define i1 @no_fuse_diff_pos_or(ptr %word, i64 %a, i64 %b) nounwind {
   ret i1 %cmp
 }
 
+; Negative: mask on the modify side drops a low bit (bit 0 of and-30 is clear),
+; so peek-through must leave the masked position in place and BTC/BT remain.
+define i1 @no_fuse_partial_mask_on_modify(ptr %word, i32 %position) nounwind {
+; CHECK-LABEL: no_fuse_partial_mask_on_modify:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    andb $30, %al
+; CHECK-NEXT:    movl (%rdi), %ecx
+; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    btcl %eax, %edx
+; CHECK-NEXT:    andl $30, %esi
+; CHECK-NEXT:    btl %esi, %ecx
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    movl %edx, (%rdi)
+; CHECK-NEXT:    retq
+  %ofs = and i32 %position, 30
+  %bit = shl i32 1, %ofs
+  %ld = load i32, ptr %word
+  %res = xor i32 %ld, %bit
+  %test = and i32 %ld, %bit
+  %cmp = icmp ne i32 %test, 0
+  store i32 %res, ptr %word
+  ret i1 %cmp
+}
+
 ; Negative: bit positions differ, BTR and BT must both remain.
 define i1 @no_fuse_diff_pos_and(ptr %word, i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: no_fuse_diff_pos_and:
