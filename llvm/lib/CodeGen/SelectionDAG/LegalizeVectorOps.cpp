@@ -662,7 +662,7 @@ void VectorLegalizer::PromoteSETCC(SDNode *Node,
   SDValue Res =
       DAG.getNode(Node->getOpcode(), DL, ResVT, Operands, Node->getFlags());
   if (ResVT != Node->getSimpleValueType(0))
-    Res = DAG.getSExtOrTrunc(Res, DL, Node->getSimpleValueType(0));
+    Res = DAG.getBoolExtOrTrunc(Res, DL, Node->getValueType(0), NewVecVT);
   Results.push_back(Res);
 }
 
