@@ -21,14 +21,18 @@ __thread int signal_handlers_called = 0;
 
 void signal_handler(int signo) {
   signal_handlers_called += 1;
-  assert(__safestack_get_unsafe_stack_ptr() <= __safestack_get_unsafe_stack_top() &&
-         __safestack_get_unsafe_stack_ptr() >= __safestack_get_unsafe_stack_bottom());
+  assert(__safestack_get_unsafe_stack_ptr() <=
+             __safestack_get_unsafe_stack_top() &&
+         __safestack_get_unsafe_stack_ptr() >=
+             __safestack_get_unsafe_stack_bottom());
 }
 
 void signal_sigaction(int signo, siginfo_t *si, void *uc) {
   signal_handlers_called += 1;
-  assert(__safestack_get_unsafe_stack_ptr() <= __safestack_get_unsafe_stack_top() &&
-         __safestack_get_unsafe_stack_ptr() >= __safestack_get_unsafe_stack_bottom());
+  assert(__safestack_get_unsafe_stack_ptr() <=
+             __safestack_get_unsafe_stack_top() &&
+         __safestack_get_unsafe_stack_ptr() >=
+             __safestack_get_unsafe_stack_bottom());
 }
 
 void *t1_start(void *ptr) {
@@ -111,8 +115,10 @@ int main() {
   raise(SIGUSR2);
 
   // Check that unsafe stack is set to the normal unsafe stack.
-  assert(__safestack_get_unsafe_stack_ptr() <= __safestack_get_unsafe_stack_top() &&
-         __safestack_get_unsafe_stack_ptr() >= __safestack_get_unsafe_stack_bottom());
+  assert(__safestack_get_unsafe_stack_ptr() <=
+             __safestack_get_unsafe_stack_top() &&
+         __safestack_get_unsafe_stack_ptr() >=
+             __safestack_get_unsafe_stack_bottom());
 
   assert(signal_handlers_called == 4);
 

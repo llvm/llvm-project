@@ -22,8 +22,8 @@
 #include "interception/interception.h"
 #include "safestack_platform.h"
 #include "safestack_util.h"
-#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer/safestack_interface.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 
 // interception.h drags in sanitizer_redefine_builtins.h, which in turn
 // creates references to __sanitizer_internal_memcpy etc.  The interceptors
@@ -339,39 +339,34 @@ __attribute__((section(".preinit_array"),
 }
 #endif
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-void *__safestack_get_unsafe_stack_bottom() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void*
+__safestack_get_unsafe_stack_bottom() {
   return unsafe_stack_start;
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-void *__safestack_get_unsafe_stack_top() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void*
+__safestack_get_unsafe_stack_top() {
   return (char*)unsafe_stack_start + unsafe_stack_size;
 }
 
-
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-void *__safestack_get_unsafe_stack_ptr() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void*
+__safestack_get_unsafe_stack_ptr() {
   return __safestack_unsafe_stack_ptr;
 }
 
 // Compatibility aliases
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-void *__get_unsafe_stack_bottom() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void* __get_unsafe_stack_bottom() {
   return __safestack_get_unsafe_stack_bottom();
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-void *__get_unsafe_stack_top() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void* __get_unsafe_stack_top() {
   return __safestack_get_unsafe_stack_top();
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-void *__get_unsafe_stack_start() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void* __get_unsafe_stack_start() {
   return __safestack_get_unsafe_stack_bottom();
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-void *__get_unsafe_stack_ptr() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void* __get_unsafe_stack_ptr() {
   return __safestack_get_unsafe_stack_ptr();
 }
