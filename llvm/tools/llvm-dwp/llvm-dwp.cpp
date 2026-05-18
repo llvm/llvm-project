@@ -239,7 +239,7 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
     OS = &*BOS;
   }
 
-  // Use DWPWriter for direct ELF output, bypassing MCStreamer.
+  // Use DWPWriter for direct ELF output
   DWPWriter Writer;
 
   if (auto Err = write(Writer, DWOFilenames, OverflowOptValue,

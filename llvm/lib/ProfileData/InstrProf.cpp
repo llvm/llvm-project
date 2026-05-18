@@ -1359,13 +1359,39 @@ void annotateValueSite(Module &M, Instruction &Inst,
 
   // Value Profile Data
   uint32_t MDCount = MaxMDCount;
+  // Zero values might occur multiple times (e.g., multiple functions that
+  // cannot be remapped). Deduplicate them to enforce the variant that
+  // values are unique, which allows passes to make some simplifying
+  // assumptions.
+  // TODO(boomanaiden154): This fits more naturally in addValueData, but
+  // preserving the current behavior is necessary for some error handling
+  // paths. When that gets cleaned up, we should move this there.
+  // TODO(boomanaiden154): We are also deduplicating non-zero values.
+  // These are rare and should only come from corrupted profiles, so we
+  // just skip them. Remove this when they are fixed properly in
+  // llvm-profdata.
+  uint64_t ZeroCount = 0;
+  DenseSet<uint64_t> VisitedValues;
   for (const auto &VD : VDs) {
-    Vals.push_back(MDHelper.createConstant(
-        ConstantInt::get(Type::getInt64Ty(Ctx), VD.Value)));
-    Vals.push_back(MDHelper.createConstant(
-        ConstantInt::get(Type::getInt64Ty(Ctx), VD.Count)));
+    auto [_, ValueInserted] = VisitedValues.insert(VD.Value);
+    if (VD.Value != 0 && !ValueInserted)
+      continue;
+    if (VD.Value == 0) {
+      ZeroCount += VD.Count;
+    } else {
+      Vals.push_back(MDHelper.createConstant(
+          ConstantInt::get(Type::getInt64Ty(Ctx), VD.Value)));
+      Vals.push_back(MDHelper.createConstant(
+          ConstantInt::get(Type::getInt64Ty(Ctx), VD.Count)));
+    }
     if (--MDCount == 0)
       break;
+  }
+  if (ZeroCount != 0) {
+    Vals.push_back(
+        MDHelper.createConstant(ConstantInt::get(Type::getInt64Ty(Ctx), 0)));
+    Vals.push_back(MDHelper.createConstant(
+        ConstantInt::get(Type::getInt64Ty(Ctx), ZeroCount)));
   }
   Inst.setMetadata(LLVMContext::MD_prof, MDNode::get(Ctx, Vals));
 }

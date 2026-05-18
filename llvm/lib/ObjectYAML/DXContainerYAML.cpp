@@ -374,6 +374,10 @@ void MappingTraits<DXContainerYAML::PSVInfo>::mapping(
   PSV.mapInfoForVersion(IO);
 
   IO.mapRequired("ResourceStride", PSV.ResourceStride);
+  if (PSV.Version > 0) {
+    IO.mapOptional("RuntimeInfoSize", PSV.RuntimeInfoSize);
+    IO.mapOptional("StringTable", PSV.StringTable);
+  }
   IO.mapRequired("Resources", PSV.Resources);
   if (PSV.Version == 0)
     return;
@@ -531,6 +535,13 @@ void MappingTraits<llvm::DXContainerYAML::StaticSamplerYamlDesc>::mapping(
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
+void MappingTraits<DXContainerYAML::DebugName>::mapping(
+    IO &IO, DXContainerYAML::DebugName &DebugName) {
+  IO.mapOptional("Flags", DebugName.Flags);
+  IO.mapOptional("NameLength", DebugName.NameLength);
+  IO.mapRequired("DebugName", DebugName.Filename);
+}
+
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
                                                    DXContainerYAML::Part &P) {
   IO.mapRequired("Name", P.Name);
@@ -541,6 +552,7 @@ void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
   IO.mapOptional("PSVInfo", P.Info);
   IO.mapOptional("Signature", P.Signature);
   IO.mapOptional("RootSignature", P.RootSignature);
+  IO.mapOptional("DebugName", P.DebugName);
 }
 
 void MappingTraits<DXContainerYAML::Object>::mapping(
@@ -584,6 +596,12 @@ void MappingTraits<DXContainerYAML::SignatureElement>::mapping(
   IO.mapRequired("Interpolation", El.Mode);
   IO.mapRequired("DynamicMask", El.DynamicMask);
   IO.mapRequired("Stream", El.Stream);
+}
+
+void MappingTraits<DXContainerYAML::StringTableEntry>::mapping(
+    IO &IO, DXContainerYAML::StringTableEntry &E) {
+  IO.mapRequired("String", E.String);
+  IO.mapRequired("Offset", E.Offset);
 }
 
 void ScalarEnumerationTraits<dxbc::PSV::SemanticKind>::enumeration(

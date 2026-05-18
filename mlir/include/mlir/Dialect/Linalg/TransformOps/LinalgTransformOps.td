@@ -1641,7 +1641,21 @@ def DecomposeInterfaceOp : Op<Transform_Dialect, "structured.decompose_interface
      TransformEachOpTrait,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    TODO
+    Decomposes target operations into sequences of simpler ops.
+
+    #### Return modes
+
+    This operation ignores ops that do not implement the AggregatedOpInterface
+    and drops them in the return. If any such op is encountered, the transform
+    emits a silenceable failure.
+
+    If all the operations referred to by the `target` handle decompose
+    properly, the transform succeeds. Otherwise the transform produces a
+    silenceable failure.
+    The return handle points to a subset of successfully produced operations.
+    For each target, the handle contains one value per its result. That is,
+    the handle contains at most as many ops as the targets had results.
+    The handle can be empty.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target);

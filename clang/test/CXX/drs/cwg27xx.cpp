@@ -194,6 +194,29 @@ int j = f('a', 2);
 #endif
 } // namespace cwg2770
 
+namespace cwg2780 { // cwg2780: 2.7
+
+void f();
+
+void g() {
+  (void)reinterpret_cast<void(&)(int)>(f);
+}
+
+} // namespace cwg2780
+
+namespace cwg2785 { // cwg2785: 10
+#if __cplusplus >= 202002L
+void g(void *); // #cwg2785-g
+
+template <typename T>
+void f() {
+  g(requires { T(); });
+  // since-cxx20-error@-1 {{no matching function for call to 'g'}}
+  //   since-cxx20-note@#cwg2785-g {{candidate function not viable: no known conversion from 'bool' to 'void *' for 1st argument}}
+}
+#endif
+} // namespace cwg2785
+
 namespace cwg2789 { // cwg2789: 18
 #if __cplusplus >= 202302L
 template <typename T = int>

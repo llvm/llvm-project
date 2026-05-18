@@ -800,6 +800,13 @@ public:
     return alignment ? getI64IntegerAttr(alignment) : mlir::IntegerAttr();
   }
 
+  // Materialize an alignment value as a CIR integer constant of the given
+  // integer type.
+  cir::ConstantOp getAlignment(mlir::Location loc, mlir::Type t,
+                               clang::CharUnits alignment) {
+    return getConstantInt(loc, t, alignment.getQuantity());
+  }
+
   mlir::IntegerAttr getSizeFromCharUnits(clang::CharUnits size) {
     return getI64IntegerAttr(size.getQuantity());
   }

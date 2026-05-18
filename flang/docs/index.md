@@ -105,6 +105,15 @@ on how to get in touch with us and to learn more about the current status.
    fstack-arrays
 ```
 
+# Historical References
+
+```{eval-rst}
+.. toctree::
+   :titlesonly:
+
+   HLFIRTransition
+```
+
 # Indices and tables
 
 ```{eval-rst}

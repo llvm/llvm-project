@@ -76,6 +76,7 @@
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/SemaSPIRV.h"
+#include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/SemaSystemZ.h"
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
@@ -3864,13 +3865,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   case Builtin::BI__builtin_stdc_bit_floor:
   case Builtin::BI__builtin_stdc_bit_ceil:
-  case Builtin::BIstdc_bit_floor:
-  case Builtin::BIstdc_bit_ceil:
     if (BuiltinStdCBuiltin(*this, TheCall, QualType()))
       return ExprError();
     break;
   case Builtin::BI__builtin_stdc_has_single_bit:
-  case Builtin::BIstdc_has_single_bit:
     if (BuiltinStdCBuiltin(*this, TheCall, Context.BoolTy))
       return ExprError();
     break;
@@ -3885,17 +3883,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_stdc_count_zeros:
   case Builtin::BI__builtin_stdc_count_ones:
   case Builtin::BI__builtin_stdc_bit_width:
-  case Builtin::BIstdc_leading_zeros:
-  case Builtin::BIstdc_leading_ones:
-  case Builtin::BIstdc_trailing_zeros:
-  case Builtin::BIstdc_trailing_ones:
-  case Builtin::BIstdc_first_leading_zero:
-  case Builtin::BIstdc_first_leading_one:
-  case Builtin::BIstdc_first_trailing_zero:
-  case Builtin::BIstdc_first_trailing_one:
-  case Builtin::BIstdc_count_zeros:
-  case Builtin::BIstdc_count_ones:
-  case Builtin::BIstdc_bit_width:
     if (BuiltinStdCBuiltin(*this, TheCall, Context.UnsignedIntTy))
       return ExprError();
     break;
@@ -3941,6 +3928,24 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (BuiltinCountedByRef(TheCall))
       return ExprError();
     break;
+
+  case Builtin::BIfeclearexcept:
+  case Builtin::BIfegetexceptflag:
+  case Builtin::BIferaiseexcept:
+  case Builtin::BIfesetexceptflag:
+  case Builtin::BIfetestexcept:
+  case Builtin::BIfegetround:
+  case Builtin::BIfesetround:
+  case Builtin::BIfegetenv:
+  case Builtin::BIfeholdexcept:
+  case Builtin::BIfesetenv:
+  case Builtin::BIfeupdateenv:
+    if (TheCall->getFPFeaturesInEffect(getLangOpts()).getExceptionMode() ==
+            LangOptions::FPE_Ignore &&
+        isPotentiallyEvaluatedContext()) {
+      Diag(TheCall->getBeginLoc(), diag::warn_fe_access_without_fenv_access)
+          << FDecl->getName() << TheCall->getSourceRange();
+    }
   }
 
   if (getLangOpts().HLSL && HLSL().CheckBuiltinFunctionCall(BuiltinID, TheCall))
@@ -4229,6 +4234,8 @@ void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
 
     Expr *Captured = const_cast<Expr *>(GetArgAt(ArgIdx));
     for (int CapturingParamIdx : Attr->params()) {
+      if (CapturingParamIdx == LifetimeCaptureByAttr::Invalid)
+        continue;
       // lifetime_capture_by(this) case is handled in the lifetimebound expr
       // initialization codepath.
       if (CapturingParamIdx == LifetimeCaptureByAttr::This &&
@@ -4465,6 +4472,11 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       }
     }
   }
+
+  if (FD && FD->isVariadic() && getLangOpts().SYCLIsDevice &&
+      !isUnevaluatedContext())
+    SYCL().DiagIfDeviceCode(Loc, diag::err_variadic_device_fn)
+        << diag::OffloadLang::SYCL;
 
   if (FD)
     diagnoseArgDependentDiagnoseIfAttrs(FD, ThisArg, Args, Loc);
@@ -7837,23 +7849,21 @@ public:
                                  unsigned specifierLen) override;
 
   void HandleInvalidLengthModifier(
-                           const analyze_format_string::FormatSpecifier &FS,
-                           const analyze_format_string::ConversionSpecifier &CS,
-                           const char *startSpecifier, unsigned specifierLen,
-                           unsigned DiagID);
+      const analyze_format_string::FormatSpecifier &FS,
+      const analyze_format_string::ConversionSpecifier &CS,
+      const char *startSpecifier, unsigned specifierLen, unsigned DiagID);
 
   void HandleNonStandardLengthModifier(
-                    const analyze_format_string::FormatSpecifier &FS,
-                    const char *startSpecifier, unsigned specifierLen);
+      const analyze_format_string::FormatSpecifier &FS,
+      const char *startSpecifier, unsigned specifierLen);
 
   void HandleNonStandardConversionSpecifier(
-                    const analyze_format_string::ConversionSpecifier &CS,
-                    const char *startSpecifier, unsigned specifierLen);
+      const analyze_format_string::ConversionSpecifier &CS,
+      const char *startSpecifier, unsigned specifierLen);
 
   void HandlePosition(const char *startPos, unsigned posLen) override;
 
-  void HandleInvalidPosition(const char *startSpecifier,
-                             unsigned specifierLen,
+  void HandleInvalidPosition(const char *startSpecifier, unsigned specifierLen,
                              analyze_format_string::PositionContext p) override;
 
   void HandleZeroPosition(const char *startPos, unsigned posLen) override;
@@ -7901,10 +7911,11 @@ SourceRange CheckFormatHandler::getFormatStringRange() {
   return OrigFormatExpr->getSourceRange();
 }
 
-CharSourceRange CheckFormatHandler::
-getSpecifierRange(const char *startSpecifier, unsigned specifierLen) {
+CharSourceRange
+CheckFormatHandler::getSpecifierRange(const char *startSpecifier,
+                                      unsigned specifierLen) {
   SourceLocation Start = getLocationOfByte(startSpecifier);
-  SourceLocation End   = getLocationOfByte(startSpecifier + specifierLen - 1);
+  SourceLocation End = getLocationOfByte(startSpecifier + specifierLen - 1);
 
   // Advance the end SourceLocation by one due to half-open ranges.
   End = End.getLocWithOffset(1);
@@ -7918,10 +7929,10 @@ SourceLocation CheckFormatHandler::getLocationOfByte(const char *x) {
 }
 
 void CheckFormatHandler::HandleIncompleteSpecifier(const char *startSpecifier,
-                                                   unsigned specifierLen){
+                                                   unsigned specifierLen) {
   EmitFormatDiagnostic(S.PDiag(diag::warn_printf_incomplete_specifier),
                        getLocationOfByte(startSpecifier),
-                       /*IsStringLocation*/true,
+                       /*IsStringLocation*/ true,
                        getSpecifierRange(startSpecifier, specifierLen));
 }
 
@@ -7939,12 +7950,12 @@ void CheckFormatHandler::HandleInvalidLengthModifier(
   if (FixedLM) {
     EmitFormatDiagnostic(S.PDiag(DiagID) << LM.toString() << CS.toString(),
                          getLocationOfByte(LM.getStart()),
-                         /*IsStringLocation*/true,
+                         /*IsStringLocation*/ true,
                          getSpecifierRange(startSpecifier, specifierLen));
 
     S.Diag(getLocationOfByte(LM.getStart()), diag::note_format_fix_specifier)
-      << FixedLM->toString()
-      << FixItHint::CreateReplacement(LMRange, FixedLM->toString());
+        << FixedLM->toString()
+        << FixItHint::CreateReplacement(LMRange, FixedLM->toString());
 
   } else {
     FixItHint Hint;
@@ -7953,9 +7964,8 @@ void CheckFormatHandler::HandleInvalidLengthModifier(
 
     EmitFormatDiagnostic(S.PDiag(DiagID) << LM.toString() << CS.toString(),
                          getLocationOfByte(LM.getStart()),
-                         /*IsStringLocation*/true,
-                         getSpecifierRange(startSpecifier, specifierLen),
-                         Hint);
+                         /*IsStringLocation*/ true,
+                         getSpecifierRange(startSpecifier, specifierLen), Hint);
   }
 }
 
@@ -7971,20 +7981,20 @@ void CheckFormatHandler::HandleNonStandardLengthModifier(
   std::optional<LengthModifier> FixedLM = FS.getCorrectedLengthModifier();
   if (FixedLM) {
     EmitFormatDiagnostic(S.PDiag(diag::warn_format_non_standard)
-                           << LM.toString() << 0,
+                             << LM.toString() << 0,
                          getLocationOfByte(LM.getStart()),
-                         /*IsStringLocation*/true,
+                         /*IsStringLocation*/ true,
                          getSpecifierRange(startSpecifier, specifierLen));
 
     S.Diag(getLocationOfByte(LM.getStart()), diag::note_format_fix_specifier)
-      << FixedLM->toString()
-      << FixItHint::CreateReplacement(LMRange, FixedLM->toString());
+        << FixedLM->toString()
+        << FixItHint::CreateReplacement(LMRange, FixedLM->toString());
 
   } else {
     EmitFormatDiagnostic(S.PDiag(diag::warn_format_non_standard)
-                           << LM.toString() << 0,
+                             << LM.toString() << 0,
                          getLocationOfByte(LM.getStart()),
-                         /*IsStringLocation*/true,
+                         /*IsStringLocation*/ true,
                          getSpecifierRange(startSpecifier, specifierLen));
   }
 }
@@ -7998,26 +8008,25 @@ void CheckFormatHandler::HandleNonStandardConversionSpecifier(
   std::optional<ConversionSpecifier> FixedCS = CS.getStandardSpecifier();
   if (FixedCS) {
     EmitFormatDiagnostic(S.PDiag(diag::warn_format_non_standard)
-                          << CS.toString() << /*conversion specifier*/1,
+                             << CS.toString() << /*conversion specifier*/ 1,
                          getLocationOfByte(CS.getStart()),
-                         /*IsStringLocation*/true,
+                         /*IsStringLocation*/ true,
                          getSpecifierRange(startSpecifier, specifierLen));
 
     CharSourceRange CSRange = getSpecifierRange(CS.getStart(), CS.getLength());
     S.Diag(getLocationOfByte(CS.getStart()), diag::note_format_fix_specifier)
-      << FixedCS->toString()
-      << FixItHint::CreateReplacement(CSRange, FixedCS->toString());
+        << FixedCS->toString()
+        << FixItHint::CreateReplacement(CSRange, FixedCS->toString());
   } else {
     EmitFormatDiagnostic(S.PDiag(diag::warn_format_non_standard)
-                          << CS.toString() << /*conversion specifier*/1,
+                             << CS.toString() << /*conversion specifier*/ 1,
                          getLocationOfByte(CS.getStart()),
-                         /*IsStringLocation*/true,
+                         /*IsStringLocation*/ true,
                          getSpecifierRange(startSpecifier, specifierLen));
   }
 }
 
-void CheckFormatHandler::HandlePosition(const char *startPos,
-                                        unsigned posLen) {
+void CheckFormatHandler::HandlePosition(const char *startPos, unsigned posLen) {
   if (!S.getDiagnostics().isIgnored(
           diag::warn_format_non_standard_positional_arg, SourceLocation()))
     EmitFormatDiagnostic(S.PDiag(diag::warn_format_non_standard_positional_arg),
@@ -8051,9 +8060,9 @@ void CheckFormatHandler::HandleNullChar(const char *nullCharacter) {
   if (!isa<ObjCStringLiteral>(OrigFormatExpr)) {
     // The presence of a null character is likely an error.
     EmitFormatDiagnostic(
-      S.PDiag(diag::warn_printf_format_string_contains_null_char),
-      getLocationOfByte(nullCharacter), /*IsStringLocation*/true,
-      getFormatStringRange());
+        S.PDiag(diag::warn_printf_format_string_contains_null_char),
+        getLocationOfByte(nullCharacter), /*IsStringLocation*/ true,
+        getFormatStringRange());
   }
 }
 
@@ -8081,8 +8090,7 @@ void CheckFormatHandler::DoneProcessing() {
 
 void UncoveredArgHandler::Diagnose(Sema &S, bool IsFunctionCall,
                                    const Expr *ArgExpr) {
-  assert(hasUncoveredArg() && !DiagnosticExprs.empty() &&
-         "Invalid state");
+  assert(hasUncoveredArg() && !DiagnosticExprs.empty() && "Invalid state");
 
   if (!ArgExpr)
     return;
@@ -8097,25 +8105,19 @@ void UncoveredArgHandler::Diagnose(Sema &S, bool IsFunctionCall,
     PDiag << E->getSourceRange();
 
   CheckFormatHandler::EmitFormatDiagnostic(
-                                  S, IsFunctionCall, DiagnosticExprs[0],
-                                  PDiag, Loc, /*IsStringLocation*/false,
-                                  DiagnosticExprs[0]->getSourceRange());
+      S, IsFunctionCall, DiagnosticExprs[0], PDiag, Loc,
+      /*IsStringLocation*/ false, DiagnosticExprs[0]->getSourceRange());
 }
 
-bool
-CheckFormatHandler::HandleInvalidConversionSpecifier(unsigned argIndex,
-                                                     SourceLocation Loc,
-                                                     const char *startSpec,
-                                                     unsigned specifierLen,
-                                                     const char *csStart,
-                                                     unsigned csLen) {
+bool CheckFormatHandler::HandleInvalidConversionSpecifier(
+    unsigned argIndex, SourceLocation Loc, const char *startSpec,
+    unsigned specifierLen, const char *csStart, unsigned csLen) {
   bool keepGoing = true;
   if (argIndex < NumDataArgs) {
     // Consider the argument coverered, even though the specifier doesn't
     // make sense.
     CoveredArgs.set(argIndex);
-  }
-  else {
+  } else {
     // If argIndex exceeds the number of data arguments we
     // don't issue a warning because that is just a cascade of warnings (and
     // they may have intended '%%' anyway). We don't want to continue processing
@@ -8133,8 +8135,7 @@ CheckFormatHandler::HandleInvalidConversionSpecifier(unsigned argIndex,
   if (!llvm::sys::locale::isPrint(*csStart)) {
     llvm::UTF32 CodePoint;
     const llvm::UTF8 **B = reinterpret_cast<const llvm::UTF8 **>(&csStart);
-    const llvm::UTF8 *E =
-        reinterpret_cast<const llvm::UTF8 *>(csStart + csLen);
+    const llvm::UTF8 *E = reinterpret_cast<const llvm::UTF8 *>(csStart + csLen);
     llvm::ConversionResult Result =
         llvm::convertUTF8Sequence(B, E, &CodePoint, llvm::strictConversion);
 
@@ -8160,29 +8161,27 @@ CheckFormatHandler::HandleInvalidConversionSpecifier(unsigned argIndex,
   return keepGoing;
 }
 
-void
-CheckFormatHandler::HandlePositionalNonpositionalArgs(SourceLocation Loc,
-                                                      const char *startSpec,
-                                                      unsigned specifierLen) {
+void CheckFormatHandler::HandlePositionalNonpositionalArgs(
+    SourceLocation Loc, const char *startSpec, unsigned specifierLen) {
   EmitFormatDiagnostic(
-    S.PDiag(diag::warn_format_mix_positional_nonpositional_args),
-    Loc, /*isStringLoc*/true, getSpecifierRange(startSpec, specifierLen));
+      S.PDiag(diag::warn_format_mix_positional_nonpositional_args), Loc,
+      /*isStringLoc*/ true, getSpecifierRange(startSpec, specifierLen));
 }
 
-bool
-CheckFormatHandler::CheckNumArgs(
-  const analyze_format_string::FormatSpecifier &FS,
-  const analyze_format_string::ConversionSpecifier &CS,
-  const char *startSpecifier, unsigned specifierLen, unsigned argIndex) {
+bool CheckFormatHandler::CheckNumArgs(
+    const analyze_format_string::FormatSpecifier &FS,
+    const analyze_format_string::ConversionSpecifier &CS,
+    const char *startSpecifier, unsigned specifierLen, unsigned argIndex) {
 
   if (HasFormatArguments() && argIndex >= NumDataArgs) {
-    PartialDiagnostic PDiag = FS.usesPositionalArg()
-      ? (S.PDiag(diag::warn_printf_positional_arg_exceeds_data_args)
-           << (argIndex+1) << NumDataArgs)
-      : S.PDiag(diag::warn_printf_insufficient_data_args);
-    EmitFormatDiagnostic(
-      PDiag, getLocationOfByte(CS.getStart()), /*IsStringLocation*/true,
-      getSpecifierRange(startSpecifier, specifierLen));
+    PartialDiagnostic PDiag =
+        FS.usesPositionalArg()
+            ? (S.PDiag(diag::warn_printf_positional_arg_exceeds_data_args)
+               << (argIndex + 1) << NumDataArgs)
+            : S.PDiag(diag::warn_printf_insufficient_data_args);
+    EmitFormatDiagnostic(PDiag, getLocationOfByte(CS.getStart()),
+                         /*IsStringLocation*/ true,
+                         getSpecifierRange(startSpecifier, specifierLen));
 
     // Since more arguments than conversion tokens are given, by extension
     // all arguments are covered, so mark this as so.
@@ -8192,14 +8191,14 @@ CheckFormatHandler::CheckNumArgs(
   return true;
 }
 
-template<typename Range>
+template <typename Range>
 void CheckFormatHandler::EmitFormatDiagnostic(PartialDiagnostic PDiag,
                                               SourceLocation Loc,
                                               bool IsStringLocation,
                                               Range StringRange,
                                               ArrayRef<FixItHint> FixIt) {
-  EmitFormatDiagnostic(S, inFunctionCall, Args[FormatIdx], PDiag,
-                       Loc, IsStringLocation, StringRange, FixIt);
+  EmitFormatDiagnostic(S, inFunctionCall, Args[FormatIdx], PDiag, Loc,
+                       IsStringLocation, StringRange, FixIt);
 }
 
 /// If the format string is not within the function call, emit a note
@@ -8240,11 +8239,11 @@ void CheckFormatHandler::EmitFormatDiagnostic(
     D << FixIt;
   } else {
     S.Diag(IsStringLocation ? ArgumentExpr->getExprLoc() : Loc, PDiag)
-      << ArgumentExpr->getSourceRange();
+        << ArgumentExpr->getSourceRange();
 
     const Sema::SemaDiagnosticBuilder &Note =
-      S.Diag(IsStringLocation ? Loc : StringRange.getBegin(),
-             diag::note_format_string_defined);
+        S.Diag(IsStringLocation ? Loc : StringRange.getBegin(),
+               diag::note_format_string_defined);
 
     Note << StringRange;
     Note << FixIt;
@@ -8280,9 +8279,8 @@ public:
   }
 
   bool HandleInvalidPrintfConversionSpecifier(
-                                      const analyze_printf::PrintfSpecifier &FS,
-                                      const char *startSpecifier,
-                                      unsigned specifierLen) override;
+      const analyze_printf::PrintfSpecifier &FS, const char *startSpecifier,
+      unsigned specifierLen) override;
 
   void handleInvalidMaskType(StringRef MaskType) override;
 
@@ -8290,16 +8288,16 @@ public:
                              const char *startSpecifier, unsigned specifierLen,
                              const TargetInfo &Target) override;
   bool checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
-                       const char *StartSpecifier,
-                       unsigned SpecifierLen,
+                       const char *StartSpecifier, unsigned SpecifierLen,
                        const Expr *E);
 
-  bool HandleAmount(const analyze_format_string::OptionalAmount &Amt, unsigned k,
-                    const char *startSpecifier, unsigned specifierLen);
+  bool HandleAmount(const analyze_format_string::OptionalAmount &Amt,
+                    unsigned k, const char *startSpecifier,
+                    unsigned specifierLen);
   void HandleInvalidAmount(const analyze_printf::PrintfSpecifier &FS,
                            const analyze_printf::OptionalAmount &Amt,
-                           unsigned type,
-                           const char *startSpecifier, unsigned specifierLen);
+                           unsigned type, const char *startSpecifier,
+                           unsigned specifierLen);
   void HandleFlag(const analyze_printf::PrintfSpecifier &FS,
                   const analyze_printf::OptionalFlag &flag,
                   const char *startSpecifier, unsigned specifierLen);
@@ -8307,14 +8305,13 @@ public:
                          const analyze_printf::OptionalFlag &ignoredFlag,
                          const analyze_printf::OptionalFlag &flag,
                          const char *startSpecifier, unsigned specifierLen);
-  bool checkForCStrMembers(const analyze_printf::ArgType &AT,
-                           const Expr *E);
+  bool checkForCStrMembers(const analyze_printf::ArgType &AT, const Expr *E);
 
   void HandleEmptyObjCModifierFlag(const char *startFlag,
                                    unsigned flagLen) override;
 
   void HandleInvalidObjCModifierFlag(const char *startFlag,
-                                            unsigned flagLen) override;
+                                     unsigned flagLen) override;
 
   void
   HandleObjCFlagsWithNonObjCConversion(const char *flagsStart,
@@ -8425,12 +8422,11 @@ bool CheckPrintfHandler::HandleInvalidPrintfConversionSpecifier(
     const analyze_printf::PrintfSpecifier &FS, const char *startSpecifier,
     unsigned specifierLen) {
   const analyze_printf::PrintfConversionSpecifier &CS =
-    FS.getConversionSpecifier();
+      FS.getConversionSpecifier();
 
-  return HandleInvalidConversionSpecifier(FS.getArgIndex(),
-                                          getLocationOfByte(CS.getStart()),
-                                          startSpecifier, specifierLen,
-                                          CS.getStart(), CS.getLength());
+  return HandleInvalidConversionSpecifier(
+      FS.getArgIndex(), getLocationOfByte(CS.getStart()), startSpecifier,
+      specifierLen, CS.getStart(), CS.getLength());
 }
 
 void CheckPrintfHandler::handleInvalidMaskType(StringRef MaskType) {
@@ -8496,26 +8492,23 @@ bool CheckPrintfHandler::HandleAmount(
 }
 
 void CheckPrintfHandler::HandleInvalidAmount(
-                                      const analyze_printf::PrintfSpecifier &FS,
-                                      const analyze_printf::OptionalAmount &Amt,
-                                      unsigned type,
-                                      const char *startSpecifier,
-                                      unsigned specifierLen) {
+    const analyze_printf::PrintfSpecifier &FS,
+    const analyze_printf::OptionalAmount &Amt, unsigned type,
+    const char *startSpecifier, unsigned specifierLen) {
   const analyze_printf::PrintfConversionSpecifier &CS =
-    FS.getConversionSpecifier();
+      FS.getConversionSpecifier();
 
   FixItHint fixit =
-    Amt.getHowSpecified() == analyze_printf::OptionalAmount::Constant
-      ? FixItHint::CreateRemoval(getSpecifierRange(Amt.getStart(),
-                                 Amt.getConstantLength()))
-      : FixItHint();
+      Amt.getHowSpecified() == analyze_printf::OptionalAmount::Constant
+          ? FixItHint::CreateRemoval(
+                getSpecifierRange(Amt.getStart(), Amt.getConstantLength()))
+          : FixItHint();
 
   EmitFormatDiagnostic(S.PDiag(diag::warn_printf_nonsensical_optional_amount)
-                         << type << CS.toString(),
+                           << type << CS.toString(),
                        getLocationOfByte(Amt.getStart()),
-                       /*IsStringLocation*/true,
-                       getSpecifierRange(startSpecifier, specifierLen),
-                       fixit);
+                       /*IsStringLocation*/ true,
+                       getSpecifierRange(startSpecifier, specifierLen), fixit);
 }
 
 void CheckPrintfHandler::HandleFlag(const analyze_printf::PrintfSpecifier &FS,
@@ -8524,39 +8517,37 @@ void CheckPrintfHandler::HandleFlag(const analyze_printf::PrintfSpecifier &FS,
                                     unsigned specifierLen) {
   // Warn about pointless flag with a fixit removal.
   const analyze_printf::PrintfConversionSpecifier &CS =
-    FS.getConversionSpecifier();
-  EmitFormatDiagnostic(S.PDiag(diag::warn_printf_nonsensical_flag)
-                         << flag.toString() << CS.toString(),
-                       getLocationOfByte(flag.getPosition()),
-                       /*IsStringLocation*/true,
-                       getSpecifierRange(startSpecifier, specifierLen),
-                       FixItHint::CreateRemoval(
-                         getSpecifierRange(flag.getPosition(), 1)));
+      FS.getConversionSpecifier();
+  EmitFormatDiagnostic(
+      S.PDiag(diag::warn_printf_nonsensical_flag)
+          << flag.toString() << CS.toString(),
+      getLocationOfByte(flag.getPosition()),
+      /*IsStringLocation*/ true,
+      getSpecifierRange(startSpecifier, specifierLen),
+      FixItHint::CreateRemoval(getSpecifierRange(flag.getPosition(), 1)));
 }
 
 void CheckPrintfHandler::HandleIgnoredFlag(
-                                const analyze_printf::PrintfSpecifier &FS,
-                                const analyze_printf::OptionalFlag &ignoredFlag,
-                                const analyze_printf::OptionalFlag &flag,
-                                const char *startSpecifier,
-                                unsigned specifierLen) {
+    const analyze_printf::PrintfSpecifier &FS,
+    const analyze_printf::OptionalFlag &ignoredFlag,
+    const analyze_printf::OptionalFlag &flag, const char *startSpecifier,
+    unsigned specifierLen) {
   // Warn about ignored flag with a fixit removal.
   EmitFormatDiagnostic(S.PDiag(diag::warn_printf_ignored_flag)
-                         << ignoredFlag.toString() << flag.toString(),
+                           << ignoredFlag.toString() << flag.toString(),
                        getLocationOfByte(ignoredFlag.getPosition()),
-                       /*IsStringLocation*/true,
+                       /*IsStringLocation*/ true,
                        getSpecifierRange(startSpecifier, specifierLen),
                        FixItHint::CreateRemoval(
-                         getSpecifierRange(ignoredFlag.getPosition(), 1)));
+                           getSpecifierRange(ignoredFlag.getPosition(), 1)));
 }
 
 void CheckPrintfHandler::HandleEmptyObjCModifierFlag(const char *startFlag,
                                                      unsigned flagLen) {
   // Warn about an empty flag.
-  EmitFormatDiagnostic(S.PDiag(diag::warn_printf_empty_objc_flag),
-                       getLocationOfByte(startFlag),
-                       /*IsStringLocation*/true,
-                       getSpecifierRange(startFlag, flagLen));
+  EmitFormatDiagnostic(
+      S.PDiag(diag::warn_printf_empty_objc_flag), getLocationOfByte(startFlag),
+      /*IsStringLocation*/ true, getSpecifierRange(startFlag, flagLen));
 }
 
 void CheckPrintfHandler::HandleInvalidObjCModifierFlag(const char *startFlag,
@@ -8565,20 +8556,21 @@ void CheckPrintfHandler::HandleInvalidObjCModifierFlag(const char *startFlag,
   auto Range = getSpecifierRange(startFlag, flagLen);
   StringRef flag(startFlag, flagLen);
   EmitFormatDiagnostic(S.PDiag(diag::warn_printf_invalid_objc_flag) << flag,
-                      getLocationOfByte(startFlag),
-                      /*IsStringLocation*/true,
-                      Range, FixItHint::CreateRemoval(Range));
+                       getLocationOfByte(startFlag),
+                       /*IsStringLocation*/ true, Range,
+                       FixItHint::CreateRemoval(Range));
 }
 
 void CheckPrintfHandler::HandleObjCFlagsWithNonObjCConversion(
-    const char *flagsStart, const char *flagsEnd, const char *conversionPosition) {
-    // Warn about using '[...]' without a '@' conversion.
-    auto Range = getSpecifierRange(flagsStart, flagsEnd - flagsStart + 1);
-    auto diag = diag::warn_printf_ObjCflags_without_ObjCConversion;
-    EmitFormatDiagnostic(S.PDiag(diag) << StringRef(conversionPosition, 1),
-                         getLocationOfByte(conversionPosition),
-                         /*IsStringLocation*/ true, Range,
-                         FixItHint::CreateRemoval(Range));
+    const char *flagsStart, const char *flagsEnd,
+    const char *conversionPosition) {
+  // Warn about using '[...]' without a '@' conversion.
+  auto Range = getSpecifierRange(flagsStart, flagsEnd - flagsStart + 1);
+  auto diag = diag::warn_printf_ObjCflags_without_ObjCConversion;
+  EmitFormatDiagnostic(S.PDiag(diag) << StringRef(conversionPosition, 1),
+                       getLocationOfByte(conversionPosition),
+                       /*IsStringLocation*/ true, Range,
+                       FixItHint::CreateRemoval(Range));
 }
 
 void EquatableFormatArgument::EmitDiagnostic(Sema &S, PartialDiagnostic PDiag,
@@ -8721,16 +8713,16 @@ bool DecomposePrintfHandler::HandlePrintfSpecifier(
   const auto &FieldWidth = FS.getFieldWidth();
   if (!FieldWidth.isInvalid() && FieldWidth.hasDataArgument()) {
     FieldWidthIndex = Specs.size();
-    Specs.emplace_back(getSpecifierRange(startSpecifier, specifierLen),
-                       getLocationOfByte(FieldWidth.getStart()),
-                       analyze_format_string::LengthModifier::None, "*",
-                       FieldWidth.getArgType(S.Context),
-                       EquatableFormatArgument::FAR_FieldWidth,
-                       EquatableFormatArgument::SS_None,
-                       FieldWidth.usesPositionalArg()
-                           ? FieldWidth.getPositionalArgIndex() - 1
-                           : FieldWidthIndex,
-                       0);
+    Specs.emplace_back(
+        getSpecifierRange(startSpecifier, specifierLen),
+        getLocationOfByte(FieldWidth.getStart()),
+        analyze_format_string::LengthModifier::None, FieldWidth.getCharacters(),
+        FieldWidth.getArgType(S.Context),
+        EquatableFormatArgument::FAR_FieldWidth,
+        EquatableFormatArgument::SS_None,
+        FieldWidth.usesPositionalArg() ? FieldWidth.getPositionalArgIndex() - 1
+                                       : FieldWidthIndex,
+        0);
   }
   // precision?
   const auto &Precision = FS.getPrecision();
@@ -8739,7 +8731,7 @@ bool DecomposePrintfHandler::HandlePrintfSpecifier(
     Specs.emplace_back(
         getSpecifierRange(startSpecifier, specifierLen),
         getLocationOfByte(Precision.getStart()),
-        analyze_format_string::LengthModifier::None, ".*",
+        analyze_format_string::LengthModifier::None, Precision.getCharacters(),
         Precision.getArgType(S.Context), EquatableFormatArgument::FAR_Precision,
         EquatableFormatArgument::SS_None,
         Precision.usesPositionalArg() ? Precision.getPositionalArgIndex() - 1
@@ -8864,10 +8856,9 @@ bool CheckPrintfHandler::HandlePrintfSpecifier(
 
   if (FS.consumesDataArgument()) {
     if (atFirstArg) {
-        atFirstArg = false;
-        usesPositionalArgs = FS.usesPositionalArg();
-    }
-    else if (usesPositionalArgs != FS.usesPositionalArg()) {
+      atFirstArg = false;
+      usesPositionalArgs = FS.usesPositionalArg();
+    } else if (usesPositionalArgs != FS.usesPositionalArg()) {
       HandlePositionalNonpositionalArgs(getLocationOfByte(CS.getStart()),
                                         startSpecifier, specifierLen);
       return false;
@@ -8876,13 +8867,13 @@ bool CheckPrintfHandler::HandlePrintfSpecifier(
 
   // First check if the field width, precision, and conversion specifier
   // have matching data arguments.
-  if (!HandleAmount(FS.getFieldWidth(), /* field width */ 0,
-                    startSpecifier, specifierLen)) {
+  if (!HandleAmount(FS.getFieldWidth(), /* field width */ 0, startSpecifier,
+                    specifierLen)) {
     return false;
   }
 
-  if (!HandleAmount(FS.getPrecision(), /* precision */ 1,
-                    startSpecifier, specifierLen)) {
+  if (!HandleAmount(FS.getPrecision(), /* precision */ 1, startSpecifier,
+                    specifierLen)) {
     return false;
   }
 
@@ -9004,13 +8995,13 @@ bool CheckPrintfHandler::HandlePrintfSpecifier(
   // Check for invalid use of field width
   if (!FS.hasValidFieldWidth()) {
     HandleInvalidAmount(FS, FS.getFieldWidth(), /* field width */ 0,
-        startSpecifier, specifierLen);
+                        startSpecifier, specifierLen);
   }
 
   // Check for invalid use of precision
   if (!FS.hasValidPrecision()) {
     HandleInvalidAmount(FS, FS.getPrecision(), /* precision */ 1,
-        startSpecifier, specifierLen);
+                        startSpecifier, specifierLen);
   }
 
   // Precision is mandatory for %P specifier.
@@ -9039,10 +9030,10 @@ bool CheckPrintfHandler::HandlePrintfSpecifier(
   // Check that flags are not ignored by another flag
   if (FS.hasSpacePrefix() && FS.hasPlusPrefix()) // ' ' ignored by '+'
     HandleIgnoredFlag(FS, FS.hasSpacePrefix(), FS.hasPlusPrefix(),
-        startSpecifier, specifierLen);
+                      startSpecifier, specifierLen);
   if (FS.hasLeadingZeros() && FS.isLeftJustified()) // '0' ignored by '-'
     HandleIgnoredFlag(FS, FS.hasLeadingZeros(), FS.isLeftJustified(),
-            startSpecifier, specifierLen);
+                      startSpecifier, specifierLen);
 
   // Check the length modifier is valid with the given conversion specifier.
   if (!FS.hasValidLengthModifier(S.getASTContext().getTargetInfo(),
@@ -9109,20 +9100,19 @@ static bool requiresParensToAddCast(const Expr *E) {
 }
 
 static std::pair<QualType, StringRef>
-shouldNotPrintDirectly(const ASTContext &Context,
-                       QualType IntendedTy,
+shouldNotPrintDirectly(const ASTContext &Context, QualType IntendedTy,
                        const Expr *E) {
   // Use a 'while' to peel off layers of typedefs.
   QualType TyTy = IntendedTy;
   while (const TypedefType *UserTy = TyTy->getAs<TypedefType>()) {
     StringRef Name = UserTy->getDecl()->getName();
     QualType CastTy = llvm::StringSwitch<QualType>(Name)
-      .Case("CFIndex", Context.getNSIntegerType())
-      .Case("NSInteger", Context.getNSIntegerType())
-      .Case("NSUInteger", Context.getNSUIntegerType())
-      .Case("SInt32", Context.IntTy)
-      .Case("UInt32", Context.UnsignedIntTy)
-      .Default(QualType());
+                          .Case("CFIndex", Context.getNSIntegerType())
+                          .Case("NSInteger", Context.getNSIntegerType())
+                          .Case("NSUInteger", Context.getNSUIntegerType())
+                          .Case("SInt32", Context.IntTy)
+                          .Case("UInt32", Context.UnsignedIntTy)
+                          .Default(QualType());
 
     if (!CastTy.isNull())
       return std::make_pair(CastTy, Name);
@@ -9132,8 +9122,7 @@ shouldNotPrintDirectly(const ASTContext &Context,
 
   // Strip parens if necessary.
   if (const ParenExpr *PE = dyn_cast<ParenExpr>(E))
-    return shouldNotPrintDirectly(Context,
-                                  PE->getSubExpr()->getType(),
+    return shouldNotPrintDirectly(Context, PE->getSubExpr()->getType(),
                                   PE->getSubExpr());
 
   // If this is a conditional expression, then its result type is constructed
@@ -9144,14 +9133,10 @@ shouldNotPrintDirectly(const ASTContext &Context,
     QualType TrueTy, FalseTy;
     StringRef TrueName, FalseName;
 
-    std::tie(TrueTy, TrueName) =
-      shouldNotPrintDirectly(Context,
-                             CO->getTrueExpr()->getType(),
-                             CO->getTrueExpr());
-    std::tie(FalseTy, FalseName) =
-      shouldNotPrintDirectly(Context,
-                             CO->getFalseExpr()->getType(),
-                             CO->getFalseExpr());
+    std::tie(TrueTy, TrueName) = shouldNotPrintDirectly(
+        Context, CO->getTrueExpr()->getType(), CO->getTrueExpr());
+    std::tie(FalseTy, FalseName) = shouldNotPrintDirectly(
+        Context, CO->getFalseExpr()->getType(), CO->getFalseExpr());
 
     if (TrueTy == FalseTy)
       return std::make_pair(TrueTy, TrueName);
@@ -9167,8 +9152,8 @@ shouldNotPrintDirectly(const ASTContext &Context,
 /// Return true if \p ICE is an implicit argument promotion of an arithmetic
 /// type. Bit-field 'promotions' from a higher ranked type to a lower ranked
 /// type do not count.
-static bool
-isArithmeticArgumentPromotion(Sema &S, const ImplicitCastExpr *ICE) {
+static bool isArithmeticArgumentPromotion(Sema &S,
+                                          const ImplicitCastExpr *ICE) {
   QualType From = ICE->getSubExpr()->getType();
   QualType To = ICE->getType();
   // It's an integer promotion if the destination type is the promoted
@@ -9204,11 +9189,9 @@ handleFormatSignedness(analyze_format_string::ArgType::MatchKind Match,
   return Match;
 }
 
-bool
-CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
-                                    const char *StartSpecifier,
-                                    unsigned SpecifierLen,
-                                    const Expr *E) {
+bool CheckPrintfHandler::checkFormatExpr(
+    const analyze_printf::PrintfSpecifier &FS, const char *StartSpecifier,
+    unsigned SpecifierLen, const Expr *E) {
   using namespace analyze_format_string;
   using namespace analyze_printf;
 
@@ -9382,10 +9365,12 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
 
   // Special-case some of Darwin's platform-independence types by suggesting
   // casts to primitive types that are known to be large enough.
-  bool ShouldNotPrintDirectly = false; StringRef CastTyName;
+  bool ShouldNotPrintDirectly = false;
+  StringRef CastTyName;
   if (S.Context.getTargetInfo().getTriple().isOSDarwin()) {
     QualType CastTy;
-    std::tie(CastTy, CastTyName) = shouldNotPrintDirectly(S.Context, IntendedTy, E);
+    std::tie(CastTy, CastTyName) =
+        shouldNotPrintDirectly(S.Context, IntendedTy, E);
     if (!CastTy.isNull()) {
       // %zi/%zu and %td/%tu are OK to use for NSInteger/NSUInteger of type int
       // (long in ASTContext). Only complain to pedants or when they're the
@@ -9456,7 +9441,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       IntendedTy.print(CastFix, S.Context.getPrintingPolicy());
       CastFix << (S.LangOpts.CPlusPlus ? ">" : ")");
 
-      SmallVector<FixItHint,4> Hints;
+      SmallVector<FixItHint, 4> Hints;
       ArgType::MatchKind IntendedMatch = AT.matchesType(S.Context, IntendedTy);
       IntendedMatch = handleFormatSignedness(IntendedMatch, S.getDiagnostics(),
                                              E->getExprLoc());
@@ -9520,8 +9505,8 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       }
     }
   } else {
-    const CharSourceRange &CSR = getSpecifierRange(StartSpecifier,
-                                                   SpecifierLen);
+    const CharSourceRange &CSR =
+        getSpecifierRange(StartSpecifier, SpecifierLen);
     // Since the warning for passing non-POD types to variadic functions
     // was deferred until now, we emit a warning for non-POD
     // arguments here.
@@ -9635,10 +9620,10 @@ public:
                             const char *startSpecifier,
                             unsigned specifierLen) override;
 
-  bool HandleInvalidScanfConversionSpecifier(
-          const analyze_scanf::ScanfSpecifier &FS,
-          const char *startSpecifier,
-          unsigned specifierLen) override;
+  bool
+  HandleInvalidScanfConversionSpecifier(const analyze_scanf::ScanfSpecifier &FS,
+                                        const char *startSpecifier,
+                                        unsigned specifierLen) override;
 
   void HandleIncompleteScanList(const char *start, const char *end) override;
 };
@@ -9648,27 +9633,24 @@ public:
 void CheckScanfHandler::HandleIncompleteScanList(const char *start,
                                                  const char *end) {
   EmitFormatDiagnostic(S.PDiag(diag::warn_scanf_scanlist_incomplete),
-                       getLocationOfByte(end), /*IsStringLocation*/true,
+                       getLocationOfByte(end), /*IsStringLocation*/ true,
                        getSpecifierRange(start, end - start));
 }
 
 bool CheckScanfHandler::HandleInvalidScanfConversionSpecifier(
-                                        const analyze_scanf::ScanfSpecifier &FS,
-                                        const char *startSpecifier,
-                                        unsigned specifierLen) {
+    const analyze_scanf::ScanfSpecifier &FS, const char *startSpecifier,
+    unsigned specifierLen) {
   const analyze_scanf::ScanfConversionSpecifier &CS =
-    FS.getConversionSpecifier();
+      FS.getConversionSpecifier();
 
-  return HandleInvalidConversionSpecifier(FS.getArgIndex(),
-                                          getLocationOfByte(CS.getStart()),
-                                          startSpecifier, specifierLen,
-                                          CS.getStart(), CS.getLength());
+  return HandleInvalidConversionSpecifier(
+      FS.getArgIndex(), getLocationOfByte(CS.getStart()), startSpecifier,
+      specifierLen, CS.getStart(), CS.getLength());
 }
 
 bool CheckScanfHandler::HandleScanfSpecifier(
-                                       const analyze_scanf::ScanfSpecifier &FS,
-                                       const char *startSpecifier,
-                                       unsigned specifierLen) {
+    const analyze_scanf::ScanfSpecifier &FS, const char *startSpecifier,
+    unsigned specifierLen) {
   using namespace analyze_scanf;
   using namespace analyze_format_string;
 
@@ -9680,8 +9662,7 @@ bool CheckScanfHandler::HandleScanfSpecifier(
     if (atFirstArg) {
       atFirstArg = false;
       usesPositionalArgs = FS.usesPositionalArg();
-    }
-    else if (usesPositionalArgs != FS.usesPositionalArg()) {
+    } else if (usesPositionalArgs != FS.usesPositionalArg()) {
       HandlePositionalNonpositionalArgs(getLocationOfByte(CS.getStart()),
                                         startSpecifier, specifierLen);
       return false;
@@ -9692,11 +9673,11 @@ bool CheckScanfHandler::HandleScanfSpecifier(
   const OptionalAmount &Amt = FS.getFieldWidth();
   if (Amt.getHowSpecified() == OptionalAmount::Constant) {
     if (Amt.getConstantAmount() == 0) {
-      const CharSourceRange &R = getSpecifierRange(Amt.getStart(),
-                                                   Amt.getConstantLength());
+      const CharSourceRange &R =
+          getSpecifierRange(Amt.getStart(), Amt.getConstantLength());
       EmitFormatDiagnostic(S.PDiag(diag::warn_scanf_nonzero_width),
                            getLocationOfByte(Amt.getStart()),
-                           /*IsStringLocation*/true, R,
+                           /*IsStringLocation*/ true, R,
                            FixItHint::CreateRemoval(R));
     }
   }
@@ -9710,9 +9691,9 @@ bool CheckScanfHandler::HandleScanfSpecifier(
   // Consume the argument.
   unsigned argIndex = FS.getArgIndex();
   if (argIndex < NumDataArgs) {
-      // The check to see if the argIndex is valid will come later.
-      // We set the bit here because we may exit early from this
-      // function if we encounter some other error.
+    // The check to see if the argIndex is valid will come later.
+    // We set the bit here because we may exit early from this
+    // function if we encounter some other error.
     CoveredArgs.set(argIndex);
   }
 
@@ -9872,7 +9853,7 @@ static void CheckFormatString(
   const char *Str = StrRef.data();
   // Account for cases where the string literal is truncated in a declaration.
   const ConstantArrayType *T =
-    S.Context.getAsConstantArrayType(FExpr->getType());
+      S.Context.getAsConstantArrayType(FExpr->getType());
   assert(T && "String literal not of constant array type!");
   size_t TypeSize = T->getZExtSize();
   size_t StrLen = std::min(std::max(TypeSize, size_t(1)) - 1, StrRef.size());
@@ -10015,9 +9996,8 @@ bool Sema::FormatStringHasSArg(const StringLiteral *FExpr) {
   assert(T && "String literal not of constant array type!");
   size_t TypeSize = T->getZExtSize();
   size_t StrLen = std::min(std::max(TypeSize, size_t(1)) - 1, StrRef.size());
-  return analyze_format_string::ParseFormatStringHasSArg(Str, Str + StrLen,
-                                                         getLangOpts(),
-                                                         Context.getTargetInfo());
+  return analyze_format_string::ParseFormatStringHasSArg(
+      Str, Str + StrLen, getLangOpts(), Context.getTargetInfo());
 }
 
 //===--- CHECK: Warn on use of wrong absolute value function. -------------===//

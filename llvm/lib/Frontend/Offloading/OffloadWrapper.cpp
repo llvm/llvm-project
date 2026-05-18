@@ -318,6 +318,7 @@ GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image, bool IsHIP,
                          FatbinInitializer, ".fatbin_wrapper" + Suffix);
   FatbinDesc->setSection(FatbinWrapperSection);
   FatbinDesc->setAlignment(Align(8));
+  FatbinDesc->setNoSanitizeMetadata();
 
   return FatbinDesc;
 }

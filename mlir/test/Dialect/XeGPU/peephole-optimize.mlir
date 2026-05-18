@@ -285,9 +285,9 @@ gpu.func @array_length(%arg0: vector<8x16xf16>, %arg1: memref<256x256xf16>, %arg
 // -----
 // CHECK-LABEL: gpu.func @vector_reduce_2d(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<4x16xf32>, %[[ARG1:[0-9a-zA-Z]+]]: memref<256xf32>) {
+// CHECK:      %[[ACC_VEC:.*]] = arith.constant dense<0.000000e+00> : vector<16xf32>
 // CHECK:      %[[MASK:.*]] = arith.constant dense<true> : vector<16xi1>
 // CHECK:      %[[OFFSET:.*]] = arith.constant dense<0> : vector<16xindex>
-// CHECK:      %[[ACC_VEC:.*]] = arith.constant dense<0.000000e+00> : vector<16xf32>
 // CHECK:      %[[ACC_SCALAR:.*]] = arith.constant 1.000000e+00 : f32
 // CHECK:      %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]] : memref<4x16xf32> -> !xegpu.tensor_desc<4x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
 // CHECK:      %[[LOADED:.*]] = xegpu.load_nd %[[TDESC]][0, 0] : !xegpu.tensor_desc<4x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<4x16xf32>
@@ -324,9 +324,9 @@ gpu.module @xevm_test {
 // -----
 // CHECK-LABEL: gpu.func @vector_reduce_2d_with_leading_unit_dims(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<4x16xf32>, %[[ARG1:[0-9a-zA-Z]+]]: memref<256xf32>) {
+// CHECK:      %[[ACC_2D:.*]] = arith.constant dense<0.000000e+00> : vector<1x16xf32>
 // CHECK:      %[[MASK:.*]] = arith.constant dense<true> : vector<16xi1>
 // CHECK:      %[[OFFSET:.*]] = arith.constant dense<0> : vector<16xindex>
-// CHECK:      %[[ACC_2D:.*]] = arith.constant dense<0.000000e+00> : vector<1x16xf32>
 // CHECK:      %[[ACC_1D:.*]] = arith.constant dense<1.000000e+00> : vector<1xf32>
 // CHECK:      %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]] : memref<4x16xf32> -> !xegpu.tensor_desc<4x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
 // CHECK:      %[[LOADED:.*]] = xegpu.load_nd %[[TDESC]][0, 0] : !xegpu.tensor_desc<4x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<4x16xf32>

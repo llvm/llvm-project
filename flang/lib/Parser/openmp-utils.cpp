@@ -80,7 +80,7 @@ struct DirectiveSpecificationScope {
       return std::visit(
           [](auto &&s) -> decltype(auto) { return GetODS(s); }, x.u);
     } else {
-      static_assert(std::is_same_v<OpenMPSectionConstruct, T>);
+      static_assert(std::is_same_v<OmpSectionDirective, T>);
       llvm_unreachable("This function does not work for SECTION");
     }
   }
@@ -150,23 +150,6 @@ const DoConstruct *GetDoConstruct(const ExecutionPartConstruct &x) {
     }
   }
   return nullptr;
-}
-
-const OmpObjectList *GetOmpObjectList(const OmpClause &clause) {
-  return common::visit([](auto &&s) { return GetOmpObjectList(s); }, clause.u);
-}
-
-const OmpObjectList *GetOmpObjectList(const OmpClause::Depend &clause) {
-  return common::visit(
-      common::visitors{
-          [](const OmpDoacross &) -> const OmpObjectList * { return nullptr; },
-          [](const OmpDependClause::TaskDep &x) { return GetOmpObjectList(x); },
-      },
-      clause.v.u);
-}
-
-const OmpObjectList *GetOmpObjectList(const OmpDependClause::TaskDep &x) {
-  return &std::get<OmpObjectList>(x.t);
 }
 
 const OmpClause *FindClause(

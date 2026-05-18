@@ -94,8 +94,7 @@ struct VPlanTransforms {
   /// The created loop is wrapped in an initial skeleton to facilitate
   /// vectorization, consisting of a vector pre-header, an exit block for the
   /// main vector loop (middle.block) and a new block as preheader of the scalar
-  /// loop (scalar.ph). See below for an illustration. It also adds a canonical
-  /// IV and its increment, using \p InductionTy and \p IVDL, and creates a
+  /// loop (scalar.ph). See below for an illustration. It also creates a
   /// VPValue expression for the original trip count.
   ///
   ///    [ ] <-- Plan's entry VPIRBasicBlock, wrapping the original loop's
@@ -129,8 +128,12 @@ struct VPlanTransforms {
   ///     \  v
   ///      >[ ]     <-- original loop exit block(s), wrapped in VPIRBasicBlocks.
   LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan>
-  buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy, DebugLoc IVDL,
+  buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
               PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
+
+  /// Add a canonical IV and its increment, using \p InductionTy and \p DL to \p
+  /// Plan
+  static void addCanonicalIVRecipes(VPlan &Plan, DebugLoc DL);
 
   /// Replace VPPhi recipes in \p Plan's header with corresponding
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and
@@ -149,9 +152,7 @@ struct VPlanTransforms {
   /// Create VPReductionRecipes for in-loop reductions. This processes chains
   /// of operations contributing to in-loop reductions and creates appropriate
   /// VPReductionRecipe instances.
-  static void createInLoopReductionRecipes(
-      VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
-      ElementCount MinVF);
+  static void createInLoopReductionRecipes(VPlan &Plan, ElementCount MinVF);
 
   /// Update \p Plan to account for all early exits. If \p Style is not
   /// NoUncountableExit, handles uncountable early exits and checks that all
@@ -293,15 +294,8 @@ struct VPlanTransforms {
   ///  * Contribute to the address computation of a recipe generating a widen
   ///    memory load/store (VPWidenMemoryInstructionRecipe or
   ///    VPInterleaveRecipe).
-  ///  * Such a widen memory load/store has at least one underlying Instruction
-  ///    that is in a basic block that needs predication and after vectorization
-  ///    the generated instruction won't be predicated.
-  /// Uses \p BlockNeedsPredication to check if a block needs predicating.
-  /// TODO: Replace BlockNeedsPredication callback with retrieving info from
-  ///       VPlan directly.
-  static void dropPoisonGeneratingRecipes(
-      VPlan &Plan,
-      const std::function<bool(BasicBlock *)> &BlockNeedsPredication);
+  ///  * Such a widen memory load/store is masked, but not with the header mask.
+  static void dropPoisonGeneratingRecipes(VPlan &Plan);
 
   /// Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
   /// replaces all uses of the canonical IV except for the canonical IV
@@ -327,7 +321,7 @@ struct VPlanTransforms {
       VPlan &Plan,
       const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
           &InterleaveGroups,
-      VPRecipeBuilder &RecipeBuilder, const bool &EpilogueAllowed);
+      const bool &EpilogueAllowed);
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
@@ -394,11 +388,6 @@ struct VPlanTransforms {
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
-
-  /// Hoist single-scalar loads with invariant addresses out of the vector loop
-  /// to the preheader, if they are proven not to alias with any stores in the
-  /// plan using noalias metadata.
-  static void hoistInvariantLoads(VPlan &Plan);
 
   /// Hoist predicated loads from the same address to the loop entry block, if
   /// they are guaranteed to execute on both paths (i.e., in replicate regions
@@ -542,6 +531,17 @@ struct VPlanTransforms {
   /// recipes. Non load/store input instructions are left unchanged.
   static void makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                          VPRecipeBuilder &RecipeBuilder);
+
+  /// Make VPlan-based scalarization decision prior to delegating to the ones
+  /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains
+  /// enabled by prior widening of consecutive memory operations for now.
+  static void makeScalarizationDecisions(VPlan &Plan, VFRange &Range);
+
+  /// Convert call VPInstructions in \p Plan into widened call, vector
+  /// intrinsic or replicate recipes based on a cost comparison via \p CostCtx.
+  static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
+                                        VPRecipeBuilder &RecipeBuilder,
+                                        VPCostContext &CostCtx);
 };
 
 } // namespace llvm
