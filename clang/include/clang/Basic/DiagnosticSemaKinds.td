@@ -1041,6 +1041,11 @@ def err_ptrauth_indirect_goto_addrlabel_arithmetic : Error<
   "%select{subtraction|addition}0 of address-of-label expressions is not "
   "supported with ptrauth indirect gotos">;
 
+def warn_fe_access_without_fenv_access : Warning<
+  "'%0' used without enabling floating-point exception behavior; use 'pragma STDC "
+  "FENV_ACCESS ON' or compile with '-ffp-exception-behavior=maytrap'">,
+  InGroup<DiagGroup<"fenv-access">>;
+
 // __ptrauth qualifier
 def err_ptrauth_qualifier_invalid : Error<
   "%select{return type|parameter type|property}1 may not be qualified with "
@@ -6027,8 +6032,6 @@ def note_checking_constraints_for_function_here : Note<
   "while checking constraint satisfaction for function '%0' required here">;
 def note_constraint_substitution_here : Note<
   "while substituting template arguments into constraint expression here">;
-def note_constraint_normalization_here : Note<
-  "while calculating associated constraint of template %0 here">;
 def note_parameter_mapping_substitution_here : Note<
   "while substituting into concept arguments here; substitution failures not "
   "allowed in concept arguments">;
@@ -13436,6 +13439,8 @@ def warn_sycl_kernel_return_type : Warning<
 def err_sycl_special_type_num_init_method : Error<
   "types with 'sycl_special_class' attribute must have one and only one '__init' "
   "method defined">;
+def err_sycl_device_invalid_target : Error<
+  "%0 is not a supported SYCL device target">;
 
 // SYCL external attribute diagnostics
 def err_sycl_external_invalid_linkage : Error<

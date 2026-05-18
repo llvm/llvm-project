@@ -1248,7 +1248,7 @@ public:
 
   /// Whether there is any non-null address discriminator.
   bool hasAddressDiscriminator() const {
-    return !getAddrDiscriminator()->isNullValue();
+    return !isa<ConstantPointerNull>(getAddrDiscriminator());
   }
 
   Constant *getDeactivationSymbol() const {
