@@ -231,12 +231,9 @@ void ProcessLaunchInfo::SetDetachOnError(bool enable) {
 llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   Log *log = GetLog(LLDBLog::Process);
 
-#ifdef _WIN32
+  // Always start with a fresh PTY. `ProcessLaunchInfo` is reused across
+  // multiple launches and the underlying PTY is single-shot.
   m_pty = std::make_shared<PTY>();
-#else
-  if (!m_pty)
-    m_pty = std::make_shared<PTY>();
-#endif
 
   bool stdin_free = GetFileActionForFD(STDIN_FILENO) == nullptr;
   bool stdout_free = GetFileActionForFD(STDOUT_FILENO) == nullptr;
