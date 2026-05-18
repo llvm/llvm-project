@@ -165,7 +165,6 @@ bool DirectXTargetMachine::addPassesToEmitFile(
   switch (FileType) {
   case CodeGenFileType::AssemblyFile:
     PM.add(createDXILPrettyPrinterLegacyPass(Out));
-    PM.add(createPrintModulePass(Out, "", true));
     break;
   case CodeGenFileType::ObjectFile:
     if (TargetPassConfig::willCompleteCodeGenPipeline()) {
