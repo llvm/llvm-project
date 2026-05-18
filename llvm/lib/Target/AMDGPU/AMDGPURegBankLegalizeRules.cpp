@@ -1303,6 +1303,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS32, S64}, {{Sgpr32}, {Sgpr64}}})
       .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}, SplitBitCount64To32}});
 
+  addRulesForGOpcs({G_CTPOP})
+      .Any({{UniS32, S32}, {{Sgpr32}, {Sgpr32}}})
+      .Any({{DivS32, S32}, {{Vgpr32}, {Vgpr32}}})
+      .Any({{UniS32, S64}, {{Sgpr32}, {Sgpr64}}})
+      .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}, CtPop64To32}});
+
   addRulesForGOpcs({G_FENCE}).Any({{{}}, {{}, {}}});
 
   addRulesForGOpcs({G_READSTEADYCOUNTER, G_READCYCLECOUNTER}, Standard)
