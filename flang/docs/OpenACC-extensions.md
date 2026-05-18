@@ -14,9 +14,11 @@ local:
 ---
 ```
 
-The items below are intentional deviations from the OpenACC specification
-accepted by Flang.  They are also listed as deviations in
-[OpenACC.md](OpenACC.md).
+Flang is more lenient than the OpenACC specification requires for purposes of
+compatibility. This document describes extensions to the OpenACC specification.
+There are a couple of known places where the Flang compiler intentionally deviates
+from the standard by being more strict than the specification; these are currently
+listed in [OpenACC.md](OpenACC.md).
 
 ## Extensions always active
 

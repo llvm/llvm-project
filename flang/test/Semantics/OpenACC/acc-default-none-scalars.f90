@@ -8,7 +8,7 @@ subroutine default_none_scalars()
   integer :: a
   integer :: b(10)
   !$acc parallel default(none)
-  !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'a' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
+  !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'a' [-Wacc-implicit-scalar]
   a = 1
   !ERROR: The DEFAULT(NONE) clause requires that 'b' must be listed in a data-mapping clause
   b(1) = 2
@@ -22,9 +22,9 @@ subroutine default_none_scalar_precomputed(x, n, p, q)
   integer :: n, i
   factor = p / q
   !$acc parallel loop default(none) present(x)
-  !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'n' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
+  !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'n' [-Wacc-implicit-scalar]
   do i = 1, n
-    !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'factor' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
+    !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'factor' [-Wacc-implicit-scalar]
     x(i) = x(i) * factor
   end do
   !$acc end parallel loop
@@ -64,12 +64,12 @@ subroutine default_none_outer_loop_scalars(x, n, m)
     thresh = real(k) - real(k) / real(m)
     val    = real(k) * 4.0
     !$acc parallel loop default(none) present(x)
-    !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'n' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
+    !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'n' [-Wacc-implicit-scalar]
     do i = 1, n
-      !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'thresh' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
-      !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'coef' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
-      !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'val' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
-      !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'k' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
+      !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'thresh' [-Wacc-implicit-scalar]
+      !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'coef' [-Wacc-implicit-scalar]
+      !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'val' [-Wacc-implicit-scalar]
+      !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'k' [-Wacc-implicit-scalar]
       if (x(i) < thresh) x(i) = x(i) + coef * val * real(k)
     end do
     !$acc end parallel loop

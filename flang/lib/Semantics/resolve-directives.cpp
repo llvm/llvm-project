@@ -1848,7 +1848,7 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
                   common::LanguageFeature::AccDefaultNoneScalars) &&
               IsAccScalar(symbol)) {
             context_.Warn(common::UsageWarning::AccImplicitScalar, name.source,
-                "Implicit attribute inferred for DEFAULT(NONE) scalar '%s' (-facc-allow-default-none-scalars)"_warn_en_US,
+                "Implicit attribute inferred for DEFAULT(NONE) scalar '%s'"_warn_en_US,
                 symbol.name());
           } else {
             context_.Say(name.source,
