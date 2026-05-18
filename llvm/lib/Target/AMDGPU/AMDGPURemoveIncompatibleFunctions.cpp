@@ -199,7 +199,7 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
   // gfx9 and below targets that don't support the mode.
   // gfx10, gfx11, gfx12 are implied to support both wave32 and 64 features.
   // They are not in the feature set. So, we need a separate check
-  if (!ST->supportsWave32() && ST->hasFeature(AMDGPU::FeatureWavefrontSize32)) {
+  if (ST->hasWave64Only() && ST->hasFeature(AMDGPU::FeatureWavefrontSize32)) {
     reportFunctionRemoved(F, AMDGPU::FeatureWavefrontSize32);
     return true;
   }
