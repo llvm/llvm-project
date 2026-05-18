@@ -8,13 +8,17 @@
 
 #include "src/ctype/isblank.h"
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
+#include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, isblank, (int c)) {
-  return static_cast<int>(c == ' ' || c == '\t');
+  if (c < 0 || c > cpp::numeric_limits<unsigned char>::max())
+    return 0;
+  return static_cast<int>(internal::isblank(static_cast<char>(c)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
