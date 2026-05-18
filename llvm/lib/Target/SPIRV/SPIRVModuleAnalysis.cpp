@@ -366,7 +366,8 @@ bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
 void SPIRVModuleAnalysis::visitFunPtrUse(
     Register OpReg, const MachineOperand *FunPtrOp,
     InstrGRegsMap &SignatureToGReg,
-    std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF) {
+    std::map<const Value *, unsigned> &GlobalToGReg,
+    const MachineFunction *MF) {
   const MachineOperand *OpFunDef = GR->getFunctionDefinitionByUse(FunPtrOp);
   assert(OpFunDef && OpFunDef->isReg());
   // find the actual function definition and number it globally in advance
