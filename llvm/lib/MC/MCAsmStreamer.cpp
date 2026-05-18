@@ -37,6 +37,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SourceMgr.h"
 #include <algorithm>
 #include <optional>
 
@@ -60,6 +61,7 @@ class MCAsmStreamer final : public MCAsmBaseStreamer {
 
   bool IsVerboseAsm = false;
   bool ShowInst = false;
+  bool ShowInstSourceLoc = false;
   bool UseDwarfDirectory = false;
 
   void EmitRegisterName(int64_t Register);
@@ -107,6 +109,7 @@ public:
     if (IsVerboseAsm)
       InstPrinter->setCommentStream(CommentStream);
     ShowInst = TO.ShowMCInst;
+    ShowInstSourceLoc = TO.ShowMCInstSourceLoc;
     switch (TO.MCUseDwarfDirectory) {
     case MCTargetOptions::DisableDwarfDirectory:
       UseDwarfDirectory = false;
@@ -2624,6 +2627,43 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
     getCommentOS() << "\n";
 
   EmitEOL();
+
+  if (ShowInstSourceLoc && Inst.getLoc().isValid()) {
+    if (const SourceMgr *SM = getContext().getSourceManager()) {
+      SMLoc Loc = Inst.getLoc();
+      unsigned BufID = SM->FindBufferContainingLoc(Loc);
+      bool PrintedSourceLoc = false;
+      // Walk the SourceMgr buffer stack to emit full source location
+      // information. When AsmParser instantiates a macro, it creates a buffer
+      // named "<instantiation>" and attaches the macro call location as its
+      // IncludeLoc. Therefore, walking IncludeLoc cleanly unwinds the macro
+      // expansion stack (emitted as ExpansionLoc) until it reaches the actual
+      // source file (emitted as SourceLoc). Any further IncludeLoc parents
+      // beyond that point represent actual .include directives (emitted as
+      // IncludeLoc).
+      while (BufID) {
+        StringRef Filename =
+            SM->getBufferInfo(BufID).Buffer->getBufferIdentifier();
+        std::pair<unsigned, unsigned> LineCol =
+            SM->getLineAndColumn(Loc, BufID);
+
+        if (Filename == "<instantiation>") {
+          OS << MAI->getCommentString() << " <ExpansionLoc: " << Filename << ":"
+             << LineCol.first << ":" << LineCol.second << ">\n";
+        } else if (!PrintedSourceLoc) {
+          OS << MAI->getCommentString() << " <SourceLoc: " << Filename << ":"
+             << LineCol.first << ":" << LineCol.second << ">\n";
+          PrintedSourceLoc = true;
+        } else {
+          OS << MAI->getCommentString() << " <IncludeLoc: " << Filename << ":"
+             << LineCol.first << ":" << LineCol.second << ">\n";
+        }
+
+        Loc = SM->getBufferInfo(BufID).IncludeLoc;
+        BufID = Loc.isValid() ? SM->FindBufferContainingLoc(Loc) : 0;
+      }
+    }
+  }
 }
 
 void MCAsmStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index,
