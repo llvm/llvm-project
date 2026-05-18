@@ -10,6 +10,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include <cassert>
 
@@ -300,6 +301,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       if (mlir::Type ty =
               cgm.getTargetCIRGenInfo().getCUDADeviceBuiltinSurfaceDeviceType())
         return ty;
+    } else if (type->isCUDADeviceBuiltinTextureType()) {
+      assert(!cir::MissingFeatures::cudaTextureType());
     }
   }
 
