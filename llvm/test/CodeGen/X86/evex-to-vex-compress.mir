@@ -916,10 +916,10 @@ body: |
   $ebx = KMOVBrk                               $k0
   ; CHECK: $k0 = VPMOVD2MZ256kr                $ymm0
   ; CHECK: $eax = KMOVBrk                      $k0
-  ; CHECK: $k0 = KSHIFTRBki                    killed $k0, 2
+  ; CHECK: $k0 = KSHIFTRBki                    $k0, 2
   $k0 = VPMOVD2MZ256kr                         $ymm0
   $eax = KMOVBrk                               $k0
-  $k0 = KSHIFTRBki                             killed $k0, 2
+  $k0 = KSHIFTRBki                             $k0, 2
   ; CHECK: $k0 = VPMOVB2MZ256kr                $ymm0
   ; CHECK: $eax = KMOVWrk                      $k0
   $k0 = VPMOVB2MZ256kr                         $ymm0
@@ -1811,10 +1811,10 @@ body: |
   $ebx = KMOVBrk                               $k0
   ; CHECK: $k0 = VPMOVD2MZ128kr                $xmm0
   ; CHECK: $eax = KMOVBrk                      $k0
-  ; CHECK: $k0 = KSHIFTRBki                    killed $k0, 2
+  ; CHECK: $k0 = KSHIFTRBki                    $k0, 2
   $k0 = VPMOVD2MZ128kr                         $xmm0
   $eax = KMOVBrk                               $k0
-  $k0 = KSHIFTRBki                             killed $k0, 2
+  $k0 = KSHIFTRBki                             $k0, 2
   ; CHECK: $k0 = VPMOVB2MZ128kr                $xmm0
   ; CHECK: $eax = KMOVBrk                      $k0
   $k0 = VPMOVB2MZ128kr                         $xmm0
