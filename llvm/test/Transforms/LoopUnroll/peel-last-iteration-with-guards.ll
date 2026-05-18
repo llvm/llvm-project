@@ -141,42 +141,18 @@ define void @peel_with_guard2(i32 %n) {
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp eq i32 [[SUB]], 0
 ; CHECK-NEXT:    br i1 [[PRECOND]], label %[[EXIT:.*]], label %[[LOOP_HEADER_PREHEADER:.*]]
 ; CHECK:       [[LOOP_HEADER_PREHEADER]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -2
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_HEADER_PREHEADER_SPLIT:.*]], label %[[EXIT_LOOPEXIT_PEEL_BEGIN:.*]]
-; CHECK:       [[LOOP_HEADER_PREHEADER_SPLIT]]:
-; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ 1, %[[LOOP_HEADER_PREHEADER_SPLIT]] ]
-; CHECK-NEXT:    br i1 false, label %[[THEN:.*]], label %[[LOOP_LATCH]]
-; CHECK:       [[THEN]]:
-; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br label %[[LOOP_LATCH]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[N]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_LOOPEXIT_PEEL_BEGIN_LOOPEXIT:.*]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP2:![0-9]+]]
-; CHECK:       [[EXIT_LOOPEXIT_PEEL_BEGIN_LOOPEXIT]]:
-; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP_LATCH]] ]
-; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT_PEEL_BEGIN]]
-; CHECK:       [[EXIT_LOOPEXIT_PEEL_BEGIN]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ 1, %[[LOOP_HEADER_PREHEADER]] ], [ [[DOTPH]], %[[EXIT_LOOPEXIT_PEEL_BEGIN_LOOPEXIT]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER_PEEL:.*]]
 ; CHECK:       [[LOOP_HEADER_PEEL]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[IV_NEXT_PEEL:%.*]], %[[LOOP_LATCH_PEEL:.*]] ], [ 1, %[[LOOP_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[C_PEEL:%.*]] = icmp eq i32 [[TMP3]], [[SUB]]
-; CHECK-NEXT:    br i1 [[C_PEEL]], label %[[THEN_PEEL:.*]], label %[[LOOP_LATCH_PEEL:.*]]
+; CHECK-NEXT:    br i1 [[C_PEEL]], label %[[THEN_PEEL:.*]], label %[[LOOP_LATCH_PEEL]]
 ; CHECK:       [[THEN_PEEL]]:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label %[[LOOP_LATCH_PEEL]]
 ; CHECK:       [[LOOP_LATCH_PEEL]]:
-; CHECK-NEXT:    [[IV_NEXT_PEEL:%.*]] = add nuw i32 [[TMP3]], 1
+; CHECK-NEXT:    [[IV_NEXT_PEEL]] = add nuw i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[EC_PEEL:%.*]] = icmp eq i32 [[IV_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[EC_PEEL]], label %[[EXIT_LOOPEXIT_PEEL_NEXT:.*]], label %[[EXIT_LOOPEXIT_PEEL_NEXT]]
-; CHECK:       [[EXIT_LOOPEXIT_PEEL_NEXT]]:
-; CHECK-NEXT:    br label %[[LOOP_HEADER_PEEL_NEXT:.*]]
-; CHECK:       [[LOOP_HEADER_PEEL_NEXT]]:
-; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT:.*]]
+; CHECK-NEXT:    br i1 [[EC_PEEL]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP_HEADER_PEEL]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -213,42 +189,18 @@ define void @test_peel_guard_sub_1_btc(i32 %n) {
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp eq i32 [[SUB]], 0
 ; CHECK-NEXT:    br i1 [[PRE]], label %[[EXIT:.*]], label %[[LOOP_HEADER_PREHEADER:.*]]
 ; CHECK:       [[LOOP_HEADER_PREHEADER]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -2
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_HEADER_PREHEADER_SPLIT:.*]], label %[[EXIT_LOOPEXIT_PEEL_BEGIN:.*]]
-; CHECK:       [[LOOP_HEADER_PREHEADER_SPLIT]]:
-; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ 1, %[[LOOP_HEADER_PREHEADER_SPLIT]] ]
-; CHECK-NEXT:    br i1 false, label %[[LOOP_LATCH]], label %[[THEN:.*]]
-; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[CALL136:%.*]] = load volatile ptr, ptr null, align 4294967296
-; CHECK-NEXT:    br label %[[LOOP_LATCH]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[N]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_LOOPEXIT_PEEL_BEGIN_LOOPEXIT:.*]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[EXIT_LOOPEXIT_PEEL_BEGIN_LOOPEXIT]]:
-; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP_LATCH]] ]
-; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT_PEEL_BEGIN]]
-; CHECK:       [[EXIT_LOOPEXIT_PEEL_BEGIN]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ 1, %[[LOOP_HEADER_PREHEADER]] ], [ [[DOTPH]], %[[EXIT_LOOPEXIT_PEEL_BEGIN_LOOPEXIT]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER_PEEL:.*]]
 ; CHECK:       [[LOOP_HEADER_PEEL]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[IV_NEXT_PEEL:%.*]], %[[LOOP_LATCH_PEEL:.*]] ], [ 1, %[[LOOP_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[CMP115_PEEL:%.*]] = icmp eq i32 [[TMP3]], [[SUB]]
-; CHECK-NEXT:    br i1 [[CMP115_PEEL]], label %[[LOOP_LATCH_PEEL:.*]], label %[[THEN_PEEL:.*]]
+; CHECK-NEXT:    br i1 [[CMP115_PEEL]], label %[[LOOP_LATCH_PEEL]], label %[[THEN_PEEL:.*]]
 ; CHECK:       [[THEN_PEEL]]:
 ; CHECK-NEXT:    [[CALL136_PEEL:%.*]] = load volatile ptr, ptr null, align 4294967296
 ; CHECK-NEXT:    br label %[[LOOP_LATCH_PEEL]]
 ; CHECK:       [[LOOP_LATCH_PEEL]]:
-; CHECK-NEXT:    [[IV_NEXT_PEEL:%.*]] = add nuw i32 [[TMP3]], 1
+; CHECK-NEXT:    [[IV_NEXT_PEEL]] = add nuw i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[EC_PEEL:%.*]] = icmp eq i32 [[IV_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[EC_PEEL]], label %[[EXIT_LOOPEXIT_PEEL_NEXT:.*]], label %[[EXIT_LOOPEXIT_PEEL_NEXT]]
-; CHECK:       [[EXIT_LOOPEXIT_PEEL_NEXT]]:
-; CHECK-NEXT:    br label %[[LOOP_HEADER_PEEL_NEXT:.*]]
-; CHECK:       [[LOOP_HEADER_PEEL_NEXT]]:
-; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT:.*]]
+; CHECK-NEXT:    br i1 [[EC_PEEL]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP_HEADER_PEEL]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -279,6 +231,4 @@ exit:
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.peeled.count", i32 1}
-; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META1]]}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
 ;.
