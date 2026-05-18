@@ -63,4 +63,4 @@ ninja -C build llvm-ir2vec
 ## License
 
 Apache License v2.0 with LLVM Exceptions. See
-[llvm.org/LICENSE.txt](https://llvm.org/LICENSE.txt).
+[LICENSE.TXT](LICENSE.TXT) or [llvm.org/LICENSE.txt](https://llvm.org/LICENSE.txt).

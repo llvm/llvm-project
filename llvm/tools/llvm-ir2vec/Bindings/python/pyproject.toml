@@ -11,7 +11,8 @@ name = "ir2vec"
 dynamic = ["version"]
 description = "Python bindings for IR2Vec, an LLVM IR embedding framework"
 readme = {file = "README.md", content-type = "text/markdown"}
-license-files = ["LICENSE.txt"]
+license = "Apache-2.0 WITH LLVM-exception"
+license-files = ["LICENSE.TXT"]
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.23"]
 
@@ -24,8 +25,7 @@ Homepage = "https://llvm.org/"
 version = {attr = "ir2vec.__version__"}
 
 [tool.setuptools.package-data]
-ir2vec = ["*.so", "*.pyd", "*.dylib"]
-"ir2vec.vocab_data" = ["*.json"]
+ir2vec = ["*.so", "*.pyd", "*.dylib", "*.json"]
 
 [tool.setuptools.packages.find]
 include = ["ir2vec*"]
