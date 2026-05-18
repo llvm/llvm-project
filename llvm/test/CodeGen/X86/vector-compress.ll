@@ -3738,10 +3738,8 @@ define <4 x i32> @test_compress_const_mask_const_passthrough(<4 x i32> %vec) nou
 ; CHECK-LABEL: test_compress_const_mask_const_passthrough:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,3,2,3]
-; CHECK-NEXT:    movl $7, %eax
-; CHECK-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; CHECK-NEXT:    movl $8, %eax
-; CHECK-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    movabsq $34359738375, %rax # imm = 0x800000007
+; CHECK-NEXT:    vpinsrq $1, %rax, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
     %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> <i1 1, i1 0, i1 0, i1 1>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>)
     ret <4 x i32> %out
