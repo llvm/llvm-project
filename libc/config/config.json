@@ -105,6 +105,10 @@
     "LIBC_CONF_COPT_MEMCPY_X86_USE_NTA_STORES": {
       "value": false,
       "doc": "Use Non-temporal stores in memcpy on x86 to improve performance of large copies."
+    },
+    "LIBC_CONF_USE_MEM_BUILTINS": {
+      "value": false,
+      "doc": "Use builtins for memory utility functions."
     }
   },
   "ctype": {

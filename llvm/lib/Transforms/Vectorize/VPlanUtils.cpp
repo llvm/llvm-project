@@ -113,7 +113,7 @@ static bool poisonGuaranteesUB(const VPValue *V) {
 
     for (VPUser *U : Current->users()) {
       // Check if Current is used as an address operand for load/store.
-      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U)) {
+      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(U))) {
         if (MemR->getAddr() == Current)
           return true;
         continue;
@@ -277,6 +277,13 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
             m_Intrinsic<Intrinsic::smin>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getSMinExpr(Ops[0], Ops[1]);
+    });
+  if (match(V, m_Intrinsic<Intrinsic::abs>(m_VPValue(LHSVal), m_VPValue())))
+    return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
+      // is_int_min_poison is local to this intrinsic: poison on INT_MIN is
+      // not proof that the input is never INT_MIN, nor that poison reaches
+      // UB. Do not translate it to SCEV's global IsNSW flag.
+      return SE.getAbsExpr(Ops[0], /*IsNSW=*/false);
     });
 
   ArrayRef<VPValue *> Ops;
@@ -449,7 +456,8 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
       .Case([](const VPInstruction *VPI) {
-        return preservesUniformity(VPI->getOpcode()) &&
+        return (VPI->isSingleScalar() || VPI->isVectorToScalar() ||
+                preservesUniformity(VPI->getOpcode())) &&
                all_of(VPI->operands(), isUniformAcrossVFsAndUFs);
       })
       .Case([](const VPWidenCastRecipe *R) {
@@ -812,7 +820,7 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
             RepR->getOperand(1) == Cur)
           return true;
       }
-      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U)) {
+      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(U))) {
         if (MemR->getAddr() == Cur && MemR->isConsecutive())
           return true;
       }

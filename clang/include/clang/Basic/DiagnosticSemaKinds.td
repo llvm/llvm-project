@@ -6027,8 +6027,6 @@ def note_checking_constraints_for_function_here : Note<
   "while checking constraint satisfaction for function '%0' required here">;
 def note_constraint_substitution_here : Note<
   "while substituting template arguments into constraint expression here">;
-def note_constraint_normalization_here : Note<
-  "while calculating associated constraint of template %0 here">;
 def note_parameter_mapping_substitution_here : Note<
   "while substituting into concept arguments here; substitution failures not "
   "allowed in concept arguments">;
@@ -10985,6 +10983,14 @@ def warn_lifetime_safety_invalidation
     : Warning<"%select{object whose reference is captured|parameter}0 is later invalidated">,
       InGroup<LifetimeSafetyInvalidation>,
       DefaultIgnore;
+def warn_lifetime_safety_invalidated_field
+    : Warning<"%select{object whose reference|parameter which}0 escapes to a field is later invalidated">,
+      InGroup<LifetimeSafetyInvalidation>,
+      DefaultIgnore;
+def warn_lifetime_safety_invalidated_global
+    : Warning<"%select{object whose reference|parameter which}0 escapes to global or static storage is later invalidated">,
+      InGroup<LifetimeSafetyInvalidation>,
+      DefaultIgnore;
 
 def warn_lifetime_safety_dangling_field
     : Warning<"address of stack memory escapes to a field">,
@@ -11007,8 +11013,8 @@ def warn_lifetime_safety_dangling_global_moved
       InGroup<LifetimeSafetyDanglingGlobalMoved>,
       DefaultIgnore;
 
-def warn_lifetime_safety_param_lifetimebound_violation
-    : Warning<"could not verify that the return value can be lifetime bound to %select{an unnamed parameter|'%1'}0">,
+def warn_lifetime_safety_lifetimebound_violation
+    : Warning<"could not verify that the return value can be lifetime bound to %select{an unnamed parameter|'%1'|the implicit this parameter}0">,
       InGroup<LifetimeSafetyLifetimeboundViolation>,
       DefaultIgnore;
 
@@ -13428,6 +13434,8 @@ def warn_sycl_kernel_return_type : Warning<
 def err_sycl_special_type_num_init_method : Error<
   "types with 'sycl_special_class' attribute must have one and only one '__init' "
   "method defined">;
+def err_sycl_device_invalid_target : Error<
+  "%0 is not a supported SYCL device target">;
 
 // SYCL external attribute diagnostics
 def err_sycl_external_invalid_linkage : Error<

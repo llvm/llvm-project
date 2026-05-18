@@ -21,7 +21,6 @@
 #include "SIISelLowering.h"
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -426,23 +425,6 @@ public:
 
   bool hasPrefetch() const { return HasGFX12Insts; }
 
-  bool hasInstPrefSize() const { return isGFX11Plus(); }
-
-  void getInstPrefSizeArgs(uint32_t &Mask, uint32_t &Shift, uint32_t &Width,
-                           uint32_t &CacheLineSize) const {
-    assert(isGFX11Plus());
-    CacheLineSize = getInstCacheLineSize();
-    if (getGeneration() == GFX11) {
-      Mask = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE;
-      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_SHIFT;
-      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_WIDTH;
-    } else {
-      Mask = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE;
-      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_SHIFT;
-      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_WIDTH;
-    }
-  }
-
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
 
@@ -712,13 +694,6 @@ public:
   bool hasINVWBL2WaitCntRequirement() const { return HasGFX1250Insts; }
 
   bool hasVOPD3() const { return HasGFX1250Insts; }
-
-  // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
-  bool hasVectorMulU64() const { return HasGFX1250Insts; }
-
-  // \returns true if the target has V_MAD_NC_U64_U32/V_MAD_NC_I64_I32
-  // instructions.
-  bool hasMadU64U32NoCarry() const { return HasGFX1250Insts; }
 
   // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
   bool hasIntMinMax64() const { return HasGFX1250Insts; }

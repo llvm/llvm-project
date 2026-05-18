@@ -568,7 +568,7 @@ scanDependenciesForJob(const Command &Job, ScanningWorkerPool &WorkerPool,
     deps::FullDependencyConsumer DepConsumer(WorkerBundleHandle->SeenModules);
 
     if (WorkerBundleHandle->Worker->computeDependencies(
-            WorkingDirectory, CC1CommandLine, DepConsumer, LookupController,
+            WorkingDirectory, {CC1CommandLine}, DepConsumer, LookupController,
             DiagConsumer))
       MaybeTUDeps = DepConsumer.takeTranslationUnitDeps();
   }

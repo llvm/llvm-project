@@ -1676,16 +1676,6 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
     LValue lv = emitLValue(e->getSubExpr());
     QualType destTy = getContext().getPointerType(e->getType());
 
-    clang::LangAS srcLangAS = e->getSubExpr()->getType().getAddressSpace();
-    mlir::ptr::MemorySpaceAttrInterface srcAS;
-    if (clang::isTargetAddressSpace(srcLangAS))
-      srcAS = cir::toCIRAddressSpaceAttr(getMLIRContext(), srcLangAS);
-    else
-      cgm.errorNYI(
-          e->getSourceRange(),
-          "emitCastLValue: address space conversion from unknown address "
-          "space");
-
     mlir::Value v = performAddrSpaceCast(lv.getPointer(), convertType(destTy));
 
     return makeAddrLValue(Address(v, convertTypeForMem(e->getType()),
@@ -2009,10 +1999,29 @@ LValue CIRGenFunction::emitMaterializeTemporaryExpr(
   // Perform derived-to-base casts and/or field accesses, to get from the
   // temporary object we created (and, potentially, for which we extended
   // the lifetime) to the subobject we're binding the reference to.
-  if (!adjustments.empty()) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitMaterializeTemporaryExpr: Adjustments");
-    return {};
+  for (SubobjectAdjustment &adjustment : llvm::reverse(adjustments)) {
+    switch (adjustment.Kind) {
+    case SubobjectAdjustment::DerivedToBaseAdjustment:
+      object =
+          getAddressOfBaseClass(object, adjustment.DerivedToBase.DerivedClass,
+                                adjustment.DerivedToBase.BasePath->path(),
+                                /*nullCheckValue=*/false, e->getExprLoc());
+      break;
+    case SubobjectAdjustment::FieldAdjustment: {
+      LValue lv = makeAddrLValue(object, e->getType(), AlignmentSource::Decl);
+      lv = emitLValueForField(lv, adjustment.Field);
+      assert(lv.isSimple() &&
+             "materialized temporary field is not a simple lvalue");
+      object = lv.getAddress();
+      break;
+    }
+    case SubobjectAdjustment::MemberPointerAdjustment: {
+      mlir::Value ptr = emitScalarExpr(adjustment.Ptr.RHS);
+      object = emitCXXMemberDataPointerAddress(
+          e, object, ptr, adjustment.Ptr.MPT, /*baseInfo=*/nullptr);
+      break;
+    }
+    }
   }
 
   return makeAddrLValue(object, m->getType(), AlignmentSource::Decl);
@@ -2262,7 +2271,22 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   CallArgList args;
   assert(!cir::MissingFeatures::opCallArgEvaluationOrder());
 
-  emitCallArgs(args, dyn_cast<FunctionProtoType>(fnType), e->arguments(),
+  // C++23 static-member operators (`static operator()` /
+  // `static operator[]`) produce a CXXOperatorCallExpr whose first argument
+  // is the object expression even though the operator is static.  Emit the
+  // object for its side effects and drop it before walking the parameter
+  // arguments.
+  auto arguments = e->arguments();
+  if (const auto *oce = dyn_cast<CXXOperatorCallExpr>(e)) {
+    if (const auto *md =
+            dyn_cast_if_present<CXXMethodDecl>(oce->getCalleeDecl());
+        md && md->isStatic()) {
+      emitIgnoredExpr(e->getArg(0));
+      arguments = llvm::drop_begin(arguments, 1);
+    }
+  }
+
+  emitCallArgs(args, dyn_cast<FunctionProtoType>(fnType), arguments,
                e->getDirectCallee());
 
   const CIRGenFunctionInfo &funcInfo =
@@ -2379,15 +2403,16 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
   if (const auto *cudaKernelCallExpr = dyn_cast<CUDAKernelCallExpr>(e))
     return emitCUDAKernelCallExpr(cudaKernelCallExpr, returnValue);
 
+  // A CXXOperatorCallExpr is created even for explicit-object methods or
+  // static member operators (C++23 `static operator()` / `static
+  // operator[]`), but those should be treated like ordinary static function
+  // calls.  Only route through the member-call path for ordinary instance
+  // operators.
   if (const auto *operatorCall = dyn_cast<CXXOperatorCallExpr>(e)) {
-    // If the callee decl is a CXXMethodDecl, we need to emit this as a C++
-    // operator member call.
-    if (const CXXMethodDecl *md =
-            dyn_cast_or_null<CXXMethodDecl>(operatorCall->getCalleeDecl()))
+    if (const auto *md =
+            dyn_cast_if_present<CXXMethodDecl>(operatorCall->getCalleeDecl());
+        md && md->isImplicitObjectMemberFunction())
       return emitCXXOperatorMemberCallExpr(operatorCall, md, returnValue);
-    // A CXXOperatorCallExpr is created even for explicit object methods, but
-    // these should be treated like static function calls. Fall through to do
-    // that.
   }
 
   CIRGenCallee callee = emitCallee(e->getCallee());
