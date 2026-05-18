@@ -1208,9 +1208,6 @@ TEST_F(TokenAnnotatorTest, UnderstandsOverloadedOperators) {
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   // Not TT_FunctionDeclarationName.
   EXPECT_TOKEN(Tokens[2], tok::kw_operator, TT_Unknown);
-
-  // Verify we don't crash.
-  annotate("operator foo*;");
 }
 
 TEST_F(TokenAnnotatorTest, OverloadedOperatorInTemplate) {

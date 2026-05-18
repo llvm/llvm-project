@@ -1684,6 +1684,8 @@ private:
       }
       while (CurrentToken &&
              CurrentToken->isNoneOf(tok::l_paren, tok::semi, tok::r_paren)) {
+        if (CurrentToken->isOneOf(tok::star, tok::amp))
+          CurrentToken->setType(TT_PointerOrReference);
         auto Next = CurrentToken->getNextNonComment();
         if (!Next)
           break;
@@ -1699,10 +1701,11 @@ private:
           break;
         if (Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator, tok::comma,
                               tok::arrow) ||
-            Previous->isPointerOrReference() ||
+            (!Previous->isTypeFinalized() &&
+             Previous->isPointerOrReference()) ||
             // User defined literal.
             Previous->TokenText.starts_with("\"\"")) {
-          Previous->overwriteFixedType(TT_OverloadedOperator);
+          Previous->setType(TT_OverloadedOperator);
           if (CurrentToken->isOneOf(tok::less, tok::greater))
             break;
         }
