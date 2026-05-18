@@ -316,7 +316,7 @@ public:
     }
   }
 
-  const std::pair<const FunctionDecl *, WarningScope>
+  std::pair<const FunctionDecl *, WarningScope>
   getCanonicalFunctionDeclForAttr(const FunctionDecl *FD) {
     if (!FD)
       return {nullptr, WarningScope::IntraTU};
@@ -447,15 +447,22 @@ public:
     }
   }
 
+  // Reports lifetimebound attributes that are placed on a function definition
+  // but not on the corresponding declaration.
   void reportMisplacedLifetimebound() {
     const FunctionDecl *FDef = dyn_cast<FunctionDecl>(FD);
     if (!FDef)
       return;
+    // Check if implicit 'this' has lifetimebound on definition but not on
+    // declaration.
     if (const auto *MDef = dyn_cast<CXXMethodDecl>(FDef);
         MDef && getDirectImplicitObjectLifetimeBoundAttr(MDef))
       if (auto [MDecl, Scope] = getCanonicalDeclForAttr(MDef);
           MDecl && !getDirectImplicitObjectLifetimeBoundAttr(MDecl))
         SemaHelper->reportMisplacedLifetimebound(Scope, MDef, MDecl);
+
+    // Check each parameter for explicit lifetimebound on definition but not on
+    // declaration.
     for (const auto *PDef : FDef->parameters()) {
       const auto *Attr = PDef->getAttr<LifetimeBoundAttr>();
       if (!Attr || Attr->isImplicit())
