@@ -1033,10 +1033,6 @@ void CIRGenFunction::emitNewArrayInitializer(
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
   CleanupDeactivationScope deactivation(*this);
 
-  CharUnits elementSize = getContext().getTypeSizeInChars(elementType);
-  CharUnits elementAlign =
-      beginPtr.getAlignment().alignmentOfArrayElement(elementSize);
-
   // Attempt to perform zero-initialization using memset.
   auto tryMemsetInitialization = [&]() -> bool {
     mlir::Location loc = numElements.getLoc();
@@ -1149,16 +1145,17 @@ void CIRGenFunction::emitNewArrayInitializer(
     }
 
     // Enter a partial-destruction Cleanup if necessary.
+    CharUnits elementSize = getContext().getTypeSizeInChars(elementType);
     if (dtorKind) {
       mlir::Location loc = cgm.getLoc(init->getSourceRange());
       endOfInit = createTempAlloca(beginPtr.getType(), getPointerAlign(), loc,
                                    "arrayinit.endOfInit");
-      pushIrregularPartialArrayCleanup(beginPtr.getPointer(), endOfInit,
-                                       elementType, elementAlign,
-                                       getDestroyer(dtorKind));
+      pushIrregularPartialArrayCleanup(
+          beginPtr.getPointer(), endOfInit, elementType,
+          beginPtr.getAlignment().alignmentOfArrayElement(elementSize),
+          getDestroyer(dtorKind));
     }
 
-    CharUnits elementSize = getContext().getTypeSizeInChars(elementType);
     CharUnits startAlign = curPtr.getAlignment();
     unsigned i = 0;
     for (const Expr *ie : initExprs) {

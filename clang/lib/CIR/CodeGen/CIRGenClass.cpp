@@ -719,7 +719,8 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   QualType elementType;
   mlir::Value numElements = emitArrayLength(arrayType, elementType, arrayBegin);
   emitCXXAggrConstructorCall(ctor, numElements, arrayBegin, e,
-                             newPointerIsChecked, zeroInitialize);
+                             newPointerIsChecked, zeroInitialize,
+                             /*endOfInit=*/Address::invalid());
 }
 
 /// Emit a loop to call a particular constructor for each of several members
