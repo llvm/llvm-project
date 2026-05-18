@@ -9,12 +9,16 @@ struct S {
   int foo(int, ...) { return 42; }
 };
 
-void test(S &s) {
-  int (S::*p)(int, ...) = nullptr;
+void invoke(S &s, int (S::*p)(int, ...)) {
   (void)__builtin_invoke(p, s, 1);
 }
 
-// CIR: cir.func{{.*}}@_Z4testR1S
+void test() {
+  S s;
+  invoke(s, nullptr);
+}
+
+// CIR: cir.func{{.*}}@_Z6invokeR1SMS_FiizE
 // CIR-DAG: !cir.func<(!cir.ptr<!void>, !s32i, ...) -> !s32i>
 // CIR: cir.call %{{.*}}(%{{.*}}, %{{.*}}) : (!cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i, ...) -> !s32i>>, !cir.ptr<!void> {{.*}}, !s32i {{.*}}) -> (!s32i
 
