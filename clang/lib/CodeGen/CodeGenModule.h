@@ -640,7 +640,6 @@ private:
   void createCUDARuntime();
   void createHLSLRuntime();
 
-  bool isTriviallyRecursive(const FunctionDecl *F);
   bool shouldEmitFunction(GlobalDecl GD);
   // Whether a global variable should be emitted by CUDA/HIP host/device
   // related attributes.

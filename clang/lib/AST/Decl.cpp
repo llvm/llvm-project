@@ -26,6 +26,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExternalASTSource.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/ODRHash.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/AST/PrettyPrinter.h"
@@ -33,6 +34,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Redeclarable.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -3520,6 +3522,59 @@ bool FunctionDecl::isInlineBuiltinDeclaration() const {
     return true;
   }
   llvm_unreachable("Unknown GVALinkage");
+}
+
+namespace {
+// Visits a function body looking for a direct call back to the symbol the
+// function will link as.  Detects both asm-label aliases and __builtin_*
+// wrappers (PR9614 / glibc btowc pattern).
+struct FunctionIsDirectlyRecursive
+    : public ConstStmtVisitor<FunctionIsDirectlyRecursive, bool> {
+  const StringRef Name;
+  const Builtin::Context &BI;
+  FunctionIsDirectlyRecursive(StringRef N, const Builtin::Context &C)
+      : Name(N), BI(C) {}
+
+  bool VisitCallExpr(const CallExpr *E) {
+    const FunctionDecl *FD = E->getDirectCallee();
+    if (!FD)
+      return false;
+    AsmLabelAttr *Attr = FD->getAttr<AsmLabelAttr>();
+    if (Attr && Name == Attr->getLabel())
+      return true;
+    unsigned BuiltinID = FD->getBuiltinID();
+    if (!BuiltinID || !BI.isLibFunction(BuiltinID))
+      return false;
+    std::string BuiltinNameStr = BI.getName(BuiltinID);
+    StringRef BuiltinName = BuiltinNameStr;
+    return BuiltinName.consume_front("__builtin_") && Name == BuiltinName;
+  }
+
+  bool VisitStmt(const Stmt *S) {
+    for (const Stmt *Child : S->children())
+      if (Child && this->Visit(Child))
+        return true;
+    return false;
+  }
+};
+} // namespace
+
+bool FunctionDecl::isTriviallyRecursive(MangleContext &MC) const {
+  StringRef Name;
+  if (MC.shouldMangleDeclName(this)) {
+    // C++-mangled functions can only recurse into themselves through an
+    // asm label that bypasses the mangled name.
+    AsmLabelAttr *Attr = getAttr<AsmLabelAttr>();
+    if (!Attr)
+      return false;
+    Name = Attr->getLabel();
+  } else {
+    Name = getName();
+  }
+
+  FunctionIsDirectlyRecursive Walker(Name, getASTContext().BuiltinInfo);
+  const Stmt *Body = getBody();
+  return Body ? Walker.Visit(Body) : false;
 }
 
 bool FunctionDecl::isDestroyingOperatorDelete() const {

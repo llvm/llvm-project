@@ -77,6 +77,7 @@ class TemplateArgumentList;
 class TemplateArgumentListInfo;
 class TemplateParameterList;
 class TypeAliasTemplateDecl;
+class MangleContext;
 class UnresolvedSetImpl;
 class VarTemplateDecl;
 enum class ImplicitParamKind;
@@ -2647,6 +2648,12 @@ public:
 
   /// Determine if this function provides an inline implementation of a builtin.
   bool isInlineBuiltinDeclaration() const;
+
+  /// Return true if this function's body contains only a direct call back to
+  /// the same symbol via an asm label or a __builtin_* alias.  Such
+  /// available_externally bodies are not valid stand-ins for the real
+  /// implementation (PR9614) and should be dropped before codegen.
+  bool isTriviallyRecursive(MangleContext &MC) const;
 
   /// Determine whether this is a destroying operator delete.
   bool isDestroyingOperatorDelete() const;
