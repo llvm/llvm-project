@@ -4318,8 +4318,8 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixBF16Mods(SDValue In, SDValue &Src,
 
 // Match BITOP3 operation and return a number of matched instructions plus
 // truth table.
-static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
-                                              SmallVectorImpl<SDValue> &Src) {
+static std::pair<unsigned, uint8_t>
+BitOp3_Op(SDValue In, SmallVectorImpl<SDValue> &Src, SelectionDAG &DAG) {
   unsigned NumOpcodes = 0;
   uint8_t LHSBits, RHSBits;
 
@@ -4397,6 +4397,12 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
     // replace that slot via the "replace parent operator" path, invalidating
     // the truth-table bits cached for the other use.
     if (LHS == RHS) {
+      // XOR(X, X) folds to 0 only when X is well-defined; XOR(undef, undef)
+      // is undef, not 0. AND/OR(X, X) folds to X and propagates undef
+      // correctly.
+      if (In.getOpcode() == ISD::XOR &&
+          !DAG.isGuaranteedNotToBeUndefOrPoison(LHS))
+        return std::make_pair(0, 0);
       uint8_t Bits;
       if (!getOperandBits(LHS, Bits))
         return std::make_pair(0, 0);
@@ -4412,13 +4418,13 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
     }
 
     // Recursion is naturally limited by the size of the operand vector.
-    auto Op = BitOp3_Op(LHS, Src);
+    auto Op = BitOp3_Op(LHS, Src, DAG);
     if (Op.first) {
       NumOpcodes += Op.first;
       LHSBits = Op.second;
     }
 
-    Op = BitOp3_Op(RHS, Src);
+    Op = BitOp3_Op(RHS, Src, DAG);
     if (Op.first) {
       NumOpcodes += Op.first;
       RHSBits = Op.second;
@@ -4453,7 +4459,7 @@ bool AMDGPUDAGToDAGISel::SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1,
   uint8_t TTbl;
   unsigned NumOpcodes;
 
-  std::tie(NumOpcodes, TTbl) = BitOp3_Op(In, Src);
+  std::tie(NumOpcodes, TTbl) = BitOp3_Op(In, Src, *CurDAG);
 
   // Src.empty() case can happen if all operands are all zero or all ones.
   // Normally it shall be optimized out before reaching this.

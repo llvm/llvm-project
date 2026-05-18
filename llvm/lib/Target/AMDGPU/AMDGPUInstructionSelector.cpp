@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -4229,6 +4230,12 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(Register R,
     // replace that slot via the "replace parent operator" path, invalidating
     // the truth-table bits cached for the other use.
     if (LHS == RHS) {
+      // XOR(X, X) folds to 0 only when X is well-defined; XOR(undef, undef)
+      // is undef, not 0. AND/OR(X, X) folds to X and propagates undef
+      // correctly.
+      if (MI->getOpcode() == TargetOpcode::G_XOR &&
+          !isGuaranteedNotToBeUndef(LHS, MRI))
+        return std::make_pair(0, 0);
       uint8_t Bits;
       if (!getOperandBits(LHS, Bits))
         return std::make_pair(0, 0);
