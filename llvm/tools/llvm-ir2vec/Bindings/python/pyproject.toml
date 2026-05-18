@@ -11,7 +11,7 @@ name = "ir2vec"
 dynamic = ["version"]
 description = "Python bindings for IR2Vec, an LLVM IR embedding framework"
 readme = {file = "README.md", content-type = "text/markdown"}
-license = "Apache-2.0 WITH LLVM-exception"
+license-files = ["LICENSE.txt"]
 requires-python = ">=3.10"
 dependencies = ["numpy"]
 
