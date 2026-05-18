@@ -3,12 +3,10 @@
 !void = !cir.void
 
 module {
-  cir.func @assume_bundle_args_without_tag(%arg0 : !cir.ptr<!void>) {
+  cir.func @assume_bundle_args_without_kind(%arg0 : !cir.ptr<!void>) {
     %0 = cir.const #cir.bool<true> : !cir.bool
-    // expected-error@+1 {{expected 1 operand bundle tags, but actually got 0}}
-    "cir.assume"(%0, %arg0) {
-      op_bundle_sizes = array<i32: 1>
-    } : (!cir.bool, !cir.ptr<!void>) -> ()
+    // expected-error@+1 {{unexpected bundle operands for kind 'none'}}
+    "cir.assume"(%0, %arg0) : (!cir.bool, !cir.ptr<!void>) -> ()
     cir.return
   }
 }
@@ -18,13 +16,10 @@ module {
 !void = !cir.void
 
 module {
-  cir.func @assume_bundle_tag_not_string(%arg0 : !cir.ptr<!void>) {
+  cir.func @assume_deref_wrong_arity(%arg0 : !cir.ptr<!void>) {
     %0 = cir.const #cir.bool<true> : !cir.bool
-    // expected-error@+1 {{operand bundle tag must be a StringAttr}}
-    "cir.assume"(%0, %arg0) {
-      op_bundle_sizes = array<i32: 1>,
-      op_bundle_tags = [42 : i64]
-    } : (!cir.bool, !cir.ptr<!void>) -> ()
+    // expected-error@+1 {{dereferenceable bundle expects 2 operands}}
+    cir.assume %0 dereferenceable(%arg0 : !cir.ptr<!void>) : !cir.bool
     cir.return
   }
 }

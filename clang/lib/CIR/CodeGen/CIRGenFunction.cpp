@@ -1474,7 +1474,8 @@ mlir::Value CIRGenFunction::emitAlignmentAssumption(
   llvm::SmallVector<mlir::Value> bundleArgs{ptrValue, alignValue};
   if (offsetValue)
     bundleArgs.push_back(offsetValue);
-  cir::AssumeOp::create(builder, assumeLoc, cond, "align", bundleArgs);
+  cir::AssumeOp::create(builder, assumeLoc, cond, cir::AssumeBundleKind::Align,
+                        bundleArgs);
   return ptrValue;
 }
 

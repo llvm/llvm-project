@@ -6144,6 +6144,15 @@ def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {
 // Assume Operations
 //===----------------------------------------------------------------------===//
 
+def CIR_AssumeBundleKind : CIR_I32EnumAttr<
+  "AssumeBundleKind", "kind of cir.assume operand bundle", [
+  I32EnumAttrCase<"None", 0>,
+  I32EnumAttrCase<"Align", 1, "align">,
+  I32EnumAttrCase<"SeparateStorage", 2, "separate_storage">,
+  I32EnumAttrCase<"Dereferenceable", 3, "dereferenceable">
+]> {
+}
+
 def CIR_AssumeOp : CIR_Op<"assume"> {
   let summary = "Tell the optimizer that a boolean value is true";
   let description = [{
@@ -6151,49 +6160,35 @@ def CIR_AssumeOp : CIR_Op<"assume"> {
     argument and does not have any results.  The operation tells the optimizer
     that the predicate is always true.
 
-    Optional operand bundles can be attached to carry additional assumption
-    metadata, mirroring MLIR LLVM dialect's `llvm.assume` operand bundles
-    (`mlir/include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.td`).  Each bundle
-    has a string tag and a (possibly empty) list of operands.  For example,
+    An optional operand bundle carries additional assumption metadata,
+    mirroring MLIR LLVM dialect's `llvm.assume` operand bundles
+    (`mlir/include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.td`).  The bundle
+    kind is a `AssumeBundleKind` enum; bundle operands follow the kind
+    keyword in the assembly form.  For example,
     `__builtin_assume_dereferenceable(p, n)` lowers to
-    `cir.assume %true ["dereferenceable"(%p, %n : !cir.ptr<!void>, !u64i)]`,
-    which in turn lowers to
+    `cir.assume %true dereferenceable(%p, %n : !cir.ptr<!void>, !u64i)
+    : !cir.bool`, which in turn lowers to
     `call void @llvm.assume(i1 true) [ "dereferenceable"(ptr, i64) ]`.
 
     This operation corresponds to the `__assume` / `__builtin_assume`
     builtins (no bundle), as well as `__builtin_assume_aligned`
-    (`"align"` bundle), `__builtin_assume_separate_storage`
-    (`"separate_storage"` bundle), and `__builtin_assume_dereferenceable`
-    (`"dereferenceable"` bundle).
+    (`align` bundle), `__builtin_assume_separate_storage`
+    (`separate_storage` bundle), and `__builtin_assume_dereferenceable`
+    (`dereferenceable` bundle).
   }];
 
   let arguments = (ins
     CIR_BoolType:$predicate,
-    VariadicOfVariadic<CIR_AnyType, "op_bundle_sizes">:$op_bundle_operands,
-    DenseI32ArrayAttr:$op_bundle_sizes,
-    OptionalAttr<ArrayAttr>:$op_bundle_tags
+    DefaultValuedAttr<CIR_AssumeBundleKind,
+                      "::cir::AssumeBundleKind::None">:$bundle_kind,
+    Variadic<CIR_AnyType>:$bundle_args
   );
 
   let assemblyFormat = [{
-    $predicate
-    custom<OpBundles>($op_bundle_operands, type($op_bundle_operands),
-                      $op_bundle_tags)
+    $predicate custom<AssumeBundle>($bundle_kind, $bundle_args,
+                                    type($bundle_args))
     `:` type($predicate) attr-dict
   }];
-
-  let builders = [
-    OpBuilder<(ins "mlir::Value":$predicate), [{
-      build($_builder, $_state, predicate,
-            /*op_bundle_operands=*/llvm::ArrayRef<mlir::ValueRange>{},
-            /*op_bundle_tags=*/mlir::ArrayAttr{});
-    }]>,
-    OpBuilder<(ins "mlir::Value":$predicate, "llvm::StringRef":$bundleTag,
-                   "mlir::ValueRange":$bundleArgs), [{
-      build($_builder, $_state, predicate,
-            llvm::ArrayRef<mlir::ValueRange>(bundleArgs),
-            $_builder.getStrArrayAttr(bundleTag));
-    }]>
-  ];
 
   let hasVerifier = 1;
 }

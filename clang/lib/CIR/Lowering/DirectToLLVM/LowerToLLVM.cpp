@@ -820,11 +820,15 @@ mlir::LogicalResult CIRToLLVMSignBitOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMAssumeOpLowering::matchAndRewrite(
     cir::AssumeOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  llvm::SmallVector<mlir::ValueRange> bundleOperands;
-  for (mlir::ValueRange operands : adaptor.getOpBundleOperands())
-    bundleOperands.push_back(operands);
-  rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(
-      op, adaptor.getPredicate(), bundleOperands, op.getOpBundleTagsAttr());
+  mlir::Value cond = adaptor.getPredicate();
+  if (op.getBundleKind() == cir::AssumeBundleKind::None) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(op, cond);
+    return mlir::success();
+  }
+
+  llvm::StringRef tag = cir::stringifyAssumeBundleKind(op.getBundleKind());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(op, cond, tag,
+                                                    adaptor.getBundleArgs());
   return mlir::success();
 }
 

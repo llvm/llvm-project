@@ -117,7 +117,7 @@ void *assume_aligned(void *ptr) {
 }
 
 // CIR: @_Z14assume_alignedPv
-// CIR:   cir.assume %{{.+}} ["align"(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i)] : !cir.bool
+// CIR:   cir.assume %{{.+}} align(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i) : !cir.bool
 // CIR: }
 
 // LLVM: @_Z14assume_alignedPv
@@ -133,7 +133,7 @@ void *assume_aligned_misalignment(void *ptr, unsigned misalignment) {
 }
 
 // CIR: @_Z27assume_aligned_misalignmentPvj
-// CIR:   cir.assume %{{.+}} ["align"(%{{.+}}, %{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i, !u64i)] : !cir.bool
+// CIR:   cir.assume %{{.+}} align(%{{.+}}, %{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i, !u64i) : !cir.bool
 // CIR: }
 
 // LLVM: @_Z27assume_aligned_misalignmentPvj
@@ -149,7 +149,7 @@ void assume_separate_storage(void *p1, void *p2) {
 }
 
 // CIR: cir.func{{.*}} @_Z23assume_separate_storagePvS_
-// CIR:   cir.assume %{{.+}} ["separate_storage"(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !cir.ptr<!void>)] : !cir.bool
+// CIR:   cir.assume %{{.+}} separate_storage(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !cir.ptr<!void>) : !cir.bool
 // CIR: }
 
 // LLVM: define {{.*}}void @_Z23assume_separate_storagePvS_
@@ -165,7 +165,7 @@ void assume_dereferenceable(void *p, unsigned long n) {
 }
 
 // CIR: cir.func{{.*}} @_Z22assume_dereferenceablePvm
-// CIR:   cir.assume %{{.+}} ["dereferenceable"(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i)] : !cir.bool
+// CIR:   cir.assume %{{.+}} dereferenceable(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i) : !cir.bool
 // CIR: }
 
 // LLVM: define {{.*}}void @_Z22assume_dereferenceablePvm
@@ -181,7 +181,7 @@ void assume_dereferenceable_const(void *p) {
 }
 
 // CIR: cir.func{{.*}} @_Z28assume_dereferenceable_constPv
-// CIR:   cir.assume %{{.+}} ["dereferenceable"(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i)] : !cir.bool
+// CIR:   cir.assume %{{.+}} dereferenceable(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i) : !cir.bool
 // CIR: }
 
 // LLVM: define {{.*}}void @_Z28assume_dereferenceable_constPv
@@ -197,7 +197,7 @@ void assume_dereferenceable_narrow_size(void *p, unsigned n) {
 }
 
 // CIR: cir.func{{.*}} @_Z34assume_dereferenceable_narrow_sizePvj
-// CIR:   cir.assume %{{.+}} ["dereferenceable"(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i)] : !cir.bool
+// CIR:   cir.assume %{{.+}} dereferenceable(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i) : !cir.bool
 // CIR: }
 
 // LLVM: define {{.*}}void @_Z34assume_dereferenceable_narrow_sizePvj

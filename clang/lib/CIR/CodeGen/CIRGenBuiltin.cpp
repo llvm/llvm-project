@@ -1087,7 +1087,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       return RValue::get(nullptr);
 
     mlir::Value argValue = emitCheckedArgForAssume(e->getArg(0));
-    cir::AssumeOp::create(builder, loc, argValue);
+    cir::AssumeOp::create(builder, loc, argValue, cir::AssumeBundleKind::None,
+                          mlir::ValueRange{});
     return RValue::get(nullptr);
   }
 
@@ -1095,7 +1096,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value value0 = emitScalarExpr(e->getArg(0));
     mlir::Value value1 = emitScalarExpr(e->getArg(1));
     mlir::Value cond = builder.getBool(true, loc);
-    cir::AssumeOp::create(builder, loc, cond, "separate_storage",
+    cir::AssumeOp::create(builder, loc, cond,
+                          cir::AssumeBundleKind::SeparateStorage,
                           mlir::ValueRange{value0, value1});
     return RValue::get(nullptr);
   }
@@ -1109,7 +1111,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     if (sizeValue.getType() != uintPtrTy)
       sizeValue = builder.createIntCast(sizeValue, uintPtrTy);
     mlir::Value cond = builder.getBool(true, loc);
-    cir::AssumeOp::create(builder, loc, cond, "dereferenceable",
+    cir::AssumeOp::create(builder, loc, cond,
+                          cir::AssumeBundleKind::Dereferenceable,
                           mlir::ValueRange{ptrValue, sizeValue});
     return RValue::get(nullptr);
   }
