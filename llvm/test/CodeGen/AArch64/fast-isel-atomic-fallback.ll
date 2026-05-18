@@ -36,7 +36,6 @@ define i32 @cmpxchg_cstexpr_addr(i32 %cmp, i32 %new, ptr %ps) #0 {
 ; CHECK-NEXT:  LBB1_3:
 ; CHECK-NEXT:    subs w8, w0, w8
 ; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    ; kill: def $w1 killed $w8
 ; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
   %tmp0 = cmpxchg ptr inttoptr (i32 ptrtoint (ptr @g to i32) to ptr), i32 %cmp, i32 %new seq_cst seq_cst

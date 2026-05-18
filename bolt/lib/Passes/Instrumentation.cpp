@@ -15,8 +15,10 @@
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/RWMutex.h"
+#include <fstream>
 #include <queue>
 #include <stack>
 
@@ -75,6 +77,13 @@ cl::opt<bool> InstrumentationWaitForks(
     cl::desc("Wait until all forks of instrumented process will finish "
              "(use with instrumentation-sleep-time option)"),
     cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
+
+cl::opt<std::string> InstrumentFuncsFile(
+    "instrument-funcs-file",
+    cl::desc("file with list of function names (one per line) to instrument; "
+             "only functions whose name exactly matches a line in this file "
+             "will be instrumented"),
+    cl::Optional, cl::cat(BoltInstrCategory));
 
 cl::opt<bool>
     InstrumentHotOnly("instrument-hot-only",
@@ -643,9 +652,37 @@ Error Instrumentation::runOnFunctions(BinaryContext &BC) {
 
   createAuxiliaryFunctions(BC);
 
+  const bool HasInstrumentFuncsFilter = !opts::InstrumentFuncsFile.empty();
+  StringSet<> InstrumentFuncsSet;
+  if (HasInstrumentFuncsFilter) {
+    std::ifstream FuncsFile(opts::InstrumentFuncsFile, std::ios::in);
+    if (!FuncsFile)
+      return createFatalBOLTError(Twine("instrument-funcs-file \"") +
+                                  Twine(opts::InstrumentFuncsFile) +
+                                  Twine("\" can't be opened."));
+    std::string FuncName;
+    while (std::getline(FuncsFile, FuncName))
+      if (!FuncName.empty())
+        InstrumentFuncsSet.insert(FuncName);
+  }
+
   ParallelUtilities::PredicateTy SkipPredicate = [&](const BinaryFunction &BF) {
-    return (!BF.isSimple() || BF.isIgnored() ||
-            (opts::InstrumentHotOnly && !BF.getKnownExecutionCount()));
+    if (!BF.isSimple() || BF.isIgnored())
+      return true;
+    if (opts::InstrumentHotOnly && !BF.getKnownExecutionCount())
+      return true;
+    if (HasInstrumentFuncsFilter) {
+      bool Found = false;
+      for (const StringRef Name : BF.getNames()) {
+        if (InstrumentFuncsSet.contains(Name)) {
+          Found = true;
+          break;
+        }
+      }
+      if (!Found)
+        return true;
+    }
+    return false;
   };
 
   ParallelUtilities::WorkFuncWithAllocTy WorkFun =

@@ -8651,7 +8651,9 @@ is executed, followed by ``uint64_t`` value and execution count pairs.
 The value profiling kind is 0 for indirect call targets and 1 for memory
 operations. For indirect call targets, each profile value is a hash
 of the callee function name, and for memory operations each value is the
-byte length.
+byte length. It is illegal to have duplicate profile values (e.g., 
+duplicate function hashes for indirect calls or byte lengths for memory
+operations).
 
 Note that the value counts do not need to add up to the total count
 listed in the third operand (in practice only the top hottest values

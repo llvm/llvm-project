@@ -37,6 +37,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include <cassert>
 #include <numeric>
 #include <optional>
 
@@ -4969,7 +4970,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return Legalized;
   }
   case G_SMULFIX:
-    return lowerSmulfix(MI);
+  case G_UMULFIX:
+    return lowerMulfix(MI);
   }
 }
 
@@ -7115,19 +7117,23 @@ void LegalizerHelper::multiplyRegisters(SmallVectorImpl<Register> &DstRegs,
   SmallVector<Register, 4> Factors;
 
   for (DstIdx = 1; DstIdx < DstParts; DstIdx++) {
-    // Collect low parts of muls for DstIdx.
-    for (unsigned i = DstIdx + 1 < SrcParts ? 0 : DstIdx - SrcParts + 1;
-         i <= std::min(DstIdx, SrcParts - 1); ++i) {
-      MachineInstrBuilder Mul =
-          B.buildMul(NarrowTy, Src1Regs[DstIdx - i], Src2Regs[i]);
-      Factors.push_back(Mul.getReg(0));
-    }
     // Collect high parts of muls from previous DstIdx.
     for (unsigned i = DstIdx < SrcParts ? 0 : DstIdx - SrcParts;
          i <= std::min(DstIdx - 1, SrcParts - 1); ++i) {
       MachineInstrBuilder Umulh =
           B.buildUMulH(NarrowTy, Src1Regs[DstIdx - 1 - i], Src2Regs[i]);
       Factors.push_back(Umulh.getReg(0));
+    }
+    // Collect low parts of muls for DstIdx. Visit the diagonal starting with
+    // the low Src1 part, so multiply-add selectors can use it as the first
+    // accumulated cross product.
+    unsigned LowStart = DstIdx + 1 < SrcParts ? 0 : DstIdx - SrcParts + 1;
+    unsigned LowEnd = std::min(DstIdx, SrcParts - 1);
+    for (unsigned RevI = LowEnd + 1; RevI != LowStart; --RevI) {
+      unsigned i = RevI - 1;
+      MachineInstrBuilder Mul =
+          B.buildMul(NarrowTy, Src1Regs[DstIdx - i], Src2Regs[i]);
+      Factors.push_back(Mul.getReg(0));
     }
     // Add CarrySum from additions calculated for previous DstIdx.
     if (DstIdx != 1) {
@@ -10656,8 +10662,11 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   return Legalized;
 }
 
-LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerSmulfix(MachineInstr &MI) {
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
+  [[maybe_unused]] unsigned OpCode = MI.getOpcode();
+  assert((OpCode == TargetOpcode::G_SMULFIX ||
+          OpCode == TargetOpcode::G_UMULFIX) &&
+         "Operator must be either G_SMULFIX or G_UMULFIX!");
   auto [Dst, LHS, RHS] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Dst);
   unsigned Scale = MI.getOperand(3).getImm();
@@ -10668,13 +10677,25 @@ LegalizerHelper::lowerSmulfix(MachineInstr &MI) {
     return Legalized;
   }
 
+  // TODO: Port other lowerng paths from SelectionDAG.
   LLT WideTy = Ty.changeElementSize(Ty.getScalarSizeInBits() * 2);
-  auto SExtLHS = MIRBuilder.buildSExt(WideTy, LHS);
-  auto SExtRHS = MIRBuilder.buildSExt(WideTy, RHS);
-  auto Mul = MIRBuilder.buildMul(WideTy, SExtLHS, SExtRHS);
   auto ShiftAmt = MIRBuilder.buildConstant(WideTy, Scale);
-  auto Shifted = MIRBuilder.buildAShr(WideTy, Mul, ShiftAmt);
-  MIRBuilder.buildTrunc(Dst, Shifted);
+  MachineInstrBuilder ExtLHS{}, ExtRHS{}, Shift{};
+  if (MI.getOpcode() == TargetOpcode::G_SMULFIX) {
+    ExtLHS = MIRBuilder.buildSExt(WideTy, LHS);
+    ExtRHS = MIRBuilder.buildSExt(WideTy, RHS);
+  } else {
+    ExtLHS = MIRBuilder.buildZExt(WideTy, LHS);
+    ExtRHS = MIRBuilder.buildZExt(WideTy, RHS);
+  }
+
+  auto Mul = MIRBuilder.buildMul(WideTy, ExtLHS, ExtRHS);
+  if (MI.getOpcode() == TargetOpcode::G_SMULFIX)
+    Shift = MIRBuilder.buildAShr(WideTy, Mul, ShiftAmt);
+  else
+    Shift = MIRBuilder.buildLShr(WideTy, Mul, ShiftAmt);
+
+  MIRBuilder.buildTrunc(Dst, Shift);
 
   MI.eraseFromParent();
   return Legalized;
