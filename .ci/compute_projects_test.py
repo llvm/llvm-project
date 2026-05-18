@@ -482,9 +482,16 @@ class TestComputeProjects(unittest.TestCase):
             ["libc/shared/math/acos.h"], "Linux"
         )
         self.assertEqual(env_variables["projects_to_build"], "clang;lld;llvm")
-        self.assertEqual(env_variables["project_check_targets"], "check-clang check-llvm")
-        self.assertEqual(env_variables["runtimes_to_build"], "libc;libcxx;libcxxabi;libunwind")
-        self.assertEqual(env_variables["runtimes_check_targets"], "check-cxx check-cxxabi check-libc check-unwind")
+        self.assertEqual(
+            env_variables["project_check_targets"], "check-clang check-llvm"
+        )
+        self.assertEqual(
+            env_variables["runtimes_to_build"], "libc;libcxx;libcxxabi;libunwind"
+        )
+        self.assertEqual(
+            env_variables["runtimes_check_targets"],
+            "check-cxx check-cxxabi check-libc check-unwind",
+        )
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
 
 
