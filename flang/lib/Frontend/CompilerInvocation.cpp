@@ -873,6 +873,13 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLoc);
   }
 
+  // -f{no-}acc-allow-default-none-scalars
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::AccDefaultNoneScalars,
+      args.hasFlag(clang::options::OPT_facc_allow_default_none_scalars,
+                   clang::options::OPT_fno_acc_allow_default_none_scalars,
+                   false));
+
   // -f{no-}xor-operator
   opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
                        args.hasFlag(clang::options::OPT_fxor_operator,
