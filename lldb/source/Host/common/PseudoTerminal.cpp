@@ -59,6 +59,11 @@ void PseudoTerminal::CloseSecondaryFileDescriptor() {
   }
 }
 
+void PseudoTerminal::Reset() {
+  ClosePrimaryFileDescriptor();
+  CloseSecondaryFileDescriptor();
+}
+
 llvm::Error PseudoTerminal::OpenFirstAvailablePrimary(int oflag) {
 #if LLDB_ENABLE_POSIX
   // Open the primary side of a pseudo terminal

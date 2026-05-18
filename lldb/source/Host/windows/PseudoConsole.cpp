@@ -215,6 +215,13 @@ void PseudoConsole::CloseAnonymousPipes() {
   m_pipe_child_stdout = INVALID_HANDLE_VALUE;
 }
 
+void PseudoConsole::Reset() {
+  Close();
+  ClosePseudoConsolePipes();
+  CloseAnonymousPipes();
+  m_mode = Mode::None;
+}
+
 llvm::Error PseudoConsole::OpenAnonymousPipes() {
   assert(m_mode == Mode::None &&
          "Attempted to open a AnonymousPipes in a different mode than None");
