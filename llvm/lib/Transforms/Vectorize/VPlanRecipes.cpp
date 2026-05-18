@@ -2269,6 +2269,95 @@ bool VPIRFlags::hasRequiredFlagsForOpcode(unsigned Opcode) const {
 #endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+static void printRecurrenceKind(raw_ostream &OS, const RecurKind &Kind) {
+  switch (Kind) {
+  case RecurKind::None:
+    OS << "none";
+    break;
+  case RecurKind::Add:
+    OS << "add";
+    break;
+  case RecurKind::Sub:
+    OS << "sub";
+    break;
+  case RecurKind::AddChainWithSubs:
+    OS << "add-chain-with-subs";
+    break;
+  case RecurKind::Mul:
+    OS << "mul";
+    break;
+  case RecurKind::Or:
+    OS << "or";
+    break;
+  case RecurKind::And:
+    OS << "and";
+    break;
+  case RecurKind::Xor:
+    OS << "xor";
+    break;
+  case RecurKind::SMin:
+    OS << "smin";
+    break;
+  case RecurKind::SMax:
+    OS << "smax";
+    break;
+  case RecurKind::UMin:
+    OS << "umin";
+    break;
+  case RecurKind::UMax:
+    OS << "umax";
+    break;
+  case RecurKind::FAdd:
+    OS << "fadd";
+    break;
+  case RecurKind::FAddChainWithSubs:
+    OS << "fadd-chain-with-subs";
+    break;
+  case RecurKind::FSub:
+    OS << "fsub";
+    break;
+  case RecurKind::FMul:
+    OS << "fmul";
+    break;
+  case RecurKind::FMin:
+    OS << "fmin";
+    break;
+  case RecurKind::FMax:
+    OS << "fmax";
+    break;
+  case RecurKind::FMinNum:
+    OS << "fminnum";
+    break;
+  case RecurKind::FMaxNum:
+    OS << "fmaxnum";
+    break;
+  case RecurKind::FMinimum:
+    OS << "fminimum";
+    break;
+  case RecurKind::FMaximum:
+    OS << "fmaximum";
+    break;
+  case RecurKind::FMinimumNum:
+    OS << "fminimumnum";
+    break;
+  case RecurKind::FMaximumNum:
+    OS << "fmaximumnum";
+    break;
+  case RecurKind::FMulAdd:
+    OS << "fmuladd";
+    break;
+  case RecurKind::AnyOf:
+    OS << "any-of";
+    break;
+  case RecurKind::FindIV:
+    OS << "find-iv";
+    break;
+  case RecurKind::FindLast:
+    OS << "find-last";
+    break;
+  }
+}
+
 void VPIRFlags::printFlags(raw_ostream &O) const {
   switch (OpType) {
   case OperationType::Cmp:
@@ -2316,49 +2405,8 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
       O << " nneg";
     break;
   case OperationType::ReductionOp: {
-    RecurKind RK = getRecurKind();
     O << " (";
-    switch (RK) {
-    case RecurKind::AnyOf:
-      O << "any-of";
-      break;
-    case RecurKind::FindLast:
-      O << "find-last";
-      break;
-    case RecurKind::SMax:
-      O << "smax";
-      break;
-    case RecurKind::SMin:
-      O << "smin";
-      break;
-    case RecurKind::UMax:
-      O << "umax";
-      break;
-    case RecurKind::UMin:
-      O << "umin";
-      break;
-    case RecurKind::FMinNum:
-      O << "fminnum";
-      break;
-    case RecurKind::FMaxNum:
-      O << "fmaxnum";
-      break;
-    case RecurKind::FMinimum:
-      O << "fminimum";
-      break;
-    case RecurKind::FMaximum:
-      O << "fmaximum";
-      break;
-    case RecurKind::FMinimumNum:
-      O << "fminimumnum";
-      break;
-    case RecurKind::FMaximumNum:
-      O << "fmaximumnum";
-      break;
-    default:
-      O << Instruction::getOpcodeName(RecurrenceDescriptor::getOpcode(RK));
-      break;
-    }
+    printRecurrenceKind(O, getRecurKind());
     if (isReductionInLoop())
       O << ", in-loop";
     if (isReductionOrdered())
@@ -3248,10 +3296,9 @@ void VPReductionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   getChainOp()->printAsOperand(O, SlotTracker);
   O << " +";
   printFlags(O);
-  O << " reduce."
-    << Instruction::getOpcodeName(
-           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
-    << " (";
+  O << " reduce.";
+  printRecurrenceKind(O, getRecurrenceKind());
+  O << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   if (isConditional()) {
     O << ", ";
@@ -4508,7 +4555,9 @@ void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN-REDUCTION-PHI ";
 
   printAsOperand(O, SlotTracker);
-  O << " = phi";
+  O << " = phi (";
+  printRecurrenceKind(O, Kind);
+  O << ")";
   printFlags(O);
   printOperands(O, SlotTracker);
   if (getVFScaleFactor() > 1)
