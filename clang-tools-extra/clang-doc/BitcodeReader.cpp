@@ -154,7 +154,7 @@ static llvm::Error decodeRecord(const Record &R, FieldId &Field,
                                  "invalid value for FieldId");
 }
 
-static llvm::Error decodeRecord(const Record &R, OwningVec<Location> &Field,
+static llvm::Error decodeRecord(const Record &R, DocList<Location> &Field,
                                 llvm::StringRef Blob) {
   if (R.size() < 3)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -1489,8 +1489,8 @@ ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
 }
 
 // Entry point
-llvm::Expected<OwningPtrArray<Info>> ClangDocBitcodeReader::readBitcode() {
-  OwningPtrArray<Info> Infos;
+llvm::Expected<std::vector<Info *>> ClangDocBitcodeReader::readBitcode() {
+  std::vector<Info *> Infos;
   if (auto Err = validateStream())
     return std::move(Err);
 
