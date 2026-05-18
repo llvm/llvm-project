@@ -1,6 +1,4 @@
 ## Check DXContainer support within a PDB file.
-## Disable the test until yaml2pdb and pdb2yaml are implemented.
-# UNSUPPORTED: target={{.*}}
 
 # RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
 # RUN: llvm-pdbutil pdb2yaml --all %t.pdb > %t.yaml
