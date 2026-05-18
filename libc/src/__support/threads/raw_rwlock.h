@@ -399,8 +399,8 @@ private:
       // reached.
       bool timeout_flag = false;
       if (!old.can_acquire<role>(get_preference())) {
-        auto result = queue.wait<role>(serial_number, timeout, is_pshared);
-        timeout_flag = (!result.has_value() && timeout.has_value());
+        auto wait_result = queue.wait<role>(serial_number, timeout, is_pshared);
+        timeout_flag = (!wait_result.has_value() && timeout.has_value());
       }
 
       // Phase 7: unregister ourselves as a pending reader/writer.

@@ -741,6 +741,7 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   case AArch64::G_PMULL:
   case AArch64::G_SLI:
   case AArch64::G_SRI:
+  case AArch64::G_FPTRUNC_ODD:
     return true;
   case TargetOpcode::G_INTRINSIC:
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
@@ -781,6 +782,7 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
   case TargetOpcode::G_BUILD_VECTOR_TRUNC:
   case AArch64::G_SLI:
   case AArch64::G_SRI:
+  case AArch64::G_FPTRUNC_ODD:
     return true;
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
@@ -966,6 +968,26 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         getCopyMapping(DstRB.getID(), SrcRB.getID(), Size),
         // We only care about the mapping of the destination for COPY.
         /*NumOperands*/ Opc == TargetOpcode::G_BITCAST ? 2 : 1);
+  }
+  case TargetOpcode::G_CONSTANT: {
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    TypeSize Size = DstTy.getSizeInBits();
+    if (!DstTy.isPointer() && (!DstTy.isScalar() || Size < 32 || Size > 64))
+      break;
+    // Scalar constants materialize in GPRs.
+    [[fallthrough]];
+  }
+  case TargetOpcode::G_BRCOND:
+  case TargetOpcode::G_FRAME_INDEX: {
+    // Operand 0 is the only banked operand and is mapped to GPR.
+    return getInstructionMapping(
+        DefaultMappingID, /*Cost=*/1,
+        getOperandsMapping(
+            {getValueMapping(
+                 PMI_FirstGPR,
+                 MRI.getType(MI.getOperand(0).getReg()).getSizeInBits()),
+             nullptr}),
+        /*NumOperands=*/2);
   }
   default:
     break;

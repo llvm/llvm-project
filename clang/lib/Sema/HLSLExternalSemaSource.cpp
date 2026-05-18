@@ -367,6 +367,32 @@ static Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
 
 // This function is responsible for constructing the constraint expression for
 // this concept:
+// template<typename T> concept is_constant_buffer_element_compatible =
+//     std::is_class_v<T> && !__is_intangible(T);
+static Expr *constructConstantBufferConstraintExpr(Sema &S,
+                                                   SourceLocation NameLoc,
+                                                   TemplateTypeParmDecl *T) {
+  ASTContext &Context = S.getASTContext();
+
+  // Obtain the QualType for 'bool'
+  QualType BoolTy = Context.BoolTy;
+
+  // Create a QualType that points to this TemplateTypeParmDecl
+  QualType TType = Context.getTypeDeclType(T);
+
+  // Create a TypeSourceInfo for the template type parameter 'T'
+  TypeSourceInfo *TTypeSourceInfo =
+      Context.getTrivialTypeSourceInfo(TType, NameLoc);
+
+  TypeTraitExpr *ResExpr = TypeTraitExpr::Create(
+      Context, BoolTy, NameLoc, UTT_IsConstantBufferElementCompatible,
+      {TTypeSourceInfo}, NameLoc, true);
+
+  return ResExpr;
+}
+
+// This function is responsible for constructing the constraint expression for
+// this concept:
 // template<typename T> concept is_structured_resource_element_compatible =
 // !__is_intangible<T> && sizeof(T) >= 1;
 static Expr *constructStructuredBufferConstraintExpr(Sema &S,
@@ -415,8 +441,10 @@ static Expr *constructStructuredBufferConstraintExpr(Sema &S,
   return CombinedExpr;
 }
 
+enum class HLSLBufferType { Typed, Structured, Constant };
+
 static ConceptDecl *constructBufferConceptDecl(Sema &S, NamespaceDecl *NSD,
-                                               bool isTypedBuffer) {
+                                               HLSLBufferType BT) {
   ASTContext &Context = S.getASTContext();
   DeclContext *DC = NSD->getDeclContext();
   SourceLocation DeclLoc = SourceLocation();
@@ -440,14 +468,22 @@ static ConceptDecl *constructBufferConceptDecl(Sema &S, NamespaceDecl *NSD,
   DeclarationName DeclName;
   Expr *ConstraintExpr = nullptr;
 
-  if (isTypedBuffer) {
+  switch (BT) {
+  case HLSLBufferType::Typed:
     DeclName = DeclarationName(
         &Context.Idents.get("__is_typed_resource_element_compatible"));
     ConstraintExpr = constructTypedBufferConstraintExpr(S, DeclLoc, T);
-  } else {
+    break;
+  case HLSLBufferType::Structured:
     DeclName = DeclarationName(
         &Context.Idents.get("__is_structured_resource_element_compatible"));
     ConstraintExpr = constructStructuredBufferConstraintExpr(S, DeclLoc, T);
+    break;
+  case HLSLBufferType::Constant:
+    DeclName = DeclarationName(
+        &Context.Idents.get("__is_constant_buffer_element_compatible"));
+    ConstraintExpr = constructConstantBufferConstraintExpr(S, DeclLoc, T);
+    break;
   }
 
   // Create a ConceptDecl
@@ -468,12 +504,14 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   ASTContext &AST = SemaPtr->getASTContext();
   CXXRecordDecl *Decl;
   ConceptDecl *TypedBufferConcept = constructBufferConceptDecl(
-      *SemaPtr, HLSLNamespace, /*isTypedBuffer*/ true);
+      *SemaPtr, HLSLNamespace, HLSLBufferType::Typed);
   ConceptDecl *StructuredBufferConcept = constructBufferConceptDecl(
-      *SemaPtr, HLSLNamespace, /*isTypedBuffer*/ false);
+      *SemaPtr, HLSLNamespace, HLSLBufferType::Structured);
+  ConceptDecl *ConstantBufferConcept = constructBufferConceptDecl(
+      *SemaPtr, HLSLNamespace, HLSLBufferType::Constant);
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "ConstantBuffer")
-             .addSimpleTemplateParams({"element_type"})
+             .addSimpleTemplateParams({"element_type"}, ConstantBufferConcept)
              .finalizeForwardDeclaration();
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {

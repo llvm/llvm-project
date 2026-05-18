@@ -1413,6 +1413,7 @@ def AMDGPU_GlobalLoadAsyncToLDSOp :
     attr-dict `:` $transferType `,` type($src) `,` type($dst)
   }];
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 def AMDGPU_TransposeLoadOp :
@@ -1636,9 +1637,6 @@ class AMDGPU_DmaBaseOp<string mnemonic, Type outType> :
                    Arg<AnyMemRef>:$lds,
                    Variadic<Index>:$lds_indices)>,
     Results<(outs outType: $base)> {
-
-  // TODO:
-  // * Add verifiers to make sure that the number of indices do not exceed the number of dimensions.
 
   let assemblyFormat = [{
     $global `[` $global_indices `]` `,` $lds `[` $lds_indices `]` attr-dict `:` type($global) `,` type($lds) `->` type(results)

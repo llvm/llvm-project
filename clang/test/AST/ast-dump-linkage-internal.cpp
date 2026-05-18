@@ -91,7 +91,7 @@ int TemplatedVarSpec = TemplatedVar<int>;
 
 void FuncDef() {
 // CHECK: | |-FunctionDecl {{.*}} FuncDef 'void ()' internal-linkage
-  
+
   extern int Int;
 // CHECK: | |   | `-VarDecl {{.*}} Int 'int' extern internal-linkage
   extern const int ConstInt;
@@ -176,7 +176,7 @@ struct Struct {
 
   friend struct Known::FriendStruct;
 // CHECK: | |   |-FriendDecl {{.*}} 'struct Known::FriendStruct'
-  
+
   template <typename>
   friend struct Known::FriendStructTemplate;
 // CHECK: | |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
@@ -215,7 +215,7 @@ struct Struct {
   friend void Known::FuncDecl();
 // CHECK: | |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
 // CHECK: | |   | `-FunctionDecl {{.*}} friend FuncDecl 'void ()' internal-linkage
-  
+
   template <typename>
   friend void Known::TemplatedFuncDecl();
 // CHECK: | |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
@@ -333,7 +333,7 @@ struct StructTemplate {
 
   friend struct Known::FriendStruct;
 // CHECK: | |   |-FriendDecl {{.*}} 'struct Known::FriendStruct'
-  
+
   template <typename>
   friend struct Known::FriendStructTemplate;
 // CHECK: | |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
@@ -376,7 +376,7 @@ struct StructTemplate {
 // CHECK: | |   | `-FunctionDecl {{.*}} friend_undeclared FuncDecl 'void ()' internal-linkage
 // FIXME: friend_undeclared is the wrong answer; friends with qualified-id
 //        have to correspond to one or more declarations found by name lookup.
-  
+
   template <typename>
   friend void Known::TemplatedFuncDecl();
 // CHECK: | |   |-FriendDecl {{.*}} col:{{[0-9]*$}}

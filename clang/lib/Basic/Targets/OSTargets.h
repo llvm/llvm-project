@@ -1099,6 +1099,19 @@ public:
   using OSTargetInfo<Target>::OSTargetInfo;
 };
 
+// H2 Target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY H2TargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("__h2__");
+  }
+
+public:
+  using OSTargetInfo<Target>::OSTargetInfo;
+};
+
 // SerenityOS target
 template <typename Target>
 class LLVM_LIBRARY_VISIBILITY SerenityTargetInfo : public OSTargetInfo<Target> {

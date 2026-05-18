@@ -588,6 +588,11 @@ bool getWMMAIsXDL(unsigned Opc) {
   return Info ? Info->is_wmma_xdl : false;
 }
 
+bool getHasMatrixScale(unsigned Opc) {
+  const WMMAInstInfo *Info = getWMMAInstInfoHelper(Opc);
+  return Info && Info->HasMatrixScale;
+}
+
 uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
   switch (EncodingVal) {
   case MFMAScaleFormats::FP6_E2M3:
@@ -724,9 +729,13 @@ bool isPermlane16(unsigned Opc) {
          Opc == AMDGPU::V_PERMLANE16_B32_e64_gfx11 ||
          Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx11 ||
          Opc == AMDGPU::V_PERMLANE16_B32_e64_gfx12 ||
+         Opc == AMDGPU::V_PERMLANE16_B32_e64_gfx13 ||
          Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx12 ||
+         Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx13 ||
          Opc == AMDGPU::V_PERMLANE16_VAR_B32_e64_gfx12 ||
-         Opc == AMDGPU::V_PERMLANEX16_VAR_B32_e64_gfx12;
+         Opc == AMDGPU::V_PERMLANE16_VAR_B32_e64_gfx13 ||
+         Opc == AMDGPU::V_PERMLANEX16_VAR_B32_e64_gfx12 ||
+         Opc == AMDGPU::V_PERMLANEX16_VAR_B32_e64_gfx13;
 }
 
 bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc) {

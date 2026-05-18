@@ -54,16 +54,10 @@ define void @v3i8(ptr %p1) {
 ;
 ; CHECK-GI-LABEL: v3i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr w8, [x0]
-; CHECK-GI-NEXT:    add x9, x0, #2
-; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    ldr s0, [x0]
 ; CHECK-GI-NEXT:    add x8, x0, #1
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b0, v0.b[2]
-; CHECK-GI-NEXT:    mov v2.b[1], v1.b[0]
-; CHECK-GI-NEXT:    mov v2.b[2], v0.b[0]
-; CHECK-GI-NEXT:    clz v0.8b, v2.8b
+; CHECK-GI-NEXT:    add x9, x0, #2
+; CHECK-GI-NEXT:    clz v0.8b, v0.8b
 ; CHECK-GI-NEXT:    st1 { v0.b }[0], [x0]
 ; CHECK-GI-NEXT:    st1 { v0.b }[1], [x8]
 ; CHECK-GI-NEXT:    st1 { v0.b }[2], [x9]
@@ -89,16 +83,8 @@ define void @v4i8(ptr %p1) {
 ;
 ; CHECK-GI-LABEL: v4i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr w8, [x0]
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[2]
-; CHECK-GI-NEXT:    mov b0, v0.b[3]
-; CHECK-GI-NEXT:    mov v2.b[1], v1.b[0]
-; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
-; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
-; CHECK-GI-NEXT:    clz v0.8b, v2.8b
+; CHECK-GI-NEXT:    ldr s0, [x0]
+; CHECK-GI-NEXT:    clz v0.8b, v0.8b
 ; CHECK-GI-NEXT:    str s0, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -343,10 +329,9 @@ define <3 x i64> @v3i64(<3 x i64> %d) {
 ; CHECK-SD-NEXT:    uaddlp v1.8h, v1.16b
 ; CHECK-SD-NEXT:    uaddlp v0.2d, v0.4s
 ; CHECK-SD-NEXT:    uaddlp v2.4s, v1.8h
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    uaddlp v2.2d, v2.4s
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    ret
 ;

@@ -3430,6 +3430,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
   Function *WcFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_inter_warp_copy_func", &M);
+  WcFunc->setCallingConv(Config.getRuntimeCC());
   WcFunc->setAttributes(FuncAttrs);
   WcFunc->addParamAttr(0, Attribute::NoUndef);
   WcFunc->addParamAttr(1, Attribute::NoUndef);
@@ -3690,6 +3691,7 @@ Expected<Function *> OpenMPIRBuilder::emitShuffleAndReduceFunction(
   Function *SarFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_shuffle_and_reduce_func", &M);
+  SarFunc->setCallingConv(Config.getRuntimeCC());
   SarFunc->setAttributes(FuncAttrs);
   SarFunc->addParamAttr(0, Attribute::NoUndef);
   SarFunc->addParamAttr(1, Attribute::NoUndef);
@@ -4386,6 +4388,7 @@ Expected<Function *> OpenMPIRBuilder::createReductionFunction(
   std::string Name = getReductionFuncName(ReducerName);
   Function *ReductionFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage, Name, &M);
+  ReductionFunc->setCallingConv(Config.getRuntimeCC());
   ReductionFunc->setAttributes(FuncAttrs);
   ReductionFunc->addParamAttr(0, Attribute::NoUndef);
   ReductionFunc->addParamAttr(1, Attribute::NoUndef);
@@ -4735,7 +4738,15 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
                                              &LHSPtr, &RHSPtr, CurFunc));
 
       // Fix the CallBack code genereated to use the correct Values for the LHS
-      // and RHS
+      // and RHS. Cast to match types before replacing (necessary to handle
+      // different address spaces).
+      if (LHSPtr->getType() != RedValue->getType())
+        RedValue = Builder.CreatePointerBitCastOrAddrSpaceCast(
+            RedValue, LHSPtr->getType());
+      if (RHSPtr->getType() != RHS->getType())
+        RHS =
+            Builder.CreatePointerBitCastOrAddrSpaceCast(RHS, RHSPtr->getType());
+
       LHSPtr->replaceUsesWithIf(RedValue, [ReductionFunc](const Use &U) {
         return cast<Instruction>(U.getUser())->getParent()->getParent() ==
                ReductionFunc;
@@ -10159,7 +10170,8 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     function_ref<MapInfosOrErrorTy(InsertPointTy CodeGenIP, llvm::Value *PtrPHI,
                                    llvm::Value *BeginArg)>
         GenMapInfoCB,
-    Type *ElemTy, StringRef FuncName, CustomMapperCallbackTy CustomMapperCB) {
+    Type *ElemTy, StringRef FuncName, CustomMapperCallbackTy CustomMapperCB,
+    bool PreserveMemberOfFlags) {
   SmallVector<Type *> Params;
   Params.emplace_back(Builder.getPtrTy());
   Params.emplace_back(Builder.getPtrTy());
@@ -10256,8 +10268,21 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     Value *OriMapType = Builder.getInt64(
         static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
             Info->Types[I]));
-    Value *MemberMapType =
-        Builder.CreateNUWAdd(OriMapType, ShiftedPreviousSize);
+    Value *MemberMapType;
+    if (PreserveMemberOfFlags) {
+      constexpr uint64_t MemberOfMask =
+          static_cast<uint64_t>(OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF);
+      uint64_t OrigFlags =
+          static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+              Info->Types[I]);
+      bool HasMemberOf = (OrigFlags & MemberOfMask) != 0;
+      if (HasMemberOf)
+        MemberMapType = Builder.CreateNUWAdd(OriMapType, ShiftedPreviousSize);
+      else
+        MemberMapType = OriMapType;
+    } else {
+      MemberMapType = Builder.CreateNUWAdd(OriMapType, ShiftedPreviousSize);
+    }
 
     // Combine the map type inherited from user-defined mapper with that
     // specified in the program. According to the OMP_MAP_TO and OMP_MAP_FROM
