@@ -67,8 +67,9 @@ static llvm::cl::opt<bool> strideIncludeLowerExtent(
 
 static llvm::cl::opt<bool> lowerDoLoopToAccLoop(
     "openacc-do-loop-to-acc-loop",
-    llvm::cl::desc("Whether to lower do loops inside OpenACC compute constructs "
-                   "as `acc.loop` operations."),
+    llvm::cl::desc(
+        "Whether to lower do loops inside OpenACC compute constructs "
+        "as `acc.loop` operations."),
     llvm::cl::init(true));
 
 static llvm::cl::opt<bool> lowerDoLoopToAccLoopInAccRoutine(
@@ -4861,10 +4862,8 @@ static bool isInsideSeqOpenACCRoutine(fir::FirOpBuilder &builder) {
 
 bool Fortran::lower::shouldLowerDoConstructAsAccLoop(
     fir::FirOpBuilder &builder) {
-  return (lowerDoLoopToAccLoop &&
-          isInsideOpenACCComputeConstruct(builder)) ||
-         (lowerDoLoopToAccLoopInAccRoutine &&
-          isInsideOpenACCRoutine(builder));
+  return (lowerDoLoopToAccLoop && isInsideOpenACCComputeConstruct(builder)) ||
+         (lowerDoLoopToAccLoopInAccRoutine && isInsideOpenACCRoutine(builder));
 }
 
 void Fortran::lower::setInsertionPointAfterOpenACCLoopIfInside(
