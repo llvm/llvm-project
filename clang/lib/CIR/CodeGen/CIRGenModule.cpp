@@ -317,7 +317,7 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
   case llvm::Triple::spirv:
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
-    theTargetCIRGenInfo = createSPIRVTargetCIRGenInfo(genTypes);
+    theTargetCIRGenInfo = createSPIRTargetCIRGenInfo(genTypes);
     return *theTargetCIRGenInfo;
   }
 }

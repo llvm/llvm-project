@@ -15,8 +15,8 @@ __kernel void add(__global int *a, __global int *b, __global int *out) {
 
 void plain(int x) {}
 
-// CIR: cir.func {{.*}} @inc{{.*}} cc(spir_kernel)
-// CIR: cir.func {{.*}} @add{{.*}} cc(spir_kernel)
+// CIR: cir.func{{.*}} @inc{{.*}} cc(spir_kernel)
+// CIR: cir.func{{.*}} @add{{.*}} cc(spir_kernel)
 // CIR: cir.func{{.*}} @plain
 // CIR-NOT: cc(spir_kernel)
 

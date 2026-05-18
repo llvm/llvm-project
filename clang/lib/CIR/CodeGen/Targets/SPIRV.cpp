@@ -22,30 +22,30 @@ using namespace clang::CIRGen;
 
 namespace {
 
-class SPIRVABIInfo : public ABIInfo {
+class SPIRABIInfo : public ABIInfo {
 public:
-  SPIRVABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+  SPIRABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
 };
 
-class SPIRVTargetCIRGenInfo : public TargetCIRGenInfo {
+class SPIRTargetCIRGenInfo : public TargetCIRGenInfo {
 public:
-  SPIRVTargetCIRGenInfo(CIRGenTypes &cgt)
-      : TargetCIRGenInfo(std::make_unique<SPIRVABIInfo>(cgt)) {}
+  SPIRTargetCIRGenInfo(CIRGenTypes &cgt)
+      : TargetCIRGenInfo(std::make_unique<SPIRABIInfo>(cgt)) {}
 
   void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
                            CIRGenModule &cgm) const override {
-    auto globalValue = mlir::dyn_cast<cir::CIRGlobalValueInterface>(global);
-    if (globalValue && globalValue.isDeclaration())
+    auto globalValue = mlir::cast<cir::CIRGlobalValueInterface>(global);
+    if (globalValue.isDeclaration())
       return;
 
     const auto *fd = dyn_cast_or_null<FunctionDecl>(decl);
     if (!fd)
       return;
 
-    if (cgm.getLangOpts().OpenCL && fd->hasAttr<DeviceKernelAttr>()) {
+    if (cgm.getLangOpts().OpenCL &&
+        DeviceKernelAttr::isOpenCLSpelling(fd->getAttr<DeviceKernelAttr>())) {
       auto func = mlir::cast<cir::FuncOp>(global);
       func.setCallingConv(cir::CallingConv::SpirKernel);
-      func.setInlineKind(cir::InlineKind::NoInline);
     }
   }
 };
@@ -53,6 +53,6 @@ public:
 } // namespace
 
 std::unique_ptr<TargetCIRGenInfo>
-clang::CIRGen::createSPIRVTargetCIRGenInfo(CIRGenTypes &cgt) {
-  return std::make_unique<SPIRVTargetCIRGenInfo>(cgt);
+clang::CIRGen::createSPIRTargetCIRGenInfo(CIRGenTypes &cgt) {
+  return std::make_unique<SPIRTargetCIRGenInfo>(cgt);
 }
