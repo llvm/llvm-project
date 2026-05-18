@@ -78,3 +78,14 @@ IntraSuppressedObj &intra_suppressed(
     IntraSuppressedObj &obj [[clang::lifetimebound]]) { // intra-note {{'lifetimebound' attribute appears here on the definition}}
   return obj;
 }
+
+struct View {
+  friend View friend_redecl(MyObj &obj); // intra-warning {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
+};
+
+// FIXME: Fix warning location, add a note pointing to this declaration saying "attribute inherited from this declaration"
+View friend_redecl(MyObj &obj [[clang::lifetimebound]]); // intra-note {{'lifetimebound' attribute appears here on the definition}}
+
+View friend_redecl(MyObj &obj) {
+  return View{};
+}
