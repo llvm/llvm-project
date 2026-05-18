@@ -5,14 +5,33 @@
 // Empty union (should be padded to size 1)
 union Empty {};
 // CIR: !rec_Empty = !cir.record<union "Empty" padded {!u8i}>
-// LLVM: %union.Empty = type { i8 }
-// OGCG: %union.Empty = type { i8 }
+// LLVM-DAG: %union.Empty = type { i8 }
+// OGCG-DAG: %union.Empty = type { i8 }
 
 // Aligned empty union (should have aligned integer member in CIR)
 union alignas(16) EmptyAligned {};
 // CIR: !rec_EmptyAligned = !cir.record<union "EmptyAligned" padded {!cir.array<!u8i x 16>}>
-// LLVM: %union.EmptyAligned = type { [16 x i8] }
-// OGCG: %union.EmptyAligned = type { [16 x i8] }
+// LLVM-DAG: %union.EmptyAligned = type { [16 x i8] }
+// OGCG-DAG: %union.EmptyAligned = type { [16 x i8] }
+
+union OuterWithEmpty {
+  Empty e;
+  int x;
+};
+struct WrapEmpty {
+  OuterWithEmpty o;
+  int s;
+};
+WrapEmpty w;
+// CIR:      !rec_OuterWithEmpty = !cir.record<union "OuterWithEmpty" {!rec_Empty, !s32i}>
+// CIR:      !rec_WrapEmpty = !cir.record<struct "WrapEmpty" {!rec_OuterWithEmpty, !s32i}>
+// CIR:      cir.global external @w = #cir.zero : !rec_WrapEmpty {alignment = 4 : i64}
+// LLVM-DAG: %struct.WrapEmpty = type { %union.OuterWithEmpty, i32 }
+// LLVM-DAG: %union.OuterWithEmpty = type { i32 }
+// LLVM:     @w = global %struct.WrapEmpty zeroinitializer, align 4
+// OGCG-DAG: %struct.WrapEmpty = type { %union.OuterWithEmpty, i32 }
+// OGCG-DAG: %union.OuterWithEmpty = type { i32 }
+// OGCG:     @w = global %struct.WrapEmpty zeroinitializer, align 4
 
 void useEmpty() {
   Empty e;
