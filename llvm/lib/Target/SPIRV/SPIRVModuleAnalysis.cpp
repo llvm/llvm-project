@@ -357,7 +357,7 @@ bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
          TII->isInlineAsmDefInstr(MI);
 }
 
-// This is a special case of a function pointer refering to a possibly
+// This is a special case of a function pointer referring to a possibly
 // forward function declaration. The operand is a dummy OpUndef that
 // requires a special treatment.
 // FunPtrOp is the MachineOperand previously recorded via
