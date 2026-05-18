@@ -373,7 +373,10 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zvvmm``
   LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-71c48b9-2026-05-17>`__.
 
-``experimental-zvvmtls``, ``experimental-zvvmttls``
+``experimental-zvvmtls``
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-71c48b9-2026-05-17>`__.
+
+``experimental-zvvmttls``
   LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-71c48b9-2026-05-17>`__.
 
 ``experimental-zvqwbdota8i``, ``experimental-zvqwbdota16i``, ``experimental-zvfqwbdota8f``, ``experimental-zvfwbdota16bf``, ``experimental-zvfbdota32f``
