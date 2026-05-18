@@ -1993,12 +1993,12 @@ defm bounds_safety : BoolFOption<
   BothFlags<[], [CC1Option],
           " experimental bounds safety extension for C">>;
 
-defm lifetime_safety : BoolFOption<
-  "lifetime-safety",
-  LangOpts<"EnableLifetimeSafety">, DefaultTrue,
+defm debug_run_lifetime_safety : BoolFOption<
+  "debug-run-lifetime-safety",
+  LangOpts<"DebugRunLifetimeSafety">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
-  BothFlags<[], [CC1Option], " lifetime safety for C++">>;
+  BothFlags<[], [CC1Option], " lifetime safety analysis for C++. Warnings are still controlled by -Wlifetime-safety. Primarily used to surface crashes or compile-time regressions without showing analysis findings.">>;
 
 def lifetime_safety_max_cfg_blocks
     : Joined<["-"], "lifetime-safety-max-cfg-blocks=">,
@@ -5976,6 +5976,12 @@ def mxcoff_roptr : Flag<["-"], "mxcoff-roptr">, Group<m_Group>,
   Flags<[TargetSpecific]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Place constant objects with relocatable address values in the RO data section and add -bforceimprw to the linker flags (AIX only)">;
 def mno_xcoff_roptr : Flag<["-"], "mno-xcoff-roptr">, Group<m_Group>, TargetSpecific;
+def maix_use_ptrgl : Flag<["-"], "maix-use-ptrgl">, Group<m_Group>,
+  Flags<[TargetSpecific]>,
+  HelpText<"Use ._ptrgl routine for indirect calls (AIX only)">;
+def mnoaix_use_ptrgl : Flag<["-"], "mno-aix-use-ptrgl">, Group<m_Group>, TargetSpecific,
+  HelpText<"Emit indirect calls inline (AIX only) (default)">;
+
 
 let Flags = [TargetSpecific] in {
 def mvx : Flag<["-"], "mvx">, Group<m_Group>;
@@ -6076,6 +6082,15 @@ def mstack_protector_guard_offset_EQ : Joined<["-"], "mstack-protector-guard-off
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Use the given offset for addressing the stack-protector guard">,
   MarshallingInfoInt<CodeGenOpts<"StackProtectorGuardOffset">, "INT_MAX", "int">;
+def mstack_protector_guard_value_width_EQ : Joined<["-"], "mstack-protector-guard-value-width=">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Use the given width for the value of the the stack-protector guard (AArch64-only)">,
+  MarshallingInfoInt<CodeGenOpts<"StackProtectorGuardValueWidth">, "UINT_MAX", "unsigned">,
+  DocBrief<[{Set the width of the stack-protector guard variable. By default,
+the width is the same as the pointer width.  Currently only supported on AArch64
+targets.  Only the values "4" and "8" are currently supported.  This currently
+only modifies the size of accesses to the global variable, not the value
+stored on the stack.}]>;
 def mstack_protector_guard_symbol_EQ : Joined<["-"], "mstack-protector-guard-symbol=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Use the given symbol for addressing the stack-protector guard">,
@@ -7453,6 +7468,8 @@ def fsycl : Flag<["-"], "fsycl">,
   HelpText<"Enable SYCL C++ extensions">;
 def fno_sycl : Flag<["-"], "fno-sycl">,
   HelpText<"Disable SYCL C++ extensions">;
+def nolibsycl : Flag<["-"], "nolibsycl">,
+  HelpText<"Do not link the SYCL runtime library">;
 def fsycl_device_only : Flag<["-"], "fsycl-device-only">,
   Alias<offload_device_only>, HelpText<"Compile SYCL code for device only">;
 def fsycl_host_only : Flag<["-"], "fsycl-host-only">,

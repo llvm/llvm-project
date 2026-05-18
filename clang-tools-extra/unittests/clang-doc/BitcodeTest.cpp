@@ -56,7 +56,6 @@ static OwningPtrVec<Info> readInfo(StringRef Bitcode, size_t NumInfos,
   llvm::BitstreamCursor Stream(Bitcode);
   doc::ClangDocBitcodeReader Reader(Stream, Diags);
   auto Infos = Reader.readBitcode();
-
   // Check that there was no error in the read.
   assert(Infos);
   EXPECT_EQ(Infos.get().size(), NumInfos);
@@ -68,39 +67,49 @@ class BitcodeTest : public ClangDocContextTest {};
 TEST_F(BitcodeTest, emitNamespaceInfoBitcode) {
   NamespaceInfo I;
   I.Name = "r";
-  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  I.Namespace = llvm::ArrayRef(Ns);
 
   Reference NewNamespace(EmptySID, "ChildNamespace", InfoType::IT_namespace);
-  I.Children.Namespaces.push_back(NewNamespace);
-  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
-  I.Children.Functions.emplace_back();
-  I.Children.Enums.emplace_back();
+  InfoNode<Reference> NewNamespaceNode(&NewNamespace);
+  I.Children.Namespaces.push_back(NewNamespaceNode);
+  Reference ChildStruct(EmptySID, "ChildStruct", InfoType::IT_record);
+  InfoNode<Reference> ChildStructNode(&ChildStruct);
+  I.Children.Records.push_back(ChildStructNode);
+  FunctionInfo FI;
+  InfoNode<FunctionInfo> FINode(&FI);
+  I.Children.Functions.push_back(FINode);
+  EnumInfo EI;
+  InfoNode<EnumInfo> EINode(&EI);
+  I.Children.Enums.push_back(EINode);
 
   std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
   OwningPtrVec<Info> ReadResults = readInfo(WriteResult, 1, this->Diags);
 
-  CheckNamespaceInfo(&I, InfoAsNamespace(ReadResults[0].get()));
+  CheckNamespaceInfo(&I, InfoAsNamespace(ReadResults[0]));
 }
 
 TEST_F(BitcodeTest, emitRecordInfoBitcode) {
   RecordInfo I;
   I.Name = "r";
-  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  I.Namespace = llvm::ArrayRef(Ns);
 
   I.DefLoc = Location(10, 10, "test.cpp");
-  I.Loc.emplace_back(12, 12, "test.cpp");
+  Location Loc1(12, 12, "test.cpp");
+  InfoNode<Location> Loc1Node(&Loc1);
+  I.Loc.push_back(Loc1Node);
 
-  I.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
+  MemberTypeInfo M(TypeInfo("int"), "X", AccessSpecifier::AS_private);
   I.TagType = TagTypeKind::Class;
   I.IsTypeDef = true;
-  I.Bases.emplace_back(EmptySID, "F", "path/to/F", true,
-                       AccessSpecifier::AS_public, true);
-  I.Bases.back().Children.Functions.emplace_back();
-  I.Bases.back().Members.emplace_back(TypeInfo("int"), "X",
-                                      AccessSpecifier::AS_private);
-  I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
-  I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
+  BaseRecordInfo B(EmptySID, "F", "path/to/F", true, AccessSpecifier::AS_public,
+                   true);
+  FunctionInfo FI;
+  InfoNode<FunctionInfo> FINode(&FI);
+  B.Children.Functions.push_back(FINode);
+  MemberTypeInfo BM(TypeInfo("int"), "X", AccessSpecifier::AS_private);
 
   // Documentation for the data member.
   CommentInfo BriefChildren[] = {CommentInfo(CommentKind::CK_TextComment, {},
@@ -109,29 +118,52 @@ TEST_F(BitcodeTest, emitRecordInfoBitcode) {
   CommentInfo TopCommentChildren[] = {
       CommentInfo(CommentKind::CK_ParagraphComment, BriefChildren)};
   CommentInfo TopComment(CommentKind::CK_FullComment, TopCommentChildren);
-  I.Bases.back().Members.back().Description.emplace_back(std::move(TopComment));
+  InfoNode<CommentInfo> TopCommentNode(&TopComment);
+  BM.Description.push_back(TopCommentNode);
+  MemberTypeInfo BMem[] = {std::move(BM)};
+  B.Members = llvm::ArrayRef(BMem);
+  BaseRecordInfo Bases[] = {std::move(B)};
+  I.Bases = llvm::ArrayRef(Bases);
 
-  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
-  I.Children.Functions.emplace_back();
-  I.Children.Enums.emplace_back();
+  MemberTypeInfo Mem[] = {std::move(M)};
+  I.Members = llvm::ArrayRef(Mem);
+  Reference Parents[] = {Reference(EmptySID, "F", InfoType::IT_record)};
+  I.Parents = llvm::ArrayRef(Parents);
+  Reference VParents[] = {Reference(EmptySID, "G", InfoType::IT_record)};
+  I.VirtualParents = llvm::ArrayRef(VParents);
+
+  Reference ChildStruct(EmptySID, "ChildStruct", InfoType::IT_record);
+  InfoNode<Reference> ChildStructNode(&ChildStruct);
+  I.Children.Records.push_back(ChildStructNode);
+  FunctionInfo FI2;
+  InfoNode<FunctionInfo> FI2Node(&FI2);
+  I.Children.Functions.push_back(FI2Node);
+  EnumInfo EI;
+  InfoNode<EnumInfo> EINode(&EI);
+  I.Children.Enums.push_back(EINode);
 
   std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
   OwningPtrVec<Info> ReadResults = readInfo(WriteResult, 1, this->Diags);
 
-  CheckRecordInfo(&I, InfoAsRecord(ReadResults[0].get()));
+  CheckRecordInfo(&I, InfoAsRecord(ReadResults[0]));
 }
 
 TEST_F(BitcodeTest, emitFunctionInfoBitcode) {
   FunctionInfo I;
   I.Name = "f";
-  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  I.Namespace = llvm::ArrayRef(Ns);
 
   I.DefLoc = Location(10, 10, "test.cpp");
-  I.Loc.emplace_back(12, 12, "test.cpp");
+  Location Loc1(12, 12, "test.cpp");
+  InfoNode<Location> Loc1Node(&Loc1);
+  I.Loc.push_back(Loc1Node);
 
   I.ReturnType = TypeInfo("void");
-  I.Params.emplace_back(TypeInfo("int"), "P");
+  FieldTypeInfo P(TypeInfo("int"), "P");
+  FieldTypeInfo Params[] = {std::move(P)};
+  I.Params = llvm::ArrayRef(Params);
 
   I.Access = AccessSpecifier::AS_none;
 
@@ -139,19 +171,24 @@ TEST_F(BitcodeTest, emitFunctionInfoBitcode) {
   EXPECT_TRUE(WriteResult.size() > 0);
   OwningPtrVec<Info> ReadResults = readInfo(WriteResult, 1, this->Diags);
 
-  CheckFunctionInfo(&I, InfoAsFunction(ReadResults[0].get()));
+  CheckFunctionInfo(&I, InfoAsFunction(ReadResults[0]));
 }
 
 TEST_F(BitcodeTest, emitMethodInfoBitcode) {
   FunctionInfo I;
   I.Name = "f";
-  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  I.Namespace = llvm::ArrayRef(Ns);
 
   I.DefLoc = Location(10, 10, "test.cpp");
-  I.Loc.emplace_back(12, 12, "test.cpp");
+  Location Loc1(12, 12, "test.cpp");
+  InfoNode<Location> Loc1Node(&Loc1);
+  I.Loc.push_back(Loc1Node);
 
   I.ReturnType = TypeInfo("void");
-  I.Params.emplace_back(TypeInfo("int"), "P");
+  FieldTypeInfo P(TypeInfo("int"), "P");
+  FieldTypeInfo Params[] = {std::move(P)};
+  I.Params = llvm::ArrayRef(Params);
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
 
@@ -161,31 +198,37 @@ TEST_F(BitcodeTest, emitMethodInfoBitcode) {
   EXPECT_TRUE(WriteResult.size() > 0);
   OwningPtrVec<Info> ReadResults = readInfo(WriteResult, 1, this->Diags);
 
-  CheckFunctionInfo(&I, InfoAsFunction(ReadResults[0].get()));
+  CheckFunctionInfo(&I, InfoAsFunction(ReadResults[0]));
 }
 
 TEST_F(BitcodeTest, emitEnumInfoBitcode) {
   EnumInfo I;
   I.Name = "e";
-  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  I.Namespace = llvm::ArrayRef(Ns);
 
   I.DefLoc = Location(10, 10, "test.cpp");
-  I.Loc.emplace_back(12, 12, "test.cpp");
+  Location Loc1(12, 12, "test.cpp");
+  InfoNode<Location> Loc1Node(&Loc1);
+  I.Loc.push_back(Loc1Node);
 
-  I.Members.emplace_back("X");
+  EnumValueInfo EV("X");
+  EnumValueInfo Mems[] = {std::move(EV)};
+  I.Members = llvm::ArrayRef(Mems);
   I.Scoped = true;
 
   std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
   OwningPtrVec<Info> ReadResults = readInfo(WriteResult, 1, this->Diags);
 
-  CheckEnumInfo(&I, InfoAsEnum(ReadResults[0].get()));
+  CheckEnumInfo(&I, InfoAsEnum(ReadResults[0]));
 }
 
 TEST_F(BitcodeTest, emitTypedefInfoBitcode) {
   TypedefInfo I;
   I.Name = "MyInt";
-  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  I.Namespace = llvm::ArrayRef(Ns);
 
   I.DefLoc = Location(10, 10, "test.cpp");
   I.Underlying = TypeInfo("unsigned");
@@ -196,13 +239,14 @@ TEST_F(BitcodeTest, emitTypedefInfoBitcode) {
       CommentInfo(CommentKind::CK_ParagraphComment, BlankChildren)};
   CommentInfo Top(CommentKind::CK_FullComment, TopChildren);
 
-  I.Description.emplace_back(std::move(Top));
+  InfoNode<CommentInfo> TopNode(&Top);
+  I.Description.push_back(TopNode);
 
   std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
   OwningPtrVec<Info> ReadResults = readInfo(WriteResult, 1, this->Diags);
 
-  CheckTypedefInfo(&I, InfoAsTypedef(ReadResults[0].get()));
+  CheckTypedefInfo(&I, InfoAsTypedef(ReadResults[0]));
 
   // Check one with no IsUsing set, no description, and no definition location.
   TypedefInfo I2;
@@ -213,7 +257,7 @@ TEST_F(BitcodeTest, emitTypedefInfoBitcode) {
   WriteResult = writeInfo(&I2, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
   ReadResults = readInfo(WriteResult, 1, this->Diags);
-  CheckTypedefInfo(&I2, InfoAsTypedef(ReadResults[0].get()));
+  CheckTypedefInfo(&I2, InfoAsTypedef(ReadResults[0]));
 }
 
 TEST_F(BitcodeTest, emitInfoWithCommentBitcode) {
@@ -221,7 +265,8 @@ TEST_F(BitcodeTest, emitInfoWithCommentBitcode) {
   F.Name = "F";
   F.ReturnType = TypeInfo("void");
   F.DefLoc = Location(0, 0, "test.cpp");
-  F.Params.emplace_back(TypeInfo("int"), "I");
+  FieldTypeInfo PI[] = {FieldTypeInfo(TypeInfo("int"), "I")};
+  F.Params = llvm::ArrayRef(PI);
 
   // BlankLine
   CommentInfo BlankChildren[] = {CommentInfo(CommentKind::CK_TextComment)};
@@ -293,13 +338,14 @@ TEST_F(BitcodeTest, emitInfoWithCommentBitcode) {
                                Verbatim,  ParamOut, ParamIn,  Return};
   CommentInfo Top(CommentKind::CK_FullComment, TopChildren);
 
-  F.Description.emplace_back(std::move(Top));
+  InfoNode<CommentInfo> TopNode(&Top);
+  F.Description.push_back(TopNode);
 
   std::string WriteResult = writeInfo(&F, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
   OwningPtrVec<Info> ReadResults = readInfo(WriteResult, 1, this->Diags);
 
-  CheckFunctionInfo(&F, InfoAsFunction(ReadResults[0].get()));
+  CheckFunctionInfo(&F, InfoAsFunction(ReadResults[0]));
 }
 
 } // namespace doc

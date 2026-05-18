@@ -1236,7 +1236,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     switch (BuiltinID) {
     case PPC::BI__builtin_dmmr:
     case PPC::BI__builtin_dmxor:
-    case PPC::BI__builtin_mma_dmsha2hash: {
+    case PPC::BI__builtin_dmsha2hash: {
       Address Addr = EmitPointerWithAlignment(E->getArg(1));
       Ops[1] = Builder.CreateLoad(Addr);
       break;

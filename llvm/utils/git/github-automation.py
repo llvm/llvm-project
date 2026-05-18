@@ -245,10 +245,10 @@ def get_user_values_str(values: list) -> str:
 class PRGreeter:
     COMMENT_TAG = "<!--LLVM NEW CONTRIBUTOR COMMENT-->\n"
 
-    def __init__(self, token: str, repo: str, pr_number: int):
+    def __init__(self, token: str, repo: str, pr_number: int, author: str):
         repo = github.Github(auth=github.Auth.Token(token)).get_repo(repo)
         self.pr = repo.get_issue(pr_number).as_pull_request()
-        self.author = self.pr.user
+        self.author = author
 
     def run(self) -> bool:
         # We assume that this is only called for a PR that has just been opened
@@ -963,7 +963,7 @@ elif args.command == "pr-subscriber":
     )
     pr_subscriber.run()
 elif args.command == "pr-greeter":
-    pr_greeter = PRGreeter(args.token, args.repo, args.issue_number)
+    pr_greeter = PRGreeter(args.token, args.repo, args.issue_number, args.author)
     pr_greeter.run()
 elif args.command == "commit-request-greeter":
     commit_greeter = CommitRequestGreeter(args.token, args.repo, args.issue_number)

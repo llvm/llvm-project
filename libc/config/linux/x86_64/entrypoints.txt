@@ -262,6 +262,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
+    libc.src.sys.mman.memfd_create
     libc.src.sys.mman.mincore
     libc.src.sys.mman.mlock
     libc.src.sys.mman.mlock2
@@ -303,6 +304,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.socket.accept4
     libc.src.sys.socket.bind
     libc.src.sys.socket.connect
+    libc.src.sys.socket.getpeername
+    libc.src.sys.socket.getsockname
     libc.src.sys.socket.getsockopt
     libc.src.sys.socket.listen
     libc.src.sys.socket.recv
@@ -1228,6 +1231,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getspecific
+    libc.src.pthread.pthread_getthreadid_np
+    libc.src.pthread.pthread_getunique_np
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_key_create
     libc.src.pthread.pthread_key_delete
@@ -1392,10 +1397,12 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.threads.cnd_destroy
     libc.src.threads.cnd_init
     libc.src.threads.cnd_signal
+    libc.src.threads.cnd_timedwait
     libc.src.threads.cnd_wait
     libc.src.threads.mtx_destroy
     libc.src.threads.mtx_init
     libc.src.threads.mtx_lock
+    libc.src.threads.mtx_trylock
     libc.src.threads.mtx_unlock
     libc.src.threads.thrd_create
     libc.src.threads.thrd_current
@@ -1464,16 +1471,16 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.wchar.wcrtomb
     libc.src.wchar.wcsrtombs
     libc.src.wchar.wcsnrtombs
-    # libc.src.wchar.fgetwc
+    libc.src.wchar.fgetwc
     # libc.src.wchar.fgetws
     # libc.src.wchar.fputwc
     # libc.src.wchar.fputws
     libc.src.wchar.fwide
-    # libc.src.wchar.getwc
+    libc.src.wchar.getwc
     # libc.src.wchar.getwchar
     # libc.src.wchar.putwc
-    # libc.src.wchar.putwchar
-    # libc.src.wchar.ungetwc
+    libc.src.wchar.putwchar
+    libc.src.wchar.ungetwc
 
     # nl_types.h entrypoints
     libc.src.nl_types.catopen
@@ -1484,6 +1491,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.link.dl_iterate_phdr
   )
 endif()
+
 
 set(TARGET_LIBMVEC_ENTRYPOINTS)
 
