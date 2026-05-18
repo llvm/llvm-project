@@ -20,8 +20,4 @@ class TestDAP_launch_basic(lldbdap_testcase.DAPTestCaseBase):
         output = self.get_stdout()
         self.assertTrue(output and len(output) > 0, "expect program output")
         lines = output.splitlines()
-        self.assertIn(
-            program.replace("\\", "/"),
-            lines[0],
-            "make sure program path is in first argument",
-        )
+        self.assertIn(program, lines[0], "make sure program path is in first argument")

@@ -20,7 +20,5 @@ class TestDAP_launch_stdio_redirection(lldbdap_testcase.DAPTestCaseBase):
             self.verify_process_exited()
             lines = f.readlines()
             self.assertIn(
-                program.replace("\\", "/"),
-                lines[0],
-                "make sure program path is in first argument",
+                program, lines[0], "make sure program path is in first argument"
             )
