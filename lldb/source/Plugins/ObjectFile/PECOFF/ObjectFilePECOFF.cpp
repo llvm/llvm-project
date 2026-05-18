@@ -998,11 +998,14 @@ SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
           .Case(".debug", eSectionTypeDebug)
           .Case(".stabstr", eSectionTypeDataCString)
           .Case(".reloc", eSectionTypeOther)
-          // .eh_frame can be truncated to 8 chars.
+          // PE/COFF image-file section names are limited to 8 characters,
+          // so the linker truncates the longer source names. Match both.
           .Cases({".eh_frame", ".eh_fram"}, eSectionTypeEHFrame)
           .Case(".gosymtab", eSectionTypeGoSymtab)
-          .Case(".lldbsummaries", lldb::eSectionTypeLLDBTypeSummaries)
-          .Case(".lldbformatters", lldb::eSectionTypeLLDBFormatters)
+          .Cases({".lldbsummaries", ".lldbsum"},
+                 lldb::eSectionTypeLLDBTypeSummaries)
+          .Cases({".lldbformatters", ".lldbfor"},
+                 lldb::eSectionTypeLLDBFormatters)
           .Case("swiftast", eSectionTypeSwiftModules)
           .Default(eSectionTypeInvalid);
   if (section_type != eSectionTypeInvalid)
