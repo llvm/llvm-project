@@ -1625,6 +1625,10 @@ define void @instructions.aggregateops({ i8, i32 } %up, <{ i8, i32 }> %p,
 !7 = !{i32 1}
 !8 = !{}
 !9 = !{i64 4}
+!15 = !{i32 0, !16}
+!16 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_prefetch_size", i32 128}
+!17 = !{i32 1, !18}
+!18 = !{!"nvvm.l1_eviction", !"last"}
 define void @instructions.memops(ptr %base) {
   alloca i32, i8 4, align 4
   ; CHECK: alloca i32, i8 4, align 4
@@ -1635,11 +1639,15 @@ define void @instructions.memops(ptr %base) {
   ; CHECK: load ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
   load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
   ; CHECK: load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
+  load ptr, ptr %base, align 8, !mem.cache_hint !15
+  ; CHECK: load ptr, ptr %base, align 8, !mem.cache_hint !15
 
   store ptr null, ptr %base, align 4, !nontemporal !8
   ; CHECK: store ptr null, ptr %base, align 4, !nontemporal !8
   store volatile ptr null, ptr %base, align 4, !nontemporal !8
   ; CHECK: store volatile ptr null, ptr %base, align 4, !nontemporal !8
+  store ptr null, ptr %base, align 4, !mem.cache_hint !17
+  ; CHECK: store ptr null, ptr %base, align 4, !mem.cache_hint !17
 
   ret void
 }

@@ -1,4 +1,4 @@
-; RUN: not opt -passes=verify < %s 2>&1 | FileCheck %s
+; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
 
 declare void @foo(ptr)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias writeonly, ptr noalias readonly, i64, i1 immarg)
