@@ -787,10 +787,11 @@ void AMDGPUAsmPrinter::emitDeferredComments() {
     const GCNSubtarget &STM = TM.getSubtarget<GCNSubtarget>(F);
     MCSymbol *FnSym = TM.getSymbol(&F);
     StringRef FuncName = FnSym->getName();
-    bool IsMemoryBound = F.getFnAttribute("amdgpu-memory-bound").getValueAsBool();
+    bool IsMemoryBound =
+        F.getFnAttribute("amdgpu-memory-bound").getValueAsBool();
 
-    MCSectionELF *CommentSection = OutContext.getELFSection(
-        ".AMDGPU.csdata", ELF::SHT_PROGBITS, 0);
+    MCSectionELF *CommentSection =
+        OutContext.getELFSection(".AMDGPU.csdata", ELF::SHT_PROGBITS, 0);
     OutStreamer->switchSection(CommentSection);
 
     if (!AMDGPU::isEntryFunctionCC(F.getCallingConv())) {
@@ -806,9 +807,8 @@ void AMDGPUAsmPrinter::emitDeferredComments() {
                     ->getVariableValue()
               : nullptr,
           RI.createTotalNumVGPRs(FuncName, OutContext),
-          RI.createTotalNumSGPRs(
-              FuncName,
-              STM.getTargetID().isXnackOnOrAny(), OutContext),
+          RI.createTotalNumSGPRs(FuncName, STM.getTargetID().isXnackOnOrAny(),
+                                 OutContext),
           RI.getSymbol(FuncName, RIK::RIK_PrivateSegSize, OutContext)
               ->getVariableValue(),
           Info.CodeSize, IsMemoryBound);
@@ -818,33 +818,26 @@ void AMDGPUAsmPrinter::emitDeferredComments() {
     const SIProgramInfo &PI = Info.ProgInfo;
     OutStreamer->emitRawComment(" " + Twine(FuncName) + " Kernel info:", false);
     emitCommonFunctionComments(
-        PI.NumArchVGPR,
-        STM.hasMAIInsts() ? PI.NumAccVGPR : nullptr,
-        PI.NumVGPR, PI.NumSGPR, PI.ScratchSize,
-        Info.CodeSize, IsMemoryBound);
+        PI.NumArchVGPR, STM.hasMAIInsts() ? PI.NumAccVGPR : nullptr, PI.NumVGPR,
+        PI.NumSGPR, PI.ScratchSize, Info.CodeSize, IsMemoryBound);
 
-    OutStreamer->emitRawComment(
-        " FloatMode: " + Twine(PI.FloatMode), false);
-    OutStreamer->emitRawComment(
-        " IeeeMode: " + Twine(PI.IEEEMode), false);
-    OutStreamer->emitRawComment(
-        " LDSByteSize: " + Twine(PI.LDSSize) +
-            " bytes/workgroup (compile time only)",
-        false);
+    OutStreamer->emitRawComment(" FloatMode: " + Twine(PI.FloatMode), false);
+    OutStreamer->emitRawComment(" IeeeMode: " + Twine(PI.IEEEMode), false);
+    OutStreamer->emitRawComment(" LDSByteSize: " + Twine(PI.LDSSize) +
+                                    " bytes/workgroup (compile time only)",
+                                false);
 
-    OutStreamer->emitRawComment(
-        " SGPRBlocks: " + getMCExprStr(PI.SGPRBlocks), false);
-    OutStreamer->emitRawComment(
-        " VGPRBlocks: " + getMCExprStr(PI.VGPRBlocks), false);
+    OutStreamer->emitRawComment(" SGPRBlocks: " + getMCExprStr(PI.SGPRBlocks),
+                                false);
+    OutStreamer->emitRawComment(" VGPRBlocks: " + getMCExprStr(PI.VGPRBlocks),
+                                false);
 
-    OutStreamer->emitRawComment(
-        " NumSGPRsForWavesPerEU: " +
-            getMCExprStr(PI.NumSGPRsForWavesPerEU),
-        false);
-    OutStreamer->emitRawComment(
-        " NumVGPRsForWavesPerEU: " +
-            getMCExprStr(PI.NumVGPRsForWavesPerEU),
-        false);
+    OutStreamer->emitRawComment(" NumSGPRsForWavesPerEU: " +
+                                    getMCExprStr(PI.NumSGPRsForWavesPerEU),
+                                false);
+    OutStreamer->emitRawComment(" NumVGPRsForWavesPerEU: " +
+                                    getMCExprStr(PI.NumVGPRsForWavesPerEU),
+                                false);
 
     if (STM.hasGFX90AInsts()) {
       const MCExpr *AdjustedAccum = MCBinaryExpr::createAdd(
@@ -859,33 +852,31 @@ void AMDGPUAsmPrinter::emitDeferredComments() {
       OutStreamer->emitRawComment(
           " NamedBarCnt: " + getMCExprStr(PI.NamedBarCnt), false);
 
-    OutStreamer->emitRawComment(
-        " Occupancy: " + getMCExprStr(PI.Occupancy), false);
+    OutStreamer->emitRawComment(" Occupancy: " + getMCExprStr(PI.Occupancy),
+                                false);
 
     bool NeedsWaveLimiter =
         F.getFnAttribute("amdgpu-wave-limiter").getValueAsBool();
-    OutStreamer->emitRawComment(
-        " WaveLimiterHint : " + Twine(NeedsWaveLimiter), false);
+    OutStreamer->emitRawComment(" WaveLimiterHint : " + Twine(NeedsWaveLimiter),
+                                false);
 
-    OutStreamer->emitRawComment(
-        " COMPUTE_PGM_RSRC2:SCRATCH_EN: " +
-            getMCExprStr(PI.ScratchEnable),
-        false);
+    OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:SCRATCH_EN: " +
+                                    getMCExprStr(PI.ScratchEnable),
+                                false);
     OutStreamer->emitRawComment(
         " COMPUTE_PGM_RSRC2:USER_SGPR: " + Twine(PI.UserSGPR), false);
-    OutStreamer->emitRawComment(
-        " COMPUTE_PGM_RSRC2:TRAP_HANDLER: " +
-            Twine(PI.TrapHandlerEnable),
-        false);
+    OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:TRAP_HANDLER: " +
+                                    Twine(PI.TrapHandlerEnable),
+                                false);
     OutStreamer->emitRawComment(
         " COMPUTE_PGM_RSRC2:TGID_X_EN: " + Twine(PI.TGIdXEnable), false);
     OutStreamer->emitRawComment(
         " COMPUTE_PGM_RSRC2:TGID_Y_EN: " + Twine(PI.TGIdYEnable), false);
     OutStreamer->emitRawComment(
         " COMPUTE_PGM_RSRC2:TGID_Z_EN: " + Twine(PI.TGIdZEnable), false);
-    OutStreamer->emitRawComment(
-        " COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: " + Twine(PI.TIdIGCompCount),
-        false);
+    OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: " +
+                                    Twine(PI.TIdIGCompCount),
+                                false);
 
     [[maybe_unused]] int64_t PGMRSrc3;
     assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
@@ -1106,9 +1097,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   emitDVgprSymbol(MF);
 
   if (isVerbose()) {
-    DeferredComments.push_back(
-        {&MF.getFunction(), CurrentProgramInfo,
-         CurrentProgramInfo.getFunctionCodeSize(MF)});
+    DeferredComments.push_back({&MF.getFunction(), CurrentProgramInfo,
+                                CurrentProgramInfo.getFunctionCodeSize(MF)});
 
     if (!MFI->isEntryFunction())
       return false;
