@@ -258,6 +258,8 @@ Non-comprehensive list of changes in this release
 - ``typeid`` on references and pointers of ``final`` types no longer emits a
   vtable lookup at runtime.
 
+- Added support for Unicode 18.0
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
