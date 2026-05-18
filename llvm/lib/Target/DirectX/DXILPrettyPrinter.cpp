@@ -272,8 +272,7 @@ public:
                                const DXILDebugInfoMap &DI)
       : MST(MST), STS(STS), DI(DI) {}
 
-  void emitMDNodeAnnot(const MDNode *N,
-                       formatted_raw_ostream &os) override {
+  void emitMDNodeAnnot(const MDNode *N, formatted_raw_ostream &os) override {
     if (auto *NewMD = DI.MDReplace.lookup(N)) {
       if (auto *NewN = dyn_cast<MDNode>(NewMD))
         if (STS.getMetadataSlot(NewN) == -1)
@@ -355,9 +354,7 @@ public:
 
   explicit DXILPrettyPrinterLegacy(raw_ostream &O) : ModulePass(ID), OS(O) {}
 
-  StringRef getPassName() const override {
-    return "DXIL Pretty Printer";
-  }
+  StringRef getPassName() const override { return "DXIL Pretty Printer"; }
 
   bool runOnModule(Module &M) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
