@@ -63,5 +63,8 @@ void test() {
   iter_move(it);
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::views::concat(a);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::concat(a, b);
 }
