@@ -7,6 +7,9 @@
 ;
 ; The above loop should be interchanged in terms of locality of reference.
 ;
+; FIXME: The above loop is not interchanged now because of the issue in the
+; instorder profitability check.
+;
 define void @profitable(ptr %A) {
 ; CHECK-LABEL: define void @profitable(
 ; CHECK-SAME: ptr [[A:%.*]]) {
@@ -62,6 +65,9 @@ exit:
 ;     A[i + 100*(9-j)] = 0;
 ;
 ; The above loop should be interchanged in terms of locality of reference.
+;
+; FIXME: The above loop is not interchanged now because of the issue in the
+; instorder profitability check.
 ;
 define void @profitable_neg_step(ptr %A) {
 ; CHECK-LABEL: define void @profitable_neg_step(
@@ -120,6 +126,9 @@ exit:
 ;     A[100*i + j] = 0;
 ;
 ; The above loop should NOT be interchanged in terms of locality of reference.
+;
+; FIXME: The above loop is interchanged now because of the issue in the
+; instorder profitability check.
 ;
 define void @unprofitable(ptr %A) {
 ; CHECK-LABEL: define void @unprofitable(
