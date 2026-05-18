@@ -221,20 +221,20 @@ define i64 @strided_search(ptr align 8 dereferenceable(14784) %p) {
 ; RV64-NEXT:    br label %[[EXIT]]
 ; RV64:       [[SCALAR_PH]]:
 ; RV64-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; RV64-NEXT:    br label %[[FOR_HEADER:.*]]
-; RV64:       [[FOR_HEADER]]:
-; RV64-NEXT:    [[IDX:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IDX_NEXT:%.*]], %[[FOR_INC:.*]] ]
+; RV64-NEXT:    br label %[[LOOP_HEADER:.*]]
+; RV64:       [[LOOP_HEADER]]:
+; RV64-NEXT:    [[IDX:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IDX_NEXT:%.*]], %[[LATCH:.*]] ]
 ; RV64-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[IDX]]
 ; RV64-NEXT:    [[FIELDP:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 88
 ; RV64-NEXT:    [[V:%.*]] = load i64, ptr [[FIELDP]], align 8
 ; RV64-NEXT:    [[HIT:%.*]] = icmp eq i64 [[V]], 0
-; RV64-NEXT:    br i1 [[HIT]], label %[[EXIT]], label %[[FOR_INC]]
-; RV64:       [[FOR_INC]]:
+; RV64-NEXT:    br i1 [[HIT]], label %[[EXIT]], label %[[LATCH]]
+; RV64:       [[LATCH]]:
 ; RV64-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 112
 ; RV64-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IDX_NEXT]], 14784
-; RV64-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[FOR_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; RV64-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
 ; RV64:       [[EXIT]]:
-; RV64-NEXT:    [[RET:%.*]] = phi i64 [ [[IDX]], %[[FOR_HEADER]] ], [ -1, %[[FOR_INC]] ], [ -1, %[[MIDDLE_BLOCK]] ], [ [[TMP16]], %[[VECTOR_EARLY_EXIT]] ]
+; RV64-NEXT:    [[RET:%.*]] = phi i64 [ [[IDX]], %[[LOOP_HEADER]] ], [ -1, %[[LATCH]] ], [ -1, %[[MIDDLE_BLOCK]] ], [ [[TMP16]], %[[VECTOR_EARLY_EXIT]] ]
 ; RV64-NEXT:    ret i64 [[RET]]
 ;
 ; RV32-LABEL: define i64 @strided_search(
@@ -282,58 +282,58 @@ define i64 @strided_search(ptr align 8 dereferenceable(14784) %p) {
 ; RV32-NEXT:    br label %[[EXIT]]
 ; RV32:       [[SCALAR_PH]]:
 ; RV32-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; RV32-NEXT:    br label %[[FOR_HEADER:.*]]
-; RV32:       [[FOR_HEADER]]:
-; RV32-NEXT:    [[IDX:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IDX_NEXT:%.*]], %[[FOR_INC:.*]] ]
+; RV32-NEXT:    br label %[[LOOP_HEADER:.*]]
+; RV32:       [[LOOP_HEADER]]:
+; RV32-NEXT:    [[IDX:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IDX_NEXT:%.*]], %[[LATCH:.*]] ]
 ; RV32-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[IDX]]
 ; RV32-NEXT:    [[FIELDP:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 88
 ; RV32-NEXT:    [[V:%.*]] = load i64, ptr [[FIELDP]], align 8
 ; RV32-NEXT:    [[HIT:%.*]] = icmp eq i64 [[V]], 0
-; RV32-NEXT:    br i1 [[HIT]], label %[[EXIT]], label %[[FOR_INC]]
-; RV32:       [[FOR_INC]]:
+; RV32-NEXT:    br i1 [[HIT]], label %[[EXIT]], label %[[LATCH]]
+; RV32:       [[LATCH]]:
 ; RV32-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 112
 ; RV32-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IDX_NEXT]], 14784
-; RV32-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[FOR_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; RV32-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
 ; RV32:       [[EXIT]]:
-; RV32-NEXT:    [[RET:%.*]] = phi i64 [ [[IDX]], %[[FOR_HEADER]] ], [ -1, %[[FOR_INC]] ], [ -1, %[[MIDDLE_BLOCK]] ], [ [[TMP17]], %[[VECTOR_EARLY_EXIT]] ]
+; RV32-NEXT:    [[RET:%.*]] = phi i64 [ [[IDX]], %[[LOOP_HEADER]] ], [ -1, %[[LATCH]] ], [ -1, %[[MIDDLE_BLOCK]] ], [ [[TMP17]], %[[VECTOR_EARLY_EXIT]] ]
 ; RV32-NEXT:    ret i64 [[RET]]
 ;
 ; ZVE32X-LABEL: define i64 @strided_search(
 ; ZVE32X-SAME: ptr align 8 dereferenceable(14784) [[P:%.*]]) #[[ATTR0]] {
 ; ZVE32X-NEXT:  [[ENTRY:.*]]:
-; ZVE32X-NEXT:    br label %[[FOR_HEADER:.*]]
-; ZVE32X:       [[FOR_HEADER]]:
-; ZVE32X-NEXT:    [[IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IDX_NEXT:%.*]], %[[FOR_INC:.*]] ]
+; ZVE32X-NEXT:    br label %[[LOOP_HEADER:.*]]
+; ZVE32X:       [[LOOP_HEADER]]:
+; ZVE32X-NEXT:    [[IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IDX_NEXT:%.*]], %[[LATCH:.*]] ]
 ; ZVE32X-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[IDX]]
 ; ZVE32X-NEXT:    [[FIELDP:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 88
 ; ZVE32X-NEXT:    [[V:%.*]] = load i64, ptr [[FIELDP]], align 8
 ; ZVE32X-NEXT:    [[HIT:%.*]] = icmp eq i64 [[V]], 0
-; ZVE32X-NEXT:    br i1 [[HIT]], label %[[EXIT:.*]], label %[[FOR_INC]]
-; ZVE32X:       [[FOR_INC]]:
+; ZVE32X-NEXT:    br i1 [[HIT]], label %[[EXIT:.*]], label %[[LATCH]]
+; ZVE32X:       [[LATCH]]:
 ; ZVE32X-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 112
 ; ZVE32X-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IDX_NEXT]], 14784
-; ZVE32X-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[FOR_HEADER]]
+; ZVE32X-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP_HEADER]]
 ; ZVE32X:       [[EXIT]]:
-; ZVE32X-NEXT:    [[RET:%.*]] = phi i64 [ [[IDX]], %[[FOR_HEADER]] ], [ -1, %[[FOR_INC]] ]
+; ZVE32X-NEXT:    [[RET:%.*]] = phi i64 [ [[IDX]], %[[LOOP_HEADER]] ], [ -1, %[[LATCH]] ]
 ; ZVE32X-NEXT:    ret i64 [[RET]]
 ;
 entry:
-  br label %for.header
+  br label %loop.header
 
-for.header:
-  %idx = phi i64 [ 0, %entry ], [ %idx.next, %for.inc ]
+loop.header:
+  %idx = phi i64 [ 0, %entry ], [ %idx.next, %latch ]
   %ptr = getelementptr inbounds nuw i8, ptr %p, i64 %idx
   %fieldp = getelementptr inbounds nuw i8, ptr %ptr, i64 88
   %v = load i64, ptr %fieldp, align 8
   %hit = icmp eq i64 %v, 0
-  br i1 %hit, label %exit, label %for.inc
+  br i1 %hit, label %exit, label %latch
 
-for.inc:
+latch:
   %idx.next = add nuw nsw i64 %idx, 112
   %done = icmp eq i64 %idx.next, 14784
-  br i1 %done, label %exit, label %for.header
+  br i1 %done, label %exit, label %loop.header
 
 exit:
-  %ret = phi i64 [ %idx, %for.header ], [ -1, %for.inc ]
+  %ret = phi i64 [ %idx, %loop.header ], [ -1, %latch ]
   ret i64 %ret
 }
