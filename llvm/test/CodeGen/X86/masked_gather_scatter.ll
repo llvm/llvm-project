@@ -2225,22 +2225,13 @@ define <3 x i32> @test30(<3 x ptr> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x i
 ; X64-KNL-LABEL: test30:
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
-; X64-KNL-NEXT:    andl $1, %edi
-; X64-KNL-NEXT:    kmovw %edi, %k0
-; X64-KNL-NEXT:    kmovw %esi, %k1
-; X64-KNL-NEXT:    kshiftlw $15, %k1, %k1
-; X64-KNL-NEXT:    kshiftrw $14, %k1, %k1
-; X64-KNL-NEXT:    korw %k1, %k0, %k0
-; X64-KNL-NEXT:    movw $-5, %ax
-; X64-KNL-NEXT:    kmovw %eax, %k1
-; X64-KNL-NEXT:    kandw %k1, %k0, %k0
-; X64-KNL-NEXT:    kmovw %edx, %k1
-; X64-KNL-NEXT:    kshiftlw $15, %k1, %k1
-; X64-KNL-NEXT:    kshiftrw $13, %k1, %k1
-; X64-KNL-NEXT:    korw %k1, %k0, %k0
+; X64-KNL-NEXT:    vmovd %edi, %xmm3
+; X64-KNL-NEXT:    vpinsrb $1, %esi, %xmm3, %xmm3
+; X64-KNL-NEXT:    vpinsrb $2, %edx, %xmm3, %xmm3
+; X64-KNL-NEXT:    vpmovzxbq {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,zero,zero,zero,zero,xmm3[1],zero,zero,zero,zero,zero,zero,zero,xmm3[2],zero,zero,zero,zero,zero,zero,zero,xmm3[3],zero,zero,zero,zero,zero,zero,zero
 ; X64-KNL-NEXT:    movb $7, %al
 ; X64-KNL-NEXT:    kmovw %eax, %k1
-; X64-KNL-NEXT:    kandw %k1, %k0, %k0
+; X64-KNL-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm3, %k0 {%k1}
 ; X64-KNL-NEXT:    kshiftlw $12, %k0, %k0
 ; X64-KNL-NEXT:    kshiftrw $12, %k0, %k1
 ; X64-KNL-NEXT:    vpmovsxdq %xmm1, %ymm1
@@ -2254,25 +2245,14 @@ define <3 x i32> @test30(<3 x ptr> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x i
 ; X86-KNL-LABEL: test30:
 ; X86-KNL:       # %bb.0:
 ; X86-KNL-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; X86-KNL-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-KNL-NEXT:    andl $1, %eax
-; X86-KNL-NEXT:    kmovw %eax, %k0
-; X86-KNL-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-KNL-NEXT:    kmovw %eax, %k1
-; X86-KNL-NEXT:    kshiftlw $15, %k1, %k1
-; X86-KNL-NEXT:    kshiftrw $14, %k1, %k1
-; X86-KNL-NEXT:    korw %k1, %k0, %k0
-; X86-KNL-NEXT:    movw $-5, %ax
-; X86-KNL-NEXT:    kmovw %eax, %k1
-; X86-KNL-NEXT:    kandw %k1, %k0, %k0
-; X86-KNL-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-KNL-NEXT:    kmovw %eax, %k1
-; X86-KNL-NEXT:    kshiftlw $15, %k1, %k1
-; X86-KNL-NEXT:    kshiftrw $13, %k1, %k1
-; X86-KNL-NEXT:    korw %k1, %k0, %k0
+; X86-KNL-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [1,1,1,1]
+; X86-KNL-NEXT:    vmovd {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; X86-KNL-NEXT:    vpinsrb $1, {{[0-9]+}}(%esp), %xmm4, %xmm4
+; X86-KNL-NEXT:    vpinsrb $2, {{[0-9]+}}(%esp), %xmm4, %xmm4
+; X86-KNL-NEXT:    vpmovzxbq {{.*#+}} ymm4 = xmm4[0],zero,zero,zero,zero,zero,zero,zero,xmm4[1],zero,zero,zero,zero,zero,zero,zero,xmm4[2],zero,zero,zero,zero,zero,zero,zero,xmm4[3],zero,zero,zero,zero,zero,zero,zero
 ; X86-KNL-NEXT:    movb $7, %al
 ; X86-KNL-NEXT:    kmovw %eax, %k1
-; X86-KNL-NEXT:    kandw %k1, %k0, %k0
+; X86-KNL-NEXT:    vptestmq %zmm3, %zmm4, %k0 {%k1}
 ; X86-KNL-NEXT:    kshiftlw $12, %k0, %k0
 ; X86-KNL-NEXT:    kshiftrw $12, %k0, %k1
 ; X86-KNL-NEXT:    vpslld $2, %xmm1, %xmm1
@@ -2282,59 +2262,55 @@ define <3 x i32> @test30(<3 x ptr> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x i
 ; X86-KNL-NEXT:    vzeroupper
 ; X86-KNL-NEXT:    retl
 ;
-; X64-SKX-LABEL: test30:
-; X64-SKX:       # %bb.0:
-; X64-SKX-NEXT:    kmovw %esi, %k0
-; X64-SKX-NEXT:    kshiftlb $7, %k0, %k0
-; X64-SKX-NEXT:    kshiftrb $6, %k0, %k0
-; X64-SKX-NEXT:    kmovw %edi, %k1
-; X64-SKX-NEXT:    kshiftlb $7, %k1, %k1
-; X64-SKX-NEXT:    kshiftrb $7, %k1, %k1
-; X64-SKX-NEXT:    korw %k0, %k1, %k0
-; X64-SKX-NEXT:    movb $-5, %al
-; X64-SKX-NEXT:    kmovw %eax, %k1
-; X64-SKX-NEXT:    kandw %k1, %k0, %k0
-; X64-SKX-NEXT:    kmovw %edx, %k1
-; X64-SKX-NEXT:    kshiftlb $7, %k1, %k1
-; X64-SKX-NEXT:    kshiftrb $5, %k1, %k1
-; X64-SKX-NEXT:    korw %k1, %k0, %k0
-; X64-SKX-NEXT:    movb $7, %al
-; X64-SKX-NEXT:    kmovw %eax, %k1
-; X64-SKX-NEXT:    kandw %k1, %k0, %k1
-; X64-SKX-NEXT:    vpmovsxdq %xmm1, %ymm1
-; X64-SKX-NEXT:    vpsllq $2, %ymm1, %ymm1
-; X64-SKX-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
-; X64-SKX-NEXT:    vpgatherqd (,%ymm0), %xmm2 {%k1}
-; X64-SKX-NEXT:    vmovdqa %xmm2, %xmm0
-; X64-SKX-NEXT:    vzeroupper
-; X64-SKX-NEXT:    retq
+; X64-SKX-SMALL-LABEL: test30:
+; X64-SKX-SMALL:       # %bb.0:
+; X64-SKX-SMALL-NEXT:    movb $7, %al
+; X64-SKX-SMALL-NEXT:    kmovw %eax, %k1
+; X64-SKX-SMALL-NEXT:    vmovd %edi, %xmm3
+; X64-SKX-SMALL-NEXT:    vpinsrb $1, %esi, %xmm3, %xmm3
+; X64-SKX-SMALL-NEXT:    vpinsrb $2, %edx, %xmm3, %xmm3
+; X64-SKX-SMALL-NEXT:    vpmovzxbq {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,zero,zero,zero,zero,xmm3[1],zero,zero,zero,zero,zero,zero,zero,xmm3[2],zero,zero,zero,zero,zero,zero,zero,xmm3[3],zero,zero,zero,zero,zero,zero,zero
+; X64-SKX-SMALL-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm3, %k1 {%k1}
+; X64-SKX-SMALL-NEXT:    vpmovsxdq %xmm1, %ymm1
+; X64-SKX-SMALL-NEXT:    vpsllq $2, %ymm1, %ymm1
+; X64-SKX-SMALL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
+; X64-SKX-SMALL-NEXT:    vpgatherqd (,%ymm0), %xmm2 {%k1}
+; X64-SKX-SMALL-NEXT:    vmovdqa %xmm2, %xmm0
+; X64-SKX-SMALL-NEXT:    vzeroupper
+; X64-SKX-SMALL-NEXT:    retq
+;
+; X64-SKX-LARGE-LABEL: test30:
+; X64-SKX-LARGE:       # %bb.0:
+; X64-SKX-LARGE-NEXT:    movb $7, %al
+; X64-SKX-LARGE-NEXT:    kmovw %eax, %k1
+; X64-SKX-LARGE-NEXT:    vmovd %edi, %xmm3
+; X64-SKX-LARGE-NEXT:    vpinsrb $1, %esi, %xmm3, %xmm3
+; X64-SKX-LARGE-NEXT:    vpinsrb $2, %edx, %xmm3, %xmm3
+; X64-SKX-LARGE-NEXT:    vpmovzxbq {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,zero,zero,zero,zero,xmm3[1],zero,zero,zero,zero,zero,zero,zero,xmm3[2],zero,zero,zero,zero,zero,zero,zero,xmm3[3],zero,zero,zero,zero,zero,zero,zero
+; X64-SKX-LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
+; X64-SKX-LARGE-NEXT:    vptestmq (%rax){1to4}, %ymm3, %k1 {%k1}
+; X64-SKX-LARGE-NEXT:    vpmovsxdq %xmm1, %ymm1
+; X64-SKX-LARGE-NEXT:    vpsllq $2, %ymm1, %ymm1
+; X64-SKX-LARGE-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
+; X64-SKX-LARGE-NEXT:    vpgatherqd (,%ymm0), %xmm2 {%k1}
+; X64-SKX-LARGE-NEXT:    vmovdqa %xmm2, %xmm0
+; X64-SKX-LARGE-NEXT:    vzeroupper
+; X64-SKX-LARGE-NEXT:    retq
 ;
 ; X86-SKX-LABEL: test30:
 ; X86-SKX:       # %bb.0:
-; X86-SKX-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-SKX-NEXT:    kmovw %eax, %k0
-; X86-SKX-NEXT:    kshiftlb $7, %k0, %k0
-; X86-SKX-NEXT:    kshiftrb $6, %k0, %k0
-; X86-SKX-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-SKX-NEXT:    kmovw %eax, %k1
-; X86-SKX-NEXT:    kshiftlb $7, %k1, %k1
-; X86-SKX-NEXT:    kshiftrb $7, %k1, %k1
-; X86-SKX-NEXT:    korw %k0, %k1, %k0
-; X86-SKX-NEXT:    movb $-5, %al
-; X86-SKX-NEXT:    kmovw %eax, %k1
-; X86-SKX-NEXT:    kandw %k1, %k0, %k0
-; X86-SKX-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-SKX-NEXT:    kmovw %eax, %k1
-; X86-SKX-NEXT:    kshiftlb $7, %k1, %k1
-; X86-SKX-NEXT:    kshiftrb $5, %k1, %k1
-; X86-SKX-NEXT:    korw %k1, %k0, %k0
 ; X86-SKX-NEXT:    movb $7, %al
 ; X86-SKX-NEXT:    kmovw %eax, %k1
-; X86-SKX-NEXT:    kandw %k1, %k0, %k1
+; X86-SKX-NEXT:    vmovd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X86-SKX-NEXT:    vpinsrb $1, {{[0-9]+}}(%esp), %xmm3, %xmm3
+; X86-SKX-NEXT:    vpinsrb $2, {{[0-9]+}}(%esp), %xmm3, %xmm3
+; X86-SKX-NEXT:    vpmovzxbq {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,zero,zero,zero,zero,xmm3[1],zero,zero,zero,zero,zero,zero,zero,xmm3[2],zero,zero,zero,zero,zero,zero,zero,xmm3[3],zero,zero,zero,zero,zero,zero,zero
+; X86-SKX-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %ymm3, %k1 {%k1}
 ; X86-SKX-NEXT:    vpslld $2, %xmm1, %xmm1
 ; X86-SKX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; X86-SKX-NEXT:    vpgatherdd (,%xmm0), %xmm2 {%k1}
 ; X86-SKX-NEXT:    vmovdqa %xmm2, %xmm0
+; X86-SKX-NEXT:    vzeroupper
 ; X86-SKX-NEXT:    retl
   %sext_ind = sext <3 x i32> %ind to <3 x i64>
   %gep.random = getelementptr i32, <3 x ptr> %base, <3 x i64> %sext_ind
@@ -2348,22 +2324,13 @@ define void @test30b(<3 x ptr> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x i32> 
 ; X64-KNL-LABEL: test30b:
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
-; X64-KNL-NEXT:    andl $1, %edi
-; X64-KNL-NEXT:    kmovw %edi, %k0
-; X64-KNL-NEXT:    kmovw %esi, %k1
-; X64-KNL-NEXT:    kshiftlw $15, %k1, %k1
-; X64-KNL-NEXT:    kshiftrw $14, %k1, %k1
-; X64-KNL-NEXT:    korw %k1, %k0, %k0
-; X64-KNL-NEXT:    movw $-5, %ax
-; X64-KNL-NEXT:    kmovw %eax, %k1
-; X64-KNL-NEXT:    kandw %k1, %k0, %k0
-; X64-KNL-NEXT:    kmovw %edx, %k1
-; X64-KNL-NEXT:    kshiftlw $15, %k1, %k1
-; X64-KNL-NEXT:    kshiftrw $13, %k1, %k1
-; X64-KNL-NEXT:    korw %k1, %k0, %k0
+; X64-KNL-NEXT:    vmovd %edi, %xmm3
+; X64-KNL-NEXT:    vpinsrb $1, %esi, %xmm3, %xmm3
+; X64-KNL-NEXT:    vpinsrb $2, %edx, %xmm3, %xmm3
+; X64-KNL-NEXT:    vpmovzxbq {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,zero,zero,zero,zero,xmm3[1],zero,zero,zero,zero,zero,zero,zero,xmm3[2],zero,zero,zero,zero,zero,zero,zero,xmm3[3],zero,zero,zero,zero,zero,zero,zero
 ; X64-KNL-NEXT:    movb $7, %al
 ; X64-KNL-NEXT:    kmovw %eax, %k1
-; X64-KNL-NEXT:    kandw %k1, %k0, %k0
+; X64-KNL-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm3, %k0 {%k1}
 ; X64-KNL-NEXT:    kshiftlw $12, %k0, %k0
 ; X64-KNL-NEXT:    kshiftrw $12, %k0, %k1
 ; X64-KNL-NEXT:    vpmovsxdq %xmm1, %ymm1
@@ -2376,25 +2343,14 @@ define void @test30b(<3 x ptr> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x i32> 
 ; X86-KNL-LABEL: test30b:
 ; X86-KNL:       # %bb.0:
 ; X86-KNL-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; X86-KNL-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-KNL-NEXT:    andl $1, %eax
-; X86-KNL-NEXT:    kmovw %eax, %k0
-; X86-KNL-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-KNL-NEXT:    kmovw %eax, %k1
-; X86-KNL-NEXT:    kshiftlw $15, %k1, %k1
-; X86-KNL-NEXT:    kshiftrw $14, %k1, %k1
-; X86-KNL-NEXT:    korw %k1, %k0, %k0
-; X86-KNL-NEXT:    movw $-5, %ax
-; X86-KNL-NEXT:    kmovw %eax, %k1
-; X86-KNL-NEXT:    kandw %k1, %k0, %k0
-; X86-KNL-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-KNL-NEXT:    kmovw %eax, %k1
-; X86-KNL-NEXT:    kshiftlw $15, %k1, %k1
-; X86-KNL-NEXT:    kshiftrw $13, %k1, %k1
-; X86-KNL-NEXT:    korw %k1, %k0, %k0
+; X86-KNL-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [1,1,1,1]
+; X86-KNL-NEXT:    vmovd {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; X86-KNL-NEXT:    vpinsrb $1, {{[0-9]+}}(%esp), %xmm4, %xmm4
+; X86-KNL-NEXT:    vpinsrb $2, {{[0-9]+}}(%esp), %xmm4, %xmm4
+; X86-KNL-NEXT:    vpmovzxbq {{.*#+}} ymm4 = xmm4[0],zero,zero,zero,zero,zero,zero,zero,xmm4[1],zero,zero,zero,zero,zero,zero,zero,xmm4[2],zero,zero,zero,zero,zero,zero,zero,xmm4[3],zero,zero,zero,zero,zero,zero,zero
 ; X86-KNL-NEXT:    movb $7, %al
 ; X86-KNL-NEXT:    kmovw %eax, %k1
-; X86-KNL-NEXT:    kandw %k1, %k0, %k0
+; X86-KNL-NEXT:    vptestmq %zmm3, %zmm4, %k0 {%k1}
 ; X86-KNL-NEXT:    kshiftlw $12, %k0, %k0
 ; X86-KNL-NEXT:    kshiftrw $12, %k0, %k1
 ; X86-KNL-NEXT:    vpslld $2, %xmm1, %xmm1
@@ -2403,57 +2359,52 @@ define void @test30b(<3 x ptr> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x i32> 
 ; X86-KNL-NEXT:    vzeroupper
 ; X86-KNL-NEXT:    retl
 ;
-; X64-SKX-LABEL: test30b:
-; X64-SKX:       # %bb.0:
-; X64-SKX-NEXT:    kmovw %esi, %k0
-; X64-SKX-NEXT:    kshiftlb $7, %k0, %k0
-; X64-SKX-NEXT:    kshiftrb $6, %k0, %k0
-; X64-SKX-NEXT:    kmovw %edi, %k1
-; X64-SKX-NEXT:    kshiftlb $7, %k1, %k1
-; X64-SKX-NEXT:    kshiftrb $7, %k1, %k1
-; X64-SKX-NEXT:    korw %k0, %k1, %k0
-; X64-SKX-NEXT:    movb $-5, %al
-; X64-SKX-NEXT:    kmovw %eax, %k1
-; X64-SKX-NEXT:    kandw %k1, %k0, %k0
-; X64-SKX-NEXT:    kmovw %edx, %k1
-; X64-SKX-NEXT:    kshiftlb $7, %k1, %k1
-; X64-SKX-NEXT:    kshiftrb $5, %k1, %k1
-; X64-SKX-NEXT:    korw %k1, %k0, %k0
-; X64-SKX-NEXT:    movb $7, %al
-; X64-SKX-NEXT:    kmovw %eax, %k1
-; X64-SKX-NEXT:    kandw %k1, %k0, %k1
-; X64-SKX-NEXT:    vpmovsxdq %xmm1, %ymm1
-; X64-SKX-NEXT:    vpsllq $2, %ymm1, %ymm1
-; X64-SKX-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
-; X64-SKX-NEXT:    vpscatterqd %xmm2, (,%ymm0) {%k1}
-; X64-SKX-NEXT:    vzeroupper
-; X64-SKX-NEXT:    retq
+; X64-SKX-SMALL-LABEL: test30b:
+; X64-SKX-SMALL:       # %bb.0:
+; X64-SKX-SMALL-NEXT:    movb $7, %al
+; X64-SKX-SMALL-NEXT:    kmovw %eax, %k1
+; X64-SKX-SMALL-NEXT:    vmovd %edi, %xmm3
+; X64-SKX-SMALL-NEXT:    vpinsrb $1, %esi, %xmm3, %xmm3
+; X64-SKX-SMALL-NEXT:    vpinsrb $2, %edx, %xmm3, %xmm3
+; X64-SKX-SMALL-NEXT:    vpmovzxbq {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,zero,zero,zero,zero,xmm3[1],zero,zero,zero,zero,zero,zero,zero,xmm3[2],zero,zero,zero,zero,zero,zero,zero,xmm3[3],zero,zero,zero,zero,zero,zero,zero
+; X64-SKX-SMALL-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm3, %k1 {%k1}
+; X64-SKX-SMALL-NEXT:    vpmovsxdq %xmm1, %ymm1
+; X64-SKX-SMALL-NEXT:    vpsllq $2, %ymm1, %ymm1
+; X64-SKX-SMALL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
+; X64-SKX-SMALL-NEXT:    vpscatterqd %xmm2, (,%ymm0) {%k1}
+; X64-SKX-SMALL-NEXT:    vzeroupper
+; X64-SKX-SMALL-NEXT:    retq
+;
+; X64-SKX-LARGE-LABEL: test30b:
+; X64-SKX-LARGE:       # %bb.0:
+; X64-SKX-LARGE-NEXT:    movb $7, %al
+; X64-SKX-LARGE-NEXT:    kmovw %eax, %k1
+; X64-SKX-LARGE-NEXT:    vmovd %edi, %xmm3
+; X64-SKX-LARGE-NEXT:    vpinsrb $1, %esi, %xmm3, %xmm3
+; X64-SKX-LARGE-NEXT:    vpinsrb $2, %edx, %xmm3, %xmm3
+; X64-SKX-LARGE-NEXT:    vpmovzxbq {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,zero,zero,zero,zero,xmm3[1],zero,zero,zero,zero,zero,zero,zero,xmm3[2],zero,zero,zero,zero,zero,zero,zero,xmm3[3],zero,zero,zero,zero,zero,zero,zero
+; X64-SKX-LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
+; X64-SKX-LARGE-NEXT:    vptestmq (%rax){1to4}, %ymm3, %k1 {%k1}
+; X64-SKX-LARGE-NEXT:    vpmovsxdq %xmm1, %ymm1
+; X64-SKX-LARGE-NEXT:    vpsllq $2, %ymm1, %ymm1
+; X64-SKX-LARGE-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
+; X64-SKX-LARGE-NEXT:    vpscatterqd %xmm2, (,%ymm0) {%k1}
+; X64-SKX-LARGE-NEXT:    vzeroupper
+; X64-SKX-LARGE-NEXT:    retq
 ;
 ; X86-SKX-LABEL: test30b:
 ; X86-SKX:       # %bb.0:
-; X86-SKX-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-SKX-NEXT:    kmovw %eax, %k0
-; X86-SKX-NEXT:    kshiftlb $7, %k0, %k0
-; X86-SKX-NEXT:    kshiftrb $6, %k0, %k0
-; X86-SKX-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-SKX-NEXT:    kmovw %eax, %k1
-; X86-SKX-NEXT:    kshiftlb $7, %k1, %k1
-; X86-SKX-NEXT:    kshiftrb $7, %k1, %k1
-; X86-SKX-NEXT:    korw %k0, %k1, %k0
-; X86-SKX-NEXT:    movb $-5, %al
-; X86-SKX-NEXT:    kmovw %eax, %k1
-; X86-SKX-NEXT:    kandw %k1, %k0, %k0
-; X86-SKX-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-SKX-NEXT:    kmovw %eax, %k1
-; X86-SKX-NEXT:    kshiftlb $7, %k1, %k1
-; X86-SKX-NEXT:    kshiftrb $5, %k1, %k1
-; X86-SKX-NEXT:    korw %k1, %k0, %k0
 ; X86-SKX-NEXT:    movb $7, %al
 ; X86-SKX-NEXT:    kmovw %eax, %k1
-; X86-SKX-NEXT:    kandw %k1, %k0, %k1
+; X86-SKX-NEXT:    vmovd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X86-SKX-NEXT:    vpinsrb $1, {{[0-9]+}}(%esp), %xmm3, %xmm3
+; X86-SKX-NEXT:    vpinsrb $2, {{[0-9]+}}(%esp), %xmm3, %xmm3
+; X86-SKX-NEXT:    vpmovzxbq {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,zero,zero,zero,zero,xmm3[1],zero,zero,zero,zero,zero,zero,zero,xmm3[2],zero,zero,zero,zero,zero,zero,zero,xmm3[3],zero,zero,zero,zero,zero,zero,zero
+; X86-SKX-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %ymm3, %k1 {%k1}
 ; X86-SKX-NEXT:    vpslld $2, %xmm1, %xmm1
 ; X86-SKX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; X86-SKX-NEXT:    vpscatterdd %xmm2, (,%xmm0) {%k1}
+; X86-SKX-NEXT:    vzeroupper
 ; X86-SKX-NEXT:    retl
   %sext_ind = sext <3 x i32> %ind to <3 x i64>
   %gep.random = getelementptr i32, <3 x ptr> %base, <3 x i64> %sext_ind

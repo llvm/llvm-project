@@ -8552,17 +8552,24 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
   }
 
   // See if we can cheaply generate a vXi8 vector and convert to vXi1.
-  // TODO: Add handling for sub-128bit vXi8 vectors.
   MVT OpVT = Op.getOperand(0).getSimpleValueType();
   if (NonConstIdx.size() > 1 && OpVT == MVT::i8) {
     // On pre-BWI targets, we must extend to vXi32 instead.
     MVT ByteVT = VT.changeVectorElementType(MVT::i8);
     MVT WideVT =
         Subtarget.hasBWI() ? ByteVT : VT.changeVectorElementType(MVT::i32);
+    if (ByteVT.getSizeInBits() < 128) {
+      ByteVT = MVT::v16i8;
+      WideVT = VT.changeVectorElementType(MVT::i64);
+    }
     if (DAG.getTargetLoweringInfo().isTypeLegal(ByteVT) &&
         DAG.getTargetLoweringInfo().isTypeLegal(WideVT)) {
-      SDValue ByteBV = DAG.getBuildVector(ByteVT, dl, Op->ops());
-      SDValue WideBV = DAG.getNode(ISD::ANY_EXTEND, dl, WideVT, ByteBV);
+      SmallVector<SDValue, 16> Elts(Op->op_values());
+      Elts.append(ByteVT.getVectorNumElements() - Elts.size(),
+                  DAG.getPOISON(OpVT));
+      SDValue ByteBV = DAG.getBuildVector(ByteVT, dl, Elts);
+      SDValue WideBV =
+          getEXTEND_VECTOR_INREG(ISD::ANY_EXTEND, dl, WideVT, ByteBV, DAG);
       WideBV = DAG.getNode(ISD::AND, dl, WideVT, WideBV,
                            DAG.getConstant(1, dl, WideVT));
       return DAG.getSetCC(dl, VT, WideBV, DAG.getConstant(0, dl, WideVT),
