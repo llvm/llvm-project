@@ -1356,7 +1356,7 @@ public:
                                                 std::move(Callbacks));
     Callbacks = std::move(C);
   }
-  void removePPCallbacks() { Callbacks.reset(); }
+  void removePPCallbacks();
   /// \}
 
   /// Get the number of tokens processed so far.
