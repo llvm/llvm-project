@@ -459,7 +459,8 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   const NonLoc StartIdx = ER->getIndex();
 
   std::optional<Loc> FirstElementVal =
-      State->getLValue(ElemTy, StartIdx, loc::MemRegionVal(SuperR)).getAs<Loc>();
+      State->getLValue(ElemTy, StartIdx, loc::MemRegionVal(SuperR))
+          .getAs<Loc>();
   if (!FirstElementVal)
     return State;
 
