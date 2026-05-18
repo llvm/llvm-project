@@ -177,6 +177,28 @@ C Language Changes
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
+- Clang now supports C2y's new syntax for if and switch statements with initializer and condition variables, as specified in `N3356 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3356.htm>`_. For example:
+
+  .. code-block:: c
+
+    if (bool x = true; x) {
+      // ...
+    }
+
+    if (bool x = true) {
+      // ...
+    }
+
+    // attribute list on declarations are also supported
+    switch ([[maybe_unused]] int x = 1) {
+    default:
+      // ...
+    }
+
+    if (bool x [[maybe_unused]] = true; x) {
+      // ...
+    }
+
 - Implemented the type-specific C2y ``<stdbit.h>`` rotate functions with constexpr
   evaluation support:
   ``stdc_rotate_left_{uc,us,ui,ul,ull}`` and
@@ -353,7 +375,7 @@ Attribute Changes in Clang
 
 - The ``[[clang::unsafe_buffer_usage]]`` attribute is now supported in API
   notes. For example:
-  
+
   .. code-block:: yaml
 
     Functions:
@@ -751,10 +773,10 @@ clang-format
 ------------
 - Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the
   '-'/'+' and the return type in Objective-C method declarations
-- Deprecate the ``BinPackParameters`` and ``BinPackArguments`` options and replace 
-  them with the ``PackParameters`` and ``PackArguments`` structs (respectively) to 
-  unify packing behavior. Add the ``BreakAfter`` option to the structs, allowing 
-  parameter and argument lists to be formatted with one parameter/argument on each 
+- Deprecate the ``BinPackParameters`` and ``BinPackArguments`` options and replace
+  them with the ``PackParameters`` and ``PackArguments`` structs (respectively) to
+  unify packing behavior. Add the ``BreakAfter`` option to the structs, allowing
+  parameter and argument lists to be formatted with one parameter/argument on each
   line if they exceed the specified count.
 - Add ``AfterComma`` value to ``BreakConstructorInitializers`` to allow breaking
   constructor initializers after commas, keeping the colon on the same line.
