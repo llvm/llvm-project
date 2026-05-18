@@ -21,13 +21,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <list>
 #include <vector>
 
 #include "sized_allocator.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "type_algorithms.h"
-#include <list>
 
 struct Test {
   template <class Iter>
