@@ -1732,6 +1732,7 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h",
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h",
+        "include/mlir/Dialect/AMDGPU/Utils/MemorySpaceUtils.h",
         "lib/Conversion/LLVMCommon/MemRefDescriptor.h",
     ],
     features = ["-parse_headers"],
@@ -1749,6 +1750,7 @@ cc_library(
         ":MemRefUtils",
         ":ROCDLDialect",
         ":SideEffectInterfaces",
+        ":Support",
         ":VectorDialect",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -1807,9 +1809,15 @@ cc_library(
 cc_library(
     name = "AMDGPUUtils",
     srcs = glob(["lib/Dialect/AMDGPU/Utils/*.cpp"]),
-    hdrs = glob(["include/mlir/Dialect/AMDGPU/Utils/*.h"]),
+    hdrs = glob(
+        ["include/mlir/Dialect/AMDGPU/Utils/*.h"],
+        exclude = ["include/mlir/Dialect/AMDGPU/Utils/MemorySpaceUtils.h"],
+    ),
     includes = ["include"],
     deps = [
+        ":AMDGPUDialect",
+        ":GPUDialect",
+        ":IR",
         ":Support",
         "//llvm:Support",
     ],
@@ -9550,6 +9558,7 @@ cc_library(
     srcs = ["lib/RegisterAllDialects.cpp"],
     deps = [
         ":AMDGPUDialect",
+        ":AMDGPUTransforms",
         ":AffineDialect",
         ":AllPassesAndDialects",
         ":ArithDialect",
