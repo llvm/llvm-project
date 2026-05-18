@@ -1264,6 +1264,34 @@ public:
     return Ref.str();
   }
 
+  /// Check for source buffer overread in memory functions.
+  void checkSourceOverread(unsigned SrcArgIdx, unsigned SizeArgIdx) {
+    if (S.isConstantEvaluatedContext())
+      return;
+
+    const Expr *SrcArg = TheCall->getArg(SrcArgIdx);
+    const Expr *SizeArg = TheCall->getArg(SizeArgIdx);
+    if (SrcArg->isInstantiationDependent() ||
+        SizeArg->isInstantiationDependent())
+      return;
+
+    std::optional<llvm::APSInt> CopyLen =
+        ComputeExplicitObjectSizeArgument(SizeArgIdx);
+    std::optional<llvm::APSInt> SrcBufSize = ComputeSizeArgument(SrcArgIdx);
+
+    if (!CopyLen || !SrcBufSize)
+      return;
+
+    // Warn only if copy length exceeds source buffer size.
+    if (llvm::APSInt::compareValues(*CopyLen, *SrcBufSize) <= 0)
+      return;
+
+    S.DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
+                          S.PDiag(diag::warn_stringop_overread)
+                              << getFunctionName() << CopyLen->getZExtValue()
+                              << SrcBufSize->getZExtValue());
+  }
+
 private:
   Sema &S;
   CallExpr *TheCall;
@@ -1272,38 +1300,6 @@ private:
   unsigned SizeTypeWidth;
 };
 } // anonymous namespace
-
-void Sema::checkSourceBufferOverread(FunctionDecl *FD, CallExpr *TheCall,
-                                     unsigned SrcArgIdx, unsigned SizeArgIdx) {
-  if (isConstantEvaluatedContext())
-    return;
-
-  const Expr *SrcArg = TheCall->getArg(SrcArgIdx);
-  const Expr *SizeArg = TheCall->getArg(SizeArgIdx);
-  if (SrcArg->isInstantiationDependent() || SizeArg->isInstantiationDependent())
-    return;
-
-  FortifiedBufferChecker Checker(*this, FD, TheCall);
-
-  std::optional<llvm::APSInt> CopyLen =
-      Checker.ComputeExplicitObjectSizeArgument(SizeArgIdx);
-  std::optional<llvm::APSInt> SrcBufSize =
-      Checker.ComputeSizeArgument(SrcArgIdx);
-
-  if (!CopyLen || !SrcBufSize)
-    return;
-
-  // Warn only if copy length exceeds source buffer size.
-  if (llvm::APSInt::compareValues(*CopyLen, *SrcBufSize) <= 0)
-    return;
-
-  std::string FuncName = Checker.getFunctionName();
-
-  DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
-                      PDiag(diag::warn_stringop_overread)
-                          << FuncName << CopyLen->getZExtValue()
-                          << SrcBufSize->getZExtValue());
-}
 
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                                                CallExpr *TheCall) {
@@ -1436,7 +1432,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     if (BuiltinID == Builtin::BI__builtin___memcpy_chk ||
         BuiltinID == Builtin::BI__builtin___memmove_chk ||
         BuiltinID == Builtin::BI__builtin___mempcpy_chk) {
-      checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/1, /*SizeArgIdx=*/2);
+      Checker.checkSourceOverread(/*SrcArgIdx=*/1, /*SizeArgIdx=*/2);
     }
     break;
   }
@@ -1487,7 +1483,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
         BuiltinID != Builtin::BI__builtin_memset &&
         BuiltinID != Builtin::BIbzero &&
         BuiltinID != Builtin::BI__builtin_bzero) {
-      checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/1, /*SizeArgIdx=*/2);
+      Checker.checkSourceOverread(/*SrcArgIdx=*/1, /*SizeArgIdx=*/2);
     }
     break;
   }
@@ -1497,14 +1493,14 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     SourceSize =
         Checker.ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
     DestinationSize = Checker.ComputeSizeArgument(1);
-    checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/0, /*SizeArgIdx=*/2);
+    Checker.checkSourceOverread(/*SrcArgIdx=*/0, /*SizeArgIdx=*/2);
     break;
   }
 
   // memchr(buf, val, size)
   case Builtin::BImemchr:
   case Builtin::BI__builtin_memchr: {
-    checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/0, /*SizeArgIdx=*/2);
+    Checker.checkSourceOverread(/*SrcArgIdx=*/0, /*SizeArgIdx=*/2);
     return;
   }
 
@@ -1514,8 +1510,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BI__builtin_memcmp:
   case Builtin::BIbcmp:
   case Builtin::BI__builtin_bcmp: {
-    checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/0, /*SizeArgIdx=*/2);
-    checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/1, /*SizeArgIdx=*/2);
+    Checker.checkSourceOverread(/*SrcArgIdx=*/0, /*SizeArgIdx=*/2);
+    Checker.checkSourceOverread(/*SrcArgIdx=*/1, /*SizeArgIdx=*/2);
     return;
   }
   case Builtin::BIsnprintf:
