@@ -1,4 +1,4 @@
-//===---- SPIRV.cpp - SPIR/SPIR-V-specific CIR CodeGen --------------------===//
+//===---- SPIRV.cpp - SPIR-V-specific CIR CodeGen -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This provides SPIR/SPIR-V-specific CIR CodeGen logic for function attributes.
+// This provides SPIR-V-specific CIR CodeGen logic for function attributes.
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,15 +22,15 @@ using namespace clang::CIRGen;
 
 namespace {
 
-class SPIRABIInfo : public ABIInfo {
+class SPIRVABIInfo : public ABIInfo {
 public:
-  SPIRABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+  SPIRVABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
 };
 
-class SPIRTargetCIRGenInfo : public TargetCIRGenInfo {
+class SPIRVTargetCIRGenInfo : public TargetCIRGenInfo {
 public:
-  SPIRTargetCIRGenInfo(CIRGenTypes &cgt)
-      : TargetCIRGenInfo(std::make_unique<SPIRABIInfo>(cgt)) {}
+  SPIRVTargetCIRGenInfo(CIRGenTypes &cgt)
+      : TargetCIRGenInfo(std::make_unique<SPIRVABIInfo>(cgt)) {}
 
   void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
                            CIRGenModule &cgm) const override {
@@ -53,6 +53,6 @@ public:
 } // namespace
 
 std::unique_ptr<TargetCIRGenInfo>
-clang::CIRGen::createSPIRTargetCIRGenInfo(CIRGenTypes &cgt) {
-  return std::make_unique<SPIRTargetCIRGenInfo>(cgt);
+clang::CIRGen::createSPIRVTargetCIRGenInfo(CIRGenTypes &cgt) {
+  return std::make_unique<SPIRVTargetCIRGenInfo>(cgt);
 }
