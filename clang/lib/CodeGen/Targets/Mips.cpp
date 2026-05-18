@@ -8,7 +8,6 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
-#include "clang/AST/Decl.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
