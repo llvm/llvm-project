@@ -5,7 +5,7 @@
 # END.
 
 # CHECK: UNRESOLVED: shtest-glob :: glob-echo.txt ({{[^)]*}})
-# CHECK: AttributeError: 'GlobItem' object has no attribute 'encode'
+# CHECK: TypeError: string argument expected, got 'GlobItem'
 
 # CHECK:      FAIL: shtest-glob :: glob-mkdir.txt ({{[^)]*}})
 # CHECK:      # | Error: 'mkdir' command failed, {{.*}}example_file1.input'

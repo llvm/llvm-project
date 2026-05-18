@@ -171,7 +171,7 @@ define void @not_a_min_max() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[F9_S0_V0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[T14:%.*]] = icmp eq i32 [[F9_S0_V0]], 5
-; CHECK-NEXT:    [[T15:%.*]] = select reassoc nnan ninf nsz contract afn i1 [[T14]], float 0x36A0000000000000, float 0.000000e+00
+; CHECK-NEXT:    [[T15:%.*]] = select reassoc nnan ninf nsz contract afn i1 [[T14]], float 1.401300e-45, float 0.000000e+00
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[F9_S0_V0]], 1
 ; CHECK-NEXT:    br i1 false, label [[END:%.*]], label [[LOOP]]
 ; CHECK:       end:

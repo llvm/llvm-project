@@ -30,13 +30,23 @@ BreakpointResolverScripted::BreakpointResolverScripted(
     lldb::SearchDepth depth, const StructuredDataImpl &args_data)
     : BreakpointResolver(bkpt, BreakpointResolver::PythonResolver),
       m_class_name(std::string(class_name)), m_depth(depth), m_args(args_data) {
-  CreateImplementationIfNeeded(bkpt);
+  if (bkpt)
+    CreateImplementationIfNeeded(bkpt);
 }
 
 void BreakpointResolverScripted::CreateImplementationIfNeeded(
     BreakpointSP breakpoint_sp) {
-  if (m_interface_sp)
+  // This version has to be called with a valid breakpoint_sp
+  // But the interface might have been made before we sent the breakpoint to
+  // the interface.  If so, do that here:
+  assert(breakpoint_sp);
+  if (m_interface_sp) {
+    if (!m_breakpoint_sent) {
+      m_interface_sp->SetBreakpoint(breakpoint_sp);
+      m_breakpoint_sent = true;
+    }
     return;
+  }
 
   if (m_class_name.empty())
     return;
@@ -45,8 +55,22 @@ void BreakpointResolverScripted::CreateImplementationIfNeeded(
     return;
 
   TargetSP target_sp = breakpoint_sp->GetTargetSP();
-  ScriptInterpreter *script_interp = target_sp->GetDebugger()
-                                              .GetScriptInterpreter();
+  if (target_sp)
+    CreateImplementationIfNeeded(*target_sp.get(), breakpoint_sp);
+}
+
+void BreakpointResolverScripted::CreateImplementationIfNeeded(
+    Target &target, BreakpointSP breakpoint_sp) {
+  if (m_interface_sp) {
+    if (!m_breakpoint_sent && breakpoint_sp) {
+      m_interface_sp->SetBreakpoint(breakpoint_sp);
+      m_breakpoint_sent = true;
+    }
+    return;
+  }
+
+  ScriptInterpreter *script_interp =
+      target.GetDebugger().GetScriptInterpreter();
   if (!script_interp)
     return;
 
@@ -67,13 +91,28 @@ void BreakpointResolverScripted::CreateImplementationIfNeeded(
     m_error = Status::FromError(obj_or_err.takeError());
     return;
   }
-
   StructuredData::ObjectSP object_sp = *obj_or_err;
   if (!object_sp || !object_sp->IsValid()) {
     m_error = Status::FromErrorStringWithFormat(
         "ScriptedBreakpoint::%s () - ERROR: %s", __FUNCTION__,
         "Failed to create valid script object");
   }
+  if (breakpoint_sp)
+    m_breakpoint_sent = true;
+}
+
+bool BreakpointResolverScripted::OverridesResolver(
+    Target &target, BreakpointResolverSP original_sp) {
+  // At this point neither resolver has been assigned a breakpoint, so pass
+  // in an empty one.
+  CreateImplementationIfNeeded(target, {});
+  if (!m_interface_sp)
+    return false;
+
+  StructuredData::ObjectSP serialized_sp =
+      original_sp->SerializeToStructuredData();
+  StructuredDataImpl impl(serialized_sp);
+  return m_interface_sp->OverridesResolver(target, impl);
 }
 
 void BreakpointResolverScripted::NotifyBreakpointSet() {

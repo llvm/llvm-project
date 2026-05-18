@@ -1614,6 +1614,17 @@ foreach vt = [v16i16, v8i32, v4i64] in {
             (XVBITREVI_W LASX256:$xj, grlenimm:$imm)>;
 }
 
+// XVBITSEL_V
+foreach vt = [v32i8, v16i16, v8i32, v4i64] in
+  def : Pat<(vt (or (and LASX256:$va, LASX256:$vk),
+                    (loongarch_vandn LASX256:$va, LASX256:$vj))),
+            (vt (XVBITSEL_V LASX256:$vj, LASX256:$vk, LASX256:$va))>;
+
+// XVBITSELI_B
+def : Pat<(v32i8 (or (and LASX256:$vd, (v32i8 (SplatPat_uimm8 uimm8:$imm))),
+                     (loongarch_vandn LASX256:$vd, LASX256:$vj))),
+          (XVBITSELI_B LASX256:$vd, LASX256:$vj, uimm8:$imm)>;
+
 // Vector bswaps
 def : Pat<(bswap (v16i16 LASX256:$xj)), (XVSHUF4I_B LASX256:$xj, 0b10110001)>;
 def : Pat<(bswap (v8i32 LASX256:$xj)), (XVSHUF4I_B LASX256:$xj, 0b00011011)>;

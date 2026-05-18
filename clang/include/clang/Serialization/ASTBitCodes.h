@@ -44,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 37;
+const unsigned VERSION_MAJOR = 38;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -751,6 +751,10 @@ enum ASTRecordTypes {
 
   /// Record code for extname-redefined undeclared identifiers.
   EXTNAME_UNDECLARED_IDENTIFIERS = 79,
+
+  /// Record that encodes the number of submodules, their base ID in the AST
+  /// file, and for each module the relative bit offset into the stream.
+  SUBMODULE_METADATA = 80,
 };
 
 /// Record types used within a source manager block.
@@ -819,8 +823,8 @@ enum PreprocessorDetailRecordTypes {
 
 /// Record types used within a submodule description block.
 enum SubmoduleRecordTypes {
-  /// Metadata for submodules as a whole.
-  SUBMODULE_METADATA = 0,
+  /// Defines the end of a single submodule. Sentinel record without any data.
+  SUBMODULE_END = 0,
 
   /// Defines the major attributes of a submodule, including its
   /// name and parent.
@@ -884,6 +888,10 @@ enum SubmoduleRecordTypes {
 
   /// Specifies affecting modules that were not imported.
   SUBMODULE_AFFECTING_MODULES = 18,
+
+  /// Specifies a direct submodule by name and ID, enabling on-demand
+  /// deserialization of children without loading the entire submodule block.
+  SUBMODULE_CHILD = 19,
 };
 
 /// Record types used within a comments block.
@@ -1217,7 +1225,13 @@ enum SpecialTypeIDs {
   SPECIAL_TYPE_OBJC_SEL_REDEFINITION = 6,
 
   /// C ucontext_t typedef type
-  SPECIAL_TYPE_UCONTEXT_T = 7
+  SPECIAL_TYPE_UCONTEXT_T = 7,
+
+  /// C fexcept_t typedef type
+  SPECIAL_TYPE_FEXCEPT_T = 8,
+
+  /// C fenv_t typedef type
+  SPECIAL_TYPE_FENV_T = 9
 };
 
 /// The number of special type IDs.

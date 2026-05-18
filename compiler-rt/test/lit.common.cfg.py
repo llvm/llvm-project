@@ -20,20 +20,8 @@ def get_path_from_clang(args, allow_failure):
         f"--target={config.target_triple}",
         *args,
     ]
-    path = None
-    try:
-        result = subprocess.run(
-            clang_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-        )
-        path = result.stdout.decode().strip()
-    except subprocess.CalledProcessError as e:
-        msg = f"Failed to run {clang_cmd}\nrc:{e.returncode}\nstdout:{e.stdout}\ne.stderr{e.stderr}"
-        if allow_failure:
-            lit_config.warning(msg)
-        else:
-            lit_config.fatal(msg)
-    return path, clang_cmd
-
+    path = lit_config.run_command_cached(clang_cmd, allow_failure, text=True)
+    return path.strip(), clang_cmd
 
 def find_compiler_libdir():
     """
@@ -592,10 +580,12 @@ if config.target_os == "Darwin":
         # There is no simulator-specific sw_vers/sysctl, so we use the host OS version
         os_detection_prefix = []
 
-    darwin_os_version = subprocess.check_output(
-        os_detection_prefix + ["sw_vers", "-productVersion"], universal_newlines=True
+    darwin_os_version = lit_config.run_command_cached(
+        os_detection_prefix + ["sw_vers", "-productVersion"],
+        universal_newlines=True,
+        text=True,
     )
-    darwin_os_version = tuple(int(x) for x in darwin_os_version.split("."))
+    darwin_os_version = tuple(int(x) for x in darwin_os_version.strip().split("."))
 
     if len(darwin_os_version) == 2:
         darwin_os_version = (darwin_os_version[0], darwin_os_version[1], 0)
@@ -608,17 +598,15 @@ if config.target_os == "Darwin":
     config.darwin_os_version = darwin_os_version
 
     # Detect x86_64h
-    try:
-        output = subprocess.check_output(
-            os_detection_prefix + ["sysctl", "hw.cpusubtype"]
-        )
+    output = lit_config.run_command_cached(
+        os_detection_prefix + ["sysctl", "hw.cpusubtype"], text=True, allow_failure=True
+    )
+    if output:
         output_re = re.match("^hw.cpusubtype: ([0-9]+)$", output)
         if output_re:
             cpu_subtype = int(output_re.group(1))
             if cpu_subtype == 8:  # x86_64h
                 config.available_features.add("x86_64h")
-    except:
-        pass
 
     # 32-bit iOS simulator is deprecated and removed in latest Xcode.
     if config.apple_platform == "iossim":
@@ -955,18 +943,11 @@ if config.target_os == "Darwin":
     if lit.util.which("log"):
         # Querying the log can only done by a privileged user so
         # so check if we can query the log.
-        exit_code = -1
-        with open("/dev/null", "r") as f:
-            # Run a `log show` command the should finish fairly quickly and produce very little output.
-            exit_code = subprocess.call(
-                ["log", "show", "--last", "1m", "--predicate", "1 == 0"],
-                stdout=f,
-                stderr=f,
-            )
-        if exit_code == 0:
+        res = lit_config.run_command_cached(
+            ["log", "show", "--last", "1m", "--predicate", "1 == 0"], allow_failure=True
+        )
+        if res is not None:
             config.available_features.add("darwin_log_cmd")
-        else:
-            lit_config.warning("log command found but cannot queried")
     else:
         lit_config.warning("log command not found. Some tests will be skipped.")
 elif config.android:

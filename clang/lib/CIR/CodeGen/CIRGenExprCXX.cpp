@@ -132,7 +132,41 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
   // Compute the object pointer.
   bool canUseVirtualCall = md->isVirtual() && !hasQualifier;
   const CXXMethodDecl *devirtualizedMethod = nullptr;
-  assert(!cir::MissingFeatures::devirtualizeMemberFunction());
+  // TODO: This devirtualization logic should be hoisted to the AST layer so it
+  // can be shared with classic codegen (see CGExprCXX.cpp).
+  if (canUseVirtualCall &&
+      md->getDevirtualizedMethod(base, getLangOpts().AppleKext)) {
+    const CXXRecordDecl *bestDynamicDecl = base->getBestDynamicClassType();
+    devirtualizedMethod = md->getCorrespondingMethodInClass(bestDynamicDecl);
+    assert(devirtualizedMethod);
+    const CXXRecordDecl *devirtualizedClass = devirtualizedMethod->getParent();
+    const Expr *inner = base->IgnoreParenBaseCasts();
+    auto getCXXRecord = [](const Expr *e) -> const CXXRecordDecl * {
+      QualType t = e->getType();
+      if (t->isRecordType())
+        return t->getAsCXXRecordDecl();
+      return t->getPointeeCXXRecordDecl();
+    };
+    if (devirtualizedMethod->getReturnType().getCanonicalType() !=
+        md->getReturnType().getCanonicalType())
+      // If the return types are not the same, this might be a case where more
+      // code needs to run to compensate for it. For example, the derived
+      // method might return a type that inherits from the return type of MD
+      // and has a prefix.
+      // For now we just avoid devirtualizing these covariant cases.
+      devirtualizedMethod = nullptr;
+    else if (getCXXRecord(inner) == devirtualizedClass)
+      // If the class of the Inner expression is where the dynamic method
+      // is defined, build the this pointer from it.
+      base = inner;
+    else if (getCXXRecord(base) != devirtualizedClass) {
+      // If the method is defined in a class that is not the best dynamic
+      // one or the one of the full expression, we would have to build
+      // a derived-to-base cast to compute the correct this pointer, but
+      // we don't have support for that yet, so do a virtual call.
+      devirtualizedMethod = nullptr;
+    }
+  }
 
   // Note on trivial assignment
   // --------------------------
@@ -214,8 +248,8 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
         callee = CIRGenCallee::forDirect(
             cgm.getAddrOfCXXStructor(globalDecl, fInfo, ty), globalDecl);
       } else {
-        cgm.errorNYI(ce->getSourceRange(), "devirtualized destructor call");
-        return RValue::get(nullptr);
+        callee = CIRGenCallee::forDirect(cgm.getAddrOfFunction(globalDecl, ty),
+                                         globalDecl);
       }
 
       QualType thisTy =
@@ -332,7 +366,7 @@ static void emitNullBaseClassInitialization(CIRGenFunction &cgf,
     assert(stores.size() == 1 && "Expected only one store");
     assert(stores[0].first == CharUnits::Zero() &&
            "Expected store to begin at offset zero");
-    CIRGenBuilderTy builder = cgf.getBuilder();
+    CIRGenBuilderTy &builder = cgf.getBuilder();
     mlir::Location loc = cgf.getLoc(base->getBeginLoc());
     builder.createStore(loc, builder.getConstant(loc, nullConstantForBase),
                         destPtr);
@@ -863,8 +897,12 @@ public:
     // is an enum whose underlying type is std::size_t.
     // FIXME: Use the right type as the parameter type. Note that in a call
     // to operator delete(size_t, ...), we may not have it available.
-    if (isAlignedAllocation(params.Alignment))
-      cgf.cgm.errorNYI("CallDeleteDuringNew: aligned allocation");
+    if (isAlignedAllocation(params.Alignment)) {
+      QualType sizeType = cgf.getContext().getSizeType();
+      cir::ConstantOp align = cgf.getBuilder().getAlignment(
+          *cgf.currSrcLoc, cgf.convertType(sizeType), allocAlign);
+      deleteArgs.add(RValue::get(align), sizeType);
+    }
 
     // Pass the rest of the arguments, which must match exactly.
     for (unsigned i = 0; i != numPlacementArgs; ++i) {
@@ -1485,12 +1523,12 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
         isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
 
     mlir::FlatSymbolRefAttr elementDtor;
+    bool hasThrowingDtor = false;
     if (const auto *rd = deleteTy->getAsCXXRecordDecl()) {
       if (rd->hasDefinition() && !rd->hasTrivialDestructor()) {
         const CXXDestructorDecl *dtor = rd->getDestructor();
         if (dtor->getType()->castAs<FunctionProtoType>()->canThrow())
-          cgm.errorNYI(e->getSourceRange(),
-                       "emitCXXDeleteExpr: throwing destructor");
+          hasThrowingDtor = true;
         cir::FuncOp dtorFn =
             cgm.getAddrOfCXXStructor(GlobalDecl(dtor, Dtor_Complete));
         elementDtor = mlir::FlatSymbolRefAttr::get(builder.getContext(),
@@ -1500,7 +1538,7 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
 
     cir::DeleteArrayOp::create(builder, ptr.getPointer().getLoc(),
                                ptr.getPointer(), deleteFn, deleteParams,
-                               elementDtor);
+                               elementDtor, hasThrowingDtor);
   } else {
     emitObjectDelete(*this, e, ptr, deleteTy);
   }
@@ -1579,7 +1617,19 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
 
     // The allocation alignment may be passed as the second argument.
     if (e->passAlignment()) {
-      cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: pass alignment");
+      // The alignment is always the second positional argument to a
+      // C++17 aligned allocation function -- right after the size.
+      constexpr unsigned indexOfAlignArg = 1;
+      // The corresponding parameter type, if the allocator declares one;
+      // otherwise fall back to size_t (the underlying type of
+      // std::align_val_t).
+      QualType alignValType = sizeType;
+      if (allocatorType->getNumParams() > indexOfAlignArg)
+        alignValType = allocatorType->getParamType(indexOfAlignArg);
+      cir::ConstantOp align = builder.getAlignment(
+          *currSrcLoc, convertType(alignValType), allocAlign);
+      allocatorArgs.add(RValue::get(align), alignValType);
+      ++paramsToSkip;
     }
 
     // FIXME: Why do we not pass a CalleeDecl here?
@@ -1782,9 +1832,15 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
   }
 
   // Pass the alignment if the delete function has an align_val_t parameter.
-  if (isAlignedAllocation(params.Alignment))
-    cgm.errorNYI(deleteFD->getSourceRange(),
-                 "emitDeleteCall: aligned allocation");
+  if (isAlignedAllocation(params.Alignment)) {
+    QualType alignValType = *paramTypeIter++;
+    CharUnits deleteTypeAlign =
+        getContext().toCharUnitsFromBits(getContext().getTypeAlignIfKnown(
+            deleteTy, /*NeedsPreferredAlignment=*/true));
+    cir::ConstantOp align = builder.getAlignment(
+        *currSrcLoc, convertType(alignValType), deleteTypeAlign);
+    deleteArgs.add(RValue::get(align), alignValType);
+  }
 
   assert(paramTypeIter == deleteFTy->param_type_end() &&
          "unknown parameter to usual delete function");
