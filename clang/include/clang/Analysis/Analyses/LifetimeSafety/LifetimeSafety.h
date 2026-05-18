@@ -131,13 +131,13 @@ public:
   reportLifetimeboundViolation(const CXXMethodDecl *MDWithLifetimebound) {}
 
   // Reports a member function definition that has [[clang::lifetimebound]] on
-  // the implicit this parameter when the previous declaration does not.
+  // the implicit this parameter when the canonical declaration does not.
   virtual void reportMisplacedLifetimebound(WarningScope Scope,
                                             const CXXMethodDecl *FDef,
                                             const CXXMethodDecl *FDecl) {}
 
   // Reports a function definition parameter that has [[clang::lifetimebound]]
-  // when the corresponding parameter in the previous declaration does not.
+  // when the corresponding parameter in the canonical declaration.
   virtual void reportMisplacedLifetimebound(WarningScope Scope,
                                             const ParmVarDecl *PVDDef,
                                             const ParmVarDecl *PVDDecl) {}

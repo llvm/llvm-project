@@ -317,13 +317,17 @@ public:
   }
 
   std::pair<const FunctionDecl *, WarningScope>
-  getCanonicalFunctionDeclForAttr(const FunctionDecl *FD) {
-    if (!FD)
+  getCanonicalFunctionDeclForAttr(const FunctionDecl *FDef) {
+    if (!FDef)
       return {nullptr, WarningScope::IntraTU};
 
-    const auto &SM = FD->getASTContext().getSourceManager();
-    const FileID DefFile = SM.getFileID(SM.getExpansionLoc(FD->getLocation()));
-    const FunctionDecl *CanonicalDecl = FD->getCanonicalDecl();
+    assert(FDef->isThisDeclarationADefinition() &&
+           "Expected FunctionDecl to be a definition");
+
+    const auto &SM = FDef->getASTContext().getSourceManager();
+    const FileID DefFile =
+        SM.getFileID(SM.getExpansionLoc(FDef->getLocation()));
+    const FunctionDecl *CanonicalDecl = FDef->getCanonicalDecl();
     WarningScope Scope = WarningScope::IntraTU;
 
     Scope = SM.getFileID(SM.getExpansionLoc(CanonicalDecl->getLocation())) !=
@@ -335,17 +339,18 @@ public:
   }
 
   std::pair<const CXXMethodDecl *, WarningScope>
-  getCanonicalDeclForAttr(const CXXMethodDecl *MD) {
-    auto [CanonicalFD, Scope] = getCanonicalFunctionDeclForAttr(MD);
-    return {cast_or_null<CXXMethodDecl>(CanonicalFD), Scope};
+  getCanonicalDeclForAttr(const CXXMethodDecl *MDef) {
+    auto [CanonicalFDecl, Scope] = getCanonicalFunctionDeclForAttr(MDef);
+    return {cast_or_null<CXXMethodDecl>(CanonicalFDecl), Scope};
   }
 
   std::pair<const ParmVarDecl *, WarningScope>
-  getCanonicalDeclForAttr(const FunctionDecl *FD, const ParmVarDecl *PVD) {
-    auto [CanonicalFD, Scope] = getCanonicalFunctionDeclForAttr(FD);
-    if (!CanonicalFD)
+  getCanonicalDeclForAttr(const FunctionDecl *FDef, const ParmVarDecl *PVDDef) {
+    auto [CanonicalFDecl, Scope] = getCanonicalFunctionDeclForAttr(FDef);
+    if (!CanonicalFDecl)
       return {nullptr, Scope};
-    return {CanonicalFD->getParamDecl(PVD->getFunctionScopeIndex()), Scope};
+    return {CanonicalFDecl->getParamDecl(PVDDef->getFunctionScopeIndex()),
+            Scope};
   }
 
   /// Returns the declaration of a function that is visible across translation

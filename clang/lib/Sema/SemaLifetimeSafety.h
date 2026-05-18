@@ -279,7 +279,7 @@ public:
   void reportMisplacedLifetimebound(WarningScope Scope,
                                     const CXXMethodDecl *FDef,
                                     const CXXMethodDecl *FDecl) override {
-    const auto *Attr = getImplicitObjectParamLifetimeBoundAttr(FDef);
+    const auto *Attr = getDirectImplicitObjectLifetimeBoundAttr(FDef);
     assert(Attr && "Expected lifetimebound attribute");
     unsigned DiagID =
         Scope == WarningScope::CrossTU

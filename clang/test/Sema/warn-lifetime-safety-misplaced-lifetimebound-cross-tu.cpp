@@ -7,11 +7,11 @@ struct HeaderObj {
   ~HeaderObj() {}
 };
 
-HeaderObj &header_param(HeaderObj &obj); // expected-warning {{'lifetimebound' attribute on a cross-TU definition is not visible to callers; add it to the declaration instead}}
+HeaderObj &header_param(HeaderObj &obj); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers in other translation units; add it to the declaration instead}}
 
 struct HeaderS {
   HeaderObj data;
-  HeaderObj &header_this(); // expected-warning {{'lifetimebound' attribute on a cross-TU definition is not visible to callers; add it to the declaration instead}}
+  HeaderObj &header_this(); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers in other translation units; add it to the declaration instead}}
 };
 
 //--- cross.cpp

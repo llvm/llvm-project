@@ -11019,12 +11019,12 @@ def warn_lifetime_safety_lifetimebound_violation
       DefaultIgnore;
 
 def warn_lifetime_safety_intra_tu_misplaced_lifetimebound
-    : Warning<"'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead">,
+    : Warning<"'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead">,
       InGroup<LifetimeSafetyIntraTUMisplacedLifetimebound>,
       DefaultIgnore;
 
 def warn_lifetime_safety_cross_tu_misplaced_lifetimebound
-    : Warning<"'lifetimebound' attribute on a cross-TU definition is not visible to callers; add it to the declaration instead">,
+    : Warning<"'lifetimebound' attribute on this definition is not visible to callers in other translation units; add it to the declaration instead">,
       InGroup<LifetimeSafetyCrossTUMisplacedLifetimebound>,
       DefaultIgnore;
 

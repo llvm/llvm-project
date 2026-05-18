@@ -640,7 +640,7 @@ def LifetimeSafetyMisplacedLifetimebound
                 [LifetimeSafetyCrossTUMisplacedLifetimebound,
                  LifetimeSafetyIntraTUMisplacedLifetimebound]> {
     code Documentation = [{
-Detects function definitions whose parameters or implicit this argument are marked as [[clang::lifetimebound]] when the corresponding declaration is not.
+Detects function definitions whose parameters or implicit this argument are marked as [[clang::lifetimebound]] when the canonical declaration is not.
 }];
 }
 
