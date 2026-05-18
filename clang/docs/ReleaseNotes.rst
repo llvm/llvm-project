@@ -155,6 +155,8 @@ C++2c Feature Support
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Partially implement Itanium mangling for pack indexing. Partially substituted packs are not yet supported. (#GH112003)
+
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -504,6 +506,9 @@ Improvements to Clang's diagnostics
 
 - Added ``-Wattribute-alias`` to diagnose type mismatches between an alias and its aliased function. (#GH195550)
 
+- Added warnings for floating-point exception function calls (fenv.h) without enabling
+  floating-point exception behavior via the appropriate flags or pragmas. (#GH128239)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -614,6 +619,7 @@ Bug Fixes to C++ Support
 - Fixed an invalid rejection and assertion failure while generating ``operator=`` for fields with the ``__restrict`` qualifier. (#GH37979)
 - Fixed a use-after-free bug when parsing default arguments containing lambdas in declarations with template-id declarators. (#GH196725)
 - Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
+- Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

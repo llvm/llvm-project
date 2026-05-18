@@ -321,15 +321,17 @@ define dso_local void @caller() nounwind {
 ; SYM:      [122](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 has_varargs
 ; SYM-NEXT: AUX indx 124 srch 3
 ; SYM-NEXT: [124](sec  0)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 EXP+#has_varargs
-; SYM-NEXT: [125](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 has_sret
-; SYM-NEXT: AUX indx 127 srch 3
-; SYM-NEXT: [127](sec  0)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 EXP+#has_sret
-; SYM-NEXT: [128](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 exp
-; SYM-NEXT: AUX indx 130 srch 3
-; SYM-NEXT: [130](sec  0)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 EXP+#exp
-; SYM-NEXT: [131](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 #has_varargs
+; SYM-NEXT: [125](sec  0)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 #__chkstk_arm64ec
+; SYM-NEXT: [126](sec  0)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 #memcpy
+; SYM-NEXT: [127](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 has_sret
+; SYM-NEXT: AUX indx 129 srch 3
+; SYM-NEXT: [129](sec  0)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 EXP+#has_sret
+; SYM-NEXT: [130](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 exp
+; SYM-NEXT: AUX indx 132 srch 3
+; SYM-NEXT: [132](sec  0)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 EXP+#exp
+; SYM-NEXT: [133](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 #has_varargs
 ; SYM-NEXT: AUX indx 58 srch 3
-; SYM-NEXT: [133](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 #has_sret
+; SYM-NEXT: [135](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 #has_sret
 ; SYM-NEXT: AUX indx 68 srch 3
-; SYM-NEXT: [135](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 #exp
+; SYM-NEXT: [137](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 #exp
 ; SYM-NEXT: AUX indx 78 srch 3

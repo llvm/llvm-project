@@ -102,20 +102,9 @@ public:
   void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,
                     const Module *Imported) override;
 
-  void EndOfMainFile() override;
-
 private:
   /// The parent dependency collector.
   ModuleDepCollector &MDC;
-
-  void handleImport(const Module *Imported);
-
-  /// Returns the ID or nothing if the dependency is spurious and is ignored.
-  std::optional<ModuleID> handleTopLevelModule(serialization::ModuleFile *MF);
-
-  /// Adds direct module dependencies to the ModuleDeps instance. This includes
-  /// prebuilt module and implicitly-built modules.
-  void addAllModuleDeps(serialization::ModuleFile &MF, ModuleDeps &MD);
 };
 
 /// Collects modular and non-modular dependencies of the main file by attaching
@@ -124,11 +113,15 @@ class ModuleDepCollector final : public DependencyCollector {
 public:
   ModuleDepCollector(DependencyScanningService &Service,
                      std::unique_ptr<DependencyOutputOptions> Opts,
-                     CompilerInstance &ScanInstance, DependencyConsumer &C,
+                     CompilerInstance &ScanInstance,
                      DependencyActionController &Controller,
                      CompilerInvocation OriginalCI,
                      const PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
                      const ArrayRef<StringRef> StableDirs);
+
+  /// Processes the accumulated dependency information and reports it to the
+  /// \c Consumer.
+  void run(DependencyConsumer &Consumer);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -146,8 +139,6 @@ private:
   DependencyScanningService &Service;
   /// The compiler instance for scanning the current translation unit.
   CompilerInstance &ScanInstance;
-  /// The consumer of collected dependency information.
-  DependencyConsumer &Consumer;
   /// Callbacks for computing dependency information.
   DependencyActionController &Controller;
   /// Mapping from prebuilt AST filepaths to their attributes referenced during
@@ -192,6 +183,15 @@ private:
   /// if needed. The callback is created and added to a Preprocessor instance by
   /// attachToPreprocessor and the Preprocessor instance owns it.
   ModuleDepCollectorPP *CollectorPPPtr = nullptr;
+
+  void handleImport(const Module *Imported);
+
+  /// Returns the ID or nothing if the dependency is spurious and is ignored.
+  std::optional<ModuleID> handleTopLevelModule(serialization::ModuleFile *MF);
+
+  /// Adds direct module dependencies to the ModuleDeps instance. This includes
+  /// prebuilt module and implicitly-built modules.
+  void addAllModuleDeps(serialization::ModuleFile &MF, ModuleDeps &MD);
 
   /// Checks whether the module is known as being prebuilt.
   bool isPrebuiltModule(const serialization::ModuleFile *MF);

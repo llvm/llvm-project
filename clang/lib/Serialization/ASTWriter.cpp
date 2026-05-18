@@ -6158,6 +6158,8 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
     AddTypeRef(Context, Context.ObjCClassRedefinitionType, SpecialTypes);
     AddTypeRef(Context, Context.ObjCSelRedefinitionType, SpecialTypes);
     AddTypeRef(Context, Context.getucontext_tType(), SpecialTypes);
+    AddTypeRef(Context, Context.getfexcept_tType(), SpecialTypes);
+    AddTypeRef(Context, Context.getfenv_tType(), SpecialTypes);
   }
 
   if (SemaPtr)

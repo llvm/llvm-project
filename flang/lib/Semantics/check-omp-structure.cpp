@@ -162,25 +162,25 @@ bool OmpStructureChecker::Enter(const parser::EndFunctionStmt &x) {
   return true;
 }
 
+bool OmpStructureChecker::Enter(const parser::MpSubprogramStmt &x) {
+  const Symbol *sym{x.v.symbol};
+  scopeStack_.push_back(sym->scope());
+  return true;
+}
+
+bool OmpStructureChecker::Enter(const parser::EndMpSubprogramStmt &x) {
+  scopeStack_.pop_back();
+  return true;
+}
+
 bool OmpStructureChecker::Enter(const parser::BlockConstruct &x) {
-  auto &specPart{std::get<parser::BlockSpecificationPart>(x.t)};
-  auto &execPart{std::get<parser::Block>(x.t)};
-  if (auto &&source{parser::GetSource(specPart)}) {
-    scopeStack_.push_back(&context_.FindScope(*source));
-  } else if (auto &&source{parser::GetSource(execPart)}) {
-    scopeStack_.push_back(&context_.FindScope(*source));
-  }
+  auto &endBlockStmt{std::get<parser::Statement<parser::EndBlockStmt>>(x.t)};
+  scopeStack_.push_back(&context_.FindScope(endBlockStmt.source));
   return true;
 }
 
 void OmpStructureChecker::Leave(const parser::BlockConstruct &x) {
-  auto &specPart{std::get<parser::BlockSpecificationPart>(x.t)};
-  auto &execPart{std::get<parser::Block>(x.t)};
-  if (auto &&source{parser::GetSource(specPart)}) {
-    scopeStack_.push_back(&context_.FindScope(*source));
-  } else if (auto &&source{parser::GetSource(execPart)}) {
-    scopeStack_.push_back(&context_.FindScope(*source));
-  }
+  scopeStack_.pop_back();
 }
 
 void OmpStructureChecker::Enter(const parser::InternalSubprogram &) {
@@ -1284,19 +1284,19 @@ void OmpStructureChecker::CheckMasterNesting(
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPAssumeConstruct &x) {
+void OmpStructureChecker::Enter(const parser::OmpAssumeDirective &x) {
   PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_assume);
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPAssumeConstruct &) {
+void OmpStructureChecker::Leave(const parser::OmpAssumeDirective &) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAssumes &x) {
+void OmpStructureChecker::Enter(const parser::OmpAssumesDirective &x) {
   PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_assumes);
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeAssumes &) {
+void OmpStructureChecker::Leave(const parser::OmpAssumesDirective &) {
   dirContext_.pop_back();
 }
 
@@ -1425,7 +1425,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
 
   const auto &sectionBlocks{std::get<std::list<parser::OpenMPConstruct>>(x.t)};
   for (const parser::OpenMPConstruct &construct : sectionBlocks) {
-    auto &section{std::get<parser::OpenMPSectionConstruct>(construct.u)};
+    auto &section{std::get<parser::OmpSectionDirective>(construct.u)};
     CheckNoBranching(
         std::get<parser::Block>(section.t), beginName.v, beginName.source);
   }
@@ -2350,6 +2350,17 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareTargetDirective &x) {
       context_.Say(arg.source,
           "The procedure '%s' in DECLARE TARGET construct cannot be a statement function."_err_en_US,
           symbol->name());
+    }
+  }
+
+  // The bare form (no arguments, no clauses) is only permitted in the
+  // specification part of a subroutine, function, or interface body
+  // (OpenMP 5.2 §7.8.2).
+  if (x.v.Arguments().v.empty() && x.v.Clauses().v.empty()) {
+    const Scope &scope{GetScopingUnit(*scopeStack_.back())};
+    if (scope.kind() != Scope::Kind::Subprogram) {
+      context_.Say(dirName.source,
+          "DECLARE TARGET directive without arguments or clauses must appear in a subroutine or function"_err_en_US);
     }
   }
 
