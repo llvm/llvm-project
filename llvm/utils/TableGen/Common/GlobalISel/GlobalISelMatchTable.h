@@ -48,6 +48,7 @@ class CodeGenRegisterClass;
 namespace gi {
 class MatchTable;
 class Matcher;
+class RuleMatcher;
 class OperandMatcher;
 class MatchAction;
 class PredicateMatcher;
@@ -71,8 +72,7 @@ std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
 /// they share. \p MatcherStorage is used as a memory container
 /// for the group that are created as part of this process.
 ///
-/// What this optimization does looks like if GroupT = GroupMatcher:
-/// Output without optimization:
+/// Example of GroupMatcher formation via this function:
 /// \verbatim
 /// # R1
 ///  # predicate A
@@ -92,10 +92,9 @@ std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
 ///  # R2
 ///   # predicate C
 /// \endverbatim
-template <class GroupT>
 std::vector<Matcher *>
-optimizeRules(ArrayRef<Matcher *> Rules,
-              std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
+optimizeRuleset(MutableArrayRef<RuleMatcher> Rules,
+                std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
 
 /// A record to be stored in a MatchTable.
 ///
@@ -324,6 +323,7 @@ public:
 
   virtual bool hasFirstCondition() const = 0;
   virtual const PredicateMatcher &getFirstCondition() const = 0;
+  virtual LLTCodeGen getFirstConditionAsRootType() const = 0;
   virtual std::unique_ptr<PredicateMatcher> popFirstCondition() = 0;
 
   /// Check recursively if the matcher records named operands for use in C++
@@ -395,6 +395,7 @@ public:
            "Trying to get a condition from a condition-less group");
     return *Conditions.front();
   }
+  LLTCodeGen getFirstConditionAsRootType() const override;
   bool hasFirstCondition() const override { return !Conditions.empty(); }
 
   bool recordsOperand() const override;
@@ -470,7 +471,11 @@ public:
   }
 
   const PredicateMatcher &getFirstCondition() const override {
-    llvm_unreachable("Trying to pop a condition from a condition-less group");
+    llvm_unreachable("Trying to get a condition from a condition-less group");
+  }
+
+  LLTCodeGen getFirstConditionAsRootType() const override {
+    llvm_unreachable("Trying to get a condition from a condition-less group");
   }
 
   bool hasFirstCondition() const override { return false; }
@@ -721,7 +726,7 @@ public:
 
   std::unique_ptr<PredicateMatcher> popFirstCondition() override;
   const PredicateMatcher &getFirstCondition() const override;
-  LLTCodeGen getFirstConditionAsRootType();
+  LLTCodeGen getFirstConditionAsRootType() const override;
   bool hasFirstCondition() const override;
   StringRef getOpcode() const;
 
@@ -844,7 +849,6 @@ public:
     IPM_Opcode,
     IPM_NumOperands,
     IPM_ImmPredicate,
-    IPM_Imm,
     IPM_AtomicOrderingMMO,
     IPM_MemoryLLTSize,
     IPM_MemoryVsLLTSize,
@@ -855,7 +859,10 @@ public:
     IPM_OneUse,
     IPM_GenericPredicate,
     IPM_MIFlags,
+
     OPM_LeafPredicate,
+    OPM_ImmPredicate,
+    OPM_Imm,
     OPM_SameOperand,
     OPM_ComplexPattern,
     OPM_IntrinsicID,
@@ -1201,10 +1208,10 @@ public:
 class ImmOperandMatcher : public OperandPredicateMatcher {
 public:
   ImmOperandMatcher(unsigned InsnVarID, unsigned OpIdx)
-      : OperandPredicateMatcher(IPM_Imm, InsnVarID, OpIdx) {}
+      : OperandPredicateMatcher(OPM_Imm, InsnVarID, OpIdx) {}
 
   static bool classof(const PredicateMatcher *P) {
-    return P->getKind() == IPM_Imm;
+    return P->getKind() == OPM_Imm;
   }
 
   void emitPredicateOpcodes(MatchTable &Table,
@@ -1313,7 +1320,7 @@ protected:
 public:
   OperandImmPredicateMatcher(unsigned InsnVarID, unsigned OpIdx,
                              const TreePredicateFn &Predicate)
-      : OperandPredicateMatcher(IPM_ImmPredicate, InsnVarID, OpIdx),
+      : OperandPredicateMatcher(OPM_ImmPredicate, InsnVarID, OpIdx),
         Predicate(Predicate) {}
 
   bool isIdentical(const PredicateMatcher &B) const override {
@@ -1324,7 +1331,7 @@ public:
   }
 
   static bool classof(const PredicateMatcher *P) {
-    return P->getKind() == IPM_ImmPredicate;
+    return P->getKind() == OPM_ImmPredicate;
   }
 
   void emitPredicateOpcodes(MatchTable &Table,
