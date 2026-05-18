@@ -1,15 +1,15 @@
 ; REQUIRES: asserts
 ; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize --disable-output \
-; RUN: -tail-folding-policy=prefer-fold-epilogue-tail -pass-remarks-analysis=loop-vectorize 2>&1 | FileCheck %s
+; RUN: -epilogue-tail-folding-policy=prefer-fold-tail -pass-remarks-analysis=loop-vectorize 2>&1 | FileCheck %s
 
 ; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize -enable-epilogue-vectorization=false \
-; RUN: --disable-output -tail-folding-policy=prefer-fold-epilogue-tail -pass-remarks-analysis=loop-vectorize 2>&1 \
+; RUN: --disable-output -epilogue-tail-folding-policy=prefer-fold-tail -pass-remarks-analysis=loop-vectorize 2>&1 \
 ; RUN: | FileCheck %s --check-prefix=CHECK-DISABLED-EPILOG
 
 define void @test_epilogue_tf(ptr %A, i64 %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'test_epilogue_tf'
 ; CHECK: LV: epilogue tail-folding is not supported yet
-; CHECK: remark: <unknown>:0:0: The tail-folding policy prefer-fold-epilogue-tail is not supported yet, fall back to a normal epilogue
+; CHECK: remark: <unknown>:0:0: The epilogue-tail-folding policy prefer-fold-tail is not supported yet, fall back to a normal epilogue
 ;
 entry:
   br label %for.body
