@@ -22,6 +22,7 @@ int memcmp(const void *s1, const void *s2, size_t n);
 #endif
 
 int bcmp(const void *s1, const void *s2, size_t n);
+void bcopy(const void *src, void *dst, size_t n);
 
 #ifdef __cplusplus
 }
@@ -125,6 +126,16 @@ void test_bcmp_overread(void) {
 void test_bcmp_no_warning(void) {
   char a[10], b[10];
   bcmp(a, b, 10); // no warning
+}
+
+void test_bcopy_overread(void) {
+  char src[4], dst[100];
+  bcopy(src, dst, 8); // expected-warning {{'bcopy' reading 8 bytes from a region of size 4}}
+}
+
+void test_bcopy_no_warning(void) {
+  char src[10], dst[10];
+  bcopy(src, dst, 10); // no warning
 }
 
 void test_memcpy_chk_overread(void) {

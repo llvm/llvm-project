@@ -1482,9 +1482,11 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
         Checker.ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
     DestinationSize = Checker.ComputeSizeArgument(0);
 
-    // Buffer overread doesn't make sense for memset.
+    // Buffer overread doesn't make sense for memset/bzero.
     if (BuiltinID != Builtin::BImemset &&
-        BuiltinID != Builtin::BI__builtin_memset) {
+        BuiltinID != Builtin::BI__builtin_memset &&
+        BuiltinID != Builtin::BIbzero &&
+        BuiltinID != Builtin::BI__builtin_bzero) {
       checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/1, /*SizeArgIdx=*/2);
     }
     break;
@@ -1495,6 +1497,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     SourceSize =
         Checker.ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
     DestinationSize = Checker.ComputeSizeArgument(1);
+    checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/0, /*SizeArgIdx=*/2);
     break;
   }
 
