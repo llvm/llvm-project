@@ -4599,6 +4599,61 @@ def BlockObjectDispose : LibBuiltin<"blocks.h"> {
 }
 // FIXME: Also declare NSConcreteGlobalBlock and NSConcreteStackBlock.
 
+def FeClearExcept : LibBuiltin<"fenv.h"> {
+  let Spellings = ["feclearexcept"];
+  let Prototype = "int(int)";
+}
+
+def FeGetExceptFlag : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fegetexceptflag"];
+  let Prototype = "int(fexcept_t*, int)";
+}
+
+def FeRaiseExcept : LibBuiltin<"fenv.h"> {
+  let Spellings = ["feraiseexcept"];
+  let Prototype = "int(int)";
+}
+
+def FeSetExceptFlag : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fesetexceptflag"];
+  let Prototype = "int(fexcept_t const*, int)";
+}
+
+def FeTestExcept : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fetestexcept"];
+  let Prototype = "int(int)";
+}
+
+def FeGetRound : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fegetround"];
+  let Prototype = "int()";
+}
+
+def FeSetRound : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fesetround"];
+  let Prototype = "int(int)";
+}
+
+def FeGetEnv : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fegetenv"];
+  let Prototype = "int(fenv_t*)";
+}
+
+def FeHoldExcept : LibBuiltin<"fenv.h"> {
+  let Spellings = ["feholdexcept"];
+  let Prototype = "int(fenv_t*)";
+}
+
+def FeSetEnv : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fesetenv"];
+  let Prototype = "int(fenv_t const*)";
+}
+
+def FeUpdateEnv : LibBuiltin<"fenv.h"> {
+  let Spellings = ["feupdateenv"];
+  let Prototype = "int(fenv_t const*)";
+}
+
 def __Addressof : LangBuiltin<"CXX_LANG"> {
   let Spellings = ["__addressof"];
   let Attributes = [FunctionWithoutBuiltinPrefix, NoThrow, Const,
@@ -4849,12 +4904,6 @@ def GetUnsafeStackPtr : Builtin {
   let Spellings = ["__builtin___get_unsafe_stack_ptr"];
   let Attributes = [NoThrow, FunctionWithBuiltinPrefix];
   let Prototype = "void*()";
-}
-
-def UnsafeSigaltstack : Builtin {
-  let Spellings = ["__builtin_unsafe_sigaltstack"];
-  let Attributes = [NoThrow, FunctionWithBuiltinPrefix];
-  let Prototype = "int(size_t)";
 }
 
 // Nontemporal loads/stores builtins.

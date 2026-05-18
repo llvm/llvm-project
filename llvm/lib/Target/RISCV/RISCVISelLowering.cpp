@@ -467,12 +467,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit())) {
     setOperationAction(ISD::ABS, XLenVT, Legal);
     if (Subtarget.is64Bit())
-      setOperationAction(ISD::ABS, MVT::i32, Custom);
+      setOperationAction({ISD::ABS, ISD::ABS_MIN_POISON}, MVT::i32, Custom);
   } else if (Subtarget.hasShortForwardBranchIALU()) {
     // We can use PseudoCCSUB to implement ABS.
     setOperationAction(ISD::ABS, XLenVT, Legal);
   } else if (Subtarget.is64Bit()) {
-    setOperationAction(ISD::ABS, MVT::i32, Custom);
+    setOperationAction({ISD::ABS, ISD::ABS_MIN_POISON}, MVT::i32, Custom);
   }
 
   if (!Subtarget.useMIPSCCMovInsn() && !Subtarget.hasVendorXTHeadCondMov())
@@ -631,6 +631,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          P64VecVTs, Legal);
       setOperationAction({ISD::ABS, ISD::ABDS, ISD::ABDU},
                          {MVT::v4i16, MVT::v8i8}, Legal);
+      setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA}, P64VecVTs, Custom);
+      setOperationAction(ISD::SSHLSAT, {MVT::v2i32, MVT::v4i16}, Custom);
+      setOperationAction(ISD::SPLAT_VECTOR, P64VecVTs, Legal);
       setOperationAction(ISD::BUILD_VECTOR, MVT::v2i32, Legal);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, {MVT::v4i16, MVT::v8i8}, Legal);
@@ -1707,6 +1710,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           // Custom lower maximum LMUL case to split to 2 half LMUL operations.
           // TODO: Support more operations.
           if (!isTypeLegal(F32VecVT)) {
+            setOperationAction({ISD::VECREDUCE_FMIN, ISD::VECREDUCE_FMAX,
+                                ISD::VECREDUCE_FMAXIMUM,
+                                ISD::VECREDUCE_FMINIMUM, ISD::VECREDUCE_FADD},
+                               VT, Custom);
             setOperationAction(ISD::SETCC, VT, Custom);
             continue;
           }
@@ -1738,6 +1745,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           // Custom lower maximum LMUL case to split to 2 half LMUL operations.
           // TODO: Support more operations.
           if (!isTypeLegal(F32VecVT)) {
+            setOperationAction({ISD::VECREDUCE_FMIN, ISD::VECREDUCE_FMAX,
+                                ISD::VECREDUCE_FMAXIMUM,
+                                ISD::VECREDUCE_FMINIMUM, ISD::VECREDUCE_FADD},
+                               VT, Custom);
             setOperationAction(ISD::SETCC, VT, Custom);
             continue;
           }
@@ -1919,6 +1930,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::UREM,
                          ISD::INSERT_VECTOR_ELT,
                          ISD::ABS,
+                         ISD::ABS_MIN_POISON,
                          ISD::CTPOP,
                          ISD::VECTOR_SHUFFLE,
                          ISD::FMA,
@@ -7701,19 +7713,41 @@ static SDValue SplitVectorOp(SDValue Op, SelectionDAG &DAG) {
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, Op.getValueType(), LoRes, HiRes);
 }
 
-static SDValue SplitVectorReductionOp(SDValue Op, SelectionDAG &DAG) {
+static SDValue SplitVectorReductionOp(SDValue Op, SelectionDAG &DAG,
+                                      bool IsVP) {
   SDLoc DL(Op);
 
-  auto [Lo, Hi] = DAG.SplitVector(Op.getOperand(1), DL);
-  auto [MaskLo, MaskHi] = DAG.SplitVector(Op.getOperand(2), DL);
-  auto [EVLLo, EVLHi] =
-      DAG.SplitEVL(Op.getOperand(3), Op.getOperand(1).getValueType(), DL);
+  if (IsVP) {
+    auto [Lo, Hi] = DAG.SplitVector(Op.getOperand(1), DL);
+    auto [MaskLo, MaskHi] = DAG.SplitVector(Op.getOperand(2), DL);
+    auto [EVLLo, EVLHi] =
+        DAG.SplitEVL(Op.getOperand(3), Op.getOperand(1).getValueType(), DL);
+
+    SDValue ResLo =
+        DAG.getNode(Op.getOpcode(), DL, Op.getValueType(),
+                    {Op.getOperand(0), Lo, MaskLo, EVLLo}, Op->getFlags());
+    return DAG.getNode(Op.getOpcode(), DL, Op.getValueType(),
+                       {ResLo, Hi, MaskHi, EVLHi}, Op->getFlags());
+  }
+
+  unsigned Opcode = Op.getOpcode();
+  unsigned OpNo = Opcode == ISD::VECREDUCE_SEQ_FADD ? 1 : 0;
+
+  auto [Lo, Hi] = DAG.SplitVector(Op.getOperand(OpNo), DL);
+  if (Opcode == ISD::VECREDUCE_SEQ_FADD) {
+    SDValue ResLo = DAG.getNode(Op.getOpcode(), DL, Op.getValueType(),
+                                Op.getOperand(0), Lo, Op->getFlags());
+    return DAG.getNode(Op.getOpcode(), DL, Op.getValueType(), ResLo, Hi,
+                       Op->getFlags());
+  }
 
   SDValue ResLo =
-      DAG.getNode(Op.getOpcode(), DL, Op.getValueType(),
-                  {Op.getOperand(0), Lo, MaskLo, EVLLo}, Op->getFlags());
-  return DAG.getNode(Op.getOpcode(), DL, Op.getValueType(),
-                     {ResLo, Hi, MaskHi, EVLHi}, Op->getFlags());
+      DAG.getNode(Op.getOpcode(), DL, Op.getValueType(), Lo, Op->getFlags());
+  SDValue ResHi =
+      DAG.getNode(Op.getOpcode(), DL, Op.getValueType(), Hi, Op->getFlags());
+  unsigned BaseOpc = ISD::getVecReduceBaseOpcode(Op.getOpcode());
+  return DAG.getNode(BaseOpc, DL, Op.getValueType(), ResLo, ResHi,
+                     Op->getFlags());
 }
 
 static SDValue SplitStrictFPVectorOp(SDValue Op, SelectionDAG &DAG) {
@@ -8390,12 +8424,17 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (Op.getOperand(0).getValueType().getVectorElementType() == MVT::i1)
       return lowerVectorMaskVecReduction(Op, DAG, /*IsVP*/ false);
     return lowerVECREDUCE(Op, DAG);
-  case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_SEQ_FADD:
+    if (isPromotedOpNeedingSplit(Op.getOperand(1), Subtarget, *this))
+      return SplitVectorReductionOp(Op, DAG, /*IsVP*/ false);
+    return lowerFPVECREDUCE(Op, DAG);
+  case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAX:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
+    if (isPromotedOpNeedingSplit(Op.getOperand(0), Subtarget, *this))
+      return SplitVectorReductionOp(Op, DAG, /*IsVP*/ false);
     return lowerFPVECREDUCE(Op, DAG);
   case ISD::VP_REDUCE_ADD:
   case ISD::VP_REDUCE_UMAX:
@@ -8409,7 +8448,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_REDUCE_FMINIMUM:
   case ISD::VP_REDUCE_FMAXIMUM:
     if (isPromotedOpNeedingSplit(Op.getOperand(1), Subtarget, *this))
-      return SplitVectorReductionOp(Op, DAG);
+      return SplitVectorReductionOp(Op, DAG, /*IsVP*/ true);
     return lowerVPREDUCE(Op, DAG);
   case ISD::VP_REDUCE_AND:
   case ISD::VP_REDUCE_OR:
@@ -8969,9 +9008,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     MVT VT = Op.getSimpleValueType();
     MVT ContainerVT = getContainerForFixedLengthVector(VT);
     SDValue VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
-    return DAG.getNode(getRISCVVLOp(Op), DL, ContainerVT, Op.getOperand(0),
-                       Op.getOperand(1), DAG.getUNDEF(ContainerVT),
-                       Op.getOperand(2), VL);
+    SDValue Res = DAG.getNode(getRISCVVLOp(Op), DL, ContainerVT,
+                              Op.getOperand(0), Op.getOperand(1),
+                              DAG.getUNDEF(ContainerVT), Op.getOperand(2), VL);
+    return convertFromScalableVector(VT, Res, DAG, Subtarget);
   }
   case ISD::FABS:
   case ISD::FNEG:
@@ -9027,6 +9067,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return DAG.getNode(ISD::SUB, dl, VT, Max, Min);
   }
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
     return lowerABS(Op, DAG);
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_POISON:
@@ -15300,7 +15341,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(expandAddSubSat(N, DAG));
     return;
   }
-  case ISD::ABS: {
+  case ISD::ABS:
+  case ISD::ABS_MIN_POISON: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
 
@@ -21391,7 +21433,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return DAG.getNode(ISD::AND, DL, VT, NewFMV,
                        DAG.getConstant(~SignBit, DL, VT));
   }
-  case ISD::ABS: {
+  case ISD::ABS:
+  case ISD::ABS_MIN_POISON: {
     EVT VT = N->getValueType(0);
     SDValue N0 = N->getOperand(0);
     // abs (sext) -> zext (abs)

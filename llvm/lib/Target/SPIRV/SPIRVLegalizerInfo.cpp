@@ -135,9 +135,21 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   auto allFloatScalarsAndF16Vector2AndVector4s = {s16, s32, s64, v2s16, v4s16};
 
+  auto allFloatScalars = {s16, s32, s64};
+
   auto allFloatScalarsAndVectors = {
       s16,   s32,   s64,   v2s16, v2s32, v2s64, v3s16,  v3s32,  v3s64,
       v4s16, v4s32, v4s64, v8s16, v8s32, v8s64, v16s16, v16s32, v16s64};
+
+  auto allShaderFloatVectors = {v2s16, v2s32, v2s64, v3s16, v3s32,
+                                v3s64, v4s16, v4s32, v4s64};
+
+  auto allFloatVectors = {v2s16, v2s32, v2s64,  v3s16,  v3s32,
+                          v3s64, v4s16, v4s32,  v4s64,  v8s16,
+                          v8s32, v8s64, v16s16, v16s32, v16s64};
+
+  auto &allowedFloatVectorTypes =
+      ST.isShader() ? allShaderFloatVectors : allFloatVectors;
 
   auto allFloatAndIntScalarsAndPtrs = {s8, s16, s32, s64, p0,  p1,
                                        p2, p3,  p4,  p5,  p6,  p7,
@@ -491,7 +503,12 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_FMINIMUM,
                                G_FMAXIMUM,
                                G_INTRINSIC_ROUNDEVEN})
-      .legalFor(allFloatScalarsAndVectors);
+      .legalFor(allFloatScalars)
+      .legalFor(allowedFloatVectorTypes)
+      .moreElementsToNextPow2(0)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)));
   // clang-format on
 
   getActionDefinitionsBuilder(G_FCOPYSIGN)

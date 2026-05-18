@@ -17,6 +17,12 @@
 
 // BAD_CUDA9: GPU arch sm_21 is supported by CUDA versions between 7.0 and 8.0
 
+// RUN: not %clang -### -v --target=x86_64-linux-gnu --cuda-gpu-arch=sm_101f \
+// RUN:   --cuda-path=%S/Inputs/CUDA_90/usr/local/cuda %s 2>&1 \
+// RUN: | FileCheck -check-prefix BAD_CUDA_SM101F %s
+
+// BAD_CUDA_SM101F: GPU arch sm_101f is supported by CUDA versions between 12.9 and 12.9
+
 // RUN: %clang -### -target x86_64-linux-gnu -nogpulib -nogpuinc --cuda-gpu-arch=sm_52 -c --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s
 // RUN: %clang -### -x hip --target=x86_64-linux-gnu -nogpulib -nogpuinc --cuda-gpu-arch=gfx908 -c %s 2>&1 \
