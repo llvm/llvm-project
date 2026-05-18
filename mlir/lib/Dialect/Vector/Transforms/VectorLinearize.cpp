@@ -898,6 +898,12 @@ struct LinearizeVectorInterleave final
 ///   %even, %odd = vector.deinterleave %src : vector<4x2xT> -> vector<4x1xT>
 /// becomes:
 ///   %even, %odd = vector.deinterleave %src_flat : vector<8xT> -> vector<4xT>
+/// This linearization only works if the innermost dimension is even.
+/// Consider vector<2x5xT>:
+/// [[0,1,2,3,4],
+///  [5,6,7,8,9]]
+/// Non-linearized deinterleave returns the odd part: [[1, 3], [6, 8]]
+/// Linearized deinterleave would the odd part: [1, 3, 5, 7, 9]
 struct LinearizeVectorDeinterleave final
     : public OpConversionPattern<vector::DeinterleaveOp> {
   using Base::Base;
@@ -908,6 +914,8 @@ struct LinearizeVectorDeinterleave final
   LogicalResult
   matchAndRewrite(vector::DeinterleaveOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (op.getSource().getType().getShape().back() % 2)
+      return failure();
     auto newOp = vector::DeinterleaveOp::create(rewriter, op.getLoc(),
                                                 adaptor.getSource());
     rewriter.replaceOp(op, newOp.getResults());
