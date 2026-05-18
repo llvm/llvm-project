@@ -4774,14 +4774,23 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
                      LLVM::OrOp>(op);
   };
 
-  // Pre-translate operations inside the region that compute intermediate values
-  // (e.g., memcpy, GEP, loads for dereferencing Fortran pointers) but are not
-  // part of the atomic compare-and-swap pattern itself. This ensures all
-  // intermediate values are available in the moduleTranslation mapping when
-  // extracting eVal and dVal below.
+  // Pre-translate operations inside the region that compute e and d (e.g.,
+  // GEP, loads for dereferencing Fortran pointers) but are not part of the
+  // atomic compare-and-swap pattern (icmp/fcmp, select, and/or).
+  //
+  // 1) Validity: The OpenMP spec requires e and d to be evaluated before the
+  //    atomic operation, so emitting their computation here is correct.
+  // 2) Memory effects: These ops only depend on values defined outside the
+  //    region. They cannot observe the block argument (%xval), which is the
+  //    value loaded atomically by cmpxchg and does not exist yet.
+  // 3) Invariant enforcement: The `allOperandsMapped` check below skips any
+  //    op whose operands include the unmapped block argument, guaranteeing
+  //    only region-external-dependent ops are pre-translated.
   for (Operation &op : block.without_terminator()) {
     // Skip operations that form the atomic compare pattern — these are
-    // analyzed separately below.
+    // not emitted as individual instructions but are analyzed below to
+    // extract the comparison predicate, expected value (e), and desired
+    // value (d) for generating a single cmpxchg/atomicrmw.
     if (isAtomicComparePatternOp(op))
       continue;
 

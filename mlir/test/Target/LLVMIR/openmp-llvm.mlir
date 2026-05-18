@@ -2453,11 +2453,12 @@ llvm.func @omp_atomic_capture_misc(
 // -----
 
 // CHECK-LABEL: @omp_atomic_compare
-// CHECK-SAME: (ptr %[[X:.*]], i32 %[[E:.*]], i32 %[[D:.*]], ptr %[[XF:.*]], float %[[EF:.*]], float %[[DF:.*]], ptr %[[XC:.*]], { float, float } %[[EC:.*]], { float, float } %[[DC:.*]])
+// CHECK-SAME: (ptr %[[X:.*]], i32 %[[E:.*]], i32 %[[D:.*]], ptr %[[XF:.*]], float %[[EF:.*]], float %[[DF:.*]], ptr %[[XC:.*]], { float, float } %[[EC:.*]], { float, float } %[[DC:.*]], ptr %[[XP:.*]], ptr %[[EP:.*]], ptr %[[DP:.*]])
 llvm.func @omp_atomic_compare(
   %x : !llvm.ptr, %e : i32, %d : i32,
   %xf : !llvm.ptr, %ef : f32, %df : f32,
-  %xc : !llvm.ptr, %ec : !llvm.struct<(f32, f32)>, %dc : !llvm.struct<(f32, f32)>) {
+  %xc : !llvm.ptr, %ec : !llvm.struct<(f32, f32)>, %dc : !llvm.struct<(f32, f32)>,
+  %xp : !llvm.ptr, %ep : !llvm.ptr, %dp : !llvm.ptr) {
 
   // Integer equality  →  cmpxchg
   // CHECK: cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
@@ -2592,6 +2593,19 @@ llvm.func @omp_atomic_compare(
     %cmp7 = llvm.and %cmp_re7, %cmp_im7 : i1
     %sel7 = llvm.select %cmp7, %dc, %xval7 : i1, !llvm.struct<(f32, f32)>
     omp.yield(%sel7 : !llvm.struct<(f32, f32)>)
+  }
+
+  // pointer-associated integer target:
+  // CHECK: %[[EPVAL:.*]] = load i32, ptr %[[EP]]
+  // CHECK: %[[DPVAL:.*]] = load i32, ptr %[[DP]]
+  // CHECK: cmpxchg ptr %[[XP]], i32 %[[EPVAL]], i32 %[[DPVAL]] monotonic monotonic
+  %eval = llvm.load %ep : !llvm.ptr -> i32
+  %dval = llvm.load %dp : !llvm.ptr -> i32
+  omp.atomic.compare %xp : !llvm.ptr {
+  ^bb0(%xval : i32):
+    %cmp = llvm.icmp "eq" %xval, %eval : i32
+    %sel = llvm.select %cmp, %dval, %xval : i1, i32
+    omp.yield(%sel : i32)
   }
 
   llvm.return
