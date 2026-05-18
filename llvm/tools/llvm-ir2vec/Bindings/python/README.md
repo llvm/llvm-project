@@ -40,8 +40,8 @@ inst_map = emb.getInstEmbMap("foo")
 
 The package ships a pre-trained seed embedding vocabulary:
 
-| Attribute | Dimensions | Use |
-|---|---|---|
+| Attribute | Dimensions |
+|---|---|
 | `ir2vec.vocab.seedEmbedding75D` | 75 |
 
 Pass this or a vocab of your choice directly to `loadVocab(vocabPath=...)`.
