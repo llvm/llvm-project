@@ -2053,7 +2053,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::nxv8i16, MVT::nxv16i8, Legal);
 
       setOperationAction(ISD::CLMUL, {MVT::nxv16i8, MVT::nxv4i32}, Legal);
-      setOperationAction(ISD::CLMUL, {MVT::nxv8i16, MVT::nxv2i64}, Custom);
+      setOperationAction(ISD::CLMUL, MVT::nxv8i16, Custom);
 
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
                                 MVT::nxv8f16, Legal);
@@ -2074,9 +2074,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                                 MVT::nxv8bf16, Legal);
   }
 
-  if (Subtarget->hasSVEAES() &&
-      (Subtarget->isSVEAvailable() || Subtarget->hasSSVE_AES()))
-    setOperationAction(ISD::CLMUL, MVT::nxv2i64, Legal);
+  setOperationAction(ISD::CLMUL, MVT::nxv2i64, Custom);
 
   // Handle non-aliasing elements mask
   if (Subtarget->hasSVE2() ||
@@ -8095,49 +8093,55 @@ SDValue AArch64TargetLowering::LowerFMA(SDValue Op, SelectionDAG &DAG) const {
   return convertFromScalableVector(DAG, VT, ScalableRes);
 }
 
-static SDValue LowerCLMUL(SDValue Op, SelectionDAG &DAG) {
+SDValue AArch64TargetLowering::LowerCLMUL(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
   assert((VT == MVT::i64 || VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i8 ||
           VT == MVT::nxv8i16 || VT == MVT::nxv2i64) &&
          "Unexpected Type");
-  SDValue OpA = Op.getOperand(0);
-  SDValue OpB = Op.getOperand(1);
-  auto IsZextedFromHalfTy = [&](SDValue Op) {
-    uint64_t FullSize = VT.getScalarSizeInBits();
-    uint64_t HalfSize = FullSize / 2;
-    APInt HiWordMask = APInt::getBitsSet(FullSize, HalfSize, FullSize);
-    return DAG.MaskedValueIsZero(Op, HiWordMask);
-  };
-  auto MakePMULLB = [&](SDValue OpA, SDValue OpB) {
-    EVT NewVT = EVT::getVectorVT(
-        *DAG.getContext(),
-        VT.getVectorElementType().getHalfSizedIntegerVT(*DAG.getContext()),
-        VT.getVectorElementCount() * 2);
-    OpA = DAG.getNode(AArch64ISD::NVCAST, DL, NewVT, OpA);
-    OpB = DAG.getNode(AArch64ISD::NVCAST, DL, NewVT, OpB);
+  uint64_t ScalarSize = VT.getScalarSizeInBits();
+  APInt HiWordMask = APInt::getBitsSet(ScalarSize, ScalarSize / 2, ScalarSize);
+
+  auto MakePMULLB = [&](SDValue OpA, SDValue OpB, EVT NewVT) {
     SDValue PMULLB =
         DAG.getTargetConstant(Intrinsic::aarch64_sve_pmullb_pair, DL, MVT::i64);
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, NewVT, PMULLB, OpA, OpB);
   };
 
   if (VT == MVT::nxv2i64) {
-    if (IsZextedFromHalfTy(OpA) && IsZextedFromHalfTy(OpB))
-      return MakePMULLB(OpA, OpB);
+    // Lower to (.d pmullb(.s, .s)) for clmul.nxv2i64(zext(nxv2i32),
+    // zext(nxv2i32))
+    if (Subtarget->isSVEorStreamingSVEAvailable() &&
+        (Subtarget->hasSVE2() || Subtarget->hasSME()) &&
+        DAG.MaskedValueIsZero(Op.getOperand(0), HiWordMask) &&
+        DAG.MaskedValueIsZero(Op.getOperand(1), HiWordMask))
+      return MakePMULLB(
+          DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv4i32, Op.getOperand(0)),
+          DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv4i32, Op.getOperand(1)),
+          MVT::nxv4i32);
+    // Lower to (.q pmullb(.d, .d)) for clmul.nxv2i64(nxv2i64, nxv2i64)
+    if (Subtarget->hasSVEAES() &&
+        (Subtarget->isSVEAvailable() || Subtarget->hasSSVE_AES()))
+      return Op;
     return SDValue();
   }
 
   if (VT == MVT::nxv8i16) {
-    if (IsZextedFromHalfTy(OpA) && IsZextedFromHalfTy(OpB))
-      return MakePMULLB(OpA, OpB);
+    SDValue OpA =
+        DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv16i8, Op.getOperand(0));
+    SDValue OpB =
+        DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv16i8, Op.getOperand(1));
+
+    // Lower to pmullb for clmul.nxv8i16(zext(nxv8i8), zext(nxv8i8))
+    if (DAG.MaskedValueIsZero(Op.getOperand(0), HiWordMask) &&
+        DAG.MaskedValueIsZero(Op.getOperand(1), HiWordMask))
+      return MakePMULLB(OpA, OpB, MVT::nxv16i8);
 
     // clmul.i16(a, b) = xor(pmullb(a_lo, b_lo),
     //                       lsl(xor(pmul(a_hi, b_lo),
     //                               pmul(a_lo, b_hi)),
     //                           8))
     // Bitcast to i8 for byte-wise PMUL and PMULLB.
-    OpA = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv16i8, OpA);
-    OpB = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv16i8, OpB);
 
     // Form adjacent byte pairs {a_hi, b_hi} and {b_lo, a_lo}. PMUL then
     // computes {a_hi * b_lo, b_hi * a_lo}, and EORBT xors those pairs.
@@ -8150,7 +8154,7 @@ static SDValue LowerCLMUL(SDValue Op, SelectionDAG &DAG) {
     EORBT = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i8, EORBT, PMUL,
                         PMUL, PMUL);
 
-    SDValue PMULLB = MakePMULLB(OpA, OpB);
+    SDValue PMULLB = MakePMULLB(OpA, OpB, MVT::nxv16i8);
 
     SDValue EORTB =
         DAG.getTargetConstant(Intrinsic::aarch64_sve_eortb, DL, MVT::i64);

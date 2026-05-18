@@ -1866,9 +1866,7 @@ define <vscale x 2 x i64> @clmul_nxv2i64_zext(<vscale x 2 x i32> %x, <vscale x 2
 ; CHECK-SME-STREAMING-SSVE-AES:       // %bb.0:
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z0.d, z0.d, #0xffffffff
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z1.d, z1.d, #0xffffffff
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    pmullt z2.q, z0.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    pmullb z0.q, z0.d, z1.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    trn1 z0.d, z0.d, z2.d
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    pmullb z0.d, z0.s, z1.s
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    ret
 ;
 ; CHECK-SVE2-LABEL: clmul_nxv2i64_zext:
@@ -1882,9 +1880,7 @@ define <vscale x 2 x i64> @clmul_nxv2i64_zext(<vscale x 2 x i32> %x, <vscale x 2
 ; CHECK-SVE2-AES:       // %bb.0:
 ; CHECK-SVE2-AES-NEXT:    and z0.d, z0.d, #0xffffffff
 ; CHECK-SVE2-AES-NEXT:    and z1.d, z1.d, #0xffffffff
-; CHECK-SVE2-AES-NEXT:    pmullt z2.q, z0.d, z1.d
-; CHECK-SVE2-AES-NEXT:    pmullb z0.q, z0.d, z1.d
-; CHECK-SVE2-AES-NEXT:    trn1 z0.d, z0.d, z2.d
+; CHECK-SVE2-AES-NEXT:    pmullb z0.d, z0.s, z1.s
 ; CHECK-SVE2-AES-NEXT:    ret
   %zextx = zext <vscale x 2 x i32> %x to <vscale x 2 x i64>
   %zexty = zext <vscale x 2 x i32> %y to <vscale x 2 x i64>
