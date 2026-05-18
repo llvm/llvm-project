@@ -1547,9 +1547,6 @@ hsa_status_t asan_hsa_amd_agents_allow_access(uint32_t num_agents,
                                            p ? p : ptr);
 }
 
-// For asan allocator, kMetadataSize is 0 and maximum redzone size is 2048. This
-// implies for device allocation, the gap between user_beg and GetBlockBegin()
-// is always one kPageSize_
 // IPC calls use static_assert to make sure kMetadataSize = 0
 //
 #  if SANITIZER_CAN_USE_ALLOCATOR64
@@ -1702,29 +1699,38 @@ hsa_status_t asan_hsa_amd_pointer_info(const void* ptr,
                                        void* (*alloc)(size_t),
                                        uint32_t* num_agents_accessible,
                                        hsa_agent_t** accessible) {
-  void* ptr_ = get_allocator().GetBlockBegin(ptr);
-  AsanChunk* m = ptr_
-                     ? instance.GetAsanChunkByAddr(reinterpret_cast<uptr>(ptr_))
-                     : nullptr;
-  if (ptr_ && m) {
-    hsa_status_t status = REAL(hsa_amd_pointer_info)(
-        ptr_, info, alloc, num_agents_accessible, accessible);
-    if (status == HSA_STATUS_SUCCESS && info) {
-      static_assert(AP_.kMetadataSize == 0, "Expression below requires this");
-      // Adjust base address of agent,host and sizeInBytes so as to return
-      // the actual pointer information of user allocation rather than asan
-      // allocation. Asan allocation pointer info can be acquired using internal
-      // 'GetPointerInfo'
-      info->agentBaseAddress = reinterpret_cast<void*>(
-          reinterpret_cast<uptr>(info->agentBaseAddress) + kPageSize_);
-      info->hostBaseAddress = reinterpret_cast<void*>(
-          reinterpret_cast<uptr>(info->hostBaseAddress) + kPageSize_);
-      info->sizeInBytes = m->UsedSize();
-    }
-    return status;
+  // Device/pool mappings are keyed by the ROCr reservation base (map_beg), not
+  // the user pointer returned from intercepted allocate/reserve.
+  void* hsa_map_base = get_allocator().GetBlockBegin(ptr);
+  if (!hsa_map_base)
+    // Not tracked by ASan; query ROCr on the caller's pointer unchanged.
+    return REAL(hsa_amd_pointer_info)(ptr, info, alloc, num_agents_accessible,
+                                      accessible);
+
+  uptr user = reinterpret_cast<uptr>(ptr);
+  AsanChunk* m = reinterpret_cast<AsanChunk*>(user - kChunkHeaderSize);
+  if (atomic_load(&m->chunk_state, memory_order_acquire) != CHUNK_ALLOCATED ||
+      m->Beg() != user)
+    // Inside a tracked mapping but not the live user base (redzone, interior,
+    // or freed); do not apply the user-visible pointer_info adjustment.
+    return REAL(hsa_amd_pointer_info)(ptr, info, alloc, num_agents_accessible,
+                                      accessible);
+
+  hsa_status_t status = REAL(hsa_amd_pointer_info)(
+      hsa_map_base, info, alloc, num_agents_accessible, accessible);
+  if (status == HSA_STATUS_SUCCESS && info) {
+    static_assert(AP_.kMetadataSize == 0, "Expression below requires this");
+    // User VA may be above hsa_map_base when VMem API's(i.e
+    // hsa_amd_vmem_address_reserve_align())  uses alignment > page size (device
+    // allocator padding and ASan redzones/headers).
+    const uptr offset = user - reinterpret_cast<uptr>(hsa_map_base);
+    info->agentBaseAddress = reinterpret_cast<void*>(
+        reinterpret_cast<uptr>(info->agentBaseAddress) + offset);
+    info->hostBaseAddress = reinterpret_cast<void*>(
+        reinterpret_cast<uptr>(info->hostBaseAddress) + offset);
+    info->sizeInBytes = m->UsedSize();
   }
-  return REAL(hsa_amd_pointer_info)(ptr, info, alloc, num_agents_accessible,
-                                    accessible);
+  return status;
 }
 
 hsa_status_t asan_hsa_init() {
