@@ -88,7 +88,7 @@ entry:
 define float @f_eval_ignore() #0 {
 ; CHECK-LABEL: @f_eval_ignore(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret float 0x3FD5555540000000
+; CHECK-NEXT:    ret float f0x3EAAAAAA
 ;
 entry:
   %result = call float @llvm.experimental.constrained.fdiv.f32(float 1.0, float 3.0, metadata !"round.downward", metadata !"fpexcept.ignore") #0
@@ -111,7 +111,7 @@ entry:
 define float @f_eval_maytrap() #0 {
 ; CHECK-LABEL: @f_eval_maytrap(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret float 0x3FD5555560000000
+; CHECK-NEXT:    ret float f0x3EAAAAAB
 ;
 entry:
   %result = call float @llvm.experimental.constrained.fdiv.f32(float 1.0, float 3.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0

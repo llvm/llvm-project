@@ -209,7 +209,7 @@ define ptr addrspace(7) @inttoptr() {
 define <2 x ptr addrspace(7)> @inttoptr_vec() {
 ; CHECK-LABEL: define { <2 x ptr addrspace(8)>, <2 x i32> } @inttoptr_vec
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    ret { <2 x ptr addrspace(8)>, <2 x i32> } { <2 x ptr addrspace(8)> zeroinitializer, <2 x i32> <i32 1, i32 2> }
+; CHECK-NEXT:    ret { <2 x ptr addrspace(8)>, <2 x i32> } { <2 x ptr addrspace(8)> splat (ptr addrspace(8) null), <2 x i32> <i32 1, i32 2> }
 ;
   ret <2 x ptr addrspace(7)> inttoptr (<2 x i160> <i160 1, i160 2> to <2 x ptr addrspace(7)>)
 }

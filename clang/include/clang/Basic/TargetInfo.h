@@ -1968,6 +1968,8 @@ private:
   void CheckFixedPointBits() const;
 };
 
+unsigned Microsoft64BitMinGlobalAlign(uint64_t TypeSize);
+
 namespace targets {
 std::unique_ptr<clang::TargetInfo>
 AllocateTarget(const llvm::Triple &Triple, const clang::TargetOptions &Opts);

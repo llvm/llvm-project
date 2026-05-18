@@ -402,6 +402,11 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
+
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
@@ -559,6 +564,11 @@ the configuration (without a prefix: ``Auto``).
       int     &r;
       int     *p;
       int (*f)();
+
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -718,6 +728,11 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
+
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
@@ -876,6 +891,11 @@ the configuration (without a prefix: ``Auto``).
       int     &r;
       int     *p;
       int (*f)();
+
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -1155,6 +1175,11 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
+
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
@@ -1311,6 +1336,11 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
+
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
@@ -1466,6 +1496,11 @@ the configuration (without a prefix: ``Auto``).
       int     &r;
       int     *p;
       int (*f)();
+
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -1912,8 +1947,7 @@ the configuration (without a prefix: ``Auto``).
   * ``InlineOnly``
     Only merge functions defined inside a class. Same as ``inline``,
     except it does not implies ``empty``: i.e. top level empty functions
-    are not merged either. This option is **deprecated** and is retained
-    for backwards compatibility. See ``Inline`` of ``ShortFunctionStyle``.
+    are not merged either. See ``Inline`` of ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -1927,9 +1961,7 @@ the configuration (without a prefix: ``Auto``).
       }
 
   * ``Empty``
-    Only merge empty functions. This option is **deprecated** and is
-    retained for backwards compatibility. See ``Empty`` of
-    ``ShortFunctionStyle``.
+    Only merge empty functions. See ``Empty`` of ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -1939,9 +1971,8 @@ the configuration (without a prefix: ``Auto``).
       }
 
   * ``Inline``
-    Only merge functions defined inside a class. Implies ``empty``. This
-    option is **deprecated** and is retained for backwards compatibility.
-    See ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
+    Only merge functions defined inside a class. Implies ``empty``. See
+    ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -2250,23 +2281,7 @@ the configuration (without a prefix: ``Auto``).
 .. _BinPackArguments:
 
 **BinPackArguments** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <BinPackArguments>`
-  If ``false``, a function call's arguments will either be all on the
-  same line or will have one line each.
-
-  .. code-block:: c++
-
-    true:
-    void f() {
-      f(aaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaa,
-        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
-    }
-
-    false:
-    void f() {
-      f(aaaaaaaaaaaaaaaaaaaa,
-        aaaaaaaaaaaaaaaaaaaa,
-        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
-    }
+  This option is **deprecated**. See ``BinPack`` of ``PackArguments``.
 
 .. _BinPackLongBracedList:
 
@@ -2289,7 +2304,7 @@ the configuration (without a prefix: ``Auto``).
 .. _BinPackParameters:
 
 **BinPackParameters** (``BinPackParametersStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <BinPackParameters>`
-  The bin pack parameters style to use.
+  This option is **deprecated**. See ``BinPack`` of ``PackParameters``.
 
   Possible values:
 
@@ -2321,6 +2336,10 @@ the configuration (without a prefix: ``Auto``).
        void f(int a,
               int b,
               int c);
+
+  * ``BPPS_UseBreakAfter`` (in configuration: ``UseBreakAfter``)
+    Use the ``BreakAfter`` option to handle parameter packing instead.
+    If the ``BreakAfter`` limit is not exceeded, behave like ``BinPack``.
 
 
 
@@ -3675,6 +3694,38 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _BreakBeforeReturnType:
+
+**BreakBeforeReturnType** (``BreakBeforeReturnTypeStyle``) :versionbadge:`clang-format 23` :ref:`¶ <BreakBeforeReturnType>`
+  The function declaration/definition return type breaking style to use.
+  Trailing return types (``auto f() -> T``) are not affected. To have
+  identifier macros (e.g. ``__always_inline``) treated as specifiers,
+  add them to ``AttributeMacros``.
+
+  Possible values:
+
+  * ``BBRTS_None`` (in configuration: ``None``)
+    Do not force a break before the return type.
+
+  * ``BBRTS_All`` (in configuration: ``All``)
+    Always break before the return type.
+
+    .. code-block:: c++
+
+      static inline
+      void f();
+
+  * ``BBRTS_TopLevel`` (in configuration: ``TopLevel``)
+    Break before the return type of top-level functions only.
+
+  * ``BBRTS_AllDefinitions`` (in configuration: ``AllDefinitions``)
+    Break before the return type of function definitions only.
+
+  * ``BBRTS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
+    Break before the return type of top-level definitions only.
+
+
+
 .. _BreakBeforeTemplateCloser:
 
 **BreakBeforeTemplateCloser** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeTemplateCloser>`
@@ -3873,6 +3924,21 @@ the configuration (without a prefix: ``Auto``).
                        initializer2()
 
 
+
+.. _BreakFunctionDeclarationParameters:
+
+**BreakFunctionDeclarationParameters** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <BreakFunctionDeclarationParameters>`
+  If ``true``, clang-format will always break before function declaration
+  parameters.
+
+  .. code-block:: c++
+
+     true:
+     void functionDeclaration(
+              int A, int B);
+
+     false:
+     void functionDeclaration(int A, int B);
 
 .. _BreakFunctionDefinitionParameters:
 
@@ -5836,6 +5902,70 @@ the configuration (without a prefix: ``Auto``).
      # define BAR
      #endif
 
+.. _PackArguments:
+
+**PackArguments** (``PackArgumentsStyle``) :versionbadge:`clang-format 23` :ref:`¶ <PackArguments>`
+  Options related to packing arguments of function calls.
+
+  Nested configuration flags:
+
+  Options related to packing arguments of function calls.
+
+  * ``BinPackArgumentsStyle BinPack`` :versionbadge:`clang-format 3.7`
+
+    The bin pack arguments style to use.
+
+    Possible values:
+
+    * ``BPAS_BinPack`` (in configuration: ``BinPack``)
+      Bin-pack arguments.
+
+      .. code-block:: c++
+
+        void f() {
+          f(aaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaa,
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
+        }
+
+    * ``BPAS_OnePerLine`` (in configuration: ``OnePerLine``)
+      Put all arguments on the current line if they fit.
+      Otherwise, put each one on its own line.
+
+      .. code-block:: c++
+
+        void f() {
+          f(aaaaaaaaaaaaaaaaaaaa,
+            aaaaaaaaaaaaaaaaaaaa,
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
+        }
+
+    * ``BPAS_UseBreakAfter`` (in configuration: ``UseBreakAfter``)
+      Use the ``BreakAfter`` option to handle argument packing instead.
+      If the ``BreakAfter`` limit is not exceeded, behave like ``BinPack``.
+
+
+  * ``unsigned BreakAfter`` :versionbadge:`clang-format 23` An argument list with more arguments than the specified number will be
+    formatted with one argument per line. This option must be used with
+    ``BinPack: UseBreakAfter``.
+
+    .. code-block:: c++
+
+      PackArguments:
+        BinPack: UseBreakAfter
+        BreakAfter: 3
+
+      void f() {
+        foo(1);
+
+        bar(1, 2, 3);
+
+        baz(1,
+            2,
+            3,
+            4);
+      }
+
+
 .. _PackConstructorInitializers:
 
 **PackConstructorInitializers** (``PackConstructorInitializersStyle``) :versionbadge:`clang-format 14` :ref:`¶ <PackConstructorInitializers>`
@@ -5907,6 +6037,77 @@ the configuration (without a prefix: ``Auto``).
              bbbbbbbbbbbbbbbbbbbb(),
              cccccccccccccccccccc()
 
+
+
+.. _PackParameters:
+
+**PackParameters** (``PackParametersStyle``) :versionbadge:`clang-format 23` :ref:`¶ <PackParameters>`
+  Options related to packing parameters of function declarations and
+  definitions.
+
+  Nested configuration flags:
+
+  Options related to packing parameters of function declarations and
+  definitions.
+
+  * ``BinPackParametersStyle BinPack`` :versionbadge:`clang-format 3.7`
+
+    The bin pack parameters style to use.
+
+    Possible values:
+
+    * ``BPPS_BinPack`` (in configuration: ``BinPack``)
+      Bin-pack parameters.
+
+      .. code-block:: c++
+
+         void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+                int ccccccccccccccccccccccccccccccccccccccccccc);
+
+    * ``BPPS_OnePerLine`` (in configuration: ``OnePerLine``)
+      Put all parameters on the current line if they fit.
+      Otherwise, put each one on its own line.
+
+      .. code-block:: c++
+
+         void f(int a, int b, int c);
+
+         void f(int a,
+                int b,
+                int ccccccccccccccccccccccccccccccccccccc);
+
+    * ``BPPS_AlwaysOnePerLine`` (in configuration: ``AlwaysOnePerLine``)
+      Always put each parameter on its own line.
+
+      .. code-block:: c++
+
+         void f(int a,
+                int b,
+                int c);
+
+    * ``BPPS_UseBreakAfter`` (in configuration: ``UseBreakAfter``)
+      Use the ``BreakAfter`` option to handle parameter packing instead.
+      If the ``BreakAfter`` limit is not exceeded, behave like ``BinPack``.
+
+
+  * ``unsigned BreakAfter`` :versionbadge:`clang-format 23` A parameter list with more parameters than the specified number will be
+    formatted with one parameter per line. This option must be used with
+    ``BinPack: UseBreakAfter``.
+
+    .. code-block:: c++
+
+      PackParameters:
+        BinPack: UseBreakAfter
+        BreakAfter: 3
+
+      void foo(int a);
+
+      void bar(int a, int b, int c);
+
+      void baz(int a,
+               int b,
+               int c,
+               int d);
 
 
 .. _PenaltyBreakAssignment:
@@ -7420,6 +7621,12 @@ the configuration (without a prefix: ``Auto``).
 
   * ``LS_Cpp20`` (in configuration: ``c++20``)
     Parse and format as C++20.
+
+  * ``LS_Cpp23`` (in configuration: ``c++23``)
+    Parse and format as C++23.
+
+  * ``LS_Cpp26`` (in configuration: ``c++26``)
+    Parse and format as C++26.
 
   * ``LS_Latest`` (in configuration: ``Latest``)
     Parse and format using the latest supported language version.

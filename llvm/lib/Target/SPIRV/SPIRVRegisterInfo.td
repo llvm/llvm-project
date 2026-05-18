@@ -29,14 +29,14 @@ let Namespace = "SPIRV" in {
   def ID0 : Register<"ID0">;
   def fID0 : Register<"fID0">;
   def pID0 : Register<"pID0">;
-  def vID0 : Register<"vID0">;
+  def viID0 : Register<"viID0">;
   def vfID0 : Register<"vfID0">;
   def vpID0 : Register<"vpID0">;
 
   def iID : RegisterClass<"SPIRV", [i64], 64, (add ID0)>;
   def fID : RegisterClass<"SPIRV", [f64], 64, (add fID0)>;
   def pID : RegisterClass<"SPIRV", [p64], 64, (add pID0)>;
-  def vID : RegisterClass<"SPIRV", [v2i64], 64, (add vID0)>;
+  def viID : RegisterClass<"SPIRV", [v2i64], 64, (add viID0)>;
   def vfID : RegisterClass<"SPIRV", [v2f64], 64, (add vfID0)>;
   def vpID : RegisterClass<"SPIRV", [v2p64], 64, (add vpID0)>;
   
@@ -44,7 +44,7 @@ let Namespace = "SPIRV" in {
       "SPIRV",
       [i64, f64, p64, v2i64, v2f64, v2p64],
       64,
-      (add iID, fID, pID, vID, vfID, vpID)>;
+      (add iID, fID, pID, viID, vfID, vpID)>;
 
   // A few instructions like OpName can take ids from both type and non-type
   // instructions, so we need a super-class to allow for both to count as valid

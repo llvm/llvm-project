@@ -1940,6 +1940,59 @@ let TargetPrefix = "riscv" in {
   defm vwabdau : RISCVTernaryWide;
 } // TargetPrefix = "riscv"
 
+// Zvzip - Reordering Structured Data in Vector Registers
+//===----------------------------------------------------------------------===//
+let TargetPrefix = "riscv" in {
+  multiclass RISCVZip {
+    // Input: (passthru, vector_in, vector_in, vl)
+    def "int_riscv_" # NAME :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             LLVMMatchType<1>, llvm_anyint_ty],
+                            [IntrNoMem]>, RISCVVIntrinsic {
+      let VLOperand = 3;
+    }
+
+    // Input: (maskedoff, vector_in, vector_in, mask, vl, policy)
+    def "int_riscv_" # NAME # "_mask" :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             LLVMMatchType<1>,
+                             LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
+                             llvm_anyint_ty, LLVMMatchType<2>],
+                            [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
+      let VLOperand = 4;
+    }
+  }
+
+  multiclass RISCVUnzip {
+    // Input: (passthru, vector_in, vl)
+    def "int_riscv_" # NAME :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             llvm_anyint_ty],
+                            [IntrNoMem]>, RISCVVIntrinsic {
+      let VLOperand = 2;
+    }
+
+    // Input: (maskedoff, vector_in, mask, vl, policy)
+    def "int_riscv_" # NAME # "_mask" :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                             llvm_anyint_ty, LLVMMatchType<2>],
+                            [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
+      let VLOperand = 3;
+    }
+  }
+
+  defm vzip    : RISCVZip;
+  defm vunzipe : RISCVUnzip;
+  defm vunzipo : RISCVUnzip;
+  defm vpaire  : RISCVBinaryAAA;
+  defm vpairo  : RISCVBinaryAAA;
+}
+
 //===----------------------------------------------------------------------===//
 // Zvdot4a8i - Vector 4-element Dot Product of packed 8-bit Integers
 //
@@ -1950,7 +2003,7 @@ let TargetPrefix = "riscv" in {
   // We use llvm_anyvector_ty and llvm_anyint_ty for future extensibility
   // purpose but only EEW=32 is defined for now
   // Input: (vector_in, vector_in, vector_in/scalar_in, vl, policy)
-  class RISCVVDOTA4UnMasked<bit HasVV>
+  class RISCVVDOT4AUnMasked<bit HasVV>
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                 [LLVMMatchType<0>, LLVMMatchType<0>,
                                  !if(HasVV, llvm_any_ty, llvm_anyint_ty),
@@ -1961,7 +2014,7 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 3;
   }
   // Input: (vector_in, vector_in, vector_in/scalar_in, mask, vl, policy)
-  class RISCVVDOTA4Masked<bit HasVV>
+  class RISCVVDOT4AMasked<bit HasVV>
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                 [LLVMMatchType<0>, LLVMMatchType<0>,
                                  !if(HasVV, llvm_any_ty, llvm_anyint_ty),
@@ -1973,15 +2026,15 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 4;
   }
 
-  multiclass RISCVVDOTA4<bit HasVV = 1> {
-    def "int_riscv_" # NAME : RISCVVDOTA4UnMasked<HasVV=HasVV>;
-    def "int_riscv_" # NAME # "_mask" : RISCVVDOTA4Masked<HasVV=HasVV>;
+  multiclass RISCVVDOT4A<bit HasVV = 1> {
+    def "int_riscv_" # NAME : RISCVVDOT4AUnMasked<HasVV=HasVV>;
+    def "int_riscv_" # NAME # "_mask" : RISCVVDOT4AMasked<HasVV=HasVV>;
   }
 
-  defm vdota4   : RISCVVDOTA4;
-  defm vdota4u  : RISCVVDOTA4;
-  defm vdota4su : RISCVVDOTA4;
-  defm vdota4us : RISCVVDOTA4<HasVV=0>;
+  defm vdot4a   : RISCVVDOT4A;
+  defm vdot4au  : RISCVVDOT4A;
+  defm vdot4asu : RISCVVDOT4A;
+  defm vdot4aus : RISCVVDOT4A<HasVV=0>;
 } // TargetPrefix = "riscv"
 
 

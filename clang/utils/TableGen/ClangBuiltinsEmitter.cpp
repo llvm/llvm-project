@@ -348,6 +348,7 @@ private:
                                .Case("__amdgpu_feature_predicate_t", "Qc")
                                .Case("__amdgpu_texture_t", "Qt")
                                .Case("__int128_t", "LLLi")
+                               .Case("__uint128_t", "ULLLi")
                                .Case("_Float16", "x")
                                .Case("__bf16", "y")
                                .Case("bool", "b")
@@ -375,6 +376,8 @@ private:
                                .Case("uint64_t", "UWi")
                                .Case("void", "v")
                                .Case("wchar_t", "w")
+                               .Case("fexcept_t", "Tx")
+                               .Case("fenv_t", "Te")
                                .Case("...", ".")
                                .Default("error");
       if (ReturnTypeVal == "error")

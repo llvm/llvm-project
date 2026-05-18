@@ -2,7 +2,7 @@
 ; RUN: opt -passes=loop-vectorize -vplan-print-after="printFinalVPlan$" \
 ; RUN: -force-vector-width=4 -force-vector-interleave=2 -force-target-supports-masked-memory-ops -disable-output 2>&1 < %s | FileCheck %s --check-prefix=IC2
 ; RUN: opt -passes=loop-vectorize -vplan-print-after="printFinalVPlan$" \
-; RUN: -force-vector-width=4 -force-vector-interleave=2 -force-target-supports-masked-memory-ops -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN: -force-vector-width=4 -force-vector-interleave=2 -force-target-supports-masked-memory-ops -tail-folding-policy=must-fold-tail \
 ; RUN: -disable-output 2>&1 < %s | FileCheck %s --check-prefix=IC2-TF
 
 ; This function is derived from the following C program:
@@ -32,8 +32,8 @@ define i32 @find_last_int_select(i64 %N, ptr %data, i32 %a) {
 ; IC2-EMPTY:
 ; IC2-NEXT:  vector.body:
 ; IC2-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; IC2-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<-1>, vp<[[VP10:%[0-9]+]]>
-; IC2-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi>.1 = phi ir<-1>, vp<[[VP11:%[0-9]+]]>
+; IC2-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi> = phi (find-last) ir<-1>, vp<[[VP10:%[0-9]+]]>
+; IC2-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi>.1 = phi (find-last) ir<-1>, vp<[[VP11:%[0-9]+]]>
 ; IC2-NEXT:    WIDEN-PHI vp<[[VP4:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP8:%[0-9]+]]>, vector.body ]
 ; IC2-NEXT:    WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP9:%[0-9]+]]>, vector.body ]
 ; IC2-NEXT:    CLONE ir<%ld.addr> = getelementptr inbounds ir<%data>, vp<%index>
@@ -97,8 +97,8 @@ define i32 @find_last_int_select(i64 %N, ptr %data, i32 %a) {
 ; IC2-TF-EMPTY:
 ; IC2-TF-NEXT:  vector.body:
 ; IC2-TF-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; IC2-TF-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<-1>, vp<[[VP16:%[0-9]+]]>
-; IC2-TF-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi>.1 = phi ir<-1>, vp<[[VP17:%[0-9]+]]>
+; IC2-TF-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi> = phi (find-last) ir<-1>, vp<[[VP16:%[0-9]+]]>
+; IC2-TF-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi>.1 = phi (find-last) ir<-1>, vp<[[VP17:%[0-9]+]]>
 ; IC2-TF-NEXT:    WIDEN-PHI vp<[[VP4:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP14:%[0-9]+]]>, vector.body ]
 ; IC2-TF-NEXT:    WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP15:%[0-9]+]]>, vector.body ]
 ; IC2-TF-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<%index>

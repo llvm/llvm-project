@@ -460,42 +460,77 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
 
   unsigned BitWidth = Ty->getScalarSizeInBits();
 
-  const APInt *AC, *AddC;
-  // Try to pre-shift a constant shifted by a variable amount added with a
-  // negative number:
-  // C << (X - AddC) --> (C >> AddC) << X
-  // and
-  // C >> (X - AddC) --> (C << AddC) >> X
-  if (match(Op0, m_APInt(AC)) && match(Op1, m_Add(m_Value(A), m_APInt(AddC))) &&
-      AddC->isNegative() && (-*AddC).ult(BitWidth)) {
+  const APInt *AC;
+  if (match(Op0, m_APInt(AC))) {
     assert(!AC->isZero() && "Expected simplify of shifted zero");
-    unsigned PosOffset = (-*AddC).getZExtValue();
 
-    auto isSuitableForPreShift = [PosOffset, &I, AC]() {
-      switch (I.getOpcode()) {
-      default:
-        return false;
-      case Instruction::Shl:
-        return (I.hasNoSignedWrap() || I.hasNoUnsignedWrap()) &&
-               AC->eq(AC->lshr(PosOffset).shl(PosOffset));
-      case Instruction::LShr:
-        return I.isExact() && AC->eq(AC->shl(PosOffset).lshr(PosOffset));
-      case Instruction::AShr:
-        return I.isExact() && AC->eq(AC->shl(PosOffset).ashr(PosOffset));
+    // Try to pre-shift a constant shifted by a variable amount added with a
+    // negative number:
+    // C << (X - AddC) --> (C >> AddC) << X
+    // and
+    // C >> (X - AddC) --> (C << AddC) >> X
+    const APInt *AddC;
+    if (match(Op1, m_Add(m_Value(A), m_APInt(AddC))) && AddC->isNegative() &&
+        (-*AddC).ult(BitWidth)) {
+      unsigned PosOffset = (-*AddC).getZExtValue();
+
+      auto isSuitableForPreShift = [PosOffset, &I, AC]() {
+        switch (I.getOpcode()) {
+        default:
+          return false;
+        case Instruction::Shl:
+          return (I.hasNoSignedWrap() || I.hasNoUnsignedWrap()) &&
+                 AC->eq(AC->lshr(PosOffset).shl(PosOffset));
+        case Instruction::LShr:
+          return I.isExact() && AC->eq(AC->shl(PosOffset).lshr(PosOffset));
+        case Instruction::AShr:
+          return I.isExact() && AC->eq(AC->shl(PosOffset).ashr(PosOffset));
+        }
+      };
+      if (isSuitableForPreShift()) {
+        Constant *NewC = ConstantInt::get(Ty, I.getOpcode() == Instruction::Shl
+                                                  ? AC->lshr(PosOffset)
+                                                  : AC->shl(PosOffset));
+        BinaryOperator *NewShiftOp =
+            BinaryOperator::Create(I.getOpcode(), NewC, A);
+        if (I.getOpcode() == Instruction::Shl) {
+          NewShiftOp->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
+        } else {
+          NewShiftOp->setIsExact();
+        }
+        return NewShiftOp;
       }
-    };
-    if (isSuitableForPreShift()) {
-      Constant *NewC = ConstantInt::get(Ty, I.getOpcode() == Instruction::Shl
-                                                ? AC->lshr(PosOffset)
-                                                : AC->shl(PosOffset));
-      BinaryOperator *NewShiftOp =
-          BinaryOperator::Create(I.getOpcode(), NewC, A);
+    }
+
+    // C1 << (C2 - X) -> (C1 << C2) >> X
+    // C1 >> (C2 - X) -> (C1 >> C2) << X
+    // X must be u<= C2 (checked by NUWSub).
+    // Also match (X ^ C2) if equivalent to (C2 - X).
+    uint64_t C2;
+    Value *X;
+    if (match(Op1, m_NUWSub(m_ConstantInt(C2), m_Value(X))) ||
+        (match(Op1, m_Xor(m_Value(X), m_ConstantInt(C2))) &&
+         (C2 | computeKnownBits(X, &I).Zero).isAllOnes())) {
       if (I.getOpcode() == Instruction::Shl) {
-        NewShiftOp->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
-      } else {
-        NewShiftOp->setIsExact();
+        if (AC->countl_zero() >= C2)
+          return BinaryOperator::CreateExactLShr(
+              ConstantInt::get(Ty, AC->shl(C2)), X);
+        if (AC->countl_one() > C2)
+          return BinaryOperator::CreateExactAShr(
+              ConstantInt::get(Ty, AC->shl(C2)), X);
+      } else if (AC->countr_zero() >= C2) {
+        if (AC->isSignBitClear()) {
+          auto *Shl = BinaryOperator::CreateNUWShl(
+              ConstantInt::get(Ty, AC->lshr(C2)), X);
+          Shl->setHasNoSignedWrap();
+          return Shl;
+        }
+        if (I.getOpcode() == Instruction::LShr)
+          return BinaryOperator::CreateNUWShl(
+              ConstantInt::get(Ty, AC->lshr(C2)), X);
+        return BinaryOperator::CreateNSWShl(ConstantInt::get(Ty, AC->ashr(C2)),
+                                            X);
       }
-      return NewShiftOp;
     }
   }
 
@@ -557,7 +592,7 @@ static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
     return IsInnerShl && cast<BinaryOperator>(InnerShift)->hasNoSignedWrap() &&
            *InnerShiftConst == OuterShAmt;
   if (IsInnerShl == IsOuterShl)
-    return true;
+    return Semantics == ShiftSemantics::Lossy;
 
   // Equal shift amounts in opposite directions become bitwise 'and':
   // lshr (shl X, C), C --> and X, C'
@@ -1070,8 +1105,8 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
       return true;
     }
     // Infer 'exact' flag if shift amount is cttz(x) on the same operand.
-    if (match(I.getOperand(1), m_Intrinsic<Intrinsic::cttz>(
-                                   m_Specific(I.getOperand(0)), m_Value()))) {
+    if (match(I.getOperand(1),
+              m_Cttz(m_Specific(I.getOperand(0)), m_Value()))) {
       I.setIsExact();
       return true;
     }
@@ -1341,8 +1376,7 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
 
     // Canonicalize "extract lowest set bit" using cttz to and-with-negate:
     // 1 << (cttz X) --> -X & X
-    if (match(Op1,
-              m_OneUse(m_Intrinsic<Intrinsic::cttz>(m_Value(X), m_Value())))) {
+    if (match(Op1, m_OneUse(m_Cttz(m_Value(X), m_Value())))) {
       Value *NegX = Builder.CreateNeg(X, "neg");
       return BinaryOperator::CreateAnd(NegX, X);
     }
@@ -1699,7 +1733,7 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
   Value *Shl0_Op0, *Shl0_Op1, *Shl1_Op1;
   BinaryOperator *Shl1;
   if (match(Op0, m_Shl(m_Value(Shl0_Op0), m_Value(Shl0_Op1))) &&
-      match(Op1, m_Intrinsic<Intrinsic::cttz>(m_BinOp(Shl1))) &&
+      match(Op1, m_Cttz(m_BinOp(Shl1), m_Value())) &&
       match(Shl1, m_Shl(m_Specific(Shl0_Op0), m_Value(Shl1_Op1))) &&
       isKnownToBeAPowerOfTwo(Shl0_Op0, /*OrZero=*/true, &I)) {
     auto *Shl0 = cast<BinaryOperator>(Op0);

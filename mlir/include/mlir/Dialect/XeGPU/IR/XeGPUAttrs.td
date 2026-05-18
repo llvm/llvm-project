@@ -72,49 +72,6 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
 
 }
 
-def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scatter_tdesc_attr"> {
-  let summary = [{a composite attribute for `TensorDescType`}];
-  let description = [{
-    `ScatterTensorDesc` is a composite attribute defined for `TensorDescType`
-    for describing following properties of a `TensorDesc`:
-
-    1. `memory_space`: It describes where the data block described by the
-        TensorDesc is located, `Global` device memory or `Shared` local memory.
-        It is default to `Global`.
-
-    2. `chunk_size`: Specifies the number of contiguous elements accessed per offset.
-      The default value is 1.
-  }];
-
-  let parameters = (ins
-    DefaultValuedParameter<
-      "MemorySpaceAttr",
-      "MemorySpaceAttr::get($_ctxt, xegpu::MemorySpace::Global)",
-      "Data memory location"
-    >: $memory_space,
-    DefaultValuedParameter<
-      "IntegerAttr",
-      "IntegerAttr::get(IntegerType::get($_ctxt, 64), 1)",
-      "Number of contiguous elements"
-    >: $chunk_size
-  );
-
-  let builders = [
-    AttrBuilder<(ins
-      CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space,
-      CArg<"int", "1">: $chunk_size
-    )>
-  ];
-
-  let extraClassDeclaration = [{
-    int64_t getChunkSizeAsInt() {
-      return getChunkSize().getInt();
-    }
-  }];
-
-  let genVerifyDecl = 1;
- }
-
 //===----------------------------------------------------------------------===//
 // XeGPU Memory Scope Enums.
 //===----------------------------------------------------------------------===//
@@ -188,6 +145,9 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
     InterfaceMethod<"Check the availability of subgroup level layouts",
                     "bool",
                     "isForSubgroup">,
+    InterfaceMethod<"Check the availability of lane level layouts",
+                    "bool",
+                    "isForLane">,
     InterfaceMethod<"Get the rank of attribute",
                     "int64_t",
                     "getRank">,
@@ -299,26 +259,60 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                       } else {
                         return failure();
                       }
-                      assert(
-                          !subShape.empty() &&
-                          "sgdata or lanedata cannot be empty for distributed shape computation");
+                      // sgdata or lanedata cannot be empty for distributed shape computation
+                      if (subShape.empty())
+                        return failure();
                       SmallVector<int64_t> distributedShape(shape.size());
                       for (auto [i, dim] : llvm::enumerate(shape)) {
                         int64_t distriUnit = layout[i]*subShape[i];
                         if ((dim % distriUnit) == 0) {
                           // Evenly divisible case, divide the dimension by the layout factor.
                           distributedShape[i] = dim / layout[i];
-                          assert((distributedShape[i] % subShape[i] == 0) &&
-                                "Even distribution: sgdata or lanedata must divide the distributed dimension");
+                          if (distributedShape[i] % subShape[i] != 0)
+                            return failure();
                         } else {
                           // wrap around case, the dimension size must be equal to subShape value
-                          assert(dim == subShape[i] &&
-                                "Wrap-around distribution: sgdata or lanedata must be same as tensor tile shape");
+                          if(dim != subShape[i])
+                            return failure();
                           distributedShape[i] = dim;
                         }
                       }
                       return distributedShape;
                     }]>,
+    InterfaceMethod<[{Checks if the given shape can be distributed by the layout}],
+                    /*retTy=*/"bool",
+                    /*methodName=*/"isDistributable",
+                    /*args=*/(ins "SmallVector<int64_t>":$shape),
+                    /*methodBody=*/[{
+                        DistributeLayoutAttr curLayoutAttr = $_self;
+                        SmallVector<int64_t> curShape = shape;
+                        // Phase 1: Distribute across subgroups (sg_layout + sg_data).
+                        if (curLayoutAttr.isForWorkgroup()) {
+                          auto maybeSgShape = curLayoutAttr.computeDistributedShape(curShape);
+                          if (failed(maybeSgShape))
+                            return false;
+                          curShape = maybeSgShape.value();
+                          curLayoutAttr = curLayoutAttr.dropSgLayoutAndData();
+                          if (!curLayoutAttr)
+                            return true;
+                        }
+                        // Phase 2: Distribute across instruction data (inst_data).
+                        if (curLayoutAttr.isForSubgroup() && !curLayoutAttr.isForLane()) {
+                          SmallVector<int64_t> instData = curLayoutAttr.getEffectiveInstDataAsInt();
+                          for (size_t i = 0; i < curShape.size(); ++i) {
+                            if (curShape[i] % instData[i] != 0)
+                              return false;
+                          }
+                          // inst_data becomes the new shape for next phase
+                          curShape = instData;
+                          curLayoutAttr = curLayoutAttr.dropInstData();
+                          if (!curLayoutAttr)
+                            return true;
+                        }
+                        // Phase 3: Distribute across lanes (lane_layout + lane_data).
+                        auto maybeLaneShape = curLayoutAttr.computeDistributedShape(curShape);
+                        return succeeded(maybeLaneShape);
+                      }]>,
     InterfaceMethod</*desc=*/[{Check if this layout is a slice of another layout.}],
                     /*retTy=*/"bool",
                     /*methodName=*/"isSliceOf",
@@ -485,6 +479,10 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
 
     bool isForSubgroup() {
       return !isForWorkgroup();
+    }
+
+    bool isForLane() {
+      return !isForWorkgroup() && (getInstData() == nullptr);
     }
 
     int64_t getRank() const {
@@ -685,6 +683,12 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
       return parent.isForSubgroup();
+    }
+
+    bool isForLane() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      return parent.isForLane();
     }
 
     /// Returns the SgLayout of the attribute, computed by applying

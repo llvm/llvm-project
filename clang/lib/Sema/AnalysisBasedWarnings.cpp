@@ -2922,9 +2922,11 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
     if (!FD)
       continue;
     AnalysisDeclContext AC(nullptr, FD);
-    AC.getCFGBuildOptions().PruneTriviallyFalseEdges = false;
+    AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
     AC.getCFGBuildOptions().AddLifetime = true;
     AC.getCFGBuildOptions().AddParameterLifetimes = true;
+    AC.getCFGBuildOptions().AddInitializers = true;
+    AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
     AC.getCFGBuildOptions().setAllAlwaysAdd();
     if (AC.getCFG())
       runLifetimeSafetyAnalysis(AC, &SemaHelper, LSStats, S.CollectStats);
@@ -2986,7 +2988,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
         .TraverseTranslationUnitDecl(TU);
   }
 
-  if (S.getLangOpts().EnableLifetimeSafety && S.getLangOpts().CPlusPlus &&
+  if (S.getLangOpts().CPlusPlus &&
       S.getLangOpts().EnableLifetimeSafetyTUAnalysis)
     LifetimeSafetyTUAnalysis(S, TU, LSStats);
 }
@@ -3037,9 +3039,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
   bool EnableLifetimeSafetyAnalysis =
-      S.getLangOpts().EnableLifetimeSafety &&
       !S.getLangOpts().EnableLifetimeSafetyTUAnalysis &&
-      lifetimes::IsLifetimeSafetyDiagnosticEnabled(S, D);
+      lifetimes::IsLifetimeSafetyEnabled(S, D);
 
   // Force that certain expressions appear as CFGElements in the CFG.  This
   // is used to speed up various analyses.

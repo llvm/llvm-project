@@ -28,6 +28,7 @@ on how to get in touch with us and to learn more about the current status.
    Extensions
    Directives
    OpenMPSupport
+   OpenMP-extensions
    Real16MathSupport
    Unsigned
    FAQ
@@ -102,6 +103,15 @@ on how to get in touch with us and to learn more about the current status.
    Semantics
    f2018-grammar.md
    fstack-arrays
+```
+
+# Historical References
+
+```{eval-rst}
+.. toctree::
+   :titlesonly:
+
+   HLFIRTransition
 ```
 
 # Indices and tables

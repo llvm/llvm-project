@@ -447,6 +447,97 @@ program openacc_loop_validity
     END DO
   END DO
 
+  ! do concurrent: each index variable counts as one collapse level.
+
+  ! Valid: collapse(2) covers both indices of a 2-index do concurrent.
+  !$acc loop collapse(2)
+  DO CONCURRENT (i = 1:n, j = 1:n)
+    aa(i, j) = 3.14d0
+  END DO
+
+  ! Valid: collapse(3) covers both concurrent indices then one nested do.
+  !$acc loop collapse(3)
+  DO CONCURRENT (i = 1:n, j = 1:n)
+    DO k = 1, n
+      aa(i, j) = aa(i, j) + a(k)
+    END DO
+  END DO
+
+  ! Valid: collapse(2) with single-index do concurrent followed by a nested do.
+  !$acc loop collapse(2)
+  DO CONCURRENT (i = 1:n)
+    DO j = 1, n
+      aa(i, j) = 3.14d0
+    END DO
+  END DO
+
+  ! Valid: combined directive, collapse(2) with do concurrent.
+  !$acc parallel loop collapse(2)
+  DO CONCURRENT (i = 1:n, j = 1:n)
+    aa(i, j) = 3.14d0
+  END DO
+
+  ! Valid: outer regular do followed by inner do concurrent covering the
+  ! remaining collapse levels.
+  !$acc loop collapse(3)
+  DO i = 1, n
+    DO CONCURRENT (j = 1:n, k = 1:n)
+      aa(i, j) = aa(i, j) + a(k)
+    END DO
+  END DO
+
+  ! Valid (more concurrent indices than collapse levels): collapse(2) consumes
+  ! only the first two indices of a 3-index do concurrent; the third is outside
+  ! the collapsed nest.
+  !$acc loop collapse(2)
+  DO CONCURRENT (i = 1:n, j = 1:n, k = 1:n)
+    aa(i, j) = aa(i, j) + a(k)
+  END DO
+
+  ! Valid (more loops than collapse levels): collapse(1) consumes only the
+  ! first index of a 2-index do concurrent; the second index is outside the
+  ! collapsed nest.
+  !$acc loop collapse(1)
+  DO CONCURRENT (i = 1:n, j = 1:n)
+    aa(i, j) = 3.14d0
+  END DO
+
+  ! Invalid: nested do's upper bound depends on a collapsed concurrent index.
+  !ERROR: Trip count must be computable and invariant
+  !$acc loop collapse(3)
+  DO CONCURRENT (i = 1:n, j = 1:n)
+    DO k = 1, i
+      aa(i, j) = aa(i, j) + a(k)
+    END DO
+  END DO
+
+  ! Invalid: nested do's upper bound depends on a collapsed concurrent index.
+  !ERROR: Trip count must be computable and invariant
+  !$acc loop collapse(2)
+  DO CONCURRENT (i = 1:n)
+    DO j = 1, i
+      aa(i, j) = 3.14d0
+    END DO
+  END DO
+
+  ! Invalid: inner concurrent index bound depends on the outer collapsed regular
+  ! do index.
+  !ERROR: Trip count must be computable and invariant
+  !$acc loop collapse(3)
+  DO i = 1, n
+    DO CONCURRENT (j = 1:n, k = 1:i)
+      aa(i, j) = aa(i, j) + a(k)
+    END DO
+  END DO
+
+  ! Fewer loops than collapse(n): collapse(3) but only 2 levels exist.
+  ! This exercises the loop-nest depth check.
+  !ERROR: Not enough perfectly nested loops for COLLAPSE(3) clause, found 2, expected 1 more
+  !$acc loop collapse(3)
+  DO CONCURRENT (i = 1:n, j = 1:n)
+    aa(i, j) = 3.14d0
+  END DO
+
 contains
 
   subroutine sub1()

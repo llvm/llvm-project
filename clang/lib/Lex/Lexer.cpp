@@ -34,6 +34,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/NativeFormatting.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Unicode.h"
 #include "llvm/Support/UnicodeCharRanges.h"
 #include <algorithm>
@@ -514,6 +515,29 @@ unsigned Lexer::MeasureTokenLength(SourceLocation Loc,
   return TheTok.getLength();
 }
 
+SourceLocation Lexer::findEndOfIdentifierContinuation(
+    SourceLocation Loc, const SourceManager &SM, const LangOptions &LangOpts) {
+  Loc = SM.getExpansionLoc(Loc);
+  const FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
+  bool Invalid = false;
+  const StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
+  if (Invalid)
+    return Loc;
+
+  const char *StrData = Buffer.data() + LocInfo.second;
+  if (StrData >= Buffer.end())
+    return Loc;
+
+  // Use the lexer continuation rules directly, without requiring identifier
+  // start at Loc.
+  Lexer TheLexer(SM.getLocForStartOfFile(LocInfo.first), LangOpts,
+                 Buffer.begin(), StrData, Buffer.end());
+  Token Tok;
+  Tok.startToken();
+  TheLexer.LexIdentifierContinue(Tok, StrData);
+  return Loc.getLocWithOffset(Tok.getLength());
+}
+
 /// Relex the token at the specified location.
 /// \returns true if there was a failure, false on success.
 bool Lexer::getRawToken(SourceLocation Loc, Token &Result,
@@ -920,8 +944,21 @@ bool Lexer::isAtEndOfMacroExpansion(SourceLocation loc,
 
   SourceLocation afterLoc = loc.getLocWithOffset(tokLen);
   SourceLocation expansionLoc;
-  if (!SM.isAtEndOfImmediateMacroExpansion(afterLoc, &expansionLoc))
-    return false;
+  FileID FID = SM.getFileID(loc);
+
+  if (SM.isInFileID(afterLoc, FID)) {
+    if (!SM.isAtEndOfImmediateMacroExpansion(afterLoc, &expansionLoc))
+      return false;
+  } else {
+    // During error recovery, a zero-length synthetic token might be inserted
+    // past the end of the FileID, e.g. inserting ")" when a macro-arg
+    // containing a comma should be guarded by parentheses. In this case,
+    // afterLoc reaches the `NextLocalOffset` boundary, any operations on
+    // afterLoc will be invalid!
+    const SrcMgr::SLocEntry &Entry = SM.getSLocEntry(FID);
+    assert(Entry.isExpansion() && "Should be in an expansion");
+    expansionLoc = Entry.getExpansion().getExpansionLocEnd();
+  }
 
   if (expansionLoc.isFileID()) {
     // No other macro expansions.
@@ -4448,9 +4485,28 @@ LexStart:
 
   case '@':
     // Objective C support.
-    if (CurPtr[-1] == '@' && LangOpts.ObjC)
-      Kind = tok::at;
-    else
+    if (CurPtr[-1] == '@' && LangOpts.ObjC) {
+      FormTokenWithChars(Result, CurPtr, tok::at);
+      if (PP && Result.isAtPhysicalStartOfLine() && !LexingRawMode &&
+          !Is_PragmaLexer) {
+        Token NextPPTok;
+        NextPPTok.startToken();
+        {
+          llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
+              this->ParsingPreprocessorDirective, true);
+          auto NextTokOr = peekNextPPToken();
+          if (NextTokOr.has_value()) {
+            NextPPTok = *NextTokOr;
+          }
+        }
+        if (NextPPTok.is(tok::raw_identifier) &&
+            NextPPTok.getRawIdentifier() == "import") {
+          PP->HandleDirective(Result);
+          return false;
+        }
+      }
+      return true;
+    } else
       Kind = tok::unknown;
     break;
 
@@ -4611,6 +4667,16 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
       // With a fatal failure in the module loader, we abort parsing.
       return true;
     return false;
+  }
+  if (Result.is(tok::at) && Result.isAtStartOfLine()) {
+    auto NextTok = peekNextPPToken();
+    if (NextTok && NextTok->is(tok::raw_identifier) &&
+        NextTok->getRawIdentifier() == "import") {
+      PP->HandleDirective(Result);
+      if (PP->hadModuleLoaderFatalFailure())
+        return true;
+      return false;
+    }
   }
   if (Result.is(tok::raw_identifier)) {
     Result.setRawIdentifierData(TokPtr);

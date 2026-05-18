@@ -2,6 +2,11 @@
 // RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -triple x86_64-apple-macosx10.14.0 %s -fno-signed-char
 // RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -triple aarch64_be-linux-gnu %s
 
+// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -triple x86_64-apple-macosx10.14.0 %s -fexperimental-new-constant-interpreter -DBYTECODE
+// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -triple x86_64-apple-macosx10.14.0 %s -fno-signed-char -fexperimental-new-constant-interpreter -DBYTECODE
+// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -triple aarch64_be-linux-gnu %s -fexperimental-new-constant-interpreter -DBYTECODE
+
+
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 #  define LITTLE_END 1
 #elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
@@ -132,6 +137,9 @@ void test_partially_initialized() {
   static_assert(fine.x == 1 && fine.y == 5);
 }
 
+/// This works in the bytecode interpreter and is tested
+/// in test/AST/ByteCode/builtin-bit-cast-bitfields.cpp
+#ifndef BYTECODE
 void no_bitfields() {
   // FIXME!
   struct S {
@@ -147,6 +155,7 @@ void no_bitfields() {
   // expected-note@+1 {{constexpr bit_cast involving bit-field is not yet supported}}
   constexpr G g = __builtin_bit_cast(G, s);
 }
+#endif
 
 void array_members() {
   struct S {
@@ -278,7 +287,7 @@ constexpr int test_indeterminate(bool read_indet) {
   };
 
   pad p{1, 2};
-  no_pad np = bit_cast<no_pad>(p);
+  no_pad np = bit_cast<no_pad>(p); // expected-note {{declared here}}
 
   int tmp = np.a + np.b;
 
@@ -343,7 +352,7 @@ constexpr B one() {
 constexpr char good_one = one().x[0] + one().x[2] + one().x[3];
 // expected-error@+2 {{constexpr variable 'bad_one' must be initialized by a constant expression}}
 // expected-note@+1 {{read of uninitialized object is not allowed in a constant expression}}
-constexpr char bad_one = one().x[1];
+constexpr char bad_one = one().x[1]; // expected-note {{temporary created here}}
 
 constexpr A two() {
   B b = one(); // b.x[1] is indeterminate.
@@ -433,7 +442,7 @@ static_assert(round_trip<bytes>(ld), "");
 static_assert(round_trip<long double>(10.0L));
 
 constexpr bool f(bool read_uninit) {
-  bytes b = bit_cast<bytes>(ld);
+  bytes b = bit_cast<bytes>(ld); // expected-note {{declared here}}
   unsigned char ld_bytes[10] = {
     0x0,  0x48, 0x9f, 0x49, 0xf0,
     0x3c, 0x20, 0xc9, 0x0,  0x40,
