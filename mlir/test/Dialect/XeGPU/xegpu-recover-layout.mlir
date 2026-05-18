@@ -146,4 +146,3 @@ gpu.func @if_basic(
   gpu.return
 }
 }
-

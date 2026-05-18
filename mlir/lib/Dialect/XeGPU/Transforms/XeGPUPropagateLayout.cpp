@@ -1564,7 +1564,7 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   // `arith.constant`), clone it and stamp the consumer's expected layout on
   // the clone instead of inserting a `xegpu.convert_layout`. The convert
   // would otherwise lower to a cross-subgroup data movement through SLM at
-  // WG-to-SG distribution time, which is strictly more expensive than
+  // WG-to-SG distribution time, which is more expensive than
   // recomputing a pure value generator.
   if (auto *producerOp = vectorValue.getDefiningOp();
       producerOp && producerOp->getNumResults() == 1 &&
