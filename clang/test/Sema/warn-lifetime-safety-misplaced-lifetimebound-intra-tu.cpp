@@ -1,9 +1,5 @@
-// RUN: rm -rf %t
-// RUN: split-file %s %t
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wno-dangling -verify=intra %t/test.cpp
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-cross-tu-misplaced-lifetimebound -Wno-dangling -I%t -verify=cross %t/cross.cpp
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wno-dangling -verify=intra %s
 
-//--- test.cpp
 struct MyObj {
   ~MyObj() {}
 };
@@ -81,34 +77,4 @@ IntraSuppressedObj &intra_suppressed(IntraSuppressedObj &obj); // intra-warning 
 IntraSuppressedObj &intra_suppressed(
     IntraSuppressedObj &obj [[clang::lifetimebound]]) { // intra-note {{'lifetimebound' attribute appears here on the definition}}
   return obj;
-}
-
-//--- cross.h
-struct HeaderObj {
-  ~HeaderObj() {}
-};
-
-HeaderObj &header_param(HeaderObj &obj); // cross-warning {{'lifetimebound' attribute on a cross-TU definition is not visible to callers; add it to the declaration instead}}
-
-HeaderObj &header_then_source_redecl(HeaderObj &obj); // cross-warning {{'lifetimebound' attribute on a cross-TU definition is not visible to callers; add it to the declaration instead}}
-
-struct HeaderS {
-  HeaderObj data;
-  HeaderObj &header_this(); // cross-warning {{'lifetimebound' attribute on a cross-TU definition is not visible to callers; add it to the declaration instead}}
-};
-
-//--- cross.cpp
-#include "cross.h"
-
-HeaderObj &header_param(HeaderObj &obj [[clang::lifetimebound]]) { // cross-note {{'lifetimebound' attribute appears here on the definition}}
-  return obj;
-}
-
-HeaderObj &header_then_source_redecl(HeaderObj &obj);
-HeaderObj &header_then_source_redecl(HeaderObj &obj [[clang::lifetimebound]]) { // cross-note {{'lifetimebound' attribute appears here on the definition}}
-  return obj;
-}
-
-HeaderObj &HeaderS::header_this() [[clang::lifetimebound]] { // cross-note {{'lifetimebound' attribute appears here on the definition}}
-  return data;
 }

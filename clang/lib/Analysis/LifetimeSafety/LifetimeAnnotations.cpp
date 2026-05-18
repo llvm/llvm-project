@@ -13,9 +13,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Basic/OperatorKinds.h"
-#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/StringSet.h"
 
 namespace clang::lifetimes {
@@ -105,42 +103,6 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   if (getImplicitObjectParamLifetimeBoundAttr(FD))
     return true;
   return isNormalAssignmentOperator(FD);
-}
-
-const std::pair<const Decl *, WarningScope>
-getUnannotatedDeclBestMatch(const FunctionDecl *FD, const ParmVarDecl *PVD) {
-  if (!FD || !FD->isExternallyVisible())
-    return {nullptr, WarningScope::IntraTU};
-
-  auto HasAttr = [PVD](const FunctionDecl *D) -> bool {
-    if (PVD)
-      return D->getParamDecl(PVD->getFunctionScopeIndex())
-          ->hasAttr<LifetimeBoundAttr>();
-    return getDirectImplicitObjectLifetimeBoundAttr(D);
-  };
-
-  auto GetAnnotatedDecl = [PVD](const FunctionDecl *D) -> const Decl * {
-    if (!D)
-      return nullptr;
-    if (PVD)
-      return D->getParamDecl(PVD->getFunctionScopeIndex());
-    return D;
-  };
-
-  const auto &SM = FD->getASTContext().getSourceManager();
-  const FileID DefFile = SM.getFileID(SM.getExpansionLoc(FD->getLocation()));
-  const FunctionDecl *Fallback = nullptr;
-
-  for (const FunctionDecl *D = FD->getPreviousDecl(); D;
-       D = D->getPreviousDecl()) {
-    if (D->isThisDeclarationADefinition() || HasAttr(D))
-      continue;
-    if (!Fallback)
-      Fallback = D;
-    if (SM.getFileID(SM.getExpansionLoc(D->getLocation())) != DefFile)
-      return {GetAnnotatedDecl(D), WarningScope::CrossTU};
-  }
-  return {GetAnnotatedDecl(Fallback), WarningScope::IntraTU};
 }
 
 bool isInStlNamespace(const Decl *D) {

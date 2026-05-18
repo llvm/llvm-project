@@ -15,8 +15,6 @@
 
 namespace clang ::lifetimes {
 
-enum class WarningScope;
-
 // This function is needed because Decl::isInStdNamespace will return false for
 // iterators in some STL implementations due to them being defined in a
 // namespace outside of the std namespace.
@@ -48,9 +46,6 @@ bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD);
 const LifetimeBoundAttr *
 getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD);
 
-const std::pair<const Decl *, WarningScope>
-getUnannotatedDeclBestMatch(const FunctionDecl *FD,
-                            const ParmVarDecl *PVD = nullptr);
 /// Returns the lifetimebound attribute for the implicit this parameter, if it
 /// exists on any redeclaration.
 const LifetimeBoundAttr *

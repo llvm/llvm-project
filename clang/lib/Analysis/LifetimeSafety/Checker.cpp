@@ -61,7 +61,6 @@ private:
   llvm::DenseMap<AnnotationTarget, EscapingTarget> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
   llvm::DenseSet<const Decl *> VerifiedLiftimeboundEscapes;
-  llvm::DenseMap<const Decl *, WarningScope> DeclarationsToAnnotate;
   const LoanPropagationAnalysis &LoanPropagation;
   const MovedLoansAnalysis &MovedLoans;
   const LiveOriginsAnalysis &LiveOrigins;
@@ -136,10 +135,6 @@ public:
       if (PVD->hasAttr<LifetimeBoundAttr>()) {
         // Track that this lifetimebound parameter correctly escapes.
         VerifiedLiftimeboundEscapes.insert(PVD);
-        if (auto [UnannotatedFDecl, Scope] =
-                getUnannotatedDeclBestMatch(cast<FunctionDecl>(FD), PVD);
-            UnannotatedFDecl)
-          DeclarationsToAnnotate.try_emplace(UnannotatedFDecl, Scope);
       } else {
         // Otherwise, suggest lifetimebound for parameter escaping through
         // return or a field in constructor.
@@ -157,10 +152,6 @@ public:
         VerifiedLiftimeboundEscapes.insert(MD);
       else if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
         AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
-      if (getDirectImplicitObjectLifetimeBoundAttr(MD))
-        if (auto [UnannotatedFDecl, Scope] = getUnannotatedDeclBestMatch(MD);
-            UnannotatedFDecl)
-          DeclarationsToAnnotate.try_emplace(UnannotatedFDecl, Scope);
     };
     auto MovedAtEscape = MovedLoans.getMovedLoans(OEF);
     for (LoanID LID : EscapedLoans) {
@@ -325,6 +316,42 @@ public:
     }
   }
 
+  const std::pair<const FunctionDecl *, WarningScope>
+  getCanonicalFunctionDeclForAttr(const FunctionDecl *FD) {
+    if (!FD || !FD->isExternallyVisible())
+      return {nullptr, WarningScope::IntraTU};
+
+    const auto &SM = FD->getASTContext().getSourceManager();
+    const FileID DefFile = SM.getFileID(SM.getExpansionLoc(FD->getLocation()));
+    const FunctionDecl *FirstDecl = nullptr;
+    WarningScope Scope = WarningScope::IntraTU;
+
+    for (const FunctionDecl *D = FD->getPreviousDecl(); D;
+         D = D->getPreviousDecl()) {
+      if (D->isThisDeclarationADefinition())
+        continue;
+      FirstDecl = D;
+      Scope = SM.getFileID(SM.getExpansionLoc(D->getLocation())) != DefFile
+                  ? WarningScope::CrossTU
+                  : WarningScope::IntraTU;
+    }
+    return {FirstDecl, Scope};
+  }
+
+  const std::pair<const CXXMethodDecl *, WarningScope>
+  getCanonicalDeclForAttr(const CXXMethodDecl *MD) {
+    auto [CanonicalFD, Scope] = getCanonicalFunctionDeclForAttr(MD);
+    return {cast_or_null<CXXMethodDecl>(CanonicalFD), Scope};
+  }
+
+  const std::pair<const ParmVarDecl *, WarningScope>
+  getCanonicalDeclForAttr(const FunctionDecl *FD, const ParmVarDecl *PVD) {
+    auto [CanonicalFD, Scope] = getCanonicalFunctionDeclForAttr(FD);
+    if (!CanonicalFD)
+      return {nullptr, Scope};
+    return {CanonicalFD->getParamDecl(PVD->getFunctionScopeIndex()), Scope};
+  }
+
   /// Returns the declaration of a function that is visible across translation
   /// units, if such a declaration exists and is different from the definition.
   static const FunctionDecl *getCrossTUDecl(const FunctionDecl &FD,
@@ -428,13 +455,18 @@ public:
     const FunctionDecl *FDef = dyn_cast<FunctionDecl>(FD);
     if (!FDef)
       return;
-    for (auto [Decl, Scope] : DeclarationsToAnnotate) {
-      if (const auto *MD = dyn_cast<CXXMethodDecl>(Decl))
-        SemaHelper->reportMisplacedLifetimebound(Scope,
-                                                 cast<CXXMethodDecl>(FDef), MD);
-      else if (const auto *PVD = dyn_cast<ParmVarDecl>(Decl))
-        SemaHelper->reportMisplacedLifetimebound(
-            Scope, FDef->getParamDecl(PVD->getFunctionScopeIndex()), PVD);
+    if (const auto *MDef = dyn_cast<CXXMethodDecl>(FDef);
+        MDef && getDirectImplicitObjectLifetimeBoundAttr(MDef))
+      if (auto [MDecl, Scope] = getCanonicalDeclForAttr(MDef);
+          MDecl && !getDirectImplicitObjectLifetimeBoundAttr(MDecl))
+        SemaHelper->reportMisplacedLifetimebound(Scope, MDef, MDecl);
+    for (const auto *PDef : FDef->parameters()) {
+      const auto *Attr = PDef->getAttr<LifetimeBoundAttr>();
+      if (!Attr || Attr->isImplicit())
+        continue;
+      if (auto [PDecl, Scope] = getCanonicalDeclForAttr(FDef, PDef);
+          PDecl && !PDecl->hasAttr<LifetimeBoundAttr>())
+        SemaHelper->reportMisplacedLifetimebound(Scope, PDef, PDecl);
     }
   }
 
