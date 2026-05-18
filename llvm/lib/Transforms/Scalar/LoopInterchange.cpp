@@ -1946,7 +1946,7 @@ bool LoopInterchangeTransform::transform(
     Instruction *IncomingValue = dyn_cast<Instruction>(
         CurInductionPHI->getIncomingValueForBlock(InnerLoop->getLoopLatch()));
     assert(IncomingValue &&
-           "Incoming value from loop latch doesn't an instruction");
+           "Incoming value from loop latch isn't an instruction");
     if (is_contained(InductionPHIs, IncomingValue))
       continue;
     InnerIndexVarList.push_back(IncomingValue);
@@ -1964,7 +1964,7 @@ bool LoopInterchangeTransform::transform(
   unsigned i = 0;
   auto MoveInstructions = [&i, &WorkList, this, &InductionPHIs, NewLatch]() {
     for (; i < WorkList.size(); i++) {
-      // Duplicate instruction and move it the new latch. Update uses that
+      // Duplicate instruction and move it to the new latch. Update uses that
       // have been moved.
       Instruction *NewI = WorkList[i]->clone();
       NewI->insertBefore(NewLatch->getFirstNonPHIIt());
