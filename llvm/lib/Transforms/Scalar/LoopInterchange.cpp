@@ -1627,22 +1627,25 @@ int LoopInterchangeProfitability::getInstrOrderCost() {
       // interchange, but we expect such cases to be rare.
       const SCEV *OuterStep = SE->getAbsExpr(*OuterCoeff, /*IsNSW=*/false);
       const SCEV *InnerStep = SE->getAbsExpr(*InnerCoeff, /*IsNSW=*/false);
-      if (SE->isKnownPredicate(ICmpInst::ICMP_SLT, InnerStep, OuterStep)) {
-        // If we find the inner induction after an outer induction e.g.
-        // for(int i=0;i<N;i++)
-        //   for(int j=0;j<N;j++)
-        //     A[i][j] = A[i-1][j-1]+k;
-        // then it is a good order.
+      // If we find the inner induction after an outer induction e.g.
+      //
+      //   for(int i=0;i<N;i++)
+      //     for(int j=0;j<N;j++)
+      //       A[i][j] = A[i-1][j-1]+k;
+      //
+      //
+      // then it is a good order. If we find the outer induction after an inner
+      // induction e.g.
+      //
+      //   for(int i=0;i<N;i++)
+      //     for(int j=0;j<N;j++)
+      //       A[j][i] = A[j-1][i-1]+k;
+      //
+      // then it is a bad order.
+      if (SE->isKnownPredicate(ICmpInst::ICMP_SLT, InnerStep, OuterStep))
         GoodOrder++;
-      } else if (SE->isKnownPredicate(ICmpInst::ICMP_SLT, OuterStep,
-                                      InnerStep)) {
-        // If we find the outer induction after an inner induction e.g.
-        // for(int i=0;i<N;i++)
-        //   for(int j=0;j<N;j++)
-        //     A[j][i] = A[j-1][i-1]+k;
-        // then it is a bad order.
+      else if (SE->isKnownPredicate(ICmpInst::ICMP_SLT, OuterStep, InnerStep))
         BadOrder++;
-      }
     }
   }
   return GoodOrder - BadOrder;
