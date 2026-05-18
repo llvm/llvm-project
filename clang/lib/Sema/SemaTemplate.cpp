@@ -406,6 +406,34 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     assert(SS.isEmpty() && "ObjectType and scope specifier cannot coexist");
     LookupCtx = computeDeclContext(ObjectType);
     IsDependent = !LookupCtx && ObjectType->isDependentType();
+
+    // [basic.lookup.classref] requires looking up the identifier first in the
+    // class of the object expression. If ObjectType is dependent only because
+    // it is a (transitively) nested class of the current instantiation, do
+    // qualified lookup against the underlying tag declaration so we don't
+    // wrongly fall through to surrounding-scope lookup and pick up a
+    // same-named template (e.g. ::hash from `using namespace std;`).
+    //
+    // This is restricted to the disambiguation case (no explicit `template`
+    // keyword): when the keyword is present the standard already requires
+    // treating `id` as a template-name and downstream code relies on the
+    // dependent path, so we leave that alone.
+    if (!LookupCtx && IsDependent && !RequiredTemplate.hasTemplateKeyword()) {
+      if (auto *RD =
+              dyn_cast_or_null<CXXRecordDecl>(ObjectType->getAsTagDecl())) {
+        for (DeclContext *Encl = RD->getDeclContext();
+             Encl && !Encl->isFileContext(); Encl = Encl->getParent()) {
+          auto *EnclRD = dyn_cast<CXXRecordDecl>(Encl);
+          if (EnclRD && EnclRD->isDependentContext() &&
+              EnclRD->isCurrentInstantiation(CurContext)) {
+            LookupCtx = RD;
+            IsDependent = false;
+            break;
+          }
+        }
+      }
+    }
+
     assert((IsDependent || !ObjectType->isIncompleteType() ||
             !ObjectType->getAs<TagType>() ||
             ObjectType->castAs<TagType>()->getDecl()->isEntityBeingDefined()) &&
