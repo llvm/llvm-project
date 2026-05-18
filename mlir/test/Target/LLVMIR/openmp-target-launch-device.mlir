@@ -25,7 +25,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
         omp.terminator
       }
       omp.terminator
-    }
+    } {omp.combined}
 
     // CHECK: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_main_l{{[0-9]+}}(ptr %[[KERNEL_ARGS:.*]]) #[[ATTRS2:[0-9]+]]
     // CHECK: %{{.*}} = call i32 @__kmpc_target_init(ptr @[[KERNEL2_ENV]], ptr %[[KERNEL_ARGS]])
@@ -36,7 +36,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
         omp.terminator
       }
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
 }

@@ -48,9 +48,9 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
             }
           }
           omp.terminator
-        }
+        } {omp.combined}
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
     }
     llvm.return

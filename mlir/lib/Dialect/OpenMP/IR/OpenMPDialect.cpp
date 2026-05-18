@@ -2605,7 +2605,8 @@ bool TargetOp::hasHostEvalTripCount() {
 
   // If it represents a `target teams distribute` construct, also evaluate the
   // `distribute` trip count on the host.
-  Operation *capturedOp = getInnermostCapturedOmpOp();
+  Operation *capturedOp =
+      cast<ComposableOpInterface>(getOperation()).findCapturedOp();
   if (auto loopNestOp = dyn_cast_if_present<LoopNestOp>(capturedOp)) {
     SmallVector<LoopWrapperInterface> loopWrappers;
     loopNestOp.gatherWrappers(loopWrappers);
@@ -2631,6 +2632,9 @@ bool TargetOp::hasHostEvalTripCount() {
 }
 
 LogicalResult TargetOp::verify() {
+  if (getKernelType() == TargetExecMode::bare && !isCombined())
+    return emitOpError() << "bare kernel requires 'omp.combined'";
+
   if (failed(verifyDependVarList(*this, getDependKinds(), getDependVars(),
                                  getDependIteratedKinds(),
                                  getDependIterated())))
@@ -2660,21 +2664,17 @@ LogicalResult TargetOp::verifyRegions() {
   if (numNestedTeams > 1)
     return emitError("target containing multiple 'omp.teams' nested ops");
 
-  if (numNestedTeams == 0 && getKernelType() == TargetExecMode::bare)
+  if (getKernelType() == TargetExecMode::bare && numNestedTeams == 0)
     return emitOpError()
            << "bare kernel must contain a nested 'omp.teams' operation";
 
-  if (getKernelType() == TargetExecMode::spmd ||
-      getKernelType() == TargetExecMode::spmd_no_loop) {
-    bool containsLoop = getRegion()
-                            .walk<WalkOrder::PreOrder>([](LoopNestOp loopOp) {
-                              return WalkResult::interrupt();
-                            })
-                            .wasInterrupted();
-    if (!containsLoop)
-      return emitOpError()
-             << "SPMD kernel must contain a nested 'omp.loop_nest' operation";
-  }
+  Operation *capturedOp =
+      cast<ComposableOpInterface>(getOperation()).findCapturedOp();
+  if ((getKernelType() == TargetExecMode::spmd ||
+       getKernelType() == TargetExecMode::spmd_no_loop) &&
+      !isa_and_present<LoopNestOp>(capturedOp))
+    return emitOpError()
+           << "SPMD kernel must capture an 'omp.loop_nest' operation";
 
   bool isTargetDevice = false;
   if (auto offloadMod = (*this)->getParentOfType<OffloadModuleInterface>())
@@ -2684,9 +2684,6 @@ LogicalResult TargetOp::verifyRegions() {
   // Check that host_eval values are only used in legal ways.
   llvm::ArrayRef<BlockArgument> hostEvalBlockArgs =
       cast<BlockArgOpenMPOpInterface>(getOperation()).getHostEvalBlockArgs();
-
-  if (!hostEvalBlockArgs.empty() && isTargetDevice)
-    emitOpError() << "'host_eval' is only supported during host compilation";
 
   bool hostEvalTripCount = hasHostEvalTripCount();
   for (Value hostEvalArg : hostEvalBlockArgs) {
@@ -2727,119 +2724,17 @@ LogicalResult TargetOp::verifyRegions() {
   }
 
   if (hostEvalTripCount && !isTargetDevice) {
-    if (auto loopOp = dyn_cast<LoopNestOp>(getInnermostCapturedOmpOp())) {
-      for (auto arg : llvm::concat<Value>(loopOp.getLoopLowerBounds(),
-                                          loopOp.getLoopUpperBounds(),
-                                          loopOp.getLoopSteps())) {
-        if (!llvm::is_contained(hostEvalBlockArgs, arg))
-          return emitOpError() << "nested 'omp.loop_nest' bounds expected to "
-                                  "be host-evaluated";
-      }
+    auto loopOp = cast<LoopNestOp>(capturedOp);
+    for (auto arg : llvm::concat<Value>(loopOp.getLoopLowerBounds(),
+                                        loopOp.getLoopUpperBounds(),
+                                        loopOp.getLoopSteps())) {
+      if (!llvm::is_contained(hostEvalBlockArgs, arg))
+        return emitOpError() << "nested 'omp.loop_nest' bounds expected to "
+                                "be host-evaluated";
     }
   }
 
   return success();
-}
-
-static Operation *
-findCapturedOmpOp(Operation *rootOp, bool checkSingleMandatoryExec,
-                  llvm::function_ref<bool(Operation *)> siblingAllowedFn) {
-  assert(rootOp && "expected valid operation");
-
-  Dialect *ompDialect = rootOp->getDialect();
-  Operation *capturedOp = nullptr;
-  DominanceInfo domInfo;
-
-  // Process in pre-order to check operations from outermost to innermost,
-  // ensuring we only enter the region of an operation if it meets the criteria
-  // for being captured. We stop the exploration of nested operations as soon as
-  // we process a region holding no operations to be captured.
-  rootOp->walk<WalkOrder::PreOrder>([&](Operation *op) {
-    if (op == rootOp)
-      return WalkResult::advance();
-
-    // Ignore operations of other dialects or omp operations with no regions,
-    // because these will only be checked if they are siblings of an omp
-    // operation that can potentially be captured.
-    bool isOmpDialect = op->getDialect() == ompDialect;
-    bool hasRegions = op->getNumRegions() > 0;
-    if (!isOmpDialect || !hasRegions)
-      return WalkResult::skip();
-
-    // This operation cannot be captured if it can be executed more than once
-    // (i.e. its block's successors can reach it) or if it's not guaranteed to
-    // be executed before all exits of the region (i.e. it doesn't dominate all
-    // blocks with no successors reachable from the entry block).
-    if (checkSingleMandatoryExec) {
-      Region *parentRegion = op->getParentRegion();
-      Block *parentBlock = op->getBlock();
-
-      for (Block *successor : parentBlock->getSuccessors())
-        if (successor->isReachable(parentBlock))
-          return WalkResult::interrupt();
-
-      for (Block &block : *parentRegion)
-        if (domInfo.isReachableFromEntry(&block) && block.hasNoSuccessors() &&
-            !domInfo.dominates(parentBlock, &block))
-          return WalkResult::interrupt();
-    }
-
-    // Don't capture this op if it has a not-allowed sibling, and stop recursing
-    // into nested operations.
-    for (Operation &sibling : op->getParentRegion()->getOps())
-      if (&sibling != op && !siblingAllowedFn(&sibling))
-        return WalkResult::interrupt();
-
-    // Don't continue capturing nested operations if we reach an omp.loop_nest.
-    // Otherwise, process the contents of this operation.
-    capturedOp = op;
-    return llvm::isa<LoopNestOp>(op) ? WalkResult::interrupt()
-                                     : WalkResult::advance();
-  });
-
-  return capturedOp;
-}
-
-Operation *TargetOp::getInnermostCapturedOmpOp() {
-  // If this is an SPMD kernel, then just attempt to find the first available
-  // omp.loop_nest. If the kernel type has been properly set, that must be the
-  // captured loop.
-  if (getKernelType() == TargetExecMode::spmd ||
-      getKernelType() == TargetExecMode::spmd_no_loop) {
-    Operation *spmdLoop = nullptr;
-    getRegion().walk<WalkOrder::PreOrder>([&spmdLoop](LoopNestOp loopOp) {
-      spmdLoop = loopOp.getOperation();
-      return WalkResult::interrupt();
-    });
-    assert(spmdLoop && "SPMD target regions must contain a loop");
-    return spmdLoop;
-  }
-
-  auto *ompDialect = getContext()->getLoadedDialect<omp::OpenMPDialect>();
-
-  // Only allow OpenMP terminators and non-OpenMP ops that either have known
-  // memory effects excluding memory write effects, or are pure.
-  return findCapturedOmpOp(
-      *this, /*checkSingleMandatoryExec=*/true, [&](Operation *sibling) {
-        if (!sibling)
-          return false;
-
-        if (ompDialect == sibling->getDialect())
-          return sibling->hasTrait<OpTrait::IsTerminator>();
-
-        if (auto memOp = dyn_cast<MemoryEffectOpInterface>(sibling)) {
-          SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4>
-              effects;
-          memOp.getEffects(effects);
-          return !llvm::any_of(
-              effects, [&](MemoryEffects::EffectInstance &effect) {
-                return isa<MemoryEffects::Write>(effect.getEffect()) &&
-                       isa<SideEffects::AutomaticAllocationScopeResource>(
-                           effect.getResource());
-              });
-        }
-        return isPure(sibling);
-      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -3068,6 +2963,9 @@ void SectionsOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult SectionsOp::verify() {
+  if (isCombined())
+    return emitOpError() << "cannot be a non-innermost combined construct leaf";
+
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
@@ -3149,6 +3047,13 @@ void WorkshareOp::build(OpBuilder &builder, OperationState &state,
   WorkshareOp::build(builder, state, clauses.nowait);
 }
 
+LogicalResult WorkshareOp::verify() {
+  if (isCombined())
+    return emitOpError() << "cannot be a non-innermost combined construct leaf";
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // WorkshareLoopWrapperOp
 //===----------------------------------------------------------------------===//
@@ -3185,6 +3090,98 @@ LogicalResult LoopWrapperInterface::verifyImpl() {
     return emitOpError() << "nested in loop wrapper is not another loop "
                             "wrapper or `omp.loop_nest`";
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ComposableOpInterface
+//===----------------------------------------------------------------------===//
+
+Operation *ComposableOpInterface::findCapturedOp() {
+  Operation *op = this->getOperation();
+
+  // Handle the composite case by returning the wrapped omp.loop_nest.
+  if (auto wrapperOp = dyn_cast<LoopWrapperInterface>(op))
+    return wrapperOp.getWrappedLoop();
+
+  // Do not look further if this op is not combined with any of its children.
+  // Need to check for composite for the omp.parallel case, which is not a loop
+  // wrapper itself.
+  if (!isCombined() && !isComposite())
+    return op;
+
+  Region &region = op->getRegion(0);
+  for (Operation &nestedOp : region.getOps()) {
+    if (auto wrapperOp = dyn_cast<LoopWrapperInterface>(&nestedOp))
+      return wrapperOp.getWrappedLoop();
+
+    if (auto composableOp = dyn_cast<ComposableOpInterface>(&nestedOp))
+      return composableOp.findCapturedOp();
+  }
+
+  // This can only be reached if the op has an omp.combined attribute but the
+  // corresponding nested composable op has been deleted. In that case, it's
+  // correct to return this operation.
+  return op;
+}
+
+LogicalResult ComposableOpInterface::verifyImpl() {
+  Operation *op = this->getOperation();
+
+  if (op->getNumRegions() != 1)
+    return emitOpError() << "composable ops must have a single region";
+
+  if (isComposite() && !isa<LoopWrapperInterface, ParallelOp>(op))
+    return emitOpError() << "non-loop wrapper cannot be composite";
+
+  // If combined, must have exactly one eligible nested op (composable or loop
+  // wrapper).
+  if (isCombined()) {
+    Operation *nestedOp = nullptr;
+    auto count = llvm::count_if(
+        op->getRegion(0).getOps(), [&nestedOp](mlir::Operation &op) {
+          if (isa<ComposableOpInterface, LoopWrapperInterface>(op)) {
+            nestedOp = &op;
+            return true;
+          }
+          return false;
+        });
+
+    // Make an exception for ops marked as omp.combined with no eligible nested
+    // ops: this situation should be disallowed, but it can be reached if an
+    // MLIR optimization pass find that the child operation has no side effects
+    // (many ComposableOpInterface ops have RecursiveMemoryEffects), so it gets
+    // deleted without updating the parent's attribute.
+    //
+    // Since there's a well defined way of handling that situation (treat it as
+    // non-combined), we relax the requirement here. Ensuring the parent is
+    // updated every time a pass that can potentially remove a child composable
+    // op runs is less preferable as a solution.
+    if (count == 0)
+      return success();
+
+    if (count > 1)
+      return emitOpError()
+             << "multiple eligible child ops found in combined op";
+
+    // This operation cannot be combined if its captured nested op can be
+    // executed more than once (i.e. its block's successors can reach it) or if
+    // it's not guaranteed to be executed before all exits of the region (i.e.
+    // it doesn't dominate all blocks with no successors reachable from the
+    // entry block).
+    DominanceInfo domInfo;
+    Block *parentBlock = nestedOp->getBlock();
+
+    for (Block *successor : parentBlock->getSuccessors())
+      if (successor->isReachable(parentBlock))
+        return emitOpError() << "nested combined child op is part of a loop";
+
+    for (Block &block : op->getRegion(0))
+      if (domInfo.isReachableFromEntry(&block) && block.hasNoSuccessors() &&
+          !domInfo.dominates(parentBlock, &block))
+        return emitOpError()
+               << "nested combined child op doesn't unconditionally execute";
+  }
   return success();
 }
 
@@ -3611,6 +3608,7 @@ void TaskloopContextOp::build(OpBuilder &builder, OperationState &state,
       clauses.privateNeedsBarrier, clauses.reductionMod, clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
       makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
+  state.addAttribute("omp.combined", UnitAttr::get(ctx));
 }
 
 TaskloopWrapperOp TaskloopContextOp::getLoopOp() {
@@ -3650,24 +3648,26 @@ LogicalResult TaskloopContextOp::verify() {
         "may not appear on the same taskloop directive");
   }
 
+  // Without this restriction, any compound construct including `taskloop` would
+  // fail to correctly identify the whole chain of operations (see
+  // ComposableOpInterface::findCapturedOp()), as well as failing to do so even
+  // for standalone `taskloop` constructs.
+  if (!isCombined())
+    return emitOpError("must always contain the 'omp.combined' attribute");
+
   return success();
 }
 
 LogicalResult TaskloopContextOp::verifyRegions() {
   Region &region = getRegion();
-  if (region.empty())
-    return emitOpError() << "expected non-empty region";
-
-  auto count = llvm::count_if(region.front(), [](mlir::Operation &op) {
+  auto loopWrapperIt = llvm::find_if(region.front(), [](mlir::Operation &op) {
     return isa<TaskloopWrapperOp>(op);
   });
-  if (count != 1)
+  if (loopWrapperIt == region.front().end())
     return emitOpError()
-           << "expected exactly 1 TaskloopWrapperOp directly nested in "
-              "the region, but "
-           << count << " were found";
-  TaskloopWrapperOp loopWrapperOp = getLoopOp();
+           << "expected a TaskloopWrapperOp directly nested in the region";
 
+  auto loopWrapperOp = cast<TaskloopWrapperOp>(*loopWrapperIt);
   auto loopNestOp = dyn_cast<LoopNestOp>(loopWrapperOp.getWrappedLoop());
   // This will fail the verifier for TaskloopWrapperOp and print an error
   // message there.
@@ -4974,6 +4974,9 @@ LogicalResult FreeSharedMemOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult WorkdistributeOp::verify() {
+  if (isCombined())
+    return emitOpError() << "cannot be a non-innermost combined construct leaf";
+
   // Check that region exists and is not empty
   Region &region = getRegion();
   if (region.empty())
