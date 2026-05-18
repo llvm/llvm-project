@@ -18,6 +18,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
@@ -4769,7 +4770,8 @@ ParmVarDecl *SemaObjC::ActOnMethodParmDeclaration(Scope *S,
   SemaRef.ProcessDeclAttributeList(SemaRef.TUScope, Param, ArgInfo.ArgAttrs);
   SemaRef.AddPragmaAttributes(SemaRef.TUScope, Param);
   if (Param->hasAttr<BlocksAttr>()) {
-    Diag(Param->getLocation(), diag::err_block_on_nonlocal);
+    Diag(Param->getLocation(), diag::err_block_not_allowed_on)
+        << diag::NotAllowedBlockVarReason::NonlocalVariable;
     Param->setInvalidDecl();
   }
 
@@ -5254,7 +5256,8 @@ Decl *SemaObjC::ActOnObjCExceptionDecl(Scope *S, Declarator &D) {
   SemaRef.ProcessDeclAttributes(S, New, D);
 
   if (New->hasAttr<BlocksAttr>())
-    Diag(New->getLocation(), diag::err_block_on_nonlocal);
+    Diag(New->getLocation(), diag::err_block_not_allowed_on)
+        << diag::NotAllowedBlockVarReason::NonlocalVariable;
   return New;
 }
 
