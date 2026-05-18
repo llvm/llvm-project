@@ -24,6 +24,41 @@
 
 #include <arm_neon.h>
 
+//===------------------------------------------------------===//
+// 2.1.3.2.7  Vector saturating rounding shift right and narrow
+// TODO:
+//===------------------------------------------------------===//
+
+// ALL-LABEL: {{.*}} @test_vqrshrun_n_s16(
+uint8x8_t test_vqrshrun_n_s16(int16x8_t a) {
+  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
+
+  // LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]])
+  // LLVM:      [[VQRSHRUN_N1:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqrshrun.v8i8(<8 x i16> {{.*}}, i32 3)
+  // LLVM:      ret <8 x i8> [[VQRSHRUN_N1]]
+  return vqrshrun_n_s16(a, 3);
+}
+
+// ALL-LABEL: {{.*}} @test_vqrshrun_n_s32(
+uint16x4_t test_vqrshrun_n_s32(int32x4_t a) {
+  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
+
+  // LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]])
+  // LLVM:      [[VQRSHRUN_N:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrun.v4i16(<4 x i32> {{.*}}, i32 9)
+  // LLVM:      ret <4 x i16> [[VQRSHRUN_N]]
+  return vqrshrun_n_s32(a, 9);
+}
+
+// ALL-LABEL: {{.*}}@test_vqrshrun_n_s64(
+uint32x2_t test_vqrshrun_n_s64(int64x2_t a) {
+  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
+   
+  // LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]])
+  // LLVM:      [[VQRSHRUN_N1:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqrshrun.v2i32(<2 x i64> {{.*}}, i32 19)
+  // LLVM:      ret <2 x i32> [[VQRSHRUN_N1]]
+  return vqrshrun_n_s64(a, 19);
+}
+
 // LLVM-LABEL: @test_vnegd_s64
 // CIR-LABEL: @vnegd_s64
 int64_t test_vnegd_s64(int64_t a) {
