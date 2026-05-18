@@ -373,25 +373,8 @@ LogicalResult cir::DeleteArrayOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// BreakOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult cir::BreakOp::verify() {
-  if (!getOperation()->getParentOfType<LoopOpInterface>() &&
-      !getOperation()->getParentOfType<SwitchOp>())
-    return emitOpError("must be within a loop");
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // LocalInitOp
 //===----------------------------------------------------------------------===//
-
-LogicalResult cir::LocalInitOp::verify() {
-  if (!getOperation()->getParentOfType<FuncOp>())
-    return emitOpError("must be inside of a 'cir.func'");
-  return success();
-}
 
 LogicalResult
 cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
@@ -523,16 +506,6 @@ LogicalResult cir::ConstantOp::verify() {
 
 OpFoldResult cir::ConstantOp::fold(FoldAdaptor /*adaptor*/) {
   return getValue();
-}
-
-//===----------------------------------------------------------------------===//
-// ContinueOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult cir::ContinueOp::verify() {
-  if (!getOperation()->getParentOfType<LoopOpInterface>())
-    return emitOpError("must be within a loop");
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -3102,12 +3075,6 @@ LogicalResult cir::AwaitOp::verify() {
   return success();
 }
 
-LogicalResult cir::CoReturnOp::verify() {
-  if (!getOperation()->getParentOfType<CoroBodyOp>())
-    return emitOpError("must be inside a cir.coro.body");
-  return success();
-}
-
 //===----------------------------------------------------------------------===//
 // CoroBody
 //===----------------------------------------------------------------------===//
@@ -4327,11 +4294,14 @@ cir::EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
 LogicalResult cir::ConstructCatchParamOp::verifySymbolUses(
     SymbolTableCollection &symbolTable) {
+  auto copyFnAttr = getCopyFnAttr();
+  if (!copyFnAttr)
+    return success();
   auto fn =
       symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(*this, getCopyFnAttr());
   if (!fn)
     return emitOpError("'")
-           << getCopyFn() << "' does not reference a valid cir.func";
+           << *getCopyFn() << "' does not reference a valid cir.func";
 
   if (!fn->hasAttr(cir::CIRDialect::getCatchCopyThunkAttrName()))
     return emitOpError("catch-init copy_fn must be tagged with the ")

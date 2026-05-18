@@ -398,6 +398,11 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
       pm, fir::createAbstractResultOpt);
   addPassToGPUModuleOperations<PassConstructor>(pm,
                                                 fir::createAbstractResultOpt);
+  pm.addPass(fir::createRematerializeFIRBoxOpsPass());
+  // Do not run CSE between rematerialization and FIR-to-LLVM lowering. CSE will
+  // undo the createRematerializeFIRBoxOps pass.
+  // LLVM-level CSE can clean up redundant operations after FIR box conversion
+  // has materialized region-local allocas.
   fir::addCodeGenRewritePass(
       pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
   fir::addExternalNameConversionPass(pm, config.Underscoring);

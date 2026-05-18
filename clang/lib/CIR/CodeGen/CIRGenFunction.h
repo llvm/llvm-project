@@ -2029,6 +2029,9 @@ public:
   std::optional<mlir::Value> emitNVPTXBuiltinExpr(unsigned builtinID,
                                                   const CallExpr *expr);
 
+  /// Emit a device-side printf call for NVPTX targets.
+  mlir::Value emitNVPTXDevicePrintfCallExpr(const CallExpr *expr);
+
   LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
 
   LValue emitConditionalOperatorLValue(const AbstractConditionalOperator *expr);
