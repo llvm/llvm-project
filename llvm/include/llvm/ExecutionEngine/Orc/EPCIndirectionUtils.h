@@ -80,17 +80,22 @@ public:
   /// Create using the given ABI class.
   template <typename ORCABI>
   static std::unique_ptr<EPCIndirectionUtils>
-  CreateWithABI(ExecutorProcessControl &EPC, MemoryAccess &MemAccess);
+  CreateWithABI(ExecutorProcessControl &EPC,
+                jitlink::JITLinkMemoryManager &MemMgr, MemoryAccess &MemAccess);
 
   /// Create based on the ExecutorProcessControl triple.
   LLVM_ABI static Expected<std::unique_ptr<EPCIndirectionUtils>>
-  Create(ExecutorProcessControl &EPC, MemoryAccess &MemAccess);
+  Create(ExecutorProcessControl &EPC, jitlink::JITLinkMemoryManager &MemMgr,
+         MemoryAccess &MemAccess);
 
   /// Return a reference to the ExecutorProcessControl object.
   ExecutorProcessControl &getExecutorProcessControl() const { return EPC; }
 
   /// Return a reference to the MemoryAccess object for this instance.
   MemoryAccess &getMemoryAccess() const { return MemAccess; }
+
+  /// Return a reference to the JITLinkMemoryManager object for this instance.
+  jitlink::JITLinkMemoryManager &getMemManager() const { return MemMgr; }
 
   /// Return a reference to the ABISupport object for this instance.
   ABISupport &getABISupport() const { return *ABI; }
@@ -141,13 +146,15 @@ private:
   using IndirectStubInfoVector = std::vector<IndirectStubInfo>;
 
   /// Create an EPCIndirectionUtils instance.
-  EPCIndirectionUtils(ExecutorProcessControl &EPC, MemoryAccess &MemAccess,
-                      std::unique_ptr<ABISupport> ABI);
+  EPCIndirectionUtils(ExecutorProcessControl &EPC,
+                      jitlink::JITLinkMemoryManager &MemMgr,
+                      MemoryAccess &MemAccess, std::unique_ptr<ABISupport> ABI);
 
   Expected<IndirectStubInfoVector> getIndirectStubs(unsigned NumStubs);
 
   std::mutex EPCUIMutex;
   ExecutorProcessControl &EPC;
+  jitlink::JITLinkMemoryManager &MemMgr;
   MemoryAccess &MemAccess;
   std::unique_ptr<ABISupport> ABI;
   ExecutorAddr ResolverBlockAddr;
@@ -214,9 +221,11 @@ public:
 template <typename ORCABI>
 std::unique_ptr<EPCIndirectionUtils>
 EPCIndirectionUtils::CreateWithABI(ExecutorProcessControl &EPC,
+                                   jitlink::JITLinkMemoryManager &MemMgr,
                                    MemoryAccess &MemAccess) {
   return std::unique_ptr<EPCIndirectionUtils>(new EPCIndirectionUtils(
-      EPC, MemAccess, std::make_unique<detail::ABISupportImpl<ORCABI>>()));
+      EPC, MemMgr, MemAccess,
+      std::make_unique<detail::ABISupportImpl<ORCABI>>()));
 }
 
 } // end namespace orc

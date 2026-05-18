@@ -526,14 +526,16 @@ TEST(DIBuilder, FixedPointType) {
   DIBuilder DIB(*M);
 
   DIFixedPointType *Ty = DIB.createBinaryFixedPointType(
-      {}, 32, 0, dwarf::DW_ATE_signed_fixed, DINode::FlagZero, -4);
+      {}, nullptr, 0, nullptr, 32, 0, dwarf::DW_ATE_signed_fixed,
+      DINode::FlagZero, -4);
   EXPECT_TRUE(Ty);
   EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointBinary);
   EXPECT_TRUE(Ty->getFactor() == -4);
   EXPECT_TRUE(Ty->getEncoding() == dwarf::DW_ATE_signed_fixed);
   EXPECT_TRUE(Ty->getTag() == dwarf::DW_TAG_base_type);
 
-  Ty = DIB.createDecimalFixedPointType({}, 32, 0, dwarf::DW_ATE_unsigned_fixed,
+  Ty = DIB.createDecimalFixedPointType({}, nullptr, 0, nullptr, 32, 0,
+                                       dwarf::DW_ATE_unsigned_fixed,
                                        DINode::FlagZero, -7);
   EXPECT_TRUE(Ty);
   EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointDecimal);
@@ -543,7 +545,8 @@ TEST(DIBuilder, FixedPointType) {
 
   APSInt Num(APInt(32, 1));
   APSInt Denom(APInt(33, 72));
-  Ty = DIB.createRationalFixedPointType({}, 32, 0, dwarf::DW_ATE_unsigned_fixed,
+  Ty = DIB.createRationalFixedPointType({}, nullptr, 0, nullptr, 32, 0,
+                                        dwarf::DW_ATE_unsigned_fixed,
                                         DINode::FlagZero, Num, Denom);
   EXPECT_TRUE(Ty);
   EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointRational);
@@ -1270,10 +1273,12 @@ TEST(MetadataTest, InlinedAtMethodsWithMultipleLevels) {
     !2 = !{i32 2, !"Debug Info Version", i32 3}
 
     ; Subprograms for each function in the call chain
-    !10 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 100, unit: !0)
-    !11 = distinct !DISubprogram(name: "inline1", scope: !1, file: !1, line: 200, unit: !0)
-    !12 = distinct !DISubprogram(name: "inline2", scope: !1, file: !1, line: 300, unit: !0)
-    !13 = distinct !DISubprogram(name: "inline3", scope: !1, file: !1, line: 400, unit: !0)
+    !10 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 100, type: !14, unit: !0)
+    !11 = distinct !DISubprogram(name: "inline1", scope: !1, file: !1, line: 200, type: !14, unit: !0)
+    !12 = distinct !DISubprogram(name: "inline2", scope: !1, file: !1, line: 300, type: !14, unit: !0)
+    !13 = distinct !DISubprogram(name: "inline3", scope: !1, file: !1, line: 400, type: !14, unit: !0)
+    !14 = !DISubroutineType(types: !15)
+    !15 = !{null}
 
     ; Location in inline3 (line 401), inlined at location !21
     !20 = !DILocation(line: 401, column: 5, scope: !13, inlinedAt: !21)

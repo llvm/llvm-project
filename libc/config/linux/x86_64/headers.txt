@@ -41,6 +41,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_ioctl
     libc.include.sys_ipc
     libc.include.sys_mman
+    libc.include.sys_personality
     libc.include.sys_prctl
     libc.include.sys_queue
     libc.include.sys_random
@@ -53,6 +54,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_syscall
     libc.include.sys_time
     libc.include.sys_types
+    libc.include.sys_ucontext
     libc.include.sys_un
     libc.include.sys_utsname
     libc.include.sys_wait

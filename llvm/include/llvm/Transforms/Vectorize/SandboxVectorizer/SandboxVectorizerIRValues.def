@@ -1,0 +1,40 @@
+//===- SandboxVectorizerIRValues.def ----------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// NOTE: Please #define DEF_DISABLE_AUTO_UNDEF before including more than one
+//       .def file to stop the .def file from automatically undefying macros.
+//
+
+#ifndef DEF_INSTR
+#define DEF_INSTR(ID, OPCODE, CLASS)
+#define DEF_INSTR_DEFINED_HERE
+#endif
+
+
+// SandboxVectorizerIR Instructions
+DEF_INSTR(Pack,           OP(Pack),          PackInst)
+
+
+// Undefine all externally defined macros.
+#ifdef DEF_INSTR_DEFINED_INTERNALLY
+#undef DEF_INSTR
+#undef DEF_INSTR_DEFINED_INTERNALLY
+#endif
+
+// Undefine all externally defined macros.
+#ifndef DEF_DISABLE_AUTO_UNDEF
+
+#undef DEF_VALUE
+#undef DEF_USER
+#undef DEF_CONST
+#undef DEF_INSTR
+#undef OP
+#undef OPCODES
+
+#endif // DEF_DISABLE_AUTO_UNDEF
+#undef DEF_DISABLE_AUTO_UNDEF

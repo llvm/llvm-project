@@ -409,6 +409,36 @@ struct TestXeGPUResolveLayoutConflicts
   }
 };
 
+struct TestXeGPUArrayLengthOptimization
+    : public PassWrapper<TestXeGPUArrayLengthOptimization,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUArrayLengthOptimization)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-array-length-optimization";
+  }
+
+  StringRef getDescription() const final {
+    return "Test XeGPU 2D block array load optimization patterns in isolation";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<vector::VectorDialect>();
+  }
+
+  TestXeGPUArrayLengthOptimization() = default;
+  TestXeGPUArrayLengthOptimization(const TestXeGPUArrayLengthOptimization &pass)
+      : PassWrapper(pass) {}
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    xegpu::populateXeGPUArrayLengthOptimizationPatterns(patterns);
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+      signalPassFailure();
+  }
+};
+
 struct TestXeGPULayoutInterface
     : public PassWrapper<TestXeGPULayoutInterface,
                          OperationPass<gpu::GPUModuleOp>> {
@@ -478,6 +508,7 @@ void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUMoveFuncBodyToWarpOp>();
   PassRegistration<TestXeGPUPropagateLayouts>();
   PassRegistration<TestXeGPUResolveLayoutConflicts>();
+  PassRegistration<TestXeGPUArrayLengthOptimization>();
 }
 } // namespace test
 } // namespace mlir

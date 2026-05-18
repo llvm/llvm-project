@@ -1805,6 +1805,12 @@ let HasMasked = false, HasVL = false, IRName = "" in {
     def vreinterpret_u_bf16 : RVVBuiltin<"vUv", "Uvv", "y", "Uv">;
     def vreinterpret_bf16_i : RVVBuiltin<"Ivv", "vIv", "y", "v">;
     def vreinterpret_bf16_u : RVVBuiltin<"Uvv", "vUv", "y", "v">;
+    let RequiredFeatures = ["zvfofp8min"] in {
+      def vreinterpret_u_f8e4m3 : RVVBuiltin<"vUv", "Uvv", "a", "Uv">;
+      def vreinterpret_f8e4m3_u : RVVBuiltin<"Uvv", "vUv", "a", "v">;
+      def vreinterpret_u_f8e5m2 : RVVBuiltin<"vUv", "Uvv", "b", "Uv">;
+      def vreinterpret_f8e5m2_u : RVVBuiltin<"Uvv", "vUv", "b", "v">;
+    }
 
     // Reinterpret between different SEW under the same LMUL
     foreach dst_sew = ["(FixedSEW:8)", "(FixedSEW:16)", "(FixedSEW:32)",
@@ -2110,7 +2116,7 @@ let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
 }
 
 // Zvdot4a8i
-multiclass RVVVDOTA4QBuiltinSet<list<list<string>> suffixes_prototypes> {
+multiclass RVVVDOT4AQBuiltinSet<list<list<string>> suffixes_prototypes> {
   let UnMaskedPolicyScheme = HasPolicyOperand,
       HasMaskedOffOperand = false,
       OverloadedName = NAME,
@@ -2122,16 +2128,16 @@ multiclass RVVVDOTA4QBuiltinSet<list<list<string>> suffixes_prototypes> {
 // Only SEW=32 is defined for zvdot4a8i so far, and since inputs are in fact
 // four 8-bit integer bundles, we use unsigned type to represent all of them
 let RequiredFeatures = ["zvdot4a8i"] in {
-  defm vdota4
-      : RVVVDOTA4QBuiltinSet<[["vv", "v", "vvUvUv"],
+  defm vdot4a
+      : RVVVDOT4AQBuiltinSet<[["vv", "v", "vvUvUv"],
                               ["vx", "v", "vvUvUe"]]>;
-  defm vdota4u
-      : RVVVDOTA4QBuiltinSet<[["vv", "Uv", "UvUvUvUv"],
+  defm vdot4au
+      : RVVVDOT4AQBuiltinSet<[["vv", "Uv", "UvUvUvUv"],
                               ["vx", "Uv", "UvUvUvUe"]]>;
-  defm vdota4su
-      : RVVVDOTA4QBuiltinSet<[["vv", "v", "vvUvUv"],
+  defm vdot4asu
+      : RVVVDOT4AQBuiltinSet<[["vv", "v", "vvUvUv"],
                               ["vx", "v", "vvUvUe"]]>;
-  defm vdota4us : RVVVDOTA4QBuiltinSet<[["vx", "v", "vvUvUe"]]>;
+  defm vdot4aus : RVVVDOT4AQBuiltinSet<[["vx", "v", "vvUvUe"]]>;
 }
 
 // Zvzip

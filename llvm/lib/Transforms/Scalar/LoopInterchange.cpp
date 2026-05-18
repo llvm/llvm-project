@@ -1935,7 +1935,6 @@ bool LoopInterchangeTransform::transform(
     reduction2Memory();
 
   if (InnerLoop->getSubLoops().empty()) {
-    BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
     LLVM_DEBUG(dbgs() << "Splitting the inner loop latch\n");
     auto &InductionPHIs = LIL.getInnerLoopInductions();
     if (InductionPHIs.empty()) {
@@ -1945,12 +1944,13 @@ bool LoopInterchangeTransform::transform(
 
     SmallVector<Instruction *, 8> InnerIndexVarList;
     for (PHINode *CurInductionPHI : InductionPHIs) {
-      if (CurInductionPHI->getIncomingBlock(0) == InnerLoopPreHeader)
-        InnerIndexVarList.push_back(
-            dyn_cast<Instruction>(CurInductionPHI->getIncomingValue(1)));
-      else
-        InnerIndexVarList.push_back(
-            dyn_cast<Instruction>(CurInductionPHI->getIncomingValue(0)));
+      Instruction *IncomingValue = dyn_cast<Instruction>(
+          CurInductionPHI->getIncomingValueForBlock(InnerLoop->getLoopLatch()));
+      assert(IncomingValue &&
+             "Incoming value from loop latch doesn't an instruction");
+      if (is_contained(InductionPHIs, IncomingValue))
+        continue;
+      InnerIndexVarList.push_back(IncomingValue);
     }
 
     // Create a new latch block for the inner loop. We split at the
@@ -2019,7 +2019,15 @@ bool LoopInterchangeTransform::transform(
   // instructions outside the loop nest.
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
   BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
+
   if (InnerLoopPreHeader != OuterLoopHeader) {
+    // Eliminate PHIs in the inner-loop preheader.
+    for (PHINode &P : make_early_inc_range(InnerLoopPreHeader->phis())) {
+      assert(P.getNumIncomingValues() == 1 &&
+             "Expected single-incoming PHIs in inner loop preheader");
+      P.replaceAllUsesWith(P.getIncomingValue(0));
+      P.eraseFromParent();
+    }
     for (Instruction &I :
          make_early_inc_range(make_range(InnerLoopPreHeader->begin(),
                                          std::prev(InnerLoopPreHeader->end()))))

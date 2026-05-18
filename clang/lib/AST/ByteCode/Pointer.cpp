@@ -556,6 +556,7 @@ void Pointer::initialize() const {
   // Field has its bit in an inline descriptor.
   assert(BS.Base != 0 && "Only composite fields can be initialised");
   getInlineDesc()->IsInitialized = true;
+  getInlineDesc()->LifeState = Lifetime::Started;
 }
 
 void Pointer::initializeElement(unsigned Index) const {

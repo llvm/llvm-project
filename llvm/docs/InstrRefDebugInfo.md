@@ -6,7 +6,7 @@ generation stage of compilation. This content is aimed at those working on code
 generation targets and optimisation passes. It may also be of interest to anyone
 curious about low-level debug info handling.
 
-# Problem statement
+## Problem statement
 
 At the end of compilation, LLVM must produce a DWARF location list (or similar)
 describing what register or stack location a variable can be found in, for each
@@ -15,7 +15,7 @@ register that the variable resides in through compilation, however this is
 vulnerable to register optimisations during regalloc, and instruction
 movements.
 
-# Solution: instruction referencing
+## Solution: instruction referencing
 
 Rather than identify the virtual register that a variable value resides in,
 instead in instruction referencing mode, LLVM refers to the machine instruction
@@ -61,7 +61,7 @@ location is safely dropped and marked "optimised out". The exception is
 instructions that are mutated rather than replaced, which always need debug info
 maintenance.
 
-# Register allocator considerations
+## Register allocator considerations
 
 When the register allocator runs, debugging instructions do not directly refer
 to any virtual registers, and thus there is no need for expensive location
@@ -91,7 +91,7 @@ bb.2:
   DBG_PHI $rax, 1
 ```
 
-# `LiveDebugValues`
+## `LiveDebugValues`
 
 After optimisations and code layout complete, information about variable
 values must be translated into variable locations, i.e. registers and stack
@@ -111,7 +111,7 @@ Key to this process is being able to identify the movement of values between
 registers and stack locations, so that the location of values can be preserved
 for the full time that they are resident in the machine.
 
-# Required target support and transition guide
+## Required target support and transition guide
 
 Instruction referencing will work on any target, but likely with poor coverage.
 Supporting instruction referencing well requires:
@@ -120,7 +120,7 @@ Supporting instruction referencing well requires:
  * Target-specific optimisations to be instrumented, to preserve instruction
    numbers.
 
-## Target hooks
+### Target hooks
 
 `TargetInstrInfo::isCopyInstrImpl` must be implemented to recognise any
 instructions that are copy-like -- `LiveDebugValues` uses this to identify when
@@ -134,7 +134,7 @@ the stack slot. In addition, any instruction that writes to a stack spill
 should have a `MachineMemoryOperand` attached, so that `LiveDebugValues` can
 recognise that a slot has been clobbered.
 
-## Target-specific optimisation instrumentation
+### Target-specific optimisation instrumentation
 
 Optimisations come in two flavours: those that mutate a `MachineInstr` to make
 it do something different, and those that create a new instruction to replace

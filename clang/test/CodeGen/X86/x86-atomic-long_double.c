@@ -18,7 +18,7 @@
 // X64-NEXT:    br label %[[ATOMIC_OP:.*]]
 // X64:       [[ATOMIC_OP]]:
 // X64-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP8:%.*]], %[[ATOMIC_OP]] ]
-// X64-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP2]], 0xK3FFF8000000000000000
+// X64-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP2]], 1.000000e+00
 // X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP1]], i8 0, i64 16, i1 false)
 // X64-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 16
 // X64-NEXT:    [[TMP3:%.*]] = load i128, ptr [[ATOMIC_TEMP1]], align 16
@@ -48,7 +48,7 @@
 // X86-NEXT:    br label %[[ATOMIC_OP:.*]]
 // X86:       [[ATOMIC_OP]]:
 // X86-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP3:%.*]], %[[ATOMIC_OP]] ]
-// X86-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP2]], 0xK3FFF8000000000000000
+// X86-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP2]], 1.000000e+00
 // X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP1]], i8 0, i64 12, i1 false)
 // X86-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 4
 // X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP2]], i8 0, i64 12, i1 false)
@@ -80,7 +80,7 @@ long double testinc(_Atomic long double *addr) {
 // X64-NEXT:    br label %[[ATOMIC_OP:.*]]
 // X64:       [[ATOMIC_OP]]:
 // X64-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP8:%.*]], %[[ATOMIC_OP]] ]
-// X64-NEXT:    [[DEC:%.*]] = fadd x86_fp80 [[TMP2]], 0xKBFFF8000000000000000
+// X64-NEXT:    [[DEC:%.*]] = fadd x86_fp80 [[TMP2]], -1.000000e+00
 // X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP1]], i8 0, i64 16, i1 false)
 // X64-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 16
 // X64-NEXT:    [[TMP3:%.*]] = load i128, ptr [[ATOMIC_TEMP1]], align 16
@@ -110,7 +110,7 @@ long double testinc(_Atomic long double *addr) {
 // X86-NEXT:    br label %[[ATOMIC_OP:.*]]
 // X86:       [[ATOMIC_OP]]:
 // X86-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP3:%.*]], %[[ATOMIC_OP]] ]
-// X86-NEXT:    [[DEC:%.*]] = fadd x86_fp80 [[TMP2]], 0xKBFFF8000000000000000
+// X86-NEXT:    [[DEC:%.*]] = fadd x86_fp80 [[TMP2]], -1.000000e+00
 // X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP1]], i8 0, i64 12, i1 false)
 // X86-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 4
 // X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP2]], i8 0, i64 12, i1 false)
@@ -143,7 +143,7 @@ long double testdec(_Atomic long double *addr) {
 // X64-NEXT:    br label %[[ATOMIC_OP:.*]]
 // X64:       [[ATOMIC_OP]]:
 // X64-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP8:%.*]], %[[ATOMIC_OP]] ]
-// X64-NEXT:    [[SUB:%.*]] = fsub x86_fp80 [[TMP2]], 0xK4003C800000000000000
+// X64-NEXT:    [[SUB:%.*]] = fsub x86_fp80 [[TMP2]], 2.500000e+01
 // X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP1]], i8 0, i64 16, i1 false)
 // X64-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 16
 // X64-NEXT:    [[TMP3:%.*]] = load i128, ptr [[ATOMIC_TEMP1]], align 16
@@ -178,7 +178,7 @@ long double testdec(_Atomic long double *addr) {
 // X86-NEXT:    br label %[[ATOMIC_OP:.*]]
 // X86:       [[ATOMIC_OP]]:
 // X86-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP3:%.*]], %[[ATOMIC_OP]] ]
-// X86-NEXT:    [[SUB:%.*]] = fsub x86_fp80 [[TMP2]], 0xK4003C800000000000000
+// X86-NEXT:    [[SUB:%.*]] = fsub x86_fp80 [[TMP2]], 2.500000e+01
 // X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP1]], i8 0, i64 12, i1 false)
 // X86-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 4
 // X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP2]], i8 0, i64 12, i1 false)
@@ -206,7 +206,7 @@ long double testcompassign(_Atomic long double *addr) {
 // X64-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 8
 // X64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 8
 // X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP]], i8 0, i64 16, i1 false)
-// X64-NEXT:    store x86_fp80 0xK4005E600000000000000, ptr [[ATOMIC_TEMP]], align 16
+// X64-NEXT:    store x86_fp80 1.150000e+02, ptr [[ATOMIC_TEMP]], align 16
 // X64-NEXT:    [[TMP1:%.*]] = load i128, ptr [[ATOMIC_TEMP]], align 16
 // X64-NEXT:    store atomic i128 [[TMP1]], ptr [[TMP0]] seq_cst, align 16
 // X64-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 8
@@ -224,7 +224,7 @@ long double testcompassign(_Atomic long double *addr) {
 // X86-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 4
 // X86-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 4
 // X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP]], i8 0, i64 12, i1 false)
-// X86-NEXT:    store x86_fp80 0xK4005E600000000000000, ptr [[ATOMIC_TEMP]], align 4
+// X86-NEXT:    store x86_fp80 1.150000e+02, ptr [[ATOMIC_TEMP]], align 4
 // X86-NEXT:    call void @__atomic_store(i32 noundef 12, ptr noundef [[TMP0]], ptr noundef [[ATOMIC_TEMP]], i32 noundef 5)
 // X86-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 4
 // X86-NEXT:    call void @__atomic_load(i32 noundef 12, ptr noundef [[TMP1]], ptr noundef [[ATOMIC_TEMP1]], i32 noundef 5)
@@ -253,7 +253,7 @@ long double testassign(_Atomic long double *addr) {
 // X64-NEXT:    br label %[[ATOMIC_OP:.*]]
 // X64:       [[ATOMIC_OP]]:
 // X64-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP8:%.*]], %[[ATOMIC_OP]] ]
-// X64-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP2]], 0xK3FFF8000000000000000
+// X64-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP2]], 1.000000e+00
 // X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP1]], i8 0, i64 16, i1 false)
 // X64-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 16
 // X64-NEXT:    [[TMP3:%.*]] = load i128, ptr [[ATOMIC_TEMP1]], align 16
@@ -283,7 +283,7 @@ long double testassign(_Atomic long double *addr) {
 // X86-NEXT:    br label %[[ATOMIC_OP:.*]]
 // X86:       [[ATOMIC_OP]]:
 // X86-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP3:%.*]], %[[ATOMIC_OP]] ]
-// X86-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP2]], 0xK3FFF8000000000000000
+// X86-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP2]], 1.000000e+00
 // X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP1]], i8 0, i64 12, i1 false)
 // X86-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 4
 // X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP2]], i8 0, i64 12, i1 false)
@@ -314,7 +314,7 @@ long double test_volatile_inc(volatile _Atomic long double *addr) {
 // X64-NEXT:    br label %[[ATOMIC_OP:.*]]
 // X64:       [[ATOMIC_OP]]:
 // X64-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP8:%.*]], %[[ATOMIC_OP]] ]
-// X64-NEXT:    [[DEC:%.*]] = fadd x86_fp80 [[TMP2]], 0xKBFFF8000000000000000
+// X64-NEXT:    [[DEC:%.*]] = fadd x86_fp80 [[TMP2]], -1.000000e+00
 // X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP1]], i8 0, i64 16, i1 false)
 // X64-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 16
 // X64-NEXT:    [[TMP3:%.*]] = load i128, ptr [[ATOMIC_TEMP1]], align 16
@@ -344,7 +344,7 @@ long double test_volatile_inc(volatile _Atomic long double *addr) {
 // X86-NEXT:    br label %[[ATOMIC_OP:.*]]
 // X86:       [[ATOMIC_OP]]:
 // X86-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP3:%.*]], %[[ATOMIC_OP]] ]
-// X86-NEXT:    [[DEC:%.*]] = fadd x86_fp80 [[TMP2]], 0xKBFFF8000000000000000
+// X86-NEXT:    [[DEC:%.*]] = fadd x86_fp80 [[TMP2]], -1.000000e+00
 // X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP1]], i8 0, i64 12, i1 false)
 // X86-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 4
 // X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP2]], i8 0, i64 12, i1 false)
@@ -376,7 +376,7 @@ long double test_volatile_dec(volatile _Atomic long double *addr) {
 // X64-NEXT:    br label %[[ATOMIC_OP:.*]]
 // X64:       [[ATOMIC_OP]]:
 // X64-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP8:%.*]], %[[ATOMIC_OP]] ]
-// X64-NEXT:    [[SUB:%.*]] = fsub x86_fp80 [[TMP2]], 0xK4003C800000000000000
+// X64-NEXT:    [[SUB:%.*]] = fsub x86_fp80 [[TMP2]], 2.500000e+01
 // X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP1]], i8 0, i64 16, i1 false)
 // X64-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 16
 // X64-NEXT:    [[TMP3:%.*]] = load i128, ptr [[ATOMIC_TEMP1]], align 16
@@ -411,7 +411,7 @@ long double test_volatile_dec(volatile _Atomic long double *addr) {
 // X86-NEXT:    br label %[[ATOMIC_OP:.*]]
 // X86:       [[ATOMIC_OP]]:
 // X86-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP3:%.*]], %[[ATOMIC_OP]] ]
-// X86-NEXT:    [[SUB:%.*]] = fsub x86_fp80 [[TMP2]], 0xK4003C800000000000000
+// X86-NEXT:    [[SUB:%.*]] = fsub x86_fp80 [[TMP2]], 2.500000e+01
 // X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP1]], i8 0, i64 12, i1 false)
 // X86-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 4
 // X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP2]], i8 0, i64 12, i1 false)
@@ -439,7 +439,7 @@ long double test_volatile_compassign(volatile _Atomic long double *addr) {
 // X64-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 8
 // X64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 8
 // X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP]], i8 0, i64 16, i1 false)
-// X64-NEXT:    store x86_fp80 0xK4005E600000000000000, ptr [[ATOMIC_TEMP]], align 16
+// X64-NEXT:    store x86_fp80 1.150000e+02, ptr [[ATOMIC_TEMP]], align 16
 // X64-NEXT:    [[TMP1:%.*]] = load i128, ptr [[ATOMIC_TEMP]], align 16
 // X64-NEXT:    store atomic volatile i128 [[TMP1]], ptr [[TMP0]] seq_cst, align 16
 // X64-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 8
@@ -457,7 +457,7 @@ long double test_volatile_compassign(volatile _Atomic long double *addr) {
 // X86-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 4
 // X86-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 4
 // X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP]], i8 0, i64 12, i1 false)
-// X86-NEXT:    store x86_fp80 0xK4005E600000000000000, ptr [[ATOMIC_TEMP]], align 4
+// X86-NEXT:    store x86_fp80 1.150000e+02, ptr [[ATOMIC_TEMP]], align 4
 // X86-NEXT:    call void @__atomic_store(i32 noundef 12, ptr noundef [[TMP0]], ptr noundef [[ATOMIC_TEMP]], i32 noundef 5)
 // X86-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 4
 // X86-NEXT:    call void @__atomic_load(i32 noundef 12, ptr noundef [[TMP1]], ptr noundef [[ATOMIC_TEMP1]], i32 noundef 5)
@@ -483,7 +483,7 @@ long double test_volatile_assign(volatile _Atomic long double *addr) {
 // X64-NEXT:    br label %[[ATOMIC_OP:.*]]
 // X64:       [[ATOMIC_OP]]:
 // X64-NEXT:    [[TMP1:%.*]] = phi x86_fp80 [ [[TMP0]], %[[ENTRY]] ], [ [[TMP7:%.*]], %[[ATOMIC_OP]] ]
-// X64-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP1]], 0xK3FFF8000000000000000
+// X64-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP1]], 1.000000e+00
 // X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP1]], i8 0, i64 16, i1 false)
 // X64-NEXT:    store x86_fp80 [[TMP1]], ptr [[ATOMIC_TEMP1]], align 16
 // X64-NEXT:    [[TMP2:%.*]] = load i128, ptr [[ATOMIC_TEMP1]], align 16
@@ -497,7 +497,7 @@ long double test_volatile_assign(volatile _Atomic long double *addr) {
 // X64-NEXT:    [[TMP7]] = load x86_fp80, ptr [[ATOMIC_TEMP3]], align 16
 // X64-NEXT:    br i1 [[TMP6]], label %[[ATOMIC_CONT:.*]], label %[[ATOMIC_OP]]
 // X64:       [[ATOMIC_CONT]]:
-// X64-NEXT:    [[CMP:%.*]] = fcmp oeq x86_fp80 [[INC]], 0xK3FFF8000000000000000
+// X64-NEXT:    [[CMP:%.*]] = fcmp oeq x86_fp80 [[INC]], 1.000000e+00
 // X64-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 // X64-NEXT:    ret i32 [[CONV]]
 //
@@ -512,7 +512,7 @@ long double test_volatile_assign(volatile _Atomic long double *addr) {
 // X86-NEXT:    br label %[[ATOMIC_OP:.*]]
 // X86:       [[ATOMIC_OP]]:
 // X86-NEXT:    [[TMP1:%.*]] = phi x86_fp80 [ [[TMP0]], %[[ENTRY]] ], [ [[TMP2:%.*]], %[[ATOMIC_OP]] ]
-// X86-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP1]], 0xK3FFF8000000000000000
+// X86-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP1]], 1.000000e+00
 // X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP1]], i8 0, i64 12, i1 false)
 // X86-NEXT:    store x86_fp80 [[TMP1]], ptr [[ATOMIC_TEMP1]], align 4
 // X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP2]], i8 0, i64 12, i1 false)
@@ -521,7 +521,7 @@ long double test_volatile_assign(volatile _Atomic long double *addr) {
 // X86-NEXT:    [[TMP2]] = load x86_fp80, ptr [[ATOMIC_TEMP1]], align 4
 // X86-NEXT:    br i1 [[CALL]], label %[[ATOMIC_CONT:.*]], label %[[ATOMIC_OP]]
 // X86:       [[ATOMIC_CONT]]:
-// X86-NEXT:    [[CMP:%.*]] = fcmp oeq x86_fp80 [[INC]], 0xK3FFF8000000000000000
+// X86-NEXT:    [[CMP:%.*]] = fcmp oeq x86_fp80 [[INC]], 1.000000e+00
 // X86-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 // X86-NEXT:    ret i32 [[CONV]]
 //

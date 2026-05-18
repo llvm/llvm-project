@@ -115,7 +115,6 @@
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       IRTranslator
-; CHECK-NEXT:       Analysis for ComputingKnownBits
 ; CHECK-NEXT:       AArch64O0PreLegalizerCombiner
 ; CHECK-NEXT:       Localizer
 ; CHECK-NEXT:       Analysis containing CSE Info
@@ -238,6 +237,7 @@
 ; CHECK-NEXT:       Machine Copy Propagation Pass
 ; CHECK-NEXT:       AArch64 Redundant Conditional Branch Elimination
 ; CHECK-NEXT:       Workaround A53 erratum 835769 pass
+; CHECK-NEXT:       AArch64 Code Layout Optimization
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       Remove Loads Into Fake Uses
 ; CHECK-NEXT:       StackMap Liveness Analysis

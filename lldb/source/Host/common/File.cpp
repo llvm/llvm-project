@@ -255,9 +255,17 @@ NativeFile::NativeFile(FILE *fh, OpenOptions options, bool transfer_ownership)
   // In order to properly display non ASCII characters in Windows, we need to
   // use Windows APIs to print to the console. This is only required if the
   // stream outputs to a console.
-  int fd = _fileno(fh);
-  is_windows_console =
-      ::GetFileType((HANDLE)::_get_osfhandle(fd)) == FILE_TYPE_CHAR;
+  {
+    HANDLE h = INVALID_HANDLE_VALUE;
+    if (fh == stdin)
+      h = ::GetStdHandle(STD_INPUT_HANDLE);
+    else if (fh == stdout)
+      h = ::GetStdHandle(STD_OUTPUT_HANDLE);
+    else if (fh == stderr)
+      h = ::GetStdHandle(STD_ERROR_HANDLE);
+    is_windows_console =
+        h != INVALID_HANDLE_VALUE && ::GetFileType(h) == FILE_TYPE_CHAR;
+  }
 #else
 #ifndef NDEBUG
   int fd = fileno(fh);
@@ -288,8 +296,17 @@ NativeFile::NativeFile(int fd, OpenOptions options, bool transfer_ownership)
   // In order to properly display non ASCII characters in Windows, we need to
   // use Windows APIs to print to the console. This is only required if the
   // file outputs to a console.
-  is_windows_console =
-      ::GetFileType((HANDLE)::_get_osfhandle(fd)) == FILE_TYPE_CHAR;
+  {
+    HANDLE h = INVALID_HANDLE_VALUE;
+    if (fd == STDIN_FILENO)
+      h = ::GetStdHandle(STD_INPUT_HANDLE);
+    else if (fd == STDOUT_FILENO)
+      h = ::GetStdHandle(STD_OUTPUT_HANDLE);
+    else if (fd == STDERR_FILENO)
+      h = ::GetStdHandle(STD_ERROR_HANDLE);
+    is_windows_console =
+        h != INVALID_HANDLE_VALUE && ::GetFileType(h) == FILE_TYPE_CHAR;
+  }
 #endif
 }
 

@@ -144,5 +144,5 @@ def _getLocaleFlagsAction(cfg, locale, alts, members):
             f"%{{LOCALE_CONV_{valid_define_name}_{member.upper()}}}",
             lambda cfg, value=value: f"'L\"{value}\"'",
         )
-        for member, value in zip(members, localeconv_info.split("\n"))
+        for member, value in zip(members, localeconv_info.splitlines())
     ]

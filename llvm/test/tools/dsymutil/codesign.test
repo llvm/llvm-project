@@ -1,15 +1,21 @@
 REQUIRES: system-darwin, x86-registered-target
 
 ## Verify --codesign signs the dSYM bundle.
-RUN: dsymutil -oso-prepend-path %p %p/Inputs/basic.macho.x86_64 -o %t.dSYM --codesign=-
+RUN: dsymutil --linker classic -oso-prepend-path %p %p/Inputs/basic.macho.x86_64 -o %t.dSYM --codesign=-
+RUN: codesign -v %t.dSYM
+RUN: dsymutil --linker parallel -oso-prepend-path %p %p/Inputs/basic.macho.x86_64 -o %t.dSYM --codesign=-
 RUN: codesign -v %t.dSYM
 
 ## Verify --codesign is incompatible with --flat.
-RUN: not dsymutil -oso-prepend-path %p %p/Inputs/basic.macho.x86_64 -o %t.flat --flat --codesign=- 2>&1 \
+RUN: not dsymutil --linker classic -oso-prepend-path %p %p/Inputs/basic.macho.x86_64 -o %t.flat --flat --codesign=- 2>&1 \
+RUN:   | FileCheck %s --check-prefix=FLAT
+RUN: not dsymutil --linker parallel -oso-prepend-path %p %p/Inputs/basic.macho.x86_64 -o %t.flat --flat --codesign=- 2>&1 \
 RUN:   | FileCheck %s --check-prefix=FLAT
 FLAT: error: --codesign is not supported with --flat: no bundle to sign
 
 ## Verify --codesign is incompatible with --no-output.
-RUN: not dsymutil -oso-prepend-path %p %p/Inputs/basic.macho.x86_64 --no-output --codesign=- 2>&1 \
+RUN: not dsymutil --linker classic -oso-prepend-path %p %p/Inputs/basic.macho.x86_64 --no-output --codesign=- 2>&1 \
+RUN:   | FileCheck %s --check-prefix=NOOUT
+RUN: not dsymutil --linker parallel -oso-prepend-path %p %p/Inputs/basic.macho.x86_64 --no-output --codesign=- 2>&1 \
 RUN:   | FileCheck %s --check-prefix=NOOUT
 NOOUT: error: --codesign is not supported with --no-output: nothing to sign

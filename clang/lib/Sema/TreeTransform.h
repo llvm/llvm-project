@@ -836,6 +836,8 @@ public:
         LSI->Lambda->getLambdaDependencyKind());
   }
 
+  ExprResult TransformConstraint(Expr *AC) { return AC; }
+
   QualType TransformReferenceType(TypeLocBuilder &TLB, ReferenceTypeLoc TL);
 
   StmtResult TransformCompoundStmt(CompoundStmt *S, bool IsStmtExpr);
@@ -3129,10 +3131,9 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildInitList(SourceLocation LBraceLoc,
-                             MultiExprArg Inits,
-                             SourceLocation RBraceLoc) {
-    return SemaRef.BuildInitList(LBraceLoc, Inits, RBraceLoc);
+  ExprResult RebuildInitList(SourceLocation LBraceLoc, MultiExprArg Inits,
+                             SourceLocation RBraceLoc, bool IsExplicit) {
+    return SemaRef.BuildInitList(LBraceLoc, Inits, RBraceLoc, IsExplicit);
   }
 
   /// Build a new designated initializer expression.
@@ -4532,7 +4533,8 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
   // If this was list initialization, revert to syntactic list form.
   if (Construct->isListInitialization())
     return getDerived().RebuildInitList(Construct->getBeginLoc(), NewArgs,
-                                        Construct->getEndLoc());
+                                        Construct->getEndLoc(),
+                                        /*IsExplicit=*/true);
 
   // Build a ParenListExpr to represent anything else.
   SourceRange Parens = Construct->getParenOrBraceRange();
@@ -14126,7 +14128,7 @@ TreeTransform<Derived>::TransformInitListExpr(InitListExpr *E) {
   }
 
   return getDerived().RebuildInitList(E->getLBraceLoc(), Inits,
-                                      E->getRBraceLoc());
+                                      E->getRBraceLoc(), E->isExplicit());
 }
 
 template<typename Derived>
@@ -15738,7 +15740,8 @@ TreeTransform<Derived>::TransformCXXTemporaryObjectExpr(
       return ExprError();
 
     if (E->isListInitialization() && !E->isStdInitListInitialization()) {
-      ExprResult Res = RebuildInitList(E->getBeginLoc(), Args, E->getEndLoc());
+      ExprResult Res = RebuildInitList(E->getBeginLoc(), Args, E->getEndLoc(),
+                                       /*IsExplicit=*/true);
       if (Res.isInvalid())
         return ExprError();
       Args = {Res.get()};
@@ -16066,8 +16069,16 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   assert(FPTL && "Not a FunctionProtoType?");
 
   AssociatedConstraint TRC = E->getCallOperator()->getTrailingRequiresClause();
-  // If the concept refers to any outer parameter packs, we track the SubstIndex
-  // for evaluation.
+  if (TRC) {
+    ExprResult E = getDerived().TransformConstraint(
+        const_cast<Expr *>(TRC.ConstraintExpr));
+    if (E.isInvalid())
+      return E;
+    TRC.ConstraintExpr = E.get();
+  }
+  // If the concept refers to any outer parameter packs, we track the
+  // SubstIndex for evaluation.
+  // FIXME: This seems unnecessary after transforming lambda constraints.
   if (TRC && TRC.ConstraintExpr->containsUnexpandedParameterPack() &&
       !TRC.ArgPackSubstIndex)
     TRC.ArgPackSubstIndex = SemaRef.ArgPackSubstIndex;
