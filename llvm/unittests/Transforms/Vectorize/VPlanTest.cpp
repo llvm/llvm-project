@@ -1732,9 +1732,10 @@ TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
 } // namespace
 
 struct VPDoubleValueDef : public VPRecipeBase {
-  VPDoubleValueDef(ArrayRef<VPValue *> Operands) : VPRecipeBase(99, Operands) {
-    new VPMultiDefValue(this);
-    new VPMultiDefValue(this);
+  VPDoubleValueDef(ArrayRef<VPValue *> Operands, Type *Ty)
+      : VPRecipeBase(99, Operands) {
+    new VPMultiDefValue(this, /*UV=*/nullptr, Ty);
+    new VPMultiDefValue(this, /*UV=*/nullptr, Ty);
   }
 
   VPRecipeBase *clone() override { return nullptr; }
@@ -1753,9 +1754,10 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
   // directions.
 
   // Create a new VPRecipeBase which defines 2 values and has 2 operands.
+  LLVMContext C;
   VPInstruction Op0(VPInstruction::StepVector, {});
   VPInstruction Op1(VPInstruction::VScale, {});
-  VPDoubleValueDef DoubleValueDef({&Op0, &Op1});
+  VPDoubleValueDef DoubleValueDef({&Op0, &Op1}, IntegerType::get(C, 32));
 
   // Create a new users of the defined values.
   VPInstruction I1(Instruction::Add,

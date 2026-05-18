@@ -600,8 +600,10 @@ protected:
   }
 
 /// Return the scalar type of \p V. If \p V's scalar type has not been set
-/// (e.g. the defining recipe has not yet been migrated), fall back to
+/// because the defining recipe was not assigned one yet, fall back to
 /// VPTypeAnalysis using the plan of the defining recipe.
+/// TODO: Remove once all VPRecipeValues have been migrated to carry their
+/// types.
 LLVM_ABI Type *getScalarTypeOrInfer(VPValue *V);
 
 /// VPSingleDefRecipe is a base class for recipes that model a sequence of one
@@ -618,10 +620,9 @@ public:
       : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this, UV) {}
 
   VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
-                    Type *Ty, Value *UV = nullptr,
+                    Type *ResultTy, Value *UV = nullptr,
                     DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this, UV, Ty) {}
-
+      : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this, UV, ResultTy) {}
 
   static inline bool classof(const VPRecipeBase *R) {
     switch (R->getVPRecipeID()) {
@@ -1875,9 +1876,6 @@ public:
 
   Instruction::CastOps getOpcode() const { return Opcode; }
 
-  /// Returns the result type of the cast.
-  Type *getResultType() const { return getScalarType(); }
-
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -1938,10 +1936,10 @@ public:
   VPWidenIntrinsicRecipe *clone() override {
     if (Value *CI = getUnderlyingValue())
       return new VPWidenIntrinsicRecipe(*cast<CallInst>(CI), VectorIntrinsicID,
-                                        operands(), getResultType(), *this,
+                                        operands(), getScalarType(), *this,
                                         *this, getDebugLoc());
     return new VPWidenIntrinsicRecipe(VectorIntrinsicID, operands(),
-                                      getResultType(), *this, *this,
+                                      getScalarType(), *this, *this,
                                       getDebugLoc());
   }
 
@@ -1962,9 +1960,6 @@ public:
 
   /// Return the ID of the intrinsic.
   Intrinsic::ID getVectorIntrinsicID() const { return VectorIntrinsicID; }
-
-  /// Return the scalar return type of the intrinsic.
-  Type *getResultType() const { return getScalarType(); }
 
   /// Return to name of the intrinsic as string.
   StringRef getIntrinsicName() const;
@@ -2001,16 +1996,17 @@ public:
                     ArrayRef<VPValue *> CallArguments,
                     const VPIRFlags &Flags = {},
                     const VPIRMetadata &Metadata = {}, DebugLoc DL = {})
-      : VPRecipeWithIRFlags(
-            VPRecipeBase::VPWidenCallSC, CallArguments,
-            cast<Function>(CallArguments.back()->getLiveInIRValue())
-                ->getReturnType(),
-            Flags, DL),
+      : VPRecipeWithIRFlags(VPRecipeBase::VPWidenCallSC, CallArguments,
+                            toScalarizedTy(Variant->getReturnType()), Flags,
+                            DL),
         VPIRMetadata(Metadata), Variant(Variant) {
     setUnderlyingValue(UV);
     assert(
         isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
         "last operand must be the called function");
+    assert(cast<Function>(CallArguments.back()->getLiveInIRValue())
+                   ->getReturnType() == getScalarType() &&
+           "Scalar type must match return type of called scalar function");
   }
 
   ~VPWidenCallRecipe() override = default;
@@ -2729,7 +2725,7 @@ public:
   VPReductionPHIRecipe *clone() override {
     return new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
-        *getStartValue(), *getBackedgeValue(), Style, *this,
+        *getOperand(0), *getBackedgeValue(), Style, *this,
         HasUsesOutsideReductionChain);
   }
 
@@ -3485,7 +3481,7 @@ public:
   /// nodes after merging back from a Branch-on-Mask.
   VPPredInstPHIRecipe(VPValue *PredV, DebugLoc DL)
       : VPSingleDefRecipe(VPRecipeBase::VPPredInstPHISC, PredV,
-                          getScalarTypeOrInfer(PredV), nullptr, DL) {}
+                          getScalarTypeOrInfer(PredV), /*UV=*/nullptr, DL) {}
   ~VPPredInstPHIRecipe() override = default;
 
   VPPredInstPHIRecipe *clone() override {

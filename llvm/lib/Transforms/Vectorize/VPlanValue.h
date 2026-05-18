@@ -327,7 +327,7 @@ class VPRecipeValue : public VPValue {
 #endif
 
 protected:
-  VPRecipeValue(unsigned char SC, Value *UV = nullptr, Type *Ty = nullptr)
+  VPRecipeValue(unsigned char SC, Value *UV, Type *Ty = nullptr)
       : VPValue(SC, UV), Ty(Ty) {}
 
 public:
@@ -368,8 +368,7 @@ class VPMultiDefValue : public VPRecipeValue {
   VPRecipeBase *Def;
 
 public:
-  LLVM_ABI_FOR_TEST VPMultiDefValue(VPRecipeBase *Def, Value *UV = nullptr,
-                                    Type *Ty = nullptr);
+  LLVM_ABI_FOR_TEST VPMultiDefValue(VPRecipeBase *Def, Value *UV, Type *Ty);
 
   ~VPMultiDefValue() override;
 

@@ -149,9 +149,11 @@ Type *VPIRValue::getType() const { return getUnderlyingValue()->getType(); }
 Type *VPValue::getScalarType() const {
   switch (getVPValueID()) {
   case VPVIRValueSC:
-    return getUnderlyingValue()->getType();
+    return cast<VPIRValue>(this)->getType();
   case VPRegionValueSC:
     return cast<VPRegionValue>(this)->getType();
+  case VPVSymbolicSC:
+    return cast<VPSymbolicValue>(this)->getType();
   case VPVMultiDefValueSC:
   case VPVSingleDefValueSC:
     return cast<VPRecipeValue>(this)->getScalarType();
