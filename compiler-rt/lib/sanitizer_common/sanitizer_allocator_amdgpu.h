@@ -16,6 +16,11 @@
 #if SANITIZER_AMDGPU
 class AmdgpuMemFuncs {
  public:
+  enum DeviceAllocFailure {
+    kNotInitialized,
+    kOutOfResources,
+  };
+
   static bool Init();
   static void* Allocate(uptr size, uptr alignment,
                         DeviceAllocationInfo* da_info);
@@ -25,6 +30,10 @@ class AmdgpuMemFuncs {
   static void RegisterSystemEventHandlers();
   static bool IsAmdgpuRuntimeShutdown();
   static void ClearAmdgpuRuntimeShutdownState();
+  // Record an HSA error on da_info when DeviceAllocatorT fails before/without a
+  // successful AmdgpuMemFuncs::Allocate (keeps HSA types out of device.h).
+  static void NoteDeviceAllocatorFailure(DeviceAllocationInfo* da_info,
+                                         DeviceAllocFailure failure);
 
  private:
   static void NotifyAmdgpuRuntimeShutdown();

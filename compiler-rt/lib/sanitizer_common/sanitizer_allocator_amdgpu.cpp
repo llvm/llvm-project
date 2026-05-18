@@ -75,6 +75,22 @@ void AmdgpuMemFuncs::ClearAmdgpuRuntimeShutdownState() {
   atomic_store(&amdgpu_event_registered, 0, memory_order_release);
 }
 
+void AmdgpuMemFuncs::NoteDeviceAllocatorFailure(DeviceAllocationInfo* da_info,
+                                                DeviceAllocFailure failure) {
+  if (!da_info || da_info->type_ != DAT_AMDGPU)
+    return;
+  AmdgpuAllocationInfo* aa_info =
+      reinterpret_cast<AmdgpuAllocationInfo*>(da_info);
+  switch (failure) {
+    case kNotInitialized:
+      aa_info->EnsureFailureStatus(HSA_STATUS_ERROR_NOT_INITIALIZED);
+      break;
+    case kOutOfResources:
+      aa_info->EnsureFailureStatus(HSA_STATUS_ERROR_OUT_OF_RESOURCES);
+      break;
+  }
+}
+
 bool AmdgpuMemFuncs::Init() {
   bool success = true;
   LOAD_HSA_FUNC_WITH_ERROR_CHECK(hsa_amd.memory_pool_allocate,
