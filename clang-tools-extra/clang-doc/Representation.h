@@ -108,10 +108,6 @@ llvm::ArrayRef<T> deepCopyArray(llvm::ArrayRef<T> V,
 // to be eventually transitioned to bare pointers in an arena.
 template <typename T> using OwnedPtr = T *;
 
-// An abstraction for vectors that are populated and read sequentially.
-// To be eventually transitioned to llvm::ArrayRef for arena storage.
-template <typename T> using OwningArray = std::vector<T>;
-
 // A helper function to create an owned pointer, abstracting away the memory
 // allocation mechanism.
 template <typename T, typename... Args>
@@ -187,7 +183,7 @@ template <typename T> InfoNode<T> *allocateListNodePersistent(T *Item) {
 
 // An abstraction for lists that are dynamically managed (inserted/removed).
 // To be eventually transitioned to llvm::simple_ilist.
-template <typename T> using OwningVec = llvm::simple_ilist<InfoNode<T>>;
+template <typename T> using DocList = llvm::simple_ilist<InfoNode<T>>;
 
 // An abstraction for dynamic lists of owned pointers.
 // To be eventually transitioned to llvm::simple_ilist<T*> or similar.
@@ -375,13 +371,13 @@ struct ScopeChildren {
   //
   // Namespaces are not syntactically valid as children of records, but making
   // this general for all possible container types reduces code complexity.
-  OwningVec<Reference> Namespaces = {};
-  OwningVec<Reference> Records = {};
-  OwningVec<FunctionInfo> Functions = {};
-  OwningVec<EnumInfo> Enums = {};
-  OwningVec<TypedefInfo> Typedefs = {};
-  OwningVec<ConceptInfo> Concepts = {};
-  OwningVec<VarInfo> Variables = {};
+  DocList<Reference> Namespaces = {};
+  DocList<Reference> Records = {};
+  DocList<FunctionInfo> Functions = {};
+  DocList<EnumInfo> Enums = {};
+  DocList<TypedefInfo> Typedefs = {};
+  DocList<ConceptInfo> Concepts = {};
+  DocList<VarInfo> Variables = {};
 
   void sort();
 };
@@ -491,7 +487,7 @@ struct MemberTypeInfo : public FieldTypeInfo {
                       Other.Description.begin(), Other.Description.end());
   }
 
-  OwningVec<CommentInfo> Description;
+  DocList<CommentInfo> Description;
 
   // Access level associated with this info (public, protected, private, none).
   // AS_public is set as default because the bitcode writer requires the enum
@@ -576,7 +572,7 @@ struct Info {
   InfoType IT = InfoType::IT_default;
 
   // Comment description of this decl.
-  OwningVec<CommentInfo> Description = {};
+  DocList<CommentInfo> Description = {};
 };
 
 inline Context::Context(const Info &I)
@@ -617,7 +613,7 @@ struct SymbolInfo : public Info {
   }
 
   std::optional<Location> DefLoc;     // Location where this decl is defined.
-  OwningVec<Location> Loc;            // Locations where this decl is declared.
+  DocList<Location> Loc = {};         // Locations where this decl is declared.
   StringRef MangledName = {};
   bool IsStatic = false;
 };
@@ -775,7 +771,7 @@ struct EnumValueInfo {
   StringRef ValueExpr = {};
 
   /// Comment description of this field.
-  OwningVec<CommentInfo> Description;
+  DocList<CommentInfo> Description;
 };
 
 // TODO: Expand to allow for documenting templating.
@@ -831,7 +827,7 @@ struct Index : public Reference {
 // A standalone function to call to merge a vector of infos into one.
 // This assumes that all infos in the vector are of the same type, and will fail
 // if they are different.
-llvm::Expected<OwnedPtr<Info>> mergeInfos(OwningPtrArray<Info> &Values);
+llvm::Expected<Info *> mergeInfos(SmallVectorImpl<Info *> &Values);
 
 // Merges a single new Info into an existing Reduced Info (allocating it if
 // needed).

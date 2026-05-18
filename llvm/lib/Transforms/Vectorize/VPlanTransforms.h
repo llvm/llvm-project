@@ -94,8 +94,7 @@ struct VPlanTransforms {
   /// The created loop is wrapped in an initial skeleton to facilitate
   /// vectorization, consisting of a vector pre-header, an exit block for the
   /// main vector loop (middle.block) and a new block as preheader of the scalar
-  /// loop (scalar.ph). See below for an illustration. It also adds a canonical
-  /// IV and its increment, using \p InductionTy and \p IVDL, and creates a
+  /// loop (scalar.ph). See below for an illustration. It also creates a
   /// VPValue expression for the original trip count.
   ///
   ///    [ ] <-- Plan's entry VPIRBasicBlock, wrapping the original loop's
@@ -129,8 +128,12 @@ struct VPlanTransforms {
   ///     \  v
   ///      >[ ]     <-- original loop exit block(s), wrapped in VPIRBasicBlocks.
   LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan>
-  buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy, DebugLoc IVDL,
+  buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
               PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
+
+  /// Add a canonical IV and its increment, using \p InductionTy and \p DL to \p
+  /// Plan
+  static void addCanonicalIVRecipes(VPlan &Plan, DebugLoc DL);
 
   /// Replace VPPhi recipes in \p Plan's header with corresponding
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and

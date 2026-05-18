@@ -624,6 +624,8 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
 
   case ARM::tBX_RET:
   case ARM::t2BXAUT_RET:
+  case ARM::CLEANUPRET:
+  case ARM::CATCHRET:
   case ARM::TCRETURNri:
   case ARM::TCRETURNrinotr12:
     MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop_Ret))
@@ -1110,6 +1112,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     DefCFAOffsetCandidates.addInst(LastPush, GPRCS3Size, BeforeFPPush);
     if (FramePtrSpillArea == SpillArea::GPRCS3)
       BeforeFPPush = false;
+    NumBytes -= GPRCS3Size;
   }
 
   bool NeedsWinCFIStackAlloc = NeedsWinCFI;
@@ -1378,7 +1381,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // will be allocated after this, so we can still use the base pointer
   // to reference locals.
   // FIXME: Clarify FrameSetup flags here.
-  if (RegInfo->hasBasePointer(MF)) {
+  if (RegInfo->hasBasePointer(MF) && !MBB.isEHFuncletEntry()) {
     if (isARM)
       BuildMI(MBB, MBBI, dl, TII.get(ARM::MOVr), RegInfo->getBaseRegister())
           .addReg(ARM::SP)
@@ -1580,6 +1583,14 @@ StackOffset ARMFrameLowering::getFrameIndexReference(const MachineFunction &MF,
                                                      int FI,
                                                      Register &FrameReg) const {
   return StackOffset::getFixed(ResolveFrameIndexReference(MF, FI, FrameReg, 0));
+}
+
+StackOffset
+ARMFrameLowering::getNonLocalFrameIndexReference(const MachineFunction &MF,
+                                                 int FI) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  int Offset = MFI.getObjectOffset(FI) + MFI.getStackSize();
+  return StackOffset::getFixed(Offset);
 }
 
 int ARMFrameLowering::ResolveFrameIndexReference(const MachineFunction &MF,
@@ -2364,6 +2375,8 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
       if (MI.isDebugInstr())
+        continue;
+      if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE)
         continue;
       for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
         if (!MI.getOperand(i).isFI())

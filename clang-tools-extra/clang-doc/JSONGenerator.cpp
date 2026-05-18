@@ -384,7 +384,7 @@ void JSONGenerator::generateContext(const Info &I, Object &Obj) {
   ContextArrayRef.back().getAsObject()->insert({"End", true});
 }
 
-static void serializeDescription(const OwningVec<CommentInfo> &Description,
+static void serializeDescription(const DocList<CommentInfo> &Description,
                                  json::Object &Obj, StringRef Key = "") {
   if (Description.empty())
     return;
