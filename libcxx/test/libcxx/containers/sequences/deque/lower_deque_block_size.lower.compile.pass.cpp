@@ -28,6 +28,4 @@ static_assert(std::__deque_block_size<TypeOfSize<255>, std::ptrdiff_t>::value ==
 static_assert(std::__deque_block_size<TypeOfSize<256>, std::ptrdiff_t>::value == 2, "");
 static_assert(std::__deque_block_size<TypeOfSize<512>, std::ptrdiff_t>::value == 2, "");
 
-int main(int, char**) {
-  return 0;
-}
+int main(int, char**) { return 0; }
