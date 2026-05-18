@@ -885,8 +885,7 @@ PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto *MemDep =
       isMemDepEnabled() ? &AM.getResult<MemoryDependenceAnalysis>(F) : nullptr;
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  auto *MSSA =
-      isMemorySSAEnabled() ? AM.getCachedResult<MemorySSAAnalysis>(F) : nullptr;
+  auto *MSSA = AM.getCachedResult<MemorySSAAnalysis>(F);
   if (isMemorySSAEnabled() && !MSSA) {
     assert(!MemDep &&
            "On-demand computation of MemSSA implies that MemDep is disabled!");
@@ -1363,7 +1362,7 @@ GVNPass::AnalyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
         Type *LoadType = Load->getType();
         int Offset = Dep.Offset;
 
-        if (MD && !MSSAU) {
+        if (!isMemorySSAEnabled()) {
           // If MD reported clobber, check it was nested.
           if (canCoerceMustAliasedValueToLoad(DepLoad, LoadType,
                                               DepLoad->getFunction())) {
@@ -1560,7 +1559,7 @@ LoadInst *GVNPass::findLoadToHoistIntoPred(BasicBlock *Pred, BasicBlock *LoadBB,
       continue;
 
     bool HasLocalDep = true;
-    if (MD && !MSSAU) {
+    if (!isMemorySSAEnabled()) {
       MemDepResult Dep = MD->getDependency(&Inst);
       HasLocalDep = !Dep.isNonLocal();
     } else {
@@ -2741,7 +2740,7 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
 /// Attempt to eliminate a load, first by eliminating it
 /// locally, and then attempting non-local elimination if that fails.
 bool GVNPass::processLoad(LoadInst *L) {
-  if (!MD && !MSSAU)
+  if (!MD && !isMemorySSAEnabled())
     return false;
 
   // This code hasn't been audited for ordered or volatile memory access.
@@ -2757,7 +2756,7 @@ bool GVNPass::processLoad(LoadInst *L) {
   }
 
   ReachingMemVal MemVal = ReachingMemVal::getUnknown(nullptr, nullptr);
-  if (MD && !MSSAU) {
+  if (!isMemorySSAEnabled()) {
     // ... to a pointer that has been loaded from before...
     MemDepResult Dep = MD->getDependency(L);
 
