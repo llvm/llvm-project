@@ -1457,6 +1457,13 @@ gentbl_cc_library(
 )
 
 td_library(
+    name = "InferIntDivisibilityOpInterfaceTdFiles",
+    srcs = ["include/mlir/Interfaces/InferIntDivisibilityOpInterface.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+td_library(
     name = "InferIntRangeInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/InferIntRangeInterface.td"],
     includes = ["include"],
@@ -1583,6 +1590,7 @@ td_library(
     deps = [
         ":ArithOpsTdFiles",
         ":FuncTdFiles",
+        ":InferIntDivisibilityOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -4059,6 +4067,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":DialectUtils",
         ":IR",
+        ":InferIntDivisibilityOpInterface",
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
         ":InliningUtils",
@@ -7837,6 +7846,28 @@ cc_library(
 )
 
 gentbl_cc_library(
+    name = "InferIntDivisibilityOpInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Interfaces/InferIntDivisibilityOpInterface.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Interfaces/InferIntDivisibilityOpInterface.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Interfaces/InferIntDivisibilityOpInterface.td",
+    deps = [":InferIntDivisibilityOpInterfaceTdFiles"],
+)
+
+cc_library(
+    name = "InferIntDivisibilityOpInterface",
+    srcs = ["lib/Interfaces/InferIntDivisibilityOpInterface.cpp"],
+    hdrs = ["include/mlir/Interfaces/InferIntDivisibilityOpInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":InferIntDivisibilityOpInterfaceIncGen",
+    ],
+)
+
+gentbl_cc_library(
     name = "InferIntRangeInterfaceIncGen",
     tbl_outs = {
         "include/mlir/Interfaces/InferIntRangeInterface.h.inc": ["-gen-op-interface-decls"],
@@ -8884,6 +8915,7 @@ cc_library(
         ":DialectUtils",
         ":FunctionInterfaces",
         ":IR",
+        ":InferIntDivisibilityOpInterface",
         ":InferIntRangeInterface",
         ":InferStridedMetadataInterface",
         ":LoopLikeInterface",
@@ -12828,6 +12860,7 @@ td_library(
         ":BuiltinDialectTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
+        ":InferIntDivisibilityOpInterfaceTdFiles",
         ":InferIntRangeInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
@@ -12915,6 +12948,7 @@ cc_library(
         "include/mlir/Interfaces/ValueBoundsOpInterface.h",
         "lib/Dialect/Arith/IR/ArithDialect.cpp",
         "lib/Dialect/Arith/IR/ArithOps.cpp",
+        "lib/Dialect/Arith/IR/InferIntDivisibilityOpInterfaceImpl.cpp",
         "lib/Dialect/Arith/IR/InferIntRangeInterfaceImpls.cpp",
     ] + glob([
         "include/mlir/Analysis/**/*.h",
@@ -12938,6 +12972,7 @@ cc_library(
         ":ConvertToLLVMInterface",
         ":DestinationStyleOpInterface",
         ":IR",
+        ":InferIntDivisibilityOpInterface",
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
         ":InferStridedMetadataInterface",
