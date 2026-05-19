@@ -290,13 +290,7 @@ struct AllocLikeFlattenPattern final : public OpRewritePattern<AllocLikeOp> {
   }
 };
 
-/// Flatten operations that expose a memref/index pair through
-/// IndexedAccessOpInterface.
-static LogicalResult flattenIndexedAccessOp(memref::IndexedAccessOpInterface op,
-                                            PatternRewriter &rewriter) {}
-
-/// Pattern that flattens any IndexedAccessOpInterface op. This is used by the
-/// full pass after all participating dialects have registered their models.
+/// Pattern that flattens any IndexedAccessOpInterface op.
 struct IndexedAccessOpFlattenPattern final
     : public OpInterfaceRewritePattern<memref::IndexedAccessOpInterface> {
   using Base::Base;
@@ -363,54 +357,6 @@ struct FlattenedMemrefAccess {
   Value memref;
   Value index;
 };
-
-static LogicalResult
-flattenIndexedMemCopyOp(memref::IndexedMemCopyOpInterface op,
-                        PatternRewriter &rewriter) {
-  TypedValue<MemRefType> src = op.getSrc();
-  TypedValue<MemRefType> dst = op.getDst();
-  if (!src && !dst)
-    return rewriter.notifyMatchFailure(op, "not copying between memrefs");
-
-  auto tryFlatten =
-      [&](TypedValue<MemRefType> memref,
-          ValueRange indices) -> std::optional<FlattenedMemrefAccess> {
-    if (!memref || !needFlattening(memref))
-      return std::nullopt;
-    if (failed(checkFlattenableMemref(op, memref, rewriter)))
-      return std::nullopt;
-
-    auto [flatMemref, offset] =
-        getFlattenMemrefAndOffset(rewriter, op->getLoc(), memref, indices);
-    return FlattenedMemrefAccess{flatMemref, offset};
-  };
-
-  std::optional<FlattenedMemrefAccess> newSrc =
-      tryFlatten(src, op.getSrcIndices());
-  std::optional<FlattenedMemrefAccess> newDst =
-      tryFlatten(dst, op.getDstIndices());
-  if (!newSrc && !newDst)
-    return rewriter.notifyMatchFailure(
-        op, "no source or destination memref needed flattening");
-
-  Value srcMemref = src;
-  ValueRange srcIndices = op.getSrcIndices();
-  if (newSrc) {
-    srcMemref = newSrc->memref;
-    srcIndices = ValueRange(newSrc->index);
-  }
-
-  Value dstMemref = dst;
-  ValueRange dstIndices = op.getDstIndices();
-  if (newDst) {
-    dstMemref = newDst->memref;
-    dstIndices = ValueRange(newDst->index);
-  }
-
-  op.setMemrefsAndIndices(rewriter, srcMemref, srcIndices, dstMemref,
-                          dstIndices);
-  return success();
-}
 
 /// Flatten all IndexedMemCopyOpInterface operations.
 struct IndexedMemCopyOpFlattenPattern final
