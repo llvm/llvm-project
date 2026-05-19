@@ -1906,7 +1906,6 @@ void CompilerInvocation::setFortranOpts() {
       preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
       preprocessorOptions.searchDirectoriesFromIntrModPath.end());
 
-
   // Add the directory supplied through -J/-module-dir to the list of search
   // directories
   if (moduleDirJ != ".")
