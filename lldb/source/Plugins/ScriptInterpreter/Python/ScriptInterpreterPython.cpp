@@ -656,8 +656,9 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
     run_string.PutCString("; lldb.frame = lldb.thread.GetSelectedFrame ()");
     run_string.PutCString("')");
   } else if (on_entry_flags & Locker::InitDebugger) {
-    // If we aren't initing the globals, we should still always set the
-    // debugger (since that is always unique.)
+    // In non-interactive mode (e.g. type summaries), initialize the debugger
+    // only if requested. This should not be used in new extensions and is kept
+    // for backwards compatibility.
     run_string.Printf("run_one_line (%s, 'lldb.debugger_unique_id = %" PRIu64,
                       m_dictionary_name.c_str(), m_debugger.GetID());
     run_string.Printf(
