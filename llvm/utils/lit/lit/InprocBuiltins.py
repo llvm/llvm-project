@@ -38,35 +38,35 @@ class InprocBuiltinIOObject(abc.ABC):
 
     @abc.abstractmethod
     def read(self) -> str:
-        raise NotImplemented
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def read_binary(self) -> bytes:
-        raise NotImplemented
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def write(self, data: str) -> int:
-        raise NotImplemented
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def write_binary(self, data: bytes) -> int:
-        raise NotImplemented
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def seek(self, pos: int):
-        raise NotImplemented
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def flush(self):
-        raise NotImplemented
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def get_filename(self) -> str | None:
-        raise NotImplemented
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def get_encoding(self) -> str | None:
-        raise NotImplemented
+        raise NotImplementedError()
 
 
 @dataclass
