@@ -1528,6 +1528,32 @@ void HoverInfo::sizeToMarkupParagraph(markup::Paragraph &P) const {
     P.appendText(", alignment " + formatSize(*Align));
 }
 
+void HoverInfo::appendCommonMetadata(markup::Document &Output) const {
+  Output.addRuler();
+
+  // Don't print Type after Parameters or ReturnType as this will just duplicate
+  // the information
+  if (Type && !ReturnType && !Parameters)
+    Output.addParagraph().appendText("Type: ").appendCode(
+        llvm::to_string(*Type));
+
+  if (Value)
+    valueToMarkupParagraph(Output.addParagraph());
+
+  if (Offset)
+    offsetToMarkupParagraph(Output.addParagraph());
+  if (Size)
+    sizeToMarkupParagraph(Output.addParagraph());
+
+  if (CalleeArgInfo)
+    calleeArgInfoToMarkupParagraph(Output.addParagraph());
+
+  if (!UsedSymbolNames.empty()) {
+    Output.addRuler();
+    usedSymbolNamesToMarkup(Output);
+  }
+}
+
 markup::Document HoverInfo::presentDoxygen() const {
 
   markup::Document Output;
@@ -1650,32 +1676,7 @@ markup::Document HoverInfo::presentDoxygen() const {
     SymbolDoc.detailedDocToMarkup(Output);
   }
 
-  Output.addRuler();
-
-  // Don't print Type after Parameters or ReturnType as this will just duplicate
-  // the information
-  if (Type && !ReturnType && !Parameters)
-    Output.addParagraph().appendText("Type: ").appendCode(
-        llvm::to_string(*Type));
-
-  if (Value) {
-    valueToMarkupParagraph(Output.addParagraph());
-  }
-
-  if (Offset)
-    offsetToMarkupParagraph(Output.addParagraph());
-  if (Size) {
-    sizeToMarkupParagraph(Output.addParagraph());
-  }
-
-  if (CalleeArgInfo) {
-    calleeArgInfoToMarkupParagraph(Output.addParagraph());
-  }
-
-  if (!UsedSymbolNames.empty()) {
-    Output.addRuler();
-    usedSymbolNamesToMarkup(Output);
-  }
+  appendCommonMetadata(Output);
 
   return Output;
 }
