@@ -1,12 +1,13 @@
-#include "llvm/Support/LEB128.h"
 #include "benchmark/benchmark.h"
+#include "llvm/Support/LEB128.h"
 
 #include <cstdint>
 #include <vector>
 
 using namespace llvm;
 
-static std::vector<uint8_t> encodeManyULEB128(const std::vector<uint64_t> &Vals) {
+static std::vector<uint8_t>
+encodeManyULEB128(const std::vector<uint64_t> &Vals) {
   std::vector<uint8_t> Buf;
   Buf.resize(Vals.size() * 10);
   uint8_t *P = Buf.data();
@@ -16,7 +17,8 @@ static std::vector<uint8_t> encodeManyULEB128(const std::vector<uint64_t> &Vals)
   return Buf;
 }
 
-static std::vector<uint8_t> encodeManySLEB128(const std::vector<int64_t> &Vals) {
+static std::vector<uint8_t>
+encodeManySLEB128(const std::vector<int64_t> &Vals) {
   std::vector<uint8_t> Buf;
   Buf.resize(Vals.size() * 10);
   uint8_t *P = Buf.data();
@@ -140,7 +142,8 @@ static void BM_DecodeSLEB128_2Byte(benchmark::State &State) {
   State.SetBytesProcessed(State.iterations() * Encoded.size());
 }
 
-// Mixed: 70% 1-byte, 20% 2-byte, 10% 5-byte (realistic DWARF-like distribution).
+// Mixed: 70% 1-byte, 20% 2-byte, 10% 5-byte (realistic DWARF-like
+// distribution).
 static void BM_DecodeULEB128_Mixed(benchmark::State &State) {
   std::vector<uint64_t> Vals(4096);
   for (size_t I = 0; I < Vals.size(); ++I) {
