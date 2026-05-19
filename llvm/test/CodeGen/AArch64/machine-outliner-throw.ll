@@ -52,9 +52,9 @@ entry:
 
 ; CHECK-LABEL: OUTLINED_FUNCTION_0:
 ; CHECK:      .cfi_startproc
-; CHECK:        adrp    x1, _ZTIi
+; CHECK:        mov     x2, xzr
+; CHECK-NEXT:   adrp    x1, _ZTIi
 ; CHECK-NEXT:   add     x1, x1, :lo12:_ZTIi
-; CHECK-NEXT:   mov     x2, xzr
 ; CHECK-NEXT:   str     w19, [x0]
 ; CHECK-NEXT:   b       __cxa_throw
 ; CHECK:      .cfi_endproc
