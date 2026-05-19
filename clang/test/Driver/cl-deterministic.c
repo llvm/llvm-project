@@ -1,8 +1,6 @@
 // We have to run the compilation step to see the output, so we must be able to
 // target Windows.
 
-// REQUIRES: system-windows
-
 // RUN: %clang_cl -fno-integrated-cc1 -E /experimental:deterministic /d1nodatetime %s
 // RUN: %clang_cl -fno-integrated-cc1 -E /D IS_SYSHEADER=1 /experimental:deterministic /d1nodatetime %s
 
@@ -13,8 +11,9 @@
 
 // RUN: %clang_cl -E -### /experimental:deterministic %s 2>&1 | FileCheck %s --check-prefix=WDATETIME
 // WDATETIME: -Wdate-time
+// WDATETIME: -mno-incremental-linker-compatible
 // RUN: %clang_cl -E -### /d1nodatetime %s 2>&1 | FileCheck %s --check-prefix=MACROREDEF
-// MACROREDEF: -Wno-builtin-macro-redefined
+// MACROREDEF: -init-datetime-macros=undefined
 
 #ifdef IS_HEADER
 

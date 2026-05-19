@@ -8896,6 +8896,11 @@ def fno_modules_check_relocated
       Group<f_Group>,
       HelpText<"Skip checks for relocated modules when loading PCM files">,
       MarshallingInfoNegativeFlag<PreprocessorOpts<"ModulesCheckRelocated">>;
+def init_datetime_macros_EQ : Joined<["-"], "init-datetime-macros=">,
+  HelpText<"Change __DATE__, __TIME__, and __TIMESTAMP__ macros initialization and expansion">,
+  Values<"default,literalone,undefined">,
+  NormalizedValues<["Default", "LiteralOne", "Undefined"]>,
+  MarshallingInfoEnum<PreprocessorOpts<"InitDateTimeMacros">, "Default">;
 
 } // let Visibility = [CC1Option]
 

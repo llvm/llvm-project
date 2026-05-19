@@ -8897,39 +8897,23 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
         Twine("-loader-replaceable-function=") + FuncOverride));
   }
 
-  auto findMacro = [&](const std::string &Macro, bool claim = false) {
-    for (const auto *A : Args.filtered(options::OPT_D, options::OPT_U)) {
-      const std::string v(A->getValue());
-      if (v == Macro || v.find(Macro + '=') != std::string::npos)
-        if (claim)
-          A->claim();
-        return true;
-    }
-    return false;
-  };
-
   if (Args.hasArg(options::OPT__SLASH_experimental_deterministic)) {
     CmdArgs.push_back("-Wdate-time");
 
     if (Args.hasArg(options::OPT_mincremental_linker_compatible)) {
-      D.Diag(diag::err_drv_argument_not_allowed_with) << "/experimental:deterministic"
-                                                      << "/Brepro-";
+      D.Diag(diag::err_drv_argument_not_allowed_with)
+          << "/experimental:deterministic"
+          << "/Brepro-";
     }
-    // CL's sets COFF's OBJ timestamp to a hash of the source file path to get deterministic
-    // result, but we force this timestamp to 0, which also produces deterministic result.
+    // CL's sets COFF's OBJ timestamp to a hash of the source file path to get
+    // deterministic result, but we force this timestamp to 0, which also
+    // produces deterministic result.
     CmdArgs.push_back("-mno-incremental-linker-compatible");
   }
 
   if (Args.hasFlag(options::OPT__SLASH_d1nodatetime,
                   options::OPT__SLASH_d1nodatetime_, false)) {
-    // Allow user definitions for these macros from the command line.
-    CmdArgs.push_back("-Wno-builtin-macro-redefined");
-    if (!findMacro("__DATE__"))
-      CmdArgs.push_back("-U__DATE__");
-    if (!findMacro("__TIME__"))
-      CmdArgs.push_back("-U__TIME__");
-    if (!findMacro("__TIMESTAMP__"))
-      CmdArgs.push_back("-U__TIMESTAMP__");
+    CmdArgs.push_back("-init-datetime-macros=undefined");
   }
 
   // /Brepro is an alias for -mincremental-linker-compatible option.
@@ -8940,14 +8924,7 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     // This options does not allow the user redifinitions for these macros.
     if (!Args.hasFlag(options::OPT__SLASH_d1nodatetime,
                       options::OPT__SLASH_d1nodatetime_, false)) {
-      findMacro("__DATE__", true);
-      findMacro("__TIME__", true);
-      findMacro("__TIMESTAMP__", true);
-
-      CmdArgs.push_back("-Wno-builtin-macro-redefined");
-      CmdArgs.push_back("-D__DATE__=\"1\"");
-      CmdArgs.push_back("-D__TIME__=\"1\"");
-      CmdArgs.push_back("-D__TIMESTAMP__=\"1\"");
+      CmdArgs.push_back("-init-datetime-macros=literalone");
     }
   }
 }
