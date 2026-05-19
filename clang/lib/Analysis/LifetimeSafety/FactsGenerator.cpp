@@ -373,7 +373,8 @@ void FactsGenerator::VisitReturnStmt(const ReturnStmt *RS) {
   }
 }
 
-void FactsGenerator::handleAssignment(const Expr *LHSExpr,
+void FactsGenerator::handleAssignment(const Expr *TargetExpr,
+                                      const Expr *LHSExpr,
                                       const Expr *RHSExpr) {
   LHSExpr = LHSExpr->IgnoreParenImpCasts();
   OriginList *LHSList = nullptr;
@@ -397,7 +398,9 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
   // unlike built-in assignment where LValueToRValue cast strips the outer
   // lvalue origin. Strip it manually to get the actual value origins being
   // assigned.
-  RHSList = getRValueOrigins(RHSExpr, RHSList);
+  if (!(isGslPointerType(LHSExpr->getType()) &&
+        isGslOwnerType(RHSExpr->getType())))
+    RHSList = getRValueOrigins(RHSExpr, RHSList);
 
   if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr)) {
     QualType QT = DRE_LHS->getDecl()->getType();
@@ -434,6 +437,7 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
   // Kill the old loans of the destination origin and flow the new loans
   // from the source origin.
   flow(LHSList->peelOuterOrigin(), RHSList, /*Kill=*/true);
+  killAndFlowOrigin(*TargetExpr, *LHSExpr);
 }
 
 void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
@@ -454,7 +458,7 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
     handlePointerArithmetic(BO);
   handleUse(BO->getRHS());
   if (BO->isAssignmentOp())
-    handleAssignment(BO->getLHS(), BO->getRHS());
+    handleAssignment(BO, BO->getLHS(), BO->getRHS());
   // TODO: Handle assignments involving dereference like `*p = q`.
 }
 
@@ -522,14 +526,14 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     QualType LHSTy = OCE->getArg(0)->getType();
     if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy) ||
         isGslOwnerType(LHSTy)) {
-      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      handleAssignment(OCE, OCE->getArg(0), OCE->getArg(1));
       return;
     }
     // Standard library callable wrappers (e.g., std::function) can propagate
     // the stored lambda's origins.
     if (const auto *RD = LHSTy->getAsCXXRecordDecl();
         RD && isStdCallableWrapperType(RD)) {
-      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      handleAssignment(OCE, OCE->getArg(0), OCE->getArg(1));
       return;
     }
     // Other tracked types: only defaulted operator= propagates origins.
@@ -537,7 +541,7 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     if (const auto *MD =
             dyn_cast_or_null<CXXMethodDecl>(OCE->getDirectCallee());
         MD && MD->isDefaulted()) {
-      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      handleAssignment(OCE, OCE->getArg(0), OCE->getArg(1));
       return;
     }
   }

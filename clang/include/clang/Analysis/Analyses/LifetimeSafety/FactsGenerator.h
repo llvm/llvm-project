@@ -65,7 +65,8 @@ private:
 
   void flow(OriginList *Dst, OriginList *Src, bool Kill);
 
-  void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
+  void handleAssignment(const Expr *TargetExpr, const Expr *LHSExpr,
+                        const Expr *RHSExpr);
 
   void handlePointerArithmetic(const BinaryOperator *BO);
 
