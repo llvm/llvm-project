@@ -13,7 +13,6 @@ import threading
 import traceback
 import typing
 from dataclasses import dataclass
-from typing import Any
 
 import lit.ShUtil as ShUtil
 import lit.Test as Test
