@@ -14,7 +14,7 @@
 namespace llvm {
 
 class MachineCopyPropagationPass
-    : public PassInfoMixin<MachineCopyPropagationPass> {
+    : public OptionalPassInfoMixin<MachineCopyPropagationPass> {
   bool UseCopyInstr;
 
 public:
@@ -25,8 +25,7 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getRequiredProperties() const {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 };
 

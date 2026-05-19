@@ -46,7 +46,12 @@ llvm::CachePruningPolicy DataFileCache::GetLLDBIndexCachePolicy() {
 
 DataFileCache::DataFileCache(llvm::StringRef path, llvm::CachePruningPolicy policy) {
   m_cache_dir.SetPath(path);
-  pruneCache(path, policy);
+  llvm::Expected<bool> err_or_pruned = pruneCache(path, policy);
+  if (!err_or_pruned) {
+    Log *log = GetLog(LLDBLog::Modules);
+    LLDB_LOG_ERROR(log, err_or_pruned.takeError(),
+                   "failed to prune lldb index cache directory: {0}");
+  }
 
   // This lambda will get called when the data is gotten from the cache and
   // also after the data was set for a given key. We only need to take
@@ -132,6 +137,11 @@ bool DataFileCache::SetCachedData(llvm::StringRef key,
       if (file_or_err) {
         llvm::CachedFileStream *cfs = file_or_err->get();
         cfs->OS->write((const char *)data.data(), data.size());
+        if (llvm::Error err = cfs->commit()) {
+          Log *log = GetLog(LLDBLog::Modules);
+          LLDB_LOG_ERROR(log, std::move(err),
+                         "failed to commit to the cache for key: {0}");
+        }
         return true;
       } else {
         Log *log = GetLog(LLDBLog::Modules);

@@ -23,6 +23,7 @@
 #include "gtest/gtest.h"
 #include <memory>
 #include <optional>
+#include <string_view>
 #include <vector>
 
 using namespace llvm;
@@ -42,12 +43,23 @@ void clang::DiagnosticsTestHelper(DiagnosticsEngine &diag) {
 namespace {
 using testing::AllOf;
 using testing::ElementsAre;
+using testing::HasSubstr;
 using testing::IsEmpty;
+
+MATCHER_P(WithMessage, M,
+          "has diagnostic message that " +
+              ::testing::DescribeMatcher<std::string>(M)) {
+  return testing::ExplainMatchResult(M, arg.getMessage().str(),
+                                     result_listener);
+}
+MATCHER(IsError, "has error severity") {
+  return arg.getLevel() == DiagnosticsEngine::Level::Error;
+}
 
 // Check that DiagnosticErrorTrap works with SuppressAllDiagnostics.
 TEST(DiagnosticTest, suppressAndTrap) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(),
-                          new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
                           new IgnoringDiagConsumer());
   Diags.setSuppressAllDiagnostics(true);
 
@@ -77,8 +89,8 @@ TEST(DiagnosticTest, suppressAndTrap) {
 // Check that FatalsAsError works as intended
 TEST(DiagnosticTest, fatalsAsError) {
   for (unsigned FatalsAsError = 0; FatalsAsError != 2; ++FatalsAsError) {
-    DiagnosticsEngine Diags(new DiagnosticIDs(),
-                            new DiagnosticOptions,
+    DiagnosticOptions DiagOpts;
+    DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
                             new IgnoringDiagConsumer());
     Diags.setFatalsAsError(FatalsAsError);
 
@@ -101,7 +113,8 @@ TEST(DiagnosticTest, fatalsAsError) {
 }
 
 TEST(DiagnosticTest, tooManyErrorsIsAlwaysFatal) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
                           new IgnoringDiagConsumer());
   Diags.setFatalsAsError(true);
 
@@ -117,7 +130,8 @@ TEST(DiagnosticTest, tooManyErrorsIsAlwaysFatal) {
 
 // Check that soft RESET works as intended
 TEST(DiagnosticTest, softReset) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
                           new IgnoringDiagConsumer());
 
   unsigned numWarnings = 0U, numErrors = 0U;
@@ -140,7 +154,8 @@ TEST(DiagnosticTest, softReset) {
 }
 
 TEST(DiagnosticTest, diagnosticError) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
                           new IgnoringDiagConsumer());
   PartialDiagnostic::DiagStorageAllocator Alloc;
   llvm::Expected<std::pair<int, int>> Value = DiagnosticError::create(
@@ -161,18 +176,19 @@ TEST(DiagnosticTest, diagnosticError) {
   EXPECT_EQ(Value->first, 20);
 }
 
+class CaptureDiagnosticConsumer : public DiagnosticConsumer {
+public:
+  SmallVector<StoredDiagnostic> StoredDiags;
+
+  void HandleDiagnostic(DiagnosticsEngine::Level level,
+                        const Diagnostic &Info) override {
+    StoredDiags.push_back(StoredDiagnostic(level, Info));
+  }
+};
+
 TEST(DiagnosticTest, storedDiagEmptyWarning) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions);
-
-  class CaptureDiagnosticConsumer : public DiagnosticConsumer {
-  public:
-    SmallVector<StoredDiagnostic> StoredDiags;
-
-    void HandleDiagnostic(DiagnosticsEngine::Level level,
-                          const Diagnostic &Info) override {
-      StoredDiags.push_back(StoredDiagnostic(level, Info));
-    }
-  };
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts);
 
   CaptureDiagnosticConsumer CaptureConsumer;
   Diags.setClient(&CaptureConsumer, /*ShouldOwnClient=*/false);
@@ -181,6 +197,21 @@ TEST(DiagnosticTest, storedDiagEmptyWarning) {
 
   // Make sure an empty warning can round-trip with \c StoredDiagnostic.
   Diags.Report(CaptureConsumer.StoredDiags.front());
+}
+
+// std::string_view is used by downstream consumers.
+TEST(DiagnosticTest, reportAcceptsStringViewMessage) {
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts);
+
+  CaptureDiagnosticConsumer CaptureConsumer;
+  Diags.setClient(&CaptureConsumer, /*ShouldOwnClient=*/false);
+
+  std::string_view SV = "diagnostic";
+  Diags.Report(diag::err_target_unknown_triple) << SV;
+
+  EXPECT_THAT(CaptureConsumer.StoredDiags,
+              ElementsAre(WithMessage(HasSubstr("diagnostic"))));
 }
 
 class SuppressionMappingTest : public testing::Test {
@@ -192,7 +223,8 @@ public:
 protected:
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  DiagnosticsEngine Diags{new DiagnosticIDs(), new DiagnosticOptions};
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags{DiagnosticIDs::create(), DiagOpts};
 
   llvm::ArrayRef<StoredDiagnostic> diags() {
     return CaptureConsumer.StoredDiags;
@@ -220,13 +252,6 @@ private:
   };
   CaptureDiagnosticConsumer CaptureConsumer;
 };
-
-MATCHER_P(WithMessage, Msg, "has diagnostic message") {
-  return arg.getMessage() == Msg;
-}
-MATCHER(IsError, "has error severity") {
-  return arg.getLevel() == DiagnosticsEngine::Level::Error;
-}
 
 TEST_F(SuppressionMappingTest, MissingMappingFile) {
   Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
@@ -289,7 +314,7 @@ TEST_F(SuppressionMappingTest, EmitCategoryIsExcluded) {
                                             locForFile("foo.cpp")));
 }
 
-TEST_F(SuppressionMappingTest, LongestMatchWins) {
+TEST_F(SuppressionMappingTest, LastMatchWins) {
   llvm::StringLiteral SuppressionMappingFile = R"(
   [unused]
   src:*clang/*
@@ -307,6 +332,40 @@ TEST_F(SuppressionMappingTest, LongestMatchWins) {
       diag::warn_unused_function, locForFile("clang/lib/Sema/bar.h")));
   EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
                                            locForFile("clang/lib/Sema/foo.h")));
+}
+
+TEST_F(SuppressionMappingTest, LongShortMatch) {
+  llvm::StringLiteral SuppressionMappingFile = R"(
+  [unused]
+  src:*test/*
+  src:*lld/*=emit)";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(diags(), IsEmpty());
+
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                           locForFile("test/t1.cpp")));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                            locForFile("lld/test/t2.cpp")));
+}
+
+TEST_F(SuppressionMappingTest, ShortLongMatch) {
+  llvm::StringLiteral SuppressionMappingFile = R"(
+  [unused]
+  src:*lld/*=emit
+  src:*test/*)";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(diags(), IsEmpty());
+
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                           locForFile("test/t1.cpp")));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                           locForFile("lld/test/t2.cpp")));
 }
 
 TEST_F(SuppressionMappingTest, IsIgnored) {

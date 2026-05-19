@@ -11,11 +11,10 @@
 // UNSUPPORTED: nvptx64-nvidia-cuda
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 // UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
 // UNSUPPORTED: x86_64-unknown-linux-gnu
-// UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
 // UNSUPPORTED: s390x-ibm-linux-gnu
-// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 struct S {};
 
@@ -47,6 +46,6 @@ int main(void) {
 // TRACE:     launchKernel
 // NDEBG:     cxx_function_name<S>(int, S*)
 // NDEBG:     main
-// DEBUG:     cxx_function_name<S>(int, S*) {{.*}}kernel_trap.cpp
-// DEBUG:     main {{.*}}kernel_trap.cpp
+// DEBUG:     cxx_function_name<S>(int, S*) {{.*}}kernel_trap.cpp:
+// DEBUG:     main {{.*}}kernel_trap.cpp:
 // clang-format on

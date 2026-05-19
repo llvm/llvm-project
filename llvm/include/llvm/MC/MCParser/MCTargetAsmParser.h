@@ -15,6 +15,7 @@
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstdint>
@@ -331,7 +332,7 @@ private:
 };
 
 /// MCTargetAsmParser - Generic interface to target specific assembly parsers.
-class MCTargetAsmParser : public MCAsmParserExtension {
+class LLVM_ABI MCTargetAsmParser : public MCAsmParserExtension {
 public:
   enum MatchResultTy {
     Match_InvalidOperand,
@@ -344,8 +345,7 @@ public:
   };
 
 protected: // Can only create subclasses.
-  MCTargetAsmParser(MCTargetOptions const &, const MCSubtargetInfo &STI,
-                    const MCInstrInfo &MII);
+  MCTargetAsmParser(const MCSubtargetInfo &STI, const MCInstrInfo &MII);
 
   /// Create a copy of STI and return a non-const reference to it.
   MCSubtargetInfo &copySTI();
@@ -359,9 +359,6 @@ protected: // Can only create subclasses.
   /// SemaCallback - The Sema callback implementation.  Must be set when parsing
   /// ms-style inline assembly.
   MCAsmParserSemaCallback *SemaCallback = nullptr;
-
-  /// Set of options which affects instrumentation of inline assembly.
-  MCTargetOptions MCOptions;
 
   /// Current STI.
   const MCSubtargetInfo *STI;
@@ -386,7 +383,12 @@ public:
   bool isParsingMSInlineAsm () { return ParsingMSInlineAsm; }
   void setParsingMSInlineAsm (bool Value) { ParsingMSInlineAsm = Value; }
 
-  MCTargetOptions getTargetOptions() const { return MCOptions; }
+  const MCTargetOptions &getTargetOptions() const {
+    return const_cast<MCTargetAsmParser *>(this)
+        ->getParser()
+        .getContext()
+        .getTargetOptions();
+  }
 
   void setSemaCallback(MCAsmParserSemaCallback *Callback) {
     SemaCallback = Callback;
@@ -508,8 +510,10 @@ public:
   virtual bool equalIsAsmAssignment() { return true; };
   // Return whether this start of statement identifier is a label
   virtual bool isLabel(AsmToken &Token) { return true; };
-  // Return whether this parser accept star as start of statement
-  virtual bool starIsStartOfStatement() { return false; };
+  // Return whether this parser accepts the given token as start of statement.
+  virtual bool tokenIsStartOfStatement(AsmToken::TokenKind Token) {
+    return false;
+  }
 
   virtual const MCExpr *applySpecifier(const MCExpr *E, uint32_t,
                                        MCContext &Ctx) {

@@ -11,22 +11,22 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; This RUN command sets `-data-sections=true -unique-section-names=true` so data
 ; sections are uniqufied by numbers.
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -data-sections=true \
-; RUN:     -unique-section-names=true -relocation-model=pic \
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
+; RUN:     -partition-static-data-sections=true \
+; RUN:     -data-sections=true -unique-section-names=true \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=SYM,COMMON --dump-input=always
 
 ; This RUN command sets `-data-sections=true -unique-section-names=false` so
 ; data sections are uniqufied by variable names.
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -data-sections=true \
-; RUN:     -unique-section-names=false -relocation-model=pic \
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
+; RUN:     -partition-static-data-sections=true \
+; RUN:     -data-sections=true  -unique-section-names=false \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=UNIQ,COMMON --dump-input=always
 
 ; This RUN command sets `-data-sections=false -unique-section-names=false`.
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -data-sections=false \
-; RUN:     -unique-section-names=false -relocation-model=pic \
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
+; RUN:     -partition-static-data-sections=true \
+; RUN:     -data-sections=false -unique-section-names=false  \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=AGG,COMMON --dump-input=always
 
 ; For @.str and @.str.1
@@ -42,19 +42,19 @@ target triple = "x86_64-unknown-linux-gnu"
 ; For @hot_relro_array
 ; COMMON:      .type hot_relro_array,@object
 ; SYM-NEXT:    .section	.data.rel.ro.hot.hot_relro_array
-; UNIQ-NEXT:   .section	.data.rel.ro.hot.,"aw",@progbits,unique,3
+; UNIQ-NEXT:   .section	.data.rel.ro.hot.,"aw",@progbits,unique,1
 ; AGG-NEXT:    .section	.data.rel.ro.hot.,"aw",@progbits
 
 ; For @hot_data, which is accessed by {cold_func, unprofiled_func, hot_func}.
 ; COMMON:      .type hot_data,@object
 ; SYM-NEXT:    .section	.data.hot.hot_data,"aw",@progbits
-; UNIQ-NEXT:   .section	.data.hot.,"aw",@progbits,unique,4
+; UNIQ-NEXT:   .section	.data.hot.,"aw",@progbits,unique,2
 ; AGG-NEXT:    .section	.data.hot.,"aw",@progbits
 
 ; For @hot_bss, which is accessed by {unprofiled_func, hot_func}.
 ; COMMON:      .type hot_bss,@object
 ; SYM-NEXT:    .section	.bss.hot.hot_bss,"aw",@nobits
-; UNIQ-NEXT:   .section	.bss.hot.,"aw",@nobits,unique,5
+; UNIQ-NEXT:   .section	.bss.hot.,"aw",@nobits,unique,3
 ; AGG-NEXT:    .section .bss.hot.,"aw",@nobits
 
 ; For @.str.2
@@ -68,13 +68,13 @@ target triple = "x86_64-unknown-linux-gnu"
 ; For @cold_bss
 ; COMMON:      .type cold_bss,@object
 ; SYM-NEXT:    .section	.bss.unlikely.cold_bss,"aw",@nobits
-; UNIQ-NEXT:   .section	.bss.unlikely.,"aw",@nobits,unique,6
+; UNIQ-NEXT:   .section	.bss.unlikely.,"aw",@nobits,unique,4
 ; AGG-NEXT:    .section	.bss.unlikely.,"aw",@nobits
 
 ; For @cold_data
 ; COMMON:      .type cold_data,@object
 ; SYM-NEXT:    .section	.data.unlikely.cold_data,"aw",@progbits
-; UNIQ-NEXT:   .section	.data.unlikely.,"aw",@progbits,unique,7
+; UNIQ-NEXT:   .section	.data.unlikely.,"aw",@progbits,unique,5
 ; AGG-NEXT:    .section	.data.unlikely.,"aw",@progbits
 
 ; For @cold_data_custom_foo_section
@@ -87,7 +87,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; For @cold_relro_array
 ; COMMON:      .type cold_relro_array,@object
 ; SYM-NEXT:    .section	.data.rel.ro.unlikely.cold_relro_array,"aw",@progbits
-; UNIQ-NEXT:   .section	.data.rel.ro.unlikely.,"aw",@progbits,unique,8
+; UNIQ-NEXT:   .section	.data.rel.ro.unlikely.,"aw",@progbits,unique,6
 ; AGG-NEXT:    .section	.data.rel.ro.unlikely.,"aw",@progbits
 
 ; Currently static-data-splitter only analyzes access from code.
@@ -97,31 +97,39 @@ target triple = "x86_64-unknown-linux-gnu"
 ; For @bss2
 ; COMMON:      .type bss2,@object
 ; SYM-NEXT:    .section	.bss.unlikely.bss2,"aw",@nobits
-; UNIQ-NEXT:   .section	.bss.unlikely.,"aw",@nobits,unique,9
+; UNIQ-NEXT:   .section	.bss.unlikely.,"aw",@nobits,unique,7
 ; AGG-NEXT:    .section	.bss.unlikely.,"aw",@nobits
 
 ; For @data3
 ; COMMON:      .type data3,@object
 ; SYM-NEXT:    .section	.data.unlikely.data3,"aw",@progbits
-; UNIQ-NEXT:   .section	.data.unlikely.,"aw",@progbits,unique,10
+; UNIQ-NEXT:   .section	.data.unlikely.,"aw",@progbits,unique,8
 ; AGG-NEXT:    .section	.data.unlikely.,"aw",@progbits
+
+;; The `.section` directive is omitted for .data with -unique-section-names=false.
+; See MCSectionELF::shouldOmitSectionDirective for the implementation details.
 
 ; For @data_with_unknown_hotness
 ; SYM: 	       .type	.Ldata_with_unknown_hotness,@object          # @data_with_unknown_hotness
 ; SYM:         .section .data..Ldata_with_unknown_hotness,"aw",@progbits
-; UNIQ:        .section  .data,"aw",@progbits,unique,11
-; The `.section` directive is omitted for .data with -unique-section-names=false.
-; See MCSectionELF::shouldOmitSectionDirective for the implementation details.
+; UNIQ:        .section  .data,"aw",@progbits,unique,9
+
 ; AGG:         .data
 ; COMMON:      .Ldata_with_unknown_hotness:
 
-; For @hot_data_custom_bar_section
-; It has an explicit section attribute 'var' and shouldn't have hot or unlikely suffix.
+; For variables that are not eligible for section prefix annotation
 ; COMMON:      .type hot_data_custom_bar_section,@object
 ; SYM-NEXT:    .section bar,"aw",@progbits
 ; SYM:         hot_data_custom_bar_section
 ; UNIQ:        .section bar,"aw",@progbits
 ; AGG:         .section bar,"aw",@progbits
+
+; SYM:      .section .data.llvm.fake_var,"aw"
+; UNIQ:     .section .data,"aw"
+; AGG:      .data
+
+;; No section for linker declaration
+; COMMON-NOT:  qux
 
 @.str = private unnamed_addr constant [5 x i8] c"hot\09\00", align 1
 @.str.1 = private unnamed_addr constant [10 x i8] c"%d\09%d\09%d\0A\00", align 1
@@ -137,6 +145,8 @@ target triple = "x86_64-unknown-linux-gnu"
 @data3 = internal global i32 3
 @data_with_unknown_hotness = private global i32 5
 @hot_data_custom_bar_section = internal global i32 101 #0
+@llvm.fake_var = internal global i32 123
+@qux = external global i64
 
 define void @cold_func(i32 %0) !prof !15 {
   %2 = load i32, ptr @cold_bss

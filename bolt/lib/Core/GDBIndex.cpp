@@ -77,7 +77,8 @@ void GDBIndex::updateGdbIndexSection(
     exit(1);
   }
   DenseSet<uint64_t> OriginalOffsets;
-  for (unsigned Index = 0, Units = BC.DwCtx->getNumCompileUnits();
+  for (unsigned Index = 0, PresentUnitsIndex = 0,
+                Units = BC.DwCtx->getNumCompileUnits();
        Index < Units; ++Index) {
     const DWARFUnit *CU = BC.DwCtx->getUnitAtIndex(Index);
     if (SkipTypeUnits && CU->isTypeUnit())
@@ -90,7 +91,7 @@ void GDBIndex::updateGdbIndexSection(
     }
 
     OriginalOffsets.insert(Offset);
-    OffsetToIndexMap[Offset] = Index;
+    OffsetToIndexMap[Offset] = PresentUnitsIndex++;
   }
 
   // Ignore old address table.
@@ -99,10 +100,19 @@ void GDBIndex::updateGdbIndexSection(
   Data += SymbolTableOffset - CUTypesOffset;
 
   // Calculate the size of the new address table.
+  const auto IsValidAddressRange = [](const DebugAddressRange &Range) {
+    return Range.HighPC > Range.LowPC;
+  };
+
   uint32_t NewAddressTableSize = 0;
   for (const auto &CURangesPair : ARangesSectionWriter.getCUAddressRanges()) {
     const SmallVector<DebugAddressRange, 2> &Ranges = CURangesPair.second;
-    NewAddressTableSize += Ranges.size() * 20;
+    NewAddressTableSize +=
+        llvm::count_if(Ranges,
+                       [&IsValidAddressRange](const DebugAddressRange &Range) {
+                         return IsValidAddressRange(Range);
+                       }) *
+        20;
   }
 
   // Difference between old and new table (and section) sizes.
@@ -125,16 +135,52 @@ void GDBIndex::updateGdbIndexSection(
 
   using MapEntry = std::pair<uint32_t, CUInfo>;
   std::vector<MapEntry> CUVector(CUMap.begin(), CUMap.end());
+  // Remove the CUs we won't emit anyway.
+  CUVector.erase(std::remove_if(CUVector.begin(), CUVector.end(),
+                                [&OriginalOffsets](const MapEntry &It) {
+                                  // Skipping TU for DWARF5 when they are not
+                                  // included in CU list.
+                                  return OriginalOffsets.count(It.first) == 0;
+                                }),
+                 CUVector.end());
   // Need to sort since we write out all of TUs in .debug_info before CUs.
   std::sort(CUVector.begin(), CUVector.end(),
             [](const MapEntry &E1, const MapEntry &E2) -> bool {
               return E1.second.Offset < E2.second.Offset;
             });
+  // Create the original CU index -> updated CU index mapping,
+  // as the sort above could've changed the order and we have to update
+  // indices correspondingly in address map and constant pool.
+  std::unordered_map<uint32_t, uint32_t> OriginalCUIndexToUpdatedCUIndexMap;
+  OriginalCUIndexToUpdatedCUIndexMap.reserve(CUVector.size());
+  for (uint32_t I = 0; I < CUVector.size(); ++I) {
+    OriginalCUIndexToUpdatedCUIndexMap[OffsetToIndexMap.at(CUVector[I].first)] =
+        I;
+  }
+  const auto RemapCUIndex = [&OriginalCUIndexToUpdatedCUIndexMap,
+                             CUVectorSize = CUVector.size(),
+                             TUVectorSize = getGDBIndexTUEntryVector().size()](
+                                uint32_t OriginalIndex) {
+    if (OriginalIndex >= CUVectorSize) {
+      if (OriginalIndex >= CUVectorSize + TUVectorSize) {
+        errs() << "BOLT-ERROR: .gdb_index unknown CU index\n";
+        exit(1);
+      }
+      // The index is into TU CU List, which we don't reorder, so return as is.
+      return OriginalIndex;
+    }
+
+    const auto It = OriginalCUIndexToUpdatedCUIndexMap.find(OriginalIndex);
+    if (It == OriginalCUIndexToUpdatedCUIndexMap.end()) {
+      errs() << "BOLT-ERROR: .gdb_index unknown CU index\n";
+      exit(1);
+    }
+
+    return It->second;
+  };
+
   // Writing out CU List <Offset, Size>
   for (auto &CUInfo : CUVector) {
-    // Skipping TU for DWARF5 when they are not included in CU list.
-    if (!OriginalOffsets.count(CUInfo.first))
-      continue;
     write64le(Buffer, CUInfo.second.Offset);
     // Length encoded in CU doesn't contain first 4 bytes that encode length.
     write64le(Buffer + 8, CUInfo.second.Length + 4);
@@ -160,13 +206,19 @@ void GDBIndex::updateGdbIndexSection(
   // Generate new address table.
   for (const std::pair<const uint64_t, DebugAddressRangesVector> &CURangesPair :
        ARangesSectionWriter.getCUAddressRanges()) {
-    const uint32_t CUIndex = OffsetToIndexMap[CURangesPair.first];
+    const uint32_t OriginalCUIndex = OffsetToIndexMap[CURangesPair.first];
+    const uint32_t UpdatedCUIndex = RemapCUIndex(OriginalCUIndex);
     const DebugAddressRangesVector &Ranges = CURangesPair.second;
     for (const DebugAddressRange &Range : Ranges) {
-      write64le(Buffer, Range.LowPC);
-      write64le(Buffer + 8, Range.HighPC);
-      write32le(Buffer + 16, CUIndex);
-      Buffer += 20;
+      // Don't emit ranges that break gdb,
+      // https://sourceware.org/bugzilla/show_bug.cgi?id=33247.
+      // We've seen [0, 0) ranges here, for instance.
+      if (IsValidAddressRange(Range)) {
+        write64le(Buffer, Range.LowPC);
+        write64le(Buffer + 8, Range.HighPC);
+        write32le(Buffer + 16, UpdatedCUIndex);
+        Buffer += 20;
+      }
     }
   }
 
@@ -177,6 +229,56 @@ void GDBIndex::updateGdbIndexSection(
 
   // Copy over the rest of the original data.
   memcpy(Buffer, Data, TrailingSize);
+
+  // Fixup CU-indices in constant pool.
+  const char *const OriginalConstantPoolData =
+      GdbIndexContents.data() + ConstantPoolOffset;
+  uint8_t *const UpdatedConstantPoolData =
+      NewGdbIndexContents + ConstantPoolOffset + Delta;
+
+  const char *OriginalSymbolTableData =
+      GdbIndexContents.data() + SymbolTableOffset;
+  std::set<uint32_t> CUVectorOffsets;
+  // Parse the symbol map and extract constant pool CU offsets from it.
+  while (OriginalSymbolTableData < OriginalConstantPoolData) {
+    const uint32_t NameOffset = read32le(OriginalSymbolTableData);
+    const uint32_t CUVectorOffset = read32le(OriginalSymbolTableData + 4);
+    OriginalSymbolTableData += 8;
+
+    // Iff both are zero, then the slot is considered empty in the hash-map.
+    if (NameOffset || CUVectorOffset) {
+      CUVectorOffsets.insert(CUVectorOffset);
+    }
+  }
+
+  // Update the CU-indicies in the constant pool
+  for (const auto CUVectorOffset : CUVectorOffsets) {
+    const char *CurrentOriginalConstantPoolData =
+        OriginalConstantPoolData + CUVectorOffset;
+    uint8_t *CurrentUpdatedConstantPoolData =
+        UpdatedConstantPoolData + CUVectorOffset;
+
+    const uint32_t Num = read32le(CurrentOriginalConstantPoolData);
+    CurrentOriginalConstantPoolData += 4;
+    CurrentUpdatedConstantPoolData += 4;
+
+    for (uint32_t J = 0; J < Num; ++J) {
+      const uint32_t OriginalCUIndexAndAttributes =
+          read32le(CurrentOriginalConstantPoolData);
+      CurrentOriginalConstantPoolData += 4;
+
+      // We only care for the index, which is the lowest 24 bits, other bits are
+      // left as is.
+      const uint32_t OriginalCUIndex =
+          OriginalCUIndexAndAttributes & ((1 << 24) - 1);
+      const uint32_t Attributes = OriginalCUIndexAndAttributes >> 24;
+      const uint32_t UpdatedCUIndexAndAttributes =
+          RemapCUIndex(OriginalCUIndex) | (Attributes << 24);
+
+      write32le(CurrentUpdatedConstantPoolData, UpdatedCUIndexAndAttributes);
+      CurrentUpdatedConstantPoolData += 4;
+    }
+  }
 
   // Register the new section.
   BC.registerOrUpdateNoteSection(".gdb_index", NewGdbIndexContents,

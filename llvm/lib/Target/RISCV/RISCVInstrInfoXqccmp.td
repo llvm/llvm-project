@@ -25,17 +25,17 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def RlistS0AsmOperand : AsmOperandClass {
-  let Name = "RlistS0";
-  let ParserMethod = "parseReglistS0";
-  let RenderMethod = "addRlistOperands";
-  let DiagnosticType = "InvalidRlistS0";
+def RegListS0AsmOperand : AsmOperandClass {
+  let Name = "RegListS0";
+  let ParserMethod = "parseRegListS0";
+  let RenderMethod = "addRegListOperands";
+  let DiagnosticType = "InvalidRegListS0";
   let DiagnosticString = "operand must be {ra, s0[-sN]} or {x1, x8[-x9][, x18[-xN]]}";
 }
 
-def rlist_s0 : RISCVOp<OtherVT> {
-   let ParserMatchClass = RlistS0AsmOperand;
-   let PrintMethod = "printRlist";
+def reglist_s0 : RISCVOp<OtherVT> {
+   let ParserMatchClass = RegListS0AsmOperand;
+   let PrintMethod = "printRegList";
    let DecoderMethod = "decodeXqccmpRlistS0";
    let EncoderMethod = "getRlistS0OpValue";
    let MCOperandPredicate = [{
@@ -59,7 +59,7 @@ def rlist_s0 : RISCVOp<OtherVT> {
 
 class RVInstXqccmpCPPPFP<bits<5> funct5, string opcodestr,
                          DAGOperand immtype = stackadj>
-    : RVInst16<(outs), (ins rlist_s0:$rlist, immtype:$stackadj),
+    : RVInst16<(outs), (ins reglist_s0:$rlist, immtype:$stackadj),
                opcodestr, "$rlist, $stackadj", [], InstFormatOther> {
   bits<4> rlist;
   bits<16> stackadj;
@@ -79,12 +79,12 @@ let DecoderNamespace = "Xqccmp", Predicates = [HasVendorXqccmp] in {
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 let Defs = [X10, X11] in
-def QC_CM_MVA01S : RVInst16CA<0b101011, 0b11, 0b10, (outs),
+def QC_CM_MVA01S : RVInst16CA<0b101011, 0b11, OPC_C2, (outs),
                               (ins SR07:$rs1, SR07:$rs2), "qc.cm.mva01s", "$rs1, $rs2">,
                    Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
 
 let Uses = [X10, X11] in
-def QC_CM_MVSA01 : RVInst16CA<0b101011, 0b01, 0b10, (outs SR07:$rs1, SR07:$rs2),
+def QC_CM_MVSA01 : RVInst16CA<0b101011, 0b01, OPC_C2, (outs SR07:$rs1, SR07:$rs2),
                               (ins), "qc.cm.mvsa01", "$rs1, $rs2">,
                    Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0

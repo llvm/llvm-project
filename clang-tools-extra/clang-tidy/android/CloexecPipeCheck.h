@@ -1,4 +1,4 @@
-//===--- CloexecPipeCheck.h - clang-tidy-------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_PIPE_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_PIPE_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECPIPECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECPIPECHECK_H
 
 #include "CloexecCheck.h"
 
@@ -16,7 +16,7 @@ namespace clang::tidy::android {
 /// Suggests to replace calls to pipe() with calls to pipe2().
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-pipe.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-pipe.html
 class CloexecPipeCheck : public CloexecCheck {
 public:
   CloexecPipeCheck(StringRef Name, ClangTidyContext *Context)
@@ -27,4 +27,4 @@ public:
 
 } // namespace clang::tidy::android
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_PIPE_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECPIPECHECK_H

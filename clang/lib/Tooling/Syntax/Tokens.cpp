@@ -23,9 +23,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
-#include <iterator>
 #include <optional>
 #include <string>
 #include <utility>
@@ -714,7 +712,15 @@ public:
 
   TokenBuffer build() && {
     assert(!Result.ExpandedTokens.empty());
-    assert(Result.ExpandedTokens.back().kind() == tok::eof);
+
+    // When the parser hits a hard limit (e.g. bracket depth or function scope
+    // depth), it halts prematurely and leaves the expanded token stream
+    // truncated with no final `eof` token. To keep the invariant, synthesize an
+    // `eof` at the location of the last collected token.
+    if (Result.ExpandedTokens.back().kind() != tok::eof) {
+      SourceLocation Loc = Result.ExpandedTokens.back().location();
+      Result.ExpandedTokens.emplace_back(Loc, 0, tok::eof);
+    }
 
     // Tokenize every file that contributed tokens to the expanded stream.
     buildSpelledTokens();

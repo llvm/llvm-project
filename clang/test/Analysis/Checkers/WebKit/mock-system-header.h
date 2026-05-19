@@ -16,6 +16,8 @@ struct MemberVariable {
     T* obj { nullptr };
 };
 
+typedef struct sqlite3 sqlite3;
+
 typedef unsigned char uint8_t;
 
 enum os_log_type_t : uint8_t {
@@ -32,6 +34,8 @@ void os_log_msg(os_log_t oslog, os_log_type_t type, const char *msg, ...);
 
 typedef const struct __attribute__((objc_bridge(NSString))) __CFString * CFStringRef;
 
+extern CFStringRef const kCFURLTagNamesKey;
+
 #ifdef __OBJC__
 @class NSString;
 @interface SystemObject {
@@ -39,4 +43,8 @@ typedef const struct __attribute__((objc_bridge(NSString))) __CFString * CFStrin
   CFStringRef cf_string;
 }
 @end
+
+typedef NSString *NSNotificationName;
+extern "C" NSNotificationName NSApplicationDidBecomeActiveNotification;
+
 #endif

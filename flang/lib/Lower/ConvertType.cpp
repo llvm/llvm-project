@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertType.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/ConvertVariable.h"
@@ -32,7 +33,7 @@ using Fortran::common::VectorElementCategory;
 //===--------------------------------------------------------------------===//
 
 static mlir::Type genRealType(mlir::MLIRContext *context, int kind) {
-  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
+  if (Fortran::common::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Real, kind)) {
     switch (kind) {
     case 2:
@@ -59,7 +60,7 @@ int getIntegerBits() {
 }
 static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind,
                                  bool isUnsigned = false) {
-  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
+  if (Fortran::common::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Integer, kind)) {
     mlir::IntegerType::SignednessSemantics signedness =
         (isUnsigned ? mlir::IntegerType::SignednessSemantics::Unsigned
@@ -82,7 +83,7 @@ static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind,
 }
 
 static mlir::Type genLogicalType(mlir::MLIRContext *context, int KIND) {
-  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
+  if (Fortran::common::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Logical, KIND))
     return fir::LogicalType::get(context, KIND);
   return {};
@@ -91,7 +92,7 @@ static mlir::Type genLogicalType(mlir::MLIRContext *context, int KIND) {
 static mlir::Type genCharacterType(
     mlir::MLIRContext *context, int KIND,
     Fortran::lower::LenParameterTy len = fir::CharacterType::unknownLen()) {
-  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
+  if (Fortran::common::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Character, KIND))
     return fir::CharacterType::get(context, KIND, len);
   return {};
@@ -275,19 +276,23 @@ struct TypeBuilderImpl {
     } else {
       fir::emitFatalError(loc, "symbol must have a type");
     }
+
+    auto shapeExpr =
+        Fortran::evaluate::GetShape(converter.getFoldingContext(), ultimate);
+
+    if (shapeExpr && !shapeExpr->empty()) {
+      // Statically ranked array.
+      fir::SequenceType::Shape shape;
+      translateShape(shape, std::move(*shapeExpr));
+      ty = fir::SequenceType::get(shape, ty);
+    } else if (!shapeExpr) {
+      // Assumed-rank.
+      ty = fir::SequenceType::get(fir::SequenceType::Shape{}, ty);
+    }
+
     bool isPolymorphic = (Fortran::semantics::IsPolymorphic(symbol) ||
                           Fortran::semantics::IsUnlimitedPolymorphic(symbol)) &&
                          !Fortran::semantics::IsAssumedType(symbol);
-    if (ultimate.IsObjectArray()) {
-      auto shapeExpr =
-          Fortran::evaluate::GetShape(converter.getFoldingContext(), ultimate);
-      fir::SequenceType::Shape shape;
-      // If there is no shapExpr, this is an assumed-rank, and the empty shape
-      // will build the desired fir.array<*:T> type.
-      if (shapeExpr)
-        translateShape(shape, std::move(*shapeExpr));
-      ty = fir::SequenceType::get(shape, ty);
-    }
     if (Fortran::semantics::IsPointer(symbol))
       return fir::wrapInClassOrBoxType(fir::PointerType::get(ty),
                                        isPolymorphic);
@@ -382,6 +387,12 @@ struct TypeBuilderImpl {
       return ty;
 
     auto rec = fir::RecordType::get(context, converter.mangleName(tySpec));
+    // Mark SEQUENCE derived types.
+    if (const auto *details =
+            typeSymbol.detailsIf<Fortran::semantics::DerivedTypeDetails>())
+      if (details->sequence())
+        rec.setSequence(true);
+
     // Maintain the stack of types for recursive references and to speed-up
     // the derived type constructions that can be expensive for derived type
     // with dozens of components/parents (modern Fortran).
@@ -398,7 +409,7 @@ struct TypeBuilderImpl {
 
     // Gather the record type fields.
     // (1) The data components.
-    if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+    {
       size_t prev_offset{0};
       unsigned padCounter{0};
       // In HLFIR the parent component is the first fir.type component.
@@ -442,34 +453,6 @@ struct TypeBuilderImpl {
             }
           }
         }
-      }
-    } else {
-      for (const auto &component :
-           Fortran::semantics::OrderedComponentIterator(tySpec)) {
-        // In the lowering to FIR the parent component does not appear in the
-        // fir.type and its components are inlined at the beginning of the
-        // fir.type<>.
-        // FIXME: this strategy leads to bugs because padding should be inserted
-        // after the component of the parents so that the next components do not
-        // end-up in the parent storage if the sum of the parent's component
-        // storage size is not a multiple of the parent type storage alignment.
-
-        // Lowering is assuming non deferred component lower bounds are
-        // always 1. Catch any situations where this is not true for now.
-        if (componentHasNonDefaultLowerBounds(component))
-          TODO(converter.genLocation(component.name()),
-               "derived type components with non default lower bounds");
-        if (IsProcedure(component))
-          TODO(converter.genLocation(component.name()), "procedure components");
-        mlir::Type ty = genSymbolType(component);
-        // Do not add the parent component (component of the parents are
-        // added and should be sufficient, the parent component would
-        // duplicate the fields). Note that genSymbolType must be called above
-        // on it so that the dispatch table for the parent type still gets
-        // emitted as needed.
-        if (component.test(Fortran::semantics::Symbol::Flag::ParentComp))
-          continue;
-        cs.emplace_back(converter.getRecordTypeFieldName(component), ty);
       }
     }
 
@@ -662,6 +645,18 @@ Fortran::lower::ComponentReverseIterator::advanceToParentType() {
   assert(parentComp != scope->cend() && "failed to get parent component");
   setCurrentType(parentComp->second->GetType()->derivedTypeSpec());
   return *currentParentType;
+}
+
+const Fortran::semantics::Symbol *
+Fortran::lower::ComponentReverseIterator::getParentComponent() const {
+  if (!currentTypeDetails->GetParentComponentName())
+    return nullptr;
+  const Fortran::semantics::Scope *scope = currentParentType->GetScope();
+  auto parentComp =
+      DEREF(scope).find(currentTypeDetails->GetParentComponentName().value());
+  if (parentComp == scope->cend())
+    return nullptr;
+  return &*parentComp->second;
 }
 
 void Fortran::lower::ComponentReverseIterator::setCurrentType(

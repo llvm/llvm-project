@@ -28,7 +28,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Engine, size_t __p, size_t __r>
-class _LIBCPP_TEMPLATE_VIS discard_block_engine {
+class discard_block_engine {
   _Engine __e_;
   int __n_;
 
@@ -64,10 +64,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit discard_block_engine(_Engine&& __e) : __e_(std::move(__e)), __n_(0) {}
 #endif // _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI explicit discard_block_engine(result_type __sd) : __e_(__sd), __n_(0) {}
-  template <
-      class _Sseq,
-      __enable_if_t<__is_seed_sequence<_Sseq, discard_block_engine>::value && !is_convertible<_Sseq, _Engine>::value,
-                    int> = 0>
+  template <class _Sseq,
+            __enable_if_t<__is_seed_sequence_v<_Sseq, discard_block_engine> && !is_convertible<_Sseq, _Engine>::value,
+                          int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit discard_block_engine(_Sseq& __q) : __e_(__q), __n_(0) {}
   _LIBCPP_HIDE_FROM_ABI void seed() {
     __e_.seed();
@@ -77,7 +76,7 @@ public:
     __e_.seed(__sd);
     __n_ = 0;
   }
-  template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, discard_block_engine>::value, int> = 0>
+  template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, discard_block_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
     __e_.seed(__q);
     __n_ = 0;

@@ -43,6 +43,41 @@ struct RawStringFormatStyleManager {
   getEnclosingFunctionStyle(StringRef EnclosingFunction) const;
 };
 
+/// Represents the spaces at the start of a line, keeping track of what the
+/// spaces are for.
+struct IndentationAndAlignment {
+  unsigned Total;
+
+  /// The column that the position of the start of the line is calculated
+  /// from. It can be more than Total.
+  unsigned IndentedFrom;
+
+  /// Add spaces for right-justifying the token. The IndentedFrom field does not
+  /// change.
+  ///
+  /// This example in Objective-C shows why the field should not change.  The
+  /// token `xx` is right-justified with this method to align the `:`
+  /// symbols. The `:` symbols should remain aligned through the step that
+  /// aligns assignments. That step uses the IndentedFrom field to tell what
+  /// lines to move. Not changing the field in this method ensures that the 2
+  /// lines move together.
+  ///
+  /// [x //
+  ///     xxxx:0
+  ///       xx:0];
+  IndentationAndAlignment addPadding(unsigned Spaces) const;
+  /// Adding indentation is more common than padding. So the operator does that.
+  IndentationAndAlignment operator+(unsigned Spaces) const;
+  IndentationAndAlignment operator-(unsigned Spaces) const;
+  IndentationAndAlignment &operator+=(unsigned Spaces);
+
+  IndentationAndAlignment(unsigned Total, unsigned IndentedFrom);
+
+  IndentationAndAlignment(unsigned Spaces);
+
+  bool operator<(const IndentationAndAlignment &Other) const;
+};
+
 class ContinuationIndenter {
 public:
   /// Constructs a \c ContinuationIndenter to format \p Line starting in
@@ -168,7 +203,7 @@ private:
   unsigned addTokenOnNewLine(LineState &State, bool DryRun);
 
   /// Calculate the new column for a line wrap before the next token.
-  unsigned getNewLineColumn(const LineState &State);
+  IndentationAndAlignment getNewLineColumn(const LineState &State);
 
   /// Adds a multiline token to the \p State.
   ///
@@ -195,23 +230,22 @@ private:
 };
 
 struct ParenState {
-  ParenState(const FormatToken *Tok, unsigned Indent, unsigned LastSpace,
-             bool AvoidBinPacking, bool NoLineBreak)
-      : Tok(Tok), Indent(Indent), LastSpace(LastSpace),
-        NestedBlockIndent(Indent), IsAligned(false),
-        BreakBeforeClosingBrace(false), BreakBeforeClosingParen(false),
-        BreakBeforeClosingAngle(false), AvoidBinPacking(AvoidBinPacking),
-        BreakBeforeParameter(false), NoLineBreak(NoLineBreak),
-        NoLineBreakInOperand(false), LastOperatorWrapped(true),
-        ContainsLineBreak(false), ContainsUnwrappedBuilder(false),
-        AlignColons(true), ObjCSelectorNameFound(false),
-        HasMultipleNestedBlocks(false), NestedBlockInlined(false),
-        IsInsideObjCArrayLiteral(false), IsCSharpGenericTypeConstraint(false),
-        IsChainedConditional(false), IsWrappedConditional(false),
-        UnindentOperator(false) {}
+  ParenState(const FormatToken *Tok, IndentationAndAlignment Indent,
+             unsigned LastSpace, bool AvoidBinPacking, bool NoLineBreak)
+      : Tok(Tok), Indent(Indent), AlignedTo(nullptr), LastSpace(LastSpace),
+        NestedBlockIndent(Indent.Total), BreakBeforeClosingBrace(false),
+        BreakBeforeClosingParen(false), BreakBeforeClosingAngle(false),
+        AvoidBinPacking(AvoidBinPacking), BreakBeforeParameter(false),
+        NoLineBreak(NoLineBreak), NoLineBreakInOperand(false),
+        LastOperatorWrapped(true), ContainsLineBreak(false),
+        ContainsUnwrappedBuilder(false), AlignColons(true),
+        ObjCSelectorNameFound(false), HasMultipleNestedBlocks(false),
+        NestedBlockInlined(false), IsInsideObjCArrayLiteral(false),
+        IsCSharpGenericTypeConstraint(false), IsChainedConditional(false),
+        IsWrappedConditional(false), UnindentOperator(false) {}
 
-  /// \brief The token opening this parenthesis level, or nullptr if this level
-  /// is opened by fake parenthesis.
+  /// The token opening this parenthesis level, or nullptr if this level is
+  /// opened by fake parenthesis.
   ///
   /// Not considered for memoization as it will always have the same value at
   /// the same token.
@@ -219,7 +253,10 @@ struct ParenState {
 
   /// The position to which a specific parenthesis level needs to be
   /// indented.
-  unsigned Indent;
+  IndentationAndAlignment Indent;
+
+  /// The token in one of the previous lines this state wants to align to.
+  const FormatToken *AlignedTo;
 
   /// The position of the last space on each level.
   ///
@@ -263,9 +300,6 @@ struct ParenState {
   ///
   /// Used to align further variables if necessary.
   unsigned VariablePos = 0;
-
-  /// Whether this block's indentation is used for alignment.
-  bool IsAligned : 1;
 
   /// Whether a newline needs to be inserted before the block's closing
   /// brace.
@@ -344,29 +378,28 @@ struct ParenState {
 
   bool IsCSharpGenericTypeConstraint : 1;
 
-  /// \brief true if the current \c ParenState represents the false branch of
-  /// a chained conditional expression (e.g. else-if)
+  /// true if the current \c ParenState represents the false branch of a chained
+  /// conditional expression (e.g. else-if)
   bool IsChainedConditional : 1;
 
-  /// \brief true if there conditionnal was wrapped on the first operator (the
-  /// question mark)
+  /// true if there conditionnal was wrapped on the first operator (the question
+  /// mark)
   bool IsWrappedConditional : 1;
 
-  /// \brief Indicates the indent should be reduced by the length of the
-  /// operator.
+  /// Indicates the indent should be reduced by the length of the operator.
   bool UnindentOperator : 1;
 
   bool operator<(const ParenState &Other) const {
-    if (Indent != Other.Indent)
-      return Indent < Other.Indent;
+    if (Indent.Total != Other.Indent.Total)
+      return Indent.Total < Other.Indent.Total;
     if (LastSpace != Other.LastSpace)
       return LastSpace < Other.LastSpace;
     if (NestedBlockIndent != Other.NestedBlockIndent)
       return NestedBlockIndent < Other.NestedBlockIndent;
     if (FirstLessLess != Other.FirstLessLess)
       return FirstLessLess < Other.FirstLessLess;
-    if (IsAligned != Other.IsAligned)
-      return IsAligned;
+    if (AlignedTo != Other.AlignedTo)
+      return AlignedTo < Other.AlignedTo;
     if (BreakBeforeClosingBrace != Other.BreakBeforeClosingBrace)
       return BreakBeforeClosingBrace;
     if (BreakBeforeClosingParen != Other.BreakBeforeClosingParen)
@@ -407,7 +440,7 @@ struct ParenState {
       return IsWrappedConditional;
     if (UnindentOperator != Other.UnindentOperator)
       return UnindentOperator;
-    return false;
+    return Indent < Other.Indent;
   }
 };
 

@@ -1,9 +1,6 @@
 ; RUN: llc -mtriple=x86_64 < %s | FileCheck %s
 ; RUN: llc -mtriple=x86_64 -relocation-model=pic < %s | FileCheck %s --check-prefix=PIC
 
-; RUN: llc -mtriple=x86_64 -filetype=obj %s -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s --check-prefix=DBG
-
 define i32 @customevent() nounwind "function-instrument"="xray-always" !dbg !1 {
     %eventptr = alloca i8
     %eventsize = alloca i64
@@ -92,17 +89,6 @@ define void @leaf_func() "function-instrument"="xray-always" "frame-pointer"="no
 
 declare void @llvm.xray.customevent(ptr, i64)
 declare void @llvm.xray.typedevent(i64, ptr, i64)
-
-;; Construct call site entries for PATCHABLE_EVENT_CALL.
-; DBG:     DW_TAG_subprogram
-; DBG:       DW_TAG_call_site
-; DBG-NEXT:    DW_AT_call_target (DW_OP_reg{{.*}})
-; DBG-NEXT:    DW_AT_call_return_pc
-
-; DBG:     DW_TAG_subprogram
-; DBG:       DW_TAG_call_site
-; DBG-NEXT:    DW_AT_call_target (DW_OP_reg{{.*}})
-; DBG-NEXT:    DW_AT_call_return_pc
 
 !llvm.dbg.cu = !{!7}
 !llvm.module.flags = !{!10, !11}

@@ -103,6 +103,7 @@ def err_deleted_non_function : Error<
   "only functions can have deleted definitions">;
 def err_module_not_found : Error<"module '%0' not found">, DefaultFatal;
 def err_module_not_built : Error<"could not build module '%0'">, DefaultFatal;
+def err_module_not_written : Error<"could not write module file for '%0' to '%1': %2">, DefaultFatal;
 def err_module_build_disabled: Error<
   "module '%0' is needed but has not been provided, and implicit use of module "
   "files is disabled">, DefaultFatal;
@@ -130,9 +131,11 @@ def err_attribute_not_type_attr : Error<
   "%0%select{ attribute|}1 cannot be applied to types">;
 def err_enum_template : Error<"enumeration cannot be a template">;
 
-def warn_cxx20_compat_consteval : Warning<
-  "'consteval' specifier is incompatible with C++ standards before C++20">,
-  InGroup<CXX20Compat>, DefaultIgnore;
+def warn_cxx20_compat_consteval
+    : Warning<"'consteval' specifier is incompatible with C++ standards before "
+              "C++20">,
+      InGroup<CXXPre20Compat>,
+      DefaultIgnore;
 def warn_missing_type_specifier : Warning<
   "type specifier missing, defaults to 'int'">,
   InGroup<ImplicitInt>, DefaultIgnore;
@@ -179,6 +182,8 @@ def err_opencl_unknown_type_specifier : Error<
 
 def warn_unknown_attribute_ignored : Warning<
   "unknown attribute %0 ignored">, InGroup<UnknownAttributes>;
+def warn_unknown_attribute_ignored_suggestion : Warning<
+  "unknown attribute %0 ignored; did you mean '%1'?">, InGroup<UnknownAttributes>;
 def warn_attribute_ignored : Warning<"%0 attribute ignored">,
   InGroup<IgnoredAttributes>;
 def err_keyword_not_supported_on_target : Error<
@@ -282,6 +287,8 @@ def err_seh___except_filter : Error<
   "%0 only allowed in __except filter expression">;
 def err_seh___finally_block : Error<
   "%0 only allowed in __finally block">;
+def err_seh_object_unwinding : Error<
+  "'__try' is not permitted in functions that require object unwinding">;
 
 // Sema && AST
 def note_invalid_subexpr_in_const_expr : Note<
@@ -307,6 +314,10 @@ def err_ms_asm_bitfield_unsupported : Error<
 def warn_stack_clash_protection_inline_asm : Warning<
   "unable to protect inline asm that clobbers stack pointer against stack "
   "clash">, InGroup<DiagGroup<"stack-protector">>;
+
+def warn_stack_protection_ignore_attribute : Warning<
+  "'stack_protector_ignore' attribute ignored due to "
+  "'-fstack-protector-all' option">, InGroup<IgnoredAttributes>;
 
 def warn_slh_does_not_support_asm_goto : Warning<
   "speculative load hardening does not protect functions with asm goto">,
@@ -368,8 +379,15 @@ def err_ppc_impossible_musttail: Error<
   "indirect calls cannot be tail called on PPC|"
   "external calls cannot be tail called on PPC}0"
   >;
+def err_mips_impossible_musttail: Error<
+  "'musttail' attribute for this call is impossible because %select{"
+  "the MIPS16 ABI does not support tail calls|"
+  "calls outside the current linkage unit cannot be tail called on MIPS}0"
+  >;
 def err_aix_musttail_unsupported: Error<
   "'musttail' attribute is not supported on AIX">;
+def err_musttail_noexcept_mismatch: Error<
+  "'musttail' in a noexcept function requires a noexcept callee">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;
@@ -429,6 +447,12 @@ def err_omp_more_one_clause : Error<
   "directive '#pragma omp %0' cannot contain more than one '%1' clause%select{| with '%3' name modifier| with 'source' dependence}2">;
 def err_omp_required_clause : Error<
   "directive '#pragma omp %0' requires the '%1' clause">;
+def warn_omp_gpu_unsupported_clause: Warning<
+  "clause '%0' is currently not supported on a GPU; clause ignored">,
+  InGroup<OpenMPClauses>;
+def warn_omp_gpu_unsupported_modifier_for_clause: Warning<
+  "modifier '%0' is currently not supported on a GPU for the '%1' clause; modifier ignored">,
+  InGroup<OpenMPClauses>;
 
 // Static Analyzer Core
 def err_unknown_analyzer_checker_or_package : Error<

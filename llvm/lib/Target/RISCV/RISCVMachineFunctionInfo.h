@@ -31,7 +31,7 @@ struct RISCVMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   RISCVMachineFunctionInfo(const llvm::RISCVMachineFunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~RISCVMachineFunctionInfo() = default;
+  ~RISCVMachineFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<RISCVMachineFunctionInfo> {
@@ -78,10 +78,16 @@ private:
   /// Size of any opaque stack adjustment due to QCI Interrupt instructions.
   unsigned QCIInterruptStackSize = 0;
 
+  /// Store Frame Indexes for Interrupt-Related CSR Spills.
+  SmallVector<int, 2> InterruptCSRFrameIndexes;
+
   int64_t StackProbeSize = 0;
 
   /// Does it probe the stack for a dynamic allocation?
   bool HasDynamicAllocation = false;
+
+  /// Whether the function has cf-protection-branch module flag set.
+  bool CFProtectionBranch = false;
 
 public:
   RISCVMachineFunctionInfo(const Function &F, const RISCVSubtarget *STI);
@@ -153,7 +159,14 @@ public:
   unsigned getRVPushStackSize() const { return RVPushStackSize; }
   void setRVPushStackSize(unsigned Size) { RVPushStackSize = Size; }
 
-  enum class InterruptStackKind { None = 0, QCINest, QCINoNest };
+  enum class InterruptStackKind {
+    None = 0,
+    QCINest,
+    QCINoNest,
+    SiFiveCLICPreemptible,
+    SiFiveCLICStackSwap,
+    SiFiveCLICPreemptibleStackSwap
+  };
 
   InterruptStackKind getInterruptStackKind(const MachineFunction &MF) const;
 
@@ -165,6 +178,32 @@ public:
 
   unsigned getQCIInterruptStackSize() const { return QCIInterruptStackSize; }
   void setQCIInterruptStackSize(unsigned Size) { QCIInterruptStackSize = Size; }
+
+  bool useSiFiveInterrupt(const MachineFunction &MF) const {
+    InterruptStackKind Kind = getInterruptStackKind(MF);
+    return Kind == InterruptStackKind::SiFiveCLICPreemptible ||
+           Kind == InterruptStackKind::SiFiveCLICStackSwap ||
+           Kind == InterruptStackKind::SiFiveCLICPreemptibleStackSwap;
+  }
+
+  bool isSiFivePreemptibleInterrupt(const MachineFunction &MF) const {
+    InterruptStackKind Kind = getInterruptStackKind(MF);
+    return Kind == InterruptStackKind::SiFiveCLICPreemptible ||
+           Kind == InterruptStackKind::SiFiveCLICPreemptibleStackSwap;
+  }
+
+  bool isSiFiveStackSwapInterrupt(const MachineFunction &MF) const {
+    InterruptStackKind Kind = getInterruptStackKind(MF);
+    return Kind == InterruptStackKind::SiFiveCLICStackSwap ||
+           Kind == InterruptStackKind::SiFiveCLICPreemptibleStackSwap;
+  }
+
+  void pushInterruptCSRFrameIndex(int FI) {
+    InterruptCSRFrameIndexes.push_back(FI);
+  }
+  int getInterruptCSRFrameIndex(size_t Idx) const {
+    return InterruptCSRFrameIndexes[Idx];
+  }
 
   // Some Stack Management Variants automatically update FP in a frame-pointer
   // convention compatible way - which means we don't need to manually update
@@ -182,6 +221,8 @@ public:
 
   bool hasDynamicAllocation() const { return HasDynamicAllocation; }
   void setDynamicAllocation() { HasDynamicAllocation = true; }
+
+  bool hasCFProtectionBranch() const { return CFProtectionBranch; }
 };
 
 } // end namespace llvm

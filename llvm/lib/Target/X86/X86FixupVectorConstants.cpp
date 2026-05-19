@@ -29,39 +29,45 @@ using namespace llvm;
 STATISTIC(NumInstChanges, "Number of instructions changes");
 
 namespace {
-class X86FixupVectorConstantsPass : public MachineFunctionPass {
+class X86FixupVectorConstantsImpl {
+public:
+  bool runOnMachineFunction(MachineFunction &MF);
+
+private:
+  bool processInstruction(MachineFunction &MF, MachineBasicBlock &MBB,
+                          MachineInstr &MI);
+
+  const X86InstrInfo *TII = nullptr;
+  const X86Subtarget *ST = nullptr;
+  const MCSchedModel *SM = nullptr;
+};
+
+class X86FixupVectorConstantsLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  X86FixupVectorConstantsPass() : MachineFunctionPass(ID) {}
+  X86FixupVectorConstantsLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "X86 Fixup Vector Constants";
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-  bool processInstruction(MachineFunction &MF, MachineBasicBlock &MBB,
-                          MachineInstr &MI);
 
   // This pass runs after regalloc and doesn't support VReg operands.
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
-
-private:
-  const X86InstrInfo *TII = nullptr;
-  const X86Subtarget *ST = nullptr;
-  const MCSchedModel *SM = nullptr;
 };
 } // end anonymous namespace
 
-char X86FixupVectorConstantsPass::ID = 0;
+char X86FixupVectorConstantsLegacy::ID = 0;
 
-INITIALIZE_PASS(X86FixupVectorConstantsPass, DEBUG_TYPE, DEBUG_TYPE, false, false)
+INITIALIZE_PASS(X86FixupVectorConstantsLegacy, DEBUG_TYPE, DEBUG_TYPE, false,
+                false)
 
-FunctionPass *llvm::createX86FixupVectorConstants() {
-  return new X86FixupVectorConstantsPass();
+FunctionPass *llvm::createX86FixupVectorConstantsLegacyPass() {
+  return new X86FixupVectorConstantsLegacy();
 }
 
 /// Normally, we only allow poison in vector splats. However, as this is part
@@ -88,11 +94,19 @@ static std::optional<APInt> extractConstantBits(const Constant *C) {
   if (isa<UndefValue>(C))
     return APInt::getZero(NumBits);
 
-  if (auto *CInt = dyn_cast<ConstantInt>(C))
-    return CInt->getValue();
+  if (auto *CInt = dyn_cast<ConstantInt>(C)) {
+    if (isa<VectorType>(CInt->getType()))
+      return APInt::getSplat(NumBits, CInt->getValue());
 
-  if (auto *CFP = dyn_cast<ConstantFP>(C))
+    return CInt->getValue();
+  }
+
+  if (auto *CFP = dyn_cast<ConstantFP>(C)) {
+    if (isa<VectorType>(CFP->getType()))
+      return APInt::getSplat(NumBits, CFP->getValue().bitcastToAPInt());
+
     return CFP->getValue().bitcastToAPInt();
+  }
 
   if (auto *CV = dyn_cast<ConstantVector>(C)) {
     if (auto *CVSplat = getSplatValueAllowUndef(CV)) {
@@ -328,17 +342,19 @@ static Constant *rebuildZExtCst(const Constant *C, unsigned NumBits,
   return rebuildExtCst(C, false, NumBits, NumElts, SrcEltBitWidth);
 }
 
-bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
+bool X86FixupVectorConstantsImpl::processInstruction(MachineFunction &MF,
                                                      MachineBasicBlock &MBB,
                                                      MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   MachineConstantPool *CP = MI.getParent()->getParent()->getConstantPool();
+  bool HasSSE2 = ST->hasSSE2();
   bool HasSSE41 = ST->hasSSE41();
   bool HasAVX2 = ST->hasAVX2();
   bool HasDQI = ST->hasDQI();
   bool HasBWI = ST->hasBWI();
   bool HasVLX = ST->hasVLX();
   bool MultiDomain = ST->hasAVX512() || ST->hasNoDomainDelayMov();
+  bool OptSize = MF.getFunction().hasOptSize();
 
   struct FixupEntry {
     int Op;
@@ -347,6 +363,36 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
     std::function<Constant *(const Constant *, unsigned, unsigned, unsigned)>
         RebuildConstant;
   };
+
+  auto NewOpcPreferable = [&](const FixupEntry &Fixup,
+                              unsigned RegBitWidth) -> bool {
+    if (SM->hasInstrSchedModel()) {
+      unsigned NewOpc = Fixup.Op;
+      auto *OldDesc = SM->getSchedClassDesc(TII->get(Opc).getSchedClass());
+      auto *NewDesc = SM->getSchedClassDesc(TII->get(NewOpc).getSchedClass());
+      unsigned BitsSaved = RegBitWidth - (Fixup.NumCstElts * Fixup.MemBitWidth);
+
+      // Compare tput/lat - avoid any regressions, but allow extra cycle of
+      // latency in exchange for each 128-bit (or less) constant pool reduction
+      // (this is a very simple cost:benefit estimate - there will probably be
+      // better ways to calculate this).
+      double OldTput = MCSchedModel::getReciprocalThroughput(*ST, *OldDesc);
+      double NewTput = MCSchedModel::getReciprocalThroughput(*ST, *NewDesc);
+      if (OldTput != NewTput)
+        return NewTput < OldTput;
+
+      int LatTol = (BitsSaved + 127) / 128;
+      int OldLat = MCSchedModel::computeInstrLatency(*ST, *OldDesc);
+      int NewLat = MCSchedModel::computeInstrLatency(*ST, *NewDesc);
+      if (OldLat != NewLat)
+        return NewLat < (OldLat + LatTol);
+    }
+
+    // We either were unable to get tput/lat or all values were equal.
+    // Prefer the new opcode for reduced constant pool size.
+    return true;
+  };
+
   auto FixupConstant = [&](ArrayRef<FixupEntry> Fixups, unsigned RegBitWidth,
                            unsigned OperandNo) {
 #ifdef EXPENSIVE_CHECKS
@@ -363,7 +409,11 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
       unsigned CstBitWidth = C->getType()->getPrimitiveSizeInBits();
       RegBitWidth = RegBitWidth ? RegBitWidth : CstBitWidth;
       for (const FixupEntry &Fixup : Fixups) {
-        if (Fixup.Op) {
+        // Always uses the smallest possible constant load with opt/minsize,
+        // otherwise use the smallest instruction that doesn't affect
+        // performance.
+        // TODO: If constant has been hoisted from loop, use smallest constant.
+        if (Fixup.Op && (OptSize || NewOpcPreferable(Fixup, RegBitWidth))) {
           // Construct a suitable constant and adjust the MI to use the new
           // constant pool entry.
           if (Constant *NewCst = Fixup.RebuildConstant(
@@ -394,11 +444,13 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   case X86::MOVAPDrm:
   case X86::MOVAPSrm:
   case X86::MOVUPDrm:
-  case X86::MOVUPSrm:
+  case X86::MOVUPSrm: {
     // TODO: SSE3 MOVDDUP Handling
-    return FixupConstant({{X86::MOVSSrm, 1, 32, rebuildZeroUpperCst},
-                          {X86::MOVSDrm, 1, 64, rebuildZeroUpperCst}},
-                         128, 1);
+    FixupEntry Fixups[] = {
+        {X86::MOVSSrm, 1, 32, rebuildZeroUpperCst},
+        {HasSSE2 ? X86::MOVSDrm : 0, 1, 64, rebuildZeroUpperCst}};
+    return FixupConstant(Fixups, 128, 1);
+  }
   case X86::VMOVAPDrm:
   case X86::VMOVAPSrm:
   case X86::VMOVUPDrm:
@@ -730,7 +782,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   return false;
 }
 
-bool X86FixupVectorConstantsPass::runOnMachineFunction(MachineFunction &MF) {
+bool X86FixupVectorConstantsImpl::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Start X86FixupVectorConstants\n";);
   bool Changed = false;
   ST = &MF.getSubtarget<X86Subtarget>();
@@ -747,4 +799,19 @@ bool X86FixupVectorConstantsPass::runOnMachineFunction(MachineFunction &MF) {
   }
   LLVM_DEBUG(dbgs() << "End X86FixupVectorConstants\n";);
   return Changed;
+}
+
+bool X86FixupVectorConstantsLegacy::runOnMachineFunction(MachineFunction &MF) {
+  X86FixupVectorConstantsImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+X86FixupVectorConstantsPass::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  X86FixupVectorConstantsImpl Impl;
+  return Impl.runOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

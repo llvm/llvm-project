@@ -13,15 +13,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/InitAllPasses.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/OpenMP/Transforms/Passes.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassOptions.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
+#include "mlir/Transforms/Passes.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/OpenMP/RegisterOpenMPExtensions.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/Passes.h"
 
@@ -32,10 +37,15 @@ int main(int argc, char **argv) {
   // TODO: register needed MLIR passes for CIR?
   mlir::DialectRegistry registry;
   registry.insert<mlir::BuiltinDialect, cir::CIRDialect,
-                  mlir::memref::MemRefDialect, mlir::LLVM::LLVMDialect>();
+                  mlir::memref::MemRefDialect, mlir::LLVM::LLVMDialect,
+                  mlir::DLTIDialect, mlir::omp::OpenMPDialect>();
+  cir::omp::registerOpenMPExtensions(registry);
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return mlir::createCIRCanonicalizePass();
+  });
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createCIRSimplifyPass();
   });
 
   mlir::PassPipelineRegistration<CIRToLLVMPipelineOptions> pipeline(
@@ -49,9 +59,22 @@ int main(int argc, char **argv) {
   });
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createCIREHABILoweringPass();
+  });
+
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return mlir::createHoistAllocasPass();
   });
 
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createGotoSolverPass();
+  });
+
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createCXXABILoweringPass();
+  });
+
+  mlir::omp::registerOpenMPPasses();
   mlir::registerTransformsPasses();
 
   return mlir::asMainReturnCode(MlirOptMain(

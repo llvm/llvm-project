@@ -16,6 +16,8 @@
 extern "C" {
 #endif
 
+#define __riscv_intrinsic_xcvalu 1
+
 #if defined(__riscv_xcvalu)
 
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
@@ -24,13 +26,13 @@ static __inline__ long __DEFAULT_FN_ATTRS __riscv_cv_abs(long a) {
   return __builtin_abs(a);
 }
 
-static __inline__ long __DEFAULT_FN_ATTRS __riscv_cv_alu_slet(long a, long b) {
-  return __builtin_riscv_cv_alu_slet(a, b);
+static __inline__ long __DEFAULT_FN_ATTRS __riscv_cv_alu_sle(long a, long b) {
+  return __builtin_riscv_cv_alu_sle(a, b);
 }
 
 static __inline__ long __DEFAULT_FN_ATTRS
-__riscv_cv_alu_sletu(unsigned long a, unsigned long b) {
-  return __builtin_riscv_cv_alu_sletu(a, b);
+__riscv_cv_alu_sleu(unsigned long a, unsigned long b) {
+  return __builtin_riscv_cv_alu_sleu(a, b);
 }
 
 static __inline__ long __DEFAULT_FN_ATTRS __riscv_cv_alu_min(long a, long b) {

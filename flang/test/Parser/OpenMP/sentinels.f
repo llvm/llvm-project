@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fopenmp -E %s | FileCheck %s
+! RUN: %flang_fc1 -E %s | FileCheck %s
 ! CHECK:      program main
 ! CHECK:       interface
 ! CHECK:        subroutine sub(a, b)
@@ -50,23 +50,23 @@ c$  * PRINT *, "comment"
 ! CHECK:      "msg1"
 ! CHECK-NOT:  "comment"
 c$ x  PRINT *, "comment"
-c$1  &         , "comment"
+c$*  &         , "comment"
 c$ x &         , "comment"
 c$  +&         , "comment"
 
 c$    PRINT *, "msg1"
-c$1  &         , "comment"
+c$*  &         , "comment"
 c$ x &         , "comment"
 c$  +&         , "comment"
 
 ! Test valid chars in initial and continuation lines.
-! CHECK:      "msg2"
-! CHECK-SAME: "msg3"
+! CHECK: !$ 20 PRINT *, "msg2"
+! CHECK: !$   &, "msg3"
 c$ 20 PRINT *, "msg2"
 c$   &         , "msg3"
 
-! CHECK:      "msg4"
-! CHECK-SAME: "msg5"
+! CHECK: !$ PRINT *, "msg4",
+! CHECK: !$   &"msg5"
 c$   0PRINT *, "msg4",
 c$   +         "msg5"
       end

@@ -27,14 +27,17 @@ extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                   KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
 
 extern int target_activate_rr(DeviceTy &Device, uint64_t MemorySize,
-                              void *ReqAddr, bool isRecord, bool SaveOutput,
-                              uint64_t &ReqPtrArgOffset);
+                              void *ReqAddr, bool IsRecord, bool SaveOutput,
+                              bool EmitReport, const char *OutputDirPath);
 
-extern int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-                         void *DeviceMemory, int64_t DeviceMemorySize,
-                         void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
-                         int32_t NumTeams, int32_t ThreadLimit,
-                         uint64_t LoopTripCount, AsyncInfoTy &AsyncInfo);
+extern int
+target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr, void *DeviceMemory,
+              int64_t DeviceMemorySize, void *ReuseDeviceAlloc,
+              const llvm::offloading::EntryTy *Globals, int32_t NumGlobals,
+              void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
+              int32_t NumTeams, int32_t ThreadLimit, uint32_t SharedMemorySize,
+              uint64_t LoopTripCount, AsyncInfoTy &AsyncInfo,
+              KernelReplayOutcomeTy *ReplayOutcome);
 
 extern void handleTargetOutcome(bool Success, ident_t *Loc);
 
@@ -55,7 +58,14 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
     const char *Type = nullptr;
     const char *Implicit =
         (ArgTypes[I] & OMP_TGT_MAPTYPE_IMPLICIT) ? "(implicit)" : "";
-    if (ArgTypes[I] & OMP_TGT_MAPTYPE_TO && ArgTypes[I] & OMP_TGT_MAPTYPE_FROM)
+
+    if (ArgTypes[I] & OMP_TGT_MAPTYPE_ATTACH &&
+        ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS)
+      Type = "attach:always";
+    else if (ArgTypes[I] & OMP_TGT_MAPTYPE_ATTACH)
+      Type = "attach";
+    else if (ArgTypes[I] & OMP_TGT_MAPTYPE_TO &&
+             ArgTypes[I] & OMP_TGT_MAPTYPE_FROM)
       Type = "tofrom";
     else if (ArgTypes[I] & OMP_TGT_MAPTYPE_TO)
       Type = "to";

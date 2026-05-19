@@ -24,6 +24,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 
 #include <algorithm>
 #include <utility>
@@ -72,13 +73,13 @@ TextNodeDumper::TextNodeDumper(raw_ostream &OS, bool ShowColors)
 void TextNodeDumper::Visit(const comments::Comment *C,
                            const comments::FullComment *FC) {
   if (!C) {
-    ColorScope Color(OS, ShowColors, NullColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Null);
     OS << "<<<NULL>>>";
     return;
   }
 
   {
-    ColorScope Color(OS, ShowColors, CommentColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Comment);
     OS << C->getCommentKindName();
   }
   dumpPointer(C);
@@ -90,7 +91,7 @@ void TextNodeDumper::Visit(const comments::Comment *C,
 
 void TextNodeDumper::Visit(const Attr *A) {
   {
-    ColorScope Color(OS, ShowColors, AttrColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Attr);
 
     switch (A->getKind()) {
 #define ATTR(X)                                                                \
@@ -125,12 +126,12 @@ void TextNodeDumper::Visit(const TemplateArgument &TA, SourceRange R,
 
 void TextNodeDumper::Visit(const Stmt *Node) {
   if (!Node) {
-    ColorScope Color(OS, ShowColors, NullColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Null);
     OS << "<<<NULL>>>";
     return;
   }
   {
-    ColorScope Color(OS, ShowColors, StmtColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Stmt);
     OS << Node->getStmtClassName();
   }
   dumpPointer(Node);
@@ -140,12 +141,12 @@ void TextNodeDumper::Visit(const Stmt *Node) {
     dumpType(E->getType());
 
     if (E->containsErrors()) {
-      ColorScope Color(OS, ShowColors, ErrorsColor);
+      ColorScope Color(OS, ShowColors, ASTDumpColor::Errors);
       OS << " contains-errors";
     }
 
     {
-      ColorScope Color(OS, ShowColors, ValueKindColor);
+      ColorScope Color(OS, ShowColors, ASTDumpColor::ValueKind);
       switch (E->getValueKind()) {
       case VK_PRValue:
         break;
@@ -159,7 +160,7 @@ void TextNodeDumper::Visit(const Stmt *Node) {
     }
 
     {
-      ColorScope Color(OS, ShowColors, ObjectKindColor);
+      ColorScope Color(OS, ShowColors, ASTDumpColor::ObjectKind);
       switch (E->getObjectKind()) {
       case OK_Ordinary:
         break;
@@ -187,13 +188,13 @@ void TextNodeDumper::Visit(const Stmt *Node) {
 
 void TextNodeDumper::Visit(const Type *T) {
   if (!T) {
-    ColorScope Color(OS, ShowColors, NullColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Null);
     OS << "<<<NULL>>>";
     return;
   }
   if (isa<LocInfoType>(T)) {
     {
-      ColorScope Color(OS, ShowColors, TypeColor);
+      ColorScope Color(OS, ShowColors, ASTDumpColor::Type);
       OS << "LocInfo Type";
     }
     dumpPointer(T);
@@ -201,7 +202,7 @@ void TextNodeDumper::Visit(const Type *T) {
   }
 
   {
-    ColorScope Color(OS, ShowColors, TypeColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Type);
     OS << T->getTypeClassName() << "Type";
   }
   dumpPointer(T);
@@ -214,7 +215,7 @@ void TextNodeDumper::Visit(const Type *T) {
     OS << " sugar";
 
   if (T->containsErrors()) {
-    ColorScope Color(OS, ShowColors, ErrorsColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Errors);
     OS << " contains-errors";
   }
 
@@ -243,13 +244,13 @@ void TextNodeDumper::Visit(QualType T) {
 
 void TextNodeDumper::Visit(TypeLoc TL) {
   if (!TL) {
-    ColorScope Color(OS, ShowColors, NullColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Null);
     OS << "<<<NULL>>>";
     return;
   }
 
   {
-    ColorScope Color(OS, ShowColors, TypeColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Type);
     OS << (TL.getTypeLocClass() == TypeLoc::Qualified
                ? "Qualified"
                : TL.getType()->getTypeClassName())
@@ -264,13 +265,13 @@ void TextNodeDumper::Visit(TypeLoc TL) {
 
 void TextNodeDumper::Visit(const Decl *D) {
   if (!D) {
-    ColorScope Color(OS, ShowColors, NullColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Null);
     OS << "<<<NULL>>>";
     return;
   }
 
   {
-    ColorScope Color(OS, ShowColors, DeclKindNameColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::DeclKindName);
     OS << D->getDeclKindName() << "Decl";
   }
   dumpPointer(D);
@@ -317,7 +318,7 @@ void TextNodeDumper::Visit(const Decl *D) {
     if (!MD || !MD->isThisDeclarationADefinition()) {
       const auto *DC = dyn_cast<DeclContext>(D);
       if (DC && DC->hasExternalLexicalStorage()) {
-        ColorScope Color(OS, ShowColors, UndeserializedColor);
+        ColorScope Color(OS, ShowColors, ASTDumpColor::Undeserialized);
         OS << " <undeserialized declarations>";
       }
     }
@@ -365,12 +366,12 @@ void TextNodeDumper::Visit(const BlockDecl::Capture &C) {
 
 void TextNodeDumper::Visit(const OMPClause *C) {
   if (!C) {
-    ColorScope Color(OS, ShowColors, NullColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Null);
     OS << "<<<NULL>>> OMPClause";
     return;
   }
   {
-    ColorScope Color(OS, ShowColors, AttrColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Attr);
     StringRef ClauseName(llvm::omp::getOpenMPClauseName(C->getClauseKind()));
     OS << "OMP" << ClauseName.substr(/*Start=*/0, /*N=*/1).upper()
        << ClauseName.drop_front() << "Clause";
@@ -388,12 +389,12 @@ void TextNodeDumper::VisitOpenACCAsteriskSizeExpr(
 
 void TextNodeDumper::Visit(const OpenACCClause *C) {
   if (!C) {
-    ColorScope Color(OS, ShowColors, NullColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Null);
     OS << "<<<NULL>>> OpenACCClause";
     return;
   }
   {
-    ColorScope Color(OS, ShowColors, AttrColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Attr);
     OS << C->getClauseKind();
 
     // Handle clauses with parens for types that have no children, likely
@@ -405,9 +406,6 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Async:
     case OpenACCClauseKind::Auto:
     case OpenACCClauseKind::Attach:
-    case OpenACCClauseKind::Copy:
-    case OpenACCClauseKind::PCopy:
-    case OpenACCClauseKind::PresentOrCopy:
     case OpenACCClauseKind::Host:
     case OpenACCClauseKind::If:
     case OpenACCClauseKind::IfPresent:
@@ -436,6 +434,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Vector:
     case OpenACCClauseKind::VectorLength:
     case OpenACCClauseKind::Invalid:
+    case OpenACCClauseKind::Shortloop:
       // The condition expression will be printed as a part of the 'children',
       // but print 'clause' here so it is clear what is happening from the dump.
       OS << " clause";
@@ -457,26 +456,38 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
         OS << ": force";
       break;
 
+    case OpenACCClauseKind::Copy:
+    case OpenACCClauseKind::PCopy:
+    case OpenACCClauseKind::PresentOrCopy:
+      OS << " clause";
+      if (cast<OpenACCCopyClause>(C)->getModifierList() !=
+          OpenACCModifierKind::Invalid)
+        OS << " modifiers: " << cast<OpenACCCopyClause>(C)->getModifierList();
+      break;
     case OpenACCClauseKind::CopyIn:
     case OpenACCClauseKind::PCopyIn:
     case OpenACCClauseKind::PresentOrCopyIn:
       OS << " clause";
-      if (cast<OpenACCCopyInClause>(C)->isReadOnly())
-        OS << " : readonly";
+      if (cast<OpenACCCopyInClause>(C)->getModifierList() !=
+          OpenACCModifierKind::Invalid)
+        OS << " modifiers: " << cast<OpenACCCopyInClause>(C)->getModifierList();
       break;
     case OpenACCClauseKind::CopyOut:
     case OpenACCClauseKind::PCopyOut:
     case OpenACCClauseKind::PresentOrCopyOut:
       OS << " clause";
-      if (cast<OpenACCCopyOutClause>(C)->isZero())
-        OS << " : zero";
+      if (cast<OpenACCCopyOutClause>(C)->getModifierList() !=
+          OpenACCModifierKind::Invalid)
+        OS << " modifiers: "
+           << cast<OpenACCCopyOutClause>(C)->getModifierList();
       break;
     case OpenACCClauseKind::Create:
     case OpenACCClauseKind::PCreate:
     case OpenACCClauseKind::PresentOrCreate:
       OS << " clause";
-      if (cast<OpenACCCreateClause>(C)->isZero())
-        OS << " : zero";
+      if (cast<OpenACCCreateClause>(C)->getModifierList() !=
+          OpenACCModifierKind::Invalid)
+        OS << " modifiers: " << cast<OpenACCCreateClause>(C)->getModifierList();
       break;
     case OpenACCClauseKind::Wait:
       OS << " clause";
@@ -491,10 +502,10 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       llvm::interleaveComma(
           cast<OpenACCDeviceTypeClause>(C)->getArchitectures(), OS,
           [&](const DeviceTypeArgument &Arch) {
-            if (Arch.first == nullptr)
+            if (Arch.getIdentifierInfo() == nullptr)
               OS << "*";
             else
-              OS << Arch.first->getName();
+              OS << Arch.getIdentifierInfo()->getName();
           });
       OS << ")";
       break;
@@ -532,7 +543,7 @@ void TextNodeDumper::Visit(const GenericSelectionExpr::ConstAssociation &A) {
 
 void TextNodeDumper::Visit(const ConceptReference *R) {
   if (!R) {
-    ColorScope Color(OS, ShowColors, NullColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Null);
     OS << "<<<NULL>>> ConceptReference";
     return;
   }
@@ -546,13 +557,13 @@ void TextNodeDumper::Visit(const ConceptReference *R) {
 
 void TextNodeDumper::Visit(const concepts::Requirement *R) {
   if (!R) {
-    ColorScope Color(OS, ShowColors, NullColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Null);
     OS << "<<<NULL>>> Requirement";
     return;
   }
 
   {
-    ColorScope Color(OS, ShowColors, StmtColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Stmt);
     switch (R->getKind()) {
     case concepts::Requirement::RK_Type:
       OS << "TypeRequirement";
@@ -609,6 +620,7 @@ static bool isSimpleAPValue(const APValue &Value) {
   case APValue::Vector:
   case APValue::Array:
   case APValue::Struct:
+  case APValue::Matrix:
     return false;
   case APValue::Union:
     return isSimpleAPValue(Value.getUnionValue());
@@ -663,7 +675,7 @@ void TextNodeDumper::dumpAPValueChildren(
 }
 
 void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
-  ColorScope Color(OS, ShowColors, ValueKindColor);
+  ColorScope Color(OS, ShowColors, ASTDumpColor::ValueKind);
   switch (Value.getKind()) {
   case APValue::None:
     OS << "None";
@@ -674,21 +686,21 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
   case APValue::Int:
     OS << "Int ";
     {
-      ColorScope Color(OS, ShowColors, ValueColor);
+      ColorScope Color(OS, ShowColors, ASTDumpColor::Value);
       OS << Value.getInt();
     }
     return;
   case APValue::Float:
     OS << "Float ";
     {
-      ColorScope Color(OS, ShowColors, ValueColor);
+      ColorScope Color(OS, ShowColors, ASTDumpColor::Value);
       OS << GetApproxValue(Value.getFloat());
     }
     return;
   case APValue::FixedPoint:
     OS << "FixedPoint ";
     {
-      ColorScope Color(OS, ShowColors, ValueColor);
+      ColorScope Color(OS, ShowColors, ASTDumpColor::Value);
       OS << Value.getFixedPoint();
     }
     return;
@@ -707,7 +719,7 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
   case APValue::ComplexInt:
     OS << "ComplexInt ";
     {
-      ColorScope Color(OS, ShowColors, ValueColor);
+      ColorScope Color(OS, ShowColors, ASTDumpColor::Value);
       OS << Value.getComplexIntReal() << " + " << Value.getComplexIntImag()
          << 'i';
     }
@@ -715,7 +727,7 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
   case APValue::ComplexFloat:
     OS << "ComplexFloat ";
     {
-      ColorScope Color(OS, ShowColors, ValueColor);
+      ColorScope Color(OS, ShowColors, ASTDumpColor::Value);
       OS << GetApproxValue(Value.getComplexFloatReal()) << " + "
          << GetApproxValue(Value.getComplexFloatImag()) << 'i';
     }
@@ -729,6 +741,14 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
     else if (const auto *BE = B.dyn_cast<const Expr *>()) {
       OS << BE->getStmtClassName() << ' ';
       dumpPointer(BE);
+    } else if (const auto BTI = B.dyn_cast<TypeInfoLValue>()) {
+      OS << "TypeInfoLValue ";
+      ColorScope Color(OS, ShowColors, ASTDumpColor::Type);
+      BTI.print(OS, PrintPolicy);
+    } else if (B.is<DynamicAllocLValue>()) {
+      OS << "DynamicAllocLValue";
+      auto BDA = B.getDynamicAllocType();
+      dumpType(BDA);
     } else {
       const auto *VDB = B.get<const ValueDecl *>();
       OS << VDB->getDeclKindName() << "Decl";
@@ -765,7 +785,7 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
     if (Value.hasArrayFiller()) {
       AddChild("filler", [=] {
         {
-          ColorScope Color(OS, ShowColors, ValueColor);
+          ColorScope Color(OS, ShowColors, ASTDumpColor::Value);
           OS << ArraySize - NumInitializedElements << " x ";
         }
         Visit(Value.getArrayFiller(), Ty);
@@ -793,10 +813,23 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
 
     return;
   }
+  case APValue::Matrix: {
+    unsigned NumRows = Value.getMatrixNumRows();
+    unsigned NumCols = Value.getMatrixNumColumns();
+    OS << "Matrix " << NumRows << "x" << NumCols;
+
+    dumpAPValueChildren(
+        Value, Ty,
+        [](const APValue &Value, unsigned Index) -> const APValue & {
+          return Value.getMatrixElt(Index);
+        },
+        Value.getMatrixNumElements(), "element", "elements");
+    return;
+  }
   case APValue::Union: {
     OS << "Union";
     {
-      ColorScope Color(OS, ShowColors, ValueColor);
+      ColorScope Color(OS, ShowColors, ASTDumpColor::Value);
       if (const FieldDecl *FD = Value.getUnionField())
         OS << " ." << *cast<NamedDecl>(FD);
     }
@@ -812,18 +845,36 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
 
     return;
   }
-  case APValue::MemberPointer:
-    OS << "MemberPointer <todo>";
+  case APValue::MemberPointer: {
+    OS << "MemberPointer ";
+    auto Path = Value.getMemberPointerPath();
+    for (const CXXRecordDecl *D : Path) {
+      {
+        ColorScope Color(OS, ShowColors, ASTDumpColor::DeclName);
+        OS << D->getDeclName();
+      }
+      OS << "::";
+    }
+
+    ColorScope Color(OS, ShowColors, ASTDumpColor::DeclName);
+    if (const ValueDecl *MemDecl = Value.getMemberPointerDecl())
+      OS << MemDecl->getDeclName();
+    else
+      OS << "null";
     return;
+  }
   case APValue::AddrLabelDiff:
-    OS << "AddrLabelDiff <todo>";
+    OS << "AddrLabelDiff ";
+    OS << "&&" << Value.getAddrLabelDiffLHS()->getLabel()->getName();
+    OS << " - ";
+    OS << "&&" << Value.getAddrLabelDiffRHS()->getLabel()->getName();
     return;
   }
   llvm_unreachable("Unknown APValue kind!");
 }
 
 void TextNodeDumper::dumpPointer(const void *Ptr) {
-  ColorScope Color(OS, ShowColors, AddressColor);
+  ColorScope Color(OS, ShowColors, ASTDumpColor::Address);
   OS << ' ' << Ptr;
 }
 
@@ -831,7 +882,7 @@ void TextNodeDumper::dumpLocation(SourceLocation Loc) {
   if (!SM)
     return;
 
-  ColorScope Color(OS, ShowColors, LocationColor);
+  ColorScope Color(OS, ShowColors, ASTDumpColor::Location);
   SourceLocation SpellingLoc = SM->getSpellingLoc(Loc);
 
   // The general format we print out is filename:line:col, but we drop pieces
@@ -873,7 +924,7 @@ void TextNodeDumper::dumpSourceRange(SourceRange R) {
 }
 
 void TextNodeDumper::dumpBareType(QualType T, bool Desugar) {
-  ColorScope Color(OS, ShowColors, TypeColor);
+  ColorScope Color(OS, ShowColors, ASTDumpColor::Type);
 
   SplitQualType T_split = T.split();
   std::string T_str = QualType::getAsString(T_split, PrintPolicy);
@@ -898,19 +949,19 @@ void TextNodeDumper::dumpType(QualType T) {
 
 void TextNodeDumper::dumpBareDeclRef(const Decl *D) {
   if (!D) {
-    ColorScope Color(OS, ShowColors, NullColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Null);
     OS << "<<<NULL>>>";
     return;
   }
 
   {
-    ColorScope Color(OS, ShowColors, DeclKindNameColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::DeclKindName);
     OS << D->getDeclKindName();
   }
   dumpPointer(D);
 
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
-    ColorScope Color(OS, ShowColors, DeclNameColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::DeclName);
     if (DeclarationName Name = ND->getDeclName())
       OS << " '" << Name << '\'';
     else
@@ -954,7 +1005,7 @@ void TextNodeDumper::dumpBareDeclRef(const Decl *D) {
 
 void TextNodeDumper::dumpName(const NamedDecl *ND) {
   if (ND->getDeclName()) {
-    ColorScope Color(OS, ShowColors, DeclNameColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::DeclName);
     OS << ' ' << ND->getDeclName();
   }
 }
@@ -974,7 +1025,7 @@ void TextNodeDumper::dumpCleanupObject(
     AddChild([=] {
       OS << "cleanup ";
       {
-        ColorScope Color(OS, ShowColors, StmtColor);
+        ColorScope Color(OS, ShowColors, ASTDumpColor::Stmt);
         OS << CLE->getStmtClassName();
       }
       dumpPointer(CLE);
@@ -1003,39 +1054,34 @@ void clang::TextNodeDumper::dumpTemplateSpecializationKind(
   }
 }
 
-void clang::TextNodeDumper::dumpNestedNameSpecifier(const NestedNameSpecifier *NNS) {
+void clang::TextNodeDumper::dumpNestedNameSpecifier(NestedNameSpecifier NNS) {
   if (!NNS)
     return;
 
   AddChild([=] {
     OS << "NestedNameSpecifier";
 
-    switch (NNS->getKind()) {
-    case NestedNameSpecifier::Identifier:
-      OS << " Identifier";
-      OS << " '" << NNS->getAsIdentifier()->getName() << "'";
-      break;
-    case NestedNameSpecifier::Namespace:
+    switch (NNS.getKind()) {
+    case NestedNameSpecifier::Kind::Namespace: {
+      auto [Namespace, Prefix] = NNS.getAsNamespaceAndPrefix();
       OS << " "; // "Namespace" is printed as the decl kind.
-      dumpBareDeclRef(NNS->getAsNamespace());
-      break;
-    case NestedNameSpecifier::NamespaceAlias:
-      OS << " "; // "NamespaceAlias" is printed as the decl kind.
-      dumpBareDeclRef(NNS->getAsNamespaceAlias());
-      break;
-    case NestedNameSpecifier::TypeSpec:
-      OS << " TypeSpec";
-      dumpType(QualType(NNS->getAsType(), 0));
-      break;
-    case NestedNameSpecifier::Global:
-      OS << " Global";
-      break;
-    case NestedNameSpecifier::Super:
-      OS << " Super";
+      dumpBareDeclRef(Namespace);
+      dumpNestedNameSpecifier(Prefix);
       break;
     }
-
-    dumpNestedNameSpecifier(NNS->getPrefix());
+    case NestedNameSpecifier::Kind::Type:
+      OS << " TypeSpec";
+      dumpType(QualType(NNS.getAsType(), 0));
+      break;
+    case NestedNameSpecifier::Kind::Global:
+      OS << " Global";
+      break;
+    case NestedNameSpecifier::Kind::MicrosoftSuper:
+      OS << " Super";
+      break;
+    case NestedNameSpecifier::Kind::Null:
+      llvm_unreachable("unexpected null nested name specifier");
+    }
   });
 }
 
@@ -1084,7 +1130,7 @@ const char *TextNodeDumper::getCommandName(unsigned CommandID) {
 }
 
 void TextNodeDumper::printFPOptions(FPOptionsOverride FPO) {
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   if (FPO.has##NAME##Override())                                               \
     OS << " " #NAME "=" << FPO.get##NAME##Override();
 #include "clang/Basic/FPOptions.def"
@@ -1296,8 +1342,10 @@ void TextNodeDumper::dumpBareTemplateName(TemplateName TN) {
     const SubstTemplateTemplateParmStorage *STS =
         TN.getAsSubstTemplateTemplateParm();
     OS << " index " << STS->getIndex();
-    if (std::optional<unsigned int> PackIndex = STS->getPackIndex())
+    if (UnsignedOrNone PackIndex = STS->getPackIndex())
       OS << " pack_index " << *PackIndex;
+    if (STS->getFinal())
+      OS << " final";
     if (const TemplateTemplateParmDecl *P = STS->getParameter())
       AddChild("parameter", [=] { Visit(P); });
     dumpDeclRef(STS->getAssociatedDecl(), "associated");
@@ -1346,6 +1394,8 @@ void TextNodeDumper::VisitTemplateExpansionTemplateArgument(
 void TextNodeDumper::VisitExpressionTemplateArgument(
     const TemplateArgument &TA) {
   OS << " expr";
+  if (TA.isCanonicalExpr())
+    OS << " canonical";
   dumpTemplateArgument(TA);
 }
 
@@ -1367,8 +1417,8 @@ static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
     if (!First)
       OS << " -> ";
 
-    const auto *RD =
-        cast<CXXRecordDecl>(Base->getType()->castAs<RecordType>()->getDecl());
+    const auto *RD = cast<CXXRecordDecl>(
+        Base->getType()->castAsCanonical<RecordType>()->getDecl());
 
     if (Base->isVirtual())
       OS << "virtual ";
@@ -1377,6 +1427,49 @@ static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
   }
 
   OS << ')';
+}
+
+void TextNodeDumper::dumpFormalLinkage(const NamedDecl *ND) {
+  switch (ND->getFormalLinkage()) {
+  case Linkage::None:
+    // A lot of declarations have no linkage, so we only dump linkage if there
+    // is one.
+    break;
+  case Linkage::Internal:
+    OS << " internal-linkage";
+    break;
+  case Linkage::External:
+    OS << " external-linkage";
+    break;
+  case Linkage::Module:
+    OS << " module-linkage";
+    break;
+  case Linkage::Invalid:
+    llvm_unreachable("Linkage hasn't been computed!");
+  case Linkage::UniqueExternal:
+  case Linkage::VisibleNone:
+    llvm_unreachable("Not a formal linkage!");
+  }
+}
+
+void TextNodeDumper::VisitLoopControlStmt(const LoopControlStmt *Node) {
+  if (!Node->hasLabelTarget())
+    return;
+
+  OS << " '" << Node->getLabelDecl()->getIdentifier()->getName() << "' (";
+
+  auto *Target = Node->getNamedLoopOrSwitch();
+  if (!Target) {
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Null);
+    OS << "<<<NULL>>>";
+  } else {
+    {
+      ColorScope Color(OS, ShowColors, ASTDumpColor::Stmt);
+      OS << Target->getStmtClassName();
+    }
+    dumpPointer(Target);
+  }
+  OS << ")";
 }
 
 void TextNodeDumper::VisitIfStmt(const IfStmt *Node) {
@@ -1466,7 +1559,7 @@ void TextNodeDumper::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *Node) {
 void TextNodeDumper::VisitCastExpr(const CastExpr *Node) {
   OS << " <";
   {
-    ColorScope Color(OS, ShowColors, CastColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Cast);
     OS << Node->getCastKindName();
   }
   dumpBasePath(OS, Node);
@@ -1528,7 +1621,7 @@ void TextNodeDumper::VisitUnresolvedLookupExpr(
 
 void TextNodeDumper::VisitObjCIvarRefExpr(const ObjCIvarRefExpr *Node) {
   {
-    ColorScope Color(OS, ShowColors, DeclKindNameColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::DeclKindName);
     OS << " " << Node->getDecl()->getDeclKindName() << "Decl";
   }
   OS << "='" << *Node->getDecl() << "'";
@@ -1547,28 +1640,28 @@ void TextNodeDumper::VisitPredefinedExpr(const PredefinedExpr *Node) {
 }
 
 void TextNodeDumper::VisitCharacterLiteral(const CharacterLiteral *Node) {
-  ColorScope Color(OS, ShowColors, ValueColor);
+  ColorScope Color(OS, ShowColors, ASTDumpColor::Value);
   OS << " " << Node->getValue();
 }
 
 void TextNodeDumper::VisitIntegerLiteral(const IntegerLiteral *Node) {
   bool isSigned = Node->getType()->isSignedIntegerType();
-  ColorScope Color(OS, ShowColors, ValueColor);
+  ColorScope Color(OS, ShowColors, ASTDumpColor::Value);
   OS << " " << toString(Node->getValue(), 10, isSigned);
 }
 
 void TextNodeDumper::VisitFixedPointLiteral(const FixedPointLiteral *Node) {
-  ColorScope Color(OS, ShowColors, ValueColor);
+  ColorScope Color(OS, ShowColors, ASTDumpColor::Value);
   OS << " " << Node->getValueAsString(/*Radix=*/10);
 }
 
 void TextNodeDumper::VisitFloatingLiteral(const FloatingLiteral *Node) {
-  ColorScope Color(OS, ShowColors, ValueColor);
+  ColorScope Color(OS, ShowColors, ASTDumpColor::Value);
   OS << " " << Node->getValueAsApproximateDouble();
 }
 
 void TextNodeDumper::VisitStringLiteral(const StringLiteral *Str) {
-  ColorScope Color(OS, ShowColors, ValueColor);
+  ColorScope Color(OS, ShowColors, ASTDumpColor::Value);
   OS << " ";
   Str->outputString(OS);
 }
@@ -1578,6 +1671,7 @@ void TextNodeDumper::VisitInitListExpr(const InitListExpr *ILE) {
     OS << " field ";
     dumpBareDeclRef(Field);
   }
+  OS << ' ' << (ILE->isExplicit() ? "explicit" : "implicit");
 }
 
 void TextNodeDumper::VisitGenericSelectionExpr(const GenericSelectionExpr *E) {
@@ -1616,6 +1710,10 @@ void TextNodeDumper::VisitMemberExpr(const MemberExpr *Node) {
 
 void TextNodeDumper::VisitExtVectorElementExpr(
     const ExtVectorElementExpr *Node) {
+  OS << " " << Node->getAccessor().getNameStart();
+}
+
+void TextNodeDumper::VisitMatrixElementExpr(const MatrixElementExpr *Node) {
   OS << " " << Node->getAccessor().getNameStart();
 }
 
@@ -1930,16 +2028,12 @@ void TextNodeDumper::VisitConstantArrayType(const ConstantArrayType *T) {
 }
 
 void TextNodeDumper::VisitVariableArrayType(const VariableArrayType *T) {
-  OS << " ";
-  dumpSourceRange(T->getBracketsRange());
   VisitArrayType(T);
 }
 
 void TextNodeDumper::VisitDependentSizedArrayType(
     const DependentSizedArrayType *T) {
   VisitArrayType(T);
-  OS << " ";
-  dumpSourceRange(T->getBracketsRange());
 }
 
 void TextNodeDumper::VisitDependentSizedExtVectorType(
@@ -2082,19 +2176,32 @@ void TextNodeDumper::VisitFunctionProtoType(const FunctionProtoType *T) {
 }
 
 void TextNodeDumper::VisitUnresolvedUsingType(const UnresolvedUsingType *T) {
+  if (ElaboratedTypeKeyword K = T->getKeyword();
+      K != ElaboratedTypeKeyword::None)
+    OS << ' ' << TypeWithKeyword::getKeywordName(K);
+  dumpNestedNameSpecifier(T->getQualifier());
   dumpDeclRef(T->getDecl());
 }
 
 void TextNodeDumper::VisitUsingType(const UsingType *T) {
-  dumpDeclRef(T->getFoundDecl());
-  if (!T->typeMatchesDecl())
-    OS << " divergent";
+  if (ElaboratedTypeKeyword K = T->getKeyword();
+      K != ElaboratedTypeKeyword::None)
+    OS << ' ' << TypeWithKeyword::getKeywordName(K);
+  dumpNestedNameSpecifier(T->getQualifier());
+  dumpDeclRef(T->getDecl());
+  dumpType(T->desugar());
 }
 
 void TextNodeDumper::VisitTypedefType(const TypedefType *T) {
+  if (ElaboratedTypeKeyword K = T->getKeyword();
+      K != ElaboratedTypeKeyword::None)
+    OS << ' ' << TypeWithKeyword::getKeywordName(K);
+  dumpNestedNameSpecifier(T->getQualifier());
   dumpDeclRef(T->getDecl());
-  if (!T->typeMatchesDecl())
+  if (!T->typeMatchesDecl()) {
     OS << " divergent";
+    dumpType(T->desugar());
+  }
 }
 
 void TextNodeDumper::VisitUnaryTransformType(const UnaryTransformType *T) {
@@ -2108,6 +2215,16 @@ void TextNodeDumper::VisitUnaryTransformType(const UnaryTransformType *T) {
 }
 
 void TextNodeDumper::VisitTagType(const TagType *T) {
+  if (T->isCanonicalUnqualified())
+    OS << " canonical";
+  if (T->isTagOwned())
+    OS << " owns_tag";
+  if (T->isInjected())
+    OS << " injected";
+  if (ElaboratedTypeKeyword K = T->getKeyword();
+      K != ElaboratedTypeKeyword::None)
+    OS << ' ' << TypeWithKeyword::getKeywordName(K);
+  dumpNestedNameSpecifier(T->getQualifier());
   dumpDeclRef(T->getDecl());
 }
 
@@ -2124,6 +2241,8 @@ void TextNodeDumper::VisitSubstTemplateTypeParmType(
   VisitTemplateTypeParmDecl(T->getReplacedParameter());
   if (auto PackIndex = T->getPackIndex())
     OS << " pack_index " << *PackIndex;
+  if (T->getFinal())
+    OS << " final";
 }
 
 void TextNodeDumper::VisitSubstTemplateTypeParmPackType(
@@ -2132,17 +2251,33 @@ void TextNodeDumper::VisitSubstTemplateTypeParmPackType(
   VisitTemplateTypeParmDecl(T->getReplacedParameter());
 }
 
-void TextNodeDumper::VisitAutoType(const AutoType *T) {
-  if (T->isDecltypeAuto())
-    OS << " decltype(auto)";
-  if (!T->isDeduced())
+void TextNodeDumper::VisitDeducedType(const DeducedType *T) {
+  switch (T->getDeducedKind()) {
+  case DeducedKind::Undeduced:
     OS << " undeduced";
+    break;
+  case DeducedKind::Deduced:
+    break;
+  case DeducedKind::DeducedAsDependent:
+    OS << " deduced-as-dependent";
+    break;
+  case DeducedKind::DeducedAsPack:
+    OS << " deduced-as-pack";
+    break;
+  }
+}
+
+void TextNodeDumper::VisitAutoType(const AutoType *T) {
+  VisitDeducedType(T);
+  // Not necessary to dump the keyword since it's spelled plainly in the printed
+  // type anyway.
   if (T->isConstrained())
     dumpDeclRef(T->getTypeConstraintConcept());
 }
 
 void TextNodeDumper::VisitDeducedTemplateSpecializationType(
     const DeducedTemplateSpecializationType *T) {
+  VisitDeducedType(T);
   dumpTemplateName(T->getTemplateName(), "name");
 }
 
@@ -2150,6 +2285,9 @@ void TextNodeDumper::VisitTemplateSpecializationType(
     const TemplateSpecializationType *T) {
   if (T->isTypeAlias())
     OS << " alias";
+  if (ElaboratedTypeKeyword K = T->getKeyword();
+      K != ElaboratedTypeKeyword::None)
+    OS << ' ' << TypeWithKeyword::getKeywordName(K);
   dumpTemplateName(T->getTemplateName(), "name");
 }
 
@@ -2181,6 +2319,11 @@ void TextNodeDumper::VisitTypedefDecl(const TypedefDecl *D) {
   dumpType(D->getUnderlyingType());
   if (D->isModulePrivate())
     OS << " __module_private__";
+
+  const TagDecl *TD = D->getUnderlyingType()->getAsTagDecl();
+  if (TD && TD->getTypedefNameForAnonDecl()) {
+    dumpFormalLinkage(D);
+  }
 }
 
 void TextNodeDumper::VisitEnumDecl(const EnumDecl *D) {
@@ -2196,10 +2339,12 @@ void TextNodeDumper::VisitEnumDecl(const EnumDecl *D) {
   if (D->isFixed())
     dumpType(D->getIntegerType());
 
-  if (const auto *Instance = D->getInstantiatedFromMemberEnum()) {
+  if (const auto *Instance = D->getTemplateInstantiationPattern()) {
     OS << " instantiated_from";
     dumpPointer(Instance);
   }
+
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitRecordDecl(const RecordDecl *D) {
@@ -2209,6 +2354,10 @@ void TextNodeDumper::VisitRecordDecl(const RecordDecl *D) {
     OS << " __module_private__";
   if (D->isCompleteDefinition())
     OS << " definition";
+
+  if (!D->isImplicit() && !D->getDescribedTemplate()) {
+    dumpFormalLinkage(D);
+  }
 }
 
 void TextNodeDumper::VisitEnumConstantDecl(const EnumConstantDecl *D) {
@@ -2302,9 +2451,13 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
   if (!D->param_empty() && !D->param_begin())
     OS << " <<<NULL params x " << D->getNumParams() << ">>>";
 
-  if (const auto *Instance = D->getInstantiatedFromMemberFunction()) {
+  if (const auto *Instance = D->getTemplateInstantiationPattern()) {
     OS << " instantiated_from";
     dumpPointer(Instance);
+  }
+
+  if (!isa<CXXDeductionGuideDecl>(D) && !D->getDescribedTemplate()) {
+    dumpFormalLinkage(D);
   }
 }
 
@@ -2327,7 +2480,7 @@ void TextNodeDumper::VisitLifetimeExtendedTemporaryDecl(
   dumpBareDeclRef(D->getExtendingDecl());
   OS << " mangling ";
   {
-    ColorScope Color(OS, ShowColors, ValueColor);
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Value);
     OS << D->getManglingNumber();
   }
 }
@@ -2391,6 +2544,11 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
   if (D->isParameterPack())
     OS << " pack";
 
+  if (const auto *Instance = D->getTemplateInstantiationPattern()) {
+    OS << " instantiated_from";
+    dumpPointer(Instance);
+  }
+
   if (D->hasInit()) {
     const Expr *E = D->getInit();
     // Only dump the value of constexpr VarDecls for now.
@@ -2400,6 +2558,10 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
       if (Value)
         AddChild("value", [=] { Visit(*Value, E->getType()); });
     }
+  }
+
+  if (!D->getDescribedVarTemplate()) {
+    dumpFormalLinkage(D);
   }
 }
 
@@ -2484,12 +2646,12 @@ void TextNodeDumper::VisitOMPRequiresDecl(const OMPRequiresDecl *D) {
   for (const auto *C : D->clauselists()) {
     AddChild([=] {
       if (!C) {
-        ColorScope Color(OS, ShowColors, NullColor);
+        ColorScope Color(OS, ShowColors, ASTDumpColor::Null);
         OS << "<<<NULL>>> OMPClause";
         return;
       }
       {
-        ColorScope Color(OS, ShowColors, AttrColor);
+        ColorScope Color(OS, ShowColors, ASTDumpColor::Attr);
         StringRef ClauseName(
             llvm::omp::getOpenMPClauseName(C->getClauseKind()));
         OS << "OMP" << ClauseName.substr(/*Start=*/0, /*N=*/1).upper()
@@ -2514,6 +2676,8 @@ void TextNodeDumper::VisitNamespaceDecl(const NamespaceDecl *D) {
     OS << " nested";
   if (!D->isFirstDecl())
     dumpDeclRef(D->getFirstDecl(), "original");
+
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitUsingDirectiveDecl(const UsingDirectiveDecl *D) {
@@ -2529,16 +2693,22 @@ void TextNodeDumper::VisitNamespaceAliasDecl(const NamespaceAliasDecl *D) {
 void TextNodeDumper::VisitTypeAliasDecl(const TypeAliasDecl *D) {
   dumpName(D);
   dumpType(D->getUnderlyingType());
+
+  const TagDecl *TD = D->getUnderlyingType()->getAsTagDecl();
+  if (TD && TD->getTypedefNameForAnonDecl()) {
+    dumpFormalLinkage(D);
+  }
 }
 
 void TextNodeDumper::VisitTypeAliasTemplateDecl(
     const TypeAliasTemplateDecl *D) {
   dumpName(D);
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
   VisitRecordDecl(D);
-  if (const auto *Instance = D->getInstantiatedFromMemberClass()) {
+  if (const auto *Instance = D->getTemplateInstantiationPattern()) {
     OS << " instantiated_from";
     dumpPointer(Instance);
   }
@@ -2555,7 +2725,7 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
   AddChild([=] {
     {
-      ColorScope Color(OS, ShowColors, DeclKindNameColor);
+      ColorScope Color(OS, ShowColors, ASTDumpColor::DeclKindName);
       OS << "DefinitionData";
     }
 #define FLAG(fn, name)                                                         \
@@ -2586,7 +2756,7 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
     AddChild([=] {
       {
-        ColorScope Color(OS, ShowColors, DeclKindNameColor);
+        ColorScope Color(OS, ShowColors, ASTDumpColor::DeclKindName);
         OS << "DefaultConstructor";
       }
       FLAG(hasDefaultConstructor, exists);
@@ -2600,7 +2770,7 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
     AddChild([=] {
       {
-        ColorScope Color(OS, ShowColors, DeclKindNameColor);
+        ColorScope Color(OS, ShowColors, ASTDumpColor::DeclKindName);
         OS << "CopyConstructor";
       }
       FLAG(hasSimpleCopyConstructor, simple);
@@ -2618,7 +2788,7 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
     AddChild([=] {
       {
-        ColorScope Color(OS, ShowColors, DeclKindNameColor);
+        ColorScope Color(OS, ShowColors, ASTDumpColor::DeclKindName);
         OS << "MoveConstructor";
       }
       FLAG(hasMoveConstructor, exists);
@@ -2635,7 +2805,7 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
     AddChild([=] {
       {
-        ColorScope Color(OS, ShowColors, DeclKindNameColor);
+        ColorScope Color(OS, ShowColors, ASTDumpColor::DeclKindName);
         OS << "CopyAssignment";
       }
       FLAG(hasSimpleCopyAssignment, simple);
@@ -2650,7 +2820,7 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
     AddChild([=] {
       {
-        ColorScope Color(OS, ShowColors, DeclKindNameColor);
+        ColorScope Color(OS, ShowColors, ASTDumpColor::DeclKindName);
         OS << "MoveAssignment";
       }
       FLAG(hasMoveAssignment, exists);
@@ -2664,7 +2834,7 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
     AddChild([=] {
       {
-        ColorScope Color(OS, ShowColors, DeclKindNameColor);
+        ColorScope Color(OS, ShowColors, ASTDumpColor::DeclKindName);
         OS << "Destructor";
       }
       FLAG(hasSimpleDestructor, simple);
@@ -2694,14 +2864,17 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
 void TextNodeDumper::VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {
   dumpName(D);
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitClassTemplateDecl(const ClassTemplateDecl *D) {
   dumpName(D);
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitVarTemplateDecl(const VarTemplateDecl *D) {
   dumpName(D);
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitBuiltinTemplateDecl(const BuiltinTemplateDecl *D) {
@@ -2746,8 +2919,7 @@ void TextNodeDumper::VisitTemplateTemplateParmDecl(
 
 void TextNodeDumper::VisitUsingDecl(const UsingDecl *D) {
   OS << ' ';
-  if (D->getQualifier())
-    D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
+  D->getQualifier().print(OS, D->getASTContext().getPrintingPolicy());
   OS << D->getDeclName();
   dumpNestedNameSpecifier(D->getQualifier());
 }
@@ -2760,16 +2932,14 @@ void TextNodeDumper::VisitUsingEnumDecl(const UsingEnumDecl *D) {
 void TextNodeDumper::VisitUnresolvedUsingTypenameDecl(
     const UnresolvedUsingTypenameDecl *D) {
   OS << ' ';
-  if (D->getQualifier())
-    D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
+  D->getQualifier().print(OS, D->getASTContext().getPrintingPolicy());
   OS << D->getDeclName();
 }
 
 void TextNodeDumper::VisitUnresolvedUsingValueDecl(
     const UnresolvedUsingValueDecl *D) {
   OS << ' ';
-  if (D->getQualifier())
-    D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
+  D->getQualifier().print(OS, D->getASTContext().getPrintingPolicy());
   OS << D->getDeclName();
   dumpType(D->getType());
 }
@@ -2818,6 +2988,19 @@ void TextNodeDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *D) {
 void TextNodeDumper::VisitAccessSpecDecl(const AccessSpecDecl *D) {
   OS << ' ';
   dumpAccessSpecifier(D->getAccess());
+}
+
+void TextNodeDumper::VisitExplicitInstantiationDecl(
+    const ExplicitInstantiationDecl *D) {
+  dumpTemplateSpecializationKind(D->getTemplateSpecializationKind());
+  if (D->isExternTemplate())
+    OS << " extern";
+  if (D->getQualifierLoc())
+    dumpNestedNameSpecifier(D->getQualifierLoc().getNestedNameSpecifier());
+  if (const NamedDecl *Spec = D->getSpecialization()) {
+    OS << " '" << Spec->getDeclName() << "'";
+    dumpDeclRef(Spec);
+  }
 }
 
 void TextNodeDumper::VisitFriendDecl(const FriendDecl *D) {
@@ -2989,6 +3172,7 @@ void TextNodeDumper::VisitBlockDecl(const BlockDecl *D) {
 
 void TextNodeDumper::VisitConceptDecl(const ConceptDecl *D) {
   dumpName(D);
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitCompoundStmt(const CompoundStmt *S) {
@@ -3003,6 +3187,25 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
   else
     OS << " tbuffer";
   dumpName(D);
+}
+
+void TextNodeDumper::VisitHLSLRootSignatureDecl(
+    const HLSLRootSignatureDecl *D) {
+  dumpName(D);
+  OS << " version: ";
+  switch (D->getVersion()) {
+  case llvm::dxbc::RootSignatureVersion::V1_0:
+    OS << "1.0";
+    break;
+  case llvm::dxbc::RootSignatureVersion::V1_1:
+    OS << "1.1";
+    break;
+  case llvm::dxbc::RootSignatureVersion::V1_2:
+    OS << "1.2";
+    break;
+  }
+  OS << ", ";
+  llvm::hlsl::rootsig::dumpRootElements(OS, D->getRootElements());
 }
 
 void TextNodeDumper::VisitHLSLOutArgExpr(const HLSLOutArgExpr *E) {

@@ -21,7 +21,7 @@ using namespace llvm::codeview;
 
 class TypeIndexIteratorTest : public testing::Test {
 public:
-  TypeIndexIteratorTest() {}
+  TypeIndexIteratorTest() = default;
 
   void SetUp() override {
     Refs.clear();
@@ -96,8 +96,7 @@ private:
       ArrayRef<uint8_t> Loc = RecordData.drop_front(Offset);
       ArrayRef<TypeIndex> Indices(
           reinterpret_cast<const TypeIndex *>(Loc.data()), Ref.Count);
-      if (llvm::any_of(Indices,
-                       [TI](const TypeIndex &Other) { return Other == TI; }))
+      if (llvm::is_contained(Indices, TI))
         return true;
     }
     return false;
@@ -606,4 +605,11 @@ TEST_F(TypeIndexIteratorTest, UsingNamespace) {
   UN.Name = "std";
   writeSymbolRecords(UN);
   checkTypeReferences(0);
+}
+
+TEST_F(TypeIndexIteratorTest, RegRelativeIndir) {
+  RegRelativeIndirSym RR(SymbolRecordKind::RegRelativeIndirSym);
+  RR.Type = TypeIndex::Int32();
+  writeSymbolRecords(RR);
+  checkTypeReferences(0, RR.Type);
 }

@@ -103,6 +103,8 @@ void FlushUnneededASanShadowMemory(uptr p, uptr size) {
 //   dispatch_after()
 //   dispatch_group_async_f()
 //   dispatch_group_async()
+//   dispatch_apply()
+//   dispatch_apply_f()
 // TODO(glider): libdispatch API contains other functions that we don't support
 // yet.
 //
@@ -128,6 +130,7 @@ typedef void* dispatch_queue_t;
 typedef void* dispatch_source_t;
 typedef u64 dispatch_time_t;
 typedef void (*dispatch_function_t)(void *block);
+typedef void (*dispatch_apply_function_t)(void *, size_t);
 typedef void* (*worker_t)(void *block);
 typedef unsigned long dispatch_mach_reason;
 typedef void *dispatch_mach_msg_t;
@@ -147,7 +150,11 @@ typedef void (^dispatch_mach_handler_t)(dispatch_mach_reason reason,
 // A wrapper for the ObjC blocks used to support libdispatch.
 typedef struct {
   void *block;
-  dispatch_function_t func;
+  union {
+    dispatch_function_t dispatch_func;
+    dispatch_apply_function_t dispatch_apply_func;
+    static_assert(sizeof(dispatch_func) == sizeof(dispatch_apply_func));
+  };
   u32 parent_tid;
 } asan_block_context_t;
 
@@ -175,8 +182,8 @@ void asan_dispatch_call_block_and_release(void *block) {
           block, (void*)pthread_self());
   asan_register_worker_thread(context->parent_tid, &stack);
   // Call the original dispatcher for the block.
-  context->func(context->block);
-  asan_free(context, &stack, FROM_MALLOC);
+  context->dispatch_func(context->block);
+  asan_free(context, &stack);
 }
 
 }  // namespace __asan
@@ -191,7 +198,7 @@ asan_block_context_t *alloc_asan_context(void *ctxt, dispatch_function_t func,
   asan_block_context_t *asan_ctxt =
       (asan_block_context_t*) asan_malloc(sizeof(asan_block_context_t), stack);
   asan_ctxt->block = ctxt;
-  asan_ctxt->func = func;
+  asan_ctxt->dispatch_func = func;
   asan_ctxt->parent_tid = GetCurrentTidOrInvalid();
   return asan_ctxt;
 }
@@ -243,13 +250,34 @@ INTERCEPTOR(void, dispatch_group_async_f, dispatch_group_t group,
                                asan_dispatch_call_block_and_release);
 }
 
-#if !defined(MISSING_BLOCKS_SUPPORT)
+extern "C" void asan_dispatch_apply_f_work(void *context, size_t iteration) {
+  GET_STACK_TRACE_THREAD;
+  asan_block_context_t *asan_ctxt = (asan_block_context_t *)context;
+  asan_register_worker_thread(asan_ctxt->parent_tid, &stack);
+  asan_ctxt->dispatch_apply_func(asan_ctxt->block, iteration);
+}
+
+INTERCEPTOR(void, dispatch_apply_f, size_t iterations, dispatch_queue_t queue,
+            void *ctxt, dispatch_apply_function_t work) {
+  GET_STACK_TRACE_THREAD;
+  asan_block_context_t *asan_ctxt =
+      (asan_block_context_t *)asan_malloc(sizeof(asan_block_context_t), &stack);
+  asan_ctxt->block = ctxt;
+  asan_ctxt->dispatch_apply_func = work;
+  asan_ctxt->parent_tid = GetCurrentTidOrInvalid();
+  REAL(dispatch_apply_f)(iterations, queue, (void *)asan_ctxt,
+                         asan_dispatch_apply_f_work);
+}
+
+#  if !defined(MISSING_BLOCKS_SUPPORT)
 extern "C" {
 void dispatch_async(dispatch_queue_t dq, void(^work)(void));
 void dispatch_group_async(dispatch_group_t dg, dispatch_queue_t dq,
                           void(^work)(void));
 void dispatch_after(dispatch_time_t when, dispatch_queue_t queue,
                     void(^work)(void));
+void dispatch_apply(size_t iterations, dispatch_queue_t queue,
+                    void (^block)(size_t iteration));
 void dispatch_source_set_cancel_handler(dispatch_source_t ds,
                                         void(^work)(void));
 void dispatch_source_set_event_handler(dispatch_source_t ds, void(^work)(void));
@@ -332,6 +360,20 @@ INTERCEPTOR(void *, dispatch_mach_create_f, const char *label,
       });
 }
 
-#endif
+INTERCEPTOR(void, dispatch_apply, size_t iterations, dispatch_queue_t queue,
+            void (^block)(size_t iteration)) {
+  ENABLE_FRAME_POINTER;
+  int parent_tid = GetCurrentTidOrInvalid();
+
+  void (^asan_block)(size_t) = ^(size_t iteration) {
+    GET_STACK_TRACE_THREAD;
+    asan_register_worker_thread(parent_tid, &stack);
+    block(iteration);
+  };
+
+  REAL(dispatch_apply)(iterations, queue, asan_block);
+}
+
+#  endif
 
 #endif  // SANITIZER_APPLE

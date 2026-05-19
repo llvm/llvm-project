@@ -1,9 +1,9 @@
-<!--===- docs/RuntimeEnvironment.md 
-  
+<!--===- docs/RuntimeEnvironment.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 ```{contents}
@@ -55,3 +55,32 @@ The default is 72.
 Set `NO_STOP_MESSAGE=1` to disable the extra information about
 IEEE floating-point exception flags that the Fortran language
 standard requires for `STOP` and `ERROR STOP` statements.
+
+## `FORT_TRUNCATE_STREAM`
+
+Set `FORT_TRUNCATE_STREAM=1` to make output to a formatted unit
+with `ACCESS="STREAM"` truncate the file when the unit has been
+repositioned via `POS=` to an earlier point in the file.
+This behavior is analogous to the implicit writing of an ENDFILE record
+when output takes place to a sequential unit after
+executing a `BACKSPACE` or `REWIND` statement.
+Truncation of a stream-access unit is common to several other
+compilers, but it is not mentioned in the standard.
+
+## `FORT_NO_EMPTY_ALLOCATION`
+
+Set `FORT_NO_EMPTY_ALLOCATION=1` to cause `ALLOCATE` statements
+fail when the allocated size is empty.
+
+## `FLANG_TRAMPOLINE_POOL_SIZE`
+
+Set `FLANG_TRAMPOLINE_POOL_SIZE` to an integer value to control the maximum
+number of runtime trampoline slots available when `-fsafe-trampoline` is
+enabled. Each slot consists of a small executable code stub (size varies by
+target; e.g. 32 bytes on x86-64 and AArch64) backed by a writable data entry.
+The default is 1024 slots, which is sufficient for typical Fortran
+programs. If more internal-procedure closures are alive simultaneously than
+the pool can hold, the runtime terminates with a diagnostic message that
+includes the current pool capacity.
+
+Example: `export FLANG_TRAMPOLINE_POOL_SIZE=4096`

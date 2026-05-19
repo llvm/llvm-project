@@ -33,7 +33,7 @@ using namespace llvm;
 
 class MachineMetadataTest : public testing::Test {
 public:
-  MachineMetadataTest() {}
+  MachineMetadataTest() = default;
 
 protected:
   LLVMContext Context;
@@ -205,8 +205,8 @@ TEST_F(MachineMetadataTest, MMSlotTrackerAArch64) {
 
   StringRef MIRString = R"MIR(
 --- |
-  define i32 @test0(i32* %p) {
-    %r = load i32, i32* %p, align 4
+  define i32 @test0(ptr %p) {
+    %r = load i32, ptr %p, align 4
     ret i32 %r
   }
 ...
@@ -250,7 +250,8 @@ body:             |
   auto *NewMMO = MF->getMachineMemOperand(OldMMO, AAInfo);
   MI.setMemRefs(*MF, NewMMO);
 
-  MachineModuleSlotTracker MST(MMI, MF);
+  MachineModuleSlotTracker MST(
+      [&](const Function &F) { return MMI.getMachineFunction(F); }, MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
   EXPECT_EQ("%1:gpr32 = LDRWui %0, 0 :: (load (s32) from %ir.p, "
@@ -354,8 +355,8 @@ TEST_F(MachineMetadataTest, MMSlotTrackerX64) {
 
   StringRef MIRString = R"MIR(
 --- |
-  define i32 @test0(i32* %p) {
-    %r = load i32, i32* %p, align 4
+  define i32 @test0(ptr %p) {
+    %r = load i32, ptr %p, align 4
     ret i32 %r
   }
 ...
@@ -400,7 +401,8 @@ body:             |
   auto *NewMMO = MF->getMachineMemOperand(OldMMO, AAInfo);
   MI.setMemRefs(*MF, NewMMO);
 
-  MachineModuleSlotTracker MST(MMI, MF);
+  MachineModuleSlotTracker MST(
+      [&](const Function &F) { return MMI.getMachineFunction(F); }, MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
   EXPECT_EQ("%1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load (s32) from %ir.p, "
@@ -446,8 +448,8 @@ TEST_F(MachineMetadataTest, MMSlotTrackerAMDGPU) {
 
   StringRef MIRString = R"MIR(
 --- |
-  define i32 @test0(i32* %p) {
-    %r = load i32, i32* %p, align 4
+  define i32 @test0(ptr %p) {
+    %r = load i32, ptr %p, align 4
     ret i32 %r
   }
 ...
@@ -498,7 +500,8 @@ body:             |
   auto *NewMMO = MF->getMachineMemOperand(OldMMO, AAInfo);
   MI.setMemRefs(*MF, NewMMO);
 
-  MachineModuleSlotTracker MST(MMI, MF);
+  MachineModuleSlotTracker MST(
+      [&](const Function &F) { return MMI.getMachineFunction(F); }, MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
   EXPECT_EQ(
@@ -564,8 +567,7 @@ body:             |
   ASSERT_TRUE(M);
   auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
   MachineFunctionProperties &Properties = MF->getProperties();
-  ASSERT_TRUE(Properties.hasProperty(
-      MachineFunctionProperties::Property::TiedOpsRewritten));
+  ASSERT_TRUE(Properties.hasTiedOpsRewritten());
 }
 
 TEST_F(MachineMetadataTest, NoTiedOpsRewritten) {
@@ -595,6 +597,5 @@ body:             |
   ASSERT_TRUE(M);
   auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
   MachineFunctionProperties &Properties = MF->getProperties();
-  ASSERT_FALSE(Properties.hasProperty(
-      MachineFunctionProperties::Property::TiedOpsRewritten));
+  ASSERT_FALSE(Properties.hasTiedOpsRewritten());
 }

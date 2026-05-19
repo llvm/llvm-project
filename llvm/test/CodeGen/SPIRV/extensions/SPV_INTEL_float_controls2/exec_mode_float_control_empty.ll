@@ -1,7 +1,7 @@
 ; Adapted from https://github.com/KhronosGroup/SPIRV-LLVM-Translator/tree/main/test/extensions/INTEL/SPV_INTEL_float_controls2
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls,+SPV_INTEL_float_controls2 %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls,+SPV_INTEL_float_controls2 %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls,+SPV_INTEL_float_controls2 %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-NOT: {{ExecutionMode.*(DenormPreserve|DenormFlushToZero|SignedZeroInfNanPreserve|RoundingModeRTE|RoundingModeRTZ|RoundingModeRTPINTEL|RoundingModeRTNINTEL|FloatingPointModeALTINTEL|FloatingPointModeIEEEINTEL)}}
 define dso_local dllexport spir_kernel void @k_no_fc(i32 %ibuf, i32 %obuf) local_unnamed_addr #16 {

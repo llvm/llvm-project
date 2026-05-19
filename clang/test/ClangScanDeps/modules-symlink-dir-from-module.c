@@ -3,12 +3,14 @@
 // module below does not transitively import Mod via a symlink, so it should not
 // see the symlinked path.
 
-// REQUIRES: shell
+// REQUIRES: symlinks
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.in > %t/cdb.json
 // RUN: ln -s module %t/include/symlink-to-module
+
+// RUN: touch %t/session.timestamp
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -j 1 \
 // RUN:   -format experimental-full  -mode=preprocess-dependency-directives \
@@ -28,7 +30,7 @@
 //--- cdb.json.in
 [{
   "directory": "DIR",
-  "command": "clang -fsyntax-only DIR/test.c -F DIR/Frameworks -I DIR/include -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/module-cache",
+  "command": "clang -fsyntax-only DIR/test.c -F DIR/Frameworks -I DIR/include -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/module-cache -fbuild-session-file=DIR/session.timestamp -fmodules-validate-once-per-build-session",
   "file": "DIR/test.c"
 }]
 

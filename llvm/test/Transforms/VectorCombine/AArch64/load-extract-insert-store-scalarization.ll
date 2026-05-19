@@ -6,13 +6,12 @@ target triple = "arm64-apple-darwin"
 define void @load_extract_insert_store_const_idx(ptr %A) {
 ; CHECK-LABEL: @load_extract_insert_store_const_idx(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <225 x double>, ptr [[A:%.*]], i32 0, i64 0
-; CHECK-NEXT:    [[EXT_0:%.*]] = load double, ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[EXT_0:%.*]] = load double, ptr [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double 2.000000e+01, [[EXT_0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <225 x double>, ptr [[A]], i32 0, i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <225 x double>, ptr [[TMP0]], i32 0, i64 1
 ; CHECK-NEXT:    [[EXT_1:%.*]] = load double, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[EXT_1]], [[MUL]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <225 x double>, ptr [[A]], i64 0, i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <225 x double>, ptr [[TMP0]], i64 0, i64 1
 ; CHECK-NEXT:    store double [[SUB]], ptr [[TMP2]], align 8
 ; CHECK-NEXT:    ret void
 ;

@@ -5,6 +5,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestStopOnSharedlibraryEvents(TestBase):
     @skipIfRemote
     @skipIfWindows
@@ -17,7 +18,7 @@ class TestStopOnSharedlibraryEvents(TestBase):
     @no_debug_info_test
     def test_auto_continue(self):
         def auto_continue(bkpt):
-            bkpt.SetAutoContinue(True)
+            bkpt.auto_continue = True
 
         self.do_test(auto_continue)
 
@@ -26,7 +27,7 @@ class TestStopOnSharedlibraryEvents(TestBase):
     @no_debug_info_test
     def test_failing_condition(self):
         def condition(bkpt):
-            bkpt.SetCondition("1 == 2")
+            bkpt.condition = "1 == 2"
 
         self.do_test(condition)
 

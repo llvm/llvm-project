@@ -8,6 +8,7 @@
 
 #include "Generators.h"
 #include "Representation.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -30,8 +31,7 @@ static std::string genEmphasis(const Twine &Text) {
   return "**" + Text.str() + "**";
 }
 
-static std::string
-genReferenceList(const llvm::SmallVectorImpl<Reference> &Refs) {
+static std::string genReferenceList(llvm::ArrayRef<Reference> Refs) {
   std::string Buffer;
   llvm::raw_string_ostream Stream(Buffer);
   for (const auto &R : Refs) {
@@ -56,16 +56,90 @@ static void writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L,
                                raw_ostream &OS) {
 
   if (!CDCtx.RepositoryUrl) {
-    OS << "*Defined at " << L.Filename << "#" << std::to_string(L.LineNumber)
-       << "*";
+    OS << "*Defined at " << L.Filename << "#"
+       << std::to_string(L.StartLineNumber) << "*";
   } else {
 
     OS << formatv("*Defined at [#{0}{1}{2}](#{0}{1}{3})*",
-                  CDCtx.RepositoryLinePrefix.value_or(""), L.LineNumber,
+                  CDCtx.RepositoryLinePrefix.value_or(""), L.StartLineNumber,
                   L.Filename, *CDCtx.RepositoryUrl);
   }
   OS << "\n\n";
 }
+
+/// Writer for writing comments to a table cell in MD.
+///
+/// The writer traverses the comments recursively and outputs the
+/// comments into a stream.
+/// The formatter inserts single/double line breaks to retain the comment
+/// structure.
+///
+/// Usage :
+/// Initialize an object with a llvm::raw_ostream to output into.
+/// Call the write(C) function with an array of Comments 'C'.
+class TableCommentWriter {
+public:
+  explicit TableCommentWriter(llvm::raw_ostream &OS) : OS(OS) {}
+
+  void write(const DocList<CommentInfo> &Comments) {
+    for (const auto &C : Comments)
+      writeTableSafeComment(C);
+
+    if (!Started)
+      OS << "--";
+  }
+
+private:
+  /// This function inserts breaks into the stream.
+  ///
+  /// We add a double break in between paragraphs.
+  /// Inside a paragraph, a single break between lines is maintained.
+  void insertSeparator() {
+    if (!Started)
+      return;
+    if (NeedsParagraphBreak) {
+      OS << "<br><br>";
+      NeedsParagraphBreak = false;
+    } else {
+      OS << "<br>";
+    }
+  }
+
+  /// This function processes every comment and its children recursively.
+  void writeTableSafeComment(const CommentInfo &I) {
+    switch (I.Kind) {
+    case CommentKind::CK_FullComment:
+      for (const auto &Child : I.Children)
+        writeTableSafeComment(Child);
+      break;
+
+    case CommentKind::CK_ParagraphComment:
+      for (const auto &Child : I.Children)
+        writeTableSafeComment(Child);
+      // Next content after a paragraph needs a break
+      NeedsParagraphBreak = true;
+      break;
+
+    case CommentKind::CK_TextComment:
+      if (!I.Text.empty()) {
+        insertSeparator();
+        OS << I.Text;
+        Started = true;
+      }
+      break;
+
+    // Handle other comment types (BlockCommand, InlineCommand, etc.)
+    default:
+      for (const auto &Child : I.Children)
+        writeTableSafeComment(Child);
+      break;
+    }
+  }
+
+  llvm::raw_ostream &OS;
+  bool Started = false;
+  bool NeedsParagraphBreak = false;
+};
 
 static void maybeWriteSourceFileRef(llvm::raw_ostream &OS,
                                     const ClangDocContext &CDCtx,
@@ -75,39 +149,49 @@ static void maybeWriteSourceFileRef(llvm::raw_ostream &OS,
 }
 
 static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
-  if (I.Kind == "FullComment") {
+  switch (I.Kind) {
+  case CommentKind::CK_FullComment:
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
-  } else if (I.Kind == "ParagraphComment") {
+      writeDescription(Child, OS);
+    break;
+
+  case CommentKind::CK_ParagraphComment:
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
+      writeDescription(Child, OS);
     writeNewLine(OS);
-  } else if (I.Kind == "BlockCommandComment") {
-    OS << genEmphasis(I.Name);
+    break;
+
+  case CommentKind::CK_BlockCommandComment:
+    OS << genEmphasis(I.Name) << " ";
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
-  } else if (I.Kind == "InlineCommandComment") {
+      writeDescription(Child, OS);
+    break;
+
+  case CommentKind::CK_InlineCommandComment:
     OS << genEmphasis(I.Name) << " " << I.Text;
-  } else if (I.Kind == "ParamCommandComment") {
+    break;
+
+  case CommentKind::CK_ParamCommandComment:
+  case CommentKind::CK_TParamCommandComment: {
     std::string Direction = I.Explicit ? (" " + I.Direction).str() : "";
-    OS << genEmphasis(I.ParamName) << I.Text << Direction;
+    OS << genEmphasis(I.ParamName) << I.Text << Direction << " ";
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
-  } else if (I.Kind == "TParamCommandComment") {
-    std::string Direction = I.Explicit ? (" " + I.Direction).str() : "";
-    OS << genEmphasis(I.ParamName) << I.Text << Direction;
+      writeDescription(Child, OS);
+    break;
+  }
+
+  case CommentKind::CK_VerbatimBlockComment:
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
-  } else if (I.Kind == "VerbatimBlockComment") {
-    for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
-  } else if (I.Kind == "VerbatimBlockLineComment") {
+      writeDescription(Child, OS);
+    break;
+
+  case CommentKind::CK_VerbatimBlockLineComment:
+  case CommentKind::CK_VerbatimLineComment:
     OS << I.Text;
     writeNewLine(OS);
-  } else if (I.Kind == "VerbatimLineComment") {
-    OS << I.Text;
-    writeNewLine(OS);
-  } else if (I.Kind == "HTMLStartTagComment") {
+    break;
+
+  case CommentKind::CK_HTMLStartTagComment: {
     if (I.AttrKeys.size() != I.AttrValues.size())
       return;
     std::string Buffer;
@@ -117,12 +201,20 @@ static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
 
     std::string CloseTag = I.SelfClosing ? "/>" : ">";
     writeLine("<" + I.Name + Attrs.str() + CloseTag, OS);
-  } else if (I.Kind == "HTMLEndTagComment") {
+    break;
+  }
+
+  case CommentKind::CK_HTMLEndTagComment:
     writeLine("</" + I.Name + ">", OS);
-  } else if (I.Kind == "TextComment") {
+    break;
+
+  case CommentKind::CK_TextComment:
     OS << I.Text;
-  } else {
-    OS << "Unknown comment kind: " << I.Kind << ".\n\n";
+    break;
+
+  case CommentKind::CK_Unknown:
+    OS << "Unknown comment kind: " << static_cast<int>(I.Kind) << ".\n\n";
+    break;
   }
 }
 
@@ -138,18 +230,43 @@ static void writeNameLink(const StringRef &CurrentPath, const Reference &R,
 
 static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
                         llvm::raw_ostream &OS) {
+  OS << "| enum ";
   if (I.Scoped)
-    writeLine("| enum class " + I.Name + " |", OS);
-  else
-    writeLine("| enum " + I.Name + " |", OS);
-  writeLine("--", OS);
+    OS << "class ";
+  OS << (I.Name.empty() ? "(unnamed)" : StringRef(I.Name)) << " ";
+  if (I.BaseType && !I.BaseType->Type.QualName.empty()) {
+    OS << ": " << I.BaseType->Type.QualName << " ";
+  }
+  OS << "|\n\n";
 
-  std::string Buffer;
-  llvm::raw_string_ostream Members(Buffer);
-  if (!I.Members.empty())
-    for (const auto &N : I.Members)
-      Members << "| " << N.Name << " |\n";
-  writeLine(Members.str(), OS);
+  OS << "| Name | Value |";
+  if (!I.Members.empty()) {
+    bool HasComments = false;
+    for (const auto &Member : I.Members) {
+      if (!Member.Description.empty()) {
+        HasComments = true;
+        OS << " Comments |";
+        break;
+      }
+    }
+    OS << "\n|---|---|";
+    if (HasComments)
+      OS << "---|";
+    OS << "\n";
+    for (const auto &N : I.Members) {
+      OS << "| " << N.Name << " ";
+      if (!N.Value.empty())
+        OS << "| " << N.Value << " ";
+      if (HasComments) {
+        OS << "| ";
+        TableCommentWriter CommentWriter(OS);
+        CommentWriter.write(N.Description);
+        OS << " ";
+      }
+      OS << "|\n";
+    }
+  }
+  OS << "\n";
 
   maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);
 
@@ -169,15 +286,12 @@ static void genMarkdown(const ClangDocContext &CDCtx, const FunctionInfo &I,
     First = false;
   }
   writeHeader(I.Name, 3, OS);
-  std::string Access = getAccessSpelling(I.Access).str();
-  if (Access != "")
-    writeLine(genItalic(Access + " " + I.ReturnType.Type.QualName + " " +
-                        I.Name + "(" + Stream.str() + ")"),
-              OS);
-  else
-    writeLine(genItalic(I.ReturnType.Type.QualName + " " + I.Name + "(" +
-                        Stream.str() + ")"),
-              OS);
+  StringRef Access = getAccessSpelling(I.Access);
+  writeLine(genItalic(Twine(Access) + (!Access.empty() ? " " : "") +
+                      (I.IsStatic ? "static " : "") +
+                      I.ReturnType.Type.QualName.str() + " " + I.Name.str() +
+                      "(" + Twine(Stream.str()) + ")"),
+            OS);
 
   maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);
 
@@ -262,11 +376,11 @@ static void genMarkdown(const ClangDocContext &CDCtx, const RecordInfo &I,
   if (!I.Members.empty()) {
     writeHeader("Members", 2, OS);
     for (const auto &Member : I.Members) {
-      std::string Access = getAccessSpelling(Member.Access).str();
-      if (Access != "")
-        writeLine(Access + " " + Member.Type.Name + " " + Member.Name, OS);
-      else
-        writeLine(Member.Type.Name + " " + Member.Name, OS);
+      StringRef Access = getAccessSpelling(Member.Access);
+      writeLine(Twine(Access) + (Access.empty() ? "" : " ") +
+                    (Member.IsStatic ? "static " : "") +
+                    Member.Type.Name.str() + " " + Member.Name.str(),
+                OS);
     }
     writeNewLine(OS);
   }
@@ -274,7 +388,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const RecordInfo &I,
   if (!I.Children.Records.empty()) {
     writeHeader("Records", 2, OS);
     for (const auto &R : I.Children.Records)
-      writeLine(R.Name, OS);
+      writeLine(R->Name, OS);
     writeNewLine(OS);
   }
   if (!I.Children.Functions.empty()) {
@@ -296,7 +410,8 @@ static void genMarkdown(const ClangDocContext &CDCtx, const TypedefInfo &I,
   // TODO support typedefs in markdown.
 }
 
-static void serializeReference(llvm::raw_fd_ostream &OS, Index &I, int Level) {
+static void serializeReference(llvm::raw_fd_ostream &OS, const Index &I,
+                               int Level) {
   // Write out the heading level starting at ##
   OS << "##" << std::string(Level, '#') << " ";
   writeNameLink("", I, OS);
@@ -320,8 +435,9 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
     OS << " for " << CDCtx.ProjectName;
   OS << "\n\n";
 
-  for (auto C : CDCtx.Idx.Children)
-    serializeReference(OS, C, 0);
+  std::vector<const Index *> Children = CDCtx.Idx.getSortedChildren();
+  for (const auto *C : Children)
+    serializeReference(OS, *C, 0);
 
   return llvm::Error::success();
 }
@@ -338,10 +454,11 @@ static llvm::Error genIndex(ClangDocContext &CDCtx) {
                                        FileErr.message());
   CDCtx.Idx.sort();
   OS << "# " << CDCtx.ProjectName << " C/C++ Reference\n\n";
-  for (auto C : CDCtx.Idx.Children) {
-    if (!C.Children.empty()) {
+  std::vector<const Index *> Children = CDCtx.Idx.getSortedChildren();
+  for (const auto *C : Children) {
+    if (!C->Children.empty()) {
       const char *Type;
-      switch (C.RefType) {
+      switch (C->RefType) {
       case InfoType::IT_namespace:
         Type = "Namespace";
         break;
@@ -357,13 +474,22 @@ static llvm::Error genIndex(ClangDocContext &CDCtx) {
       case InfoType::IT_typedef:
         Type = "Typedef";
         break;
+      case InfoType::IT_concept:
+        Type = "Concept";
+        break;
+      case InfoType::IT_variable:
+        Type = "Variable";
+        break;
+      case InfoType::IT_friend:
+        Type = "Friend";
+        break;
       case InfoType::IT_default:
         Type = "Other";
       }
-      OS << "* " << Type << ": [" << C.Name << "](";
-      if (!C.Path.empty())
-        OS << C.Path << "/";
-      OS << C.Name << ")\n";
+      OS << "* " << Type << ": [" << C->Name << "](";
+      if (!C->Path.empty())
+        OS << C->Path << "/";
+      OS << C->Name << ")\n";
     }
   }
   return llvm::Error::success();
@@ -374,9 +500,9 @@ class MDGenerator : public Generator {
 public:
   static const char *Format;
 
-  llvm::Error generateDocs(StringRef RootDir,
-                           llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                           const ClangDocContext &CDCtx) override;
+  llvm::Error generateDocumentation(
+      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
+      const ClangDocContext &CDCtx, std::string DirName) override;
   llvm::Error createResources(ClangDocContext &CDCtx) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
@@ -384,17 +510,16 @@ public:
 
 const char *MDGenerator::Format = "md";
 
-llvm::Error
-MDGenerator::generateDocs(StringRef RootDir,
-                          llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                          const ClangDocContext &CDCtx) {
+llvm::Error MDGenerator::generateDocumentation(
+    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
+    const ClangDocContext &CDCtx, std::string DirName) {
   // Track which directories we already tried to create.
   llvm::StringSet<> CreatedDirs;
 
   // Collect all output by file name and create the necessary directories.
   llvm::StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
-    doc::Info *Info = Group.getValue().get();
+    doc::Info *Info = getPtr(Group.getValue());
 
     llvm::SmallString<128> Path;
     llvm::sys::path::native(RootDir, Path);
@@ -448,6 +573,10 @@ llvm::Error MDGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
     break;
   case InfoType::IT_typedef:
     genMarkdown(CDCtx, *static_cast<clang::doc::TypedefInfo *>(I), OS);
+    break;
+  case InfoType::IT_concept:
+  case InfoType::IT_variable:
+  case InfoType::IT_friend:
     break;
   case InfoType::IT_default:
     return createStringError(llvm::inconvertibleErrorCode(),

@@ -153,6 +153,17 @@ inline static MCRegister getMSARegFromFReg(MCRegister Reg) {
   else
     return MCRegister();
 }
+
+inline static MCRegister getFloatRegFromFReg(MCRegister Reg) {
+  if (Reg >= Mips::F0 && Reg <= Mips::F31)
+    return Reg;
+  else if (Reg >= Mips::D0_64 && Reg <= Mips::D31_64)
+    return Reg - Mips::D0_64 + Mips::F0;
+  else if (Reg >= Mips::W0 && Reg <= Mips::W31)
+    return Reg - Mips::W0 + Mips::F0;
+  return Mips::NoRegister;
+}
+
 } // namespace llvm
 
 #endif

@@ -154,6 +154,10 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
     }
   } break;
 
+  case 'v':
+    enable_variable_annotations = true;
+    break;
+
   case '\x01':
     force = true;
     break;
@@ -180,6 +184,7 @@ void CommandObjectDisassemble::CommandOptions::OptionParsingStarting(
   end_addr = LLDB_INVALID_ADDRESS;
   symbol_containing_addr = LLDB_INVALID_ADDRESS;
   raw = false;
+  enable_variable_annotations = false;
   plugin_name.clear();
 
   Target *target =
@@ -249,12 +254,12 @@ CommandObjectDisassemble::CheckRangeSize(std::vector<AddressRange> ranges,
     return ranges;
 
   StreamString msg;
-  msg << "Not disassembling " << what << " because it is very large ";
+  msg << "not disassembling " << what << " because it is very large ";
   for (const AddressRange &r : ranges)
     r.Dump(&msg, &GetTarget(), Address::DumpStyleLoadAddress,
            Address::DumpStyleFileAddress);
   msg << ". To disassemble specify an instruction count limit, start/stop "
-         "addresses or use the --force option.";
+         "addresses or use the --force option";
   return llvm::createStringError(msg.GetString());
 }
 
@@ -361,7 +366,7 @@ CommandObjectDisassemble::GetCurrentLineRanges() {
 
 llvm::Expected<std::vector<AddressRange>>
 CommandObjectDisassemble::GetNameRanges(CommandReturnObject &result) {
-  ConstString name(m_options.func_name.c_str());
+  ConstString name(m_options.func_name);
 
   ModuleFunctionSearchOptions function_options;
   function_options.include_symbols = true;
@@ -484,27 +489,28 @@ void CommandObjectDisassemble::DoExecute(Args &command,
     if (plugin_name) {
       result.AppendErrorWithFormat(
           "Unable to find Disassembler plug-in named '%s' that supports the "
-          "'%s' architecture.\n",
+          "'%s' architecture",
           plugin_name, m_options.arch.GetArchitectureName());
     } else
       result.AppendErrorWithFormat(
-          "Unable to find Disassembler plug-in for the '%s' architecture.\n",
+          "Unable to find Disassembler plug-in for the '%s' architecture",
           m_options.arch.GetArchitectureName());
     return;
   } else if (flavor_string != nullptr && !disassembler->FlavorValidForArchSpec(
                                              m_options.arch, flavor_string))
-    result.AppendWarningWithFormat(
-        "invalid disassembler flavor \"%s\", using default.\n", flavor_string);
+    result.AppendWarningWithFormatv(
+        "invalid disassembler flavor \"{0}\", using default", flavor_string);
 
   result.SetStatus(eReturnStatusSuccessFinishResult);
 
   if (!command.empty()) {
     result.AppendErrorWithFormat(
-        "\"disassemble\" arguments are specified as options.\n");
+        "\"disassemble\" arguments are specified as options");
     const int terminal_width =
         GetCommandInterpreter().GetDebugger().GetTerminalWidth();
+    const bool use_color = GetCommandInterpreter().GetDebugger().GetUseColor();
     GetOptions()->GenerateOptionUsage(result.GetErrorStream(), *this,
-                                      terminal_width);
+                                      terminal_width, use_color);
     return;
   }
 
@@ -527,6 +533,9 @@ void CommandObjectDisassemble::DoExecute(Args &command,
 
   if (m_options.raw)
     options |= Disassembler::eOptionRawOuput;
+
+  if (m_options.enable_variable_annotations)
+    options |= Disassembler::eOptionVariableAnnotations;
 
   llvm::Expected<std::vector<AddressRange>> ranges =
       GetRangesForSelectedMode(result);
@@ -555,11 +564,11 @@ void CommandObjectDisassemble::DoExecute(Args &command,
     } else {
       if (m_options.symbol_containing_addr != LLDB_INVALID_ADDRESS) {
         result.AppendErrorWithFormat(
-            "Failed to disassemble memory in function at 0x%8.8" PRIx64 ".\n",
+            "Failed to disassemble memory in function at 0x%8.8" PRIx64,
             m_options.symbol_containing_addr);
       } else {
         result.AppendErrorWithFormat(
-            "Failed to disassemble memory at 0x%8.8" PRIx64 ".\n",
+            "Failed to disassemble memory at 0x%8.8" PRIx64,
             cur_range.GetBaseAddress().GetLoadAddress(&target));
       }
     }

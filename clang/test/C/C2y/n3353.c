@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -verify=expected,c2y,c -pedantic -std=c2y %s
-// RUN: %clang_cc1 -verify=expected,c2y,compat -Wpre-c2y-compat -std=c2y %s
-// RUN: %clang_cc1 -verify=expected,ext,c -pedantic -std=c23 %s
-// RUN: %clang_cc1 -verify=expected,cpp -pedantic -x c++ -Wno-c11-extensions %s
+// RUN: %clang_cc1 -verify=expected,c2y,c -pedantic -std=c2y -Wno-gnu-line-marker %s
+// RUN: %clang_cc1 -verify=expected,c2y,compat -Wpre-c2y-compat -std=c2y -Wno-gnu-line-marker %s
+// RUN: %clang_cc1 -verify=expected,ext,c -pedantic -std=c23 -Wno-gnu-line-marker %s
+// RUN: %clang_cc1 -verify=expected,cpp -pedantic -x c++ -Wno-c11-extensions -Wno-gnu-line-marker %s
 
 
 /* WG14 N3353: Clang 21
@@ -44,7 +44,16 @@ static const void *ptr = 0o0;  /* ext-warning {{octal integer literals are a C2y
 #endif
 
 // 0 by itself is not deprecated, of course.
-int k = 0;
+int k1                = 0;
+unsigned int k2       = 0u;
+long k3               = 0l;
+unsigned long k4      = 0ul;
+long long k5          = 0ll;
+unsigned long long k6 = 0ull;
+
+// Test a preprocessor use of 0 by itself, which is also not deprecated.
+#if 0
+#endif
 
 // Make sure there are no surprises with auto and type deduction. Promotion
 // turns this into an 'int', and 'constexpr' implies 'const'.
@@ -61,7 +70,6 @@ static_assert(__extension__ _Generic(typeof(l), const int : 1, default : 0)); //
 
 // Note that 0o by itself is an invalid literal.
 int m = 0o; /* expected-error {{invalid suffix 'o' on integer constant}}
-               c2y-warning {{octal literals without a '0o' prefix are deprecated}}
              */
 
 // Ensure negation works as expected.
@@ -79,14 +87,43 @@ int n = 0o18; /* expected-error {{invalid digit '8' in octal constant}}
                  cpp-warning {{octal integer literals are a Clang extension}}
                */
 int o1 = 0o8; /* expected-error {{invalid suffix 'o8' on integer constant}}
-                 c2y-warning {{octal literals without a '0o' prefix are deprecated}}
                */
 // FIXME: however, it matches the behavior for hex literals in terms of the
 // error reported. Unfortunately, we then go on to think 0 is an octal literal
 // without a prefix, which is again a bit confusing.
 int o2 = 0xG; /* expected-error {{invalid suffix 'xG' on integer constant}}
-                 c2y-warning {{octal literals without a '0o' prefix are deprecated}}
                */
+
+// Show that floating-point suffixes on octal literals are rejected.
+auto f1 = 0o0.;  /* expected-error {{invalid suffix '.' on integer constant}}
+                    compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                    ext-warning {{octal integer literals are a C2y extension}}
+                    cpp-warning {{octal integer literals are a Clang extension}}
+                */
+auto f2 = 0o0.1; /* expected-error {{invalid suffix '.1' on integer constant}}
+                    compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                    ext-warning {{octal integer literals are a C2y extension}}
+                    cpp-warning {{octal integer literals are a Clang extension}}
+                */
+auto f3 = 0o0e1; /* expected-error {{invalid suffix 'e1' on integer constant}}
+                    compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                    ext-warning {{octal integer literals are a C2y extension}}
+                    cpp-warning {{octal integer literals are a Clang extension}}
+                 */
+auto f4 = 0o0E1; /* expected-error {{invalid suffix 'E1' on integer constant}}
+                    compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                    ext-warning {{octal integer literals are a C2y extension}}
+                    cpp-warning {{octal integer literals are a Clang extension}}
+                 */
+
+// Show that valid floating-point literals with a leading 0 do not produce octal-related warnings.
+auto f5 = 0.;
+auto f7 = 00.;
+auto f8 = 01.;
+auto f9 = 0e1;
+auto f10 = 0E1;
+auto f11 = 00e1;
+auto f12 = 00E1;
 
 // Ensure digit separators work as expected.
 constexpr int p = 0o0'1'2'3'4'5'6'7; /* compat-warning {{octal integer literals are incompatible with standards before C2y}}
@@ -95,7 +132,6 @@ constexpr int p = 0o0'1'2'3'4'5'6'7; /* compat-warning {{octal integer literals 
                                       */
 static_assert(p == 01234567); // c2y-warning {{octal literals without a '0o' prefix are deprecated}}
 int q = 0o'0'1; /* expected-error {{invalid suffix 'o'0'1' on integer constant}}
-                   c2y-warning {{octal literals without a '0o' prefix are deprecated}}
                  */
 
 #define M 0o123
@@ -129,6 +165,57 @@ void foo() {
                */
 }
 #endif
+
+int other_func(int i, ...);
+#172 "system_header.h" 3
+#define SYS_HEADER_MACRO_1 0o02
+#define SYS_HEADER_MACRO_2 02
+#define SYS_HEADER_MACRO_FN1(...)  other_func(0o02, __VA_ARGS__)
+#define SYS_HEADER_MACRO_FN2(...)  other_func(2, __VA_ARGS__)
+#174 "n3353.c" 1
+
+#define USER_HEADER_MACRO_1 0o02
+#define USER_HEADER_MACRO_2 02
+#define USER_HEADER_MACRO_FN1(...)  other_func(0o02, __VA_ARGS__)
+#define USER_HEADER_MACRO_FN2(...)  other_func(2, __VA_ARGS__)
+
+// Test what happens when a user macro expands to a system macro.
+#define USER_OBJECT_MACRO SYS_HEADER_MACRO_1
+#define USER_FUNCTION_MACRO() SYS_HEADER_MACRO_1
+
+void test_macro_behavior(void) {
+  // No diagnostic because these expanded from a macro defined in a system
+  // header.
+  int i = SYS_HEADER_MACRO_1;
+  int j = SYS_HEADER_MACRO_2;
+  int k = SYS_HEADER_MACRO_FN1(12);
+
+  // This one diagnoses because the literal is not in the system header.
+  int l = SYS_HEADER_MACRO_FN2(0o02); /* ext-warning {{octal integer literals are a C2y extension}}
+                                         cpp-warning {{octal integer literals are a Clang extension}}
+                                         compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                                       */
+
+  // Neither of these diagnose because the actual octal literal tokens are
+  // defined in a system header even if there's an intervening user macro.
+  int m = USER_OBJECT_MACRO;
+  int n = USER_FUNCTION_MACRO();
+
+  // Diagnose other macro expansions though.
+  int a = USER_HEADER_MACRO_1; /* ext-warning {{octal integer literals are a C2y extension}}
+                                  cpp-warning {{octal integer literals are a Clang extension}}
+                                  compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                                */
+  int b = USER_HEADER_MACRO_2; // c2y-warning {{octal literals without a '0o' prefix are deprecated}}
+  int c = USER_HEADER_MACRO_FN1(12); /* ext-warning {{octal integer literals are a C2y extension}}
+                                       cpp-warning {{octal integer literals are a Clang extension}}
+                                       compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                                     */
+  int d = USER_HEADER_MACRO_FN2(0o02); /* ext-warning {{octal integer literals are a C2y extension}}
+                                          cpp-warning {{octal integer literals are a Clang extension}}
+                                          compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                                        */
+}
 
 #line 0123  // expected-warning {{#line directive interprets number as decimal, not octal}}
 #line 0o123 // expected-error {{#line directive requires a simple digit sequence}}

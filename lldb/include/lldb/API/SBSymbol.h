@@ -36,6 +36,8 @@ public:
 
   const char *GetMangledName() const;
 
+  const char *GetBaseName() const;
+
   lldb::SBInstructionList GetInstructions(lldb::SBTarget target);
 
   lldb::SBInstructionList GetInstructions(lldb::SBTarget target,
@@ -85,6 +87,13 @@ public:
 
   SymbolType GetType();
 
+  /// Get the ID of this symbol, usually the original symbol table index.
+  ///
+  /// \returns
+  ///     LLDB_INVALID_SYMBOL_ID if this object does not contain a valid symbol
+  ///     object. Otherwise, Returns a valid symbol ID.
+  uint32_t GetID() const;
+
   bool operator==(const lldb::SBSymbol &rhs) const;
 
   bool operator!=(const lldb::SBSymbol &rhs) const;
@@ -98,6 +107,15 @@ public:
   // Returns true if the symbol was synthetically generated from something
   // other than the actual symbol table itself in the object file.
   bool IsSynthetic();
+
+  /// Returns true if the symbol is a debug symbol.
+  bool IsDebug() const;
+
+  /// Get the string representation of a symbol type.
+  static const char *GetTypeAsString(lldb::SymbolType symbol_type);
+
+  /// Get the symbol type from a string representation.
+  static lldb::SymbolType GetTypeFromString(const char *str);
 
 protected:
   lldb_private::Symbol *get();

@@ -20,6 +20,7 @@
 #include "llvm/AsmParser/SlotMapping.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallingConv.h"
@@ -44,6 +45,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
@@ -62,9 +64,6 @@ static cl::opt<bool> AllowIncompleteIR(
     cl::desc(
         "Allow incomplete IR on a best effort basis (references to unknown "
         "metadata will be dropped)"));
-
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
 
 static std::string getTypeString(Type *T) {
   std::string Result;
@@ -209,10 +208,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   // records in this IR.
   assert(!(SeenNewDbgInfoFormat && SeenOldDbgInfoFormat) &&
          "Mixed debug intrinsics/records seen without a parsing error?");
-  if (PreserveInputDbgFormat == cl::boolOrDefault::BOU_TRUE) {
-    UseNewDbgInfoFormat = SeenNewDbgInfoFormat;
-    M->setNewDbgInfoFormatFlag(SeenNewDbgInfoFormat);
-  }
 
   // Handle any function attribute group forward references.
   for (const auto &RAG : ForwardRefAttrGroups) {
@@ -321,11 +316,10 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       return error(NT.second.second,
                    "use of undefined type '%" + Twine(NT.first) + "'");
 
-  for (StringMap<std::pair<Type*, LocTy> >::iterator I =
-       NamedTypes.begin(), E = NamedTypes.end(); I != E; ++I)
-    if (I->second.second.isValid())
-      return error(I->second.second,
-                   "use of undefined type named '" + I->getKey() + "'");
+  for (const auto &[Name, TypeInfo] : NamedTypes)
+    if (TypeInfo.second.isValid())
+      return error(TypeInfo.second,
+                   "use of undefined type named '" + Name + "'");
 
   if (!ForwardRefComdats.empty())
     return error(ForwardRefComdats.begin()->second,
@@ -335,10 +329,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
     if (StringRef(Name).starts_with("llvm.")) {
       Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(Name);
-      if (IID == Intrinsic::not_intrinsic)
-        // Don't do anything for unknown intrinsics.
-        continue;
-
       // Automatically create declarations for intrinsics. Intrinsics can only
       // be called directly, so the call function type directly determines the
       // declaration function type.
@@ -351,12 +341,30 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
         if (!CB || !CB->isCallee(&U))
           return error(Info.second, "intrinsic can only be used as callee");
 
-        SmallVector<Type *> OverloadTys;
-        if (!Intrinsic::getIntrinsicSignature(IID, CB->getFunctionType(),
-                                              OverloadTys))
-          return error(Info.second, "invalid intrinsic signature");
+        std::string ErrorMsg;
+        raw_string_ostream ErrorOS(ErrorMsg);
 
-        U.set(Intrinsic::getOrInsertDeclaration(M, IID, OverloadTys));
+        SmallVector<Type *> OverloadTys;
+        if (IID != Intrinsic::not_intrinsic &&
+            Intrinsic::isSignatureValid(IID, CB->getFunctionType(), OverloadTys,
+                                        ErrorOS)) {
+          U.set(Intrinsic::getOrInsertDeclaration(M, IID, OverloadTys));
+        } else {
+          // Try to upgrade the intrinsic.
+          Function *TmpF = Function::Create(CB->getFunctionType(),
+                                            Function::ExternalLinkage, Name, M);
+          Function *NewF = nullptr;
+          if (!UpgradeIntrinsicFunction(TmpF, NewF)) {
+            if (IID == Intrinsic::not_intrinsic)
+              return error(Info.second, "unknown intrinsic '" + Name + "'");
+            return error(Info.second, ErrorMsg);
+          }
+
+          U.set(TmpF);
+          UpgradeIntrinsicCall(CB, NewF);
+          if (TmpF->use_empty())
+            TmpF->eraseFromParent();
+        }
       }
 
       Info.first->eraseFromParent();
@@ -423,6 +431,9 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       N.second->resolveCycles();
   }
 
+  DISubprogram::cleanupRetainedNodes(NewDistinctSPs);
+  NewDistinctSPs.clear();
+
   for (auto *Inst : InstsWithTBAATag) {
     MDNode *MD = Inst->getMetadata(LLVMContext::MD_tbaa);
     // With incomplete IR, the tbaa metadata may have been dropped.
@@ -446,9 +457,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   UpgradeModuleFlags(*M);
   UpgradeNVVMAnnotations(*M);
   UpgradeSectionAttributes(*M);
-
-  if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE)
-    M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
+  copyModuleAttrToFunctions(*M);
 
   if (!Slots)
     return false;
@@ -642,7 +651,7 @@ bool LLParser::parseTargetDefinition(std::string &TentativeDLStr,
     if (parseToken(lltok::equal, "expected '=' after target triple") ||
         parseStringConstant(Str))
       return true;
-    M->setTargetTriple(Triple(Str));
+    M->setTargetTriple(Triple(std::move(Str)));
     return false;
   case lltok::kw_datalayout:
     Lex.Lex();
@@ -749,14 +758,22 @@ bool LLParser::parseDeclare() {
 ///   ::= 'define' FunctionHeader (!dbg !56)* '{' ...
 bool LLParser::parseDefine() {
   assert(Lex.getKind() == lltok::kw_define);
+
+  FileLoc FunctionStart = getTokLineColumnPos();
   Lex.Lex();
 
   Function *F;
   unsigned FunctionNumber = -1;
   SmallVector<unsigned> UnnamedArgNums;
-  return parseFunctionHeader(F, true, FunctionNumber, UnnamedArgNums) ||
-         parseOptionalFunctionMetadata(*F) ||
-         parseFunctionBody(*F, FunctionNumber, UnnamedArgNums);
+  bool RetValue =
+      parseFunctionHeader(F, true, FunctionNumber, UnnamedArgNums) ||
+      parseOptionalFunctionMetadata(*F) ||
+      parseFunctionBody(*F, FunctionNumber, UnnamedArgNums);
+  if (ParserContext)
+    ParserContext->addFunctionLocation(
+        F, FileLocRange(FunctionStart, getPrevTokEndLineColumnPos()));
+
+  return RetValue;
 }
 
 /// parseGlobalType
@@ -1050,11 +1067,12 @@ bool LLParser::skipModuleSummaryEntry() {
   // support is in place we will look for the tokens corresponding to the
   // expected tags.
   if (Lex.getKind() != lltok::kw_gv && Lex.getKind() != lltok::kw_module &&
-      Lex.getKind() != lltok::kw_typeid && Lex.getKind() != lltok::kw_flags &&
-      Lex.getKind() != lltok::kw_blockcount)
-    return tokError(
-        "Expected 'gv', 'module', 'typeid', 'flags' or 'blockcount' at the "
-        "start of summary entry");
+      Lex.getKind() != lltok::kw_typeid &&
+      Lex.getKind() != lltok::kw_typeidCompatibleVTable &&
+      Lex.getKind() != lltok::kw_flags && Lex.getKind() != lltok::kw_blockcount)
+    return tokError("Expected 'gv', 'module', 'typeid', "
+                    "'typeidCompatibleVTable', 'flags' or 'blockcount' at the "
+                    "start of summary entry");
   if (Lex.getKind() == lltok::kw_flags)
     return parseSummaryIndexFlags();
   if (Lex.getKind() == lltok::kw_blockcount)
@@ -1243,14 +1261,12 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, unsigned NameID,
   std::unique_ptr<GlobalIFunc> GI;
   GlobalValue *GV;
   if (IsAlias) {
-    GA.reset(GlobalAlias::create(Ty, AddrSpace,
-                                 (GlobalValue::LinkageTypes)Linkage, Name,
-                                 Aliasee, /*Parent*/ nullptr));
+    GA.reset(GlobalAlias::create(Ty, AddrSpace, Linkage, Name, Aliasee,
+                                 /*Parent=*/nullptr));
     GV = GA.get();
   } else {
-    GI.reset(GlobalIFunc::create(Ty, AddrSpace,
-                                 (GlobalValue::LinkageTypes)Linkage, Name,
-                                 Aliasee, /*Parent*/ nullptr));
+    GI.reset(GlobalIFunc::create(Ty, AddrSpace, Linkage, Name, Aliasee,
+                                 /*Parent=*/nullptr));
     GV = GI.get();
   }
   GV->setThreadLocalMode(TLM);
@@ -1268,6 +1284,9 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, unsigned NameID,
       Lex.Lex();
       GV->setPartition(Lex.getStrVal());
       if (parseToken(lltok::StringConstant, "expected partition string"))
+        return true;
+    } else if (!IsAlias && Lex.getKind() == lltok::MetadataVar) {
+      if (parseGlobalObjectMetadataAttachment(*GI))
         return true;
     } else {
       return tokError("unknown alias or ifunc property!");
@@ -1596,17 +1615,31 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     return false;
   }
   case Attribute::Dereferenceable: {
-    uint64_t Bytes;
-    if (parseOptionalDerefAttrBytes(lltok::kw_dereferenceable, Bytes))
+    std::optional<uint64_t> Bytes;
+    if (parseOptionalAttrBytes(lltok::kw_dereferenceable, Bytes))
       return true;
-    B.addDereferenceableAttr(Bytes);
+    assert(Bytes.has_value());
+    B.addDereferenceableAttr(Bytes.value());
+    return false;
+  }
+  case Attribute::DeadOnReturn: {
+    std::optional<uint64_t> Bytes;
+    if (parseOptionalAttrBytes(lltok::kw_dead_on_return, Bytes,
+                               /*ErrorNoBytes=*/false))
+      return true;
+    if (Bytes.has_value()) {
+      B.addDeadOnReturnAttr(DeadOnReturnInfo(Bytes.value()));
+    } else {
+      B.addDeadOnReturnAttr(DeadOnReturnInfo());
+    }
     return false;
   }
   case Attribute::DereferenceableOrNull: {
-    uint64_t Bytes;
-    if (parseOptionalDerefAttrBytes(lltok::kw_dereferenceable_or_null, Bytes))
+    std::optional<uint64_t> Bytes;
+    if (parseOptionalAttrBytes(lltok::kw_dereferenceable_or_null, Bytes))
       return true;
-    B.addDereferenceableOrNullAttr(Bytes);
+    assert(Bytes.has_value());
+    B.addDereferenceableOrNullAttr(Bytes.value());
     return false;
   }
   case Attribute::UWTable: {
@@ -1628,6 +1661,14 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     if (!ME)
       return true;
     B.addMemoryAttr(*ME);
+    return false;
+  }
+  case Attribute::DenormalFPEnv: {
+    std::optional<DenormalFPEnv> Mode = parseDenormalFPEnvAttr();
+    if (!Mode)
+      return true;
+
+    B.addDenormalFPEnvAttr(*Mode);
     return false;
   }
   case Attribute::NoFPClass: {
@@ -1948,13 +1989,16 @@ bool LLParser::parseOptionalAddrSpace(unsigned &AddrSpace, unsigned DefaultAS) {
 
   auto ParseAddrspaceValue = [&](unsigned &AddrSpace) -> bool {
     if (Lex.getKind() == lltok::StringConstant) {
-      auto AddrSpaceStr = Lex.getStrVal();
+      const std::string &AddrSpaceStr = Lex.getStrVal();
       if (AddrSpaceStr == "A") {
         AddrSpace = M->getDataLayout().getAllocaAddrSpace();
       } else if (AddrSpaceStr == "G") {
         AddrSpace = M->getDataLayout().getDefaultGlobalsAddressSpace();
       } else if (AddrSpaceStr == "P") {
         AddrSpace = M->getDataLayout().getProgramAddressSpace();
+      } else if (std::optional<unsigned> AS =
+                     M->getDataLayout().getNamedAddressSpace(AddrSpaceStr)) {
+        AddrSpace = *AS;
       } else {
         return tokError("invalid symbolic addrspace '" + AddrSpaceStr + "'");
       }
@@ -2283,6 +2327,9 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
     CC = CallingConv::AMDGPU_CS_ChainPreserve;
     break;
   case lltok::kw_amdgpu_kernel:  CC = CallingConv::AMDGPU_KERNEL; break;
+  case lltok::kw_amdgpu_gfx_whole_wave:
+    CC = CallingConv::AMDGPU_Gfx_WholeWave;
+    break;
   case lltok::kw_tailcc:         CC = CallingConv::Tail; break;
   case lltok::kw_m68k_rtdcc:     CC = CallingConv::M68k_RTD; break;
   case lltok::kw_graalcc:        CC = CallingConv::GRAAL; break;
@@ -2320,6 +2367,15 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
 #undef CC_VLS_CASE
     }
     return false;
+  case lltok::kw_cheriot_compartmentcallcc:
+    CC = CallingConv::CHERIoT_CompartmentCall;
+    break;
+  case lltok::kw_cheriot_compartmentcalleecc:
+    CC = CallingConv::CHERIoT_CompartmentCallee;
+    break;
+  case lltok::kw_cheriot_librarycallcc:
+    CC = CallingConv::CHERIoT_LibraryCall;
+    break;
   case lltok::kw_cc: {
       Lex.Lex();
       return parseUInt32(CC);
@@ -2419,6 +2475,35 @@ bool LLParser::parseOptionalAlignment(MaybeAlign &Alignment, bool AllowParens) {
   return false;
 }
 
+/// parseOptionalPrefAlignment
+///   ::= /* empty */
+///   ::= 'prefalign' '(' 4 ')'
+bool LLParser::parseOptionalPrefAlignment(MaybeAlign &Alignment) {
+  Alignment = std::nullopt;
+  if (!EatIfPresent(lltok::kw_prefalign))
+    return false;
+  LocTy AlignLoc = Lex.getLoc();
+  uint64_t Value = 0;
+
+  LocTy ParenLoc = Lex.getLoc();
+  if (!EatIfPresent(lltok::lparen))
+    return error(ParenLoc, "expected '('");
+
+  if (parseUInt64(Value))
+    return true;
+
+  ParenLoc = Lex.getLoc();
+  if (!EatIfPresent(lltok::rparen))
+    return error(ParenLoc, "expected ')'");
+
+  if (!isPowerOf2_64(Value))
+    return error(AlignLoc, "alignment is not a power of two");
+  if (Value > Value::MaximumAlignment)
+    return error(AlignLoc, "huge alignments are not supported yet");
+  Alignment = Align(Value);
+  return false;
+}
+
 /// parseOptionalCodeModel
 ///   ::= /* empty */
 ///   ::= 'code_model' "large"
@@ -2443,31 +2528,38 @@ bool LLParser::parseOptionalCodeModel(CodeModel::Model &model) {
   return false;
 }
 
-/// parseOptionalDerefAttrBytes
+/// parseOptionalAttrBytes
 ///   ::= /* empty */
 ///   ::= AttrKind '(' 4 ')'
 ///
-/// where AttrKind is either 'dereferenceable' or 'dereferenceable_or_null'.
-bool LLParser::parseOptionalDerefAttrBytes(lltok::Kind AttrKind,
-                                           uint64_t &Bytes) {
+/// where AttrKind is either 'dereferenceable', 'dereferenceable_or_null', or
+/// 'dead_on_return'
+bool LLParser::parseOptionalAttrBytes(lltok::Kind AttrKind,
+                                      std::optional<uint64_t> &Bytes,
+                                      bool ErrorNoBytes) {
   assert((AttrKind == lltok::kw_dereferenceable ||
-          AttrKind == lltok::kw_dereferenceable_or_null) &&
+          AttrKind == lltok::kw_dereferenceable_or_null ||
+          AttrKind == lltok::kw_dead_on_return) &&
          "contract!");
 
   Bytes = 0;
   if (!EatIfPresent(AttrKind))
     return false;
   LocTy ParenLoc = Lex.getLoc();
-  if (!EatIfPresent(lltok::lparen))
-    return error(ParenLoc, "expected '('");
+  if (!EatIfPresent(lltok::lparen)) {
+    if (ErrorNoBytes)
+      return error(ParenLoc, "expected '('");
+    Bytes = std::nullopt;
+    return false;
+  }
   LocTy DerefLoc = Lex.getLoc();
-  if (parseUInt64(Bytes))
+  if (parseUInt64(Bytes.value()))
     return true;
   ParenLoc = Lex.getLoc();
   if (!EatIfPresent(lltok::rparen))
     return error(ParenLoc, "expected ')'");
-  if (!Bytes)
-    return error(DerefLoc, "dereferenceable bytes must be non-zero");
+  if (!Bytes.value())
+    return error(DerefLoc, "byte count specified must be non-zero");
   return false;
 }
 
@@ -2521,16 +2613,28 @@ bool LLParser::parseAllocKind(AllocFnKind &Kind) {
   return false;
 }
 
-static std::optional<MemoryEffects::Location> keywordToLoc(lltok::Kind Tok) {
+static SmallVector<MemoryEffects::Location, 2> keywordToLoc(lltok::Kind Tok) {
+  using Loc = IRMemLocation;
+
   switch (Tok) {
   case lltok::kw_argmem:
-    return IRMemLocation::ArgMem;
+    return {Loc::ArgMem};
   case lltok::kw_inaccessiblemem:
-    return IRMemLocation::InaccessibleMem;
+    return {Loc::InaccessibleMem};
   case lltok::kw_errnomem:
-    return IRMemLocation::ErrnoMem;
+    return {Loc::ErrnoMem};
+  case lltok::kw_target_mem0:
+    return {Loc::TargetMem0};
+  case lltok::kw_target_mem1:
+    return {Loc::TargetMem1};
+  case lltok::kw_target_mem: {
+    SmallVector<MemoryEffects::Location, 2> Targets;
+    for (auto Loc : MemoryEffects::targetMemLocations())
+      Targets.push_back(Loc);
+    return Targets;
+  }
   default:
-    return std::nullopt;
+    return {};
   }
 }
 
@@ -2549,13 +2653,29 @@ static std::optional<ModRefInfo> keywordToModRef(lltok::Kind Tok) {
   }
 }
 
+static std::optional<DenormalMode::DenormalModeKind>
+keywordToDenormalModeKind(lltok::Kind Tok) {
+  switch (Tok) {
+  case lltok::kw_ieee:
+    return DenormalMode::IEEE;
+  case lltok::kw_preservesign:
+    return DenormalMode::PreserveSign;
+  case lltok::kw_positivezero:
+    return DenormalMode::PositiveZero;
+  case lltok::kw_dynamic:
+    return DenormalMode::Dynamic;
+  default:
+    return std::nullopt;
+  }
+}
+
 std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
   MemoryEffects ME = MemoryEffects::none();
 
   // We use syntax like memory(argmem: read), so the colon should not be
   // interpreted as a label terminator.
   Lex.setIgnoreColonInIdentifiers(true);
-  auto _ = make_scope_exit([&] { Lex.setIgnoreColonInIdentifiers(false); });
+  llvm::scope_exit _([&] { Lex.setIgnoreColonInIdentifiers(false); });
 
   Lex.Lex();
   if (!EatIfPresent(lltok::lparen)) {
@@ -2564,9 +2684,10 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
   }
 
   bool SeenLoc = false;
+  bool SeenTargetLoc = false;
   do {
-    std::optional<IRMemLocation> Loc = keywordToLoc(Lex.getKind());
-    if (Loc) {
+    SmallVector<IRMemLocation, 2> Locs = keywordToLoc(Lex.getKind());
+    if (!Locs.empty()) {
       Lex.Lex();
       if (!EatIfPresent(lltok::colon)) {
         tokError("expected ':' after location");
@@ -2576,7 +2697,7 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
 
     std::optional<ModRefInfo> MR = keywordToModRef(Lex.getKind());
     if (!MR) {
-      if (!Loc)
+      if (Locs.empty())
         tokError("expected memory location (argmem, inaccessiblemem, errnomem) "
                  "or access kind (none, read, write, readwrite)");
       else
@@ -2585,9 +2706,18 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
     }
 
     Lex.Lex();
-    if (Loc) {
+    if (!Locs.empty()) {
       SeenLoc = true;
-      ME = ME.getWithModRef(*Loc, *MR);
+      for (IRMemLocation Loc : Locs) {
+        ME = ME.getWithModRef(Loc, *MR);
+        if (ME.isTargetMemLoc(Loc) && Locs.size() == 1)
+          SeenTargetLoc = true;
+      }
+      if (Locs.size() > 1 && SeenTargetLoc) {
+        tokError("target memory default access kind must be specified first");
+        return std::nullopt;
+      }
+
     } else {
       if (SeenLoc) {
         tokError("default access kind must be specified first");
@@ -2602,6 +2732,87 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
 
   tokError("unterminated memory attribute");
   return std::nullopt;
+}
+
+std::optional<DenormalMode> LLParser::parseDenormalFPEnvEntry() {
+  std::optional<DenormalMode::DenormalModeKind> OutputMode =
+      keywordToDenormalModeKind(Lex.getKind());
+  if (!OutputMode) {
+    tokError("expected denormal behavior kind (ieee, preservesign, "
+             "positivezero, dynamic)");
+    return {};
+  }
+
+  Lex.Lex();
+
+  std::optional<DenormalMode::DenormalModeKind> InputMode;
+  if (EatIfPresent(lltok::bar)) {
+    InputMode = keywordToDenormalModeKind(Lex.getKind());
+    if (!InputMode) {
+      tokError("expected denormal behavior kind (ieee, preservesign, "
+               "positivezero, dynamic)");
+      return {};
+    }
+
+    Lex.Lex();
+  } else {
+    // Single item, input == output mode
+    InputMode = OutputMode;
+  }
+
+  return DenormalMode(*OutputMode, *InputMode);
+}
+
+std::optional<DenormalFPEnv> LLParser::parseDenormalFPEnvAttr() {
+  // We use syntax like denormal_fpenv(float: preservesign), so the colon should
+  // not be interpreted as a label terminator.
+  Lex.setIgnoreColonInIdentifiers(true);
+  llvm::scope_exit _([&] { Lex.setIgnoreColonInIdentifiers(false); });
+
+  Lex.Lex();
+
+  if (parseToken(lltok::lparen, "expected '('"))
+    return {};
+
+  DenormalMode DefaultMode = DenormalMode::getIEEE();
+  DenormalMode F32Mode = DenormalMode::getInvalid();
+
+  bool HasDefaultSection = false;
+  if (Lex.getKind() != lltok::Type) {
+    std::optional<DenormalMode> ParsedDefaultMode = parseDenormalFPEnvEntry();
+    if (!ParsedDefaultMode)
+      return {};
+    DefaultMode = *ParsedDefaultMode;
+    HasDefaultSection = true;
+  }
+
+  bool HasComma = EatIfPresent(lltok::comma);
+  if (Lex.getKind() == lltok::Type) {
+    if (HasDefaultSection && !HasComma) {
+      tokError("expected ',' before float:");
+      return {};
+    }
+
+    Type *Ty = nullptr;
+    if (parseType(Ty) || !Ty->isFloatTy()) {
+      tokError("expected float:");
+      return {};
+    }
+
+    if (parseToken(lltok::colon, "expected ':' before float denormal_fpenv"))
+      return {};
+
+    std::optional<DenormalMode> ParsedF32Mode = parseDenormalFPEnvEntry();
+    if (!ParsedF32Mode)
+      return {};
+
+    F32Mode = *ParsedF32Mode;
+  }
+
+  if (parseToken(lltok::rparen, "unterminated denormal_fpenv"))
+    return {};
+
+  return DenormalFPEnv(DefaultMode, F32Mode);
 }
 
 static unsigned keywordToFPClassTest(lltok::Kind Tok) {
@@ -3078,6 +3289,8 @@ bool LLParser::parseParameterList(SmallVectorImpl<ParamInfo> &ArgList,
     Value *V;
     if (parseType(ArgTy, ArgLoc))
       return true;
+    if (!FunctionType::isValidArgumentType(ArgTy))
+      return error(ArgLoc, "invalid type for function argument");
 
     AttrBuilder ArgAttrs(M->getContext());
 
@@ -3213,7 +3426,7 @@ bool LLParser::parseCapturesAttr(AttrBuilder &B) {
   // We use syntax like captures(ret: address, provenance), so the colon
   // should not be interpreted as a label terminator.
   Lex.setIgnoreColonInIdentifiers(true);
-  auto _ = make_scope_exit([&] { Lex.setIgnoreColonInIdentifiers(false); });
+  llvm::scope_exit _([&] { Lex.setIgnoreColonInIdentifiers(false); });
 
   Lex.Lex();
   if (parseToken(lltok::lparen, "expected '('"))
@@ -3370,29 +3583,39 @@ bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
         return error(TypeLoc, "argument can not have void type");
 
       std::string Name;
+      FileLoc IdentStart;
+      FileLoc IdentEnd;
+      bool Unnamed = false;
       if (Lex.getKind() == lltok::LocalVar) {
         Name = Lex.getStrVal();
+        IdentStart = getTokLineColumnPos();
         Lex.Lex();
+        IdentEnd = getPrevTokEndLineColumnPos();
       } else {
         unsigned ArgID;
         if (Lex.getKind() == lltok::LocalVarID) {
           ArgID = Lex.getUIntVal();
+          IdentStart = getTokLineColumnPos();
           if (checkValueID(TypeLoc, "argument", "%", CurValID, ArgID))
             return true;
           Lex.Lex();
+          IdentEnd = getPrevTokEndLineColumnPos();
         } else {
           ArgID = CurValID;
+          Unnamed = true;
         }
         UnnamedArgNums.push_back(ArgID);
         CurValID = ArgID + 1;
       }
 
-      if (!ArgTy->isFirstClassType())
+      if (!FunctionType::isValidArgumentType(ArgTy))
         return error(TypeLoc, "invalid type for function argument");
 
-      ArgList.emplace_back(TypeLoc, ArgTy,
-                           AttributeSet::get(ArgTy->getContext(), Attrs),
-                           std::move(Name));
+      ArgList.emplace_back(
+          TypeLoc, ArgTy,
+          Unnamed ? std::nullopt
+                  : std::make_optional(FileLocRange(IdentStart, IdentEnd)),
+          AttributeSet::get(ArgTy->getContext(), Attrs), std::move(Name));
     } while (EatIfPresent(lltok::comma));
   }
 
@@ -3929,10 +4152,42 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     ID.APSIntVal = Lex.getAPSIntVal();
     ID.Kind = ValID::t_APSInt;
     break;
-  case lltok::APFloat:
+  case lltok::APFloat: {
     ID.APFloatVal = Lex.getAPFloatVal();
     ID.Kind = ValID::t_APFloat;
     break;
+  }
+  case lltok::FloatLiteral: {
+    if (!ExpectedTy)
+      return error(ID.Loc, "unexpected floating-point literal");
+    if (!ExpectedTy->isFloatingPointTy())
+      return error(ID.Loc, "floating-point constant invalid for type");
+    ID.APFloatVal = APFloat(ExpectedTy->getFltSemantics());
+    APFloat::opStatus Except =
+        cantFail(ID.APFloatVal.convertFromString(
+                     Lex.getStrVal(), RoundingMode::NearestTiesToEven),
+                 "Invalid float strings should be caught by the lexer");
+    // Forbid overflowing and underflowing literals, but permit inexact
+    // literals. Underflow is thrown when the result is denormal, so to allow
+    // denormals, only reject underflowing literals that resulted in a zero.
+    if (Except & APFloat::opOverflow)
+      return error(ID.Loc, "floating-point constant overflowed type");
+    if ((Except & APFloat::opUnderflow) && ID.APFloatVal.isZero())
+      return error(ID.Loc, "floating-point constant underflowed type");
+    ID.Kind = ValID::t_APFloat;
+    break;
+  }
+  case lltok::FloatHexLiteral: {
+    if (!ExpectedTy)
+      return error(ID.Loc, "unexpected floating-point literal");
+    const auto &Semantics = ExpectedTy->getFltSemantics();
+    const APInt &Bits = Lex.getAPSIntVal();
+    if (APFloat::getSizeInBits(Semantics) != Bits.getBitWidth())
+      return error(ID.Loc, "float hex literal has incorrect number of bits");
+    ID.APFloatVal = APFloat(Semantics, Bits);
+    ID.Kind = ValID::t_APFloat;
+    break;
+  }
   case lltok::kw_true:
     ID.ConstantVal = ConstantInt::getTrue(Context);
     ID.Kind = ValID::t_Constant;
@@ -3988,12 +4243,13 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     if (Elts.empty())
       return error(ID.Loc, "constant vector must not be empty");
 
-    if (!Elts[0]->getType()->isIntegerTy() &&
+    if (!Elts[0]->getType()->isIntegerTy() && !Elts[0]->getType()->isByteTy() &&
         !Elts[0]->getType()->isFloatingPointTy() &&
         !Elts[0]->getType()->isPointerTy())
       return error(
           FirstEltLoc,
-          "vector elements must have integer, pointer or floating point type");
+          "vector elements must have integer, byte, pointer or floating point "
+          "type");
 
     // Verify that all the vector elements have the same type.
     for (unsigned i = 1, e = Elts.size(); i != e; ++i)
@@ -4040,15 +4296,16 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     ID.Kind = ValID::t_Constant;
     return false;
   }
-  case lltok::kw_c:  // c "foo"
+  case lltok::kw_c: { // c "foo"
     Lex.Lex();
-    ID.ConstantVal = ConstantDataArray::getString(Context, Lex.getStrVal(),
-                                                  false);
+    ArrayType *ATy = cast<ArrayType>(ExpectedTy);
+    ID.ConstantVal = ConstantDataArray::getString(
+        Context, Lex.getStrVal(), false, ATy->getElementType()->isByteTy());
     if (parseToken(lltok::StringConstant, "expected string"))
       return true;
     ID.Kind = ValID::t_Constant;
     return false;
-
+  }
   case lltok::kw_asm: {
     // ValID ::= 'asm' SideEffect? AlignStack? IntelDialect? STRINGCONSTANT ','
     //             STRINGCONSTANT
@@ -4222,11 +4479,13 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   }
   case lltok::kw_ptrauth: {
     // ValID ::= 'ptrauth' '(' ptr @foo ',' i32 <key>
-    //                         (',' i64 <disc> (',' ptr addrdisc)? )? ')'
+    //                         (',' i64 <disc> (',' ptr addrdisc (',' ptr ds)?
+    //                         )? )? ')'
     Lex.Lex();
 
     Constant *Ptr, *Key;
-    Constant *Disc = nullptr, *AddrDisc = nullptr;
+    Constant *Disc = nullptr, *AddrDisc = nullptr,
+             *DeactivationSymbol = nullptr;
 
     if (parseToken(lltok::lparen,
                    "expected '(' in constant ptrauth expression") ||
@@ -4235,11 +4494,14 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
                    "expected comma in constant ptrauth expression") ||
         parseGlobalTypeAndValue(Key))
       return true;
-    // If present, parse the optional disc/addrdisc.
-    if (EatIfPresent(lltok::comma))
-      if (parseGlobalTypeAndValue(Disc) ||
-          (EatIfPresent(lltok::comma) && parseGlobalTypeAndValue(AddrDisc)))
-        return true;
+    // If present, parse the optional disc/addrdisc/ds.
+    if (EatIfPresent(lltok::comma) && parseGlobalTypeAndValue(Disc))
+      return true;
+    if (EatIfPresent(lltok::comma) && parseGlobalTypeAndValue(AddrDisc))
+      return true;
+    if (EatIfPresent(lltok::comma) &&
+        parseGlobalTypeAndValue(DeactivationSymbol))
+      return true;
     if (parseToken(lltok::rparen,
                    "expected ')' in constant ptrauth expression"))
       return true;
@@ -4270,7 +4532,15 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       AddrDisc = ConstantPointerNull::get(PointerType::get(Context, 0));
     }
 
-    ID.ConstantVal = ConstantPtrAuth::get(Ptr, KeyC, DiscC, AddrDisc);
+    if (!DeactivationSymbol)
+      DeactivationSymbol =
+          ConstantPointerNull::get(PointerType::get(Context, 0));
+    if (!DeactivationSymbol->getType()->isPointerTy())
+      return error(ID.Loc,
+                   "constant ptrauth deactivation symbol must be a pointer");
+
+    ID.ConstantVal =
+        ConstantPtrAuth::get(Ptr, KeyC, DiscC, AddrDisc, DeactivationSymbol);
     ID.Kind = ValID::t_Constant;
     return false;
   }
@@ -4279,6 +4549,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_bitcast:
   case lltok::kw_addrspacecast:
   case lltok::kw_inttoptr:
+  case lltok::kw_ptrtoaddr:
   case lltok::kw_ptrtoint: {
     unsigned Opc = Lex.getUIntVal();
     Type *DestTy = nullptr;
@@ -4512,6 +4783,9 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       if (!Indices.empty() && !Ty->isSized(&Visited))
         return error(ID.Loc, "base element of getelementptr must be sized");
 
+      if (!ConstantExpr::isSupportedGetElementPtr(Ty))
+        return error(ID.Loc, "invalid base element for constant getelementptr");
+
       if (!GetElementPtrInst::getIndexedType(Ty, Indices))
         return error(ID.Loc, "invalid getelementptr indices");
 
@@ -4733,6 +5007,10 @@ struct DwarfLangField : public MDUnsignedField {
   DwarfLangField() : MDUnsignedField(0, dwarf::DW_LANG_hi_user) {}
 };
 
+struct DwarfSourceLangNameField : public MDUnsignedField {
+  DwarfSourceLangNameField() : MDUnsignedField(0, UINT32_MAX) {}
+};
+
 struct DwarfCCField : public MDUnsignedField {
   DwarfCCField() : MDUnsignedField(0, dwarf::DW_CC_hi_user) {}
 };
@@ -4792,9 +5070,13 @@ struct MDField : public MDFieldImpl<Metadata *> {
 };
 
 struct MDStringField : public MDFieldImpl<MDString *> {
-  bool AllowEmpty;
-  MDStringField(bool AllowEmpty = true)
-      : ImplTy(nullptr), AllowEmpty(AllowEmpty) {}
+  enum class EmptyIs {
+    Null,  //< Allow empty input string, map to nullptr
+    Empty, //< Allow empty input string, map to an empty MDString
+    Error, //< Disallow empty string, map to an error
+  } EmptyIs;
+  MDStringField(enum EmptyIs EmptyIs = EmptyIs::Null)
+      : ImplTy(nullptr), EmptyIs(EmptyIs) {}
 };
 
 struct MDFieldList : public MDFieldImpl<SmallVector<Metadata *, 4>> {
@@ -4822,6 +5104,34 @@ struct MDSignedOrMDField : MDEitherFieldImpl<MDSignedField, MDField> {
   Metadata *getMDFieldValue() const {
     assert(isMDField() && "Wrong field type");
     return B.Val;
+  }
+};
+
+struct MDUnsignedOrMDField : MDEitherFieldImpl<MDUnsignedField, MDField> {
+  MDUnsignedOrMDField(uint64_t Default = 0, bool AllowNull = true)
+      : ImplTy(MDUnsignedField(Default), MDField(AllowNull)) {}
+
+  MDUnsignedOrMDField(uint64_t Default, uint64_t Max, bool AllowNull = true)
+      : ImplTy(MDUnsignedField(Default, Max), MDField(AllowNull)) {}
+
+  bool isMDUnsignedField() const { return WhatIs == IsTypeA; }
+  bool isMDField() const { return WhatIs == IsTypeB; }
+  uint64_t getMDUnsignedValue() const {
+    assert(isMDUnsignedField() && "Wrong field type");
+    return A.Val;
+  }
+  Metadata *getMDFieldValue() const {
+    assert(isMDField() && "Wrong field type");
+    return B.Val;
+  }
+
+  Metadata *getValueAsMetadata(LLVMContext &Context) const {
+    if (isMDUnsignedField())
+      return ConstantAsMetadata::get(
+          ConstantInt::get(Type::getInt64Ty(Context), getMDUnsignedValue()));
+    if (isMDField())
+      return getMDFieldValue();
+    return nullptr;
   }
 };
 
@@ -4953,6 +5263,25 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name, DwarfLangField &Result) {
     return tokError("invalid DWARF language" + Twine(" '") + Lex.getStrVal() +
                     "'");
   assert(Lang <= Result.Max && "Expected valid DWARF language");
+  Result.assign(Lang);
+  Lex.Lex();
+  return false;
+}
+
+template <>
+bool LLParser::parseMDField(LocTy Loc, StringRef Name,
+                            DwarfSourceLangNameField &Result) {
+  if (Lex.getKind() == lltok::APSInt)
+    return parseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
+
+  if (Lex.getKind() != lltok::DwarfSourceLangName)
+    return tokError("expected DWARF source language name");
+
+  unsigned Lang = dwarf::getSourceLanguageName(Lex.getStrVal());
+  if (!Lang)
+    return tokError("invalid DWARF source language name" + Twine(" '") +
+                    Lex.getStrVal() + "'");
+  assert(Lang <= Result.Max && "Expected valid DWARF source language name");
   Result.assign(Lang);
   Lex.Lex();
   return false;
@@ -5209,16 +5538,48 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name,
 }
 
 template <>
+bool LLParser::parseMDField(LocTy Loc, StringRef Name,
+                            MDUnsignedOrMDField &Result) {
+  // Try to parse an unsigned int.
+  if (Lex.getKind() == lltok::APSInt) {
+    MDUnsignedField Res = Result.A;
+    if (!parseMDField(Loc, Name, Res)) {
+      Result.assign(Res);
+      return false;
+    }
+    return true;
+  }
+
+  // Otherwise, try to parse as an MDField.
+  MDField Res = Result.B;
+  if (!parseMDField(Loc, Name, Res)) {
+    Result.assign(Res);
+    return false;
+  }
+
+  return true;
+}
+
+template <>
 bool LLParser::parseMDField(LocTy Loc, StringRef Name, MDStringField &Result) {
   LocTy ValueLoc = Lex.getLoc();
   std::string S;
   if (parseStringConstant(S))
     return true;
 
-  if (!Result.AllowEmpty && S.empty())
-    return error(ValueLoc, "'" + Name + "' cannot be empty");
+  if (S.empty()) {
+    switch (Result.EmptyIs) {
+    case MDStringField::EmptyIs::Null:
+      Result.assign(nullptr);
+      return false;
+    case MDStringField::EmptyIs::Empty:
+      break;
+    case MDStringField::EmptyIs::Error:
+      return error(ValueLoc, "'" + Name + "' cannot be empty");
+    }
+  }
 
-  Result.assign(S.empty() ? nullptr : MDString::get(Context, S));
+  Result.assign(MDString::get(Context, S));
   return false;
 }
 
@@ -5325,20 +5686,22 @@ bool LLParser::parseSpecializedMDNode(MDNode *&N, bool IsDistinct) {
 
 /// parseDILocationFields:
 ///   ::= !DILocation(line: 43, column: 8, scope: !5, inlinedAt: !6,
-///   isImplicitCode: true)
+///   isImplicitCode: true, atomGroup: 1, atomRank: 1)
 bool LLParser::parseDILocation(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(line, LineField, );                                                 \
   OPTIONAL(column, ColumnField, );                                             \
   REQUIRED(scope, MDField, (/* AllowNull */ false));                           \
   OPTIONAL(inlinedAt, MDField, );                                              \
-  OPTIONAL(isImplicitCode, MDBoolField, (false));
+  OPTIONAL(isImplicitCode, MDBoolField, (false));                              \
+  OPTIONAL(atomGroup, MDUnsignedField, (0, UINT64_MAX));                       \
+  OPTIONAL(atomRank, MDUnsignedField, (0, UINT8_MAX));
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result =
-      GET_OR_DISTINCT(DILocation, (Context, line.Val, column.Val, scope.Val,
-                                   inlinedAt.Val, isImplicitCode.Val));
+  Result = GET_OR_DISTINCT(
+      DILocation, (Context, line.Val, column.Val, scope.Val, inlinedAt.Val,
+                   isImplicitCode.Val, atomGroup.Val, atomRank.Val));
   return false;
 }
 
@@ -5387,7 +5750,7 @@ bool LLParser::parseDISubrangeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(line, LineField, );                                                 \
   OPTIONAL(scope, MDField, );                                                  \
   OPTIONAL(baseType, MDField, );                                               \
-  OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
+  OPTIONAL(size, MDUnsignedOrMDField, (0, UINT64_MAX));                        \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(lowerBound, MDSignedOrMDField, );                                   \
@@ -5411,10 +5774,10 @@ bool LLParser::parseDISubrangeType(MDNode *&Result, bool IsDistinct) {
   Metadata *Stride = convToMetadata(stride);
   Metadata *Bias = convToMetadata(bias);
 
-  Result = GET_OR_DISTINCT(DISubrangeType,
-                           (Context, name.Val, file.Val, line.Val, scope.Val,
-                            size.Val, align.Val, flags.Val, baseType.Val,
-                            LowerBound, UpperBound, Stride, Bias));
+  Result = GET_OR_DISTINCT(
+      DISubrangeType, (Context, name.Val, file.Val, line.Val, scope.Val,
+                       size.getValueAsMetadata(Context), align.Val, flags.Val,
+                       baseType.Val, LowerBound, UpperBound, Stride, Bias));
 
   return false;
 }
@@ -5522,17 +5885,22 @@ bool LLParser::parseDIBasicType(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(tag, DwarfTagField, (dwarf::DW_TAG_base_type));                     \
   OPTIONAL(name, MDStringField, );                                             \
-  OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
+  OPTIONAL(file, MDField, );                                                   \
+  OPTIONAL(line, LineField, );                                                 \
+  OPTIONAL(scope, MDField, );                                                  \
+  OPTIONAL(size, MDUnsignedOrMDField, (0, UINT64_MAX));                        \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
+  OPTIONAL(dataSize, MDUnsignedField, (0, UINT32_MAX));                        \
   OPTIONAL(encoding, DwarfAttEncodingField, );                                 \
   OPTIONAL(num_extra_inhabitants, MDUnsignedField, (0, UINT32_MAX));           \
   OPTIONAL(flags, DIFlagField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result = GET_OR_DISTINCT(DIBasicType, (Context, tag.Val, name.Val, size.Val,
-                                         align.Val, encoding.Val,
-                                         num_extra_inhabitants.Val, flags.Val));
+  Result = GET_OR_DISTINCT(
+      DIBasicType, (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val,
+                    size.getValueAsMetadata(Context), align.Val, encoding.Val,
+                    num_extra_inhabitants.Val, dataSize.Val, flags.Val));
   return false;
 }
 
@@ -5545,7 +5913,10 @@ bool LLParser::parseDIFixedPointType(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(tag, DwarfTagField, (dwarf::DW_TAG_base_type));                     \
   OPTIONAL(name, MDStringField, );                                             \
-  OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
+  OPTIONAL(file, MDField, );                                                   \
+  OPTIONAL(line, LineField, );                                                 \
+  OPTIONAL(scope, MDField, );                                                  \
+  OPTIONAL(size, MDUnsignedOrMDField, (0, UINT64_MAX));                        \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(encoding, DwarfAttEncodingField, );                                 \
   OPTIONAL(flags, DIFlagField, );                                              \
@@ -5557,9 +5928,10 @@ bool LLParser::parseDIFixedPointType(MDNode *&Result, bool IsDistinct) {
 #undef VISIT_MD_FIELDS
 
   Result = GET_OR_DISTINCT(DIFixedPointType,
-                           (Context, tag.Val, name.Val, size.Val, align.Val,
-                            encoding.Val, flags.Val, kind.Val, factor.Val,
-                            numerator.Val, denominator.Val));
+                           (Context, tag.Val, name.Val, file.Val, line.Val,
+                            scope.Val, size.getValueAsMetadata(Context),
+                            align.Val, encoding.Val, flags.Val, kind.Val,
+                            factor.Val, numerator.Val, denominator.Val));
   return false;
 }
 
@@ -5572,7 +5944,7 @@ bool LLParser::parseDIStringType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(stringLength, MDField, );                                           \
   OPTIONAL(stringLengthExpression, MDField, );                                 \
   OPTIONAL(stringLocationExpression, MDField, );                               \
-  OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
+  OPTIONAL(size, MDUnsignedOrMDField, (0, UINT64_MAX));                        \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(encoding, DwarfAttEncodingField, );
   PARSE_MD_FIELDS();
@@ -5581,7 +5953,8 @@ bool LLParser::parseDIStringType(MDNode *&Result, bool IsDistinct) {
   Result = GET_OR_DISTINCT(
       DIStringType,
       (Context, tag.Val, name.Val, stringLength.Val, stringLengthExpression.Val,
-       stringLocationExpression.Val, size.Val, align.Val, encoding.Val));
+       stringLocationExpression.Val, size.getValueAsMetadata(Context),
+       align.Val, encoding.Val));
   return false;
 }
 
@@ -5602,9 +5975,9 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(line, LineField, );                                                 \
   OPTIONAL(scope, MDField, );                                                  \
   REQUIRED(baseType, MDField, );                                               \
-  OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
+  OPTIONAL(size, MDUnsignedOrMDField, (0, UINT64_MAX));                        \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
-  OPTIONAL(offset, MDUnsignedField, (0, UINT64_MAX));                          \
+  OPTIONAL(offset, MDUnsignedOrMDField, (0, UINT64_MAX));                      \
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(extraData, MDField, );                                              \
   OPTIONAL(dwarfAddressSpace, MDUnsignedField, (UINT32_MAX, UINT32_MAX));      \
@@ -5627,11 +6000,11 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
         (unsigned)ptrAuthExtraDiscriminator.Val, ptrAuthIsaPointer.Val,
         ptrAuthAuthenticatesNullValues.Val);
 
-  Result = GET_OR_DISTINCT(DIDerivedType,
-                           (Context, tag.Val, name.Val, file.Val, line.Val,
-                            scope.Val, baseType.Val, size.Val, align.Val,
-                            offset.Val, DWARFAddressSpace, PtrAuthData,
-                            flags.Val, extraData.Val, annotations.Val));
+  Result = GET_OR_DISTINCT(
+      DIDerivedType, (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val,
+                      baseType.Val, size.getValueAsMetadata(Context), align.Val,
+                      offset.getValueAsMetadata(Context), DWARFAddressSpace,
+                      PtrAuthData, flags.Val, extraData.Val, annotations.Val));
   return false;
 }
 
@@ -5643,9 +6016,9 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(line, LineField, );                                                 \
   OPTIONAL(scope, MDField, );                                                  \
   OPTIONAL(baseType, MDField, );                                               \
-  OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
+  OPTIONAL(size, MDUnsignedOrMDField, (0, UINT64_MAX));                        \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
-  OPTIONAL(offset, MDUnsignedField, (0, UINT64_MAX));                          \
+  OPTIONAL(offset, MDUnsignedOrMDField, (0, UINT64_MAX));                      \
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(elements, MDField, );                                               \
   OPTIONAL(runtimeLang, DwarfLangField, );                                     \
@@ -5680,12 +6053,12 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   if (identifier.Val)
     if (auto *CT = DICompositeType::buildODRType(
             Context, *identifier.Val, tag.Val, name.Val, file.Val, line.Val,
-            scope.Val, baseType.Val, size.Val, align.Val, offset.Val,
-            specification.Val, num_extra_inhabitants.Val, flags.Val,
-            elements.Val, runtimeLang.Val, EnumKind, vtableHolder.Val,
-            templateParams.Val, discriminator.Val, dataLocation.Val,
-            associated.Val, allocated.Val, Rank, annotations.Val,
-            bitStride.Val)) {
+            scope.Val, baseType.Val, size.getValueAsMetadata(Context),
+            align.Val, offset.getValueAsMetadata(Context), specification.Val,
+            num_extra_inhabitants.Val, flags.Val, elements.Val, runtimeLang.Val,
+            EnumKind, vtableHolder.Val, templateParams.Val, discriminator.Val,
+            dataLocation.Val, associated.Val, allocated.Val, Rank,
+            annotations.Val, bitStride.Val)) {
       Result = CT;
       return false;
     }
@@ -5695,7 +6068,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   Result = GET_OR_DISTINCT(
       DICompositeType,
       (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val, baseType.Val,
-       size.Val, align.Val, offset.Val, flags.Val, elements.Val,
+       size.getValueAsMetadata(Context), align.Val,
+       offset.getValueAsMetadata(Context), flags.Val, elements.Val,
        runtimeLang.Val, EnumKind, vtableHolder.Val, templateParams.Val,
        identifier.Val, discriminator.Val, dataLocation.Val, associated.Val,
        allocated.Val, Rank, annotations.Val, specification.Val,
@@ -5730,7 +6104,7 @@ bool LLParser::parseDIFile(MDNode *&Result, bool IsDistinct) {
   REQUIRED(directory, MDStringField, );                                        \
   OPTIONAL(checksumkind, ChecksumKindField, (DIFile::CSK_MD5));                \
   OPTIONAL(checksum, MDStringField, );                                         \
-  OPTIONAL(source, MDStringField, );
+  OPTIONAL(source, MDStringField, (MDStringField::EmptyIs::Empty));
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -5759,9 +6133,13 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   if (!IsDistinct)
     return tokError("missing 'distinct', required for !DICompileUnit");
 
+  LocTy Loc = Lex.getLoc();
+
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
-  REQUIRED(language, DwarfLangField, );                                        \
   REQUIRED(file, MDField, (/* AllowNull */ false));                            \
+  OPTIONAL(language, DwarfLangField, );                                        \
+  OPTIONAL(sourceLanguageName, DwarfSourceLangNameField, );                    \
+  OPTIONAL(sourceLanguageVersion, MDUnsignedField, (0, UINT32_MAX));           \
   OPTIONAL(producer, MDStringField, );                                         \
   OPTIONAL(isOptimized, MDBoolField, );                                        \
   OPTIONAL(flags, MDStringField, );                                            \
@@ -5783,12 +6161,28 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
+  if (!language.Seen && !sourceLanguageName.Seen)
+    return error(Loc, "missing one of 'language' or 'sourceLanguageName', "
+                      "required for !DICompileUnit");
+
+  if (language.Seen && sourceLanguageName.Seen)
+    return error(Loc, "can only specify one of 'language' and "
+                      "'sourceLanguageName' on !DICompileUnit");
+
+  if (sourceLanguageVersion.Seen && !sourceLanguageName.Seen)
+    return error(Loc, "'sourceLanguageVersion' requires an associated "
+                      "'sourceLanguageName' on !DICompileUnit");
+
   Result = DICompileUnit::getDistinct(
-      Context, language.Val, file.Val, producer.Val, isOptimized.Val, flags.Val,
-      runtimeVersion.Val, splitDebugFilename.Val, emissionKind.Val, enums.Val,
-      retainedTypes.Val, globals.Val, imports.Val, macros.Val, dwoId.Val,
-      splitDebugInlining.Val, debugInfoForProfiling.Val, nameTableKind.Val,
-      rangesBaseAddress.Val, sysroot.Val, sdk.Val);
+      Context,
+      language.Seen ? DISourceLanguageName(language.Val)
+                    : DISourceLanguageName(sourceLanguageName.Val,
+                                           sourceLanguageVersion.Val),
+      file.Val, producer.Val, isOptimized.Val, flags.Val, runtimeVersion.Val,
+      splitDebugFilename.Val, emissionKind.Val, enums.Val, retainedTypes.Val,
+      globals.Val, imports.Val, macros.Val, dwoId.Val, splitDebugInlining.Val,
+      debugInfoForProfiling.Val, nameTableKind.Val, rangesBaseAddress.Val,
+      sysroot.Val, sdk.Val);
   return false;
 }
 
@@ -5809,7 +6203,7 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(linkageName, MDStringField, );                                      \
   OPTIONAL(file, MDField, );                                                   \
   OPTIONAL(line, LineField, );                                                 \
-  OPTIONAL(type, MDField, );                                                   \
+  REQUIRED(type, MDField, (/* AllowNull */ false));                            \
   OPTIONAL(isLocal, MDBoolField, );                                            \
   OPTIONAL(isDefinition, MDBoolField, (true));                                 \
   OPTIONAL(scopeLine, LineField, );                                            \
@@ -5826,7 +6220,8 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(retainedNodes, MDField, );                                          \
   OPTIONAL(thrownTypes, MDField, );                                            \
   OPTIONAL(annotations, MDField, );                                            \
-  OPTIONAL(targetFuncName, MDStringField, );
+  OPTIONAL(targetFuncName, MDStringField, );                                   \
+  OPTIONAL(keyInstructions, MDBoolField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -5846,7 +6241,11 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
        type.Val, scopeLine.Val, containingType.Val, virtualIndex.Val,
        thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
        declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val,
-       targetFuncName.Val));
+       targetFuncName.Val, keyInstructions.Val));
+
+  if (IsDistinct)
+    NewDistinctSPs.push_back(cast<DISubprogram>(Result));
+
   return false;
 }
 
@@ -6013,7 +6412,7 @@ bool LLParser::parseDITemplateValueParameter(MDNode *&Result, bool IsDistinct) {
 ///                         declaration: !4, align: 8)
 bool LLParser::parseDIGlobalVariable(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
-  OPTIONAL(name, MDStringField, (/* AllowEmpty */ false));                     \
+  OPTIONAL(name, MDStringField, (MDStringField::EmptyIs::Error));              \
   OPTIONAL(scope, MDField, );                                                  \
   OPTIONAL(linkageName, MDStringField, );                                      \
   OPTIONAL(file, MDField, );                                                   \
@@ -6066,18 +6465,26 @@ bool LLParser::parseDILocalVariable(MDNode *&Result, bool IsDistinct) {
 }
 
 /// parseDILabel:
-///   ::= !DILabel(scope: !0, name: "foo", file: !1, line: 7)
+///   ::= !DILabel(scope: !0, name: "foo", file: !1, line: 7, column: 4)
 bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(scope, MDField, (/* AllowNull */ false));                           \
   REQUIRED(name, MDStringField, );                                             \
   REQUIRED(file, MDField, );                                                   \
-  REQUIRED(line, LineField, );
+  REQUIRED(line, LineField, );                                                 \
+  OPTIONAL(column, ColumnField, );                                             \
+  OPTIONAL(isArtificial, MDBoolField, );                                       \
+  OPTIONAL(coroSuspendIdx, MDUnsignedField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
+  std::optional<unsigned> CoroSuspendIdx =
+      coroSuspendIdx.Seen ? std::optional<unsigned>(coroSuspendIdx.Val)
+                          : std::nullopt;
+
   Result = GET_OR_DISTINCT(DILabel,
-                           (Context, scope.Val, name.Val, file.Val, line.Val));
+                           (Context, scope.Val, name.Val, file.Val, line.Val,
+                            column.Val, isArtificial.Val, CoroSuspendIdx));
   return false;
 }
 
@@ -6193,8 +6600,8 @@ bool LLParser::parseDIObjCProperty(MDNode *&Result, bool IsDistinct) {
 #undef VISIT_MD_FIELDS
 
   Result = GET_OR_DISTINCT(DIObjCProperty,
-                           (Context, name.Val, file.Val, line.Val, setter.Val,
-                            getter.Val, attributes.Val, type.Val));
+                           (Context, name.Val, file.Val, line.Val, getter.Val,
+                            setter.Val, attributes.Val, type.Val));
   return false;
 }
 
@@ -6359,10 +6766,11 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
       V = NoCFIValue::get(cast<GlobalValue>(V));
     return V == nullptr;
   case ValID::t_APSInt:
-    if (!Ty->isIntegerTy())
-      return error(ID.Loc, "integer constant must have integer type");
+    if (!Ty->isIntegerTy() && !Ty->isByteTy())
+      return error(ID.Loc, "integer/byte constant must have integer/byte type");
     ID.APSIntVal = ID.APSIntVal.extOrTrunc(Ty->getPrimitiveSizeInBits());
-    V = ConstantInt::get(Context, ID.APSIntVal);
+    Ty->isIntegerTy() ? V = ConstantInt::get(Context, ID.APSIntVal)
+                      : V = ConstantByte::get(Context, ID.APSIntVal);
     return false;
   case ValID::t_APFloat:
     if (!Ty->isFloatingPointTy() ||
@@ -6484,7 +6892,7 @@ bool LLParser::parseConstantValue(Type *Ty, Constant *&C) {
   C = nullptr;
   ValID ID;
   auto Loc = Lex.getLoc();
-  if (parseValID(ID, /*PFS=*/nullptr))
+  if (parseValID(ID, /*PFS=*/nullptr, /*ExpectedTy=*/Ty))
     return true;
   switch (ID.Kind) {
   case ValID::t_APSInt:
@@ -6514,8 +6922,14 @@ bool LLParser::parseConstantValue(Type *Ty, Constant *&C) {
 bool LLParser::parseValue(Type *Ty, Value *&V, PerFunctionState *PFS) {
   V = nullptr;
   ValID ID;
-  return parseValID(ID, PFS, Ty) ||
-         convertValIDToValue(Ty, ID, V, PFS);
+
+  FileLoc Start = getTokLineColumnPos();
+  bool Ret = parseValID(ID, PFS, Ty) || convertValIDToValue(Ty, ID, V, PFS);
+  if (!Ret && ParserContext) {
+    FileLoc End = getPrevTokEndLineColumnPos();
+    ParserContext->addValueReferenceAtLocation(V, FileLocRange(Start, End));
+  }
+  return Ret;
 }
 
 bool LLParser::parseTypeAndValue(Value *&V, PerFunctionState *PFS) {
@@ -6631,7 +7045,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   LocTy BuiltinLoc;
   std::string Section;
   std::string Partition;
-  MaybeAlign Alignment;
+  MaybeAlign Alignment, PrefAlignment;
   std::string GC;
   GlobalValue::UnnamedAddr UnnamedAddr = GlobalValue::UnnamedAddr::None;
   unsigned AddrSpace = 0;
@@ -6649,6 +7063,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
       (EatIfPresent(lltok::kw_partition) && parseStringConstant(Partition)) ||
       parseOptionalComdat(FunctionName, C) ||
       parseOptionalAlignment(Alignment) ||
+      parseOptionalPrefAlignment(PrefAlignment) ||
       (EatIfPresent(lltok::kw_gc) && parseStringConstant(GC)) ||
       (EatIfPresent(lltok::kw_prefix) && parseGlobalTypeAndValue(Prefix)) ||
       (EatIfPresent(lltok::kw_prologue) && parseGlobalTypeAndValue(Prologue)) ||
@@ -6750,6 +7165,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   Fn->setUnnamedAddr(UnnamedAddr);
   if (Alignment)
     Fn->setAlignment(*Alignment);
+  Fn->setPreferredAlignment(PrefAlignment);
   Fn->setSection(Section);
   Fn->setPartition(Partition);
   Fn->setComdat(C);
@@ -6762,6 +7178,9 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   // Add all of the arguments we parsed to the function.
   Function::arg_iterator ArgIt = Fn->arg_begin();
   for (unsigned i = 0, e = ArgList.size(); i != e; ++i, ++ArgIt) {
+    if (ParserContext && ArgList[i].IdentLoc)
+      ParserContext->addInstructionOrArgumentLocation(
+          &*ArgIt, ArgList[i].IdentLoc.value());
     // If the argument has a name, insert it into the argument symbol table.
     if (ArgList[i].Name.empty()) continue;
 
@@ -6877,6 +7296,8 @@ bool LLParser::parseFunctionBody(Function &Fn, unsigned FunctionNumber,
 /// parseBasicBlock
 ///   ::= (LabelStr|LabelID)? Instruction*
 bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
+  FileLoc BBStart = getTokLineColumnPos();
+
   // If this basic block starts out with a name, remember it.
   std::string Name;
   int NameID = -1;
@@ -6909,8 +7330,6 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
       if (SeenOldDbgInfoFormat)
         return error(Lex.getLoc(), "debug record should not appear in a module "
                                    "containing debug info intrinsics");
-      if (!SeenNewDbgInfoFormat)
-        M->setNewDbgInfoFormatFlag(true);
       SeenNewDbgInfoFormat = true;
       Lex.Lex();
 
@@ -6920,6 +7339,7 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
       TrailingDbgRecord.emplace_back(DR, DeleteDbgRecord);
     }
 
+    FileLoc InstStart = getTokLineColumnPos();
     // This instruction may have three possibilities for a name: a) none
     // specified, b) name specified "%foo =", c) number specified: "%4 =".
     LocTy NameLoc = Lex.getLoc();
@@ -6969,7 +7389,15 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
     for (DbgRecordPtr &DR : TrailingDbgRecord)
       BB->insertDbgRecordBefore(DR.release(), Inst->getIterator());
     TrailingDbgRecord.clear();
+    if (ParserContext) {
+      ParserContext->addInstructionOrArgumentLocation(
+          Inst, FileLocRange(InstStart, getPrevTokEndLineColumnPos()));
+    }
   } while (!Inst->isTerminator());
+
+  if (ParserContext)
+    ParserContext->addBlockLocation(
+        BB, FileLocRange(BBStart, getPrevTokEndLineColumnPos()));
 
   assert(TrailingDbgRecord.empty() &&
          "All debug values should have been attached to an instruction.");
@@ -6991,7 +7419,8 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
                               .Case("declare", RecordKind::ValueKind)
                               .Case("value", RecordKind::ValueKind)
                               .Case("assign", RecordKind::ValueKind)
-                              .Case("label", RecordKind::LabelKind);
+                              .Case("label", RecordKind::LabelKind)
+                              .Case("declare_value", RecordKind::ValueKind);
 
   // Parsing labels is trivial; parse here and early exit, otherwise go into the
   // full DbgVariableRecord processing stage.
@@ -7016,7 +7445,8 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
   LocType ValueType = StringSwitch<LocType>(Lex.getStrVal())
                           .Case("declare", LocType::Declare)
                           .Case("value", LocType::Value)
-                          .Case("assign", LocType::Assign);
+                          .Case("assign", LocType::Assign)
+                          .Case("declare_value", LocType::DeclareValue);
 
   Lex.Lex();
   if (parseToken(lltok::lparen, "Expected '(' here"))
@@ -7239,6 +7669,7 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_fptoui:
   case lltok::kw_fptosi:
   case lltok::kw_inttoptr:
+  case lltok::kw_ptrtoaddr:
   case lltok::kw_ptrtoint:
     return parseCast(Inst, PFS, KeywordVal);
   case lltok::kw_fptrunc:
@@ -7412,7 +7843,7 @@ bool LLParser::parseBr(Instruction *&Inst, PerFunctionState &PFS) {
     return true;
 
   if (BasicBlock *BB = dyn_cast<BasicBlock>(Op0)) {
-    Inst = BranchInst::Create(BB);
+    Inst = UncondBrInst::Create(BB);
     return false;
   }
 
@@ -7425,7 +7856,7 @@ bool LLParser::parseBr(Instruction *&Inst, PerFunctionState &PFS) {
       parseTypeAndBasicBlock(Op2, Loc2, PFS))
     return true;
 
-  Inst = BranchInst::Create(Op1, Op2, Op0);
+  Inst = CondBrInst::Create(Op0, Op1, Op2);
   return false;
 }
 
@@ -7470,8 +7901,8 @@ bool LLParser::parseSwitch(Instruction *&Inst, PerFunctionState &PFS) {
   Lex.Lex();  // Eat the ']'.
 
   SwitchInst *SI = SwitchInst::Create(Cond, DefaultBB, Table.size());
-  for (unsigned i = 0, e = Table.size(); i != e; ++i)
-    SI->addCase(Table[i].first, Table[i].second);
+  for (const auto &[OnVal, Dest] : Table)
+    SI->addCase(OnVal, Dest);
   Inst = SI;
   return false;
 }
@@ -8166,8 +8597,8 @@ int LLParser::parsePHI(Instruction *&Inst, PerFunctionState &PFS) {
   }
 
   PHINode *PN = PHINode::Create(Ty, PHIVals.size());
-  for (unsigned i = 0, e = PHIVals.size(); i != e; ++i)
-    PN->addIncoming(PHIVals[i].first, PHIVals[i].second);
+  for (const auto &[Val, BB] : PHIVals)
+    PN->addIncoming(Val, BB);
   Inst = PN;
   return AteExtraComma ? InstExtraComma : InstNormal;
 }
@@ -8339,8 +8770,6 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
       return error(CallLoc, "llvm.dbg intrinsic should not appear in a module "
                             "using non-intrinsic debug info");
     }
-    if (!SeenOldDbgInfoFormat)
-      M->setNewDbgInfoFormatFlag(false);
     SeenOldDbgInfoFormat = true;
   }
   CI->setAttributes(PAL);
@@ -8575,20 +9004,24 @@ int LLParser::parseCmpXchg(Instruction *&Inst, PerFunctionState &PFS) {
 }
 
 /// parseAtomicRMW
-///   ::= 'atomicrmw' 'volatile'? BinOp TypeAndValue ',' TypeAndValue
+///   ::= 'atomicrmw' 'volatile'? 'elementwise'? BinOp TypeAndValue ','
+///   TypeAndValue
 ///       'singlethread'? AtomicOrdering
 int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   Value *Ptr, *Val; LocTy PtrLoc, ValLoc;
   bool AteExtraComma = false;
   AtomicOrdering Ordering = AtomicOrdering::NotAtomic;
   SyncScope::ID SSID = SyncScope::System;
-  bool isVolatile = false;
+  bool IsVolatile = false;
+  bool IsElementwise = false;
   bool IsFP = false;
   AtomicRMWInst::BinOp Operation;
   MaybeAlign Alignment;
 
   if (EatIfPresent(lltok::kw_volatile))
-    isVolatile = true;
+    IsVolatile = true;
+  if (EatIfPresent(lltok::kw_elementwise))
+    IsElementwise = true;
 
   switch (Lex.getKind()) {
   default:
@@ -8632,6 +9065,22 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
     Operation = AtomicRMWInst::FMin;
     IsFP = true;
     break;
+  case lltok::kw_fmaximum:
+    Operation = AtomicRMWInst::FMaximum;
+    IsFP = true;
+    break;
+  case lltok::kw_fminimum:
+    Operation = AtomicRMWInst::FMinimum;
+    IsFP = true;
+    break;
+  case lltok::kw_fmaximumnum:
+    Operation = AtomicRMWInst::FMaximumNum;
+    IsFP = true;
+    break;
+  case lltok::kw_fminimumnum:
+    Operation = AtomicRMWInst::FMinimumNum;
+    IsFP = true;
+    break;
   }
   Lex.Lex();  // Eat the operation.
 
@@ -8649,23 +9098,34 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   if (Val->getType()->isScalableTy())
     return error(ValLoc, "atomicrmw operand may not be scalable");
 
+  // For elementwise ops, the value must be a fixed vector type whose element
+  // type is legal for the corresponding scalar atomicrmw operation. So assign
+  // ScalarTy the element type for elementwise ops so we can check this.
+  Type *ScalarTy = Val->getType();
+  if (IsElementwise) {
+    auto *VecTy = dyn_cast<FixedVectorType>(Val->getType());
+    if (!VecTy)
+      return error(ValLoc,
+                   "atomicrmw elementwise operand must be a fixed vector type");
+    ScalarTy = VecTy->getElementType();
+  }
+
   if (Operation == AtomicRMWInst::Xchg) {
-    if (!Val->getType()->isIntegerTy() &&
-        !Val->getType()->isFloatingPointTy() &&
-        !Val->getType()->isPointerTy()) {
+    if (!ScalarTy->isIntegerTy() && !ScalarTy->isFloatingPointTy() &&
+        !ScalarTy->isPointerTy()) {
       return error(
           ValLoc,
           "atomicrmw " + AtomicRMWInst::getOperationName(Operation) +
               " operand must be an integer, floating point, or pointer type");
     }
   } else if (IsFP) {
-    if (!Val->getType()->isFPOrFPVectorTy()) {
+    if (!ScalarTy->isFPOrFPVectorTy()) {
       return error(ValLoc, "atomicrmw " +
                                AtomicRMWInst::getOperationName(Operation) +
                                " operand must be a floating point type");
     }
   } else {
-    if (!Val->getType()->isIntegerTy()) {
+    if (!ScalarTy->isIntegerTy()) {
       return error(ValLoc, "atomicrmw " +
                                AtomicRMWInst::getOperationName(Operation) +
                                " operand must be an integer");
@@ -8673,18 +9133,16 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   }
 
   unsigned Size =
-      PFS.getFunction().getDataLayout().getTypeStoreSizeInBits(
-          Val->getType());
+      PFS.getFunction().getDataLayout().getTypeStoreSizeInBits(Val->getType());
   if (Size < 8 || (Size & (Size - 1)))
-    return error(ValLoc, "atomicrmw operand must be power-of-two byte-sized"
-                         " integer");
+    return error(ValLoc,
+                 "atomicrmw operand must have a power-of-two byte size");
   const Align DefaultAlignment(
-      PFS.getFunction().getDataLayout().getTypeStoreSize(
-          Val->getType()));
-  AtomicRMWInst *RMWI =
-      new AtomicRMWInst(Operation, Ptr, Val,
-                        Alignment.value_or(DefaultAlignment), Ordering, SSID);
-  RMWI->setVolatile(isVolatile);
+      PFS.getFunction().getDataLayout().getTypeStoreSize(Val->getType()));
+  AtomicRMWInst *RMWI = new AtomicRMWInst(Operation, Ptr, Val,
+                                          Alignment.value_or(DefaultAlignment),
+                                          Ordering, SSID, IsElementwise);
+  RMWI->setVolatile(IsVolatile);
   Inst = RMWI;
   return AteExtraComma ? InstExtraComma : InstNormal;
 }
@@ -8863,6 +9321,8 @@ bool LLParser::parseMDNodeVector(SmallVectorImpl<Metadata *> &Elts) {
 //===----------------------------------------------------------------------===//
 bool LLParser::sortUseListOrder(Value *V, ArrayRef<unsigned> Indexes,
                                 SMLoc Loc) {
+  if (!V->hasUseList())
+    return false;
   if (V->use_empty())
     return error(Loc, "value has no uses");
 
@@ -9055,7 +9515,7 @@ bool LLParser::parseTypeIdEntry(unsigned ID) {
     for (auto TIDRef : FwdRefTIDs->second) {
       assert(!*TIDRef.first &&
              "Forward referenced type id GUID expected to be 0");
-      *TIDRef.first = GlobalValue::getGUID(Name);
+      *TIDRef.first = GlobalValue::getGUIDAssumingExternalLinkage(Name);
     }
     ForwardRefTypeIds.erase(FwdRefTIDs);
   }
@@ -9160,7 +9620,7 @@ bool LLParser::parseTypeIdCompatibleVtableEntry(unsigned ID) {
     for (auto TIDRef : FwdRefTIDs->second) {
       assert(!*TIDRef.first &&
              "Forward referenced type id GUID expected to be 0");
-      *TIDRef.first = GlobalValue::getGUID(Name);
+      *TIDRef.first = GlobalValue::getGUIDAssumingExternalLinkage(Name);
     }
     ForwardRefTypeIds.erase(FwdRefTIDs);
   }
@@ -9476,7 +9936,7 @@ bool LLParser::addGlobalValueToIndex(
       assert(
           (!GlobalValue::isLocalLinkage(Linkage) || !SourceFileName.empty()) &&
           "Need a source_filename to compute GUID for local");
-      GUID = GlobalValue::getGUID(
+      GUID = GlobalValue::getGUIDAssumingExternalLinkage(
           GlobalValue::getGlobalIdentifier(Name, Linkage, SourceFileName));
       VI = Index->getOrInsertValueInfo(GUID, Index->saveString(Name));
     }
@@ -9647,7 +10107,7 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
       GlobalValue::ExternalLinkage, GlobalValue::DefaultVisibility,
       /*NotEligibleToImport=*/false,
       /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false,
-      GlobalValueSummary::Definition);
+      GlobalValueSummary::Definition, /*NoRenameOnPromotion=*/false);
   unsigned InstCount;
   SmallVector<FunctionSummary::EdgeTy, 0> Calls;
   FunctionSummary::TypeIdInfo TypeIdInfo;
@@ -9735,7 +10195,7 @@ bool LLParser::parseVariableSummary(std::string Name, GlobalValue::GUID GUID,
       GlobalValue::ExternalLinkage, GlobalValue::DefaultVisibility,
       /*NotEligibleToImport=*/false,
       /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false,
-      GlobalValueSummary::Definition);
+      GlobalValueSummary::Definition, /*NoRenameOnPromotion=*/false);
   GlobalVarSummary::GVarFlags GVarFlags(/*ReadOnly*/ false,
                                         /* WriteOnly */ false,
                                         /* Constant */ false,
@@ -9794,7 +10254,7 @@ bool LLParser::parseAliasSummary(std::string Name, GlobalValue::GUID GUID,
       GlobalValue::ExternalLinkage, GlobalValue::DefaultVisibility,
       /*NotEligibleToImport=*/false,
       /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false,
-      GlobalValueSummary::Definition);
+      GlobalValueSummary::Definition, /*NoRenameOnPromotion=*/false);
   if (parseToken(lltok::colon, "expected ':' here") ||
       parseToken(lltok::lparen, "expected '(' here") ||
       parseModuleReference(ModulePath) ||
@@ -9806,24 +10266,25 @@ bool LLParser::parseAliasSummary(std::string Name, GlobalValue::GUID GUID,
 
   ValueInfo AliaseeVI;
   unsigned GVId;
-  if (parseGVReference(AliaseeVI, GVId))
-    return true;
+  auto AS = std::make_unique<AliasSummary>(GVFlags);
+  AS->setModulePath(ModulePath);
+
+  if (!EatIfPresent(lltok::kw_null)) {
+    if (parseGVReference(AliaseeVI, GVId))
+      return true;
+
+    // Record forward reference if the aliasee is not parsed yet.
+    if (AliaseeVI.getRef() == FwdVIRef) {
+      ForwardRefAliasees[GVId].emplace_back(AS.get(), Loc);
+    } else {
+      auto Summary = Index->findSummaryInModule(AliaseeVI, ModulePath);
+      assert(Summary && "Aliasee must be a definition");
+      AS->setAliasee(AliaseeVI, Summary);
+    }
+  }
 
   if (parseToken(lltok::rparen, "expected ')' here"))
     return true;
-
-  auto AS = std::make_unique<AliasSummary>(GVFlags);
-
-  AS->setModulePath(ModulePath);
-
-  // Record forward reference if the aliasee is not parsed yet.
-  if (AliaseeVI.getRef() == FwdVIRef) {
-    ForwardRefAliasees[GVId].emplace_back(AS.get(), Loc);
-  } else {
-    auto Summary = Index->findSummaryInModule(AliaseeVI, ModulePath);
-    assert(Summary && "Aliasee must be a definition");
-    AS->setAliasee(AliaseeVI, Summary);
-  }
 
   return addGlobalValueToIndex(Name, GUID,
                                (GlobalValue::LinkageTypes)GVFlags.Linkage, ID,
@@ -9973,6 +10434,7 @@ bool LLParser::parseOptionalCalls(
         if (parseToken(lltok::colon, "expected ':'") || parseHotness(Hotness))
           return true;
         break;
+      // Deprecated, keep in order to support old files.
       case lltok::kw_relbf:
         Lex.Lex();
         if (parseToken(lltok::colon, "expected ':'") || parseUInt32(RelBF))
@@ -9987,15 +10449,13 @@ bool LLParser::parseOptionalCalls(
         return error(Lex.getLoc(), "expected hotness, relbf, or tail");
       }
     }
-    if (Hotness != CalleeInfo::HotnessType::Unknown && RelBF > 0)
-      return tokError("Expected only one of hotness or relbf");
     // Keep track of the Call array index needing a forward reference.
     // We will save the location of the ValueInfo needing an update, but
     // can only do so once the std::vector is finalized.
     if (VI.getRef() == FwdVIRef)
       IdToIndexMap[GVId].push_back(std::make_pair(Calls.size(), Loc));
     Calls.push_back(
-        FunctionSummary::EdgeTy{VI, CalleeInfo(Hotness, HasTailCall, RelBF)});
+        FunctionSummary::EdgeTy{VI, CalleeInfo(Hotness, HasTailCall)});
 
     if (parseToken(lltok::rparen, "expected ')' in call"))
       return true;
@@ -10591,6 +11051,12 @@ bool LLParser::parseGVFlags(GlobalValueSummary::GVFlags &GVFlags) {
       GVFlags.ImportType = static_cast<unsigned>(IK);
       Lex.Lex();
       break;
+    case lltok::kw_noRenameOnPromotion:
+      Lex.Lex();
+      if (parseToken(lltok::colon, "expected ':'") || parseFlag(Flag))
+        return true;
+      GVFlags.NoRenameOnPromotion = Flag;
+      break;
     default:
       return error(Lex.getLoc(), "expected gv flag type");
     }
@@ -10773,12 +11239,15 @@ bool LLParser::parseMemProfs(std::vector<MIBInfo> &MIBs) {
       return true;
 
     SmallVector<unsigned> StackIdIndices;
-    do {
-      uint64_t StackId = 0;
-      if (parseUInt64(StackId))
-        return true;
-      StackIdIndices.push_back(Index->addOrGetStackIdIndex(StackId));
-    } while (EatIfPresent(lltok::comma));
+    // Combined index alloc records may not have a stack id list.
+    if (Lex.getKind() != lltok::rparen) {
+      do {
+        uint64_t StackId = 0;
+        if (parseUInt64(StackId))
+          return true;
+        StackIdIndices.push_back(Index->addOrGetStackIdIndex(StackId));
+      } while (EatIfPresent(lltok::comma));
+    }
 
     if (parseToken(lltok::rparen, "expected ')' in stackIds"))
       return true;

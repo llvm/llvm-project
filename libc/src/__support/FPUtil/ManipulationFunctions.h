@@ -29,7 +29,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T frexp(T x, int &exp) {
+LIBC_INLINE constexpr T frexp(T x, int &exp) {
   FPBits<T> bits(x);
   if (bits.is_inf_or_nan()) {
 #ifdef LIBC_FREXP_INF_NAN_EXPONENT
@@ -53,7 +53,7 @@ LIBC_INLINE T frexp(T x, int &exp) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T modf(T x, T &iptr) {
+LIBC_INLINE constexpr T modf(T x, T &iptr) {
   FPBits<T> bits(x);
   if (bits.is_zero() || bits.is_nan()) {
     iptr = x;
@@ -74,7 +74,7 @@ LIBC_INLINE T modf(T x, T &iptr) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T copysign(T x, T y) {
+LIBC_INLINE constexpr T copysign(T x, T y) {
   FPBits<T> xbits(x);
   xbits.set_sign(FPBits<T>(y).sign());
   return xbits.get_val();
@@ -210,7 +210,7 @@ template <typename T, typename U,
                                cpp::is_floating_point_v<U> &&
                                (sizeof(T) <= sizeof(U)),
                            int> = 0>
-LIBC_INLINE T nextafter(T from, U to) {
+LIBC_INLINE constexpr T nextafter(T from, U to) {
   FPBits<T> from_bits(from);
   if (from_bits.is_nan())
     return from;

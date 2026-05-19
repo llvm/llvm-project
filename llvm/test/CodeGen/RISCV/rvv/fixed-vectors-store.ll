@@ -223,7 +223,7 @@ define void @store_constant_undef_v2i8(ptr %p) {
 ; CHECK-NEXT:    li a1, 768
 ; CHECK-NEXT:    sh a1, 0(a0)
 ; CHECK-NEXT:    ret
-  store <2 x i8> <i8 undef, i8 3>, ptr %p
+  store <2 x i8> <i8 poison, i8 3>, ptr %p
   ret void
 }
 

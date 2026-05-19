@@ -8,7 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfhmin,+v,+zvfbfmin -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
-declare <vscale x 1 x float> @llvm.experimental.constrained.fptrunc.nxv1f32.nxv1f64(<vscale x 1 x double>, metadata, metadata)
 define <vscale x 1 x float> @vfptrunc_nxv1f64_nxv1f32(<vscale x 1 x double> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv1f64_nxv1f32:
 ; CHECK:       # %bb.0:
@@ -20,7 +19,6 @@ define <vscale x 1 x float> @vfptrunc_nxv1f64_nxv1f32(<vscale x 1 x double> %va)
   ret <vscale x 1 x float> %evec
 }
 
-declare <vscale x 1 x half> @llvm.experimental.constrained.fptrunc.nxv1f16.nxv1f64(<vscale x 1 x double>, metadata, metadata)
 define <vscale x 1 x half> @vfptrunc_nxv1f64_nxv1f16(<vscale x 1 x double> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv1f64_nxv1f16:
 ; CHECK:       # %bb.0:
@@ -33,7 +31,6 @@ define <vscale x 1 x half> @vfptrunc_nxv1f64_nxv1f16(<vscale x 1 x double> %va) 
   ret <vscale x 1 x half> %evec
 }
 
-declare <vscale x 1 x half> @llvm.experimental.constrained.fptrunc.nxv1f16.nxv1f32(<vscale x 1 x float>, metadata, metadata)
 define <vscale x 1 x half> @vfptrunc_nxv1f32_nxv1f16(<vscale x 1 x float> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv1f32_nxv1f16:
 ; CHECK:       # %bb.0:
@@ -45,7 +42,6 @@ define <vscale x 1 x half> @vfptrunc_nxv1f32_nxv1f16(<vscale x 1 x float> %va) s
   ret <vscale x 1 x half> %evec
 }
 
-declare <vscale x 2 x float> @llvm.experimental.constrained.fptrunc.nxv2f32.nxv2f64(<vscale x 2 x double>, metadata, metadata)
 define <vscale x 2 x float> @vfptrunc_nxv2f64_nxv2f32(<vscale x 2 x double> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv2f64_nxv2f32:
 ; CHECK:       # %bb.0:
@@ -57,7 +53,6 @@ define <vscale x 2 x float> @vfptrunc_nxv2f64_nxv2f32(<vscale x 2 x double> %va)
   ret <vscale x 2 x float> %evec
 }
 
-declare <vscale x 2 x half> @llvm.experimental.constrained.fptrunc.nxv2f16.nxv2f64(<vscale x 2 x double>, metadata, metadata)
 define <vscale x 2 x half> @vfptrunc_nxv2f64_nxv2f16(<vscale x 2 x double> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv2f64_nxv2f16:
 ; CHECK:       # %bb.0:
@@ -70,7 +65,6 @@ define <vscale x 2 x half> @vfptrunc_nxv2f64_nxv2f16(<vscale x 2 x double> %va) 
   ret <vscale x 2 x half> %evec
 }
 
-declare <vscale x 2 x half> @llvm.experimental.constrained.fptrunc.nxv2f16.nxv2f32(<vscale x 2 x float>, metadata, metadata)
 define <vscale x 2 x half> @vfptrunc_nxv2f32_nxv2f16(<vscale x 2 x float> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv2f32_nxv2f16:
 ; CHECK:       # %bb.0:
@@ -82,7 +76,6 @@ define <vscale x 2 x half> @vfptrunc_nxv2f32_nxv2f16(<vscale x 2 x float> %va) s
   ret <vscale x 2 x half> %evec
 }
 
-declare <vscale x 4 x float> @llvm.experimental.constrained.fptrunc.nxv4f32.nxv4f64(<vscale x 4 x double>, metadata, metadata)
 define <vscale x 4 x float> @vfptrunc_nxv4f64_nxv4f32(<vscale x 4 x double> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv4f64_nxv4f32:
 ; CHECK:       # %bb.0:
@@ -94,7 +87,6 @@ define <vscale x 4 x float> @vfptrunc_nxv4f64_nxv4f32(<vscale x 4 x double> %va)
   ret <vscale x 4 x float> %evec
 }
 
-declare <vscale x 4 x half> @llvm.experimental.constrained.fptrunc.nxv4f16.nxv4f64(<vscale x 4 x double>, metadata, metadata)
 define <vscale x 4 x half> @vfptrunc_nxv4f64_nxv4f16(<vscale x 4 x double> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv4f64_nxv4f16:
 ; CHECK:       # %bb.0:
@@ -107,7 +99,6 @@ define <vscale x 4 x half> @vfptrunc_nxv4f64_nxv4f16(<vscale x 4 x double> %va) 
   ret <vscale x 4 x half> %evec
 }
 
-declare <vscale x 4 x half> @llvm.experimental.constrained.fptrunc.nxv4f16.nxv4f32(<vscale x 4 x float>, metadata, metadata)
 define <vscale x 4 x half> @vfptrunc_nxv4f32_nxv4f16(<vscale x 4 x float> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv4f32_nxv4f16:
 ; CHECK:       # %bb.0:
@@ -119,7 +110,6 @@ define <vscale x 4 x half> @vfptrunc_nxv4f32_nxv4f16(<vscale x 4 x float> %va) s
   ret <vscale x 4 x half> %evec
 }
 
-declare <vscale x 8 x float> @llvm.experimental.constrained.fptrunc.nxv8f32.nxv8f64(<vscale x 8 x double>, metadata, metadata)
 define <vscale x 8 x float> @vfptrunc_nxv8f64_nxv8f32(<vscale x 8 x double> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv8f64_nxv8f32:
 ; CHECK:       # %bb.0:
@@ -131,7 +121,6 @@ define <vscale x 8 x float> @vfptrunc_nxv8f64_nxv8f32(<vscale x 8 x double> %va)
   ret <vscale x 8 x float> %evec
 }
 
-declare <vscale x 8 x half> @llvm.experimental.constrained.fptrunc.nxv8f16.nxv8f64(<vscale x 8 x double>, metadata, metadata)
 define <vscale x 8 x half> @vfptrunc_nxv8f64_nxv8f16(<vscale x 8 x double> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv8f64_nxv8f16:
 ; CHECK:       # %bb.0:
@@ -144,7 +133,6 @@ define <vscale x 8 x half> @vfptrunc_nxv8f64_nxv8f16(<vscale x 8 x double> %va) 
   ret <vscale x 8 x half> %evec
 }
 
-declare <vscale x 8 x half> @llvm.experimental.constrained.fptrunc.nxv8f16.nxv8f32(<vscale x 8 x float>, metadata, metadata)
 define <vscale x 8 x half> @vfptrunc_nxv8f32_nxv8f16(<vscale x 8 x float> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv8f32_nxv8f16:
 ; CHECK:       # %bb.0:
@@ -156,7 +144,6 @@ define <vscale x 8 x half> @vfptrunc_nxv8f32_nxv8f16(<vscale x 8 x float> %va) s
   ret <vscale x 8 x half> %evec
 }
 
-declare <vscale x 1 x bfloat> @llvm.experimental.constrained.fptrunc.nxv1bf16.nxv1f64(<vscale x 1 x double>, metadata, metadata)
 define <vscale x 1 x bfloat> @vfptrunc_nxv1f64_nxv1bf16(<vscale x 1 x double> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv1f64_nxv1bf16:
 ; CHECK:       # %bb.0:
@@ -169,7 +156,6 @@ define <vscale x 1 x bfloat> @vfptrunc_nxv1f64_nxv1bf16(<vscale x 1 x double> %v
   ret <vscale x 1 x bfloat> %evec
 }
 
-declare <vscale x 1 x bfloat> @llvm.experimental.constrained.fptrunc.nxv1bf16.nxv1f32(<vscale x 1 x float>, metadata, metadata)
 define <vscale x 1 x bfloat> @vfptrunc_nxv1f32_nxv1bf16(<vscale x 1 x float> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv1f32_nxv1bf16:
 ; CHECK:       # %bb.0:
@@ -181,7 +167,6 @@ define <vscale x 1 x bfloat> @vfptrunc_nxv1f32_nxv1bf16(<vscale x 1 x float> %va
   ret <vscale x 1 x bfloat> %evec
 }
 
-declare <vscale x 2 x bfloat> @llvm.experimental.constrained.fptrunc.nxv2bf16.nxv2f64(<vscale x 2 x double>, metadata, metadata)
 define <vscale x 2 x bfloat> @vfptrunc_nxv2f64_nxv2bf16(<vscale x 2 x double> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv2f64_nxv2bf16:
 ; CHECK:       # %bb.0:
@@ -194,7 +179,6 @@ define <vscale x 2 x bfloat> @vfptrunc_nxv2f64_nxv2bf16(<vscale x 2 x double> %v
   ret <vscale x 2 x bfloat> %evec
 }
 
-declare <vscale x 2 x bfloat> @llvm.experimental.constrained.fptrunc.nxv2bf16.nxv2f32(<vscale x 2 x float>, metadata, metadata)
 define <vscale x 2 x bfloat> @vfptrunc_nxv2f32_nxv2bf16(<vscale x 2 x float> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv2f32_nxv2bf16:
 ; CHECK:       # %bb.0:
@@ -206,7 +190,6 @@ define <vscale x 2 x bfloat> @vfptrunc_nxv2f32_nxv2bf16(<vscale x 2 x float> %va
   ret <vscale x 2 x bfloat> %evec
 }
 
-declare <vscale x 4 x bfloat> @llvm.experimental.constrained.fptrunc.nxv4bf16.nxv4f64(<vscale x 4 x double>, metadata, metadata)
 define <vscale x 4 x bfloat> @vfptrunc_nxv4f64_nxv4bf16(<vscale x 4 x double> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv4f64_nxv4bf16:
 ; CHECK:       # %bb.0:
@@ -219,7 +202,6 @@ define <vscale x 4 x bfloat> @vfptrunc_nxv4f64_nxv4bf16(<vscale x 4 x double> %v
   ret <vscale x 4 x bfloat> %evec
 }
 
-declare <vscale x 4 x bfloat> @llvm.experimental.constrained.fptrunc.nxv4bf16.nxv4f32(<vscale x 4 x float>, metadata, metadata)
 define <vscale x 4 x bfloat> @vfptrunc_nxv4f32_nxv4bf16(<vscale x 4 x float> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv4f32_nxv4bf16:
 ; CHECK:       # %bb.0:
@@ -231,7 +213,6 @@ define <vscale x 4 x bfloat> @vfptrunc_nxv4f32_nxv4bf16(<vscale x 4 x float> %va
   ret <vscale x 4 x bfloat> %evec
 }
 
-declare <vscale x 8 x bfloat> @llvm.experimental.constrained.fptrunc.nxv8bf16.nxv8f64(<vscale x 8 x double>, metadata, metadata)
 define <vscale x 8 x bfloat> @vfptrunc_nxv8f64_nxv8bf16(<vscale x 8 x double> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv8f64_nxv8bf16:
 ; CHECK:       # %bb.0:
@@ -244,7 +225,6 @@ define <vscale x 8 x bfloat> @vfptrunc_nxv8f64_nxv8bf16(<vscale x 8 x double> %v
   ret <vscale x 8 x bfloat> %evec
 }
 
-declare <vscale x 8 x bfloat> @llvm.experimental.constrained.fptrunc.nxv8bf16.nxv8f32(<vscale x 8 x float>, metadata, metadata)
 define <vscale x 8 x bfloat> @vfptrunc_nxv8f32_nxv8bf16(<vscale x 8 x float> %va) strictfp {
 ; CHECK-LABEL: vfptrunc_nxv8f32_nxv8bf16:
 ; CHECK:       # %bb.0:

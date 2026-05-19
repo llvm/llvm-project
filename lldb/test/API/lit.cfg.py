@@ -90,6 +90,8 @@ def find_python_interpreter():
     )
 
     shutil.copy(real_python, copied_python)
+    # macOS 15+ restricts injecting the ASAN runtime to only user-compiled code.
+    subprocess.check_call(["/usr/bin/codesign", "--remove-signature", copied_python])
 
     # Now make sure the copied Python works. The Python in Xcode has a relative
     # RPATH and cannot be copied.
@@ -130,14 +132,14 @@ if is_configured("llvm_use_sanitizer"):
     config.environment["MallocNanoZone"] = "0"
     if "Address" in config.llvm_use_sanitizer:
         config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
-        if "Darwin" in config.host_os:
+        if "Darwin" in config.target_os:
             config.environment["DYLD_INSERT_LIBRARIES"] = find_sanitizer_runtime(
                 "libclang_rt.asan_osx_dynamic.dylib"
             )
 
     if "Thread" in config.llvm_use_sanitizer:
         config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
-        if "Darwin" in config.host_os:
+        if "Darwin" in config.target_os:
             config.environment["DYLD_INSERT_LIBRARIES"] = find_sanitizer_runtime(
                 "libclang_rt.tsan_osx_dynamic.dylib"
             )
@@ -230,8 +232,8 @@ for env_var in ("ASAN_OPTIONS", "DYLD_INSERT_LIBRARIES"):
     if env_var in config.environment:
         dotest_cmd += ["--inferior-env", env_var + "=" + config.environment[env_var]]
 
-if is_configured("test_arch"):
-    dotest_cmd += ["--arch", config.test_arch]
+if is_configured("test_triple"):
+    dotest_cmd += ["--triple", config.test_triple]
 
 if is_configured("lldb_build_directory"):
     dotest_cmd += ["--build-dir", config.lldb_build_directory]
@@ -271,6 +273,9 @@ if is_configured("lldb_libs_dir"):
 if is_configured("lldb_framework_dir"):
     dotest_cmd += ["--framework", config.lldb_framework_dir]
 
+if is_configured("cmake_build_type"):
+    dotest_cmd += ["--cmake-build-type", config.cmake_build_type]
+
 if "lldb-simulator-ios" in config.available_features:
     dotest_cmd += ["--apple-sdk", "iphonesimulator", "--platform-name", "ios-simulator"]
 elif "lldb-simulator-watchos" in config.available_features:
@@ -294,6 +299,12 @@ if "lldb-simulator-qemu-user" in config.available_features:
 if is_configured("enabled_plugins"):
     for plugin in config.enabled_plugins:
         dotest_cmd += ["--enable-plugin", plugin]
+
+if getattr(config, "lldb_enable_mte", False):
+    dotest_cmd += ["--enable-mte"]
+
+if getattr(config, "lldb_enable_arm64e_debugserver", False):
+    dotest_cmd += ["--arm64e-debugserver"]
 
 # `dotest` args come from three different sources:
 # 1. Derived by CMake based on its configs (LLDB_TEST_COMMON_ARGS), which end
@@ -346,3 +357,15 @@ if platform.system() == "Windows":
     for v in ["SystemDrive"]:
         if v in os.environ:
             config.environment[v] = os.environ[v]
+    # Use anonymous pipes instead of ConPTY for all tests. ConPTY injects VT
+    # escape sequences into the output stream, which breaks tests that check
+    # for specific stdout/stderr content.
+    dotest_cmd += ["--env", "LLDB_LAUNCH_FLAG_USE_PIPES=1"]
+
+# Some steps required to initialize the tests dynamically link with python.dll
+# and need to know the location of the Python libraries. This ensures that we
+# use the same version of Python that was used to build lldb to run our tests.
+config.environment["PYTHONHOME"] = config.python_root_dir
+config.environment["PATH"] = os.path.pathsep.join(
+    (config.python_root_dir, config.environment.get("PATH", ""))
+)

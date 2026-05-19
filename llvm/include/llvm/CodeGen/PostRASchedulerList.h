@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class PostRASchedulerPass : public PassInfoMixin<PostRASchedulerPass> {
+class PostRASchedulerPass : public OptionalPassInfoMixin<PostRASchedulerPass> {
   const TargetMachine *TM;
 
 public:
@@ -22,8 +22,7 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getRequiredProperties() const {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 };
 

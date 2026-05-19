@@ -79,9 +79,9 @@ and then check for ``#if _LIBCPP_SOMETHING_ENABLED`` instead of
 
 and then checking for ``#ifdef _LIBCPP_SOMETHING_ENABLED``.
 
-This makes it significantly easier to catch missing includes, since Clang and GCC will warn when using and undefined
-marco inside an ``#if`` statement when using ``-Wundef``. Some macros in libc++ don't use this style yet, so this only
-applies when introducing a new macro.
+This makes it significantly easier to catch missing includes: Clang and GCC with ``-Wundef`` enabled will warn
+when using an undefined macro inside an ``#if`` statement. Some macros in libc++ don't use this style yet,
+so this guideline only applies when introducing a new macro.
 
 This is partially enforced by the clang-tidy check ``libcpp-internal-ftms``.
 
@@ -104,12 +104,22 @@ provide alternative spellings for their attributes, so these should be avoided i
 
 This is enforced by the clang-tidy check ``libcpp-uglify-attributes``.
 
-Use C++11 extensions in C++03 code if they simplify the code
-============================================================
+Use extensions if they simplify the code
+========================================
 
-libc++ only supports Clang in C++98/03 mode. Clang provides many C++11 features in C++03, making it possible to write a
-lot of code in a simpler way than if we were restricted to C++03 features. Some use of extensions is even mandatory,
-since libc++ supports move semantics in C++03.
+libc++ only supports recent versions Clang and GCC, which allows us to make use of extensions in the code base if both
+compilers support them. Only  features backported from future language versions should be used liberally throughout the
+library. For example, some of the most useful extensions are lambdas and ``if constexpr``, since they almost always
+significantly improve readability when used as intended.
+
+libc++ supports the C++98/03 mode only with the Clang compiler. Clang provides many C++11 features in C++03, making it
+possible to write a lot of code in a simpler way than if we were restricted to C++03 features. Some use of extensions is
+even mandatory, since libc++ supports move semantics in C++03. Details on which features have been backported can be
+found
+`here <https://clang.llvm.org/docs/LanguageExtensions.html#language-extensions-back-ported-to-previous-standards>`__.
+
+GCC is only supported from C++11 onwards. Unfortunately, GCC doesn't document which features are backported to older
+language versions, so you just have to try whether GCC accepts the features you want to use.
 
 Use ``using`` aliases instead of ``typedef``
 ============================================
@@ -124,8 +134,8 @@ Write SFINAE with ``requires`` clauses in C++20-only code
 subsume other concepts. This means that overloads based on traits can be written without negating more general cases.
 They also show intent better.
 
-Write ``enable_if`` as ``enable_if_t<conditon, int> = 0``
-=========================================================
+Write ``enable_if`` as ``enable_if_t<condition, int> = 0``
+==========================================================
 
 The form ``enable_if_t<condition, int> = 0`` is the only one that works in every language mode and for overload sets
 using the same template arguments otherwise. If the code must work in C++11 or C++03, the libc++-internal alias
@@ -165,6 +175,11 @@ have a recommended practice where to put them, so libc++ applies it whenever it 
   This protects programmers from assuming too much about how the internals of a function work, making code more robust
   in the presence of future optimizations.
 
+``[[nodiscard]]`` should not be applied to functions if Clang already diagnoses unused results, for example:
+- conversion functions
+- equality operators
+- relational operators
+
 Applications of ``[[nodiscard]]`` are code like any other code, so we aim to test them on public interfaces. This can be
 done with a ``.verify.cpp`` test. Many examples are available. Just look for tests with the suffix
 ``.nodiscard.verify.cpp``.
@@ -195,3 +210,18 @@ prevent compilers from generating said debug information. Aliases inside type tr
 should be annotated for the same reason.
 
 This is enforced by the clang-tidy check ``libcpp-nodebug-on-aliases``.
+
+Naming benchmarks
+=================
+
+Libc++ contains several benchmarks. It is helpful to observe some consistency when naming benchmarks since it makes it
+easier to search for and filter benchmark names from various other tools like LNT. In particular, we name benchmarks
+after the function they are measuring, with a few transformations to help filtering:
+
+- Constructors are named ``ctor`` to make the name independent on the container being benchmarked.
+- Copy and move operations use ``Self`` instead of the container type, again to make their name independent from the
+  container being benchmarked.
+
+When multiple benchmarks measure the same function under different circumstances, we add context as a parenthesis
+after the function signature. For example, ``std::vector<bool>::ctor(Self&&, const allocator_type&) (equal allocators)``
+would be the allocator-aware move constructor for ``std::vector<bool>`` in the case of equal allocators.

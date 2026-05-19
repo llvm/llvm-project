@@ -37,37 +37,37 @@ void f(int x) {
   if (x >= 0 || x <= 0) { } // expected-warning {{overlapping comparisons always evaluate to true}}
 
   // > && <
-  if (x > 2 && x < 1) { }  // expected-warning {{overlapping comparisons always evaluate to false}}
-  if (x > 2 && x < 2) { }  // expected-warning {{overlapping comparisons always evaluate to false}}
-  if (x > 2 && x < 3) { }  // expected-warning {{overlapping comparisons always evaluate to false}}
-  if (x > 0 && x < 1) { }  // expected-warning {{overlapping comparisons always evaluate to false}}
+  if (x > 2 && x < 1) { }  // expected-warning {{non-overlapping comparisons always evaluate to false}}
+  if (x > 2 && x < 2) { }  // expected-warning {{non-overlapping comparisons always evaluate to false}}
+  if (x > 2 && x < 3) { }  // expected-warning {{non-overlapping comparisons always evaluate to false}}
+  if (x > 0 && x < 1) { }  // expected-warning {{non-overlapping comparisons always evaluate to false}}
 
-  if (x > 2 && x <= 1) { }  // expected-warning {{overlapping comparisons always evaluate to false}}
-  if (x > 2 && x <= 2) { }  // expected-warning {{overlapping comparisons always evaluate to false}}
+  if (x > 2 && x <= 1) { }  // expected-warning {{non-overlapping comparisons always evaluate to false}}
+  if (x > 2 && x <= 2) { }  // expected-warning {{non-overlapping comparisons always evaluate to false}}
   if (x > 2 && x <= 3) { }
 
-  if (x >= 2 && x < 1) { }  // expected-warning {{overlapping comparisons always evaluate to false}}
-  if (x >= 2 && x < 2) { }  // expected-warning {{overlapping comparisons always evaluate to false}}
+  if (x >= 2 && x < 1) { }  // expected-warning {{non-overlapping comparisons always evaluate to false}}
+  if (x >= 2 && x < 2) { }  // expected-warning {{non-overlapping comparisons always evaluate to false}}
   if (x >= 2 && x < 3) { }
-  if (x >= 0 && x < 0) { }  // expected-warning {{overlapping comparisons always evaluate to false}}
+  if (x >= 0 && x < 0) { }  // expected-warning {{non-overlapping comparisons always evaluate to false}}
 
-  if (x >= 2 && x <= 1) { }  // expected-warning {{overlapping comparisons always evaluate to false}}
+  if (x >= 2 && x <= 1) { }  // expected-warning {{non-overlapping comparisons always evaluate to false}}
   if (x >= 2 && x <= 2) { }
   if (x >= 2 && x <= 3) { }
 
   // !=, ==, ..
   if (x != 2 || x != 3) { }  // expected-warning {{overlapping comparisons always evaluate to true}}
   if (x != 2 || x < 3) { }   // expected-warning {{overlapping comparisons always evaluate to true}}
-  if (x == 2 && x == 3) { }  // expected-warning {{overlapping comparisons always evaluate to false}}
-  if (x == 2 && x > 3) { }   // expected-warning {{overlapping comparisons always evaluate to false}}
-  if (x == 3 && x < 0) { }  // expected-warning {{overlapping comparisons always evaluate to false}}
-  if (3 == x && x < 0) { }  // expected-warning {{overlapping comparisons always evaluate to false}}
+  if (x == 2 && x == 3) { }  // expected-warning {{non-overlapping comparisons always evaluate to false}}
+  if (x == 2 && x > 3) { }   // expected-warning {{non-overlapping comparisons always evaluate to false}}
+  if (x == 3 && x < 0) { }  // expected-warning {{non-overlapping comparisons always evaluate to false}}
+  if (3 == x && x < 0) { }  // expected-warning {{non-overlapping comparisons always evaluate to false}}
 
   if (x == mydefine && x > 3) { }
   if (x == (mydefine + 1) && x > 3) { }
 
   if (x != CHOICE_0 || x != CHOICE_1) { } // expected-warning {{overlapping comparisons always evaluate to true}}
-  if (x == CHOICE_0 && x == CHOICE_1) { } // expected-warning {{overlapping comparisons always evaluate to false}}
+  if (x == CHOICE_0 && x == CHOICE_1) { } // expected-warning {{non-overlapping comparisons always evaluate to false}}
 
   // Don't warn if comparing x to different types
   if (x == CHOICE_0 && x == 1) { }
@@ -80,7 +80,7 @@ void f(int x) {
 
 void enums(enum Choices c) {
   if (c != CHOICE_0 || c != CHOICE_1) { } // expected-warning {{overlapping comparisons always evaluate to true}}
-  if (c == CHOICE_0 && c == CHOICE_1) { } // expected-warning {{overlapping comparisons always evaluate to false}}
+  if (c == CHOICE_0 && c == CHOICE_1) { } // expected-warning {{non-overlapping comparisons always evaluate to false}}
 
   // Don't warn if comparing x to different types
   if (c == CHOICE_0 && c == 1) { }
@@ -117,12 +117,12 @@ void assignment(int x) {
   int a = x > 4 || x < 10;
   // expected-warning@-1{{overlapping comparisons always evaluate to true}}
   int b = x < 2 && x > 5;
-  // expected-warning@-1{{overlapping comparisons always evaluate to false}}
+  // expected-warning@-1{{non-overlapping comparisons always evaluate to false}}
 
   int c = x != 1 || x != 3;
   // expected-warning@-1{{overlapping comparisons always evaluate to true}}
   int d = x == 1 && x == 2;
-  // expected-warning@-1{{overlapping comparisons always evaluate to false}}
+  // expected-warning@-1{{non-overlapping comparisons always evaluate to false}}
 
   int e = x < 1 || x != 0;
   // expected-warning@-1{{overlapping comparisons always evaluate to true}}
@@ -132,12 +132,12 @@ int returns(int x) {
   return x > 4 || x < 10;
   // expected-warning@-1{{overlapping comparisons always evaluate to true}}
   return x < 2 && x > 5;
-  // expected-warning@-1{{overlapping comparisons always evaluate to false}}
+  // expected-warning@-1{{non-overlapping comparisons always evaluate to false}}
 
   return x != 1 || x != 3;
   // expected-warning@-1{{overlapping comparisons always evaluate to true}}
   return x == 1 && x == 2;
-  // expected-warning@-1{{overlapping comparisons always evaluate to false}}
+  // expected-warning@-1{{non-overlapping comparisons always evaluate to false}}
 
   return x < 1 || x != 0;
   // expected-warning@-1{{overlapping comparisons always evaluate to true}}
@@ -169,7 +169,84 @@ int struct_test(struct A a) {
   return a.x > 5 && a.y < 1;  // no warning, different variables
 
   return a.x > 5 && a.x < 1;
-  // expected-warning@-1{{overlapping comparisons always evaluate to false}}
+  // expected-warning@-1{{non-overlapping comparisons always evaluate to false}}
   return a.y == 1 || a.y != 1;
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+}
+
+void char_tests(char c) {
+  if (c > 'a' || c < 'z') {}
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+  if (c > 'z' && c < 'a') {}
+  // expected-warning@-1{{non-overlapping comparisons always evaluate to false}}
+  if (c == 'a' && c == 'z') {}
+  // expected-warning@-1{{non-overlapping comparisons always evaluate to false}}
+  if (c != 'a' || c != 'z') {}
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+}
+
+void float_tests(float f) {
+  if (f > 1.0 || f < 2.0) {}
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+  if (f > 2.0 && f < 1.0) {}
+  // expected-warning@-1{{non-overlapping comparisons always evaluate to false}}
+  if (f == 1.0 && f == 2.0) {}
+  // expected-warning@-1{{non-overlapping comparisons always evaluate to false}}
+  if (f != 1.0 || f != 2.0) {}
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+}
+
+void double_tests(double d) {
+  if (d > 3.5 || d < 4.5) {}
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+  if (d > 4.5 && d < 3.5) {}
+  // expected-warning@-1{{non-overlapping comparisons always evaluate to false}}
+  if (d == 3.5 && d == 4.5) {}
+  // expected-warning@-1{{non-overlapping comparisons always evaluate to false}}
+  if (d != 3.5 || d != 4.5) {}
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+}
+
+void mixed_float_double_tests(float f, double d) {
+  if (f > 1.0 || d < 2.0) {}
+  // no warning, different types
+  if (f > 2.0 && d < 1.0) {}
+  // no warning, different types
+  if (f == 1.0 && d == 2.0) {}
+  // no warning, different types
+  if (f != 1.0 || d != 2.0) {}
+  // no warning, different types
+}
+
+void float_edge_cases(float f) {
+  if (f > 0.0 || f < 0.0) {}
+  // no-warning
+  if (f > 0.0 && f < 0.0) {}
+  // expected-warning@-1{{non-overlapping comparisons always evaluate to false}}}
+  if (f == 0.0 && f == -0.0) {}
+  // no-warning
+  if (f != 0.0 || f != -0.0) {}
+  // no warning
+}
+
+void double_edge_cases(double d) {
+  if (d > 0.0 || d < 0.0) {}
+  // no-warning
+  if (d > 0.0 && d < 0.0) {}
+  // expected-warning@-1{{non-overlapping comparisons always evaluate to false}}
+  if (d == 0.0 && d == -0.0) {}
+  // no warning
+  if (d != 0.0 || d != -0.0) {}
+  // no warning
+}
+
+void float_int_literal_tests(float f) {
+  if (f > 1 || f < 2) {}
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+  if (f > 2 && f < 1) {}
+  // expected-warning@-1{{non-overlapping comparisons always evaluate to false}}
+  if (f == 1 && f == 2) {}
+  // expected-warning@-1{{non-overlapping comparisons always evaluate to false}}
+  if (f != 1 || f != 2) {}
   // expected-warning@-1{{overlapping comparisons always evaluate to true}}
 }

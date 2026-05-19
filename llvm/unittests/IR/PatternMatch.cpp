@@ -635,6 +635,70 @@ TEST_F(PatternMatchTest, ZExtSExtSelf) {
   EXPECT_TRUE(m_ZExtOrSExtOrSelf(m_One()).match(One64S));
 }
 
+TEST_F(PatternMatchTest, IntFPConversions) {
+  LLVMContext &Ctx = IRB.getContext();
+
+  Value *One32 = IRB.getInt32(1);
+  Value *OneDouble = ConstantFP::get(IRB.getDoubleTy(), APFloat(1.0));
+  Value *OneDoubleU = IRB.CreateUIToFP(One32, Type::getDoubleTy(Ctx));
+  Value *OneDoubleS = IRB.CreateSIToFP(One32, Type::getDoubleTy(Ctx));
+  Value *One32U = IRB.CreateFPToUI(OneDouble, Type::getInt32Ty(Ctx));
+  Value *One32S = IRB.CreateFPToSI(OneDouble, Type::getInt32Ty(Ctx));
+
+  EXPECT_FALSE(m_IToFP(m_One()).match(One32));
+  EXPECT_TRUE(m_IToFP(m_One()).match(OneDoubleU));
+  EXPECT_TRUE(m_IToFP(m_One()).match(OneDoubleS));
+
+  EXPECT_FALSE(m_FPToI(m_FPOne()).match(OneDouble));
+  EXPECT_TRUE(m_FPToI(m_FPOne()).match(One32U));
+  EXPECT_TRUE(m_FPToI(m_FPOne()).match(One32S));
+}
+
+TEST_F(PatternMatchTest, BooleanMap) {
+  Value *Alloca = IRB.CreateAlloca(IRB.getInt1Ty());
+  Value *SelectCond = IRB.CreateLoad(IRB.getInt1Ty(), Alloca);
+  Value *C1 = IRB.getInt1(1);
+  Value *C2 = IRB.getInt1(0);
+
+  Value *Cond;
+  Constant *T, *F;
+
+  Value *select = IRB.CreateSelect(SelectCond, C1, C2);
+  EXPECT_TRUE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(select));
+  EXPECT_EQ(Cond, SelectCond);
+  EXPECT_EQ(T, C1);
+  EXPECT_EQ(F, C2);
+
+  Value *zext = IRB.CreateZExt(C1, IntegerType::getInt64Ty(Ctx));
+  EXPECT_TRUE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(zext));
+  EXPECT_EQ(Cond, C1);
+  EXPECT_EQ(T, IRB.getInt64(1));
+  EXPECT_EQ(F, IRB.getInt64(0));
+
+  Value *sext = IRB.CreateSExt(C1, IntegerType::getInt64Ty(Ctx));
+  EXPECT_TRUE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(sext));
+  EXPECT_EQ(Cond, C1);
+  EXPECT_EQ(T, IRB.getInt64(-1));
+  EXPECT_EQ(F, IRB.getInt64(0));
+
+  // Negative: zext/sext of non-i1 should not match
+  Value *I8Val = IRB.getInt8(1);
+  Value *ZExtI8 = IRB.CreateZExt(I8Val, IntegerType::getInt64Ty(Ctx));
+  EXPECT_FALSE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(ZExtI8));
+  Value *SExtI8 = IRB.CreateSExt(I8Val, IntegerType::getInt64Ty(Ctx));
+  EXPECT_FALSE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(SExtI8));
+
+  // Negative: plain arithmetic instruction should not match
+  Value *Add = IRB.CreateAdd(IRB.getInt32(1), IRB.getInt32(2));
+  EXPECT_FALSE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(Add));
+}
+
 TEST_F(PatternMatchTest, BitCast) {
   Value *OneDouble = ConstantFP::get(IRB.getDoubleTy(), APFloat(1.0));
   Value *ScalableDouble = ConstantFP::get(
@@ -1327,9 +1391,9 @@ TEST_F(PatternMatchTest, OverflowingBinOps) {
 TEST_F(PatternMatchTest, LoadStoreOps) {
   // Create this load/store sequence:
   //
-  //  %p = alloca i32*
-  //  %0 = load i32*, i32** %p
-  //  store i32 42, i32* %0
+  //  %p = alloca ptr
+  //  %0 = load ptr, ptr %p
+  //  store i32 42, ptr %0
 
   Value *Alloca = IRB.CreateAlloca(IRB.getInt32Ty());
   Value *LoadInst = IRB.CreateLoad(IRB.getInt32Ty(), Alloca);
@@ -1691,6 +1755,12 @@ TEST_F(PatternMatchTest, VectorUndefFloat) {
   EXPECT_TRUE(match(VectorInfPoison, m_Inf()));
   EXPECT_FALSE(match(VectorNaNPoison, m_Inf()));
 
+  EXPECT_TRUE(match(ScalarPosInf, m_PosInf()));
+  EXPECT_FALSE(match(ScalarNegInf, m_PosInf()));
+
+  EXPECT_FALSE(match(ScalarPosInf, m_NegInf()));
+  EXPECT_TRUE(match(ScalarNegInf, m_NegInf()));
+
   EXPECT_FALSE(match(ScalarUndef, m_NonInf()));
   EXPECT_FALSE(match(VectorUndef, m_NonInf()));
   EXPECT_FALSE(match(VectorZeroUndef, m_NonInf()));
@@ -2035,30 +2105,62 @@ TEST_F(PatternMatchTest, IntrinsicMatcher) {
                             m_SpecificInt(10))));
 }
 
+TEST_F(PatternMatchTest, AnyIntrinsicMatcher) {
+  Value *Ops0[] = {IRB.getInt32(0)};
+  Value *Ops1[] = {IRB.getInt32(0)};
+  Module *M = BB->getParent()->getParent();
+
+  Function *BswapFn =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::bswap, IRB.getInt32Ty());
+  Value *BswapCall = CallInst::Create(BswapFn, Ops0, "", BB);
+
+  Function *CtpopFn =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::ctpop, IRB.getInt32Ty());
+  Value *CtpopCall = CallInst::Create(CtpopFn, Ops1, "", BB);
+
+  // Match any of the listed intrinsic IDs.
+  EXPECT_TRUE(
+      match(BswapCall, m_AnyIntrinsic<Intrinsic::bswap, Intrinsic::ctpop>()));
+  EXPECT_TRUE(
+      match(CtpopCall, m_AnyIntrinsic<Intrinsic::bswap, Intrinsic::ctpop>()));
+
+  // Should not match an unlisted intrinsic.
+  EXPECT_FALSE(match(
+      BswapCall, m_AnyIntrinsic<Intrinsic::ctpop, Intrinsic::bitreverse>()));
+
+  // Single ID should work like m_Intrinsic.
+  EXPECT_TRUE(match(BswapCall, m_AnyIntrinsic<Intrinsic::bswap>()));
+  EXPECT_FALSE(match(CtpopCall, m_AnyIntrinsic<Intrinsic::bswap>()));
+
+  // Non-intrinsic call should not match.
+  EXPECT_FALSE(match(IRB.getInt32(0),
+                     m_AnyIntrinsic<Intrinsic::bswap, Intrinsic::ctpop>()));
+}
+
 namespace {
 
 struct is_unsigned_zero_pred {
-  bool isValue(const APInt &C) { return C.isZero(); }
+  bool isValue(const APInt &C) const { return C.isZero(); }
 };
 
 struct is_float_zero_pred {
-  bool isValue(const APFloat &C) { return C.isZero(); }
+  bool isValue(const APFloat &C) const { return C.isZero(); }
 };
 
 template <typename T> struct always_true_pred {
-  bool isValue(const T &) { return true; }
+  bool isValue(const T &) const { return true; }
 };
 
 template <typename T> struct always_false_pred {
-  bool isValue(const T &) { return false; }
+  bool isValue(const T &) const { return false; }
 };
 
 struct is_unsigned_max_pred {
-  bool isValue(const APInt &C) { return C.isMaxValue(); }
+  bool isValue(const APInt &C) const { return C.isMaxValue(); }
 };
 
 struct is_float_nan_pred {
-  bool isValue(const APFloat &C) { return C.isNaN(); }
+  bool isValue(const APFloat &C) const { return C.isNaN(); }
 };
 
 } // namespace
@@ -2355,25 +2457,6 @@ TEST_F(PatternMatchTest, VectorLogicalSelects) {
   EXPECT_FALSE(match(MixedTypeOr, m_LogicalOr(m_Value(), m_Value())));
 }
 
-TEST_F(PatternMatchTest, VScale) {
-  DataLayout DL = M->getDataLayout();
-
-  Type *VecTy = ScalableVectorType::get(IRB.getInt8Ty(), 1);
-  Value *NullPtrVec =
-      Constant::getNullValue(PointerType::getUnqual(VecTy->getContext()));
-  Value *GEP = IRB.CreateGEP(VecTy, NullPtrVec, IRB.getInt64(1));
-  Value *PtrToInt = IRB.CreatePtrToInt(GEP, DL.getIntPtrType(GEP->getType()));
-  EXPECT_TRUE(match(PtrToInt, m_VScale()));
-
-  Type *VecTy2 = ScalableVectorType::get(IRB.getInt8Ty(), 2);
-  Value *NullPtrVec2 =
-      Constant::getNullValue(PointerType::getUnqual(VecTy2->getContext()));
-  Value *GEP2 = IRB.CreateGEP(VecTy, NullPtrVec2, IRB.getInt64(1));
-  Value *PtrToInt2 =
-      IRB.CreatePtrToInt(GEP2, DL.getIntPtrType(GEP2->getType()));
-  EXPECT_TRUE(match(PtrToInt2, m_VScale()));
-}
-
 TEST_F(PatternMatchTest, NotForbidPoison) {
   Type *ScalarTy = IRB.getInt8Ty();
   Type *VectorTy = FixedVectorType::get(ScalarTy, 3);
@@ -2625,8 +2708,7 @@ TEST_F(PatternMatchTest, PtrAdd) {
   Constant *Offset = ConstantInt::get(IdxTy, 42);
   Value *PtrAdd = IRB.CreatePtrAdd(Null, Offset);
   Value *OtherGEP = IRB.CreateGEP(IdxTy, Null, Offset);
-  Value *PtrAddConst =
-      ConstantExpr::getGetElementPtr(Type::getInt8Ty(Ctx), Null, Offset);
+  Value *PtrAddConst = ConstantExpr::getPtrAdd(Null, Offset);
 
   Value *A, *B;
   EXPECT_TRUE(match(PtrAdd, m_PtrAdd(m_Value(A), m_Value(B))));
@@ -2638,6 +2720,69 @@ TEST_F(PatternMatchTest, PtrAdd) {
   EXPECT_EQ(B, Offset);
 
   EXPECT_FALSE(match(OtherGEP, m_PtrAdd(m_Value(A), m_Value(B))));
+}
+
+TEST_F(PatternMatchTest, ShiftOrSelf) {
+  Type *I64Ty = Type::getInt64Ty(Ctx);
+  Constant *LHS = ConstantInt::get(I64Ty, 7);
+  Constant *ShAmt = ConstantInt::get(I64Ty, 16);
+  Value *Shl = IRB.CreateShl(LHS, ShAmt);
+  Value *LShr = IRB.CreateLShr(LHS, ShAmt);
+  Value *AShr = IRB.CreateAShr(LHS, ShAmt);
+  Value *Add = IRB.CreateAdd(LHS, LHS);
+
+  uint64_t ShAmtC;
+  Value *A;
+  EXPECT_TRUE(match(Shl, m_ShlOrSelf(m_Value(A), ShAmtC)));
+  EXPECT_EQ(A, LHS);
+  EXPECT_EQ(ShAmtC, 16U);
+
+  EXPECT_TRUE(match(Add, m_ShlOrSelf(m_Value(A), ShAmtC)));
+  EXPECT_EQ(A, Add);
+  EXPECT_EQ(ShAmtC, 0U);
+
+  EXPECT_TRUE(match(LShr, m_LShrOrSelf(m_Value(A), ShAmtC)));
+  EXPECT_EQ(A, LHS);
+  EXPECT_EQ(ShAmtC, 16U);
+
+  EXPECT_TRUE(match(Add, m_LShrOrSelf(m_Value(A), ShAmtC)));
+  EXPECT_EQ(A, Add);
+  EXPECT_EQ(ShAmtC, 0U);
+
+  EXPECT_TRUE(match(AShr, m_AShrOrSelf(m_Value(A), ShAmtC)));
+  EXPECT_EQ(A, LHS);
+  EXPECT_EQ(ShAmtC, 16U);
+
+  EXPECT_TRUE(match(Add, m_AShrOrSelf(m_Value(A), ShAmtC)));
+  EXPECT_EQ(A, Add);
+  EXPECT_EQ(ShAmtC, 0U);
+}
+
+TEST_F(PatternMatchTest, CommutativeDeferredIntrinsicMatch) {
+  Value *X = ConstantFP::get(IRB.getDoubleTy(), 1.0);
+  Value *Y = ConstantFP::get(IRB.getDoubleTy(), 2.0);
+
+  auto CheckMatch = [X, Y](Value *Pattern) {
+    Value *tX = nullptr, *tY = nullptr;
+    EXPECT_TRUE(
+        match(Pattern, m_c_Intrinsic<Intrinsic::minimum>(
+                           m_Value(tX), m_c_Intrinsic<Intrinsic::minimum>(
+                                            m_Deferred(tX), m_Value(tY)))));
+    EXPECT_EQ(tX, X);
+    EXPECT_EQ(tY, Y);
+  };
+  CheckMatch(IRB.CreateBinaryIntrinsic(
+      Intrinsic::minimum, X,
+      IRB.CreateBinaryIntrinsic(Intrinsic::minimum, X, Y)));
+  CheckMatch(IRB.CreateBinaryIntrinsic(
+      Intrinsic::minimum, X,
+      IRB.CreateBinaryIntrinsic(Intrinsic::minimum, Y, X)));
+  CheckMatch(IRB.CreateBinaryIntrinsic(
+      Intrinsic::minimum, IRB.CreateBinaryIntrinsic(Intrinsic::minimum, X, Y),
+      X));
+  CheckMatch(IRB.CreateBinaryIntrinsic(
+      Intrinsic::minimum, IRB.CreateBinaryIntrinsic(Intrinsic::minimum, Y, X),
+      X));
 }
 
 } // anonymous namespace.

@@ -1,16 +1,8 @@
 header: sys/sendfile.h
-header_template: sendfile.h.def
-macros: []
-types:
-  - type_name: ssize_t
-  - type_name: size_t
-  - type_name: off_t
-enums: []
-objects: []
+standards:
+  - linux
 functions:
   - name: sendfile
-    standards:
-      - GNUExtensions
     return_type: ssize_t
     arguments:
       - type: int

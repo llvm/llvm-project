@@ -1,4 +1,4 @@
-; REQUIRES: x86_64-linux
+; REQUIRES: x86-registered-target
 ; RUN: opt < %s -passes=simplifycfg -S -o %t
 ; RUN: FileCheck %s < %t
 

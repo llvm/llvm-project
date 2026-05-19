@@ -39,14 +39,15 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManagerInternal.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeName.h"
 #include <cassert>
 #include <cstring>
-#include <iterator>
 #include <list>
 #include <memory>
 #include <tuple>
@@ -55,6 +56,19 @@
 #include <vector>
 
 namespace llvm {
+
+namespace detail {
+template <typename DerivedT> struct InfoMixin {
+  /// Gets the name of the pass we are mixed into.
+  static StringRef name() {
+    static_assert(std::is_base_of<InfoMixin, DerivedT>::value,
+                  "Must pass the derived type as the template argument!");
+    StringRef Name = getTypeName<DerivedT>();
+    Name.consume_front("llvm::");
+    return Name;
+  }
+};
+} // namespace detail
 
 class Function;
 class Module;
@@ -66,22 +80,34 @@ template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 /// passes.
 ///
 /// This provides some boilerplate for types that are passes.
-template <typename DerivedT> struct PassInfoMixin {
-  /// Gets the name of the pass we are mixed into.
-  static StringRef name() {
-    static_assert(std::is_base_of<PassInfoMixin, DerivedT>::value,
-                  "Must pass the derived type as the template argument!");
-    StringRef Name = getTypeName<DerivedT>();
-    Name.consume_front("llvm::");
-    return Name;
-  }
-
+///
+/// Actual passes should inherit from RequiredPassInfoMixin or
+/// OptionalPassInfoMixin.
+///
+/// TODO: move to a detail namespace once we've branched for LLVM 23.
+template <typename DerivedT>
+struct PassInfoMixin : detail::InfoMixin<DerivedT> {
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
     StringRef ClassName = DerivedT::name();
     auto PassName = MapClassName2PassName(ClassName);
     OS << PassName;
   }
+
+  // TODO: remove once out of tree users are updated.
+  static bool isRequired() { return false; }
+};
+
+/// A CRTP mix-in for passes that should not be skipped.
+template <typename DerivedT>
+struct RequiredPassInfoMixin : PassInfoMixin<DerivedT> {
+  static bool isRequired() { return true; }
+};
+
+/// A CRTP mix-in for passes that can be skipped.
+template <typename DerivedT>
+struct OptionalPassInfoMixin : PassInfoMixin<DerivedT> {
+  static bool isRequired() { return false; }
 };
 
 /// A CRTP mix-in that provides informational APIs needed for analysis passes.
@@ -89,7 +115,7 @@ template <typename DerivedT> struct PassInfoMixin {
 /// This provides some boilerplate for types that are analysis passes. It
 /// automatically mixes in \c PassInfoMixin.
 template <typename DerivedT>
-struct AnalysisInfoMixin : PassInfoMixin<DerivedT> {
+struct AnalysisInfoMixin : detail::InfoMixin<DerivedT> {
   /// Returns an opaque, unique ID for this analysis type.
   ///
   /// This ID is a pointer type that is guaranteed to be 8-byte aligned and thus
@@ -158,7 +184,7 @@ getAnalysisResult(AnalysisManager<IRUnitT, AnalysisArgTs...> &AM, IRUnitT &IR,
 template <typename IRUnitT,
           typename AnalysisManagerT = AnalysisManager<IRUnitT>,
           typename... ExtraArgTs>
-class PassManager : public PassInfoMixin<
+class PassManager : public RequiredPassInfoMixin<
                         PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>> {
 public:
   /// Construct a pass manager.
@@ -177,11 +203,10 @@ public:
 
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
-    for (unsigned Idx = 0, Size = Passes.size(); Idx != Size; ++Idx) {
-      auto *P = Passes[Idx].get();
+    ListSeparator LS(",");
+    for (auto &P : Passes) {
+      OS << LS;
       P->printPipeline(OS, MapClassName2PassName);
-      if (Idx + 1 < Size)
-        OS << ',';
     }
   }
 
@@ -216,8 +241,6 @@ public:
   /// Returns if the pass manager contains any passes.
   bool isEmpty() const { return Passes.empty(); }
 
-  static bool isRequired() { return true; }
-
 protected:
   using PassConceptT =
       detail::PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...>;
@@ -229,18 +252,19 @@ template <typename IRUnitT>
 void printIRUnitNameForStackTrace(raw_ostream &OS, const IRUnitT &IR);
 
 template <>
-void printIRUnitNameForStackTrace<Module>(raw_ostream &OS, const Module &IR);
+LLVM_ABI void printIRUnitNameForStackTrace<Module>(raw_ostream &OS,
+                                                   const Module &IR);
 
-extern template class PassManager<Module>;
+extern template class LLVM_TEMPLATE_ABI PassManager<Module>;
 
 /// Convenience typedef for a pass manager over modules.
 using ModulePassManager = PassManager<Module>;
 
 template <>
-void printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
-                                            const Function &IR);
+LLVM_ABI void printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
+                                                     const Function &IR);
 
-extern template class PassManager<Function>;
+extern template class LLVM_TEMPLATE_ABI PassManager<Function>;
 
 /// Convenience typedef for a pass manager over functions.
 using FunctionPassManager = PassManager<Function>;
@@ -489,6 +513,22 @@ public:
   /// invalidate them, unless they are preserved by the PreservedAnalyses set.
   void invalidate(IRUnitT &IR, const PreservedAnalyses &PA);
 
+  /// Directly clear a cached analysis for an IR unit.
+  ///
+  /// Using invalidate() over this is preferred unless you are really
+  /// sure you want to *only* clear this analysis without asking if it is
+  /// invalid.
+  template <typename AnalysisT> void clearAnalysis(IRUnitT &IR) {
+    AnalysisResultListT &ResultsList = AnalysisResultLists[&IR];
+    AnalysisKey *ID = AnalysisT::ID();
+
+    auto I =
+        llvm::find_if(ResultsList, [&ID](auto &E) { return E.first == ID; });
+    assert(I != ResultsList.end() && "Analysis must be available");
+    ResultsList.erase(I);
+    AnalysisResults.erase({ID, &IR});
+  }
+
 private:
   /// Look up a registered analysis pass.
   PassConceptT &lookUpPass(AnalysisKey *ID) {
@@ -535,12 +575,12 @@ private:
   AnalysisResultMapT AnalysisResults;
 };
 
-extern template class AnalysisManager<Module>;
+extern template class LLVM_TEMPLATE_ABI AnalysisManager<Module>;
 
 /// Convenience typedef for the Module analysis manager.
 using ModuleAnalysisManager = AnalysisManager<Module>;
 
-extern template class AnalysisManager<Function>;
+extern template class LLVM_TEMPLATE_ABI AnalysisManager<Function>;
 
 /// Convenience typedef for the Function analysis manager.
 using FunctionAnalysisManager = AnalysisManager<Function>;
@@ -562,7 +602,7 @@ using FunctionAnalysisManager = AnalysisManager<Function>;
 /// Note that the proxy's result is a move-only RAII object.  The validity of
 /// the analyses in the inner analysis manager is tied to its lifetime.
 template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
-class InnerAnalysisManagerProxy
+class LLVM_TEMPLATE_ABI InnerAnalysisManagerProxy
     : public AnalysisInfoMixin<
           InnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT>> {
 public:
@@ -572,7 +612,7 @@ public:
 
     Result(Result &&Arg) : InnerAM(std::move(Arg.InnerAM)) {
       // We have to null out the analysis manager in the moved-from state
-      // because we are taking ownership of the responsibilty to clear the
+      // because we are taking ownership of the responsibility to clear the
       // analysis state.
       Arg.InnerAM = nullptr;
     }
@@ -590,7 +630,7 @@ public:
     Result &operator=(Result &&RHS) {
       InnerAM = RHS.InnerAM;
       // We have to null out the analysis manager in the moved-from state
-      // because we are taking ownership of the responsibilty to clear the
+      // because we are taking ownership of the responsibility to clear the
       // analysis state.
       RHS.InnerAM = nullptr;
       return *this;
@@ -639,8 +679,14 @@ private:
   AnalysisManagerT *InnerAM;
 };
 
+// NOTE: The LLVM_ABI annotation cannot be used here because MSVC disallows
+// storage-class specifiers on class members outside of the class declaration
+// (C2720). LLVM_ATTRIBUTE_VISIBILITY_DEFAULT only applies to non-Windows
+// targets so it is used instead. Without this annotation, compiling LLVM as a
+// shared library with -fvisibility=hidden using GCC fails to export the symbol
+// even though InnerAnalysisManagerProxy is already annotated with LLVM_ABI.
 template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
-AnalysisKey
+LLVM_ATTRIBUTE_VISIBILITY_DEFAULT AnalysisKey
     InnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT, ExtraArgTs...>::Key;
 
 /// Provide the \c FunctionAnalysisManager to \c Module proxy.
@@ -650,7 +696,7 @@ using FunctionAnalysisManagerModuleProxy =
 /// Specialization of the invalidate method for the \c
 /// FunctionAnalysisManagerModuleProxy's result.
 template <>
-bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
+LLVM_ABI bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
     Module &M, const PreservedAnalyses &PA,
     ModuleAnalysisManager::Invalidator &Inv);
 
@@ -795,8 +841,8 @@ template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
 AnalysisKey
     OuterAnalysisManagerProxy<AnalysisManagerT, IRUnitT, ExtraArgTs...>::Key;
 
-extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
-                                                Function>;
+extern template class LLVM_TEMPLATE_ABI
+    OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>;
 /// Provide the \c ModuleAnalysisManager to \c Function proxy.
 using ModuleAnalysisManagerFunctionProxy =
     OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>;
@@ -825,7 +871,7 @@ using ModuleAnalysisManagerFunctionProxy =
 /// analyses are not invalidated while the function passes are running, so they
 /// may be stale.  Function analyses will not be stale.
 class ModuleToFunctionPassAdaptor
-    : public PassInfoMixin<ModuleToFunctionPassAdaptor> {
+    : public RequiredPassInfoMixin<ModuleToFunctionPassAdaptor> {
 public:
   using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
 
@@ -834,11 +880,10 @@ public:
       : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate) {}
 
   /// Runs the function pass across every function in the module.
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
-
-  static bool isRequired() { return true; }
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:
   std::unique_ptr<PassConceptT> Pass;
@@ -874,8 +919,8 @@ template <typename AnalysisT, typename IRUnitT,
           typename AnalysisManagerT = AnalysisManager<IRUnitT>,
           typename... ExtraArgTs>
 struct RequireAnalysisPass
-    : PassInfoMixin<RequireAnalysisPass<AnalysisT, IRUnitT, AnalysisManagerT,
-                                        ExtraArgTs...>> {
+    : RequiredPassInfoMixin<RequireAnalysisPass<
+          AnalysisT, IRUnitT, AnalysisManagerT, ExtraArgTs...>> {
   /// Run this pass over some unit of IR.
   ///
   /// This pass can be run over any unit of IR and use any analysis manager
@@ -895,14 +940,13 @@ struct RequireAnalysisPass
     auto PassName = MapClassName2PassName(ClassName);
     OS << "require<" << PassName << '>';
   }
-  static bool isRequired() { return true; }
 };
 
 /// A no-op pass template which simply forces a specific analysis result
 /// to be invalidated.
 template <typename AnalysisT>
 struct InvalidateAnalysisPass
-    : PassInfoMixin<InvalidateAnalysisPass<AnalysisT>> {
+    : RequiredPassInfoMixin<InvalidateAnalysisPass<AnalysisT>> {
   /// Run this pass over some unit of IR.
   ///
   /// This pass can be run over any unit of IR and use any analysis manager,
@@ -927,7 +971,8 @@ struct InvalidateAnalysisPass
 ///
 /// Because this preserves no analyses, any analysis passes queried after this
 /// pass runs will recompute fresh results.
-struct InvalidateAllAnalysesPass : PassInfoMixin<InvalidateAllAnalysesPass> {
+struct InvalidateAllAnalysesPass
+    : OptionalPassInfoMixin<InvalidateAllAnalysesPass> {
   /// Run this pass over some unit of IR.
   template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
   PreservedAnalyses run(IRUnitT &, AnalysisManagerT &, ExtraArgTs &&...) {

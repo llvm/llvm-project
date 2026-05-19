@@ -32,6 +32,7 @@
 
 using namespace clang;
 using namespace sema;
+using llvm::APFloat;
 using llvm::ArrayRef;
 
 ExprResult SemaObjC::ParseObjCStringLiteral(SourceLocation *AtLocs,
@@ -74,8 +75,7 @@ ExprResult SemaObjC::ParseObjCStringLiteral(SourceLocation *AtLocs,
         CAT->getElementType(), llvm::APInt(32, StrBuf.size() + 1), nullptr,
         CAT->getSizeModifier(), CAT->getIndexTypeCVRQualifiers());
     S = StringLiteral::Create(Context, StrBuf, StringLiteralKind::Ordinary,
-                              /*Pascal=*/false, StrTy, &StrLocs[0],
-                              StrLocs.size());
+                              /*Pascal=*/false, StrTy, StrLocs);
   }
 
   return BuildObjCStringLiteral(AtLocs[0], S);
@@ -316,6 +316,65 @@ static ObjCMethodDecl *getNSNumberFactoryMethod(SemaObjC &S, SourceLocation Loc,
   return Method;
 }
 
+static bool CheckObjCNumberExpressionIsConstant(Sema &S, Expr *Number) {
+  const LangOptions &LangOpts = S.getLangOpts();
+
+  if (!LangOpts.ObjCConstantLiterals)
+    return false;
+
+  const QualType Ty = Number->IgnoreParens()->getType();
+  ASTContext &Context = S.Context;
+
+  if (Number->isValueDependent())
+    return false;
+
+  if (!Number->isEvaluatable(Context))
+    return false;
+
+  // Note `@YES` `@NO` need to be handled explicitly
+  // to meet existing plist encoding / decoding expectations
+  // we can't convert anything that is "bool like" so ensure
+  // we're referring to a `BOOL` typedef or a real `_Bool`
+  // preferring explicit types over the typedefs.
+  //
+  // Also we can emit the constant singleton if supported by the target always.
+  assert(LangOpts.ObjCRuntime.hasConstantCFBooleans() &&
+         "The current ABI doesn't support the constant CFBooleanTrue "
+         "singleton!");
+  const bool IsBoolType =
+      (Ty->isBooleanType() || NSAPI(Context).isObjCBOOLType(Ty));
+  if (IsBoolType)
+    return true;
+
+  // If for debug or other reasons an explict opt-out is passed bail.
+  // This doesn't effect `BOOL` singletons similar to collection singletons.
+  if (!LangOpts.ConstantNSNumberLiterals)
+    return false;
+
+  // Note: Other parts of Sema prevent the boxing of types that aren't supported
+  // by `NSNumber`
+  Expr::EvalResult IntResult{};
+  if (Number->EvaluateAsInt(IntResult, Context))
+    return true;
+
+  // Eval the number as an llvm::APFloat and ensure it fits
+  // what NSNumber expects.
+  APFloat FloatValue(0.0);
+  if (Number->EvaluateAsFloat(FloatValue, Context)) {
+    // This asserts that the sema checks for `ObjCBoxedExpr` haven't changed to
+    // allow larger values than NSNumber supports
+    if (&FloatValue.getSemantics() == &APFloat::IEEEsingle())
+      return true;
+    if (&FloatValue.getSemantics() == &APFloat::IEEEdouble())
+      return true;
+
+    llvm_unreachable(
+        "NSNumber only supports `float` or `double` floating-point types.");
+  }
+
+  return false;
+}
+
 /// BuildObjCNumericLiteral - builds an ObjCBoxedExpr AST node for the
 /// numeric literal expression. Type of the expression will be "NSNumber *".
 ExprResult SemaObjC::BuildObjCNumericLiteral(SourceLocation AtLoc,
@@ -364,9 +423,15 @@ ExprResult SemaObjC::BuildObjCNumericLiteral(SourceLocation AtLoc,
     return ExprError();
   Number = ConvertedNumber.get();
 
+  const bool IsConstInitLiteral =
+      CheckObjCNumberExpressionIsConstant(SemaRef, Number);
+
+  auto *NumberLiteral = new (Context)
+      ObjCBoxedExpr(Number, NSNumberPointer, Method, IsConstInitLiteral,
+                    SourceRange(AtLoc, NR.getEnd()));
+
   // Use the effective source range of the literal, including the leading '@'.
-  return SemaRef.MaybeBindToTemporary(new (Context) ObjCBoxedExpr(
-      Number, NSNumberPointer, Method, SourceRange(AtLoc, NR.getEnd())));
+  return SemaRef.MaybeBindToTemporary(NumberLiteral);
 }
 
 ExprResult SemaObjC::ActOnObjCBoolLiteral(SourceLocation AtLoc,
@@ -508,8 +573,9 @@ static ExprResult CheckObjCCollectionLiteralElement(Sema &S, Expr *Element,
 ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
   ASTContext &Context = getASTContext();
   if (ValueExpr->isTypeDependent()) {
-    ObjCBoxedExpr *BoxedExpr =
-      new (Context) ObjCBoxedExpr(ValueExpr, Context.DependentTy, nullptr, SR);
+    ObjCBoxedExpr *BoxedExpr = new (Context)
+        ObjCBoxedExpr(ValueExpr, Context.DependentTy, nullptr,
+                      /*ExpressibleAsConstantInitializer=*/true, SR);
     return BoxedExpr;
   }
   ObjCMethodDecl *BoxingMethod = nullptr;
@@ -519,6 +585,10 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
   if (RValue.isInvalid()) {
     return ExprError();
   }
+
+  // Check if the runtime supports constant init literals
+  const bool IsConstInitLiteral =
+      CheckObjCNumberExpressionIsConstant(SemaRef, ValueExpr);
   SourceLocation Loc = SR.getBegin();
   ValueExpr = RValue.get();
   QualType ValueType(ValueExpr->getType());
@@ -551,7 +621,8 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
             if (llvm::isLegalUTF8String(&StrBegin, StrEnd)) {
               BoxedType = Context.getAttributedType(NullabilityKind::NonNull,
                   NSStringPointer, NSStringPointer);
-              return new (Context) ObjCBoxedExpr(CE, BoxedType, nullptr, SR);
+              return new (Context)
+                  ObjCBoxedExpr(CE, BoxedType, nullptr, true, SR);
             }
 
             Diag(SL->getBeginLoc(), diag::warn_objc_boxing_invalid_utf8_string)
@@ -598,7 +669,7 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
       BoxingMethod = StringWithUTF8StringMethod;
       BoxedType = NSStringPointer;
       // Transfer the nullability from method's return type.
-      std::optional<NullabilityKind> Nullability =
+      NullabilityKindOrNone Nullability =
           BoxingMethod->getReturnType()->getNullability();
       if (Nullability)
         BoxedType =
@@ -634,20 +705,17 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
         break;
       }
     }
-    // FIXME:  Do I need to do anything special with BoolTy expressions?
-
     // Look for the appropriate method within NSNumber.
     BoxingMethod = getNSNumberFactoryMethod(*this, Loc, ValueType);
     BoxedType = NSNumberPointer;
-  } else if (const EnumType *ET = ValueType->getAs<EnumType>()) {
-    if (!ET->getDecl()->isComplete()) {
+  } else if (const auto *ED = ValueType->getAsEnumDecl()) {
+    if (!ED->isComplete()) {
       Diag(Loc, diag::err_objc_incomplete_boxed_expression_type)
         << ValueType << ValueExpr->getSourceRange();
       return ExprError();
     }
 
-    BoxingMethod = getNSNumberFactoryMethod(*this, Loc,
-                                            ET->getDecl()->getIntegerType());
+    BoxingMethod = getNSNumberFactoryMethod(*this, Loc, ED->getIntegerType());
     BoxedType = NSNumberPointer;
   } else if (ValueType->isObjCBoxableRecordType()) {
     // Support for structure types, that marked as objc_boxable
@@ -742,22 +810,26 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
     InitializedEntity IE = InitializedEntity::InitializeTemporary(ValueType);
     ConvertedValueExpr = SemaRef.PerformCopyInitialization(
         IE, ValueExpr->getExprLoc(), ValueExpr);
-  } else {
+    if (ConvertedValueExpr.isInvalid())
+      return ExprError();
+
+    ValueExpr = ConvertedValueExpr.get();
+  } else if (BoxingMethod->parameters().size() > 0) {
     // Convert the expression to the type that the parameter requires.
     ParmVarDecl *ParamDecl = BoxingMethod->parameters()[0];
     InitializedEntity IE = InitializedEntity::InitializeParameter(Context,
                                                                   ParamDecl);
     ConvertedValueExpr =
         SemaRef.PerformCopyInitialization(IE, SourceLocation(), ValueExpr);
+    if (ConvertedValueExpr.isInvalid())
+      return ExprError();
+
+    ValueExpr = ConvertedValueExpr.get();
   }
 
-  if (ConvertedValueExpr.isInvalid())
-    return ExprError();
-  ValueExpr = ConvertedValueExpr.get();
+  ObjCBoxedExpr *BoxedExpr = new (Context)
+      ObjCBoxedExpr(ValueExpr, BoxedType, BoxingMethod, IsConstInitLiteral, SR);
 
-  ObjCBoxedExpr *BoxedExpr =
-    new (Context) ObjCBoxedExpr(ValueExpr, BoxedType,
-                                      BoxingMethod, SR);
   return SemaRef.MaybeBindToTemporary(BoxedExpr);
 }
 
@@ -877,6 +949,24 @@ ExprResult SemaObjC::BuildObjCArrayLiteral(SourceRange SR,
   QualType ObjectsType = ArrayWithObjectsMethod->parameters()[0]->getType();
   QualType RequiredType = ObjectsType->castAs<PointerType>()->getPointeeType();
 
+  const LangOptions &LangOpts = getLangOpts();
+
+  bool ExpressibleAsConstantInitLiteral = LangOpts.ConstantNSArrayLiterals;
+
+  // ExpressibleAsConstantInitLiteral isn't meaningful for dependent literals.
+  if (ExpressibleAsConstantInitLiteral &&
+      llvm::any_of(Elements,
+                   [](Expr *Elem) { return Elem->isValueDependent(); }))
+    ExpressibleAsConstantInitLiteral = false;
+
+  // We can stil emit a constant empty array
+  if (LangOpts.ObjCConstantLiterals && Elements.size() == 0) {
+    assert(LangOpts.ObjCRuntime.hasConstantEmptyCollections() &&
+           "The current ABI doesn't support an empty constant NSArray "
+           "singleton!");
+    ExpressibleAsConstantInitLiteral = true;
+  }
+
   // Check that each of the elements provided is valid in a collection literal,
   // performing conversions as necessary.
   Expr **ElementsBuffer = Elements.data();
@@ -887,14 +977,24 @@ ExprResult SemaObjC::BuildObjCArrayLiteral(SourceRange SR,
       return ExprError();
 
     ElementsBuffer[I] = Converted.get();
+
+    // Only allow actual literals and not references to other constant literals
+    // to be in constant collections since they *could* be modified / reassigned
+    if (ExpressibleAsConstantInitLiteral &&
+        (!isa<ObjCObjectLiteral>(ElementsBuffer[I]->IgnoreImpCasts()) ||
+         !ElementsBuffer[I]->isConstantInitializer(Context)))
+      ExpressibleAsConstantInitLiteral = false;
   }
 
   QualType Ty
     = Context.getObjCObjectPointerType(
                                     Context.getObjCInterfaceType(NSArrayDecl));
 
-  return SemaRef.MaybeBindToTemporary(ObjCArrayLiteral::Create(
-      Context, Elements, Ty, ArrayWithObjectsMethod, SR));
+  auto *ArrayLiteral =
+      ObjCArrayLiteral::Create(Context, Elements, Ty, ArrayWithObjectsMethod,
+                               ExpressibleAsConstantInitLiteral, SR);
+
+  return SemaRef.MaybeBindToTemporary(ArrayLiteral);
 }
 
 /// Check for duplicate keys in an ObjC dictionary literal. For instance:
@@ -1087,6 +1187,28 @@ ExprResult SemaObjC::BuildObjCDictionaryLiteral(
   // Check that each of the keys and values provided is valid in a collection
   // literal, performing conversions as necessary.
   bool HasPackExpansions = false;
+
+  const LangOptions &LangOpts = getLangOpts();
+
+  bool ExpressibleAsConstantInitLiteral = LangOpts.ConstantNSDictionaryLiterals;
+
+  // ExpressibleAsConstantInitLiteral isn't meaningful for dependent dictionary
+  // literals.
+  for (ObjCDictionaryElement &Elem : Elements) {
+    if (!ExpressibleAsConstantInitLiteral)
+      break;
+    if (Elem.Key->isValueDependent() || Elem.Value->isValueDependent())
+      ExpressibleAsConstantInitLiteral = false;
+  }
+
+  // We can stil emit a constant empty dictionary.
+  if (LangOpts.ObjCConstantLiterals && Elements.size() == 0) {
+    assert(LangOpts.ObjCRuntime.hasConstantEmptyCollections() &&
+           "The current ABI doesn't support an empty constant NSDictionary "
+           "singleton!");
+    ExpressibleAsConstantInitLiteral = true;
+  }
+
   for (ObjCDictionaryElement &Element : Elements) {
     // Check the key.
     ExprResult Key =
@@ -1102,6 +1224,22 @@ ExprResult SemaObjC::BuildObjCDictionaryLiteral(
 
     Element.Key = Key.get();
     Element.Value = Value.get();
+
+    if (ExpressibleAsConstantInitLiteral &&
+        !Element.Key->isConstantInitializer(Context))
+      ExpressibleAsConstantInitLiteral = false;
+
+    // Only support string keys like plists
+    if (ExpressibleAsConstantInitLiteral &&
+        !isa<ObjCStringLiteral>(Element.Key->IgnoreImpCasts()))
+      ExpressibleAsConstantInitLiteral = false;
+
+    // Only allow actual literals and not references to other constant literals
+    // to be in constant collections since they *could* be modified / reassigned
+    if (ExpressibleAsConstantInitLiteral &&
+        (!isa<ObjCObjectLiteral>(Element.Value->IgnoreImpCasts()) ||
+         !Element.Value->isConstantInitializer(Context)))
+      ExpressibleAsConstantInitLiteral = false;
 
     if (Element.EllipsisLoc.isInvalid())
       continue;
@@ -1121,11 +1259,13 @@ ExprResult SemaObjC::BuildObjCDictionaryLiteral(
   QualType Ty = Context.getObjCObjectPointerType(
       Context.getObjCInterfaceType(NSDictionaryDecl));
 
-  auto *Literal =
-      ObjCDictionaryLiteral::Create(Context, Elements, HasPackExpansions, Ty,
-                                    DictionaryWithObjectsMethod, SR);
-  CheckObjCDictionaryLiteralDuplicateKeys(SemaRef, Literal);
-  return SemaRef.MaybeBindToTemporary(Literal);
+  auto *DictionaryLiteral = ObjCDictionaryLiteral::Create(
+      Context, Elements, HasPackExpansions, Ty, DictionaryWithObjectsMethod,
+      ExpressibleAsConstantInitLiteral, SR);
+
+  CheckObjCDictionaryLiteralDuplicateKeys(SemaRef, DictionaryLiteral);
+
+  return SemaRef.MaybeBindToTemporary(DictionaryLiteral);
 }
 
 ExprResult SemaObjC::BuildObjCEncodeExpression(SourceLocation AtLoc,
@@ -1564,16 +1704,14 @@ QualType SemaObjC::getMessageSendResultType(const Expr *Receiver,
 
   // Map the nullability of the result into a table index.
   unsigned receiverNullabilityIdx = 0;
-  if (std::optional<NullabilityKind> nullability =
-          ReceiverType->getNullability()) {
+  if (NullabilityKindOrNone nullability = ReceiverType->getNullability()) {
     if (*nullability == NullabilityKind::NullableResult)
       nullability = NullabilityKind::Nullable;
     receiverNullabilityIdx = 1 + static_cast<unsigned>(*nullability);
   }
 
   unsigned resultNullabilityIdx = 0;
-  if (std::optional<NullabilityKind> nullability =
-          resultType->getNullability()) {
+  if (NullabilityKindOrNone nullability = resultType->getNullability()) {
     if (*nullability == NullabilityKind::NullableResult)
       nullability = NullabilityKind::Nullable;
     resultNullabilityIdx = 1 + static_cast<unsigned>(*nullability);
@@ -1894,7 +2032,7 @@ bool SemaObjC::CheckMessageArgumentTypes(
         continue;
 
       ExprResult Arg = SemaRef.DefaultVariadicArgumentPromotion(
-          Args[i], Sema::VariadicMethod, nullptr);
+          Args[i], VariadicCallType::Method, nullptr);
       IsError |= Arg.isInvalid();
       Args[i] = Arg.get();
     }
@@ -1980,6 +2118,7 @@ ExprResult SemaObjC::HandleExprPropertyRefExpr(
     SourceLocation SuperLoc, QualType SuperType, bool Super) {
   ASTContext &Context = getASTContext();
   const ObjCInterfaceType *IFaceT = OPT->getInterfaceType();
+  assert(IFaceT && "Expected an Interface");
   ObjCInterfaceDecl *IFace = IFaceT->getDecl();
 
   if (!MemberName.isIdentifier()) {
@@ -2103,7 +2242,8 @@ ExprResult SemaObjC::HandleExprPropertyRefExpr(
   DeclFilterCCC<ObjCPropertyDecl> CCC{};
   if (TypoCorrection Corrected = SemaRef.CorrectTypo(
           DeclarationNameInfo(MemberName, MemberLoc), Sema::LookupOrdinaryName,
-          nullptr, nullptr, CCC, Sema::CTK_ErrorRecovery, IFace, false, OPT)) {
+          nullptr, nullptr, CCC, CorrectTypoKind::ErrorRecovery, IFace, false,
+          OPT)) {
     DeclarationName TypoResult = Corrected.getCorrection();
     if (TypoResult.isIdentifier() &&
         TypoResult.getAsIdentifierInfo() == Member) {
@@ -2297,7 +2437,7 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
   SemaRef.LookupName(Result, S);
 
   switch (Result.getResultKind()) {
-  case LookupResult::NotFound:
+  case LookupResultKind::NotFound:
     // Normal name lookup didn't find anything. If we're in an
     // Objective-C method, look for ivars. If we find one, we're done!
     // FIXME: This is a hack. Ivar lookup should be part of normal
@@ -2317,14 +2457,14 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
     // Break out; we'll perform typo correction below.
     break;
 
-  case LookupResult::NotFoundInCurrentInstantiation:
-  case LookupResult::FoundOverloaded:
-  case LookupResult::FoundUnresolvedValue:
-  case LookupResult::Ambiguous:
+  case LookupResultKind::NotFoundInCurrentInstantiation:
+  case LookupResultKind::FoundOverloaded:
+  case LookupResultKind::FoundUnresolvedValue:
+  case LookupResultKind::Ambiguous:
     Result.suppressDiagnostics();
     return ObjCInstanceMessage;
 
-  case LookupResult::Found: {
+  case LookupResultKind::Found: {
     // If the identifier is a class or not, and there is a trailing dot,
     // it's an instance message.
     if (HasTrailingDot)
@@ -2336,10 +2476,10 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
     if (ObjCInterfaceDecl *Class = dyn_cast<ObjCInterfaceDecl>(ND))
       T = Context.getObjCInterfaceType(Class);
     else if (TypeDecl *Type = dyn_cast<TypeDecl>(ND)) {
-      T = Context.getTypeDeclType(Type);
       SemaRef.DiagnoseUseOfDecl(Type, NameLoc);
-    }
-    else
+      T = Context.getTypeDeclType(ElaboratedTypeKeyword::None,
+                                  /*Qualifier=*/std::nullopt, Type);
+    } else
       return ObjCInstanceMessage;
 
     //  We have a class message, and T is the type we're
@@ -2353,7 +2493,7 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
   ObjCInterfaceOrSuperCCC CCC(SemaRef.getCurMethodDecl());
   if (TypoCorrection Corrected = SemaRef.CorrectTypo(
           Result.getLookupNameInfo(), Result.getLookupKind(), S, nullptr, CCC,
-          Sema::CTK_ErrorRecovery, nullptr, false, nullptr, false)) {
+          CorrectTypoKind::ErrorRecovery, nullptr, false, nullptr, false)) {
     if (Corrected.isKeyword()) {
       // If we've found the keyword "super" (the only keyword that would be
       // returned by CorrectTypo), this is a send to super.
@@ -3566,13 +3706,30 @@ namespace {
       return ACC_invalid;
     }
 
-    /// Objective-C string literals can be safely casted.
-    ACCResult VisitObjCStringLiteral(ObjCStringLiteral *e) {
+    /// Constant initializer Objective-C literals can be safely casted.
+    ACCResult VisitObjCObjectLiteral(ObjCObjectLiteral *OL) {
       // If we're casting to any retainable type, go ahead.  Global
-      // strings are immune to retains, so this is bottom.
-      if (isAnyRetainable(TargetClass)) return ACC_bottom;
+      // strings and constant literals are immune to retains, so this is bottom.
+      if (OL->isGlobalAllocation() || isAnyRetainable(TargetClass))
+        return ACC_bottom;
 
       return ACC_invalid;
+    }
+
+    ACCResult VisitObjCStringLiteral(ObjCStringLiteral *SL) {
+      return VisitObjCObjectLiteral(SL);
+    }
+
+    ACCResult VisitObjCBoxedExpr(ObjCBoxedExpr *OBE) {
+      return VisitObjCObjectLiteral(OBE);
+    }
+
+    ACCResult VisitObjCArrayLiteral(ObjCArrayLiteral *AL) {
+      return VisitObjCObjectLiteral(AL);
+    }
+
+    ACCResult VisitObjCDictionaryLiteral(ObjCDictionaryLiteral *DL) {
+      return VisitObjCObjectLiteral(DL);
     }
 
     /// Look through certain implicit and explicit casts.
@@ -3845,7 +4002,7 @@ static inline T *getObjCBridgeAttr(const TypedefType *TD) {
   QualType QT = TDNDecl->getUnderlyingType();
   if (QT->isPointerType()) {
     QT = QT->getPointeeType();
-    if (const RecordType *RT = QT->getAs<RecordType>()) {
+    if (const RecordType *RT = QT->getAsCanonical<RecordType>()) {
       for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
         if (auto *attr = Redecl->getAttr<T>())
           return attr;
@@ -4007,7 +4164,7 @@ static bool CheckObjCBridgeNSCast(Sema &S, QualType castType, Expr *castExpr,
   while (const auto *TD = T->getAs<TypedefType>()) {
     TypedefNameDecl *TDNDecl = TD->getDecl();
     if (TB *ObjCBAttr = getObjCBridgeAttr<TB>(TD)) {
-      if (IdentifierInfo *Parm = ObjCBAttr->getBridgedType()) {
+      if (const IdentifierInfo *Parm = ObjCBAttr->getBridgedType()) {
         HadTheAttribute = true;
         if (Parm->isStr("id"))
           return true;
@@ -4070,7 +4227,7 @@ static bool CheckObjCBridgeCFCast(Sema &S, QualType castType, Expr *castExpr,
   while (const auto *TD = T->getAs<TypedefType>()) {
     TypedefNameDecl *TDNDecl = TD->getDecl();
     if (TB *ObjCBAttr = getObjCBridgeAttr<TB>(TD)) {
-      if (IdentifierInfo *Parm = ObjCBAttr->getBridgedType()) {
+      if (const IdentifierInfo *Parm = ObjCBAttr->getBridgedType()) {
         HadTheAttribute = true;
         if (Parm->isStr("id"))
           return true;
@@ -4228,9 +4385,9 @@ bool SemaObjC::checkObjCBridgeRelatedComponents(
   if (!ObjCBAttr)
     return false;
 
-  IdentifierInfo *RCId = ObjCBAttr->getRelatedClass();
-  IdentifierInfo *CMId = ObjCBAttr->getClassMethod();
-  IdentifierInfo *IMId = ObjCBAttr->getInstanceMethod();
+  const IdentifierInfo *RCId = ObjCBAttr->getRelatedClass();
+  const IdentifierInfo *CMId = ObjCBAttr->getClassMethod();
+  const IdentifierInfo *IMId = ObjCBAttr->getInstanceMethod();
   if (!RCId)
     return false;
   NamedDecl *Target = nullptr;
@@ -4388,7 +4545,7 @@ SemaObjC::ARCConversionResult
 SemaObjC::CheckObjCConversion(SourceRange castRange, QualType castType,
                               Expr *&castExpr, CheckedConversionKind CCK,
                               bool Diagnose, bool DiagnoseCFAudited,
-                              BinaryOperatorKind Opc) {
+                              BinaryOperatorKind Opc, bool IsReinterpretCast) {
   ASTContext &Context = getASTContext();
   QualType castExprType = castExpr->getType();
 
@@ -4448,13 +4605,17 @@ SemaObjC::CheckObjCConversion(SourceRange castRange, QualType castType,
   // must be explicit.
   // Allow conversions between pointers to lifetime types and coreFoundation
   // pointers too, but only when the conversions are explicit.
+  // Allow conversions requested with a reinterpret_cast that converts an
+  // expression of type T* to type U*.
   if (exprACTC == ACTC_indirectRetainable &&
       (castACTC == ACTC_voidPtr ||
-       (castACTC == ACTC_coreFoundation && SemaRef.isCast(CCK))))
+       (castACTC == ACTC_coreFoundation && SemaRef.isCast(CCK)) ||
+       (IsReinterpretCast && effCastType->isAnyPointerType())))
     return ACR_okay;
   if (castACTC == ACTC_indirectRetainable &&
-      (exprACTC == ACTC_voidPtr || exprACTC == ACTC_coreFoundation) &&
-      SemaRef.isCast(CCK))
+      (((exprACTC == ACTC_voidPtr || exprACTC == ACTC_coreFoundation) &&
+        SemaRef.isCast(CCK)) ||
+       (IsReinterpretCast && castExprType->isAnyPointerType())))
     return ACR_okay;
 
   switch (ARCCastChecker(Context, exprACTC, castACTC, false).Visit(castExpr)) {
@@ -5149,7 +5310,8 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
     SourceLocation RParen) {
   ASTContext &Context = getASTContext();
   auto FindSpecVersion =
-      [&](StringRef Platform) -> std::optional<VersionTuple> {
+      [&](StringRef Platform,
+          const llvm::Triple::OSType &OS) -> std::optional<VersionTuple> {
     auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
       return Spec.getPlatform() == Platform;
     });
@@ -5160,14 +5322,29 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
         return Spec.getPlatform() == "ios";
       });
     }
+    // Use "anyappleos" spec if no platform-specific spec is found and the
+    // target is an Apple OS.
+    if (Spec == AvailSpecs.end()) {
+      // Check if this OS is a Darwin/Apple OS.
+      const llvm::Triple &Triple = Context.getTargetInfo().getTriple();
+      if (Triple.isOSDarwin()) {
+        Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
+          return Spec.getPlatform() == "anyappleos";
+        });
+      }
+    }
     if (Spec == AvailSpecs.end())
       return std::nullopt;
-    return Spec->getVersion();
+
+    return llvm::Triple::getCanonicalVersionForOS(
+        OS, Spec->getVersion(),
+        llvm::Triple::isValidVersionForOS(OS, Spec->getVersion()));
   };
 
   VersionTuple Version;
   if (auto MaybeVersion =
-          FindSpecVersion(Context.getTargetInfo().getPlatformName()))
+          FindSpecVersion(Context.getTargetInfo().getPlatformName(),
+                          Context.getTargetInfo().getTriple().getOS()))
     Version = *MaybeVersion;
 
   // The use of `@available` in the enclosing context should be analyzed to

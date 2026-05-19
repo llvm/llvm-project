@@ -17,7 +17,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -89,8 +88,7 @@ ProgramStateManager::~ProgramStateManager() {
 }
 
 ProgramStateRef ProgramStateManager::removeDeadBindingsFromEnvironmentAndStore(
-    ProgramStateRef state, const StackFrameContext *LCtx,
-    SymbolReaper &SymReaper) {
+    ProgramStateRef state, const StackFrame *SF, SymbolReaper &SymReaper) {
 
   // This code essentially performs a "mark-and-sweep" of the VariableBindings.
   // The roots are any Block-level exprs and Decls that our liveness algorithm
@@ -103,8 +101,8 @@ ProgramStateRef ProgramStateManager::removeDeadBindingsFromEnvironmentAndStore(
   NewState.Env = EnvMgr.removeDeadBindings(NewState.Env, SymReaper, state);
 
   // Clean up the store.
-  StoreRef newStore = StoreMgr->removeDeadBindings(NewState.getStore(), LCtx,
-                                                   SymReaper);
+  StoreRef newStore =
+      StoreMgr->removeDeadBindings(NewState.getStore(), SF, SymReaper);
   NewState.setStore(newStore);
   SymReaper.setReapedStore(newStore);
 
@@ -149,7 +147,7 @@ typedef ArrayRef<const MemRegion *> RegionList;
 typedef ArrayRef<SVal> ValueList;
 
 ProgramStateRef ProgramState::invalidateRegions(
-    RegionList Regions, const Stmt *S, unsigned Count,
+    RegionList Regions, ConstCFGElementRef Elem, unsigned Count,
     const LocationContext *LCtx, bool CausedByPointerEscape,
     InvalidatedSymbols *IS, const CallEvent *Call,
     RegionAndSymbolInvalidationTraits *ITraits) const {
@@ -157,12 +155,12 @@ ProgramStateRef ProgramState::invalidateRegions(
   for (const MemRegion *Reg : Regions)
     Values.push_back(loc::MemRegionVal(Reg));
 
-  return invalidateRegions(Values, S, Count, LCtx, CausedByPointerEscape, IS,
+  return invalidateRegions(Values, Elem, Count, LCtx, CausedByPointerEscape, IS,
                            Call, ITraits);
 }
 
 ProgramStateRef ProgramState::invalidateRegions(
-    ValueList Values, const Stmt *S, unsigned Count,
+    ValueList Values, ConstCFGElementRef Elem, unsigned Count,
     const LocationContext *LCtx, bool CausedByPointerEscape,
     InvalidatedSymbols *IS, const CallEvent *Call,
     RegionAndSymbolInvalidationTraits *ITraits) const {
@@ -181,7 +179,7 @@ ProgramStateRef ProgramState::invalidateRegions(
   StoreManager::InvalidatedRegions TopLevelInvalidated;
   StoreManager::InvalidatedRegions Invalidated;
   const StoreRef &NewStore = Mgr.StoreMgr->invalidateRegions(
-      getStore(), Values, S, Count, LCtx, Call, *IS, *ITraits,
+      getStore(), Values, Elem, Count, LCtx, Call, *IS, *ITraits,
       &TopLevelInvalidated, &Invalidated);
 
   ProgramStateRef NewState = makeWithStore(NewStore);
@@ -232,7 +230,7 @@ SVal ProgramState::wrapSymbolicRegion(SVal Val) const {
 
 ProgramStateRef
 ProgramState::enterStackFrame(const CallEvent &Call,
-                              const StackFrameContext *CalleeCtx) const {
+                              const StackFrame *CalleeCtx) const {
   return makeWithStore(
       getStateManager().StoreMgr->enterStackFrame(getStore(), Call, CalleeCtx));
 }
@@ -299,17 +297,16 @@ SVal ProgramState::getSVal(Loc location, QualType T) const {
   return V;
 }
 
-ProgramStateRef ProgramState::BindExpr(const Stmt *S,
-                                           const LocationContext *LCtx,
-                                           SVal V, bool Invalidate) const{
-  Environment NewEnv =
-    getStateManager().EnvMgr.bindExpr(Env, EnvironmentEntry(S, LCtx), V,
-                                      Invalidate);
+ProgramStateRef ProgramState::BindExpr(const Expr *E,
+                                       const LocationContext *LCtx, SVal V,
+                                       bool Invalidate) const {
+  Environment NewEnv = getStateManager().EnvMgr.bindExpr(
+      Env, EnvironmentEntry(E, LCtx), V, Invalidate);
   if (NewEnv == Env)
     return this;
 
   ProgramState NewSt = *this;
-  NewSt.Env = NewEnv;
+  NewSt.Env = std::move(NewEnv);
   return getStateManager().getPersistentState(NewSt);
 }
 
@@ -532,14 +529,13 @@ AnalysisManager& ProgramState::getAnalysisManager() const {
 // Generic Data Map.
 //===----------------------------------------------------------------------===//
 
-void *const* ProgramState::FindGDM(void *K) const {
+void *const *ProgramState::FindGDM(const void *K) const {
   return GDM.lookup(K);
 }
 
-void*
-ProgramStateManager::FindGDMContext(void *K,
-                               void *(*CreateContext)(llvm::BumpPtrAllocator&),
-                               void (*DeleteContext)(void*)) {
+void *ProgramStateManager::FindGDMContext(
+    const void *K, void *(*CreateContext)(llvm::BumpPtrAllocator &),
+    void (*DeleteContext)(void *)) {
 
   std::pair<void*, void (*)(void*)>& p = GDMContexts[K];
   if (!p.first) {
@@ -550,7 +546,8 @@ ProgramStateManager::FindGDMContext(void *K,
   return p.first;
 }
 
-ProgramStateRef ProgramStateManager::addGDM(ProgramStateRef St, void *Key, void *Data){
+ProgramStateRef ProgramStateManager::addGDM(ProgramStateRef St, const void *Key,
+                                            void *Data) {
   ProgramState::GenericDataMap M1 = St->getGDM();
   ProgramState::GenericDataMap M2 = GDMFactory.add(M1, Key, Data);
 
@@ -562,7 +559,8 @@ ProgramStateRef ProgramStateManager::addGDM(ProgramStateRef St, void *Key, void 
   return getPersistentState(NewSt);
 }
 
-ProgramStateRef ProgramStateManager::removeGDM(ProgramStateRef state, void *Key) {
+ProgramStateRef ProgramStateManager::removeGDM(ProgramStateRef state,
+                                               const void *Key) {
   ProgramState::GenericDataMap OldM = state->getGDM();
   ProgramState::GenericDataMap NewM = GDMFactory.remove(OldM, Key);
 

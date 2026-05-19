@@ -30,6 +30,7 @@
 namespace mlir {
 class Builder;
 class OpBuilder;
+class ImplicitLocOpBuilder;
 
 /// This class implements `Optional` functionality for ParseResult. We don't
 /// directly use Optional here, because it provides an implicit conversion
@@ -114,7 +115,7 @@ public:
   MLIRContext *getContext() { return getOperation()->getContext(); }
 
   /// Print the operation to the given stream.
-  void print(raw_ostream &os, OpPrintingFlags flags = std::nullopt) {
+  void print(raw_ostream &os, OpPrintingFlags flags = {}) {
     state->print(os, flags);
   }
   void print(raw_ostream &os, AsmState &asmState) {
@@ -242,9 +243,10 @@ protected:
   /// so we can cast it away here.
   explicit OpState(Operation *state) : state(state) {}
 
-  /// For all op which don't have properties, we keep a single instance of
-  /// `EmptyProperties` to be used where a reference to a properties is needed:
-  /// this allow to bind a pointer to the reference without triggering UB.
+  /// For all ops which don't have properties, we keep a single instance of
+  /// `EmptyProperties` to be used where a pointer to a struct of properties
+  /// is needed: this allows binding a pointer to the reference without
+  /// triggering UB.
   static EmptyProperties &getEmptyProperties() {
     static EmptyProperties emptyProperties;
     return emptyProperties;
@@ -272,7 +274,7 @@ class OpFoldResult : public PointerUnion<Attribute, Value> {
   using PointerUnion<Attribute, Value>::PointerUnion;
 
 public:
-  void dump() const { llvm::errs() << *this << "\n"; }
+  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << "\n"; }
 
   MLIRContext *getContext() const {
     PointerUnion pu = *this;
@@ -888,7 +890,7 @@ public:
         continue;
 
       // Non-empty regions must contain a single basic block.
-      if (!llvm::hasSingleElement(region))
+      if (!region.hasOneBlock())
         return op->emitOpError("expects region #")
                << i << " to have 0 or 1 blocks";
 
@@ -1322,6 +1324,32 @@ struct HasParent {
   };
 };
 
+/// This class provides a verifier for ops that are expecting an ancestor
+/// (anywhere up the parent chain) to be one of the given op types.
+template <typename... AncestorOpTypes>
+struct HasAncestor {
+  template <typename ConcreteType>
+  class Impl : public TraitBase<ConcreteType, Impl> {
+  public:
+    static LogicalResult verifyTrait(Operation *op) {
+      if (op->getParentOfType<AncestorOpTypes...>())
+        return success();
+
+      return op->emitOpError()
+             << "expects ancestor op "
+             << (sizeof...(AncestorOpTypes) != 1 ? "to be one of '" : "'")
+             << llvm::ArrayRef({AncestorOpTypes::getOperationName()...}) << "'";
+    }
+
+    template <typename AncestorOpType =
+                  std::tuple_element_t<0, std::tuple<AncestorOpTypes...>>>
+    std::enable_if_t<sizeof...(AncestorOpTypes) == 1, AncestorOpType>
+    getAncestorOp() {
+      return this->getOperation()->template getParentOfType<AncestorOpType>();
+    }
+  };
+};
+
 /// A trait for operations that have an attribute specifying operand segments.
 ///
 /// Certain operations can have multiple variadic operands and their size
@@ -1631,14 +1659,11 @@ using detect_has_verify_region_trait =
 
 /// Verify the given trait if it provides a verifier.
 template <typename T>
-std::enable_if_t<detect_has_verify_trait<T>::value, LogicalResult>
-verifyTrait(Operation *op) {
-  return T::verifyTrait(op);
-}
-template <typename T>
-inline std::enable_if_t<!detect_has_verify_trait<T>::value, LogicalResult>
-verifyTrait(Operation *) {
-  return success();
+LogicalResult verifyTrait(Operation *op) {
+  if constexpr (detect_has_verify_trait<T>::value)
+    return T::verifyTrait(op);
+  else
+    return success();
 }
 
 /// Given a set of traits, return the result of verifying the given operation.
@@ -1649,15 +1674,11 @@ LogicalResult verifyTraits(Operation *op) {
 
 /// Verify the given trait if it provides a region verifier.
 template <typename T>
-std::enable_if_t<detect_has_verify_region_trait<T>::value, LogicalResult>
-verifyRegionTrait(Operation *op) {
-  return T::verifyRegionTrait(op);
-}
-template <typename T>
-inline std::enable_if_t<!detect_has_verify_region_trait<T>::value,
-                        LogicalResult>
-verifyRegionTrait(Operation *) {
-  return success();
+LogicalResult verifyRegionTrait(Operation *op) {
+  if constexpr (detect_has_verify_region_trait<T>::value)
+    return T::verifyRegionTrait(op);
+  else
+    return success();
 }
 
 /// Given a set of traits, return the result of verifying the regions of the
@@ -1984,7 +2005,7 @@ public:
     if constexpr (!hasProperties())
       return getEmptyProperties();
     return *getOperation()
-                ->getPropertiesStorageUnsafe()
+                ->getPropertiesStorage()
                 .template as<InferredProperties<T> *>();
   }
 
@@ -2157,5 +2178,7 @@ struct DenseMapInfo<T,
   static bool isEqual(T lhs, T rhs) { return lhs == rhs; }
 };
 } // namespace llvm
+
+MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::EmptyProperties)
 
 #endif

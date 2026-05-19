@@ -6,11 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FormatterBytecode.h"
+#include "lldb/DataFormatters/FormatterBytecode.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadicDetails.h"
@@ -25,8 +28,8 @@ std::string toString(FormatterBytecode::OpCodes op) {
     const char *s = MNEMONIC;                                                  \
     return s ? s : #NAME;                                                      \
   }
-#include "FormatterBytecode.def"
-#undef DEFINE_SIGNATURE
+#include "lldb/DataFormatters/FormatterBytecode.def"
+#undef DEFINE_OPCODE
   }
   return llvm::utostr(op);
 }
@@ -36,8 +39,8 @@ std::string toString(FormatterBytecode::Selectors sel) {
 #define DEFINE_SELECTOR(ID, NAME)                                              \
   case ID:                                                                     \
     return "@" #NAME;
-#include "FormatterBytecode.def"
-#undef DEFINE_SIGNATURE
+#include "lldb/DataFormatters/FormatterBytecode.def"
+#undef DEFINE_SELECTOR
   }
   return "@" + llvm::utostr(sel);
 }
@@ -47,7 +50,7 @@ std::string toString(FormatterBytecode::Signatures sig) {
 #define DEFINE_SIGNATURE(ID, NAME)                                             \
   case ID:                                                                     \
     return "@" #NAME;
-#include "FormatterBytecode.def"
+#include "lldb/DataFormatters/FormatterBytecode.def"
 #undef DEFINE_SIGNATURE
   }
   return llvm::utostr(sig);
@@ -180,13 +183,12 @@ static llvm::Error TypeCheck(llvm::ArrayRef<DataStackElement> data,
   return TypeCheck(data.drop_back(1), type2, type1);
 }
 
-llvm::Error Interpret(std::vector<ControlStackElement> &control,
-                      DataStack &data, Selectors sel) {
+llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
   if (control.empty())
     return llvm::Error::success();
   // Since the only data types are single endian and ULEBs, the
   // endianness should not matter.
-  llvm::DataExtractor cur_block(control.back(), true, 64);
+  llvm::DataExtractor cur_block(control.back(), true);
   llvm::DataExtractor::Cursor pc(0);
 
   while (!control.empty()) {
@@ -195,7 +197,7 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
       // Save the return address.
       if (control.size() > 1)
         control[control.size() - 2] = cur_block.getData().drop_front(pc.tell());
-      cur_block = llvm::DataExtractor(control.back(), true, 64);
+      cur_block = llvm::DataExtractor(control.back(), true);
       if (pc)
         pc = llvm::DataExtractor::Cursor(0);
     };
@@ -221,9 +223,10 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
     if (control.empty() || !pc)
       return pc.takeError();
 
-    LLDB_LOGV(GetLog(LLDBLog::DataFormatters),
-              "[eval {0}] opcode={1}, control={2}, data={3}", toString(sel),
-              toString(opcode), control.size(), toString(data));
+    LLDB_LOG_VERBOSE(GetLog(LLDBLog::DataFormatters),
+                     "[eval {0}] opcode={1}, control={2}, data={3}",
+                     toString(sig), toString(opcode), control.size(),
+                     toString(data));
 
     // Various shorthands to improve the readability of error handling.
 #define TYPE_CHECK(...)                                                        \
@@ -489,7 +492,17 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
         TYPE_CHECK(Object, String);
         auto name = data.Pop<std::string>();
         POP_VALOBJ(valobj);
-        data.Push((uint64_t)valobj->GetIndexOfChildWithName(name));
+        if (auto index_or_err = valobj->GetIndexOfChildWithName(name))
+          data.Push((uint64_t)*index_or_err);
+        else
+          return index_or_err.takeError();
+        break;
+      }
+      case sel_get_parent: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        auto *parent = valobj->GetParent();
+        data.Push(parent ? parent->GetSP() : ValueObjectSP());
         break;
       }
       case sel_get_type: {
@@ -505,6 +518,18 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
         auto type = data.Pop<CompilerType>();
         // FIXME: There is more code in SBType::GetTemplateArgumentType().
         data.Push(type.GetTypeTemplateArgument(index, true));
+        break;
+      }
+      case sel_get_synthetic_value: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        data.Push(valobj->GetSyntheticValue());
+        break;
+      }
+      case sel_get_non_synthetic_value: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        data.Push(valobj->GetNonSyntheticValue());
         break;
       }
       case sel_get_value: {
@@ -550,6 +575,13 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
         auto type = data.Pop<CompilerType>();
         POP_VALOBJ(valobj);
         data.Push(valobj->Cast(type));
+        break;
+      }
+      case sel_clone: {
+        TYPE_CHECK(Object, String);
+        auto new_name = data.Pop<std::string>();
+        POP_VALOBJ(valobj);
+        data.Push(valobj->Clone(new_name));
         break;
       }
       case sel_strlen: {

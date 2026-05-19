@@ -26,7 +26,17 @@ def ViewLikeOpInterface : OpInterface<"ViewLikeOpInterface"> {
   let methods = [
     InterfaceMethod<
       "Returns the source buffer from which the view is created.",
-      "::mlir::Value", "getViewSource">
+      "::mlir::Value", "getViewSource">,
+    InterfaceMethod<
+      /*desc=*/[{ Returns the buffer which the view created. }],
+      /*retTy=*/"::mlir::Value",
+      /*methodName=*/"getViewDest",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op->getResult(0);
+      }]
+    >
   ];
 }
 
@@ -403,5 +413,17 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
         ::mlir::cast<::mlir::OffsetSizeAndStrideOpInterface>($_op));
   }];
 }
+
+// This trai indicates that pointer-like objects (such as memrefs) returned
+// from this operation will never alias with each other. This provides a
+// guarantee to optimization passes that accesses through different results
+// of this operation can be safely reordered, as they will never reference
+// overlapping memory locations.
+//
+// Operations with this trait take multiple pointer-like operands
+// and return the same operands with additional non-aliasing guarantees.
+// If the access to the results of this operation aliases at runtime, the
+// behavior of such access is undefined.
+def DistinctObjectsTrait : NativeOpTrait<"DistinctObjectsTrait">;
 
 #endif // MLIR_INTERFACES_VIEWLIKEINTERFACE

@@ -16,6 +16,8 @@
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
+#include "llvm/Support/ErrorExtras.h"
+
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/StackFrame.h"
@@ -73,22 +75,22 @@ static CompilerType GetLLDBNSPairType(TargetSP target_sp) {
 
   static constexpr llvm::StringLiteral g_lldb_autogen_nspair("__lldb_autogen_nspair");
 
-  compiler_type = scratch_ts_sp->GetTypeForIdentifier<clang::CXXRecordDecl>(g_lldb_autogen_nspair);
+  compiler_type = scratch_ts_sp->GetTypeForIdentifier<clang::CXXRecordDecl>(
+      scratch_ts_sp->getASTContext(), g_lldb_autogen_nspair);
 
   if (!compiler_type) {
     compiler_type = scratch_ts_sp->CreateRecordType(
-        nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
-        g_lldb_autogen_nspair, llvm::to_underlying(clang::TagTypeKind::Struct),
-        lldb::eLanguageTypeC);
+        nullptr, OptionalClangModuleID(), g_lldb_autogen_nspair,
+        llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
 
     if (compiler_type) {
       TypeSystemClang::StartTagDeclarationDefinition(compiler_type);
       CompilerType id_compiler_type =
           scratch_ts_sp->GetBasicType(eBasicTypeObjCID);
-      TypeSystemClang::AddFieldToRecordType(
-          compiler_type, "key", id_compiler_type, lldb::eAccessPublic, 0);
-      TypeSystemClang::AddFieldToRecordType(
-          compiler_type, "value", id_compiler_type, lldb::eAccessPublic, 0);
+      TypeSystemClang::AddFieldToRecordType(compiler_type, "key",
+                                            id_compiler_type, 0);
+      TypeSystemClang::AddFieldToRecordType(compiler_type, "value",
+                                            id_compiler_type, 0);
       TypeSystemClang::CompleteTagDeclarationDefinition(compiler_type);
     }
   }
@@ -108,8 +110,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
   struct DataDescriptor_32 {
@@ -148,8 +148,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
-
 private:
   ExecutionContextRef m_exe_ctx_ref;
   CompilerType m_pair_type;
@@ -177,8 +175,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
   struct DictionaryItemDescriptor {
@@ -209,7 +205,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   ValueObjectSP m_pair;
@@ -227,8 +223,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
   struct DictionaryItemDescriptor {
@@ -259,8 +253,6 @@ namespace Foundation1100 {
 
     lldb::ChildCacheState Update() override;
 
-    size_t GetIndexOfChildWithName(ConstString name) override;
-    
   private:
     struct DataDescriptor_32 {
       uint32_t _used : 26;
@@ -585,15 +577,6 @@ lldb_private::formatters::NSDictionaryISyntheticFrontEnd::
   m_data_64 = nullptr;
 }
 
-size_t lldb_private::formatters::NSDictionaryISyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
-  const char *item_name = name.GetCString();
-  uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return UINT32_MAX;
-  return idx;
-}
-
 llvm::Expected<uint32_t> lldb_private::formatters::
     NSDictionaryISyntheticFrontEnd::CalculateNumChildren() {
   if (!m_data_32 && !m_data_64)
@@ -707,8 +690,8 @@ lldb_private::formatters::NSDictionaryISyntheticFrontEnd::GetChildAtIndex(
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     DataExtractor data(buffer_sp, m_order, m_ptr_size);
-    dict_item.valobj_sp = CreateValueObjectFromData(idx_name.GetString(), data,
-                                                    m_exe_ctx_ref, m_pair_type);
+    dict_item.valobj_sp = CreateChildValueObjectFromData(
+        idx_name.GetString(), data, m_exe_ctx_ref, m_pair_type);
   }
   return dict_item.valobj_sp;
 }
@@ -717,15 +700,6 @@ lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::
     NSCFDictionarySyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
     : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_hashtable(),
       m_pair_type() {}
-
-size_t lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
-  const char *item_name = name.GetCString();
-  const uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return UINT32_MAX;
-  return idx;
-}
 
 llvm::Expected<uint32_t> lldb_private::formatters::
     NSCFDictionarySyntheticFrontEnd::CalculateNumChildren() {
@@ -839,8 +813,8 @@ lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::GetChildAtIndex(
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     DataExtractor data(buffer_sp, m_order, m_ptr_size);
-    dict_item.valobj_sp = CreateValueObjectFromData(idx_name.GetString(), data,
-                                                    m_exe_ctx_ref, m_pair_type);
+    dict_item.valobj_sp = CreateChildValueObjectFromData(
+        idx_name.GetString(), data, m_exe_ctx_ref, m_pair_type);
   }
   return dict_item.valobj_sp;
 }
@@ -848,15 +822,6 @@ lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::GetChildAtIndex(
 lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
     NSConstantDictionarySyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
     : SyntheticChildrenFrontEnd(*valobj_sp) {}
-
-size_t lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
-  const char *item_name = name.GetCString();
-  uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return UINT32_MAX;
-  return idx;
-}
 
 llvm::Expected<uint32_t> lldb_private::formatters::
     NSConstantDictionarySyntheticFrontEnd::CalculateNumChildren() {
@@ -951,8 +916,8 @@ lldb::ValueObjectSP lldb_private::formatters::
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     DataExtractor data(buffer_sp, m_order, m_ptr_size);
-    dict_item.valobj_sp = CreateValueObjectFromData(idx_name.GetString(), data,
-                                                    m_exe_ctx_ref, m_pair_type);
+    dict_item.valobj_sp = CreateChildValueObjectFromData(
+        idx_name.GetString(), data, m_exe_ctx_ref, m_pair_type);
   }
   return dict_item.valobj_sp;
 }
@@ -961,10 +926,12 @@ lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
     NSDictionary1SyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
     : SyntheticChildrenFrontEnd(*valobj_sp.get()), m_pair(nullptr) {}
 
-size_t lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+llvm::Expected<size_t> lldb_private::formatters::
+    NSDictionary1SyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   static const ConstString g_zero("[0]");
-  return name == g_zero ? 0 : UINT32_MAX;
+  if (name == g_zero)
+    return 0;
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 llvm::Expected<uint32_t> lldb_private::formatters::
@@ -1022,7 +989,7 @@ lldb_private::formatters::NSDictionary1SyntheticFrontEnd::GetChildAtIndex(
   }
 
   DataExtractor data(buffer_sp, process_sp->GetByteOrder(), ptr_size);
-  m_pair = CreateValueObjectFromData(
+  m_pair = CreateChildValueObjectFromData(
       "[0]", data, m_backend.GetExecutionContextRef(), pair_type);
 
   return m_pair;
@@ -1042,16 +1009,6 @@ lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<
   m_data_32 = nullptr;
   delete m_data_64;
   m_data_64 = nullptr;
-}
-
-template <typename D32, typename D64>
-size_t lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<
-    D32, D64>::GetIndexOfChildWithName(ConstString name) {
-  const char *item_name = name.GetCString();
-  uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return UINT32_MAX;
-  return idx;
 }
 
 template <typename D32, typename D64>
@@ -1184,8 +1141,8 @@ lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     DataExtractor data(buffer_sp, m_order, m_ptr_size);
-    dict_item.valobj_sp = CreateValueObjectFromData(idx_name.GetString(), data,
-                                                    m_exe_ctx_ref, m_pair_type);
+    dict_item.valobj_sp = CreateChildValueObjectFromData(
+        idx_name.GetString(), data, m_exe_ctx_ref, m_pair_type);
   }
   return dict_item.valobj_sp;
 }
@@ -1200,16 +1157,6 @@ lldb_private::formatters::Foundation1100::
   m_data_32 = nullptr;
   delete m_data_64;
   m_data_64 = nullptr;
-}
-
-size_t
-lldb_private::formatters::Foundation1100::
-  NSDictionaryMSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
-  const char *item_name = name.GetCString();
-  uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return UINT32_MAX;
-  return idx;
 }
 
 llvm::Expected<uint32_t> lldb_private::formatters::Foundation1100::
@@ -1330,8 +1277,8 @@ lldb_private::formatters::Foundation1100::
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     DataExtractor data(buffer_sp, m_order, m_ptr_size);
-    dict_item.valobj_sp = CreateValueObjectFromData(idx_name.GetString(), data,
-                                                    m_exe_ctx_ref, m_pair_type);
+    dict_item.valobj_sp = CreateChildValueObjectFromData(
+        idx_name.GetString(), data, m_exe_ctx_ref, m_pair_type);
   }
   return dict_item.valobj_sp;
 }

@@ -48,6 +48,21 @@ inline std::optional<Function *> getAttachedARCFunction(const CallBase *CB) {
   return cast<Function>(B->Inputs[0]);
 }
 
+/// This function determines whether the clang_arc_attachedcall should be
+/// emitted with or without the marker.
+/// Concretely, this is the difference between:
+///   objc_retainAutoreleasedReturnValue
+/// and
+///  objc_claimAutoreleasedReturnValue
+/// retainRV (and unsafeClaimRV) requires a marker, but claimRV does not.
+inline bool attachedCallOpBundleNeedsMarker(const CallBase *CB) {
+  // FIXME: do this on ARCRuntimeEntryPoints, and do the todo above ARCInstKind
+  if (std::optional<Function *> Fn = getAttachedARCFunction(CB))
+    if ((*Fn)->getName() == "objc_claimAutoreleasedReturnValue")
+      return false;
+  return true;
+}
+
 /// Check whether the function is retainRV/unsafeClaimRV.
 inline bool isRetainOrClaimRV(ARCInstKind Kind) {
   return Kind == ARCInstKind::RetainRV || Kind == ARCInstKind::UnsafeClaimRV;

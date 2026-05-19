@@ -23,8 +23,7 @@ define void @stptr_w(ptr %p, i32 signext %val) nounwind {
 ; LA32-LABEL: stptr_w:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $a0, $a0, 2047
-; LA32-NEXT:    addi.w $a0, $a0, 1
-; LA32-NEXT:    st.w $a1, $a0, 0
+; LA32-NEXT:    st.w $a1, $a0, 1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: stptr_w:
@@ -77,9 +76,8 @@ define void @stptr_d(ptr %p, i64 %val) nounwind {
 ; LA32-LABEL: stptr_d:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $a0, $a0, 2047
-; LA32-NEXT:    addi.w $a0, $a0, 1
-; LA32-NEXT:    st.w $a2, $a0, 4
-; LA32-NEXT:    st.w $a1, $a0, 0
+; LA32-NEXT:    st.w $a2, $a0, 5
+; LA32-NEXT:    st.w $a1, $a0, 1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: stptr_d:

@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -fno-ppc-native-vector-element-order -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="LLVMIR" %s
+! RUN: %flang_fc1 -emit-llvm %s -fno-ppc-native-vector-element-order -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="LLVMIR" %s
 ! REQUIRES: target=powerpc{{.*}}
 
 ! CHECK-LABEL: vec_splat_testf32i64
@@ -19,7 +19,7 @@ subroutine vec_splat_testu8i16(x)
   y = vec_splat(x, 0_2)
 
 ! LLVMIR: %[[x:.*]] = load <16 x i8>, ptr %{{[0-9]}}, align 16
-! LLVMIR: %[[ele:.*]] = extractelement <16 x i8> %[[x]], i16 15
+! LLVMIR: %[[ele:.*]] = extractelement <16 x i8> %[[x]], i64 15
 ! LLVMIR: %[[ins:.*]] = insertelement <16 x i8> poison, i8 %[[ele]], i32 0
 ! LLVMIR: %[[y:.*]] = shufflevector <16 x i8> %[[ins]], <16 x i8> poison, <16 x i32> zeroinitializer
 ! LLVMIR: store <16 x i8> %[[y]], ptr %{{[0-9]}}, align 16

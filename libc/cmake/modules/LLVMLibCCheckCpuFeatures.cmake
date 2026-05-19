@@ -7,15 +7,28 @@ set(ALL_CPU_FEATURES "")
 
 if(LIBC_TARGET_ARCHITECTURE_IS_X86_64)
   set(ALL_CPU_FEATURES SSE2 SSE4_2 AVX AVX2 AVX512F AVX512BW FMA)
-  set(LIBC_COMPILE_OPTIONS_NATIVE -march=native)
+  set(_libc_native_default -march=native)
 elseif(LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
-  set(ALL_CPU_FEATURES "FullFP16")
-  set(LIBC_COMPILE_OPTIONS_NATIVE -mcpu=native)
+  set(ALL_CPU_FEATURES FullFP16 MOPS SVE SVE2)
+  set(_libc_native_default -mcpu=native)
+else()
+  set(_libc_native_default "")
 endif()
 
 if(LIBC_CROSSBUILD)
-  set(LIBC_COMPILE_OPTIONS_NATIVE ${LIBC_COMPILE_OPTIONS_DEFAULT})
+  set(_libc_native_default ${LIBC_COMPILE_OPTIONS_DEFAULT})
 endif()
+
+# LIBC_COMPILE_OPTIONS_NATIVE controls the -march/-mcpu flag used for
+# host-optimised builds and CPU feature detection.  It defaults to
+# -march=native (x86) or -mcpu=native (AArch64) for local developer builds.
+#
+# CI environments with shared build caches (e.g. sccache) should set this
+# to an empty string (-DLIBC_COMPILE_OPTIONS_NATIVE="") because the cache
+# treats -march=native as a literal string and will silently serve object
+# files compiled for a different CPU model.
+set(LIBC_COMPILE_OPTIONS_NATIVE "${_libc_native_default}" CACHE STRING
+    "Compile options for host-native builds.  Set to empty to disable -march=native.")
 
 # Making sure ALL_CPU_FEATURES is sorted.
 list(SORT ALL_CPU_FEATURES)
@@ -50,25 +63,19 @@ function(_intersection output_var list1 list2)
 endfunction()
 
 set(AVAILABLE_CPU_FEATURES "")
-if(LIBC_CROSSBUILD)
-  # If we are doing a cross build, we will just assume that all CPU features
-  # are available.
-  set(AVAILABLE_CPU_FEATURES ${ALL_CPU_FEATURES})
-else()
-  # Try compile a C file to check if flag is supported.
-  set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-  foreach(feature IN LISTS ALL_CPU_FEATURES)
-    try_compile(
-      has_feature
-      ${CMAKE_CURRENT_BINARY_DIR}/cpu_features
-      SOURCES ${LIBC_SOURCE_DIR}/cmake/modules/cpu_features/check_${feature}.cpp
-      COMPILE_DEFINITIONS -I${LIBC_SOURCE_DIR} ${LIBC_COMPILE_OPTIONS_NATIVE}
-    )
-    if(has_feature)
-      list(APPEND AVAILABLE_CPU_FEATURES ${feature})
-    endif()
-  endforeach()
-endif()
+# Try to compile a C file to check if a flag is supported.
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+foreach(feature IN LISTS ALL_CPU_FEATURES)
+  try_compile(
+    has_feature
+    ${CMAKE_CURRENT_BINARY_DIR}/cpu_features
+    SOURCES ${LIBC_SOURCE_DIR}/cmake/modules/cpu_features/check_${feature}.cpp
+    COMPILE_DEFINITIONS -I${LIBC_SOURCE_DIR} ${LIBC_COMPILE_OPTIONS_NATIVE}
+  )
+  if(has_feature)
+    list(APPEND AVAILABLE_CPU_FEATURES ${feature})
+  endif()
+endforeach()
 
 set(LIBC_CPU_FEATURES ${AVAILABLE_CPU_FEATURES} CACHE STRING "Host supported CPU features")
 

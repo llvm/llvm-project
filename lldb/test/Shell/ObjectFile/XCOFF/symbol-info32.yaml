@@ -1,0 +1,124 @@
+# RUN: yaml2obj %s -o %t
+# RUN: %lldb %t -o "image dump symtab" -o exit | FileCheck %s
+# CHECK: Index   UserID     DSX Type            File Address/Value Load Address       Size               Flags      Name
+# CHECK: [    0] 4294967295     Invalid         0xffffffffffffffff                    0x0000000000000000 0x00000000 errno
+# CHECK: [    1] 4294967295     Code            0x0000000010000320                    0x0000000000000420 0x00000000 __threads_init
+# CHECK: [    2] 4294967295     Data            0x0000000020000920                    0x000000000000003c 0x00000000 __threads_init
+# CHECK: [    3] 4294967295     Invalid         0x000000002000095c                    0x0000000000000060 0x00000000 TOC
+# CHECK: [    4] 4294967295     Invalid         0x0000000010000740                    0x000000000000003a 0x00000000 text
+# CHECK: [    5] 4294967295     Invalid         0x0000000010000740                    0x000000000000003a 0x00000000 main
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:     0x1DF
+  NumberOfSections: 2
+  CreationTime:    000000000
+  Flags:           0x1002
+Sections:
+  - Name:            .text
+    Address:         0x10000268
+    Size:            0x512
+    FileOffsetToData: 0x268
+    FileOffsetToRelocations: 0xECC
+    FileOffsetToLineNumbers: 0x0
+    NumberOfRelocations: 0x24
+    NumberOfLineNumbers: 0x0
+    Flags:           [ STYP_TEXT ]
+    SectionData:     80C20000
+  - Name:            .data
+    Address:         0x2000077A
+    Size:            0x242
+    FileOffsetToData: 0x77A
+    FileOffsetToRelocations: 0x1034
+    FileOffsetToLineNumbers: 0x0
+    NumberOfRelocations: 0x25
+    NumberOfLineNumbers: 0x0
+    Flags:           [ STYP_DATA ]
+    SectionData:     ''
+Symbols:
+  - Name:            errno
+    Value:           0x0
+    Section:         N_UNDEF
+    Type:            0x0
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        ParameterHashIndex: 0
+        TypeChkSectNum:  0
+        StorageMappingClass: XMC_RW
+        SectionOrLength: 0
+        StabInfoIndex:   0
+        StabSectNum:     0
+  - Name:            .__threads_init
+    Value:           0x10000320
+    Section:         .text
+    Type:            0x20
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        ParameterHashIndex: 0
+        TypeChkSectNum:  0
+        StorageMappingClass: XMC_PR
+        SectionOrLength: 84
+        StabInfoIndex:   0
+        StabSectNum:     0
+  - Name:            __threads_init
+    Value:           0x20000920
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        ParameterHashIndex: 0
+        TypeChkSectNum:  0
+        StorageMappingClass: XMC_DS
+        SectionOrLength: 12
+        StabInfoIndex:   0
+        StabSectNum:     0
+  - Name:            TOC
+    Value:           0x2000095C
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_HIDEXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        ParameterHashIndex: 0
+        TypeChkSectNum:  0
+        StorageMappingClass: XMC_TC0
+        SectionOrLength: 0
+        StabInfoIndex:   0
+        StabSectNum:     0
+  - Name:            .text
+    Value:           0x10000740
+    Section:         .text
+    Type:            0x0
+    StorageClass:    C_HIDEXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        ParameterHashIndex: 0
+        TypeChkSectNum:  0
+        StorageMappingClass: XMC_PR
+        SectionOrLength: 58
+        StabInfoIndex:   0
+        StabSectNum:     0
+  - Name:            .main
+    Value:           0x10000740
+    Section:         .text
+    Type:            0x0
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        ParameterHashIndex: 0
+        TypeChkSectNum:  0
+        StorageMappingClass: XMC_PR
+        SectionOrLength: 137
+        StabInfoIndex:   0
+        StabSectNum:     0
+
+...

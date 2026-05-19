@@ -8,6 +8,7 @@
 import sys
 import os
 import platform
+from typing import List
 
 from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.dextIR import FrameIR, LocIR, StepIR, StopReason, ValueIR
@@ -111,7 +112,7 @@ class DbgEng(DebuggerBase):
         # We are, by this point, already launched.
         self.step_info = probe_process.probe_state(self.client)
 
-    def step(self):
+    def step_in(self):
         res = setup.step_once(self.client)
         if not res:
             self.finished = True
@@ -122,7 +123,7 @@ class DbgEng(DebuggerBase):
         # relevant source file -- this is likely to be a problem when setting
         # breakpoints. Until that's fixed, single step instead of running
         # freely. This isn't very efficient, but at least makes progress.
-        self.step()
+        self.step_in()
 
     def _get_step_info(self, watches, step_index):
         frames = self.step_info
@@ -167,6 +168,12 @@ class DbgEng(DebuggerBase):
             program_state=ProgramState(state_frames),
         )
 
+    def get_stack_frames(self, step_index: int) -> StepIR:
+        raise NotImplementedError("--use-script debugging not supported in dbgeng yet.")
+
+    def collect_watches(self, step: StepIR, watches: List[str]):
+        raise NotImplementedError("--use-script debugging not supported in dbgeng yet.")
+
     @property
     def is_running(self):
         return False  # We're never free-running
@@ -176,16 +183,12 @@ class DbgEng(DebuggerBase):
         return self.finished
 
     def evaluate_expression(self, expression, frame_idx=0):
-        # XXX: cdb insists on using '->' to examine fields of structures,
-        # as it appears to reserve '.' for other purposes.
-        fixed_expr = expression.replace(".", "->")
-
         orig_scope_idx = self.client.Symbols.GetCurrentScopeFrameIndex()
         self.client.Symbols.SetScopeFrameByIndex(frame_idx)
 
-        res = self.client.Control.Evaluate(fixed_expr)
+        res = self.client.Control.Evaluate(expression)
         if res is not None:
-            result, typename = self.client.Control.Evaluate(fixed_expr)
+            result, typename = self.client.Control.Evaluate(expression)
             could_eval = True
         else:
             result, typename = (None, None)

@@ -36,10 +36,10 @@ define void @f(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2, ptr
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:  Ltmp0:
+; CHECK-NEXT:  Ltmp0: ## EH_LABEL
 ; CHECK-NEXT:    ## implicit-def: $ebx
 ; CHECK-NEXT:    calll __Znam
-; CHECK-NEXT:  Ltmp1:
+; CHECK-NEXT:  Ltmp1: ## EH_LABEL
 ; CHECK-NEXT:  ## %bb.1: ## %bb11
 ; CHECK-NEXT:    movl %eax, %esi
 ; CHECK-NEXT:    movb $1, %al
@@ -58,13 +58,13 @@ define void @f(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2, ptr
 ; CHECK-NEXT:    jne LBB0_9
 ; CHECK-NEXT:  ## %bb.10: ## %bb41
 ; CHECK-NEXT:    ## in Loop: Header=BB0_8 Depth=1
-; CHECK-NEXT:  Ltmp2:
+; CHECK-NEXT:  Ltmp2: ## EH_LABEL
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %esi, (%esp)
 ; CHECK-NEXT:    calll _Pjii
-; CHECK-NEXT:  Ltmp3:
+; CHECK-NEXT:  Ltmp3: ## EH_LABEL
 ; CHECK-NEXT:  ## %bb.11: ## %bb42
 ; CHECK-NEXT:    ## in Loop: Header=BB0_8 Depth=1
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -126,20 +126,20 @@ define void @f(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2, ptr
 ; CHECK-NEXT:    decl {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Spill
 ; CHECK-NEXT:    jmp LBB0_8
 ; CHECK-NEXT:  LBB0_18: ## %bb43
-; CHECK-NEXT:  Ltmp5:
+; CHECK-NEXT:  Ltmp5: ## EH_LABEL
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    calll _OnOverFlow
-; CHECK-NEXT:  Ltmp6:
+; CHECK-NEXT:  Ltmp6: ## EH_LABEL
 ; CHECK-NEXT:    jmp LBB0_3
 ; CHECK-NEXT:  LBB0_2: ## %bb29
-; CHECK-NEXT:  Ltmp7:
+; CHECK-NEXT:  Ltmp7: ## EH_LABEL
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    calll _OnOverFlow
-; CHECK-NEXT:  Ltmp8:
+; CHECK-NEXT:  Ltmp8: ## EH_LABEL
 ; CHECK-NEXT:  LBB0_3: ## %bb30
 ; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  LBB0_4: ## %bb20.loopexit
-; CHECK-NEXT:  Ltmp4:
+; CHECK-NEXT:  Ltmp4: ## EH_LABEL
 ; CHECK-NEXT:  LBB0_9:
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:  LBB0_6: ## %bb23
@@ -151,7 +151,7 @@ define void @f(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2, ptr
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB0_5: ## %bb20.loopexit.split-lp
-; CHECK-NEXT:  Ltmp9:
+; CHECK-NEXT:  Ltmp9: ## EH_LABEL
 ; CHECK-NEXT:    jmp LBB0_6
 ; CHECK-NEXT:  Lfunc_end0:
 bb:

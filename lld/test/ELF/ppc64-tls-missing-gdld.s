@@ -15,18 +15,18 @@
 
 # RUN: ld.lld %t/a.o %t/tga.o -o %t2 2>&1 | FileCheck %s --check-prefix=WARN
 # RUN: llvm-readelf -x .got %t2 | FileCheck %s --check-prefix=HEX
-# RUN: llvm-objdump -d --no-leading-addr %t2 | FileCheck %s --check-prefix=DIS
+# RUN: llvm-objdump -d --no-leading-addr %t2 | FileCheck %s --check-prefix=DIS2
 
 # WARN: warning: {{.*}}.o: disable TLS relaxation due to R_PPC64_GOT_TLS* relocations without R_PPC64_TLSGD/R_PPC64_TLSLD relocations
 
-## .got+0: x is local - relaxed to LE - its DTPMOD/DTPREL slots are link-time constants.
+## .got+0: x is local - optimized to LE - its DTPMOD/DTPREL slots are link-time constants.
 ## DTPMOD is 1. DTPREL is st_value-0x8000 = -0x8000.
 ## .got+16: DTPMOD/DTPREL for _TLS_MODULE_BASE_ is 1 and 0, respectively.
-## .got+32: TPOFFSET for x = st_value-0x7000
+## IE is relaxed to LE, so there is no TPOFFSET GOT entry.
 # HEX:      section '.got':
 # HEX-NEXT: [[#%x,IGNORE:]] 50820210 00000000 01000000 00000000
 # HEX-NEXT: [[#%x,IGNORE:]] 00000000 00000000 01000000 00000000
-# HEX-NEXT: [[#%x,IGNORE:]] 0080ffff ffffffff 0090ffff ffffffff
+# HEX-NEXT: [[#%x,IGNORE:]] 0080ffff ffffffff
 
 ## .TOC.-32768 = (.got+0x8000)-32768 = .got
 # DIS-LABEL: <GeneralDynamic>:
@@ -49,12 +49,36 @@
 # DIS-NEXT:    addi 3, 3, -32760
 # DIS-NEXT:    bl [[#TGA]]
 
-## Technically we don't have to disable IE to LE relaxation,
-## but disabling it for implementation simplicity does not hurt.
+## In the shared library case, IE is not optimized.
 # DIS-LABEL: <InitialExec>:
 # DIS-NEXT:    addis 3, 2, 0
 # DIS-NEXT:    ld 3, -32728(3)
 # DIS-NEXT:    add 3, 3, 13
+
+## .TOC.-32768 = (.got+0x8000)-32768 = .got
+# DIS2-LABEL: <GeneralDynamic>:
+# DIS2-NEXT:    addis 3, 2, 0
+# DIS2-NEXT:    addi 3, 3, -32744
+# DIS2-NEXT:    bl [[#%x,TGA:]]
+# DIS2-LABEL: <GeneralDynamic_NOTOC>:
+# DIS2-NEXT:    addis 3, 2, 0
+# DIS2-NEXT:    addi 3, 3, -32744
+# DIS2-NEXT:    bl [[#TGA]]
+# DIS2-LABEL: <LocalDynamic>:
+# DIS2-NEXT:    addis 3, 2, 0
+# DIS2-NEXT:    addi 3, 3, -32760
+# DIS2-NEXT:    bl [[#TGA]]
+# DIS2-LABEL: <LocalDynamic_NOTOC>:
+# DIS2-NEXT:    addis 3, 2, 0
+# DIS2-NEXT:    addi 3, 3, -32760
+# DIS2-NEXT:    bl [[#TGA]]
+
+## IE to LE is relaxed even when GD/LD relaxation is disabled,
+## since IE does not involve __tls_get_addr.
+# DIS2-LABEL: <InitialExec>:
+# DIS2-NEXT:    nop
+# DIS2-NEXT:    addis 3, 13, 0
+# DIS2-NEXT:    addi 3, 3, -28672
 
 #--- a.s
 GeneralDynamic:

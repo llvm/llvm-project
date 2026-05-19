@@ -25,7 +25,7 @@
 #include "min_allocator.h"
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
 
@@ -61,11 +61,23 @@ void test() {
   }
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::vector<int>, std::vector<int>>();
-  test<std::deque<int>, std::vector<int>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque<int>, std::vector<int>>();
   test<MinSequenceContainer<int>, MinSequenceContainer<int>>();
   test<std::vector<int, min_allocator<int>>, std::vector<int, min_allocator<int>>>();
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

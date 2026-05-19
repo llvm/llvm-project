@@ -922,8 +922,6 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
       // True if the result is copied into our data buffer
       bool sucess = false;
       std::string name;
-      bool is_complex;
-      uint32_t count;
       const uint32_t num_children = return_compiler_type.GetNumFields();
 
       // A structure consisting of one or two FP values (and nothing else) will
@@ -937,7 +935,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
               return_compiler_type.GetFieldAtIndex(idx, name, &field_bit_offset,
                                                    nullptr, nullptr);
 
-          if (field_compiler_type.IsFloatingPointType(count, is_complex))
+          if (field_compiler_type.GetTypeInfo() & eTypeIsFloat)
             use_fp_regs = true;
           else
             found_non_fp_field = true;
@@ -1044,7 +1042,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
 
         if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
             field_compiler_type.IsPointerType() ||
-            field_compiler_type.IsFloatingPointType(count, is_complex)) {
+            field_compiler_type.GetTypeInfo() & eTypeIsFloat) {
           padding = field_byte_offset - integer_bytes;
 
           if (integer_bytes < 8) {
@@ -1123,7 +1121,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
 
     // We have got the address. Create a memory object out of it
     return_valobj_sp = ValueObjectMemory::Create(
-        &thread, "", Address(mem_address, nullptr), return_compiler_type);
+        &thread, "", Address(mem_address), return_compiler_type);
   }
   return return_valobj_sp;
 }

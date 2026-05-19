@@ -26,7 +26,7 @@ define i64 @valid_wcslen32(ptr %src) {
 ; CHECK-NEXT:    [[CURR_0]] = getelementptr inbounds i8, ptr [[SRC_PN]], i64 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[CURR_0]], align 4
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[WHILE_END:.*]], label %[[WHILE_COND]]
+; CHECK-NEXT:    br i1 true, label %[[WHILE_END:.*]], label %[[WHILE_COND]]
 ; CHECK:       [[WHILE_END]]:
 ; CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[END]] to i64
 ; CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[SRC]] to i64

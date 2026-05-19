@@ -166,15 +166,19 @@ TEST(HashingTest, HashCombineRangeBasicTest) {
   hash_code arr1_hash = hash_combine_range(begin(arr1), end(arr1));
   EXPECT_NE(dummy_hash, arr1_hash);
   EXPECT_EQ(arr1_hash, hash_combine_range(begin(arr1), end(arr1)));
+  EXPECT_EQ(arr1_hash, hash_combine_range(arr1));
 
   const std::vector<int> vec(begin(arr1), end(arr1));
   EXPECT_EQ(arr1_hash, hash_combine_range(vec.begin(), vec.end()));
+  EXPECT_EQ(arr1_hash, hash_combine_range(vec));
 
   const std::list<int> list(begin(arr1), end(arr1));
   EXPECT_EQ(arr1_hash, hash_combine_range(list.begin(), list.end()));
+  EXPECT_EQ(arr1_hash, hash_combine_range(list));
 
   const std::deque<int> deque(begin(arr1), end(arr1));
   EXPECT_EQ(arr1_hash, hash_combine_range(deque.begin(), deque.end()));
+  EXPECT_EQ(arr1_hash, hash_combine_range(deque));
 
   const int arr2[] = { 3, 2, 1 };
   hash_code arr2_hash = hash_combine_range(begin(arr2), end(arr2));
@@ -196,6 +200,25 @@ TEST(HashingTest, HashCombineRangeBasicTest) {
   hash_code arr5_hash = hash_combine_range(begin(arr5), end(arr5));
   hash_code d_arr5_hash = hash_combine_range(begin(d_arr5), end(d_arr5));
   EXPECT_EQ(arr5_hash, d_arr5_hash);
+}
+
+TEST(HashingTest, HashCombineRangeIteratorOverInlineBuffer) {
+  // Drive the non-pointer iterator overload past the inline stack buffer
+  // (>256 bytes of hashable data) into the heap-grow path.
+  constexpr size_t N = 100; // 100 * sizeof(size_t) = 800 bytes
+  std::vector<size_t> v(N);
+  for (size_t i = 0; i < N; ++i)
+    v[i] = i * 0x9E3779B97F4A7C15ULL;
+  std::list<size_t> l(v.begin(), v.end());
+
+  // Iterator and pointer paths see the same byte stream and agree past the
+  // inline buffer threshold.
+  EXPECT_EQ(hash_combine_range(v), hash_combine_range(l));
+  EXPECT_EQ(hash_combine_range(l), hash_combine_range(l));
+
+  std::list<size_t> l2 = l;
+  l2.push_back(0xDEADBEEFu);
+  EXPECT_NE(hash_combine_range(l), hash_combine_range(l2));
 }
 
 TEST(HashingTest, HashCombineRangeLengthDiff) {

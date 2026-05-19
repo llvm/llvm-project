@@ -1,5 +1,5 @@
 ; RUN: opt -passes=redundant-dbg-inst-elim -S %s -o - \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: | FileCheck %s --implicit-check-not="#dbg_"
 
 ;; Hand-written. Test how RemoveRedundantDbgInstrs interacts with dbg.assign
 ;; intrinsics. FileCehck directives are inline.

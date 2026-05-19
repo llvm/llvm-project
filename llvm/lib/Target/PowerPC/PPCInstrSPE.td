@@ -20,10 +20,10 @@ class EFXForm_1<bits<11> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6-10}  = RT;
-  let Inst{11-15} = RA;
-  let Inst{16-20} = RB;
-  let Inst{21-31} = xo;
+  let Inst{6...10}  = RT;
+  let Inst{11...15} = RA;
+  let Inst{16...20} = RB;
+  let Inst{21...31} = xo;
 }
 
 class EFXForm_2<bits<11> xo, dag OOL, dag IOL, string asmstr,
@@ -45,11 +45,11 @@ class EFXForm_3<bits<11> xo, dag OOL, dag IOL, string asmstr,
   bits<5> RA;
   bits<5> RB;
 
-  let Inst{6-8}  = crD;
-  let Inst{9-10}  = 0;
-  let Inst{11-15} = RA;
-  let Inst{16-20} = RB;
-  let Inst{21-31} = xo;
+  let Inst{6...8}  = crD;
+  let Inst{9...10}  = 0;
+  let Inst{11...15} = RA;
+  let Inst{16...20} = RB;
+  let Inst{21...31} = xo;
 }
 
 class EVXForm_1<bits<11> xo, dag OOL, dag IOL, string asmstr,
@@ -61,10 +61,10 @@ class EVXForm_1<bits<11> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6-10}  = RT;
-  let Inst{11-15} = RA;
-  let Inst{16-20} = RB;
-  let Inst{21-31} = xo;
+  let Inst{6...10}  = RT;
+  let Inst{11...15} = RA;
+  let Inst{16...20} = RB;
+  let Inst{21...31} = xo;
 }
 
 class EVXForm_2<bits<11> xo, dag OOL, dag IOL, string asmstr,
@@ -88,11 +88,11 @@ class EVXForm_3<bits<11> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6-8}  = crD;
-  let Inst{9-10}  = 0;
-  let Inst{11-15} = RA;
-  let Inst{16-20} = RB;
-  let Inst{21-31} = xo;
+  let Inst{6...8}  = crD;
+  let Inst{9...10}  = 0;
+  let Inst{11...15} = RA;
+  let Inst{16...20} = RB;
+  let Inst{21...31} = xo;
 }
 
 class EVXForm_4<bits<8> xo, dag OOL, dag IOL, string asmstr,
@@ -105,11 +105,11 @@ class EVXForm_4<bits<8> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6-10}  = RT;
-  let Inst{11-15} = RA;
-  let Inst{16-20} = RB;
-  let Inst{21-28} = xo;
-  let Inst{29-31} = crD;
+  let Inst{6...10}  = RT;
+  let Inst{11...15} = RA;
+  let Inst{16...20} = RB;
+  let Inst{21...28} = xo;
+  let Inst{29...31} = crD;
 }
 
 class EVXForm_D<bits<11> xo, dag OOL, dag IOL, string asmstr,
@@ -121,10 +121,10 @@ class EVXForm_D<bits<11> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6-10}  = RT;
-  let Inst{11-15} = RA;
-  let Inst{16-20} = D;
-  let Inst{21-31} = xo;
+  let Inst{6...10}  = RT;
+  let Inst{11...15} = RA;
+  let Inst{16...20} = D;
+  let Inst{21...31} = xo;
 }
 
 let DecoderNamespace = "SPE", Predicates = [HasSPE] in {

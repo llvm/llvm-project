@@ -19,7 +19,7 @@
 //
 // The const overloads of
 //   valarray::operator[](...) const
-// return propxy objects. These proxies are implicitly convertible to
+// return proxy objects. These proxies are implicitly convertible to
 // std::valarray.
 //
 // valarray& operator^=(const valarray& v);

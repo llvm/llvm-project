@@ -14,6 +14,10 @@ export namespace std {
   using std::invoke_r;
 #endif
 
+#if _LIBCPP_STD_VER >= 20
+  using std::basic_common_reference;
+#endif
+
   // [refwrap], reference_wrapper
   using std::reference_wrapper;
 

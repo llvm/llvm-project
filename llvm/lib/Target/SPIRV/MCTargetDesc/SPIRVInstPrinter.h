@@ -10,26 +10,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPIRV_INSTPRINTER_SPIRVINSTPRINTER_H
-#define LLVM_LIB_TARGET_SPIRV_INSTPRINTER_SPIRVINSTPRINTER_H
+#ifndef LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVINSTPRINTER_H
+#define LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVINSTPRINTER_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCRegister.h"
 
 namespace llvm {
 class SPIRVInstPrinter : public MCInstPrinter {
 private:
-  SmallDenseMap<unsigned, SPIRV::InstructionSet::InstructionSet> ExtInstSetIDs;
+  SmallDenseMap<MCRegister, SPIRV::InstructionSet::InstructionSet> ExtInstSetIDs;
+  SmallDenseMap<MCRegister, unsigned> IntTypeBitwidths;
   void recordOpExtInstImport(const MCInst *MI);
+  void recordIntType(const MCInst *MI);
 
 public:
   using MCInstPrinter::MCInstPrinter;
 
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &OS) override;
-  void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O,
-                    const char *Modifier = nullptr);
+  void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 
   void printStringImm(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 
@@ -54,4 +56,4 @@ public:
 };
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_SPIRV_INSTPRINTER_SPIRVINSTPRINTER_H
+#endif // LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVINSTPRINTER_H

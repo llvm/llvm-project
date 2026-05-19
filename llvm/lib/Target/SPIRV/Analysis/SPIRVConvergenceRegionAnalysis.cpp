@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVConvergenceRegionAnalysis.h"
+#include "SPIRV.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -20,15 +21,12 @@
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include <optional>
 #include <queue>
+#include <unordered_set>
 
 #define DEBUG_TYPE "spirv-convergence-region-analysis"
 
 using namespace llvm;
 using namespace SPIRV;
-
-namespace llvm {
-void initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PassRegistry &);
-} // namespace llvm
 
 INITIALIZE_PASS_BEGIN(SPIRVConvergenceRegionAnalysisWrapperPass,
                       "convergence-region",
@@ -272,8 +270,7 @@ public:
       ToProcess.pop();
 
       auto CT = getConvergenceToken(L->getHeader());
-      SmallPtrSet<BasicBlock *, 8> RegionBlocks(L->block_begin(),
-                                                L->block_end());
+      SmallPtrSet<BasicBlock *, 8> RegionBlocks(llvm::from_range, L->blocks());
       SmallVector<BasicBlock *> LoopExits;
       L->getExitingBlocks(LoopExits);
       if (CT.has_value()) {

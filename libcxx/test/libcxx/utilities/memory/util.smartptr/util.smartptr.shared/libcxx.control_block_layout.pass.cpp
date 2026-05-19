@@ -30,7 +30,7 @@
 
 struct value_init_tag {};
 
-template <class T, int _Idx, bool CanBeEmptyBase = std::is_empty<T>::value && !std::__libcpp_is_final<T>::value>
+template <class T, int _Idx, bool CanBeEmptyBase = std::is_empty<T>::value && !std::__is_final_v<T>>
 struct compressed_pair_elem {
   explicit compressed_pair_elem(value_init_tag) : value_() {}
 
@@ -123,7 +123,9 @@ void test() {
 
   // Make sure both types have the same triviality (that has ABI impact since
   // it determined how objects are passed). Both should be non-trivial.
-  static_assert(std::is_trivial<New>::value == std::is_trivial<Old>::value, "");
+  static_assert(std::is_trivially_copyable<New>::value == std::is_trivially_copyable<Old>::value, "");
+  static_assert(
+      std::is_trivially_default_constructible<New>::value == std::is_trivially_default_constructible<Old>::value, "");
 }
 
 // Object types to store in the control block

@@ -26,7 +26,8 @@ using namespace llvm;
 
 class TestFrontendAction : public ASTFrontendAction {
 public:
-  TestFrontendAction(ExternalASTSource *Source) : Source(Source) {}
+  TestFrontendAction(IntrusiveRefCntPtr<ExternalASTSource> Source)
+      : Source(std::move(Source)) {}
 
 private:
   void ExecuteAction() override {
@@ -44,23 +45,26 @@ private:
   IntrusiveRefCntPtr<ExternalASTSource> Source;
 };
 
-bool testExternalASTSource(ExternalASTSource *Source,
+bool testExternalASTSource(llvm::IntrusiveRefCntPtr<ExternalASTSource> Source,
                            StringRef FileContents) {
-  CompilerInstance Compiler;
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   auto Invocation = std::make_shared<CompilerInvocation>();
   Invocation->getPreprocessorOpts().addRemappedFile(
       "test.cc", MemoryBuffer::getMemBuffer(FileContents).release());
   const char *Args[] = { "test.cc" };
-  CompilerInvocation::CreateFromArgs(*Invocation, Args,
-                                     Compiler.getDiagnostics());
-  Compiler.setInvocation(std::move(Invocation));
+
+  DiagnosticOptions InvocationDiagOpts;
+  auto InvocationDiags = CompilerInstance::createDiagnostics(
+      *llvm::vfs::getRealFileSystem(), InvocationDiagOpts);
+  CompilerInvocation::CreateFromArgs(*Invocation, Args, *InvocationDiags);
+
+  CompilerInstance Compiler(std::move(Invocation));
+  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics();
 
   TestFrontendAction Action(Source);
   return Compiler.ExecuteAction(Action);
 }
-
 
 // Ensure that a failed name lookup into an external source only occurs once.
 TEST(ExternalASTSourceTest, FailedLookupOccursOnce) {
@@ -79,6 +83,7 @@ TEST(ExternalASTSourceTest, FailedLookupOccursOnce) {
   };
 
   unsigned Calls = 0;
-  ASSERT_TRUE(testExternalASTSource(new TestSource(Calls), "int j, k = j;"));
+  ASSERT_TRUE(testExternalASTSource(
+      llvm::makeIntrusiveRefCnt<TestSource>(Calls), "int j, k = j;"));
   EXPECT_EQ(1u, Calls);
 }

@@ -16,7 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CaptureTracking.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -56,49 +55,34 @@ CaptureTracker::~CaptureTracker() = default;
 
 bool CaptureTracker::shouldExplore(const Use *U) { return true; }
 
-bool CaptureTracker::isDereferenceableOrNull(Value *O, const DataLayout &DL) {
-  // We want comparisons to null pointers to not be considered capturing,
-  // but need to guard against cases like gep(p, -ptrtoint(p2)) == null,
-  // which are equivalent to p == p2 and would capture the pointer.
-  //
-  // A dereferenceable pointer is a case where this is known to be safe,
-  // because the pointer resulting from such a construction would not be
-  // dereferenceable.
-  //
-  // It is not sufficient to check for inbounds GEP here, because GEP with
-  // zero offset is always inbounds.
-  bool CanBeNull, CanBeFreed;
-  return O->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
-}
-
 namespace {
 struct SimpleCaptureTracker : public CaptureTracker {
-  explicit SimpleCaptureTracker(bool ReturnCaptures, CaptureComponents Mask,
+  explicit SimpleCaptureTracker(CaptureComponents Mask,
                                 function_ref<bool(CaptureComponents)> StopFn)
-      : ReturnCaptures(ReturnCaptures), Mask(Mask), StopFn(StopFn) {}
+      : Mask(Mask), StopFn(StopFn) {}
 
   void tooManyUses() override {
     LLVM_DEBUG(dbgs() << "Captured due to too many uses\n");
     CC = Mask;
+    CCWithRet = Mask;
   }
 
   Action captured(const Use *U, UseCaptureInfo CI) override {
-    if (isa<ReturnInst>(U->getUser()) && !ReturnCaptures)
-      return ContinueIgnoringReturn;
-
     if (capturesNothing(CI.UseCC & Mask))
       return Continue;
 
     LLVM_DEBUG(dbgs() << "Captured by: " << *U->getUser() << "\n");
-    CC |= CI.UseCC & Mask;
+    CCWithRet |= CI.UseCC & Mask;
+    if (!isa<ReturnInst>(U->getUser()))
+      CC |= CI.UseCC & Mask;
     return StopFn(CC) ? Stop : Continue;
   }
 
-  bool ReturnCaptures;
   CaptureComponents Mask;
   function_ref<bool(CaptureComponents)> StopFn;
 
   CaptureComponents CC = CaptureComponents::None;
+  CaptureComponents CCWithRet = CaptureComponents::None;
 };
 
 /// Only find pointer captures which happen before the given instruction. Uses
@@ -171,26 +155,26 @@ struct CapturesBefore : public CaptureTracker {
 // escape are not in a cycle.
 struct EarliestCaptures : public CaptureTracker {
 
-  EarliestCaptures(bool ReturnCaptures, Function &F, const DominatorTree &DT,
-                   CaptureComponents Mask)
-      : DT(DT), ReturnCaptures(ReturnCaptures), F(F), Mask(Mask) {}
+  EarliestCaptures(Function &F, const DominatorTree &DT, CaptureComponents Mask)
+      : DT(DT), F(F), Mask(Mask) {}
 
   void tooManyUses() override {
     CC = Mask;
+    CCWithRet = Mask;
     EarliestCapture = &*F.getEntryBlock().begin();
   }
 
   Action captured(const Use *U, UseCaptureInfo CI) override {
     Instruction *I = cast<Instruction>(U->getUser());
-    if (isa<ReturnInst>(I) && !ReturnCaptures)
-      return ContinueIgnoringReturn;
-
     if (capturesAnything(CI.UseCC & Mask)) {
-      if (!EarliestCapture)
-        EarliestCapture = I;
-      else
-        EarliestCapture = DT.findNearestCommonDominator(EarliestCapture, I);
-      CC |= CI.UseCC & Mask;
+      CCWithRet |= CI.UseCC & Mask;
+      if (!isa<ReturnInst>(I)) {
+        if (!EarliestCapture)
+          EarliestCapture = I;
+        else
+          EarliestCapture = DT.findNearestCommonDominator(EarliestCapture, I);
+        CC |= CI.UseCC & Mask;
+      }
     }
 
     // Continue analysis, as we need to see all potential captures.
@@ -198,24 +182,25 @@ struct EarliestCaptures : public CaptureTracker {
   }
 
   const DominatorTree &DT;
-  bool ReturnCaptures;
   Function &F;
   CaptureComponents Mask;
 
   Instruction *EarliestCapture = nullptr;
   CaptureComponents CC = CaptureComponents::None;
+  CaptureComponents CCWithRet = CaptureComponents::None;
 };
 } // namespace
 
-CaptureComponents llvm::PointerMayBeCaptured(
-    const Value *V, bool ReturnCaptures, CaptureComponents Mask,
-    function_ref<bool(CaptureComponents)> StopFn, unsigned MaxUsesToExplore) {
+CaptureResult
+llvm::PointerMayBeCaptured(const Value *V, CaptureComponents Mask,
+                           function_ref<bool(CaptureComponents)> StopFn,
+                           unsigned MaxUsesToExplore) {
   assert(!isa<GlobalValue>(V) &&
          "It doesn't make sense to ask whether a global is captured.");
 
   LLVM_DEBUG(dbgs() << "Captured?: " << *V << " = ");
 
-  SimpleCaptureTracker SCT(ReturnCaptures, Mask, StopFn);
+  SimpleCaptureTracker SCT(Mask, StopFn);
   PointerMayBeCaptured(V, &SCT, MaxUsesToExplore);
   if (capturesAnything(SCT.CC))
     ++NumCaptured;
@@ -223,14 +208,14 @@ CaptureComponents llvm::PointerMayBeCaptured(
     ++NumNotCaptured;
     LLVM_DEBUG(dbgs() << "not captured\n");
   }
-  return SCT.CC;
+  return {SCT.CC, SCT.CCWithRet};
 }
 
 bool llvm::PointerMayBeCaptured(const Value *V, bool ReturnCaptures,
                                 unsigned MaxUsesToExplore) {
-  return capturesAnything(
-      PointerMayBeCaptured(V, ReturnCaptures, CaptureComponents::All,
-                           capturesAnything, MaxUsesToExplore));
+  CaptureResult Res = PointerMayBeCaptured(V, CaptureComponents::All,
+                                           capturesAnything, MaxUsesToExplore);
+  return capturesAnything(ReturnCaptures ? Res.WithRet : Res.WithoutRet);
 }
 
 CaptureComponents llvm::PointerMayBeCapturedBefore(
@@ -241,9 +226,10 @@ CaptureComponents llvm::PointerMayBeCapturedBefore(
   assert(!isa<GlobalValue>(V) &&
          "It doesn't make sense to ask whether a global is captured.");
 
-  if (!DT)
-    return PointerMayBeCaptured(V, ReturnCaptures, Mask, StopFn,
-                                MaxUsesToExplore);
+  if (!DT) {
+    CaptureResult Res = PointerMayBeCaptured(V, Mask, StopFn, MaxUsesToExplore);
+    return ReturnCaptures ? Res.WithRet : Res.WithoutRet;
+  }
 
   CapturesBefore CB(ReturnCaptures, I, DT, IncludeI, LI, Mask, StopFn);
   PointerMayBeCaptured(V, &CB, MaxUsesToExplore);
@@ -264,26 +250,22 @@ bool llvm::PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
       capturesAnything, LI, MaxUsesToExplore));
 }
 
-Instruction *llvm::FindEarliestCapture(const Value *V, Function &F,
-                                       bool ReturnCaptures,
-                                       const DominatorTree &DT,
-                                       CaptureComponents Mask,
-                                       unsigned MaxUsesToExplore) {
+std::pair<Instruction *, CaptureResult>
+llvm::FindEarliestCapture(const Value *V, Function &F, const DominatorTree &DT,
+                          CaptureComponents Mask, unsigned MaxUsesToExplore) {
   assert(!isa<GlobalValue>(V) &&
          "It doesn't make sense to ask whether a global is captured.");
 
-  EarliestCaptures CB(ReturnCaptures, F, DT, Mask);
+  EarliestCaptures CB(F, DT, Mask);
   PointerMayBeCaptured(V, &CB, MaxUsesToExplore);
   if (capturesAnything(CB.CC))
     ++NumCapturedBefore;
   else
     ++NumNotCapturedBefore;
-  return CB.EarliestCapture;
+  return {CB.EarliestCapture, {CB.CC, CB.CCWithRet}};
 }
 
-UseCaptureInfo llvm::DetermineUseCaptureKind(
-    const Use &U, const Value *Base,
-    function_ref<bool(Value *, const DataLayout &)> IsDereferenceableOrNull) {
+UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
   Instruction *I = dyn_cast<Instruction>(U.getUser());
 
   // TODO: Investigate non-instruction uses.
@@ -294,19 +276,13 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(
   case Instruction::Call:
   case Instruction::Invoke: {
     auto *Call = cast<CallBase>(I);
-    // Not captured if the callee is readonly, doesn't return a copy through
-    // its return value and doesn't unwind or diverge (a readonly function can
-    // leak bits by throwing an exception or not depending on the input value).
-    if (Call->onlyReadsMemory() && Call->doesNotThrow() && Call->willReturn() &&
-        Call->getType()->isVoidTy())
-      return CaptureComponents::None;
-
     // The pointer is not captured if returned pointer is not captured.
     // NOTE: CaptureTracking users should not assume that only functions
     // marked with nocapture do not capture. This means that places like
     // getUnderlyingObject in ValueTracking or DecomposeGEPExpression
     // in BasicAA also need to know about this property.
-    if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(Call, true))
+    if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
+            Call, /*MustPreserveOffset=*/true))
       return UseCaptureInfo::passthrough();
 
     // Volatile operations effectively capture the memory location that they
@@ -324,10 +300,17 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(
     if (Call->isCallee(&U))
       return CaptureComponents::None;
 
-    // Not captured if only passed via 'nocapture' arguments.
     assert(Call->isDataOperand(&U) && "Non-callee must be data operand");
     CaptureInfo CI = Call->getCaptureInfo(Call->getDataOperandNo(&U));
-    return UseCaptureInfo(CI.getOtherComponents(), CI.getRetComponents());
+
+    // If the call is readonly and doesn't return a value, only the address
+    // may be captured.
+    CaptureComponents Mask = CaptureComponents::All;
+    if (Call->onlyReadsMemory() && Call->getType()->isVoidTy())
+      Mask = CaptureComponents::Address;
+
+    return UseCaptureInfo(CI.getOtherComponents() & Mask,
+                          CI.getRetComponents());
   }
   case Instruction::Load:
     // Volatile loads make the address observable.
@@ -339,8 +322,12 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(
     return CaptureComponents::None;
   case Instruction::Store:
     // Stored the pointer - conservatively assume it may be captured.
+    if (U.getOperandNo() == 0)
+      return MDNode::toCaptureComponents(
+          I->getMetadata(LLVMContext::MD_captures));
+
     // Volatile stores make the address observable.
-    if (U.getOperandNo() == 0 || cast<StoreInst>(I)->isVolatile())
+    if (cast<StoreInst>(I)->isVolatile())
       return CaptureComponents::All;
     return CaptureComponents::None;
   case Instruction::AtomicRMW: {
@@ -377,6 +364,12 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(
   case Instruction::AddrSpaceCast:
     // The original value is not captured via this if the new value isn't.
     return UseCaptureInfo::passthrough();
+  case Instruction::PtrToAddr:
+    // We treat ptrtoaddr as a location-independent capture of the address even
+    // if it is ultimately not used. Continuing recursive analysis after
+    // ptrtoaddr would be possible, but we'd need logic to do that correctly,
+    // which is not the same as the current pointer following logic.
+    return CaptureComponents::Address;
   case Instruction::ICmp: {
     unsigned Idx = U.getOperandNo();
     unsigned OtherIdx = 1 - Idx;
@@ -391,15 +384,6 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(
       if (U->getType()->getPointerAddressSpace() == 0)
         if (isNoAliasCall(U.get()->stripPointerCasts()))
           return CaptureComponents::None;
-      if (!I->getFunction()->nullPointerIsDefined()) {
-        auto *O = I->getOperand(Idx)->stripPointerCastsSameRepresentation();
-        // Comparing a dereferenceable_or_null pointer against null cannot
-        // lead to pointer escapes, because if it is not null it must be a
-        // valid (in-bounds) pointer.
-        const DataLayout &DL = I->getDataLayout();
-        if (IsDereferenceableOrNull && IsDereferenceableOrNull(O, DL))
-          return CaptureComponents::None;
-      }
 
       // Check whether this is a comparison of the base pointer against
       // null.
@@ -426,7 +410,7 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
 
   SmallVector<const Use *, 20> Worklist;
   Worklist.reserve(getDefaultMaxUsesToExploreForCaptureTracking());
-  SmallSet<const Use *, 20> Visited;
+  SmallPtrSet<const Use *, 20> Visited;
 
   auto AddUses = [&](const Value *V) {
     for (const Use &U : V->uses()) {
@@ -447,12 +431,9 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
   if (!AddUses(V))
     return;
 
-  auto IsDereferenceableOrNull = [Tracker](Value *V, const DataLayout &DL) {
-    return Tracker->isDereferenceableOrNull(V, DL);
-  };
   while (!Worklist.empty()) {
     const Use *U = Worklist.pop_back_val();
-    UseCaptureInfo CI = DetermineUseCaptureKind(*U, V, IsDereferenceableOrNull);
+    UseCaptureInfo CI = DetermineUseCaptureKind(*U, V);
     if (capturesAnything(CI.UseCC)) {
       switch (Tracker->captured(U, CI)) {
       case CaptureTracker::Stop:
@@ -475,28 +456,4 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
   }
 
   // All uses examined.
-}
-
-bool llvm::isNonEscapingLocalObject(
-    const Value *V, SmallDenseMap<const Value *, bool, 8> *IsCapturedCache) {
-  SmallDenseMap<const Value *, bool, 8>::iterator CacheIt;
-  if (IsCapturedCache) {
-    bool Inserted;
-    std::tie(CacheIt, Inserted) = IsCapturedCache->insert({V, false});
-    if (!Inserted)
-      // Found cached result, return it!
-      return CacheIt->second;
-  }
-
-  // If this is an identified function-local object, check to see if it escapes.
-  // We only care about provenance here, not address capture.
-  if (isIdentifiedFunctionLocal(V)) {
-    bool Ret = !capturesAnything(PointerMayBeCaptured(
-        V, /*ReturnCaptures=*/false, CaptureComponents::Provenance));
-    if (IsCapturedCache)
-      CacheIt->second = Ret;
-    return Ret;
-  }
-
-  return false;
 }

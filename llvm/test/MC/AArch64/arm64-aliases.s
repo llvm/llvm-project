@@ -512,6 +512,20 @@ foo:
   sys #4, c8, c3, #6
 ; CHECK: tlbi vmalls12e1is
 
+; Check that all 5 register bits are set (0x31):
+;    (from Arm ARM regarding TLBI instructions without operands)
+;    "Rt should be encoded as 0b11111. If the Rt field is not set to 0b11111,
+;     it is CONSTRAINED UNPREDICTABLE whether:
+;       * The instruction is UNDEFINED.
+;       * The instruction behaves as if the Rt field is set to 0b11111."
+;
+; Do not disassemble this to `tlbi` but a SYS alias instead
+;
+  sys #4, c8, c7, #6, x30
+; CHECK: sys #0x4, c8, c7, #0x6, x30
+  sys #4, c8, c7, #6, x31
+; CHECK: tlbi vmalls12e1
+
   ic ialluis
 ; CHECK: ic ialluis                 ; encoding: [0x1f,0x71,0x08,0xd5]
   ic iallu

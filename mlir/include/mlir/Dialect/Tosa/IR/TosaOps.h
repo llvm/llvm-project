@@ -44,10 +44,14 @@ class PatternRewriter;
 
 namespace tosa {
 
-ParseResult parseTypeOrAttr(OpAsmParser &parser, TypeAttr &typeAttr,
-                            Attribute &attr);
-void printTypeOrAttr(OpAsmPrinter &p, Operation *op, TypeAttr type,
-                     Attribute attr);
+ParseResult parseVariableOpTypeOrInitialValue(OpAsmParser &parser,
+                                              DenseElementsAttr &varShapeAttr,
+                                              TypeAttr &typeAttr,
+                                              Attribute &initialValueAttr);
+void printVariableOpTypeOrInitialValue(OpAsmPrinter &p, Operation *op,
+                                       DenseElementsAttr varShapeAttr,
+                                       TypeAttr typeAttr,
+                                       Attribute initialValueAttr);
 
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.h.inc"
 
@@ -120,15 +124,9 @@ public:
   }
 };
 
-LogicalResult verifyTosaShapeOperator(Operation *op);
 /// This class indicates that op operates on tosa shape types
 template <typename ConcreteType>
-class TosaShapeOperator : public TraitBase<ConcreteType, TosaShapeOperator> {
-public:
-  static LogicalResult verifyTrait(Operation *op) {
-    return verifyTosaShapeOperator(op);
-  }
-};
+class TosaShapeOperator : public TraitBase<ConcreteType, TosaShapeOperator> {};
 
 LogicalResult verifyTosaShapeOperatorWithSameRanks(Operation *op);
 /// This class indicates that op operates on tosa shape types
@@ -147,6 +145,12 @@ public:
 namespace tosa {
 
 bool isa_tosa_shape_type(mlir::Type t);
+
+/// Represents a dimension in the shape of a tensor that can be inferred
+/// based on the other provided dimensions. For example, in a reshape
+/// operation, -1 can be used to indicate a size that is the remainder
+/// of the other dimensions.
+constexpr int64_t kInferableDimSize = -1;
 
 } // namespace tosa
 
@@ -171,6 +175,12 @@ std::optional<Value> createZeroPointTensor(OpBuilder &builder, Location loc,
 // Create a pad-const const tensor with value of `val` of required data-type
 Value createPadConstTensor(OpBuilder &builder, Location loc, Value src,
                            int32_t val = 0);
+
+// returns type of variable op
+RankedTensorType getVariableType(VariableOp variableOp);
+
+// Returns the bitwidth of a TOSA tensor element type
+unsigned getBitWidth(Type type);
 
 } // namespace tosa
 } // namespace mlir

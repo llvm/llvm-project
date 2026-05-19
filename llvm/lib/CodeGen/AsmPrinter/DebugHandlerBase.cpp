@@ -105,6 +105,8 @@ DebugHandlerBase::~DebugHandlerBase() = default;
 void DebugHandlerBase::beginModule(Module *M) {
   if (M->debug_compile_units().empty())
     Asm = nullptr;
+  else
+    LScopes.initialize(*M);
 }
 
 // Each LexicalScope has first instruction and last instruction to mark
@@ -238,6 +240,8 @@ bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
           Encoding == dwarf::DW_ATE_complex_float ||
           Encoding == dwarf::DW_ATE_signed_fixed ||
           Encoding == dwarf::DW_ATE_unsigned_fixed ||
+          (Encoding >= dwarf::DW_ATE_lo_user &&
+           Encoding <= dwarf::DW_ATE_hi_user) ||
           (Ty->getTag() == dwarf::DW_TAG_unspecified_type &&
            Ty->getName() == "decltype(nullptr)")) &&
          "Unsupported encoding");
@@ -269,7 +273,7 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
 
   // Grab the lexical scopes for the function, if we don't have any of those
   // then we're not going to be able to do anything.
-  LScopes.initialize(*MF);
+  LScopes.scanFunction(*MF);
   if (LScopes.empty()) {
     beginFunctionImpl(MF);
     return;
@@ -365,8 +369,7 @@ void DebugHandlerBase::beginInstruction(const MachineInstr *MI) {
   CurMI = MI;
 
   // Insert labels where requested.
-  DenseMap<const MachineInstr *, MCSymbol *>::iterator I =
-      LabelsBeforeInsn.find(MI);
+  auto I = LabelsBeforeInsn.find(MI);
 
   // No label needed.
   if (I == LabelsBeforeInsn.end())
@@ -395,8 +398,7 @@ void DebugHandlerBase::endInstruction() {
     PrevInstBB = CurMI->getParent();
   }
 
-  DenseMap<const MachineInstr *, MCSymbol *>::iterator I =
-      LabelsAfterInsn.find(CurMI);
+  auto I = LabelsAfterInsn.find(CurMI);
 
   // No label needed or label already assigned.
   if (I == LabelsAfterInsn.end() || I->second) {

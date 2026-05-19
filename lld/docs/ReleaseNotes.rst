@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ===========================
 lld |release| Release Notes
 ===========================
@@ -25,22 +28,17 @@ Non-comprehensive list of changes in this release
 
 ELF Improvements
 ----------------
-* For AArch64, added support for ``-zgcs-report-dynamic``, enabling checks for
-  GNU GCS Attribute Flags in Dynamic Objects when GCS is enabled. Inherits value
-  from ``-zgcs-report`` (capped at ``warning`` level) unless user-defined,
-  ensuring compatibility with GNU ld linker.
 
-* The default Hexagon architecture version in ELF object files produced by
-  lld is changed to v68. This change is only effective when the version is
-  not provided in the command line by the user and cannot be inferred from
-  inputs.
-
-* ``--why-live=<glob>`` prints for each symbol matching ``<glob>`` a chain of
-  items that kept it live during garbage collection. This is inspired by the
-  Mach-O LLD feature of the same name.
-
-* Linker script ``OVERLAY`` descriptions now support virtual memory regions
-  (e.g. ``>region``) and ``NOCROSSREFS``.
+* Added ``--bp-compression-sort-section=<glob>[=<layout_priority>[=<match_priority>]]``,
+  replacing the old coarse ``--bp-compression-sort`` modes with a way to split
+  input sections into multiple compression groups, run balanced partitioning
+  independently per group, and leave out sections that are poor candidates for
+  BP.
+  ``layout_priority`` controls group placement order (lower value = placed
+  first, default 0). ``match_priority`` resolves conflicts when multiple globs
+  match the same section (lower value = higher priority; explicit priority
+  beats positional last-match-wins; default: positional). In ELF, the glob
+  matches input section names (e.g. ``.text.unlikely.code1``).
 
 Breaking changes
 ----------------
@@ -51,8 +49,16 @@ COFF Improvements
 MinGW Improvements
 ------------------
 
+* Added ``--push-state`` and ``--pop-state``, offering the same semantics as
+  when used with the ELF linker: The state of ``--Bstatic``/``--Bdynamic`` and
+  ``--whole-archive`` are pushed onto a stack and popped from it.
+
 MachO Improvements
 ------------------
+
+* ``--bp-compression-sort-section`` now accepts optional layout and match
+  priorities (same syntax as ELF). In Mach-O, the glob matches the
+  concatenated segment+section name (e.g. ``__TEXT__text``).
 
 WebAssembly Improvements
 ------------------------

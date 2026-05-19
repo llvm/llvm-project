@@ -1,12 +1,15 @@
 // REQUIRES: aarch64
 
 // RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
-// RUN: ld.lld %t.o -o %t.so -shared
+// RUN: ld.lld --xosegment %t.o -o %t.so -shared
 // RUN: llvm-readelf -l %t.so | FileCheck --implicit-check-not=LOAD %s
+
+// RUN: not ld.lld --execute-only --no-rosegment %t.o -shared -o /dev/null 2>&1 | FileCheck --check-prefix=ERR-NOROSEGMENT %s
+// ERR-NOROSEGMENT: error: --execute-only and --no-rosegment cannot be used together
 
 // RUN: echo ".section .foo,\"ax\"; ret" > %t.s
 // RUN: llvm-mc -filetype=obj -triple=aarch64 %t.s -o %t2.o
-// RUN: ld.lld %t.o %t2.o -o %t.so -shared
+// RUN: ld.lld --xosegment %t.o %t2.o -o %t.so -shared
 // RUN: llvm-readelf -l %t.so | FileCheck --check-prefix=DIFF --implicit-check-not=LOAD %s
 
 // CHECK:      LOAD           0x000000 0x0000000000000000 0x0000000000000000 0x000245 0x000245 R   0x10000

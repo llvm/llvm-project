@@ -140,5 +140,67 @@ int main(int, char**)
     test<std::uintptr_t>();
     test<std::size_t>();
 
+    // _BitInt tests. Width tiers follow C23 7.18.2.5.
+    // bit_ceil uses numeric_limits::digits, so only byte-aligned widths.
+#if TEST_HAS_EXTENSION(bit_int)
+    {
+      using T32 = unsigned _BitInt(32);
+      using T64 = unsigned _BitInt(64);
+
+      assert(std::bit_ceil(T32(0)) == T32(1));
+      assert(std::bit_ceil(T32(1)) == T32(1));
+      assert(std::bit_ceil(T32(2)) == T32(2));
+      assert(std::bit_ceil(T32(3)) == T32(4));
+      assert(std::bit_ceil(T32(4)) == T32(4));
+      assert(std::bit_ceil(T32(5)) == T32(8));
+      assert(std::bit_ceil(T32(7)) == T32(8));
+      assert(std::bit_ceil(T32(8)) == T32(8));
+      assert(std::bit_ceil(T32(9)) == T32(16));
+      assert(std::bit_ceil(T32(60)) == T32(64));
+      assert(std::bit_ceil(T32(64)) == T32(64));
+      assert(std::bit_ceil(T32(65)) == T32(128));
+      assert(std::bit_ceil(T32(128)) == T32(128));
+      assert(std::bit_ceil(T32(129)) == T32(256));
+      assert(std::bit_ceil(T64(0)) == T64(1));
+      assert(std::bit_ceil(T64(1)) == T64(1));
+      assert(std::bit_ceil(T64(3)) == T64(4));
+      assert(std::bit_ceil(T64(65)) == T64(128));
+      assert(std::bit_ceil(T64(T64(1) << 62)) == T64(1) << 62);
+      assert(std::bit_ceil((T64(1) << 62) + 1) == T64(1) << 63);
+    }
+#  if __BITINT_MAXWIDTH__ >= 128
+    {
+      using T128 = unsigned _BitInt(128);
+      assert(std::bit_ceil(T128(0)) == T128(1));
+      assert(std::bit_ceil(T128(1)) == T128(1));
+      assert(std::bit_ceil(T128(3)) == T128(4));
+      // Boundary around 64-bit limb.
+      assert(std::bit_ceil(T128(1) << 64) == T128(1) << 64);
+      assert(std::bit_ceil((T128(1) << 64) + 1) == T128(1) << 65);
+      // Near the top of the width.
+      assert(std::bit_ceil(T128(1) << 126) == T128(1) << 126);
+      assert(std::bit_ceil((T128(1) << 126) + 1) == T128(1) << 127);
+    }
+#  endif
+#  if __BITINT_MAXWIDTH__ >= 256
+    {
+      using T256 = unsigned _BitInt(256);
+      assert(std::bit_ceil(T256(0)) == T256(1));
+      assert(std::bit_ceil(T256(1)) == T256(1));
+      assert(std::bit_ceil(T256(2)) == T256(2));
+      assert(std::bit_ceil(T256(3)) == T256(4));
+      assert(std::bit_ceil(T256(7)) == T256(8));
+      assert(std::bit_ceil(T256(127)) == T256(128));
+      assert(std::bit_ceil(T256(128)) == T256(128));
+      assert(std::bit_ceil(T256(129)) == T256(256));
+      // Large value just below a power of two.
+      assert(std::bit_ceil(T256(1) << 128) == T256(1) << 128);
+      assert(std::bit_ceil((T256(1) << 128) + 1) == T256(1) << 129);
+      assert(std::bit_ceil(T256(1) << 200) == T256(1) << 200);
+      assert(std::bit_ceil((T256(1) << 200) + 1) == T256(1) << 201);
+    }
+#  endif
+#endif // TEST_HAS_EXTENSION(bit_int)
+
     return 0;
 }

@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -debug-info-kind=limited -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-target-device -o - | FileCheck %s
 // RUN: %clang_cc1 -debug-info-kind=limited -verify -fopenmp -x c++ -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -o - | FileCheck %s
+// RUN: %clang_cc1 -debug-info-kind=limited -verify -fopenmp -x c++ -triple spirv64 -fopenmp-targets=spirv64 -emit-llvm %s -fopenmp-is-target-device -o - | FileCheck %s
 // expected-no-diagnostics
 
 
@@ -29,7 +30,7 @@ void B::sbar() { A::sfoo(); }
 
 // CHECK-DAG: @x = hidden{{.*}} constant i32 0
 // CHECK-DAG: @y = protected{{.*}} i32 0
-// CHECK-DAG: define hidden void @_ZN1B4sbarEv()
-// CHECK-DAG: define linkonce_odr hidden void @_ZN1A4sfooEv()
-// CHECK-DAG: define hidden void @_ZN1B3barEv(
-// CHECK-DAG: define linkonce_odr hidden void @_ZN1A3fooEv(
+// CHECK-DAG: define hidden{{.*}} void @_ZN1B4sbarEv()
+// CHECK-DAG: define linkonce_odr hidden{{.*}} void @_ZN1A4sfooEv()
+// CHECK-DAG: define hidden{{.*}} void @_ZN1B3barEv(
+// CHECK-DAG: define linkonce_odr hidden{{.*}}void @_ZN1A3fooEv(

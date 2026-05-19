@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGEN_SCOREBOARDHAZARDRECOGNIZER_H
 #define LLVM_CODEGEN_SCOREBOARDHAZARDRECOGNIZER_H
 
+#include "llvm/ADT/bit.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include <cassert>
@@ -59,7 +60,7 @@ class ScoreboardHazardRecognizer : public ScheduleHazardRecognizer {
 
     InstrStage::FuncUnits& operator[](size_t idx) const {
       // Depth is expected to be a power-of-2.
-      assert(Depth && !(Depth & (Depth - 1)) &&
+      assert(llvm::has_single_bit(Depth) &&
              "Scoreboard was not initialized properly!");
 
       return Data[(Head + idx) & (Depth-1)];

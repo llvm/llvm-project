@@ -13,19 +13,19 @@
 ; CHECK-NEXT:        14:      blr
 
 ; CHECK-LABEL: <.foo>:
-; CHECK:             5c:      	b 0x64 <L0>
-; CHECK-NEXT:  <L2>:
-; CHECK-NEXT:        60:      	bf	8, 0x84 <L1>
+; CHECK:             5c:      	b 0x64 <L1>
 ; CHECK-NEXT:  <L0>:
+; CHECK-NEXT:        60:      	bf	8, 0x84 <L2>
+; CHECK-NEXT:  <L1>:
 ; CHECK-NEXT:        64:      	bl 0x0 <.internal>
 ; CHECK-NEXT:        68:      	cmplwi	3, 11
-; CHECK-NEXT:        6c:      	bt	0, 0x60 <L2>
+; CHECK-NEXT:        6c:      	bt	0, 0x60 <L0>
 ; CHECK-NEXT:        70:        mr      31, 3
 ; CHECK-NEXT:        74:      	bl 0x0 <.extern>
 ; CHECK-NEXT:        78:      	nop
 ; CHECK-NEXT:        7c:        mr      3, 31
-; CHECK-NEXT:        80:      	b 0x60 <L2>
-; CHECK-NEXT:  <L1>:
+; CHECK-NEXT:        80:      	b 0x60 <L0>
+; CHECK-NEXT:  <L2>:
 ; CHECK-NEXT:        84:      	lwz 31, 60(1)
 
 define internal i32 @internal(i32 %a) {
