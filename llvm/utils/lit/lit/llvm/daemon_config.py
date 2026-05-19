@@ -58,7 +58,7 @@ def use_daemon_tool(
     be the string provided via that parameter.
     """
 
-    # Find the absolute path to the executable in the tool directory. executable = lit.util.which(daemon_tool, tool_dir)
+    # Find the absolute path to the executable in the tool directory.
     executable = lit.util.which(tool_name, tool_dir)
     if not executable:
         lit_config.warning(
