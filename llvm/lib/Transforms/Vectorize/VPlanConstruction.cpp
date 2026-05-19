@@ -1428,16 +1428,6 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
   addBypassBranch(Plan, CheckBlockVPBB, CondVPV, AddBranchWeights);
 }
 
-/// Return an insert point in \p EntryVPBB after existing VPIRPhi,
-/// VPIRInstruction and VPExpandSCEVRecipe recipes.
-static VPBasicBlock::iterator getExpandSCEVInsertPt(VPBasicBlock *EntryVPBB) {
-  auto InsertPt = EntryVPBB->begin();
-  while (InsertPt != EntryVPBB->end() &&
-         isa<VPExpandSCEVRecipe, VPIRPhi, VPIRInstruction>(&*InsertPt))
-    ++InsertPt;
-  return InsertPt;
-}
-
 void VPlanTransforms::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
@@ -1469,10 +1459,7 @@ void VPlanTransforms::addMinimumIterationCheck(
     return SE.getUMaxExpr(MinProfitableTripCountSCEV, VFxUF);
   };
 
-  VPBasicBlock *EntryVPBB = Plan.getEntry();
-  // Place compare and branch in CheckBlock if given, ExpandSCEVs in Entry.
-  VPBasicBlock *CheckVPBB = CheckBlock ? CheckBlock : EntryVPBB;
-  VPBuilder Builder(CheckVPBB);
+  VPBuilder Builder(CheckBlock);
   VPValue *TripCountCheck = Plan.getFalse();
   const SCEV *Step = GetMinTripCount();
   // TripCountCheck = false, folding tail implies positive vector trip
@@ -1490,9 +1477,11 @@ void VPlanTransforms::addMinimumIterationCheck(
                                     TripCount, Step)) {
       // Generate the minimum iteration check only if we cannot prove the
       // check is known to be true, or known to be false.
-      // ExpandSCEV must be placed in Entry.
-      VPBuilder SCEVBuilder(EntryVPBB, getExpandSCEVInsertPt(EntryVPBB));
-      VPValue *MinTripCountVPV = SCEVBuilder.createExpandSCEV(Step);
+      // // Try to expand SCEVs to VPInstructions in CheckBlock, or to
+      // VPExpandSCEV in Entry failing that.
+      VPValue *MinTripCountVPV = Builder.expandSCEV(Step, DL);
+      if (!MinTripCountVPV)
+        MinTripCountVPV = VPBuilder(Plan.getEntry()).createExpandSCEV(Step);
       TripCountCheck = Builder.createICmp(
           CmpPred, TripCountVPV, MinTripCountVPV, DL, "min.iters.check");
     } // else step known to be < trip count, use TripCountCheck preset to false.

@@ -34,8 +34,10 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "CIRGenFunctionInfo.h"
 #include "TargetInfo.h"
@@ -779,7 +781,47 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
   const auto *tc = fd ? fd->getAttr<TargetClonesAttr>() : nullptr;
   bool addedAttr = false;
   if (td || tv || sd || tc) {
-    assert(!cir::MissingFeatures::opFuncMultiVersioning());
+    llvm::StringMap<bool> featureMap;
+    astContext.getFunctionFeatureMap(featureMap, gd);
+
+    // Now add the target-cpu and target-features to the function.
+    // While we populated the feature map above, we still need to
+    // get and parse the target/target_clones attribute so we can
+    // get the cpu for the function.
+    llvm::StringRef featureStr = td ? td->getFeaturesStr() : llvm::StringRef();
+    if (tc && (getTriple().isOSAIX() || getTriple().isX86()))
+      featureStr = tc->getFeatureStr(gd.getMultiVersionIndex());
+    if (!featureStr.empty()) {
+      clang::ParsedTargetAttr parsedAttr =
+          getTarget().parseTargetAttr(featureStr);
+      if (!parsedAttr.CPU.empty() &&
+          getTarget().isValidCPUName(parsedAttr.CPU)) {
+        targetCPU = parsedAttr.CPU;
+        tuneCPU = ""; // Clear the tune CPU.
+      }
+      if (!parsedAttr.Tune.empty() &&
+          getTarget().isValidCPUName(parsedAttr.Tune))
+        tuneCPU = parsedAttr.Tune;
+    }
+
+    if (sd) {
+      // Apply the given CPU name as the 'tune-cpu' so that the optimizer can
+      // favor this processor.
+      tuneCPU = sd->getCPUName(gd.getMultiVersionIndex())->getName();
+    }
+
+    // For AMDGPU, only emit delta features (features that differ from the
+    // target CPU's defaults). Other targets might want to follow a similar
+    // pattern.
+    if (getTarget().getTriple().isAMDGPU()) {
+      features = getFeatureDeltaFromDefault(*this, targetCPU, featureMap);
+    } else {
+      // Produce the canonical string for this set of features.
+      features.reserve(features.size() + featureMap.size());
+      for (const auto &entry : featureMap)
+        features.push_back((entry.getValue() ? "+" : "-") +
+                           entry.getKey().str());
+    }
   } else {
     // Just add the existing target cpu and target features to the function.
     if (setTargetFeatures && getTarget().getTriple().isAMDGPU()) {
