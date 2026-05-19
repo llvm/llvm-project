@@ -773,7 +773,7 @@ Extract a vector of destination type from the source vector. The index operand
 represents the starting index from which a subvector is extracted from
 the source vector.
 
-The index must be a constant multiple of the source vector's minimum vector
+The index must be a constant multiple of the destination vector's minimum vector
 length. If the source vector is a scalable vector, then the index is first
 scaled by the runtime scaling factor. The indices extracted from the source
 vector must be valid indices of that vector. If this condition cannot be
