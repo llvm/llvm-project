@@ -227,17 +227,6 @@ tools = [
         extra_args=["-fc1"] + flang_driver_search_args + flang_extra_search_args,
         unresolved="fatal",
     ),
-    # Variants that do not implicitly add intrinsic search paths
-    ToolSubst(
-        "%bbc_bare",
-        command=FindTool("bbc"),
-        unresolved="fatal",
-    ),
-    ToolSubst(
-        "%flang_bare",
-        command=flang_exe,
-        unresolved="fatal",
-    ),
 ]
 
 # Flang has several unimplemented features. TODO messages are used to mark

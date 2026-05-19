@@ -608,6 +608,14 @@ int main(int argc, char **argv) {
 
   if (includeDirs.size() == 0) {
     includeDirs.push_back(".");
+    // Default Fortran modules should be installed in include/flang (a sibling
+    // to the bin) directory.
+    intrinsicIncludeDirs.push_back(
+        llvm::sys::path::parent_path(
+            llvm::sys::path::parent_path(
+                llvm::sys::fs::getMainExecutable(argv[0], nullptr)))
+            .str() +
+        "/include/flang");
   }
 
   Fortran::parser::Options options;

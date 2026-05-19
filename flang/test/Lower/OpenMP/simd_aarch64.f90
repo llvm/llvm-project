@@ -3,7 +3,6 @@
 ! REQUIRES: aarch64-registered-target
 
 ! Requires aarch64 iso_c_binding.mod which currently is only available if your host is also aarch64
-! FIXME: Make flang a proper cross-compiler
 ! REQUIRES: aarch64-host
 
 ! RUN: %flang_fc1 -triple aarch64-unknown-linux-gnu -emit-hlfir -fopenmp %s -o - | FileCheck  %s
