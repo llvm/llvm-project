@@ -40,8 +40,7 @@ class WritableBinaryStream;
 }
 
 PDBFileBuilder::PDBFileBuilder(BumpPtrAllocator &Allocator)
-    : Allocator(Allocator), Strings(std::make_unique<PDBStringTableBuilder>()),
-      InjectedSourceHashTraits(*Strings), InjectedSourceTable(2) {}
+    : Allocator(Allocator), InjectedSourceTable(2) {}
 
 PDBFileBuilder::~PDBFileBuilder() = default;
 
@@ -80,8 +79,10 @@ TpiStreamBuilder &PDBFileBuilder::getIpiBuilder() {
 }
 
 PDBStringTableBuilder &PDBFileBuilder::getStringTableBuilder() {
-  if (!Strings)
+  if (!Strings) {
     Strings = std::make_unique<PDBStringTableBuilder>();
+    InjectedSourceHashTraits = StringTableHashTraits(*Strings);
+  }
   return *Strings;
 }
 
