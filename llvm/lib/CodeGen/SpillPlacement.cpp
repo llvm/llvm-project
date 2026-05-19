@@ -147,7 +147,7 @@ struct SpillPlacement::Node {
     // Compute the weighted sum of inputs.
     BlockFrequency SumN = BiasN;
     BlockFrequency SumP = BiasP;
-    for (auto [BundleNo, Weight] : Links) {
+    for (auto &[BundleNo, Weight] : Links) {
       if (nodes[BundleNo].Value == -1)
         SumN += Weight;
       else if (nodes[BundleNo].Value == 1)
@@ -174,7 +174,7 @@ struct SpillPlacement::Node {
 
   void getDissentingNeighbors(SparseSet<unsigned> &List,
                               const Node nodes[]) const {
-    for (auto [BundleNo, _] : Links) {
+    for (auto &[BundleNo, _] : Links) {
       // Neighbors that already have the same value are not going to
       // change because of this node changing.
       if (Value != nodes[BundleNo].Value)
