@@ -1291,13 +1291,13 @@ gpu.module @xevm_module {
 // CHECK-LABEL: gpu.func @xegpu_dpas_mx
 // CHECK-DAG: %[[CST:.*]] = arith.constant dense<3.000000e+00> : vector<8x1xf8E4M3FN>
 // CHECK-DAG: %[[CST_0:.*]] = arith.constant dense<3.000000e+00> : vector<16x1xf8E4M3FN>
-// CHECK-DAG: %[[CST_1:.*]] = arith.constant dense<1.000000e+00> : vector<8x1xf8E8M0FNU>
+// CHECK-DAG: %[[CST_1:.*]] = arith.constant dense<1.000000e+00> : vector<1x2xf8E8M0FNU>
 // CHECK-DAG: %[[CST_2:.*]] = arith.constant dense<5.000000e-01> : vector<2x1xf8E8M0FNU>
 // CHECK-DAG: %[[SCALE_B:.*]] = vector.shape_cast %[[CST_2]] : vector<2x1xf8E8M0FNU> to vector<2xf8E8M0FNU>
-// CHECK-DAG: %[[SCALE_A:.*]] = vector.shape_cast %[[CST_1]] : vector<8x1xf8E8M0FNU> to vector<8xf8E8M0FNU>
+// CHECK-DAG: %[[SCALE_A:.*]] = vector.shape_cast %[[CST_1]] : vector<1x2xf8E8M0FNU> to vector<2xf8E8M0FNU>
 // CHECK-DAG: %[[B:.*]] = vector.shape_cast %[[CST_0]] : vector<16x1xf8E4M3FN> to vector<16xf8E4M3FN>
 // CHECK-DAG: %[[A:.*]] = vector.shape_cast %[[CST]] : vector<8x1xf8E4M3FN> to vector<8xf8E4M3FN>
-// CHECK: %[[RESULT:.*]] = xegpu.dpas_mx %[[A]], %[[B]] scale_a = %[[SCALE_A]] scale_b = %[[SCALE_B]] : (vector<8xf8E4M3FN>, vector<16xf8E4M3FN>, vector<8xf8E8M0FNU>, vector<2xf8E8M0FNU>) -> vector<8xf32>
+// CHECK: %[[RESULT:.*]] = xegpu.dpas_mx %[[A]], %[[B]] scale_a = %[[SCALE_A]] scale_b = %[[SCALE_B]] : (vector<8xf8E4M3FN>, vector<16xf8E4M3FN>, vector<2xf8E8M0FNU>, vector<2xf8E8M0FNU>) -> vector<8xf32>
 gpu.func @xegpu_dpas_mx(%arg0: !xegpu.mem_desc<8x8xf16>, %arg1: !xegpu.mem_desc<8x8xf16>) {
   %A = arith.constant dense<3.> : vector<8x16xf8E4M3FN>
   %B = arith.constant dense<3.> : vector<16x16xf8E4M3FN>
@@ -1308,7 +1308,7 @@ gpu.func @xegpu_dpas_mx(%arg0: !xegpu.mem_desc<8x8xf16>, %arg1: !xegpu.mem_desc<
   {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
     layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
     layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
-    layout_a_scale = #xegpu.layout<lane_layout = [1, 2], lane_data = [1, 1]>,
+    layout_a_scale = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>,
     layout_b_scale = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
   : (vector<8x16xf8E4M3FN>, vector<16x16xf8E4M3FN>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU>)  -> vector<8x16xf32>
 
