@@ -407,6 +407,8 @@ its enabled sub-projects. Nearly all of these variable names begin with
   llvm-as* at the root of your build directory.
 
 **LLVM_CCACHE_BUILD**:BOOL
+  Note: this option will be deprecated. Use ``CMAKE_C_COMPILER_LAUNCHER`` and
+  ``CMAKE_CXX_COMPILER_LAUNCHER`` instead.
   If enabled and the ``ccache`` program is available, then LLVM will be
   built using ``ccache`` to speed up rebuilds of LLVM and its components.
   Defaults to OFF.  The size and location of the cache maintained
