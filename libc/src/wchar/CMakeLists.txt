@@ -683,9 +683,14 @@ add_entrypoint_object(
   HDRS
     getwchar.h
   DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.src.stdio.stdin
     libc.src.__support.File.file
     libc.src.__support.libc_errno
+    libc.hdr.types.wint_t
+    libc.hdr.types.FILE
+    libc.hdr.wchar_macros
 )
 
 add_entrypoint_object(
