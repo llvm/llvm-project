@@ -2072,9 +2072,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     if (Subtarget->hasBF16())
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
                                 MVT::nxv8bf16, Legal);
+    setOperationAction(ISD::CLMUL, MVT::nxv2i64, Custom);
   }
-
-  setOperationAction(ISD::CLMUL, MVT::nxv2i64, Custom);
 
   // Handle non-aliasing elements mask
   if (Subtarget->hasSVE2() ||
@@ -8111,14 +8110,16 @@ SDValue AArch64TargetLowering::LowerCLMUL(SDValue Op, SelectionDAG &DAG) const {
   if (VT == MVT::nxv2i64) {
     // Lower to (.d pmullb(.s, .s)) for clmul.nxv2i64(zext(nxv2i32),
     // zext(nxv2i32))
-    if (Subtarget->isSVEorStreamingSVEAvailable() &&
-        (Subtarget->hasSVE2() || Subtarget->hasSME()) &&
+    if ((Subtarget->hasSVE2() || Subtarget->hasSME()) &&
         DAG.MaskedValueIsZero(Op.getOperand(0), HiWordMask) &&
-        DAG.MaskedValueIsZero(Op.getOperand(1), HiWordMask))
-      return MakePMULLB(
-          DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv4i32, Op.getOperand(0)),
-          DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv4i32, Op.getOperand(1)),
-          MVT::nxv4i32);
+        DAG.MaskedValueIsZero(Op.getOperand(1), HiWordMask)) {
+      SDValue OpA =
+          DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv4i32, Op.getOperand(0));
+      SDValue OpB =
+          DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv4i32, Op.getOperand(1));
+      return DAG.getNode(AArch64ISD::NVCAST, DL, VT,
+                         MakePMULLB(OpA, OpB, MVT::nxv4i32));
+    }
     // Lower to (.q pmullb(.d, .d)) for clmul.nxv2i64(nxv2i64, nxv2i64)
     if (Subtarget->hasSVEAES() &&
         (Subtarget->isSVEAvailable() || Subtarget->hasSSVE_AES()))
@@ -8135,7 +8136,8 @@ SDValue AArch64TargetLowering::LowerCLMUL(SDValue Op, SelectionDAG &DAG) const {
     // Lower to pmullb for clmul.nxv8i16(zext(nxv8i8), zext(nxv8i8))
     if (DAG.MaskedValueIsZero(Op.getOperand(0), HiWordMask) &&
         DAG.MaskedValueIsZero(Op.getOperand(1), HiWordMask))
-      return MakePMULLB(OpA, OpB, MVT::nxv16i8);
+      return DAG.getNode(AArch64ISD::NVCAST, DL, VT,
+                         MakePMULLB(OpA, OpB, MVT::nxv16i8));
 
     // clmul.i16(a, b) = xor(pmullb(a_lo, b_lo),
     //                       lsl(xor(pmul(a_hi, b_lo),
