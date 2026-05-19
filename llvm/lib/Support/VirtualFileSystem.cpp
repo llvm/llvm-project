@@ -1018,9 +1018,6 @@ InMemoryFileSystem::lookupNode(const Twine &P, bool FollowFinalSymlink,
 
   auto I = llvm::sys::path::begin(Path), E = llvm::sys::path::end(Path);
   while (true) {
-    if (*I == ".")
-      return detail::NamedNodeOrError(Path, Dir);
-
     detail::InMemoryNode *Node = Dir->getChild(*I);
     ++I;
     if (!Node)

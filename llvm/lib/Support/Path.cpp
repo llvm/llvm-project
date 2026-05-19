@@ -816,6 +816,9 @@ bool remove_dots(SmallVectorImpl<char> &the_path, bool remove_dot_dot,
     if (!remaining.empty()) {
       needs_change |= remaining.front() != preferred_separator(style);
       remaining = remaining.drop_front();
+      // The path needs to be rewritten if it has a trailing slash.
+      // FIXME: This is emergent behavior that could be removed.
+      needs_change |= remaining.empty();
     }
 
     // Check for path traversal components or double separators.
