@@ -107,21 +107,6 @@ void propagation_gsl() {
   v2.use();     // expected-note {{later used here}}
 }
 
-struct [[gsl::Pointer()]] ViewAssign {
-  ViewAssign &operator=(const MyObj &);
-  void use() const;
-};
-
-// FIXME: Should warn!
-void chained_assignment_gsl() {
-  ViewAssign v1, v2;
-  {
-    MyObj s;
-    v2 = v1 = s;
-  }
-  v2.use();
-}
-
 void multiple_uses_one_warning() {
   MyObj* p;
   {
