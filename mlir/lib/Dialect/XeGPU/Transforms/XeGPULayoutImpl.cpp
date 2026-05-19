@@ -1170,11 +1170,11 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
 /// load matrix lowers to load gather and 1d block load. All of them share the
 /// same layout setup logic.
 /// For Subgroup layout, uses the consumer layout directly.
-/// non-chunked loads:
+/// non-chunked loads (1D or 2D):
 ///   InstData = {1, ..., min(consumer, maxLaneLoadSize * subgroupSize)}
 ///   LaneLayout = {1, ..., subgroupSize}
 ///   lane_data = {1, ..., min(consumer, maxLaneLoadSize)}
-/// chunked loads:
+/// chunked loads (2D only):
 ///   InstData = {subgroupSize, min(consumer, maxLaneLoadSize)}
 ///   LaneLayout = {subgroupSize, 1}
 ///   lane_data={1,min(consumer, maxLaneLoadSize)}
