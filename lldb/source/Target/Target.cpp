@@ -72,6 +72,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/ErrorExtras.h"
@@ -977,20 +978,18 @@ void Target::DescribeBreakpointOverrides(Stream &stream,
     return;
   }
 
-  auto begin = idxs.begin();
-  auto end = idxs.end();
-  bool empty = idxs.empty();
+  const bool empty = idxs.empty();
   bool print_first = true;
-  for (auto const &elem : m_breakpoint_overrides) {
-    auto idx_pos = empty ? end : std::find(begin, end, elem.first);
-    if (empty || idx_pos != end) {
+  for (const auto &[id, resolver] : m_breakpoint_overrides) {
+    auto idx_pos = llvm::find(idxs, id);
+    if (empty || idx_pos != idxs.end()) {
       if (print_first) {
         // FIXME: Is there some good way to flow the description?
         stream << "ID    Description\n";
         stream << "----  -----------\n";
         print_first = false;
       }
-      stream.Format("{0,4}  {1}\n", elem.first, elem.second->GetDescription());
+      stream.Format("{0,4}  {1}\n", id, resolver->GetDescription());
       if (!empty)
         idxs.erase(idx_pos);
     }
