@@ -30,7 +30,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT: Successor(s): scalar.ph, vector.ph
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT: vector.ph:
-; IF-EVL-OUTLOOP-NEXT:  EMIT vp<[[RDX_START:%.]]> = reduction-start-vector ir<%start>, ir<0>, ir<1>
+; IF-EVL-OUTLOOP-NEXT:  EMIT vp<[[RDX_START:%.]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
 ; IF-EVL-OUTLOOP-NEXT: Successor(s): vector loop
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT: <x1> vector loop: {
@@ -58,10 +58,11 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT: middle.block:
 ; IF-EVL-OUTLOOP-NEXT:   EMIT vp<[[RDX:%.+]]> = compute-reduction-result (add) vp<[[RDX_SELECT]]>
+; IF-EVL-OUTLOOP-NEXT:   EMIT vp<[[INIT:%.+]]> = add vp<[[RDX]]>, ir<%start>
 ; IF-EVL-OUTLOOP-NEXT: Successor(s): ir-bb<for.end>
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT: ir-bb<for.end>:
-; IF-EVL-OUTLOOP-NEXT:   IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[RDX]]> from middle.block)
+; IF-EVL-OUTLOOP-NEXT:   IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[INIT]]> from middle.block)
 ; IF-EVL-OUTLOOP-NEXT: No successors
 ;
 
