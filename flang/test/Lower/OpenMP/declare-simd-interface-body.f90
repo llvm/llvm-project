@@ -6,7 +6,7 @@
 ! dummy arguments, which are not in scope here, and creating it would yield
 ! null operands).
 
-! RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 interface
   subroutine add2(i)
