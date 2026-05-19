@@ -1,0 +1,10 @@
+VERS1.0 {
+  global:
+    __tgt_rtl_init;
+    __tgt_rtl_deinit;
+    __tgt_init_all_rtls;
+    __tgt_register_rpc_callback;
+    *;
+
+  local:
+};

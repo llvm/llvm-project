@@ -2684,6 +2684,20 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
+  /// Query for the completion of the pending operations on the async info.
+  Expected<QueueStatusTy>
+  queryAsyncStaticImpl(__tgt_async_info &AsyncInfo) override {
+    AMDGPUStreamTy *Stream =
+        reinterpret_cast<AMDGPUStreamTy *>(AsyncInfo.Queue);
+    assert(Stream && "Invalid stream");
+
+    auto CompletedOrErr = Stream->query();
+    if (!CompletedOrErr)
+      return CompletedOrErr.takeError();
+
+    return *CompletedOrErr ? QueueStatusTy::READY : QueueStatusTy::NOT_READY;
+  }
+
   /// Pin the host buffer and return the device pointer that should be used for
   /// device transfers.
   Expected<void *> dataLockImpl(void *HstPtr, int64_t Size) override {

@@ -172,6 +172,7 @@ private:
   uint32_t BaseLevel;
   bool ShouldPrefixNextString;
   bool ShouldEmitNewLineOnDestruction;
+  bool ShouldAbortOnDestruction;
   bool NeedEndNewLine = false;
 
   /// Buffer to reduce interference between different threads
@@ -223,17 +224,22 @@ private:
 public:
   explicit odbg_ostream(std::string Prefix, raw_ostream &Os, uint32_t BaseLevel,
                         bool ShouldPrefixNextString = true,
-                        bool ShouldEmitNewLineOnDestruction = true)
+                        bool ShouldEmitNewLineOnDestruction = true,
+                        bool ShouldAbortOnDestruction = false)
       : Prefix(std::move(Prefix)), Os(Os), BaseLevel(BaseLevel),
         ShouldPrefixNextString(ShouldPrefixNextString),
         ShouldEmitNewLineOnDestruction(ShouldEmitNewLineOnDestruction),
-        BufferStrm(Buffer) {
+        ShouldAbortOnDestruction(ShouldAbortOnDestruction), BufferStrm(Buffer) {
     SetUnbuffered();
   }
   ~odbg_ostream() final {
     if (ShouldEmitNewLineOnDestruction && NeedEndNewLine)
       BufferStrm << '\n';
     Os << BufferStrm.str();
+    if (ShouldAbortOnDestruction) {
+      Os.flush();
+      abort();
+    }
   }
   odbg_ostream(const odbg_ostream &) = delete;
   odbg_ostream &operator=(const odbg_ostream &) = delete;
@@ -242,6 +248,7 @@ public:
     BaseLevel = other.BaseLevel;
     ShouldPrefixNextString = other.ShouldPrefixNextString;
     ShouldEmitNewLineOnDestruction = other.ShouldEmitNewLineOnDestruction;
+    ShouldAbortOnDestruction = other.ShouldAbortOnDestruction;
     NeedEndNewLine = other.NeedEndNewLine;
     Muted = other.Muted;
     BufferStrm << other.BufferStrm.str();
@@ -611,7 +618,8 @@ constexpr const char *ODT_Tool = OLDT_Tool;
 constexpr const char *ODT_Module = OLDT_Module;
 constexpr const char *ODT_Interop = "Interop";
 
-static inline odbg_ostream reportErrorStream() {
+static inline odbg_ostream reportErrorStream(bool ShouldAbort,
+                                             std::string Prefix) {
 #ifdef OMPTARGET_DEBUG
   if (::llvm::offload::debug::isDebugEnabled()) {
     uint32_t RealLevel = ODL_Error;
@@ -619,13 +627,26 @@ static inline odbg_ostream reportErrorStream() {
                                                  (ODT_Error), RealLevel))
       return odbg_ostream{
           ::llvm::offload::debug::computePrefix(DEBUG_PREFIX, ODT_Error),
-          ::llvm::offload::debug::dbgs(), RealLevel};
+          ::llvm::offload::debug::dbgs(),
+          RealLevel,
+          /*ShouldPrefixNextString=*/true,
+          /*ShouldEmitNewLineOnDestruction=*/true,
+          ShouldAbort};
     else
-      return odbg_ostream{"", ::llvm::nulls(), 1};
+      return odbg_ostream{"",
+                          ::llvm::nulls(),
+                          1,
+                          /*ShouldPrefixNextString=*/true,
+                          /*ShouldEmitNewLineOnDestruction=*/true,
+                          ShouldAbort};
   }
 #endif
-  return odbg_ostream{GETNAME(TARGET_NAME) " error: ",
-                      ::llvm::offload::debug::dbgs(), ODL_Error};
+  return odbg_ostream{GETNAME(TARGET_NAME) + Prefix,
+                      ::llvm::offload::debug::dbgs(),
+                      ODL_Error,
+                      /*ShouldPrefixNextString=*/true,
+                      /*ShouldEmitNewLineOnDestruction=*/true,
+                      ShouldAbort};
 }
 
 #ifdef OMPTARGET_DEBUG
@@ -693,8 +714,18 @@ static inline raw_ostream &operator<<(raw_ostream &Os, void *Ptr) {
 
 #endif // OMPTARGET_DEBUG
 
+// New REPORT warning macro in the same style as ODBG
+#define REPORT_WARN()                                                          \
+  ::llvm::omp::target::debug::reportErrorStream(/*ShouldAbort=*/false,         \
+                                                " warning: ")
+// New REPORT error macro in the same style as ODBG
+#define REPORT()                                                               \
+  ::llvm::omp::target::debug::reportErrorStream(/*ShouldAbort=*/false,         \
+                                                " error: ")
 // New REPORT macro in the same style as ODBG
-#define REPORT() ::llvm::omp::target::debug::reportErrorStream()
+#define REPORT_FATAL()                                                         \
+  ::llvm::omp::target::debug::reportErrorStream(/*ShouldAbort=*/true,          \
+                                                " fatal error: ")
 
 } // namespace llvm::omp::target::debug
 

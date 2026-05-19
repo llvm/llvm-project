@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
   return 0;
 }
 // clang-format off
-// CHECK: omptarget --> Entry  0: Base=[[DAT_HST_PTR_BASE:0x.*]], Begin=[[DAT_HST_PTR_BASE]], Size=12
-// CHECK: omptarget --> Entry  1: Base=[[DAT_HST_PTR_BASE]], Begin=[[DAT_HST_PTR_BASE]], Size=4,
-// CHECK: omptarget --> Entry  2: Base=[[DAT_HST_PTR_BASE]], Begin=[[DATUM_HST_PTR_BASE:0x.*]], Size=8,
+// CHECK: --> Entry  0: Base=[[DAT_HST_PTR_BASE:0x.*]], Begin=[[DAT_HST_PTR_BASE]], Size=12
+// CHECK: --> Entry  1: Base=[[DAT_HST_PTR_BASE]], Begin=[[DAT_HST_PTR_BASE]], Size=4,
+// CHECK: --> Entry  2: Base=[[DAT_HST_PTR_BASE]], Begin=[[DATUM_HST_PTR_BASE:0x.*]], Size=8,
 // clang-format on

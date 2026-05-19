@@ -14,6 +14,10 @@
 #include "Shared/Debug.h"
 #include "Shared/Requirements.h"
 #include "device.h"
+#include "omptarget.h"
+#include <cstdint>
+#include <optional>
+#include <variant>
 
 using namespace llvm::omp::target::debug;
 
@@ -206,11 +210,21 @@ LookupResult MappingInfoTy::lookupMapping(HDTTMapAccessorTy &HDTTMap,
 
 TargetPointerResultTy MappingInfoTy::getTargetPointer(
     HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin, void *HstPtrBase,
-    int64_t TgtPadding, int64_t Size, map_var_info_t HstPtrName, bool HasFlagTo,
-    bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
-    bool HasCloseModifier, bool HasPresentModifier, bool HasHoldModifier,
+    int64_t TgtPadding, std::variant<int64_t, const NonContigDescTy *> MemInfo,
+    map_var_info_t HstPtrName, bool HasFlagTo, bool HasFlagAlways,
+    bool IsImplicit, bool UpdateRefCount, bool HasCloseModifier,
+    bool HasPresentModifier, bool HasHoldModifier, bool IsNoCreate,
     AsyncInfoTy &AsyncInfo, HostDataToTargetTy *OwnedTPR, bool ReleaseHDTTMap,
     StateInfoTy *StateInfo) {
+
+  int64_t Size;
+  const NonContigDescTy *CopyInfo = nullptr;
+  if (std::holds_alternative<int64_t>(MemInfo)) {
+    Size = std::get<int64_t>(MemInfo);
+  } else {
+    CopyInfo = std::get<const NonContigDescTy *>(MemInfo);
+    Size = CopyInfo->getAllocSize();
+  }
 
   LookupResult LR = lookupMapping(HDTTMap, HstPtrBegin, Size, OwnedTPR);
   LR.TPR.Flags.IsPresent = true;
@@ -250,7 +264,8 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
          LR.TPR.getEntry()->holdRefCountToStr().c_str(), HoldRefCountAction,
          (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "unknown");
     LR.TPR.TargetPointer = (void *)Ptr;
-  } else if ((LR.Flags.ExtendsBefore || LR.Flags.ExtendsAfter) && !IsImplicit) {
+  } else if ((LR.Flags.ExtendsBefore || LR.Flags.ExtendsAfter) && !IsImplicit &&
+             !IsNoCreate) {
     // Explicit extension of mapped data - not allowed.
     MESSAGE("explicit extension not allowed: host address specified is " DPxMOD
             " (%" PRId64
@@ -290,7 +305,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
     MESSAGE("device mapping required by 'present' map type modifier does not "
             "exist for host address " DPxMOD " (%" PRId64 " bytes)",
             DPxPTR(HstPtrBegin), Size);
-  } else if (Size) {
+  } else if (Size && !IsNoCreate) {
     // If it is not contained and Size > 0, we should create a new entry for it.
     LR.TPR.Flags.IsNewEntry = true;
     uintptr_t TgtAllocBegin =
@@ -328,6 +343,12 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
   // give up the lock.
   if (ReleaseHDTTMap)
     HDTTMap.destroy();
+
+  if (!LR.TPR.isPresent() && IsNoCreate) {
+    ODBG() << "Mapping for " << HstPtrBegin << " with size " << Size
+           << " does not exist and no_create is specified: returning.";
+    return std::move(LR.TPR);
+  }
 
   // Lambda to check if this pointer was newly allocated on the current region.
   // This is needed to handle cases when the TO entry is encountered after an
@@ -384,8 +405,14 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
     ODBG(ODT_Mapping) << "Moving " << Size << " bytes (hst:" << HstPtrBegin
                       << ") -> (tgt:" << LR.TPR.TargetPointer << ")";
 
-    int Ret = Device.submitData(LR.TPR.TargetPointer, HstPtrBegin, Size,
-                                AsyncInfo, LR.TPR.getEntry());
+    int Ret;
+    if (CopyInfo) {
+      Ret = Device.submitNonContigData(LR.TPR.TargetPointer, HstPtrBegin,
+                                       *CopyInfo, AsyncInfo, LR.TPR.getEntry());
+    } else {
+      Ret = Device.submitData(LR.TPR.TargetPointer, HstPtrBegin, Size,
+                              AsyncInfo, LR.TPR.getEntry());
+    }
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT() << "Copying data to device failed.";
       // We will also return nullptr if the data movement fails because that
@@ -555,6 +582,27 @@ int MappingInfoTy::deallocTgtPtrAndEntry(HostDataToTargetTy *Entry,
   return Ret;
 }
 
+static void printNonContigCopyInfoImpl(int DeviceId, bool H2D,
+                                       void *SrcPtrBegin, void *DstPtrBegin,
+                                       const NonContigDescTy &CopyInfo,
+                                       HostDataToTargetTy *HT) {
+
+  INFO(OMP_INFOTYPE_DATA_TRANSFER, DeviceId,
+       "Copying non-contiguous data from %s to %s, %sPtr=" DPxMOD
+       ", %sPtr=" DPxMOD ", Name=%s\n",
+       H2D ? "host" : "device", H2D ? "device" : "host", H2D ? "Hst" : "Tgt",
+       DPxPTR(H2D ? SrcPtrBegin : DstPtrBegin), H2D ? "Tgt" : "Hst",
+       DPxPTR(H2D ? DstPtrBegin : SrcPtrBegin),
+       (HT && HT->HstPtrName) ? getNameFromMapping(HT->HstPtrName).c_str()
+                              : "unknown");
+  ODBG(ODT_Mapping) << "Non-contiguous data descriptor:\n";
+  for (unsigned I = 0; I < CopyInfo.getRank(); I++)
+    ODBG(ODT_Mapping) << "  Dim " << I << " : Offset "
+                      << CopyInfo.Dims[I].Offset << " Count "
+                      << CopyInfo.Dims[I].Count << " Stride "
+                      << CopyInfo.Dims[I].Stride << "\n";
+}
+
 static void printCopyInfoImpl(int DeviceId, bool H2D, void *SrcPtrBegin,
                               void *DstPtrBegin, int64_t Size,
                               HostDataToTargetTy *HT) {
@@ -567,6 +615,16 @@ static void printCopyInfoImpl(int DeviceId, bool H2D, void *SrcPtrBegin,
        DPxPTR(H2D ? DstPtrBegin : SrcPtrBegin), Size,
        (HT && HT->HstPtrName) ? getNameFromMapping(HT->HstPtrName).c_str()
                               : "unknown");
+}
+
+void MappingInfoTy::printNonContigCopyInfo(
+    void *TgtPtrBegin, void *HstPtrBegin, const NonContigDescTy &CopyInfo,
+    bool H2D, HostDataToTargetTy *Entry,
+    MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr) {
+  auto HDTTMap =
+      HostDataToTargetMap.getExclusiveAccessor(!!Entry || !!HDTTMapPtr);
+  printNonContigCopyInfoImpl(Device.DeviceID, H2D, HstPtrBegin, TgtPtrBegin,
+                             CopyInfo, Entry);
 }
 
 void MappingInfoTy::printCopyInfo(

@@ -16,6 +16,7 @@
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "PluginManager.h"
+#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/EnvironmentVar.h"
 #include "Shared/Utils.h"
@@ -42,55 +43,6 @@ using llvm::SmallVector;
 using namespace llvm::omp::target::ompt;
 #endif
 using namespace llvm::omp::target::debug;
-
-int AsyncInfoTy::synchronize() {
-  int Result = OFFLOAD_SUCCESS;
-  if (!isQueueEmpty()) {
-    switch (SyncType) {
-    case SyncTy::BLOCKING:
-      // If we have a queue we need to synchronize it now.
-      Result = Device.synchronize(*this);
-      assert(AsyncInfo.Queue == nullptr &&
-             "The device plugin should have nulled the queue to indicate there "
-             "are no outstanding actions!");
-      break;
-    case SyncTy::NON_BLOCKING:
-      Result = Device.queryAsync(*this);
-      break;
-    }
-  }
-
-  // Run any pending post-processing function registered on this async object.
-  if (Result == OFFLOAD_SUCCESS && isQueueEmpty())
-    Result = runPostProcessing();
-
-  return Result;
-}
-
-void *&AsyncInfoTy::getVoidPtrLocation() {
-  BufferLocations.push_back(nullptr);
-  return BufferLocations.back();
-}
-
-bool AsyncInfoTy::isDone() const { return isQueueEmpty(); }
-
-int32_t AsyncInfoTy::runPostProcessing() {
-  size_t Size = PostProcessingFunctions.size();
-  for (size_t I = 0; I < Size; ++I) {
-    const int Result = PostProcessingFunctions[I]();
-    if (Result != OFFLOAD_SUCCESS)
-      return Result;
-  }
-
-  // Clear the vector up until the last known function, since post-processing
-  // procedures might add new procedures themselves.
-  const auto *PrevBegin = PostProcessingFunctions.begin();
-  PostProcessingFunctions.erase(PrevBegin, PrevBegin + Size);
-
-  return OFFLOAD_SUCCESS;
-}
-
-bool AsyncInfoTy::isQueueEmpty() const { return AsyncInfo.Queue == nullptr; }
 
 /* All begin addresses for partially mapped structs must be aligned, up to 16,
  * in order to ensure proper alignment of members. E.g.
@@ -521,8 +473,13 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     if ((ArgTypes[I] & OMP_TGT_MAPTYPE_LITERAL) ||
         (ArgTypes[I] & OMP_TGT_MAPTYPE_PRIVATE))
       continue;
+
+    assert(!(ArgTypes[I] & OMP_TGT_MAPTYPE_NON_CONTIG));
+
+    int64_t DataSize = ArgSizes[I];
+
     TIMESCOPE_WITH_DETAILS_AND_IDENT(
-        "HostToDev", "Size=" + std::to_string(ArgSizes[I]) + "B", Loc);
+        "HostToDev", "Size=" + std::to_string(DataSize) + "B", Loc);
     if (ArgMappers && ArgMappers[I]) {
       // Instead of executing the regular path of targetDataBegin, call the
       // targetDataMapper variant which will call targetDataBegin again
@@ -531,7 +488,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                         << "th argument";
 
       map_var_info_t ArgName = (!ArgNames) ? nullptr : ArgNames[I];
-      int Rc = targetDataMapper(Loc, Device, ArgsBase[I], Args[I], ArgSizes[I],
+      int Rc = targetDataMapper(Loc, Device, ArgsBase[I], Args[I], DataSize,
                                 ArgTypes[I], ArgName, ArgMappers[I], AsyncInfo,
                                 targetDataBegin, StateInfo);
 
@@ -547,7 +504,6 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 
     void *HstPtrBegin = Args[I];
     void *HstPtrBase = ArgsBase[I];
-    int64_t DataSize = ArgSizes[I];
     map_var_info_t HstPtrName = (!ArgNames) ? nullptr : ArgNames[I];
 
     // ATTACH map-types are supposed to be handled after all mapping for the
@@ -620,10 +576,12 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       // PTR_AND_OBJ entry is handled below, and so the allocation might fail
       // when HasPresentModifier.
       PointerTpr = Device.getMappingInfo().getTargetPointer(
-          HDTTMap, HstPtrBase, HstPtrBase, /*TgtPadding=*/0, sizeof(void *),
+          HDTTMap, HstPtrBase, HstPtrBase, /*TgtPadding=*/0,
+          static_cast<int64_t>(sizeof(void *)),
           /*HstPtrName=*/nullptr,
           /*HasFlagTo=*/false, /*HasFlagAlways=*/false, IsImplicit, UpdateRef,
-          HasCloseModifier, HasPresentModifier, HasHoldModifier, AsyncInfo,
+          HasCloseModifier, HasPresentModifier, HasHoldModifier,
+          /*IsNoCreate=*/false, AsyncInfo,
           /*OwnedTPR=*/nullptr, /*ReleaseHDTTMap=*/false);
       PointerTgtPtrBegin = PointerTpr.TargetPointer;
       IsHostPtr = PointerTpr.Flags.IsHostPointer;
@@ -657,9 +615,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     const bool HasFlagAlways = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
     // Note that HDTTMap will be released in getTargetPointer.
     auto TPR = Device.getMappingInfo().getTargetPointer(
-        HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, HstPtrName,
+        HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, ArgSizes[I], HstPtrName,
         HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
-        HasPresentModifier, HasHoldModifier, AsyncInfo, PointerTpr.getEntry(),
+        HasPresentModifier, HasHoldModifier, /*IsNoCreate=*/false, AsyncInfo,
+        PointerTpr.getEntry(),
         /*ReleaseHDTTMap=*/true, StateInfo);
     void *TgtPtrBegin = TPR.TargetPointer;
     IsHostPtr = TPR.Flags.IsHostPointer;
@@ -1117,8 +1076,10 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       continue;
     }
 
-    void *HstPtrBegin = Args[I];
+    assert(!(ArgTypes[I] & OMP_TGT_MAPTYPE_NON_CONTIG));
     int64_t DataSize = ArgSizes[I];
+
+    void *HstPtrBegin = Args[I];
     bool IsImplicit = ArgTypes[I] & OMP_TGT_MAPTYPE_IMPLICIT;
     bool UpdateRef = !(ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) ||
                      (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ);
@@ -1231,7 +1192,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         }
       }
 
-      int Ret = Device.retrieveData(HstPtr, TgtPtr, Size, AsyncInfo, Entry);
+      int Ret =
+          Device.retrieveData(HstPtr, TgtPtr, Size, AsyncInfo, TPR.getEntry());
       if (Ret != OFFLOAD_SUCCESS) {
         REPORT() << "Copying data from device failed.";
         return OFFLOAD_FAIL;
@@ -1610,43 +1572,9 @@ static bool isLambdaMapping(int64_t Mapping) {
   return (Mapping & LambdaMapping) == LambdaMapping;
 }
 
+using llvm::offload::getTableMap;
+
 namespace {
-/// Find the table information in the map or look it up in the translation
-/// tables.
-TableMap *getTableMap(void *HostPtr) {
-  std::lock_guard<std::mutex> TblMapLock(PM->TblMapMtx);
-  HostPtrToTableMapTy::iterator TableMapIt =
-      PM->HostPtrToTableMap.find(HostPtr);
-
-  if (TableMapIt != PM->HostPtrToTableMap.end())
-    return &TableMapIt->second;
-
-  // We don't have a map. So search all the registered libraries.
-  TableMap *TM = nullptr;
-  std::lock_guard<std::mutex> TrlTblLock(PM->TrlTblMtx);
-  for (HostEntriesBeginToTransTableTy::iterator Itr =
-           PM->HostEntriesBeginToTransTable.begin();
-       Itr != PM->HostEntriesBeginToTransTable.end(); ++Itr) {
-    // get the translation table (which contains all the good info).
-    TranslationTable *TransTable = &Itr->second;
-    // iterate over all the host table entries to see if we can locate the
-    // host_ptr.
-    llvm::offloading::EntryTy *Cur = TransTable->HostTable.EntriesBegin;
-    for (uint32_t I = 0; Cur < TransTable->HostTable.EntriesEnd; ++Cur, ++I) {
-      if (Cur->Address != HostPtr)
-        continue;
-      // we got a match, now fill the HostPtrToTableMap so that we
-      // may avoid this search next time.
-      TM = &(PM->HostPtrToTableMap)[HostPtr];
-      TM->Table = TransTable;
-      TM->Index = I;
-      return TM;
-    }
-  }
-
-  return nullptr;
-}
-
 /// A class manages private arguments in a target region.
 class PrivateArgumentManagerTy {
   /// A data structure for the information of first-private arguments. We can

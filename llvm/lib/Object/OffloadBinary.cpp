@@ -398,6 +398,7 @@ OffloadKind object::getOffloadKind(StringRef Name) {
       .Case("cuda", OFK_Cuda)
       .Case("hip", OFK_HIP)
       .Case("sycl", OFK_SYCL)
+      .Case("openacc", OFK_OpenACC)
       .Default(OFK_None);
 }
 
@@ -411,6 +412,8 @@ StringRef object::getOffloadKindName(OffloadKind Kind) {
     return "hip";
   case OFK_SYCL:
     return "sycl";
+  case OFK_OpenACC:
+    return "openacc";
   default:
     return "none";
   }

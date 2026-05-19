@@ -23,24 +23,14 @@ using namespace llvm::omp::target::debug;
 
 static std::mutex PluginMtx;
 static uint32_t RefCount = 0;
+static bool PluginsInitialized = 0;
 std::atomic<bool> RTLAlive{false};
 std::atomic<int> RTLOngoingSyncs{0};
 
-/// Check deleted and deprecated features, such as environment variables.
-static void checkRuntimeEnvironment() {
-  const char *ShmemEnvarName = "LIBOMPTARGET_SHARED_MEMORY_SIZE";
-  if (std::getenv(ShmemEnvarName))
-    MESSAGE("Warning: %s is no longer valid. Please use OpenMP clause "
-            "'dyn_groupprivate' instead.\n",
-            ShmemEnvarName);
-}
-
-void initRuntime() {
+void initRuntime(bool OffloadEnabled) {
   std::scoped_lock<decltype(PluginMtx)> Lock(PluginMtx);
   Profiler::get();
   TIMESCOPE();
-
-  checkRuntimeEnvironment();
 
   if (PM == nullptr)
     PM = new PluginManager();
@@ -53,17 +43,27 @@ void initRuntime() {
     llvm::omp::target::ompt::connectLibrary();
 #endif
 
-    PM->init();
-    PM->registerDelayedLibraries();
+    if (!OffloadEnabled)
+      ODBG(ODT_Init) << "Offload is disabled. Skipping plugin initialization";
 
     // RTL initialization is complete
     RTLAlive = true;
+  }
+
+  // Initialize the plugins if at least one of the calls to this function is
+  // with OffloadEnabled == true
+  if (!PluginsInitialized && OffloadEnabled) {
+    ODBG(ODT_Init) << "Offload is enabled. Initializating plugins";
+    PM->initPlugins();
+    PM->registerDelayedLibraries();
+    PluginsInitialized = true;
   }
 }
 
 void deinitRuntime() {
   std::scoped_lock<decltype(PluginMtx)> Lock(PluginMtx);
   assert(PM && "Runtime not initialized");
+  assert(RefCount != 0 && "Unmatched init and deinit");
 
   if (RefCount == 1) {
     ODBG(ODT_Deinit) << "Deinit offload library!";
@@ -74,10 +74,12 @@ void deinitRuntime() {
                      << RTLOngoingSyncs.load();
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+
     PM->deinit();
     delete PM;
     PM = nullptr;
-  }
 
+    PluginsInitialized = false;
+  }
   RefCount--;
 }

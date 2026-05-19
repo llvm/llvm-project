@@ -786,6 +786,19 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuStreamQuery: %s");
   }
 
+  Expected<QueueStatusTy>
+  queryAsyncStaticImpl(__tgt_async_info &AsyncInfo) override {
+    CUstream Stream = reinterpret_cast<CUstream>(AsyncInfo.Queue);
+    CUresult Res = cuStreamQuery(Stream);
+
+    if (Res == CUDA_ERROR_NOT_READY)
+      return QueueStatusTy::NOT_READY;
+    if (Res == CUDA_SUCCESS)
+      return QueueStatusTy::READY;
+
+    return Plugin::check(Res, "error in cuStreamQuery: %s");
+  }
+
   Expected<void *> dataLockImpl(void *HstPtr, int64_t Size) override {
     // TODO: Register the buffer as CUDA host memory.
     return HstPtr;

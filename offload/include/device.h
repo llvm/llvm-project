@@ -81,6 +81,12 @@ struct DeviceTy {
   /// allocator should be used (host, shared, device).
   int32_t deleteData(void *TgtPtrBegin, int32_t Kind = TARGET_ALLOC_DEFAULT);
 
+  int32_t
+  submitNonContigData(void *TgtPtrBegin, void *HstPtrBegin,
+                      const NonContigDescTy &CopyInfo, AsyncInfoTy &AsyncInfo,
+                      HostDataToTargetTy *Entry = nullptr,
+                      MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+
   // Data transfer. When AsyncInfo is nullptr, the transfer will be
   // synchronous.
   // Copy data from host to device
@@ -88,6 +94,12 @@ struct DeviceTy {
                      AsyncInfoTy &AsyncInfo,
                      HostDataToTargetTy *Entry = nullptr,
                      MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+
+  int32_t
+  retrieveNonContigData(void *HstPtrBegin, void *TgtPtrBegin,
+                        const NonContigDescTy &CopyInfo, AsyncInfoTy &AsyncInfo,
+                        HostDataToTargetTy *Entry = nullptr,
+                        MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
 
   // Copy data from device back to host
   int32_t retrieveData(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
@@ -120,15 +132,26 @@ struct DeviceTy {
                        KernelExtraArgsTy *KernelExtraArgs,
                        AsyncInfoTy &AsyncInfo);
 
+  // Enqueues a host function in the asynchronous queue.
+  int32_t enqueueHostCall(void (*Callback)(void *), void *UserData,
+                          AsyncInfoTy &AsyncInfo);
+
   /// Synchronize device/queue/event based on \p AsyncInfo and return
   /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.
   int32_t synchronize(AsyncInfoTy &AsyncInfo);
+
+  /// Synchronize device/queue/event based on \p AsyncInfo without releasing the
+  /// queue and return QueueStatusTy::READY / QueueStatusTy::NOT_READY /
+  /// OFFLOAD_FAIL.
+  int32_t synchronizeStatic(AsyncInfoTy &AsyncInfo);
 
   /// Query for device/queue/event based completion on \p AsyncInfo in a
   /// non-blocking manner and return OFFLOAD_SUCCESS/OFFLOAD_FAIL when
   /// succeeds/fails. Must be called multiple times until AsyncInfo is
   /// completed and AsyncInfo.isDone() returns true.
   int32_t queryAsync(AsyncInfoTy &AsyncInfo);
+
+  int32_t queryAsyncStatic(AsyncInfoTy &AsyncInfo);
 
   /// Calls the corresponding print device info function in the plugin.
   bool printDeviceInfo();

@@ -332,6 +332,13 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  /// All functions are already synchronous. No need to do anything on this
+  /// query function.
+  Expected<QueueStatusTy>
+  queryAsyncStaticImpl(__tgt_async_info &AsyncInfo) override {
+    return QueueStatusTy::READY;
+  }
+
   /// This plugin does not support interoperability
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     return Plugin::success();

@@ -834,6 +834,8 @@ public:
   }
 };
 
+enum class QueueStatusTy { READY = 0, NOT_READY = 1 };
+
 /// Class implementing common functionalities of offload devices. Each plugin
 /// should define the specific device class, derive from this generic one, and
 /// implement the necessary virtual function members.
@@ -934,6 +936,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
                                bool *IsQueueWorkCompleted) = 0;
 
+  Expected<QueueStatusTy> queryAsyncStatic(__tgt_async_info *AsyncInfo);
+  virtual Expected<QueueStatusTy>
+  queryAsyncStaticImpl(__tgt_async_info &AsyncInfo) = 0;
+
   /// Check whether the architecture supports VA management
   virtual bool supportVAManagement() const { return false; }
 
@@ -1012,11 +1018,27 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
+  /// Submit non-contiguous data to the device (host to device transfer).
+  Error dataNonContigSubmit(void *TgtPtr, const void *HstPtr,
+                            const NonContigDescTy &CopyInfo,
+                            __tgt_async_info *AsyncInfo);
+  virtual Error dataNonContigSubmitImpl(void *TgtPtr, const void *HstPtr,
+                                        const NonContigDescTy &CopyInfo,
+                                        AsyncInfoWrapperTy &AsyncInfoWrapper);
+
   /// Retrieve data from the device (device to host transfer).
   Error dataRetrieve(void *HstPtr, const void *TgtPtr, int64_t Size,
                      __tgt_async_info *AsyncInfo);
   virtual Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+
+  /// Retrieve non-contiguous data from the device (device to host transfer).
+  Error dataNonContigRetrieve(void *HstPtr, const void *TgtPtr,
+                              const NonContigDescTy &CopyInfo,
+                              __tgt_async_info *AsyncInfo);
+  virtual Error dataNonContigRetrieveImpl(void *HstPtr, const void *TgtPtr,
+                                          const NonContigDescTy &CopyInfo,
+                                          AsyncInfoWrapperTy &AsyncInfoWrapper);
 
   /// Instert a data fence between previous data operations and the following
   /// operations if necessary for the device
@@ -1614,9 +1636,21 @@ public:
   int32_t data_submit_async(int32_t DeviceId, void *TgtPtr, void *HstPtr,
                             int64_t Size, __tgt_async_info *AsyncInfoPtr);
 
+  /// Copy non-contiguous data to the given device asynchronously.
+  int32_t data_non_contig_submit_async(int32_t DeviceId, void *TgtPtr,
+                                       void *HstPtr,
+                                       const NonContigDescTy &CopyInfo,
+                                       __tgt_async_info *AsyncInfoPtr);
+
   /// Copy data from the given device.
   int32_t data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
                         int64_t Size);
+
+  /// Copy non-contiguous data from the given device asynchronously.
+  int32_t data_non_contig_retrieve_async(int32_t DeviceId, void *HstPtr,
+                                         void *TgtPtr,
+                                         const NonContigDescTy &CopyInfo,
+                                         __tgt_async_info *AsyncInfoPtr);
 
   /// Copy data from the given device asynchronously.
   int32_t data_retrieve_async(int32_t DeviceId, void *HstPtr, void *TgtPtr,
@@ -1641,14 +1675,25 @@ public:
                         KernelExtraArgsTy *KernelExtraArgs,
                         __tgt_async_info *AsyncInfoPtr);
 
+  /// Enqueue a host call into the asynchronous queue.
+  int32_t enqueue_host_call(int32_t DeviceId, void (*Callback)(void *),
+                            void *UserData, __tgt_async_info *AsyncInfo);
+
   /// Synchronize an asyncrhonous queue with the plugin runtime.
   int32_t synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
+
+  /// Synchronize an asyncrhonous queue with the plugin runtime without
+  /// releasing it.
+  int32_t synchronize_static(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
 
   /// Query the current state of an asynchronous queue.
   int32_t query_async(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
 
   /// Obtain information about the given device.
   InfoTreeNode obtain_device_info(int32_t DeviceId);
+
+  /// Query the current state of an asynchronous queue.
+  int32_t query_async_static(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
 
   /// Prints information about the given devices supported by the plugin.
   void print_device_info(int32_t DeviceId);
