@@ -139,21 +139,20 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
   std::future<lldb::SBError> did_attach_message_success =
       comm_channel.NotifyDidAttach();
 
-// We just attached to the runInTerminal launcher, which was waiting to be
-// attached. We now resume it, so it can receive the didAttach notification
-// and then perform the exec. Upon continuing, the debugger will stop the
-// process right in the middle of the exec. To the user, what we are doing is
-// transparent, as they will only be able to see the process since the exec,
-// completely unaware of the preparatory work.
-//
-// On Windows, the debuggee itself is waiting to be attached to. There is no
-// need to continue.
-#ifndef _WIN32
-  dap.target.GetProcess().Continue();
-#endif
-
-  // Return the debugger to its prior async state.
+#ifdef _WIN32
+  // On Windows the target was created with CREATE_SUSPENDED. The launcher
+  // will call ResumeThread after reading didAttach, but we still must process
+  // the initial debug events from the attach for the target to actually run.
+  // Use async Continue() so we don't block while the suspend count is still 1.
   scope_sync_mode.reset();
+  dap.target.GetProcess().Continue();
+#else
+  // On Linux the launcher and target are the same process. Continue() resumes
+  // the launcher so it can read didAttach and execvp into the target, stopping
+  // again at the new program's entry.
+  dap.target.GetProcess().Continue();
+  scope_sync_mode.reset();
+#endif
 
   // If sending the notification failed, the launcher should be dead by now and
   // the async didAttach notification should have an error message, so we

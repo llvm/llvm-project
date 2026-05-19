@@ -7,7 +7,6 @@ from lldbsuite.test.decorators import (
     skipIf,
     skipIfBuildType,
     no_match,
-    skipIfWindows,
 )
 import lldbdap_testcase
 import tempfile
@@ -19,7 +18,6 @@ class TestDAP_launch_stdio_redirection_and_console(lldbdap_testcase.DAPTestCaseB
     """
 
     @skipIfAsan
-    @skipIfWindows  # https://github.com/llvm/llvm-project/issues/198763
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     @skipIfBuildType(["debug"])
     def test(self):
