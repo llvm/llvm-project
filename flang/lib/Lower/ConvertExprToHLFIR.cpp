@@ -1191,52 +1191,6 @@ translateSignedRelational(Fortran::common::RelationalOperator rop) {
   llvm_unreachable("unhandled INTEGER relational operator");
 }
 
-static mlir::arith::CmpIPredicate
-translateUnsignedRelational(Fortran::common::RelationalOperator rop) {
-  switch (rop) {
-  case Fortran::common::RelationalOperator::LT:
-    return mlir::arith::CmpIPredicate::ult;
-  case Fortran::common::RelationalOperator::LE:
-    return mlir::arith::CmpIPredicate::ule;
-  case Fortran::common::RelationalOperator::EQ:
-    return mlir::arith::CmpIPredicate::eq;
-  case Fortran::common::RelationalOperator::NE:
-    return mlir::arith::CmpIPredicate::ne;
-  case Fortran::common::RelationalOperator::GT:
-    return mlir::arith::CmpIPredicate::ugt;
-  case Fortran::common::RelationalOperator::GE:
-    return mlir::arith::CmpIPredicate::uge;
-  }
-  llvm_unreachable("unhandled UNSIGNED relational operator");
-}
-
-/// Convert parser's REAL relational operators to MLIR.
-/// The choice of order (O prefix) vs unorder (U prefix) follows Fortran 2018
-/// requirements in the IEEE context (table 17.1 of F2018). This choice is
-/// also applied in other contexts because it is easier and in line with
-/// other Fortran compilers.
-/// FIXME: The signaling/quiet aspect of the table 17.1 requirement is not
-/// fully enforced. FIR and LLVM `fcmp` instructions do not give any guarantee
-/// whether the comparison will signal or not in case of quiet NaN argument.
-static mlir::arith::CmpFPredicate
-translateFloatRelational(Fortran::common::RelationalOperator rop) {
-  switch (rop) {
-  case Fortran::common::RelationalOperator::LT:
-    return mlir::arith::CmpFPredicate::OLT;
-  case Fortran::common::RelationalOperator::LE:
-    return mlir::arith::CmpFPredicate::OLE;
-  case Fortran::common::RelationalOperator::EQ:
-    return mlir::arith::CmpFPredicate::OEQ;
-  case Fortran::common::RelationalOperator::NE:
-    return mlir::arith::CmpFPredicate::UNE;
-  case Fortran::common::RelationalOperator::GT:
-    return mlir::arith::CmpFPredicate::OGT;
-  case Fortran::common::RelationalOperator::GE:
-    return mlir::arith::CmpFPredicate::OGE;
-  }
-  llvm_unreachable("unhandled REAL relational operator");
-}
-
 template <int KIND>
 struct BinaryOp<Fortran::evaluate::Relational<
     Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, KIND>>> {
@@ -1247,7 +1201,8 @@ struct BinaryOp<Fortran::evaluate::Relational<
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
     auto cmp = mlir::arith::CmpIOp::create(
-        builder, loc, translateSignedRelational(op.opr), lhs, rhs);
+        builder, loc, Fortran::lower::translateSignedRelational(op.opr), lhs,
+        rhs);
     return hlfir::EntityWithAttributes{cmp};
   }
 };
@@ -1269,7 +1224,8 @@ struct BinaryOp<Fortran::evaluate::Relational<
     mlir::Value lhsSL = builder.createConvert(loc, signlessType, lhs);
     mlir::Value rhsSL = builder.createConvert(loc, signlessType, rhs);
     auto cmp = mlir::arith::CmpIOp::create(
-        builder, loc, translateUnsignedRelational(op.opr), lhsSL, rhsSL);
+        builder, loc, Fortran::lower::translateUnsignedRelational(op.opr),
+        lhsSL, rhsSL);
     return hlfir::EntityWithAttributes{cmp};
   }
 };
@@ -1284,7 +1240,8 @@ struct BinaryOp<Fortran::evaluate::Relational<
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
     auto cmp = mlir::arith::CmpFOp::create(
-        builder, loc, translateFloatRelational(op.opr), lhs, rhs);
+        builder, loc, Fortran::lower::translateFloatRelational(op.opr), lhs,
+        rhs);
     return hlfir::EntityWithAttributes{cmp};
   }
 };
@@ -1298,8 +1255,9 @@ struct BinaryOp<Fortran::evaluate::Relational<
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
-    auto cmp = fir::CmpcOp::create(builder, loc,
-                                   translateFloatRelational(op.opr), lhs, rhs);
+    auto cmp = fir::CmpcOp::create(
+        builder, loc, Fortran::lower::translateFloatRelational(op.opr), lhs,
+        rhs);
     return hlfir::EntityWithAttributes{cmp};
   }
 };
