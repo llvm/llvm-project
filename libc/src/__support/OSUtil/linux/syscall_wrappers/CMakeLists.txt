@@ -42,7 +42,7 @@ add_header_library(
   HDRS
     accept.h
   DEPENDS
-    libc.src.__support.OSUtil.linux.syscall_wrappers.accept
+    libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.libc_errno
@@ -57,9 +57,9 @@ add_header_library(
   HDRS
     accept4.h
   DEPENDS
+    libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
-    libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.hdr.types.socklen_t
     libc.hdr.types.struct_sockaddr
@@ -71,10 +71,9 @@ add_header_library(
   HDRS
     connect.h
   DEPENDS
-    libc.src.__support.OSUtil.linux.syscall_wrappers.connect
+    libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
-    libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.hdr.types.socklen_t
     libc.hdr.types.struct_sockaddr
@@ -86,9 +85,9 @@ add_header_library(
   HDRS
     getsockopt.h
   DEPENDS
+    libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
-    libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.hdr.types.socklen_t
     libc.include.sys_syscall
@@ -127,9 +126,9 @@ add_header_library(
   HDRS
     listen.h
   DEPENDS
+    libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
-    libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.include.sys_syscall
 )
@@ -152,11 +151,23 @@ add_header_library(
   HDRS
     setsockopt.h
   DEPENDS
+    libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
-    libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.hdr.types.socklen_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  shutdown
+  HDRS
+    shutdown.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
     libc.include.sys_syscall
 )
 
