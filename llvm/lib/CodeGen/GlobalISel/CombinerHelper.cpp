@@ -8824,7 +8824,7 @@ static unsigned getCountZeroPoisonOpcode(unsigned Opc) {
   case TargetOpcode::G_CTTZ:
     return TargetOpcode::G_CTTZ_ZERO_POISON;
   default:
-    return 0;
+    llvm_unreachable("Expected count-zero opcode");
   }
 }
 
@@ -8833,9 +8833,6 @@ bool CombinerHelper::matchCountZeroToZeroPoison(MachineInstr &MI) const {
     return false;
 
   unsigned ZPOpc = getCountZeroPoisonOpcode(MI.getOpcode());
-  if (!ZPOpc)
-    return false;
-
   Register Src = MI.getOperand(1).getReg();
   if (!VT->isKnownNeverZero(Src))
     return false;
