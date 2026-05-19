@@ -119,7 +119,7 @@ std::unique_ptr<Module> llvm::CloneModule(
     // Defer setting the resolver function until after functions are cloned.
     if (!ShouldCloneDefinition(&I)) {
       // An ifunc also cannot act as an external reference, so we need to create
-      // a function depending on the value type.
+      // a function.
       GlobalValue *GV;
       assert(I.getValueType()->isFunctionTy() &&
              "ValueType of ifunc must be function type!");
