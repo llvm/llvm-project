@@ -829,6 +829,8 @@ enum class CompilerVersionFlags : uint32_t {
   LLVM_MARK_AS_BITMASK_ENUM(Internal)
 };
 
+bool isValidCompilerVersionFlags(uint32_t V);
+
 struct CompilerVersionHeader {
   uint16_t Major;
   uint16_t Minor;

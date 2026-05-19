@@ -82,25 +82,34 @@ bool llvm::dxbc::isValidBorderColor(uint32_t V) {
   return false;
 }
 
-bool llvm::dxbc::isValidRootDesciptorFlags(uint32_t V) {
-  using FlagT = dxbc::RootDescriptorFlags;
-  uint32_t LargestValue =
+template <typename FlagT>
+static bool isValidFlags(std::underlying_type_t<FlagT> V) {
+  decltype(V) LargestValue =
       llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
   return V < NextPowerOf2(LargestValue);
+}
+
+template <typename EnumT>
+static bool isValidEnumValue(std::underlying_type_t<EnumT> V) {
+  decltype(V) LargestValue =
+      llvm::to_underlying(EnumT::LLVM_BITMASK_LARGEST_ENUMERATOR);
+  return V <= LargestValue;
+}
+
+bool llvm::dxbc::isValidRootDesciptorFlags(uint32_t V) {
+  return isValidFlags<dxbc::RootDescriptorFlags>(V);
 }
 
 bool llvm::dxbc::isValidDescriptorRangeFlags(uint32_t V) {
-  using FlagT = dxbc::DescriptorRangeFlags;
-  uint32_t LargestValue =
-      llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
-  return V < NextPowerOf2(LargestValue);
+  return isValidFlags<dxbc::DescriptorRangeFlags>(V);
 }
 
 bool llvm::dxbc::isValidStaticSamplerFlags(uint32_t V) {
-  using FlagT = dxbc::StaticSamplerFlags;
-  uint32_t LargestValue =
-      llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
-  return V < NextPowerOf2(LargestValue);
+  return isValidFlags<dxbc::StaticSamplerFlags>(V);
+}
+
+bool llvm::dxbc::isValidCompilerVersionFlags(uint32_t V) {
+  return isValidFlags<dxbc::CompilerVersionFlags>(V);
 }
 
 dxbc::PartType dxbc::parsePartType(StringRef S) {

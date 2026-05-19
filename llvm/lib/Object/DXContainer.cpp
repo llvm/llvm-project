@@ -192,6 +192,9 @@ Error DXContainer::parseCompilerVersionInfo(StringRef Part) {
     return Err;
   Current += sizeof(Header);
 
+  if (!dxbc::isValidCompilerVersionFlags(to_underlying(Header.Flags)))
+    return parseFailed("Incorrect shader compiler version flags combination");
+
   StringRef CommitSha;
   const char *Prev = Current;
   if (Error Err = readString(Part, Current, Header.ContentSizeInBytes,
