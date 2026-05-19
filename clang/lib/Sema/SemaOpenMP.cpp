@@ -5444,7 +5444,8 @@ getPrivateItem(Sema &S, Expr *&RefExpr, SourceLocation &ELoc,
   RefExpr = RefExpr->IgnoreParenImpCasts();
   auto *DE = dyn_cast_or_null<DeclRefExpr>(RefExpr);
   auto *ME = dyn_cast_or_null<MemberExpr>(RefExpr);
-  if ((!DE || !isa<VarDecl>(DE->getDecl())) &&
+  if ((!DE ||
+       (!isa<VarDecl>(DE->getDecl()) && !isa<BindingDecl>(DE->getDecl()))) &&
       (S.getCurrentThisType().isNull() || !ME ||
        !isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()) ||
        !isa<FieldDecl>(ME->getMemberDecl()))) {
@@ -19481,7 +19482,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
         SemaRef, VDPrivate, RefExpr->getType().getUnqualifiedType(), ELoc);
 
     DeclRefExpr *Ref = nullptr;
-    if (!VD && !SemaRef.CurContext->isDependentContext()) {
+    bool IsBindingDecl = isa<BindingDecl>(D);
+    if (!VD && !IsBindingDecl && !SemaRef.CurContext->isDependentContext()) {
       auto *FD = dyn_cast<FieldDecl>(D);
       VarDecl *VD = FD ? DSAStack->getImplicitFDCapExprDecl(FD) : nullptr;
       if (VD)
@@ -19492,9 +19494,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
     }
     if (!IsImplicitClause)
       DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_private, Ref);
-    Vars.push_back((VD || SemaRef.CurContext->isDependentContext())
-                       ? RefExpr->IgnoreParens()
-                       : Ref);
+    Vars.push_back(
+        (VD || IsBindingDecl || SemaRef.CurContext->isDependentContext())
+            ? RefExpr->IgnoreParens()
+            : Ref);
     PrivateCopies.push_back(VDPrivateRefExpr);
   }
 
@@ -19768,23 +19771,28 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
       if (TopDVar.CKind == OMPC_lastprivate) {
         Ref = TopDVar.PrivateCopy;
       } else {
-        auto *FD = dyn_cast<FieldDecl>(D);
-        VarDecl *VD = FD ? DSAStack->getImplicitFDCapExprDecl(FD) : nullptr;
-        if (VD)
-          Ref =
-              buildDeclRefExpr(SemaRef, VD, VD->getType().getNonReferenceType(),
-                               RefExpr->getExprLoc());
-        else
-          Ref = buildCapture(SemaRef, D, SimpleRefExpr, /*WithInit=*/true);
-        if (VD || !isOpenMPCapturedDecl(D))
-          ExprCaptures.push_back(Ref->getDecl());
+        bool IsBindingDecl = isa<BindingDecl>(D);
+        if (!IsBindingDecl) {
+          auto *FD = dyn_cast<FieldDecl>(D);
+          VarDecl *VD = FD ? DSAStack->getImplicitFDCapExprDecl(FD) : nullptr;
+          if (VD)
+            Ref = buildDeclRefExpr(SemaRef, VD,
+                                   VD->getType().getNonReferenceType(),
+                                   RefExpr->getExprLoc());
+          else
+            Ref = buildCapture(SemaRef, D, SimpleRefExpr, /*WithInit=*/true);
+          if (VD || !isOpenMPCapturedDecl(D))
+            ExprCaptures.push_back(Ref->getDecl());
+        }
       }
     }
     if (!IsImplicitClause)
       DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_firstprivate, Ref);
-    Vars.push_back((VD || SemaRef.CurContext->isDependentContext())
-                       ? RefExpr->IgnoreParens()
-                       : Ref);
+    bool IsBindingDecl = isa<BindingDecl>(D);
+    Vars.push_back(
+        (VD || IsBindingDecl || SemaRef.CurContext->isDependentContext())
+            ? RefExpr->IgnoreParens()
+            : Ref);
     PrivateCopies.push_back(VDPrivateRefExpr);
     Inits.push_back(VDInitRefExpr);
   }

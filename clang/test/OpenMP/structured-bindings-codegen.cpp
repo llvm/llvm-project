@@ -364,6 +364,41 @@ void test_simd_() {
   }
 }
 
+void test_private_individual_bindings() {
+  Point p{1, 2};
+  auto [a, b] = p;
+#pragma omp parallel private(a)
+  {
+    a = 2;
+  }
+}
+
+void test_firstprivate_individual_bindings() {
+  Point p{1, 2};
+  auto [a, b] = p;
+#pragma omp parallel firstprivate(b)
+  {
+    b = b + 10;
+  }
+}
+
+void test_mixed_dsa() {
+  Point p{1, 2};
+  auto [a, b] = p;
+#pragma omp parallel firstprivate(a) shared(b)
+  {
+    int result = a + b;
+  }
+}
+
+void test_static_bindings() {
+  static auto [a, b] = Point{1, 2};
+#pragma omp parallel
+  {
+    (void)(a + b);
+  }
+}
+
 int main() {
   test_target_explicit_map();
   test_target_implicit_map();
@@ -386,6 +421,10 @@ int main() {
   test_nested();
   test_multiple_bindings();
   test_multiple_bindings_mixed_dsa();
+  test_private_individual_bindings();
+  test_firstprivate_individual_bindings();
+  test_mixed_dsa();
+  test_static_bindings();
   return 0;
 }
 
@@ -2000,6 +2039,94 @@ int main() {
 // CHECK:    ret void
 //
 //
+// CHECK-LABEL: define dso_local void @_Z32test_private_individual_bindingsv(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P:%.*]], ptr align 4 @__const._Z32test_private_individual_bindingsv.p, i64 8, i1 false)
+// CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP0:%.*]], ptr align 4 [[P]], i64 8, i1 false)
+// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 0, ptr @_Z32test_private_individual_bindingsv.omp_outlined)
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define internal void @_Z32test_private_individual_bindingsv.omp_outlined(
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2]] {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
+// CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
+// CHECK:    store i32 2, ptr [[A:%.*]], align 4
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define dso_local void @_Z37test_firstprivate_individual_bindingsv(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P:%.*]], ptr align 4 @__const._Z37test_firstprivate_individual_bindingsv.p, i64 8, i1 false)
+// CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP0:%.*]], ptr align 4 [[P]], i64 8, i1 false)
+// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z37test_firstprivate_individual_bindingsv.omp_outlined, ptr [[TMP0]])
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define internal void @_Z37test_firstprivate_individual_bindingsv.omp_outlined(
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
+// CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
+// CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 1
+// CHECK:    [[TMP2:%.*]] = load i32, ptr [[Y]], align 4
+// CHECK:    store i32 [[TMP2]], ptr [[B:%.*]], align 4
+// CHECK:    [[TMP3:%.*]] = load i32, ptr [[B]], align 4
+// CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP3]], 10
+// CHECK:    store i32 [[ADD]], ptr [[B]], align 4
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define dso_local void @_Z14test_mixed_dsav(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P:%.*]], ptr align 4 @__const._Z14test_mixed_dsav.p, i64 8, i1 false)
+// CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP0:%.*]], ptr align 4 [[P]], i64 8, i1 false)
+// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z14test_mixed_dsav.omp_outlined, ptr [[TMP0]])
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define internal void @_Z14test_mixed_dsav.omp_outlined(
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
+// CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
+// CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
+// CHECK:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
+// CHECK:    store i32 [[TMP2]], ptr [[A:%.*]], align 4
+// CHECK:    [[TMP3:%.*]] = load i32, ptr [[A]], align 4
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 1
+// CHECK:    [[TMP4:%.*]] = load i32, ptr [[Y]], align 4
+// CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP3]], [[TMP4]]
+// CHECK:    store i32 [[ADD]], ptr [[RESULT:%.*]], align 4
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define dso_local void @_Z20test_static_bindingsv(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 0, ptr @_Z20test_static_bindingsv.omp_outlined)
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define internal void @_Z20test_static_bindingsv.omp_outlined(
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2]] {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
+// CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
+// CHECK:    [[TMP0:%.*]] = load i32, ptr @_ZZ20test_static_bindingsvEDC1a1bE, align 4
+// CHECK:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @_ZZ20test_static_bindingsvEDC1a1bE, i64 4), align 4
+// CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[TMP1]]
+// CHECK:    ret void
+//
+//
 // CHECK-LABEL: define dso_local noundef i32 @main(
 // CHECK-SAME: ) #[[ATTR7:[0-9]+]] {
 // CHECK:  [[ENTRY:.*:]]
@@ -2025,5 +2152,9 @@ int main() {
 // CHECK:    call void @_Z11test_nestedv()
 // CHECK:    call void @_Z22test_multiple_bindingsv()
 // CHECK:    call void @_Z32test_multiple_bindings_mixed_dsav()
+// CHECK:    call void @_Z32test_private_individual_bindingsv()
+// CHECK:    call void @_Z37test_firstprivate_individual_bindingsv()
+// CHECK:    call void @_Z14test_mixed_dsav()
+// CHECK:    call void @_Z20test_static_bindingsv()
 // CHECK:    ret i32 0
 //

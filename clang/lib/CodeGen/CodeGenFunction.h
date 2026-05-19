@@ -1152,9 +1152,14 @@ public:
     /// Sets the address of the variable \p LocalVD to be \p TempAddr in
     /// function \p CGF.
     /// \return true if at least one variable was set already, false otherwise.
-    bool setVarAddr(CodeGenFunction &CGF, const VarDecl *LocalVD,
+    bool setVarAddr(CodeGenFunction &CGF, const ValueDecl *LocalVD,
                     Address TempAddr) {
-      LocalVD = LocalVD->getCanonicalDecl();
+      LocalVD = cast<ValueDecl>(LocalVD->getCanonicalDecl());
+      // For BindingDecls, also store by name for remapped lookup
+      if (const auto *BD = dyn_cast<BindingDecl>(LocalVD)) {
+        CGF.OMPPrivatizedBindingsByName.insert({BD->getName(), TempAddr});
+      }
+
       // Only save it once.
       if (SavedLocals.count(LocalVD))
         return false;
@@ -1225,7 +1230,7 @@ public:
     /// PrivateGen is the address of the generated private variable.
     /// \return true if the variable is registered as private, false if it has
     /// been privatized already.
-    bool addPrivate(const VarDecl *LocalVD, Address Addr) {
+    bool addPrivate(const ValueDecl *LocalVD, Address Addr) {
       assert(PerformCleanup && "adding private to dead scope");
       return MappedVars.setVarAddr(CGF, LocalVD, Addr);
     }
@@ -1547,6 +1552,11 @@ private:
   /// LocalDeclMap - This keeps track of the LLVM allocas or globals for local C
   /// decls.
   DeclMapTy LocalDeclMap;
+
+  /// Name-based lookup map for privatized BindingDecls.
+  /// Used when BindingDecls are remapped during OpenMP outlining, since the
+  /// remapped BindingDecl has a different pointer than the original.
+  llvm::StringMap<Address> OMPPrivatizedBindingsByName;
 
   // Keep track of the cleanups for callee-destructed parameters pushed to the
   // cleanup stack so that they can be deactivated later.

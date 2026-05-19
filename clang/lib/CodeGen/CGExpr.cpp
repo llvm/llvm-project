@@ -3818,10 +3818,20 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
   // an enclosing scope.
   if (const auto *BD = dyn_cast<BindingDecl>(ND)) {
     if (E->refersToEnclosingVariableOrCapture()) {
+      // Try direct lookup first.
+      auto It = LocalDeclMap.find(BD->getCanonicalDecl());
+      if (It != LocalDeclMap.end()) {
+        return MakeAddrLValue(It->second, E->getType(), AlignmentSource::Decl);
+      }
       // OpenMP case: binding was captured via its decomposed decl.
       if (CapturedStmtInfo &&
           CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP &&
           CGM.getLangOpts().OpenMP) {
+        auto NameIt = OMPPrivatizedBindingsByName.find(BD->getName());
+        if (NameIt != OMPPrivatizedBindingsByName.end()) {
+          return MakeAddrLValue(NameIt->second, E->getType(),
+                                AlignmentSource::Decl);
+        }
         return EmitOMPCapturedBindingLValue(BD);
       }
       // Non-OpenMP case: lambda capture.

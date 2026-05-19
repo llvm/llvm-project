@@ -1152,11 +1152,35 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
     const auto *IRef = C->varlist_begin();
     const auto *InitsRef = C->inits().begin();
     for (const Expr *IInit : C->private_copies()) {
-      const auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
-      bool ThisFirstprivateIsLastprivate =
-          Lastprivates.count(OrigVD->getCanonicalDecl()) > 0;
-      const FieldDecl *FD = CapturedStmtInfo->lookup(OrigVD);
+      const auto *OrigDecl = cast<DeclRefExpr>(*IRef)->getDecl();
+      const VarDecl *OrigVD = dyn_cast<VarDecl>(OrigDecl);
       const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
+
+      if (const auto *BD = dyn_cast<BindingDecl>(OrigDecl)) {
+        Address PrivateAddr = CreateMemTemp(VD->getType(), VD->getName());
+        DeclRefExpr DRE(getContext(), const_cast<BindingDecl *>(BD),
+                        /*RefersToEnclosingVariableOrCapture=*/true,
+                        BD->getType(), VK_LValue, (*IRef)->getExprLoc());
+        LValue OriginalLVal = EmitLValue(&DRE);
+        RValue OrigValue =
+            EmitLoadOfLValue(OriginalLVal, (*IRef)->getExprLoc());
+        EmitStoreThroughLValue(OrigValue,
+                               MakeAddrLValue(PrivateAddr, VD->getType()));
+        LocalDeclMap.try_emplace(VD, PrivateAddr);
+        bool IsRegistered = PrivateScope.addPrivate(BD, PrivateAddr);
+        assert(IsRegistered &&
+               "firstprivate var already registered as firstprivate");
+        (void)IsRegistered;
+        ++IRef;
+        ++InitsRef;
+        continue;
+      }
+
+      // Original VarDecl logic.
+      assert(OrigVD && "Expected VarDecl for non-BindingDecl firstprivate");
+      bool ThisFirstprivateIsLastprivate =
+          OrigVD && Lastprivates.count(OrigVD->getCanonicalDecl()) > 0;
+      const FieldDecl *FD = CapturedStmtInfo->lookup(OrigVD);
       if (!MustEmitFirstprivateCopy && !ThisFirstprivateIsLastprivate && FD &&
           !FD->getType()->isReferenceType() &&
           (!VD || !VD->hasAttr<OMPAllocateDeclAttr>())) {
@@ -1279,13 +1303,19 @@ void CodeGenFunction::EmitOMPPrivateClause(
   for (const auto *C : D.getClausesOfKind<OMPPrivateClause>()) {
     auto IRef = C->varlist_begin();
     for (const Expr *IInit : C->private_copies()) {
-      const auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
-      if (EmittedAsPrivate.insert(OrigVD->getCanonicalDecl()).second) {
+      const auto *OrigDecl = cast<DeclRefExpr>(*IRef)->getDecl();
+      bool ShouldEmit = true;
+      if (const auto *VD = dyn_cast<VarDecl>(OrigDecl)) {
+        if (!EmittedAsPrivate.insert(VD->getCanonicalDecl()).second) {
+          ShouldEmit = false; // Already emitted.
+        }
+      }
+      if (ShouldEmit) {
         const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
         EmitDecl(*VD);
         // Emit private VarDecl with copy init.
         bool IsRegistered =
-            PrivateScope.addPrivate(OrigVD, GetAddrOfLocalVar(VD));
+            PrivateScope.addPrivate(OrigDecl, GetAddrOfLocalVar(VD));
         assert(IsRegistered && "private var already registered as private");
         // Silence the warning about unused variable.
         (void)IsRegistered;
@@ -1862,7 +1892,9 @@ checkForLastprivateConditionalUpdate(CodeGenFunction &CGF,
       const auto *DRE = dyn_cast<DeclRefExpr>(Ref->IgnoreParenImpCasts());
       if (!DRE)
         continue;
-      PrivateDecls.insert(cast<VarDecl>(DRE->getDecl()));
+      // Only track VarDecl, not BindingDecl.
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+        PrivateDecls.insert(VD);
     }
   }
   CGF.CGM.getOpenMPRuntime().checkAndEmitSharedLastprivateConditional(
