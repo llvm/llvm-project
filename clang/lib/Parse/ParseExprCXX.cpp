@@ -1865,10 +1865,11 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
   return DG;
 }
 
-Sema::ConditionResult
-Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
-                          Sema::ConditionKind CK, bool MissingOK,
-                          ForRangeInfo *FRI) {
+Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
+                                                SourceLocation Loc,
+                                                Sema::ConditionKind CK,
+                                                bool MissingOK,
+                                                ForRangeInfo *FRI) {
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
   PreferredType.enterCondition(Actions, Tok.getLocation());
 
