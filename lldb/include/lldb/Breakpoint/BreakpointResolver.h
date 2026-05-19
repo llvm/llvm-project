@@ -154,18 +154,28 @@ public:
   /// for any other purpose, as the values may change as LLDB evolves.
   unsigned getResolverID() const { return SubclassID; }
 
+  /// This checks whether the resolver's type matches the enum
+  /// lldb::eBreakpointResolverType.
+  bool ResolverTyInMask(uint64_t mask);
+
   enum ResolverTy GetResolverTy() {
     if (SubclassID > ResolverTy::LastKnownResolverType)
       return ResolverTy::UnknownResolver;
     return (enum ResolverTy)SubclassID;
   }
-
+  
+  uint64_t MaskForResolverTy();
+  
+  /// Returns true if this resolver is in the mask (made of elements of 
+  /// BreakpointResolverType.
+  bool ResolverInMask(uint64_t mask);
+  static std::string DescribeMask(uint64_t mask);
   const char *GetResolverName() { return ResolverTyToName(GetResolverTy()); }
 
   static const char *ResolverTyToName(enum ResolverTy);
 
   static ResolverTy NameToResolverTy(llvm::StringRef name);
-
+  
   virtual lldb::BreakpointResolverSP
   CopyForBreakpoint(lldb::BreakpointSP &breakpoint) = 0;
 

@@ -38,11 +38,22 @@ class TestOverridesResolver(TestBase):
         command = "command script import " + script_name
         self.runCmd(command)
 
-    def add_override(self, use_cmd, help_text, class_name, key, value):
+    def add_override(self, use_cmd, help_text, class_name, mask, key, value):
         if use_cmd:
             result = lldb.SBCommandReturnObject()
+            # Convert the mask to command arguments.  I just do the ones I
+            # am using in the test.
+            mask_args = ""
+            mask_str = ""
+            if mask & lldb.eResolverFileAndLine:
+                mask_args += "-m file_and_line "
+                mask_str += "F"
+            if mask & lldb.eResolverName:
+                mask_args += "-m name "
+                mask_str += "N"
+
             self.ci.HandleCommand(
-                f"breakpoint override add -P {class_name} -k {key} -v {value} -d '{help_text}'",
+                f"breakpoint override add -P {class_name} -k {key} -v {value} -d '{help_text}' {mask_args}",
                 result,
             )
             self.assertCommandReturn(result, "breakpoint override worked")
@@ -53,12 +64,12 @@ class TestOverridesResolver(TestBase):
             extra_args.SetFromJSON(json_str)
             error = lldb.SBError()
             override_id = target.AddBreakpointOverride(
-                class_name, help_text, extra_args, error
+                class_name, help_text, mask, extra_args, error
             )
             self.assertError(error, "Made the override successfully")
 
         # Check the override listing, make sure our new entry is present:
-        self.expect("breakpoint override list", substrs=[str(override_id), help_text])
+        self.expect("breakpoint override list", substrs=[str(override_id), mask_str, help_text])
 
         return override_id
 
@@ -73,6 +84,7 @@ class TestOverridesResolver(TestBase):
             use_cmd,
             trivial_help,
             "bkpt_resolver.TrivialExample",
+            lldb.eResolverName,
             "test_key",
             "test_value",
         )
@@ -82,6 +94,7 @@ class TestOverridesResolver(TestBase):
             use_cmd,
             useful_help,
             "bkpt_resolver.OverrideExample",
+            lldb.eResolverFileAndLine,
             "symbol",
             "stop_here_instead",
         )
@@ -107,11 +120,14 @@ class TestOverridesResolver(TestBase):
         )
 
         # Now make a breakpoint by file and line:
-        # FIXME: Use source_line to find this line number:
         bkpt = target.BreakpointCreateByLocation(
             "main.c", line_number("main.c", "I am in the stop symbol")
         )
         self.assertEqual(bkpt.GetNumLocations(), 1, "We make one location")
+        # Make sure that the override was called but trivial was not:
+        self.expect("checker override", startstr="1")
+        self.expect("checker trivial", startstr="0")
+        
         # Now continue and we'll hit this breakpoint but not in the
         # right place:
         (target, process, thread, bkpt) = lldbutil.run_to_breakpoint_do_run(
@@ -127,10 +143,15 @@ class TestOverridesResolver(TestBase):
             func_name, alternate_location, "Stopped at overridden location"
         )
 
-        # Now set a source name breakpoint, that should not get overridden, and
+        # Now set a symbol name breakpoint, that should not get overridden, and
         # when we continue we should hit it:
         name_bkpt = target.BreakpointCreateByName("change_him")
         self.assertGreater(name_bkpt.GetNumLocations(), 0, "Found locations")
+        # Now we've made one by name and one file and line breakpoint so both
+        # override functions should have been called.
+        self.expect("checker trivial", startstr="1")
+        self.expect("checker override", startstr="1")
+        
         threads = lldbutil.continue_to_breakpoint(process, name_bkpt)
         self.assertEqual(len(threads), 1, "Hit our name breakpoint")
         func_name = threads[0].frames[0].name
@@ -157,8 +178,19 @@ class TestOverridesResolver(TestBase):
         new_bkpt = target.BreakpointCreateByLocation(
             "main.c", line_number("main.c", "return 0")
         )
+        # Neither override should have been called for this breakpoint
+        # so the counts should still be at 1 each:
+        self.expect("checker trivial", startstr="1")
+        self.expect("checker override", startstr="1")
+        
         self.assertEqual(new_bkpt.num_locations, 1, "Made breakpoint")
         threads = lldbutil.continue_to_breakpoint(process, new_bkpt)
         self.assertEqual(len(threads), 1, "Hit our new breakpoint")
         func_name = threads[0].frames[0].name
         self.assertEqual(func_name, "main", "Stopped in unchanged location")
+
+        # Finally, make sure neither of the overrides was called with a
+        # type that was not part of the mask.
+        self.expect("checker trivial_not_name", startstr="0")
+        self.expect("checker override_not_file", startstr="0")
+        

@@ -639,9 +639,10 @@ public:
                     lldb::SBError &error);
 
   /// Adds a breakpoint override implemented by class_name.  Returns the ID
-  /// of the new override or LLDB_INVALID_INDEX64 on error.
+  /// of the new override or LLDB_INVALID_INDEX64 on error.  The type_mask
+  /// is composed of elements from the lldb::BreakpointResolverType enum.
   uint64_t AddBreakpointOverride(const char *class_name,
-                                 const char *description,
+                                 const char *description, uint64_t type_mask,
                                  SBStructuredData &args_data, SBError &status);
 
   bool RemoveBreakpointOverride(uint64_t id);

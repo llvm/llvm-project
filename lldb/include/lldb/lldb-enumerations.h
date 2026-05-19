@@ -691,6 +691,7 @@ enum CommandArgumentType {
   eArgTypeExceptionStage,
   eArgTypeNameMatchStyle,
   eArgTypePluginDomain,
+  eArgTypeBreakpointResolverMask,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -1477,6 +1478,21 @@ enum BinaryInformationLevel {
   eBinaryInformationLevelAddrName,
   eBinaryInformationLevelAddrNameUUID,
   eBinaryInformationLevelFull
+};
+
+/// This reflects the BreakpointResolver::ResolverTy, but this is a convenient
+/// enum for making a mask to pass to RegisterOverrideResolver.  It has to be
+/// kept in sync with the ResolverTy.
+
+enum BreakpointResolverType {
+  eResolverUnknown = 0,
+  eResolverFileAndLine = (1 << 0),
+  eResolverAddress = (1 << 1),
+  eResolverName = (1 << 2),
+  eResolverFileRegex = (1 << 3),
+  eResolverPython = (1 << 4),
+  eResolverException = (1 << 5),
+  eResolverLastKnown = eResolverException,
 };
 
 } // namespace lldb
