@@ -6260,7 +6260,9 @@ int X86TTIImpl::getGatherOverhead() const {
   // other alternatives.
   // TODO: Remove the explicit hasAVX512()?, That would mean we would only
   // enable gather with a -march.
-  if (ST->hasAVX512() || (ST->hasAVX2() && ST->hasFastGather()))
+  if (ST->hasAVX512())
+    return ST->hasSlowAVX512Gather() ? 1024 : 2;
+  if (ST->hasAVX2() && ST->hasFastGather())
     return 2;
 
   return 1024;
@@ -6268,7 +6270,7 @@ int X86TTIImpl::getGatherOverhead() const {
 
 int X86TTIImpl::getScatterOverhead() const {
   if (ST->hasAVX512())
-    return 2;
+    return ST->hasSlowAVX512Scatter() ? 1024 : 2;
 
   return 1024;
 }

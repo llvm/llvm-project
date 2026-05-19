@@ -734,6 +734,13 @@ def TuningPreferNoScatter
     : SubtargetFeature<"prefer-no-scatter", "PreferScatter", "false",
                        "Prefer no scatter instructions">;
 
+def TuningSlowAVX512Gather
+    : SubtargetFeature<"slow-avx512-gather", "HasSlowAVX512Gather", "true",
+                       "AVX-512 gather instructions are slow">;
+def TuningSlowAVX512Scatter
+    : SubtargetFeature<"slow-avx512-scatter", "HasSlowAVX512Scatter", "true",
+                       "AVX-512 scatter instructions are slow">;
+
 def TuningPrefer128Bit
     : SubtargetFeature<"prefer-128-bit", "Prefer128Bit", "true",
                        "Prefer 128-bit AVX instructions">;
@@ -1631,7 +1638,9 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN3Features =
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
 
-  list<SubtargetFeature> ZN4AdditionalTuning = [TuningFastDPWSSD];
+  list<SubtargetFeature> ZN4AdditionalTuning = [TuningFastDPWSSD,
+                                                TuningSlowAVX512Gather,
+                                                TuningSlowAVX512Scatter];
   list<SubtargetFeature> ZN4Tuning =
     !listconcat(ZN3Tuning, ZN4AdditionalTuning);
   list<SubtargetFeature> ZN4AdditionalFeatures = [FeatureAVX512,
