@@ -619,6 +619,8 @@ add_entrypoint_object(
   HDRS
     fputws.h
   DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.hdr.types.FILE
     libc.hdr.types.wchar_t
     libc.src.__support.File.file
