@@ -86,7 +86,7 @@ public:
                      DependencyActionController &Controller,
                      CompilerInvocation OriginalCI,
                      const PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
-                     SmallVector<SmallString<0>, 2> StableDirs);
+                     const ArrayRef<StringRef> StableDirs);
 
   /// Processes the accumulated dependency information and reports it to the
   /// \c Consumer.
@@ -115,7 +115,9 @@ private:
   const PrebuiltModulesAttrsMap PrebuiltModulesASTMap;
   /// Directory paths known to be stable through an active development and build
   /// cycle.
-  SmallVector<SmallString<0>, 2> StableDirs;
+  llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver StableDirsStrings{Alloc};
+  const ArrayRef<StringRef> StableDirs;
   /// Path to the main source file.
   std::string MainFile;
   /// Non-modular file dependencies. This includes the main source file and
@@ -210,7 +212,7 @@ void resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
 ///
 /// \param Directories Paths known to be in a stable location. e.g. Sysroot.
 /// \param Input Path to evaluate.
-bool isPathInStableDir(const ArrayRef<SmallString<0>> Directories,
+bool isPathInStableDir(const ArrayRef<StringRef> Directories,
                        const StringRef Input);
 
 /// Determine if options collected from a module's
@@ -218,7 +220,7 @@ bool isPathInStableDir(const ArrayRef<SmallString<0>> Directories,
 ///
 /// \param Directories Paths known to be in a stable location. e.g. Sysroot.
 /// \param HSOpts Header search options derived from the compiler invocation.
-bool areOptionsInStableDir(const ArrayRef<SmallString<0>> Directories,
+bool areOptionsInStableDir(const ArrayRef<StringRef> Directories,
                            const HeaderSearchOptions &HSOpts);
 
 } // end namespace dependencies

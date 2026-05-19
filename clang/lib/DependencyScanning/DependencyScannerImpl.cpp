@@ -67,7 +67,7 @@ public:
                          PrebuiltModulesAttrsMap &PrebuiltModulesASTMap,
                          const HeaderSearchOptions &HSOpts,
                          const LangOptions &LangOpts, DiagnosticsEngine &Diags,
-                         const ArrayRef<SmallString<0>> StableDirs)
+                         const ArrayRef<StringRef> StableDirs)
       : PrebuiltModuleFiles(PrebuiltModuleFiles),
         NewModuleFiles(NewModuleFiles),
         PrebuiltModulesASTMap(PrebuiltModulesASTMap), ExistingHSOpts(HSOpts),
@@ -166,7 +166,7 @@ private:
   const LangOptions &ExistingLangOpts;
   DiagnosticsEngine &Diags;
   std::string CurrentFile;
-  const ArrayRef<SmallString<0>> StableDirs;
+  const ArrayRef<StringRef> StableDirs;
 };
 
 /// Visit the given prebuilt module and collect all of the modules it
@@ -176,7 +176,7 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
                                 PrebuiltModuleFilesT &ModuleFiles,
                                 PrebuiltModulesAttrsMap &PrebuiltModulesASTMap,
                                 DiagnosticsEngine &Diags,
-                                const ArrayRef<SmallString<0>> StableDirs) {
+                                const ArrayRef<StringRef> StableDirs) {
   // List of module files to be processed.
   llvm::SmallVector<std::string> Worklist;
 
@@ -463,29 +463,30 @@ std::shared_ptr<CompilerInvocation> dependencies::createScanCompilerInvocation(
   return ScanInvocation;
 }
 
-SmallVector<SmallString<0>, 2>
-dependencies::getInitialStableDirs(const CompilerInstance &ScanInstance) {
+SmallVector<StringRef>
+dependencies::getInitialStableDirs(const CompilerInstance &ScanInstance,
+                                   llvm::StringSaver &SS) {
   // Create a collection of stable directories derived from the ScanInstance
   // for determining whether module dependencies would fully resolve from
   // those directories.
-  SmallVector<SmallString<0>, 2> StableDirs;
+  SmallVector<StringRef> StableDirs;
   const StringRef Sysroot = ScanInstance.getHeaderSearchOpts().Sysroot;
   if (!Sysroot.empty() && llvm::sys::path::root_directory(Sysroot) != Sysroot) {
     SmallString<0> SysrootBuf = Sysroot;
     llvm::sys::path::remove_dots(SysrootBuf);
-    StableDirs.emplace_back(std::move(SysrootBuf));
+    StableDirs.emplace_back(SS.save(Twine(SysrootBuf)));
 
     SmallString<0> ResourceDirBuf{
         ScanInstance.getHeaderSearchOpts().ResourceDir};
     llvm::sys::path::remove_dots(ResourceDirBuf);
-    StableDirs.emplace_back(std::move(ResourceDirBuf));
+    StableDirs.emplace_back(SS.save(Twine(ResourceDirBuf)));
   }
   return StableDirs;
 }
 
 std::optional<PrebuiltModulesAttrsMap>
-dependencies::computePrebuiltModulesASTMap(
-    CompilerInstance &ScanInstance, ArrayRef<SmallString<0>> StableDirs) {
+dependencies::computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
+                                           ArrayRef<StringRef> StableDirs) {
   // Store a mapping of prebuilt module files and their properties like header
   // search options. This will prevent the implicit build to create duplicate
   // modules and will force reuse of the existing prebuilt module files
@@ -524,10 +525,10 @@ dependencies::initializeScanInstanceDependencyCollector(
     DependencyScanningService &Service, CompilerInvocation &Inv,
     DependencyActionController &Controller,
     PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
-    SmallVector<SmallString<0>, 2> StableDirs) {
+    ArrayRef<StringRef> StableDirs) {
   auto MDC = std::make_shared<ModuleDepCollector>(
       Service, std::move(DepOutputOpts), ScanInstance, Controller, Inv,
-      std::move(PrebuiltModulesASTMap), std::move(StableDirs));
+      std::move(PrebuiltModulesASTMap), StableDirs);
   ScanInstance.addDependencyCollector(MDC);
   return MDC;
 }
@@ -749,7 +750,9 @@ bool DependencyScanningAction::runInvocation(
                                    DepFS);
 
     // FIXME: Do this only once.
-    auto StableDirs = getInitialStableDirs(ScanInstance);
+    llvm::BumpPtrAllocator Alloc;
+    llvm::StringSaver SS(Alloc);
+    auto StableDirs = getInitialStableDirs(ScanInstance, SS);
     auto MaybePrebuiltModulesASTMap =
         computePrebuiltModulesASTMap(ScanInstance, StableDirs);
     if (!MaybePrebuiltModulesASTMap)
@@ -772,8 +775,9 @@ bool DependencyScanningAction::runInvocation(
   initializeScanCompilerInstance(ScanInstance, FS, DiagConsumer, Service,
                                  DepFS);
 
-  SmallVector<SmallString<0>, 2> StableDirs =
-      getInitialStableDirs(ScanInstance);
+  llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver SS(Alloc);
+  SmallVector<StringRef> StableDirs = getInitialStableDirs(ScanInstance, SS);
   auto MaybePrebuiltModulesASTMap =
       computePrebuiltModulesASTMap(ScanInstance, StableDirs);
   if (!MaybePrebuiltModulesASTMap)
