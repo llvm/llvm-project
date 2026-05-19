@@ -12254,24 +12254,6 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
     ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(TVal);
     ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
 
-    // Check for SMAX(lhs, 0) and SMIN(lhs, 0) patterns.
-    // (SELECT_CC setgt, lhs, 0, lhs, 0) -> (BIC lhs, (SRA lhs, typesize-1))
-    // (SELECT_CC setlt, lhs, 0, lhs, 0) -> (AND lhs, (SRA lhs, typesize-1))
-    // Both require less instructions than compare and conditional select.
-    if ((CC == ISD::SETGT || CC == ISD::SETLT) && LHS == TVal &&
-        RHSC && RHSC->isZero() && CFVal && CFVal->isZero() &&
-        LHS.getValueType() == RHS.getValueType()) {
-      EVT VT = LHS.getValueType();
-      SDValue Shift =
-          DAG.getNode(ISD::SRA, DL, VT, LHS,
-                      DAG.getConstant(VT.getSizeInBits() - 1, DL, VT));
-
-      if (CC == ISD::SETGT)
-        Shift = DAG.getNOT(DL, Shift, VT);
-
-      return DAG.getNode(ISD::AND, DL, VT, LHS, Shift);
-    }
-
     // Check for sign bit test patterns that can use TST optimization.
     // (SELECT_CC setlt, sign_extend_inreg, 0, tval, fval)
     //                          -> TST %operand, sign_bit; CSEL

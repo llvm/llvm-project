@@ -6303,6 +6303,16 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
     return DAG.getNode(Opcode, DL, VT, N1, N0);
 
+  // smax(x, 0) -> and(x, not(sra(x, bw-1)))
+  // smin(x, 0) -> and(x, sra(x, bw-1))
+  if ((Opcode == ISD::SMAX || Opcode == ISD::SMIN) && VT.isScalarInteger() &&
+      isNullConstant(N1)) {
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    ISD::CondCode CC = Opcode == ISD::SMAX ? ISD::SETGT : ISD::SETLT;
+    if (SDValue V = foldSelectCCToShiftAnd(DL, N0, Zero, N0, Zero, CC))
+      return V;
+  }
+
   // fold vector ops
   if (VT.isVector())
     if (SDValue FoldedVOp = SimplifyVBinOp(N, DL))
@@ -30260,17 +30270,20 @@ SDValue DAGCombiner::foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0,
   if (!isNullConstant(N3) || !XType.bitsGE(AType))
     return SDValue();
 
-  // If the comparison is testing for a positive value, we have to invert
-  // the sign bit mask, so only do that transform if the target has a bitwise
-  // 'and not' instruction (the invert is free).
-  if (CC == ISD::SETGT && TLI.hasAndNot(N2)) {
-    // (X > -1) ? A : 0
-    // (X >  0) ? X : 0 <-- This is canonical signed max.
-    if (!(isAllOnesConstant(N1) || (isNullConstant(N1) && N0 == N2)))
+  // Match signed max/min clamp-to-zero style selects.
+  if (CC == ISD::SETGT) {
+    // (X > -1) ? A : 0 -- invert sign mask; prefer targets with and-not.
+    if (isAllOnesConstant(N1)) {
+      if (!TLI.hasAndNot(N2))
+        return SDValue();
+    } else if (isNullConstant(N1) && N0 == N2) {
+      // (X > 0) ? X : 0 -- canonical signed max.
+    } else {
       return SDValue();
+    }
   } else if (CC == ISD::SETLT) {
-    // (X <  0) ? A : 0
-    // (X <  1) ? X : 0 <-- This is un-canonicalized signed min.
+    // (X < 0) ? A : 0 -- canonical signed min.
+    // (X < 1) ? X : 0 -- un-canonicalized signed min.
     if (!(isNullConstant(N1) || (isOneConstant(N1) && N0 == N2)))
       return SDValue();
   } else {

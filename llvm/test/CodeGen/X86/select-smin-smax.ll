@@ -18,31 +18,20 @@ declare i128 @llvm.smin.i128(i128, i128)
 define i8 @test_i8_smax(i8 %a) nounwind {
 ; X64-LABEL: test_i8_smax:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    testb %dil, %dil
-; X64-NEXT:    cmovgl %edi, %eax
-; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    sarb $7, %al
+; X64-NEXT:    notb %al
+; X64-NEXT:    andb %dil, %al
 ; X64-NEXT:    retq
 ;
-; X86-BMI-LABEL: test_i8_smax:
-; X86-BMI:       # %bb.0:
-; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BMI-NEXT:    xorl %eax, %eax
-; X86-BMI-NEXT:    testb %cl, %cl
-; X86-BMI-NEXT:    cmovgl %ecx, %eax
-; X86-BMI-NEXT:    # kill: def $al killed $al killed $eax
-; X86-BMI-NEXT:    retl
-;
-; X86-NOBMI-LABEL: test_i8_smax:
-; X86-NOBMI:       # %bb.0:
-; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NOBMI-NEXT:    testb %al, %al
-; X86-NOBMI-NEXT:    jg .LBB0_2
-; X86-NOBMI-NEXT:  # %bb.1:
-; X86-NOBMI-NEXT:    xorl %eax, %eax
-; X86-NOBMI-NEXT:  .LBB0_2:
-; X86-NOBMI-NEXT:    # kill: def $al killed $al killed $eax
-; X86-NOBMI-NEXT:    retl
+; X86-LABEL: test_i8_smax:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    sarb $7, %al
+; X86-NEXT:    notb %al
+; X86-NEXT:    andb %cl, %al
+; X86-NEXT:    retl
   %r = call i8 @llvm.smax.i8(i8 %a, i8 0)
   ret i8 %r
 }
@@ -67,31 +56,39 @@ define i8 @test_i8_smin(i8 %a) nounwind {
 }
 
 define i16 @test_i16_smax(i16 %a) nounwind {
-; X64-LABEL: test_i16_smax:
-; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    testw %di, %di
-; X64-NEXT:    cmovgl %edi, %eax
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
-; X64-NEXT:    retq
+; X64-BMI-LABEL: test_i16_smax:
+; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    movswl %di, %eax
+; X64-BMI-NEXT:    sarl $15, %eax
+; X64-BMI-NEXT:    andnl %edi, %eax, %eax
+; X64-BMI-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-BMI-NEXT:    retq
+;
+; X64-NOBMI-LABEL: test_i16_smax:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    movswl %di, %eax
+; X64-NOBMI-NEXT:    sarl $15, %eax
+; X64-NOBMI-NEXT:    notl %eax
+; X64-NOBMI-NEXT:    andl %edi, %eax
+; X64-NOBMI-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NOBMI-NEXT:    retq
 ;
 ; X86-BMI-LABEL: test_i16_smax:
 ; X86-BMI:       # %bb.0:
-; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BMI-NEXT:    xorl %eax, %eax
-; X86-BMI-NEXT:    testw %cx, %cx
-; X86-BMI-NEXT:    cmovgl %ecx, %eax
+; X86-BMI-NEXT:    movswl {{[0-9]+}}(%esp), %eax
+; X86-BMI-NEXT:    movl %eax, %ecx
+; X86-BMI-NEXT:    shrl $15, %ecx
+; X86-BMI-NEXT:    andnl %eax, %ecx, %eax
 ; X86-BMI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-BMI-NEXT:    retl
 ;
 ; X86-NOBMI-LABEL: test_i16_smax:
 ; X86-NOBMI:       # %bb.0:
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOBMI-NEXT:    testw %ax, %ax
-; X86-NOBMI-NEXT:    jg .LBB2_2
-; X86-NOBMI-NEXT:  # %bb.1:
-; X86-NOBMI-NEXT:    xorl %eax, %eax
-; X86-NOBMI-NEXT:  .LBB2_2:
+; X86-NOBMI-NEXT:    movswl {{[0-9]+}}(%esp), %ecx
+; X86-NOBMI-NEXT:    movl %ecx, %eax
+; X86-NOBMI-NEXT:    shrl $15, %eax
+; X86-NOBMI-NEXT:    notl %eax
+; X86-NOBMI-NEXT:    andl %ecx, %eax
 ; X86-NOBMI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NOBMI-NEXT:    retl
   %r = call i16 @llvm.smax.i16(i16 %a, i16 0)
@@ -129,9 +126,10 @@ define i32 @test_i32_smax(i32 %a) nounwind {
 ;
 ; X64-NOBMI-LABEL: test_i32_smax:
 ; X64-NOBMI:       # %bb.0:
-; X64-NOBMI-NEXT:    xorl %eax, %eax
-; X64-NOBMI-NEXT:    testl %edi, %edi
-; X64-NOBMI-NEXT:    cmovgl %edi, %eax
+; X64-NOBMI-NEXT:    movl %edi, %eax
+; X64-NOBMI-NEXT:    sarl $31, %eax
+; X64-NOBMI-NEXT:    notl %eax
+; X64-NOBMI-NEXT:    andl %edi, %eax
 ; X64-NOBMI-NEXT:    retq
 ;
 ; X86-BMI-LABEL: test_i32_smax:
@@ -144,12 +142,11 @@ define i32 @test_i32_smax(i32 %a) nounwind {
 ;
 ; X86-NOBMI-LABEL: test_i32_smax:
 ; X86-NOBMI:       # %bb.0:
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOBMI-NEXT:    testl %eax, %eax
-; X86-NOBMI-NEXT:    jg .LBB4_2
-; X86-NOBMI-NEXT:  # %bb.1:
-; X86-NOBMI-NEXT:    xorl %eax, %eax
-; X86-NOBMI-NEXT:  .LBB4_2:
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOBMI-NEXT:    movl %ecx, %eax
+; X86-NOBMI-NEXT:    sarl $31, %eax
+; X86-NOBMI-NEXT:    notl %eax
+; X86-NOBMI-NEXT:    andl %ecx, %eax
 ; X86-NOBMI-NEXT:    retl
   %r = call i32 @llvm.smax.i32(i32 %a, i32 0)
   ret i32 %r
@@ -184,35 +181,29 @@ define i64 @test_i64_smax(i64 %a) nounwind {
 ;
 ; X64-NOBMI-LABEL: test_i64_smax:
 ; X64-NOBMI:       # %bb.0:
-; X64-NOBMI-NEXT:    xorl %eax, %eax
-; X64-NOBMI-NEXT:    testq %rdi, %rdi
-; X64-NOBMI-NEXT:    cmovgq %rdi, %rax
+; X64-NOBMI-NEXT:    movq %rdi, %rax
+; X64-NOBMI-NEXT:    sarq $63, %rax
+; X64-NOBMI-NEXT:    notq %rax
+; X64-NOBMI-NEXT:    andq %rdi, %rax
 ; X64-NOBMI-NEXT:    retq
 ;
 ; X86-BMI-LABEL: test_i64_smax:
 ; X86-BMI:       # %bb.0:
-; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-BMI-NEXT:    xorl %eax, %eax
-; X86-BMI-NEXT:    testl %edx, %edx
-; X86-BMI-NEXT:    cmovlel %eax, %edx
-; X86-BMI-NEXT:    cmovnsl {{[0-9]+}}(%esp), %eax
+; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMI-NEXT:    movl %eax, %ecx
+; X86-BMI-NEXT:    sarl $31, %ecx
+; X86-BMI-NEXT:    andnl %eax, %ecx, %edx
+; X86-BMI-NEXT:    andnl {{[0-9]+}}(%esp), %ecx, %eax
 ; X86-BMI-NEXT:    retl
 ;
 ; X86-NOBMI-LABEL: test_i64_smax:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NOBMI-NEXT:    testl %edx, %edx
-; X86-NOBMI-NEXT:    movl $0, %eax
-; X86-NOBMI-NEXT:    jns .LBB6_1
-; X86-NOBMI-NEXT:  # %bb.2:
-; X86-NOBMI-NEXT:    jle .LBB6_3
-; X86-NOBMI-NEXT:  .LBB6_4:
-; X86-NOBMI-NEXT:    retl
-; X86-NOBMI-NEXT:  .LBB6_1:
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOBMI-NEXT:    jg .LBB6_4
-; X86-NOBMI-NEXT:  .LBB6_3:
-; X86-NOBMI-NEXT:    xorl %edx, %edx
+; X86-NOBMI-NEXT:    movl %edx, %eax
+; X86-NOBMI-NEXT:    sarl $31, %eax
+; X86-NOBMI-NEXT:    notl %eax
+; X86-NOBMI-NEXT:    andl %eax, %edx
+; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    retl
   %r = call i64 @llvm.smax.i64(i64 %a, i64 0)
   ret i64 %r
@@ -239,14 +230,23 @@ define i64 @test_i64_smin(i64 %a) nounwind {
 }
 
 define i128 @test_i128_smax(i128 %a) nounwind {
-; X64-LABEL: test_i128_smax:
-; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    testq %rsi, %rsi
-; X64-NEXT:    cmovsq %rdx, %rax
-; X64-NEXT:    cmovgq %rsi, %rdx
-; X64-NEXT:    retq
+; X64-BMI-LABEL: test_i128_smax:
+; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    movq %rsi, %rcx
+; X64-BMI-NEXT:    sarq $63, %rcx
+; X64-BMI-NEXT:    andnq %rdi, %rcx, %rax
+; X64-BMI-NEXT:    andnq %rsi, %rcx, %rdx
+; X64-BMI-NEXT:    retq
+;
+; X64-NOBMI-LABEL: test_i128_smax:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    movq %rdi, %rax
+; X64-NOBMI-NEXT:    movq %rsi, %rdx
+; X64-NOBMI-NEXT:    sarq $63, %rdx
+; X64-NOBMI-NEXT:    notq %rdx
+; X64-NOBMI-NEXT:    andq %rdx, %rax
+; X64-NOBMI-NEXT:    andq %rsi, %rdx
+; X64-NOBMI-NEXT:    retq
 ;
 ; X86-BMI-LABEL: test_i128_smax:
 ; X86-BMI:       # %bb.0:
@@ -255,14 +255,12 @@ define i128 @test_i128_smax(i128 %a) nounwind {
 ; X86-BMI-NEXT:    pushl %eax
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BMI-NEXT:    xorl %edx, %edx
-; X86-BMI-NEXT:    testl %ecx, %ecx
-; X86-BMI-NEXT:    cmovlel %edx, %ecx
-; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-BMI-NEXT:    cmovsl %edx, %esi
-; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-BMI-NEXT:    cmovsl %edx, %edi
-; X86-BMI-NEXT:    cmovnsl {{[0-9]+}}(%esp), %edx
+; X86-BMI-NEXT:    movl %ecx, %edx
+; X86-BMI-NEXT:    sarl $31, %edx
+; X86-BMI-NEXT:    andnl %ecx, %edx, %ecx
+; X86-BMI-NEXT:    andnl {{[0-9]+}}(%esp), %edx, %esi
+; X86-BMI-NEXT:    andnl {{[0-9]+}}(%esp), %edx, %edi
+; X86-BMI-NEXT:    andnl {{[0-9]+}}(%esp), %edx, %edx
 ; X86-BMI-NEXT:    movl %ecx, 12(%eax)
 ; X86-BMI-NEXT:    movl %edx, 8(%eax)
 ; X86-BMI-NEXT:    movl %edi, 4(%eax)
@@ -278,25 +276,20 @@ define i128 @test_i128_smax(i128 %a) nounwind {
 ; X86-NOBMI-NEXT:    pushl %esi
 ; X86-NOBMI-NEXT:    pushl %eax
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOBMI-NEXT:    testl %ecx, %ecx
-; X86-NOBMI-NEXT:    movl $0, %edx
-; X86-NOBMI-NEXT:    movl $0, %esi
-; X86-NOBMI-NEXT:    movl $0, %edi
-; X86-NOBMI-NEXT:    js .LBB8_2
-; X86-NOBMI-NEXT:  # %bb.1:
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NOBMI-NEXT:    movl %edx, %ecx
+; X86-NOBMI-NEXT:    sarl $31, %ecx
+; X86-NOBMI-NEXT:    notl %ecx
+; X86-NOBMI-NEXT:    andl %ecx, %edx
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NOBMI-NEXT:  .LBB8_2:
-; X86-NOBMI-NEXT:    jg .LBB8_4
-; X86-NOBMI-NEXT:  # %bb.3:
-; X86-NOBMI-NEXT:    xorl %ecx, %ecx
-; X86-NOBMI-NEXT:  .LBB8_4:
-; X86-NOBMI-NEXT:    movl %ecx, 12(%eax)
-; X86-NOBMI-NEXT:    movl %edi, 8(%eax)
-; X86-NOBMI-NEXT:    movl %esi, 4(%eax)
-; X86-NOBMI-NEXT:    movl %edx, (%eax)
+; X86-NOBMI-NEXT:    andl %ecx, %esi
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NOBMI-NEXT:    andl %ecx, %edi
+; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %ecx
+; X86-NOBMI-NEXT:    movl %edx, 12(%eax)
+; X86-NOBMI-NEXT:    movl %ecx, 8(%eax)
+; X86-NOBMI-NEXT:    movl %edi, 4(%eax)
+; X86-NOBMI-NEXT:    movl %esi, (%eax)
 ; X86-NOBMI-NEXT:    addl $4, %esp
 ; X86-NOBMI-NEXT:    popl %esi
 ; X86-NOBMI-NEXT:    popl %edi

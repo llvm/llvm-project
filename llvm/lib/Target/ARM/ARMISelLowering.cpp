@@ -5218,28 +5218,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
   SDValue TrueVal = Op.getOperand(2);
   SDValue FalseVal = Op.getOperand(3);
-  ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FalseVal);
-  ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
   if (Op.getValueType().isInteger()) {
-
-    // Check for SMAX(lhs, 0) and SMIN(lhs, 0) patterns.
-    // (SELECT_CC setgt, lhs, 0, lhs, 0) -> (BIC lhs, (SRA lhs, typesize-1))
-    // (SELECT_CC setlt, lhs, 0, lhs, 0) -> (AND lhs, (SRA lhs, typesize-1))
-    // Both require less instructions than compare and conditional select.
-    if ((CC == ISD::SETGT || CC == ISD::SETLT) && LHS == TrueVal && RHSC &&
-        RHSC->isZero() && CFVal && CFVal->isZero() &&
-        LHS.getValueType() == RHS.getValueType()) {
-      EVT VT = LHS.getValueType();
-      SDValue Shift =
-          DAG.getNode(ISD::SRA, dl, VT, LHS,
-                      DAG.getConstant(VT.getSizeInBits() - 1, dl, VT));
-
-      if (CC == ISD::SETGT)
-        Shift = DAG.getNOT(dl, Shift, VT);
-
-      return DAG.getNode(ISD::AND, dl, VT, LHS, Shift);
-    }
-
     // (SELECT_CC setlt, x, 0, 1, 0) -> SRL(x, bw-1)
     if (CC == ISD::SETLT && isNullConstant(RHS) && isOneConstant(TrueVal) &&
         isNullConstant(FalseVal) && LHS.getValueType() == VT)
