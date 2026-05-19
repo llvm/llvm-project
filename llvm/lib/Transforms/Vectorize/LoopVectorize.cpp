@@ -225,7 +225,8 @@ static cl::opt<TailFoldingPolicyTy> TailFoldingPolicy(
 
 static cl::opt<TailFoldingPolicyTy> EpilogueTailFoldingPolicy(
     "epilogue-tail-folding-policy", cl::Hidden,
-    cl::desc("Epilogue-tail-folding preferences over creating an epilogue loop."),
+    cl::desc(
+        "Epilogue-tail-folding preferences over creating an epilogue loop."),
     cl::values(
         clEnumValN(TailFoldingPolicyTy::None, "dont-fold-tail",
                    "Don't tail-fold loops."),
