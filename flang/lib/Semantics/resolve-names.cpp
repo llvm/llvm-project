@@ -5114,8 +5114,14 @@ void SubprogramVisitor::CreateEntry(
     return static_cast<const parser::Name *>(nullptr);
   }()};
   std::optional<SourceName> distinctResultName;
-  if (resultName && resultName->source != entryName.source) {
-    distinctResultName = resultName->source;
+  if (resultName) {
+    if (resultName->source != entryName.source) {
+      distinctResultName = resultName->source;
+    } else {
+      Say(*resultName,
+          "RESULT name '%s' must be different from ENTRY name '%s'"_err_en_US,
+          resultName->source, entryName.source);
+    }
   }
   if (outer.IsModule() && !attrs.test(Attr::PRIVATE)) {
     attrs.set(Attr::PUBLIC);
