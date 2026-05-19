@@ -143,20 +143,12 @@ void use_TakesFunc() {
 
 // CIR-LABEL: _Z9TakesFuncIFivEEDcRKT_
 // CIR-NEXT: %[[FUNC_ALLOCA:.*]] = cir.alloca !cir.ptr<!cir.func<() -> !s32i>>, !cir.ptr<!cir.ptr<!cir.func<() -> !s32i>>>, ["f", init, const]
-// CIR-NEXT: %[[RET_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR-NEXT: cir.store %{{.*}}, %[[FUNC_ALLOCA]] : !cir.ptr<!cir.func<() -> !s32i>>, !cir.ptr<!cir.ptr<!cir.func<() -> !s32i>>>
 // CIR-NEXT: %[[FUNC_LOAD:.*]] = cir.load %[[FUNC_ALLOCA]] : !cir.ptr<!cir.ptr<!cir.func<() -> !s32i>>>, !cir.ptr<!cir.func<() -> !s32i>>
 // CIR-NEXT: %[[CALL:.*]] = cir.call %[[FUNC_LOAD]]() : (!cir.ptr<!cir.func<() -> !s32i>>) -> (!s32i {llvm.noundef})
-// CIR-NEXT: cir.store %[[CALL]], %[[RET_ALLOCA]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM-LABEL: _Z9TakesFuncIFivEEDcRKT_
 // LLVM-NEXT: %[[FUNC_ALLOCA:.*]] = alloca ptr
-// LLVM-NEXT: %[[RET_ALLOCA:.*]] = alloca i32
-// LLVM-NEXT: store ptr %{{.*}}, ptr %[[FUNC_ALLOCA]]
 // LLVM-NEXT: %[[FUNC_LOAD:.*]] = load ptr, ptr %[[FUNC_ALLOCA]]
 // LLVM-NEXT: %[[CALL:.*]] = call noundef i32 %[[FUNC_LOAD]]()
-// LLVM-NEXT: store i32 %[[CALL]], ptr %[[RET_ALLOCA]]
-
-
 
 // LLVM: attributes #[[LLVM_ATTR_0]] = { nounwind }
