@@ -2244,6 +2244,23 @@ TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroShlOneByVar) {
       Info.isKnownNeverZero(MRI->getVRegDef(CopyShl)->getOperand(1).getReg()));
 }
 
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroFreezeShlOneByVar) {
+  StringRef MIRString = R"(
+   %one:_(s32) = G_CONSTANT i32 1
+   %x:_(s32) = COPY $w0
+   %shl:_(s32) = G_SHL %one, %x
+   %freeze:_(s32) = G_FREEZE %shl
+   %copy_freeze:_(s32) = COPY %freeze
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopyFreeze = Copies[Copies.size() - 1];
+  GISelValueTracking Info(*MF);
+  EXPECT_FALSE(Info.isKnownNeverZero(
+      MRI->getVRegDef(CopyFreeze)->getOperand(1).getReg()));
+}
+
 TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroAshrExact) {
   StringRef MIRString = R"(
    %one:_(s32) = G_CONSTANT i32 1
@@ -2324,6 +2341,29 @@ TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroBuildVector) {
       Info.isKnownNeverZero(MRI->getVRegDef(CopyBV)->getOperand(1).getReg()));
   EXPECT_FALSE(
       Info.isKnownNeverZero(MRI->getVRegDef(CopyBVZ)->getOperand(1).getReg()));
+}
+
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroExtractVectorElt) {
+  StringRef MIRString = R"(
+   %hi33:_(s64) = G_CONSTANT i64 4294967296
+   %vec:_(<2 x s64>) = G_BUILD_VECTOR %hi33, %hi33
+   %idx:_(s64) = G_CONSTANT i64 0
+   %extract64:_(s64) = G_EXTRACT_VECTOR_ELT %vec, %idx
+   %copy_extract64:_(s64) = COPY %extract64
+
+   %extract32:_(s32) = G_EXTRACT_VECTOR_ELT %vec, %idx
+   %copy_extract32:_(s32) = COPY %extract32
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopyExtract32 = Copies[Copies.size() - 1];
+  Register CopyExtract64 = Copies[Copies.size() - 2];
+  GISelValueTracking Info(*MF);
+  EXPECT_TRUE(Info.isKnownNeverZero(
+      MRI->getVRegDef(CopyExtract64)->getOperand(1).getReg()));
+  EXPECT_FALSE(Info.isKnownNeverZero(
+      MRI->getVRegDef(CopyExtract32)->getOperand(1).getReg()));
 }
 
 TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroSplatVector) {
