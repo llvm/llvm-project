@@ -437,8 +437,8 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   if (!State)
     return nullptr;
 
-  const MemRegion *R = Element.getAsRegion();
-  const auto *ER = dyn_cast_or_null<ElementRegion>(R);
+  SVal BufVal = C.getSVal(Buffer.Expression);
+  const auto *ER = dyn_cast_or_null<ElementRegion>(BufVal.getAsRegion());
   if (!ER)
     return State;
 
@@ -456,11 +456,8 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
 
   const QualType ElemTy = Ctx.getBaseElementType(SuperR->getValueType());
 
-  const NonLoc StartIdx = ER->getIndex();
-
   std::optional<Loc> FirstElementVal =
-      State->getLValue(ElemTy, StartIdx, loc::MemRegionVal(SuperR))
-          .getAs<Loc>();
+      State->getLValue(ElemTy, SVB.makeZeroArrayIndex(), BufVal).getAs<Loc>();
   if (!FirstElementVal)
     return State;
 
@@ -512,15 +509,11 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   if (!Offset)
     return State;
 
-  // Retrieve the index of the last element.
+  // Retrieve the index of the last element relative to the buffer pointer.
   const NonLoc One = SVB.makeIntVal(1, IdxTy).castAs<NonLoc>();
   SVal LastIdx = SVB.evalBinOpNN(State, BO_Sub, *Offset, One, IdxTy);
 
-  const SVal AbsLastIdx =
-      SVB.evalBinOp(State, BO_Add, StartIdx, LastIdx, IdxTy);
-
-  SVal LastElementVal =
-      State->getLValue(ElemTy, AbsLastIdx, loc::MemRegionVal(SuperR));
+  SVal LastElementVal = State->getLValue(ElemTy, LastIdx, BufVal);
   if (!isa<Loc>(LastElementVal))
     return State;
 
