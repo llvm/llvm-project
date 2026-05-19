@@ -130,7 +130,7 @@ inline unsigned encodeULEB128(uint64_t Value, uint8_t *p,
 inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
                               const uint8_t *end = nullptr,
                               const char **error = nullptr) {
-  if (p != end && (*p < 128)) {
+  if (p != end && *p < 128) {
     if (n)
       *n = 1;
     return *p;
@@ -170,7 +170,7 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
 inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
                              const uint8_t *end = nullptr,
                              const char **error = nullptr) {
-  if (p != end && (*p < 128)) {
+  if (p != end && *p < 128) {
     if (n)
       *n = 1;
     // Handle negatives. Shift the value to move the sign bit from position 6
