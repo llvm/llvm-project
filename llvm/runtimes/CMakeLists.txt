@@ -4,6 +4,10 @@
 # the two files.
 
 set(COMMON_CMAKE_ARGS "-DHAVE_LLVM_LIT=ON;-DCLANG_RESOURCE_DIR=${CLANG_RESOURCE_DIR}")
+if(APPLE AND CMAKE_OSX_SYSROOT AND (LLVM_TARGET_TRIPLE STREQUAL LLVM_HOST_TRIPLE))
+  # Only propagate the host sysroot for native runtimes builds.
+  list(APPEND RUNTIMES_CMAKE_ARGS "-DCMAKE_OSX_SYSROOT=${CMAKE_OSX_SYSROOT}")
+endif()
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
   string(TOUPPER "${proj}" canon_name)
   STRING(REGEX REPLACE "-" "_" canon_name ${canon_name})
@@ -303,7 +307,6 @@ function(runtime_default_target)
                            PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                 LLVM_USE_LINKER
                                                 CUDA CMAKE_CUDA # For runtimes that may look for the CUDA compiler and/or SDK (libc, offload, flang-rt)
-                                                FFI # offload uses libffi
                                                 FLANG_RUNTIME # Shared between Flang and Flang-RT
                                                 ${ARG_PREFIXES}
                            EXTRA_TARGETS ${extra_targets}
@@ -578,6 +581,12 @@ if(build_runtimes)
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
+    # Pass the location of LLVM tools to the runtime build so libclc can find them
+    if (LLVM_NATIVE_TOOL_DIR)
+      list(APPEND extra_cmake_args "-DLLVM_NATIVE_TOOL_DIR=${LLVM_NATIVE_TOOL_DIR}")
+    else()
+      list(APPEND extra_cmake_args "-DLLVM_NATIVE_TOOL_DIR=${LLVM_RUNTIME_OUTPUT_INTDIR}")
+    endif()
   endif()
   # Tools needed by build_symbolizer.sh.
   if("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
@@ -710,7 +719,6 @@ if(build_runtimes)
         runtime_register_target(${name}+${multilib}
           DEPENDS runtimes-${name}
           CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name}
-                     -DLLVM_RUNTIMES_PREFIX=${name}/
                      -DLLVM_RUNTIMES_LIBDIR_SUBDIR=${multilib}
                      ${extra_cmake_args}
           BASE_NAME ${name}
@@ -813,7 +821,7 @@ ${_flag_values}\
 endif()
 
 if(LIBOMP_ENABLE_ARM64X)
-  # TODO: This only needs to depend on openmp-arm64ec-pc-windows-msvc, but the 
+  # TODO: This only needs to depend on openmp-arm64ec-pc-windows-msvc, but the
   # openmp targets set up for cross build runtimes don't currently work correctly.
   add_dependencies(runtimes-configure runtimes-arm64ec-pc-windows-msvc-build)
 endif()

@@ -18,8 +18,7 @@ define i64 @same_exit_block_pre_inc_use1() #1 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 64, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 3, [[N_VEC]]
@@ -314,7 +313,7 @@ define i64 @loop_contains_load_after_early_exit(ptr dereferenceable(1024) align(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P1]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i32> [[WIDE_LOAD]], splat (i32 1)
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[P2]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[P2]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX1]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = freeze <4 x i1> [[TMP6]]

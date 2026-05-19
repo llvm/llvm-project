@@ -330,7 +330,7 @@ enum ErrorType {
   eErrorTypeWin32       ///< Standard Win32 error codes.
 };
 
-enum ValueType {
+enum ValueType : uint32_t {
   eValueTypeInvalid = 0,
   eValueTypeVariableGlobal = 1,   ///< globals variable
   eValueTypeVariableStatic = 2,   ///< static variable
@@ -556,6 +556,12 @@ enum InstrumentationRuntimeType {
   eNumInstrumentationRuntimeTypes
 };
 
+enum PluginDomainKind {
+  ePluginDomainKindGlobal = 0x1,
+  ePluginDomainKindDebugger = 0x2,
+  ePluginDomainKindTarget = 0x4,
+};
+
 enum DynamicValueType {
   eNoDynamicValues = 0,
   eDynamicCanRunTarget = 1,
@@ -684,6 +690,7 @@ enum CommandArgumentType {
   eArgTypeProtocol,
   eArgTypeExceptionStage,
   eArgTypeNameMatchStyle,
+  eArgTypePluginDomain,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };

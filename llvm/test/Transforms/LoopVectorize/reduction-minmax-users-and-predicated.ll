@@ -51,8 +51,7 @@ define i32 @chained_smax(i32 %x, ptr %src) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[BROADCAST_SPLAT]], <4 x i32> zeroinitializer)
 ; CHECK-NEXT:    br i1 true, label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [3 x i32], ptr [[SRC]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:

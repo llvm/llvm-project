@@ -3087,3 +3087,47 @@ define i8 @no_fold_umin_to_uadd_sat_if_not_zero(i8 %a, i8 %b) {
   %r = trunc nuw i16 %cmp to i8
   ret i8 %r
 }
+
+define i8 @fold_icmpeq_to_ssub_sat(i8 %a) {
+; CHECK-LABEL: @fold_icmpeq_to_ssub_sat(
+; CHECK-NEXT:    [[SEL:%.*]] = call i8 @llvm.ssub.sat.i8(i8 0, i8 [[A:%.*]])
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %a, -128
+  %sub = sub i8 0, %a
+  %sel = select i1 %cmp, i8 127, i8 %sub
+  ret i8 %sel
+}
+
+define i8 @fold_icmpne_to_ssub_sat(i8 %a) {
+; CHECK-LABEL: @fold_icmpne_to_ssub_sat(
+; CHECK-NEXT:    [[SEL:%.*]] = call i8 @llvm.ssub.sat.i8(i8 0, i8 [[A:%.*]])
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp ne i8 %a, -128
+  %sub = sub i8 0, %a
+  %sel = select i1 %cmp, i8 %sub, i8 127
+  ret i8 %sel
+}
+
+define <4 x i8> @fold_icmpeq_to_ssub_sat_vec(<4 x i8> %a) {
+; CHECK-LABEL: @fold_icmpeq_to_ssub_sat_vec(
+; CHECK-NEXT:    [[SEL:%.*]] = call <4 x i8> @llvm.ssub.sat.v4i8(<4 x i8> zeroinitializer, <4 x i8> [[A:%.*]])
+; CHECK-NEXT:    ret <4 x i8> [[SEL]]
+;
+  %cmp = icmp eq <4 x i8> %a, splat (i8 -128)
+  %sub = sub <4 x i8> zeroinitializer, %a
+  %sel = select <4 x i1> %cmp, <4 x i8> splat (i8 127), <4 x i8> %sub
+  ret <4 x i8> %sel
+}
+
+define <4 x i8> @fold_icmpne_to_ssub_sat_vec(<4 x i8> %a) {
+; CHECK-LABEL: @fold_icmpne_to_ssub_sat_vec(
+; CHECK-NEXT:    [[SEL:%.*]] = call <4 x i8> @llvm.ssub.sat.v4i8(<4 x i8> zeroinitializer, <4 x i8> [[A:%.*]])
+; CHECK-NEXT:    ret <4 x i8> [[SEL]]
+;
+  %cmp = icmp ne <4 x i8> %a, splat (i8 -128)
+  %sub = sub <4 x i8> zeroinitializer, %a
+  %sel = select <4 x i1> %cmp, <4 x i8> %sub, <4 x i8> splat (i8 127)
+  ret <4 x i8> %sel
+}

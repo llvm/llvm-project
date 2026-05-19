@@ -1585,8 +1585,28 @@ void Sema::PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext) {
 
   // Out-of-line definitions shouldn't be pushed into scope in C++, unless they
   // are function-local declarations.
-  if (getLangOpts().CPlusPlus && D->isOutOfLine() && !S->getFnParent())
-    return;
+  if (getLangOpts().CPlusPlus && D->isOutOfLine()) {
+    if (!S->getFnParent())
+      return;
+
+    // Even inside a function, an out-of-line definition of a type that is
+    // nested inside a local class must not be pushed into the enclosing
+    // function scope. For example:
+    //
+    //   class A { public: class B; };
+    //   class A::B {};   // out-of-line definition inside the function
+    //   B b;             // must fail - only A::B is valid
+    //   Wrapper{B{}}     // must also fail
+    //
+    // Per C++ scoping rules only the qualified form A::B is accessible.
+    // Without this guard, PushOnScopeChains would add B to the function's
+    // local scope, making it findable via unqualified lookup, which is
+    // incorrect. The condition targets TagDecls (class/struct/union/enum)
+    // whose DeclContext is a CXXRecordDecl, i.e., types that are members
+    // of a local class being defined out-of-line.
+    if (isa<TagDecl>(D) && isa<CXXRecordDecl>(D->getDeclContext()))
+      return;
+  }
 
   // Template instantiations should also not be pushed into scope.
   if (isa<FunctionDecl>(D) &&
@@ -4898,6 +4918,8 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
       VarDecl *Def = Old->getDefinition();
       if (Def && checkVarDeclRedefinition(Def, New))
         return;
+      if (Old->isInvalidDecl())
+        New->setInvalidDecl();
     }
   } else {
     // C++ may not have a tentative definition rule, but it has a different
@@ -7075,13 +7097,6 @@ static void SetNestedNameSpecifier(Sema &S, DeclaratorDecl *DD, Declarator &D) {
 }
 
 void Sema::deduceOpenCLAddressSpace(VarDecl *Var) {
-  QualType Type = Var->getType();
-  if (Type.hasAddressSpace())
-    return;
-  if (Type->isDependentType())
-    return;
-  if (Type->isSamplerT() || Type->isVoidType())
-    return;
   LangAS ImplAS = LangAS::opencl_private;
   // OpenCL C v3.0 s6.7.8 - For OpenCL C 2.0 or with the
   // __opencl_c_program_scope_global_variables feature, the address space
@@ -7090,27 +7105,7 @@ void Sema::deduceOpenCLAddressSpace(VarDecl *Var) {
   if (getOpenCLOptions().areProgramScopeVariablesSupported(getLangOpts()) &&
       Var->hasGlobalStorage())
     ImplAS = LangAS::opencl_global;
-  // If the original type from a decayed type is an array type and that array
-  // type has no address space yet, deduce it now.
-  if (auto DT = dyn_cast<DecayedType>(Type)) {
-    auto OrigTy = DT->getOriginalType();
-    if (!OrigTy.hasAddressSpace() && OrigTy->isArrayType()) {
-      // Add the address space to the original array type and then propagate
-      // that to the element type through `getAsArrayType`.
-      OrigTy = Context.getAddrSpaceQualType(OrigTy, ImplAS);
-      OrigTy = QualType(Context.getAsArrayType(OrigTy), 0);
-      // Re-generate the decayed type.
-      Type = Context.getDecayedType(OrigTy);
-    }
-  }
-  Type = Context.getAddrSpaceQualType(Type, ImplAS);
-  // Apply any qualifiers (including address space) from the array type to
-  // the element type. This implements C99 6.7.3p8: "If the specification of
-  // an array type includes any type qualifiers, the element type is so
-  // qualified, not the array type."
-  if (Type->isArrayType())
-    Type = QualType(Context.getAsArrayType(Type), 0);
-  Var->setType(Type);
+  Var->assignAddressSpace(Context, ImplAS);
 }
 
 static void checkWeakAttr(Sema &S, NamedDecl &ND) {
@@ -7953,7 +7948,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
     if (CurContext->isRecord()) {
       if (SC == SC_Static) {
-        if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
+        if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
           // Walk up the enclosing DeclContexts to check for any that are
           // incompatible with static data members.
           const DeclContext *FunctionOrMethod = nullptr;
@@ -7976,7 +7971,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
                  diag::err_static_data_member_not_allowed_in_local_class)
                 << Name << RD->getDeclName() << RD->getTagKind();
             Invalid = true;
-            RD->setInvalidDecl();
           } else if (AnonStruct) {
             // C++ [class.static.data]p4: Unnamed classes and classes contained
             // directly or indirectly within unnamed classes shall not contain
@@ -9162,12 +9156,6 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     }
   }
 
-  if (!NewVD->hasLocalStorage() && NewVD->hasAttr<BlocksAttr>()) {
-    Diag(NewVD->getLocation(), diag::err_block_on_nonlocal);
-    NewVD->setInvalidDecl();
-    return;
-  }
-
   if (!NewVD->hasLocalStorage() && T->isSizelessType() &&
       !T.isWebAssemblyReferenceType() && !T->isHLSLSpecificType()) {
     Diag(NewVD->getLocation(), diag::err_sizeless_nonlocal) << T;
@@ -9176,7 +9164,8 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   }
 
   if (isVM && NewVD->hasAttr<BlocksAttr>()) {
-    Diag(NewVD->getLocation(), diag::err_block_on_vm);
+    Diag(NewVD->getLocation(), diag::err_block_not_allowed_on)
+        << diag::NotAllowedBlockVarReason::VariablyModifiedType;
     NewVD->setInvalidDecl();
     return;
   }
@@ -15810,12 +15799,11 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
         << 1 << New << SourceRange(D.getDeclSpec().getModulePrivateSpecLoc())
         << FixItHint::CreateRemoval(D.getDeclSpec().getModulePrivateSpecLoc());
 
-  if (New->hasAttr<BlocksAttr>()) {
-    Diag(New->getLocation(), diag::err_block_on_nonlocal);
-  }
+  if (New->hasAttr<BlocksAttr>())
+    Diag(New->getLocation(), diag::err_block_not_allowed_on)
+        << diag::NotAllowedBlockVarReason::NonlocalVariable;
 
-  if (getLangOpts().OpenCL)
-    deduceOpenCLAddressSpace(New);
+  New->deduceParmAddressSpace(Context);
 
   return New;
 }
@@ -15904,6 +15892,20 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
       lifetime = T->getObjCARCImplicitLifetime();
     }
     T = Context.getLifetimeQualifiedType(T, lifetime);
+  }
+
+  if (getLangOpts().OpenCL) {
+    assert(!isa<DecayedType>(T));
+    if (T->isArrayType() && !T.hasAddressSpace()) {
+      QualType ET = Context.getAsArrayType(T)->getElementType();
+      if (!ET.hasAddressSpace()) {
+        // Add the private address space to the contents of the pointer when a
+        // pointer parameter is declared as an array and not declared.
+        LangAS ImplAS = LangAS::opencl_private;
+        T = Context.getAddrSpaceQualType(T, ImplAS);
+        T = QualType(Context.getAsArrayType(T), 0);
+      }
+    }
   }
 
   ParmVarDecl *New = ParmVarDecl::Create(Context, DC, StartLoc, NameLoc, Name,
@@ -16332,10 +16334,13 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   // have the LSI properly restored.
   if (isGenericLambdaCallOperatorSpecialization(FD)) {
     // C++2c 7.5.5.2p17 A member of a closure type shall not be explicitly
-    // instantiated, explicitly specialized.
-    if (FD->getTemplateSpecializationInfo()
-            ->isExplicitInstantiationOrSpecialization()) {
-      Diag(FD->getLocation(), diag::err_lambda_explicit_spec);
+    // specialized.
+    if (FD->getTemplateSpecializationInfo()->isExplicitSpecialization()) {
+      Diag(FD->getLocation(), diag::err_lambda_explicit_temp_spec)
+          << /*specialization*/ 0;
+      CXXRecordDecl *RD = cast<CXXRecordDecl>(FD->getParent());
+      Diag(RD->getLocation(), diag::note_defined_here) << RD;
+
       FD->setInvalidDecl();
       PushFunctionScope();
     } else {

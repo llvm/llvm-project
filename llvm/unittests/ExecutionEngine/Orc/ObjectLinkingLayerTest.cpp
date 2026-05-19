@@ -297,23 +297,21 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
       return ExecutorAddr::fromPtr((void *)nullptr);
     }
 
-    void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+    void lookupSymbolsAsync(tpctypes::DylibHandle H,
+                            const SymbolLookupSet &Symbols,
                             SymbolLookupCompleteFn Complete) override {
-      std::vector<std::optional<ExecutorSymbolDef>> Result;
-      EXPECT_EQ(Request.size(), 1u);
-      for (auto &LR : Request) {
-        EXPECT_EQ(LR.Symbols.size(), 1u);
-        for (auto &Sym : LR.Symbols) {
-          if (*Sym.first == "_testFunc") {
-            ExecutorSymbolDef Def{ExecutorAddr::fromPtr((void *)0x1000),
-                                  JITSymbolFlags::Exported};
-            Result.emplace_back(Def);
-          } else {
-            ADD_FAILURE() << "unexpected symbol request " << *Sym.first;
-          }
+      tpctypes::LookupResult Result;
+      EXPECT_EQ(Symbols.size(), 1u);
+      for (auto &Sym : Symbols) {
+        if (*Sym.first == "_testFunc") {
+          ExecutorSymbolDef Def{ExecutorAddr::fromPtr((void *)0x1000),
+                                JITSymbolFlags::Exported};
+          Result.emplace_back(Def);
+        } else {
+          ADD_FAILURE() << "unexpected symbol request " << *Sym.first;
         }
       }
-      Complete(std::vector<tpctypes::LookupResult>{1, Result});
+      Complete(std::move(Result));
     }
 
     Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() override {

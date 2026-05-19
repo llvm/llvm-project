@@ -309,6 +309,18 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setHighBits(MaxValue.countl_zero());
     break;
   }
+  case TargetOpcode::G_UREM: {
+    KnownBits LHSKnown(Known.getBitWidth());
+    KnownBits RHSKnown(Known.getBitWidth());
+
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), LHSKnown, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), RHSKnown, DemandedElts,
+                         Depth + 1);
+
+    Known = KnownBits::urem(LHSKnown, RHSKnown);
+    break;
+  }
   case TargetOpcode::G_CONSTANT: {
     Known = KnownBits::makeConstant(MI.getOperand(1).getCImm()->getValue());
     break;
@@ -781,7 +793,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_CTTZ:
-  case TargetOpcode::G_CTTZ_ZERO_UNDEF: {
+  case TargetOpcode::G_CTTZ_ZERO_POISON: {
     KnownBits SrcOpKnown;
     computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
                          Depth + 1);
@@ -792,7 +804,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_CTLZ:
-  case TargetOpcode::G_CTLZ_ZERO_UNDEF: {
+  case TargetOpcode::G_CTLZ_ZERO_POISON: {
     KnownBits SrcOpKnown;
     computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
                          Depth + 1);

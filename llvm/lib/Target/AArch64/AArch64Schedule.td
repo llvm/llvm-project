@@ -94,3 +94,7 @@ def WriteVLDPairShuffle : WriteSequence<[WriteVLD, WriteVq, WriteVq]>;
 // Store a shuffled vector.
 def WriteVSTShuffle : WriteSequence<[WriteVq, WriteVST]>;
 def WriteVSTPairShuffle : WriteSequence<[WriteVq, WriteVq, WriteVST]>;
+
+// SIMD MAC forwarding reads
+def ReadVMAC       : SchedRead;  // SIMD MAC operand read
+def ReadVMACAccum  : SchedRead;  // SIMD MAC accumulator/destination read

@@ -782,6 +782,7 @@ protected:
 
       if (!error.Success()) {
         result.AppendMessage(error.AsCString());
+        result.SetStatus(eReturnStatusFailed);
         return;
       }
 

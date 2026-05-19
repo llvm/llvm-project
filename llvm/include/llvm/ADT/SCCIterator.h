@@ -165,8 +165,7 @@ void scc_iterator<GraphT, GT>::DFSVisitChildren() {
   while (VisitStack.back().NextChild != GT::child_end(VisitStack.back().Node)) {
     // TOS has at least one more child so continue DFS
     NodeRef childN = *VisitStack.back().NextChild++;
-    typename DenseMap<NodeRef, unsigned>::iterator Visited =
-        nodeVisitNumbers.find(childN);
+    auto Visited = nodeVisitNumbers.find(childN);
     if (Visited == nodeVisitNumbers.end()) {
       // this node has never been seen.
       DFSVisitOne(childN);

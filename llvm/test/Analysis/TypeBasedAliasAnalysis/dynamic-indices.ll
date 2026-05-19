@@ -91,7 +91,7 @@ for.end:                                          ; preds = %for.body
 
 ; CHECK: define float @test1(
 
-; CHECK:   ret float 0x3FD3333340000000
+; CHECK:   ret float 3.000000e-01
 
 define float @test1(ptr %a) nounwind {
 entry:

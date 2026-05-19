@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lldb-python.h"
+
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
@@ -13,7 +15,6 @@
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
-#include "../lldb-python.h"
 #include "ScriptedHookPythonInterface.h"
 
 using namespace lldb;
