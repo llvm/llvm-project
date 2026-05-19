@@ -1923,8 +1923,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     uint64_t SrcMinLen = SrcTy.getElementCount().getKnownMinValue();
-    if (!IsMixedFixedFromScalable &&
-        (Idx >= SrcMinLen || Idx + DstMinLen > SrcMinLen)) {
+    if (Idx >= SrcMinLen ||
+        (!IsMixedFixedFromScalable && Idx + DstMinLen > SrcMinLen)) {
       report("Destination type and index must not cause extract to overrun the "
              "source vector",
              MI);

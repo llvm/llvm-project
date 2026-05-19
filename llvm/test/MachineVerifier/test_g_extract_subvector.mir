@@ -55,4 +55,8 @@ body: |
 
     ; CHECK: Index must be a multiple of the destination vector's minimum vector length
     %20:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR %12, 1
+
+    ; CHECK: Destination type and index must not cause extract to overrun the source vector
+    %21:_(<2 x s32>) = G_EXTRACT_SUBVECTOR %12, 4
+
 ...
