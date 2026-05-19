@@ -62,6 +62,27 @@ static bool isScalarizableMemRefResult(Type retTy) {
          retTyAsMemRef.getNumElements() == 1;
 }
 
+static bool isSupportedScalarizedMemRefReturnValue(Value value) {
+  if (isa<BlockArgument>(value))
+    return true;
+
+  Operation *definingOp = value.getDefiningOp();
+  return isa_and_nonnull<memref::AllocOp, memref::GetGlobalOp>(definingOp);
+}
+
+static LogicalResult collectSupportedScalarizedMemRefReturns(
+    func::FuncOp funcOp, SmallVectorImpl<func::ReturnOp> &returnOps) {
+  WalkResult result = funcOp.walk([&](func::ReturnOp returnOp) {
+    if (returnOp.getNumOperands() != 1)
+      return WalkResult::interrupt();
+    if (!isSupportedScalarizedMemRefReturnValue(returnOp.getOperand(0)))
+      return WalkResult::interrupt();
+    returnOps.push_back(returnOp);
+    return WalkResult::advance();
+  });
+  return result.wasInterrupted() ? failure() : success();
+}
+
 static Value materializeCastIfNeeded(OpBuilder &builder, Location loc,
                                      Type type, Value value) {
   if (value.getType() == type)
@@ -70,6 +91,9 @@ static Value materializeCastIfNeeded(OpBuilder &builder, Location loc,
       .getResult(0);
 }
 
+// Ranked memrefs with rank > 0 convert to
+// single element emitc.array, so extract the unique element with a zero
+// subscript.
 static Value loadScalarFromArray(OpBuilder &builder, Location loc,
                                  Type scalarType,
                                  TypedValue<emitc::ArrayType> arrayValue) {
@@ -83,6 +107,8 @@ static Value loadScalarFromArray(OpBuilder &builder, Location loc,
       .getResult();
 }
 
+// Rank-0 memrefs and heap allocations are modeled as pointers. Assuming the
+// return operand is already converted, load the single element directly.
 static Value loadScalarFromPointer(OpBuilder &builder, Location loc,
                                    Type scalarType,
                                    TypedValue<emitc::PointerType> ptr) {
@@ -99,25 +125,22 @@ static bool shouldReadMemRefReturnAsPointer(Value value,
 }
 
 static void scalarizeSingleElementMemRefReturns(
-    emitc::FuncOp funcOp, ConversionPatternRewriter &rewriter,
+    ArrayRef<func::ReturnOp> returnOps, ConversionPatternRewriter &rewriter,
     const TypeConverter &typeConverter, MemRefType memrefType) {
-  // Due to branching the function may have multiple return statements.
-  SmallVector<func::ReturnOp> returnOps;
-  funcOp.walk([&](func::ReturnOp returnOp) {
-    assert(returnOp.getNumOperands() == 1 &&
-           "Expected scalarized function to have one return operand");
-    returnOps.push_back(returnOp);
-  });
+  Type scalarType = typeConverter.convertType(memrefType.getElementType());
+  assert(scalarType && "MemRef element type must be EmitC convertible.");
 
   for (func::ReturnOp returnOp : returnOps) {
+    assert(returnOp.getNumOperands() == 1 &&
+           "Expected scalarized function to have one return operand");
     OpBuilder::InsertionGuard guard(rewriter);
     Location loc = returnOp.getLoc();
     rewriter.setInsertionPoint(returnOp);
 
-    Type scalarType = typeConverter.convertType(memrefType.getElementType());
-    assert(scalarType && "MemRef element type must be EmitC convertible.");
-
     Value returnedValue = returnOp.getOperand(0);
+    // Return operands may have already have been type-converted to emitc, e.g.
+    // when coming from a converted block argument. This case handles
+    // emitc.array return operands.
     if (auto arrayValue =
             dyn_cast<TypedValue<emitc::ArrayType>>(returnedValue)) {
       Value scalar = loadScalarFromArray(rewriter, loc, scalarType, arrayValue);
@@ -125,6 +148,7 @@ static void scalarizeSingleElementMemRefReturns(
       continue;
     }
 
+    // This case handles emitc.ptr return operands.
     if (auto ptr = dyn_cast<TypedValue<emitc::PointerType>>(returnedValue)) {
       Value scalar = loadScalarFromPointer(rewriter, loc, scalarType, ptr);
       rewriter.replaceOpWithNewOp<emitc::ReturnOp>(returnOp, scalar);
@@ -136,6 +160,9 @@ static void scalarizeSingleElementMemRefReturns(
            "Expected scalarized return operand to be a memref, emitc.array, or "
            "emitc.ptr.");
 
+    // Some legal producers still have the original memref type at this point.
+    // Rank-0 memrefs and memref.alloc results are expected to lower to pointer
+    // storage, so materialize that conversion before loading the scalar.
     if (shouldReadMemRefReturnAsPointer(returnedValue, returnedMemRefType)) {
       Type ptrTy = emitc::PointerType::get(scalarType);
       Value ptrValue =
@@ -147,6 +174,9 @@ static void scalarizeSingleElementMemRefReturns(
       continue;
     }
 
+    // Remaining legal single-element memrefs are fixed-rank, fixed-shape
+    // values that lower to emitc.array. Materialize the array view and load
+    // the only element.
     Type convertedArrayType = typeConverter.convertType(returnedMemRefType);
     assert((convertedArrayType && isa<emitc::ArrayType>(convertedArrayType)) &&
            "MemRef type must convert to emitc.array.");
@@ -170,6 +200,18 @@ public:
     if (callOp.getNumResults() > 1)
       return rewriter.notifyMatchFailure(
           callOp, "only functions with zero or one result can be converted");
+
+    if (callOp.getNumResults() == 1) {
+      if (isa<MemRefType>(callOp.getResult(0).getType()))
+        return rewriter.notifyMatchFailure(
+            callOp, "memref call results cannot be converted");
+
+      Type resultType =
+          getTypeConverter()->convertType(callOp.getResult(0).getType());
+      if (!resultType)
+        return rewriter.notifyMatchFailure(callOp,
+                                           "result type conversion failed");
+    }
 
     rewriter.replaceOpWithNewOp<emitc::CallOp>(callOp, callOp.getResultTypes(),
                                                adaptor.getOperands(),
@@ -205,13 +247,24 @@ public:
     Type resultType;
     bool scalarizeMemRefResult = false;
     MemRefType scalarizedMemRefType;
+    SmallVector<func::ReturnOp> scalarizedReturnOps;
     if (fnType.getNumResults() == 1) {
       Type originalResultType = fnType.getResult(0);
-      scalarizeMemRefResult = isScalarizableMemRefResult(originalResultType) &&
-                              isPrivateAndUnused(funcOp);
-      if (scalarizeMemRefResult) {
+      if (isa<MemRefType>(originalResultType)) {
+        scalarizeMemRefResult =
+            isScalarizableMemRefResult(originalResultType) &&
+            isPrivateAndUnused(funcOp);
+        if (!scalarizeMemRefResult)
+          return rewriter.notifyMatchFailure(
+              funcOp, "memref result cannot be scalarized");
+        if (!funcOp.isDeclaration() &&
+            failed(collectSupportedScalarizedMemRefReturns(
+                funcOp, scalarizedReturnOps)))
+          return rewriter.notifyMatchFailure(
+              funcOp, "unsupported memref return producer");
         scalarizedMemRefType = cast<MemRefType>(originalResultType);
       }
+
       Type typeToConvert = scalarizeMemRefResult
                                ? getElementTypeOrSelf(scalarizedMemRefType)
                                : originalResultType;
@@ -255,8 +308,9 @@ public:
               &newFuncOp.getBody(), *getTypeConverter(), &signatureConverter)))
         return failure();
       if (scalarizeMemRefResult)
-        scalarizeSingleElementMemRefReturns(
-            newFuncOp, rewriter, *getTypeConverter(), scalarizedMemRefType);
+        scalarizeSingleElementMemRefReturns(scalarizedReturnOps, rewriter,
+                                            *getTypeConverter(),
+                                            scalarizedMemRefType);
     }
     rewriter.eraseOp(funcOp);
 
@@ -294,6 +348,10 @@ public:
       rewriter.replaceOpWithNewOp<emitc::ReturnOp>(returnOp, Value());
       return success();
     }
+
+    if (isa<MemRefType>(returnOp.getOperand(0).getType()))
+      return rewriter.notifyMatchFailure(returnOp,
+                                         "memref return is not converted");
 
     rewriter.replaceOpWithNewOp<emitc::ReturnOp>(returnOp,
                                                  adaptor.getOperands()[0]);
