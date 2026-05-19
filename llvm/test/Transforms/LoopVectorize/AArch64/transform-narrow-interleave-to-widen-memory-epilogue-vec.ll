@@ -84,6 +84,9 @@ exit:
 ; materializes VFxUF and the canonical IV increment step is UF*vscale.
 %pair = type { i64, i64 }
 define void @test(ptr noalias %A, i64 %v, i64 %n) #0 {
+; CHECK-LABEL: define void @test(
+; CHECK:       vector.body:
+;
 entry:
   br label %for.body
 
