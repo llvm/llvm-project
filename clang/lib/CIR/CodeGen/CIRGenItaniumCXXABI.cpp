@@ -1202,8 +1202,8 @@ CIRGenItaniumRTTIBuilder::getAddrOfExternalRTTIDescriptor(mlir::Location loc,
     // From LLVM codegen => Note for the future: If we would ever like to do
     // deferred emission of RTTI, check if emitting vtables opportunistically
     // need any adjustment.
-    gv = CIRGenModule::createGlobalOp(cgm, loc, name, builder.getUInt8PtrTy(),
-                                      /*isConstant=*/true);
+    gv = cgm.createGlobalOp(loc, name, builder.getUInt8PtrTy(),
+                            /*isConstant=*/true);
     const CXXRecordDecl *rd = ty->getAsCXXRecordDecl();
     cgm.setGVProperties(gv, rd);
 
@@ -1601,9 +1601,8 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   // Create new global and search for an existing global.
   auto oldGV = dyn_cast_or_null<cir::GlobalOp>(cgm.getGlobalValue(name));
 
-  cir::GlobalOp gv =
-      CIRGenModule::createGlobalOp(cgm, loc, name, init.getType(),
-                                   /*isConstant=*/true);
+  cir::GlobalOp gv = cgm.createGlobalOp(loc, name, init.getType(),
+                                        /*isConstant=*/true);
   gv.setLinkage(linkage);
 
   // Export the typeinfo in the same circumstances as the vtable is

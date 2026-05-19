@@ -1023,7 +1023,12 @@ def CIR_YieldOp : CIR_Op<"yield", [
 // BreakOp
 //===----------------------------------------------------------------------===//
 
-def CIR_BreakOp : CIR_Op<"break", [Terminator]> {
+defvar CIR_LoopScopes = ["WhileOp", "DoWhileOp", "ForOp"];
+defvar CIR_BreakableScopes = !listconcat(CIR_LoopScopes, ["SwitchOp"]);
+
+def CIR_BreakOp : CIR_Op<"break", [
+  Terminator, AncestorOneOf<CIR_BreakableScopes>
+]> {
   let summary = "C/C++ `break` statement equivalent";
   let description = [{
     The `cir.break` operation is used to cease the execution of the current loop
@@ -1031,7 +1036,6 @@ def CIR_BreakOp : CIR_Op<"break", [Terminator]> {
     allowed within a breakable operations (loops and switches).
   }];
   let assemblyFormat = "attr-dict";
-  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -1039,7 +1043,9 @@ def CIR_BreakOp : CIR_Op<"break", [Terminator]> {
 // ContinueOp
 //===----------------------------------------------------------------------===//
 
-def CIR_ContinueOp : CIR_Op<"continue", [Terminator]> {
+def CIR_ContinueOp : CIR_Op<"continue", [
+  Terminator, AncestorOneOf<CIR_LoopScopes>
+]> {
   let summary = "C/C++ `continue` statement equivalent";
   let description = [{
     The `cir.continue` operation is used to end execution of the current
@@ -1047,7 +1053,6 @@ def CIR_ContinueOp : CIR_Op<"continue", [Terminator]> {
     It is only allowed within loop regions.
   }];
   let assemblyFormat = "attr-dict";
-  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -3284,7 +3289,7 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
     UnitAttr:$is_volatile
   );
 
-  let results = (outs CIR_IntType:$result);
+  let results = (outs CIR_AnyIntOrBoolType:$result);
 
   let assemblyFormat = [{
     (`align` `(` $alignment^ `)`)?
@@ -3371,7 +3376,7 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
     UnitAttr:$is_volatile
     );
 
-  let results = (outs CIR_IntType:$result);
+  let results = (outs CIR_AnyIntOrBoolType:$result);
 
   let assemblyFormat = [{
     (`align` `(` $alignment^ `)`)?
@@ -3846,7 +3851,8 @@ def CIR_FuncOp : CIR_Op<"func", [
 //===----------------------------------------------------------------------===//
 
 def CIR_LocalInitOp : CIR_Op<"local_init", [
-  DeclareOpInterfaceMethods<SymbolUserOpInterface>, NoRegionArguments
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>, NoRegionArguments,
+  HasAncestor<"FuncOp">
 ]> {
   let summary = "initialize a static or thread local object";
   let description = [{
@@ -3901,7 +3907,6 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
 }
 }];
 
-  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -4317,7 +4322,7 @@ def CIR_CoroBodyOp : CIR_Op<"coro.body", [
 //===----------------------------------------------------------------------===//
 
 def CIR_CoReturnOp : CIR_Op<"co_return", [
-  ReturnLike, Pure, Terminator
+  ReturnLike, Pure, Terminator, HasAncestor<"CoroBodyOp">
 ]> {
   let summary = "Coroutine return operation";
   let description = [{
@@ -4330,8 +4335,6 @@ def CIR_CoReturnOp : CIR_Op<"co_return", [
   let assemblyFormat = [{
     attr-dict
   }];
-
-  let hasVerifier = 1;
 
   let hasLLVMLowering = false;
 }
@@ -5046,8 +5049,8 @@ def CIR_GetMethodOp : CIR_Op<"get_method"> {
     The method type must match the callee type. That is:
     - The return type of the method must match the return type of the callee.
     - The first parameter of the callee must have type `!cir.ptr<!cir.void>`.
-    - Types of other parameters of the callee must match the parameters of the
-      method.
+    - Types of other parameters of the callee must match the method's
+      parameters after the implicit `this` pointer.
   }];
 
   let arguments = (ins CIR_MethodType:$method, CIR_PtrToRecordType:$object);
@@ -7209,7 +7212,7 @@ def CIR_TryOp : CIR_Op<"try",[
 // CatchParamOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CatchParamOp : CIR_Op<"catch_param", [HasParent<"cir::TryOp">]> {
+def CIR_CatchParamOp : CIR_Op<"catch_param", [HasParent<"TryOp">]> {
   let summary = "Represents the catch clause formal parameter";
   let description = [{
     The `cir.catch_param` is used to retrieve the exception object inside
@@ -7776,11 +7779,11 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
       CIR_EhTokenType:$eh_token,
       CIR_PointerType:$param_addr,
       CIR_InitCatchKind:$kind,
-      FlatSymbolRefAttr:$copy_fn
+      OptionalAttr<FlatSymbolRefAttr>:$copy_fn
   );
 
   let assemblyFormat = [{
-    $kind $eh_token `to` $param_addr `using` $copy_fn `:`
+    $kind $eh_token `to` $param_addr `using` ($copy_fn^)? `:`
       qualified(type($param_addr)) attr-dict
   }];
 
@@ -8175,6 +8178,32 @@ def CIR_MemChrOp : CIR_Op<"libc.memchr"> {
 
   let assemblyFormat = [{
     `(` $src `,` $pattern `,` $len `)` attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// LaunderOp
+//===----------------------------------------------------------------------===//
+
+def CIR_LaunderOp : CIR_Op<"launder", [SameOperandsAndResultType]> {
+  let summary = "Launder operation";
+  let description = [{
+    This operation represents a call to 'launder' in C++,
+    which acts as an optimization boundary that breaks type invariance.
+
+  Example:
+  ```
+    %0 = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
+    %1 = cir.load align(8) %1 : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+    %2 = cir.launder(%1) : !cir.ptr<!rec_S>
+  ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$arg);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $arg `:` qualified(type($result)) attr-dict
   }];
 }
 
