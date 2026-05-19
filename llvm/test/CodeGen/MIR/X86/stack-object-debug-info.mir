@@ -36,12 +36,14 @@
   !2 = !{}
   !3 = !{i32 1, !"Debug Info Version", i32 3}
   !4 = !DILocalVariable(name: "x", scope: !5, file: !1, line: 16, type: !8)
-  !5 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !0)
+  !5 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false, type: !12, unit: !0)
   !6 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
   !7 = !DILocation(line: 0, scope: !5)
   !8 = !DICompositeType(tag: DW_TAG_array_type, baseType: !6, size: 2048, align: 8, elements: !9)
   !9 = !{!10}
   !10 = !DISubrange(count: 256)
+  !11 = !{null}
+  !12 = !DISubroutineType(types: !11)
 ...
 ---
 name:            foo
@@ -53,7 +55,7 @@ frameInfo:
 # CHECK:  - { id: 0, name: y.i, type: default, offset: 0, size: 256, alignment: 16,
 # CHECK-NEXT: callee-saved-register: '', callee-saved-restored: true,
 # CHECK-NEXT: debug-info-variable: '!4', debug-info-expression: '!DIExpression()',
-# CHECK-NEXT: debug-info-location: '!10' }
+# CHECK-NEXT: debug-info-location: '!12' }
 stack:
   - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16,
       debug-info-variable: '!4', debug-info-expression: '!DIExpression()',

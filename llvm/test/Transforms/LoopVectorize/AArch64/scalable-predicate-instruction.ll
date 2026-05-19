@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes=loop-vectorize -S | FileCheck %s
-; RUN: opt < %s -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-dont-vectorize -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -tail-folding-policy=must-fold-tail -S | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
@@ -13,7 +13,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void  @predication_in_loop(ptr %a, ptr %b, ptr %cond) #0 {
 ; CHECK-LABEL: @predication_in_loop
-; CHECK:  sdiv <vscale x 4 x i32>
+; CHECK:  call <vscale x 4 x i32> @llvm.masked.sdiv
 ;
 entry:
   br label %for.body
@@ -58,7 +58,7 @@ for.inc:
 
 define void @unpredicated_loop_predication_through_tailfolding(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: @unpredicated_loop_predication_through_tailfolding
-; CHECK-NOT:  sdiv <vscale x 4 x i32>
+; CHECK-NOT:  call <vscale x 4 x i32> @llvm.masked.sdiv
 
 entry:
   br label %loop

@@ -421,7 +421,7 @@ define x86_fp80 @ignore_x86_fp80(x86_fp80 %x) #0 {
 ; CHECK-LABEL: define x86_fp80 @ignore_x86_fp80(
 ; CHECK-SAME: x86_fp80 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[HARD_CANONICAL:%.*]] = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 [[X]])
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord x86_fp80 [[X]], 0xK00000000000000000000
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord x86_fp80 [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[X_CANON:%.*]] = select i1 [[ORD]], x86_fp80 [[HARD_CANONICAL]], x86_fp80 [[X]]
 ; CHECK-NEXT:    ret x86_fp80 [[X_CANON]]
 ;
@@ -435,7 +435,7 @@ define ppc_fp128 @ignore_ppc_fp128(ppc_fp128 %x) #0 {
 ; CHECK-LABEL: define ppc_fp128 @ignore_ppc_fp128(
 ; CHECK-SAME: ppc_fp128 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[HARD_CANONICAL:%.*]] = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 [[X]])
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord ppc_fp128 [[X]], 0xM00000000000000000000000000000000
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord ppc_fp128 [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[X_CANON:%.*]] = select i1 [[ORD]], ppc_fp128 [[HARD_CANONICAL]], ppc_fp128 [[X]]
 ; CHECK-NEXT:    ret ppc_fp128 [[X_CANON]]
 ;
@@ -555,7 +555,7 @@ define float @canonicalize_missing_noop_only_daz(float %x) "denormal-fp-math"="i
 define half @independent_hands_canonicalize_ieee_0(half noundef %x, half %y) #0 {
 ; CHECK-LABEL: define half @independent_hands_canonicalize_ieee_0(
 ; CHECK-SAME: half noundef [[X:%.*]], half [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0xH0000
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[X_CANON:%.*]] = select i1 [[ORD]], half [[X]], half [[Y]]
 ; CHECK-NEXT:    ret half [[X_CANON]]
 ;
@@ -568,7 +568,7 @@ define half @independent_hands_canonicalize_ieee_0(half noundef %x, half %y) #0 
 define half @independent_hands_canonicalize_ieee_1(half noundef %x, half %y) #0 {
 ; CHECK-LABEL: define half @independent_hands_canonicalize_ieee_1(
 ; CHECK-SAME: half noundef [[X:%.*]], half [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno half [[X]], 0xH0000
+; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno half [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[X_CANON:%.*]] = select i1 [[UNO]], half [[Y]], half [[X]]
 ; CHECK-NEXT:    ret half [[X_CANON]]
 ;
@@ -581,7 +581,7 @@ define half @independent_hands_canonicalize_ieee_1(half noundef %x, half %y) #0 
 define half @independent_hands_fdiv_ieee_0(half noundef %x, half %y) #0 {
 ; CHECK-LABEL: define half @independent_hands_fdiv_ieee_0(
 ; CHECK-SAME: half noundef [[X:%.*]], half [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0xH0000
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ORD]], half [[Y]], half [[X]]
 ; CHECK-NEXT:    ret half [[SEL]]
 ;
@@ -594,7 +594,7 @@ define half @independent_hands_fdiv_ieee_0(half noundef %x, half %y) #0 {
 define half @independent_hands_fdiv_ieee_1(half noundef %x, half %y) #0 {
 ; CHECK-LABEL: define half @independent_hands_fdiv_ieee_1(
 ; CHECK-SAME: half noundef [[X:%.*]], half [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno half [[X]], 0xH0000
+; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno half [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[UNO]], half [[X]], half [[Y]]
 ; CHECK-NEXT:    ret half [[SEL]]
 ;
@@ -608,7 +608,7 @@ define half @independent_hands_canonicalize_daz_0(half noundef %x, half %y) #1 {
 ; CHECK-LABEL: define half @independent_hands_canonicalize_daz_0(
 ; CHECK-SAME: half noundef [[X:%.*]], half [[Y:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[HARD_CANONICAL:%.*]] = call half @llvm.canonicalize.f16(half [[X]])
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0xH0000
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[X_CANON:%.*]] = select i1 [[ORD]], half [[HARD_CANONICAL]], half [[Y]]
 ; CHECK-NEXT:    ret half [[X_CANON]]
 ;
@@ -622,7 +622,7 @@ define half @independent_hands_canonicalize_daz_1(half noundef %x, half %y) #1 {
 ; CHECK-LABEL: define half @independent_hands_canonicalize_daz_1(
 ; CHECK-SAME: half noundef [[X:%.*]], half [[Y:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[HARD_CANONICAL:%.*]] = call half @llvm.canonicalize.f16(half [[X]])
-; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno half [[X]], 0xH0000
+; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno half [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[X_CANON:%.*]] = select i1 [[UNO]], half [[Y]], half [[HARD_CANONICAL]]
 ; CHECK-NEXT:    ret half [[X_CANON]]
 ;
@@ -635,8 +635,8 @@ define half @independent_hands_canonicalize_daz_1(half noundef %x, half %y) #1 {
 define half @independent_hands_fdiv_daz_0(half noundef %x, half %y) #1 {
 ; CHECK-LABEL: define half @independent_hands_fdiv_daz_0(
 ; CHECK-SAME: half noundef [[X:%.*]], half [[Y:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[RCP:%.*]] = fdiv half 0xH3C00, [[X]]
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0xH0000
+; CHECK-NEXT:    [[RCP:%.*]] = fdiv half 1.000000e+00, [[X]]
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ORD]], half [[Y]], half [[RCP]]
 ; CHECK-NEXT:    ret half [[SEL]]
 ;
@@ -649,8 +649,8 @@ define half @independent_hands_fdiv_daz_0(half noundef %x, half %y) #1 {
 define half @independent_hands_fdiv_daz_1(half noundef %x, half %y) #1 {
 ; CHECK-LABEL: define half @independent_hands_fdiv_daz_1(
 ; CHECK-SAME: half noundef [[X:%.*]], half [[Y:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[RCP:%.*]] = fdiv half 0xH3C00, [[X]]
-; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno half [[X]], 0xH0000
+; CHECK-NEXT:    [[RCP:%.*]] = fdiv half 1.000000e+00, [[X]]
+; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno half [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[UNO]], half [[RCP]], half [[Y]]
 ; CHECK-NEXT:    ret half [[SEL]]
 ;
@@ -664,7 +664,7 @@ define x86_fp80 @independent_hands_canonicalize_ieee_0_x86_fp80(x86_fp80 noundef
 ; CHECK-LABEL: define x86_fp80 @independent_hands_canonicalize_ieee_0_x86_fp80(
 ; CHECK-SAME: x86_fp80 noundef [[X:%.*]], x86_fp80 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[HARD_CANONICAL:%.*]] = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 [[X]])
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord x86_fp80 [[X]], 0xK00000000000000000000
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord x86_fp80 [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[X_CANON:%.*]] = select i1 [[ORD]], x86_fp80 [[HARD_CANONICAL]], x86_fp80 [[Y]]
 ; CHECK-NEXT:    ret x86_fp80 [[X_CANON]]
 ;
@@ -677,8 +677,8 @@ define x86_fp80 @independent_hands_canonicalize_ieee_0_x86_fp80(x86_fp80 noundef
 define x86_fp80 @independent_hands_fdiv_ieee_0_x86_fp80(x86_fp80 noundef %x, x86_fp80 %y) #0 {
 ; CHECK-LABEL: define x86_fp80 @independent_hands_fdiv_ieee_0_x86_fp80(
 ; CHECK-SAME: x86_fp80 noundef [[X:%.*]], x86_fp80 [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RCP:%.*]] = fdiv x86_fp80 0xK3FFF8000000000000000, [[X]]
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord x86_fp80 [[X]], 0xK00000000000000000000
+; CHECK-NEXT:    [[RCP:%.*]] = fdiv x86_fp80 1.000000e+00, [[X]]
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord x86_fp80 [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ORD]], x86_fp80 [[Y]], x86_fp80 [[RCP]]
 ; CHECK-NEXT:    ret x86_fp80 [[SEL]]
 ;
@@ -693,7 +693,7 @@ define x86_fp80 @independent_hands_fdiv_ieee_0_x86_fp80(x86_fp80 noundef %x, x86
 define half @independent_hands_canonicalize_ieee_0_maybe_undef(half %x, half %y) #0 {
 ; CHECK-LABEL: define half @independent_hands_canonicalize_ieee_0_maybe_undef(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0xH0000
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[X_CANON:%.*]] = select i1 [[ORD]], half [[X]], half [[Y]]
 ; CHECK-NEXT:    ret half [[X_CANON]]
 ;
@@ -707,7 +707,7 @@ define half @independent_hands_canonicalize_ieee_0_maybe_undef(half %x, half %y)
 define half @independent_hands_canonicalize_ieee_1_maybe_undef(half %x, half %y) #0 {
 ; CHECK-LABEL: define half @independent_hands_canonicalize_ieee_1_maybe_undef(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno half [[X]], 0xH0000
+; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno half [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[X_CANON:%.*]] = select i1 [[UNO]], half [[Y]], half [[X]]
 ; CHECK-NEXT:    ret half [[X_CANON]]
 ;
@@ -722,7 +722,7 @@ define half @independent_hands_fdiv_ieee_0_maybe_undef(half %x, half %y) #0 {
 ; CHECK-LABEL: define half @independent_hands_fdiv_ieee_0_maybe_undef(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[X_FR:%.*]] = freeze half [[X]]
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X_FR]], 0xH0000
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X_FR]], 0.000000e+00
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ORD]], half [[Y]], half [[X_FR]]
 ; CHECK-NEXT:    ret half [[SEL]]
 ;
@@ -737,7 +737,7 @@ define half @independent_hands_fdiv_ieee_1_maybe_undef(half %x, half %y) #0 {
 ; CHECK-LABEL: define half @independent_hands_fdiv_ieee_1_maybe_undef(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[X_FR:%.*]] = freeze half [[X]]
-; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno half [[X_FR]], 0xH0000
+; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno half [[X_FR]], 0.000000e+00
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[UNO]], half [[X_FR]], half [[Y]]
 ; CHECK-NEXT:    ret half [[SEL]]
 ;

@@ -240,7 +240,8 @@ void clang::CIRGen::setAMDGPUTargetFunctionAttributes(const Decl *decl,
     const bool isHIPKernel =
         cgm.getLangOpts().HIP && fd->hasAttr<CUDAGlobalAttr>();
 
-    // TODO(CIR): Set amdgpu_kernel calling convention for HIP kernels.
+    if (isHIPKernel)
+      func.setCallingConv(cir::CallingConv::AMDGPUKernel);
 
     handleAMDGPUFlatWorkGroupSizeAttr(fd, func, cgm, builder, isOpenCLKernel,
                                       isHIPKernel);

@@ -5,6 +5,17 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+_Atomic int g1;
+_Atomic int g2 = 42;
+// CIR: cir.global external @g2 = #cir.int<42> : !s32i {alignment = 4 : i64}
+// CIR: cir.global external @g1 = #cir.int<0> : !s32i {alignment = 4 : i64}
+
+// LLVM: @g2 = global i32 42, align 4
+// LLVM: @g1 = global i32 0, align 4
+
+// OGCG: @g2 = global i32 42, align 4
+// OGCG: @g1 = global i32 0, align 4
+
 void f1(void) {
   _Atomic(int) x = 42;
 }
@@ -67,10 +78,26 @@ void f4(_Atomic(float) *p) {
 // CIR: cir.store align(4) atomic(seq_cst) %{{.+}}, %{{.+}} : !cir.float, !cir.ptr<!cir.float>
 
 // LLVM-LABEL: @f4
-// LLVM: store atomic float 0x40091EB860000000, ptr %{{.+}} seq_cst, align 4
+// LLVM: store atomic float 3.140000e+00, ptr %{{.+}} seq_cst, align 4
 
 // OGCG-LABEL: @f4
-// OGCG: store atomic float 0x40091EB860000000, ptr %{{.+}} seq_cst, align 4
+// OGCG: store atomic float 3.140000e+00, ptr %{{.+}} seq_cst, align 4
+
+void atomic_to_non_atomic(_Atomic int *ptr, _Atomic volatile int *vptr) {
+  // CIR-LABEL: @atomic_to_non_atomic
+  // LLVM-LABEL: @atomic_to_non_atomic
+  // OGCG-LABEL: @atomic_to_non_atomic
+
+  int a = *ptr;
+  // CIR: %{{.+}} = cir.load align(4) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // LLVM: %{{.+}} = load atomic i32, ptr %{{.+}} seq_cst, align 4
+  // OGCG: %{{.+}} = load atomic i32, ptr %{{.+}} seq_cst, align 4
+
+  int b = *vptr;
+  // CIR: %{{.+}} = cir.load volatile align(4) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // LLVM: %{{.+}} = load atomic volatile i32, ptr %{{.+}} seq_cst, align 4
+  // OGCG: %{{.+}} = load atomic volatile i32, ptr %{{.+}} seq_cst, align 4
+}
 
 void load(int *ptr) {
   int x;
@@ -2980,4 +3007,358 @@ int atomic_fetch_udec(int *ptr, int value) {
 
   // OGCG:      %[[RES:.+]] = atomicrmw udec_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
   // OGCG-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
+}
+
+void atomic_cmpxchg_maybe_weak(int *ptr, int *expected, int *desired, int failure, int weak) {
+  // CIR-LABEL: @atomic_cmpxchg_maybe_weak
+  // LLVM-LABEL: @atomic_cmpxchg_maybe_weak
+  // OGCG-LABEL: @atomic_cmpxchg_maybe_weak
+  // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
+  // CIR: %[[WEAK:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["weak", init]
+
+  __atomic_compare_exchange(ptr, expected, desired, weak, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
+  // CIR:         %[[WEAK_LOAD:.*]] = cir.load{{.*}}%[[WEAK]]
+  // CIR-NEXT:    %[[WEAK_CAST:.*]] = cir.cast int_to_bool %[[WEAK_LOAD]]
+  // CIR-NEXT:    cir.if %[[WEAK_CAST]] {
+  // CIR:           %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR-NEXT:      %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
+  // CIR-NEXT:      cir.if %[[FAILED]] {
+  // CIR-NEXT:        cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:      }
+  // CIR-NEXT:      cir.store align(1) %[[SUCCESS]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
+  // CIR-NEXT:    } else {
+  // CIR:           %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR-NEXT:      %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
+  // CIR-NEXT:      cir.if %[[FAILED]] {
+  // CIR-NEXT:        cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:      }
+  // CIR-NEXT:      cir.store align(1) %[[SUCCESS]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
+  // CIR-NEXT:    }
+
+  // LLVM:         %[[WEAK_CAST:.*]] = icmp ne i32 %{{.*}}, 0
+  // LLVM-NEXT:    br i1 %[[WEAK_CAST]], label %[[WEAK_TRUE:.*]], label %[[WEAK_FALSE:.*]]
+  //
+  // LLVM:       [[WEAK_TRUE]]:
+  // LLVM:         %[[RESULT:.+]] = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
+  // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
+  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
+  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM:       [[LABEL_FAILED]]:
+  // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
+  // LLVM-NEXT:    br label %[[LABEL_CONT]]
+  // LLVM:       [[LABEL_CONT]]:
+  // LLVM-NEXT:    %[[SUCCESS_2:.+]] = zext i1 %[[SUCCESS]] to i8
+  // LLVM-NEXT:    store i8 %[[SUCCESS_2]], ptr %{{.+}}, align 1
+  //
+  // LLVM:       [[WEAK_FALSE]]:
+  // LLVM:         %[[RESULT:.+]] = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
+  // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
+  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
+  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM:       [[LABEL_FAILED]]:
+  // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
+  // LLVM-NEXT:    br label %[[LABEL_CONT]]
+  // LLVM:       [[LABEL_CONT]]:
+  // LLVM-NEXT:    %[[SUCCESS_2:.+]] = zext i1 %[[SUCCESS]] to i8
+  // LLVM-NEXT:    store i8 %[[SUCCESS_2]], ptr %{{.+}}, align 1
+
+  // OGCG:         %[[IS_WEAK:.*]] = icmp ne i32 %{{.*}}, 0
+  // OGCG-NEXT:    switch i1 %[[IS_WEAK]], label %[[WEAK_TRUE:.*]] [
+  // OGCG-NEXT:      i1 false, label %[[WEAK_FALSE:.*]]
+  // OGCG-NEXT:    ]
+  //
+  // OGCG:         [[WEAK_FALSE]]:
+  // OGCG:         %[[RESULT:.+]] = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // OGCG-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
+  // OGCG-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
+  // OGCG-NEXT:    br i1 %[[SUCCESS]], label %{{.*}}, label %{{.*}}
+  //
+  // OGCG:         [[WEAK_TRUE]]:
+  // OGCG:         %[[RESULT:.+]] = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // OGCG-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
+  // OGCG-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
+  // OGCG-NEXT:    br i1 %[[SUCCESS]], label %{{.*}}, label %{{.*}}
+  //
+  // Note: The order of the rest of the blocks is pretty awkward in OGCG 
+  // in a way that makes this not particularly checkable in any way that
+  // is readable.  So we're checking only up to the above.
+
+  __atomic_compare_exchange(ptr, expected, desired, weak, __ATOMIC_SEQ_CST, failure);
+  // CIR:      %[[WEAK_LOAD:.*]] = cir.load{{.*}}%[[WEAK]]
+  // CIR-NEXT: %[[WEAK_CAST:.*]] = cir.cast int_to_bool %[[WEAK_LOAD]]
+  // CIR-NEXT: cir.if %[[WEAK_CAST]] {
+  // CIR:        %[[FAIL_LOAD:.*]] = cir.load{{.*}}%[[FAILURE]]
+  // CIR:        cir.switch(%[[FAIL_LOAD]] : !s32i) {
+  // CIR-NEXT:     cir.case(default, []) {
+  // CIR:            cir.atomic.cmpxchg weak success(seq_cst) failure(relaxed) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR:            cir.break
+  // CIR:          }
+  // CIR-NEXT:     cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
+  // CIR:            cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR:            cir.break
+  // CIR-NEXT:     }
+  // CIR-NEXT:     cir.case(anyof, [#cir.int<5> : !s32i]) {
+  // CIR:            cir.atomic.cmpxchg weak success(seq_cst) failure(seq_cst) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR:            cir.break
+  // CIR-NEXT:     }
+  // CIR-NEXT:     cir.yield
+  // CIR-NEXT:   }
+  // CIR-NEXT: } else {
+  // CIR:        %[[FAIL_LOAD:.*]] = cir.load{{.*}}%[[FAILURE]]
+  // CIR:        cir.switch(%[[FAIL_LOAD]] : !s32i) {
+  // CIR-NEXT:     cir.case(default, []) {
+  // CIR:            cir.atomic.cmpxchg success(seq_cst) failure(relaxed) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR:            cir.break
+  // CIR:          }
+  // CIR-NEXT:     cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
+  // CIR:            cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR:            cir.break
+  // CIR-NEXT:     }
+  // CIR-NEXT:     cir.case(anyof, [#cir.int<5> : !s32i]) {
+  // CIR:            cir.atomic.cmpxchg success(seq_cst) failure(seq_cst) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR:            cir.break
+  // CIR-NEXT:     }
+  // CIR-NEXT:     cir.yield
+  // CIR-NEXT:   }
+  // CIR-NEXT: }
+
+  // LLVM:         %[[WEAK_CAST:.*]] = icmp ne i32 %{{.*}}, 0
+  // LLVM-NEXT:    br i1 %[[WEAK_CAST]], label %[[WEAK_TRUE:.*]], label %[[WEAK_FALSE:.*]]
+  //
+  // LLVM: [[WEAK_TRUE]]:
+  // LLVM: switch i32 %{{.*}}, label %[[DEF:.*]] [
+  // LLVM-NEXT: i32 1, label %[[ACQ:.*]]
+  // LLVM-NEXT: i32 2, label %[[ACQ]]
+  // LLVM-NEXT: i32 5, label %[[SEQ_CST:.*]]
+  // LLVM-NEXT: ]
+  // LLVM: [[DEF]]:
+  // LLVM:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst monotonic
+  // LLVM: [[ACQ]]:
+  // LLVM:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire
+  // LLVM: [[SEQ_CST]]:
+  // LLVM:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst seq_cst
+  //
+  // LLVM: [[WEAK_FALSE]]:
+  // LLVM: switch i32 %{{.*}}, label %[[DEF:.*]] [
+  // LLVM-NEXT: i32 1, label %[[ACQ:.*]]
+  // LLVM-NEXT: i32 2, label %[[ACQ]]
+  // LLVM-NEXT: i32 5, label %[[SEQ_CST:.*]]
+  // LLVM-NEXT: ]
+  // LLVM: [[DEF]]:
+  // LLVM:   cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst monotonic
+  // LLVM: [[ACQ]]:
+  // LLVM:   cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire
+  // LLVM: [[SEQ_CST]]:
+  // LLVM:   cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst seq_cst
+
+  // OGCG:         %[[IS_WEAK:.*]] = icmp ne i32 %{{.*}}, 0
+  // OGCG-NEXT:    switch i1 %[[IS_WEAK]], label %[[WEAK_TRUE:.*]] [
+  // OGCG-NEXT:      i1 false, label %[[WEAK_FALSE:.*]]
+  // OGCG-NEXT:    ]
+  //
+  // OGCG: [[WEAK_FALSE]]:
+  // OGCG: switch i32 %{{.*}}, label %[[STRONG_DEF:.*]] [
+  // OGCG-NEXT: i32 1, label %[[STRONG_ACQ:.*]]
+  // OGCG-NEXT: i32 2, label %[[STRONG_ACQ]]
+  // OGCG-NEXT: i32 5, label %[[STRONG_SEQ_CST:.*]]
+  // OGCG-NEXT: ]
+  //
+  // OGCG: [[WEAK_TRUE]]:
+  // OGCG: switch i32 %{{.*}}, label %[[WEAK_DEF:.*]] [
+  // OGCG-NEXT: i32 1, label %[[WEAK_ACQ:.*]]
+  // OGCG-NEXT: i32 2, label %[[WEAK_ACQ]]
+  // OGCG-NEXT: i32 5, label %[[WEAK_SEQ_CST:.*]]
+  // OGCG-NEXT: ]
+  //
+  // OGCG: [[STRONG_DEF]]:
+  // OGCG:   cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst monotonic
+  // OGCG: [[STRONG_ACQ]]:
+  // OGCG:   cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire
+  // OGCG: [[STRONG_SEQ_CST]]:
+  // OGCG:   cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst seq_cst
+  //
+  // OGCG: [[WEAK_DEF]]:
+  // OGCG:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst monotonic
+  // OGCG: [[WEAK_ACQ]]:
+  // OGCG:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire
+  // OGCG: [[WEAK_SEQ_CST]]:
+  // OGCG:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst seq_cst
+}
+
+void atomic_cmpxchg_n_maybe_weak(int *ptr, int *expected, int desired, int failure, int weak) {
+  // CIR-LABEL: @atomic_cmpxchg_n_maybe_weak
+  // LLVM-LABEL: @atomic_cmpxchg_n_maybe_weak
+  // OGCG-LABEL: @atomic_cmpxchg_n_maybe_weak
+  // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
+  // CIR: %[[WEAK:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["weak", init]
+
+  __atomic_compare_exchange_n(ptr, expected, desired, weak, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
+  // CIR:         %[[WEAK_LOAD:.*]] = cir.load{{.*}}%[[WEAK]]
+  // CIR-NEXT:    %[[WEAK_CAST:.*]] = cir.cast int_to_bool %[[WEAK_LOAD]]
+  // CIR-NEXT:    cir.if %[[WEAK_CAST]] {
+  // CIR:           %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR-NEXT:      %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
+  // CIR-NEXT:      cir.if %[[FAILED]] {
+  // CIR-NEXT:        cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:      }
+  // CIR-NEXT:      cir.store align(1) %[[SUCCESS]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
+  // CIR-NEXT:    } else {
+  // CIR:           %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR-NEXT:      %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
+  // CIR-NEXT:      cir.if %[[FAILED]] {
+  // CIR-NEXT:        cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:      }
+  // CIR-NEXT:      cir.store align(1) %[[SUCCESS]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
+  // CIR-NEXT:      }
+
+  // LLVM:         %[[WEAK_CAST:.*]] = icmp ne i32 %{{.*}}, 0
+  // LLVM-NEXT:    br i1 %[[WEAK_CAST]], label %[[WEAK_TRUE:.*]], label %[[WEAK_FALSE:.*]]
+  //
+  // LLVM:       [[WEAK_TRUE]]:
+  // LLVM:         %[[RESULT:.+]] = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
+  // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
+  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
+  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM:       [[LABEL_FAILED]]:
+  // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
+  // LLVM-NEXT:    br label %[[LABEL_CONT]]
+  // LLVM:       [[LABEL_CONT]]:
+  // LLVM-NEXT:    %[[SUCCESS_2:.+]] = zext i1 %[[SUCCESS]] to i8
+  // LLVM-NEXT:    store i8 %[[SUCCESS_2]], ptr %{{.+}}, align 1
+  //
+  // LLVM:       [[WEAK_FALSE]]:
+  // LLVM:         %[[RESULT:.+]] = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
+  // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
+  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
+  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM:       [[LABEL_FAILED]]:
+  // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
+  // LLVM-NEXT:    br label %[[LABEL_CONT]]
+  // LLVM:       [[LABEL_CONT]]:
+  // LLVM-NEXT:    %[[SUCCESS_2:.+]] = zext i1 %[[SUCCESS]] to i8
+  // LLVM-NEXT:    store i8 %[[SUCCESS_2]], ptr %{{.+}}, align 1
+
+
+  // OGCG:         %[[IS_WEAK:.*]] = icmp ne i32 %{{.*}}, 0
+  // OGCG-NEXT:    switch i1 %[[IS_WEAK]], label %[[WEAK_TRUE:.*]] [
+  // OGCG-NEXT:      i1 false, label %[[WEAK_FALSE:.*]]
+  // OGCG-NEXT:    ]
+  //
+  // OGCG:         [[WEAK_FALSE]]:
+  // OGCG:         %[[RESULT:.+]] = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // OGCG-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
+  // OGCG-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
+  // OGCG-NEXT:    br i1 %[[SUCCESS]], label %{{.*}}, label %{{.*}}
+  //
+  // OGCG:         [[WEAK_TRUE]]:
+  // OGCG:         %[[RESULT:.+]] = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // OGCG-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
+  // OGCG-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
+  // OGCG-NEXT:    br i1 %[[SUCCESS]], label %{{.*}}, label %{{.*}}
+
+  __atomic_compare_exchange_n(ptr, expected, desired, weak, __ATOMIC_SEQ_CST, failure);
+  // CIR:      %[[WEAK_LOAD:.*]] = cir.load{{.*}}%[[WEAK]]
+  // CIR-NEXT: %[[WEAK_CAST:.*]] = cir.cast int_to_bool %[[WEAK_LOAD]]
+  // CIR-NEXT: cir.if %[[WEAK_CAST]] {
+  // CIR:        %[[FAIL_LOAD:.*]] = cir.load{{.*}}%[[FAILURE]]
+  // CIR:        cir.switch(%[[FAIL_LOAD]] : !s32i) {
+  // CIR-NEXT:     cir.case(default, []) {
+  // CIR:            cir.atomic.cmpxchg weak success(seq_cst) failure(relaxed) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR:            cir.break
+  // CIR:          }
+  // CIR-NEXT:     cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
+  // CIR:            cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR:            cir.break
+  // CIR-NEXT:     }
+  // CIR-NEXT:     cir.case(anyof, [#cir.int<5> : !s32i]) {
+  // CIR:            cir.atomic.cmpxchg weak success(seq_cst) failure(seq_cst) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR:            cir.break
+  // CIR-NEXT:     }
+  // CIR-NEXT:     cir.yield
+  // CIR-NEXT:   }
+  // CIR-NEXT: } else {
+  // CIR:        %[[FAIL_LOAD:.*]] = cir.load{{.*}}%[[FAILURE]]
+  // CIR:        cir.switch(%[[FAIL_LOAD]] : !s32i) {
+  // CIR-NEXT:     cir.case(default, []) {
+  // CIR:            cir.atomic.cmpxchg success(seq_cst) failure(relaxed) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR:            cir.break
+  // CIR:          }
+  // CIR-NEXT:     cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
+  // CIR:            cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR:            cir.break
+  // CIR-NEXT:     }
+  // CIR-NEXT:     cir.case(anyof, [#cir.int<5> : !s32i]) {
+  // CIR:            cir.atomic.cmpxchg success(seq_cst) failure(seq_cst) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+  // CIR:            cir.break
+  // CIR-NEXT:     }
+  // CIR-NEXT:     cir.yield
+  // CIR-NEXT:   }
+  // CIR-NEXT: }
+
+  // LLVM:         %[[WEAK_CAST:.*]] = icmp ne i32 %{{.*}}, 0
+  // LLVM-NEXT:    br i1 %[[WEAK_CAST]], label %[[WEAK_TRUE:.*]], label %[[WEAK_FALSE:.*]]
+  //
+  // LLVM: [[WEAK_TRUE]]:
+  // LLVM: switch i32 %{{.*}}, label %[[DEF:.*]] [
+  // LLVM-NEXT: i32 1, label %[[ACQ:.*]]
+  // LLVM-NEXT: i32 2, label %[[ACQ]]
+  // LLVM-NEXT: i32 5, label %[[SEQ_CST:.*]]
+  // LLVM-NEXT: ]
+  // LLVM: [[DEF]]:
+  // LLVM:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst monotonic
+  // LLVM: [[ACQ]]:
+  // LLVM:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire
+  // LLVM: [[SEQ_CST]]:
+  // LLVM:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst seq_cst
+  //
+  // LLVM: [[WEAK_FALSE]]:
+  // LLVM: switch i32 %{{.*}}, label %[[DEF:.*]] [
+  // LLVM-NEXT: i32 1, label %[[ACQ:.*]]
+  // LLVM-NEXT: i32 2, label %[[ACQ]]
+  // LLVM-NEXT: i32 5, label %[[SEQ_CST:.*]]
+  // LLVM-NEXT: ]
+  // LLVM: [[DEF]]:
+  // LLVM:   cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst monotonic
+  // LLVM: [[ACQ]]:
+  // LLVM:   cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire
+  // LLVM: [[SEQ_CST]]:
+  // LLVM:   cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst seq_cst
+
+
+  // OGCG:         %[[IS_WEAK:.*]] = icmp ne i32 %{{.*}}, 0
+  // OGCG-NEXT:    switch i1 %[[IS_WEAK]], label %[[WEAK_TRUE:.*]] [
+  // OGCG-NEXT:      i1 false, label %[[WEAK_FALSE:.*]]
+  // OGCG-NEXT:    ]
+  //
+  // OGCG: [[WEAK_FALSE]]:
+  // OGCG: switch i32 %{{.*}}, label %[[STRONG_DEF:.*]] [
+  // OGCG-NEXT: i32 1, label %[[STRONG_ACQ:.*]]
+  // OGCG-NEXT: i32 2, label %[[STRONG_ACQ]]
+  // OGCG-NEXT: i32 5, label %[[STRONG_SEQ_CST:.*]]
+  // OGCG-NEXT: ]
+  //
+  // OGCG: [[WEAK_TRUE]]:
+  // OGCG: switch i32 %{{.*}}, label %[[WEAK_DEF:.*]] [
+  // OGCG-NEXT: i32 1, label %[[WEAK_ACQ:.*]]
+  // OGCG-NEXT: i32 2, label %[[WEAK_ACQ]]
+  // OGCG-NEXT: i32 5, label %[[WEAK_SEQ_CST:.*]]
+  // OGCG-NEXT: ]
+  //
+  // OGCG: [[STRONG_DEF]]:
+  // OGCG:   cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst monotonic
+  // OGCG: [[STRONG_ACQ]]:
+  // OGCG:   cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire
+  // OGCG: [[STRONG_SEQ_CST]]:
+  // OGCG:   cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst seq_cst
+  //
+  // OGCG: [[WEAK_DEF]]:
+  // OGCG:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst monotonic
+  // OGCG: [[WEAK_ACQ]]:
+  // OGCG:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire
+  // OGCG: [[WEAK_SEQ_CST]]:
+  // OGCG:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst seq_cst
 }

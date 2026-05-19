@@ -11,5 +11,7 @@ define i32 @main() {
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %ptr_1 = call ptr @_Znwm(i64 50) => ptr 0x10 [ptr_1]
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   %ptr_2 = call ptr @_Znwm(i64 100) at @main
 ; CHECK-NEXT: Error: Insufficient heap space.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

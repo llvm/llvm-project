@@ -176,6 +176,7 @@ shared_library("ubsan_shared") {
 
       # ubsan
       "-Wl,-U,___ubsan_default_options",
+      "-Wl,-U,___ubsan_default_suppressions",
 
       # sanitizer_common
       "-Wl,-U,___sanitizer_free_hook",

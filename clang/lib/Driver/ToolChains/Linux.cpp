@@ -484,9 +484,10 @@ static void setPAuthABIInTriple(const Driver &D, const ArgList &Args,
 }
 
 std::string Linux::ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
+                                               llvm::StringRef BoundArch,
                                                types::ID InputType) const {
   std::string TripleString =
-      Generic_ELF::ComputeEffectiveClangTriple(Args, InputType);
+      Generic_ELF::ComputeEffectiveClangTriple(Args, BoundArch, InputType);
   if (getTriple().isAArch64()) {
     llvm::Triple Triple(TripleString);
     setPAuthABIInTriple(getDriver(), Args, Triple);
@@ -880,7 +881,8 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
   if (ActiveKinds & Action::OFK_HIP)
     Libraries.emplace_back(RocmInstallation->getLibPath(), "libamdhip64.so");
   else if (ActiveKinds & Action::OFK_SYCL)
-    Libraries.emplace_back(SYCLInstallation->getSYCLRTLibPath(), "libsycl.so");
+    Libraries.emplace_back(SYCLInstallation->getSYCLRTLibPath(),
+                           "libLLVMSYCL.so");
 
   for (auto [Path, Library] : Libraries) {
     if (Args.hasFlag(options::OPT_frtlib_add_rpath,

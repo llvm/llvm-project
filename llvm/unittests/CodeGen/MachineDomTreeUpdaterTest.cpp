@@ -7,88 +7,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineDomTreeUpdater.h"
-#include "llvm/Analysis/CGSCCPassManager.h"
-#include "llvm/Analysis/LoopAnalysisManager.h"
+#include "CodeGenTestBase.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/Module.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 
-class MachineDomTreeUpdaterTest : public testing::Test {
+class MachineDomTreeUpdaterTest : public CodeGenTestBase {
 public:
-  LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM;
-  std::unique_ptr<Module> M;
-  std::unique_ptr<MachineModuleInfo> MMI;
-  std::unique_ptr<MIRParser> MIR;
-
-  LoopAnalysisManager LAM;
-  MachineFunctionAnalysisManager MFAM;
-  FunctionAnalysisManager FAM;
-  CGSCCAnalysisManager CGAM;
-  ModuleAnalysisManager MAM;
-
-  ModulePassManager MPM;
-  FunctionPassManager FPM;
-  MachineFunctionPassManager MFPM;
-
   static void SetUpTestCase() {
     InitializeAllTargets();
     InitializeAllTargetMCs();
   }
 
-  void SetUp() override {
-    Triple TargetTriple("x86_64-unknown-linux-gnu");
-    std::string Error;
-    const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
-    if (!T)
-      GTEST_SKIP();
-    TargetOptions Options;
-    TM = std::unique_ptr<TargetMachine>(
-        T->createTargetMachine(TargetTriple, "", "", Options, std::nullopt));
-    if (!TM)
-      GTEST_SKIP();
-    MMI = std::make_unique<MachineModuleInfo>(TM.get());
-
-    PassBuilder PB(TM.get());
-    PB.registerModuleAnalyses(MAM);
-    PB.registerCGSCCAnalyses(CGAM);
-    PB.registerFunctionAnalyses(FAM);
-    PB.registerLoopAnalyses(LAM);
-    PB.registerMachineFunctionAnalyses(MFAM);
-    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
-    MAM.registerPass([&] { return MachineModuleAnalysis(*MMI); });
-  }
-
-  bool parseMIR(StringRef MIRCode) {
-    SMDiagnostic Diagnostic;
-    std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
-    MIR = createMIRParser(std::move(MBuffer), Context);
-    if (!MIR)
-      return false;
-
-    M = MIR->parseIRModule();
-    M->setDataLayout(TM->createDataLayout());
-
-    if (MIR->parseMachineFunctions(*M, MAM)) {
-      M.reset();
-      return false;
-    }
-
-    return true;
-  }
+  void SetUp() override { setUpImpl("x86_64-unknown-linux-gnu", "", ""); }
 };
 
 TEST_F(MachineDomTreeUpdaterTest, EagerUpdateBasicOperations) {
@@ -150,8 +85,7 @@ body:             |
 
   ASSERT_TRUE(parseMIR(MIRString));
 
-  auto &MF =
-      FAM.getResult<MachineFunctionAnalysis>(*M->getFunction("f0")).getMF();
+  MachineFunction &MF = getMF("f0");
 
   MachineDominatorTree DT(MF);
   MachinePostDominatorTree PDT(MF);
@@ -240,8 +174,7 @@ body:             |
 
   ASSERT_TRUE(parseMIR(MIRString));
 
-  auto &MF =
-      FAM.getResult<MachineFunctionAnalysis>(*M->getFunction("f0")).getMF();
+  MachineFunction &MF = getMF("f0");
 
   MachineDominatorTree DT(MF);
   MachinePostDominatorTree PDT(MF);

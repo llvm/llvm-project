@@ -212,8 +212,7 @@ bool TailDuplicator::tailDuplicateAndUpdate(
       }
 
       // Add the new vregs as available values.
-      DenseMap<Register, AvailableValsTy>::iterator LI =
-          SSAUpdateVals.find(VReg);
+      auto LI = SSAUpdateVals.find(VReg);
       for (std::pair<MachineBasicBlock *, Register> &J : LI->second) {
         MachineBasicBlock *SrcBB = J.first;
         Register SrcReg = J.second;
@@ -338,8 +337,7 @@ static void getRegsUsedByPHIs(const MachineBasicBlock &BB,
 /// Add a definition and source virtual registers pair for SSA update.
 void TailDuplicator::addSSAUpdateEntry(Register OrigReg, Register NewReg,
                                        MachineBasicBlock *BB) {
-  DenseMap<Register, AvailableValsTy>::iterator LI =
-      SSAUpdateVals.find(OrigReg);
+  auto LI = SSAUpdateVals.find(OrigReg);
   if (LI != SSAUpdateVals.end())
     LI->second.push_back(std::make_pair(BB, NewReg));
   else {
@@ -369,11 +367,16 @@ void TailDuplicator::processPHI(
   // available value liveout of the block.
   Register NewDef = MRI->createVirtualRegister(RC);
   Copies.push_back(std::make_pair(NewDef, RegSubRegPair(SrcReg, SrcSubReg)));
+  if (!Remove) {
+    // Informing MachineSSAUpdater that DefReg -> NewDef in PredBB is not
+    // correct, because it could be used to update on other PHI. But the DefReg
+    // in the COPY will be properly updated by MachineSSAUpdater.
+    MI->getOperand(SrcOpIdx).setReg(NewDef);
+    MI->getOperand(SrcOpIdx).setSubReg(0);
+    return;
+  }
   if (isDefLiveOut(DefReg, TailBB, MRI) || RegsUsedByPhi.count(DefReg))
     addSSAUpdateEntry(DefReg, NewDef, PredBB);
-
-  if (!Remove)
-    return;
 
   MI->removePHIIncomingValueFor(*PredBB);
 
@@ -517,8 +520,7 @@ void TailDuplicator::updateSuccessorsPHIs(
       // If Idx is set, the operands at Idx and Idx+1 must be removed.
       // We reuse the location to avoid expensive removeOperand calls.
 
-      DenseMap<Register, AvailableValsTy>::iterator LI =
-          SSAUpdateVals.find(Reg);
+      auto LI = SSAUpdateVals.find(Reg);
       if (LI != SSAUpdateVals.end()) {
         // This register is defined in the tail block.
         for (const std::pair<MachineBasicBlock *, Register> &J : LI->second) {

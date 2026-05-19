@@ -19,6 +19,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -143,8 +144,8 @@ lldb::ValueObjectSP
 LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (m_pair_address != 0 && m_pair_type) {
     if (!m_pair_sp)
-      m_pair_sp = CreateValueObjectFromAddress("pair", m_pair_address,
-                                               m_exe_ctx_ref, m_pair_type);
+      m_pair_sp = CreateChildValueObjectFromAddress("pair", m_pair_address,
+                                                    m_exe_ctx_ref, m_pair_type);
     if (m_pair_sp)
       return m_pair_sp->GetChildAtIndex(idx);
   }
@@ -210,7 +211,7 @@ lldb::ChildCacheState VectorIteratorSyntheticFrontEnd::Update() {
     return lldb::ChildCacheState::eRefetch;
   Status err;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
-  m_item_sp = CreateValueObjectFromAddress(
+  m_item_sp = CreateChildValueObjectFromAddress(
       "item", item_ptr->GetValueAsUnsigned(0), m_exe_ctx_ref,
       item_ptr->GetCompilerType().GetPointeeType());
   if (err.Fail())
@@ -380,7 +381,7 @@ lldb::ChildCacheState LibStdcppSharedPtrSyntheticFrontEnd::Update() {
   if (!cast_ptr_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  m_ptr_obj = cast_ptr_sp->Clone(ConstString("pointer")).get();
+  m_ptr_obj = cast_ptr_sp->Clone("pointer").get();
 
   return lldb::ChildCacheState::eRefetch;
 }
@@ -470,10 +471,14 @@ bool formatters::LibStdcppVariantSummaryProvider(
   if (!index_obj || !data_obj)
     return false;
 
-  auto index_bytes = index_obj->GetByteSize();
-  if (!index_bytes)
+  auto index_bytes_or_err = index_obj->GetByteSize();
+  if (!index_bytes_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters),
+                   index_bytes_or_err.takeError(),
+                   "failed to get variant index byte size: {0}");
     return false;
-  auto npos_value = LibStdcppVariantNposValue(*index_bytes);
+  }
+  auto npos_value = LibStdcppVariantNposValue(*index_bytes_or_err);
   auto index = index_obj->GetValueAsUnsigned(0);
   if (index == npos_value) {
     stream.Printf(" No Value");

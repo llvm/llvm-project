@@ -672,23 +672,6 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   }
   assert(!isa<FieldDecl>(D) && "Didn't expect a FieldDecl!");
 
-  // FIXME: This gives internal linkage to names that should have no linkage
-  // (those not covered by [basic.link]p6).
-  if (D->isInAnonymousNamespace()) {
-    const auto *Var = dyn_cast<VarDecl>(D);
-    const auto *Func = dyn_cast<FunctionDecl>(D);
-    // FIXME: The check for extern "C" here is not justified by the standard
-    // wording, but we retain it from the pre-DR1113 model to avoid breaking
-    // code.
-    //
-    // C++11 [basic.link]p4:
-    //   An unnamed namespace or a namespace declared directly or indirectly
-    //   within an unnamed namespace has internal linkage.
-    if ((!Var || !isFirstInExternCContext(Var)) &&
-        (!Func || !isFirstInExternCContext(Func)))
-      return LinkageInfo::internal();
-  }
-
   // Set up the defaults.
 
   // C99 6.2.2p5:
@@ -696,6 +679,12 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   //   scope and no storage-class specifier, its linkage is
   //   external.
   LinkageInfo LV = getExternalLinkageFor(D);
+
+  // Inherit linkage from the enclosing namespace, if there is any.
+  if (const auto *ND = dyn_cast<NamespaceDecl>(
+          D->getDeclContext()->getEnclosingNamespaceContext())) {
+    LV.setLinkage(ND->getLinkageInternal());
+  }
 
   if (!hasExplicitVisibilityAlready(computation)) {
     if (std::optional<Visibility> Vis = getExplicitVisibility(D, computation)) {
@@ -749,6 +738,14 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
 
   //     - a variable; or
   if (const auto *Var = dyn_cast<VarDecl>(D)) {
+    // FIXME: The check for extern "C" here is not justified by the standard
+    // wording, but we retain it from the pre-DR1113 model to avoid breaking
+    // code.
+    if (isFirstInExternCContext(Var)) {
+      LV.setLinkage(Linkage::External);
+      return LV;
+    }
+
     // GCC applies the following optimization to variables and static
     // data members, but not to functions:
     //
@@ -771,8 +768,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // Note that we don't want to make the variable non-external
     // because of this, but unique-external linkage suits us.
 
-    if (Context.getLangOpts().CPlusPlus && !isFirstInExternCContext(Var) &&
-        !IgnoreVarTypeLinkage) {
+    if (Context.getLangOpts().CPlusPlus && !IgnoreVarTypeLinkage) {
       LinkageInfo TypeLV = getLVForType(*Var->getType(), computation);
       if (!isExternallyVisible(TypeLV.getLinkage()))
         return LinkageInfo::uniqueExternal();
@@ -817,18 +813,27 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // merging storage classes and visibility attributes, so we don't have to
     // look at previous decls in here.
 
+    // FIXME: The check for extern "C" here is not justified by the standard
+    // wording, but we retain it from the pre-DR1113 model to avoid breaking
+    // code.
+    if (isFirstInExternCContext(Function)) {
+      LV.setLinkage(Linkage::External);
+      return LV;
+    }
+
     // In C++, then if the type of the function uses a type with
     // unique-external linkage, it's not legally usable from outside
-    // this translation unit.  However, we should use the C linkage
-    // rules instead for extern "C" declarations.
-    if (Context.getLangOpts().CPlusPlus && !isFirstInExternCContext(Function)) {
+    // this translation unit.
+    if (Context.getLangOpts().CPlusPlus) {
       // Only look at the type-as-written. Otherwise, deducing the return type
       // of a function could change its linkage.
       QualType TypeAsWritten = Function->getType();
       if (TypeSourceInfo *TSI = Function->getTypeSourceInfo())
         TypeAsWritten = TSI->getType();
-      if (!isExternallyVisible(TypeAsWritten->getLinkage()))
-        return LinkageInfo::uniqueExternal();
+      if (!isExternallyVisible(TypeAsWritten->getLinkage())) {
+        LV.mergeLinkage(LinkageInfo::uniqueExternal());
+        return LV;
+      }
     }
 
     // Consider LV from the template and the template arguments.
@@ -876,13 +881,13 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   //     An unnamed namespace or a namespace declared directly or indirectly
   //     within an unnamed namespace has internal linkage. All other namespaces
   //     have external linkage.
-  //
-  // We handled names in anonymous namespaces above.
-  } else if (isa<NamespaceDecl>(D)) {
-    return LV;
+  } else if (auto *ND = dyn_cast<NamespaceDecl>(D)) {
+    if (ND->isAnonymousNamespace()) {
+      LV.mergeLinkage(Linkage::Internal);
+    }
 
-  // By extension, we assign external linkage to Objective-C
-  // interfaces.
+    // By extension, we assign external linkage to Objective-C
+    // interfaces.
   } else if (isa<ObjCInterfaceDecl>(D)) {
     // fallout
 
@@ -1993,8 +1998,10 @@ bool NamedDecl::isCXXInstanceMember() const {
 
 template <typename DeclT>
 static SourceLocation getTemplateOrInnerLocStart(const DeclT *decl) {
-  if (decl->getNumTemplateParameterLists() > 0)
-    return decl->getTemplateParameterList(0)->getTemplateLoc();
+  if (ArrayRef<TemplateParameterList *> TPLs =
+          decl->getTemplateParameterLists();
+      !TPLs.empty())
+    return TPLs.front()->getTemplateLoc();
   return decl->getInnerLocStart();
 }
 
@@ -2064,48 +2071,12 @@ SourceLocation DeclaratorDecl::getOuterLocStart() const {
   return getTemplateOrInnerLocStart(this);
 }
 
-// Helper function: returns true if QT is or contains a type
-// having a postfix component.
-static bool typeIsPostfix(QualType QT) {
-  while (true) {
-    const Type* T = QT.getTypePtr();
-    switch (T->getTypeClass()) {
-    default:
-      return false;
-    case Type::Pointer:
-      QT = cast<PointerType>(T)->getPointeeType();
-      break;
-    case Type::BlockPointer:
-      QT = cast<BlockPointerType>(T)->getPointeeType();
-      break;
-    case Type::MemberPointer:
-      QT = cast<MemberPointerType>(T)->getPointeeType();
-      break;
-    case Type::LValueReference:
-    case Type::RValueReference:
-      QT = cast<ReferenceType>(T)->getPointeeType();
-      break;
-    case Type::PackExpansion:
-      QT = cast<PackExpansionType>(T)->getPattern();
-      break;
-    case Type::Paren:
-    case Type::ConstantArray:
-    case Type::DependentSizedArray:
-    case Type::IncompleteArray:
-    case Type::VariableArray:
-    case Type::FunctionProto:
-    case Type::FunctionNoProto:
-      return true;
-    }
-  }
-}
-
 SourceRange DeclaratorDecl::getSourceRange() const {
   SourceLocation RangeEnd = getLocation();
   if (TypeSourceInfo *TInfo = getTypeSourceInfo()) {
     // If the declaration has no name or the type extends past the name take the
     // end location of the type.
-    if (!getDeclName() || typeIsPostfix(TInfo->getType()))
+    if (!getDeclName() || TInfo->getType().hasPostfixDeclaratorSyntax())
       RangeEnd = TInfo->getTypeLoc().getSourceRange().getEnd();
   }
   return SourceRange(getOuterLocStart(), RangeEnd);
@@ -2950,6 +2921,33 @@ VarDecl::setInstantiationOfStaticDataMember(VarDecl *VD,
   assert(getASTContext().getTemplateOrSpecializationInfo(this).isNull() &&
          "Previous template or instantiation?");
   getASTContext().setInstantiatedFromStaticDataMember(this, VD, TSK);
+}
+
+void VarDecl::assignAddressSpace(const ASTContext &Ctxt, LangAS AS) {
+  QualType Type = getType();
+  if (Type.hasAddressSpace())
+    return;
+  if (Type->isDependentType())
+    return;
+  if (Type->isSamplerT() || Type->isVoidType())
+    return;
+  assert(isa<ParmVarDecl>(this) || isa<ImplicitParamDecl>(this)
+             ? !Type->isArrayType()
+             : !isa<DecayedType>(Type));
+  Type = Ctxt.getAddrSpaceQualType(Type, AS);
+  // Apply any qualifiers (including address space) from the array type to
+  // the element type. This implements C99 6.7.3p8: "If the specification of
+  // an array type includes any type qualifiers, the element type is so
+  // qualified, not the array type."
+  if (Type->isArrayType())
+    Type = QualType(Ctxt.getAsArrayType(Type), 0);
+  setType(Type);
+}
+
+void VarDecl::deduceParmAddressSpace(const ASTContext &Ctxt) {
+  assert(isa<ParmVarDecl>(this) || isa<ImplicitParamDecl>(this));
+  if (Ctxt.getLangOpts().OpenCL)
+    assignAddressSpace(Ctxt, LangAS::opencl_private);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5603,14 +5601,19 @@ void ImplicitParamDecl::anchor() {}
 
 ImplicitParamDecl *ImplicitParamDecl::Create(ASTContext &C, DeclContext *DC,
                                              SourceLocation IdLoc,
-                                             IdentifierInfo *Id, QualType Type,
+                                             const IdentifierInfo *Id,
+                                             QualType Type,
                                              ImplicitParamKind ParamKind) {
-  return new (C, DC) ImplicitParamDecl(C, DC, IdLoc, Id, Type, ParamKind);
+  auto *Parm = new (C, DC) ImplicitParamDecl(C, DC, IdLoc, Id, Type, ParamKind);
+  Parm->deduceParmAddressSpace(C);
+  return Parm;
 }
 
 ImplicitParamDecl *ImplicitParamDecl::Create(ASTContext &C, QualType Type,
                                              ImplicitParamKind ParamKind) {
-  return new (C, nullptr) ImplicitParamDecl(C, Type, ParamKind);
+  auto *Parm = new (C, nullptr) ImplicitParamDecl(C, Type, ParamKind);
+  Parm->deduceParmAddressSpace(C);
+  return Parm;
 }
 
 ImplicitParamDecl *ImplicitParamDecl::CreateDeserialized(ASTContext &C,
@@ -5828,7 +5831,7 @@ TypeAliasDecl *TypeAliasDecl::CreateDeserialized(ASTContext &C,
 SourceRange TypedefDecl::getSourceRange() const {
   SourceLocation RangeEnd = getLocation();
   if (TypeSourceInfo *TInfo = getTypeSourceInfo()) {
-    if (typeIsPostfix(TInfo->getType()))
+    if (TInfo->getType().hasPostfixDeclaratorSyntax())
       RangeEnd = TInfo->getTypeLoc().getSourceRange().getEnd();
   }
   return SourceRange(getBeginLoc(), RangeEnd);
