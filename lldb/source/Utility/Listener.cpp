@@ -259,9 +259,8 @@ bool Listener::GetEventInternal(
     uint32_t event_type_mask, EventSP &event_sp) {
   Log *log = GetLog(LLDBLog::Events);
 
-  LLDB_LOG(log,
-           "{0} Listener('{1}')::{2}, timeout = {3}, event_type_mask = {4:x}",
-           this, m_name, __FUNCTION__, timeout, event_type_mask);
+  LLDB_LOG(log, "{0} Listener('{1}'), timeout = {2}, event_type_mask = {3:x}",
+           this, m_name, timeout, event_type_mask);
 
   std::unique_lock<std::mutex> lock(m_events_mutex);
 
@@ -278,8 +277,7 @@ bool Listener::GetEventInternal(
 
       if (result == std::cv_status::timeout) {
         log = GetLog(LLDBLog::Events);
-        LLDB_LOG(log, "{0} Listener('{1}')::{2}(), timed out", this, m_name,
-                 __FUNCTION__);
+        LLDB_LOG(log, "{0} Listener('{1}'), timed out", this, m_name);
         return false;
       } else if (result != std::cv_status::no_timeout) {
         log = GetLog(LLDBLog::Events);
