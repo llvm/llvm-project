@@ -29,6 +29,7 @@ function(_get_common_test_compile_options output_var c_test flags)
       list(APPEND compile_options "-fno-exceptions")
       list(APPEND compile_options "-fno-unwind-tables")
       list(APPEND compile_options "-fno-asynchronous-unwind-tables")
+      list(APPEND compile_options "-nostdinc++")
       if(NOT c_test)
         list(APPEND compile_options "-fno-rtti")
       endif()
@@ -473,7 +474,8 @@ function(add_libc_fuzzer target_name)
 
   target_compile_options(${fq_target_name}
     PRIVATE
-    ${LIBC_FUZZER_COMPILE_OPTIONS})
+    ${LIBC_FUZZER_COMPILE_OPTIONS}
+  )
 
 endfunction(add_libc_fuzzer)
 
