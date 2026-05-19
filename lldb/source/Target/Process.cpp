@@ -414,7 +414,7 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
                               ListenerSP listener_sp,
                               const FileSpec *crash_file_path,
                               bool can_connect) {
-  static uint32_t g_process_unique_id = 0;
+  static std::atomic<uint32_t> g_process_unique_id{0};
 
   ProcessSP process_sp;
   ProcessCreateInstance create_callback = nullptr;
@@ -6165,7 +6165,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   return return_value;
 }
 
-void Process::GetStatus(Stream &strm) {
+void Process::GetStatus(Stream &strm, bool is_verbose) {
   const StateType state = GetState();
   if (StateIsStoppedState(state, false)) {
     if (state == eStateExited) {
@@ -6177,8 +6177,11 @@ void Process::GetStatus(Stream &strm) {
     } else {
       if (state == eStateConnected)
         strm.Printf("Connected to remote target.\n");
-      else
+      else {
         strm.Printf("Process %" PRIu64 " %s\n", GetID(), StateAsCString(state));
+        if (auto core_args = GetCoreFileArgs(); core_args && is_verbose)
+          core_args->Format(strm);
+      }
     }
   } else {
     strm.Printf("Process %" PRIu64 " is running.\n", GetID());
