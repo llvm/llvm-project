@@ -1,6 +1,3 @@
-// We have to run the compilation step to see the output, so we must be able to
-// target Windows.
-
 // RUN: %clang_cl -fno-integrated-cc1 -E /experimental:deterministic /d1nodatetime %s
 // RUN: %clang_cl -fno-integrated-cc1 -E /D IS_SYSHEADER=1 /experimental:deterministic /d1nodatetime %s
 
