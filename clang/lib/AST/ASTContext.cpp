@@ -66,6 +66,7 @@
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
+#include "clang/Lex/MacroInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
@@ -116,9 +117,38 @@ enum FloatingRank {
 };
 
 /// \returns The locations that are relevant when searching for Doc comments
-/// related to \p D.
+/// related to \p Key.
 static SmallVector<SourceLocation, 2>
-getDeclLocsForCommentSearch(const Decl *D, SourceManager &SourceMgr) {
+getDeclLocsForCommentSearch(ASTContext::RawCommentLookupKey Key,
+                            SourceManager &SourceMgr) {
+  if (const auto *MI = dyn_cast<const MacroInfo *>(Key)) {
+    SourceLocation DefLoc = MI->getDefinitionLoc();
+    if (DefLoc.isInvalid() || !DefLoc.isFileID())
+      return {};
+
+    // The macro's definition location points at its name (e.g. FOO in
+    // `#define FOO 1`). The text between a preceding documentation comment
+    // and the name contains the `#define` directive itself, which would be
+    // rejected by the preprocessor-directive guard in
+    // getRawCommentForDeclNoCacheImpl. Walk back to the leading `#` so that
+    // the guard only fires when something *else* sits between the comment
+    // and our directive.
+    FileIDAndOffset Decomposed = SourceMgr.getDecomposedLoc(DefLoc);
+    bool Invalid = false;
+    StringRef Buffer = SourceMgr.getBufferData(Decomposed.first, &Invalid);
+    if (Invalid)
+      return {};
+    unsigned Offset = Decomposed.second;
+    while (Offset > 0 && Buffer[Offset - 1] != '#' &&
+           Buffer[Offset - 1] != '\n')
+      --Offset;
+    if (Offset > 0 && Buffer[Offset - 1] == '#')
+      --Offset;
+    return {SourceMgr.getLocForStartOfFile(Decomposed.first)
+                .getLocWithOffset(Offset)};
+  }
+
+  const auto *D = cast<const Decl *>(Key);
   assert(D);
 
   // User can not attach documentation to implicit declarations.
@@ -215,7 +245,7 @@ getDeclLocsForCommentSearch(const Decl *D, SourceManager &SourceMgr) {
 }
 
 RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
-    const Decl *D, const SourceLocation RepresentativeLocForDecl,
+    RawCommentLookupKey Key, const SourceLocation RepresentativeLocForDecl,
     const std::map<unsigned, RawComment *> &CommentsInTheFile) const {
   // If the declaration doesn't map directly to a location in a file, we
   // can't find the comment.
@@ -226,6 +256,9 @@ RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
   // If there are no comments anywhere, we won't find anything.
   if (CommentsInTheFile.empty())
     return nullptr;
+
+  const auto *D = dyn_cast<const Decl *>(Key);
+  const bool IsMacro = isa<const MacroInfo *>(Key);
 
   // Decompose the location for the declaration and find the beginning of the
   // file buffer.
@@ -242,8 +275,9 @@ RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
     if ((CommentBehindDecl->isDocumentation() ||
          LangOpts.CommentOpts.ParseAllComments) &&
         CommentBehindDecl->isTrailingComment() &&
-        (isa<FieldDecl>(D) || isa<EnumConstantDecl>(D) || isa<VarDecl>(D) ||
-         isa<ObjCMethodDecl>(D) || isa<ObjCPropertyDecl>(D))) {
+        (IsMacro || (D && (isa<FieldDecl>(D) || isa<EnumConstantDecl>(D) ||
+                           isa<VarDecl>(D) || isa<ObjCMethodDecl>(D) ||
+                           isa<ObjCPropertyDecl>(D))))) {
 
       // Check that Doxygen trailing comment comes after the declaration, starts
       // on the same line and in the same file as the declaration.
@@ -292,8 +326,9 @@ RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
   return CommentBeforeDecl;
 }
 
-RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
-  const auto DeclLocs = getDeclLocsForCommentSearch(D, SourceMgr);
+RawComment *
+ASTContext::getRawCommentForDeclNoCache(RawCommentLookupKey Key) const {
+  const auto DeclLocs = getDeclLocsForCommentSearch(Key, SourceMgr);
 
   for (const auto DeclLoc : DeclLocs) {
     // If the declaration doesn't map directly to a location in a file, we
@@ -318,7 +353,7 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
       continue;
 
     if (RawComment *Comment =
-            getRawCommentForDeclNoCacheImpl(D, DeclLoc, *CommentsInThisFile))
+            getRawCommentForDeclNoCacheImpl(Key, DeclLoc, *CommentsInThisFile))
       return Comment;
   }
 
@@ -331,15 +366,31 @@ void ASTContext::addComment(const RawComment &RC) {
   Comments.addComment(RC, LangOpts.CommentOpts, BumpAlloc);
 }
 
-const RawComment *ASTContext::getRawCommentForAnyRedecl(
-                                                const Decl *D,
-                                                const Decl **OriginalDecl) const {
-  if (!D) {
+const RawComment *
+ASTContext::getRawCommentForAnyRedecl(RawCommentLookupKey Key,
+                                      const Decl **OriginalDecl) const {
+  if (Key.isNull()) {
     if (OriginalDecl)
-      OriginalDecl = nullptr;
+      *OriginalDecl = nullptr;
     return nullptr;
   }
 
+  // Macros have no redeclaration chain: look up directly, populate the cache,
+  // and return.
+  if (const auto *MI = dyn_cast<const MacroInfo *>(Key)) {
+    if (OriginalDecl)
+      *OriginalDecl = nullptr;
+    auto Existing = DeclRawComments.find(Key);
+    if (Existing != DeclRawComments.end())
+      return Existing->second;
+    if (const RawComment *RC = getRawCommentForDeclNoCache(Key)) {
+      cacheRawCommentForDecl(MI, *RC);
+      return RC;
+    }
+    return nullptr;
+  }
+
+  const Decl *D = cast<const Decl *>(Key);
   D = &adjustDeclToTemplate(*D);
 
   // Any comment directly attached to D?
@@ -400,7 +451,7 @@ const RawComment *ASTContext::getRawCommentForAnyRedecl(
     }
     const RawComment *RedeclComment = getRawCommentForDeclNoCache(Redecl);
     if (RedeclComment) {
-      cacheRawCommentForDecl(*Redecl, *RedeclComment);
+      cacheRawCommentForDecl(Redecl, *RedeclComment);
       if (OriginalDecl)
         *OriginalDecl = Redecl;
       return RedeclComment;
@@ -413,13 +464,15 @@ const RawComment *ASTContext::getRawCommentForAnyRedecl(
   return nullptr;
 }
 
-void ASTContext::cacheRawCommentForDecl(const Decl &OriginalD,
+void ASTContext::cacheRawCommentForDecl(RawCommentLookupKey Original,
                                         const RawComment &Comment) const {
   assert(Comment.isDocumentation() || LangOpts.CommentOpts.ParseAllComments);
-  DeclRawComments.try_emplace(&OriginalD, &Comment);
-  const Decl *const CanonicalDecl = OriginalD.getCanonicalDecl();
-  RedeclChainComments.try_emplace(CanonicalDecl, &OriginalD);
-  CommentlessRedeclChains.erase(CanonicalDecl);
+  DeclRawComments.try_emplace(Original, &Comment);
+  if (const auto *D = dyn_cast<const Decl *>(Original)) {
+    const Decl *const CanonicalDecl = D->getCanonicalDecl();
+    RedeclChainComments.try_emplace(CanonicalDecl, D);
+    CommentlessRedeclChains.erase(CanonicalDecl);
+  }
 }
 
 static void addRedeclaredMethods(const ObjCMethodDecl *ObjCMethod,
@@ -492,7 +545,7 @@ void ASTContext::attachCommentsToJustParsedDecls(ArrayRef<Decl *> Decls,
 
       if (RawComment *const DocComment = getRawCommentForDeclNoCacheImpl(
               D, DeclLoc, *CommentsInThisFile)) {
-        cacheRawCommentForDecl(*D, *DocComment);
+        cacheRawCommentForDecl(D, *DocComment);
         comments::FullComment *FC = DocComment->parse(*this, PP, D);
         ParsedComments[D->getCanonicalDecl()] = FC;
         break;
