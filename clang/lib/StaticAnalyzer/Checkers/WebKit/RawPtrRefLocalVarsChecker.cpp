@@ -288,7 +288,7 @@ public:
                     const Decl *DeclWithIssue) const {
     if (shouldSkipVarDecl(V))
       return;
-  
+
     if (auto *DD = dyn_cast<DecompositionDecl>(V)) {
       for (auto *BD : DD->bindings()) {
         auto *Binding = BD->getBinding();
@@ -302,7 +302,7 @@ public:
         reportBug(V, nullptr, BD, DeclWithIssue);
       }
     }
-  
+
     std::optional<bool> IsUncountedPtr = isUnsafePtr(V->getType());
     if (IsUncountedPtr && *IsUncountedPtr) {
       if (isPtrOriginSafe(V, Value))
@@ -351,8 +351,7 @@ public:
                   if (MaybeGuardian->isLocalVarDecl() &&
                       (isSafePtr(MaybeGuardianArgCXXRecord) ||
                        isRefcountedStringsHack(MaybeGuardian)) &&
-                      isGuardedScopeEmbeddedInGuardianScope(
-                          V, MaybeGuardian))
+                      isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian))
                     return true;
                 }
               }
