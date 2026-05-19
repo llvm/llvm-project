@@ -22105,6 +22105,8 @@ performExtractSubvectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   EVT VT = N->getValueType(0);
   SDValue V = N->getOperand(0);
 
+  // Fixed-length splats get legalized to a scalable splat + fixed-length
+  // extract, so avoid creating an infinite loop.
   if (VT.isScalableVector() != V->getValueType(0).isScalableVector())
     return SDValue();
 
