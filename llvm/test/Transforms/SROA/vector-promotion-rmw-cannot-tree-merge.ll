@@ -79,19 +79,17 @@ entry:
 }
 
 ; Ordering constraint: the init store must precede every partial access.
-; Here a partial load/store pair at slice 0 appears BEFORE the full-width
-; init store, so the rewrite must refuse — otherwise the per-slice SSA
-; seed would be wrong (the pre-init partial load actually reads
-; undef/garbage, not the init value).
+; Here a partial store at slice 0 appears BEFORE the full-width init
+; store, so the very first access by block order is not the init store
+; and the rewrite must refuse — otherwise the per-slice SSA seed
+; would be wrong.
 define <4 x float> @init_store_not_first(<4 x float> %init, <2 x float> %a, <2 x float> %b) {
 entry:
   %alloca = alloca [4 x float], align 16
 
-  ; Partial load+store BEFORE the init store.
+  ; Partial store BEFORE the init store.
   %p_pre = getelementptr inbounds [4 x float], ptr %alloca, i32 0, i32 0
-  %v_pre = load <2 x float>, ptr %p_pre, align 8
-  %r_pre = fadd <2 x float> %v_pre, %a
-  store <2 x float> %r_pre, ptr %p_pre, align 8
+  store <2 x float> %a, ptr %p_pre, align 8
 
   ; Full-width init store comes after.
   store <4 x float> %init, ptr %alloca, align 16
