@@ -279,6 +279,16 @@ void TransferFunctions::Visit(Stmt *S) {
       }
       break;
     }
+    case Stmt::AttributedStmtClass: {
+      // In an attributed statement, include the assumptions of the
+      // [[assume(...)]] attributes as being live.
+      AttributedStmt *AS = cast<AttributedStmt>(S);
+      for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(AS->getAttrs())) {
+        AddLiveExpr(val.liveExprs, LV.ESetFact, Attr->getAssumption());
+      }
+      // FIXME: Also handle other attributes that have relevant substatements.
+      break;
+    }
     case Stmt::PseudoObjectExprClass: {
       // A pseudo-object operation only directly consumes its result
       // expression.

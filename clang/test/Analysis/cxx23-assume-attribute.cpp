@@ -50,24 +50,23 @@ int ternary_in_assume(int a, int b) {
 int assume_and_fallthrough_at_the_same_attrstmt(int a, int b) {
   [[assume(a == 2)]];
   clang_analyzer_dump(a); // expected-warning {{2 S32b}}
-  // expected-warning-re@-1 {{reg_${{[0-9]+}}<int a>}} FIXME: We shouldn't have this dump.
   switch (a) {
     case 2:
       [[fallthrough, assume(b == 30)]];
     case 4: {
       clang_analyzer_dump(b); // expected-warning {{30 S32b}}
-      // expected-warning-re@-1 {{reg_${{[0-9]+}}<int b>}} FIXME: We shouldn't have this dump.
       return b;
     }
   }
 
   // This code should be unreachable.
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+  clang_analyzer_warnIfReached(); // no-warning
+  return 0;
+}
 
+void assume_false() {
   [[assume(false)]]; // This should definitely make it so.
   clang_analyzer_warnIfReached(); // no-warning
-
-  return 0;
 }
 
 void assume_opaque_gh151854_no_crash() {
@@ -79,19 +78,13 @@ void assume_opaque_gh151854_no_crash() {
 int multiple_assumptions(int a, int b) {
   [[assume(a == 2), assume(b == 3)]];
   clang_analyzer_dump(a); // expected-warning {{2 S32b}}
-  // expected-warning-re@-1 {{reg_${{[0-9]+}}<int a>}} FIXME: We shouldn't have this dump.
   clang_analyzer_dump(b); // expected-warning {{3 S32b}}
-  // expected-warning-re@-1 {{reg_${{[0-9]+}}<int b>}} FIXME: We shouldn't have this dump.
   clang_analyzer_dump(a+b); // expected-warning {{5 S32b}}
-  // expected-warning-re@-1 {{(reg_${{[0-9]+}}<int a>) + 3}} FIXME: We shouldn't have this dump.
-  // expected-warning-re@-2 {{(reg_${{[0-9]+}}<int b>) + 2}} FIXME: We shouldn't have this dump.
-  // expected-warning-re@-3 {{(reg_${{[0-9]+}}<int a>) + (reg_${{[0-9]+}}<int b>)}} FIXME: We shouldn't have this dump.
   return a + b;
 }
 
 int trivial_assumption(int a) {
   [[assume(a == 2)]];
   clang_analyzer_dump(a); // expected-warning {{2 S32b}}
-  // expected-warning-re@-1 {{reg_${{[0-9]+}}<int a>}} FIXME: We shouldn't have this dump.
   return a;
 }

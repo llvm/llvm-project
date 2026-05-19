@@ -1224,15 +1224,33 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
 
 void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
                                      ExplodedNode *Pred, ExplodedNodeSet &Dst) {
+  const LocationContext *LCtx = Pred->getLocationContext();
   ExplodedNodeSet CheckerPreStmt;
   getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, A, *this);
 
   ExplodedNodeSet EvalSet;
 
-  for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(A->getAttrs())) {
-    for (ExplodedNode *N : CheckerPreStmt) {
-      Visit(Attr->getAssumption()->IgnoreParens(), N, EvalSet);
+  for (ExplodedNode *N : CheckerPreStmt) {
+    ProgramStateRef State = N->getState();
+    for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(A->getAttrs())) {
+      SVal AssumedVal = State->getSVal(Attr->getAssumption(), LCtx);
+      if (auto ValidAssumedVal = AssumedVal.getAs<DefinedOrUnknownSVal>()) {
+        State = State->assume(*ValidAssumedVal, true);
+      } else {
+        // The assumption expression has evaluated to UndefinedVal.
+        // Theoretically this should be reported by a checker, but currently we
+        // just discard the execution path.
+        State = nullptr;
+      }
+      if (!State)
+        break;
     }
+
+    // FIXME: If the analyzer needs to know about other attributes, insert
+    // handling for them here.
+
+    if (State)
+      EvalSet.insert(Engine.makePostStmtNode(A, State, N));
   }
 
   getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, A, *this);
