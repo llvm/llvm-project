@@ -289,11 +289,8 @@ Expected<LinkResult> linkDeviceCode(ArrayRef<std::string> InputFiles,
   }
 
   // Link SYCL device input files. Resolve the target triple.
-  std::optional<llvm::Triple> TargetTriple;
-  if (Args.hasArg(OPT_triple_EQ))
-    TargetTriple = llvm::Triple(Args.getLastArgValue(OPT_triple_EQ));
-  StringRef TripleSource = TargetTriple ? StringRef("--triple=") : StringRef();
-
+  llvm::Triple TargetTriple(Args.getLastArgValue(OPT_triple_EQ));
+  StringRef TripleSource = TargetTriple.empty() ? "" : "--triple=";
   auto LinkerOutput = std::make_unique<Module>("sycl-device-link", C);
   Linker L(*LinkerOutput);
 
@@ -303,13 +300,13 @@ Expected<LinkResult> linkDeviceCode(ArrayRef<std::string> InputFiles,
       return ModOrErr.takeError();
 
     const llvm::Triple &T = (*ModOrErr)->getTargetTriple();
-    if (!T.empty()) {
-      if (!TargetTriple) {
+    if (!T.empty() && T != TargetTriple) {
+      if (TargetTriple.empty()) {
         TargetTriple = T;
         TripleSource = File;
-      } else if (T != *TargetTriple) {
+      } else {
         return createStringError(
-            "conflicting target triples: '" + TargetTriple->str() + "' (from " +
+            "conflicting target triples: '" + TargetTriple.str() + "' (from " +
             TripleSource + ") vs '" + T.str() + "' (from " + File + ")");
       }
     }
@@ -318,7 +315,7 @@ Expected<LinkResult> linkDeviceCode(ArrayRef<std::string> InputFiles,
       return createStringError("Could not link IR");
   }
 
-  if (!TargetTriple)
+  if (TargetTriple.empty())
     return createStringError(
         "Target triple must be specified or inferable from inputs");
 
@@ -327,7 +324,7 @@ Expected<LinkResult> linkDeviceCode(ArrayRef<std::string> InputFiles,
     auto LibMod = getBitcodeModule(File, C);
     if (!LibMod)
       return LibMod.takeError();
-    if ((*LibMod)->getTargetTriple() == *TargetTriple) {
+    if ((*LibMod)->getTargetTriple() == TargetTriple) {
       unsigned Flags = Linker::Flags::LinkOnlyNeeded;
       if (L.linkInModule(std::move(*LibMod), Flags))
         return createStringError("Could not link IR");
@@ -346,7 +343,7 @@ Expected<LinkResult> linkDeviceCode(ArrayRef<std::string> InputFiles,
   WriteBitcodeToFile(*LinkerOutput, OS);
 
   return LinkResult{std::move(LinkerOutput), SmallString<256>(*BitcodeOutput),
-                    std::move(*TargetTriple)};
+                    std::move(TargetTriple)};
 }
 
 /// Run Code Generation using LLVM backend.
