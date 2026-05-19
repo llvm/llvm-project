@@ -1734,6 +1734,47 @@ updateControlFlowOps(mlir::OpBuilder &builder,
   return success();
 }
 
+/// Parent-rooted counterpart of `updateControlFlowOps`. For each entry edge
+/// of a `RegionBranchOpInterface` op (i.e. the edges from the parent op into
+/// its regions on first execution), plant `layout_operand_N` on the parent
+/// op's entry operand whenever the tied region-entry input (typically a body
+/// block argument) has a propagated layout.
+///
+/// This is required because `getDistributeLayoutAttr(BlockArgument)`
+/// redirects to `getTemporaryLayout(tiedInit)` on the parent op. Without
+/// writing the entry-operand layout back here, that lookup returns null even
+/// when backward propagation has fully determined the layout (e.g. from a
+/// downstream `xegpu.dpas` anchor through a `scf.yield` back-edge), and
+/// downstream vector consumers are treated as having a layout-less producer.
+///
+/// Written against `RegionBranchOpInterface` so it covers loops, `scf.if`,
+/// `scf.while`, and any other op implementing the interface symmetrically.
+static LogicalResult
+updateRegionBranchEntryEdges(mlir::OpBuilder &builder,
+                             mlir::RegionBranchOpInterface branchOp,
+                             GetLayoutFnTy getLayoutOfValue) {
+  SmallVector<RegionSuccessor> entrySuccessors;
+  branchOp.getSuccessorRegions(RegionBranchPoint::parent(), entrySuccessors);
+  for (const RegionSuccessor &successor : entrySuccessors) {
+    if (successor.isParent())
+      continue;
+    OperandRange entryOperands = branchOp.getEntrySuccessorOperands(successor);
+    ValueRange successorInputs = branchOp.getSuccessorInputs(successor);
+    if (entryOperands.empty() || entryOperands.size() != successorInputs.size())
+      continue;
+    unsigned beginIdx = entryOperands.getBeginOperandIndex();
+    for (auto [i, successorInput] : llvm::enumerate(successorInputs)) {
+      if (!isa<VectorType, xegpu::TensorDescType>(successorInput.getType()))
+        continue;
+      xegpu::DistributeLayoutAttr layout = getLayoutOfValue(successorInput);
+      if (!layout)
+        continue;
+      xegpu::setTemporaryLayout(branchOp->getOpOperand(beginIdx + i), layout);
+    }
+  }
+  return success();
+}
+
 /// Update the function arguments and results with the layouts.
 static LogicalResult updateFunctionOpInterface(mlir::OpBuilder &builder,
                                                mlir::FunctionOpInterface funcOp,
@@ -1827,6 +1868,10 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
           .Case([&](mlir::RegionBranchTerminatorOpInterface branchTermOp) {
             r = updateControlFlowOps(builder, branchTermOp,
                                      getXeGPULayoutForValue);
+          })
+          .Case([&](mlir::RegionBranchOpInterface branchOp) {
+            r = updateRegionBranchEntryEdges(builder, branchOp,
+                                             getXeGPULayoutForValue);
           })
           .Case([&](mlir::FunctionOpInterface funcOp) {
             r = updateFunctionOpInterface(builder, funcOp,

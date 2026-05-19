@@ -260,7 +260,7 @@ gpu.module @test {
     // CHECK-SAME: : vector<128x128xf16>, vector<128x128xf16>, vector<128x128xf32> -> vector<128x128xf32>
 
     // CHECK-NEXT: scf.yield %{{.*}} : vector<128x128xf32>
-    // CHECK-NEXT: } {layout_result_0 = #xegpu.layout<sg_layout = [2, 2], sg_data = [64, 64]>}
+    // CHECK-NEXT: } {layout_operand_3 = #xegpu.layout<sg_layout = [2, 2], sg_data = [64, 64]>, layout_result_0 = #xegpu.layout<sg_layout = [2, 2], sg_data = [64, 64]>}
     // CHECK: xegpu.store_nd %{{.*}} <{layout = #xegpu.layout<sg_layout = [2, 2], sg_data = [64, 64]>}>
 
     %2 = scf.for %arg3 = %c0 to %c8192 step %c128 iter_args(%arg4 = %cst) -> (vector<128x128xf32>) {
