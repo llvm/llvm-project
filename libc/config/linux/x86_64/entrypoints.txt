@@ -1473,7 +1473,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.wchar.wcsnrtombs
     libc.src.wchar.fgetwc
     # libc.src.wchar.fgetws
-    # libc.src.wchar.fputwc
+    libc.src.wchar.fputwc
     # libc.src.wchar.fputws
     libc.src.wchar.fwide
     libc.src.wchar.getwc
