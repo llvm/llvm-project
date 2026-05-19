@@ -628,6 +628,9 @@ void GroupMatcher::optimize() {
 
 //===- SwitchMatcher ------------------------------------------------------===//
 
+SwitchMatcher::SwitchMatcher() : Matcher(MK_Switch) {}
+SwitchMatcher::~SwitchMatcher() = default;
+
 bool SwitchMatcher::recordsOperand() const {
   assert(!isa_and_present<RecordNamedOperandMatcher>(Condition.get()) &&
          "Switch conditions should not record named operands");

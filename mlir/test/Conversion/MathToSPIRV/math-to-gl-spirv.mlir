@@ -12,6 +12,8 @@ func.func @float32_unary_scalar(%arg0: f32) {
   %1 = math.cos %arg0 : f32
   // CHECK: spirv.GL.Exp %{{.*}}: f32
   %2 = math.exp %arg0 : f32
+  // CHECK: spirv.GL.Exp2 %{{.*}}: f32
+  %exp2 = math.exp2 %arg0 : f32
   // CHECK: %[[EXP:.+]] = spirv.GL.Exp %arg0
   // CHECK: %[[ONE:.+]] = spirv.Constant 1.000000e+00 : f32
   // CHECK: spirv.FSub %[[EXP]], %[[ONE]]
@@ -22,9 +24,7 @@ func.func @float32_unary_scalar(%arg0: f32) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.GL.Log %[[ADDONE]]
   %5 = math.log1p %arg0 : f32
-  // CHECK: %[[LOG2_RECIPROCAL:.+]] = spirv.Constant 1.44269502 : f32
-  // CHECK: %[[LOG0:.+]] = spirv.GL.Log {{.+}}
-  // CHECK: spirv.FMul %[[LOG0]], %[[LOG2_RECIPROCAL]]
+  // CHECK: spirv.GL.Log2 %{{.*}}: f32
   %6 = math.log2 %arg0 : f32
   // CHECK: %[[LOG10_RECIPROCAL:.+]] = spirv.Constant 0.434294492 : f32
   // CHECK: %[[LOG1:.+]] = spirv.GL.Log {{.+}}
@@ -73,6 +73,8 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   %1 = math.cos %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Exp %{{.*}}: vector<3xf32>
   %2 = math.exp %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Exp2 %{{.*}}: vector<3xf32>
+  %exp2 = math.exp2 %arg0 : vector<3xf32>
   // CHECK: %[[EXP:.+]] = spirv.GL.Exp %arg0
   // CHECK: %[[ONE:.+]] = spirv.Constant dense<1.000000e+00> : vector<3xf32>
   // CHECK: spirv.FSub %[[EXP]], %[[ONE]]
@@ -83,9 +85,7 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.GL.Log %[[ADDONE]]
   %5 = math.log1p %arg0 : vector<3xf32>
-  // CHECK: %[[LOG2_RECIPROCAL:.+]] = spirv.Constant dense<1.44269502> : vector<3xf32>
-  // CHECK: %[[LOG0:.+]] = spirv.GL.Log {{.+}}
-  // CHECK: spirv.FMul %[[LOG0]], %[[LOG2_RECIPROCAL]]
+  // CHECK: spirv.GL.Log2 %{{.*}}: vector<3xf32>
   %6 = math.log2 %arg0 : vector<3xf32>
   // CHECK: %[[LOG10_RECIPROCAL:.+]] = spirv.Constant dense<0.434294492> : vector<3xf32>
   // CHECK: %[[LOG1:.+]] = spirv.GL.Log {{.+}}

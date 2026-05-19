@@ -300,7 +300,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .scalarSameSizeAs(0, 1);
 
   // count trailing zeros
-  getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF)
+  getActionDefinitionsBuilder(G_CTTZ_ZERO_POISON)
       .legalFor({{s16, s16}, {s32, s32}})
       .legalFor(Is64Bit, {{s64, s64}})
       .widenScalarToNextPow2(1, /*Min=*/16)

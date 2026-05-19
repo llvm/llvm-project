@@ -594,7 +594,7 @@ bool AMDGPUInstructionSelector::selectG_AMDGPU_MAD_64_32(
   MachineBasicBlock *BB = I.getParent();
   MachineFunction *MF = BB->getParent();
   const bool IsUnsigned = I.getOpcode() == AMDGPU::G_AMDGPU_MAD_U64_U32;
-  bool UseNoCarry = Subtarget->hasMadU64U32NoCarry() &&
+  bool UseNoCarry = Subtarget->hasMadNC64_32Insts() &&
                     MRI->use_nodbg_empty(I.getOperand(1).getReg());
 
   unsigned Opc;
@@ -730,8 +730,16 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
   ArrayRef<int16_t> SubRegs = TRI.getRegSplitParts(SrcRC, DstSize / 8);
   for (int I = 0, E = NumDst; I != E; ++I) {
     MachineOperand &Dst = MI.getOperand(I);
-    BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), Dst.getReg())
-        .addReg(SrcReg, {}, SubRegs[I]);
+    // hi16:sreg_32 is not allowed so explicitly shift upper 16-bits.
+    if (SrcBank->getID() == AMDGPU::SGPRRegBankID &&
+        SubRegs[I] == AMDGPU::hi16) {
+      BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_LSHR_B32), Dst.getReg())
+          .addReg(SrcReg)
+          .addImm(16);
+    } else {
+      BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), Dst.getReg())
+          .addReg(SrcReg, {}, SubRegs[I]);
+    }
 
     // Make sure the subregister index is valid for the source register.
     SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubRegs[I]);
@@ -2081,6 +2089,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   const bool IsGFX10Plus = AMDGPU::isGFX10Plus(STI);
   const bool IsGFX11Plus = AMDGPU::isGFX11Plus(STI);
   const bool IsGFX12Plus = AMDGPU::isGFX12Plus(STI);
+  const bool IsGFX13Plus = AMDGPU::isGFX13Plus(STI);
 
   const unsigned ArgOffset = MI.getNumExplicitDefs() + 1;
 
@@ -2206,7 +2215,10 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
     ++NumVDataDwords;
 
   int Opcode = -1;
-  if (IsGFX12Plus) {
+  if (IsGFX13Plus) {
+    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx13,
+                                   NumVDataDwords, NumVAddrDwords);
+  } else if (IsGFX12Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12,
                                    NumVDataDwords, NumVAddrDwords);
   } else if (IsGFX11Plus) {
@@ -2829,6 +2841,18 @@ static Register stripBitCast(Register Reg, MachineRegisterInfo &MRI) {
 
 static bool isExtractHiElt(MachineRegisterInfo &MRI, Register In,
                            Register &Out) {
+  // When unmerging a register that is composed of 2 x 16-bit values allow to
+  // use an extract hi instruction for the upper 16 bits. We only need to check
+  // the size of `In` as all defs are guaranteed to be the same type for
+  // GUnmerge.
+  if (auto *Unmerge = dyn_cast<GUnmerge>(MRI.getVRegDef(In))) {
+    if (Unmerge->getNumDefs() == 2 && Unmerge->getOperand(1).getReg() == In &&
+        MRI.getType(In).getSizeInBits() == 16) {
+      Out = Unmerge->getSourceReg();
+      return true;
+    }
+  }
+
   Register Trunc;
   if (!mi_match(In, MRI, m_GTrunc(m_Reg(Trunc))))
     return false;

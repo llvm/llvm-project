@@ -118,3 +118,121 @@
 // CHECK-LIBPATHS-PIC: "-L{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-none-elf{{/|\\\\}}lib{{/|\\\\}}v68{{/|\\\\}}G0{{/|\\\\}}pic"
 // CHECK-LIBPATHS-PIC: "-L{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-none-elf{{/|\\\\}}lib{{/|\\\\}}v68{{/|\\\\}}G0"
 // CHECK-LIBPATHS-PIC: "-L{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-none-elf{{/|\\\\}}lib{{/|\\\\}}v68"
+
+// =============================================================================
+// H2 OS tests (--target=hexagon-h2-elf --cstdlib=picolibc)
+// Differences from hexagon-none-elf: crt0-noflash-hosted.o, -lh2 -lsyscall_wrapper
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Test standard include paths for H2
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-h2-elf --cstdlib=picolibc \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin %s 2>&1 | FileCheck -check-prefix=CHECK-H2-C-INCLUDES %s
+// CHECK-H2-C-INCLUDES: "-cc1" {{.*}} "-internal-isystem" "{{.*}}{{/|\\\\}}lib{{/|\\\\}}clang{{/|\\\\}}{{[0-9]+}}{{/|\\\\}}include"
+// CHECK-H2-C-INCLUDES: "-internal-externc-isystem" "{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-h2-elf{{/|\\\\}}include"
+
+// RUN: %clangxx -### --target=hexagon-h2-elf --cstdlib=picolibc \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin %s 2>&1 | FileCheck -check-prefix=CHECK-H2-CXX-INCLUDES %s
+// CHECK-H2-CXX-INCLUDES: "-cc1" {{.*}} "-internal-isystem" "{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-h2-elf{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
+// CHECK-H2-CXX-INCLUDES: "-internal-isystem" "{{.*}}{{/|\\\\}}lib{{/|\\\\}}clang{{/|\\\\}}{{[0-9]+}}{{/|\\\\}}include"
+// CHECK-H2-CXX-INCLUDES: "-internal-externc-isystem" "{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-h2-elf{{/|\\\\}}include"
+
+// -----------------------------------------------------------------------------
+// H2 start files: crt0-noflash-hosted.o (not crt0-semihost.o)
+// -----------------------------------------------------------------------------
+// RUN: %clang --target=hexagon-h2-elf --cstdlib=picolibc -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-H2-STARTUP
+// CHECK-H2-STARTUP: "{{.*}}crt0-noflash-hosted.o"
+// CHECK-H2-STARTUP-NOT: "{{.*}}crt0-semihost.o"
+
+// RUN: %clang --target=hexagon-h2-elf --cstdlib=picolibc -nostartfiles -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-H2-NOSTART
+// CHECK-H2-NOSTART-NOT: "{{.*}}crt0-noflash-hosted.o"
+
+// -----------------------------------------------------------------------------
+// H2: -nostdlib, -nostartfiles, -nodefaultlibs, -nolibc
+// -----------------------------------------------------------------------------
+// RUN: %clangxx -### --target=hexagon-h2-elf --cstdlib=picolibc \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv68 \
+// RUN:   -nostdlib %s 2>&1 | FileCheck -check-prefix=CHECK-H2-NOSTDLIB %s
+// CHECK-H2-NOSTDLIB: "-cc1"
+// CHECK-H2-NOSTDLIB: {{hexagon-link|ld}}
+// CHECK-H2-NOSTDLIB-NOT: "{{.*}}crt0-noflash-hosted.o"
+// CHECK-H2-NOSTDLIB-NOT: "-lc++"
+// CHECK-H2-NOSTDLIB-NOT: "-lm"
+// CHECK-H2-NOSTDLIB-NOT: "--start-group"
+// CHECK-H2-NOSTDLIB-NOT: "-lh2"
+// CHECK-H2-NOSTDLIB-NOT: "-lsyscall_wrapper"
+// CHECK-H2-NOSTDLIB-NOT: "-lc"
+// CHECK-H2-NOSTDLIB-NOT: "-lclang_rt.builtins"
+// CHECK-H2-NOSTDLIB-NOT: "--end-group"
+
+// RUN: %clangxx -### --target=hexagon-h2-elf --cstdlib=picolibc \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv68 \
+// RUN:   -nostartfiles %s 2>&1 | FileCheck -check-prefix=CHECK-H2-NOSTARTFILES %s
+// CHECK-H2-NOSTARTFILES: "-cc1"
+// CHECK-H2-NOSTARTFILES: {{hexagon-link|ld}}
+// CHECK-H2-NOSTARTFILES-NOT: "{{.*}}crt0-noflash-hosted.o"
+// CHECK-H2-NOSTARTFILES: "-lc++" "-lc++abi" "-lunwind" "-lm" "--start-group" "-lh2" "-lsyscall_wrapper" "-lc" "-lclang_rt.builtins" "--end-group"
+
+// RUN: %clangxx -### --target=hexagon-h2-elf --cstdlib=picolibc \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv68 \
+// RUN:   -nodefaultlibs %s 2>&1 | FileCheck -check-prefix=CHECK-H2-NODEFAULTLIBS %s
+// CHECK-H2-NODEFAULTLIBS: "-cc1"
+// CHECK-H2-NODEFAULTLIBS: {{hexagon-link|ld}}
+// CHECK-H2-NODEFAULTLIBS: "{{.*}}crt0-noflash-hosted.o"
+// CHECK-H2-NODEFAULTLIBS-NOT: "-lc++"
+// CHECK-H2-NODEFAULTLIBS-NOT: "-lm"
+// CHECK-H2-NODEFAULTLIBS-NOT: "--start-group"
+// CHECK-H2-NODEFAULTLIBS-NOT: "-lh2"
+// CHECK-H2-NODEFAULTLIBS-NOT: "-lsyscall_wrapper"
+// CHECK-H2-NODEFAULTLIBS-NOT: "-lc"
+// CHECK-H2-NODEFAULTLIBS-NOT: "-lclang_rt.builtins"
+// CHECK-H2-NODEFAULTLIBS-NOT: "--end-group"
+
+// RUN: %clangxx -### --target=hexagon-h2-elf --cstdlib=picolibc \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv68 \
+// RUN:   -nolibc %s 2>&1 | FileCheck -check-prefix=CHECK-H2-NOLIBC %s
+// CHECK-H2-NOLIBC: "-cc1"
+// CHECK-H2-NOLIBC: {{hexagon-link|ld}}
+// CHECK-H2-NOLIBC: "{{.*}}crt0-noflash-hosted.o"
+// CHECK-H2-NOLIBC-SAME: "-lc++"
+// CHECK-H2-NOLIBC-SAME: "-lm"
+// CHECK-H2-NOLIBC-SAME: "--start-group"
+// CHECK-H2-NOLIBC-SAME: "-lh2"
+// CHECK-H2-NOLIBC-SAME: "-lsyscall_wrapper"
+// CHECK-H2-NOLIBC-NOT: "-lc"
+// CHECK-H2-NOLIBC-SAME: "-lclang_rt.builtins"
+// CHECK-H2-NOLIBC-SAME: "--end-group"
+
+// -----------------------------------------------------------------------------
+// H2: compiler-rt is forced (not -lgcc)
+// -----------------------------------------------------------------------------
+// RUN: %clang --target=hexagon-h2-elf --cstdlib=picolibc -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-H2-RTLIB
+// RUN: %clangxx --target=hexagon-h2-elf --cstdlib=picolibc -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-H2-RTLIB
+// CHECK-H2-RTLIB: "-lclang_rt.builtins"
+// CHECK-H2-RTLIB-NOT: "-lgcc"
+
+// -----------------------------------------------------------------------------
+// H2: libunwind linked for C++ but not C
+// -----------------------------------------------------------------------------
+// RUN: %clangxx --target=hexagon-h2-elf --cstdlib=picolibc -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-H2-CXX-UNWIND
+// CHECK-H2-CXX-UNWIND: "-lunwind"
+
+// -----------------------------------------------------------------------------
+// H2: library search paths use target/picolibc/hexagon-unknown-h2-elf/
+// -----------------------------------------------------------------------------
+// RUN: %clang --target=hexagon-h2-elf --cstdlib=picolibc \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv68 -### %s 2>&1 | FileCheck -check-prefix=CHECK-H2-LIBPATHS %s
+// CHECK-H2-LIBPATHS: "-L{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-h2-elf{{/|\\\\}}lib{{/|\\\\}}v68"
+// CHECK-H2-LIBPATHS-NOT: "-L{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-h2-elf{{/|\\\\}}lib{{/|\\\\}}v68{{/|\\\\}}G0"
+
+// RUN: %clang --target=hexagon-h2-elf --cstdlib=picolibc \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv68 -G0 -### %s 2>&1 | FileCheck -check-prefix=CHECK-H2-LIBPATHS-G0 %s
+// CHECK-H2-LIBPATHS-G0: "-L{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-h2-elf{{/|\\\\}}lib{{/|\\\\}}v68{{/|\\\\}}G0"
+// CHECK-H2-LIBPATHS-G0: "-L{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-h2-elf{{/|\\\\}}lib{{/|\\\\}}v68"

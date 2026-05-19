@@ -15,10 +15,13 @@ void foo(int N) {
 #pragma omp target teams distribute parallel for simd thread_limit(4)
   for (int i = 0; i < N; ++i)
     ;
-#pragma omp target teams distribute parallel for simd ompx_attribute(__attribute__((launch_bounds(42, 42))))
+#pragma omp target teams distribute parallel for simd ompx_attribute(__attribute__((launch_bounds(42, 84))))
   for (int i = 0; i < N; ++i)
     ;
-#pragma omp target teams distribute parallel for simd ompx_attribute(__attribute__((launch_bounds(42, 42)))) num_threads(22)
+#pragma omp target teams distribute parallel for simd ompx_attribute(__attribute__((launch_bounds(42, 84)))) num_threads(22)
+  for (int i = 0; i < N; ++i)
+    ;
+#pragma omp target teams distribute parallel for simd ompx_attribute(__attribute__((launch_bounds(42, 84, 86)))) num_threads(20)
   for (int i = 0; i < N; ++i)
     ;
 }
@@ -29,13 +32,16 @@ void foo(int N) {
 // CHECK: define weak_odr protected {{amdgpu|spir}}_kernel void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+__Z3fooi_}}l15({{.*}}) #[[ATTR2:.+]] {
 // CHECK: define weak_odr protected {{amdgpu|spir}}_kernel void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+__Z3fooi_}}l18({{.*}}) #[[ATTR3:.+]] {
 // CHECK: define weak_odr protected {{amdgpu|spir}}_kernel void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+__Z3fooi_}}l21({{.*}}) #[[ATTR4:.+]] {
+// CHECK: define weak_odr protected {{amdgpu|spir}}_kernel void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+__Z3fooi_}}l24({{.*}}) #[[ATTR5:.+]] {
 
 // CHECK-AMDGPU: attributes #[[ATTR1]] = { {{.*}} "amdgpu-flat-work-group-size"="1,256" {{.*}} }
 // CHECK-AMDGPU: attributes #[[ATTR2]] = { {{.*}} "amdgpu-flat-work-group-size"="1,4" {{.*}} }
 // CHECK-AMDGPU: attributes #[[ATTR3]] = { {{.*}} "amdgpu-flat-work-group-size"="1,42" {{.*}} }
 // CHECK-AMDGPU: attributes #[[ATTR4]] = { {{.*}} "amdgpu-flat-work-group-size"="1,22" {{.*}} }
+// CHECK-AMDGPU: attributes #[[ATTR5]] = { {{.*}} "amdgpu-flat-work-group-size"="1,20" "amdgpu-max-num-workgroups"="86,1,1" {{.*}} }
 
 // CHECK-SPIRV: attributes #[[ATTR1]] = { {{.*}} "omp_target_thread_limit"="256" {{.*}} }
 // CHECK-SPIRV: attributes #[[ATTR2]] = { {{.*}} "omp_target_thread_limit"="4"  {{.*}} }
-// CHECK-SPIRV: attributes #[[ATTR3]] = { {{.*}} "omp_target_num_teams"="42" "omp_target_thread_limit"="42" {{.*}} }
-// CHECK-SPIRV: attributes #[[ATTR4]] = { {{.*}} "omp_target_num_teams"="42" "omp_target_thread_limit"="22" {{.*}} }
+// CHECK-SPIRV: attributes #[[ATTR3]] = { {{.*}} "omp_target_num_teams"="84" "omp_target_thread_limit"="42" {{.*}} }
+// CHECK-SPIRV: attributes #[[ATTR4]] = { {{.*}} "omp_target_num_teams"="84" "omp_target_thread_limit"="22" {{.*}} }
+// CHECK-SPIRV: attributes #[[ATTR5]] = { {{.*}} "omp_target_num_teams"="84" "omp_target_thread_limit"="20" {{.*}} }

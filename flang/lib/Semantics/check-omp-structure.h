@@ -145,12 +145,12 @@ public:
   void Leave(const parser::OmpNothingDirective &);
   void Enter(const parser::OpenMPAllocatorsConstruct &);
   void Leave(const parser::OpenMPAllocatorsConstruct &);
-  void Enter(const parser::OpenMPRequiresConstruct &);
-  void Leave(const parser::OpenMPRequiresConstruct &);
-  void Enter(const parser::OpenMPGroupprivate &);
-  void Leave(const parser::OpenMPGroupprivate &);
-  void Enter(const parser::OpenMPThreadprivate &);
-  void Leave(const parser::OpenMPThreadprivate &);
+  void Enter(const parser::OmpRequiresDirective &);
+  void Leave(const parser::OmpRequiresDirective &);
+  void Enter(const parser::OmpGroupprivateDirective &);
+  void Leave(const parser::OmpGroupprivateDirective &);
+  void Enter(const parser::OmpThreadprivateDirective &);
+  void Leave(const parser::OmpThreadprivateDirective &);
 
   void Enter(const parser::OpenMPSimpleStandaloneConstruct &);
   void Leave(const parser::OpenMPSimpleStandaloneConstruct &);

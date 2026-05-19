@@ -2106,9 +2106,10 @@ private:
                                          Value *ExitCond, bool ExitIfTrue,
                                          bool ControlsOnlyExit,
                                          bool AllowPredicates);
-  std::optional<ScalarEvolution::ExitLimit> computeExitLimitFromCondFromBinOp(
-      ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, bool ExitIfTrue,
-      bool ControlsOnlyExit, bool AllowPredicates);
+  std::optional<ScalarEvolution::ExitLimit>
+  computeExitLimitFromCondFromBinOp(ExitLimitCacheTy &Cache, const Loop *L,
+                                    Value *ExitCond, bool ExitIfTrue,
+                                    bool AllowPredicates);
 
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a conditional branch of the ICmpInst

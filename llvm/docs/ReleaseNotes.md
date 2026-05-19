@@ -125,6 +125,9 @@ Makes programs 10x faster by doing Special New Thing.
   in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
   distributed ThinLTO. 
 
+* ``ConstantFP`` now supports vector types and is the canonical form returned by
+  ``ConstantVector::getSplat(C)`` when ``C`` is a scalar ``ConstantFP``.
+
 ### Changes to building LLVM
 
 ### Changes to TableGen
@@ -202,6 +205,7 @@ Makes programs 10x faster by doing Special New Thing.
 * `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
 * Support for the experimental `XRivosVisni` vendor extension has been removed.
 * Adds experimental assembler support for the 'Zvvmm` (RISC-V Integer Matrix Multiply-Accumulate) extension.
+* Adds experimental assembler support for the 'Zvvfmm` (RISC-V Floating-Point Matrix Multiply-Accumulate) extension.
 * Adds support for 'Ziccid' (Instruction/Data Coherence and Consistency) extension.
 
 ### Changes to the WebAssembly Backend
@@ -230,6 +234,20 @@ Makes programs 10x faster by doing Special New Thing.
   or ``LLVMSetOperand`` to access successors.
 
 ### Changes to the CodeGen infrastructure
+
+* Renamed ISD::CTLZ_ZERO_UNDEF to ISD::CTLZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
+
+* Renamed ISD::CTTZ_ZERO_UNDEF to ISD::CTTZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
+
+### Changes to the GlobalISel infrastructure
+
+* Renamed G_CTLZ_ZERO_UNDEF to G_CTLZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
+
+* Renamed G_CTTZ_ZERO_UNDEF to G_CTTZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
 
 ### Changes to the Metadata Info
 
@@ -303,6 +321,8 @@ Makes programs 10x faster by doing Special New Thing.
   If you are using such a system and cannot change LLDB version, or want to package
   an affected version in a way that is compatible with these systems, the issue
   contains details of backports that could be done to fix the affected versions.
+* When an ELF core file is loaded, LLDB now shows the command line that created the core file.
+  If you need to see it again, use the command `process status -v`.
 * LLDB now supports debugging Linux [Memory Protection Keys](https://docs.kernel.org/core-api/protection-keys.html)
   on AArch64 systems that have the Permission Overlay Extension (POE / FEAT_S1POE).
   See the [LLDB on AArch64 Linux](https://lldb.llvm.org/use/aarch64-linux.html#permission-overlay-extension-poe)

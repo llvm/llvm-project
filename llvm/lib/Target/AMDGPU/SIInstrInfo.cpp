@@ -1018,7 +1018,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   if (RC == RI.getVGPR64Class() && (SrcRC == RC || RI.isSGPRClass(SrcRC))) {
-    if (ST.hasMovB64()) {
+    if (ST.hasVMovB64Inst()) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B64_e32), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc));
       return;
@@ -1067,7 +1067,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
              (RI.isProperlyAlignedRC(*RC) &&
               (SrcRC == RC || RI.isSGPRClass(SrcRC)))) {
     // TODO: In 96-bit case, could do a 64-bit mov and then a 32-bit mov.
-    if (ST.hasMovB64()) {
+    if (ST.hasVMovB64Inst()) {
       Opcode = AMDGPU::V_MOV_B64_e32;
       EltSize = 8;
     } else if (ST.hasPkMovB32()) {
@@ -2159,7 +2159,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     const MachineOperand &SrcOp = MI.getOperand(1);
     // FIXME: Will this work for 64-bit floating point immediates?
     assert(!SrcOp.isFPImm());
-    if (ST.hasMovB64() && Mov64RC->contains(Dst)) {
+    if (ST.hasVMovB64Inst() && Mov64RC->contains(Dst)) {
       MI.setDesc(Mov64Desc);
       if (SrcOp.isReg() || isInlineConstant(MI, 1) ||
           isUInt<32>(SrcOp.getImm()) || ST.has64BitLiterals())
@@ -2703,7 +2703,7 @@ std::pair<MachineInstr*, MachineInstr*>
 SIInstrInfo::expandMovDPP64(MachineInstr &MI) const {
   assert (MI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO);
 
-  if (ST.hasMovB64() && ST.hasFeature(AMDGPU::FeatureDPALU_DPP) &&
+  if (ST.hasVMovB64Inst() && ST.hasFeature(AMDGPU::FeatureDPALU_DPP) &&
       AMDGPU::isLegalDPALU_DPPControl(
           ST, getNamedOperand(MI, AMDGPU::OpName::dpp_ctrl)->getImm())) {
     MI.setDesc(get(AMDGPU::V_MOV_B64_dpp));
@@ -5231,17 +5231,13 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       }
       break;
     case AMDGPU::OPERAND_REG_IMM_INT32:
-    case AMDGPU::OPERAND_REG_IMM_INT64:
     case AMDGPU::OPERAND_REG_IMM_INT16:
     case AMDGPU::OPERAND_REG_IMM_FP32:
-    case AMDGPU::OPERAND_REG_IMM_V2FP32:
     case AMDGPU::OPERAND_REG_IMM_BF16:
     case AMDGPU::OPERAND_REG_IMM_FP16:
-    case AMDGPU::OPERAND_REG_IMM_FP64:
     case AMDGPU::OPERAND_REG_IMM_V2FP16:
     case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
     case AMDGPU::OPERAND_REG_IMM_V2INT16:
-    case AMDGPU::OPERAND_REG_IMM_V2INT32:
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
       break;
     case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
@@ -5266,6 +5262,19 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       }
       break;
     }
+    case AMDGPU::OPERAND_REG_IMM_FP64:
+    case AMDGPU::OPERAND_REG_IMM_INT64:
+    case AMDGPU::OPERAND_REG_IMM_V2INT32:
+    case AMDGPU::OPERAND_REG_IMM_V2FP32:
+      if (ST.has64BitLiterals() && Desc.getSize() != 4 && MO.isImm() &&
+          !isInlineConstant(MI, i) &&
+          !AMDGPU::isValid32BitLiteral(MO.getImm(),
+                                       OpInfo.OperandType ==
+                                           AMDGPU::OPERAND_REG_IMM_FP64)) {
+        ErrInfo = "illegal 64-bit immediate value for operand.";
+        return false;
+      }
+      break;
     case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
     case AMDGPU::OPERAND_INPUT_MODS:
       if (!MI.getOperand(i).isImm() || !isInlineConstant(MI, i)) {
@@ -7086,7 +7095,18 @@ static void emitLoadScalarOpsFromVGPRLoop(
     unsigned NumSubRegs = RegSize / 32;
     Register VScalarOp = ScalarOp->getReg();
 
+    const TargetRegisterClass *RFLSrcRC =
+        TII.getRegClass(TII.get(AMDGPU::V_READFIRSTLANE_B32), 1);
+
     if (NumSubRegs == 1) {
+      const TargetRegisterClass *VScalarOpRC = MRI.getRegClass(VScalarOp);
+      if (const TargetRegisterClass *Common =
+              TRI->getCommonSubClass(VScalarOpRC, RFLSrcRC);
+          Common != VScalarOpRC) {
+        Register VRReg = MRI.createVirtualRegister(Common);
+        BuildMI(LoopBB, I, DL, TII.get(AMDGPU::COPY), VRReg).addReg(VScalarOp);
+        VScalarOp = VRReg;
+      }
       Register CurReg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
       BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), CurReg)
@@ -7949,7 +7969,7 @@ void SIInstrInfo::moveToVALUImpl(
   }
 
   case AMDGPU::S_MUL_U64:
-    if (ST.hasVectorMulU64()) {
+    if (ST.hasVMulU64Inst()) {
       NewOpcode = AMDGPU::V_MUL_U64_e64;
       break;
     }

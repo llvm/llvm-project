@@ -298,6 +298,87 @@ static mlir::Value callBeginCatch(CIRGenFunction &cgf, mlir::Value ehToken,
   return beginCatch.getExnPtr();
 }
 
+/// Get or create the catch-init copy thunk for \p catchParam.
+///
+/// The copy thunk has signature `void(T*, T*)` (where `T` is the catch
+/// parameter type) and contains the normal aggregate emission of the catch
+/// parameter's init expression.
+///
+/// The thunk name is keyed off the catch parameter's canonical type mangled
+/// name, so a single translation unit emits at most one thunk per catch type.
+static cir::FuncOp getOrCreateCopyThunk(CIRGenFunction &cgf,
+                                        const VarDecl &catchParam,
+                                        cir::PointerType paramAddrType,
+                                        mlir::Location loc) {
+  CIRGenModule &cgm = cgf.cgm;
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  mlir::ModuleOp mod = cgm.getModule();
+
+  const Expr *copyExpr = catchParam.getInit();
+  assert(copyExpr && "non-trivial copy expects a copy expression");
+
+  llvm::SmallString<128> thunkName;
+  llvm::raw_svector_ostream thunkNameStream(thunkName);
+  thunkNameStream << "__clang_cir_catch_copy_";
+  cgm.getCXXABI().getMangleContext().mangleCanonicalTypeName(
+      catchParam.getType(), thunkNameStream);
+
+  if (cir::FuncOp existing = cgm.lookupFuncOp(thunkName))
+    return existing;
+
+  mlir::Type voidTy = cir::VoidType::get(builder.getContext());
+  auto thunkTy = cir::FuncType::get({paramAddrType, paramAddrType}, voidTy,
+                                    /*isVarArg=*/false);
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(mod.getBody());
+  cir::FuncOp thunk = cir::FuncOp::create(builder, loc, thunkName, thunkTy);
+  cgm.insertGlobalSymbol(thunk);
+  thunk.setLinkage(cir::GlobalLinkageKind::LinkOnceODRLinkage);
+  thunk.setGlobalVisibility(cir::VisibilityKind::Hidden);
+  thunk->setAttr(cir::CIRDialect::getCatchCopyThunkAttrName(),
+                 builder.getUnitAttr());
+
+  mlir::Block *entry = thunk.addEntryBlock();
+  builder.setInsertionPointToStart(entry);
+
+  // Use a fresh CIRGenFunction to drive the body emission. We need just enough
+  // state for emitAggExpr / emitCXXConstructorCall to compute the call-site
+  // argument attributes; the helper has no AST decl, no exception scopes, and
+  // no return value, so we bypass the full startFunction/finishFunction
+  // machinery.
+  CIRGenFunction subCgf(cgm, builder);
+  subCgf.curFn = thunk;
+
+  // Some emission paths (e.g. materializing temporaries for default args via
+  // emitAnyExprToTemp) need both a current source location and a lexical
+  // scope to anchor allocas. Since we bypass startFunction, install both
+  // explicitly for the lifetime of the thunk's body emission.
+  CIRGenFunction::SourceLocRAIIObject thunkLoc(subCgf, loc);
+  CIRGenFunction::LexicalScope thunkScope(subCgf, loc, entry);
+
+  // Bind the OpaqueValueExpr at the source position of the catch parameter's
+  // copy expression to an LValue at the thunk's `src` block argument.
+  LValue srcLV = subCgf.makeNaturalAlignAddrLValue(entry->getArgument(1),
+                                                   catchParam.getType());
+  CIRGenFunction::OpaqueValueMapping opaqueValue(
+      subCgf, OpaqueValueExpr::findInCopyConstruct(copyExpr), srcLV);
+
+  // Drive the construction into the helper's `dest` block argument via the
+  // normal aggregate-emission machinery so that `ExprWithCleanups`,
+  // converting/inheriting constructors, and any future copy-construction
+  // shapes flow through unchanged.
+  Address destAddr = subCgf.makeNaturalAddressForPointer(
+      entry->getArgument(0), catchParam.getType(), clang::CharUnits::Zero());
+  subCgf.emitAggExpr(
+      copyExpr, AggValueSlot::forAddr(
+                    destAddr, Qualifiers(), AggValueSlot::IsNotDestructed,
+                    AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap));
+
+  cir::ReturnOp::create(builder, loc);
+  return thunk;
+}
+
 /// A "special initializer" callback for initializing a catch
 /// parameter during catch initialization.
 static void initCatchParam(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
@@ -339,10 +420,28 @@ static void initCatchParam(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
     }
   }
 
-  mlir::Value exnPtr = callBeginCatch(cgf, ehToken, builder.getVoidPtrTy());
   CIRGenFunction::AutoVarEmission var = cgf.emitAutoVarAlloca(catchParam);
-  cir::InitCatchParamOp::create(builder, cgf.getLoc(loc), exnPtr,
-                                var.getAllocatedAddress().getPointer(), kind);
+  Address paramAddr = var.getAllocatedAddress();
+  mlir::Location mloc = cgf.getLoc(loc);
+
+  if (kind == cir::InitCatchKind::NonTrivialCopy) {
+    // Sanitizer-checked construction (UBSan vptr/derived-class checks, etc.)
+    // would require additional adornments that cir.construct_catch_param does
+    // not yet carry.
+    assert(!cir::MissingFeatures::sanitizers());
+
+    auto paramAddrType =
+        mlir::cast<cir::PointerType>(paramAddr.getPointer().getType());
+    cir::FuncOp thunk =
+        getOrCreateCopyThunk(cgf, catchParam, paramAddrType, mloc);
+    cir::ConstructCatchParamOp::create(builder, mloc, ehToken,
+                                       paramAddr.getPointer(), kind,
+                                       thunk.getSymName());
+  }
+
+  mlir::Value exnPtr = callBeginCatch(cgf, ehToken, builder.getVoidPtrTy());
+  cir::InitCatchParamOp::create(builder, mloc, exnPtr, paramAddr.getPointer(),
+                                kind);
   cgf.emitAutoVarCleanups(var);
 }
 
