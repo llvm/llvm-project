@@ -1064,8 +1064,8 @@ uint32_t Serializer::prepareArrayConstant(Location loc, Type constType,
   operands.reserve(attr.size() + 2);
   spirv::CompositeType compositeType = cast<spirv::CompositeType>(constType);
   for (auto [idx, elementAttr] : llvm::enumerate(attr)) {
-    if (auto elementID = prepareConstant(loc, compositeType.getElementType(idx),
-                                         elementAttr)) {
+    if (uint32_t elementID = prepareConstant(
+            loc, compositeType.getElementType(idx), elementAttr)) {
       operands.push_back(elementID);
     } else {
       return 0;
