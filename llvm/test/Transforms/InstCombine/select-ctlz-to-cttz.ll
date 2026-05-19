@@ -56,6 +56,26 @@ define i32 @select_clz_to_ctz_constant_for_zero(i32 %a) {
   ret i32 %cond
 }
 
+; Same as select_clz_to_ctz_constant_for_zero, but with 31 - ctlz as Clang emits.
+define i32 @select_clz_to_ctz_sub_constant_for_zero(i32 %a) {
+; CHECK-LABEL: @select_clz_to_ctz_sub_constant_for_zero(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], [[SUB]]
+; CHECK-NEXT:    [[LZ:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[AND]], i1 false)
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 31, [[LZ]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 32, i32 [[SUB1]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub i32 0, %a
+  %and = and i32 %sub, %a
+  %lz = tail call i32 @llvm.ctlz.i32(i32 %and, i1 false)
+  %tobool = icmp eq i32 %a, 0
+  %sub1 = sub nsw i32 31, %lz
+  %cond = select i1 %tobool, i32 32, i32 %sub1
+  ret i32 %cond
+}
+
 define <2 x i32> @select_clz_to_ctz_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_vec(
 ; CHECK-NEXT:    [[COND:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[A:%.*]], i1 true)
