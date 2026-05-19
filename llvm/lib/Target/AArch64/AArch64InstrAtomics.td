@@ -325,6 +325,7 @@ class atomic_hint_stshh_strm_seqcst<PatFrag base>
 class BaseStoreHintPseudo<RegisterClass regtype>
       : Pseudo<(outs), (ins GPR64sp:$addr, regtype:$data,
                         i32imm:$order, i32imm:$hint), []>, Sched<[WriteAtomic]> {
+  let Size = 8;
   let isCodeGenOnly = 1;
   let hasSideEffects = 1;
   let mayStore = 1;

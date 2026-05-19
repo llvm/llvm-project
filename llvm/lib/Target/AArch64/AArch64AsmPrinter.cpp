@@ -278,6 +278,9 @@ public:
   // Emit expansion of Compare-and-branch pseudo instructions
   void emitCBPseudoExpansion(const MachineInstr *MI);
 
+  // Emit expansion of atomic store with hint pseudo instructions
+  void emitAtomicHintPseudoExpansion(const MachineInstr *MI, unsigned Size);
+
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   void EmitToStreamer(const MCInst &Inst) {
     EmitToStreamer(*OutStreamer, Inst);
@@ -3126,6 +3129,42 @@ void AArch64AsmPrinter::emitCBPseudoExpansion(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, Inst);
 }
 
+void AArch64AsmPrinter::emitAtomicHintPseudoExpansion(const MachineInstr *MI,
+                                                      unsigned Size) {
+
+  unsigned StOpc;
+  unsigned Order = MI->getOperand(2).getImm();
+  bool Relaxed = Order == 0;
+  switch (Size) {
+  case 8:
+    StOpc = Relaxed ? AArch64::STRBBui : AArch64::STLRB;
+    break;
+  case 16:
+    StOpc = Relaxed ? AArch64::STRHHui : AArch64::STLRH;
+    break;
+  case 32:
+    StOpc = Relaxed ? AArch64::STRWui : AArch64::STLRW;
+    break;
+  case 64:
+    StOpc = Relaxed ? AArch64::STRXui : AArch64::STLRX;
+    break;
+  default:
+    llvm_unreachable("Unexpected atomic hint size.");
+  }
+
+  EmitToStreamer(
+      MCInstBuilder(AArch64::STSHH).addImm(MI->getOperand(3).getImm()));
+
+  MCInst Store;
+  Store.setOpcode(StOpc);
+  Store.addOperand(MCOperand::createReg(MI->getOperand(1).getReg()));
+  Store.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+  Store.setFlags(MI->getFlags());
+  if (Relaxed)
+    Store.addOperand(MCOperand::createImm(0));
+  EmitToStreamer(*OutStreamer, Store);
+}
+
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "AArch64GenMCPseudoLowering.inc"
@@ -3812,6 +3851,18 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     emitCBPseudoExpansion(MI);
+    return;
+  case AArch64::ATOMIC_STORE_HINT_B:
+    emitAtomicHintPseudoExpansion(MI, 8);
+    return;
+  case AArch64::ATOMIC_STORE_HINT_H:
+    emitAtomicHintPseudoExpansion(MI, 16);
+    return;
+  case AArch64::ATOMIC_STORE_HINT_S:
+    emitAtomicHintPseudoExpansion(MI, 32);
+    return;
+  case AArch64::ATOMIC_STORE_HINT_D:
+    emitAtomicHintPseudoExpansion(MI, 64);
     return;
   }
 

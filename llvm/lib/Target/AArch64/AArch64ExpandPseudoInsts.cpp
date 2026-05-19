@@ -70,9 +70,6 @@ private:
                             MachineBasicBlock::iterator MBBI);
   bool expandSVEBitwisePseudo(MachineInstr &MI, MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MBBI);
-  bool expandAtomicStoreHintPseudo(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MBBI,
-                                   unsigned Size);
   bool expandCMP_SWAP(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                       unsigned LdarOp, unsigned StlrOp, unsigned CmpOp,
                       unsigned ExtendImm, unsigned ZeroReg,
@@ -1311,51 +1308,6 @@ bool AArch64ExpandPseudoImpl::expandFormTuplePseudo(
   return true;
 }
 
-bool AArch64ExpandPseudoImpl::expandAtomicStoreHintPseudo(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, unsigned Size) {
-  MachineInstr &MI = *MBBI;
-  DebugLoc DL = MI.getDebugLoc();
-
-  unsigned StOpc;
-  unsigned Order = MI.getOperand(2).getImm();
-  bool Relaxed = Order == 0;
-
-  switch (Size) {
-  case 8:
-    StOpc = Relaxed ? AArch64::STRBBui : AArch64::STLRB;
-    break;
-  case 16:
-    StOpc = Relaxed ? AArch64::STRHHui : AArch64::STLRH;
-    break;
-  case 32:
-    StOpc = Relaxed ? AArch64::STRWui : AArch64::STLRW;
-    break;
-  case 64:
-    StOpc = Relaxed ? AArch64::STRXui : AArch64::STLRX;
-    break;
-  default:
-    llvm_unreachable("Unexpected atomic hint size.");
-  }
-
-  auto *Hint = BuildMI(MBB, MBBI, DL, TII->get(AArch64::STSHH))
-                   .addImm(MI.getOperand(3).getImm())
-                   .getInstr();
-
-  auto Store = BuildMI(MBB, MBBI, DL, TII->get(StOpc))
-                   .add(MI.getOperand(1))
-                   .addReg(MI.getOperand(0).getReg())
-                   .setMemRefs(MI.memoperands())
-                   .setMIFlags(MI.getFlags());
-
-  if (Relaxed)
-    Store.addImm(0);
-
-  transferImpOps(MI, Store, Store);
-  finalizeBundle(MBB, Hint->getIterator(), MBBI->getIterator());
-  MI.eraseFromParent();
-  return true;
-}
-
 /// If MBBI references a pseudo instruction that should be expanded here,
 /// do the expansion and return true.  Otherwise return false.
 bool AArch64ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
@@ -1996,14 +1948,6 @@ bool AArch64ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
   case AArch64::NAND_ZZZ:
   case AArch64::NOR_ZZZ:
     return expandSVEBitwisePseudo(MI, MBB, MBBI);
-  case AArch64::ATOMIC_STORE_HINT_B:
-    return expandAtomicStoreHintPseudo(MBB, MBBI, 8);
-  case AArch64::ATOMIC_STORE_HINT_H:
-    return expandAtomicStoreHintPseudo(MBB, MBBI, 16);
-  case AArch64::ATOMIC_STORE_HINT_S:
-    return expandAtomicStoreHintPseudo(MBB, MBBI, 32);
-  case AArch64::ATOMIC_STORE_HINT_D:
-    return expandAtomicStoreHintPseudo(MBB, MBBI, 64);
   }
   return false;
 }
