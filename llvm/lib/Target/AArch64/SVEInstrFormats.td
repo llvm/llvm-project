@@ -11512,12 +11512,12 @@ class sve2_int_to_fp_upcvt<string asm, ZPRRegOp ZdRC, ZPRRegOp ZnRC,
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve2_int_to_fp_upcvt<string asm, bits<2> U, string op> {
+multiclass sve2_int_to_fp_upcvt<string asm, bits<2> U, SDPatternOperator op> {
   def _BtoH : sve2_int_to_fp_upcvt<asm, ZPR16, ZPR8,  0b01, U>;
   def _HtoS : sve2_int_to_fp_upcvt<asm, ZPR32, ZPR16, 0b10, U>;
   def _StoD : sve2_int_to_fp_upcvt<asm, ZPR64, ZPR32, 0b11, U>;
 
-  def : SVE_1_Op_Pat<nxv8f16, !cast<SDPatternOperator>(op # "_f16i8"), nxv16i8, !cast<Instruction>(NAME # _BtoH)>;
-  def : SVE_1_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # "_f32i16"), nxv8i16, !cast<Instruction>(NAME # _HtoS)>;
-  def : SVE_1_Op_Pat<nxv2f64, !cast<SDPatternOperator>(op # "_f64i32"), nxv4i32, !cast<Instruction>(NAME # _StoD)>;
+  def : SVE_1_Op_Pat<nxv8f16, op, nxv16i8, !cast<Instruction>(NAME # _BtoH)>;
+  def : SVE_1_Op_Pat<nxv4f32, op, nxv8i16, !cast<Instruction>(NAME # _HtoS)>;
+  def : SVE_1_Op_Pat<nxv2f64, op, nxv4i32, !cast<Instruction>(NAME # _StoD)>;
 }

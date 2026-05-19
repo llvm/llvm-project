@@ -30,12 +30,12 @@
 
 // CHECK-LABEL: @test_svcvtb_f16_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.scvtfb.f16i8(<vscale x 16 x i8> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.scvtfb.nxv8f16.nxv16i8(<vscale x 16 x i8> [[ZN:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svcvtb_f16_s8u10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.scvtfb.f16i8(<vscale x 16 x i8> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.scvtfb.nxv8f16.nxv16i8(<vscale x 16 x i8> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 svfloat16_t test_svcvtb_f16_s8(svint8_t zn) MODE_ATTR {
@@ -44,12 +44,12 @@ svfloat16_t test_svcvtb_f16_s8(svint8_t zn) MODE_ATTR {
 
 // CHECK-LABEL: @test_svcvtb_f32_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.scvtfb.f32i16(<vscale x 8 x i16> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.scvtfb.nxv4f32.nxv8i16(<vscale x 8 x i16> [[ZN:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svcvtb_f32_s16u11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.scvtfb.f32i16(<vscale x 8 x i16> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.scvtfb.nxv4f32.nxv8i16(<vscale x 8 x i16> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 svfloat32_t test_svcvtb_f32_s16(svint16_t zn) MODE_ATTR {
@@ -58,12 +58,12 @@ svfloat32_t test_svcvtb_f32_s16(svint16_t zn) MODE_ATTR {
 
 // CHECK-LABEL: @test_svcvtb_f64_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.scvtfb.f64i32(<vscale x 4 x i32> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.scvtfb.nxv2f64.nxv4i32(<vscale x 4 x i32> [[ZN:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svcvtb_f64_s32u11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.scvtfb.f64i32(<vscale x 4 x i32> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.scvtfb.nxv2f64.nxv4i32(<vscale x 4 x i32> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 svfloat64_t test_svcvtb_f64_s32(svint32_t zn) MODE_ATTR {
@@ -72,12 +72,12 @@ svfloat64_t test_svcvtb_f64_s32(svint32_t zn) MODE_ATTR {
 
 // CHECK-LABEL: @test_svcvtb_f16_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.ucvtfb.f16i8(<vscale x 16 x i8> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.ucvtfb.nxv8f16.nxv16i8(<vscale x 16 x i8> [[ZN:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svcvtb_f16_u8u11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.ucvtfb.f16i8(<vscale x 16 x i8> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.ucvtfb.nxv8f16.nxv16i8(<vscale x 16 x i8> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 svfloat16_t test_svcvtb_f16_u8(svuint8_t zn) MODE_ATTR {
@@ -86,12 +86,12 @@ svfloat16_t test_svcvtb_f16_u8(svuint8_t zn) MODE_ATTR {
 
 // CHECK-LABEL: @test_svcvtb_f32_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.ucvtfb.f32i16(<vscale x 8 x i16> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.ucvtfb.nxv4f32.nxv8i16(<vscale x 8 x i16> [[ZN:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svcvtb_f32_u16u12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.ucvtfb.f32i16(<vscale x 8 x i16> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.ucvtfb.nxv4f32.nxv8i16(<vscale x 8 x i16> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 svfloat32_t test_svcvtb_f32_u16(svuint16_t zn) MODE_ATTR {
@@ -100,12 +100,12 @@ svfloat32_t test_svcvtb_f32_u16(svuint16_t zn) MODE_ATTR {
 
 // CHECK-LABEL: @test_svcvtb_f64_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.ucvtfb.f64i32(<vscale x 4 x i32> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.ucvtfb.nxv2f64.nxv4i32(<vscale x 4 x i32> [[ZN:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svcvtb_f64_u32u12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.ucvtfb.f64i32(<vscale x 4 x i32> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.ucvtfb.nxv2f64.nxv4i32(<vscale x 4 x i32> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 svfloat64_t test_svcvtb_f64_u32(svuint32_t zn) MODE_ATTR {
@@ -114,12 +114,12 @@ svfloat64_t test_svcvtb_f64_u32(svuint32_t zn) MODE_ATTR {
 
 // CHECK-LABEL: @test_svcvt_f16_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.scvtflt.f16i8(<vscale x 16 x i8> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.scvtft.nxv8f16.nxv16i8(<vscale x 16 x i8> [[ZN:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcvt_f16_s8u10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.scvtflt.f16i8(<vscale x 16 x i8> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.scvtft.nxv8f16.nxv16i8(<vscale x 16 x i8> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 svfloat16_t test_svcvt_f16_s8(svint8_t zn) MODE_ATTR {
@@ -128,12 +128,12 @@ svfloat16_t test_svcvt_f16_s8(svint8_t zn) MODE_ATTR {
 
 // CHECK-LABEL: @test_svcvt_f32_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.scvtflt.f32i16(<vscale x 8 x i16> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.scvtft.nxv4f32.nxv8i16(<vscale x 8 x i16> [[ZN:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svcvt_f32_s16u11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.scvtflt.f32i16(<vscale x 8 x i16> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.scvtft.nxv4f32.nxv8i16(<vscale x 8 x i16> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 svfloat32_t test_svcvt_f32_s16(svint16_t zn) MODE_ATTR {
@@ -142,12 +142,12 @@ svfloat32_t test_svcvt_f32_s16(svint16_t zn) MODE_ATTR {
 
 // CHECK-LABEL: @test_svcvt_f64_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.scvtflt.f64i32(<vscale x 4 x i32> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.scvtft.nxv2f64.nxv4i32(<vscale x 4 x i32> [[ZN:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svcvt_f64_s32u11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.scvtflt.f64i32(<vscale x 4 x i32> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.scvtft.nxv2f64.nxv4i32(<vscale x 4 x i32> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 svfloat64_t test_svcvt_f64_s32(svint32_t zn) MODE_ATTR {
@@ -156,12 +156,12 @@ svfloat64_t test_svcvt_f64_s32(svint32_t zn) MODE_ATTR {
 
 // CHECK-LABEL: @test_svcvt_f16_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.ucvtflt.f16i8(<vscale x 16 x i8> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.ucvtft.nxv8f16.nxv16i8(<vscale x 16 x i8> [[ZN:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svcvt_f16_u8u11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.ucvtflt.f16i8(<vscale x 16 x i8> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.ucvtft.nxv8f16.nxv16i8(<vscale x 16 x i8> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 svfloat16_t test_svcvt_f16_u8(svuint8_t zn) MODE_ATTR {
@@ -170,12 +170,12 @@ svfloat16_t test_svcvt_f16_u8(svuint8_t zn) MODE_ATTR {
 
 // CHECK-LABEL: @test_svcvt_f32_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.ucvtflt.f32i16(<vscale x 8 x i16> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.ucvtft.nxv4f32.nxv8i16(<vscale x 8 x i16> [[ZN:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svcvt_f32_u16u12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.ucvtflt.f32i16(<vscale x 8 x i16> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.ucvtft.nxv4f32.nxv8i16(<vscale x 8 x i16> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 svfloat32_t test_svcvt_f32_u16(svuint16_t zn) MODE_ATTR {
@@ -184,12 +184,12 @@ svfloat32_t test_svcvt_f32_u16(svuint16_t zn) MODE_ATTR {
 
 // CHECK-LABEL: @test_svcvt_f64_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.ucvtflt.f64i32(<vscale x 4 x i32> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.ucvtft.nxv2f64.nxv4i32(<vscale x 4 x i32> [[ZN:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svcvt_f64_u32u12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.ucvtflt.f64i32(<vscale x 4 x i32> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.ucvtft.nxv2f64.nxv4i32(<vscale x 4 x i32> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 svfloat64_t test_svcvt_f64_u32(svuint32_t zn) MODE_ATTR {

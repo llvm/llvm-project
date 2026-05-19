@@ -11,7 +11,7 @@ define <vscale x 8 x half> @scvtfb_f16_i8(<vscale x 16 x i8> %zn) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    scvtf z0.h, z0.b
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x half> @llvm.aarch64.sve.scvtfb.f16i8(<vscale x 16 x i8> %zn)
+  %res = call <vscale x 8 x half> @llvm.aarch64.sve.scvtfb.nxv8f16.nxv16i8(<vscale x 16 x i8> %zn)
   ret <vscale x 8 x half> %res
 }
 
@@ -20,7 +20,7 @@ define <vscale x 4 x float> @scvtfb_f32_i16(<vscale x 8 x i16> %zn) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    scvtf z0.s, z0.h
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x float> @llvm.aarch64.sve.scvtfb.f32i16(<vscale x 8 x i16> %zn)
+  %res = call <vscale x 4 x float> @llvm.aarch64.sve.scvtfb.nxv4f32.nxv8i16(<vscale x 8 x i16> %zn)
   ret <vscale x 4 x float> %res
 }
 
@@ -29,7 +29,7 @@ define <vscale x 2 x double> @scvtfb_f64_i32(<vscale x 4 x i32> %zn) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    scvtf z0.d, z0.s
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x double> @llvm.aarch64.sve.scvtfb.f64i32(<vscale x 4 x i32> %zn)
+  %res = call <vscale x 2 x double> @llvm.aarch64.sve.scvtfb.nxv2f64.nxv4i32(<vscale x 4 x i32> %zn)
   ret <vscale x 2 x double> %res
 }
 
@@ -38,7 +38,7 @@ define <vscale x 8 x half> @ucvtfb_f16_i8(<vscale x 16 x i8> %zn) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ucvtf z0.h, z0.b
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x half> @llvm.aarch64.sve.ucvtfb.f16i8(<vscale x 16 x i8> %zn)
+  %res = call <vscale x 8 x half> @llvm.aarch64.sve.ucvtfb.nxv8f16.nxv16i8(<vscale x 16 x i8> %zn)
   ret <vscale x 8 x half> %res
 }
 
@@ -47,7 +47,7 @@ define <vscale x 4 x float> @ucvtfb_f32_i16(<vscale x 8 x i16> %zn) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ucvtf z0.s, z0.h
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x float> @llvm.aarch64.sve.ucvtfb.f32i16(<vscale x 8 x i16> %zn)
+  %res = call <vscale x 4 x float> @llvm.aarch64.sve.ucvtfb.nxv4f32.nxv8i16(<vscale x 8 x i16> %zn)
   ret <vscale x 4 x float> %res
 }
 
@@ -56,7 +56,7 @@ define <vscale x 2 x double> @ucvtfb_f64_i32(<vscale x 4 x i32> %zn) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ucvtf z0.d, z0.s
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x double> @llvm.aarch64.sve.ucvtfb.f64i32(<vscale x 4 x i32> %zn)
+  %res = call <vscale x 2 x double> @llvm.aarch64.sve.ucvtfb.nxv2f64.nxv4i32(<vscale x 4 x i32> %zn)
   ret <vscale x 2 x double> %res
 }
 
@@ -69,7 +69,7 @@ define <vscale x 8 x half> @scvtflt_f16_i8(<vscale x 16 x i8> %zn) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    scvtflt z0.h, z0.b
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x half> @llvm.aarch64.sve.scvtflt.f16i8(<vscale x 16 x i8> %zn)
+  %res = call <vscale x 8 x half> @llvm.aarch64.sve.scvtft.nxv8f16.nxv16i8(<vscale x 16 x i8> %zn)
   ret <vscale x 8 x half> %res
 }
 
@@ -78,7 +78,7 @@ define <vscale x 4 x float> @scvtflt_f32_i16(<vscale x 8 x i16> %zn) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    scvtflt z0.s, z0.h
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x float> @llvm.aarch64.sve.scvtflt.f32i16(<vscale x 8 x i16> %zn)
+  %res = call <vscale x 4 x float> @llvm.aarch64.sve.scvtft.nxv4f32.nxv8i16(<vscale x 8 x i16> %zn)
   ret <vscale x 4 x float> %res
 }
 
@@ -87,7 +87,7 @@ define <vscale x 2 x double> @scvtflt_f64_i32(<vscale x 4 x i32> %zn) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    scvtflt z0.d, z0.s
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x double> @llvm.aarch64.sve.scvtflt.f64i32(<vscale x 4 x i32> %zn)
+  %res = call <vscale x 2 x double> @llvm.aarch64.sve.scvtft.nxv2f64.nxv4i32(<vscale x 4 x i32> %zn)
   ret <vscale x 2 x double> %res
 }
 
@@ -96,7 +96,7 @@ define <vscale x 8 x half> @ucvtflt_f16_i8(<vscale x 16 x i8> %zn) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ucvtflt z0.h, z0.b
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x half> @llvm.aarch64.sve.ucvtflt.f16i8(<vscale x 16 x i8> %zn)
+  %res = call <vscale x 8 x half> @llvm.aarch64.sve.ucvtft.nxv8f16.nxv16i8(<vscale x 16 x i8> %zn)
   ret <vscale x 8 x half> %res
 }
 
@@ -105,7 +105,7 @@ define <vscale x 4 x float> @ucvtflt_f32_i16(<vscale x 8 x i16> %zn) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ucvtflt z0.s, z0.h
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x float> @llvm.aarch64.sve.ucvtflt.f32i16(<vscale x 8 x i16> %zn)
+  %res = call <vscale x 4 x float> @llvm.aarch64.sve.ucvtft.nxv4f32.nxv8i16(<vscale x 8 x i16> %zn)
   ret <vscale x 4 x float> %res
 }
 
@@ -114,7 +114,7 @@ define <vscale x 2 x double> @ucvtflt_f64_i32(<vscale x 4 x i32> %zn) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ucvtflt z0.d, z0.s
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x double> @llvm.aarch64.sve.ucvtflt.f64i32(<vscale x 4 x i32> %zn)
+  %res = call <vscale x 2 x double> @llvm.aarch64.sve.ucvtft.nxv2f64.nxv4i32(<vscale x 4 x i32> %zn)
   ret <vscale x 2 x double> %res
 }
 
