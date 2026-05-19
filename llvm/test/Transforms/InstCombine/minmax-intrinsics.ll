@@ -2726,10 +2726,8 @@ define i8 @test_smin_and_multiuse(i8 %x, i8 %y) {
 ; C0=1, C1=1, C2=4: condition 1 <=s 4*(2-1)/2 = 2
 define i8 @smax_shl_add_basic(i8 %x) {
 ; CHECK-LABEL: @smax_shl_add_basic(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X]], 1
-; CHECK-NEXT:    [[MAX1:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 [[ADD]])
-; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[MAX1]], i8 4)
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 4)
 ; CHECK-NEXT:    ret i8 [[MAX2]]
 ;
   %add  = add nsw i8 %x, 1
@@ -2742,10 +2740,8 @@ define i8 @smax_shl_add_basic(i8 %x) {
 ; C0=1, C1=2, C2=4: condition: 2 <=s 4*(2-1)/2 = 2
 define i8 @smax_shl_add_boundary(i8 %x) {
 ; CHECK-LABEL: @smax_shl_add_boundary(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], 2
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X]], 1
-; CHECK-NEXT:    [[MAX1:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 [[ADD]])
-; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[MAX1]], i8 4)
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 4)
 ; CHECK-NEXT:    ret i8 [[MAX2]]
 ;
   %add  = add nsw i8 %x, 2
@@ -2759,10 +2755,8 @@ define i8 @smax_shl_add_boundary(i8 %x) {
 ; C0=2, C1=1, C2=8: condition: 1 <=s 8*(4-1)/4 = 6
 define i8 @smax_shl_add_commuted_const(i8 %x) {
 ; CHECK-LABEL: @smax_shl_add_commuted_const(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X]], 2
-; CHECK-NEXT:    [[MAX1:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 [[ADD]])
-; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[MAX1]], i8 8)
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 8)
 ; CHECK-NEXT:    ret i8 [[MAX2]]
 ;
   %add  = add nsw i8 1, %x
@@ -2776,10 +2770,8 @@ define i8 @smax_shl_add_commuted_const(i8 %x) {
 ; C0=2, C1=6, C2=8: condition: 6 <=s 8*(4-1)/4 = 6
 define i8 @smax_shl_add_commuted_inner(i8 %x) {
 ; CHECK-LABEL: @smax_shl_add_commuted_inner(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], 6
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X]], 2
-; CHECK-NEXT:    [[MAX1:%.*]] = call i8 @llvm.smax.i8(i8 [[ADD]], i8 [[SHL]])
-; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[MAX1]], i8 8)
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 8)
 ; CHECK-NEXT:    ret i8 [[MAX2]]
 ;
   %add  = add nsw i8 %x, 6
@@ -2793,10 +2785,8 @@ define i8 @smax_shl_add_commuted_inner(i8 %x) {
 ; (negative constant value)
 define i8 @smax_shl_add_neg_consts(i8 %x) {
 ; CHECK-LABEL: @smax_shl_add_neg_consts(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], -3
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X]], 1
-; CHECK-NEXT:    [[MAX1:%.*]] = call i8 @llvm.smax.i8(i8 [[ADD]], i8 [[SHL]])
-; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[MAX1]], i8 -4)
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 -4)
 ; CHECK-NEXT:    ret i8 [[MAX2]]
 ;
   %add  = add nsw i8 %x, -3
@@ -2893,10 +2883,8 @@ define i8 @smax_shl_add_inner_multi_use(i8 %x) {
 ; Vector Test-Positive on splat vectors
 define <3 x i8> @smax_shl_add_vec_splat(<3 x i8> %x) {
 ; CHECK-LABEL: @smax_shl_add_vec_splat(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw <3 x i8> [[X:%.*]], splat (i8 1)
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw <3 x i8> [[X]], splat (i8 1)
-; CHECK-NEXT:    [[MAX1:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[SHL]], <3 x i8> [[ADD]])
-; CHECK-NEXT:    [[MAX2:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[MAX1]], <3 x i8> splat (i8 4))
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw <3 x i8> [[X:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[MAX2:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[SHL]], <3 x i8> splat (i8 4))
 ; CHECK-NEXT:    ret <3 x i8> [[MAX2]]
 ;
   %add  = add nsw <3 x i8> %x, <i8 1, i8 1, i8 1>

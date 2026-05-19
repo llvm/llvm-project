@@ -2352,6 +2352,32 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Instruction *NewMinMax = factorizeMinMaxTree(II))
        return NewMinMax;
 
+    // smax(smax(x << C0, x + C1), C2) --> smax(x << C0, C2)
+    // when C1 <=s (C2 * (2^C0 - 1) / 2^C0)
+    if (IID == Intrinsic::smax) {
+      Value *X, *Shl;
+      const APInt *C0, *C1, *C2;
+      if (match(I0, m_OneUse(m_c_SMax(m_Value(Shl),
+                                      m_NSWAdd(m_Value(X), m_APInt(C1))))) &&
+          match(Shl, m_NSWShl(m_Specific(X), m_APInt(C0))) &&
+          match(I1, m_APInt(C2))) {
+
+        // C2 * (2^C0 - 1) may overflow the original width, so compute in
+        // 2*BitWidth to get the exact result without overflow.
+        unsigned BitWidth = II->getType()->getScalarSizeInBits();
+        unsigned WiderWidth = BitWidth * 2;
+
+        APInt Pow2 =
+            APInt::getOneBitSet(WiderWidth, C0->getZExtValue()); // 2^C0
+        APInt RHS = (C2->sext(WiderWidth) * (Pow2 - 1)).sdiv(Pow2);
+        if (C1->sext(WiderWidth).sle(RHS))
+          return replaceInstUsesWith(
+              *II,
+              Builder.CreateBinaryIntrinsic(
+                  Intrinsic::smax, Shl, ConstantInt::get(II->getType(), *C2)));
+      }
+    }
+
     // Try to fold minmax with constant RHS based on range information
     if (match(I1, m_APIntAllowPoison(RHSC))) {
       ICmpInst::Predicate Pred =
