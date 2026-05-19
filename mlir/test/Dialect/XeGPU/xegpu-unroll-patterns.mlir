@@ -336,5 +336,29 @@ gpu.module @test {
     gpu.return %0 : vector<32xf32>
   }
 
+//-----
+  // source: <32x16xf32>, target tile: <16x16xf32>
+  // Verifies that the patterns works correctly when there is
+  // no place for the sequential elementwise 'arith' reduction.
+  //
+  // CHECK-LABEL: multi_reduction_no_elwise
+  // CHECK-SAME: [[SRC:%.+]]: vector<32x16xf32>, [[ACC:%.+]]: vector<32xf32>
+  //
+  // First row tile [0]: single source tile, no arith reduction
+  // CHECK: [[T0:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [0, 0], sizes = [16, 16]{{.*}} : vector<32x16xf32> to vector<16x16xf32>
+  // CHECK: [[ACC0:%.+]] = vector.extract_strided_slice [[ACC]] {offsets = [0], sizes = [16]{{.*}} : vector<32xf32> to vector<16xf32>
+  // CHECK: [[MR0:%.+]] = vector.multi_reduction <add>, [[T0]], [[ACC0]] [1] : vector<16x16xf32> to vector<16xf32>
+  // CHECK: [[INS0:%.+]] = vector.insert_strided_slice [[MR0]], {{%.+}} {offsets = [0]{{.*}} : vector<16xf32> into vector<32xf32>
+  //
+  // Second row tile [16]: single source tile, no arith reduction
+  // CHECK: [[T1:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [16, 0], sizes = [16, 16]{{.*}} : vector<32x16xf32> to vector<16x16xf32>
+  // CHECK: [[ACC1:%.+]] = vector.extract_strided_slice [[ACC]] {offsets = [16], sizes = [16]{{.*}} : vector<32xf32> to vector<16xf32>
+  // CHECK: [[MR1:%.+]] = vector.multi_reduction <add>, [[T1]], [[ACC1]] [1] : vector<16x16xf32> to vector<16xf32>
+  // CHECK: [[INS1:%.+]] = vector.insert_strided_slice [[MR1]], [[INS0]] {offsets = [16]{{.*}} : vector<16xf32> into vector<32xf32>
+  gpu.func @multi_reduction_no_elwise(%src: vector<32x16xf32>, %acc: vector<32xf32>) -> vector<32xf32> {
+    %0 = vector.multi_reduction <add>, %src, %acc {layout_operand_0 = #xegpu.layout<inst_data = [16, 16]>} [1] : vector<32x16xf32> to vector<32xf32>
+    gpu.return %0 : vector<32xf32>
+  }
+
 }
 
