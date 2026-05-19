@@ -642,6 +642,10 @@ static std::optional<Procedure> CharacterizeProcedure(
           [&](const semantics::SubprogramDetails &subp)
               -> std::optional<Procedure> {
             Procedure result;
+            if (subp.stmtFunction()) {
+              // Statement functions have implicit interfaces (F'2018 15.5.1)
+              result.attrs.set(Procedure::Attr::ImplicitInterface);
+            }
             if (subp.isFunction()) {
               if (auto fr{CharacterizeFunctionResult(
                       subp.result(), context, seenProcs, emitError)}) {
