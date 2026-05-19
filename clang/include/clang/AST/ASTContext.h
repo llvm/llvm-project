@@ -1034,21 +1034,21 @@ public:
   ///
   /// Don't do anything if a comment has already been attached to \p Original
   /// or its redeclaration chain.
-  void cacheRawCommentForDecl(RawCommentLookupKey Original,
-                              const RawComment &Comment) const;
+  void cacheRawComment(RawCommentLookupKey Original,
+                       const RawComment &Comment) const;
 
   /// \returns searches \p CommentsInFile for doc comment for \p Key.
   ///
   /// \p RepresentativeLocForDecl is used as a location for searching doc
   /// comments. \p CommentsInFile is a mapping offset -> comment of files in the
   /// same file where \p RepresentativeLocForDecl is.
-  RawComment *getRawCommentForDeclNoCacheImpl(
+  RawComment *getRawCommentNoCacheImpl(
       RawCommentLookupKey Key, const SourceLocation RepresentativeLocForDecl,
       const std::map<unsigned, RawComment *> &CommentsInFile) const;
 
   /// Return the documentation comment attached to a given declaration or
   /// macro, without looking into cache.
-  RawComment *getRawCommentForDeclNoCache(RawCommentLookupKey Key) const;
+  RawComment *getRawCommentNoCache(RawCommentLookupKey Key) const;
 
 public:
   void addComment(const RawComment &RC);
