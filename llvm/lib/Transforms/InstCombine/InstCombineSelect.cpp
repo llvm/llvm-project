@@ -4425,6 +4425,48 @@ static Value *foldSelectBitTest(SelectInst &Sel, Value *CondVal, Value *TrueVal,
   return nullptr;
 }
 
+/// This function makes the following folds:
+/// select C, (sub 0, X), (xor X, -1)
+///   -> sub (sext !C), X
+/// select C, (xor X, -1), (sub 0, X)
+///   -> sub (sext C), X
+static Instruction *foldSelectNegNot(SelectInst &SI,
+                                     InstCombiner::BuilderTy &Builder) {
+  auto *CondVal = SI.getCondition();
+  auto *TrueVal = SI.getTrueValue();
+  auto *FalseVal = SI.getFalseValue();
+  auto *SelTy = SI.getType();
+
+  if (!SelTy->isIntOrIntVectorTy() || SelTy->isIntOrIntVectorTy(1))
+    return nullptr;
+
+  if (CondVal->getType()->isVectorTy() != SelTy->isVectorTy())
+    return nullptr;
+
+  auto matchNegNot = [&](Value *Neg, Value *Not, Value *&X) -> bool {
+    return match(Neg, m_OneUse(m_Neg(m_Value(X)))) &&
+           match(Not, m_OneUse(m_Not(m_Specific(X))));
+  };
+
+  Value *X;
+  Value *Mask;
+
+  // select C, (sub 0, X), (xor X, -1) -> sub (sext !C), X
+  if (matchNegNot(TrueVal, FalseVal, X)) {
+    Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
+    Mask = Builder.CreateSExt(NotCond, SelTy);
+    return BinaryOperator::CreateSub(Mask, X);
+  }
+
+  // select C, (xor X, -1), (sub 0, X) -> sub (sext C), X
+  if (matchNegNot(FalseVal, TrueVal, X)) {
+    Mask = Builder.CreateSExt(CondVal, SelTy);
+    return BinaryOperator::CreateSub(Mask, X);
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -4512,6 +4554,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return new SExtInst(NotCond, SelType);
     }
   }
+
+  if (Instruction *I = foldSelectNegNot(SI, Builder))
+    return I;
 
   auto *SIFPOp = dyn_cast<FPMathOperator>(&SI);
 
