@@ -268,6 +268,15 @@ public:
   common::Restorer<bool> AllowWholeAssumedSizeArray(bool yes = true) {
     return common::ScopedSet(isWholeAssumedSizeArrayOk_, yes);
   }
+  // Allows a TYPE(*) assumed-type dummy to appear as an expression
+  // (F2023 15.5.2.3-2: If the chosen consequent is a consequent-arg, its expr
+  // or variable is the actual argument for the corres-
+  // ponding dummy argument, and if it is an expr, it is evaluated. If the
+  // chosen consequent is .NIL., the actual argument for that dummy argument is
+  // not present.).
+  common::Restorer<bool> AllowAssumedTypeDummy() {
+    return common::ScopedSet(isAssumedTypeDummyOk_, true);
+  }
 
 protected:
   int IntegerTypeSpecKind(const parser::IntegerTypeSpec &);
@@ -425,6 +434,7 @@ private:
       implicitInterfaces_;
   bool isWholeAssumedSizeArrayOk_{false};
   bool isNullPointerOk_{false};
+  bool isAssumedTypeDummyOk_{false};
   bool useSavedTypedExprs_{true};
   bool inWhereBody_{false};
   bool inDataStmtObject_{false};

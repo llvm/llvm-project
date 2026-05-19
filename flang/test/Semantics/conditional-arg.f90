@@ -131,6 +131,17 @@ contains
   end subroutine
 
   ! =========================================================================
+  ! Implicit interface: conditional arguments require an explicit interface.
+  ! =========================================================================
+
+  subroutine test_implicit_interface
+    integer :: a, b
+    logical :: flag
+    !ERROR: Conditional argument requires an explicit interface
+    call external_sub_no_interface((flag ? a : b))
+  end subroutine
+
+  ! =========================================================================
   ! F2023:R1526: The condition in a conditional argument must be a
   !             scalar-logical-expr.
   ! =========================================================================
@@ -140,14 +151,21 @@ contains
     real :: rcond
     character :: ccond
     logical :: flag
-    !ERROR: Condition in conditional argument must be logical
+    !ERROR: Must have LOGICAL type, but is INTEGER(4)
     call sub_int((icond ? a : b))
-    !ERROR: Condition in conditional argument must be logical
+    !ERROR: Must have LOGICAL type, but is REAL(4)
     call sub_int((rcond ? a : b))
-    !ERROR: Condition in conditional argument must be logical
+    !ERROR: Must have LOGICAL type, but is CHARACTER(KIND=1,LEN=1_8)
     call sub_int((ccond ? a : b))
     ! Valid: logical condition
     call sub_int((flag ? a : b))
+  end subroutine
+
+  subroutine test_nonscalar_condition
+    integer :: a, b
+    logical :: arr_flag(5)
+    !ERROR: Must be a scalar value, but is a rank-1 array
+    call sub_int((arr_flag ? a : b))
   end subroutine
 
   ! =========================================================================
@@ -806,6 +824,9 @@ module m_derived_types
     subroutine sub_class_star(x)
       class(*), intent(in) :: x
     end subroutine
+    subroutine sub_type_star(x)
+      type(*), intent(in) :: x
+    end subroutine
   end interface
 end module
 
@@ -858,5 +879,48 @@ subroutine test_unlimited_poly_both
   class(*), allocatable :: a, b
   logical :: flag
   ! Valid: both unlimited polymorphic
+  call sub_class_star((flag ? a : b))
+end subroutine
+
+! TYPE(*) with TYPE(*) — both assumed type, should be valid.
+! F2023 15.5.2.3-2: consequent-args are actual arguments, so TYPE(*) is permitted.
+subroutine test_assumed_type_both(a, b)
+  use m_derived_types
+  implicit none
+  type(*), intent(in) :: a, b
+  logical :: flag
+  ! Valid: both assumed type
+  call sub_type_star((flag ? a : b))
+end subroutine
+
+! TYPE(*) with TYPE(t1) — one assumed type, one concrete type, should error.
+subroutine test_assumed_type_mismatch(a)
+  use m_derived_types
+  implicit none
+  type(*), intent(in) :: a
+  type(t1) :: b
+  logical :: flag
+  !ERROR: All consequent-args in a conditional argument must have the same type and kind; have TYPE(*) and t1
+  call sub_type_star((flag ? a : b))
+end subroutine
+
+! CLASS(t1) with CLASS(t1) — both polymorphic same declared type, should be valid.
+subroutine test_class_same_type
+  use m_derived_types
+  implicit none
+  class(t1), allocatable :: a, b
+  logical :: flag
+  ! Valid: both CLASS(t1), same declared type
+  call sub_class_t1((flag ? a : b))
+end subroutine
+
+! CLASS(t1) with CLASS(t2) — both polymorphic different declared types, should error.
+subroutine test_class_different_types
+  use m_derived_types
+  implicit none
+  class(t1), allocatable :: a
+  class(t2), allocatable :: b
+  logical :: flag
+  !ERROR: All consequent-args in a conditional argument must be the same derived type; have CLASS(t1) and CLASS(t2)
   call sub_class_star((flag ? a : b))
 end subroutine

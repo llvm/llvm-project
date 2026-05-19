@@ -4416,7 +4416,8 @@ MaybeExpr ExpressionAnalyzer::ExprOrVariable(
       std::is_same_v<PARSED, parser::Variable>) {
     FixMisparsedFunctionReference(context_, x.u);
   }
-  if (AssumedTypeDummy(x)) { // C710
+  // F2018 C710 (F2023 C715)
+  if (AssumedTypeDummy(x) && !isAssumedTypeDummyOk_) {
     Say("TYPE(*) dummy argument may only be used as an actual argument"_err_en_US);
     ResetExpr(x);
     return std::nullopt;
@@ -4884,6 +4885,10 @@ void ArgumentAnalyzer::Analyze(
               common::visit(
                   common::visitors{
                       [&](const common::Indirection<parser::Expr> &expr) {
+                        // F2023 15.5.2.3-2: consequent-args are actual
+                        // arguments, so TYPE(*) dummies are permitted here
+                        // (F2018 C710 (F2023 C715) waived).
+                        auto restorer{context_.AllowAssumedTypeDummy()};
                         if (MaybeExpr valExpr{context_.Analyze(expr.value())}) {
                           if (!valExpr->GetType()) {
                             context_.Say(
@@ -4911,21 +4916,17 @@ void ArgumentAnalyzer::Analyze(
             auto analyzeCondArg{[&](const parser::ConditionalArg &ca,
                                     auto &self)
                                     -> std::optional<EvalConditionalArg> {
-              // Analyze the condition
+              // Analyze the condition — passing ScalarLogicalExpr directly
+              // enforces both scalar (rank-0) and logical type constraints
+              // via the Analyze(Scalar<A>) and Analyze(Logical<A>) templates.
               const auto &condition{std::get<parser::ScalarLogicalExpr>(ca.t)};
-              MaybeExpr condExpr{
-                  context_.Analyze(condition.thing.thing.value())};
-              if (!condExpr) {
+              MaybeExpr conditionExpr{context_.Analyze(condition)};
+              if (!conditionExpr) {
                 fatalErrors_ = true;
                 return std::nullopt;
               }
-              auto *logicalExpr{std::get_if<Expr<SomeLogical>>(&condExpr->u)};
-              if (!logicalExpr) {
-                context_.Say(
-                    "Condition in conditional argument must be logical"_err_en_US);
-                fatalErrors_ = true;
-                return std::nullopt;
-              }
+              auto &conditionValue{
+                  std::get<Expr<SomeLogical>>(conditionExpr->u)};
 
               // Analyze the consequent
               EvalConsequent consequent{analyzeConsequent(
@@ -4961,7 +4962,7 @@ void ArgumentAnalyzer::Analyze(
                 return std::nullopt;
               }
 
-              return EvalConditionalArg{std::move(*logicalExpr),
+              return EvalConditionalArg{std::move(conditionValue),
                   std::move(consequent), std::move(tail)};
             }};
 

@@ -245,4 +245,23 @@ contains
     call sub_optional((.false. ? a : .true. ? .nil. : b))
   end subroutine
 
+  ! Logical-type consequents: conditional args whose consequent expressions
+  ! are logical values.  Tests folding through the conditional arg path.
+
+  subroutine test_logical_consequent_true
+    logical :: a, b, r
+    ! Constant condition with logical consequents.
+    ! (.TRUE. ? a : b) folds to 'a', passed to a function.
+    a = .true.
+    b = .false.
+    r = (.true. ? a : b)
+  end subroutine
+
+  subroutine test_logical_consequent_false
+    logical :: a, b, r
+    a = .true.
+    b = .false.
+    r = (.false. ? a : b)
+  end subroutine
+
 end module
