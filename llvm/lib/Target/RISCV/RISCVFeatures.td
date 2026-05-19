@@ -702,7 +702,7 @@ def HasStdExtZvqwdota8iOrZvqwdota16i
     : Predicate<"Subtarget->hasStdExtZvqwdota8i() || Subtarget->hasStdExtZvqwdota16i()">,
       AssemblerPredicate<(any_of FeatureStdExtZvqwdota8i, FeatureStdExtZvqwdota16i),
                          "'Zvqwdota8i' (8-bit Integer Dot-Product) or "
-                          "'Zvqwdota16i' (16-bit Integer Dot-Product)">;
+                         "'Zvqwdota16i' (16-bit Integer Dot-Product)">;
 
 def FeatureStdExtZvfwdota16bf
     : RISCVExperimentalExtension<0, 2, "BF16 Dot-Product", [FeatureStdExtZve32f]>;
