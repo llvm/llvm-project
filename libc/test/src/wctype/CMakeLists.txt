@@ -42,7 +42,7 @@ add_libc_test(
     libc.src.wctype.iswgraph
 )
 
-add_libc_test(  
+add_libc_test(
   iswlower_test
   SUITE
     libc_wctype_unittests
@@ -141,4 +141,26 @@ add_libc_test(
     wctype_test.cpp
   DEPENDS
     libc.src.wctype.wctype
+)
+
+add_libc_test(
+  towlower_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    towlower_test.cpp
+  DEPENDS
+    libc.src.wctype.towlower
+    libc.src.__support.wctype_utils
+)
+
+add_libc_test(
+  towupper_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    towupper_test.cpp
+  DEPENDS
+    libc.src.wctype.towupper
+    libc.src.__support.wctype_utils
 )
