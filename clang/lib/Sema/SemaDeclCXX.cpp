@@ -7474,10 +7474,13 @@ void Sema::checkProfileViolationsAtClassFinalization(CXXRecordDecl *RD) {
     return;
   if (RD->isInvalidDecl() || RD->isDependentType() || RD->isLambda())
     return;
+  // ProfileSuppressScope is profile-agnostic (it pushes every
+  // [[profiles::suppress]] entry it finds and isProfileSuppressed filters by
+  // name later), so set it up once for all callbacks.
+  ProfileSuppressScope Scope(*this, RD, /*WalkLexicalParents=*/true);
   for (const auto &E : ClassFinalizationProfiles) {
     if (!isProfileEnforced(E.Name))
       continue;
-    ProfileSuppressScope Scope(*this, RD, /*WalkLexicalParents=*/true);
     E.Callback(*this, RD);
   }
 }
