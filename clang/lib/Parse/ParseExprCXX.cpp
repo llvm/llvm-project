@@ -1869,7 +1869,7 @@ Sema::ConditionResult
 Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
                           Sema::ConditionKind CK, bool MissingOK,
                           ForRangeInfo *FRI, bool EnterForConditionScope,
-                          bool isParsingSecondClauseOfC2yIfCondition) {
+                          bool ParsingSecondClauseOfC2yIfCondition) {
   // Helper to ensure we always enter a continue/break scope if requested.
   struct ForConditionScopeRAII {
     Scope *S;
@@ -1945,8 +1945,7 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
       return Sema::ConditionError();
 
     if (InitStmt && Tok.is(tok::semi)) {
-      if (parsingC2yIfOrSwitchCondition &&
-          !isParsingSecondClauseOfC2yIfCondition)
+      if (parsingC2yIfOrSwitchCondition && !ParsingSecondClauseOfC2yIfCondition)
         // C2y only permits declaration in the first clause of an if condition,
         // so it makes sense to error out in other condition. We can stop
         // parsing here and just report an error but we chose to continue to
@@ -2000,7 +1999,7 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
 
   case ConditionOrInitStatement::ConditionDecl:
   case ConditionOrInitStatement::Error:
-    if (getLangOpts().C2y && isParsingSecondClauseOfC2yIfCondition) {
+    if (getLangOpts().C2y && ParsingSecondClauseOfC2yIfCondition) {
       Diag(Tok.getLocation(), diag::err_expected_expression);
       return Sema::ConditionError();
     }

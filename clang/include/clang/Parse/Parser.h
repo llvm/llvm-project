@@ -5044,7 +5044,7 @@ private:
                     Sema::ConditionKind CK, bool MissingOK,
                     ForRangeInfo *FRI = nullptr,
                     bool EnterForConditionScope = false,
-                    bool isParsingSecondClauseOfC2yIfCondition = false);
+                    bool ParsingSecondClauseOfC2yIfCondition = false);
   DeclGroupPtrTy ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
                                                       ParsedAttributes &Attrs);
 
