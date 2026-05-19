@@ -381,7 +381,7 @@ public:
   bool EnterSession(uint16_t on_entry_flags, lldb::FileSP in, lldb::FileSP out,
                     lldb::FileSP err);
 
-  void LeaveSession(bool clear_globals = true, bool reset_stdio = true);
+  void LeaveSession(uint16_t leave_flags);
 
   uint32_t IsExecutingPython() {
     std::lock_guard<std::mutex> guard(m_mutex);

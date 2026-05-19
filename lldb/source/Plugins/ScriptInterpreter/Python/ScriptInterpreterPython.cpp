@@ -369,8 +369,7 @@ bool ScriptInterpreterPythonImpl::Locker::DoFreeLock() {
 bool ScriptInterpreterPythonImpl::Locker::DoTearDownSession() {
   if (!m_python_interpreter)
     return false;
-  m_python_interpreter->LeaveSession(m_on_leave & TearDownGlobals,
-                                     m_on_leave & TearDownStdio);
+  m_python_interpreter->LeaveSession(m_on_leave);
   return true;
 }
 
@@ -550,13 +549,12 @@ ScriptInterpreterPythonImpl::CreateInstance(Debugger &debugger) {
   return std::make_shared<ScriptInterpreterPythonImpl>(debugger);
 }
 
-void ScriptInterpreterPythonImpl::LeaveSession(bool clear_globals,
-                                               bool clear_stdio) {
+void ScriptInterpreterPythonImpl::LeaveSession(uint16_t leave_flags) {
   Log *log = GetLog(LLDBLog::Script);
   if (log)
     log->PutCString("ScriptInterpreterPythonImpl::LeaveSession()");
 
-  if (clear_globals) {
+  if (leave_flags & Locker::TearDownGlobals) {
     // Unset the LLDB global variables.
     RunSimpleString("lldb.debugger = None; lldb.target = None; lldb.process "
                     "= None; lldb.thread = None; lldb.frame = None");
@@ -567,7 +565,7 @@ void ScriptInterpreterPythonImpl::LeaveSession(bool clear_globals,
   // up believing we have no thread state and PyImport_AddModule will crash if
   // that is the case - since that seems to only happen when destroying the
   // SBDebugger, we can make do without clearing up stdout and stderr
-  if (clear_stdio && PyThreadState_GetDict()) {
+  if ((leave_flags & Locker::TearDownStdio) && PyThreadState_GetDict()) {
     PythonDictionary &sys_module_dict = GetSysModuleDictionary();
     if (sys_module_dict.IsValid()) {
       if (m_saved_stdin.IsValid()) {
