@@ -132,14 +132,11 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[UV]](s32)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[UV1]](s32)
-    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[UV2]](s32)
-    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s8) = G_TRUNC [[UV3]](s32)
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s8>) = G_BUILD_VECTOR [[TRUNC]](s8), [[TRUNC1]](s8), [[TRUNC2]](s8), [[TRUNC3]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8)
-    ; CHECK-NEXT: $d0 = COPY [[BUILD_VECTOR]](<8 x s8>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[COPY]](<4 x s32>)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<4 x s16>), [[DEF]](<4 x s16>)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[CONCAT_VECTORS]](<8 x s16>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC1]](<8 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(s32), %2:_(s32), %3:_(s32), %4:_(s32) = G_UNMERGE_VALUES %0(<4 x s32>)
@@ -164,12 +161,11 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[COPY]](<2 x i64>)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](i64)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[UV1]](i64)
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16), [[DEF]](s16), [[DEF]](s16)
-    ; CHECK-NEXT: $d0 = COPY [[BUILD_VECTOR]](<4 x s16>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x i32>) = G_TRUNC [[COPY]](<2 x i64>)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x i32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x i32>) = G_CONCAT_VECTORS [[TRUNC]](<2 x i32>), [[DEF]](<2 x i32>)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[CONCAT_VECTORS]](<4 x i32>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC1]](<4 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %0:_(<2 x i64>) = COPY $q0
     %1:_(i64), %2:_(i64) = G_UNMERGE_VALUES %0(<2 x i64>)
