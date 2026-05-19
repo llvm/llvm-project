@@ -916,8 +916,8 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) const {
     if (AMDGPU::getRegBitWidth(VDataRCID) > 64) {
       // On gfx940-family the BUFFER_STORE source-vgpr WAR hazard exists for
       // every SOFFSET shape; the wait-state count differs by SOFFSET, and is
-      // computed in checkVALUHazardsHelper. Pre-gfx940 keeps the original
-      // narrow gate.
+      // computed in checkVALUHazardsHelper. Pre-gfx940 the hazard only exists
+      // if soffset is not an SGPR.
       if (ST.hasGFX940Insts())
         return VDataIdx;
       const MachineOperand *SOffset =
@@ -972,6 +972,9 @@ int GCNHazardRecognizer::checkVALUHazardsHelper(
 
   const int MaxWaitStates = ST.hasGFX940Insts() ? 2 : 1;
 
+  // Per-producer required wait-state window. On pre-gfx940 every producer
+  // uses 1; on gfx940-family MUBUF/MTBUF stores with an SGPR SOFFSET use 1
+  // and everything else (literal/absent SOFFSET, FLAT) uses 2.
   auto WindowFor = [this, TII](const MachineInstr &MI) -> int {
     if (!ST.hasGFX940Insts())
       return 1;
@@ -984,19 +987,22 @@ int GCNHazardRecognizer::checkVALUHazardsHelper(
     return 2;
   };
 
-  for (int Window = 1; Window <= MaxWaitStates; ++Window) {
-    auto IsHazardFn = [this, Reg, TRI, Window,
-                       &WindowFor](const MachineInstr &MI) {
-      int DataIdx = createsVALUHazard(MI);
-      if (DataIdx < 0)
-        return false;
-      if (WindowFor(MI) != Window)
-        return false;
-      return TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg);
-    };
-    int Elapsed = getWaitStatesSince(IsHazardFn, Window);
-    WaitStatesNeeded = std::max(WaitStatesNeeded, Window - Elapsed);
-  }
+  // For each hazard producer reached, accumulate the wait states still
+  // needed using that producer's own window. The predicate always returns
+  // false so the walk runs to MaxWaitStates.
+  int Distance = 0;
+  auto Counter = [&](const MachineInstr &MI) {
+    int DataIdx = createsVALUHazard(MI);
+    if (DataIdx >= 0 &&
+        TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg)) {
+      int Need = WindowFor(MI) - Distance;
+      if (Need > WaitStatesNeeded)
+        WaitStatesNeeded = Need;
+    }
+    Distance += SIInstrInfo::getNumWaitStates(MI);
+    return false;
+  };
+  getWaitStatesSince(Counter, MaxWaitStates);
 
   return WaitStatesNeeded;
 }
