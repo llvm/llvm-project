@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/DataFormatters/FormatterBytecode.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
@@ -582,7 +581,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
         TYPE_CHECK(Object, String);
         auto new_name = data.Pop<std::string>();
         POP_VALOBJ(valobj);
-        data.Push(valobj->Clone(ConstString(new_name)));
+        data.Push(valobj->Clone(new_name));
         break;
       }
       case sel_strlen: {
