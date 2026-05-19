@@ -32,7 +32,7 @@ AST_MATCHER(ParenExpr, isInMacro) {
          E->getBeginLoc().isMacroID() || E->getEndLoc().isMacroID();
 }
 
-// Returns true if this ParenExpr is the base object of a member access
+// Matches if this ParenExpr is the base object of a member access
 // (.field or ->field), possibly through implicit casts or temporary
 // materialization that Clang inserts (e.g. qualification casts for const
 // methods, MaterializeTemporaryExpr for prvalue bases).
