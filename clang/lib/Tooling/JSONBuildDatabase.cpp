@@ -380,13 +380,14 @@ bool JSONBuildDatabase::parseSet(std::string &ErrorMessage,
 bool JSONBuildDatabase::parseTU(std::string &ErrorMessage,
                                 llvm::yaml::MappingNode *TUObject) {
   llvm::yaml::SequenceNode *Arguments = nullptr;
+  std::vector<llvm::yaml::ScalarNode *> Command;
   llvm::yaml::ScalarNode *Language = nullptr;
   llvm::yaml::SequenceNode *LocalArguments = nullptr;
-  llvm::yaml::ScalarNode *WorkingDirectory = nullptr;
+  llvm::yaml::ScalarNode *WorkDirectory = nullptr;
   llvm::yaml::ScalarNode *Private = nullptr;
   llvm::yaml::ScalarNode *Source = nullptr;
   llvm::yaml::ScalarNode *Object = nullptr;
-  llvm::yaml::SequenceNode *Provides = nullptr;
+  llvm::yaml::MappingNode *Provides = nullptr;
   llvm::yaml::SequenceNode *Requires = nullptr;
   for (auto &NextKeyValue : *TUObject) {
     auto *KeyString =
@@ -408,6 +409,14 @@ bool JSONBuildDatabase::parseTU(std::string &ErrorMessage,
         ErrorMessage = "Expected array as value for \"arguments\".";
         return false;
       }
+      for (auto &Argument : *Arguments) {
+        auto *Scalar = dyn_cast<llvm::yaml::ScalarNode>(&Argument);
+        if (!Scalar) {
+          ErrorMessage = "Only strings are allowed in 'arguments'.";
+          return false;
+        }
+        Command.push_back(Scalar);
+      }
     } else if (KeyValue == "language") {
       Language = dyn_cast<llvm::yaml::ScalarNode>(Value);
       if (!Language) {
@@ -420,10 +429,10 @@ bool JSONBuildDatabase::parseTU(std::string &ErrorMessage,
         ErrorMessage = "Expected array as value for \"local-arguments\".";
         return false;
       }
-    } else if (KeyValue == "working-directory") {
-      WorkingDirectory = dyn_cast<llvm::yaml::ScalarNode>(Value);
-      if (!WorkingDirectory) {
-        ErrorMessage = "Expected string as value for \"working-directory\".";
+    } else if (KeyValue == "work-directory") {
+      WorkDirectory = dyn_cast<llvm::yaml::ScalarNode>(Value);
+      if (!WorkDirectory) {
+        ErrorMessage = "Expected string as value for \"work-directory\".";
         return false;
       }
     } else if (KeyValue == "private") {
@@ -445,9 +454,9 @@ bool JSONBuildDatabase::parseTU(std::string &ErrorMessage,
         return false;
       }
     } else if (KeyValue == "provides") {
-      Provides = dyn_cast<llvm::yaml::SequenceNode>(Value);
+      Provides = dyn_cast<llvm::yaml::MappingNode>(Value);
       if (!Provides) {
-        ErrorMessage = "Expected array as value for \"provides\".";
+        ErrorMessage = "Expected object as value for \"provides\".";
         return false;
       }
     } else if (KeyValue == "requires") {
@@ -476,5 +485,23 @@ bool JSONBuildDatabase::parseTU(std::string &ErrorMessage,
     ErrorMessage = "Missing key in translation-unit: \"arguments\".";
     return false;
   }
+  SmallString<8> FileStorage;
+  StringRef FileName = Source->getValue(FileStorage);
+  SmallString<128> NativeFilePath;
+  if (llvm::sys::path::is_relative(FileName)) {
+    SmallString<8> DirectoryStorage;
+    SmallString<128> AbsolutePath(WorkDirectory->getValue(DirectoryStorage));
+    llvm::sys::path::append(AbsolutePath, FileName);
+    llvm::sys::path::native(AbsolutePath, NativeFilePath);
+  } else {
+    llvm::sys::path::native(FileName, NativeFilePath);
+  }
+  llvm::sys::path::remove_dots(NativeFilePath, /*remove_dot_dot=*/true);
+  auto Cmd = CompileCommandRef(WorkDirectory, Source, Command, Object);
+
+  IndexByFile[NativeFilePath].push_back(Cmd);
+  AllCommands.push_back(Cmd);
+  MatchTrie.insert(NativeFilePath);
+
   return true;
 }
