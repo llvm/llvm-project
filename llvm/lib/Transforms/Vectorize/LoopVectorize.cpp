@@ -3097,7 +3097,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
         // also eliminate any loops.
         //
         // Forced interleaving is considered when seeing if
-        // OneScalarIterationRemainder is produced. It may prodiced more than
+        // OneScalarIterationRemainder is produced. It may produced more than
         // one vector iteration, but only one scalar iteration.
         for (unsigned MaxVF = MaxFactors.FixedVF.getFixedValue(); MaxVF >= 2;
              MaxVF /= 2) {
