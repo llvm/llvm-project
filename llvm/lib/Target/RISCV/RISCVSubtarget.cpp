@@ -251,6 +251,7 @@ bool RISCVSubtarget::isLegalElementTypeForRVV(EVT ScalarTy) const {
   switch (ScalarTy.getSimpleVT().SimpleTy) {
   case MVT::iPTR:
     return is64Bit() ? hasVInstructionsI64() : true;
+  case MVT::i1:
   case MVT::i8:
   case MVT::i16:
   case MVT::i32:
