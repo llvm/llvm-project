@@ -182,8 +182,7 @@ define i64 @strided_search(ptr align 8 dereferenceable(14784) %p) {
 ; RV64-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 132, [[TMP1]]
 ; RV64-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH1:.*]], label %[[VECTOR_PH:.*]]
 ; RV64:       [[VECTOR_PH]]:
-; RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
+; RV64-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 1
 ; RV64-NEXT:    [[N_MOD_VF:%.*]] = urem i64 132, [[TMP3]]
 ; RV64-NEXT:    [[N_VEC:%.*]] = sub i64 132, [[N_MOD_VF]]
 ; RV64-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 112
