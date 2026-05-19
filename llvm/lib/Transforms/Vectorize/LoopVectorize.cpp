@@ -7189,7 +7189,7 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
                  CM.requiresScalarEpilogue(VF.isVector()),
                  CM.foldTailByMasking(), OrigLoop, BranchWeights,
                  OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(),
-                 PSE, /*CheckBlock=*/nullptr);
+                 PSE, Plan.getEntry());
 }
 
 // Determine how to lower the epilogue, which depends on 1) optimising
