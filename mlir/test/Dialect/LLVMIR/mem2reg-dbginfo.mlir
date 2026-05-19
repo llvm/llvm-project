@@ -126,3 +126,28 @@ llvm.func @keep_dbg_if_not_promoted() {
   llvm.call @use_ptr(%1) : (!llvm.ptr) -> ()
   llvm.return
 }
+
+// Regression test for https://github.com/llvm/llvm-project/issues/197158:
+// When a loaded value is stored back, `replacedValuesMap` records the load's
+// result. Running `visitReplacedValues` before `replaceAllUsesWith` ensures
+// the new `dbg.value` references the live load result, which is then
+// correctly redirected to the reaching definition.
+
+// CHECK-LABEL: llvm.func @store_load_store_back
+// CHECK-NOT: = llvm.alloca
+// CHECK-NOT: llvm.intr.dbg.declare
+// CHECK-NOT: llvm.store
+// CHECK-NOT: llvm.load
+// CHECK: %[[CST:.*]] = llvm.mlir.constant({{.*}}) : i64
+// CHECK: llvm.intr.dbg.value #[[$VAR]] = %[[CST]] : i64
+// CHECK: llvm.return
+llvm.func @store_load_store_back() {
+  %one = llvm.mlir.constant(1 : i32) : i32
+  %cst = llvm.mlir.constant(42 : i64) : i64
+  %p = llvm.alloca %one x i64 : (i32) -> !llvm.ptr
+  llvm.intr.dbg.declare #di_local_variable = %p : !llvm.ptr
+  llvm.store %cst, %p : i64, !llvm.ptr
+  %v = llvm.load %p : !llvm.ptr -> i64
+  llvm.store %v, %p : i64, !llvm.ptr
+  llvm.return
+}

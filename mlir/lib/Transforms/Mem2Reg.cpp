@@ -264,6 +264,12 @@ private:
   /// This member function must only be called at most once per region.
   void promoteInRegion(Region *region, Value reachingDef);
 
+  /// Calls `visitReplacedValues` on ops in `region` that requested it.
+  /// Must run before `removeBlockingUses(region)` so values in
+  /// `replacedValuesMap` remain live. Any new IR uses of load results
+  /// will be redirected when `removeBlockingUses` replaces those loads.
+  void visitReplacedValuesForRegion(Region *region);
+
   /// Removes the blocking uses of the slot within the given region, in
   /// reverse topological order. If the content of the region was moved out
   /// to a different region, the new region will be processed instead.
@@ -291,13 +297,6 @@ private:
   /// Contains the reaching definition at the end of the blocks visited so far.
   DenseMap<Block *, Value> reachingAtBlockEnd;
 
-  /// Lists all the values that have been set by a memory operation as a
-  /// reaching definition at one point during the promotion. The accompanying
-  /// operation is the memory operation that originally stored the value.
-  llvm::SmallVector<std::pair<Operation *, Value>> replacedValues;
-  /// Operations to visit with the `visitReplacedValues` method at the end of
-  /// the promotion.
-  llvm::SmallVector<PromotableOpInterface> toVisitReplacedValues;
   /// Operations to be erased at the end of the promotion.
   llvm::SmallSetVector<Operation *, 8> toErase;
 
@@ -676,6 +675,13 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
         // Even though `finalizePromotion` may have moved regions to a new
         // operation, `removeBlockingUses` handles this case and will redirect
         // processing to the correct region.
+        // `visitReplacedValuesForRegion` must run before `removeBlockingUses`
+        // so that load results in `replacedValuesMap` remain live. The
+        // subsequent `replaceAllUsesWith` in `removeBlockingUses` will
+        // redirect any new uses created by `visitReplacedValues` to their
+        // post-promotion definitions.
+        for (auto &[region, reachingDef] : regionsToProcess)
+          visitReplacedValuesForRegion(region);
         for (auto &[region, reachingDef] : regionsToProcess)
           removeBlockingUses(region);
       }
@@ -829,9 +835,6 @@ void MemorySlotPromoter::removeBlockingUses(Region *region) {
               aliasSlot, blockingUsesMap[toPromote], builder,
               reachingDefAtBlockingUse, dataLayout) == DeletionKind::Delete)
         toErase.insert(toPromote);
-      if (toPromoteMemOp.storesTo(aliasSlot))
-        if (Value replacedValue = replacedValuesMap[toPromoteMemOp])
-          replacedValues.push_back({toPromoteMemOp, replacedValue});
       continue;
     }
 
@@ -840,8 +843,32 @@ void MemorySlotPromoter::removeBlockingUses(Region *region) {
     if (toPromoteBasic.removeBlockingUses(blockingUsesMap[toPromote],
                                           builder) == DeletionKind::Delete)
       toErase.insert(toPromote);
-    if (toPromoteBasic.requiresReplacedValues())
-      toVisitReplacedValues.push_back(toPromoteBasic);
+  }
+}
+
+void MemorySlotPromoter::visitReplacedValuesForRegion(Region *region) {
+  auto *blockingUsesMapIt = info.userToBlockingUses.find(region);
+  if (blockingUsesMapIt == info.userToBlockingUses.end())
+    return;
+  BlockingUsesMap &blockingUsesMap = blockingUsesMapIt->second;
+  if (blockingUsesMap.empty())
+    return;
+
+  // Build the replaced-values list from per-store snapshots. These values
+  // are still live. Since this runs before `removeBlockingUses` replaces
+  // loads, any new uses of load results created by `visitReplacedValues`
+  // will be correctly redirected to post-promotion definitions later.
+  SmallVector<std::pair<Operation *, Value>> replacedValues;
+  for (const auto &[memOp, value] : replacedValuesMap)
+    if (value)
+      replacedValues.push_back({memOp, value});
+
+  for (auto &[op, _] : blockingUsesMap) {
+    auto toVisit = dyn_cast<PromotableOpInterface>(op);
+    if (!toVisit || !toVisit.requiresReplacedValues())
+      continue;
+    builder.setInsertionPointAfter(op);
+    toVisit.visitReplacedValues(replacedValues, builder);
   }
 }
 
@@ -977,15 +1004,14 @@ MemorySlotPromoter::promoteSlot() {
   // before removeBlockingUses.
   promoteInRegion(slot.ptr.getParentRegion(), nullptr);
 
+  // Notify operations of reaching definitions. This runs before
+  // `removeBlockingUses` so values passed to `visitReplacedValues` remain
+  // live. Any new uses of load results will be redirected when those loads
+  // are replaced.
+  visitReplacedValuesForRegion(slot.ptr.getParentRegion());
+
   // Blocking uses can then be removed for the outermost region.
   removeBlockingUses(slot.ptr.getParentRegion());
-
-  // Notify operations that requested it of the reaching definitions set by
-  // storing memory operations.
-  for (PromotableOpInterface op : toVisitReplacedValues) {
-    builder.setInsertionPointAfter(op);
-    op.visitReplacedValues(replacedValues, builder);
-  }
 
   // Finally, remove unused operations and merge point block arguments.
   removeUnusedItems();
