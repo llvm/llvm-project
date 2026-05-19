@@ -450,8 +450,9 @@ static bool isAggrConstForceInt32(const Value *V) {
 }
 
 static bool isSpvAggrPlaceholder(const Value *V) {
-  return match(V, m_AnyIntrinsic<Intrinsic::spv_undef,
-                                 Intrinsic::spv_const_composite>());
+  return match(
+      V,
+      m_AnyIntrinsic<Intrinsic::spv_undef, Intrinsic::spv_const_composite>());
 }
 
 static void setInsertPointSkippingPhis(IRBuilder<> &B, Instruction *I) {
