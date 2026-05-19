@@ -6,7 +6,7 @@
 ;   for (j = 0; j < 2; j++)
 ;     sum += A[i][j];
 ;
-; The fadd instruction has reassoc flag, so it's leagal to interchange the
+; The fadd instruction has reassoc flag, so it's legal to interchange the
 ; loops. However, it also has ninf flag, which means the transformation
 ; potentially produces a poison due to the change of the order of evaluation.
 ; For example, consider the case where
