@@ -266,8 +266,7 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   assert(hasVectorValue(Def));
   auto *VecPart = Data.VPV2Vector[Def];
 
-  // VPWidenRecipe converted e.g., { <i64>, <i1> } to { <4 x i64>, <4 x i1> }.
-  // Invert it here.
+  // e.g., { <4 x i64>, <4 x i1> } to { <i64>, <i1> }.
   auto *StructTy = dyn_cast<StructType>(VecPart->getType());
   if (StructTy && isVectorizedStructTy(StructTy)) {
     Value *LaneV = Lane.getAsRuntimeExpr(Builder, VF);
