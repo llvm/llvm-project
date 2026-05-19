@@ -122,6 +122,7 @@ protected:
 };
 } // namespace
 
+#ifdef AARCH64_AVAILABLE
 TEST_P(PassTester, ExampleTest) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
@@ -163,7 +164,9 @@ TEST_P(PassTester, ExampleTest) {
   EXPECT_EQ(CFILoc.size(), 1u);
   EXPECT_EQ(CFILoc[0], 4);
 }
+#endif // AARCH64_AVAILABLE
 
+#ifdef AARCH64_AVAILABLE
 TEST_P(PassTester, fillUnknownStateInBBTest) {
   /* Check that a if BB starts with unknown RAState, we can fill the unknown
    states based on following instructions with known RAStates.
@@ -234,6 +237,7 @@ TEST_P(PassTester, fillUnknownStateInBBTest) {
   EXPECT_TRUE(RAState1.has_value());
   EXPECT_TRUE(*RAState1);
 }
+#endif // AARCH64_AVAILABLE
 
 TEST_P(PassTester, fillUnknownStubs) {
   /*
