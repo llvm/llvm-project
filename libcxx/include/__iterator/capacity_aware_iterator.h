@@ -76,7 +76,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __capacity_aware_iterator(_Iter __iter) : __iter_(std::move(__iter)) {}
 
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const noexcept { return *__iter_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const noexcept { return *__iter_; }
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator->() const noexcept { return std::__to_address(__iter_); }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator& operator++() noexcept {
@@ -145,28 +145,28 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __capacity_aware_iterator
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __capacity_aware_iterator
   operator+(const __capacity_aware_iterator& __i, difference_type __n) noexcept {
     auto __tmp = __i;
     __tmp += __n;
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __capacity_aware_iterator
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __capacity_aware_iterator
   operator+(difference_type __n, const __capacity_aware_iterator& __i) noexcept {
     auto __tmp = __i;
     __tmp += __n;
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __capacity_aware_iterator
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __capacity_aware_iterator
   operator-(const __capacity_aware_iterator& __i, difference_type __n) noexcept {
     auto __tmp = __i;
     __tmp -= __n;
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
   operator-(const __capacity_aware_iterator& __x, const __capacity_aware_iterator& __y) noexcept {
     return difference_type(__x.__iter_ - __y.__iter_);
   }
