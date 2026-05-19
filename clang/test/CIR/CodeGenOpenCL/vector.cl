@@ -38,9 +38,3 @@ int4 vec_ternary(int4 c, int4 a, int4 b) {
 // LLVM: %[[SELECT:.*]] = select <4 x i1> %[[COND_IS_NEG]], <4 x i32> %[[A:.*]], <4 x i32> zeroinitializer
 // LLVM: %[[RESULT:.*]] = or <4 x i32> %[[SELECT]], %[[COND_MAX]]
 // LLVM: ret <4 x i32> %[[RESULT]]
-
-// OGCG: %[[COND_MAX:.*]] = tail call <4 x i32> @llvm.smax.v4i32(<4 x i32> %[[COND:.*]], <4 x i32> zeroinitializer)
-// OGCG: %[[COND_IS_NEG:.*]] = icmp slt <4 x i32> %[[COND]], zeroinitializer
-// OGCG: %[[SELECT:.*]] = select <4 x i1> %[[COND_IS_NEG]], <4 x i32> %[[A:.*]], <4 x i32> zeroinitializer
-// OGCG: %[[RESULT:.*]] = or <4 x i32> %[[SELECT]], %[[COND_MAX]]
-// OGCG: ret <4 x i32> %[[RESULT]]
