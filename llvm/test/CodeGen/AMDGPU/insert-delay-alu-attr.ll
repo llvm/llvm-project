@@ -15,7 +15,7 @@ entry:
   %15 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %16 = add i32 %15, 255
   %17 = sdiv i32 %16, 256
-  tail call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %17, ptr addrspace(8) undef, i32 undef, i32 0, i32 0)
+  tail call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %17, ptr addrspace(8) poison, i32 poison, i32 0, i32 0)
   ret void
 }
 
@@ -33,7 +33,7 @@ entry:
   %15 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %16 = add i32 %15, 255
   %17 = sdiv i32 %16, 256
-  tail call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %17, ptr addrspace(8) undef, i32 undef, i32 0, i32 0)
+  tail call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %17, ptr addrspace(8) poison, i32 poison, i32 0, i32 0)
   ret void
 }
 
@@ -51,7 +51,7 @@ entry:
   %15 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %16 = add i32 %15, 255
   %17 = sdiv i32 %16, 256
-  tail call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %17, ptr addrspace(8) undef, i32 undef, i32 0, i32 0)
+  tail call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %17, ptr addrspace(8) poison, i32 poison, i32 0, i32 0)
   ret void
 }
 
@@ -68,7 +68,7 @@ entry:
   %15 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %16 = add i32 %15, 255
   %17 = sdiv i32 %16, 256
-  tail call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %17, ptr addrspace(8) undef, i32 undef, i32 0, i32 0)
+  tail call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %17, ptr addrspace(8) poison, i32 poison, i32 0, i32 0)
   ret void
 }
 
