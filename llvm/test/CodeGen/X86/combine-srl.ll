@@ -425,27 +425,15 @@ define <4 x i32> @combine_vec_lshr_lzcnt_bit0(<4 x i32> %x) {
 define <4 x i32> @combine_vec_lshr_lzcnt_bit1(<4 x i32> %x) {
 ; SSE2-LABEL: combine_vec_lshr_lzcnt_bit1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    andpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    xorpd %xmm1, %xmm1
-; SSE2-NEXT:    movapd %xmm0, %xmm2
-; SSE2-NEXT:    unpckhps {{.*#+}} xmm2 = xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; SSE2-NEXT:    movapd {{.*#+}} xmm3 = [4.503599627370496E+15,4.503599627370496E+15]
-; SSE2-NEXT:    orpd %xmm3, %xmm2
-; SSE2-NEXT:    subpd %xmm3, %xmm2
-; SSE2-NEXT:    psrlq $52, %xmm2
-; SSE2-NEXT:    movapd %xmm0, %xmm4
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
-; SSE2-NEXT:    orpd %xmm3, %xmm4
-; SSE2-NEXT:    subpd %xmm3, %xmm4
-; SSE2-NEXT:    psrlq $52, %xmm4
-; SSE2-NEXT:    packssdw %xmm2, %xmm4
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1054,1054,1054,1054]
-; SSE2-NEXT:    psubd %xmm4, %xmm2
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    pandn %xmm2, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    cvtdq2ps %xmm0, %xmm1
+; SSE2-NEXT:    psrld $23, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [158,158,158,158]
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    psubd %xmm1, %xmm2
+; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pminsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    psrld $5, %xmm0
 ; SSE2-NEXT:    retq
 ;

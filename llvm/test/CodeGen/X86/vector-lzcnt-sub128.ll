@@ -6,21 +6,17 @@ declare <2 x i32> @llvm.ctlz.v2i32(<2 x i32>, i1 immarg)
 define <2 x i32> @illegal_ctlz(<2 x i32> %v1) {
 ; CHECK-LABEL: illegal_ctlz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorpd %xmm1, %xmm1
-; CHECK-NEXT:    movapd %xmm0, %xmm2
-; CHECK-NEXT:    unpckhps {{.*#+}} xmm2 = xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; CHECK-NEXT:    movapd {{.*#+}} xmm3 = [4.503599627370496E+15,4.503599627370496E+15]
-; CHECK-NEXT:    orpd %xmm3, %xmm2
-; CHECK-NEXT:    subpd %xmm3, %xmm2
-; CHECK-NEXT:    psrlq $52, %xmm2
-; CHECK-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; CHECK-NEXT:    orpd %xmm3, %xmm0
-; CHECK-NEXT:    subpd %xmm3, %xmm0
-; CHECK-NEXT:    psrlq $52, %xmm0
-; CHECK-NEXT:    packssdw %xmm2, %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [1054,1054,1054,1054]
-; CHECK-NEXT:    psubd %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    psrld $8, %xmm1
+; CHECK-NEXT:    pandn %xmm0, %xmm1
+; CHECK-NEXT:    cvtdq2ps %xmm1, %xmm1
+; CHECK-NEXT:    psrld $23, %xmm1
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [158,158,158,158]
+; CHECK-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-NEXT:    psubd %xmm1, %xmm2
+; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
+; CHECK-NEXT:    pand %xmm2, %xmm0
+; CHECK-NEXT:    pminsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %v2 = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %v1, i1 true)
   ret <2 x i32> %v2
