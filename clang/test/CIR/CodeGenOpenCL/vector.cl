@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 %s -fclangir -emit-cir -triple spir-unknown-unknown -o %t.cir
-// RUN: FileCheck %s --input-file=%t.cir --check-prefix=LLVM
+// RUN: FileCheck %s --input-file=%t.cir --check-prefix=CIR
 
 // RUN: %clang_cc1 %s -fclangir -emit-llvm -triple spir-unknown-unknown -o %t.ll
 // RUN: FileCheck %s --input-file=%t.ll --check-prefix=LLVM
 
 // RUN: %clang_cc1 %s -emit-llvm -triple spir-unknown-unknown -o %t.ll
-// RUN: FileCheck %s --input-file=%t.ll --check-prefix=OGCG
+// RUN: FileCheck %s --input-file=%t.ll --check-prefix=LLVM
 
 typedef __attribute__(( ext_vector_type(4) )) int int4;
 
