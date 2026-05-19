@@ -1,4 +1,4 @@
-//===-- lib/runtime/matmul.cpp ----------------------------------*- C++ -*-===//
+//===-- lib/runtime/matmul.h ------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,13 +19,16 @@
 //
 // Places where BLAS routines could be called are marked as TODO items.
 
-#include "flang/Runtime/matmul.h"
+#ifndef FLANG_RT_RUNTIME_MATMUL_H_
+#define FLANG_RT_RUNTIME_MATMUL_H_
+
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
 #include "flang/Common/optional.h"
 #include "flang/Runtime/c-or-cpp.h"
 #include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/entry-names.h"
 #include <cstring>
 
 namespace {
@@ -449,10 +452,6 @@ struct MatmulHelper {
 };
 } // namespace
 
-namespace Fortran::runtime {
-extern "C" {
-RT_EXT_API_GROUP_BEGIN
-
 #define MATMUL_INSTANCE(XCAT, XKIND, YCAT, YKIND) \
   void RTDEF(Matmul##XCAT##XKIND##YCAT##YKIND)(Descriptor & result, \
       const Descriptor &x, const Descriptor &y, const char *sourceFile, \
@@ -469,10 +468,4 @@ RT_EXT_API_GROUP_BEGIN
         result, x, y, sourceFile, line, false); \
   }
 
-#define MATMUL_FORCE_ALL_TYPES 0
-
-#include "flang/Runtime/matmul-instances.inc"
-
-RT_EXT_API_GROUP_END
-} // extern "C"
-} // namespace Fortran::runtime
+#endif // FLANG_RT_RUNTIME_MATMUL_H_
