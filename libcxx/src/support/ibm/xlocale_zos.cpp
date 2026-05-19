@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__assert>
-#include <__support/ibm/xlocale.h>
+#include <__locale_dir/support/mvs.h>
 #include <sstream>
 #include <vector>
 
