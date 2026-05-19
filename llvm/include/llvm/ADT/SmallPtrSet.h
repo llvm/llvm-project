@@ -412,9 +412,11 @@ public:
   ///       if (Pred(P))
   ///         Set.erase(P);
   ///
-  /// Returns whether anything was removed. It is safe to read the set inside
-  /// the predicate function. However, the predicate must not modify the set
-  /// itself, only indicate a removal by returning true.
+  /// Returns whether anything was removed. The predicate must not access the
+  /// set being modified: it may inspect the element passed to it and return
+  /// true to request removal, but must not read (e.g. count()/find()) or
+  /// otherwise mutate the set. If anything is removed, all iterators and
+  /// references into the set are invalidated.
   template <typename UnaryPredicate> bool remove_if(UnaryPredicate P) {
     bool Removed = false;
     if (isSmall()) {
