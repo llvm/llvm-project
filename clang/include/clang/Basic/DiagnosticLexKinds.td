@@ -421,13 +421,16 @@ def note_pp_ambiguous_macro_chosen : Note<
   "expanding this definition of %0">;
 def note_pp_ambiguous_macro_other : Note<
   "other definition of %0">;
-def warn_pp_macro_hides_keyword : Extension<
+def warn_pp_macro_hides_keyword : ExtWarn<
   "keyword is hidden by macro definition">, InGroup<KeywordAsMacro>;
+def warn_pp_macro_name_is_keyword : ExtWarn<
+  "keyword or identifier with special meaning is used as a macro name">,
+  InGroup<KeywordAsMacro>;
 def warn_pp_macro_is_reserved_id : Warning<
   "macro name is a reserved identifier">, DefaultIgnore,
   InGroup<ReservedIdAsMacro>;
 def warn_pp_macro_is_reserved_attribute_id : Warning<
-  "%0 is a reserved attribute identifier">, DefaultIgnore,
+  "%0 is a reserved attribute identifier">,
   InGroup<ReservedAttributeIdentifier>;
 def warn_pp_objc_macro_redef_ignored : Warning<
   "ignoring redefinition of Objective-C qualifier macro">,
@@ -506,10 +509,10 @@ def warn_cxx98_compat_variadic_macro : Warning<
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def ext_named_variadic_macro : Extension<
   "named variadic macros are a GNU extension">, InGroup<VariadicMacros>;
-def err_embedded_directive : Error<"embedding a %select{|#}0%1 directive "
+def err_embedded_directive : Error<"embedding a%select{ #| @|}0%1 directive "
                                    "within macro arguments is not supported">;
-def ext_embedded_directive : Extension<
-  "embedding a directive within macro arguments has undefined behavior">,
+def warn_embedded_directive : ExtWarn<
+  "embedding a%select{ #| @|}0%1 directive within macro arguments has undefined behavior">,
   InGroup<DiagGroup<"embedded-directive">>;
 def ext_c_missing_varargs_arg : Extension<
   "passing no argument for the '...' parameter of a variadic macro is "
@@ -1056,10 +1059,7 @@ def warn_header_guard : Warning<
 def note_header_guard : Note<
   "%0 is defined here; did you mean %1?">;
 
-def warn_defined_in_object_type_macro : Warning<
-  "macro expansion producing 'defined' has undefined behavior">,
-  InGroup<ExpansionToDefined>;
-def warn_defined_in_function_type_macro : Extension<
+def warn_defined_in_macro : Warning<
   "macro expansion producing 'defined' has undefined behavior">,
   InGroup<ExpansionToDefined>;
 

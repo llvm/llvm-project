@@ -56,16 +56,15 @@ module @gemm attributes {gpu.container_module} {
 
       %b_scale_tdesc = xegpu.create_nd_tdesc %arg3 : memref<128x1024xf8E8M0FNU> -> !xegpu.tensor_desc<16x128xf8E8M0FNU>
       %scale_b = xegpu.load_nd %b_scale_tdesc[%c0, %1] {layout = #b_scale}: !xegpu.tensor_desc<16x128xf8E8M0FNU> -> vector<16x128xf8E8M0FNU>
-
       %d = xegpu.dpas_mx %a, %b, %c scale_a = %scale_a scale_b = %scale_b
             {layout_a = #a,
              layout_b = #b,
              layout_cd = #c,
              layout_a_scale = #a_scale,
              layout_b_scale = #b_scale}
-          : vector<128x512xf4E2M1FN>, vector<512x128xf4E2M1FN>,
+          : (vector<128x512xf4E2M1FN>, vector<512x128xf4E2M1FN>,
             vector<128x128xf32>,
-            vector<128x16xf8E8M0FNU>, vector<16x128xf8E8M0FNU>
+            vector<128x16xf8E8M0FNU>, vector<16x128xf8E8M0FNU>)
           -> vector<128x128xf32>
 
       // store_nd with offset

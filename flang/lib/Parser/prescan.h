@@ -68,6 +68,10 @@ public:
     fixedFormColumnLimit_ = limit;
     return *this;
   }
+  Prescanner &set_freeFormColumnLimit(int limit) {
+    freeFormColumnLimit_ = limit;
+    return *this;
+  }
 
   Prescanner &AddCompilerDirectiveSentinel(const std::string &);
 
@@ -269,6 +273,7 @@ private:
   bool backslashFreeFormContinuation_{false};
   bool inFixedForm_{false};
   int fixedFormColumnLimit_{72};
+  int freeFormColumnLimit_{10000};
   Encoding encoding_{Encoding::UTF_8};
   int parenthesisNesting_{0};
   int prescannerNesting_{0};
