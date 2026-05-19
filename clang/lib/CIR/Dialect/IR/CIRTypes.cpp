@@ -345,6 +345,15 @@ Type RecordType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
   });
 }
 
+mlir::Type RecordType::getPadding() const {
+  if (!getPadded())
+    return {};
+  llvm::ArrayRef<mlir::Type> members = getMembers();
+  if (members.empty())
+    return {};
+  return members.back();
+}
+
 bool RecordType::isLayoutIdentical(const RecordType &other) {
   if (getImpl() == other.getImpl())
     return true;
@@ -396,8 +405,8 @@ RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
     // by `insertPadding`, making `sizeof(parent)` and array GEPs off by the
     // missing bytes.
     llvm::TypeSize size = dataLayout.getTypeSizeInBits(largest);
-    if (getPadded())
-      size += dataLayout.getTypeSizeInBits(*getMembers().rbegin());
+    if (mlir::Type tailPad = getPadding())
+      size += dataLayout.getTypeSizeInBits(tailPad);
     return size;
   }
 

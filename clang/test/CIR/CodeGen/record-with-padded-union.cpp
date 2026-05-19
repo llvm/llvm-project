@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 struct SSO {
   char *p;
@@ -21,9 +21,6 @@ struct SSO {
 // LLVM: %struct.SSO = type { ptr, i64, %union.anon{{.*}} }
 // LLVM: %union.anon{{.*}} = type { i64, [8 x i8] }
 
-// OGCG: %struct.SSO = type { ptr, i64, %union.anon }
-// OGCG: %union.anon = type { i64, [8 x i8] }
-
 extern "C" SSO *last_of_three() {
   SSO *p = new SSO[3];
   return &p[2];
@@ -32,8 +29,4 @@ extern "C" SSO *last_of_three() {
 // Allocation is 3*sizeof(SSO)=96; per-element stride comes from struct size.
 // LLVM-LABEL: define {{.*}}@last_of_three
 // LLVM: call {{.*}}@_Znam(i64 noundef 96)
-// LLVM: getelementptr %struct.SSO, ptr %{{.+}}, i64 2
-
-// OGCG-LABEL: define {{.*}}@last_of_three
-// OGCG: call {{.*}}@_Znam(i64 noundef 96)
-// OGCG: getelementptr {{.*}}%struct.SSO, ptr %{{.+}}, i64 2
+// LLVM: getelementptr{{.*}}%struct.SSO, ptr %{{.+}}, i64 2
