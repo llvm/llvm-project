@@ -2252,7 +2252,7 @@ define <8 x i16> @ushll2_8h(ptr %A) nounwind {
 ; CHECK-GI-LABEL: ushll2_8h:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <16 x i8>, ptr %A
@@ -2272,7 +2272,7 @@ define <4 x i32> @ushll2_4s(ptr %A) nounwind {
 ; CHECK-GI-LABEL: ushll2_4s:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <8 x i16>, ptr %A
@@ -2292,7 +2292,7 @@ define <2 x i64> @ushll2_2d(ptr %A) nounwind {
 ; CHECK-GI-LABEL: ushll2_2d:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <4 x i32>, ptr %A
@@ -2892,7 +2892,7 @@ define <8 x i16> @sshll2_8h(ptr %A) nounwind {
 ; CHECK-GI-LABEL: sshll2_8h:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <16 x i8>, ptr %A
@@ -2912,7 +2912,7 @@ define <4 x i32> @sshll2_4s(ptr %A) nounwind {
 ; CHECK-GI-LABEL: sshll2_4s:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <8 x i16>, ptr %A
@@ -2932,7 +2932,7 @@ define <2 x i64> @sshll2_2d(ptr %A) nounwind {
 ; CHECK-GI-LABEL: sshll2_2d:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sshll v0.2d, v0.2s, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <4 x i32>, ptr %A

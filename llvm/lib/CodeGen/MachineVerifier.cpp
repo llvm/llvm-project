@@ -1348,6 +1348,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     if (SameType && SrcTy.isVector())
       SameType &= SrcTy.getElementCount() == DstTy.getElementCount();
+    if (SameType && SrcTy.isFloatOrFloatVector())
+      SameType &= SrcTy.getFpSemantics() == DstTy.getFpSemantics();
 
     if (SameType)
       report("bitcast must change the type", MI);

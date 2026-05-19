@@ -1585,8 +1585,28 @@ void Sema::PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext) {
 
   // Out-of-line definitions shouldn't be pushed into scope in C++, unless they
   // are function-local declarations.
-  if (getLangOpts().CPlusPlus && D->isOutOfLine() && !S->getFnParent())
-    return;
+  if (getLangOpts().CPlusPlus && D->isOutOfLine()) {
+    if (!S->getFnParent())
+      return;
+
+    // Even inside a function, an out-of-line definition of a type that is
+    // nested inside a local class must not be pushed into the enclosing
+    // function scope. For example:
+    //
+    //   class A { public: class B; };
+    //   class A::B {};   // out-of-line definition inside the function
+    //   B b;             // must fail - only A::B is valid
+    //   Wrapper{B{}}     // must also fail
+    //
+    // Per C++ scoping rules only the qualified form A::B is accessible.
+    // Without this guard, PushOnScopeChains would add B to the function's
+    // local scope, making it findable via unqualified lookup, which is
+    // incorrect. The condition targets TagDecls (class/struct/union/enum)
+    // whose DeclContext is a CXXRecordDecl, i.e., types that are members
+    // of a local class being defined out-of-line.
+    if (isa<TagDecl>(D) && isa<CXXRecordDecl>(D->getDeclContext()))
+      return;
+  }
 
   // Template instantiations should also not be pushed into scope.
   if (isa<FunctionDecl>(D) &&
@@ -3140,16 +3160,15 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
         --E;
         continue;
       }
-    } else if (isa<SelectAnyAttr>(NewAttribute)) {
+    } else if (isa<SelectAnyAttr>(NewAttribute) &&
+               cast<VarDecl>(New)->isInline() &&
+               !cast<VarDecl>(New)->isInlineSpecified()) {
       // Don't warn about applying selectany to implicitly inline variables.
       // Older compilers and language modes would require the use of selectany
       // to make such variables inline, and it would have no effect if we
       // honored it.
-      if (const auto *VD = dyn_cast<VarDecl>(New);
-          VD && VD->isInline() && !VD->isInlineSpecified()) {
-        ++I;
-        continue;
-      }
+      ++I;
+      continue;
     } else if (isa<OMPDeclareVariantAttr>(NewAttribute)) {
       // We allow to add OMP[Begin]DeclareVariantAttr to be added to
       // declarations after definitions.
@@ -4899,6 +4918,8 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
       VarDecl *Def = Old->getDefinition();
       if (Def && checkVarDeclRedefinition(Def, New))
         return;
+      if (Old->isInvalidDecl())
+        New->setInvalidDecl();
     }
   } else {
     // C++ may not have a tentative definition rule, but it has a different
@@ -7120,16 +7141,15 @@ static void checkAliasAttr(Sema &S, NamedDecl &ND) {
 }
 
 static void checkSelectAnyAttr(Sema &S, NamedDecl &ND) {
-  SelectAnyAttr *Attr = ND.getAttr<SelectAnyAttr>();
-  if (!Attr)
-    return;
-
-  if (const auto *VD = dyn_cast<VarDecl>(&ND);
-      VD && !VD->isStaticDataMember() && VD->isExternallyVisible())
-    return;
-
-  S.Diag(Attr->getLocation(), diag::err_attribute_selectany_non_extern_var);
-  ND.dropAttr<SelectAnyAttr>();
+  // 'selectany' only applies to externally visible variable declarations.
+  // It does not apply to functions.
+  if (SelectAnyAttr *Attr = ND.getAttr<SelectAnyAttr>()) {
+    if (isa<FunctionDecl>(ND) || !ND.isExternallyVisible()) {
+      S.Diag(Attr->getLocation(),
+             diag::err_attribute_selectany_non_extern_data);
+      ND.dropAttr<SelectAnyAttr>();
+    }
+  }
 }
 
 static void checkHybridPatchableAttr(Sema &S, NamedDecl &ND) {
@@ -7928,7 +7948,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
     if (CurContext->isRecord()) {
       if (SC == SC_Static) {
-        if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
+        if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
           // Walk up the enclosing DeclContexts to check for any that are
           // incompatible with static data members.
           const DeclContext *FunctionOrMethod = nullptr;
@@ -7951,7 +7971,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
                  diag::err_static_data_member_not_allowed_in_local_class)
                 << Name << RD->getDeclName() << RD->getTagKind();
             Invalid = true;
-            RD->setInvalidDecl();
           } else if (AnonStruct) {
             // C++ [class.static.data]p4: Unnamed classes and classes contained
             // directly or indirectly within unnamed classes shall not contain
@@ -9137,12 +9156,6 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     }
   }
 
-  if (!NewVD->hasLocalStorage() && NewVD->hasAttr<BlocksAttr>()) {
-    Diag(NewVD->getLocation(), diag::err_block_on_nonlocal);
-    NewVD->setInvalidDecl();
-    return;
-  }
-
   if (!NewVD->hasLocalStorage() && T->isSizelessType() &&
       !T.isWebAssemblyReferenceType() && !T->isHLSLSpecificType()) {
     Diag(NewVD->getLocation(), diag::err_sizeless_nonlocal) << T;
@@ -9151,7 +9164,8 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   }
 
   if (isVM && NewVD->hasAttr<BlocksAttr>()) {
-    Diag(NewVD->getLocation(), diag::err_block_on_vm);
+    Diag(NewVD->getLocation(), diag::err_block_not_allowed_on)
+        << diag::NotAllowedBlockVarReason::VariablyModifiedType;
     NewVD->setInvalidDecl();
     return;
   }
@@ -15785,9 +15799,9 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
         << 1 << New << SourceRange(D.getDeclSpec().getModulePrivateSpecLoc())
         << FixItHint::CreateRemoval(D.getDeclSpec().getModulePrivateSpecLoc());
 
-  if (New->hasAttr<BlocksAttr>()) {
-    Diag(New->getLocation(), diag::err_block_on_nonlocal);
-  }
+  if (New->hasAttr<BlocksAttr>())
+    Diag(New->getLocation(), diag::err_block_not_allowed_on)
+        << diag::NotAllowedBlockVarReason::NonlocalVariable;
 
   New->deduceParmAddressSpace(Context);
 
@@ -16320,10 +16334,13 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   // have the LSI properly restored.
   if (isGenericLambdaCallOperatorSpecialization(FD)) {
     // C++2c 7.5.5.2p17 A member of a closure type shall not be explicitly
-    // instantiated, explicitly specialized.
-    if (FD->getTemplateSpecializationInfo()
-            ->isExplicitInstantiationOrSpecialization()) {
-      Diag(FD->getLocation(), diag::err_lambda_explicit_spec);
+    // specialized.
+    if (FD->getTemplateSpecializationInfo()->isExplicitSpecialization()) {
+      Diag(FD->getLocation(), diag::err_lambda_explicit_temp_spec)
+          << /*specialization*/ 0;
+      CXXRecordDecl *RD = cast<CXXRecordDecl>(FD->getParent());
+      Diag(RD->getLocation(), diag::note_defined_here) << RD;
+
       FD->setInvalidDecl();
       PushFunctionScope();
     } else {

@@ -716,7 +716,7 @@ define void @hoist_loads_in_masked_regions(ptr noalias %dst, ptr noalias %src, p
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[SRC]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[COND]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i32> [[WIDE_LOAD]], splat (i32 11)
