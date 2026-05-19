@@ -2931,6 +2931,8 @@ bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
 
 /// Check if two !mem.cache_hint metadata nodes are equal.
 static bool areMemCacheHintMetadataEqual(const MDNode *A, const MDNode *B) {
+  if (A == B)
+    return true;
   if (!A || !B || A->getNumOperands() != B->getNumOperands())
     return false;
 
