@@ -2227,6 +2227,34 @@ def : GCNPat <
   (V_XOR_B32_e64 (S_MOV_B32 (i32 0x80000000)), VGPR_32:$src)
 >;
 
+def : GCNPat <
+  (DivergentUnaryFrag<fneg> (v4f16 VReg_64:$src)),
+  (REG_SEQUENCE VReg_64,
+    (V_XOR_B32_e32 (i32 0x80008000),
+      (i32 (EXTRACT_SUBREG VReg_64:$src, sub0))), sub0,
+    (V_XOR_B32_e32 (i32 0x80008000),
+      (i32 (EXTRACT_SUBREG VReg_64:$src, sub1))), sub1)
+>;
+
+def : GCNPat <
+  (UniformUnaryFrag<fneg> (v4f16 SReg_64:$src)),
+  (S_XOR_B64 SReg_64:$src, (i64 (S_MOV_B64 (i64 0x8000800080008000))))
+>;
+
+def : GCNPat <
+  (DivergentUnaryFrag<fneg> (v4bf16 VReg_64:$src)),
+  (REG_SEQUENCE VReg_64,
+    (V_XOR_B32_e32 (i32 0x80008000),
+      (i32 (EXTRACT_SUBREG VReg_64:$src, sub0))), sub0,
+    (V_XOR_B32_e32 (i32 0x80008000),
+      (i32 (EXTRACT_SUBREG VReg_64:$src, sub1))), sub1)
+>;
+
+def : GCNPat <
+  (UniformUnaryFrag<fneg> (v4bf16 SReg_64:$src)),
+  (S_XOR_B64 SReg_64:$src, (i64 (S_MOV_B64 (i64 0x8000800080008000))))
+>;
+
 foreach fp16vt = [f16, bf16] in {
 let SubtargetPredicate = NotUseRealTrue16Insts in {
 def : GCNPat <
