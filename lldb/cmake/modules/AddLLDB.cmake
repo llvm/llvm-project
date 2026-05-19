@@ -31,7 +31,34 @@ function(lldb_tablegen)
     add_public_tablegen_target(${LTG_TARGET})
     set_property(GLOBAL APPEND PROPERTY LLDB_TABLEGEN_TARGETS ${LTG_TARGET})
   endif()
+  if("-dump-json" IN_LIST ARGN)
+    set_property(GLOBAL APPEND PROPERTY LLDB_DOCS_JSON_OUTPUTS "${TABLEGEN_OUTPUT}")
+  endif()
 endfunction(lldb_tablegen)
+
+# Returns TRUE in `out_var` if any of `libs` is `liblldb` or already carries
+# the LLDB_LINKS_LIBLLDB property.
+function(_lldb_links_liblldb_check out_var libs)
+  set(${out_var} FALSE PARENT_SCOPE)
+  foreach(lib ${libs})
+    if("${lib}" STREQUAL "liblldb")
+      set(${out_var} TRUE PARENT_SCOPE)
+      return()
+    endif()
+    if(TARGET "${lib}")
+      get_target_property(_p "${lib}" LLDB_LINKS_LIBLLDB)
+      if(_p)
+        set(${out_var} TRUE PARENT_SCOPE)
+        return()
+      endif()
+    endif()
+  endforeach()
+endfunction()
+
+function(_lldb_propagate_links_liblldb name libs)
+  _lldb_links_liblldb_check(_links_liblldb "${libs}")
+  set_target_properties(${name} PROPERTIES LLDB_LINKS_LIBLLDB ${_links_liblldb})
+endfunction()
 
 function(add_lldb_library name)
   include_directories(BEFORE
@@ -73,7 +100,11 @@ function(add_lldb_library name)
   elseif (PARAM_SHARED)
     set(libkind SHARED)
   elseif (PARAM_OBJECT)
-    set(libkind OBJECT)
+    # Pass STATIC alongside OBJECT so that under BUILD_SHARED_LIBS=ON the
+    # secondary library variant llvm_add_library produces is a STATIC archive
+    # rather than a SHARED library. OBJECT consumers in LLDB carry no LINK_LIBS
+    # of their own (consumers add them), so a SHARED variant would fail to link.
+    set(libkind "OBJECT;STATIC")
   else ()
     # PARAM_STATIC or library type unspecified. BUILD_SHARED_LIBS
     # does not control the kind of libraries created for LLDB,
@@ -91,6 +122,9 @@ function(add_lldb_library name)
     LINK_LIBS ${PARAM_LINK_LIBS}
     ${pass_NO_INSTALL_RPATH}
   )
+
+  # Mark whether this library transitively pulls in liblldb.
+  _lldb_propagate_links_liblldb(${name} "${PARAM_LINK_LIBS}")
 
   if(CLANG_LINK_CLANG_DYLIB)
     target_link_libraries(${name} PRIVATE clang-cpp)
@@ -167,6 +201,26 @@ function(add_lldb_executable name)
   )
 
   target_link_libraries(${name} PRIVATE ${ARG_LINK_LIBS})
+  if(WIN32)
+    list(FIND ARG_LINK_LIBS liblldb LIBLLDB_INDEX)
+    if(NOT LIBLLDB_INDEX EQUAL -1)
+      if (MSVC)
+        target_link_options(${name} PRIVATE
+          "LINKER:/DELAYLOAD:$<TARGET_FILE_NAME:liblldb>")
+        target_link_libraries(${name} PRIVATE delayimp)
+      elseif (MINGW AND LINKER_IS_LLD)
+        # LLD can delay load just by passing a --delayload flag, as long as the import
+        # library is a short type import library (which LLD and MS link.exe produce).
+        # With ld.bfd, with long import libraries (as produced by GNU binutils), one
+        # has to generate a separate delayload import library with dlltool.
+        target_link_options(${name} PRIVATE "-Wl,--delayload=$<TARGET_FILE_NAME:liblldb>")
+      elseif (DEFINED LLDB_PYTHON_DLL_RELATIVE_PATH)
+        # If liblldb can't be delayloaded, then LLDB_PYTHON_DLL_RELATIVE_PATH will not
+        # have any effect.
+        message(WARNING "liblldb is not delay loaded, LLDB_PYTHON_DLL_RELATIVE_PATH has no effect")
+      endif()
+    endif()
+  endif()
   if(CLANG_LINK_CLANG_DYLIB)
     target_link_libraries(${name} PRIVATE clang-cpp)
   else()
@@ -197,6 +251,20 @@ function(add_lldb_executable name)
       add_llvm_install_targets(install-${name}
                                DEPENDS ${name}
                                COMPONENT ${name})
+      # An installed tool that links liblldb won't run without liblldb
+      # installed alongside it. Record it on a global list so other
+      # runtime components (e.g. the Python/Lua script packages) can
+      # attach themselves to the same install targets.
+      _lldb_links_liblldb_check(_links_liblldb "${ARG_LINK_LIBS}")
+      if(_links_liblldb)
+        set_property(GLOBAL APPEND PROPERTY LLDB_TOOLS_LINKING_LIBLLDB ${name})
+        if(TARGET install-liblldb)
+          add_dependencies(install-${name} install-liblldb)
+          if(TARGET install-${name}-stripped AND TARGET install-liblldb-stripped)
+            add_dependencies(install-${name}-stripped install-liblldb-stripped)
+          endif()
+        endif()
+      endif()
     endif()
     if(APPLE AND ARG_INSTALL_PREFIX)
       lldb_add_post_install_steps_darwin(${name} ${ARG_INSTALL_PREFIX})

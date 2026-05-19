@@ -780,6 +780,41 @@ hlfir::EntityWithAttributes Fortran::lower::ArrayConstructorBuilder<T>::gen(
     const Fortran::evaluate::ArrayConstructor<T> &arrayCtorExpr,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  // Array constructors inside a where-assignment-stmt must be executed
+  // exactly once without mask control, per Fortran 2023 section 10.2.3.2.
+  // Lower them in a special region so that this can be enforced when
+  // scheduling forall/where expression evaluations.
+  if (hlfir::isInsideHlfirWhereMaskedExpression(builder.getRegion()) &&
+      !builder.getRegion().getParentOfType<hlfir::ExactlyOnceOp>()) {
+    Fortran::lower::StatementContext localStmtCtx;
+    mlir::Type bogusType = builder.getIndexType();
+    auto exactlyOnce = hlfir::ExactlyOnceOp::create(builder, loc, bogusType);
+    mlir::Block *block = builder.createBlock(&exactlyOnce.getBody());
+    builder.setInsertionPointToStart(block);
+
+    // Recursively generate the array constructor inside the exactly_once region
+    hlfir::EntityWithAttributes res = ArrayConstructorBuilder<T>::gen(
+        loc, converter, arrayCtorExpr, symMap, localStmtCtx);
+
+    auto yield = hlfir::YieldOp::create(builder, loc, res);
+    Fortran::lower::genCleanUpInRegionIfAny(loc, builder, yield.getCleanup(),
+                                            localStmtCtx);
+    builder.setInsertionPointAfter(exactlyOnce);
+    exactlyOnce->getResult(0).setType(res.getType());
+
+    if (hlfir::isFortranValue(exactlyOnce.getResult()))
+      return hlfir::EntityWithAttributes{exactlyOnce.getResult()};
+
+    // Create hlfir.declare for the result to satisfy
+    // hlfir::EntityWithAttributes requirements.
+    auto [exv, cleanup] = hlfir::translateToExtendedValue(
+        loc, builder, hlfir::Entity{exactlyOnce});
+    assert(!cleanup && "result is a variable");
+    return hlfir::genDeclare(loc, builder, exv, ".arrayctor.result",
+                             fir::FortranVariableFlagsAttr{});
+  }
+
   // Select the lowering strategy given the array constructor.
   auto arrayBuilder = selectArrayCtorLoweringStrategy(
       loc, converter, arrayCtorExpr, symMap, stmtCtx);

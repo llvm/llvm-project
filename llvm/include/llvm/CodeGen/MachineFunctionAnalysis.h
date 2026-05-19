@@ -42,11 +42,12 @@ public:
                              FunctionAnalysisManager::Invalidator &);
   };
 
-  MachineFunctionAnalysis(const TargetMachine *TM) : TM(TM) {};
+  MachineFunctionAnalysis(const TargetMachine &TM) : TM(&TM) {};
   LLVM_ABI Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
-class FreeMachineFunctionPass : public PassInfoMixin<FreeMachineFunctionPass> {
+class FreeMachineFunctionPass
+    : public RequiredPassInfoMixin<FreeMachineFunctionPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };

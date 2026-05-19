@@ -12,6 +12,7 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DarwinSDKInfo.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
@@ -25,11 +26,11 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/ParseAST.h"
 #include "clang/Rewrite/Core/Rewriter.h"
@@ -74,6 +75,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Host/File.h"
@@ -96,6 +98,7 @@
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/Platform/MacOSX/PlatformDarwin.h"
 #include "lldb/Utility/XcodeSDK.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <cctype>
 #include <memory>
@@ -113,6 +116,7 @@ class ClangExpressionParser::LLDBPreprocessorCallbacks : public PPCallbacks {
   ClangModulesDeclVendor &m_decl_vendor;
   ClangPersistentVariables &m_persistent_vars;
   clang::SourceManager &m_source_mgr;
+  /// Accumulates error messages across all moduleImport calls.
   StreamString m_error_stream;
   bool m_has_errors = false;
 
@@ -138,11 +142,12 @@ public:
       module.path.push_back(
           ConstString(component.getIdentifierInfo()->getName()));
 
-    StreamString error_stream;
-
     ClangModulesDeclVendor::ModuleVector exported_modules;
-    if (!m_decl_vendor.AddModule(module, &exported_modules, m_error_stream))
+    if (auto err = m_decl_vendor.AddModule(module, &exported_modules)) {
       m_has_errors = true;
+      m_error_stream.PutCString(llvm::toString(std::move(err)));
+      m_error_stream.PutChar('\n');
+    }
 
     for (ClangModulesDeclVendor::ModuleID module : exported_modules)
       m_persistent_vars.AddHandLoadedClangModule(module);
@@ -167,9 +172,9 @@ public:
       : m_options(opts), m_filename(filename) {
     m_options.ShowPresumedLoc = true;
     m_options.ShowLevel = false;
-    m_os = std::make_shared<llvm::raw_string_ostream>(m_output);
+    m_os = std::make_unique<llvm::raw_string_ostream>(m_output);
     m_passthrough =
-        std::make_shared<clang::TextDiagnosticPrinter>(*m_os, m_options);
+        std::make_unique<clang::TextDiagnosticPrinter>(*m_os, m_options);
   }
 
   void ResetManager(DiagnosticManager *manager = nullptr) {
@@ -274,13 +279,19 @@ public:
 
           // Find the range of the primary location.
           for (const auto &range : Info.getRanges()) {
-            if (range.getBegin() == sloc) {
-              // FIXME: This is probably not handling wide characters correctly.
-              unsigned end_col = sm.getSpellingColumnNumber(range.getEnd());
-              if (end_col > loc.column)
-                loc.length = end_col - loc.column;
+            if (range.getBegin() != sloc)
+              continue;
+            SourceLocation end = range.getEnd();
+            if (range.isTokenRange())
+              end = clang::Lexer::getLocForEndOfToken(end, 0, sm, m_lang_opts);
+            // FIXME: This is probably not handling wide characters correctly.
+            unsigned end_col = sm.getSpellingColumnNumber(end);
+            // Ignore ranges that span multiple lines.
+            if (end_col != sm.getSpellingLineNumber(sloc))
               break;
-            }
+            if (end_col > loc.column)
+              loc.length = end_col - loc.column;
+            break;
           }
           detail.source_location = loc;
         }
@@ -303,6 +314,7 @@ public:
   }
 
   void BeginSourceFile(const LangOptions &LO, const Preprocessor *PP) override {
+    m_lang_opts = LO;
     m_passthrough->BeginSourceFile(LO, PP);
   }
 
@@ -311,11 +323,12 @@ public:
 private:
   DiagnosticManager *m_manager = nullptr;
   DiagnosticOptions m_options;
-  std::shared_ptr<clang::TextDiagnosticPrinter> m_passthrough;
-  /// Output stream of m_passthrough.
-  std::shared_ptr<llvm::raw_string_ostream> m_os;
+  LangOptions m_lang_opts;
   /// Output string filled by m_os.
   std::string m_output;
+  /// Output stream of m_passthrough.
+  std::unique_ptr<llvm::raw_string_ostream> m_os;
+  std::unique_ptr<clang::TextDiagnosticPrinter> m_passthrough;
   StringRef m_filename;
 };
 
@@ -527,7 +540,8 @@ static void SetupTargetOpts(CompilerInstance &compiler,
 
 static void SetupLangOpts(CompilerInstance &compiler,
                           ExecutionContextScope &exe_scope,
-                          const Expression &expr) {
+                          const Expression &expr,
+                          DiagnosticManager &diagnostic_manager) {
   Log *log = GetLog(LLDBLog::Expressions);
 
   // If the expression is being evaluated in the context of an existing stack
@@ -547,6 +561,9 @@ static void SetupLangOpts(CompilerInstance &compiler,
                      : lldb::eLanguageTypeUnknown),
         lldb_private::Language::GetNameForLanguageType(language));
 
+  lldb::LanguageType language_for_note = language;
+  std::string language_fallback_reason;
+
   LangOptions &lang_opts = compiler.getLangOpts();
 
   switch (language) {
@@ -560,12 +577,20 @@ static void SetupLangOpts(CompilerInstance &compiler,
     // family language, because the expression parser uses features of C++ to
     // capture values.
     lang_opts.CPlusPlus = true;
+
+    language_for_note = lldb::eLanguageTypeC_plus_plus;
+    language_fallback_reason =
+        "Expression evaluation in pure C not supported. ";
     break;
   case lldb::eLanguageTypeObjC:
     lang_opts.ObjC = true;
     // FIXME: the following language option is a temporary workaround,
     // to "ask for ObjC, get ObjC++" (see comment above).
     lang_opts.CPlusPlus = true;
+
+    language_for_note = lldb::eLanguageTypeObjC_plus_plus;
+    language_fallback_reason =
+        "Expression evaluation in pure Objective-C not supported. ";
 
     // Clang now sets as default C++14 as the default standard (with
     // GNU extensions), so we do the same here to avoid mismatches that
@@ -591,15 +616,21 @@ static void SetupLangOpts(CompilerInstance &compiler,
     lang_opts.CPlusPlus11 = true;
     compiler.getHeaderSearchOpts().UseLibcxx = true;
     [[fallthrough]];
-  case lldb::eLanguageTypeC_plus_plus_03:
+  case lldb::eLanguageTypeC_plus_plus_03: {
     lang_opts.CPlusPlus = true;
     if (process_sp
         // We're stopped in a frame without debug-info. The user probably
         // intends to make global queries (which should include Objective-C).
-        && !(frame_sp && frame_sp->HasDebugInformation()))
+        && !(frame_sp && frame_sp->HasDebugInformation())) {
       lang_opts.ObjC =
           process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC) != nullptr;
-    break;
+      if (lang_opts.ObjC) {
+        language_for_note = lldb::eLanguageTypeObjC_plus_plus;
+        language_fallback_reason = "Possibly stopped inside system library, so "
+                                   "speculatively enabled Objective-C. ";
+      }
+    }
+  } break;
   case lldb::eLanguageTypeObjC_plus_plus:
   case lldb::eLanguageTypeUnknown:
   default:
@@ -607,8 +638,26 @@ static void SetupLangOpts(CompilerInstance &compiler,
     lang_opts.CPlusPlus = true;
     lang_opts.CPlusPlus11 = true;
     compiler.getHeaderSearchOpts().UseLibcxx = true;
+
+    language_for_note = lldb::eLanguageTypeObjC_plus_plus;
+    if (language != language_for_note) {
+      if (language != lldb::eLanguageTypeUnknown)
+        language_fallback_reason = llvm::formatv(
+            "Expression evaluation in {0} not supported. ",
+            lldb_private::Language::GetDisplayNameForLanguageType(language));
+
+      language_fallback_reason +=
+          llvm::formatv("Falling back to default language. ");
+    }
     break;
   }
+
+  diagnostic_manager.AddDiagnostic(
+      llvm::formatv("{0}Ran expression as '{1}'.", language_fallback_reason,
+                    lldb_private::Language::GetDisplayNameForLanguageType(
+                        language_for_note))
+          .str(),
+      lldb::Severity::eSeverityInfo, DiagnosticOrigin::eDiagnosticOriginLLDB);
 
   lang_opts.Bool = true;
   lang_opts.WChar = true;
@@ -685,10 +734,24 @@ static void SetupImportStdModuleLangOpts(CompilerInstance &compiler,
 // Implementation of ClangExpressionParser
 //===----------------------------------------------------------------------===//
 
+static void SetPointerAuthOptionsForArm64e(LangOptions &lang_opts) {
+  lang_opts.PointerAuthIntrinsics = true;
+  lang_opts.PointerAuthCalls = true;
+  lang_opts.PointerAuthReturns = true;
+  lang_opts.PointerAuthAuthTraps = true;
+  lang_opts.PointerAuthIndirectGotos = true;
+  lang_opts.PointerAuthVTPtrAddressDiscrimination = true;
+  lang_opts.PointerAuthVTPtrTypeDiscrimination = true;
+  lang_opts.PointerAuthObjcIsa = true;
+  lang_opts.PointerAuthObjcClassROPointers = true;
+  lang_opts.PointerAuthObjcInterfaceSel = true;
+}
+
 ClangExpressionParser::ClangExpressionParser(
     ExecutionContextScope *exe_scope, Expression &expr,
-    bool generate_debug_info, std::vector<std::string> include_directories,
-    std::string filename)
+    bool generate_debug_info, DiagnosticManager &diagnostic_manager,
+    std::vector<std::string> include_directories, std::string filename,
+    bool force_disable_ptrauth_codegen)
     : ExpressionParser(exe_scope, expr, generate_debug_info), m_compiler(),
       m_pp_callbacks(nullptr),
       m_include_directories(std::move(include_directories)),
@@ -720,14 +783,15 @@ ClangExpressionParser::ClangExpressionParser(
   m_compiler = std::make_unique<CompilerInstance>();
 
   // Make sure clang uses the same VFS as LLDB.
-  m_compiler->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
+  m_compiler->setVirtualFileSystem(
+      FileSystem::Instance().GetVirtualFileSystem());
 
   // 2. Configure the compiler with a set of default options that are
   // appropriate for most situations.
   SetupTargetOpts(*m_compiler, *target_sp);
 
   // 3. Create and install the target on the compiler.
-  m_compiler->createDiagnostics(m_compiler->getVirtualFileSystem());
+  m_compiler->createDiagnostics();
   // Limit the number of error diagnostics we emit.
   // A value of 0 means no limit for both LLDB and Clang.
   m_compiler->getDiagnostics().setErrorLimit(target_sp->GetExprErrorLimit());
@@ -735,24 +799,28 @@ ClangExpressionParser::ClangExpressionParser(
   if (auto *target_info = TargetInfo::CreateTargetInfo(
           m_compiler->getDiagnostics(),
           m_compiler->getInvocation().getTargetOpts())) {
-    if (log) {
-      LLDB_LOGF(log, "Target datalayout string: '%s'",
-                target_info->getDataLayoutString());
-      LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());
-      LLDB_LOGF(log, "Target vector alignment: %d",
-                target_info->getMaxVectorAlign());
-    }
+    LLDB_LOGF(log, "Target datalayout string: '%s'",
+              target_info->getDataLayoutString());
+    LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());
+    LLDB_LOGF(log, "Target vector alignment: %d",
+              target_info->getMaxVectorAlign());
     m_compiler->setTarget(target_info);
   } else {
-    if (log)
-      LLDB_LOGF(log, "Failed to create TargetInfo for '%s'",
-                m_compiler->getTargetOpts().Triple.c_str());
+    LLDB_LOGF(log, "Failed to create TargetInfo for '%s'",
+              m_compiler->getTargetOpts().Triple.c_str());
 
     lldbassert(false && "Failed to create TargetInfo.");
   }
 
   // 4. Set language options.
-  SetupLangOpts(*m_compiler, *exe_scope, expr);
+  SetupLangOpts(*m_compiler, *exe_scope, expr, diagnostic_manager);
+
+  const llvm::Triple triple = target_sp->GetArchitecture().GetTriple();
+  const bool enable_ptrauth =
+      triple.isArm64e() && !force_disable_ptrauth_codegen;
+  if (enable_ptrauth)
+    SetPointerAuthOptionsForArm64e(m_compiler->getLangOpts());
+
   auto *clang_expr = dyn_cast<ClangUserExpression>(&m_expr);
   if (clang_expr && clang_expr->DidImportCxxModules()) {
     LLDB_LOG(log, "Adding lang options for importing C++ modules");
@@ -769,6 +837,12 @@ ClangExpressionParser::ClangExpressionParser(
     m_compiler->getCodeGenOpts().setDebugInfo(codegenoptions::FullDebugInfo);
   else
     m_compiler->getCodeGenOpts().setDebugInfo(codegenoptions::NoDebugInfo);
+
+  if (enable_ptrauth) {
+    PointerAuthOptions &ptrauth_opts = m_compiler->getCodeGenOpts().PointerAuth;
+    clang::CompilerInvocation::setDefaultPointerAuthOptions(
+        ptrauth_opts, m_compiler->getLangOpts(), triple);
+  }
 
   // Disable some warnings.
   SetupDefaultClangDiagnostics(*m_compiler);
@@ -790,7 +864,7 @@ ClangExpressionParser::ClangExpressionParser(
   // 6. Set up the source management objects inside the compiler
   m_compiler->createFileManager();
   if (!m_compiler->hasSourceManager())
-    m_compiler->createSourceManager(m_compiler->getFileManager());
+    m_compiler->createSourceManager();
   m_compiler->createPreprocessor(TU_Complete);
 
   switch (expr.Language().AsLanguageType()) {
@@ -839,11 +913,8 @@ ClangExpressionParser::ClangExpressionParser(
   std::string module_name("$__lldb_module");
 
   m_llvm_context = std::make_unique<LLVMContext>();
-  m_code_generator.reset(CreateLLVMCodeGen(
-      m_compiler->getDiagnostics(), module_name,
-      m_compiler->getVirtualFileSystemPtr(), m_compiler->getHeaderSearchOpts(),
-      m_compiler->getPreprocessorOpts(), m_compiler->getCodeGenOpts(),
-      *m_llvm_context));
+  m_code_generator =
+      CreateLLVMCodeGen(*m_compiler, module_name, *m_llvm_context);
 }
 
 ClangExpressionParser::~ClangExpressionParser() = default;
@@ -1305,6 +1376,10 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   m_compiler->setSema(nullptr);
 
   adapter->EndSourceFile();
+  // Creating persistent variables can trigger diagnostic emission.
+  // Make sure we reset the manager so we don't get asked to handle
+  // diagnostics after we finished parsing.
+  adapter->ResetManager();
 
   unsigned num_errors = adapter->getNumErrors();
 
@@ -1319,8 +1394,6 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   if (!num_errors) {
     type_system_helper->CommitPersistentDecls();
   }
-
-  adapter->ResetManager();
 
   return num_errors;
 }
@@ -1448,8 +1521,8 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
           "Couldn't find %s() in the module", m_expr.FunctionName());
       return err;
     } else {
-      LLDB_LOGF(log, "Found function %s for %s", function_name.AsCString(),
-                m_expr.FunctionName());
+      LLDB_LOG(log, "Found function {0} for {1}", function_name,
+               m_expr.FunctionName());
     }
   }
 
@@ -1467,7 +1540,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
     LLDB_LOGF(log, "%s - Current expression language is %s\n", __FUNCTION__,
               lang.GetDescription().data());
     lldb::ProcessSP process_sp = exe_ctx.GetProcessSP();
-    if (process_sp && lang != lldb::eLanguageTypeUnknown) {
+    if (process_sp && lang) {
       auto runtime = process_sp->GetLanguageRuntime(lang.AsLanguageType());
       if (runtime)
         runtime->GetIRPasses(custom_passes);
@@ -1500,9 +1573,9 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
 
   if (decl_map) {
     StreamString error_stream;
-    IRForTarget ir_for_target(decl_map, m_expr.NeedsVariableResolution(),
-                              *execution_unit_sp, error_stream,
-                              function_name.AsCString());
+    IRForTarget ir_for_target(
+        decl_map, m_expr.NeedsVariableResolution(), *execution_unit_sp,
+        error_stream, execution_policy, function_name.AsCString(nullptr));
 
     if (!ir_for_target.runOnModule(*execution_unit_sp->GetModule())) {
       err = Status(error_stream.GetString().str());
@@ -1564,7 +1637,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
         if (auto *checker_funcs = llvm::dyn_cast<ClangDynamicCheckerFunctions>(
                 process->GetDynamicCheckers())) {
           IRDynamicChecks ir_dynamic_checks(*checker_funcs,
-                                            function_name.AsCString());
+                                            function_name.AsCString(nullptr));
 
           llvm::Module *module = execution_unit_sp->GetModule();
           if (!module || !ir_dynamic_checks.runOnModule(*module)) {

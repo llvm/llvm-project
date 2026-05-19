@@ -49,19 +49,47 @@ static constexpr inline bool canHaveIterator(Clause C) {
 }
 
 // Can clause C create a private copy of a variable.
-static constexpr inline bool isPrivatizingClause(Clause C) {
+static constexpr inline bool isPrivatizingClause(Clause C, unsigned Version) {
+  switch (C) {
+  case OMPC_firstprivate:
+  case OMPC_in_reduction:
+  case OMPC_lastprivate:
+  case OMPC_linear:
+  case OMPC_private:
+  case OMPC_reduction:
+  case OMPC_task_reduction:
+    return true;
+  case OMPC_detach:
+  case OMPC_induction:
+  case OMPC_is_device_ptr:
+  case OMPC_use_device_ptr:
+    return Version >= 60;
+  default:
+    return false;
+  }
+}
+
+static constexpr inline bool isDataSharingAttributeClause(Clause C,
+                                                          unsigned Version) {
+  // The "Version" parameter is in case the result is version-depenent
+  // in the future.
+  (void)Version;
   switch (C) {
   case OMPC_detach:
   case OMPC_firstprivate:
-  // TODO case OMPC_induction:
+  case OMPC_has_device_addr:
+  case OMPC_induction:
   case OMPC_in_reduction:
   case OMPC_is_device_ptr:
   case OMPC_lastprivate:
   case OMPC_linear:
   case OMPC_private:
   case OMPC_reduction:
+  case OMPC_shared:
   case OMPC_task_reduction:
+  case OMPC_use_device_addr:
   case OMPC_use_device_ptr:
+  case OMPC_uses_allocators:
     return true;
   default:
     return false;

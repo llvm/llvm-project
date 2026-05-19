@@ -113,12 +113,16 @@ static CallInst *InsertTrap(BuilderTy &IRB, bool DebugTrapBB,
   if (!DebugTrapBB)
     return IRB.CreateIntrinsic(Intrinsic::trap, {});
 
-  return IRB.CreateIntrinsic(
-      Intrinsic::ubsantrap,
-      ConstantInt::get(IRB.getInt8Ty(),
-                       GuardKind.has_value()
-                           ? GuardKind.value()
-                           : IRB.GetInsertBlock()->getParent()->size()));
+  uint64_t ImmArg = GuardKind.has_value()
+                        ? GuardKind.value()
+                        : IRB.GetInsertBlock()->getParent()->size();
+  // Ensure we constrain ImmArg to fitting within a 8-but unsigned integer to
+  // prevent overflow.
+  if (ImmArg > 255)
+    ImmArg = 255;
+
+  return IRB.CreateIntrinsic(Intrinsic::ubsantrap,
+                             ConstantInt::get(IRB.getInt8Ty(), ImmArg));
 }
 
 static CallInst *InsertCall(BuilderTy &IRB, bool MayReturn, StringRef Name) {
@@ -163,12 +167,12 @@ static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
     // If we have a constant zero, unconditionally branch.
     // FIXME: We should really handle this differently to bypass the splitting
     // the block.
-    BranchInst::Create(TrapBB, OldBB);
+    UncondBrInst::Create(TrapBB, OldBB);
     return;
   }
 
   // Create the conditional branch.
-  BranchInst::Create(TrapBB, Cont, Or, OldBB);
+  CondBrInst::Create(Or, TrapBB, Cont, OldBB);
 }
 
 static std::string
@@ -178,6 +182,8 @@ getRuntimeCallName(const BoundsCheckingPass::Options::Runtime &Opts) {
     Name += "_minimal";
   if (!Opts.MayReturn)
     Name += "_abort";
+  else if (Opts.HandlerPreserveAllRegs)
+    Name += "_preserve";
   return Name;
 }
 
@@ -267,7 +273,10 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
       TrapCall->setDoesNotReturn();
       IRB.CreateUnreachable();
     }
-
+    // The preserve-all logic is somewhat duplicated in CGExpr.cpp for
+    // local-bounds. Make sure to change that too.
+    if (Opts.Rt && Opts.Rt->HandlerPreserveAllRegs && MayReturn)
+      TrapCall->setCallingConv(CallingConv::PreserveAll);
     if (!MayReturn && SingleTrapBB && !DebugTrapBB)
       ReuseTrapBB = TrapBB;
 

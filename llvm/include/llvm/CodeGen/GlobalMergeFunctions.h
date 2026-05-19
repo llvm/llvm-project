@@ -58,7 +58,7 @@ public:
   /// The suffix used to identify the merged function that parameterizes
   /// the constant values. Note that the original function, without this suffix,
   /// becomes a thunk supplying contexts to the merged function via parameters.
-  static constexpr const char MergingInstanceSuffix[] = ".Tgm";
+  static constexpr char MergingInstanceSuffix[] = ".Tgm";
 
   GlobalMergeFunc(const ModuleSummaryIndex *Index) : Index(Index) {};
 
@@ -77,7 +77,7 @@ public:
 };
 
 /// Global function merging pass for new pass manager.
-struct GlobalMergeFuncPass : public PassInfoMixin<GlobalMergeFuncPass> {
+struct GlobalMergeFuncPass : public OptionalPassInfoMixin<GlobalMergeFuncPass> {
   const ModuleSummaryIndex *ImportSummary = nullptr;
   GlobalMergeFuncPass() = default;
   GlobalMergeFuncPass(const ModuleSummaryIndex *ImportSummary)

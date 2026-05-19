@@ -12,9 +12,6 @@ define void @load_store(ptr %p) {
 ; LMUL1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP0]]
 ; LMUL1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; LMUL1:       vector.ph:
-; LMUL1-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; LMUL1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
-; LMUL1-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; LMUL1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL1:       vector.body:
 ; LMUL1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -22,14 +19,13 @@ define void @load_store(ptr %p) {
 ; LMUL1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 1 x i64>, ptr [[TMP3]], align 8
 ; LMUL1-NEXT:    [[TMP5:%.*]] = add <vscale x 1 x i64> [[WIDE_LOAD]], splat (i64 1)
 ; LMUL1-NEXT:    store <vscale x 1 x i64> [[TMP5]], ptr [[TMP3]], align 8
-; LMUL1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; LMUL1-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; LMUL1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
+; LMUL1-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; LMUL1-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL1:       middle.block:
-; LMUL1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; LMUL1-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; LMUL1-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; LMUL1:       scalar.ph:
-; LMUL1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; LMUL1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; LMUL1-NEXT:    br label [[FOR_BODY:%.*]]
 ; LMUL1:       for.body:
 ; LMUL1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -45,7 +41,7 @@ define void @load_store(ptr %p) {
 ;
 ; LMUL2-LABEL: @load_store(
 ; LMUL2-NEXT:  entry:
-; LMUL2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; LMUL2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; LMUL2:       vector.ph:
 ; LMUL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL2:       vector.body:
@@ -62,24 +58,13 @@ define void @load_store(ptr %p) {
 ; LMUL2-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; LMUL2-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL2:       middle.block:
-; LMUL2-NEXT:    br label [[FOR_END:%.*]]
-; LMUL2:       scalar.ph:
 ; LMUL2-NEXT:    br label [[FOR_BODY:%.*]]
-; LMUL2:       for.body:
-; LMUL2-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; LMUL2-NEXT:    [[Q:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[IV]]
-; LMUL2-NEXT:    [[V:%.*]] = load i64, ptr [[Q]], align 8
-; LMUL2-NEXT:    [[W:%.*]] = add i64 [[V]], 1
-; LMUL2-NEXT:    store i64 [[W]], ptr [[Q]], align 8
-; LMUL2-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; LMUL2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; LMUL2-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; LMUL2:       for.end:
 ; LMUL2-NEXT:    ret void
 ;
 ; LMUL4-LABEL: @load_store(
 ; LMUL4-NEXT:  entry:
-; LMUL4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; LMUL4-NEXT:    br label [[VECTOR_PH:%.*]]
 ; LMUL4:       vector.ph:
 ; LMUL4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL4:       vector.body:
@@ -96,24 +81,13 @@ define void @load_store(ptr %p) {
 ; LMUL4-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; LMUL4-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL4:       middle.block:
-; LMUL4-NEXT:    br label [[FOR_END:%.*]]
-; LMUL4:       scalar.ph:
 ; LMUL4-NEXT:    br label [[FOR_BODY:%.*]]
-; LMUL4:       for.body:
-; LMUL4-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; LMUL4-NEXT:    [[Q:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[IV]]
-; LMUL4-NEXT:    [[V:%.*]] = load i64, ptr [[Q]], align 8
-; LMUL4-NEXT:    [[W:%.*]] = add i64 [[V]], 1
-; LMUL4-NEXT:    store i64 [[W]], ptr [[Q]], align 8
-; LMUL4-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; LMUL4-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; LMUL4-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; LMUL4:       for.end:
 ; LMUL4-NEXT:    ret void
 ;
 ; LMUL8-LABEL: @load_store(
 ; LMUL8-NEXT:  entry:
-; LMUL8-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; LMUL8-NEXT:    br label [[VECTOR_PH:%.*]]
 ; LMUL8:       vector.ph:
 ; LMUL8-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL8:       vector.body:
@@ -130,18 +104,7 @@ define void @load_store(ptr %p) {
 ; LMUL8-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; LMUL8-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL8:       middle.block:
-; LMUL8-NEXT:    br label [[FOR_END:%.*]]
-; LMUL8:       scalar.ph:
 ; LMUL8-NEXT:    br label [[FOR_BODY:%.*]]
-; LMUL8:       for.body:
-; LMUL8-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; LMUL8-NEXT:    [[Q:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[IV]]
-; LMUL8-NEXT:    [[V:%.*]] = load i64, ptr [[Q]], align 8
-; LMUL8-NEXT:    [[W:%.*]] = add i64 [[V]], 1
-; LMUL8-NEXT:    store i64 [[W]], ptr [[Q]], align 8
-; LMUL8-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; LMUL8-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; LMUL8-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; LMUL8:       for.end:
 ; LMUL8-NEXT:    ret void
 ;

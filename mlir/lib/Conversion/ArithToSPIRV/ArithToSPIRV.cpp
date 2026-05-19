@@ -170,11 +170,6 @@ getTypeConversionFailure(ConversionPatternRewriter &rewriter, Operation *op) {
   return getTypeConversionFailure(rewriter, op, op->getResultTypes().front());
 }
 
-// TODO: Move to some common place?
-static std::string getDecorationString(spirv::Decoration decor) {
-  return llvm::convertToSnakeFromCamelCase(stringifyDecoration(decor));
-}
-
 namespace {
 
 /// Converts elementwise unary, binary and ternary arith operations to SPIR-V
@@ -187,6 +182,11 @@ struct ElementwiseArithOpPattern final : OpConversionPattern<Op> {
   matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     assert(adaptor.getOperands().size() <= 3);
+    // Reject boolean types to allow specialized boolean patterns to handle
+    // them (e.g., addi/subi on i1 should use LogicalNotEqual, not IAdd/ISub).
+    if (!adaptor.getOperands().empty() &&
+        isBoolScalarOrVector(adaptor.getOperands().front().getType()))
+      return failure();
     auto converter = this->template getTypeConverter<SPIRVTypeConverter>();
     Type dstType = converter->convertType(op.getType());
     if (!dstType) {
@@ -232,7 +232,7 @@ struct ElementwiseArithOpPattern final : OpConversionPattern<Op> {
 /// Converts composite arith.constant operation to spirv.Constant.
 struct ConstantCompositeOpPattern final
     : public OpConversionPattern<arith::ConstantOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::ConstantOp constOp, OpAdaptor adaptor,
@@ -267,8 +267,7 @@ struct ConstantCompositeOpPattern final
 
       // Check that the buffer meets the requirements to get converted to a
       // DenseElementsAttr
-      bool detectedSplat = false;
-      if (!DenseElementsAttr::isValidRawBuffer(srcType, ptr, detectedSplat))
+      if (!DenseElementsAttr::isValidRawBuffer(srcType, ptr))
         return constOp->emitError("resource is not a valid buffer");
 
       dstElementsAttr =
@@ -357,7 +356,7 @@ struct ConstantCompositeOpPattern final
 /// Converts scalar arith.constant operation to spirv.Constant.
 struct ConstantScalarOpPattern final
     : public OpConversionPattern<arith::ConstantOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::ConstantOp constOp, OpAdaptor adaptor,
@@ -467,7 +466,7 @@ static Value emulateSignedRemainder(Location loc, Value lhs, Value rhs,
 /// This cannot be merged into the template unary/binary pattern due to Vulkan
 /// restrictions over spirv.SRem and spirv.SMod.
 struct RemSIOpGLPattern final : public OpConversionPattern<arith::RemSIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
@@ -483,7 +482,7 @@ struct RemSIOpGLPattern final : public OpConversionPattern<arith::RemSIOp> {
 
 /// Converts arith.remsi to OpenCL SPIR-V ops.
 struct RemSIOpCLPattern final : public OpConversionPattern<arith::RemSIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
@@ -534,7 +533,7 @@ struct BitwiseOpPattern final : public OpConversionPattern<Op> {
 
 /// Converts arith.xori to SPIR-V operations.
 struct XOrIOpLogicalPattern final : public OpConversionPattern<arith::XOrIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::XOrIOp op, OpAdaptor adaptor,
@@ -558,7 +557,7 @@ struct XOrIOpLogicalPattern final : public OpConversionPattern<arith::XOrIOp> {
 /// Converts arith.xori to SPIR-V operations if the type of source is i1 or
 /// vector of i1.
 struct XOrIOpBooleanPattern final : public OpConversionPattern<arith::XOrIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::XOrIOp op, OpAdaptor adaptor,
@@ -578,6 +577,98 @@ struct XOrIOpBooleanPattern final : public OpConversionPattern<arith::XOrIOp> {
   }
 };
 
+/// Converts an arith integer op to the given SPIR-V boolean op if the type is
+/// i1 or vector of i1. Each mapping follows from the boolean truth table of
+/// the operation:
+///   addi(a, b)  = a ^ b  (add mod 2 = XOR = LogicalNotEqual)
+///   subi(a, b)  = a ^ b  (sub mod 2 = XOR = LogicalNotEqual)
+///   muli(a, b)  = a & b  (1*1=1, else 0 = LogicalAnd)
+///   divui(a, b) = a & b  (a/1=a, a/0=UB; truth table matches AND)
+///   divsi(a, b) = a & b  (same as divui on i1)
+///   maxsi(a, b) = a & b  (signed i1: 1 represents -1, so max is 0 unless both
+///                        are 1)
+///   maxui(a, b) = a | b  (unsigned max on i1: 1 when either operand is 1)
+///   minsi(a, b) = a | b  (signed i1: -1 < 0, so min is 1 when either operand
+///                        is 1)
+///   minui(a, b) = a & b  (unsigned min on i1: 1 only when both operands are
+///                        1)
+template <typename ArithOp, typename SPIRVOp>
+struct BoolIOpPattern final : public OpConversionPattern<ArithOp> {
+  BoolIOpPattern(const TypeConverter &converter, MLIRContext *context)
+      // benefit=2: takes priority over the generic ElementwiseArithOpPattern
+      // (benefit=1) when the operand type is i1.
+      : OpConversionPattern<ArithOp>(converter, context, /*benefit=*/2) {}
+
+  LogicalResult
+  matchAndRewrite(ArithOp op, typename ArithOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!isBoolScalarOrVector(adaptor.getOperands().front().getType()))
+      return failure();
+
+    Type dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return getTypeConversionFailure(rewriter, op);
+
+    rewriter.replaceOpWithNewOp<SPIRVOp>(op, dstType, adaptor.getOperands());
+    return success();
+  }
+};
+
+/// Converts an arith binary op on i1 to spirv.LogicalAnd(lhs,
+/// spirv.LogicalNot(rhs)). This covers shift-left, shift-right-unsigned, and
+/// unsigned remainder on i1:
+///   shli(a, b)  = a & ~b  (shift left clears the bit when b=1)
+///   shrui(a, b) = a & ~b  (shift right unsigned clears the bit when b=1)
+///   remui(a, b) = a & ~b  (only defined when b=1; a%1=0, and ~b=~1=0, so AND
+///                         gives 0)
+///   remsi(a, b) = a & ~b  (only defined when b=1; a%1=0, and ~b=~1=0, so AND
+///                         gives 0)
+template <typename ArithOp>
+struct BoolIOpAndNotPattern final : public OpConversionPattern<ArithOp> {
+  BoolIOpAndNotPattern(const TypeConverter &converter, MLIRContext *context)
+      // benefit=2: takes priority over the generic ElementwiseArithOpPattern
+      // (benefit=1) when the operand type is i1.
+      : OpConversionPattern<ArithOp>(converter, context, /*benefit=*/2) {}
+
+  LogicalResult
+  matchAndRewrite(ArithOp op, typename ArithOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!isBoolScalarOrVector(adaptor.getOperands().front().getType()))
+      return failure();
+
+    Type dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return getTypeConversionFailure(rewriter, op);
+
+    Location loc = op.getLoc();
+    Value notRhs = spirv::LogicalNotOp::create(rewriter, loc, dstType,
+                                               adaptor.getOperands()[1]);
+    rewriter.replaceOpWithNewOp<spirv::LogicalAndOp>(
+        op, dstType, adaptor.getOperands()[0], notRhs);
+    return success();
+  }
+};
+
+/// Converts arith.shrsi on i1 to identity: arithmetic right shift of a 1-bit
+/// signed value always yields the original value (0 >> n = 0, -1 >> n = -1).
+struct ShRSIBoolPattern final : public OpConversionPattern<arith::ShRSIOp> {
+  ShRSIBoolPattern(const TypeConverter &converter, MLIRContext *context)
+      // benefit=2: takes priority over the generic spirv::ElementwiseOpPattern
+      // (benefit=1) when the operand type is i1.
+      : OpConversionPattern<arith::ShRSIOp>(converter, context,
+                                            /*benefit=*/2) {}
+
+  LogicalResult
+  matchAndRewrite(arith::ShRSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!isBoolScalarOrVector(adaptor.getOperands().front().getType()))
+      return failure();
+
+    rewriter.replaceOp(op, adaptor.getOperands().front());
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // UIToFPOp
 //===----------------------------------------------------------------------===//
@@ -585,7 +676,7 @@ struct XOrIOpBooleanPattern final : public OpConversionPattern<arith::XOrIOp> {
 /// Converts arith.uitofp to spirv.Select if the type of source is i1 or vector
 /// of i1.
 struct UIToFPI1Pattern final : public OpConversionPattern<arith::UIToFPOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::UIToFPOp op, OpAdaptor adaptor,
@@ -607,6 +698,64 @@ struct UIToFPI1Pattern final : public OpConversionPattern<arith::UIToFPOp> {
   }
 };
 
+/// Converts arith.uitofp/arith.sitofp to spirv.ConvertUToF/spirv.ConvertSToF.
+/// When the source integer type was widened during type conversion (e.g., i8
+/// emulated as i32), the upper bits of the widened value may contain garbage.
+/// This pattern cleans the upper bits before the conversion:
+/// - For unsigned (IsSigned=false): mask with BitwiseAnd.
+/// - For signed (IsSigned=true): sign-extend via ShiftLeftLogical +
+///   ShiftRightArithmetic.
+template <typename ArithOp, typename SPIRVOp, bool IsSigned>
+struct IntToFPPattern final : public OpConversionPattern<ArithOp> {
+  using OpConversionPattern<ArithOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ArithOp op, typename ArithOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcType = adaptor.getOperands().front().getType();
+    if (isBoolScalarOrVector(srcType))
+      return failure();
+
+    Type dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return getTypeConversionFailure(rewriter, op);
+
+    // Check if the source integer type was widened during type conversion.
+    unsigned originalBitwidth =
+        getElementTypeOrSelf(op.getIn().getType()).getIntOrFloatBitWidth();
+    unsigned convertedBitwidth =
+        getElementTypeOrSelf(srcType).getIntOrFloatBitWidth();
+
+    if (originalBitwidth >= convertedBitwidth) {
+      rewriter.replaceOpWithNewOp<SPIRVOp>(op, dstType, adaptor.getOperands());
+      return success();
+    }
+
+    // The source was widened. Clean the upper bits before converting.
+    Location loc = op.getLoc();
+    Value cleaned;
+    if constexpr (IsSigned) {
+      // Sign-extend by shifting left then arithmetic right.
+      unsigned shiftAmount = convertedBitwidth - originalBitwidth;
+      Value shiftSize =
+          getScalarOrVectorConstInt(srcType, shiftAmount, rewriter, loc);
+      Value shifted = spirv::ShiftLeftLogicalOp::create(
+          rewriter, loc, srcType, adaptor.getIn(), shiftSize);
+      cleaned = spirv::ShiftRightArithmeticOp::create(rewriter, loc, srcType,
+                                                      shifted, shiftSize);
+    } else {
+      // Zero-extend by masking off the upper bits.
+      Value mask = getScalarOrVectorConstInt(
+          srcType, llvm::maskTrailingOnes<uint64_t>(originalBitwidth), rewriter,
+          loc);
+      cleaned = spirv::BitwiseAndOp::create(rewriter, loc, srcType,
+                                            adaptor.getIn(), mask);
+    }
+    rewriter.replaceOpWithNewOp<SPIRVOp>(op, dstType, cleaned);
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // IndexCastOp
 //===----------------------------------------------------------------------===//
@@ -614,7 +763,7 @@ struct UIToFPI1Pattern final : public OpConversionPattern<arith::UIToFPOp> {
 /// Converts arith.index_cast to spirv.INotEqual if the target type is i1.
 struct IndexCastIndexI1Pattern final
     : public OpConversionPattern<arith::IndexCastOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::IndexCastOp op, OpAdaptor adaptor,
@@ -638,7 +787,7 @@ struct IndexCastIndexI1Pattern final
 /// Converts arith.index_cast to spirv.Select if the source type is i1.
 struct IndexCastI1IndexPattern final
     : public OpConversionPattern<arith::IndexCastOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::IndexCastOp op, OpAdaptor adaptor,
@@ -666,7 +815,7 @@ struct IndexCastI1IndexPattern final
 /// Converts arith.extsi to spirv.Select if the type of source is i1 or vector
 /// of i1.
 struct ExtSII1Pattern final : public OpConversionPattern<arith::ExtSIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::ExtSIOp op, OpAdaptor adaptor,
@@ -707,7 +856,7 @@ struct ExtSII1Pattern final : public OpConversionPattern<arith::ExtSIOp> {
 /// Converts arith.extsi to spirv.Select if the type of source is neither i1 nor
 /// vector of i1.
 struct ExtSIPattern final : public OpConversionPattern<arith::ExtSIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::ExtSIOp op, OpAdaptor adaptor,
@@ -731,6 +880,8 @@ struct ExtSIPattern final : public OpConversionPattern<arith::ExtSIOp> {
       assert(srcBW < dstBW);
       Value shiftSize = getScalarOrVectorConstInt(dstType, dstBW - srcBW,
                                                   rewriter, op.getLoc());
+      if (!shiftSize)
+        return rewriter.notifyMatchFailure(op, "unsupported type for shift");
 
       // First shift left to sequeeze out all leading bits beyond the original
       // bitwidth. Here we need to use the original source and result type's
@@ -758,7 +909,7 @@ struct ExtSIPattern final : public OpConversionPattern<arith::ExtSIOp> {
 /// Converts arith.extui to spirv.Select if the type of source is i1 or vector
 /// of i1.
 struct ExtUII1Pattern final : public OpConversionPattern<arith::ExtUIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::ExtUIOp op, OpAdaptor adaptor,
@@ -783,7 +934,7 @@ struct ExtUII1Pattern final : public OpConversionPattern<arith::ExtUIOp> {
 /// Converts arith.extui for cases where the type of source is neither i1 nor
 /// vector of i1.
 struct ExtUIPattern final : public OpConversionPattern<arith::ExtUIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::ExtUIOp op, OpAdaptor adaptor,
@@ -806,6 +957,8 @@ struct ExtUIPattern final : public OpConversionPattern<arith::ExtUIOp> {
       Value mask = getScalarOrVectorConstInt(
           dstType, llvm::maskTrailingOnes<uint64_t>(bitwidth), rewriter,
           op.getLoc());
+      if (!mask)
+        return rewriter.notifyMatchFailure(op, "unsupported type for mask");
       rewriter.replaceOpWithNewOp<spirv::BitwiseAndOp>(op, dstType,
                                                        adaptor.getIn(), mask);
     } else {
@@ -823,7 +976,7 @@ struct ExtUIPattern final : public OpConversionPattern<arith::ExtUIOp> {
 /// Converts arith.trunci to spirv.Select if the type of result is i1 or vector
 /// of i1.
 struct TruncII1Pattern final : public OpConversionPattern<arith::TruncIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::TruncIOp op, OpAdaptor adaptor,
@@ -853,7 +1006,7 @@ struct TruncII1Pattern final : public OpConversionPattern<arith::TruncIOp> {
 /// Converts arith.trunci for cases where the type of result is neither i1
 /// nor vector of i1.
 struct TruncIPattern final : public OpConversionPattern<arith::TruncIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::TruncIOp op, OpAdaptor adaptor,
@@ -874,6 +1027,8 @@ struct TruncIPattern final : public OpConversionPattern<arith::TruncIOp> {
       unsigned bw = getElementTypeOrSelf(op.getType()).getIntOrFloatBitWidth();
       Value mask = getScalarOrVectorConstInt(
           dstType, llvm::maskTrailingOnes<uint64_t>(bw), rewriter, op.getLoc());
+      if (!mask)
+        return rewriter.notifyMatchFailure(op, "unsupported type for mask");
       rewriter.replaceOpWithNewOp<spirv::BitwiseAndOp>(op, dstType,
                                                        adaptor.getIn(), mask);
     } else {
@@ -963,7 +1118,7 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
 /// Converts integer compare operation on i1 type operands to SPIR-V ops.
 class CmpIOpBooleanPattern final : public OpConversionPattern<arith::CmpIOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
@@ -1014,7 +1169,7 @@ public:
 /// Converts integer compare operation to SPIR-V ops.
 class CmpIOpPattern final : public OpConversionPattern<arith::CmpIOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
@@ -1063,7 +1218,7 @@ public:
 /// Converts floating-point comparison operations to SPIR-V ops.
 class CmpFOpPattern final : public OpConversionPattern<arith::CmpFOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
@@ -1103,7 +1258,7 @@ public:
 /// Kernel capability.
 class CmpFOpNanKernelPattern final : public OpConversionPattern<arith::CmpFOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
@@ -1128,7 +1283,7 @@ public:
 /// require additional capability.
 class CmpFOpNanNonePattern final : public OpConversionPattern<arith::CmpFOp> {
 public:
-  using OpConversionPattern<arith::CmpFOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
@@ -1163,32 +1318,34 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// AddUIExtendedOp
+// AddUIExtendedOp/SubUIExtendedOp
 //===----------------------------------------------------------------------===//
 
-/// Converts arith.addui_extended to spirv.IAddCarry.
-class AddUIExtendedOpPattern final
-    : public OpConversionPattern<arith::AddUIExtendedOp> {
+/// Converts arith.addui_extended/arith.subui_extended to spirv.IAddCarry/
+/// spirv.ISubBorrow.
+template <typename ArithExtendedOp, typename SPIRVExtendedOp>
+class BinaryExtendedOpPattern final
+    : public OpConversionPattern<ArithExtendedOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using OpConversionPattern<ArithExtendedOp>::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(arith::AddUIExtendedOp op, OpAdaptor adaptor,
+  matchAndRewrite(ArithExtendedOp op, typename ArithExtendedOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type dstElemTy = adaptor.getLhs().getType();
     Location loc = op->getLoc();
-    Value result = spirv::IAddCarryOp::create(rewriter, loc, adaptor.getLhs(),
-                                              adaptor.getRhs());
+    Value result = SPIRVExtendedOp::create(rewriter, loc, adaptor.getLhs(),
+                                           adaptor.getRhs());
 
-    Value sumResult = spirv::CompositeExtractOp::create(rewriter, loc, result,
-                                                        llvm::ArrayRef(0));
-    Value carryValue = spirv::CompositeExtractOp::create(rewriter, loc, result,
-                                                         llvm::ArrayRef(1));
+    Value valueResult = spirv::CompositeExtractOp::create(rewriter, loc, result,
+                                                          llvm::ArrayRef(0));
+    Value flagValue = spirv::CompositeExtractOp::create(rewriter, loc, result,
+                                                        llvm::ArrayRef(1));
 
-    // Convert the carry value to boolean.
+    // Convert the carry/borrow value to boolean.
     Value one = spirv::ConstantOp::getOne(dstElemTy, loc, rewriter);
-    Value carryResult = spirv::IEqualOp::create(rewriter, loc, carryValue, one);
+    Value flagResult = spirv::IEqualOp::create(rewriter, loc, flagValue, one);
 
-    rewriter.replaceOp(op, {sumResult, carryResult});
+    rewriter.replaceOp(op, {valueResult, flagResult});
     return success();
   }
 };
@@ -1226,7 +1383,7 @@ public:
 /// Converts arith.select to spirv.Select.
 class SelectOpPattern final : public OpConversionPattern<arith::SelectOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(arith::SelectOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1352,18 +1509,28 @@ void mlir::arith::populateArithToSPIRVPatterns(
   patterns.add<
     ConstantCompositeOpPattern,
     ConstantScalarOpPattern,
+    BoolIOpPattern<arith::AddIOp, spirv::LogicalNotEqualOp>, // add mod 2 = XOR = not-equal
     ElementwiseArithOpPattern<arith::AddIOp, spirv::IAddOp>,
+    BoolIOpPattern<arith::SubIOp, spirv::LogicalNotEqualOp>, // sub mod 2 = XOR = not-equal
     ElementwiseArithOpPattern<arith::SubIOp, spirv::ISubOp>,
+    BoolIOpPattern<arith::MulIOp, spirv::LogicalAndOp>,      // 1*1=1, else 0 = AND
     ElementwiseArithOpPattern<arith::MulIOp, spirv::IMulOp>,
+    BoolIOpPattern<arith::DivUIOp, spirv::LogicalAndOp>,     // a/1=a, a/0=UB; truth table = AND
     spirv::ElementwiseOpPattern<arith::DivUIOp, spirv::UDivOp>,
+    BoolIOpPattern<arith::DivSIOp, spirv::LogicalAndOp>,     // same as divui on i1
     spirv::ElementwiseOpPattern<arith::DivSIOp, spirv::SDivOp>,
+    BoolIOpAndNotPattern<arith::RemUIOp>,  // remui(a,b) = a & ~b (see pattern comment)
     spirv::ElementwiseOpPattern<arith::RemUIOp, spirv::UModOp>,
+    BoolIOpAndNotPattern<arith::RemSIOp>,  // remsi(a,b) = a & ~b (see pattern comment)
     RemSIOpGLPattern, RemSIOpCLPattern,
     BitwiseOpPattern<arith::AndIOp, spirv::LogicalAndOp, spirv::BitwiseAndOp>,
     BitwiseOpPattern<arith::OrIOp, spirv::LogicalOrOp, spirv::BitwiseOrOp>,
     XOrIOpLogicalPattern, XOrIOpBooleanPattern,
+    BoolIOpAndNotPattern<arith::ShLIOp>,   // shli(a,b)  = a & ~b (see pattern comment)
     ElementwiseArithOpPattern<arith::ShLIOp, spirv::ShiftLeftLogicalOp>,
+    BoolIOpAndNotPattern<arith::ShRUIOp>,  // shrui(a,b) = a & ~b (see pattern comment)
     spirv::ElementwiseOpPattern<arith::ShRUIOp, spirv::ShiftRightLogicalOp>,
+    ShRSIBoolPattern,                      // shrsi(a,b) = a (identity; see pattern comment)
     spirv::ElementwiseOpPattern<arith::ShRSIOp, spirv::ShiftRightArithmeticOp>,
     spirv::ElementwiseOpPattern<arith::NegFOp, spirv::FNegateOp>,
     spirv::ElementwiseOpPattern<arith::AddFOp, spirv::FAddOp>,
@@ -1376,8 +1543,9 @@ void mlir::arith::populateArithToSPIRVPatterns(
     TypeCastingOpPattern<arith::ExtFOp, spirv::FConvertOp>,
     TruncIPattern, TruncII1Pattern,
     TypeCastingOpPattern<arith::TruncFOp, spirv::FConvertOp>,
-    TypeCastingOpPattern<arith::UIToFPOp, spirv::ConvertUToFOp>, UIToFPI1Pattern,
-    TypeCastingOpPattern<arith::SIToFPOp, spirv::ConvertSToFOp>,
+    IntToFPPattern<arith::UIToFPOp, spirv::ConvertUToFOp, false>,
+    UIToFPI1Pattern,
+    IntToFPPattern<arith::SIToFPOp, spirv::ConvertSToFOp, true>,
     TypeCastingOpPattern<arith::FPToUIOp, spirv::ConvertFToUOp>,
     TypeCastingOpPattern<arith::FPToSIOp, spirv::ConvertFToSOp>,
     TypeCastingOpPattern<arith::IndexCastOp, spirv::SConvertOp>,
@@ -1386,7 +1554,8 @@ void mlir::arith::populateArithToSPIRVPatterns(
     TypeCastingOpPattern<arith::BitcastOp, spirv::BitcastOp>,
     CmpIOpBooleanPattern, CmpIOpPattern,
     CmpFOpNanNonePattern, CmpFOpPattern,
-    AddUIExtendedOpPattern,
+    BinaryExtendedOpPattern<arith::AddUIExtendedOp, spirv::IAddCarryOp>,
+    BinaryExtendedOpPattern<arith::SubUIExtendedOp, spirv::ISubBorrowOp>,
     MulIExtendedOpPattern<arith::MulSIExtendedOp, spirv::SMulExtendedOp>,
     MulIExtendedOpPattern<arith::MulUIExtendedOp, spirv::UMulExtendedOp>,
     SelectOpPattern,
@@ -1395,6 +1564,10 @@ void mlir::arith::populateArithToSPIRVPatterns(
     MinimumMaximumFOpPattern<arith::MinimumFOp, spirv::GLFMinOp>,
     MinNumMaxNumFOpPattern<arith::MaxNumFOp, spirv::GLFMaxOp>,
     MinNumMaxNumFOpPattern<arith::MinNumFOp, spirv::GLFMinOp>,
+    BoolIOpPattern<arith::MaxSIOp, spirv::LogicalAndOp>, // signed i1: 1=-1, so max=0 unless both are 1
+    BoolIOpPattern<arith::MaxUIOp, spirv::LogicalOrOp>,  // unsigned max on i1: 1 when either is 1
+    BoolIOpPattern<arith::MinSIOp, spirv::LogicalOrOp>,  // signed i1: -1<0, so min=1 when either is 1
+    BoolIOpPattern<arith::MinUIOp, spirv::LogicalAndOp>, // unsigned min on i1: 1 only when both are 1
     spirv::ElementwiseOpPattern<arith::MaxSIOp, spirv::GLSMaxOp>,
     spirv::ElementwiseOpPattern<arith::MaxUIOp, spirv::GLUMaxOp>,
     spirv::ElementwiseOpPattern<arith::MinSIOp, spirv::GLSMinOp>,

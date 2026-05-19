@@ -116,6 +116,13 @@ LLVM_ABI void adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond,
                                           const SimplifyQuery &Q,
                                           unsigned Depth = 0);
 
+/// Adjust \p Known for the given select \p Arm to include information from the
+/// select \p Cond.
+LLVM_ABI void adjustKnownFPClassForSelectArm(KnownFPClass &Known, Value *Cond,
+                                             Value *Arm, bool Invert,
+                                             const SimplifyQuery &Q,
+                                             unsigned Depth = 0);
+
 /// Return true if LHS and RHS have no common bits set.
 LLVM_ABI bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
                                   const WithCache<const Value *> &RHSCache,
@@ -231,6 +238,10 @@ LLVM_ABI Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
 LLVM_ABI bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
                              bool &TrueIfSigned);
 
+LLVM_ABI KnownFPClass analyzeKnownFPClassFromSelect(
+    const Instruction *I, const KnownFPClass &KnownLHS,
+    const KnownFPClass &KnownRHS, const SimplifyQuery &SQ, unsigned Depth = 0);
+
 /// Determine which floating-point classes are valid for \p V, and return them
 /// in KnownFPClass bit sets.
 ///
@@ -317,6 +328,11 @@ LLVM_ABI bool canIgnoreSignBitOfZero(const Use &U);
 /// Return true if the sign bit of the FP value can be ignored by the user when
 /// the value is NaN.
 LLVM_ABI bool canIgnoreSignBitOfNaN(const Use &U);
+
+/// Return true if the floating-point value \p V is known to be an integer
+/// value.
+LLVM_ABI bool isKnownIntegral(const Value *V, const SimplifyQuery &SQ,
+                              FastMathFlags FMF);
 
 /// If the specified value can be set by repeating the same byte in memory,
 /// return the i8 value that it is represented with. This is true for all i8
@@ -407,25 +423,29 @@ LLVM_ABI uint64_t GetStringLength(const Value *V, unsigned CharSize = 8);
 
 /// This function returns call pointer argument that is considered the same by
 /// aliasing rules. You CAN'T use it to replace one value with another. If
-/// \p MustPreserveNullness is true, the call must preserve the nullness of
-/// the pointer.
+/// \p MustPreserveOffset is true, the call must preserve the byte offset of
+/// the pointer within its underlying object. Offset preservation implies
+/// nullness preservation; pass true when callers reason about either offset or
+/// null equality (e.g. GEP decomposition, dereferenceability, isKnownNonZero).
 LLVM_ABI const Value *
 getArgumentAliasingToReturnedPointer(const CallBase *Call,
-                                     bool MustPreserveNullness);
+                                     bool MustPreserveOffset);
 inline Value *getArgumentAliasingToReturnedPointer(CallBase *Call,
-                                                   bool MustPreserveNullness) {
+                                                   bool MustPreserveOffset) {
   return const_cast<Value *>(getArgumentAliasingToReturnedPointer(
-      const_cast<const CallBase *>(Call), MustPreserveNullness));
+      const_cast<const CallBase *>(Call), MustPreserveOffset));
 }
 
 /// {launder,strip}.invariant.group returns pointer that aliases its argument,
 /// and it only captures pointer by returning it.
 /// These intrinsics are not marked as nocapture, because returning is
 /// considered as capture. The arguments are not marked as returned neither,
-/// because it would make it useless. If \p MustPreserveNullness is true,
-/// the intrinsic must preserve the nullness of the pointer.
+/// because it would make it useless. If \p MustPreserveOffset is true, the
+/// intrinsic must preserve the byte offset of the pointer within its
+/// underlying object (which excludes `llvm.ptrmask`, since masking off low
+/// bits changes the byte offset while still aliasing the same object).
 LLVM_ABI bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-    const CallBase *Call, bool MustPreserveNullness);
+    const CallBase *Call, bool MustPreserveOffset);
 
 /// This method strips off any GEP address adjustments, pointer casts
 /// or `llvm.threadlocal.address` from the specified value \p V, returning the
@@ -613,6 +633,17 @@ LLVM_ABI bool isValidAssumeForContext(const Instruction *I,
                                       const DominatorTree *DT = nullptr,
                                       bool AllowEphemerals = false);
 
+inline bool isValidAssumeForContext(const Instruction *I,
+                                    const SimplifyQuery &Q) {
+  return isValidAssumeForContext(I, Q.CxtI, Q.DT, Q.AllowEphemerals);
+}
+
+/// Returns true, if no instruction between \p Assume and \p CtxI may free
+/// memory and the function is marked as NoSync. The latter ensures the current
+/// function cannot arrange for another thread to free on its behalf.
+LLVM_ABI bool willNotFreeBetween(const Instruction *Assume,
+                                 const Instruction *CtxI);
+
 enum class OverflowResult {
   /// Always overflows in the direction of signed/unsigned min value.
   AlwaysOverflowsLow,
@@ -660,10 +691,7 @@ LLVM_ABI ConstantRange getVScaleRange(const Function *F, unsigned BitWidth);
 /// Determine the possible constant range of an integer or vector of integer
 /// value. This is intended as a cheap, non-recursive check.
 LLVM_ABI ConstantRange computeConstantRange(const Value *V, bool ForSigned,
-                                            bool UseInstrInfo = true,
-                                            AssumptionCache *AC = nullptr,
-                                            const Instruction *CtxI = nullptr,
-                                            const DominatorTree *DT = nullptr,
+                                            const SimplifyQuery &SQ,
                                             unsigned Depth = 0);
 
 /// Combine constant ranges from computeConstantRange() and computeKnownBits().
@@ -979,6 +1007,24 @@ LLVM_ABI bool matchSimpleBinaryIntrinsicRecurrence(const IntrinsicInst *I,
                                                    PHINode *&P, Value *&Init,
                                                    Value *&OtherOp);
 
+/// Attempt to match a simple value-accumulating recurrence of the form:
+///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]
+///   %llvm.intrinsic = call Ty @llvm.intrinsic(%OtherOp0, %OtherOp1,
+///   %llvm.intrinsic.acc)
+/// OR
+///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]
+///   %llvm.intrinsic = call Ty @llvm.intrinsic(%llvm.intrinsic.acc, %OtherOp0,
+///   %OtherOp1)
+///
+/// The recurrence relation is of kind:
+///   X_0 = %a (initial value),
+///   X_i = call @llvm.ternary.intrinsic(X_i-1, %b, %c)
+/// Where %b, %c are not required to be loop-invariant.
+LLVM_ABI bool matchSimpleTernaryIntrinsicRecurrence(const IntrinsicInst *I,
+                                                    PHINode *&P, Value *&Init,
+                                                    Value *&OtherOp0,
+                                                    Value *&OtherOp1);
+
 /// Return true if RHS is known to be implied true by LHS.  Return false if
 /// RHS is known to be implied false by LHS.  Otherwise, return std::nullopt if
 /// no implication can be made. A & B must be i1 (boolean) values or a vector of
@@ -1017,6 +1063,16 @@ findValuesAffectedByCondition(Value *Cond, bool IsAssume,
 /// where f(X) == 0 if and only if X == 0, otherwise returns nullptr.
 LLVM_ABI Value *stripNullTest(Value *V);
 LLVM_ABI const Value *stripNullTest(const Value *V);
+
+/// Enumerates all possible immediate values of V and inserts them into the set
+/// \p Constants. If \p AllowUndefOrPoison is false, it fails when V may contain
+/// undef/poison elements. Returns true if the result is complete. Otherwise,
+/// the result is incomplete (more than MaxCount values).
+/// NOTE: The constant values are not distinct.
+LLVM_ABI bool
+collectPossibleValues(const Value *V,
+                      SmallPtrSetImpl<const Constant *> &Constants,
+                      unsigned MaxCount, bool AllowUndefOrPoison = true);
 
 } // end namespace llvm
 

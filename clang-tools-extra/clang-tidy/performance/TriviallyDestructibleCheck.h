@@ -22,7 +22,7 @@ namespace clang::tidy::performance {
 /// A::~A() = default;
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance/trivially-destructible.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/performance/trivially-destructible.html
 class TriviallyDestructibleCheck : public ClangTidyCheck {
 public:
   TriviallyDestructibleCheck(StringRef Name, ClangTidyContext *Context)

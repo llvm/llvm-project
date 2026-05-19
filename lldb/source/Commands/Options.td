@@ -71,13 +71,16 @@ let Command = "settings clear" in {
 let Command = "settings show" in {
   def setshow_defaults : Option<"defaults", "d">,
                          Desc<"Include ${d}efault values if defined.">;
+  def setshow_changed : Option<"changed", "c">,
+                        Desc<"Only show settings whose value differs from the "
+                             "default.">;
 }
 
 let Command = "breakpoint list" in {
   // FIXME: We need to add an "internal" command, and then add this sort of
   // thing to it. But I need to see it for now, and don't want to wait.
   def blist_internal : Option<"internal", "i">,
-                       Desc<"Show debugger ${i}nternal breakpoints">;
+                       Desc<"Show debugger ${i}nternal breakpoints.">;
   def blist_brief : Option<"brief", "b">,
                     Group<1>,
                     Desc<"Give a ${b}rief description of the breakpoint (no "
@@ -171,6 +174,14 @@ let Command = "breakpoint dummy" in {
         Group<1>,
         Desc<"Act on ${D}ummy breakpoints - i.e. breakpoints set before a file "
              "is provided, which prime new targets.">;
+}
+
+let Command = "breakpoint names" in {
+  def breakpoint_name_option_names :
+    Option<"breakpoint-name", "N">, Group<1>,
+    Arg<"BreakpointName">,
+    Desc<"Adds this name to the list of names for this breakpoint.  "
+    "Can be specified more than once.">;
 }
 
 let Command = "breakpoint set" in {
@@ -355,6 +366,128 @@ let Command = "breakpoint set" in {
     "exception Object of this type is thrown.  Can be repeated multiple times "
     "to stop for multiple object types">;
    */
+}
+
+let Command = "breakpoint add address" in {
+  def breakpoint_add_address_shlib : Option<"shlib", "s">, Arg<"ShlibName">,
+    Completion<"Module">,
+    Desc<"Set the breakpoint at an address relative to sections in this shared"
+    " library.">;
+  def breakpoint_add_address_hardware : Option<"hardware", "H">,
+    Desc<"Require the breakpoint to use hardware breakpoints.">;
+}
+
+let Command = "breakpoint add exception" in {
+  def breakpoint_add_exception_hardware : Option<"hardware", "H">,
+    Desc<"Require the breakpoint to use hardware breakpoints.">;
+  def breakpoint_add_exception_typename : Option<"exception-typename", "O">,
+    Arg<"TypeName">, Desc<"The breakpoint will only stop if an "
+    "exception Object of this type is thrown.  Can be repeated multiple times "
+    "to stop for multiple object types">;
+  def breakpoint_add_exception_stage : Option<"exception-stage", "E">,
+    Arg<"ExceptionStage">,
+    Desc<"Stop only at the specified exception stage.  Can be specified more "
+         "than once to create a mask of stages.">;
+}
+
+let Command = "breakpoint add file" in {
+  def breakpoint_add_file_hardware : Option<"hardware", "H">,
+    Desc<"Require the breakpoint to use hardware breakpoints.">;
+  def breakpoint_add_file_line : Option<"line", "l">, Group<2>, Arg<"LineNum">,
+    Required,
+    Desc<"Specifies the line number on which to set this breakpoint.">;
+  def breakpoint_add_file_filename : Option<"filename", "f">, Group<2>,
+    Arg<"Filename">, Completion<"SourceFile">, Desc<"The file in which to seek "
+    "the specified source line.">;
+  def breakpoint_add_file_column : Option<"column", "u">, Arg<"ColumnNum">, Group<2>,
+    Desc<"Specifies the column number on which to set this breakpoint.">;
+  def breakpoint_add_file_shlib : Option<"shlib", "s">, Arg<"ShlibName">,
+    Completion<"Module">,
+    Desc<"Set the breakpoint only in this shared library.  Can repeat this "
+    "option multiple times to specify multiple shared libraries.">;
+  def breakpoint_add_file_move_to_nearest_code : Option<"move-to-nearest-code", "m">,
+    Arg<"Boolean">,
+    Desc<"Move breakpoints to nearest code. If not set the "
+    "target.move-to-nearest-code setting is used.">;
+  def breakpoint_add_file_address_slide : Option<"address-slide", "S">,
+    Arg<"Offset">,
+    Desc<"Add the specified offset to whatever address(es) the breakpoint "
+    "resolves to. At present this applies the offset directly as given, and "
+    "doesn't try to align it to instruction boundaries.">;
+  def breakpoint_add_file_skip_prologue : Option<"skip-prologue", "K">,
+    Arg<"Boolean">,
+    Desc<"Skip the prologue if the breakpoint is at the beginning of a "
+    "function. If not set the target.skip-prologue setting is used.">;
+}
+
+let Command = "breakpoint add name" in {
+  def breakpoint_add_name_hardware : Option<"hardware", "H">,
+    Desc<"Require the breakpoint to use hardware breakpoints.">;
+  def breakpoint_add_name_address_slide : Option<"address-slide", "S">,
+    Arg<"Offset">,
+    Desc<"Add the specified offset to whatever address(es) the breakpoint "
+    "resolves to. At present this applies the offset directly as given, and "
+    "doesn't try to align it to instruction boundaries.">;
+  def breakpoint_add_name_shlib : Option<"shlib", "s">, Arg<"ShlibName">,
+    Completion<"Module">,
+    Desc<"Search for names only in this shared library.  Can repeat this "
+    "option multiple times to specify multiple shared libraries.">;
+  def breakpoint_add_name_filename : Option<"filename", "f">,
+    Arg<"Filename">, Completion<"SourceFile">, Desc<"Only search for functions "
+    "defined in the given source file.  Can be specified more than once.">;
+  def breakpoint_add_name_skip_prologue : Option<"skip-prologue", "K">,
+    Arg<"Boolean">,
+    Desc<"Skip the prologue if the breakpoint is at the beginning of a "
+    "function. If not set the target.skip-prologue setting is used.">;
+  def breakpoint_add_name_match_style : Option<"match-style", "m">,
+    Arg<"NameMatchStyle">, 
+    Desc<"The style of matching to do when looking for candidate symbols - "
+    "auto if not specified.">;
+  def breakpoint_add_name_language : Option<"name-language", "L">,
+    Arg<"Language">,
+    Desc<"Only consider indentifiers from the given language when looking for "
+    "match candidates.">;
+}
+
+let Command = "breakpoint add pattern" in {
+  def breakpoint_add_pattern_hardware : Option<"hardware", "H">,
+    Desc<"Require the breakpoint to use hardware breakpoints.">;
+  def breakpoint_add_pattern_move_to_nearest_code : Option<"move-to-nearest-code", "m">,
+    Arg<"Boolean">,
+    Desc<"Move breakpoints to nearest code. If not set the "
+    "target.move-to-nearest-code setting is used.">;
+  def breakpoint_add_pattern_shlib : Option<"shlib", "s">, Arg<"ShlibName">,
+    Completion<"Module">,
+    Desc<"Search for pattern matches only in this shared library.  Can repeat this "
+    "option multiple times to specify multiple shared libraries.">;
+  def breakpoint_add_pattern_filename : Option<"filename", "f">, Group<1>,
+    Arg<"Filename">, Completion<"SourceFile">, Desc<"Limit the pattern search "
+    "to the specified source file.  Can be specified more than once.">;
+  def breakpoint_add_pattern_name : Option<"name", "n">, Arg<"FunctionName">,
+    Completion<"Symbol">, Group<1>,
+    Desc<"Search for pattern matches only in functions matching the specified "
+    "function name using the 'auto' match style.  Can be specified more than "
+    "once, and composes with the filename option.">;
+  def breakpoint_add_pattern_all_files : Option<"all-files", "a">, Group<2>,
+    Desc<"All files are searched for source pattern matches, limited by the "
+    "shlib argument.">;
+}
+
+let Command = "breakpoint add scripted" in {
+  def breakpoint_add_scripted_hardware : Option<"hardware", "H">,
+    Desc<"Require the breakpoint to use hardware breakpoints.">;
+  def breakpoint_add_scripted_filename : Option<"filename", "f">,
+    Arg<"Filename">, Completion<"SourceFile">, Desc<"The files in which to apply "
+    "the scripted resolver callback.  Can repeat the option multiple times.">;
+  def breakpoint_add_scripted_shlib : Option<"shlib", "s">, Arg<"ShlibName">,
+    Completion<"Module">,
+    Desc<"The module in which to apply the scripted resolver callback.  Can "
+    "repeat this option multiple times to specify multiple shared libraries.">;
+}
+
+let Command = "breakpoint override add" in {
+  def breakpoint_override_add_description : Option<"description", "d">,
+    Desc<"Description string for this override resolver">, Arg<"HelpText">;
 }
 
 let Command = "breakpoint clear" in {
@@ -652,6 +785,13 @@ let Command = "expression" in {
         Desc<"Persist expression result in a variable for subsequent use. "
              "Expression results will be labeled with $-prefixed variables, "
              "e.g. $0, $1, etc.">;
+  def ignore_context_qualifiers
+      : Option<"c++-ignore-context-qualifiers", "Q">,
+        Groups<[1, 2]>,
+        Desc<"When specified, evaluates the expression without taking into "
+             "account the type ${Q}ualifiers of the scope. In C++, this would "
+             "permit calling a non-const method when stopped in a const-method "
+             "(which would be disallowed by language rules).">;
 }
 
 let Command = "frame diag" in {
@@ -734,7 +874,8 @@ let Command = "log enable" in {
   def log_file : Option<"file", "f">,
                  Group<1>,
                  Arg<"Filename">,
-                 Desc<"Set the destination file to log to.">;
+                 Desc<"Set the destination file that all the enabled "
+                      "categories in the specified log channel will log to.">;
   def log_handler : Option<"log-handler", "h">,
                     Group<1>,
                     EnumArg<"LogHandler">,
@@ -793,7 +934,7 @@ let Command = "memory read" in {
       : Option<"binary", "b">,
         Group<2>,
         Desc<"If true, memory will be saved as binary. If false, the memory is "
-             "saved save as an ASCII dump that uses the format, size, count "
+             "saved as an ASCII dump that uses the format, size, count "
              "and number per line settings.">;
   def memory_read_type : Option<"type", "t">,
                          Groups<[3, 4]>,
@@ -1100,6 +1241,23 @@ let Command = "platform shell" in {
 let Command = "plugin list" in {
   def plugin_list_json : Option<"json", "j">,
                          Desc<"Output the plugin list in json format.">;
+  def plugin_list_domain : Option<"domain", "d">,
+                           EnumArg<"PluginDomain">,
+                           Desc<"The ${d}omain to list plugins for. Defaults to 'global'.">;
+}
+
+let Command = "plugin enable" in {
+  def plugin_enable_domain : Option<"domain", "d">,
+                             EnumArg<"PluginDomain">,
+                             Desc<"The ${d}omain in which to enable the "
+                                  "matching plugins. Defaults to 'global'.">;
+}
+
+let Command = "plugin disable" in {
+  def plugin_disable_domain : Option<"domain", "d">,
+                              EnumArg<"PluginDomain">,
+                              Desc<"The ${d}omain in which to disable the "
+                                   "matching plugins. Defaults to 'global'.">;
 }
 
 let Command = "process launch" in {
@@ -1173,6 +1331,11 @@ let Command = "process launch" in {
         Arg<"Boolean">,
         Desc<"Set whether to shell expand arguments to the process when "
              "launching.">;
+  def process_launch_memory_tagging
+      : Option<"memory-tagging", "M">,
+        Desc<"Set whether to explicitly enable memory tagging when launching "
+             "the process.  Requires hardware support.  "
+             "(Only supported on Darwin.)">;
 }
 
 let Command = "process attach" in {
@@ -1681,7 +1844,7 @@ let Command = "target modules lookup" in {
                                        "match, if a best match is available.">;
 }
 
-let Command = "target stop hook add" in {
+let Command = "target stop_hook add" in {
   def target_stop_hook_add_one_liner
       : Option<"one-liner", "o">,
         GroupRange<1, 3>,
@@ -1757,6 +1920,109 @@ let Command = "target stop hook add" in {
              "Defaults to true.">;
 }
 
+let Command = "target stop_hook list" in {
+  def target_stop_hook_list_internal
+      : Option<"internal", "i">,
+        Desc<"Show debugger ${i}nternal stop hooks.">;
+}
+
+let Command = "target hook add" in {
+  // Command-based options (Group 1 only -- mutually exclusive with -P).
+  def target_hook_add_one_liner
+      : Option<"one-liner", "o">,
+        Group<1>,
+        Arg<"OneLiner">,
+        Desc<"Add a command for the hook. Can be specified more than "
+             "once, and commands will be run in the order they appear.">;
+  def target_hook_add_on_load
+      : Option<"on-load", "L">,
+        Group<1>,
+        Desc<"Fire the hook when modules are ${L}oaded.">;
+  def target_hook_add_on_unload
+      : Option<"on-unload", "u">,
+        Group<1>,
+        Desc<"Fire the hook when modules are ${u}nloaded.">;
+  def target_hook_add_on_stop
+      : Option<"on-stop", "S">,
+        Group<1>,
+        Desc<"Fire the hook when the process ${S}tops.">;
+  // Shared options (both command-based and Python class hooks).
+  def target_hook_add_shlib
+      : Option<"shlib", "s">,
+        Arg<"ShlibName">,
+        Completion<"Module">,
+        Desc<"Set the module within which the stop handler is to be run.">;
+  def target_hook_add_thread_index
+      : Option<"thread-index", "x">,
+        Arg<"ThreadIndex">,
+        Desc<"The stop handler is run only for the thread whose inde${x} "
+             "matches this argument.">;
+  def target_hook_add_thread_id
+      : Option<"thread-id", "t">,
+        Arg<"ThreadID">,
+        Desc<"The stop handler is run only for the ${t}hread whose TID "
+             "matches this argument.">;
+  def target_hook_add_thread_name
+      : Option<"thread-name", "T">,
+        Arg<"ThreadName">,
+        Desc<"The stop handler is run only for the ${T}hread whose thread "
+             "name matches this argument.">;
+  def target_hook_add_queue_name
+      : Option<"queue-name", "q">,
+        Arg<"QueueName">,
+        Desc<"The stop handler is run only for threads in the ${q}ueue whose "
+             "name is given by this argument.">;
+  def target_hook_add_file
+      : Option<"file", "f">,
+        Arg<"Filename">,
+        Desc<"Specify the source ${f}ile within which the stop handler is "
+             "to be run.">,
+        Completion<"SourceFile">;
+  def target_hook_add_start_line
+      : Option<"start-line", "l">,
+        Arg<"LineNum">,
+        Desc<"Set the start of the ${l}ine range for which the stop handler "
+             "is to be run.">;
+  def target_hook_add_end_line
+      : Option<"end-line", "e">,
+        Arg<"LineNum">,
+        Desc<"Set the ${e}nd of the line range for which the stop handler "
+             "is to be run.">;
+  def target_hook_add_classname
+      : Option<"classname", "c">,
+        Arg<"ClassName">,
+        Desc<"Specify the ${c}lass within which the stop handler is to "
+             "be run.">;
+  def target_hook_add_name
+      : Option<"name", "n">,
+        Arg<"FunctionName">,
+        Desc<"Set the function ${n}ame within which the stop handler will "
+             "be run.">,
+        Completion<"Symbol">;
+  def target_hook_add_auto_continue
+      : Option<"auto-continue", "G">,
+        Arg<"Boolean">,
+        Desc<"The hook will auto-continue after running its stop handler.">;
+  def target_hook_add_at_initial_stop
+      : Option<"at-initial-stop", "I">,
+        Arg<"Boolean">,
+        Desc<"Whether the stop handler will trigger when lldb ${I}nitially "
+             "gains control of the process. Defaults to true.">;
+}
+
+let Command = "target hook modify" in {
+  def target_hook_modify_enable_trigger
+      : Option<"enable-trigger", "e">,
+        Arg<"Name">,
+        Desc<"Enable a trigger on the hook. Valid trigger names: load, "
+             "unload, stop.">;
+  def target_hook_modify_disable_trigger
+      : Option<"disable-trigger", "d">,
+        Arg<"Name">,
+        Desc<"Disable a trigger on the hook. Valid trigger names: load, "
+             "unload, stop.">;
+}
+
 let Command = "thread backtrace" in {
   def thread_backtrace_count : Option<"count", "c">,
                                Group<1>,
@@ -1775,6 +2041,15 @@ let Command = "thread backtrace" in {
                                     Group<1>,
                                     Desc<"Do not filter out frames according "
                                          "to installed frame recognizers">;
+  def thread_backtrace_provider
+      : Option<"provider", "p">,
+        Group<1>,
+        Arg<"FrameProviderIDRange">,
+        Desc<"Show backtrace from specific frame provider(s). "
+             "Use a single ID (e.g., '2') for one provider, "
+             "a range (e.g., '0-2', '0 to 2') for multiple, "
+             "or '*'/'all' to show every provider. "
+             "ID 0 is the base unwinder, 1+ are synthetic providers.">;
 }
 
 let Command = "thread step scope" in {
@@ -2123,6 +2398,12 @@ let Command = "type synth add" in {
   def type_synth_add_cascade : Option<"cascade", "C">,
                                Arg<"Boolean">,
                                Desc<"If true, cascade through typedef chains.">;
+  def type_synth_add_wants_deref
+      : Option<"requires-dereference", "D">,
+        Arg<"Boolean">,
+        Desc<"If true, when this synthetic provider matches a pointer or "
+             "reference type, it will receive the dereferenced value object "
+             "instead of the raw pointer or reference.">;
   def type_synth_add_skip_pointers
       : Option<"skip-pointers", "p">,
         Desc<"Don't use this format for pointers-to-type objects.">;
@@ -2420,4 +2701,9 @@ let Command = "statistics dump" in {
         Desc<"Dump statistics for known plugins including name, order, and "
              "enabled state. Defaults to true for both summary and default "
              "mode.">;
+}
+
+let Command = "version" in {
+  def version_verbose : Option<"verbose", "v">,
+                        Desc<"Include build configuration in version output.">;
 }

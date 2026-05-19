@@ -26,8 +26,8 @@ define dso_local void @f8(i32 noundef %i, i32 noundef %k) #0 {
 ; CHECK-ASM-NEXT:    cbz x9, .LBB0_5
 ; CHECK-ASM-NEXT:  // %bb.2:
 ; CHECK-ASM-NEXT:    ldrsw x9, [sp, #8]
-; CHECK-ASM-NEXT:    adrp x10, B
-; CHECK-ASM-NEXT:    add x10, x10, :lo12:B
+; CHECK-ASM-NEXT:    adrp x10, .L_MergedGlobals
+; CHECK-ASM-NEXT:    add x10, x10, :lo12:.L_MergedGlobals
 ; CHECK-ASM-NEXT:    strb wzr, [x10, x8]
 ; CHECK-ASM-NEXT:    cmp x9, #10
 ; CHECK-ASM-NEXT:    b.hi .LBB0_6
@@ -36,9 +36,8 @@ define dso_local void @f8(i32 noundef %i, i32 noundef %k) #0 {
 ; CHECK-ASM-NEXT:    sub x8, x8, x9
 ; CHECK-ASM-NEXT:    cbz x8, .LBB0_6
 ; CHECK-ASM-NEXT:  // %bb.4:
-; CHECK-ASM-NEXT:    adrp x8, B2
-; CHECK-ASM-NEXT:    add x8, x8, :lo12:B2
-; CHECK-ASM-NEXT:    strb wzr, [x8, x9]
+; CHECK-ASM-NEXT:    add x8, x10, x9
+; CHECK-ASM-NEXT:    strb wzr, [x8, #10]
 ; CHECK-ASM-NEXT:    add sp, sp, #16
 ; CHECK-ASM-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-ASM-NEXT:    ret

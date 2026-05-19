@@ -99,9 +99,7 @@ class LiveStacksWrapperLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  LiveStacksWrapperLegacy() : MachineFunctionPass(ID) {
-    initializeLiveStacksWrapperLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  LiveStacksWrapperLegacy() : MachineFunctionPass(ID) {}
 
   LiveStacks &getLS() { return Impl; }
   const LiveStacks &getLS() const { return Impl; }
@@ -126,7 +124,8 @@ public:
   LiveStacks run(MachineFunction &MF, MachineFunctionAnalysisManager &);
 };
 
-class LiveStacksPrinterPass : public PassInfoMixin<LiveStacksPrinterPass> {
+class LiveStacksPrinterPass
+    : public RequiredPassInfoMixin<LiveStacksPrinterPass> {
   raw_ostream &OS;
 
 public:

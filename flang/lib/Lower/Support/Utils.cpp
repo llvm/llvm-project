@@ -16,6 +16,7 @@
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/IterationSpace.h"
+#include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/PrivateReductionUtils.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -82,7 +83,7 @@ public:
          x.cosubscript())
       cosubs -= getHashValue(v);
     return getHashValue(x.base()) * 97u - cosubs + getHashValue(x.stat()) +
-           257u + getHashValue(x.team());
+           257u + getHashValue(x.team()) + getHashValue(x.notify());
   }
   static unsigned getHashValue(const Fortran::evaluate::NamedEntity &x) {
     if (x.IsSymbol())
@@ -156,6 +157,11 @@ public:
     return (getHashValue(x.left()) + getHashValue(x.right())) * 41u +
            static_cast<unsigned>(TC) + static_cast<unsigned>(KIND) +
            static_cast<unsigned>(x.ordering) * 7u;
+  }
+  template <typename T>
+  static unsigned getHashValue(const Fortran::evaluate::ConditionalExpr<T> &x) {
+    return getHashValue(x.condition()) * 151u -
+           getHashValue(x.thenValue()) * 3u + getHashValue(x.elseValue());
   }
   template <Fortran::common::TypeCategory TC, int KIND>
   static unsigned getHashValue(
@@ -341,7 +347,8 @@ public:
                       const Fortran::evaluate::CoarrayRef &y) {
     return isEqual(x.base(), y.base()) &&
            isEqual(x.cosubscript(), y.cosubscript()) &&
-           isEqual(x.stat(), y.stat()) && isEqual(x.team(), y.team());
+           isEqual(x.stat(), y.stat()) && isEqual(x.team(), y.team()) &&
+           isEqual(x.notify(), y.notify());
   }
   static bool isEqual(const Fortran::evaluate::NamedEntity &x,
                       const Fortran::evaluate::NamedEntity &y) {
@@ -413,6 +420,13 @@ public:
   static bool isEqual(const Fortran::evaluate::Extremum<A> &x,
                       const Fortran::evaluate::Extremum<A> &y) {
     return isBinaryEqual(x, y);
+  }
+  template <typename T>
+  static bool isEqual(const Fortran::evaluate::ConditionalExpr<T> &x,
+                      const Fortran::evaluate::ConditionalExpr<T> &y) {
+    return isEqual(x.condition(), y.condition()) &&
+           isEqual(x.thenValue(), y.thenValue()) &&
+           isEqual(x.elseValue(), y.elseValue());
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::RealToIntPower<A> &x,
@@ -610,6 +624,10 @@ unsigned getHashValue(const Fortran::lower::ExplicitIterSpace::ArrayBases &x) {
       [&](const auto *p) { return HashEvaluateExpr::getHashValue(*p); }, x);
 }
 
+unsigned getHashValue(const Fortran::evaluate::Component *x) {
+  return HashEvaluateExpr::getHashValue(*x);
+}
+
 bool isEqual(const Fortran::lower::SomeExpr *x,
              const Fortran::lower::SomeExpr *y) {
   const auto *empty =
@@ -641,6 +659,17 @@ bool isEqual(const Fortran::lower::ExplicitIterSpace::ArrayBases &x,
       x, y);
 }
 
+bool isEqual(const Fortran::evaluate::Component *x,
+             const Fortran::evaluate::Component *y) {
+  const auto *empty =
+      llvm::DenseMapInfo<const Fortran::evaluate::Component *>::getEmptyKey();
+  const auto *tombstone = llvm::DenseMapInfo<
+      const Fortran::evaluate::Component *>::getTombstoneKey();
+  if (x == empty || y == empty || x == tombstone || y == tombstone)
+    return x == y;
+  return x == y || IsEqualEvaluateExpr::isEqual(*x, *y);
+}
+
 void copyFirstPrivateSymbol(lower::AbstractConverter &converter,
                             const semantics::Symbol *sym,
                             mlir::OpBuilder::InsertPoint *copyAssignIP) {
@@ -669,7 +698,17 @@ void privatizeSymbol(
 
   const semantics::Symbol *sym =
       isDoConcurrent ? &symToPrivatize->GetUltimate() : symToPrivatize;
-  const lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
+  // Module variables accessed via USE inside nested BLOCKs may not be
+  // instantiated yet. Ensure they are bound before looking up the host box.
+  const auto &ultimate = sym->GetUltimate();
+  if (ultimate.owner().kind() == semantics::Scope::Kind::Module &&
+      !symTable.lookupSymbol(ultimate)) {
+    Fortran::lower::AggregateStoreMap storeMap;
+    Fortran::lower::instantiateVariable(
+        converter, Fortran::lower::pft::Variable{ultimate, /*global=*/true},
+        symTable, storeMap);
+  }
+  lower::SymbolBox hsb = symTable.lookupSymbol(*sym);
   assert(hsb && "Host symbol box not found");
 
   mlir::Location symLoc = hsb.getAddr().getLoc();
@@ -762,7 +801,7 @@ void privatizeSymbol(
         mlir::isa<fir::BaseBoxType>(allocType) ||
         mlir::isa<fir::BoxCharType>(allocType);
     if (needsInitialization) {
-      lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(
+      lower::SymbolBox hsb = symTable.lookupSymbol(
           isDoConcurrent ? symToPrivatize->GetUltimate() : *symToPrivatize);
 
       assert(hsb && "Host symbol box not found");

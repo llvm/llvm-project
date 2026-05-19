@@ -454,9 +454,7 @@ class AtomicOperandChecker {
     // If nothing matches, error out.
     DiagnoseInvalidAtomic(BinInf->FoundExpr->getExprLoc(),
                           SemaRef.PDiag(diag::note_acc_atomic_mismatch_operand)
-                              << const_cast<Expr *>(AssignInf.LHS)
-                              << const_cast<Expr *>(BinInf->LHS)
-                              << const_cast<Expr *>(BinInf->RHS));
+                              << AssignInf.LHS << BinInf->LHS << BinInf->RHS);
     return IDACInfo::Fail();
   }
 
@@ -592,8 +590,7 @@ class AtomicOperandChecker {
 
     PartialDiagnostic PD =
         SemaRef.PDiag(diag::note_acc_atomic_mismatch_compound_operand)
-        << FirstKind << const_cast<Expr *>(FirstX) << SecondKind
-        << const_cast<Expr *>(SecondX);
+        << FirstKind << FirstX << SecondKind << SecondX;
 
     return DiagnoseInvalidAtomic(SecondX->getExprLoc(), PD);
   }

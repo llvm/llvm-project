@@ -20,17 +20,25 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-interfaces.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <variant>
 #include <vector>
 
+// Match the PluginInitCallback and PluginTermCallback signature. The generated
+// initializer always succeeds.
 #define LLDB_PLUGIN_DEFINE_ADV(ClassName, PluginName)                          \
-  namespace lldb_private {                                                     \
-  void lldb_initialize_##PluginName() { ClassName::Initialize(); }             \
+  extern "C" {                                                                 \
+  bool lldb_initialize_##PluginName() {                                        \
+    ClassName::Initialize();                                                   \
+    return true;                                                               \
+  }                                                                            \
   void lldb_terminate_##PluginName() { ClassName::Terminate(); }               \
   }
 
@@ -39,8 +47,8 @@
 
 // FIXME: Generate me with CMake
 #define LLDB_PLUGIN_DECLARE(PluginName)                                        \
-  namespace lldb_private {                                                     \
-  extern void lldb_initialize_##PluginName();                                  \
+  extern "C" {                                                                 \
+  extern bool lldb_initialize_##PluginName();                                  \
   extern void lldb_terminate_##PluginName();                                   \
   }
 
@@ -69,12 +77,98 @@ struct RegisteredPluginInfo {
 //
 // The plugin namespace here is used so we can operate on all the plugins
 // of a given type so it is easy to enable or disable them as a group.
-using GetPluginInfo = std::function<std::vector<RegisteredPluginInfo>()>;
-using SetPluginEnabled = std::function<bool(llvm::StringRef, bool)>;
-struct PluginNamespace {
+using GetPluginInfo = std::function<llvm::SmallVector<RegisteredPluginInfo>()>;
+using SetPluginEnabledGlobalDomain = std::function<bool(llvm::StringRef, bool)>;
+using SetPluginEnabledAllDomains = std::function<llvm::Error(
+    llvm::StringRef, bool, Debugger &, lldb::PluginDomainKind)>;
+class PluginNamespace {
+public:
+  static constexpr uint8_t kAllDomains = lldb::ePluginDomainKindGlobal |
+                                         lldb::ePluginDomainKindDebugger |
+                                         lldb::ePluginDomainKindTarget;
+
+  /// Plugin that only supports enable/disable in the global domain
+  PluginNamespace(llvm::StringRef name, GetPluginInfo get_info,
+                  SetPluginEnabledGlobalDomain set_enabled)
+      : name(name), get_info(get_info),
+        supported_domains(lldb::ePluginDomainKindGlobal),
+        set_enabled_fn(set_enabled) {}
+
+  /// Plugin that supports enable/disable in all domains.
+  PluginNamespace(llvm::StringRef name, GetPluginInfo get_info,
+                  SetPluginEnabledAllDomains set_enabled)
+      : name(name), get_info(get_info), supported_domains(kAllDomains),
+        set_enabled_fn(set_enabled) {}
+
+  std::optional<SetPluginEnabledGlobalDomain> GetSetEnabledGlobalFn() const {
+    if (SupportsOnlyDomain(lldb::ePluginDomainKindGlobal))
+      return std::get<SetPluginEnabledGlobalDomain>(set_enabled_fn);
+    return std::nullopt;
+  }
+
+  std::optional<SetPluginEnabledAllDomains> GetSetEnabledAllDomainsFn() const {
+    if (supported_domains == kAllDomains)
+      return std::get<SetPluginEnabledAllDomains>(set_enabled_fn);
+    return std::nullopt;
+  }
+
+  bool SupportsDomain(lldb::PluginDomainKind domain) const {
+    assert(llvm::has_single_bit(static_cast<uint8_t>(domain)));
+    return supported_domains & domain;
+  }
+
+  bool SupportsOnlyDomain(lldb::PluginDomainKind domain) const {
+    assert(llvm::has_single_bit(static_cast<uint8_t>(domain)));
+    return supported_domains == domain;
+  }
+
   llvm::StringRef name;
   GetPluginInfo get_info;
-  SetPluginEnabled set_enabled;
+
+private:
+  uint8_t supported_domains;
+  std::variant<SetPluginEnabledGlobalDomain, SetPluginEnabledAllDomains>
+      set_enabled_fn;
+};
+
+struct InstrumentationRuntimeCallbacks {
+  InstrumentationRuntimeCreateInstance create_callback;
+  InstrumentationRuntimeGetType get_type_callback;
+};
+
+struct LanguageRuntimeCallbacks {
+  LanguageRuntimeCreateInstance create_callback;
+  LanguageRuntimeGetCommandObject command_callback;
+  LanguageRuntimeGetExceptionPrecondition precondition_callback;
+};
+
+struct ObjectFileCallbacks {
+  ObjectFileCreateInstance create_callback;
+  ObjectFileCreateMemoryInstance create_memory_callback;
+  ObjectFileGetModuleSpecifications get_module_specifications;
+  ObjectFileSaveCore save_core;
+};
+
+struct ObjectContainerCallbacks {
+  ObjectContainerCreateInstance create_callback;
+  ObjectContainerCreateMemoryInstance create_memory_callback;
+  ObjectFileGetModuleSpecifications get_module_specifications;
+};
+
+struct StructuredDataPluginCallbacks {
+  StructuredDataPluginCreateInstance create_callback;
+  StructuredDataFilterLaunchInfo filter_callback;
+};
+
+struct REPLCallbacks {
+  REPLCreateInstance create_callback;
+  LanguageSet supported_languages;
+};
+
+struct TraceExporterCallbacks {
+  llvm::StringRef name;
+  TraceExporterCreateInstance create_callback;
+  ThreadTraceExportCommandCreator create_thread_trace_export_command;
 };
 
 class PluginManager {
@@ -125,7 +219,7 @@ public:
 
   static bool UnregisterPlugin(ABICreateInstance create_callback);
 
-  static ABICreateInstance GetABICreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<ABICreateInstance> GetABICreateCallbacks();
 
   // Architecture
   static void RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -142,8 +236,8 @@ public:
 
   static bool UnregisterPlugin(DisassemblerCreateInstance create_callback);
 
-  static DisassemblerCreateInstance
-  GetDisassemblerCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<DisassemblerCreateInstance>
+  GetDisassemblerCreateCallbacks();
 
   static DisassemblerCreateInstance
   GetDisassemblerCreateCallbackForPluginName(llvm::StringRef name);
@@ -156,8 +250,8 @@ public:
 
   static bool UnregisterPlugin(DynamicLoaderCreateInstance create_callback);
 
-  static DynamicLoaderCreateInstance
-  GetDynamicLoaderCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<DynamicLoaderCreateInstance>
+  GetDynamicLoaderCreateCallbacks();
 
   static DynamicLoaderCreateInstance
   GetDynamicLoaderCreateCallbackForPluginName(llvm::StringRef name);
@@ -170,8 +264,8 @@ public:
 
   static bool UnregisterPlugin(JITLoaderCreateInstance create_callback);
 
-  static JITLoaderCreateInstance
-  GetJITLoaderCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<JITLoaderCreateInstance>
+  GetJITLoaderCreateCallbacks();
 
   // EmulateInstruction
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -180,8 +274,8 @@ public:
   static bool
   UnregisterPlugin(EmulateInstructionCreateInstance create_callback);
 
-  static EmulateInstructionCreateInstance
-  GetEmulateInstructionCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<EmulateInstructionCreateInstance>
+  GetEmulateInstructionCreateCallbacks();
 
   static EmulateInstructionCreateInstance
   GetEmulateInstructionCreateCallbackForPluginName(llvm::StringRef name);
@@ -193,8 +287,8 @@ public:
 
   static bool UnregisterPlugin(OperatingSystemCreateInstance create_callback);
 
-  static OperatingSystemCreateInstance
-  GetOperatingSystemCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<OperatingSystemCreateInstance>
+  GetOperatingSystemCreateCallbacks();
 
   static OperatingSystemCreateInstance
   GetOperatingSystemCreateCallbackForPluginName(llvm::StringRef name);
@@ -207,7 +301,7 @@ public:
 
   static bool UnregisterPlugin(LanguageCreateInstance create_callback);
 
-  static LanguageCreateInstance GetLanguageCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<LanguageCreateInstance> GetLanguageCreateCallbacks();
 
   // LanguageRuntime
   static bool RegisterPlugin(
@@ -218,14 +312,8 @@ public:
 
   static bool UnregisterPlugin(LanguageRuntimeCreateInstance create_callback);
 
-  static LanguageRuntimeCreateInstance
-  GetLanguageRuntimeCreateCallbackAtIndex(uint32_t idx);
-
-  static LanguageRuntimeGetCommandObject
-  GetLanguageRuntimeGetCommandObjectAtIndex(uint32_t idx);
-
-  static LanguageRuntimeGetExceptionPrecondition
-  GetLanguageRuntimeGetExceptionPreconditionAtIndex(uint32_t idx);
+  static llvm::SmallVector<LanguageRuntimeCallbacks>
+  GetLanguageRuntimeCallbacks();
 
   // SystemRuntime
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -233,8 +321,8 @@ public:
 
   static bool UnregisterPlugin(SystemRuntimeCreateInstance create_callback);
 
-  static SystemRuntimeCreateInstance
-  GetSystemRuntimeCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<SystemRuntimeCreateInstance>
+  GetSystemRuntimeCreateCallbacks();
 
   // ObjectFile
   static bool
@@ -249,21 +337,14 @@ public:
 
   static bool IsRegisteredObjectFilePluginName(llvm::StringRef name);
 
-  static ObjectFileCreateInstance
-  GetObjectFileCreateCallbackAtIndex(uint32_t idx);
-
-  static ObjectFileCreateMemoryInstance
-  GetObjectFileCreateMemoryCallbackAtIndex(uint32_t idx);
-
-  static ObjectFileGetModuleSpecifications
-  GetObjectFileGetModuleSpecificationsCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<ObjectFileCallbacks> GetObjectFileCallbacks();
 
   static ObjectFileCreateMemoryInstance
   GetObjectFileCreateMemoryCallbackForPluginName(llvm::StringRef name);
 
   static Status SaveCore(lldb_private::SaveCoreOptions &core_options);
 
-  static std::vector<llvm::StringRef> GetSaveCorePluginNames();
+  static llvm::SmallVector<llvm::StringRef> GetSaveCorePluginNames();
 
   // ObjectContainer
   static bool RegisterPlugin(
@@ -274,14 +355,8 @@ public:
 
   static bool UnregisterPlugin(ObjectContainerCreateInstance create_callback);
 
-  static ObjectContainerCreateInstance
-  GetObjectContainerCreateCallbackAtIndex(uint32_t idx);
-
-  static ObjectContainerCreateMemoryInstance
-  GetObjectContainerCreateMemoryCallbackAtIndex(uint32_t idx);
-
-  static ObjectFileGetModuleSpecifications
-  GetObjectContainerGetModuleSpecificationsCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<ObjectContainerCallbacks>
+  GetObjectContainerCallbacks();
 
   // Platform
   static bool
@@ -291,7 +366,7 @@ public:
 
   static bool UnregisterPlugin(PlatformCreateInstance create_callback);
 
-  static PlatformCreateInstance GetPlatformCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<PlatformCreateInstance> GetPlatformCreateCallbacks();
 
   static PlatformCreateInstance
   GetPlatformCreateCallbackForPluginName(llvm::StringRef name);
@@ -310,7 +385,7 @@ public:
 
   static bool UnregisterPlugin(ProcessCreateInstance create_callback);
 
-  static ProcessCreateInstance GetProcessCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<ProcessCreateInstance> GetProcessCreateCallbacks();
 
   static ProcessCreateInstance
   GetProcessCreateCallbackForPluginName(llvm::StringRef name);
@@ -343,18 +418,41 @@ public:
   static lldb::RegisterTypeBuilderSP GetRegisterTypeBuilder(Target &target);
 
   // ScriptInterpreter
-  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
-                             lldb::ScriptLanguage script_lang,
-                             ScriptInterpreterCreateInstance create_callback);
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 lldb::ScriptLanguage script_lang,
+                 ScriptInterpreterCreateInstance create_callback,
+                 ScriptInterpreterGetPath get_path_callback = nullptr);
 
   static bool UnregisterPlugin(ScriptInterpreterCreateInstance create_callback);
 
-  static ScriptInterpreterCreateInstance
-  GetScriptInterpreterCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<ScriptInterpreterCreateInstance>
+  GetScriptInterpreterCreateCallbacks();
 
   static lldb::ScriptInterpreterSP
   GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
                                   Debugger &debugger);
+
+  static FileSpec
+  GetScriptInterpreterLibraryPath(lldb::ScriptLanguage script_lang);
+
+  // SyntheticFrameProvider
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 SyntheticFrameProviderCreateInstance create_native_callback,
+                 ScriptedFrameProviderCreateInstance create_scripted_callback);
+
+  static bool
+  UnregisterPlugin(SyntheticFrameProviderCreateInstance create_callback);
+
+  static bool
+  UnregisterPlugin(ScriptedFrameProviderCreateInstance create_callback);
+
+  static SyntheticFrameProviderCreateInstance
+  GetSyntheticFrameProviderCreateCallbackForPluginName(llvm::StringRef name);
+
+  static llvm::SmallVector<ScriptedFrameProviderCreateInstance>
+  GetScriptedFrameProviderCreateCallbacks();
 
   // StructuredDataPlugin
 
@@ -399,12 +497,8 @@ public:
   static bool
   UnregisterPlugin(StructuredDataPluginCreateInstance create_callback);
 
-  static StructuredDataPluginCreateInstance
-  GetStructuredDataPluginCreateCallbackAtIndex(uint32_t idx);
-
-  static StructuredDataFilterLaunchInfo
-  GetStructuredDataFilterCallbackAtIndex(uint32_t idx,
-                                         bool &iteration_complete);
+  static llvm::SmallVector<StructuredDataPluginCallbacks>
+  GetStructuredDataPluginCallbacks();
 
   // SymbolFile
   static bool
@@ -414,8 +508,8 @@ public:
 
   static bool UnregisterPlugin(SymbolFileCreateInstance create_callback);
 
-  static SymbolFileCreateInstance
-  GetSymbolFileCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<SymbolFileCreateInstance>
+  GetSymbolFileCreateCallbacks();
 
   // SymbolVendor
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -423,8 +517,8 @@ public:
 
   static bool UnregisterPlugin(SymbolVendorCreateInstance create_callback);
 
-  static SymbolVendorCreateInstance
-  GetSymbolVendorCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<SymbolVendorCreateInstance>
+  GetSymbolVendorCreateCallbacks();
 
   // SymbolLocator
   static bool RegisterPlugin(
@@ -441,8 +535,8 @@ public:
 
   static bool UnregisterPlugin(SymbolLocatorCreateInstance create_callback);
 
-  static SymbolLocatorCreateInstance
-  GetSymbolLocatorCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<SymbolLocatorCreateInstance>
+  GetSymbolLocatorCreateCallbacks();
 
   static ModuleSpec LocateExecutableObjectFile(const ModuleSpec &module_spec,
                                                StatisticsMap &map);
@@ -469,8 +563,7 @@ public:
       llvm::StringRef schema,
       DebuggerInitializeCallback debugger_init_callback);
 
-  static bool
-  UnregisterPlugin(TraceCreateInstanceFromBundle create_callback);
+  static bool UnregisterPlugin(TraceCreateInstanceFromBundle create_callback);
 
   static TraceCreateInstanceFromBundle
   GetTraceCreateCallback(llvm::StringRef plugin_name);
@@ -515,12 +608,7 @@ public:
 
   static bool UnregisterPlugin(TraceExporterCreateInstance create_callback);
 
-  static llvm::StringRef GetTraceExporterPluginNameAtIndex(uint32_t index);
-
-  /// Return the callback used to create the CommandObject that will be listed
-  /// under "thread trace export". Can be \b null.
-  static ThreadTraceExportCommandCreator
-  GetThreadTraceExportCommandCreatorAtIndex(uint32_t index);
+  static llvm::SmallVector<TraceExporterCallbacks> GetTraceExporterCallbacks();
 
   // UnwindAssembly
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -528,8 +616,8 @@ public:
 
   static bool UnregisterPlugin(UnwindAssemblyCreateInstance create_callback);
 
-  static UnwindAssemblyCreateInstance
-  GetUnwindAssemblyCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<UnwindAssemblyCreateInstance>
+  GetUnwindAssemblyCreateCallbacks();
 
   // MemoryHistory
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -537,8 +625,8 @@ public:
 
   static bool UnregisterPlugin(MemoryHistoryCreateInstance create_callback);
 
-  static MemoryHistoryCreateInstance
-  GetMemoryHistoryCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<MemoryHistoryCreateInstance>
+  GetMemoryHistoryCreateCallbacks();
 
   // InstrumentationRuntime
   static bool
@@ -549,11 +637,8 @@ public:
   static bool
   UnregisterPlugin(InstrumentationRuntimeCreateInstance create_callback);
 
-  static InstrumentationRuntimeGetType
-  GetInstrumentationRuntimeGetTypeCallbackAtIndex(uint32_t idx);
-
-  static InstrumentationRuntimeCreateInstance
-  GetInstrumentationRuntimeCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<InstrumentationRuntimeCallbacks>
+  GetInstrumentationRuntimeCallbacks(bool enabled_only = true);
 
   // TypeSystem
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -563,8 +648,8 @@ public:
 
   static bool UnregisterPlugin(TypeSystemCreateInstance create_callback);
 
-  static TypeSystemCreateInstance
-  GetTypeSystemCreateCallbackAtIndex(uint32_t idx);
+  static llvm::SmallVector<TypeSystemCreateInstance>
+  GetTypeSystemCreateCallbacks();
 
   static LanguageSet GetAllTypeSystemSupportedLanguagesForTypes();
 
@@ -596,11 +681,18 @@ public:
 
   static bool UnregisterPlugin(REPLCreateInstance create_callback);
 
-  static REPLCreateInstance GetREPLCreateCallbackAtIndex(uint32_t idx);
-
-  static LanguageSet GetREPLSupportedLanguagesAtIndex(uint32_t idx);
+  static llvm::SmallVector<REPLCallbacks> GetREPLCallbacks();
 
   static LanguageSet GetREPLAllTypeSystemSupportedLanguages();
+
+  // Higlhighter
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             HighlighterCreateInstance create_callback);
+
+  static bool UnregisterPlugin(HighlighterCreateInstance create_callback);
+
+  static llvm::SmallVector<HighlighterCreateInstance>
+  GetHighlighterCreateCallbacks();
 
   // Some plug-ins might register a DebuggerInitializeCallback callback when
   // registering the plug-in. After a new Debugger instance is created, this
@@ -694,97 +786,104 @@ public:
   //
   // Plugin Info+Enable Declarations
   //
-  static std::vector<RegisteredPluginInfo> GetABIPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetABIPluginInfo();
   static bool SetABIPluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetArchitecturePluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetArchitecturePluginInfo();
   static bool SetArchitecturePluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetDisassemblerPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetDisassemblerPluginInfo();
   static bool SetDisassemblerPluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetDynamicLoaderPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetDynamicLoaderPluginInfo();
   static bool SetDynamicLoaderPluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetEmulateInstructionPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo>
+  GetEmulateInstructionPluginInfo();
   static bool SetEmulateInstructionPluginEnabled(llvm::StringRef name,
                                                  bool enable);
 
-  static std::vector<RegisteredPluginInfo>
+  static llvm::SmallVector<RegisteredPluginInfo>
   GetInstrumentationRuntimePluginInfo();
-  static bool SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
-                                                     bool enable);
+  static llvm::StringRef PluginDomainKindToStr(lldb::PluginDomainKind kind);
+  static llvm::Error
+  SetInstrumentationRuntimePluginEnabled(llvm::StringRef name, bool enable,
+                                         Debugger &requesting_debugger,
+                                         lldb::PluginDomainKind domain);
 
-  static std::vector<RegisteredPluginInfo> GetJITLoaderPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetJITLoaderPluginInfo();
   static bool SetJITLoaderPluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetLanguagePluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetLanguagePluginInfo();
   static bool SetLanguagePluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetLanguageRuntimePluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetLanguageRuntimePluginInfo();
   static bool SetLanguageRuntimePluginEnabled(llvm::StringRef name,
                                               bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetMemoryHistoryPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetMemoryHistoryPluginInfo();
   static bool SetMemoryHistoryPluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetObjectContainerPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetObjectContainerPluginInfo();
   static bool SetObjectContainerPluginEnabled(llvm::StringRef name,
                                               bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetObjectFilePluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetObjectFilePluginInfo();
   static bool SetObjectFilePluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetOperatingSystemPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetOperatingSystemPluginInfo();
   static bool SetOperatingSystemPluginEnabled(llvm::StringRef name,
                                               bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetPlatformPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetPlatformPluginInfo();
   static bool SetPlatformPluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetProcessPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetProcessPluginInfo();
   static bool SetProcessPluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetREPLPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetREPLPluginInfo();
   static bool SetREPLPluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetRegisterTypeBuilderPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo>
+  GetRegisterTypeBuilderPluginInfo();
   static bool SetRegisterTypeBuilderPluginEnabled(llvm::StringRef name,
                                                   bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetScriptInterpreterPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo>
+  GetScriptInterpreterPluginInfo();
   static bool SetScriptInterpreterPluginEnabled(llvm::StringRef name,
                                                 bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetScriptedInterfacePluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo>
+  GetScriptedInterfacePluginInfo();
   static bool SetScriptedInterfacePluginEnabled(llvm::StringRef name,
                                                 bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetStructuredDataPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetStructuredDataPluginInfo();
   static bool SetStructuredDataPluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetSymbolFilePluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetSymbolFilePluginInfo();
   static bool SetSymbolFilePluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetSymbolLocatorPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetSymbolLocatorPluginInfo();
   static bool SetSymbolLocatorPluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetSymbolVendorPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetSymbolVendorPluginInfo();
   static bool SetSymbolVendorPluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetSystemRuntimePluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetSystemRuntimePluginInfo();
   static bool SetSystemRuntimePluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetTracePluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetTracePluginInfo();
   static bool SetTracePluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetTraceExporterPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetTraceExporterPluginInfo();
   static bool SetTraceExporterPluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetTypeSystemPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetTypeSystemPluginInfo();
   static bool SetTypeSystemPluginEnabled(llvm::StringRef name, bool enable);
 
-  static std::vector<RegisteredPluginInfo> GetUnwindAssemblyPluginInfo();
+  static llvm::SmallVector<RegisteredPluginInfo> GetUnwindAssemblyPluginInfo();
   static bool SetUnwindAssemblyPluginEnabled(llvm::StringRef name, bool enable);
 
   static void AutoCompletePluginName(llvm::StringRef partial_name,

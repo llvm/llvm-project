@@ -48,6 +48,14 @@
 #    error "__cpp_lib_ranges_concat should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_join_with
 #    error "__cpp_lib_ranges_join_with should not be defined before c++23"
 #  endif
@@ -58,6 +66,10 @@
 
 #  ifdef __cpp_lib_ranges_slide
 #    error "__cpp_lib_ranges_slide should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_to_container
@@ -98,6 +110,14 @@
 #    error "__cpp_lib_ranges_concat should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_join_with
 #    error "__cpp_lib_ranges_join_with should not be defined before c++23"
 #  endif
@@ -108,6 +128,10 @@
 
 #  ifdef __cpp_lib_ranges_slide
 #    error "__cpp_lib_ranges_slide should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_to_container
@@ -148,6 +172,14 @@
 #    error "__cpp_lib_ranges_concat should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_join_with
 #    error "__cpp_lib_ranges_join_with should not be defined before c++23"
 #  endif
@@ -158,6 +190,10 @@
 
 #  ifdef __cpp_lib_ranges_slide
 #    error "__cpp_lib_ranges_slide should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_to_container
@@ -201,6 +237,14 @@
 #    error "__cpp_lib_ranges_concat should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_join_with
 #    error "__cpp_lib_ranges_join_with should not be defined before c++23"
 #  endif
@@ -211,6 +255,10 @@
 
 #  ifdef __cpp_lib_ranges_slide
 #    error "__cpp_lib_ranges_slide should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_to_container
@@ -278,6 +326,17 @@
 #    error "__cpp_lib_ranges_concat should not be defined before c++26"
 #  endif
 
+#  ifndef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_enumerate != 202302L
+#    error "__cpp_lib_ranges_enumerate should have the value 202302L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_ranges_join_with
 #    error "__cpp_lib_ranges_join_with should be defined in c++23"
 #  endif
@@ -305,6 +364,13 @@
 #    endif
 #  endif
 
+#  ifndef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_stride != 202207L
+#    error "__cpp_lib_ranges_stride should have the value 202207L in c++23"
+#  endif
+
 #  ifndef __cpp_lib_ranges_to_container
 #    error "__cpp_lib_ranges_to_container should be defined in c++23"
 #  endif
@@ -312,17 +378,11 @@
 #    error "__cpp_lib_ranges_to_container should have the value 202202L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should be defined in c++23"
-#    endif
-#    if __cpp_lib_ranges_zip != 202110L
-#      error "__cpp_lib_ranges_zip should have the value 202110L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_zip
+#    error "__cpp_lib_ranges_zip should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_zip != 202110L
+#    error "__cpp_lib_ranges_zip should have the value 202110L in c++23"
 #  endif
 
 #elif TEST_STD_VER > 23
@@ -400,6 +460,20 @@
 #    endif
 #  endif
 
+#  ifndef __cpp_lib_ranges_enumerate
+#    error "__cpp_lib_ranges_enumerate should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_enumerate != 202302L
+#    error "__cpp_lib_ranges_enumerate should have the value 202302L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_indices != 202506L
+#    error "__cpp_lib_ranges_indices should have the value 202506L in c++26"
+#  endif
+
 #  ifndef __cpp_lib_ranges_join_with
 #    error "__cpp_lib_ranges_join_with should be defined in c++26"
 #  endif
@@ -427,6 +501,13 @@
 #    endif
 #  endif
 
+#  ifndef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_stride != 202207L
+#    error "__cpp_lib_ranges_stride should have the value 202207L in c++26"
+#  endif
+
 #  ifndef __cpp_lib_ranges_to_container
 #    error "__cpp_lib_ranges_to_container should be defined in c++26"
 #  endif
@@ -434,17 +515,11 @@
 #    error "__cpp_lib_ranges_to_container should have the value 202202L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should be defined in c++26"
-#    endif
-#    if __cpp_lib_ranges_zip != 202110L
-#      error "__cpp_lib_ranges_zip should have the value 202110L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_zip
+#    error "__cpp_lib_ranges_zip should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_zip != 202110L
+#    error "__cpp_lib_ranges_zip should have the value 202110L in c++26"
 #  endif
 
 #endif // TEST_STD_VER > 23

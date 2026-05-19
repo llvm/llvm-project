@@ -15,6 +15,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/ValueObject/ValueObject.h"
 #if defined(_WIN32)
 #include "lldb/Host/windows/ConnectionGenericFileWindows.h"
 #endif
@@ -81,6 +82,12 @@ lldb::BreakpointSP ScriptInterpreter::GetOpaqueTypeFromSBBreakpoint(
   return breakpoint.m_opaque_wp.lock();
 }
 
+lldb::BreakpointLocationSP
+ScriptInterpreter::GetOpaqueTypeFromSBBreakpointLocation(
+    const lldb::SBBreakpointLocation &break_loc) const {
+  return break_loc.m_opaque_wp.lock();
+}
+
 lldb::ProcessAttachInfoSP ScriptInterpreter::GetOpaqueTypeFromSBAttachInfo(
     const lldb::SBAttachInfo &attach_info) const {
   return attach_info.m_opaque_sp;
@@ -98,6 +105,20 @@ ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
     return error.m_opaque_up->Clone();
 
   return Status();
+}
+
+lldb::ThreadSP ScriptInterpreter::GetOpaqueTypeFromSBThread(
+    const lldb::SBThread &thread) const {
+  if (thread.m_opaque_sp)
+    return thread.m_opaque_sp->GetThreadSP();
+  return nullptr;
+}
+
+lldb::StackFrameSP
+ScriptInterpreter::GetOpaqueTypeFromSBFrame(const lldb::SBFrame &frame) const {
+  if (frame.m_opaque_sp)
+    return frame.m_opaque_sp->GetFrameSP();
+  return nullptr;
 }
 
 Event *
@@ -123,7 +144,7 @@ SymbolContext ScriptInterpreter::GetOpaqueTypeFromSBSymbolContext(
   return {};
 }
 
-std::optional<MemoryRegionInfo>
+std::optional<lldb_private::MemoryRegionInfo>
 ScriptInterpreter::GetOpaqueTypeFromSBMemoryRegionInfo(
     const lldb::SBMemoryRegionInfo &mem_region) const {
   if (!mem_region.m_opaque_up)
@@ -135,6 +156,25 @@ lldb::ExecutionContextRefSP
 ScriptInterpreter::GetOpaqueTypeFromSBExecutionContext(
     const lldb::SBExecutionContext &exe_ctx) const {
   return exe_ctx.m_exe_ctx_sp;
+}
+
+lldb::StackFrameListSP ScriptInterpreter::GetOpaqueTypeFromSBFrameList(
+    const lldb::SBFrameList &frame_list) const {
+  return frame_list.m_opaque_sp;
+}
+
+lldb::TargetSP ScriptInterpreter::GetOpaqueTypeFromSBTarget(
+    const lldb::SBTarget &target) const {
+  return target.m_opaque_sp;
+}
+
+lldb::ValueObjectSP
+ScriptInterpreter::GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const {
+  if (!value.m_opaque_sp)
+    return lldb::ValueObjectSP();
+
+  lldb_private::ValueLocker locker;
+  return locker.GetLockedSP(*value.m_opaque_sp);
 }
 
 lldb::ScriptLanguage
@@ -179,6 +219,31 @@ ScriptInterpreter::AcquireInterpreterLock() {
   return std::make_unique<ScriptInterpreterLocker>();
 }
 
+ScriptInterpreter::SanitizedScriptingModuleName
+ScriptInterpreter::GetSanitizedScriptingModuleName(llvm::StringRef name) {
+  std::string sanitized_name(name);
+  std::string conflicting_keyword;
+
+  // FIXME: for Python, don't allow certain characters in imported module
+  // filenames. Theoretically, different scripting languages may have
+  // different sets of forbidden tokens in filenames, and that should
+  // be dealt with by each ScriptInterpreter. For now, just replace dots
+  // with underscores. In order to support anything other than Python
+  // this will need to be reworked.
+  llvm::replace(sanitized_name, '.', '_');
+  llvm::replace(sanitized_name, ' ', '_');
+  llvm::replace(sanitized_name, '-', '_');
+  llvm::replace(sanitized_name, '+', 'x');
+
+  if (IsReservedWord(sanitized_name.c_str())) {
+    conflicting_keyword = sanitized_name;
+    sanitized_name.insert(sanitized_name.begin(), '_');
+  }
+
+  return ScriptInterpreter::SanitizedScriptingModuleName(
+      name.str(), std::move(sanitized_name), std::move(conflicting_keyword));
+}
+
 static void ReadThreadBytesReceived(void *baton, const void *src,
                                     size_t src_len) {
   if (src && src_len) {
@@ -203,7 +268,7 @@ ScriptInterpreterIORedirect::Create(bool enable_io, Debugger &debugger,
   auto nullout = FileSystem::Instance().Open(FileSpec(FileSystem::DEV_NULL),
                                              File::eOpenOptionWriteOnly);
   if (!nullout)
-    return nullin.takeError();
+    return nullout.takeError();
 
   return std::unique_ptr<ScriptInterpreterIORedirect>(
       new ScriptInterpreterIORedirect(std::move(*nullin), std::move(*nullout)));

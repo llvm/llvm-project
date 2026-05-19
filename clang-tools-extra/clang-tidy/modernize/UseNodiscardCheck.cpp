@@ -17,7 +17,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 static bool doesNoDiscardMacroExist(ASTContext &Context,
-                                    const llvm::StringRef &MacroId) {
+                                    const StringRef &MacroId) {
   // Don't check for the Macro existence if we are using an attribute
   // either a C++17 standard attribute or pre C++17 syntax
   if (MacroId.starts_with("[[") || MacroId.starts_with("__attribute__"))
@@ -84,6 +84,9 @@ void UseNodiscardCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void UseNodiscardCheck::registerMatchers(MatchFinder *Finder) {
   auto FunctionObj =
       cxxRecordDecl(hasAnyName("::std::function", "::boost::function"));
+  auto NoDiscardClassTemplateSpecialization =
+      classTemplateSpecializationDecl(hasSpecializedTemplate(classTemplateDecl(
+          has(cxxRecordDecl(hasAttr(attr::WarnUnusedResult))))));
 
   // Find all non-void const methods which have not already been marked to
   // warn on unused result.
@@ -92,11 +95,12 @@ void UseNodiscardCheck::registerMatchers(MatchFinder *Finder) {
           isConst(), isDefinitionOrInline(),
           unless(anyOf(
               returns(voidType()),
-              returns(
-                  hasDeclaration(decl(hasAttr(clang::attr::WarnUnusedResult)))),
+              returns(hasDeclaration(decl(hasAttr(attr::WarnUnusedResult)))),
+              returns(hasUnqualifiedDesugaredType(recordType(
+                  hasDeclaration(NoDiscardClassTemplateSpecialization)))),
               isNoReturn(), isOverloadedOperator(), isVariadic(),
               hasTemplateReturnType(), hasClassMutableFields(),
-              isConversionOperator(), hasAttr(clang::attr::WarnUnusedResult),
+              isConversionOperator(), hasAttr(attr::WarnUnusedResult),
               hasType(isInstantiationDependentType()),
               hasAnyParameter(
                   anyOf(parmVarDecl(anyOf(hasType(FunctionObj),
@@ -110,11 +114,11 @@ void UseNodiscardCheck::registerMatchers(MatchFinder *Finder) {
 void UseNodiscardCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("no_discard");
   // Don't make replacements if the location is invalid or in a macro.
-  SourceLocation Loc = MatchedDecl->getLocation();
+  const SourceLocation Loc = MatchedDecl->getLocation();
   if (Loc.isInvalid() || Loc.isMacroID())
     return;
 
-  SourceLocation RetLoc = MatchedDecl->getInnerLocStart();
+  const SourceLocation RetLoc = MatchedDecl->getInnerLocStart();
 
   ASTContext &Context = *Result.Context;
 

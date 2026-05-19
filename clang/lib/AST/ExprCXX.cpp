@@ -149,6 +149,11 @@ bool CXXTypeidExpr::isPotentiallyEvaluated() const {
 bool CXXTypeidExpr::isMostDerived(const ASTContext &Context) const {
   assert(!isTypeOperand() && "Cannot call isMostDerived for typeid(type)");
   const Expr *E = getExprOperand()->IgnoreParenNoopCasts(Context);
+
+  if (const CXXRecordDecl *RD = E->getType()->getAsCXXRecordDecl())
+    if (RD->isEffectivelyFinal())
+      return true;
+
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
     QualType Ty = DRE->getDecl()->getType();
     if (!Ty->isPointerOrReferenceType())
@@ -605,10 +610,11 @@ CXXOperatorCallExpr::CXXOperatorCallExpr(OverloadedOperatorKind OpKind,
                                          QualType Ty, ExprValueKind VK,
                                          SourceLocation OperatorLoc,
                                          FPOptionsOverride FPFeatures,
-                                         ADLCallKind UsesADL)
+                                         ADLCallKind UsesADL, bool IsReversed)
     : CallExpr(CXXOperatorCallExprClass, Fn, /*PreArgs=*/{}, Args, Ty, VK,
                OperatorLoc, FPFeatures, /*MinNumArgs=*/0, UsesADL) {
   CXXOperatorCallExprBits.OperatorKind = OpKind;
+  CXXOperatorCallExprBits.IsReversed = IsReversed;
   assert(
       (CXXOperatorCallExprBits.OperatorKind == static_cast<unsigned>(OpKind)) &&
       "OperatorKind overflow!");
@@ -620,12 +626,11 @@ CXXOperatorCallExpr::CXXOperatorCallExpr(unsigned NumArgs, bool HasFPFeatures,
     : CallExpr(CXXOperatorCallExprClass, /*NumPreArgs=*/0, NumArgs,
                HasFPFeatures, Empty) {}
 
-CXXOperatorCallExpr *
-CXXOperatorCallExpr::Create(const ASTContext &Ctx,
-                            OverloadedOperatorKind OpKind, Expr *Fn,
-                            ArrayRef<Expr *> Args, QualType Ty,
-                            ExprValueKind VK, SourceLocation OperatorLoc,
-                            FPOptionsOverride FPFeatures, ADLCallKind UsesADL) {
+CXXOperatorCallExpr *CXXOperatorCallExpr::Create(
+    const ASTContext &Ctx, OverloadedOperatorKind OpKind, Expr *Fn,
+    ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
+    SourceLocation OperatorLoc, FPOptionsOverride FPFeatures,
+    ADLCallKind UsesADL, bool IsReversed) {
   // Allocate storage for the trailing objects of CallExpr.
   unsigned NumArgs = Args.size();
   unsigned SizeOfTrailingObjects = CallExpr::sizeOfTrailingObjects(
@@ -635,7 +640,7 @@ CXXOperatorCallExpr::Create(const ASTContext &Ctx,
                        SizeOfTrailingObjects),
                    alignof(CXXOperatorCallExpr));
   return new (Mem) CXXOperatorCallExpr(OpKind, Fn, Args, Ty, VK, OperatorLoc,
-                                       FPFeatures, UsesADL);
+                                       FPFeatures, UsesADL, IsReversed);
 }
 
 CXXOperatorCallExpr *CXXOperatorCallExpr::CreateEmpty(const ASTContext &Ctx,
@@ -670,6 +675,8 @@ SourceRange CXXOperatorCallExpr::getSourceRangeImpl() const {
   } else if (getNumArgs() == 1) {
     return SourceRange(getOperatorLoc(), getArg(0)->getEndLoc());
   } else if (getNumArgs() == 2) {
+    if (CXXOperatorCallExprBits.IsReversed)
+      return SourceRange(getArg(1)->getBeginLoc(), getArg(0)->getEndLoc());
     return SourceRange(getArg(0)->getBeginLoc(), getArg(1)->getEndLoc());
   } else {
     return getOperatorLoc();
@@ -1725,9 +1732,9 @@ SizeOfPackExpr *SizeOfPackExpr::CreateDeserialized(ASTContext &Context,
   return new (Storage) SizeOfPackExpr(EmptyShell(), NumPartialArgs);
 }
 
-NamedDecl *SubstNonTypeTemplateParmExpr::getParameter() const {
-  return cast<NamedDecl>(
-      getReplacedTemplateParameterList(getAssociatedDecl())->asArray()[Index]);
+NonTypeTemplateParmDecl *SubstNonTypeTemplateParmExpr::getParameter() const {
+  return cast<NonTypeTemplateParmDecl>(
+      std::get<0>(getReplacedTemplateParameter(getAssociatedDecl(), Index)));
 }
 
 PackIndexingExpr *PackIndexingExpr::Create(
@@ -1749,9 +1756,7 @@ PackIndexingExpr *PackIndexingExpr::Create(
 
 NamedDecl *PackIndexingExpr::getPackDecl() const {
   if (auto *D = dyn_cast<DeclRefExpr>(getPackIdExpression()); D) {
-    NamedDecl *ND = dyn_cast<NamedDecl>(D->getDecl());
-    assert(ND && "exected a named decl");
-    return ND;
+    return D->getDecl();
   }
   assert(false && "invalid declaration kind in pack indexing expression");
   return nullptr;
@@ -1793,7 +1798,7 @@ SubstNonTypeTemplateParmPackExpr::SubstNonTypeTemplateParmPackExpr(
 NonTypeTemplateParmDecl *
 SubstNonTypeTemplateParmPackExpr::getParameterPack() const {
   return cast<NonTypeTemplateParmDecl>(
-      getReplacedTemplateParameterList(getAssociatedDecl())->asArray()[Index]);
+      std::get<0>(getReplacedTemplateParameter(getAssociatedDecl(), Index)));
 }
 
 TemplateArgument SubstNonTypeTemplateParmPackExpr::getArgumentPack() const {
@@ -1937,6 +1942,24 @@ TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
   void *Mem = C.Allocate(totalSizeToAlloc<APValue, TypeSourceInfo *>(
       IsStoredAsBool ? 0 : 1, NumArgs));
   return new (Mem) TypeTraitExpr(EmptyShell(), IsStoredAsBool);
+}
+
+CXXReflectExpr::CXXReflectExpr(EmptyShell Empty)
+    : Expr(CXXReflectExprClass, Empty) {}
+
+CXXReflectExpr::CXXReflectExpr(SourceLocation CaretCaretLoc,
+                               const TypeSourceInfo *TSI)
+    : Expr(CXXReflectExprClass, TSI->getType(), VK_PRValue, OK_Ordinary),
+      CaretCaretLoc(CaretCaretLoc), Operand(TSI) {}
+
+CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
+                                       SourceLocation CaretCaretLoc,
+                                       TypeSourceInfo *TSI) {
+  return new (C) CXXReflectExpr(CaretCaretLoc, TSI);
+}
+
+CXXReflectExpr *CXXReflectExpr::CreateEmpty(ASTContext &C) {
+  return new (C) CXXReflectExpr(EmptyShell());
 }
 
 CUDAKernelCallExpr::CUDAKernelCallExpr(Expr *Fn, CallExpr *Config,

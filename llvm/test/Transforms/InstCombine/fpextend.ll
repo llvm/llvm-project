@@ -440,13 +440,35 @@ define half @bf16_to_f32_to_f16(bfloat %a) nounwind {
 
 define bfloat @bf16_frem(bfloat %x) {
 ; CHECK-LABEL: @bf16_frem(
-; CHECK-NEXT:    [[TMP1:%.*]] = frem bfloat [[X:%.*]], 0xR40C9
+; CHECK-NEXT:    [[TMP1:%.*]] = frem bfloat [[X:%.*]], 6.281250e+00
 ; CHECK-NEXT:    ret bfloat [[TMP1]]
 ;
   %t1 = fpext bfloat %x to float
   %t2 = frem float %t1, 6.281250e+00
   %t3 = fptrunc float %t2 to bfloat
   ret bfloat %t3
+}
+
+define <4 x bfloat> @v4bf16_frem_x_const(<4 x bfloat> %x) {
+; CHECK-LABEL: @v4bf16_frem_x_const(
+; CHECK-NEXT:    [[TMP1:%.*]] = frem <4 x bfloat> [[X:%.*]], splat (bfloat 6.281250e+00)
+; CHECK-NEXT:    ret <4 x bfloat> [[TMP1]]
+;
+  %t1 = fpext <4 x bfloat> %x to <4 x float>
+  %t2 = frem <4 x float> %t1, splat(float 6.281250e+00)
+  %t3 = fptrunc <4 x float> %t2 to <4 x bfloat>
+  ret <4 x bfloat> %t3
+}
+
+define <4 x bfloat> @v4bf16_frem_const_x(<4 x bfloat> %x) {
+; CHECK-LABEL: @v4bf16_frem_const_x(
+; CHECK-NEXT:    [[TMP1:%.*]] = frem <4 x bfloat> splat (bfloat 6.281250e+00), [[X:%.*]]
+; CHECK-NEXT:    ret <4 x bfloat> [[TMP1]]
+;
+  %t1 = fpext <4 x bfloat> %x to <4 x float>
+  %t2 = frem <4 x float> splat(float 6.281250e+00), %t1
+  %t3 = fptrunc <4 x float> %t2 to <4 x bfloat>
+  ret <4 x bfloat> %t3
 }
 
 define <4 x float> @v4f32_fadd(<4 x float> %a) {
@@ -456,6 +478,19 @@ define <4 x float> @v4f32_fadd(<4 x float> %a) {
 ;
   %2 = fpext <4 x float> %a to <4 x double>
   %4 = fadd <4 x double> %2, splat (double -1.000000e+00)
+  %5 = fptrunc <4 x double> %4 to <4 x float>
+  ret <4 x float> %5
+}
+
+define <4 x float> @v4f32_fadd_const_not_shrinkable(<4 x float> %a) {
+; CHECK-LABEL: @v4f32_fadd_const_not_shrinkable(
+; CHECK-NEXT:    [[TMP1:%.*]] = fpext <4 x float> [[A:%.*]] to <4 x double>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x double> [[TMP1]], splat (double -1.000000e+100)
+; CHECK-NEXT:    [[TMP3:%.*]] = fptrunc <4 x double> [[TMP2]] to <4 x float>
+; CHECK-NEXT:    ret <4 x float> [[TMP3]]
+;
+  %2 = fpext <4 x float> %a to <4 x double>
+  %4 = fadd <4 x double> %2, splat (double -1.000000e+100)
   %5 = fptrunc <4 x double> %4 to <4 x float>
   ret <4 x float> %5
 }

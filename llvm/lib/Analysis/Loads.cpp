@@ -37,17 +37,13 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
     function_ref<bool(const RetainedKnowledge &RK)> CheckSize,
     const DataLayout &DL, const Instruction *CtxI, AssumptionCache *AC,
     const DominatorTree *DT) {
-  // Dereferenceable information from assumptions is only valid if the value
-  // cannot be freed between the assumption and use. For now just use the
-  // information for values that cannot be freed in the function.
-  // TODO: More precisely check if the pointer can be freed between assumption
-  // and use.
-  if (!CtxI || Ptr->canBeFreed())
+  if (!CtxI)
     return false;
   /// Look through assumes to see if both dereferencability and alignment can
   /// be proven by an assume if needed.
   RetainedKnowledge AlignRK;
   RetainedKnowledge DerefRK;
+  bool PtrCanBeFreed = Ptr->canBeFreed();
   bool IsAligned = Ptr->getPointerAlignment(DL) >= Alignment;
   return getKnowledgeForValue(
       Ptr, {Attribute::Dereferenceable, Attribute::Alignment}, *AC,
@@ -56,7 +52,11 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
           return false;
         if (RK.AttrKind == Attribute::Alignment)
           AlignRK = std::max(AlignRK, RK);
-        if (RK.AttrKind == Attribute::Dereferenceable)
+
+        // Dereferenceable information from assumptions is only valid if the
+        // value cannot be freed between the assumption and use.
+        if ((!PtrCanBeFreed || willNotFreeBetween(Assume, CtxI)) &&
+            RK.AttrKind == Attribute::Dereferenceable)
           DerefRK = std::max(DerefRK, RK);
         IsAligned |= AlignRK && AlignRK.ArgValue >= Alignment.value();
         if (IsAligned && DerefRK && CheckSize(DerefRK))
@@ -161,7 +161,8 @@ static bool isDereferenceableAndAlignedPointer(
 
 
   if (const auto *Call = dyn_cast<CallBase>(V)) {
-    if (auto *RP = getArgumentAliasingToReturnedPointer(Call, true))
+    if (auto *RP = getArgumentAliasingToReturnedPointer(
+            Call, /*MustPreserveOffset=*/true))
       return isDereferenceableAndAlignedPointer(RP, Alignment, Size, DL, CtxI,
                                                 AC, DT, TLI, Visited, MaxDepth);
 
@@ -289,9 +290,9 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
 bool llvm::isDereferenceableAndAlignedInLoop(
     LoadInst *LI, Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     AssumptionCache *AC, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
-  const Align Alignment = LI->getAlign();
   auto &DL = LI->getDataLayout();
   Value *Ptr = LI->getPointerOperand();
+  const SCEV *PtrSCEV = SE.getSCEV(Ptr);
   APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getType()),
                 DL.getTypeStoreSize(LI->getType()).getFixedValue());
 
@@ -299,11 +300,19 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   // access is safe within the loop w/o needing predication.
   if (L->isLoopInvariant(Ptr))
     return isDereferenceableAndAlignedPointer(
-        Ptr, Alignment, EltSize, DL, &*L->getHeader()->getFirstNonPHIIt(), AC,
-        &DT);
+        Ptr, LI->getAlign(), EltSize, DL, &*L->getHeader()->getFirstNonPHIIt(),
+        AC, &DT);
 
-  const SCEV *PtrScev = SE.getSCEV(Ptr);
-  auto *AddRec = dyn_cast<SCEVAddRecExpr>(PtrScev);
+  const SCEV *EltSizeSCEV = SE.getConstant(EltSize);
+  return isDereferenceableAndAlignedInLoop(PtrSCEV, LI->getAlign(), EltSizeSCEV,
+                                           L, SE, DT, AC, Predicates);
+}
+
+bool llvm::isDereferenceableAndAlignedInLoop(
+    const SCEV *PtrSCEV, Align Alignment, const SCEV *EltSizeSCEV, Loop *L,
+    ScalarEvolution &SE, DominatorTree &DT, AssumptionCache *AC,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+  auto *AddRec = dyn_cast<SCEVAddRecExpr>(PtrSCEV);
 
   // Check to see if we have a repeating access pattern and it's possible
   // to prove all accesses are well aligned.
@@ -314,6 +323,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (!Step)
     return false;
 
+  const APInt &EltSize = cast<SCEVConstant>(EltSizeSCEV)->getAPInt();
   // For the moment, restrict ourselves to the case where the access size is a
   // multiple of the requested alignment and the base is aligned.
   // TODO: generalize if a case found which warrants
@@ -333,9 +343,11 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
   std::optional<ScalarEvolution::LoopGuards> LoopGuards;
+
+  auto &DL = L->getHeader()->getDataLayout();
   const auto &[AccessStart, AccessEnd] =
-      getStartAndEndForAccess(L, PtrScev, LI->getType(), BECount, MaxBECount,
-                              &SE, nullptr, &DT, AC, LoopGuards);
+      getStartAndEndForAccess(L, PtrSCEV, EltSizeSCEV, BECount, MaxBECount, &SE,
+                              nullptr, &DT, AC, LoopGuards);
   if (isa<SCEVCouldNotCompute>(AccessStart) ||
       isa<SCEVCouldNotCompute>(AccessEnd))
     return false;
@@ -357,7 +369,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   const SCEV *AccessSizeSCEV = nullptr;
   if (const SCEVUnknown *NewBase = dyn_cast<SCEVUnknown>(AccessStart)) {
     Base = NewBase->getValue();
-    AccessSize = MaxPtrDiff;
+    AccessSize = std::move(MaxPtrDiff);
     AccessSizeSCEV = PtrDiff;
   } else if (auto *MinAdd = dyn_cast<SCEVAddExpr>(AccessStart)) {
     if (MinAdd->getNumOperands() != 2)
@@ -390,7 +402,11 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   } else
     return false;
 
-  Instruction *HeaderFirstNonPHI = &*L->getHeader()->getFirstNonPHIIt();
+  Instruction *CtxI = &*L->getHeader()->getFirstNonPHIIt();
+  if (BasicBlock *LoopPred = L->getLoopPredecessor()) {
+    if (isa<UncondBrInst, CondBrInst>(LoopPred->getTerminator()))
+      CtxI = LoopPred->getTerminator();
+  }
   return isDereferenceableAndAlignedPointerViaAssumption(
              Base, Alignment,
              [&SE, AccessSizeSCEV, &LoopGuards](const RetainedKnowledge &RK) {
@@ -399,9 +415,9 @@ bool llvm::isDereferenceableAndAlignedInLoop(
                    SE.applyLoopGuards(AccessSizeSCEV, *LoopGuards),
                    SE.applyLoopGuards(SE.getSCEV(RK.IRArgValue), *LoopGuards));
              },
-             DL, HeaderFirstNonPHI, AC, &DT) ||
+             DL, CtxI, AC, &DT) ||
          isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, DL,
-                                            HeaderFirstNonPHI, AC, &DT);
+                                            CtxI, AC, &DT);
 }
 
 static bool suppressSpeculativeLoadForSanitizers(const Instruction &CtxI) {
@@ -559,6 +575,8 @@ static bool areNonOverlapSameBaseLoadAndStore(const Value *LoadPtr,
                                               const DataLayout &DL) {
   APInt LoadOffset(DL.getIndexTypeSizeInBits(LoadPtr->getType()), 0);
   APInt StoreOffset(DL.getIndexTypeSizeInBits(StorePtr->getType()), 0);
+  if (LoadOffset.getBitWidth() != StoreOffset.getBitWidth())
+    return false;
   const Value *LoadBase = LoadPtr->stripAndAccumulateConstantOffsets(
       DL, LoadOffset, /* AllowNonInbounds */ false);
   const Value *StoreBase = StorePtr->stripAndAccumulateConstantOffsets(
@@ -799,7 +817,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
 
 // Returns true if a use is either in an ICmp/PtrToInt or a Phi/Select that only
 // feeds into them.
-static bool isPointerUseReplacable(const Use &U) {
+static bool isPointerUseReplacable(const Use &U, bool HasNonAddressBits) {
   unsigned Limit = 40;
   SmallVector<const User *> Worklist({U.getUser()});
   SmallPtrSet<const User *, 8> Visited;
@@ -808,7 +826,11 @@ static bool isPointerUseReplacable(const Use &U) {
     auto *User = Worklist.pop_back_val();
     if (!Visited.insert(User).second)
       continue;
-    if (isa<ICmpInst, PtrToIntInst>(User))
+    if (isa<ICmpInst, PtrToAddrInst>(User))
+      continue;
+    // FIXME: The PtrToIntInst case here is not strictly correct, as it
+    // changes which provenance is exposed.
+    if (!HasNonAddressBits && isa<PtrToIntInst>(User))
       continue;
     if (isa<PHINode, SelectInst>(User))
       Worklist.append(User->user_begin(), User->user_end());
@@ -819,15 +841,18 @@ static bool isPointerUseReplacable(const Use &U) {
   return Limit != 0;
 }
 
-// Returns true if `To` is a null pointer, constant dereferenceable pointer or
-// both pointers have the same underlying objects.
 static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
                                        const DataLayout &DL) {
   // This is not strictly correct, but we do it for now to retain important
   // optimizations.
   if (isa<ConstantPointerNull>(To))
     return true;
-  if (isa<Constant>(To) &&
+  // Conversely, replacing null in the default address space with destination
+  // pointer is always valid.
+  if (isa<ConstantPointerNull>(From) &&
+      From->getType()->getPointerAddressSpace() == 0)
+    return true;
+  if (isa<Constant>(To) && To->getType()->isPointerTy() &&
       isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL))
     return true;
   return getUnderlyingObjectAggressive(From) ==
@@ -836,9 +861,10 @@ static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
 
 bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
                                           const DataLayout &DL) {
-  assert(U->getType() == To->getType() && "values must have matching types");
+  Type *Ty = To->getType();
+  assert(U->getType() == Ty && "values must have matching types");
   // Not a pointer, just return true.
-  if (!To->getType()->isPointerTy())
+  if (!Ty->isPtrOrPtrVectorTy())
     return true;
 
   // Do not perform replacements in lifetime intrinsic arguments.
@@ -847,14 +873,17 @@ bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
 
   if (isPointerAlwaysReplaceable(&*U, To, DL))
     return true;
-  return isPointerUseReplacable(U);
+
+  bool HasNonAddressBits =
+      DL.getAddressSizeInBits(Ty) != DL.getPointerTypeSizeInBits(Ty);
+  return isPointerUseReplacable(U, HasNonAddressBits);
 }
 
 bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
                                      const DataLayout &DL) {
   assert(From->getType() == To->getType() && "values must have matching types");
   // Not a pointer, just return true.
-  if (!From->getType()->isPointerTy())
+  if (!From->getType()->isPtrOrPtrVectorTy())
     return true;
 
   return isPointerAlwaysReplaceable(From, To, DL);

@@ -17,13 +17,16 @@ namespace clang::tidy::bugprone {
 /// unintendedly.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-semicolon.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-semicolon.html
 class SuspiciousSemicolonCheck : public ClangTidyCheck {
 public:
   SuspiciousSemicolonCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_IgnoreUnlessSpelledInSource;
+  }
 };
 
 } // namespace clang::tidy::bugprone

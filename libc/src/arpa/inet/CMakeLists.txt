@@ -23,6 +23,34 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  inet_aton
+  SRCS
+    inet_aton.cpp
+  HDRS
+    inet_aton.h
+  DEPENDS
+    libc.include.arpa_inet
+    libc.hdr.types.struct_in_addr
+    libc.src.__support.common
+    libc.src.__support.str_to_integer
+)
+
+add_entrypoint_object(
+  inet_addr
+  SRCS
+    inet_addr.cpp
+  HDRS
+    inet_addr.h
+  DEPENDS
+    libc.include.arpa_inet
+    libc.hdr.netinet_in_macros
+    libc.hdr.types.struct_in_addr
+    libc.hdr.types.in_addr_t
+    libc.src.__support.common
+    libc.src.arpa.inet.inet_aton
+)
+
+add_entrypoint_object(
   ntohl
   SRCS
     ntohl.cpp

@@ -1,5 +1,10 @@
 // RUN: mlir-translate --no-implicit-module --test-spirv-roundtrip %s | FileCheck %s
 
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
 // Test file showing how the Physical Storage Buffer extension works end-2-end.
 
 !f32_binding = !spirv.struct<binding_f32_t, (!spirv.rtarray<f32, stride=4> [0])>

@@ -16,7 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 
 using namespace mlir::remark::detail;
-
+using namespace mlir::remark;
 //------------------------------------------------------------------------------
 // Remark
 //------------------------------------------------------------------------------
@@ -29,6 +29,11 @@ Remark::Arg::Arg(llvm::StringRef k, Value v) : key(k) {
 Remark::Arg::Arg(llvm::StringRef k, Type t) : key(k) {
   llvm::raw_string_ostream os(val);
   os << t;
+}
+
+Remark::Arg::Arg(llvm::StringRef k, Attribute a) : key(k), attr(a) {
+  llvm::raw_string_ostream os(val);
+  os << a;
 }
 
 void Remark::insert(llvm::StringRef s) { args.emplace_back(s); }
@@ -70,7 +75,7 @@ static void printArgs(llvm::raw_ostream &os, llvm::ArrayRef<Remark::Arg> args) {
 void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
   // Header: [Type] pass:remarkName
   StringRef type = getRemarkTypeString();
-  StringRef categoryName = getFullCategoryName();
+  StringRef categoryName = getCombinedCategoryName();
   StringRef name = remarkName;
 
   os << '[' << type << "] ";
@@ -81,9 +86,10 @@ void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
     os << "Function=" << getFunction() << " | ";
 
   if (printLocation) {
-    if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(getLocation()))
+    if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(getLocation())) {
       os << " @" << flc.getFilename() << ":" << flc.getLine() << ":"
          << flc.getColumn();
+    }
   }
 
   printArgs(os, getArgs());
@@ -140,9 +146,10 @@ llvm::remarks::Remark Remark::generateRemark() const {
   r.RemarkType = getRemarkType();
   r.RemarkName = getRemarkName();
   // MLIR does not use passes; instead, it has categories and sub-categories.
-  r.PassName = getFullCategoryName();
+  r.PassName = getCombinedCategoryName();
   r.FunctionName = getFunction();
   r.Loc = locLambda();
+  // Add all args (includes RemarkId and RelatedTo if they were added).
   for (const Remark::Arg &arg : getArgs()) {
     r.Args.emplace_back();
     r.Args.back().Key = arg.key;
@@ -165,12 +172,13 @@ InFlightRemark::~InFlightRemark() {
 // Remark Engine
 //===----------------------------------------------------------------------===//
 
-template <typename RemarkT, typename... Args>
-InFlightRemark RemarkEngine::makeRemark(Args &&...args) {
+template <typename RemarkT>
+InFlightRemark RemarkEngine::makeRemark(Location loc, RemarkOpts opts) {
   static_assert(std::is_base_of_v<Remark, RemarkT>,
                 "RemarkT must derive from Remark");
-  return InFlightRemark(*this,
-                        std::make_unique<RemarkT>(std::forward<Args>(args)...));
+  auto remark = std::make_unique<RemarkT>(loc, opts);
+  remark->setId(generateRemarkId());
+  return InFlightRemark(*this, std::move(remark));
 }
 
 template <typename RemarkT>
@@ -225,26 +233,40 @@ InFlightRemark RemarkEngine::emitOptimizationRemarkAnalysis(Location loc,
 // RemarkEngine
 //===----------------------------------------------------------------------===//
 
-void RemarkEngine::report(const Remark &&remark) {
+void RemarkEngine::reportImpl(const Remark &remark) {
   // Stream the remark
-  if (remarkStreamer)
+  if (remarkStreamer) {
     remarkStreamer->streamOptimizationRemark(remark);
+  }
 
   // Print using MLIR's diagnostic
   if (printAsEmitRemarks)
     emitRemark(remark.getLocation(), remark.getMsg());
 }
 
+void RemarkEngine::report(const Remark &&remark) {
+  if (remarkEmittingPolicy)
+    remarkEmittingPolicy->reportRemark(remark);
+}
+
 RemarkEngine::~RemarkEngine() {
+  if (remarkEmittingPolicy)
+    remarkEmittingPolicy->finalize();
+
   if (remarkStreamer)
     remarkStreamer->finalize();
 }
 
-llvm::LogicalResult
-RemarkEngine::initialize(std::unique_ptr<MLIRRemarkStreamerBase> streamer,
-                         std::string *errMsg) {
-  // If you need to validate categories/filters, do so here and set errMsg.
+llvm::LogicalResult RemarkEngine::initialize(
+    std::unique_ptr<MLIRRemarkStreamerBase> streamer,
+    std::unique_ptr<RemarkEmittingPolicyBase> remarkEmittingPolicy,
+    std::string *errMsg) {
   remarkStreamer = std::move(streamer);
+
+  auto reportFunc = llvm::bind_front<&RemarkEngine::reportImpl>(this);
+  remarkEmittingPolicy->initialize(ReportFn(std::move(reportFunc)));
+
+  this->remarkEmittingPolicy = std::move(remarkEmittingPolicy);
   return success();
 }
 
@@ -301,14 +323,15 @@ RemarkEngine::RemarkEngine(bool printAsEmitRemarks,
 }
 
 llvm::LogicalResult mlir::remark::enableOptimizationRemarks(
-    MLIRContext &ctx,
-    std::unique_ptr<remark::detail::MLIRRemarkStreamerBase> streamer,
-    const remark::RemarkCategories &cats, bool printAsEmitRemarks) {
+    MLIRContext &ctx, std::unique_ptr<detail::MLIRRemarkStreamerBase> streamer,
+    std::unique_ptr<detail::RemarkEmittingPolicyBase> remarkEmittingPolicy,
+    const RemarkCategories &cats, bool printAsEmitRemarks) {
   auto engine =
-      std::make_unique<remark::detail::RemarkEngine>(printAsEmitRemarks, cats);
+      std::make_unique<detail::RemarkEngine>(printAsEmitRemarks, cats);
 
   std::string errMsg;
-  if (failed(engine->initialize(std::move(streamer), &errMsg))) {
+  if (failed(engine->initialize(std::move(streamer),
+                                std::move(remarkEmittingPolicy), &errMsg))) {
     llvm::report_fatal_error(
         llvm::Twine("Failed to initialize remark engine. Error: ") + errMsg);
   }
@@ -316,3 +339,45 @@ llvm::LogicalResult mlir::remark::enableOptimizationRemarks(
 
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// Remark emitting policies
+//===----------------------------------------------------------------------===//
+
+namespace mlir::remark {
+RemarkEmittingPolicyAll::RemarkEmittingPolicyAll() = default;
+RemarkEmittingPolicyFinal::RemarkEmittingPolicyFinal() = default;
+
+void RemarkEmittingPolicyFinal::finalize() {
+  assert(reportImpl && "reportImpl is not set");
+
+  // Build ID -> Remark* lookup for resolving related remark references.
+  llvm::DenseMap<uint64_t, const detail::Remark *> idMap;
+  llvm::DenseSet<uint64_t> childIds; // IDs referenced as children
+
+  for (const auto &remark : postponedRemarks) {
+    if (remark.getId())
+      idMap[remark.getId().getValue()] = &remark;
+    for (auto relId : remark.getRelatedRemarkIds())
+      childIds.insert(relId.getValue());
+  }
+
+  // Emit remarks with related remarks grouped after their parents.
+  // Parent remarks are emitted first, followed by their related (child)
+  // remarks. Child-only remarks are skipped at the top level to avoid
+  // duplication.
+  for (const auto &remark : postponedRemarks) {
+    if (remark.getId() && childIds.count(remark.getId().getValue()))
+      continue; // will be printed grouped under its parent
+
+    reportImpl(remark);
+
+    // Emit related remarks immediately after the parent.
+    for (auto relId : remark.getRelatedRemarkIds()) {
+      if (const auto *related = idMap.lookup(relId.getValue()))
+        reportImpl(*related);
+    }
+  }
+}
+
+} // namespace mlir::remark

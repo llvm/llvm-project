@@ -1132,9 +1132,6 @@ entry:
 
 ; Check that functions with varargs do not use save/restore code
 
-declare void @llvm.va_start(ptr)
-declare void @llvm.va_end(ptr)
-
 define i32 @varargs(ptr %fmt, ...) {
 ; RV32IZCMP-LABEL: varargs:
 ; RV32IZCMP:       # %bb.0:
@@ -1579,8 +1576,6 @@ entry:
 
 ; Check that dynamic allocation calculations remain correct
 
-declare ptr @llvm.stacksave()
-declare void @llvm.stackrestore(ptr)
 declare void @notdead(ptr)
 
 define void @alloca(i32 %n) {
@@ -4004,7 +3999,6 @@ define void @callee_no_irq() {
 }
 
 declare void @bar(ptr, ptr)
-declare ptr @llvm.frameaddress.p0(i32 immarg)
 
 define i32 @use_fp(i32 %x) {
 ; RV32IZCMP-LABEL: use_fp:
@@ -4017,7 +4011,7 @@ define i32 @use_fp(i32 %x) {
 ; RV32IZCMP-NEXT:    addi s0, sp, 32
 ; RV32IZCMP-NEXT:    .cfi_def_cfa s0, 0
 ; RV32IZCMP-NEXT:    mv s1, a0
-; RV32IZCMP-NEXT:    addi a1, s0, -20
+; RV32IZCMP-NEXT:    addi a1, sp, 12
 ; RV32IZCMP-NEXT:    mv a0, s0
 ; RV32IZCMP-NEXT:    call bar
 ; RV32IZCMP-NEXT:    mv a0, s1
@@ -4034,7 +4028,7 @@ define i32 @use_fp(i32 %x) {
 ; RV64IZCMP-NEXT:    addi s0, sp, 48
 ; RV64IZCMP-NEXT:    .cfi_def_cfa s0, 0
 ; RV64IZCMP-NEXT:    mv s1, a0
-; RV64IZCMP-NEXT:    addi a1, s0, -36
+; RV64IZCMP-NEXT:    addi a1, sp, 12
 ; RV64IZCMP-NEXT:    mv a0, s0
 ; RV64IZCMP-NEXT:    call bar
 ; RV64IZCMP-NEXT:    mv a0, s1
@@ -4051,7 +4045,7 @@ define i32 @use_fp(i32 %x) {
 ; RV32IZCMP-SR-NEXT:    addi s0, sp, 32
 ; RV32IZCMP-SR-NEXT:    .cfi_def_cfa s0, 0
 ; RV32IZCMP-SR-NEXT:    mv s1, a0
-; RV32IZCMP-SR-NEXT:    addi a1, s0, -20
+; RV32IZCMP-SR-NEXT:    addi a1, sp, 12
 ; RV32IZCMP-SR-NEXT:    mv a0, s0
 ; RV32IZCMP-SR-NEXT:    call bar
 ; RV32IZCMP-SR-NEXT:    mv a0, s1
@@ -4068,7 +4062,7 @@ define i32 @use_fp(i32 %x) {
 ; RV64IZCMP-SR-NEXT:    addi s0, sp, 48
 ; RV64IZCMP-SR-NEXT:    .cfi_def_cfa s0, 0
 ; RV64IZCMP-SR-NEXT:    mv s1, a0
-; RV64IZCMP-SR-NEXT:    addi a1, s0, -36
+; RV64IZCMP-SR-NEXT:    addi a1, sp, 12
 ; RV64IZCMP-SR-NEXT:    mv a0, s0
 ; RV64IZCMP-SR-NEXT:    call bar
 ; RV64IZCMP-SR-NEXT:    mv a0, s1
@@ -4088,7 +4082,7 @@ define i32 @use_fp(i32 %x) {
 ; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    .cfi_def_cfa s0, 0
 ; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    addi a1, s0, -16
+; RV32I-NEXT:    mv a1, sp
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    call bar
 ; RV32I-NEXT:    mv a0, s1
@@ -4116,7 +4110,7 @@ define i32 @use_fp(i32 %x) {
 ; RV64I-NEXT:    addi s0, sp, 32
 ; RV64I-NEXT:    .cfi_def_cfa s0, 0
 ; RV64I-NEXT:    mv s1, a0
-; RV64I-NEXT:    addi a1, s0, -28
+; RV64I-NEXT:    addi a1, sp, 4
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call bar
 ; RV64I-NEXT:    mv a0, s1

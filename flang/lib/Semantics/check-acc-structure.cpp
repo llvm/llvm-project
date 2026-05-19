@@ -10,6 +10,7 @@
 #include "flang/Common/enum-set.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
@@ -136,10 +137,10 @@ void AccStructureChecker::CheckNotInComputeConstruct() {
   }
 }
 
-bool AccStructureChecker::IsInsideParallelConstruct() const {
+bool AccStructureChecker::IsInsideKernelsConstruct() const {
   if (auto directive = getParentComputeConstruct())
-    if (*directive == llvm::acc::ACCD_parallel ||
-        *directive == llvm::acc::ACCD_parallel_loop)
+    if (*directive == llvm::acc::ACCD_kernels ||
+        *directive == llvm::acc::ACCD_kernels_loop)
       return true;
   return false;
 }
@@ -293,7 +294,10 @@ void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
           bool invalid{false};
           if (parentClause == llvm::acc::Clause::ACCC_gang &&
               cl == llvm::acc::Clause::ACCC_gang) {
-            if (IsInsideParallelConstruct()) {
+            if (IsInsideKernelsConstruct()) {
+              context_.Say(GetContext().clauseSource,
+                  "Nested GANG loops are not allowed in the region of a KERNELS construct"_err_en_US);
+            } else {
               auto parentDim = getGangDimensionSize(parent);
               auto currentDim = getGangDimensionSize(GetContext());
               std::int64_t parentDimNum = 1, currentDimNum = 1;
@@ -317,8 +321,6 @@ void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
                     parentDimStr);
                 continue;
               }
-            } else {
-              invalid = true;
             }
           } else if (parentClause == llvm::acc::Clause::ACCC_worker &&
               (cl == llvm::acc::Clause::ACCC_gang ||
@@ -342,6 +344,75 @@ void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
     }
     if (IsComputeConstruct(parent.directive))
       break;
+  }
+}
+
+void AccStructureChecker::Enter(const parser::CallStmt &call) {
+  if (dirContext_.empty() || !call.typedCall) {
+    return;
+  }
+  const Symbol *sym{call.typedCall->proc().GetSymbol()};
+  if (!sym) {
+    return;
+  }
+  const Symbol &ult{sym->GetUltimate()};
+  const auto *subp{ult.detailsIf<SubprogramDetails>()};
+  if (!subp || subp->openACCRoutineInfos().empty()) {
+    return;
+  }
+  std::string routineParDim;
+  unsigned routineGangDim = 0;
+  for (const OpenACCRoutineInfo &ri : subp->openACCRoutineInfos()) {
+    if (ri.isGang()) {
+      if (unsigned gangDim = ri.gangDim()) {
+        routineGangDim = gangDim;
+        routineParDim = "GANG(" + std::to_string(gangDim) + ")";
+      } else {
+        routineGangDim = 1;
+        routineParDim = "GANG";
+      }
+    } else if (ri.isWorker()) {
+      routineParDim = "WORKER";
+    } else if (ri.isVector()) {
+      routineParDim = "VECTOR";
+    } else if (ri.isSeq()) {
+      routineParDim = "SEQ";
+    }
+  }
+
+  DirectiveContext &inner{dirContext_.back()};
+  for (llvm::acc::Clause cl : inner.actualClauses) {
+    if (cl == llvm::acc::Clause::ACCC_vector) {
+      if (!routineParDim.empty() && routineParDim != "SEQ") {
+        context_.Say(GetContext().clauseSource,
+            "Calling %s routine inside VECTOR loop is not allowed"_err_en_US,
+            routineParDim);
+      }
+    }
+    if (cl == llvm::acc::Clause::ACCC_worker) {
+      if (!routineParDim.empty() &&
+          (routineParDim != "SEQ" && routineParDim != "VECTOR")) {
+        context_.Say(GetContext().clauseSource,
+            "Calling %s routine inside WORKER loop is not allowed"_err_en_US,
+            routineParDim);
+      }
+    }
+    if (cl == llvm::acc::Clause::ACCC_gang) {
+      const std::optional<std::int64_t> loopGangDim{
+          getGangDimensionSize(inner)};
+      const std::int64_t loopDimNum{loopGangDim.value_or(1)};
+      if (routineGangDim && routineGangDim >= loopDimNum) {
+        if (loopGangDim) {
+          context_.Say(GetContext().clauseSource,
+              "Calling %s routine inside GANG(%s) loop is not allowed"_err_en_US,
+              routineParDim, std::to_string(*loopGangDim));
+        } else {
+          context_.Say(GetContext().clauseSource,
+              "Calling %s routine inside GANG loop is not allowed"_err_en_US,
+              routineParDim);
+        }
+      }
+    }
   }
 }
 
@@ -666,9 +737,44 @@ void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
   const auto &verbatim = std::get<parser::Verbatim>(x.t);
   PushContextAndClauseSets(verbatim.source, llvm::acc::Directive::ACCD_cache);
   SetContextDirectiveSource(verbatim.source);
-  if (loopNestLevel == 0) {
-    context_.Say(verbatim.source,
-          "The CACHE directive must be inside a loop"_err_en_US);
+  // Check cache directive array section constraints
+  const auto &objectListWithModifier =
+      std::get<parser::AccObjectListWithModifier>(x.t);
+  const auto &objectList =
+      std::get<parser::AccObjectList>(objectListWithModifier.t);
+
+  for (const auto &accObject : objectList.v) {
+    common::visit(
+        common::visitors{
+            [&](const parser::Designator &designator) {
+              if (const auto *dataRef =
+                      std::get_if<parser::DataRef>(&designator.u)) {
+                if (const auto *arrayElem =
+                        std::get_if<common::Indirection<parser::ArrayElement>>(
+                            &dataRef->u)) {
+                  for (const auto &subscript :
+                      arrayElem->value().Subscripts()) {
+                    if (const auto *triplet =
+                            std::get_if<parser::SubscriptTriplet>(
+                                &subscript.u)) {
+                      const auto &stride{std::get<2>(triplet->t)};
+                      if (stride) {
+                        if (auto strideVal{GetIntValue(*stride)}) {
+                          if (*strideVal != 1) {
+                            context_.Say(designator.source,
+                                "The CACHE directive does not support strided array sections"_err_en_US);
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            [&](const parser::Name &) {
+              // Common block names are not expected in cache directive
+            }},
+        accObject.u);
   }
 }
 void AccStructureChecker::Leave(const parser::OpenACCCacheConstruct &x) {
@@ -708,7 +814,8 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
     common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
-              if (const auto *name = getDesignatorNameIfDataRef(designator)) {
+              if (const auto *name =
+                      parser::GetDesignatorNameIfDataRef(designator)) {
                 if (declareSymbols.contains(&name->symbol->GetUltimate())) {
                   if (declareSymbols[&name->symbol->GetUltimate()] == clause) {
                     context_.Warn(common::UsageWarning::OpenAccUsage,
@@ -981,7 +1088,8 @@ void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
     common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
-              if (const auto *name = getDesignatorNameIfDataRef(designator)) {
+              if (const auto *name =
+                      parser::GetDesignatorNameIfDataRef(designator)) {
                 if (name->symbol) {
                   if (const auto *type{name->symbol->GetType()}) {
                     if (type->IsNumeric(TypeCategory::Integer) &&

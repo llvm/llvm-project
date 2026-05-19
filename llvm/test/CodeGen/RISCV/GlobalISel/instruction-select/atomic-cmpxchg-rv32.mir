@@ -17,7 +17,7 @@ body:             |
     ; RV32IA-ZABHA-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; RV32IA-ZABHA-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x0
     ; RV32IA-ZABHA-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 1
-    ; RV32IA-ZABHA-NEXT: [[AMOCAS_B:%[0-9]+]]:gpr = AMOCAS_B [[COPY1]], [[COPY]], [[ADDI]] :: (load store monotonic (s8))
+    ; RV32IA-ZABHA-NEXT: [[AMOCAS_B:%[0-9]+]]:gpr = AMOCAS_B [[COPY1]], [[ADDI]], [[COPY]] :: (load store monotonic (s8))
     ; RV32IA-ZABHA-NEXT: $x10 = COPY [[AMOCAS_B]]
     ; RV32IA-ZABHA-NEXT: PseudoRET implicit $x10
     %0:gpr(p0) = COPY $x10
@@ -42,7 +42,7 @@ body:             |
     ; RV32IA-ZABHA-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; RV32IA-ZABHA-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x0
     ; RV32IA-ZABHA-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 1
-    ; RV32IA-ZABHA-NEXT: [[AMOCAS_H:%[0-9]+]]:gpr = AMOCAS_H [[COPY1]], [[COPY]], [[ADDI]] :: (load store monotonic (s16))
+    ; RV32IA-ZABHA-NEXT: [[AMOCAS_H:%[0-9]+]]:gpr = AMOCAS_H [[COPY1]], [[ADDI]], [[COPY]] :: (load store monotonic (s16))
     ; RV32IA-ZABHA-NEXT: $x10 = COPY [[AMOCAS_H]]
     ; RV32IA-ZABHA-NEXT: PseudoRET implicit $x10
     %0:gpr(p0) = COPY $x10
@@ -67,7 +67,7 @@ body:             |
     ; RV32IA-ZABHA-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; RV32IA-ZABHA-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x0
     ; RV32IA-ZABHA-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 1
-    ; RV32IA-ZABHA-NEXT: [[AMOCAS_W:%[0-9]+]]:gpr = AMOCAS_W [[COPY1]], [[COPY]], [[ADDI]] :: (load store monotonic (s32))
+    ; RV32IA-ZABHA-NEXT: [[AMOCAS_W:%[0-9]+]]:gpr = AMOCAS_W [[COPY1]], [[ADDI]], [[COPY]] :: (load store monotonic (s32))
     ; RV32IA-ZABHA-NEXT: $x10 = COPY [[AMOCAS_W]]
     ; RV32IA-ZABHA-NEXT: PseudoRET implicit $x10
     %0:gpr(p0) = COPY $x10
@@ -92,7 +92,7 @@ body:             |
     ; RV32IA-ZABHA-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; RV32IA-ZABHA-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x0
     ; RV32IA-ZABHA-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 1
-    ; RV32IA-ZABHA-NEXT: [[AMOCAS_W:%[0-9]+]]:gpr = AMOCAS_W [[COPY1]], [[COPY]], [[ADDI]] :: (load store monotonic (s32))
+    ; RV32IA-ZABHA-NEXT: [[AMOCAS_W:%[0-9]+]]:gpr = AMOCAS_W [[COPY1]], [[ADDI]], [[COPY]] :: (load store monotonic (s32))
     ; RV32IA-ZABHA-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU [[AMOCAS_W]], 1
     ; RV32IA-ZABHA-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; RV32IA-ZABHA-NEXT: $x10 = COPY [[AMOCAS_W]]

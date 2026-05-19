@@ -372,7 +372,9 @@ private:
 /// FunctionArgList - Type for representing both the decl and type
 /// of parameters to a function. The decl must be either a
 /// ParmVarDecl or ImplicitParamDecl.
-class FunctionArgList : public SmallVector<const VarDecl *, 16> {};
+class FunctionArgList : public SmallVector<const VarDecl *, 16> {
+  using SmallVector::SmallVector;
+};
 
 /// ReturnValueSlot - Contains the address where the return value of a
 /// function can be stored, and whether the address is volatile or not.
@@ -410,10 +412,10 @@ public:
 /// This is useful for adding attrs to bitcode modules that you want to link
 /// with but don't control, such as CUDA's libdevice.  When linking with such
 /// a bitcode library, you might want to set e.g. its functions'
-/// "unsafe-fp-math" attribute to match the attr of the functions you're
+/// denormal_fp_math attribute to match the attr of the functions you're
 /// codegen'ing.  Otherwise, LLVM will interpret the bitcode module's lack of
-/// unsafe-fp-math attrs as tantamount to unsafe-fp-math=false, and then LLVM
-/// will propagate unsafe-fp-math=false up to every transitive caller of a
+/// denormal-fp-math attrs as tantamount to denormal-fp-math=ieee, and then LLVM
+/// will propagate denormal-fp-math=ieee up to every transitive caller of a
 /// function in the bitcode library!
 ///
 /// With the exception of fast-math attrs, this will only make the attributes
@@ -457,6 +459,9 @@ struct DisableDebugLocationUpdates {
   CodeGenFunction &CGF;
   DisableDebugLocationUpdates(CodeGenFunction &CGF);
   ~DisableDebugLocationUpdates();
+  DisableDebugLocationUpdates(const DisableDebugLocationUpdates &) = delete;
+  DisableDebugLocationUpdates &
+  operator=(const DisableDebugLocationUpdates &) = delete;
 };
 
 } // end namespace CodeGen

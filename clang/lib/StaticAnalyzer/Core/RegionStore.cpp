@@ -714,11 +714,6 @@ public: // Part of public interface to class.
     return getBinding(getRegionBindings(S), L, T);
   }
 
-  std::optional<SVal> getUniqueDefaultBinding(RegionBindingsConstRef B,
-                                              const TypedValueRegion *R) const;
-  std::optional<SVal>
-  getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const;
-
   std::optional<SVal> getDefaultBinding(Store S, const MemRegion *R) override {
     RegionBindingsRef B = getRegionBindings(S);
     // Default bindings are always applied over a base region so look up the
@@ -791,8 +786,8 @@ public: // Part of public interface to class.
 
   /// removeDeadBindings - Scans the RegionStore of 'state' for dead values.
   ///  It returns a new Store with these values removed.
-  StoreRef removeDeadBindings(Store store, const StackFrameContext *LCtx,
-                              SymbolReaper& SymReaper) override;
+  StoreRef removeDeadBindings(Store store, const StackFrame *SF,
+                              SymbolReaper &SymReaper) override;
 
   //===------------------------------------------------------------------===//
   // Utility methods.
@@ -2457,7 +2452,7 @@ NonLoc RegionStoreManager::createLazyBinding(RegionBindingsConstRef B,
 SVal RegionStoreManager::getBindingForStruct(RegionBindingsConstRef B,
                                              const TypedValueRegion *R) {
   const RecordDecl *RD =
-      R->getValueType()->castAsCanonical<RecordType>()->getOriginalDecl();
+      R->getValueType()->castAsCanonical<RecordType>()->getDecl();
   if (!RD->getDefinition())
     return UnknownVal();
 
@@ -2465,11 +2460,6 @@ SVal RegionStoreManager::getBindingForStruct(RegionBindingsConstRef B,
   // behavior doesn't depend on the struct layout.
   // This way even an empty struct can carry taint, no matter if creduce drops
   // the last field member or not.
-
-  // Try to avoid creating a LCV if it would anyways just refer to a single
-  // default binding.
-  if (std::optional<SVal> Val = getUniqueDefaultBinding(B, R))
-    return *Val;
   return createLazyBinding(B, R);
 }
 
@@ -2576,6 +2566,15 @@ RegionStoreManager::setImplicitDefaultValue(LimitedRegionBindingsConstRef B,
   if (B.hasExhaustedBindingLimit())
     return B;
 
+  // Preserve an existing aggregate default binding. This handles partially
+  // initialized union-containing aggregates where bindAggregate() may already
+  // have installed a more precise default value at offset 0. Still allow
+  // implicit defaults for scalars and pointers so regular zero-initialization
+  // continues to work, e.g. for `new int[10]{}`.
+  if (T->isAggregateType() && B.getDefaultBinding(R).has_value()) {
+    return B;
+  }
+
   SVal V;
 
   if (Loc::isLocType(T))
@@ -2658,16 +2657,19 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
     return bindAggregate(B, R, V);
   }
 
-  // Handle lazy compound values.
+  // FIXME Single value constant should have been handled before this call to
+  // bindArray. This is only a hotfix to not crash.
+  if (Init.isConstant())
+    return bindAggregate(B, R, Init);
+
   if (std::optional LCV = Init.getAs<nonloc::LazyCompoundVal>()) {
     if (std::optional NewB = tryBindSmallArray(B, R, AT, *LCV))
       return *NewB;
-
     return bindAggregate(B, R, Init);
   }
 
-  if (Init.isUnknown())
-    return bindAggregate(B, R, UnknownVal());
+  if (isa<nonloc::SymbolVal, UnknownVal, UndefinedVal>(Init))
+    return bindAggregate(B, R, Init);
 
   // Remaining case: explicit compound values.
   const nonloc::CompoundVal& CV = Init.castAs<nonloc::CompoundVal>();
@@ -2751,49 +2753,11 @@ RegionStoreManager::bindVector(LimitedRegionBindingsConstRef B,
   return NewB;
 }
 
-std::optional<SVal>
-RegionStoreManager::getUniqueDefaultBinding(RegionBindingsConstRef B,
-                                            const TypedValueRegion *R) const {
-  if (R != R->getBaseRegion())
-    return std::nullopt;
-
-  const auto *Cluster = B.lookup(R);
-  if (!Cluster || !llvm::hasSingleElement(*Cluster))
-    return std::nullopt;
-
-  const auto [Key, Value] = *Cluster->begin();
-  return Key.isDirect() ? std::optional<SVal>{} : Value;
-}
-
-std::optional<SVal>
-RegionStoreManager::getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const {
-  auto B = getRegionBindings(LCV.getStore());
-  return getUniqueDefaultBinding(B, LCV.getRegion());
-}
-
 std::optional<LimitedRegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
     LimitedRegionBindingsConstRef B, const TypedValueRegion *R,
     const RecordDecl *RD, nonloc::LazyCompoundVal LCV) {
   if (B.hasExhaustedBindingLimit())
     return B.withValuesEscaped(LCV);
-
-  // If we try to copy a Conjured value representing the value of the whole
-  // struct, don't try to element-wise copy each field.
-  // That would unnecessarily bind Derived symbols slicing off the subregion for
-  // the field from the whole Conjured symbol.
-  //
-  //   struct Window { int width; int height; };
-  //   Window getWindow(); <-- opaque fn.
-  //   Window w = getWindow(); <-- conjures a new Window.
-  //   Window w2 = w; <-- trivial copy "w", calling "tryBindSmallStruct"
-  //
-  // We should not end up with a new Store for "w2" like this:
-  //   Direct [ 0..31]: Derived{Conj{}, w.width}
-  //   Direct [32..63]: Derived{Conj{}, w.height}
-  // Instead, we should just bind that Conjured value instead.
-  if (std::optional<SVal> Val = getUniqueDefaultBinding(LCV)) {
-    return B.addBinding(BindingKey::Make(R, BindingKey::Default), Val.value());
-  }
 
   FieldVector Fields;
 
@@ -2985,15 +2949,14 @@ class RemoveDeadBindingsWorker
     : public ClusterAnalysis<RemoveDeadBindingsWorker> {
   SmallVector<const SymbolicRegion *, 12> Postponed;
   SymbolReaper &SymReaper;
-  const StackFrameContext *CurrentLCtx;
+  const StackFrame *CurrentSF;
 
 public:
   RemoveDeadBindingsWorker(RegionStoreManager &rm,
-                           ProgramStateManager &stateMgr,
-                           RegionBindingsRef b, SymbolReaper &symReaper,
-                           const StackFrameContext *LCtx)
-    : ClusterAnalysis<RemoveDeadBindingsWorker>(rm, stateMgr, b),
-      SymReaper(symReaper), CurrentLCtx(LCtx) {}
+                           ProgramStateManager &stateMgr, RegionBindingsRef b,
+                           SymbolReaper &symReaper, const StackFrame *SF)
+      : ClusterAnalysis<RemoveDeadBindingsWorker>(rm, stateMgr, b),
+        SymReaper(symReaper), CurrentSF(SF) {}
 
   // Called by ClusterAnalysis.
   void VisitAddedToCluster(const MemRegion *baseR, const ClusterBindings &C);
@@ -3042,9 +3005,8 @@ void RemoveDeadBindingsWorker::VisitAddedToCluster(const MemRegion *baseR,
   if (const CXXThisRegion *TR = dyn_cast<CXXThisRegion>(baseR)) {
     const auto *StackReg =
         cast<StackArgumentsSpaceRegion>(TR->getSuperRegion());
-    const StackFrameContext *RegCtx = StackReg->getStackFrame();
-    if (CurrentLCtx &&
-        (RegCtx == CurrentLCtx || RegCtx->isParentOf(CurrentLCtx)))
+    const StackFrame *RegSF = StackReg->getStackFrame();
+    if (CurrentSF && (RegSF == CurrentSF || RegSF->isParentOf(CurrentSF)))
       AddToWorkList(TR, &C);
   }
 }
@@ -3117,10 +3079,10 @@ bool RemoveDeadBindingsWorker::UpdatePostponed() {
 }
 
 StoreRef RegionStoreManager::removeDeadBindings(Store store,
-                                                const StackFrameContext *LCtx,
-                                                SymbolReaper& SymReaper) {
+                                                const StackFrame *SF,
+                                                SymbolReaper &SymReaper) {
   RegionBindingsRef B = getRegionBindings(store);
-  RemoveDeadBindingsWorker W(*this, StateMgr, B, SymReaper, LCtx);
+  RemoveDeadBindingsWorker W(*this, StateMgr, B, SymReaper, SF);
   W.GenerateClusters();
 
   // Enqueue the region roots onto the worklist.

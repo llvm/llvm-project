@@ -41,4 +41,30 @@ class Branch_imm<bits<3> funct3, string opcodestr>
 let Predicates = [HasStdExtZibi] in {
   def BEQI : Branch_imm<0b010, "beqi">;
   def BNEI : Branch_imm<0b011, "bnei">;
+
+  // For long branch relaxation.
+  // This will be expanded into BEQI/BNEI(4 bytes) + JAL(4 bytes).
+  def PseudoLongBEQI : LongBcciPseudo<imm5_zibi, 8>;
+  def PseudoLongBNEI : LongBcciPseudo<imm5_zibi, 8>;
+} // Predicates = [HasStdExtZibi]
+
+multiclass BccImmPat<CondCode Cond, Branch_imm Inst> {
+  def : Pat<(riscv_brcc (XLenVT GPR:$rs1), imm5_zibi:$cimm, Cond, bb:$imm12),
+            (Inst GPR:$rs1, imm5_zibi:$cimm, bare_simm13_lsb0_bb:$imm12)>;
+}
+
+defm CC_Imm5_Zibi : SelectCC_GPR_riirr<GPR, imm5_zibi>;
+
+class SelectZibi<CondCode Cond>
+    : Pat<(riscv_selectcc (XLenVT GPR:$lhs), imm5_zibi:$cimm, Cond:$cc,
+                          (XLenVT GPR:$truev), GPR:$falsev),
+          (Select_GPR_Using_CC_Imm5_Zibi GPR:$lhs, imm5_zibi:$cimm,
+              (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+
+let Predicates = [HasStdExtZibi] in {
+  def : SelectZibi<SETEQ>;
+  def : SelectZibi<SETNE>;
+
+  defm : BccImmPat<SETEQ, BEQI>;
+  defm : BccImmPat<SETNE, BNEI>;
 } // Predicates = [HasStdExtZibi]

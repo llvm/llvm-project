@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -57,8 +58,7 @@ struct HexNumber {
   HexNumber(unsigned long Value) : Value(Value) {}
   HexNumber(unsigned long long Value) : Value(Value) {}
   template <typename EnumT, typename = std::enable_if_t<std::is_enum_v<EnumT>>>
-  HexNumber(EnumT Value)
-      : HexNumber(static_cast<std::underlying_type_t<EnumT>>(Value)) {}
+  HexNumber(EnumT Value) : HexNumber(llvm::to_underlying(Value)) {}
 
   uint64_t Value;
 };
@@ -84,7 +84,7 @@ struct FlagEntry {
       : Name(Name), Value(Value) {}
   template <typename EnumT, typename = std::enable_if_t<std::is_enum_v<EnumT>>>
   FlagEntry(StringRef Name, EnumT Value)
-      : FlagEntry(Name, static_cast<std::underlying_type_t<EnumT>>(Value)) {}
+      : FlagEntry(Name, llvm::to_underlying(Value)) {}
 
   StringRef Name;
   uint64_t Value;
@@ -284,9 +284,11 @@ public:
     startLine() << Label << ": " << (Value ? "Yes" : "No") << '\n';
   }
 
-  template <typename... T> void printVersion(StringRef Label, T... Version) {
+  template <typename T, typename... TArgs>
+  void printVersion(StringRef Label, T MajorVersion, TArgs... MinorVersions) {
     startLine() << Label << ": ";
-    printVersionInternal(Version...);
+    getOStream() << MajorVersion;
+    ((getOStream() << '.' << MinorVersions), ...);
     getOStream() << "\n";
   }
 
@@ -454,16 +456,6 @@ public:
   virtual raw_ostream &getOStream() { return OS; }
 
 private:
-  template <typename T> void printVersionInternal(T Value) {
-    getOStream() << Value;
-  }
-
-  template <typename S, typename T, typename... TArgs>
-  void printVersionInternal(S Value, T Value2, TArgs... Args) {
-    getOStream() << Value << ".";
-    printVersionInternal(Value2, Args...);
-  }
-
   static bool flagName(const FlagEntry &LHS, const FlagEntry &RHS) {
     return LHS.Name < RHS.Name;
   }
@@ -878,7 +870,7 @@ struct DictScope : DelimitedScope {
     W.objectBegin();
   }
 
-  ~DictScope() {
+  ~DictScope() override {
     if (W)
       W->objectEnd();
   }
@@ -897,7 +889,7 @@ struct ListScope : DelimitedScope {
     W.arrayBegin();
   }
 
-  ~ListScope() {
+  ~ListScope() override {
     if (W)
       W->arrayEnd();
   }

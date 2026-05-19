@@ -47,6 +47,7 @@ class CodeGenRegisterClass;
 namespace gi {
 class MatchTable;
 class Matcher;
+class RuleMatcher;
 class OperandMatcher;
 class MatchAction;
 class PredicateMatcher;
@@ -70,8 +71,7 @@ std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
 /// they share. \p MatcherStorage is used as a memory container
 /// for the group that are created as part of this process.
 ///
-/// What this optimization does looks like if GroupT = GroupMatcher:
-/// Output without optimization:
+/// Example of GroupMatcher formation via this function:
 /// \verbatim
 /// # R1
 ///  # predicate A
@@ -91,10 +91,9 @@ std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
 ///  # R2
 ///   # predicate C
 /// \endverbatim
-template <class GroupT>
 std::vector<Matcher *>
-optimizeRules(ArrayRef<Matcher *> Rules,
-              std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
+optimizeRuleset(MutableArrayRef<RuleMatcher> Rules,
+                std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
 
 /// A record to be stored in a MatchTable.
 ///
@@ -267,7 +266,8 @@ extern std::set<LLTCodeGen> KnownTypes;
 
 /// Convert an MVT to an equivalent LLT if possible, or the invalid LLT() for
 /// MVTs that don't map cleanly to an LLT (e.g., iPTR, *any, ...).
-std::optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT);
+std::optional<LLTCodeGen> MVTToLLT(MVT VT);
+std::optional<LLTCodeGen> MVTToGenericLLT(MVT VT);
 
 using TempTypeIdx = int64_t;
 class LLTCodeGenOrTempType {
@@ -306,13 +306,31 @@ inline MatchTable &operator<<(MatchTable &Table,
 //===- Matchers -----------------------------------------------------------===//
 class Matcher {
 public:
+  enum MatcherKind {
+    MK_Group,
+    MK_Switch,
+    MK_Rule,
+  };
+
+  Matcher(MatcherKind Kind) : Kind(Kind) {}
   virtual ~Matcher();
+
+  MatcherKind getKind() const { return Kind; }
+
   virtual void optimize();
   virtual void emit(MatchTable &Table) = 0;
 
   virtual bool hasFirstCondition() const = 0;
   virtual const PredicateMatcher &getFirstCondition() const = 0;
+  virtual LLTCodeGen getFirstConditionAsRootType() const = 0;
   virtual std::unique_ptr<PredicateMatcher> popFirstCondition() = 0;
+
+  /// Check recursively if the matcher records named operands for use in C++
+  /// predicates.
+  virtual bool recordsOperand() const = 0;
+
+private:
+  MatcherKind Kind;
 };
 
 class GroupMatcher final : public Matcher {
@@ -327,6 +345,10 @@ class GroupMatcher final : public Matcher {
   std::vector<std::unique_ptr<Matcher>> MatcherStorage;
 
 public:
+  GroupMatcher() : Matcher(MK_Group) {}
+
+  static bool classof(const Matcher *M) { return M->getKind() == MK_Group; }
+
   /// Add a matcher to the collection of nested matchers if it meets the
   /// requirements, and return true. If it doesn't, do nothing and return false.
   ///
@@ -361,7 +383,7 @@ public:
   /// has been already called. If any of the matchers are moved out, the group
   /// becomes safe to destroy, but not safe to re-use for anything else.
   iterator_range<std::vector<Matcher *>::iterator> matchers() {
-    return make_range(Matchers.begin(), Matchers.end());
+    return Matchers;
   }
   size_t size() const { return Matchers.size(); }
   bool empty() const { return Matchers.empty(); }
@@ -372,7 +394,10 @@ public:
            "Trying to get a condition from a condition-less group");
     return *Conditions.front();
   }
+  LLTCodeGen getFirstConditionAsRootType() const override;
   bool hasFirstCondition() const override { return !Conditions.empty(); }
+
+  bool recordsOperand() const override;
 
 private:
   /// See if a candidate matcher could be added to this group solely by
@@ -395,26 +420,37 @@ struct RecordAndValue {
 };
 
 class SwitchMatcher : public Matcher {
-  /// All the nested matchers, representing distinct switch-cases. The first
-  /// conditions (as Matcher::getFirstCondition() reports) of all the nested
-  /// matchers must share the same type and path to a value they check, in other
-  /// words, be isIdenticalDownToValue, but have different values they check
-  /// against.
+  /// All the nested matchers, representing switch-cases. The first conditions
+  /// (as Matcher::getFirstCondition() reports) of all the nested matchers must
+  /// share the same type and path to a value they check, in other words, be
+  /// isIdenticalDownToValue. Multiple matchers can share the same value and are
+  /// bucketed together.
   std::vector<Matcher *> Matchers;
 
   /// The representative condition, with a type and a path (InsnVarID and OpIdx
-  /// in most cases)  shared by all the matchers contained.
+  /// in most cases) shared by all the matchers contained.
   std::unique_ptr<PredicateMatcher> Condition;
 
-  /// Temporary set used to check that the case values don't repeat within the
-  /// same switch.
-  std::set<RecordAndValue> Values;
+  struct Bucket {
+    RecordAndValue Value;
+    std::vector<Matcher *> Matchers;
+
+    explicit Bucket(RecordAndValue Value) : Value(std::move(Value)) {}
+  };
+
+  /// Buckets of matchers keyed by their case value.
+  std::map<int64_t, Bucket> Buckets;
 
   /// An owning collection for any auxiliary matchers created while optimizing
   /// nested matchers contained.
   std::vector<std::unique_ptr<Matcher>> MatcherStorage;
 
 public:
+  SwitchMatcher();
+  ~SwitchMatcher();
+
+  static bool classof(const Matcher *M) { return M->getKind() == MK_Switch; }
+
   bool addMatcher(Matcher &Candidate);
 
   void finalize();
@@ -434,10 +470,16 @@ public:
   }
 
   const PredicateMatcher &getFirstCondition() const override {
-    llvm_unreachable("Trying to pop a condition from a condition-less group");
+    llvm_unreachable("Trying to get a condition from a condition-less group");
+  }
+
+  LLTCodeGen getFirstConditionAsRootType() const override {
+    llvm_unreachable("Trying to get a condition from a condition-less group");
   }
 
   bool hasFirstCondition() const override { return false; }
+
+  bool recordsOperand() const override;
 
 private:
   /// See if the predicate type has a Switch-implementation for it.
@@ -520,10 +562,10 @@ protected:
 
   ArrayRef<SMLoc> SrcLoc;
 
-  typedef std::tuple<const Record *, unsigned, unsigned>
-      DefinedComplexPatternSubOperand;
-  typedef StringMap<DefinedComplexPatternSubOperand>
-      DefinedComplexPatternSubOperandMap;
+  using DefinedComplexPatternSubOperand =
+      std::tuple<const Record *, unsigned, unsigned>;
+  using DefinedComplexPatternSubOperandMap =
+      StringMap<DefinedComplexPatternSubOperand>;
   /// A map of Symbolic Names to ComplexPattern sub-operands.
   DefinedComplexPatternSubOperandMap ComplexSubOperands;
   /// A map used to for multiple referenced error check of ComplexSubOperand.
@@ -542,6 +584,8 @@ public:
   RuleMatcher(ArrayRef<SMLoc> SrcLoc);
   RuleMatcher(RuleMatcher &&Other) = default;
   RuleMatcher &operator=(RuleMatcher &&Other) = default;
+
+  static bool classof(const Matcher *M) { return M->getKind() == MK_Rule; }
 
   TempTypeIdx getNextTempTypeIdx() { return NextTempTypeIdx--; }
 
@@ -613,7 +657,7 @@ public:
   DefinedInsnVariablesMap::const_iterator defined_insn_vars_end() const {
     return InsnVariableIDs.end();
   }
-  iterator_range<typename DefinedInsnVariablesMap::const_iterator>
+  iterator_range<DefinedInsnVariablesMap::const_iterator>
   defined_insn_vars() const {
     return make_range(defined_insn_vars_begin(), defined_insn_vars_end());
   }
@@ -624,8 +668,7 @@ public:
   MutatableInsnSet::const_iterator mutatable_insns_end() const {
     return MutatableInsns.end();
   }
-  iterator_range<typename MutatableInsnSet::const_iterator>
-  mutatable_insns() const {
+  iterator_range<MutatableInsnSet::const_iterator> mutatable_insns() const {
     return make_range(mutatable_insns_begin(), mutatable_insns_end());
   }
   void reserveInsnMatcherForMutation(InstructionMatcher *InsnMatcher) {
@@ -669,6 +712,8 @@ public:
   void optimize() override;
   void emit(MatchTable &Table) override;
 
+  bool recordsOperand() const override;
+
   /// Compare the priority of this object and B.
   ///
   /// Returns true if this object is more important than B.
@@ -680,7 +725,7 @@ public:
 
   std::unique_ptr<PredicateMatcher> popFirstCondition() override;
   const PredicateMatcher &getFirstCondition() const override;
-  LLTCodeGen getFirstConditionAsRootType();
+  LLTCodeGen getFirstConditionAsRootType() const override;
   bool hasFirstCondition() const override;
   StringRef getOpcode() const;
 
@@ -694,9 +739,7 @@ public:
     return make_range(PhysRegOperands.begin(), PhysRegOperands.end());
   }
 
-  iterator_range<MatchersTy::iterator> insnmatchers() {
-    return make_range(Matchers.begin(), Matchers.end());
-  }
+  iterator_range<MatchersTy::iterator> insnmatchers() { return Matchers; }
   bool insnmatchers_empty() const { return Matchers.empty(); }
   void insnmatchers_pop_front();
 };
@@ -805,7 +848,6 @@ public:
     IPM_Opcode,
     IPM_NumOperands,
     IPM_ImmPredicate,
-    IPM_Imm,
     IPM_AtomicOrderingMMO,
     IPM_MemoryLLTSize,
     IPM_MemoryVsLLTSize,
@@ -816,7 +858,10 @@ public:
     IPM_OneUse,
     IPM_GenericPredicate,
     IPM_MIFlags,
+
     OPM_LeafPredicate,
+    OPM_ImmPredicate,
+    OPM_Imm,
     OPM_SameOperand,
     OPM_ComplexPattern,
     OPM_IntrinsicID,
@@ -825,6 +870,7 @@ public:
     OPM_Int,
     OPM_LiteralInt,
     OPM_LLT,
+    OPM_LLTShape,
     OPM_PointerToAny,
     OPM_RegBank,
     OPM_MBB,
@@ -851,12 +897,18 @@ public:
 
   PredicateKind getKind() const { return Kind; }
 
-  bool dependsOnOperands() const {
+  bool dependsOnRecordedOperands() const {
     // Custom predicates really depend on the context pattern of the
     // instruction, not just the individual instruction. This therefore
     // implicitly depends on all other pattern constraints.
     return Kind == IPM_GenericPredicate;
   }
+
+  /// \param M A Matcher that contains this PredicateMatcher.
+  /// \returns true if this PredicateMatcher can be hoisted outside of \p M.
+  virtual bool canHoistOutsideOf(const Matcher &M) const { return true; }
+
+  bool recordsOperand() const { return Kind == OPM_RecordNamedOperand; }
 
   virtual bool isIdentical(const PredicateMatcher &B) const {
     return B.getKind() == getKind() && InsnVarID == B.InsnVarID &&
@@ -889,7 +941,7 @@ public:
   OperandPredicateMatcher(PredicateKind Kind, unsigned InsnVarID,
                           unsigned OpIdx)
       : PredicateMatcher(Kind, InsnVarID, OpIdx) {}
-  virtual ~OperandPredicateMatcher();
+  ~OperandPredicateMatcher() override;
 
   /// Compare the priority of this object and B.
   ///
@@ -929,12 +981,20 @@ public:
            OrigOpIdx == cast<SameOperandMatcher>(&B)->OrigOpIdx &&
            MatchingName == cast<SameOperandMatcher>(&B)->MatchingName;
   }
+
+  virtual bool canHoistOutsideOf(const Matcher &M) const override;
 };
 
 /// Generates code to check that an operand is a particular LLT.
 class LLTOperandMatcher : public OperandPredicateMatcher {
 protected:
   LLTCodeGen Ty;
+
+  LLTOperandMatcher(PredicateKind Kind, unsigned InsnVarID, unsigned OpIdx,
+                    const LLTCodeGen &Ty)
+      : OperandPredicateMatcher(Kind, InsnVarID, OpIdx), Ty(Ty) {
+    KnownTypes.insert(Ty);
+  }
 
 public:
   static std::map<LLTCodeGen, unsigned> TypeIDValues;
@@ -948,9 +1008,7 @@ public:
   }
 
   LLTOperandMatcher(unsigned InsnVarID, unsigned OpIdx, const LLTCodeGen &Ty)
-      : OperandPredicateMatcher(OPM_LLT, InsnVarID, OpIdx), Ty(Ty) {
-    KnownTypes.insert(Ty);
-  }
+      : LLTOperandMatcher(OPM_LLT, InsnVarID, OpIdx, Ty) {}
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_LLT;
@@ -968,6 +1026,36 @@ public:
 
   void emitPredicateOpcodes(MatchTable &Table,
                             RuleMatcher &Rule) const override;
+};
+
+/// Generates code to check that the element count & element sizes are the same.
+class LLTOperandShapeMatcher : public LLTOperandMatcher {
+  static ElementCount getShapeElementCount(const LLT &Ty) {
+    return Ty.isVector() ? Ty.getElementCount() : ElementCount::getFixed(1);
+  }
+
+  static unsigned getShapeScalarSizeInBits(const LLT &Ty) {
+    return Ty.getScalarSizeInBits();
+  }
+
+public:
+  LLTOperandShapeMatcher(unsigned InsnVarID, unsigned OpIdx,
+                         const LLTCodeGen &Ty)
+      : LLTOperandMatcher(OPM_LLTShape, InsnVarID, OpIdx, Ty) {}
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == OPM_LLTShape;
+  }
+
+  bool isIdentical(const PredicateMatcher &B) const override {
+    return OperandPredicateMatcher::isIdentical(B) &&
+           getShapeElementCount(Ty.get()) ==
+               getShapeElementCount(
+                   cast<LLTOperandShapeMatcher>(&B)->Ty.get()) &&
+           getShapeScalarSizeInBits(Ty.get()) ==
+               getShapeScalarSizeInBits(
+                   cast<LLTOperandShapeMatcher>(&B)->Ty.get());
+  }
 };
 
 /// Generates code to check that an operand is a pointer to any address space.
@@ -1118,10 +1206,10 @@ public:
 class ImmOperandMatcher : public OperandPredicateMatcher {
 public:
   ImmOperandMatcher(unsigned InsnVarID, unsigned OpIdx)
-      : OperandPredicateMatcher(IPM_Imm, InsnVarID, OpIdx) {}
+      : OperandPredicateMatcher(OPM_Imm, InsnVarID, OpIdx) {}
 
   static bool classof(const PredicateMatcher *P) {
-    return P->getKind() == IPM_Imm;
+    return P->getKind() == OPM_Imm;
   }
 
   void emitPredicateOpcodes(MatchTable &Table,
@@ -1230,7 +1318,7 @@ protected:
 public:
   OperandImmPredicateMatcher(unsigned InsnVarID, unsigned OpIdx,
                              const TreePredicateFn &Predicate)
-      : OperandPredicateMatcher(IPM_ImmPredicate, InsnVarID, OpIdx),
+      : OperandPredicateMatcher(OPM_ImmPredicate, InsnVarID, OpIdx),
         Predicate(Predicate) {}
 
   bool isIdentical(const PredicateMatcher &B) const override {
@@ -1241,7 +1329,7 @@ public:
   }
 
   static bool classof(const PredicateMatcher *P) {
-    return P->getKind() == IPM_ImmPredicate;
+    return P->getKind() == OPM_ImmPredicate;
   }
 
   void emitPredicateOpcodes(MatchTable &Table,
@@ -1322,6 +1410,8 @@ public:
   /// already been assigned, simply returns it.
   TempTypeIdx getTempTypeIdx(RuleMatcher &Rule);
 
+  bool recordsOperand() const;
+
   std::string getOperandExpr(unsigned InsnVarID) const;
 
   InstructionMatcher &getInstructionMatcher() const { return Insn; }
@@ -1363,7 +1453,7 @@ class InstructionPredicateMatcher : public PredicateMatcher {
 public:
   InstructionPredicateMatcher(PredicateKind Kind, unsigned InsnVarID)
       : PredicateMatcher(Kind, InsnVarID) {}
-  virtual ~InstructionPredicateMatcher() {}
+  ~InstructionPredicateMatcher() override = default;
 
   /// Compare the priority of this object and B.
   ///
@@ -1687,6 +1777,14 @@ public:
   bool isIdentical(const PredicateMatcher &B) const override;
   void emitPredicateOpcodes(MatchTable &Table,
                             RuleMatcher &Rule) const override;
+
+  bool canHoistOutsideOf(const Matcher &M) const override {
+    // We can only hoist C++ code if the parent Matcher does not define any
+    // symbol that may be used by C++ code.
+    // TODO?: Could we be more precise, e.g. hoist if the Matcher records
+    // operands, but the operands aren't used by this bit of C++.
+    return !M.recordsOperand();
+  }
 };
 
 class MIFlagsInstructionPredicateMatcher : public InstructionPredicateMatcher {
@@ -1764,7 +1862,7 @@ public:
 /// * Has an nsw/nuw flag or doesn't.
 class InstructionMatcher final : public PredicateListMatcher<PredicateMatcher> {
 protected:
-  typedef std::vector<std::unique_ptr<OperandMatcher>> OperandVec;
+  using OperandVec = std::vector<std::unique_ptr<OperandMatcher>>;
 
   RuleMatcher &Rule;
 
@@ -1839,6 +1937,8 @@ public:
   void pop_front() { Operands.erase(Operands.begin()); }
 
   void optimize();
+
+  bool recordsOperand() const;
 
   /// Emit MatchTable opcodes that test whether the instruction named in
   /// InsnVarName matches all the predicates and all the operands.
@@ -2305,7 +2405,7 @@ public:
 
   ActionKind getKind() const { return Kind; }
 
-  virtual ~MatchAction() {}
+  virtual ~MatchAction() = default;
 
   // Some actions may need to add extra predicates to ensure they can run.
   virtual void emitAdditionalPredicates(MatchTable &Table,

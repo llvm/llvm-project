@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fopenacc -emit-cir -fclangir %s -o - | FileCheck %s
 
 void acc_shutdown(int cond) {
-  // CHECK: cir.func{{.*}} @acc_shutdown(%[[ARG:.*]]: !s32i{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_shutdown(%[[ARG:.*]]: !s32i{{.*}}) {{.*}}{
   // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
   // CHECK-NEXT: cir.store %[[ARG]], %[[COND]] : !s32i, !cir.ptr<!s32i>
 #pragma acc shutdown
@@ -18,13 +18,13 @@ void acc_shutdown(int cond) {
 
 #pragma acc shutdown if(cond)
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[COND_CAST:.*]] = cir.cast(int_to_bool, %[[COND_LOAD]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[COND_CAST:.*]] = cir.cast int_to_bool %[[COND_LOAD]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[BOOL_CONV:.*]] = builtin.unrealized_conversion_cast %[[COND_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.shutdown if(%[[BOOL_CONV]])
 
 #pragma acc shutdown if(1)
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_TO_BOOL_CAST:.*]] = cir.cast(int_to_bool, %[[ONE_LITERAL]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[ONE_TO_BOOL_CAST:.*]] = cir.cast int_to_bool %[[ONE_LITERAL]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[BOOL_CONV:.*]] = builtin.unrealized_conversion_cast %[[ONE_TO_BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.shutdown if(%[[BOOL_CONV]])
 
@@ -40,7 +40,7 @@ void acc_shutdown(int cond) {
 
 #pragma acc shutdown if(cond) device_num(cond) device_type(*)
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[COND_CAST:.*]] = cir.cast(int_to_bool, %[[COND_LOAD]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[COND_CAST:.*]] = cir.cast int_to_bool %[[COND_LOAD]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[BOOL_CONV:.*]] = builtin.unrealized_conversion_cast %[[COND_CAST]] : !cir.bool to i1
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[COND_CONV:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32

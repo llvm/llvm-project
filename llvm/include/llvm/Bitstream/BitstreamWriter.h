@@ -87,7 +87,7 @@ class BitstreamWriter {
 
   void WriteWord(unsigned Value) {
     Value =
-        support::endian::byte_swap<uint32_t, llvm::endianness::little>(Value);
+        support::endian::byte_swap<uint32_t>(Value, llvm::endianness::little);
     Buffer.append(reinterpret_cast<const char *>(&Value),
                   reinterpret_cast<const char *>(&Value + 1));
   }

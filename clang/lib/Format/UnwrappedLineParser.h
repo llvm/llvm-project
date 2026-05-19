@@ -145,7 +145,7 @@ private:
                               bool *HasLabel = nullptr);
   bool tryToParseBracedList();
   bool parseBracedList(bool IsAngleBracket = false, bool IsEnum = false);
-  bool parseParens(TokenType AmpAmpTokenType = TT_Unknown,
+  bool parseParens(TokenType StarAndAmpTokenType = TT_Unknown,
                    bool InMacroCall = false);
   void parseSquare(bool LambdaIntroducer = false);
   void keepAncestorBraces();
@@ -159,7 +159,8 @@ private:
   void parseLoopBody(bool KeepBraces, bool WrapRightBrace);
   void parseForOrWhileLoop(bool HasParens = true);
   void parseDoWhile();
-  void parseLabel(bool LeftAlignLabel = false);
+  void parseLabel(FormatStyle::IndentGotoLabelStyle IndentGotoLabels =
+                      FormatStyle::IGLS_OuterIndent);
   void parseCaseLabel();
   void parseSwitch(bool IsExpr);
   void parseNamespace();
@@ -169,8 +170,8 @@ private:
   bool parseEnum();
   bool parseStructLike();
   bool parseRequires(bool SeenEqual);
-  void parseRequiresClause(FormatToken *RequiresToken);
-  void parseRequiresExpression(FormatToken *RequiresToken);
+  void parseRequiresClause();
+  void parseRequiresExpression();
   void parseConstraintExpression();
   void parseCppExportBlock();
   void parseNamespaceOrExportBlock(unsigned AddLevels);
@@ -205,6 +206,8 @@ private:
   unsigned parseVerilogHierarchyHeader();
   void parseVerilogTable();
   void parseVerilogCaseLabel();
+  // For import, export, and extern.
+  void parseVerilogExtern();
   std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>>
   parseMacroCall();
 

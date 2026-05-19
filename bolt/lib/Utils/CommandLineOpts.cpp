@@ -104,6 +104,29 @@ ExecutionCountThreshold("execution-count-threshold",
   cl::Hidden,
   cl::cat(BoltOptCategory));
 
+cl::opt<SplitFunctionsStrategy> SplitStrategy(
+    "split-strategy", cl::init(SplitFunctionsStrategy::Profile2),
+    cl::values(clEnumValN(SplitFunctionsStrategy::Profile2, "profile2",
+                          "split each function into a hot and cold fragment "
+                          "using profiling information")),
+    cl::values(clEnumValN(SplitFunctionsStrategy::CDSplit, "cdsplit",
+                          "split each function into a hot, warm, and cold "
+                          "fragment using profiling information")),
+    cl::values(clEnumValN(
+        SplitFunctionsStrategy::Random2, "random2",
+        "split each function into a hot and cold fragment at a randomly chosen "
+        "split point (ignoring any available profiling information)")),
+    cl::values(clEnumValN(
+        SplitFunctionsStrategy::RandomN, "randomN",
+        "split each function into N fragments at a randomly chosen split "
+        "points (ignoring any available profiling information)")),
+    cl::values(clEnumValN(
+        SplitFunctionsStrategy::All, "all",
+        "split all basic blocks of each function into fragments such that each "
+        "fragment contains exactly a single basic block")),
+    cl::desc("strategy used to partition blocks into fragments"),
+    cl::cat(BoltOptCategory));
+
 bool HeatmapBlockSpecParser::parse(cl::Option &O, StringRef ArgName,
                                    StringRef Arg, HeatmapBlockSizes &Val) {
   // Parses a human-readable suffix into a shift amount or nullopt on error.
@@ -193,10 +216,23 @@ cl::opt<bool> HotText(
         "will put hot code into 2M pages. This requires relocation."),
     cl::ZeroOrMore, cl::cat(BoltCategory));
 
+cl::opt<bool> Hugify(
+    "hugify",
+    cl::desc("Automatically put hot code on 2MB page(s) (hugify) at runtime. "
+             "No manual call to hugify is needed in the binary (which is what "
+             "--hot-text relies on)."),
+    cl::cat(BoltOptCategory));
+
 cl::opt<bool>
     Instrument("instrument",
                cl::desc("instrument code to generate accurate profile data"),
                cl::cat(BoltOptCategory));
+
+cl::opt<bool> LargeCodeModel(
+    "large-code-model",
+    cl::desc("use large code model for exception handling encodings. "
+             "Auto-detected by the presence of .ltext sections otherwise."),
+    cl::cat(BoltCategory));
 
 cl::opt<bool> Lite("lite", cl::desc("skip processing of cold functions"),
                    cl::cat(BoltCategory));
@@ -221,6 +257,16 @@ cl::opt<bool> PrintCacheMetrics(
     "print-cache-metrics",
     cl::desc("calculate and print various metrics for instruction cache"),
     cl::cat(BoltOptCategory));
+
+cl::list<std::string> PrintOnly("print-only", cl::CommaSeparated,
+                                cl::desc("list of functions to print"),
+                                cl::value_desc("func1,func2,func3,..."),
+                                cl::Hidden, cl::cat(BoltCategory));
+
+cl::opt<std::string>
+    PrintOnlyFile("print-only-file",
+                  cl::desc("file with list of functions to print"), cl::Hidden,
+                  cl::cat(BoltCategory));
 
 cl::opt<bool> PrintSections("print-sections",
                             cl::desc("print all registered sections"),
@@ -262,7 +308,7 @@ cl::opt<bool> TimeRewrite("time-rewrite",
 
 cl::opt<bool> UseOldText(
     "use-old-text",
-    cl::desc("re-use space in old .text if possible (relocation mode)"),
+    cl::desc("reuse space in old .text if possible (relocation mode)"),
     cl::cat(BoltCategory));
 
 cl::opt<bool> UpdateDebugSections(

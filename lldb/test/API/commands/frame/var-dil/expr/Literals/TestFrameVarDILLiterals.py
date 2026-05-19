@@ -19,6 +19,10 @@ class TestFrameVarDILLiterals(TestBase):
 
         self.runCmd("settings set target.experimental.use-DIL true")
 
+        # Check boolean literals parsing
+        self.expect_var_path("true", value="true", type="bool")
+        self.expect_var_path("false", value="false", type="bool")
+
         # Check number literals parsing
         self.expect_var_path("1.0", value="1", type="double")
         self.expect_var_path("1.0f", value="1", type="float")

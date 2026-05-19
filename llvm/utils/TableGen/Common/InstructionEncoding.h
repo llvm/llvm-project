@@ -21,6 +21,7 @@ namespace llvm {
 
 class BitsInit;
 class CodeGenInstruction;
+class CodeGenTarget;
 class Record;
 class RecordVal;
 class VarLenInst;
@@ -48,12 +49,6 @@ struct OperandInfo {
   std::optional<uint64_t> InitValue;
 
   OperandInfo(std::string D, bool HCD) : Decoder(D), HasCompleteDecoder(HCD) {}
-
-  void addField(unsigned Base, unsigned Width, unsigned Offset) {
-    Fields.emplace_back(Base, Width, Offset);
-  }
-
-  ArrayRef<EncodingField> fields() const { return Fields; }
 };
 
 /// Represents a parsed InstructionEncoding record or a record derived from it.
@@ -136,6 +131,13 @@ public:
 
   /// Returns information about the operands' contribution to this encoding.
   ArrayRef<OperandInfo> getOperands() const { return Operands; }
+
+  /// \returns the effective value of the DecoderMethod field. If DecoderMethod
+  /// is an explictly set value, return false for second.
+  static std::pair<std::string, bool>
+  findOperandDecoderMethod(const Record *Record);
+
+  static OperandInfo getOpInfo(const Record *TypeRecord);
 
 private:
   void parseVarLenEncoding(const VarLenInst &VLI);

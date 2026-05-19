@@ -53,10 +53,14 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
     UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr,
     SavedLocalInSpecExpr, PrintNamelist, AssumedRankPassedToNonAssumedRank,
-    IgnoreIrrelevantAttributes, Unsigned, AmbiguousStructureConstructor,
-    ContiguousOkForSeqAssociation, ForwardRefExplicitTypeDummy,
-    InaccessibleDeferredOverride, CudaWarpMatchFunction, DoConcurrentOffload,
-    TransferBOZ, Coarray)
+    IgnoreIrrelevantAttributes, Unsigned, ContiguousOkForSeqAssociation,
+    ForwardRefExplicitTypeDummy, InaccessibleDeferredOverride,
+    CudaWarpMatchFunction, DoConcurrentOffload, TransferBOZ, Coarray,
+    PointerPassObject, MultipleIdenticalDATA,
+    DefaultStructConstructorNullPointer, AssumedRankIoItem,
+    MultipleProgramUnitsOnSameLine, AllocatedForAssociated,
+    OpenMPThreadprivateEquivalence, RelaxedCLoc, CudaPinned,
+    AccDefaultNoneScalars)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -76,10 +80,13 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     IndexVarRedefinition, IncompatibleImplicitInterfaces,
     VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg,
     MismatchingDummyProcedure, SubscriptedEmptyArray, UnsignedLiteralTruncation,
-    CompatibleDeclarationsFromDistinctModules,
+    CompatibleDeclarationsFromDistinctModules, ConstantIsContiguous,
     NullActualForDefaultIntentAllocatable, UseAssociationIntoSameNameSubprogram,
     HostAssociatedIntentOutInSpecExpr, NonVolatilePointerToVolatile,
-    RealConstantWidening)
+    RealConstantWidening, VolatileOrAsynchronousTemporary, UnusedVariable,
+    UsedUndefinedVariable, BadValueInDeadCode, AssumedTypeSizeDummy,
+    MisplacedIgnoreTKR, NamelistParameter, ImpureFinalInPure,
+    IgnoredNoReallocateLHS, CLoc, ExperimentalOption, AccImplicitScalar)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;
@@ -143,6 +150,19 @@ public:
   void AddAlternativeCliSpelling(UsageWarning w, std::string input) {
     cliOptions_.insert({input, {w}});
   }
+  void AddDeprecatedCliSpelling(LanguageFeature f,
+      const std::string &deprecated, const std::string &canonical) {
+    cliOptions_.insert({deprecated, {f}});
+    deprecatedCliOptions_.insert({deprecated, canonical});
+  }
+  void AddDeprecatedCliSpelling(UsageWarning w, const std::string &deprecated,
+      const std::string &canonical) {
+    cliOptions_.insert({deprecated, {w}});
+    deprecatedCliOptions_.insert({deprecated, canonical});
+  }
+  // Returns the canonical spelling if the input is a deprecated spelling.
+  std::optional<std::string_view> CheckDeprecatedSpelling(
+      std::string_view input) const;
   void ReplaceCliCanonicalSpelling(LanguageFeature f, std::string input);
   void ReplaceCliCanonicalSpelling(UsageWarning w, std::string input);
   std::string_view getDefaultCliSpelling(LanguageFeature f) const {
@@ -159,6 +179,8 @@ private:
   // Map from Cli syntax of language features and usage warnings to their enum
   // values.
   std::unordered_map<std::string, LanguageFeatureOrWarning> cliOptions_;
+  // Map from deprecated Cli spellings to their canonical replacements.
+  std::unordered_map<std::string, std::string> deprecatedCliOptions_;
   // These two arrays map the enum values to their cannonical Cli spellings.
   // Since each of the CanonicalSpelling is a string in the domain of the map
   // above we just use a view of the string instead of another copy.

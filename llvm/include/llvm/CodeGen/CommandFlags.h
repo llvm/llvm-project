@@ -37,6 +37,8 @@ LLVM_ABI std::string getMArch();
 
 LLVM_ABI std::string getMCPU();
 
+LLVM_ABI std::string getMTune();
+
 LLVM_ABI std::vector<std::string> getMAttrs();
 
 LLVM_ABI Reloc::Model getRelocModel();
@@ -57,12 +59,6 @@ LLVM_ABI std::optional<CodeGenFileType> getExplicitFileType();
 LLVM_ABI CodeGenFileType getFileType();
 
 LLVM_ABI FramePointerKind getFramePointerUsage();
-
-LLVM_ABI bool getEnableUnsafeFPMath();
-
-LLVM_ABI bool getEnableNoInfsFPMath();
-
-LLVM_ABI bool getEnableNoNaNsFPMath();
 
 LLVM_ABI bool getEnableNoSignedZerosFPMath();
 
@@ -127,6 +123,8 @@ LLVM_ABI llvm::EABI getEABIVersion();
 
 LLVM_ABI llvm::DebuggerKind getDebuggerTuningOpt();
 
+LLVM_ABI llvm::VectorLibrary getVectorLibrary();
+
 LLVM_ABI bool getEnableStackSizeSection();
 
 LLVM_ABI bool getEnableAddrsig();
@@ -156,10 +154,26 @@ LLVM_ABI bool getJMCInstrument();
 
 LLVM_ABI bool getXCOFFReadOnlyPointers();
 
+enum SaveStatsMode { None, Cwd, Obj };
+
+LLVM_ABI SaveStatsMode getSaveStats();
+
 /// Create this object with static storage to register codegen-related command
 /// line options.
 struct RegisterCodeGenFlags {
   LLVM_ABI RegisterCodeGenFlags();
+};
+
+/// Tools that support subtarget tuning should create this object with static
+/// storage to register the -mtune command line option.
+struct RegisterMTuneFlag {
+  LLVM_ABI RegisterMTuneFlag();
+};
+
+/// Tools that support stats saving should create this object with static
+/// storage to register the --save-stats command line option.
+struct RegisterSaveStatsFlag {
+  LLVM_ABI RegisterSaveStatsFlag();
 };
 
 LLVM_ABI bool getEnableBBAddrMap();
@@ -178,21 +192,23 @@ InitTargetOptionsFromCodeGenFlags(const llvm::Triple &TheTriple);
 
 LLVM_ABI std::string getCPUStr();
 
+LLVM_ABI std::string getTuneCPUStr();
+
 LLVM_ABI std::string getFeaturesStr();
 
 LLVM_ABI std::vector<std::string> getFeatureList();
 
 LLVM_ABI void renderBoolStringAttr(AttrBuilder &B, StringRef Name, bool Val);
 
-/// Set function attributes of function \p F based on CPU, Features, and command
-/// line flags.
-LLVM_ABI void setFunctionAttributes(StringRef CPU, StringRef Features,
-                                    Function &F);
+/// Set function attributes of function \p F based on CPU, TuneCPU, Features,
+/// and command line flags.
+LLVM_ABI void setFunctionAttributes(Function &F, StringRef CPU,
+                                    StringRef Features, StringRef TuneCPU = "");
 
 /// Set function attributes of functions in Module M based on CPU,
-/// Features, and command line flags.
-LLVM_ABI void setFunctionAttributes(StringRef CPU, StringRef Features,
-                                    Module &M);
+/// TuneCPU, Features, and command line flags.
+LLVM_ABI void setFunctionAttributes(Module &M, StringRef CPU,
+                                    StringRef Features, StringRef TuneCPU = "");
 
 /// Should value-tracking variable locations / instruction referencing be
 /// enabled by default for this triple?
@@ -204,6 +220,17 @@ LLVM_ABI bool getDefaultValueTrackingVariableLocations(const llvm::Triple &T);
 LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
     StringRef TargetTriple,
     CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
+
+/// Conditionally enables the collection of LLVM statistics during the tool run,
+/// based on the value of the flag. Must be called before the tool run to
+/// actually collect data.
+LLVM_ABI void MaybeEnableStatistics();
+
+/// Conditionally saves the collected LLVM statistics to the received output
+/// file, based on the value of the flag. Should be called after the tool run,
+/// and must follow a call to `MaybeEnableStatistics()` to actually have data to
+/// write.
+LLVM_ABI int MaybeSaveStatistics(StringRef OutputFilename, StringRef ToolName);
 
 } // namespace codegen
 } // namespace llvm

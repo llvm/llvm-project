@@ -569,40 +569,30 @@ void CodeViewDebug::emitCodeViewMagicVersion() {
   OS.emitInt32(COFF::DEBUG_SECTION_MAGIC);
 }
 
-static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
-  switch (DWLang) {
-  case dwarf::DW_LANG_C:
-  case dwarf::DW_LANG_C89:
-  case dwarf::DW_LANG_C99:
-  case dwarf::DW_LANG_C11:
+static SourceLanguage
+MapDWARFLanguageToCVLang(dwarf::SourceLanguageName DWLName) {
+  switch (DWLName) {
+  case dwarf::DW_LNAME_C:
     return SourceLanguage::C;
-  case dwarf::DW_LANG_C_plus_plus:
-  case dwarf::DW_LANG_C_plus_plus_03:
-  case dwarf::DW_LANG_C_plus_plus_11:
-  case dwarf::DW_LANG_C_plus_plus_14:
+  case dwarf::DW_LNAME_C_plus_plus:
     return SourceLanguage::Cpp;
-  case dwarf::DW_LANG_Fortran77:
-  case dwarf::DW_LANG_Fortran90:
-  case dwarf::DW_LANG_Fortran95:
-  case dwarf::DW_LANG_Fortran03:
-  case dwarf::DW_LANG_Fortran08:
+  case dwarf::DW_LNAME_Fortran:
     return SourceLanguage::Fortran;
-  case dwarf::DW_LANG_Pascal83:
+  case dwarf::DW_LNAME_Pascal:
     return SourceLanguage::Pascal;
-  case dwarf::DW_LANG_Cobol74:
-  case dwarf::DW_LANG_Cobol85:
+  case dwarf::DW_LNAME_Cobol:
     return SourceLanguage::Cobol;
-  case dwarf::DW_LANG_Java:
+  case dwarf::DW_LNAME_Java:
     return SourceLanguage::Java;
-  case dwarf::DW_LANG_D:
+  case dwarf::DW_LNAME_D:
     return SourceLanguage::D;
-  case dwarf::DW_LANG_Swift:
+  case dwarf::DW_LNAME_Swift:
     return SourceLanguage::Swift;
-  case dwarf::DW_LANG_Rust:
+  case dwarf::DW_LNAME_Rust:
     return SourceLanguage::Rust;
-  case dwarf::DW_LANG_ObjC:
+  case dwarf::DW_LNAME_ObjC:
     return SourceLanguage::ObjC;
-  case dwarf::DW_LANG_ObjC_plus_plus:
+  case dwarf::DW_LNAME_ObjC_plus_plus:
     return SourceLanguage::ObjCpp;
   default:
     // There's no CodeView representation for this language, and CV doesn't
@@ -610,6 +600,14 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
     // as it's very low level.
     return SourceLanguage::Masm;
   }
+}
+
+static SourceLanguage MapDWARFLanguageToCVLang(dwarf::SourceLanguage DWLang) {
+  auto MaybeLName = dwarf::toDW_LNAME(DWLang);
+  if (!MaybeLName)
+    return MapDWARFLanguageToCVLang(static_cast<dwarf::SourceLanguageName>(0));
+
+  return MapDWARFLanguageToCVLang(MaybeLName->first);
 }
 
 void CodeViewDebug::beginModule(Module *M) {
@@ -630,13 +628,23 @@ void CodeViewDebug::beginModule(Module *M) {
     // When emitting only compiler information, we may have only NoDebug CUs,
     // which would be skipped by debug_compile_units_begin.
     NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
+    if (CUs->operands().empty()) {
+      Asm = nullptr;
+      return;
+    }
     Node = *CUs->operands().begin();
   }
-  const auto *CU = cast<DICompileUnit>(Node);
 
-  CurrentSourceLanguage = MapDWLangToCVLang(CU->getSourceLanguage());
+  TheCU = cast<DICompileUnit>(Node);
+  DISourceLanguageName Lang = TheCU->getSourceLanguage();
+  CurrentSourceLanguage =
+      Lang.hasVersionedName()
+          ? MapDWARFLanguageToCVLang(
+                static_cast<dwarf::SourceLanguageName>(Lang.getName()))
+          : MapDWARFLanguageToCVLang(
+                static_cast<dwarf::SourceLanguage>(Lang.getName()));
   if (!M->getCodeViewFlag() ||
-      CU->getEmissionKind() == DICompileUnit::NoDebug) {
+      TheCU->getEmissionKind() == DICompileUnit::NoDebug) {
     Asm = nullptr;
     return;
   }
@@ -897,11 +905,10 @@ void CodeViewDebug::emitCompilerInformation() {
   OS.AddComment("CPUType");
   OS.emitInt16(static_cast<uint64_t>(TheCPU));
 
-  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
-  const MDNode *Node = *CUs->operands().begin();
-  const auto *CU = cast<DICompileUnit>(Node);
+  StringRef CompilerVersion = "0";
+  if (TheCU)
+    CompilerVersion = TheCU->getProducer();
 
-  StringRef CompilerVersion = CU->getProducer();
   Version FrontVer = parseVersion(CompilerVersion);
   OS.AddComment("Frontend version");
   for (int N : FrontVer.Part) {
@@ -1267,7 +1274,8 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
 }
 
 CodeViewDebug::LocalVarDef
-CodeViewDebug::createDefRangeMem(uint16_t CVRegister, int Offset) {
+CodeViewDebug::createDefRangeMem(uint16_t CVRegister, int Offset,
+                                 int32_t DerefOffset) {
   LocalVarDef DR;
   DR.InMemory = -1;
   DR.DataOffset = Offset;
@@ -1275,6 +1283,7 @@ CodeViewDebug::createDefRangeMem(uint16_t CVRegister, int Offset) {
   DR.IsSubfield = 0;
   DR.StructOffset = 0;
   DR.CVRegister = CVRegister;
+  DR.DerefOffset = DerefOffset;
   return DR;
 }
 
@@ -1300,16 +1309,23 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
       continue;
 
     // If the variable has an attached offset expression, extract it.
-    // FIXME: Try to handle DW_OP_deref as well.
     int64_t ExprOffset = 0;
-    bool Deref = false;
+    int64_t DerefOffset = LocalVarDef::NoDeref;
     if (VI.Expr) {
-      // If there is one DW_OP_deref element, use offset of 0 and keep going.
-      if (VI.Expr->getNumElements() == 1 &&
-          VI.Expr->getElement(0) == llvm::dwarf::DW_OP_deref)
-        Deref = true;
-      else if (!VI.Expr->extractIfOffset(ExprOffset))
+      SmallVector<uint64_t, 2> FirstRemaining;
+      if (!VI.Expr->extractLeadingOffset(ExprOffset, FirstRemaining))
         continue;
+      if (!FirstRemaining.empty()) {
+        if (FirstRemaining.front() != dwarf::DW_OP_deref)
+          continue;
+        SmallVector<uint64_t, 1> LastRemaining;
+        if (!DIExpression::extractLeadingOffset(
+                ArrayRef(FirstRemaining).drop_front(), DerefOffset,
+                LastRemaining))
+          continue;
+        if (!LastRemaining.empty())
+          continue;
+      }
     }
 
     // Get the frame register used and the offset.
@@ -1322,10 +1338,13 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
       // No encoding currently exists for scalable offsets; bail out.
       continue;
     }
+    if (DerefOffset < INT32_MIN || DerefOffset > INT32_MAX)
+      continue;
 
     // Calculate the label ranges.
     LocalVarDef DefRange =
-        createDefRangeMem(CVReg, FrameOffset.getFixed() + ExprOffset);
+        createDefRangeMem(CVReg, FrameOffset.getFixed() + ExprOffset,
+                          static_cast<int32_t>(DerefOffset));
 
     LocalVariable Var;
     Var.DIVar = VI.Var;
@@ -1337,19 +1356,8 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
       Var.DefRanges[DefRange].emplace_back(Begin, End);
     }
 
-    if (Deref)
-      Var.UseReferenceType = true;
-
     recordLocalVariable(std::move(Var), Scope);
   }
-}
-
-static bool canUseReferenceType(const DbgVariableLocation &Loc) {
-  return !Loc.LoadChain.empty() && Loc.LoadChain.back() == 0;
-}
-
-static bool needsReferenceType(const DbgVariableLocation &Loc) {
-  return Loc.LoadChain.size() == 2 && Loc.LoadChain.back() == 0;
 }
 
 void CodeViewDebug::calculateRanges(
@@ -1380,30 +1388,9 @@ void CodeViewDebug::calculateRanges(
       continue;
     }
 
-    // CodeView can only express variables in register and variables in memory
-    // at a constant offset from a register. However, for variables passed
-    // indirectly by pointer, it is common for that pointer to be spilled to a
-    // stack location. For the special case of one offseted load followed by a
-    // zero offset load (a pointer spilled to the stack), we change the type of
-    // the local variable from a value type to a reference type. This tricks the
-    // debugger into doing the load for us.
-    if (Var.UseReferenceType) {
-      // We're using a reference type. Drop the last zero offset load.
-      if (canUseReferenceType(*Location))
-        Location->LoadChain.pop_back();
-      else
-        continue;
-    } else if (needsReferenceType(*Location)) {
-      // This location can't be expressed without switching to a reference type.
-      // Start over using that.
-      Var.UseReferenceType = true;
-      Var.DefRanges.clear();
-      calculateRanges(Var, Entries);
-      return;
-    }
-
-    // We can only handle a register or an offseted load of a register.
-    if (!Location->Register || Location->LoadChain.size() > 1)
+    // We can only handle a register, an offsetted load of a register, or an
+    // indirect offsetted load.
+    if (!Location->Register || Location->LoadChain.size() > 2)
       continue;
 
     // Codeview can only express byte-aligned offsets, ensure that we have a
@@ -1420,8 +1407,13 @@ void CodeViewDebug::calculateRanges(
     LocalVarDef DR;
     DR.CVRegister = TRI->getCodeViewRegNum(Location->Register);
     DR.InMemory = !Location->LoadChain.empty();
-    DR.DataOffset =
-        !Location->LoadChain.empty() ? Location->LoadChain.back() : 0;
+    DR.DataOffset = 0;
+    DR.DerefOffset = LocalVarDef::NoDeref;
+    if (!Location->LoadChain.empty()) {
+      DR.DataOffset = Location->LoadChain[0];
+      if (Location->LoadChain.size() >= 2)
+        DR.DerefOffset = Location->LoadChain[1];
+    }
     if (Location->FragmentInfo) {
       DR.IsSubfield = true;
       DR.StructOffset = Location->FragmentInfo->OffsetInBits / 8;
@@ -2115,7 +2107,7 @@ TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
   // Lower the containing class type.
   TypeIndex ClassType = getTypeIndex(ClassTy);
 
-  DITypeRefArray ReturnAndArgs = Ty->getTypeArray();
+  DITypeArray ReturnAndArgs = Ty->getTypeArray();
 
   unsigned Index = 0;
   SmallVector<TypeIndex, 8> ArgTypeIndices;
@@ -2157,7 +2149,7 @@ TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
 
 TypeIndex CodeViewDebug::lowerTypeVFTableShape(const DIDerivedType *Ty) {
   unsigned VSlotCount =
-      Ty->getSizeInBits() / (8 * Asm->MAI->getCodePointerSize());
+      Ty->getSizeInBits() / (8 * Asm->MAI.getCodePointerSize());
   SmallVector<VFTableSlotKind, 4> Slots(VSlotCount, VFTableSlotKind::Near);
 
   VFTableShapeRecord VFTSR(Slots);
@@ -2736,15 +2728,6 @@ CodeViewDebug::getTypeIndexForThisPtr(const DIDerivedType *PtrTy,
   return recordTypeIndexForDINode(PtrTy, TI, SubroutineTy);
 }
 
-TypeIndex CodeViewDebug::getTypeIndexForReferenceTo(const DIType *Ty) {
-  PointerRecord PR(getTypeIndex(Ty),
-                   getPointerSizeInBytes() == 8 ? PointerKind::Near64
-                                                : PointerKind::Near32,
-                   PointerMode::LValueReference, PointerOptions::None,
-                   Ty->getSizeInBits() / 8);
-  return TypeTable.writeLeafType(PR);
-}
-
 TypeIndex CodeViewDebug::getCompleteTypeIndex(const DIType *Ty) {
   // The null DIType is the void type. Don't try to hash it.
   if (!Ty)
@@ -2870,9 +2853,7 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
     Flags |= LocalSymFlags::IsOptimizedOut;
 
   OS.AddComment("TypeIndex");
-  TypeIndex TI = Var.UseReferenceType
-                     ? getTypeIndexForReferenceTo(Var.DIVar->getType())
-                     : getCompleteTypeIndex(Var.DIVar->getType());
+  TypeIndex TI = getCompleteTypeIndex(Var.DIVar->getType());
   OS.emitInt32(TI.getIndex());
   OS.AddComment("Flags");
   OS.emitInt16(static_cast<uint16_t>(Flags));
@@ -2900,14 +2881,28 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
         Offset += FI.OffsetAdjustment;
       }
 
-      // If we can use the chosen frame pointer for the frame and this isn't a
-      // sliced aggregate, use the smaller S_DEFRANGE_FRAMEPOINTER_REL record.
-      // Otherwise, use S_DEFRANGE_REGISTER_REL.
       EncodedFramePtrReg EncFP = encodeFramePtrReg(RegisterId(Reg), TheCPU);
-      if (!DefRange.IsSubfield && EncFP != EncodedFramePtrReg::None &&
-          (bool(Flags & LocalSymFlags::IsParameter)
-               ? (EncFP == FI.EncodedParamFramePtrReg)
-               : (EncFP == FI.EncodedLocalFramePtrReg))) {
+
+      if (DefRange.DerefOffset != LocalVarDef::NoDeref) {
+        uint16_t RegRelFlags = 0;
+        if (DefRange.IsSubfield) {
+          RegRelFlags = DefRangeRegisterRelSym::IsSubfieldFlag |
+                        (DefRange.StructOffset
+                         << DefRangeRegisterRelSym::OffsetInParentShift);
+        }
+        DefRangeRegisterRelIndirHeader DRHdr;
+        DRHdr.Register = Reg;
+        DRHdr.Flags = RegRelFlags;
+        DRHdr.BasePointerOffset = Offset;
+        DRHdr.OffsetInUdt = DefRange.DerefOffset;
+        OS.emitCVDefRangeDirective(Ranges, DRHdr);
+      } else if (!DefRange.IsSubfield && EncFP != EncodedFramePtrReg::None &&
+                 (bool(Flags & LocalSymFlags::IsParameter)
+                      ? (EncFP == FI.EncodedParamFramePtrReg)
+                      : (EncFP == FI.EncodedLocalFramePtrReg))) {
+        // If we can use the chosen frame pointer for the frame and this isn't a
+        // sliced aggregate, use the smaller S_DEFRANGE_FRAMEPOINTER_REL record.
+        // Otherwise, use S_DEFRANGE_REGISTER_REL.
         DefRangeFramePointerRelHeader DRHdr;
         DRHdr.Offset = Offset;
         OS.emitCVDefRangeDirective(Ranges, DRHdr);
@@ -2925,7 +2920,9 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
         OS.emitCVDefRangeDirective(Ranges, DRHdr);
       }
     } else {
-      assert(DefRange.DataOffset == 0 && "unexpected offset into register");
+      assert(DefRange.DataOffset == 0 &&
+             DefRange.DerefOffset == LocalVarDef::NoDeref &&
+             "unexpected offset into register");
       if (DefRange.IsSubfield) {
         DefRangeSubfieldRegisterHeader DRHdr;
         DRHdr.Register = DefRange.CVRegister;
@@ -3126,12 +3123,23 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
   CurFn = nullptr;
 }
 
-// Usable locations are valid with non-zero line numbers. A line number of zero
-// corresponds to optimized code that doesn't have a distinct source location.
+// Usable locations are valid with non-zero line numbers, or artificial
+// subprograms because they are associated to the corresponding line within the
+// inlined callee.
+//
+// A line number of zero corresponds to optimized code that doesn't have a
+// distinct source location.
+//
 // In this case, we try to use the previous or next source location depending on
 // the context.
 static bool isUsableDebugLoc(DebugLoc DL) {
-  return DL && DL.getLine() != 0;
+  if (!DL)
+    return false;
+  if (DL.getLine() != 0)
+    return true;
+  if (const DILocalScope *Scope = DL->getScope())
+    return Scope->getSubprogram()->isArtificial();
+  return false;
 }
 
 void CodeViewDebug::beginInstruction(const MachineInstr *MI) {

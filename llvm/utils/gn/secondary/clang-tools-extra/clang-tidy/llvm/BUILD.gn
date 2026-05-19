@@ -13,14 +13,18 @@ static_library("llvm") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "FormatvStringCheck.cpp",
     "HeaderGuardCheck.cpp",
     "IncludeOrderCheck.cpp",
     "LLVMTidyModule.cpp",
     "PreferIsaOrDynCastInConditionalsCheck.cpp",
     "PreferRegisterOverUnsignedCheck.cpp",
     "PreferStaticOverAnonymousNamespaceCheck.cpp",
+    "RedundantCastingCheck.cpp",
     "TwineLocalCheck.cpp",
+    "TypeSwitchCaseTypesCheck.cpp",
     "UseNewMLIROpBuilderCheck.cpp",
     "UseRangesCheck.cpp",
+    "UseVectorUtilsCheck.cpp",
   ]
 }

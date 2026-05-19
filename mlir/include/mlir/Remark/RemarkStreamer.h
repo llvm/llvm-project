@@ -26,14 +26,15 @@ public:
   createToFile(llvm::StringRef path, llvm::remarks::Format fmt);
 
   void streamOptimizationRemark(const Remark &remark) override;
-  void finalize() override {}
+  void finalize() override;
   ~LLVMRemarkStreamer() override;
 
 private:
   LLVMRemarkStreamer() = default;
 
-  std::unique_ptr<class llvm::remarks::RemarkStreamer> remarkStreamer;
   std::unique_ptr<class llvm::ToolOutputFile> file;
+  // RemarkStreamer must be destructed before file is destroyed!
+  std::unique_ptr<class llvm::remarks::RemarkStreamer> remarkStreamer;
 };
 } // namespace mlir::remark::detail
 
@@ -44,6 +45,7 @@ namespace mlir::remark {
 /// mlir::emitRemarks.
 LogicalResult enableOptimizationRemarksWithLLVMStreamer(
     MLIRContext &ctx, StringRef filePath, llvm::remarks::Format fmt,
+    std::unique_ptr<detail::RemarkEmittingPolicyBase> remarkEmittingPolicy,
     const RemarkCategories &cat, bool printAsEmitRemarks = false);
 
 } // namespace mlir::remark

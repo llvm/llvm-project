@@ -51,8 +51,7 @@ public:
 
   child_range children();
   const_child_range children() const {
-    auto Children = const_cast<OpenACCClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OpenACCClause *>(this)->children();
   }
 
   virtual ~OpenACCClause() = default;
@@ -456,11 +455,6 @@ public:
     return getExprs()[0];
   }
 
-  ArrayRef<Expr *> getVarList() {
-    assert(!HasConditionExpr.has_value() &&
-           "Condition Expr self clause asked about var list");
-    return getExprs();
-  }
   ArrayRef<Expr *> getVarList() const {
     assert(!HasConditionExpr.has_value() &&
            "Condition Expr self clause asked about var list");
@@ -474,8 +468,7 @@ public:
   }
 
   const_child_range children() const {
-    child_range Children = const_cast<OpenACCSelfClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OpenACCSelfClause *>(this)->children();
   }
 
   static OpenACCSelfClause *Create(const ASTContext &C, SourceLocation BeginLoc,
@@ -523,9 +516,7 @@ public:
   }
 
   const_child_range children() const {
-    child_range Children =
-        const_cast<OpenACCClauseWithExprs *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OpenACCClauseWithExprs *>(this)->children();
   }
 };
 
@@ -563,9 +554,6 @@ public:
   SourceLocation getQueuesLoc() const { return QueuesLoc; }
   bool hasDevNumExpr() const { return getExprs()[0]; }
   Expr *getDevNumExpr() const { return getExprs()[0]; }
-  ArrayRef<Expr *> getQueueIdExprs() {
-    return OpenACCClauseWithExprs::getExprs().drop_front();
-  }
   ArrayRef<Expr *> getQueueIdExprs() const {
     return OpenACCClauseWithExprs::getExprs().drop_front();
   }
@@ -594,8 +582,6 @@ public:
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
 
-  ArrayRef<Expr *> getIntExprs() { return OpenACCClauseWithExprs::getExprs(); }
-
   ArrayRef<Expr *> getIntExprs() const {
     return OpenACCClauseWithExprs::getExprs();
   }
@@ -620,7 +606,6 @@ public:
                                    SourceLocation LParenLoc,
                                    ArrayRef<Expr *> SizeExprs,
                                    SourceLocation EndLoc);
-  ArrayRef<Expr *> getSizeExprs() { return OpenACCClauseWithExprs::getExprs(); }
 
   ArrayRef<Expr *> getSizeExprs() const {
     return OpenACCClauseWithExprs::getExprs();
@@ -831,7 +816,6 @@ protected:
 
 public:
   static bool classof(const OpenACCClause *C);
-  ArrayRef<Expr *> getVarList() { return getExprs(); }
   ArrayRef<Expr *> getVarList() const { return getExprs(); }
 };
 
@@ -840,16 +824,13 @@ public:
 // alloca at the level of the base, and the init at the element level.
 struct OpenACCPrivateRecipe {
   VarDecl *AllocaDecl;
-  Expr *InitExpr;
 
-  OpenACCPrivateRecipe(VarDecl *A, Expr *I) : AllocaDecl(A), InitExpr(I) {
-    assert(!AllocaDecl || AllocaDecl->getInit() == nullptr);
-  }
+  OpenACCPrivateRecipe(VarDecl *A) : AllocaDecl(A) {}
 
   bool isSet() const { return AllocaDecl; }
 
   static OpenACCPrivateRecipe Empty() {
-    return OpenACCPrivateRecipe(nullptr, nullptr);
+    return OpenACCPrivateRecipe(/*AllocaDecl=*/nullptr);
   }
 };
 
@@ -877,11 +858,6 @@ public:
   }
   // Gets a list of 'made up' `VarDecl` objects that can be used by codegen to
   // ensure that we properly initialize each of these variables.
-  ArrayRef<OpenACCPrivateRecipe> getInitRecipes() {
-    return ArrayRef<OpenACCPrivateRecipe>{
-        getTrailingObjects<OpenACCPrivateRecipe>(), getExprs().size()};
-  }
-
   ArrayRef<OpenACCPrivateRecipe> getInitRecipes() const {
     return ArrayRef<OpenACCPrivateRecipe>{
         getTrailingObjects<OpenACCPrivateRecipe>(), getExprs().size()};
@@ -901,18 +877,17 @@ public:
 // InitFromTemporary is the 'temp' declaration we put in to be 'copied from'.
 struct OpenACCFirstPrivateRecipe {
   VarDecl *AllocaDecl;
-  Expr *InitExpr;
   VarDecl *InitFromTemporary;
-  OpenACCFirstPrivateRecipe(VarDecl *A, Expr *I, VarDecl *T)
-      : AllocaDecl(A), InitExpr(I), InitFromTemporary(T) {
-    assert(!AllocaDecl || AllocaDecl->getInit() == nullptr);
+  OpenACCFirstPrivateRecipe(VarDecl *A, VarDecl *T)
+      : AllocaDecl(A), InitFromTemporary(T) {
     assert(!InitFromTemporary || InitFromTemporary->getInit() == nullptr);
   }
 
   bool isSet() const { return AllocaDecl; }
 
   static OpenACCFirstPrivateRecipe Empty() {
-    return OpenACCFirstPrivateRecipe(nullptr, nullptr, nullptr);
+    return OpenACCFirstPrivateRecipe(/*AllocaDecl=*/nullptr,
+                                     /*InitFromTemporary=*/nullptr);
   }
 };
 
@@ -941,11 +916,6 @@ public:
 
   // Gets a list of 'made up' `VarDecl` objects that can be used by codegen to
   // ensure that we properly initialize each of these variables.
-  ArrayRef<OpenACCFirstPrivateRecipe> getInitRecipes() {
-    return ArrayRef<OpenACCFirstPrivateRecipe>{
-        getTrailingObjects<OpenACCFirstPrivateRecipe>(), getExprs().size()};
-  }
-
   ArrayRef<OpenACCFirstPrivateRecipe> getInitRecipes() const {
     return ArrayRef<OpenACCFirstPrivateRecipe>{
         getTrailingObjects<OpenACCFirstPrivateRecipe>(), getExprs().size()};
@@ -1281,51 +1251,97 @@ public:
 };
 
 // A structure to stand in for the recipe on a reduction.  RecipeDecl is the
-// 'main' declaration used for initializaiton, which is fixed. 
+// 'main' declaration used for initializaiton, which is fixed.
 struct OpenACCReductionRecipe {
   VarDecl *AllocaDecl;
-  Expr *InitExpr;
-  // TODO: OpenACC: this should eventually have the operations here too.
 
-  OpenACCReductionRecipe(VarDecl *A, Expr *I) : AllocaDecl(A), InitExpr(I) {
-    assert(!AllocaDecl || AllocaDecl->getInit() == nullptr);
-  }
+  // A combiner recipe is represented by an operation expression.  However, in
+  // order to generate these properly, we have to make up a LHS and a RHS
+  // expression for the purposes of generation.
+  struct CombinerRecipe {
+    VarDecl *LHS;
+    VarDecl *RHS;
+    Expr *Op;
+  };
+
+  // Contains a collection of the recipe elements we need for the combiner:
+  // -For Scalars, there will be 1 element, just the combiner for that scalar.
+  // -For a struct with a valid operator, this will be 1 element, just that
+  //  call.
+  // -For a struct without the operator, this will be 1 element per field, which
+  //  should be the combiner for that element.
+  // -For an array of any of the above, it will be the above for the element.
+  // Note: These are necessarily stored in either Trailing Storage (when in the
+  // AST), or in a separate collection when being semantically analyzed.
+  llvm::ArrayRef<CombinerRecipe> CombinerRecipes;
 
   bool isSet() const { return AllocaDecl; }
-  static OpenACCReductionRecipe Empty() {
-    return OpenACCReductionRecipe(nullptr, nullptr);
+
+private:
+  friend class OpenACCReductionClause;
+  OpenACCReductionRecipe(VarDecl *A, llvm::ArrayRef<CombinerRecipe> Combiners)
+      : AllocaDecl(A), CombinerRecipes(Combiners) {}
+};
+
+// A version of the above that is used for semantic analysis, at a time before
+// the OpenACCReductionClause node has been created.  This one has storage for
+// the CombinerRecipe, since Trailing storage for it doesn't exist yet.
+struct OpenACCReductionRecipeWithStorage {
+  VarDecl *AllocaDecl;
+  llvm::SmallVector<OpenACCReductionRecipe::CombinerRecipe, 1> CombinerRecipes;
+
+  OpenACCReductionRecipeWithStorage(
+      VarDecl *A,
+      llvm::ArrayRef<OpenACCReductionRecipe::CombinerRecipe> Combiners)
+      : AllocaDecl(A), CombinerRecipes(Combiners) {}
+
+  static OpenACCReductionRecipeWithStorage Empty() {
+    return OpenACCReductionRecipeWithStorage(/*AllocaDecl=*/nullptr, {});
   }
 };
 
 class OpenACCReductionClause final
     : public OpenACCClauseWithVarList,
       private llvm::TrailingObjects<OpenACCReductionClause, Expr *,
-                                    OpenACCReductionRecipe> {
+                                    OpenACCReductionRecipe,
+                                    OpenACCReductionRecipe::CombinerRecipe> {
   friend TrailingObjects;
   OpenACCReductionOperator Op;
 
   OpenACCReductionClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                          OpenACCReductionOperator Operator,
                          ArrayRef<Expr *> VarList,
-                         ArrayRef<OpenACCReductionRecipe> Recipes,
+                         ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
                          SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::Reduction, BeginLoc,
                                  LParenLoc, EndLoc),
         Op(Operator) {
-          assert(VarList.size() == Recipes.size());
+    assert(VarList.size() == Recipes.size());
     setExprs(getTrailingObjects<Expr *>(VarList.size()), VarList);
-    llvm::uninitialized_copy(Recipes, getTrailingObjects<
-                             OpenACCReductionRecipe > ());
+
+    // Since we're using trailing storage on this node to store the 'combiner'
+    // recipes of the Reduction Recipes (which have a 1:M relationship), we need
+    // to ensure we get the ArrayRef of each of our combiner 'correct'.
+    OpenACCReductionRecipe::CombinerRecipe *CurCombinerLoc =
+        getTrailingObjects<OpenACCReductionRecipe::CombinerRecipe>();
+    for (const auto &[Idx, R] : llvm::enumerate(Recipes)) {
+
+      // ArrayRef to the 'correct' data location in trailing storage.
+      llvm::MutableArrayRef<OpenACCReductionRecipe::CombinerRecipe>
+          NewCombiners{CurCombinerLoc, R.CombinerRecipes.size()};
+      CurCombinerLoc += R.CombinerRecipes.size();
+
+      llvm::uninitialized_copy(R.CombinerRecipes, NewCombiners.begin());
+
+      // Placement new into the correct location in trailng storage.
+      new (&getTrailingObjects<OpenACCReductionRecipe>()[Idx])
+          OpenACCReductionRecipe(R.AllocaDecl, NewCombiners);
+    }
   }
 
 public:
   static bool classof(const OpenACCClause *C) {
     return C->getClauseKind() == OpenACCClauseKind::Reduction;
-  }
-
-  ArrayRef<OpenACCReductionRecipe> getRecipes() {
-    return ArrayRef<OpenACCReductionRecipe>{
-        getTrailingObjects<OpenACCReductionRecipe>(), getExprs().size()};
   }
 
   ArrayRef<OpenACCReductionRecipe> getRecipes() const {
@@ -1336,11 +1352,15 @@ public:
   static OpenACCReductionClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          OpenACCReductionOperator Operator, ArrayRef<Expr *> VarList,
-         ArrayRef<OpenACCReductionRecipe> Recipes, SourceLocation EndLoc);
+         ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
+         SourceLocation EndLoc);
 
   OpenACCReductionOperator getReductionOp() const { return Op; }
 
   size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return getExprs().size();
+  }
+  size_t numTrailingObjects(OverloadToken<OpenACCReductionRecipe>) const {
     return getExprs().size();
   }
 };

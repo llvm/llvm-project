@@ -17,7 +17,7 @@ namespace clang::tidy::objc {
 /// of NSObject and recommends calling a superclass initializer instead.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/objc/super-self.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/objc/super-self.html
 class SuperSelfCheck : public ClangTidyCheck {
 public:
   SuperSelfCheck(StringRef Name, ClangTidyContext *Context)

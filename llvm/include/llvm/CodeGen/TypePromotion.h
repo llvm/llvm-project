@@ -21,12 +21,12 @@ namespace llvm {
 class Function;
 class TargetMachine;
 
-class TypePromotionPass : public PassInfoMixin<TypePromotionPass> {
+class TypePromotionPass : public OptionalPassInfoMixin<TypePromotionPass> {
 private:
   const TargetMachine *TM;
 
 public:
-  TypePromotionPass(const TargetMachine *TM): TM(TM) { }
+  TypePromotionPass(const TargetMachine &TM) : TM(&TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

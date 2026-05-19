@@ -26,31 +26,32 @@ class MachineModuleInfo;
 class Module;
 template <typename T> class SmallVectorImpl;
 
-class PrintMIRPreparePass : public PassInfoMixin<PrintMIRPreparePass> {
+class PrintMIRPreparePass : public RequiredPassInfoMixin<PrintMIRPreparePass> {
   raw_ostream &OS;
 
 public:
   PrintMIRPreparePass(raw_ostream &OS = errs()) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
-class PrintMIRPass : public PassInfoMixin<PrintMIRPass> {
+class PrintMIRPass : public RequiredPassInfoMixin<PrintMIRPass> {
   raw_ostream &OS;
 
 public:
   PrintMIRPass(raw_ostream &OS = errs()) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 /// Print LLVM IR using the MIR serialization format to the given output stream.
 LLVM_ABI void printMIR(raw_ostream &OS, const Module &M);
 
-/// Print a machine function using the MIR serialization format to the given
-/// output stream.
+/// Print MIR using Legacy Pass Manager (uses MachineModuleInfo).
 LLVM_ABI void printMIR(raw_ostream &OS, const MachineModuleInfo &MMI,
+                       const MachineFunction &MF);
+
+/// Print MIR using New Pass Manager (uses FunctionAnalysisManager).
+LLVM_ABI void printMIR(raw_ostream &OS, FunctionAnalysisManager &FAM,
                        const MachineFunction &MF);
 
 /// Determine a possible list of successors of a basic block based on the

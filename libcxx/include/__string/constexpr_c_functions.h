@@ -95,14 +95,13 @@ __constexpr_memcmp(const _Tp* __lhs, const _Up* __rhs, __element_count __n) {
   }
 }
 
-// Because of __libcpp_is_trivially_equality_comparable we know that comparing the object representations is equivalent
+// Because of __is_trivially_equality_comparable_v we know that comparing the object representations is equivalent
 // to a std::memcmp(...) == 0. Since we have multiple objects contiguously in memory, we can call memcmp once instead
 // of invoking it on every object individually.
 template <class _Tp, class _Up>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
 __constexpr_memcmp_equal(const _Tp* __lhs, const _Up* __rhs, __element_count __n) {
-  static_assert(__libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
-                "_Tp and _Up have to be trivially equality comparable");
+  static_assert(__is_trivially_equality_comparable_v<_Tp, _Up>, "_Tp and _Up have to be trivially equality comparable");
 
   auto __count = static_cast<size_t>(__n);
 
@@ -127,7 +126,7 @@ __constexpr_memcmp_equal(const _Tp* __lhs, const _Up* __rhs, __element_count __n
 
 template <class _Tp, class _Up>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __constexpr_memchr(_Tp* __str, _Up __value, size_t __count) {
-  static_assert(sizeof(_Tp) == 1 && __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
+  static_assert(sizeof(_Tp) == 1 && __is_trivially_equality_comparable_v<_Tp, _Up>,
                 "Calling memchr on non-trivially equality comparable types is unsafe.");
 
   if (__libcpp_is_constant_evaluated()) {

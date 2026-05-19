@@ -36,9 +36,17 @@ void RawWrite(const char *buffer) {
 
 void ReportFile::ReopenIfNecessary() {
   mu->CheckLocked();
-  if (fd == kStdoutFd || fd == kStderrFd) return;
-
   uptr pid = internal_getpid();
+  if (fallbackToStderrActive && fd_pid != pid) {
+    // If fallbackToStderrActive is set then we fellback to stderr. If this is a
+    // new process, mark fd as invalid so we attempt to open again.
+    CHECK_EQ(fd, kStderrFd);
+    fd = kInvalidFd;
+    fallbackToStderrActive = false;
+  }
+  if (fd == kStdoutFd || fd == kStderrFd)
+    return;
+
   // If in tracer, use the parent's file.
   if (pid == stoptheworld_tracer_pid)
     pid = stoptheworld_tracer_ppid;
@@ -48,8 +56,7 @@ void ReportFile::ReopenIfNecessary() {
     // process, close it now.
     if (fd_pid == pid)
       return;
-    else
-      CloseFile(fd);
+    CloseFile(fd);
   }
 
   const char *exe_name = GetProcessName();
@@ -65,18 +72,24 @@ void ReportFile::ReopenIfNecessary() {
   error_t err;
   fd = OpenFile(full_path, WrOnly, &err);
   if (fd == kInvalidFd) {
-    const char *ErrorMsgPrefix = "ERROR: Can't open file: ";
+    bool fallback = common_flags()->log_fallback_to_stderr;
+    const char *ErrorMsgPrefix =
+        fallback ? "WARNING: Can't open file, falling back to stderr: "
+                 : "ERROR: Can't open file: ";
     WriteToFile(kStderrFd, ErrorMsgPrefix, internal_strlen(ErrorMsgPrefix));
     WriteToFile(kStderrFd, full_path, internal_strlen(full_path));
     char errmsg[100];
     internal_snprintf(errmsg, sizeof(errmsg), " (reason: %d)\n", err);
     WriteToFile(kStderrFd, errmsg, internal_strlen(errmsg));
-    Die();
+    if (!fallback)
+      Die();
+    fallbackToStderrActive = true;
+    fd = kStderrFd;
   }
   fd_pid = pid;
 }
 
-static void RecursiveCreateParentDirs(char *path) {
+static void RecursiveCreateParentDirs(char *path, fd_t &fd) {
   if (path[0] == '\0')
     return;
   for (int i = 1; path[i] != '\0'; ++i) {
@@ -85,12 +98,19 @@ static void RecursiveCreateParentDirs(char *path) {
       continue;
     path[i] = '\0';
     if (!DirExists(path) && !CreateDir(path)) {
-      const char *ErrorMsgPrefix = "ERROR: Can't create directory: ";
+      bool fallback = common_flags()->log_fallback_to_stderr;
+      const char *ErrorMsgPrefix =
+          fallback ? "WARNING: Can't create directory, falling back to stderr: "
+                   : "ERROR: Can't create directory: ";
       WriteToFile(kStderrFd, ErrorMsgPrefix, internal_strlen(ErrorMsgPrefix));
       WriteToFile(kStderrFd, path, internal_strlen(path));
       const char *ErrorMsgSuffix = "\n";
       WriteToFile(kStderrFd, ErrorMsgSuffix, internal_strlen(ErrorMsgSuffix));
-      Die();
+      if (!fallback)
+        Die();
+      path[i] = save;
+      fd = kStderrFd;
+      return;
     }
     path[i] = save;
   }
@@ -108,6 +128,9 @@ static void ParseAndSetPath(const char *pattern, char *dest,
   CHECK(dest);
   CHECK_GE(dest_size, 1);
   dest[0] = '\0';
+  // Return empty string if empty string was passed
+  if (internal_strlen(pattern) == 0)
+    return;
   uptr next_substr_start_idx = 0;
   for (uptr i = 0; i < internal_strlen(pattern) - 1; i++) {
     if (pattern[i] != '%')
@@ -161,12 +184,17 @@ void ReportFile::SetReportPath(const char *path) {
   if (path) {
     uptr len = internal_strlen(path);
     if (len > sizeof(path_prefix) - 100) {
-      const char *message = "ERROR: Path is too long: ";
+      bool fallback = common_flags()->log_fallback_to_stderr;
+      const char *message =
+          fallback ? "WARNING: Path is too long, falling back to stderr: "
+                   : "ERROR: Path is too long: ";
       WriteToFile(kStderrFd, message, internal_strlen(message));
       WriteToFile(kStderrFd, path, 8);
       message = "...\n";
       WriteToFile(kStderrFd, message, internal_strlen(message));
-      Die();
+      if (!fallback)
+        Die();
+      path = "stderr";
     }
   }
 
@@ -180,7 +208,7 @@ void ReportFile::SetReportPath(const char *path) {
     fd = kStdoutFd;
   } else {
     ParseAndSetPath(path, path_prefix, kMaxPathLength);
-    RecursiveCreateParentDirs(path_prefix);
+    RecursiveCreateParentDirs(path_prefix, fd);
   }
 }
 

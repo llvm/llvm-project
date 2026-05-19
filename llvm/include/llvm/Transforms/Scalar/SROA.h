@@ -1,4 +1,4 @@
-﻿//===- SROA.h - Scalar Replacement Of Aggregates ----------------*- C++ -*-===//
+//===- SROA.h - Scalar Replacement Of Aggregates ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,7 +23,7 @@ class Function;
 
 enum class SROAOptions : bool { ModifyCFG, PreserveCFG };
 
-class SROAPass : public PassInfoMixin<SROAPass> {
+class SROAPass : public OptionalPassInfoMixin<SROAPass> {
   const SROAOptions PreserveCFG;
 
 public:

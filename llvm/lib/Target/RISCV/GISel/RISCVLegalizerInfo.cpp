@@ -149,9 +149,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, sXLen, sXLen);
 
   getActionDefinitionsBuilder(
-      {G_UADDE, G_UADDO, G_USUBE, G_USUBO}).lower();
+      {G_UADDE, G_UADDO, G_USUBE, G_USUBO, G_READ_REGISTER, G_WRITE_REGISTER})
+      .lower();
 
-  getActionDefinitionsBuilder({G_SADDO, G_SADDE, G_SSUBO})
+  getActionDefinitionsBuilder({G_SADDE, G_SADDO, G_SSUBE, G_SSUBO})
       .minScalar(0, sXLen)
       .lower();
 
@@ -174,6 +175,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                    typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST)))
       .customIf(typeIsLegalBoolVec(1, BoolVecTys, ST))
       .maxScalar(0, sXLen);
+
+  getActionDefinitionsBuilder(G_TRUNC).alwaysLegal();
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
       .customFor({sXLen})
@@ -218,8 +221,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     BSWAPActions.maxScalar(0, sXLen).lower();
 
   auto &CountZerosActions = getActionDefinitionsBuilder({G_CTLZ, G_CTTZ});
-  auto &CountZerosUndefActions =
-      getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF});
+  auto &CountZerosPoisonActions =
+      getActionDefinitionsBuilder({G_CTLZ_ZERO_POISON, G_CTTZ_ZERO_POISON});
   if (ST.hasStdExtZbb()) {
     CountZerosActions.legalFor({{sXLen, sXLen}})
         .customFor({{s32, s32}})
@@ -228,9 +231,20 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
         .scalarSameSizeAs(1, 0);
   } else {
     CountZerosActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
-    CountZerosUndefActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
+    CountZerosPoisonActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
   }
-  CountZerosUndefActions.lower();
+  CountZerosPoisonActions.lower();
+
+  auto &CountSignActions = getActionDefinitionsBuilder(G_CTLS);
+  if (ST.hasStdExtP()) {
+    CountSignActions.legalFor({{sXLen, sXLen}})
+        .customFor({{s32, s32}})
+        .clampScalar(0, s32, sXLen)
+        .widenScalarToNextPow2(0)
+        .scalarSameSizeAs(1, 0);
+  } else {
+    CountSignActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+  }
 
   auto &CTPOPActions = getActionDefinitionsBuilder(G_CTPOP);
   if (ST.hasStdExtZbb()) {
@@ -238,7 +252,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
         .clampScalar(0, sXLen, sXLen)
         .scalarSameSizeAs(1, 0);
   } else {
-    CTPOPActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+    CTPOPActions.widenScalarToNextPow2(0, /*Min*/ 8)
+        .clampScalar(0, s8, sXLen)
+        .scalarSameSizeAs(1, 0)
+        .lower();
   }
 
   getActionDefinitionsBuilder(G_CONSTANT)
@@ -418,6 +435,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor({{p0, sXLen}})
       .clampScalar(1, sXLen, sXLen);
 
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
+
   getActionDefinitionsBuilder(G_BRCOND).legalFor({sXLen}).minScalar(0, sXLen);
 
   getActionDefinitionsBuilder(G_BRJT).customFor({{p0, sXLen}});
@@ -505,6 +524,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
+  getActionDefinitionsBuilder(G_MEMCPY_INLINE).lower();
+
   getActionDefinitionsBuilder({G_DYN_STACKALLOC, G_STACKSAVE, G_STACKRESTORE})
       .lower();
 
@@ -566,7 +587,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customFor(ST.hasStdExtF(), {{s1, s32}})
       .customFor(ST.hasStdExtD(), {{s1, s64}})
       .customFor(ST.hasStdExtZfh(), {{s1, s16}})
-      .lowerFor({{s1, s32}, {s1, s64}});
+      .lower();
 
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalFor(ST.hasStdExtF(), {s32})
@@ -629,12 +650,17 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FTAN, G_FPOW, G_FLOG, G_FLOG2,
                                G_FLOG10, G_FEXP, G_FEXP2, G_FEXP10, G_FACOS,
                                G_FASIN, G_FATAN, G_FATAN2, G_FCOSH, G_FSINH,
-                               G_FTANH})
+                               G_FTANH, G_FMODF})
       .libcallFor({s32, s64})
       .libcallFor(ST.is64Bit(), {s128});
   getActionDefinitionsBuilder({G_FPOWI, G_FLDEXP})
       .libcallFor({{s32, s32}, {s64, s32}})
       .libcallFor(ST.is64Bit(), {s128, s32});
+
+  getActionDefinitionsBuilder(G_FCANONICALIZE)
+      .legalFor(ST.hasStdExtF(), {s32})
+      .legalFor(ST.hasStdExtD(), {s64})
+      .legalFor(ST.hasStdExtZfh(), {s16});
 
   getActionDefinitionsBuilder(G_VASTART).customFor({p0});
 
@@ -717,6 +743,25 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, sXLen, sXLen)
       .lower();
 
+  LegalityPredicate InsertVectorEltPred = [=](const LegalityQuery &Query) {
+    LLT VecTy = Query.Types[0];
+    LLT EltTy = Query.Types[1];
+    return VecTy.getElementType() == EltTy;
+  };
+
+  getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
+      .legalIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+                   InsertVectorEltPred, typeIs(2, sXLen)))
+      .legalIf(all(typeIsLegalBoolVec(0, BoolVecTys, ST), InsertVectorEltPred,
+                   typeIs(2, sXLen)));
+
+  getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS})
+      .alwaysLegal();
+
+  getActionDefinitionsBuilder(G_FENCE).alwaysLegal();
+
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
@@ -725,8 +770,29 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                            MachineInstr &MI) const {
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
 
-  if (RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntrinsicID))
+  if (const RISCVVIntrinsicsTable::RISCVVIntrinsicInfo *II =
+          RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntrinsicID)) {
+    if (II->hasScalarOperand() && !II->IsFPIntrinsic) {
+      MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+      MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+      auto OldScalar = MI.getOperand(II->ScalarOperand + 2).getReg();
+      // Legalize integer vx form intrinsic.
+      if (MRI.getType(OldScalar).isScalar()) {
+        if (MRI.getType(OldScalar).getSizeInBits() < sXLen.getSizeInBits()) {
+          Helper.Observer.changingInstr(MI);
+          Helper.widenScalarSrc(MI, sXLen, II->ScalarOperand + 2,
+                                TargetOpcode::G_ANYEXT);
+          Helper.Observer.changedInstr(MI);
+        } else if (MRI.getType(OldScalar).getSizeInBits() >
+                   sXLen.getSizeInBits()) {
+          // TODO: i64 in riscv32.
+          return false;
+        }
+      }
+    }
     return true;
+  }
 
   switch (IntrinsicID) {
   default:
@@ -758,6 +824,8 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::riscv_vsetvli:
+  case Intrinsic::riscv_vsetvlimax:
   case Intrinsic::riscv_masked_atomicrmw_add:
   case Intrinsic::riscv_masked_atomicrmw_sub:
   case Intrinsic::riscv_masked_cmpxchg:
@@ -1175,7 +1243,7 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
   // to place the desired subvector starting at element 0.
   const LLT XLenTy(STI.getXLenVT());
   auto SlidedownAmt = MIB.buildVScale(XLenTy, RemIdx);
-  auto [Mask, VL] = buildDefaultVLOps(LitTy, MIB, MRI);
+  auto [Mask, VL] = buildDefaultVLOps(InterLitTy, MIB, MRI);
   uint64_t Policy = RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC;
   auto Slidedown = MIB.buildInstr(
       RISCV::G_VSLIDEDOWN_VL, {InterLitTy},
@@ -1204,7 +1272,7 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   LLT BigTy = MRI.getType(BigVec);
   LLT LitTy = MRI.getType(LitVec);
 
-  if (Idx == 0 ||
+  if (Idx == 0 &&
       MRI.getVRegDef(BigVec)->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
     return true;
 
@@ -1278,7 +1346,7 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   auto Insert = MIB.buildInsertSubvector(InterLitTy, MIB.buildUndef(InterLitTy),
                                          LitVec, 0);
 
-  auto [Mask, _] = buildDefaultVLOps(BigTy, MIB, MRI);
+  auto [Mask, _] = buildDefaultVLOps(InterLitTy, MIB, MRI);
   auto VL = MIB.buildVScale(XLenTy, LitTy.getElementCount().getKnownMinValue());
 
   // If we're inserting into the lowest elements, use a tail undisturbed
@@ -1341,6 +1409,8 @@ static unsigned getRISCVWOpcode(unsigned Opcode) {
     return RISCV::G_CLZW;
   case TargetOpcode::G_CTTZ:
     return RISCV::G_CTZW;
+  case TargetOpcode::G_CTLS:
+    return RISCV::G_CLSW;
   case TargetOpcode::G_FPTOSI:
     return RISCV::G_FCVT_W_RV64;
   case TargetOpcode::G_FPTOUI:
@@ -1453,7 +1523,8 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return true;
   }
   case TargetOpcode::G_CTLZ:
-  case TargetOpcode::G_CTTZ: {
+  case TargetOpcode::G_CTTZ:
+  case TargetOpcode::G_CTLS: {
     Helper.Observer.changingInstr(MI);
     Helper.widenScalarSrc(MI, sXLen, 1, TargetOpcode::G_ANYEXT);
     Helper.widenScalarDst(MI, sXLen);

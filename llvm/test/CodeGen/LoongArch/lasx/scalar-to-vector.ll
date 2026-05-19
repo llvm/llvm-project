@@ -25,7 +25,7 @@ define <16 x i16> @scalar_to_16xi16(i16 %val) {
 define <8 x i32> @scalar_to_8xi32(i32 %val) {
 ; CHECK-LABEL: scalar_to_8xi32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a0, 0
+; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %ret = insertelement <8 x i32> poison, i32 %val, i32 0
   ret <8 x i32> %ret
@@ -34,13 +34,13 @@ define <8 x i32> @scalar_to_8xi32(i32 %val) {
 define <4 x i64> @scalar_to_4xi64(i64 %val) {
 ; LA32-LABEL: scalar_to_4xi64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a0, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr0, $a1, 1
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: scalar_to_4xi64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    xvinsgr2vr.d $xr0, $a0, 0
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    ret
   %ret = insertelement <4 x i64> poison, i64 %val, i32 0
   ret <4 x i64> %ret

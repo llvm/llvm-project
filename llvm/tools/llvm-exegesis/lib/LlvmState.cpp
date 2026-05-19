@@ -56,6 +56,11 @@ Expected<LLVMState> LLVMState::Create(std::string TripleName,
 
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TheTriple, CpuName, ""));
+  if (!STI) {
+    return make_error<StringError>("unable to create subtarget info",
+                                   inconvertibleErrorCode());
+  }
+
   assert(STI && "Unable to create subtarget info!");
   if (!STI->isCPUStringValid(CpuName)) {
     return make_error<StringError>(Twine("invalid CPU name (")
@@ -152,7 +157,7 @@ bool LLVMState::canAssemble(const MCInst &Inst) const {
   SmallVector<char, 16> Tmp;
   SmallVector<MCFixup, 4> Fixups;
   CodeEmitter->encodeInstruction(Inst, Tmp, Fixups,
-                                 *TheTargetMachine->getMCSubtargetInfo());
+                                 TheTargetMachine->getMCSubtargetInfo());
   return Tmp.size() > 0;
 }
 

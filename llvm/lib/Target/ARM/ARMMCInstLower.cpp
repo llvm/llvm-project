@@ -100,6 +100,9 @@ bool ARMAsmPrinter::lowerOperand(const MachineOperand &MO,
     MCOp = MCOperand::createExpr(MCSymbolRefExpr::create(
         MO.getMBB()->getSymbol(), OutContext));
     break;
+  case MachineOperand::MO_MCSymbol:
+    MCOp = GetSymbolRef(MO, MO.getMCSymbol());
+    break;
   case MachineOperand::MO_GlobalAddress:
     MCOp = GetSymbolRef(MO,
                         GetARMGVSymbol(MO.getGlobal(), MO.getTargetFlags()));
@@ -112,8 +115,8 @@ bool ARMAsmPrinter::lowerOperand(const MachineOperand &MO,
     MCOp = GetSymbolRef(MO, GetJTISymbol(MO.getIndex()));
     break;
   case MachineOperand::MO_ConstantPoolIndex:
-    if (Subtarget->genExecuteOnly())
-      llvm_unreachable("execute-only should not generate constant pools");
+    assert(!MF->getSubtarget<ARMSubtarget>().genExecuteOnly() &&
+           "execute-only should not generate constant pools");
     MCOp = GetSymbolRef(MO, GetCPISymbol(MO.getIndex()));
     break;
   case MachineOperand::MO_BlockAddress:

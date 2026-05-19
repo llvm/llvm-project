@@ -24,7 +24,7 @@ module {
     %5 = cir.vtt.address_point %3 : !cir.ptr<!cir.ptr<!void>>, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
     cir.call @_ZN1BC2Ev(%4, %5) : (!cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!void>>) -> ()
     %6 = cir.vtt.address_point %3 : !cir.ptr<!cir.ptr<!void>>, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
-    %7 = cir.cast(bitcast, %6 : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+    %7 = cir.cast bitcast %6 : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!cir.vptr>
     %8 = cir.load align(8) %7 : !cir.ptr<!cir.vptr>, !cir.vptr
     %9 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
     cir.store align(8) %8, %9 : !cir.vptr, !cir.ptr<!cir.vptr>

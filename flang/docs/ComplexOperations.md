@@ -93,7 +93,9 @@ While [the same option in clang][2] allows specifying `promoted`, this is not
 implemented in Flang. Also, in the case of `improved`, clang does not handle NaN
 and infinite values, but Flang does. These behavioral differences arise because
 the transformation of complex division calculations depends on the implementation
-of ComplexToStandard, which may change in the future.
+of ComplexToStandard, which may change in the future. If you specify
+`-ffast-math`, the lowering is the same as specifiying
+`-fcomplex-arithmetic=basic`.
 
 [1]: https://discourse.llvm.org/t/rfc-change-lowering-of-fortran-math-intrinsics/63971
 [2]: https://clang.llvm.org/docs/UsersManual.html#cmdoption-fcomplex-arithmetic

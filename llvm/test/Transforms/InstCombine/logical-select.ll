@@ -676,14 +676,12 @@ define <2 x i64> @fp_bitcast(<4 x i1> %cmp, <2 x double> %a, <2 x double> %b) {
 define <4 x i32> @computesignbits_through_shuffles(<4 x float> %x, <4 x float> %y, <4 x float> %z) {
 ; CHECK-LABEL: @computesignbits_through_shuffles(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole <4 x float> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
-; CHECK-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[SEXT]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
-; CHECK-NEXT:    [[S2:%.*]] = shufflevector <4 x i32> [[SEXT]], <4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
-; CHECK-NEXT:    [[SHUF_OR1:%.*]] = or <4 x i32> [[S1]], [[S2]]
-; CHECK-NEXT:    [[S3:%.*]] = shufflevector <4 x i32> [[SHUF_OR1]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
-; CHECK-NEXT:    [[S4:%.*]] = shufflevector <4 x i32> [[SHUF_OR1]], <4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
-; CHECK-NEXT:    [[SHUF_OR2:%.*]] = or <4 x i32> [[S3]], [[S4]]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw <4 x i32> [[SHUF_OR2]] to <4 x i1>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[CMP]], <4 x i1> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i1> [[CMP]], <4 x i1> poison, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i1> [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <4 x i1> [[TMP3]], <4 x i1> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[S4:%.*]] = shufflevector <4 x i1> [[TMP3]], <4 x i1> poison, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i1> [[S3]], [[S4]]
 ; CHECK-NEXT:    [[SEL_V:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[Z:%.*]], <4 x float> [[X]]
 ; CHECK-NEXT:    [[SEL:%.*]] = bitcast <4 x float> [[SEL_V]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[SEL]]
@@ -1638,4 +1636,59 @@ define <2 x i1> @test_logical_and_icmp_samesign_vec_with_poison_tv(<2 x i8> %x) 
   %cmp2 = icmp samesign ult <2 x i8> %x, <i8 11, i8 poison>
   %and = select <2 x i1> %cmp1, <2 x i1> %cmp2, <2 x i1> zeroinitializer
   ret <2 x i1> %and
+}
+
+define i1 @test_logical_and_trunc_nuw(i1 %c, i8 noundef range(i8 0,2) %x) {
+; CHECK-LABEL: @test_logical_and_trunc_nuw(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C:%.*]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %and = select i1 %c, i1 %trunc, i1 false
+  ret i1 %and
+}
+
+define i1 @test_logical_or_trunc_nuw(i1 %c, i8 noundef range(i8 0,2) %x) {
+; CHECK-LABEL: @test_logical_or_trunc_nuw(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C:%.*]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %or = select i1 %c, i1 true, i1 %trunc
+  ret i1 %or
+}
+
+define <2 x i1> @test_logical_and_trunc_nuw_vec(<2 x i1> %c, <2 x i8> noundef range(i8 0,2) %x) {
+; CHECK-LABEL: @test_logical_and_trunc_nuw_vec(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw <2 x i8> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[C:%.*]], [[TRUNC]]
+; CHECK-NEXT:    ret <2 x i1> [[AND]]
+;
+  %trunc = trunc nuw <2 x i8> %x to <2 x i1>
+  %and = select <2 x i1> %c, <2 x i1> %trunc, <2 x i1> zeroinitializer
+  ret <2 x i1> %and
+}
+
+define i1 @neg_test_logical_and_trunc_nuw_no_range(i1 %c, i8 noundef %x) {
+; CHECK-LABEL: @neg_test_logical_and_trunc_nuw_no_range(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C:%.*]], i1 [[TRUNC]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %and = select i1 %c, i1 %trunc, i1 false
+  ret i1 %and
+}
+
+define i1 @neg_test_logical_and_trunc_nuw_no_noundef(i1 %c, i8 range(i8 0,2) %x) {
+; CHECK-LABEL: @neg_test_logical_and_trunc_nuw_no_noundef(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C:%.*]], i1 [[TRUNC]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %and = select i1 %c, i1 %trunc, i1 false
+  ret i1 %and
 }

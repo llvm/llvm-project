@@ -211,7 +211,7 @@ public:
 };
 
 /// Printer pass for the \c LoopNest results.
-class LoopNestPrinterPass : public PassInfoMixin<LoopNestPrinterPass> {
+class LoopNestPrinterPass : public RequiredPassInfoMixin<LoopNestPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -220,8 +220,6 @@ public:
   LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                                  LoopStandardAnalysisResults &AR,
                                  LPMUpdater &U);
-
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

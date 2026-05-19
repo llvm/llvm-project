@@ -7,4 +7,4 @@ module @inner_mod1 {
 
 // REPRO: module @inner_mod1
 // REPRO: module @foo {
-// REPRO: pipeline: "builtin.module(any(builtin.module(test-module-pass)))"
+// REPRO: pipeline: "builtin.module(builtin.module(test-module-pass))"

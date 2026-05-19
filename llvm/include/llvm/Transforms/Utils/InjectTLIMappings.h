@@ -17,7 +17,7 @@
 
 namespace llvm {
 class Function;
-class InjectTLIMappings : public PassInfoMixin<InjectTLIMappings> {
+class InjectTLIMappings : public OptionalPassInfoMixin<InjectTLIMappings> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

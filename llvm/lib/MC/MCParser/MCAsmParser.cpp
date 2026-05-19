@@ -168,14 +168,15 @@ bool MCAsmParser::parseSymbol(MCSymbol *&Res) {
   if (parseIdentifier(Name))
     return true;
 
-  Res = getContext().getOrCreateSymbol(Name);
+  Res = getContext().parseSymbol(Name);
   return false;
 }
 
 void MCParsedAsmOperand::dump() const {
   // Cannot completely remove virtual function even in release mode.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  MCTargetOptions Opts;
   dbgs() << "  ";
-  print(dbgs(), MCAsmInfo());
+  print(dbgs(), MCAsmInfo(Opts));
 #endif
 }

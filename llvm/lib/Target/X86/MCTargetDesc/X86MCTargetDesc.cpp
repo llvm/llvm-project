@@ -48,18 +48,21 @@ std::string X86_MC::ParseX86Triple(const Triple &TT) {
   std::string FS;
   // SSE2 should default to enabled in 64-bit mode, but can be turned off
   // explicitly.
-  if (TT.isArch64Bit())
+  if (TT.isX86_64())
     FS = "+64bit-mode,-32bit-mode,-16bit-mode,+sse2";
   else if (TT.getEnvironment() != Triple::CODE16)
     FS = "-64bit-mode,+32bit-mode,-16bit-mode";
   else
     FS = "-64bit-mode,-32bit-mode,+16bit-mode";
 
+  if (TT.isX32())
+    FS += ",+x32";
+
   return FS;
 }
 
 unsigned X86_MC::getDwarfRegFlavour(const Triple &TT, bool isEH) {
-  if (TT.getArch() == Triple::x86_64)
+  if (TT.isX86_64())
     return DWARFFlavour::X86_64;
 
   if (TT.isOSDarwin())
@@ -407,9 +410,8 @@ static MCInstrInfo *createX86MCInstrInfo() {
 }
 
 static MCRegisterInfo *createX86MCRegisterInfo(const Triple &TT) {
-  unsigned RA = (TT.getArch() == Triple::x86_64)
-                    ? X86::RIP  // Should have dwarf #16.
-                    : X86::EIP; // Should have dwarf #8.
+  unsigned RA = TT.isX86_64() ? X86::RIP  // Should have dwarf #16.
+                              : X86::EIP; // Should have dwarf #8.
 
   MCRegisterInfo *X = new MCRegisterInfo();
   InitX86MCRegisterInfo(X, RA, X86_MC::getDwarfRegFlavour(TT, false),
@@ -418,33 +420,58 @@ static MCRegisterInfo *createX86MCRegisterInfo(const Triple &TT) {
   return X;
 }
 
+static void populateReservedIdentifiers(MCAsmInfo &MAI,
+                                        const MCRegisterInfo &MRI) {
+  auto &Set = MAI.getReservedIdentifiers();
+  // Register names: `call rsi` is misassembled as an indirect call. Use the
+  // Intel printer's table directly — it's the lowercase asm name in stable
+  // storage. MRI::getName() returns the uppercase enum name and would need
+  // an extra .lower() heap allocation per entry.
+  for (unsigned i = 1, e = MRI.getNumRegs(); i < e; ++i)
+    if (const char *Name = X86IntelInstPrinter::getRegisterName(i))
+      if (Name[0])
+        Set.insert(CachedHashStringRef(Name));
+  // Keywords that GAS Intel syntax misparses as constants, modifiers, or
+  // pseudo-registers instead of symbol references (e.g., `call byte` calls
+  // address 1, not symbol "byte"; `call flat` errors out).
+  for (StringRef KW : {"byte", "word", "dword", "fword", "qword", "mmword",
+                       "tbyte", "oword", "xmmword", "ymmword", "zmmword",
+                       "offset", "flat", "near", "far", "short"})
+    Set.insert(CachedHashStringRef(KW));
+  // Operator keywords parsed by GAS/X86AsmParser in Intel mode.
+  for (StringRef KW : {"and", "eq", "ge", "gt", "le", "lt", "mod", "ne", "not",
+                       "or", "shl", "shr", "xor"})
+    Set.insert(CachedHashStringRef(KW));
+}
+
 static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
                                      const Triple &TheTriple,
                                      const MCTargetOptions &Options) {
-  bool is64Bit = TheTriple.getArch() == Triple::x86_64;
+  bool is64Bit = TheTriple.isX86_64();
 
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatMachO()) {
     if (is64Bit)
-      MAI = new X86_64MCAsmInfoDarwin(TheTriple);
+      MAI = new X86_64MCAsmInfoDarwin(TheTriple, Options);
     else
-      MAI = new X86MCAsmInfoDarwin(TheTriple);
+      MAI = new X86MCAsmInfoDarwin(TheTriple, Options);
   } else if (TheTriple.isOSBinFormatELF()) {
     // Force the use of an ELF container.
-    MAI = new X86ELFMCAsmInfo(TheTriple);
+    MAI = new X86ELFMCAsmInfo(TheTriple, Options);
   } else if (TheTriple.isWindowsMSVCEnvironment() ||
              TheTriple.isWindowsCoreCLREnvironment() || TheTriple.isUEFI()) {
     if (Options.getAssemblyLanguage().equals_insensitive("masm"))
-      MAI = new X86MCAsmInfoMicrosoftMASM(TheTriple);
+      MAI = new X86MCAsmInfoMicrosoftMASM(TheTriple, Options);
     else
-      MAI = new X86MCAsmInfoMicrosoft(TheTriple);
+      MAI = new X86MCAsmInfoMicrosoft(TheTriple, Options);
   } else if (TheTriple.isOSCygMing() ||
              TheTriple.isWindowsItaniumEnvironment()) {
-    MAI = new X86MCAsmInfoGNUCOFF(TheTriple);
+    MAI = new X86MCAsmInfoGNUCOFF(TheTriple, Options);
   } else {
     // The default is ELF.
-    MAI = new X86ELFMCAsmInfo(TheTriple);
+    MAI = new X86ELFMCAsmInfo(TheTriple, Options);
   }
+  populateReservedIdentifiers(*MAI, MRI);
 
   // Initialize initial frame state.
   // Calculate amount of bytes used for return address storing
@@ -489,7 +516,7 @@ namespace X86_MC {
 class X86MCInstrAnalysis : public MCInstrAnalysis {
   X86MCInstrAnalysis(const X86MCInstrAnalysis &) = delete;
   X86MCInstrAnalysis &operator=(const X86MCInstrAnalysis &) = delete;
-  virtual ~X86MCInstrAnalysis() = default;
+  ~X86MCInstrAnalysis() override = default;
 
 public:
   X86MCInstrAnalysis(const MCInstrInfo *MCII) : MCInstrAnalysis(MCII) {}
@@ -533,7 +560,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   const MCRegisterClass &VR128XRC = MRI.getRegClass(X86::VR128XRegClassID);
   const MCRegisterClass &VR256XRC = MRI.getRegClass(X86::VR256XRegClassID);
 
-  auto ClearsSuperReg = [=](unsigned RegID) {
+  auto ClearsSuperReg = [=](MCRegister RegID) {
     // On X86-64, a general purpose integer register is viewed as a 64-bit
     // register internal to the processor.
     // An update to the lower 32 bits of a 64 bit integer register is

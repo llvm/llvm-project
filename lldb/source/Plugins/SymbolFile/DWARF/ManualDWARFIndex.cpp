@@ -22,7 +22,6 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/lldb-private-enumerations.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
 #include <atomic>
 #include <optional>
@@ -33,10 +32,10 @@ using namespace lldb_private::plugin::dwarf;
 using namespace llvm::dwarf;
 
 void ManualDWARFIndex::Index() {
-  if (m_indexed)
-    return;
-  m_indexed = true;
+  std::call_once(m_indexed_flag, [this]() { IndexImpl(); });
+}
 
+void ManualDWARFIndex::IndexImpl() {
   ElapsedTime elapsed(m_index_time);
   LLDB_SCOPED_TIMERF("%p", static_cast<void *>(m_dwarf));
   if (LoadFromCache()) {
@@ -312,7 +311,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
                   objc_method->GetClassNameWithCategory());
               ConstString objc_selector_name(objc_method->GetSelector());
               ConstString objc_fullname_no_category_name(
-                  objc_method->GetFullNameWithoutCategory().c_str());
+                  objc_method->GetFullNameWithoutCategory());
               ConstString class_name_no_category(objc_method->GetClassName());
               set.function_fullnames.Insert(ConstString(name), ref);
               if (class_name_with_category)

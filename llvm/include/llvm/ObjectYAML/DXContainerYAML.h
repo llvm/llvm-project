@@ -115,7 +115,7 @@ struct RootParameterHeaderYaml {
   dxbc::ShaderVisibility Visibility;
   uint32_t Offset;
 
-  RootParameterHeaderYaml(){};
+  RootParameterHeaderYaml() = default;
   RootParameterHeaderYaml(dxbc::RootParameterType T) : Type(T) {}
 };
 
@@ -123,7 +123,7 @@ struct RootParameterLocationYaml {
   RootParameterHeaderYaml Header;
   std::optional<size_t> IndexInSignature;
 
-  RootParameterLocationYaml(){};
+  RootParameterLocationYaml() = default;
   explicit RootParameterLocationYaml(RootParameterHeaderYaml Header)
       : Header(Header) {}
 };
@@ -178,6 +178,11 @@ struct StaticSamplerYamlDesc {
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
   dxbc::ShaderVisibility ShaderVisibility;
+
+  LLVM_ABI uint32_t getEncodedFlags() const;
+
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag) bool Enum = false;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 
 struct RootSignatureYamlDesc {
@@ -235,6 +240,11 @@ struct SignatureElement {
   uint8_t Stream;
 };
 
+struct StringTableEntry {
+  StringRef String;
+  uint32_t Offset;
+};
+
 struct PSVInfo {
   // The version field isn't actually encoded in the file, but it is inferred by
   // the size of data regions. We include it in the yaml because it simplifies
@@ -256,6 +266,10 @@ struct PSVInfo {
   MaskVector PatchOutputMap;
 
   StringRef EntryName;
+
+  // Output-only fields populated by obj2yaml for inspection.
+  SmallVector<StringTableEntry> StringTable;
+  uint32_t RuntimeInfoSize = 0;
 
   LLVM_ABI void mapInfoForVersion(yaml::IO &IO);
 
@@ -282,6 +296,12 @@ struct Signature {
   llvm::SmallVector<SignatureParameter> Parameters;
 };
 
+struct DebugName {
+  std::optional<uint16_t> Flags;
+  std::optional<uint16_t> NameLength;
+  std::string Filename;
+};
+
 struct Part {
   Part() = default;
   Part(std::string N, uint32_t S) : Name(N), Size(S) {}
@@ -293,12 +313,16 @@ struct Part {
   std::optional<PSVInfo> Info;
   std::optional<DXContainerYAML::Signature> Signature;
   std::optional<DXContainerYAML::RootSignatureYamlDesc> RootSignature;
+  std::optional<DXContainerYAML::DebugName> DebugName;
 };
 
 struct Object {
   FileHeader Header;
   std::vector<Part> Parts;
 };
+
+LLVM_ABI Expected<std::unique_ptr<DXContainerYAML::Object>>
+fromDXContainer(object::DXContainer &DXC);
 
 } // namespace DXContainerYAML
 } // namespace llvm
@@ -311,6 +335,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureParameter)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::RootParameterLocationYaml)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::DescriptorRangeYaml)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::StaticSamplerYamlDesc)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::StringTableEntry)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
@@ -358,6 +383,10 @@ template <> struct MappingTraits<DXContainerYAML::PSVInfo> {
   LLVM_ABI static void mapping(IO &IO, DXContainerYAML::PSVInfo &PSV);
 };
 
+template <> struct MappingTraits<DXContainerYAML::DebugName> {
+  LLVM_ABI static void mapping(IO &IO, DXContainerYAML::DebugName &DebugName);
+};
+
 template <> struct MappingTraits<DXContainerYAML::Part> {
   LLVM_ABI static void mapping(IO &IO, DXContainerYAML::Part &Version);
 };
@@ -377,6 +406,10 @@ template <> struct MappingTraits<DXContainerYAML::ResourceBindInfo> {
 template <> struct MappingTraits<DXContainerYAML::SignatureElement> {
   LLVM_ABI static void mapping(IO &IO,
                                llvm::DXContainerYAML::SignatureElement &El);
+};
+
+template <> struct MappingTraits<DXContainerYAML::StringTableEntry> {
+  static void mapping(IO &IO, DXContainerYAML::StringTableEntry &E);
 };
 
 template <> struct MappingTraits<DXContainerYAML::SignatureParameter> {

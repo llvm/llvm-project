@@ -8,9 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV64ZBB
 
-declare i32 @llvm.abs.i32(i32, i1 immarg)
-declare i64 @llvm.abs.i64(i64, i1 immarg)
-
 define i32 @neg_abs32(i32 %x) {
 ; RV32I-LABEL: neg_abs32:
 ; RV32I:       # %bb.0:

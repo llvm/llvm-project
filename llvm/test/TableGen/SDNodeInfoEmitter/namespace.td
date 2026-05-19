@@ -24,15 +24,15 @@ def node_2 : SDNode<"MyCustomISD::NODE", SDTypeProfile<0, 1, [SDTCisVT<0, i2>]>>
 // EMPTY-NEXT:     ;
 
 // EMPTY:        static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
-// EMPTY-NEXT:     /* dummy */ {SDTCisVT, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE}
+// EMPTY-NEXT:     /* dummy */ {SDTCisVT, 0, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE}
 // EMPTY-NEXT:   };
 // EMPTY-EMPTY:
 // EMPTY-NEXT:   static const SDNodeDesc MyTargetSDNodeDescs[] = {
 // EMPTY-NEXT:   };
 // EMPTY-EMPTY:
 // EMPTY-NEXT:   static const SDNodeInfo MyTargetGenSDNodeInfo(
-// EMPTY-NEXT:       /*NumOpcodes=*/0, MyTargetSDNodeDescs,
-// EMPTY-NEXT:       MyTargetSDNodeNames, MyTargetSDTypeConstraints);
+// EMPTY-NEXT:       /*NumOpcodes=*/0, MyTargetSDNodeDescs, MyTargetSDNodeNames,
+// EMPTY-NEXT:       MyTargetVTByHwModeTable, MyTargetSDTypeConstraints);
 
 // COMMON:       namespace llvm::[[NS]] {
 // COMMON-EMPTY:
@@ -49,9 +49,13 @@ def node_2 : SDNode<"MyCustomISD::NODE", SDTypeProfile<0, 1, [SDTCisVT<0, i2>]>>
 // COMMON-NEXT:    "[[NS]]::NODE\0"
 // COMMON-NEXT:    ;
 
+// COMMON:       static const VTByHwModePair MyTargetVTByHwModeTable[] = {
+// COMMON-NEXT:    /* dummy */ {0, MVT::INVALID_SIMPLE_VALUE_TYPE}
+// COMMON-NEXT:  };
+
 // COMMON:       static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
-// TARGET-NEXT:    /* 0 */ {SDTCisVT, 0, 0, MVT::i1},
-// CUSTOM-NEXT:    /* 0 */ {SDTCisVT, 0, 0, MVT::i2},
+// TARGET-NEXT:    /* 0 */ {SDTCisVT, 0, 0, 0, MVT::i1},
+// CUSTOM-NEXT:    /* 0 */ {SDTCisVT, 0, 0, 0, MVT::i2},
 // COMMON-NEXT:  };
 // COMMON-EMPTY:
 // COMMON-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
@@ -60,5 +64,5 @@ def node_2 : SDNode<"MyCustomISD::NODE", SDTypeProfile<0, 1, [SDTCisVT<0, i2>]>>
 // COMMON-NEXT:  };
 // COMMON-EMPTY:
 // COMMON-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(
-// COMMON-NEXT:      /*NumOpcodes=*/1, MyTargetSDNodeDescs,
-// COMMON-NEXT:      MyTargetSDNodeNames, MyTargetSDTypeConstraints);
+// COMMON-NEXT:      /*NumOpcodes=*/1, MyTargetSDNodeDescs, MyTargetSDNodeNames,
+// COMMON-NEXT:      MyTargetVTByHwModeTable, MyTargetSDTypeConstraints);

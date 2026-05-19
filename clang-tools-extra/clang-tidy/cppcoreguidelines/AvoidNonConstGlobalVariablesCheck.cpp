@@ -17,7 +17,8 @@ namespace clang::tidy::cppcoreguidelines {
 AvoidNonConstGlobalVariablesCheck::AvoidNonConstGlobalVariablesCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      AllowInternalLinkage(Options.get("AllowInternalLinkage", false)) {}
+      AllowInternalLinkage(Options.get("AllowInternalLinkage", false)),
+      AllowThreadLocal(Options.get("AllowThreadLocal", false)) {}
 
 void AvoidNonConstGlobalVariablesCheck::registerMatchers(MatchFinder *Finder) {
   auto NamespaceMatcher = AllowInternalLinkage
@@ -31,6 +32,8 @@ void AvoidNonConstGlobalVariablesCheck::registerMatchers(MatchFinder *Finder) {
       GlobalContext,
       AllowInternalLinkage ? varDecl(unless(isStaticStorageClass()))
                            : varDecl(),
+      AllowThreadLocal ? varDecl(unless(hasThreadStorageDuration()))
+                       : varDecl(),
       unless(anyOf(
           isConstexpr(), hasType(isConstQualified()),
           hasType(referenceType())))); // References can't be changed, only the

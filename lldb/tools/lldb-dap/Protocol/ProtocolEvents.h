@@ -21,6 +21,7 @@
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_EVENTS_H
 
 #include "Protocol/ProtocolTypes.h"
+#include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
@@ -83,10 +84,100 @@ struct InvalidatedEventBody {
 
   /// If specified, the client only needs to refetch data related to this stack
   /// frame (and the `threadId` is ignored).
-  std::optional<uint64_t> frameId;
+  std::optional<uint64_t> stackFrameId;
 };
 llvm::json::Value toJSON(const InvalidatedEventBody::Area &);
 llvm::json::Value toJSON(const InvalidatedEventBody &);
+
+/// This event indicates that some memory range has been updated. It should only
+/// be sent if the corresponding capability supportsMemoryEvent is true.
+///
+/// Clients typically react to the event by re-issuing a readMemory request if
+/// they show the memory identified by the memoryReference and if the updated
+/// memory range overlaps the displayed range. Clients should not make
+/// assumptions how individual memory references relate to each other, so they
+/// should not assume that they are part of a single continuous address range
+/// and might overlap.
+///
+/// Debug adapters can use this event to indicate that the contents of a memory
+/// range has changed due to some other request like setVariable or
+/// setExpression. Debug adapters are not expected to emit this event for each
+/// and every memory change of a running program, because that information is
+/// typically not available from debuggers and it would flood clients with too
+/// many events.
+struct MemoryEventBody {
+  /// Memory reference of a memory range that has been updated.
+  lldb::addr_t memoryReference = LLDB_INVALID_ADDRESS;
+
+  /// Starting offset in bytes where memory has been updated. Can be negative.
+  int64_t offset = 0;
+
+  /// Number of bytes updated.
+  uint64_t count = 0;
+};
+llvm::json::Value toJSON(const MemoryEventBody &);
+
+enum StoppedReason : unsigned {
+  eStoppedReasonUninitialized,
+  eStoppedReasonStep,
+  eStoppedReasonBreakpoint,
+  eStoppedReasonException,
+  eStoppedReasonPause,
+  eStoppedReasonEntry,
+  eStoppedReasonGoto,
+  eStoppedReasonFunctionBreakpoint,
+  eStoppedReasonDataBreakpoint,
+  eStoppedReasonInstructionBreakpoint,
+};
+
+/// The event indicates that the execution of the debuggee has stopped due to
+/// some condition.
+///
+/// This can be caused by a breakpoint previously set, a stepping request has
+/// completed, by executing a debugger statement etc.
+struct StoppedEventBody {
+  /// The reason for the event.
+  ///
+  /// For backward compatibility this string is shown in the UI if the
+  /// `description` attribute is missing (but it must not be translated).
+  StoppedReason reason = eStoppedReasonUninitialized;
+
+  /// The full reason for the event, e.g. 'Paused on exception'. This string is
+  /// shown in the UI as is and can be translated.
+  std::string description;
+
+  /// The thread which was stopped.
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
+
+  /// A value of true hints to the client that this event should not change the
+  /// focus.
+  bool preserveFocusHint = false;
+
+  /// Additional information. E.g. if reason is `exception`, text contains the
+  /// exception name. This string is shown in the UI.
+  std::string text;
+
+  /// "If `allThreadsStopped` is true, a debug adapter can announce that all
+  /// threads have stopped.
+  ///
+  /// - The client should use this information to enable that all threads can be
+  /// expanded to access their stacktraces.
+  /// - If the attribute is missing or false, only the thread with the given
+  /// `threadId` can be expanded.
+  bool allThreadsStopped = false;
+
+  /// Ids of the breakpoints that triggered the event. In most cases there is
+  /// only a single breakpoint but here are some examples for multiple
+  /// breakpoints:
+  ///
+  /// - Different types of breakpoints map to the same location.
+  /// - Multiple source breakpoints get collapsed to the same instruction by the
+  /// compiler/runtime.
+  /// - Multiple function breakpoints with different function names map to the
+  /// same location.
+  std::vector<lldb::break_id_t> hitBreakpointIds;
+};
+llvm::json::Value toJSON(const StoppedEventBody &);
 
 } // end namespace lldb_dap::protocol
 

@@ -78,6 +78,7 @@ public:
   void Enter(const parser::SeparateModuleSubprogram &);
   void Enter(const parser::DoConstruct &);
   void Leave(const parser::DoConstruct &);
+  void Enter(const parser::CallStmt &);
 
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenACC/ACC.inc"
@@ -101,7 +102,7 @@ private:
   bool IsLoopConstruct(llvm::acc::Directive directive) const;
   std::optional<llvm::acc::Directive> getParentComputeConstruct() const;
   bool IsInsideComputeConstruct() const;
-  bool IsInsideParallelConstruct() const;
+  bool IsInsideKernelsConstruct() const;
   void CheckNotInComputeConstruct();
   std::optional<std::int64_t> getGangDimensionSize(
       DirectiveContext &dirContext);

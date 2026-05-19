@@ -41,7 +41,7 @@ struct CoreDefinition {
 } // namespace lldb_private
 
 // This core information can be looked using the ArchSpec::Core as the index
-static const CoreDefinition g_core_definitions[] = {
+static constexpr const CoreDefinition g_core_definitions[] = {
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_generic,
      "arm"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv4,
@@ -74,6 +74,12 @@ static const CoreDefinition g_core_definitions[] = {
      "armv7m"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7em,
      "armv7em"},
+    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm,
+     ArchSpec::eCore_arm_armv8m_base, "armv8m.base"},
+    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm,
+     ArchSpec::eCore_arm_armv8m_main, "armv8m.main"},
+    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm,
+     ArchSpec::eCore_arm_armv8_1m_main, "armv8.1m.main"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_xscale,
      "xscale"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumb,
@@ -90,12 +96,12 @@ static const CoreDefinition g_core_definitions[] = {
      "thumbv6m"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7,
      "thumbv7"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7f,
-     "thumbv7f"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7s,
      "thumbv7s"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7k,
      "thumbv7k"},
+    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7f,
+     "thumbv7f"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7m,
      "thumbv7m"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7em,
@@ -257,6 +263,15 @@ static_assert(sizeof(g_core_definitions) / sizeof(CoreDefinition) ==
                   ArchSpec::kNumCores,
               "make sure we have one core definition for each core");
 
+template <int I> struct ArchSpecValidator : ArchSpecValidator<I + 1> {
+  static_assert(g_core_definitions[I].core == I,
+                "g_core_definitions order doesn't match Core enumeration");
+};
+
+template <> struct ArchSpecValidator<ArchSpec::kNumCores> {};
+
+ArchSpecValidator<ArchSpec::eCore_arm_generic> validator;
+
 struct ArchDefinitionEntry {
   ArchSpec::Core core;
   uint32_t cpu;
@@ -309,6 +324,9 @@ static const ArchDefinitionEntry g_macho_arch_entries[] = {
     {ArchSpec::eCore_arm_armv7k,      llvm::MachO::CPU_TYPE_ARM,        llvm::MachO::CPU_SUBTYPE_ARM_V7K,       UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_arm_armv7m,      llvm::MachO::CPU_TYPE_ARM,        llvm::MachO::CPU_SUBTYPE_ARM_V7M,       UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_arm_armv7em,     llvm::MachO::CPU_TYPE_ARM,        llvm::MachO::CPU_SUBTYPE_ARM_V7EM,      UINT32_MAX, SUBTYPE_MASK},
+    {ArchSpec::eCore_arm_armv8m_base,     llvm::MachO::CPU_TYPE_ARM,        llvm::MachO::CPU_SUBTYPE_ARM_V8M_BASE,      UINT32_MAX, SUBTYPE_MASK},
+    {ArchSpec::eCore_arm_armv8m_main,     llvm::MachO::CPU_TYPE_ARM,        llvm::MachO::CPU_SUBTYPE_ARM_V8M_MAIN,      UINT32_MAX, SUBTYPE_MASK},
+    {ArchSpec::eCore_arm_armv8_1m_main,     llvm::MachO::CPU_TYPE_ARM,        llvm::MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN,      UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_arm_arm64e,      llvm::MachO::CPU_TYPE_ARM64,      llvm::MachO::CPU_SUBTYPE_ARM64E,        UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_arm_arm64,       llvm::MachO::CPU_TYPE_ARM64,      llvm::MachO::CPU_SUBTYPE_ARM64_ALL,     UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_arm_arm64,       llvm::MachO::CPU_TYPE_ARM64,      llvm::MachO::CPU_SUBTYPE_ARM64_V8,      UINT32_MAX, SUBTYPE_MASK},
@@ -434,7 +452,7 @@ static const ArchDefinition g_coff_arch_def = {
 
 // clang-format off
 static const ArchDefinitionEntry g_xcoff_arch_entries[] = {
-    {ArchSpec::eCore_ppc_generic,   llvm::XCOFF::TCPU_COM},
+    {ArchSpec::eCore_ppc_generic,   llvm::XCOFF::TCPU_PPC},
     {ArchSpec::eCore_ppc64_generic, llvm::XCOFF::TCPU_PPC64}
 };
 // clang-format on
@@ -661,10 +679,6 @@ uint32_t ArchSpec::GetMachOCPUSubType() const {
   return LLDB_INVALID_CPUTYPE;
 }
 
-uint32_t ArchSpec::GetDataByteSize() const { return 1; }
-
-uint32_t ArchSpec::GetCodeByteSize() const { return 1; }
-
 llvm::Triple::ArchType ArchSpec::GetMachine() const {
   const CoreDefinition *core_def = FindCoreDefinition(m_core);
   if (core_def)
@@ -712,6 +726,8 @@ bool ArchSpec::CharIsSignedByDefault() const {
   case llvm::Triple::ppc64:
     return m_triple.isOSDarwin();
 
+  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32:
   case llvm::Triple::ppc64le:
   case llvm::Triple::systemz:
   case llvm::Triple::xcore:

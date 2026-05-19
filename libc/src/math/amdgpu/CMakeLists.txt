@@ -4,8 +4,6 @@ add_entrypoint_object(
     ceil.cpp
   HDRS
     ../ceil.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -14,8 +12,6 @@ add_entrypoint_object(
     ceilf.cpp
   HDRS
     ../ceilf.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -24,8 +20,6 @@ add_entrypoint_object(
     copysign.cpp
   HDRS
     ../copysign.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -34,8 +28,6 @@ add_entrypoint_object(
     copysignf.cpp
   HDRS
     ../copysignf.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -44,8 +36,6 @@ add_entrypoint_object(
     fabs.cpp
   HDRS
     ../fabs.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -54,8 +44,6 @@ add_entrypoint_object(
     fabsf.cpp
   HDRS
     ../fabsf.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -64,8 +52,6 @@ add_entrypoint_object(
     floor.cpp
   HDRS
     ../floor.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -74,8 +60,6 @@ add_entrypoint_object(
     floorf.cpp
   HDRS
     ../floorf.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -84,8 +68,6 @@ add_entrypoint_object(
     fma.cpp
   HDRS
     ../fma.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -94,8 +76,6 @@ add_entrypoint_object(
     fmaf.cpp
   HDRS
     ../fmaf.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -104,8 +84,6 @@ add_entrypoint_object(
     fmax.cpp
   HDRS
     ../fmax.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -114,8 +92,6 @@ add_entrypoint_object(
     fmaxf.cpp
   HDRS
     ../fmaxf.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -124,8 +100,6 @@ add_entrypoint_object(
     fmin.cpp
   HDRS
     ../fmin.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -134,8 +108,6 @@ add_entrypoint_object(
     fminf.cpp
   HDRS
     ../fminf.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -144,8 +116,6 @@ add_entrypoint_object(
     fmod.cpp
   HDRS
     ../fmod.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -154,8 +124,6 @@ add_entrypoint_object(
     fmodf.cpp
   HDRS
     ../fmodf.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -164,8 +132,6 @@ add_entrypoint_object(
     nearbyint.cpp
   HDRS
     ../nearbyint.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -174,8 +140,6 @@ add_entrypoint_object(
     nearbyintf.cpp
   HDRS
     ../nearbyintf.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -184,8 +148,6 @@ add_entrypoint_object(
     remainder.cpp
   HDRS
     ../remainder.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -194,8 +156,6 @@ add_entrypoint_object(
     remainderf.cpp
   HDRS
     ../remainderf.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -204,8 +164,6 @@ add_entrypoint_object(
     rint.cpp
   HDRS
     ../rint.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -214,8 +172,6 @@ add_entrypoint_object(
     rintf.cpp
   HDRS
     ../rintf.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -224,8 +180,6 @@ add_entrypoint_object(
     round.cpp
   HDRS
     ../round.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -234,8 +188,6 @@ add_entrypoint_object(
     sqrt.cpp
   HDRS
     ../sqrt.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -244,8 +196,6 @@ add_entrypoint_object(
     sqrtf.cpp
   HDRS
     ../sqrtf.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -254,8 +204,6 @@ add_entrypoint_object(
     trunc.cpp
   HDRS
     ../trunc.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -264,8 +212,6 @@ add_entrypoint_object(
     truncf.cpp
   HDRS
     ../truncf.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -274,8 +220,6 @@ add_entrypoint_object(
     frexp.cpp
   HDRS
     ../frexp.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -284,8 +228,6 @@ add_entrypoint_object(
     frexpf.cpp
   HDRS
     ../frexpf.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -294,8 +236,6 @@ add_entrypoint_object(
     scalbn.cpp
   HDRS
     ../scalbn.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -304,8 +244,6 @@ add_entrypoint_object(
     scalbnf.cpp
   HDRS
     ../scalbnf.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -314,8 +252,6 @@ add_entrypoint_object(
     ldexp.cpp
   HDRS
     ../ldexp.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -324,8 +260,6 @@ add_entrypoint_object(
     ldexpf.cpp
   HDRS
     ../ldexpf.h
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -336,7 +270,6 @@ add_entrypoint_object(
     ../tgamma.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
-    -O2
 )
 
 add_entrypoint_object(
@@ -347,7 +280,6 @@ add_entrypoint_object(
     ../tgammaf.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
-    -O2
 )
 
 add_entrypoint_object(
@@ -358,7 +290,6 @@ add_entrypoint_object(
     ../lgamma.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
-    -O2
 )
 
 add_entrypoint_object(
@@ -369,5 +300,4 @@ add_entrypoint_object(
     ../lgamma_r.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
-    -O2
 )

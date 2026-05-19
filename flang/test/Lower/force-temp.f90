@@ -27,6 +27,14 @@ module test
       integer, intent(out) :: buf(5)
     end subroutine
   end interface
+
+  ! Used by call_s6() and others below
+  type base
+    integer :: i = -1
+  end type
+  type, extends (base) :: child
+    real :: r = -2.0
+  end type
 contains
   subroutine s1(buf)
 !CHECK-LABEL: func.func @_QMtestPs1
@@ -79,4 +87,54 @@ contains
     p => x(::2) ! pointer to non-contiguous array section
     call pass_intent_out(p)
   end subroutine
+  subroutine call_s6()
+    interface
+      subroutine s6(b)
+        import :: base
+        type(base), intent(inout) :: b(:)
+      end subroutine s6
+    end interface
+    class(base), pointer :: pb(:)
+    type(child), target :: c(2)
+!CHECK-LABEL: func.func @_QMtestPcall_s6
+!CHECK-NOT: hlfir.copy_in
+!CHECK: fir.call @_QPs6
+!CHECK-NOT: hlfir.copy_out
+    pb => c
+    call s6(pb)
+  end subroutine call_s6
+  subroutine call_s7()
+    interface
+      subroutine s7(b1, b2, n)
+        import :: base
+        integer :: n
+        type(base), intent(inout) :: b1(n)
+        type(base), intent(inout) :: b2(*)
+      end subroutine
+    end interface
+    integer, parameter :: n = 7
+    class(base), allocatable :: c1(:), c2(:)
+!CHECK-LABEL: func.func @_QMtestPcall_s7
+!CHECK: hlfir.copy_in
+!CHECK: hlfir.copy_in
+!CHECK: fir.call @_QPs7
+!CHECK: hlfir.copy_out
+!CHECK: hlfir.copy_out
+    call s7(c1, c2, n)
+  end subroutine call_s7
+  subroutine call_s8()
+    interface
+      subroutine s8(buf)
+        ! IGNORE_TKR(C) takes precendence over CONTIGUOUS
+        !DIR$ IGNORE_TKR(C) buf
+        real, contiguous :: buf(:)
+      end subroutine
+    end interface
+    real a(10)
+!CHECK-LABEL: func.func @_QMtestPcall_s8
+!CHECK-NOT: hlfir.copy_in
+!CHECK: fir.call @_QPs8
+!CHECK-NOT: hlfir.copy_out
+    call s8(a(1:5:2))
+  end subroutine call_s8
 end module
