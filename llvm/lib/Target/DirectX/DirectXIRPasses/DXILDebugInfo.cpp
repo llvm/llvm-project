@@ -71,9 +71,9 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
     Res.MDExtra.insert({NewCU, SubprogramsMD});
   }
 
-  for (auto *T : DIF.types()) {
+  for (DIType *T : DIF.types()) {
     if (auto *SR = dyn_cast<DISubrangeType>(T)) {
-      auto *BT = SR->getBaseType();
+      DIType *BT = SR->getBaseType();
       if (!BT)
         BT = DIBasicType::get(
             SR->getContext(), dwarf::DW_TAG_base_type, SR->getName(),
