@@ -78,7 +78,7 @@ public:
 
   /// Run the dependency scanning tool for all given frontend command-lines,
   /// and report the discovered dependencies to the provided consumer. The
-  /// \C OverlayFS will be used to call \c makeEffectiveVFS().
+  /// \c OverlayFS will be used to call \c makeEffectiveVFS().
   ///
   /// \returns false if any errors occurred (with diagnostics reported to
   /// \c DiagConsumer), true otherwise.
