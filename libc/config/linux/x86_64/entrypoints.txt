@@ -1,4 +1,12 @@
 set(TARGET_LIBC_ENTRYPOINTS
+    # arpa/inet.h entrypoints
+    libc.src.arpa.inet.htonl
+    libc.src.arpa.inet.htons
+    libc.src.arpa.inet.inet_addr
+    libc.src.arpa.inet.inet_aton
+    libc.src.arpa.inet.ntohl
+    libc.src.arpa.inet.ntohs
+
     # ctype.h entrypoints
     libc.src.ctype.isalnum
     libc.src.ctype.isalpha
@@ -1192,14 +1200,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.opendir
     libc.src.dirent.readdir
 
-    # arpa/inet.h entrypoints
-    libc.src.arpa.inet.htonl
-    libc.src.arpa.inet.htons
-    libc.src.arpa.inet.inet_addr
-    libc.src.arpa.inet.inet_aton
-    libc.src.arpa.inet.ntohl
-    libc.src.arpa.inet.ntohs
-
     # pthread.h entrypoints
     libc.src.pthread.pthread_atfork
     libc.src.pthread.pthread_attr_destroy
@@ -1492,6 +1492,17 @@ if(LLVM_LIBC_FULL_BUILD)
   )
 endif()
 
+if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  if(LLVM_LIBC_FULL_BUILD)
+    list(APPEND TARGET_LIBC_ENTRYPOINTS
+      # regex.h entrypoints
+      libc.src.regex.regcomp
+      libc.src.regex.regexec
+      libc.src.regex.regerror
+      libc.src.regex.regfree
+    )
+  endif()
+endif()
 
 set(TARGET_LIBMVEC_ENTRYPOINTS)
 

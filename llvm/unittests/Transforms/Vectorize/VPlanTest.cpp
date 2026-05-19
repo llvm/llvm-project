@@ -1825,6 +1825,44 @@ TEST_F(VPInstructionTest, VPSymbolicValueMaterialization) {
   EXPECT_TRUE(Plan.getVF().isMaterialized());
 }
 
+using VPUtilsTest = VPlanTestBase;
+
+TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
+  VPlan &Plan = getPlan();
+
+  // isSingleScalar opcode without operands.
+  std::unique_ptr<VPInstruction> VScale(
+      new VPInstruction(VPInstruction::VScale, {}));
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(VScale.get()));
+
+  // isSingleScalar opcode with a uniform operand.
+  std::unique_ptr<VPInstruction> EVL(
+      new VPInstruction(VPInstruction::ExplicitVectorLength, {&Plan.getVF()}));
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(EVL.get()));
+
+  // isVectorToScalar opcode with a uniform operand.
+  std::unique_ptr<VPInstruction> FirstActiveLane(
+      new VPInstruction(VPInstruction::FirstActiveLane, {&Plan.getVF()}));
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(FirstActiveLane.get()));
+
+  // StepVector produces a distinct value per lane and is non-uniform; use it
+  // as the non-single-scalar operand in the negative cases below.
+  std::unique_ptr<VPInstruction> StepVector(
+      new VPInstruction(VPInstruction::StepVector, {}));
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(StepVector.get()));
+
+  // isSingleScalar opcode with a non-single-scalar operand.
+  std::unique_ptr<VPInstruction> EVLNonUniform(new VPInstruction(
+      VPInstruction::ExplicitVectorLength, {StepVector.get()}));
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(EVLNonUniform.get()));
+
+  // isVectorToScalar opcode with a non-single-scalar operand.
+  std::unique_ptr<VPInstruction> FirstActiveLaneNonUniform(
+      new VPInstruction(VPInstruction::FirstActiveLane, {StepVector.get()}));
+  EXPECT_FALSE(
+      vputils::isUniformAcrossVFsAndUFs(FirstActiveLaneNonUniform.get()));
+}
+
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
 TEST_F(VPInstructionTest, VPSymbolicValueAddUserAfterMaterialization) {
   VPlan &Plan = getPlan();

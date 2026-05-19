@@ -1148,18 +1148,6 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
                                              VPCostContext &Ctx) const;
 };
 
-/// Helper to access the operand that contains the unroll part for this recipe
-/// after unrolling.
-template <unsigned PartOpIdx> class LLVM_ABI_FOR_TEST VPUnrollPartAccessor {
-protected:
-  /// Return the VPValue operand containing the unroll part or null if there is
-  /// no such operand.
-  VPValue *getUnrollPartOperand(const VPUser &U) const;
-
-  /// Return the unroll part.
-  unsigned getUnrollPart(const VPUser &U) const;
-};
-
 /// Helper to manage IR metadata for recipes. It filters out metadata that
 /// cannot be propagated.
 class VPIRMetadata {
@@ -1299,18 +1287,10 @@ public:
     LastActiveLane,
     // Returns a reversed vector for the operand.
     Reverse,
-
-    // The opcodes below are used for VPInstructionWithType.
-    //
-    /// Scale the first operand (vector step) by the second operand
-    /// (scalar-step).  Casts both operands to the result type if needed.
-    WideIVStep,
     /// Start vector for reductions with 3 operands: the original start value,
     /// the identity value for the reduction and an integer indicating the
     /// scaling factor.
     ReductionStartVector,
-    // Creates a step vector starting from 0 to VF with a step of 1.
-    StepVector,
     /// Extracts a single lane (first operand) from a set of vector operands.
     /// The lane specifies an index into a vector formed by combining all vector
     /// operands (all operands after the first one).
@@ -1324,15 +1304,28 @@ public:
     /// masks (even operands -- ignoring the default value), and returns the
     /// last active value from the combined data vector using the combined mask.
     ExtractLastActive,
-
-    /// Returns the value for vscale.
-    VScale,
     /// Compute the exiting value of a wide induction after vectorization, that
     /// is the value of the last lane of the induction increment (i.e. its
     /// backedge value). Has the wide induction recipe as operand.
     ExitingIVValue,
     MaskedCond,
-    OpsEnd = MaskedCond,
+
+    // The opcodes below are used for VPInstructionWithType.
+    // NOTE: VPInstructionWithType classes are also used for:
+    // 1. All CastInst variants - see createVPInstructionsForVPBB, and other
+    //    cases where createScalarCast, createScalarZExtOrTrunc and
+    //    createScalarSExtOrTrunc are invoked.
+    // 2. Scalar load instructions - see createVPInstructionsForVPBB.
+
+    /// Scale the first operand (vector step) by the second operand
+    /// (scalar-step).  Casts both operands to the result type if needed.
+    WideIVStep,
+    // Creates a step vector starting from 0 to VF with a step of 1.
+    StepVector,
+    /// Returns the value for vscale.
+    VScale,
+
+    OpsEnd = VScale,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
@@ -3877,8 +3870,9 @@ protected:
 };
 
 /// A Recipe for widening the canonical induction variable of the vector loop.
-class VPWidenCanonicalIVRecipe : public VPSingleDefRecipe,
-                                 public VPUnrollPartAccessor<1> {
+/// First operand is the canonical IV recipe, a second step operand  (VF * Part)
+/// is added during unrolling.
+class VPWidenCanonicalIVRecipe : public VPSingleDefRecipe {
 public:
   VPWidenCanonicalIVRecipe(VPRegionValue *CanonicalIV)
       : VPSingleDefRecipe(VPRecipeBase::VPWidenCanonicalIVSC, {CanonicalIV}) {}
@@ -3886,15 +3880,17 @@ public:
   ~VPWidenCanonicalIVRecipe() override = default;
 
   VPWidenCanonicalIVRecipe *clone() override {
-    return new VPWidenCanonicalIVRecipe(getCanonicalIV());
+    auto *WideCanIV = new VPWidenCanonicalIVRecipe(getCanonicalIV());
+    if (VPValue *Step = getStepValue())
+      WideCanIV->addOperand(Step);
+    return WideCanIV;
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenCanonicalIVSC)
 
-  /// Generate a canonical vector induction variable of the vector loop, with
-  /// start = {<Part*VF, Part*VF+1, ..., Part*VF+VF-1> for 0 <= Part < UF}, and
-  /// step = <VF*UF, VF*UF, ..., VF*UF>.
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("Expected prior expansion of WidenCanonicalIV recipes");
+  }
 
   /// Return the cost of this VPWidenCanonicalIVPHIRecipe.
   InstructionCost computeCost(ElementCount VF,
@@ -3906,6 +3902,10 @@ public:
   /// Return the canonical IV being widened.
   VPRegionValue *getCanonicalIV() const {
     return cast<VPRegionValue>(getOperand(0));
+  }
+
+  VPValue *getStepValue() const {
+    return getNumOperands() == 2 ? getOperand(1) : nullptr;
   }
 
 protected:

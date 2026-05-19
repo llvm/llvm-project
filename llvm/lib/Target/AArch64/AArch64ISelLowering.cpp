@@ -2992,6 +2992,25 @@ unsigned AArch64TargetLowering::ComputeNumSignBitsForTargetNode(
   return 1;
 }
 
+unsigned AArch64TargetLowering::computeNumSignBitsForTargetInstr(
+    GISelValueTracking &Analysis, Register R, const APInt &DemandedElts,
+    const MachineRegisterInfo &MRI, unsigned Depth) const {
+  const MachineInstr *MI = MRI.getVRegDef(R);
+  if (!MI)
+    return 1;
+
+  switch (MI->getOpcode()) {
+  case AArch64::G_FCMEQ:
+  case AArch64::G_FCMGE:
+  case AArch64::G_FCMGT: {
+    LLT VT = MRI.getType(R);
+    return VT.getScalarSizeInBits();
+  }
+  default:
+    return 1;
+  }
+}
+
 MVT AArch64TargetLowering::getScalarShiftAmountTy(const DataLayout &DL,
                                                   EVT) const {
   return MVT::i64;
@@ -12570,8 +12589,10 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
   }
 
   // Emit first, and possibly only, CSEL.
+  // Propagate all flags to the CSEL node for downstream optimization passes.
   SDValue CC1Val = getCondCode(DAG, CC1);
-  SDValue CS1 = DAG.getNode(AArch64ISD::CSEL, DL, VT, TVal, FVal, CC1Val, Cmp);
+  SDValue CS1 =
+      DAG.getNode(AArch64ISD::CSEL, DL, VT, {TVal, FVal, CC1Val, Cmp}, Flags);
 
   // If we need a second CSEL, emit it, using the output of the first as the
   // RHS.  We're effectively OR'ing the two CC's together.

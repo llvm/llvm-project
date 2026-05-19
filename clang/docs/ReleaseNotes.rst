@@ -260,6 +260,8 @@ Non-comprehensive list of changes in this release
 - ``typeid`` on references and pointers of ``final`` types no longer emits a
   vtable lookup at runtime.
 
+- Updated support for Unicode from 15.1 to 18.0.
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
@@ -508,6 +510,8 @@ Improvements to Clang's diagnostics
 
 - Added warnings for floating-point exception function calls (fenv.h) without enabling
   floating-point exception behavior via the appropriate flags or pragmas. (#GH128239)
+  
+- The diagnostics around ``__block`` now explain why a variable cannot be marked ``__block``. (#GH197213)
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -607,7 +611,7 @@ Bug Fixes to C++ Support
   which could make the program mistakenly ill-formed.
 - Fixed a crash when an immediate-invoked ``consteval`` lambda is used as an invalid initializer. (#GH185270)
 - Fixed an assertion failure when using a global destructor with a target with a non-default program address space. (#GH186484)
-
+- Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
 - Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching
   MSVC behavior. Constructors with variadic arguments or callee-cleanup parameters are not yet supported
   and produce a warning. (#GH162640)
