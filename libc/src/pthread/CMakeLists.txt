@@ -464,6 +464,7 @@ add_entrypoint_object(
   HDRS
     pthread_mutex_lock.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.include.pthread
     libc.src.__support.threads.mutex
 )
@@ -475,6 +476,7 @@ add_entrypoint_object(
   HDRS
     pthread_mutex_trylock.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.include.pthread
     libc.src.__support.threads.mutex
 )
@@ -486,7 +488,9 @@ add_entrypoint_object(
   HDRS
     pthread_mutex_unlock.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.include.pthread
+    libc.src.__support.libc_assert
     libc.src.__support.threads.mutex
 )
 

@@ -4407,6 +4407,10 @@ void mlir::amdgpu::populateCommonGPUTypeAndAttributeConversions(
         }
         llvm_unreachable("unknown address space enum value");
       });
+  typeConverter.addConversion([](gpu::NamedBarrierType type) {
+    return LLVM::LLVMPointerType::get(
+        type.getContext(), ROCDL::ROCDLDialect::kSharedMemoryAddressSpace);
+  });
 }
 
 void mlir::populateAMDGPUTypeAndAttributeConversions(

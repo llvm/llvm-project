@@ -6027,8 +6027,6 @@ def note_checking_constraints_for_function_here : Note<
   "while checking constraint satisfaction for function '%0' required here">;
 def note_constraint_substitution_here : Note<
   "while substituting template arguments into constraint expression here">;
-def note_constraint_normalization_here : Note<
-  "while calculating associated constraint of template %0 here">;
 def note_parameter_mapping_substitution_here : Note<
   "while substituting into concept arguments here; substitution failures not "
   "allowed in concept arguments">;
@@ -11381,10 +11379,15 @@ def note_carries_dependency_missing_first_decl : Note<
 def err_carries_dependency_param_not_function_decl : Error<
   "'[[carries_dependency]]' attribute only allowed on parameter in a function "
   "declaration or lambda">;
-def err_block_on_nonlocal : Error<
-  "__block attribute not allowed, only allowed on local variables">;
-def err_block_on_vm : Error<
-  "__block attribute not allowed on declaration with a variably modified type">;
+def err_block_not_allowed_on : Error<
+  "'__block' is not allowed on %enum_select<NotAllowedBlockVarReason>{"
+  "%NonlocalVariable{a nonlocal variable}|"
+  "%StaticLocalVariable{a static local variable}|"
+  "%CppStaticDataMember{a C++ static data member}|"
+  "%ObjCInstanceVariable{an Objective-C instance variable}|"
+  "%RegisterVariable{a 'register' variable}|"
+  "%VariablyModifiedType{a declaration with a variably modified type}|"
+  "}0">;
 def err_sizeless_nonlocal : Error<
   "non-local variable with sizeless type %0">;
 
@@ -13436,6 +13439,8 @@ def warn_sycl_kernel_return_type : Warning<
 def err_sycl_special_type_num_init_method : Error<
   "types with 'sycl_special_class' attribute must have one and only one '__init' "
   "method defined">;
+def err_sycl_device_invalid_target : Error<
+  "%0 is not a supported SYCL device target">;
 
 // SYCL external attribute diagnostics
 def err_sycl_external_invalid_linkage : Error<
