@@ -172,9 +172,9 @@ public:
   /// Number of micro-ops that may be buffered for OOO execution.
   unsigned getMicroOpBufferSize() const { return SchedModel.MicroOpBufferSize; }
 
-  /// Return the scaled buffer size for a processor resource.
+  /// Return the original buffer size for a processor resource.
   int getResourceBufferSize(unsigned PIdx) const {
-    return SchedModel.getResourceBufferSize(PIdx);
+    return SchedModel.getProcResource(PIdx)->BufferSize;
   }
 
   /// Compute operand latency based on the available machine model.

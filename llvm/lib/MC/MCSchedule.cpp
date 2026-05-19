@@ -234,7 +234,7 @@ int MCSchedModel::getResourceBufferSize(unsigned ProcResourceIdx) const {
   int BufferSize = getProcResource(ProcResourceIdx)->BufferSize;
 
   // Skip scaling when factor is 1 (the default).
-  // Use native float comparison to avoid compile-time overhead on the hot fast
+  // Use native float comparison to avoid overhead on the hot fast
   // path, as 1.0f is exactly representable
   if (LLVM_LIKELY(ReservationStationScaleFactor ==
                   DefaultReservationStationScaleFactor))
