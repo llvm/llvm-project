@@ -1639,8 +1639,6 @@ void SPIRVEmitIntrinsics::preprocessUndefs(IRBuilder<> &B) {
   }
 }
 
-// When SPV_KHR_poison_freeze is enabled, replace each LLVM PoisonValue operand
-// with a spv_poison intrinsic so selection emits OpPoisonKHR.
 void SPIRVEmitIntrinsics::preprocessPoisons(IRBuilder<> &B) {
   const SPIRVSubtarget *STI = TM.getSubtargetImpl(*CurrF);
   if (!STI->canUseExtension(SPIRV::Extension::SPV_KHR_poison_freeze))
