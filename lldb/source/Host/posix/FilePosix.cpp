@@ -234,3 +234,5 @@ Status NativeFilePosix::Write(const void *buf, size_t &num_bytes,
   }
   return error;
 }
+
+char NativeFilePosix::ID = 0;

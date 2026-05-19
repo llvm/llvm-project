@@ -54,7 +54,7 @@ public:
 
   static char ID;
   bool isA(const void *classID) const override {
-    return classID == &ID || File::isA(classID);
+    return classID == &ID || NativeFile::isA(classID);
   }
   static bool classof(const File *file) { return file->isA(&ID); }
 

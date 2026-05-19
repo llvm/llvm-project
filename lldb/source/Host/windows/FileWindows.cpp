@@ -142,3 +142,5 @@ Status NativeFileWindows::Write(const void *buf, size_t &num_bytes,
   }
   return error;
 }
+
+char NativeFileWindows::ID = 0;

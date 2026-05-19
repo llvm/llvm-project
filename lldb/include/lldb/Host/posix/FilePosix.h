@@ -34,6 +34,12 @@ public:
   Status Read(void *dst, size_t &num_bytes, off_t &offset) override;
   Status Write(const void *src, size_t &num_bytes, off_t &offset) override;
 
+  static char ID;
+  bool isA(const void *classID) const override {
+    return classID == &ID || NativeFileBase::isA(classID);
+  }
+  static bool classof(const File *file) { return file->isA(&ID); }
+
 protected:
   void CalculateInteractiveAndTerminal() override;
 
