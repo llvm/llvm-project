@@ -5164,15 +5164,15 @@ define <8 x i8> @test_select_v8i8(i1 %cond, <8 x i8> %a, <8 x i8> %b) {
 define <2 x i32> @test_select_v2i32(i1 %cond, <2 x i32> %a, <2 x i32> %b) {
 ; RV32-LABEL: test_select_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    andi a0, a0, 1
-; RV32-NEXT:    neg a5, a0
-; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    and a2, a2, a5
-; RV32-NEXT:    and a4, a4, a0
-; RV32-NEXT:    and a5, a1, a5
-; RV32-NEXT:    and a0, a3, a0
-; RV32-NEXT:    or a1, a2, a4
-; RV32-NEXT:    or a0, a5, a0
+; RV32-NEXT:    andi a5, a0, 1
+; RV32-NEXT:    bnez a5, .LBB207_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:    mv a1, a4
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB207_2:
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_select_v2i32:
@@ -5318,16 +5318,17 @@ define <2 x i32> @test_vselect_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    slt a0, a2, a0
 ; RV32-NEXT:    slt a1, a3, a1
-; RV32-NEXT:    neg a6, a0
-; RV32-NEXT:    neg a7, a1
-; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    and a1, a3, a1
-; RV32-NEXT:    and a3, a5, a7
-; RV32-NEXT:    and a0, a2, a0
-; RV32-NEXT:    and a2, a4, a6
-; RV32-NEXT:    or a1, a3, a1
-; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    neg a1, a1
+; RV32-NEXT:    neg a0, a0
+; RV32-NEXT:    bnez a1, .LBB210_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a5, a3
+; RV32-NEXT:  .LBB210_2:
+; RV32-NEXT:    bnez a0, .LBB210_4
+; RV32-NEXT:  # %bb.3:
+; RV32-NEXT:    mv a4, a2
+; RV32-NEXT:  .LBB210_4:
+; RV32-NEXT:    padd.dw a0, a4, zero
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_vselect_v2i32:
@@ -5362,22 +5363,8 @@ define <4 x i16> @test_bswap_v4i16(<4 x i16> %a) {
 define <2 x i32> @test_bswap_v2i32(<2 x i32> %a) {
 ; RV32-LABEL: test_bswap_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a2, 16
-; RV32-NEXT:    psrli.dw a4, a0, 8
-; RV32-NEXT:    addi a2, a2, -256
-; RV32-NEXT:    psrli.dw a6, a0, 24
-; RV32-NEXT:    pslli.dw t1, a0, 24
-; RV32-NEXT:    and a3, a5, a2
-; RV32-NEXT:    and a4, a4, a2
-; RV32-NEXT:    and a1, a1, a2
-; RV32-NEXT:    or a3, a3, a7
-; RV32-NEXT:    and a0, a0, a2
-; RV32-NEXT:    or a2, a4, a6
-; RV32-NEXT:    pslli.dw a0, a0, 8
-; RV32-NEXT:    or a1, t2, a1
-; RV32-NEXT:    or a0, t1, a0
-; RV32-NEXT:    or a1, a1, a3
-; RV32-NEXT:    or a0, a0, a2
+; RV32-NEXT:    rev8 a1, a1
+; RV32-NEXT:    rev8 a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_bswap_v2i32:

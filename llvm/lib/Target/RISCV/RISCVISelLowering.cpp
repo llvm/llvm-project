@@ -624,7 +624,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::LOAD, ISD::STORE}, P64VecVTs, Custom);
       setOperationAction(ISD::BITCAST, P64VecVTs, Custom);
       setOperationAction({ISD::ADD, ISD::SUB}, P64VecVTs, Legal);
-      setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, P64VecVTs, Custom);
+      setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, {MVT::v4i16, MVT::v8i8},
+                         Custom);
       setOperationAction(
           {ISD::UADDSAT, ISD::SADDSAT, ISD::USUBSAT, ISD::SSUBSAT}, P64VecVTs,
           Legal);
@@ -8953,58 +8954,25 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     EVT VT = Op.getValueType();
     // Split 64-bit vector AND/OR/XOR on RV32 with P extension
     if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() &&
-        (VT == MVT::v2i32 || VT == MVT::v4i16 || VT == MVT::v8i8)) {
+        (VT == MVT::v4i16 || VT == MVT::v8i8)) {
       SDLoc DL(Op);
       SDValue LHS = Op.getOperand(0);
       SDValue RHS = Op.getOperand(1);
 
       // Determine the half-size type
-      MVT HalfVT;
-      if (VT == MVT::v2i32)
-        HalfVT = MVT::i32;
-      else if (VT == MVT::v4i16)
-        HalfVT = MVT::v2i16;
-      else // VT == MVT::v8i8
-        HalfVT = MVT::v4i8;
+      MVT HalfVT = (VT == MVT::v4i16) ? MVT::v2i16 : MVT::v4i8;
 
       // Extract the two halves from LHS
-      SDValue LHSLo, LHSHi;
-      if (VT == MVT::v2i32) {
-        // For v2i32, extract two i32 scalars
-        LHSLo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, HalfVT, LHS,
-                            DAG.getVectorIdxConstant(0, DL));
-        LHSHi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, HalfVT, LHS,
-                            DAG.getVectorIdxConstant(1, DL));
-      } else {
-        // For v4i16 and v8i8, extract two vector halves
-        std::tie(LHSLo, LHSHi) = DAG.SplitVector(LHS, DL, HalfVT, HalfVT);
-      }
+      auto [LHSLo, LHSHi] = DAG.SplitVector(LHS, DL, HalfVT, HalfVT);
 
       // Extract the two halves from RHS
-      SDValue RHSLo, RHSHi;
-      if (VT == MVT::v2i32) {
-        // For v2i32, extract two i32 scalars
-        RHSLo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, HalfVT, RHS,
-                            DAG.getVectorIdxConstant(0, DL));
-        RHSHi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, HalfVT, RHS,
-                            DAG.getVectorIdxConstant(1, DL));
-      } else {
-        // For v4i16 and v8i8, extract two vector halves
-        std::tie(RHSLo, RHSHi) = DAG.SplitVector(RHS, DL, HalfVT, HalfVT);
-      }
+      auto [RHSLo, RHSHi] = DAG.SplitVector(RHS, DL, HalfVT, HalfVT);
 
       // Perform the operation on each half
       unsigned Opc = Op.getOpcode();
       SDValue ResLo = DAG.getNode(Opc, DL, HalfVT, LHSLo, RHSLo);
       SDValue ResHi = DAG.getNode(Opc, DL, HalfVT, LHSHi, RHSHi);
 
-      // Combine the two halves into the result vector
-      if (VT == MVT::v2i32) {
-        // For v2i32, build vector from two i32 scalars
-        return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, ResLo, ResHi);
-      }
-
-      // For v4i16 and v8i8, use CONCAT_VECTORS
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ResLo, ResHi);
     }
     return lowerToScalableOp(Op, DAG);
