@@ -757,7 +757,7 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
     if (!MachineSet) {
       if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj)) {
         Out.setMachine(ELFObj->getEMachine());
-        Out.setOSABI(ELFObj->getOS());
+        Out.setOSABI(ELFObj->getEIdentOSABI());
       } else if (Obj.isWasm()) {
         Out.setIsWASM(true);
       }

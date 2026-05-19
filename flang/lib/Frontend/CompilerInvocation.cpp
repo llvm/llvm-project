@@ -807,10 +807,15 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                            : FortranForm::FreeForm;
   }
 
-  // Set fixedFormColumns based on -ffixed-line-length=<value>
-  if (const auto *arg =
-          args.getLastArg(clang::options::OPT_ffixed_line_length_EQ)) {
+  // Set fixedFormColumns based on -ffixed-line-length=<value> or
+  // set freeFormColumns based on -ffree-line-length=<value>.
+  for (const auto *arg :
+       args.filtered(clang::options::OPT_ffixed_line_length_EQ,
+                     clang::options::OPT_ffree_line_length_EQ)) {
+
     llvm::StringRef argValue = llvm::StringRef(arg->getValue());
+    bool isFixedLineFlag =
+        arg->getOption().matches(clang::options::OPT_ffixed_line_length_EQ);
     std::int64_t columns = -1;
     if (argValue == "none") {
       columns = 0;
@@ -818,16 +823,17 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       columns = -1;
     }
     if (columns < 0) {
-      diags.Report(clang::diag::err_drv_negative_columns)
+      diags.Report(clang::diag::err_drv_invalid_columns)
           << arg->getOption().getName() << arg->getValue();
-    } else if (columns == 0) {
-      opts.fixedFormColumns = 1000000;
-    } else if (columns < 7) {
+    } else if (columns == 0 && isFixedLineFlag) {
+      columns = 1000000;
+    } else if (columns < 7 && isFixedLineFlag) {
+      // Specific to the fixed form
       diags.Report(clang::diag::err_drv_small_columns)
           << arg->getOption().getName() << arg->getValue() << "7";
-    } else {
-      opts.fixedFormColumns = columns;
     }
+
+    (isFixedLineFlag ? opts.fixedFormColumns : opts.freeFormColumns) = columns;
   }
 
   // Set conversion based on -fconvert=<value>
@@ -872,6 +878,13 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {
     opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLoc);
   }
+
+  // -f{no-}acc-allow-default-none-scalars
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::AccDefaultNoneScalars,
+      args.hasFlag(clang::options::OPT_facc_allow_default_none_scalars,
+                   clang::options::OPT_fno_acc_allow_default_none_scalars,
+                   false));
 
   // -f{no-}xor-operator
   opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
@@ -1883,6 +1896,7 @@ void CompilerInvocation::setFortranOpts() {
         frontendOptions.fortranForm == FortranForm::FixedForm;
   }
   fortranOptions.fixedFormColumns = frontendOptions.fixedFormColumns;
+  fortranOptions.freeFormColumns = frontendOptions.freeFormColumns;
 
   // -E
   fortranOptions.prescanAndReformat =
@@ -1900,6 +1914,12 @@ void CompilerInvocation::setFortranOpts() {
   // Add the ordered list of -intrinsic-modules-path
   fortranOptions.searchDirectories.insert(
       fortranOptions.searchDirectories.end(),
+      preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
+      preprocessorOptions.searchDirectoriesFromIntrModPath.end());
+
+  // Add the ordered list of -fintrinsic-modules-path
+  fortranOptions.intrinsicModuleDirectories.insert(
+      fortranOptions.intrinsicModuleDirectories.end(),
       preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
       preprocessorOptions.searchDirectoriesFromIntrModPath.end());
 

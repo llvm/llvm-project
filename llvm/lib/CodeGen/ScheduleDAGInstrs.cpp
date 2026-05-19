@@ -621,7 +621,7 @@ void ScheduleDAGInstrs::initSUnits() {
       for (const MCWriteProcResEntry &PRE :
            make_range(SchedModel.getWriteProcResBegin(SC),
                       SchedModel.getWriteProcResEnd(SC))) {
-        switch (SchedModel.getProcResource(PRE.ProcResourceIdx)->BufferSize) {
+        switch (SchedModel.getResourceBufferSize(PRE.ProcResourceIdx)) {
         case 0:
           SU->hasReservedResource = true;
           break;

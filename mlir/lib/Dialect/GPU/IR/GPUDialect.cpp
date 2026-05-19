@@ -844,9 +844,13 @@ LogicalResult LaunchOp::verifyRegions() {
   if (getBody().empty()) {
     return emitOpError("body region is empty");
   }
-  if (getBody().getNumArguments() <
-      kNumConfigRegionAttributes + getNumWorkgroupAttributions()) {
-    return emitOpError("unexpected number of region arguments");
+  unsigned actualNumRegionArgs = getBody().getNumArguments();
+  unsigned expectedNumRegionArgs =
+      getNumConfigRegionAttributes() + getNumWorkgroupAttributions();
+  if (actualNumRegionArgs < expectedNumRegionArgs) {
+    return emitOpError("expected at least ")
+           << expectedNumRegionArgs << " region arguments, but got "
+           << actualNumRegionArgs;
   }
 
   // Verify Attributions Address Spaces.

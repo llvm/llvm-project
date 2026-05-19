@@ -108,12 +108,12 @@ define ptx_kernel i32 @test_cluster_ctaid() "nvvm.maxclusterrank"="8" {
 define ptx_kernel i32 @test_cluster_dim() "nvvm.cluster_dim"="4,4,1" {
 ; CHECK-LABEL: define ptx_kernel i32 @test_cluster_dim(
 ; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 16) i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid.x()
-; CHECK-NEXT:    [[TMP2:%.*]] = call range(i32 0, 16) i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid.y()
-; CHECK-NEXT:    [[TMP3:%.*]] = call range(i32 0, 16) i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid.z()
-; CHECK-NEXT:    [[TMP5:%.*]] = call range(i32 1, 17) i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid.x()
-; CHECK-NEXT:    [[TMP6:%.*]] = call range(i32 1, 17) i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid.y()
-; CHECK-NEXT:    [[TMP7:%.*]] = call range(i32 1, 17) i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid.z()
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 4) i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid.x()
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i32 0, 4) i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid.y()
+; CHECK-NEXT:    [[TMP3:%.*]] = call range(i32 0, 1) i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid.z()
+; CHECK-NEXT:    [[TMP5:%.*]] = call range(i32 4, 5) i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid.x()
+; CHECK-NEXT:    [[TMP6:%.*]] = call range(i32 4, 5) i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid.y()
+; CHECK-NEXT:    [[TMP7:%.*]] = call range(i32 1, 2) i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid.z()
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP10]], [[TMP5]]

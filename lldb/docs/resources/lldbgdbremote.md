@@ -2180,8 +2180,17 @@ following forms:
       which the stop was detected.
     * If key == "watch" or key == "rwatch" or key == "awatch", then
       value is the data address in big endian hex
-    * If key == "library", then value is ignore and "qXfer:libraries:read"
-      packets should be used to detect any newly loaded shared libraries
+    * If key == "library", then value is ignored and `qXfer:libraries:read`
+      packets should be used to detect any newly loaded shared libraries.
+      The server emits this whenever one or more shared libraries have been
+      loaded or unloaded since the last stop. On Linux/SVR4 systems
+      lldb-server does not emit `library:`, since the dynamic loader is
+      observable via a breakpoint on `_dl_debug_state`. Instead, the BP hit
+      serves as the notification (and clients use `qXfer:libraries-svr4:read`).
+      On Windows, where the kernel raises `LOAD_DLL_DEBUG_EVENT` /
+      `UNLOAD_DLL_DEBUG_EVENT` directly, lldb-server tracks pending events via
+      `NativeProcessProtocol::HasPendingLibraryEvents()` and emits `library:1;`
+      in the next stop reply.
 
 * `WAA` - `W` means the process exited and `AA` is the exit status.
 

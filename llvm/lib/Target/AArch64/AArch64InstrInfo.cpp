@@ -11373,7 +11373,18 @@ void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
   auto Builder = BuildMI(MBB, InsertPt, DL, get(AArch64::PAUTH_EPILOGUE))
                      .setMIFlag(MachineInstr::FrameDestroy);
 
-  const auto *AFI = MBB.getParent()->getInfo<AArch64FunctionInfo>();
+  MachineFunction &MF = *MBB.getParent();
+  const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  auto &AFL = *static_cast<const AArch64FrameLowering *>(
+      MF.getSubtarget().getFrameLowering());
+  if (AFL.getArgumentStackToRestore(MF, MBB)) {
+    Builder.addReg(AArch64::X17, RegState::ImplicitDefine);
+    Builder.addReg(AArch64::X16, RegState::ImplicitDefine);
+    if (Subtarget.hasPAuthLR())
+      Builder.addReg(AArch64::X15, RegState::ImplicitDefine);
+    return;
+  }
+
   if (AFI->branchProtectionPAuthLR() && !Subtarget.hasPAuthLR())
     Builder.addReg(AArch64::X16, RegState::ImplicitDefine);
 }

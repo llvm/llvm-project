@@ -15,6 +15,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -39,6 +40,7 @@
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/MLIRContext.h"
@@ -65,7 +67,15 @@ static llvm::cl::opt<bool> strideIncludeLowerExtent(
 
 static llvm::cl::opt<bool> lowerDoLoopToAccLoop(
     "openacc-do-loop-to-acc-loop",
-    llvm::cl::desc("Whether to lower do loops as `acc.loop` operations."),
+    llvm::cl::desc(
+        "Whether to lower do loops inside OpenACC compute constructs "
+        "as `acc.loop` operations."),
+    llvm::cl::init(true));
+
+static llvm::cl::opt<bool> lowerDoLoopToAccLoopInAccRoutine(
+    "openacc-do-loop-to-acc-loop-in-acc-routine",
+    llvm::cl::desc("Whether to lower do loops inside explicit `!$acc routine` "
+                   "procedures as `acc.loop` operations."),
     llvm::cl::init(true));
 
 static llvm::cl::opt<bool> enableSymbolRemapping(
@@ -1439,6 +1449,8 @@ static void privatizeIv(
                          Fortran::semantics::SymbolRef(sym));
 }
 
+static bool isInsideSeqOpenACCRoutine(fir::FirOpBuilder &builder);
+
 static void determineDefaultLoopParMode(
     Fortran::lower::AbstractConverter &converter, mlir::acc::LoopOp &loopOp,
     llvm::SmallVector<mlir::Attribute> &seqDeviceTypes,
@@ -1455,22 +1467,23 @@ static void determineDefaultLoopParMode(
   if (hasDefaultSeq || hasDefaultIndependent || hasDefaultAuto)
     return; // Default loop par mode is already specified.
 
-  mlir::Region *currentRegion =
-      converter.getFirOpBuilder().getBlock()->getParent();
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Region *currentRegion = builder.getBlock()->getParent();
   mlir::Operation *parentOp = mlir::acc::getEnclosingComputeOp(*currentRegion);
   const bool isOrphanedLoop = !parentOp;
-  if (isOrphanedLoop ||
+  if ((isOrphanedLoop && !isInsideSeqOpenACCRoutine(builder)) ||
       mlir::isa_and_present<mlir::acc::ParallelOp>(parentOp)) {
     // As per OpenACC 3.3 standard section 2.9.6 independent clause:
     // A loop construct with no auto or seq clause is treated as if it has the
     // independent clause when it is an orphaned loop construct or its parent
     // compute construct is a parallel construct.
     independentDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-        converter.getFirOpBuilder().getContext(), mlir::acc::DeviceType::None));
-  } else if (mlir::isa_and_present<mlir::acc::SerialOp>(parentOp)) {
-    // Serial construct implies `seq` clause on loop. However, this
-    // conflicts with parallelism assignment if already set. Therefore check
-    // that first.
+        builder.getContext(), mlir::acc::DeviceType::None));
+  } else if (mlir::isa_and_present<mlir::acc::SerialOp>(parentOp) ||
+             isInsideSeqOpenACCRoutine(builder)) {
+    // Serial construct or seq accelerator routine implies `seq` clause on loop.
+    // However, this conflicts with parallelism assignment if already set.
+    // Therefore check that first.
     bool hasDefaultGangWorkerOrVector =
         loopOp.hasVector() || loopOp.getVectorValue() || loopOp.hasWorker() ||
         loopOp.getWorkerValue() || loopOp.hasGang() ||
@@ -1479,8 +1492,7 @@ static void determineDefaultLoopParMode(
         loopOp.getGangValue(mlir::acc::GangArgType::Static);
     if (!hasDefaultGangWorkerOrVector)
       seqDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-          converter.getFirOpBuilder().getContext(),
-          mlir::acc::DeviceType::None));
+          builder.getContext(), mlir::acc::DeviceType::None));
     // Since the loop has some parallelism assigned - we cannot assign `seq`.
     // However, the `acc.loop` verifier will check that one of seq, independent,
     // or auto is marked. Seems reasonable to mark as auto since the OpenACC
@@ -1489,8 +1501,7 @@ static void determineDefaultLoopParMode(
     // ignore any gang, worker, or vector clauses on the loop construct"
     else
       autoDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-          converter.getFirOpBuilder().getContext(),
-          mlir::acc::DeviceType::None));
+          builder.getContext(), mlir::acc::DeviceType::None));
   } else {
     // As per OpenACC 3.3 standard section 2.9.7 auto clause:
     // When the parent compute construct is a kernels construct, a loop
@@ -1499,7 +1510,7 @@ static void determineDefaultLoopParMode(
     assert(mlir::isa_and_present<mlir::acc::KernelsOp>(parentOp) &&
            "Expected kernels construct");
     autoDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-        converter.getFirOpBuilder().getContext(), mlir::acc::DeviceType::None));
+        builder.getContext(), mlir::acc::DeviceType::None));
   }
 }
 
@@ -1841,8 +1852,21 @@ void AccDataMap::remapDataOperandSymbols(
     }
     std::optional<fir::FortranVariableOpInterface> hostDef =
         symbolMap.lookupVariableDefinition(symbol);
-    assert(hostDef.has_value() && llvm::isa<hlfir::DeclareOp>(*hostDef) &&
-           "expected symbol to be mapped to hlfir.declare");
+    if (!hostDef.has_value() || !llvm::isa<hlfir::DeclareOp>(*hostDef)) {
+      // Privatized loop induction variables in explicit acc routine functions
+      // may not have a host hlfir.declare to clone. Bind the symbol directly
+      // to a declare of the acc.private result.
+      std::string uniqName = converter.mangleName(symbol.get());
+      fir::FortranVariableFlagsAttr attributes =
+          Fortran::lower::translateSymbolAttributes(builder.getContext(),
+                                                    symbol->GetUltimate());
+      auto declare = hlfir::DeclareOp::create(
+          builder, loc, value, uniqName, /*shape=*/nullptr,
+          /*typeparams=*/{}, /*dummyScope=*/nullptr, /*storage=*/nullptr,
+          /*storage_offset=*/0, attributes);
+      symbolMap.addVariableDefinition(symbol, declare, /*force=*/true);
+      continue;
+    }
     auto hostDeclare = llvm::cast<hlfir::DeclareOp>(*hostDef);
     // Replace base input and DummyScope inputs.
     mlir::Value hostInput = hostDeclare.getMemref();
@@ -4814,6 +4838,34 @@ bool Fortran::lower::isInsideOpenACCComputeConstruct(
       mlir::acc::getEnclosingComputeOp(builder.getRegion()));
 }
 
+bool Fortran::lower::isInsideOpenACCRoutine(fir::FirOpBuilder &builder) {
+  return mlir::acc::isAccRoutine(builder.getFunction().getOperation());
+}
+
+static bool isInsideSeqOpenACCRoutine(fir::FirOpBuilder &builder) {
+  mlir::func::FuncOp funcOp = builder.getFunction();
+  if (!mlir::acc::isAccRoutine(funcOp.getOperation()))
+    return false;
+  auto routineInfo = funcOp->getAttrOfType<mlir::acc::RoutineInfoAttr>(
+      mlir::acc::getRoutineInfoAttrName());
+  if (!routineInfo)
+    return false;
+  for (mlir::SymbolRefAttr routineRef : routineInfo.getAccRoutines()) {
+    auto routineOp =
+        mlir::SymbolTable::lookupNearestSymbolFrom<mlir::acc::RoutineOp>(
+            funcOp, routineRef.getLeafReference());
+    if (routineOp && routineOp.hasSeq())
+      return true;
+  }
+  return false;
+}
+
+bool Fortran::lower::shouldLowerDoConstructAsAccLoop(
+    fir::FirOpBuilder &builder) {
+  return (lowerDoLoopToAccLoop && isInsideOpenACCComputeConstruct(builder)) ||
+         (lowerDoLoopToAccLoopInAccRoutine && isInsideOpenACCRoutine(builder));
+}
+
 void Fortran::lower::setInsertionPointAfterOpenACCLoopIfInside(
     fir::FirOpBuilder &builder) {
   if (auto loopOp =
@@ -4897,7 +4949,8 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
     Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::SymMap &localSymbols,
     const Fortran::parser::DoConstruct &doConstruct, pft::Evaluation &eval) {
-  if (!lowerDoLoopToAccLoop)
+  if (!Fortran::lower::shouldLowerDoConstructAsAccLoop(
+          converter.getFirOpBuilder()))
     return nullptr;
 
   // Only convert loops which have induction variables that need privatized.
@@ -4956,13 +5009,17 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Operation *accRegionOp =
       mlir::acc::getEnclosingComputeOp(builder.getRegion());
-  mlir::acc::LoopParMode parMode =
-      mlir::isa_and_present<mlir::acc::ParallelOp>(accRegionOp) &&
-              doConstruct.IsDoConcurrent()
-          ? mlir::acc::LoopParMode::loop_independent
-      : mlir::isa_and_present<mlir::acc::SerialOp>(accRegionOp)
-          ? mlir::acc::LoopParMode::loop_seq
-          : mlir::acc::LoopParMode::loop_auto;
+  mlir::acc::LoopParMode parMode;
+  if (mlir::isa_and_present<mlir::acc::SerialOp>(accRegionOp) ||
+      isInsideSeqOpenACCRoutine(builder)) {
+    parMode = mlir::acc::LoopParMode::loop_seq;
+  } else if (doConstruct.IsDoConcurrent() &&
+             (mlir::isa_and_present<mlir::acc::ParallelOp>(accRegionOp) ||
+              isInsideOpenACCRoutine(builder))) {
+    parMode = mlir::acc::LoopParMode::loop_independent;
+  } else {
+    parMode = mlir::acc::LoopParMode::loop_auto;
+  }
 
   // Set the parallel mode based on the computed parMode
   auto deviceNoneAttr = mlir::acc::DeviceTypeAttr::get(

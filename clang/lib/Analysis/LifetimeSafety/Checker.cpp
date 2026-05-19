@@ -103,6 +103,7 @@ public:
     suggestAnnotations();
     reportNoescapeViolations();
     reportLifetimeboundViolations();
+    reportMisplacedLifetimebound();
     //  Annotation inference is currently guarded by a frontend flag. In the
     //  future, this might be replaced by a design that differentiates between
     //  explicit and inferred findings with separate warning groups.
@@ -315,6 +316,43 @@ public:
     }
   }
 
+  std::pair<const FunctionDecl *, WarningScope>
+  getCanonicalFunctionDeclForAttr(const FunctionDecl *FDef) {
+    if (!FDef)
+      return {nullptr, WarningScope::IntraTU};
+
+    assert(FDef->isThisDeclarationADefinition() &&
+           "Expected FunctionDecl to be a definition");
+
+    const auto &SM = FDef->getASTContext().getSourceManager();
+    const FileID DefFile =
+        SM.getFileID(SM.getExpansionLoc(FDef->getLocation()));
+    const FunctionDecl *CanonicalDecl = FDef->getCanonicalDecl();
+    WarningScope Scope = WarningScope::IntraTU;
+
+    Scope = SM.getFileID(SM.getExpansionLoc(CanonicalDecl->getLocation())) !=
+                    DefFile
+                ? WarningScope::CrossTU
+                : WarningScope::IntraTU;
+
+    return {CanonicalDecl, Scope};
+  }
+
+  std::pair<const CXXMethodDecl *, WarningScope>
+  getCanonicalDeclForAttr(const CXXMethodDecl *MDef) {
+    auto [CanonicalFDecl, Scope] = getCanonicalFunctionDeclForAttr(MDef);
+    return {cast_or_null<CXXMethodDecl>(CanonicalFDecl), Scope};
+  }
+
+  std::pair<const ParmVarDecl *, WarningScope>
+  getCanonicalDeclForAttr(const FunctionDecl *FDef, const ParmVarDecl *PVDDef) {
+    auto [CanonicalFDecl, Scope] = getCanonicalFunctionDeclForAttr(FDef);
+    if (!CanonicalFDecl)
+      return {nullptr, Scope};
+    return {CanonicalFDecl->getParamDecl(PVDDef->getFunctionScopeIndex()),
+            Scope};
+  }
+
   /// Returns the declaration of a function that is visible across translation
   /// units, if such a declaration exists and is different from the definition.
   static const FunctionDecl *getCrossTUDecl(const FunctionDecl &FD,
@@ -345,11 +383,11 @@ public:
 
     if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
       SemaHelper->suggestLifetimeboundToParmVar(
-          SuggestionScope::CrossTU,
+          WarningScope::CrossTU,
           CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()),
           EscapeTarget);
     else
-      SemaHelper->suggestLifetimeboundToParmVar(SuggestionScope::IntraTU, PVD,
+      SemaHelper->suggestLifetimeboundToParmVar(WarningScope::IntraTU, PVD,
                                                 EscapeTarget);
   }
 
@@ -359,11 +397,10 @@ public:
                                   const Expr *EscapeExpr) {
     if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*MD, SM))
       SemaHelper->suggestLifetimeboundToImplicitThis(
-          SuggestionScope::CrossTU, cast<CXXMethodDecl>(CrossTUDecl),
-          EscapeExpr);
+          WarningScope::CrossTU, cast<CXXMethodDecl>(CrossTUDecl), EscapeExpr);
     else
-      SemaHelper->suggestLifetimeboundToImplicitThis(SuggestionScope::IntraTU,
-                                                     MD, EscapeExpr);
+      SemaHelper->suggestLifetimeboundToImplicitThis(WarningScope::IntraTU, MD,
+                                                     EscapeExpr);
   }
 
   void suggestAnnotations() {
@@ -412,6 +449,32 @@ public:
              "should escape through return");
       if (!isImplicit && !Escapes)
         SemaHelper->reportLifetimeboundViolation(PVD);
+    }
+  }
+
+  // Reports lifetimebound attributes that are placed on a function definition
+  // but not on the corresponding declaration.
+  void reportMisplacedLifetimebound() {
+    const FunctionDecl *FDef = dyn_cast<FunctionDecl>(FD);
+    if (!FDef)
+      return;
+    // Check if implicit 'this' has lifetimebound on definition but not on
+    // declaration.
+    if (const auto *MDef = dyn_cast<CXXMethodDecl>(FDef);
+        MDef && getDirectImplicitObjectLifetimeBoundAttr(MDef))
+      if (auto [MDecl, Scope] = getCanonicalDeclForAttr(MDef);
+          MDecl && !getDirectImplicitObjectLifetimeBoundAttr(MDecl))
+        SemaHelper->reportMisplacedLifetimebound(Scope, MDef, MDecl);
+
+    // Check each parameter for explicit lifetimebound on definition but not on
+    // declaration.
+    for (const auto *PDef : FDef->parameters()) {
+      const auto *Attr = PDef->getAttr<LifetimeBoundAttr>();
+      if (!Attr || Attr->isImplicit())
+        continue;
+      if (auto [PDecl, Scope] = getCanonicalDeclForAttr(FDef, PDef);
+          PDecl && !PDecl->hasAttr<LifetimeBoundAttr>())
+        SemaHelper->reportMisplacedLifetimebound(Scope, PDef, PDecl);
     }
   }
 

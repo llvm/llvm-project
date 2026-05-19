@@ -262,6 +262,11 @@ public:
     return globalsMapping.lookup(op);
   }
 
+  /// Finds an LLVM IR global value by the mlir.global symbol name.
+  llvm::GlobalValue *lookupGlobal(StringRef name) const {
+    return globalsByNameMapping.lookup(name);
+  }
+
   /// Finds an LLVM IR global value that corresponds to the given MLIR operation
   /// defining a global alias value.
   llvm::GlobalValue *lookupAlias(Operation *op) {
@@ -469,6 +474,12 @@ private:
 
   /// Mappings between llvm.mlir.global definitions and corresponding globals.
   DenseMap<Operation *, llvm::GlobalValue *> globalsMapping;
+
+  /// Name-keyed mirror of `globalsMapping`, populated alongside it during
+  /// `convertGlobalsAndAliases`.  Lets `getLLVMConstant` resolve
+  /// `FlatSymbolRefAttr` leaves of aggregate constants that name a global
+  /// (mirroring how `functionMapping` resolves function names).
+  llvm::StringMap<llvm::GlobalValue *> globalsByNameMapping;
 
   /// Mappings between llvm.mlir.alias definitions and corresponding global
   /// aliases.

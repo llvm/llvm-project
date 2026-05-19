@@ -73,15 +73,22 @@ getLifetimeBoundAttrFromFunctionType(const TypeSourceInfo &TSI) {
 }
 
 const LifetimeBoundAttr *
+getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD) {
+  if (const TypeSourceInfo *TSI = FD->getTypeSourceInfo())
+    if (const auto *Attr = getLifetimeBoundAttrFromFunctionType(*TSI))
+      return Attr;
+  return nullptr;
+}
+
+const LifetimeBoundAttr *
 getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   // Attribute merging doesn't work well with attributes on function types (like
   // 'this' param). We need to check all redeclarations.
   auto CheckRedecls = [](const FunctionDecl *F) -> const LifetimeBoundAttr * {
     for (const FunctionDecl *Redecl : F->redecls())
-      if (const TypeSourceInfo *TSI = Redecl->getTypeSourceInfo())
-        if (const auto *Attr = getLifetimeBoundAttrFromFunctionType(*TSI))
-          return Attr;
+      if (const auto *Attr = getDirectImplicitObjectLifetimeBoundAttr(Redecl))
+        return Attr;
     return nullptr;
   };
 

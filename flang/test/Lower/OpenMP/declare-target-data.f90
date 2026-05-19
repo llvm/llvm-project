@@ -8,11 +8,11 @@ module test_0
 INTEGER :: data_int = 10
 !$omp declare target link(data_int)
 
-!CHECK-DAG: fir.global @_QMtest_0Earray_1d({{.*}}) {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link), automap = false>} : !fir.array<3xi32>
+!CHECK-DAG: fir.global @_QMtest_0Earray_1d({{.*}}) {alignment = 64 : i64, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link), automap = false>} : !fir.array<3xi32>
 INTEGER :: array_1d(3) = (/1,2,3/)
 !$omp declare target link(array_1d)
 
-!CHECK-DAG: fir.global @_QMtest_0Earray_2d({{.*}}) {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link), automap = false>} : !fir.array<2x2xi32>
+!CHECK-DAG: fir.global @_QMtest_0Earray_2d({{.*}}) {alignment = 64 : i64, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link), automap = false>} : !fir.array<2x2xi32>
 INTEGER :: array_2d(2,2) = reshape((/1,2,3,4/), (/2,2/))
 !$omp declare target link(array_2d)
 

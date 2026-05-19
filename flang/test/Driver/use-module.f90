@@ -3,9 +3,9 @@
 !--------------------------
 ! FLANG DRIVER (flang)
 !--------------------------
-! RUN: %flang -fsyntax-only -I %S/Inputs -I %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
-! RUN: %flang -fsyntax-only -I %S/Inputs -J %S/Inputs/module-dir %s 2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
-! RUN: %flang -fsyntax-only -I %S/Inputs -module-dir %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
+! RUN: %flang -fsyntax-only -I %S/Inputs/module-dir-one -I %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
+! RUN: %flang -fsyntax-only -I %S/Inputs/module-dir-one -J %S/Inputs/module-dir %s 2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
+! RUN: %flang -fsyntax-only -I %S/Inputs/module-dir-one -module-dir %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
 
 ! RUN: not %flang -fsyntax-only -I %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=MISSING_MOD2
 ! RUN: not %flang -fsyntax-only -J %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=MISSING_MOD2
@@ -18,9 +18,9 @@
 !-----------------------------------------
 ! FRONTEND FLANG DRIVER (flang -fc1)
 !-----------------------------------------
-! RUN: %flang_fc1 -fsyntax-only -I %S/Inputs -I %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
-! RUN: %flang_fc1 -fsyntax-only -I %S/Inputs -J %S/Inputs/module-dir %s 2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
-! RUN: %flang_fc1 -fsyntax-only -I %S/Inputs -module-dir %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
+! RUN: %flang_fc1 -fsyntax-only -I %S/Inputs/module-dir-one -I %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
+! RUN: %flang_fc1 -fsyntax-only -I %S/Inputs/module-dir-one -J %S/Inputs/module-dir %s 2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
+! RUN: %flang_fc1 -fsyntax-only -I %S/Inputs/module-dir-one -module-dir %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
 
 ! RUN: not %flang_fc1 -fsyntax-only -I %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=MISSING_MOD2
 ! RUN: not %flang_fc1 -fsyntax-only -J %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=MISSING_MOD2

@@ -61,6 +61,14 @@ constexpr void testType(U u) {
 constexpr bool test() {
   testType<SomeInt>(SomeInt(10));
   testType<SomeInt>(IntComparableWith(SomeInt(10)));
+#ifndef TEST_HAS_NO_INT128
+  testType<__int128_t>(__int128_t(10));
+  testType<__uint128_t>(__uint128_t(10));
+#endif
+  testType<signed long long>(10LL);
+  testType<unsigned long long>(10ULL);
+  testType<signed long long>(IntComparableWith<signed long long>(10));
+  testType<unsigned long long>(IntComparableWith<unsigned long long>(10));
   testType<signed long>(IntComparableWith<signed long>(10));
   testType<unsigned long>(IntComparableWith<unsigned long>(10));
   testType<int>(IntComparableWith<int>(10));

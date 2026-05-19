@@ -21,106 +21,106 @@ enums: []
 objects: []
 functions:
   - name: asctime
-    standard:
+    standards:
       - stdc
     return_type: char *
     arguments:
       - type: const struct tm *
   - name: asctime_r
-    standard:
+    standards:
       - stdc
     return_type: char *
     arguments:
       - type: const struct tm *
       - type: char *
   - name: ctime
-    standard:
+    standards:
       - stdc
     return_type: char *
     arguments:
       - type: const time_t *
   - name: ctime_r
-    standard:
+    standards:
       - stdc
     return_type: char *
     arguments:
       - type: const time_t *
       - type: char *
   - name: localtime
-    standard:
+    standards:
       - stdc
     return_type: struct tm *
     arguments:
       - type: const time_t *
   - name: localtime_r
-    standard:
+    standards:
       - stdc
     return_type: struct tm *
     arguments:
       - type: const time_t *
       - type: struct tm *
   - name: clock
-    standard:
+    standards:
       - stdc
     return_type: clock_t
     arguments:
       - type: void
   - name: clock_gettime
-    standard:
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: clockid_t
       - type: struct timespec *
   - name: clock_settime
-    standard:
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: clockid_t
       - type: const struct timespec *
   - name: difftime
-    standard:
+    standards:
       - stdc
     return_type: double
     arguments:
       - type: time_t
       - type: time_t
   - name: gettimeofday
-    standard:
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: struct timeval *
       - type: void *
   - name: gmtime
-    standard:
+    standards:
       - stdc
     return_type: struct tm *
     arguments:
       - type: const time_t *
   - name: gmtime_r
-    standard:
+    standards:
       - stdc
     return_type: struct tm *
     arguments:
       - type: const time_t *
       - type: struct tm *
   - name: mktime
-    standard:
+    standards:
       - stdc
     return_type: time_t
     arguments:
       - type: struct tm *
   - name: nanosleep
-    standard:
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: const struct timespec *
       - type: struct timespec *
   - name: strftime
-    standard:
+    standards:
       - stdc
     return_type: size_t
     arguments:
@@ -129,7 +129,7 @@ functions:
       - type: const char *__restrict
       - type: const struct tm *__restrict
   - name: strftime_l
-    standard:
+    standards:
       - stdc
     return_type: size_t
     arguments:
@@ -139,13 +139,13 @@ functions:
       - type: const struct tm *__restrict
       - type: locale_t
   - name: time
-    standard:
+    standards:
       - stdc
     return_type: time_t
     arguments:
       - type: time_t *
   - name: timespec_get
-    standard:
+    standards:
       - stdc
     return_type: int
     arguments:

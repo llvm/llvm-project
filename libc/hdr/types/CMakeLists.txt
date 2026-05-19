@@ -466,6 +466,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_sockaddr_in
+  HDRS
+    struct_sockaddr_in.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sockaddr_in
+    libc.include.netinet_in
+)
+
+add_proxy_header_library(
   socklen_t
   HDRS
     socklen_t.h

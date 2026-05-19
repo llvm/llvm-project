@@ -345,6 +345,29 @@ namespace cxx_member_operator_call {
   }
 }
 
+namespace call_function_ptr {
+  class RefCountableWithWeakPtr : public RefCountable, public CanMakeWeakPtr<RefCountableWithWeakPtr> {
+  public:
+    void method();
+  };
+
+  RefCountableWithWeakPtr* provide();
+
+  void foo(void (*consume)(void*, RefCountableWithWeakPtr*), void (*consumeVar)(RefCountableWithWeakPtr*, ...), void (RefCountableWithWeakPtr::*method)()) {
+    consume(nullptr, provide());
+    // expected-warning@-1{{Call argument is uncounted and unsafe}}
+    consumeVar(nullptr, provide());
+    // expected-warning@-1{{Call argument is uncounted and unsafe}}
+    (provide()->*method)();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+  }
+
+  template <typename T, typename U, typename... Arg>
+  void bar(T* obj, int (U::* function)(void*, Arg... args), Arg... args) {
+    (obj->*function)(args...);
+  }
+}
+
 namespace call_with_ptr_on_ref {
   Ref<RefCountable> provideProtected();
   void bar(RefCountable* bad);
@@ -439,4 +462,22 @@ namespace call_with_adopt_ref {
   void foo() {
     adoptRef(new Obj)->method();
   }
+}
+
+namespace call_with_weak_ptr {
+
+  class RefCountableWithWeakPtr : public RefCountable, public CanMakeWeakPtr<RefCountableWithWeakPtr> {
+  };
+
+  RefCountableWithWeakPtr* provide();
+  void consume(RefCountableWithWeakPtr*);
+
+  void foo() {
+    WeakPtr weakPtr = provide();
+    consume(weakPtr);
+    // expected-warning@-1{{Call argument is uncounted and unsafe}}
+    weakPtr->method();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+  }
+
 }

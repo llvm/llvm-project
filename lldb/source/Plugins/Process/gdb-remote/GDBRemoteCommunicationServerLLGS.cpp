@@ -1054,6 +1054,11 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
                     tid_stop_info.details.fork.child_tid);
   }
 
+  if (process.HasPendingLibraryEvents()) {
+    // 1 is an arbitrary value here. The parameter is ignored.
+    response.PutCString("library:1;");
+  }
+
   return response;
 }
 
@@ -3386,6 +3391,24 @@ GDBRemoteCommunicationServerLLGS::ReadXferObject(llvm::StringRef object,
     return MemoryBuffer::getMemBufferCopy(response.GetString(), __FUNCTION__);
   }
 
+  if (object == "libraries") {
+    auto library_list = m_current_process->GetLoadedLibraries();
+    if (!library_list)
+      return library_list.takeError();
+
+    StreamString response;
+    response.Printf("<library-list>");
+    for (auto const &library : *library_list) {
+      response.Printf("<library name=\"%s\">",
+                      XMLEncodeAttributeValue(library.name.c_str()).c_str());
+      response.Printf("<section address=\"0x%" PRIx64 "\"/>",
+                      library.base_addr);
+      response.Printf("</library>");
+    }
+    response.Printf("</library-list>");
+    return MemoryBuffer::getMemBufferCopy(response.GetString(), __FUNCTION__);
+  }
+
   if (object == "features" && annex == "target.xml")
     return BuildTargetXml();
 
@@ -4401,6 +4424,8 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
     ret.push_back("qXfer:auxv:read+");
   if (bool(plugin_features & Extension::libraries_svr4))
     ret.push_back("qXfer:libraries-svr4:read+");
+  if (bool(plugin_features & Extension::libraries))
+    ret.push_back("qXfer:libraries:read+");
   if (bool(plugin_features & Extension::siginfo_read))
     ret.push_back("qXfer:siginfo:read+");
   if (bool(plugin_features & Extension::memory_tagging))

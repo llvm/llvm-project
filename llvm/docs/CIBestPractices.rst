@@ -185,7 +185,20 @@ Using Fully Qualified Container Names
 When referencing container images from a registry, such as in GitHub Actions
 workflows, or in ``Dockerfile`` files used for building images, prefer fully
 qualified names (i.e., including the registry domain) over just the image.
-For example, prefer ``docker.io/ubuntu:24.04`` over ``ubuntu:24.04``. This
-ensures portability across systems where a different default registry might
-be specified and also prevents attackers from changing the default registry
-to pull in a malicious image instead of the intended one.
+For example, prefer ``docker.io/ubuntu:24.04@sha256:<sha>`` over
+``ubuntu:24.04@sha256:<sha>``. This ensures portability across systems where a
+different default registry might be specified and also prevents attackers from
+changing the default registry to pull in a malicious image instead of the
+intended one.
+
+Hash-Pin Container Images
+-------------------------
+
+Container images should be hash-pinned using the full SHA256 digest. For
+example, instead of writing ``docker.io/library/ubuntu:24.04``, one should
+write out
+``docker.io/library/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b``.
+This prevents images from getting updated when the tag changes, which can
+introduce security issues and unwanted behavior differences. This incurs
+some additional burden for updates, but most of these are automatically handled
+by Renovate.

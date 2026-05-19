@@ -102,7 +102,7 @@
 #if defined(LLVM_BUILD_STATIC) || !defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS)
 #define DEMANGLE_ABI
 #else
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(__MINGW32__)
 #if defined(LLVM_EXPORTS)
 #define DEMANGLE_ABI __declspec(dllexport)
 #else

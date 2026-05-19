@@ -246,8 +246,13 @@ public:
 
   mlir::Value VisitCharacterLiteral(const CharacterLiteral *e) {
     mlir::Type ty = cgf.convertType(e->getType());
-    auto init = cir::IntAttr::get(ty, e->getValue());
-    return cir::ConstantOp::create(builder, cgf.getLoc(e->getExprLoc()), init);
+    // Character literals are always stored in an unsigned (even for signed
+    // char), so allow implicit truncation here.
+    auto intTy = mlir::cast<cir::IntTypeInterface>(ty);
+    llvm::APInt apValue(intTy.getWidth(), e->getValue(),
+                        /*isSigned=*/false, /*implicitTrunc=*/true);
+    return cir::ConstantOp::create(builder, cgf.getLoc(e->getExprLoc()),
+                                   cir::IntAttr::get(ty, apValue));
   }
 
   mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *e) {

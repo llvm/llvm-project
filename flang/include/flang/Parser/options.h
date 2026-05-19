@@ -25,6 +25,7 @@ struct Options {
 
   bool isFixedForm{false};
   int fixedFormColumns{72};
+  int freeFormColumns{10000};
   common::LanguageFeatureControl features;
   std::vector<std::string> searchDirectories;
   std::vector<std::string> intrinsicModuleDirectories;

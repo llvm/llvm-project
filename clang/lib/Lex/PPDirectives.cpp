@@ -186,13 +186,9 @@ static bool isReservedCXXAttributeName(Preprocessor &PP, IdentifierInfo *II) {
   if (Lang.CPlusPlus &&
       hasAttribute(AttributeCommonInfo::AS_CXX11, /* Scope*/ nullptr, II,
                    PP.getTargetInfo(), Lang, /*CheckPlugins*/ false) > 0) {
-    AttributeCommonInfo::AttrArgsInfo AttrArgsInfo =
-        AttributeCommonInfo::getCXX11AttrArgsInfo(II);
-    if (AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Required)
-      return PP.isNextPPTokenOneOf(tok::l_paren);
-
+    StringRef Name = II->getName();
     return !PP.isNextPPTokenOneOf(tok::l_paren) ||
-           AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Optional;
+           (Name != "likely" && Name != "unlikely");
   }
   return false;
 }
@@ -213,7 +209,11 @@ static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
 
 static MacroDiag shouldWarnOnMacroUndef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
-  // Do not warn on keyword undef.  It is generally harmless and widely used.
+  StringRef Text = II->getName();
+  if (II->isKeyword(Lang))
+    return MD_KeywordDef;
+  if (Lang.CPlusPlus11 && (Text == "override" || Text == "final"))
+    return MD_KeywordDef;
   if (isReservedInAllContexts(II->isReserved(Lang)))
     return MD_ReservedMacro;
   if (isReservedCXXAttributeName(PP, II))
@@ -410,8 +410,10 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
       // We do not want to warn on some patterns widely used in configuration
       // scripts.  This requires analyzing next tokens, so do not issue warnings
       // now, only inform caller.
-      if (ShadowFlag)
+      if (isDefineUndef == MU_Define && ShadowFlag)
         *ShadowFlag = true;
+      else
+        Diag(MacroNameTok, diag::warn_pp_macro_name_is_keyword);
     }
     if (D == MD_ReservedMacro)
       Diag(MacroNameTok, diag::warn_pp_macro_is_reserved_id);
@@ -1351,7 +1353,27 @@ void Preprocessor::HandleDirective(Token &Result) {
   // not support this for #include-like directives, since that can result in
   // terrible diagnostics, and does not work in GCC.
   if (InMacroArgs) {
+    enum IntroduceKind {
+      IK_HASH = 0,
+      IK_AT = 1,
+      IK_KEYWORD = 2,
+    };
+
+    IntroduceKind IK = IK_HASH;
+    switch (Introducer.getKind()) {
+    case tok::hash:
+      IK = IK_HASH;
+      break;
+    case tok::at:
+      IK = IK_AT;
+      break;
+    default:
+      IK = IK_KEYWORD;
+      break;
+    }
+    SmallString<16> DirectiveSpelling;
     if (IdentifierInfo *II = Result.getIdentifierInfo()) {
+      DirectiveSpelling.append(II->getName());
       switch (II->getPPKeywordID()) {
       case tok::pp_include:
       case tok::pp_import:
@@ -1361,18 +1383,19 @@ void Preprocessor::HandleDirective(Token &Result) {
       case tok::pp_embed:
       case tok::pp_module:
       case tok::pp___preprocessed_module:
-      case tok::pp___preprocessed_import:
-        Diag(Result, diag::err_embedded_directive)
-            << Introducer.is(tok::hash) << II->getName();
+      case tok::pp___preprocessed_import: {
+        Diag(Result, diag::err_embedded_directive) << IK << DirectiveSpelling;
         Diag(*ArgMacro, diag::note_macro_expansion_here)
             << ArgMacro->getIdentifierInfo();
         DiscardUntilEndOfDirective();
         return;
+      }
       default:
         break;
       }
     }
-    Diag(Result, diag::ext_embedded_directive);
+
+    Diag(Result, diag::warn_embedded_directive) << IK << DirectiveSpelling;
   }
 
   // Temporarily enable macro expansion if set so
@@ -3329,9 +3352,8 @@ void Preprocessor::HandleDefineDirective(
   if (!MI) return;
 
   if (MacroShadowsKeyword &&
-      !isConfigurationPattern(MacroNameTok, MI, getLangOpts())) {
+      !isConfigurationPattern(MacroNameTok, MI, getLangOpts()))
     Diag(MacroNameTok, diag::warn_pp_macro_hides_keyword);
-  }
   // Check that there is no paste (##) operator at the beginning or end of the
   // replacement list.
   unsigned NumTokens = MI->getNumTokens();

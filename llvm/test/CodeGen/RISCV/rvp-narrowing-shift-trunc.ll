@@ -54,10 +54,6 @@ define i32 @trunc_lshr_v4i16_to_v4i8(i64 %a.coerce) {
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    addi sp, sp, -16
 ; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-RV32-NEXT:    sw a0, 0(sp)
-; CHECK-RV32-NEXT:    sw a1, 4(sp)
-; CHECK-RV32-NEXT:    lw a1, 4(sp)
-; CHECK-RV32-NEXT:    lw a0, 0(sp)
 ; CHECK-RV32-NEXT:    psrli.dh a0, a0, 4
 ; CHECK-RV32-NEXT:    sw a0, 8(sp)
 ; CHECK-RV32-NEXT:    sw a1, 12(sp)

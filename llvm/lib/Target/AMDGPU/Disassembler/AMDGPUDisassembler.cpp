@@ -2384,7 +2384,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
 
   uint32_t NextFreeVGPR =
       (GranulatedWorkitemVGPRCount + 1) *
-      AMDGPU::IsaInfo::getVGPREncodingGranule(&STI, EnableWavefrontSize32);
+      AMDGPU::IsaInfo::getVGPREncodingGranule(STI, EnableWavefrontSize32);
 
   KdStream << Indent << ".amdhsa_next_free_vgpr " << NextFreeVGPR << '\n';
 
@@ -2415,7 +2415,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
                             "must be zero on gfx10+");
 
   uint32_t NextFreeSGPR = (GranulatedWavefrontSGPRCount + 1) *
-                          AMDGPU::IsaInfo::getSGPREncodingGranule(&STI);
+                          AMDGPU::IsaInfo::getSGPREncodingGranule(STI);
 
   KdStream << Indent << ".amdhsa_reserve_vcc " << 0 << '\n';
   if (!hasArchitectedFlatScratch())

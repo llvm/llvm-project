@@ -207,7 +207,8 @@ Use this attribute to mark functions that take ownership of memory and will deal
 
   void __attribute((ownership_holds(malloc, 2))) store_in_table(int key, record_t *val);
 
-The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory leak reports (concerning the specified parameter); the difference between them is that using taken memory is a use-after-free error, while using held memory is assumed to be legitimate.
+The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory leak reports (concerning the specified parameter); the difference between them is that using taken memory is a use-after-free error, while using held memory is assumed to be legitimate. However, releasing the held memory or passing it to another holding call is reported by the analyzer as an "attempt to release non-owned memory".
+
 
 Mac OS X API Annotations
 ________________________

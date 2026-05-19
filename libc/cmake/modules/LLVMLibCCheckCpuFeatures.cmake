@@ -63,25 +63,19 @@ function(_intersection output_var list1 list2)
 endfunction()
 
 set(AVAILABLE_CPU_FEATURES "")
-if(LIBC_CROSSBUILD)
-  # If we are doing a cross build, we will just assume that all CPU features
-  # are available.
-  set(AVAILABLE_CPU_FEATURES ${ALL_CPU_FEATURES})
-else()
-  # Try compile a C file to check if flag is supported.
-  set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-  foreach(feature IN LISTS ALL_CPU_FEATURES)
-    try_compile(
-      has_feature
-      ${CMAKE_CURRENT_BINARY_DIR}/cpu_features
-      SOURCES ${LIBC_SOURCE_DIR}/cmake/modules/cpu_features/check_${feature}.cpp
-      COMPILE_DEFINITIONS -I${LIBC_SOURCE_DIR} ${LIBC_COMPILE_OPTIONS_NATIVE}
-    )
-    if(has_feature)
-      list(APPEND AVAILABLE_CPU_FEATURES ${feature})
-    endif()
-  endforeach()
-endif()
+# Try to compile a C file to check if a flag is supported.
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+foreach(feature IN LISTS ALL_CPU_FEATURES)
+  try_compile(
+    has_feature
+    ${CMAKE_CURRENT_BINARY_DIR}/cpu_features
+    SOURCES ${LIBC_SOURCE_DIR}/cmake/modules/cpu_features/check_${feature}.cpp
+    COMPILE_DEFINITIONS -I${LIBC_SOURCE_DIR} ${LIBC_COMPILE_OPTIONS_NATIVE}
+  )
+  if(has_feature)
+    list(APPEND AVAILABLE_CPU_FEATURES ${feature})
+  endif()
+endforeach()
 
 set(LIBC_CPU_FEATURES ${AVAILABLE_CPU_FEATURES} CACHE STRING "Host supported CPU features")
 

@@ -1344,9 +1344,8 @@ struct WgToSgVectorTransposeOp
         xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
     if (!layout || !layout.isForWorkgroup())
       return failure();
-    // TODO-LayoutRefactor: handle the case using getTemporaryLayout
     xegpu::DistributeLayoutAttr sourceLayout =
-        xegpu::getDistributeLayoutAttr(op.getVector());
+        xegpu::getTemporaryLayout(op->getOpOperand(0));
     if (!sourceLayout || !sourceLayout.isForWorkgroup())
       return failure();
 

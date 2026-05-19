@@ -38,8 +38,7 @@ define void @scalablevf(ptr %dst.start, i8 %a, i8 %b) {
 ; SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 64, [[TMP1]]
 ; SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SCALABLE:       [[VECTOR_PH]]:
-; SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP2]]
+; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP0]]
 ; SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
 ; SCALABLE-NEXT:    [[TMP5:%.*]] = shl i64 [[N_VEC]], 2
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DST_START]], i64 [[TMP5]]
@@ -57,7 +56,7 @@ define void @scalablevf(ptr %dst.start, i8 %a, i8 %b) {
 ; SCALABLE-NEXT:    [[TMP21:%.*]] = udiv <vscale x 4 x i8> [[TMP20]], splat (i8 -1)
 ; SCALABLE-NEXT:    [[TMP22:%.*]] = add <vscale x 4 x i8> [[BROADCAST_SPLAT2]], [[TMP21]]
 ; SCALABLE-NEXT:    store <vscale x 4 x i8> [[TMP22]], ptr [[NEXT_GEP]], align 1
-; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
+; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
 ; SCALABLE-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SCALABLE:       [[MIDDLE_BLOCK]]:

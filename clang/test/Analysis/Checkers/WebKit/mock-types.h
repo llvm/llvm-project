@@ -415,6 +415,9 @@ public:
     return *this;
   }
 
+  T* operator->() { return get(); }
+  operator T*() { return get(); }
+
   T* get() {
     return impl ? impl->get<T>() : nullptr;
   }

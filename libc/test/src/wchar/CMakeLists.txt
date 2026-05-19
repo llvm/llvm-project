@@ -559,6 +559,8 @@ add_libc_test(
     fputwc_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
     libc.src.stdio.fopen
     libc.src.stdio.fclose
     libc.src.stdio.fread
@@ -596,7 +598,8 @@ add_libc_test(
   SRCS
     fputws_test.cpp
   DEPENDS
-    libc.include.stdio
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
     libc.src.stdio.fopen
     libc.src.stdio.fclose
     libc.src.stdio.fread
@@ -613,7 +616,9 @@ add_libc_test(
   SRCS
     fgetws_test.cpp
   DEPENDS
-    libc.include.stdio
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.wint_t
     libc.src.stdio.fopen
     libc.src.stdio.fclose
     libc.src.stdio.fwrite
@@ -672,7 +677,9 @@ add_libc_test(
   SRCS
     getwchar_test.cpp
   DEPENDS
-    libc.include.stdio
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.wchar_macros
     libc.src.stdio.fopen
     libc.src.stdio.fclose
     libc.src.stdio.fwrite
@@ -692,7 +699,9 @@ add_libc_test(
   SRCS
     putwc_test.cpp
   DEPENDS
-    libc.include.stdio
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.wchar_macros
     libc.src.stdio.fopen
     libc.src.stdio.fclose
     libc.src.stdio.fread

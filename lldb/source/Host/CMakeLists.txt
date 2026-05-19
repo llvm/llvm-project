@@ -71,6 +71,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     windows/ConnectionConPTYWindows.cpp
     windows/ConnectionGenericFileWindows.cpp
     windows/FileSystem.cpp
+    windows/FileWindows.cpp
     windows/Host.cpp
     windows/HostInfoWindows.cpp
     windows/HostProcessWindows.cpp
@@ -86,6 +87,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
 else()
   add_host_subdirectory(posix
     posix/DomainSocket.cpp
+    posix/FilePosix.cpp
     posix/FileSystemPosix.cpp
     posix/HostInfoPosix.cpp
     posix/HostProcessPosix.cpp

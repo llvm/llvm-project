@@ -142,8 +142,8 @@ protected:
     uint32_t start_line = m_options.start_line;
     uint32_t end_line = m_options.end_line;
     uint32_t num_lines = m_options.num_lines;
-    Target &target = GetTarget();
-
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     uint32_t num_matches = 0;
     // Dump all the line entries for the file in the list.
     ConstString last_module_file_name;
@@ -177,7 +177,7 @@ protected:
         }
         // Dump the line entry.
         line_entry.GetDescription(&strm, lldb::eDescriptionLevelBrief, cu,
-                                  &target, /*show_address_only=*/false);
+                                  target, /*show_address_only=*/false);
         strm << "\n";
         last_module_file_name = module_file_name;
         num_matches++;
@@ -197,8 +197,8 @@ protected:
     uint32_t start_line = m_options.start_line;
     uint32_t end_line = m_options.end_line;
     uint32_t num_lines = m_options.num_lines;
-    Target &target = GetTarget();
-
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     uint32_t num_matches = 0;
     assert(module);
     if (cu) {
@@ -250,7 +250,7 @@ protected:
               cu_header_printed = true;
             }
             line_entry.GetDescription(&strm, lldb::eDescriptionLevelBrief, cu,
-                                      &target, /*show_address_only=*/false);
+                                      target, /*show_address_only=*/false);
             strm << "\n";
 
             // Anymore after this one?
@@ -301,8 +301,9 @@ protected:
     Address so_addr;
     size_t num_matches = 0;
     assert(module_list.GetSize() > 0);
-    Target &target = GetTarget();
-    if (!target.HasLoadedSections()) {
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+    if (!target->HasLoadedSections()) {
       // The target isn't loaded yet, we need to lookup the file address in all
       // modules.  Note: the module list option does not apply to addresses.
       const size_t num_modules = module_list.GetSize();
@@ -328,7 +329,7 @@ protected:
     } else {
       // The target has some things loaded, resolve this address to a compile
       // unit + file + line and display
-      if (target.ResolveLoadAddress(addr, so_addr)) {
+      if (target->ResolveLoadAddress(addr, so_addr)) {
         ModuleSP module_sp(so_addr.GetModule());
         // Check to make sure this module is in our list.
         if (module_sp && module_list.GetIndexForModule(module_sp.get()) !=
@@ -370,8 +371,9 @@ protected:
     SymbolContextList sc_list_funcs;
     ConstString name(m_options.symbol_name);
     SymbolContextList sc_list_lines;
-    Target &target = GetTarget();
-    uint32_t addr_byte_size = target.GetArchitecture().GetAddressByteSize();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+    uint32_t addr_byte_size = target->GetArchitecture().GetAddressByteSize();
 
     ModuleFunctionSearchOptions function_options;
     function_options.include_symbols = false;
@@ -380,7 +382,7 @@ protected:
     // Note: module_list can't be const& because FindFunctionSymbols isn't
     // const.
     ModuleList module_list =
-        (m_module_list.GetSize() > 0) ? m_module_list : target.GetImages();
+        (m_module_list.GetSize() > 0) ? m_module_list : target->GetImages();
     module_list.FindFunctions(name, eFunctionNameTypeAuto, function_options,
                               sc_list_funcs);
     size_t num_matches = sc_list_funcs.GetSize();
@@ -419,7 +421,7 @@ protected:
         // sc_list_lines.
         const Address &base_address = range.GetBaseAddress();
         const addr_t size = range.GetByteSize();
-        lldb::addr_t start_addr = base_address.GetLoadAddress(&target);
+        lldb::addr_t start_addr = base_address.GetLoadAddress(target);
         if (start_addr == LLDB_INVALID_ADDRESS)
           start_addr = base_address.GetFileAddress();
         lldb::addr_t end_addr = start_addr + size;
@@ -458,11 +460,12 @@ protected:
 
   // Dump the line entries found for the address specified in the option.
   bool DumpLinesForAddress(CommandReturnObject &result) {
-    Target &target = GetTarget();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     SymbolContextList sc_list;
 
     StreamString error_strm;
-    if (!GetSymbolContextsForAddress(target.GetImages(), m_options.address,
+    if (!GetSymbolContextsForAddress(target->GetImages(), m_options.address,
                                      sc_list, error_strm)) {
       result.AppendErrorWithFormat("%s", error_strm.GetData());
       return false;
@@ -482,9 +485,10 @@ protected:
   bool DumpLinesForFile(CommandReturnObject &result) {
     FileSpec file_spec(m_options.file_name);
     const char *filename = m_options.file_name.c_str();
-    Target &target = GetTarget();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     const ModuleList &module_list =
-        (m_module_list.GetSize() > 0) ? m_module_list : target.GetImages();
+        (m_module_list.GetSize() > 0) ? m_module_list : target->GetImages();
 
     bool displayed_something = false;
     const size_t num_modules = module_list.GetSize();
@@ -531,8 +535,8 @@ protected:
   }
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget();
-
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     // Collect the list of modules to search.
     m_module_list.Clear();
     if (!m_options.modules.empty()) {
@@ -540,7 +544,7 @@ protected:
         FileSpec module_file_spec(m_options.modules[i]);
         if (module_file_spec) {
           ModuleSpec module_spec(module_file_spec);
-          target.GetImages().FindModules(module_spec, m_module_list);
+          target->GetImages().FindModules(module_spec, m_module_list);
           if (m_module_list.IsEmpty())
             result.AppendWarningWithFormatv("no module found for '{0}'",
                                             m_options.modules[i]);
@@ -550,7 +554,7 @@ protected:
         result.AppendError("no modules match the input");
         return;
       }
-    } else if (target.GetImages().GetSize() == 0) {
+    } else if (target->GetImages().GetSize() == 0) {
       result.AppendError("the target has no associated executable images");
       return;
     }
@@ -769,8 +773,8 @@ protected:
     }
 
     if (sc.function) {
-      Target &target = GetTarget();
-
+      Target *target = GetTarget();
+      assert(target && "target guaranteed by eCommandRequiresTarget");
       SupportFileNSP start_file = std::make_shared<SupportFile>();
       uint32_t start_line;
       uint32_t end_line;
@@ -830,7 +834,7 @@ protected:
           "File: {0}", start_file->GetSpecOnly().GetPath().c_str());
       // We don't care about the column here.
       const uint32_t column = 0;
-      return target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
+      return target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
           start_file, line_no, column, 0, m_options.num_lines, "",
           &result.GetOutputStream(), GetBreakpointLocations());
     } else {
@@ -899,19 +903,19 @@ protected:
   }
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget();
-
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     if (!m_options.symbol_name.empty()) {
       SymbolContextList sc_list;
       ConstString name(m_options.symbol_name);
 
       // Displaying the source for a symbol. Search for function named name.
-      FindMatchingFunctions(target, name, sc_list);
+      FindMatchingFunctions(*target, name, sc_list);
       if (sc_list.GetSize() == 0) {
         // If we didn't find any functions with that name, try searching for
         // symbols that line up exactly with function addresses.
         SymbolContextList sc_list_symbols;
-        FindMatchingFunctionSymbols(target, name, sc_list_symbols);
+        FindMatchingFunctionSymbols(*target, name, sc_list_symbols);
         for (const SymbolContext &sc : sc_list_symbols) {
           if (sc.symbol && sc.symbol->ValueIsAddress()) {
             const Address &base_address = sc.symbol->GetAddressRef();
@@ -952,10 +956,10 @@ protected:
       StreamString error_strm;
       SymbolContextList sc_list;
 
-      if (!target.HasLoadedSections()) {
+      if (!target->HasLoadedSections()) {
         // The target isn't loaded yet, we need to lookup the file address in
         // all modules
-        const ModuleList &module_list = target.GetImages();
+        const ModuleList &module_list = target->GetImages();
         const size_t num_modules = module_list.GetSize();
         for (size_t i = 0; i < num_modules; ++i) {
           ModuleSP module_sp(module_list.GetModuleAtIndex(i));
@@ -979,7 +983,7 @@ protected:
       } else {
         // The target has some things loaded, resolve this address to a compile
         // unit + file + line and display
-        if (target.ResolveLoadAddress(m_options.address, so_addr)) {
+        if (target->ResolveLoadAddress(m_options.address, so_addr)) {
           ModuleSP module_sp(so_addr.GetModule());
           if (module_sp) {
             SymbolContext sc;
@@ -1014,7 +1018,7 @@ protected:
             m_breakpoint_locations.Reset(sc.comp_unit->GetPrimaryFile(), 0,
                                          show_inlines);
             SearchFilterForUnconstrainedSearches target_search_filter(
-                target.shared_from_this());
+                target->shared_from_this());
             target_search_filter.Search(m_breakpoint_locations);
           }
 
@@ -1040,10 +1044,9 @@ protected:
               (GetDebugger().GetStopShowColumn() != eStopShowColumnNone)
                   ? sc.line_entry.column
                   : 0;
-          target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              sc.comp_unit->GetPrimarySupportFile(),
-              sc.line_entry.line, column, lines_to_back_up,
-              m_options.num_lines - lines_to_back_up, "->",
+          target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
+              sc.comp_unit->GetPrimarySupportFile(), sc.line_entry.line, column,
+              lines_to_back_up, m_options.num_lines - lines_to_back_up, "->",
               &result.GetOutputStream(), GetBreakpointLocations());
           result.SetStatus(eReturnStatusSuccessFinishResult);
         }
@@ -1054,12 +1057,12 @@ protected:
       // exact same list command twice in a row, it is more likely because you
       // typed it once, then typed it again
       if (m_options.start_line == 0) {
-        if (target.GetSourceManager().DisplayMoreWithLineNumbers(
+        if (target->GetSourceManager().DisplayMoreWithLineNumbers(
                 &result.GetOutputStream(), m_options.num_lines,
                 m_options.reverse, GetBreakpointLocations())) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          if (target.GetSourceManager().AtLastLine(m_options.reverse)) {
+          if (target->GetSourceManager().AtLastLine(m_options.reverse)) {
             result.AppendNoteWithFormatv(
                 "Reached {0} of the file, no more to page",
                 m_options.reverse ? "beginning" : "end");
@@ -1074,20 +1077,20 @@ protected:
 
         if (m_options.show_bp_locs) {
           SourceManager::FileSP last_file_sp(
-              target.GetSourceManager().GetLastFile());
+              target->GetSourceManager().GetLastFile());
           if (last_file_sp) {
             const bool show_inlines = true;
             m_breakpoint_locations.Reset(
                 last_file_sp->GetSupportFile()->GetSpecOnly(), 0, show_inlines);
             SearchFilterForUnconstrainedSearches target_search_filter(
-                target.shared_from_this());
+                target->shared_from_this());
             target_search_filter.Search(m_breakpoint_locations);
           }
         } else
           m_breakpoint_locations.Clear();
 
         const uint32_t column = 0;
-        if (target.GetSourceManager()
+        if (target->GetSourceManager()
                 .DisplaySourceLinesWithLineNumbersUsingLastFile(
                     m_options.start_line, // Line to display
                     m_options.num_lines,  // Lines after line to
@@ -1102,7 +1105,7 @@ protected:
       //      const char *filename = m_options.file_name.c_str();
       FileSpec file_spec(m_options.file_name);
       bool check_inlines = false;
-      const InlineStrategy inline_strategy = target.GetInlineStrategy();
+      const InlineStrategy inline_strategy = target->GetInlineStrategy();
       if (inline_strategy == eInlineBreakpointsAlways ||
           (inline_strategy == eInlineBreakpointsHeaders &&
            !file_spec.IsSourceImplementationFile()))
@@ -1118,7 +1121,7 @@ protected:
           if (module_file_spec) {
             ModuleSpec module_spec(module_file_spec);
             matching_modules.Clear();
-            target.GetImages().FindModules(module_spec, matching_modules);
+            target->GetImages().FindModules(module_spec, matching_modules);
             num_matches += matching_modules.ResolveSymbolContextsForFileSpec(
                 file_spec, 1, check_inlines,
                 SymbolContextItem(eSymbolContextModule |
@@ -1128,7 +1131,7 @@ protected:
           }
         }
       } else {
-        num_matches = target.GetImages().ResolveSymbolContextsForFileSpec(
+        num_matches = target->GetImages().ResolveSymbolContextsForFileSpec(
             file_spec, 1, check_inlines,
             eSymbolContextModule | eSymbolContextCompUnit |
                 eSymbolContextLineEntry,
@@ -1171,7 +1174,7 @@ protected:
             m_breakpoint_locations.Reset(sc.comp_unit->GetPrimaryFile(), 0,
                                          show_inlines);
             SearchFilterForUnconstrainedSearches target_search_filter(
-                target.shared_from_this());
+                target->shared_from_this());
             target_search_filter.Search(m_breakpoint_locations);
           } else
             m_breakpoint_locations.Clear();
@@ -1187,7 +1190,7 @@ protected:
           // print. Instead, we want to print the one from the line entry.
           SupportFileNSP found_file_sp = sc.line_entry.file_sp;
 
-          target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
+          target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
               found_file_sp, m_options.start_line, column, 0,
               m_options.num_lines, "", &result.GetOutputStream(),
               GetBreakpointLocations());

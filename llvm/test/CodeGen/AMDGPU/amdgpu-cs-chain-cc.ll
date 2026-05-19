@@ -1149,27 +1149,27 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_realign_stack_chain_call(i32 %idx, 
 ; DAGISEL-GFX10:       ; %bb.0:
 ; DAGISEL-GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; DAGISEL-GFX10-NEXT:    s_add_i32 s33, s32, 0x3e0
-; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v2, 3
+; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v0, 4
 ; DAGISEL-GFX10-NEXT:    s_and_b32 s33, s33, 0xfffffc00
 ; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v3, 2
-; DAGISEL-GFX10-NEXT:    v_lshrrev_b32_e64 v1, 5, s33
+; DAGISEL-GFX10-NEXT:    v_lshrrev_b32_e64 v2, 5, s33
 ; DAGISEL-GFX10-NEXT:    s_mov_b32 s34, s32
 ; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v4, 1
 ; DAGISEL-GFX10-NEXT:    s_mov_b32 s5, chain_callee@abs32@hi
 ; DAGISEL-GFX10-NEXT:    s_mov_b32 s4, chain_callee@abs32@lo
-; DAGISEL-GFX10-NEXT:    v_lshl_add_u32 v0, v8, 4, v1
-; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 4
+; DAGISEL-GFX10-NEXT:    v_lshl_add_u32 v1, v8, 4, v2
 ; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v8, v9
 ; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v9, v10
 ; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v10, v11
+; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v2, 3
 ; DAGISEL-GFX10-NEXT:    s_addk_i32 s32, 0x1800
-; DAGISEL-GFX10-NEXT:    buffer_store_dword v1, v0, s[48:51], 0 offen offset:12
+; DAGISEL-GFX10-NEXT:    buffer_store_dword v0, v1, s[48:51], 0 offen offset:12
 ; DAGISEL-GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; DAGISEL-GFX10-NEXT:    buffer_store_dword v2, v0, s[48:51], 0 offen offset:8
+; DAGISEL-GFX10-NEXT:    buffer_store_dword v2, v1, s[48:51], 0 offen offset:8
 ; DAGISEL-GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; DAGISEL-GFX10-NEXT:    buffer_store_dword v3, v0, s[48:51], 0 offen offset:4
+; DAGISEL-GFX10-NEXT:    buffer_store_dword v3, v1, s[48:51], 0 offen offset:4
 ; DAGISEL-GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; DAGISEL-GFX10-NEXT:    buffer_store_dword v4, v0, s[48:51], 0 offen
+; DAGISEL-GFX10-NEXT:    buffer_store_dword v4, v1, s[48:51], 0 offen
 ; DAGISEL-GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; DAGISEL-GFX10-NEXT:    s_mov_b32 s32, s34
 ; DAGISEL-GFX10-NEXT:    s_mov_b32 exec_lo, -1

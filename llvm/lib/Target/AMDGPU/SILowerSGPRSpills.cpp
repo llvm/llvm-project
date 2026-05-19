@@ -146,8 +146,7 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       MCRegister Reg = CS.getReg();
 
       MachineInstrSpan MIS(I, &SaveBlock);
-      const TargetRegisterClass *RC = RI->getMinimalPhysRegClass(
-          Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);
+      const TargetRegisterClass *RC = RI->getMinimalPhysRegClass(Reg);
 
       // If this value was already livein, we probably have a direct use of the
       // incoming register value, so don't kill at the spill point. This happens
@@ -291,8 +290,7 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
       MCRegister Reg = CSRegs[I];
 
       if (SavedRegs.test(Reg)) {
-        const TargetRegisterClass *RC =
-          TRI->getMinimalPhysRegClass(Reg, MVT::i32);
+        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
         int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
                                            TRI->getSpillAlign(*RC), true);
 

@@ -167,15 +167,13 @@ struct VPlanTransforms {
   /// be added to the middle block.
   LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan, bool TailFolded);
 
-  // Create a check to \p Plan to see if the vector loop should be executed.
-  // If \p CheckBlock is non-null, the compare and branch are placed there;
-  // ExpandSCEV recipes are always placed in Entry.
+  // Create a check in \p CheckBlock to see if the vector loop should be
+  // executed.
   static void addMinimumIterationCheck(
       VPlan &Plan, ElementCount VF, unsigned UF,
       ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
       bool TailFolded, Loop *OrigLoop, const uint32_t *MinItersBypassWeights,
-      DebugLoc DL, PredicatedScalarEvolution &PSE,
-      VPBasicBlock *CheckBlock = nullptr);
+      DebugLoc DL, PredicatedScalarEvolution &PSE, VPBasicBlock *CheckBlock);
 
   /// Add a new check block before the vector preheader to \p Plan to check if
   /// the main vector loop should be executed (TC >= VF * UF).

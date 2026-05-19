@@ -153,6 +153,10 @@ class DialectType<dag d> : DialectAttrOrType<d>, TypeKind {
   let cParser = "succeeded($_reader.readType<$_resultType>($_var))";
   let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, $_args)";
 }
+// Variant of the above, where it never prints. Useful for staging.
+class DialectTypeNoPrint<dag d> : DialectType<d> {
+  let printerPredicate = "false";
+}
 
 class DialectAttributes<string d> {
   string dialect = d;

@@ -1035,7 +1035,7 @@ void CIRGenFunction::emitNewArrayInitializer(
   const Expr *init = e->getInitializer();
   Address endOfInit = Address::invalid();
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
-  assert(!cir::MissingFeatures::cleanupDeactivationScope());
+  CleanupDeactivationScope deactivation(*this);
 
   // Attempt to perform zero-initialization using memset.
   auto tryMemsetInitialization = [&]() -> bool {
@@ -1149,30 +1149,33 @@ void CIRGenFunction::emitNewArrayInitializer(
     }
 
     // Enter a partial-destruction Cleanup if necessary.
+    CharUnits elementSize = getContext().getTypeSizeInChars(elementType);
     if (dtorKind) {
-      cgm.errorNYI(ile->getSourceRange(),
-                   "emitNewArrayInitializer: init requires dtor");
-      return;
+      mlir::Location loc = cgm.getLoc(init->getSourceRange());
+      endOfInit = createTempAlloca(beginPtr.getType(), getPointerAlign(), loc,
+                                   "arrayinit.endOfInit");
+      pushIrregularPartialArrayCleanup(
+          beginPtr.getPointer(), endOfInit, elementType,
+          beginPtr.getAlignment().alignmentOfArrayElement(elementSize),
+          getDestroyer(dtorKind));
     }
 
-    CharUnits elementSize = getContext().getTypeSizeInChars(elementType);
     CharUnits startAlign = curPtr.getAlignment();
     unsigned i = 0;
     for (const Expr *ie : initExprs) {
+      mlir::Location loc = getLoc(ie->getExprLoc());
+
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially
       // observed to be unnecessary.
-      if (endOfInit.isValid()) {
-        cgm.errorNYI(ie->getSourceRange(),
-                     "emitNewArrayInitializer: update dtor cleanup ptr");
-        return;
-      }
+      if (endOfInit.isValid())
+        builder.createStore(loc, curPtr.getPointer(), endOfInit);
+
       // FIXME: If the last initializer is an incomplete initializer list for
       // an array, and we have an array filler, we can fold together the two
       // initialization loops.
       storeAnyExprIntoOneUnit(*this, ie, ie->getType(), curPtr,
                               AggValueSlot::DoesNotOverlap);
-      mlir::Location loc = getLoc(ie->getExprLoc());
       mlir::Value castOp = builder.createPtrBitcast(
           curPtr.getPointer(), convertTypeForMem(allocType));
       mlir::Value offsetOp = builder.getSignedInt(loc, 1, /*width=*/32);
@@ -1266,7 +1269,7 @@ void CIRGenFunction::emitNewArrayInitializer(
     curPtr = curPtr.withElementType(builder, initType);
     emitCXXAggrConstructorCall(ctor, numElements, curPtr, cce,
                                /*newPointerIsChecked=*/true,
-                               cce->requiresZeroInitialization());
+                               cce->requiresZeroInitialization(), endOfInit);
     if (getContext().getTargetInfo().emitVectorDeletingDtors(
             getContext().getLangOpts())) {
       cgm.errorNYI(e->getSourceRange(),

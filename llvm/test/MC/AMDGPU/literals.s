@@ -2008,16 +2008,14 @@ v_add_nc_u64 v[0:1], v[0:1], 0x123456789
 // NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_add_nc_u64
 // NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_add_nc_u64
 
-// FIXME: Literal is truncated but shall be rejected
 v_add_nc_u64 v[0:1], v[0:1], lit(0x123456789)
-// GFX1250-ASM: v_add_nc_u64_e64 v[0:1], v[0:1], lit(0x23456789) ; encoding: [0x00,0x00,0x28,0xd5,0x00,0xff,0x01,0x02,0x89,0x67,0x45,0x23]
-// GFX1250-DIS: v_add_nc_u64_e64 v[0:1], v[0:1], 0x23456789 ; encoding: [0x00,0x00,0x28,0xd5,0x00,0xff,0x01,0x02,0x89,0x67,0x45,0x23]
-// NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_add_nc_u64
-// NOGFX11: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1100): v_add_nc_u64
-// NOGFX12: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx1200): v_add_nc_u64
-// NOGFX9: :[[@LINE-6]]:1: error: instruction not supported on this GPU (gfx900): v_add_nc_u64
-// NOSI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tahiti): v_add_nc_u64
-// NOVI: :[[@LINE-8]]:1: error: instruction not supported on this GPU (tonga): v_add_nc_u64
+// NOCI: :[[@LINE-1]]:1: error: instruction not supported on this GPU (bonaire): v_add_nc_u64
+// NOGFX11: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1100): v_add_nc_u64
+// NOGFX12: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1200): v_add_nc_u64
+// NOGFX1250: :[[@LINE-4]]:34: error: literal value out of range
+// NOGFX9: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx900): v_add_nc_u64
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tahiti): v_add_nc_u64
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_add_nc_u64
 
 v_add_f64 v[0:1], v[0:1], lit(1)
 // GFX11: v_add_f64 v[0:1], v[0:1], lit(0x1)      ; encoding: [0x00,0x00,0x27,0xd7,0x00,0xff,0x01,0x02,0x01,0x00,0x00,0x00]
@@ -2066,11 +2064,5 @@ v_add_f64 v[0:1], v[0:1], 0x3ff000001
 // NOGFX89: :[[@LINE-4]]:19: error: invalid operand for instruction
 // NOSICI: :[[@LINE-5]]:19: error: invalid operand for instruction
 
-// FIXME: Literal is truncated but shall be rejected
 v_add_f64 v[0:1], v[0:1], lit(0x3ff000001)
-// GFX1250-ASM: v_add_f64_e64 v[0:1], v[0:1], lit(0xff000001) ; encoding: [0x00,0x00,0x02,0xd5,0x00,0xff,0x01,0x02,0x01,0x00,0x00,0xff]
-// GFX1250-DIS: v_add_f64_e64 v[0:1], v[0:1], 0xff000001 ; encoding: [0x00,0x00,0x02,0xd5,0x00,0xff,0x01,0x02,0x01,0x00,0x00,0xff]
-// NOGFX11: :[[@LINE-3]]:19: error: invalid operand for instruction
-// NOGFX12: :[[@LINE-4]]:19: error: invalid operand for instruction
-// NOGFX89: :[[@LINE-5]]:19: error: invalid operand for instruction
-// NOSICI: :[[@LINE-6]]:19: error: invalid operand for instruction
+// NOGCN: :[[@LINE-1]]:31: error: literal value out of range
