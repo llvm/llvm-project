@@ -673,12 +673,25 @@ bool AtomicExpandImpl::expandAtomicLoadToCmpXchg(LoadInst *LI) {
 
   Value *Addr = LI->getPointerOperand();
   Type *Ty = LI->getType();
-  Constant *DummyVal = Constant::getNullValue(Ty);
+
+  // cmpxchg only supports integer and pointer operand types. Bitcast scalar
+  // floating-point types and vectors of floating-point to an integer of the
+  // same bit width so the expansion is valid IR; bitcast the result back
+  // afterwards.
+  Type *CmpXchgTy = Ty;
+  bool NeedBitcast = Ty->getScalarType()->isFloatingPointTy();
+  if (NeedBitcast)
+    CmpXchgTy = Builder.getIntNTy(Ty->getPrimitiveSizeInBits());
+
+  Constant *DummyVal = Constant::getNullValue(CmpXchgTy);
 
   Value *Pair = Builder.CreateAtomicCmpXchg(
       Addr, DummyVal, DummyVal, LI->getAlign(), Order,
       AtomicCmpXchgInst::getStrongestFailureOrdering(Order));
   Value *Loaded = Builder.CreateExtractValue(Pair, 0, "loaded");
+
+  if (NeedBitcast)
+    Loaded = Builder.CreateBitCast(Loaded, Ty);
 
   LI->replaceAllUsesWith(Loaded);
   LI->eraseFromParent();

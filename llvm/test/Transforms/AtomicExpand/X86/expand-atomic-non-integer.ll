@@ -307,8 +307,7 @@ define <2 x i16> @atomic_vec2_i16(ptr %x) nounwind {
 define <2 x half> @atomic_vec2_half(ptr %x) nounwind {
 ; CHECK-LABEL: define <2 x half> @atomic_vec2_half(
 ; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[X]] acquire, align 8
-; CHECK-NEXT:    [[RET:%.*]] = bitcast i32 [[TMP1]] to <2 x half>
+; CHECK-NEXT:    [[RET:%.*]] = load atomic <2 x half>, ptr [[X]] acquire, align 8
 ; CHECK-NEXT:    ret <2 x half> [[RET]]
 ;
   %ret = load atomic <2 x half>, ptr %x acquire, align 8
