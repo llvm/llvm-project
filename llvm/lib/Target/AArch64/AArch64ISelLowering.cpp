@@ -2992,6 +2992,25 @@ unsigned AArch64TargetLowering::ComputeNumSignBitsForTargetNode(
   return 1;
 }
 
+unsigned AArch64TargetLowering::computeNumSignBitsForTargetInstr(
+    GISelValueTracking &Analysis, Register R, const APInt &DemandedElts,
+    const MachineRegisterInfo &MRI, unsigned Depth) const {
+  const MachineInstr *MI = MRI.getVRegDef(R);
+  if (!MI)
+    return 1;
+
+  switch (MI->getOpcode()) {
+  case AArch64::G_FCMEQ:
+  case AArch64::G_FCMGE:
+  case AArch64::G_FCMGT: {
+    LLT VT = MRI.getType(R);
+    return VT.getScalarSizeInBits();
+  }
+  default:
+    return 1;
+  }
+}
+
 MVT AArch64TargetLowering::getScalarShiftAmountTy(const DataLayout &DL,
                                                   EVT) const {
   return MVT::i64;
