@@ -1874,8 +1874,7 @@ define <2 x i32> @test_non_const_splat_i32(i32 %elt) {
 define <8 x i8> @test_padd_bs_splat_lhs(<8 x i8> %a, i8 %b) {
 ; RV32-LABEL: test_padd_bs_splat_lhs:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pmv.dbs a2, a2
-; RV32-NEXT:    padd.db a0, a2, a0
+; RV32-NEXT:    padd.dbs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_padd_bs_splat_lhs:
@@ -1891,8 +1890,7 @@ define <8 x i8> @test_padd_bs_splat_lhs(<8 x i8> %a, i8 %b) {
 define <8 x i8> @test_padd_bs_splat_rhs(<8 x i8> %a, i8 %b) {
 ; RV32-LABEL: test_padd_bs_splat_rhs:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pmv.dbs a2, a2
-; RV32-NEXT:    padd.db a0, a0, a2
+; RV32-NEXT:    padd.dbs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_padd_bs_splat_rhs:
@@ -1908,8 +1906,7 @@ define <8 x i8> @test_padd_bs_splat_rhs(<8 x i8> %a, i8 %b) {
 define <4 x i16> @test_padd_hs_splat_lhs(<4 x i16> %a, i16 %b) {
 ; RV32-LABEL: test_padd_hs_splat_lhs:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pmv.dhs a2, a2
-; RV32-NEXT:    padd.dh a0, a2, a0
+; RV32-NEXT:    padd.dhs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_padd_hs_splat_lhs:
@@ -1925,8 +1922,7 @@ define <4 x i16> @test_padd_hs_splat_lhs(<4 x i16> %a, i16 %b) {
 define <4 x i16> @test_padd_hs_splat_rhs(<4 x i16> %a, i16 %b) {
 ; RV32-LABEL: test_padd_hs_splat_rhs:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pmv.dhs a2, a2
-; RV32-NEXT:    padd.dh a0, a0, a2
+; RV32-NEXT:    padd.dhs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_padd_hs_splat_rhs:
@@ -1942,8 +1938,7 @@ define <4 x i16> @test_padd_hs_splat_rhs(<4 x i16> %a, i16 %b) {
 define <2 x i32> @test_padd_ws_splat_lhs(<2 x i32> %a, i32 %b) {
 ; RV32-LABEL: test_padd_ws_splat_lhs:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    mv a3, a2
-; RV32-NEXT:    padd.dw a0, a2, a0
+; RV32-NEXT:    padd.dws a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_padd_ws_splat_lhs:
@@ -1959,8 +1954,7 @@ define <2 x i32> @test_padd_ws_splat_lhs(<2 x i32> %a, i32 %b) {
 define <2 x i32> @test_padd_ws_splat_rhs(<2 x i32> %a, i32 %b) {
 ; RV32-LABEL: test_padd_ws_splat_rhs:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    mv a3, a2
-; RV32-NEXT:    padd.dw a0, a0, a2
+; RV32-NEXT:    padd.dws a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_padd_ws_splat_rhs:

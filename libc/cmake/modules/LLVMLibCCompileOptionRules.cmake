@@ -130,6 +130,10 @@ function(_get_compile_options_from_config output_var)
     libc_add_definition(config_options "LIBC_COPT_MEMCPY_X86_USE_NTA_STORES")
   endif()
 
+  if(LIBC_CONF_USE_MEM_BUILTINS)
+    libc_add_definition(config_options "LIBC_COPT_USE_MEM_BUILTINS")
+  endif()
+
   if(LIBC_TYPES_TIME_T_IS_32_BIT AND LLVM_LIBC_FULL_BUILD)
     libc_add_definition(config_options "LIBC_TYPES_TIME_T_IS_32_BIT")
   endif()
@@ -310,6 +314,10 @@ function(_get_common_compile_options output_var flags)
     # inside static member functions (fixed in Clang 22, see PR #157667 and #165919).
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "22.0.0")
       list(APPEND compile_options "-Wshadow")
+    endif()
+
+    if(LIBC_CC_SUPPORTS_NO_FENV_ACCESS)
+      list(APPEND compile_options "-Wno-fenv-access")
     endif()
   elseif(MSVC)
     list(APPEND compile_options "/EHs-c-")
