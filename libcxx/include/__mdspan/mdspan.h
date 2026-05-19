@@ -236,7 +236,7 @@ public:
              is_nothrow_constructible_v<index_type, const _OtherIndexType&>)
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference at(const array<_OtherIndexType, rank()>& __indices) const {
     return [&]<size_t... _Idxs>(index_sequence<_Idxs...>) -> reference {
-      return at(extents_type::__index_cast(as_const(__indices[_Idxs]))...);
+      return at(extents_type::__index_cast(__indices[_Idxs])...);
     }(make_index_sequence<rank()>());
   }
 
