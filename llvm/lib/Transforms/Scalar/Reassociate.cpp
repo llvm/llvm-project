@@ -31,6 +31,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
@@ -2294,6 +2295,33 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
 
   LLVM_DEBUG(dbgs() << "RAIn:\t"; PrintOps(I, Ops); dbgs() << '\n');
 
+  // On targets that report branch divergence (TTI.hasBranchDivergence()),
+  // boost the rank of divergent operands so they sort towards the root of
+  // the expression tree.  This clusters uniform operands together at the
+  // leaves, forming sub-expressions whose operands are all uniform and that
+  // can be evaluated in the target's uniform-execution domain.
+  //
+  // Example: (uniform1 + divergent) + uniform2
+  //       -> (uniform1 + uniform2) + divergent
+  if (UA && Ops.size() > 2) {
+    constexpr unsigned DivergentRankOffset = 1U << 28;
+    BasicBlock *ParentBB = I->getParent();
+    for (ValueEntry &Entry : Ops) {
+      if (isa<Constant>(Entry.Op))
+        continue;
+      bool Divergent = false;
+      for (const Use &U : Entry.Op->uses()) {
+        Instruction *Usr = dyn_cast<Instruction>(U.getUser());
+        if (Usr && Usr->getParent() == ParentBB) {
+          Divergent = UA->isDivergentAtUse(U);
+          break;
+        }
+      }
+      if (Divergent)
+        Entry.Rank += DivergentRankOffset;
+    }
+  }
+
   // Now that we have linearized the tree to a list and have gathered all of
   // the operands and their ranks, sort the operands by their rank.  Use a
   // stable_sort so that values with equal ranks will have their relative
@@ -2543,7 +2571,17 @@ ReassociatePass::BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT) {
   }
 }
 
-PreservedAnalyses ReassociatePass::run(Function &F, FunctionAnalysisManager &) {
+PreservedAnalyses ReassociatePass::run(Function &F,
+                                       FunctionAnalysisManager &AM) {
+  // On targets with branch divergence, obtain UniformityInfo so we can group
+  // uniform operands together in expression trees.
+  UA = nullptr;
+  if (!SkipUniformityAnalysis) {
+    const TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
+    if (TTI.hasBranchDivergence(&F))
+      UA = &AM.getResult<UniformityInfoAnalysis>(F);
+  }
+
   // Get the functions basic blocks in Reverse Post Order. This order is used by
   // BuildRankMap to pre calculate ranks correctly. It also excludes dead basic
   // blocks (it has been seen that the analysis in this pass could hang when
@@ -2606,15 +2644,17 @@ PreservedAnalyses ReassociatePass::run(Function &F, FunctionAnalysisManager &) {
     }
   }
 
-  // We are done with the rank map and pair map.
+  // We are done with the rank map, pair map, and uniformity info.
   RankMap.clear();
   ValueRankMap.clear();
   for (auto &Entry : PairMap)
     Entry.clear();
+  UA = nullptr;
 
   if (MadeChange) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
+    PA.preserve<UniformityInfoAnalysis>();
     return PA;
   }
 
@@ -2637,6 +2677,7 @@ public:
     if (skipFunction(F))
       return false;
 
+    Impl.SkipUniformityAnalysis = true;
     FunctionAnalysisManager DummyFAM;
     auto PA = Impl.run(F, DummyFAM);
     return !PA.areAllPreserved();

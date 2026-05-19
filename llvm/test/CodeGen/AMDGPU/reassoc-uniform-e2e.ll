@@ -13,8 +13,8 @@ define amdgpu_kernel void @mul_ungrouped(ptr addrspace(1) %arg, i32 %x, i32 %y) 
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_mul_i32 s2, s3, s2
 ; CHECK-NEXT:    v_mul_lo_u32 v0, s2, v0
-; CHECK-NEXT:    v_mul_lo_u32 v0, v0, s3
 ; CHECK-NEXT:    global_store_dword v1, v0, s[0:1]
 ; CHECK-NEXT:    s_endpgm
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -31,8 +31,8 @@ define amdgpu_kernel void @or_ungrouped(ptr addrspace(1) %arg, i32 %x, i32 %y) {
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_or_b32 s2, s3, s2
 ; CHECK-NEXT:    v_or_b32_e32 v0, s2, v0
-; CHECK-NEXT:    v_or_b32_e32 v0, s3, v0
 ; CHECK-NEXT:    global_store_dword v1, v0, s[0:1]
 ; CHECK-NEXT:    s_endpgm
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -49,8 +49,8 @@ define amdgpu_kernel void @and_ungrouped(ptr addrspace(1) %arg, i32 %x, i32 %y) 
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_and_b32 s2, s3, s2
 ; CHECK-NEXT:    v_and_b32_e32 v0, s2, v0
-; CHECK-NEXT:    v_and_b32_e32 v0, s3, v0
 ; CHECK-NEXT:    global_store_dword v1, v0, s[0:1]
 ; CHECK-NEXT:    s_endpgm
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -101,11 +101,11 @@ define amdgpu_kernel void @mul_4op(ptr addrspace(1) %arg, i32 %u1, i32 %u2) {
 ; CHECK-LABEL: mul_4op:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; CHECK-NEXT:    v_mul_u32_u24_e32 v0, v1, v0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mul_lo_u32 v0, v0, s2
-; CHECK-NEXT:    v_mul_lo_u32 v0, v0, s3
+; CHECK-NEXT:    s_mul_i32 s2, s3, s2
+; CHECK-NEXT:    v_mul_lo_u32 v0, s2, v0
+; CHECK-NEXT:    v_mul_lo_u32 v0, v0, v1
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    global_store_dword v1, v0, s[0:1]
 ; CHECK-NEXT:    s_endpgm
   %d1 = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -124,8 +124,8 @@ define amdgpu_kernel void @or_4op(ptr addrspace(1) %arg, i32 %u1, i32 %u2) {
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_or3_b32 v0, v1, v0, s2
-; CHECK-NEXT:    v_or_b32_e32 v0, s3, v0
+; CHECK-NEXT:    s_or_b32 s2, s3, s2
+; CHECK-NEXT:    v_or3_b32 v0, s2, v0, v1
 ; CHECK-NEXT:    global_store_dword v2, v0, s[0:1]
 ; CHECK-NEXT:    s_endpgm
   %d1 = tail call i32 @llvm.amdgcn.workitem.id.x()
