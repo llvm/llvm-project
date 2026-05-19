@@ -233,7 +233,7 @@ static const char *getDeviceArchName(int DeviceId) {
 /* Per-TU profile entry inside a dynamic module.
  * A single dynamic module may contain multiple TUs (e.g. -fgpu-rdc). */
 typedef struct {
-  void *DeviceVar; /* device address of __llvm_offload_prf_<CUID>      */
+  void *DeviceVar; /* device address of __llvm_profile_sections_<CUID> */
   int Processed;   /* 0 = not yet collected, 1 = data already copied   */
 } OffloadDynamicTUInfo;
 
@@ -357,25 +357,23 @@ typedef struct {
   OffloadDynamicModuleInfo *ModInfo;
 } EnumState;
 
-/* Grow the TU array inside a module entry and register one __llvm_offload_prf_*
- * symbol. Also pre-registers the corresponding per-TU section symbols with CLR
- * (needed so hipMemcpy can copy from those device addresses later). */
+/* Grow the TU array inside a module entry and register one
+ * __llvm_profile_sections_<CUID> symbol. Also pre-registers the corresponding
+ * per-TU section symbols with CLR (needed so hipMemcpy can copy from those
+ * device addresses later). */
 static int registerPrfSymbol(const char *Name, void *UserData) {
   EnumState *S = (EnumState *)UserData;
   OffloadDynamicModuleInfo *MI = S->ModInfo;
 
-  /* Look up the per-TU pointer variable, then dereference to get the
-   * address of __llvm_profile_sections. */
-  void *DevicePtrVar = nullptr;
+  /* Look up the device address of the per-TU __llvm_profile_sections_<CUID>
+   * struct.  In the current design Clang emits the struct itself at this
+   * symbol (not a pointer indirection), so the address from hipModuleGetGlobal
+   * is what processDeviceOffloadPrf needs to hipMemcpy from. */
+  void *DeviceVar = nullptr;
   size_t Bytes = 0;
-  if (hipModuleGetGlobal(&DevicePtrVar, &Bytes, S->Module, Name) != 0) {
+  if (hipModuleGetGlobal(&DeviceVar, &Bytes, S->Module, Name) != 0) {
     PROF_WARN("failed to get symbol %s for module %p\n", Name, S->Module);
     return 0; /* continue */
-  }
-  void *DeviceVar = nullptr;
-  if (hipMemcpy(&DeviceVar, DevicePtrVar, sizeof(void *), 2 /*DToH*/) != 0) {
-    PROF_WARN("failed to read sections pointer for %s\n", Name);
-    return 0;
   }
 
   /* Grow TU array if needed. */
@@ -435,7 +433,7 @@ __llvm_profile_offload_register_dynamic_module(int ModuleLoadRc, void **Ptr,
   MI->NumTUs = 0;
   MI->CapTUs = 0;
 
-  /* Enumerate all __llvm_offload_prf_<CUID> symbols in the ELF image.
+  /* Enumerate all __llvm_profile_sections_<CUID> symbols in the ELF image.
    * For each one, look it up via hipModuleGetGlobal (which also registers
    * the device address with CLR for later hipMemcpy) and store the entry.
    *
@@ -443,7 +441,8 @@ __llvm_profile_offload_register_dynamic_module(int ModuleLoadRc, void **Ptr,
    * profiling is not yet supported. */
 #if __has_include(<elf.h>)
   EnumState State = {*Ptr, MI};
-  enumerateElfSymbols(Image, "__llvm_offload_prf_", registerPrfSymbol, &State);
+  enumerateElfSymbols(Image, "__llvm_profile_sections_", registerPrfSymbol,
+                      &State);
 #else
   (void)Image;
   if (isVerboseMode())
@@ -452,7 +451,8 @@ __llvm_profile_offload_register_dynamic_module(int ModuleLoadRc, void **Ptr,
 #endif
 
   if (MI->NumTUs == 0) {
-    PROF_WARN("no __llvm_offload_prf_* symbols found in module %p\n", *Ptr);
+    PROF_WARN("no __llvm_profile_sections_* symbols found in module %p\n",
+              *Ptr);
   } else if (isVerboseMode()) {
     PROF_NOTE("Module %p: registered %d TU(s)\n", *Ptr, MI->NumTUs);
   }
@@ -823,22 +823,16 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
 
 static int processShadowVariable(void *ShadowVar, int TUIndex,
                                  const char *Target) {
-  void *DevicePtrVar = nullptr;
-  if (hipGetSymbolAddress(&DevicePtrVar, ShadowVar) != 0) {
+  void *DeviceSections = nullptr;
+  if (hipGetSymbolAddress(&DeviceSections, ShadowVar) != 0) {
     PROF_WARN("failed to get symbol address for shadow variable %p\n",
               ShadowVar);
     return -1;
   }
-  // The shadow variable is a pointer to __llvm_profile_sections (defined
-  // in the GPU profile runtime). Dereference to get the struct address.
-  void *DeviceOffloadPrf = nullptr;
-  if (hipMemcpy(&DeviceOffloadPrf, DevicePtrVar, sizeof(void *), 2 /*DToH*/) !=
-      0) {
-    PROF_WARN("failed to read sections pointer from shadow variable %p\n",
-              ShadowVar);
-    return -1;
-  }
-  return processDeviceOffloadPrf(DeviceOffloadPrf, TUIndex, Target);
+  /* The shadow's device address is the address of the per-TU
+   * __llvm_profile_sections_<CUID> struct itself. processDeviceOffloadPrf
+   * reads the 7 pointers from there with one hipMemcpy. */
+  return processDeviceOffloadPrf(DeviceSections, TUIndex, Target);
 }
 
 /* Check if HIP runtime is available and loaded */

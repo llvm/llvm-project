@@ -246,22 +246,6 @@ static bool profDataReferencedByCode(const Module &M) {
   return enablesValueProfiling(M);
 }
 
-// Extract CUID (Compilation Unit ID) from the module.
-// HIP/CUDA modules have a global variable __hip_cuid_<hash> that uniquely
-// identifies each translation unit. Returns an empty StringRef if not found.
-// The returned StringRef points into the GlobalVariable's name, which is
-// owned by the Module and stable for the Module's lifetime.
-static StringRef getCUIDFromModule(const Module &M) {
-  for (const GlobalVariable &GV : M.globals()) {
-    if (!GV.hasExternalLinkage())
-      continue;
-    StringRef Name = GV.getName();
-    if (Name.consume_front("__hip_cuid_"))
-      return Name;
-  }
-  return "";
-}
-
 class InstrLowerer final {
 public:
   InstrLowerer(Module &M, const InstrProfOptions &Options,
@@ -309,7 +293,6 @@ private:
   size_t NamesSize = 0;
 
   StructType *ProfileDataTy = nullptr;
-  std::string CachedCUID; // CUID cached for consistent section naming
 
   // vector of counter load/store pairs to be register promoted.
   std::vector<LoadStorePair> PromotionCandidates;
@@ -435,18 +418,8 @@ private:
   /// and for any profile output file that was specified.
   void emitInitialization();
 
-  /// For GPU targets: cache the CUID for consistent section naming.
-  void cacheGPUCUID();
-
   /// Return the __llvm_profile_data struct type.
   StructType *getProfileDataTy();
-
-  /// Create __llvm_offload_prf structure for GPU targets.
-  /// All sections use linker-defined __start_/__stop_ bounds.
-  void createProfileSectionSymbols();
-
-  /// Create HIP device variable registration for profile symbols
-  void createHIPDeviceVariableRegistration();
 };
 
 ///
@@ -978,8 +951,6 @@ bool InstrLowerer::lower() {
   if (!ContainsProfiling && !CoverageNamesVar)
     return MadeChange;
 
-  cacheGPUCUID();
-
   // We did not know how many value sites there would be inside
   // the instrumented function. This is counting the number of instrumented
   // target value sites to enter it as field in the profile data variable.
@@ -1027,18 +998,6 @@ bool InstrLowerer::lower() {
   emitVNodes();
   emitNameData();
   emitVTableNames();
-
-  // Create start/stop symbols for device code profile sections
-  createProfileSectionSymbols();
-
-  // Create host shadow variables and registration calls for HIP device profile
-  // symbols
-  createHIPDeviceVariableRegistration();
-
-  // HIP dynamic-module instrumentation (hipModuleLoad* / hipModuleUnload)
-  // is handled by interceptors in
-  // compiler-rt/lib/profile/InstrProfilingPlatformROCm.cpp — no IR-level
-  // rewrite is performed here.
 
   // Emit runtime hook for the cases where the target does not unconditionally
   // require pulling in profile runtime, and coverage is enabled on code that is
@@ -2074,12 +2033,6 @@ void InstrLowerer::emitNameData() {
   auto *NamesVal =
       ConstantDataArray::getString(Ctx, StringRef(CompressedNameStr), false);
   std::string NamesVarName = std::string(getInstrProfNamesVarName());
-  if (isGPUProfTarget(M)) {
-    StringRef CUID =
-        CachedCUID.empty() ? getCUIDFromModule(M) : StringRef(CachedCUID);
-    if (!CUID.empty())
-      NamesVarName = (Twine(NamesVarName) + "_" + CUID).str();
-  }
   NamesVar =
       new GlobalVariable(M, NamesVal->getType(), true,
                          GlobalValue::PrivateLinkage, NamesVal, NamesVarName);
@@ -2319,167 +2272,6 @@ StructType *InstrLowerer::getProfileDataTy() {
   };
   ProfileDataTy = StructType::get(Ctx, ArrayRef(DataTypes));
   return ProfileDataTy;
-}
-
-void InstrLowerer::cacheGPUCUID() {
-  if (!isGPUProfTarget(M))
-    return;
-  CachedCUID = getCUIDFromModule(M);
-}
-
-// Create CUID-suffixed pointer to __llvm_profile_sections for GPU targets.
-// The basic HIP/offload runtime exposes the original 7-entry section table:
-//   names_start, names_stop, cnts_start, cnts_stop, data_start, data_stop,
-//   raw_version.
-// We create a per-TU global that points to it, giving the host a unique
-// symbol for shadow variable registration.
-void InstrLowerer::createProfileSectionSymbols() {
-  if (!isGPUProfTarget(M) || CachedCUID.empty())
-    return;
-
-  auto &Ctx = M.getContext();
-  unsigned AS = M.getDataLayout().getDefaultGlobalsAddressSpace();
-  auto *Int8PtrTy = PointerType::get(Ctx, AS);
-
-  // __llvm_profile_sections is an array of 7 pointers defined in the GPU
-  // profile runtime (InstrProfilingPlatformGPU.c). Declare it as external.
-  auto *SectionsTy = ArrayType::get(Int8PtrTy, 7);
-  auto *SectionsGV = M.getGlobalVariable("__llvm_profile_sections");
-  if (!SectionsGV) {
-    SectionsGV = new GlobalVariable(M, SectionsTy, /*isConstant=*/true,
-                                    GlobalValue::ExternalLinkage, nullptr,
-                                    "__llvm_profile_sections", nullptr,
-                                    GlobalValue::NotThreadLocal, AS);
-    SectionsGV->setVisibility(GlobalValue::HiddenVisibility);
-  }
-
-  // Create a CUID-suffixed global that stores a pointer to the sections
-  // struct. Aliases can't point to declarations, so we use a pointer global.
-  // The host reads through this indirection: hipGetSymbolAddress gives the
-  // pointer global's device address, then one DtoH copy yields the sections
-  // struct address, then another DtoH copy reads the actual sections.
-  auto *PtrTy = SectionsGV->getType();
-  auto *PtrInit =
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(SectionsGV, PtrTy);
-  std::string PtrName = "__llvm_offload_prf_" + CachedCUID;
-  auto *PtrGV = new GlobalVariable(
-      M, PtrTy, /*isConstant=*/true, GlobalValue::ExternalLinkage, PtrInit,
-      PtrName, nullptr, GlobalValue::NotThreadLocal, AS);
-  PtrGV->setVisibility(GlobalValue::DefaultVisibility);
-  CompilerUsedVars.push_back(PtrGV);
-}
-
-void InstrLowerer::createHIPDeviceVariableRegistration() {
-  if (isGPUProfTarget(M))
-    return;
-
-  StringRef CUID =
-      CachedCUID.empty() ? getCUIDFromModule(M) : StringRef(CachedCUID);
-  if (CUID.empty())
-    return;
-
-  auto &Ctx = M.getContext();
-  auto *VoidTy = Type::getVoidTy(Ctx);
-  auto *VoidPtrTy = PointerType::getUnqual(Ctx);
-
-  std::string OffloadPrfName = ("__llvm_offload_prf_" + CUID).str();
-  auto *OffloadPrfShadow = new GlobalVariable(
-      M, VoidPtrTy, /*isConstant=*/false, GlobalValue::ExternalLinkage,
-      ConstantPointerNull::get(cast<PointerType>(VoidPtrTy)), OffloadPrfName);
-  CompilerUsedVars.push_back(OffloadPrfShadow);
-
-  auto *RegisterShadowTy = FunctionType::get(VoidTy, {VoidPtrTy}, false);
-  FunctionCallee RegisterShadowFunc = M.getOrInsertFunction(
-      "__llvm_profile_offload_register_shadow_variable", RegisterShadowTy);
-
-  Function *Ctor = M.getFunction("__hip_module_ctor");
-  if (!Ctor) {
-    // RDC mode: no __hip_module_ctor per-TU. Emit an offloading entry so the
-    // linker wrapper generates __hipRegisterVar in the final module ctor.
-    llvm::offloading::emitOffloadingEntry(
-        M, llvm::object::OffloadKind::OFK_HIP, OffloadPrfShadow, OffloadPrfName,
-        M.getDataLayout().getPointerSize(VoidPtrTy->getPointerAddressSpace()),
-        llvm::offloading::OffloadGlobalEntry, /*Data=*/0);
-
-    auto *CtorFn = Function::Create(FunctionType::get(VoidTy, false),
-                                    GlobalValue::InternalLinkage,
-                                    "__llvm_pgo_register_" + CUID, &M);
-    auto *Entry = BasicBlock::Create(Ctx, "entry", CtorFn);
-    IRBuilder<> B(Entry);
-    B.CreateCall(RegisterShadowFunc, {OffloadPrfShadow});
-    B.CreateRetVoid();
-    appendToGlobalCtors(M, CtorFn, 65535);
-    return;
-  }
-
-  // Locate the HIP fat-binary registration call and capture its return value
-  Value *Handle = nullptr;
-  for (BasicBlock &BB : *Ctor)
-    for (Instruction &I : BB)
-      if (auto *CB = dyn_cast<CallBase>(&I))
-        if (Function *Callee = CB->getCalledFunction())
-          if (Callee->getName() == "__hipRegisterFatBinary") {
-            Handle = &I; // call result
-            break;
-          }
-  if (!Handle)
-    return;
-  GlobalVariable *FatbinHandleGV = nullptr;
-  if (auto *HandleInst = dyn_cast<Instruction>(Handle))
-    for (Instruction *Cur = HandleInst->getNextNode(); Cur;
-         Cur = Cur->getNextNode()) {
-      auto *SI = dyn_cast<StoreInst>(Cur);
-      if (!SI || SI->getValueOperand() != Handle)
-        continue;
-      if (auto *GV = dyn_cast<GlobalVariable>(
-              SI->getPointerOperand()->stripPointerCasts())) {
-        FatbinHandleGV = GV;
-        break;
-      }
-    }
-
-  if (!FatbinHandleGV) {
-    LLVM_DEBUG(dbgs() << "store of __hipRegisterFatBinary call not found\n");
-  }
-
-  // Insert the new registration just before the ctor’s return
-  ReturnInst *RetInst = nullptr;
-  for (auto &BB : llvm::reverse(*Ctor))
-    if ((RetInst = dyn_cast<ReturnInst>(BB.getTerminator())))
-      break;
-  if (!RetInst)
-    return;
-  IRBuilder<> Builder(RetInst);
-
-  LLVM_DEBUG(dbgs() << "Found __hip_module_ctor, registering anchors for CUID="
-                    << CUID << "\n");
-
-  auto *Int32Ty = Type::getInt32Ty(Ctx);
-  auto *Int64Ty = Type::getInt64Ty(Ctx);
-  auto *RegisterVarTy =
-      FunctionType::get(VoidTy,
-                        {VoidPtrTy, VoidPtrTy, VoidPtrTy, VoidPtrTy, Int32Ty,
-                         Int64Ty, Int32Ty, Int32Ty},
-                        false);
-  FunctionCallee RegisterVarFunc =
-      M.getOrInsertFunction("__hipRegisterVar", RegisterVarTy);
-  Value *HipHandle =
-      FatbinHandleGV ? Builder.CreateLoad(VoidPtrTy, FatbinHandleGV) : Handle;
-
-  auto *NameStr = ConstantDataArray::getString(Ctx, OffloadPrfName, true);
-  auto *NameGV = new GlobalVariable(M, NameStr->getType(), true,
-                                    GlobalValue::PrivateLinkage, NameStr,
-                                    OffloadPrfName + ".name");
-
-  Builder.CreateCall(RegisterVarFunc,
-                     {HipHandle, OffloadPrfShadow,
-                      Builder.CreatePointerCast(NameGV, VoidPtrTy),
-                      Builder.CreatePointerCast(NameGV, VoidPtrTy),
-                      Builder.getInt32(0),
-                      Builder.getInt64(M.getDataLayout().getPointerSize()),
-                      Builder.getInt32(0), Builder.getInt32(0)});
-
-  Builder.CreateCall(RegisterShadowFunc, {OffloadPrfShadow});
 }
 
 } // namespace
