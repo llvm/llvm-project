@@ -248,6 +248,11 @@ struct LinkResult {
   llvm::Triple TargetTriple;
 };
 
+/// TODO: There is nothing SYCL specific in linkDeviceCode function. Remove:
+///   1. Mentions of SYCL.
+///   2. "fat" file formats. This linker shouldn't refer to input files as
+///   "device code"/"device libraries".
+
 /// Following tasks are performed:
 /// 1. Resolve the target triple: use --triple= when given, otherwise take the
 /// first input that supplies a triple as canonical. Issue an error if any
@@ -298,7 +303,7 @@ Expected<LinkResult> linkDeviceCode(ArrayRef<std::string> InputFiles,
       return ModOrErr.takeError();
 
     const llvm::Triple &T = (*ModOrErr)->getTargetTriple();
-    if (!T.str().empty()) {
+    if (!T.empty()) {
       if (!TargetTriple) {
         TargetTriple = T;
         TripleSource = File;

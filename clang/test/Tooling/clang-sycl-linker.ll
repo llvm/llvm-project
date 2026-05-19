@@ -7,7 +7,7 @@
 ; RUN: llvm-as %t/input2.ll -o %t/input2.bc
 ;
 ; Test the dry run of a simple case to link two input files.
-; RUN: clang-sycl-linker -v --module-split-mode=none %t/input1.bc %t/input2.bc -o %t/spirv.out 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc -o %t/spirv.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=SIMPLE-FO
 ; SIMPLE-FO:      sycl-device-link: inputs: {{.*}}.bc, {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
 ; SIMPLE-FO-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}_0.spv
