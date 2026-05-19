@@ -21,7 +21,7 @@
 #include "llvm/IR/Module.h"
 #include "gtest/gtest.h"
 
-namespace llvm {
+using namespace llvm;
 namespace {
 
 TEST(VerifierTest, Branch_i1) {
@@ -537,5 +537,40 @@ TEST(VerifierTest, DeeplyNested) {
   EXPECT_FALSE(verifyModule(M, &ErrorOS));
 }
 
+TEST(VerifierTest, IntrinsicRetInvalidStruct) {
+  LLVMContext Ctx;
+
+  // Create 2 invalid struct types for @llvm.nvvm.elect.sync intrinsic.
+  Type *I32Ty = Type::getInt32Ty(Ctx);
+  Type *I1Ty = Type::getInt1Ty(Ctx);
+
+  StructType *NonLiteral = StructType::create(Ctx, {I32Ty, I1Ty}, "st");
+  StructType *LiteralPacked =
+      StructType::get(Ctx, {I32Ty, I1Ty}, /*isPacked=*/true);
+  for (StructType *STy : {NonLiteral, LiteralPacked}) {
+    Module M("M", Ctx);
+    FunctionType *IntrFTy = FunctionType::get(STy, I32Ty, /*isVarArg=*/false);
+    Function *Intr = Function::Create(IntrFTy, Function::InternalLinkage,
+                                      "llvm.nvvm.elect.sync", M);
+
+    FunctionType *FTy =
+        FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
+    Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+    BasicBlock *Entry = BasicBlock::Create(Ctx, "entry", F);
+
+    Constant *Zero = ConstantInt::get(I32Ty, 0);
+    CallInst::Create(Intr, Zero, /*Bundles=*/{}, "ci", Entry);
+    ReturnInst::Create(Ctx, Entry);
+
+    std::string Error;
+    raw_string_ostream ErrorOS(Error);
+    EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+
+    EXPECT_TRUE(StringRef(Error).starts_with(
+        "intrinsic return type expected literal non-packed struct with 2 "
+        "elements, but got"))
+        << Error;
+  }
+}
+
 } // end anonymous namespace
-} // end namespace llvm

@@ -165,6 +165,11 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name,
   return {s, wasInserted};
 }
 
+static bool isBitcodeSymbol(const Symbol *symbol) {
+  return symbol->getFile() &&
+         symbol->getFile()->kind() == InputFile::BitcodeKind;
+}
+
 static void reportTypeError(const Symbol *existing, const InputFile *file,
                             llvm::wasm::WasmSymbolType type) {
   error("symbol type mismatch: " + toString(*existing) + "\n>>> defined as " +
@@ -192,6 +197,8 @@ static bool signatureMatches(FunctionSymbol *existing,
 static void checkGlobalType(const Symbol *existing, const InputFile *file,
                             const WasmGlobalType *newType) {
   if (!isa<GlobalSymbol>(existing)) {
+    if (isBitcodeSymbol(existing))
+      return;
     reportTypeError(existing, file, WASM_SYMBOL_TYPE_GLOBAL);
     return;
   }
@@ -206,11 +213,14 @@ static void checkGlobalType(const Symbol *existing, const InputFile *file,
 
 static void checkTagType(const Symbol *existing, const InputFile *file,
                          const WasmSignature *newSig) {
-  const auto *existingTag = dyn_cast<TagSymbol>(existing);
   if (!isa<TagSymbol>(existing)) {
+    if (isBitcodeSymbol(existing))
+      return;
     reportTypeError(existing, file, WASM_SYMBOL_TYPE_TAG);
     return;
   }
+
+  const auto *existingTag = cast<TagSymbol>(existing);
 
   const WasmSignature *oldSig = existingTag->signature;
   if (*newSig != *oldSig)
@@ -223,6 +233,8 @@ static void checkTagType(const Symbol *existing, const InputFile *file,
 static void checkTableType(const Symbol *existing, const InputFile *file,
                            const WasmTableType *newType) {
   if (!isa<TableSymbol>(existing)) {
+    if (isBitcodeSymbol(existing))
+      return;
     reportTypeError(existing, file, WASM_SYMBOL_TYPE_TABLE);
     return;
   }
@@ -237,7 +249,7 @@ static void checkTableType(const Symbol *existing, const InputFile *file,
 }
 
 static void checkDataType(const Symbol *existing, const InputFile *file) {
-  if (!isa<DataSymbol>(existing))
+  if (!isa<DataSymbol>(existing) && !isBitcodeSymbol(existing))
     reportTypeError(existing, file, WASM_SYMBOL_TYPE_DATA);
 }
 
@@ -511,6 +523,10 @@ Symbol *SymbolTable::addDefinedFunction(StringRef name, uint32_t flags,
 
   auto existingFunction = dyn_cast<FunctionSymbol>(s);
   if (!existingFunction) {
+    if (isBitcodeSymbol(s)) {
+      replaceSym(s);
+      return s;
+    }
     reportTypeError(s, file, WASM_SYMBOL_TYPE_FUNCTION);
     return s;
   }
