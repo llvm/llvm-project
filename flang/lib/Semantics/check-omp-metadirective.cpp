@@ -43,9 +43,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {
       x.v, llvm::omp::OMPC_when, GetContext().clauseSource, context_);
 }
 
-void OmpStructureChecker::Enter(const parser::OmpContextSelector &ctx) {
-  EnterDirectiveNest(ContextSelectorNest);
-
+void OmpStructureChecker::CheckContextSelectorSpecification(
+    const parser::OmpContextSelector &ctx) {
   using SetName = parser::OmpTraitSetSelectorName;
   std::map<SetName::Value, const SetName *> visited;
 
@@ -64,6 +63,11 @@ void OmpStructureChecker::Enter(const parser::OmpContextSelector &ctx) {
     }
     CheckTraitSetSelector(traitSet);
   }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpContextSelector &ctx) {
+  EnterDirectiveNest(ContextSelectorNest);
+  CheckContextSelectorSpecification(ctx);
 }
 
 void OmpStructureChecker::Leave(const parser::OmpContextSelector &) {
@@ -240,7 +244,11 @@ void OmpStructureChecker::CheckTraitSetSelector(
       if (maybeProps) {
         auto &[maybeScore, _]{maybeProps->t};
         if (maybeScore) {
-          CheckTraitScore(*maybeScore);
+          if (!config.allowsScore)
+            context_.Say(maybeScore->source,
+                "SCORE is not allowed for %s trait set"_err_en_US, usn);
+          else
+            CheckTraitScore(*maybeScore);
         }
       }
 

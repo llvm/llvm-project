@@ -127,6 +127,9 @@ public:
 
   void Enter(const parser::OmpDeclareVariantDirective &);
   void Leave(const parser::OmpDeclareVariantDirective &);
+  void CheckOmpDeclareVariantDirective(
+      const parser::OmpDeclareVariantDirective &);
+  void CheckDeclareVariantUserConditions(const parser::OmpContextSelector &);
   void Enter(const parser::OmpDeclareSimdDirective &);
   void Leave(const parser::OmpDeclareSimdDirective &);
   void Enter(const parser::OmpAllocateDirective &);
@@ -265,6 +268,7 @@ private:
       const parser::OmpTraitProperty &);
 
   void CheckTraitSelectorList(const std::list<parser::OmpTraitSelector> &);
+  void CheckContextSelectorSpecification(const parser::OmpContextSelector &);
   void CheckTraitSetSelector(const parser::OmpTraitSetSelector &);
   void CheckTraitScore(const parser::OmpTraitScore &);
   bool VerifyTraitPropertyLists(
@@ -416,6 +420,8 @@ private:
     LastType = MetadirectiveNest,
   };
   int directiveNest_[LastType + 1] = {0};
+
+  std::set<std::pair<const Symbol *, const Symbol *>> declareVariantPairs_;
 
   int allocateDirectiveLevel_{0};
   parser::CharBlock visitedAtomicSource_;
