@@ -9045,8 +9045,8 @@ ExpectedStmt ASTNodeImporter::VisitInitListExpr(InitListExpr *E) {
     return std::move(Err);
 
   ASTContext &ToCtx = Importer.getToContext();
-  InitListExpr *To = new (ToCtx) InitListExpr(
-      ToCtx, ToLBraceLoc, ToExprs, ToRBraceLoc);
+  InitListExpr *To = new (ToCtx)
+      InitListExpr(ToCtx, ToLBraceLoc, ToExprs, ToRBraceLoc, E->isExplicit());
   To->setType(ToType);
 
   if (E->hasArrayFiller()) {

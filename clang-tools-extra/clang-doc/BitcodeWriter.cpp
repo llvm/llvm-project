@@ -495,7 +495,7 @@ void ClangDocBitcodeWriter::emitBlock(const FriendInfo &R) {
   if (R.ReturnType)
     emitBlock(*R.ReturnType);
   for (const auto &CI : R.Description)
-    emitBlock(CI);
+    emitBlock(*CI.Ptr);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const TypeInfo &T) {
@@ -512,7 +512,7 @@ void ClangDocBitcodeWriter::emitBlock(const TypedefInfo &T) {
   for (const auto &N : T.Namespace)
     emitBlock(N, FieldId::F_namespace);
   for (const auto &CI : T.Description)
-    emitBlock(CI);
+    emitBlock(*CI.Ptr);
   if (T.DefLoc)
     emitRecord(*T.DefLoc, TYPEDEF_DEFLOCATION);
   if (T.Template)
@@ -538,9 +538,9 @@ void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {
   emitRecord(T.IsStatic, MEMBER_TYPE_IS_STATIC);
   emitRecord(T.IsBuiltIn, MEMBER_TYPE_IS_BUILTIN);
   emitRecord(T.IsTemplate, MEMBER_TYPE_IS_TEMPLATE);
-  emitRecord(T.IsTemplate, MEMBER_TYPE_IS_TEMPLATE);
+  // emitRecord(T.IsTemplate, MEMBER_TYPE_IS_TEMPLATE);
   for (const auto &CI : T.Description)
-    emitBlock(CI);
+    emitBlock(*CI.Ptr);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const CommentInfo &I) {
@@ -575,7 +575,7 @@ void ClangDocBitcodeWriter::emitBlock(const NamespaceInfo &I) {
   for (const auto &N : I.Namespace)
     emitBlock(N, FieldId::F_namespace);
   for (const auto &CI : I.Description)
-    emitBlock(CI);
+    emitBlock(*CI.Ptr);
   for (const auto &C : I.Children.Namespaces)
     emitBlock(C, FieldId::F_child_namespace);
   for (const auto &C : I.Children.Records)
@@ -599,7 +599,7 @@ void ClangDocBitcodeWriter::emitBlock(const EnumInfo &I) {
   for (const auto &N : I.Namespace)
     emitBlock(N, FieldId::F_namespace);
   for (const auto &CI : I.Description)
-    emitBlock(CI);
+    emitBlock(*CI.Ptr);
   if (I.DefLoc)
     emitRecord(*I.DefLoc, ENUM_DEFLOCATION);
   for (const auto &L : I.Loc)
@@ -617,7 +617,7 @@ void ClangDocBitcodeWriter::emitBlock(const EnumValueInfo &I) {
   emitRecord(I.Value, ENUM_VALUE_VALUE);
   emitRecord(I.ValueExpr, ENUM_VALUE_EXPR);
   for (const auto &CI : I.Description)
-    emitBlock(CI);
+    emitBlock(*CI.Ptr);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
@@ -630,7 +630,7 @@ void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
   for (const auto &N : I.Namespace)
     emitBlock(N, FieldId::F_namespace);
   for (const auto &CI : I.Description)
-    emitBlock(CI);
+    emitBlock(*CI.Ptr);
   if (I.DefLoc)
     emitRecord(*I.DefLoc, RECORD_DEFLOCATION);
   for (const auto &L : I.Loc)
@@ -681,7 +681,7 @@ void ClangDocBitcodeWriter::emitBlock(const FunctionInfo &I) {
   for (const auto &N : I.Namespace)
     emitBlock(N, FieldId::F_namespace);
   for (const auto &CI : I.Description)
-    emitBlock(CI);
+    emitBlock(*CI.Ptr);
   emitRecord(I.Access, FUNCTION_ACCESS);
   emitRecord(I.IsMethod, FUNCTION_IS_METHOD);
   emitRecord(I.IsStatic, FUNCTION_IS_STATIC);
@@ -702,7 +702,7 @@ void ClangDocBitcodeWriter::emitBlock(const ConceptInfo &I) {
   emitRecord(I.USR, CONCEPT_USR);
   emitRecord(I.Name, CONCEPT_NAME);
   for (const auto &CI : I.Description)
-    emitBlock(CI);
+    emitBlock(*CI.Ptr);
   emitRecord(I.IsType, CONCEPT_IS_TYPE);
   emitRecord(I.ConstraintExpression, CONCEPT_CONSTRAINT_EXPRESSION);
   emitBlock(I.Template);
@@ -745,7 +745,7 @@ void ClangDocBitcodeWriter::emitBlock(const VarInfo &I) {
   for (const auto &N : I.Namespace)
     emitBlock(N, FieldId::F_namespace);
   for (const auto &CI : I.Description)
-    emitBlock(CI);
+    emitBlock(*CI.Ptr);
   if (I.DefLoc)
     emitRecord(*I.DefLoc, VAR_DEFLOCATION);
   emitRecord(I.IsStatic, VAR_IS_STATIC);

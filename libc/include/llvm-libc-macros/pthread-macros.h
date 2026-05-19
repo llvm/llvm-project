@@ -32,18 +32,18 @@
 #ifdef __linux__
 #define PTHREAD_MUTEX_INITIALIZER                                              \
   {                                                                            \
-      /* .__ftxw = */ {0},     /* .__priority_inherit = */ 0,                  \
-      /* .__recursive = */ 0,  /* .__robust = */ 0,                            \
-      /* .__pshared = */ 0,    /* .__owner = */ 0,                             \
-      /* .__lock_count = */ 0,                                                 \
+      /* .__ftxw = */ {0},    /* .__priority_inherit = */ 0,                   \
+      /* .__recursive = */ 0, /* .__robust = */ 0,                             \
+      /* .__pshared = */ 0,   /* .__error_checking = */ 0,                     \
+      /* .__owner = */ 0,     /* .__lock_count = */ 0,                         \
   }
 #else
 #define PTHREAD_MUTEX_INITIALIZER                                              \
   {                                                                            \
-      /* .__ftxw = */ {0},     /* .__priority_inherit = */ 0,                  \
-      /* .__recursive = */ 0,  /* .__robust = */ 0,                            \
-      /* .__pshared = */ 0,    /* .__owner = */ 0,                             \
-      /* .__lock_count = */ 0,                                                 \
+      /* .__ftxw = */ {0},    /* .__priority_inherit = */ 0,                   \
+      /* .__recursive = */ 0, /* .__robust = */ 0,                             \
+      /* .__pshared = */ 0,   /* .__error_checking = */ 0,                     \
+      /* .__owner = */ 0,     /* .__lock_count = */ 0,                         \
   }
 #endif
 
