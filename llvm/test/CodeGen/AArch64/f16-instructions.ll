@@ -403,12 +403,12 @@ define i1 @test_fcmp_ueq(half %a, half %b) #0 {
 ; CHECK-CVT-SD-NEXT:    csinc w0, w8, wzr, vc
 ; CHECK-CVT-SD-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: test_fcmp_ueq:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcmp h0, h1
-; CHECK-FP16-SD-NEXT:    cset w8, eq
-; CHECK-FP16-SD-NEXT:    csinc w0, w8, wzr, vc
-; CHECK-FP16-SD-NEXT:    ret
+; CHECK-FP16-LABEL: test_fcmp_ueq:
+; CHECK-FP16:       // %bb.0:
+; CHECK-FP16-NEXT:    fcmp h0, h1
+; CHECK-FP16-NEXT:    cset w8, eq
+; CHECK-FP16-NEXT:    csinc w0, w8, wzr, vc
+; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-CVT-GI-LABEL: test_fcmp_ueq:
 ; CHECK-CVT-GI:       // %bb.0:
@@ -416,17 +416,8 @@ define i1 @test_fcmp_ueq(half %a, half %b) #0 {
 ; CHECK-CVT-GI-NEXT:    fcvt s1, h1
 ; CHECK-CVT-GI-NEXT:    fcmp s0, s1
 ; CHECK-CVT-GI-NEXT:    cset w8, eq
-; CHECK-CVT-GI-NEXT:    cset w9, vs
-; CHECK-CVT-GI-NEXT:    orr w0, w8, w9
+; CHECK-CVT-GI-NEXT:    csinc w0, w8, wzr, vc
 ; CHECK-CVT-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test_fcmp_ueq:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fcmp h0, h1
-; CHECK-FP16-GI-NEXT:    cset w8, eq
-; CHECK-FP16-GI-NEXT:    cset w9, vs
-; CHECK-FP16-GI-NEXT:    orr w0, w8, w9
-; CHECK-FP16-GI-NEXT:    ret
   %r = fcmp ueq half %a, %b
   ret i1 %r
 }
@@ -571,12 +562,12 @@ define i1 @test_fcmp_one(half %a, half %b) #0 {
 ; CHECK-CVT-SD-NEXT:    csinc w0, w8, wzr, le
 ; CHECK-CVT-SD-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: test_fcmp_one:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcmp h0, h1
-; CHECK-FP16-SD-NEXT:    cset w8, mi
-; CHECK-FP16-SD-NEXT:    csinc w0, w8, wzr, le
-; CHECK-FP16-SD-NEXT:    ret
+; CHECK-FP16-LABEL: test_fcmp_one:
+; CHECK-FP16:       // %bb.0:
+; CHECK-FP16-NEXT:    fcmp h0, h1
+; CHECK-FP16-NEXT:    cset w8, mi
+; CHECK-FP16-NEXT:    csinc w0, w8, wzr, le
+; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-CVT-GI-LABEL: test_fcmp_one:
 ; CHECK-CVT-GI:       // %bb.0:
@@ -584,17 +575,8 @@ define i1 @test_fcmp_one(half %a, half %b) #0 {
 ; CHECK-CVT-GI-NEXT:    fcvt s1, h1
 ; CHECK-CVT-GI-NEXT:    fcmp s0, s1
 ; CHECK-CVT-GI-NEXT:    cset w8, mi
-; CHECK-CVT-GI-NEXT:    cset w9, gt
-; CHECK-CVT-GI-NEXT:    orr w0, w8, w9
+; CHECK-CVT-GI-NEXT:    csinc w0, w8, wzr, le
 ; CHECK-CVT-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test_fcmp_one:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fcmp h0, h1
-; CHECK-FP16-GI-NEXT:    cset w8, mi
-; CHECK-FP16-GI-NEXT:    cset w9, gt
-; CHECK-FP16-GI-NEXT:    orr w0, w8, w9
-; CHECK-FP16-GI-NEXT:    ret
   %r = fcmp one half %a, %b
   ret i1 %r
 }

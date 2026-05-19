@@ -4490,15 +4490,13 @@ MachineInstr *AArch64InstructionSelector::emitCSetForFCmp(
   if (CC2 == AArch64CC::AL)
     return emitCSINC(/*Dst=*/Dst, /*Src1=*/ZReg, /*Src2=*/ZReg, InvCC1,
                      MIRBuilder);
+
+  // cset(CC1) then csinc Dst, Tmp, wzr, inv(CC2).
   const TargetRegisterClass *RC = &AArch64::GPR32RegClass;
-  Register Def1Reg = MRI.createVirtualRegister(RC);
-  Register Def2Reg = MRI.createVirtualRegister(RC);
-  auto InvCC2 = AArch64CC::getInvertedCondCode(CC2);
-  emitCSINC(/*Dst=*/Def1Reg, /*Src1=*/ZReg, /*Src2=*/ZReg, InvCC1, MIRBuilder);
-  emitCSINC(/*Dst=*/Def2Reg, /*Src1=*/ZReg, /*Src2=*/ZReg, InvCC2, MIRBuilder);
-  auto OrMI = MIRBuilder.buildInstr(AArch64::ORRWrr, {Dst}, {Def1Reg, Def2Reg});
-  constrainSelectedInstRegOperands(*OrMI, TII, TRI, RBI);
-  return &*OrMI;
+  Register TmpReg = MRI.createVirtualRegister(RC);
+  emitCSINC(/*Dst=*/TmpReg, /*Src1=*/ZReg, /*Src2=*/ZReg, InvCC1, MIRBuilder);
+  return emitCSINC(/*Dst=*/Dst, /*Src1=*/TmpReg, /*Src2=*/ZReg,
+                   AArch64CC::getInvertedCondCode(CC2), MIRBuilder);
 }
 
 MachineInstr *AArch64InstructionSelector::emitFPCompare(

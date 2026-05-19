@@ -54,8 +54,7 @@ define ptr @fn(ptr %in, ptr %out) {
 ; CHECK-GI-NEXT:    fcvt s0, h0
 ; CHECK-GI-NEXT:    fcmp s0, #0.0
 ; CHECK-GI-NEXT:    cset w8, mi
-; CHECK-GI-NEXT:    cset w9, gt
-; CHECK-GI-NEXT:    orr w8, w8, w9
+; CHECK-GI-NEXT:    csinc w8, w8, wzr, le
 ; CHECK-GI-NEXT:    ucvtf s0, w8
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    bif v0.8b, v2.8b, v1.8b

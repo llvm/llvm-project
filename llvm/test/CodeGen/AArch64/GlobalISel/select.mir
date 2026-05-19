@@ -152,9 +152,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: nofpexcept FCMPSrr [[COPY]], [[COPY]], implicit-def $nzcv, implicit $fpcr
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 5, implicit $nzcv
-    ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
-    ; CHECK-NEXT: [[ORRWrr:%[0-9]+]]:gpr32 = ORRWrr [[CSINCWr]], [[CSINCWr1]]
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[ORRWrr]]
+    ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr [[CSINCWr]], $wzr, 13, implicit $nzcv
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[CSINCWr1]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: nofpexcept FCMPDrr [[COPY2]], [[COPY2]], implicit-def $nzcv, implicit $fpcr

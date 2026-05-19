@@ -775,8 +775,7 @@ define i1 @test_fcmp_ueq(bfloat %a, bfloat %b) #0 {
 ; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-CVT-GI-NEXT:    fcmp s0, s1
 ; CHECK-CVT-GI-NEXT:    cset w8, eq
-; CHECK-CVT-GI-NEXT:    cset w9, vs
-; CHECK-CVT-GI-NEXT:    orr w0, w8, w9
+; CHECK-CVT-GI-NEXT:    csinc w0, w8, wzr, vc
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-BF16-GI-LABEL: test_fcmp_ueq:
@@ -787,8 +786,7 @@ define i1 @test_fcmp_ueq(bfloat %a, bfloat %b) #0 {
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-BF16-GI-NEXT:    fcmp s0, s1
 ; CHECK-BF16-GI-NEXT:    cset w8, eq
-; CHECK-BF16-GI-NEXT:    cset w9, vs
-; CHECK-BF16-GI-NEXT:    orr w0, w8, w9
+; CHECK-BF16-GI-NEXT:    csinc w0, w8, wzr, vc
 ; CHECK-BF16-GI-NEXT:    ret
   %r = fcmp ueq bfloat %a, %b
   ret i1 %r
@@ -1045,8 +1043,7 @@ define i1 @test_fcmp_one(bfloat %a, bfloat %b) #0 {
 ; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-CVT-GI-NEXT:    fcmp s0, s1
 ; CHECK-CVT-GI-NEXT:    cset w8, mi
-; CHECK-CVT-GI-NEXT:    cset w9, gt
-; CHECK-CVT-GI-NEXT:    orr w0, w8, w9
+; CHECK-CVT-GI-NEXT:    csinc w0, w8, wzr, le
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-BF16-GI-LABEL: test_fcmp_one:
@@ -1057,8 +1054,7 @@ define i1 @test_fcmp_one(bfloat %a, bfloat %b) #0 {
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-BF16-GI-NEXT:    fcmp s0, s1
 ; CHECK-BF16-GI-NEXT:    cset w8, mi
-; CHECK-BF16-GI-NEXT:    cset w9, gt
-; CHECK-BF16-GI-NEXT:    orr w0, w8, w9
+; CHECK-BF16-GI-NEXT:    csinc w0, w8, wzr, le
 ; CHECK-BF16-GI-NEXT:    ret
   %r = fcmp one bfloat %a, %b
   ret i1 %r
