@@ -176,7 +176,7 @@ void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
   }
   if (hasFeature(AMDGPU::FeatureXNACKAnyOnly) && TargetID.isXnackOnOrOff()) {
     Ctx.diagnose(DiagnosticInfoUnsupported(
-        F, "target only supports xnack 'Any'; '+/-xnack is not allowed"));
+        F, "target only supports xnack 'Any'; '+/-xnack' is not allowed"));
   }
 }
 
