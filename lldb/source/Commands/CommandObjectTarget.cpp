@@ -3186,7 +3186,7 @@ public:
       : CommandObjectParsed(
             interpreter, "target modules list",
             "List current executable and dependent shared library images.",
-            nullptr, eCommandRequiresTarget) {
+            nullptr, eCommandAllowsDummyTarget) {
     AddSimpleArgumentList(eArgTypeModule, eArgRepeatStar);
   }
 
@@ -3197,8 +3197,14 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
     const bool use_global_module_list = m_options.m_use_global_module_list;
+
+    // Every code path other than the global module list needs a real target.
+    if (!use_global_module_list && (!target || target->IsDummyTarget())) {
+      result.AppendError(GetInvalidTargetDescription());
+      return;
+    }
+
     // Define a local module list here to ensure it lives longer than any
     // "locker" object which might lock its contents below (through the
     // "module_list_ptr" variable).

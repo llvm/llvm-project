@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "clang/Basic/TargetID.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Options/Options.h"
-#include "llvm/TargetParser/TargetParser.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
