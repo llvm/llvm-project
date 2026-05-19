@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ASINPIF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ASINPIF_H
 
-#include "inv_trigf_utils.h"
+#include "asin_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -50,9 +50,9 @@ LIBC_INLINE float asinpif(float x) {
   if (LIBC_UNLIKELY(x_abs <= 0.5)) {
     double x_d = fputil::cast<double>(x);
     double v2 = x_d * x_d;
-    double result = x_d * fputil::multiply_add(
-                              v2, inv_trigf_utils_internal::asinpi_eval(v2),
-                              inv_trigf_utils_internal::ASINPI_COEFFS[0]);
+    double result =
+        x_d * fputil::multiply_add(v2, asin_internal::asinpi_eval(v2),
+                                   asin_internal::ASINPIF_COEFFS[0]);
     return fputil::cast<float>(result);
   }
 
@@ -74,16 +74,15 @@ LIBC_INLINE float asinpif(float x) {
   constexpr double ONE_OVER_PI_LO = -0x1.6b01ec5417056p-56;
   // C0_MINUS_1OVERPI = c0 - 1/pi = DELTA_C0 + ONE_OVER_PI_LO
   constexpr double C0_MINUS_1OVERPI =
-      (inv_trigf_utils_internal::ASINPI_COEFFS[0] - ONE_OVER_PI_HI) +
-      ONE_OVER_PI_LO;
+      (asin_internal::ASINPIF_COEFFS[0] - ONE_OVER_PI_HI) + ONE_OVER_PI_LO;
 
   double u = fputil::multiply_add(-0.5, x_abs, 0.5);
   double sqrt_u = fputil::sqrt<double>(u);
   double neg2_sqrt_u = -2.0 * sqrt_u;
 
   // tail = (c0 - 1/pi) + u * P1(u)
-  double tail = fputil::multiply_add(
-      u, inv_trigf_utils_internal::asinpi_eval(u), C0_MINUS_1OVERPI);
+  double tail =
+      fputil::multiply_add(u, asin_internal::asinpi_eval(u), C0_MINUS_1OVERPI);
 
   double result_hi = fputil::multiply_add(neg2_sqrt_u, ONE_OVER_PI_HI, 0.5);
   double result = fputil::multiply_add(tail, neg2_sqrt_u, result_hi);
