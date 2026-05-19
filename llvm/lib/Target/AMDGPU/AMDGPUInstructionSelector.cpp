@@ -4192,9 +4192,10 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(Register R,
         // create a duplicate entry. Two slots with the same value would be
         // assigned different truth-table column bits (e.g. 0xf0 and 0xcc),
         // corrupting all downstream bit assignments.
-        for (unsigned J = 0; J < Src.size(); ++J)
+        for (unsigned J = 0; J < Src.size(); ++J) {
           if (J != I && Src[J] == Op)
             return false;
+        }
         Bits = SrcBits[I];
         Src[I] = Op;
         return true;
