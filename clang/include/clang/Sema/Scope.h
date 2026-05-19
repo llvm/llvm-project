@@ -140,7 +140,7 @@ public:
     /// This is the scope of a C++ catch statement.
     CatchScope = 0x1000000,
 
-    /// This is the scope corresponding of a C++26 expansion statement.
+    /// This is the scope corresponding to a C++26 expansion statement.
     ///
     /// NOTE: While currently unused, this flag is reserved for the
     /// implementation of expansion statements; do not remove it or
