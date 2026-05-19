@@ -500,5 +500,6 @@ ParseResult parseOptionalVisibilityKeyword(OpAsmParser &parser,
 /// Include the generated symbol interfaces.
 #include "mlir/IR/SymbolInterfaces.h.inc"
 #include "mlir/IR/SymbolInterfacesAttrInterface.h.inc"
+#include "mlir/IR/SymbolInterfacesTypeInterface.h.inc"
 
 #endif // MLIR_IR_SYMBOLTABLE_H
