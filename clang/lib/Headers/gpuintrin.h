@@ -32,30 +32,6 @@ _Pragma("push_macro(\"bool\")");
 #define bool _Bool
 #endif
 
-_Pragma("omp begin declare target device_type(nohost)");
-_Pragma("omp begin declare variant match(device = {kind(gpu)})");
-
-// Forward declare a few functions for the implementation header.
-
-// Returns a bitmask marking all lanes that have the same value of __x.
-_DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_match_any_u32_impl(uint64_t __lane_mask, uint32_t __x);
-
-// Returns a bitmask marking all lanes that have the same value of __x.
-_DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_match_any_u64_impl(uint64_t __lane_mask, uint64_t __x);
-
-// Returns the current lane mask if every lane contains __x.
-_DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_match_all_u32_impl(uint64_t __lane_mask, uint32_t __x);
-
-// Returns the current lane mask if every lane contains __x.
-_DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_match_all_u64_impl(uint64_t __lane_mask, uint64_t __x);
-
-_Pragma("omp end declare variant");
-_Pragma("omp end declare target");
-
 #if defined(__NVPTX__)
 #include <nvptxintrin.h>
 #elif defined(__AMDGPU__)
@@ -289,8 +265,9 @@ __DO_LANE_OPS(double, __GPU_OP, -__builtin_inf(), maxnum, f64);
 #undef __DO_LANE_OPS
 
 // Returns a bitmask marking all lanes that have the same value of __x.
+#ifndef __gpu_match_any_u32_impl
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_match_any_u32_impl(uint64_t __lane_mask, uint32_t __x) {
+__gpu_match_any_u32(uint64_t __lane_mask, uint32_t __x) {
   uint64_t __match_mask = 0;
 
   bool __done = 0;
@@ -308,10 +285,13 @@ __gpu_match_any_u32_impl(uint64_t __lane_mask, uint32_t __x) {
   }
   return __match_mask;
 }
+#endif
+#undef __gpu_match_any_u32_impl
 
 // Returns a bitmask marking all lanes that have the same value of __x.
+#ifndef __gpu_match_any_u64_impl
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_match_any_u64_impl(uint64_t __lane_mask, uint64_t __x) {
+__gpu_match_any_u64(uint64_t __lane_mask, uint64_t __x) {
   uint64_t __match_mask = 0;
 
   bool __done = 0;
@@ -329,24 +309,32 @@ __gpu_match_any_u64_impl(uint64_t __lane_mask, uint64_t __x) {
   }
   return __match_mask;
 }
+#endif
+#undef __gpu_match_any_u64_impl
 
 // Returns the current lane mask if every lane contains __x.
+#ifndef __gpu_match_all_u32_impl
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_match_all_u32_impl(uint64_t __lane_mask, uint32_t __x) {
+__gpu_match_all_u32(uint64_t __lane_mask, uint32_t __x) {
   uint32_t __first = __gpu_shuffle_idx_u32(
       __lane_mask, __builtin_ctzg(__lane_mask), __x, __gpu_num_lanes());
   uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
   return __ballot == __lane_mask ? __lane_mask : UINT64_C(0);
 }
+#endif
+#undef __gpu_match_all_u32_impl
 
 // Returns the current lane mask if every lane contains __x.
+#ifndef __gpu_match_all_u64_impl
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_match_all_u64_impl(uint64_t __lane_mask, uint64_t __x) {
+__gpu_match_all_u64(uint64_t __lane_mask, uint64_t __x) {
   uint64_t __first = __gpu_shuffle_idx_u64(
       __lane_mask, __builtin_ctzg(__lane_mask), __x, __gpu_num_lanes());
   uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
   return __ballot == __lane_mask ? __lane_mask : UINT64_C(0);
 }
+#endif
+#undef __gpu_match_all_u64_impl
 
 _Pragma("omp end declare variant");
 _Pragma("omp end declare target");

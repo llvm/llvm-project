@@ -362,6 +362,8 @@ def int_amdgcn_wave_barrier : ClangBuiltin<"__builtin_amdgcn_wave_barrier">,
 //     MASK = 0x0000 0080: ALL DS instructions may be scheduled across SCHED_BARRIER.
 //     MASK = 0x0000 0100: ALL DS read instructions may be scheduled accoss SCHED_BARRIER.
 //     MASK = 0x0000 0200: ALL DS write instructions may be scheduled across SCHED_BARRIER.
+//     MASK = 0x0000 0400: All Transcendental (e.g. V_EXP) instructions may be scheduled across SCHED_BARRIER.
+//     MASK = 0x0000 0800: All LDSDMA instructions may be scheduled across SCHED_BARRIER.
 def int_amdgcn_sched_barrier : ClangBuiltin<"__builtin_amdgcn_sched_barrier">,
   Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
                                 IntrWillReturn, IntrNoCallback, IntrNoFree]>;
@@ -3761,27 +3763,27 @@ def int_amdgcn_sat_pk4_u4_u8 : ClangBuiltin<"__builtin_amdgcn_sat_pk4_u4_u8">,
   PureIntrinsic<[llvm_i16_ty], [llvm_i32_ty]>;
 
 // llvm.amdgcn.permlane.bcast <src0> <src1> <src2>
-def int_amdgcn_permlane_bcast : ClangBuiltin<"__builtin_amdgcn_permlane_bcast">,
-  Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+def int_amdgcn_permlane_bcast :
+  Intrinsic<[llvm_any_ty],
+            [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // llvm.amdgcn.permlane.up <src0> <src1> <src2>
-def int_amdgcn_permlane_up : ClangBuiltin<"__builtin_amdgcn_permlane_up">,
-  Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+def int_amdgcn_permlane_up :
+  Intrinsic<[llvm_any_ty],
+            [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // llvm.amdgcn.permlane.down <src0> <src1> <src2>
-def int_amdgcn_permlane_down : ClangBuiltin<"__builtin_amdgcn_permlane_down">,
-  Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+def int_amdgcn_permlane_down :
+  Intrinsic<[llvm_any_ty],
+            [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // llvm.amdgcn.permlane.xor <src0> <src1> <src2>
-def int_amdgcn_permlane_xor : ClangBuiltin<"__builtin_amdgcn_permlane_xor">,
-  Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+def int_amdgcn_permlane_xor :
+  Intrinsic<[llvm_any_ty],
+            [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // llvm.amdgcn.permlane.idx.gen <src0> <src1>

@@ -8,27 +8,27 @@
 
 ...
 # GCN-LABEL: name: waitcnt-debug
-# LGKM: S_WAITCNT 127
+# LGKM: S_WAITCNT .Lgkmcnt_0
 # LGKM-NEXT: S_NOP 0
 # LGKM-NEXT: S_NOP 0
 
-# EXP: S_WAITCNT 3855
+# EXP: S_WAITCNT .Expcnt_0
 # EXP-NEXT: S_NOP 0
-# EXP-NEXT: S_WAITCNT 3855
+# EXP-NEXT: S_WAITCNT .Expcnt_0
 # EXP-NEXT: S_NOP 0
 
-# VM: S_WAITCNT 3952
+# VM: S_WAITCNT .Vmcnt_0
 # VM-NEXT: S_NOP 0
-# VM-NEXT: S_WAITCNT 3952
+# VM-NEXT: S_WAITCNT .Vmcnt_0
 # VM-NEXT: S_NOP 0
-# VM-NEXT: S_WAITCNT 3952
+# VM-NEXT: S_WAITCNT .Vmcnt_0
 # VM-NEXT: S_NOP 0
 
-# ZERO: S_WAITCNT 0
+# ZERO: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # ZERO-NEXT: S_NOP 0
-# ZERO-NEXT: S_WAITCNT 0
+# ZERO-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # ZERO-NEXT: S_NOP 0
-# ZERO-NEXT: S_WAITCNT 0
+# ZERO-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # ZERO-NEXT: S_NOP 0
 
 name:            waitcnt-debug

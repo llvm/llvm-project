@@ -182,6 +182,8 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"c_ptr_1", asAddr}, {"c_ptr_2", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"c_devloc", &I::genCDevLoc, {{{"x", asBox}}}, /*isElemental=*/false},
+    {"c_devptr_eq", &I::genCPtrCompare<mlir::arith::CmpIPredicate::eq>},
+    {"c_devptr_ne", &I::genCPtrCompare<mlir::arith::CmpIPredicate::ne>},
     {"c_f_pointer",
      &I::genCFPointer,
      {{{"cptr", asValue},
@@ -806,6 +808,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"team", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"time", &I::genTime, {}, /*isElemental=*/false},
+    {"timef", &I::genTimef, {}, /*isElemental=*/false},
     {"tokenize",
      &I::genTokenize,
      {{{"string", asAddr},
@@ -3380,7 +3383,7 @@ IntrinsicLibrary::genCLoc(mlir::Type resultType,
   return genCLocOrCFunLoc(builder, loc, resultType, args);
 }
 
-// C_PTR_EQ and C_PTR_NE
+// C_PTR_EQ / C_PTR_NE and C_DEVPTR_EQ / C_DEVPTR_NE
 template <mlir::arith::CmpIPredicate pred>
 fir::ExtendedValue
 IntrinsicLibrary::genCPtrCompare(mlir::Type resultType,
@@ -8263,6 +8266,13 @@ IntrinsicLibrary::genThisImage(mlir::Type resultType,
     TODO(loc, "this_image with coarray argument.");
   mlir::Value res = mif::ThisImageOp::create(builder, loc, team);
   return builder.createConvert(loc, resultType, res);
+}
+
+// TIMEF
+mlir::Value IntrinsicLibrary::genTimef(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.empty() && "timef does not accept any args");
+  return fir::runtime::genTimef(builder, loc);
 }
 
 // TRAILZ

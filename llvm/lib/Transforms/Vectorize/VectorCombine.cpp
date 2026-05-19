@@ -660,6 +660,13 @@ bool VectorCombine::foldExtractExtract(Instruction &I) {
       V0->getType() != V1->getType())
     return false;
 
+  // For fixed-width vectors, reject out-of-bounds extract indexes
+  if (auto *FixedVecTy = dyn_cast<FixedVectorType>(V0->getType())) {
+    unsigned NumElts = FixedVecTy->getNumElements();
+    if (C0 >= NumElts || C1 >= NumElts)
+      return false;
+  }
+
   // If the scalar value 'I' is going to be re-inserted into a vector, then try
   // to create an extract to that same element. The extract/insert can be
   // reduced to a "select shuffle".
@@ -4973,8 +4980,8 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   // Add any shuffle uses for the shuffles we have found, to include them in our
   // cost calculations.
   if (!FromReduction) {
-    for (ShuffleVectorInst *SV : Shuffles) {
-      for (auto *U : SV->users()) {
+    for (size_t Idx = 0, E = Shuffles.size(); Idx != E; ++Idx) {
+      for (auto *U : Shuffles[Idx]->users()) {
         ShuffleVectorInst *SSV = dyn_cast<ShuffleVectorInst>(U);
         if (SSV && isa<UndefValue>(SSV->getOperand(1)) && SSV->getType() == VT)
           Shuffles.push_back(SSV);

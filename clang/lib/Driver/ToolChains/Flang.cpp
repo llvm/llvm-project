@@ -136,6 +136,8 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
                    options::OPT_funderscoring, options::OPT_fno_underscoring,
                    options::OPT_funsigned, options::OPT_fno_unsigned,
+                   options::OPT_facc_allow_default_none_scalars,
+                   options::OPT_fno_acc_allow_default_none_scalars,
                    options::OPT_finstrument_functions});
 
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
@@ -252,8 +254,6 @@ void Flang::addCodegenOptions(const ArgList &Args,
   Args.addAllArgs(
       CmdArgs,
       {options::OPT_fdo_concurrent_to_openmp_EQ,
-       options::OPT_flang_experimental_hlfir,
-       options::OPT_flang_deprecated_no_hlfir,
        options::OPT_fno_ppc_native_vec_elem_order,
        options::OPT_fppc_native_vec_elem_order, options::OPT_finit_global_zero,
        options::OPT_fno_init_global_zero, options::OPT_frepack_arrays,
@@ -269,18 +269,13 @@ void Flang::addCodegenOptions(const ArgList &Args,
 void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   const ToolChain &TC = getToolChain();
   const Driver &D = TC.getDriver();
-  DiagnosticsEngine &Diags = D.getDiags();
   LTOKind LTOMode = D.getLTOMode();
   // LTO mode is parsed by the Clang driver library.
   assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
   if (LTOMode == LTOK_Full)
     CmdArgs.push_back("-flto=full");
-  else if (LTOMode == LTOK_Thin) {
-    Diags.Report(
-        Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                              "the option '-flto=thin' is a work in progress"));
+  else if (LTOMode == LTOK_Thin)
     CmdArgs.push_back("-flto=thin");
-  }
   Args.addAllArgs(CmdArgs, {options::OPT_ffat_lto_objects,
                             options::OPT_fno_fat_lto_objects});
 }

@@ -16,7 +16,6 @@ define amdgpu_kernel void @local_volatile_load_0(
 ; GFX6-NEXT:    s_mov_b64 s[0:1], s[4:5]
 ; GFX6-NEXT:    s_load_dword s4, s[0:1], 0x9
 ; GFX6-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xb
-; GFX6-NEXT:    ; kill: def $sgpr2 killed $sgpr4
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s7, s1
@@ -199,7 +198,6 @@ define amdgpu_kernel void @local_volatile_load_1(
 ; GFX6-NEXT:    s_mov_b64 s[0:1], s[4:5]
 ; GFX6-NEXT:    s_load_dword s4, s[0:1], 0x9
 ; GFX6-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xb
-; GFX6-NEXT:    ; kill: def $sgpr2 killed $sgpr4
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s7, s1
@@ -407,7 +405,6 @@ define amdgpu_kernel void @local_volatile_store_0(
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s1, s[4:5], 0xb
-; GFX6-NEXT:    ; kill: def $sgpr0 killed $sgpr1
 ; GFX6-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x9
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s0, s[2:3], 0x0
@@ -568,7 +565,6 @@ define amdgpu_kernel void @local_volatile_store_1(
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s1, s[4:5], 0xb
-; GFX6-NEXT:    ; kill: def $sgpr0 killed $sgpr1
 ; GFX6-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x9
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s0, s[2:3], 0x0
@@ -747,8 +743,6 @@ define amdgpu_kernel void @local_volatile_workgroup_acquire_load(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s1, s[4:5], 0x9
 ; GFX6-NEXT:    s_load_dword s0, s[4:5], 0xa
-; GFX6-NEXT:    ; kill: def $sgpr2 killed $sgpr0
-; GFX6-NEXT:    ; kill: def $sgpr2 killed $sgpr1
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s1
@@ -916,7 +910,6 @@ define amdgpu_kernel void @local_volatile_workgroup_release_store(
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GFX6-NEXT:    s_load_dword s1, s[4:5], 0xa
-; GFX6-NEXT:    ; kill: def $sgpr0 killed $sgpr1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GFX6-NEXT:    s_mov_b32 m0, -1

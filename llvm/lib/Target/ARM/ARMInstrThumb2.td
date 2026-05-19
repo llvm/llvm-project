@@ -4347,7 +4347,9 @@ def t2HVC : T2XI <(outs), (ins imm0_65535:$imm16), IIC_Br, "hvc.w\t$imm16", []>,
 }
 
 // Alias for HVC without the ".w" optional width specifier
-def : t2InstAlias<"hvc\t$imm16", (t2HVC imm0_65535:$imm16)>;
+def : t2InstAlias<"hvc\t$imm16", (t2HVC imm0_65535:$imm16)> {
+  let Predicates = [IsThumb2, HasVirtualization];
+}
 
 //===----------------------------------------------------------------------===//
 // Non-Instruction Patterns
@@ -4396,6 +4398,9 @@ def t2LDRLIT_ga_pcrel : PseudoInst<(outs rGPR:$dst), (ins i32imm:$addr),
                                         (ARMWrapperPIC tglobaladdr:$addr))]>,
                        Requires<[IsThumb, HasV8MBaseline, DontUseMovtInPic]>;
 }
+
+// Exception Handling
+def : T2Pat<(ARMLocalRecover mcsym:$sym), (t2MOVi32imm mcsym:$sym)>;
 
 // TLS globals
 def : Pat<(ARMWrapperPIC tglobaltlsaddr:$addr),
