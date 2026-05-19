@@ -72,7 +72,9 @@ set(environ_internal_gcc12_workaround "")
 if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
    (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "12") AND
    (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13"))
-  set(environ_internal_gcc12_workaround "-Wno-stringop-overflow")
+  set(environ_internal_gcc12_workaround "-Wno-stringop-overflow"
+      "-fdisable-tree-waccess1" "-fdisable-tree-waccess2"
+      "-fdisable-tree-waccess3")
 endif()
 
 add_object_library(

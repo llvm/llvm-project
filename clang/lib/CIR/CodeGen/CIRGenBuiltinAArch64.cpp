@@ -354,6 +354,21 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vrecpxh_f16:
   case NEON::BI__builtin_neon_vrsqrteh_f16:
   case NEON::BI__builtin_neon_vrsqrtsh_f16:
+  case NEON::BI__builtin_neon_vmaxv_s8:
+  case NEON::BI__builtin_neon_vmaxvq_s8:
+  case NEON::BI__builtin_neon_vmaxv_s16:
+  case NEON::BI__builtin_neon_vmaxvq_s16:
+  case NEON::BI__builtin_neon_vmaxv_s32:
+  case NEON::BI__builtin_neon_vmaxvq_s32:
+  case NEON::BI__builtin_neon_vmaxv_u8:
+  case NEON::BI__builtin_neon_vmaxvq_u8:
+  case NEON::BI__builtin_neon_vmaxv_u16:
+  case NEON::BI__builtin_neon_vmaxvq_u16:
+  case NEON::BI__builtin_neon_vmaxv_u32:
+  case NEON::BI__builtin_neon_vmaxvq_u32:
+  case NEON::BI__builtin_neon_vmaxv_f32:
+  case NEON::BI__builtin_neon_vmaxvq_f32:
+  case NEON::BI__builtin_neon_vmaxvq_f64:
     return emitNeonCall(cgf.cgm, cgf.getBuilder(),
                         {cgf.convertType(expr->getArg(0)->getType())}, ops,
                         llvmIntrName, cgf.convertType(expr->getType()), loc);
@@ -2904,12 +2919,32 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vst4q_v:
   case NEON::BI__builtin_neon_vst4_lane_v:
   case NEON::BI__builtin_neon_vst4q_lane_v:
-  case NEON::BI__builtin_neon_vtrn_v:
-  case NEON::BI__builtin_neon_vtrnq_v:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
+  case NEON::BI__builtin_neon_vtrn_v:
+  case NEON::BI__builtin_neon_vtrnq_v: {
+    ops[1] = builder.createBitcast(ops[1], ty);
+    ops[2] = builder.createBitcast(ops[2], ty);
+    // Adding a bitcast here as Ops[0] might be a void pointer.
+    mlir::Value baseAddr =
+        builder.createBitcast(ops[0], builder.getPointerTo(ty));
+    mlir::Value sv;
+
+    for (unsigned vi = 0; vi != 2; ++vi) {
+      llvm::SmallVector<int64_t, 16> indices;
+      for (unsigned i = 0, e = ty.getSize(); i != e; i += 2) {
+        indices.push_back(i + vi);
+        indices.push_back(i + e + vi);
+      }
+      cir::ConstantOp idx = builder.getConstInt(loc, builder.getSInt32Ty(), vi);
+      mlir::Value addr = builder.createPtrStride(loc, baseAddr, idx);
+      sv = builder.createVecShuffle(loc, ops[1], ops[2], indices);
+      (void)builder.CIRBaseBuilderTy::createStore(loc, sv, addr);
+    }
+    return sv;
+  }
   case NEON::BI__builtin_neon_vuzp_v:
   case NEON::BI__builtin_neon_vuzpq_v: {
     ops[1] = builder.createBitcast(ops[1], ty);

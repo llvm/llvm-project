@@ -2271,10 +2271,9 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
         if (!isa<Constant>(ArgVal)) {
           CleanupKind Cleanup = getARCCleanupKind();
           QualType Ty = TheExpr->getType();
-          RawAddress Alloca = RawAddress::invalid();
-          RawAddress Addr = CreateMemTemp(Ty, "os.log.arg", &Alloca);
+          RawAddress Alloca = CreateMemTempWithoutCast(Ty, "os.log.arg");
           ArgVal = EmitARCRetain(Ty, ArgVal);
-          Builder.CreateStore(ArgVal, Addr);
+          Builder.CreateStore(ArgVal, Alloca);
           pushLifetimeExtendedDestroy(Cleanup, Alloca, Ty,
                                       CodeGenFunction::destroyARCStrongPrecise,
                                       Cleanup & EHCleanup);
@@ -2449,40 +2448,12 @@ EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
   return RValue::get(Overflow);
 }
 
-static bool
-TypeRequiresBuiltinLaunderImp(const ASTContext &Ctx, QualType Ty,
-                              llvm::SmallPtrSetImpl<const Decl *> &Seen) {
-  if (const auto *Arr = Ctx.getAsArrayType(Ty))
-    Ty = Ctx.getBaseElementType(Arr);
-
-  const auto *Record = Ty->getAsCXXRecordDecl();
-  if (!Record)
-    return false;
-
-  // We've already checked this type, or are in the process of checking it.
-  if (!Seen.insert(Record).second)
-    return false;
-
-  assert(Record->hasDefinition() &&
-         "Incomplete types should already be diagnosed");
-
-  if (Record->isDynamicClass())
-    return true;
-
-  for (FieldDecl *F : Record->fields()) {
-    if (TypeRequiresBuiltinLaunderImp(Ctx, F->getType(), Seen))
-      return true;
-  }
-  return false;
-}
-
 /// Determine if the specified type requires laundering by checking if it is a
 /// dynamic class type or contains a subobject which is a dynamic class type.
 static bool TypeRequiresBuiltinLaunder(CodeGenModule &CGM, QualType Ty) {
   if (!CGM.getCodeGenOpts().StrictVTablePointers)
     return false;
-  llvm::SmallPtrSet<const Decl *, 16> Seen;
-  return TypeRequiresBuiltinLaunderImp(CGM.getContext(), Ty, Seen);
+  return Ty.requiresBuiltinLaunder(CGM.getContext());
 }
 
 RValue CodeGenFunction::emitRotate(const CallExpr *E, bool IsRotateRight) {
@@ -3770,6 +3741,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
   case Builtin::BI__builtin_stdc_rotate_left:
+  case Builtin::BIstdc_rotate_left_uc:
+  case Builtin::BIstdc_rotate_left_us:
+  case Builtin::BIstdc_rotate_left_ui:
+  case Builtin::BIstdc_rotate_left_ul:
+  case Builtin::BIstdc_rotate_left_ull:
   case Builtin::BI_rotl8: // Microsoft variants of rotate left
   case Builtin::BI_rotl16:
   case Builtin::BI_rotl:
@@ -3782,6 +3758,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
   case Builtin::BI__builtin_stdc_rotate_right:
+  case Builtin::BIstdc_rotate_right_uc:
+  case Builtin::BIstdc_rotate_right_us:
+  case Builtin::BIstdc_rotate_right_ui:
+  case Builtin::BIstdc_rotate_right_ul:
+  case Builtin::BIstdc_rotate_right_ull:
   case Builtin::BI_rotr8: // Microsoft variants of rotate right
   case Builtin::BI_rotr16:
   case Builtin::BI_rotr:
@@ -6361,13 +6342,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           getContext().getSizeType(), ArraySize, nullptr,
           ArraySizeModifier::Normal,
           /*IndexTypeQuals=*/0);
-      auto Tmp = CreateMemTemp(SizeArrayTy, "block_sizes");
-      llvm::Value *TmpPtr = Tmp.getPointer();
-      // The EmitLifetime* pair expect a naked Alloca as their last argument,
-      // however for cases where the default AS is not the Alloca AS, Tmp is
-      // actually the Alloca ascasted to the default AS, hence the
-      // stripPointerCasts()
-      llvm::Value *Alloca = TmpPtr->stripPointerCasts();
+      auto Tmp = CreateMemTempWithoutCast(SizeArrayTy, "block_sizes");
+      llvm::Value *Alloca = Tmp.getPointer();
       llvm::Value *ElemPtr;
       EmitLifetimeStart(Alloca);
       // Each of the following arguments specifies the size of the corresponding
@@ -6384,8 +6360,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         Builder.CreateAlignedStore(
             V, GEP, CGM.getDataLayout().getPrefTypeAlign(SizeTy));
       }
-      // Return the Alloca itself rather than a potential ascast as this is only
-      // used by the paired EmitLifetimeEnd.
       return {ElemPtr, Alloca};
     };
 
@@ -6816,7 +6790,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // always just emit into it.
   TypeEvaluationKind EvalKind = getEvaluationKind(E->getType());
   if (EvalKind == TEK_Aggregate && ReturnValue.isNull()) {
-    Address DestPtr = CreateMemTemp(E->getType(), "agg.tmp");
+    Address DestPtr = CreateMemTempWithoutCast(E->getType(), "agg.tmp");
     ReturnValue = ReturnValueSlot(DestPtr, false);
   }
 
