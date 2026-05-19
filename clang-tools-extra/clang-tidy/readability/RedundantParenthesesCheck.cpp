@@ -37,6 +37,8 @@ AST_MATCHER(ParenExpr, isInMacro) {
 // materialization that Clang inserts (e.g. qualification casts for const
 // methods, MaterializeTemporaryExpr for prvalue bases).
 AST_MATCHER(ParenExpr, isBaseOfMemberAccess) {
+  if (!isa<CXXOperatorCallExpr>(Node.getSubExpr()->IgnoreImpCasts()))
+    return false;
   ASTContext &Ctx = Finder->getASTContext();
   DynTypedNodeList Parents = Ctx.getParents(Node);
   while (!Parents.empty()) {
