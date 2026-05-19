@@ -664,7 +664,7 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   Expected<LinkResult> LinkedOrErr = linkDeviceCode(Files, Args, C);
   if (!LinkedOrErr)
     return LinkedOrErr.takeError();
-  auto &[LinkedModule, LinkedFile, ResolvedTriple] = *LinkedOrErr;
+  LinkResult &Result = *LinkedOrErr;
 
   // Determine the requested module split mode.
   IRSplitMode SplitMode = IRSplitMode::SPLIT_PER_TU;
@@ -683,15 +683,15 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   bool EmitOnlyKernelsAsEntryPoints = true;
 
   SmallVector<SplitModule, 0> SplitModules;
-  if (canSkipModuleSplit(SplitMode, *LinkedModule,
+  if (canSkipModuleSplit(SplitMode, *Result.LinkedModule,
                          EmitOnlyKernelsAsEntryPoints)) {
-    SplitModules.push_back(
-        {SmallString<256>(LinkedFile),
-         collectEntryPoints(*LinkedModule, EmitOnlyKernelsAsEntryPoints)});
+    SplitModules.push_back({SmallString<256>(Result.BitcodeFile),
+                            collectEntryPoints(*Result.LinkedModule,
+                                               EmitOnlyKernelsAsEntryPoints)});
   } else {
     Expected<SmallVector<SplitModule, 0>> SplitModulesOrErr =
-        splitDeviceCode(std::move(LinkedModule), LinkedFile, SplitMode,
-                        EmitOnlyKernelsAsEntryPoints, Args);
+        splitDeviceCode(std::move(Result.LinkedModule), Result.BitcodeFile,
+                        SplitMode, EmitOnlyKernelsAsEntryPoints, Args);
     if (!SplitModulesOrErr)
       return SplitModulesOrErr.takeError();
 
@@ -708,8 +708,8 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
     StringRef Stem = OutputFile.rsplit('.').first;
     std::string CodeGenFile = (Stem + "_" + Twine(I) + OutputFileNameExt).str();
 
-    if (Error Err = runCodeGen(SplitModules[I].ModuleFilePath, ResolvedTriple,
-                               Args, CodeGenFile, C))
+    if (Error Err = runCodeGen(SplitModules[I].ModuleFilePath,
+                               Result.TargetTriple, Args, CodeGenFile, C))
       return Err;
 
     SplitModules[I].ModuleFilePath = CodeGenFile;
@@ -735,7 +735,8 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
     OffloadingImage TheImage{};
     TheImage.TheImageKind = IsAOTCompileNeeded ? IMG_Object : IMG_SPIRV;
     TheImage.TheOffloadKind = OFK_SYCL;
-    TheImage.StringData["triple"] = Args.MakeArgString(ResolvedTriple.str());
+    TheImage.StringData["triple"] =
+        Args.MakeArgString(Result.TargetTriple.str());
     TheImage.StringData["arch"] =
         Args.MakeArgString(Args.getLastArgValue(OPT_arch_EQ));
     TheImage.StringData["symbols"] = SI.Symbols;
