@@ -12,7 +12,8 @@ emitc.class @modelClass {
   }
 }
 
-// CHECK-LABEL: struct modelClass {
+// CHECK-LABEL: class modelClass {
+// CHECK-NEXT:    public:
 // CHECK-NEXT:    float fieldName0[1];
 // CHECK-NEXT:    float fieldName1[1];
 // CHECK-NEXT:    void execute() {
@@ -33,7 +34,8 @@ emitc.class final @finalClass {
   }
 }
 
-// CHECK-LABEL: struct finalClass final {
+// CHECK-LABEL: class finalClass final {
+// CHECK-NEXT:    public:
 // CHECK-NEXT:    float fieldName0[1];
 // CHECK-NEXT:    float fieldName1[1];
 // CHECK-NEXT:    void execute() {
@@ -50,7 +52,8 @@ emitc.class @mainClass {
   }
 }
 
-// CHECK-LABEL: struct mainClass {
+// CHECK-LABEL: class mainClass {
+// CHECK-NEXT:    public:
 // CHECK-NEXT:    float fieldName0[2] = {0.0e+00f, 0.0e+00f};
 // CHECK-NEXT:    void get_fieldName0() {
 // CHECK-NEXT:     return;
@@ -65,10 +68,33 @@ emitc.class @reflectionClass {
   }
 }
 
-// CHECK-LABEL: struct reflectionClass {
+// CHECK-LABEL: class reflectionClass {
+// CHECK-NEXT:    public:
 // CHECK-NEXT:    const std::map<std::string, std::string> reflectionMap = { { "another_feature", "fieldName0" } };
 // CHECK-NEXT:    void get_reflectionMap() {
 // CHECK-NEXT:     return;
 // CHECK-NEXT:    }
+// CHECK-NEXT:  };
+
+// struct does not emit a public: section.
+emitc.class struct @structClass {
+  emitc.field @x : i32
+  emitc.field @y : i32
+}
+
+// CHECK-LABEL: struct structClass {
+// CHECK-NEXT:    int32_t x;
+// CHECK-NEXT:    int32_t y;
+// CHECK-NEXT:  };
+
+// union does not emit a public: section.
+emitc.class union @unionClass {
+  emitc.field @asInt : i32
+  emitc.field @asFloat : f32
+}
+
+// CHECK-LABEL: union unionClass {
+// CHECK-NEXT:    int32_t asInt;
+// CHECK-NEXT:    float asFloat;
 // CHECK-NEXT:  };
 

@@ -1225,11 +1225,15 @@ static LogicalResult printOperation(CppEmitter &emitter, ModuleOp moduleOp) {
 
 static LogicalResult printOperation(CppEmitter &emitter, ClassOp classOp) {
   raw_indented_ostream &os = emitter.ostream();
-  os << "struct " << classOp.getSymName();
+  ClassType classType = classOp.getClassType();
+  os << stringifyClassType(classType) << " " << classOp.getSymName();
   if (classOp.getFinalSpecifier())
     os << " final";
   os << " {\n";
   os.indent();
+
+  if (classType == ClassType::class_)
+    os << "public:\n";
 
   for (Operation &op : classOp) {
     if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/false)))
