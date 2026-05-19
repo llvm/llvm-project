@@ -2483,7 +2483,7 @@ _mm_mul_epu32(__m128i __a, __m128i __b) {
 ///    differences between both operands.
 static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_sad_epu8(__m128i __a, __m128i __b) {
-  return __builtin_ia32_psadbw128((__v16qi)__a, (__v16qi)__b);
+  return __builtin_ia32_psadbw128((__v16qu)__a, (__v16qu)__b);
 }
 
 /// Subtracts the corresponding 8-bit integer values in the operands.
