@@ -258,6 +258,10 @@ LLVM_ABI ArrayRef<EnumEntry<StaticBorderColor>> getStaticBorderColors();
 
 LLVM_ABI PartType parsePartType(StringRef S);
 
+bool isDebugProgramPart(PartType PT);
+
+const char *getProgramPartName(bool IsDebug);
+
 struct VertexPSVInfo {
   uint8_t OutputPositionPresent;
   uint8_t Unused[3];
@@ -804,6 +808,19 @@ enum class RootSignatureVersion {
   V1_1 = 0x2,
   V1_2 = 0x3,
 };
+
+struct DebugNameHeader {
+  uint16_t Flags;
+  /// Debug file name length, without null terminator.
+  uint16_t NameLength;
+
+  void swapBytes() {
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(NameLength);
+  }
+};
+
+static_assert(sizeof(DebugNameHeader) == 4, "DebugNameHeader size incorrect.");
 
 } // namespace dxbc
 } // namespace llvm

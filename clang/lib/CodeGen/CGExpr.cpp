@@ -182,7 +182,7 @@ RawAddress CodeGenFunction::CreateDefaultAlignTempAlloca(llvm::Type *Ty,
                                                          const Twine &Name) {
   CharUnits Align =
       CharUnits::fromQuantity(CGM.getDataLayout().getPrefTypeAlign(Ty));
-  return CreateTempAlloca(Ty, Align, Name);
+  return CreateTempAlloca(Ty, LangAS::Default, Align, Name);
 }
 
 RawAddress CodeGenFunction::CreateIRTempWithoutCast(QualType Ty,
@@ -200,8 +200,9 @@ RawAddress CodeGenFunction::CreateMemTemp(QualType Ty, const Twine &Name,
 RawAddress CodeGenFunction::CreateMemTemp(QualType Ty, CharUnits Align,
                                           const Twine &Name,
                                           RawAddress *Alloca) {
-  RawAddress Result = CreateTempAlloca(ConvertTypeForMem(Ty), Align, Name,
-                                       /*ArraySize=*/nullptr, Alloca);
+  RawAddress Result =
+      CreateTempAlloca(ConvertTypeForMem(Ty), Ty.getAddressSpace(), Align, Name,
+                       /*ArraySize=*/nullptr, Alloca);
 
   if (Ty->isConstantMatrixType()) {
     auto *ArrayTy = cast<llvm::ArrayType>(Result.getElementType());
@@ -499,7 +500,10 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
         // FIXME: Should we put the new global into a COMDAT?
         return RawAddress(C, GV->getValueType(), alignment);
       }
-    return CGF.CreateMemTemp(Ty, "ref.tmp", Alloca);
+    RawAddress Addr = CGF.CreateMemTempWithoutCast(Ty, "ref.tmp");
+    if (Alloca)
+      *Alloca = Addr;
+    return Addr;
   }
   case SD_Thread:
   case SD_Static:
@@ -1626,7 +1630,7 @@ RValue CodeGenFunction::GetUndefRValue(QualType Ty) {
   // identifiable address.  Just because the contents of the value are undefined
   // doesn't mean that the address can't be taken and compared.
   case TEK_Aggregate: {
-    Address DestPtr = CreateMemTemp(Ty, "undef.agg.tmp");
+    Address DestPtr = CreateMemTempWithoutCast(Ty, "undef.agg.tmp");
     return RValue::getAggregate(DestPtr);
   }
 
@@ -5966,7 +5970,7 @@ LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
     // make sure to emit the VLA size.
     EmitVariablyModifiedType(E->getType());
 
-  Address DeclPtr = CreateMemTemp(E->getType(), ".compoundliteral");
+  Address DeclPtr = CreateMemTempWithoutCast(E->getType(), ".compoundliteral");
   const Expr *InitExpr = E->getInitializer();
   LValue Result = MakeAddrLValue(DeclPtr, E->getType(), AlignmentSource::Decl);
 
