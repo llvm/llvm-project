@@ -587,9 +587,7 @@
 // CHECK-R28: "-target-feature" "+reserved-r28"
 // RUN: %clang -### --target=hexagon-unknown-elf %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK371 %s
-// CHECK371-NOT: "+reserved-r16"
-// CHECK371-NOT: "+reserved-r19"
-// CHECK371-NOT: "+reserved-r28"
+// CHECK371-NOT: "+reserved-r{{(1[6-9]|2[0-8])}}"
 
 // -----------------------------------------------------------------------------
 // mcabac

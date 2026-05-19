@@ -286,7 +286,10 @@ public:
   bool useHVX64BOps() const { return useHVXOps() && UseHVX64BOps; }
 
   bool hasMemNoShuf() const { return HasMemNoShuf; }
-  bool isRRegReserved(unsigned i) const { return ReservedR[i]; }
+  bool isRRegReserved(unsigned i) const {
+    assert(i >= 16 && i <= 28 && "Register index out of reservable range");
+    return ReservedR[i];
+  }
   bool usePredicatedCalls() const;
 
   bool noreturnStackElim() const { return NoreturnStackElim; }
