@@ -54,7 +54,7 @@ endfunction()
 #
 # This function must be called at the beginning of a runtime root CMakeLists.
 #
-# Argument COMPILERS is a ist of compiler binary file paths to track.
+# Argument is a ist of compiler binary file paths to track.
 #
 function(llvm_defer_compiler_dependency_tracking)
   set(COMPILERS ${ARGN})
