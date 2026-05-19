@@ -164,14 +164,16 @@ static bool haveNonAddressableEffectsConflict(
          const llvm::SmallPtrSetImpl<mlir::SideEffects::Resource *> &set2) {
         if (set1.empty() || set2.empty())
           return false;
-        for (const auto *r1 : set1)
-          for (const auto *r2 : set2)
+        for (const auto *r1 : set1) {
+          for (const auto *r2 : set2) {
             if (!r1->isDisjointFrom(r2)) {
               LLVM_DEBUG(llvm::dbgs()
                          << "resources " << r1->getName() << " and "
                          << r2->getName() << " are not disjoint\n");
               return true;
             }
+          }
+        }
         return false;
       };
   if (accessSameResource(reads1, others2) ||
@@ -298,10 +300,11 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) const {
   mlir::SmallVector<mlir::Value, 1> notToBeWrittenBeforeAssign;
 
   // 1) side effects in the elemental body - it isn't sufficient to just look
-  // for ordered elementals because we also cannot support out of order reads
+  // for ordered elementals because we also cannot support out of order reads.
+  // We can use mlir::getEffectsRecursively(), because the hlfir.elemental's
+  // MemAlloc effect will effectively be ignored below.
   std::optional<mlir::SmallVector<mlir::MemoryEffects::EffectInstance>>
-      elementalEffects = getEffectsBetween(
-          &elemental.getBody()->front(), elemental.getBody()->getTerminator());
+      elementalEffects = mlir::getEffectsRecursively(elemental);
   if (!elementalEffects) {
     LLVM_DEBUG(llvm::dbgs()
                << "operation with unknown effects inside elemental\n");
