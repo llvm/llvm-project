@@ -1411,9 +1411,7 @@ static bool checkTupleLikeDecomposition(Sema &S,
     BindingVD->getLexicalDeclContext()->addHiddenDecl(BindingVD);
 
     InitializedEntity Entity = InitializedEntity::InitializeBinding(BindingVD);
-    InitializationKind Kind =
-        E.get()->isPRValue() ? InitializationKind::CreateDirect(Loc, Loc, Loc)
-                             : InitializationKind::CreateCopy(Loc, Loc);
+    InitializationKind Kind = InitializationKind::CreateCopy(Loc, Loc);
     InitializationSequence Seq(S, Entity, Kind, Init);
     E = Seq.Perform(S, Entity, Kind, Init);
     if (E.isInvalid())
