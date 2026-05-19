@@ -147,9 +147,9 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
                          "VGPRCriticalLimit calculation method.\n");
     unsigned DynamicVGPRBlockSize = MFI.getDynamicVGPRBlockSize();
     unsigned Granule =
-        AMDGPU::IsaInfo::getVGPRAllocGranule(&ST, DynamicVGPRBlockSize);
+        AMDGPU::IsaInfo::getVGPRAllocGranule(ST, DynamicVGPRBlockSize);
     unsigned Addressable =
-        AMDGPU::IsaInfo::getAddressableNumVGPRs(&ST, DynamicVGPRBlockSize);
+        AMDGPU::IsaInfo::getAddressableNumVGPRs(ST, DynamicVGPRBlockSize);
     unsigned VGPRBudget = alignDown(Addressable / TargetOccupancy, Granule);
     VGPRBudget = std::max(VGPRBudget, Granule);
     VGPRCriticalLimit = std::min(VGPRBudget, VGPRExcessLimit);
@@ -2073,11 +2073,10 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
   // For dynamic VGPR mode, we don't want to waste any VGPR blocks.
   if (DAG.MFI.isDynamicVGPREnabled()) {
     unsigned BlocksBefore = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
-        &ST, DAG.MFI.getDynamicVGPRBlockSize(),
+        ST, DAG.MFI.getDynamicVGPRBlockSize(),
         PressureBefore.getVGPRNum(false));
     unsigned BlocksAfter = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
-        &ST, DAG.MFI.getDynamicVGPRBlockSize(),
-        PressureAfter.getVGPRNum(false));
+        ST, DAG.MFI.getDynamicVGPRBlockSize(), PressureAfter.getVGPRNum(false));
     if (BlocksAfter > BlocksBefore)
       return true;
   }

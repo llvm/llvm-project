@@ -5945,8 +5945,7 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
   if (Version.Major >= 10)
     NumSGPRs = MCConstantExpr::create(0, Ctx);
   else {
-    unsigned MaxAddressableNumSGPRs =
-        IsaInfo::getAddressableNumSGPRs(&getSTI());
+    unsigned MaxAddressableNumSGPRs = IsaInfo::getAddressableNumSGPRs(getSTI());
 
     if (NumSGPRs->evaluateAsAbsolute(EvaluatedSGPRs) && Version.Major >= 8 &&
         !Features.test(FeatureSGPRInitBug) &&
@@ -5984,9 +5983,9 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
 
   VGPRBlocks = GetNumGPRBlocks(
       NextFreeVGPR,
-      IsaInfo::getVGPREncodingGranule(&getSTI(), EnableWavefrontSize32));
+      IsaInfo::getVGPREncodingGranule(getSTI(), EnableWavefrontSize32));
   SGPRBlocks =
-      GetNumGPRBlocks(NumSGPRs, IsaInfo::getSGPREncodingGranule(&getSTI()));
+      GetNumGPRBlocks(NumSGPRs, IsaInfo::getSGPREncodingGranule(getSTI()));
 
   return false;
 }
@@ -6572,7 +6571,7 @@ bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
 
 bool AMDGPUAsmParser::ParseDirectiveAMDKernelCodeT() {
   AMDGPUMCKernelCodeT KernelCode;
-  KernelCode.initDefault(&getSTI(), getContext());
+  KernelCode.initDefault(getSTI(), getContext());
 
   while (true) {
     // Lex EndOfStatement.  This is in a while loop, because lexing a comment
@@ -6736,7 +6735,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPULDS() {
   if (getParser().parseComma())
     return true;
 
-  unsigned LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(&getSTI());
+  unsigned LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(getSTI());
 
   int64_t Size;
   SMLoc SizeLoc = getLoc();
