@@ -133,3 +133,32 @@ latch:
 exit:
   ret i32 %select.data
 }
+
+; Check that we do not crash when the backedge of a find-last-like reduction
+; phi is the phi itself (e.g. because a blend with a poison incoming was
+; simplified away).
+define i8 @findlast_blend_with_poison(i8 %e, i1 %c) {
+; CHECK-LABEL: define i8 @findlast_blend_with_poison(
+; CHECK-NOT:    vector.body
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %reduc = phi i8 [ %e, %entry ], [ %reduc.next, %loop.latch ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  br i1 %c, label %loop.latch, label %other
+
+other:
+  br label %loop.latch
+
+loop.latch:
+  %reduc.next = phi i8 [ poison, %other ], [ %reduc, %loop.header ]
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp ult i32 %iv.next, 7
+  br i1 %ec, label %loop.header, label %exit
+
+exit:
+  %fr = freeze i8 %reduc.next
+  ret i8 %fr
+}

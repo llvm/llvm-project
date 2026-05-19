@@ -1,7 +1,7 @@
 ; Check that Module splitting can trace through more complex call stacks
 ; involving several nested indirect calls.
 
-; RUN: llvm-split -split-by-category=module-id -S < %s -o %t
+; RUN: llvm-split -split-by-category=attribute --category-attribute=module-id -S < %s -o %t
 ; RUN: FileCheck %s -input-file=%t_0.ll --check-prefix CHECK0 \
 ; RUN:     --implicit-check-not @foo --implicit-check-not @kernel_A \
 ; RUN:     --implicit-check-not @kernel_B --implicit-check-not @baz

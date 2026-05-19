@@ -60,7 +60,7 @@ private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
   llvm::DenseMap<AnnotationTarget, EscapingTarget> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
-  llvm::DenseSet<const ParmVarDecl *> VerifiedLiftimeboundEscapes;
+  llvm::DenseSet<const Decl *> VerifiedLiftimeboundEscapes;
   const LoanPropagationAnalysis &LoanPropagation;
   const MovedLoansAnalysis &MovedLoans;
   const LiveOriginsAnalysis &LiveOrigins;
@@ -103,6 +103,7 @@ public:
     suggestAnnotations();
     reportNoescapeViolations();
     reportLifetimeboundViolations();
+    reportMisplacedLifetimebound();
     //  Annotation inference is currently guarded by a frontend flag. In the
     //  future, this might be replaced by a design that differentiates between
     //  explicit and inferred findings with separate warning groups.
@@ -147,9 +148,10 @@ public:
       // field!
     };
     auto CheckImplicitThis = [&](const CXXMethodDecl *MD) {
-      if (!implicitObjectParamIsLifetimeBound(MD))
-        if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
-          AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
+      if (implicitObjectParamIsLifetimeBound(MD))
+        VerifiedLiftimeboundEscapes.insert(MD);
+      else if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
+        AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
     };
     auto MovedAtEscape = MovedLoans.getMovedLoans(OEF);
     for (LoanID LID : EscapedLoans) {
@@ -277,8 +279,20 @@ public:
               SemaHelper->reportInvalidatedField(InvalidatedPVD,
                                                  FieldEscape->getFieldDecl(),
                                                  Warning.InvalidatedByExpr);
-          } else if (isa<GlobalEscapeFact>(OEF)) {
-            // FIXME: Diagnose invalidated global escapes separately.
+          } else if (const auto *GlobalEscape =
+                         dyn_cast<GlobalEscapeFact>(OEF)) {
+            // Invalidated object escapes to global or static storage.
+            if (IssueExpr)
+              // Invalidated object on stack escapes to global or static
+              // storage.
+              SemaHelper->reportInvalidatedGlobal(IssueExpr,
+                                                  GlobalEscape->getGlobal(),
+                                                  Warning.InvalidatedByExpr);
+            else if (InvalidatedPVD)
+              // Invalidated parameter escapes to global or static storage.
+              SemaHelper->reportInvalidatedGlobal(InvalidatedPVD,
+                                                  GlobalEscape->getGlobal(),
+                                                  Warning.InvalidatedByExpr);
           } else if (isa<ReturnEscapeFact>(OEF)) {
             // FIXME: Diagnose invalidated return escapes separately.
           } else
@@ -300,6 +314,43 @@ public:
       } else
         llvm_unreachable("Unhandled CausingFact type");
     }
+  }
+
+  std::pair<const FunctionDecl *, WarningScope>
+  getCanonicalFunctionDeclForAttr(const FunctionDecl *FDef) {
+    if (!FDef)
+      return {nullptr, WarningScope::IntraTU};
+
+    assert(FDef->isThisDeclarationADefinition() &&
+           "Expected FunctionDecl to be a definition");
+
+    const auto &SM = FDef->getASTContext().getSourceManager();
+    const FileID DefFile =
+        SM.getFileID(SM.getExpansionLoc(FDef->getLocation()));
+    const FunctionDecl *CanonicalDecl = FDef->getCanonicalDecl();
+    WarningScope Scope = WarningScope::IntraTU;
+
+    Scope = SM.getFileID(SM.getExpansionLoc(CanonicalDecl->getLocation())) !=
+                    DefFile
+                ? WarningScope::CrossTU
+                : WarningScope::IntraTU;
+
+    return {CanonicalDecl, Scope};
+  }
+
+  std::pair<const CXXMethodDecl *, WarningScope>
+  getCanonicalDeclForAttr(const CXXMethodDecl *MDef) {
+    auto [CanonicalFDecl, Scope] = getCanonicalFunctionDeclForAttr(MDef);
+    return {cast_or_null<CXXMethodDecl>(CanonicalFDecl), Scope};
+  }
+
+  std::pair<const ParmVarDecl *, WarningScope>
+  getCanonicalDeclForAttr(const FunctionDecl *FDef, const ParmVarDecl *PVDDef) {
+    auto [CanonicalFDecl, Scope] = getCanonicalFunctionDeclForAttr(FDef);
+    if (!CanonicalFDecl)
+      return {nullptr, Scope};
+    return {CanonicalFDecl->getParamDecl(PVDDef->getFunctionScopeIndex()),
+            Scope};
   }
 
   /// Returns the declaration of a function that is visible across translation
@@ -332,11 +383,11 @@ public:
 
     if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
       SemaHelper->suggestLifetimeboundToParmVar(
-          SuggestionScope::CrossTU,
+          WarningScope::CrossTU,
           CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()),
           EscapeTarget);
     else
-      SemaHelper->suggestLifetimeboundToParmVar(SuggestionScope::IntraTU, PVD,
+      SemaHelper->suggestLifetimeboundToParmVar(WarningScope::IntraTU, PVD,
                                                 EscapeTarget);
   }
 
@@ -346,11 +397,10 @@ public:
                                   const Expr *EscapeExpr) {
     if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*MD, SM))
       SemaHelper->suggestLifetimeboundToImplicitThis(
-          SuggestionScope::CrossTU, cast<CXXMethodDecl>(CrossTUDecl),
-          EscapeExpr);
+          WarningScope::CrossTU, cast<CXXMethodDecl>(CrossTUDecl), EscapeExpr);
     else
-      SemaHelper->suggestLifetimeboundToImplicitThis(SuggestionScope::IntraTU,
-                                                     MD, EscapeExpr);
+      SemaHelper->suggestLifetimeboundToImplicitThis(WarningScope::IntraTU, MD,
+                                                     EscapeExpr);
   }
 
   void suggestAnnotations() {
@@ -385,6 +435,10 @@ public:
   void reportLifetimeboundViolations() {
     if (!isa<FunctionDecl>(FD))
       return;
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+        MD && getImplicitObjectParamLifetimeBoundAttr(MD) &&
+        !VerifiedLiftimeboundEscapes.contains(MD))
+      SemaHelper->reportLifetimeboundViolation(MD);
     for (const ParmVarDecl *PVD : cast<FunctionDecl>(FD)->parameters()) {
       if (!PVD->hasAttr<LifetimeBoundAttr>())
         continue;
@@ -395,6 +449,32 @@ public:
              "should escape through return");
       if (!isImplicit && !Escapes)
         SemaHelper->reportLifetimeboundViolation(PVD);
+    }
+  }
+
+  // Reports lifetimebound attributes that are placed on a function definition
+  // but not on the corresponding declaration.
+  void reportMisplacedLifetimebound() {
+    const FunctionDecl *FDef = dyn_cast<FunctionDecl>(FD);
+    if (!FDef)
+      return;
+    // Check if implicit 'this' has lifetimebound on definition but not on
+    // declaration.
+    if (const auto *MDef = dyn_cast<CXXMethodDecl>(FDef);
+        MDef && getDirectImplicitObjectLifetimeBoundAttr(MDef))
+      if (auto [MDecl, Scope] = getCanonicalDeclForAttr(MDef);
+          MDecl && !getDirectImplicitObjectLifetimeBoundAttr(MDecl))
+        SemaHelper->reportMisplacedLifetimebound(Scope, MDef, MDecl);
+
+    // Check each parameter for explicit lifetimebound on definition but not on
+    // declaration.
+    for (const auto *PDef : FDef->parameters()) {
+      const auto *Attr = PDef->getAttr<LifetimeBoundAttr>();
+      if (!Attr || Attr->isImplicit())
+        continue;
+      if (auto [PDecl, Scope] = getCanonicalDeclForAttr(FDef, PDef);
+          PDecl && !PDecl->hasAttr<LifetimeBoundAttr>())
+        SemaHelper->reportMisplacedLifetimebound(Scope, PDef, PDecl);
     }
   }
 
