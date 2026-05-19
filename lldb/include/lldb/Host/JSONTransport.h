@@ -259,9 +259,10 @@ private:
       if (!m_buffer.empty())
         handler.OnError(llvm::make_error<TransportUnhandledContentsError>(
             std::string(m_buffer.str())));
-      // Remove the read handle from the MainLoop before notifying the handler,
-      // because OnClosed may destroy this transport (and the handler).
-      m_read_handle.reset();
+      // Move the read handle to a local before notifying the handler. The
+      // handler may destroy this transport (e.g. by erasing it from a
+      // connection map), so accessing members after OnClosed() is unsafe.
+      auto read_handle = std::move(m_read_handle);
       handler.OnClosed();
     }
   }
