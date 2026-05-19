@@ -89,13 +89,6 @@ static bool isValidFlags(std::underlying_type_t<FlagT> V) {
   return V < NextPowerOf2(LargestValue);
 }
 
-template <typename EnumT>
-static bool isValidEnumValue(std::underlying_type_t<EnumT> V) {
-  decltype(V) LargestValue =
-      llvm::to_underlying(EnumT::LLVM_BITMASK_LARGEST_ENUMERATOR);
-  return V <= LargestValue;
-}
-
 bool llvm::dxbc::isValidRootDesciptorFlags(uint32_t V) {
   return isValidFlags<dxbc::RootDescriptorFlags>(V);
 }
