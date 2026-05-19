@@ -57,7 +57,7 @@ C/C++ Language Potentially Breaking Changes
       while (({ break; true; })) {}
     }
 
-    // Error: can't break out of the 'for' loop from within its increment.
+    // Error: can't break out of the 'for' loop from within its own increment.
     for (;;({ while (({ break; true; })) {} })) {}
 
   This also resolves a divergence from GCC: in a construct such as
@@ -69,7 +69,7 @@ C/C++ Language Potentially Breaking Changes
     }
 
   Clang would previously ``break`` out of the ``while`` loop, whereas GCC (since version 9) would
-  ``break`` out of the ``for`` loop here.
+  ``break`` out of the ``for`` loop here. Now, Clang and GCC both break out of the ``for`` loop.
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
