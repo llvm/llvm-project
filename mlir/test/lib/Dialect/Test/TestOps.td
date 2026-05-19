@@ -3969,6 +3969,26 @@ def TestTransparentCastAlias : TEST_Op<"transparent_cast_alias",
   let assemblyFormat = "$source attr-dict `:` functional-type($source, $result)";
 }
 
+// Transparent alias of a memref slot exposing two simultaneously-usable
+// aliases of the same bit-width at different signednesses (signed and
+// unsigned 32-bit integers, both aliasing the signless i32 storage).
+// Exercises mem2reg's handling of an aliaser whose
+// `getPromotableSlotAliases` returns more than one entry for a single
+// aliased operand.
+def TestTransparentDualAlias : TEST_Op<"transparent_dual_alias",
+    [DeclareOpInterfaceMethods<PromotableOpInterface,
+                               ["canUsesBeRemoved",
+                                "removeBlockingUses"]>,
+     DeclareOpInterfaceMethods<PromotableAliaserInterface,
+                               ["getPromotableSlotAliases",
+                                "projectSlotValueToAliasValue",
+                                "projectAliasValueToSlotValue"]>]> {
+  let arguments = (ins MemRefOf<[I32]>:$source);
+  let results = (outs MemRefOf<[SI32]>:$result_signed,
+                      MemRefOf<[UI32]>:$result_unsigned);
+  let assemblyFormat = "$source attr-dict `:` functional-type($source, results)";
+}
+
 //===----------------------------------------------------------------------===//
 // Test allocation Ops
 //===----------------------------------------------------------------------===//

@@ -291,3 +291,30 @@ func.func @promotable_through_alias_across_regions(%cond: i1, %a: i32) {
   }
   return
 }
+
+// -----
+
+// Dual-alias case: a single aliaser op exposes two simultaneously usable
+// aliases of the same parent slot (signless i32) at different signednesses
+// (signed and unsigned i32). `getPromotableSlotAliases` populates two
+// entries for that operand, both of which end up in the alias map. The
+// store reaches the slot through the signed alias and the load reaches it
+// through the unsigned alias.
+
+// CHECK-LABEL: func.func @promotable_through_dual_alias
+// CHECK-SAME: (%[[A:.*]]: si32) -> ui32
+// CHECK-NOT: memref.alloca
+// CHECK-NOT: test.transparent_dual_alias
+// CHECK-NOT: memref.store
+// CHECK-NOT: memref.load
+// CHECK: %[[A_I32:.*]] = builtin.unrealized_conversion_cast %[[A]] : si32 to i32
+// CHECK: %[[A_UI32:.*]] = builtin.unrealized_conversion_cast %[[A_I32]] : i32 to ui32
+// CHECK: return %[[A_UI32]] : ui32
+func.func @promotable_through_dual_alias(%a: si32) -> ui32 {
+  %slot = memref.alloca() : memref<i32>
+  %signed, %unsigned = test.transparent_dual_alias %slot
+    : (memref<i32>) -> (memref<si32>, memref<ui32>)
+  memref.store %a, %signed[] : memref<si32>
+  %v = memref.load %unsigned[] : memref<ui32>
+  return %v : ui32
+}
