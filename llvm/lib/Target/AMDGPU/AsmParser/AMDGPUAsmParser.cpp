@@ -86,6 +86,7 @@ public:
     bool hasFPModifiers() const { return Abs || Neg; }
     bool hasIntModifiers() const { return Sext; }
     bool hasModifiers() const { return hasFPModifiers() || hasIntModifiers(); }
+    bool isForcedLit() const { return Lit == LitModifier::Lit; }
     bool isForcedLit64() const { return Lit == LitModifier::Lit64; }
 
     int64_t getFPModifiersOperand() const {
@@ -1051,6 +1052,10 @@ public:
 
   bool hasIntModifiers() const {
     return getModifiers().hasIntModifiers();
+  }
+
+  bool isForcedLit() const {
+    return isImmLiteral() && getModifiers().isForcedLit();
   }
 
   bool isForcedLit64() const {
@@ -3989,7 +3994,7 @@ AMDGPUAsmParser::checkVOPDRegBankConstraints(const MCInst &Inst, bool AsVOPD3) {
       Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx13 ||
       Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx1250 ||
       Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx13;
-  bool AllowSameVGPR = isGFX1250Plus();
+  bool AllowSameVGPR = isGFX12Plus();
 
   if (AsVOPD3) { // Literal constants are not allowed with VOPD3.
     for (auto OpName : {OpName::src0X, OpName::src0Y}) {
@@ -5133,11 +5138,12 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
       Imm = getLitValue(MO.getExpr());
 
     bool IsAnotherLiteral = false;
+    bool IsForcedLit = findMCOperand(Operands, OpIdx).isForcedLit();
     bool IsForcedLit64 = findMCOperand(Operands, OpIdx).isForcedLit64();
     if (!Imm.has_value()) {
       // Literal value not known, so we conservately assume it's different.
       IsAnotherLiteral = true;
-    } else if (IsForcedLit64 || !isInlineConstant(Inst, OpIdx)) {
+    } else if (IsForcedLit || IsForcedLit64 || !isInlineConstant(Inst, OpIdx)) {
       uint64_t Value = *Imm;
       bool IsForcedFP64 =
           Desc.operands()[OpIdx].OperandType == AMDGPU::OPERAND_KIMM64 ||
@@ -5145,7 +5151,8 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
            HasMandatoryLiteral);
       bool IsFP64 = (IsForcedFP64 || AMDGPU::isSISrcFPOperand(Desc, OpIdx)) &&
                     AMDGPU::getOperandSize(Desc.operands()[OpIdx]) == 8;
-      bool IsValid32Op = AMDGPU::isValid32BitLiteral(Value, IsFP64);
+      bool IsValid32Op =
+          IsForcedLit || AMDGPU::isValid32BitLiteral(Value, IsFP64);
 
       if (((!IsValid32Op && !isInt<32>(Value) && !isUInt<32>(Value) &&
             !IsForcedFP64) ||

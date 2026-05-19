@@ -641,6 +641,44 @@ cir.func @test_goto_within_nested_cleanup() {
 // CHECK:       ^[[OUTER_DONE]]:
 // CHECK:         cir.return
 
+// Test that a single goto out of a cleanup scope branches through the
+// cleanup before transferring control to its target label. After the cleanup
+// body branches to cleanup entry, the cleanup runs and then a goto with the
+// same target label is emitted in the cleanup continuation block.
+cir.func @test_goto_out_of_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.goto "exit"
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.br ^bb1
+^bb1:
+  cir.label "exit"
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_goto_out_of_cleanup()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+// CHECK:       ^[[BODY]]:
+// CHECK:         cir.call @doSomething(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CLEANUP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP_EXIT]]:
+// CHECK:         cir.goto "exit"
+// CHECK:       ^[[UNREACHABLE_FALLTHROUGH:bb[0-9]+]]:
+// CHECK:         cir.br ^[[LABEL_BB:bb[0-9]+]]
+// CHECK:       ^[[LABEL_BB]]:
+// CHECK:         cir.label "exit"
+// CHECK:         cir.return
+
 cir.func private @get() -> !s32i
 cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
 cir.func private @dtor(!cir.ptr<!rec_SomeClass>)

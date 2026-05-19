@@ -1999,10 +1999,29 @@ LValue CIRGenFunction::emitMaterializeTemporaryExpr(
   // Perform derived-to-base casts and/or field accesses, to get from the
   // temporary object we created (and, potentially, for which we extended
   // the lifetime) to the subobject we're binding the reference to.
-  if (!adjustments.empty()) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitMaterializeTemporaryExpr: Adjustments");
-    return {};
+  for (SubobjectAdjustment &adjustment : llvm::reverse(adjustments)) {
+    switch (adjustment.Kind) {
+    case SubobjectAdjustment::DerivedToBaseAdjustment:
+      object =
+          getAddressOfBaseClass(object, adjustment.DerivedToBase.DerivedClass,
+                                adjustment.DerivedToBase.BasePath->path(),
+                                /*nullCheckValue=*/false, e->getExprLoc());
+      break;
+    case SubobjectAdjustment::FieldAdjustment: {
+      LValue lv = makeAddrLValue(object, e->getType(), AlignmentSource::Decl);
+      lv = emitLValueForField(lv, adjustment.Field);
+      assert(lv.isSimple() &&
+             "materialized temporary field is not a simple lvalue");
+      object = lv.getAddress();
+      break;
+    }
+    case SubobjectAdjustment::MemberPointerAdjustment: {
+      mlir::Value ptr = emitScalarExpr(adjustment.Ptr.RHS);
+      object = emitCXXMemberDataPointerAddress(
+          e, object, ptr, adjustment.Ptr.MPT, /*baseInfo=*/nullptr);
+      break;
+    }
+    }
   }
 
   return makeAddrLValue(object, m->getType(), AlignmentSource::Decl);

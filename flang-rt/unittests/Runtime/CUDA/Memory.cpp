@@ -160,3 +160,147 @@ TEST(MemoryCUFTest, CUFDataTransferDescDescStrided) {
     EXPECT_EQ(recvStorage[i * stride + 1], -2);
   }
 }
+
+TEST(MemoryCUFTest, CUFDataTransferDescDescLeadingSliceRank2) {
+  using Fortran::common::TypeCategory;
+  static constexpr int nx{8};
+  static constexpr int ny{4};
+  static constexpr int elements{nx * ny};
+  SubscriptValue sliceExtent[]{nx - 2, ny};
+
+  std::int32_t hostStorage[elements]{};
+  for (int j{0}; j < ny; ++j) {
+    for (int i{1}; i < nx - 1; ++i) {
+      hostStorage[i + nx * j] = i + 10 * j;
+    }
+  }
+
+  std::int32_t *devStorage{static_cast<std::int32_t *>(RTNAME(CUFMemAlloc)(
+      sizeof(hostStorage), kMemTypeDevice, __FILE__, __LINE__))};
+  ASSERT_NE(devStorage, nullptr);
+  cudaMemset(devStorage, 0xff, sizeof(hostStorage));
+
+  StaticDescriptor<2> hostStaticDesc;
+  Descriptor &hostDesc{hostStaticDesc.descriptor()};
+  hostDesc.Establish(TypeCode{TypeCategory::Integer, 4}, sizeof(std::int32_t),
+      hostStorage + 1, 2, sliceExtent);
+  hostDesc.GetDimension(0).SetByteStride(sizeof(std::int32_t));
+  hostDesc.GetDimension(1).SetByteStride(nx * sizeof(std::int32_t));
+
+  StaticDescriptor<2> devStaticDesc;
+  Descriptor &devDesc{devStaticDesc.descriptor()};
+  devDesc.Establish(TypeCode{TypeCategory::Integer, 4}, sizeof(std::int32_t),
+      devStorage + 1, 2, sliceExtent);
+  devDesc.GetDimension(0).SetByteStride(sizeof(std::int32_t));
+  devDesc.GetDimension(1).SetByteStride(nx * sizeof(std::int32_t));
+
+  RTNAME(CUFDataTransferDescDesc)
+  (&devDesc, &hostDesc, kHostToDevice, __FILE__, __LINE__);
+
+  std::int32_t result[elements]{};
+  RTNAME(CUFDataTransferPtrPtr)
+  (result, devStorage, sizeof(result), kDeviceToHost, __FILE__, __LINE__);
+
+  std::int32_t recvStorage[elements]{};
+  for (int i{0}; i < elements; ++i) {
+    recvStorage[i] = -2;
+  }
+  StaticDescriptor<2> recvStaticDesc;
+  Descriptor &recvDesc{recvStaticDesc.descriptor()};
+  recvDesc.Establish(TypeCode{TypeCategory::Integer, 4}, sizeof(std::int32_t),
+      recvStorage + 1, 2, sliceExtent);
+  recvDesc.GetDimension(0).SetByteStride(sizeof(std::int32_t));
+  recvDesc.GetDimension(1).SetByteStride(nx * sizeof(std::int32_t));
+  RTNAME(CUFDataTransferDescDesc)
+  (&recvDesc, &devDesc, kDeviceToHost, __FILE__, __LINE__);
+
+  RTNAME(CUFMemFree)(devStorage, kMemTypeDevice, __FILE__, __LINE__);
+
+  for (int j{0}; j < ny; ++j) {
+    EXPECT_EQ(result[nx * j], -1);
+    EXPECT_EQ(result[nx - 1 + nx * j], -1);
+    EXPECT_EQ(recvStorage[nx * j], -2);
+    EXPECT_EQ(recvStorage[nx - 1 + nx * j], -2);
+    for (int i{1}; i < nx - 1; ++i) {
+      const int index{i + nx * j};
+      EXPECT_EQ(result[index], hostStorage[index]);
+      EXPECT_EQ(recvStorage[index], hostStorage[index]);
+    }
+  }
+}
+
+TEST(MemoryCUFTest, CUFDataTransferDescDescLeadingSlice) {
+  using Fortran::common::TypeCategory;
+  static constexpr int nx{8};
+  static constexpr int ny{4};
+  static constexpr int nz{3};
+  static constexpr int elements{nx * ny * nz};
+  SubscriptValue sliceExtent[]{nx - 2, ny, nz};
+
+  std::int32_t hostStorage[elements]{};
+  for (int k{0}; k < nz; ++k) {
+    for (int j{0}; j < ny; ++j) {
+      for (int i{1}; i < nx - 1; ++i) {
+        hostStorage[i + nx * (j + ny * k)] = i + 10 * j + 100 * k;
+      }
+    }
+  }
+
+  std::int32_t *devStorage{static_cast<std::int32_t *>(RTNAME(CUFMemAlloc)(
+      sizeof(hostStorage), kMemTypeDevice, __FILE__, __LINE__))};
+  ASSERT_NE(devStorage, nullptr);
+  cudaMemset(devStorage, 0xff, sizeof(hostStorage));
+
+  StaticDescriptor<3> hostStaticDesc;
+  Descriptor &hostDesc{hostStaticDesc.descriptor()};
+  hostDesc.Establish(TypeCode{TypeCategory::Integer, 4}, sizeof(std::int32_t),
+      hostStorage + 1, 3, sliceExtent);
+  hostDesc.GetDimension(0).SetByteStride(sizeof(std::int32_t));
+  hostDesc.GetDimension(1).SetByteStride(nx * sizeof(std::int32_t));
+  hostDesc.GetDimension(2).SetByteStride(nx * ny * sizeof(std::int32_t));
+
+  StaticDescriptor<3> devStaticDesc;
+  Descriptor &devDesc{devStaticDesc.descriptor()};
+  devDesc.Establish(TypeCode{TypeCategory::Integer, 4}, sizeof(std::int32_t),
+      devStorage + 1, 3, sliceExtent);
+  devDesc.GetDimension(0).SetByteStride(sizeof(std::int32_t));
+  devDesc.GetDimension(1).SetByteStride(nx * sizeof(std::int32_t));
+  devDesc.GetDimension(2).SetByteStride(nx * ny * sizeof(std::int32_t));
+
+  RTNAME(CUFDataTransferDescDesc)
+  (&devDesc, &hostDesc, kHostToDevice, __FILE__, __LINE__);
+
+  std::int32_t result[elements]{};
+  RTNAME(CUFDataTransferPtrPtr)
+  (result, devStorage, sizeof(result), kDeviceToHost, __FILE__, __LINE__);
+
+  std::int32_t recvStorage[elements]{};
+  for (int i{0}; i < elements; ++i) {
+    recvStorage[i] = -2;
+  }
+  StaticDescriptor<3> recvStaticDesc;
+  Descriptor &recvDesc{recvStaticDesc.descriptor()};
+  recvDesc.Establish(TypeCode{TypeCategory::Integer, 4}, sizeof(std::int32_t),
+      recvStorage + 1, 3, sliceExtent);
+  recvDesc.GetDimension(0).SetByteStride(sizeof(std::int32_t));
+  recvDesc.GetDimension(1).SetByteStride(nx * sizeof(std::int32_t));
+  recvDesc.GetDimension(2).SetByteStride(nx * ny * sizeof(std::int32_t));
+  RTNAME(CUFDataTransferDescDesc)
+  (&recvDesc, &devDesc, kDeviceToHost, __FILE__, __LINE__);
+
+  RTNAME(CUFMemFree)(devStorage, kMemTypeDevice, __FILE__, __LINE__);
+
+  for (int k{0}; k < nz; ++k) {
+    for (int j{0}; j < ny; ++j) {
+      EXPECT_EQ(result[nx * (j + ny * k)], -1);
+      EXPECT_EQ(result[nx - 1 + nx * (j + ny * k)], -1);
+      EXPECT_EQ(recvStorage[nx * (j + ny * k)], -2);
+      EXPECT_EQ(recvStorage[nx - 1 + nx * (j + ny * k)], -2);
+      for (int i{1}; i < nx - 1; ++i) {
+        const int index{i + nx * (j + ny * k)};
+        EXPECT_EQ(result[index], hostStorage[index]);
+        EXPECT_EQ(recvStorage[index], hostStorage[index]);
+      }
+    }
+  }
+}

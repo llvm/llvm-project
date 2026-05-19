@@ -472,6 +472,7 @@ namespace {
     SDValue visitSHLSAT(SDNode *N);
     SDValue visitRotate(SDNode *N);
     SDValue visitABS(SDNode *N);
+    SDValue visitABS_MIN_POISON(SDNode *N);
     SDValue visitCLMUL(SDNode *N);
     SDValue visitBSWAP(SDNode *N);
     SDValue visitBITREVERSE(SDNode *N);
@@ -1991,6 +1992,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::SSHLSAT:
   case ISD::USHLSAT:            return visitSHLSAT(N);
   case ISD::ABS:                return visitABS(N);
+  case ISD::ABS_MIN_POISON:     return visitABS_MIN_POISON(N);
   case ISD::CLMUL:
   case ISD::CLMULR:
   case ISD::CLMULH:             return visitCLMUL(N);
@@ -4314,8 +4316,8 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     }
 
     // Convert 0 - abs(x).
-    if (N1.getOpcode() == ISD::ABS && N1.hasOneUse() &&
-        !TLI.isOperationLegalOrCustom(ISD::ABS, VT))
+    if (ISD::isAbsOpcode(N1.getOpcode()) && N1.hasOneUse() &&
+        !TLI.isOperationLegalOrCustom(N1.getOpcode(), VT))
       if (SDValue Result = TLI.expandABS(N1.getNode(), DAG, true))
         return Result;
 
@@ -12117,7 +12119,8 @@ SDValue DAGCombiner::visitABS(SDNode *N) {
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::ABS, DL, VT, {N0}))
     return C;
   // fold (abs (abs x)) -> (abs x)
-  if (N0.getOpcode() == ISD::ABS)
+  // fold (abs (abs_min_poison x)) -> (abs_min_poison x)
+  if (ISD::isAbsOpcode(N0.getOpcode()))
     return N0;
   // fold (abs x) -> x iff not-negative
   if (DAG.SignBitIsZero(N0))
@@ -12128,6 +12131,52 @@ SDValue DAGCombiner::visitABS(SDNode *N) {
 
   // fold (abs (sign_extend_inreg x)) -> (zero_extend (abs (truncate x)))
   // iff zero_extend/truncate are free.
+  if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG) {
+    EVT ExtVT = cast<VTSDNode>(N0.getOperand(1))->getVT();
+    if (TLI.isTruncateFree(VT, ExtVT) && TLI.isZExtFree(ExtVT, VT) &&
+        TLI.isTypeDesirableForOp(ISD::ABS, ExtVT) &&
+        hasOperation(ISD::ABS, ExtVT)) {
+      return DAG.getNode(
+          ISD::ZERO_EXTEND, DL, VT,
+          DAG.getNode(ISD::ABS, DL, ExtVT,
+                      DAG.getNode(ISD::TRUNCATE, DL, ExtVT, N0.getOperand(0))));
+    }
+  }
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitABS_MIN_POISON(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // fold (abs_min_poison c1) -> c2 (or poison if c1 == INT_MIN)
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::ABS_MIN_POISON, DL, VT, {N0}))
+    return C;
+  // fold (abs_min_poison (abs_min_poison x)) -> (abs_min_poison x)
+  // fold (abs_min_poison (abs x)) -> (abs x)
+  // fold (abs_min_poison (freeze (abs x))) -> (freeze (abs x))
+  // fold (abs_min_poison (freeze (abs_min_poison x))) ->
+  //   (freeze (abs_min_poison x))
+  //
+  // Freeze case is valid because: for x != INT_MIN both sides equal abs(x);
+  // for x == INT_MIN both forms produce a non-deterministic but well-defined
+  // value since freeze already consumed the poison.
+  if (ISD::isAbsOpcode(peekThroughFreeze(N0).getOpcode()))
+    return N0;
+  // fold (abs_min_poison x) -> x iff not-negative
+  if (DAG.SignBitIsZero(N0))
+    return N0;
+
+  if (SDValue ABD = foldABSToABD(N, DL))
+    return ABD;
+
+  // fold (abs_min_poison (sign_extend_inreg x)) ->
+  //   (zero_extend (abs (truncate x)))
+  // iff zero_extend/truncate are free. The sign_extend_inreg keeps the value
+  // in the narrow type's range, so the wide abs_min_poison is never actually
+  // poison.
   if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG) {
     EVT ExtVT = cast<VTSDNode>(N0.getOperand(1))->getVT();
     if (TLI.isTruncateFree(VT, ExtVT) && TLI.isZExtFree(ExtVT, VT) &&
@@ -15707,7 +15756,8 @@ static SDValue widenCtPop(SDNode *Extend, SelectionDAG &DAG, const SDLoc &DL) {
 }
 
 // If we have (zext (abs X)) where X is a type that will be promoted by type
-// legalization, convert to (abs (sext X)). But don't extend past a legal type.
+// legalization, convert to (abs_min_poison (sext X)). But do not extend
+// past a legal type.
 static SDValue widenAbs(SDNode *Extend, SelectionDAG &DAG) {
   assert(Extend->getOpcode() == ISD::ZERO_EXTEND && "Expected zero extend.");
 
@@ -15716,7 +15766,7 @@ static SDValue widenAbs(SDNode *Extend, SelectionDAG &DAG) {
     return SDValue();
 
   SDValue Abs = Extend->getOperand(0);
-  if (Abs.getOpcode() != ISD::ABS || !Abs.hasOneUse())
+  if (!ISD::isAbsOpcode(Abs.getOpcode()) || !Abs.hasOneUse())
     return SDValue();
 
   EVT AbsVT = Abs.getValueType();
@@ -15729,7 +15779,7 @@ static SDValue widenAbs(SDNode *Extend, SelectionDAG &DAG) {
 
   SDValue SExt =
       DAG.getNode(ISD::SIGN_EXTEND, SDLoc(Abs), LegalVT, Abs.getOperand(0));
-  SDValue NewAbs = DAG.getNode(ISD::ABS, SDLoc(Abs), LegalVT, SExt);
+  SDValue NewAbs = DAG.getNode(ISD::ABS_MIN_POISON, SDLoc(Abs), LegalVT, SExt);
   return DAG.getZExtOrTrunc(NewAbs, SDLoc(Extend), VT);
 }
 
