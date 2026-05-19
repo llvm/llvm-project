@@ -360,7 +360,8 @@ class SPIRVLegalizePointerCastImpl {
       GR->buildAssignPtr(B, ElemTy, ElementPtr);
 
       // Extract the element from the vector and store it.
-      Value *Element = makeExtractElement(B, ElemTy, SrcVector, I);
+      Value *Element =
+          E == 1 ? SrcVector : makeExtractElement(B, ElemTy, SrcVector, I);
       StoreInst *SI = B.CreateStore(Element, ElementPtr);
       SI->setAlignment(Alignment);
     }

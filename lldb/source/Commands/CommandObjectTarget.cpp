@@ -1042,8 +1042,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
     const size_t argc = command.GetArgumentCount();
     if (argc & 1) {
       result.AppendError("add requires an even number of arguments\n");
@@ -1058,7 +1057,7 @@ protected:
                     "pair: '%s' -> '%s'",
                     from, to);
           bool last_pair = ((argc - i) == 2);
-          target->GetImageSearchPathList().Append(
+          target.GetImageSearchPathList().Append(
               from, to, last_pair); // Notify if this is the last pair
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
         } else {
@@ -1087,10 +1086,9 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
     bool notify = true;
-    target->GetImageSearchPathList().Clear(notify);
+    target.GetImageSearchPathList().Clear(notify);
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 };
@@ -1148,7 +1146,6 @@ public:
       return;
 
     Target *target = m_exe_ctx.GetTargetPtr();
-
     const PathMappingList &list = target->GetImageSearchPathList();
     const size_t num = list.GetSize();
     ConstString old_path, new_path;
@@ -1163,8 +1160,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
     size_t argc = command.GetArgumentCount();
     // check for at least 3 arguments and an odd number of parameters
     if (argc >= 3 && argc & 1) {
@@ -1187,8 +1183,8 @@ protected:
 
         if (from[0] && to[0]) {
           bool last_pair = ((argc - i) == 2);
-          target->GetImageSearchPathList().Insert(from, to, insert_idx,
-                                                  last_pair);
+          target.GetImageSearchPathList().Insert(from, to, insert_idx,
+                                                 last_pair);
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
         } else {
           if (from[0])
@@ -1219,9 +1215,8 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
-    target->GetImageSearchPathList().Dump(&result.GetOutputStream());
+    Target &target = GetTarget();
+    target.GetImageSearchPathList().Dump(&result.GetOutputStream());
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 };
@@ -1242,8 +1237,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
     if (command.GetArgumentCount() != 1) {
       result.AppendError("query requires one argument\n");
       return;
@@ -1251,7 +1245,7 @@ protected:
 
     ConstString orig(command.GetArgumentAtIndex(0));
     ConstString transformed;
-    if (target->GetImageSearchPathList().RemapPath(orig, transformed))
+    if (target.GetImageSearchPathList().RemapPath(orig, transformed))
       result.GetOutputStream().Printf("%s\n", transformed.GetCString());
     else
       result.GetOutputStream().Printf("%s\n", orig.GetCString());
@@ -1920,13 +1914,13 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
+
     size_t num_dumped = 0;
     if (command.GetArgumentCount() == 0) {
       // Dump all headers for all modules images
       num_dumped = DumpModuleObjfileHeaders(result.GetOutputStream(),
-                                            target->GetImages());
+                                            target.GetImages());
       if (num_dumped == 0) {
         result.AppendError("the target has no associated executable images");
       }
@@ -1938,7 +1932,7 @@ protected:
            (arg_cstr = command.GetArgumentAtIndex(arg_idx)) != nullptr;
            ++arg_idx) {
         size_t num_matched =
-            FindModulesByName(target, arg_cstr, module_list, true);
+            FindModulesByName(&target, arg_cstr, module_list, true);
         if (num_matched == 0) {
           result.AppendWarningWithFormatv(
               "unable to find an image that matches '{0}'", arg_cstr);
@@ -2017,8 +2011,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
     uint32_t num_dumped = 0;
     Mangled::NamePreference name_preference =
         (m_options.m_prefer_mangled ? Mangled::ePreferMangled
@@ -2026,7 +2019,7 @@ protected:
 
     if (command.GetArgumentCount() == 0) {
       // Dump all sections for all modules images
-      const ModuleList &module_list = target->GetImages();
+      const ModuleList &module_list = target.GetImages();
       std::lock_guard<std::recursive_mutex> guard(module_list.GetMutex());
       const size_t num_modules = module_list.GetSize();
       if (num_modules > 0) {
@@ -2059,7 +2052,7 @@ protected:
            ++arg_idx) {
         ModuleList module_list;
         const size_t num_matches =
-            FindModulesByName(target, arg_cstr, module_list, true);
+            FindModulesByName(&target, arg_cstr, module_list, true);
         if (num_matches > 0) {
           for (ModuleSP module_sp : module_list.Modules()) {
             if (module_sp) {
@@ -2112,13 +2105,12 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
     uint32_t num_dumped = 0;
 
     if (command.GetArgumentCount() == 0) {
       // Dump all sections for all modules images
-      const size_t num_modules = target->GetImages().GetSize();
+      const size_t num_modules = target.GetImages().GetSize();
       if (num_modules == 0) {
         result.AppendError("the target has no associated executable images");
         return;
@@ -2135,7 +2127,7 @@ protected:
         num_dumped++;
         DumpModuleSections(
             m_interpreter, result.GetOutputStream(),
-            target->GetImages().GetModulePointerAtIndex(image_idx));
+            target.GetImages().GetModulePointerAtIndex(image_idx));
       }
     } else {
       // Dump specified images (by basename or fullpath)
@@ -2145,7 +2137,7 @@ protected:
            ++arg_idx) {
         ModuleList module_list;
         const size_t num_matches =
-            FindModulesByName(target, arg_cstr, module_list, true);
+            FindModulesByName(&target, arg_cstr, module_list, true);
         if (num_matches > 0) {
           for (size_t i = 0; i < num_matches; ++i) {
             if (INTERRUPT_REQUESTED(GetDebugger(),
@@ -2262,9 +2254,9 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
-    const ModuleList &module_list = target->GetImages();
+    Target &target = GetTarget();
+
+    const ModuleList &module_list = target.GetImages();
     const size_t num_modules = module_list.GetSize();
     if (num_modules == 0) {
       result.AppendError("the target has no associated executable images");
@@ -2292,7 +2284,7 @@ protected:
     for (const Args::ArgEntry &arg : command.entries()) {
       ModuleList module_list;
       const size_t num_matches =
-          FindModulesByName(target, arg.c_str(), module_list, true);
+          FindModulesByName(&target, arg.c_str(), module_list, true);
       if (num_matches == 0) {
         // Check the global list
         std::lock_guard<std::recursive_mutex> guard(
@@ -2337,13 +2329,12 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
     uint32_t num_dumped = 0;
 
     if (command.GetArgumentCount() == 0) {
       // Dump all sections for all modules images
-      const ModuleList &target_modules = target->GetImages();
+      const ModuleList &target_modules = target.GetImages();
       std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
       const size_t num_modules = target_modules.GetSize();
       if (num_modules == 0) {
@@ -2369,7 +2360,7 @@ protected:
            ++arg_idx) {
         ModuleList module_list;
         const size_t num_matches =
-            FindModulesByName(target, arg_cstr, module_list, true);
+            FindModulesByName(&target, arg_cstr, module_list, true);
         if (num_matches > 0) {
           for (size_t i = 0; i < num_matches; ++i) {
             if (INTERRUPT_REQUESTED(GetDebugger(), "Interrupted dumping {0} "
@@ -2560,14 +2551,13 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
     uint32_t num_dumped = 0;
 
     StructuredData::Array separate_debug_info_lists_by_module;
     if (command.GetArgumentCount() == 0) {
       // Dump all sections for all modules images
-      const ModuleList &target_modules = target->GetImages();
+      const ModuleList &target_modules = target.GetImages();
       std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
       const size_t num_modules = target_modules.GetSize();
       if (num_modules == 0) {
@@ -2596,7 +2586,7 @@ protected:
            ++arg_idx) {
         ModuleList module_list;
         const size_t num_matches =
-            FindModulesByName(target, arg_cstr, module_list, true);
+            FindModulesByName(&target, arg_cstr, module_list, true);
         if (num_matches > 0) {
           for (size_t i = 0; i < num_matches; ++i) {
             if (INTERRUPT_REQUESTED(GetDebugger(),
@@ -2751,8 +2741,7 @@ protected:
   OptionGroupFile m_symbol_file;
 
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
     bool flush = false;
 
     const size_t argc = args.GetArgumentCount();
@@ -2768,7 +2757,7 @@ protected:
         Status error;
         if (PluginManager::DownloadObjectAndSymbolFile(module_spec, error)) {
           ModuleSP module_sp(
-              target->GetOrCreateModule(module_spec, true /* notify */));
+              target.GetOrCreateModule(module_spec, true /* notify */));
           if (module_sp) {
             result.SetStatus(eReturnStatusSuccessFinishResult);
             return;
@@ -2825,10 +2814,10 @@ protected:
             module_spec.GetSymbolFileSpec() =
                 m_symbol_file.GetOptionValue().GetCurrentValue();
           if (!module_spec.GetArchitecture().IsValid())
-            module_spec.GetArchitecture() = target->GetArchitecture();
+            module_spec.GetArchitecture() = target.GetArchitecture();
           Status error;
-          ModuleSP module_sp(target->GetOrCreateModule(
-              module_spec, true /* notify */, &error));
+          ModuleSP module_sp(
+              target.GetOrCreateModule(module_spec, true /* notify */, &error));
           if (!module_sp) {
             const char *error_cstr = error.AsCString();
             if (error_cstr)
@@ -2857,7 +2846,7 @@ protected:
     }
 
     if (flush) {
-      ProcessSP process = target->GetProcessSP();
+      ProcessSP process = target.GetProcessSP();
       if (process)
         process->Flush();
     }
@@ -2902,8 +2891,7 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
     const bool load = m_load_option.GetOptionValue().GetCurrentValue();
     const bool set_pc = m_pc_option.GetOptionValue().GetCurrentValue();
 
@@ -2915,7 +2903,7 @@ protected:
     if (load) {
       if (!m_file_option.GetOptionValue().OptionWasSet() &&
           !m_uuid_option_group.GetOptionValue().OptionWasSet()) {
-        ModuleList &module_list = target->GetImages();
+        ModuleList &module_list = target.GetImages();
         if (module_list.GetSize() == 1) {
           search_using_module_spec = true;
           module_spec.GetFileSpec() =
@@ -2930,7 +2918,7 @@ protected:
       const bool use_global_module_list = true;
       ModuleList module_list;
       const size_t num_matches = FindModulesByName(
-          target, arg_cstr, module_list, use_global_module_list);
+          &target, arg_cstr, module_list, use_global_module_list);
       if (num_matches == 1) {
         module_spec.GetFileSpec() =
             module_list.GetModuleAtIndex(0)->GetFileSpec();
@@ -2953,7 +2941,7 @@ protected:
 
     if (search_using_module_spec) {
       ModuleList matching_modules;
-      target->GetImages().FindModules(module_spec, matching_modules);
+      target.GetImages().FindModules(module_spec, matching_modules);
       const size_t num_matches = matching_modules.GetSize();
 
       char path[PATH_MAX];
@@ -2970,7 +2958,7 @@ protected:
                   const addr_t slide =
                       m_slide_option.GetOptionValue().GetCurrentValue();
                   const bool slide_is_offset = true;
-                  module->SetLoadAddress(*target, slide, slide_is_offset,
+                  module->SetLoadAddress(target, slide, slide_is_offset,
                                          changed);
                 } else {
                   result.AppendError("one or more section name + load "
@@ -3002,8 +2990,8 @@ protected:
                               sect_name);
                           break;
                         } else {
-                          if (target->SetSectionLoadAddress(section_sp,
-                                                            load_addr))
+                          if (target.SetSectionLoadAddress(section_sp,
+                                                           load_addr))
                             changed = true;
                           result.AppendMessageWithFormatv(
                               "section '{0}' loaded at {1:x}", sect_name,
@@ -3034,13 +3022,13 @@ protected:
               }
 
               if (changed) {
-                target->ModulesDidLoad(matching_modules);
+                target.ModulesDidLoad(matching_modules);
                 Process *process = m_exe_ctx.GetProcessPtr();
                 if (process)
                   process->Flush();
               }
               if (load) {
-                ProcessSP process = target->CalculateProcess();
+                ProcessSP process = target.CalculateProcess();
                 Address file_entry = objfile->GetEntryPointAddress();
                 if (!process) {
                   result.AppendError("No process");
@@ -3051,7 +3039,7 @@ protected:
                   return;
                 }
                 std::vector<ObjectFile::LoadableData> loadables(
-                    objfile->GetLoadableData(*target));
+                    objfile->GetLoadableData(target));
                 if (loadables.size() == 0) {
                   result.AppendError("No loadable sections");
                   return;
@@ -3065,7 +3053,7 @@ protected:
                   ThreadList &thread_list = process->GetThreadList();
                   RegisterContextSP reg_context(
                       thread_list.GetSelectedThread()->GetRegisterContext());
-                  addr_t file_entry_addr = file_entry.GetLoadAddress(target);
+                  addr_t file_entry_addr = file_entry.GetLoadAddress(&target);
                   if (!reg_context->SetPC(file_entry_addr)) {
                     result.AppendErrorWithFormat("failed to set PC value to "
                                                  "0x%" PRIx64,
@@ -3195,8 +3183,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
     const bool use_global_module_list = m_options.m_use_global_module_list;
     // Define a local module list here to ensure it lives longer than any
     // "locker" object which might lock its contents below (through the
@@ -3207,10 +3194,10 @@ protected:
 
     if (m_options.m_module_addr != LLDB_INVALID_ADDRESS) {
       Address module_address;
-      if (module_address.SetLoadAddress(m_options.m_module_addr, target)) {
+      if (module_address.SetLoadAddress(m_options.m_module_addr, &target)) {
         ModuleSP module_sp(module_address.GetModule());
         if (module_sp) {
-          PrintModule(*target, module_sp.get(), 0, strm);
+          PrintModule(target, module_sp.get(), 0, strm);
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
           result.AppendErrorWithFormat(
@@ -3241,13 +3228,13 @@ protected:
           guard.lock();
           num_modules = Module::GetNumberAllocatedModules();
         } else {
-          module_list_ptr = &target->GetImages();
+          module_list_ptr = &target.GetImages();
         }
       } else {
         for (const Args::ArgEntry &arg : command) {
           // Dump specified images (by basename or fullpath)
           const size_t num_matches = FindModulesByName(
-              target, arg.c_str(), module_list, use_global_module_list);
+              &target, arg.c_str(), module_list, use_global_module_list);
           if (num_matches == 0) {
             if (argc == 1) {
               result.AppendErrorWithFormat("no modules found that match '%s'",
@@ -3281,7 +3268,7 @@ protected:
           }
 
           const size_t indent = strm.Printf("[%3u] ", image_idx);
-          PrintModule(*target, module, indent, strm);
+          PrintModule(target, module, indent, strm);
         }
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
@@ -3986,9 +3973,9 @@ public:
       return false;
     case eLookupTypeType:
       if (!m_options.m_str.empty()) {
-        if (LookupTypeHere(GetTarget(), m_interpreter, result.GetOutputStream(),
-                           *sym_ctx.module_sp, m_options.m_str.c_str(),
-                           m_options.m_use_regex)) {
+        if (LookupTypeHere(&GetTarget(), m_interpreter,
+                           result.GetOutputStream(), *sym_ctx.module_sp,
+                           m_options.m_str.c_str(), m_options.m_use_regex)) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
           return true;
         }
@@ -4065,7 +4052,7 @@ public:
     case eLookupTypeType:
       if (!m_options.m_str.empty()) {
         if (LookupTypeInModule(
-                GetTarget(), m_interpreter, result.GetOutputStream(), module,
+                &GetTarget(), m_interpreter, result.GetOutputStream(), module,
                 m_options.m_str.c_str(), m_options.m_use_regex)) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
           return true;
@@ -4088,8 +4075,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
     bool syntax_error = false;
     uint32_t i;
     uint32_t num_successful_lookups = 0;
@@ -4110,7 +4096,7 @@ protected:
 
       // Dump all sections for all other modules
 
-      const ModuleList &target_modules = target->GetImages();
+      const ModuleList &target_modules = target.GetImages();
       std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
       if (target_modules.GetSize() == 0) {
         result.AppendError("the target has no associated executable images");
@@ -4132,7 +4118,7 @@ protected:
            ++i) {
         ModuleList module_list;
         const size_t num_matches =
-            FindModulesByName(target, arg_cstr, module_list, false);
+            FindModulesByName(&target, arg_cstr, module_list, false);
         if (num_matches > 0) {
           for (size_t j = 0; j < num_matches; ++j) {
             Module *module = module_list.GetModulePointerAtIndex(j);
@@ -4459,7 +4445,6 @@ protected:
         m_file_option.GetOptionValue().GetCurrentValue();
 
     Target *target = m_exe_ctx.GetTargetPtr();
-
     ModuleSP module_sp(target->GetImages().FindFirstModule(module_spec));
     if (module_sp) {
       module_spec.GetFileSpec() = module_sp->GetFileSpec();
@@ -4875,7 +4860,7 @@ public:
                             "appropriately defined Python class.  You can also "
                             "add filters so the hook only runs a certain stop "
                             "points.",
-                            "target stop-hook add", eCommandAllowsDummyTarget),
+                            "target stop-hook add"),
         IOHandlerDelegateMultiline("DONE",
                                    IOHandlerDelegate::Completion::LLDBCommand),
         m_python_class_options("scripted stop-hook", true, 'P') {
@@ -4957,7 +4942,7 @@ protected:
                                " aborted, no commands.\n",
                                m_stop_hook_sp->GetID());
         }
-        GetTarget()->UndoCreateStopHook(m_stop_hook_sp->GetID());
+        GetTarget().UndoCreateStopHook(m_stop_hook_sp->GetID());
       } else {
         // The IOHandler editor is only for command lines stop hooks:
         Target::StopHookCommandLine *hook_ptr =
@@ -4979,18 +4964,17 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     m_stop_hook_sp.reset();
 
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
-    Target::StopHookSP new_hook_sp = target->CreateStopHook(
-        m_python_class_options.GetName().empty()
-            ? Target::StopHook::StopHookKind::CommandBased
-            : Target::StopHook::StopHookKind::ScriptBased);
+    Target &target = GetTarget();
+    Target::StopHookSP new_hook_sp =
+        target.CreateStopHook(m_python_class_options.GetName().empty() ?
+                               Target::StopHook::StopHookKind::CommandBased
+                               : Target::StopHook::StopHookKind::ScriptBased);
 
     //  First step, make the specifier.
     std::unique_ptr<SymbolContextSpecifier> specifier_up;
     if (m_options.m_sym_ctx_specified) {
       specifier_up =
-          std::make_unique<SymbolContextSpecifier>(target->shared_from_this());
+          std::make_unique<SymbolContextSpecifier>(target.shared_from_this());
 
       if (!m_options.m_module_name.empty()) {
         specifier_up->AddSpecification(
@@ -5076,7 +5060,7 @@ protected:
         // FIXME: Set the stop hook ID counter back.
         result.AppendErrorWithFormat("Couldn't add stop hook: %s",
                                      error.AsCString());
-        target->UndoCreateStopHook(new_hook_sp->GetID());
+        target.UndoCreateStopHook(new_hook_sp->GetID());
         return;
       }
     } else {
@@ -5102,9 +5086,9 @@ private:
 class CommandObjectTargetStopHookDelete : public CommandObjectParsed {
 public:
   CommandObjectTargetStopHookDelete(CommandInterpreter &interpreter)
-      : CommandObjectParsed(
-            interpreter, "target stop-hook delete", "Delete a stop-hook.",
-            "target stop-hook delete [<idx>]", eCommandAllowsDummyTarget) {
+      : CommandObjectParsed(interpreter, "target stop-hook delete",
+                            "Delete a stop-hook.",
+                            "target stop-hook delete [<idx>]") {
     SetHelpLong(
         R"(
 Deletes the stop hook by index.
@@ -5129,8 +5113,7 @@ it was deleted.
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
     // FIXME: see if we can use the breakpoint id style parser?
     size_t num_args = command.GetArgumentCount();
     if (num_args == 0) {
@@ -5138,7 +5121,7 @@ protected:
         result.SetStatus(eReturnStatusFailed);
         return;
       } else {
-        target->RemoveAllStopHooks();
+        target.RemoveAllStopHooks();
       }
     } else {
       for (size_t i = 0; i < num_args; i++) {
@@ -5148,7 +5131,7 @@ protected:
                                        command.GetArgumentAtIndex(i));
           return;
         }
-        if (!target->RemoveStopHookByID(user_id)) {
+        if (!target.RemoveStopHookByID(user_id)) {
           result.AppendErrorWithFormat("unknown stop hook id: \"%s\"",
                                        command.GetArgumentAtIndex(i));
           return;
@@ -5168,9 +5151,7 @@ public:
   CommandObjectTargetStopHookEnableDisable(CommandInterpreter &interpreter,
                                            bool enable, const char *name,
                                            const char *help, const char *syntax)
-      : CommandObjectParsed(interpreter, name, help, syntax,
-                            eCommandAllowsDummyTarget),
-        m_enable(enable) {
+      : CommandObjectParsed(interpreter, name, help, syntax), m_enable(enable) {
     AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatStar);
   }
 
@@ -5186,14 +5167,13 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
     // FIXME: see if we can use the breakpoint id style parser?
     size_t num_args = command.GetArgumentCount();
     bool success;
 
     if (num_args == 0) {
-      target->SetAllStopHooksActiveState(m_enable);
+      target.SetAllStopHooksActiveState(m_enable);
     } else {
       for (size_t i = 0; i < num_args; i++) {
         lldb::user_id_t user_id;
@@ -5202,7 +5182,7 @@ protected:
                                        command.GetArgumentAtIndex(i));
           return;
         }
-        success = target->SetStopHookActiveStateByID(user_id, m_enable);
+        success = target.SetStopHookActiveStateByID(user_id, m_enable);
         if (!success) {
           result.AppendErrorWithFormat("unknown stop hook id: \"%s\"",
                                        command.GetArgumentAtIndex(i));
@@ -5227,8 +5207,7 @@ class CommandObjectTargetStopHookList : public CommandObjectParsed {
 public:
   CommandObjectTargetStopHookList(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "target stop-hook list",
-                            "List all stop-hooks.", nullptr,
-                            eCommandAllowsDummyTarget) {}
+                            "List all stop-hooks.") {}
 
   ~CommandObjectTargetStopHookList() override = default;
 
@@ -5269,10 +5248,10 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
+
     bool printed_hook = false;
-    for (auto &hook : target->GetStopHooks(m_options.m_internal)) {
+    for (auto &hook : target.GetStopHooks(m_options.m_internal)) {
       if (printed_hook)
         result.GetOutputStream().PutCString("\n");
       hook->GetDescription(result.GetOutputStream(), eDescriptionLevelFull);
@@ -5497,7 +5476,7 @@ public:
       : CommandObjectParsed(
             interpreter, "target hook add",
             "Add a hook to be executed on target lifecycle events.",
-            "target hook add", eCommandAllowsDummyTarget),
+            "target hook add"),
         IOHandlerDelegateMultiline("DONE",
                                    IOHandlerDelegate::Completion::LLDBCommand),
         m_python_class_options("scripted hook", false, 'P') {
@@ -5583,7 +5562,7 @@ protected:
                                " aborted, no commands.\n",
                                m_hook_sp->GetID());
         }
-        GetTarget()->UndoCreateHook(m_hook_sp->GetID());
+        GetTarget().UndoCreateHook(m_hook_sp->GetID());
       } else {
         auto *hook = static_cast<Target::HookCommandLine *>(m_hook_sp.get());
         hook->SetActionFromString(line);
@@ -5601,8 +5580,8 @@ protected:
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
     m_hook_sp.reset();
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
+
     bool is_python_class = !m_python_class_options.GetName().empty();
 
     // Command-based hooks require at least one explicit trigger.
@@ -5617,7 +5596,7 @@ protected:
         is_python_class ? Target::Hook::HookKind::ScriptBased
                         : Target::Hook::HookKind::CommandBased;
 
-    Target::HookSP new_hook_sp = target->CreateHook(hook_kind);
+    Target::HookSP new_hook_sp = target.CreateHook(hook_kind);
 
     if (!is_python_class) {
       // Build trigger mask from explicit command-line flags.
@@ -5638,7 +5617,7 @@ protected:
     // Set up symbol context specifier if filter options were provided.
     if (m_options.m_sym_ctx_specified) {
       auto specifier_up =
-          std::make_unique<SymbolContextSpecifier>(target->shared_from_this());
+          std::make_unique<SymbolContextSpecifier>(target.shared_from_this());
 
       if (!m_options.m_module_name.empty())
         specifier_up->AddSpecification(
@@ -5706,7 +5685,7 @@ protected:
       if (callback_error.Fail()) {
         result.AppendErrorWithFormat("couldn't add hook: %s",
                                      callback_error.AsCString());
-        target->UndoCreateHook(new_hook_sp->GetID());
+        target.UndoCreateHook(new_hook_sp->GetID());
         return;
       }
       result.AppendMessageWithFormatv("Hook #{0} added.\n",
@@ -5732,8 +5711,7 @@ class CommandObjectTargetHookDelete : public CommandObjectParsed {
 public:
   CommandObjectTargetHookDelete(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "target hook delete", "Delete a hook.",
-                            "target hook delete [<id>]",
-                            eCommandAllowsDummyTarget) {
+                            "target hook delete [<id>]") {
     AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatStar);
   }
 
@@ -5741,14 +5719,13 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
     if (command.GetArgumentCount() == 0) {
       if (!m_interpreter.Confirm("Delete all hooks?", true)) {
         result.SetStatus(eReturnStatusFailed);
         return;
       }
-      target->RemoveAllHooks();
+      target.RemoveAllHooks();
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return;
     }
@@ -5760,7 +5737,7 @@ protected:
                                      command.GetArgumentAtIndex(i));
         return;
       }
-      if (!target->RemoveHookByID(user_id)) {
+      if (!target.RemoveHookByID(user_id)) {
         result.AppendErrorWithFormat("unknown hook id: \"%s\"",
                                      command.GetArgumentAtIndex(i));
         return;
@@ -5777,9 +5754,7 @@ public:
   CommandObjectTargetHookEnableDisable(CommandInterpreter &interpreter,
                                        bool enable, const char *name,
                                        const char *help, const char *syntax)
-      : CommandObjectParsed(interpreter, name, help, syntax,
-                            eCommandAllowsDummyTarget),
-        m_enable(enable) {
+      : CommandObjectParsed(interpreter, name, help, syntax), m_enable(enable) {
     AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatStar);
   }
 
@@ -5787,11 +5762,11 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
+
     // No IDs = apply to all hooks.
     if (command.GetArgumentCount() == 0) {
-      target->SetAllHooksEnabledState(m_enable);
+      target.SetAllHooksEnabledState(m_enable);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return;
     }
@@ -5803,7 +5778,7 @@ protected:
                                      command.GetArgumentAtIndex(i));
         return;
       }
-      if (!target->SetHookEnabledStateByID(user_id, m_enable)) {
+      if (!target.SetHookEnabledStateByID(user_id, m_enable)) {
         result.AppendErrorWithFormat("unknown hook id: \"%s\"",
                                      command.GetArgumentAtIndex(i));
         return;
@@ -5865,8 +5840,7 @@ public:
       : CommandObjectParsed(interpreter, "target hook modify",
                             "Modify trigger settings on a hook.",
                             "target hook modify [--enable-trigger <name>] "
-                            "[--disable-trigger <name>] [<id>]",
-                            eCommandAllowsDummyTarget) {
+                            "[--disable-trigger <name>] [<id>]") {
     AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatOptional);
     SetHelpLong(R"help(
 Modify trigger settings on command-based hooks. Scripted hooks derive their
@@ -5899,8 +5873,8 @@ protected:
   }
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
+    Target &target = GetTarget();
+
     if (m_options.m_enable_trigger.empty() &&
         m_options.m_disable_trigger.empty()) {
       result.AppendError("at least one of --enable-trigger or "
@@ -5911,12 +5885,12 @@ protected:
     // Resolve the hook ID. Default to last added if not specified.
     Target::HookSP hook_sp;
     if (command.GetArgumentCount() == 0) {
-      size_t num_hooks = target->GetNumHooks();
+      size_t num_hooks = target.GetNumHooks();
       if (num_hooks == 0) {
         result.AppendError("no hooks exist");
         return;
       }
-      hook_sp = target->GetHookAtIndex(num_hooks - 1);
+      hook_sp = target.GetHookAtIndex(num_hooks - 1);
     } else {
       lldb::user_id_t user_id;
       if (!llvm::to_integer(command.GetArgumentAtIndex(0), user_id)) {
@@ -5924,7 +5898,7 @@ protected:
                                      command.GetArgumentAtIndex(0));
         return;
       }
-      hook_sp = target->GetHookByID(user_id);
+      hook_sp = target.GetHookByID(user_id);
       if (!hook_sp) {
         result.AppendErrorWithFormat("unknown hook id: \"%s\"",
                                      command.GetArgumentAtIndex(0));
@@ -5975,20 +5949,19 @@ class CommandObjectTargetHookList : public CommandObjectParsed {
 public:
   CommandObjectTargetHookList(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "target hook list", "List all hooks.",
-                            "target hook list", eCommandAllowsDummyTarget) {}
+                            "target hook list") {}
 
   ~CommandObjectTargetHookList() override = default;
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
-    size_t num_hooks = target->GetNumHooks();
+    Target &target = GetTarget();
+    size_t num_hooks = target.GetNumHooks();
     if (num_hooks == 0) {
       result.GetOutputStream().PutCString("No hooks.\n");
     } else {
       for (size_t i = 0; i < num_hooks; i++) {
-        Target::HookSP hook_sp = target->GetHookAtIndex(i);
+        Target::HookSP hook_sp = target.GetHookAtIndex(i);
         if (hook_sp)
           hook_sp->GetDescription(result.GetOutputStream(),
                                   eDescriptionLevelFull);
@@ -6045,7 +6018,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     // Go over every scratch TypeSystem and dump to the command output.
-    for (lldb::TypeSystemSP ts : GetTarget()->GetScratchTypeSystems())
+    for (lldb::TypeSystemSP ts : GetTarget().GetScratchTypeSystems())
       if (ts)
         ts->Dump(result.GetOutputStream().AsRawOstream(), "",
                  GetCommandInterpreter().GetDebugger().GetUseColor());
@@ -6070,9 +6043,8 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
-    target->DumpSectionLoadList(result.GetOutputStream());
+    Target &target = GetTarget();
+    target.DumpSectionLoadList(result.GetOutputStream());
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 };
@@ -6133,7 +6105,6 @@ protected:
         m_class_options.GetName(), m_class_options.GetStructuredData());
 
     Target *target = m_exe_ctx.GetTargetPtr();
-
     if (!target)
       target = &GetDebugger().GetDummyTarget();
 
