@@ -3,6 +3,19 @@ add_custom_target(libc_unistd_unittests)
 add_subdirectory(testdata)
 
 add_libc_unittest(
+  alarm_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    alarm_test.cpp
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.include.unistd
+    libc.src.signal.signal
+    libc.src.unistd.alarm
+)
+
+add_libc_unittest(
   access_test
   SUITE
     libc_unistd_unittests
