@@ -8552,17 +8552,24 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
   }
 
   // See if we can cheaply generate a vXi8 vector and convert to vXi1.
-  // TODO: Add handling for sub-128bit vXi8 vectors.
   MVT OpVT = Op.getOperand(0).getSimpleValueType();
   if (NonConstIdx.size() > 1 && OpVT == MVT::i8) {
     // On pre-BWI targets, we must extend to vXi32 instead.
     MVT ByteVT = VT.changeVectorElementType(MVT::i8);
-    MVT WideVT =
-        Subtarget.hasBWI() ? ByteVT : VT.changeVectorElementType(MVT::i32);
+    MVT WideSVT = Subtarget.hasBWI() ? MVT::i8 : MVT::i32;
+    if (ByteVT.getSizeInBits() < 128) {
+      WideSVT = ByteVT == MVT::v4i8 ? MVT::i32 : MVT::i64;
+      ByteVT = MVT::v16i8;
+    }
+    MVT WideVT = VT.changeVectorElementType(WideSVT);
     if (DAG.getTargetLoweringInfo().isTypeLegal(ByteVT) &&
         DAG.getTargetLoweringInfo().isTypeLegal(WideVT)) {
-      SDValue ByteBV = DAG.getBuildVector(ByteVT, dl, Op->ops());
-      SDValue WideBV = DAG.getNode(ISD::ANY_EXTEND, dl, WideVT, ByteBV);
+      SmallVector<SDValue, 16> Elts(Op->op_values());
+      Elts.append(ByteVT.getVectorNumElements() - Elts.size(),
+                  DAG.getPOISON(OpVT));
+      SDValue ByteBV = DAG.getBuildVector(ByteVT, dl, Elts);
+      SDValue WideBV =
+          getEXTEND_VECTOR_INREG(ISD::ANY_EXTEND, dl, WideVT, ByteBV, DAG);
       WideBV = DAG.getNode(ISD::AND, dl, WideVT, WideBV,
                            DAG.getConstant(1, dl, WideVT));
       return DAG.getSetCC(dl, VT, WideBV, DAG.getConstant(0, dl, WideVT),
@@ -29730,11 +29737,21 @@ static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
                          DAG.getExtractVectorElt(DL, ExtractVT, Src, 1));
     }
 
-    SmallVector<int, 16> Mask(NumSrcElts, -1);
-    std::iota(Mask.begin(), Mask.begin() + (NumElts / 2), NumElts / 2);
-    SDValue Upper =
-        DAG.getVectorShuffle(SrcVT, DL, Src, DAG.getUNDEF(SrcVT), Mask);
-    Src = DAG.getNode(BinOp, DL, SrcVT, Src, Upper);
+    // Peek through identity elements added by legalisation padding.
+    APInt HiElts = APInt::getBitsSet(NumSrcElts, NumElts / 2, NumElts);
+    if (!DAG.isIdentityElement(BinOp, SDNodeFlags(), Src, HiElts, 1)) {
+      APInt LoElts = APInt::getLowBitsSet(NumSrcElts, NumElts / 2);
+      SDValue Lo = Src;
+      while (SDValue NewLo =
+                 TLI.SimplifyMultipleUseDemandedVectorElts(Lo, LoElts, DAG))
+        Lo = NewLo;
+
+      SmallVector<int, 16> Mask(NumSrcElts, -1);
+      std::iota(Mask.begin(), Mask.begin() + (NumElts / 2), NumElts / 2);
+      SDValue Hi =
+          DAG.getVectorShuffle(SrcVT, DL, Src, DAG.getUNDEF(SrcVT), Mask);
+      Src = DAG.getNode(BinOp, DL, SrcVT, Lo, Hi);
+    }
   }
   return DAG.getExtractVectorElt(DL, ExtractVT, Src, 0);
 }
@@ -29931,18 +29948,25 @@ static SDValue LowerMINMAX(SDValue Op, const X86Subtarget &Subtarget,
 static SDValue LowerMINMAX_REDUCE(SDValue Op, const X86Subtarget &Subtarget,
                                   SelectionDAG &DAG) {
   EVT ExtractVT = Op.getValueType();
+  bool AllowScalarization = !Subtarget.hasAVX512();
   if (!Subtarget.hasSSE41() || (ExtractVT != MVT::i16 && ExtractVT != MVT::i8))
-    return LowerVECREDUCE(Op, Subtarget, DAG, !Subtarget.hasAVX512());
+    return LowerVECREDUCE(Op, Subtarget, DAG, AllowScalarization);
 
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
   EVT SrcSVT = SrcVT.getScalarType();
+  ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(Op.getOpcode());
   if (SrcSVT != ExtractVT || (SrcVT.getSizeInBits() % 128) != 0)
-    return LowerVECREDUCE(Op, Subtarget, DAG, !Subtarget.hasAVX512());
+    return LowerVECREDUCE(Op, Subtarget, DAG, AllowScalarization);
+
+  // Bail if at least the upper half elements are identity.
+  APInt HiElts = APInt::getHighBitsSet(SrcVT.getVectorNumElements(),
+                                       SrcVT.getVectorNumElements() / 2);
+  if (DAG.isIdentityElement(BinOp, SDNodeFlags(), Src, HiElts, 1))
+    return LowerVECREDUCE(Op, Subtarget, DAG, AllowScalarization);
 
   SDLoc DL(Op);
   SDValue MinPos = Src;
-  ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(Op.getOpcode());
 
   // First, reduce the source down to 128-bit, applying BinOp to lo/hi.
   while (SrcVT.getSizeInBits() > 128) {
@@ -47164,10 +47188,6 @@ static SDValue combineMinMaxReduction(SDNode *Extract, SelectionDAG &DAG,
   if (!Src)
     return SDValue();
 
-  EVT SrcVT = Src.getValueType();
-  if ((SrcVT.getSizeInBits() % 128) != 0)
-    return SDValue();
-
   ISD::NodeType RdxOp;
   switch (BinOp) {
   case ISD::SMAX:
@@ -49026,7 +49046,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     return V;
 
   // select(~Cond, X, Y) -> select(Cond, Y, X)
-  if (CondVT.getScalarType() != MVT::i1) {
+  // This is only valid for vector selects which use an all-bits mask semantic.
+  // For scalar selects, ~Cond != 0 is not equivalent to Cond == 0.
+  if (CondVT.isVector() && CondVT.getScalarType() != MVT::i1) {
     if (SDValue CondNot = IsNOT(Cond, DAG))
       return DAG.getNode(N->getOpcode(), DL, VT,
                          DAG.getBitcast(CondVT, CondNot), RHS, LHS);

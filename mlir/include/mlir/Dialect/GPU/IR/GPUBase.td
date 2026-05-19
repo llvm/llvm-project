@@ -115,6 +115,24 @@ def GPU_AddressSpaceAttr :
 
 def GPU_AddressSpaceAttrArray : TypedArrayAttrBase<GPU_AddressSpaceAttr, "GPU Address Space array">;
 
+def GPU_BarrierScopeSubgroup  : I32EnumCase<"Subgroup",  1, "subgroup">;
+def GPU_BarrierScopeWorkgroup : I32EnumCase<"Workgroup", 2, "workgroup">;
+def GPU_BarrierScopeCluster   : I32EnumCase<"Cluster",   3, "cluster">;
+
+def GPU_BarrierScopeEnum : I32Enum<
+  "BarrierScope", "barrier execution scope", [
+    GPU_BarrierScopeSubgroup,
+    GPU_BarrierScopeWorkgroup,
+    GPU_BarrierScopeCluster
+  ]> {
+  let cppNamespace = "::mlir::gpu";
+}
+
+def GPU_BarrierScopeAttr :
+    EnumAttr<GPU_Dialect, GPU_BarrierScopeEnum, "barrier_scope"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 def GPU_Dimension : GPU_I32Enum<"Dimension",
     "a dimension, either 'x', 'y', or 'z'",
     [
@@ -169,6 +187,11 @@ def GPU_SparseDnTensorHandle : GPU_SparseHandle<"SparseDnTensorHandleType", "den
 def GPU_SparseSpGEMMOpHandle : GPU_SparseHandle<"SparseSpGEMMOpHandleType", "SpGEMM operation">;
 def GPU_SparseSpMatHandle : GPU_SparseHandle<"SparseSpMatHandleType", "sparse matrix">;
 
+def GPU_NamedBarrier : DialectType<
+  GPU_Dialect,
+  CPred<"::llvm::isa<::mlir::gpu::NamedBarrierType>($_self)">,
+  "named barrier type">,
+  BuildableType<"mlir::gpu::NamedBarrierType::get($_builder.getContext())">;
 
 //===----------------------------------------------------------------------===//
 // GPU Interfaces.

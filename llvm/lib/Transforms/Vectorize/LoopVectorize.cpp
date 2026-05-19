@@ -6641,15 +6641,15 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
 
   // Create recipes for header phis. For outer loops, reductions, recurrences
   // and in-loop reductions are empty since legality doesn't detect them.
-  if (!RUN_VPLAN_PASS(VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE,
-                      *OrigLoop, Legal->getInductionVars(),
-                      Legal->getReductionVars(),
-                      Legal->getFixedOrderRecurrences(),
-                      Config.getInLoopReductions(), Hints.allowReordering()))
+  if (!RUN_VPLAN_PASS_NO_VERIFY(
+          VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE, *OrigLoop,
+          Legal->getInductionVars(), Legal->getReductionVars(),
+          Legal->getFixedOrderRecurrences(), Config.getInLoopReductions(),
+          Hints.allowReordering()))
     return;
 
-  RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
-  RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::simplifyRecipes, *VPlan0);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::removeDeadRecipes, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::addCanonicalIVRecipes, *VPlan0,
                  getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
   // If we're vectorizing a loop with an uncountable exit, make sure that the
@@ -7189,7 +7189,7 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
                  CM.requiresScalarEpilogue(VF.isVector()),
                  CM.foldTailByMasking(), OrigLoop, BranchWeights,
                  OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(),
-                 PSE, /*CheckBlock=*/nullptr);
+                 PSE, Plan.getEntry());
 }
 
 // Determine how to lower the epilogue, which depends on 1) optimising

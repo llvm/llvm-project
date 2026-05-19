@@ -16,8 +16,7 @@ define i32 @early_exit_live_out(ptr align 4 dereferenceable(4096) %p) {
 ; RV64-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; RV64-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV64:       [[VECTOR_PH]]:
-; RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; RV64-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; RV64-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; RV64-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; RV64-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -65,8 +64,7 @@ define i32 @early_exit_live_out(ptr align 4 dereferenceable(4096) %p) {
 ; RV32-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; RV32-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV32:       [[VECTOR_PH]]:
-; RV32-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; RV32-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; RV32-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; RV32-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; RV32-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; RV32-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -114,8 +112,7 @@ define i32 @early_exit_live_out(ptr align 4 dereferenceable(4096) %p) {
 ; ZVE32X-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; ZVE32X-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; ZVE32X:       [[VECTOR_PH]]:
-; ZVE32X-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; ZVE32X-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; ZVE32X-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; ZVE32X-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; ZVE32X-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; ZVE32X-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -245,8 +242,7 @@ define i64 @strided_search(ptr align 8 dereferenceable(14784) %p) {
 ; RV32-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 132, [[TMP1]]
 ; RV32-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV32:       [[VECTOR_PH]]:
-; RV32-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; RV32-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
+; RV32-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 1
 ; RV32-NEXT:    [[N_MOD_VF:%.*]] = urem i64 132, [[TMP3]]
 ; RV32-NEXT:    [[N_VEC:%.*]] = sub i64 132, [[N_MOD_VF]]
 ; RV32-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 112

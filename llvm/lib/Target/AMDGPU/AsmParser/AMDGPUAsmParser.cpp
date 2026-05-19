@@ -3358,6 +3358,8 @@ ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
     }
 
     if (Expr->evaluateAsAbsolute(IntVal)) {
+      if (Lit == LitModifier::Lit && !isInt<32>(IntVal) && !isUInt<32>(IntVal))
+        return Error(S, "literal value out of range");
       Operands.push_back(AMDGPUOperand::CreateImm(this, IntVal, S));
       AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
       Op.setModifiers(Mods);
