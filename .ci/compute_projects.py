@@ -80,7 +80,7 @@ DEPENDENT_RUNTIMES_TO_BUILD = {
 # This mapping describes runtimes that should be tested when the key project is
 # touched.
 DEPENDENT_RUNTIMES_TO_TEST = {
-    "clang": {"compiler-rt"},
+    "clang": {"compiler-rt", "libc"},
     "clang-tools-extra": {"libc"},
     "libc": {"libc"},
     "libclc": {"libclc"},
@@ -154,8 +154,6 @@ PROJECT_CHECK_TARGETS = {
     "flang-rt": "check-flang-rt",
     "libc": "check-libc",
     "libclc": "check-libclc",
-    "lld": "check-lld",
-    "lldb": "check-lldb",
     "mlir": "check-mlir",
     "openmp": "check-openmp",
     "polly": "check-polly",

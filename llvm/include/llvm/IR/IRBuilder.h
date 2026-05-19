@@ -1637,6 +1637,10 @@ public:
     return Accum;
   }
 
+  Value *CreateDisjointOr(Value *LHS, Value *RHS, const Twine &Name = "") {
+    return CreateOr(LHS, RHS, Name, true);
+  }
+
   Value *CreateXor(Value *LHS, Value *RHS, const Twine &Name = "") {
     if (Value *V = Folder.FoldBinOp(Instruction::Xor, LHS, RHS))
       return V;
