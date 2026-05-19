@@ -28,6 +28,10 @@ def SDTX86Cmov    : SDTypeProfile<1, 4,
                                   [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
                                    SDTCisVT<3, i8>, SDTCisVT<4, i32>]>;
 
+def SDTX86CtSelect : SDTypeProfile<1, 4,
+                                  [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
+                                   SDTCisVT<3, i8>, SDTCisVT<4, i32>]>;
+
 // Unary and binary operator instructions that set EFLAGS as a side-effect.
 def SDTUnaryArithWithFlags : SDTypeProfile<2, 1,
                                            [SDTCisSameAs<0, 2>,
@@ -172,6 +176,8 @@ def X86ctest   : SDNode<"X86ISD::CTEST",    SDTX86Ccmp>;
 // Conditional load/store instructions
 def X86cload    : SDNode<"X86ISD::CLOAD",   SDTX86Cload, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def X86cstore   : SDNode<"X86ISD::CSTORE",  SDTX86Cstore, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+def X86ct_select: SDNode<"X86ISD::CT_SELECT", SDTX86CtSelect>;
 
 // X86 conditional moves. Operand 0 and operand 1 are the two values
 // to select from. Operand 2 is the condition code, and operand 3 is the
