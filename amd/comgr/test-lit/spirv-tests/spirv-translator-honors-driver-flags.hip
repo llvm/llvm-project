@@ -1,5 +1,5 @@
 // REQUIRES: comgr-has-spirv-translator
-
+// REQUIRES: stability
 // COM: Verify COMGR honors the --spirv-* flags HIPAMD emits today (see
 // COM: clang/lib/Driver/ToolChains/HIPAMD.cpp). Each RUN pins one observable
 // COM: side-effect of a specific driver flag. The kernel calls an amdgcn

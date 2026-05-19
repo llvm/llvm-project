@@ -29737,11 +29737,21 @@ static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
                          DAG.getExtractVectorElt(DL, ExtractVT, Src, 1));
     }
 
-    SmallVector<int, 16> Mask(NumSrcElts, -1);
-    std::iota(Mask.begin(), Mask.begin() + (NumElts / 2), NumElts / 2);
-    SDValue Upper =
-        DAG.getVectorShuffle(SrcVT, DL, Src, DAG.getUNDEF(SrcVT), Mask);
-    Src = DAG.getNode(BinOp, DL, SrcVT, Src, Upper);
+    // Peek through identity elements added by legalisation padding.
+    APInt HiElts = APInt::getBitsSet(NumSrcElts, NumElts / 2, NumElts);
+    if (!DAG.isIdentityElement(BinOp, SDNodeFlags(), Src, HiElts, 1)) {
+      APInt LoElts = APInt::getLowBitsSet(NumSrcElts, NumElts / 2);
+      SDValue Lo = Src;
+      while (SDValue NewLo =
+                 TLI.SimplifyMultipleUseDemandedVectorElts(Lo, LoElts, DAG))
+        Lo = NewLo;
+
+      SmallVector<int, 16> Mask(NumSrcElts, -1);
+      std::iota(Mask.begin(), Mask.begin() + (NumElts / 2), NumElts / 2);
+      SDValue Hi =
+          DAG.getVectorShuffle(SrcVT, DL, Src, DAG.getUNDEF(SrcVT), Mask);
+      Src = DAG.getNode(BinOp, DL, SrcVT, Lo, Hi);
+    }
   }
   return DAG.getExtractVectorElt(DL, ExtractVT, Src, 0);
 }
@@ -29938,18 +29948,25 @@ static SDValue LowerMINMAX(SDValue Op, const X86Subtarget &Subtarget,
 static SDValue LowerMINMAX_REDUCE(SDValue Op, const X86Subtarget &Subtarget,
                                   SelectionDAG &DAG) {
   EVT ExtractVT = Op.getValueType();
+  bool AllowScalarization = !Subtarget.hasAVX512();
   if (!Subtarget.hasSSE41() || (ExtractVT != MVT::i16 && ExtractVT != MVT::i8))
-    return LowerVECREDUCE(Op, Subtarget, DAG, !Subtarget.hasAVX512());
+    return LowerVECREDUCE(Op, Subtarget, DAG, AllowScalarization);
 
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
   EVT SrcSVT = SrcVT.getScalarType();
+  ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(Op.getOpcode());
   if (SrcSVT != ExtractVT || (SrcVT.getSizeInBits() % 128) != 0)
-    return LowerVECREDUCE(Op, Subtarget, DAG, !Subtarget.hasAVX512());
+    return LowerVECREDUCE(Op, Subtarget, DAG, AllowScalarization);
+
+  // Bail if at least the upper half elements are identity.
+  APInt HiElts = APInt::getHighBitsSet(SrcVT.getVectorNumElements(),
+                                       SrcVT.getVectorNumElements() / 2);
+  if (DAG.isIdentityElement(BinOp, SDNodeFlags(), Src, HiElts, 1))
+    return LowerVECREDUCE(Op, Subtarget, DAG, AllowScalarization);
 
   SDLoc DL(Op);
   SDValue MinPos = Src;
-  ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(Op.getOpcode());
 
   // First, reduce the source down to 128-bit, applying BinOp to lo/hi.
   while (SrcVT.getSizeInBits() > 128) {
@@ -47169,10 +47186,6 @@ static SDValue combineMinMaxReduction(SDNode *Extract, SelectionDAG &DAG,
   SDValue Src = DAG.matchBinOpReduction(
       Extract, BinOp, {ISD::SMAX, ISD::SMIN, ISD::UMAX, ISD::UMIN}, true);
   if (!Src)
-    return SDValue();
-
-  EVT SrcVT = Src.getValueType();
-  if ((SrcVT.getSizeInBits() % 128) != 0)
     return SDValue();
 
   ISD::NodeType RdxOp;
