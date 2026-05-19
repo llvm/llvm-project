@@ -1,0 +1,70 @@
+// RUN: %check_clang_tidy -std=c++20 %s readability-identifier-naming %t -- \
+// RUN:   -config='{CheckOptions: { \
+// RUN:     readability-identifier-naming.DefaultCase: lower_case, \
+// RUN:     readability-identifier-naming.ClassCase: CamelCase, \
+// RUN:     readability-identifier-naming.StructCase: CamelCase, \
+// RUN:     readability-identifier-naming.UnionCase: CamelCase, \
+// RUN:     readability-identifier-naming.TemplateParameterCase: CamelCase \
+// RUN:   }}'
+
+// Forward declarations should use their semantic declaration kind
+// instead of falling back to DefaultCase.
+
+// Namespace-scope forward declarations.
+
+class GoodClass;
+
+class bad_class;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for class 'bad_class'
+
+struct GoodStruct;
+
+struct bad_struct;
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for struct 'bad_struct'
+
+union GoodUnion;
+
+union bad_union;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for union 'bad_union'
+
+// Nested forward declarations.
+
+class Outer {
+  class GoodInnerClass;
+
+  class bad_inner_class;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for class 'bad_inner_class'
+
+  struct GoodInnerStruct;
+
+  struct bad_inner_struct;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for struct 'bad_inner_struct'
+
+  union GoodInnerUnion;
+
+  union bad_inner_union;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for union 'bad_inner_union'
+};
+
+// Template forward declarations.
+
+template <typename T>
+class GoodTemplateClass;
+
+template <typename T>
+class bad_template_class;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for class 'bad_template_class'
+
+template <typename T>
+struct GoodTemplateStruct;
+
+template <typename T>
+struct bad_template_struct;
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for struct 'bad_template_struct'
+
+template <typename T>
+union GoodTemplateUnion;
+
+template <typename T>
+union bad_template_union;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for union 'bad_template_union'

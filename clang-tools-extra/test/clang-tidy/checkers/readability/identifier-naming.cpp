@@ -248,8 +248,8 @@ class my_class;
 // Just make sure the fix is applied.
 // CHECK-FIXES: class CMyClass;
 
-class my_forward_declared_class; // No warning should be triggered.
-
+class my_forward_declared_class;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for class 'my_forward_declared_class'
 const int my_class::classConstant = 4;
 // CHECK-FIXES: const int CMyClass::kClassConstant = 4;
 
