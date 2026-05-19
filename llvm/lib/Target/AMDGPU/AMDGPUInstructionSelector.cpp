@@ -3196,6 +3196,22 @@ bool AMDGPUInstructionSelector::selectG_GLOBAL_VALUE(
     DstReg, IsVGPR ? AMDGPU::VGPR_32RegClass : AMDGPU::SReg_32RegClass, *MRI);
 }
 
+bool AMDGPUInstructionSelector::selectG_BLOCK_ADDR(MachineInstr &I) const {
+  MachineBasicBlock *BB = I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+  Register DstReg = I.getOperand(0).getReg();
+  const BlockAddress *BA = I.getOperand(1).getBlockAddress();
+
+  BuildMI(*BB, &I, DL, TII.get(AMDGPU::SI_PC_ADD_REL_OFFSET64), DstReg)
+      .addBlockAddress(BA);
+
+  if (!MRI->getRegClassOrNull(DstReg))
+    MRI->setRegClass(DstReg, &AMDGPU::SReg_64RegClass);
+
+  I.eraseFromParent();
+  return true;
+}
+
 bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
   Register DstReg = I.getOperand(0).getReg();
   Register SrcReg = I.getOperand(1).getReg();
@@ -4497,6 +4513,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_BRCOND(I);
   case TargetOpcode::G_GLOBAL_VALUE:
     return selectG_GLOBAL_VALUE(I);
+  case TargetOpcode::G_BLOCK_ADDR:
+    return selectG_BLOCK_ADDR(I);
   case TargetOpcode::G_PTRMASK:
     return selectG_PTRMASK(I);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:

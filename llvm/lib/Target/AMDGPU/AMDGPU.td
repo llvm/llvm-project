@@ -284,6 +284,10 @@ defm VmemPrefInsts : AMDGPUSubtargetFeature<"vmem-pref-insts",
   "Has flat_prefect_b8 and global_prefetch_b8 instructions"
 >;
 
+defm SmemPrefetchInsts : AMDGPUSubtargetFeature<"smem-prefetch-insts",
+  "Has s_prefetch_inst, s_prefetch_inst_pc_rel, s_prefetch_data and s_prefetch_data_pc_rel instructions"
+>;
+
 defm SafeSmemPrefetch : AMDGPUSubtargetFeature<"safe-smem-prefetch",
   "SMEM prefetches do not fail on illegal address",
   /*GenPredicate=*/0
@@ -2084,6 +2088,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
+   FeatureSmemPrefetchInsts,
    FeatureNoF16PseudoScalarTransInlineConstants,
    FeatureRealTrue16Insts,
    FeatureMTBUFInsts,
@@ -2168,6 +2173,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
    FeatureMcastLoadInsts,
+   FeatureSmemPrefetchInsts,
    FeatureNoF16PseudoScalarTransInlineConstants,
    FeatureRealTrue16Insts,
    FeatureVMovB64Inst,
@@ -2280,6 +2286,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
+   FeatureSmemPrefetchInsts,
 ]>;
 
 //===----------------------------------------------------------------------===//
