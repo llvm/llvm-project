@@ -190,6 +190,8 @@ public:
     }
   }
 
+  // TODO: share with BackendConsumer::LinkInModules once OG's CurLinkModule
+  // diagnostic-handler indirection is abstracted behind a callback for CIR.
   bool linkInModules(llvm::Module &M) {
     for (auto &LM : LinkModules) {
       assert(LM.Module && "LinkModule does not actually have a module");
