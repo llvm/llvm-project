@@ -70,10 +70,7 @@ public:
   void CloseAnonymousPipes();
 
   /// Closes any open ConPTY/pipe handles and resets internal state to a
-  /// freshly-constructed PseudoConsole. Useful when a ProcessLaunchInfo gets
-  /// reused for a second launch — the previous PseudoConsole would otherwise
-  /// trip the `m_mode == Mode::None` assert in OpenPseudoConsole /
-  /// OpenAnonymousPipes.
+  /// freshly-constructed PseudoConsole.
   void Reset();
 
   /// Returns whether the ConPTY and its pipes are currently open and valid.
