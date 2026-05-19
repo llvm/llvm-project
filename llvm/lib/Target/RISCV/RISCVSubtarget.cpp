@@ -241,7 +241,8 @@ bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
 }
 
 bool RISCVSubtarget::isLegalElementTypeForRVV(Type *EltTy) const {
-  return isLegalElementTypeForRVV(EVT::getEVT(EltTy));
+  return isLegalElementTypeForRVV(
+      TLInfo.getValueType(TLInfo.getTargetMachine().createDataLayout(), EltTy));
 }
 
 bool RISCVSubtarget::isLegalElementTypeForRVV(EVT ScalarTy) const {
