@@ -29010,7 +29010,6 @@ public:
         // Also, do not try to reduce const values, if the operation is not
         // foldable.
         bool IsReducedVal = !EdgeInst || Level > RecursionMaxDepth ||
-                            R.isAnalyzedReductionRoot(EdgeInst) ||
                             getRdxKind(EdgeInst) != RdxKind ||
                             IsCmpSelMinMax != isCmpSelMinMax(EdgeInst);
         ReductionOrdering CurrentRK = IsReducedVal
@@ -29827,11 +29826,10 @@ public:
     if (RK == ReductionOrdering::Ordered)
       return VectorizedTree;
 
-    if (!VectorValuesAndScales.empty()) {
+    if (!VectorValuesAndScales.empty())
       VectorizedTree = GetNewVectorizedTree(
           VectorizedTree,
-          emitReduction(V, Builder, *TTI, ReductionRoot->getType()));
-    }
+          emitReduction(Builder, *TTI, ReductionRoot->getType()));
 
     if (!VectorizedTree) {
       if (!CheckForReusedReductionOps) {
@@ -30223,9 +30221,8 @@ public:
 private:
   /// Creates the reduction from the given \p Vec vector value with the given
   /// scale \p Scale and signedness \p IsSigned.
-  Value *createSingleOp(BoUpSLP &V, IRBuilderBase &Builder,
-                        const TargetTransformInfo &TTI, Value *Vec,
-                        unsigned Scale, bool IsSigned, Type *DestTy,
+  Value *createSingleOp(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
+                        Value *Vec, unsigned Scale, bool IsSigned, Type *DestTy,
                         bool ReducedInTree) {
     Value *Rdx;
     if (ReducedInTree) {
@@ -30233,26 +30230,20 @@ private:
     } else if (auto *VecTy = dyn_cast<FixedVectorType>(DestTy)) {
       unsigned DestTyNumElements = getNumElements(VecTy);
       unsigned VF = getNumElements(Vec->getType()) / DestTyNumElements;
-      unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(RdxKind);
       Rdx = nullptr;
       /*
         e.g. Consider vector reduce add.
 
-        Initial reduction is
-        %add0 = add <4 x i32> zeroinitializer, %A
-        %add1 = add <4 x i32> %add0, %B
+        RdxVal[0] = [a, b, c, d]
+        RdxVal[1] = [e, f, g, h]
+        Add0 = zeroinitializer + RdxVal[0]
+        Add1 = Add0 + RdxVal[1]
 
-        where,
-        %A = <a, b, c, d>
-        %B = <e, f, g, h>
-        %add1 = A + B = <a + e, b + f, c + g, d + h>
-
-        After revectorization with VF=2 and Vec = <a, b, c, d, e, f, g, h>,
+        After revectorization with VF=2 and Vec = [a, b, c, d, e, f, g, h],
         the reduction can be expressed as:
-        %A = shufflevector <8 x i32> %Vec, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-        %B = shufflevector <8 x i32> %Vec, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-        %add0 = add <4 x i32> zeroinitializer, %A
-        %add1 = add <4 x i32> %add0, %B
+        RdxVal[0] = ExtractVector(Vec, 0, 3) = [a, b, c, d]
+        RdxVal[1] = ExtractVector(Vec, 4, 7) = [e, f, g, h]
+        Add = RdxVal[0] + RdxVal[1]
       */
       for (auto I : seq<unsigned>(VF)) {
         auto Position = I * DestTyNumElements;
@@ -30262,8 +30253,6 @@ private:
           Rdx = SubVec;
         } else {
           Rdx = createOp(Builder, RdxKind, Rdx, SubVec, "rdx.op", ReductionOps);
-          if (isa<Instruction>(Rdx))
-            V.analyzedReductionRoot(cast<Instruction>(Rdx));
         }
       }
     } else {
@@ -30366,10 +30355,10 @@ private:
             unsigned ScalarTyNumElements = VecTy->getNumElements();
             auto *DstTy = FixedVectorType::get(VecTy->getScalarType(),
                                                ReducedVals.size());
-            for (unsigned I : seq<unsigned>(ReducedVals.size())) {
-              VectorCost += TTI->getShuffleCost(TTI::SK_ExtractSubvector, VecTy,
-                                                DstTy, {}, CostKind,
-                                                I * ScalarTyNumElements, VecTy);
+            for (unsigned I : seq<unsigned>(ReducedVals.size() - 1)) {
+              VectorCost +=
+                  ::getShuffleCost(*TTI, TTI::SK_ExtractSubvector, VectorTy, {},
+                                   CostKind, I * ScalarTyNumElements, VecTy);
               VectorCost +=
                   TTI->getArithmeticInstrCost(RdxOpcode, VecTy, CostKind);
             }
@@ -30496,13 +30485,13 @@ private:
   /// Splits the values, stored in VectorValuesAndScales, into registers/free
   /// sub-registers, combines them with the given reduction operation as a
   /// vector operation and then performs single (small enough) reduction.
-  Value *emitReduction(BoUpSLP &V, IRBuilderBase &Builder,
-                       const TargetTransformInfo &TTI, Type *DestTy) {
+  Value *emitReduction(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
+                       Type *DestTy) {
     Value *ReducedSubTree = nullptr;
     // Creates reduction and combines with the previous reduction.
     auto CreateSingleOp = [&](Value *Vec, unsigned Scale, bool IsSigned,
                               bool ReducedInTree) {
-      Value *Rdx = createSingleOp(V, Builder, TTI, Vec, Scale, IsSigned, DestTy,
+      Value *Rdx = createSingleOp(Builder, TTI, Vec, Scale, IsSigned, DestTy,
                                   ReducedInTree);
       if (ReducedSubTree)
         ReducedSubTree = createOp(Builder, RdxKind, ReducedSubTree, Rdx,
@@ -31170,6 +31159,9 @@ bool SLPVectorizerPass::vectorizeHorReduction(
       Res = true;
       if (auto *I = dyn_cast<Instruction>(VectorizedV); I && I != Inst) {
         // Try to find another reduction.
+        if (SLPReVec && I->getType()->isVectorTy() &&
+            Inst->getType()->isVectorTy())
+          continue;
         Stack.emplace(I, Level);
         continue;
       }

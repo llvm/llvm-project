@@ -5,7 +5,8 @@ define <4 x i16> @test(<4 x i16> %a) {
 ; CHECK-LABEL: define <4 x i16> @test(
 ; CHECK-SAME: <4 x i16> [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[OP_RDX9:%.*]] = or <4 x i16> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[SUBI:%.*]] = add <4 x i16> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[OP_RDX9:%.*]] = or <4 x i16> zeroinitializer, [[SUBI]]
 ; CHECK-NEXT:    ret <4 x i16> [[OP_RDX9]]
 ;
 entry:
