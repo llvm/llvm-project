@@ -164,6 +164,9 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- A new tweak "Create function body out-of-line" was added that creates
+  an implementation for a function declaration.
+
 Signature help
 ^^^^^^^^^^^^^^
 
