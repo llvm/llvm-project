@@ -85,10 +85,57 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString("--dependent-lib=amath"));
   }
 
+  // SYCL requires dynamic CRT because STL objects cross DLL boundaries.
+  // Library dependency is added via --dependent-lib at compiler stage.
+  // Here we validate CRT compatibility and add the library search path.
+  if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false) &&
+      !Args.hasArg(options::OPT_nolibsycl) &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
+
+    // Check if static CRT is being used. Use getLastArg to handle overriding
+    // options (e.g., /MT /MD -> /MD wins).
+    bool HasStaticCRT = false;
+
+    if (const Arg *A = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
+      StringRef RuntimeLib = A->getValue();
+      if (RuntimeLib == "static" || RuntimeLib == "static_dbg")
+        HasStaticCRT = true;
+    }
+
+    if (const Arg *A = Args.getLastArg(options::OPT__SLASH_M_Group)) {
+      if (A->getOption().matches(options::OPT__SLASH_MT) ||
+          A->getOption().matches(options::OPT__SLASH_MTd))
+        HasStaticCRT = true;
+    }
+
+    if (HasStaticCRT) {
+      TC.getDriver().Diag(diag::err_drv_sycl_requires_dynamic_crt);
+    } else {
+      // Add library search path so linker can find LLVMSYCL[d].lib.
+      SmallString<128> LibPath(TC.getDriver().Dir);
+      llvm::sys::path::append(LibPath, "..", "lib");
+      CmdArgs.push_back(Args.MakeArgString(Twine("-libpath:") + LibPath));
+    }
+  }
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles) &&
       !C.getDriver().IsCLMode() && !C.getDriver().IsFlangMode()) {
     CmdArgs.push_back("-defaultlib:libcmt");
     CmdArgs.push_back("-defaultlib:oldnames");
+
+    // SYCL: Add runtime library for clang (non-clang-cl) with MSVC target.
+    // For clang-cl, --dependent-lib is used at compiler stage instead.
+    if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false) &&
+        !Args.hasArg(options::OPT_nolibsycl)) {
+      bool IsDebugBuild = false;
+      if (const Arg *A = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
+        StringRef RuntimeVal = A->getValue();
+        if (RuntimeVal == "dll_dbg")
+          IsDebugBuild = true;
+      }
+      CmdArgs.push_back(IsDebugBuild ? "-defaultlib:LLVMSYCLd"
+                                     : "-defaultlib:LLVMSYCL");
+    }
   }
 
   // If the VC environment hasn't been configured (perhaps because the user
@@ -161,6 +208,12 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   auto CRTPath = TC.getCompilerRTPath();
   if (TC.getVFS().exists(CRTPath))
     CmdArgs.push_back(Args.MakeArgString("-libpath:" + CRTPath));
+
+  // SYCL offload compilation creates .llvm.offloading sections in each object
+  // file to store device code and metadata. Suppress linker warning about
+  // multiple sections with different attributes (LNK4078).
+  if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false))
+    CmdArgs.push_back("/IGNORE:4078");
 
   CmdArgs.push_back("-nologo");
 
