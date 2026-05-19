@@ -5049,8 +5049,8 @@ def CIR_GetMethodOp : CIR_Op<"get_method"> {
     The method type must match the callee type. That is:
     - The return type of the method must match the return type of the callee.
     - The first parameter of the callee must have type `!cir.ptr<!cir.void>`.
-    - Types of other parameters of the callee must match the parameters of the
-      method.
+    - Types of other parameters of the callee must match the method's
+      parameters after the implicit `this` pointer.
   }];
 
   let arguments = (ins CIR_MethodType:$method, CIR_PtrToRecordType:$object);
