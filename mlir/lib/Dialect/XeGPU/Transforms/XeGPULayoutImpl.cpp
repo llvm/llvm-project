@@ -1464,6 +1464,8 @@ getDpasInstDataVectors(VectorType aTy, VectorType bTy, VectorType cdTy,
   int kDimSize = subgroupSize;
   if (isDpasMx) {
     auto supportedKLen = uArchInstruction->getSupportedK(aTy.getElementType());
+    if (supportedKLen.empty())
+      return std::nullopt;
     kDimSize = supportedKLen[0];
   }
 
@@ -1918,7 +1920,7 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   // For non-anchor ops, derive the operand layout from the op's result
   // layout via op-specific semantics.
   xegpu::DistributeLayoutAttr resLayout;
-  if (op->getNumResults() == 1)
+  if (op->getNumResults() == 1 || isa<vector::DeinterleaveOp>(op))
     resLayout = xegpu::getDistributeLayoutAttr(op->getResult(0));
   return inferSourceLayoutFromResultForNonAnchorOp(operand, resLayout);
 }
