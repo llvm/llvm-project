@@ -94,6 +94,7 @@ public:
   virtual void EmitMCResourceMaximums(const MCSymbol *MaxVGPR,
                                       const MCSymbol *MaxAGPR,
                                       const MCSymbol *MaxSGPR,
+                                      const MCSymbol *MaxNonChainVGPR,
                                       const MCSymbol *MaxNamedBarrier) {};
 
   /// \returns True on success, false on failure.
@@ -177,6 +178,7 @@ public:
 
   void EmitMCResourceMaximums(const MCSymbol *MaxVGPR, const MCSymbol *MaxAGPR,
                               const MCSymbol *MaxSGPR,
+                              const MCSymbol *MaxNonChainVGPR,
                               const MCSymbol *MaxNamedBarrier) override;
 
   /// \returns True on success, false on failure.

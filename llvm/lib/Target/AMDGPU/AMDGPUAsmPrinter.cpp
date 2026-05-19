@@ -731,7 +731,8 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   OutStreamer->switchSection(MaxGPRSection);
   getTargetStreamer()->EmitMCResourceMaximums(
       RI.getMaxVGPRSymbol(OutContext), RI.getMaxAGPRSymbol(OutContext),
-      RI.getMaxSGPRSymbol(OutContext), RI.getMaxNamedBarrierSymbol(OutContext));
+      RI.getMaxSGPRSymbol(OutContext), RI.getMaxNonChainVGPRSymbol(OutContext),
+      RI.getMaxNamedBarrierSymbol(OutContext));
   OutStreamer->popSection();
 
   // In the object-linking pipeline per-function resource MCExprs reference
@@ -1131,28 +1132,44 @@ void AMDGPUAsmPrinter::emitDVgprSymbol(MachineFunction &MF) {
       MF.getFunction().getCallingConv() == CallingConv::AMDGPU_CS_Chain) {
     MCContext &Ctx = MF.getContext();
     unsigned BlockSize = MFI.getDynamicVGPRBlockSize();
-    MCValue NumVGPRs;
-    if (!CurrentProgramInfo.NumVGPRsForWavesPerEU->evaluateAsRelocatable(
-            NumVGPRs, nullptr) ||
-        !NumVGPRs.isAbsolute()) {
-      llvm_unreachable("unable to resolve NumVGPRs for _dvgpr$ symbol");
-    }
-    // Calculate number of VGPR blocks.
-    // Treat 0 VGPRs as 1 VGPR to avoid underflowing.
-    unsigned NumBlocks =
-        divideCeil(std::max(unsigned(NumVGPRs.getConstant()), 1U), BlockSize);
 
-    if (NumBlocks > 8) {
-      OutContext.reportError({},
-                             "too many DVGPR blocks for _dvgpr$ symbol for '" +
-                                 Twine(CurrentFnSym->getName()) + "'");
-      return;
+    const MCExpr *EncodedBlocks;
+    MCValue NumVGPRs;
+    if (CurrentProgramInfo.NumVGPRsForWavesPerEU->evaluateAsRelocatable(
+            NumVGPRs, nullptr) &&
+        NumVGPRs.isAbsolute()) {
+
+      // Calculate number of VGPR blocks.
+      // Treat 0 VGPRs as 1 VGPR to avoid underflowing.
+      unsigned NumBlocks =
+          divideCeil(std::max(unsigned(NumVGPRs.getConstant()), 1U), BlockSize);
+
+      if (NumBlocks > 8) {
+        OutContext.reportError(
+            {}, "too many DVGPR blocks for _dvgpr$ symbol for '" +
+                    Twine(CurrentFnSym->getName()) + "'");
+        return;
+      }
+      unsigned EncodedNumBlocks = (NumBlocks - 1) << 3;
+      EncodedBlocks = MCConstantExpr::create(EncodedNumBlocks, Ctx);
+    } else {
+      // Value not yet available so build a symbolic MCExpr:
+      // ((alignTo(max(NumVGPRs, 1), BlockSize) / BlockSize - 1) << 3
+      const MCExpr *One = MCConstantExpr::create(1, Ctx);
+      const MCExpr *BlockSizeConst = MCConstantExpr::create(BlockSize, Ctx);
+      const MCExpr *MaxVGPRs = AMDGPUMCExpr::createMax(
+          {CurrentProgramInfo.NumVGPRsForWavesPerEU, One}, Ctx);
+      const MCExpr *NumBlocks = MCBinaryExpr::createDiv(
+          AMDGPUMCExpr::createAlignTo(MaxVGPRs, BlockSizeConst, Ctx),
+          BlockSizeConst, Ctx);
+      EncodedBlocks =
+          MCBinaryExpr::createShl(MCBinaryExpr::createSub(NumBlocks, One, Ctx),
+                                  MCConstantExpr::create(3, Ctx), Ctx);
     }
-    unsigned EncodedNumBlocks = (NumBlocks - 1) << 3;
+
     // Add to function symbol to create _dvgpr$ symbol.
     const MCExpr *DVgprFuncVal = MCBinaryExpr::createAdd(
-        MCSymbolRefExpr::create(CurrentFnSym, Ctx),
-        MCConstantExpr::create(EncodedNumBlocks, Ctx), Ctx);
+        MCSymbolRefExpr::create(CurrentFnSym, Ctx), EncodedBlocks, Ctx);
     MCSymbol *DVgprFuncSym =
         Ctx.getOrCreateSymbol(Twine("_dvgpr$") + CurrentFnSym->getName());
     OutStreamer->emitAssignment(DVgprFuncSym, DVgprFuncVal);
