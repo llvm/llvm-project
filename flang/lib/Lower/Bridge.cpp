@@ -3974,7 +3974,7 @@ private:
           mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
           builder->setInsertionPointToStart(builder->getAllocaBlock());
           ivValue = builder->createTemporaryAlloc(
-              loc, idxTy, toStringRef(name.symbol->name()));
+              loc, genType(*name.symbol), toStringRef(name.symbol->name()));
           builder->restoreInsertionPoint(insPt);
         }
 
