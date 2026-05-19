@@ -5,6 +5,7 @@ from lldbsuite.test import lldbutil
 
 from typing import Union
 
+
 class TestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
