@@ -18,6 +18,8 @@ struct TypeOfSize {
   char data[Size];
 };
 
+static_assert(_LIBCPP_USE_LOWER_DEQUE_BLOCK_SIZE == 0, "");
+
 static_assert(std::__deque_block_size<char, std::ptrdiff_t>::value == 4096, "");
 static_assert(std::__deque_block_size<int, std::ptrdiff_t>::value == 1024, "");
 static_assert(std::__deque_block_size<double, std::ptrdiff_t>::value == 512, "");

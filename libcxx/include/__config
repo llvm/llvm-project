@@ -522,6 +522,10 @@ typedef __char32_t char32_t;
 
 #  define _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
 
+#  ifndef _LIBCPP_USE_LOWER_DEQUE_BLOCK_SIZE
+#    define _LIBCPP_USE_LOWER_DEQUE_BLOCK_SIZE 0
+#  endif
+
 #endif // __cplusplus
 
 #endif // _LIBCPP___CONFIG
