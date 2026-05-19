@@ -76,7 +76,7 @@ def main():
         for name in args.name:
             vcsrevision_contents += '#define %s_REVISION "%s"\n' % (name, rev)
             vcsrevision_contents += '#define %s_REPOSITORY "%s"\n' % (name, url)
-            vcsrevision_contents += "#define %s_COMMIT_COUNT %s\n" % (
+            vcsrevision_contents += "#define %s_COMMIT_COUNT %su\n" % (
                 name,
                 commit_count,
             )

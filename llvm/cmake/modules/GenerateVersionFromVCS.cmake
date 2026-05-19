@@ -35,7 +35,7 @@ function(append_info name revision repository commit_count)
   endif()
   if(commit_count)
     file(APPEND "${HEADER_FILE}.tmp"
-      "#define ${name}_COMMIT_COUNT ${commit_count}\n")
+      "#define ${name}_COMMIT_COUNT ${commit_count}u\n")
   else()
     file(APPEND "${HEADER_FILE}.tmp"
       "#undef ${name}_COMMIT_COUNT\n")

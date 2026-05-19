@@ -8,9 +8,11 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Config/config.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/Support/VCSRevision.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
@@ -614,7 +616,7 @@ Parts:
 TEST(DXCFile, ParseVERSPart) {
   SmallString<128> Storage;
 
-  // First read a fully explicit yaml with all sizes and offsets provided.
+  // Read a fully explicit yaml with all sizes and offsets provided.
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
   Header:
     Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
@@ -648,4 +650,51 @@ TEST(DXCFile, ParseVERSPart) {
 
   EXPECT_EQ(Storage.size(), 84u);
   EXPECT_TRUE(memcmp(Buffer, Storage.data(), 84u) == 0);
+}
+
+TEST(DXCFile, ComputeVERSPart) {
+  SmallString<128> Storage;
+
+  // Check default values of compiler version part fields.
+  ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
+  Header:
+    Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                       0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+    Version:
+      Major:           1
+      Minor:           0
+    PartCount:       1
+  Parts:
+    - Name:            VERS
+      Size:            100
+      CompilerVersion:
+    )"));
+
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(MemoryBufferRef(Storage, "")));
+  const std::optional<mcdxbc::CompilerVersion> &VERS =
+      C.getCompilerVersionInfo();
+  EXPECT_TRUE(VERS.has_value());
+  dxbc::CompilerVersionHeader Header = VERS->Parameters;
+  EXPECT_EQ(Header.Major, LLVM_VERSION_MAJOR);
+  EXPECT_EQ(Header.Minor, LLVM_VERSION_MINOR);
+#ifndef NDEBUG
+  EXPECT_TRUE(!!(Header.Flags & dxbc::CompilerVersionFlags::Debug));
+#else
+  EXPECT_FALSE(!!(Header.Flags & dxbc::CompilerVersionFlags::Debug));
+#endif
+  EXPECT_FALSE(!!(Header.Flags & dxbc::CompilerVersionFlags::Internal));
+#ifdef LLVM_COMMIT_COUNT
+  EXPECT_EQ(Header.CommitCount, LLVM_COMMIT_COUNT);
+#else
+  EXPECT_EQ(Header.CommitCount, 0);
+#endif
+#ifdef LLVM_REVISION
+  EXPECT_EQ(VERS->CommitSha, LLVM_REVISION);
+#else
+  EXPECT_TRUE(VERS->CommitSha.empty());
+#endif
+  EXPECT_EQ(VERS->CustomVersionString, PACKAGE_VERSION);
+  EXPECT_EQ(VERS->Parameters.ContentSizeInBytes,
+            VERS->CommitSha.size() + 1 + VERS->CustomVersionString.size() + 1);
 }

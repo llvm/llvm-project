@@ -54,17 +54,14 @@ Parts:
       DXIL:            [ 0x42, 0x43, 0xC0, 0xDE, ]
 ...
 
-
-
-
-#CHECK:        - Name:            VERS
-#CHECK-NEXT:     Size:            36
-#CHECK-NEXT:     CompilerVersion:
-#CHECK-NEXT:       Major:           1
-#CHECK-NEXT:       Minor:           10
-#CHECK-NEXT:       IsDebugBuild:    true
-#CHECK-NEXT:       IsValidated:     false
-#CHECK-NEXT:       CommitCount:     5267
-#CHECK-NEXT:       ContentSizeInBytes: 20
-#CHECK-NEXT:       CommitSha:       21f060b7
-#CHECK-NEXT:       CustomVersionString: 1.9.0.1526
+# CHECK:        - Name:            VERS
+# CHECK-NEXT:     Size:            36
+# CHECK-NEXT:     CompilerVersion:
+# CHECK-NEXT:       Major:           1
+# CHECK-NEXT:       Minor:           10
+# CHECK-NEXT:       IsDebugBuild:    true
+# CHECK-NEXT:       IsValidated:     false
+# CHECK-NEXT:       CommitCount:     5267
+# CHECK-NEXT:       ContentSizeInBytes: 20
+# CHECK-NEXT:       CommitSha:       21f060b7
+# CHECK-NEXT:       CustomVersionString: 1.9.0.1526
