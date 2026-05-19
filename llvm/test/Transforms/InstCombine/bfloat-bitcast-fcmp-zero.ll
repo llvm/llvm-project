@@ -5,7 +5,7 @@ define i1 @f(bfloat %x) {
 ; CHECK-LABEL: define i1 @f(
 ; CHECK-SAME: bfloat [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast bfloat [[X]] to half
-; CHECK-NEXT:    [[TMP2:%.*]] = fcmp une half [[TMP1]], 0xH0000
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp une half [[TMP1]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = bitcast bfloat %x to half
