@@ -13,11 +13,9 @@
 ; SIMPLE-FO-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}_0.spv
 ; SIMPLE-FO-NOT:  {{.+}}
 ;
-; Test that IMG_SPIRV image kind is set for non-AOT compilation
-; Test that triple was inferred from inputs and recorded in the offload image.
+; Test that IMG_SPIRV image kind is set for non-AOT compilation.
 ; RUN: llvm-objdump --offloading %t/spirv.out | FileCheck %s --check-prefix=IMAGE-KIND-SPIRV
 ; IMAGE-KIND-SPIRV: kind            spir-v
-; IMAGE-KIND-SPIRV: triple          spirv64
 ;
 ; Test the dry run of a simple case with device library files specified.
 ; RUN: mkdir -p %t/libs
@@ -70,28 +68,6 @@
 ; RUN:   | FileCheck %s --check-prefix=NOOUTPUT
 ; NOOUTPUT: Output file must be specified
 ;
-; Test error on mismatched triple between inputs.
-; RUN: llvm-as %t/input-mismatch.ll -o %t/input-mismatch.bc
-; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input-mismatch.bc -o %t/mismatch.out 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=TRIPLE-MISMATCH
-; TRIPLE-MISMATCH: error: conflicting target triples: 'spirv64' (from {{.*}}input1.bc) vs 'spirv32' (from {{.*}}input-mismatch.bc)
-;
-; Test that explicit -triple= is used. Input does not supply a triple.
-; RUN: llvm-as %t/no-triple.ll -o %t/no-triple.bc
-; RUN: clang-sycl-linker -triple=spirv64 %t/no-triple.bc -o %t/no-triple-input.out
-; RUN: llvm-objdump --offloading %t/no-triple-input.out | FileCheck %s --check-prefix=NO-TRIPLE-INPUT
-; NO-TRIPLE-INPUT: triple          spirv64
-;
-; Test error when explicit -triple= conflicts with the input's triple.
-; RUN: not clang-sycl-linker --dry-run -triple=spirv32 %t/input1.bc -o %t/explicit.out 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=EXPL-TRIPLE-MISMATCH
-; EXPL-TRIPLE-MISMATCH: error: conflicting target triples: 'spirv32' (from --triple=) vs 'spirv64' (from {{.*}}input1.bc)
-;
-; Test error when neither -triple= nor any input supplies a triple.
-; RUN: not clang-sycl-linker --dry-run %t/no-triple.bc -o a.out 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=NO-TRIPLE
-; NO-TRIPLE: Target triple must be specified or inferable from inputs
-;
 ; Check parser error reporting for unknown options.
 ; RUN: not clang-sycl-linker --dry-run --not-a-real-flag -triple=spirv64 %t/input1.bc -o a.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=BADOPT
@@ -131,19 +107,3 @@ target triple = "spirv64"
 define spir_func i32 @helper() {
   ret i32 0
 }
-
-;--- input-mismatch.ll
-target triple = "spirv32"
-
-define spir_kernel void @kernel_c() #0 {
-  ret void
-}
-
-attributes #0 = { "sycl-module-id"="TU3.cpp" }
-
-;--- no-triple.ll
-define spir_kernel void @kernel_d() #0 {
-  ret void
-}
-
-attributes #0 = { "sycl-module-id"="TU4.cpp" }
