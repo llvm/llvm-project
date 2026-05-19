@@ -678,7 +678,7 @@ ItaniumEHLowering::lowerConstructCatchParam(cir::ConstructCatchParamOp op,
     mlir::Value casted =
         cir::CastOp::create(builder, loc, paramAddrType.getPointee(),
                             cir::CastKind::bitcast, exnObj);
-    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {});
+    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {}, {});
     op.erase();
     return success();
   }
