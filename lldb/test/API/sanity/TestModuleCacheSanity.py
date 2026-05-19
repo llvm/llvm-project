@@ -16,9 +16,7 @@ class ModuleCacheSanityTestCase(TestBase):
 
     def test(self):
         build_dir_name = (
-            "lldb-test-build"
-            if sys.platform == "win32"
-            else "lldb-test-build.noindex"
+            "lldb-test-build" if sys.platform == "win32" else "lldb-test-build.noindex"
         )
         self.expect(
             "settings show symbols.clang-modules-cache-path",
