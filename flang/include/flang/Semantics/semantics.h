@@ -33,6 +33,7 @@ class IntrinsicTypeDefaultKinds;
 }
 
 namespace Fortran::parser {
+struct AccObject;
 struct Name;
 struct Program;
 class AllCookedSources;
@@ -336,6 +337,15 @@ public:
   void NoteUsedSymbols(const UnorderedSymbolSet &);
   bool IsSymbolUsed(const Symbol &) const;
 
+  // Track same-kind duplicate AccObjects between resolve-directives and
+  // rewrite-parse-tree (e.g. the second `x` in `private(x, x)`).
+  void MarkAccObjectDuplicate(const parser::AccObject *o) {
+    accObjectDuplicates_.insert(o);
+  }
+  bool IsAccObjectDuplicate(const parser::AccObject *o) const {
+    return accObjectDuplicates_.count(o) != 0;
+  }
+
   void DumpSymbols(llvm::raw_ostream &);
 
   // Top-level ProgramTrees are owned by the SemanticsContext for persistence.
@@ -395,6 +405,7 @@ private:
   std::map<const Symbol *, SourceName> moduleFileOutputRenamings_;
   UnorderedSymbolSet isDefined_;
   UnorderedSymbolSet isUsed_;
+  std::set<const parser::AccObject *> accObjectDuplicates_;
   std::list<ProgramTree> programTrees_;
 };
 

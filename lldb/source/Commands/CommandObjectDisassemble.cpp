@@ -366,7 +366,7 @@ CommandObjectDisassemble::GetCurrentLineRanges() {
 
 llvm::Expected<std::vector<AddressRange>>
 CommandObjectDisassemble::GetNameRanges(CommandReturnObject &result) {
-  ConstString name(m_options.func_name.c_str());
+  ConstString name(m_options.func_name);
 
   ModuleFunctionSearchOptions function_options;
   function_options.include_symbols = true;
