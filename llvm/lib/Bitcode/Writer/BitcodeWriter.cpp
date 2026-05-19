@@ -2227,7 +2227,11 @@ void ModuleBitcodeWriter::writeDISubprogram(const DISubprogram *N,
   Record.push_back(VE.getMetadataOrNullID(N->getRawLinkageName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(N->getLine());
-  Record.push_back(VE.getMetadataOrNullID(N->getType()));
+  // This field uses the metadata-or-null encoding in bitcode: 0 means null,
+  // otherwise the stored value is the metadata ID plus 1. Use getMetadataID()
+  // to assert that DISubprogram::type is present, then translate back to the
+  // existing encoding.
+  Record.push_back(VE.getMetadataID(N->getType()) + 1);
   Record.push_back(N->getScopeLine());
   Record.push_back(VE.getMetadataOrNullID(N->getContainingType()));
   Record.push_back(N->getSPFlags());
