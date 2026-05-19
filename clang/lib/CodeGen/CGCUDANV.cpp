@@ -764,8 +764,7 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
         Name,
         Name,
         llvm::ConstantInt::get(IntTy, /*Extern=*/0),
-        llvm::ConstantInt::get(VarSizeTy,
-                               CGM.getDataLayout().getPointerSize()),
+        llvm::ConstantInt::get(VarSizeTy, CGM.getDataLayout().getPointerSize()),
         llvm::ConstantInt::get(IntTy, /*Constant=*/0),
         llvm::ConstantInt::get(IntTy, 0)};
     Builder.CreateCall(RegisterVar, RegisterVarArgs);
@@ -1395,8 +1394,8 @@ void CGNVCUDARuntime::emitOffloadProfilingSections() {
     auto *Init = llvm::ConstantStruct::get(StructTy, Fields);
     auto *GV = new llvm::GlobalVariable(
         M, StructTy, /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage,
-        Init, Name, /*InsertBefore=*/nullptr,
-        llvm::GlobalValue::NotThreadLocal, GlobalAS);
+        Init, Name, /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+        GlobalAS);
     GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
     CGM.addCompilerUsedGlobal(GV);
     return;

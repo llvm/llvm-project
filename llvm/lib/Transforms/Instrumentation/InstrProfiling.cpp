@@ -42,7 +42,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/RuntimeLibcalls.h"
@@ -330,9 +329,6 @@ private:
 
   /// Replace instrprof.increment with an increment of the appropriate value.
   void lowerIncrement(InstrProfIncrementInst *Inc);
-
-  /// AMDGPU specific implementation of lowerIncrement.
-  void lowerIncrementAMDGPU(InstrProfIncrementInst *Inc);
 
   /// Force emitting of name vars for unused functions.
   void lowerCoverageData(GlobalVariable *CoverageNamesVar);
@@ -1202,24 +1198,23 @@ void InstrLowerer::lowerTimestamp(
 }
 
 void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
-  if (TT.isAMDGPU()) {
-    lowerIncrementAMDGPU(Inc);
-    return;
-  }
   auto *Addr = getCounterAddress(Inc);
-
   IRBuilder<> Builder(Inc);
   if (isGPUProfTarget(M)) {
-    auto *I64Ty = Builder.getInt64Ty();
+    auto *Int64Ty = Builder.getInt64Ty();
     auto *PtrTy = Builder.getPtrTy();
     auto *CalleeTy = FunctionType::get(Type::getVoidTy(M.getContext()),
-                                       {PtrTy, PtrTy, I64Ty}, false);
-    auto Callee =
-        M.getOrInsertFunction("__llvm_profile_instrument_gpu", CalleeTy);
+                                       {PtrTy, PtrTy, Int64Ty}, false);
+    FunctionCallee Callee =
+        M.getOrInsertFunction(RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+                                  RTLIB::impl___llvm_profile_instrument_gpu),
+                              CalleeTy);
     Value *CastAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, PtrTy);
     Value *Uniform =
         ConstantPointerNull::get(PointerType::getUnqual(M.getContext()));
-    Builder.CreateCall(Callee, {CastAddr, Uniform, Inc->getStep()});
+    Value *StepI64 =
+        Builder.CreateZExtOrTrunc(Inc->getStep(), Int64Ty, "step.i64");
+    Builder.CreateCall(Callee, {CastAddr, Uniform, StepI64});
   } else if (Options.Atomic || AtomicCounterUpdateAll ||
              (Inc->getIndex()->isNullValue() && AtomicFirstCounter)) {
     Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
@@ -1232,37 +1227,6 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
     if (isCounterPromotionEnabled())
       PromotionCandidates.emplace_back(cast<Instruction>(Load), Store);
   }
-  Inc->eraseFromParent();
-}
-
-void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
-  IRBuilder<> Builder(Inc);
-  LLVMContext &Context = M.getContext();
-  auto *Int64Ty = Type::getInt64Ty(Context);
-
-  auto *CounterIdx = Inc->getIndex();
-
-  // --- Counter address ---
-  GlobalVariable *Counters = getOrCreateRegionCounters(Inc);
-  Value *Indices[] = {Builder.getInt32(0), CounterIdx};
-  Value *Addr = Builder.CreateInBoundsGEP(Counters->getValueType(), Counters,
-                                          Indices, "ctr.addr");
-
-  auto *PtrTy = PointerType::getUnqual(Context);
-  Value *UniformAddrArg = ConstantPointerNull::get(cast<PointerType>(PtrTy));
-  Value *CastAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, PtrTy);
-
-  Value *IncStep = Inc->getStep();
-  Value *StepI64 = Builder.CreateZExtOrTrunc(IncStep, Int64Ty, "step.i64");
-
-  auto *CalleeTy = FunctionType::get(Type::getVoidTy(Context),
-                                     {PtrTy, PtrTy, Int64Ty}, false);
-  FunctionCallee IncrFn =
-      M.getOrInsertFunction(RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
-                                RTLIB::impl___llvm_profile_instrument_gpu),
-                            CalleeTy);
-  Builder.CreateCall(IncrFn, {CastAddr, UniformAddrArg, StepI64});
-
   Inc->eraseFromParent();
 }
 
@@ -1901,10 +1865,11 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     Linkage = GlobalValue::PrivateLinkage;
     Visibility = GlobalValue::DefaultVisibility;
   }
-  // AMDGPU objects are always ET_DYN, so non-local symbols with default
-  // visibility are preemptible. The CounterPtr label difference emits a REL32
-  // relocation that lld rejects against preemptible targets.
-  if (TT.isAMDGPU() && !GlobalValue::isLocalLinkage(Linkage))
+  // GPU-target ELF objects are always ET_DYN, so non-local symbols with
+  // default visibility are preemptible. The CounterPtr label difference
+  // emits a REL32 relocation that lld rejects against preemptible targets.
+  if (TT.isGPU() && TT.isOSBinFormatELF() &&
+      !GlobalValue::isLocalLinkage(Linkage))
     Visibility = GlobalValue::ProtectedVisibility;
   auto *Data =
       new GlobalVariable(M, DataTy, false, Linkage, nullptr, DataVarName);
