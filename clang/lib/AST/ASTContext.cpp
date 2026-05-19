@@ -246,17 +246,12 @@ RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
          isa<ObjCMethodDecl>(D) || isa<ObjCPropertyDecl>(D) ||
          isa<FunctionDecl>(D))) {
 
-      const auto DeclLineNumber =
-          SourceMgr.getLineNumber(DeclLocDecomp.first, DeclLocDecomp.second);
-
-      const auto DeclOfCommentLine =
+      // Check that Doxygen trailing comment comes after the declaration and in
+      // the same file as the declaration.
+      if (SourceMgr.getLineNumber(DeclLocDecomp.first, DeclLocDecomp.second) <=
           Comments.getCommentBeginLine(CommentBehindDecl, DeclLocDecomp.first,
-                                       OffsetCommentBehindDecl->first);
+                                       OffsetCommentBehindDecl->first)) {
 
-      // Check that Doxygen trailing comment comes after the declaration, starts
-      // on the same or next line and in the same file as the declaration.
-      if (DeclLineNumber == std::clamp(DeclLineNumber, DeclOfCommentLine,
-                                       DeclOfCommentLine + 1)) {
         return CommentBehindDecl;
       }
     }
