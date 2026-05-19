@@ -714,7 +714,7 @@ def FeatureStdExtZvfqwdota8f
     : RISCVExperimentalExtension<0, 2, "OCP FP8 Dot-Product", [FeatureStdExtZve32f]>;
 def HasStdExtZvfqwdota8f : Predicate<"Subtarget->hasStdExtZvfqwdota8f()">,
                            AssemblerPredicate<(all_of FeatureStdExtZvfqwdota8f),
-                                               "'Zvfqwdota8f' (OCP FP8 Dot-Product)">;
+                                              "'Zvfqwdota8f' (OCP FP8 Dot-Product)">;
 
 def FeatureStdExtZvfbfa
     : RISCVExperimentalExtension<0, 1, "Additional BF16 vector compute support",
