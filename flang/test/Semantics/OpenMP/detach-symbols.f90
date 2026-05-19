@@ -5,7 +5,7 @@
 
 !DEF: /detach_symbol_dsa (Subroutine) Subprogram
 subroutine detach_symbol_dsa
-  !DEF: /omp_lib (ModFile) Module
+  !DEF: /omp_lib INTRINSIC (ModFile) Module
   !DEF: /omp_lib/omp_event_handle_kind PARAMETER, PUBLIC Use INTEGER(4)
   use :: omp_lib, only: omp_event_handle_kind
   !DEF: /detach_symbol_dsa/omp_event_handle_kind PARAMETER Use INTEGER(4)

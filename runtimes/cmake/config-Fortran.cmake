@@ -78,7 +78,7 @@ set(RUNTIMES_ENABLE_FORTRAN OFF)
 #
 #    add_dependencies(target ${RUNTIMES_FORTRAN_BUILD_DEPS})
 #
-# to noy fail
+# to not fail
 add_custom_target(fortran-dummy-dep)
 set(RUNTIMES_FORTRAN_BUILD_DEPS fortran-dummy-dep)
 

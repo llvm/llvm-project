@@ -1,55 +1,23 @@
 ! Ensure argument -fintrinsic-modules-path works as expected.
+! WITHOUT the option, the default location for the module is checked and no error generated.
+! With the option GIVEN, the module with the same name is PREPENDED, and considered over the
+! default one, causing an error.
 
 !-----------------------------------------
-! FLANG DRIVER
+! FRONTEND FLANG DRIVER (flang -fc1)
 !-----------------------------------------
-! NOTE: Depending on how Flang is built, the default intrinsics may have higher
-!       or lower priority than -fintrinsic-modules-path added here. Using
-!       basictestmoduleone.mod from Inputs/module-dir/ will trigger an error.
+! RUN: %flang_fc1 -fsyntax-only %s  2>&1 | FileCheck %s --allow-empty --check-prefix=WITHOUT
+! RUN: not %flang_bare -fc1 -fsyntax-only -fintrinsic-modules-path %S/Inputs/ %s  2>&1 | FileCheck %s --check-prefix=GIVEN
+! RUN: not %flang_bare -fc1 -fsyntax-only -fintrinsic-modules-path=%S/Inputs/ %s  2>&1 | FileCheck %s --check-prefix=GIVEN
 
-! RUN:     %flang -fsyntax-only -### %s 2>&1 | FileCheck %s --check-prefix=DEFAULTPATH
+! WITHOUT-NOT: 'ieee_arithmetic.mod' was not found
+! WITHOUT-NOT: 'iso_fortran_env.mod' was not found
 
-! RUN:     %flang -fsyntax-only -cpp -DINTRINSICS_DEFAULT %s
-! RUN: not %flang -fsyntax-only -cpp -DINTRINSICS_INPUTONE %s 2>&1 | FileCheck %s --check-prefix=NOINPUTONE
-! RUN: not %flang -fsyntax-only -cpp -DINTRINSICS_INPUTTWO %s 2>&1 | FileCheck %s --check-prefix=NOINPUTTWO
-! RUN:     %flang -fsyntax-only -cpp -DINTRINSICS_DEFAULT -DINTRINSICS_INPUTTWO -fintrinsic-modules-path=%S/Inputs/module-dir/ %s
-! RUN:     %flang -fsyntax-only -cpp -DINTRINSICS_INPUTONE -fintrinsic-modules-path=%S/Inputs/ %s
-! RUN:     %flang -fsyntax-only -cpp -DINTRINSICS_INPUTONE -DINTRINSICS_INPUTTWO -fintrinsic-modules-path=%S/Inputs/ -fintrinsic-modules-path=%S/Inputs/module-dir/ %s
-! RUN: not %flang -fsyntax-only -cpp -DINTRINSICS_INPUTONE -DINTRINSICS_INPUTTWO -fintrinsic-modules-path=%S/Inputs/module-dir/ -fintrinsic-modules-path=%S/Inputs/ %s 2>&1 | FileCheck %s --check-prefix=WRONGINPUTONE
+! GIVEN: error: Cannot read module file for module 'ieee_arithmetic': 'ieee_arithmetic.mod' is not a module file for this compiler
+! GIVEN: error: Cannot read module file for module 'iso_fortran_env': 'iso_fortran_env.mod' is not a module file for this compiler
 
-
-!-----------------------------------------
-! FLANG FRONTEND (flang -fc1)
-!-----------------------------------------
-! NOTE: %flang_cc1 the default intrinsics path always has higher priority than
-!       -fintrinsic-modules-path added here. Accidentally using
-!       ieee_arithmetic/iso_fortran_env from the Inputs/ directory will trigger
-!       an error (e.g. when the default intrinsics dir is empty).
-
-! RUN:     %flang_fc1 -fsyntax-only -cpp -DINTRINSICS_DEFAULT %s
-! RUN: not %flang_fc1 -fsyntax-only -cpp -DINTRINSICS_DEFAULT -DINTRINSICS_INPUTONE %s 2>&1 | FileCheck %s --check-prefix=NOINPUTONE
-! RUN: not %flang_fc1 -fsyntax-only -cpp -DINTRINSICS_DEFAULT -DINTRINSICS_INPUTTWO %s 2>&1 | FileCheck %s --check-prefix=NOINPUTTWO
-! RUN:     %flang_fc1 -fsyntax-only -cpp -DINTRINSICS_DEFAULT -DINTRINSICS_INPUTTWO -fintrinsic-modules-path=%S/Inputs/module-dir %s
-! RUN:     %flang_fc1 -fsyntax-only -cpp -DINTRINSICS_DEFAULT -DINTRINSICS_INPUTONE -fintrinsic-modules-path=%S/Inputs/ %s
-! RUN:     %flang_fc1 -fsyntax-only -cpp -DINTRINSICS_DEFAULT -DINTRINSICS_INPUTONE -DINTRINSICS_INPUTTWO -fintrinsic-modules-path=%S/Inputs/ -fintrinsic-modules-path=%S/Inputs/module-dir/ %s
-! RUN: not %flang_fc1 -fsyntax-only -cpp -DINTRINSICS_DEFAULT -DINTRINSICS_INPUTONE -DINTRINSICS_INPUTTWO -fintrinsic-modules-path=%S/Inputs/module-dir -fintrinsic-modules-path=%S/Inputs/ %s 2>&1 | FileCheck %s --check-prefix=WRONGINPUTONE
-
-
-! DEFAULTPATH: flang{{.*}}-fc1{{.*}}-fintrinsic-modules-path
-
-! NOINPUTONE: Source file 'basictestmoduleone.mod' was not found
-! NOINPUTTWO: Source file 'basictestmoduletwo.mod' was not found
-! WRONGINPUTONE: 't1' not found in module 'basictestmoduleone'
 
 program test_intrinsic_module_path
-#ifdef INTRINSICS_DEFAULT
    use ieee_arithmetic, only: ieee_round_type
    use iso_fortran_env, only: team_type, event_type, lock_type
-#endif
-#ifdef INTRINSICS_INPUTONE
-   use basictestmoduleone, only: t1
-#endif
-#ifdef INTRINSICS_INPUTTWO
-   use basictestmoduletwo, only: t2
-#endif
 end program

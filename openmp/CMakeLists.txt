@@ -70,6 +70,13 @@ set(OPENMP_TEST_CXX_COMPILER "${OPENMP_TEST_CXX_COMPILER_default}" CACHE STRING
 set(OPENMP_TEST_Fortran_COMPILER "${OPENMP_TEST_Fortran_COMPILER_default}" CACHE STRING
   "Fortran compiler to use for testing OpenMP runtime libraries.")
 
+# Set fortran test compiler if flang is found
+if (EXISTS "${OPENMP_TEST_Fortran_COMPILER}")
+  message("Using local flang build at ${OPENMP_TEST_Fortran_COMPILER}")
+else()
+  unset(OPENMP_TEST_Fortran_COMPILER)
+endif()
+
 # If not standalone, set CMAKE_CXX_STANDARD but don't set the global cache value,
 # only set it locally for OpenMP.
 set(CMAKE_CXX_STANDARD 17)
@@ -100,7 +107,7 @@ set(LIBOMP_BUILD_DATE "No_Timestamp")
 
 
 set(LIBOMP_FORTRAN_MODULES "${RUNTIMES_ENABLE_FORTRAN}" CACHE BOOL
-  "Create Fortran module files? (requires Fortran compiler)")
+  "Create Fortran module files? (requires fortran compiler)")
 
 option(LIBOMP_FORTRAN_MODULES_ONLY
   "Build only Fortran modules without libomp runtime library" OFF)
@@ -166,7 +173,7 @@ endif()
 if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx|^spirv64" OR
    "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn|^nvptx|^spirv64")
   add_subdirectory(device)
-
+else()
   # Build host runtime library, after LIBOMPTARGET variables are set since they
   # are needed to enable time profiling support in the OpenMP runtime.
   if(NOT LIBOMP_FORTRAN_MODULES_ONLY)
