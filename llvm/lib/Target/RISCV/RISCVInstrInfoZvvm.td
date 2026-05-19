@@ -28,14 +28,8 @@ def TileLambdaOp : RISCVOp {
   let ParserMatchClass = TileLambdaAsmOperand;
   let PrintMethod = "printTileLambda";
   let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeUImmOperand<3>";
+  let DecoderMethod = "decodeUImmNonZeroOperand<3>";
   let OperandType = "OPERAND_UIMM3";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return Imm && isUInt<3>(Imm);
-  }];
 }
 
 def VScaleAsmOperand : AsmOperandClass {
@@ -84,8 +78,7 @@ class VTileLoadBase<bits<2> mop, dag ins, string opcodestr, string argstr>
 }
 
 class VTileStoreBase<bits<2> mop, dag ins, string opcodestr, string argstr>
-    : RVInst<(outs),
-             ins, opcodestr, argstr, [], InstFormatR> {
+    : RVInst<(outs), ins, opcodestr, argstr, [], InstFormatR> {
   bits<5> vs3;
   bits<5> rs1;
   bits<5> rs2;

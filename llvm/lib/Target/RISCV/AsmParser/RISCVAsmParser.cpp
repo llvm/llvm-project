@@ -2559,7 +2559,7 @@ ParseStatus RISCVAsmParser::parseMaskReg(OperandVector &Operands) {
   StringRef Name = getLexer().getTok().getIdentifier();
   if (!Name.consume_back(".t")) {
     // Non-register identifiers may belong to another optional operand in an
-    // overloaded mnemnoic. Let the matcher try those alternatives.
+    // overloaded mnemonic. Let the matcher try those alternatives.
     if (matchRegisterNameHelper(Name))
       return Error(getLoc(), "expected '.t' suffix");
     return ParseStatus::NoMatch;
@@ -2607,10 +2607,8 @@ ParseStatus RISCVAsmParser::parseTileLambda(OperandVector &Operands) {
     return ParseStatus::NoMatch;
 
   unsigned Lambda;
-  if (Name.getAsInteger(10, Lambda))
-    return Error(S, "operand must be L1, L2, L4, L8, L16, L32, or L64");
-
-  if (!isPowerOf2_32(Lambda) || Lambda >= 128)
+  if (Name.getAsInteger(10, Lambda) || !isPowerOf2_32(Lambda) ||
+      Lambda >= 128)
     return Error(S, "operand must be L1, L2, L4, L8, L16, L32, or L64");
 
   unsigned EncodedLambda = Log2_32(Lambda) + 1;
