@@ -756,6 +756,16 @@ struct AMDGPUQueueTy {
             Status, "error in hsa_amd_profiling_set_profiler_enabled: %s"))
       return Err;
 
+    // Enable SDMA async-copy timestamping process-globally so that
+    // `recordEvent` can recycle an async-copy completion signal and have
+    // `hsa_amd_profiling_get_async_copy_time` return valid timestamps. This
+    // toggle is process-global and idempotent; calling it once per queue
+    // init is safe.
+    Status = hsa_amd_profiling_async_copy_enable(1);
+    if (auto Err = Plugin::check(
+            Status, "error in hsa_amd_profiling_async_copy_enable: %s"))
+      return Err;
+
     return Plugin::success();
   }
 
@@ -974,6 +984,18 @@ public:
   /// Function pointer type for `pushHostCallback`
   using HostFnType = void (*)(void *);
 
+  /// What kind of HSA op (if any) backs a stream slot's completion signal.
+  /// Exposed at the public class scope so that `AMDGPUEventTy` can refer to
+  /// it when recording the timing kind of a recycled signal.
+  ///   * KernelDispatch -- signal carries dispatch timestamps queryable via
+  ///                       `hsa_amd_profiling_get_dispatch_time` (used for
+  ///                       both kernel-dispatch packets and barrier marker
+  ///                       packets).
+  ///   * AsyncCopy      -- signal carries SDMA timestamps queryable via
+  ///                       `hsa_amd_profiling_get_async_copy_time`.
+  ///   * None           -- not a timestamped HSA op; cannot be recycled.
+  enum class TimingKind { None, KernelDispatch, AsyncCopy };
+
 private:
   /// Utility struct holding arguments for async H2H memory copies.
   struct MemcpyArgsTy {
@@ -1012,11 +1034,12 @@ private:
     /// operation as input signal.
     AMDGPUSignalTy *Signal;
 
-    /// True iff this slot holds an AQL kernel-dispatch packet whose
-    /// completion signal carries dispatch timestamps that can be queried with
-    /// `hsa_amd_profiling_get_dispatch_time`. Used by `recordEvent` to recycle
-    /// the signal instead of submitting a barrier marker.
-    bool IsKernelDispatch;
+    /// What kind of HSA op (if any) backs this slot's completion signal.
+    /// Used by `recordEvent` to decide whether the signal can be recycled
+    /// instead of submitting a fresh barrier marker, and by `getElapsedTime`
+    /// to pick the matching HSA profiling API. See
+    /// `AMDGPUStreamTy::TimingKind`.
+    TimingKind Kind;
 
     /// The actions that must be performed after the operation's completion. Set
     /// to nullptr when there is no action to perform.
@@ -1035,7 +1058,7 @@ private:
 
     /// Create an empty slot.
     StreamSlotTy()
-        : Signal(nullptr), IsKernelDispatch(false), Callbacks({}),
+        : Signal(nullptr), Kind(TimingKind::None), Callbacks({}),
           ActionArgs({}) {}
 
     /// Schedule a host memory copy action on the slot.
@@ -1192,7 +1215,7 @@ private:
     assert(Slot + 1 == NextSlot && "Can only roll back the last consumed slot");
 
     Slots[Slot].Signal = nullptr;
-    Slots[Slot].IsKernelDispatch = false;
+    Slots[Slot].Kind = TimingKind::None;
     Slots[Slot].Callbacks.clear();
     Slots[Slot].ActionArgs.clear();
     --NextSlot;
@@ -1212,7 +1235,7 @@ private:
           return Err;
 
       Slots[Slot].Signal = nullptr;
-      Slots[Slot].IsKernelDispatch = false;
+      Slots[Slot].Kind = TimingKind::None;
     }
 
     // Reset the stream slots to zero.
@@ -1386,7 +1409,7 @@ public:
     // `recordEvent` can recycle the dispatch completion signal as the event's
     // timing signal, avoiding a redundant AQL barrier marker packet on the
     // hot path of inter-kernel record/wait usage.
-    Slots[Curr].IsKernelDispatch = true;
+    Slots[Curr].Kind = TimingKind::KernelDispatch;
 
     // Setup the post action to release the kernel args buffer.
     if (auto Err = Slots[Curr].schedReleaseBuffer(KernelArgs, MemoryManager))
@@ -1433,6 +1456,11 @@ public:
     // Consume stream slot and compute dependencies.
     auto [Curr, InputSignal] = consume(OutputSignal);
 
+    // Mark this slot as an async copy so that an immediately-following
+    // `recordEvent` can recycle the SDMA completion signal as the event's
+    // timing signal, avoiding a redundant AQL barrier marker packet.
+    Slots[Curr].Kind = TimingKind::AsyncCopy;
+
     // Issue the async memory copy.
     if (InputSignal && InputSignal->load()) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
@@ -1468,6 +1496,12 @@ public:
 
     // Consume stream slot and compute dependencies.
     auto [Curr, InputSignal] = consume(OutputSignals[0]);
+
+    // Mark this slot as an async copy: its OutputSignal is the SDMA
+    // completion signal for the device->pinned-host transfer. The *next*
+    // slot consumed below holds the host-side `std::memcpy` callback whose
+    // signal does not carry SDMA timestamps and must remain `None`.
+    Slots[Curr].Kind = TimingKind::AsyncCopy;
 
     // Setup the post action for releasing the intermediate buffer.
     if (auto Err = Slots[Curr].schedReleaseBuffer(Inter, MemoryManager))
@@ -1577,6 +1611,14 @@ public:
     if (auto Err = Slots[Curr].schedReleaseBuffer(Inter, MemoryManager))
       return Err;
 
+    // Mark the final SDMA slot as an async copy: in both branches above the
+    // last `consume()` is the one bound to `OutputSignal`, which is the
+    // completion signal of the pinned-host->device SDMA transfer issued
+    // below. The earlier slot (if any) was a host-side `std::memcpy`
+    // callback whose signal does not carry SDMA timestamps and must remain
+    // `None`.
+    Slots[Curr].Kind = TimingKind::AsyncCopy;
+
     // Issue the second step: host to device transfer. Avoid defining the input
     // dependency if already satisfied.
     if (InputSignal && InputSignal->load()) {
@@ -1603,6 +1645,10 @@ public:
 
     // Consume stream slot and compute dependencies.
     auto [Curr, InputSignal] = consume(OutputSignal);
+
+    // Mark this slot as an async copy so that an immediately-following
+    // `recordEvent` can recycle the SDMA completion signal.
+    Slots[Curr].Kind = TimingKind::AsyncCopy;
 
     // The agents need to have access to the corresponding memory
     // This is presently only true if the pointers were originally
@@ -1720,7 +1766,8 @@ struct AMDGPUEventTy {
   /// Create an empty event.
   AMDGPUEventTy(AMDGPUDeviceTy &Device)
       : Device(Device), RecordedStream(nullptr), RecordedSlot(-1),
-        RecordedSyncCycle(-1), TimingSignal(nullptr) {}
+        RecordedSyncCycle(-1), TimingSignal(nullptr),
+        TimingKind(AMDGPUStreamTy::TimingKind::None) {}
 
   /// Initialize and deinitialize.
   Error init() { return resetState(); }
@@ -1732,6 +1779,7 @@ struct AMDGPUEventTy {
     RecordedStream = nullptr;
     RecordedSlot = -1;
     RecordedSyncCycle = -1;
+    TimingKind = AMDGPUStreamTy::TimingKind::None;
     return releaseTimingSignal(ReusableSignalPtr);
   }
 
@@ -1814,6 +1862,11 @@ protected:
   /// The signal of the recorded timing barrier.
   AMDGPUSignalTy *TimingSignal;
 
+  /// What kind of HSA op produced `TimingSignal`. Selects which HSA
+  /// profiling API `getElapsedTime` must use (dispatch_time vs
+  /// async_copy_time). Cross-kind elapsed-time queries are allowed.
+  AMDGPUStreamTy::TimingKind TimingKind;
+
   /// Mutex to safely access event fields.
   mutable std::mutex Mutex;
 
@@ -1828,21 +1881,37 @@ Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event,
 
   std::lock_guard<std::mutex> StreamLock(Mutex);
 
-  // Fast path: avoid enqueuing a redundant AQL barrier marker packet if
-  // one is already available.
-  // Note: queue profiling is enabled at queue creation time, but ompt_stop_tracing
-  // can disable it. This would result in garbage timestamps.
-  if (NextSlot > 0 && Slots[NextSlot - 1].IsKernelDispatch &&
+  // Fast path: if the most recent operation on this stream is a kernel
+  // dispatch OR an SDMA async copy, recycle its completion signal as the
+  // event's timing signal. Queue profiling and SDMA async-copy profiling
+  // are enabled at queue creation, so the slot's signal already carries
+  // valid `start_ts`/`end_ts` queryable via either
+  // `hsa_amd_profiling_get_dispatch_time` (for kernel dispatch packets) or
+  // `hsa_amd_profiling_get_async_copy_time` (for SDMA copies). This avoids
+  // enqueuing a redundant AQL barrier marker packet (~4 extra HSA host ops
+  // + 1 AQL packet) on the hot path of `record/wait` event usage in
+  // libomptarget.
+  //
+  // The original slot itself stays valid for `waitEvent`/`synchronizeOn`
+  // since those use `Event.RecordedSlot` + `Slots[..].Signal`, which here
+  // point at the op's own completion signal -- the correct thing to wait
+  // on.
+  if (NextSlot > 0 &&
+      (Slots[NextSlot - 1].Kind == TimingKind::KernelDispatch ||
+       Slots[NextSlot - 1].Kind == TimingKind::AsyncCopy) &&
       Slots[NextSlot - 1].Signal != nullptr) {
-    AMDGPUSignalTy *KernelSignal = Slots[NextSlot - 1].Signal;
+    AMDGPUSignalTy *OpSignal = Slots[NextSlot - 1].Signal;
 
-    // Take an additional reference for the event's TimingSignal. It
-    // is released by `AMDGPUEventTy::releaseTimingSignal`.
-    KernelSignal->increaseUseCount();
+    // Take an additional reference for the event's TimingSignal. The
+    // slot's own reference is released by `complete()` as usual; the
+    // event's reference is released by
+    // `AMDGPUEventTy::releaseTimingSignal`.
+    OpSignal->increaseUseCount();
 
     Event.RecordedSlot = static_cast<int64_t>(NextSlot) - 1;
     Event.RecordedSyncCycle = SyncCycle;
-    Event.TimingSignal = KernelSignal;
+    Event.TimingSignal = OpSignal;
+    Event.TimingKind = Slots[NextSlot - 1].Kind;
 
     assert(Event.RecordedSyncCycle >= 0 && "Invalid recorded sync cycle");
     assert(Event.RecordedSlot >= 0 && "Invalid recorded slot");
@@ -1855,9 +1924,12 @@ Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event,
     return Plugin::success();
   }
 
-  // Fallback: No signal available. Materialize the event by
-  // enqueuing a real barrier marker packet on the stream so elapsed-time
-  // queries can still retrieve timing.
+  // Fallback: no recyclable kernel-dispatch or SDMA completion signal is
+  // available (the stream is empty after a sync, or the last op was a
+  // barrier or host callback that does not produce timestamps usable by
+  // either HSA profiling API). Materialize the event by enqueuing a real
+  // barrier marker packet on the stream so elapsed-time queries can still
+  // retrieve timing.
 
   // One use for the stream slot and one for the event timing signal.
   const uint32_t OutputSignalUses = 2;
@@ -1889,6 +1961,9 @@ Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event,
   Event.RecordedSlot = Curr;
   Event.RecordedSyncCycle = SyncCycle;
   Event.TimingSignal = OutputSignal;
+  // A barrier marker packet's completion signal is queried via the
+  // dispatch_time API, same as a kernel dispatch packet.
+  Event.TimingKind = TimingKind::KernelDispatch;
 
   assert(Event.RecordedSyncCycle >= 0 && "Invalid recorded sync cycle");
   assert(Event.RecordedSlot >= 0 && "Invalid recorded slot");
@@ -3792,23 +3867,41 @@ Expected<float> AMDGPUEventTy::getElapsedTime(AMDGPUEventTy &EndEvent) {
         ErrorCode::UNKNOWN,
         "timing information is not ready for one or both events");
 
-  hsa_amd_profiling_dispatch_time_t StartTime = {};
-  hsa_amd_profiling_dispatch_time_t StopTime = {};
+  // Each event's timing signal may have been produced by either a kernel
+  // dispatch / barrier marker (queryable via dispatch_time) or by an SDMA
+  // async copy (queryable via async_copy_time). The two HSA APIs return
+  // timestamps on the same system clock, so we can mix-and-match start and
+  // stop kinds.
+  auto loadEndTick = [&](const AMDGPUEventTy &E) -> Expected<uint64_t> {
+    using TK = AMDGPUStreamTy::TimingKind;
+    if (E.TimingKind == TK::AsyncCopy) {
+      hsa_amd_profiling_async_copy_time_t T = {};
+      hsa_status_t Status =
+          hsa_amd_profiling_get_async_copy_time(E.TimingSignal->get(), &T);
+      if (auto Err = Plugin::check(
+              Status, "error in hsa_amd_profiling_get_async_copy_time: %s"))
+        return std::move(Err);
+      return T.end;
+    }
+    // KernelDispatch or None (defensive): use dispatch_time.
+    hsa_amd_profiling_dispatch_time_t T = {};
+    hsa_status_t Status = hsa_amd_profiling_get_dispatch_time(
+        E.Device.getAgent(), E.TimingSignal->get(), &T);
+    if (auto Err = Plugin::check(
+            Status, "error in hsa_amd_profiling_get_dispatch_time: %s"))
+      return std::move(Err);
+    return T.end;
+  };
 
-  hsa_status_t Status = hsa_amd_profiling_get_dispatch_time(
-      Device.getAgent(), TimingSignal->get(), &StartTime);
-  if (auto Err = Plugin::check(
-          Status, "error in hsa_amd_profiling_get_dispatch_time: %s"))
-    return std::move(Err);
+  auto StartEndOrErr = loadEndTick(*this);
+  if (!StartEndOrErr)
+    return StartEndOrErr.takeError();
+  auto StopEndOrErr = loadEndTick(EndEvent);
+  if (!StopEndOrErr)
+    return StopEndOrErr.takeError();
 
-  Status = hsa_amd_profiling_get_dispatch_time(
-      EndEvent.Device.getAgent(), EndEvent.TimingSignal->get(), &StopTime);
-  if (auto Err = Plugin::check(
-          Status, "error in hsa_amd_profiling_get_dispatch_time: %s"))
-    return std::move(Err);
-
-  const int64_t DeltaTicks =
-      static_cast<int64_t>(StopTime.end) - static_cast<int64_t>(StartTime.end);
+  const int64_t DeltaTicks = static_cast<int64_t>(*StopEndOrErr) -
+                             static_cast<int64_t>(*StartEndOrErr);
   constexpr double MillisecondsPerSecond = 1000.0;
 
   return static_cast<float>(static_cast<double>(DeltaTicks) *

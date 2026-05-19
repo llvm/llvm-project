@@ -182,8 +182,12 @@ TEST_P(olGetEventElapsedTimeTest, EmptyQueueLeadingEventFallback) {
   ASSERT_SUCCESS(olDestroyEvent(End));
 }
 
-// Prior event was not a kernel launch, but a memcpy
-TEST_P(olGetEventElapsedTimeTest, NonKernelPriorOpFallback) {
+// Event recorded immediately after an async memcpy must recycle the
+// memcpy's SDMA completion signal (no extra barrier marker emitted) and
+// `olGetEventElapsedTime` must still return a valid elapsed time when the
+// second event recycles a kernel-dispatch signal -- i.e., cross-kind
+// elapsed-time queries work.
+TEST_P(olGetEventElapsedTimeTest, MemcpyPriorOpRecyclesAsyncCopy) {
   constexpr size_t CopySize = 1024;
   void *DevBuf = nullptr;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, CopySize, &DevBuf));
@@ -194,31 +198,74 @@ TEST_P(olGetEventElapsedTimeTest, NonKernelPriorOpFallback) {
 
   // Slot 0: kernel.
   launchFoo();
-  // Slot 1: async H->D memcpy on the same queue. IsKernelDispatch is false
-  // for this slot, so the next recordEvent must NOT recycle it.
+  // Slot 1: async H->D memcpy on the same queue. The memcpy's SDMA
+  // completion signal carries valid `hsa_amd_profiling_get_async_copy_time`
+  // timestamps, so the next recordEvent must recycle this slot's signal
+  // (AsyncCopy kind) instead of pushing a fresh barrier marker.
   ASSERT_SUCCESS(
       olMemcpy(Queue, DevBuf, Device, HostBuf.data(), Host, CopySize));
-  // Slot 2: must be a fresh barrier marker (fallback path), because
-  // Slots[NextSlot-1] (the memcpy) has IsKernelDispatch=false.
+  // Start recycles Slot 1's async-copy signal.
   ASSERT_SUCCESS(olCreateEvent(Queue, &Start));
 
-  // Slot 3: kernel.
+  // Slot 2: kernel.
   launchFoo();
-  // End takes the fast path and recycles Slot 3's kernel signal.
+  // End takes the fast path and recycles Slot 2's KernelDispatch signal.
   ASSERT_SUCCESS(olCreateEvent(Queue, &End));
 
   ASSERT_SUCCESS(olSyncEvent(End));
 
   float Elapsed = -1.0f;
   ASSERT_SUCCESS(olGetEventElapsedTime(Start, End, &Elapsed));
-  // Strictly positive: Start's barrier ran before the second kernel was
-  // dispatched, so the kernel-end timestamp must be later than the
-  // barrier-end timestamp. A zero or negative value would indicate that
-  // Start latched onto a stale or later slot.
+  // Strictly positive: the memcpy ended before the second kernel finished,
+  // so the kernel-end timestamp must be later than the memcpy-end
+  // timestamp. A zero or negative value would indicate that the cross-kind
+  // tick-domain comparison broke, or that one event latched onto a stale
+  // signal.
   ASSERT_GT(Elapsed, 0.0f);
 
   ASSERT_SUCCESS(olDestroyEvent(Start));
   ASSERT_SUCCESS(olDestroyEvent(End));
+  ASSERT_SUCCESS(olMemFree(DevBuf));
+}
+
+// Two events recorded back-to-back on a queue whose last operation is an
+// async memcpy must produce identical elapsed-time deltas relative to any
+// third event. Both events recycle the same SDMA completion signal, so the
+// returned `end` ticks must match.
+TEST_P(olGetEventElapsedTimeTest, BackToBackEventsShareAsyncCopySignal) {
+  constexpr size_t CopySize = 4096;
+  void *DevBuf = nullptr;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, CopySize, &DevBuf));
+  std::vector<uint8_t> HostBuf(CopySize, 0x33);
+
+  ol_event_handle_t Start = nullptr;
+  ol_event_handle_t MidA = nullptr;
+  ol_event_handle_t MidB = nullptr;
+
+  launchFoo();
+  ASSERT_SUCCESS(olCreateEvent(Queue, &Start));
+  ASSERT_SUCCESS(
+      olMemcpy(Queue, DevBuf, Device, HostBuf.data(), Host, CopySize));
+  // Both MidA and MidB recycle the same async-copy completion signal
+  // because no intervening op separates them.
+  ASSERT_SUCCESS(olCreateEvent(Queue, &MidA));
+  ASSERT_SUCCESS(olCreateEvent(Queue, &MidB));
+
+  ASSERT_SUCCESS(olSyncEvent(MidB));
+
+  float DeltaA = -1.0f, DeltaB = -1.0f;
+  ASSERT_SUCCESS(olGetEventElapsedTime(Start, MidA, &DeltaA));
+  ASSERT_SUCCESS(olGetEventElapsedTime(Start, MidB, &DeltaB));
+
+  ASSERT_GE(DeltaA, 0.0f);
+  ASSERT_GE(DeltaB, 0.0f);
+  // Both Mid events should be attached to the same SDMA copy completion
+  // signal; tolerate minimal difference.
+  ASSERT_NEAR(DeltaA, DeltaB, /*abs_error_ms=*/0.05f);
+
+  ASSERT_SUCCESS(olDestroyEvent(Start));
+  ASSERT_SUCCESS(olDestroyEvent(MidA));
+  ASSERT_SUCCESS(olDestroyEvent(MidB));
   ASSERT_SUCCESS(olMemFree(DevBuf));
 }
 
