@@ -196,6 +196,9 @@ public:
 
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *curFuncDecl = nullptr;
+  /// When true, generateCode must not emit the function body after the
+  /// prologue (e.g. after reporting STDC FENV_ACCESS NYI for this function).
+  bool skipFunctionBody = false;
   /// This is the inner-most code context, which includes blocks.
   const clang::Decl *curCodeDecl = nullptr;
   const CIRGenFunctionInfo *curFnInfo = nullptr;

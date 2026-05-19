@@ -499,8 +499,10 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = (d ? d->getNonClosureContext() : nullptr);
 
-  if (fd && (fd->UsesFPIntrin() || fd->hasAttr<StrictFPAttr>()))
+  if (fd && (fd->UsesFPIntrin() || fd->hasAttr<StrictFPAttr>())) {
+    skipFunctionBody = true;
     cgm.errorNYI(loc, "STDC FENV_ACCESS");
+  }
 
   prologueCleanupDepth = ehStack.stable_begin();
 
@@ -706,6 +708,7 @@ static void eraseEmptyAndUnusedBlocks(cir::FuncOp func) {
 
 cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                                          cir::FuncType funcType) {
+  skipFunctionBody = false;
   const auto *funcDecl = cast<FunctionDecl>(gd.getDecl());
   curGD = gd;
 
@@ -780,7 +783,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     // Emit the standard function prologue.
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
-    if (cgm.getDiags().hasErrorOccurred())
+    if (skipFunctionBody)
       return fn;
 
     // Save parameters for coroutine function.
@@ -1373,8 +1376,10 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
       !isa<CXXConstructorDecl>(cgf.curFuncDecl) &&
       !isa<CXXDestructorDecl>(cgf.curFuncDecl) &&
       (newExceptionBehavior != llvm::fp::ebIgnore ||
-       newRoundingBehavior != llvm::RoundingMode::NearestTiesToEven))
+       newRoundingBehavior != llvm::RoundingMode::NearestTiesToEven)) {
+    cgf.skipFunctionBody = true;
     cgf.cgm.errorNYI(cgf.curFuncDecl->getLocation(), "STDC FENV_ACCESS");
+  }
 
   // TODO(cir): mark CIR function with fast math attributes.
   assert(!cir::MissingFeatures::fastMathFuncAttributes());
