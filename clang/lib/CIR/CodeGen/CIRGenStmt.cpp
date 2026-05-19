@@ -143,9 +143,6 @@ void CIRGenFunction::emitStopPoint(const Stmt *s) {
 mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
                                              bool useCurrentScope,
                                              ArrayRef<const Attr *> attr) {
-  if (skipFunctionBody)
-    return mlir::success();
-
   if (mlir::succeeded(emitSimpleStmt(s, useCurrentScope)))
     return mlir::success();
 

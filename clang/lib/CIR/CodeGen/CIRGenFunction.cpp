@@ -499,10 +499,8 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = (d ? d->getNonClosureContext() : nullptr);
 
-  if (fd && (fd->UsesFPIntrin() || fd->hasAttr<StrictFPAttr>())) {
-    skipFunctionBody = true;
+  if (fd && (fd->UsesFPIntrin() || fd->hasAttr<StrictFPAttr>()))
     cgm.errorNYI(loc, "STDC FENV_ACCESS");
-  }
 
   prologueCleanupDepth = ehStack.stable_begin();
 
@@ -708,7 +706,6 @@ static void eraseEmptyAndUnusedBlocks(cir::FuncOp func) {
 
 cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                                          cir::FuncType funcType) {
-  skipFunctionBody = false;
   const auto *funcDecl = cast<FunctionDecl>(gd.getDecl());
   curGD = gd;
 
@@ -783,7 +780,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     // Emit the standard function prologue.
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
-    if (skipFunctionBody)
+    if (funcDecl->UsesFPIntrin() || funcDecl->hasAttr<StrictFPAttr>())
       return fn;
 
     // Save parameters for coroutine function.
@@ -1372,14 +1369,12 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   // TODO(cir): override FP flags once FM configs are guarded.
   assert(!cir::MissingFeatures::fastMathFlags());
 
-  if (cgf.curFuncDecl && !cgf.builder.getIsFPConstrained() &&
-      !isa<CXXConstructorDecl>(cgf.curFuncDecl) &&
-      !isa<CXXDestructorDecl>(cgf.curFuncDecl) &&
-      (newExceptionBehavior != llvm::fp::ebIgnore ||
-       newRoundingBehavior != llvm::RoundingMode::NearestTiesToEven)) {
-    cgf.skipFunctionBody = true;
-    cgf.cgm.errorNYI(cgf.curFuncDecl->getLocation(), "STDC FENV_ACCESS");
-  }
+  assert((cgf.curFuncDecl == nullptr || cgf.builder.getIsFPConstrained() ||
+          isa<CXXConstructorDecl>(cgf.curFuncDecl) ||
+          isa<CXXDestructorDecl>(cgf.curFuncDecl) ||
+          (newExceptionBehavior == llvm::fp::ebIgnore &&
+           newRoundingBehavior == llvm::RoundingMode::NearestTiesToEven)) &&
+         "FPConstrained should be enabled on entire function");
 
   // TODO(cir): mark CIR function with fast math attributes.
   assert(!cir::MissingFeatures::fastMathFuncAttributes());
