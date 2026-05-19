@@ -247,6 +247,79 @@ overload of ``isProfileSuppressed`` examines:
 - The enclosing ``Decl`` chain via ``getLexicalDeclContext()``.
 
 
+Pattern 3: Class-Finalization Profile
+-------------------------------------
+
+Used when the rule applies to a class as a whole and needs to run once after
+the class definition is complete -- for example, "every non-private field of
+this class must satisfy property X" or "this class's field set must look
+like Y."  ``test::class_final`` is the in-tree example.
+
+The dispatch point is ``Sema::checkProfileViolationsAtClassFinalization``,
+called from the end of ``Sema::CheckCompletedCXXClass`` in
+``clang/lib/Sema/SemaDeclCXX.cpp``.  ``CheckCompletedCXXClass`` is the
+single function reached from every class-completion path -- the parser
+(``ActOnFinishCXXMemberSpecification``), template instantiation
+(``InstantiateClass``), and lambda completion -- so wiring the hook there
+covers all of them with no extra plumbing.
+
+The dispatcher filters out classes the rules are not meant to see:
+
+- Dependent classes (``isDependentType()``).  The hook will re-fire on each
+  instantiation via the template-instantiation completion path.
+- Invalid classes (``isInvalidDecl()``).
+- Lambdas (``isLambda()``).  Closure types have no user-controlled field
+  shape, so class-finalization rules do not apply.
+
+This pattern needs two pieces, both colocated with the dispatcher.
+
+1. **Add the profile to the class-finalization opt-in table.**
+   ``ClassFinalizationProfiles`` in ``clang/lib/Sema/SemaDeclCXX.cpp`` is a
+   small per-pass table of profile name plus callback.  One row per profile:
+
+   .. code-block:: c++
+
+      struct ClassFinalizationProfileEntry {
+        StringRef Name;
+        void (*Callback)(Sema &, CXXRecordDecl *);
+      };
+      constexpr ClassFinalizationProfileEntry ClassFinalizationProfiles[] = {
+          {"my::profile", &runMyProfileCallback},
+      };
+
+   The dispatcher iterates the table, skips entries whose profile is not
+   enforced, sets up a ``ProfileSuppressScope(*this, RD,
+   /*WalkLexicalParents=*/true)``, and invokes the callback.  Because the
+   suppress scope is established by the dispatcher, the callback can use
+   the location-based ``shouldEmitProfileViolation`` overload and have
+   ``[[profiles::suppress]]`` on the class or any enclosing lexical
+   ``Decl`` work correctly.
+
+2. **Emit diagnostics from the callback via**
+   ``Sema::shouldEmitProfileViolation``.  Each callback decides where on
+   the class to point and which diagnostic to use, possibly with notes:
+
+   .. code-block:: c++
+
+      void runMyProfileCallback(Sema &S, CXXRecordDecl *RD) {
+        if (!S.shouldEmitProfileViolation("my::profile", /*Rule=*/"",
+                                          RD->getLocation()))
+          return;
+        S.Diag(RD->getLocation(), diag::err_my_profile_rule)
+            << "my::profile" << RD;
+      }
+
+The diagnostic itself is defined with ``ProfileRuleError`` as in patterns 1
+and 2.
+
+Unlike the post-parse CFG pass, class-finalization callbacks run while the
+``CXXRecordDecl`` is being finalized (immediately before
+``CheckCompletedCXXClass`` returns).  Out-of-line member definitions --
+including constructor bodies -- have not yet been parsed when the callback
+runs.  Rules that need ctor-body flow analysis must therefore live in a
+post-parse CFG pass (pattern 2), not here.
+
+
 .. _profiles-token-dominion:
 
 Suppression Dominion is Token-Based
@@ -354,11 +427,13 @@ The following parts of P3589R2 are deliberately not implemented:
 Built-in Profiles
 =================
 
-The tree ships three built-in profiles, all gated on ``-fprofiles``:
+The tree ships four built-in profiles, all gated on ``-fprofiles``:
 
 - ``test::type_cast`` (test-only) -- pattern-1 example.
 - ``test::uninit_read`` (test-only) -- pattern-2 example riding the existing
   CFG uninitialized-variables analysis.
+- ``test::class_final`` (test-only) -- pattern-3 example riding the
+  class-finalization dispatch.
 - ``std::init`` (initial slice of the proposed initialization profile from
   Stroustrup's draft, on top of P3589R2 and P3402R3).  It rides the same
   CFG dispatch as ``test::uninit_read`` for one of its rules and adds three
@@ -367,7 +442,8 @@ The tree ships three built-in profiles, all gated on ``-fprofiles``:
 By convention:
 
 - Real test profiles live under the ``test::`` namespace.  Today there are
-  two: ``test::type_cast`` and ``test::uninit_read``.
+  three: ``test::type_cast``, ``test::uninit_read``, and
+  ``test::class_final``.
 - The names ``test::other``, ``test::bounds``, ``test::new_profile``, and
   ``test::not_enforced`` are deliberately *not* implemented and appear only
   in negative tests as stand-in "some other profile" names.  Adding a real
@@ -423,12 +499,37 @@ work for this profile: by the time the CFG analysis runs, the parse-time
 directly via ``shouldEmitProfileViolation(name, rule, Stmt*, AnalysisDeclContext&)``.
 
 
+The ``test::class_final`` Profile
+---------------------------------
+
+A pattern-3 (class-finalization) profile.  Demonstrates the case where the
+rule applies once per completed class definition and runs from the
+class-finalization dispatch in ``Sema::CheckCompletedCXXClass``.
+
+- **Rules**: none (the profile has a single implicit rule, so the rule
+  string is empty).
+- **Diagnostic**: ``err_profile_class_final_test`` ("test profile fired on
+  completion of class %1 under profile '%0'").
+- **Opt-in table**: ``ClassFinalizationProfiles`` in
+  ``clang/lib/Sema/SemaDeclCXX.cpp``.
+
+Because dependent classes are filtered out by the dispatcher, the
+diagnostic fires on class template *instantiations* rather than on the
+primary template.  Lambda closures are also skipped.
+``[[profiles::suppress(test::class_final)]]`` on the class or any
+enclosing lexical ``Decl`` silences the diagnostic via the
+``ProfileSuppressScope(*this, RD, /*WalkLexicalParents=*/true)`` the
+dispatcher establishes around each callback.
+
+
 The ``std::init`` Profile (initial slice)
 -----------------------------------------
 
 A first slice of the proposed initialization profile, intentionally minimal:
-no ``[[ref_to_uninit]]``, no field-level marker, no class-finalization hook,
-no new dataflow analyses.  See the audit and plan documents in
+no ``[[ref_to_uninit]]``, no field-level marker, no new dataflow analyses.
+The class-finalization dispatch (pattern 3) now exists in the framework but
+``std::init`` does not yet register any class-finalization callbacks; those
+land with the §6 / §6.2 work.  See the audit and plan documents in
 ``.cursor/plans/`` for the deferred items.
 
 The slice introduces one new attribute and four rules.
@@ -560,6 +661,12 @@ profiles.  When changing the framework, run them all with
   analysis-based-warnings early-exit-on-first-error does not hide later
   cases; case 0 is the no-violation baseline used by both the
   ``-fprofiles`` and the without-``-fprofiles`` runs.
+- ``clang/test/SemaCXX/safety-profile-class-final.cpp`` -- the
+  ``test::class_final`` profile: end-to-end exercise of the
+  class-finalization dispatch (pattern 3) including basic firing, class
+  template instantiation, lambda skipping, suppression on the class and on
+  enclosing lexical parents, SFINAE exclusion, and the
+  without-``-fprofiles`` ignored path.
 - ``clang/test/SemaCXX/safety-profile-init-read.cpp`` -- the ``std::init``
   profile's ``uninit_read`` rule.  Same ``-DCASE=N`` style as the
   ``test::uninit_read`` test; CASE=4 additionally enforces

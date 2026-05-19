@@ -7021,6 +7021,31 @@ ReportOverrides(Sema &S, unsigned DiagID, const CXXMethodDecl *MD,
   return IssuedDiagnostic;
 }
 
+namespace {
+// Profiles that opt into the class-finalization dispatch. Each entry pairs
+// the profile name with a callback invoked once per completed,
+// non-dependent, non-lambda, non-invalid CXXRecordDecl. Adding a new
+// profile is a single row here plus a ProfileRuleError diagnostic in
+// DiagnosticSemaKinds.td and a callback that consults
+// Sema::shouldEmitProfileViolation before emitting.
+struct ClassFinalizationProfileEntry {
+  StringRef Name;
+  void (*Callback)(Sema &, CXXRecordDecl *);
+};
+
+void runTestClassFinalCallback(Sema &S, CXXRecordDecl *RD) {
+  if (!S.shouldEmitProfileViolation("test::class_final", /*Rule=*/"",
+                                    RD->getLocation()))
+    return;
+  S.Diag(RD->getLocation(), diag::err_profile_class_final_test)
+      << "test::class_final" << RD;
+}
+
+constexpr ClassFinalizationProfileEntry ClassFinalizationProfiles[] = {
+    {"test::class_final", &runTestClassFinalCallback},
+};
+} // namespace
+
 void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   if (!Record)
     return;
@@ -7440,6 +7465,21 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
       };
   CheckMismatchedTypeAwareAllocators(OO_New, OO_Delete);
   CheckMismatchedTypeAwareAllocators(OO_Array_New, OO_Array_Delete);
+
+  checkProfileViolationsAtClassFinalization(Record);
+}
+
+void Sema::checkProfileViolationsAtClassFinalization(CXXRecordDecl *RD) {
+  if (!getLangOpts().Profiles || !RD)
+    return;
+  if (RD->isInvalidDecl() || RD->isDependentType() || RD->isLambda())
+    return;
+  for (const auto &E : ClassFinalizationProfiles) {
+    if (!isProfileEnforced(E.Name))
+      continue;
+    ProfileSuppressScope Scope(*this, RD, /*WalkLexicalParents=*/true);
+    E.Callback(*this, RD);
+  }
 }
 
 /// Look up the special member function that would be called by a special

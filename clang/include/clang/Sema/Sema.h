@@ -6035,6 +6035,12 @@ public:
   /// \param Record The completed class.
   void CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record);
 
+  /// Dispatch class-finalization profile callbacks for a completed class.
+  /// Called from \c CheckCompletedCXXClass so parser, template instantiation,
+  /// and lambda finalization paths all reach the same hook.  Dependent,
+  /// invalid, and lambda classes are filtered out.
+  void checkProfileViolationsAtClassFinalization(CXXRecordDecl *RD);
+
   /// Check that the C++ class annoated with "trivial_abi" satisfies all the
   /// conditions that are needed for the attribute to have an effect.
   void checkIllFormedTrivialABIStruct(CXXRecordDecl &RD);
