@@ -549,6 +549,30 @@ static Constant *getKnownConstant(Value *Val, ConstantPreference Preference) {
   return dyn_cast<ConstantInt>(Val);
 }
 
+/// Return true if phi-translating PN's incoming value from PredBB is safe.
+/// Translation is unsafe when the incoming value is not loop invariant,
+/// i.e., when its defining block is in a cycle.
+/// TODO: A more precise check would determine whether the incoming value is
+/// loop invariant specifically with respect to PredBB.
+static bool canPhiTranslate(PHINode *PN, BasicBlock *PredBB) {
+  Value *InVal = PN->getIncomingValueForBlock(PredBB);
+
+  // Non-instructions (constants, arguments) are always loop invariant.
+  auto *Inst = dyn_cast<Instruction>(InVal);
+  if (!Inst)
+    return true;
+
+  BasicBlock *DefBB = Inst->getParent();
+  // Instructions in the entry block cannot be part of a loop.
+  if (DefBB->isEntryBlock())
+    return true;
+  // InVal is loop invariant if its defining block is not in a cycle.
+  // Avoid the DomTree, which may have pending lazy updates at this point.
+  SmallVector<BasicBlock *> Succs(successors(DefBB));
+  return !isPotentiallyReachableFromMany(Succs, DefBB, /*ExclusionSet=*/nullptr,
+                                         /*DT=*/nullptr, /*LI=*/nullptr);
+}
+
 /// computeValueKnownInPredecessors - Given a basic block BB and a value V, see
 /// if we can infer that the value is a known ConstantInt/BlockAddress or undef
 /// in any of our predecessors.  If so, return the known list of value and pred
@@ -2646,6 +2670,13 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
                       << "' - Cost is too high: " << DuplicationCost << "\n");
     return false;
   }
+
+  // Bail out before any CFG modification if phi translation is illegal for any
+  // predecessor.
+  for (BasicBlock *Pred : PredBBs)
+    for (PHINode &PN : BB->phis())
+      if (!canPhiTranslate(&PN, Pred))
+        return false;
 
   // And finally, do it!  Start by factoring the predecessors if needed.
   std::vector<DominatorTree::UpdateType> Updates;
