@@ -190,6 +190,19 @@ add_header_library(
 )
 
 add_header_library(
+  sendmmsg
+  HDRS
+    sendmmsg.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.struct_mmsghdr
+    libc.include.sys_syscall
+)
+
+add_header_library(
   sendmsg
   HDRS
     sendmsg.h
