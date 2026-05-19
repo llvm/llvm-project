@@ -273,6 +273,7 @@ write_file(
     content = [
         "#undef LLVM_REVISION",
         "#undef LLVM_REPOSITORY",
+        "#undef LLVM_COMMIT_COUNT",
     ],
 )
 
