@@ -30,12 +30,10 @@ static void BM_map_find_string_literal(benchmark::State& state) {
 
 BENCHMARK(BM_map_find_string_literal);
 
-// Benchmark: find() with string_view vs find() with string (constructed from
-// string_view). Demonstrates the benefit of __is_transparently_comparable_v
-// for basic_string_view: the optimized path avoids constructing a temporary
-// std::string (and its potential heap allocation for keys beyond SSO).
-// Compare BM_map_find_string_view against BM_map_find_string_constructed_from_view
-// in the output to see the speedup.
+// Benchmark: find()/contains()/at() with string_view. Demonstrates the benefit
+// of __is_transparently_comparable_v for basic_string_view: the optimized path
+// avoids constructing a temporary std::string (and its potential heap allocation
+// for keys beyond SSO).
 
 static constexpr const char* kLongKey = "Something very very long to show a long string situation";
 
@@ -58,18 +56,6 @@ static void BM_map_find_string_view(benchmark::State& state) {
 
 BENCHMARK(BM_map_find_string_view);
 
-static void BM_map_find_string_constructed_from_view(benchmark::State& state) {
-  auto map            = make_test_map();
-  std::string_view sv = kLongKey;
-
-  for (auto _ : state) {
-    benchmark::DoNotOptimize(map);
-    benchmark::DoNotOptimize(map.find(std::string(sv)));
-  }
-}
-
-BENCHMARK(BM_map_find_string_constructed_from_view);
-
 static void BM_map_contains_string_view(benchmark::State& state) {
   auto map            = make_test_map();
   std::string_view sv = kLongKey;
@@ -82,18 +68,6 @@ static void BM_map_contains_string_view(benchmark::State& state) {
 
 BENCHMARK(BM_map_contains_string_view);
 
-static void BM_map_contains_string_constructed_from_view(benchmark::State& state) {
-  auto map            = make_test_map();
-  std::string_view sv = kLongKey;
-
-  for (auto _ : state) {
-    benchmark::DoNotOptimize(map);
-    benchmark::DoNotOptimize(map.contains(std::string(sv)));
-  }
-}
-
-BENCHMARK(BM_map_contains_string_constructed_from_view);
-
 static void BM_map_at_string_view(benchmark::State& state) {
   auto map            = make_test_map();
   std::string_view sv = kLongKey;
@@ -105,18 +79,6 @@ static void BM_map_at_string_view(benchmark::State& state) {
 }
 
 BENCHMARK(BM_map_at_string_view);
-
-static void BM_map_at_string_constructed_from_view(benchmark::State& state) {
-  auto map            = make_test_map();
-  std::string_view sv = kLongKey;
-
-  for (auto _ : state) {
-    benchmark::DoNotOptimize(map);
-    benchmark::DoNotOptimize(map.at(std::string(sv)));
-  }
-}
-
-BENCHMARK(BM_map_at_string_constructed_from_view);
 
 template <class K, class V>
 struct support::adapt_operations<std::map<K, V>> {
