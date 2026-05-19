@@ -3572,6 +3572,22 @@ def lo16_to_vgpr32 : OutPatFrag<(ops node:$op),
 def hi16_to_vgpr32 : OutPatFrag<(ops node:$op),
   (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $op, hi16)>;
 
+def VOPDXTable : GenericTable {
+  let FilterClass = "VOPDX";
+  let CppTypeName = "VOPDXYInfo";
+  let Fields = ["VOPDOp", "Subtarget", "VOPD3"];
+  let PrimaryKey = ["VOPDOp", "Subtarget", "VOPD3"];
+  let PrimaryKeyName = "canBeVOPDX";
+}
+
+def VOPDYTable : GenericTable {
+  let FilterClass = "VOPDY";
+  let CppTypeName = "VOPDXYInfo";
+  let Fields = ["VOPDOp", "Subtarget", "VOPD3"];
+  let PrimaryKey = ["VOPDOp", "Subtarget", "VOPD3"];
+  let PrimaryKeyName = "canBeVOPDY";
+}
+
 include "SIInstructions.td"
 
 include "DSInstructions.td"
