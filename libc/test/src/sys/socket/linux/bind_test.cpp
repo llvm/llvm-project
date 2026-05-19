@@ -48,7 +48,6 @@ TEST_F(LlvmLibcBindTest, BindLocalSocket) {
 }
 
 TEST_F(LlvmLibcBindTest, BindInetSocket) {
-
   int sock = LIBC_NAMESPACE::socket(AF_INET, SOCK_DGRAM, 0);
   ASSERT_GE(sock, 0);
   ASSERT_ERRNO_SUCCESS();
