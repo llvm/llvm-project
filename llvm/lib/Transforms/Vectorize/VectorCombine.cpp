@@ -5561,6 +5561,10 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
 /// %merge1 = bitcast <vscale x 16 x i16> %f1 to <vscale x 8 x i32>
 /// ```
 bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
+  // This pattern involves bitcast that is not compatible with big endian.
+  if (DL->isBigEndian())
+    return false;
+
   using namespace PatternMatch;
   Value *DeinterleavedVal;
   if (!match(&I, m_Deinterleave2(m_Value(DeinterleavedVal))))
@@ -5574,8 +5578,6 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
   if (ElementWidth < 2 || !isPowerOf2_32(ElementWidth))
     return false;
   unsigned HalfElementWidth = ElementWidth / 2;
-  APInt LoMask = APInt::getLowBitsSet(ElementWidth, HalfElementWidth);
-  APInt HiMask = APInt::getHighBitsSet(ElementWidth, HalfElementWidth);
 
   if (!I.hasNUses(2))
     return false;
@@ -5603,6 +5605,8 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
 
   // Pattern match bottom-up from the merge instructions.
   auto MatchMerge = [&](void) -> bool {
+    APInt LoMask = APInt::getLowBitsSet(ElementWidth, HalfElementWidth);
+    APInt HiMask = APInt::getHighBitsSet(ElementWidth, HalfElementWidth);
     return match(MergeInsts[0],
                  m_c_Or(m_And(m_Specific(OrigFields[0]), m_SpecificInt(LoMask)),
                         m_Shl(m_Specific(OrigFields[1]),
