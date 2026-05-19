@@ -13,7 +13,6 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/CodeGen/Target.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
-#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
@@ -68,8 +67,6 @@ static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
       builder, globalOp.getLoc(), ptrGlobalName, /*isConstant=*/false,
       /*isTarget=*/false, ptrTy, initAttr,
       /*linkName=*/builder.createInternalLinkage(), attrs);
-
-  ptrGlobal->setAttr(cuf::getManagedPtrAttrName(), mlir::UnitAttr::get(ctx));
 
   mlir::Region &region = ptrGlobal.getRegion();
   mlir::Block *block = builder.createBlock(&region);

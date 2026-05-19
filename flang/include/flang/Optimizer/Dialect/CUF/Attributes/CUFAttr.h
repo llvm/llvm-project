@@ -36,13 +36,6 @@ static constexpr llvm::StringRef dataAttrName = "data_attr";
 static constexpr llvm::StringRef getDataAttrName() { return "cuf.data_attr"; }
 static constexpr llvm::StringRef getProcAttrName() { return "cuf.proc_attr"; }
 
-/// Attribute to mark a global as a managed-memory companion pointer.
-/// Prevents CompilerGeneratedNamesConversionPass from renaming it, which
-/// would break the name lookup in CUFOpConversionLate.
-static constexpr llvm::StringRef getManagedPtrAttrName() {
-  return "cuf.managed_ptr";
-}
-
 /// Attribute to carry CUDA launch_bounds values.
 static constexpr llvm::StringRef getLaunchBoundsAttrName() {
   return "cuf.launch_bounds";
