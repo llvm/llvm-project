@@ -110,12 +110,21 @@ public:
   llvm::Expected<dependencies::TranslationUnitDeps> getModuleDependencies(
       StringRef ModuleName, ArrayRef<std::string> CommandLine, StringRef CWD,
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
-      dependencies::DependencyActionController &Controller);
+      dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
   /// Returns the worker tracing VFS, if it was requested via the service.
   llvm::vfs::TracingFileSystem *getWorkerTracingVFS() const {
     return Worker.getTracingVFS();
   }
+
+  static std::unique_ptr<dependencies::DependencyActionController>
+  createActionController(
+      dependencies::DependencyScanningWorker &Worker,
+      dependencies::LookupModuleOutputCallback LookupModuleOutput);
+
+  std::unique_ptr<dependencies::DependencyActionController>
+  createActionController(
+      dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
 private:
   dependencies::DependencyScanningWorker Worker;

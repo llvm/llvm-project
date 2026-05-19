@@ -202,8 +202,8 @@ std::optional<std::string> DependencyScanningTool::getDependencyFile(
     LookupModuleOutputCallback LookupModuleOutput,
     DiagnosticConsumer &DiagConsumer) {
   MakeDependencyPrinterConsumer DepConsumer;
-  CallbackActionController Controller(LookupModuleOutput);
-  if (!computeDependencies(Worker, CWD, CommandLine, DepConsumer, Controller,
+  auto Controller = createActionController(LookupModuleOutput);
+  if (!computeDependencies(Worker, CWD, CommandLine, DepConsumer, *Controller,
                            DiagConsumer))
     return std::nullopt;
   std::string Output;
@@ -334,7 +334,7 @@ DependencyScanningTool::getTranslationUnitDependencies(
     LookupModuleOutputCallback LookupModuleOutput,
     std::optional<llvm::MemoryBufferRef> TUBuffer) {
   FullDependencyConsumer Consumer(AlreadySeen);
-  CallbackActionController Controller(LookupModuleOutput);
+  auto Controller = createActionController(LookupModuleOutput);
 
   // If we are scanning from a TUBuffer, create an overlay filesystem with the
   // input as an in-memory file and add it to the command line.
@@ -347,7 +347,7 @@ DependencyScanningTool::getTranslationUnitDependencies(
     CommandLine = CommandLineWithTUBufferInput;
   }
 
-  if (!computeDependencies(Worker, CWD, CommandLine, Consumer, Controller,
+  if (!computeDependencies(Worker, CWD, CommandLine, Consumer, *Controller,
                            DiagConsumer, OverlayFS))
     return std::nullopt;
   return Consumer.takeTranslationUnitDeps();
@@ -357,14 +357,16 @@ llvm::Expected<TranslationUnitDeps>
 DependencyScanningTool::getModuleDependencies(
     StringRef ModuleName, ArrayRef<std::string> CommandLine, StringRef CWD,
     const llvm::DenseSet<ModuleID> &AlreadySeen,
-    DependencyActionController &Controller) {
+    LookupModuleOutputCallback LookupModuleOutput) {
+  auto Controller = createActionController(LookupModuleOutput);
+
   auto MaybeCIWithContext = CompilerInstanceWithContext::initializeOrError(
-      *this, CWD, CommandLine, Controller);
+      *this, CWD, CommandLine, *Controller);
   if (auto Error = MaybeCIWithContext.takeError())
     return Error;
 
   return MaybeCIWithContext->computeDependenciesByNameOrError(
-      ModuleName, AlreadySeen, Controller);
+      ModuleName, AlreadySeen, *Controller);
 }
 
 static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
@@ -455,6 +457,20 @@ CompilerInstanceWithContext::computeDependenciesByNameOrError(
   if (computeDependencies(ModuleName, Consumer, Controller))
     return Consumer.takeTranslationUnitDeps();
   return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
+}
+
+std::unique_ptr<DependencyActionController>
+DependencyScanningTool::createActionController(
+    DependencyScanningWorker &Worker,
+    LookupModuleOutputCallback LookupModuleOutput) {
+  (void)Worker;
+  return std::make_unique<CallbackActionController>(LookupModuleOutput);
+}
+
+std::unique_ptr<DependencyActionController>
+DependencyScanningTool::createActionController(
+    LookupModuleOutputCallback LookupModuleOutput) {
+  return createActionController(Worker, std::move(LookupModuleOutput));
 }
 
 bool CompilerInstanceWithContext::initialize(
