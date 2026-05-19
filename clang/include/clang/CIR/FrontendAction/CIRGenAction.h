@@ -45,7 +45,7 @@ private:
 
   mlir::MLIRContext *MLIRCtx;
 
-  std::unique_ptr<llvm::LLVMContext> VMContext;
+  std::unique_ptr<llvm::LLVMContext> Ctx;
   llvm::SmallVector<::clang::LinkModule, 4> LinkModules;
 
 protected:
