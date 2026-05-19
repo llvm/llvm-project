@@ -1235,14 +1235,7 @@ FLAGS_ENUM(CommandFlags){
     ///
     /// Verifies that the process is being traced by a Trace plug-in, if it
     /// isn't the command will fail with an appropriate error message.
-    eCommandProcessMustBeTraced = (1u << 8),
-    /// eCommandAllowsDummyTarget
-    ///
-    /// Indicates that the command can legitimately operate on the dummy target
-    /// (e.g. `breakpoint set` priming future targets). Without this flag,
-    /// CommandObject::GetTarget filters the dummy target out and returns null
-    /// when no real target is selected.
-    eCommandAllowsDummyTarget = (1u << 9)};
+    eCommandProcessMustBeTraced = (1u << 8)};
 
 /// Whether a summary should cap how much data it returns to users or not.
 enum TypeSummaryCapping {
