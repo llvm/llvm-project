@@ -251,11 +251,17 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
   switch (Kind) {
   case GK_GFX1251:
   case GK_GFX1250:
-  case GK_GFX12_5_GENERIC:
     Features["swmmac-gfx1200-insts"] = true;
     Features["swmmac-gfx1250-insts"] = true;
     [[fallthrough]];
   case GK_GFX1310:
+    Features["cube-insts"] = true;
+    Features["cvt-pknorm-vop2-insts"] = true;
+    Features["lerp-inst"] = true;
+    Features["qsad-insts"] = true;
+    Features["sad-insts"] = true;
+    [[fallthrough]];
+  case GK_GFX12_5_GENERIC:
     Features["ci-insts"] = true;
     Features["dot7-insts"] = true;
     Features["dot8-insts"] = true;
@@ -297,11 +303,6 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["wavefrontsize32"] = true;
     Features["clusters"] = true;
     Features["mcast-load-insts"] = true;
-    Features["cube-insts"] = true;
-    Features["lerp-inst"] = true;
-    Features["sad-insts"] = true;
-    Features["qsad-insts"] = true;
-    Features["cvt-pknorm-vop2-insts"] = true;
     break;
   case GK_GFX1201:
   case GK_GFX1200:
