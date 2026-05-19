@@ -3333,9 +3333,6 @@ bool InstCombinerImpl::foldExtractionOfVectorDeinterleave(Instruction *DI) {
     Value *V;
     ArrayRef<int> ShuffleMask;
     unsigned Index;
-    // Match the most common form of `shufflevector <vec0>, poison, <mask>`.
-    // Not sure if we'll see `shufflevector poison, <vec0>, <mask>` in the
-    // future.
     if (match(I, m_Shuffle(m_Value(V), m_Undef(), m_Mask(ShuffleMask))) &&
         isa<FixedVectorType>(V->getType())) {
       unsigned NumInputElements =
@@ -3420,10 +3417,10 @@ bool InstCombinerImpl::foldExtractionOfVectorDeinterleave(Instruction *DI) {
   auto *BitcastedTy = VectorType::getExtendedElementVectorType(InputVecTy);
   BitcastedTy = VectorType::getHalfElementsVectorType(BitcastedTy);
   Value *Bitcast = Builder.CreateBitCast(DIV, BitcastedTy);
-  APInt Mask = InElementTy->getMask();
-  Value *NewField0 =
-      Builder.CreateAnd(Bitcast, Mask.zext(Mask.getBitWidth() * 2));
-  Value *NewField1 = Builder.CreateLShr(Bitcast, InElementTy->getBitWidth());
+  unsigned InElementBitWidth = InElementTy->getBitWidth();
+  auto Mask = APInt::getLowBitsSet(InElementBitWidth * 2, InElementBitWidth);
+  Value *NewField0 = Builder.CreateAnd(Bitcast, Mask);
+  Value *NewField1 = Builder.CreateLShr(Bitcast, InElementBitWidth);
 
   for (Instruction *I : Field0Replacements)
     replaceInstUsesWith(*I, NewField0);
