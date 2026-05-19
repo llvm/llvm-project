@@ -1115,10 +1115,10 @@ bool PerfScriptReader::extractMMapEventForBinary(ProfiledBinary *Binary,
   bool R = false;
   SmallVector<StringRef, 7> Fields;
   if (Line.contains("PERF_RECORD_MMAP2 ")) {
-    static Regex RegMmap2(MMap2Pattern);
+    Regex RegMmap2(MMap2Pattern);
     R = RegMmap2.match(Line, &Fields);
   } else if (Line.contains("PERF_RECORD_MMAP ")) {
-    static Regex RegMmap(MMapPattern);
+    Regex RegMmap(MMapPattern);
     R = RegMmap.match(Line, &Fields);
   } else
     llvm_unreachable("unexpected MMAP event entry");
