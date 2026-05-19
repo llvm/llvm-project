@@ -978,10 +978,10 @@ void Target::DescribeBreakpointOverrides(Stream &stream,
     return;
   }
 
-  const bool empty = idxs.empty();
+  bool empty = idxs.empty();
   bool print_first = true;
-  for (const auto &[id, resolver] : m_breakpoint_overrides) {
-    auto idx_pos = llvm::find(idxs, id);
+  for (auto const &elem : m_breakpoint_overrides) {
+    auto idx_pos = llvm::find(idxs, elem.first);
     if (empty || idx_pos != idxs.end()) {
       if (print_first) {
         // FIXME: Is there some good way to flow the description?
@@ -989,7 +989,7 @@ void Target::DescribeBreakpointOverrides(Stream &stream,
         stream << "----  -----------\n";
         print_first = false;
       }
-      stream.Format("{0,4}  {1}\n", id, resolver->GetDescription());
+      stream.Format("{0,4}  {1}\n", elem.first, elem.second->GetDescription());
       if (!empty)
         idxs.erase(idx_pos);
     }
