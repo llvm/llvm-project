@@ -438,8 +438,8 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   // canonical IV of null type and debug location.
   Type *CanIVTy = nullptr;
   DebugLoc DL = DebugLoc::getUnknown();
-  auto *OutermostHeaderVPBB = cast<VPBasicBlock>(
-      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+  auto *OutermostHeaderVPBB =
+      VPBlockUtils::getPlainCFGHeaderAndLatch(Plan).first;
   VPPhi *OutermostVPPhi = nullptr;
   if (HeaderVPB == OutermostHeaderVPBB) {
     OutermostVPPhi = cast<VPPhi>(&OutermostHeaderVPBB->front());
@@ -479,9 +479,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 }
 
 void VPlanTransforms::addCanonicalIVRecipes(VPlan &Plan, DebugLoc DL) {
-  auto *HeaderVPBB = cast<VPBasicBlock>(
-      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
-  auto *LatchVPBB = cast<VPBasicBlock>(HeaderVPBB->getPredecessors()[1]);
+  auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
 
   // Add a VPPhi for the canonical IV starting at 0 as first recipe in header.
   auto *CanonicalIVPHI =
@@ -911,10 +909,9 @@ bool VPlanTransforms::createHeaderPhiRecipes(
     const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
     const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering) {
   // Retrieve the header manually from the intial plain-CFG VPlan.
-  VPBasicBlock *HeaderVPBB = cast<VPBasicBlock>(
-      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+  auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
   VPDominatorTree VPDT(Plan);
-  assert(VPDT.dominates(HeaderVPBB, HeaderVPBB->getPredecessors()[1]) &&
+  assert(VPDT.dominates(HeaderVPBB, LatchVPBB) &&
          "header must dominate its latch");
 
   auto CreateHeaderPhiRecipe = [&](VPPhi *PhiR) -> VPHeaderPHIRecipe * {
@@ -1200,10 +1197,8 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
                                        Loop *TheLoop,
                                        PredicatedScalarEvolution &PSE,
                                        DominatorTree &DT, AssumptionCache *AC) {
-  auto *MiddleVPBB = cast<VPBasicBlock>(
-      Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
-  auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
-  VPBasicBlock *HeaderVPBB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[1]);
+  auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
+  auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
 
   // TODO: We would like to detect uncountable exits and stores within loops
   //       with such exits from the VPlan alone. Exit detection can be moved
@@ -1236,8 +1231,7 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
 }
 
 void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
-  auto *MiddleVPBB = cast<VPBasicBlock>(
-      Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
+  auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
   // If MiddleVPBB has a single successor then the original loop does not exit
   // via the latch and the single successor must be the scalar preheader.
   // There's no need to add a runtime check to MiddleVPBB.
