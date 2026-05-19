@@ -5,6 +5,7 @@
 
 ; CHECK-MISSED-OPT-REMARK: remark: {{.*}} loop not vectorized
 
+; NOTE: -pass-remarks should only report remarks for successful vectorization
 ; CHECK-REMARK-NOT: remark: {{.*}} loop not vectorized: Cannot determine whether critical uncountable exit load address does not alias with a memory write
 
 
