@@ -976,12 +976,21 @@ static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {
     gv.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
 }
 
-static void setLinkageForFunction(cir::FuncOp &func, const NamedDecl *nd) {
+static void setLinkageForFunction(CIRGenModule &cgm, cir::FuncOp &func,
+                                  const NamedDecl *nd) {
   // Mirrors CodeGenModule::setLinkageForGV for function declarations.
   LinkageInfo lv = nd->getLinkageAndVisibility();
   if (isExternallyVisible(lv.getLinkage()) &&
-      (nd->hasAttr<WeakAttr>() || nd->isWeakImported()))
-    func.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
+      (nd->hasAttr<WeakAttr>() || nd->isWeakImported())) {
+    auto linkage = cir::GlobalLinkageKind::ExternalWeakLinkage;
+    func.setLinkage(linkage);
+    func.setLinkageAttr(
+        cir::GlobalLinkageKindAttr::get(&cgm.getMLIRContext(), linkage));
+    // Declarations must keep 'private' MLIR visibility; only update for defs.
+    if (!func.isDeclaration())
+      mlir::SymbolTable::setSymbolVisibility(
+          func, cgm.getMLIRVisibilityFromCIRLinkage(linkage));
+  }
 }
 
 static llvm::SmallVector<int64_t> indexesOfArrayAttr(mlir::ArrayAttr indexes) {
@@ -3002,24 +3011,7 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
     getTargetCIRGenInfo().setTargetAttributes(funcDecl, func, *this);
 
   // Mirrors setLinkageForGV in CodeGenModule::SetFunctionAttributes.
-  setLinkageForFunction(func, funcDecl);
-
-  // GetGVALinkageForFunction requires a definition (or willHaveBody) and
-  // asserts via isInlineDefinitionExternallyVisible on bare declarations.
-  const bool isDeclWithoutBody =
-      func.isDeclaration() && !funcDecl->doesThisDeclarationHaveABody();
-  if (!isIncompleteFunction && !isDeclWithoutBody) {
-    // TODO(cir): This needs a lot of work to better match CodeGen. That
-    // ultimately ends up in setGlobalVisibility, which already has the linkage
-    // of the LLVM GV (corresponding to our FuncOp) computed, so it doesn't have
-    // to recompute it here. This is a minimal fix for now.
-    if (!isLocalLinkage(getFunctionLinkage(globalDecl))) {
-      const Decl *decl = globalDecl.getDecl();
-      func.setGlobalVisibility(
-          getGlobalVisibilityAttrFromDecl(decl).getValue());
-    }
-  }
-
+  setLinkageForFunction(*this, func, funcDecl);
 
   // If we plan on emitting this inline builtin, we can't treat it as a builtin.
   if (funcDecl->isInlineBuiltinDeclaration()) {
