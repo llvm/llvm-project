@@ -95,6 +95,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_sigmask
+  SRCS
+    pthread_sigmask.cpp
+  HDRS
+    ../pthread_sigmask.h
+  DEPENDS
+    libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
+)
+
+
+add_entrypoint_object(
   sigemptyset
   SRCS
     sigemptyset.cpp
