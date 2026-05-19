@@ -144,7 +144,6 @@ const uint32_t *
 MipsRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const {
   const MipsSubtarget &Subtarget = MF.getSubtarget<MipsSubtarget>();
-
   // N64 ABI
   if (Subtarget.isABI_N64()) {
     if (Subtarget.isSingleFloat())
