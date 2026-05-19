@@ -5,254 +5,6 @@
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 ; ============================================================================
-; Divergent i32 compares
-; ============================================================================
-
-define i32 @divergent_i32_eq_i32(i32 %a, i32 %b) #0 {
-; GFX950-LABEL: divergent_i32_eq_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1250-LABEL: divergent_i32_eq_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
-; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %cmp = icmp eq i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  ret i32 %zext
-}
-
-define i64 @divergent_i32_eq_i64(i32 %a, i32 %b) #0 {
-; GFX950-LABEL: divergent_i32_eq_i64:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
-; GFX950-NEXT:    v_mov_b32_e32 v1, 0
-; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1250-LABEL: divergent_i32_eq_i64:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
-; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %cmp = icmp eq i32 %a, %b
-  %zext = zext i1 %cmp to i64
-  ret i64 %zext
-}
-
-define i32 @divergent_i32_ne_i32(i32 %a, i32 %b) #0 {
-; GFX950-LABEL: divergent_i32_ne_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cmp_ne_u32_e32 vcc, v0, v1
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1250-LABEL: divergent_i32_ne_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v0, v1
-; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %cmp = icmp ne i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  ret i32 %zext
-}
-
-define i32 @divergent_i32_ugt_i32(i32 %a, i32 %b) #0 {
-; GFX950-LABEL: divergent_i32_ugt_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1250-LABEL: divergent_i32_ugt_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v0, v1
-; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %cmp = icmp ugt i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  ret i32 %zext
-}
-
-define i32 @divergent_i32_uge_i32(i32 %a, i32 %b) #0 {
-; GFX950-LABEL: divergent_i32_uge_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v1
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1250-LABEL: divergent_i32_uge_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v0, v1
-; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %cmp = icmp uge i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  ret i32 %zext
-}
-
-define i32 @divergent_i32_ult_i32(i32 %a, i32 %b) #0 {
-; GFX950-LABEL: divergent_i32_ult_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1250-LABEL: divergent_i32_ult_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v1
-; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %cmp = icmp ult i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  ret i32 %zext
-}
-
-define i32 @divergent_i32_ule_i32(i32 %a, i32 %b) #0 {
-; GFX950-LABEL: divergent_i32_ule_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cmp_le_u32_e32 vcc, v0, v1
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1250-LABEL: divergent_i32_ule_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_le_u32_e32 vcc_lo, v0, v1
-; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %cmp = icmp ule i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  ret i32 %zext
-}
-
-define i32 @divergent_i32_sgt_i32(i32 %a, i32 %b) #0 {
-; GFX950-LABEL: divergent_i32_sgt_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cmp_gt_i32_e32 vcc, v0, v1
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1250-LABEL: divergent_i32_sgt_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v0, v1
-; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %cmp = icmp sgt i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  ret i32 %zext
-}
-
-define i32 @divergent_i32_sge_i32(i32 %a, i32 %b) #0 {
-; GFX950-LABEL: divergent_i32_sge_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v1
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1250-LABEL: divergent_i32_sge_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_ge_i32_e32 vcc_lo, v0, v1
-; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %cmp = icmp sge i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  ret i32 %zext
-}
-
-define i32 @divergent_i32_slt_i32(i32 %a, i32 %b) #0 {
-; GFX950-LABEL: divergent_i32_slt_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cmp_lt_i32_e32 vcc, v0, v1
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1250-LABEL: divergent_i32_slt_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v1
-; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %cmp = icmp slt i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  ret i32 %zext
-}
-
-define i32 @divergent_i32_sle_i32(i32 %a, i32 %b) #0 {
-; GFX950-LABEL: divergent_i32_sle_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cmp_le_i32_e32 vcc, v0, v1
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1250-LABEL: divergent_i32_sle_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_le_i32_e32 vcc_lo, v0, v1
-; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %cmp = icmp sle i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  ret i32 %zext
-}
-
-; ============================================================================
 ; Uniform i32 compares
 ; ============================================================================
 
@@ -568,1311 +320,8 @@ entry:
 
 
 ; ============================================================================
-; AMDGPU_KERNEL ABI tests
+; AMDGPU_PS ABI tests
 ; ============================================================================
-
-; ----------------------------------------------------------------------------
-; Uniform i32 compares
-; ----------------------------------------------------------------------------
-
-define amdgpu_kernel void @kernel_uniform_i32_eq_i32(
-; GFX950-LABEL: kernel_uniform_i32_eq_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_cmp_eq_u32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i32_eq_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_cmp_eq_u32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i32 %a,
-    i32 %b) #0 {
-entry:
-  %cmp = icmp eq i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i32_eq_i64(
-; GFX950-LABEL: kernel_uniform_i32_eq_i64:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_cmp_eq_u32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b64 s[2:3], 1, 0
-; GFX950-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i32_eq_i64:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_cmp_eq_u32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b64 s[2:3], 1, 0
-; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
-; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i32 %a,
-    i32 %b) #0 {
-entry:
-  %cmp = icmp eq i32 %a, %b
-  %zext = zext i1 %cmp to i64
-  store i64 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i32_ne_i32(
-; GFX950-LABEL: kernel_uniform_i32_ne_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_cmp_lg_u32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i32_ne_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_cmp_lg_u32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i32 %a,
-    i32 %b) #0 {
-entry:
-  %cmp = icmp ne i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i32_ugt_i32(
-; GFX950-LABEL: kernel_uniform_i32_ugt_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_cmp_gt_u32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i32_ugt_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_cmp_gt_u32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i32 %a,
-    i32 %b) #0 {
-entry:
-  %cmp = icmp ugt i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i32_uge_i32(
-; GFX950-LABEL: kernel_uniform_i32_uge_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_cmp_ge_u32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i32_uge_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_cmp_ge_u32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i32 %a,
-    i32 %b) #0 {
-entry:
-  %cmp = icmp uge i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i32_ult_i32(
-; GFX950-LABEL: kernel_uniform_i32_ult_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_cmp_lt_u32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i32_ult_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_cmp_lt_u32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i32 %a,
-    i32 %b) #0 {
-entry:
-  %cmp = icmp ult i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i32_ule_i32(
-; GFX950-LABEL: kernel_uniform_i32_ule_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_cmp_le_u32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i32_ule_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_cmp_le_u32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i32 %a,
-    i32 %b) #0 {
-entry:
-  %cmp = icmp ule i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i32_sgt_i32(
-; GFX950-LABEL: kernel_uniform_i32_sgt_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_cmp_gt_i32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i32_sgt_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_cmp_gt_i32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i32 %a,
-    i32 %b) #0 {
-entry:
-  %cmp = icmp sgt i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i32_sge_i32(
-; GFX950-LABEL: kernel_uniform_i32_sge_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_cmp_ge_i32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i32_sge_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_cmp_ge_i32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i32 %a,
-    i32 %b) #0 {
-entry:
-  %cmp = icmp sge i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i32_slt_i32(
-; GFX950-LABEL: kernel_uniform_i32_slt_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_cmp_lt_i32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i32_slt_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_cmp_lt_i32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i32 %a,
-    i32 %b) #0 {
-entry:
-  %cmp = icmp slt i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i32_sle_i32(
-; GFX950-LABEL: kernel_uniform_i32_sle_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_cmp_le_i32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i32_sle_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_cmp_le_i32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i32 %a,
-    i32 %b) #0 {
-entry:
-  %cmp = icmp sle i32 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-; ----------------------------------------------------------------------------
-; Uniform i16 compares
-; ----------------------------------------------------------------------------
-
-define amdgpu_kernel void @kernel_uniform_i16_eq_i32(
-; GFX950-LABEL: kernel_uniform_i16_eq_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX950-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX950-NEXT:    s_cmp_eq_u32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i16_eq_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX1250-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_cmp_eq_u32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i16 %a,
-    i16 %b) #0 {
-entry:
-  %cmp = icmp eq i16 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i16_eq_i64(
-; GFX950-LABEL: kernel_uniform_i16_eq_i64:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX950-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX950-NEXT:    s_cmp_eq_u32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b64 s[2:3], 1, 0
-; GFX950-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i16_eq_i64:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX1250-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_cmp_eq_u32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b64 s[2:3], 1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
-; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i16 %a,
-    i16 %b) #0 {
-entry:
-  %cmp = icmp eq i16 %a, %b
-  %zext = zext i1 %cmp to i64
-  store i64 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i16_ne_i32(
-; GFX950-LABEL: kernel_uniform_i16_ne_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX950-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX950-NEXT:    s_cmp_lg_u32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i16_ne_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX1250-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_cmp_lg_u32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i16 %a,
-    i16 %b) #0 {
-entry:
-  %cmp = icmp ne i16 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i16_ugt_i32(
-; GFX950-LABEL: kernel_uniform_i16_ugt_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX950-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX950-NEXT:    s_cmp_gt_u32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i16_ugt_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX1250-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_cmp_gt_u32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i16 %a,
-    i16 %b) #0 {
-entry:
-  %cmp = icmp ugt i16 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i16_uge_i32(
-; GFX950-LABEL: kernel_uniform_i16_uge_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX950-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX950-NEXT:    s_cmp_ge_u32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i16_uge_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX1250-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_cmp_ge_u32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i16 %a,
-    i16 %b) #0 {
-entry:
-  %cmp = icmp uge i16 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i16_ult_i32(
-; GFX950-LABEL: kernel_uniform_i16_ult_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX950-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX950-NEXT:    s_cmp_lt_u32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i16_ult_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX1250-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_cmp_lt_u32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i16 %a,
-    i16 %b) #0 {
-entry:
-  %cmp = icmp ult i16 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i16_ule_i32(
-; GFX950-LABEL: kernel_uniform_i16_ule_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX950-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX950-NEXT:    s_cmp_le_u32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i16_ule_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX1250-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_cmp_le_u32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i16 %a,
-    i16 %b) #0 {
-entry:
-  %cmp = icmp ule i16 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i16_sgt_i32(
-; GFX950-LABEL: kernel_uniform_i16_sgt_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_ashr_i32 s3, s2, 16
-; GFX950-NEXT:    s_sext_i32_i16 s2, s2
-; GFX950-NEXT:    s_cmp_gt_i32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i16_sgt_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_ashr_i32 s3, s2, 16
-; GFX1250-NEXT:    s_sext_i32_i16 s2, s2
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_cmp_gt_i32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i16 %a,
-    i16 %b) #0 {
-entry:
-  %cmp = icmp sgt i16 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i16_sge_i32(
-; GFX950-LABEL: kernel_uniform_i16_sge_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_ashr_i32 s3, s2, 16
-; GFX950-NEXT:    s_sext_i32_i16 s2, s2
-; GFX950-NEXT:    s_cmp_ge_i32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i16_sge_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_ashr_i32 s3, s2, 16
-; GFX1250-NEXT:    s_sext_i32_i16 s2, s2
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_cmp_ge_i32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i16 %a,
-    i16 %b) #0 {
-entry:
-  %cmp = icmp sge i16 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i16_slt_i32(
-; GFX950-LABEL: kernel_uniform_i16_slt_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_ashr_i32 s3, s2, 16
-; GFX950-NEXT:    s_sext_i32_i16 s2, s2
-; GFX950-NEXT:    s_cmp_lt_i32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i16_slt_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_ashr_i32 s3, s2, 16
-; GFX1250-NEXT:    s_sext_i32_i16 s2, s2
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_cmp_lt_i32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i16 %a,
-    i16 %b) #0 {
-entry:
-  %cmp = icmp slt i16 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i16_sle_i32(
-; GFX950-LABEL: kernel_uniform_i16_sle_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_ashr_i32 s3, s2, 16
-; GFX950-NEXT:    s_sext_i32_i16 s2, s2
-; GFX950-NEXT:    s_cmp_le_i32 s2, s3
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s2
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i16_sle_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_ashr_i32 s3, s2, 16
-; GFX1250-NEXT:    s_sext_i32_i16 s2, s2
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_cmp_le_i32 s2, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i16 %a,
-    i16 %b) #0 {
-entry:
-  %cmp = icmp sle i16 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-; ----------------------------------------------------------------------------
-; Divergent i64 compares
-; ----------------------------------------------------------------------------
-
-define amdgpu_kernel void @kernel_i64_eq_i32(
-; GFX950-LABEL: kernel_i64_eq_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_cmp_eq_u64 s[2:3], s[6:7]
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_i64_eq_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
-; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_cmp_eq_u64 s[2:3], s[6:7]
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i64 %a,
-    i64 %b) #0 {
-entry:
-  %cmp = icmp eq i64 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_i64_eq_i64(
-; GFX950-LABEL: kernel_i64_eq_i64:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX950-NEXT:    s_mov_b32 s4, 0
-; GFX950-NEXT:    v_mov_b32_e32 v2, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s4
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_cmp_eq_u64 s[2:3], s[6:7]
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
-; GFX950-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_i64_eq_i64:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_cmp_eq_u64 s[2:3], s[6:7]
-; GFX1250-NEXT:    s_mov_b32 s2, 0
-; GFX1250-NEXT:    s_cselect_b32 s3, -1, 0
-; GFX1250-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s2
-; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s3
-; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i64 %a,
-    i64 %b) #0 {
-entry:
-  %cmp = icmp eq i64 %a, %b
-  %zext = zext i1 %cmp to i64
-  store i64 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_i64_ne_i32(
-; GFX950-LABEL: kernel_i64_ne_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_cmp_lg_u64 s[2:3], s[6:7]
-; GFX950-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX950-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
-; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_i64_ne_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
-; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_cmp_lg_u64 s[2:3], s[6:7]
-; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i64 %a,
-    i64 %b) #0 {
-entry:
-  %cmp = icmp ne i64 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_i64_ugt_i32(
-; GFX950-LABEL: kernel_i64_ugt_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v2, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
-; GFX950-NEXT:    v_cmp_gt_u64_e32 vcc, s[2:3], v[0:1]
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    global_store_dword v2, v0, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_i64_ugt_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
-; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_gt_u64_e64 s2, s[2:3], s[6:7]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i64 %a,
-    i64 %b) #0 {
-entry:
-  %cmp = icmp ugt i64 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_i64_uge_i32(
-; GFX950-LABEL: kernel_i64_uge_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v2, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
-; GFX950-NEXT:    v_cmp_ge_u64_e32 vcc, s[2:3], v[0:1]
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    global_store_dword v2, v0, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_i64_uge_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
-; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_ge_u64_e64 s2, s[2:3], s[6:7]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i64 %a,
-    i64 %b) #0 {
-entry:
-  %cmp = icmp uge i64 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_i64_ult_i32(
-; GFX950-LABEL: kernel_i64_ult_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v2, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
-; GFX950-NEXT:    v_cmp_lt_u64_e32 vcc, s[2:3], v[0:1]
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    global_store_dword v2, v0, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_i64_ult_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
-; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_lt_u64_e64 s2, s[2:3], s[6:7]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i64 %a,
-    i64 %b) #0 {
-entry:
-  %cmp = icmp ult i64 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i64_ule_i32(
-; GFX950-LABEL: kernel_uniform_i64_ule_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v2, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
-; GFX950-NEXT:    v_cmp_le_u64_e32 vcc, s[2:3], v[0:1]
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    global_store_dword v2, v0, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i64_ule_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
-; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_le_u64_e64 s2, s[2:3], s[6:7]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i64 %a,
-    i64 %b) #0 {
-entry:
-  %cmp = icmp ule i64 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i64_sgt_i32(
-; GFX950-LABEL: kernel_uniform_i64_sgt_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v2, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
-; GFX950-NEXT:    v_cmp_gt_i64_e32 vcc, s[2:3], v[0:1]
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    global_store_dword v2, v0, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i64_sgt_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
-; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_gt_i64_e64 s2, s[2:3], s[6:7]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i64 %a,
-    i64 %b) #0 {
-entry:
-  %cmp = icmp sgt i64 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i64_sge_i32(
-; GFX950-LABEL: kernel_uniform_i64_sge_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v2, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
-; GFX950-NEXT:    v_cmp_ge_i64_e32 vcc, s[2:3], v[0:1]
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    global_store_dword v2, v0, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i64_sge_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
-; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_ge_i64_e64 s2, s[2:3], s[6:7]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i64 %a,
-    i64 %b) #0 {
-entry:
-  %cmp = icmp sge i64 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i64_slt_i32(
-; GFX950-LABEL: kernel_uniform_i64_slt_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v2, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
-; GFX950-NEXT:    v_cmp_lt_i64_e32 vcc, s[2:3], v[0:1]
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    global_store_dword v2, v0, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i64_slt_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
-; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_lt_i64_e64 s2, s[2:3], s[6:7]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i64 %a,
-    i64 %b) #0 {
-entry:
-  %cmp = icmp slt i64 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @kernel_uniform_i64_sle_i32(
-; GFX950-LABEL: kernel_uniform_i64_sle_i32:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v2, 0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
-; GFX950-NEXT:    v_cmp_le_i64_e32 vcc, s[2:3], v[0:1]
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX950-NEXT:    global_store_dword v2, v0, s[0:1]
-; GFX950-NEXT:    s_endpgm
-;
-; GFX1250-LABEL: kernel_uniform_i64_sle_i32:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
-; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cmp_le_i64_e64 s2, s[2:3], s[6:7]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out,
-    i64 %a,
-    i64 %b) #0 {
-entry:
-  %cmp = icmp sle i64 %a, %b
-  %zext = zext i1 %cmp to i32
-  store i32 %zext, ptr addrspace(1) %out
-  ret void
-}
 
 
 ; To test divergent with amdgpu kernel ABI.
@@ -2049,4 +498,886 @@ entry:
   %cmp = icmp eq i32 %a, %b
   %tmp2 = zext i1 %cmp to i32
   ret i32 %tmp2
+}
+
+; ----------------------------------------------------------------------------
+; Uniform i32 compares
+; ----------------------------------------------------------------------------
+
+define amdgpu_ps void @ps_uniform_i32_eq_i32(
+; GFX950-LABEL: ps_uniform_i32_eq_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i32_eq_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i32 %a,
+    i32 %b) #0 {
+entry:
+  %cmp = icmp eq i32 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i32_eq_i64(
+; GFX950-LABEL: ps_uniform_i32_eq_i64:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; GFX950-NEXT:    s_mov_b32 s0, 0
+; GFX950-NEXT:    v_mov_b32_e32 v3, s0
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i32_eq_i64:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    s_mov_b32 s0, 0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_mov_b32_e32 v3, s0
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i32 %a,
+    i32 %b) #0 {
+entry:
+  %cmp = icmp eq i32 %a, %b
+  %zext = zext i1 %cmp to i64
+  store i64 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i32_ne_i32(
+; GFX950-LABEL: ps_uniform_i32_ne_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_ne_u32_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i32_ne_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i32 %a,
+    i32 %b) #0 {
+entry:
+  %cmp = icmp ne i32 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i32_ugt_i32(
+; GFX950-LABEL: ps_uniform_i32_ugt_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_gt_u32_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i32_ugt_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i32 %a,
+    i32 %b) #0 {
+entry:
+  %cmp = icmp ugt i32 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i32_uge_i32(
+; GFX950-LABEL: ps_uniform_i32_uge_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_ge_u32_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i32_uge_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i32 %a,
+    i32 %b) #0 {
+entry:
+  %cmp = icmp uge i32 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i32_ult_i32(
+; GFX950-LABEL: ps_uniform_i32_ult_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_lt_u32_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i32_ult_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i32 %a,
+    i32 %b) #0 {
+entry:
+  %cmp = icmp ult i32 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i32_ule_i32(
+; GFX950-LABEL: ps_uniform_i32_ule_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_le_u32_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i32_ule_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_le_u32_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i32 %a,
+    i32 %b) #0 {
+entry:
+  %cmp = icmp ule i32 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i32_sgt_i32(
+; GFX950-LABEL: ps_uniform_i32_sgt_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_gt_i32_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i32_sgt_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i32 %a,
+    i32 %b) #0 {
+entry:
+  %cmp = icmp sgt i32 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i32_sge_i32(
+; GFX950-LABEL: ps_uniform_i32_sge_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_ge_i32_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i32_sge_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_ge_i32_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i32 %a,
+    i32 %b) #0 {
+entry:
+  %cmp = icmp sge i32 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i32_slt_i32(
+; GFX950-LABEL: ps_uniform_i32_slt_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_lt_i32_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i32_slt_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i32 %a,
+    i32 %b) #0 {
+entry:
+  %cmp = icmp slt i32 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i32_sle_i32(
+; GFX950-LABEL: ps_uniform_i32_sle_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_le_i32_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i32_sle_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_le_i32_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i32 %a,
+    i32 %b) #0 {
+entry:
+  %cmp = icmp sle i32 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+; ----------------------------------------------------------------------------
+; Uniform i16 compares
+; ----------------------------------------------------------------------------
+
+define amdgpu_ps void @ps_uniform_i16_eq_i32(
+; GFX950-LABEL: ps_uniform_i16_eq_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i16_eq_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_eq_u16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i16 %a,
+    i16 %b) #0 {
+entry:
+  %cmp = icmp eq i16 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i16_eq_i64(
+; GFX950-LABEL: ps_uniform_i16_eq_i64:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, v2, v3
+; GFX950-NEXT:    s_mov_b32 s0, 0
+; GFX950-NEXT:    v_mov_b32_e32 v3, s0
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i16_eq_i64:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_eq_u16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    s_mov_b32 s0, 0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_mov_b32_e32 v3, s0
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i16 %a,
+    i16 %b) #0 {
+entry:
+  %cmp = icmp eq i16 %a, %b
+  %zext = zext i1 %cmp to i64
+  store i64 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i16_ne_i32(
+; GFX950-LABEL: ps_uniform_i16_ne_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_ne_u16_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i16_ne_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_ne_u16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i16 %a,
+    i16 %b) #0 {
+entry:
+  %cmp = icmp ne i16 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i16_ugt_i32(
+; GFX950-LABEL: ps_uniform_i16_ugt_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_gt_u16_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i16_ugt_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_gt_u16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i16 %a,
+    i16 %b) #0 {
+entry:
+  %cmp = icmp ugt i16 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i16_uge_i32(
+; GFX950-LABEL: ps_uniform_i16_uge_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_ge_u16_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i16_uge_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_ge_u16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i16 %a,
+    i16 %b) #0 {
+entry:
+  %cmp = icmp uge i16 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i16_ult_i32(
+; GFX950-LABEL: ps_uniform_i16_ult_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_lt_u16_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i16_ult_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_lt_u16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i16 %a,
+    i16 %b) #0 {
+entry:
+  %cmp = icmp ult i16 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i16_ule_i32(
+; GFX950-LABEL: ps_uniform_i16_ule_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_le_u16_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i16_ule_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_le_u16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i16 %a,
+    i16 %b) #0 {
+entry:
+  %cmp = icmp ule i16 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i16_sgt_i32(
+; GFX950-LABEL: ps_uniform_i16_sgt_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i16_sgt_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_gt_i16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i16 %a,
+    i16 %b) #0 {
+entry:
+  %cmp = icmp sgt i16 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i16_sge_i32(
+; GFX950-LABEL: ps_uniform_i16_sge_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i16_sge_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_ge_i16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i16 %a,
+    i16 %b) #0 {
+entry:
+  %cmp = icmp sge i16 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i16_slt_i32(
+; GFX950-LABEL: ps_uniform_i16_slt_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i16_slt_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_lt_i16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i16 %a,
+    i16 %b) #0 {
+entry:
+  %cmp = icmp slt i16 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i16_sle_i32(
+; GFX950-LABEL: ps_uniform_i16_sle_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_le_i16_e32 vcc, v2, v3
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i16_sle_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_le_i16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i16 %a,
+    i16 %b) #0 {
+entry:
+  %cmp = icmp sle i16 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+; ----------------------------------------------------------------------------
+; Divergent i64 compares
+; ----------------------------------------------------------------------------
+
+define amdgpu_ps void @ps_i64_eq_i32(
+; GFX950-LABEL: ps_i64_eq_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_eq_u64_e32 vcc, v[2:3], v[4:5]
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_i64_eq_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[4:5]
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i64 %a,
+    i64 %b) #0 {
+entry:
+  %cmp = icmp eq i64 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_i64_eq_i64(
+; GFX950-LABEL: ps_i64_eq_i64:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_eq_u64_e32 vcc, v[2:3], v[4:5]
+; GFX950-NEXT:    s_mov_b32 s0, 0
+; GFX950-NEXT:    v_mov_b32_e32 v3, s0
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_i64_eq_i64:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[4:5]
+; GFX1250-NEXT:    s_mov_b32 s0, 0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_mov_b32_e32 v3, s0
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i64 %a,
+    i64 %b) #0 {
+entry:
+  %cmp = icmp eq i64 %a, %b
+  %zext = zext i1 %cmp to i64
+  store i64 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_i64_ne_i32(
+; GFX950-LABEL: ps_i64_ne_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_ne_u64_e32 vcc, v[2:3], v[4:5]
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_i64_ne_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[2:3], v[4:5]
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i64 %a,
+    i64 %b) #0 {
+entry:
+  %cmp = icmp ne i64 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_i64_ugt_i32(
+; GFX950-LABEL: ps_i64_ugt_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_gt_u64_e32 vcc, v[2:3], v[4:5]
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_i64_ugt_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[2:3], v[4:5]
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i64 %a,
+    i64 %b) #0 {
+entry:
+  %cmp = icmp ugt i64 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_i64_uge_i32(
+; GFX950-LABEL: ps_i64_uge_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_ge_u64_e32 vcc, v[2:3], v[4:5]
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_i64_uge_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_ge_u64_e32 vcc_lo, v[2:3], v[4:5]
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i64 %a,
+    i64 %b) #0 {
+entry:
+  %cmp = icmp uge i64 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_i64_ult_i32(
+; GFX950-LABEL: ps_i64_ult_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_lt_u64_e32 vcc, v[2:3], v[4:5]
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_i64_ult_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[2:3], v[4:5]
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i64 %a,
+    i64 %b) #0 {
+entry:
+  %cmp = icmp ult i64 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i64_ule_i32(
+; GFX950-LABEL: ps_uniform_i64_ule_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_le_u64_e32 vcc, v[2:3], v[4:5]
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i64_ule_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_le_u64_e32 vcc_lo, v[2:3], v[4:5]
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i64 %a,
+    i64 %b) #0 {
+entry:
+  %cmp = icmp ule i64 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i64_sgt_i32(
+; GFX950-LABEL: ps_uniform_i64_sgt_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_gt_i64_e32 vcc, v[2:3], v[4:5]
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i64_sgt_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_gt_i64_e32 vcc_lo, v[2:3], v[4:5]
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i64 %a,
+    i64 %b) #0 {
+entry:
+  %cmp = icmp sgt i64 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i64_sge_i32(
+; GFX950-LABEL: ps_uniform_i64_sge_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_ge_i64_e32 vcc, v[2:3], v[4:5]
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i64_sge_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_ge_i64_e32 vcc_lo, v[2:3], v[4:5]
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i64 %a,
+    i64 %b) #0 {
+entry:
+  %cmp = icmp sge i64 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i64_slt_i32(
+; GFX950-LABEL: ps_uniform_i64_slt_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_lt_i64_e32 vcc, v[2:3], v[4:5]
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i64_slt_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[2:3], v[4:5]
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i64 %a,
+    i64 %b) #0 {
+entry:
+  %cmp = icmp slt i64 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @ps_uniform_i64_sle_i32(
+; GFX950-LABEL: ps_uniform_i64_sle_i32:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    v_cmp_le_i64_e32 vcc, v[2:3], v[4:5]
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: ps_uniform_i64_sle_i32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    v_cmp_le_i64_e32 vcc_lo, v[2:3], v[4:5]
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
+    ptr addrspace(1) %out,
+    i64 %a,
+    i64 %b) #0 {
+entry:
+  %cmp = icmp sle i64 %a, %b
+  %zext = zext i1 %cmp to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
 }
