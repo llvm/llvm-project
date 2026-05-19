@@ -112,10 +112,8 @@ struct Iter {
 };
 
 void memberAccessOnParen(Stream &s, Iter it) {
-  // (s << "x").str() -- parens required for method chaining; no warning.
   (s << "x").str();
 
-  // (*it).x -- parens required before member access; no warning.
   auto v = (*it).x;
 }
 
