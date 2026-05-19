@@ -7801,8 +7801,7 @@ bool Sema::diagnoseArgDependentDiagnoseIfAttrs(const FunctionDecl *Function,
         // It's sane to use the same Args for any redecl of this function, since
         // EvaluateWithSubstitution only cares about the position of each
         // argument in the arg list, not the ParmVarDecl* it maps to.
-        // FIXME: This doesn't consider value-dependent cases, because doing so
-        // is very difficult. Ideally, we should handle them more gracefully.
+        // Value-dependent conditions are checked after instantiation.
         if (DIA->getCond()->isValueDependent() ||
             !DIA->getCond()->EvaluateWithSubstitution(
                 Result, Context, cast<FunctionDecl>(DIA->getParent()), Args,
