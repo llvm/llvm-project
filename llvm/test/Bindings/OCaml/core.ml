@@ -161,8 +161,8 @@ let test_constants () =
   (* CHECK: const_single{{.*}}2.75
    * CHECK: const_double{{.*}}3.1459
    * CHECK: const_double_string{{.*}}2
-   * CHECK: const_fake_fp128{{.*}}0xL00000000000000004000000000000000
-   * CHECK: const_fp128_string{{.*}}0xLF3CB1CCF26FBC178452FB4EC7F91973F
+   * CHECK: const_fake_fp128{{.*}}2.000000e+00
+   * CHECK: const_fp128_string{{.*}}1.000000e+400
    *)
   begin group "real";
     let cs = const_float float_type 2.75 in

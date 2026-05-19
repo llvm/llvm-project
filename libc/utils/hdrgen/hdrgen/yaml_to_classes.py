@@ -52,7 +52,20 @@ def yaml_to_classes(yaml_data, header_class, entry_points=None):
     types = yaml_data.get("types", [])
     sorted_types = sorted(types, key=lambda x: x["type_name"])
     for type_data in sorted_types:
-        header.add_type(Type(type_data["type_name"]))
+        type_name = type_data["type_name"]
+        type_guard = type_data.get("guard")
+        # If a type has a guard, the macro it references must exist in
+        # the same yaml file with a macro_header attribute.
+        if type_guard is not None and not any(
+            macro_data["macro_name"] == type_guard and "macro_header" in macro_data
+            for macro_data in yaml_data.get("macros", [])
+        ):
+            raise ValueError(
+                f"Type '{type_name}' has guard '{type_guard}' but no macro with "
+                f"macro_header '{type_guard}' was found in this file."
+            )
+
+        header.add_type(Type(type_name, type_guard))
 
     for enum_data in yaml_data.get("enums", []):
         header.add_enumeration(

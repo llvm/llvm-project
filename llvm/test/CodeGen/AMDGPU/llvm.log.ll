@@ -1544,9 +1544,9 @@ define amdgpu_kernel void @s_log_v3f32(ptr addrspace(1) %out, <3 x float> %in) {
 ;
 ; R600-LABEL: s_log_v3f32:
 ; R600:       ; %bb.0:
-; R600-NEXT:    ALU 62, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T2.X, T3.X, 0
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XY, T0.X, 1
+; R600-NEXT:    ALU 61, @4, KC0[CB0:0-32], KC1[]
+; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T3.X, 0
+; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XY, T2.X, 1
 ; R600-NEXT:    CF_END
 ; R600-NEXT:    ALU clause starting at 4:
 ; R600-NEXT:     SETGT T0.W, literal.x, KC0[3].Z,
@@ -1554,141 +1554,138 @@ define amdgpu_kernel void @s_log_v3f32(ptr addrspace(1) %out, <3 x float> %in) {
 ; R600-NEXT:    8388608(1.175494e-38), 0(0.000000e+00)
 ; R600-NEXT:     CNDE * T2.W, PV.W, 1.0, literal.x,
 ; R600-NEXT:    1333788672(4.294967e+09), 0(0.000000e+00)
-; R600-NEXT:     MUL_IEEE T2.W, KC0[3].Z, PV.W,
-; R600-NEXT:     CNDE * T3.W, T1.W, 1.0, literal.x,
+; R600-NEXT:     MUL_IEEE T0.Z, KC0[3].Z, PV.W,
+; R600-NEXT:     SETGT T2.W, literal.x, KC0[3].W,
+; R600-NEXT:     CNDE * T3.W, T1.W, 1.0, literal.y,
+; R600-NEXT:    8388608(1.175494e-38), 1333788672(4.294967e+09)
+; R600-NEXT:     MUL_IEEE T1.Z, KC0[3].Y, PS,
+; R600-NEXT:     CNDE T3.W, PV.W, 1.0, literal.x,
+; R600-NEXT:     LOG_IEEE * T0.X, PV.Z,
 ; R600-NEXT:    1333788672(4.294967e+09), 0(0.000000e+00)
-; R600-NEXT:     MUL_IEEE T0.Z, KC0[3].Y, PS,
-; R600-NEXT:     SETGT T3.W, literal.x, KC0[3].W,
-; R600-NEXT:     LOG_IEEE * T0.X, PV.W,
-; R600-NEXT:    8388608(1.175494e-38), 0(0.000000e+00)
-; R600-NEXT:     AND_INT T1.Z, PS, literal.x,
-; R600-NEXT:     CNDE T2.W, PV.W, 1.0, literal.y,
-; R600-NEXT:     LOG_IEEE * T0.Y, PV.Z,
-; R600-NEXT:    -4096(nan), 1333788672(4.294967e+09)
 ; R600-NEXT:     MUL_IEEE T0.Z, KC0[3].W, PV.W,
-; R600-NEXT:     ADD T2.W, T0.X, -PV.Z,
-; R600-NEXT:     AND_INT * T4.W, PS, literal.x,
+; R600-NEXT:     AND_INT T3.W, PS, literal.x,
+; R600-NEXT:     LOG_IEEE * T0.Y, PV.Z,
 ; R600-NEXT:    -4096(nan), 0(0.000000e+00)
-; R600-NEXT:     ADD T2.Z, T0.Y, -PS,
-; R600-NEXT:     MUL_IEEE T5.W, PV.W, literal.x,
+; R600-NEXT:     ADD T1.Z, T0.X, -PV.W,
+; R600-NEXT:     AND_INT T4.W, PS, literal.x,
 ; R600-NEXT:     LOG_IEEE * T0.Z, PV.Z,
-; R600-NEXT:    939916788(3.194618e-05), 0(0.000000e+00)
-; R600-NEXT:     MULADD_IEEE T3.Z, T1.Z, literal.x, PV.W,
-; R600-NEXT:     AND_INT T5.W, PS, literal.y,
-; R600-NEXT:     MUL_IEEE * T6.W, PV.Z, literal.x,
+; R600-NEXT:    -4096(nan), 0(0.000000e+00)
+; R600-NEXT:     ADD T2.Z, T0.Y, -PV.W,
+; R600-NEXT:     MUL_IEEE T5.W, PV.Z, literal.x,
+; R600-NEXT:     AND_INT * T6.W, PS, literal.y,
 ; R600-NEXT:    939916788(3.194618e-05), -4096(nan)
-; R600-NEXT:     MULADD_IEEE T4.Z, T4.W, literal.x, PS,
-; R600-NEXT:     ADD T6.W, T0.Z, -PV.W,
-; R600-NEXT:     MULADD_IEEE * T2.W, T2.W, literal.y, PV.Z, BS:VEC_021/SCL_122
-; R600-NEXT:    939916788(3.194618e-05), 1060204544(6.931152e-01)
-; R600-NEXT:     MULADD_IEEE T1.Y, T1.Z, literal.x, PS,
-; R600-NEXT:     SETGT T1.Z, literal.y, |T0.X|,
-; R600-NEXT:     MUL_IEEE T2.W, PV.W, literal.z,
-; R600-NEXT:     MULADD_IEEE * T7.W, T2.Z, literal.x, PV.Z, BS:VEC_021/SCL_122
-; R600-NEXT:    1060204544(6.931152e-01), 2139095040(INF)
+; R600-NEXT:     ADD T3.Z, T0.Z, -PS,
+; R600-NEXT:     MULADD_IEEE T5.W, T3.W, literal.x, PV.W,
+; R600-NEXT:     MUL_IEEE * T7.W, PV.Z, literal.x,
 ; R600-NEXT:    939916788(3.194618e-05), 0(0.000000e+00)
+; R600-NEXT:     MULADD_IEEE T4.Z, T4.W, literal.x, PS,
+; R600-NEXT:     MULADD_IEEE T5.W, T1.Z, literal.y, PV.W,
+; R600-NEXT:     MUL_IEEE * T7.W, PV.Z, literal.x,
+; R600-NEXT:    939916788(3.194618e-05), 1060204544(6.931152e-01)
+; R600-NEXT:     MULADD_IEEE T1.Y, T6.W, literal.x, PS,
+; R600-NEXT:     MULADD_IEEE T1.Z, T3.W, literal.y, PV.W, BS:VEC_120/SCL_212
+; R600-NEXT:     SETGT T3.W, literal.z, |T0.X|,
+; R600-NEXT:     MULADD_IEEE * T5.W, T2.Z, literal.y, PV.Z, BS:VEC_021/SCL_122
+; R600-NEXT:    939916788(3.194618e-05), 1060204544(6.931152e-01)
+; R600-NEXT:    2139095040(INF), 0(0.000000e+00)
 ; R600-NEXT:     MULADD_IEEE T1.X, T4.W, literal.x, PS,
 ; R600-NEXT:     SETGT T2.Y, literal.y, |T0.Y|,
-; R600-NEXT:     MULADD_IEEE T2.Z, T5.W, literal.z, PV.W, BS:VEC_120/SCL_212
-; R600-NEXT:     CNDE T2.W, PV.Z, T0.X, PV.Y,
-; R600-NEXT:     CNDE * T0.W, T0.W, 0.0, literal.w,
+; R600-NEXT:     CNDE T1.Z, PV.W, T0.X, PV.Z,
+; R600-NEXT:     CNDE T0.W, T0.W, 0.0, literal.z, BS:VEC_120/SCL_212
+; R600-NEXT:     MULADD_IEEE * T3.W, T3.Z, literal.x, PV.Y, BS:VEC_021/SCL_122
 ; R600-NEXT:    1060204544(6.931152e-01), 2139095040(INF)
-; R600-NEXT:    939916788(3.194618e-05), 1102148120(2.218071e+01)
-; R600-NEXT:     ADD T1.Y, PV.W, -PS,
-; R600-NEXT:     MULADD_IEEE T1.Z, T6.W, literal.x, PV.Z,
+; R600-NEXT:    1102148120(2.218071e+01), 0(0.000000e+00)
+; R600-NEXT:     MULADD_IEEE T0.X, T6.W, literal.x, PS,
+; R600-NEXT:     ADD T1.Y, PV.Z, -PV.W,
+; R600-NEXT:     SETGT T1.Z, literal.y, |T0.Z|,
 ; R600-NEXT:     CNDE T0.W, PV.Y, T0.Y, PV.X,
-; R600-NEXT:     CNDE * T1.W, T1.W, 0.0, literal.y,
-; R600-NEXT:    1060204544(6.931152e-01), 1102148120(2.218071e+01)
-; R600-NEXT:     ADD T1.X, PV.W, -PS,
-; R600-NEXT:     MULADD_IEEE T0.W, T5.W, literal.x, PV.Z,
-; R600-NEXT:     SETGT * T1.W, literal.y, |T0.Z|,
+; R600-NEXT:     CNDE * T1.W, T1.W, 0.0, literal.z,
 ; R600-NEXT:    1060204544(6.931152e-01), 2139095040(INF)
-; R600-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
-; R600-NEXT:     CNDE T0.W, PS, T0.Z, PV.W,
-; R600-NEXT:     CNDE * T1.W, T3.W, 0.0, literal.y,
-; R600-NEXT:    2(2.802597e-45), 1102148120(2.218071e+01)
-; R600-NEXT:     ADD T2.X, PV.W, -PS,
-; R600-NEXT:     ADD_INT * T0.W, KC0[2].Y, literal.x,
-; R600-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; R600-NEXT:     LSHR * T3.X, PV.W, literal.x,
+; R600-NEXT:    1102148120(2.218071e+01), 0(0.000000e+00)
+; R600-NEXT:     ADD T1.X, PV.W, -PS,
+; R600-NEXT:     CNDE T0.W, PV.Z, T0.Z, PV.X,
+; R600-NEXT:     CNDE * T1.W, T2.W, 0.0, literal.x,
+; R600-NEXT:    1102148120(2.218071e+01), 0(0.000000e+00)
+; R600-NEXT:     ADD T0.X, PV.W, -PS,
+; R600-NEXT:     LSHR * T2.X, KC0[2].Y, literal.x,
+; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; R600-NEXT:     ADD_INT * T3.X, PS, literal.x,
 ; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; CM-LABEL: s_log_v3f32:
 ; CM:       ; %bb.0:
-; CM-NEXT:    ALU 68, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T2.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T4.X, T1.X
+; CM-NEXT:    ALU 66, @4, KC0[CB0:0-32], KC1[]
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T2.X
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0.X, T3.X
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     SETGT * T0.W, literal.x, KC0[3].Y,
+; CM-NEXT:     SETGT * T0.W, literal.x, KC0[3].W,
 ; CM-NEXT:    8388608(1.175494e-38), 0(0.000000e+00)
-; CM-NEXT:     CNDE T0.Z, PV.W, 1.0, literal.x,
-; CM-NEXT:     SETGT * T1.W, literal.y, KC0[3].W,
-; CM-NEXT:    1333788672(4.294967e+09), 8388608(1.175494e-38)
-; CM-NEXT:     CNDE T0.Y, PV.W, 1.0, literal.x,
-; CM-NEXT:     SETGT T1.Z, literal.y, KC0[3].Z,
-; CM-NEXT:     MUL_IEEE * T2.W, KC0[3].Y, PV.Z,
-; CM-NEXT:    1333788672(4.294967e+09), 8388608(1.175494e-38)
-; CM-NEXT:     LOG_IEEE T0.X, T2.W,
-; CM-NEXT:     LOG_IEEE T0.Y (MASKED), T2.W,
-; CM-NEXT:     LOG_IEEE T0.Z (MASKED), T2.W,
-; CM-NEXT:     LOG_IEEE * T0.W (MASKED), T2.W,
-; CM-NEXT:     CNDE T1.Y, T1.Z, 1.0, literal.x,
-; CM-NEXT:     AND_INT T0.Z, PV.X, literal.y,
-; CM-NEXT:     MUL_IEEE * T2.W, KC0[3].W, T0.Y,
+; CM-NEXT:     CNDE * T1.W, PV.W, 1.0, literal.x,
+; CM-NEXT:    1333788672(4.294967e+09), 0(0.000000e+00)
+; CM-NEXT:     SETGT T0.Y, literal.x, KC0[3].Z,
+; CM-NEXT:     SETGT T0.Z, literal.x, KC0[3].Y,
+; CM-NEXT:     MUL_IEEE * T1.W, KC0[3].W, PV.W,
+; CM-NEXT:    8388608(1.175494e-38), 0(0.000000e+00)
+; CM-NEXT:     LOG_IEEE T0.X, T1.W,
+; CM-NEXT:     LOG_IEEE T0.Y (MASKED), T1.W,
+; CM-NEXT:     LOG_IEEE T0.Z (MASKED), T1.W,
+; CM-NEXT:     LOG_IEEE * T0.W (MASKED), T1.W,
+; CM-NEXT:     CNDE T1.Y, T0.Z, 1.0, literal.x,
+; CM-NEXT:     CNDE T1.Z, T0.Y, 1.0, literal.x,
+; CM-NEXT:     AND_INT * T1.W, PV.X, literal.y,
 ; CM-NEXT:    1333788672(4.294967e+09), -4096(nan)
-; CM-NEXT:     LOG_IEEE T0.X (MASKED), T2.W,
-; CM-NEXT:     LOG_IEEE T0.Y, T2.W,
-; CM-NEXT:     LOG_IEEE T0.Z (MASKED), T2.W,
-; CM-NEXT:     LOG_IEEE * T0.W (MASKED), T2.W,
-; CM-NEXT:     ADD T2.Y, T0.X, -T0.Z,
-; CM-NEXT:     AND_INT T2.Z, PV.Y, literal.x,
-; CM-NEXT:     MUL_IEEE * T2.W, KC0[3].Z, T1.Y,
-; CM-NEXT:    -4096(nan), 0(0.000000e+00)
+; CM-NEXT:     ADD T2.Y, T0.X, -PV.W,
+; CM-NEXT:     MUL_IEEE T1.Z, KC0[3].Z, PV.Z,
+; CM-NEXT:     MUL_IEEE * T2.W, KC0[3].Y, PV.Y,
 ; CM-NEXT:     LOG_IEEE T1.X, T2.W,
 ; CM-NEXT:     LOG_IEEE T1.Y (MASKED), T2.W,
 ; CM-NEXT:     LOG_IEEE T1.Z (MASKED), T2.W,
 ; CM-NEXT:     LOG_IEEE * T1.W (MASKED), T2.W,
-; CM-NEXT:     ADD T1.Y, T0.Y, -T2.Z,
-; CM-NEXT:     AND_INT T3.Z, PV.X, literal.x,
-; CM-NEXT:     MUL_IEEE * T2.W, T2.Y, literal.y, BS:VEC_120/SCL_212
+; CM-NEXT:     LOG_IEEE T1.X (MASKED), T1.Z,
+; CM-NEXT:     LOG_IEEE T1.Y, T1.Z,
+; CM-NEXT:     LOG_IEEE T1.Z (MASKED), T1.Z,
+; CM-NEXT:     LOG_IEEE * T1.W (MASKED), T1.Z,
+; CM-NEXT:     AND_INT T3.Y, PV.Y, literal.x,
+; CM-NEXT:     AND_INT T1.Z, T1.X, literal.x,
+; CM-NEXT:     MUL_IEEE * T2.W, T2.Y, literal.y,
 ; CM-NEXT:    -4096(nan), 939916788(3.194618e-05)
-; CM-NEXT:     MULADD_IEEE T3.Y, T0.Z, literal.x, PV.W,
-; CM-NEXT:     ADD T4.Z, T1.X, -PV.Z,
-; CM-NEXT:     MUL_IEEE * T2.W, PV.Y, literal.x,
+; CM-NEXT:     MULADD_IEEE T4.Y, T1.W, literal.x, PV.W,
+; CM-NEXT:     ADD T2.Z, T1.X, -PV.Z,
+; CM-NEXT:     ADD * T2.W, T1.Y, -PV.Y,
 ; CM-NEXT:    939916788(3.194618e-05), 0(0.000000e+00)
-; CM-NEXT:     MULADD_IEEE T4.Y, T2.Z, literal.x, PV.W,
-; CM-NEXT:     MUL_IEEE T5.Z, PV.Z, literal.x,
-; CM-NEXT:     MULADD_IEEE * T2.W, T2.Y, literal.y, PV.Y,
+; CM-NEXT:     MUL_IEEE T5.Y, PV.W, literal.x,
+; CM-NEXT:     MUL_IEEE T3.Z, PV.Z, literal.x,
+; CM-NEXT:     MULADD_IEEE * T3.W, T2.Y, literal.y, PV.Y,
 ; CM-NEXT:    939916788(3.194618e-05), 1060204544(6.931152e-01)
-; CM-NEXT:     MULADD_IEEE T2.Y, T0.Z, literal.x, PV.W,
-; CM-NEXT:     MULADD_IEEE T0.Z, T3.Z, literal.y, PV.Z, BS:VEC_120/SCL_212
-; CM-NEXT:     MULADD_IEEE * T2.W, T1.Y, literal.x, PV.Y,
-; CM-NEXT:    1060204544(6.931152e-01), 939916788(3.194618e-05)
-; CM-NEXT:     SETGT T2.X, literal.x, |T0.X|,
-; CM-NEXT:     MULADD_IEEE T1.Y, T2.Z, literal.y, PV.W,
-; CM-NEXT:     SETGT T2.Z, literal.x, |T0.Y|,
-; CM-NEXT:     MULADD_IEEE * T2.W, T4.Z, literal.y, PV.Z, BS:VEC_120/SCL_212
-; CM-NEXT:    2139095040(INF), 1060204544(6.931152e-01)
-; CM-NEXT:     MULADD_IEEE T3.X, T3.Z, literal.x, PV.W,
-; CM-NEXT:     SETGT T3.Y, literal.y, |T1.X|,
-; CM-NEXT:     CNDE T0.Z, PV.Z, T0.Y, PV.Y,
-; CM-NEXT:     CNDE * T1.W, T1.W, 0.0, literal.z,
+; CM-NEXT:     MULADD_IEEE T2.X, T1.W, literal.x, PV.W,
+; CM-NEXT:     SETGT T2.Y, literal.y, |T0.X|,
+; CM-NEXT:     MULADD_IEEE T3.Z, T1.Z, literal.z, PV.Z,
+; CM-NEXT:     MULADD_IEEE * T1.W, T3.Y, literal.z, PV.Y,
 ; CM-NEXT:    1060204544(6.931152e-01), 2139095040(INF)
+; CM-NEXT:    939916788(3.194618e-05), 0(0.000000e+00)
+; CM-NEXT:     MULADD_IEEE T3.X, T2.W, literal.x, PV.W,
+; CM-NEXT:     MULADD_IEEE T4.Y, T2.Z, literal.x, PV.Z,
+; CM-NEXT:     CNDE T2.Z, PV.Y, T0.X, PV.X,
+; CM-NEXT:     CNDE * T0.W, T0.W, 0.0, literal.y, BS:VEC_120/SCL_212
+; CM-NEXT:    1060204544(6.931152e-01), 1102148120(2.218071e+01)
+; CM-NEXT:     ADD T0.X, PV.Z, -PV.W,
+; CM-NEXT:     MULADD_IEEE T2.Y, T1.Z, literal.x, PV.Y,
+; CM-NEXT:     MULADD_IEEE T1.Z, T3.Y, literal.x, PV.X,
+; CM-NEXT:     SETGT * T0.W, literal.y, |T1.Y|,
+; CM-NEXT:    1060204544(6.931152e-01), 2139095040(INF)
+; CM-NEXT:     LSHR T2.X, KC0[2].Y, literal.x,
+; CM-NEXT:     SETGT T3.Y, literal.y, |T1.X|,
+; CM-NEXT:     CNDE T1.Z, PV.W, T1.Y, PV.Z,
+; CM-NEXT:     CNDE * T0.W, T0.Y, 0.0, literal.z,
+; CM-NEXT:    2(2.802597e-45), 2139095040(INF)
 ; CM-NEXT:    1102148120(2.218071e+01), 0(0.000000e+00)
-; CM-NEXT:     ADD T4.X, PV.Z, -PV.W,
-; CM-NEXT:     CNDE T0.Y, PV.Y, T1.X, PV.X,
-; CM-NEXT:     CNDE T0.Z, T1.Z, 0.0, literal.x,
-; CM-NEXT:     ADD_INT * T1.W, KC0[2].Y, literal.y,
-; CM-NEXT:    1102148120(2.218071e+01), 8(1.121039e-44)
-; CM-NEXT:     LSHR T1.X, PV.W, literal.x,
-; CM-NEXT:     ADD T0.Y, PV.Y, -PV.Z,
-; CM-NEXT:     CNDE T0.Z, T2.X, T0.X, T2.Y,
-; CM-NEXT:     CNDE * T0.W, T0.W, 0.0, literal.y,
+; CM-NEXT:     ADD_INT T3.X, PV.X, literal.x,
+; CM-NEXT:     ADD T1.Y, PV.Z, -PV.W,
+; CM-NEXT:     CNDE T1.Z, PV.Y, T1.X, T2.Y,
+; CM-NEXT:     CNDE * T0.W, T0.Z, 0.0, literal.y,
 ; CM-NEXT:    2(2.802597e-45), 1102148120(2.218071e+01)
-; CM-NEXT:     ADD * T0.X, PV.Z, -PV.W,
-; CM-NEXT:     LSHR * T2.X, KC0[2].Y, literal.x,
-; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; CM-NEXT:     ADD * T1.X, PV.Z, -PV.W,
   %result = call <3 x float> @llvm.log.v3f32(<3 x float> %in)
   store <3 x float> %result, ptr addrspace(1) %out
   ret void

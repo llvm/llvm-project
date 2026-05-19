@@ -22,7 +22,7 @@ tls1:
 # RUN: wasm-ld --no-gc-sections --no-entry -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
-# RUN: wasm-ld --experimental-pic -shared -o %t.so %t.o
+# RUN: wasm-ld -shared -o %t.so %t.o
 # RUN: obj2yaml %t.so | FileCheck %s --check-prefix=PIC
 
 #      CHECK:  - Type:            DATA

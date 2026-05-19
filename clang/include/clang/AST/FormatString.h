@@ -396,6 +396,10 @@ public:
     return length + UsesDotPrefix;
   }
 
+  StringRef getCharacters() const {
+    return StringRef(start - UsesDotPrefix, length + UsesDotPrefix);
+  }
+
   ArgType getArgType(ASTContext &Ctx) const;
 
   void toString(raw_ostream &os) const;

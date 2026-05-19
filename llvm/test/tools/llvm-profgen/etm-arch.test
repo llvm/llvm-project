@@ -1,6 +1,6 @@
 ; REQUIRES: opencsd, arm-registered-target
 ; RUN: split-file %s %t
-; RUN: printf '\x80' > %t.etm
+; RUN: printf '\200' > %t.etm
 
 ; Test 1: ARM binary with Cortex-M attributes should pass.
 ; RUN: yaml2obj %t/arm-valid.yaml -o %t.arm.valid.bin

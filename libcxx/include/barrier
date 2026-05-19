@@ -95,6 +95,7 @@ using __barrier_phase_t _LIBCPP_NODEBUG = uint8_t;
 
 class __barrier_algorithm_base;
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 [[__gnu__::__returns_nonnull__, __gnu__::__malloc__]]
 _LIBCPP_EXPORTED_FROM_ABI __barrier_algorithm_base* __construct_barrier_algorithm_base(ptrdiff_t& __expected);
 
@@ -104,6 +105,7 @@ __arrive_barrier_algorithm_base([[__gnu__::__nonnull__]] _LIBCPP_NOESCAPE __barr
 
 _LIBCPP_EXPORTED_FROM_ABI void __destroy_barrier_algorithm_base(
     [[__gnu__::__nonnull__]] _LIBCPP_NOESCAPE __barrier_algorithm_base* __barrier) noexcept;
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _CompletionF>
 class __barrier_base {

@@ -248,8 +248,8 @@ func.func @insert_strided_slice_inst_data_with_packing(%arg0: memref<8x64xi8>) {
   %cst_small = arith.constant dense<1> : vector<4x64xi8>
   %cst_large = arith.constant dense<0> : vector<8x64xi8>
   %insert = vector.insert_strided_slice %cst_small, %cst_large {offsets = [0, 0], strides = [1, 1]} : vector<4x64xi8> into vector<8x64xi8>
-  %tdesc = xegpu.create_nd_tdesc %arg0 : memref<8x64xi8> -> !xegpu.tensor_desc<8x64xi8, #xegpu.layout<inst_data = [8, 64]>>
-  xegpu.store_nd %insert, %tdesc[0, 0] <{layout = #xegpu.layout<inst_data = [8, 64]>}>: vector<8x64xi8>, !xegpu.tensor_desc<8x64xi8, #xegpu.layout<inst_data = [8, 64]>>
+  %tdesc = xegpu.create_nd_tdesc %arg0 : memref<8x64xi8> -> !xegpu.tensor_desc<8x64xi8>
+  xegpu.store_nd %insert, %tdesc[0, 0] <{layout = #xegpu.layout<inst_data = [8, 64]>}>: vector<8x64xi8>, !xegpu.tensor_desc<8x64xi8>
   return
 }
 }
@@ -333,7 +333,7 @@ func.func @vector_shape_cast_expand_and_merge(%arg0: memref<256xf16>, %arg1: mem
 
     %4 = vector.shape_cast %2 : vector<2x4x32xf16> to vector<1x256xf16>
     %5 = vector.shape_cast %4 : vector<1x256xf16> to vector<256xf16>
-    xegpu.store %5, %arg1[%0], %cst <{layout = #xegpu.layout<inst_data = [32] >}> : vector<256xf16>, memref<256xf16>, vector<256xindex>, vector<256xi1>
+    xegpu.store %5, %arg1[%0], %cst <{layout = #xegpu.layout<inst_data = [32]>}> : vector<256xf16>, memref<256xf16>, vector<256xindex>, vector<256xi1>
     return
   }
 }
@@ -398,6 +398,52 @@ gpu.module @test_collapse_dims [#xevm.target<O = 3, chip = "pvc">] {
 
     gpu.return
   }
+}
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: func.func @bitcast_ui8_to_f4(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<256x16xui8>) {
+// CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]] : memref<256x16xui8> -> !xegpu.tensor_desc<256x16xui8, #xegpu.layout<inst_data = [32, 16]>>
+// CHECK: %[[LOAD:.*]] = xegpu.load_nd %[[TDESC]][0, 0] <{layout = #xegpu.layout<inst_data = [32, 16]>}> :
+// CHECK-SAME: !xegpu.tensor_desc<256x16xui8, #xegpu.layout<inst_data = [32, 16]>> -> vector<256x16xui8>
+// CHECK: %[[BC:.*]] = vector.bitcast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [32, 32]>} : vector<256x16xui8> to vector<256x32xf4E2M1FN>
+// CHECK: xegpu.convert_layout %[[BC]]
+// CHECK-SAME: <{input_layout = #xegpu.layout<inst_data = [32, 32]>, target_layout = #xegpu.layout<inst_data = [32, 32]>}>
+// CHECK-SAME: : vector<256x32xf4E2M1FN>
+func.func @bitcast_ui8_to_f4(%arg0: memref<256x16xui8>) {
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<256x16xui8> -> !xegpu.tensor_desc<256x16xui8>
+  %1 = xegpu.load_nd %0[0, 0] : !xegpu.tensor_desc<256x16xui8> -> vector<256x16xui8>
+  %2 = vector.bitcast %1 : vector<256x16xui8> to vector<256x32xf4E2M1FN>
+  %3 = xegpu.convert_layout %2
+     <{input_layout = #xegpu.layout<inst_data = [32, 32]>,
+      target_layout = #xegpu.layout<inst_data = [32, 32]>}>
+     : vector<256x32xf4E2M1FN>
+  return
+}
+}
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: func.func @bitcast_ui16_to_f4(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<256x16xui16>) {
+// CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]] : memref<256x16xui16> -> !xegpu.tensor_desc<256x16xui16, #xegpu.layout<inst_data = [32, 16]>>
+// CHECK: %[[LOAD:.*]] = xegpu.load_nd %[[TDESC]][0, 0] <{layout = #xegpu.layout<inst_data = [32, 16]>}> :
+// CHECK-SAME: !xegpu.tensor_desc<256x16xui16, #xegpu.layout<inst_data = [32, 16]>> -> vector<256x16xui16>
+// CHECK: %[[BC:.*]] = vector.bitcast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [32, 64]>} : vector<256x16xui16> to vector<256x64xf4E2M1FN>
+// CHECK: xegpu.convert_layout %[[BC]]
+// CHECK-SAME: <{input_layout = #xegpu.layout<inst_data = [32, 32]>, target_layout = #xegpu.layout<inst_data = [32, 32]>}>
+// CHECK-SAME: : vector<256x64xf4E2M1FN>
+func.func @bitcast_ui16_to_f4(%arg0: memref<256x16xui16>) {
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<256x16xui16> -> !xegpu.tensor_desc<256x16xui16>
+  %1 = xegpu.load_nd %0[0, 0] : !xegpu.tensor_desc<256x16xui16> -> vector<256x16xui16>
+  %2 = vector.bitcast %1 : vector<256x16xui16> to vector<256x64xf4E2M1FN>
+  %3 = xegpu.convert_layout %2
+     <{input_layout = #xegpu.layout<inst_data = [32, 32]>,
+      target_layout = #xegpu.layout<inst_data = [32, 32]>}>
+     : vector<256x64xf4E2M1FN>
+  return
+}
 }
 
 // -----

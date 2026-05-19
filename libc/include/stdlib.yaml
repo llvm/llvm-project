@@ -209,6 +209,14 @@ functions:
     return_type: void
     arguments:
       - type: unsigned int
+  - name: setenv
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+      - type: int
   - name: strfromd
     standards:
       - stdc

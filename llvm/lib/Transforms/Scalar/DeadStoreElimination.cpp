@@ -1165,8 +1165,8 @@ static bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
                                       EarliestEscapeAnalysis &EA) {
   const Value *UnderlyingObj = getUnderlyingObject(Arg);
   return isIdentifiedFunctionLocal(UnderlyingObj) &&
-         capturesNothing(
-             EA.getCapturesBefore(UnderlyingObj, CB, /*OrAt*/ true));
+         capturesNothing(EA.getCapturesBefore(UnderlyingObj, CB, /*OrAt=*/true,
+                                              /*ReturnCaptures=*/false));
 }
 
 DSEState::DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
@@ -1396,8 +1396,8 @@ bool DSEState::isInvisibleToCallerAfterRet(const Value *V, const Value *Ptr,
   }
   auto I = InvisibleToCallerAfterRet.insert({V, false});
   if (I.second && isInvisibleToCallerOnUnwind(V) && isNoAliasCall(V))
-    I.first->second = capturesNothing(PointerMayBeCaptured(
-        V, /*ReturnCaptures=*/true, CaptureComponents::Provenance));
+    I.first->second = capturesNothing(
+        PointerMayBeCaptured(V, CaptureComponents::Provenance).WithRet);
   return I.first->second;
 }
 
@@ -1414,8 +1414,8 @@ bool DSEState::isInvisibleToCallerOnUnwind(const Value *V) {
     // with the killing MemoryDef. But we refrain from doing so for now to
     // limit compile-time and this does not cause any changes to the number
     // of stores removed on a large test set in practice.
-    I.first->second = capturesAnything(PointerMayBeCaptured(
-        V, /*ReturnCaptures=*/false, CaptureComponents::Provenance));
+    I.first->second = capturesAnything(
+        PointerMayBeCaptured(V, CaptureComponents::Provenance).WithoutRet);
   return !I.first->second;
 }
 
