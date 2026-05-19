@@ -205,7 +205,7 @@ define void @test_vpinstruction_switch_cost(ptr %start, ptr %end) {
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP11:%[0-9]+]]> = icmp eq ir<%l>, ir<0>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP12:%[0-9]+]]> = or vp<[[VP9]]>, vp<[[VP10]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP13:%[0-9]+]]> = or vp<[[VP12]]>, vp<[[VP11]]>
-; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP14:%[0-9]+]]> = not vp<[[VP13]]>
+; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP14:%[0-9]+]]> = not vp<[[VP13]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP15:%[0-9]+]]> = vector-pointer vp<%next.gep>
 ; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP15]]>, ir<1>, vp<[[VP11]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP16:%[0-9]+]]> = vector-pointer vp<%next.gep>
@@ -236,7 +236,7 @@ define void @test_vpinstruction_switch_cost(ptr %start, ptr %end) {
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP11]]> = icmp eq ir<%l>, ir<0>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP12]]> = or vp<[[VP9]]>, vp<[[VP10]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP13]]> = or vp<[[VP12]]>, vp<[[VP11]]>
-; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP14]]> = not vp<[[VP13]]>
+; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP14]]> = not vp<[[VP13]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP15]]> = vector-pointer vp<%next.gep>
 ; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP15]]>, ir<1>, vp<[[VP11]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP16]]> = vector-pointer vp<%next.gep>
