@@ -1,3 +1,15 @@
+set(LLVM_OPTIONAL_SOURCES
+  PointerAuthCFIFixup.cpp
+)
+
+set(PassTests_SOURCES
+  LivenessAnalysis.cpp
+)
+
+if(LLVM_TARGETS_TO_BUILD MATCHES "AArch64")
+  list(APPEND PassTests_SOURCES PointerAuthCFIFixup.cpp)
+endif()
+
 set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
   Object
@@ -6,8 +18,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_bolt_unittest(PassTests
-  LivenessAnalysis.cpp
-  PointerAuthCFIFixup.cpp
+  ${PassTests_SOURCES}
 
   DISABLE_LLVM_LINK_LLVM_DYLIB
   )

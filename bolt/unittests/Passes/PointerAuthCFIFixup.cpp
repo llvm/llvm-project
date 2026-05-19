@@ -7,10 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef AARCH64_AVAILABLE
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
-#endif // AARCH64_AVAILABLE
 
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
@@ -34,7 +32,7 @@ extern cl::opt<bool> PrintPAuthCFIAnalyzer;
 } // namespace opts
 
 namespace {
-struct PassTester : public testing::TestWithParam<Triple::ArchType> {
+struct PassTester : public testing::Test {
   void SetUp() override {
     initalizeLLVM();
     prepareElf();
@@ -72,7 +70,7 @@ protected:
     ELF64LE::Ehdr *EHdr = reinterpret_cast<typename ELF64LE::Ehdr *>(ElfBuf);
     EHdr->e_ident[llvm::ELF::EI_CLASS] = llvm::ELF::ELFCLASS64;
     EHdr->e_ident[llvm::ELF::EI_DATA] = llvm::ELF::ELFDATA2LSB;
-    EHdr->e_machine = GetParam() == Triple::aarch64 ? EM_AARCH64 : EM_X86_64;
+    EHdr->e_machine = EM_AARCH64;
     MemoryBufferRef Source(StringRef(ElfBuf, sizeof(ElfBuf)), "ELF");
     ObjFile = cantFail(ObjectFile::createObjectFile(Source));
   }
@@ -84,7 +82,7 @@ protected:
         {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
     BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(
-        createMCPlusBuilder(GetParam(), BC->MIA.get(), BC->MII.get(),
+        createMCPlusBuilder(Triple::aarch64, BC->MIA.get(), BC->MII.get(),
                             BC->MRI.get(), BC->STI.get())));
 
     PassManager = std::make_unique<BinaryFunctionPassManager>(*BC);
@@ -122,11 +120,7 @@ protected:
 };
 } // namespace
 
-#ifdef AARCH64_AVAILABLE
-TEST_P(PassTester, ExampleTest) {
-  if (GetParam() != Triple::aarch64)
-    GTEST_SKIP();
-
+TEST_F(PassTester, ExampleTest) {
   ASSERT_NE(TextSection, nullptr);
 
   PREPARE_FUNC("ExampleFunction");
@@ -164,10 +158,8 @@ TEST_P(PassTester, ExampleTest) {
   EXPECT_EQ(CFILoc.size(), 1u);
   EXPECT_EQ(CFILoc[0], 4);
 }
-#endif // AARCH64_AVAILABLE
 
-#ifdef AARCH64_AVAILABLE
-TEST_P(PassTester, fillUnknownStateInBBTest) {
+TEST_F(PassTester, fillUnknownStateInBBTest) {
   /* Check that a if BB starts with unknown RAState, we can fill the unknown
    states based on following instructions with known RAStates.
    *
@@ -185,9 +177,6 @@ TEST_P(PassTester, fillUnknownStateInBBTest) {
           0000000c:   adds    x0, x0, #0x3
         CFI State: 0
    */
-  if (GetParam() != Triple::aarch64)
-    GTEST_SKIP();
-
   ASSERT_NE(TextSection, nullptr);
 
   PREPARE_FUNC("FuncWithUnknownStateInBB");
@@ -237,9 +226,8 @@ TEST_P(PassTester, fillUnknownStateInBBTest) {
   EXPECT_TRUE(RAState1.has_value());
   EXPECT_TRUE(*RAState1);
 }
-#endif // AARCH64_AVAILABLE
 
-TEST_P(PassTester, fillUnknownStubs) {
+TEST_F(PassTester, fillUnknownStubs) {
   /*
    * Stubs that are not part of the function's CFG should inherit the RAState of
    the BasicBlock before it.
@@ -261,9 +249,6 @@ TEST_P(PassTester, fillUnknownStubs) {
        Predecessors: .LBB0
           00000008:   ret
    */
-  if (GetParam() != Triple::aarch64)
-    GTEST_SKIP();
-
   ASSERT_NE(TextSection, nullptr);
 
   PREPARE_FUNC("FuncWithStub");
@@ -300,7 +285,7 @@ TEST_P(PassTester, fillUnknownStubs) {
   EXPECT_EQ(CFILoc.size(), 0u);
 }
 
-TEST_P(PassTester, fillUnknownStubsEmpty) {
+TEST_F(PassTester, fillUnknownStubsEmpty) {
   /*
    * This test checks that BOLT can set the RAState of unknown BBs,
    * even if all previous BBs are empty, hence no PrevInst gets set.
@@ -308,9 +293,6 @@ TEST_P(PassTester, fillUnknownStubsEmpty) {
    * As this means that the current (empty) BB is the first with non-pseudo
    * instructions, the function's initialRAState should be used.
    */
-  if (GetParam() != Triple::aarch64)
-    GTEST_SKIP();
-
   ASSERT_NE(TextSection, nullptr);
 
   PREPARE_FUNC("FuncWithStub");
@@ -336,8 +318,3 @@ TEST_P(PassTester, fillUnknownStubsEmpty) {
   // BB2 should be set to BF.initialRAState (false).
   EXPECT_FALSE(*RAState);
 }
-
-#ifdef AARCH64_AVAILABLE
-INSTANTIATE_TEST_SUITE_P(AArch64, PassTester,
-                         ::testing::Values(Triple::aarch64));
-#endif
