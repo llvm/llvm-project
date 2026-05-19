@@ -1242,7 +1242,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   case Intrinsic::amdgcn_wave_shuffle:
     return selectWaveShuffleIntrin(I);
   case Intrinsic::amdgcn_fma_legacy:
-    if (!STI.hasGFX10_3Insts()) {
+    if (!STI.hasFmaLegacy32Insts()) {
       diagnoseUnsupportedIntrinsic(I);
       return false;
     }
