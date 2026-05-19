@@ -3105,32 +3105,6 @@ bool RISCVTargetLowering::mergeStoresAfterLegalization(EVT VT) const {
          (VT.isFixedLengthVector() && VT.getVectorElementType() == MVT::i1);
 }
 
-bool RISCVTargetLowering::isLegalElementTypeForRVV(EVT ScalarTy) const {
-  if (!ScalarTy.isSimple())
-    return false;
-  switch (ScalarTy.getSimpleVT().SimpleTy) {
-  case MVT::iPTR:
-    return Subtarget.is64Bit() ? Subtarget.hasVInstructionsI64() : true;
-  case MVT::i8:
-  case MVT::i16:
-  case MVT::i32:
-    return Subtarget.hasVInstructions();
-  case MVT::i64:
-    return Subtarget.hasVInstructionsI64();
-  case MVT::f16:
-    return Subtarget.hasVInstructionsF16Minimal();
-  case MVT::bf16:
-    return Subtarget.hasVInstructionsBF16Minimal();
-  case MVT::f32:
-    return Subtarget.hasVInstructionsF32();
-  case MVT::f64:
-    return Subtarget.hasVInstructionsF64();
-  default:
-    return false;
-  }
-}
-
-
 unsigned RISCVTargetLowering::combineRepeatedFPDivisors() const {
   return NumRepeatedDivisors;
 }
@@ -26209,7 +26183,7 @@ bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,
     return false;
 
   EVT ScalarType = DataType.getScalarType();
-  if (!isLegalElementTypeForRVV(ScalarType))
+  if (!Subtarget.isLegalElementTypeForRVV(ScalarType))
     return false;
 
   if (!Subtarget.enableUnalignedVectorMem() &&
@@ -26225,7 +26199,7 @@ bool RISCVTargetLowering::isLegalFirstFaultLoad(EVT DataType,
     return false;
 
   EVT ScalarType = DataType.getScalarType();
-  if (!isLegalElementTypeForRVV(ScalarType))
+  if (!Subtarget.isLegalElementTypeForRVV(ScalarType))
     return false;
 
   if (!Subtarget.enableUnalignedVectorMem() &&
@@ -26326,7 +26300,7 @@ bool RISCVTargetLowering::isCtpopFast(EVT VT) const {
   if (VT.isVector()) {
     EVT SVT = VT.getVectorElementType();
     // If the element type is legal we can use cpop.v if it is enabled.
-    if (isLegalElementTypeForRVV(SVT))
+    if (Subtarget.isLegalElementTypeForRVV(SVT))
       return Subtarget.hasStdExtZvbb();
     // Don't consider it fast if the type needs to be legalized or scalarized.
     return false;

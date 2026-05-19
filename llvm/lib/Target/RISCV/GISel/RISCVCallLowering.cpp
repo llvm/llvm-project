@@ -264,27 +264,6 @@ struct RISCVCallReturnHandler : public RISCVIncomingValueHandler {
 RISCVCallLowering::RISCVCallLowering(const RISCVTargetLowering &TLI)
     : CallLowering(&TLI) {}
 
-/// Return true if scalable vector with ScalarTy is legal for lowering.
-static bool isLegalElementTypeForRVV(Type *EltTy,
-                                     const RISCVSubtarget &Subtarget) {
-  if (EltTy->isPointerTy())
-    return Subtarget.is64Bit() ? Subtarget.hasVInstructionsI64() : true;
-  if (EltTy->isIntegerTy(1) || EltTy->isIntegerTy(8) ||
-      EltTy->isIntegerTy(16) || EltTy->isIntegerTy(32))
-    return true;
-  if (EltTy->isIntegerTy(64))
-    return Subtarget.hasVInstructionsI64();
-  if (EltTy->isHalfTy())
-    return Subtarget.hasVInstructionsF16Minimal();
-  if (EltTy->isBFloatTy())
-    return Subtarget.hasVInstructionsBF16Minimal();
-  if (EltTy->isFloatTy())
-    return Subtarget.hasVInstructionsF32();
-  if (EltTy->isDoubleTy())
-    return Subtarget.hasVInstructionsF64();
-  return false;
-}
-
 // TODO: Support all argument types.
 // TODO: Remove IsLowerArgs argument by adding support for vectors in lowerCall.
 static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
@@ -301,7 +280,7 @@ static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
   // TODO: Support fixed vector types.
   if (IsLowerArgs && T->isVectorTy() && Subtarget.hasVInstructions() &&
       T->isScalableTy() &&
-      isLegalElementTypeForRVV(T->getScalarType(), Subtarget))
+      Subtarget.isLegalElementTypeForRVV(T->getScalarType()))
     return true;
   return false;
 }
@@ -327,7 +306,7 @@ static bool isSupportedReturnType(Type *T, const RISCVSubtarget &Subtarget,
 
   if (IsLowerRetVal && T->isVectorTy() && Subtarget.hasVInstructions() &&
       T->isScalableTy() &&
-      isLegalElementTypeForRVV(T->getScalarType(), Subtarget))
+      Subtarget.isLegalElementTypeForRVV(T->getScalarType()))
     return true;
 
   return false;

@@ -3717,7 +3717,7 @@ RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       !DL.fitsInLegalInteger(NewEltBW))
     return {};
   auto *NewEltTy = IntegerType::get(II.getContext(), NewEltBW);
-  if (!TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, NewEltTy)))
+  if (!ST->isLegalElementTypeForRVV(TLI->getValueType(DL, NewEltTy)))
     return {};
   ElementCount NewEC = SourceEC.divideCoefficientBy(TargetScale);
   Type *RetTy = VectorType::get(NewEltTy, NewEC);

@@ -384,6 +384,8 @@ public:
 
   unsigned getMaxLMULForFixedLengthVectors() const;
   bool useRVVForFixedLengthVectors() const;
+  bool isLegalElementTypeForRVV(Type *EltTy) const;
+  bool isLegalElementTypeForRVV(EVT ScalarTy) const;
 
   bool enableSubRegLiveness() const override;
 

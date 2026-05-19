@@ -240,6 +240,36 @@ bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
          getMinRVVVectorSizeInBits() >= RISCV::RVVBitsPerBlock;
 }
 
+bool RISCVSubtarget::isLegalElementTypeForRVV(Type *EltTy) const {
+  return isLegalElementTypeForRVV(EVT::getEVT(EltTy));
+}
+
+bool RISCVSubtarget::isLegalElementTypeForRVV(EVT ScalarTy) const {
+  if (!ScalarTy.isSimple())
+    return false;
+
+  switch (ScalarTy.getSimpleVT().SimpleTy) {
+  case MVT::iPTR:
+    return is64Bit() ? hasVInstructionsI64() : true;
+  case MVT::i8:
+  case MVT::i16:
+  case MVT::i32:
+    return hasVInstructions();
+  case MVT::i64:
+    return hasVInstructionsI64();
+  case MVT::f16:
+    return hasVInstructionsF16Minimal();
+  case MVT::bf16:
+    return hasVInstructionsBF16Minimal();
+  case MVT::f32:
+    return hasVInstructionsF32();
+  case MVT::f64:
+    return hasVInstructionsF64();
+  default:
+    return false;
+  }
+}
+
 bool RISCVSubtarget::enableSubRegLiveness() const { return true; }
 
 bool RISCVSubtarget::enableMachinePipeliner() const {

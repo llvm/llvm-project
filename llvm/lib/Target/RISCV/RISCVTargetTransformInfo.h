@@ -275,7 +275,7 @@ public:
       const Instruction *CxtI = nullptr) const override;
 
   bool isElementTypeLegalForScalableVector(Type *Ty) const override {
-    return TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty));
+    return ST->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty));
   }
 
   bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) const {
@@ -292,7 +292,7 @@ public:
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
-    return TLI->isLegalElementTypeForRVV(ElemType);
+    return ST->isLegalElementTypeForRVV(ElemType);
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment,
@@ -319,14 +319,14 @@ public:
     // We also need to check if the vector of address is valid.
     EVT PointerTypeVT = EVT(TLI->getPointerTy(DL));
     if (DataTypeVT.isScalableVector() &&
-        !TLI->isLegalElementTypeForRVV(PointerTypeVT))
+        !ST->isLegalElementTypeForRVV(PointerTypeVT))
       return false;
 
     EVT ElemType = DataTypeVT.getScalarType();
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
-    return TLI->isLegalElementTypeForRVV(ElemType);
+    return ST->isLegalElementTypeForRVV(ElemType);
   }
 
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const override {
@@ -416,7 +416,7 @@ public:
       return true;
 
     Type *Ty = RdxDesc.getRecurrenceType();
-    if (!TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty)))
+    if (!ST->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty)))
       return false;
 
     switch (RdxDesc.getRecurrenceKind()) {
