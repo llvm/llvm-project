@@ -292,6 +292,65 @@ func.func @extract_source_conflict_with_order() -> vector<16x32xf16> {
   %1 = vector.extract %0[0, 0] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [0, 1]>} : vector<16x32xf16> from vector<2x4x16x32xf16>
   return %1 : vector<16x32xf16>
 }
+
+// vector.deinterleave is the producer with 2 results. A second
+// vector.deinterleave (also a non-anchor op with 2 results) consumes result #1
+// of the first. getConsumerLayoutAt must index into the consumer op's results
+// using the producer result number (resultIdx=1) rather than always result(0).
+//
+// No conflict: result #1 of the first deinterleave (inst_data=[8,16]) matches
+// inferDeinterleaveSourceLayout(inst_data=[8,8]) = inst_data=[8,16].
+// CHECK-LABEL: func.func @nested_deinterleave_no_conflict
+// CHECK:         %[[X:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [8, 32]>} : () -> vector<8x32xf16>
+// CHECK-NEXT:    %[[A0:.*]], %[[A1:.*]] = vector.deinterleave %[[X]]
+// CHECK-SAME:      {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>, layout_result_1 = #xegpu.layout<inst_data = [8, 16]>}
+// CHECK-SAME:      : vector<8x32xf16> -> vector<8x16xf16>
+// CHECK-NEXT:    %{{.*}}, %{{.*}} = vector.deinterleave %[[A1]]
+// CHECK-SAME:      {layout_result_0 = #xegpu.layout<inst_data = [8, 8]>, layout_result_1 = #xegpu.layout<inst_data = [8, 8]>}
+// CHECK-SAME:      : vector<8x16xf16> -> vector<8x8xf16>
+// CHECK-NOT: xegpu.convert_layout
+// CHECK:         return
+func.func @nested_deinterleave_no_conflict() {
+  %x = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [8, 32]>} : () -> vector<8x32xf16>
+  %a0, %a1 = vector.deinterleave %x {
+    layout_result_0 = #xegpu.layout<inst_data = [8, 16]>,
+    layout_result_1 = #xegpu.layout<inst_data = [8, 16]>
+  } : vector<8x32xf16> -> vector<8x16xf16>
+  %b0, %b1 = vector.deinterleave %a1 {
+    layout_result_0 = #xegpu.layout<inst_data = [8, 8]>,
+    layout_result_1 = #xegpu.layout<inst_data = [8, 8]>
+  } : vector<8x16xf16> -> vector<8x8xf16>
+  return
+}
+
+// Conflict: result #1 of the first deinterleave carries inst_data=[16,16] but
+// the second deinterleave expects inst_data=[8,16] as its source (inferred from
+// inst_data=[8,8] via inferDeinterleaveSourceLayout). A convert_layout must be
+// inserted to bridge the mismatch.
+// CHECK-LABEL: func.func @nested_deinterleave_with_conflict
+// CHECK:         %[[X:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [8, 32]>} : () -> vector<16x32xf16>
+// CHECK-NEXT:    %[[A0:.*]], %[[A1:.*]] = vector.deinterleave %[[X]]
+// CHECK-SAME:      {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>, layout_result_1 = #xegpu.layout<inst_data = [16, 16]>}
+// CHECK-SAME:      : vector<16x32xf16> -> vector<16x16xf16>
+// CHECK-NEXT:    %[[CVT:.*]] = xegpu.convert_layout %[[A1]]
+// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [16, 16]>, target_layout = #xegpu.layout<inst_data = [8, 16]>}>
+// CHECK-SAME:      : vector<16x16xf16>
+// CHECK-NEXT:    %{{.*}}, %{{.*}} = vector.deinterleave %[[CVT]]
+// CHECK-SAME:      {layout_result_0 = #xegpu.layout<inst_data = [8, 8]>, layout_result_1 = #xegpu.layout<inst_data = [8, 8]>}
+// CHECK-SAME:      : vector<16x16xf16> -> vector<16x8xf16>
+// CHECK:         return
+func.func @nested_deinterleave_with_conflict() {
+  %x = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [8, 32]>} : () -> vector<16x32xf16>
+  %a0, %a1 = vector.deinterleave %x {
+    layout_result_0 = #xegpu.layout<inst_data = [8, 16]>,
+    layout_result_1 = #xegpu.layout<inst_data = [16, 16]>
+  } : vector<16x32xf16> -> vector<16x16xf16>
+  %b0, %b1 = vector.deinterleave %a1 {
+    layout_result_0 = #xegpu.layout<inst_data = [8, 8]>,
+    layout_result_1 = #xegpu.layout<inst_data = [8, 8]>
+  } : vector<16x16xf16> -> vector<16x8xf16>
+  return
+}
 }
 
 // -----
