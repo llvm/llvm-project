@@ -616,8 +616,8 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
           }
 
           // Skip argv[0] as we already have the file name from the executable path.
-          if (argc > 0 )
-            data.GetCStr(&offset);
+          if (argc > 0)
+            process_info.SetArg0(data.GetCStr(&offset));
 
           // Now extract the rest of the arguments.
           Args &proc_args = process_info.GetArguments();
