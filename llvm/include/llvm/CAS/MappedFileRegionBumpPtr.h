@@ -105,6 +105,10 @@ private:
     std::swap(FD, RHS.FD);
     std::swap(SharedLockFD, RHS.SharedLockFD);
     std::swap(Logger, RHS.Logger);
+    std::swap(HighWaterMarkFD, RHS.HighWaterMarkFD);
+    std::swap(HighWaterMarkRegion, RHS.HighWaterMarkRegion);
+    std::swap(HighWaterMarkPtr, RHS.HighWaterMarkPtr);
+    std::swap(IsV9Index, RHS.IsV9Index);
   }
 
 private:
@@ -118,6 +122,11 @@ private:
   std::optional<int> FD;
   std::optional<int> SharedLockFD;
   std::shared_ptr<ondisk::OnDiskCASLogger> Logger = nullptr;
+
+  std::optional<int> HighWaterMarkFD;
+  RegionT HighWaterMarkRegion;
+  std::atomic<uint64_t> *HighWaterMarkPtr = nullptr;
+  bool IsV9Index = false;
 };
 
 } // namespace llvm::cas

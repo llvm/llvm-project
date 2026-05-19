@@ -216,6 +216,37 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
     Result.H->AllocatedSize.exchange(FileSize->AllocatedSize);
   }
 
+  if (Result.Path.find("v9.index") != std::string::npos) {
+    Result.IsV9Index = true;
+    int FD;
+    std::string Path = Result.Path + ".highwatermark";
+    if (std::error_code EC = sys::fs::openFileForReadWrite(
+            Path, FD, sys::fs::CD_OpenAlways, sys::fs::OF_None))
+      return createFileError(Path, EC);
+    Result.HighWaterMarkFD = FD;
+    sys::fs::file_t File = sys::fs::convertFDToNativeFile(FD);
+    if (std::error_code EC = sys::fs::resize_file(FD, sizeof(uint64_t)))
+      return createFileError(Result.Path, EC);
+    std::error_code EC;
+    sys::fs::mapped_file_region Map(
+      File, sys::fs::mapped_file_region::readwrite, sizeof(uint64_t), 0, EC,
+      "Local\\V9IndexHighWaterMark");
+    if (EC)
+      return createFileError(Result.Path, EC);
+    Result.HighWaterMarkRegion = std::move(Map);
+    Result.HighWaterMarkPtr = reinterpret_cast<std::atomic<uint64_t> *>(
+        Result.HighWaterMarkRegion.data());
+    uint64_t Size = Result.size();
+    uint64_t HighWaterMark = Result.HighWaterMarkPtr->load();
+    //llvm::dbgs() << "Checking data corruption " << Size << " vs "
+    //             << HighWaterMark << "\n";
+    if (Size < HighWaterMark) {
+      llvm::dbgs() << "Detected data corruption: stale ptr " << Size
+                   << " vs high water mark " << HighWaterMark << "\n";
+      //exit(129);
+    }
+  }
+
   return Result;
 }
 
@@ -227,6 +258,9 @@ void MappedFileRegionBumpPtr::destroyImpl() {
   if (SharedLockFD)
     (void)unlockFileThreadSafe(*SharedLockFD);
 
+  uint64_t BumpPtrSize = size();
+
+#if 0
   // Attempt to truncate the file if we can get exclusive access. Ignore any
   // errors.
   if (H) {
@@ -251,6 +285,7 @@ void MappedFileRegionBumpPtr::destroyImpl() {
 #endif
     }
   }
+#endif
 
   auto Close = [](std::optional<int> &FD) {
     if (FD) {
@@ -263,6 +298,21 @@ void MappedFileRegionBumpPtr::destroyImpl() {
   // Close the file and shared lock.
   Close(FD);
   Close(SharedLockFD);
+
+  if (IsV9Index) {
+    uint64_t New = BumpPtrSize;
+    //llvm::dbgs() << "Writing " << New << "\n";
+    uint64_t Old = HighWaterMarkPtr->load();
+    while (New > Old) {
+      bool Success = HighWaterMarkPtr->compare_exchange_strong(Old, New);
+      if (Success)
+        break;
+      Old = HighWaterMarkPtr->load();
+    }
+    HighWaterMarkRegion.sync();
+    HighWaterMarkRegion.unmap();
+    Close(HighWaterMarkFD);
+  }
 
   if (Logger)
     Logger->log_MappedFileRegionBumpPtr_close(Path);
