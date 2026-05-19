@@ -353,13 +353,13 @@ public:
     return I;
   }
 
-  /// Returns the Register Class of a physical register, picking the most sub
-  /// register class that contains this physreg.
+  /// Returns the Register Class of a physical register, picking the smallest
+  /// register subclass that contains this physreg.
   virtual const TargetRegisterClass *
   getMinimalPhysRegClass(MCRegister Reg) const = 0;
 
   /// Returns the common Register Class of two physical registers, picking the
-  /// most sub register class that contains these two physregs.
+  /// smallest register subclass that contains these two physregs.
   const TargetRegisterClass *
   getCommonMinimalPhysRegClass(MCRegister Reg1, MCRegister Reg2) const;
 
