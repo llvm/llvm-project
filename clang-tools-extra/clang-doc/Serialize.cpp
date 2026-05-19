@@ -608,8 +608,7 @@ void Serializer::parseEnumerators(EnumInfo &I, const EnumDecl *D) {
     EnumValueInfo &Member = LocalMembers.emplace_back(
         E->getNameAsString(), ValueStr.str(), ValueExpr);
     ASTContext &Context = E->getASTContext();
-    if (RawComment *Comment =
-            E->getASTContext().getRawCommentNoCache(E)) {
+    if (RawComment *Comment = E->getASTContext().getRawCommentNoCache(E)) {
       Comment->setAttached();
       if (comments::FullComment *Fc = Comment->parse(Context, nullptr, E)) {
         auto *NewCI = allocateListNodeTransient<CommentInfo>();
