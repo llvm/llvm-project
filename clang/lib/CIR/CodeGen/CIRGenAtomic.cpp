@@ -523,12 +523,13 @@ static void emitAtomicCmpXchgFailureSet(CIRGenFunction &cgf, AtomicExpr *e,
       });
 }
 
-static void emitAtomicCmpXchgFailureSet(CIRGenFunction &cgf, AtomicExpr *e,
-                                        Expr *isWeakExpr, Address dest,
-                                        Address ptr, Address val1, Address val2,
-                                        Expr *failureOrderExpr, uint64_t size,
-                                        cir::MemOrder successOrder,
-                                        cir::SyncScopeKind scope) {
+// A version of the emitAtomicCmpXchgFailureSet function that ALSO checks
+// whether it is 'weak' or not (by adding an 'if' around it, and calling
+// emitAtomicCmpXchgFailureSet 2x).
+static void emitAtomicCmpXchgFailureSetCheckWeak(
+    CIRGenFunction &cgf, AtomicExpr *e, Expr *isWeakExpr, Address dest,
+    Address ptr, Address val1, Address val2, Expr *failureOrderExpr,
+    uint64_t size, cir::MemOrder successOrder, cir::SyncScopeKind scope) {
   mlir::Value isWeakVal = cgf.emitScalarExpr(isWeakExpr);
   // The AST seems to be inserting a 'bool' cast (even in C mode) here, so we'll
   // just emit it like a scalar.
@@ -591,8 +592,9 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
       emitAtomicCmpXchgFailureSet(cgf, expr, isWeak, dest, ptr, val1, val2,
                                   failureOrderExpr, size, order, scope);
     } else {
-      emitAtomicCmpXchgFailureSet(cgf, expr, isWeakExpr, dest, ptr, val1, val2,
-                                  failureOrderExpr, size, order, scope);
+      emitAtomicCmpXchgFailureSetCheckWeak(cgf, expr, isWeakExpr, dest, ptr,
+                                           val1, val2, failureOrderExpr, size,
+                                           order, scope);
     }
     return;
   }
