@@ -201,6 +201,64 @@ void spirv::IAddCarryOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.ISubBorrow
+//===----------------------------------------------------------------------===//
+
+struct ISubBorrowFold final : OpRewritePattern<spirv::ISubBorrowOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(spirv::ISubBorrowOp op,
+                                PatternRewriter &rewriter) const override {
+    Value lhs = op.getOperand1();
+    Value rhs = op.getOperand2();
+
+    // isubborrow (x, 0) = <x, 0>
+    if (matchPattern(rhs, m_Zero())) {
+      Value constituents[2] = {lhs, rhs};
+      rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, op.getType(),
+                                                               constituents);
+      return success();
+    }
+
+    // According to the SPIR-V spec:
+    //
+    //  Member 0 of the result gets the low-order bits (full component width)
+    //  of the subtraction.
+    //
+    //  Member 1 of the result gets 0 if Operand 1 >= Operand 2 (unsigned),
+    //  and 1 otherwise.
+    Attribute lhsAttr;
+    Attribute rhsAttr;
+    if (!matchPattern(lhs, m_Constant(&lhsAttr)) ||
+        !matchPattern(rhs, m_Constant(&rhsAttr)))
+      return failure();
+
+    auto diffs = constFoldBinaryOp<IntegerAttr>(
+        {lhsAttr, rhsAttr},
+        [](const APInt &a, const APInt &b) { return a - b; });
+    if (!diffs)
+      return failure();
+
+    auto borrows = constFoldBinaryOp<IntegerAttr>(
+        {lhsAttr, rhsAttr}, [](const APInt &a, const APInt &b) {
+          APInt zero = APInt::getZero(a.getBitWidth());
+          return a.ult(b) ? (zero + 1) : zero;
+        });
+    if (!borrows)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<spirv::ConstantOp>(
+        op, op.getType(), rewriter.getArrayAttr({diffs, borrows}));
+    return success();
+  }
+};
+
+void spirv::ISubBorrowOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<ISubBorrowFold>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.[S|U]MulExtended
 //===----------------------------------------------------------------------===//
 
