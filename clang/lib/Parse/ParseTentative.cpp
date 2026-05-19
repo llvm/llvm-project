@@ -453,7 +453,7 @@ Parser::isCXXConditionDeclarationOrInitStatement(bool CanBeInitStatement,
   ConditionDeclarationOrInitStatementState State(*this, CanBeInitStatement,
                                                  CanBeForRangeDecl);
 
-  if (!getLangOpts().C2y && CanBeInitStatement && Tok.is(tok::kw_using))
+  if (CanBeInitStatement && Tok.is(tok::kw_using))
     return ConditionOrInitStatement::InitStmtDecl;
   if (State.update(isCXXDeclarationSpecifier(ImplicitTypenameContext::No)))
     return State.result();
@@ -1065,7 +1065,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
 
     // Check for need to substitute AltiVec __vector keyword
     // for "vector" identifier.
-    if (!getLangOpts().C2y && TryAltiVecVectorToken())
+    if (TryAltiVecVectorToken())
       return TPResult::True;
 
     const Token &Next = NextToken();

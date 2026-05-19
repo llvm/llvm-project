@@ -1885,7 +1885,7 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
     }
   } ForConditionScope{EnterForConditionScope ? getCurScope() : nullptr};
   bool parsingC2yIfOrSwitchCondition =
-      getLangOpts().C2y && !FRI && !EnterForConditionScope;
+      getLangOpts().C2y && !EnterForConditionScope;
 
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
   PreferredType.enterCondition(Actions, Tok.getLocation());
@@ -1970,7 +1970,7 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
     WarnOnInit();
     DeclGroupPtrTy DG;
     SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
-    if (!getLangOpts().C2y && Tok.is(tok::kw_using))
+    if (Tok.is(tok::kw_using))
       DG = ParseAliasDeclarationInInitStatement(
           DeclaratorContext::SelectionInit, attrs);
     else {
