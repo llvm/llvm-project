@@ -23,17 +23,8 @@ define { i1, <32 x i8> } @bitcast_v32i8(ptr %a0) {
 define { i1, <16 x i16> } @bitcast_v16i16(ptr %a0) {
 ; CHECK-LABEL: bitcast_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld a1, 0(a0)
-; CHECK-NEXT:    ld a2, 8(a0)
-; CHECK-NEXT:    ld a3, 16(a0)
-; CHECK-NEXT:    ld a0, 24(a0)
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a2
-; CHECK-NEXT:    vslide1down.vx v8, v8, a3
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmsne.vi v10, v8, 0
 ; CHECK-NEXT:    vcpop.m a0, v10
 ; CHECK-NEXT:    seqz a0, a0
@@ -50,17 +41,8 @@ define { i1, <16 x i16> } @bitcast_v16i16(ptr %a0) {
 define { i1, <8 x i32> } @bitcast_v8i32(ptr %a0) {
 ; CHECK-LABEL: bitcast_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld a1, 0(a0)
-; CHECK-NEXT:    ld a2, 8(a0)
-; CHECK-NEXT:    ld a3, 16(a0)
-; CHECK-NEXT:    ld a0, 24(a0)
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a2
-; CHECK-NEXT:    vslide1down.vx v8, v8, a3
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmsne.vi v10, v8, 0
 ; CHECK-NEXT:    vcpop.m a0, v10
 ; CHECK-NEXT:    seqz a0, a0
