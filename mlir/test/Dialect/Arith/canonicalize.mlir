@@ -1369,6 +1369,16 @@ func.func @subSub0(%arg0: index, %arg1: index) -> index {
   return %sub2 : index
 }
 
+// CHECK-LABEL: @subSub1
+// CHECK-SAME:    %[[ARG0:.*]]: index,
+// CHECK-SAME:    %[[ARG1:.*]]: index)
+//      CHECK:    return %[[ARG1]] : index
+func.func @subSub1(%arg0: index, %arg1: index) -> index {
+  %sub1 = arith.subi %arg0, %arg1 : index
+  %sub2 = arith.subi %arg0, %sub1 : index
+  return %sub2 : index
+}
+
 // CHECK-LABEL: @subSub0Ovf
 //       CHECK:   %[[c0:.+]] = arith.constant 0 : index
 //       CHECK:   %[[add:.+]] = arith.subi %[[c0]], %arg1 overflow<nsw, nuw> : index
@@ -1747,6 +1757,115 @@ func.func @adduiExtendedPoisonRhs() -> (i32, i1) {
   %poison = ub.poison : i32
   %sum, %overflow = arith.addui_extended %c5, %poison : i32, i1
   return %sum, %overflow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedZeroRhs
+//  CHECK-NEXT:   %[[false:.+]] = arith.constant false
+//  CHECK-NEXT:   return %arg0, %[[false]]
+func.func @subuiExtendedZeroRhs(%arg0: i32) -> (i32, i1) {
+  %zero = arith.constant 0 : i32
+  %diff, %borrow = arith.subui_extended %arg0, %zero: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedZeroRhsSplat
+//  CHECK-NEXT:   %[[false:.+]] = arith.constant dense<false> : vector<4xi1>
+//  CHECK-NEXT:   return %arg0, %[[false]]
+func.func @subuiExtendedZeroRhsSplat(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
+  %zero = arith.constant dense<0> : vector<4xi32>
+  %diff, %borrow = arith.subui_extended %arg0, %zero: vector<4xi32>, vector<4xi1>
+  return %diff, %borrow : vector<4xi32>, vector<4xi1>
+}
+
+// CHECK-LABEL: @subuiExtendedSameOperand
+//  CHECK-DAG:    %[[zero:.+]] = arith.constant 0 : i32
+//  CHECK-DAG:    %[[false:.+]] = arith.constant false
+//  CHECK-NEXT:   return %[[zero]], %[[false]]
+func.func @subuiExtendedSameOperand(%arg0: i32) -> (i32, i1) {
+  %diff, %borrow = arith.subui_extended %arg0, %arg0: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedSameOperandVector
+//  CHECK-DAG:    %[[zero:.+]] = arith.constant dense<0> : vector<4xi32>
+//  CHECK-DAG:    %[[false:.+]] = arith.constant dense<false> : vector<4xi1>
+//  CHECK-NEXT:   return %[[zero]], %[[false]]
+func.func @subuiExtendedSameOperandVector(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
+  %diff, %borrow = arith.subui_extended %arg0, %arg0: vector<4xi32>, vector<4xi1>
+  return %diff, %borrow : vector<4xi32>, vector<4xi1>
+}
+
+// CHECK-LABEL: @subuiExtendedUnusedBorrowScalar
+//  CHECK-SAME:   (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32) -> i32
+//  CHECK-NEXT:   %[[RES:.+]] = arith.subi %[[LHS]], %[[RHS]] : i32
+//  CHECK-NEXT:   return %[[RES]] : i32
+func.func @subuiExtendedUnusedBorrowScalar(%arg0: i32, %arg1: i32) -> i32 {
+  %diff, %borrow = arith.subui_extended %arg0, %arg1: i32, i1
+  return %diff : i32
+}
+
+// CHECK-LABEL: @subuiExtendedUnusedBorrowVector
+//  CHECK-SAME:   (%[[LHS:.+]]: vector<3xi32>, %[[RHS:.+]]: vector<3xi32>) -> vector<3xi32>
+//  CHECK-NEXT:   %[[RES:.+]] = arith.subi %[[LHS]], %[[RHS]] : vector<3xi32>
+//  CHECK-NEXT:   return %[[RES]] : vector<3xi32>
+func.func @subuiExtendedUnusedBorrowVector(%arg0: vector<3xi32>, %arg1: vector<3xi32>) -> vector<3xi32> {
+  %diff, %borrow = arith.subui_extended %arg0, %arg1: vector<3xi32>, vector<3xi1>
+  return %diff : vector<3xi32>
+}
+
+// CHECK-LABEL: @subuiExtendedConstants
+//  CHECK-DAG:    %[[false:.+]] = arith.constant false
+//  CHECK-DAG:    %[[c2:.+]] = arith.constant 2 : i32
+//  CHECK-NEXT:   return %[[c2]], %[[false]]
+func.func @subuiExtendedConstants() -> (i32, i1) {
+  %c5 = arith.constant 5 : i32
+  %c3 = arith.constant 3 : i32
+  %diff, %borrow = arith.subui_extended %c5, %c3: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedConstantsBorrow
+//  CHECK-DAG:    %[[true:.+]] = arith.constant true
+//  CHECK-DAG:    %[[c_2:.+]] = arith.constant -2 : i32
+//  CHECK-NEXT:   return %[[c_2]], %[[true]]
+func.func @subuiExtendedConstantsBorrow() -> (i32, i1) {
+  %c3 = arith.constant 3 : i32
+  %c5 = arith.constant 5 : i32
+  %diff, %borrow = arith.subui_extended %c3, %c5: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedConstantsBorrowVector
+//  CHECK-DAG:    %[[diff:.+]] = arith.constant dense<[1, 0, -1, 0]> : vector<4xi32>
+//  CHECK-DAG:    %[[borrow:.+]] = arith.constant dense<[false, false, true, false]> : vector<4xi1>
+//  CHECK-NEXT:   return %[[diff]], %[[borrow]]
+func.func @subuiExtendedConstantsBorrowVector() -> (vector<4xi32>, vector<4xi1>) {
+  %v1 = arith.constant dense<[1, 3, 3, 7]> : vector<4xi32>
+  %v2 = arith.constant dense<[0, 3, 4, 7]> : vector<4xi32>
+  %diff, %borrow = arith.subui_extended %v1, %v2 : vector<4xi32>, vector<4xi1>
+  return %diff, %borrow : vector<4xi32>, vector<4xi1>
+}
+
+// CHECK-LABEL: @subuiExtendedPoisonLhs
+//  CHECK-NEXT:   %[[P0:.+]] = ub.poison : i32
+//  CHECK-NEXT:   %[[P1:.+]] = ub.poison : i1
+//  CHECK-NEXT:   return %[[P0]], %[[P1]]
+func.func @subuiExtendedPoisonLhs() -> (i32, i1) {
+  %poison = ub.poison : i32
+  %c5 = arith.constant 5 : i32
+  %diff, %borrow = arith.subui_extended %poison, %c5 : i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedPoisonRhs
+//  CHECK-NEXT:   %[[P0:.+]] = ub.poison : i32
+//  CHECK-NEXT:   %[[P1:.+]] = ub.poison : i1
+//  CHECK-NEXT:   return %[[P0]], %[[P1]]
+func.func @subuiExtendedPoisonRhs() -> (i32, i1) {
+  %c5 = arith.constant 5 : i32
+  %poison = ub.poison : i32
+  %diff, %borrow = arith.subui_extended %c5, %poison : i32, i1
+  return %diff, %borrow : i32, i1
 }
 
 // CHECK-LABEL: @mulsiExtendedZeroRhs
@@ -2490,6 +2609,38 @@ func.func @test_subf(%arg0 : f16) -> (f16, f16, f16) {
   return %0, %1, %2 : f16, f16, f16
 }
 
+// CHECK-LABEL: @test_subf_negzero(
+//  CHECK-SAME: %[[ARG0:.+]]: f16
+func.func @test_subf_negzero(%arg0 : f16) -> f16 {
+  // CHECK-NEXT:  %[[X:.+]] = arith.negf %[[ARG0]] : f16
+  // CHECK-NEXT:  return %[[X]] : f16
+  %c-0 = arith.constant -0.0 : f16
+  %0 = arith.subf %c-0, %arg0 : f16
+  return %0 : f16
+}
+
+// subf(+0, x) must NOT fold to negf(x)
+// CHECK-LABEL: @test_subf_poszero_no_negf(
+//  CHECK-SAME: %[[ARG0:.+]]: f16
+func.func @test_subf_poszero_no_negf(%arg0 : f16) -> f16 {
+  // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
+  // CHECK-NEXT:  %[[X:.+]] = arith.subf %[[C0]], %[[ARG0]] : f16
+  // CHECK-NEXT:  return %[[X]] : f16
+  %c0 = arith.constant 0.0 : f16
+  %0 = arith.subf %c0, %arg0 : f16
+  return %0 : f16
+}
+
+// CHECK-LABEL: @test_subf_negzero_splat(
+//  CHECK-SAME: %[[ARG0:.+]]: vector<4xf32>
+func.func @test_subf_negzero_splat(%arg0 : vector<4xf32>) -> vector<4xf32> {
+  // CHECK-NEXT:  %[[X:.+]] = arith.negf %[[ARG0]] : vector<4xf32>
+  // CHECK-NEXT:  return %[[X]] : vector<4xf32>
+  %c-0 = arith.constant dense<-0.0> : vector<4xf32>
+  %0 = arith.subf %c-0, %arg0 : vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
 // -----
 
 // CHECK-LABEL: @test_mulf(
@@ -2577,10 +2728,12 @@ func.func @test_addf_rounding_mode(%arg0 : f32) -> (f32, f32, f32) {
 
 // CHECK-LABEL: @test_subf_rounding_mode(
 // CHECK-SAME: %[[ARG0:.+]]: f32
-func.func @test_subf_rounding_mode(%arg0 : f32) -> (f32, f32, f32) {
+func.func @test_subf_rounding_mode(%arg0 : f32) -> (f32, f32, f32, f32) {
+  // CHECK-DAG:  %[[NZ:.+]] = arith.constant -0.000000e+00 : f32
   // CHECK-DAG:  %[[UP:.+]] = arith.constant 2.00000024 : f32
   // CHECK-DAG:  %[[DOWN:.+]] = arith.constant 2.000000e+00 : f32
-  // CHECK-NEXT: return %[[ARG0]], %[[UP]], %[[DOWN]]
+  // CHECK:      %[[NEG:.+]] = arith.subf %[[NZ]], %[[ARG0]] downward : f32
+  // CHECK-NEXT: return %[[ARG0]], %[[UP]], %[[DOWN]], %[[NEG]]
   %a = arith.constant 1.0000001 : f32
   %b = arith.constant -1.0 : f32
   // subf(x, +0) folds even with a rounding mode.
@@ -2588,7 +2741,10 @@ func.func @test_subf_rounding_mode(%arg0 : f32) -> (f32, f32, f32) {
   %0 = arith.subf %arg0, %c0 downward : f32
   %1 = arith.subf %a, %b upward : f32
   %2 = arith.subf %a, %b downward : f32
-  return %0, %1, %2 : f32, f32, f32
+  // subf(-0, x) must NOT fold to negf when a custom rounding mode is set.
+  %c-0 = arith.constant -0.0 : f32
+  %3 = arith.subf %c-0, %arg0 downward : f32
+  return %0, %1, %2, %3 : f32, f32, f32, f32
 }
 
 // -----

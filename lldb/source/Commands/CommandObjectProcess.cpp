@@ -143,8 +143,7 @@ public:
 
 protected:
   void DoExecute(Args &launch_args, CommandReturnObject &result) override {
-    Debugger &debugger = GetDebugger();
-    Target *target = debugger.GetSelectedTarget().get();
+    Target *target = &GetTarget();
     // If our listener is nullptr, users aren't allows to launch
     ModuleSP exe_module_sp = target->GetExecutableModule();
 
@@ -314,7 +313,9 @@ protected:
     PlatformSP platform_sp(
         GetDebugger().GetPlatformList().GetSelectedPlatform());
 
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = &GetTarget();
+    if (target->IsDummyTarget())
+      target = nullptr;
     // N.B. The attach should be synchronous.  It doesn't help much to get the
     // prompt back between initiating the attach and the target actually
     // stopping.  So even if the interpreter is set to be asynchronous, we wait
@@ -533,7 +534,7 @@ protected:
       // default breakpoint.
       if (m_options.m_run_to_bkpt_args.GetArgumentCount() > 0)
         CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-            m_options.m_run_to_bkpt_args, target, result, &run_to_bkpt_ids,
+            m_options.m_run_to_bkpt_args, m_exe_ctx, result, &run_to_bkpt_ids,
             BreakpointName::Permissions::disablePerm);
       if (!result.Succeeded()) {
         return;
@@ -731,12 +732,12 @@ protected:
           result.SetStatus(eReturnStatusSuccessContinuingNoResult);
         }
       } else {
-        result.AppendErrorWithFormat("Failed to resume process: %s.",
+        result.AppendErrorWithFormat("Failed to resume process: %s",
                                      error.AsCString());
       }
     } else {
       result.AppendErrorWithFormat(
-          "Process cannot be continued from its current state (%s).",
+          "Process cannot be continued from its current state (%s)",
           StateAsCString(state));
     }
   }
@@ -916,18 +917,21 @@ protected:
     Status error;
     Debugger &debugger = GetDebugger();
     PlatformSP platform_sp = m_interpreter.GetPlatform(true);
+    Target *target = &GetTarget();
+    if (target->IsDummyTarget())
+      target = nullptr;
     ProcessSP process_sp =
         debugger.GetAsyncExecution()
-            ? platform_sp->ConnectProcess(
-                  command.GetArgumentAtIndex(0), plugin_name, debugger,
-                  debugger.GetSelectedTarget().get(), error)
+            ? platform_sp->ConnectProcess(command.GetArgumentAtIndex(0),
+                                          plugin_name, debugger, target, error)
             : platform_sp->ConnectProcessSynchronous(
                   command.GetArgumentAtIndex(0), plugin_name, debugger,
-                  result.GetOutputStream(), debugger.GetSelectedTarget().get(),
-                  error);
+                  result.GetOutputStream(), target, error);
     if (error.Fail() || process_sp == nullptr) {
       result.AppendError(error.AsCString("Error connecting to the process"));
+      return;
     }
+    result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   CommandOptions m_options;
@@ -951,6 +955,10 @@ public:
     if (process)
       return process->GetPluginCommandObject();
     return nullptr;
+  }
+
+  llvm::StringRef GetUnsupportedError() override {
+    return "no process plugin commands are currently registered";
   }
 };
 
@@ -1178,7 +1186,7 @@ protected:
         signo = process->GetUnixSignals()->GetSignalNumberFromName(signal_name);
 
       if (signo == LLDB_INVALID_SIGNAL_NUMBER) {
-        result.AppendErrorWithFormat("Invalid signal argument '%s'.",
+        result.AppendErrorWithFormat("Invalid signal argument '%s'",
                                      command.GetArgumentAtIndex(0));
       } else {
         Status error(process->Signal(signo));
@@ -1458,7 +1466,7 @@ protected:
     const uint32_t num_frames = 1;
     const uint32_t num_frames_with_source = 1;
     const bool stop_format = true;
-    process->GetStatus(strm);
+    process->GetStatus(strm, m_options.m_verbose);
     process->GetThreadStatus(strm, only_threads_with_stop_reason, start_frame,
                              num_frames, num_frames_with_source, stop_format);
 

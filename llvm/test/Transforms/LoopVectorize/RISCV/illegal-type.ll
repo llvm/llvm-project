@@ -44,7 +44,7 @@ define void @loop_f128(ptr nocapture %ptr, i64 %N) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds fp128, ptr [[PTR:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load fp128, ptr [[ARRAYIDX]], align 16
-; CHECK-NEXT:    [[ADD:%.*]] = fsub fp128 [[TMP0]], 0xL00000000000000008000000000000000
+; CHECK-NEXT:    [[ADD:%.*]] = fsub fp128 [[TMP0]], -0.000000e+00
 ; CHECK-NEXT:    store fp128 [[ADD]], ptr [[ARRAYIDX]], align 16
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
@@ -107,7 +107,7 @@ define void @uniform_store_i1(ptr noalias %dst, ptr noalias %start, i64 %N) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 32
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[N_VEC]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <32 x ptr> poison, ptr [[START]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <32 x ptr> [[BROADCAST_SPLATINSERT]], <32 x ptr> poison, <32 x i32> zeroinitializer

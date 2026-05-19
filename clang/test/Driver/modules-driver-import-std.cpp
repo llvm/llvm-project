@@ -1,6 +1,8 @@
 // Checks that -fmodules-driver correctly handles the import of Standard library
 // modules.
 
+// REQUIRES: x86-registered-target
+
 // The standard library modules manifest (libc++.modules.json) is discovered
 // relative to the installed C++ standard library runtime libraries
 // We need to create them in order for Clang to find the manifest.
@@ -47,11 +49,14 @@ import std;
 
 int main() {}
 
-// RUN: %clang -std=c++23 -c -fmodules-driver -Rmodules-driver -Rmodule-import \
+// RUN: %clang -std=c++23 -stdlib=libc++ \
+// RUN:   -fmodules-driver -Rmodules-driver -Rmodule-import \
 // RUN:   -stdlib=libc++ \
+// RUN:   -resource-dir=%t/FakeSysroot/usr/lib/x86_64-linux-gnu \
 // RUN:   --sysroot=%t/FakeSysroot \
+// RUN:   -L%t/Inputs/usr/lib/x86_64-linux-gnu \
 // RUN:   --target=x86_64-linux-gnu \
-// RUN:   %t/main.cpp 2>&1 \
+// RUN:   -c %t/main.cpp 2>&1 \
 // RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck -DPREFIX=%/t %s
 

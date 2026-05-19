@@ -7,7 +7,7 @@
 ---
 # CHECK-LABEL: name: vccz_corrupt_workaround
 # CHECK: $vcc = V_CMP_EQ_F32
-# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: S_WAITCNT .Lgkmcnt_0
 # SI-NEXT: $vcc = S_MOV_B64 $vcc
 # CHECK-NEXT: S_CBRANCH_VCCZ %bb.2, implicit killed $vcc
 
@@ -50,7 +50,7 @@ body: |
 ---
 # CHECK-LABEL: name: vccz_corrupt_undef_vcc
 # CHECK: BUFFER_STORE_DWORD_OFFSET
-# SI-NEXT: S_WAITCNT 3855
+# SI-NEXT: S_WAITCNT .Expcnt_0
 # CHECK-NEXT: $vgpr0 = V_MOV_B32_e32
 
 name: vccz_corrupt_undef_vcc
@@ -190,9 +190,9 @@ body: |
 
 ---
 # CHECK-LABEL: name: load_wait_def_use
-# SI: S_WAITCNT 0
+# SI: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
-# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: S_WAITCNT .Lgkmcnt_0
 # SI-NEXT: $vcc = S_MOV_B64 0
 # SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
 name: load_wait_def_use
@@ -207,9 +207,9 @@ body: |
 
 ---
 # CHECK-LABEL: name: load_wait_nop_def_use
-# SI: S_WAITCNT 0
+# SI: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
-# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: S_WAITCNT .Lgkmcnt_0
 # SI-NEXT: S_NOP 0
 # SI-NEXT: $vcc = S_MOV_B64 0
 # SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
@@ -226,10 +226,10 @@ body: |
 
 ---
 # CHECK-LABEL: name: load_def_wait_use
-# SI: S_WAITCNT 0
+# SI: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
 # SI-NEXT: $vcc = S_MOV_B64 0
-# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: S_WAITCNT .Lgkmcnt_0
 # SI-NEXT: $vcc = S_MOV_B64 $vcc
 # SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
 name: load_def_wait_use
@@ -243,10 +243,10 @@ body: |
 ...
 
 # CHECK-LABEL: name: load_def_wait_nop_use
-# SI: S_WAITCNT 0
+# SI: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
 # SI-NEXT: $vcc = S_MOV_B64 0
-# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: S_WAITCNT .Lgkmcnt_0
 # SI-NEXT: S_NOP 0
 # SI-NEXT: $vcc = S_MOV_B64 $vcc
 # SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
@@ -263,10 +263,10 @@ body: |
 
 ---
 # CHECK-LABEL: name: load_def_use
-# SI: S_WAITCNT 0
+# SI: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
 # SI-NEXT: $vcc = S_MOV_B64 0
-# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: S_WAITCNT .Lgkmcnt_0
 # SI-NEXT: $vcc = S_MOV_B64 $vcc
 # SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
 name: load_def_use
@@ -280,10 +280,10 @@ body: |
 
 ---
 # CHECK-LABEL: name: def_load_wait_use
-# SI: S_WAITCNT 0
+# SI: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # SI-NEXT: $vcc = S_MOV_B64 0
 # SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
-# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: S_WAITCNT .Lgkmcnt_0
 # SI-NEXT: $vcc = S_MOV_B64 $vcc
 # SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
 name: def_load_wait_use
@@ -298,10 +298,10 @@ body: |
 
 ---
 # CHECK-LABEL: name: def_load_wait_nop_use
-# SI: S_WAITCNT 0
+# SI: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # SI-NEXT: $vcc = S_MOV_B64 0
 # SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
-# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: S_WAITCNT .Lgkmcnt_0
 # SI-NEXT: S_NOP 0
 # SI-NEXT: $vcc = S_MOV_B64 $vcc
 # SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
@@ -318,10 +318,10 @@ body: |
 
 ---
 # CHECK-LABEL: name: def_load_use
-# SI: S_WAITCNT 0
+# SI: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # SI-NEXT: $vcc = S_MOV_B64 0
 # SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
-# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: S_WAITCNT .Lgkmcnt_0
 # SI-NEXT: $vcc = S_MOV_B64 $vcc
 # SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
 name: def_load_use

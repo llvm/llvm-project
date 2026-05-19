@@ -32,4 +32,7 @@ add_dependencies(libomp-mod ${RUNTIMES_FORTRAN_BUILD_DEPS})
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.h"
   DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH}
+    COMPONENT openmp
 )
+
+openmp_register_meta_dep(libomp-mod)

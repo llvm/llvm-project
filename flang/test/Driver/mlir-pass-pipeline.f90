@@ -168,6 +168,7 @@ end program
 ! ALL-NEXT:    AbstractResultOpt
 ! ALL-NEXT:  'func.func' Pipeline
 ! ALL-NEXT:    AbstractResultOpt
+! ALL-NEXT:    RematerializeFIRBoxOpsPass
 ! ALL-NEXT:  'gpu.module' Pipeline
 ! ALL-NEXT:   Pipeline Collection : ['func.func', 'gpu.func']
 ! ALL-NEXT:   'func.func' Pipeline

@@ -222,10 +222,6 @@ static llvm::cl::opt<bool> enableNoPPCNativeVecElemOrder(
     llvm::cl::desc("no PowerPC native vector element order."),
     llvm::cl::init(false));
 
-static llvm::cl::opt<bool> useHLFIR("hlfir",
-                                    llvm::cl::desc("Lower to high level FIR"),
-                                    llvm::cl::init(true));
-
 static llvm::cl::opt<bool> enableCUDA("fcuda",
                                       llvm::cl::desc("enable CUDA Fortran"),
                                       llvm::cl::init(false));
@@ -241,7 +237,8 @@ static llvm::cl::opt<bool>
                             llvm::cl::init(false));
 
 static llvm::cl::opt<std::string>
-    enableGPUMode("gpu", llvm::cl::desc("Enable GPU Mode managed|unified"),
+    enableGPUMode("gpu",
+                  llvm::cl::desc("Enable GPU Mode managed|unified|pinned"),
                   llvm::cl::init(""));
 
 static llvm::cl::opt<std::string>
@@ -473,7 +470,6 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   // Use default lowering options for bbc.
   Fortran::lower::LoweringOptions loweringOptions{};
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
-  loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
   loweringOptions.setIntegerWrapAround(integerWrapAround);
   loweringOptions.setInitGlobalZero(initGlobalZero);
   loweringOptions.setReallocateLHS(reallocateLHS);
@@ -555,7 +551,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
       return mlir::failure();
     }
 
-    if (emitFIR && useHLFIR) {
+    if (emitFIR) {
       // lower HLFIR to FIR
       fir::EnableOpenMP enableOmp =
           enableOpenMP ? fir::EnableOpenMP::Full : fir::EnableOpenMP::None;
@@ -669,6 +665,8 @@ int main(int argc, char **argv) {
     options.features.Enable(Fortran::common::LanguageFeature::CudaManaged);
   else if (enableGPUMode == "unified")
     options.features.Enable(Fortran::common::LanguageFeature::CudaUnified);
+  else if (enableGPUMode == "pinned")
+    options.features.Enable(Fortran::common::LanguageFeature::CudaPinned);
 
   if (fixedForm) {
     options.isFixedForm = fixedForm;

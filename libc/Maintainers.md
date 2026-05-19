@@ -49,6 +49,10 @@ This file is a list of the [maintainers](https://llvm.org/docs/DeveloperPolicy.h
 - Jeff Bailey
 - jbailey@raspberryginger.com (email), [kaladron](https://github.com/kaladron) (github), kaladron (discourse), kaladron725 (discord)
 
+## ARM and AArch64
+- Victor Campos
+- victor.campos@arm.com (email), [vhscampos](https://github.com/vhscampos) (github)
+
 # Inactive Maintainers
 - Tristan Ross
 - tristan.ross@midstall.com (email), [RossComputerGuy](https://github.com/RossComputerGuy) (github)

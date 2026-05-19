@@ -434,6 +434,16 @@ class _LocalProcess(_BaseProcess):
 
         stdout = kwargs.pop("stdout", DEVNULL if not self._trace_on else None)
         stderr = kwargs.pop("stderr", None)
+        # This works around a bug in the macOS job control code where
+        # a supurious SIGHUP is sent to the the process group of our
+        # spawned subprocess when it is shutting down.
+        # While this SIGHUP doesn't cause any issues for our subprocess,
+        # it does reach the LIT process and stops the test suite run
+        # early.
+        # This parameter forces the spawned process into a new process
+        # group which prevents the supurious SIGHUP from reaching LIT.
+        # We don't
+        kwargs.setdefault("start_new_session", True)
 
         self._proc = Popen(
             [executable] + args,
@@ -732,9 +742,7 @@ class Base(unittest.TestCase):
         remote_test_dir = configuration.lldb_platform_working_dir
         for c in components:
             remote_test_dir = lldbutil.join_remote_paths(remote_test_dir, c)
-            error = lldb.remote_platform.MakeDirectory(
-                remote_test_dir, 448
-            )  # 448 = 0o700
+            error = lldb.remote_platform.MakeDirectory(remote_test_dir, 0o700)
             if error.Fail():
                 raise Exception(
                     "making remote directory '%s': %s" % (remote_test_dir, error)
@@ -823,7 +831,7 @@ class Base(unittest.TestCase):
 
         # Set any user-overridden settings.
         for setting, value in configuration.settings:
-            commands.append("setting set %s %s" % (setting, value))
+            commands.append("setting set -- %s %s" % (setting, value))
 
         # Make sure that a sanitizer LLDB's environment doesn't get passed on.
         if (
@@ -2232,7 +2240,8 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 # Make sure we found the local shared library in the above code
                 self.assertTrue(os.path.exists(local_shlib_path))
 
-            local_shlib_path = os.path.realpath(local_shlib_path)
+            if lldb.remote_platform:
+                local_shlib_path = os.path.realpath(local_shlib_path)
             # Add the shared library to our target
             shlib_module = target.AddModule(local_shlib_path, None, None, None)
             if lldb.remote_platform:
@@ -2252,6 +2261,16 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 dirs.append(dir_to_add)
 
         env_value = self.platformContext.shlib_path_separator.join(dirs)
+        # On Windows the shlib env var is PATH. `SetEnvironmentEntries` with
+        # append=True replaces any matching key, so simply returning
+        # "PATH=<test-build-dir>" would wipe out the inherited PATH and break
+        # DLL resolution. Prepend our dirs to the inherited PATH instead.
+        if sys.platform == "win32" and shlib_environment_var == "PATH":
+            existing = os.environ.get("PATH", None)
+            if existing is not None:
+                env_value = (
+                    env_value + self.platformContext.shlib_path_separator + existing
+                )
         return ["%s=%s" % (shlib_environment_var, env_value)]
 
     def registerSanitizerLibrariesWithTarget(self, target):

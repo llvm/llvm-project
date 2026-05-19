@@ -457,7 +457,7 @@ generic-llvm-libc)
     mkdir -p "${BUILD_DIR}"
     curl -L "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-${LINUX_VERSION}.tar.xz" --output "${BUILD_DIR}/linux.tar.xz"
     tar -xf "${BUILD_DIR}/linux.tar.xz" -C "${BUILD_DIR}"
-    make LLVM=1 INSTALL_HDR_PATH="${BUILD_DIR}/linux-install" -C "${BUILD_DIR}/linux-${LINUX_VERSION}" headers_install
+    make INSTALL_HDR_PATH="${BUILD_DIR}/linux-install" -C "${BUILD_DIR}/linux-${LINUX_VERSION}" headers_install
 
     generate-cmake-base -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-llvm-libc.cmake" \
                         -DLIBCXX_TEST_CONFIG="llvm-libc++-llvm-libc.cfg.in" \
