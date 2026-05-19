@@ -38,6 +38,9 @@
 ; CHECK: OpFunction
 ; CHECK: OpFAdd %[[#F32]] %[[#]] %[[#PF]]
 
+; CHECK: OpFunction
+; CHECK: OpFAdd %[[#F32]] %[[#]] %[[#PF]]
+
 ; OpPhi survives only on the OpenCL flow. The Vulkan path structurizes the
 ; CFG and folds phi(%v, poison) to %v before lowering.
 ; OCL: OpFunction
@@ -75,6 +78,15 @@ define <4 x float> @poison_select(i1 %cond, <4 x float> %v) {
 
 define float @poison_fadd(float %x) {
   %r = fadd float %x, poison
+  ret float %r
+}
+
+; A direct call to the type-overloaded intrinsic must lower the same way.
+declare float @llvm.spv.poison.f32()
+
+define float @poison_intrinsic_call(float %x) {
+  %p = call float @llvm.spv.poison.f32()
+  %r = fadd float %x, %p
   ret float %r
 }
 

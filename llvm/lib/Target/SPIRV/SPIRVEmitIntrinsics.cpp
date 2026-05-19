@@ -449,10 +449,8 @@ static bool isAggrConstForceInt32(const Value *V) {
          isa<ConstantDataArray>(V) || IsAggrZero || IsUndefAggregate;
 }
 
-// True for the i32-placeholder intrinsics that carry an aggregate's real type
-// in AggrConstTypes.
 static bool isSpvAggrPlaceholder(const Value *V) {
-  return match(V, m_AnyIntrinsic<Intrinsic::spv_undef, Intrinsic::spv_poison,
+  return match(V, m_AnyIntrinsic<Intrinsic::spv_undef,
                                  Intrinsic::spv_const_composite>());
 }
 
@@ -564,10 +562,9 @@ Type *SPIRVEmitIntrinsics::reconstructType(Value *Op, bool UnknownElemTypeI8,
   Type *Ty = Op->getType();
   if (auto *OpI = dyn_cast<Instruction>(Op)) {
     Ty = restoreMutatedType(GR, OpI, Ty);
-    // Aggregate undef/poison/constant values are lowered to spv_undef/
-    // spv_poison/spv_const_composite intrinsics whose return type is i32;
-    // recover the original aggregate type so downstream pointee deduction
-    // sees it.
+    // Aggregate undef/constant values are lowered to spv_undef/
+    // spv_const_composite intrinsics whose return type is i32; recover the
+    // original aggregate type so downstream pointee deduction sees it.
     if (isSpvAggrPlaceholder(OpI))
       if (auto It = AggrConstTypes.find(OpI); It != AggrConstTypes.end())
         Ty = It->second;
@@ -1678,11 +1675,8 @@ void SPIRVEmitIntrinsics::preprocessPoisons(IRBuilder<> &B) {
           setInsertPointSkippingPhis(B, I);
           BPrepared = true;
         }
-        auto *IntrPoison =
+        Replacement =
             B.CreateIntrinsic(Intrinsic::spv_poison, {Op->getType()}, {});
-        AggrConsts[IntrPoison] = Poison;
-        AggrConstTypes[IntrPoison] = Op->getType();
-        Replacement = IntrPoison;
       }
       I->setOperand(Idx, Replacement);
     }
@@ -2127,11 +2121,10 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
     Type *OpTy = Op->getType();
     if (auto *OpI = dyn_cast<Instruction>(Op))
       OpTy = restoreMutatedType(GR, OpI, OpTy);
-    // Aggregate undef/poison/constant values were lowered by
-    // preprocessUndefs/preprocessPoisons/preprocessCompositeConstants to
-    // spv_undef/spv_poison/spv_const_composite calls returning i32; recover
-    // the original aggregate type so the pointee type assigned to the store's
-    // pointer operand reflects the value being stored.
+    // Aggregate undef/constant values were lowered by preprocessUndefs/
+    // preprocessCompositeConstants to spv_undef/spv_const_composite calls
+    // returning i32; recover the original aggregate type so the pointee type
+    // assigned to the store's pointer operand reflects the value being stored.
     if (isSpvAggrPlaceholder(Op))
       if (auto It = AggrConstTypes.find(cast<Instruction>(Op));
           It != AggrConstTypes.end())
@@ -2521,29 +2514,26 @@ Value *SPIRVEmitIntrinsics::buildSpvUndefOrPoisonComposite(
   assert((LeafIntrID == Intrinsic::spv_undef ||
           LeafIntrID == Intrinsic::spv_poison) &&
          "expected spv_undef or spv_poison leaf");
-  auto MakeLeaf = [&](Type *ElemTy) {
-    return LeafIntrID == Intrinsic::spv_poison
-               ? B.CreateIntrinsic(LeafIntrID, {ElemTy}, {})
-               : B.CreateIntrinsic(LeafIntrID, {});
+  auto MakeLeaf = [&](Type *ElemTy) -> Instruction * {
+    if (LeafIntrID == Intrinsic::spv_poison)
+      return B.CreateIntrinsic(LeafIntrID, {ElemTy}, {});
+    auto *Leaf = B.CreateIntrinsic(LeafIntrID, {});
+    AggrConsts[Leaf] = PoisonValue::get(ElemTy);
+    AggrConstTypes[Leaf] = ElemTy;
+    return Leaf;
   };
   SmallVector<Value *, 4> Elems;
   if (auto *ArrTy = dyn_cast<ArrayType>(AggrTy)) {
     Type *ElemTy = ArrTy->getElementType();
-    auto *Leaf = MakeLeaf(ElemTy);
-    AggrConsts[Leaf] = PoisonValue::get(ElemTy);
-    AggrConstTypes[Leaf] = ElemTy;
-    Elems.assign(ArrTy->getNumElements(), Leaf);
+    Elems.assign(ArrTy->getNumElements(), MakeLeaf(ElemTy));
   } else {
     auto *StructTy = cast<StructType>(AggrTy);
     DenseMap<Type *, Instruction *> LeafByType;
     for (unsigned I = 0; I < StructTy->getNumElements(); ++I) {
       Type *ElemTy = StructTy->getContainedType(I);
       auto &Entry = LeafByType[ElemTy];
-      if (!Entry) {
+      if (!Entry)
         Entry = MakeLeaf(ElemTy);
-        AggrConsts[Entry] = PoisonValue::get(ElemTy);
-        AggrConstTypes[Entry] = ElemTy;
-      }
       Elems.push_back(Entry);
     }
   }
