@@ -57,6 +57,7 @@ interface LldbDapProcessEntry {
   pid: number;
   name?: string;
   executable?: string;
+  arguments?: string;
   triple?: string;
   user?: number;
 }
