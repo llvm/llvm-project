@@ -15665,8 +15665,8 @@ void ASTContext::recordOffsetOfEvaluation(const OffsetOfExpr *E) {
 }
 
 bool ASTContext::maybeFoldMSConstexpr(
-    SmallVectorImpl<PartialDiagnosticAt> &Notes) {
-  if (Notes.size() != 1 || !getLangOpts().MSVCCompat)
+    APValue &Val, SmallVectorImpl<PartialDiagnosticAt> &Notes) {
+  if (Notes.size() != 1 || !getLangOpts().MSVCCompat || Val.isLValue())
     return false;
   auto &PD = Notes[0].second;
   if (PD.getDiagID() != diag::note_constexpr_invalid_cast_ptrtoint)

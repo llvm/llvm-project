@@ -3882,7 +3882,8 @@ public:
   void recordMemberDataPointerEvaluation(const ValueDecl *VD);
   void recordOffsetOfEvaluation(const OffsetOfExpr *E);
 
-  bool maybeFoldMSConstexpr(SmallVectorImpl<PartialDiagnosticAt> &Notes);
+  bool maybeFoldMSConstexpr(APValue &Val,
+                            SmallVectorImpl<PartialDiagnosticAt> &Notes);
 
 private:
   /// All OMPTraitInfo objects live in this collection, one per
