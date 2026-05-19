@@ -357,6 +357,10 @@ if platform.system() == "Windows":
     for v in ["SystemDrive"]:
         if v in os.environ:
             config.environment[v] = os.environ[v]
+
+    if getattr(config, "lldb_use_lldb_server", False):
+        config.environment["LLDB_USE_LLDB_SERVER"] = "1"
+
     # Use anonymous pipes instead of ConPTY for all tests. ConPTY injects VT
     # escape sequences into the output stream, which breaks tests that check
     # for specific stdout/stderr content.
