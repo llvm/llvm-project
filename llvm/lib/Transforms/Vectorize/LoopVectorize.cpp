@@ -7365,6 +7365,7 @@ getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
       return CM_EpilogueNotNeededFoldTail;
     case TailFoldingPolicyTy::MustFoldTail:
       return CM_EpilogueNotAllowedFoldTail;
+    };
   }
 
   // 3) If set, obey the hints
