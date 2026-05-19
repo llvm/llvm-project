@@ -465,6 +465,9 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
   for (int i = 0; i < NumDynamicModules; ++i) {
     OffloadDynamicModuleInfo *MI = &DynamicModules[i];
 
+    /* HIP recycles hipModule_t addresses after unload. Drained slots
+     * are cleared (ModulePtr = nullptr) below so a recycled-handle
+     * lookup finds the new slot, not the dead one. */
     if (MI->ModulePtr != Ptr)
       continue;
 
@@ -486,13 +489,22 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
         int CurDev = 0;
         hipGetDevice(&CurDev);
         const char *ArchName = getDeviceArchName(CurDev);
-        if (processDeviceOffloadPrf(TU->DeviceVar, TUIndex, ArchName) == 0)
+        /* Encode TUIndex in Target so each drain writes to its own
+         * profraw ("<arch>.<TUIndex>.profile.<pid>.profraw"); otherwise
+         * back-to-back drains overwrite the same file. Static-load
+         * (processShadowVariable) keeps the bare arch target. */
+        char TargetWithTU[64];
+        snprintf(TargetWithTU, sizeof(TargetWithTU), "%s.%d", ArchName,
+                 TUIndex);
+        if (processDeviceOffloadPrf(TU->DeviceVar, TUIndex, TargetWithTU) == 0)
           TU->Processed = 1;
         else
           PROF_WARN("failed to process profile data for module %p TU %d\n", Ptr,
                     t);
       }
     }
+    /* Mark the slot dead so a recycled handle finds the new slot. */
+    MI->ModulePtr = nullptr;
     unlockDynamicModules();
     return;
   }
@@ -694,20 +706,28 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
     return -1;
   }
 
+  /* Cache the freshly allocated host buffers so subsequent drains with the
+   * same device-side section pointers (the RDC-mode multi-shadow case) can
+   * reuse them. Once cached, ownership transfers to the cache: tell the
+   * RAII cleanup not to free, otherwise the cache holds dangling pointers
+   * for the next call. */
   if (!CntsReused && CountersSize > 0) {
     CachedDevCntsBegin = DevCntsBegin;
     CachedHostCnts = HostCountersBegin;
     CachedCntsSize = CountersSize;
+    HostCopies.CntsReused = 1;
   }
   if (!DataReused && DataSize > 0) {
     CachedDevDataBegin = DevDataBegin;
     CachedHostData = HostDataBegin;
     CachedDataSize = DataSize;
+    HostCopies.DataReused = 1;
   }
   if (!NamesReused && NamesSize > 0) {
     CachedDevNamesBegin = DevNamesBegin;
     CachedHostNames = HostNamesBegin;
     CachedNamesSize = NamesSize;
+    HostCopies.NamesReused = 1;
   }
 
   if (isVerboseMode())
@@ -781,8 +801,10 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
                          sizeof(RelocatedData[i].Values));
   }
 
-  char TUIndexStr[16];
-  snprintf(TUIndexStr, sizeof(TUIndexStr), "%d", TUIndex);
+  /* TUIndex is encoded into Target by the dynamic-load caller; the
+   * static-load path passes bare arch and would need the same treatment
+   * to support multi-shadow drains. */
+  (void)TUIndex;
 
   ret = __llvm_write_custom_profile(
       Target, (__llvm_profile_data *)BufDataBegin,
@@ -855,7 +877,17 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
         PROF_NOTE("Collecting static profile data from device %d (%s)\n", Dev,
                   ArchName);
       for (int i = 0; i < NumShadowVariables; ++i) {
-        if (processShadowVariable(OffloadShadowVariables[i], i, ArchName) != 0)
+        /* Encode the shadow-variable index in Target so per-TU drains
+         * in RDC mode (multiple shadows registered into one device
+         * image) write to distinct profraw files. Single-TU programs
+         * still get the bare arch target via the i==0 case. */
+        const char *Target = ArchName;
+        char TargetWithIdx[64];
+        if (NumShadowVariables > 1) {
+          snprintf(TargetWithIdx, sizeof(TargetWithIdx), "%s.%d", ArchName, i);
+          Target = TargetWithIdx;
+        }
+        if (processShadowVariable(OffloadShadowVariables[i], i, Target) != 0)
           Ret = -1;
       }
     }
@@ -864,10 +896,12 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
       hipSetDevice(OrigDevice);
   }
 
-  /* Dynamically-loaded modules — warn about any unprocessed TUs */
+  /* Warn about unprocessed TUs; skip cleared slots (already drained). */
   lockDynamicModules();
   for (int i = 0; i < NumDynamicModules; ++i) {
     OffloadDynamicModuleInfo *MI = &DynamicModules[i];
+    if (!MI->ModulePtr)
+      continue;
     for (int t = 0; t < MI->NumTUs; ++t) {
       if (!MI->TUs[t].Processed) {
         PROF_WARN("dynamic module %p TU %d was not processed before exit\n",
