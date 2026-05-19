@@ -1062,7 +1062,7 @@ uint32_t Serializer::prepareArrayConstant(Location loc, Type constType,
   uint32_t resultID = getNextID();
   SmallVector<uint32_t, 4> operands = {typeID, resultID};
   operands.reserve(attr.size() + 2);
-  auto compositeType = cast<spirv::CompositeType>(constType);
+  spirv::CompositeType compositeType = cast<spirv::CompositeType>(constType);
   for (auto [idx, elementAttr] : llvm::enumerate(attr)) {
     if (auto elementID = prepareConstant(loc, compositeType.getElementType(idx),
                                          elementAttr)) {
