@@ -1,6 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++17 -ferror-limit 1 -verify %s
-// Regression test for #197625: diagnose_if condition becomes value-dependent
-// via RecoveryExpr after fatal error, hitting an assertion in EvaluateWithSubstitution.
+// RUN: %clang_cc1 -fsyntax-only -ferror-limit 1 -verify %s
+// https://github.com/llvm/llvm-project/issues/197625
 
 template <typename T> struct S {
   T val;
