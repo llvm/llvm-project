@@ -1705,16 +1705,8 @@ define i1 @neg_test_logical_and_trunc_nuw_no_noundef(i1 %c, i8 range(i8 0,2) %x)
 ; Original motivating issue: #154025
 define i32 @pos_original_issue(i32 %arg0, i32 %arg1,
 ; CHECK-LABEL: @pos_original_issue(
-; CHECK-NEXT:    [[V0:%.*]] = or i32 [[ARG5:%.*]], [[ARG4:%.*]]
-; CHECK-NEXT:    [[V1:%.*]] = or i32 [[V0]], [[ARG3:%.*]]
-; CHECK-NEXT:    [[V2:%.*]] = or i32 [[V1]], [[ARG2:%.*]]
-; CHECK-NEXT:    [[V3:%.*]] = or i32 [[V2]], [[ARG1:%.*]]
-; CHECK-NEXT:    [[V4:%.*]] = or i32 [[V3]], [[ARG0:%.*]]
-; CHECK-NEXT:    [[V5:%.*]] = icmp ne i32 [[V4]], 0
-; CHECK-NEXT:    [[V6:%.*]] = icmp ne i32 [[ARG1]], 0
-; CHECK-NEXT:    [[V7:%.*]] = select i1 [[V5]], i1 true, i1 [[V6]]
-; CHECK-NEXT:    [[V8:%.*]] = select i1 [[V7]], i32 [[ARG0]], i32 0
-; CHECK-NEXT:    ret i32 [[V8]]
+; CHECK-SAME: i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 [[ARG3:%.*]], i32 [[ARG4:%.*]], i32 [[ARG5:%.*]]) {
+; CHECK-NEXT:     ret i32 [[ARG0]]
 ;
   i32 %arg2, i32 %arg3,
   i32 %arg4, i32 %arg5) {
@@ -1737,17 +1729,8 @@ define i32 @pos_original_issue(i32 %arg0, i32 %arg1,
 ; Deep-left OR tree
 define i8 @pos_or_left(i8 %x, i8 %a, i8 %b, i8 %c,
 ; CHECK-LABEL: @pos_or_left(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], [[D:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], [[E:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = or i8 [[TMP3]], [[F:%.*]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or i8 [[TMP4]], [[A:%.*]]
-; CHECK-NEXT:    [[OR6:%.*]] = or i8 [[TMP5]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[OR6]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[A]], 0
-; CHECK-NEXT:    [[LOR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[LOR]], i8 [[X]], i8 0
-; CHECK-NEXT:    ret i8 [[SEL]]
+; CHECK-SAME: i8 [[X:%.*]], i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]], i8 [[E:%.*]], i8 [[F:%.*]]) {
+; CHECK-NEXT:       ret i8 [[X]]
 ;
   i8 %d, i8 %e, i8 %f) {
   %or1 = or i8 %x, %a
@@ -1768,17 +1751,8 @@ define i8 @pos_or_left(i8 %x, i8 %a, i8 %b, i8 %c,
 ; Deep-right OR tree
 define i8 @pos_or_right(i8 %x, i8 %a, i8 %b, i8 %c,
 ; CHECK-LABEL: @pos_or_right(
-; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[E:%.*]], [[F:%.*]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[D:%.*]], [[OR1]]
-; CHECK-NEXT:    [[OR3:%.*]] = or i8 [[C:%.*]], [[OR2]]
-; CHECK-NEXT:    [[OR4:%.*]] = or i8 [[B:%.*]], [[OR3]]
-; CHECK-NEXT:    [[OR5:%.*]] = or i8 [[A:%.*]], [[OR4]]
-; CHECK-NEXT:    [[OR6:%.*]] = or i8 [[X:%.*]], [[OR5]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[OR6]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[A]], 0
-; CHECK-NEXT:    [[LOR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[LOR]], i8 [[X]], i8 0
-; CHECK-NEXT:    ret i8 [[SEL]]
+; CHECK-SAME: i8 [[X:%.*]], i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]], i8 [[E:%.*]], i8 [[F:%.*]]) {
+; CHECK-NEXT:       ret i8 [[X]]
 ;
   i8 %d, i8 %e, i8 %f) {
   %or1 = or i8 %e, %f
@@ -1799,12 +1773,8 @@ define i8 @pos_or_right(i8 %x, i8 %a, i8 %b, i8 %c,
 ; Commuted OR operands.
 define i8 @pos_or_commuted(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @pos_or_commuted(
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[OR]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Z:%.*]], 0
-; CHECK-NEXT:    [[LOR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[LOR]], i8 [[X]], i8 0
-; CHECK-NEXT:    ret i8 [[SEL]]
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
+; CHECK-NEXT:       ret i8 [[X]]
 ;
   %or = or i8 %y, %x
 
@@ -1826,11 +1796,7 @@ define i8 @pos_multiuse_or(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @pos_multiuse_or(
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[OR]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[OR]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Z:%.*]], 0
-; CHECK-NEXT:    [[LOR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[LOR]], i8 [[X]], i8 0
-; CHECK-NEXT:    ret i8 [[SEL]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
   %or = or i8 %x, %y
   call void @use(i8 %or)
@@ -1849,10 +1815,7 @@ define i8 @pos_multiuse_cond(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[OR]], 0
 ; CHECK-NEXT:    call void @use1(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Z:%.*]], 0
-; CHECK-NEXT:    [[LOR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[LOR]], i8 [[X]], i8 0
-; CHECK-NEXT:    ret i8 [[SEL]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
   %or = or i8 %x, %y
 
@@ -1873,17 +1836,8 @@ define i8 @pos_multiuse_cond(i8 %x, i8 %y, i8 %z) {
 ; Vector deep-left OR tree
 define <4 x i8> @pos_vector_left(
 ; CHECK-LABEL: @pos_vector_left(
-; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i8> [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i8> [[TMP1]], [[D:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i8> [[TMP2]], [[E:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = or <4 x i8> [[TMP3]], [[F:%.*]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i8> [[TMP4]], [[A:%.*]]
-; CHECK-NEXT:    [[OR6:%.*]] = or <4 x i8> [[TMP5]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <4 x i8> [[OR6]], zeroinitializer
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne <4 x i8> [[A]], zeroinitializer
-; CHECK-NEXT:    [[LOR:%.*]] = select <4 x i1> [[CMP1]], <4 x i1> splat (i1 true), <4 x i1> [[CMP2]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[LOR]], <4 x i8> [[X]], <4 x i8> zeroinitializer
-; CHECK-NEXT:    ret <4 x i8> [[SEL]]
+; CHECK-SAME: <4 x i8> [[X:%.*]], <4 x i8> [[A:%.*]], <4 x i8> [[B:%.*]], <4 x i8> [[C:%.*]], <4 x i8> [[D:%.*]], <4 x i8> [[E:%.*]], <4 x i8> [[F:%.*]]) {
+; CHECK-NEXT:    ret <4 x i8> [[X]]
 ;
   <4 x i8> %x,
   <4 x i8> %a,
@@ -1916,17 +1870,8 @@ define <4 x i8> @pos_vector_left(
 ; Vector deep-right OR tree
 define <4 x i8> @pos_vector_right(
 ; CHECK-LABEL: @pos_vector_right(
-; CHECK-NEXT:    [[OR1:%.*]] = or <4 x i8> [[E:%.*]], [[F:%.*]]
-; CHECK-NEXT:    [[OR2:%.*]] = or <4 x i8> [[D:%.*]], [[OR1]]
-; CHECK-NEXT:    [[OR3:%.*]] = or <4 x i8> [[C:%.*]], [[OR2]]
-; CHECK-NEXT:    [[OR4:%.*]] = or <4 x i8> [[B:%.*]], [[OR3]]
-; CHECK-NEXT:    [[OR5:%.*]] = or <4 x i8> [[A:%.*]], [[OR4]]
-; CHECK-NEXT:    [[OR6:%.*]] = or <4 x i8> [[X:%.*]], [[OR5]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <4 x i8> [[OR6]], zeroinitializer
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne <4 x i8> [[A]], zeroinitializer
-; CHECK-NEXT:    [[LOR:%.*]] = select <4 x i1> [[CMP1]], <4 x i1> splat (i1 true), <4 x i1> [[CMP2]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[LOR]], <4 x i8> [[X]], <4 x i8> zeroinitializer
-; CHECK-NEXT:    ret <4 x i8> [[SEL]]
+; CHECK-SAME: <4 x i8> [[X:%.*]], <4 x i8> [[A:%.*]], <4 x i8> [[B:%.*]], <4 x i8> [[C:%.*]], <4 x i8> [[D:%.*]], <4 x i8> [[E:%.*]], <4 x i8> [[F:%.*]]) {
+; CHECK-NEXT:    ret <4 x i8> [[X]]
 ;
   <4 x i8> %x,
   <4 x i8> %a,

@@ -5121,6 +5121,30 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
               ProfcheckDisableMetadataFixes ? nullptr : &SI);
         }
     }
+    // Fold:
+    //
+    //   select ((icmp ne V, 0) || X), TrueVal, 0
+    //
+    // when V is either TrueVal itself or an OR-chain exposing TrueVal as an
+    // immediate operand.
+    // This is safe because the `icmp ne` guarantees the selected arm is
+    // nonzero whenever the select takes the TrueVal path.
+    if (!IsAnd && match(FalseVal, m_Zero()) && !isa<Constant>(TrueVal)) {
+      CmpPredicate Pred;
+      Value *CmpVal = nullptr;
+      Value *OrLHS = nullptr;
+      Value *OrRHS = nullptr;
+
+      auto IsTrueValInCmpValue = [&](Value *V) {
+        return V == TrueVal ||
+               (match(V, m_Or(m_Value(OrLHS), m_Value(OrRHS))) &&
+                (OrLHS == TrueVal || OrRHS == TrueVal));
+      };
+
+      if (match(A, m_ICmp(Pred, m_Value(CmpVal), m_Zero())) &&
+          Pred == ICmpInst::ICMP_NE && IsTrueValInCmpValue(CmpVal))
+        return replaceInstUsesWith(SI, TrueVal);
+    }
 
     return nullptr;
   };
