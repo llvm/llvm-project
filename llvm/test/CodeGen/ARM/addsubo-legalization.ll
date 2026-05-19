@@ -20,7 +20,7 @@ define <2 x i1> @uaddo(ptr %ptr, ptr %ptr2) {
 ; CHECK-NEXT:    vmov r4, r5, d17
 ; CHECK-NEXT:    subs.w r3, lr, r3
 ; CHECK-NEXT:    sbcs.w r2, r12, r2
-; CHECK-NEXT:    mov.w r2, #0
+; CHECK-NEXT:    mov r2, r1
 ; CHECK-NEXT:    it lo
 ; CHECK-NEXT:    movlo r2, #1
 ; CHECK-NEXT:    cmp r2, #0
@@ -59,7 +59,7 @@ define <2 x i1> @usubo(ptr %ptr, ptr %ptr2) {
 ; CHECK-NEXT:    vmov r6, r7, d17
 ; CHECK-NEXT:    subs.w r3, lr, r3
 ; CHECK-NEXT:    sbcs.w r2, r12, r2
-; CHECK-NEXT:    mov.w r2, #0
+; CHECK-NEXT:    mov r2, r1
 ; CHECK-NEXT:    it lo
 ; CHECK-NEXT:    movlo r2, #1
 ; CHECK-NEXT:    cmp r2, #0

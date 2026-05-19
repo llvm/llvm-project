@@ -274,7 +274,7 @@ define {i32, i32} @test_slt_not(i32 %c, i32 %d, i64 %a, i64 %b) {
 ; CHECK-THUMB2-NEXT:    ldr r0, [sp, #4]
 ; CHECK-THUMB2-NEXT:    subs.w r2, r2, r12
 ; CHECK-THUMB2-NEXT:    sbcs.w r0, r3, r0
-; CHECK-THUMB2-NEXT:    mov.w r0, #0
+; CHECK-THUMB2-NEXT:    mov r0, r1
 ; CHECK-THUMB2-NEXT:    ite lt
 ; CHECK-THUMB2-NEXT:    movlt r0, #1
 ; CHECK-THUMB2-NEXT:    movge r1, #1

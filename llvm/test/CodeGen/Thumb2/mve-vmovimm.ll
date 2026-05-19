@@ -1082,30 +1082,31 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @fadd_float_1(<4 x float> %a) {
 ; CHECKLE-MVE-LABEL: fadd_float_1:
 ; CHECKLE-MVE:       @ %bb.0: @ %entry
-; CHECKLE-MVE-NEXT:    .save {r4, lr}
-; CHECKLE-MVE-NEXT:    push {r4, lr}
+; CHECKLE-MVE-NEXT:    .save {r4, r5, r7, lr}
+; CHECKLE-MVE-NEXT:    push {r4, r5, r7, lr}
 ; CHECKLE-MVE-NEXT:    .vsave {d8, d9}
 ; CHECKLE-MVE-NEXT:    vpush {d8, d9}
 ; CHECKLE-MVE-NEXT:    vmov q4, q0
-; CHECKLE-MVE-NEXT:    mov.w r1, #1065353216
+; CHECKLE-MVE-NEXT:    mov.w r5, #1065353216
 ; CHECKLE-MVE-NEXT:    vmov r4, r0, d9
+; CHECKLE-MVE-NEXT:    mov r1, r5
 ; CHECKLE-MVE-NEXT:    bl __aeabi_fadd
 ; CHECKLE-MVE-NEXT:    vmov s19, r0
 ; CHECKLE-MVE-NEXT:    mov r0, r4
-; CHECKLE-MVE-NEXT:    mov.w r1, #1065353216
+; CHECKLE-MVE-NEXT:    mov r1, r5
 ; CHECKLE-MVE-NEXT:    bl __aeabi_fadd
 ; CHECKLE-MVE-NEXT:    vmov s18, r0
-; CHECKLE-MVE-NEXT:    mov.w r1, #1065353216
+; CHECKLE-MVE-NEXT:    mov r1, r5
 ; CHECKLE-MVE-NEXT:    vmov r4, r0, d8
 ; CHECKLE-MVE-NEXT:    bl __aeabi_fadd
 ; CHECKLE-MVE-NEXT:    vmov s17, r0
 ; CHECKLE-MVE-NEXT:    mov r0, r4
-; CHECKLE-MVE-NEXT:    mov.w r1, #1065353216
+; CHECKLE-MVE-NEXT:    mov r1, r5
 ; CHECKLE-MVE-NEXT:    bl __aeabi_fadd
 ; CHECKLE-MVE-NEXT:    vmov s16, r0
 ; CHECKLE-MVE-NEXT:    vmov q0, q4
 ; CHECKLE-MVE-NEXT:    vpop {d8, d9}
-; CHECKLE-MVE-NEXT:    pop {r4, pc}
+; CHECKLE-MVE-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; CHECKLE-MVEFP-LABEL: fadd_float_1:
 ; CHECKLE-MVEFP:       @ %bb.0: @ %entry

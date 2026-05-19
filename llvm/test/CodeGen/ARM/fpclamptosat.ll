@@ -162,7 +162,7 @@ define i32 @ustest_f64i32(double %x) {
 ; VFP2-NEXT:    subs.w r3, r0, #-1
 ; VFP2-NEXT:    mov.w r2, #0
 ; VFP2-NEXT:    sbcs r3, r1, #0
-; VFP2-NEXT:    mov.w r3, #0
+; VFP2-NEXT:    mov r3, r2
 ; VFP2-NEXT:    it lt
 ; VFP2-NEXT:    movlt r3, #1
 ; VFP2-NEXT:    cmp r3, #0
@@ -1016,7 +1016,7 @@ define i64 @stest_f64i64(double %x) {
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r4, r2, #0
 ; VFP2-NEXT:    sbcs r4, r3, #0
-; VFP2-NEXT:    mov.w r4, #0
+; VFP2-NEXT:    mov r4, r12
 ; VFP2-NEXT:    it lt
 ; VFP2-NEXT:    movlt r4, #1
 ; VFP2-NEXT:    cmp r4, #0
@@ -1272,7 +1272,7 @@ define i64 @stest_f32i64(float %x) {
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r4, r2, #0
 ; VFP2-NEXT:    sbcs r4, r3, #0
-; VFP2-NEXT:    mov.w r4, #0
+; VFP2-NEXT:    mov r4, r12
 ; VFP2-NEXT:    it lt
 ; VFP2-NEXT:    movlt r4, #1
 ; VFP2-NEXT:    cmp r4, #0
@@ -1533,7 +1533,7 @@ define i64 @stest_f16i64(half %x) {
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r4, r2, #0
 ; VFP2-NEXT:    sbcs r4, r3, #0
-; VFP2-NEXT:    mov.w r4, #0
+; VFP2-NEXT:    mov r4, r12
 ; VFP2-NEXT:    it lt
 ; VFP2-NEXT:    movlt r4, #1
 ; VFP2-NEXT:    cmp r4, #0
@@ -2682,7 +2682,7 @@ define i64 @stest_f64i64_mm(double %x) {
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r4, r2, #0
 ; VFP2-NEXT:    sbcs r4, r3, #0
-; VFP2-NEXT:    mov.w r4, #0
+; VFP2-NEXT:    mov r4, r12
 ; VFP2-NEXT:    it lt
 ; VFP2-NEXT:    movlt r4, #1
 ; VFP2-NEXT:    cmp r4, #0
@@ -2995,7 +2995,7 @@ define i64 @stest_f32i64_mm(float %x) {
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r4, r2, #0
 ; VFP2-NEXT:    sbcs r4, r3, #0
-; VFP2-NEXT:    mov.w r4, #0
+; VFP2-NEXT:    mov r4, r12
 ; VFP2-NEXT:    it lt
 ; VFP2-NEXT:    movlt r4, #1
 ; VFP2-NEXT:    cmp r4, #0
@@ -3313,7 +3313,7 @@ define i64 @stest_f16i64_mm(half %x) {
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r4, r2, #0
 ; VFP2-NEXT:    sbcs r4, r3, #0
-; VFP2-NEXT:    mov.w r4, #0
+; VFP2-NEXT:    mov r4, r12
 ; VFP2-NEXT:    it lt
 ; VFP2-NEXT:    movlt r4, #1
 ; VFP2-NEXT:    cmp r4, #0

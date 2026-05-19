@@ -63,19 +63,19 @@ define void @arm_cmplx_dot_prod_q15(ptr nocapture readonly %pSrcA, ptr nocapture
 ; CHECK-NEXT:    add.w r7, r7, r2, lsl #1
 ; CHECK-NEXT:    vldrh.u16 q0, [r0]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1]
-; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    mov r4, r12
 ; CHECK-NEXT:    lsr.w r9, r7, #3
 ; CHECK-NEXT:    mov r7, r12
 ; CHECK-NEXT:    mov r11, r12
 ; CHECK-NEXT:    wls lr, r9, .LBB1_4
 ; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
-; CHECK-NEXT:    add.w r8, r0, r9, lsl #5
 ; CHECK-NEXT:    mov.w r11, #0
+; CHECK-NEXT:    add.w r8, r0, r9, lsl #5
 ; CHECK-NEXT:    adds r0, #32
 ; CHECK-NEXT:    add.w r6, r1, #32
 ; CHECK-NEXT:    lsl.w r9, r9, #4
 ; CHECK-NEXT:    mov r4, r11
-; CHECK-NEXT:    movs r7, #0
+; CHECK-NEXT:    mov r7, r11
 ; CHECK-NEXT:    mov r12, r11
 ; CHECK-NEXT:  .LBB1_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1

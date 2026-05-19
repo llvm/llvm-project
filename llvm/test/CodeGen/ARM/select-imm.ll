@@ -634,11 +634,9 @@ define i1 @t10() {
 ; THUMB2-NEXT:    .pad #8
 ; THUMB2-NEXT:    sub sp, #8
 ; THUMB2-NEXT:    mvn r0, #2
-; THUMB2-NEXT:    str r0, [sp, #4]
-; THUMB2-NEXT:    mvn r0, #7
-; THUMB2-NEXT:    str r0, [sp]
-; THUMB2-NEXT:    mvn r0, #2
 ; THUMB2-NEXT:    mvn r1, #7
+; THUMB2-NEXT:    str r0, [sp, #4]
+; THUMB2-NEXT:    str r1, [sp]
 ; THUMB2-NEXT:    bl __aeabi_idivmod
 ; THUMB2-NEXT:    sub.w r0, r1, r0, lsl #3
 ; THUMB2-NEXT:    adds r0, #3

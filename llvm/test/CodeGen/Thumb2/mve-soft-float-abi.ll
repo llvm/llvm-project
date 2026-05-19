@@ -545,8 +545,8 @@ declare void @print_uint32x4_t(<4 x i32> %val)
 define i32 @main(i64 %x, i64 %y) {
 ; CHECK-LE-LABEL: main:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    .save {r4, lr}
-; CHECK-LE-NEXT:    push {r4, lr}
+; CHECK-LE-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-LE-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-LE-NEXT:    .vsave {d8, d9}
 ; CHECK-LE-NEXT:    vpush {d8, d9}
 ; CHECK-LE-NEXT:    .pad #8
@@ -554,49 +554,51 @@ define i32 @main(i64 %x, i64 %y) {
 ; CHECK-LE-NEXT:    vmov.32 q4[2], r2
 ; CHECK-LE-NEXT:    mov r4, r1
 ; CHECK-LE-NEXT:    mov r1, r0
+; CHECK-LE-NEXT:    movs r5, #0
 ; CHECK-LE-NEXT:    vmov.32 q4[3], r3
-; CHECK-LE-NEXT:    movs r0, #0
+; CHECK-LE-NEXT:    mov r0, r5
 ; CHECK-LE-NEXT:    mov r2, r1
 ; CHECK-LE-NEXT:    mov r3, r4
 ; CHECK-LE-NEXT:    vstr d9, [sp]
 ; CHECK-LE-NEXT:    bl print_uint32x4_t
-; CHECK-LE-NEXT:    movs r0, #0
+; CHECK-LE-NEXT:    mov r0, r5
 ; CHECK-LE-NEXT:    movs r2, #1
 ; CHECK-LE-NEXT:    mov r3, r4
 ; CHECK-LE-NEXT:    vstr d9, [sp]
 ; CHECK-LE-NEXT:    bl print_uint32x4_t
-; CHECK-LE-NEXT:    movs r0, #0
+; CHECK-LE-NEXT:    mov r0, r5
 ; CHECK-LE-NEXT:    add sp, #8
 ; CHECK-LE-NEXT:    vpop {d8, d9}
-; CHECK-LE-NEXT:    pop {r4, pc}
+; CHECK-LE-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; CHECK-BE-LABEL: main:
 ; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    .save {r4, lr}
-; CHECK-BE-NEXT:    push {r4, lr}
+; CHECK-BE-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-BE-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-BE-NEXT:    .vsave {d8, d9}
 ; CHECK-BE-NEXT:    vpush {d8, d9}
 ; CHECK-BE-NEXT:    .pad #8
 ; CHECK-BE-NEXT:    sub sp, #8
 ; CHECK-BE-NEXT:    vmov.32 q0[2], r2
 ; CHECK-BE-NEXT:    mov r4, r1
-; CHECK-BE-NEXT:    mov r1, r0
 ; CHECK-BE-NEXT:    vmov.32 q0[3], r3
+; CHECK-BE-NEXT:    mov r1, r0
+; CHECK-BE-NEXT:    movs r5, #0
 ; CHECK-BE-NEXT:    vrev64.32 q4, q0
-; CHECK-BE-NEXT:    movs r0, #0
+; CHECK-BE-NEXT:    mov r0, r5
 ; CHECK-BE-NEXT:    mov r2, r1
 ; CHECK-BE-NEXT:    mov r3, r4
 ; CHECK-BE-NEXT:    vstr d9, [sp]
 ; CHECK-BE-NEXT:    bl print_uint32x4_t
-; CHECK-BE-NEXT:    movs r0, #0
+; CHECK-BE-NEXT:    mov r0, r5
 ; CHECK-BE-NEXT:    movs r2, #1
 ; CHECK-BE-NEXT:    mov r3, r4
 ; CHECK-BE-NEXT:    vstr d9, [sp]
 ; CHECK-BE-NEXT:    bl print_uint32x4_t
-; CHECK-BE-NEXT:    movs r0, #0
+; CHECK-BE-NEXT:    mov r0, r5
 ; CHECK-BE-NEXT:    add sp, #8
 ; CHECK-BE-NEXT:    vpop {d8, d9}
-; CHECK-BE-NEXT:    pop {r4, pc}
+; CHECK-BE-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %a = insertelement <2 x i64> poison, i64 %x, i64 0
   %b = insertelement <2 x i64> %a, i64 %y, i64 1

@@ -26,7 +26,7 @@ define internal %struct.S51 @F33() {
 ; CHECK-LABEL: F33:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
   ret %struct.S51 zeroinitializer

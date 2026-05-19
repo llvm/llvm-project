@@ -488,10 +488,10 @@ define arm_aapcs_vfpcc <2 x i32> @vcmp_multi_v2i32(<2 x i64> %a, <2 x i32> %b, <
 ; CHECK-LABEL: vcmp_multi_v2i32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov r0, r1, d0
-; CHECK-NEXT:    movs r2, #0
 ; CHECK-NEXT:    orrs r0, r1
+; CHECK-NEXT:    mov.w r0, #0
 ; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    mov r2, r0
 ; CHECK-NEXT:    bfi r2, r1, #0, #8
 ; CHECK-NEXT:    vmov r1, r3, d1
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
@@ -1029,10 +1029,10 @@ define arm_aapcs_vfpcc <2 x i32> @vcmp_r_multi_v2i32(<2 x i64> %a, <2 x i32> %b,
 ; CHECK-LABEL: vcmp_r_multi_v2i32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov r0, r1, d0
-; CHECK-NEXT:    movs r2, #0
 ; CHECK-NEXT:    orrs r0, r1
+; CHECK-NEXT:    mov.w r0, #0
 ; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    mov r2, r0
 ; CHECK-NEXT:    bfi r2, r1, #0, #8
 ; CHECK-NEXT:    vmov r1, r3, d1
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
