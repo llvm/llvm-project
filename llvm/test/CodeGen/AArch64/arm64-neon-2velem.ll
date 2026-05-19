@@ -812,7 +812,7 @@ define <4 x i32> @test_vmlal_high_lane_s16(<4 x i32> %a, <8 x i16> %b, <4 x i16>
 ;
 ; CHECK-GI-LABEL: test_vmlal_high_lane_s16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    smlal v0.4s, v1.4h, v2.h[3]
 ; CHECK-GI-NEXT:    ret
@@ -833,7 +833,7 @@ define <2 x i64> @test_vmlal_high_lane_s32(<2 x i64> %a, <4 x i32> %b, <2 x i32>
 ;
 ; CHECK-GI-LABEL: test_vmlal_high_lane_s32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    smlal v0.2d, v1.2s, v2.s[1]
 ; CHECK-GI-NEXT:    ret
@@ -853,7 +853,7 @@ define <4 x i32> @test_vmlal_high_laneq_s16(<4 x i32> %a, <8 x i16> %b, <8 x i16
 ;
 ; CHECK-GI-LABEL: test_vmlal_high_laneq_s16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    smlal v0.4s, v1.4h, v2.h[7]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -872,7 +872,7 @@ define <2 x i64> @test_vmlal_high_laneq_s32(<2 x i64> %a, <4 x i32> %b, <4 x i32
 ;
 ; CHECK-GI-LABEL: test_vmlal_high_laneq_s32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    smlal v0.2d, v1.2s, v2.s[3]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -942,7 +942,7 @@ define <4 x i32> @test_vmlsl_high_lane_s16(<4 x i32> %a, <8 x i16> %b, <4 x i16>
 ;
 ; CHECK-GI-LABEL: test_vmlsl_high_lane_s16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    smlsl v0.4s, v1.4h, v2.h[3]
 ; CHECK-GI-NEXT:    ret
@@ -963,7 +963,7 @@ define <2 x i64> @test_vmlsl_high_lane_s32(<2 x i64> %a, <4 x i32> %b, <2 x i32>
 ;
 ; CHECK-GI-LABEL: test_vmlsl_high_lane_s32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    smlsl v0.2d, v1.2s, v2.s[1]
 ; CHECK-GI-NEXT:    ret
@@ -983,7 +983,7 @@ define <4 x i32> @test_vmlsl_high_laneq_s16(<4 x i32> %a, <8 x i16> %b, <8 x i16
 ;
 ; CHECK-GI-LABEL: test_vmlsl_high_laneq_s16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    smlsl v0.4s, v1.4h, v2.h[7]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1002,7 +1002,7 @@ define <2 x i64> @test_vmlsl_high_laneq_s32(<2 x i64> %a, <4 x i32> %b, <4 x i32
 ;
 ; CHECK-GI-LABEL: test_vmlsl_high_laneq_s32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    smlsl v0.2d, v1.2s, v2.s[3]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1072,7 +1072,7 @@ define <4 x i32> @test_vmlal_high_lane_u16(<4 x i32> %a, <8 x i16> %b, <4 x i16>
 ;
 ; CHECK-GI-LABEL: test_vmlal_high_lane_u16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    umlal v0.4s, v1.4h, v2.h[3]
 ; CHECK-GI-NEXT:    ret
@@ -1093,7 +1093,7 @@ define <2 x i64> @test_vmlal_high_lane_u32(<2 x i64> %a, <4 x i32> %b, <2 x i32>
 ;
 ; CHECK-GI-LABEL: test_vmlal_high_lane_u32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    umlal v0.2d, v1.2s, v2.s[1]
 ; CHECK-GI-NEXT:    ret
@@ -1113,7 +1113,7 @@ define <4 x i32> @test_vmlal_high_laneq_u16(<4 x i32> %a, <8 x i16> %b, <8 x i16
 ;
 ; CHECK-GI-LABEL: test_vmlal_high_laneq_u16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    umlal v0.4s, v1.4h, v2.h[7]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1132,7 +1132,7 @@ define <2 x i64> @test_vmlal_high_laneq_u32(<2 x i64> %a, <4 x i32> %b, <4 x i32
 ;
 ; CHECK-GI-LABEL: test_vmlal_high_laneq_u32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    umlal v0.2d, v1.2s, v2.s[3]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1202,7 +1202,7 @@ define <4 x i32> @test_vmlsl_high_lane_u16(<4 x i32> %a, <8 x i16> %b, <4 x i16>
 ;
 ; CHECK-GI-LABEL: test_vmlsl_high_lane_u16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    umlsl v0.4s, v1.4h, v2.h[3]
 ; CHECK-GI-NEXT:    ret
@@ -1223,7 +1223,7 @@ define <2 x i64> @test_vmlsl_high_lane_u32(<2 x i64> %a, <4 x i32> %b, <2 x i32>
 ;
 ; CHECK-GI-LABEL: test_vmlsl_high_lane_u32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    umlsl v0.2d, v1.2s, v2.s[1]
 ; CHECK-GI-NEXT:    ret
@@ -1243,7 +1243,7 @@ define <4 x i32> @test_vmlsl_high_laneq_u16(<4 x i32> %a, <8 x i16> %b, <8 x i16
 ;
 ; CHECK-GI-LABEL: test_vmlsl_high_laneq_u16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    umlsl v0.4s, v1.4h, v2.h[7]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1262,7 +1262,7 @@ define <2 x i64> @test_vmlsl_high_laneq_u32(<2 x i64> %a, <4 x i32> %b, <4 x i32
 ;
 ; CHECK-GI-LABEL: test_vmlsl_high_laneq_u32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    umlsl v0.2d, v1.2s, v2.s[3]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1330,7 +1330,7 @@ define <4 x i32> @test_vmull_high_lane_s16(<8 x i16> %a, <4 x i16> %v) {
 ;
 ; CHECK-GI-LABEL: test_vmull_high_lane_s16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    smull v0.4s, v0.4h, v1.h[3]
 ; CHECK-GI-NEXT:    ret
@@ -1350,7 +1350,7 @@ define <2 x i64> @test_vmull_high_lane_s32(<4 x i32> %a, <2 x i32> %v) {
 ;
 ; CHECK-GI-LABEL: test_vmull_high_lane_s32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.s[1]
 ; CHECK-GI-NEXT:    ret
@@ -1370,7 +1370,7 @@ define <4 x i32> @test_vmull_high_lane_u16(<8 x i16> %a, <4 x i16> %v) {
 ;
 ; CHECK-GI-LABEL: test_vmull_high_lane_u16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.h[3]
 ; CHECK-GI-NEXT:    ret
@@ -1390,7 +1390,7 @@ define <2 x i64> @test_vmull_high_lane_u32(<4 x i32> %a, <2 x i32> %v) {
 ;
 ; CHECK-GI-LABEL: test_vmull_high_lane_u32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.s[1]
 ; CHECK-GI-NEXT:    ret
@@ -1453,7 +1453,7 @@ define <4 x i32> @test_vmull_high_laneq_s16(<8 x i16> %a, <8 x i16> %v) {
 ;
 ; CHECK-GI-LABEL: test_vmull_high_laneq_s16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    smull v0.4s, v0.4h, v1.h[7]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1471,7 +1471,7 @@ define <2 x i64> @test_vmull_high_laneq_s32(<4 x i32> %a, <4 x i32> %v) {
 ;
 ; CHECK-GI-LABEL: test_vmull_high_laneq_s32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.s[3]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1489,7 +1489,7 @@ define <4 x i32> @test_vmull_high_laneq_u16(<8 x i16> %a, <8 x i16> %v) {
 ;
 ; CHECK-GI-LABEL: test_vmull_high_laneq_u16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.h[7]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1507,7 +1507,7 @@ define <2 x i64> @test_vmull_high_laneq_u32(<4 x i32> %a, <4 x i32> %v) {
 ;
 ; CHECK-GI-LABEL: test_vmull_high_laneq_u32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.s[3]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1552,7 +1552,7 @@ define <4 x i32> @test_vqdmlal_high_lane_s16(<4 x i32> %a, <8 x i16> %b, <4 x i1
 ;
 ; CHECK-GI-LABEL: test_vqdmlal_high_lane_s16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    sqdmlal v0.4s, v1.4h, v2.h[3]
 ; CHECK-GI-NEXT:    ret
@@ -1573,7 +1573,7 @@ define <2 x i64> @test_vqdmlal_high_lane_s32(<2 x i64> %a, <4 x i32> %b, <2 x i3
 ;
 ; CHECK-GI-LABEL: test_vqdmlal_high_lane_s32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    sqdmlal v0.2d, v1.2s, v2.s[1]
 ; CHECK-GI-NEXT:    ret
@@ -1620,7 +1620,7 @@ define <4 x i32> @test_vqdmlsl_high_lane_s16(<4 x i32> %a, <8 x i16> %b, <4 x i1
 ;
 ; CHECK-GI-LABEL: test_vqdmlsl_high_lane_s16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    sqdmlsl v0.4s, v1.4h, v2.h[3]
 ; CHECK-GI-NEXT:    ret
@@ -1641,7 +1641,7 @@ define <2 x i64> @test_vqdmlsl_high_lane_s32(<2 x i64> %a, <4 x i32> %b, <2 x i3
 ;
 ; CHECK-GI-LABEL: test_vqdmlsl_high_lane_s32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    sqdmlsl v0.2d, v1.2s, v2.s[1]
 ; CHECK-GI-NEXT:    ret
@@ -1708,7 +1708,7 @@ define <4 x i32> @test_vqdmull_high_lane_s16(<8 x i16> %a, <4 x i16> %v) {
 ;
 ; CHECK-GI-LABEL: test_vqdmull_high_lane_s16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    sqdmull v0.4s, v0.4h, v1.h[3]
 ; CHECK-GI-NEXT:    ret
@@ -1728,7 +1728,7 @@ define <2 x i64> @test_vqdmull_high_lane_s32(<4 x i32> %a, <2 x i32> %v) {
 ;
 ; CHECK-GI-LABEL: test_vqdmull_high_lane_s32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    sqdmull v0.2d, v0.2s, v1.s[1]
 ; CHECK-GI-NEXT:    ret
@@ -1747,7 +1747,7 @@ define <4 x i32> @test_vqdmull_high_laneq_s16(<8 x i16> %a, <8 x i16> %v) {
 ;
 ; CHECK-GI-LABEL: test_vqdmull_high_laneq_s16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sqdmull v0.4s, v0.4h, v1.h[7]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1765,7 +1765,7 @@ define <2 x i64> @test_vqdmull_high_laneq_s32(<4 x i32> %a, <4 x i32> %v) {
 ;
 ; CHECK-GI-LABEL: test_vqdmull_high_laneq_s32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sqdmull v0.2d, v0.2s, v1.s[3]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -2268,7 +2268,7 @@ define <4 x i16> @test_vadd_lane5_i16_bitcast_bigger_aligned(<4 x i16> %a, <16 x
 ;
 ; CHECK-GI-LABEL: test_vadd_lane5_i16_bitcast_bigger_aligned:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    dup v1.4h, v1.h[1]
 ; CHECK-GI-NEXT:    add v0.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
@@ -3002,7 +3002,7 @@ define <4 x i32> @test_vmlal_high_lane_s16_0(<4 x i32> %a, <8 x i16> %b, <4 x i1
 ;
 ; CHECK-GI-LABEL: test_vmlal_high_lane_s16_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    smlal v0.4s, v1.4h, v2.h[0]
 ; CHECK-GI-NEXT:    ret
@@ -3023,7 +3023,7 @@ define <2 x i64> @test_vmlal_high_lane_s32_0(<2 x i64> %a, <4 x i32> %b, <2 x i3
 ;
 ; CHECK-GI-LABEL: test_vmlal_high_lane_s32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    smlal v0.2d, v1.2s, v2.s[0]
 ; CHECK-GI-NEXT:    ret
@@ -3043,7 +3043,7 @@ define <4 x i32> @test_vmlal_high_laneq_s16_0(<4 x i32> %a, <8 x i16> %b, <8 x i
 ;
 ; CHECK-GI-LABEL: test_vmlal_high_laneq_s16_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    smlal v0.4s, v1.4h, v2.h[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3062,7 +3062,7 @@ define <2 x i64> @test_vmlal_high_laneq_s32_0(<2 x i64> %a, <4 x i32> %b, <4 x i
 ;
 ; CHECK-GI-LABEL: test_vmlal_high_laneq_s32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    smlal v0.2d, v1.2s, v2.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3132,7 +3132,7 @@ define <4 x i32> @test_vmlsl_high_lane_s16_0(<4 x i32> %a, <8 x i16> %b, <4 x i1
 ;
 ; CHECK-GI-LABEL: test_vmlsl_high_lane_s16_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    smlsl v0.4s, v1.4h, v2.h[0]
 ; CHECK-GI-NEXT:    ret
@@ -3153,7 +3153,7 @@ define <2 x i64> @test_vmlsl_high_lane_s32_0(<2 x i64> %a, <4 x i32> %b, <2 x i3
 ;
 ; CHECK-GI-LABEL: test_vmlsl_high_lane_s32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    smlsl v0.2d, v1.2s, v2.s[0]
 ; CHECK-GI-NEXT:    ret
@@ -3173,7 +3173,7 @@ define <4 x i32> @test_vmlsl_high_laneq_s16_0(<4 x i32> %a, <8 x i16> %b, <8 x i
 ;
 ; CHECK-GI-LABEL: test_vmlsl_high_laneq_s16_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    smlsl v0.4s, v1.4h, v2.h[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3192,7 +3192,7 @@ define <2 x i64> @test_vmlsl_high_laneq_s32_0(<2 x i64> %a, <4 x i32> %b, <4 x i
 ;
 ; CHECK-GI-LABEL: test_vmlsl_high_laneq_s32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    smlsl v0.2d, v1.2s, v2.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3262,7 +3262,7 @@ define <4 x i32> @test_vmlal_high_lane_u16_0(<4 x i32> %a, <8 x i16> %b, <4 x i1
 ;
 ; CHECK-GI-LABEL: test_vmlal_high_lane_u16_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    umlal v0.4s, v1.4h, v2.h[0]
 ; CHECK-GI-NEXT:    ret
@@ -3283,7 +3283,7 @@ define <2 x i64> @test_vmlal_high_lane_u32_0(<2 x i64> %a, <4 x i32> %b, <2 x i3
 ;
 ; CHECK-GI-LABEL: test_vmlal_high_lane_u32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    umlal v0.2d, v1.2s, v2.s[0]
 ; CHECK-GI-NEXT:    ret
@@ -3303,7 +3303,7 @@ define <4 x i32> @test_vmlal_high_laneq_u16_0(<4 x i32> %a, <8 x i16> %b, <8 x i
 ;
 ; CHECK-GI-LABEL: test_vmlal_high_laneq_u16_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    umlal v0.4s, v1.4h, v2.h[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3322,7 +3322,7 @@ define <2 x i64> @test_vmlal_high_laneq_u32_0(<2 x i64> %a, <4 x i32> %b, <4 x i
 ;
 ; CHECK-GI-LABEL: test_vmlal_high_laneq_u32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    umlal v0.2d, v1.2s, v2.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3392,7 +3392,7 @@ define <4 x i32> @test_vmlsl_high_lane_u16_0(<4 x i32> %a, <8 x i16> %b, <4 x i1
 ;
 ; CHECK-GI-LABEL: test_vmlsl_high_lane_u16_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    umlsl v0.4s, v1.4h, v2.h[0]
 ; CHECK-GI-NEXT:    ret
@@ -3413,7 +3413,7 @@ define <2 x i64> @test_vmlsl_high_lane_u32_0(<2 x i64> %a, <4 x i32> %b, <2 x i3
 ;
 ; CHECK-GI-LABEL: test_vmlsl_high_lane_u32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    umlsl v0.2d, v1.2s, v2.s[0]
 ; CHECK-GI-NEXT:    ret
@@ -3433,7 +3433,7 @@ define <4 x i32> @test_vmlsl_high_laneq_u16_0(<4 x i32> %a, <8 x i16> %b, <8 x i
 ;
 ; CHECK-GI-LABEL: test_vmlsl_high_laneq_u16_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    umlsl v0.4s, v1.4h, v2.h[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3452,7 +3452,7 @@ define <2 x i64> @test_vmlsl_high_laneq_u32_0(<2 x i64> %a, <4 x i32> %b, <4 x i
 ;
 ; CHECK-GI-LABEL: test_vmlsl_high_laneq_u32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    umlsl v0.2d, v1.2s, v2.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3520,7 +3520,7 @@ define <4 x i32> @test_vmull_high_lane_s16_0(<8 x i16> %a, <4 x i16> %v) {
 ;
 ; CHECK-GI-LABEL: test_vmull_high_lane_s16_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    smull v0.4s, v0.4h, v1.h[0]
 ; CHECK-GI-NEXT:    ret
@@ -3540,7 +3540,7 @@ define <2 x i64> @test_vmull_high_lane_s32_0(<4 x i32> %a, <2 x i32> %v) {
 ;
 ; CHECK-GI-LABEL: test_vmull_high_lane_s32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.s[0]
 ; CHECK-GI-NEXT:    ret
@@ -3560,7 +3560,7 @@ define <4 x i32> @test_vmull_high_lane_u16_0(<8 x i16> %a, <4 x i16> %v) {
 ;
 ; CHECK-GI-LABEL: test_vmull_high_lane_u16_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.h[0]
 ; CHECK-GI-NEXT:    ret
@@ -3580,7 +3580,7 @@ define <2 x i64> @test_vmull_high_lane_u32_0(<4 x i32> %a, <2 x i32> %v) {
 ;
 ; CHECK-GI-LABEL: test_vmull_high_lane_u32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.s[0]
 ; CHECK-GI-NEXT:    ret
@@ -3643,7 +3643,7 @@ define <4 x i32> @test_vmull_high_laneq_s16_0(<8 x i16> %a, <8 x i16> %v) {
 ;
 ; CHECK-GI-LABEL: test_vmull_high_laneq_s16_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    smull v0.4s, v0.4h, v1.h[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3661,7 +3661,7 @@ define <2 x i64> @test_vmull_high_laneq_s32_0(<4 x i32> %a, <4 x i32> %v) {
 ;
 ; CHECK-GI-LABEL: test_vmull_high_laneq_s32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3679,7 +3679,7 @@ define <4 x i32> @test_vmull_high_laneq_u16_0(<8 x i16> %a, <8 x i16> %v) {
 ;
 ; CHECK-GI-LABEL: test_vmull_high_laneq_u16_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.h[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3697,7 +3697,7 @@ define <2 x i64> @test_vmull_high_laneq_u32_0(<4 x i32> %a, <4 x i32> %v) {
 ;
 ; CHECK-GI-LABEL: test_vmull_high_laneq_u32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3742,7 +3742,7 @@ define <4 x i32> @test_vqdmlal_high_lane_s16_0(<4 x i32> %a, <8 x i16> %b, <4 x 
 ;
 ; CHECK-GI-LABEL: test_vqdmlal_high_lane_s16_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    sqdmlal v0.4s, v1.4h, v2.h[0]
 ; CHECK-GI-NEXT:    ret
@@ -3763,7 +3763,7 @@ define <2 x i64> @test_vqdmlal_high_lane_s32_0(<2 x i64> %a, <4 x i32> %b, <2 x 
 ;
 ; CHECK-GI-LABEL: test_vqdmlal_high_lane_s32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    sqdmlal v0.2d, v1.2s, v2.s[0]
 ; CHECK-GI-NEXT:    ret
@@ -3810,7 +3810,7 @@ define <4 x i32> @test_vqdmlsl_high_lane_s16_0(<4 x i32> %a, <8 x i16> %b, <4 x 
 ;
 ; CHECK-GI-LABEL: test_vqdmlsl_high_lane_s16_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    sqdmlsl v0.4s, v1.4h, v2.h[0]
 ; CHECK-GI-NEXT:    ret
@@ -3831,7 +3831,7 @@ define <2 x i64> @test_vqdmlsl_high_lane_s32_0(<2 x i64> %a, <4 x i32> %b, <2 x 
 ;
 ; CHECK-GI-LABEL: test_vqdmlsl_high_lane_s32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    sqdmlsl v0.2d, v1.2s, v2.s[0]
 ; CHECK-GI-NEXT:    ret
@@ -3898,7 +3898,7 @@ define <4 x i32> @test_vqdmull_high_lane_s16_0(<8 x i16> %a, <4 x i16> %v) {
 ;
 ; CHECK-GI-LABEL: test_vqdmull_high_lane_s16_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    sqdmull v0.4s, v0.4h, v1.h[0]
 ; CHECK-GI-NEXT:    ret
@@ -3918,7 +3918,7 @@ define <2 x i64> @test_vqdmull_high_lane_s32_0(<4 x i32> %a, <2 x i32> %v) {
 ;
 ; CHECK-GI-LABEL: test_vqdmull_high_lane_s32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    sqdmull v0.2d, v0.2s, v1.s[0]
 ; CHECK-GI-NEXT:    ret
@@ -3937,7 +3937,7 @@ define <4 x i32> @test_vqdmull_high_laneq_s16_0(<8 x i16> %a, <8 x i16> %v) {
 ;
 ; CHECK-GI-LABEL: test_vqdmull_high_laneq_s16_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sqdmull v0.4s, v0.4h, v1.h[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3955,7 +3955,7 @@ define <2 x i64> @test_vqdmull_high_laneq_s32_0(<4 x i32> %a, <4 x i32> %v) {
 ;
 ; CHECK-GI-LABEL: test_vqdmull_high_laneq_s32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sqdmull v0.2d, v0.2s, v1.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:

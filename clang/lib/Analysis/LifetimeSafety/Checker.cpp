@@ -60,7 +60,7 @@ private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
   llvm::DenseMap<AnnotationTarget, EscapingTarget> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
-  llvm::DenseSet<const ParmVarDecl *> VerifiedLiftimeboundEscapes;
+  llvm::DenseSet<const Decl *> VerifiedLiftimeboundEscapes;
   const LoanPropagationAnalysis &LoanPropagation;
   const MovedLoansAnalysis &MovedLoans;
   const LiveOriginsAnalysis &LiveOrigins;
@@ -147,9 +147,10 @@ public:
       // field!
     };
     auto CheckImplicitThis = [&](const CXXMethodDecl *MD) {
-      if (!implicitObjectParamIsLifetimeBound(MD))
-        if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
-          AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
+      if (implicitObjectParamIsLifetimeBound(MD))
+        VerifiedLiftimeboundEscapes.insert(MD);
+      else if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
+        AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
     };
     auto MovedAtEscape = MovedLoans.getMovedLoans(OEF);
     for (LoanID LID : EscapedLoans) {
@@ -264,7 +265,38 @@ public:
                                           MovedExpr, ExpiryLoc);
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
-        if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
+        if (Warning.InvalidatedByExpr) {
+          if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
+            // Invalidated object escapes to a field.
+            if (IssueExpr)
+              // Invalidated object on stack escapes to a field.
+              SemaHelper->reportInvalidatedField(IssueExpr,
+                                                 FieldEscape->getFieldDecl(),
+                                                 Warning.InvalidatedByExpr);
+            else if (InvalidatedPVD)
+              // Invalidated parameter escapes to a field.
+              SemaHelper->reportInvalidatedField(InvalidatedPVD,
+                                                 FieldEscape->getFieldDecl(),
+                                                 Warning.InvalidatedByExpr);
+          } else if (const auto *GlobalEscape =
+                         dyn_cast<GlobalEscapeFact>(OEF)) {
+            // Invalidated object escapes to global or static storage.
+            if (IssueExpr)
+              // Invalidated object on stack escapes to global or static
+              // storage.
+              SemaHelper->reportInvalidatedGlobal(IssueExpr,
+                                                  GlobalEscape->getGlobal(),
+                                                  Warning.InvalidatedByExpr);
+            else if (InvalidatedPVD)
+              // Invalidated parameter escapes to global or static storage.
+              SemaHelper->reportInvalidatedGlobal(InvalidatedPVD,
+                                                  GlobalEscape->getGlobal(),
+                                                  Warning.InvalidatedByExpr);
+          } else if (isa<ReturnEscapeFact>(OEF)) {
+            // FIXME: Diagnose invalidated return escapes separately.
+          } else
+            llvm_unreachable("Unhandled OriginEscapesFact type");
+        } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
           // Return stack address.
           SemaHelper->reportUseAfterReturn(
               IssueExpr, RetEscape->getReturnExpr(), MovedExpr, ExpiryLoc);
@@ -366,6 +398,10 @@ public:
   void reportLifetimeboundViolations() {
     if (!isa<FunctionDecl>(FD))
       return;
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+        MD && getImplicitObjectParamLifetimeBoundAttr(MD) &&
+        !VerifiedLiftimeboundEscapes.contains(MD))
+      SemaHelper->reportLifetimeboundViolation(MD);
     for (const ParmVarDecl *PVD : cast<FunctionDecl>(FD)->parameters()) {
       if (!PVD->hasAttr<LifetimeBoundAttr>())
         continue;

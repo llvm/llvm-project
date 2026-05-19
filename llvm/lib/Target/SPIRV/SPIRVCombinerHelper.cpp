@@ -397,6 +397,9 @@ void SPIRVCombinerHelper::applyMatrixMultiply(MachineInstr &MI) const {
   SmallVector<Register, 16> ResultScalars =
       computeDotProducts(RowsA, ColsB, SpvVecType, GR);
 
-  Builder.buildBuildVector(ResReg, ResultScalars);
+  if (ResultScalars.size() == 1)
+    Builder.buildCopy(ResReg, ResultScalars[0]);
+  else
+    Builder.buildBuildVector(ResReg, ResultScalars);
   MI.eraseFromParent();
 }
