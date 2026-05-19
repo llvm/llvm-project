@@ -42,6 +42,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cassert>
 #include <optional>
@@ -1495,13 +1496,15 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
 /// Fold the following code sequence:
 /// \code
 ///   int a = ctlz(x & -x);
-//    x ? 31 - a : a;
-//    // or
-//    x ? 31 - a : 32;
+///   (x == 0) ? 32 : (31 - a);   // or xor(31, a); Clang may emit sub
+///   // or (x == 0) ? a : (31 - a) when zero returns ctlz (poison if true)
 /// \code
 ///
 /// into:
-///   cttz(x)
+///   cttz(x, is_zero_poison)
+///
+/// When the zero arm is the bitwidth constant, the fold uses
+/// cttz(x, false) so zero is defined as returning the bitwidth.
 static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
                                          Value *FalseVal,
                                          InstCombiner::BuilderTy &Builder) {
@@ -1513,9 +1516,16 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
     std::swap(TrueVal, FalseVal);
 
   Value *Ctlz;
-  if (!match(FalseVal,
-             m_Xor(m_Value(Ctlz), m_SpecificInt(BitWidth - 1))))
+  // (bitwidth - 1) - ctlz(...) is equivalent to xor(bitwidth - 1, ctlz) only
+  // when bitwidth is a power of two, so (bitwidth - 1) is an all-ones mask over
+  // the ctlz result range. The sub form is correct for arbitrary bitwidths.
+  if (match(FalseVal, m_Xor(m_Value(Ctlz), m_SpecificInt(BitWidth - 1)))) {
+    if (!isPowerOf2_64(BitWidth))
+      return nullptr;
+  } else if (!match(FalseVal,
+                    m_Sub(m_SpecificInt(BitWidth - 1), m_Value(Ctlz)))) {
     return nullptr;
+  }
 
   if (!match(Ctlz, m_Ctlz(m_Value(), m_Value())))
     return nullptr;
@@ -1528,9 +1538,13 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
   if (!match(II->getOperand(0), m_c_And(m_Specific(X), m_Neg(m_Specific(X)))))
     return nullptr;
 
+  Value *ZeroIsPoison = II->getArgOperand(1);
+  if (match(TrueVal, m_SpecificInt(BitWidth)))
+    ZeroIsPoison = ConstantInt::getFalse(II->getContext());
+
   Function *F = Intrinsic::getOrInsertDeclaration(
       II->getModule(), Intrinsic::cttz, II->getType());
-  return CallInst::Create(F, {X, II->getArgOperand(1)});
+  return CallInst::Create(F, {X, ZeroIsPoison});
 }
 
 /// Attempt to fold a cttz/ctlz followed by a icmp plus select into a single

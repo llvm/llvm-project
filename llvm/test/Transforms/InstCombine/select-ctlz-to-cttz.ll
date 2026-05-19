@@ -2,6 +2,8 @@
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 declare i3 @llvm.cttz.i3(i3, i1)
+declare i33 @llvm.cttz.i33(i33, i1)
+declare i33 @llvm.ctlz.i33(i33, i1)
 declare i32 @llvm.cttz.i32(i32, i1 immarg)
 declare i32 @llvm.ctlz.i32(i32, i1 immarg)
 declare i64 @llvm.cttz.i64(i64, i1 immarg)
@@ -59,12 +61,7 @@ define i32 @select_clz_to_ctz_constant_for_zero(i32 %a) {
 ; Same as select_clz_to_ctz_constant_for_zero, but with 31 - ctlz as Clang emits.
 define i32 @select_clz_to_ctz_sub_constant_for_zero(i32 %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_sub_constant_for_zero(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], [[SUB]]
-; CHECK-NEXT:    [[LZ:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[AND]], i1 false)
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A]], 0
-; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 31, [[LZ]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 32, i32 [[SUB1]]
+; CHECK-NEXT:    [[COND:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[A:%.*]], i1 false)
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %sub = sub i32 0, %a
@@ -149,6 +146,60 @@ define i64 @select_clz_to_ctz_i64(i64 %a) {
   %sub1 = xor i64 %lz, 63
   %cond = select i1 %tobool, i64 %lz, i64 %sub1
   ret i64 %cond
+}
+
+; Negative test: xor with (bitwidth - 1) is not (bitwidth - 1) - ctlz when
+; bitwidth is not a power of two (here i33: 31 xor 32 = 63, not cttz(2) = 1).
+define i33 @select_clz_to_ctz_xor_non_pot(i33 %a) {
+; CHECK-LABEL: @select_clz_to_ctz_xor_non_pot(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i33 0, [[A:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i33 [[A]], [[SUB]]
+; CHECK-NEXT:    [[LZ:%.*]] = tail call range(i33 0, 34) i33 @llvm.ctlz.i33(i33 [[AND]], i1 false)
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i33 [[A]], 0
+; CHECK-NEXT:    [[SUB1:%.*]] = xor i33 [[LZ]], 32
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i33 33, i33 [[SUB1]]
+; CHECK-NEXT:    ret i33 [[COND]]
+;
+  %sub = sub i33 0, %a
+  %and = and i33 %sub, %a
+  %lz = tail call i33 @llvm.ctlz.i33(i33 %and, i1 false)
+  %tobool = icmp eq i33 %a, 0
+  %sub1 = xor i33 %lz, 32
+  %cond = select i1 %tobool, i33 33, i33 %sub1
+  ret i33 %cond
+}
+
+define i33 @select_clz_to_ctz_xor_non_pot_two() {
+; CHECK-LABEL: @select_clz_to_ctz_xor_non_pot_two(
+; CHECK-NEXT:    [[R:%.*]] = call i33 @select_clz_to_ctz_xor_non_pot(i33 2)
+; CHECK-NEXT:    ret i33 [[R]]
+;
+  %r = call i33 @select_clz_to_ctz_xor_non_pot(i33 2)
+  ret i33 %r
+}
+
+; Sub form still folds for non-power-of-two bitwidths.
+define i33 @select_clz_to_ctz_sub_non_pot(i33 %a) {
+; CHECK-LABEL: @select_clz_to_ctz_sub_non_pot(
+; CHECK-NEXT:    [[COND:%.*]] = call range(i33 0, 34) i33 @llvm.cttz.i33(i33 [[A:%.*]], i1 false)
+; CHECK-NEXT:    ret i33 [[COND]]
+;
+  %sub = sub i33 0, %a
+  %and = and i33 %sub, %a
+  %lz = tail call i33 @llvm.ctlz.i33(i33 %and, i1 false)
+  %tobool = icmp eq i33 %a, 0
+  %sub1 = sub nsw i33 32, %lz
+  %cond = select i1 %tobool, i33 33, i33 %sub1
+  ret i33 %cond
+}
+
+define i33 @select_clz_to_ctz_sub_non_pot_two() {
+; CHECK-LABEL: @select_clz_to_ctz_sub_non_pot_two(
+; CHECK-NEXT:    [[R:%.*]] = call i33 @select_clz_to_ctz_sub_non_pot(i33 2)
+; CHECK-NEXT:    ret i33 [[R]]
+;
+  %r = call i33 @select_clz_to_ctz_sub_non_pot(i33 2)
+  ret i33 %r
 }
 
 ; Negative tests
