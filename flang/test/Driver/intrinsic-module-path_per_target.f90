@@ -42,7 +42,7 @@
 !-----------------------------------------
 
 ! DEFAULTPATH:      -fc1
-! DEFAULTPATH-SAME: -fintrinsic-modules-path" "{{.*}}/resource_dir_with_per_target_subdir{{[\\/]}}finclude{{[\\/]}}flang{{[\\/]}}x86_64-unknown-linux-gnu"
+! DEFAULTPATH-SAME: -fintrinsic-modules-path" "{{.*(\\\\|/)}}resource_dir_with_per_target_subdir{{(\\\\|/)}}finclude{{(\\\\|/)}}flang{{(\\\\|/)}}x86_64-unknown-linux-gnu"
 
 ! NOINPUTONE: Source file 'basictestmoduleone.mod' was not found
 ! NOINPUTTWO: Source file 'basictestmoduletwo.mod' was not found
