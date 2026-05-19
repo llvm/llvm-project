@@ -206,8 +206,7 @@ static cl::opt<unsigned> VectorizeMemoryCheckThreshold(
 enum class TailFoldingPolicyTy {
   None = 0,
   PreferFoldTail,
-  MustFoldTail,
-  PreferFoldEpilogueTail
+  MustFoldTail
 };
 
 static cl::opt<TailFoldingPolicyTy> TailFoldingPolicy(
@@ -7370,10 +7369,6 @@ getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
       return CM_EpilogueNotNeededFoldTail;
     case TailFoldingPolicyTy::MustFoldTail:
       return CM_EpilogueNotAllowedFoldTail;
-    case TailFoldingPolicyTy::PreferFoldEpilogueTail:
-      // Handled separately as this is realted specifically to epilogue loop.
-      break;
-    };
   }
 
   // 3) If set, obey the hints
