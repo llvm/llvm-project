@@ -161,19 +161,6 @@ add_header_library(
 )
 
 add_header_library(
-  recv
-  HDRS
-    recv.h
-  DEPENDS
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.common
-    libc.src.__support.error_or
-    libc.src.__support.macros.config
-    libc.hdr.types.ssize_t
-    libc.include.sys_syscall
-)
-
-add_header_library(
   recvfrom
   HDRS
     recvfrom.h
@@ -199,19 +186,6 @@ add_header_library(
     libc.src.__support.macros.config
     libc.hdr.types.ssize_t
     libc.hdr.types.struct_msghdr
-    libc.include.sys_syscall
-)
-
-add_header_library(
-  send
-  HDRS
-    send.h
-  DEPENDS
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.common
-    libc.src.__support.error_or
-    libc.src.__support.macros.config
-    libc.hdr.types.ssize_t
     libc.include.sys_syscall
 )
 

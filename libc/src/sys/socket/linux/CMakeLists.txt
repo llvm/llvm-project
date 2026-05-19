@@ -147,7 +147,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.ssize_t
     libc.src.__support.common
-    libc.src.__support.OSUtil.linux.syscall_wrappers.send
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sendto
     libc.src.errno.errno
 )
 
@@ -203,7 +203,7 @@ add_entrypoint_object(
     libc.src.__support.macros.sanitizer
     libc.hdr.types.ssize_t
     libc.src.__support.common
-    libc.src.__support.OSUtil.linux.syscall_wrappers.recv
+    libc.src.__support.OSUtil.linux.syscall_wrappers.recvfrom
     libc.src.errno.errno
 )
 
