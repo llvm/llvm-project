@@ -5507,6 +5507,22 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
+  // Mul utility functions
+  //
+
+  /// Expand X * C into shifts and adds/subs using Bernstein's algorithm.
+  /// \param ShlAddCost maps shift amount to the cost of a fused shift-add step.
+  /// \param InstrCount if non-null, contains the number of instructions after
+  /// expansion.
+  /// Returns SDValue() if expansion is not profitable.
+  SDValue buildMulByConstant(
+      SDNode *N, SelectionDAG &DAG, const APInt &MulAmt,
+      unsigned *InstrCount = nullptr,
+      function_ref<unsigned(unsigned)> ShlAddCost = [](unsigned) {
+        return 2u;
+      }) const;
+
+  //===--------------------------------------------------------------------===//
   // Legalization utility functions
   //
 

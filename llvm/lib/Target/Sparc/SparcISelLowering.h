@@ -143,6 +143,7 @@ namespace llvm {
     SDValue LowerF128Compare(SDValue LHS, SDValue RHS, unsigned &SPCC,
                              const SDLoc &DL, SelectionDAG &DAG) const;
 
+    SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue PerformBITCASTCombine(SDNode *N, DAGCombinerInfo &DCI) const;

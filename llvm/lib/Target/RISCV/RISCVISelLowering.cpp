@@ -17195,32 +17195,6 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
 }
 
-// Try to expand a multiply to a sequence of shifts and add/subs,
-// for a machine without native mul instruction.
-static SDValue expandMulToNAFSequence(SDNode *N, SelectionDAG &DAG,
-                                      uint64_t MulAmt) {
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  const uint64_t BitWidth = VT.getFixedSizeInBits();
-
-  SDValue Result = DAG.getConstant(0, DL, N->getValueType(0));
-  SDValue N0 = N->getOperand(0);
-
-  // Find the Non-adjacent form of the multiplier.
-  for (uint64_t E = MulAmt, I = 0; E && I < BitWidth; ++I, E >>= 1) {
-    if (E & 1) {
-      bool IsAdd = (E & 3) == 1;
-      E -= IsAdd ? 1 : -1;
-      SDValue ShiftVal = DAG.getNode(ISD::SHL, DL, VT, N0,
-                                     DAG.getShiftAmountConstant(I, VT, DL));
-      ISD::NodeType AddSubOp = IsAdd ? ISD::ADD : ISD::SUB;
-      Result = DAG.getNode(AddSubOp, DL, VT, Result, ShiftVal);
-    }
-  }
-
-  return Result;
-}
-
 // X * (2^N +/- 2^M) -> (add/sub (shl X, C1), (shl X, C2))
 static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
                                         uint64_t MulAmt) {
@@ -17422,8 +17396,13 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = expandMulToAddOrSubOfShl(N, DAG, MulAmt))
     return V;
 
-  if (!Subtarget.hasStdExtZmmul())
-    return expandMulToNAFSequence(N, DAG, MulAmt);
+  if (!Subtarget.hasStdExtZmmul()) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    return TLI.buildMulByConstant(
+        N, DAG, APInt(64, MulAmt), nullptr,
+        // sh[123]add fuses shift+add into one instruction when available.
+        [&](unsigned ShAmt) { return Subtarget.hasShlAdd(ShAmt) ? 1u : 2u; });
+  }
 
   return SDValue();
 }

@@ -251,26 +251,18 @@ define i32 @test_cttz_i32(i32 %a) nounwind {
 ; RV64I-NEXT:  # %bb.1: # %cond.false
 ; RV64I-NEXT:    neg a1, a0
 ; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    slli a1, a0, 6
-; RV64I-NEXT:    slli a2, a0, 8
-; RV64I-NEXT:    slli a3, a0, 10
-; RV64I-NEXT:    slli a4, a0, 12
-; RV64I-NEXT:    add a1, a1, a2
-; RV64I-NEXT:    slli a2, a0, 16
-; RV64I-NEXT:    sub a3, a3, a4
-; RV64I-NEXT:    slli a4, a0, 18
-; RV64I-NEXT:    sub a2, a2, a4
-; RV64I-NEXT:    slli a4, a0, 4
-; RV64I-NEXT:    sub a4, a0, a4
-; RV64I-NEXT:    add a1, a4, a1
-; RV64I-NEXT:    slli a4, a0, 14
-; RV64I-NEXT:    sub a3, a3, a4
-; RV64I-NEXT:    slli a4, a0, 23
-; RV64I-NEXT:    sub a2, a2, a4
-; RV64I-NEXT:    slli a0, a0, 27
-; RV64I-NEXT:    add a1, a1, a3
+; RV64I-NEXT:    slli a1, a0, 9
+; RV64I-NEXT:    sub a1, a1, a0
+; RV64I-NEXT:    slli a1, a1, 3
+; RV64I-NEXT:    add a1, a1, a0
+; RV64I-NEXT:    slli a1, a1, 5
+; RV64I-NEXT:    sub a1, a1, a0
+; RV64I-NEXT:    slli a1, a1, 2
+; RV64I-NEXT:    add a1, a1, a0
+; RV64I-NEXT:    slli a2, a1, 4
+; RV64I-NEXT:    sub a2, a2, a1
+; RV64I-NEXT:    slli a2, a2, 4
 ; RV64I-NEXT:    add a0, a2, a0
-; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    srliw a0, a0, 27
 ; RV64I-NEXT:    lui a1, %hi(.LCPI2_0)
 ; RV64I-NEXT:    addi a1, a1, %lo(.LCPI2_0)
@@ -731,26 +723,18 @@ define i32 @test_cttz_i32_zero_poison(i32 %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    neg a1, a0
 ; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    slli a1, a0, 6
-; RV64I-NEXT:    slli a2, a0, 8
-; RV64I-NEXT:    slli a3, a0, 10
-; RV64I-NEXT:    slli a4, a0, 12
-; RV64I-NEXT:    add a1, a1, a2
-; RV64I-NEXT:    slli a2, a0, 16
-; RV64I-NEXT:    sub a3, a3, a4
-; RV64I-NEXT:    slli a4, a0, 18
-; RV64I-NEXT:    sub a2, a2, a4
-; RV64I-NEXT:    slli a4, a0, 4
-; RV64I-NEXT:    sub a4, a0, a4
-; RV64I-NEXT:    add a1, a4, a1
-; RV64I-NEXT:    slli a4, a0, 14
-; RV64I-NEXT:    sub a3, a3, a4
-; RV64I-NEXT:    slli a4, a0, 23
-; RV64I-NEXT:    sub a2, a2, a4
-; RV64I-NEXT:    slli a0, a0, 27
-; RV64I-NEXT:    add a1, a1, a3
+; RV64I-NEXT:    slli a1, a0, 9
+; RV64I-NEXT:    sub a1, a1, a0
+; RV64I-NEXT:    slli a1, a1, 3
+; RV64I-NEXT:    add a1, a1, a0
+; RV64I-NEXT:    slli a1, a1, 5
+; RV64I-NEXT:    sub a1, a1, a0
+; RV64I-NEXT:    slli a1, a1, 2
+; RV64I-NEXT:    add a1, a1, a0
+; RV64I-NEXT:    slli a2, a1, 4
+; RV64I-NEXT:    sub a2, a2, a1
+; RV64I-NEXT:    slli a2, a2, 4
 ; RV64I-NEXT:    add a0, a2, a0
-; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    srliw a0, a0, 27
 ; RV64I-NEXT:    lui a1, %hi(.LCPI6_0)
 ; RV64I-NEXT:    addi a1, a1, %lo(.LCPI6_0)

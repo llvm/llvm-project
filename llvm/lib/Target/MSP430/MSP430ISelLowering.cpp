@@ -116,13 +116,12 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1,   Expand);
 
-  // FIXME: Implement efficiently multiplication by a constant
   setOperationAction(ISD::MUL,              MVT::i8,    Promote);
   setOperationAction(ISD::MULHS,            MVT::i8,    Promote);
   setOperationAction(ISD::MULHU,            MVT::i8,    Promote);
   setOperationAction(ISD::SMUL_LOHI,        MVT::i8,    Promote);
   setOperationAction(ISD::UMUL_LOHI,        MVT::i8,    Promote);
-  setOperationAction(ISD::MUL,              MVT::i16,   LibCall);
+  setOperationAction(ISD::MUL,              MVT::i16,   Custom);
   setOperationAction(ISD::MULHS,            MVT::i16,   Expand);
   setOperationAction(ISD::MULHU,            MVT::i16,   Expand);
   setOperationAction(ISD::SMUL_LOHI,        MVT::i16,   Expand);
@@ -156,6 +155,7 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
 SDValue MSP430TargetLowering::LowerOperation(SDValue Op,
                                              SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
+  case ISD::MUL:              return LowerMUL(Op, DAG);
   case ISD::SHL: // FALLTHROUGH
   case ISD::SRL:
   case ISD::SRA:              return LowerShifts(Op, DAG);
@@ -772,6 +772,30 @@ SDValue MSP430TargetLowering::LowerCallResult(
   }
 
   return Chain;
+}
+
+SDValue MSP430TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op->getValueType(0);
+  if (VT != MVT::i16)
+    return SDValue();
+
+  ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op->getOperand(1));
+  if (!C)
+    return SDValue();
+
+  unsigned InstrCount = 0;
+  SDValue Result =
+      buildMulByConstant(Op.getNode(), DAG, C->getAPIntValue(), &InstrCount,
+                         [](unsigned ShAmt) -> unsigned {
+                           if (ShAmt == 8)
+                             return 2; // swpb + add
+                           if (ShAmt == 9)
+                             return 3; // swpb + shift-by-1 + add
+                           return ShAmt + 1; // ShAmt individual shifts + add
+                         });
+  if (!Result || InstrCount > 12)
+    return SDValue();
+  return Result;
 }
 
 SDValue MSP430TargetLowering::LowerShifts(SDValue Op,

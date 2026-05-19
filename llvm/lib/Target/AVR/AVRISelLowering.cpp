@@ -164,19 +164,19 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
   setOperationAction(ISD::SDIVREM, MVT::i16, Custom);
   setOperationAction(ISD::SDIVREM, MVT::i32, Custom);
 
-  // Do not use MUL. The AVR instructions are closer to SMUL_LOHI &co.
-  setOperationAction(ISD::MUL, MVT::i8, Expand);
-  setOperationAction(ISD::MUL, MVT::i16, Expand);
-
   // Expand 16 bit multiplications.
   setOperationAction(ISD::SMUL_LOHI, MVT::i16, Expand);
   setOperationAction(ISD::UMUL_LOHI, MVT::i16, Expand);
 
-  // Expand multiplications to libcalls when there is
-  // no hardware MUL.
   if (!Subtarget.supportsMultiplication()) {
+    setOperationAction(ISD::MUL, MVT::i8, Custom);
+    setOperationAction(ISD::MUL, MVT::i16, Custom);
     setOperationAction(ISD::SMUL_LOHI, MVT::i8, Expand);
     setOperationAction(ISD::UMUL_LOHI, MVT::i8, Expand);
+  } else {
+    // Do not use MUL. The AVR instructions are closer to SMUL_LOHI &co.
+    setOperationAction(ISD::MUL, MVT::i8, Expand);
+    setOperationAction(ISD::MUL, MVT::i16, Expand);
   }
 
   for (MVT VT : MVT::integer_valuetypes()) {
@@ -925,10 +925,20 @@ SDValue AVRTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
   return New;
 }
 
+SDValue AVRTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
+  ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op->getOperand(1));
+  if (!C)
+    return SDValue();
+
+  return buildMulByConstant(Op.getNode(), DAG, C->getAPIntValue());
+}
+
 SDValue AVRTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default:
     llvm_unreachable("Don't know how to custom lower this!");
+  case ISD::MUL:
+    return LowerMUL(Op, DAG);
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
