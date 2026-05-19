@@ -229,18 +229,22 @@ int32_t __kmpc_gpu_xteam_reduce_nowait(IdentTy *Loc, void *reduce_data,
                                        ListGlobalFnTy lgcpyFct,
                                        ListGlobalFnTy glcpyFct,
                                        ListGlobalFnTy glredFct) {
-  // Terminate all threads in non-SPMD mode except for the master thread.
-  uint32_t ThreadId = mapping::getThreadIdInBlock();
-  if (mapping::isGenericMode()) {
+  uint32_t ThreadId;
+  uint32_t NumThreads;
+
+  if (mapping::isSPMDMode()) {
+    // In SPMD mode all workers participate in the teams reduction.
+    ThreadId = mapping::getThreadIdInBlock();
+    NumThreads = mapping::getNumberOfThreadsInBlock();
+  } else {
+    // In generic mode, only the team master participates in the teams
+    // reduction because the workers are waiting for parallel work.
     if (!mapping::isMainThreadInGenericMode())
       return 0;
     ThreadId = 0;
+    NumThreads = 1;
   }
 
-  // In non-generic mode all workers participate in the teams reduction.
-  // In generic mode only the team master participates in the teams
-  // reduction because the workers are waiting for parallel work.
-  uint32_t NumThreads = omp_get_num_threads();
   uint32_t TeamId = omp_get_team_num();
   uint32_t NumTeams = omp_get_num_teams();
 

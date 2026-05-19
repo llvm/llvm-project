@@ -4522,7 +4522,7 @@ checkReductionInfos(ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
-    ArrayRef<bool> IsByRef, bool IsNoWait, bool IsTeamsReduction,
+    ArrayRef<bool> IsByRef, bool IsNoWait, bool IsTeamsReduction, bool IsSPMD,
     ReductionGenCBKind ReductionGenCBKind, std::optional<omp::GV> GridValue,
     Value *SrcLocInfo) {
   if (!updateToLocation(Loc))
@@ -4629,9 +4629,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
 
   // NOTE: ReductionDataSize is passed as the reduce_data_size
   // argument to __kmpc_nvptx_{parallel,teams}_reduce_nowait_v2, but
-  // the runtime implementations do not currently use it.  The teams
-  // runtime reads ReductionDataSize from KernelEnvironmentTy instead
-  // (set separately via TargetKernelDefaultAttrs).  It is computed
+  // the runtime implementations do not currently use it.  It is computed
   // here conservatively as max(element sizes) * N rather than the
   // exact sum, which over-calculates the size for mixed reduction
   // types but is harmless given the argument is unused.
@@ -4653,6 +4651,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   }
   Value *ReductionDataSize =
       Builder.getInt64(MaxDataSize * ReductionInfos.size());
+
+  // Populated by the teams-reduction branch with per-thread scratch field
+  // pointers (one per reduction variable). The writer-thread combine loop
+  // below reads the final reduced values from these slots instead of from
+  // RI.PrivateVariable, since the runtime leaves the result in the per-thread
+  // scratch rather than touching the original team-local storage.
+  SmallVector<Value *, 4> PerThreadScratchFieldPtrs;
+
   if (!IsTeamsReduction) {
     Value *SarFuncCast =
         Builder.CreatePointerBitCastOrAddrSpaceCast(*SarFunc, FuncPtrTy);
@@ -4685,8 +4691,71 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
 
     Builder.restoreIP(CodeGenIP);
 
-    Value *Args3[] = {SrcLocInfo, RL,        *SarFunc, WcFunc,
-                      *LtGCFunc,  *GtLCFunc, *GtLRFunc};
+    // The runtime's cross-team final aggregate uses the storage pointed at by
+    // its reduce-list argument as per-thread scratch.  When the surrounding
+    // kernel is already in SPMD execution mode, clang emitted each reduction
+    // private as a per-thread `alloca addrspace(5)`, so the original red_list
+    // (RL) is already per-thread and nothing else is needed.
+    //
+    // When the kernel is in Non-SPMD execution mode at codegen time, clang's
+    // Generic-mode globalization put the reduction private into team-shared
+    // LDS.  OpenMPOpt may later upgrade the kernel to Generic-SPMD, at which
+    // point all threads of the last team enter the cross-team final aggregate
+    // — and they would race on the shared LDS slot if we passed RL through.
+    // Emit a per-thread scratch buffer + a per-thread red_list, copy the
+    // team-local value in, and hand the per-thread red_list to the runtime
+    // instead.  `PerThreadScratchFieldPtrs` is then non-empty, which signals
+    // the writer-thread combine loop below to source the final value from
+    // the per-thread scratch (which the runtime updated) rather than from
+    // RI.PrivateVariable (which still holds the team-local value).
+    Value *RuntimeRedList = RL;
+    if (!IsSPMD) {
+      CodeGenIP = Builder.saveIP();
+      Builder.restoreIP(AllocaIP);
+      Value *PerThreadScratchAlloca = Builder.CreateAlloca(
+          ReductionsBufferTy, /*ArraySize=*/nullptr, ".omp.reduction.scratch");
+      Value *PerThreadScratch = Builder.CreatePointerBitCastOrAddrSpaceCast(
+          PerThreadScratchAlloca, PtrTy,
+          PerThreadScratchAlloca->getName() + ".ascast");
+      ArrayType *PerThreadRedListTy =
+          ArrayType::get(PtrTy, ReductionInfos.size());
+      Value *PerThreadRedListAlloca =
+          Builder.CreateAlloca(PerThreadRedListTy, /*ArraySize=*/nullptr,
+                               ".omp.reduction.per_thread_red_list");
+      Value *PerThreadRedList = Builder.CreatePointerBitCastOrAddrSpaceCast(
+          PerThreadRedListAlloca, PtrTy,
+          PerThreadRedListAlloca->getName() + ".ascast");
+      Builder.restoreIP(CodeGenIP);
+
+      PerThreadScratchFieldPtrs.assign(ReductionInfos.size(), nullptr);
+      for (auto En : enumerate(ReductionInfos)) {
+        const ReductionInfo &RI = En.value();
+        Type *FieldTy = ReductionTypeArgs[En.index()];
+        Value *FieldPtr = Builder.CreateConstInBoundsGEP2_32(
+            ReductionsBufferTy, PerThreadScratch, 0, En.index());
+        Value *Slot =
+            Builder.CreateInBoundsGEP(PerThreadRedListTy, PerThreadRedList,
+                                      {ConstantInt::get(IndexTy, 0),
+                                       ConstantInt::get(IndexTy, En.index())});
+        Builder.CreateStore(FieldPtr, Slot);
+
+        // Strictly only thread 0 needs the team value copied in (only it
+        // does the initial GB[TeamId] save), but having every thread copy
+        // keeps this branchless; the non-thread-0 garbage is overwritten by
+        // the runtime's glcpyFct before being read.
+        Value *SrcPtr = RI.PrivateVariable;
+        if (!IsByRef.empty() && IsByRef[En.index()])
+          SrcPtr = Builder.CreateLoad(PtrTy, SrcPtr);
+        Value *TeamVal = Builder.CreateLoad(FieldTy, SrcPtr);
+        Builder.CreateStore(TeamVal, FieldPtr);
+
+        PerThreadScratchFieldPtrs[En.index()] = FieldPtr;
+      }
+      RuntimeRedList = PerThreadRedList;
+    }
+
+    Value *Args3[] = {SrcLocInfo, RuntimeRedList, *SarFunc, WcFunc,
+                      *LtGCFunc,  *GtLCFunc,      *GtLRFunc};
 
     Function *TeamsReduceFn = getOrCreateRuntimeFunctionPtr(
         RuntimeFunction::OMPRTL___kmpc_gpu_xteam_reduce_nowait);
@@ -4710,6 +4779,25 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     const ReductionInfo &RI = En.value();
     Type *ValueType = RI.ElementType;
     Value *RedValue = RI.Variable;
+
+    // For the Non-SPMD teams-reduction path the call site above redirected
+    // the runtime onto a per-thread scratch buffer (see the `if (!IsSPMD)`
+    // block).  The writer thread's final reduced value lives in
+    // PerThreadScratchFieldPtrs[i] rather than in RI.PrivateVariable — which
+    // still holds only the team-local value.  Publish the final value back
+    // into RI.PrivateVariable so the combiner below reads it unchanged.
+    // Only the writer thread executes this `then` branch, so the store to
+    // the team-shared LDS slot is race-free.
+    if (!PerThreadScratchFieldPtrs.empty()) {
+      Type *FieldTy = ReductionTypeArgs[En.index()];
+      Value *FinalVal =
+          Builder.CreateLoad(FieldTy, PerThreadScratchFieldPtrs[En.index()]);
+      Value *DstPtr = RI.PrivateVariable;
+      if (!IsByRef.empty() && IsByRef[En.index()])
+        DstPtr = Builder.CreateLoad(PtrTy, DstPtr);
+      Builder.CreateStore(FinalVal, DstPtr);
+    }
+
     Value *RHS =
         Builder.CreatePointerBitCastOrAddrSpaceCast(RI.PrivateVariable, PtrTy);
 

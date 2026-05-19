@@ -2330,6 +2330,16 @@ public:
   /// \param IsByRef For each reduction clause, whether the reduction is by-ref.
   /// \param IsTeamsReduction   Optional flag set if it is a teams
   ///                           reduction.
+  /// \param IsSPMD             Optional flag set when the surrounding kernel
+  ///                           is compiled in SPMD execution mode (every
+  ///                           reduction private is then known to be a
+  ///                           per-thread scratch alloca).  When false, the
+  ///                           teams-reduction call site emits per-thread
+  ///                           scratch and copies the team-local value in so
+  ///                           the runtime's cross-team work cannot race on
+  ///                           team-shared LDS storage produced by Generic
+  ///                           globalization (Generic-SPMD case after
+  ///                           OpenMPOpt SPMD-ization).
   /// \param GridValue          Optional GPU grid value.
   /// used for teams reduction.
   /// \param SrcLocInfo         Source location information global.
@@ -2337,7 +2347,7 @@ public:
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
       ArrayRef<bool> IsByRef, bool IsNoWait = false,
-      bool IsTeamsReduction = false,
+      bool IsTeamsReduction = false, bool IsSPMD = false,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
       std::optional<omp::GV> GridValue = {}, Value *SrcLocInfo = nullptr);
 

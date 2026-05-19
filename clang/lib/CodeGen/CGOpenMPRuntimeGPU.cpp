@@ -1787,10 +1787,12 @@ void CGOpenMPRuntimeGPU::emitReduction(
     Idx++;
   }
 
+  bool IsSPMD = getExecutionMode() == CGOpenMPRuntimeGPU::EM_SPMD;
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createReductionsGPU(
           OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, /*IsByRef=*/{}, false,
-          TeamsReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
+          TeamsReduction, IsSPMD,
+          llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
           CGF.getTarget().getGridValue(), RTLoc));
   CGF.Builder.restoreIP(AfterIP);
 }
