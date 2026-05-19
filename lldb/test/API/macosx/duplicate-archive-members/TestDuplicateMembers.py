@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipUnlessDarwin
 class BSDArchivesTestCase(TestBase):
     def test(self):
         """Break inside a() and b() defined within libfoo.a."""
