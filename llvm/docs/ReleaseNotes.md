@@ -148,6 +148,11 @@ Makes programs 10x faster by doing Special New Thing.
   disabled by default to maintain compatibility with Binutils and LLVM older
   toolchains that do not define the `R_AARCH64_TLS_DTPREL64` static relocation
   type for TLS offsets.
+* A bug was fixed that caused LLVM IR inline assembly clobbers of the x29 and
+  x30 registers to be ignored when they were written using their xN names
+  instead of the ABI names FP and LR. Note that LLVM IR produced by Clang
+  always uses the ABI names, but other frontends may not.
+  ([#167783](https://github.com/llvm/llvm-project/pull/167783))
 
 ### Changes to the AMDGPU Backend
 
@@ -207,6 +212,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Adds experimental assembler support for the 'Zvvmm` (RISC-V Integer Matrix Multiply-Accumulate) extension.
 * Adds experimental assembler support for the 'Zvvfmm` (RISC-V Floating-Point Matrix Multiply-Accumulate) extension.
 * Adds support for 'Ziccid' (Instruction/Data Coherence and Consistency) extension.
+* Adds experimental assembler support for the `Xqccmt` (Qualcomm 16-bit Table Jump) vendor extension.
 
 ### Changes to the WebAssembly Backend
 
@@ -273,8 +279,10 @@ Makes programs 10x faster by doing Special New Thing.
 * Breakpoint commands now accept `.` to refer to the location(s) at which the current thread is stopped. For
   example, `breakpoint disable .` disables the just-hit breakpoint location. Another usage is to automate a
   command to run at the current location: `breakpoint command add -o 'p my_var' .`.
-* The `apropos` command now highlights matching keywords in its output when color is enabled.
-* The TUI mode (enabled with the `gui` command) now has a real-time console output pane. stdout / stderr messages get redirected to this pane when it is enabled.
+* The `apropos` command now:
+  * Highlights matching keywords in its output when color is enabled.
+  * Searches the components of settings paths. For example `apropos qemu-user` will now
+    show `platform.plugin.qemu-user` as one of the results.
 
 #### Deprecated APIs
 

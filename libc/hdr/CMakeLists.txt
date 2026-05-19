@@ -376,5 +376,13 @@ add_gen_header(
   PROXY
 )
 
+add_proxy_header_library(
+  regex_macros
+  HDRS
+    regex_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.regex_macros
+)
+
 add_subdirectory(types)
 add_subdirectory(func)
