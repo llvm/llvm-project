@@ -23,7 +23,7 @@ class InstCountPass : public RequiredPassInfoMixin<InstCountPass> {
 public:
   explicit InstCountPass() {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // end namespace llvm

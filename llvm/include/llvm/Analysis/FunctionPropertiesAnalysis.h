@@ -189,7 +189,7 @@ class FunctionPropertiesStatisticsPass
 public:
   explicit FunctionPropertiesStatisticsPass() {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// Correctly update FunctionPropertiesInfo post-inlining. A

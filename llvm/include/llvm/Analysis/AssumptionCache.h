@@ -168,7 +168,7 @@ public:
   }
 
   /// Determine which values are affected by this assume operand bundle.
-  static void
+  LLVM_ABI static void
   findValuesAffectedByOperandBundle(OperandBundleUse Bundle,
                                     function_ref<void(Value *)> InsertAffected);
 };

@@ -100,11 +100,11 @@ public:
   using const_iterator = DominanceFrontier::const_iterator;
 
   /// Handle invalidation explicitly.
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
+                           FunctionAnalysisManager::Invalidator &);
 };
 
-class DominanceFrontierWrapperPass : public FunctionPass {
+class LLVM_ABI DominanceFrontierWrapperPass : public FunctionPass {
   DominanceFrontier DF;
 
 public:
@@ -141,7 +141,7 @@ public:
   using Result = DominanceFrontier;
 
   /// Run the analysis pass over a function and produce a dominator tree.
-  DominanceFrontier run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI DominanceFrontier run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Printer pass for the \c DominanceFrontier.
@@ -150,9 +150,9 @@ class DominanceFrontierPrinterPass
   raw_ostream &OS;
 
 public:
-  explicit DominanceFrontierPrinterPass(raw_ostream &OS);
+  LLVM_ABI explicit DominanceFrontierPrinterPass(raw_ostream &OS);
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

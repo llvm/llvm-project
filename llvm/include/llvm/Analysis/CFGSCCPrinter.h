@@ -18,7 +18,7 @@ class CFGSCCPrinterPass : public RequiredPassInfoMixin<CFGSCCPrinterPass> {
 
 public:
   explicit CFGSCCPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // namespace llvm
 
