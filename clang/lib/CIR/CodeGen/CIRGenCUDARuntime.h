@@ -33,9 +33,6 @@ class CIRGenCUDARuntime {
 protected:
   CIRGenModule &cgm;
 
-  /// Mangle context for device.
-  std::unique_ptr<MangleContext> deviceMC;
-
 public:
   CIRGenCUDARuntime(CIRGenModule &cgm);
   virtual ~CIRGenCUDARuntime();
