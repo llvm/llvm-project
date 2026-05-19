@@ -3328,7 +3328,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
          "VPReplicateRecipes must be unrolled before ::execute");
   auto *Instr = getUnderlyingInstr();
   Instruction *Cloned = Instr->clone();
-  if (!Instr->getType()->isVoidTy()) {
+  if (definesResult()) {
     Cloned->setName(Instr->getName() + ".cloned");
     Type *ResultTy = State.TypeAnalysis.inferScalarType(this);
     // The operands of the replicate recipe may have been narrowed, resulting in
@@ -3636,7 +3636,7 @@ void VPReplicateRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
   O << Indent << (IsSingleScalar ? "CLONE " : "REPLICATE ");
 
-  if (!getUnderlyingInstr()->getType()->isVoidTy()) {
+  if (definesResult()) {
     printAsOperand(O, SlotTracker);
     O << " = ";
   }

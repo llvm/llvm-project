@@ -3256,6 +3256,11 @@ public:
 
   bool isPredicated() const { return IsPredicated; }
 
+  /// Returns true if the underlying instruction has a non-void result type.
+  bool definesResult() const {
+    return !getUnderlyingInstr()->getType()->isVoidTy();
+  }
+
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
