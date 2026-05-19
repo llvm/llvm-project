@@ -2607,8 +2607,7 @@ ParseStatus RISCVAsmParser::parseTileLambda(OperandVector &Operands) {
     return ParseStatus::NoMatch;
 
   unsigned Lambda;
-  if (Name.getAsInteger(10, Lambda) || !isPowerOf2_32(Lambda) ||
-      Lambda >= 128)
+  if (Name.getAsInteger(10, Lambda) || !isPowerOf2_32(Lambda) || Lambda >= 128)
     return Error(S, "operand must be L1, L2, L4, L8, L16, L32, or L64");
 
   unsigned EncodedLambda = Log2_32(Lambda) + 1;
