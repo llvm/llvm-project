@@ -180,7 +180,7 @@ void populateRewrites(RewritePatternSet &patternSet) {
 }
 ```
 
-[ODS](https://mlir.llvm.org/docs/DefiningDialects/Operations/) provides a simple
+[ODS](../DefiningDialects/Operations.md) provides a simple
 way to define a function-style canonicalization for your operation. In the TableGen
 definition of the op, specify `let hasCanonicalizeMethod = 1;` and then implement
 the `canonicalize` method in your .cpp file:
@@ -230,7 +230,7 @@ struct ConvertTFLeakyRelu : public RewritePattern {
 ```
 
 In the C++ rewrite, the static benefit of the rewrite pattern is specified at 
-construction, while in the pattern generator a simple heuristic is currently 
+construction, while, in the pattern generator, a simple heuristic is currently 
 employed based around the number of ops matched and replaced.
 
 The above rule did not capture the matching operands/attributes, but in general
