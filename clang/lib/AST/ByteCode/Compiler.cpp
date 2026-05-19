@@ -1619,14 +1619,18 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
+
+  QualType LHSTy = LHS->getType().getAtomicUnqualifiedType();
+  QualType RHSTy = RHS->getType().getAtomicUnqualifiedType();
+
   assert(!E->isCommaOp() &&
          "Comma op should be handled in VisitBinaryOperator");
   assert(E->getType()->isVectorType());
-  assert(LHS->getType()->isVectorType());
-  assert(RHS->getType()->isVectorType());
+  assert(LHSTy->isVectorType());
+  assert(RHSTy->isVectorType());
 
   // We can only handle vectors with primitive element types.
-  if (!canClassify(LHS->getType()->castAs<VectorType>()->getElementType()))
+  if (!canClassify(LHSTy->castAs<VectorType>()->getElementType()))
     return false;
 
   // Prepare storage for result.
@@ -1643,14 +1647,14 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
                 ? BinaryOperator::getOpForCompoundAssignment(E->getOpcode())
                 : E->getOpcode();
 
-  PrimType ElemT = this->classifyVectorElementType(LHS->getType());
-  PrimType RHSElemT = this->classifyVectorElementType(RHS->getType());
+  PrimType ElemT = this->classifyVectorElementType(LHSTy);
+  PrimType RHSElemT = this->classifyVectorElementType(RHSTy);
   PrimType ResultElemT = this->classifyVectorElementType(E->getType());
 
   if (E->getOpcode() == BO_Assign) {
     assert(Ctx.getASTContext().hasSameUnqualifiedType(
-        LHS->getType()->castAs<VectorType>()->getElementType(),
-        RHS->getType()->castAs<VectorType>()->getElementType()));
+        LHSTy->castAs<VectorType>()->getElementType(),
+        RHSTy->castAs<VectorType>()->getElementType()));
     if (!this->visit(LHS))
       return false;
     if (!this->visit(RHS))
