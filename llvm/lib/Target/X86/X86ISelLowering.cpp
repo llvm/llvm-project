@@ -1359,7 +1359,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     if (!Subtarget.hasSSSE3()) {
       setOperationAction(ISD::CTLZ, MVT::v4i32, Custom);
-      setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v4i32, Custom);
+      setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::v4i32, Custom);
     }
   }
 

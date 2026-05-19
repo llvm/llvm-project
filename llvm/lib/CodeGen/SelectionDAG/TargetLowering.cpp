@@ -10873,11 +10873,12 @@ SDValue TargetLowering::expandCTLZ(SDNode *Node, SelectionDAG &DAG) const {
 SDValue TargetLowering::expandCTLZWithFP(SDNode *Node,
                                          SelectionDAG &DAG) const {
   // pseudocode :
-  // if (x == 0) return 32;
-  // f64 f = (f64)x;
-  // u64 i = bitcast<u64>(f);
-  // u32 ilog2 = (u32)(i >> 52) - 1023;
-  // return 31 - ilog2;
+  // v = v & ~(v >> 8)
+  // v = (f32)v
+  // v = bitcast<i32>(v)
+  // v = v >> 23
+  // v = 158 - v
+  // v = min(v, 32)
 
   SDLoc dl(Node);
   EVT VT = Node->getValueType(0);
@@ -10887,45 +10888,29 @@ SDValue TargetLowering::expandCTLZWithFP(SDNode *Node,
   if (EltVT != MVT::i32)
     return SDValue();
 
-  EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
-  EVT HalfFloatVT = HalfVT.changeVectorElementType(*DAG.getContext(), MVT::f64);
-  EVT HalfFloatBitsVT = HalfFloatVT.changeVectorElementTypeToInteger();
-
-  const fltSemantics &Sem =
-      HalfFloatVT.getVectorElementType().getFltSemantics();
+  EVT FloatVT = VT.changeVectorElementType(*DAG.getContext(), MVT::f32);
+  const fltSemantics &Sem = FloatVT.getVectorElementType().getFltSemantics();
   unsigned BitWidth = EltVT.getSizeInBits();
   unsigned MantissaBits = APFloat::semanticsPrecision(Sem);
   unsigned ExponentBias = APFloat::semanticsMaxExponent(Sem);
 
-  auto ComputeExp = [&](SDValue Half) {
-    SDValue Float = DAG.getNode(ISD::UINT_TO_FP, dl, HalfFloatVT, Half);
-    SDValue Bits = DAG.getBitcast(HalfFloatBitsVT, Float);
-    SDValue Exp = DAG.getNode(
-        ISD::SRL, dl, HalfFloatBitsVT, Bits,
-        DAG.getShiftAmountConstant(MantissaBits - 1, HalfFloatBitsVT, dl));
-    return DAG.getNode(ISD::TRUNCATE, dl, HalfVT, Exp);
-  };
+  // v = v & ~(v >> 8)
+  SDValue ShiftOp =
+      DAG.getNode(ISD::SRL, dl, VT, Op, DAG.getShiftAmountConstant(8, VT, dl));
+  SDValue Tmp = DAG.getNode(ISD::AND, dl, VT, Op, DAG.getNOT(dl, ShiftOp, VT));
 
-  SDValue ExpTruncLo = ComputeExp(DAG.getExtractSubvector(dl, HalfVT, Op, 0));
-  SDValue ExpTruncHi = ComputeExp(
-      DAG.getExtractSubvector(dl, HalfVT, Op, VT.getVectorNumElements() / 2));
-  SDValue Exp =
-      DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, ExpTruncLo, ExpTruncHi);
-  SDValue NonZeroRes =
-      DAG.getNode(ISD::SUB, dl, VT,
-                  DAG.getConstant(BitWidth - 1 + ExponentBias, dl, VT), Exp);
+  SDValue Float = DAG.getNode(ISD::SINT_TO_FP, dl, FloatVT, Tmp);
+  SDValue Int = DAG.getNode(ISD::BITCAST, dl, VT, Float);
 
-  // Skip Op == 0 case for CTLZ_ZERO_UNDEF
-  if (Node->getOpcode() == ISD::CTLZ_ZERO_UNDEF)
-    return NonZeroRes;
+  SDValue ShiftExp =
+      DAG.getNode(ISD::SRL, dl, VT, Int,
+                  DAG.getShiftAmountConstant(MantissaBits - 1, VT, dl));
+  SDValue UndoBias = DAG.getNode(
+      ISD::USUBSAT, dl, VT,
+      DAG.getConstant(BitWidth - 1 + ExponentBias, dl, VT), ShiftExp);
 
-  // This Handles the Op == 0 case
-  EVT CmpVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-  SDValue Zero = DAG.getConstant(0, dl, VT);
-  SDValue IsZero = DAG.getSetCC(dl, CmpVT, Op, Zero, ISD::SETEQ);
-
-  return DAG.getNode(ISD::VSELECT, dl, VT, IsZero,
-                     DAG.getConstant(BitWidth, dl, VT), NonZeroRes);
+  return DAG.getNode(ISD::SMIN, dl, VT, UndoBias,
+                     DAG.getConstant(BitWidth, dl, VT));
 }
 
 SDValue TargetLowering::expandVPCTLZ(SDNode *Node, SelectionDAG &DAG) const {
