@@ -812,13 +812,14 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
 /// multi_reduction ops (as the upstream pattern does) and is more efficient.
 ///
 /// Example:
-/// vector.multi_reduction <32,64> to <32> (tile_shape=32, 32)
+/// vector.multi_reduction <32x64xf16> to <32xf16> (tile_shape=32, 32)
 /// -- Upstream pattern generates:
-/// %tmp1 = vector.multi_reduction %tile0, %zero_acc <32,32> to <32>
-/// %res = vector.multi_reduction %tmp1, %tile1 <32,32> to <32>
+/// %tmp1 = vector.multi_reduction %tile0, %zero_acc <32x32xf16> to <32xf16>
+/// %res = vector.multi_reduction %tmp1, %tile1 <32x32xf16> to <32xf16>
 /// -- This pattern generates:
-/// %tmp1 = arith.reduction %tile0, %tile1 <32,32> -> <32x,2> // elementwise
-/// %res = vector.multi_reduction %tmp1, %zero_acc <32,32> to <32>
+/// %tmp1 = arith.reduction %tile0, %tile1 <32x32xf16> -> <32x32xf16> //
+/// elementwise %res = vector.multi_reduction %tmp1, %zero_acc <32x32xf16> to
+/// <32xf16>
 struct UnrollMultiReductionOp
     : public UnrollPattern<vector::MultiDimReductionOp> {
   UnrollMultiReductionOp(MLIRContext *context,
@@ -897,15 +898,15 @@ struct UnrollMultiReductionOp
         baseOffsets[dim] = keptOffsets[idx];
 
       // Generate the full tile indices for the reduced dimensions.
-      // Ex: if reduceDimShapes = [32, 64] and reducedDimTargetShapes = [16,
-      // 16], then reducedTileCoords:
+      // Ex: if reduceDimShapes = [32, 64] and
+      // reducedDimTargetShapes = [16, 16], then reducedTileCoords:
       // [(0, 0), (0, 1), (0, 2), (0, 3),
       //  (1, 0), (1, 1), (1, 2), (1, 3)]
       auto reducedTileCoords = StaticTileOffsetRange(
           numReducedTilesPerDim, SmallVector<int64_t>(reducedDims.size(), 1));
 
       // Step 1: Fill "blanks" in the offsets for the reduced dimensions
-      // using 'reducedTileCoords' and exctact according tiles.
+      // using 'reducedTileCoords' and extract according tiles.
       // Ex: tiles = [source[off0, off1, off2_red, off3_red, off4], ...]
       SmallVector<Value> tiles;
       for (SmallVector<int64_t> reducedTileIdx : reducedTileCoords) {
