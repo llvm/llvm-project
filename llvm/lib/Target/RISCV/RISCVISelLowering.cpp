@@ -17629,8 +17629,13 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
   auto GetPreferredEltVT = [](SDValue V) -> MVT {
     // Look backwards: check if V itself is derived from a vector
     SDValue Peek = peekThroughBitcasts(V);
-    if (Peek.getValueType().isVector() && Peek.getValueType().isInteger())
-      return Peek.getSimpleValueType().getVectorElementType();
+    EVT PeekVT = Peek.getValueType();
+
+    if (PeekVT.isVector() && PeekVT.isInteger()) {
+      EVT EltVT = PeekVT.getVectorElementType();
+      if (EltVT.isSimple())
+        return EltVT.getSimpleVT();
+    }
 
     // Look forwards: check if V is bitcasted to a vector elsewhere in the DAG
     for (SDUse &Use : V->uses()) {
@@ -17642,8 +17647,11 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
       SDNode *User = Use.getUser();
       if (User->getOpcode() == ISD::BITCAST) {
         EVT CastVT = User->getValueType(0);
-        if (CastVT.isVector() && CastVT.isInteger())
-          return CastVT.getVectorElementType().getSimpleVT();
+        if (CastVT.isVector() && CastVT.isInteger()) {
+          EVT EltVT = CastVT.getVectorElementType();
+          if (EltVT.isSimple())
+            return EltVT.getSimpleVT();
+        }
       }
     }
     return MVT::INVALID_SIMPLE_VALUE_TYPE;
@@ -17663,9 +17671,8 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
   }
 
   // If both are unsuitable, use the safe default (i8)
-  if (!IsValidEltVT(EltVT)) {
+  if (!IsValidEltVT(EltVT))
     EltVT = MVT::i8;
-  }
 
   unsigned EltSize = EltVT.getSizeInBits();
   unsigned NumElts = OpSize / EltSize;
