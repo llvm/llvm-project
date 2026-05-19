@@ -1574,7 +1574,7 @@ define i32 @popcnt2_64_tail_trunc2(i64 noundef %0) {
   ret i32 %18
 }
 
-; The power-of-two condition only applies on popcount, no the truncated
+; The power-of-two condition only applies on popcount, not the truncated
 ; value's bit width.
 define i17 @popcnt2_64_tail_trunc_non_power_of_two(i64 noundef %0) {
 ; CHECK-LABEL: @popcnt2_64_tail_trunc_non_power_of_two(
