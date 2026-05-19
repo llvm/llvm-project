@@ -1171,6 +1171,14 @@ protected:
       symbol.set_details(T{});
       return symbol;
     } else if (auto *details{symbol.detailsIf<EntityDetails>()}) {
+      // Variable declaration overrides tentative DECLARE TARGET external.
+      if (std::is_same_v<ObjectEntityDetails, T> &&
+          symbol.implicitAttrs().test(Attr::EXTERNAL) &&
+          symbol.test(Symbol::Flag::OmpDeclareTarget)) {
+        symbol.attrs().reset(Attr::EXTERNAL);
+        symbol.implicitAttrs().reset(Attr::EXTERNAL);
+        symbol.set(Symbol::Flag::OmpDeclareTarget, false);
+      }
       symbol.set_details(T{std::move(*details)});
       return symbol;
     } else if (std::is_same_v<EntityDetails, T> &&
@@ -3455,6 +3463,12 @@ void ScopeHandler::ApplyImplicitRules(
     // Dummy argument, no declaration or reference; if it turns
     // out to be a subroutine, it's fine, and if it is a function
     // or object, it'll be caught later.
+    return;
+  }
+  // Tentative DECLARE TARGET external; type will resolve later.
+  if (symbol.test(Symbol::Flag::OmpDeclareTarget) &&
+      symbol.implicitAttrs().test(Attr::EXTERNAL) &&
+      symbol.has<EntityDetails>()) {
     return;
   }
   if (deferImplicitTyping_) {
@@ -9335,19 +9349,21 @@ bool DeclarationVisitor::FindAndMarkDeclareTargetSymbol(
       // subprograms where local variables could be forward-declared.
       // Also skip if a common block with the same name exists.
       // Use isImplicitNoneExternal() since this creates an implicit external,
-      // not an implicit type.
+      // not an implicit type. Use EntityDetails so a later variable
+      // declaration in the same spec part can override it.
       if (!isImplicitNoneExternal() &&
           currScope().kind() != Scope::Kind::Subprogram &&
           currScope().kind() != Scope::Kind::BlockConstruct &&
           !currScope().FindCommonBlock(name.source)) {
         auto [it, inserted]{
-            currScope().try_emplace(name.source, Attrs{}, ProcEntityDetails{})};
+            currScope().try_emplace(name.source, Attrs{}, EntityDetails{})};
         Symbol &symbol{*it->second};
-        if (inserted || symbol.has<ProcEntityDetails>()) {
+        if (inserted || symbol.has<EntityDetails>()) {
           name.symbol = &symbol;
           // Don't set Subroutine flag - let the actual definition determine
-          // whether it's a subroutine or function
+          // whether it's a subroutine or function.
           SetImplicitAttr(symbol, Attr::EXTERNAL);
+          symbol.set(Symbol::Flag::OmpDeclareTarget);
           return true;
         }
       }

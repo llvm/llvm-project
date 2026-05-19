@@ -2909,13 +2909,13 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
       // no other declaration gives it a procedure property, treat it as an
       // external subroutine.
       if (symbol->has<EntityDetails>() && !symbol->GetType() &&
-          !symbol->attrs().test(Attr::EXTERNAL) &&
           !symbol->test(Symbol::Flag::Function) &&
           !symbol->test(Symbol::Flag::Subroutine)) {
-        // Symbol is still unspecialized EntityDetails - promote to external
-        // proc. Don't set Subroutine flag - let the actual definition
-        // determine whether it's a subroutine or function.
-        symbol->attrs().set(Attr::EXTERNAL);
+        // Promote to external proc. Don't set Subroutine flag - let the
+        // actual definition determine whether it's a subroutine or function.
+        if (!symbol->attrs().test(Attr::EXTERNAL)) {
+          symbol->attrs().set(Attr::EXTERNAL);
+        }
         symbol->set_details(ProcEntityDetails{});
       }
     }

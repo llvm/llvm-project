@@ -17,6 +17,7 @@ module test_0
 !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
 !$omp declare target to(no_implicit_materialization_3)
 
+!ERROR: 'no_implicit_materialization_3' must be a variable or a procedure
 !$omp declare target enter(no_implicit_materialization_3)
 
 INTEGER :: data_int = 10

@@ -24,6 +24,7 @@ program declare_target02
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
   !$omp declare target to (blk1_to)
 
+  !ERROR: 'blk1_to' must be a variable or a procedure
   !$omp declare target enter (blk1_to)
 
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
@@ -144,6 +145,7 @@ module mod4
 
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
   !$omp declare target to (blk4_to)
+  !ERROR: 'blk4_to' must be a variable or a procedure
   !$omp declare target enter (blk4_to)
 
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
