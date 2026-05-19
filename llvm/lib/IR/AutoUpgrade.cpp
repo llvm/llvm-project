@@ -2701,10 +2701,9 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
 
   if (Name == "abs.i" || Name == "abs.ll") {
     Value *Arg = CI->getArgOperand(0);
-    Value *Neg = Builder.CreateNeg(Arg, "neg");
-    Value *Cmp = Builder.CreateICmpSGE(
-        Arg, llvm::Constant::getNullValue(Arg->getType()), "abs.cond");
-    Rep = Builder.CreateSelect(Cmp, Arg, Neg, "abs");
+    Rep = Builder.CreateIntrinsic(Intrinsic::abs, {Arg->getType()},
+                                  {Arg, Builder.getTrue()},
+                                  /*FMFSource=*/nullptr, "abs");
   } else if (Name == "abs.bf16" || Name == "abs.bf16x2") {
     Type *Ty = (Name == "abs.bf16")
                    ? Builder.getBFloatTy()
