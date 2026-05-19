@@ -1517,6 +1517,48 @@ func.func @test_cast_to_block_scaled_block_size_mismatch(%arg0: tensor<4x32xf32>
 
 // -----
 
+func.func @test_cast_i8_block_scaled(%arg0: tensor<4x32xi8>) -> tensor<4x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>> {
+  // expected-error@+1 {{'tosa.cast' op requires non-block-scaled element type to be floating-point when casting to or from block scaled element type, got 'i8'}}
+  %0 = tosa.cast %arg0 : (tensor<4x32xi8>) -> tensor<4x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+  return %0 : tensor<4x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+}
+
+// -----
+
+func.func @test_cast_block_scaled_i32(%arg0: tensor<4x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<4x32xi32> {
+  // expected-error@+1 {{'tosa.cast' op requires non-block-scaled element type to be floating-point when casting to or from block scaled element type, got 'i32'}}
+  %0 = tosa.cast %arg0 : (tensor<4x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<4x32xi32>
+  return %0 : tensor<4x32xi32>
+}
+
+// -----
+
+func.func @test_cast_between_block_scaled(%arg0: tensor<4x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<4x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>> {
+  // expected-error@+1 {{'tosa.cast' op requires exactly one of input or output to have block scaled element type}}
+  %0 = tosa.cast %arg0 : (tensor<4x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<4x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+  return %0 : tensor<4x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+}
+
+// -----
+
+func.func @test_block_scaled_cast_invalid_block_shape(%arg0: tensor<1x16x31x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<1x16x31xf32> {
+  // expected-error@+2 {{tensor type 'tensor<1x16x31x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>' blocked dimension must be a multiple of block size, got 31 and block size 32}}
+  // expected-error@+1 {{'tosa.cast' op operand #0 must be tosa-conformant tensor of number values, but got 'tensor<1x16x31x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>'}}
+  %0 = tosa.cast %arg0 : (tensor<1x16x31x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<1x16x31xf32>
+  return %0 : tensor<1x16x31xf32>
+}
+
+// -----
+
+func.func @test_block_scaled_cast_scalar(%arg0: tensor<!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<f32> {
+  // expected-error@+2 {{tensor type 'tensor<!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>' does not support block scaling on scalar tensors}}
+  // expected-error@+1 {{'tosa.cast' op operand #0 must be tosa-conformant tensor of number values, but got 'tensor<!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>'}}
+  %0 = tosa.cast %arg0 : (tensor<!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
+// -----
+
 func.func @test_clamp_quantized(%arg0:tensor<?x112x112x32x!quant.uniform<u8:f32, 0.023529412224888802:-128>>) -> (tensor<?x112x112x32x!quant.uniform<u8:f32, 0.023529412224888802:-128>>) {
     // expected-error@+1 {{'tosa.clamp' op min/max attributes types are incompatible with input/output element types.}}
     %0 = tosa.clamp %arg0 {max_val = 127 : i8, min_val = -128 : i8} : (tensor<?x112x112x32x!quant.uniform<u8:f32, 0.023529412224888802:-128>>) -> tensor<?x112x112x32x!quant.uniform<u8:f32, 0.023529412224888802:-128>>

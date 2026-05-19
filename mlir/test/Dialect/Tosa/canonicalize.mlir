@@ -1651,6 +1651,73 @@ func.func @test_canonicalize_non_narrowing_cast_i8_to_f8E4M3FN_unsupported(%arg0
 
 // -----
 
+// CHECK-LABEL: @test_canonicalize_cast_from_cast_to_block_scaled_type_f4E2M1
+// CHECK: return %arg0 : tensor<15x3x2x256x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+func.func @test_canonicalize_cast_from_cast_to_block_scaled_type_f4E2M1(%arg0: tensor<15x3x2x256x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<15x3x2x256x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>> {
+  %0 = tosa.cast %arg0 : (tensor<15x3x2x256x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<15x3x2x256xf32>
+  %1 = tosa.cast %0 : (tensor<15x3x2x256xf32>) -> tensor<15x3x2x256x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+  return %1 : tensor<15x3x2x256x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+}
+
+// -----
+
+// CHECK-LABEL: @test_canonicalize_cast_from_cast_to_block_scaled_type_f8E5M2
+// CHECK: return %arg0 : tensor<160x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>
+func.func @test_canonicalize_cast_from_cast_to_block_scaled_type_f8E5M2(%arg0: tensor<160x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<160x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>> {
+  %0 = tosa.cast %arg0 : (tensor<160x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<160xf32>
+  %1 = tosa.cast %0 : (tensor<160xf32>) -> tensor<160x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>
+  return %1 : tensor<160x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>
+}
+
+// -----
+
+// CHECK-LABEL: @test_do_not_canonicalize_cast_from_cast_to_block_scaled_type_different_types_f8E5M2_f6E2M3
+// CHECK: %[[values:.+]] = tosa.cast %arg0
+// CHECK: %[[block_scaled:.+]] = tosa.cast %[[values]]
+// CHECK: return %[[block_scaled]] : tensor<160x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+func.func @test_do_not_canonicalize_cast_from_cast_to_block_scaled_type_different_types_f8E5M2_f6E2M3(%arg0: tensor<160x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<160x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>> {
+  %0 = tosa.cast %arg0 : (tensor<160x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<160xf32>
+  %1 = tosa.cast %0 : (tensor<160xf32>) -> tensor<160x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+  return %1 : tensor<160x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+}
+
+// -----
+
+// CHECK-LABEL: @test_do_not_canonicalize_cast_from_cast_to_block_scaled_type_different_types_f6E2M3_f6E3M2
+// CHECK: %[[values:.+]] = tosa.cast %arg0
+// CHECK: %[[block_scaled:.+]] = tosa.cast %[[values]]
+// CHECK: return %[[block_scaled]] : tensor<32x!tosa.block_scaled<f6E3M2FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+func.func @test_do_not_canonicalize_cast_from_cast_to_block_scaled_type_different_types_f6E2M3_f6E3M2(%arg0: tensor<32x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<32x!tosa.block_scaled<f6E3M2FN:f8E8M0FNU:BLOCK_SHAPE_32>> {
+  %0 = tosa.cast %arg0 : (tensor<32x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<32xf32>
+  %1 = tosa.cast %0 : (tensor<32xf32>) -> tensor<32x!tosa.block_scaled<f6E3M2FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+  return %1 : tensor<32x!tosa.block_scaled<f6E3M2FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+}
+
+// -----
+
+// CHECK-LABEL: @test_do_not_canonicalize_cast_from_cast_to_block_scaled_type_unranked
+// CHECK: %[[values:.+]] = tosa.cast %arg0
+// CHECK: %[[block_scaled:.+]] = tosa.cast %[[values]]
+// CHECK: return %[[block_scaled]] : tensor<*x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+func.func @test_do_not_canonicalize_cast_from_cast_to_block_scaled_type_unranked(%arg0: tensor<3x64x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<*x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>> {
+  %0 = tosa.cast %arg0 : (tensor<3x64x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<*xf32>
+  %1 = tosa.cast %0 : (tensor<*xf32>) -> tensor<*x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+  return %1 : tensor<*x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+}
+
+// -----
+
+// CHECK-LABEL: @test_do_not_canonicalize_cast_from_cast_to_block_scaled_type_f8E5M2_f8E4M3
+// CHECK: tosa.cast
+// CHECK: tosa.cast
+func.func @test_do_not_canonicalize_cast_from_cast_to_block_scaled_type_f8E5M2_f8E4M3(%arg0: tensor<15x3x2x256x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<15x3x2x256x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>> {
+  %0 = tosa.cast %arg0 : (tensor<15x3x2x256x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<15x3x2x256xf8E4M3FN>
+  %1 = tosa.cast %0 : (tensor<15x3x2x256xf8E4M3FN>) -> tensor<15x3x2x256x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>
+  return %1 : tensor<15x3x2x256x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>
+}
+
+// -----
+
 // CHECK-LABEL: @test_canonicalize_cast_from_cast_to_block_scaled_f4E2M1
 // CHECK: return %arg0, %arg1 : tensor<15x3x2x256xf4E2M1FN>, tensor<15x3x2x8xf8E8M0FNU>
 func.func @test_canonicalize_cast_from_cast_to_block_scaled_f4E2M1(%arg0: tensor<15x3x2x256xf4E2M1FN>, %arg1: tensor<15x3x2x8xf8E8M0FNU>) -> (tensor<15x3x2x256xf4E2M1FN>, tensor<15x3x2x8xf8E8M0FNU>) {
