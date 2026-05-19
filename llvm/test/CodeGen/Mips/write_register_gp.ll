@@ -1,6 +1,11 @@
 ; RUN: llc -mtriple=mips64el -mcpu=mips64r2 < %s | FileCheck %s -check-prefix=MIPS64
 
-define void @setglobal(i64 %x) {
+; Test that when a user declares $28 as a global register, assignments to it are
+; not optimizes away.
+; Clang previously generated no instruction, which GCC generated `move $gp, $4`.
+; This test ensures Clang matches GCC behavior.
+
+define void @setglobal(i64 %x) nounwind {
 ; MIPS64-LABEL: setglobal:
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    jr $ra
@@ -11,7 +16,7 @@ entry:
   ret void
 }
 
-declare void @llvm.write_register.i64(metadata, i64) #1
+declare void @llvm.write_register.i64(metadata, i64) nounwind
 
 !llvm.named.register.$28 = !{!0}
 !0 = !{!"$28"}
