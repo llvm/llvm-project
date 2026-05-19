@@ -6838,6 +6838,9 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
                                                               Range))
         continue;
 
+      // Invalidate the legacy widening decision so the cost of replaced load is
+      // not counted during precomputeCosts.
+      // TODO: Remove once the legacy exit cost computation is retired.
       for (ElementCount VF : Range)
         Ctx.invalidateWideningDecision(&LoadR->getIngredient(), VF);
 

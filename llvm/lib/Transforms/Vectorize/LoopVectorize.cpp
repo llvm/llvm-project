@@ -938,7 +938,10 @@ public:
     CM_Scalarize,
     CM_VectorCall,
     CM_IntrinsicCall,
-    CM_InvalidDecision
+    /// A widening decision that has been invalidated since the corresponding
+    /// recipe was replaced during VPlan transforms.
+    /// TODO: Remove once the legacy exit cost computation is retired.
+    CM_InvalidatedDecision
   };
 
   /// Save vectorization decision \p W and \p Cost taken by the cost model for
@@ -5392,7 +5395,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       case LoopVectorizationCostModel::CM_VectorCall:
       case LoopVectorizationCostModel::CM_IntrinsicCall:
         llvm_unreachable_internal("Instr has invalid widening decision");
-      case LoopVectorizationCostModel::CM_InvalidDecision:
+      case LoopVectorizationCostModel::CM_InvalidatedDecision:
         return TTI::CastContextHint::None;
       }
 
@@ -5717,8 +5720,8 @@ bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
 
 void VPCostContext::invalidateWideningDecision(Instruction *I,
                                                ElementCount VF) {
-  CM.setWideningDecision(I, VF, LoopVectorizationCostModel::CM_InvalidDecision,
-                         0);
+  CM.setWideningDecision(I, VF,
+                         LoopVectorizationCostModel::CM_InvalidatedDecision, 0);
 }
 
 uint64_t VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {
