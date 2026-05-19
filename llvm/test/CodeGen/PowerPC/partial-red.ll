@@ -10,7 +10,7 @@
 ; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck --check-prefix=BE32 %s
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) uwtable
-define dso_local signext range(i32 -262144, 262137) i32 @tuh(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b) local_unnamed_addr {
+define dso_local signext range(i32 -262144, 262137) i32 @tuh(ptr noundef readonly captures(none) %a) local_unnamed_addr {
 ; CHECK-LABEL: tuh:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvd2x vs0, 0, r3
@@ -56,20 +56,6 @@ define dso_local signext range(i32 -262144, 262137) i32 @tuh(ptr noundef readonl
 ; BE32-NEXT:    stxvw4x v2, 0, r3
 ; BE32-NEXT:    lwz r3, -16(r1)
 ; BE32-NEXT:    blr
-; BE64%s-LABEL: tuh:
-; BE64%s:       # %bb.0: # %entry
-; BE64%s-NEXT:    lxvw4x v3, 0, r3
-; BE64%s-NEXT:    vspltish v2, 1
-; BE64%s-NEXT:    xxlxor v4, v4, v4
-; BE64%s-NEXT:    vmsumuhm v2, v3, v2, v4
-; BE64%s-NEXT:    xxswapd v3, v2
-; BE64%s-NEXT:    vadduwm v2, v2, v3
-; BE64%s-NEXT:    xxspltw v3, v2, 1
-; BE64%s-NEXT:    vadduwm v2, v2, v3
-; BE64%s-NEXT:    xxsldwi vs0, v2, v2, 3
-; BE64%s-NEXT:    mffprwz r3, f0
-; BE64%s-NEXT:    extsw r3, r3
-; BE64%s-NEXT:    blr
 entry:
   %0 = load <8 x i16>, ptr %a, align 2
   %conv = zext <8 x i16> %0 to <8 x i32>
@@ -126,20 +112,6 @@ define dso_local signext range(i32 -262144, 262137) i32 @tuh2(ptr noundef readon
 ; BE32-NEXT:    stxvw4x v2, 0, r3
 ; BE32-NEXT:    lwz r3, -16(r1)
 ; BE32-NEXT:    blr
-; BE64%s-LABEL: tuh2:
-; BE64%s:       # %bb.0: # %entry
-; BE64%s-NEXT:    lxvw4x v2, 0, r3
-; BE64%s-NEXT:    lxvw4x v3, 0, r4
-; BE64%s-NEXT:    xxlxor v4, v4, v4
-; BE64%s-NEXT:    vmsumuhm v2, v2, v3, v4
-; BE64%s-NEXT:    xxswapd v3, v2
-; BE64%s-NEXT:    vadduwm v2, v2, v3
-; BE64%s-NEXT:    xxspltw v3, v2, 1
-; BE64%s-NEXT:    vadduwm v2, v2, v3
-; BE64%s-NEXT:    xxsldwi vs0, v2, v2, 3
-; BE64%s-NEXT:    mffprwz r3, f0
-; BE64%s-NEXT:    extsw r3, r3
-; BE64%s-NEXT:    blr
 entry:
   %0 = load <8 x i16>, ptr %a, align 2
   %conv = zext <8 x i16> %0 to <8 x i32>
@@ -152,7 +124,7 @@ entry:
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) uwtable
-define dso_local signext range(i32 -262144, 262137) i32 @tsh(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b) local_unnamed_addr {
+define dso_local signext range(i32 -262144, 262137) i32 @tsh(ptr noundef readonly captures(none) %a) local_unnamed_addr {
 ; CHECK-LABEL: tsh:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvd2x vs0, 0, r3
@@ -198,20 +170,6 @@ define dso_local signext range(i32 -262144, 262137) i32 @tsh(ptr noundef readonl
 ; BE32-NEXT:    stxvw4x v2, 0, r3
 ; BE32-NEXT:    lwz r3, -16(r1)
 ; BE32-NEXT:    blr
-; BE64%s-LABEL: tsh:
-; BE64%s:       # %bb.0: # %entry
-; BE64%s-NEXT:    lxvw4x v3, 0, r3
-; BE64%s-NEXT:    vspltish v2, 1
-; BE64%s-NEXT:    xxlxor v4, v4, v4
-; BE64%s-NEXT:    vmsumshm v2, v3, v2, v4
-; BE64%s-NEXT:    xxswapd v3, v2
-; BE64%s-NEXT:    vadduwm v2, v2, v3
-; BE64%s-NEXT:    xxspltw v3, v2, 1
-; BE64%s-NEXT:    vadduwm v2, v2, v3
-; BE64%s-NEXT:    xxsldwi vs0, v2, v2, 3
-; BE64%s-NEXT:    mffprwz r3, f0
-; BE64%s-NEXT:    extsw r3, r3
-; BE64%s-NEXT:    blr
 entry:
   %0 = load <8 x i16>, ptr %a, align 2
   %conv = sext <8 x i16> %0 to <8 x i32>
@@ -268,20 +226,6 @@ define dso_local signext range(i32 -262144, 262137) i32 @tsh2(ptr noundef readon
 ; BE32-NEXT:    stxvw4x v2, 0, r3
 ; BE32-NEXT:    lwz r3, -16(r1)
 ; BE32-NEXT:    blr
-; BE64%s-LABEL: tsh2:
-; BE64%s:       # %bb.0: # %entry
-; BE64%s-NEXT:    lxvw4x v2, 0, r3
-; BE64%s-NEXT:    lxvw4x v3, 0, r4
-; BE64%s-NEXT:    xxlxor v4, v4, v4
-; BE64%s-NEXT:    vmsumshm v2, v2, v3, v4
-; BE64%s-NEXT:    xxswapd v3, v2
-; BE64%s-NEXT:    vadduwm v2, v2, v3
-; BE64%s-NEXT:    xxspltw v3, v2, 1
-; BE64%s-NEXT:    vadduwm v2, v2, v3
-; BE64%s-NEXT:    xxsldwi vs0, v2, v2, 3
-; BE64%s-NEXT:    mffprwz r3, f0
-; BE64%s-NEXT:    extsw r3, r3
-; BE64%s-NEXT:    blr
 entry:
   %0 = load <8 x i16>, ptr %a, align 2
   %conv = sext <8 x i16> %0 to <8 x i32>
@@ -294,7 +238,7 @@ entry:
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) uwtable
-define dso_local signext range(i32 -262144, 262137) i32 @tub(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b) local_unnamed_addr {
+define dso_local signext range(i32 -262144, 262137) i32 @tub(ptr noundef readonly captures(none) %a) local_unnamed_addr {
 ; CHECK-LABEL: tub:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvd2x vs0, 0, r3
@@ -340,20 +284,6 @@ define dso_local signext range(i32 -262144, 262137) i32 @tub(ptr noundef readonl
 ; BE32-NEXT:    stxvw4x v2, 0, r3
 ; BE32-NEXT:    lwz r3, -16(r1)
 ; BE32-NEXT:    blr
-; BE64%s-LABEL: tub:
-; BE64%s:       # %bb.0: # %entry
-; BE64%s-NEXT:    lxvw4x v3, 0, r3
-; BE64%s-NEXT:    vspltisb v2, 1
-; BE64%s-NEXT:    xxlxor v4, v4, v4
-; BE64%s-NEXT:    vmsumubm v2, v3, v2, v4
-; BE64%s-NEXT:    xxswapd v3, v2
-; BE64%s-NEXT:    vadduwm v2, v2, v3
-; BE64%s-NEXT:    xxspltw v3, v2, 1
-; BE64%s-NEXT:    vadduwm v2, v2, v3
-; BE64%s-NEXT:    xxsldwi vs0, v2, v2, 3
-; BE64%s-NEXT:    mffprwz r3, f0
-; BE64%s-NEXT:    extsw r3, r3
-; BE64%s-NEXT:    blr
 entry:
   %0 = load <16 x i8>, ptr %a, align 2
   %conv = zext <16 x i8> %0 to <16 x i32>
@@ -410,20 +340,6 @@ define dso_local signext range(i32 -262144, 262137) i32 @tub2(ptr noundef readon
 ; BE32-NEXT:    stxvw4x v2, 0, r3
 ; BE32-NEXT:    lwz r3, -16(r1)
 ; BE32-NEXT:    blr
-; BE64%s-LABEL: tub2:
-; BE64%s:       # %bb.0: # %entry
-; BE64%s-NEXT:    lxvw4x v2, 0, r3
-; BE64%s-NEXT:    lxvw4x v3, 0, r4
-; BE64%s-NEXT:    xxlxor v4, v4, v4
-; BE64%s-NEXT:    vmsumubm v2, v2, v3, v4
-; BE64%s-NEXT:    xxswapd v3, v2
-; BE64%s-NEXT:    vadduwm v2, v2, v3
-; BE64%s-NEXT:    xxspltw v3, v2, 1
-; BE64%s-NEXT:    vadduwm v2, v2, v3
-; BE64%s-NEXT:    xxsldwi vs0, v2, v2, 3
-; BE64%s-NEXT:    mffprwz r3, f0
-; BE64%s-NEXT:    extsw r3, r3
-; BE64%s-NEXT:    blr
 entry:
   %0 = load <16 x i8>, ptr %a, align 2
   %conv = zext <16 x i8> %0 to <16 x i32>
@@ -436,7 +352,7 @@ entry:
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) uwtable
-define dso_local signext range(i32 -262144, 262137) i32 @tsb(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b) local_unnamed_addr {
+define dso_local signext range(i32 -262144, 262137) i32 @tsb(ptr noundef readonly captures(none) %a) local_unnamed_addr {
 ; CHECK-LABEL: tsb:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvd2x vs0, 0, r3
@@ -482,20 +398,6 @@ define dso_local signext range(i32 -262144, 262137) i32 @tsb(ptr noundef readonl
 ; BE32-NEXT:    stxvw4x v2, 0, r3
 ; BE32-NEXT:    lwz r3, -16(r1)
 ; BE32-NEXT:    blr
-; BE64%s-LABEL: tsb:
-; BE64%s:       # %bb.0: # %entry
-; BE64%s-NEXT:    lxvw4x v3, 0, r3
-; BE64%s-NEXT:    vspltisb v2, 1
-; BE64%s-NEXT:    xxlxor v4, v4, v4
-; BE64%s-NEXT:    vmsummbm v2, v3, v2, v4
-; BE64%s-NEXT:    xxswapd v3, v2
-; BE64%s-NEXT:    vadduwm v2, v2, v3
-; BE64%s-NEXT:    xxspltw v3, v2, 1
-; BE64%s-NEXT:    vadduwm v2, v2, v3
-; BE64%s-NEXT:    xxsldwi vs0, v2, v2, 3
-; BE64%s-NEXT:    mffprwz r3, f0
-; BE64%s-NEXT:    extsw r3, r3
-; BE64%s-NEXT:    blr
 entry:
   %0 = load <16 x i8>, ptr %a, align 2
   %conv = sext <16 x i8> %0 to <16 x i32>
@@ -552,20 +454,6 @@ define dso_local signext range(i32 -262144, 262137) i32 @tsb2(ptr noundef readon
 ; BE32-NEXT:    stxvw4x v2, 0, r3
 ; BE32-NEXT:    lwz r3, -16(r1)
 ; BE32-NEXT:    blr
-; BE64%s-LABEL: tsb2:
-; BE64%s:       # %bb.0: # %entry
-; BE64%s-NEXT:    lxvw4x v2, 0, r3
-; BE64%s-NEXT:    lxvw4x v3, 0, r4
-; BE64%s-NEXT:    xxlxor v4, v4, v4
-; BE64%s-NEXT:    vmsummbm v2, v2, v3, v4
-; BE64%s-NEXT:    xxswapd v3, v2
-; BE64%s-NEXT:    vadduwm v2, v2, v3
-; BE64%s-NEXT:    xxspltw v3, v2, 1
-; BE64%s-NEXT:    vadduwm v2, v2, v3
-; BE64%s-NEXT:    xxsldwi vs0, v2, v2, 3
-; BE64%s-NEXT:    mffprwz r3, f0
-; BE64%s-NEXT:    extsw r3, r3
-; BE64%s-NEXT:    blr
 entry:
   %0 = load <16 x i8>, ptr %a, align 2
   %conv = sext <16 x i8> %0 to <16 x i32>
