@@ -1372,11 +1372,11 @@ defm Clusters : AMDGPUSubtargetFeature<"clusters",
 >;
 
 defm HasWave32 : AMDGPUSubtargetFeature<"has-wave32",
-  "Target supports Wave32."
+  "Target supports +wavefrontsize32."
 >;
 
 defm HasWave64 : AMDGPUSubtargetFeature<"has-wave64",
-  "Target supports Wave64."
+  "Target supports +wavefrontsize64."
 >;
 
 def FeatureWaitsBeforeSystemScopeStores : SubtargetFeature<

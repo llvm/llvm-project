@@ -872,6 +872,16 @@ public:
 
   bool isWave64() const { return getWavefrontSize() == 64; }
 
+  bool isWave32Only() const {
+    return hasFeature(AMDGPU::FeatureHasWave32) &&
+           !hasFeature(AMDGPU::FeatureHasWave64);
+  }
+
+  bool isWave64Only() const {
+    return hasFeature(AMDGPU::FeatureHasWave64) &&
+           !hasFeature(AMDGPU::FeatureHasWave32);
+  }
+
   /// Returns if the wavesize of this subtarget is known reliable. This is false
   /// only for the a default target-cpu that does not have an explicit
   /// +wavefrontsize target feature.
