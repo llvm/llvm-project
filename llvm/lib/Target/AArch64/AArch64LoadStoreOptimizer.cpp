@@ -65,6 +65,8 @@ STATISTIC(NumFailedAlignmentCheck, "Number of load/store pair transformation "
                                    "not passed the alignment check");
 STATISTIC(NumConstOffsetFolded,
           "Number of const offset of index address folded");
+STATISTIC(NumUMOVFoldedToFPRStore,
+          "Number of UMOV + GPR stores folded to FPR stores");
 
 DEBUG_COUNTER(RegRenamingCounter, DEBUG_TYPE "-reg-renaming",
               "Controls which pairs are considered for renaming");
@@ -218,6 +220,9 @@ struct AArch64LoadStoreOpt {
 
   // Find and merge an index ldr/st instruction into a base ld/st instruction.
   bool tryToMergeIndexLdSt(MachineBasicBlock::iterator &MBBI, int Scale);
+
+  // Replace a UMOV (lane 0) + GPR store with a direct FPR sub-register store.
+  bool tryToReplaceUMOVStore(MachineBasicBlock::iterator &MBBI);
 
   bool optimizeBlock(MachineBasicBlock &MBB, bool EnableNarrowZeroStOpt);
 
@@ -3012,6 +3017,110 @@ bool AArch64LoadStoreOpt::tryToMergeIndexLdSt(MachineBasicBlock::iterator &MBBI,
   return false;
 }
 
+// Given a UMOV-lane-0 opcode and a GPR store opcode, return the corresponding
+// FPR store opcode and the sub-register index to extract from the vector, or
+// return false if the combination is not supported.
+static bool getUMOVToFPRStoreInfo(unsigned UMOVOpc, unsigned GPRStoreOpc,
+                                  unsigned &FPRStoreOpc, unsigned &SubRegIdx) {
+  switch (UMOVOpc) {
+  case AArch64::UMOVvi8_idx0:
+    if (GPRStoreOpc != AArch64::STRBBui)
+      return false;
+    FPRStoreOpc = AArch64::STRBui;
+    SubRegIdx = AArch64::bsub;
+    return true;
+  case AArch64::UMOVvi16_idx0:
+    if (GPRStoreOpc != AArch64::STRHHui)
+      return false;
+    FPRStoreOpc = AArch64::STRHui;
+    SubRegIdx = AArch64::hsub;
+    return true;
+  case AArch64::UMOVvi32_idx0:
+    if (GPRStoreOpc != AArch64::STRWui)
+      return false;
+    FPRStoreOpc = AArch64::STRSui;
+    SubRegIdx = AArch64::ssub;
+    return true;
+  case AArch64::UMOVvi64_idx0:
+    if (GPRStoreOpc != AArch64::STRXui)
+      return false;
+    FPRStoreOpc = AArch64::STRDui;
+    SubRegIdx = AArch64::dsub;
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool AArch64LoadStoreOpt::tryToReplaceUMOVStore(
+    MachineBasicBlock::iterator &MBBI) {
+  MachineInstr &StoreMI = *MBBI;
+  unsigned StoreOpc = StoreMI.getOpcode();
+
+  if (StoreOpc != AArch64::STRBBui && StoreOpc != AArch64::STRHHui &&
+      StoreOpc != AArch64::STRWui && StoreOpc != AArch64::STRXui)
+    return false;
+
+  MachineBasicBlock *MBB = StoreMI.getParent();
+  unsigned FPRStoreOpc = 0, SubRegIdx = 0;
+  MCPhysReg StoreValReg = StoreMI.getOperand(0).getReg();
+
+  if (!StoreMI.getOperand(0).isKill())
+    return false;
+
+  // Scan backward to find the UMOV that defines the store's value register.
+  MachineInstr *UMOVMI = nullptr;
+  for (auto It = MBBI; It != MBB->begin() && !UMOVMI;) {
+    MachineInstr &MI = *--It;
+    if (MI.readsRegister(StoreValReg, TRI))
+      return false;
+    if (MI.definesRegister(StoreValReg, TRI)) {
+      if (!getUMOVToFPRStoreInfo(MI.getOpcode(), StoreMI.getOpcode(),
+                                 FPRStoreOpc, SubRegIdx))
+        return false;
+      UMOVMI = &MI;
+    }
+  }
+  if (!UMOVMI)
+    return false;
+
+  MCPhysReg VecReg = UMOVMI->getOperand(1).getReg();
+
+  // Check that no instruction between UMOV and store clobbers the vector
+  // register.  Also track whether VecReg is killed anywhere from the UMOV
+  // (inclusive) through the intervening instructions -- we need this to decide
+  // whether the FPR sub-register can be marked killed on the new store.
+  bool VecRegKilled = UMOVMI->killsRegister(VecReg, TRI);
+  for (auto It = std::next(UMOVMI->getIterator()); It != MBBI; ++It) {
+    if (It->modifiesRegister(VecReg, TRI))
+      return false;
+    if (!VecRegKilled && It->killsRegister(VecReg, TRI))
+      VecRegKilled = true;
+  }
+
+  // Safe to proceed. Clear kill flags on the vector register between UMOV and
+  // the new store so the FPR sub-register stays live.
+  UMOVMI->clearRegisterKills(VecReg, TRI);
+  for (auto It = std::next(UMOVMI->getIterator()); It != MBBI; ++It)
+    It->clearRegisterKills(VecReg, TRI);
+
+  LLVM_DEBUG(dbgs() << "Folding UMOV + store: " << *UMOVMI << "  + "
+                    << StoreMI);
+
+  MCPhysReg FPRReg = TRI->getSubReg(VecReg, SubRegIdx);
+  BuildMI(*MBB, MBBI, StoreMI.getDebugLoc(), TII->get(FPRStoreOpc))
+      .addReg(FPRReg, getKillRegState(VecRegKilled))
+      .add(StoreMI.getOperand(1))
+      .add(StoreMI.getOperand(2))
+      .setMemRefs(StoreMI.memoperands());
+
+  MBBI = MBB->erase(MBBI);
+  UMOVMI->eraseFromParent();
+
+  ++NumUMOVFoldedToFPRStore;
+  return true;
+}
+
 bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
                                         bool EnableNarrowZeroStOpt) {
   AArch64FunctionInfo &AFI = *MBB.getParent()->getInfo<AArch64FunctionInfo>();
@@ -3109,6 +3218,20 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
        MBBI != E;) {
     int Scale;
     if (isMergeableIndexLdSt(*MBBI, Scale) && tryToMergeIndexLdSt(MBBI, Scale))
+      Modified = true;
+    else
+      ++MBBI;
+  }
+
+  // 6) Replace UMOV (lane 0) + GPR store with a direct FPR sub-register store.
+  //      e.g.,
+  //        umov w8, v0.h[0]
+  //        strh w8, [x0]
+  //        ; becomes
+  //        str h0, [x0]
+  for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
+       MBBI != E;) {
+    if (tryToReplaceUMOVStore(MBBI))
       Modified = true;
     else
       ++MBBI;
