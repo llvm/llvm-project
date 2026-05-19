@@ -913,9 +913,15 @@ public:
   // update itself then use m_parent.  The ValueObjectDynamicValue's parent is
   // not the correct parent for displaying, they are really siblings, so for
   // display it needs to route through to its grandparent.
-  virtual ValueObject *GetParent() { return m_parent; }
+  virtual ValueObject *GetParent() {
+    return m_logical_parent ? m_logical_parent : m_parent;
+  }
 
-  virtual const ValueObject *GetParent() const { return m_parent; }
+  virtual const ValueObject *GetParent() const {
+    return m_logical_parent ? m_logical_parent : m_parent;
+  }
+
+  void SetLogicalParent(ValueObject *parent) { m_logical_parent = parent; }
 
   ValueObject *GetNonBaseClassParent();
 
@@ -1045,6 +1051,10 @@ protected:
 
   /// The parent value object, or nullptr if this has no parent.
   ValueObject *m_parent = nullptr;
+  /// The parent to report from GetParent(), if different from m_parent.
+  /// Used for synthetic children whose logical parent is the synthetic
+  /// ValueObject, not the infrastructure parent.
+  ValueObject *m_logical_parent = nullptr;
   /// The root of the hierarchy for this ValueObject (or nullptr if never
   /// calculated).
   ValueObject *m_root = nullptr;

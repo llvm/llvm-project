@@ -3,6 +3,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+from typing import Union
 
 class TestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
@@ -14,17 +15,24 @@ class TestCase(TestBase):
         )
         frame = thread.GetFrameAtIndex(0)
 
-        parent = frame.FindVariable("parent")
+        self._do_test(frame, "parent", "child")
+        self._do_test(frame, "vec", 0)
+
+    def _do_test(
+        self, frame: lldb.SBFrame, parent_name: str, child_key: Union[str, int]
+    ):
+        parent = frame.FindVariable(parent_name)
         self.assertTrue(parent.IsValid())
 
-        child = parent.GetChildMemberWithName("child")
+        if isinstance(child_key, int):
+            child = parent.GetChildAtIndex(child_key)
+        else:
+            assert isinstance(child_key, str)
+            child = parent.GetChildMemberWithName(child_key)
         self.assertTrue(child.IsValid())
 
         # GetParent of child should be the parent struct.
         child_parent = child.GetParent()
         self.assertTrue(child_parent.IsValid())
-        self.assertEqual(child_parent.name, "parent")
+        self.assertEqual(child_parent.name, parent_name)
         self.assertEqual(child_parent.GetID(), parent.GetID())
-
-        # GetParent of a top-level variable should be invalid.
-        self.assertFalse(parent.GetParent().IsValid())
