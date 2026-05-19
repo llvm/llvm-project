@@ -1663,7 +1663,7 @@ define <2 x i64> @uabdl2_from_extract_dup(<4 x i32> %lhs, i32 %rhs) {
 ; CHECK-GI-LABEL: uabdl2_from_extract_dup:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    dup.2s v1, w0
-; CHECK-GI-NEXT:    ext.16b v0, v0, v0, #8
+; CHECK-GI-NEXT:    mov d0, v0[1]
 ; CHECK-GI-NEXT:    uabdl.2d v0, v0, v1
 ; CHECK-GI-NEXT:    ret
   %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
@@ -1698,7 +1698,7 @@ define <2 x i64> @sabdl2_from_extract_dup(<4 x i32> %lhs, i32 %rhs) {
 ; CHECK-GI-LABEL: sabdl2_from_extract_dup:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    dup.2s v1, w0
-; CHECK-GI-NEXT:    ext.16b v0, v0, v0, #8
+; CHECK-GI-NEXT:    mov d0, v0[1]
 ; CHECK-GI-NEXT:    sabdl.2d v0, v0, v1
 ; CHECK-GI-NEXT:    ret
   %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
@@ -2033,7 +2033,7 @@ define <16 x i16> @uabd16b_i16_const_select(<16 x i8> %a) {
 ; CHECK-GI-LABEL: uabd16b_i16_const_select:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI106_1
-; CHECK-GI-NEXT:    ext.16b v3, v0, v0, #8
+; CHECK-GI-NEXT:    mov d3, v0[1]
 ; CHECK-GI-NEXT:    ushll.8h v4, v0, #0
 ; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI106_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI106_0
@@ -2075,7 +2075,7 @@ define <16 x i16> @sabd16b_i16_const_select(<16 x i8> %a) {
 ; CHECK-GI-LABEL: sabd16b_i16_const_select:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI107_1
-; CHECK-GI-NEXT:    ext.16b v3, v0, v0, #8
+; CHECK-GI-NEXT:    mov d3, v0[1]
 ; CHECK-GI-NEXT:    sshll.8h v4, v0, #0
 ; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI107_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI107_0

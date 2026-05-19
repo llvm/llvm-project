@@ -807,14 +807,25 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         {ISD::CTPOP, MVT::v4i32, 3},
         {ISD::CTPOP, MVT::v8i16, 2},
         {ISD::CTPOP, MVT::v16i8, 1},
-        {ISD::CTPOP, MVT::i64,   4},
+        {ISD::CTPOP, MVT::i64, 4},
         {ISD::CTPOP, MVT::v2i32, 3},
         {ISD::CTPOP, MVT::v4i16, 2},
-        {ISD::CTPOP, MVT::v8i8,  1},
-        {ISD::CTPOP, MVT::i32,   5},
+        {ISD::CTPOP, MVT::v8i8, 1},
+        {ISD::CTPOP, MVT::i32, 5},
+        // SVE types (For targets that override NEON for fixed length vectors)
+        {ISD::CTPOP, MVT::nxv2i64, 1},
+        {ISD::CTPOP, MVT::nxv4i32, 1},
+        {ISD::CTPOP, MVT::nxv8i16, 1},
+        {ISD::CTPOP, MVT::nxv16i8, 1},
     };
     auto LT = getTypeLegalizationCost(RetTy);
     MVT MTy = LT.second;
+
+    // When SVE is available CNT will be used for fixed and scalable vectors.
+    if (ST->isSVEorStreamingSVEAvailable() && MTy.isFixedLengthVector())
+      MTy = MVT::getScalableVectorVT(MTy.getVectorElementType(),
+                                     128 / MTy.getScalarSizeInBits());
+
     if (const auto *Entry = CostTableLookup(CtpopCostTbl, ISD::CTPOP, MTy)) {
       // Extra cost of +1 when illegal vector types are legalized by promoting
       // the integer type.
@@ -2702,8 +2713,8 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
   // (sve.ld1.gather.index Mask BasePtr (sve.index IndexBase 1))
   // => (masked.load (gep BasePtr IndexBase) Align Mask zeroinitializer)
   Value *IndexBase;
-  if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(
-                       m_Value(IndexBase), m_SpecificInt(1)))) {
+  if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(m_Value(IndexBase),
+                                                             m_One()))) {
     Align Alignment =
         BasePtr->getPointerAlignment(II.getDataLayout());
 
@@ -2730,8 +2741,8 @@ instCombineST1ScatterIndex(InstCombiner &IC, IntrinsicInst &II) {
   // (sve.st1.scatter.index Value Mask BasePtr (sve.index IndexBase 1))
   // => (masked.store Value (gep BasePtr IndexBase) Align Mask)
   Value *IndexBase;
-  if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(
-                       m_Value(IndexBase), m_SpecificInt(1)))) {
+  if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(m_Value(IndexBase),
+                                                             m_One()))) {
     Align Alignment =
         BasePtr->getPointerAlignment(II.getDataLayout());
 
@@ -3347,7 +3358,7 @@ bool AArch64TTIImpl::isExtPartOfAvgExpr(const Instruction *ExtUser, Type *Dst,
   // m_ZExtOrSExt matched.
   Instruction *Ex1, *Ex2;
   if (!(match(Add, m_c_Add(m_Instruction(Ex1),
-                           m_c_Add(m_Instruction(Ex2), m_SpecificInt(1))))))
+                           m_c_Add(m_Instruction(Ex2), m_One())))))
     return false;
 
   // Ensure both extends are of the same type
@@ -5656,7 +5667,9 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
 
   switch (RdxDesc.getRecurrenceKind()) {
   case RecurKind::Sub:
+  case RecurKind::FSub:
   case RecurKind::AddChainWithSubs:
+  case RecurKind::FAddChainWithSubs:
   case RecurKind::Add:
   case RecurKind::FAdd:
   case RecurKind::And:
@@ -5978,7 +5991,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     return Invalid;
 
   if ((Opcode != Instruction::Add && Opcode != Instruction::Sub &&
-       Opcode != Instruction::FAdd) ||
+       Opcode != Instruction::FAdd && Opcode != Instruction::FSub) ||
       OpAExtend == TTI::PR_None)
     return Invalid;
 
@@ -6045,7 +6058,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
             NEONPred);
   };
 
-  bool IsSub = Opcode == Instruction::Sub;
+  bool IsSub = (Opcode == Instruction::Sub) || (Opcode == Instruction::FSub);
   InstructionCost Cost = InputLT.first * TTI::TCC_Basic;
   // Integer partial sub-reductions that don't map to a specific instruction,
   // carry an extra cost for implementing a double negation:
