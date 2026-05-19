@@ -3421,22 +3421,7 @@ bool RISCVTTIImpl::isLegalBroadcastLoad(Type *ElementTy,
   if (!(ST->hasVInstructions() && ST->hasOptimizedZeroStrideLoad()))
     return false;
 
-  switch (ElementTy->getScalarSizeInBits()) {
-  case 8:
-    return ElementTy->isIntegerTy();
-  case 16:
-    return ElementTy->isIntegerTy() ||
-           (ElementTy->isHalfTy() && ST->hasVInstructionsF16Minimal()) ||
-           (ElementTy->isBFloatTy() && ST->hasVInstructionsBF16Minimal());
-  case 32:
-    return ElementTy->isIntegerTy() ||
-           (ElementTy->isFloatTy() && ST->hasVInstructionsF32());
-  case 64:
-    return (ElementTy->isIntegerTy() && ST->hasVInstructionsI64()) ||
-           (ElementTy->isFloatingPointTy() && ST->hasVInstructionsF64());
-  }
-
-  return false;
+  return TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, ElementTy));
 }
 
 /// See if \p I should be considered for address type promotion. We check if \p
