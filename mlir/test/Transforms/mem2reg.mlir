@@ -184,74 +184,69 @@ func.func @poison_insertion_point(%val: f64) {
 
 // -----
 
-// Verifies that mem2reg promotes a memory slot whose stores and loads are
-// reached through a transparent view operation that exposes itself via
-// PromotableAliaserInterface::getPromotableSlotView. The conditional store
-// on the view in ^bb1 must be discovered as a defining block, otherwise
-// the merge point at ^bb2 would not get a block argument and the promotion
-// would silently drop the conditional update.
+// Verifies that mem2reg promotes a memory slot accessed through a transparent
+// alias operation exposing itself via `getPromotableSlotAliases`. The
+// conditional store on the alias in ^bb1 must be discovered as a defining
+// block; otherwise, the merge point at ^bb2 would lack a block argument,
+// silently dropping the conditional update.
 
-// CHECK-LABEL: func.func @promotable_through_view
+// CHECK-LABEL: func.func @promotable_through_alias
 // CHECK-SAME: (%[[A:.*]]: i32, %[[COND:.*]]: i1) -> i32
 // CHECK-NOT: test.multi_slot_alloca
-// CHECK-NOT: test.transparent_view
+// CHECK-NOT: test.transparent_alias
 // CHECK: %[[C42:.*]] = arith.constant 42 : i32
 // CHECK: cf.cond_br %[[COND]], ^[[BB1:.*]], ^[[BB2:.*]](%[[C42]] : i32)
 // CHECK: ^[[BB1]]:
 // CHECK:   cf.br ^[[BB2]](%[[A]] : i32)
 // CHECK: ^[[BB2]](%[[MERGE:.*]]: i32):
 // CHECK:   return %[[MERGE]] : i32
-func.func @promotable_through_view(%a: i32, %cond: i1) -> i32 {
+func.func @promotable_through_alias(%a: i32, %cond: i1) -> i32 {
   %c42 = arith.constant 42 : i32
   %slot = test.multi_slot_alloca : () -> memref<i32>
-  %view = test.transparent_view %slot : (memref<i32>) -> memref<i32>
-  memref.store %c42, %view[] : memref<i32>
+  %alias = test.transparent_alias %slot : (memref<i32>) -> memref<i32>
+  memref.store %c42, %alias[] : memref<i32>
   cf.cond_br %cond, ^bb1, ^bb2
 ^bb1:
-  memref.store %a, %view[] : memref<i32>
+  memref.store %a, %alias[] : memref<i32>
   cf.br ^bb2
 ^bb2:
-  %v = memref.load %view[] : memref<i32>
+  %v = memref.load %alias[] : memref<i32>
   return %v : i32
 }
 
 // -----
 
-// Type-changing transparent view: the store and load see the slot at f32
-// while the underlying allocation is at i32. mem2reg materialises an
-// `unrealized_conversion_cast` (the view op's `projectViewValueToSlotValue`)
-// at the store (f32 → i32 to update the reaching def at the slot's elem
-// type) and at the load (i32 → f32 via `projectSlotValueToViewValue` to feed
-// the load's f32 result type).
+// Type-changing transparent alias: the store and load access the slot as f32
+// while the underlying allocation is i32. mem2reg materializes an
+// `unrealized_conversion_cast` at the store (f32 → i32 via `projectAliasValueToSlotValue`)
+// and at the load (i32 → f32 via `projectSlotValueToAliasValue`).
 
-// CHECK-LABEL: func.func @promotable_through_cast_view
+// CHECK-LABEL: func.func @promotable_through_cast_alias
 // CHECK-SAME: (%[[A:.*]]: f32) -> f32
 // CHECK-NOT: test.multi_slot_alloca
-// CHECK-NOT: test.transparent_cast_view
+// CHECK-NOT: test.transparent_cast_alias
 // CHECK: %[[I32:.*]] = builtin.unrealized_conversion_cast %[[A]] : f32 to i32
 // CHECK: %{{.*}} = builtin.unrealized_conversion_cast %[[I32]] : i32 to f32
 // CHECK: return %{{.*}} : f32
-func.func @promotable_through_cast_view(%a: f32) -> f32 {
+func.func @promotable_through_cast_alias(%a: f32) -> f32 {
   %slot = test.multi_slot_alloca : () -> memref<i32>
-  %view = test.transparent_cast_view %slot : (memref<i32>) -> memref<f32>
-  memref.store %a, %view[] : memref<f32>
-  %v = memref.load %view[] : memref<f32>
+  %alias = test.transparent_cast_alias %slot : (memref<i32>) -> memref<f32>
+  memref.store %a, %alias[] : memref<f32>
+  %v = memref.load %alias[] : memref<f32>
   return %v : f32
 }
 
 // -----
 
 // Same as above with a conditional store across blocks. The merge-point
-// block argument is at the root slot's element type (i32), and the
-// `projectViewValueToSlotValue` casts are inserted at the store sites
-// (f32 → i32) so the merge argument can carry the conditional update; the
-// load site inserts the inverse cast (i32 → f32) for its result via
-// `projectSlotValueToViewValue`.
+// block argument uses the root slot's element type (i32). Casts are inserted
+// at the store sites (f32 → i32 via `projectAliasValueToSlotValue`) and the
+// load site (i32 → f32 via `projectSlotValueToAliasValue`).
 
-// CHECK-LABEL: func.func @promotable_through_cast_view_blocks
+// CHECK-LABEL: func.func @promotable_through_cast_alias_blocks
 // CHECK-SAME: (%[[A:.*]]: f32, %[[COND:.*]]: i1) -> f32
 // CHECK-NOT: test.multi_slot_alloca
-// CHECK-NOT: test.transparent_cast_view
+// CHECK-NOT: test.transparent_cast_alias
 // CHECK: %[[CST:.*]] = arith.constant 1.000000e+00 : f32
 // CHECK: %[[CST_I32:.*]] = builtin.unrealized_conversion_cast %[[CST]] : f32 to i32
 // CHECK: cf.cond_br %[[COND]], ^[[BB1:.*]], ^[[BB2:.*]](%[[CST_I32]] : i32)
@@ -261,39 +256,38 @@ func.func @promotable_through_cast_view(%a: f32) -> f32 {
 // CHECK: ^[[BB2]](%[[MERGE:.*]]: i32):
 // CHECK:   %[[MERGE_F32:.*]] = builtin.unrealized_conversion_cast %[[MERGE]] : i32 to f32
 // CHECK:   return %[[MERGE_F32]] : f32
-func.func @promotable_through_cast_view_blocks(%a: f32, %cond: i1) -> f32 {
+func.func @promotable_through_cast_alias_blocks(%a: f32, %cond: i1) -> f32 {
   %cst = arith.constant 1.0 : f32
   %slot = test.multi_slot_alloca : () -> memref<i32>
-  %view = test.transparent_cast_view %slot : (memref<i32>) -> memref<f32>
-  memref.store %cst, %view[] : memref<f32>
+  %alias = test.transparent_cast_alias %slot : (memref<i32>) -> memref<f32>
+  memref.store %cst, %alias[] : memref<f32>
   cf.cond_br %cond, ^bb1, ^bb2
 ^bb1:
-  memref.store %a, %view[] : memref<f32>
+  memref.store %a, %alias[] : memref<f32>
   cf.br ^bb2
 ^bb2:
-  %v = memref.load %view[] : memref<f32>
+  %v = memref.load %alias[] : memref<f32>
   return %v : f32
 }
 
 // -----
 
-// Regression test: the view is defined in the parent region but the store
-// owning the propagated blocking use lives in a nested region (`scf.if`).
-// The new blocking use must be registered under the owner's region, otherwise
-// `removeBlockingUses` trips the "all operations must still be in the same
-// region" invariant after `scf.if` rebuilds itself in `finalizePromotion`.
+// Regression test: the alias is defined in the parent region, but the store
+// is in a nested region (`scf.if`). The new blocking use must be registered
+// under the store's region; otherwise, `removeBlockingUses` fails the region
+// invariant after `scf.if` rebuilds itself in `finalizePromotion`.
 
-// CHECK-LABEL: func.func @promotable_through_view_across_regions
+// CHECK-LABEL: func.func @promotable_through_alias_across_regions
 // CHECK-SAME: (%[[COND:.*]]: i1, %[[A:.*]]: i32)
 // CHECK-NOT: test.multi_slot_alloca
-// CHECK-NOT: test.transparent_view
+// CHECK-NOT: test.transparent_alias
 // CHECK-NOT: memref.store
 // CHECK: scf.if %[[COND]]
-func.func @promotable_through_view_across_regions(%cond: i1, %a: i32) {
+func.func @promotable_through_alias_across_regions(%cond: i1, %a: i32) {
   %slot = test.multi_slot_alloca : () -> memref<i32>
-  %view = test.transparent_view %slot : (memref<i32>) -> memref<i32>
+  %alias = test.transparent_alias %slot : (memref<i32>) -> memref<i32>
   scf.if %cond {
-    memref.store %a, %view[] : memref<i32>
+    memref.store %a, %alias[] : memref<i32>
   }
   return
 }

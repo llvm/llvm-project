@@ -292,65 +292,59 @@ def PromotableAliaserInterface : OpInterface<"PromotableAliaserInterface"> {
 
   let methods = [
     InterfaceMethod<[{
-        Returns a view of a parent memory slot (accessed via
-        `aliasedSlotPointerOperand`) as a new memory slot. The pointer to this
-        new slot must be a result of the current operation, and its element
-        type may differ from the parent's.
+        Populates `newMemorySlots` with the memory slots this operation
+        exposes by aliasing `parentSlot` (accessed via
+        `aliasedSlotPointerOperand`). Each new slot's pointer must be a
+        result of this operation, and its element type may differ from the
+        parent's. Leave the vector empty if no alias is exposed. An operation
+        can expose multiple aliases for the same parent slot.
 
-        Providing a view requires implementing the two projection methods below
-        to bridge values between the parent's and the new slot's element types.
-        One method extracts the new slot's value from the parent's value, while
-        the other reconstructs the parent's value after a store to the new slot.
-        If these projections cannot be performed, this method should return
-        `std::nullopt`.
+        `parentSlot` is provided so that aliasers using opaque pointers can
+        derive the new slot's element type from `parentSlot.elemType`.
+
+        Exposing an alias requires implementing the two projection methods
+        below to bridge values between the parent and new slot element types.
+        If these projections cannot be performed, leave `newMemorySlots` empty.
 
         No IR mutation is allowed in this method.
       }],
-      "::std::optional<::mlir::PromotableSlotView>",
-      "getPromotableSlotView",
-      (ins)
+      "void",
+      "getPromotableSlotAliases",
+      (ins "::mlir::OpOperand &":$aliasedSlotPointerOperand,
+           "const ::mlir::MemorySlot &":$parentSlot,
+           "::llvm::SmallVectorImpl<::mlir::MemorySlot> &":$newMemorySlots)
     >,
     InterfaceMethod<[{
-        Constructs a value of `targetType` from the given `value`, projecting
-        the element type of the slot pointer operand down to the element type
-        of the view. Mem2Reg invokes this method when a load operation on the
-        view requires the slot value to be materialized with the view's
+        Extracts the value of `aliasSlot` from `slotValue` (the value of
+        `parentSlot`). Mem2Reg invokes this method when a load on the new slot
+        requires the parent's value to be materialized with the new slot's
         element type.
       }],
       "::mlir::Value",
-      "projectSlotValueToViewValue",
-      (ins "::mlir::Value":$value,
-           "::mlir::Type":$targetType,
+      "projectSlotValueToAliasValue",
+      (ins "::mlir::OpOperand &":$aliasedSlotPointerOperand,
+           "const ::mlir::MemorySlot &":$parentSlot,
+           "const ::mlir::MemorySlot &":$aliasSlot,
+           "::mlir::Value":$slotValue,
            "::mlir::OpBuilder &":$builder), [{}],
-      [{
-        if (value.getType() == targetType)
-          return value;
-        return ::mlir::Value{};
-      }]
+      [{ return slotValue; }]
     >,
     InterfaceMethod<[{
-        Constructs a value of `targetType` from the given `viewValue`, projecting
-        the view's element type back to the element type of the slot pointer
-        operand. Mem2Reg invokes this method when a store operation on the view
-        needs to update the slot value using the element type of the slot
-        pointer operand.
-
-        The `reachingDef` parameter represents the slot value at `targetType`
-        immediately preceding the store. While it can be ignored for full views,
-        for partial subviews (such as a single field of an aggregate), the
-        result is constructed by inserting `viewValue` into `reachingDef`.
+        Reconstructs the value of `parentSlot` from `aliasValue` (a store to
+        `aliasSlot`) and `reachingDef` (the parent slot's value immediately
+        preceding the store). For full aliases, `reachingDef` can be ignored.
+        For partial sub-aliases, it allows the result to be constructed by
+        inserting `aliasValue` into `reachingDef`.
       }],
       "::mlir::Value",
-      "projectViewValueToSlotValue",
-      (ins "::mlir::Value":$viewValue,
-           "::mlir::Type":$targetType,
+      "projectAliasValueToSlotValue",
+      (ins "::mlir::OpOperand &":$aliasedSlotPointerOperand,
+           "const ::mlir::MemorySlot &":$parentSlot,
+           "const ::mlir::MemorySlot &":$aliasSlot,
+           "::mlir::Value":$aliasValue,
            "::mlir::Value":$reachingDef,
            "::mlir::OpBuilder &":$builder), [{}],
-      [{
-        if (viewValue.getType() == targetType)
-          return viewValue;
-        return ::mlir::Value{};
-      }]
+      [{ return aliasValue; }]
     >,
   ];
 }

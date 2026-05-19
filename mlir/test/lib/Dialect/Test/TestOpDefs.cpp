@@ -1770,15 +1770,19 @@ TestMultiSlotAlloca::handleDestructuringComplete(
 }
 
 //===----------------------------------------------------------------------===//
-// TestTransparentView
+// TestTransparentAlias
 //===----------------------------------------------------------------------===//
 
-std::optional<PromotableSlotView> TestTransparentView::getPromotableSlotView() {
+void TestTransparentAlias::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot & /*parentSlot*/,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getSource())
+    return;
   Type elemType = cast<MemRefType>(getResult().getType()).getElementType();
-  return PromotableSlotView{getSource(), MemorySlot{getResult(), elemType}};
+  newMemorySlots.push_back(MemorySlot{getResult(), elemType});
 }
 
-bool TestTransparentView::canUsesBeRemoved(
+bool TestTransparentAlias::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses,
     const DataLayout &dataLayout) {
@@ -1787,22 +1791,25 @@ bool TestTransparentView::canUsesBeRemoved(
   return true;
 }
 
-DeletionKind TestTransparentView::removeBlockingUses(
+DeletionKind TestTransparentAlias::removeBlockingUses(
     const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
 }
 
 //===----------------------------------------------------------------------===//
-// TestTransparentCastView
+// TestTransparentCastAlias
 //===----------------------------------------------------------------------===//
 
-std::optional<PromotableSlotView>
-TestTransparentCastView::getPromotableSlotView() {
+void TestTransparentCastAlias::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot & /*parentSlot*/,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getSource())
+    return;
   Type elemType = cast<MemRefType>(getResult().getType()).getElementType();
-  return PromotableSlotView{getSource(), MemorySlot{getResult(), elemType}};
+  newMemorySlots.push_back(MemorySlot{getResult(), elemType});
 }
 
-bool TestTransparentCastView::canUsesBeRemoved(
+bool TestTransparentCastAlias::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses,
     const DataLayout &dataLayout) {
@@ -1811,28 +1818,30 @@ bool TestTransparentCastView::canUsesBeRemoved(
   return true;
 }
 
-DeletionKind TestTransparentCastView::removeBlockingUses(
+DeletionKind TestTransparentCastAlias::removeBlockingUses(
     const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
 }
 
-Value TestTransparentCastView::projectSlotValueToViewValue(Value value,
-                                                           Type targetType,
-                                                           OpBuilder &builder) {
-  if (value.getType() == targetType)
-    return value;
-  return UnrealizedConversionCastOp::create(builder, getLoc(), targetType,
-                                            value)
+Value TestTransparentCastAlias::projectSlotValueToAliasValue(
+    OpOperand & /*aliasedSlotPointerOperand*/,
+    const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
+    Value slotValue, OpBuilder &builder) {
+  if (slotValue.getType() == aliasSlot.elemType)
+    return slotValue;
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            aliasSlot.elemType, slotValue)
       .getResult(0);
 }
 
-Value TestTransparentCastView::projectViewValueToSlotValue(
-    Value viewValue, Type targetType, Value /*reachingDef*/,
+Value TestTransparentCastAlias::projectAliasValueToSlotValue(
+    OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
+    const MemorySlot & /*aliasSlot*/, Value aliasValue, Value /*reachingDef*/,
     OpBuilder &builder) {
-  if (viewValue.getType() == targetType)
-    return viewValue;
-  return UnrealizedConversionCastOp::create(builder, getLoc(), targetType,
-                                            viewValue)
+  if (aliasValue.getType() == parentSlot.elemType)
+    return aliasValue;
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            parentSlot.elemType, aliasValue)
       .getResult(0);
 }
 

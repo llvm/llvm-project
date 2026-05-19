@@ -8,7 +8,6 @@
 
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 
-#include "mlir/Analysis/SliceWalk.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include "mlir/Interfaces/MemorySlotOpInterfaces.cpp.inc"
@@ -16,122 +15,144 @@
 
 using namespace mlir;
 
-namespace {
-/// One step in a view chain, leaf-first. `inputElemType` is the elem type
-/// of the slot one step closer to root; `outputElemType` is the elem type
-/// this step exposes.
-struct ViewStep {
-  PromotableAliaserInterface view;
-  Type inputElemType;
-  Type outputElemType;
-};
-} // namespace
-
-/// Walks back from `value` to `rootSlot.ptr` along
-/// `getPromotableSlotView` chains. On success, populates `chainOut` with
-/// the view ops leaf-to-root and writes the type at which `value` aliases
-/// the underlying slot to `*outViewElemType`.
-static bool walkPromotableSlotViewChain(Value value, const MemorySlot &rootSlot,
-                                        SmallVectorImpl<ViewStep> &chainOut,
-                                        Type *outViewElemType) {
-  Type aliasElemType{};
-  bool reachedRoot = false;
-  WalkContinuation result = walkSlice(value, [&](Value current) {
-    if (current == rootSlot.ptr) {
-      reachedRoot = true;
-      return WalkContinuation::skip();
-    }
-    auto aliaser =
-        dyn_cast_or_null<PromotableAliaserInterface>(current.getDefiningOp());
-    if (!aliaser)
-      return WalkContinuation::interrupt();
-    std::optional<PromotableSlotView> info = aliaser.getPromotableSlotView();
-    if (!info || info->view.ptr != current)
-      return WalkContinuation::interrupt();
-    if (!aliasElemType)
-      aliasElemType = info->view.elemType;
-    chainOut.push_back(ViewStep{aliaser, /*inputElemType=*/Type{},
-                                /*outputElemType=*/info->view.elemType});
-    return WalkContinuation::advanceTo(info->aliasedSlotPointerOperand);
-  });
-
-  if (result.wasInterrupted() || !reachedRoot)
-    return false;
-
-  // Fill in each step's `inputElemType` from the previous step's output
-  // (or `rootSlot.elemType` for the root-most step).
-  Type prevOutput = rootSlot.elemType;
-  for (ViewStep &step : llvm::reverse(chainOut)) {
-    step.inputElemType = prevOutput;
-    prevOutput = step.outputElemType;
-  }
-
-  if (outViewElemType)
-    *outViewElemType = aliasElemType ? aliasElemType : rootSlot.elemType;
-  return true;
+/// Returns the slot describing `aliasPtr`: `rootSlot` if it is the root,
+/// the entry in `aliasMap` if it's a known alias, or `nullopt` otherwise.
+static std::optional<MemorySlot>
+getParentSlot(Value aliasPtr, const MemorySlot &rootSlot,
+              const PromotableAliasMap &aliasMap) {
+  if (aliasPtr == rootSlot.ptr)
+    return rootSlot;
+  auto it = aliasMap.find(aliasPtr);
+  if (it == aliasMap.end())
+    return std::nullopt;
+  return it->second.slot;
 }
 
-bool mlir::isPromotableSlotView(Value value, const MemorySlot &rootSlot,
-                                Type *outViewElemType) {
-  SmallVector<ViewStep> chain;
-  return walkPromotableSlotViewChain(value, rootSlot, chain, outViewElemType);
+void mlir::populatePromotableAliasMap(PromotableAliaserInterface aliaser,
+                                      const MemorySlot &rootSlot,
+                                      PromotableAliasMap &aliasMap) {
+  for (OpOperand &operand : aliaser->getOpOperands()) {
+    std::optional<MemorySlot> parentSlot =
+        getParentSlot(operand.get(), rootSlot, aliasMap);
+    if (!parentSlot)
+      continue;
+    SmallVector<MemorySlot, 2> newSlots;
+    aliaser.getPromotableSlotAliases(operand, *parentSlot, newSlots);
+    for (const MemorySlot &alias : newSlots)
+      aliasMap.try_emplace(alias.ptr, PromotableSlotAliasInfo{alias, &operand});
+  }
 }
 
-std::optional<MemorySlot> mlir::getOpViewSlot(Operation *op,
-                                              const MemorySlot &rootSlot) {
-  for (Value operand : op->getOperands()) {
-    Type viewElemType;
-    if (isPromotableSlotView(operand, rootSlot, &viewElemType))
-      return MemorySlot{operand, viewElemType};
-  }
+std::optional<MemorySlot>
+mlir::getOpAliasSlot(Operation *op, const MemorySlot &rootSlot,
+                     const PromotableAliasMap &aliasMap) {
+  for (Value operand : op->getOperands())
+    if (std::optional<MemorySlot> slot =
+            getParentSlot(operand, rootSlot, aliasMap))
+      return slot;
   return std::nullopt;
 }
 
-Value mlir::convertSlotValueToViewValue(Value slotValue, Value viewPtr,
-                                        const MemorySlot &rootSlot,
-                                        OpBuilder &builder) {
-  SmallVector<ViewStep> chain;
-  if (!walkPromotableSlotViewChain(viewPtr, rootSlot, chain, /*out=*/nullptr))
+bool mlir::isUsingAtMostOneSlotAlias(Operation *op, const MemorySlot &rootSlot,
+                                     const PromotableAliasMap &aliasMap) {
+  Value uniqueAliasPtr;
+  for (Value operand : op->getOperands()) {
+    std::optional<MemorySlot> slot = getParentSlot(operand, rootSlot, aliasMap);
+    if (!slot)
+      continue;
+    if (uniqueAliasPtr && uniqueAliasPtr != slot->ptr)
+      return false;
+    uniqueAliasPtr = slot->ptr;
+  }
+  return true;
+}
+
+namespace {
+/// A step in an alias chain, from leaf to root. `parentSlot` is one step
+/// closer to the root; `aliasSlot` is the slot exposed at this step.
+struct ChainStep {
+  PromotableAliaserInterface aliaser;
+  OpOperand *aliasedSlotPointerOperand;
+  MemorySlot parentSlot;
+  MemorySlot aliasSlot;
+};
+} // namespace
+
+/// Walks back from `aliasPtr` to `rootSlot.ptr` through `aliasMap`,
+/// populating `chainOut` from leaf to root. Returns false if `aliasPtr`
+/// is not a known alias of `rootSlot`.
+static bool buildAliasChain(Value aliasPtr, const MemorySlot &rootSlot,
+                            const PromotableAliasMap &aliasMap,
+                            SmallVectorImpl<ChainStep> &chainOut) {
+  if (aliasPtr == rootSlot.ptr)
+    return true;
+  Value current = aliasPtr;
+  while (current != rootSlot.ptr) {
+    auto it = aliasMap.find(current);
+    if (it == aliasMap.end())
+      return false;
+    OpOperand *operand = it->second.aliasedSlotPointerOperand;
+    auto aliaser = cast<PromotableAliaserInterface>(operand->getOwner());
+    std::optional<MemorySlot> parent =
+        getParentSlot(operand->get(), rootSlot, aliasMap);
+    if (!parent)
+      return false;
+    chainOut.push_back(ChainStep{aliaser, operand, *parent, it->second.slot});
+    current = operand->get();
+  }
+  return true;
+}
+
+Value mlir::convertSlotValueToAliasValue(Value slotValue, Value aliasPtr,
+                                         const MemorySlot &rootSlot,
+                                         const PromotableAliasMap &aliasMap,
+                                         OpBuilder &builder) {
+  SmallVector<ChainStep> chain;
+  if (!buildAliasChain(aliasPtr, rootSlot, aliasMap, chain))
     return {};
   Value current = slotValue;
   // Root-to-leaf walk: reverse the leaf-first chain.
-  for (ViewStep &step : llvm::reverse(chain)) {
-    current = step.view.projectSlotValueToViewValue(
-        current, step.outputElemType, builder);
+  for (ChainStep &step : llvm::reverse(chain)) {
+    current = step.aliaser.projectSlotValueToAliasValue(
+        *step.aliasedSlotPointerOperand, step.parentSlot, step.aliasSlot,
+        current, builder);
     if (!current)
       return {};
   }
   return current;
 }
 
-Value mlir::convertViewValueToSlotValue(Value viewValue, Value viewPtr,
-                                        Value rootReachingDef,
-                                        const MemorySlot &rootSlot,
-                                        OpBuilder &builder) {
-  SmallVector<ViewStep> chain;
-  if (!walkPromotableSlotViewChain(viewPtr, rootSlot, chain, /*out=*/nullptr))
+Value mlir::convertAliasValueToSlotValue(Value aliasValue, Value aliasPtr,
+                                         Value rootReachingDef,
+                                         const MemorySlot &rootSlot,
+                                         const PromotableAliasMap &aliasMap,
+                                         OpBuilder &builder) {
+  SmallVector<ChainStep> chain;
+  if (!buildAliasChain(aliasPtr, rootSlot, aliasMap, chain))
     return {};
 
-  // Project `rootReachingDef` down to each step's input level so the
-  // per-step projector can use it (needed for partial subviews; full views
-  // ignore it). The chain is leaf-first, so `chain.back()` is the root slot
-  // and `chain.front()` is the leaf view.
+  // Project `rootReachingDef` down to each step's parent level so the
+  // per-step projector can use it (needed for partial sub-aliases; full
+  // aliases ignore it). The chain is leaf-first, so `chain.back()` is the
+  // root-most step (parent = rootSlot) and `chain.front()` is the leaf.
   SmallVector<Value> perStepReachingDef(chain.size());
   Value current = rootReachingDef;
   for (int i = static_cast<int>(chain.size()) - 1; i >= 0; --i) {
     perStepReachingDef[i] = current;
-    current = chain[i].view.projectSlotValueToViewValue(
-        current, chain[i].outputElemType, builder);
+    current = chain[i].aliaser.projectSlotValueToAliasValue(
+        *chain[i].aliasedSlotPointerOperand, chain[i].parentSlot,
+        chain[i].aliasSlot, current, builder);
     if (!current)
       return {};
   }
 
-  // Walk leaf-to-root, combining `viewValue` with the projected reaching
+  // Walk leaf-to-root, combining `aliasValue` with the projected reaching
   // definition at each step.
-  current = viewValue;
+  current = aliasValue;
   for (size_t i = 0; i < chain.size(); ++i) {
-    current = chain[i].view.projectViewValueToSlotValue(
-        current, chain[i].inputElemType, perStepReachingDef[i], builder);
+    current = chain[i].aliaser.projectAliasValueToSlotValue(
+        *chain[i].aliasedSlotPointerOperand, chain[i].parentSlot,
+        chain[i].aliasSlot, current, perStepReachingDef[i], builder);
     if (!current)
       return {};
   }

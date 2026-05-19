@@ -100,21 +100,7 @@ add_mlir_library(MLIRLoopLikeInterface
 )
 
 add_mlir_interface_library(MemOpInterfaces)
-
-add_mlir_library(MLIRMemorySlotInterfaces
-  MemorySlotInterfaces.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
-
-  DEPENDS
-  MLIRMemorySlotInterfacesIncGen
-
-  LINK_LIBS PUBLIC
-  MLIRAnalysis
-  MLIRIR
-)
-
+add_mlir_interface_library(MemorySlotInterfaces)
 add_mlir_interface_library(ParallelCombiningOpInterface)
 add_mlir_interface_library(RuntimeVerifiableOpInterface)
 add_mlir_interface_library(ShapedOpInterfaces)

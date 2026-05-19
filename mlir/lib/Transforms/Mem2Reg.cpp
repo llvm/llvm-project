@@ -158,6 +158,9 @@ struct MemorySlotPromotionInfo {
   /// are guaranteed to be held by a PromotableRegionOpInterface, and to be
   /// nested within the parent region of the slot pointer.
   DenseMap<Region *, RegionPromotionInfo> regionsToPromote;
+  /// Transitive aliases of `slot.ptr` via `PromotableAliaserInterface`,
+  /// mapping alias values to their exposed slot and aliased operand.
+  PromotableAliasMap aliasMap;
 };
 
 /// Computes information for basic slot promotion. This will check that direct
@@ -184,9 +187,10 @@ private:
   /// Resulting blocking uses are grouped by region.
   /// This also ensures all the uses are within promotable regions, adding
   /// information about regions to be promoted to the `regionsToPromote` map.
-  LogicalResult computeBlockingUses(
-      RegionBlockingUsesMap &userToBlockingUses,
-      DenseMap<Region *, RegionPromotionInfo> &regionsToPromote);
+  LogicalResult
+  computeBlockingUses(RegionBlockingUsesMap &userToBlockingUses,
+                      DenseMap<Region *, RegionPromotionInfo> &regionsToPromote,
+                      PromotableAliasMap &aliasMap);
 
   /// Computes the points in the provided region where multiple re-definitions
   /// of the slot's value (stores) may conflict.
@@ -344,7 +348,8 @@ Value MemorySlotPromoter::getOrCreateDefaultValue() {
 
 LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
     RegionBlockingUsesMap &userToBlockingUses,
-    DenseMap<Region *, RegionPromotionInfo> &regionsToPromote) {
+    DenseMap<Region *, RegionPromotionInfo> &regionsToPromote,
+    PromotableAliasMap &aliasMap) {
   // The promotion of an operation may require the promotion of further
   // operations (typically, removing operations that use an operation that must
   // delete itself). We thus need to start from the use of the slot pointer and
@@ -389,6 +394,10 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
     if (it == blockingUsesMap.end())
       continue;
 
+    // Populate the alias map for alias-exposing ops.
+    if (auto aliaser = dyn_cast<PromotableAliaserInterface>(user))
+      populatePromotableAliasMap(aliaser, slot, aliasMap);
+
     SmallPtrSet<OpOperand *, 4> &blockingUses = it->second;
 
     SmallVector<OpOperand *> newBlockingUses;
@@ -400,15 +409,22 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
         return failure();
       regionsWithDirectUse.insert(user->getParentRegion());
     } else if (auto promotable = dyn_cast<PromotableMemOpInterface>(user)) {
-      MemorySlot viewSlot = getOpViewSlot(user, slot).value_or(slot);
-      if (!promotable.canUsesBeRemoved(viewSlot, blockingUses, newBlockingUses,
+      // If the memop reaches the root slot through multiple distinct alias
+      // operands, promotion fails. `PromotableMemOpInterface` currently
+      // expects a single slot per call. Supporting multiple aliases would
+      // require extending the interface.
+      if (!isUsingAtMostOneSlotAlias(user, slot, aliasMap))
+        return failure();
+      MemorySlot aliasSlot =
+          getOpAliasSlot(user, slot, aliasMap).value_or(slot);
+      if (!promotable.canUsesBeRemoved(aliasSlot, blockingUses, newBlockingUses,
                                        dataLayout))
         return failure();
 
       // Operations that interact with the slot's memory will be promoted using
       // a reaching definition. Therefore, the operation must be within a region
       // where the reaching definition can be computed.
-      if (promotable.storesTo(viewSlot))
+      if (promotable.storesTo(aliasSlot))
         regionsWithDirectStore.insert(user->getParentRegion());
       else
         regionsWithDirectUse.insert(user->getParentRegion());
@@ -510,8 +526,8 @@ MemorySlotPromotionAnalyzer::computeInfo() {
   // cannot find a way to resolve their blocking uses, we abort the promotion.
   // We also compute at this stage the regions that will be analyzed for
   // reaching definition information.
-  if (failed(
-          computeBlockingUses(info.userToBlockingUses, info.regionsToPromote)))
+  if (failed(computeBlockingUses(info.userToBlockingUses, info.regionsToPromote,
+                                 info.aliasMap)))
     return {};
 
   // Compute the blocks containing a store for each region, either directly or
@@ -519,13 +535,14 @@ MemorySlotPromotionAnalyzer::computeInfo() {
   // all regions with at least one store.
   //
   // Iterating `info.userToBlockingUses` lets this also pick up stores that
-  // reach the slot through chains of views (`getPromotableSlotView`).
+  // reach the slot through chains of aliases (`getPromotableSlotAliases`).
   DenseMap<Region *, SmallPtrSet<Block *, 16>> definingBlocks;
   for (auto &[region, opsMap] : info.userToBlockingUses)
     for (auto &[user, _blockingUses] : opsMap)
       if (auto storeOp = dyn_cast<PromotableMemOpInterface>(user)) {
-        MemorySlot viewSlot = getOpViewSlot(user, slot).value_or(slot);
-        if (storeOp.storesTo(viewSlot))
+        MemorySlot aliasSlot =
+            getOpAliasSlot(user, slot, info.aliasMap).value_or(slot);
+        if (storeOp.storesTo(aliasSlot))
           definingBlocks[region].insert(user->getBlock());
       }
   for (auto &[region, regionInfo] : info.regionsToPromote)
@@ -558,8 +575,9 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
       if (info.userToBlockingUses[memOp->getParentRegion()].contains(memOp))
         reachingDefs.insert({memOp, reachingDef});
 
-      MemorySlot viewSlot = getOpViewSlot(memOp, slot).value_or(slot);
-      if (memOp.storesTo(viewSlot)) {
+      MemorySlot aliasSlot =
+          getOpAliasSlot(memOp, slot, info.aliasMap).value_or(slot);
+      if (memOp.storesTo(aliasSlot)) {
         builder.setInsertionPointAfter(memOp);
         // To not expose default value creation to the interfaces, if we have
         // no reaching definition by now, we set it to the default value.
@@ -567,27 +585,27 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
         if (!reachingDef)
           reachingDef = getOrCreateDefaultValue();
         Value reachingDefAtStore = reachingDef;
-        if (slot.ptr != viewSlot.ptr) {
-          // The store sees the slot at `viewSlot.elemType`; project the
+        if (slot.ptr != aliasSlot.ptr) {
+          // The store sees the slot at `aliasSlot.elemType`; project the
           // reaching definition (at root elem type) before handing it to
           // `getStored`.
-          reachingDefAtStore = convertSlotValueToViewValue(
-              reachingDef, viewSlot.ptr, slot, builder);
+          reachingDefAtStore = convertSlotValueToAliasValue(
+              reachingDef, aliasSlot.ptr, slot, info.aliasMap, builder);
           assert(reachingDefAtStore &&
-                 "projectSlotValueToViewValue contract violation");
+                 "projectSlotValueToAliasValue contract violation");
         }
         Value stored =
-            memOp.getStored(viewSlot, builder, reachingDefAtStore, dataLayout);
+            memOp.getStored(aliasSlot, builder, reachingDefAtStore, dataLayout);
         assert(stored && "a memory operation storing to a slot must provide a "
                          "new definition of the slot");
-        // `replacedValuesMap` keeps `stored` at `viewSlot.elemType` for
+        // `replacedValuesMap` keeps `stored` at `aliasSlot.elemType` for
         // `visitReplacedValues`; the new reaching definition is tracked at
         // the root slot's elem type, so project `stored` back.
         replacedValuesMap[memOp] = stored;
-        if (viewSlot.ptr != slot.ptr) {
-          stored = convertViewValueToSlotValue(stored, viewSlot.ptr,
-                                               reachingDef, slot, builder);
-          assert(stored && "projectViewValueToSlotValue contract violation");
+        if (aliasSlot.ptr != slot.ptr) {
+          stored = convertAliasValueToSlotValue(
+              stored, aliasSlot.ptr, reachingDef, slot, info.aliasMap, builder);
+          assert(stored && "projectAliasValueToSlotValue contract violation");
         }
         reachingDef = stored;
       }
@@ -791,21 +809,22 @@ void MemorySlotPromoter::removeBlockingUses(Region *region) {
         reachingDef = getOrCreateDefaultValue();
 
       builder.setInsertionPointAfter(toPromote);
-      MemorySlot viewSlot = getOpViewSlot(toPromote, slot).value_or(slot);
+      MemorySlot aliasSlot =
+          getOpAliasSlot(toPromote, slot, info.aliasMap).value_or(slot);
       Value reachingDefAtBlockingUse = reachingDef;
-      if (viewSlot.ptr != slot.ptr) {
-        // Project the reaching definition to `viewSlot.elemType` to match
+      if (aliasSlot.ptr != slot.ptr) {
+        // Project the reaching definition to `aliasSlot.elemType` to match
         // what `toPromoteMemOp` sees.
-        reachingDefAtBlockingUse = convertSlotValueToViewValue(
-            reachingDef, viewSlot.ptr, slot, builder);
+        reachingDefAtBlockingUse = convertSlotValueToAliasValue(
+            reachingDef, aliasSlot.ptr, slot, info.aliasMap, builder);
         assert(reachingDefAtBlockingUse &&
-               "projectSlotValueToViewValue contract violation");
+               "projectSlotValueToAliasValue contract violation");
       }
       if (toPromoteMemOp.removeBlockingUses(
-              viewSlot, blockingUsesMap[toPromote], builder,
+              aliasSlot, blockingUsesMap[toPromote], builder,
               reachingDefAtBlockingUse, dataLayout) == DeletionKind::Delete)
         toErase.insert(toPromote);
-      if (toPromoteMemOp.storesTo(viewSlot))
+      if (toPromoteMemOp.storesTo(aliasSlot))
         if (Value replacedValue = replacedValuesMap[toPromoteMemOp])
           replacedValues.push_back({toPromoteMemOp, replacedValue});
       continue;
