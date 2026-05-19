@@ -317,6 +317,7 @@ add_header_macro(
   regex.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.regex_macros
     .llvm-libc-types.regex_t
     .llvm-libc-types.regmatch_t
     .llvm-libc-types.regoff_t

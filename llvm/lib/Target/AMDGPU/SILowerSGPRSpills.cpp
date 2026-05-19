@@ -267,8 +267,7 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
           continue;
         }
 
-        const TargetRegisterClass *RC =
-          TRI->getMinimalPhysRegClass(Reg, MVT::i32);
+        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
         int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
                                            TRI->getSpillAlign(*RC), true);
 
