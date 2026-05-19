@@ -358,11 +358,7 @@ if platform.system() == "Windows":
         if v in os.environ:
             config.environment[v] = os.environ[v]
 
-    use_server = lit_config.params.get("lldb-use-lldb-server", None)
-    if use_server is None:
-        use_server = getattr(config, "lldb_use_lldb_server", None)
-    if use_server is not None and str(use_server).lower() in ("1", "on", "yes", "true"):
-        lit_config.note("Running API tests with LLDB_USE_LLDB_SERVER=1")
+    if getattr(config, "lldb_use_lldb_server", False):
         config.environment["LLDB_USE_LLDB_SERVER"] = "1"
 
     # Use anonymous pipes instead of ConPTY for all tests. ConPTY injects VT
