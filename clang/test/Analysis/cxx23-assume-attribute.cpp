@@ -88,3 +88,10 @@ int multiple_assumptions(int a, int b) {
   // expected-warning-re@-3 {{(reg_${{[0-9]+}}<int a>) + (reg_${{[0-9]+}}<int b>)}} FIXME: We shouldn't have this dump.
   return a + b;
 }
+
+int trivial_assumption(int a) {
+  [[assume(a == 2)]];
+  clang_analyzer_dump(a); // expected-warning {{2 S32b}}
+  // expected-warning-re@-1 {{reg_${{[0-9]+}}<int a>}} FIXME: We shouldn't have this dump.
+  return a;
+}
