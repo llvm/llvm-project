@@ -33,12 +33,11 @@ bool clang::loadLinkModules(CompilerInstance &CI, llvm::LLVMContext &Ctx,
     llvm::Expected<std::unique_ptr<llvm::Module>> ModuleOrErr =
         llvm::getOwningLazyBitcodeModule(std::move(*BCBuf), Ctx);
     if (!ModuleOrErr) {
-      llvm::handleAllErrors(ModuleOrErr.takeError(),
-                            [&](llvm::ErrorInfoBase &EIB) {
-                              CI.getDiagnostics().Report(
-                                  diag::err_cannot_open_file)
-                                  << F.Filename << EIB.message();
-                            });
+      llvm::handleAllErrors(
+          ModuleOrErr.takeError(), [&](llvm::ErrorInfoBase &EIB) {
+            CI.getDiagnostics().Report(diag::err_cannot_open_file)
+                << F.Filename << EIB.message();
+          });
       LinkModules.clear();
       return true;
     }
