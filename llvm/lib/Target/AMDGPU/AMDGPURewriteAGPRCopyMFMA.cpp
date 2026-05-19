@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DebugCounter.h"
 
 using namespace llvm;
@@ -43,6 +44,12 @@ using namespace llvm;
 
 DEBUG_COUNTER(RewriteAGPRCopyMFMACounter, DEBUG_TYPE,
               "Controls which MFMA chains are rewritten to AGPR form");
+
+static cl::opt<unsigned> ImplicitDefScanLimit(
+    "amdgpu-mfma-vgpr-to-agpr-spill-scan-limit", cl::Hidden, cl::init(4),
+    cl::desc("Maximum number of instructions to scan forward from a live "
+             "segment start when searching for a spill store before "
+             "inserting an IMPLICIT_DEF"));
 
 namespace {
 
@@ -126,6 +133,15 @@ public:
   /// be included in the map.
   void collectSpillIndexUses(ArrayRef<LiveInterval *> StackIntervals,
                              SpillReferenceMap &Map) const;
+
+  /// For each segment in the stack slot's LiveInterval whose start does not
+  /// correspond to a spill store, insert an IMPLICIT_DEF of \p NewVReg.
+  /// This handles a control flow path where there is no spill store dominating
+  /// a spill reload. Returns false if any segment start cannot be resolved
+  /// (caller should bail out and not unspill).
+  bool insertImplicitDefsForLiveSegments(LiveInterval &StackLI, int Slot,
+                                         ArrayRef<MachineInstr *> SpillStores,
+                                         Register NewVReg) const;
 
   /// Attempt to unspill VGPRs by finding a free register and replacing the
   /// spill instructions with copies.
@@ -476,6 +492,69 @@ void AMDGPURewriteAGPRCopyMFMAImpl::collectSpillIndexUses(
   }
 }
 
+bool AMDGPURewriteAGPRCopyMFMAImpl::insertImplicitDefsForLiveSegments(
+    LiveInterval &StackLI, int Slot, ArrayRef<MachineInstr *> SpillStores,
+    Register NewVReg) const {
+  const unsigned ScanLimit = ImplicitDefScanLimit;
+
+  SmallPtrSet<MachineInstr *, 4> StoreSet(SpillStores.begin(),
+                                          SpillStores.end());
+
+  SmallVector<MachineInstr *, 2> InsertedDefs;
+
+  for (const LiveRange::Segment &Seg : StackLI) {
+    MachineInstr *MI = LIS.getInstructionFromIndex(Seg.start);
+    // Fall back to LIS query in case the segment start does not correspond
+    // to an instruction.
+    MachineBasicBlock *MBB =
+        MI ? MI->getParent() : LIS.getMBBFromIndex(Seg.start);
+
+    // Bail-out: we could not resolve any MBB for this segment start.
+    // Roll back any defs already inserted for earlier segments -- the
+    // caller must skip unspilling this slot entirely.
+    if (!MBB) {
+      for (MachineInstr *Def : InsertedDefs) {
+        LIS.RemoveMachineInstrFromMaps(*Def);
+        Def->eraseFromParent();
+      }
+      return false;
+    }
+
+    // Scan forward from the segment start looking for a spill store to this
+    // slot. LiveStacks liveness for a store can start a few instructions
+    // before the store itself, so we allow a small window controlled by
+    // ImplicitDefScanLimit. Redundant IMPLICIT_DEFs (e.g. because of a small
+    // scan limit) are harmless, since they will be cleaned up by downstream
+    // transformations.
+    MachineBasicBlock::iterator It = MI ? MI->getIterator() : MBB->begin();
+    bool FoundStore = false;
+    for (unsigned I = 0; I < ScanLimit && It != MBB->end(); ++I, ++It) {
+      if (StoreSet.count(&*It)) {
+        FoundStore = true;
+        break;
+      }
+    }
+
+    // A spill store is found for this segment, so no IMPLICIT_DEF is needed.
+    if (FoundStore)
+      continue;
+
+    // Insert an IMPLICIT_DEF to provide a reaching definition for NewVReg.
+    MachineBasicBlock::iterator InsertPt =
+        MI ? MI->getIterator() : MBB->begin();
+    MachineInstr *ImpDef =
+        BuildMI(*MBB, InsertPt, DebugLoc(), TII.get(TargetOpcode::IMPLICIT_DEF),
+                NewVReg);
+    LIS.InsertMachineInstrInMaps(*ImpDef);
+    InsertedDefs.push_back(ImpDef);
+
+    LLVM_DEBUG(dbgs() << "Inserted IMPLICIT_DEF for " << printReg(NewVReg)
+                      << " in " << printMBBReference(*MBB) << '\n');
+  }
+
+  return true;
+}
+
 void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
   unsigned NumSlots = LSS.getNumIntervals();
   if (NumSlots == 0)
@@ -545,6 +624,18 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
 
       const TargetRegisterClass *RC = LSS.getIntervalRegClass(Slot);
       Register NewVReg = MRI.createVirtualRegister(RC);
+
+      // It is legal for a spill reload to not have a dominating spill store.
+      // But after un-spilling, the replacement vreg must have reaching defs
+      // on all paths. Ensure this condition by inserting IMPLICIT_DEFs if
+      // required. Bail out if segment starts cannot be resolved.
+      SmallVector<MachineInstr *, 4> SpillStores;
+      for (MachineInstr *MI : SpillReferences->second)
+        if (MI->mayStore())
+          SpillStores.push_back(MI);
+
+      if (!insertImplicitDefsForLiveSegments(*LI, Slot, SpillStores, NewVReg))
+        continue;
 
       for (MachineInstr *SpillMI : SpillReferences->second)
         replaceSpillWithCopyToVReg(*SpillMI, Slot, NewVReg);
