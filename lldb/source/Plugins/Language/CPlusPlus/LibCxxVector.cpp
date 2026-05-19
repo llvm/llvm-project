@@ -39,6 +39,7 @@ public:
 private:
   ValueObject *m_start = nullptr;
   ValueObject *m_finish = nullptr;
+  lldb::ValueObjectSP m_finish_sp;
   CompilerType m_element_type;
   uint32_t m_element_size = 0;
 };
@@ -127,8 +128,12 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::GetChildAtIndex(
 }
 
 static ValueObjectSP GetDataPointer(ValueObject &root) {
+  ValueObjectSP layout_sp = root.GetChildMemberWithName("__layout_");
+  ValueObject &parent = layout_sp ? *layout_sp : root;
+  if (auto begin_sp = parent.GetChildMemberWithName("__begin_"))
+    return begin_sp;
   auto [cap_sp, is_compressed_pair] =
-      GetValueOrOldCompressedPair(root, "__cap_", "__end_cap_");
+      GetValueOrOldCompressedPair(parent, "__cap_", "__end_cap_");
   if (!cap_sp)
     return nullptr;
 
@@ -141,6 +146,7 @@ static ValueObjectSP GetDataPointer(ValueObject &root) {
 lldb::ChildCacheState
 lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
   m_start = m_finish = nullptr;
+  m_finish_sp.reset();
   ValueObjectSP data_sp(GetDataPointer(m_backend));
 
   if (!data_sp)
@@ -156,8 +162,22 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
 
     if (m_element_size > 0) {
       // store raw pointers or end up with a circular dependency
-      m_start = m_backend.GetChildMemberWithName("__begin_").get();
-      m_finish = m_backend.GetChildMemberWithName("__end_").get();
+      ValueObjectSP layout_sp = m_backend.GetChildMemberWithName("__layout_");
+      ValueObject &parent = layout_sp ? *layout_sp : m_backend;
+      m_start = parent.GetChildMemberWithName("__begin_").get();
+      m_finish = parent.GetChildMemberWithName("__end_").get();
+      if (!m_finish) {
+        if (ValueObjectSP size_sp = parent.GetChildMemberWithName("__size_")) {
+          uint64_t start_val = m_start ? m_start->GetValueAsUnsigned(0) : 0;
+          uint64_t size_val = size_sp->GetValueAsUnsigned(0);
+          uint64_t finish_val = start_val + size_val * m_element_size;
+          m_finish_sp = CreateChildValueObjectFromAddress(
+              "__end_", finish_val, m_backend.GetExecutionContextRef(),
+              m_start ? m_start->GetCompilerType() : CompilerType(),
+              /*do_deref=*/false);
+          m_finish = m_finish_sp.get();
+        }
+      }
     }
   }
   return lldb::ChildCacheState::eRefetch;
