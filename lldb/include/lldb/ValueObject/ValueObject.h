@@ -569,7 +569,7 @@ public:
   /// Change the name of the current ValueObject. Should *not* be used from a
   /// synthetic child provider as it would change the name of the non synthetic
   /// child as well.
-  void SetName(ConstString name) { m_name = name; }
+  void SetName(llvm::StringRef name) { m_name = ConstString(name); }
 
   struct AddrAndType {
     lldb::addr_t address = LLDB_INVALID_ADDRESS;
@@ -628,7 +628,7 @@ public:
   /// ValueObject as its parent. It should be used when we want to change the
   /// name of a ValueObject without modifying the actual ValueObject itself
   /// (e.g. sythetic child provider).
-  virtual lldb::ValueObjectSP Clone(ConstString new_name);
+  virtual lldb::ValueObjectSP Clone(llvm::StringRef new_name);
 
   virtual lldb::ValueObjectSP AddressOf(Status &error);
 
