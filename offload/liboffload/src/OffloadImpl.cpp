@@ -164,6 +164,7 @@ struct ol_queue_impl_t {
       : AsyncInfo(AsyncInfo), Device(Device), Id(IdCounter++) {}
   __tgt_async_info *AsyncInfo;
   ol_device_handle_t Device;
+  std::mutex Mutex;
   // A unique identifier for the queue
   size_t Id;
   static std::atomic<size_t> IdCounter;
@@ -767,12 +768,13 @@ Error olDestroyQueue_impl(ol_queue_handle_t Queue) {
 }
 
 Error olSyncQueue_impl(ol_queue_handle_t Queue) {
+  std::lock_guard<std::mutex> Lock(Queue->Mutex);
+
   // Host plugin doesn't have a queue set so it's not safe to call synchronize
   // on it, but we have nothing to synchronize in that situation anyway.
   if (Queue->AsyncInfo->Queue) {
-    // We don't need to release the queue and we would like the ability for
-    // other offload threads to submit work concurrently, so pass "false" here
-    // so we don't release the underlying queue object.
+    // Keep the underlying queue object available for future submissions after
+    // this synchronization completes.
     if (auto Err = Queue->Device->Device->synchronize(Queue->AsyncInfo, false))
       return Err;
   }
@@ -1063,6 +1065,10 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   if (Kernel->Kind != OL_SYMBOL_KIND_KERNEL)
     return createOffloadError(ErrorCode::SYMBOL_KIND,
                               "provided symbol is not a kernel");
+
+  std::unique_lock<std::mutex> QueueLock;
+  if (Queue)
+    QueueLock = std::unique_lock<std::mutex>(Queue->Mutex);
 
   auto *QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
   AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, QueueImpl);
