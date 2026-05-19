@@ -7244,55 +7244,9 @@ static void checkLifetimeBoundAttr(Sema &S, NamedDecl &ND) {
   }
 }
 
-static bool isPrintfScanfLikeBuiltin(Sema &S, const FunctionDecl &FD) {
-  if (unsigned BuiltinID = FD.getBuiltinID()) {
-    unsigned FormatIdx;
-    bool HasVAListArg;
-
-    return S.Context.BuiltinInfo.isPrintfLike(BuiltinID, FormatIdx,
-                                              HasVAListArg) ||
-           S.Context.BuiltinInfo.isScanfLike(BuiltinID, FormatIdx,
-                                             HasVAListArg);
-  }
-
-  return false;
-}
-
-static bool isPrintfLikeFunction(Sema &S, const FunctionDecl &FD,
-                                 unsigned &FormatIdx, unsigned &FirstArg) {
-  IdentifierInfo *Name = FD.getIdentifier();
-  if (!Name)
-    return false;
-
-  if ((!S.getLangOpts().CPlusPlus &&
-       FD.getDeclContext()->isTranslationUnit()) ||
-      (isa<LinkageSpecDecl>(FD.getDeclContext()) &&
-       cast<LinkageSpecDecl>(FD.getDeclContext())->getLanguage() ==
-           LinkageSpecLanguageIDs::C)) {
-    if (Name->isStr("asprintf") || Name->isStr("vasprintf")) {
-      FormatIdx = 2;
-      FirstArg = Name->isStr("vasprintf") ? 0 : 3;
-      return true;
-    }
-  }
-
-  return false;
-}
-
 static void checkModularFormatAttr(Sema &S, NamedDecl &ND) {
-  if (!ND.hasAttr<ModularFormatAttr>())
-    return;
-
-  if (isa<FunctionDecl>(ND)) {
-    FunctionDecl *FD = cast<FunctionDecl>(&ND);
-    unsigned FormatIdx, FirstArg;
-
-    if (FD->hasAttr<FormatAttr>() || isPrintfScanfLikeBuiltin(S, *FD) ||
-        isPrintfLikeFunction(S, *FD, FormatIdx, FirstArg))
-      return;
-  }
-
-  S.Diag(ND.getLocation(), diag::err_modular_format_attribute_no_format);
+  if (ND.hasAttr<ModularFormatAttr>() && !ND.hasAttr<FormatAttr>())
+    S.Diag(ND.getLocation(), diag::err_modular_format_attribute_no_format);
 }
 
 static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
@@ -17602,14 +17556,15 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
   } else
     return;
 
-  // FIXME: asprintf and vasprintf aren't C99 functions. Should they be
-  // target-specific builtins, perhaps?
-  unsigned FormatIdx, FirstArg;
-  if (!FD->hasAttr<FormatAttr>() &&
-      isPrintfLikeFunction(*this, *FD, FormatIdx, FirstArg))
-    FD->addAttr(
-        FormatAttr::CreateImplicit(Context, &Context.Idents.get("printf"),
-                                   FormatIdx, FirstArg, FD->getLocation()));
+  if (Name->isStr("asprintf") || Name->isStr("vasprintf")) {
+    // FIXME: asprintf and vasprintf aren't C99 functions. Should they be
+    // target-specific builtins, perhaps?
+    if (!FD->hasAttr<FormatAttr>())
+      FD->addAttr(FormatAttr::CreateImplicit(Context,
+                                             &Context.Idents.get("printf"), 2,
+                                             Name->isStr("vasprintf") ? 0 : 3,
+                                             FD->getLocation()));
+  }
 
   if (Name->isStr("__CFStringMakeConstantString")) {
     // We already have a __builtin___CFStringMakeConstantString,
