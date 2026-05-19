@@ -17658,10 +17658,19 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
   };
 
   auto IsValidEltVT = [&](MVT VT) {
-    return VT != MVT::INVALID_SIMPLE_VALUE_TYPE && VT.isInteger() &&
-           VT.getSizeInBits() >= 8 &&
-           VT.getSizeInBits() <= Subtarget.getXLen() &&
-           OpSize % VT.getSizeInBits() == 0;
+    if (VT == MVT::INVALID_SIMPLE_VALUE_TYPE || !VT.isInteger())
+      return false;
+
+    // Make sure we don't try to create an impossible vector type where the
+    // elements don't perfectly fill up the OpSize boundary.
+    unsigned EltSize = VT.getSizeInBits();
+    if (EltSize == 0 || OpSize % EltSize != 0)
+      return false;
+
+    // Construct the proposed vector type to check its legality
+    unsigned NumElts = OpSize / EltSize;
+    EVT TestVecVT = EVT::getVectorVT(*DAG.getContext(), VT, NumElts);
+    return Subtarget.getTargetLowering()->isTypeLegal(TestVecVT);
   };
 
   // Get preferred VT from either X or Y.
