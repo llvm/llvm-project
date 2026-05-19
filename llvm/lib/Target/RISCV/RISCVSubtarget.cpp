@@ -241,8 +241,22 @@ bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
 }
 
 bool RISCVSubtarget::isLegalElementTypeForRVV(Type *EltTy) const {
-  return isLegalElementTypeForRVV(
-      TLInfo.getValueType(TLInfo.getTargetMachine().createDataLayout(), EltTy));
+  if (EltTy->isPointerTy())
+    return is64Bit() ? hasVInstructionsI64() : true;
+  if (EltTy->isIntegerTy(1) || EltTy->isIntegerTy(8) ||
+      EltTy->isIntegerTy(16) || EltTy->isIntegerTy(32))
+    return true;
+  if (EltTy->isIntegerTy(64))
+    return hasVInstructionsI64();
+  if (EltTy->isHalfTy())
+    return hasVInstructionsF16Minimal();
+  if (EltTy->isBFloatTy())
+    return hasVInstructionsBF16Minimal();
+  if (EltTy->isFloatTy())
+    return hasVInstructionsF32();
+  if (EltTy->isDoubleTy())
+    return hasVInstructionsF64();
+  return false;
 }
 
 bool RISCVSubtarget::isLegalElementTypeForRVV(EVT ScalarTy) const {
