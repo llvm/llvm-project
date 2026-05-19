@@ -271,6 +271,7 @@ public:
   HANDLE_ATTR_CLASS(PrefixSpec::Non_Recursive, NON_RECURSIVE)
   HANDLE_ATTR_CLASS(PrefixSpec::Pure, PURE)
   HANDLE_ATTR_CLASS(PrefixSpec::Recursive, RECURSIVE)
+  HANDLE_ATTR_CLASS(PrefixSpec::Simple, SIMPLE)
   HANDLE_ATTR_CLASS(TypeAttrSpec::BindC, BIND_C)
   HANDLE_ATTR_CLASS(BindAttr::Deferred, DEFERRED)
   HANDLE_ATTR_CLASS(BindAttr::Non_Overridable, NON_OVERRIDABLE)
@@ -1480,6 +1481,7 @@ public:
       llvm::ArrayRef<SourceName> componentPath, parser::Designator &designator);
 
 private:
+  Symbol *CopyUseDeviceSymbol(const Symbol &symbol);
   SemanticsContext &context_;
 };
 
@@ -1615,20 +1617,43 @@ bool AccVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
 
 void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
   // New symbols are created for those appearing in the use_device clause.
-  // These new symbols get the CUDA device attribute.
+  // These new symbols get the CUDA UseDevice attribute so that generic
+  // resolution can distinguish them from true DEVICE variables: UseDevice
+  // actuals are compatible with both host and device dummy arguments.
   if (name && name->symbol) {
-    Symbol *copy{currScope().CopySymbol(name->symbol->GetUltimate())};
+    Symbol *copy{CopyUseDeviceSymbol(*name->symbol)};
     if (copy) {
-      if (auto *object{copy->GetUltimate().detailsIf<ObjectEntityDetails>()}) {
-        object->set_cudaDataAttr(common::CUDADataAttr::Device);
+      if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
+        object->set_cudaDataAttr(common::CUDADataAttr::UseDevice);
       }
-    } else {
-      copy = FindInScope(currScope(), name->symbol->GetUltimate().name());
-    }
-    if (copy) {
       name->symbol = copy;
     }
   }
+}
+
+Symbol *AccVisitor::CopyUseDeviceSymbol(const Symbol &symbol) {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  Symbol *copy{currScope().CopySymbol(ultimate)};
+  if (!copy) {
+    copy = FindInScope(currScope(), ultimate.name());
+  }
+  if (copy && copy->has<HostAssocDetails>()) {
+    if (const auto *hostAssoc{copy->detailsIf<HostAssocDetails>()};
+        hostAssoc && copy->owner().kind() == Scope::Kind::OpenACCConstruct) {
+      Scope &hostScope{currScope().parent()};
+      if (!FindInScope(hostScope, ultimate.name())) {
+        hostScope.CopySymbol(*copy);
+      }
+    }
+    if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
+      currScope().erase(copy->name());
+      auto pair{currScope().try_emplace(
+          ultimate.name(), ultimate.attrs(), ObjectEntityDetails{*object})};
+      copy = &*pair.first->second;
+      copy->flags() = ultimate.flags();
+    }
+  }
+  return copy;
 }
 
 void AccVisitor::CopySymbolWithDeviceStructurePath(const parser::Name *baseName,
@@ -1636,11 +1661,7 @@ void AccVisitor::CopySymbolWithDeviceStructurePath(const parser::Name *baseName,
   if (!baseName || !baseName->symbol || componentPath.empty()) {
     return;
   }
-  const Symbol &orig{*baseName->symbol};
-  Symbol *copy{currScope().CopySymbol(orig)};
-  if (!copy) {
-    copy = FindInScope(currScope(), baseName->symbol->name());
-  }
+  Symbol *copy{CopyUseDeviceSymbol(*baseName->symbol)};
   if (!copy) {
     return;
   }
@@ -1709,7 +1730,7 @@ public:
   static bool NeedsScope(const parser::OmpBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
-  bool Pre(const parser::OpenMPRequiresConstruct &x) {
+  bool Pre(const parser::OmpRequiresDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
@@ -1794,11 +1815,13 @@ public:
   void Post(const parser::OmpEndSectionsDirective &x) {
     Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
-  bool Pre(const parser::OpenMPThreadprivate &) {
+  bool Pre(const parser::OmpThreadprivateDirective &) {
     SkipImplicitTyping(true);
     return true;
   }
-  void Post(const parser::OpenMPThreadprivate &) { SkipImplicitTyping(false); }
+  void Post(const parser::OmpThreadprivateDirective &) {
+    SkipImplicitTyping(false);
+  }
   bool Pre(const parser::OmpDeclareTargetDirective &x) {
     auto addObjectName{[&](const parser::OmpObject &object) {
       common::visit(
@@ -4815,6 +4838,11 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
       name.symbol = nullptr;
     } else if (auto *entity{ultimate.detailsIf<EntityDetails>()};
                entity && !ultimate.has<ProcEntityDetails>()) {
+      if (entity->isDummy()) {
+        Say(name,
+            "Dummy argument '%s' may not be used as a statement function"_err_en_US);
+        return false;
+      }
       resultType = entity->type();
       ultimate.details() = UnknownDetails{}; // will be replaced below
     } else {
@@ -5904,7 +5932,7 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
   auto &symbol{HandleAttributeStmt(Attr::PARAMETER, name)};
   ConvertToObjectEntity(symbol);
   auto *details{symbol.detailsIf<ObjectEntityDetails>()};
-  if (!details || symbol.test(Symbol::Flag::CrayPointer) ||
+  if (!details || IsPointer(symbol) || symbol.test(Symbol::Flag::CrayPointer) ||
       symbol.test(Symbol::Flag::CrayPointee)) {
     SayWithDecl(
         name, symbol, "PARAMETER attribute not allowed on '%s'"_err_en_US);
@@ -9674,7 +9702,8 @@ void ResolveNamesVisitor::HandleProcedureName(
 bool ResolveNamesVisitor::CheckImplicitNoneExternal(
     const SourceName &name, const Symbol &symbol) {
   if (symbol.has<ProcEntityDetails>() && isImplicitNoneExternal() &&
-      !symbol.attrs().test(Attr::EXTERNAL) &&
+      (!symbol.attrs().test(Attr::EXTERNAL) ||
+          symbol.implicitAttrs().test(Attr::EXTERNAL)) &&
       !symbol.attrs().test(Attr::INTRINSIC) && !symbol.HasExplicitInterface()) {
     Say(name,
         "'%s' is an external procedure without the EXTERNAL attribute in a scope with IMPLICIT NONE(EXTERNAL)"_err_en_US);
@@ -9700,7 +9729,7 @@ void ResolveNamesVisitor::NoteExecutablePartCall(
       ConvertToProcEntity(*symbol, name);
       if (auto *details{symbol->detailsIf<ProcEntityDetails>()}) {
         symbol->set(flag);
-        if (IsDummy(*symbol)) {
+        if (IsDummy(*symbol) && !symbol->attrs().test(Attr::EXTERNAL)) {
           SetImplicitAttr(*symbol, Attr::EXTERNAL);
         }
         ApplyImplicitRules(*symbol);
@@ -10155,13 +10184,27 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         SetBindNameOn(symbol);
       }
     }
-    // Implicitly treat allocatable arrays as managed when feature is enabled.
-    // This is done after all explicit CUDA attributes have been processed.
-    if (context().languageFeatures().IsEnabled(
-            common::LanguageFeature::CudaManaged))
-      if (auto *object{symbol.detailsIf<ObjectEntityDetails>()})
-        if (IsAllocatable(symbol) && !object->cudaDataAttr())
+
+    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+      if (IsAllocatable(symbol) && !object->cudaDataAttr()) {
+        // Implicitly treat allocatable arrays as managed when feature is
+        // enabled. This is done after all explicit CUDA attributes have been
+        // processed. Only applies when CUDA Fortran is enabled; otherwise
+        // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
+        // OpenACC) would incorrectly route every allocatable through the CUDA
+        // Fortran managed descriptor pipeline.
+        if (context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CudaManaged) &&
+            context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CUDA))
           object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+        // Implicitly treat allocatable arrays as pinned when feature is
+        // enabled.
+        else if (context().languageFeatures().IsEnabled(
+                     common::LanguageFeature::CudaPinned))
+          object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+      }
+    }
   }
   currScope().InstantiateDerivedTypes();
   for (const auto &decl : decls) {

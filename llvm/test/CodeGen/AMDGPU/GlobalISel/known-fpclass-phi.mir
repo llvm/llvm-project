@@ -115,7 +115,7 @@ body: |
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[PHI]], [[COPY1]]
   ; CHECK-NEXT:   [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ord), [[PHI]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x7FF8000000000000
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_FCONSTANT float +qnan
   ; CHECK-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s1), [[FMINNUM_IEEE]], [[C2]]
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
   ; CHECK-NEXT:   $vgpr0 = COPY [[COPY2]](s32)

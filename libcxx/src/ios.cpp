@@ -22,6 +22,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_HIDDEN __iostream_category : public __do_message {
 public:
@@ -102,18 +103,13 @@ void ios_base::__call_callbacks(event ev) {
 // locale
 
 locale ios_base::imbue(const locale& newloc) {
-  static_assert(sizeof(locale) == sizeof(__loc_), "");
-  locale& loc_storage = *reinterpret_cast<locale*>(&__loc_);
-  locale oldloc       = loc_storage;
-  loc_storage         = newloc;
+  locale loc = newloc;
+  std::swap(__loc_, loc);
   __call_callbacks(imbue_event);
-  return oldloc;
+  return loc;
 }
 
-locale ios_base::getloc() const {
-  const locale& loc_storage = *reinterpret_cast<const locale*>(&__loc_);
-  return loc_storage;
-}
+locale ios_base::getloc() const { return __loc_; }
 
 // xalloc
 #if _LIBCPP_HAS_C_ATOMIC_IMP && _LIBCPP_HAS_THREADS
@@ -201,11 +197,10 @@ void ios_base::register_callback(event_callback fn, int index) {
 ios_base::~ios_base() {
   // Avoid UB when not properly initialized. See ios_base::ios_base for
   // more information.
-  if (!__loc_)
+  if (!__loc_.__locale_)
     return;
   __call_callbacks(erase_event);
-  locale& loc_storage = *reinterpret_cast<locale*>(&__loc_);
-  loc_storage.~locale();
+  __loc_.~locale();
   free(__fn_);
   free(__index_);
   free(__iarray_);
@@ -277,12 +272,10 @@ void ios_base::copyfmt(const ios_base& rhs) {
       std::__throw_bad_alloc();
   }
   // Got everything we need.  Copy everything but __rdstate_, __rdbuf_ and __exceptions_
-  __fmtflags_           = rhs.__fmtflags_;
-  __precision_          = rhs.__precision_;
-  __width_              = rhs.__width_;
-  locale& lhs_loc       = *reinterpret_cast<locale*>(&__loc_);
-  const locale& rhs_loc = *reinterpret_cast<const locale*>(&rhs.__loc_);
-  lhs_loc               = rhs_loc;
+  __fmtflags_  = rhs.__fmtflags_;
+  __precision_ = rhs.__precision_;
+  __width_     = rhs.__width_;
+  __loc_       = rhs.__loc_;
   if (__event_cap_ < rhs.__event_size_) {
     free(__fn_);
     __fn_ = new_callbacks.release();
@@ -312,14 +305,13 @@ void ios_base::copyfmt(const ios_base& rhs) {
 
 void ios_base::move(ios_base& rhs) {
   // *this is uninitialized
-  __fmtflags_     = rhs.__fmtflags_;
-  __precision_    = rhs.__precision_;
-  __width_        = rhs.__width_;
-  __rdstate_      = rhs.__rdstate_;
-  __exceptions_   = rhs.__exceptions_;
-  __rdbuf_        = 0;
-  locale& rhs_loc = *reinterpret_cast<locale*>(&rhs.__loc_);
-  ::new (&__loc_) locale(rhs_loc);
+  __fmtflags_   = rhs.__fmtflags_;
+  __precision_  = rhs.__precision_;
+  __width_      = rhs.__width_;
+  __rdstate_    = rhs.__rdstate_;
+  __exceptions_ = rhs.__exceptions_;
+  __rdbuf_      = 0;
+  ::new (&__loc_) locale(rhs.__loc_);
   __fn_              = rhs.__fn_;
   rhs.__fn_          = 0;
   __index_           = rhs.__index_;
@@ -348,9 +340,7 @@ void ios_base::swap(ios_base& rhs) noexcept {
   std::swap(__width_, rhs.__width_);
   std::swap(__rdstate_, rhs.__rdstate_);
   std::swap(__exceptions_, rhs.__exceptions_);
-  locale& lhs_loc = *reinterpret_cast<locale*>(&__loc_);
-  locale& rhs_loc = *reinterpret_cast<locale*>(&rhs.__loc_);
-  std::swap(lhs_loc, rhs_loc);
+  std::swap(__loc_, rhs.__loc_);
   std::swap(__fn_, rhs.__fn_);
   std::swap(__index_, rhs.__index_);
   std::swap(__event_size_, rhs.__event_size_);
@@ -386,6 +376,7 @@ bool ios_base::sync_with_stdio(bool sync) {
   return r;
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

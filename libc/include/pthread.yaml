@@ -64,6 +64,9 @@ types:
   - type_name: pthread_rwlockattr_t
   - type_name: pthread_attr_t
   - type_name: pthread_spinlock_t
+  - type_name: pthread_id_np_t
+    standards:
+      - llvm_libc_ext
 functions:
   - name: pthread_atfork
     return_type: int
@@ -444,3 +447,16 @@ functions:
     return_type: int
     arguments:
       - type: pthread_spinlock_t *
+  - name: pthread_getthreadid_np
+    standards:
+      - llvm_libc_ext
+    return_type: pthread_id_np_t
+    arguments:
+      - type: void
+  - name: pthread_getunique_np
+    standards:
+      - llvm_libc_ext
+    return_type: int
+    arguments:
+      - type: const pthread_t *__restrict
+      - type: pthread_id_np_t *__restrict

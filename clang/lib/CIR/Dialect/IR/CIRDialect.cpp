@@ -138,6 +138,7 @@ template <typename Ty> struct EnumTraits {};
 REGISTER_ENUM_TYPE(GlobalLinkageKind);
 REGISTER_ENUM_TYPE(VisibilityKind);
 REGISTER_ENUM_TYPE(SideEffect);
+REGISTER_ENUM_TYPE(CallingConv);
 } // namespace
 
 /// Parse an enum from the keyword, or default to the provided default value.
@@ -361,25 +362,19 @@ LogicalResult cir::ArrayCtor::verify() {
 LogicalResult cir::ArrayDtor::verify() { return verifyArrayCtorDtor(*this); }
 
 //===----------------------------------------------------------------------===//
-// BreakOp
+// DeleteArrayOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult cir::BreakOp::verify() {
-  if (!getOperation()->getParentOfType<LoopOpInterface>() &&
-      !getOperation()->getParentOfType<SwitchOp>())
-    return emitOpError("must be within a loop");
+LogicalResult cir::DeleteArrayOp::verify() {
+  if (getDtorMayThrow() && !getElementDtorAttr())
+    return emitOpError(
+        "'dtor_may_throw' requires an 'element_dtor' to be present");
   return success();
 }
 
 //===----------------------------------------------------------------------===//
 // LocalInitOp
 //===----------------------------------------------------------------------===//
-
-LogicalResult cir::LocalInitOp::verify() {
-  if (!getOperation()->getParentOfType<FuncOp>())
-    return emitOpError("must be inside of a 'cir.func'");
-  return success();
-}
 
 LogicalResult
 cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
@@ -414,6 +409,7 @@ void cir::ConditionOp::getSuccessorRegions(
   if (auto loopOp = dyn_cast<LoopOpInterface>(getOperation()->getParentOp())) {
     regions.emplace_back(&loopOp.getBody());
     regions.push_back(RegionSuccessor::parent());
+    return;
   }
 
   // Parent is an await: condition may branch to resume or suspend regions.
@@ -510,16 +506,6 @@ LogicalResult cir::ConstantOp::verify() {
 
 OpFoldResult cir::ConstantOp::fold(FoldAdaptor /*adaptor*/) {
   return getValue();
-}
-
-//===----------------------------------------------------------------------===//
-// ContinueOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult cir::ContinueOp::verify() {
-  if (!getOperation()->getParentOfType<LoopOpInterface>())
-    return emitOpError("must be within a loop");
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1364,11 +1350,10 @@ void cir::IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
 
   // If the condition isn't constant, both regions may be executed.
   regions.push_back(RegionSuccessor(&getThenRegion()));
-  // If the else region does not exist, it is not a viable successor.
   if (elseRegion)
     regions.push_back(RegionSuccessor(elseRegion));
-
-  return;
+  else
+    regions.push_back(RegionSuccessor::parent());
 }
 
 mlir::ValueRange cir::IfOp::getSuccessorInputs(RegionSuccessor successor) {
@@ -1891,12 +1876,26 @@ mlir::LogicalResult cir::GlobalOp::verify() {
       return failure();
   }
 
-  if ((getStaticLocalGuard().has_value() || getTlsModel()) &&
+  if ((getStaticLocalGuard().has_value()) &&
       (!getCtorRegion().empty() || !getDtorRegion().empty()))
     return emitOpError(
-        "Cannot have a thread-local or static-local global-op "
-        "with a constructor or destructor, they require in-function "
-        "initialization via LocalInitOp");
+        "Cannot have a static-local global-op with a constructor or "
+        "destructor, they require in-function initialization via LocalInitOp");
+
+  if (getDynTlsRefs()) {
+    if (getStaticLocalGuard().has_value())
+      return emitOpError(
+          "cannot have both static local and dynamic tls references");
+    if (!getTlsModel() || getTlsModel() != TLS_Model::GeneralDynamic)
+      return emitOpError("'dyn_tls_refs' only valid for dynamic tls");
+  }
+
+  if (getAliasee().has_value()) {
+    if (getInitialValue().has_value() || !getCtorRegion().empty() ||
+        !getDtorRegion().empty())
+      return emitOpError("global alias shall not have an initializer or "
+                         "constructor/destructor regions");
+  }
 
   // TODO(CIR): Many other checks for properties that haven't been upstreamed
   // yet.
@@ -1979,29 +1978,32 @@ static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
                                              mlir::Region &ctorRegion,
                                              mlir::Region &dtorRegion) {
   auto printType = [&]() { p << ": " << type; };
-  if (!op.isDeclaration()) {
-    p << "= ";
-    if (!ctorRegion.empty()) {
-      p << "ctor ";
-      printType();
-      p << " ";
-      p.printRegion(ctorRegion,
-                    /*printEntryBlockArgs=*/false,
-                    /*printBlockTerminators=*/false);
-    } else {
-      // This also prints the type...
-      if (initAttr)
-        printConstant(p, initAttr);
-    }
-
-    if (!dtorRegion.empty()) {
-      p << " dtor ";
-      p.printRegion(dtorRegion,
-                    /*printEntryBlockArgs=*/false,
-                    /*printBlockTerminators=*/false);
-    }
-  } else {
+  // Aliases are definitions but they have no initial value or ctor/dtor; the
+  // assembly prints them like declarations (`: type`).
+  if (op.isDeclaration() || op.getAliasee()) {
     printType();
+    return;
+  }
+
+  p << "= ";
+  if (!ctorRegion.empty()) {
+    p << "ctor ";
+    printType();
+    p << " ";
+    p.printRegion(ctorRegion,
+                  /*printEntryBlockArgs=*/false,
+                  /*printBlockTerminators=*/false);
+  } else {
+    // This also prints the type...
+    if (initAttr)
+      printConstant(p, initAttr);
+  }
+
+  if (!dtorRegion.empty()) {
+    p << " dtor ";
+    p.printRegion(dtorRegion,
+                  /*printEntryBlockArgs=*/false,
+                  /*printBlockTerminators=*/false);
   }
 }
 
@@ -2191,7 +2193,7 @@ static llvm::StringRef getLinkageAttrNameString() { return "linkage"; }
 
 void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
                         StringRef name, FuncType type,
-                        GlobalLinkageKind linkage) {
+                        GlobalLinkageKind linkage, CallingConv callingConv) {
   result.addRegion();
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
@@ -2200,6 +2202,8 @@ void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
   result.addAttribute(
       getLinkageAttrNameString(),
       GlobalLinkageKindAttr::get(builder.getContext(), linkage));
+  result.addAttribute(getCallingConvAttrName(result.name),
+                      CallingConvAttr::get(builder.getContext(), callingConv));
 }
 
 //===----------------------------------------------------------------------===//
@@ -2350,6 +2354,20 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     if (parser.parseRParen().failed())
       return failure();
   }
+
+  // Default to C calling convention if no keyword is provided.
+  mlir::StringAttr callConvNameAttr = getCallingConvAttrName(state.name);
+  cir::CallingConv callConv = cir::CallingConv::C;
+  if (parser.parseOptionalKeyword("cc").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+    if (parseCIRKeyword<cir::CallingConv>(parser, callConv).failed())
+      return parser.emitError(loc) << "unknown calling convention";
+    if (parser.parseRParen().failed())
+      return failure();
+  }
+  state.addAttribute(callConvNameAttr,
+                     cir::CallingConvAttr::get(parser.getContext(), callConv));
 
   auto parseGlobalDtorCtor =
       [&](StringRef keyword,
@@ -2566,6 +2584,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (std::optional<StringRef> aliaseeName = getAliasee()) {
     p << " alias(";
     p.printSymbolName(*aliaseeName);
+    p << ")";
+  }
+
+  if (getCallingConv() != cir::CallingConv::C) {
+    p << " cc(";
+    p << stringifyCallingConv(getCallingConv());
     p << ")";
   }
 
@@ -3048,12 +3072,6 @@ mlir::ValueRange cir::AwaitOp::getSuccessorInputs(RegionSuccessor successor) {
 LogicalResult cir::AwaitOp::verify() {
   if (!isa<ConditionOp>(this->getReady().back().getTerminator()))
     return emitOpError("ready region must end with cir.condition");
-  return success();
-}
-
-LogicalResult cir::CoReturnOp::verify() {
-  if (!getOperation()->getParentOfType<CoroBodyOp>())
-    return emitOpError("must be inside a cir.coro.body");
   return success();
 }
 
@@ -4115,7 +4133,15 @@ LogicalResult cir::TryOp::verify() {
     if (mlir::isa<cir::UnwindAttr>(typeAttr))
       continue;
 
-    if (entryBlock.empty() || !mlir::isa<cir::BeginCatchOp>(entryBlock.front()))
+    // A catch handler region must start with cir.begin_catch, optionally
+    // preceded by a single cir.construct_catch_param that performs any
+    // pre-begin_catch initialization for the catch parameter.
+    if (entryBlock.empty())
+      return emitOpError("catch handler region must not be empty");
+    mlir::Operation *firstOp = &entryBlock.front();
+    if (mlir::isa_and_present<cir::ConstructCatchParamOp>(firstOp))
+      firstOp = firstOp->getNextNode();
+    if (!firstOp || !mlir::isa<cir::BeginCatchOp>(firstOp))
       return emitOpError(
           "catch handler region must start with 'cir.begin_catch'");
   }
@@ -4259,6 +4285,42 @@ cir::EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (!isa_and_nonnull<GlobalOp>(op))
     return emitOpError("'")
            << getTypeSym() << "' does not reference a valid cir.global";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ConstructCatchParamOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ConstructCatchParamOp::verifySymbolUses(
+    SymbolTableCollection &symbolTable) {
+  auto copyFnAttr = getCopyFnAttr();
+  if (!copyFnAttr)
+    return success();
+  auto fn =
+      symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(*this, getCopyFnAttr());
+  if (!fn)
+    return emitOpError("'")
+           << *getCopyFn() << "' does not reference a valid cir.func";
+
+  if (!fn->hasAttr(cir::CIRDialect::getCatchCopyThunkAttrName()))
+    return emitOpError("catch-init copy_fn must be tagged with the ")
+           << cir::CIRDialect::getCatchCopyThunkAttrName() << " attribute";
+
+  cir::FuncType fnType = fn.getFunctionType();
+  if (fnType.getNumInputs() != 2 || !fnType.hasVoidReturn())
+    return emitOpError("catch-init copy_fn must take two pointer arguments and "
+                       "return void");
+
+  if (fnType.getInput(0) != getParamAddr().getType())
+    return emitOpError("first argument of catch-init copy_fn must match the "
+                       "type of 'param_addr'");
+
+  if (fnType.getInput(1) != getParamAddr().getType())
+    return emitOpError(
+        "second argument of catch-init copy_fn must be a pointer "
+        "to the catch type");
+
   return success();
 }
 

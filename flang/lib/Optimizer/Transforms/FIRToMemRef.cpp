@@ -129,6 +129,18 @@ private:
   MemRefInfo convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp,
                                 PatternRewriter &, FIRToMemRefTypeConverter &);
 
+  /// Returns true if \p coordinateOp can be lowered to an indexed memref access
+  /// by convertCoordinateArrayOp. This is true when the base is a reference to
+  /// a statically-shaped scalar array.
+  bool isArrayIndexingCoordinateOp(fir::CoordinateOp coordinateOp,
+                                   FIRToMemRefTypeConverter &) const;
+
+  /// Lower a fir.coordinate_of that indexes into a static-extent scalar array
+  /// (e.g. a struct component like `A%v(i)`) to a memref + index pair.
+  MemRefInfo convertCoordinateArrayOp(Operation *memOp, fir::CoordinateOp,
+                                      PatternRewriter &,
+                                      FIRToMemRefTypeConverter &);
+
   void replaceFIRMemrefs(Value, Value, PatternRewriter &) const;
 
   FailureOr<Value> getFIRConvert(Operation *memOp, Operation *memref,
@@ -150,6 +162,8 @@ private:
     SmallVector<Value> shiftVec;
     SmallVector<Value> sliceVec;
     bool hasProjectedSlice = false;
+    // Constant value of the first projected-slice field, if any.
+    std::optional<std::int64_t> projectedSliceStart;
   };
 
   template <typename OpTy>
@@ -169,6 +183,15 @@ private:
 
   static bool hasProjectedSlice(fir::SliceOp sliceOp) {
     return sliceOp && !sliceOp.getFields().empty();
+  }
+
+  // Returns the constant first projected-slice field, if available.
+  static std::optional<std::int64_t>
+  getProjectedSliceStartIfConstant(fir::SliceOp sliceOp) {
+    auto fields = sliceOp.getFields();
+    if (fields.empty())
+      return std::nullopt;
+    return fir::getIntIfConstant(fields.front());
   }
 
   unsigned getRankFromEmbox(fir::EmboxOp embox) const {
@@ -313,15 +336,12 @@ void FIRToMemRef::collectSliceInfoFrom(OpTy op, SliceInfo &info) const {
     }
 
     if (auto sliceOp = getSliceOp(op.getSlice())) {
-      // A slice path changes the physical projection of the boxed entity (for
-      // example, `complex -> real` for `%re`). Preserve shape/shift for logical
-      // indexing, but do not treat the triplets alone as layout information.
       if (hasProjectedSlice(sliceOp)) {
         info.hasProjectedSlice = true;
-      } else {
-        auto triples = sliceOp.getTriples();
-        info.sliceVec.append(triples.begin(), triples.end());
+        info.projectedSliceStart = getProjectedSliceStartIfConstant(sliceOp);
       }
+      auto triples = sliceOp.getTriples();
+      info.sliceVec.append(triples.begin(), triples.end());
     }
   }
 }
@@ -473,9 +493,6 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
     rank = getRankFromEmbox(embox);
   }
 
-  // Projected boxed slices leave `sliceVec` empty on purpose: indices are
-  // computed in the logical section coordinate space, while stride/base come
-  // later from the box descriptor.
   SmallVector<Value> &shiftVec = sliceInfo.shiftVec;
   SmallVector<Value> &sliceVec = sliceInfo.sliceVec;
   SmallVector<Value> sliceLbs, sliceStrides;
@@ -626,6 +643,41 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   bool isDescriptor = mlir::isa<fir::BaseBoxType>(firMemref.getType()) ||
                       firMemref.getDefiningOp<fir::BoxAddrOp>() != nullptr;
 
+  // For complex projections, reinterpret memref<d0×...×complex<T>> as
+  // memref<d0×...×2×T> and append the component index (0=re, 1=im) so that
+  // each load/store touches exactly sizeof(T) bytes.
+  SliceInfo sliceInfo;
+  collectSliceInfoFrom(arrayCoorOp, sliceInfo);
+  if (auto embox = firMemref.getDefiningOp<fir::EmboxOp>())
+    collectSliceInfoFrom(embox, sliceInfo);
+  else if (auto rebox = firMemref.getDefiningOp<fir::ReboxOp>())
+    collectSliceInfoFrom(rebox, sliceInfo);
+  auto srcTy = cast<MemRefType>((*converted).getType());
+  if (sliceInfo.hasProjectedSlice) {
+    if (auto complexTy = dyn_cast<mlir::ComplexType>(srcTy.getElementType())) {
+      if (!sliceInfo.projectedSliceStart ||
+          (*sliceInfo.projectedSliceStart != 0 &&
+           *sliceInfo.projectedSliceStart != 1)) {
+        LLVM_DEBUG(
+            llvm::dbgs()
+            << "FIRToMemRef: projected complex slice selector must be constant "
+               "0 (real) or 1 (imaginary), bailing out of conversion\n");
+        return failure();
+      }
+      auto projection = *sliceInfo.projectedSliceStart;
+      SmallVector<int64_t> shape(srcTy.getShape());
+      shape.push_back(2);
+      Value compMemref =
+          fir::ConvertOp::create(
+              rewriter, loc, MemRefType::get(shape, complexTy.getElementType()),
+              *converted)
+              .getResult();
+      indices.push_back(
+          arith::ConstantIndexOp::create(rewriter, loc, projection));
+      return std::pair{compMemref, indices};
+    }
+  }
+
   // Static shape does not imply contiguous layout for descriptor-backed
   // entities (e.g. boxed array sections with non-unit stride). Keep the
   // reinterpret-cast path so descriptor strides are preserved.
@@ -633,7 +685,6 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
     return std::pair{*converted, indices};
 
   unsigned rank = arrayCoorOp.getIndices().size();
-
   if (auto embox = firMemref.getDefiningOp<fir::EmboxOp>())
     rank = getRankFromEmbox(embox);
 
@@ -642,29 +693,17 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   SmallVector<Value> strides;
   strides.reserve(rank);
 
-  SliceInfo sliceInfo;
-  collectSliceInfoFrom(arrayCoorOp, sliceInfo);
-
-  Value box = firMemref;
-  if (!isa<BlockArgument>(firMemref)) {
-    if (auto embox = firMemref.getDefiningOp<fir::EmboxOp>()) {
-      collectSliceInfoFrom(embox, sliceInfo);
-    } else if (auto rebox = firMemref.getDefiningOp<fir::ReboxOp>()) {
-      collectSliceInfoFrom(rebox, sliceInfo);
-    }
-  }
-
   SmallVector<Value> &shapeVec = sliceInfo.shapeVec;
   if (sliceInfo.hasProjectedSlice || shapeVec.empty()) {
     // Projected slices carry their physical layout in the descriptor. Rebuild
     // the MemRef view from box metadata instead of from slice triplets.
     auto boxElementSize =
-        fir::BoxEleSizeOp::create(rewriter, loc, indexTy, box);
+        fir::BoxEleSizeOp::create(rewriter, loc, indexTy, firMemref);
 
     for (unsigned i = 0; i < rank; ++i) {
       Value dim = arith::ConstantIndexOp::create(rewriter, loc, rank - i - 1);
       auto boxDims = fir::BoxDimsOp::create(rewriter, loc, indexTy, indexTy,
-                                            indexTy, box, dim);
+                                            indexTy, firMemref, dim);
 
       Value extent = boxDims->getResult(1);
       sizes.push_back(castTypeToIndexType(extent, rewriter));
@@ -791,9 +830,7 @@ FIRToMemRef::getFIRConvert(Operation *memOp, Operation *op,
                         "the same, bailing out of conversion\n");
           return failure();
         }
-        // Keep `box_addr` on the projected box so the descriptor remains the
-        // source of truth for projected element type and stride.
-        if (!projectedSlice && embox.getSlice() &&
+        if (embox.getSlice() &&
             embox.getSlice().getDefiningOp<fir::SliceOp>()) {
           Type originalType = embox.getMemref().getType();
           basePtr = embox.getMemref();
@@ -867,6 +904,77 @@ Value FIRToMemRef::canonicalizeIndex(Value index,
   return index;
 }
 
+bool FIRToMemRef::isArrayIndexingCoordinateOp(
+    fir::CoordinateOp coordinateOp,
+    FIRToMemRefTypeConverter &typeConverter) const {
+  // The base must be a reference/pointer/heap to a sequence/array type.
+  Type baseType = coordinateOp.getRef().getType();
+  Type unwrapped = fir::dyn_cast_ptrEleTy(baseType);
+  if (!unwrapped)
+    return false;
+
+  auto seqTy = dyn_cast<fir::SequenceType>(unwrapped);
+  if (!seqTy)
+    return false;
+
+  // Restrict to fully static extents — dynamic arrays would need a shape
+  // operand (which coordinate_of lacks) to build a valid memref descriptor.
+  if (fir::hasDynamicSize(seqTy))
+    return false;
+
+  // The element type must be a convertible scalar — no derived types.
+  if (!typeConverter.convertibleMemrefType(baseType))
+    return false;
+
+  return true;
+}
+
+MemRefInfo FIRToMemRef::convertCoordinateArrayOp(
+    Operation *memOp, fir::CoordinateOp coordinateOp, PatternRewriter &rewriter,
+    FIRToMemRefTypeConverter &typeConverter) {
+  Value firBase = coordinateOp.getRef();
+  Location loc = coordinateOp->getLoc();
+  IndexType indexTy = rewriter.getIndexType();
+
+  if (typeConverter.isEmptyArray(firBase.getType()))
+    return failure();
+
+  // Convert the base ref/heap/ptr to a memref.  convertMemrefType reverses the
+  // FIR column-major shape to row-major, keeping it in sync with index reversal
+  // below.
+  rewriter.setInsertionPoint(coordinateOp);
+  FailureOr<Value> converted;
+  if (isa<BlockArgument>(firBase)) {
+    Type memrefTy = typeConverter.convertMemrefType(firBase.getType());
+    if (!memrefTy)
+      return failure();
+    converted =
+        fir::ConvertOp::create(rewriter, loc, memrefTy, firBase).getResult();
+  } else {
+    converted =
+        getFIRConvert(memOp, firBase.getDefiningOp(), rewriter, typeConverter);
+    if (failed(converted))
+      return failure();
+  }
+  rewriter.setInsertionPointAfter(coordinateOp);
+
+  // The converted memref has static shape — no reinterpret_cast needed.
+  assert(cast<MemRefType>(converted->getType()).hasStaticShape() &&
+         "expected static shape for coordinate_of array base");
+
+  // Collect and normalize the 0-based coor indices
+  SmallVector<Value> indices;
+  for (Value v : coordinateOp.getCoor()) {
+    v = canonicalizeIndex(v, rewriter);
+    if (!isa<IndexType>(v.getType()))
+      v = arith::IndexCastOp::create(rewriter, loc, indexTy, v);
+    indices.push_back(v);
+  }
+  std::reverse(indices.begin(), indices.end());
+
+  return std::pair{*converted, indices};
+}
+
 MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
                                       PatternRewriter &rewriter,
                                       FIRToMemRefTypeConverter &typeConverter,
@@ -937,6 +1045,31 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
   }
 
   if (auto coordinateOp = dyn_cast<fir::CoordinateOp>(memrefOp)) {
+    // Fast path: coordinate_of used as a plain array indexer on a static-extent
+    // scalar array (e.g. a struct component `A%v(i)`).
+    if (isArrayIndexingCoordinateOp(coordinateOp, typeConverter)) {
+      MemRefInfo memrefInfo = convertCoordinateArrayOp(memOp, coordinateOp,
+                                                       rewriter, typeConverter);
+      if (succeeded(memrefInfo)) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "FIRToMemRef: converted coordinate_of array indexer\n");
+        for (auto user : memrefOp->getUsers()) {
+          if (!isa<fir::LoadOp, fir::StoreOp>(user)) {
+            LLVM_DEBUG(
+                llvm::dbgs()
+                    << "FIRToMemRef: coordinate_of used by non-load/store, "
+                       "skipping erase\n";
+                firMemref.dump(); user->dump());
+            return memrefInfo;
+          }
+        }
+        eraseOps.insert(memrefOp);
+        return memrefInfo;
+      }
+    }
+
+    // Fallback: struct field access or dynamic array — produce a rank-0 scalar
+    // memref from the leaf reference.
     FailureOr<Value> converted =
         getFIRConvert(memOp, coordinateOp, rewriter, typeConverter);
     if (failed(converted)) {
@@ -1020,7 +1153,13 @@ void FIRToMemRef::replaceFIRMemrefs(Value firMemref, Value converted,
   Type ty = firMemref.getType();
 
   for (auto op : worklist) {
-    rewriter.setInsertionPoint(op);
+    // If op is directly inside a LoopWrapperInterface region, inserting before
+    // op would violate the single-nested-op invariant. Walk up the wrapper
+    // chain and insert before the outermost wrapper instead.
+    Operation *insertBefore = op;
+    while (mlir::isa<omp::LoopWrapperInterface>(insertBefore->getParentOp()))
+      insertBefore = insertBefore->getParentOp();
+    rewriter.setInsertionPoint(insertBefore);
     Location loc = op->getLoc();
     Value replaceConvert = fir::ConvertOp::create(rewriter, loc, ty, converted);
     op->replaceUsesOfWith(firMemref, replaceConvert);
@@ -1135,7 +1274,7 @@ void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
     value =
         createTypeConversion(rewriter, store.getLoc(), convertedType, value);
 
-  Attribute attr = (store.getOperation())->getAttr("tbaa");
+  Attribute attr = store.getOperation()->getAttr("tbaa");
   memref::StoreOp storeOp = rewriter.replaceOpWithNewOp<memref::StoreOp>(
       store, value, converted, indices);
   if (attr)

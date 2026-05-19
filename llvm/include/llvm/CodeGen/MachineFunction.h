@@ -72,7 +72,6 @@ class SlotIndexes;
 class StringRef;
 class TargetRegisterClass;
 class TargetSubtargetInfo;
-struct WasmEHFuncInfo;
 struct WinEHFuncInfo;
 
 template <> struct ilist_alloc_traits<MachineBasicBlock> {
@@ -316,11 +315,6 @@ class LLVM_ABI MachineFunction {
 
   // Keep track of the function section.
   MCSection *Section = nullptr;
-
-  // Catchpad unwind destination info for wasm EH.
-  // Keeps track of Wasm exception handling related data. This will be null for
-  // functions that aren't using a wasm EH personality.
-  WasmEHFuncInfo *WasmEHInfo = nullptr;
 
   // Keeps track of Windows exception handling related data. This will be null
   // for functions that aren't using a funclet-based EH personality.
@@ -825,12 +819,6 @@ public:
   /// function.
   MachineConstantPool *getConstantPool() { return ConstantPool; }
   const MachineConstantPool *getConstantPool() const { return ConstantPool; }
-
-  /// getWasmEHFuncInfo - Return information about how the current function uses
-  /// Wasm exception handling. Returns null for functions that don't use wasm
-  /// exception handling.
-  const WasmEHFuncInfo *getWasmEHFuncInfo() const { return WasmEHInfo; }
-  WasmEHFuncInfo *getWasmEHFuncInfo() { return WasmEHInfo; }
 
   /// getWinEHFuncInfo - Return information about how the current function uses
   /// Windows exception handling. Returns null for functions that don't use
