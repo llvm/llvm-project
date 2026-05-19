@@ -10,6 +10,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
+#include <vector>
 
 namespace {
 
@@ -127,6 +128,141 @@ TEST_P(olGetEventElapsedTimeTest, InvalidNullEndEvent) {
                olGetEventElapsedTime(StartEvent, nullptr, &ElapsedTime));
 
   ASSERT_SUCCESS(olDestroyEvent(StartEvent));
+}
+
+// Two events recorded back-to-back on a queue whose last operation is a
+// kernel dispatch must produce identical elapsed-time deltas relative to any
+// third event.
+TEST_P(olGetEventElapsedTimeTest, BackToBackEventsShareDispatchSignal) {
+  ol_event_handle_t Start = nullptr;
+  ol_event_handle_t MidA = nullptr;
+  ol_event_handle_t MidB = nullptr;
+
+  ASSERT_SUCCESS(olCreateEvent(Queue, &Start));
+  launchFoo();
+  ASSERT_SUCCESS(olCreateEvent(Queue, &MidA));
+  ASSERT_SUCCESS(olCreateEvent(Queue, &MidB));
+
+  ASSERT_SUCCESS(olSyncEvent(MidB));
+
+  float DeltaA = -1.0f, DeltaB = -1.0f;
+  ASSERT_SUCCESS(olGetEventElapsedTime(Start, MidA, &DeltaA));
+  ASSERT_SUCCESS(olGetEventElapsedTime(Start, MidB, &DeltaB));
+
+  ASSERT_GE(DeltaA, 0.0f);
+  ASSERT_GE(DeltaB, 0.0f);
+  // Both Mid events should be attached to the same kernel dispatch's
+  // completion signal (no intervening op separates them). Tolerate
+  // minimal difference.
+  ASSERT_NEAR(DeltaA, DeltaB, /*abs_error_ms=*/0.05f);
+
+  ASSERT_SUCCESS(olDestroyEvent(Start));
+  ASSERT_SUCCESS(olDestroyEvent(MidA));
+  ASSERT_SUCCESS(olDestroyEvent(MidB));
+}
+
+// Event recorded before any kernel has been dispatched on the queue must
+// still work.
+TEST_P(olGetEventElapsedTimeTest, EmptyQueueLeadingEventFallback) {
+  ol_event_handle_t Start = nullptr;
+  ol_event_handle_t End = nullptr;
+
+  ASSERT_SUCCESS(olCreateEvent(Queue, &Start));
+
+  launchFoo();
+  ASSERT_SUCCESS(olCreateEvent(Queue, &End));
+
+  ASSERT_SUCCESS(olSyncEvent(End));
+
+  float Elapsed = -1.0f;
+  ASSERT_SUCCESS(olGetEventElapsedTime(Start, End, &Elapsed));
+  ASSERT_GE(Elapsed, 0.0f);
+
+  ASSERT_SUCCESS(olDestroyEvent(Start));
+  ASSERT_SUCCESS(olDestroyEvent(End));
+}
+
+// Prior event was not a kernel launch, but a memcpy
+TEST_P(olGetEventElapsedTimeTest, NonKernelPriorOpFallback) {
+  constexpr size_t CopySize = 1024;
+  void *DevBuf = nullptr;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, CopySize, &DevBuf));
+  std::vector<uint8_t> HostBuf(CopySize, 0x5A);
+
+  ol_event_handle_t Start = nullptr;
+  ol_event_handle_t End = nullptr;
+
+  // Slot 0: kernel.
+  launchFoo();
+  // Slot 1: async H->D memcpy on the same queue. IsKernelDispatch is false
+  // for this slot, so the next recordEvent must NOT recycle it.
+  ASSERT_SUCCESS(
+      olMemcpy(Queue, DevBuf, Device, HostBuf.data(), Host, CopySize));
+  // Slot 2: must be a fresh barrier marker (fallback path), because
+  // Slots[NextSlot-1] (the memcpy) has IsKernelDispatch=false.
+  ASSERT_SUCCESS(olCreateEvent(Queue, &Start));
+
+  // Slot 3: kernel.
+  launchFoo();
+  // End takes the fast path and recycles Slot 3's kernel signal.
+  ASSERT_SUCCESS(olCreateEvent(Queue, &End));
+
+  ASSERT_SUCCESS(olSyncEvent(End));
+
+  float Elapsed = -1.0f;
+  ASSERT_SUCCESS(olGetEventElapsedTime(Start, End, &Elapsed));
+  // Strictly positive: Start's barrier ran before the second kernel was
+  // dispatched, so the kernel-end timestamp must be later than the
+  // barrier-end timestamp. A zero or negative value would indicate that
+  // Start latched onto a stale or later slot.
+  ASSERT_GT(Elapsed, 0.0f);
+
+  ASSERT_SUCCESS(olDestroyEvent(Start));
+  ASSERT_SUCCESS(olDestroyEvent(End));
+  ASSERT_SUCCESS(olMemFree(DevBuf));
+}
+
+// Elapsed time must work across a queue sync
+TEST_P(olGetEventElapsedTimeTest, EventAfterQueueSyncFallback) {
+  ol_event_handle_t Start = nullptr;
+  ol_event_handle_t End = nullptr;
+
+  launchFoo();
+  ASSERT_SUCCESS(olCreateEvent(Queue, &Start));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+  launchFoo();
+  ASSERT_SUCCESS(olCreateEvent(Queue, &End));
+
+  ASSERT_SUCCESS(olSyncEvent(End));
+
+  float Elapsed = -1.0f;
+  ASSERT_SUCCESS(olGetEventElapsedTime(Start, End, &Elapsed));
+  ASSERT_GE(Elapsed, 0.0f);
+
+  ASSERT_SUCCESS(olDestroyEvent(Start));
+  ASSERT_SUCCESS(olDestroyEvent(End));
+}
+
+// Multiple kernels between two events.
+// Elapsed time must reflect at least the wall-clock of all enclosed kernels.
+TEST_P(olGetEventElapsedTimeTest, MultipleKernelsBetweenEvents) {
+  ol_event_handle_t Start = nullptr;
+  ol_event_handle_t End = nullptr;
+
+  launchFoo();
+  ASSERT_SUCCESS(olCreateEvent(Queue, &Start));
+  for (int I = 0; I < 8; ++I)
+    launchFoo();
+  ASSERT_SUCCESS(olCreateEvent(Queue, &End));
+
+  ASSERT_SUCCESS(olSyncEvent(End));
+
+  float Elapsed = -1.0f;
+  ASSERT_SUCCESS(olGetEventElapsedTime(Start, End, &Elapsed));
+  ASSERT_GE(Elapsed, 0.0f);
+
+  ASSERT_SUCCESS(olDestroyEvent(Start));
+  ASSERT_SUCCESS(olDestroyEvent(End));
 }
 
 TEST_P(olGetEventElapsedTimeTest, InvalidNullElapsedTime) {

@@ -1012,6 +1012,12 @@ private:
     /// operation as input signal.
     AMDGPUSignalTy *Signal;
 
+    /// True iff this slot holds an AQL kernel-dispatch packet whose
+    /// completion signal carries dispatch timestamps that can be queried with
+    /// `hsa_amd_profiling_get_dispatch_time`. Used by `recordEvent` to recycle
+    /// the signal instead of submitting a barrier marker.
+    bool IsKernelDispatch;
+
     /// The actions that must be performed after the operation's completion. Set
     /// to nullptr when there is no action to perform.
     llvm::SmallVector<AMDGPUStreamCallbackTy *> Callbacks;
@@ -1028,7 +1034,9 @@ private:
     llvm::SmallVector<ActionArgsTy> ActionArgs;
 
     /// Create an empty slot.
-    StreamSlotTy() : Signal(nullptr), Callbacks({}), ActionArgs({}) {}
+    StreamSlotTy()
+        : Signal(nullptr), IsKernelDispatch(false), Callbacks({}),
+          ActionArgs({}) {}
 
     /// Schedule a host memory copy action on the slot.
     ///
@@ -1184,6 +1192,7 @@ private:
     assert(Slot + 1 == NextSlot && "Can only roll back the last consumed slot");
 
     Slots[Slot].Signal = nullptr;
+    Slots[Slot].IsKernelDispatch = false;
     Slots[Slot].Callbacks.clear();
     Slots[Slot].ActionArgs.clear();
     --NextSlot;
@@ -1203,6 +1212,7 @@ private:
           return Err;
 
       Slots[Slot].Signal = nullptr;
+      Slots[Slot].IsKernelDispatch = false;
     }
 
     // Reset the stream slots to zero.
@@ -1371,6 +1381,12 @@ public:
 
     // Consume stream slot and compute dependencies.
     auto [Curr, InputSignal] = consume(OutputSignal);
+
+    // Mark this slot as a kernel dispatch so that an immediately-following
+    // `recordEvent` can recycle the dispatch completion signal as the event's
+    // timing signal, avoiding a redundant AQL barrier marker packet on the
+    // hot path of inter-kernel record/wait usage.
+    Slots[Curr].IsKernelDispatch = true;
 
     // Setup the post action to release the kernel args buffer.
     if (auto Err = Slots[Curr].schedReleaseBuffer(KernelArgs, MemoryManager))
@@ -1810,6 +1826,39 @@ Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event,
     return Plugin::error(ErrorCode::INVALID_NULL_POINTER,
                          "target queue was nullptr");
 
+  std::lock_guard<std::mutex> StreamLock(Mutex);
+
+  // Fast path: avoid enqueuing a redundant AQL barrier marker packet if
+  // one is already available.
+  // Note: queue profiling is enabled at queue creation time, but ompt_stop_tracing
+  // can disable it. This would result in garbage timestamps.
+  if (NextSlot > 0 && Slots[NextSlot - 1].IsKernelDispatch &&
+      Slots[NextSlot - 1].Signal != nullptr) {
+    AMDGPUSignalTy *KernelSignal = Slots[NextSlot - 1].Signal;
+
+    // Take an additional reference for the event's TimingSignal. It
+    // is released by `AMDGPUEventTy::releaseTimingSignal`.
+    KernelSignal->increaseUseCount();
+
+    Event.RecordedSlot = static_cast<int64_t>(NextSlot) - 1;
+    Event.RecordedSyncCycle = SyncCycle;
+    Event.TimingSignal = KernelSignal;
+
+    assert(Event.RecordedSyncCycle >= 0 && "Invalid recorded sync cycle");
+    assert(Event.RecordedSlot >= 0 && "Invalid recorded slot");
+
+    // Return the unused reusable signal back to the manager.
+    if (ReusedSignal) {
+      if (auto Err = SignalManager.returnResource(ReusedSignal))
+        return Err;
+    }
+    return Plugin::success();
+  }
+
+  // Fallback: No signal available. Materialize the event by
+  // enqueuing a real barrier marker packet on the stream so elapsed-time
+  // queries can still retrieve timing.
+
   // One use for the stream slot and one for the event timing signal.
   const uint32_t OutputSignalUses = 2;
 
@@ -1823,13 +1872,9 @@ Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event,
   OutputSignal->reset();
   OutputSignal->increaseUseCount(OutputSignalUses);
 
-  std::lock_guard<std::mutex> StreamLock(Mutex);
-
   // Consume stream slot and compute dependencies.
   auto [Curr, InputSignal] = consume(OutputSignal);
 
-  // Materialize the event as a real marker on the queue. Elapsed-time queries
-  // need a packet-backed completion signal to retrieve dispatch timing.
   if (auto Err = Queue->pushBarrier(OutputSignal, InputSignal, nullptr)) {
     rollbackConsumedSlot(Curr);
 
