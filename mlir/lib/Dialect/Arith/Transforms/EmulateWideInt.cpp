@@ -630,6 +630,18 @@ struct ConvertSelect final : OpConversionPattern<arith::SelectOp> {
 // ConvertShLI
 //===----------------------------------------------------------------------===//
 
+/// Math adopted from RISCVISelLowering for `ISD::SHL_PARTS`.
+//
+// if (rhsElem0 - newBitWidth) < 0: // rhsElem0 < newBitWidth
+//   lo = lhsElem0 << rhsElem0
+//   hi = (lhsElem1 << rhsElem0) | ((lhsElem0 >>u 1) >>u ((newBitWidth - 1) -
+//   rhsElem0))
+// else:
+//   lo = 0
+//   hi = lhsElem0 << (rhsElem0 - newBitWidth)
+//
+// Because shifts by values >= newBitWidth are undefined, we ignore the high
+// half of RHS.
 struct ConvertShLI final : OpConversionPattern<arith::ShLIOp> {
   using Base::Base;
 
@@ -652,83 +664,89 @@ struct ConvertShLI final : OpConversionPattern<arith::ShLIOp> {
         extractLastDimHalves(rewriter, loc, adaptor.getLhs());
     Value rhsElem0 = extractLastDimSlice(rewriter, loc, adaptor.getRhs(), 0);
 
-    // Assume that the shift amount is < 2 * newBitWidth. Calculate the low and
-    // high halves of the results separately:
-    //   1. low := LHS.low shli RHS
-    //
-    //   2. high := a or b or c, where:
-    //     a) Bits from LHS.high, shifted by the RHS.
-    //     b) Bits from LHS.low, shifted right. These come into play when
-    //        RHS < newBitWidth, e.g.:
-    //         [0000][llll] shli 3 --> [0lll][l000]
-    //                                    ^
-    //                                    |
-    //                           [llll] shrui (4 - 3)
-    //     c) Bits from LHS.low, shifted left. These matter when
-    //        RHS > newBitWidth, e.g.:
-    //         [0000][llll] shli 7 --> [l000][0000]
-    //                                   ^
-    //                                   |
-    //                          [llll] shli (7 - 4)
-    //
-    // Because shifts by values >= newBitWidth are undefined, we ignore the high
-    // half of RHS, and introduce 'bounds checks' to account for
-    // RHS.low > newBitWidth.
-    //
-    // TODO: Explore possible optimizations.
     Value zeroCst = createScalarOrSplatConstant(rewriter, loc, newOperandTy, 0);
-    Value elemBitWidth =
-        createScalarOrSplatConstant(rewriter, loc, newOperandTy, newBitWidth);
+    Value oneCst = createScalarOrSplatConstant(rewriter, loc, newOperandTy, 1);
 
-    Value illegalElemShift = arith::CmpIOp::create(
-        rewriter, loc, arith::CmpIPredicate::uge, rhsElem0, elemBitWidth);
+    // compute low bits for rhsElem0 < newBitWidth
+    Value lowTrue = arith::ShLIOp::create(rewriter, loc, lhsElem0, rhsElem0);
 
-    Value shiftedElem0 =
-        arith::ShLIOp::create(rewriter, loc, lhsElem0, rhsElem0);
-    Value resElem0 = arith::SelectOp::create(rewriter, loc, illegalElemShift,
-                                             zeroCst, shiftedElem0);
-
-    Value cappedShiftAmount = arith::SelectOp::create(
-        rewriter, loc, illegalElemShift, elemBitWidth, rhsElem0);
-    Value rightShiftAmount =
-        arith::SubIOp::create(rewriter, loc, elemBitWidth, cappedShiftAmount);
-    Value shiftedRight =
-        arith::ShRUIOp::create(rewriter, loc, lhsElem0, rightShiftAmount);
-    Value overshotShiftAmount =
-        arith::SubIOp::create(rewriter, loc, rhsElem0, elemBitWidth);
-    Value shiftedLeft =
-        arith::ShLIOp::create(rewriter, loc, lhsElem0, overshotShiftAmount);
-
-    Value shiftedElem1 =
+    // compute high bits for rhsElem0 < newBitWidth
+    Value shiftLeftHigh =
         arith::ShLIOp::create(rewriter, loc, lhsElem1, rhsElem0);
-    Value resElem1High = arith::SelectOp::create(
-        rewriter, loc, illegalElemShift, zeroCst, shiftedElem1);
-    Value resElem1Low = arith::SelectOp::create(rewriter, loc, illegalElemShift,
-                                                shiftedLeft, shiftedRight);
-    Value resElem1 =
-        arith::OrIOp::create(rewriter, loc, resElem1Low, resElem1High);
+    Value targetLenMinusOne = createScalarOrSplatConstant(
+        rewriter, loc, newOperandTy, newBitWidth - 1);
+    Value targetLenMinusOneShiftAmount =
+        arith::SubIOp::create(rewriter, loc, targetLenMinusOne, rhsElem0);
+    Value shiftRightOneLow =
+        arith::ShRUIOp::create(rewriter, loc, lhsElem0, oneCst);
+    Value shiftRightLow = arith::ShRUIOp::create(
+        rewriter, loc, shiftRightOneLow, targetLenMinusOneShiftAmount);
+    Value highTrue =
+        arith::OrIOp::create(rewriter, loc, shiftLeftHigh, shiftRightLow);
+
+    // compute high bits for rhsElem0 >= newBitWidth
+    Value targetLenConstant =
+        createScalarOrSplatConstant(rewriter, loc, newOperandTy, newBitWidth);
+    Value shiftAmountMinusTargetLen =
+        arith::SubIOp::create(rewriter, loc, rhsElem0, targetLenConstant);
+    Value highFalse = arith::ShLIOp::create(rewriter, loc, lhsElem0,
+                                            shiftAmountMinusTargetLen);
+
+    // select the high and low bits based on rhsElem0 < newBitWidth
+    Value condition =
+        arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
+                              shiftAmountMinusTargetLen, zeroCst);
+    Value resultLow =
+        arith::SelectOp::create(rewriter, loc, condition, lowTrue, zeroCst);
+    Value resultHigh =
+        arith::SelectOp::create(rewriter, loc, condition, highTrue, highFalse);
 
     Value resultVec =
-        constructResultVector(rewriter, loc, newTy, {resElem0, resElem1});
+        constructResultVector(rewriter, loc, newTy, {resultLow, resultHigh});
     rewriter.replaceOp(op, resultVec);
     return success();
   }
 };
 
 //===----------------------------------------------------------------------===//
-// ConvertShRUI
+// ConvertShROp
 //===----------------------------------------------------------------------===//
 
-struct ConvertShRUI final : OpConversionPattern<arith::ShRUIOp> {
-  using Base::Base;
+/// Math adopted from RISCVISelLowering for `ISD::SHR_PARTS`.
+//
+// arith.shrsi expansion:
+// if (rhsElem0 - newBitWidth) < 0: // rhsElem0 < newBitWidth
+//   lo = (lhsElem0 >>u rhsElem0) | ((lhsElem1 << 1) << ((newBitWidth - 1) -
+//   rhsElem0))
+//   hi = lhsElem1 >>s rhsElem0
+// else:
+//   lo = lhsElem1 >>s (rhsElem0 - newBitWidth);
+//   hi = lhsElem1 >>s (newBitWidth - 1)
+//
+// arith.shrui expansion:
+// if (rhsElem0 - newBitWidth)  < 0: // rhsElem0 < newBitWidth
+//   lo = (lhsElem0 >>u rhsElem0) | ((lhsElem1 << 1) << ((newBitWidth - 1) -
+//   rhsElem0))
+//   hi = lhsElem1 >>u rhsElem0
+// else:
+//   lo = lhsElem1 >>u (rhsElem0 - newBitWidth);
+//   hi = 0;
+//
+// Because shifts by values >= newBitWidth are undefined, we ignore the high
+// half of RHS.
+template <typename ShROp>
+struct ConvertShR final : OpConversionPattern<ShROp> {
+  using OpConversionPattern<ShROp>::OpConversionPattern;
+  using OpAdaptor = typename OpConversionPattern<ShROp>::OpAdaptor;
 
   LogicalResult
-  matchAndRewrite(arith::ShRUIOp op, OpAdaptor adaptor,
+  matchAndRewrite(ShROp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
 
     Type oldTy = op.getType();
-    auto newTy = getTypeConverter()->convertType<VectorType>(oldTy);
+    auto newTy =
+        this->getTypeConverter()->template convertType<VectorType>(oldTy);
     if (!newTy)
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", op.getType()));
@@ -741,128 +759,55 @@ struct ConvertShRUI final : OpConversionPattern<arith::ShRUIOp> {
         extractLastDimHalves(rewriter, loc, adaptor.getLhs());
     Value rhsElem0 = extractLastDimSlice(rewriter, loc, adaptor.getRhs(), 0);
 
-    // Assume that the shift amount is < 2 * newBitWidth. Calculate the low and
-    // high halves of the results separately:
-    //   1. low := a or b or c, where:
-    //     a) Bits from LHS.low, shifted by the RHS.
-    //     b) Bits from LHS.high, shifted left. These matter when
-    //        RHS < newBitWidth, e.g.:
-    //         [hhhh][0000] shrui 3 --> [000h][hhh0]
-    //                                          ^
-    //                                          |
-    //                                 [hhhh] shli (4 - 1)
-    //     c) Bits from LHS.high, shifted right. These come into play when
-    //        RHS > newBitWidth, e.g.:
-    //         [hhhh][0000] shrui 7 --> [0000][000h]
-    //                                          ^
-    //                                          |
-    //                                 [hhhh] shrui (7 - 4)
-    //
-    //   2. high := LHS.high shrui RHS
-    //
-    // Because shifts by values >= newBitWidth are undefined, we ignore the high
-    // half of RHS, and introduce 'bounds checks' to account for
-    // RHS.low > newBitWidth.
-    //
-    // TODO: Explore possible optimizations.
     Value zeroCst = createScalarOrSplatConstant(rewriter, loc, newOperandTy, 0);
-    Value elemBitWidth =
-        createScalarOrSplatConstant(rewriter, loc, newOperandTy, newBitWidth);
+    Value oneCst = createScalarOrSplatConstant(rewriter, loc, newOperandTy, 1);
 
-    Value illegalElemShift = arith::CmpIOp::create(
-        rewriter, loc, arith::CmpIPredicate::uge, rhsElem0, elemBitWidth);
-
-    Value shiftedElem0 =
+    // compute low bits for rhsElem0 < newBitWidth
+    Value targetLenMinusOne = createScalarOrSplatConstant(
+        rewriter, loc, newOperandTy, newBitWidth - 1);
+    Value targetLenMinusOneShiftAmount =
+        arith::SubIOp::create(rewriter, loc, targetLenMinusOne, rhsElem0);
+    Value shiftRightLow =
         arith::ShRUIOp::create(rewriter, loc, lhsElem0, rhsElem0);
-    Value resElem0Low = arith::SelectOp::create(rewriter, loc, illegalElemShift,
-                                                zeroCst, shiftedElem0);
-    Value shiftedElem1 =
-        arith::ShRUIOp::create(rewriter, loc, lhsElem1, rhsElem0);
-    Value resElem1 = arith::SelectOp::create(rewriter, loc, illegalElemShift,
-                                             zeroCst, shiftedElem1);
+    Value shiftLeftHighOne =
+        arith::ShLIOp::create(rewriter, loc, lhsElem1, oneCst);
+    Value shiftLeftHigh = arith::ShLIOp::create(rewriter, loc, shiftLeftHighOne,
+                                                targetLenMinusOneShiftAmount);
+    Value lowTrue =
+        arith::OrIOp::create(rewriter, loc, shiftRightLow, shiftLeftHigh);
 
-    Value cappedShiftAmount = arith::SelectOp::create(
-        rewriter, loc, illegalElemShift, elemBitWidth, rhsElem0);
-    Value leftShiftAmount =
-        arith::SubIOp::create(rewriter, loc, elemBitWidth, cappedShiftAmount);
-    Value shiftedLeft =
-        arith::ShLIOp::create(rewriter, loc, lhsElem1, leftShiftAmount);
-    Value overshotShiftAmount =
-        arith::SubIOp::create(rewriter, loc, rhsElem0, elemBitWidth);
-    Value shiftedRight =
-        arith::ShRUIOp::create(rewriter, loc, lhsElem1, overshotShiftAmount);
+    // compute low bits for rhsElem0 >= newBitWidth
+    Value targetLenConstant =
+        createScalarOrSplatConstant(rewriter, loc, newOperandTy, newBitWidth);
+    Value shiftAmountMinusTargetLen =
+        arith::SubIOp::create(rewriter, loc, rhsElem0, targetLenConstant);
+    Value lowFalse =
+        ShROp::create(rewriter, loc, lhsElem0, shiftAmountMinusTargetLen);
 
-    Value resElem0High = arith::SelectOp::create(
-        rewriter, loc, illegalElemShift, shiftedRight, shiftedLeft);
-    Value resElem0 =
-        arith::OrIOp::create(rewriter, loc, resElem0Low, resElem0High);
+    // compute high bits for rhsElem0 < newBitWidth
+    Value highTrue = ShROp::create(rewriter, loc, lhsElem1, rhsElem0);
+
+    // compute high bits for rhsElem0 >= newBitWidth
+    Value highFalse{};
+    if constexpr (std::is_same_v<ShROp, arith::ShRSIOp>) {
+      highFalse =
+          arith::ShRSIOp::create(rewriter, loc, lhsElem1, targetLenMinusOne);
+    } else {
+      highFalse = zeroCst;
+    }
+
+    // select the high and low bits based on shiftAmount < targetLen
+    Value condition =
+        arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
+                              shiftAmountMinusTargetLen, zeroCst);
+    Value resultLow =
+        arith::SelectOp::create(rewriter, loc, condition, lowTrue, lowFalse);
+    Value resultHigh =
+        arith::SelectOp::create(rewriter, loc, condition, highTrue, highFalse);
 
     Value resultVec =
-        constructResultVector(rewriter, loc, newTy, {resElem0, resElem1});
+        constructResultVector(rewriter, loc, newTy, {resultLow, resultHigh});
     rewriter.replaceOp(op, resultVec);
-    return success();
-  }
-};
-
-//===----------------------------------------------------------------------===//
-// ConvertShRSI
-//===----------------------------------------------------------------------===//
-
-struct ConvertShRSI final : OpConversionPattern<arith::ShRSIOp> {
-  using Base::Base;
-
-  LogicalResult
-  matchAndRewrite(arith::ShRSIOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Location loc = op->getLoc();
-
-    Type oldTy = op.getType();
-    auto newTy = getTypeConverter()->convertType<VectorType>(oldTy);
-    if (!newTy)
-      return rewriter.notifyMatchFailure(
-          loc, llvm::formatv("unsupported type: {0}", op.getType()));
-
-    Value lhsElem1 = extractLastDimSlice(rewriter, loc, adaptor.getLhs(), 1);
-    Value rhsElem0 = extractLastDimSlice(rewriter, loc, adaptor.getRhs(), 0);
-
-    Type narrowTy = rhsElem0.getType();
-    int64_t origBitwidth = newTy.getElementTypeBitWidth() * 2;
-
-    // Rewrite this as an bitwise or of `arith.shrui` and sign extension bits.
-    // Perform as many ops over the narrow integer type as possible and let the
-    // other emulation patterns convert the rest.
-    Value elemZero = createScalarOrSplatConstant(rewriter, loc, narrowTy, 0);
-    Value signBit = arith::CmpIOp::create(
-        rewriter, loc, arith::CmpIPredicate::slt, lhsElem1, elemZero);
-    signBit = dropTrailingX1Dim(rewriter, loc, signBit);
-
-    // Create a bit pattern of either all ones or all zeros. Then shift it left
-    // to calculate the sign extension bits created by shifting the original
-    // sign bit right.
-    Value allSign = arith::ExtSIOp::create(rewriter, loc, oldTy, signBit);
-    Value maxShift =
-        createScalarOrSplatConstant(rewriter, loc, narrowTy, origBitwidth);
-    Value numNonSignExtBits =
-        arith::SubIOp::create(rewriter, loc, maxShift, rhsElem0);
-    numNonSignExtBits = dropTrailingX1Dim(rewriter, loc, numNonSignExtBits);
-    numNonSignExtBits =
-        arith::ExtUIOp::create(rewriter, loc, oldTy, numNonSignExtBits);
-    Value signBits =
-        arith::ShLIOp::create(rewriter, loc, allSign, numNonSignExtBits);
-
-    // Use original arguments to create the right shift.
-    Value shrui =
-        arith::ShRUIOp::create(rewriter, loc, op.getLhs(), op.getRhs());
-    Value shrsi = arith::OrIOp::create(rewriter, loc, shrui, signBits);
-
-    // Handle shifting by zero. This is necessary when the `signBits` shift is
-    // invalid.
-    Value isNoop = arith::CmpIOp::create(
-        rewriter, loc, arith::CmpIPredicate::eq, rhsElem0, elemZero);
-    isNoop = dropTrailingX1Dim(rewriter, loc, isNoop);
-    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNoop, op.getLhs(),
-                                                 shrsi);
-
     return success();
   }
 };
@@ -1293,7 +1238,8 @@ void arith::populateArithWideIntEmulationPatterns(
       // Misc ops.
       ConvertConstant, ConvertCmpI, ConvertSelect, ConvertVectorPrint,
       // Binary ops.
-      ConvertAddI, ConvertMulI, ConvertShLI, ConvertShRSI, ConvertShRUI,
+      ConvertAddI, ConvertMulI, ConvertShLI, ConvertShR<arith::ShRUIOp>,
+      ConvertShR<arith::ShRSIOp>,
       ConvertMaxMin<arith::MaxUIOp, arith::CmpIPredicate::ugt>,
       ConvertMaxMin<arith::MaxSIOp, arith::CmpIPredicate::sgt>,
       ConvertMaxMin<arith::MinUIOp, arith::CmpIPredicate::ult>,
