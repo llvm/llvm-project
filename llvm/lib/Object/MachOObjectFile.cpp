@@ -2398,6 +2398,30 @@ void MachOObjectFile::getRelocationTypeName(
         res = Table[RType];
       break;
     }
+    case Triple::riscv32: {
+      static const char *const Table[] = {
+          "RISCV_RELOC_UNSIGNED", "RISCV_RELOC_SUBTRACTOR",
+          "RISCV_RELOC_BRANCH21", "RISCV_RELOC_HI20",
+          "RISCV_RELOC_LO12",     "RISCV_RELOC_GOT_HI20",
+          "RISCV_RELOC_GOT_LO12", "RISCV_RELOC_POINTER_TO_GOT",
+          "RISCV_RELOC_ADDEND",
+      };
+
+      if (RType >= std::size(Table))
+        res = "Unknown";
+      else
+        res = Table[RType];
+      Result.append(res.begin(), res.end());
+      if ((RType == MachO::RISCV_RELOC_HI20 ||
+           RType == MachO::RISCV_RELOC_GOT_HI20 ||
+           RType == MachO::RISCV_RELOC_LO12 ||
+           RType == MachO::RISCV_RELOC_GOT_LO12) &&
+          getAnyRelocationPCRel(getRelocation(Rel))) {
+        StringRef PCRel("(pcrel)");
+        Result.append(PCRel.begin(), PCRel.end());
+      }
+      return;
+    }
     case Triple::UnknownArch:
       res = "Unknown";
       break;
@@ -2815,6 +2839,24 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
       if (ArchFlag)
         *ArchFlag = "armv7s";
       return Triple("armv7s-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V8M_BASE:
+      if (McpuDefault)
+        *McpuDefault = "cortex-m23";
+      if (ArchFlag)
+        *ArchFlag = "armv8m.base";
+      return Triple("thumbv8m-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V8M_MAIN:
+      if (McpuDefault)
+        *McpuDefault = "cortex-m33";
+      if (ArchFlag)
+        *ArchFlag = "armv8m.main";
+      return Triple("thumbv8m-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN:
+      if (McpuDefault)
+        *McpuDefault = "cortex-m52";
+      if (ArchFlag)
+        *ArchFlag = "armv8.1m.main";
+      return Triple("thumbv8m-apple-darwin");
     default:
       return Triple();
     }
@@ -2888,24 +2930,11 @@ bool MachOObjectFile::isValidArch(StringRef ArchFlag) {
 }
 
 ArrayRef<StringRef> MachOObjectFile::getValidArchs() {
-  static const std::array<StringRef, 18> ValidArchs = {{
-      "i386",
-      "x86_64",
-      "x86_64h",
-      "armv4t",
-      "arm",
-      "armv5e",
-      "armv6",
-      "armv6m",
-      "armv7",
-      "armv7em",
-      "armv7k",
-      "armv7m",
-      "armv7s",
-      "arm64",
-      "arm64e",
-      "arm64_32",
-      "ppc",
+  static const std::array<StringRef, 21> ValidArchs = {{
+      "i386",          "x86_64", "x86_64h", "armv4t",      "arm",
+      "armv5e",        "armv6",  "armv6m",  "armv7",       "armv7em",
+      "armv7k",        "armv7m", "armv7s",  "armv8m.base", "armv8m.main",
+      "armv8.1m.main", "arm64",  "arm64e",  "arm64_32",    "ppc",
       "ppc64",
   }};
 

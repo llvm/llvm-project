@@ -30,7 +30,7 @@ static std::optional<const char *> ToOptionalString(const char *s) {
 static const char *GetModuleName(const SymbolContext &sc) {
   if (!sc.module_sp)
     return nullptr;
-  return sc.module_sp->GetFileSpec().GetFilename().AsCString();
+  return sc.module_sp->GetFileSpec().GetFilename().AsCString(nullptr);
 }
 
 /// \return
@@ -156,9 +156,10 @@ public:
     m_s.Format("    {0}: ", item.id);
 
     if (m_options.show_timestamps) {
-      m_s.Format("[{0}] ", item.timestamp
-                               ? formatv("{0:3} ns", *item.timestamp).str()
-                               : "unavailable");
+      if (item.timestamp)
+        m_s << formatv("[{0:3} ns]", *item.timestamp);
+      else
+        m_s << "[unavailable]";
     }
 
     if (item.event) {
@@ -244,7 +245,7 @@ private:
     else if (!sc.function && !sc.symbol)
       m_s << module_name << "`(none)";
     else
-      m_s << module_name << "`" << sc.GetFunctionName().AsCString();
+      m_s << module_name << "`" << sc.GetFunctionName();
   }
 
   void DumpFunctionCallTree(const TraceDumper::FunctionCall &function_call) {
@@ -376,7 +377,8 @@ public:
       m_j.attribute("module", ToOptionalString(GetModuleName(item)));
       m_j.attribute(
           "symbol",
-          ToOptionalString(item.symbol_info->sc.GetFunctionName().AsCString()));
+          ToOptionalString(
+              item.symbol_info->sc.GetFunctionName().AsCString(nullptr)));
 
       if (lldb::InstructionSP instruction = item.symbol_info->instruction) {
         ExecutionContext exe_ctx = item.symbol_info->exe_ctx;

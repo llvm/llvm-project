@@ -98,6 +98,11 @@ Module &Module::operator=(Module &&Other) {
 
   NamedMDList.clear();
   NamedMDList.splice(NamedMDList.begin(), Other.NamedMDList);
+  for (NamedMDNode &NMD : NamedMDList)
+    NMD.setParent(this);
+
+  NamedMDSymTab = std::move(Other.NamedMDSymTab);
+  ComdatSymTab = std::move(Other.ComdatSymTab);
   GlobalScopeAsm = std::move(Other.GlobalScopeAsm);
   OwnedMemoryBuffer = std::move(Other.OwnedMemoryBuffer);
   Materializer = std::move(Other.Materializer);
@@ -802,6 +807,18 @@ void Module::setStackProtectorGuardOffset(int Offset) {
   addModuleFlag(ModFlagBehavior::Error, "stack-protector-guard-offset", Offset);
 }
 
+std::optional<unsigned> Module::getStackProtectorGuardValueWidth() const {
+  Metadata *MD = getModuleFlag("stack-protector-guard-value-width");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return CI->getZExtValue();
+  return std::nullopt;
+}
+
+void Module::setStackProtectorGuardValueWidth(unsigned Width) {
+  addModuleFlag(ModFlagBehavior::Error, "stack-protector-guard-value-width",
+                Width);
+}
+
 unsigned Module::getOverrideStackAlignment() const {
   Metadata *MD = getModuleFlag("override-stack-alignment");
   if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
@@ -934,4 +951,11 @@ WinX64EHUnwindV2Mode Module::getWinX64EHUnwindV2Mode() const {
   if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
     return static_cast<WinX64EHUnwindV2Mode>(CI->getZExtValue());
   return WinX64EHUnwindV2Mode::Disabled;
+}
+
+ControlFlowGuardMode Module::getControlFlowGuardMode() const {
+  Metadata *MD = getModuleFlag("cfguard");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return static_cast<ControlFlowGuardMode>(CI->getZExtValue());
+  return ControlFlowGuardMode::Disabled;
 }

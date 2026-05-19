@@ -1462,7 +1462,8 @@ class opt
       return true; // Parse error!
     this->setValue(Val);
     this->setPosition(pos);
-    Callback(Val);
+    if (Callback)
+      Callback(Val);
     return false;
   }
 
@@ -1517,13 +1518,15 @@ public:
 
   template <class T> DataType &operator=(const T &Val) {
     this->setValue(Val);
-    Callback(Val);
+    if (Callback)
+      Callback(Val);
     return this->getValue();
   }
 
   template <class T> DataType &operator=(T &&Val) {
     this->getValue() = std::forward<T>(Val);
-    Callback(this->getValue());
+    if (Callback)
+      Callback(this->getValue());
     return this->getValue();
   }
 
@@ -1539,8 +1542,7 @@ public:
     Callback = CB;
   }
 
-  std::function<void(const typename ParserClass::parser_data_type &)> Callback =
-      [](const typename ParserClass::parser_data_type &) {};
+  std::function<void(const typename ParserClass::parser_data_type &)> Callback;
 };
 
 #if !(defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && defined(_MSC_VER))
@@ -1717,7 +1719,8 @@ class list : public Option, public list_storage<DataType, StorageClass> {
     list_storage<DataType, StorageClass>::addValue(Val);
     setPosition(pos);
     Positions.push_back(pos);
-    Callback(Val);
+    if (Callback)
+      Callback(Val);
     return false;
   }
 
@@ -1786,8 +1789,7 @@ public:
     Callback = CB;
   }
 
-  std::function<void(const typename ParserClass::parser_data_type &)> Callback =
-      [](const typename ParserClass::parser_data_type &) {};
+  std::function<void(const typename ParserClass::parser_data_type &)> Callback;
 };
 
 // Modifier to set the number of additional values.
@@ -1894,7 +1896,8 @@ class bits : public Option, public bits_storage<DataType, Storage> {
     this->addValue(Val);
     setPosition(pos);
     Positions.push_back(pos);
-    Callback(Val);
+    if (Callback)
+      Callback(Val);
     return false;
   }
 
@@ -1942,8 +1945,7 @@ public:
     Callback = CB;
   }
 
-  std::function<void(const typename ParserClass::parser_data_type &)> Callback =
-      [](const typename ParserClass::parser_data_type &) {};
+  std::function<void(const typename ParserClass::parser_data_type &)> Callback;
 };
 
 //===----------------------------------------------------------------------===//

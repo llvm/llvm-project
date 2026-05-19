@@ -142,8 +142,8 @@ constexpr FeatureBitset FeaturesDiamondRapids =
     FeatureCMPCCXADD | FeatureAVXIFMA | FeatureAVXNECONVERT |
     FeatureAVXVNNIINT8 | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
     FeatureSM4 | FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 |
-    FeaturePPX | FeatureNDD | FeatureNF | FeatureMOVRS | FeatureAMX_MOVRS |
-    FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32;
+    FeaturePPX | FeatureNDD | FeatureNF | FeatureJMPABS | FeatureMOVRS |
+    FeatureAMX_MOVRS | FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
@@ -178,7 +178,7 @@ constexpr FeatureBitset FeaturesPantherlake =
 constexpr FeatureBitset FeaturesNovalake =
     FeaturesPantherlake | FeaturePREFETCHI | FeatureAVX10_2 | FeatureMOVRS |
     FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 | FeaturePPX |
-    FeatureNDD | FeatureNF;
+    FeatureNDD | FeatureNF | FeatureJMPABS;
 constexpr FeatureBitset FeaturesClearwaterforest =
     (FeaturesSierraforest ^ FeatureWIDEKL) | FeatureAVXVNNIINT16 |
     FeatureSHA512 | FeatureSM3 | FeatureSM4 | FeaturePREFETCHI | FeatureUSERMSR;
@@ -254,6 +254,10 @@ static constexpr FeatureBitset FeaturesZNVER4 =
 static constexpr FeatureBitset FeaturesZNVER5 =
     FeaturesZNVER4 | FeatureAVXVNNI | FeatureMOVDIRI | FeatureMOVDIR64B |
     FeatureAVX512VP2INTERSECT | FeaturePREFETCHI | FeatureAVXVNNI;
+
+static constexpr FeatureBitset FeaturesZNVER6 =
+    FeaturesZNVER5 | FeatureAVXVNNIINT8 | FeatureAVX512FP16 | FeatureAVXIFMA |
+    FeatureAVXNECONVERT;
 
 // D151696 tranplanted Mangling and OnlyForCPUDispatchSpecific from
 // X86TargetParser.def to here. They are assigned by following ways:
@@ -440,6 +444,7 @@ constexpr ProcInfo Processors[] = {
   { {"znver3"}, CK_ZNVER3, FEATURE_AVX2, FeaturesZNVER3, '\0', false },
   { {"znver4"}, CK_ZNVER4, FEATURE_AVX512VBMI2, FeaturesZNVER4, '\0', false },
   { {"znver5"}, CK_ZNVER5, FEATURE_AVX512VP2INTERSECT, FeaturesZNVER5, '\0', false },
+  { {"znver6"}, CK_ZNVER6, FEATURE_AVX512FP16, FeaturesZNVER6, '\0', false },
   // Generic 64-bit processor.
   { {"x86-64"}, CK_x86_64, FEATURE_SSE2 , FeaturesX86_64, '\0', false },
   { {"x86-64-v2"}, CK_x86_64_v2, FEATURE_SSE4_2 , FeaturesX86_64_V2, '\0', false },
@@ -654,11 +659,12 @@ constexpr FeatureBitset ImpliedFeaturesCCMP = {};
 constexpr FeatureBitset ImpliedFeaturesNF = {};
 constexpr FeatureBitset ImpliedFeaturesCF = {};
 constexpr FeatureBitset ImpliedFeaturesZU = {};
+constexpr FeatureBitset ImpliedFeaturesJMPABS = {};
 
 constexpr FeatureBitset ImpliedFeaturesAPXF =
     ImpliedFeaturesEGPR | ImpliedFeaturesPush2Pop2 | ImpliedFeaturesPPX |
     ImpliedFeaturesNDD | ImpliedFeaturesCCMP | ImpliedFeaturesNF |
-    ImpliedFeaturesCF | ImpliedFeaturesZU;
+    ImpliedFeaturesCF | ImpliedFeaturesZU | ImpliedFeaturesJMPABS;
 
 constexpr FeatureBitset ImpliedFeaturesMOVRS = {};
 

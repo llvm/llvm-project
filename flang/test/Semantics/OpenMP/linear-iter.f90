@@ -33,6 +33,7 @@ SUBROUTINE LINEAR_BAD(N)
   !$omp teams
   !ERROR: Variable 'j' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE
   !ERROR: Variable 'b' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE
+  !ERROR: List item 'b' in LINEAR clause must be a scalar variable
   !$omp distribute parallel do simd linear(j) linear(b)
   do i = 1, N
      a = 3.14
@@ -45,6 +46,7 @@ SUBROUTINE LINEAR_BAD(N)
   !$omp teams
   !ERROR: Variable 'j' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE
   !ERROR: Variable 'b' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE
+  !ERROR: List item 'b' in LINEAR clause must be a scalar variable
   !$omp distribute parallel do simd linear(j, b)
   do i = 1, N
      a = 3.14
@@ -74,8 +76,12 @@ SUBROUTINE LINEAR_BAD(N)
    !$omp end distribute simd
 
    !WARNING: `DISTRIBUTE` must be dynamically enclosed in a `TEAMS` region.
+   !ERROR: Loop iteration variable with a predetermined data sharing attribute cannot appear in a LINEAR clause
+   !ERROR: Loop iteration variable with a predetermined data sharing attribute cannot appear in a LINEAR clause
    !$omp distribute simd linear(i,j) collapse(2)
+   !BECAUSE: 'i' is an iteration variable of an affected loop
    do i = 1, N
+   !BECAUSE: 'j' is an iteration variable of an affected loop
       do j = 1, N
          a = 3.14
       enddo

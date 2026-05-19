@@ -27,9 +27,6 @@ _Pragma("omp begin declare variant match(device = {arch(spirv64)})");
 #define __gpu_global __attribute__((address_space(1)))
 #define __gpu_generic __attribute__((address_space(4)))
 
-// Attribute to declare a function as a kernel.
-#define __gpu_kernel __attribute__((device_kernel, visibility("protected")))
-
 // Returns the number of workgroups in the 'x' dimension of the grid.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_x(void) {
   return __builtin_spirv_num_workgroups(0);
@@ -144,30 +141,6 @@ __gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x,
                       uint32_t __width) {
   uint32_t __lane = __idx + (__gpu_lane_id() & ~(__width - 1));
   return __builtin_spirv_subgroup_shuffle(__x, __lane);
-}
-
-// Returns a bitmask marking all lanes that have the same value of __x.
-_DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_match_any_u32(uint64_t __lane_mask, uint32_t __x) {
-  return __gpu_match_any_u32_impl(__lane_mask, __x);
-}
-
-// Returns a bitmask marking all lanes that have the same value of __x.
-_DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_match_any_u64(uint64_t __lane_mask, uint64_t __x) {
-  return __gpu_match_any_u64_impl(__lane_mask, __x);
-}
-
-// Returns the current lane mask if every lane contains __x.
-_DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_match_all_u32(uint64_t __lane_mask, uint32_t __x) {
-  return __gpu_match_all_u32_impl(__lane_mask, __x);
-}
-
-// Returns the current lane mask if every lane contains __x.
-_DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_match_all_u64(uint64_t __lane_mask, uint64_t __x) {
-  return __gpu_match_all_u64_impl(__lane_mask, __x);
 }
 
 // SPIR-V does not expose this, always return false.

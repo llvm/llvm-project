@@ -10,6 +10,7 @@
 // munlock, and munlockall should have separate test files which only need to
 // check our code paths (succeeds and errors).
 
+#include "hdr/sys_mman_macros.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/libc_errno.h"
 #include "src/sys/mman/madvise.h"

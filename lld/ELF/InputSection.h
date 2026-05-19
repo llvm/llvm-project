@@ -209,11 +209,6 @@ public:
     bytesDropped += num;
   }
 
-  void push_back(uint64_t num) {
-    assert(bytesDropped >= num);
-    bytesDropped -= num;
-  }
-
   mutable const uint8_t *content_;
   uint64_t size;
 
@@ -299,6 +294,7 @@ public:
   template <typename T> llvm::ArrayRef<T> getDataAs() const {
     size_t s = content().size();
     assert(s % sizeof(T) == 0);
+    assert(reinterpret_cast<uintptr_t>(content().data()) % alignof(T) == 0);
     return llvm::ArrayRef<T>((const T *)content().data(), s / sizeof(T));
   }
 
@@ -325,6 +321,10 @@ struct SectionPiece {
 
 static_assert(sizeof(SectionPiece) == 16, "SectionPiece is too big");
 
+// Used by splitSections to pre-resolve section piece indexes. 32 bits of offset
+// supports section piece up to 4GB.
+constexpr unsigned mergeValueShift = 32;
+
 // This corresponds to a SHF_MERGE section of an input file.
 class MergeInputSection : public InputSectionBase {
 public:
@@ -338,7 +338,8 @@ public:
   void splitIntoPieces();
 
   // Translate an offset in the input section to an offset in the parent
-  // MergeSyntheticSection.
+  // MergeSyntheticSection. If the offset was pre-resolved by
+  // resolveSymbolPieces (upper bits non-zero), this is O(1).
   uint64_t getParentOffset(uint64_t offset) const;
 
   // Splittable sections are handled as a sequence of data

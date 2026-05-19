@@ -13,6 +13,7 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -103,6 +104,79 @@ Value *IRBuilderBase::CreateAggregateCast(Value *V, Type *DestTy) {
   return CreateBitOrPointerCast(V, DestTy);
 }
 
+Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
+                                                   Value *V, Type *NewTy) {
+  Type *OldTy = V->getType();
+
+  if (OldTy == NewTy)
+    return V;
+
+  assert(!(isa<IntegerType>(OldTy) && isa<IntegerType>(NewTy)) &&
+         "Integer types must be the exact same to convert.");
+
+  // A variant of bitcast that supports a mixture of fixed and scalable types
+  // that are know to have the same size.
+  auto CreateBitCastLike = [this](Value *In, Type *Ty) -> Value * {
+    Type *InTy = In->getType();
+    if (InTy == Ty)
+      return In;
+
+    if (isa<FixedVectorType>(InTy) && isa<ScalableVectorType>(Ty)) {
+      // For vscale_range(2) expand <4 x i32> to <vscale x 4 x i16> -->
+      //   <4 x i32> to <vscale x 2 x i32> to <vscale x 4 x i16>
+      auto *VTy = VectorType::getWithSizeAndScalar(cast<VectorType>(Ty), InTy);
+      return CreateBitCast(
+          CreateInsertVector(VTy, PoisonValue::get(VTy), In, getInt64(0)), Ty);
+    }
+
+    if (isa<ScalableVectorType>(InTy) && isa<FixedVectorType>(Ty)) {
+      // For vscale_range(2) expand <vscale x 4 x i16> to <4 x i32> -->
+      //   <vscale x 4 x i16> to <vscale x 2 x i32> to <4 x i32>
+      auto *VTy = VectorType::getWithSizeAndScalar(cast<VectorType>(InTy), Ty);
+      return CreateExtractVector(Ty, CreateBitCast(In, VTy), getInt64(0));
+    }
+
+    return CreateBitCast(In, Ty);
+  };
+
+  // See if we need inttoptr for this type pair. May require additional bitcast.
+  if (OldTy->isIntOrIntVectorTy() && NewTy->isPtrOrPtrVectorTy()) {
+    // Expand <2 x i32> to i8* --> <2 x i32> to i64 to i8*
+    // Expand i128 to <2 x i8*> --> i128 to <2 x i64> to <2 x i8*>
+    // Expand <4 x i32> to <2 x i8*> --> <4 x i32> to <2 x i64> to <2 x i8*>
+    // Directly handle i64 to i8*
+    return CreateIntToPtr(CreateBitCastLike(V, DL.getIntPtrType(NewTy)), NewTy);
+  }
+
+  // See if we need ptrtoint for this type pair. May require additional bitcast.
+  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isIntOrIntVectorTy()) {
+    // Expand <2 x i8*> to i128 --> <2 x i8*> to <2 x i64> to i128
+    // Expand i8* to <2 x i32> --> i8* to i64 to <2 x i32>
+    // Expand <2 x i8*> to <4 x i32> --> <2 x i8*> to <2 x i64> to <4 x i32>
+    // Expand i8* to i64 --> i8* to i64 to i64
+    return CreateBitCastLike(CreatePtrToInt(V, DL.getIntPtrType(OldTy)), NewTy);
+  }
+
+  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isPtrOrPtrVectorTy()) {
+    unsigned OldAS = OldTy->getPointerAddressSpace();
+    unsigned NewAS = NewTy->getPointerAddressSpace();
+    // To convert pointers with different address spaces (they are already
+    // checked convertible, i.e. they have the same pointer size), so far we
+    // cannot use `bitcast` (which has restrict on the same address space) or
+    // `addrspacecast` (which is not always no-op casting). Instead, use a pair
+    // of no-op `ptrtoint`/`inttoptr` casts through an integer with the same bit
+    // size.
+    if (OldAS != NewAS) {
+      return CreateIntToPtr(
+          CreateBitCastLike(CreatePtrToInt(V, DL.getIntPtrType(OldTy)),
+                            DL.getIntPtrType(NewTy)),
+          NewTy);
+    }
+  }
+
+  return CreateBitCastLike(V, NewTy);
+}
+
 CallInst *
 IRBuilderBase::createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
                                 const Twine &Name, FMFSource FMFSource,
@@ -133,6 +207,15 @@ Value *IRBuilderBase::CreateTypeSize(Type *Ty, TypeSize Size) {
     return ConstantInt::get(Ty, Size.getKnownMinValue());
 
   return CreateVScaleMultiple(*this, Ty, Size.getKnownMinValue());
+}
+
+Value *IRBuilderBase::CreateAllocationSize(Type *DestTy, AllocaInst *AI) {
+  const DataLayout &DL = BB->getDataLayout();
+  TypeSize ElemSize = DL.getTypeAllocSize(AI->getAllocatedType());
+  Value *Size = CreateTypeSize(DestTy, ElemSize);
+  if (AI->isArrayAllocation())
+    Size = CreateMul(CreateZExtOrTrunc(AI->getArraySize(), DestTy), Size);
+  return Size;
 }
 
 Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
@@ -462,16 +545,17 @@ CallInst *IRBuilderBase::CreateThreadLocalAddress(Value *Ptr) {
   return CI;
 }
 
-CallInst *
-IRBuilderBase::CreateAssumption(Value *Cond,
-                                ArrayRef<OperandBundleDef> OpBundles) {
+CallInst *IRBuilderBase::CreateAssumption(Value *Cond) {
   assert(Cond->getType() == getInt1Ty() &&
          "an assumption condition must be of type i1");
+  return CreateIntrinsic(Intrinsic::assume, /*OverloadTypes=*/{}, {Cond});
+}
 
-  Value *Ops[] = { Cond };
-  Module *M = BB->getParent()->getParent();
-  Function *FnAssume = Intrinsic::getOrInsertDeclaration(M, Intrinsic::assume);
-  return CreateCall(FnAssume, Ops, OpBundles);
+CallInst *
+IRBuilderBase::CreateAssumption(ArrayRef<OperandBundleDef> OpBundles) {
+  Value *Args[] = {ConstantInt::getTrue(getContext())};
+  return CreateIntrinsic(Intrinsic::assume, /*OverloadTypes=*/{}, Args,
+                         /*FMFSource=*/nullptr, /*Name=*/"", OpBundles);
 }
 
 Instruction *IRBuilderBase::CreateNoAliasScopeDeclaration(Value *Scope) {
@@ -839,19 +923,19 @@ Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, {LHS->getType()});
   if (Value *V = Folder.FoldBinaryIntrinsic(ID, LHS, RHS, Fn->getReturnType(),
-                                            /*FMFSource=*/nullptr))
+                                            FMFSource.get(FMF)))
     return V;
   return createCallHelper(Fn, {LHS, RHS}, Name, FMFSource);
 }
 
 CallInst *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
-                                         ArrayRef<Type *> Types,
+                                         ArrayRef<Type *> OverloadTypes,
                                          ArrayRef<Value *> Args,
-                                         FMFSource FMFSource,
-                                         const Twine &Name) {
+                                         FMFSource FMFSource, const Twine &Name,
+                                         ArrayRef<OperandBundleDef> OpBundles) {
   Module *M = BB->getModule();
-  Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, Types);
-  return createCallHelper(Fn, Args, Name, FMFSource);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, OverloadTypes);
+  return createCallHelper(Fn, Args, Name, FMFSource, OpBundles);
 }
 
 CallInst *IRBuilderBase::CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
@@ -859,12 +943,7 @@ CallInst *IRBuilderBase::CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
                                          FMFSource FMFSource,
                                          const Twine &Name) {
   Module *M = BB->getModule();
-
-  SmallVector<Type *> ArgTys;
-  ArgTys.reserve(Args.size());
-  for (auto &I : Args)
-    ArgTys.push_back(I->getType());
-
+  SmallVector<Type *> ArgTys = llvm::map_to_vector(Args, &Value::getType);
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, RetTy, ArgTys);
   return createCallHelper(Fn, Args, Name, FMFSource);
 }
@@ -1033,7 +1112,7 @@ Value *IRBuilderBase::CreateSelect(Value *C, Value *True, Value *False,
 Value *IRBuilderBase::CreateSelectFMF(Value *C, Value *True, Value *False,
                                       FMFSource FMFSource, const Twine &Name,
                                       Instruction *MDFrom) {
-  if (auto *V = Folder.FoldSelect(C, True, False))
+  if (auto *V = Folder.FoldSelect(C, True, False, FMFSource.get(FMF)))
     return V;
 
   SelectInst *Sel = SelectInst::Create(C, True, False);
@@ -1047,15 +1126,23 @@ Value *IRBuilderBase::CreateSelectFMF(Value *C, Value *True, Value *False,
   return Insert(Sel, Name);
 }
 
-Value *IRBuilderBase::CreatePtrDiff(Type *ElemTy, Value *LHS, Value *RHS,
-                                    const Twine &Name) {
+Value *IRBuilderBase::CreatePtrDiff(Value *LHS, Value *RHS, const Twine &Name,
+                                    bool IsNUW) {
   assert(LHS->getType() == RHS->getType() &&
          "Pointer subtraction operand types must match!");
-  Value *LHS_int = CreatePtrToInt(LHS, Type::getInt64Ty(Context));
-  Value *RHS_int = CreatePtrToInt(RHS, Type::getInt64Ty(Context));
-  Value *Difference = CreateSub(LHS_int, RHS_int);
-  return CreateExactSDiv(Difference, ConstantExpr::getSizeOf(ElemTy),
-                         Name);
+  Value *LHSAddr = CreatePtrToAddr(LHS);
+  Value *RHSAddr = CreatePtrToAddr(RHS);
+  return CreateSub(LHSAddr, RHSAddr, Name, IsNUW);
+}
+Value *IRBuilderBase::CreatePtrDiff(Type *ElemTy, Value *LHS, Value *RHS,
+                                    const Twine &Name) {
+  const DataLayout &DL = BB->getDataLayout();
+  TypeSize ElemSize = DL.getTypeAllocSize(ElemTy);
+  if (ElemSize == TypeSize::getFixed(1))
+    return CreatePtrDiff(LHS, RHS, Name);
+
+  Value *Diff = CreatePtrDiff(LHS, RHS);
+  return CreateExactSDiv(Diff, CreateTypeSize(Diff->getType(), ElemSize), Name);
 }
 
 Value *IRBuilderBase::CreateLaunderInvariantGroup(Value *Ptr) {
@@ -1107,35 +1194,47 @@ Value *IRBuilderBase::CreateVectorReverse(Value *V, const Twine &Name) {
   return CreateShuffleVector(V, ShuffleMask, Name);
 }
 
-Value *IRBuilderBase::CreateVectorSplice(Value *V1, Value *V2, int64_t Imm,
-                                         const Twine &Name) {
-  assert(isa<VectorType>(V1->getType()) && "Unexpected type");
-  assert(V1->getType() == V2->getType() &&
-         "Splice expects matching operand types!");
-
-  if (auto *VTy = dyn_cast<ScalableVectorType>(V1->getType())) {
-    Module *M = BB->getParent()->getParent();
-    Function *F = Intrinsic::getOrInsertDeclaration(
-        M,
-        Imm >= 0 ? Intrinsic::vector_splice_left
-                 : Intrinsic::vector_splice_right,
-        VTy);
-
-    Value *Ops[] = {V1, V2, getInt32(std::abs(Imm))};
-    return Insert(CallInst::Create(F, Ops), Name);
-  }
-
-  unsigned NumElts = cast<FixedVectorType>(V1->getType())->getNumElements();
-  assert(((-Imm <= NumElts) || (Imm < NumElts)) &&
-         "Invalid immediate for vector splice!");
-
-  // Keep the original behaviour for fixed vector
+static SmallVector<int, 8> getSpliceMask(int64_t Imm, unsigned NumElts) {
   unsigned Idx = (NumElts + Imm) % NumElts;
   SmallVector<int, 8> Mask;
   for (unsigned I = 0; I < NumElts; ++I)
     Mask.push_back(Idx + I);
+  return Mask;
+}
 
-  return CreateShuffleVector(V1, V2, Mask);
+Value *IRBuilderBase::CreateVectorSpliceLeft(Value *V1, Value *V2,
+                                             Value *Offset, const Twine &Name) {
+  assert(isa<VectorType>(V1->getType()) && "Unexpected type");
+  assert(V1->getType() == V2->getType() &&
+         "Splice expects matching operand types!");
+
+  // Emit a shufflevector for fixed vectors with a constant offset
+  if (auto *COffset = dyn_cast<ConstantInt>(Offset))
+    if (auto *FVTy = dyn_cast<FixedVectorType>(V1->getType()))
+      return CreateShuffleVector(
+          V1, V2,
+          getSpliceMask(COffset->getZExtValue(), FVTy->getNumElements()));
+
+  return CreateIntrinsic(Intrinsic::vector_splice_left, V1->getType(),
+                         {V1, V2, Offset}, {}, Name);
+}
+
+Value *IRBuilderBase::CreateVectorSpliceRight(Value *V1, Value *V2,
+                                              Value *Offset,
+                                              const Twine &Name) {
+  assert(isa<VectorType>(V1->getType()) && "Unexpected type");
+  assert(V1->getType() == V2->getType() &&
+         "Splice expects matching operand types!");
+
+  // Emit a shufflevector for fixed vectors with a constant offset
+  if (auto *COffset = dyn_cast<ConstantInt>(Offset))
+    if (auto *FVTy = dyn_cast<FixedVectorType>(V1->getType()))
+      return CreateShuffleVector(
+          V1, V2,
+          getSpliceMask(-COffset->getZExtValue(), FVTy->getNumElements()));
+
+  return CreateIntrinsic(Intrinsic::vector_splice_right, V1->getType(),
+                         {V1, V2, Offset}, {}, Name);
 }
 
 Value *IRBuilderBase::CreateVectorSplat(unsigned NumElts, Value *V,
@@ -1260,12 +1359,12 @@ CallInst *IRBuilderBase::CreateAlignmentAssumptionHelper(const DataLayout &DL,
   if (OffsetValue)
     Vals.push_back(OffsetValue);
   OperandBundleDefT<Value *> AlignOpB("align", Vals);
-  return CreateAssumption(ConstantInt::getTrue(getContext()), {AlignOpB});
+  return CreateAssumption({AlignOpB});
 }
 
 CallInst *IRBuilderBase::CreateAlignmentAssumption(const DataLayout &DL,
                                                    Value *PtrValue,
-                                                   unsigned Alignment,
+                                                   uint64_t Alignment,
                                                    Value *OffsetValue) {
   assert(isa<PointerType>(PtrValue->getType()) &&
          "trying to create an alignment assumption on a non-pointer?");
@@ -1288,11 +1387,16 @@ CallInst *IRBuilderBase::CreateAlignmentAssumption(const DataLayout &DL,
 CallInst *IRBuilderBase::CreateDereferenceableAssumption(Value *PtrValue,
                                                          Value *SizeValue) {
   assert(isa<PointerType>(PtrValue->getType()) &&
-         "trying to create an deferenceable assumption on a non-pointer?");
+         "trying to create a deferenceable assumption on a non-pointer?");
   SmallVector<Value *, 4> Vals({PtrValue, SizeValue});
   OperandBundleDefT<Value *> DereferenceableOpB("dereferenceable", Vals);
-  return CreateAssumption(ConstantInt::getTrue(getContext()),
-                          {DereferenceableOpB});
+  return CreateAssumption({DereferenceableOpB});
+}
+
+CallInst *IRBuilderBase::CreateNonnullAssumption(Value *PtrValue) {
+  assert(isa<PointerType>(PtrValue->getType()) &&
+         "trying to create a nonnull assumption on a non-pointer?");
+  return CreateAssumption(OperandBundleDef("nonnull", PtrValue));
 }
 
 IRBuilderDefaultInserter::~IRBuilderDefaultInserter() = default;

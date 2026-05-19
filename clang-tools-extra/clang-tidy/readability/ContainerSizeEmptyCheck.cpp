@@ -94,7 +94,7 @@ AST_MATCHER(QualType, isIntegralType) {
 }
 
 AST_MATCHER_P(UserDefinedLiteral, hasLiteral,
-              clang::ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
   const UserDefinedLiteral::LiteralOperatorKind LOK =
       Node.getLiteralOperatorKind();
   if (LOK == UserDefinedLiteral::LOK_Template ||
@@ -107,8 +107,7 @@ AST_MATCHER_P(UserDefinedLiteral, hasLiteral,
 }
 
 AST_MATCHER_P(CXXMethodDecl, hasCanonicalDecl,
-              clang::ast_matchers::internal::Matcher<CXXMethodDecl>,
-              InnerMatcher) {
+              ast_matchers::internal::Matcher<CXXMethodDecl>, InnerMatcher) {
   return InnerMatcher.matches(*Node.getCanonicalDecl(), Finder, Builder);
 }
 
@@ -116,11 +115,15 @@ AST_POLYMORPHIC_MATCHER_P(
     matchMemberName,
     AST_POLYMORPHIC_SUPPORTED_TYPES(MemberExpr, CXXDependentScopeMemberExpr),
     std::string, MemberName) {
-  if (const auto *E = dyn_cast<MemberExpr>(&Node))
-    return E->getMemberDecl()->getName() == MemberName;
+  if (const auto *E = dyn_cast<MemberExpr>(&Node)) {
+    const IdentifierInfo *II = E->getMemberDecl()->getIdentifier();
+    return II && II->getName() == MemberName;
+  }
 
-  if (const auto *E = dyn_cast<CXXDependentScopeMemberExpr>(&Node))
-    return E->getMember().getAsString() == MemberName;
+  if (const auto *E = dyn_cast<CXXDependentScopeMemberExpr>(&Node)) {
+    const IdentifierInfo *II = E->getMember().getAsIdentifierInfo();
+    return II && II->getName() == MemberName;
+  }
 
   return false;
 }
@@ -141,16 +144,18 @@ void ContainerSizeEmptyCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
-  const auto ValidContainerRecord = cxxRecordDecl(isSameOrDerivedFrom(
-      namedDecl(has(cxxMethodDecl(isConst(), parameterCountIs(0), isPublic(),
-                                  hasAnyName("size", "length"),
-                                  returns(qualType(isIntegralType(),
-                                                   unless(booleanType()))))
-                        .bind("size")),
-                has(cxxMethodDecl(isConst(), parameterCountIs(0), isPublic(),
-                                  hasName("empty"), returns(booleanType()))
-                        .bind("empty")))
-          .bind("container")));
+  const auto ValidContainerRecord =
+      cxxRecordDecl(
+          isSameOrDerivedFrom(namedDecl(
+              has(cxxMethodDecl(isConst(), parameterCountIs(0), isPublic(),
+                                hasAnyName("size", "length"),
+                                returns(qualType(isIntegralType(),
+                                                 unless(booleanType()))))
+                      .bind("size")),
+              has(cxxMethodDecl(isConst(), parameterCountIs(0), isPublic(),
+                                hasName("empty"), returns(booleanType()))
+                      .bind("empty")))))
+          .bind("ContainerDecl");
 
   const auto ValidContainerNonTemplateType =
       qualType(hasUnqualifiedDesugaredType(
@@ -233,6 +238,13 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       binaryOperation(
           hasAnyOperatorName("==", "!="), hasOperands(WrongComparend, STLArg),
+          unless(hasEitherOperand(cxxConstructExpr(
+              argumentCountIs(0),
+              unless(hasType(qualType(hasCanonicalType(hasDeclaration(
+                  // 'equalsBoundNode' needs the 'ContainerDecl' binding
+                  // from 'STLArg' to already exist, so this constraint must
+                  // appear after 'hasOperands' matcher
+                  namedDecl(equalsBoundNode("ContainerDecl")))))))))),
           unless(allOf(hasLHS(hasType(ExcludedComparisonTypesMatcher)),
                        hasRHS(hasType(SameExcludedComparisonTypesMatcher)))),
           NotInEmptyMethodOfContainer)
@@ -273,10 +285,11 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
     ReplacementText += "empty()";
   } else if (E->isImplicitCXXThis()) {
     ReplacementText += "empty()";
-  } else if (E->getType()->isPointerType())
+  } else if (E->getType()->isPointerType()) {
     ReplacementText += "->empty()";
-  else
+  } else {
     ReplacementText += ".empty()";
+  }
 
   if (BinCmp) {
     if (BinCmp->getOperator() == OO_ExclaimEqual)
@@ -295,9 +308,9 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
                                         ReplacementText);
   } else if (BinaryOp) { // Determine the correct transformation.
     const auto *LiteralLHS =
-        llvm::dyn_cast<IntegerLiteral>(BinaryOp->getLHS()->IgnoreImpCasts());
+        dyn_cast<IntegerLiteral>(BinaryOp->getLHS()->IgnoreImpCasts());
     const auto *LiteralRHS =
-        llvm::dyn_cast<IntegerLiteral>(BinaryOp->getRHS()->IgnoreImpCasts());
+        dyn_cast<IntegerLiteral>(BinaryOp->getRHS()->IgnoreImpCasts());
     const bool ContainerIsLHS = !LiteralLHS;
 
     uint64_t Value = 0;
@@ -413,21 +426,6 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
                   "for emptiness instead of comparing to an empty object")
         << Hint;
   }
-
-  const auto *Container = Result.Nodes.getNodeAs<NamedDecl>("container");
-  if (const auto *CTS = dyn_cast<ClassTemplateSpecializationDecl>(Container)) {
-    // The definition of the empty() method is the same for all implicit
-    // instantiations. In order to avoid duplicate or inconsistent warnings
-    // (depending on how deduplication is done), we use the same class name
-    // for all implicit instantiations of a template.
-    if (CTS->getSpecializationKind() == TSK_ImplicitInstantiation)
-      Container = CTS->getSpecializedTemplate();
-  }
-  const auto *Empty = Result.Nodes.getNodeAs<FunctionDecl>("empty");
-
-  diag(Empty->getLocation(), "method %0::empty() defined here",
-       DiagnosticIDs::Note)
-      << Container;
 }
 
 } // namespace clang::tidy::readability

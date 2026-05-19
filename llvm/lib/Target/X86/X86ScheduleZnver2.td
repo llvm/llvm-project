@@ -200,10 +200,10 @@ defm : Zn2WriteResPair<WriteShiftCL,  [Zn2ALU], 1>;
 defm : Zn2WriteResPair<WriteRotate,   [Zn2ALU], 1>;
 defm : Zn2WriteResPair<WriteRotateCL, [Zn2ALU], 1>;
 
-defm : X86WriteRes<WriteSHDrri, [Zn2ALU], 1, [1], 1>;
-defm : X86WriteResUnsupported<WriteSHDrrcl>;
-defm : X86WriteResUnsupported<WriteSHDmri>;
-defm : X86WriteResUnsupported<WriteSHDmrcl>;
+defm : X86WriteRes<WriteSHDrri, [Zn2ALU], 3, [12], 6>;
+defm : X86WriteRes<WriteSHDrrcl, [Zn2ALU], 3, [12], 7>;
+defm : X86WriteRes<WriteSHDmri, [Zn2ALU, Zn2AGU], !add(Znver2Model.LoadLatency, 3), [12, 1], 8>;
+defm : X86WriteRes<WriteSHDmrcl, [Zn2ALU, Zn2AGU], !add(Znver2Model.LoadLatency, 3), [12, 1], 8>;
 
 defm : Zn2WriteResPair<WriteJump,  [Zn2ALU], 1>;
 defm : Zn2WriteResFpuPair<WriteCRC32, [Zn2FPU0], 3>;
@@ -727,16 +727,6 @@ def : InstRW<[WriteMicrocoded], (instregex "RC(R|L)(8|16|32|64)m(1|i|CL)")>;
 // SHR SHL SAR.
 // m,i.
 def : InstRW<[WriteShiftLd], (instregex "S(A|H)(R|L)(8|16|32|64)m(i|1)")>;
-
-// SHRD SHLD.
-// m,r
-def : InstRW<[WriteShiftLd], (instregex "SH(R|L)D(16|32|64)mri8")>;
-
-// r,r,cl.
-def : InstRW<[WriteMicrocoded], (instregex "SH(R|L)D(16|32|64)rrCL")>;
-
-// m,r,cl.
-def : InstRW<[WriteMicrocoded], (instregex "SH(R|L)D(16|32|64)mrCL")>;
 
 //-- Misc instructions --//
 // CMPXCHG8B.

@@ -103,8 +103,6 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; CHECK-NEXT:    [[TMP20:%.*]] = mul <vscale x 2 x i64> [[TMP19]], splat (i64 -7070675565921424023)
 ; CHECK-NEXT:    [[TMP21:%.*]] = add <vscale x 2 x i64> [[TMP20]], splat (i64 -4)
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[TMP21]], <vscale x 2 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]]), !alias.scope [[META6:![0-9]+]], !noalias [[META3]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr nusw i8, <vscale x 2 x ptr> [[VECTOR_GEP]], i64 12
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq <vscale x 2 x ptr> [[TMP16]], [[BROADCAST_SPLAT7]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = zext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = mul i64 12, [[TMP26]]
@@ -112,10 +110,9 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP28]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr nusw i8, <vscale x 2 x ptr> [[VECTOR_GEP]], i64 12
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq <vscale x 2 x ptr> [[TMP30]], [[BROADCAST_SPLAT7]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = sub i64 [[TMP26]], 1
-; CHECK-NEXT:    [[TMP22:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP23:%.*]] = mul nuw i64 [[TMP22]], 2
-; CHECK-NEXT:    [[TMP24:%.*]] = mul i64 [[TMP23]], 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <vscale x 2 x i1> [[TMP17]], i64 [[TMP29]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -131,8 +128,7 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; CHECK-NEXT:    store i64 [[MUL2]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr nusw i8, ptr [[PTR_IV]], i64 12
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 true, i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ [[CMP]], %[[LOOP]] ], [ [[TMP25]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i1 [[CMP_LCSSA]]
@@ -151,8 +147,7 @@ loop:
   store i64 %mul2, ptr %dst, align 1
   %ptr.iv.next = getelementptr nusw i8, ptr %ptr.iv, i64 12
   %cmp = icmp eq ptr %ptr.iv.next, %end
-  %or.cond = select i1 %cmp, i1 true, i1 false
-  br i1 %or.cond, label %exit, label %loop
+  br i1 %cmp, label %exit, label %loop
 
 exit:
   ret i1 %cmp

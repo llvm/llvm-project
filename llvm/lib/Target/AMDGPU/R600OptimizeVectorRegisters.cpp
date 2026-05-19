@@ -150,8 +150,7 @@ bool R600VectorRegMerger::tryMergeVector(const RegSeqInfo *Untouched,
     const {
   unsigned CurrentUndexIdx = 0;
   for (auto &It : ToMerge->RegToChan) {
-    DenseMap<Register, unsigned>::const_iterator PosInUntouched =
-        Untouched->RegToChan.find(It.first);
+    auto PosInUntouched = Untouched->RegToChan.find(It.first);
     if (PosInUntouched != Untouched->RegToChan.end()) {
       Remap.emplace_back(It.second, (*PosInUntouched).second);
       continue;
@@ -222,8 +221,8 @@ MachineInstr *R600VectorRegMerger::RebuildVector(
 
   // Update RSI
   RSI->Instr = NewMI;
-  RSI->RegToChan = UpdatedRegToChan;
-  RSI->UndefReg = UpdatedUndef;
+  RSI->RegToChan = std::move(UpdatedRegToChan);
+  RSI->UndefReg = std::move(UpdatedUndef);
 
   return NewMI;
 }

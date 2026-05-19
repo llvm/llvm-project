@@ -1,0 +1,27 @@
+functions:
+  poll:
+    in-latest-posix: ''
+  ppoll:
+    in-latest-posix: ''
+
+macros:
+  POLLERR:
+    in-latest-posix: ''
+  POLLHUP:
+    in-latest-posix: ''
+  POLLIN:
+    in-latest-posix: ''
+  POLLNVAL:
+    in-latest-posix: ''
+  POLLOUT:
+    in-latest-posix: ''
+  POLLPRI:
+    in-latest-posix: ''
+  POLLRDBAND:
+    in-latest-posix: ''
+  POLLRDNORM:
+    in-latest-posix: ''
+  POLLWRBAND:
+    in-latest-posix: ''
+  POLLWRNORM:
+    in-latest-posix: ''

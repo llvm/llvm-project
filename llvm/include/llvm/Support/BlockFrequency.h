@@ -121,6 +121,8 @@ public:
   }
 };
 
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, BlockFrequency Freq);
+
 LLVM_ABI void printRelativeBlockFreq(raw_ostream &OS, BlockFrequency EntryFreq,
                                      BlockFrequency Freq);
 

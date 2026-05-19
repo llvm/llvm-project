@@ -384,14 +384,6 @@ def SGPR_LO16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16,
   let HasSGPR = 1;
 }
 
-def SGPR_HI16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16,
-                              (add (sequence "SGPR%u_HI16", 0, 105))> {
-  let isAllocatable = 0;
-  let Size = 16;
-  let GeneratePressureSet = 0;
-  let HasSGPR = 1;
-}
-
 // SGPR 32-bit registers
 def SGPR_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
                             (add (sequence "SGPR%u", 0, 105))> {
@@ -614,9 +606,9 @@ def VGPR_16 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
 def VGPR_16_Lo128 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
                             (add (interleave (sequence "VGPR%u_LO16", 0, 127),
                                              (sequence "VGPR%u_HI16", 0, 127)))> {
+  let AllocationPriority = !add(2, !mul(BaseClassPriority, BaseClassScaleFactor));
   let Size = 16;
   let GeneratePressureSet = 0;
-  let isAllocatable = 0;
 
   // This is the base class for VGPR{0..127}_{LO16,HI16}.
   let BaseClassOrder = 16;
@@ -1429,6 +1421,8 @@ def VSrc_v2f32 : SrcRegOrImm9 <VS_64_AlignTarget, "OPERAND_REG_IMM_V2FP32">;
 
 def VSrc_NoInline_v2f16  : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_NOINLINE_V2FP16">;
 
+def VSrc_v2f16_splat : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_V2FP16_SPLAT">;
+
 //===----------------------------------------------------------------------===//
 //  VRegSrc_* Operands with a VGPR
 //===----------------------------------------------------------------------===//
@@ -1485,6 +1479,10 @@ foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "320", "35
 
   // Always even alignment requirement
   def VGPROp_#size#_Align2 : RegisterOperand<!cast<RegisterClassLike>("VReg_"#size#_Align2)>;
+}
+
+def VGPROp_32_Lo256 : RegisterOperand<VGPR_32_Lo256> {
+  let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }
 
 def VGPROp_16_Lo128 : RegisterOperand<VGPR_16_Lo128> {

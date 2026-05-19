@@ -38,7 +38,7 @@ DWARF5AcceleratorTable::DWARF5AcceleratorTable(
   // for the .debug_names contributions they are in .debug_str section.
   if (BC.getNumDWOCUs()) {
     DataExtractor StrData(BC.DwCtx->getDWARFObj().getStrSection(),
-                          BC.DwCtx->isLittleEndian(), 0);
+                          BC.DwCtx->isLittleEndian());
     uint64_t Offset = 0;
     uint64_t StrOffset = 0;
     while (StrData.isValidOffset(Offset)) {
@@ -136,9 +136,7 @@ static bool shouldIncludeVariable(const DWARFUnit &Unit, const DIE &Die) {
     constructVect(LocAttrInfo.getDIELoc().values());
   else
     constructVect(LocAttrInfo.getDIEBlock().values());
-  ArrayRef<uint8_t> Expr = ArrayRef<uint8_t>(Sblock);
-  DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
-                     Unit.getContext().isLittleEndian(), 0);
+  DataExtractor Data(Sblock, Unit.getContext().isLittleEndian());
   DWARFExpression LocExpr(Data, Unit.getAddressByteSize(),
                           Unit.getFormParams().Format);
   for (const DWARFExpression::Operation &Expr : LocExpr)
@@ -677,11 +675,11 @@ static constexpr uint32_t getDebugNamesHeaderSize() {
   constexpr uint32_t BucketCountLength = sizeof(uint32_t);
   constexpr uint32_t NameCountLength = sizeof(uint32_t);
   constexpr uint32_t AbbrevTableSizeLength = sizeof(uint32_t);
-  constexpr uint32_t AugmentationStringSizeLenght = sizeof(uint32_t);
+  constexpr uint32_t AugmentationStringSizeLength = sizeof(uint32_t);
   return VersionLength + PaddingLength + CompUnitCountLength +
          LocalTypeUnitCountLength + ForeignTypeUnitCountLength +
          BucketCountLength + NameCountLength + AbbrevTableSizeLength +
-         AugmentationStringSizeLenght;
+         AugmentationStringSizeLength;
 }
 
 void DWARF5AcceleratorTable::emitHeader() const {

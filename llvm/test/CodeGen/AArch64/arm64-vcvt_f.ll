@@ -3,7 +3,6 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -O0 -fast-isel | FileCheck %s --check-prefixes=CHECK,CHECK-FI
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple  -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for test_vcvt_bf16_f64
 
 define <2 x double> @test_vcvt_f64_f32(<2 x float> %x) nounwind readnone ssp {
 ; CHECK-LABEL: test_vcvt_f64_f32:
@@ -172,13 +171,15 @@ define <2 x bfloat> @test_vcvt_bf16_f64(<2 x double> %v) nounwind readnone ssp {
 ; CHECK-GI-NEXT:    fcvtxn v0.2s, v0.2d
 ; CHECK-GI-NEXT:    movi.4s v1, #1
 ; CHECK-GI-NEXT:    movi.4s v2, #127, msl #8
+; CHECK-GI-NEXT:    movi.4s v5, #64, lsl #16
 ; CHECK-GI-NEXT:    ushr.4s v3, v0, #16
+; CHECK-GI-NEXT:    fcmeq.4s v4, v0, v0
 ; CHECK-GI-NEXT:    add.4s v2, v0, v2
+; CHECK-GI-NEXT:    orr.16b v0, v0, v5
 ; CHECK-GI-NEXT:    and.16b v1, v3, v1
-; CHECK-GI-NEXT:    fcmeq.4s v3, v0, v0
-; CHECK-GI-NEXT:    orr.4s v0, #64, lsl #16
-; CHECK-GI-NEXT:    add.4s v1, v1, v2
-; CHECK-GI-NEXT:    bit.16b v0, v1, v3
+; CHECK-GI-NEXT:    mvn.16b v3, v4
+; CHECK-GI-NEXT:    add.4s v1, v2, v1
+; CHECK-GI-NEXT:    bif.16b v0, v1, v3
 ; CHECK-GI-NEXT:    shrn.4h v0, v0, #16
 ; CHECK-GI-NEXT:    ret
   %vcvt1.i = fptrunc <2 x double> %v to <2 x bfloat>
@@ -267,53 +268,4 @@ define <4 x float> @test_vcvtx_high_f32_f64(<2 x float> %x, <2 x double> %v) nou
   %vcvtx2.i = tail call <2 x float> @llvm.aarch64.neon.fcvtxn.v2f32.v2f64(<2 x double> %v) nounwind
   %res = shufflevector <2 x float> %x, <2 x float> %vcvtx2.i, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x float> %res
-}
-
-define i16 @to_half(float %in) {
-; CHECK-SD-LABEL: to_half:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvt h0, s0
-; CHECK-SD-NEXT:    fmov w0, s0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-FI-LABEL: to_half:
-; CHECK-FI:       // %bb.0:
-; CHECK-FI-NEXT:    fcvt h1, s0
-; CHECK-FI-NEXT:    // implicit-def: $w0
-; CHECK-FI-NEXT:    fmov s0, w0
-; CHECK-FI-NEXT:    fmov s0, s1
-; CHECK-FI-NEXT:    fmov w0, s0
-; CHECK-FI-NEXT:    // kill: def $w1 killed $w0
-; CHECK-FI-NEXT:    ret
-;
-; CHECK-GI-LABEL: to_half:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    fmov w0, s0
-; CHECK-GI-NEXT:    ret
-  %res = call i16 @llvm.convert.to.fp16.f32(float %in)
-  ret i16 %res
-}
-
-define float @from_half(i16 %in) {
-; CHECK-SD-LABEL: from_half:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    fcvt s0, h0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-FI-LABEL: from_half:
-; CHECK-FI:       // %bb.0:
-; CHECK-FI-NEXT:    fmov s0, w0
-; CHECK-FI-NEXT:    // kill: def $h0 killed $h0 killed $s0
-; CHECK-FI-NEXT:    fcvt s0, h0
-; CHECK-FI-NEXT:    ret
-;
-; CHECK-GI-LABEL: from_half:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    fcvt s0, h0
-; CHECK-GI-NEXT:    ret
-  %res = call float @llvm.convert.from.fp16.f32(i16 %in)
-  ret float %res
 }

@@ -13,9 +13,13 @@
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/ArrayRef.h"
+#include <cstdint>
 
 using namespace mlir;
 using namespace mlir::affine;
@@ -152,6 +156,41 @@ void SimplifyBoundedAffineOpsOp::getEffects(
 //===----------------------------------------------------------------------===//
 // SimplifyMinMaxAffineOpsOp
 //===----------------------------------------------------------------------===//
+
+LogicalResult SuperVectorizeOp::verify() {
+  if (getFastestVaryingPattern().has_value()) {
+    if (getFastestVaryingPattern()->size() != getVectorSizes().size())
+      return emitOpError()
+             << "fastest varying pattern specified with different size than "
+                "the vector size";
+  }
+  return success();
+}
+
+DiagnosedSilenceableFailure
+SuperVectorizeOp::apply(transform::TransformRewriter &rewriter,
+                        TransformResults &results, TransformState &state) {
+  ArrayRef<int64_t> fastestVaryingPattern;
+  if (getFastestVaryingPattern().has_value())
+    fastestVaryingPattern = getFastestVaryingPattern().value();
+
+  for (Operation *target : state.getPayloadOps(getTarget()))
+    if (!target->getParentOfType<affine::AffineForOp>())
+      vectorizeChildAffineLoops(target, getVectorizeReductions(),
+                                getVectorSizes(), fastestVaryingPattern);
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void SuperVectorizeOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getTargetMutable(), effects);
+  modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// SimplifyMinMaxAffineOpsOp
+//===----------------------------------------------------------------------===//
 DiagnosedSilenceableFailure
 SimplifyMinMaxAffineOpsOp::apply(transform::TransformRewriter &rewriter,
                                  TransformResults &results,
@@ -200,6 +239,7 @@ public:
 
   void init() {
     declareGeneratedDialect<AffineDialect>();
+    declareGeneratedDialect<vector::VectorDialect>();
 
     registerTransformOps<
 #define GET_OP_LIST

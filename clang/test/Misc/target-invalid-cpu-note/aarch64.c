@@ -11,6 +11,7 @@
 // CHECK-SAME: {{^}}, ampere1
 // CHECK-SAME: {{^}}, ampere1a
 // CHECK-SAME: {{^}}, ampere1b
+// CHECK-SAME: {{^}}, ampere1c
 // CHECK-SAME: {{^}}, apple-a10
 // CHECK-SAME: {{^}}, apple-a11
 // CHECK-SAME: {{^}}, apple-a12

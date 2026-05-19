@@ -12,6 +12,8 @@ func.func @float32_unary_scalar(%arg0: f32) {
   %1 = math.cos %arg0 : f32
   // CHECK: spirv.GL.Exp %{{.*}}: f32
   %2 = math.exp %arg0 : f32
+  // CHECK: spirv.GL.Exp2 %{{.*}}: f32
+  %exp2 = math.exp2 %arg0 : f32
   // CHECK: %[[EXP:.+]] = spirv.GL.Exp %arg0
   // CHECK: %[[ONE:.+]] = spirv.Constant 1.000000e+00 : f32
   // CHECK: spirv.FSub %[[EXP]], %[[ONE]]
@@ -22,9 +24,7 @@ func.func @float32_unary_scalar(%arg0: f32) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.GL.Log %[[ADDONE]]
   %5 = math.log1p %arg0 : f32
-  // CHECK: %[[LOG2_RECIPROCAL:.+]] = spirv.Constant 1.44269502 : f32
-  // CHECK: %[[LOG0:.+]] = spirv.GL.Log {{.+}}
-  // CHECK: spirv.FMul %[[LOG0]], %[[LOG2_RECIPROCAL]]
+  // CHECK: spirv.GL.Log2 %{{.*}}: f32
   %6 = math.log2 %arg0 : f32
   // CHECK: %[[LOG10_RECIPROCAL:.+]] = spirv.Constant 0.434294492 : f32
   // CHECK: %[[LOG1:.+]] = spirv.GL.Log {{.+}}
@@ -73,6 +73,8 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   %1 = math.cos %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Exp %{{.*}}: vector<3xf32>
   %2 = math.exp %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Exp2 %{{.*}}: vector<3xf32>
+  %exp2 = math.exp2 %arg0 : vector<3xf32>
   // CHECK: %[[EXP:.+]] = spirv.GL.Exp %arg0
   // CHECK: %[[ONE:.+]] = spirv.Constant dense<1.000000e+00> : vector<3xf32>
   // CHECK: spirv.FSub %[[EXP]], %[[ONE]]
@@ -83,9 +85,7 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.GL.Log %[[ADDONE]]
   %5 = math.log1p %arg0 : vector<3xf32>
-  // CHECK: %[[LOG2_RECIPROCAL:.+]] = spirv.Constant dense<1.44269502> : vector<3xf32>
-  // CHECK: %[[LOG0:.+]] = spirv.GL.Log {{.+}}
-  // CHECK: spirv.FMul %[[LOG0]], %[[LOG2_RECIPROCAL]]
+  // CHECK: spirv.GL.Log2 %{{.*}}: vector<3xf32>
   %6 = math.log2 %arg0 : vector<3xf32>
   // CHECK: %[[LOG10_RECIPROCAL:.+]] = spirv.Constant dense<0.434294492> : vector<3xf32>
   // CHECK: %[[LOG1:.+]] = spirv.GL.Log {{.+}}
@@ -183,45 +183,98 @@ func.func @ctlz_vector2(%val: vector<2xi32>) -> vector<2xi32> {
   return %0 : vector<2xi32>
 }
 
+// Dynamic exponent: exp(y * log(x)); yields NaN for x<0.
 // CHECK-LABEL: @powf_scalar
 //  CHECK-SAME: (%[[LHS:.+]]: f32, %[[RHS:.+]]: f32)
 func.func @powf_scalar(%lhs: f32, %rhs: f32) -> f32 {
-  // CHECK: %[[F0:.+]] = spirv.Constant 0.000000e+00 : f32
-  // CHECK: %[[LT:.+]] = spirv.FOrdLessThan %[[LHS]], %[[F0]] : f32
-  // CHECK: %[[F1:.+]] = spirv.Constant 1.000000e+00 : f32
-  // CHECK: %[[REM:.+]] = spirv.FRem %[[RHS]], %[[F1]] : f32
-  // CHECK: %[[IS_FRACTION:.+]] = spirv.FOrdNotEqual %[[REM]], %[[F0]] : f32
-  // CHECK: %[[AND:.+]] = spirv.LogicalAnd %[[IS_FRACTION]], %[[LT]] : i1
-  // CHECK: %[[NAN:.+]] = spirv.Constant 0x7FC00000 : f32
-  // CHECK: %[[NEW_LHS:.+]] = spirv.Select %[[AND]], %[[NAN]], %[[LHS]] : i1, f32
-  // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[NEW_LHS]] : f32
-  // CHECK: %[[IRHS:.+]] = spirv.ConvertFToS
-  // CHECK: %[[CST1:.+]] = spirv.Constant 1 : i32
-  // CHECK: %[[REM:.+]] = spirv.BitwiseAnd %[[IRHS]]
-  // CHECK: %[[ODD:.+]] = spirv.IEqual %[[REM]], %[[CST1]] : i32
-  // CHECK: %[[POW:.+]] = spirv.GL.Pow %[[ABS]], %[[RHS]] : f32
-  // CHECK: %[[NEG:.+]] = spirv.FNegate %[[POW]] : f32
-  // CHECK: %[[SNEG:.+]] = spirv.LogicalAnd %[[LT]], %[[ODD]] : i1
-  // CHECK: %[[SEL:.+]] = spirv.Select %[[SNEG]], %[[NEG]], %[[POW]] : i1, f32
+  // CHECK: %[[LOG:.+]] = spirv.GL.Log %[[LHS]] : f32
+  // CHECK: %[[MUL:.+]] = spirv.FMul %[[RHS]], %[[LOG]] : f32
+  // CHECK: %[[EXP:.+]] = spirv.GL.Exp %[[MUL]] : f32
   %0 = math.powf %lhs, %rhs : f32
-  // CHECK: return %[[SEL]]
+  // CHECK: return %[[EXP]]
   return %0: f32
 }
 
 // CHECK-LABEL: @powf_vector
 func.func @powf_vector(%lhs: vector<4xf32>, %rhs: vector<4xf32>) -> vector<4xf32> {
-  // CHECK: spirv.FOrdLessThan
-  // CHECK: spirv.FRem
-  // CHECK: spirv.FOrdNotEqual
-  // CHECK: spirv.LogicalAnd
-  // CHECK: spirv.Select
+  // CHECK: spirv.GL.Log %{{.*}} : vector<4xf32>
+  // CHECK: spirv.FMul %{{.*}} : vector<4xf32>
+  // CHECK: spirv.GL.Exp %{{.*}} : vector<4xf32>
+  %0 = math.powf %lhs, %rhs : vector<4xf32>
+  return %0: vector<4xf32>
+}
+
+// Constant odd integer exponent: parity is known statically, so the lowering
+// drops the runtime FToS/BitwiseAnd/IEqual/LogicalAnd parity computation.
+// CHECK-LABEL: @powf_const_odd_int_exp
+//  CHECK-SAME: (%[[LHS:.+]]: f32)
+func.func @powf_const_odd_int_exp(%lhs: f32) -> f32 {
+  // CHECK: %[[RHS:.+]] = arith.constant 3.000000e+00 : f32
+  // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[LHS]] : f32
+  // CHECK: %[[POW:.+]] = spirv.GL.Pow %[[ABS]], %[[RHS]] : f32
+  // CHECK: %[[F0:.+]] = spirv.Constant 0.000000e+00 : f32
+  // CHECK: %[[LT:.+]] = spirv.FOrdLessThan %[[LHS]], %[[F0]] : f32
+  // CHECK: %[[NEG:.+]] = spirv.FNegate %[[POW]] : f32
+  // CHECK: %[[SEL:.+]] = spirv.Select %[[LT]], %[[NEG]], %[[POW]] : i1, f32
+  %c = arith.constant 3.0 : f32
+  %0 = math.powf %lhs, %c : f32
+  // CHECK: return %[[SEL]]
+  return %0: f32
+}
+
+// Constant even integer exponent: result is non-negative, no select needed.
+// CHECK-LABEL: @powf_const_even_int_exp
+//  CHECK-SAME: (%[[LHS:.+]]: f32)
+func.func @powf_const_even_int_exp(%lhs: f32) -> f32 {
+  // CHECK: %[[RHS:.+]] = arith.constant 4.000000e+00 : f32
+  // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[LHS]] : f32
+  // CHECK: %[[POW:.+]] = spirv.GL.Pow %[[ABS]], %[[RHS]] : f32
+  %c = arith.constant 4.0 : f32
+  %0 = math.powf %lhs, %c : f32
+  // CHECK: return %[[POW]]
+  return %0: f32
+}
+
+// Constant non-integer exponent: falls into the dynamic exp(y*log(x)) path.
+// CHECK-LABEL: @powf_const_frac_exp
+//  CHECK-SAME: (%[[LHS:.+]]: f32)
+func.func @powf_const_frac_exp(%lhs: f32) -> f32 {
+  // CHECK: %[[RHS:.+]] = arith.constant 2.500000e+00 : f32
+  // CHECK: %[[LOG:.+]] = spirv.GL.Log %[[LHS]] : f32
+  // CHECK: %[[MUL:.+]] = spirv.FMul %[[RHS]], %[[LOG]] : f32
+  // CHECK: %[[EXP:.+]] = spirv.GL.Exp %[[MUL]] : f32
+  %c = arith.constant 2.5 : f32
+  %0 = math.powf %lhs, %c : f32
+  // CHECK: return %[[EXP]]
+  return %0: f32
+}
+
+// Splat constant odd integer-valued vector exponent: uniform odd parity.
+// CHECK-LABEL: @powf_const_odd_int_exp_vector
+func.func @powf_const_odd_int_exp_vector(%lhs: vector<4xf32>) -> vector<4xf32> {
   // CHECK: spirv.GL.FAbs
-  // CHECK: spirv.BitwiseAnd %{{.*}} : vector<4xi32>
-  // CHECK: spirv.IEqual %{{.*}} : vector<4xi32>
   // CHECK: spirv.GL.Pow %{{.*}}: vector<4xf32>
+  // CHECK: spirv.FOrdLessThan
   // CHECK: spirv.FNegate
   // CHECK: spirv.Select
-  %0 = math.powf %lhs, %rhs : vector<4xf32>
+  %c = arith.constant dense<3.0> : vector<4xf32>
+  %0 = math.powf %lhs, %c : vector<4xf32>
+  return %0: vector<4xf32>
+}
+
+// Mixed-parity constant integer-valued vector exponent: per-element odd-mask
+// constant is materialized and AND-ed with lhs<0.
+// CHECK-LABEL: @powf_const_mixed_int_exp_vector
+func.func @powf_const_mixed_int_exp_vector(%lhs: vector<4xf32>) -> vector<4xf32> {
+  // CHECK: spirv.GL.FAbs
+  // CHECK: spirv.GL.Pow %{{.*}}: vector<4xf32>
+  // CHECK: spirv.FOrdLessThan
+  // CHECK: spirv.FNegate
+  // CHECK: %[[ODD:.+]] = spirv.Constant dense<[true, false, true, false]> : vector<4xi1>
+  // CHECK: spirv.LogicalAnd %{{.*}}, %[[ODD]] : vector<4xi1>
+  // CHECK: spirv.Select
+  %c = arith.constant dense<[3.0, 2.0, 5.0, 4.0]> : vector<4xf32>
+  %0 = math.powf %lhs, %c : vector<4xf32>
   return %0: vector<4xf32>
 }
 
@@ -255,6 +308,27 @@ func.func @round_vector(%x: vector<4xf32>) -> vector<4xf32> {
   // CHECK: %[[BITCAST:.+]] = spirv.Bitcast %[[ADD]]
   %0 = math.round %x : vector<4xf32>
   return %0: vector<4xf32>
+}
+
+// Unit dimensional vectors are converted to scalars by inserting
+// unrealized_conversion_cast's.
+//
+// CHECK-LABEL: @round_vector_unit_dim
+//  CHECK-SAME: (%[[ARG:.+]]: vector<1xf32>) -> vector<1xf32>
+func.func @round_vector_unit_dim(%x: vector<1xf32>) -> vector<1xf32> {
+  // CHECK: %[[CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : vector<1xf32> to f32
+  // CHECK: %[[ZERO:.+]] = spirv.Constant 0.000000e+00
+  // CHECK: %[[ONE:.+]] = spirv.Constant 1.000000e+00
+  // CHECK: %[[HALF:.+]] = spirv.Constant 5.000000e-01
+  // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[CAST]] : f32
+  // CHECK: %[[FLOOR:.+]] = spirv.GL.Floor %[[ABS]]
+  // CHECK: %[[SUB:.+]] = spirv.FSub %[[ABS]], %[[FLOOR]]
+  // CHECK: %[[GE:.+]] = spirv.FOrdGreaterThanEqual %[[SUB]], %[[HALF]]
+  // CHECK: %[[SEL:.+]] = spirv.Select %[[GE]], %[[ONE]], %[[ZERO]]
+  // CHECK: %[[ADD:.+]] = spirv.FAdd %[[FLOOR]], %[[SEL]]
+  // CHECK: %[[BITCAST:.+]] = spirv.Bitcast %[[ADD]] : f32 to i32
+  %0 = math.round %x : vector<1xf32>
+  return %0: vector<1xf32>
 }
 
 } // end module

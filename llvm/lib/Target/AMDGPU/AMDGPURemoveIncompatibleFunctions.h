@@ -14,7 +14,7 @@
 
 namespace llvm {
 class AMDGPURemoveIncompatibleFunctionsPass
-    : public PassInfoMixin<AMDGPURemoveIncompatibleFunctionsPass> {
+    : public OptionalPassInfoMixin<AMDGPURemoveIncompatibleFunctionsPass> {
   const TargetMachine *TM;
 
 public:

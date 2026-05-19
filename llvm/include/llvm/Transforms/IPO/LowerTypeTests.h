@@ -195,33 +195,42 @@ LLVM_ABI bool isJumpTableCanonical(Function *F);
 
 /// Specifies how to drop type tests.
 enum class DropTestKind {
-  None,   /// Do not drop type tests (default).
   Assume, /// Drop only llvm.assumes using type test value.
   All,    /// Drop the type test and all uses.
 };
 
 } // end namespace lowertypetests
 
-class LowerTypeTestsPass : public PassInfoMixin<LowerTypeTestsPass> {
+class LowerTypeTestsPass : public RequiredPassInfoMixin<LowerTypeTestsPass> {
   bool UseCommandLine = false;
 
   ModuleSummaryIndex *ExportSummary = nullptr;
   const ModuleSummaryIndex *ImportSummary = nullptr;
-  lowertypetests::DropTestKind DropTypeTests =
-      lowertypetests::DropTestKind::None;
 
 public:
   LowerTypeTestsPass() : UseCommandLine(true) {}
   LowerTypeTestsPass(ModuleSummaryIndex *ExportSummary,
-                     const ModuleSummaryIndex *ImportSummary,
-                     lowertypetests::DropTestKind DropTypeTests =
-                         lowertypetests::DropTestKind::None)
-      : ExportSummary(ExportSummary), ImportSummary(ImportSummary),
-        DropTypeTests(DropTypeTests) {}
+                     const ModuleSummaryIndex *ImportSummary)
+      : ExportSummary(ExportSummary), ImportSummary(ImportSummary) {}
+
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-class SimplifyTypeTestsPass : public PassInfoMixin<SimplifyTypeTestsPass> {
+class DropTypeTestsPass : public RequiredPassInfoMixin<DropTypeTestsPass> {
+  lowertypetests::DropTestKind Kind = lowertypetests::DropTestKind::Assume;
+
+public:
+  explicit DropTypeTestsPass(
+      lowertypetests::DropTestKind Kind = lowertypetests::DropTestKind::Assume)
+      : Kind(Kind) {}
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+class SimplifyTypeTestsPass
+    : public OptionalPassInfoMixin<SimplifyTypeTestsPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

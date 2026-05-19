@@ -56,21 +56,24 @@ public:
   /// Run the analysis pass over a function and produce a dominator tree.
   CycleInfo run(Function &F, FunctionAnalysisManager &);
 
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
+
   // TODO: verify analysis?
 };
 
-class CycleInfoPrinterPass : public PassInfoMixin<CycleInfoPrinterPass> {
+class CycleInfoPrinterPass
+    : public RequiredPassInfoMixin<CycleInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit CycleInfoPrinterPass(raw_ostream &OS);
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
-struct CycleInfoVerifierPass : public PassInfoMixin<CycleInfoVerifierPass> {
+struct CycleInfoVerifierPass
+    : public RequiredPassInfoMixin<CycleInfoVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

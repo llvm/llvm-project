@@ -23,6 +23,14 @@ func.func @foo() -> (f8E4M3FN, f32) {
   return %cst1, %cst2 : f8E4M3FN, f32
 }
 
+// Put the denormal in a separate function so that the flush_denormals folder
+// does not collapse it before we reach the runtime.
+// 2^-9 = 0.001953125 is the smallest positive f8E4M3FN denormal.
+func.func @denormal_f8() -> f8E4M3FN {
+  %cst = arith.constant 0.001953125 : f8E4M3FN
+  return %cst : f8E4M3FN
+}
+
 func.func @entry() {
   %a1 = arith.constant 1.4 : f8E4M3FN
   %a2 = arith.constant 1.4 : f32
@@ -77,6 +85,17 @@ func.func @entry() {
   // Closest f4E2M1FN value: 6.0
   %cvt_from_unsigned_int = arith.uitofp %c9 : i16 to f4E2M1FN
   vector.print %cvt_from_unsigned_int : f4E2M1FN
+
+  // flush_denormals on an f8E4M3FN denormal: returns +0.0.
+  %denormal = func.call @denormal_f8() : () -> f8E4M3FN
+  %flushed_denormal = arith.flush_denormals %denormal : f8E4M3FN
+  // CHECK-NEXT: 0
+  vector.print %flushed_denormal : f8E4M3FN
+
+  // flush_denormals on a normal f8E4M3FN value (%cvt == 2.25): passes through.
+  %flushed_normal = arith.flush_denormals %cvt : f8E4M3FN
+  // CHECK-NEXT: 2.25
+  vector.print %flushed_normal : f8E4M3FN
 
   return
 }

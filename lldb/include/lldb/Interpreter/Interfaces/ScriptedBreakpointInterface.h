@@ -11,6 +11,7 @@
 
 #include "ScriptedInterface.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Target.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -36,7 +37,14 @@ public:
                          lldb::DescriptionLevel level) {
     return {};
   }
+
+  virtual void SetBreakpoint(lldb::BreakpointSP break_sp) {}
+
+  virtual bool OverridesResolver(Target &target,
+                                 StructuredDataImpl &original_resolver) {
+    return false;
+  }
 };
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_INTERFACES_SCRIPTEDSTOPHOOKINTERFACE_H
+#endif // LLDB_INTERPRETER_INTERFACES_SCRIPTEDBREAKPOINTINTERFACE_H

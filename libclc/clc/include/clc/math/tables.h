@@ -9,8 +9,6 @@
 #ifndef __CLC_MATH_TABLES_H__
 #define __CLC_MATH_TABLES_H__
 
-#include <clc/clctypes.h>
-
 #define __CLC_TABLE_SPACE __constant
 
 #define __CLC_TABLE_MANGLE(NAME) __clc_##NAME
@@ -76,7 +74,7 @@ __CLC_TABLE_FUNCTION_DECL_VEC(float, cbrt_tbl_head);
 __CLC_TABLE_FUNCTION_DECL_VEC(float, cbrt_tbl_tail);
 __CLC_TABLE_FUNCTION_DECL_VEC(float, sinhcosh_tbl_head);
 __CLC_TABLE_FUNCTION_DECL_VEC(float, sinhcosh_tbl_tail);
-__CLC_TABLE_FUNCTION_DECL_VEC(ulong, pibits_tbl);
+__CLC_TABLE_FUNCTION_DECL_VEC(uint, two_by_pi_bits_tbl);
 
 #ifdef cl_khr_fp64
 

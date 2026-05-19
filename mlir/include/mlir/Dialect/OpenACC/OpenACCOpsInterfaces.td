@@ -75,6 +75,10 @@ def GlobalVariableOpInterface : OpInterface<"GlobalVariableOpInterface"> {
       }]>,
     InterfaceMethod<"Get the initialization region (returns nullptr if none)",
       "::mlir::Region*", "getInitRegion", (ins)>,
+    InterfaceMethod<"Check if the global variable is device data",
+      "bool", "isDeviceData", (ins), [{
+        return false;
+      }]>,
   ];
 }
 
@@ -113,6 +117,21 @@ def OutlineRematerializationOpInterface : OpInterface<"OutlineRematerializationO
     Operations implementing this interface are expected to be memory effect
     free. Their results are typically used for type construction or providing
     metadata (such as shape information for arrays).
+
+    `isRematerializationCandidate` refines whether a particular operation
+    instance participates in rematerialization; `isa<OutlineRematerializationOpInterface>`
+    requires both a registered model and this predicate.
+  }];
+
+  let methods = [
+    InterfaceMethod<"Returns whether this operation instance should be treated "
+                      "as an outline rematerialization candidate.",
+                      "bool", "isRematerializationCandidate", (ins),
+                      /*methodBody=*/"return true;">,
+  ];
+
+  let extraClassOf = [{
+    return $_op.isRematerializationCandidate();
   }];
 
   let verify = [{
@@ -131,6 +150,14 @@ def OffloadRegionOpInterface : OpInterface<"OffloadRegionOpInterface"> {
     their regions will be extracted and compiled separately (e.g., as
     device kernels or outlined functions).
   }];
+
+  let methods = [
+    InterfaceMethod<"Get the offload region", "::mlir::Region&",
+      "getOffloadRegion",
+      (ins), [{
+        return $_op.getRegion();
+      }]>,
+  ];
 }
 
 #endif // OPENACC_OPS_INTERFACES

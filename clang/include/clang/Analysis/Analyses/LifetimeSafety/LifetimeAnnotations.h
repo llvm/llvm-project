@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 
 namespace clang ::lifetimes {
@@ -40,6 +41,11 @@ bool isNormalAssignmentOperator(const FunctionDecl *FD);
 /// has the lifetimebound attribute.
 bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD);
 
+/// Returns the lifetimebound attribute for the implicit this parameter, if it
+/// exists on any redeclaration.
+const LifetimeBoundAttr *
+getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD);
+
 /// Returns true if the implicit object parameter (this) should be considered
 /// lifetimebound, either due to an explicit lifetimebound attribute on the
 /// method or because it's a normal assignment operator.
@@ -48,9 +54,11 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 // Returns true if the implicit object argument (this) of a method call should
 // be tracked for GSL lifetime analysis. This applies to STL methods that return
 // pointers or references that depend on the lifetime of the object, such as
-// container iterators (begin, end), data accessors (c_str, data, get), or
-// element accessors (operator[], operator*, front, back, at).
-bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee);
+// container iterators (begin, end), data accessors (c_str, data, get),
+// element accessors (operator[], operator*, front, back, at), or propagating
+// operations (operator+, operator-, operator++, operator--).
+bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
+                                  bool RunningUnderLifetimeSafety);
 
 // Returns true if the first argument of a free function should be tracked for
 // GSL lifetime analysis. This applies to STL free functions that take a pointer
@@ -59,10 +67,37 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee);
 // std::any_cast.
 bool shouldTrackFirstArgument(const FunctionDecl *FD);
 
+// Returns true if the second argument of a free function should be tracked for
+// lifetime analysis. This applies to free operator functions that take a
+// GSL Pointer as their second argument.
+bool shouldTrackSecondArgument(const FunctionDecl *FD);
+
 // Tells whether the type is annotated with [[gsl::Pointer]].
 bool isGslPointerType(QualType QT);
 // Tells whether the type is annotated with [[gsl::Owner]].
 bool isGslOwnerType(QualType QT);
+
+// Returns true if the given method is std::unique_ptr::release().
+// This is treated as a move in lifetime analysis to avoid false-positives
+// when ownership is manually transferred.
+bool isUniquePtrRelease(const CXXMethodDecl &MD);
+
+// Returns true if the given method invalidates references tracked by lifetime
+// analysis (e.g. vector::push_back). Methods that only invalidate iterators but
+// not references (e.g. unordered_map::emplace) are not considered invalidating
+// here.
+//
+// Container invalidation rules are based on:
+// https://en.cppreference.com/w/cpp/container#Iterator_invalidation
+bool isInvalidationMethod(const CXXMethodDecl &MD);
+
+// Returns true if the function destroys its first argument
+// (e.g., destructors via implicit 'this', std::destroy_at).
+bool destructsFirstArg(const FunctionDecl &FD);
+
+/// Returns true for standard library callable wrappers (e.g., std::function)
+/// that can propagate the stored lambda's origins.
+bool isStdCallableWrapperType(const CXXRecordDecl *RD);
 
 } // namespace clang::lifetimes
 

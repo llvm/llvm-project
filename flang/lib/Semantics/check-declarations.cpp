@@ -961,7 +961,10 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "!DIR$ IGNORE_TKR(R) may not apply in an ELEMENTAL procedure"_err_en_US);
       }
-      if (IsPassedViaDescriptor(symbol)) {
+      // Descriptor based dummy args passed with ignore_tkr(c) are allowed
+      // to have type/kind/rank differences
+      if (IsPassedViaDescriptor(symbol) &&
+          !ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
         if (IsAllocatableOrObjectPointer(&symbol) &&
             !ignoreTKR.test(common::IgnoreTKR::Pointer)) {
           if (inExplicitExternalInterface) {
@@ -1162,6 +1165,8 @@ void CheckHelper::CheckObjectEntity(
     }
     auto attr{*details.cudaDataAttr()};
     switch (attr) {
+    case common::CUDADataAttr::Value:
+      break; // Nothing to check for VALUE attribute
     case common::CUDADataAttr::Constant:
       if (subpDetails && !inDeviceSubprogram) {
         messages_.Say(
@@ -1188,10 +1193,10 @@ void CheckHelper::CheckObjectEntity(
       }
       break;
     case common::CUDADataAttr::Managed:
-      if (!IsAutomatic(symbol) && !IsAllocatable(symbol) &&
+      if (!IsAutomatic(symbol) && !IsAllocatableOrPointer(symbol) &&
           !details.isDummy() && !evaluate::IsExplicitShape(symbol)) {
         messages_.Say(
-            "Object '%s' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, explicit shape, or a dummy argument"_err_en_US,
+            "Object '%s' with ATTRIBUTES(MANAGED) must also be allocatable, pointer, automatic, explicit shape, or a dummy argument"_err_en_US,
             symbol.name());
       }
       break;
@@ -1235,8 +1240,17 @@ void CheckHelper::CheckObjectEntity(
       messages_.Say(
           "ATTRIBUTES(TEXTURE) is obsolete and no longer supported"_err_en_US);
       break;
+    case common::CUDADataAttr::UseDevice:
+      break;
     }
-    if (attr != common::CUDADataAttr::Pinned) {
+    // CUDADataAttr::UseDevice is not user-spellable; it is set internally on
+    // construct-scoped symbol copies created for OpenACC `host_data
+    // use_device(...)` operands so that later passes can resolve them to the
+    // device address. The original symbol that actually lives in COMMON or an
+    // equivalence group carries no CUDA attribute, so the CUDA Fortran
+    // restrictions on user-written ATTRIBUTES(...) do not apply to it.
+    if (attr != common::CUDADataAttr::Pinned &&
+        attr != common::CUDADataAttr::UseDevice) {
       if (details.commonBlock()) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(%s) may not be in COMMON"_err_en_US,
@@ -1452,6 +1466,10 @@ void CheckHelper::CheckArraySpec(
 void CheckHelper::CheckProcEntity(
     const Symbol &symbol, const ProcEntityDetails &details) {
   CheckSymbolType(symbol);
+  // F2018 8.5.17: an entity with the TARGET attribute shall be a variable;
+  // a procedure (EXTERNAL or INTRINSIC) is not a variable.
+  CheckConflicting(symbol, Attr::EXTERNAL, Attr::TARGET);
+  CheckConflicting(symbol, Attr::INTRINSIC, Attr::TARGET);
   const Symbol *interface{details.procInterface()};
   if (details.isDummy()) {
     if (!symbol.attrs().test(Attr::POINTER) && // C843
@@ -1588,6 +1606,12 @@ void CheckHelper::CheckSubprogram(
     if (!Procedure::Characterize(symbol, foldingContext_)) {
       context_.SetError(symbol);
     }
+  }
+  // F2023 C1553
+  if (symbol.attrs().test(Attr::SIMPLE) && symbol.attrs().test(Attr::IMPURE)) {
+    messages_.Say(symbol.name(),
+        "A procedure may not have both the SIMPLE and IMPURE attributes"_err_en_US);
+    context_.SetError(symbol);
   }
   if (const Symbol *iface{FindSeparateModuleSubprogramInterface(&symbol)}) {
     SubprogramMatchHelper{*this}.Check(symbol, *iface);
@@ -3520,6 +3544,24 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
       context_.SetError(symbol);
     }
   }
+  // F2023 C1807 - a procedure defined in a submodule shall not have a binding
+  // label unless its interface is declared in the ancestor module.
+  const std::string *bindName{symbol.GetBindName()};
+  if (symbol.has<SubprogramDetails>() &&
+      !symbol.get<SubprogramDetails>().isInterface() && bindName &&
+      !bindName->empty() && symbol.owner().IsSubmodule()) {
+    const Symbol *iface{FindSeparateModuleSubprogramInterface(&symbol)};
+    bool ok{false};
+    if (iface) {
+      const Scope *ifaceModule{FindModuleOrSubmoduleContaining(iface->owner())};
+      ok = ifaceModule && ifaceModule->IsModule();
+    }
+    if (!ok) {
+      messages_.Say(symbol.name(),
+          "A procedure defined in a submodule shall not have a binding label unless its interface is declared in the ancestor module"_err_en_US);
+      context_.SetError(symbol);
+    }
+  }
   if (symbol.has<ObjectEntityDetails>()) {
     whyNot = WhyNotInteroperableObject(symbol);
   } else if (symbol.has<ProcEntityDetails>() ||
@@ -3862,9 +3904,15 @@ void CheckHelper::CheckSymbolType(const Symbol &symbol) {
   } else if (auto dyType{evaluate::DynamicType::From(relevant)}) {
     if (dyType->IsPolymorphic() && !dyType->IsAssumedType() &&
         !(IsDummy(symbol) && !IsProcedure(relevant))) { // C708
-      messages_.Say(
-          "CLASS entity '%s' must be a dummy argument, allocatable, or object pointer"_err_en_US,
-          symbol.name());
+      if (IsProcedure(symbol)) {
+        messages_.Say(
+            "Polymorphic function%s '%s' must have an explicit interface whose result is ALLOCATABLE or POINTER"_err_en_US,
+            IsPointer(symbol) ? " pointer" : "", symbol.name());
+      } else {
+        messages_.Say(
+            "CLASS entity '%s' must be a dummy argument, allocatable, or object pointer"_err_en_US,
+            symbol.name());
+      }
     }
     if (dyType->HasDeferredTypeParameter()) { // C702
       messages_.Say(

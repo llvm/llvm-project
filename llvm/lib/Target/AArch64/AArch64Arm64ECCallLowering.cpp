@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -75,7 +76,7 @@ public:
   bool runOnModule(Module &M) override;
 
 private:
-  int cfguard_module_flag = 0;
+  ControlFlowGuardMode CFGuardModuleFlag = ControlFlowGuardMode::Disabled;
   FunctionType *GuardFnType = nullptr;
   FunctionType *DispatchFnType = nullptr;
   Constant *GuardFnCFGlobal = nullptr;
@@ -436,6 +437,14 @@ Function *AArch64Arm64ECCallLowering::buildExitThunk(FunctionType *FT,
   Value *Callee = IRB.CreateLoad(PtrTy, CalleePtr);
   auto &DL = M->getDataLayout();
   SmallVector<Value *> Args;
+  FunctionType *DispatcherCallTy = X64Ty;
+  // If we have a vararg function, the SelectionDAG lowering will need to
+  // recognize this so it can copy the arguments described by x4 (pointer) and
+  // x5 (length) to set up the x86-64 context correctly.
+  if (FT->isVarArg())
+    DispatcherCallTy =
+        FunctionType::get(X64Ty->getReturnType(), X64Ty->params(),
+                          /*isVarArg=*/true);
 
   // Pass the called function in x9.
   auto X64TyOffset = 1;
@@ -487,7 +496,7 @@ Function *AArch64Arm64ECCallLowering::buildExitThunk(FunctionType *FT,
   }
   // FIXME: Transfer necessary attributes? sret? anything else?
 
-  CallInst *Call = IRB.CreateCall(X64Ty, Callee, Args);
+  CallInst *Call = IRB.CreateCall(DispatcherCallTy, Callee, Args);
   Call->setCallingConv(CallingConv::ARM64EC_Thunk_X64);
 
   Value *RetVal = Call;
@@ -593,6 +602,11 @@ Function *AArch64Arm64ECCallLowering::buildEntryThunk(Function *F) {
 
   Value *RetVal = Call;
   if (TransformDirectToSRet) {
+    // The x64 side returns this value indirectly via a hidden pointer (sret).
+    // Mark the thunk's pointer arg with sret so that ISel saves it and copies
+    // it into x8 (RAX) on return, matching the x64 calling convention.
+    Thunk->addParamAttr(
+        1, Attribute::getWithStructRetType(M->getContext(), RetTy));
     IRB.CreateStore(RetVal, Thunk->getArg(1));
   } else if (X64RetType != RetTy) {
     Value *CastAlloca = IRB.CreateAlloca(X64RetType);
@@ -758,7 +772,8 @@ void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
 
   // Load the global symbol as a pointer to the check function.
   Value *GuardFn;
-  if (cfguard_module_flag == 2 && !CB->hasFnAttr("guard_nocf"))
+  if ((CFGuardModuleFlag == ControlFlowGuardMode::Enabled) &&
+      !CB->hasFnAttr("guard_nocf"))
     GuardFn = GuardFnCFGlobal;
   else
     GuardFn = GuardFnGlobal;
@@ -794,9 +809,22 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
   M = &Mod;
 
   // Check if this module has the cfguard flag and read its value.
-  if (auto *MD =
-          mdconst::extract_or_null<ConstantInt>(M->getModuleFlag("cfguard")))
-    cfguard_module_flag = MD->getZExtValue();
+  CFGuardModuleFlag = M->getControlFlowGuardMode();
+
+  // Warn if the module flag requests an unsupported CFGuard mechanism.
+  if (CFGuardModuleFlag == ControlFlowGuardMode::Enabled) {
+    if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(
+            Mod.getModuleFlag("cfguard-mechanism"))) {
+      auto MechanismOverride =
+          static_cast<ControlFlowGuardMechanism>(CI->getZExtValue());
+      if (MechanismOverride != ControlFlowGuardMechanism::Automatic &&
+          MechanismOverride != ControlFlowGuardMechanism::Check)
+        Mod.getContext().diagnose(
+            DiagnosticInfoGeneric("only the Check Control Flow Guard mechanism "
+                                  "is supported for Arm64EC",
+                                  DS_Warning));
+    }
+  }
 
   PtrTy = PointerType::getUnqual(M->getContext());
   I64Ty = Type::getInt64Ty(M->getContext());

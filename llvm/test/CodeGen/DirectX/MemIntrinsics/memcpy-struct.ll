@@ -7,20 +7,20 @@ define void @test_struct_alloca() "hlsl.export" {
 ; CHECK-LABEL: define void @test_struct_alloca(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[OUT:%.*]] = alloca [[STRUCT_S:%.*]], align 16
-; CHECK-NEXT:    [[IN:%.*]] = alloca [[STRUCT_S]], align 16
+; CHECK-NEXT:    [[OUT:%.*]] = alloca [[STRUCT_S:%.*]], align 8
+; CHECK-NEXT:    [[IN:%.*]] = alloca [[STRUCT_S]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[IN]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i32 0
-; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[TMP2]], align 16
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[IN]], i32 16
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[TMP3]], align 16
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i32 16
-; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP5]], align 16
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[IN]], i32 32
-; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x i32>, ptr [[TMP6]], align 16
+; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i32 32
-; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP8]], align 16
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

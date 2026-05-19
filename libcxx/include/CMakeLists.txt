@@ -157,6 +157,8 @@ set(files
   __algorithm/ranges_set_intersection.h
   __algorithm/ranges_set_symmetric_difference.h
   __algorithm/ranges_set_union.h
+  __algorithm/ranges_shift_left.h
+  __algorithm/ranges_shift_right.h
   __algorithm/ranges_shuffle.h
   __algorithm/ranges_sort.h
   __algorithm/ranges_sort_heap.h
@@ -214,6 +216,7 @@ set(files
   __atomic/atomic_lock_free.h
   __atomic/atomic_ref.h
   __atomic/atomic_sync.h
+  __atomic/atomic_sync_timed.h
   __atomic/atomic_waitable_traits.h
   __atomic/check_memory_order.h
   __atomic/contention_t.h
@@ -320,6 +323,7 @@ set(files
   __concepts/invocable.h
   __concepts/movable.h
   __concepts/predicate.h
+  __concepts/primary_template.h
   __concepts/regular.h
   __concepts/relation.h
   __concepts/same_as.h
@@ -329,12 +333,16 @@ set(files
   __condition_variable/condition_variable.h
   __config
   __configuration/abi.h
+  __configuration/attributes.h
   __configuration/availability.h
   __configuration/compiler.h
+  __configuration/diagnostic_suppression.h
   __configuration/experimental.h
   __configuration/hardening.h
   __configuration/language.h
+  __configuration/namespace.h
   __configuration/platform.h
+  __configuration/utility.h
   __coroutine/coroutine_handle.h
   __coroutine/coroutine_traits.h
   __coroutine/noop_coroutine_handle.h
@@ -400,6 +408,7 @@ set(files
   __format/format_to_n_result.h
   __format/formatter.h
   __format/formatter_bool.h
+  __format/formatter_bool_impl.h
   __format/formatter_char.h
   __format/formatter_floating_point.h
   __format/formatter_integer.h
@@ -477,6 +486,7 @@ set(files
   __iterator/aliasing_iterator.h
   __iterator/back_insert_iterator.h
   __iterator/bounded_iter.h
+  __iterator/capacity_aware_iterator.h
   __iterator/common_iterator.h
   __iterator/concepts.h
   __iterator/counted_iterator.h
@@ -535,9 +545,12 @@ set(files
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
   __locale_dir/support/linux.h
+  __locale_dir/support/llvm_libc.h
   __locale_dir/support/netbsd.h
   __locale_dir/support/newlib.h
   __locale_dir/support/no_locale/characters.h
+  __locale_dir/support/no_locale/conversions.h
+  __locale_dir/support/no_locale/formatting.h
   __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/windows.h
   __locale_dir/time.h
@@ -607,6 +620,7 @@ set(files
   __memory/unique_temporary_buffer.h
   __memory/uses_allocator.h
   __memory/uses_allocator_construction.h
+  __memory/valid_range.h
   __memory_resource/memory_resource.h
   __memory_resource/monotonic_buffer_resource.h
   __memory_resource/polymorphic_allocator.h
@@ -722,6 +736,7 @@ set(files
   __ranges/empty_view.h
   __ranges/enable_borrowed_range.h
   __ranges/enable_view.h
+  __ranges/enumerate_view.h
   __ranges/filter_view.h
   __ranges/from_range.h
   __ranges/iota_view.h
@@ -741,6 +756,7 @@ set(files
   __ranges/single_view.h
   __ranges/size.h
   __ranges/split_view.h
+  __ranges/stride_view.h
   __ranges/subrange.h
   __ranges/take_view.h
   __ranges/take_while_view.h
@@ -765,7 +781,6 @@ set(files
   __support/ibm/gettod_zos.h
   __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
-  __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
   __support/xlocale/__strtonum_fallback.h
   __system_error/errc.h
@@ -861,7 +876,6 @@ set(files
   __type_traits/is_pod.h
   __type_traits/is_pointer.h
   __type_traits/is_polymorphic.h
-  __type_traits/is_primary_template.h
   __type_traits/is_reference.h
   __type_traits/is_reference_wrapper.h
   __type_traits/is_referenceable.h
@@ -881,7 +895,6 @@ set(files
   __type_traits/is_union.h
   __type_traits/is_unqualified.h
   __type_traits/is_unsigned.h
-  __type_traits/is_valid_expansion.h
   __type_traits/is_void.h
   __type_traits/is_volatile.h
   __type_traits/is_within_lifetime.h
@@ -919,6 +932,7 @@ set(files
   __utility/as_lvalue.h
   __utility/auto_cast.h
   __utility/cmp.h
+  __utility/constant_wrapper.h
   __utility/convert_to_integral.h
   __utility/declval.h
   __utility/default_three_way_comparator.h
@@ -931,7 +945,6 @@ set(files
   __utility/in_place.h
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
-  __utility/is_valid_range.h
   __utility/lazy_synth_three_way_comparator.h
   __utility/move.h
   __utility/no_destroy.h
@@ -996,7 +1009,6 @@ set(files
   cstring
   ctgmath
   ctime
-  ctype.h
   cuchar
   cwchar
   cwctype
@@ -1023,18 +1035,15 @@ set(files
   ext/__hash
   ext/hash_map
   ext/hash_set
-  fenv.h
   filesystem
   flat_map
   flat_set
-  float.h
   format
   forward_list
   fstream
   functional
   future
   initializer_list
-  inttypes.h
   iomanip
   ios
   iosfwd

@@ -28,6 +28,32 @@ hexadecimal format instead of decimal if desired.
   .section .data
   .float 0x1c2.2ap3
 
+``.prefalign`` directive
+------------------------
+
+.. code-block:: gas
+
+  .prefalign <log2_align>, <end_sym>, nop
+  .prefalign <log2_align>, <end_sym>, <fill_byte>
+
+The ``.prefalign`` directive pads the current location so that the code
+between the directive and ``end_sym`` starts at an alignment that depends
+on the size of that code (currently only supported with ELF).
+``log2_align`` specifies the preferred alignment as a power-of-2 exponent
+(e.g. 4 means 16-byte alignment). ``end_sym`` must be a symbol defined in
+the same section. The fill operand is required: ``nop`` fills the padding
+with target-appropriate NOP instructions, while an integer in ``[0, 255]``
+fills the padding with that byte value.
+
+The alignment is determined by the *body_size* (the number of bytes between
+the padded start and ``end_sym``), with *pref_align* = 2^\ *log2_align*:
+
+- If *body_size* < *pref_align*: align to the smallest power of 2
+  greater than or equal to *body_size*.
+- If *body_size* ≥ *pref_align*: align to *pref_align*.
+
+To also enforce a minimum alignment, emit a ``.p2align`` before ``.prefalign``.
+
 Machine-specific Assembly Syntax
 ================================
 

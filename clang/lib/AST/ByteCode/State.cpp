@@ -25,15 +25,15 @@ OptionalDiagnostic State::FFDiag(SourceLocation Loc, diag::kind DiagId,
 
 OptionalDiagnostic State::FFDiag(const Expr *E, diag::kind DiagId,
                                  unsigned ExtraNotes) {
-  if (getEvalStatus().Diag)
+  if (EvalStatus.Diag)
     return diag(E->getExprLoc(), DiagId, ExtraNotes, false);
   setActiveDiagnostic(false);
   return OptionalDiagnostic();
 }
 
-OptionalDiagnostic State::FFDiag(const SourceInfo &SI, diag::kind DiagId,
+OptionalDiagnostic State::FFDiag(SourceInfo SI, diag::kind DiagId,
                                  unsigned ExtraNotes) {
-  if (getEvalStatus().Diag)
+  if (EvalStatus.Diag)
     return diag(SI.getLoc(), DiagId, ExtraNotes, false);
   setActiveDiagnostic(false);
   return OptionalDiagnostic();
@@ -43,7 +43,7 @@ OptionalDiagnostic State::CCEDiag(SourceLocation Loc, diag::kind DiagId,
                                   unsigned ExtraNotes) {
   // Don't override a previous diagnostic. Don't bother collecting
   // diagnostics if we're evaluating for overflow.
-  if (!getEvalStatus().Diag || !getEvalStatus().Diag->empty()) {
+  if (!EvalStatus.Diag || !EvalStatus.Diag->empty()) {
     setActiveDiagnostic(false);
     return OptionalDiagnostic();
   }
@@ -55,7 +55,7 @@ OptionalDiagnostic State::CCEDiag(const Expr *E, diag::kind DiagId,
   return CCEDiag(E->getExprLoc(), DiagId, ExtraNotes);
 }
 
-OptionalDiagnostic State::CCEDiag(const SourceInfo &SI, diag::kind DiagId,
+OptionalDiagnostic State::CCEDiag(SourceInfo SI, diag::kind DiagId,
                                   unsigned ExtraNotes) {
   return CCEDiag(SI.getLoc(), DiagId, ExtraNotes);
 }
@@ -68,31 +68,29 @@ OptionalDiagnostic State::Note(SourceLocation Loc, diag::kind DiagId) {
 
 void State::addNotes(ArrayRef<PartialDiagnosticAt> Diags) {
   if (hasActiveDiagnostic())
-    llvm::append_range(*getEvalStatus().Diag, Diags);
+    llvm::append_range(*EvalStatus.Diag, Diags);
 }
 
 DiagnosticBuilder State::report(SourceLocation Loc, diag::kind DiagId) {
-  return getASTContext().getDiagnostics().Report(Loc, DiagId);
+  return Ctx.getDiagnostics().Report(Loc, DiagId);
 }
 
 /// Add a diagnostic to the diagnostics list.
 PartialDiagnostic &State::addDiag(SourceLocation Loc, diag::kind DiagId) {
-  PartialDiagnostic PD(DiagId, getASTContext().getDiagAllocator());
-  getEvalStatus().Diag->push_back(std::make_pair(Loc, PD));
-  return getEvalStatus().Diag->back().second;
+  PartialDiagnostic PD(DiagId, Ctx.getDiagAllocator());
+  EvalStatus.Diag->push_back(std::make_pair(Loc, PD));
+  return EvalStatus.Diag->back().second;
 }
 
 OptionalDiagnostic State::diag(SourceLocation Loc, diag::kind DiagId,
                                unsigned ExtraNotes, bool IsCCEDiag) {
-  Expr::EvalStatus &EvalStatus = getEvalStatus();
   if (EvalStatus.Diag) {
     if (hasPriorDiagnostic()) {
       return OptionalDiagnostic();
     }
 
     unsigned CallStackNotes = getCallStackDepth() - 1;
-    unsigned Limit =
-        getASTContext().getDiagnostics().getConstexprBacktraceLimit();
+    unsigned Limit = Ctx.getDiagnostics().getConstexprBacktraceLimit();
     if (Limit)
       CallStackNotes = std::min(CallStackNotes, Limit + 1);
     if (checkingPotentialConstantExpression())
@@ -157,4 +155,67 @@ void State::addCallStack(unsigned Limit) {
       addDiag(CallRange.getBegin(), diag::note_constexpr_call_here)
           << Out.str() << CallRange;
   }
+}
+
+bool State::hasPriorDiagnostic() {
+  if (!EvalStatus.Diag->empty()) {
+    switch (EvalMode) {
+    case EvaluationMode::ConstantFold:
+    case EvaluationMode::IgnoreSideEffects:
+      if (!HasFoldFailureDiagnostic)
+        break;
+      // We've already failed to fold something. Keep that diagnostic.
+      [[fallthrough]];
+    case EvaluationMode::ConstantExpression:
+    case EvaluationMode::ConstantExpressionUnevaluated:
+      setActiveDiagnostic(false);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool State::keepEvaluatingAfterFailure() const {
+  uint64_t Limit = Ctx.getLangOpts().ConstexprStepLimit;
+  if (Limit != 0 && !stepsLeft())
+    return false;
+
+  switch (EvalMode) {
+  case EvaluationMode::ConstantExpression:
+  case EvaluationMode::ConstantExpressionUnevaluated:
+  case EvaluationMode::ConstantFold:
+  case EvaluationMode::IgnoreSideEffects:
+    return checkingPotentialConstantExpression() ||
+           checkingForUndefinedBehavior();
+  }
+  llvm_unreachable("Missed EvalMode case");
+}
+
+bool State::keepEvaluatingAfterSideEffect() const {
+  switch (EvalMode) {
+  case EvaluationMode::IgnoreSideEffects:
+    return true;
+
+  case EvaluationMode::ConstantExpression:
+  case EvaluationMode::ConstantExpressionUnevaluated:
+  case EvaluationMode::ConstantFold:
+    // By default, assume any side effect might be valid in some other
+    // evaluation of this expression from a different context.
+    return checkingPotentialConstantExpression() ||
+           checkingForUndefinedBehavior();
+  }
+  llvm_unreachable("Missed EvalMode case");
+}
+
+bool State::keepEvaluatingAfterUndefinedBehavior() const {
+  switch (EvalMode) {
+  case EvaluationMode::IgnoreSideEffects:
+  case EvaluationMode::ConstantFold:
+    return true;
+
+  case EvaluationMode::ConstantExpression:
+  case EvaluationMode::ConstantExpressionUnevaluated:
+    return checkingForUndefinedBehavior();
+  }
+  llvm_unreachable("Missed EvalMode case");
 }

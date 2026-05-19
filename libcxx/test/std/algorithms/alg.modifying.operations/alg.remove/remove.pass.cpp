@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 #include <memory>
 
 #include "test_macros.h"

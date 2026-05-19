@@ -6,6 +6,16 @@
 // RUN: %if spirv-tools %{ spirv-val %t %}
 
 spirv.module Logical OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage], []> {
+  spirv.func @any_vector(%arg0: vector<4xi1>) "None" {
+    // CHECK: {{.*}} = spirv.Any {{.*}} : vector<4xi1>
+    %0 = spirv.Any %arg0 : vector<4xi1>
+    spirv.Return
+  }
+  spirv.func @all_vector(%arg0: vector<4xi1>) "None" {
+    // CHECK: {{.*}} = spirv.All {{.*}} : vector<4xi1>
+    %0 = spirv.All %arg0 : vector<4xi1>
+    spirv.Return
+  }
   spirv.func @iequal_scalar(%arg0: i32, %arg1: i32)  "None" {
     // CHECK: {{.*}} = spirv.IEqual {{.*}}, {{.*}} : i32
     %0 = spirv.IEqual %arg0, %arg1 : i32
@@ -138,3 +148,28 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.4, [Shader, Linkage, BFloat1
     spirv.Return
   }
 }
+
+// -----
+
+// Test select works with composite types.
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.6, [Shader, Linkage], []> {
+  spirv.func @select_op_array(%arg0: i1, %arg1: !spirv.array<4 x i32>, %arg2: !spirv.array<4 x i32>) -> () "None" {
+    // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, !spirv.array<4 x i32>
+    %0 = spirv.Select %arg0, %arg1, %arg2 : i1, !spirv.array<4 x i32>
+    spirv.Return
+  }
+
+  spirv.func @select_op_struct(%arg0: i1, %arg1: !spirv.struct<(i32, i32)>, %arg2: !spirv.struct<(i32, i32)>) -> () "None" {
+    // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, !spirv.struct<(i32, i32)>
+    %0 = spirv.Select %arg0, %arg1, %arg2 : i1, !spirv.struct<(i32, i32)>
+    spirv.Return
+  }
+
+  spirv.func @select_op_matrix(%arg0: i1, %arg1: !spirv.matrix<4 x vector<3xf32>>, %arg2: !spirv.matrix<4 x vector<3xf32>>) -> () "None" {
+    // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, !spirv.matrix<4 x vector<3xf32>>
+    %0 = spirv.Select %arg0, %arg1, %arg2 : i1, !spirv.matrix<4 x vector<3xf32>>
+    spirv.Return
+  }
+}
+

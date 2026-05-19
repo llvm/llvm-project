@@ -1856,6 +1856,7 @@ void SubtargetEmitter::emitHwModeCheck(const std::string &ClassName,
       if (P.second->isSubClassOf("ValueType")) {
         ValueTypeModes |= (1 << (P.first - 1));
       } else if (P.second->isSubClassOf("RegInfo") ||
+                 P.second->isSubClassOf("Register") ||
                  P.second->isSubClassOf("SubRegRange") ||
                  P.second->isSubClassOf("RegisterClassLike")) {
         RegInfoModes |= (1 << (P.first - 1));
@@ -1896,13 +1897,18 @@ void SubtargetEmitter::emitHwModeCheck(const std::string &ClassName,
   // End emitting for getHwModeSet().
 
   auto HandlePerMode = [&](std::string ModeType, unsigned ModeInBitSet) {
-    OS << "  case HwMode_" << ModeType << ":\n"
-       << "    Modes &= " << ModeInBitSet << ";\n"
-       << "    if (!Modes)\n      return Modes;\n"
-       << "    if (!llvm::has_single_bit<unsigned>(Modes))\n"
-       << "      llvm_unreachable(\"Two or more HwModes for " << ModeType
-       << " were found!\");\n"
-       << "    return llvm::countr_zero(Modes) + 1;\n";
+    OS << "  case HwMode_" << ModeType << ":\n";
+    if (ModeInBitSet == 0) {
+      OS << "    // No HwMode for " << ModeType << ".\n"
+         << "    return 0;\n";
+    } else {
+      OS << "    Modes &= " << ModeInBitSet << ";\n"
+         << "    if (!Modes)\n      return Modes;\n"
+         << "    if (!llvm::has_single_bit<unsigned>(Modes))\n"
+         << "      llvm_unreachable(\"Two or more HwModes for " << ModeType
+         << " were found!\");\n"
+         << "    return llvm::countr_zero(Modes) + 1;\n";
+    }
   };
 
   // Start emitting for getHwMode().
@@ -2009,17 +2015,17 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "                      WPR, WL, RA, IS, OC, FP) { }\n\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,\n"
      << "      const MCInst *MI, const MCInstrInfo *MCII,\n"
-     << "      unsigned CPUID) const override {\n"
+     << "      unsigned CPUID) const final {\n"
      << "    return " << Target << "_MC"
      << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, *this, CPUID);\n";
   OS << "  }\n";
   if (TGT.getHwModes().getNumModeIds() > 1) {
-    OS << "  unsigned getHwModeSet() const override;\n";
+    OS << "  unsigned getHwModeSet() const final;\n";
     OS << "  unsigned getHwMode(enum HwModeType type = HwMode_Default) const "
-          "override;\n";
+          "final;\n";
   }
   if (Target == "AArch64")
-    OS << "  bool isCPUStringValid(StringRef CPU) const override {\n"
+    OS << "  bool isCPUStringValid(StringRef CPU) const final {\n"
        << "    CPU = AArch64::resolveCPUAlias(CPU);\n"
        << "    return MCSubtargetInfo::isCPUStringValid(CPU);\n"
        << "  }\n";
@@ -2137,10 +2143,10 @@ void SubtargetEmitter::emitHeader(raw_ostream &OS) {
      << "public:\n"
      << "  unsigned resolveSchedClass(unsigned SchedClass, "
      << " const MachineInstr *DefMI,"
-     << " const TargetSchedModel *SchedModel) const override;\n"
+     << " const TargetSchedModel *SchedModel) const final;\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,"
      << " const MCInst *MI, const MCInstrInfo *MCII,"
-     << " unsigned CPUID) const override;\n"
+     << " unsigned CPUID) const final;\n"
      << "  DFAPacketizer *createDFAPacketizer(const InstrItineraryData *IID)"
      << " const;\n";
 
@@ -2163,13 +2169,13 @@ void SubtargetEmitter::emitHeader(raw_ostream &OS) {
     }
     OS << "  };\n";
 
-    OS << "  unsigned getHwModeSet() const override;\n";
+    OS << "  unsigned getHwModeSet() const final;\n";
     OS << "  unsigned getHwMode(enum HwModeType type = HwMode_Default) const "
-          "override;\n";
+          "final;\n";
   }
   if (TGT.hasMacroFusion())
     OS << "  std::vector<MacroFusionPredTy> getMacroFusions() const "
-          "override;\n";
+          "final;\n";
 
   STIPredicateExpander PE(Target);
   PE.setByRef(false);
