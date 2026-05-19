@@ -1484,6 +1484,15 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // select x, (i1 y | z), y -> y | (x && z)
+  if (CanCreateNewRecipe &&
+      match(Def, m_Select(m_VPValue(X),
+                          m_OneUse(m_c_BinaryOr(m_VPValue(Y), m_VPValue(Z))),
+                          m_Deferred(Y))) &&
+      TypeInfo.inferScalarType(Y)->isIntegerTy(1))
+    return Def->replaceAllUsesWith(
+        Builder.createOr(Y, Builder.createLogicalAnd(X, Z)));
+
   if (match(Def, m_c_Add(m_VPValue(A), m_ZeroInt())))
     return Def->replaceAllUsesWith(A);
 

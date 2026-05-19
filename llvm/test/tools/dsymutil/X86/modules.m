@@ -18,11 +18,11 @@ EOF
    clang -c -g odr_violation.c -o 2.o
 */
 
-// RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/modules \
+// RUN: dsymutil --linker classic -f -oso-prepend-path=%p/../Inputs/modules \
 // RUN:   -y %p/dummy-debug-map.map -o - \
 // RUN:     | llvm-dwarfdump -v --debug-info - | FileCheck %s
 
-// RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/modules -y \
+// RUN: dsymutil --linker classic -f -oso-prepend-path=%p/../Inputs/modules -y \
 // RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck --check-prefix=WARN %s
 
 // Verify both linkers emit a valid .debug_names section for input with
