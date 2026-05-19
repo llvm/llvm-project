@@ -112,9 +112,24 @@ struct Iter {
 };
 
 void memberAccessOnParen(Stream &s, Iter it) {
+  // Overloaded operator calls as base: parens are syntactically required.
   (s << "x").str();
-
   auto v = (*it).x;
+
+  // Plain expressions: parens are redundant even as member-access base.
+  const char *p = (s).str();
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    const char *p = s.str();
+
+  Val val{};
+  auto w = (val).x;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    auto w = val.x;
+
+  Foo foo2{};
+  auto z = (foo2.fooBar()).z;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    auto z = foo2.fooBar().z;
 }
 
 void memberExpr() {
