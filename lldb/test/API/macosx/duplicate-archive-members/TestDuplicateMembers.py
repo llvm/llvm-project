@@ -7,8 +7,8 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipUnlessDarwin
 class BSDArchivesTestCase(TestBase):
+    @skipIfWindows # ar does not exist on Windows
     def test(self):
         """Break inside a() and b() defined within libfoo.a."""
         self.build()
