@@ -91,7 +91,6 @@
 #include <cstdint>
 #include <cstring>
 #include <iterator>
-#include <queue>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -2977,10 +2976,8 @@ public:
     //     (+ optional full final load). RMW also needs VecTy to be set
     //     because we use getIndex() to convert byte offsets to element
     //     indices, which requires a promoted vector alloca.
-    bool IsRMWPattern =
-        InitStore != nullptr && !LoadInfos.empty() && VecTy != nullptr;
-    bool IsStoresOnlyPattern =
-        InitStore == nullptr && LoadInfos.empty() && FullLoad != nullptr;
+    bool IsRMWPattern = InitStore && VecTy && !LoadInfos.empty();
+    bool IsStoresOnlyPattern = !InitStore && FullLoad && LoadInfos.empty();
     if (!IsRMWPattern && !IsStoresOnlyPattern)
       return std::nullopt;
 
@@ -2998,31 +2995,27 @@ public:
 
     SmallVector<Value *, 4> DeletedValues;
 
-    // Helper: run the pairwise tree merge on a queue of vectors and return
-    // the merged result. At each iteration of the while-loop we pop pairs
-    // of vectors, concatenate them with mergeTwoVectors, and push the
-    // result back. An odd leftover is rotated to the end so it pairs up in
-    // the next iteration. Final queue size == 1 is the fully-merged vector.
-    auto TreeMerge = [&](std::queue<Value *> &Q, IRBuilder<> &B) -> Value * {
+    // Helper: pairwise tree-merge a list of vectors into a single vector.
+    // At each iteration we merge each adjacent pair via mergeTwoVectors,
+    // collect the merged values into Next, and (if Vals had odd length)
+    // carry the trailing element through unchanged. Loop until one value
+    // remains — the fully-merged vector.
+    auto TreeMerge = [&](SmallVectorImpl<Value *> &Vals,
+                         IRBuilder<> &B) -> Value * {
       LLVM_DEBUG(dbgs() << "  Rewrite stores into shufflevectors:\n");
-      while (Q.size() > 1) {
-        const auto N = Q.size();
-        for ([[maybe_unused]] const auto _ : llvm::seq(N / 2)) {
-          Value *V0 = Q.front();
-          Q.pop();
-          Value *V1 = Q.front();
-          Q.pop();
-          Value *M = mergeTwoVectors(V0, V1, DL, AllocatedEltTy, B);
+      while (Vals.size() > 1) {
+        SmallVector<Value *, 8> Next;
+        for (unsigned I = 0, E = Vals.size(); I + 1 < E; I += 2) {
+          Value *M =
+              mergeTwoVectors(Vals[I], Vals[I + 1], DL, AllocatedEltTy, B);
           LLVM_DEBUG(dbgs() << "    shufflevector: " << *M << "\n");
-          Q.push(M);
+          Next.push_back(M);
         }
-        if (N % 2 == 1) {
-          Value *V = Q.front();
-          Q.pop();
-          Q.push(V);
-        }
+        if (Vals.size() % 2 == 1)
+          Next.push_back(Vals.back());
+        Vals = std::move(Next);
       }
-      return Q.front();
+      return Vals[0];
     };
 
     if (IsStoresOnlyPattern) {
@@ -3077,13 +3070,13 @@ public:
       // trailing instructions in that block.
       IRBuilder<> Builder(LoadBB == StoreBB ? cast<Instruction>(FullLoad)
                                             : StoreBB->getTerminator());
-      std::queue<Value *> Q;
+      SmallVector<Value *, 8> Vals;
       for (const auto &Info : StoreInfos) {
         DeletedValues.push_back(Info.Store);
-        Q.push(Info.StoredValue);
+        Vals.push_back(Info.StoredValue);
       }
       // Merge all stored values and store the merged value into the alloca.
-      Value *Merged = TreeMerge(Q, Builder);
+      Value *Merged = TreeMerge(Vals, Builder);
       Builder.CreateAlignedStore(Merged, &NewAI, getSliceAlign());
 
       // Replace the original load with a load of the newly-merged alloca.
@@ -3161,14 +3154,12 @@ public:
     // stores ends with SliceValues[r] = its last stored value. Both are
     // correct.
     using SliceRange = std::pair<uint64_t, uint64_t>;
-    DenseSet<SliceRange> TouchedRanges;
-    for (auto &Info : LoadInfos)
-      TouchedRanges.insert({Info.BeginOffset, Info.EndOffset});
-    for (auto &Info : StoreInfos)
-      TouchedRanges.insert({Info.BeginOffset, Info.EndOffset});
-    SmallVector<SliceRange, 8> Partition(TouchedRanges.begin(),
-                                         TouchedRanges.end());
+    SmallVector<SliceRange, 8> Partition;
+    Partition.reserve(Accesses.size());
+    for (auto &Acc : Accesses)
+      Partition.emplace_back(Acc.BeginOffset, Acc.EndOffset);
     llvm::sort(Partition);
+    Partition.erase(llvm::unique(Partition), Partition.end());
     // Disjoint + contiguous tile of the whole alloca.
     uint64_t Expected = NewAllocaBeginOffset;
     for (auto &Range : Partition) {
@@ -3238,17 +3229,19 @@ public:
     }
 
     // Tree-merge the final per-range values (in range order) into the
-    // alloca's final vector value. Insertion point is just after the
-    // block-order-last partial access — guaranteed to dominate every
-    // SliceValues entry since each one is either an init extract or a
-    // stored value defined before its (now-deleted) store. The next
-    // node is guaranteed non-null because every basic block ends in a
-    // terminator and a load/store can never be the terminator.
-    IRBuilder<> Builder(Accesses.back().Inst->getNextNode());
-    std::queue<Value *> Q;
+    // alloca's final vector value. Anchor the IRBuilder to FullLoad (when it
+    // shares the partial-access block) or otherwise to the block's
+    // terminator — never to a partial access, since those are queued for
+    // deletion. Both anchors are guaranteed to dominate every SliceValues
+    // entry: each one is either an init extract (before any access) or a
+    // stored value defined before its (now-deleted) store.
+    IRBuilder<> Builder(FullLoad && FullLoad->getParent() == StoreBB
+                            ? cast<Instruction>(FullLoad)
+                            : StoreBB->getTerminator());
+    SmallVector<Value *, 8> Vals;
     for (auto &Range : Partition)
-      Q.push(SliceValues[Range]);
-    Value *Merged = TreeMerge(Q, Builder);
+      Vals.push_back(SliceValues[Range]);
+    Value *Merged = TreeMerge(Vals, Builder);
     Builder.CreateAlignedStore(Merged, &NewAI, getSliceAlign());
 
     // Replace the optional final full-width load with a load of the newly

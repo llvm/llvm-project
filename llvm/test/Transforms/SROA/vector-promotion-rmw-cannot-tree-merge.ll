@@ -77,3 +77,55 @@ entry:
   %result = load <4 x float>, ptr %alloca, align 16
   ret <4 x float> %result
 }
+
+; Ordering constraint: the init store must precede every partial access.
+; Here a partial load/store pair at slice 0 appears BEFORE the full-width
+; init store, so the rewrite must refuse — otherwise the per-slice SSA
+; seed would be wrong (the pre-init partial load actually reads
+; undef/garbage, not the init value).
+define <4 x float> @init_store_not_first(<4 x float> %init, <2 x float> %a, <2 x float> %b) {
+entry:
+  %alloca = alloca [4 x float], align 16
+
+  ; Partial load+store BEFORE the init store.
+  %p_pre = getelementptr inbounds [4 x float], ptr %alloca, i32 0, i32 0
+  %v_pre = load <2 x float>, ptr %p_pre, align 8
+  %r_pre = fadd <2 x float> %v_pre, %a
+  store <2 x float> %r_pre, ptr %p_pre, align 8
+
+  ; Full-width init store comes after.
+  store <4 x float> %init, ptr %alloca, align 16
+
+  %p1 = getelementptr inbounds [4 x float], ptr %alloca, i32 0, i32 2
+  %v1 = load <2 x float>, ptr %p1, align 8
+  %r1 = fadd <2 x float> %v1, %b
+  store <2 x float> %r1, ptr %p1, align 8
+
+  %result = load <4 x float>, ptr %alloca, align 16
+  ret <4 x float> %result
+}
+
+; Ordering constraint: when the final full-width load shares the partial
+; accesses' basic block, it must come after every partial access. Here it
+; sits between two partial accesses, so the rewrite must refuse —
+; otherwise the load would observe a stale slice value.
+define <4 x float> @full_load_in_middle(<4 x float> %init, <2 x float> %a, <2 x float> %b) {
+entry:
+  %alloca = alloca [4 x float], align 16
+  store <4 x float> %init, ptr %alloca, align 16
+
+  %p0 = getelementptr inbounds [4 x float], ptr %alloca, i32 0, i32 0
+  %v0 = load <2 x float>, ptr %p0, align 8
+  %r0 = fadd <2 x float> %v0, %a
+  store <2 x float> %r0, ptr %p0, align 8
+
+  ; Full-width load is between the two partial pairs.
+  %intermediate = load <4 x float>, ptr %alloca, align 16
+
+  %p1 = getelementptr inbounds [4 x float], ptr %alloca, i32 0, i32 2
+  %v1 = load <2 x float>, ptr %p1, align 8
+  %r1 = fadd <2 x float> %v1, %b
+  store <2 x float> %r1, ptr %p1, align 8
+
+  ret <4 x float> %intermediate
+}
