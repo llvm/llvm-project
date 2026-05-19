@@ -117,6 +117,39 @@ def : WriteRes<WriteLDHi,    []> { let Latency = 4; }
 // Define customized scheduler read/write types specific to C1 Ultra.
 //===----------------------------------------------------------------------===//
 
+// The approach for modelling SME instructions should not be taken as accurate.
+// This is largely due to the limitations of tablegen and the way that SME
+// works. Fundamentally, modelling SME instructions accurately requires
+// knowledge of target state that isn't available to us at compile time, namely,
+// whether the core is in streaming SVE mode. Due to this limitation the
+// modelling of SME instructions is dependent on the type of SME instruction
+// which we have. These are enumerated below:
+//
+//    1. SVE instructions added by SME and available when not in streaming SVE mode
+//    2. SVE instructions added by SME but not sent to CME when in streaming SVE mode
+//    3. FP/SVE/ASIMD instructions sent to CME when in streaming SVE mode
+//    4. SME instructions sent to CME and only available in streaming SVE mode
+//
+// To model instructions of type (1) and (2) is fairly accurate in that we know
+// that these instructions aren't "dependent" on streaming SVE mode to model their
+// scheduling information. To model these we use a predicate on these instructions
+// which checks if the target supports SME (SMESchedPred).
+//
+// To model instructions of type (3) we recognise that compile time knowledge
+// doesn't include information of whether we are in streaming SVE mode. However,
+// for the sake of completeness we model this class of instructions by adding
+// an llvm-mca attribute (mca-streaming-sched) which is interpreted as the core
+// being in streaming SVE mode. This allows us to at least have some data on how
+// these instructions may be scheduled when in streaming SVE mode using llvm-mca
+// if the core supports SME and this attribute is enabled. Otherwise, we default
+// to the plain non-streaming SVE mode scheduling information.
+//
+// Similarly, to model instructions of type (4) we just extend the scheduling model
+// to add definitions for this class of instructions which are "gated" via the
+// SMESchedPred predicate and mca-streaming-sched attribute. The purpose of
+// having these definitions is that information on how these instructions are
+// scheduled on the CME coprocessor is useful for analysis.
+
 // SME2 related read write types
 // Define generic 0 micro-op types.
 def C1UWrite_0c : SchedWriteRes<[]> { let Latency = 0; }
@@ -133,11 +166,18 @@ class C1UCMEWriteRC<int LatencyCycles, list<ProcResourceKind> Resources,
   let ReleaseAtCycles = ReleaseCycles;
 }
 
+class C1UStreamingOnlySchedWrite<SchedWrite StreamingWrite>
+    : SchedWriteVariant<[
+        SchedVar<SMEMCStreamingSchedPred, [StreamingWrite]>,
+        SchedVar<NoSchedPred,             [C1UWrite_0c]>
+      ]>;
+
 // Detailed CME scheduling derived from the SME2 software optimization guide.
 def C1UWrite_1c_CMEPERMS : C1UCMEWrite<1, [C1UUnitCMEPERMS]>;
 def C1UWrite_1c_CMEPERMS_1rc : C1UCMEWriteRC<1, [C1UUnitCMEPERMS], [1]>;
 def C1UWrite_1c_CMEPERMS_2rc : C1UCMEWriteRC<1, [C1UUnitCMEPERMS], [2]>;
 def C1UWrite_1c_CMERNMRET : C1UCMEWrite<1, [C1UUnitCMERNMRET]>;
+def C1UWrite_1c_CMEMML0_4rc : C1UCMEWriteRC<1, [C1UUnitCMEMML0], [4]>;
 def C1UWrite_2c_1L_CMELD : C1UCMEWrite<2, [C1UUnitL, C1UUnitCMELD]>;
 def C1UWrite_2c_1I_1L_CMELD : C1UCMEWrite<2, [C1UUnitI, C1UUnitL,
                                               C1UUnitCMELD]>;
@@ -174,15 +214,28 @@ def C1UWrite_2c_5SA_5V01_CMEST : C1UCMEWrite<2, [C1UUnitSA, C1UUnitSA,
                                                  C1UUnitV01, C1UUnitV01,
                                                  C1UUnitCMEST]>;
 def C1UWrite_4c_CMEPERMS : C1UCMEWrite<4, [C1UUnitCMEPERMS]>;
+def C1UWrite_4c_CMEPERMS_2rc : C1UCMEWriteRC<4, [C1UUnitCMEPERMS], [2]>;
+def C1UWrite_5c_CMEPERMS : C1UCMEWrite<5, [C1UUnitCMEPERMS]>;
 def C1UWrite_4c_CMEPERMF : C1UCMEWrite<4, [C1UUnitCMEPERMF]>;
 def C1UWrite_4c_CMEPERMF_1rc : C1UCMEWriteRC<4, [C1UUnitCMEPERMF], [3]>;
 def C1UWrite_4c_CMEPERMF_VX0ALU : C1UCMEWrite<4, [C1UUnitCMEPERMF,
                                                   C1UUnitCMEVX0ALU]>;
+def C1UWrite_4c_CMEPERMF_5rc : C1UCMEWriteRC<4, [C1UUnitCMEPERMF], [6]>;
+def C1UWrite_4c_CMEMML0_4rc : C1UCMEWriteRC<4, [C1UUnitCMEMML0], [4]>;
+def C1UWrite_4c_CMEMML0_6rc : C1UCMEWriteRC<4, [C1UUnitCMEMML0], [6]>;
+def C1UWrite_4c_CMEMML0_8rc : C1UCMEWriteRC<4, [C1UUnitCMEMML0], [8]>;
 def C1UWrite_4c_CMEVXALU : C1UCMEWrite<4, [C1UUnitCMEVXALU]>;
+def C1UWrite_4c_CMEVXALU_2rc : C1UCMEWriteRC<4, [C1UUnitCMEVXALU], [2]>;
+def C1UWrite_4c_CMEVXALU_4rc : C1UCMEWriteRC<4, [C1UUnitCMEVXALU], [4]>;
 def C1UWrite_4c_CMEVX0ALU : C1UCMEWrite<4, [C1UUnitCMEVX0ALU]>;
+def C1UWrite_4c_CMEVX0ALU_PERMF_1rc
+    : C1UCMEWriteRC<4, [C1UUnitCMEVX0ALU, C1UUnitCMEPERMF], [1, 3]>;
+def C1UWrite_4c_CMEVX0ALU_PERMF_2rc
+    : C1UCMEWriteRC<4, [C1UUnitCMEVX0ALU, C1UUnitCMEPERMF], [2, 6]>;
 def C1UWrite_4c_CMEVXFPDOT : C1UCMEWrite<4, [C1UUnitCMEVXFPDOT]>;
 def C1UWrite_4c_CMEVXMUL : C1UCMEWrite<4, [C1UUnitCMEVXMUL]>;
 def C1UWrite_4c_CMEMML0 : C1UCMEWrite<4, [C1UUnitCMEMML0]>;
+def C1UWrite_4c_CMEPF_2rc : C1UCMEWriteRC<4, [C1UUnitCMEPF], [2]>;
 def C1UWrite_8c_CMEVXMUL_1rc : C1UCMEWriteRC<8, [C1UUnitCMEVXMUL], [2]>;
 def C1UWrite_8c_CMEVXALU_1rc : C1UCMEWriteRC<8, [C1UUnitCMEVXALU], [2]>;
 def C1UWrite_4c_1M0_CMEPERMF_VX0ALU : C1UCMEWrite<12, [C1UUnitM0,
@@ -194,6 +247,9 @@ def C1UWrite_12c_1M0_CMEPERMF_VX0ALU_2rc
 def C1UWrite_4c_CMEMML0_1rc : C1UCMEWriteRC<4, [C1UUnitCMEMML0], [4]>;
 def C1UWrite_4c_CMEMML0_2rc : C1UCMEWriteRC<4, [C1UUnitCMEMML0], [2]>;
 def C1UWrite_5c_CMEVXALU_1rc : C1UCMEWriteRC<5, [C1UUnitCMEVXALU], [2]>;
+def C1UWrite_5c_CMEVXALU_4rc : C1UCMEWriteRC<5, [C1UUnitCMEVXALU], [4]>;
+def C1UWrite_5c_CMEPERMF_6rc : C1UCMEWriteRC<5, [C1UUnitCMEPERMF], [6]>;
+def C1UWrite_5c_CMEMML0_2rc : C1UCMEWriteRC<5, [C1UUnitCMEMML0], [2]>;
 def C1UWrite_4c_1M0_CMEVXALU : C1UCMEWrite<4, [C1UUnitM0, C1UUnitCMEVXALU]>;
 def C1UWrite_4c_1M_CMEPERMS_1rc : C1UCMEWriteRC<4, [C1UUnitM, C1UUnitCMEPERMS],
                                                [1, 2]>;
@@ -225,6 +281,21 @@ def C1UWrite_12c_CMEVX0ALU_PERMS_VXALU_2d5rc
     : C1UCMEWriteRC<12, [C1UUnitCMEVX0ALU, C1UUnitCMEPERMS,
                          C1UUnitCMEVXALU],
                     [2, 5, 2]>;
+def C1UWrite_2c_CMEMML0_2rc : C1UCMEWriteRC<2, [C1UUnitCMEMML0], [2]>;
+def C1UWrite_2c_CMEMML0_4rc : C1UCMEWriteRC<2, [C1UUnitCMEMML0], [4]>;
+def C1UWrite_2c_CMEPF_2rc : C1UCMEWriteRC<2, [C1UUnitCMEPF], [2]>;
+def C1UWrite_6c_CMEVXALU_4rc : C1UCMEWriteRC<6, [C1UUnitCMEVXALU], [4]>;
+def C1UWrite_7c_1L_CMELD : C1UCMEWrite<7, [C1UUnitL, C1UUnitCMELD]>;
+def C1UWrite_7c_CMEPERMF_12rc : C1UCMEWriteRC<7, [C1UUnitCMEPERMF], [12]>;
+def C1UWrite_7c_CMEVXALU_4rc : C1UCMEWriteRC<7, [C1UUnitCMEVXALU], [4]>;
+def C1UWrite_8c_CMEPERMF_VX0ALU_1rc
+    : C1UCMEWriteRC<8, [C1UUnitCMEPERMF, C1UUnitCMEVX0ALU], [3, 1]>;
+def C1UWrite_9c_CMEMML1 : C1UCMEWrite<9, [C1UUnitCMEMML1]>;
+def C1UWrite_9c_CMEMML1_2rc : C1UCMEWriteRC<9, [C1UUnitCMEMML1], [2]>;
+def C1UWrite_9c_CMEMML1_5rc : C1UCMEWriteRC<9, [C1UUnitCMEMML1], [5]>;
+def C1UWrite_11c_1SA_CMEST : C1UCMEWrite<11, [C1UUnitSA, C1UUnitCMEST]>;
+def C1UWrite_13c_CMEMML1_PERMF_5rc
+    : C1UCMEWriteRC<13, [C1UUnitCMEMML1, C1UUnitCMEPERMF], [5, 3]>;
 def C1UWrite_10c_CMEMC_10rc : C1UCMEWriteRC<10, [C1UUnitCMEMC], [10]>;
 def C1UWrite_11c_CMEMC_11rc : C1UCMEWriteRC<11, [C1UUnitCMEMC], [11]>;
 def C1UWrite_12c_CMEMC_12rc : C1UCMEWriteRC<12, [C1UUnitCMEMC], [12]>;
@@ -3053,5 +3124,116 @@ def : InstRW<[C1UWrite_1c_1M_Streaming], (instregex "^PTRUE_C_[BHSD]$")>;
 
 // Loop control, based on GPR generating predicate as counter
 def : InstRW<[C1UWrite_1c_1M_Streaming], (instregex "^WHILE(GE|GT|HI|HS|LE|LO|LS|LT)_CXX_[BHSD]$")>;
+
+// SVE instructions added by SME and only available in Streaming SVE mode
+// -----------------------------------------------------------------------------
+
+// Horizontal and vertical ZA reductions.
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_4c_CMEVXALU_4rc>],
+             (instregex "^ADDHA_MPPZ_[SD]$", "^ADDVA_MPPZ_[SD]$")>;
+
+// Outer-product ZA updates.
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_2c_CMEMML0_4rc>],
+             (instregex "^BMOPA_MPPZZ_S$", "^BMOPS_MPPZZ_S$",
+                        "^(SMOPA|UMOPA|SMOPS|UMOPS)_MPPZZ_(S|D|HtoS)$",
+                        "^(SUMOPA|USMOPA|SUMOPS|USMOPS)_MPPZZ_(S|D)$")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_4c_CMEMML0_4rc>],
+             (instregex "^(FMOPA|FMOPS)_MPPZZ_(S|D|H)$",
+                        "^FMOP(AL|SL)_MPPZZ$",
+                        "^(BFMOPA|BFMOPS)_MPPZZ(_H)?$")>;
+
+// ZA accumulators updated through multi-vector add/subtract operations.
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_2c_CMEMML0_2rc>],
+             (instregex "^(ADD|SUB)_VG2_M2(Z|ZZ|Z2Z)_[SD]$")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_2c_CMEMML0_4rc>],
+             (instregex "^(ADD|SUB)_VG4_M4(Z|ZZ|Z4Z)_[SD]$")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_5c_CMEVXALU_1rc>],
+             (instregex "^ADD_VG2_2ZZ_")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_6c_CMEVXALU_4rc>],
+             (instregex "^ADD_VG4_4ZZ_")>;
+
+// Streaming-only clamp, convert and shift families.
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_5c_CMEVXALU_1rc>],
+             (instregex "^FCLAMP_VG2_2Z2Z_", "^(S|U)CLAMP_VG2_2Z2Z_",
+                        "^SQDMULH_VG2_2ZZ_", "^(S|U)RSHL_VG2_2ZZ_")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_7c_CMEVXALU_4rc>],
+             (instregex "^FCLAMP_VG4_4Z4Z_", "^(S|U)CLAMP_VG4_4Z4Z_")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_4c_CMEVXALU_2rc>],
+             (instregex "^SQDMULH_VG2_2Z2Z_", "^(S|U)RSHL_VG2_2Z2Z_",
+                        "^(SQRSHR|UQRSHR)_VG2_Z2ZI_")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_4c_CMEVXALU_4rc>],
+             (instregex "^(S|U)RSHL_VG4_4Z4Z_")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_5c_CMEVXALU_4rc>],
+             (instregex "^SQDMULH_VG4_4(ZZ|Z4Z)_")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_6c_CMEVXALU_4rc>],
+             (instregex "^(S|U)RSHL_VG4_4ZZ_")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_4c_CMEVX0ALU_PERMF_1rc>],
+             (instregex "^(S|U)CVTF_2Z2Z_StoS$")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_4c_CMEVX0ALU_PERMF_2rc>],
+             (instregex "^(S|U)CVTF_4Z4Z_StoS$")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_8c_CMEVXALU_PERMS_1rc>],
+             (instregex "^(SQCVT|UQCVT|SQCVTU|SQCVTN|SQCVTUN|UQCVTN)_Z4Z_",
+                        "^SQRSHRU_VG2_Z2ZI_",
+                        "^(SQRSHR|UQRSHR|SQRSHRU|SQRSHRN|UQRSHRN|SQRSHRUN)_VG4_Z4ZI_")>;
+
+// SME integer and floating-point dot and multiply-accumulate families.
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_2c_CMEMML0_2rc>],
+             (instregex "^(SUDOT|USDOT)_VG2_M2(ZZI|ZZ|Z2Z)_BToS$",
+                        "^(SMLAL|UMLAL|SMLSL|UMLSL)_(MZZI|MZZ|VG2_M2)",
+                        "^(SMLALL|UMLALL|USMLALL|SMLSLL|UMLSLL)_(MZZI|MZZ|VG2_M2ZZI|VG2_M2ZZ|VG2_M2Z2Z)_(BtoS|HtoD)$",
+                        "^(SUMLALL|USMLALL)_(VG2_M2ZZI|VG2_M2ZZ|VG2_M2Z2Z)_BtoS$",
+                        "^(SVDOT|UVDOT)_VG2_M2ZZI_",
+                        "^(FVDOT|BFVDOT)_VG2_M2ZZI_HtoS$")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_2c_CMEMML0_4rc>],
+             (instregex "^(SUDOT|USDOT)_VG4_M4(ZZI|ZZ|Z4Z)_BToS$",
+                        "^(SMLAL|UMLAL|SMLSL|UMLSL)_VG4_M4",
+                        "^(SMLALL|UMLALL|USMLALL|SMLSLL|UMLSLL)_(VG4_M4ZZI|VG4_M4ZZ|VG4_M4Z4Z)_(BtoS|HtoD)$",
+                        "^(SUMLALL|USMLALL)_(VG4_M4ZZI|VG4_M4ZZ|VG4_M4Z4Z)_BtoS$")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_4c_CMEMML0_6rc>],
+             (instregex "^(SUVDOT|USVDOT)_VG4_M4ZZI_")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_4c_CMEMML0_8rc>],
+             (instregex "^(SVDOT|UVDOT)_VG4_M4ZZI_")>;
+
+// Streaming-only misc and ZA move instructions.
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_4c_CMEPERMS>],
+             (instregex "^(SUNPK|UUNPK)_VG2_2ZZ_", "^(ZIP|UZP)_VG2_2ZZZ")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_4c_CMEPERMS_2rc>],
+             (instregex "^(SUNPK|UUNPK)_VG4_4Z2Z_", "^SEL_VG2_2ZC2Z2Z_",
+                        "^(ZIP|UZP)_VG4_4Z4Z")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_5c_CMEPERMS>],
+             (instregex "^SEL_VG4_4ZC4Z4Z_")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_5c_CMEMML0_2rc>],
+             (instregex "^MOVA_MXI2Z_", "^MOVA_VG2_MXI2Z$")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_2c_CMEMML0_4rc>],
+             (instregex "^MOVA_MXI4Z_", "^MOVA_VG4_MXI4Z$")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_9c_CMEMML1>],
+             (instregex "^MOVA_2ZMXI_")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_9c_CMEMML1_2rc>],
+             (instregex "^MOVA_4ZMXI_")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_9c_CMEMML1_5rc>],
+             (instregex "^MOVA_VG2_2ZMXI$")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_13c_CMEMML1_PERMF_5rc>],
+             (instregex "^MOVA_VG4_4ZMXI$")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_4c_CMEPERMF_1rc>],
+             (instrs MOVT_TIX)>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_8c_CMEPERMF_VX0ALU_1rc>],
+             (instrs MOVT_XTI)>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_4c_CMEPERMF_1rc>],
+             (instregex "^LUTI[24]_ZTZI_")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_5c_CMEPERMF_6rc>],
+             (instregex "^LUTI[24](_S)?_2ZTZI_")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_7c_CMEPERMF_12rc>],
+             (instregex "^LUTI[24](_S)?_4ZTZI_")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_1c_CMEMML0_4rc>],
+             (instregex "^ZERO_M")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_1c_CMERNMRET>],
+             (instrs ZERO_T)>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_7c_1L_CMELD>],
+             (instregex "^LDR_ZA")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_11c_1SA_CMEST>],
+             (instregex "^STR_ZA")>;
+def : InstRW<[C1UStreamingOnlySchedWrite<C1UWrite_2c_CMEPF_2rc>],
+             (instrs RPRFM)>;
+
 
 }

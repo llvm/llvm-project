@@ -3650,7 +3650,7 @@ multiclass sme_tmopa_32b<bits<5> opc, RegisterOperand zn_ty, RegisterOperand zm_
 class sme2_zero_zt<string mnemonic, bits<4> opc>
     : I<(outs ZTR:$ZT), (ins ),
          mnemonic, "\t\\{ $ZT \\}",
-         "", []>, Sched<[]> {
+         "", []>, Sched<[WriteI]> {
   bits<0> ZT;
   let Inst{31-4} = 0b1100000001001000000000000000;
   let Inst{3-0}  = opc;
