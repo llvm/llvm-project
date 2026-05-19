@@ -222,6 +222,8 @@ void initializer_acts_the_same_as_null_attr() {
   ASSERT_EQ(mutex_snapshot.__recursive, mutex_from_init_snapshot.__recursive);
   ASSERT_EQ(mutex_snapshot.__robust, mutex_from_init_snapshot.__robust);
   ASSERT_EQ(mutex_snapshot.__pshared, mutex_from_init_snapshot.__pshared);
+  ASSERT_EQ(mutex_snapshot.__error_checking,
+            mutex_from_init_snapshot.__error_checking);
   ASSERT_EQ(mutex_snapshot.__owner, mutex_from_init_snapshot.__owner);
   ASSERT_EQ(mutex_snapshot.__lock_count, mutex_from_init_snapshot.__lock_count);
 
@@ -234,6 +236,34 @@ void initializer_acts_the_same_as_null_attr() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_trylock(&mutex_from_init), EBUSY);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&mutex_from_init), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_destroy(&mutex_from_init), 0);
+}
+
+void error_checking_mutex_test() {
+  pthread_mutexattr_t attr;
+  pthread_mutex_t error_checking_mutex;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_init(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_settype(&attr,
+                                                      PTHREAD_MUTEX_ERRORCHECK),
+            0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&error_checking_mutex, &attr),
+            0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_destroy(&attr), 0);
+
+  pthread_mutex_t snapshot = snapshot_mutex(&error_checking_mutex);
+  ASSERT_TRUE(snapshot.__error_checking);
+  ASSERT_EQ(snapshot.__owner, 0);
+  ASSERT_EQ(snapshot.__lock_count, size_t(0));
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_lock(&error_checking_mutex), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_trylock(&error_checking_mutex),
+            EDEADLK);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_lock(&error_checking_mutex), EDEADLK);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&error_checking_mutex), 0);
+
+  snapshot = snapshot_mutex(&error_checking_mutex);
+  ASSERT_EQ(snapshot.__owner, 0);
+  ASSERT_EQ(snapshot.__lock_count, size_t(0));
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_destroy(&error_checking_mutex), 0);
 }
 
 static constexpr int THREAD_COUNT = 10;
@@ -298,6 +328,7 @@ TEST_MAIN() {
   trylock_test();
   recursive_mutex_test();
   initializer_acts_the_same_as_null_attr();
+  error_checking_mutex_test();
   multiple_waiters();
   return 0;
 }

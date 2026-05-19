@@ -253,7 +253,7 @@ module test_threadprivate_mod
   ! CHECK: Name = 'x'
   ! CHECK: Name = 'y'
   common /vars/ x, y
-  ! CHECK-NOT: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPThreadprivate
+  ! CHECK-NOT: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpThreadprivateDirective
   !$omp threadprivate(/vars/)
 end module
 

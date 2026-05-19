@@ -955,21 +955,13 @@ static cir::FuncType getIntrinsicType(CIRGenFunction &cgf,
   using namespace llvm::Intrinsic;
 
   SmallVector<IITDescriptor, 8> table;
-  getIntrinsicInfoTableEntries(id, table);
+  auto [tableRef, _, isVarArg] = getIntrinsicInfoTableEntries(id, table);
 
-  ArrayRef<IITDescriptor> tableRef = table;
   mlir::Type resultTy = decodeFixedType(cgf, tableRef, context);
 
   SmallVector<mlir::Type, 8> argTypes;
-  bool isVarArg = false;
-  while (!tableRef.empty()) {
-    IITDescriptor::IITDescriptorKind kind = tableRef.front().Kind;
-    if (kind == IITDescriptor::VarArg) {
-      isVarArg = true;
-      break; // VarArg is last
-    }
+  while (!tableRef.empty())
     argTypes.push_back(decodeFixedType(cgf, tableRef, context));
-  }
 
   // CIR convention: no explicit void return type
   if (isa<cir::VoidType>(resultTy))
@@ -1940,7 +1932,18 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     cir::UnreachableOp::create(builder, loc);
     return RValue::get(nullptr);
   }
-  case Builtin::BI__builtin_launder:
+  case Builtin::BI__builtin_launder: {
+    const Expr *arg = e->getArg(0);
+    QualType argTy = arg->getType()->getPointeeType();
+    mlir::Value ptr = emitScalarExpr(arg);
+
+    if (cgm.getCodeGenOpts().StrictVTablePointers &&
+        argTy.requiresBuiltinLaunder(cgm.getASTContext())) {
+      mlir::Location loc = getLoc(e->getExprLoc());
+      ptr = cir::LaunderOp::create(builder, loc, ptr).getResult();
+    }
+    return RValue::get(ptr);
+  }
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_sub:
   case Builtin::BI__sync_fetch_and_or:
@@ -2400,6 +2403,17 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_printf:
   case Builtin::BIprintf:
+    if (getTarget().getTriple().isNVPTX() ||
+        getTarget().getTriple().isAMDGCN() ||
+        (getTarget().getTriple().isSPIRV() &&
+         getTarget().getTriple().getVendor() == llvm::Triple::AMD)) {
+      if (getTarget().getTriple().isNVPTX())
+        return RValue::get(emitNVPTXDevicePrintfCallExpr(e));
+      if ((getTarget().getTriple().isAMDGCN() ||
+           getTarget().getTriple().isSPIRV()) &&
+          getLangOpts().HIP)
+        return errorBuiltinNYI(*this, e, builtinID);
+    }
     break;
   case Builtin::BI__builtin_canonicalize:
   case Builtin::BI__builtin_canonicalizef:

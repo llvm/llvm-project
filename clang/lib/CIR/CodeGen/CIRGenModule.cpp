@@ -683,12 +683,12 @@ mlir::Operation *CIRGenModule::getGlobalValue(StringRef name) {
 }
 
 cir::GlobalOp
-CIRGenModule::createGlobalOp(CIRGenModule &cgm, mlir::Location loc,
-                             StringRef name, mlir::Type t, bool isConstant,
+CIRGenModule::createGlobalOp(mlir::Location loc, StringRef name, mlir::Type t,
+                             bool isConstant,
                              mlir::ptr::MemorySpaceAttrInterface addrSpace,
                              mlir::Operation *insertPoint) {
   cir::GlobalOp g;
-  CIRGenBuilderTy &builder = cgm.getBuilder();
+  CIRGenBuilderTy &builder = getBuilder();
 
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
@@ -700,22 +700,22 @@ CIRGenModule::createGlobalOp(CIRGenModule &cgm, mlir::Location loc,
       builder.setInsertionPoint(insertPoint);
     } else {
       // Group global operations together at the top of the module.
-      if (cgm.lastGlobalOp)
-        builder.setInsertionPointAfter(cgm.lastGlobalOp);
+      if (lastGlobalOp)
+        builder.setInsertionPointAfter(lastGlobalOp);
       else
-        builder.setInsertionPointToStart(cgm.getModule().getBody());
+        builder.setInsertionPointToStart(getModule().getBody());
     }
 
     g = cir::GlobalOp::create(builder, loc, name, t, isConstant, addrSpace);
     if (!insertPoint)
-      cgm.lastGlobalOp = g;
+      lastGlobalOp = g;
 
     // Default to private until we can judge based on the initializer,
     // since MLIR doesn't allow public declarations.
     mlir::SymbolTable::setSymbolVisibility(
         g, mlir::SymbolTable::Visibility::Private);
   }
-  cgm.symbolLookupCache[g.getSymNameAttr()] = g;
+  symbolLookupCache[g.getSymNameAttr()] = g;
   return g;
 }
 
@@ -1130,9 +1130,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
 
   // mlir::SymbolTable::Visibility::Public is the default, no need to explicitly
   // mark it as such.
-  cir::GlobalOp gv = CIRGenModule::createGlobalOp(
-      *this, loc, mangledName, ty, isConstant, declCIRAS,
-      /*insertPoint=*/entry.getOperation());
+  cir::GlobalOp gv = createGlobalOp(loc, mangledName, ty, isConstant, declCIRAS,
+                                    /*insertPoint=*/entry.getOperation());
 
   // If we already created a global with the same mangled name (but different
   // type) before, remove it from its parent.
@@ -1160,11 +1159,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
 
     setLinkageForGV(gv, d);
 
-    if (d->getTLSKind()) {
-      if (d->getTLSKind() == VarDecl::TLS_Dynamic)
-        errorNYI(d->getSourceRange(), "getOrCreateCIRGlobal: TLS dynamic");
+    if (d->getTLSKind())
       setTLSMode(gv, *d);
-    }
 
     setGVProperties(gv, d);
 
@@ -1301,8 +1297,8 @@ static void emitUsed(CIRGenModule &cgm, StringRef name,
   cir::ConstArrayAttr initAttr = cir::ConstArrayAttr::get(
       arrayTy, mlir::ArrayAttr::get(&cgm.getMLIRContext(), usedArray));
 
-  cir::GlobalOp gv = CIRGenModule::createGlobalOp(cgm, loc, name, arrayTy,
-                                                  /*isConstant=*/false);
+  cir::GlobalOp gv = cgm.createGlobalOp(loc, name, arrayTy,
+                                        /*isConstant=*/false);
   gv.setLinkage(cir::GlobalLinkageKind::AppendingLinkage);
   gv.setInitialValueAttr(initAttr);
   gv.setSectionAttr(builder.getStringAttr("llvm.metadata"));
@@ -1508,7 +1504,8 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
 
   setNonAliasAttributes(vd, gv);
 
-  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  if (vd->getTLSKind() && !vd->isStaticLocal())
+    setTLSMode(gv, *vd);
 
   maybeSetTrivialComdat(*vd, gv);
 
@@ -1733,7 +1730,7 @@ cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
   }
 
   // Create a new variable.
-  gv = createGlobalOp(*this, loc, name, ty);
+  gv = createGlobalOp(loc, name, ty);
 
   // Set up extra information and add to the module
   gv.setLinkageAttr(
@@ -1937,8 +1934,45 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
       builder.setInsertionPoint(noProtoCallOp);
 
       // Patch call type with the real function type.
-      cir::CallOp realCallOp = builder.createCallOp(
-          noProtoCallOp.getLoc(), newFn, noProtoCallOp.getOperands());
+      cir::FuncType newFnType = newFn.getFunctionType();
+      mlir::OperandRange callOperands = noProtoCallOp.getOperands();
+      bool returnTypeMatches =
+          newFnType.hasVoidReturn()
+              ? noProtoCallOp.getNumResults() == 0
+              : noProtoCallOp.getNumResults() == 1 &&
+                    noProtoCallOp.getResultTypes().front() ==
+                        newFnType.getReturnType();
+      bool typesMatch = !newFn.getNoProto() && returnTypeMatches &&
+                        callOperands.size() == newFnType.getNumInputs();
+      for (unsigned i = 0, e = newFnType.getNumInputs(); typesMatch && i != e;
+           ++i) {
+        if (callOperands[i].getType() != newFnType.getInput(i))
+          typesMatch = false;
+      }
+
+      cir::CallOp realCallOp;
+      if (typesMatch) {
+        // Patch call type with the real function type.
+        realCallOp =
+            builder.createCallOp(noProtoCallOp.getLoc(), newFn, callOperands);
+      } else {
+        // Build an indirect call whose function-pointer signature matches
+        // the existing call site.
+        cir::FuncType origFnType = oldFn.getFunctionType();
+        cir::FuncType callFnType =
+            origFnType.isVarArg()
+                ? cir::FuncType::get(origFnType.getInputs(),
+                                     origFnType.getReturnType(),
+                                     /*isVarArg=*/false)
+                : origFnType;
+        mlir::Value addr = cir::GetGlobalOp::create(
+            builder, noProtoCallOp.getLoc(), cir::PointerType::get(newFnType),
+            newFn.getSymName());
+        mlir::Value casted =
+            builder.createBitcast(addr, cir::PointerType::get(callFnType));
+        realCallOp = builder.createIndirectCallOp(
+            noProtoCallOp.getLoc(), casted, callFnType, callOperands);
+      }
 
       // Replace old no proto call with fixed call.
       noProtoCallOp.replaceAllUsesWith(realCallOp);
@@ -1998,8 +2032,8 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
 
   // Create a global variable for this string
   // FIXME(cir): check for insertion point in module level.
-  cir::GlobalOp gv = CIRGenModule::createGlobalOp(
-      cgm, loc, globalName, c.getType(), !cgm.getLangOpts().WritableStrings);
+  cir::GlobalOp gv = cgm.createGlobalOp(loc, globalName, c.getType(),
+                                        !cgm.getLangOpts().WritableStrings);
 
   // Set up extra information and add to the module
   gv.setAlignmentAttr(cgm.getSize(alignment));
@@ -2774,6 +2808,13 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) {
 
   auto global = cast<cir::GlobalOp>(op);
   global.setTlsModel(tlm);
+
+  // For namespace-scope dyanmic TLS we need to set the wrapper, int, or guard
+  // info.
+  if (d.isStaticLocal() || tlm != cir::TLS_Model::GeneralDynamic)
+    return;
+
+  setGlobalTlsReferences(d, global);
 }
 
 void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
@@ -3367,7 +3408,7 @@ void CIRGenModule::release() {
         cir::LangAddressSpaceAttr::get(&getMLIRContext(),
                                        getGlobalVarAddressSpace(nullptr));
 
-    auto gv = createGlobalOp(*this, loc, cuidName, int8Ty,
+    auto gv = createGlobalOp(loc, cuidName, int8Ty,
                              /*isConstant=*/false, addrSpace);
     gv.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
     // Initialize with zero
@@ -3450,14 +3491,13 @@ void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
 
   // TODO(cir): Make GlobalAlias a separate op.
   cir::CIRGlobalValueInterface alias =
-      isFunction
-          ? mlir::cast<cir::CIRGlobalValueInterface>(
-                createCIRFunction(loc, mangledName,
-                                  mlir::cast<cir::FuncType>(declTy),
-                                  cast<FunctionDecl>(d))
-                    .getOperation())
-          : mlir::cast<cir::CIRGlobalValueInterface>(
-                createGlobalOp(*this, loc, mangledName, declTy).getOperation());
+      isFunction ? mlir::cast<cir::CIRGlobalValueInterface>(
+                       createCIRFunction(loc, mangledName,
+                                         mlir::cast<cir::FuncType>(declTy),
+                                         cast<FunctionDecl>(d))
+                           .getOperation())
+                 : mlir::cast<cir::CIRGlobalValueInterface>(
+                       createGlobalOp(loc, mangledName, declTy).getOperation());
   alias.setAliasee(aa->getAliasee());
   alias.setLinkage(linkage);
   mlir::SymbolTable::setSymbolVisibility(alias, visibility);
@@ -3655,10 +3695,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
     materializedType = mte->getType();
 
   CharUnits align = getASTContext().getTypeAlignInChars(materializedType);
-
-  auto insertResult = materializedGlobalTemporaryMap.insert({mte, nullptr});
-  if (!insertResult.second)
-    errorNYI(mte->getSourceRange(), "duplicate materialized temporaries");
+  mlir::Location loc = getLoc(mte->getSourceRange());
 
   // FIXME: If an externally-visible declaration extends multiple temporaries,
   // we need to give each temporary the same name in every translation unit (and
@@ -3667,6 +3704,20 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
   llvm::raw_svector_ostream out(name);
   getCXXABI().getMangleContext().mangleReferenceTemporary(
       varDecl, mte->getManglingNumber(), out);
+
+  auto insertResult = materializedGlobalTemporaryMap.insert({mte, nullptr});
+  if (!insertResult.second) {
+    mlir::Type type = getTypes().convertTypeForMem(materializedType);
+    // We've seen this before: either we already created it or we're in the
+    // process of doing so.
+    if (!insertResult.first->second) {
+      // We recursively re-entered this function, probably during emission of
+      // the initializer. Create a placeholder.
+      insertResult.first->second =
+          createGlobalOp(loc, name, type, /*isConstant=*/false);
+    }
+    return insertResult.first->second;
+  }
 
   APValue *value = nullptr;
   if (mte->getStorageDuration() == SD_Static && varDecl->evaluateValue()) {
@@ -3720,8 +3771,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
       linkage = cir::GlobalLinkageKind::InternalLinkage;
     }
   }
-  mlir::Location loc = getLoc(mte->getSourceRange());
-  cir::GlobalOp gv = createGlobalOp(*this, loc, name, type, isConstant);
+  cir::GlobalOp gv = createGlobalOp(loc, name, type, isConstant);
   gv.setInitialValueAttr(initialValue);
 
   if (emitter)
@@ -3744,7 +3794,10 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
   assert(!cir::MissingFeatures::addressSpace());
 
   // Update the map with the new temporary. If we created a placeholder above,
-  // replace it with the new global now.
+  // erase it as well, the name will have been the same, so our symbol
+  // references would have been correct. We still do a 'replaceAllUsesWith' in
+  // case some sort of expression formed a reference to the placeholder
+  // temporary.
   mlir::Operation *&entry = materializedGlobalTemporaryMap[mte];
   if (entry) {
     entry->replaceAllUsesWith(cv);
@@ -3787,7 +3840,7 @@ cir::GlobalOp CIRGenModule::getAddrOfUnnamedGlobalConstantDecl(
   std::string name = numEntries == 0
                          ? ".constant"
                          : (Twine(".constant.") + Twine(numEntries)).str();
-  auto globalOp = createGlobalOp(*this, builder.getUnknownLoc(), name,
+  auto globalOp = createGlobalOp(builder.getUnknownLoc(), name,
                                  typedInit.getType(), /*is_constant=*/true);
   globalOp.setLinkage(cir::GlobalLinkageKind::PrivateLinkage);
 
@@ -3828,7 +3881,7 @@ CIRGenModule::getAddrOfTemplateParamObject(const TemplateParamObjectDecl *tpo) {
           : cir::GlobalLinkageKind::InternalLinkage;
 
   assert(!cir::MissingFeatures::addressSpace());
-  auto globalOp = createGlobalOp(*this, builder.getUnknownLoc(), name,
+  auto globalOp = createGlobalOp(builder.getUnknownLoc(), name,
                                  typedInit.getType(), /*is_constant=*/true);
   globalOp.setLinkage(linkage);
   globalOp.setAlignment(alignment.getAsAlign().value());

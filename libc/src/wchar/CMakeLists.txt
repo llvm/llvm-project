@@ -646,9 +646,13 @@ add_entrypoint_object(
   HDRS
     ungetwc.h
   DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.common
     libc.hdr.types.FILE
     libc.hdr.types.wint_t
+    libc.hdr.wchar_macros
     libc.src.__support.File.file
+    libc.src.__support.libc_errno
     libc.src.__support.macros.null_check
 )
 

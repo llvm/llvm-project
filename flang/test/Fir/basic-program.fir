@@ -156,6 +156,7 @@ func.func @_QQmain() {
 // PASSES-NEXT:    AbstractResultOpt
 // PASSES-NEXT:  'func.func' Pipeline
 // PASSES-NEXT:    AbstractResultOpt
+// PASSES-NEXT:    RematerializeFIRBoxOpsPass
 // PASSES-NEXT:  'gpu.module' Pipeline
 // PASSES-NEXT:   Pipeline Collection : ['func.func', 'gpu.func']
 // PASSES-NEXT:   'func.func' Pipeline
