@@ -63,7 +63,7 @@ function(_intersection output_var list1 list2)
 endfunction()
 
 set(AVAILABLE_CPU_FEATURES "")
-# Try compile a C file to check if flag is supported.
+# Try to compile a C file to check if a flag is supported.
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 foreach(feature IN LISTS ALL_CPU_FEATURES)
   try_compile(
