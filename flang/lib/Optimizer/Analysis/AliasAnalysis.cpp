@@ -1413,7 +1413,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
     if (accSourceReturn)
       return *accSourceReturn;
 
-    if (!breakFromLoop) {
+    if (!breakFromLoop && v) {
       // If we have reached a BlockArgument, try to pass through it
       // for some OpenACC operations.
       if (mlir::Value accOperand = mlir::acc::getACCOperandForBlockArg(v)) {
