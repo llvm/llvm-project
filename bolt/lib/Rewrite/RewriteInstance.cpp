@@ -5619,6 +5619,11 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
   assert((DynSymSection || BC->IsStaticExecutable) &&
          "dynamic symbol table expected");
   if (DynSymSection) {
+    uint64_t SavedPos = Out->os().tell();
+    uint64_t RequiredPos = DynSymSection->sh_offset + DynSymSection->sh_size;
+    if (SavedPos < RequiredPos)
+      Out->os().seek(RequiredPos);
+
     updateELFSymbolTable(
         File,
         /*IsDynSym=*/true,
@@ -5630,6 +5635,9 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
                            DynSymSection->sh_offset + Offset);
         },
         [](StringRef) -> size_t { return 0; });
+
+    if (SavedPos < RequiredPos)
+      Out->os().seek(SavedPos);
   }
 
   if (opts::RemoveSymtab)
