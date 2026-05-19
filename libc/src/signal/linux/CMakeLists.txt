@@ -10,6 +10,7 @@ add_header_library(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.linux.vdso
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
     libc.src.__support.error_or
     libc.src.__support.threads.raw_rwlock
 )
@@ -89,8 +90,7 @@ add_entrypoint_object(
   DEPENDS
     .signal_utils
     libc.hdr.types.sigset_t
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
     libc.src.errno.errno
 )
 
