@@ -1051,9 +1051,9 @@ protected:
 
   /// The parent value object, or nullptr if this has no parent.
   ValueObject *m_parent = nullptr;
-  /// The parent to report from GetParent(), if different from m_parent.
-  /// Used for synthetic children whose logical parent is the synthetic
-  /// ValueObject, not the infrastructure parent.
+  /// The parent to report from GetParent() when the value of m_parent does not
+  /// reflect the "display" or logical parent. Used for synthetic children whose
+  /// logical parent is the synthetic ValueObject. See also GetParent().
   ValueObject *m_logical_parent = nullptr;
   /// The root of the hierarchy for this ValueObject (or nullptr if never
   /// calculated).
