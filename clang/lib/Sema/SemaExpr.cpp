@@ -17279,10 +17279,9 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
     if (!TInfo->getType().isPODType(Context)) {
       Diag(TInfo->getTypeLoc().getBeginLoc(),
            TInfo->getType()->isObjCLifetimeType()
-             ? diag::warn_second_parameter_to_va_arg_ownership_qualified
-             : diag::warn_second_parameter_to_va_arg_not_pod)
-        << TInfo->getType()
-        << TInfo->getTypeLoc().getSourceRange();
+               ? diag::warn_second_parameter_to_va_arg_ownership_qualified
+               : diag::err_second_parameter_to_va_arg_not_pod)
+          << TInfo->getType() << TInfo->getTypeLoc().getSourceRange();
     }
 
     if (TInfo->getType()->isArrayType()) {
