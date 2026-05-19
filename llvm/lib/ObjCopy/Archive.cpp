@@ -14,11 +14,18 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::objcopy;
 using namespace llvm::object;
+
+/// Returns the format name for \p B, or an empty string if \p B is not an
+/// ObjectFile (e.g. an Archive).
+static StringRef getObjectFormatName(const Binary *B) {
+  if (const auto *OF = dyn_cast<object::ObjectFile>(B))
+    return OF->getFileFormatName();
+  return {};
+}
 
 Expected<std::vector<NewArchiveMember>>
 objcopy::createNewArchiveMembers(const MultiFormatConfig &Config,
@@ -37,9 +44,7 @@ objcopy::createNewArchiveMembers(const MultiFormatConfig &Config,
 
     const CommonConfig &CC = Config.getCommonConfig();
     if (CC.Verbose) {
-      StringRef FormatName;
-      if (auto *OF = dyn_cast<object::ObjectFile>(ChildOrErr->get()))
-        FormatName = OF->getFileFormatName();
+      StringRef FormatName = getObjectFormatName(ChildOrErr->get());
       outs() << "copy from '" << Ar.getFileName() << "(" << *ChildNameOrErr
              << ")' [" << FormatName << "] to '" << CC.OutputFilename << "("
              << *ChildNameOrErr << ")' [" << FormatName << "]\n";
