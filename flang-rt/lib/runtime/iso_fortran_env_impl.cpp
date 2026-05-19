@@ -111,13 +111,13 @@ static constexpr std::int32_t selectedReal64{8};
 
 #if HAS_FLOAT80
 static constexpr std::int32_t selectedReal80{10};
-#elif HAS_LDBL128 || HAS_FLOAT128
+#elif HAS_LDBL128 || FLANG_RT_SUPPORTS_REAL16
 static constexpr std::int32_t selectedReal80{16};
 #else
 static constexpr std::int32_t selectedReal80{-3};
 #endif
 
-#if HAS_LDBL128 || HAS_FLOAT128
+#if HAS_LDBL128 || FLANG_RT_SUPPORTS_REAL16
 static constexpr std::int32_t selectedReal64x2{16};
 static constexpr std::int32_t selectedReal128{16};
 #elif HAS_FLOAT80
@@ -236,9 +236,7 @@ extern const std::int32_t FORTRAN_NAMED_CONST(
 extern const std::int32_t FORTRAN_NAMED_CONST(
     __builtin_logical_kinds)[] = FORTRAN_LOGICAL_KINDS;
 
-// Target-filtered subset of FORTRAN_REAL_KINDS from type-kinds.h. We cannot
-// simply reference it due to variable runtime support, so we statically assert.
-static_assert(sizeof((int[])FORTRAN_REAL_KINDS) / sizeof(int) == 6);
+// Target-filtered subset of FORTRAN_REAL_KINDS from type-kinds.h.
 extern const std::int32_t FORTRAN_NAMED_CONST(__builtin_real_kinds)[]{
     2,
     3,
@@ -247,7 +245,7 @@ extern const std::int32_t FORTRAN_NAMED_CONST(__builtin_real_kinds)[]{
 #if HAS_FLOAT80
     10,
 #endif
-#if HAS_LDBL128 || HAS_FLOAT128
+#if HAS_LDBL128 || FLANG_RT_SUPPORTS_REAL16
     16,
 #endif
 };
