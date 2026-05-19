@@ -1857,8 +1857,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     uint64_t DstMinLen = DstTy.getElementCount().getKnownMinValue();
-    if (!IsMixedFixedIntoScalable &&
-        (Idx >= DstMinLen || Idx + Src1MinLen > DstMinLen)) {
+    if (Idx >= DstMinLen ||
+        (!IsMixedFixedIntoScalable && Idx + Src1MinLen > DstMinLen)) {
       report("Subvector type and index must not cause insert to overrun the "
              "vector being inserted into",
              MI);
