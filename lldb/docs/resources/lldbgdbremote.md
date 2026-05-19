@@ -2259,12 +2259,6 @@ following keys and values:
          be outside the watchpoint that was triggered, the remote
          stub should determine which watchpoint was triggered and
          report an address from within its range.
-         On an architecture like AArch64, the FAR address value 
-         reported with the watchpoint exception may not be contained
-         within a watched memory address range, e.g. a 16-byte write
-         which only overlaps with a watched range near the end may
-         report the start of the 16-byte write.  The stub is 
-         responsible for rewriting this to the closest watched region.
       2. Watchpoint hardware register index number.
       3. Actual watchpoint trap address, which may be outside
          the range of any watched region of memory. On MIPS, an addr

@@ -22,10 +22,15 @@ class TestUnavailableRegisters(GDBRemoteTestBase):
                 self.initial_x2_read = True
 
             def haltReason(self):
-                return "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;00:0100000000000000;01:;03:0500000000000000;04:00bc010001000000;"
+                # Register 1 cannot be fetched.
+                return (
+                    "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;00:0100000000000000;"
+                    "01:;"
+                    "03:0500000000000000;04:00bc010001000000;"
+                )
 
             def threadStopInfo(self, threadnum):
-                return "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;00:0100000000000000;01:;03:0500000000000000;04:00bc010001000000;"
+                return self.haltReason()
 
             def writeRegisters(self):
                 return "E02"
