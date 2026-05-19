@@ -30,6 +30,7 @@ namespace llvm {
 
 class AssumptionCache;
 class BasicBlock;
+class CallInst;
 class DominatorTree;
 class InnerLoopVectorizer;
 class IRBuilderBase;
@@ -40,6 +41,10 @@ class VPBasicBlock;
 class VPRegionBlock;
 class VPlan;
 class Value;
+
+namespace Intrinsic {
+typedef unsigned ID;
+}
 
 /// Returns a calculation for the total number of elements for a given \p VF.
 /// For fixed width vectors this value is a constant, whereas for scalable
@@ -318,6 +323,9 @@ struct VPTransformState {
 
 /// Struct to hold various analysis needed for cost computations.
 struct VPCostContext {
+  /// Choice for how to widen a call at a given VF.
+  enum class CallWideningKind { Scalarize, Intrinsic, VectorVariant };
+
   const TargetTransformInfo &TTI;
   const TargetLibraryInfo &TLI;
   VPTypeAnalysis Types;
@@ -349,6 +357,17 @@ struct VPCostContext {
   /// \returns how much the cost of a predicated block should be divided by.
   /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
   uint64_t getPredBlockCostDivisor(BasicBlock *BB) const;
+
+  /// Returns true if \p I is known to be scalarized at \p VF.
+  bool willBeScalarized(Instruction *I, ElementCount VF) const;
+
+  /// Forwards to LoopVectorizationCostModel::isMaskRequired.
+  bool isMaskRequired(Instruction *I) const;
+
+  /// Returns the legacy call widening decision for \p CI at \p VF, or
+  /// std::nullopt if none was recorded. Used only in asserts.
+  std::optional<CallWideningKind> getLegacyCallKind(CallInst *CI,
+                                                    ElementCount VF) const;
 
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
