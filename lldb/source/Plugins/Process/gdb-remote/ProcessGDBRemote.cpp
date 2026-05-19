@@ -5537,6 +5537,9 @@ llvm::Error ProcessGDBRemote::LoadModules() {
       if (obj->GetType() != ObjectFile::Type::eTypeExecutable)
         return IterationAction::Continue;
 
+      if (target.GetExecutableModulePointer() == module_sp.get())
+        return IterationAction::Stop;
+
       lldb::ModuleSP module_copy_sp = module_sp;
       target.SetExecutableModule(module_copy_sp, eLoadDependentsNo);
       return IterationAction::Stop;
