@@ -229,8 +229,8 @@ bool LoopReduceMotionPass::matchAndTransform(LoopStandardAnalysisResults &AR,
       continue;
 
     // Don't match if the Recurrence Value has other use in loop
-    bool hasOtherUse = llvm::any_of(RecurrenceValueFromPHI->users(),
-                                    [&](User *U) {
+    bool hasOtherUse =
+        llvm::any_of(RecurrenceValueFromPHI->users(), [&](User *U) {
           auto *Inst = dyn_cast<Instruction>(U);
           return Inst && Inst != PN && L.contains(Inst->getParent());
         });
