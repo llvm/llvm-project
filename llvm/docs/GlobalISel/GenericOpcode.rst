@@ -785,7 +785,7 @@ not the other way around.
 
 .. code-block:: none
 
-  %3:_(<vscale x 4 x i64>) = G_EXTRACT_SUBVECTOR %2:_(<vscale x 8 x i64>), 2
+  %3:_(<vscale x 4 x i64>) = G_EXTRACT_SUBVECTOR %2:_(<vscale x 8 x i64>), 4
 
 G_CONCAT_VECTORS
 ^^^^^^^^^^^^^^^^
