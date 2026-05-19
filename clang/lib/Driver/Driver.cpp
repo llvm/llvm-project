@@ -76,6 +76,7 @@
 #include "clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h" // IWYU pragma: keep
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2132,8 +2133,8 @@ void Driver::generateCompilationDiagnostics(
     return;
   }
 
-  // Don't attempt to generate preprocessed files if multiple -arch options are
-  // used, unless they're all duplicates.
+  // If there are multiple -arch options, build a reproducer only for the bound
+  // arch that crashed.
   llvm::StringSet<> ArchNames;
   for (const Arg *A : C.getArgs()) {
     if (A->getOption().matches(options::OPT_arch)) {
@@ -2142,10 +2143,17 @@ void Driver::generateCompilationDiagnostics(
     }
   }
   if (ArchNames.size() > 1) {
-    Diag(clang::diag::note_drv_command_failed_diag_msg)
-        << "Error generating preprocessed source(s) - cannot generate "
-           "preprocessed source with multiple -arch options.";
-    return;
+    // Build a reproducer only for the bound arch that crashed.
+    StringRef FailingArch = Cmd.getBoundArch();
+    if (FailingArch.empty()) {
+      Diag(clang::diag::note_drv_command_failed_diag_msg)
+          << "Error generating preprocessed source(s) - cannot generate "
+             "preprocessed source with multiple -arch options.";
+      return;
+    }
+    C.getArgs().eraseArg(options::OPT_arch);
+    C.getArgs().AddJoinedArg(nullptr, getOpts().getOption(options::OPT_arch),
+                             FailingArch);
   }
 
   // If we only have IR inputs there's no need for preprocessing.
@@ -6101,6 +6109,13 @@ InputInfoList Driver::BuildJobsForActionNoCache(
         &CachedResults,
     Action::OffloadKind TargetDeviceOffloadKind) const {
   llvm::PrettyStackTraceString CrashInfo("Building compilation jobs");
+
+  // Track the bound arch for commands constructed in this scope so
+  // generateCompilationDiagnostics can identify the crashing arch.
+  StringRef SavedBoundArch = C.getCurrentBoundArch();
+  C.setCurrentBoundArch(BoundArch);
+  auto RestoreBoundArch =
+      llvm::scope_exit([&] { C.setCurrentBoundArch(SavedBoundArch); });
 
   InputInfoList OffloadDependencesInputInfo;
   bool BuildingForOffloadDevice = TargetDeviceOffloadKind != Action::OFK_None;

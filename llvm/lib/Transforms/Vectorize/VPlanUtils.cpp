@@ -455,6 +455,10 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
         return preservesUniformity(R->getOpcode()) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
+      .Case([](const VPPhi *) {
+        // Bail out on VPPhi, as we can end up in infinite cycles.
+        return false;
+      })
       .Case([](const VPInstruction *VPI) {
         return (VPI->isSingleScalar() || VPI->isVectorToScalar() ||
                 preservesUniformity(VPI->getOpcode())) &&
@@ -702,6 +706,18 @@ bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
   // successor.
   return VPB->getNumSuccessors() >= 2 &&
          VPBlockUtils::isHeader(VPB->getSuccessors().back(), VPDT);
+}
+
+std::pair<VPBasicBlock *, VPBasicBlock *>
+VPBlockUtils::getPlainCFGHeaderAndLatch(const VPlan &Plan) {
+  auto *Header = cast<VPBasicBlock>(
+      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+  auto *Latch = cast<VPBasicBlock>(Header->getPredecessors()[1]);
+  return {Header, Latch};
+}
+
+VPBasicBlock *VPBlockUtils::getPlainCFGMiddleBlock(const VPlan &Plan) {
+  return cast<VPBasicBlock>(Plan.getScalarPreheader()->getPredecessors()[0]);
 }
 
 std::optional<MemoryLocation>

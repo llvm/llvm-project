@@ -25,6 +25,26 @@ EOF
 // RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/modules -y \
 // RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck --check-prefix=WARN %s
 
+// Verify both linkers emit a valid .debug_names section for input with
+// -gmodules skeleton CUs. In the parallel linker, without dropping
+// DW_AT_GNU_dwo_id and giving each compile unit a unique ID, .debug_names
+// entries are misattributed to the wrong CU and CUs look like skeleton CUs
+// needing a (non-existent) .dwo.
+// RUN: rm -rf %t.classic.dSYM
+// RUN: dsymutil --linker classic --accelerator Dwarf -verify -f \
+// RUN:   -oso-prepend-path=%p/../Inputs/modules \
+// RUN:   -y %p/dummy-debug-map.map -o %t.classic.dSYM
+// RUN: llvm-dwarfdump -v --debug-info %t.classic.dSYM \
+// RUN:     | FileCheck --check-prefix=ACCEL %s
+// RUN: rm -rf %t.parallel.dSYM
+// RUN: dsymutil --linker parallel --accelerator Dwarf -verify -f \
+// RUN:   -oso-prepend-path=%p/../Inputs/modules \
+// RUN:   -y %p/dummy-debug-map.map -o %t.parallel.dSYM
+// RUN: llvm-dwarfdump -v --debug-info %t.parallel.dSYM \
+// RUN:     | FileCheck --check-prefix=ACCEL %s
+
+// ACCEL: DW_TAG_compile_unit
+
 // WARN-NOT: warning: hash mismatch
 
 // ---------------------------------------------------------------------

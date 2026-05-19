@@ -437,7 +437,7 @@ lldb::SBValue SBValue::CreateValueFromExpression(const char *name,
     new_value_sp = value_sp->CreateChildValueObjectFromExpression(
         name, expression, exe_ctx, options.ref());
     if (new_value_sp)
-      new_value_sp->SetName(ConstString(name));
+      new_value_sp->SetName(name);
   }
   sb_value.SetSP(new_value_sp);
   return sb_value;
@@ -1104,7 +1104,7 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
                                 value_sp.get());
 
   if (name)
-    res_val_sp->SetName(ConstString(name));
+    res_val_sp->SetName(name);
 
   SBValue result;
   result.SetSP(res_val_sp, options.GetFetchDynamicValue());
@@ -1314,7 +1314,7 @@ lldb::SBValue SBValue::Clone(const char *new_name) {
   lldb::ValueObjectSP value_sp(GetSP(locker));
 
   if (value_sp)
-    return lldb::SBValue(value_sp->Clone(ConstString(new_name)));
+    return lldb::SBValue(value_sp->Clone(new_name));
   else
     return lldb::SBValue();
 }
