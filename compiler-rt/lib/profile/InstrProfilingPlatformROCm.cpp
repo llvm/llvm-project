@@ -914,3 +914,58 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
 
   return Ret;
 }
+
+/* Interceptors for hipModuleLoad* / hipModuleUnload.
+ *
+ * Linux only. Windows would need import-table or trampoline patching
+ * via interception_win.cpp instead of dlsym(RTLD_NEXT). */
+
+#if defined(__linux__) && !defined(_WIN32)
+
+INTERCEPTOR(int, hipModuleLoad, void **module, const char *fname) {
+  int rc = REAL(hipModuleLoad)(module, fname);
+  /* Pass NULL image: no in-memory ELF is available for filename loads,
+   * so the register hook skips symbol enumeration. */
+  __llvm_profile_offload_register_dynamic_module(rc, module, nullptr);
+  return rc;
+}
+
+INTERCEPTOR(int, hipModuleLoadData, void **module, const void *image) {
+  int rc = REAL(hipModuleLoadData)(module, image);
+  __llvm_profile_offload_register_dynamic_module(rc, module, image);
+  return rc;
+}
+
+INTERCEPTOR(int, hipModuleLoadDataEx, void **module, const void *image,
+            unsigned numOptions, void **options, void **optionValues) {
+  int rc = REAL(hipModuleLoadDataEx)(module, image, numOptions, options,
+                                     optionValues);
+  __llvm_profile_offload_register_dynamic_module(rc, module, image);
+  return rc;
+}
+
+INTERCEPTOR(int, hipModuleUnload, void *module) {
+  /* Drain counters before the module is destroyed; device addresses
+   * captured at register time are invalid after unload. */
+  __llvm_profile_offload_unregister_dynamic_module(module);
+  return REAL(hipModuleUnload)(module);
+}
+
+/* Runs at C++ dynamic init time, before any user hipModuleLoad* call.
+ *
+ * INTERCEPT_FUNCTION must run unconditionally: our wrapper symbol
+ * preempts libamdhip64.so's at link time, so REAL() must be populated
+ * or the first user call segfaults. */
+static int installHipModuleInterceptors() {
+  if (isVerboseMode())
+    PROF_NOTE("%s", "Installing hipModuleLoad*/hipModuleUnload interceptors\n");
+  INTERCEPT_FUNCTION(hipModuleLoad);
+  INTERCEPT_FUNCTION(hipModuleLoadData);
+  INTERCEPT_FUNCTION(hipModuleLoadDataEx);
+  INTERCEPT_FUNCTION(hipModuleUnload);
+  return 0;
+}
+
+static int HipModuleInterceptorsInstalled = installHipModuleInterceptors();
+
+#endif /* __linux__ */

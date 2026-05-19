@@ -447,12 +447,6 @@ private:
 
   /// Create HIP device variable registration for profile symbols
   void createHIPDeviceVariableRegistration();
-
-  /// Create HIP dynamic module registration call
-  void createHIPDynamicModuleRegistration();
-
-  /// Create HIP dynamic module unregistration call
-  void createHIPDynamicModuleUnregistration();
 };
 
 ///
@@ -1041,8 +1035,10 @@ bool InstrLowerer::lower() {
   // symbols
   createHIPDeviceVariableRegistration();
 
-  createHIPDynamicModuleRegistration();
-  createHIPDynamicModuleUnregistration();
+  // HIP dynamic-module instrumentation (hipModuleLoad* / hipModuleUnload)
+  // is handled by interceptors in
+  // compiler-rt/lib/profile/InstrProfilingPlatformROCm.cpp — no IR-level
+  // rewrite is performed here.
 
   // Emit runtime hook for the cases where the target does not unconditionally
   // require pulling in profile runtime, and coverage is enabled on code that is
@@ -2062,102 +2058,6 @@ void InstrLowerer::emitVNodes() {
   // VNodesVar is used by runtime but not referenced via relocation by other
   // sections. Conservatively make it linker retained.
   UsedVars.push_back(VNodesVar);
-}
-
-void InstrLowerer::createHIPDynamicModuleRegistration() {
-  if (isGPUProfTarget(M))
-    return;
-  StringRef FuncNames[] = {"hipModuleLoad", "hipModuleLoadData",
-                           "hipModuleLoadDataEx"};
-  for (StringRef FuncName : FuncNames) {
-    Function *F = M.getFunction(FuncName);
-    if (!F)
-      continue;
-
-    for (User *U : F->users()) {
-      if (auto *CB = dyn_cast<CallBase>(U)) {
-        Instruction *InsertPt = nullptr;
-        // If the call is an invoke instruction, we should insert the
-        // registration call in the normal destination block.
-        if (auto *Invoke = dyn_cast<InvokeInst>(CB)) {
-          InsertPt = &*Invoke->getNormalDest()->getFirstInsertionPt();
-        } else if (CB->isTerminator()) {
-          // If it's another kind of terminator (e.g., callbr), we don't
-          // know the semantics of the successors, so we conservatively
-          // skip it. The hipModuleLoad* functions are not expected to be
-          // used in other terminator instructions.
-          continue;
-        } else {
-          // This is a normal call instruction, so we can insert after it.
-          InsertPt = CB->getNextNode();
-        }
-
-        // If there's no valid insertion point (e.g., a malformed block),
-        // skip.
-        if (!InsertPt)
-          continue;
-
-        IRBuilder<> Builder(InsertPt);
-        auto *VoidTy = Type::getVoidTy(M.getContext());
-        auto *VoidPtrTy = PointerType::getUnqual(M.getContext());
-        auto *Int32Ty = Type::getInt32Ty(M.getContext());
-        // register(int rc, void **modulePtr, const void *image)
-        auto *RegisterDynamicModuleTy =
-            FunctionType::get(VoidTy, {Int32Ty, VoidPtrTy, VoidPtrTy}, false);
-        FunctionCallee RegisterFunc = M.getOrInsertFunction(
-            "__llvm_profile_offload_register_dynamic_module",
-            RegisterDynamicModuleTy);
-
-        // Arg 0: return value of the hipModuleLoad* call (hipError_t / i32).
-        Value *ReturnValue = CB;
-        // Arg 1: module handle (out-parameter, hipModule_t*).
-        Value *ModuleHandle = CB->getArgOperand(0);
-        // Arg 2: code object image pointer.
-        // For hipModuleLoadData(module, image) and
-        // hipModuleLoadDataEx(module, image, ...), image is arg 1.
-        // For hipModuleLoad(module, fname), arg 1 is a filename — pass NULL.
-        Value *ImagePtr;
-        if (FuncName == "hipModuleLoad")
-          ImagePtr =
-              ConstantPointerNull::get(PointerType::getUnqual(M.getContext()));
-        else
-          ImagePtr = CB->getArgOperand(1);
-
-        Builder.CreateCall(RegisterFunc, {ReturnValue, ModuleHandle, ImagePtr});
-      }
-    }
-  }
-}
-
-void InstrLowerer::createHIPDynamicModuleUnregistration() {
-  Function *F = M.getFunction("hipModuleUnload");
-  if (!F)
-    return;
-
-  for (User *U : F->users()) {
-    if (auto *CB = dyn_cast_or_null<CallBase>(U)) {
-      // The insertion point is right before the call to hipModuleUnload.
-      Instruction *InsertPt = CB;
-
-      IRBuilder<> Builder(InsertPt);
-      auto *VoidTy = Type::getVoidTy(M.getContext());
-      auto *VoidPtrTy = PointerType::getUnqual(M.getContext());
-
-      auto *UnregisterDynamicModuleTy =
-          FunctionType::get(VoidTy, {VoidPtrTy}, false);
-      FunctionCallee UnregisterFunc = M.getOrInsertFunction(
-          "__llvm_profile_offload_unregister_dynamic_module",
-          UnregisterDynamicModuleTy);
-
-      // The argument is the module handle, which is the first
-      // argument to the hipModuleUnload call.
-      Value *ModuleHandle = CB->getArgOperand(0);
-      Value *CastedModuleHandle =
-          Builder.CreatePointerCast(ModuleHandle, VoidPtrTy);
-
-      Builder.CreateCall(UnregisterFunc, {CastedModuleHandle});
-    }
-  }
 }
 
 void InstrLowerer::emitNameData() {
