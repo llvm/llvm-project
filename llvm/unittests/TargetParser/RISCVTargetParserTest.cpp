@@ -109,13 +109,14 @@ TEST(RISCVTuneFeature, AllTuneFeatures) {
   RISCV::getAllTuneFeatures(AllTuneFeatures);
   // Only allowed subtarget features that are explicitly marked by
   // special TableGen class.
-  EXPECT_EQ(AllTuneFeatures.size(), 20U);
+  EXPECT_EQ(AllTuneFeatures.size(), 21U);
   for (auto F : {"conditional-cmv-fusion",
                  "disable-latency-sched-heuristic",
                  "disable-misched-load-clustering",
                  "disable-misched-store-clustering",
                  "disable-postmisched-load-clustering",
                  "disable-postmisched-store-clustering",
+                 "enable-make-compressible-opt",
                  "single-element-vec-fp64",
                  "no-default-unroll",
                  "no-sink-splat-operands",

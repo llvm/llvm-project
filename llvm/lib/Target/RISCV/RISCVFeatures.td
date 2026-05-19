@@ -1950,6 +1950,11 @@ def TuneEnableSelectOptimize
     : SubtargetFeature<"enable-select-opt", "EnableSelectOptimize", "true",
                        "Enable the select optimize pass for select loop heuristics">;
 
+def TuneEnableMakeCompressibleOpt
+    : RISCVSimpleTuneFeature<"enable-make-compressible-opt",
+                             "EnableMakeCompressibleOpt", "true",
+                             "Enable the make compressible optimization pass">;
+
 foreach nf = {2-8} in
   def TuneOptimizedNF#nf#SegmentLoadStore :
       SubtargetFeature<"optimized-nf"#nf#"-segment-load-store",
@@ -2093,4 +2098,3 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
 
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors">;
-
