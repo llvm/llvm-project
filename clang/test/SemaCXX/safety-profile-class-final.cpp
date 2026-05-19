@@ -145,6 +145,79 @@ auto sfinae_pick(...) -> int { return 1; }
 static_assert(__is_same(decltype(sfinae_pick<long>(0L)), long), // expected-note {{while substituting explicitly-specified template arguments into function template 'sfinae_pick'}}
               "profile violation must not SFINAE out the first overload");
 
+// Local classes inside a function body fire (a function is not itself a
+// class-finalization subject).
+void test_local_class() {
+  struct LocalInFn { int m; }; // expected-error {{test profile fired on completion of class 'LocalInFn' under profile 'test::class_final'}}
+  LocalInFn x;
+  (void)x;
+}
+
+// Function-level suppress silences a local class defined in its body via
+// the parse-time ProfileSuppressStack (not via the lexical-parent walk;
+// the walk goes through the *Decl* chain, not statement context).
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::class_final)]]
+void test_local_class_suppressed_via_fn() {
+  struct LocalInSuppressedFn { int m; };
+  LocalInSuppressedFn x;
+  (void)x;
+}
+
+// Local classes inside a lambda *body* still fire. Only the closure type
+// itself is filtered by isLambda(); user-defined classes nested inside the
+// closure's call operator are not lambdas.
+void test_local_class_inside_lambda() {
+  auto f = []() {
+    struct LocalInLambda { int m; }; // expected-error {{test profile fired on completion of class 'LocalInLambda' under profile 'test::class_final'}}
+    LocalInLambda x;
+    (void)x;
+  };
+  f();
+}
+
+// Anonymous union and anonymous struct members fire with synthesized
+// "(unnamed ...)" diagnostic names.
+struct HasAnonymousMembers { // expected-error {{test profile fired on completion of class 'HasAnonymousMembers' under profile 'test::class_final'}}
+  union { // expected-error {{test profile fired on completion of class '(unnamed union}}
+    int a;
+    float b;
+  };
+  struct { // expected-error {{test profile fired on completion of class '(unnamed struct}}
+    int x;
+  };
+};
+
+// Class template partial specialization instantiation. The partial
+// specialization itself is dependent (skipped); its concrete instantiation
+// fires at the primary template's location with a note at the use site.
+template <typename T> struct PartialSpec { T m; }; // expected-error {{test profile fired on completion of class 'PartialSpec<int *>' under profile 'test::class_final'}}
+template <typename T> struct PartialSpec<T*> {
+  T *p;
+};
+void use_partial_spec() {
+  PartialSpec<int *> x; // expected-note {{in instantiation of template class 'PartialSpec<int *>' requested here}}
+  (void)x;
+}
+
+// Explicit instantiation *definition* fires at the explicit-instantiation
+// directive's own line (unlike implicit instantiation, which fires at the
+// primary template's line).
+template <typename T> struct ExplicitInst { T m; };
+template struct ExplicitInst<int>; // expected-error {{test profile fired on completion of class 'ExplicitInst<int>' under profile 'test::class_final'}} \
+                                   // expected-note {{in instantiation of template class 'ExplicitInst<int>' requested here}}
+
+// Explicit instantiation *declaration* (extern template) still instantiates
+// the class itself per C++ rules, so it also fires at its own line.
+extern template struct ExplicitInst<short>; // expected-error {{test profile fired on completion of class 'ExplicitInst<short>' under profile 'test::class_final'}} \
+                                            // expected-note {{in instantiation of template class 'ExplicitInst<short>' requested here}}
+
+// Friend class definitions are completed normally and fire at their own line.
+class HasFriendDecl { // expected-error {{test profile fired on completion of class 'HasFriendDecl' under profile 'test::class_final'}}
+  friend struct FriendedLater;
+};
+struct FriendedLater { int m; }; // expected-error {{test profile fired on completion of class 'FriendedLater' under profile 'test::class_final'}}
+
 // Without `-fprofiles`, the enforce attribute is `warn_attribute_ignored`
 // and the diagnostic never fires. This is exercised by the no-profiles RUN
 // line, which expects only the two attribute-ignored warnings above.
