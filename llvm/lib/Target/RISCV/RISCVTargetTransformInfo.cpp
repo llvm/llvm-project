@@ -873,6 +873,13 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
                                         LT.second, CostKind));
   }
   case TTI::SK_Broadcast: {
+    // Check for broadcast loads, which are synthesized by optimized zero-stride
+    // loads (this is checked in RISCVTTIImpl::isLegalBroadcastLoad).
+    bool IsLoad = !Args.empty() && isa<LoadInst>(Args[0]);
+    if (IsLoad && isLegalBroadcastLoad(SrcTy->getElementType(),
+                                       LT.second.getVectorElementCount()))
+      return 0;
+
     bool HasScalar = (Args.size() > 0) && (Operator::getOpcode(Args[0]) ==
                                            Instruction::InsertElement);
     if (LT.second.getScalarSizeInBits() == 1) {
@@ -3406,6 +3413,30 @@ bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy,
   if (!isLegalMaskedLoadStore(DataTy, Alignment))
     return false;
   return true;
+}
+
+bool RISCVTTIImpl::isLegalBroadcastLoad(Type *ElementTy,
+                                        ElementCount NumElements) const {
+  // Optimized zero-stride loads can be treated as broadcasts.
+  if (!(ST->hasVInstructions() && ST->hasOptimizedZeroStrideLoad()))
+    return false;
+
+  switch (ElementTy->getScalarSizeInBits()) {
+  case 8:
+    return ElementTy->isIntegerTy();
+  case 16:
+    return ElementTy->isIntegerTy() ||
+           (ElementTy->isHalfTy() && ST->hasVInstructionsF16Minimal()) ||
+           (ElementTy->isBFloatTy() && ST->hasVInstructionsBF16Minimal());
+  case 32:
+    return ElementTy->isIntegerTy() ||
+           (ElementTy->isFloatTy() && ST->hasVInstructionsF32());
+  case 64:
+    return (ElementTy->isIntegerTy() && ST->hasVInstructionsI64()) ||
+           (ElementTy->isFloatingPointTy() && ST->hasVInstructionsF64());
+  }
+
+  return false;
 }
 
 /// See if \p I should be considered for address type promotion. We check if \p
