@@ -55,21 +55,20 @@ struct InjectIncompleteReturnConsumer : public ASTConsumer {
   void HandleTranslationUnit(ASTContext &Ctx) override {
     // Create a forward-declared C++ class (no definition).
     IdentifierInfo &ClassId = Ctx.Idents.get("IncompleteClass");
-    auto *RD = CXXRecordDecl::Create(Ctx, TagTypeKind::Class,
-                                     Ctx.getTranslationUnitDecl(),
-                                     SourceLocation(), SourceLocation(),
-                                     &ClassId, /*PrevDecl=*/nullptr);
+    auto *RD = CXXRecordDecl::Create(
+        Ctx, TagTypeKind::Class, Ctx.getTranslationUnitDecl(), SourceLocation(),
+        SourceLocation(), &ClassId, /*PrevDecl=*/nullptr);
     Ctx.getTranslationUnitDecl()->addDecl(RD);
     QualType ClassTy = Ctx.getCanonicalTagType(RD);
 
     // Create a function declaration: IncompleteClass make();
     IdentifierInfo &FnId = Ctx.Idents.get("__test_make_incomplete");
-    QualType FnTy = Ctx.getFunctionType(ClassTy, {},
-                                        FunctionProtoType::ExtProtoInfo());
+    QualType FnTy =
+        Ctx.getFunctionType(ClassTy, {}, FunctionProtoType::ExtProtoInfo());
     auto *MakeFD = FunctionDecl::Create(
-        Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(),
-        SourceLocation(), DeclarationName(&FnId), FnTy,
-        Ctx.getTrivialTypeSourceInfo(FnTy), SC_Extern);
+        Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
+        DeclarationName(&FnId), FnTy, Ctx.getTrivialTypeSourceInfo(FnTy),
+        SC_Extern);
     Ctx.getTranslationUnitDecl()->addDecl(MakeFD);
 
     // Create a DeclRefExpr referencing 'make'.
@@ -98,9 +97,9 @@ struct InjectIncompleteReturnConsumer : public ASTConsumer {
     QualType VoidFnTy =
         Ctx.getFunctionType(Ctx.VoidTy, {}, FunctionProtoType::ExtProtoInfo());
     auto *CallerFD = FunctionDecl::Create(
-        Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(),
-        SourceLocation(), DeclarationName(&CallerId),
-        VoidFnTy, Ctx.getTrivialTypeSourceInfo(VoidFnTy), SC_None);
+        Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
+        DeclarationName(&CallerId), VoidFnTy,
+        Ctx.getTrivialTypeSourceInfo(VoidFnTy), SC_None);
     CallerFD->setBody(Body);
     Ctx.getTranslationUnitDecl()->addDecl(CallerFD);
 
@@ -123,8 +122,8 @@ static void runIncompleteReturnTypeCodeGen() {
   CI.createDiagnostics();
 
   CI.getTargetOpts().Triple = "spir64-unknown-unknown";
-  CI.setTarget(TargetInfo::CreateTargetInfo(CI.getDiagnostics(),
-                                            CI.getTargetOpts()));
+  CI.setTarget(
+      TargetInfo::CreateTargetInfo(CI.getDiagnostics(), CI.getTargetOpts()));
 
   CI.createFileManager();
   CI.createSourceManager();
