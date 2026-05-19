@@ -4444,7 +4444,7 @@ static Instruction *foldSelectNegNot(SelectInst &SI,
     return nullptr;
 
   auto matchNegNot = [&](Value *Neg, Value *Not, Value *&X) -> bool {
-    return match(Neg, m_OneUse(m_Sub(m_Zero(), m_Value(X)))) &&
+    return match(Neg, m_OneUse(m_Neg(m_Value(X)))) &&
            match(Not, m_OneUse(m_Not(m_Specific(X))));
   };
 
