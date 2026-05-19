@@ -2593,7 +2593,7 @@ VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
       (Ctx.getLangOpts().CPlusPlus ||
        (isConstexpr() && Ctx.getLangOpts().C23)) &&
       EStatus.DiagEmitted) {
-    if (!Ctx.maybeFoldMSConstexpr(Notes))
+    if (!Ctx.maybeFoldMSConstexpr(Eval->Evaluated, Notes))
       Result = false;
   }
 
