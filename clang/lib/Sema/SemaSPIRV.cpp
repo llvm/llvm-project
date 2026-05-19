@@ -416,6 +416,8 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     TheCall->setType(RetTy);
     break;
   }
+  case SPIRV::BI__builtin_spirv_test_incomplete_return:
+    break;
   }
   return false;
 }
