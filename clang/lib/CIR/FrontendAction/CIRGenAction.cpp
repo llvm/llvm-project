@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/DiagnosticHandler.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -193,6 +194,14 @@ public:
     for (auto &LM : LinkModules) {
       assert(LM.Module && "LinkModule does not actually have a module");
 
+      if (LM.PropagateAttrs)
+        for (llvm::Function &F : *LM.Module) {
+          if (F.isIntrinsic())
+            continue;
+          clang::CodeGen::mergeDefaultFunctionDefinitionAttributes(
+              F, CGO, CI.getLangOpts(), CI.getTargetOpts(), LM.Internalize);
+        }
+
       bool Err;
       if (LM.Internalize) {
         Err = llvm::Linker::linkModules(
@@ -237,12 +246,12 @@ void CIRGenConsumer::anchor() {}
 
 CIRGenAction::CIRGenAction(OutputType Act, mlir::MLIRContext *MLIRCtx)
     : MLIRCtx(MLIRCtx ? MLIRCtx : new mlir::MLIRContext),
-      VMContext(std::make_unique<llvm::LLVMContext>()), Action(Act) {}
+      Ctx(std::make_unique<llvm::LLVMContext>()), Action(Act) {}
 
 CIRGenAction::~CIRGenAction() { MLIRMod.release(); }
 
 bool CIRGenAction::BeginSourceFileAction(CompilerInstance &CI) {
-  if (clang::loadLinkModules(CI, *VMContext, LinkModules))
+  if (clang::loadLinkModules(CI, *Ctx, LinkModules))
     return false;
   return ASTFrontendAction::BeginSourceFileAction(CI);
 }
@@ -273,7 +282,7 @@ CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     Out = getOutputStream(CI, InFile, Action);
 
   auto Result = std::make_unique<cir::CIRGenConsumer>(
-      Action, CI, CI.getCodeGenOpts(), std::move(Out), *VMContext, LinkModules);
+      Action, CI, CI.getCodeGenOpts(), std::move(Out), *Ctx, LinkModules);
 
   return Result;
 }

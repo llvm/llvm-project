@@ -10,6 +10,18 @@
 // RUN: not %clang_cc1 -O1 -triple x86_64-unknown-linux-gnu -fclangir \
 // RUN:     -mlink-bitcode-file no-such-file.bc -emit-llvm -o - %s 2>&1 \
 // RUN:     | FileCheck -check-prefix=CHECK-NO-FILE %s
+//
+// -mlink-builtin-bitcode propagates the host TU's default function-definition
+// attributes onto linked-in functions. Linking at -O0 keeps f from being
+// inlined into g so the propagated attribute group is observable.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-cpu skylake -fclangir \
+// RUN:     -mlink-builtin-bitcode %t.bc -emit-llvm -o - %s \
+// RUN:     | FileCheck -check-prefix=CHECK-PROPAGATE %s
+//
+// -mlink-bitcode-file does NOT propagate (PropagateAttrs=false).
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-cpu skylake -fclangir \
+// RUN:     -mlink-bitcode-file %t.bc -emit-llvm -o - %s \
+// RUN:     | FileCheck -check-prefix=CHECK-NO-PROPAGATE %s
 
 int f(void);
 
@@ -46,6 +58,12 @@ int g(void) {
 
 // CHECK-BC-LABEL: define{{.*}} i32 @f
 // CHECK-BC2-LABEL: define{{.*}} i32 @f2
+
+// CHECK-PROPAGATE: define internal{{.*}} i32 @f(){{[^#]*}}#[[F_ATTRS:[0-9]+]]
+// CHECK-PROPAGATE: attributes #[[F_ATTRS]] = {{.*}}"target-cpu"="skylake"
+
+// CHECK-NO-PROPAGATE: define{{.*}} i32 @f(){{[^#]*}}#[[F_ATTRS:[0-9]+]]
+// CHECK-NO-PROPAGATE-NOT: attributes #[[F_ATTRS]] = {{.*}}"target-cpu"="skylake"
 
 #endif
 
