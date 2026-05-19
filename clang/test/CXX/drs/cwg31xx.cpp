@@ -63,9 +63,9 @@ namespace cwg3135 {
 // CWG3135: `x` is of type Pinned rather than Pinned&&. 
 // This leads to the deleted copy ctor being called.
 auto [x] = Source{};
-// since-cxx17-error-re@-1 {{call to deleted constructor of 'std::tuple_element<0U{{L*}}, Source>::type' (aka 'cwg3135::Pinned')}}
-// since-cxx17-note@-2 {{in implicit initialization of binding declaration 'x'}}
-// since-cxx17-note@#cwg3135-pinned-ctor {{'Pinned' has been explicitly marked deleted here}}
+// since-cxx17-error@-1 {{initializing binding of type 'Pinned' invokes deleted constructor}}
+//   since-cxx17-note@-2 {{in implicit initialization of binding declaration 'x'}}
+//   since-cxx17-note@#cwg3135-pinned-ctor {{'Pinned' has been explicitly marked deleted here}}
 #endif
 } // namespace cwg3135
 
