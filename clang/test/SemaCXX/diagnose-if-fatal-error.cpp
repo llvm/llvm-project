@@ -7,9 +7,16 @@ template <typename T> struct S {
   constexpr T get() const { return val; }
 };
 
-void bad(int i) __attribute__((diagnose_if(i, "bad", "error"))); // expected-note {{from 'diagnose_if'}}
+// The isValueDependent() guard must not suppress diagnose_if after instantiation.
+struct Bar {
+  template <typename T>
+  Bar(S<T> s) __attribute__((diagnose_if(s.get() == 1, "one", "error"))) {} // expected-note {{from 'diagnose_if'}}
+};
+void instantiated() { Bar{S<int>{1}}; } // expected-error {{one}}
+
+// After fatal error, the guard must skip evaluation instead of crashing.
+void bad(int i) __attribute__((diagnose_if(i, "bad", "error")));
 void blast() {
-  bad(1); // expected-error {{bad}}
   bad(1); // expected-error@* {{too many errors}}
 }
 
