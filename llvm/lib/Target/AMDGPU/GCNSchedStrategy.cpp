@@ -2221,13 +2221,11 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
       }
       ++RegionEnd;
     }
-    LLVM_DEBUG(dbgs() << "Scheduling " << *MI);
-  }
-
-  // Liveness queries below need the final region layout.
-  for (MachineInstr *MI : MIOrder) {
-    if (MI->isDebugInstr())
+    if (MI->isDebugInstr()) {
+      LLVM_DEBUG(dbgs() << "Scheduling " << *MI);
       continue;
+    }
+
     // Reset read-undef flags and update them later.
     for (MachineOperand &Op : MI->all_defs())
       Op.setIsUndef(false);
@@ -2241,6 +2239,7 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
       // Adjust for missing dead-def flags.
       RegOpers.detectDeadDefs(*MI, *DAG.LIS);
     }
+    LLVM_DEBUG(dbgs() << "Scheduling " << *MI);
   }
 
   // The region end doesn't change throughout scheduling since it itself is
@@ -2251,9 +2250,9 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
 
 /// Returns true when \p RD will already be in AGPR-form after the rewrite, so
 /// no bridge copy is needed at this reaching definition.
-static bool reachingDefStaysAGPR(MachineInstr *RD,
-                                 const DenseSet<Register> &CandSrc2Regs,
-                                 const SIInstrInfo &TII) {
+static bool isReachingDefAGPRForm(MachineInstr *RD,
+                                  const DenseSet<Register> &CandSrc2Regs,
+                                  const SIInstrInfo &TII) {
   if (TII.isMAI(*RD))
     return true;
   if (RD->getOpcode() == AMDGPU::AV_MOV_B32_IMM_PSEUDO)
@@ -2270,9 +2269,10 @@ bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
     return false;
   // Reject candidates whose users force an unavoidable bridge copy.
   Register DstReg = MI->getOperand(0).getReg();
-  for (const MachineOperand &Use : DAG.MRI.use_nodbg_operands(DstReg))
+  for (const MachineOperand &Use : DAG.MRI.use_nodbg_operands(DstReg)) {
     if (!TII->isMAI(*Use.getParent()) && !Use.getParent()->isCopy())
       return false;
+  }
   return true;
 }
 
@@ -2316,7 +2316,7 @@ bool RewriteMFMAFormStage::initHeuristics(
 
         for (SlotIndex RDIdx : Src2ReachingDefs) {
           MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
-          if (reachingDefStaysAGPR(RD, CandSrc2Regs, *TII))
+          if (isReachingDefAGPRForm(RD, CandSrc2Regs, *TII))
             continue;
           CopyForDef.insert(RD);
         }
@@ -2593,7 +2593,7 @@ bool RewriteMFMAFormStage::rewrite(
 
       for (SlotIndex RDIndex : Src2ReachingDefs) {
         MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-        if (reachingDefStaysAGPR(RD, RewriteSrc2Regs, *TII))
+        if (isReachingDefAGPRForm(RD, RewriteSrc2Regs, *TII))
           continue;
 
         Src2DefsReplace.insert(RD);
