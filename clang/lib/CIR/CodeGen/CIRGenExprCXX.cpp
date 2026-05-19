@@ -969,7 +969,8 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf, const CXXNewExpr *e,
     typedef mlir::Value RValueTy;
     static RValue get(CIRGenFunction &cgf, ValueTy v) {
       while (cir::CastOp castOp = v.getDefiningOp<cir::CastOp>()) {
-        if (castOp.getKind() != cir::CastKind::address_space)
+        if (castOp.getKind() != cir::CastKind::address_space &&
+            castOp.getKind() != cir::CastKind::bitcast)
           break;
         v = castOp.getSrc();
       }

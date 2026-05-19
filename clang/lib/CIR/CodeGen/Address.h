@@ -148,6 +148,12 @@ public:
     return mlir::dyn_cast_or_null<OpTy>(getDefiningOp());
   }
 
+  /// Returns the cast kind that preserves the storage object
+  bool isAllocaPreservingCast(cir::CastKind kind) const {
+    return kind == cir::CastKind::address_space ||
+           kind == cir::CastKind::bitcast;
+  }
+
   /// Return the underlying alloca for this address, if any.
   ///
   /// Addresses may refer to an alloca through an address space cast, for
