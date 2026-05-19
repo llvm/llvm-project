@@ -71,7 +71,7 @@ TEST_F(LlvmLibcBindTest, BindInetSocket) {
   ASSERT_THAT(LIBC_NAMESPACE::getsockname(
                   sock, reinterpret_cast<struct sockaddr *>(&my_addr), &len),
               Succeeds(0));
-  ASSERT_EQ(len, sizeof(struct sockaddr_in));
+  ASSERT_EQ(len, static_cast<socklen_t>(sizeof(struct sockaddr_in)));
   EXPECT_EQ(my_addr.sin_family, static_cast<sa_family_t>(AF_INET));
   EXPECT_NE(my_addr.sin_port, static_cast<in_port_t>(0));
   EXPECT_EQ(my_addr.sin_addr.s_addr, LIBC_NAMESPACE::htonl(INADDR_LOOPBACK));
