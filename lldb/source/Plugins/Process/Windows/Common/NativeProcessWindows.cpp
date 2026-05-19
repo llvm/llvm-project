@@ -96,6 +96,8 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
              GetDebuggedProcessId(), state);
     LLDB_LOG(log, "resuming {0} threads.", m_threads.size());
 
+    m_pending_library_events = false;
+
     bool failed = false;
     for (uint32_t i = 0; i < m_threads.size(); ++i) {
       auto thread = static_cast<NativeThreadWindows *>(m_threads[i].get());
@@ -408,6 +410,26 @@ NativeProcessWindows::GetFileLoadAddress(const llvm::StringRef &file_name,
       file_spec.GetPath().c_str(), GetID());
 }
 
+llvm::Expected<std::vector<LoadedLibraryInfo>>
+NativeProcessWindows::GetLoadedLibraries() {
+  if (Status error = CacheLoadedModules(); error.Fail())
+    return error.ToError();
+
+  std::vector<LoadedLibraryInfo> libs;
+  libs.reserve(m_loaded_modules.size());
+  for (const auto &[file_spec, base] : m_loaded_modules) {
+    LoadedLibraryInfo info;
+    info.name = file_spec.GetPath();
+    info.base_addr = base;
+    libs.push_back(std::move(info));
+  }
+  return libs;
+}
+
+bool NativeProcessWindows::HasPendingLibraryEvents() {
+  return m_pending_library_events;
+}
+
 void NativeProcessWindows::OnExitProcess(uint32_t exit_code) {
   Log *log = GetLog(WindowsLog::Process);
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
@@ -635,14 +657,13 @@ void NativeProcessWindows::OnExitThread(lldb::tid_t thread_id,
 
 void NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
                                      lldb::addr_t module_addr) {
-  // Simply invalidate the cached loaded modules.
-  if (!m_loaded_modules.empty())
-    m_loaded_modules.clear();
+  m_loaded_modules.clear();
+  m_pending_library_events = true;
 }
 
 void NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
-  if (!m_loaded_modules.empty())
-    m_loaded_modules.clear();
+  m_loaded_modules.clear();
+  m_pending_library_events = true;
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
