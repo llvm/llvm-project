@@ -79,9 +79,6 @@ static bool runNVVMIntrRange(Function &F) {
   const unsigned MaxNTID =
       OverallMaxNTID.value_or(std::numeric_limits<unsigned>::max());
 
-  const unsigned MaxNctaPerCluster =
-      MaxClusterRank.value_or(std::numeric_limits<unsigned>::max());
-
   // When reqntid is specified, block dimensions are exact compile-time
   // constants. Otherwise, use maxntid (capped at hardware limits) as upper
   // bounds.
@@ -109,6 +106,8 @@ static bool runNVVMIntrRange(Function &F) {
     MinClusterSize = MaxClusterSize =
         ClusterDim[0] * ClusterDim[1] * ClusterDim[2];
   } else {
+    const unsigned MaxNctaPerCluster =
+        MaxClusterRank.value_or(std::numeric_limits<unsigned>::max());
     MinClusterDim = {1, 1, 1};
     MaxClusterDim = {std::min(0x7fffffffu, MaxNctaPerCluster),
                      std::min(0xffffu, MaxNctaPerCluster),
