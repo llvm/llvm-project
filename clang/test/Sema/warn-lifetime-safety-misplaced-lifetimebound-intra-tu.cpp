@@ -89,3 +89,14 @@ View friend_redecl(MyObj &obj [[clang::lifetimebound]]); // expected-note {{'lif
 View friend_redecl(MyObj &obj) {
   return View{};
 }
+
+template <typename T>
+// FIXME: Current analysis suggests adding to the primary template declaration, which is not ideal, as it will affect all specializations.
+MyObj &spec_func(T &obj); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
+
+template <>
+// FIXME: Attribute is inhetired, diagnostic's wording is not correct.
+MyObj &spec_func<MyObj>(MyObj &obj [[clang::lifetimebound]]); // expected-note {{'lifetimebound' attribute appears here on the definition}}
+
+template <>
+MyObj &spec_func<MyObj>(MyObj &obj) { return obj; }
