@@ -69,7 +69,6 @@ void memcpy_offset_no_false_positive(char *dst) {
   memcpy(dst, &buf[5], 3); // no-warning
 }
 
-
 // The interesting case here is that the portion we're copying is initialized,
 // but not the whole matrix. We need to be careful to extract buf[1], and not
 // buf when trying to peel region layers off from the source argument.
