@@ -24,6 +24,11 @@
 # BEFORE UPDATING these requirements: verify tml-compiler-opt pipenv
 # can be applied first, then these requirements.
 #
+# Recommended verification workflow:
+#   1. Apply ml-compiler-opt's pipenv (Pipfile.lock) in a fresh venv.
+#   2. pip install the updated requirements on top of it.
+#   3. Run unit tests locally to confirm no breakage.
+#
 # See: https://github.com/llvm/llvm-zorg (bot configuration)
 #      https://github.com/google/ml-compiler-opt (Pipfile / build env)
 nanobind>=2.9, <3.0
