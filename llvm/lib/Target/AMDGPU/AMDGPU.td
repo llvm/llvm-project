@@ -213,7 +213,7 @@ def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
 >;
 
 defm XNACKAnyOnly : AMDGPUSubtargetFeature<"xnack-any-only",
-  "Target only support XnackSetting to be `any`"
+  "Target only support XnackSetting to be any"
 >;
 
 // XNACK is disabled if SH_MEM_CONFIG.ADDRESS_MODE = GPUVM on chips that support
