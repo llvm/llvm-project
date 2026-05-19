@@ -483,6 +483,9 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB, DebugLoc DL) {
         CmpInst::ICMP_EQ, CanonicalIVIncrement, &Plan.getVectorTripCount());
     LatchTerm->setOperand(1, IsLatchExitTaken);
   } else {
+    // We are replacing the branch to exit the region. Remove the original
+    // BranchOnCond.
+    assert(match(LatchTerm, m_BranchOnCond()) && "Unexpected terminator");
     DebugLoc LatchDL = LatchTerm->getDebugLoc();
     Builder.createNaryOp(VPInstruction::BranchOnCount,
                          {CanonicalIVIncrement, &Plan.getVectorTripCount()},
