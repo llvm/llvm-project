@@ -165,6 +165,63 @@ define <1 x i64> @atomic_vec1_i64_align(ptr %x) nounwind {
   ret <1 x i64> %ret
 }
 
+define void @store_atomic_vec1_i32(ptr %x, <1 x i32> %v) {
+; CHECK-LABEL: store_atomic_vec1_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, (%rdi)
+; CHECK-NEXT:    retq
+  store atomic <1 x i32> %v, ptr %x release, align 4
+  ret void
+}
+
+define void @store_atomic_vec1_i8(ptr %x, <1 x i8> %v) {
+; CHECK-O3-LABEL: store_atomic_vec1_i8:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movb %sil, (%rdi)
+; CHECK-O3-NEXT:    retq
+;
+; CHECK-O0-LABEL: store_atomic_vec1_i8:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movb %sil, %al
+; CHECK-O0-NEXT:    movb %al, (%rdi)
+; CHECK-O0-NEXT:    retq
+  store atomic <1 x i8> %v, ptr %x release, align 1
+  ret void
+}
+
+define void @store_atomic_vec1_i16(ptr %x, <1 x i16> %v) {
+; CHECK-O3-LABEL: store_atomic_vec1_i16:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movw %si, (%rdi)
+; CHECK-O3-NEXT:    retq
+;
+; CHECK-O0-LABEL: store_atomic_vec1_i16:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movw %si, %ax
+; CHECK-O0-NEXT:    movw %ax, (%rdi)
+; CHECK-O0-NEXT:    retq
+  store atomic <1 x i16> %v, ptr %x release, align 2
+  ret void
+}
+
+define void @store_atomic_vec1_i64(ptr %x, <1 x i64> %v) nounwind {
+; CHECK-LABEL: store_atomic_vec1_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, (%rdi)
+; CHECK-NEXT:    retq
+  store atomic <1 x i64> %v, ptr %x release, align 8
+  ret void
+}
+
+define void @store_atomic_vec1_ptr(ptr %x, <1 x ptr> %v) nounwind {
+; CHECK-LABEL: store_atomic_vec1_ptr:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, (%rdi)
+; CHECK-NEXT:    retq
+  store atomic <1 x ptr> %v, ptr %x release, align 8
+  ret void
+}
+
 define <2 x i8> @atomic_vec2_i8(ptr %x) {
 ; CHECK-SSE-O3-LABEL: atomic_vec2_i8:
 ; CHECK-SSE-O3:       # %bb.0:
