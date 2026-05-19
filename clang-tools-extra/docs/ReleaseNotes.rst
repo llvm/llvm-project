@@ -164,6 +164,9 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- A new tweak "Create function body out-of-line" was added that creates
+  an implementation for a function declaration.
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -429,6 +432,9 @@ Changes in existing checks
 
   - Avoid false positives when moving object to a base type then accessing
     non-base members.
+
+  - Avoid false positives when moving object is reinitialized via the base
+    class's ``operator=``.
 
 - Improved :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>`

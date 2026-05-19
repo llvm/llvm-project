@@ -9,10 +9,10 @@
 
 define dso_local i32 @variadics1(i32 noundef %first, ...) {
 ; CHECK-LABEL: define dso_local i32 @variadics1(
-; CHECK-SAME: i32 noundef [[FIRST:%.*]], ptr [[VARARGS:%.*]]) {
+; CHECK-SAME: i32 noundef [[FIRST:%.*]], ptr addrspace(5) [[VARARGS:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VLIST:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    store ptr [[VARARGS]], ptr [[VLIST]], align 8
+; CHECK-NEXT:    store ptr addrspace(5) [[VARARGS]], ptr [[VLIST]], align 8
 ; CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VLIST]], align 8
 ; CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i64 4
 ; CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VLIST]], align 8
@@ -132,7 +132,8 @@ define dso_local i32 @foo() {
 ; CHECK-NEXT:    store double [[CONV2]], ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[FOO_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 6
 ; CHECK-NEXT:    store double 1.000000e+00, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @variadics1(i32 noundef 1, ptr [[VARARG_BUFFER]])
+; CHECK-NEXT:    [[TMP6:%.*]] = addrspacecast ptr [[VARARG_BUFFER]] to ptr addrspace(5)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @variadics1(i32 noundef 1, ptr addrspace(5) [[TMP6]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VARARG_BUFFER]])
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
@@ -146,11 +147,11 @@ entry:
 
 define dso_local i32 @variadics2(i32 noundef %first, ...) {
 ; CHECK-LABEL: define dso_local i32 @variadics2(
-; CHECK-SAME: i32 noundef [[FIRST:%.*]], ptr [[VARARGS:%.*]]) {
+; CHECK-SAME: i32 noundef [[FIRST:%.*]], ptr addrspace(5) [[VARARGS:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VLIST:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[S1_SROA_3:%.*]] = alloca [3 x i8], align 1
-; CHECK-NEXT:    store ptr [[VARARGS]], ptr [[VLIST]], align 8
+; CHECK-NEXT:    store ptr addrspace(5) [[VARARGS]], ptr [[VLIST]], align 8
 ; CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VLIST]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 7
 ; CHECK-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[TMP0]], i64 -8)
@@ -215,7 +216,8 @@ define dso_local i32 @bar() {
 ; CHECK-NEXT:    store i8 [[S1_SROA_2_0_COPYLOAD]], ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[BAR_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 3
 ; CHECK-NEXT:    store i64 [[S1_SROA_31_0_COPYLOAD]], ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @variadics2(i32 noundef 1, ptr [[VARARG_BUFFER]])
+; CHECK-NEXT:    [[TMP3:%.*]] = addrspacecast ptr [[VARARG_BUFFER]] to ptr addrspace(5)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @variadics2(i32 noundef 1, ptr addrspace(5) [[TMP3]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VARARG_BUFFER]])
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
@@ -231,10 +233,10 @@ entry:
 
 define dso_local i32 @variadics3(i32 noundef %first, ...) {
 ; CHECK-LABEL: define dso_local i32 @variadics3(
-; CHECK-SAME: i32 noundef [[FIRST:%.*]], ptr [[VARARGS:%.*]]) {
+; CHECK-SAME: i32 noundef [[FIRST:%.*]], ptr addrspace(5) [[VARARGS:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VLIST:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    store ptr [[VARARGS]], ptr [[VLIST]], align 8
+; CHECK-NEXT:    store ptr addrspace(5) [[VARARGS]], ptr [[VLIST]], align 8
 ; CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VLIST]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 15
 ; CHECK-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[TMP0]], i64 -16)
@@ -277,7 +279,8 @@ define dso_local i32 @baz() {
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VARARG_BUFFER]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[BAZ_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[TMP0]], align 16
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @variadics3(i32 noundef 1, ptr [[VARARG_BUFFER]])
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[VARARG_BUFFER]] to ptr addrspace(5)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @variadics3(i32 noundef 1, ptr addrspace(5) [[TMP1]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VARARG_BUFFER]])
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
@@ -288,10 +291,10 @@ entry:
 
 define dso_local i32 @variadics4(ptr noundef byval(%struct.S2) align 8 %first, ...) {
 ; CHECK-LABEL: define dso_local i32 @variadics4(
-; CHECK-SAME: ptr noundef byval([[STRUCT_S2:%.*]]) align 8 [[FIRST:%.*]], ptr [[VARARGS:%.*]]) {
+; CHECK-SAME: ptr noundef byval([[STRUCT_S2:%.*]]) align 8 [[FIRST:%.*]], ptr addrspace(5) [[VARARGS:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VLIST:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    store ptr [[VARARGS]], ptr [[VLIST]], align 8
+; CHECK-NEXT:    store ptr addrspace(5) [[VARARGS]], ptr [[VLIST]], align 8
 ; CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VLIST]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 7
 ; CHECK-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[TMP0]], i64 -8)
@@ -336,7 +339,8 @@ define dso_local void @qux() {
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VARARG_BUFFER]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[QUX_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; CHECK-NEXT:    store i64 1, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @variadics4(ptr noundef byval([[STRUCT_S2]]) align 8 [[S]], ptr [[VARARG_BUFFER]])
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[VARARG_BUFFER]] to ptr addrspace(5)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @variadics4(ptr noundef byval([[STRUCT_S2]]) align 8 [[S]], ptr addrspace(5) [[TMP1]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VARARG_BUFFER]])
 ; CHECK-NEXT:    ret void
 ;

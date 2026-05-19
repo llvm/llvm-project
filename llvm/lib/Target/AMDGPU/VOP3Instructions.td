@@ -364,13 +364,12 @@ let mayRaiseFPException = 0 in { // Seems suspicious but manual doesn't say it d
   defm V_DIV_SCALE_F64 : VOP3Inst <"v_div_scale_f64", VOP3b_F64_I1_F64_F64_F64>;
 } // End mayRaiseFPException = 0
 
-let isReMaterializable = 1 in
+let isReMaterializable = 1, SubtargetPredicate = HasMsadInsts in
 defm V_MSAD_U8 : VOP3Inst <"v_msad_u8", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
 
-let Constraints = "@earlyclobber $vdst" in {
+let SubtargetPredicate = HasMqsadPkInsts, Constraints = "@earlyclobber $vdst" in {
 defm V_MQSAD_PK_U16_U8 : VOP3Inst <"v_mqsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64, VOP3_CLAMP>>;
-} // End Constraints = "@earlyclobber $vdst"
-
+} // End SubtargetPredicate = HasMqsadPkInsts, Constraints = "@earlyclobber $vdst"
 
 let isReMaterializable = 1 in {
 let SchedRW = [WriteDouble], IsDPMACCInstruction = 1 in {
@@ -425,13 +424,12 @@ def VOPProfileMQSAD : VOP3_Profile<VOP_V4I32_I64_I32_V4I32, VOP3_CLAMP> {
   let HasModifiers = 0;
 }
 
-let SubtargetPredicate = isGFX7Plus in {
 let Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32] in {
 let SubtargetPredicate = HasQsadInsts in
   defm V_QSAD_PK_U16_U8 : VOP3Inst <"v_qsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64, VOP3_CLAMP>>;
-defm V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOPProfileMQSAD>;
+let SubtargetPredicate = HasMqsadInsts in
+  defm V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOPProfileMQSAD>;
 } // End Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32]
-} // End SubtargetPredicate = isGFX7Plus
 
 let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALUDummy] in {
   let SubtargetPredicate = isGFX7Plus in {
