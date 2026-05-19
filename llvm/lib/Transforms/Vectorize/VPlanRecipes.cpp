@@ -3337,12 +3337,11 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
 
   // Replace the operands of the cloned instructions with their scalar
   // equivalents in the new loop.
-  auto *EVI = dyn_cast<ExtractValueInst>(Instr);
+  auto *EVI = dyn_cast<ExtractValueInst>(Cloned);
   for (const auto &[Idx, V] : enumerate(operands())) {
+    // tryToWiden() stores ExtractValueInst->getIndices() as the second
+    // operand. It's not valid to pass it to setOperand().
     if (EVI && Idx > 0) {
-      // tryToWiden() stores ExtractValueInst->getIndices() as the second
-      // operand.
-
       // Invariants from tryToWiden()
       assert(Idx == 1);
       assert(EVI->getNumIndices() == 1 && "Expected one extractvalue index");
