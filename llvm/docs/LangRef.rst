@@ -7841,7 +7841,7 @@ For intrinsic calls, the operand number is the call argument index.
 Operand numbers must be unique within
 a ``!mem.cache_hint`` node and must refer to a pointer-typed operand.
 
-For exmaple, for a ``load``, the pointer is operand 0. For a ``store``, the value is
+For example, for a ``load``, the pointer is operand 0. For a ``store``, the value is
 operand 0 and the pointer is operand 1. For intrinsic calls such as
 ``llvm.memcpy``, operand numbers correspond to argument positions: e.g.,
 destination is argument 0 and source is argument 1.
@@ -7851,7 +7851,8 @@ Keys must be strings, and values must be either strings or integer constants. Ke
 a single hint node must be unique.
 
 The hint node keys are prefixed with a target identifier (e.g., ``nvvm.``) and
-their interpretation is entirely target-dependent. The IR verifier enforces only
+their interpretation is target-dependent. Each hint must describe a property of
+the individual memory access through the corresponding pointer operand. The IR verifier enforces only
 the structural rules above; validation of target-specific keys and values is
 performed by the corresponding backend. Unsupported properties may be silently
 ignored during code generation.
