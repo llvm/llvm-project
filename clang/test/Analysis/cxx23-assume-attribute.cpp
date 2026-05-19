@@ -88,3 +88,13 @@ int trivial_assumption(int a) {
   clang_analyzer_dump(a); // expected-warning {{2 S32b}}
   return a;
 }
+
+int undefined_assumption() {
+  // Theoretically the analyzer should report that the assumption expression of
+  // the [[assume]] attribute is an undefined value; currently it just aborts
+  // the symbolic execution on that path.
+  int a;
+  [[assume(a)]];
+  clang_analyzer_warnIfReached(); // no-warning
+  return a;
+}
