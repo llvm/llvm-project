@@ -2180,8 +2180,10 @@ def FeatureISAVersion12_Generic: FeatureSet<
     [FeatureRequiresCOV6])>;
 
 def FeatureISAVersion12_5_Generic: FeatureSet<
-  !listconcat(FeatureISAVersion12_50.Features,
-    [FeatureRequiresCOV6])>;
+  !listconcat(FeatureISAVersion12_50_Common.Features,
+    [FeatureAddressableLocalMemorySize327680,
+     FeatureSetregVGPRMSBFixup,
+     FeatureRequiresCOV6])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
