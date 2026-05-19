@@ -398,9 +398,7 @@ void FactsGenerator::handleAssignment(const Expr *TargetExpr,
   // unlike built-in assignment where LValueToRValue cast strips the outer
   // lvalue origin. Strip it manually to get the actual value origins being
   // assigned.
-  if (!(isGslPointerType(LHSExpr->getType()) &&
-        isGslOwnerType(RHSExpr->getType())))
-    RHSList = getRValueOrigins(RHSExpr, RHSList);
+  RHSList = getRValueOrigins(RHSExpr, RHSList);
 
   if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr)) {
     QualType QT = DRE_LHS->getDecl()->getType();
