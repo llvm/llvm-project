@@ -9,7 +9,7 @@ import shutil
 import stat
 import subprocess
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Callable
 
 import lit.util
 from lit.ShCommands import Command
