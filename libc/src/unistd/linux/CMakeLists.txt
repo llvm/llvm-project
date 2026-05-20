@@ -5,6 +5,7 @@ add_entrypoint_object(
   HDRS
     ../alarm.h
   DEPENDS
+    libc.hdr.types.struct_itimerval
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
