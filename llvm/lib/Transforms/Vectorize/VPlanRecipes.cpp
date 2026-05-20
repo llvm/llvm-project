@@ -1054,6 +1054,9 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
   Type *ScalarTy = this->getScalarType();
   Type *ResultTy = VF.isVector() ? toVectorTy(ScalarTy, VF) : ScalarTy;
   switch (Opcode) {
+  case VPInstruction::Not:
+    return Ctx.TTI.getArithmeticInstrCost(Instruction::Xor, ResultTy,
+                                          Ctx.CostKind);
   case Instruction::FNeg:
     return Ctx.TTI.getArithmeticInstrCost(Opcode, ResultTy, Ctx.CostKind);
   case Instruction::UDiv:
@@ -1391,11 +1394,13 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                                     VecTy, Ctx.CostKind, 0);
   }
   case VPInstruction::Not: {
-    Type *RetTy = Ctx.Types.inferScalarType(getOperand(0));
-    if (!vputils::onlyFirstLaneUsed(this))
-      RetTy = toVectorTy(RetTy, VF);
-    return Ctx.TTI.getArithmeticInstrCost(Instruction::Xor, RetTy,
-                                          Ctx.CostKind);
+    // InstCombine will fold `xor` to the conditional branch.
+    if (hasOneUse() && match(const_cast<VPUser *>(getSingleUser()),
+                             m_BranchOnCond(m_VPValue())))
+      return 0;
+    return getCostForRecipeWithOpcode(
+        getOpcode(),
+        vputils::onlyFirstLaneUsed(this) ? ElementCount::getFixed(1) : VF, Ctx);
   }
   case VPInstruction::BranchOnCount: {
     // If TC <= VF then this is just a branch.
