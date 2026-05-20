@@ -559,7 +559,7 @@ public:
   READ_FEATURE(OmpRequiresDirective)
   READ_FEATURE(OpenMPSimpleStandaloneConstruct)
   READ_FEATURE(OpenMPStandaloneConstruct)
-  READ_FEATURE(OpenMPSectionConstruct)
+  READ_FEATURE(OmpSectionDirective)
   READ_FEATURE(OpenMPSectionsConstruct)
   READ_FEATURE(OmpThreadprivateDirective)
   READ_FEATURE(OpenStmt)

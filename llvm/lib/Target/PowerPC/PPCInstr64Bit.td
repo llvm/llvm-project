@@ -207,6 +207,26 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
     Requires<[IsPPC64]>;
 }
 
+let Predicates = [IsAIX] in {
+  let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
+      Defs = [LR8, X2], Uses = [RM, X1], RST = 2, RA = 1, D = 40 in {
+    def BL8_LDinto_toc : IForm_and_DForm_1<18, 0, 1, 58,
+                        (outs), (ins calltarget:$LI),
+                        "bl $LI\n\tld 2, 40(1)", IIC_BrB,
+                        []>,
+                         Requires<[IsPPC64]>;
+  }
+
+  let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
+      Defs = [LR8, X2, RM], Uses = [RM, X1], RST = 2, RA = 1, D = 40 in {
+    def BL8_LDinto_toc_RM : IForm_and_DForm_1<18, 0, 1, 58,
+                          (outs), (ins calltarget:$LI),
+                          "bl $LI\n\tld 2, 40(1)", IIC_BrB,
+                          []>,
+                           Requires<[IsPPC64]>;
+  }
+}
+
 } // Interpretation64Bit
 
 // FIXME: Duplicating this for the asm parser should be unnecessary, but the
@@ -258,6 +278,14 @@ def : Pat<(PPCcall_rm (i64 mcsym:$dst)),
           (BL8_RM mcsym:$dst)>;
 def : Pat<(PPCcall_nop_rm (i64 mcsym:$dst)),
           (BL8_NOP_RM mcsym:$dst)>;
+
+let Predicates = [IsAIX] in {
+  def : Pat<(PPCbl_load_toc (i64 texternalsym:$dst)),
+            (BL8_LDinto_toc texternalsym:$dst)>;
+
+  def : Pat<(PPCbl_load_toc_rm (i64 texternalsym:$dst)),
+            (BL8_LDinto_toc_RM texternalsym:$dst)>;
+}
 
 // Atomic operations
 // FIXME: some of these might be used with constant operands. This will result
@@ -320,19 +348,11 @@ def LDAT_CSNE : X_RD5_RS5_IM5<31, 614, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA),
            Requires<[IsISA3_0]>;
 }
 
-def LDAT_PSEUDO : PPCCustomInserterPseudo<
-    (outs g8rc:$dst),
-    (ins ptr_rc_nor0:$ptr, g8rc:$val, u5imm:$fc),
-    "#LDAT_PSEUDO",
-    [(set i64:$dst, (int_ppc_amo_ldat ptr_rc_nor0:$ptr, g8rc:$val,
-                                      u5imm_timm:$fc))]>;
+def : Pat<(int_ppc_amo_ldat ptr_rc_nor0:$ptr, g8rc:$val, u5imm_timm:$fc),
+          (EVEN8 (LDAT (PAIR8 (i64 (IMPLICIT_DEF)), $val), $ptr, $fc))>;
 
-def LDAT_COND_PSEUDO : PPCCustomInserterPseudo <
-    (outs g8rc:$dst),
-    (ins ptr_rc_nor0:$ptr, u5imm:$fc),
-    "#LDAT_COND_PSEUDO",
-    [(set i64:$dst, (int_ppc_amo_ldat_cond ptr_rc_nor0:$ptr,
-                                            u5imm_timm:$fc))]>;
+def : Pat<(int_ppc_amo_ldat_cond ptr_rc_nor0:$ptr, u5imm_timm:$fc),
+          (EVEN8 (LDAT (PAIR8 (i64 (IMPLICIT_DEF)), (i64 (IMPLICIT_DEF))), $ptr, $fc))>;
 
 let Defs = [X8, X9, X10], Uses = [X9, X10] in
 def LDAT_CSNE_PSEUDO : PPCPostRAExpPseudo<
@@ -406,11 +426,11 @@ def : Pat<(int_ppc_cmpxchg_i128 ForceXForm:$ptr,
                            g8rc:$new_lo,
                            g8rc:$new_hi))>;
 
-let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
+let mayStore = 1, mayLoad = 1, hasSideEffects = 0 in
 def STDAT : XForm_base_r3xo_memOp<31, 742, (outs),
                                   (ins g8rc:$RST, ptr_rc_nor0:$RA, u5imm:$RB),
                                   "stdat $RST, $RA, $RB", IIC_LdStStore,
-                                  [(PPCstat i64:$RST, ptr_rc_nor0:$RA,
+                                  [(int_ppc_amo_stdat ptr_rc_nor0:$RA, i64:$RST,
                                             u5imm_timm:$RB)]>, isPPC64,
             Requires<[IsISA3_0]>;
 
