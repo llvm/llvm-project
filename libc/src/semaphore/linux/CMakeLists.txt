@@ -3,8 +3,10 @@ add_header_library(
   HDRS
     semaphore.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.types.mode_t
     libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.limits
     libc.src.__support.error_or
     libc.src.__support.threads.futex_utils
 )
@@ -20,7 +22,6 @@ add_object_library(
     libc.hdr.errno_macros
     libc.hdr.fcntl_macros
     libc.src.__support.CPP.array
-    libc.src.__support.CPP.limits
     libc.src.__support.CPP.new
     libc.src.__support.CPP.string_view
     libc.src.__support.ctype_utils

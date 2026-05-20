@@ -9,13 +9,19 @@
 #ifndef LLVM_LIBC_SRC_SEMAPHORE_LINUX_SEMAPHORE_H
 #define LLVM_LIBC_SRC_SEMAPHORE_LINUX_SEMAPHORE_H
 
+#include "hdr/errno_macros.h"
 #include "hdr/types/mode_t.h"
 #include "src/__support/CPP/atomic.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/threads/futex_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
+// Define SEM_VALUE_MAX as INT_MAX
+constexpr unsigned int SEM_VALUE_MAX =
+    static_cast<unsigned int>(cpp::numeric_limits<int>::max());
 
 class Semaphore {
   Futex value;
@@ -28,8 +34,8 @@ class Semaphore {
 
 public:
   // TODO:
-  // Add the posting and waiting operations: sem_post, sem_wait,
-  //    sem_trywait, sem_timedwait, sem_clockwait.
+  // Add the blocking waiting operations: sem_wait, sem_timedwait,
+  //    sem_clockwait.
 
   LIBC_INLINE constexpr Semaphore(unsigned int value)
       : value(value), canary(SEM_CANARY) {}
@@ -52,6 +58,39 @@ public:
     // TODO: handle the case where the semaphore is locked.
     return static_cast<int>(
         const_cast<Futex &>(value).load(cpp::MemoryOrder::RELAXED));
+  }
+
+  // Atomically increments the semaphore value and
+  // wakes one blocked waiter if any.
+  LIBC_INLINE int post() {
+    FutexWordType v = value.load(cpp::MemoryOrder::RELAXED);
+
+    do {
+      if (v >= SEM_VALUE_MAX)
+        return EOVERFLOW;
+      // RELEASE on success, since post should publish prior writes
+      // RELAXED on failture, since no synchronization event occurs
+    } while (!value.compare_exchange_weak(v, v + 1, cpp::MemoryOrder::RELEASE,
+                                          cpp::MemoryOrder::RELAXED));
+
+    // Named semaphores live in MAP_SHARED memory and may be shared across
+    // processes, so use a shared wake.
+    value.notify_one(/*is_shared=*/true);
+    return 0;
+  }
+
+  // Attempts to decrement the semaphore value without blocking.
+  LIBC_INLINE int trywait() {
+    FutexWordType v = value.load(cpp::MemoryOrder::RELAXED);
+
+    while (v > 0) {
+      // ACQUIRE on success to synchronize with the matching post().
+      if (value.compare_exchange_weak(v, v - 1, cpp::MemoryOrder::ACQUIRE,
+                                      cpp::MemoryOrder::RELAXED))
+        return 0;
+    }
+
+    return EAGAIN;
   }
 
   // Named semaphore operations.

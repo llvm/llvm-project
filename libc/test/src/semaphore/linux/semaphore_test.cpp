@@ -26,6 +26,31 @@ TEST(LlvmLibcSemaphoreTest, Destroy) {
   ASSERT_FALSE(sem.is_valid());
 }
 
+TEST(LlvmLibcSemaphoreTest, TryWait) {
+  Semaphore sem(2);
+
+  // two successful non-blocking decrements.
+  ASSERT_EQ(sem.trywait(), 0);
+  ASSERT_EQ(sem.trywait(), 0);
+  ASSERT_EQ(sem.getvalue(), 0);
+
+  // value is now zero, trywait must fail with EAGAIN.
+  ASSERT_EQ(sem.trywait(), EAGAIN);
+  ASSERT_EQ(sem.getvalue(), 0);
+}
+
+TEST(LlvmLibcSemaphoreTest, Post) {
+  Semaphore sem(0);
+  ASSERT_EQ(sem.getvalue(), 0);
+
+  ASSERT_EQ(sem.post(), 0);
+  ASSERT_EQ(sem.getvalue(), 1);
+
+  // the posted value can be consumed by trywait.
+  ASSERT_EQ(sem.trywait(), 0);
+  ASSERT_EQ(sem.getvalue(), 0);
+}
+
 // Named semaphore tests.
 
 TEST(LlvmLibcSemaphoreTest, NamedOpenCloseUnlink) {
