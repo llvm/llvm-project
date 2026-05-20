@@ -5538,9 +5538,7 @@ std::string ArgumentAnalyzer::TypeAsFortran(std::size_t i) {
         : type->IsUnlimitedPolymorphic() ? "CLASS(*)"s
         : type->IsPolymorphic()          ? type->AsFortran()
         : type->category() == TypeCategory::Derived
-        ? (type->GetDerivedTypeSpec().IsVectorType()
-                  ? type->AsFortran()
-                  : "TYPE("s + type->AsFortran() + ')')
+        ? "TYPE("s + type->AsFortran() + ')'
         : type->category() == TypeCategory::Character
         ? "CHARACTER(KIND="s + std::to_string(type->kind()) + ')'
         : ToUpperCase(type->AsFortran());
