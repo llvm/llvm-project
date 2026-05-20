@@ -5292,28 +5292,20 @@ def HLSLVkLocation : HLSLAnnotationAttr {
   let Documentation = [HLSLVkLocationDocs];
 }
 
-def HLSLMatrixLayout : InheritableAttr {
-  let Spellings = [CustomKeyword<"row_major">, CustomKeyword<"column_major">];
-  let Subjects = SubjectList<[Var, TypedefName, Field, Function]>;
+// `row_major` / `column_major` are HLSL keywords that select the in-memory
+// layout of a matrix-typed declaration. 
+def HLSLRowMajor : TypeAttr {
+  let Spellings = [CustomKeyword<"row_major">];
   let LangOpts = [HLSL];
   let Documentation = [HLSLMatrixLayoutDocs];
 }
 
-// Internal type-attribute markers attached to matrix QualTypes by Sema when
-// a decl carries `[[hlsl::row_major]]` / `[[hlsl::column_major]]`. They let
-// CodeGen / const-eval recover the layout from any matrix-typed expression
-// without re-walking back to the source decl.
-def HLSLRowMajor : TypeAttr {
-  let Spellings = [];
-  let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
-}
-
 def HLSLColumnMajor : TypeAttr {
-  let Spellings = [];
+  let Spellings = [CustomKeyword<"column_major">];
   let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLMatrixLayoutDocs];
 }
+def : MutualExclusions<[HLSLRowMajor, HLSLColumnMajor]>;
 
 def RandomizeLayout : InheritableAttr {
   let Spellings = [GCC<"randomize_layout">];
