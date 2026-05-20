@@ -7,16 +7,21 @@
 ##
 ## Layout follows lld/test/ELF/aarch64-cortex-a53-843419-address.s test cases.
 
-# RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux-gnu %s -o %t.o
-# RUN: echo "SECTIONS { \
-# RUN:   . = SIZEOF_HEADERS; \
-# RUN:   .text : { *(.text.main) *(.text.pats) } \
-# RUN:   .data : { *(.data.main) } }" > %t.script
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux-gnu %t/input.s -o %t.o
 # RUN: %clang %cflags -fPIC -pie %t.o -o %t.exe -nostdlib \
-# RUN:   -fuse-ld=lld -Wl,-q -Wl,-T,%t.script -Wl,--fix-cortex-a53-843419
+# RUN:   -fuse-ld=lld -Wl,-q -Wl,-T,%t/linker-script -Wl,--fix-cortex-a53-843419
 # RUN: llvm-bolt %t.exe -o %t.bolt
-# RUN: llvm-objdump -d %t.bolt | FileCheck %s
+# RUN: llvm-objdump -d %t.bolt | FileCheck %t/input.s
 
+#--- linker-script
+SECTIONS {
+  . = SIZEOF_HEADERS;
+  .text : { *(.text.main) *(.text.pats) }
+  .data : { *(.data.main) }
+}
+
+#--- input.s
 .section .text.main, "ax", %progbits
 .balign 4
 .global target_function
@@ -105,7 +110,7 @@ test_pattern_3:
 .size test_pattern_3, .-test_pattern_3
 
 .balign 4096
-.space 4096 - 8
+.space 4096 - 4
 .global test_pattern_4
 .type test_pattern_4, %function
 test_pattern_4:
@@ -122,7 +127,7 @@ test_pattern_4:
 .size test_pattern_4, .-test_pattern_4
 
 .balign 4096
-.space 4096 - 8
+.space 4096 - 4
 .global test_pattern_5
 .type test_pattern_5, %function
 test_pattern_5:
@@ -141,7 +146,7 @@ test_pattern_5:
 
 ## Pattern 6 (x16): mov x16 + final load; inlining must preserve x16.
 .balign 4096
-.space 4096 - 8
+.space 4096 - 4
 .global test_pattern_x16
 .type test_pattern_x16, %function
 test_pattern_x16:
