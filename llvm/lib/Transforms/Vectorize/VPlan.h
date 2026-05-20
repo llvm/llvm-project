@@ -552,9 +552,6 @@ public:
   /// Returns the debug location of the recipe.
   DebugLoc getDebugLoc() const { return DL; }
 
-  /// Return true if the recipe is a scalar cast.
-  bool isScalarCast() const;
-
   /// Set the recipe's debug location to \p NewDL.
   void setDebugLoc(DebugLoc NewDL) { DL = NewDL; }
 
@@ -1367,7 +1364,8 @@ private:
     if (!getUnderlyingValue())
       return true;
 
-    return Opcode == Instruction::PHI || Opcode == Instruction::GetElementPtr;
+    return Instruction::isCast(Opcode) || Opcode == Instruction::PHI ||
+           Opcode == Instruction::GetElementPtr;
   }
 
 public:
@@ -1515,12 +1513,13 @@ public:
   static inline bool classof(const VPRecipeBase *R) {
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
     // type information.
-    if (R->isScalarCast())
-      return true;
     auto *VPI = dyn_cast<VPInstruction>(R);
     if (!VPI)
       return false;
-    switch (VPI->getOpcode()) {
+    unsigned Opc = VPI->getOpcode();
+    if (Instruction::isCast(Opc))
+      return true;
+    switch (Opc) {
     case VPInstruction::WideIVStep:
     case VPInstruction::StepVector:
     case VPInstruction::VScale:
