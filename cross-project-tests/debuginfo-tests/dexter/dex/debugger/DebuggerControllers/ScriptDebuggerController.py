@@ -25,20 +25,20 @@ from dex.utils.Timeout import Timeout
 from dex.dextIR import DextIR, FrameIR, StepIR
 
 
-def paths_differ(expected: str, actual: str) -> bool:
-    """Returns True if expected is not a trailing subpath of actual, i.e. if `actual` does not end with `expected` after
-    normalizing both paths."""
-    normalized_expected: str = os.path.normcase(os.path.normpath(expected))
-    normalized_actual: str = os.path.normcase(os.path.normpath(actual))
-    return not normalized_actual.endswith(normalized_expected)
+def is_subpath(subpath: str, superpath: str) -> bool:
+    """Returns True if subpath is not a trailing subpath of superpath, i.e. if `superpath` does not end with `subpath`
+    after normalizing both paths."""
+    normalized_subpath: str = os.path.normcase(os.path.normpath(subpath))
+    normalized_superpath: str = os.path.normcase(os.path.normpath(superpath))
+    return normalized_superpath.endswith(normalized_subpath)
 
 
-# A very simple matcher, returns True iff `where` matches `frame`.
 def match_where_to_frame(
     where: Where,
     frame: FrameIR,
 ) -> bool:
-    if where.file is not None and paths_differ(where.file, frame.loc.path):
+    """A very simple matcher, returns True iff `where` matches `frame`."""
+    if where.file is not None and not is_subpath(where.file, frame.loc.path):
         return False
     if where.function is not None:
         fn = frame.function
@@ -104,7 +104,7 @@ def get_active_where_expects(
 
 
 class DebuggerAction(Enum):
-    STEP = 0
+    STEP_OVER = 0
     STEP_OUT = 1
     CONTINUE = 2
     EXIT = 3
@@ -209,7 +209,7 @@ class ScriptDebuggerController(DebuggerControllerBase):
             if any(
                 frame_idx == 0 for frame_idx, expects in active_where_expects.values()
             ):
-                next_action = DebuggerAction.STEP
+                next_action = DebuggerAction.STEP_OVER
             elif active_where_expects:
                 next_action = DebuggerAction.STEP_OUT
             else:
@@ -229,7 +229,7 @@ class ScriptDebuggerController(DebuggerControllerBase):
 
             if next_action == DebuggerAction.EXIT:
                 break
-            elif next_action == DebuggerAction.STEP:
+            elif next_action == DebuggerAction.STEP_OVER:
                 self.debugger.step_next()
             elif next_action == DebuggerAction.STEP_OUT:
                 self.debugger.step_out()
