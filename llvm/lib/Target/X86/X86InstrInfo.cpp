@@ -755,6 +755,26 @@ static bool regIsPICBase(Register BaseReg, const MachineRegisterInfo &MRI) {
   return isPICBase;
 }
 
+/// Return true if an instruction can be rematerialized as a different
+/// instruction without clobbering eflags register, or the definition of the
+/// physical register really doesn't matter.
+bool X86InstrInfo::canRematerializeIgnorePhysRegDef(
+    const MachineInstr &MI, const MachineOperand &MO) const {
+  assert(MO.isReg() && MO.getReg() && MO.getReg().isPhysical());
+
+  switch (MI.getOpcode()) {
+  case X86::MOV32r0:
+  case X86::MOV32r1:
+  case X86::MOV32r_1:
+    if (MO.getReg() == X86::EFLAGS)
+      return true;
+    else
+      return false;
+  }
+
+  return false;
+}
+
 bool X86InstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
@@ -954,7 +974,21 @@ bool X86InstrInfo::isReMaterializableImpl(
     }
     break;
   }
+
+  case X86::LZCNT16rr:
+  case X86::LZCNT32rr:
+  case X86::LZCNT64rr:
+  case X86::TZCNT16rr:
+  case X86::TZCNT32rr:
+  case X86::TZCNT64rr:
+  case X86::POPCNT16rr:
+  case X86::POPCNT32rr:
+  case X86::POPCNT64rr:
+    // Let TargetInstrInfo::isReMaterializableImpl to do general operands
+    // checking.
+    break;
   }
+
   return TargetInstrInfo::isReMaterializableImpl(MI);
 }
 

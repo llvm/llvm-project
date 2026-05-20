@@ -339,6 +339,8 @@ public:
   Register isStoreToStackSlotPostFE(const MachineInstr &MI,
                                     int &FrameIndex) const override;
 
+  bool canRematerializeIgnorePhysRegDef(const MachineInstr &MI,
+                                        const MachineOperand &) const override;
   bool isReMaterializableImpl(const MachineInstr &MI) const override;
   void
   reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,

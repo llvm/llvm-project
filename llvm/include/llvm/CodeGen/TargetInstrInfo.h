@@ -191,6 +191,13 @@ public:
            (MI.getDesc().isRematerializable() && isReMaterializableImpl(MI));
   }
 
+  /// Return true if an instruction can be rematerialized as a different
+  /// instruction without clobbering the physical register.
+  virtual bool canRematerializeIgnorePhysRegDef(
+      const MachineInstr &MI, const MachineOperand &MO) const {
+    return false;
+  }
+
   /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
   /// of instruction rematerialization or sinking.
   virtual bool isIgnorableUse(const MachineOperand &MO) const {
