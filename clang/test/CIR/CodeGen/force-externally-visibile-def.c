@@ -6,7 +6,7 @@ inline void my_func() {}
 extern inline void my_func();
 
 // CHECK: module {{.*}} attributes {cir.lang = #cir.lang<c>{{.*}} {
-// CHECK-NEXT:   cir.func no_inline no_proto {{.*}}@my_func() attributes {nothrow} {
+// CHECK-NEXT:   cir.func no_inline no_proto @my_func() attributes {{{.*}}, nothrow} {
 // CHECK-NEXT:     cir.return
 // CHECK-NEXT:   }
 // CHECK-NEXT: }

@@ -538,7 +538,8 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
 
     // Forward declarations are emitted lazily on first use.
     if (!fd->doesThisDeclarationHaveABody()) {
-      if (!fd->doesDeclarationForceExternallyVisibleDefinition())
+      if (!fd->doesDeclarationForceExternallyVisibleDefinition() &&
+          (!fd->isMultiVersion() || !getTarget().getTriple().isAArch64()))
         return;
 
       StringRef mangledName = getMangledName(gd);
@@ -2968,15 +2969,7 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   // represent them in dedicated ops. The correct attributes are ensured during
   // translation to LLVM. Thus, we don't need to check for them here.
 
-  // If this function has a body somewhere in the AST, we must use that
-  // definition for attributes and linkage calculation. This prevents AST
-  // assertions when forcing inline definitions from forward declarations.
   const auto *funcDecl = cast<FunctionDecl>(globalDecl.getDecl());
-  const FunctionDecl *fdDef;
-  if (funcDecl->hasBody(fdDef)) {
-    funcDecl = fdDef;
-    globalDecl = globalDecl.getWithDecl(fdDef);
-  }
 
   if (!isIncompleteFunction)
     setCIRFunctionAttributes(globalDecl,
