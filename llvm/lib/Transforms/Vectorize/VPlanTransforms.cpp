@@ -6783,6 +6783,7 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
   for (VPInstruction *VPI : ToErase)
     VPI->eraseFromParent();
 }
+
 void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
                                                PredicatedScalarEvolution &PSE,
                                                Loop &L, VPCostContext &Ctx,
@@ -6792,7 +6793,6 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
 
   VPTypeAnalysis TypeInfo(Plan);
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
-  SmallVector<VPWidenMemoryRecipe *> ToErase;
   VPValue *I32VF = nullptr;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(VectorLoop->getEntry()))) {
@@ -6880,15 +6880,6 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
           {NewPtr, StrideInBytes, Mask, I32VF}, LoadTy, Alignment, *LoadR,
           LoadR->getDebugLoc());
       LoadR->replaceAllUsesWith(StridedLoad);
-
-      ToErase.push_back(LoadR);
     }
-  }
-
-  // Clean up dead recipes.
-  for (auto *R : ToErase) {
-    VPValue *Addr = R->getAddr();
-    R->getAsRecipe()->eraseFromParent();
-    recursivelyDeleteDeadRecipes(Addr);
   }
 }
