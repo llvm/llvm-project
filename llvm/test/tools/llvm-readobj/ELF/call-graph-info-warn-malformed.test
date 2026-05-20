@@ -293,7 +293,21 @@ Symbols:
 # LLVM-FIRST-CGSECTION-NEXT:       NumIndirectTargetTypeIDs: 0
 # LLVM-FIRST-CGSECTION-NEXT:       IndirectTypeIDs: []
 # LLVM-FIRST-CGSECTION-NEXT:     }
-# LLVM-FIRST-CGSECTION-NEXT:    ]
+# LLVM-FIRST-CGSECTION-NEXT:   ]
+# LLVM-FIRST-CGSECTION-NEXT:   CallGraph [
+# LLVM-FIRST-CGSECTION-NEXT:     Function {
+# LLVM-FIRST-CGSECTION-NEXT:       Names: [bar]
+# LLVM-FIRST-CGSECTION-NEXT:       Address: 0x17A0
+# LLVM-FIRST-CGSECTION-NEXT:       Version: 0
+# LLVM-FIRST-CGSECTION-NEXT:       IsIndirectTarget: Yes
+# LLVM-FIRST-CGSECTION-NEXT:       TypeID: 0x3ECBEEF531F74424
+# LLVM-FIRST-CGSECTION-NEXT:       NumDirectCallees: 0
+# LLVM-FIRST-CGSECTION-NEXT:       DirectCallees [
+# LLVM-FIRST-CGSECTION-NEXT:       ]
+# LLVM-FIRST-CGSECTION-NEXT:       NumIndirectTargetTypeIDs: 0
+# LLVM-FIRST-CGSECTION-NEXT:       IndirectTypeIDs: []
+# LLVM-FIRST-CGSECTION-NEXT:     }
+# LLVM-FIRST-CGSECTION-NEXT:   ]
 # LLVM-FIRST-CGSECTION-NOT: {{.}}
 
 # JSON-FIRST-CGSECTION:     "CallGraph": [
@@ -303,6 +317,23 @@ Symbols:
 # JSON-FIRST-CGSECTION-NEXT:            "foo"
 # JSON-FIRST-CGSECTION-NEXT:          ],
 # JSON-FIRST-CGSECTION-NEXT:          "Address": 6032,
+# JSON-FIRST-CGSECTION-NEXT:          "Version": 0,
+# JSON-FIRST-CGSECTION-NEXT:          "IsIndirectTarget": true,
+# JSON-FIRST-CGSECTION-NEXT:          "TypeID": 4524972987496481828,
+# JSON-FIRST-CGSECTION-NEXT:          "NumDirectCallees": 0,
+# JSON-FIRST-CGSECTION-NEXT:          "DirectCallees": [],
+# JSON-FIRST-CGSECTION-NEXT:          "NumIndirectTargetTypeIDs": 0,
+# JSON-FIRST-CGSECTION-NEXT:          "IndirectTypeIDs": []
+# JSON-FIRST-CGSECTION-NEXT:        }
+# JSON-FIRST-CGSECTION-NEXT:      }
+# JSON-FIRST-CGSECTION-NEXT:    ],
+# JSON-FIRST-CGSECTION-NEXT:    "CallGraph": [
+# JSON-FIRST-CGSECTION-NEXT:      {
+# JSON-FIRST-CGSECTION-NEXT:        "Function": {
+# JSON-FIRST-CGSECTION-NEXT:          "Names": [
+# JSON-FIRST-CGSECTION-NEXT:            "bar"
+# JSON-FIRST-CGSECTION-NEXT:          ],
+# JSON-FIRST-CGSECTION-NEXT:          "Address": 6048,
 # JSON-FIRST-CGSECTION-NEXT:          "Version": 0,
 # JSON-FIRST-CGSECTION-NEXT:          "IsIndirectTarget": true,
 # JSON-FIRST-CGSECTION-NEXT:          "TypeID": 4524972987496481828,
@@ -349,6 +380,10 @@ Symbols:
     Type:     STT_FUNC
     Section:  .text
     Value:    0x1790
+  - Name:     bar
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x17A0
 
 ## Check warning when the relocation section linked to SHT_LLVM_CALL_GRAPH has an invalid sh_link.
 # RUN: yaml2obj --docnum=8 -DLINK=255 -DINFO=.llvm_call_graph %s -o %t13
