@@ -15,7 +15,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 #include <map>
 

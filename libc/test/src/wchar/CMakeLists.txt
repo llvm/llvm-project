@@ -546,8 +546,8 @@ add_libc_test(
     fwide_test.cpp
   DEPENDS
     libc.include.stdio
-    libc.src.stdio.fopen
     libc.src.stdio.fclose
+    libc.src.stdio.fopen
     libc.src.wchar.fwide
 )
 
@@ -558,12 +558,15 @@ add_libc_test(
   SRCS
     fputwc_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.wchar_macros
     libc.include.stdio
-    libc.src.stdio.fopen
     libc.src.stdio.fclose
+    libc.src.stdio.ferror
+    libc.src.stdio.fopen
     libc.src.stdio.fread
     libc.src.stdio.fwrite
-    libc.src.stdio.ferror
     libc.src.wchar.fputwc
     libc.src.wchar.fwide
     libc.test.UnitTest.ErrnoCheckingTest
@@ -579,10 +582,10 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.hdr.stdint_proxy
     libc.hdr.wchar_macros
-    libc.src.stdio.fopen
     libc.src.stdio.fclose
     libc.src.stdio.feof
     libc.src.stdio.ferror
+    libc.src.stdio.fopen
     libc.src.stdio.fwrite
     libc.src.wchar.fgetwc
     libc.src.wchar.fwide
@@ -596,11 +599,12 @@ add_libc_test(
   SRCS
     fputws_test.cpp
   DEPENDS
-    libc.include.stdio
-    libc.src.stdio.fopen
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
     libc.src.stdio.fclose
-    libc.src.stdio.fread
     libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
     libc.src.wchar.fputws
     libc.src.wchar.fwide
     libc.test.UnitTest.ErrnoCheckingTest
@@ -613,11 +617,13 @@ add_libc_test(
   SRCS
     fgetws_test.cpp
   DEPENDS
-    libc.include.stdio
-    libc.src.stdio.fopen
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.wint_t
     libc.src.stdio.fclose
-    libc.src.stdio.fwrite
     libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.fwrite
     libc.src.wchar.fgetws
     libc.src.wchar.fwide
     libc.src.wchar.wcscmp
@@ -633,12 +639,12 @@ add_libc_test(
   DEPENDS
     libc.hdr.stdio_macros
     libc.hdr.wchar_macros
-    libc.src.stdio.fopen
     libc.src.stdio.fclose
-    libc.src.stdio.fwrite
     libc.src.stdio.feof
     libc.src.stdio.ferror
+    libc.src.stdio.fopen
     libc.src.stdio.fseek
+    libc.src.stdio.fwrite
     libc.src.wchar.fgetwc
     libc.src.wchar.fwide
     libc.src.wchar.ungetwc
@@ -655,13 +661,13 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.hdr.stdint_proxy
     libc.hdr.wchar_macros
-    libc.src.stdio.fopen
     libc.src.stdio.fclose
-    libc.src.stdio.fwrite
     libc.src.stdio.feof
     libc.src.stdio.ferror
-    libc.src.wchar.getwc
+    libc.src.stdio.fopen
+    libc.src.stdio.fwrite
     libc.src.wchar.fwide
+    libc.src.wchar.getwc
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
@@ -672,15 +678,17 @@ add_libc_test(
   SRCS
     getwchar_test.cpp
   DEPENDS
-    libc.include.stdio
-    libc.src.stdio.fopen
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.wchar_macros
     libc.src.stdio.fclose
-    libc.src.stdio.fwrite
     libc.src.stdio.feof
     libc.src.stdio.ferror
+    libc.src.stdio.fopen
     libc.src.stdio.stdin
-    libc.src.wchar.getwchar
+    libc.src.stdio.fwrite
     libc.src.wchar.fwide
+    libc.src.wchar.getwchar
     libc.src.wchar.ungetwc
     libc.test.UnitTest.ErrnoCheckingTest
 )
@@ -692,13 +700,15 @@ add_libc_test(
   SRCS
     putwc_test.cpp
   DEPENDS
-    libc.include.stdio
-    libc.src.stdio.fopen
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.wchar_macros
     libc.src.stdio.fclose
-    libc.src.stdio.fread
     libc.src.stdio.ferror
-    libc.src.wchar.putwc
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
     libc.src.wchar.fwide
+    libc.src.wchar.putwc
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
@@ -712,12 +722,12 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.hdr.stdint_proxy
     libc.hdr.wchar_macros
-    libc.src.stdio.fopen
     libc.src.stdio.fclose
-    libc.src.stdio.fread
     libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
     libc.src.stdio.stdout
-    libc.src.wchar.putwchar
     libc.src.wchar.fwide
+    libc.src.wchar.putwchar
     libc.test.UnitTest.ErrnoCheckingTest
 )

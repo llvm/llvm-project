@@ -218,7 +218,11 @@ struct TransferOpOfCollapseShapeOpFolder final
 LogicalResult
 AccessOpOfSubViewOpFolder::matchAndRewrite(memref::IndexedAccessOpInterface op,
                                            PatternRewriter &rewriter) const {
-  auto subview = op.getAccessedMemref().getDefiningOp<memref::SubViewOp>();
+  TypedValue<MemRefType> accessedMemref = op.getAccessedMemref();
+  if (!accessedMemref)
+    return rewriter.notifyMatchFailure(op, "not accessing a memref");
+
+  auto subview = accessedMemref.getDefiningOp<memref::SubViewOp>();
   if (!subview)
     return rewriter.notifyMatchFailure(op, "not accessing a subview");
 
@@ -262,7 +266,11 @@ AccessOpOfSubViewOpFolder::matchAndRewrite(memref::IndexedAccessOpInterface op,
 
 LogicalResult AccessOpOfExpandShapeOpFolder::matchAndRewrite(
     memref::IndexedAccessOpInterface op, PatternRewriter &rewriter) const {
-  auto expand = op.getAccessedMemref().getDefiningOp<memref::ExpandShapeOp>();
+  TypedValue<MemRefType> accessedMemref = op.getAccessedMemref();
+  if (!accessedMemref)
+    return rewriter.notifyMatchFailure(op, "not accessing a memref");
+
+  auto expand = accessedMemref.getDefiningOp<memref::ExpandShapeOp>();
   if (!expand)
     return rewriter.notifyMatchFailure(op, "not accessing an expand_shape");
 
@@ -299,8 +307,11 @@ LogicalResult AccessOpOfExpandShapeOpFolder::matchAndRewrite(
 
 LogicalResult AccessOpOfCollapseShapeOpFolder::matchAndRewrite(
     memref::IndexedAccessOpInterface op, PatternRewriter &rewriter) const {
-  auto collapse =
-      op.getAccessedMemref().getDefiningOp<memref::CollapseShapeOp>();
+  TypedValue<MemRefType> accessedMemref = op.getAccessedMemref();
+  if (!accessedMemref)
+    return rewriter.notifyMatchFailure(op, "not accessing a memref");
+
+  auto collapse = accessedMemref.getDefiningOp<memref::CollapseShapeOp>();
   if (!collapse)
     return rewriter.notifyMatchFailure(op, "not accessing a collapse_shape");
 
@@ -337,15 +348,17 @@ LogicalResult AccessOpOfCollapseShapeOpFolder::matchAndRewrite(
 
 LogicalResult IndexedMemCopyOpOfSubViewOpFolder::matchAndRewrite(
     memref::IndexedMemCopyOpInterface op, PatternRewriter &rewriter) const {
-  auto srcSubview = op.getSrc().getDefiningOp<memref::SubViewOp>();
-  auto dstSubview = op.getDst().getDefiningOp<memref::SubViewOp>();
+  TypedValue<MemRefType> src = op.getSrc();
+  TypedValue<MemRefType> dst = op.getDst();
+  auto srcSubview = src ? src.getDefiningOp<memref::SubViewOp>() : nullptr;
+  auto dstSubview = dst ? dst.getDefiningOp<memref::SubViewOp>() : nullptr;
   if (!srcSubview && !dstSubview)
     return rewriter.notifyMatchFailure(
         op, "no subviews found on indexed copy inputs");
 
-  Value newSrc = op.getSrc();
+  Value newSrc = src;
   SmallVector<Value> newSrcIndices = llvm::to_vector(op.getSrcIndices());
-  Value newDst = op.getDst();
+  Value newDst = dst;
   SmallVector<Value> newDstIndices = llvm::to_vector(op.getDstIndices());
   if (srcSubview) {
     newSrc = srcSubview.getSource();
@@ -370,29 +383,31 @@ LogicalResult IndexedMemCopyOpOfSubViewOpFolder::matchAndRewrite(
 
 LogicalResult IndexedMemCopyOpOfExpandShapeOpFolder::matchAndRewrite(
     memref::IndexedMemCopyOpInterface op, PatternRewriter &rewriter) const {
-  auto srcExpand = op.getSrc().getDefiningOp<memref::ExpandShapeOp>();
-  auto dstExpand = op.getDst().getDefiningOp<memref::ExpandShapeOp>();
+  TypedValue<MemRefType> src = op.getSrc();
+  TypedValue<MemRefType> dst = op.getDst();
+  auto srcExpand = src ? src.getDefiningOp<memref::ExpandShapeOp>() : nullptr;
+  auto dstExpand = dst ? dst.getDefiningOp<memref::ExpandShapeOp>() : nullptr;
   if (!srcExpand && !dstExpand)
     return rewriter.notifyMatchFailure(
         op, "no expand_shapes found on indexed copy inputs");
 
-  Value newSrc = op.getSrc();
+  Value newSrc = src;
   SmallVector<Value> newSrcIndices = llvm::to_vector(op.getSrcIndices());
-  Value newDst = op.getDst();
+  Value newDst = dst;
   SmallVector<Value> newDstIndices = llvm::to_vector(op.getDstIndices());
   if (srcExpand) {
     newSrc = srcExpand.getViewSource();
     newSrcIndices.clear();
     memref::resolveSourceIndicesExpandShape(op.getLoc(), rewriter, srcExpand,
                                             op.getSrcIndices(), newSrcIndices,
-                                            /*startsInbounds=*/true);
+                                            op.hasInboundsSrcIndices());
   }
   if (dstExpand) {
     newDst = dstExpand.getViewSource();
     newDstIndices.clear();
     memref::resolveSourceIndicesExpandShape(op.getLoc(), rewriter, dstExpand,
                                             op.getDstIndices(), newDstIndices,
-                                            /*startsInbounds=*/true);
+                                            op.hasInboundsDstIndices());
   }
   op.setMemrefsAndIndices(rewriter, newSrc, newSrcIndices, newDst,
                           newDstIndices);
@@ -401,29 +416,33 @@ LogicalResult IndexedMemCopyOpOfExpandShapeOpFolder::matchAndRewrite(
 
 LogicalResult IndexedMemCopyOpOfCollapseShapeOpFolder::matchAndRewrite(
     memref::IndexedMemCopyOpInterface op, PatternRewriter &rewriter) const {
-  auto srcCollapse = op.getSrc().getDefiningOp<memref::CollapseShapeOp>();
-  auto dstCollapse = op.getDst().getDefiningOp<memref::CollapseShapeOp>();
+  TypedValue<MemRefType> src = op.getSrc();
+  TypedValue<MemRefType> dst = op.getDst();
+  auto srcCollapse =
+      src ? src.getDefiningOp<memref::CollapseShapeOp>() : nullptr;
+  auto dstCollapse =
+      dst ? dst.getDefiningOp<memref::CollapseShapeOp>() : nullptr;
   if (!srcCollapse && !dstCollapse)
     return rewriter.notifyMatchFailure(
         op, "no collapse_shapes found on indexed copy inputs");
 
-  Value newSrc = op.getSrc();
+  Value newSrc = src;
   SmallVector<Value> newSrcIndices = llvm::to_vector(op.getSrcIndices());
-  Value newDst = op.getDst();
+  Value newDst = dst;
   SmallVector<Value> newDstIndices = llvm::to_vector(op.getDstIndices());
   if (srcCollapse) {
     newSrc = srcCollapse.getViewSource();
     newSrcIndices.clear();
     memref::resolveSourceIndicesCollapseShape(
         op.getLoc(), rewriter, srcCollapse, op.getSrcIndices(), newSrcIndices,
-        /*startsInbounds=*/true);
+        op.hasInboundsSrcIndices());
   }
   if (dstCollapse) {
     newDst = dstCollapse.getViewSource();
     newDstIndices.clear();
     memref::resolveSourceIndicesCollapseShape(
         op.getLoc(), rewriter, dstCollapse, op.getDstIndices(), newDstIndices,
-        /*startsInbounds=*/true);
+        op.hasInboundsDstIndices());
   }
   op.setMemrefsAndIndices(rewriter, newSrc, newSrcIndices, newDst,
                           newDstIndices);
