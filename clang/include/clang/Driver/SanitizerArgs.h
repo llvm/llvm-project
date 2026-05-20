@@ -10,6 +10,7 @@
 
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Driver/Action.h"
+#include "clang/Driver/BoundArch.h"
 #include "clang/Driver/Types.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -87,7 +88,7 @@ public:
   /// Parses the sanitizer arguments from an argument list.
   SanitizerArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                 bool DiagnoseErrors = true, bool DiagnoseBoundArchErrors = true,
-                StringRef BoundArch = "",
+                BoundArch BA = {},
                 Action::OffloadKind DeviceOffloadKind = Action::OFK_None);
 
   bool needsSharedRt() const { return SharedRuntime; }

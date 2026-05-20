@@ -10,6 +10,7 @@
 #define LLVM_CLANG_DRIVER_JOB_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Driver/BoundArch.h"
 #include "clang/Driver/InputInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -195,8 +196,10 @@ public:
   const Tool &getCreator() const { return Creator; }
 
   /// Return the bound architecture for this command, if any.
-  StringRef getBoundArch() const { return BoundArch; }
-  void setBoundArch(StringRef Arch) { BoundArch = std::string(Arch); }
+  driver::BoundArch getBoundArch() const {
+    return driver::BoundArch(BoundArch);
+  }
+  void setBoundArch(driver::BoundArch BA) { BoundArch = BA.ArchName.str(); }
 
   /// Returns the kind of response file supported by the current invocation.
   const ResponseFileSupport &getResponseFileSupport() {
