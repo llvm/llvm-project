@@ -235,7 +235,7 @@ def create_parser():
         dest="test_build_dir",
         metavar="Test build directory",
         default=(
-            "lldb-test-build" if sys.platform == "win32" else "lldb-test-build.noindex"
+            "lldb-test-build.noindex" if sys.platform == "darwin" else "lldb-test-build"
         ),
         help="The root build directory for the tests. It will be removed before running.",
     )
