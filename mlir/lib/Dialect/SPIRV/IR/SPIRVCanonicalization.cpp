@@ -125,17 +125,13 @@ void spirv::AccessChainOp::getCanonicalizationPatterns(
 // spirv.IAddCarry
 //===----------------------------------------------------------------------===//
 
-// We are required to use CompositeConstructOp to create a constant struct as
-// they are not yet implemented as constant, hence we can not do so in a fold.
 struct IAddCarryFold final : OpRewritePattern<spirv::IAddCarryOp> {
   using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::IAddCarryOp op,
                                 PatternRewriter &rewriter) const override {
-    Location loc = op.getLoc();
     Value lhs = op.getOperand1();
     Value rhs = op.getOperand2();
-    Type constituentType = lhs.getType();
 
     // iaddcarry (x, 0) = <0, x>
     if (matchPattern(rhs, m_Zero())) {
@@ -177,20 +173,8 @@ struct IAddCarryFold final : OpRewritePattern<spirv::IAddCarryOp> {
     if (!carrys)
       return failure();
 
-    Value addsVal =
-        spirv::ConstantOp::create(rewriter, loc, constituentType, adds);
-
-    Value carrysVal =
-        spirv::ConstantOp::create(rewriter, loc, constituentType, carrys);
-
-    // Create empty struct
-    Value undef = spirv::UndefOp::create(rewriter, loc, op.getType());
-    // Fill in adds at id 0
-    Value intermediate =
-        spirv::CompositeInsertOp::create(rewriter, loc, addsVal, undef, 0);
-    // Fill in carrys at id 1
-    rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(op, carrysVal,
-                                                          intermediate, 1);
+    rewriter.replaceOpWithNewOp<spirv::ConstantOp>(
+        op, op.getType(), rewriter.getArrayAttr({adds, carrys}));
     return success();
   }
 };
@@ -204,8 +188,6 @@ void spirv::IAddCarryOp::getCanonicalizationPatterns(
 // spirv.[S|U]MulExtended
 //===----------------------------------------------------------------------===//
 
-// We are required to use CompositeConstructOp to create a constant struct as
-// they are not yet implemented as constant, hence we can not do so in a fold.
 template <typename MulOp, bool IsSigned>
 struct MulExtendedFold final : OpRewritePattern<MulOp> {
   using OpRewritePattern<MulOp>::OpRewritePattern;
@@ -258,20 +240,8 @@ struct MulExtendedFold final : OpRewritePattern<MulOp> {
     if (!highBits)
       return failure();
 
-    Value lowBitsVal =
-        spirv::ConstantOp::create(rewriter, loc, constituentType, lowBits);
-
-    Value highBitsVal =
-        spirv::ConstantOp::create(rewriter, loc, constituentType, highBits);
-
-    // Create empty struct
-    Value undef = spirv::UndefOp::create(rewriter, loc, op.getType());
-    // Fill in lowBits at id 0
-    Value intermediate =
-        spirv::CompositeInsertOp::create(rewriter, loc, lowBitsVal, undef, 0);
-    // Fill in highBits at id 1
-    rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(op, highBitsVal,
-                                                          intermediate, 1);
+    rewriter.replaceOpWithNewOp<spirv::ConstantOp>(
+        op, op.getType(), rewriter.getArrayAttr({lowBits, highBits}));
     return success();
   }
 };
