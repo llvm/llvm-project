@@ -57,3 +57,25 @@ EMPTY: !<thin>
 # RUN: llvm-ar t %t/delete-count.a | count 0
 
 # DELETE-SECOND: foo.txt
+
+## test thin archive d option with -P and N modifiers (full path matching)
+
+# RUN: echo one > %t/a/file.txt
+
+# RUN: rm -f %t/archive-dPN.a
+# RUN: llvm-ar rc --thin %t/archive-dPN.a %t/a/file.txt %t/a/FILE.txt
+# RUN: llvm-ar t %t/archive-dPN.a | FileCheck %s --check-prefix=THIN-BEFORE -DPATH=%/t --implicit-check-not={{.}}
+
+## third does not exists, expect no-op
+# RUN: llvm-ar dPN 3 --thin %t/archive-dPN.a %t/a/file.txt
+# RUN: llvm-ar t %t/archive-dPN.a | FileCheck %s --check-prefix=THIN-BEFORE -DPATH=%/t --implicit-check-not={{.}}
+
+# RUN: llvm-ar dPN 2 --thin %t/archive-dPN.a %t/a/file.txt
+# RUN: llvm-ar t %t/archive-dPN.a | FileCheck %s --check-prefix=THIN-AFTER -DPATH=%/t --implicit-check-not={{.}}
+# RUN: llvm-ar dPN 1 --thin %t/archive-dPN.a %t/a/file.txt
+# RUN: llvm-ar t %t/archive-dPN.a | count 0
+
+# THIN-BEFORE: [[PATH]]/a/file.txt
+# THIN-BEFORE: [[PATH]]/a/FILE.txt
+
+# THIN-AFTER: [[PATH]]/a/file.txt
