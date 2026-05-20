@@ -1599,7 +1599,14 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
 }
 
 llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
-                                                 BreakpointAction action) {
+                                                 BreakpointAction action,
+                                                 bool do_it_now) {
+  if (do_it_now)
+    if (llvm::Error E = FlushDelayedBreakpoints())
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Breakpoints), std::move(E),
+          "eager breakpoint requested, but failed to flush breakpoints: {0}");
+
   auto site_sp = site.shared_from_this();
   std::unique_lock<std::recursive_mutex> guard(m_delayed_breakpoints_mutex);
 
@@ -1607,7 +1614,7 @@ llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
   if (IsBreakpointSiteEnabled(*site_sp) == (action == BreakpointAction::Enable))
     return llvm::Error::success();
 
-  if (ShouldUseDelayedBreakpoints()) {
+  if (!do_it_now && ShouldUseDelayedBreakpoints()) {
     m_delayed_breakpoints.Enqueue(site_sp, action);
     return llvm::Error::success();
   }
@@ -1769,17 +1776,8 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
       BreakpointResolver::ResolverTy::AddressResolver;
   bool should_be_eager = use_hardware || bp_from_address;
 
-  // If this breakpoint must be eager, flush the breakpoint queue in case there
-  // is an interaction between the sites in the queue and this new site.
-  if (should_be_eager)
-    if (llvm::Error E = FlushDelayedBreakpoints())
-      LLDB_LOG_ERROR(
-          GetLog(LLDBLog::Breakpoints), std::move(E),
-          "eager breakpoint requested, but failed to flush breakpoints: {0}");
-
-  auto error = should_be_eager ? EnableBreakpointSite(bp_site_sp.get())
-                               : Status::FromError(ExecuteBreakpointSiteAction(
-                                     *bp_site_sp, BreakpointAction::Enable));
+  auto error = Status::FromError(ExecuteBreakpointSiteAction(
+      *bp_site_sp, BreakpointAction::Enable, /*do_it_now=*/should_be_eager));
   if (error.Success()) {
     constituent->SetBreakpointSite(bp_site_sp);
     return m_breakpoint_site_list.Add(bp_site_sp);
