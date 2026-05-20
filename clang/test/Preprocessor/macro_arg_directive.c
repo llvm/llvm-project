@@ -2,8 +2,8 @@
 
 #define a(x) enum { x }
 a(n =
-#undef a // expected-warning {{embedding a #undef directive within macro arguments has undefined behavior}}
-#define a 5 // expected-warning {{embedding a #define directive within macro arguments has undefined behavior}}
+#undef a
+#define a 5
   a);
 _Static_assert(n == 5, "");
 

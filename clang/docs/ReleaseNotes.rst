@@ -54,6 +54,9 @@ C++ Specific Potentially Breaking Changes
   matching the deduction of array sizes from ``int(&)[N]``.
   This is a breaking change for code that depended on the previously deduced type. (#GH195033)
 
+- Clang now rejects nested local classes defined in a different
+  block scope than their parent class. (#GH193472)
+
 ABI Changes in This Version
 ---------------------------
 
@@ -151,12 +154,6 @@ C++ Language Changes
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
-
-- Implemented `P2843R3 <https://wg21.link/P2843R3>`_ Preprocessing is never
-  undefined. Clang now diagnoses a macro expansion producing ``defined`` in a
-  conditional expression, an embedded directive within macro arguments, macro
-  names reserved for keywords, special identifiers, or standard attribute
-  tokens by default.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
