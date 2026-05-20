@@ -301,6 +301,74 @@ static mlir::func::FuncOp createCopyFunc(mlir::Location loc, mlir::Type varType,
   return funcOp;
 }
 
+/// Creates a copy function for box types that copies the array DATA
+/// (not just the descriptor) using the Fortran runtime's Assign function.
+/// This is needed for copyprivate of dynamically-sized arrays where each
+/// thread has its own allocation and needs the data copied from the
+/// single-executing thread.
+static mlir::func::FuncOp createBoxDataCopyFunc(mlir::Location loc,
+                                                mlir::Type varType,
+                                                fir::FirOpBuilder builder) {
+  mlir::ModuleOp module = builder.getModule();
+  auto rt = cast<fir::ReferenceType>(varType);
+  mlir::Type eleTy = rt.getEleTy();
+  std::string copyFuncName =
+      fir::getTypeAsString(eleTy, builder.getKindMap(), "_workshare_copy_data");
+
+  if (auto decl = module.lookupSymbol<mlir::func::FuncOp>(copyFuncName))
+    return decl;
+
+  // Ensure _FortranAAssign is declared in the module.
+  auto boxNoneTy = fir::BoxType::get(builder.getNoneType());
+  auto refBoxNoneTy = fir::ReferenceType::get(boxNoneTy);
+  auto refI8Ty = fir::ReferenceType::get(builder.getIntegerType(8));
+  auto i32Ty = builder.getI32Type();
+  llvm::StringRef assignFuncName = "_FortranAAssign";
+  auto assignFunc = module.lookupSymbol<mlir::func::FuncOp>(assignFuncName);
+  if (!assignFunc) {
+    mlir::OpBuilder::InsertionGuard g(builder);
+    mlir::OpBuilder modBuilder(module.getBodyRegion());
+    auto assignFuncType = mlir::FunctionType::get(
+        builder.getContext(), {refBoxNoneTy, boxNoneTy, refI8Ty, i32Ty}, {});
+    assignFunc = mlir::func::FuncOp::create(modBuilder, loc, assignFuncName,
+                                            assignFuncType);
+    assignFunc.setVisibility(mlir::SymbolTable::Visibility::Private);
+  }
+
+  // Create the copy function.
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  mlir::OpBuilder modBuilder(module.getBodyRegion());
+  llvm::SmallVector<mlir::Type> argsTy = {varType, varType};
+  auto funcType = mlir::FunctionType::get(builder.getContext(), argsTy, {});
+  mlir::func::FuncOp funcOp =
+      mlir::func::FuncOp::create(modBuilder, loc, copyFuncName, funcType);
+  funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  fir::factory::setInternalLinkage(funcOp);
+  builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
+                      {loc, loc});
+  builder.setInsertionPointToStart(&funcOp.getRegion().back());
+
+  // Load the source box.
+  Value srcBox =
+      fir::LoadOp::create(builder, loc, eleTy, funcOp.getArgument(1));
+
+  // Convert types for _FortranAAssign call.
+  Value dstConv =
+      fir::ConvertOp::create(builder, loc, refBoxNoneTy, funcOp.getArgument(0));
+  Value srcConv = fir::ConvertOp::create(builder, loc, boxNoneTy, srcBox);
+
+  // Use null source location (only used for error reporting).
+  Value nullLoc = fir::ZeroOp::create(builder, loc, refI8Ty);
+  Value zeroLine = builder.createIntegerConstant(loc, i32Ty, 0);
+
+  // Call _FortranAAssign to copy the array data.
+  fir::CallOp::create(builder, loc, assignFunc,
+                      mlir::ValueRange{dstConv, srcConv, nullLoc, zeroLine});
+
+  mlir::func::ReturnOp::create(builder, loc);
+  return funcOp;
+}
+
 static bool isUserOutsideSR(Operation *user, Operation *parentOp,
                             SingleRegion sr) {
   while (user->getParentOp() != parentOp)
@@ -380,11 +448,12 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
     return alloc;
   };
 
-  auto moveToSingle =
-      [&](SingleRegion sr, OpBuilder allocaBuilder, OpBuilder singleBuilder,
-          OpBuilder parallelBuilder) -> std::pair<bool, SmallVector<Value>> {
+  auto moveToSingle = [&](SingleRegion sr, OpBuilder allocaBuilder,
+                          OpBuilder singleBuilder, OpBuilder parallelBuilder)
+      -> std::tuple<bool, SmallVector<Value>, SmallPtrSet<Value, 4>> {
     IRMapping singleMapping = rootMapping;
     SmallVector<Value> copyPrivate;
+    SmallPtrSet<Value, 4> boxDataCopyVars;
     bool allParallelized = true;
 
     // "firstprivate" pointer initialization creates: (1) alloca, (2) store
@@ -408,8 +477,8 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
             writesToCopyprivateAlloca =
                 llvm::any_of(effects, [&](const auto &eff) {
                   return isa<MemoryEffects::Write>(eff.getEffect()) &&
-                         eff.getValue() &&
-                         hoistedCopyprivateAllocas.contains(eff.getValue());
+                         (!eff.getValue() ||
+                          hoistedCopyprivateAllocas.contains(eff.getValue()));
                 });
           }
         }
@@ -437,39 +506,34 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
       } else if (auto alloca = dyn_cast<fir::AllocaOp>(&op)) {
         if (alloca.isDynamic()) {
           // Dynamic allocas (e.g. firstprivate arrays with runtime extent)
-          // cannot use the simple load/store copyprivate copy function
-          // because it only copies a single element for sequence types like
-          // !fir.array<?xi32>. Instead, keep the alloca in the single block
-          // and broadcast its address via a box to all threads. The box
-          // preserves shape information and is semantically correct for
-          // copyprivate.
-          singleBuilder.clone(op, singleMapping);
+          // are hoisted so each thread gets its own allocation, providing
+          // true firstprivate semantics. The array data is broadcast via
+          // copyprivate using a box that carries shape information. The
+          // copyprivate copy function uses _FortranAAssign to copy the
+          // actual array data (not just the descriptor) between threads.
+          auto hoisted =
+              cast<fir::AllocaOp>(allocaBuilder.clone(*alloca, singleMapping));
+          rootMapping.map(&*alloca, &*hoisted);
+          rootMapping.map(alloca.getResult(), hoisted.getResult());
+
           if (isTransitivelyUsedOutside(alloca.getResult(), sr)) {
-            Value clonedResult = singleMapping.lookup(alloca.getResult());
-            if (!rootMapping.lookupOrNull(alloca.getResult())) {
-              // Create a box type wrapping the allocated array type.
-              Type eleTy =
-                  cast<fir::ReferenceType>(alloca.getType()).getEleTy();
-              auto boxTy = fir::BoxType::get(eleTy);
-              Value boxAlloc = fir::AllocaOp::create(allocaBuilder, loc, boxTy);
-              // In single: create a shape from the alloca extents, embox
-              // the array, and store the box.
-              SmallVector<Value> extents;
-              for (Value ext : alloca.getShape())
-                extents.push_back(singleMapping.lookupOrDefault(ext));
-              Value shape = fir::ShapeOp::create(singleBuilder, loc, extents);
-              Value box = fir::EmboxOp::create(singleBuilder, loc, boxTy,
-                                               clonedResult, shape);
-              fir::StoreOp::create(singleBuilder, loc, box, boxAlloc);
-              // After single: load the box and extract the address.
-              Value loadedBox =
-                  fir::LoadOp::create(parallelBuilder, loc, boxTy, boxAlloc);
-              Value addr = fir::BoxAddrOp::create(parallelBuilder, loc,
-                                                  alloca.getType(), loadedBox);
-              rootMapping.map(alloca.getResult(), addr);
-              copyPrivate.push_back(boxAlloc);
-            }
+            // Create a box slot for copyprivate to broadcast the array data.
+            Type eleTy = cast<fir::ReferenceType>(alloca.getType()).getEleTy();
+            auto boxTy = fir::BoxType::get(eleTy);
+            Value boxAlloc = fir::AllocaOp::create(allocaBuilder, loc, boxTy);
+
+            // Embox the per-thread array allocation with its shape extents.
+            Value shape =
+                fir::ShapeOp::create(allocaBuilder, loc, hoisted.getShape());
+            Value box = fir::EmboxOp::create(allocaBuilder, loc, boxTy,
+                                             hoisted.getResult(), shape);
+            fir::StoreOp::create(allocaBuilder, loc, box, boxAlloc);
+
+            copyPrivate.push_back(boxAlloc);
+            boxDataCopyVars.insert(boxAlloc);
           }
+
+          hoistedCopyprivateAllocas.insert(alloca.getResult());
           allParallelized = false;
         } else {
           auto hoisted =
@@ -496,7 +560,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
       }
     }
     omp::TerminatorOp::create(singleBuilder, loc);
-    return {allParallelized, copyPrivate};
+    return {allParallelized, copyPrivate, boxDataCopyVars};
   };
 
   for (Block &block : sourceRegion) {
@@ -557,7 +621,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
         Block *parallelBlock = new Block();
         parallelBuilder.setInsertionPointToStart(parallelBlock);
 
-        auto [allParallelized, copyprivateVars] =
+        auto [allParallelized, copyprivateVars, boxDataCopyVars] =
             moveToSingle(std::get<SingleRegion>(opOrSingle), allocaBuilder,
                          singleBuilder, parallelBuilder);
         if (allParallelized) {
@@ -574,7 +638,10 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
           cleanupBlock(singleBlock);
           for (auto var : singleOperands.copyprivateVars) {
             mlir::func::FuncOp funcOp =
-                createCopyFunc(loc, var.getType(), firCopyFuncBuilder);
+                boxDataCopyVars.contains(var)
+                    ? createBoxDataCopyFunc(loc, var.getType(),
+                                            firCopyFuncBuilder)
+                    : createCopyFunc(loc, var.getType(), firCopyFuncBuilder);
             singleOperands.copyprivateSyms.push_back(
                 SymbolRefAttr::get(funcOp));
           }

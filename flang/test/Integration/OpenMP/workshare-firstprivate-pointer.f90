@@ -9,7 +9,6 @@
 !RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s --check-prefix HLFIR
 !RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s --check-prefix FIR
 !RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s --check-prefix LLVM
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %s -o - | fir-opt --lower-workshare --allow-unregistered-dialect -o - | FileCheck %s --check-prefix FIROPT
 
 ! Test that parallel workshare with firstprivate(P) where P is a pointer
 ! correctly places stores through the pointer target in omp.single rather
@@ -87,80 +86,6 @@ end subroutine
 ! FIR: }
 ! FIR: return
 
-! FIROPT: func.func @_QPtest_workshare_firstprivate_pointer(
-! FIROPT-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-
-! FIROPT: %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
-! FIROPT: %[[I_ALLOC:.*]] = fir.alloca i32
-! FIROPT: %[[I_DECL:.*]]:2 = hlfir.declare %[[I_ALLOC]]
-
-! FIROPT: %[[P_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[SCOPE]] arg 1
-! FIROPT-SAME: fortran_attrs = #fir.var_attrs<intent_in, pointer>
-
-! FIROPT: omp.parallel {
-
-! FIROPT: %[[P_PRIV:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> {bindc_name = "p", pinned
-
-! FIROPT: omp.single copyprivate(%[[P_PRIV]] -> @_workshare_copy_box_ptr_Uxi32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) nowait {
-
-! FIROPT: %[[ZERO_PTR:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xi32>>
-! FIROPT: %[[C0:.*]] = arith.constant 0 : index
-! FIROPT: %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
-! FIROPT: %[[EMBOX:.*]] = fir.embox %[[ZERO_PTR]](%[[SHAPE]])
-! FIROPT: fir.store %[[EMBOX]] to %[[P_PRIV]]
-
-! FIROPT: %[[P_FP:.*]]:2 = hlfir.declare %[[P_PRIV]]
-! FIROPT-SAME: fortran_attrs = #fir.var_attrs<intent_in, pointer>
-
-! FIROPT: %[[LOAD_ORIG:.*]] = fir.load %[[P_DECL]]#0
-! FIROPT: fir.store %[[LOAD_ORIG]] to %[[P_FP]]#0
-
-! FIROPT: %[[C1:.*]] = arith.constant 1 : i32
-
-! FIROPT: %[[LOAD_PRIV:.*]] = fir.load %[[P_FP]]#0
-! FIROPT: %[[C0_2:.*]] = arith.constant 0 : index
-! FIROPT: %[[DIMS:.*]]:3 = fir.box_dims %[[LOAD_PRIV]], %[[C0_2]]
-
-! FIROPT: %[[EXT64:.*]] = fir.convert %[[DIMS]]#1 : (index) -> i64
-! FIROPT: %[[EXT32:.*]] = fir.convert %[[EXT64]] : (i64) -> i32
-
-! FIROPT: hlfir.forall lb {
-! FIROPT: hlfir.yield %[[C1]] : i32
-! FIROPT: } ub {
-! FIROPT: hlfir.yield %[[EXT32]] : i32
-! FIROPT: }  (%[[IV:.*]]: i32) {
-
-! FIROPT: %[[IDX:.*]] = hlfir.forall_index "i" %[[IV]] : (i32) -> !fir.ref<i32>
-
-! FIROPT: hlfir.region_assign {
-
-! FIROPT: %[[IDX_VAL:.*]] = fir.load %[[IDX]] : !fir.ref<i32>
-! FIROPT: hlfir.yield %[[IDX_VAL]] : i32
-
-! FIROPT: } to {
-
-! FIROPT: %[[LOAD_BOX:.*]] = fir.load %[[P_FP]]#0
-! FIROPT: %[[LOAD_I:.*]] = fir.load %[[IDX]] : !fir.ref<i32>
-! FIROPT: %[[IDX64:.*]] = fir.convert %[[LOAD_I]] : (i32) -> i64
-
-! FIROPT: %[[DESIG:.*]] = hlfir.designate %[[LOAD_BOX]] (%[[IDX64]])
-! FIROPT-SAME: -> !fir.ref<i32>
-
-! FIROPT: hlfir.yield %[[DESIG]] : !fir.ref<i32>
-
-! FIROPT: }
-! FIROPT: }
-
-! FIROPT: omp.terminator
-! FIROPT: }
-
-! FIROPT: %[[POST_DECL:.*]]:2 = hlfir.declare %[[P_PRIV]]
-! FIROPT-SAME: fortran_attrs = #fir.var_attrs<intent_in, pointer>
-
-! FIROPT: omp.barrier
-! FIROPT: omp.terminator
-! FIROPT: }
-
 ! At LLVM IR level, verify the OpenMP fork call exists and the loop body
 ! is inside the outlined function.
 ! LLVM:       call void {{.*}}__kmpc_fork_call({{.*}}@test_workshare_firstprivate_pointer_..omp_par{{.*}})
@@ -195,31 +120,29 @@ subroutine test_workshare_firstprivate_array(a, z, n)
 end subroutine
 
 ! After workshare lowering, the dynamic alloca for the firstprivate copy
-! must be inside omp.single, with its address broadcast via a !fir.box
-! indirection alloca + copyprivate.
+! is hoisted so each thread gets its own allocation (true firstprivate).
+! The array data is broadcast via copyprivate using a box with a
+! data-copying function (_FortranAAssign).
 ! FIR-LABEL:     {{.*}}test_workshare_firstprivate_array(
 ! FIR:           %[[C1:.*]] = arith.constant 1 : i32
 ! FIR-LABEL:     omp.parallel {
 
-! The box indirection alloca is hoisted for copyprivate
-! FIR:       omp.single copyprivate(%[[BOX_INDIRECT:.*]] -> @_workshare_copy_box_Uxi32{{.*}}) {
+! The dynamic alloca is hoisted (per-thread allocation)
+! FIR:       %[[FP_ARRAY:.*]] = fir.alloca !fir.array<?xi32>
+! The box slot and embox are hoisted for copyprivate
+! FIR:       %[[BOX_SLOT:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
+! FIR:       %[[SHAPE:.*]] = fir.shape %{{.*}}
+! FIR:       %[[BOX_VAL:.*]] = fir.embox %[[FP_ARRAY]](%[[SHAPE]]){{.*}}
+! FIR:       fir.store %[[BOX_VAL]] to %[[BOX_SLOT]]
 
-! The dynamic alloca (firstprivate copy) is inside the single block
-! FIR:         %[[FP_ARRAY:.*]] = fir.alloca{{.*}}
+! Copyprivate uses box-data copy function to broadcast array contents
+! FIR:       omp.single copyprivate(%[[BOX_SLOT]] -> @_workshare_copy_data_box_Uxi32{{.*}}) {
 
-! Runtime shape construction for the firstprivate array.
-! FIR:         %[[SHAPE:.*]] = fir.shape %{{.*}}
-! FIR:         %[[BOX_VAL:.*]] = fir.embox %[[FP_ARRAY]](%[[SHAPE]]){{.*}}fir.array<?xi32>{{.*}}
-! FIR:         fir.store %[[BOX_VAL]] to %[[BOX_INDIRECT]] {{.*}}fir.array<?xi32>{{.*}}
-
-! The initialization of the firstprivate copy
+! The initialization of the firstprivate copy (single thread only)
 ! FIR:         fir.call @_FortranAAssign
 ! FIR:         omp.terminator
 ! FIR:       }
-! After single, the box is loaded and the address extracted
-! FIR:       %[[LOADED_BOX:.*]] = fir.load %[[BOX_INDIRECT]]{{.*}}fir.array<?xi32>{{.*}}
-! FIR:       %[[ARRAY_ADDR:.*]] = fir.box_addr %[[LOADED_BOX]]{{.*}}fir.array<?xi32>>{{.*}}
-! The workshared loop uses the broadcast address
+! The workshared loop uses the per-thread allocation directly
 ! FIR:       omp.wsloop {
 ! FIR:         %[[SRC_ELEM:.*]] = fir.array_coor %{{.*}}(%{{.*}}) %{{.*}}
 ! FIR:         %[[SRC_VAL:.*]] = fir.load %[[SRC_ELEM]]
@@ -230,3 +153,264 @@ end subroutine
 ! FIR:       omp.barrier
 ! FIR:       omp.terminator
 ! FIR:       return
+
+subroutine allocatable_example()
+  implicit none
+
+  integer, allocatable :: p(:)
+  integer :: a(4)
+
+  allocate(p(4))
+  p = [1, 2, 3, 4]
+
+  !$omp parallel workshare firstprivate(p)
+    a = p + 1
+  !$omp end parallel workshare
+end subroutine
+
+! HLFIR-LABEL: func.func @_QPallocatable_example() {
+! HLFIR: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {{.*}}uniq_name = "_QFallocatable_exampleEa"
+! HLFIR: %[[ORIG_P:.*]]:2 = hlfir.declare %{{.*}} {{.*}}fortran_attrs = #fir.var_attrs<allocatable>{{.*}}uniq_name = "_QFallocatable_exampleEp"
+
+! Initial allocation/assignment of original p
+! HLFIR: fir.allocmem !fir.array<?xi32>
+! HLFIR: fir.store %{{.*}} to %[[ORIG_P]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! HLFIR: hlfir.assign %{{.*}} to %[[ORIG_P]]#0 realloc : {{.*}}, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+
+! HLFIR: omp.parallel {
+! HLFIR:   omp.workshare {
+
+! Firstprivate allocatable descriptor
+! HLFIR:     %[[FP_ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {{.*}}bindc_name = "p"{{.*}}
+
+! Allocate/init firstprivate copy depending on original allocation status
+! HLFIR:     %[[ORIG_VAL0:.*]] = fir.load %[[ORIG_P]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! HLFIR:     %[[ORIG_ADDR0:.*]] = fir.box_addr %[[ORIG_VAL0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! HLFIR:     fir.convert %[[ORIG_ADDR0]]
+! HLFIR:     arith.cmpi ne
+! HLFIR:     fir.if %{{.*}} {
+! HLFIR:       %[[ORIG_VAL1:.*]] = fir.load %[[ORIG_P]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! HLFIR:       fir.box_dims %[[ORIG_VAL1]]
+! HLFIR:       fir.allocmem !fir.array<?xi32>
+! HLFIR:       fir.embox
+! HLFIR:       fir.store %{{.*}} to %[[FP_ALLOCA]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! HLFIR:     } else {
+! HLFIR:       fir.zero_bits !fir.heap<!fir.array<?xi32>>
+! HLFIR:       fir.embox
+! HLFIR:       fir.store %{{.*}} to %[[FP_ALLOCA]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! HLFIR:     }
+
+! Declare firstprivate p
+! HLFIR:     %[[FP_DECL:.*]]:2 = hlfir.declare %[[FP_ALLOCA]] {{.*}}fortran_attrs = #fir.var_attrs<allocatable>{{.*}}uniq_name = "_QFallocatable_exampleEp"
+
+! Copy original p into firstprivate p
+! HLFIR:     %[[FP_VAL0:.*]] = fir.load %[[FP_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! HLFIR:     %[[FP_ADDR0:.*]] = fir.box_addr %[[FP_VAL0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! HLFIR:     fir.convert %[[FP_ADDR0]]
+! HLFIR:     arith.cmpi ne
+! HLFIR:     fir.if %{{.*}} {
+! HLFIR:       %[[ORIG_VAL2:.*]] = fir.load %[[ORIG_P]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! HLFIR:       hlfir.assign %[[ORIG_VAL2]] to %[[FP_DECL]]#0 realloc : !fir.box<!fir.heap<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! HLFIR:     }
+
+! Use firstprivate p in: a = p + 1
+! HLFIR:     %[[FP_VAL1:.*]] = fir.load %[[FP_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! HLFIR:     %[[EXPR:.*]] = hlfir.elemental
+! HLFIR:       hlfir.designate %[[FP_VAL1]]
+! HLFIR:       fir.load
+! HLFIR:       arith.addi
+! HLFIR:       hlfir.yield_element
+! HLFIR:     hlfir.assign %[[EXPR]] to %[[A]]#0 : !hlfir.expr<?xi32>, !fir.ref<!fir.array<4xi32>>
+! HLFIR:     hlfir.destroy %[[EXPR]] : !hlfir.expr<?xi32>
+
+! Cleanup firstprivate p
+! HLFIR:     %[[FP_VAL2:.*]] = fir.load %[[FP_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! HLFIR:     %[[FP_ADDR1:.*]] = fir.box_addr %[[FP_VAL2]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! HLFIR:     fir.convert %[[FP_ADDR1]]
+! HLFIR:     arith.cmpi ne
+! HLFIR:     fir.if %{{.*}} {
+! HLFIR:       %[[FP_VAL3:.*]] = fir.load %[[FP_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! HLFIR:       %[[FP_ADDR2:.*]] = fir.box_addr %[[FP_VAL3]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! HLFIR:       fir.freemem %[[FP_ADDR2]] : !fir.heap<!fir.array<?xi32>>
+! HLFIR:       fir.store %{{.*}} to %[[FP_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! HLFIR:     }
+! HLFIR:     omp.terminator
+! HLFIR:   }
+! HLFIR:   omp.terminator
+! HLFIR: }
+
+! Final cleanup of original p
+! HLFIR: %[[ORIG_VAL3:.*]] = fir.load %[[ORIG_P]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! HLFIR: %[[ORIG_ADDR1:.*]] = fir.box_addr %[[ORIG_VAL3]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! HLFIR: fir.convert %[[ORIG_ADDR1]]
+! HLFIR: arith.cmpi ne
+! HLFIR: fir.if %{{.*}} {
+! HLFIR:   %[[ORIG_VAL4:.*]] = fir.load %[[ORIG_P]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! HLFIR:   %[[ORIG_ADDR2:.*]] = fir.box_addr %[[ORIG_VAL4]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! HLFIR:   fir.freemem %[[ORIG_ADDR2]] : !fir.heap<!fir.array<?xi32>>
+! HLFIR:   fir.store %{{.*}} to %[[ORIG_P]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! HLFIR: }
+
+! HLFIR: return
+! HLFIR: }
+
+! FIR-LABEL: func.func @_QPallocatable_example()
+
+! FIR:           %[[C1_I32:.*]] = arith.constant 1 : i32
+
+! Original allocatable p declaration/allocation
+! FIR:           %[[A_DECL:.*]] = fir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFallocatable_exampleEa"}
+! FIR:           %[[ORIG_P:.*]] = fir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatable_exampleEp"}
+! FIR:           fir.allocmem !fir.array<?xi32>
+! FIR:           fir.store %{{.*}} to %[[ORIG_P]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! FIR:           fir.call @_FortranAAssign
+
+! FIR:           omp.parallel {
+
+! Allocas for copyprivate slots
+! FIR:             %[[A_BOX_SLOT:.*]] = fir.alloca !fir.box<!fir.array<4xi32>>
+! FIR:             %[[FP_BOX_SLOT:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "p", pinned
+! FIR:             %[[COPY_BOX_SLOT:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
+! FIR:             %[[COPY_HEAP_SLOT:.*]] = fir.alloca !fir.heap<!fir.array<?xi32>>
+
+! Copyprivate with three slots for broadcasting firstprivate data
+! FIR:             omp.single copyprivate(%[[FP_BOX_SLOT]] -> @_workshare_copy_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %[[COPY_BOX_SLOT]] -> @_workshare_copy_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %[[COPY_HEAP_SLOT]] -> @_workshare_copy_heap_Uxi32 : !fir.ref<!fir.heap<!fir.array<?xi32>>>) {
+
+! Check original allocation status and allocate firstprivate copy
+! FIR:               %[[ORIG_BOX0:.*]] = fir.load %[[ORIG_P]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! FIR:               fir.box_addr %[[ORIG_BOX0]]
+! FIR:               arith.cmpi ne
+! FIR:               fir.if %{{.*}} {
+! FIR:                 fir.load %[[ORIG_P]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! FIR:                 fir.box_dims
+! FIR:                 fir.allocmem !fir.array<?xi32>
+! FIR:                 fir.store %{{.*}} to %[[FP_BOX_SLOT]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! FIR:               } else {
+! FIR:                 fir.zero_bits !fir.heap<!fir.array<?xi32>>
+! FIR:                 fir.store %{{.*}} to %[[FP_BOX_SLOT]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! FIR:               }
+
+! Declare firstprivate p and copy data from original
+! FIR:               %[[FP_DECL:.*]] = fir.declare %[[FP_BOX_SLOT]] {fortran_attrs = #fir.var_attrs<allocatable>
+! FIR:               fir.load %[[FP_DECL]]
+! FIR:               fir.box_addr
+! FIR:               arith.cmpi ne
+! FIR:               fir.if %{{.*}} {
+! FIR:                 fir.call @_FortranAAssign
+! FIR:               }
+
+! Store to copyprivate broadcast slots
+! FIR:               fir.store %{{.*}} to %[[COPY_BOX_SLOT]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! FIR:               fir.store %{{.*}} to %[[COPY_HEAP_SLOT]] : !fir.ref<!fir.heap<!fir.array<?xi32>>>
+! FIR:               omp.terminator
+! FIR:             }
+
+! After single: use copyprivate broadcast data for workshared computation
+! FIR:             %[[FP_DECL2:.*]] = fir.declare %[[FP_BOX_SLOT]] {fortran_attrs = #fir.var_attrs<allocatable>
+! FIR:             %[[COPY_BOX:.*]] = fir.load %[[COPY_BOX_SLOT]]
+
+! Workshared loop: temp = p + 1
+! FIR:             omp.wsloop {
+! FIR:               omp.loop_nest (%[[I:.*]]) : index
+! FIR:                 %[[SRC_VAL:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+! FIR:                 %[[ADD_RES:.*]] = arith.addi %[[SRC_VAL]], %[[C1_I32]] : i32
+! FIR:                 fir.store %[[ADD_RES]] to %{{.*}} : !fir.ref<i32>
+! FIR:                 omp.yield
+! FIR:             }
+
+! Assignment of temp to a and cleanup (in omp.single nowait)
+! FIR:             omp.single nowait {
+! FIR:               fir.call @_FortranAAssign
+! FIR:               fir.freemem
+! Cleanup firstprivate p
+! FIR:               fir.if %{{.*}} {
+! FIR:                 fir.freemem
+! FIR:               }
+! FIR:               omp.terminator
+! FIR:             }
+
+! FIR:             omp.barrier
+! FIR:             omp.terminator
+! FIR:           }
+
+! Cleanup original p
+! FIR:           fir.if %{{.*}} {
+! FIR:             fir.freemem
+! FIR:           }
+! FIR:           return
+
+subroutine derived_type_example()
+  implicit none
+
+  type :: t
+    integer :: x
+  end type
+
+  type(t) :: p(4)
+  integer :: a(4)
+
+  p%x = [1, 2, 3, 4]
+
+  !$omp parallel workshare firstprivate(p)
+    a = p%x + 1
+  !$omp end parallel workshare
+end subroutine
+
+! FIR-LABEL: func.func @_QPderived_type_example()
+! FIR:           %[[C1_I32:.*]] = arith.constant 1 : i32
+! FIR:           %[[A_DECL:.*]] = fir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFderived_type_exampleEa"}
+! FIR:           %[[ORIG_P:.*]] = fir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFderived_type_exampleEp"}
+! FIR:           fir.call @_FortranAAssign
+! FIR:           omp.parallel {
+
+! Allocas for copyprivate slots
+! FIR:             %[[A_BOX_SLOT:.*]] = fir.alloca !fir.box<!fir.array<4xi32>>
+! FIR:             %[[P_BOX_SLOT:.*]] = fir.alloca !fir.box<!fir.array<4x!fir.type<{{.*}}>>>
+! FIR:             %[[FP_ARRAY:.*]] = fir.alloca !fir.array<4x!fir.type<{{.*}}>> {bindc_name = "p", pinned
+! FIR:             %[[HEAP_SLOT:.*]] = fir.alloca !fir.heap<!fir.array<4xi32>>
+
+! Copyprivate with derived-type copy function and heap copy function
+! FIR:             omp.single copyprivate(%[[FP_ARRAY]] -> @_workshare_copy_4xrec__QFderived_type_exampleTt : {{.*}}, %[[HEAP_SLOT]] -> @_workshare_copy_heap_4xi32 : {{.*}}) {
+
+! Declare firstprivate p and copy original data
+! FIR:               fir.declare %[[FP_ARRAY]]
+! FIR:               fir.call @_FortranAAssign
+
+! Allocate temp array for expression result
+! FIR:               fir.allocmem !fir.array<4xi32>
+! FIR:               fir.store %{{.*}} to %[[HEAP_SLOT]]
+! FIR:               omp.terminator
+! FIR:             }
+
+! After single: declare firstprivate p and extract p%x via slice
+! FIR:             %[[FP_DECL:.*]] = fir.declare %[[FP_ARRAY]]
+! FIR:             fir.field_index x, !fir.type<{{.*}}>
+! FIR:             fir.slice
+! FIR:             %[[PX_ADDR:.*]] = fir.box_addr
+
+! Load temp array from copyprivate slot
+! FIR:             %[[HEAP_VAL:.*]] = fir.load %[[HEAP_SLOT]]
+! FIR:             %[[TMP_DECL:.*]] = fir.declare %[[HEAP_VAL]]
+
+! Workshared loop: temp = p%x + 1
+! FIR:             omp.wsloop {
+! FIR:               omp.loop_nest (%[[I:.*]]) : index
+! FIR:                 %[[SRC_ELEM:.*]] = fir.array_coor %[[PX_ADDR]]
+! FIR:                 %[[SRC_VAL:.*]] = fir.load %[[SRC_ELEM]] : !fir.ref<i32>
+! FIR:                 %[[ADD_RES:.*]] = arith.addi %[[SRC_VAL]], %[[C1_I32]] : i32
+! FIR:                 %[[DST_ELEM:.*]] = fir.array_coor %[[TMP_DECL]]
+! FIR:                 fir.store %[[ADD_RES]] to %[[DST_ELEM]] : !fir.ref<i32>
+! FIR:                 omp.yield
+
+! Assignment of temp to a and cleanup (in omp.single nowait)
+! FIR:             omp.single nowait {
+! FIR:               fir.call @_FortranAAssign
+! FIR:               fir.freemem
+! FIR:               omp.terminator
+! FIR:             }
+
+! FIR:             omp.barrier
+! FIR:             omp.terminator
+! FIR:           }
+
+! FIR:           return

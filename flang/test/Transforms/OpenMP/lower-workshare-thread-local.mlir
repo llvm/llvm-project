@@ -488,5 +488,76 @@ func.func @pointer_descriptor_store_is_thread_local() {
 
 // Test for "parallel workshare firstprivate(z)" where z is an array.
 // Check that z is broadcast to all private values of the threads.
-// This test is now part of flang/test/Integration/OpenMP/workshare-firstprivate-pointer.f90
 
+// The copy function uses _FortranAAssign to broadcast array data.
+// CHECK-LABEL: func.func private @_workshare_copy_data_box_Uxi32(
+// CHECK: fir.call @_FortranAAssign
+// CHECK: return
+
+// CHECK-LABEL: func.func @dynamic_alloca_firstprivate_array(
+// CHECK-SAME: %[[N:.*]]: index,
+// CHECK-SAME: %[[SRC:.*]]: !fir.ref<!fir.array<?xi32>>,
+// CHECK-SAME: %[[DST:.*]]: !fir.ref<!fir.array<?xi32>>)
+func.func @dynamic_alloca_firstprivate_array(%n: index, %src: !fir.ref<!fir.array<?xi32>>, %dst: !fir.ref<!fir.array<?xi32>>) {
+  omp.parallel {
+    omp.workshare {
+      // Dynamic alloca for the firstprivate array copy
+      %z = fir.alloca !fir.array<?xi32>, %n {bindc_name = "z", pinned}
+      %shape = fir.shape %n : (index) -> !fir.shape<1>
+      %decl = fir.declare %z(%shape) {uniq_name = "z"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xi32>>
+      // A side-effecting op that initializes the firstprivate copy
+      "test.init"(%decl, %src) : (!fir.ref<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
+      // Workshared loop that reads from the firstprivate array
+      %c1 = arith.constant 1 : index
+      omp.workshare.loop_wrapper {
+        omp.loop_nest (%i) : index = (%c1) to (%n) inclusive step (%c1) {
+          %elem = fir.array_coor %decl(%shape) %i : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+          %val = fir.load %elem : !fir.ref<i32>
+          %dst_elem = fir.array_coor %dst(%shape) %i : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+          fir.store %val to %dst_elem : !fir.ref<i32>
+          omp.yield
+        }
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// CHECK: omp.parallel {
+
+// The dynamic alloca is hoisted so each thread gets its own allocation.
+// CHECK: %[[ARRAY:.*]] = fir.alloca !fir.array<?xi32>, %[[N]]
+// CHECK-SAME: bindc_name = "z"
+// CHECK-SAME: pinned
+
+// A box slot is used for copyprivate to broadcast the array data.
+// CHECK: %[[BOX_SLOT:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
+// CHECK: %[[SHAPE0:.*]] = fir.shape %[[N]]
+// CHECK: %[[BOX:.*]] = fir.embox %[[ARRAY]](%[[SHAPE0]]) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+// CHECK: fir.store %[[BOX]] to %[[BOX_SLOT]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
+
+// Initialization happens only inside the single block.
+// CHECK: omp.single copyprivate(%[[BOX_SLOT]] -> @_workshare_copy_data_box_Uxi32 : !fir.ref<!fir.box<!fir.array<?xi32>>>) {
+// CHECK: %[[SHAPE1:.*]] = fir.shape %[[N]]
+// CHECK: %[[DECL1:.*]] = fir.declare %[[ARRAY]](%[[SHAPE1]])
+// CHECK: "test.init"(%[[DECL1]], %[[SRC]])
+// CHECK: omp.terminator
+// CHECK: }
+
+// The workshared loop uses the hoisted per-thread array.
+// CHECK: %[[SHAPE2:.*]] = fir.shape %[[N]]
+// CHECK: %[[DECL2:.*]] = fir.declare %[[ARRAY]](%[[SHAPE2]])
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: omp.wsloop nowait
+// CHECK: omp.loop_nest (%[[I:.*]]) : index = (%[[C1]]) to (%[[N]]) inclusive step (%[[C1]])
+// CHECK: %[[ELEM:.*]] = fir.array_coor %[[DECL2]](%[[SHAPE2]]) %[[I]] : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+// CHECK: %[[VAL:.*]] = fir.load %[[ELEM]] : !fir.ref<i32>
+// CHECK: %[[DST_ELEM:.*]] = fir.array_coor %[[DST]](%[[SHAPE2]]) %[[I]] : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+// CHECK: fir.store %[[VAL]] to %[[DST_ELEM]] : !fir.ref<i32>
+// CHECK: omp.yield
+
+// CHECK: omp.barrier
+// CHECK: omp.terminator
+// CHECK: return
