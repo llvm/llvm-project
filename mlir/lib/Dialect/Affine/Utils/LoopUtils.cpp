@@ -22,10 +22,12 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -114,12 +116,74 @@ static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
     std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
 }
 
+/// Return true if we can prove that the we always run at least the first
+/// iteration of the ForOp.
+static bool alwaysRunsFirstIteration(AffineForOp op) {
+  // Can't perform the analysis if the loops's bounds aren't index-typed.
+  if (!op.getInductionVar().getType().isIndex())
+    return false;
+  if (op.getLowerBoundMap().getNumResults() != 1 ||
+      op.getUpperBoundMap().getNumResults() != 1)
+    return false;
+
+  SmallVector<Value> lowerMapOperands = op.getLowerBoundOperands();
+  SmallVector<Value> upperMapOperands = op.getUpperBoundOperands();
+  ValueBoundsConstraintSet::Variable lower(op.getLowerBoundMap(),
+                                           lowerMapOperands);
+  ValueBoundsConstraintSet::Variable upper(op.getUpperBoundMap(),
+                                           upperMapOperands);
+  FailureOr<bool> isLb = ValueBoundsConstraintSet::compare(
+      lower, ValueBoundsConstraintSet::LT, upper);
+  return isLb.value_or(false);
+}
+
+/// Return true if we can prove that the we never run more than one iteration of
+/// the ForOp.
+static bool neverRunsSecondIteration(AffineForOp op) {
+  // Can't perform the analysis if the loops's bounds aren't index-typed.
+  if (!op.getInductionVar().getType().isIndex())
+    return false;
+
+  if (op.getLowerBoundMap().getNumResults() != 1 ||
+      op.getUpperBoundMap().getNumResults() != 1)
+    return false;
+
+  // The loop will only loop once if the inducation variable for the next time
+  // in the loop is greater than or equal to upper.
+  MLIRContext *context = op.getContext();
+  SmallVector<Value> lowerMapOperands = op.getLowerBoundOperands();
+  SmallVector<Value> upperMapOperands = op.getUpperBoundOperands();
+  SmallVector<AffineExpr> results;
+  AffineMap lowerMap = op.getLowerBoundMap();
+  for (AffineExpr expr : lowerMap.getResults())
+    results.push_back(expr + op.getStep().getSExtValue());
+
+  AffineMap nextItMap = AffineMap::get(
+      lowerMap.getNumDims(), lowerMap.getNumSymbols(), results, context);
+  ValueBoundsConstraintSet::Variable nextItVar(nextItMap, lowerMapOperands);
+  ValueBoundsConstraintSet::Variable upperVar(op.getUpperBoundMap(),
+                                              upperMapOperands);
+  FailureOr<bool> isUpperUnderNextIter = ValueBoundsConstraintSet::compare(
+      nextItVar, ValueBoundsConstraintSet::GE, upperVar);
+  return isUpperUnderNextIter.value_or(false);
+}
+
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// was known to have a single iteration.
 LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
   std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
-  if (!tripCount || *tripCount != 1)
+
+  // Only allow loops that are guaranteed to execute exactly once. If the trip
+  // count is constant, it must be exactly. If the trip count is dynamic, verify
+  // via affine analysis that it always runs the first iteration but never
+  // reaches the second.
+  if (tripCount && *tripCount != 1) {
     return failure();
+  }
+  if (!tripCount &&
+      !(alwaysRunsFirstIteration(forOp) && neverRunsSecondIteration(forOp))) {
+    return failure();
+  }
 
   // TODO: extend this for arbitrary affine bounds.
   if (forOp.getLowerBoundMap().getNumResults() != 1)
