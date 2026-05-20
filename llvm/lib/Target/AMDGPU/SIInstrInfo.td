@@ -1306,8 +1306,6 @@ def CPol_NonGLC : ValuePredicatedOperand<CPol, "!(Op.getImm() & CPol::GLC)", 1>;
 def CPol_GLC_WithDefault : DefaultOperand<CPol_GLC, !shl(1, CPolBit.GLC)>;
 def CPol_NonGLC_WithDefault : DefaultOperand<CPol_NonGLC, 0>;
 
-def IsAsync : NamedBitOperand<"isasync">;
-
 def TFE : NamedBitOperand<"tfe">;
 def UNorm : NamedBitOperand<"unorm">;
 def DA : NamedBitOperand<"da">;
@@ -3488,6 +3486,30 @@ def getIfAddr64Inst : InstrMapping {
   let ColFields = ["IsAddr64"];
   let KeyCol = ["1"];
   let ValueCols = [["1"]];
+}
+
+// Pairs each MUBUF/FLAT load-to-LDS pseudo with its GFX9GFX10Async sibling.
+class GFX9GFX10AsyncTable<string opName, bit is_async = 0> {
+  string GFX9GFX10AsyncOpName = opName;
+  bit IsGFX9GFX10Async = is_async;
+}
+
+// Maps a load-to-LDS pseudo to its GFX9GFX10Async _ASYNC sibling.
+def getGFX9GFX10AsyncOp : InstrMapping {
+  let FilterClass = "GFX9GFX10AsyncTable";
+  let RowFields = ["GFX9GFX10AsyncOpName"];
+  let ColFields = ["IsGFX9GFX10Async"];
+  let KeyCol = ["0"];
+  let ValueCols = [["1"]];
+}
+
+// Inverse of getGFX9GFX10AsyncOp.
+def getGFX9GFX10NonAsyncOp : InstrMapping {
+  let FilterClass = "GFX9GFX10AsyncTable";
+  let RowFields = ["GFX9GFX10AsyncOpName"];
+  let ColFields = ["IsGFX9GFX10Async"];
+  let KeyCol = ["1"];
+  let ValueCols = [["0"]];
 }
 
 // Maps a GLOBAL to its SADDR form.
