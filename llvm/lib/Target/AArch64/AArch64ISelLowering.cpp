@@ -2080,7 +2080,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::nxv8i16, MVT::nxv16i8, Legal);
 
       setOperationAction(ISD::CLMUL, {MVT::nxv16i8, MVT::nxv4i32}, Legal);
-      setOperationAction(ISD::CLMUL, {MVT::nxv8i16}, Custom);
+      setOperationAction(ISD::CLMUL, MVT::nxv8i16, Custom);
 
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
                                 MVT::nxv8f16, Legal);
@@ -2099,11 +2099,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     if (Subtarget->hasBF16())
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
                                 MVT::nxv8bf16, Legal);
+    setOperationAction(ISD::CLMUL, MVT::nxv2i64, Custom);
   }
-
-  if (Subtarget->hasSVEAES() &&
-      (Subtarget->isSVEAvailable() || Subtarget->hasSSVE_AES()))
-    setOperationAction(ISD::CLMUL, MVT::nxv2i64, Legal);
 
   // Handle non-aliasing elements mask
   if (Subtarget->hasSVE2() ||
@@ -8153,23 +8150,58 @@ SDValue AArch64TargetLowering::LowerFMA(SDValue Op, SelectionDAG &DAG) const {
   return convertFromScalableVector(DAG, VT, ScalableRes);
 }
 
-static SDValue LowerCLMUL(SDValue Op, SelectionDAG &DAG) {
+SDValue AArch64TargetLowering::LowerCLMUL(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
   assert((VT == MVT::i64 || VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i8 ||
-          VT == MVT::nxv8i16) &&
+          VT == MVT::nxv8i16 || VT == MVT::nxv2i64) &&
          "Unexpected Type");
+  uint64_t ScalarSize = VT.getScalarSizeInBits();
+  APInt HiWordMask = APInt::getBitsSet(ScalarSize, ScalarSize / 2, ScalarSize);
+
+  auto MakePMULLB = [&](SDValue OpA, SDValue OpB, EVT NewVT) {
+    SDValue PMULLB =
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_pmullb_pair, DL, MVT::i64);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, NewVT, PMULLB, OpA, OpB);
+  };
+
+  if (VT == MVT::nxv2i64) {
+    // Lower to (.d pmullb(.s, .s)) for clmul.nxv2i64(zext(nxv2i32),
+    // zext(nxv2i32))
+    if ((Subtarget->hasSVE2() || Subtarget->hasSME()) &&
+        DAG.MaskedValueIsZero(Op.getOperand(0), HiWordMask) &&
+        DAG.MaskedValueIsZero(Op.getOperand(1), HiWordMask)) {
+      SDValue OpA =
+          DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv4i32, Op.getOperand(0));
+      SDValue OpB =
+          DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv4i32, Op.getOperand(1));
+      return DAG.getNode(AArch64ISD::NVCAST, DL, VT,
+                         MakePMULLB(OpA, OpB, MVT::nxv4i32));
+    }
+    // Lower to (.q pmullb(.d, .d)) for clmul.nxv2i64(nxv2i64, nxv2i64)
+    if (Subtarget->hasSVEAES() &&
+        (Subtarget->isSVEAvailable() || Subtarget->hasSSVE_AES()))
+      return Op;
+    return SDValue();
+  }
 
   if (VT == MVT::nxv8i16) {
+    SDValue OpA =
+        DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv16i8, Op.getOperand(0));
+    SDValue OpB =
+        DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv16i8, Op.getOperand(1));
+
+    // Lower to pmullb for clmul.nxv8i16(zext(nxv8i8), zext(nxv8i8))
+    if (DAG.MaskedValueIsZero(Op.getOperand(0), HiWordMask) &&
+        DAG.MaskedValueIsZero(Op.getOperand(1), HiWordMask))
+      return DAG.getNode(AArch64ISD::NVCAST, DL, VT,
+                         MakePMULLB(OpA, OpB, MVT::nxv16i8));
+
     // clmul.i16(a, b) = xor(pmullb(a_lo, b_lo),
     //                       lsl(xor(pmul(a_hi, b_lo),
     //                               pmul(a_lo, b_hi)),
     //                           8))
-    SDValue OpA = Op.getOperand(0);
-    SDValue OpB = Op.getOperand(1);
     // Bitcast to i8 for byte-wise PMUL and PMULLB.
-    OpA = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv16i8, OpA);
-    OpB = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv16i8, OpB);
 
     // Form adjacent byte pairs {a_hi, b_hi} and {b_lo, a_lo}. PMUL then
     // computes {a_hi * b_lo, b_hi * a_lo}, and EORBT xors those pairs.
@@ -8182,10 +8214,7 @@ static SDValue LowerCLMUL(SDValue Op, SelectionDAG &DAG) {
     EORBT = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i8, EORBT, PMUL,
                         PMUL, PMUL);
 
-    SDValue PMULLB =
-        DAG.getTargetConstant(Intrinsic::aarch64_sve_pmullb_pair, DL, MVT::i64);
-    PMULLB = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i8, PMULLB, OpA,
-                         OpB);
+    SDValue PMULLB = MakePMULLB(OpA, OpB, MVT::nxv16i8);
 
     SDValue EORTB =
         DAG.getTargetConstant(Intrinsic::aarch64_sve_eortb, DL, MVT::i64);
@@ -22045,17 +22074,20 @@ performExtractSubvectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return SDValue();
 
   EVT VT = N->getValueType(0);
-  if (!VT.isScalableVector() || VT.getVectorElementType() != MVT::i1)
-    return SDValue();
-
   SDValue V = N->getOperand(0);
+
+  // Fixed-length splats get legalized to a scalable splat + fixed-length
+  // extract, so avoid creating an infinite loop.
+  if (VT.isScalableVector() != V->getValueType(0).isScalableVector())
+    return SDValue();
 
   // NOTE: This combine exists in DAGCombiner, but that version's legality check
   // blocks this combine because the non-const case requires custom lowering.
+  // We also want to perform it even when the splat has multiple uses.
   //
   // ty1 extract_vector(ty2 splat(const))) -> ty1 splat(const)
   if (V.getOpcode() == ISD::SPLAT_VECTOR)
-    if (isa<ConstantSDNode>(V.getOperand(0)))
+    if (isa<ConstantSDNode, ConstantFPSDNode>(V.getOperand(0)))
       return DAG.getNode(ISD::SPLAT_VECTOR, SDLoc(N), VT, V.getOperand(0));
 
   return SDValue();
@@ -26114,9 +26146,12 @@ static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
   SmallVector<SDValue, 16> MaskConstants;
   if (DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable() &&
       VecVT == MVT::v16i8) {
-    // v16i8 is a special case, as we have 16 entries but only 8 positional bits
-    // per entry. We split it into two halves, apply the mask, zip the halves to
-    // create 8x 16-bit values, and the perform the vector reduce.
+    // v16i8 is a special case: we have 16 entries but only 8 positional bits
+    // per i16 of bitmask. ANDing with a mask whose two 8-byte halves both
+    // hold the powers-of-two 1,2,...,128 leaves at most one bit set per byte
+    // lane within each 8-byte group, so pairwise addition equals OR and
+    // cannot carry. Three levels of ADDP then losslessly pack the 16
+    // per-lane bits into the low i16 of the result vector.
     for (unsigned Half = 0; Half < 2; ++Half) {
       for (unsigned I = 0; I < 8; ++I) {
         // On big-endian targets, the lane order in sub-byte vector elements
@@ -26129,13 +26164,13 @@ static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
     SDValue RepresentativeBits =
         DAG.getNode(ISD::AND, DL, VecVT, ComparisonResult, Mask);
 
-    SDValue UpperRepresentativeBits =
-        DAG.getNode(AArch64ISD::EXT, DL, VecVT, RepresentativeBits,
-                    RepresentativeBits, DAG.getConstant(8, DL, MVT::i32));
-    SDValue Zipped = DAG.getNode(AArch64ISD::ZIP1, DL, VecVT,
-                                 RepresentativeBits, UpperRepresentativeBits);
-    Zipped = DAG.getNode(ISD::BITCAST, DL, MVT::v8i16, Zipped);
-    return DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i16, Zipped);
+    SDValue V = RepresentativeBits;
+    V = DAG.getNode(AArch64ISD::ADDP, DL, VecVT, V, V);
+    V = DAG.getNode(AArch64ISD::ADDP, DL, VecVT, V, V);
+    V = DAG.getNode(AArch64ISD::ADDP, DL, VecVT, V, V);
+    V = DAG.getNode(ISD::BITCAST, DL, MVT::v8i16, V);
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i16, V,
+                       DAG.getConstant(0, DL, MVT::i64));
   }
 
   // All other vector sizes.

@@ -7602,11 +7602,10 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
   assert(all_of(IV->users(),
                 [](const VPUser *U) {
-                  return isa<VPScalarIVStepsRecipe>(U) ||
-                         isa<VPDerivedIVRecipe>(U) ||
-                         cast<VPRecipeBase>(U)->isScalarCast() ||
-                         cast<VPInstruction>(U)->getOpcode() ==
-                             Instruction::Add;
+                  if (isa<VPScalarIVStepsRecipe, VPDerivedIVRecipe>(U))
+                    return true;
+                  unsigned Opc = cast<VPInstruction>(U)->getOpcode();
+                  return Instruction::isCast(Opc) || Opc == Instruction::Add;
                 }) &&
          "the canonical IV should only be used by its increment or "
          "ScalarIVSteps when resetting the start value");
