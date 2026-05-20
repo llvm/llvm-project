@@ -21,7 +21,6 @@ end
 !CHECK:   j size=4 offset=4: ObjectEntity type: INTEGER(4)
 !CHECK:   k size=4 offset=8: ObjectEntity type: INTEGER(4)
 !CHECK:   OtherConstruct scope: size=0 alignment=1 sourceRange=98 bytes
+!CHECK:     i (OmpPrivate, OmpPreDetermined): HostAssoc => i size=4 offset=0: ObjectEntity type: INTEGER(4)
+!CHECK:     j (OmpPrivate, OmpPreDetermined): HostAssoc => j size=4 offset=4: ObjectEntity type: INTEGER(4)
 !CHECK:     k (OmpPrivate, OmpPreDetermined): HostAssoc => k size=4 offset=8: ObjectEntity type: INTEGER(4)
-!CHECK:     OtherConstruct scope: size=0 alignment=1 sourceRange=77 bytes
-!CHECK:       i (OmpPrivate, OmpPreDetermined): HostAssoc => i size=4 offset=0: ObjectEntity type: INTEGER(4)
-!CHECK:       j (OmpPrivate, OmpPreDetermined): HostAssoc => j size=4 offset=4: ObjectEntity type: INTEGER(4)
