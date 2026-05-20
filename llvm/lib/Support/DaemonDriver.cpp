@@ -63,11 +63,11 @@ public:
   /// Redirect `FromFd` to the same file as `ToFd` for the lifetime of this
   /// object.
   ScopedFileRedirect(int FromFd, int ToFd) : FromFd(FromFd) {
-    // Store a copy of the original file so that we can restore the original fd
-    // to this copy.
-    CopyFd = DUP_FN(FromFd);
+    // Create a duplicate FD pointing to the original file so that we can
+    // restore the original FD to the file pointed to by the duplicate.
+    DuplicateFd = DUP_FN(FromFd);
 
-    // Close the source fd and reopen it to the target fd.
+    // Close the source FD and reopen it to the target FD.
     DUP2_FN(ToFd, FromFd);
   }
 
@@ -75,11 +75,11 @@ public:
     if (Moved)
       return;
 
-    // Close the source fd and reopen it to the original file.
-    DUP2_FN(CopyFd, FromFd);
+    // Close the source FD and reopen it to the original file.
+    DUP2_FN(DuplicateFd, FromFd);
 
-    // Close the copied file descriptor, as it's no longer needed.
-    CLOSE_FN(CopyFd);
+    // Close the duplicate file descriptor, as it's no longer needed.
+    CLOSE_FN(DuplicateFd);
   }
 
   ScopedFileRedirect(ScopedFileRedirect &&Other) {
@@ -97,7 +97,7 @@ private:
   ScopedFileRedirect &operator=(const ScopedFileRedirect &Other) = default;
 
   int FromFd;
-  int CopyFd;
+  int DuplicateFd;
   bool Moved = false;
 };
 
