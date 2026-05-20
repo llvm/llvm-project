@@ -14,12 +14,12 @@
 
 // RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
 
-// COM: The original DS2 is gone; s_branch forward replaces it. The bumped
-// COM: s_wait_dscnt stays at the original position.
+// COM: The original DS2 is gone; s_branch forward replaces it. The drain
+// COM: s_wait_dscnt stays at the original position with imm unchanged (0x0).
 // DISASM-LABEL: <test_ds_trampoline>:
 // DISASM-NOT: ds_load_2addr_stride64_b32
 // DISASM: s_branch
-// DISASM: s_wait_dscnt 0x1
+// DISASM: s_wait_dscnt 0x0
 // DISASM: s_endpgm
 
 // COM: Trampoline body appended after .text: expanded DS loads + branch-back.
