@@ -19,9 +19,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(wint_t, towupper, (wint_t c)) {
-  if (c == static_cast<wint_t>(static_cast<wchar_t>(c))) {
+  if (c == static_cast<wint_t>(static_cast<wchar_t>(c)))
     return static_cast<wint_t>(internal::toupper(static_cast<wchar_t>(c)));
-  }
   return c;
 }
 

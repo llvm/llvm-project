@@ -161,8 +161,9 @@ add_entrypoint_object(
   HDRS
     towlower.h
   DEPENDS
-    libc.src.__support.wctype_utils
     libc.hdr.types.wint_t
+    libc.src.__support.common
+    libc.src.__support.wctype_utils
 )
 
 add_entrypoint_object(
@@ -172,6 +173,7 @@ add_entrypoint_object(
   HDRS
     towupper.h
   DEPENDS
-    libc.src.__support.wctype_utils
     libc.hdr.types.wint_t
+    libc.src.__support.common
+    libc.src.__support.wctype_utils
 )

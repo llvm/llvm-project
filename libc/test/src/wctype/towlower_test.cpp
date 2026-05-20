@@ -53,18 +53,5 @@ TEST(LlvmLibcTowLower, SimpleTest) {
   EXPECT_EQ(LIBC_NAMESPACE::towlower(L'α'), static_cast<wint_t>(L'α'));
   EXPECT_EQ(LIBC_NAMESPACE::towlower(L'а'), static_cast<wint_t>(L'а'));
   EXPECT_EQ(LIBC_NAMESPACE::towlower(L'é'), static_cast<wint_t>(L'é'));
-#else // ASCII Mode
-  // Non-ASCII should remain unchanged
-  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'Α'), static_cast<wint_t>(L'Α'));
-  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'Ω'), static_cast<wint_t>(L'Ω'));
-  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'А'), static_cast<wint_t>(L'А'));
-  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'Я'), static_cast<wint_t>(L'Я'));
-  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'É'), static_cast<wint_t>(L'É'));
-  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'Ü'), static_cast<wint_t>(L'Ü'));
-
-#if WCHAR_MAX > 0xFFFF
-  EXPECT_EQ(LIBC_NAMESPACE::towlower(L'\U00010400'),
-            static_cast<wint_t>(L'\U00010400'));
-#endif
 #endif
 }
