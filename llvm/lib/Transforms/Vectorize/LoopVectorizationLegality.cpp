@@ -309,86 +309,6 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
   }
 }
 
-// Return true if the inner loop \p Lp is uniform with regard to the outer loop
-// \p OuterLp (i.e., if the outer loop is vectorized, all the vector lanes
-// executing the inner loop will execute the same iterations). This check is
-// very constrained for now but it will be relaxed in the future. \p Lp is
-// considered uniform if it meets all the following conditions:
-//   1) it has a canonical IV (starting from 0 and with stride 1),
-//   2) its latch terminator is a conditional branch and,
-//   3) its latch condition is a compare instruction whose operands are the
-//      canonical IV and an OuterLp invariant.
-// This check doesn't take into account the uniformity of other conditions not
-// related to the loop latch because they don't affect the loop uniformity.
-//
-// NOTE: We decided to keep all these checks and its associated documentation
-// together so that we can easily have a picture of the current supported loop
-// nests. However, some of the current checks don't depend on \p OuterLp and
-// would be redundantly executed for each \p Lp if we invoked this function for
-// different candidate outer loops. This is not the case for now because we
-// don't currently have the infrastructure to evaluate multiple candidate outer
-// loops and \p OuterLp will be a fixed parameter while we only support explicit
-// outer loop vectorization. It's also very likely that these checks go away
-// before introducing the aforementioned infrastructure. However, if this is not
-// the case, we should move the \p OuterLp independent checks to a separate
-// function that is only executed once for each \p Lp.
-static bool isUniformLoop(Loop *Lp, Loop *OuterLp) {
-  assert(Lp->getLoopLatch() && "Expected loop with a single latch.");
-
-  // If Lp is the outer loop, it's uniform by definition.
-  if (Lp == OuterLp)
-    return true;
-  assert(OuterLp->contains(Lp) && "OuterLp must contain Lp.");
-
-  // 1.
-  PHINode *IV = Lp->getCanonicalInductionVariable();
-  if (!IV) {
-    LLVM_DEBUG(dbgs() << "LV: Canonical IV not found.\n");
-    return false;
-  }
-
-  // 2.
-  BasicBlock *Latch = Lp->getLoopLatch();
-  auto *LatchBr = dyn_cast<CondBrInst>(Latch->getTerminator());
-  if (!LatchBr) {
-    LLVM_DEBUG(dbgs() << "LV: Unsupported loop latch branch.\n");
-    return false;
-  }
-
-  // 3.
-  auto *LatchCmp = dyn_cast<CmpInst>(LatchBr->getCondition());
-  if (!LatchCmp) {
-    LLVM_DEBUG(
-        dbgs() << "LV: Loop latch condition is not a compare instruction.\n");
-    return false;
-  }
-
-  Value *CondOp0 = LatchCmp->getOperand(0);
-  Value *CondOp1 = LatchCmp->getOperand(1);
-  Value *IVUpdate = IV->getIncomingValueForBlock(Latch);
-  if (!(CondOp0 == IVUpdate && OuterLp->isLoopInvariant(CondOp1)) &&
-      !(CondOp1 == IVUpdate && OuterLp->isLoopInvariant(CondOp0))) {
-    LLVM_DEBUG(dbgs() << "LV: Loop latch condition is not uniform.\n");
-    return false;
-  }
-
-  return true;
-}
-
-// Return true if \p Lp and all its nested loops are uniform with regard to \p
-// OuterLp.
-static bool isUniformLoopNest(Loop *Lp, Loop *OuterLp) {
-  if (!isUniformLoop(Lp, OuterLp))
-    return false;
-
-  // Check if nested loops are uniform.
-  for (Loop *SubLp : *Lp)
-    if (!isUniformLoopNest(SubLp, OuterLp))
-      return false;
-
-  return true;
-}
-
 static IntegerType *getInductionIntegerTy(const DataLayout &DL, Type *Ty) {
   assert(Ty->isIntOrPtrTy() && "Expected integer or pointer type");
 
@@ -621,38 +541,39 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     }
 
     // Check whether the branch is a supported one. Only unconditional
-    // branches, conditional branches with an outer loop invariant condition or
+    // branches, conditional branches with an outer loop uniform condition or
     // backedges are supported.
     // FIXME: We skip these checks when VPlan predication is enabled as we
     // want to allow divergent branches. This whole check will be removed
     // once VPlan predication is on by default.
     auto *Br = dyn_cast<CondBrInst>(Term);
-    if (Br && !TheLoop->isLoopInvariant(Br->getCondition()) &&
-        !LI->isLoopHeader(Br->getSuccessor(0)) &&
-        !LI->isLoopHeader(Br->getSuccessor(1))) {
-      reportVectorizationFailure(
-          "Unsupported conditional branch",
-          "loop control flow is not understood by vectorizer",
-          "CFGNotUnderstood", ORE, TheLoop);
-      if (DoExtraAnalysis)
-        Result = false;
-      else
-        return false;
-    }
-  }
+    if (Br && !TheLoop->isLoopLatch(BB)) {
+      bool isUniformCondBr = TheLoop->isLoopInvariant(Br->getCondition());
 
-  // Check whether inner loops are uniform. At this point, we only support
-  // simple outer loops scenarios with uniform nested loops.
-  if (!isUniformLoopNest(TheLoop /*loop nest*/,
-                         TheLoop /*context outer loop*/)) {
-    reportVectorizationFailure(
-        "Outer loop contains divergent loops",
-        "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
-        ORE, TheLoop);
-    if (DoExtraAnalysis)
-      Result = false;
-    else
-      return false;
+      auto *Cmp = dyn_cast<CmpInst>(Br->getCondition());
+      auto *SE = PSE.getSE();
+      if (!isUniformCondBr && Cmp &&
+          SE->isSCEVable(Cmp->getOperand(0)->getType())) {
+        const SCEV *LhsExpr = PSE.getSCEV(Cmp->getOperand(0));
+        const SCEV *RhsExpr = PSE.getSCEV(Cmp->getOperand(1));
+        isUniformCondBr |= (SE->isLoopUniform(LhsExpr, TheLoop) &&
+                            SE->isLoopUniform(RhsExpr, TheLoop));
+      }
+
+      // If the condition is not uniform, report a failure. We currently require
+      // uniform conditions to avoid the complexity of vectorizing divergent
+      // control flow in the outer loop.
+      if (!isUniformCondBr) {
+        reportVectorizationFailure(
+            "Outer loop contains divergent conditional branch",
+            "loop control flow is not understood by vectorizer",
+            "CFGNotUnderstood", ORE, TheLoop);
+        if (DoExtraAnalysis)
+          Result = false;
+        else
+          return false;
+      }
+    }
   }
 
   // Check whether we are able to set up outer loop induction.
