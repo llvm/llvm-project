@@ -83,19 +83,21 @@ if(LLVM_LIBC_FULL_BUILD)
   set(header_install_target install-libc-headers)
 endif()
 
+set(install-libc-depends ${added_archive_targets}
+                         ${added_bitcode_targets}
+                         ${header_install_target})
+# TODO: Add startup_target to install-libc depend list when SPIRV64
+# supports it.
+if (NOT LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
+  list(APPEND install-libc-depends ${startup_target})
+endif()
 add_custom_target(install-libc
-                  DEPENDS ${added_archive_targets}
-                          ${added_bitcode_targets}
-                          ${startup_target}
-                          ${header_install_target}
+                  DEPENDS ${install-libc-depends}
                   COMMAND "${CMAKE_COMMAND}"
                           -DCMAKE_INSTALL_COMPONENT=libc
                           -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
 add_custom_target(install-libc-stripped
-                  DEPENDS ${added_archive_targets}
-                          ${added_bitcode_targets}
-                          ${startup_target}
-                          ${header_install_target}
+                  DEPENDS ${install-libc-depends}
                   COMMAND "${CMAKE_COMMAND}"
                           -DCMAKE_INSTALL_COMPONENT=libc
                           -DCMAKE_INSTALL_DO_STRIP=1
