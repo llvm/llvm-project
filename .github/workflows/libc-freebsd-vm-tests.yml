@@ -11,6 +11,7 @@ on:
 jobs:
   build:
     if: github.repository_owner == 'llvm'
+    timeout-minutes: 120
     runs-on: ubuntu-24.04
     
     steps:

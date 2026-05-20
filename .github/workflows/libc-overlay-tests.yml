@@ -11,6 +11,7 @@ on:
 jobs:
   build:
     if: github.repository_owner == 'llvm'
+    timeout-minutes: 30
     runs-on: ${{ matrix.os }}
     strategy:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
