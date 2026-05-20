@@ -1933,6 +1933,7 @@ private:
 bool OmpVisitor::HasDataEnvironment(llvm::omp::Directive dir) {
   for (auto leaf : llvm::omp::getLeafConstructsOrSelf(dir)) {
     switch (leaf) {
+    case llvm::omp::Directive::OMPD_dispatch:
     case llvm::omp::Directive::OMPD_distribute: // work-distribution
     case llvm::omp::Directive::OMPD_do: // work-distribution
     case llvm::omp::Directive::OMPD_for: // work-distribution
@@ -1951,8 +1952,6 @@ bool OmpVisitor::HasDataEnvironment(llvm::omp::Directive dir) {
     case llvm::omp::Directive::OMPD_taskgroup:
     case llvm::omp::Directive::OMPD_taskloop: // task-generating
     case llvm::omp::Directive::OMPD_teams: // team-generating
-    case llvm::omp::Directive::OMPD_workdistribute: // work-distribution
-    case llvm::omp::Directive::OMPD_workshare: // work-distribution
       return true;
     default:
       break;
