@@ -1603,6 +1603,16 @@ public:
     return isNegative() ? INT_MIN : getExactLog2Abs();
   }
 
+  // Returns true if this value is exactly 2^N.
+  LLVM_READONLY
+  bool isPowerOf2(int N) const { return N != INT_MIN && getExactLog2() == N; }
+
+  // Returns true if this value is exactly -(2^N).
+  LLVM_READONLY
+  bool isNegPowerOf2(int N) const {
+    return N != INT_MIN && isNegative() && getExactLog2Abs() == N;
+  }
+
   LLVM_ABI friend hash_code hash_value(const APFloat &Arg);
   friend int ilogb(const APFloat &Arg);
   friend APFloat scalbn(APFloat X, int Exp, roundingMode RM);
