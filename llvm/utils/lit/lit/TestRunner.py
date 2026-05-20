@@ -227,11 +227,11 @@ class CommandInvocation(abc.ABC):
         raise NotImplemented
 
     @abc.abstractmethod
-    def stdout(self) -> typing.TextIO:
+    def stdout(self) -> typing.TextIO | None:
         raise NotImplemented
 
     @abc.abstractmethod
-    def stderr(self) -> typing.TextIO:
+    def stderr(self) -> typing.TextIO | None:
         raise NotImplemented
 
 
@@ -250,10 +250,10 @@ class ProcessInvocation(CommandInvocation):
     def communicate(self) -> tuple[str, str]:
         return self.popen.communicate()
 
-    def stdout(self) -> typing.TextIO:
+    def stdout(self) -> typing.TextIO | None:
         return self.popen.stdout
 
-    def stderr(self) -> typing.TextIO:
+    def stderr(self) -> typing.TextIO | None:
         return self.popen.stderr
 
 
@@ -283,10 +283,10 @@ class InprocBuiltinInvocation(CommandInvocation):
 
         return stdout, stderr
 
-    def stdout(self) -> typing.TextIO:
+    def stdout(self) -> typing.TextIO | None:
         return self.result.stdout
 
-    def stderr(self) -> typing.TextIO:
+    def stderr(self) -> typing.TextIO | None:
         return self.result.stderr
 
 
