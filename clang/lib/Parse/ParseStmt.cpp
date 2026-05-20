@@ -1287,7 +1287,7 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
   }
 
   if (getLangOpts().C99 && InitStmt->get() != nullptr &&
-      InitStmt->get()->getStmtClass() != Stmt::DeclStmtClass){
+      InitStmt->get()->getStmtClass() != Stmt::DeclStmtClass) {
     // C2y only permits declaration in the first clause of an if condition,
     // so it makes sense to error out in other conditions.
     Diag(InitStmt->get()->getBeginLoc(),
@@ -1298,7 +1298,7 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
   }
 
   if (getLangOpts().C99 && InitStmt->get() != nullptr &&
-      Cond.get().first != nullptr){
+      Cond.get().first != nullptr) {
     // C2y only permits expression in the second clause of an if condition,
     // so it makes sense to error out in other conditions.
     Diag(Cond.get().first->getBeginLoc(), diag::err_expected_expression)
