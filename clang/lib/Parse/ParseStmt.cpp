@@ -1300,7 +1300,7 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
         Diag(Cond.get().first->getBeginLoc(), diag::err_expected_expression)
             << Cond.get().first->getSourceRange();
     } else if (Cond.get().first != nullptr)
-      // handle: if (int decl = 0) {}
+      // Handle: if (int decl = 0) {}.
       Diag(Cond.get().first->getBeginLoc(),
            getLangOpts().C2y ? diag::warn_c2y_compat_init_statement
                              : diag::ext_c2y_init_statement)
