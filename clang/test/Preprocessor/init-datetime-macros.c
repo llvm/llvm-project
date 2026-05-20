@@ -15,6 +15,7 @@
 // CHECK-INIT-DATETIME-LITERALONE-NOT: time: 
 // CHECK-INIT-DATETIME-LITERALONE-NOT: timestamp: 
 
+// RUN: %clang_cc1 -E -DDATETIME_CUSTOM -init-datetime-macros=literalone -D__DATE__="\"d3\"" -D__TIME__="\"t4\"" -D__TIMESTAMP__="\"ts5\"" %s | FileCheck %s --check-prefix CHECK-INIT-DATETIME-CUSTOM
 // RUN: %clang_cc1 -E -DDATETIME_CUSTOM -init-datetime-macros=undefined -D__DATE__="\"d3\"" -D__TIME__="\"t4\"" -D__TIMESTAMP__="\"ts5\"" %s | FileCheck %s --check-prefix CHECK-INIT-DATETIME-CUSTOM
 // CHECK-INIT-DATETIME-CUSTOM: date: "d3"
 // CHECK-INIT-DATETIME-CUSTOM: time: "t4"
