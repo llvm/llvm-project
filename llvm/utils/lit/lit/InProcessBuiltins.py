@@ -21,12 +21,13 @@ from lit.ShellEnvironment import (
 )
 
 
-class InprocBuiltinIOObject(abc.ABC):
+class InProcessBuiltinIOObject(abc.ABC):
     """
     Base class for IO streams used for in-process built-ins. This class has two
-    specializations: InprocBuiltinIOFile, wrapping a file open in text mode, and
-    InprocBuiltinIOMemory, wrapping a BytesIO object. These streams provide
-    a text IO interface, but support reading and writing binary data too.
+    specializations: InProcessBuiltinIOFile, wrapping a file open in text mode,
+    and InProcessBuiltinIOMemory, wrapping a BytesIO object. These streams
+    provide a text IO interface, but support reading and writing binary data
+    too.
 
     The main reason that this exists is to solve the conflict that binary IO is
     required for daemonized testing, as many tests involve tools reading and
@@ -70,9 +71,9 @@ class InprocBuiltinIOObject(abc.ABC):
 
 
 @dataclass
-class InprocBuiltinIOFile(InprocBuiltinIOObject):
+class InProcessBuiltinIOFile(InProcessBuiltinIOObject):
     """
-    Specialization of InprocBuiltinIOObject wrapping a file which is open in
+    Specialization of InProcessBuiltinIOObject wrapping a file which is open in
     text mode. Files must be opened in text mode so that character encoding
     tags are correctly handled on z/OS. Binary IO is still supported via the
     OS APIs (needed for daemonized testing).
@@ -119,9 +120,9 @@ class InprocBuiltinIOFile(InprocBuiltinIOObject):
 
 
 @dataclass
-class InprocBuiltinIOMemory(InprocBuiltinIOObject):
+class InProcessBuiltinIOMemory(InProcessBuiltinIOObject):
     """
-    Specialization of InprocBuiltinIOObject wrapping an in-memory binary stream.
+    Specialization of InProcessBuiltinIOObject wrapping an in-memory binary stream.
     """
 
     obj: io.BytesIO
@@ -152,7 +153,7 @@ class InprocBuiltinIOMemory(InprocBuiltinIOObject):
         return self.encoding
 
 
-class InprocBuiltinIO:
+class InProcessBuiltinIO:
     """
     Holds IO streams for an inproc builtin invocation.
 
@@ -160,9 +161,9 @@ class InprocBuiltinIO:
     `stder == stdout` is True.
     """
 
-    stdin: InprocBuiltinIOObject
-    stdout: InprocBuiltinIOObject
-    stderr: InprocBuiltinIOObject
+    stdin: InProcessBuiltinIOObject
+    stdout: InProcessBuiltinIOObject
+    stderr: InProcessBuiltinIOObject
 
     def __init__(self, stdin, stdout, stderr):
         """
@@ -184,13 +185,13 @@ class InprocBuiltinIO:
         )
 
         # Replace sentinel values with in-memory streams.
-        def resolve_io_obj(stream) -> InprocBuiltinIOObject:
+        def resolve_io_obj(stream) -> InProcessBuiltinIOObject:
             if stream == subprocess.PIPE or stream is None:
-                return InprocBuiltinIOMemory(io.BytesIO())
-            elif isinstance(stream, InprocBuiltinIOObject):
+                return InProcessBuiltinIOMemory(io.BytesIO())
+            elif isinstance(stream, InProcessBuiltinIOObject):
                 return stream
             else:
-                return InprocBuiltinIOFile(stream)
+                return InProcessBuiltinIOFile(stream)
 
         self.stdin = resolve_io_obj(stdin)
         self.stdout = resolve_io_obj(stdout)
@@ -201,8 +202,8 @@ class InprocBuiltinIO:
             self.stderr = resolve_io_obj(stderr)
 
 
-InprocBuiltinExecuteFn = Callable[
-    [Command, "list[str]", ShellEnvironment, InprocBuiltinIO],
+InProcessBuiltinExecuteFn = Callable[
+    [Command, "list[str]", ShellEnvironment, InProcessBuiltinIO],
     int,
 ]
 """
@@ -218,16 +219,16 @@ The return value is the exit code.
 
 
 @dataclass
-class InprocBuiltin:
+class InProcessBuiltin:
     """
     Represents a command that is run as an in-process builtins.
     """
 
-    execute: InprocBuiltinExecuteFn
+    execute: InProcessBuiltinExecuteFn
 
 
 def executeBuiltinCd(
-    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InprocBuiltinIO
+    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InProcessBuiltinIO
 ) -> int:
     """executeBuiltinCd - Change the current directory."""
     if len(args) != 2:
@@ -240,7 +241,7 @@ def executeBuiltinCd(
 
 
 def executeBuiltinPushd(
-    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InprocBuiltinIO
+    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InProcessBuiltinIO
 ) -> int:
     """executeBuiltinPushd - Change the current dir and save the old."""
     if len(args) != 2:
@@ -251,7 +252,7 @@ def executeBuiltinPushd(
 
 
 def executeBuiltinPopd(
-    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InprocBuiltinIO
+    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InProcessBuiltinIO
 ) -> int:
     """executeBuiltinPopd - Restore a previously saved working directory."""
     if len(args) != 1:
@@ -263,7 +264,7 @@ def executeBuiltinPopd(
 
 
 def executeBuiltinExport(
-    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InprocBuiltinIO
+    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InProcessBuiltinIO
 ) -> int:
     """executeBuiltinExport - Set an environment variable."""
     if len(args) != 2:
@@ -273,7 +274,7 @@ def executeBuiltinExport(
 
 
 def executeBuiltinEcho(
-    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InprocBuiltinIO
+    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InProcessBuiltinIO
 ) -> int:
     """Interpret a redirected echo or @echo command"""
     opened_files = []
@@ -281,7 +282,7 @@ def executeBuiltinEcho(
     stdout = io.stdout
     if (
         kIsWindows
-        and isinstance(io.stdout, InprocBuiltinIOFile)
+        and isinstance(io.stdout, InProcessBuiltinIOFile)
         and io.stdout.get_filename()
     ):
         # Reopen stdout with `newline=""` to avoid CRLF translation.
@@ -330,7 +331,7 @@ def executeBuiltinEcho(
 
 
 def executeBuiltinMkdir(
-    cmd: Command, args: list[str], cmd_shenv: ShellEnvironment, io: InprocBuiltinIO
+    cmd: Command, args: list[str], cmd_shenv: ShellEnvironment, io: InProcessBuiltinIO
 ):
     """executeBuiltinMkdir - Create new directories."""
     try:
@@ -366,7 +367,7 @@ def executeBuiltinMkdir(
 
 
 def executeBuiltinRm(
-    cmd: Command, args: list[str], cmd_shenv: ShellEnvironment, io: InprocBuiltinIO
+    cmd: Command, args: list[str], cmd_shenv: ShellEnvironment, io: InProcessBuiltinIO
 ):
     """executeBuiltinRm - Removes (deletes) files or directories."""
     try:
@@ -477,7 +478,7 @@ def executeBuiltinRm(
 
 
 def executeBuiltinUmask(
-    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InprocBuiltinIO
+    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InProcessBuiltinIO
 ):
     """executeBuiltinUmask - Change the current umask."""
     if os.name != "posix":
@@ -492,7 +493,7 @@ def executeBuiltinUmask(
     return 0
 
 
-def executeBuiltinUlimit(cmd: Command, args: list[str], shenv, io: InprocBuiltinIO):
+def executeBuiltinUlimit(cmd: Command, args: list[str], shenv, io: InProcessBuiltinIO):
     """executeBuiltinUlimit - Change the current limits."""
     try:
         # Try importing the resource module (available on POSIX systems) and
@@ -527,13 +528,13 @@ def executeBuiltinUlimit(cmd: Command, args: list[str], shenv, io: InprocBuiltin
 
 
 def executeBuiltinColon(
-    cmd: Command, args: list[str], cmd_shenv: ShellEnvironment, io: InprocBuiltinIO
+    cmd: Command, args: list[str], cmd_shenv: ShellEnvironment, io: InProcessBuiltinIO
 ):
     """executeBuiltinColon - Discard arguments and exit with status 0."""
     return 0
 
 
-def get_default_inproc_builtins() -> dict[str, InprocBuiltin]:
+def get_default_inproc_builtins() -> dict[str, InProcessBuiltin]:
     """
     get_default_inproc_builtins - Returns the map of command names to Lit's
     in-process built-in implementations.
@@ -544,15 +545,15 @@ def get_default_inproc_builtins() -> dict[str, InprocBuiltin]:
     """
 
     return {
-        "@echo": InprocBuiltin(executeBuiltinEcho),
-        "cd": InprocBuiltin(executeBuiltinCd),
-        "export": InprocBuiltin(executeBuiltinExport),
-        "echo": InprocBuiltin(executeBuiltinEcho),
-        "mkdir": InprocBuiltin(executeBuiltinMkdir),
-        "popd": InprocBuiltin(executeBuiltinPopd),
-        "pushd": InprocBuiltin(executeBuiltinPushd),
-        "rm": InprocBuiltin(executeBuiltinRm),
-        "ulimit": InprocBuiltin(executeBuiltinUlimit),
-        "umask": InprocBuiltin(executeBuiltinUmask),
-        ":": InprocBuiltin(executeBuiltinColon),
+        "@echo": InProcessBuiltin(executeBuiltinEcho),
+        "cd": InProcessBuiltin(executeBuiltinCd),
+        "export": InProcessBuiltin(executeBuiltinExport),
+        "echo": InProcessBuiltin(executeBuiltinEcho),
+        "mkdir": InProcessBuiltin(executeBuiltinMkdir),
+        "popd": InProcessBuiltin(executeBuiltinPopd),
+        "pushd": InProcessBuiltin(executeBuiltinPushd),
+        "rm": InProcessBuiltin(executeBuiltinRm),
+        "ulimit": InProcessBuiltin(executeBuiltinUlimit),
+        "umask": InProcessBuiltin(executeBuiltinUmask),
+        ":": InProcessBuiltin(executeBuiltinColon),
     }
