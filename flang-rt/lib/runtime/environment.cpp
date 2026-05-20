@@ -8,7 +8,6 @@
 
 #include "flang-rt/runtime/environment.h"
 #include "environment-default-list.h"
-#include "io-api-gpu.h"
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/tools.h"
 #include <cstdio>
@@ -268,11 +267,6 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
       PostConfigEnvCallback[i](ac, av, env, envDefaults);
     }
   }
-
-  // Registers the IO handlers with the offloading runtime only if present.
-#ifdef FLANG_RT_HAS_RPC_SERVER
-  Fortran::runtime::io::RegisterRPCHandlers();
-#endif
 }
 
 const char *ExecutionEnvironment::GetEnv(
