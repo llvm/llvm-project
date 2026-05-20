@@ -1297,6 +1297,28 @@ void test_builtin_elementwise_fshl(long long int i1, long long int i2,
   u4 tmp_vu_r = __builtin_elementwise_fshr(vu1, vu2, vu3);
 }
 
+void test_builtin_elementwise_clmul(unsigned int ui1, unsigned int ui2,
+                                    unsigned short us1, unsigned short us2,
+                                    u4 vu1, u4 vu2) {
+  // CHECK:      [[UI1:%.+]] = load i32, ptr %ui1.addr, align 4
+  // CHECK-NEXT: [[UI2:%.+]] = load i32, ptr %ui2.addr, align 4
+  // CHECK-NEXT: [[UI3:%.+]] = call i32 @llvm.clmul.i32(i32 [[UI1]], i32 [[UI2]])
+  // CHECK-NEXT: store i32 [[UI3]], ptr %ui1.addr, align 4
+  ui1 = __builtin_elementwise_clmul(ui1, ui2);
+
+  // CHECK:      [[US1:%.+]] = load i16, ptr %us1.addr, align 2
+  // CHECK-NEXT: [[US2:%.+]] = load i16, ptr %us2.addr, align 2
+  // CHECK-NEXT: [[US3:%.+]] = call i16 @llvm.clmul.i16(i16 [[US1]], i16 [[US2]])
+  // CHECK-NEXT: store i16 [[US3]], ptr %us1.addr, align 2
+  us1 = __builtin_elementwise_clmul(us1, us2);
+
+  // CHECK:      [[VU1:%.+]] = load <4 x i32>, ptr %vu1.addr, align 16
+  // CHECK-NEXT: [[VU2:%.+]] = load <4 x i32>, ptr %vu2.addr, align 16
+  // CHECK-NEXT: [[VU3:%.+]] = call <4 x i32> @llvm.clmul.v4i32(<4 x i32> [[VU1]], <4 x i32> [[VU2]])
+  // CHECK-NEXT: store <4 x i32> [[VU3]], ptr %vu1.addr, align 16
+  vu1 = __builtin_elementwise_clmul(vu1, vu2);
+}
+
 void test_builtin_elementwise_clzg(si8 vs1, si8 vs2, u4 vu1,
                                    long long int lli, short si,
                                    _BitInt(31) bi, int i,

@@ -1385,6 +1385,18 @@ namespace ElementwisePopcount {
 #endif
 }
 
+namespace ElementwiseClmul {
+  static_assert(__builtin_elementwise_clmul(0U, 0U) == 0U);
+  static_assert(__builtin_elementwise_clmul(1U, 1U) == 1U);
+  static_assert(__builtin_elementwise_clmul(3U, 3U) == 5U);
+  static_assert(__builtin_elementwise_clmul(0xBU, 0xDU) == 0x7FU);
+  static_assert(__builtin_elementwise_clmul(0xFU, 0xFU) == 0x55U);
+
+  static_assert(__builtin_reduce_add(__builtin_elementwise_clmul(
+                    (vector4uint){0U, 1U, 3U, 7U},
+                    (vector4uint){0U, 1U, 3U, 7U})) == 27U);
+}
+
 namespace BuiltinMemcpy {
   constexpr int simple() {
     int a = 12;

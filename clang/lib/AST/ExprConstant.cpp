@@ -14071,18 +14071,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
-  case Builtin::BI__builtin_elementwise_clmul: {
-    APValue LHS, RHS;
-    if (!EvaluateAsRValue(Info, E->getArg(0), LHS) ||
-        !EvaluateAsRValue(Info, E->getArg(1), RHS))
-      return false;
-
-    const APSInt &LHSInt = LHS.getInt();
-    const APSInt &RHSInt = RHS.getInt();
-    APInt Result = llvm::APIntOps::clmul(LHSInt, RHSInt);
-
-    return Success(APValue(APSInt(Result, LHSInt.isUnsigned())), E);
-  }
+  case Builtin::BI__builtin_elementwise_clmul:
+    return EvaluateBinOpExpr(llvm::APIntOps::clmul);
   case Builtin::BI__builtin_elementwise_fshl:
   case Builtin::BI__builtin_elementwise_fshr: {
     APValue SourceHi, SourceLo, SourceShift;
@@ -17204,6 +17194,15 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     APInt Result = std::min(LHS, RHS);
     return Success(APSInt(Result, !LHS.isSigned()), E);
+  }
+  case Builtin::BI__builtin_elementwise_clmul: {
+    APSInt LHS, RHS;
+    if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
+        !EvaluateInteger(E->getArg(1), RHS, Info))
+      return false;
+
+    APInt Result = llvm::APIntOps::clmul(LHS, RHS);
+    return Success(APSInt(Result, LHS.isUnsigned()), E);
   }
   case Builtin::BI__builtin_elementwise_fshl:
   case Builtin::BI__builtin_elementwise_fshr: {
