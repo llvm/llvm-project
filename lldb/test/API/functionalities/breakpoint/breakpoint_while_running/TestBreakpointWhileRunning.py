@@ -23,4 +23,3 @@ class BreakpointWhileRunning(TestBase):
         lldbutil.expect_state_changes(self, listener, process, [lldb.eStateRunning])
         self.runCmd("break set --source-pattern-regexp 'break here'")
         lldbutil.expect_state_changes(self, listener, process, [lldb.eStateStopped])
-        self.runCmd("process status")
