@@ -1170,42 +1170,28 @@ StyleKind IdentifierNamingCheck::findStyleKind(
         if (CxxRecordDecl->isAbstract() && NamingStyles[SK_AbstractClass])
           return SK_AbstractClass;
       }
-
-      if (Definition->isStruct() && NamingStyles[SK_Struct])
-        return SK_Struct;
-
-      if (Definition->isStruct() && NamingStyles[SK_Class])
-        return SK_Class;
-
-      if (Definition->isClass() && NamingStyles[SK_Class])
-        return SK_Class;
-
-      if (Definition->isClass() && NamingStyles[SK_Struct])
-        return SK_Struct;
-
-      if (Definition->isUnion() && NamingStyles[SK_Union])
-        return SK_Union;
-
-      if (Definition->isEnum() && NamingStyles[SK_Enum])
-        return SK_Enum;
     }
+    const auto *Record = Decl->getDefinition();
+    // Fall back to declarations when definitions are not available
+    if (!Record)
+      Record = Decl;
 
-    if (Decl->isStruct() && NamingStyles[SK_Struct])
+    if (Record->isStruct() && NamingStyles[SK_Struct])
       return SK_Struct;
 
-    if (Decl->isStruct() && NamingStyles[SK_Class])
+    if (Record->isStruct() && NamingStyles[SK_Class])
       return SK_Class;
 
-    if (Decl->isClass() && NamingStyles[SK_Class])
+    if (Record->isClass() && NamingStyles[SK_Class])
       return SK_Class;
 
-    if (Decl->isClass() && NamingStyles[SK_Struct])
+    if (Record->isClass() && NamingStyles[SK_Struct])
       return SK_Struct;
 
-    if (Decl->isUnion() && NamingStyles[SK_Union])
+    if (Record->isUnion() && NamingStyles[SK_Union])
       return SK_Union;
 
-    if (Decl->isEnum() && NamingStyles[SK_Enum])
+    if (Record->isEnum() && NamingStyles[SK_Enum])
       return SK_Enum;
 
     return undefinedStyle(NamingStyles);

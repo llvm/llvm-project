@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s readability-identifier-naming %t -- \
+// RUN: %check_clang_tidy -std=c++98-or-later %s readability-identifier-naming %t -- \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     readability-identifier-naming.DefaultCase: lower_case, \
 // RUN:     readability-identifier-naming.ClassCase: CamelCase, \
