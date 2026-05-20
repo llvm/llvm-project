@@ -24,6 +24,11 @@ At least one of the following commands are required:
   Path of perf-script trace created by Linux perf tool with `script`
   command(the raw perf.data should be profiled with -b).
 
+.. option:: --etm=<string>
+
+  Path of the ETM trace file created by ARM CoreSight trace tools.
+  Requires the OpenCSD library version 1.5.4 or higher to be enabled during the build.
+
 .. option:: --perfdata=<perfdata>, --pd
 
    Path of raw perf data created by Linux perf tool (it should be profiled
@@ -41,7 +46,7 @@ At least one of the following commands are required:
 .. note::
 
    Only one of ``--perfscript``, ``--perfdata``, ``--unsymbolized-profile``,
-   or ``--llvm-sample-profile`` may be specified at a time.  
+   ``--llvm-sample-profile``, or ``--etm`` may be specified at a time.
 
 .. option:: --binary=<string[,string,...]>
 
@@ -79,6 +84,11 @@ OPTIONS
     
    Path of debug info binary. ``llvm-profgen`` will load the DWARF info from
    it instead of the executable binary.
+
+.. option:: --target-triple=<triple>
+
+   Override the target triple for the binary. This is useful for ETM trace
+   decoding to specify the correct Arm M-profile target.
   
 .. option:: --pid
 

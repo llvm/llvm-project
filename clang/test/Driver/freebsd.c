@@ -226,3 +226,6 @@
 // PASS:      "--eh-frame-hdr"
 // PASS-SAME: "-export-dynamic"
 // PASS-SAME: "-s" "-t" "-T" "a.lds"
+
+// RUN: %clang -target riscv32be-unknown-freebsd -### -c %s 2>&1 | FileCheck %s --check-prefix=RV32BE
+// RV32BE-NOT: elf32briscv

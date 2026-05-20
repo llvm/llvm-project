@@ -71,7 +71,7 @@ entry:
 }
 
 ; CHECK-LABEL: any_half
-; CHECK: fcmp une half %{{.*}}, 0xH0000
+; CHECK: fcmp une half %{{.*}}, 0.000000e+00
 define noundef i1 @any_half(half noundef %p0) {
 entry:
   %p0.addr = alloca half, align 2

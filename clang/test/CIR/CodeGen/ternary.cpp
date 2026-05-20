@@ -10,7 +10,7 @@ int x(int y) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z1xi(
-// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {nothrow} {
+// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {{{.*}}nothrow} {
 // CIR: [[Y:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init]
 // CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR: cir.store %[[ARG0]], [[Y]] : !s32i, !cir.ptr<!s32i>
@@ -52,7 +52,7 @@ int foo(int a, int b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z3fooii(
-// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {nothrow} {
+// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {{{.*}}nothrow} {
 // CIR: [[A:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR: [[B:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
 // CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
@@ -185,7 +185,7 @@ void test_cond_lvalue_assign(bool flag) {
 // OGCG: %[[A:.*]] = alloca i32
 // OGCG: %[[B:.*]] = alloca i32
 // OGCG: %[[FLAG_VAL:.*]] = load i8, ptr %[[FLAG]]
-// OGCG: %[[COND:.*]] = trunc i8 %[[FLAG_VAL]] to i1
+// OGCG: %[[COND:.*]] = icmp ne i8 %[[FLAG_VAL]], 0
 // OGCG: br i1 %[[COND]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // OGCG: [[TRUE_BB]]:
 // OGCG:   br label %[[MERGE_BB:.*]]
@@ -237,7 +237,7 @@ int& test_cond_lvalue_ref(bool cond, int x, int y) {
 // OGCG: %[[X:.*]] = alloca i32
 // OGCG: %[[Y:.*]] = alloca i32
 // OGCG: %[[COND_VAL:.*]] = load i8, ptr %[[COND]]
-// OGCG: %[[BOOL:.*]] = trunc i8 %[[COND_VAL]] to i1
+// OGCG: %[[BOOL:.*]] = icmp ne i8 %[[COND_VAL]], 0
 // OGCG: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // OGCG: [[TRUE_BB]]:
 // OGCG:   br label %[[MERGE_BB:.*]]
@@ -292,7 +292,7 @@ void test_cond_lvalue_compound(bool flag) {
 // OGCG: %[[A:.*]] = alloca i32
 // OGCG: %[[B:.*]] = alloca i32
 // OGCG: %[[FLAG_VAL:.*]] = load i8, ptr %[[FLAG]]
-// OGCG: %[[BOOL:.*]] = trunc i8 %[[FLAG_VAL]] to i1
+// OGCG: %[[BOOL:.*]] = icmp ne i8 %[[FLAG_VAL]], 0
 // OGCG: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // OGCG: [[TRUE_BB]]:
 // OGCG:   br label %[[MERGE_BB:.*]]

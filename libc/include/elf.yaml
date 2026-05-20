@@ -266,6 +266,18 @@ macros:
     macro_value: '0x70000000'
   - macro_name: PT_HIPROC
     macro_value: '0x7fffffff'
+  - macro_name: PT_GNU_EH_FRAME
+    macro_value: '0x6474e550'
+    standards:
+      - gnu
+  - macro_name: PT_GNU_STACK
+    macro_value: '0x6474e551'
+    standards:
+      - gnu
+  - macro_name: PT_GNU_RELRO
+    macro_value: '0x6474e552'
+    standards:
+      - gnu
   - macro_name: PT_GNU_PROPERTY
     macro_value: '0x6474e553'
   - macro_name: PF_X

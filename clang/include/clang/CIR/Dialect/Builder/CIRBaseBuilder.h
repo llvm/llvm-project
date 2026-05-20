@@ -354,15 +354,16 @@ public:
     return getGlobalViewAttr(type, globalOp, arAttr);
   }
 
-  mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global,
-                              bool threadLocal = false) {
+  cir::GetGlobalOp createGetGlobal(mlir::Location loc, cir::GlobalOp global,
+                                   bool threadLocal = false) {
     assert(!cir::MissingFeatures::addressSpace());
     return cir::GetGlobalOp::create(*this, loc,
                                     getPointerTo(global.getSymType()),
                                     global.getSymNameAttr(), threadLocal);
   }
 
-  mlir::Value createGetGlobal(cir::GlobalOp global, bool threadLocal = false) {
+  cir::GetGlobalOp createGetGlobal(cir::GlobalOp global,
+                                   bool threadLocal = false) {
     return createGetGlobal(global.getLoc(), global, threadLocal);
   }
 
@@ -753,6 +754,16 @@ public:
     return createShift(loc, lhs, rhs, false);
   }
 
+  /// Returns `void (T...)` as a cir::FuncType.
+  cir::FuncType getVoidFnTy(mlir::TypeRange argTypes = {}) {
+    return cir::FuncType::get(llvm::to_vector(argTypes), getVoidTy());
+  }
+
+  /// Returns `void (*)(T...)` as a cir::PointerType.
+  cir::PointerType getVoidFnPtrTy(mlir::TypeRange argTypes = {}) {
+    return getPointerTo(getVoidFnTy(argTypes));
+  }
+
   //
   // Block handling helpers
   // ----------------------
@@ -787,6 +798,13 @@ public:
 
   mlir::IntegerAttr getAlignmentAttr(int64_t alignment) {
     return alignment ? getI64IntegerAttr(alignment) : mlir::IntegerAttr();
+  }
+
+  // Materialize an alignment value as a CIR integer constant of the given
+  // integer type.
+  cir::ConstantOp getAlignment(mlir::Location loc, mlir::Type t,
+                               clang::CharUnits alignment) {
+    return getConstantInt(loc, t, alignment.getQuantity());
   }
 
   mlir::IntegerAttr getSizeFromCharUnits(clang::CharUnits size) {
@@ -825,9 +843,12 @@ public:
     mlir::Type adjustedThisTy = getVoidPtrTy(objectPtrTy.getAddrSpace());
 
     llvm::SmallVector<mlir::Type> calleeFuncInputTypes{adjustedThisTy};
-    calleeFuncInputTypes.insert(calleeFuncInputTypes.end(),
-                                methodFuncInputTypes.begin(),
-                                methodFuncInputTypes.end());
+    // The member function type's first parameter is the implicit 'this'
+    // pointer.  The callee takes an adjusted void* receiver instead.
+    if (methodFuncInputTypes.size() > 1)
+      calleeFuncInputTypes.insert(calleeFuncInputTypes.end(),
+                                  methodFuncInputTypes.begin() + 1,
+                                  methodFuncInputTypes.end());
     cir::FuncType calleeFuncTy =
         methodFuncTy.clone(calleeFuncInputTypes, methodFuncTy.getReturnType());
     // TODO(cir): consider the address space of the callee.

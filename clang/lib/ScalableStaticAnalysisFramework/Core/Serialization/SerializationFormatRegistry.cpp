@@ -12,7 +12,7 @@
 using namespace clang;
 using namespace ssaf;
 
-LLVM_INSTANTIATE_REGISTRY(SerializationFormatRegistry)
+LLVM_DEFINE_REGISTRY(SerializationFormatRegistry)
 
 bool ssaf::isFormatRegistered(llvm::StringRef FormatName) {
   for (const auto &Entry : SerializationFormatRegistry::entries())

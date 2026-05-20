@@ -1957,6 +1957,16 @@ llvm.mlir.global internal constant @bad_array_attr_simple_type() : !llvm.array<2
 
 // -----
 
+llvm.mlir.global internal constant @bad_ptr_array_attr_leaf() : !llvm.array<2 x ptr> {
+  // expected-error@below {{pointer array element at index 0 must be a flat symbol reference, zero, undef, or poison}}
+  %0 = llvm.mlir.constant([1 : i32, @s0]) : !llvm.array<2 x ptr>
+  llvm.return %0 : !llvm.array<2 x ptr>
+}
+
+llvm.mlir.global private constant @s0("a\00") {addr_space = 0 : i32} : !llvm.array<2 x i8>
+
+// -----
+
 llvm.func @inlineAsmMustTail(%arg0: i32, %arg1 : !llvm.ptr) {
   // expected-error@+1 {{op tail call kind 'musttail' is not supported}}
   %8 = llvm.inline_asm tail_call_kind = <musttail> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
@@ -2022,14 +2032,6 @@ llvm.func @invalid_xevm_matrix_3(%a: !llvm.ptr<1>, %base_width_a: i32, %base_hei
 llvm.func @invalid_xevm_truncf_1(%arg0: vector<8xf16>) {
   // expected-error@+1 {{op both src and dst should be vector types or both}}
   %0 = xevm.truncf %arg0 { src_etype = f16, dst_etype = bf8 } : (vector<8xf16>) -> i8
-  llvm.return
-}
-
-// -----
-
-llvm.func @invalid_xevm_truncf_1(%arg0: vector<8xf16>) {
-  // expected-error@+1 {{op src and dst vector types should have the same number of elements}}
-  %0 = xevm.truncf %arg0 { src_etype = f16, dst_etype = bf8 } : (vector<8xf16>) -> vector<4xi8>
   llvm.return
 }
 
@@ -2114,4 +2116,20 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     // expected-error@+1 {{'llvm.ptrtoaddr' op bit-width of integer result type 'i64' must match the pointer bitwidth (32) specified in the datalayout}}
     %0 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i64
   }
+}
+
+// -----
+
+func.func @nvvm_read_sreg_tid_x_wrong_type() {
+  // expected-error@+1 {{'nvvm.read.ptx.sreg.tid.x' op result #0 must be 32-bit signless integer, but got 'i64'}}
+  %0 = nvvm.read.ptx.sreg.tid.x : i64
+  return
+}
+
+// -----
+
+func.func @nvvm_read_sreg_clock64_wrong_type() {
+  // expected-error@+1 {{'nvvm.read.ptx.sreg.clock64' op result #0 must be 64-bit signless integer, but got 'i32'}}
+  %0 = nvvm.read.ptx.sreg.clock64 : i32
+  return
 }
