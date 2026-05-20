@@ -2601,7 +2601,7 @@ class LLVM_ABI_FOR_TEST VPWidenPHIRecipe : public VPSingleDefRecipe,
   std::string Name;
 
 public:
-  /// Create a new VPWidenPHIRecipe with incoming values \p IncomingvValues,
+  /// Create a new VPWidenPHIRecipe with incoming values \p IncomingValues,
   /// debug location \p DL and \p Name.
   VPWidenPHIRecipe(ArrayRef<VPValue *> IncomingValues,
                    DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
