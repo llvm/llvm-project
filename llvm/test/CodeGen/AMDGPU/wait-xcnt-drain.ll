@@ -124,8 +124,3 @@ else:
   store volatile i32 0, ptr addrspace(1) %q
   ret void
 }
-
-declare void @llvm.amdgcn.s.barrier.wait(i16 immarg)
-declare void @llvm.amdgcn.s.barrier.signal(i32 immarg)
-declare i1   @llvm.amdgcn.s.barrier.signal.isfirst(i32 immarg)
-declare void @llvm.amdgcn.s.sendmsg(i32 immarg, i32)
