@@ -14,7 +14,6 @@ define amdgpu_kernel void @drain_barrier_wait(ptr addrspace(1) %p, ptr addrspace
 ; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_barrier_wait 1
-; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    global_store_b32 v0, v2, s[2:3] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_endpgm
@@ -37,7 +36,6 @@ define amdgpu_kernel void @drain_barrier_signal(ptr addrspace(1) %p, ptr addrspa
 ; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_barrier_signal 1
-; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    global_store_b32 v0, v2, s[2:3] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_endpgm
@@ -61,7 +59,6 @@ define amdgpu_kernel void @drain_barrier_signal_isfirst(ptr addrspace(1) %p, ptr
 ; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_barrier_signal_isfirst 1
-; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    global_store_b32 v0, v2, s[2:3] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_endpgm
@@ -85,7 +82,6 @@ define amdgpu_kernel void @drain_sendmsg(ptr addrspace(1) %p, ptr addrspace(1) %
 ; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_sendmsg sendmsg(MSG_INTERRUPT)
-; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    global_store_b32 v0, v2, s[2:3] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_endpgm
@@ -109,13 +105,11 @@ define amdgpu_kernel void @drain_cbranch(ptr addrspace(1) %p, ptr addrspace(1) %
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB4_2
 ; CHECK-NEXT:  ; %bb.1: ; %then
-; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s9
 ; CHECK-NEXT:    global_store_b32 v0, v1, s[2:3] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .LBB4_2: ; %else
-; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    global_store_b32 v0, v0, s[2:3] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_endpgm
