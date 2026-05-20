@@ -418,22 +418,21 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
       return false;
     }
 
+    // s32 Load_lo16 holds SextLoad i8, Load_hi16 is zero.
+    // fake16: and  (sextload i8 -> s32), 0xFFFF
+    // true16: zext (sextload i8 -> s16) -> s32
     if (mi_match(
             Load, MRI,
             m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16)))) ||
-        mi_match(Load, MRI, m_GZExt(m_MInstr(SextLoad)))) {
+        mi_match(Load, MRI,
+                 m_GZExt(m_all_of(m_SpecificType(LLT::scalar(16)),
+                                  m_MInstr(SextLoad))))) {
       if (SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
         return false;
 
       const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
       if (MMO->getSizeInBits().getValue() != 8)
         return false;
-
-      if (Load->getOpcode() == TargetOpcode::G_ZEXT) {
-        LLT SextDstTy = MRI.getType(SextLoad->getOperand(0).getReg());
-        if (SextDstTy.getSizeInBits() != 16)
-          return false;
-      }
 
       return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_I8, MI, SextLoad, Dst);
     }
@@ -457,22 +456,21 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
       return false;
     }
 
+    // s32 Load_lo16 holds SextLoad i8, Load_hi16 is zero.
+    // fake16: and  (sextload i8 -> s32), 0xFFFF
+    // true16: zext (sextload i8 -> s16) -> s32
     if (mi_match(
             Load, MRI,
             m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16)))) ||
-        mi_match(Load, MRI, m_GZExt(m_MInstr(SextLoad)))) {
+        mi_match(Load, MRI,
+                 m_GZExt(m_all_of(m_SpecificType(LLT::scalar(16)),
+                                  m_MInstr(SextLoad))))) {
       if (SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
         return false;
 
       const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
       if (MMO->getSizeInBits().getValue() != 8)
         return false;
-
-      if (Load->getOpcode() == TargetOpcode::G_ZEXT) {
-        LLT SextDstTy = MRI.getType(SextLoad->getOperand(0).getReg());
-        if (SextDstTy.getSizeInBits() != 16)
-          return false;
-      }
 
       return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_I8, MI, SextLoad, Dst);
     }
