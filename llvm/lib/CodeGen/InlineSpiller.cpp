@@ -1837,15 +1837,9 @@ void HoistSpillHelper::hoistAllSpills() {
 
   // Flush vregs that were unassigned from the matrix during shrinking but
   // were not split (so LRE_DidCloneVirtReg never re-assigned them).
-  for (auto &[VReg, PhysReg] : PendingReassignments) {
-    if (LIS.hasInterval(VReg)) {
-      LiveInterval &LI = LIS.getInterval(VReg);
-      if (!LI.empty())
-        Matrix->assign(LI, PhysReg);
-      else
-        VRM.assignVirt2Phys(VReg, PhysReg);
-    }
-  }
+  for (auto &[VReg, PhysReg] : PendingReassignments)
+    if (LIS.hasInterval(VReg))
+      Matrix->assign(LIS.getInterval(VReg), PhysReg);
   PendingReassignments.clear();
 }
 
@@ -1873,35 +1867,29 @@ bool HoistSpillHelper::LRE_CanEraseVirtReg(Register VirtReg) {
 /// For VirtReg clone, the \p New register should have the same physreg or
 /// stackslot as the \p old register.
 void HoistSpillHelper::LRE_DidCloneVirtReg(Register New, Register Old) {
-  // Place VReg at PhysReg. Goes through LiveRegMatrix when VReg has a
-  // non-empty live interval and the matrix is available; otherwise records
-  // the assignment directly in VirtRegMap.
   auto AssignToPhys = [&](Register VReg, MCRegister PhysReg) {
-    if (Matrix && LIS.hasInterval(VReg)) {
-      LiveInterval &LI = LIS.getInterval(VReg);
-      if (!LI.empty()) {
-        Matrix->assign(LI, PhysReg);
-        return;
-      }
-    }
-    VRM.assignVirt2Phys(VReg, PhysReg);
+    if (Matrix && LIS.hasInterval(VReg))
+      Matrix->assign(LIS.getInterval(VReg), PhysReg);
+    else
+      VRM.assignVirt2Phys(VReg, PhysReg);
   };
 
   auto PendingIt = PendingReassignments.find(Old);
   if (PendingIt != PendingReassignments.end()) {
-    // Old was already unassigned from the matrix by LRE_WillShrinkVirtReg.
-    // Reassign both Old (with its shrunk interval) and New to the matrix.
+    // LRE_WillShrinkVirtReg only enrolls regs that had a live interval.
+    assert(LIS.hasInterval(Old) &&
+           "Pending reassignment for vreg without live interval");
     MCRegister PhysReg = PendingIt->second;
     PendingReassignments.erase(PendingIt);
 
-    if (LIS.hasInterval(Old))
-      AssignToPhys(Old, PhysReg);
+    // Reassign both Old (with its shrunk interval) and New to the matrix.
+    AssignToPhys(Old, PhysReg);
     AssignToPhys(New, PhysReg);
   } else if (VRM.hasPhys(Old)) {
     MCRegister PhysReg = VRM.getPhys(Old);
     if (Matrix && LIS.hasInterval(Old)) {
-      LiveInterval &OldLI = LIS.getInterval(Old);
-      Matrix->unassign(OldLI, /*ClearAllReferencingSegments=*/true);
+      Matrix->unassign(LIS.getInterval(Old),
+                       /*ClearAllReferencingSegments=*/true);
       AssignToPhys(Old, PhysReg);
     }
     AssignToPhys(New, PhysReg);
