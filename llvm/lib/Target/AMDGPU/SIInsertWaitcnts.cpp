@@ -3075,7 +3075,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
 
   // Set XCNT to zero in the bracket for instructions that implicitly drain
   // XCNT.
-  if (ST.hasWaitXcnt() && !Inst.isCall() && SIInstrInfo::isXcntDrain(Inst))
+  if (ST.hasWaitXcnt() && SIInstrInfo::isXcntDrain(Inst))
     ScoreBrackets->applyWaitcnt(AMDGPU::X_CNT, 0);
 }
 
