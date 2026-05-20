@@ -65,7 +65,7 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
       Res.MDReplace.insert({SP, NewSP});
 
       if (auto It = Res.MDExtra.find(SP); It != Res.MDExtra.end()) {
-        auto *FunctionMD = It->second;
+        const Metadata *FunctionMD = It->second;
         Res.MDExtra.erase(It);
         Res.MDExtra.insert({NewSP, FunctionMD});
       }
