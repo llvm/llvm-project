@@ -1,5 +1,3 @@
-.. include:: ../check.rst
-
 =========
 complex.h
 =========

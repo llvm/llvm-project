@@ -992,17 +992,16 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVE1:       vector.body:
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE62:%.*]] ]
-; CHECK-INTERLEAVE1-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE62]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], [[PRED_LOAD_CONTINUE62]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE62]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP16:%.*]] = icmp ule <16 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP17:%.*]] = extractelement <16 x i1> [[TMP16]], i64 0
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP17]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK-INTERLEAVE1:       pred.load.if:
-; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-INTERLEAVE1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP20:%.*]] = insertelement <16 x i8> poison, i8 [[TMP19]], i64 0
-; CHECK-INTERLEAVE1-NEXT:    [[TMP99:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP0]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP99:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP101:%.*]] = load i8, ptr [[TMP99]], align 1
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP102:%.*]] = insertelement <16 x i8> poison, i8 [[TMP101]], i64 0
 ; CHECK-INTERLEAVE1-NEXT:    br label [[PRED_LOAD_CONTINUE]]
@@ -1248,17 +1247,16 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE62:%.*]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE62]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], [[PRED_LOAD_CONTINUE62]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE62]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = icmp ule <16 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = extractelement <16 x i1> [[TMP16]], i64 0
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP17]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK-INTERLEAVED:       pred.load.if:
-; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP20:%.*]] = insertelement <16 x i8> poison, i8 [[TMP19]], i64 0
-; CHECK-INTERLEAVED-NEXT:    [[TMP99:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP0]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP99:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP101:%.*]] = load i8, ptr [[TMP99]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP102:%.*]] = insertelement <16 x i8> poison, i8 [[TMP101]], i64 0
 ; CHECK-INTERLEAVED-NEXT:    br label [[PRED_LOAD_CONTINUE]]
@@ -1504,17 +1502,16 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-MAXBW:       vector.body:
 ; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE62:%.*]] ]
-; CHECK-MAXBW-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE62]] ]
 ; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], [[PRED_LOAD_CONTINUE62]] ]
+; CHECK-MAXBW-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE62]] ]
 ; CHECK-MAXBW-NEXT:    [[TMP16:%.*]] = icmp ule <16 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-MAXBW-NEXT:    [[TMP17:%.*]] = extractelement <16 x i1> [[TMP16]], i64 0
 ; CHECK-MAXBW-NEXT:    br i1 [[TMP17]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK-MAXBW:       pred.load.if:
-; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-MAXBW-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-MAXBW-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-MAXBW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
 ; CHECK-MAXBW-NEXT:    [[TMP20:%.*]] = insertelement <16 x i8> poison, i8 [[TMP19]], i64 0
-; CHECK-MAXBW-NEXT:    [[TMP99:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP0]]
+; CHECK-MAXBW-NEXT:    [[TMP99:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-MAXBW-NEXT:    [[TMP101:%.*]] = load i8, ptr [[TMP99]], align 1
 ; CHECK-MAXBW-NEXT:    [[TMP102:%.*]] = insertelement <16 x i8> poison, i8 [[TMP101]], i64 0
 ; CHECK-MAXBW-NEXT:    br label [[PRED_LOAD_CONTINUE]]

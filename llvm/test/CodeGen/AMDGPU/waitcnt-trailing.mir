@@ -4,7 +4,7 @@
 # is followed by a meta instruction.
 
 # CHECK-LABEL: name: waitcnt-no-redundant
-# CHECK: S_WAITCNT 0
+# CHECK: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # CHECK: S_MOV_B32
 # CHECK-NOT: S_WAITCNT
 

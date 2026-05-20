@@ -10,10 +10,7 @@
 
 define void @test_sincos_v4f32(<4 x float> %x, ptr noalias %out_sin, ptr noalias %out_cos) {
 ; AMD-LABEL: test_sincos_v4f32:
-; AMD:    callq sincosf@PLT
-; AMD:    callq sincosf@PLT
-; AMD:    callq sincosf@PLT
-; AMD:    callq sincosf@PLT
+; AMD:    callq amd_vrs4_sincosf@PLT
 ;
 ; GLIBC-LABEL: test_sincos_v4f32:
 ; GLIBC:    callq _ZGVbN4v_sinf@PLT
@@ -27,15 +24,19 @@ define void @test_sincos_v4f32(<4 x float> %x, ptr noalias %out_sin, ptr noalias
 }
 
 define void @test_sincos_v8f32(<8 x float> %x, ptr noalias %out_sin, ptr noalias %out_cos) {
-; AMD-LABEL: test_sincos_v8f32:
-; AMD:    callq sincosf@PLT
-; AMD:    callq sincosf@PLT
-; AMD:    callq sincosf@PLT
-; AMD:    callq sincosf@PLT
-; AMD:    callq sincosf@PLT
-; AMD:    callq sincosf@PLT
-; AMD:    callq sincosf@PLT
-; AMD:    callq sincosf@PLT
+; AMD-SSE-LABEL: test_sincos_v8f32:
+; AMD-SSE:    callq amd_vrs4_sincosf@PLT
+; AMD-SSE:    callq amd_vrs4_sincosf@PLT
+;
+; AMD-AVX-LABEL: test_sincos_v8f32:
+; AMD-AVX:    callq amd_vrs4_sincosf@PLT
+; AMD-AVX:    callq amd_vrs4_sincosf@PLT
+;
+; AMD-AVX2-LABEL: test_sincos_v8f32:
+; AMD-AVX2:    callq amd_vrs8_sincosf@PLT
+;
+; AMD-AVX512-LABEL: test_sincos_v8f32:
+; AMD-AVX512:    callq amd_vrs8_sincosf@PLT
 ;
 ; GLIBC-LABEL: test_sincos_v8f32:
 ; GLIBC:    callq _ZGVdN8v_sinf@PLT
@@ -49,23 +50,42 @@ define void @test_sincos_v8f32(<8 x float> %x, ptr noalias %out_sin, ptr noalias
 }
 
 define void @test_sincos_v16f32(<16 x float> %x, ptr noalias %out_sin, ptr noalias %out_cos) {
-; CHECK-LABEL: test_sincos_v16f32:
-; CHECK:    callq sincosf@PLT
-; CHECK:    callq sincosf@PLT
-; CHECK:    callq sincosf@PLT
-; CHECK:    callq sincosf@PLT
-; CHECK:    callq sincosf@PLT
-; CHECK:    callq sincosf@PLT
-; CHECK:    callq sincosf@PLT
-; CHECK:    callq sincosf@PLT
-; CHECK:    callq sincosf@PLT
-; CHECK:    callq sincosf@PLT
-; CHECK:    callq sincosf@PLT
-; CHECK:    callq sincosf@PLT
-; CHECK:    callq sincosf@PLT
-; CHECK:    callq sincosf@PLT
-; CHECK:    callq sincosf@PLT
-; CHECK:    callq sincosf@PLT
+; AMD-SSE-LABEL: test_sincos_v16f32:
+; AMD-SSE:    callq amd_vrs4_sincosf@PLT
+; AMD-SSE:    callq amd_vrs4_sincosf@PLT
+; AMD-SSE:    callq amd_vrs4_sincosf@PLT
+; AMD-SSE:    callq amd_vrs4_sincosf@PLT
+;
+; AMD-AVX-LABEL: test_sincos_v16f32:
+; AMD-AVX:    callq amd_vrs4_sincosf@PLT
+; AMD-AVX:    callq amd_vrs4_sincosf@PLT
+; AMD-AVX:    callq amd_vrs4_sincosf@PLT
+; AMD-AVX:    callq amd_vrs4_sincosf@PLT
+;
+; AMD-AVX2-LABEL: test_sincos_v16f32:
+; AMD-AVX2:    callq amd_vrs8_sincosf@PLT
+; AMD-AVX2:    callq amd_vrs8_sincosf@PLT
+;
+; AMD-AVX512-LABEL: test_sincos_v16f32:
+; AMD-AVX512:    callq amd_vrs16_sincosf@PLT
+;
+; GLIBC-LABEL: test_sincos_v16f32:
+; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq sincosf@PLT
   %result = call { <16 x float>, <16 x float> } @llvm.sincos.v16f32(<16 x float> %x)
   %result.0 = extractvalue { <16 x float>, <16 x float> } %result, 0
   %result.1 = extractvalue { <16 x float>, <16 x float> } %result, 1
@@ -76,8 +96,7 @@ define void @test_sincos_v16f32(<16 x float> %x, ptr noalias %out_sin, ptr noali
 
 define void @test_sincos_v2f64(<2 x double> %x, ptr noalias %out_sin, ptr noalias %out_cos) {
 ; AMD-LABEL: test_sincos_v2f64:
-; AMD:    callq sincos@PLT
-; AMD:    callq sincos@PLT
+; AMD:    callq amd_vrd2_sincos@PLT
 ;
 ; GLIBC-LABEL: test_sincos_v2f64:
 ; GLIBC:    callq _ZGVbN2v_sin@PLT
@@ -91,11 +110,19 @@ define void @test_sincos_v2f64(<2 x double> %x, ptr noalias %out_sin, ptr noalia
 }
 
 define void @test_sincos_v4f64(<4 x double> %x, ptr noalias %out_sin, ptr noalias %out_cos) {
-; AMD-LABEL: test_sincos_v4f64:
-; AMD:    callq sincos@PLT
-; AMD:    callq sincos@PLT
-; AMD:    callq sincos@PLT
-; AMD:    callq sincos@PLT
+; AMD-SSE-LABEL: test_sincos_v4f64:
+; AMD-SSE:    callq amd_vrd2_sincos@PLT
+; AMD-SSE:    callq amd_vrd2_sincos@PLT
+;
+; AMD-AVX-LABEL: test_sincos_v4f64:
+; AMD-AVX:    callq amd_vrd2_sincos@PLT
+; AMD-AVX:    callq amd_vrd2_sincos@PLT
+;
+; AMD-AVX2-LABEL: test_sincos_v4f64:
+; AMD-AVX2:    callq amd_vrd4_sincos@PLT
+;
+; AMD-AVX512-LABEL: test_sincos_v4f64:
+; AMD-AVX512:    callq amd_vrd4_sincos@PLT
 ;
 ; GLIBC-LABEL: test_sincos_v4f64:
 ; GLIBC:    callq _ZGVdN4v_sin@PLT
@@ -109,15 +136,34 @@ define void @test_sincos_v4f64(<4 x double> %x, ptr noalias %out_sin, ptr noalia
 }
 
 define void @test_sincos_v8f64(<8 x double> %x, ptr noalias %out_sin, ptr noalias %out_cos) {
-; CHECK-LABEL: test_sincos_v8f64:
-; CHECK:    callq sincos@PLT
-; CHECK:    callq sincos@PLT
-; CHECK:    callq sincos@PLT
-; CHECK:    callq sincos@PLT
-; CHECK:    callq sincos@PLT
-; CHECK:    callq sincos@PLT
-; CHECK:    callq sincos@PLT
-; CHECK:    callq sincos@PLT
+; AMD-SSE-LABEL: test_sincos_v8f64:
+; AMD-SSE:    callq amd_vrd2_sincos@PLT
+; AMD-SSE:    callq amd_vrd2_sincos@PLT
+; AMD-SSE:    callq amd_vrd2_sincos@PLT
+; AMD-SSE:    callq amd_vrd2_sincos@PLT
+;
+; AMD-AVX-LABEL: test_sincos_v8f64:
+; AMD-AVX:    callq amd_vrd2_sincos@PLT
+; AMD-AVX:    callq amd_vrd2_sincos@PLT
+; AMD-AVX:    callq amd_vrd2_sincos@PLT
+; AMD-AVX:    callq amd_vrd2_sincos@PLT
+;
+; AMD-AVX2-LABEL: test_sincos_v8f64:
+; AMD-AVX2:    callq amd_vrd4_sincos@PLT
+; AMD-AVX2:    callq amd_vrd4_sincos@PLT
+;
+; AMD-AVX512-LABEL: test_sincos_v8f64:
+; AMD-AVX512:    callq amd_vrd8_sincos@PLT
+;
+; GLIBC-LABEL: test_sincos_v8f64:
+; GLIBC:    callq sincos@PLT
+; GLIBC:    callq sincos@PLT
+; GLIBC:    callq sincos@PLT
+; GLIBC:    callq sincos@PLT
+; GLIBC:    callq sincos@PLT
+; GLIBC:    callq sincos@PLT
+; GLIBC:    callq sincos@PLT
+; GLIBC:    callq sincos@PLT
   %result = call { <8 x double>, <8 x double> } @llvm.sincos.v8f64(<8 x double> %x)
   %result.0 = extractvalue { <8 x double>, <8 x double> } %result, 0
   %result.1 = extractvalue { <8 x double>, <8 x double> } %result, 1
@@ -126,10 +172,7 @@ define void @test_sincos_v8f64(<8 x double> %x, ptr noalias %out_sin, ptr noalia
   ret void
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; AMD-AVX: {{.*}}
-; AMD-AVX2: {{.*}}
-; AMD-AVX512: {{.*}}
-; AMD-SSE: {{.*}}
+; CHECK: {{.*}}
 ; GLIBC-AVX: {{.*}}
 ; GLIBC-AVX2: {{.*}}
 ; GLIBC-AVX512: {{.*}}

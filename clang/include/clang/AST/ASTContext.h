@@ -1998,8 +1998,7 @@ public:
   QualType getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack);
 
   QualType
-  getTemplateTypeParmType(unsigned Depth, unsigned Index,
-                          bool ParameterPack,
+  getTemplateTypeParmType(int Depth, int Index, bool ParameterPack,
                           TemplateTypeParmDecl *ParmDecl = nullptr) const;
 
   QualType getCanonicalTemplateSpecializationType(

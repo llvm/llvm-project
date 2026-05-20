@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/CUDAKernelOpInterface.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -189,9 +190,8 @@ bool fir::mayBeAbsentBox(mlir::Value val) {
       // arguments to the operands (though, the meaning
       // of operands/block-arguments of acc.compute_region
       // is tricky).
-      if (mlir::Operation *accOp =
-              mlir::acc::getACCDataClauseOpForBlockArg(val)) {
-        val = mlir::acc::getVar(accOp);
+      if (mlir::Value accOperand = mlir::acc::getACCOperandForBlockArg(val)) {
+        val = accOperand;
         continue;
       }
 
@@ -214,6 +214,11 @@ bool fir::mayBeAbsentBox(mlir::Value val) {
       return reboxAROp.getOptional();
     if (mlir::isa<fir::LoadOp>(defOp))
       return false;
+
+    if (mlir::isa<ACC_DATA_ENTRY_AND_INIT_OPS>(defOp)) {
+      val = mlir::acc::getVar(defOp);
+      continue;
+    }
 
     if (auto viewIface =
             mlir::dyn_cast<fir::FortranObjectViewOpInterface>(defOp)) {
@@ -594,6 +599,15 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
           llvm::any_of(memref.getUsers(), [](mlir::Operation *u) {
             return mlir::isa<ACC_DATA_ENTRY_OPS>(u);
           }))
+        return mlir::failure();
+      // Don't pull in rebox defined outside a CUDA kernel boundary when the
+      // array_coor is inside that kernel. CUF lowering converts such a rebox
+      // into a managed-memory descriptor that the kernel needs to receive as
+      // its argument; folding the rebox away would leave the kernel capturing
+      // the host-side descriptor directly, causing illegal device dereferences
+      // at runtime.
+      if (op->getParentOfType<fir::CUDAKernelOpInterface>() !=
+          reboxOp->getParentOfType<fir::CUDAKernelOpInterface>())
         return mlir::failure();
       boxedMemref = reboxOp.getBox();
       boxedShape = reboxOp.getShape();
@@ -5636,8 +5650,13 @@ void fir::DeclareOp::visitReplacedValues(
     llvm::ArrayRef<std::pair<mlir::Operation *, mlir::Value>> definitions,
     mlir::OpBuilder &builder) {
   for (auto [op, value] : definitions) {
+    // Do not emit DeclareValue when we have a dummy scope as this can
+    // potentially result in us generating it where the DummyScope does not
+    // dominate it. This can happen after inlining.
+    if (getDummyScope())
+      continue;
     builder.setInsertionPointAfter(op);
-    fir::DeclareValueOp::create(builder, getLoc(), value, getDummyScope(),
+    fir::DeclareValueOp::create(builder, getLoc(), value, nullptr,
                                 getUniqNameAttr(), getFortranAttrsAttr(),
                                 getDataAttrAttr(), getDummyArgNoAttr());
   }

@@ -148,7 +148,7 @@ static bool isKnownMonotonic(VPValue *V) {
     return true;
   // Only handle a subset of IVs until we can guarantee there's no overflow.
   if (auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(V))
-    return WidenIV->isCanonical();
+    return WidenIV->isCanonical() || WidenIV->hasNoUnsignedWrap();
   if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(V))
     return match(Steps->getOperand(0),
                  m_CombineOr(

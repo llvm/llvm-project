@@ -234,20 +234,8 @@ private:
   /// Return a vector of offsets corresponding to a trace in a function
   /// if the trace is valid, std::nullopt otherwise.
   std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
-  getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace, uint64_t Count,
+  getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
                          bool IsReturn) const;
-
-  /// Record external entry into the function \p BF.
-  ///
-  /// Return true if the entry is valid, false otherwise.
-  bool recordEntry(BinaryFunction &BF, uint64_t To, bool Mispred,
-                   uint64_t Count = 1) const;
-
-  /// Record exit from the function \p BF via a call or return.
-  ///
-  /// Return true if the exit point is valid, false otherwise.
-  bool recordExit(BinaryFunction &BF, uint64_t From, bool Mispred,
-                  uint64_t Count = 1) const;
 
   /// Branch stacks aggregation statistics
   uint64_t NumTraces{0};

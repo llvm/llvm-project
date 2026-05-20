@@ -127,6 +127,30 @@ func.func @test_scalar_output_transpose(%arg0: tensor<*xf32>) -> tensor<f32> {
 
 // -----
 
+func.func @test_reverse_element_type_mismatch(%arg0: tensor<2x3xi32>) -> tensor<2x3xf32> {
+  // expected-error@+1 {{'tosa.reverse' op requires the same element type for all operands and results}}
+  %0 = tosa.reverse %arg0 {axis = 1 : i32} : (tensor<2x3xi32>) -> tensor<2x3xf32>
+  return %0 : tensor<2x3xf32>
+}
+
+// -----
+
+func.func @test_reverse_shape_mismatch(%arg0: tensor<2x3xi32>) -> tensor<2x4xi32> {
+  // expected-error@+1 {{'tosa.reverse' op requires the same shape for all operands and results}}
+  %0 = tosa.reverse %arg0 {axis = 1 : i32} : (tensor<2x3xi32>) -> tensor<2x4xi32>
+  return %0 : tensor<2x4xi32>
+}
+
+// -----
+
+func.func @test_reverse_rank_mismatch(%arg0: tensor<2x3xi32>) -> tensor<1x2x3xi32> {
+  // expected-error@+1 {{'tosa.reverse' op result type has different rank than operands}}
+  %0 = tosa.reverse %arg0 {axis = 1 : i32} : (tensor<2x3xi32>) -> tensor<1x2x3xi32>
+  return %0 : tensor<1x2x3xi32>
+}
+
+// -----
+
 func.func @test_slice_invalid_output_rank() {
   %0 = tensor.empty() : tensor<4x31x31xf32>
   %start = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
@@ -419,6 +443,27 @@ func.func @test_error_scalar_input_with_per_channel(%arg0: tensor<i8>) -> tensor
   // expected-error@+1 {{'tosa.rescale' op requires input to be at least rank 1 when per_channel is true, but got rank 0}}
   %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = true, rounding_mode = SINGLE_ROUND, per_channel = true, input_unsigned = false, output_unsigned = false} : (tensor<i8>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>, tensor<1xi16>) -> tensor<i16>
   return %0 : tensor<i16>
+}
+
+// -----
+
+func.func @test_rescale_invalid_static_output_shape(%arg0: tensor<13x21x3xi8>) -> tensor<13x21x4xi8> {
+  %multiplier = "tosa.const"() <{values = dense<42> : tensor<1xi16>}> : () -> tensor<1xi16>
+  %shift = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %input_zp = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %output_zp = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // expected-error@+1 {{'tosa.rescale' op expected output shape 13, 21, 4 to be compatible with inferred shape 13, 21, 3}}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = SINGLE_ROUND, per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<13x21x3xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<13x21x4xi8>
+  return %0 : tensor<13x21x4xi8>
+}
+
+// -----
+
+func.func @test_mul_invalid_static_output_shape(%arg0: tensor<?x21x1xf32>, %arg1: tensor<?x1x3xf32>) -> tensor<?x21x2xf32> {
+  %shift = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // expected-error@+1 {{'tosa.mul' op expected output shape ?, 21, 2 to be compatible with inferred shape ?, 21, 3}}
+  %0 = tosa.mul %arg0, %arg1, %shift : (tensor<?x21x1xf32>, tensor<?x1x3xf32>, tensor<1xi8>) -> tensor<?x21x2xf32>
+  return %0 : tensor<?x21x2xf32>
 }
 
 // -----

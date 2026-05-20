@@ -418,9 +418,14 @@ bool Sub(InterpState &S, CodePtr OpPC) {
     // a AddrLabelDiff integral.
     if (LHS.getKind() == IntegralKind::LabelAddress ||
         RHS.getKind() == IntegralKind::LabelAddress) {
-      const auto *A = reinterpret_cast<const Expr *>(LHS.getPtr());
-      const auto *B = reinterpret_cast<const Expr *>(RHS.getPtr());
-      if (!isa<AddrLabelExpr>(A) || !isa<AddrLabelExpr>(B))
+      const auto *A = LHS.getKind() == IntegralKind::LabelAddress
+                          ? reinterpret_cast<const Expr *>(LHS.getPtr())
+                          : nullptr;
+      const auto *B = RHS.getKind() == IntegralKind::LabelAddress
+                          ? reinterpret_cast<const Expr *>(RHS.getPtr())
+                          : nullptr;
+      if (!isa_and_nonnull<AddrLabelExpr>(A) ||
+          !isa_and_nonnull<AddrLabelExpr>(B))
         return false;
       const auto *LHSAddrExpr = cast<AddrLabelExpr>(A);
       const auto *RHSAddrExpr = cast<AddrLabelExpr>(B);
@@ -1272,6 +1277,15 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     }
   }
 
+  // p == nullptr or nullptr == p.
+  if (RHS.isZero() || LHS.isZero()) {
+    S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Unordered)));
+    return true;
+  }
+
+  assert(!LHS.isZero());
+  assert(!RHS.isZero());
+
   if (!S.inConstantContext()) {
     if (isConstexprUnknown(LHS) || isConstexprUnknown(RHS))
       return false;
@@ -1304,27 +1318,26 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   }
 
   // Otherwise we need to do a bunch of extra checks before returning Unordered.
-  if (LHS.isOnePastEnd() && !RHS.isOnePastEnd() && !RHS.isZero() &&
-      RHS.isBlockPointer() && RHS.getOffset() == 0) {
+  if (LHS.isOnePastEnd() && !RHS.isOnePastEnd() && RHS.isBlockPointer() &&
+      RHS.getOffset() == 0) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
         << LHS.toDiagnosticString(S.getASTContext());
     return false;
   }
-  if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
-      LHS.isBlockPointer() && LHS.getOffset() == 0) {
+  if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && LHS.isBlockPointer() &&
+      LHS.getOffset() == 0) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
         << RHS.toDiagnosticString(S.getASTContext());
     return false;
   }
 
-  bool BothNonNull = !LHS.isZero() && !RHS.isZero();
   // Reject comparisons to literals.
   for (const auto &P : {LHS, RHS}) {
     if (P.isZero())
       continue;
-    if (BothNonNull && P.pointsToLiteral()) {
+    if (P.pointsToLiteral()) {
       const Expr *E = P.getDeclDesc()->asExpr();
       if (isa<StringLiteral>(E)) {
         const SourceInfo &Loc = S.Current->getSource(OpPC);
@@ -1338,7 +1351,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
             << P.toDiagnosticString(S.getASTContext());
         return false;
       }
-    } else if (BothNonNull && P.isIntegralPointer()) {
+    } else if (P.isIntegralPointer()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_pointer_constant_comparison)
           << LHS.toDiagnosticString(S.getASTContext())
@@ -1352,6 +1365,15 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_zero_sized)
         << LHS.toDiagnosticString(S.getASTContext())
         << RHS.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
+  if (LHS.isConstexprUnknown() || RHS.isConstexprUnknown()) {
+    if (!S.checkingPotentialConstantExpression())
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_pointer_comparison_unspecified)
+          << LHS.toDiagnosticString(S.getASTContext())
+          << RHS.toDiagnosticString(S.getASTContext());
     return false;
   }
 
@@ -1972,6 +1994,27 @@ inline bool GetRefLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return handleReference(S, OpPC, LocalBlock);
 }
 
+inline bool GetRefGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
+  Block *B = S.P.getGlobal(I);
+
+  if (isConstexprUnknown(B)) {
+    S.Stk.push<Pointer>(B);
+    return true;
+  }
+
+  const auto &Desc = B->getBlockDesc<GlobalInlineDescriptor>();
+  if (Desc.InitState != GlobalInitState::Initialized)
+    return DiagnoseUninitialized(S, OpPC, B->isExtern(), B, AK_Read);
+
+  S.Stk.push<Pointer>(B->deref<Pointer>());
+  return true;
+}
+
+inline bool CheckRefInit(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  return CheckRange(S, OpPC, Ptr, AK_Read);
+}
+
 inline bool GetPtrParam(InterpState &S, CodePtr OpPC, uint32_t Index) {
   if (S.Current->isBottomFrame())
     return false;
@@ -2066,6 +2109,10 @@ inline bool CheckNull(InterpState &S, CodePtr OpPC) {
 
 inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
                            const Pointer &Ptr) {
+  if (!Ptr.isBlockPointer())
+    return false;
+  if (!Ptr.getFieldDesc()->isRecord())
+    return false;
   Pointer Base = Ptr.stripBaseCasts();
   const Record::Base *VirtBase = Base.getRecord()->getVirtualBase(Decl);
   S.Stk.push<Pointer>(Base.atField(VirtBase->Offset));
@@ -3425,6 +3472,12 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
   if (!SrcPtr.isBlockPointer() || !DestPtr.isBlockPointer())
     return false;
 
+  const Descriptor *SrcDesc = SrcPtr.getFieldDesc();
+  const Descriptor *DestDesc = DestPtr.getFieldDesc();
+  if (!SrcDesc->isPrimitiveArray() || !DestDesc->isPrimitiveArray() ||
+      SrcDesc->getPrimType() != Name || DestDesc->getPrimType() != Name)
+    return false;
+
   for (uint32_t I = 0; I != Size; ++I) {
     const Pointer &SP = SrcPtr.atIndex(SrcIndex + I);
 
@@ -3507,6 +3560,8 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 bool GetMemberPtr(InterpState &S, CodePtr OpPC, const ValueDecl *D);
 bool GetMemberPtrBase(InterpState &S, CodePtr OpPC);
 bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC);
+bool CopyMemberPtrPath(InterpState &S, CodePtr OpPC, const RecordDecl *Entry,
+                       bool IsDerived);
 
 /// Just emit a diagnostic. The expression that caused emission of this
 /// op is not valid in a constant context.
@@ -3543,6 +3598,17 @@ inline bool StartSpeculation(InterpState &S, CodePtr OpPC) {
 #ifndef NDEBUG
   ++S.SpeculationDepth;
 #endif
+  return true;
+}
+
+inline bool StartInit(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  S.InitializingBlocks.push_back(Ptr.block());
+  return true;
+}
+
+inline bool EndInit(InterpState &S, CodePtr OpPC) {
+  S.InitializingBlocks.pop_back();
   return true;
 }
 
@@ -3721,6 +3787,22 @@ inline bool CheckDecl(InterpState &S, CodePtr OpPC, const VarDecl *VD) {
         << (VD->getTSCSpec() == TSCS_unspecified ? 0 : 1) << VD;
     return false;
   }
+  return true;
+}
+
+/// Check if the destination array we're initializing can hold the \p NumElems
+/// elements.
+inline bool CheckArrayDestSize(InterpState &S, CodePtr OpPC, size_t NumElems) {
+  if (!CheckArraySize(S, OpPC, NumElems))
+    return false;
+
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!Ptr.isUnknownSizeArray() && NumElems > Ptr.getNumElems()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_too_small)
+        << Ptr.getNumElems() << NumElems;
+    return false;
+  }
+
   return true;
 }
 

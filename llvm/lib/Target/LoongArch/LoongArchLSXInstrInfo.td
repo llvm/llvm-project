@@ -72,6 +72,7 @@ def loongarch_vshuf4i: SDNode<"LoongArchISD::VSHUF4I", SDT_LoongArchV1RUimm>;
 def loongarch_vshuf4i_d : SDNode<"LoongArchISD::VSHUF4I_D", SDT_LoongArchV2RUimm>;
 def loongarch_vreplvei: SDNode<"LoongArchISD::VREPLVEI", SDT_LoongArchV1RUimm>;
 def loongarch_vreplgr2vr: SDNode<"LoongArchISD::VREPLGR2VR", SDT_LoongArchVreplgr2vr>;
+def loongarch_vpermi : SDNode<"LoongArchISD::VPERMI", SDT_LoongArchV2RUimm>;
 
 def loongarch_vfrecipe: SDNode<"LoongArchISD::FRECIPE", SDT_LoongArchVFRECIPE>;
 def loongarch_vfrsqrte: SDNode<"LoongArchISD::FRSQRTE", SDT_LoongArchVFRSQRTE>;
@@ -1588,18 +1589,6 @@ multiclass InsertExtractPatV2<ValueType vecty, ValueType elemty> {
   }
 }
 
-multiclass VAvgPat<SDPatternOperator OpNode, string Inst, ValueType vt> {
-  def : Pat<(OpNode (vt (add vt:$vj, vt:$vk)), (vt (vsplat_imm_eq_1))),
-            (!cast<LAInst>(Inst) vt:$vj, vt:$vk)>;
-}
-
-multiclass VAvgrPat<SDPatternOperator OpNode, string Inst, ValueType vt> {
-  def : Pat<(OpNode (vt (add (vt (add vt:$vj, vt:$vk)),
-                             (vt (vsplat_imm_eq_1)))),
-                    (vt (vsplat_imm_eq_1))),
-            (!cast<LAInst>(Inst) vt:$vj, vt:$vk)>;
-}
-
 let Predicates = [HasExtLSX] in {
 
 // VADD_{B/H/W/D}
@@ -1868,6 +1857,17 @@ foreach vt = [v8i16, v4i32, v2i64] in {
   def : Pat<(xor (vt LSX128:$vj), (vt (vsplat_i32_pow2 grlenimm:$imm))),
             (VBITREVI_W LSX128:$vj, grlenimm:$imm)>;
 }
+
+// VBITSEL_V
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in
+  def : Pat<(vt (or (and LSX128:$va, LSX128:$vk),
+                    (loongarch_vandn LSX128:$va, LSX128:$vj))),
+            (vt (VBITSEL_V LSX128:$vj, LSX128:$vk, LSX128:$va))>;
+
+// VBITSELI_B
+def : Pat<(v16i8 (or (and LSX128:$vd, (v16i8 (SplatPat_uimm8 uimm8:$imm))),
+                     (loongarch_vandn LSX128:$vd, LSX128:$vj))),
+          (VBITSELI_B LSX128:$vd, LSX128:$vj, uimm8:$imm)>;
 
 // Vector bswaps
 def : Pat<(bswap (v8i16 LSX128:$vj)), (VSHUF4I_B LSX128:$vj, 0b10110001)>;
@@ -2187,6 +2187,12 @@ def : Pat<(loongarch_vshuf4i_d v2i64:$vj, v2i64:$vk, immZExt8:$ui8),
 def : Pat<(loongarch_vshuf4i_d v2f64:$vj, v2f64:$vk, immZExt8:$ui8),
           (VSHUF4I_D v2f64:$vj, v2f64:$vk, immZExt8:$ui8)>;
 
+// VPERMI_W
+def : Pat<(loongarch_vpermi v4i32:$vj, v4i32:$vk, immZExt8:$ui8),
+          (VPERMI_W v4i32:$vj, v4i32:$vk, immZExt8:$ui8)>;
+def : Pat<(loongarch_vpermi v4f32:$vj, v4f32:$vk, immZExt8:$ui8),
+          (VPERMI_W v4f32:$vj, v4f32:$vk, immZExt8:$ui8)>;
+
 // VREPLVEI_{B/H/W/D}
 def : Pat<(loongarch_vreplvei v16i8:$vj, immZExt4:$ui4),
           (VREPLVEI_B v16i8:$vj, immZExt4:$ui4)>;
@@ -2301,22 +2307,6 @@ def : Pat<(f64 f64imm_vldi:$in),
           (f64 (EXTRACT_SUBREG (VLDI (to_f64imm_vldi f64imm_vldi:$in)), sub_64))>;
 
 // VAVG_{B/H/W/D/BU/HU/WU/DU}, VAVGR_{B/H/W/D/BU/HU/WU/DU}
-defm : VAvgPat<sra, "VAVG_B", v16i8>;
-defm : VAvgPat<sra, "VAVG_H", v8i16>;
-defm : VAvgPat<sra, "VAVG_W", v4i32>;
-defm : VAvgPat<sra, "VAVG_D", v2i64>;
-defm : VAvgPat<srl, "VAVG_BU", v16i8>;
-defm : VAvgPat<srl, "VAVG_HU", v8i16>;
-defm : VAvgPat<srl, "VAVG_WU", v4i32>;
-defm : VAvgPat<srl, "VAVG_DU", v2i64>;
-defm : VAvgrPat<sra, "VAVGR_B", v16i8>;
-defm : VAvgrPat<sra, "VAVGR_H", v8i16>;
-defm : VAvgrPat<sra, "VAVGR_W", v4i32>;
-defm : VAvgrPat<sra, "VAVGR_D", v2i64>;
-defm : VAvgrPat<srl, "VAVGR_BU", v16i8>;
-defm : VAvgrPat<srl, "VAVGR_HU", v8i16>;
-defm : VAvgrPat<srl, "VAVGR_WU", v4i32>;
-defm : VAvgrPat<srl, "VAVGR_DU", v2i64>;
 defm : PatVrVr<avgfloors, "VAVG">;
 defm : PatVrVr<avgceils, "VAVGR">;
 defm : PatVrVrU<avgflooru, "VAVG">;

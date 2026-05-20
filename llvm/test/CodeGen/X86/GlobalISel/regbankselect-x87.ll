@@ -7,7 +7,7 @@ define x86_fp80 @f0(x86_fp80 noundef %a) {
   ; X86: bb.1.entry:
   ; X86-NEXT:   [[FRAME_INDEX:%[0-9]+]]:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X86-NEXT:   [[LOAD:%[0-9]+]]:psr(s80) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s80) from %fixed-stack.0, align 4)
-  ; X86-NEXT:   [[C:%[0-9]+]]:psr(s80) = G_FCONSTANT x86_fp80 0xK400A8000000000000000
+  ; X86-NEXT:   [[C:%[0-9]+]]:psr(s80) = G_FCONSTANT x86_fp80 2.048000e+03
   ; X86-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:gpr(p0) = G_FRAME_INDEX %stack.0.a.addr
   ; X86-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:gpr(p0) = G_FRAME_INDEX %stack.1.x
   ; X86-NEXT:   G_STORE [[LOAD]](s80), [[FRAME_INDEX1]](p0) :: (store (s80) into %ir.a.addr, align 16)
@@ -22,7 +22,7 @@ define x86_fp80 @f0(x86_fp80 noundef %a) {
   ; X64: bb.1.entry:
   ; X64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X64-NEXT:   [[LOAD:%[0-9]+]]:psr(s80) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s80) from %fixed-stack.0, align 16)
-  ; X64-NEXT:   [[C:%[0-9]+]]:psr(s80) = G_FCONSTANT x86_fp80 0xK400A8000000000000000
+  ; X64-NEXT:   [[C:%[0-9]+]]:psr(s80) = G_FCONSTANT x86_fp80 2.048000e+03
   ; X64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:gpr(p0) = G_FRAME_INDEX %stack.0.a.addr
   ; X64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:gpr(p0) = G_FRAME_INDEX %stack.1.x
   ; X64-NEXT:   G_STORE [[LOAD]](s80), [[FRAME_INDEX1]](p0) :: (store (s80) into %ir.a.addr, align 16)

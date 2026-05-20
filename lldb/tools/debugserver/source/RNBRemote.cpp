@@ -5856,28 +5856,28 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
           }
           thread_dict_sp->AddItem("memory", memory_array_sp);
         }
-      }
 
-      std::vector<uint64_t> added_binaries;
-      JSONGenerator::ObjectSP detailed_binary_infos;
+        std::vector<uint64_t> added_binaries;
+        JSONGenerator::ObjectSP detailed_binary_infos;
 
-      // If we've stopped with a breakpoint exception on this
-      // thread, and we're stopped at the dyld notification
-      // function address, collect information about libraries
-      // that have been loaded, expedite that information in
-      // the stop packet.
-      if (tid_stop_info.details.exception.type == EXC_BREAKPOINT &&
-          DNBGetBinariesLoadedInfo(pid, tid, added_binaries,
-                                   detailed_binary_infos)) {
-        JSONGenerator::ArraySP load_addresses;
-        load_addresses = std::make_shared<JSONGenerator::Array>();
-        for (nub_addr_t addr : added_binaries)
-          load_addresses->AddIntegerItem(addr);
-        thread_dict_sp->AddItem("added-binaries", load_addresses);
+        // If we've stopped with a breakpoint exception on this
+        // thread, and we're stopped at the dyld notification
+        // function address, collect information about libraries
+        // that have been loaded, expedite that information in
+        // the stop packet.
+        if (tid_stop_info.details.exception.type == EXC_BREAKPOINT &&
+            DNBGetBinariesLoadedInfo(pid, tid, added_binaries,
+                                     detailed_binary_infos)) {
+          JSONGenerator::ArraySP load_addresses;
+          load_addresses = std::make_shared<JSONGenerator::Array>();
+          for (nub_addr_t addr : added_binaries)
+            load_addresses->AddIntegerItem(addr);
+          thread_dict_sp->AddItem("added-binaries", load_addresses);
 
-        if (detailed_binary_infos)
-          thread_dict_sp->AddItem("detailed-binaries-info",
-                                  detailed_binary_infos);
+          if (detailed_binary_infos)
+            thread_dict_sp->AddItem("detailed-binaries-info",
+                                    detailed_binary_infos);
+        }
       }
 
       threads_array_sp->AddItem(thread_dict_sp);

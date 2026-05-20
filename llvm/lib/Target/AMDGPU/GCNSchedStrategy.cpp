@@ -147,9 +147,9 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
                          "VGPRCriticalLimit calculation method.\n");
     unsigned DynamicVGPRBlockSize = MFI.getDynamicVGPRBlockSize();
     unsigned Granule =
-        AMDGPU::IsaInfo::getVGPRAllocGranule(&ST, DynamicVGPRBlockSize);
+        AMDGPU::IsaInfo::getVGPRAllocGranule(ST, DynamicVGPRBlockSize);
     unsigned Addressable =
-        AMDGPU::IsaInfo::getAddressableNumVGPRs(&ST, DynamicVGPRBlockSize);
+        AMDGPU::IsaInfo::getAddressableNumVGPRs(ST, DynamicVGPRBlockSize);
     unsigned VGPRBudget = alignDown(Addressable / TargetOccupancy, Granule);
     VGPRBudget = std::max(VGPRBudget, Granule);
     VGPRCriticalLimit = std::min(VGPRBudget, VGPRExcessLimit);
@@ -1075,7 +1075,7 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
   auto *NonDbgMI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
   if (LiveInIt != MBBLiveIns.end()) {
     auto LiveIn = std::move(LiveInIt->second);
-    RPTracker.reset(*MBB->begin(), &LiveIn);
+    RPTracker.reset(*MBB->begin(), MBB->end(), &LiveIn);
     MBBLiveIns.erase(LiveInIt);
   } else {
     I = Rgn.first;
@@ -1083,7 +1083,7 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
 #ifdef EXPENSIVE_CHECKS
     assert(isEqual(getLiveRegsBefore(*NonDbgMI, *LIS), LRS));
 #endif
-    RPTracker.reset(*I, &LRS);
+    RPTracker.reset(*I, I->getParent()->end(), &LRS);
   }
 
   for (;;) {
@@ -1207,16 +1207,10 @@ void GCNScheduleDAGMILive::runSchedStages() {
       }
 
       if (S.useGCNTrackers()) {
-        GCNDownwardRPTracker *DownwardTracker = S.getDownwardTracker();
-        GCNUpwardRPTracker *UpwardTracker = S.getUpwardTracker();
-        GCNRPTracker::LiveRegSet *RegionLiveIns =
-            &LiveIns[Stage->getRegionIdx()];
-
-        reinterpret_cast<GCNRPTracker *>(DownwardTracker)
-            ->reset(MRI, *RegionLiveIns);
-        reinterpret_cast<GCNRPTracker *>(UpwardTracker)
-            ->reset(MRI, RegionLiveOuts.getLiveRegsForRegionIdx(
-                             Stage->getRegionIdx()));
+        const unsigned RegionIdx = Stage->getRegionIdx();
+        S.getDownwardTracker()->reset(MRI, LiveIns[RegionIdx]);
+        S.getUpwardTracker()->reset(
+            MRI, RegionLiveOuts.getLiveRegsForRegionIdx(RegionIdx));
       }
 
       ScheduleDAGMILive::schedule();
@@ -2079,11 +2073,10 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
   // For dynamic VGPR mode, we don't want to waste any VGPR blocks.
   if (DAG.MFI.isDynamicVGPREnabled()) {
     unsigned BlocksBefore = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
-        &ST, DAG.MFI.getDynamicVGPRBlockSize(),
+        ST, DAG.MFI.getDynamicVGPRBlockSize(),
         PressureBefore.getVGPRNum(false));
     unsigned BlocksAfter = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
-        &ST, DAG.MFI.getDynamicVGPRBlockSize(),
-        PressureAfter.getVGPRNum(false));
+        ST, DAG.MFI.getDynamicVGPRBlockSize(), PressureAfter.getVGPRNum(false));
     if (BlocksAfter > BlocksBefore)
       return true;
   }
@@ -2557,7 +2550,7 @@ bool RewriteMFMAFormStage::rewrite(
       }
 
       if (!Src2DefsReplace.empty()) {
-        DenseMap<Register, Register>::iterator RI = RedefMap.find(Src2Reg);
+        auto RI = RedefMap.find(Src2Reg);
         if (RI != RedefMap.end()) {
           MappedReg = RI->second;
         } else {
@@ -2641,7 +2634,7 @@ bool RewriteMFMAFormStage::rewrite(
     }
 
     if (!DstUseDefsReplace.empty()) {
-      DenseMap<Register, Register>::iterator RI = RedefMap.find(DstReg);
+      auto RI = RedefMap.find(DstReg);
       if (RI != RedefMap.end()) {
         MappedReg = RI->second;
       } else {
@@ -2668,8 +2661,7 @@ bool RewriteMFMAFormStage::rewrite(
 
           // If this reaching def was the last MI in the region, update the
           // region boundaries.
-          DenseMap<MachineInstr *, unsigned>::iterator LMI =
-              LastMIToRegion.find(RD);
+          auto LMI = LastMIToRegion.find(RD);
           if (LMI != LastMIToRegion.end()) {
             unsigned UpdateRegion = LMI->second;
             DAG.Regions[UpdateRegion].second = VGPRCopy;
@@ -2747,8 +2739,7 @@ bool RewriteMFMAFormStage::rewrite(
 
       // If this UseInst was the first MI in the region, update the region
       // boundaries.
-      DenseMap<MachineInstr *, unsigned>::iterator FI =
-          FirstMIToRegion.find(UseInst);
+      auto FI = FirstMIToRegion.find(UseInst);
       if (FI != FirstMIToRegion.end()) {
         unsigned UpdateRegion = FI->second;
         DAG.Regions[UpdateRegion].first = VGPRCopy;
@@ -2782,7 +2773,7 @@ bool RewriteMFMAFormStage::rewrite(
     Register RegToRewrite = RewriteReg;
 
     // Be sure to update the replacement register and not the original.
-    DenseMap<Register, Register>::iterator RI = RedefMap.find(RewriteReg);
+    auto RI = RedefMap.find(RewriteReg);
     if (RI != RedefMap.end())
       RegToRewrite = RI->second;
 

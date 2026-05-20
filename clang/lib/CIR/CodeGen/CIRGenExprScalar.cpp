@@ -246,8 +246,13 @@ public:
 
   mlir::Value VisitCharacterLiteral(const CharacterLiteral *e) {
     mlir::Type ty = cgf.convertType(e->getType());
-    auto init = cir::IntAttr::get(ty, e->getValue());
-    return cir::ConstantOp::create(builder, cgf.getLoc(e->getExprLoc()), init);
+    // Character literals are always stored in an unsigned (even for signed
+    // char), so allow implicit truncation here.
+    auto intTy = mlir::cast<cir::IntTypeInterface>(ty);
+    llvm::APInt apValue(intTy.getWidth(), e->getValue(),
+                        /*isSigned=*/false, /*implicitTrunc=*/true);
+    return cir::ConstantOp::create(builder, cgf.getLoc(e->getExprLoc()),
+                                   cir::IntAttr::get(ty, apValue));
   }
 
   mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *e) {
@@ -272,8 +277,7 @@ public:
                                convertType(e->getType()), e->getPackLength());
   }
   mlir::Value VisitPseudoObjectExpr(PseudoObjectExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: pseudo object");
-    return {};
+    return cgf.emitPseudoObjectRValue(e).getValue();
   }
   mlir::Value VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -2455,7 +2459,16 @@ mlir::Value ScalarExprEmitter::VisitMemberExpr(MemberExpr *e) {
   if (e->EvaluateAsInt(result, cgf.getContext(), Expr::SE_AllowSideEffects)) {
     llvm::APSInt value = result.Val.getInt();
     cgf.emitIgnoredExpr(e->getBase());
-    return builder.getConstInt(cgf.getLoc(e->getExprLoc()), value);
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    // The constant is folded from an APSInt with the source-type's bit width
+    // (1 for bool), but the AST's expression type is what later consumers of
+    // this value see. For a bool member we have to emit a !cir.bool constant
+    // -- otherwise downstream ops (cir.call into a bool parameter, cir.if /
+    // cir.ternary on the value, ...) would all reject the !cir.int<u, 1> the
+    // raw APSInt would produce.
+    if (e->getType()->isBooleanType())
+      return builder.getBool(value.getBoolValue(), loc);
+    return builder.getConstInt(loc, value);
   }
   return emitLoadOfLValue(e);
 }
@@ -2776,10 +2789,10 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
 
   // OpenCL: If the condition is a vector, we can treat this condition like
   // the select function.
-  if ((cgf.getLangOpts().OpenCL && condType->isVectorType()) ||
-      condType->isExtVectorType()) {
+  if (cgf.getLangOpts().OpenCL &&
+      (condType->isVectorType() || condType->isExtVectorType())) {
     assert(!cir::MissingFeatures::vectorType());
-    cgf.cgm.errorNYI(e->getSourceRange(), "vector ternary op");
+    cgf.cgm.errorNYI(e->getSourceRange(), "OpenCL vector ternary op");
   }
 
   if (condType->isVectorType() || condType->isSveVLSBuiltinType()) {

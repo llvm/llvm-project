@@ -62,6 +62,7 @@ CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
                                const LegalizerInfo *LI)
     : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer), VT(VT),
       MDT(MDT), IsPreLegalize(IsPreLegalize), LI(LI),
+      TII(Builder.getMF().getSubtarget().getInstrInfo()),
       RBI(Builder.getMF().getSubtarget().getRegBankInfo()),
       TRI(Builder.getMF().getSubtarget().getRegisterInfo()) {
   (void)this->VT;
@@ -399,6 +400,70 @@ void CombinerHelper::applyCombineConcatVectors(
   MI.eraseFromParent();
 }
 
+bool CombinerHelper::matchCombineBuildVectorOfBitcast(
+    MachineInstr &MI, SmallVector<Register> &Ops) const {
+  auto &BV = cast<GBuildVector>(MI);
+
+  // Look at the first operand for a unmerge(bitcast) from a scalar type.
+  GUnmerge *Unmerge = getOpcodeDef<GUnmerge>(BV.getSourceReg(0), MRI);
+  if (!Unmerge || Unmerge->getReg(0) != BV.getSourceReg(0))
+    return false;
+  MachineInstr *BC = MRI.getVRegDef(Unmerge->getSourceReg());
+  if (BC->getOpcode() != TargetOpcode::G_BITCAST)
+    return false;
+  LLT InputTy = MRI.getType(BC->getOperand(1).getReg());
+  unsigned Factor = Unmerge->getNumDefs();
+  if (!InputTy.isScalar() || BV.getNumSources() % Factor != 0)
+    return false;
+
+  // Check if the build_vector is legal
+  LLT BVDstTy = LLT::fixed_vector(BV.getNumSources() / Factor, InputTy);
+  if (!isLegal({TargetOpcode::G_BUILD_VECTOR, {BVDstTy, InputTy}}))
+    return false;
+
+  // Check all other operands are bitcasts or undef.
+  for (unsigned Idx = 0; Idx < BV.getNumSources(); Idx += Factor) {
+    GUnmerge *Unmerge = getOpcodeDef<GUnmerge>(BV.getSourceReg(Idx), MRI);
+    if (!all_of(iota_range<unsigned>(0, Factor, false), [&](unsigned J) {
+          MachineInstr *Src = MRI.getVRegDef(BV.getSourceReg(Idx + J));
+          if (Src->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+            return true;
+          return Unmerge && BV.getSourceReg(Idx + J) == Unmerge->getReg(J);
+        }))
+      return false;
+    if (!Unmerge)
+      Ops.push_back(0);
+    else {
+      MachineInstr *BC = MRI.getVRegDef(Unmerge->getSourceReg());
+      if (BC->getOpcode() != TargetOpcode::G_BITCAST ||
+          MRI.getType(BC->getOperand(1).getReg()) != InputTy)
+        return false;
+      Ops.push_back(BC->getOperand(1).getReg());
+    }
+  }
+
+  return true;
+}
+
+void CombinerHelper::applyCombineBuildVectorOfBitcast(
+    MachineInstr &MI, SmallVector<Register> &Ops) const {
+  LLT SrcTy = MRI.getType(Ops[0]);
+  // Build undef if any operations require it.
+  Register Undef = 0;
+  for (Register &Op : Ops) {
+    if (!Op) {
+      if (!Undef)
+        Undef = Builder.buildUndef(SrcTy).getReg(0);
+      Op = Undef;
+    }
+  }
+
+  LLT BVDstTy = LLT::fixed_vector(Ops.size(), SrcTy);
+  auto BV = Builder.buildBuildVector(BVDstTy, Ops);
+  Builder.buildBitcast(MI.getOperand(0).getReg(), BV);
+  MI.eraseFromParent();
+}
+
 void CombinerHelper::applyCombineShuffleToBuildVector(MachineInstr &MI) const {
   auto &Shuffle = cast<GShuffleVector>(MI);
 
@@ -512,15 +577,6 @@ void CombinerHelper::applyCombineShuffleConcat(
   else
     Builder.buildCopy(MI.getOperand(0).getReg(), Ops[0]);
   MI.eraseFromParent();
-}
-
-bool CombinerHelper::tryCombineShuffleVector(MachineInstr &MI) const {
-  SmallVector<Register, 4> Ops;
-  if (matchCombineShuffleVector(MI, Ops)) {
-    applyCombineShuffleVector(MI, Ops);
-    return true;
-  }
-  return false;
 }
 
 bool CombinerHelper::matchCombineShuffleVector(
@@ -3060,10 +3116,9 @@ bool CombinerHelper::matchOperandIsUndef(MachineInstr &MI,
          getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI);
 }
 
-bool CombinerHelper::matchOperandIsKnownToBeAPowerOfTwo(MachineInstr &MI,
-                                                        unsigned OpIdx) const {
-  MachineOperand &MO = MI.getOperand(OpIdx);
-  return isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT);
+bool CombinerHelper::matchOperandIsKnownToBeAPowerOfTwo(
+    const MachineOperand &MO, bool OrNegative) const {
+  return isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT, OrNegative);
 }
 
 void CombinerHelper::replaceInstWithFConstant(MachineInstr &MI,
@@ -6103,6 +6158,43 @@ void CombinerHelper::applyUDivByPow2(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
+void CombinerHelper::applySimplifySRemByPow2(MachineInstr &MI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_SREM && "Expected SREM");
+  auto &SRem = cast<GBinOp>(MI);
+  Register Dst = SRem.getReg(0);
+  Register LHS = SRem.getLHSReg();
+  Register RHS = SRem.getRHSReg();
+  LLT Ty = MRI.getType(Dst);
+  LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
+
+  // Effectively we want to lower G_SREM %lhs, %rhs, where %rhs is +/- a power
+  // of 2, to the following branch-free bias-and-mask version:
+  //
+  // %abs = G_ABS %rhs
+  // %mask = G_SUB %abs, 1
+  // %sign = G_ASHR %lhs, $(bitwidth - 1)
+  // %bias = G_AND %sign, %mask
+  // %biased = G_ADD %lhs, %bias
+  // %masked = G_AND %biased, %mask
+  // %res = G_SUB %masked, %bias
+  //
+  // The bias adds (|%rhs| - 1) for negative %lhs, correcting rounding towards
+  // zero (instead of towards -inf that a plain mask would give). Constant
+  // divisors collapse %mask to a single G_CONSTANT via the CSEMIRBuilder folds
+  // for G_ABS and G_SUB.
+
+  unsigned BitWidth = Ty.getScalarSizeInBits();
+  auto AbsRHS = Builder.buildAbs(Ty, RHS);
+  auto Mask = Builder.buildSub(Ty, AbsRHS, Builder.buildConstant(Ty, 1));
+  auto BWMinusOne = Builder.buildConstant(ShiftAmtTy, BitWidth - 1);
+  auto Sign = Builder.buildAShr(Ty, LHS, BWMinusOne);
+  auto Bias = Builder.buildAnd(Ty, Sign, Mask);
+  auto Biased = Builder.buildAdd(Ty, LHS, Bias);
+  auto Masked = Builder.buildAnd(Ty, Biased, Mask);
+  Builder.buildSub(Dst, Masked, Bias);
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::matchUMulHToLShr(MachineInstr &MI) const {
   assert(MI.getOpcode() == TargetOpcode::G_UMULH);
   Register RHS = MI.getOperand(2).getReg();
@@ -6914,9 +7006,13 @@ bool CombinerHelper::matchRepeatedFPDivisor(
   if (!MI.getFlag(MachineInstr::MIFlag::FmArcp))
     return false;
 
+  auto IsOne = [this](Register X) {
+    auto N0CFP = isConstantOrConstantSplatVectorFP(*MRI.getVRegDef(X), MRI);
+    return N0CFP && (N0CFP->isExactlyValue(1.0) || N0CFP->isExactlyValue(-1.0));
+  };
+
   // Skip if current node is a reciprocal/fneg-reciprocal.
-  auto N0CFP = isConstantOrConstantSplatVectorFP(*MRI.getVRegDef(X), MRI);
-  if (N0CFP && (N0CFP->isExactlyValue(1.0) || N0CFP->isExactlyValue(-1.0)))
+  if (IsOne(X))
     return false;
 
   // Exit early if the target does not want this transform or if there can't
@@ -6933,7 +7029,8 @@ bool CombinerHelper::matchRepeatedFPDivisor(
     if (&U == &MI || U.getParent() != MI.getParent())
       continue;
     if (U.getOpcode() == TargetOpcode::G_FDIV &&
-        U.getOperand(2).getReg() == Y && U.getOperand(1).getReg() != Y) {
+        U.getOperand(2).getReg() == Y && U.getOperand(1).getReg() != Y &&
+        !IsOne(U.getOperand(1).getReg())) {
       // This division is eligible for optimization only if global unsafe math
       // is enabled or if this division allows reciprocal formation.
       if (U.getFlag(MachineInstr::MIFlag::FmArcp)) {
@@ -8637,7 +8734,7 @@ bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
 bool CombinerHelper::matchCtls(MachineInstr &CtlzMI,
                                BuildFnTy &MatchInfo) const {
   assert((CtlzMI.getOpcode() == TargetOpcode::G_CTLZ ||
-          CtlzMI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_UNDEF) &&
+          CtlzMI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_POISON) &&
          "Expected G_CTLZ variant");
 
   const Register Dst = CtlzMI.getOperand(0).getReg();
@@ -8696,4 +8793,17 @@ bool CombinerHelper::matchCtls(MachineInstr &CtlzMI,
   };
 
   return true;
+}
+
+// Fold shr ( add ( ext X, ext Y ), 1 ) -> avgfloor ( x, y )
+// Fold shr ( add ( ext X, ext Y, 1 ), 1 ) -> avgceil ( x, y )
+bool CombinerHelper::matchAVG(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              Register X, Register Y,
+                              unsigned TargetOpc) const {
+  assert((MI.getOpcode() == TargetOpcode::G_LSHR ||
+          MI.getOpcode() == TargetOpcode::G_ASHR) &&
+         "Expected G_LSHR/G_ASHR");
+
+  LLT XTy = MRI.getType(X);
+  return XTy == MRI.getType(Y) && isLegal({TargetOpc, {XTy}});
 }

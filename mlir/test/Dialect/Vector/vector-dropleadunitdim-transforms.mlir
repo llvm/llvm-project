@@ -693,3 +693,98 @@ func.func @drop_unit_dims_scalar_cond_select(%cond: i1, %arg0: vector<1x16xi1>, 
   %sel = arith.select %cond, %arg0, %arg1 : vector<1x16xi1>
   return %sel : vector<1x16xi1>
 }
+
+// -----
+
+// CHECK-LABEL: func.func @cast_away_load_leading_one_dims
+// CHECK:         %[[L:.+]] = vector.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<8x16xf32>, vector<4xf32>
+// CHECK:         %[[B:.+]] = vector.broadcast %[[L]] : vector<4xf32> to vector<1x4xf32>
+// CHECK:         return %[[B]] : vector<1x4xf32>
+func.func @cast_away_load_leading_one_dims(%base: memref<8x16xf32>, %i: index, %j: index) -> vector<1x4xf32> {
+  %0 = vector.load %base[%i, %j] : memref<8x16xf32>, vector<1x4xf32>
+  return %0 : vector<1x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @cast_away_maskedload_leading_one_dims
+// CHECK:         %[[M:.+]] = vector.extract %{{.*}}[0] : vector<4xi1> from vector<1x4xi1>
+// CHECK:         %[[P:.+]] = vector.extract %{{.*}}[0] : vector<4xf32> from vector<1x4xf32>
+// CHECK:         %[[L:.+]] = vector.maskedload %{{.*}}[%{{.*}}], %[[M]], %[[P]] : memref<16xf32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+// CHECK:         %[[B:.+]] = vector.broadcast %[[L]] : vector<4xf32> to vector<1x4xf32>
+// CHECK:         return %[[B]] : vector<1x4xf32>
+func.func @cast_away_maskedload_leading_one_dims(%base: memref<16xf32>, %i: index, %mask: vector<1x4xi1>, %pass: vector<1x4xf32>) -> vector<1x4xf32> {
+  %0 = vector.maskedload %base[%i], %mask, %pass : memref<16xf32>, vector<1x4xi1>, vector<1x4xf32> into vector<1x4xf32>
+  return %0 : vector<1x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @cast_away_expandload_leading_one_dims
+// CHECK:         %[[M:.+]] = vector.extract %{{.*}}[0] : vector<4xi1> from vector<1x4xi1>
+// CHECK:         %[[P:.+]] = vector.extract %{{.*}}[0] : vector<4xf32> from vector<1x4xf32>
+// CHECK:         %[[L:.+]] = vector.expandload %{{.*}}[%{{.*}}], %[[M]], %[[P]] : memref<16xf32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+// CHECK:         %[[B:.+]] = vector.broadcast %[[L]] : vector<4xf32> to vector<1x4xf32>
+// CHECK:         return %[[B]] : vector<1x4xf32>
+func.func @cast_away_expandload_leading_one_dims(%base: memref<16xf32>, %i: index, %mask: vector<1x4xi1>, %pass: vector<1x4xf32>) -> vector<1x4xf32> {
+  %0 = vector.expandload %base[%i], %mask, %pass : memref<16xf32>, vector<1x4xi1>, vector<1x4xf32> into vector<1x4xf32>
+  return %0 : vector<1x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @cast_away_gather_leading_one_dims
+// CHECK:         %[[I:.+]] = vector.extract %{{.*}}[0] : vector<4xi32> from vector<1x4xi32>
+// CHECK:         %[[M:.+]] = vector.extract %{{.*}}[0] : vector<4xi1> from vector<1x4xi1>
+// CHECK:         %[[P:.+]] = vector.extract %{{.*}}[0] : vector<4xf32> from vector<1x4xf32>
+// CHECK:         %[[G:.+]] = vector.gather %{{.*}}[%{{.*}}] [%[[I]]], %[[M]], %[[P]] : memref<16xf32>, vector<4xi32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+// CHECK:         %[[B:.+]] = vector.broadcast %[[G]] : vector<4xf32> to vector<1x4xf32>
+// CHECK:         return %[[B]] : vector<1x4xf32>
+func.func @cast_away_gather_leading_one_dims(%base: memref<16xf32>, %i: index, %idx: vector<1x4xi32>, %mask: vector<1x4xi1>, %pass: vector<1x4xf32>) -> vector<1x4xf32> {
+  %0 = vector.gather %base[%i] [%idx], %mask, %pass : memref<16xf32>, vector<1x4xi32>, vector<1x4xi1>, vector<1x4xf32> into vector<1x4xf32>
+  return %0 : vector<1x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @cast_away_store_leading_one_dims
+// CHECK:         %[[V:.+]] = vector.extract %{{.*}}[0] : vector<4xf32> from vector<1x4xf32>
+// CHECK:         vector.store %[[V]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<8x16xf32>, vector<4xf32>
+func.func @cast_away_store_leading_one_dims(%val: vector<1x4xf32>, %base: memref<8x16xf32>, %i: index, %j: index) {
+  vector.store %val, %base[%i, %j] : memref<8x16xf32>, vector<1x4xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @cast_away_maskedstore_leading_one_dims
+// CHECK:         %[[M:.+]] = vector.extract %{{.*}}[0] : vector<4xi1> from vector<1x4xi1>
+// CHECK:         %[[V:.+]] = vector.extract %{{.*}}[0] : vector<4xf32> from vector<1x4xf32>
+// CHECK:         vector.maskedstore %{{.*}}[%{{.*}}], %[[M]], %[[V]] : memref<16xf32>, vector<4xi1>, vector<4xf32>
+func.func @cast_away_maskedstore_leading_one_dims(%base: memref<16xf32>, %i: index, %mask: vector<1x4xi1>, %val: vector<1x4xf32>) {
+  vector.maskedstore %base[%i], %mask, %val : memref<16xf32>, vector<1x4xi1>, vector<1x4xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @cast_away_compressstore_leading_one_dims
+// CHECK:         %[[M:.+]] = vector.extract %{{.*}}[0] : vector<4xi1> from vector<1x4xi1>
+// CHECK:         %[[V:.+]] = vector.extract %{{.*}}[0] : vector<4xf32> from vector<1x4xf32>
+// CHECK:         vector.compressstore %{{.*}}[%{{.*}}], %[[M]], %[[V]] : memref<16xf32>, vector<4xi1>, vector<4xf32>
+func.func @cast_away_compressstore_leading_one_dims(%base: memref<16xf32>, %i: index, %mask: vector<1x4xi1>, %val: vector<1x4xf32>) {
+  vector.compressstore %base[%i], %mask, %val : memref<16xf32>, vector<1x4xi1>, vector<1x4xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @cast_away_scatter_leading_one_dims
+// CHECK:         %[[I:.+]] = vector.extract %{{.*}}[0] : vector<4xi32> from vector<1x4xi32>
+// CHECK:         %[[M:.+]] = vector.extract %{{.*}}[0] : vector<4xi1> from vector<1x4xi1>
+// CHECK:         %[[V:.+]] = vector.extract %{{.*}}[0] : vector<4xf32> from vector<1x4xf32>
+// CHECK:         vector.scatter %{{.*}}[%{{.*}}] [%[[I]]], %[[M]], %[[V]] : memref<16xf32>, vector<4xi32>, vector<4xi1>, vector<4xf32>
+func.func @cast_away_scatter_leading_one_dims(%base: memref<16xf32>, %i: index, %idx: vector<1x4xi32>, %mask: vector<1x4xi1>, %val: vector<1x4xf32>) {
+  vector.scatter %base[%i] [%idx], %mask, %val : memref<16xf32>, vector<1x4xi32>, vector<1x4xi1>, vector<1x4xf32>
+  return
+}

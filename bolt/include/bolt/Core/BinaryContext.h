@@ -892,7 +892,7 @@ public:
            TheTriple->getArch() == llvm::Triple::x86_64;
   }
 
-  bool isRISCV() const { return TheTriple->getArch() == llvm::Triple::riscv64; }
+  bool isRISCV() const { return TheTriple->isRISCV(); }
 
   // AArch64/RISC-V functions to check if symbol is used to delimit
   // code/data in .text. Code is marked by $x, data by $d.
@@ -1545,8 +1545,7 @@ public:
   /// won't be used in the main code emitter.
   IndependentCodeEmitter createIndependentMCCodeEmitter() const {
     IndependentCodeEmitter MCEInstance;
-    MCEInstance.LocalCtx.reset(
-        new MCContext(*TheTriple, *AsmInfo, MRI.get(), STI.get()));
+    MCEInstance.LocalCtx.reset(new MCContext(*TheTriple, *AsmInfo, *MRI, *STI));
     MCEInstance.LocalMOFI.reset(
         TheTarget->createMCObjectFileInfo(*MCEInstance.LocalCtx,
                                           /*PIC=*/!HasFixedLoadAddress));

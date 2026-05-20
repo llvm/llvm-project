@@ -9,7 +9,7 @@
 
 // CHECK-LABEL: test_int
 int test_int(int expr) {
-  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.reduce.min.i32([[TY]] %[[#]])
+  // CHECK-SPIRV:  %[[RET:.*]] = call [[TY:.*]] @llvm.spv.wave.reduce.min.i32([[TY]] %[[#]])
   // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.reduce.min.i32([[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveActiveMin(expr);
@@ -20,7 +20,7 @@ int test_int(int expr) {
 
 // CHECK-LABEL: test_uint64_t
 uint64_t test_uint64_t(uint64_t expr) {
-  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.reduce.umin.i64([[TY]] %[[#]])
+  // CHECK-SPIRV:  %[[RET:.*]] = call [[TY:.*]] @llvm.spv.wave.reduce.umin.i64([[TY]] %[[#]])
   // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.reduce.umin.i64([[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveActiveMin(expr);
@@ -33,7 +33,7 @@ uint64_t test_uint64_t(uint64_t expr) {
 
 // CHECK-LABEL: test_floatv4
 float4 test_floatv4(float4 expr) {
-  // CHECK-SPIRV:  %[[RET1:.*]] = call reassoc nnan ninf nsz arcp afn spir_func [[TY1:.*]] @llvm.spv.wave.reduce.min.v4f32([[TY1]] %[[#]]
+  // CHECK-SPIRV:  %[[RET1:.*]] = call reassoc nnan ninf nsz arcp afn [[TY1:.*]] @llvm.spv.wave.reduce.min.v4f32([[TY1]] %[[#]]
   // CHECK-DXIL:  %[[RET1:.*]] = call reassoc nnan ninf nsz arcp afn [[TY1:.*]] @llvm.dx.wave.reduce.min.v4f32([[TY1]] %[[#]])
   // CHECK:  ret [[TY1]] %[[RET1]]
   return WaveActiveMin(expr);
