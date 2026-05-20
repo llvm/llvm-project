@@ -1290,7 +1290,7 @@ static BitModeTy getBitMode(const char *RawBitMode) {
       .Case("64", BitModeTy::Bit64)
       .Case("32_64", BitModeTy::Bit32_64)
       .Case("any", BitModeTy::Any)
-      .Default(BitModeTy::Unknown);
+      .Default(BitModeTy::Any);
 }
 
 static const char *matchFlagWithArg(StringRef Expected,

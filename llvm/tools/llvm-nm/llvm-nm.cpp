@@ -2486,7 +2486,7 @@ int llvm_nm_main(int argc, char **argv, const llvm::ToolContext &) {
                   .Case("64", BitModeTy::Bit64)
                   .Case("32_64", BitModeTy::Bit32_64)
                   .Case("any", BitModeTy::Any)
-                  .Default(BitModeTy::Bit32);
+                  .Default(BitModeTy::Any);
   } else
     BitMode = BitModeTy::Any;
 
