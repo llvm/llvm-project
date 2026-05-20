@@ -342,15 +342,15 @@ end:
 
 ; // -----
 
-; CHECK: #[[start_loc:.*]] = loc("metadata-loop.ll":1:2)
-; CHECK: #[[end_loc:.*]] = loc("metadata-loop.ll":2:2)
+; CHECK: #[[start_file:.*]] = loc({{.*}}:1:2)
+; CHECK: #[[end_file:.*]] = loc({{.*}}:2:2)
 ; CHECK: #[[SUBPROGRAM:.*]] = #llvm.di_subprogram<
-; CHECK: #[[start_loc_fused:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[start_loc]]])
-; CHECK: #[[end_loc_fused:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[end_loc]]])
+; CHECK: #[[start_loc:.*]] = #llvm.di_location<#[[start_file]] in #[[SUBPROGRAM]]>
+; CHECK: #[[end_loc:.*]] = #llvm.di_location<#[[end_file]] in #[[SUBPROGRAM]]>
 ; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<
 ; CHECK-SAME: mustProgress = true
-; CHECK-SAME: startLoc = #[[start_loc_fused]]
-; CHECK-SAME: endLoc = #[[end_loc_fused]]
+; CHECK-SAME: startLoc = #[[start_loc]]
+; CHECK-SAME: endLoc = #[[end_loc]]
 
 ; CHECK-LABEL: @loop_locs
 define void @loop_locs(i64 %n, ptr %A) {

@@ -54,8 +54,8 @@ struct LoopMetadataConversion {
   FailureOr<LoopPeeledAttr> convertPeeledAttr();
   FailureOr<LoopUnswitchAttr> convertUnswitchAttr();
   FailureOr<SmallVector<AccessGroupAttr>> convertParallelAccesses();
-  FusedLoc convertStartLoc();
-  FailureOr<FusedLoc> convertEndLoc();
+  LocationAttr convertStartLoc();
+  FailureOr<LocationAttr> convertEndLoc();
 
   llvm::SmallVector<llvm::DILocation *, 2> locations;
   llvm::StringMap<const llvm::MDNode *> propertyMap;
@@ -410,37 +410,21 @@ LoopMetadataConversion::convertParallelAccesses() {
   return refs;
 }
 
-/// Convert a translated location to a FusedLoc for loop annotation storage.
-/// translateLoc produces DILocationAttr, but LoopAnnotationAttr stores
-/// locations as FusedLoc<scope>[raw_loc]. Extract the source location and scope
-/// from the DILocationAttr to build the FusedLoc directly, matching the format
-/// expected by LoopAnnotationTranslation on the export side.
-static FusedLoc toFusedLoc(Location loc) {
-  if (auto fused = dyn_cast<FusedLoc>(loc))
-    return fused;
-  if (isa<UnknownLoc>(loc))
-    return {};
-  if (auto diLoc = dyn_cast<LLVM::DILocationAttr>(loc))
-    return dyn_cast<FusedLoc>(FusedLoc::get(
-        {diLoc.getSourceLoc()}, diLoc.getScope(), loc.getContext()));
-  return {};
-}
-
-FusedLoc LoopMetadataConversion::convertStartLoc() {
+LocationAttr LoopMetadataConversion::convertStartLoc() {
   if (locations.empty())
     return {};
-  return toFusedLoc(
-      loopAnnotationImporter.moduleImport.translateLoc(locations[0]));
+  return loopAnnotationImporter.moduleImport.translateLoc(locations[0]);
 }
 
-FailureOr<FusedLoc> LoopMetadataConversion::convertEndLoc() {
+FailureOr<LocationAttr> LoopMetadataConversion::convertEndLoc() {
   if (locations.size() < 2)
-    return FusedLoc();
+    return LocationAttr();
   if (locations.size() > 2)
     return emitError(loc)
            << "expected loop metadata to have at most two DILocations";
-  return toFusedLoc(
-      loopAnnotationImporter.moduleImport.translateLoc(locations[1]));
+  LocationAttr endLoc =
+      loopAnnotationImporter.moduleImport.translateLoc(locations[1]);
+  return endLoc;
 }
 
 LoopAnnotationAttr LoopMetadataConversion::convert() {
@@ -471,8 +455,8 @@ LoopAnnotationAttr LoopMetadataConversion::convert() {
     return {};
   }
 
-  FailureOr<FusedLoc> startLoc = convertStartLoc();
-  FailureOr<FusedLoc> endLoc = convertEndLoc();
+  FailureOr<LocationAttr> startLoc = convertStartLoc();
+  FailureOr<LocationAttr> endLoc = convertEndLoc();
 
   return createIfNonNull<LoopAnnotationAttr>(
       ctx, disableNonForced, vecAttr, interleaveAttr, unrollAttr,

@@ -617,6 +617,18 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                      << key << "'";
 }
 
+//===----------------------------------------------------------------------===//
+// Location helpers
+//===----------------------------------------------------------------------===//
+
+DISubprogramAttr LLVM::findSubprogramInLoc(Location loc) {
+  if (auto diLoc = loc->findInstanceOf<DILocationAttr>())
+    return dyn_cast<DISubprogramAttr>(diLoc.getScope());
+  if (auto spLoc = loc->findInstanceOf<FusedLocWith<DISubprogramAttr>>())
+    return spLoc.getMetadata();
+  return nullptr;
+}
+
 DIFileAttr LLVM::findFileInScope(DIScopeAttr scope) {
   while (scope) {
     if (auto file = dyn_cast<DIFileAttr>(scope))
