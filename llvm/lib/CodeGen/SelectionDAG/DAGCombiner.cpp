@@ -25057,7 +25057,8 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
   auto IsExtractFree = [](SDValue Op) {
     APInt SplatVal;
     return isAnyConstantBuildVector(Op, true) ||
-           ISD::isConstantSplatVector(Op.getNode(), SplatVal);
+           ISD::isConstantSplatVector(Op.getNode(), SplatVal) ||
+           (Op.getOpcode() == ISD::BUILD_VECTOR && Op.hasOneUse());
   };
   SDValue Op0 = Vec.getOperand(0);
   SDValue Op1 = Vec.getOperand(1);

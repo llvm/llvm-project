@@ -10343,6 +10343,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"],
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":AtomicInterfacesIncGen",
         ":ControlFlowInterfaces",
         ":IR",
