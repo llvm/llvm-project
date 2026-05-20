@@ -22,13 +22,13 @@ struct GoodStruct;
 
 struct bad_struct;
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for struct 'bad_struct'
-// CHECK-FIXES: class BadStruct;
+// CHECK-FIXES: struct BadStruct;
 
 union GoodUnion;
 
 union bad_union;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for union 'bad_union'
-// CHECK-FIXES: class BadUnion;
+// CHECK-FIXES: union BadUnion;
 
 // Nested forward declarations.
 
@@ -43,13 +43,13 @@ class Outer {
 
   struct bad_inner_struct;
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for struct 'bad_inner_struct'
-  // CHECK-FIXES: class BadInnerStruct;
+  // CHECK-FIXES: struct BadInnerStruct;
 
   union GoodInnerUnion;
 
   union bad_inner_union;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for union 'bad_inner_union'
-  // CHECK-FIXES: class BadInnerUnion;
+  // CHECK-FIXES: union BadInnerUnion;
 
 };
 
@@ -69,7 +69,7 @@ struct GoodTemplateStruct;
 template <typename T>
 struct bad_template_struct;
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for struct 'bad_template_struct'
-// CHECK-FIXES: class BadTemplateStruct;
+// CHECK-FIXES: struct BadTemplateStruct;
 
 template <typename T>
 union GoodTemplateUnion;
@@ -77,4 +77,4 @@ union GoodTemplateUnion;
 template <typename T>
 union bad_template_union;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for union 'bad_template_union'
-// CHECK-FIXES: class BadTemplateUnion;
+// CHECK-FIXES: template BadTemplateUnion;
