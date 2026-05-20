@@ -481,6 +481,8 @@ public:
     return HasNoWrapReductions;
   }
 
+  ArrayRef<Instruction *> getHasNoInfInsts() const { return HasNoInfInsts; }
+
   /// Record reductions in the inner loop. Currently supported reductions:
   /// - initialized from a constant.
   /// - reduction PHI node has only one user.
@@ -548,6 +550,10 @@ private:
   /// like integer addition/multiplication. Those flags must be dropped when
   /// interchanging the loops.
   SmallVector<Instruction *, 4> HasNoWrapReductions;
+
+  /// Hold instructions that have ninf flags and involved in reductions. Those
+  /// flags must be dropped when interchanging the loops.
+  SmallVector<Instruction *, 4> HasNoInfInsts;
 
   /// Vector of reductions in the inner loop.
   SmallVector<InnerReduction, 8> InnerReductions;
@@ -619,7 +625,8 @@ public:
       : OuterLoop(Outer), InnerLoop(Inner), SE(SE), LI(LI), DT(DT), LIL(LIL) {}
 
   /// Interchange OuterLoop and InnerLoop.
-  bool transform(ArrayRef<Instruction *> DropNoWrapInsts);
+  bool transform(ArrayRef<Instruction *> DropNoWrapInsts,
+                 ArrayRef<Instruction *> DropNoInfInsts);
   void reduction2Memory();
   void restructureLoops(Loop *NewInner, Loop *NewOuter,
                         BasicBlock *OrigInnerPreHeader,
@@ -773,7 +780,7 @@ struct LoopInterchange {
     });
 
     LoopInterchangeTransform LIT(OuterLoop, InnerLoop, SE, LI, DT, LIL);
-    LIT.transform(LIL.getHasNoWrapReductions());
+    LIT.transform(LIL.getHasNoWrapReductions(), LIL.getHasNoInfInsts());
     LLVM_DEBUG(dbgs() << "Loops interchanged: outer loop '"
                       << OuterLoop->getName() << "' and inner loop '"
                       << InnerLoop->getName() << "'\n");
@@ -970,7 +977,8 @@ static Value *followLCSSA(Value *SV) {
 }
 
 static bool checkReductionKind(Loop *L, PHINode *PHI,
-                               SmallVectorImpl<Instruction *> &HasNoWrapInsts) {
+                               SmallVectorImpl<Instruction *> &HasNoWrapInsts,
+                               SmallVectorImpl<Instruction *> &HasNoInfInsts) {
   RecurrenceDescriptor RD;
   if (RecurrenceDescriptor::isReductionPHI(PHI, L, RD)) {
     // Detect floating point reduction only when it can be reordered.
@@ -986,6 +994,14 @@ static bool checkReductionKind(Loop *L, PHINode *PHI,
     case RecurKind::SMax:
     case RecurKind::UMin:
     case RecurKind::UMax:
+    case RecurKind::AnyOf:
+      return true;
+
+    // Changing the order of floating-point operations may alter the results. If
+    // a certain instruction has the ninf flag, it means that reordering can
+    // produce a poison value, which may lead to undefined behavior. To prevent
+    // this, we must drop the ninf flags if we decide to apply the
+    // transformation.
     case RecurKind::FAdd:
     case RecurKind::FMul:
     case RecurKind::FMin:
@@ -995,7 +1011,9 @@ static bool checkReductionKind(Loop *L, PHINode *PHI,
     case RecurKind::FMinimumNum:
     case RecurKind::FMaximumNum:
     case RecurKind::FMulAdd:
-    case RecurKind::AnyOf:
+      for (Instruction *I : RD.getReductionOpChain(PHI, L))
+        if (isa<FPMathOperator>(I) && I->hasNoInfs())
+          HasNoInfInsts.push_back(I);
       return true;
 
     // Change the order of integer addition/multiplication may change the
@@ -1043,7 +1061,8 @@ static bool checkReductionKind(Loop *L, PHINode *PHI,
 // Check V's users to see if it is involved in a reduction in L.
 static PHINode *
 findInnerReductionPhi(Loop *L, Value *V,
-                      SmallVectorImpl<Instruction *> &HasNoWrapInsts) {
+                      SmallVectorImpl<Instruction *> &HasNoWrapInsts,
+                      SmallVectorImpl<Instruction *> &HasNoInfInsts) {
   // Reduction variables cannot be constants.
   if (isa<Constant>(V))
     return nullptr;
@@ -1053,7 +1072,7 @@ findInnerReductionPhi(Loop *L, Value *V,
       if (PHI->getNumIncomingValues() == 1)
         continue;
 
-      if (checkReductionKind(L, PHI, HasNoWrapInsts))
+      if (checkReductionKind(L, PHI, HasNoWrapInsts, HasNoInfInsts))
         return PHI;
       else
         return nullptr;
@@ -1110,7 +1129,7 @@ bool LoopInterchangeLegality::isInnerReduction(
     return false;
 
   // Check the reduction kind.
-  if (!checkReductionKind(L, Phi, HasNoWrapInsts))
+  if (!checkReductionKind(L, Phi, HasNoWrapInsts, HasNoInfInsts))
     return false;
 
   // Find lcssa_phi in OuterLoop's Latch
@@ -1213,8 +1232,8 @@ bool LoopInterchangeLegality::findInductionAndReductions(
         // Check if we have a PHI node in the outer loop that has a reduction
         // result from the inner loop as an incoming value.
         Value *V = followLCSSA(PHI.getIncomingValueForBlock(L->getLoopLatch()));
-        PHINode *InnerRedPhi =
-            findInnerReductionPhi(InnerLoop, V, HasNoWrapReductions);
+        PHINode *InnerRedPhi = findInnerReductionPhi(
+            InnerLoop, V, HasNoWrapReductions, HasNoInfInsts);
         if (!InnerRedPhi ||
             !llvm::is_contained(InnerRedPhi->incoming_values(), &PHI)) {
           LLVM_DEBUG(
@@ -1951,7 +1970,8 @@ void LoopInterchangeTransform::reduction2Memory() {
 }
 
 bool LoopInterchangeTransform::transform(
-    ArrayRef<Instruction *> DropNoWrapInsts) {
+    ArrayRef<Instruction *> DropNoWrapInsts,
+    ArrayRef<Instruction *> DropNoInfInsts) {
   bool Transformed = false;
 
   ArrayRef<LoopInterchangeLegality::InnerReduction> InnerReductions =
@@ -2065,12 +2085,14 @@ bool LoopInterchangeTransform::transform(
     return false;
   }
 
-  // Finally, drop the nsw/nuw flags from the instructions for reduction
+  // Finally, drop the nsw/nuw/ninf flags from the instructions for reduction
   // calculations.
   for (Instruction *Reduction : DropNoWrapInsts) {
     Reduction->setHasNoSignedWrap(false);
     Reduction->setHasNoUnsignedWrap(false);
   }
+  for (Instruction *I : DropNoInfInsts)
+    I->setHasNoInfs(false);
 
   return true;
 }
