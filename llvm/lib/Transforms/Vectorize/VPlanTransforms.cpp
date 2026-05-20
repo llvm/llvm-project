@@ -1931,10 +1931,11 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
           }))
         continue;
 
-      VPBuilder Builder(RepOrWidenR);
-      auto *Clone =
-          Builder.createSingleScalarOp(RepOrWidenR->getUnderlyingInstr(),
-                                       RepOrWidenR->operands(), *RepOrWidenR);
+      auto *Clone = VPBuilder::createSingleScalarOp(
+          getOpcodeOrIntrinsicID(RepOrWidenR)->second, RepOrWidenR->operands(),
+          /*Mask=*/nullptr, *RepOrWidenR, {}, DebugLoc::getUnknown(),
+          RepOrWidenR->getUnderlyingInstr());
+      Clone->insertBefore(RepOrWidenR);
       RepOrWidenR->replaceAllUsesWith(Clone);
       if (isDeadRecipe(*RepOrWidenR))
         RepOrWidenR->eraseFromParent();
@@ -6572,8 +6573,10 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
       if (!vputils::onlyFirstLaneUsed(VPI))
         continue;
 
-      auto *Recipe = VPBuilder(VPI).createSingleScalarOp(
-          I, VPI->operandsWithoutMask(), *VPI, *VPI, VPI->getDebugLoc());
+      auto *Recipe = VPBuilder::createSingleScalarOp(
+          VPI->getOpcode(), VPI->operandsWithoutMask(), /*Mask=*/nullptr, *VPI,
+          *VPI, VPI->getDebugLoc(), I);
+      Recipe->insertBefore(VPI);
       VPI->replaceAllUsesWith(Recipe);
       VPI->eraseFromParent();
     }

@@ -443,31 +443,21 @@ public:
         Opcode, Op, ResultTy, nullptr, VPIRFlags::getDefaultFlags(Opcode)));
   }
 
-  /// Create a single-scalar recipe for \p I with \p Operands without inserting
-  /// it. Use VPInstructionWithType for casts and VPReplicateRecipe otherwise.
-  static VPSingleDefRecipe *
-  createSingleScalarOp(Instruction *I, ArrayRef<VPValue *> Operands,
-                       VPValue *Mask, const VPIRFlags &Flags,
-                       const VPIRMetadata &Metadata, DebugLoc DL) {
-    if (Instruction::isCast(I->getOpcode())) {
+  /// Create a single-scalar recipe with \p Opcode and \p Operands without
+  /// inserting it.
+  static VPSingleDefRecipe *createSingleScalarOp(unsigned Opcode,
+                                                 ArrayRef<VPValue *> Operands,
+                                                 VPValue *Mask,
+                                                 const VPIRFlags &Flags,
+                                                 const VPIRMetadata &Metadata,
+                                                 DebugLoc DL, Instruction *UV) {
+    if (Instruction::isCast(Opcode)) {
       assert(!Mask && "Cast cannot be predicated");
-      auto *Recipe =
-          new VPInstructionWithType(I->getOpcode(), Operands, I->getType(),
-                                    Flags, Metadata, DL, I->getName());
-      Recipe->setUnderlyingValue(I);
-      return Recipe;
+      return new VPInstructionWithType(Opcode, Operands, UV->getType(), Flags,
+                                       Metadata, DL, UV->getName(), UV);
     }
-    return new VPReplicateRecipe(I, Operands, /*IsSingleScalar=*/true, Mask,
+    return new VPReplicateRecipe(UV, Operands, /*IsSingleScalar=*/true, Mask,
                                  Flags, Metadata, DL);
-  }
-
-  /// Create and insert a single-scalar recipe for \p I with \p Operands. Use
-  /// VPInstructionWithType for casts and VPReplicateRecipe otherwise.
-  VPSingleDefRecipe *createSingleScalarOp(
-      Instruction *I, ArrayRef<VPValue *> Operands, const VPIRFlags &Flags = {},
-      const VPIRMetadata &Metadata = {}, DebugLoc DL = DebugLoc::getUnknown()) {
-    return tryInsertInstruction(VPBuilder::createSingleScalarOp(
-        I, Operands, /*Mask=*/nullptr, Flags, Metadata, DL));
   }
 
   VPScalarIVStepsRecipe *

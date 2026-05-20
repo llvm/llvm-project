@@ -1648,6 +1648,8 @@ InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
   // TODO: Compute cost for VPInstructions without underlying values.
   if (!getUnderlyingValue())
     return 0;
+  assert(Instruction::isCast(getOpcode()) &&
+         "only casts have underlying values currently");
   return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                     Ctx);
 }

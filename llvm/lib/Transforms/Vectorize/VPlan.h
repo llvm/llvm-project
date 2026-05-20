@@ -1524,9 +1524,12 @@ public:
                         Type *ResultTy, const VPIRFlags &Flags = {},
                         const VPIRMetadata &Metadata = {},
                         DebugLoc DL = DebugLoc::getUnknown(),
-                        const Twine &Name = "")
+                        const Twine &Name = "", Value *UV = nullptr)
       : VPInstruction(Opcode, Operands, Flags, Metadata, DL, Name),
-        ResultTy(ResultTy) {}
+        ResultTy(ResultTy) {
+    if (UV)
+      setUnderlyingValue(UV);
+  }
 
   static inline bool classof(const VPRecipeBase *R) {
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
@@ -3223,6 +3226,8 @@ public:
       : VPRecipeWithIRFlags(VPRecipeBase::VPReplicateSC, Operands, Flags, DL),
         VPIRMetadata(Metadata), IsSingleScalar(IsSingleScalar),
         IsPredicated(Mask) {
+    assert((!IsSingleScalar || !I->isCast()) &&
+           "single-scalar casts should use VPInstructionWithType");
     setUnderlyingValue(I);
     if (Mask)
       addOperand(Mask);

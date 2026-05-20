@@ -6565,9 +6565,9 @@ VPSingleDefRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
   if (IsUniform) {
-    return VPBuilder::createSingleScalarOp(I, VPI->operandsWithoutMask(),
-                                           BlockInMask, *VPI, *VPI,
-                                           VPI->getDebugLoc());
+    return VPBuilder::createSingleScalarOp(
+        VPI->getOpcode(), VPI->operandsWithoutMask(), BlockInMask, *VPI, *VPI,
+        VPI->getDebugLoc(), I);
   }
   auto *Recipe = new VPReplicateRecipe(I, VPI->operandsWithoutMask(),
                                        /*IsSingleScalar=*/false, BlockInMask,
