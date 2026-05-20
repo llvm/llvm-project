@@ -1329,14 +1329,20 @@ bool LoopInterchangeLegality::findInductions(
   return !Inductions.empty();
 }
 
-// We currently only support LCSSA PHI nodes in the inner loop exit, if their
-// users are either reduction PHIs or PHIs outside the outer loop (which means
-// the we are only interested in the final value after the loop).
+/// We currently only support LCSSA PHI nodes in the inner loop exit if their
+/// users are either of the following:
+///
+/// - Reduction PHIs
+/// - PHIs outside the outer loop
+/// - PHIs belonging to the latch of the outer loop
+///
+/// These conditions mean that we are only interested in the final value after
+/// the inner loop.
 static bool
-areInnerLoopExitPHIsSupported(Loop *InnerL, Loop *OuterL,
+areInnerLoopExitPHIsSupported(Loop *OuterL, Loop *InnerL,
                               SmallPtrSetImpl<PHINode *> &Reductions,
                               PHINode *LcssaReduction) {
-  BasicBlock *InnerExit = OuterL->getUniqueExitBlock();
+  BasicBlock *InnerExit = InnerL->getUniqueExitBlock();
   for (PHINode &PHI : InnerExit->phis()) {
     // The reduction LCSSA PHI will have only one incoming block, which comes
     // from the loop latch.
@@ -1346,11 +1352,16 @@ areInnerLoopExitPHIsSupported(Loop *InnerL, Loop *OuterL,
       return true;
     if (any_of(PHI.users(), [&Reductions, OuterL](User *U) {
           PHINode *PN = dyn_cast<PHINode>(U);
-          return !PN ||
-                 (!Reductions.count(PN) && OuterL->contains(PN->getParent()));
-        })) {
+          if (!PN)
+            return true;
+          if (Reductions.count(PN))
+            return false;
+          BasicBlock *PB = PN->getParent();
+          if (!OuterL->contains(PB))
+            return false;
+          return PB != OuterL->getLoopLatch();
+        }))
       return false;
-    }
   }
   return true;
 }
