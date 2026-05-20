@@ -7,7 +7,7 @@ objects: []
 functions:
   - name: prctl
     standards:
-      - Linux
+      - linux
     return_type: int
     arguments:
       - type: int

@@ -184,7 +184,7 @@ functions:
       - type: size_t
   - name: getentropy
     standards:
-      - GNUExtensions
+      - gnu
     return_type: int
     arguments:
       - type: void *
@@ -204,7 +204,7 @@ functions:
       - type: size_t
   - name: getpagesize
     standards:
-      - BSDExtensions
+      - bsd
     return_type: int
     arguments:
       - type: void
@@ -236,7 +236,7 @@ functions:
       - type: pid_t
   - name: gettid
     standards:
-      - Linux
+      - linux
     return_type: pid_t
     arguments:
       - type: void
@@ -300,7 +300,7 @@ functions:
       - type: int *
   - name: pipe2
     standards:
-      - Linux
+      - linux
     return_type: int
     arguments:
       - type: int *
