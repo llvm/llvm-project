@@ -25,9 +25,9 @@ module attributes {omp.is_gpu = true, omp.is_target_device = true} {
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     return
   }
 }
