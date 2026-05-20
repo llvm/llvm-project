@@ -1631,6 +1631,10 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
     CodeGenSpecifics::Marshalling marshal;
     mlir::MLIRContext *context = recTy.getContext();
 
+    // Have to do this first to catch any illegal types in the record.
+    const llvm::SmallVector<mlir::Type> &flattenedTypes =
+        flattenTypeList(loc, recTy);
+
     // This is odd and some targets reject it. The spec says to ignore it.
     // IIRC Fortran does not allow empty structs and not all versions of C do.
     // Try to do something sensible, rather than crashing.
@@ -1641,9 +1645,6 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
       // This struct must go to the stack because it cannot be passed using only
       // registers.
       return passOnTheStack(recordAlign, recTy, isResult);
-
-    const llvm::SmallVector<mlir::Type> &flattenedTypes =
-        flattenTypeList(loc, recTy);
 
     checkAvailableRegisters(loc, previousArguments, gprArgs, fprArgs);
 
