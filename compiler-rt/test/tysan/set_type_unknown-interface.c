@@ -3,7 +3,7 @@
 
 #include <sanitizer/tysan_interface.h>
 
-int main(){
+int main() {
   int i = 0;
   int *iPtr = &i;
   float *fPtr = (float *)iPtr;
@@ -17,5 +17,5 @@ int main(){
   *iPtr = 0;
   // CHECK: WRITE of size 4 at 0x{{.*}} with type int accesses an existing object of type float
 
-return 0;
+  return 0;
 }
