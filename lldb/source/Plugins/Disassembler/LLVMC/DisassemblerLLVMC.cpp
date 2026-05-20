@@ -1472,7 +1472,7 @@ void DisassemblerLLVMC::UpdateSubtargetFeatures(
     // 1. Must be at least 2 chars (e.g., "+a").
     // 2. Name cannot start with a digit (e.g. "+123" is invalid).
     // 3. Must start with '+' or '-'.
-    // 4. All characters after the sign must be alphanumeric or '_'.
+    // 4. All characters after the sign must be alphanumeric or '_' or '-'.
     if (flag.size() < 2) {
       is_valid = false;
       ostream << "must have a name";
@@ -1483,7 +1483,7 @@ void DisassemblerLLVMC::UpdateSubtargetFeatures(
       is_valid = false;
       ostream << "must start with '+' or '-'";
     } else if (!std::all_of(flag.begin() + 1, flag.end(), [](unsigned char c) {
-                 return std::isalnum(c) || c == '_';
+                 return std::isalnum(c) || c == '_' || c == '-';
                })) {
       is_valid = false;
       ostream << "contains invalid characters";

@@ -358,9 +358,9 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
 
   Type *Tp = VectorType::get(AccumType, VF.divideCoefficientBy(4));
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
-  // Note: Asuming all vdota4* variants are equal cost
+  // Note: Asuming all vdot4a* variants are equal cost
   return LT.first *
-         getRISCVInstructionCost(RISCV::VDOTA4_VV, LT.second, CostKind);
+         getRISCVInstructionCost(RISCV::VDOT4A_VV, LT.second, CostKind);
 }
 
 bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {

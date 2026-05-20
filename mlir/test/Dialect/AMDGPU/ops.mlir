@@ -675,6 +675,15 @@ func.func @transpose_load(%idx1 : index, %idx2 : index, %mem : memref<128x32xf16
   func.return %0 : vector<4xf16>
 }
 
+// CHECK-LABEL: func @global_transpose_load
+func.func @global_transpose_load(%i : index, %j : index,
+    %mem : memref<128x256xf16, #gpu.address_space<global>>) -> vector<8xf16> {
+  // CHECK: amdgpu.global_transpose_load
+  %0 = amdgpu.global_transpose_load %mem[%i, %j]
+         : memref<128x256xf16, #gpu.address_space<global>> -> vector<8xf16>
+  func.return %0 : vector<8xf16>
+}
+
 // CHECK-LABEL: func @gather_to_lds
 func.func @gather_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf16>, %mem2 : memref<32x32xf16>, %smem1 : memref<32xf16, #gpu.address_space<workgroup>>, %smem2 : memref<32x32xf16, #gpu.address_space<workgroup>>, %smem3 : memref<?x?xf16, strided<[?, 1]>, #gpu.address_space<workgroup>>) {
   // CHECK: amdgpu.gather_to_lds async %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}[%{{.*}}, %{{.*}}]
@@ -688,6 +697,15 @@ func.func @gather_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf16>, %
   amdgpu.gather_to_lds %mem2[%idx1, %idx2], %smem1[%idx1] : vector<2xf16>, memref<32x32xf16>, memref<32xf16,    #gpu.address_space<workgroup>>
   amdgpu.gather_to_lds %mem1[%idx1], %smem3[%idx1, %idx2] : vector<2xf16>, memref<32xf16>,   memref<?x?xf16, strided<[?, 1]>, #gpu.address_space<workgroup>>
   rocdl.wait.asyncmark 0
+  func.return
+}
+
+// CHECK-LABEL: func @gather_to_lds_integer_fat_raw_buffer_address_space
+func.func @gather_to_lds_integer_fat_raw_buffer_address_space(%idx : index,
+    %mem : memref<32xf16, 7>,
+    %smem : memref<32xf16, #gpu.address_space<workgroup>>) {
+  // CHECK: amdgpu.gather_to_lds
+  amdgpu.gather_to_lds %mem[%idx], %smem[%idx] : vector<2xf16>, memref<32xf16, 7>, memref<32xf16, #gpu.address_space<workgroup>>
   func.return
 }
 
@@ -750,10 +768,10 @@ func.func @memory_counter_wait() {
 }
 
 // CHECK-LABEL: func @make_dma_base
-// CHECK-SAME: (%[[IDX:.+]]: index, %[[MEM:.+]]: memref<8xi32>, %[[SMEM:.+]]: memref<8xi32, #gpu.address_space<workgroup>>)
-func.func @make_dma_base(%idx: index, %mem: memref<8xi32>, %smem: memref<8xi32, #gpu.address_space<workgroup>>) {
-  // CHECK: amdgpu.make_dma_base %[[MEM]][%[[IDX]]], %[[SMEM]][%[[IDX]]] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
-  amdgpu.make_dma_base %mem[%idx], %smem[%idx] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+// CHECK-SAME: (%[[IDX:.+]]: index, %[[MEM:.+]]: memref<8xi32, #gpu.address_space<global>>, %[[SMEM:.+]]: memref<8xi32, #gpu.address_space<workgroup>>)
+func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu.address_space<global>>, %smem: memref<8xi32, #gpu.address_space<workgroup>>) {
+  // CHECK: amdgpu.make_dma_base %[[MEM]][%[[IDX]]], %[[SMEM]][%[[IDX]]] : memref<8xi32, #gpu.address_space<global>>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+  amdgpu.make_dma_base %mem[%idx], %smem[%idx] : memref<8xi32, #gpu.address_space<global>>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
   func.return
 }
 

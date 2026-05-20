@@ -50,7 +50,7 @@ enum DWPSectionId : unsigned {
   DS_NumSections
 };
 
-/// Direct ELF writer for DWP output, bypassing MCStreamer.
+/// Direct ELF writer for DWP output.
 ///
 /// Section data is stored as zero-copy StringRef chunks pointing to the
 /// mmap'd input files, plus an inline buffer for constructed data

@@ -884,6 +884,16 @@ decodeFixedType(CIRGenFunction &cgf,
   switch (descriptor.Kind) {
   case IITDescriptor::Void:
     return cir::VoidType::get(context);
+  case IITDescriptor::Half:
+    return cir::FP16Type::get(context);
+  case IITDescriptor::BFloat:
+    return cir::BF16Type::get(context);
+  case IITDescriptor::Float:
+    return cir::SingleType::get(context);
+  case IITDescriptor::Double:
+    return cir::DoubleType::get(context);
+  case IITDescriptor::Quad:
+    return cir::FP128Type::get(context);
   // If the intrinsic expects unsigned integers, the signedness is corrected in
   // correctIntegerSignedness()
   case IITDescriptor::Integer:
@@ -945,22 +955,13 @@ static cir::FuncType getIntrinsicType(CIRGenFunction &cgf,
   using namespace llvm::Intrinsic;
 
   SmallVector<IITDescriptor, 8> table;
-  getIntrinsicInfoTableEntries(id, table);
+  auto [tableRef, _, isVarArg] = getIntrinsicInfoTableEntries(id, table);
 
-  ArrayRef<IITDescriptor> tableRef = table;
   mlir::Type resultTy = decodeFixedType(cgf, tableRef, context);
 
   SmallVector<mlir::Type, 8> argTypes;
-  bool isVarArg = false;
-  while (!tableRef.empty()) {
-    llvm::Intrinsic::IITDescriptor::IITDescriptorKind kind =
-        tableRef.front().Kind;
-    if (kind == IITDescriptor::VarArg) {
-      isVarArg = true;
-      break; // VarArg is last
-    }
+  while (!tableRef.empty())
     argTypes.push_back(decodeFixedType(cgf, tableRef, context));
-  }
 
   // CIR convention: no explicit void return type
   if (isa<cir::VoidType>(resultTy))
@@ -1931,7 +1932,18 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     cir::UnreachableOp::create(builder, loc);
     return RValue::get(nullptr);
   }
-  case Builtin::BI__builtin_launder:
+  case Builtin::BI__builtin_launder: {
+    const Expr *arg = e->getArg(0);
+    QualType argTy = arg->getType()->getPointeeType();
+    mlir::Value ptr = emitScalarExpr(arg);
+
+    if (cgm.getCodeGenOpts().StrictVTablePointers &&
+        argTy.requiresBuiltinLaunder(cgm.getASTContext())) {
+      mlir::Location loc = getLoc(e->getExprLoc());
+      ptr = cir::LaunderOp::create(builder, loc, ptr).getResult();
+    }
+    return RValue::get(ptr);
+  }
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_sub:
   case Builtin::BI__sync_fetch_and_or:
@@ -2391,6 +2403,17 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_printf:
   case Builtin::BIprintf:
+    if (getTarget().getTriple().isNVPTX() ||
+        getTarget().getTriple().isAMDGCN() ||
+        (getTarget().getTriple().isSPIRV() &&
+         getTarget().getTriple().getVendor() == llvm::Triple::AMD)) {
+      if (getTarget().getTriple().isNVPTX())
+        return RValue::get(emitNVPTXDevicePrintfCallExpr(e));
+      if ((getTarget().getTriple().isAMDGCN() ||
+           getTarget().getTriple().isSPIRV()) &&
+          getLangOpts().HIP)
+        return errorBuiltinNYI(*this, e, builtinID);
+    }
     break;
   case Builtin::BI__builtin_canonicalize:
   case Builtin::BI__builtin_canonicalizef:
@@ -2427,12 +2450,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   StringRef prefix =
       llvm::Triple::getArchTypePrefix(getTarget().getTriple().getArch());
   if (!prefix.empty()) {
-    intrinsicID = Intrinsic::getIntrinsicForClangBuiltin(prefix.data(), name);
+    intrinsicID = Intrinsic::getIntrinsicForClangBuiltin(prefix, name);
     // NOTE we don't need to perform a compatibility flag check here since the
     // intrinsics are declared in Builtins*.def via LANGBUILTIN which filter the
     // MS builtins via ALL_MS_LANGUAGES and are filtered earlier.
     if (intrinsicID == Intrinsic::not_intrinsic)
-      intrinsicID = Intrinsic::getIntrinsicForMSBuiltin(prefix.data(), name);
+      intrinsicID = Intrinsic::getIntrinsicForMSBuiltin(prefix, name);
   }
 
   if (intrinsicID != Intrinsic::not_intrinsic) {
@@ -2441,7 +2464,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     getContext().GetBuiltinType(builtinID, error, &iceArguments);
     assert(error == ASTContext::GE_None && "Should not codegen an error");
 
-    llvm::StringRef name = llvm::Intrinsic::getName(intrinsicID);
+    StringRef name = Intrinsic::getName(intrinsicID);
     // cir::LLVMIntrinsicCallOp expects intrinsic name to not have prefix
     // "llvm." For example, `llvm.nvvm.barrier0` should be passed as
     // `nvvm.barrier0`.
@@ -2711,7 +2734,42 @@ mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
                                                   cir::IntType resType,
                                                   mlir::Value emittedE,
                                                   bool isDynamic) {
-  assert(!cir::MissingFeatures::opCallImplicitObjectSizeArgs());
+  // If this is a pass_object_size parameter, load the implicit size arg.
+  //
+  // BOS type compatibility: a pass_object_size annotation with one type can
+  // satisfy a __builtin_object_size query with a different type when the
+  // annotated type is a safe approximation.  Type 0 (max, whole object) is
+  // an overestimate for type 1 (max, closest surrounding subobject), and
+  // type 3 (min, closest surrounding subobject) is an underestimate for
+  // type 2 (min, whole object).
+  enum BOSType {
+    MaxWholeObject = 0,
+    MaxSubobject = 1,
+    MinWholeObject = 2,
+    MinSubobject = 3,
+  };
+  if (auto *dre = dyn_cast<DeclRefExpr>(e->IgnoreParenImpCasts())) {
+    auto *param = dyn_cast<ParmVarDecl>(dre->getDecl());
+    auto *objSizeAttr = dre->getDecl()->getAttr<PassObjectSizeAttr>();
+    if (param && objSizeAttr) {
+      auto from = objSizeAttr->getType();
+      bool compatible = from == static_cast<int>(type) ||
+                        (from == MaxWholeObject && type == MaxSubobject) ||
+                        (from == MinSubobject && type == MinWholeObject);
+      if (compatible) {
+        const ImplicitParamDecl *sizeDecl = sizeArguments.lookup(param);
+        assert(sizeDecl && "expected pass_object_size implicit param");
+
+        DeclMapTy::iterator declIter = localDeclMap.find(sizeDecl);
+        assert(declIter != localDeclMap.end());
+        Address addr = declIter->second;
+
+        return emitLoadOfScalar(addr, /*volatile=*/false,
+                                getContext().getSizeType(), e->getBeginLoc(),
+                                LValueBaseInfo(AlignmentSource::Decl));
+      }
+    }
+  }
 
   // LLVM can't handle type=3 appropriately, and __builtin_object_size shouldn't
   // evaluate e for side-effects. In either case, just like original LLVM

@@ -16,6 +16,7 @@
 #include "lldb/Breakpoint/BreakpointResolverFileRegex.h"
 #include "lldb/Breakpoint/BreakpointResolverName.h"
 #include "lldb/Breakpoint/BreakpointResolverScripted.h"
+#include "lldb/Breakpoint/ScriptedBreakpointOverrideResolver.h"
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -51,6 +52,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
+#include "lldb/Target/Policy.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterTypeBuilder.h"
 #include "lldb/Target/SectionLoadList.h"
@@ -70,6 +72,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/ErrorExtras.h"
@@ -239,6 +242,13 @@ void Target::PrimeFromDummyTarget(Target &target) {
     AddBreakpointName(std::make_unique<BreakpointName>(*bp_name_entry.second));
   }
 
+  for (auto const &elem : target.m_breakpoint_overrides) {
+    BreakpointResolverOverrideUP new_override_up =
+        elem.second->CopyIntoNewTarget(*this);
+    if (new_override_up->Validate())
+      AddBreakpointResolverOverride(std::move(new_override_up));
+  }
+
   m_frame_recognizer_manager_up = std::make_unique<StackFrameRecognizerManager>(
       *target.m_frame_recognizer_manager_up);
 
@@ -271,6 +281,7 @@ void Target::CleanupProcess() {
   m_breakpoint_list.ClearAllBreakpointSites();
   m_internal_breakpoint_list.ClearAllBreakpointSites();
   ResetBreakpointHitCounts();
+  llvm::consumeError(m_process_sp->FlushDelayedBreakpoints());
   // Disable watchpoints just on the debugger side.
   std::unique_lock<std::recursive_mutex> lock;
   this->GetWatchpointList().GetListMutex(lock);
@@ -798,6 +809,15 @@ BreakpointSP Target::CreateBreakpoint(SearchFilterSP &filter_sp,
                                       bool resolve_indirect_symbols) {
   BreakpointSP bp_sp;
   if (filter_sp && resolver_sp) {
+    // Now check whether there are any "Breakpoint Overrides" registered, and
+    // if there are see if one of them want to handle this request instead.
+    // But we don't allow overrides for internal breakpoints:
+    if (!internal) {
+      BreakpointResolverSP overridden_sp =
+          CheckBreakpointOverrides(resolver_sp);
+      if (overridden_sp)
+        resolver_sp = overridden_sp;
+    }
     const bool hardware = request_hardware || GetRequireHardwareBreakpoints();
     bp_sp.reset(new Breakpoint(*this, filter_sp, resolver_sp, hardware,
                                resolve_indirect_symbols));
@@ -929,6 +949,51 @@ void Target::GetBreakpointNames(std::vector<std::string> &names) {
     names.push_back(bp_name_entry.first.GetString());
   }
   llvm::sort(names);
+}
+
+llvm::Expected<lldb::user_id_t>
+Target::AddBreakpointResolverOverride(llvm::StringRef class_name,
+                                      StructuredData::DictionarySP args_data_sp,
+                                      llvm::StringRef description) {
+  if (class_name.empty())
+    return LLDB_INVALID_INDEX64;
+
+  StructuredDataImpl impl;
+  impl.SetObjectSP(args_data_sp);
+
+  BreakpointResolverOverrideUP new_override_up(
+      new ScriptedBreakpointResolverOverride(*this, std::string(description),
+                                             std::string(class_name), impl));
+  llvm::Error error = new_override_up->Validate();
+  if (error)
+    return error;
+
+  return AddBreakpointResolverOverride(std::move(new_override_up));
+}
+
+void Target::DescribeBreakpointOverrides(Stream &stream,
+                                         std::vector<lldb::user_id_t> &idxs) {
+  if (m_breakpoint_overrides.size() == 0) {
+    stream << "No overrides.\n";
+    return;
+  }
+
+  bool empty = idxs.empty();
+  bool print_first = true;
+  for (auto const &elem : m_breakpoint_overrides) {
+    auto idx_pos = llvm::find(idxs, elem.first);
+    if (empty || idx_pos != idxs.end()) {
+      if (print_first) {
+        // FIXME: Is there some good way to flow the description?
+        stream << "ID    Description\n";
+        stream << "----  -----------\n";
+        print_first = false;
+      }
+      stream.Format("{0,4}  {1}\n", elem.first, elem.second->GetDescription());
+      if (!empty)
+        idxs.erase(idx_pos);
+    }
+  }
 }
 
 bool Target::ProcessIsValid() {
@@ -2690,7 +2755,7 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
     return ts->GetPersistentExpressionState();
 
   LLDB_LOG(GetLog(LLDBLog::Target),
-           "Unable to get persistent expression state for language {1}: {0}",
+           "Unable to get persistent expression state for language {}:",
            Language::GetNameForLanguageType(language));
   return nullptr;
 }
@@ -4267,8 +4332,11 @@ Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
   auto should_stop_or_err = m_interface_sp->HandleStop(exc_ctx, stream);
   output_sp->PutCString(
       reinterpret_cast<StreamString *>(stream.get())->GetData());
-  if (!should_stop_or_err)
+  if (!should_stop_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Target), should_stop_or_err.takeError(),
+                   "scripted stop hook HandleStop failed: {0}");
     return StopHookResult::KeepStopped;
+  }
 
   return *should_stop_or_err ? StopHookResult::KeepStopped
                              : StopHookResult::RequestContinue;
@@ -5886,10 +5954,14 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
 }
 
 std::recursive_mutex &Target::GetAPIMutex() {
+  Policy policy = PolicyStack::Get().Current();
+  if (policy.view == Policy::View::Private)
+    return m_private_mutex;
+
   if (GetProcessSP() && GetProcessSP()->CurrentThreadIsPrivateStateThread())
     return m_private_mutex;
-  else
-    return m_mutex;
+
+  return m_mutex;
 }
 
 /// Get metrics associated with this target in JSON format.

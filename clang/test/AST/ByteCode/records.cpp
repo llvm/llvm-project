@@ -2000,3 +2000,34 @@ namespace EmptyRecords {
                                   // both-note {{in call}}
   constexpr int testc = f(e3, 3);
 }
+
+namespace RVOPtrIsExtern {
+  struct __ph {
+  } extern const _1;
+  constexpr void test(__ph) {}
+  constexpr bool test_all() {
+    test(_1);
+    return true;
+  }
+  static_assert(test_all(), "");
+}
+
+namespace MutableInMemcpy {
+  union H {
+    mutable struct {} gx; // both-note {{declared here}}
+  };
+  constexpr H h1 = {};
+  constexpr H h2 = h1; // both-error {{must be initialized by a constant expression}} \
+                       // both-note {{read of mutable member 'gx' is not allowed in a constant expression}} \
+                       // both-note {{in call}}
+}
+
+namespace StaticMemberRedecl {
+  class S {
+    public:
+    static const int m;
+  };
+  constexpr int getM() { return S::m; }
+  const int S::m = 10;
+  static_assert(getM() == 10, "");
+}

@@ -555,7 +555,7 @@ ParseResult spirv::ConstantOp::parse(OpAsmParser &parser,
 
 void spirv::ConstantOp::print(OpAsmPrinter &printer) {
   printer << ' ' << getValue();
-  if (isa<spirv::ArrayType>(getType()))
+  if (isa<spirv::ArrayType, spirv::StructType>(getType()))
     printer << " : " << getType();
 }
 
@@ -610,10 +610,27 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
     return success();
   }
   if (auto arrayAttr = dyn_cast<ArrayAttr>(value)) {
+    if (auto structType = dyn_cast<spirv::StructType>(opType)) {
+      // Identified (possibly recursive) structs are not supported as constants.
+      if (structType.isIdentified())
+        return op.emitOpError(
+            "cannot have an identified struct as a constant type");
+      if (arrayAttr.size() != structType.getNumElements())
+        return op.emitOpError("number of constituents (")
+               << arrayAttr.size()
+               << ") does not match number of struct members ("
+               << structType.getNumElements() << ")";
+      for (auto [idx, element] : llvm::enumerate(arrayAttr.getValue())) {
+        if (failed(verifyConstantType(op, element,
+                                      structType.getElementType(idx))))
+          return failure();
+      }
+      return success();
+    }
     auto arrayType = dyn_cast<spirv::ArrayType>(opType);
     if (!arrayType)
       return op.emitOpError(
-          "must have spirv.array result type for array value");
+          "must have spirv.array or spirv.struct result type for array value");
     Type elemType = arrayType.getElementType();
     for (Attribute element : arrayAttr.getValue()) {
       // Verify array elements recursively.
@@ -638,7 +655,8 @@ bool spirv::ConstantOp::isBuildableWith(Type type) {
     return false;
 
   if (isa<SPIRVDialect>(type.getDialect())) {
-    // TODO: support constant struct
+    if (auto structType = dyn_cast<spirv::StructType>(type))
+      return !structType.isIdentified();
     return isa<spirv::ArrayType>(type);
   }
 
@@ -1499,6 +1517,14 @@ void spirv::UMulExtendedOp::print(OpAsmPrinter &printer) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::MemoryBarrierOp::verify() {
+  return verifyMemorySemantics(getOperation(), getMemorySemantics());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.MemoryNamedBarrierOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::MemoryNamedBarrierOp::verify() {
   return verifyMemorySemantics(getOperation(), getMemorySemantics());
 }
 

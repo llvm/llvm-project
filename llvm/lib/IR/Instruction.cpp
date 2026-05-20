@@ -969,6 +969,7 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
                cast<AtomicCmpXchgInst>(I2)->getSyncScopeID();
   if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I1))
     return RMWI->getOperation() == cast<AtomicRMWInst>(I2)->getOperation() &&
+           RMWI->isElementwise() == cast<AtomicRMWInst>(I2)->isElementwise() &&
            RMWI->isVolatile() == cast<AtomicRMWInst>(I2)->isVolatile() &&
            (RMWI->getAlign() == cast<AtomicRMWInst>(I2)->getAlign() ||
             IgnoreAlignment) &&
@@ -1166,6 +1167,33 @@ bool Instruction::isVolatile() const {
       }
     }
     return false;
+  }
+}
+
+bool Instruction::maySynchronize() const {
+  // FIXME: This currently treats atomics with monotonic ordering as
+  // synchronizing. This is unnecessarily conservative and does not match
+  // our LangRef definition of the property.
+  switch (getOpcode()) {
+  default:
+    assert(!isAtomic() && "Unhandled atomic instruction");
+    return false;
+  case Instruction::Fence: {
+    // All legal orderings for fence are stronger than monotonic.
+    auto *FI = cast<FenceInst>(this);
+    return FI->getSyncScopeID() != SyncScope::SingleThread;
+  }
+  case Instruction::AtomicRMW:
+  case Instruction::AtomicCmpXchg:
+    return true;
+  case Instruction::Store:
+    return isStrongerThanUnordered(cast<StoreInst>(this)->getOrdering());
+  case Instruction::Load:
+    return isStrongerThanUnordered(cast<LoadInst>(this)->getOrdering());
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return !cast<CallBase>(this)->hasFnAttr(Attribute::NoSync);
   }
 }
 

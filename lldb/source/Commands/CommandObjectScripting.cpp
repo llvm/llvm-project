@@ -229,6 +229,8 @@ protected:
 
     if (!num_listed_interface)
       s << " None\n";
+
+    result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
 private:
