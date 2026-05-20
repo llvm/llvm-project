@@ -118,7 +118,8 @@ def FeatureDuplex: SubtargetFeature<"duplex", "EnableDuplex", "true",
       "Enable generation of duplex instruction">;
 foreach i = {16-28} in
     def FeatureReservedR#i : SubtargetFeature<"reserved-r"#i,
-        "ReservedR["#i#"]", "true", "Reserve register R"#i>;
+        "UserReservedRegister[Hexagon::R"#i#"]",
+        "true", "Reserve register R"#i>;
 def FeatureNoreturnStackElim: SubtargetFeature<"noreturn-stack-elim",
       "NoreturnStackElim", "true",
       "Eliminate stack allocation in a noreturn function when possible">;
