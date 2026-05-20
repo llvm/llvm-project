@@ -2361,7 +2361,7 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   // column-major positions rather than inserting sequentially and shuffling.
   const ConstantMatrixType *ColMajorMT = nullptr;
   if (const auto *MT = E->getType()->getAs<ConstantMatrixType>();
-      MT && isMatrixColumnMajor(CGF.getLangOpts(), E->getType()))
+      MT && !isMatrixRowMajor(CGF.getLangOpts(), E->getType()))
     ColMajorMT = MT;
 
   // Loop over initializers collecting the Value for each, and remembering
