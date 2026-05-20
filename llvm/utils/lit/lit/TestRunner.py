@@ -271,16 +271,8 @@ class InprocBuiltinInvocation(CommandInvocation):
         return self.result.exit_code
 
     def communicate(self) -> tuple[str, str]:
-        if self.stdout():
-            stdout = self.stdout().read()
-        else:
-            stdout = ""
-
-        if self.stderr():
-            stderr = self.stderr().read()
-        else:
-            stderr = ""
-
+        stdout = self.stdout.read() if self.stdout() else ""
+        stderr = self.stderr.read() if self.stderr() else ""
         return stdout, stderr
 
     def stdout(self) -> typing.TextIO | None:
