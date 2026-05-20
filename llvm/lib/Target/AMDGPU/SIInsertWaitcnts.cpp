@@ -660,9 +660,8 @@ public:
       return false;
     if (SIInstrInfo::usesASYNC_CNT(MI))
       return true;
-    const MachineOperand *Async =
-        TII.getNamedOperand(MI, AMDGPU::OpName::IsAsync);
-    return Async && (Async->getImm());
+    // Having a non-async sibling means MI is itself a PreGFX12 _ASYNC pseudo.
+    return AMDGPU::getPreGFX12NonAsyncOp(MI.getOpcode()) != -1;
   }
 
   bool isNonAsyncLdsDmaWrite(const MachineInstr &MI) const {
