@@ -75,6 +75,16 @@ uint8_t test_vqrshrunh_n_s16(int16_t a) {
   return (uint8_t)vqrshrunh_n_s16(a, 8);
 }
 
+// ALL-LABEL: {{.*}}@test_vqrshruns_n_s32(
+uint16_t test_vqrshruns_n_s32(int32_t a) {
+  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
+
+  // LLVM-SAME: i32 noundef {{.*}})
+  // LLVM:      call {{.*}}@llvm.aarch64.neon.sqrshrun.{{(v4i16|i16)}}(
+  // LLVM:      ret i16 {{%.*}}
+  return (uint16_t)vqrshruns_n_s32(a, 16);
+}
+
 //ALL-LABEL: {{.*}} @test_vqrshrund_n_s64(
 uint32_t test_vqrshrund_n_s64(int64_t a) {
   //CIR: {{%.*}} =  cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}

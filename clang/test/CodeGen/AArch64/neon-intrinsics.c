@@ -15560,18 +15560,6 @@ uint8_t test_vqrshrunh_n_s16(int16_t a) {
   return (uint8_t)vqrshrunh_n_s16(a, 8);
 }
 
-// CHECK-LABEL: define dso_local i16 @test_vqrshruns_n_s32(
-// CHECK-SAME: i32 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
-// CHECK-NEXT:    [[VQRSHRUNS_N_S32:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrun.v4i16(<4 x i32> [[TMP0]], i32 16)
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i16> [[VQRSHRUNS_N_S32]], i64 0
-// CHECK-NEXT:    ret i16 [[TMP1]]
-//
-uint16_t test_vqrshruns_n_s32(int32_t a) {
-  return (uint16_t)vqrshruns_n_s32(a, 16);
-}
-
 // CHECK-LABEL: define dso_local i32 @test_vqrshrund_n_s64(
 // CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
