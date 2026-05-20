@@ -71,5 +71,17 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
     Res.MDExtra.insert({NewCU, SubprogramsMD});
   }
 
+  for (DIType *T : DIF.types()) {
+    if (auto *SR = dyn_cast<DISubrangeType>(T)) {
+      DIType *BT = SR->getBaseType();
+      if (!BT)
+        BT = DIBasicType::get(
+            SR->getContext(), dwarf::DW_TAG_base_type, SR->getName(),
+            SR->getSizeInBits(), SR->getAlignInBits(), dwarf::DW_ATE_unsigned,
+            SR->getNumExtraInhabitants(), /*DataSizeInBits=*/0, SR->getFlags());
+      Res.MDReplace.insert({T, BT});
+    }
+  }
+
   return Res;
 }
