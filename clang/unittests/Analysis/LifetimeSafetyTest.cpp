@@ -2028,6 +2028,25 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithMultiAssignInSameStmt) {
   EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
 }
 
+TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithOverwritingAssignments) {
+  SetupTest(R"(
+    void target() {
+      int tgt1 = 1, tgt2 = 2;
+      int *a = &tgt1;
+      int *b = a;
+      int *c = b;
+      b = &tgt2;
+      int *s = c;
+      POINT(after_use);
+    }
+  )");
+
+  const llvm::SmallVector<OriginID> OriginFlowChain =
+      Helper->buildOriginFlowChainInOneBlock("s", "tgt1", "after_use");
+
+  EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
+}
+
 TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithLifetimeBound) {
   SetupTest(R"(
     int* choose(int* a [[clang::lifetimebound]], int* b  [[clang::lifetimebound]]);
