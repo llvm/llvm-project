@@ -13,6 +13,10 @@ add_header_library(
   attributes
   HDRS
     attributes.h
+  DEPENDS
+    .config
+    libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.compiler
 )
 
 add_header_library(
