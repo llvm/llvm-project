@@ -35,7 +35,8 @@ convertStringAttrToDenseElementsAttr(cir::ConstArrayAttr attr,
 }
 
 template <> mlir::APInt getZeroInitFromType(mlir::Type ty) {
-  assert(mlir::isa<cir::IntType>(ty) && "expected int type");
+  if (mlir::isa<cir::BoolType>(ty))
+    return mlir::APInt::getZero(1);
   const auto intTy = mlir::cast<cir::IntType>(ty);
   return mlir::APInt::getZero(intTy.getWidth());
 }
@@ -80,6 +81,12 @@ void convertToDenseElementsAttrImpl(
 
   auto arrayAttr = mlir::cast<mlir::ArrayAttr>(attr.getElts());
   for (auto eltAttr : arrayAttr) {
+    if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(eltAttr)) {
+      if constexpr (std::is_same_v<StorageTy, mlir::APInt>) {
+        values[currentIndex++] = mlir::APInt(1, (uint64_t)boolAttr.getValue());
+        continue;
+      }
+    }
     if (auto valueAttr = mlir::dyn_cast<AttrTy>(eltAttr)) {
       values[currentIndex++] = valueAttr.getValue();
       continue;
@@ -219,6 +226,10 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
     return convertStringAttrToDenseElementsAttr(constArr,
                                                 converter->convertType(type));
   if (mlir::isa<cir::IntType>(type))
+    return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
+        constArr, dims, type, converter->convertType(type));
+
+  if (mlir::isa<cir::BoolType>(type))
     return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
         constArr, dims, type, converter->convertType(type));
 

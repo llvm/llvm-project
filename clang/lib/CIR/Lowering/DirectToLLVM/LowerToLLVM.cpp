@@ -1939,8 +1939,8 @@ static mlir::Type getConstArrayLeafType(mlir::Type ty) {
 }
 
 static bool isBulkLowerableConstArrayLeaf(mlir::Type leafTy) {
-  return mlir::isa<cir::PointerType, cir::IntType, cir::FPTypeInterface>(
-      leafTy);
+  return mlir::isa<cir::PointerType, cir::IntType, cir::BoolType,
+                   cir::FPTypeInterface>(leafTy);
 }
 
 bool hasTrailingZeros(cir::ConstArrayAttr attr) {
@@ -2516,7 +2516,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
       // whole initializer as one aggregate attribute (no insertvalue
       // region). Skip arrays with trailing-zero compression: those need
       // per-element zero/undef setup. Leaf type must match what
-      // lowerConstArrayAttr handles (pointers, integers, floats today).
+      // lowerConstArrayAttr handles (pointers, integers, bools, floats).
       if (!hasTrailingZeros(constArr) &&
           isBulkLowerableConstArrayLeaf(
               getConstArrayLeafType(constArr.getType()))) {
