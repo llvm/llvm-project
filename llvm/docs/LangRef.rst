@@ -6585,23 +6585,15 @@ more-accurate debug info for profiling results.
                         macros: !6, dwoId: 0x0abcd)
 
 The optional ``dialect:`` field encodes the source-language *dialect* of the
-compile unit as an enum (the ``DW_LLVM_LANG_DIALECT_*`` family defined in
-``include/llvm/BinaryFormat/Dwarf.def``). It corresponds to the
-``DW_AT_LLVM_language_dialect`` attribute emitted on ``DW_TAG_compile_unit`` and
-is intended for language dialects that represent different execution models.
-When specified, the field must name one of the known dialects (either
-symbolically or with the matching numeric value):
-
-* ``DW_LLVM_LANG_DIALECT_simt`` / ``1``
-* ``DW_LLVM_LANG_DIALECT_tile`` / ``2``
+compile unit as an enum. It corresponds to the ``DW_AT_LLVM_language_dialect``
+attribute emitted on ``DW_TAG_compile_unit`` and is intended for language
+dialects that represent different execution models. When specified, the field
+must name one of the known dialects, either symbolically or with the matching
+numeric value; see :ref:`llvm_language_dialect` for the list of supported
+values.
 
 Omitting the ``dialect:`` field is the only way to express "no dialect" in
-textual IR; the assembly parser rejects an explicit ``dialect: 0`` because,
-when present, the field must name a known dialect. The IR verifier and
-bitcode reader treat a stored value of 0 as "no dialect specified" and
-reject any value outside the defined enumeration. When set, the dialect is
-printed in symbolic form; when unset, the field is omitted from the textual
-output and no ``DW_AT_LLVM_language_dialect`` attribute is emitted.
+textual IR.
 
 .. code-block:: text
 
