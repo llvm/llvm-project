@@ -27,8 +27,7 @@ extern "C" {
 ///
 /// \param addr Start of memory region.
 /// \param size Size of memory region.
-void SANITIZER_CDECL __tysan_set_type_unknown(void const *addr,
-                                                 size_t size);
+void SANITIZER_CDECL __tysan_set_type_unknown(void const *addr, size_t size);
 
 #ifdef __cplusplus
 }
