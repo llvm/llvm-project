@@ -3328,9 +3328,9 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
          "VPReplicateRecipes must be unrolled before ::execute");
   auto *Instr = getUnderlyingInstr();
   Instruction *Cloned = Instr->clone();
-  if (definesResult()) {
+  Type *ResultTy = State.TypeAnalysis.inferScalarType(this);
+  if (!ResultTy->isVoidTy()) {
     Cloned->setName(Instr->getName() + ".cloned");
-    Type *ResultTy = State.TypeAnalysis.inferScalarType(this);
     // The operands of the replicate recipe may have been narrowed, resulting in
     // a narrower result type. Update the type of the cloned instruction to the
     // correct type.
@@ -3636,7 +3636,8 @@ void VPReplicateRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
   O << Indent << (IsSingleScalar ? "CLONE " : "REPLICATE ");
 
-  if (definesResult()) {
+  VPTypeAnalysis TypeInfo(*getParent()->getPlan());
+  if (!TypeInfo.inferScalarType(this)->isVoidTy()) {
     printAsOperand(O, SlotTracker);
     O << " = ";
   }
