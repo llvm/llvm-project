@@ -10,7 +10,7 @@
 /// (feclearexcept / feraiseexcept / fetestexcept).
 ///
 /// These checks also guard against an optimizer eliding the wrapped libm
-/// calls: under Clang's default `-ffp-exception-behavior=ignore`, the
+/// calls: under clang's default `-ffp-exception-behavior=ignore`, the
 /// compiler is free to drop calls to fenv functions, which would silently
 /// break ieee_arithmetic flag handling.  exceptions.cpp uses
 /// `FLANG_FP_TRAP_ON` to disable that optimization; if it were ever removed

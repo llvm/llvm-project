@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // FLANG_FP_TRAP_ON enables floating-point exception access in the
-// enclosing scope.  It silences Clang's -Wfenv-access on calls to fenv.h
-// primitives (feraiseexcept, fesetround, fetestexcept, ...).
+// enclosing scope.  It silences clang's -Wfenv-access warning on calls to
+// fenv.h primitives (feraiseexcept, fesetround, fetestexcept, ...).
 //
 // Use as a statement at the top of a function body:
 //
@@ -17,8 +17,6 @@
 //     feraiseexcept(FE_INVALID);
 //   }
 //
-// File-scope use is also valid C/C++ but triggers a Clang codegen assertion
-// in template-heavy translation units, so prefer function scope.
 
 #ifndef FORTRAN_COMMON_FP_CONTROL_H_
 #define FORTRAN_COMMON_FP_CONTROL_H_
@@ -29,7 +27,7 @@
 // -Wfenv-access diagnostic recommends.
 #define FLANG_FP_TRAP_ON _Pragma("clang fp exceptions(maytrap)")
 #else
-// Portable fallback for GCC, MSVC, or older Clang.
+// Portable fallback for GCC, MSVC, or older clang.
 #define FLANG_FP_TRAP_ON _Pragma("STDC FENV_ACCESS ON")
 #endif
 
