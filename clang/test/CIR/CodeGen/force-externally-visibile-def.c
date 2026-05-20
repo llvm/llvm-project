@@ -13,6 +13,6 @@ extern inline void my_func();
 // CIR-NEXT:   }
 // CIR-NEXT: }
 
-// LLVM_OGCG: define void @my_func(){{.*}}{
+// LLVM_OGCG: define{{.*}}void @my_func(){{.*}}{
 // LLVM_OGCG:   ret void
 // LLVM_OGCG: }
