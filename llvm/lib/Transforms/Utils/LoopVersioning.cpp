@@ -374,8 +374,8 @@ Loop *llvm::versionLoopForInvariantBoundLoad(Loop *L, LoadInst *BoundLoad,
   // Clone the loop including its preheader.
   ValueToValueMapTy VMap;
   SmallVector<BasicBlock *, 4> NewBlocks;
-  Loop *VerLoop = cloneLoopWithPreheader(PreHeader, RtCheckBB, L, VMap,
-                                         ".lver", &LI, &DT, NewBlocks);
+  Loop *VerLoop = cloneLoopWithPreheader(PreHeader, RtCheckBB, L, VMap, ".lver",
+                                         &LI, &DT, NewBlocks);
   remapInstructionsInBlocks(NewBlocks, VMap);
 
   BasicBlock *VerPreHeader = cast<BasicBlock>(VMap[PreHeader]);
@@ -437,9 +437,8 @@ Loop *llvm::versionLoopForInvariantBoundLoad(Loop *L, LoadInst *BoundLoad,
       }
       if (ExitUses.empty())
         continue;
-      PHINode *MergePhi = PHINode::Create(I.getType(), 2,
-                                          I.getName() + ".merge",
-                                          OrigExitBlock->begin());
+      PHINode *MergePhi = PHINode::Create(
+          I.getType(), 2, I.getName() + ".merge", OrigExitBlock->begin());
       MergePhi->addIncoming(&I, NewExitBlock);
       MergePhi->addIncoming(CloneI, VerNewExitBlock);
       for (Use *U : ExitUses)
@@ -516,7 +515,8 @@ Loop *llvm::versionLoopForInvariantBoundLoad(Loop *L, LoadInst *BoundLoad,
   if (!RtCheckCond)
     RtCheckCond = ConstantInt::getFalse(Ctx);
 
-  // Branch: If conflict is detected then take the original loop path, else take the versioned loop path.
+  // Branch: If conflict is detected then take the original loop path, else take
+  // the versioned loop path.
   Builder.CreateCondBr(RtCheckCond, PreHeader, VerPreHeader);
   DT.insertEdge(RtCheckBB, PreHeader);
   DT.insertEdge(RtCheckBB, VerPreHeader);

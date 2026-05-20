@@ -8245,8 +8245,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       if (LoadInst *BoundLoad =
               LVL.tryToFindDynamicBoundLoadCandidate(L, *AA)) {
         if (isSpeculativeBoundVersioningProfitable())
-          if (Loop *Cand = versionLoopForInvariantBoundLoad(L, BoundLoad, *DT,
-                                                            *LI, *AA, PSE, AC)) {
+          if (Loop *Cand = versionLoopForInvariantBoundLoad(
+                  L, BoundLoad, *DT, *LI, *AA, PSE, AC)) {
             SE->forgetLoop(L);
             SE->forgetLoop(Cand);
             return processLoop(Cand);
