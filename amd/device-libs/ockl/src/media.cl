@@ -11,6 +11,8 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 #define CATTR __attribute__((const))
+#define MATTR __attribute__((const, target("msad-insts")))
+#define MQATTR __attribute__((const, target("mqsad-pk-insts")))
 #define LCATTR __attribute__((const, target("lerp-inst")))
 #define QCATTR __attribute__((const, target("qsad-insts")))
 #define SCATTR __attribute__((const, target("sad-insts")))
@@ -137,13 +139,13 @@ OCKL_MANGLE_U32(min3)(uint a, uint b, uint c)
     return a1 < c ? a1 : c;
 }
 
-CATTR uint
+MATTR uint
 OCKL_MANGLE_U32(msad)(uint a, uint b, uint c)
 {
     return __builtin_amdgcn_msad_u8(a, b, c);
 }
 
-CATTR ulong
+MQATTR ulong
 OCKL_MANGLE_U64(mqsad)(ulong a, uint b, ulong c)
 {
     return __builtin_amdgcn_mqsad_pk_u16_u8(a, b, c);

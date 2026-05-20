@@ -31091,6 +31091,16 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
       return DAG.getNode(ISD::AND, dl, VT, SRL, DAG.getConstant(Mask, dl, VT));
     }
     if (Op.getOpcode() == ISD::SRA) {
+      // ashr(R, 1) === xor(avgceilu(R,-1),and(not(R),MIN_SIGNED))
+      if (ShiftAmt == 1) {
+        R = DAG.getFreeze(R);
+        SDValue AllOnes = DAG.getAllOnesConstant(dl, VT);
+        SDValue Avg = DAG.getNode(ISD::AVGCEILU, dl, VT, R, AllOnes);
+        SDValue Not = DAG.getNode(ISD::XOR, dl, VT, R, AllOnes);
+        SDValue Hi =
+            DAG.getNode(ISD::AND, dl, VT, Not, DAG.getConstant(0x80, dl, VT));
+        return DAG.getNode(ISD::XOR, dl, VT, Avg, Hi);
+      }
       // ashr(R, Amt) === sub(xor(lshr(R, Amt), Mask), Mask)
       SDValue Res = DAG.getNode(ISD::SRL, dl, VT, R, Amt);
 
@@ -62242,6 +62252,65 @@ static SDValue combineKSHIFT(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Reassociates AND by splat to other operand when profitable.
+// Equivalent as removing the same bit within each matrix's row acts like the
+// corresponding source bit is zero.
+static SDValue combineAndOnGF2P8AFFINEQBOperand(SDNode *N, const SDLoc &DL,
+                                                SelectionDAG &DAG, EVT VT) {
+  using namespace SDPatternMatch;
+
+  SDValue X, Y, AndOp, SplatOp;
+  APInt Imm, SplatVal, ConstUndef;
+  SmallVector<APInt> ConstEltBits;
+
+  // TODO: Add reverse fold when X is constant
+  // Fold GF2P8AFFINEQB(x & Splat(C), M, Imm)
+  //  --> GF2P8AFFINEQB(x, M & Splat(C), Imm)
+  if (sd_match(N, m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(AndOp), m_Value(Y),
+                              m_ConstInt(Imm))) &&
+      sd_match(AndOp, m_And(m_Value(X), m_Value(SplatOp))) &&
+      getTargetConstantBitsFromNode(Y, Y.getScalarValueSizeInBits(), ConstUndef,
+                                    ConstEltBits, /*AllowWholeUndefs=*/false)) {
+    bool SplatIsConst =
+        X86::isConstantSplat(SplatOp, SplatVal, /*AllowPartialUndefs=*/false);
+
+    // Can still shorten the chain when constant folded with the matrix
+    if (!AndOp->hasOneUse() && !SplatIsConst)
+      return SDValue();
+
+    if (!(SplatIsConst || DAG.isSplatValue(SplatOp, /*AllowUndefs=*/false)) ||
+        SplatOp.getScalarValueSizeInBits() != 8)
+      return SDValue();
+
+    // ANDs with constants are not folded away this far into lowering
+    SDValue NewMatrix;
+    if (!SplatIsConst) {
+      NewMatrix = DAG.getNode(ISD::AND, DL, VT, SplatOp, Y);
+    } else {
+      SmallVector<SDValue> FoldedAnd;
+      for (APInt &Elt : ConstEltBits)
+        FoldedAnd.push_back(DAG.getConstant(SplatVal & Elt, DL, MVT::i8));
+
+      NewMatrix = DAG.getBuildVector(VT, DL, FoldedAnd);
+    }
+
+    return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X, NewMatrix,
+                       DAG.getTargetConstant(Imm, DL, MVT::i8));
+  }
+
+  return SDValue();
+}
+
+static SDValue combineGF2P8AFFINEQB(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  SDLoc dl(N);
+
+  if (SDValue R = combineAndOnGF2P8AFFINEQBOperand(N, dl, DAG, VT))
+    return R;
+
+  return SDValue();
+}
+
 // Optimize (fp16_to_fp (fp_to_fp16 X)) to VCVTPS2PH followed by VCVTPH2PS.
 // Done as a combine because the lowering for fp16_to_fp and fp_to_fp16 produce
 // extra instructions between the conversion due to going to scalar and back.
@@ -62841,6 +62910,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VPMADD52H:    return combineVPMADD52LH(N, DAG, DCI);
   case X86ISD::KSHIFTL:
   case X86ISD::KSHIFTR:     return combineKSHIFT(N, DAG, DCI);
+  case X86ISD::GF2P8AFFINEQB:  return combineGF2P8AFFINEQB(N, DAG);
   case ISD::FP16_TO_FP:     return combineFP16_TO_FP(N, DAG, Subtarget);
   case ISD::STRICT_FP_EXTEND:
   case ISD::FP_EXTEND:      return combineFP_EXTEND(N, DAG, DCI, Subtarget);
