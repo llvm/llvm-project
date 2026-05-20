@@ -20,6 +20,8 @@
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -40,10 +42,13 @@ struct TestLinalgTransforms
   void getDependentDialects(DialectRegistry &registry) const override {
     // clang-format off
     registry.insert<affine::AffineDialect,
+                    arith::ArithDialect,
                     bufferization::BufferizationDialect,
+                    math::MathDialect,
                     memref::MemRefDialect,
                     scf::SCFDialect,
                     linalg::LinalgDialect,
+                    tensor::TensorDialect,
                     vector::VectorDialect,
                     gpu::GPUDialect>();
     // clang-format on
@@ -130,6 +135,14 @@ struct TestLinalgTransforms
       *this, "test-decompose-local-softmax",
       llvm::cl::desc("Test decompose local_softmax op"),
       llvm::cl::init(false)};
+  Option<bool> testOnlineSoftmaxRewrite{
+      *this, "test-online-softmax-rewrite",
+      llvm::cl::desc("Test rewrite of softmax+matmul to online softmax"),
+      llvm::cl::init(false)};
+  Option<int64_t> onlineSoftmaxTileSize{
+      *this, "online-softmax-tile-size",
+      llvm::cl::desc("Tile size for online softmax rewrite"),
+      llvm::cl::init(32)};
   Option<bool> testFoldIntoPackAndUnpack{
       *this, "test-fold-into-pack-and-unpack",
       llvm::cl::desc("Test folding ops into linalg.pack and linalg.unpack"),
@@ -242,6 +255,14 @@ static void applyDecomposeLocalSoftmax(func::FuncOp funcOp) {
   });
 }
 
+static void applyOnlineSoftmaxRewrite(func::FuncOp funcOp,
+                                       int64_t tileSize) {
+  MLIRContext *ctx = funcOp.getContext();
+  RewritePatternSet patterns(ctx);
+  linalg::populateOnlineSoftmaxPatterns(patterns, tileSize);
+  (void)applyPatternsGreedily(funcOp, std::move(patterns));
+}
+
 static void applyFoldIntoPackAndUnpackPatterns(
     Operation *rootOp,
     const linalg::ControlFoldIntoPackUnpackFn &controlFn = nullptr) {
@@ -284,6 +305,8 @@ void TestLinalgTransforms::runOnOperation() {
     return applyDecomposeWinogradOps(getOperation());
   if (testDecomposeLocalSoftmax)
     return applyDecomposeLocalSoftmax(getOperation());
+  if (testOnlineSoftmaxRewrite)
+    return applyOnlineSoftmaxRewrite(getOperation(), onlineSoftmaxTileSize);
   Operation *rootOp = getOperation();
   if (testFoldIntoPackAndUnpack)
     applyFoldIntoPackAndUnpackPatterns(rootOp);
