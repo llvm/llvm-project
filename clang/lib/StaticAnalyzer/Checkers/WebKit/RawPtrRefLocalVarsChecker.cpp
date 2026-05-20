@@ -297,8 +297,6 @@ public:
         std::optional<bool> IsUncountedPtr = isUnsafePtr(Binding->getType());
         if (!IsUncountedPtr || !*IsUncountedPtr)
           continue;
-        if (isPtrOriginSafe(V, Binding))
-          return;
         reportBug(V, nullptr, BD, DeclWithIssue);
       }
     }
