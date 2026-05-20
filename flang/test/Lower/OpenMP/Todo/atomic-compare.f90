@@ -4,7 +4,7 @@
 program p
   integer :: x
   logical :: r
-  !$omp atomic compare fail(relaxed)
+  !$omp atomic compare
   if (x .eq. 0) then
      x = 2
   end if
