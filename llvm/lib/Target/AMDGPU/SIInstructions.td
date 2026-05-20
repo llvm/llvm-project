@@ -1329,6 +1329,11 @@ def SI_PC_ADD_REL_OFFSET64 : SPseudoInstSI <
   let SubtargetPredicate = Has64BitLiterals;
 }
 
+def : GCNPat<
+  (p0 blockaddress:$ba),
+  (SI_PC_ADD_REL_OFFSET64 $ba)
+>;
+
 let SubtargetPredicate = HasSmemPrefetchInsts in {
   def : GCNPat <
     (int_amdgcn_s_prefetch_inst (i64 tblockaddress:$ptr), imm:$len),

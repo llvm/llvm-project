@@ -919,6 +919,13 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       return InsnMatcher;
     }
 
+    if (SrcGIOrNull->getName() == "G_BLOCK_ADDR") {
+      // Name operand of G_BLOCK_ADDR so it can be referenced in the destination
+      // pattern.
+      InsnMatcher.addOperand(OpIdx++, Src.getName().str(), TempOpIdx);
+      return InsnMatcher;
+    }
+
     // Special case because the operand order is changed from setcc. The
     // predicate operand needs to be swapped from the last operand to the first
     // source.

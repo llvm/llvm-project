@@ -140,7 +140,6 @@ private:
   bool selectG_SELECT(MachineInstr &I) const;
   bool selectG_BRCOND(MachineInstr &I) const;
   bool selectG_GLOBAL_VALUE(MachineInstr &I) const;
-  bool selectG_BLOCK_ADDR(MachineInstr &I) const;
   bool selectG_PTRMASK(MachineInstr &I) const;
   bool selectG_EXTRACT_VECTOR_ELT(MachineInstr &I) const;
   bool selectG_INSERT_VECTOR_ELT(MachineInstr &I) const;
