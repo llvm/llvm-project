@@ -366,7 +366,7 @@ void SymbolDocCommentVisitor::preprocessDocumentation(StringRef Doc) {
   // which would break the parsing if we would just enclose the comment text
   // with "/** */".
 
-  // Escape doxygen commands inside markdown inline code spans.
+  // Escape doxygen commands inside multi-line markdown inline code spans.
   // This is required to not let the doxygen parser interpret them as
   // commands.
   // Note: This is a heuristic which may fail in some cases.
@@ -436,11 +436,32 @@ void SymbolDocCommentVisitor::preprocessDocumentation(StringRef Doc) {
       // command. To avoid this, we add a space before the '<'.
       OS << ' ';
 
-    for (char C : Line) {
-      if (C == '`')
-        InCodeSpan = !InCodeSpan;
-      else if (InCodeSpan && (C == '@' || C == '\\'))
+    for (size_t Idx = 0, End = Line.size(); Idx != End; ++Idx) {
+      char C = Line[Idx];
+
+      if (C == '`') {
+        if (!InCodeSpan) {
+          // Explicitly skip escaping for balanced inline code spans.
+          // If we see a backtick, find a balanced closing backtick and
+          // output the entire escaped substring. However, if we don't
+          // find an ending backtick, this is a code span that spans
+          // multiple lines and should still be escaped.
+          size_t Close = Line.find('`', Idx + 1);
+          if (Close != llvm::StringRef::npos) {
+            OS << Line.substr(Idx, Close - Idx + 1);
+            Idx = Close;
+            continue;
+          }
+
+          InCodeSpan = true;
+        } else {
+          InCodeSpan = false;
+        }
+      }
+
+      if (InCodeSpan && (C == '@' || C == '\\'))
         OS << '\\';
+
       OS << C;
     }
 
