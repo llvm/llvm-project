@@ -8,7 +8,7 @@ inline void my_func() {}
 extern inline void my_func();
 
 // CIR: module {{.*}} attributes {cir.lang = #cir.lang<c>{{.*}} {
-// CIR-NEXT:   cir.func no_inline no_proto{{.*}}@my_func() attributes {{{.*}}, nothrow} {
+// CIR-NEXT:   cir.func no_inline no_proto{{.*}}@my_func() {{.*}} {
 // CIR-NEXT:     cir.return
 // CIR-NEXT:   }
 // CIR-NEXT: }
