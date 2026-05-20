@@ -11,7 +11,6 @@
 #include "clang/Sema/SemaSYCL.h"
 #include "TreeTransform.h"
 #include "clang/AST/Mangle.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/SubobjectVisitor.h"
 #include "clang/AST/SYCLKernelInfo.h"
 #include "clang/AST/StmtSYCL.h"
@@ -670,31 +669,52 @@ OutlinedFunctionDecl *BuildSYCLKernelEntryPointOutline(Sema &SemaRef,
 class KernelArgsChecker : public SubobjectVisitor<KernelArgsChecker> {
   SemaSYCL &SemaSYCLRef;
   bool IsValid = true;
-  SmallVector<const CXXRecordDecl *, 4> History;
+  using SubobjectAccess = llvm::PointerUnion<CXXBaseSpecifier *, FieldDecl *>;
+  SmallVector<SubobjectAccess, 4> SubobjectAccessPath;
 
 public:
   KernelArgsChecker(SemaSYCL &SR, SourceLocation Loc)
       : SubobjectVisitor<KernelArgsChecker>(SR.getASTContext()),
         SemaSYCLRef(SR) {}
-  bool enterRecord(CXXRecordDecl *Record, FieldDecl *Parent) {
-    History.push_back(Record);
-    return getDerived().visitRecord(Record, Parent);
+
+  bool visitBaseSpecifierPre(CXXBaseSpecifier BS) {
+    SubobjectAccessPath.push_back(&BS);
+    return true;
   }
 
-  bool visitReferenceType(QualType Ty, FieldDecl *Parent) {
-    SemaSYCLRef.Diag(Parent->getLocation(), diag::err_bad_kernel_param_type)
-        << Ty;
-    for (auto &ParentRecord : History)
-      SemaSYCLRef.Diag(ParentRecord->getLocation(),
-                       diag::note_within_field_of_type)
-          << ParentRecord;
+  bool visitFieldDeclPre(FieldDecl *FD) {
+    SubobjectAccessPath.push_back(FD);
+    return true;
+  }
+
+  bool visitReferenceType(const ReferenceType *RT) {
+
+    // Reference cannot be a base, so just assume we came via a FieldDecl.
+    auto *DirectParent = SubobjectAccessPath.back().get<FieldDecl *>();
+    SemaSYCLRef.Diag(DirectParent->getLocation(),
+                     diag::err_bad_kernel_param_type)
+        << DirectParent->getType();
+
+    for (auto Parent : SubobjectAccessPath) {
+      if (auto *FD = Parent.dyn_cast<FieldDecl *>()) {
+        SemaSYCLRef.Diag(FD->getParent()->getLocation(),
+                         diag::note_within_field_of_type)
+            << FD->getParent();
+      } else {
+        auto *BS = Parent.get<CXXBaseSpecifier *>();
+        CXXRecordDecl *RD = BS->getType()->getAsCXXRecordDecl();
+        assert(RD);
+        SemaSYCLRef.Diag(RD->getLocation(), diag::note_within_base_of_type)
+            << RD;
+      }
+    }
     IsValid = false;
     return true;
   }
 
-  bool leaveRecord(CXXRecordDecl *Record, FieldDecl *Parent) {
-    History.pop_back();
-    return true;
+  void visitFieldDeclPost(FieldDecl *FD) { SubobjectAccessPath.pop_back(); }
+  void visitBaseSpecifierPost(CXXBaseSpecifier BS) {
+    SubobjectAccessPath.pop_back();
   }
 
   bool isInvalid() { return !IsValid; }

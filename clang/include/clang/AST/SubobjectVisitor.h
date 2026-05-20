@@ -17,124 +17,113 @@
 #include "clang/AST/Type.h"
 
 namespace clang {
-template <typename Derived> class SubobjectVisitor {
-  ASTContext &Ctx;
 
-  public:
-  SubobjectVisitor(ASTContext &Ctx) : Ctx(Ctx) {}
+#define DISPATCH(CLASS)                                                        \
+  return static_cast<Derived *>(this)->visit##CLASS(                           \
+      static_cast<const CLASS *>(T))
+
+template <template <typename> class Ptr, typename Derived>
+class SubobjectVisitorBase {
+  ASTContext &Ctx;
+  template <typename Class> using ptr_t = typename Ptr<Class>::type;
+  template <typename Class>
+  using non_ptr_t = typename std::remove_pointer<ptr_t<Class>>::type;
+
+public:
+  SubobjectVisitorBase(ASTContext &Ctx) : Ctx(Ctx) {}
+
   /// Return a reference to the derived class.
   Derived &getDerived() { return *static_cast<Derived *>(this); }
 
-  bool enterRecord(CXXRecordDecl *Record, FieldDecl *Parent) {
-    return getDerived().visitRecord(Record, Parent);
-  }
+  void visit(QualType QT) {
+    // If the type is an array, visit its element type. Separate traversal of
+    // arrays is not needed because the array will be encountered as a
+    // FieldDecl.
 
-  bool leaveRecord(CXXRecordDecl *Record, FieldDecl *Parent) {
-    return true;
-  }
-
-  bool enterUnion(CXXRecordDecl *Record, FieldDecl *Parent) {
-    return getDerived().visitUnion(Record, Parent);
-  }
-
-  bool enterArray(QualType ArrayTy, FieldDecl *Parent) {
-    return getDerived().visitArrayTy(ArrayTy, Parent);
-  }
-
-  bool visitRecord(CXXRecordDecl *Record, FieldDecl *Parent) {
-    return true;
-  }
-
-  bool visitUnion(CXXRecordDecl *Record, FieldDecl *Parent) {
-    return true;
-  }
-
-  bool visitReferenceType(QualType Ty, FieldDecl *Parent) {
-    return true;
-  }
-
-  bool visitPointerType(QualType Ty, FieldDecl *Parent) {
-    return true;
-  }
-
-  bool visitScalarType(QualType Ty, FieldDecl *Parent) {
-    return true;
-  }
-
-  bool visitOtherType(QualType Ty, FieldDecl *Parent) {
-    return true;
-  }
-
-  bool visitArrayTy(QualType Ty, FieldDecl *Parent) {
-    return true;
-  }
-
-  bool traverseRecord(CXXRecordDecl *Record) {
-    FieldDecl* Parent = nullptr;
-    getDerived().traverseRecord(Record, Parent);
-    return true;
-  }
-
-  bool traverseRecord(CXXRecordDecl *Record, FieldDecl *Parent) {
-    getDerived().enterRecord(Record, Parent);
-
-    for (const auto &Base : Record->bases()) {
-      QualType BaseTy = Base.getType();
-      getDerived().traverseType(BaseTy, Parent);
-    }
-    for (const auto Field : Record->fields()) {
-      QualType FieldTy = Field->getType();
-      getDerived().traverseType(FieldTy, Field);
+    if (QT->isArrayType()) {
+      QualType ElTy =
+          cast<ConstantArrayType>(Ctx.getAsArrayType(QT))->getElementType();
+      visit(ElTy);
+      return;
     }
 
-    getDerived().leaveRecord(Record, Parent);
-    return true;
-  }
-
-  bool traverseUnion(CXXRecordDecl *Record, FieldDecl *Parent) {
-    getDerived().enterUnion(Record, Parent);
-
-    for (const auto Field : Record->fields()) {
-      QualType FieldTy = Field->getType();
-      getDerived().traverseType(FieldTy, Field);
+    if (ptr_t<RecordDecl> RD = QT->getAsRecordDecl()) {
+      traverseRecord(RD);
+      return;
     }
-    return true;
+
+    visitGenericType(QT.getTypePtr());
   }
 
-  bool traverseArray(QualType Ty, FieldDecl *Parent) {
-    getDerived().enterArray(Ty, Parent);
-    const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(Ty);
-    if (!CAT)
-      return true;
-
-    QualType ET = CAT->getElementType();
-    uint64_t ElemCount = CAT->getSize().getZExtValue();
-    for (uint64_t Index = 0; Index < ElemCount; ++Index)
-      getDerived().traverseType(ET, Parent);
-
-    return true;
+  void traverseRecord(ptr_t<RecordDecl> RD) {
+    if (ptr_t<CXXRecordDecl> CRD = dyn_cast<CXXRecordDecl>(RD)) {
+      for (non_ptr_t<CXXBaseSpecifier> BS : CRD->bases()) {
+        if (!static_cast<Derived *>(this)->visitBaseSpecifierPre(BS))
+          continue;
+        visit(BS.getType());
+        static_cast<Derived *>(this)->visitBaseSpecifierPost(BS);
+      }
+    }
+    for (ptr_t<FieldDecl> FD : RD->fields()) {
+      if (!static_cast<Derived *>(this)->visitFieldDeclPre(FD))
+        continue;
+      visit(FD->getType());
+      static_cast<Derived *>(this)->visitFieldDeclPost(FD);
+    }
   }
 
-  bool traverseType(QualType Ty, FieldDecl *Parent) {
-    if (Ty->isStructureOrClassType()) {
-      CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
-      getDerived().traverseRecord(RD, Parent);
-    } else if (Ty->isUnionType()) {
-      CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
-      getDerived().traverseUnion(RD, Parent);
-    } else if (Ty->isReferenceType())
-      getDerived().visitReferenceType(Ty, Parent);
-    else if (Ty->isPointerType())
-      getDerived().visitPointerType(Ty, Parent);
-    else if (Ty->isArrayType())
-      getDerived().traverseArray(Ty, Parent);
-    else if (Ty->isScalarType() || Ty->isVectorType())
-      getDerived().visitScalarType(Ty, Parent);
-    else
-      getDerived().visitOtherType(Ty, Parent);
-    return true;
+  // Default base class specifier pre-order visitor.
+  bool visitBaseSpecifierPre(non_ptr_t<CXXBaseSpecifier> BS) { return true; }
+
+  // Default base class specifier post-order visitor.
+  void visitBaseSpecifierPost(non_ptr_t<CXXBaseSpecifier> BS) {}
+
+  // Default field pre-order visitor.
+  bool visitFieldDeclPre(ptr_t<FieldDecl> FD) { return true; }
+
+  // Default field post-order visitor.
+  void visitFieldDeclPost(ptr_t<FieldDecl> FD) {}
+  bool visitGenericType(const Type *T) {
+    // Top switch stmt: dispatch to VisitFooType for each FooType.
+    switch (T->getTypeClass()) {
+#define ABSTRACT_TYPE(CLASS, PARENT)
+#define TYPE(CLASS, PARENT)                                                    \
+  case Type::CLASS:                                                            \
+    DISPATCH(CLASS##Type);
+#include "clang/AST/TypeNodes.inc"
+    }
+    llvm_unreachable("Unknown type class!");
   }
 
+  // If the implementation chooses not to implement a certain visit method, fall
+  // back on superclass.
+#define TYPE(CLASS, PARENT)                                                    \
+  bool visit##CLASS##Type(const CLASS##Type *T) { DISPATCH(PARENT); }
+#include "clang/AST/TypeNodes.inc"
+
+  /// Method called if \c ImpClass doesn't provide specific handler
+  /// for some type class.
+  bool visitType(const Type *) { return true; }
 };
+
+template <typename Derived>
+class SubobjectVisitor
+    : public SubobjectVisitorBase<std::add_pointer, Derived> {
+public:
+  SubobjectVisitor(ASTContext &Ctx)
+      : SubobjectVisitorBase<std::add_pointer, Derived>(Ctx) {}
+};
+
+template <typename Derived>
+class ConstSubobjectVisitor
+    : public SubobjectVisitorBase<llvm::make_const_ptr, Derived> {
+public:
+  ConstSubobjectVisitor(ASTContext &Ctx)
+      : SubobjectVisitorBase<std::add_pointer, Derived>(Ctx) {}
+};
+
+#undef DISPATCH
+
 } // end namespace clang
+
 #endif // LLVM_CLANG_AST_SUBOBJECTVISITOR

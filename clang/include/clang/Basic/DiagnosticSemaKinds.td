@@ -11804,6 +11804,8 @@ def err_record_with_pointers_kernel_param : Error<
   "%select{struct|union}0 kernel parameters may not contain pointers">;
 def note_within_field_of_type : Note<
   "within field of type %0 declared here">;
+def note_within_base_of_type : Note<
+  "within base of type %1 declared here">;
 def note_illegal_field_declared_here : Note<
   "field of illegal %select{type|pointer type}0 %1 declared here">;
 def err_opencl_type_struct_or_union_field : Error<
