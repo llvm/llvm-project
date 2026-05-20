@@ -86,14 +86,14 @@ void writeConfigToJSON(InstrumentationConfig &IConf, StringRef OutputFile,
 
     J.attributeBegin(InstrumentationLocation::getKindStr(Kind));
     J.objectBegin();
-    for (auto &ChoiceIt : KindChoices) {
-      J.attributeBegin(ChoiceIt.getKey());
+    for (auto &[Name, Choice] : KindChoices) {
+      J.attributeBegin(Name);
       J.objectBegin();
-      J.attribute("enabled", ChoiceIt.second->Enabled);
-      J.attribute("filter", ChoiceIt.second->Filter);
+      J.attribute("enabled", Choice->Enabled);
+      J.attribute("filter", Choice->Filter);
       J.attribute("filter.description",
                   "Static property filter to exclude instrumentation.");
-      for (auto &ArgIt : ChoiceIt.second->IRTArgs) {
+      for (auto &ArgIt : Choice->IRTArgs) {
         J.attribute(ArgIt.Name, ArgIt.Enabled);
         if ((ArgIt.Flags & IRTArg::REPLACABLE) ||
             (ArgIt.Flags & IRTArg::REPLACABLE_CUSTOM))
@@ -200,7 +200,8 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
             "malformed JSON configuration, expected an object", DS_Warning));
         continue;
       }
-      auto *IO = IChoiceMap.lookup(ObjIt.first);
+      auto *ChoiceIt = IChoiceMap.find(ObjIt.first);
+      auto *IO = (ChoiceIt != IChoiceMap.end()) ? ChoiceIt->second : nullptr;
       if (!IO) {
         Ctx.diagnose(DiagnosticInfoInstrumentation(
             Twine("malformed JSON configuration, expected an object matching "

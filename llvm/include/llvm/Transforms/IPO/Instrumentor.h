@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EnumeratedArray.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -447,7 +448,7 @@ struct InstrumentationConfig {
   /// the instrumentation location kind and then by the opportunity name. Notice
   /// that an instrumentation location may have more than one instrumentation
   /// opportunity registered.
-  EnumeratedArray<StringMap<InstrumentationOpportunity *>,
+  EnumeratedArray<MapVector<StringRef, InstrumentationOpportunity *>,
                   InstrumentationLocation::KindTy>
       IChoices;
 
