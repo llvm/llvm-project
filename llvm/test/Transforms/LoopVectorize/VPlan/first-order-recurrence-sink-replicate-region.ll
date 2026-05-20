@@ -270,7 +270,7 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    BLEND vp<[[VP10:%[0-9]+]]> = ir<%and.red> ir<%and.red.next>/vp<[[VP6]]>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = select vp<[[VP6]]>, ir<%and.red.next>, ir<%and.red>
 ; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (and) vp<[[VP10]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:

@@ -5708,9 +5708,9 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     VPValue *BackedgeVal = PhiR->getBackedgeValue();
     auto *FindLastSelect = cast<VPSingleDefRecipe>(BackedgeVal);
     if (HeaderMask &&
-        !match(BackedgeVal, m_SelectLike(m_Specific(HeaderMask),
-                                         m_VPSingleDefRecipe(FindLastSelect),
-                                         m_Specific(PhiR))))
+        !match(BackedgeVal,
+               m_Select(m_Specific(HeaderMask),
+                        m_VPSingleDefRecipe(FindLastSelect), m_Specific(PhiR))))
       continue;
 
     // Get the find-last expression from the find-last select of the reduction
@@ -6075,9 +6075,9 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   // Check if WidenRecipe is the final result of the reduction. If so look
   // through selects for predicated reductions.
   VPValue *Cond = nullptr;
-  VPValue *ExitValue = cast_or_null<VPSingleDefRecipe>(vputils::findUserOf(
-      WidenRecipe, m_SelectLike(m_VPValue(Cond), m_Specific(WidenRecipe),
-                                m_Specific(RdxPhi))));
+  VPValue *ExitValue = cast_or_null<VPInstruction>(vputils::findUserOf(
+      WidenRecipe,
+      m_Select(m_VPValue(Cond), m_Specific(WidenRecipe), m_Specific(RdxPhi))));
   bool IsLastInChain = RdxPhi->getBackedgeValue() == WidenRecipe ||
                        RdxPhi->getBackedgeValue() == ExitValue;
   assert((!ExitValue || IsLastInChain) &&
@@ -6314,8 +6314,7 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
   if (!RdxResult)
     return std::nullopt;
   VPValue *ExitValue = RdxResult->getOperand(0);
-  match(ExitValue,
-        m_SelectLike(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
+  match(ExitValue, m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
 
   VPTypeAnalysis &TypeInfo = CostCtx.Types;
   SmallVector<VPPartialReductionChain> Chain;
@@ -6450,9 +6449,8 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
         return Chain.ScaleFactor == ScaledReductionMap.lookup_or(R, 0) ||
                match(R, m_ComputeReductionResult(
                             m_Specific(Chain.ReductionBinOp))) ||
-               match(R,
-                     m_SelectLike(m_VPValue(), m_Specific(Chain.ReductionBinOp),
-                                  m_Specific(RedPhiR)));
+               match(R, m_Select(m_VPValue(), m_Specific(Chain.ReductionBinOp),
+                                 m_Specific(RedPhiR)));
       };
       if (!all_of(Chain.ReductionBinOp->users(), UseIsValid)) {
         Chains.clear();
