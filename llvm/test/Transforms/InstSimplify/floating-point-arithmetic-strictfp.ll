@@ -514,6 +514,33 @@ define float @maxnum_with_pos_one_op(float %a) #0 {
   ret float %fabs
 }
 
+define float @fmul_unity(float %x) #0 {
+; CHECK-LABEL: @fmul_unity(
+; CHECK-NEXT:    [[FMUL:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[X:%.*]], float 1.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret float [[X]]
+;
+  %fmul = call float @llvm.experimental.constrained.fmul.f32(float %x, float 1.0, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret float %fmul
+}
+
+define float @fmul_unity_signaling(float %x) #1 {
+; CHECK-LABEL: @fmul_unity_signaling(
+; CHECK-NEXT:    [[FMUL:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[X:%.*]], float 1.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = call float @llvm.experimental.constrained.fmul.f32(float %x, float 1.0, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret float %fmul
+}
+
+define float @fmul_unity_signaling_nnan(float %x) #1 {
+; CHECK-LABEL: @fmul_unity_signaling_nnan(
+; CHECK-NEXT:    [[FMUL:%.*]] = call nnan float @llvm.experimental.constrained.fmul.f32(float [[X:%.*]], float 1.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret float [[X]]
+;
+  %fmul = call nnan float @llvm.experimental.constrained.fmul.f32(float %x, float 1.0, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret float %fmul
+}
+
 declare float @llvm.fabs.f32(float)
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
 
@@ -532,3 +559,4 @@ declare float @llvm.experimental.constrained.maxnum.f32(float, float, metadata)
 declare float @llvm.experimental.constrained.sqrt.f32(float, metadata, metadata)
 
 attributes #0 = { strictfp }
+attributes #1 = { signaling_nans strictfp }

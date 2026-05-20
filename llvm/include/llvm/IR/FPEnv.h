@@ -80,11 +80,5 @@ LLVM_ABI Intrinsic::ID getConstrainedIntrinsicID(const Instruction &Instr);
 inline bool canRoundingModeBe(RoundingMode RM, RoundingMode QRM) {
   return RM == QRM || RM == RoundingMode::Dynamic;
 }
-
-/// Returns true if the possibility of a signaling NaN can be safely
-/// ignored.
-inline bool canIgnoreSNaN(fp::ExceptionBehavior EB, FastMathFlags FMF) {
-  return (EB == fp::ebIgnore || FMF.noNaNs());
-}
 }
 #endif
