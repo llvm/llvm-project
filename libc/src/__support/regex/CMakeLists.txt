@@ -1,0 +1,12 @@
+add_object_library(
+  regex_expr_pool
+  SRCS
+    regex_expr_pool.cpp
+  HDRS
+    regex_expr_pool.h
+    regex_ast.h
+  DEPENDS
+    libc.src.__support.CPP.new
+    libc.src.__support.hash
+    libc.src.__support.macros.config
+)
