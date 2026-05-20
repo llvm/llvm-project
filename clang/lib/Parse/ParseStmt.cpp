@@ -1286,19 +1286,17 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
                                     /*MissingOK=*/false);
   }
 
-  if (getLangOpts().C99) {
+  if (!getLangOpts().CPlusPlus) {
     if (InitStmt != nullptr && InitStmt->isUsable()) {
-      // handle the 2 clauses of declaration: (clause1; clause2)
-      if (InitStmt->get()->getStmtClass() != Stmt::DeclStmtClass)
-        // C2y only permits declaration in the first clause of an if condition,
-        // so it makes sense to error out in other conditions.
+      // Handle the 2 clauses of declaration: (clause1; clause2).
+      if (!isa<DeclStmt>(InitStmt->get()))
+        // C2y only permits declaration in the first clause of an if condition.
         Diag(InitStmt->get()->getBeginLoc(),
              diag::err_c2y_first_condition_clause_is_not_declaration)
             << InitStmt->get()->getSourceRange();
 
       if (Cond.get().first != nullptr)
-        // C2y only permits expression in the second clause of an if condition,
-        // so it makes sense to error out in other conditions.
+        // C2y only permits expression in the second clause of an if condition.
         Diag(Cond.get().first->getBeginLoc(), diag::err_expected_expression)
             << Cond.get().first->getSourceRange();
     } else if (Cond.get().first != nullptr)
