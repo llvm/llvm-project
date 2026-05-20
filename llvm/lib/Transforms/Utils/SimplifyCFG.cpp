@@ -7587,8 +7587,8 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
     unsigned Shift;
   };
 
-  auto TryGetRangeReductionForBase = [&](int64_t CandidateBase)
-      -> std::optional<RangeReduction> {
+  auto TryGetRangeReductionForBase =
+      [&](int64_t CandidateBase) -> std::optional<RangeReduction> {
     SmallVector<int64_t, 4> ReducedValues;
     ReducedValues.reserve(Values.size());
     uint64_t ReducedBits = 0;
