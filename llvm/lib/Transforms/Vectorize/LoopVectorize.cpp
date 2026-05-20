@@ -3030,13 +3030,13 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       MaxPowerOf2RuntimeVF = std::nullopt; // Stick with tail-folding for now.
   }
 
-  auto NoScalarEpilogueNeeded = [this, &UserIC](unsigned MaxVF) {
+  auto NoScalarEpilogueNeeded = [this](unsigned MaxVF, unsigned EffectiveIC) {
     // Return false if the loop is neither a single-latch-exit loop nor an
     // early-exit loop as tail-folding is not supported in that case.
     if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch() &&
         !Legal->hasUncountableEarlyExit())
       return false;
-    unsigned MaxVFtimesIC = UserIC ? MaxVF * UserIC : MaxVF;
+    unsigned MaxVFtimesIC = MaxVF * EffectiveIC;
     ScalarEvolution *SE = PSE.getSE();
     // Calling getSymbolicMaxBackedgeTakenCount enables support for loops
     // with uncountable exits. For countable loops, the symbolic maximum must
@@ -3053,10 +3053,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     return Rem->isZero();
   };
 
+  unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
   if (MaxPowerOf2RuntimeVF > 0u) {
     assert((UserVF.isNonZero() || isPowerOf2_32(*MaxPowerOf2RuntimeVF)) &&
            "MaxFixedVF must be a power of 2");
-    if (NoScalarEpilogueNeeded(*MaxPowerOf2RuntimeVF)) {
+    if (NoScalarEpilogueNeeded(*MaxPowerOf2RuntimeVF, EffectiveIC)) {
       // Accept MaxFixedVF if we do not have a tail.
       LLVM_DEBUG(dbgs() << "LV: No tail will remain for any chosen VF.\n");
       return MaxFactors;
@@ -3064,7 +3065,6 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   }
 
   auto ExpectedTC = getSmallBestKnownTC(PSE, TheLoop);
-  unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
   auto HasOneScalarIterationRemainder =
       [EffectiveIC](ElementCount &ExactTC, unsigned int MaxVF) -> bool {
     return ExactTC.getFixedValue() == 1 + (MaxVF * EffectiveIC);
@@ -3077,7 +3077,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       // the trip count but the scalable factor does not, use the fixed-width
       // factor in preference to allow the generation of a non-predicated loop.
       if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
-          NoScalarEpilogueNeeded(MaxFactors.FixedVF.getFixedValue())) {
+          NoScalarEpilogueNeeded(MaxFactors.FixedVF.getFixedValue(), EffectiveIC)) {
         LLVM_DEBUG(dbgs() << "LV: Picking a fixed-width so that no tail will "
                              "remain for any chosen VF.\n");
         MaxFactors.ScalableVF = ElementCount::getScalable(0);
