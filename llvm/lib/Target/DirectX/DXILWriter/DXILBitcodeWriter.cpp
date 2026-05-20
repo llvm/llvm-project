@@ -2615,13 +2615,15 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
         {DebugInfo.VRename.lookup_or(V, V)->getValueName(), V});
   }
   // The keys are unique, so there shouldn't be stability issues.
-  llvm::sort(SortedTable, [](const auto &A, const auto &B) {
-    return A.first->first() < B.first->first();
-  });
+  llvm::sort(SortedTable,
+             [](const std::pair<const ValueName *, const Value *> &A,
+                const std::pair<const ValueName *, const Value *> &B) {
+               return A.first->first() < B.first->first();
+             });
 
-  for (auto &SI : SortedTable) {
-    auto &Name = *SI.first;
-    auto *Value = SI.second;
+  for (std::pair<const ValueName *, const Value *> &SI : SortedTable) {
+    const ValueName *Name = *SI.first;
+    const Value *Value = SI.second;
 
     // Figure out the encoding to use for the name.
     bool is7Bit = true;
