@@ -1157,7 +1157,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0(ptr addrspa
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e32 v2, -1.0, v2
+; SI-GISEL-NEXT:    v_max_f32_e64 v2, -v2, -v2
 ; SI-GISEL-NEXT:    v_med3_f32 v2, v2, v3, v4
 ; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[10:11]
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
@@ -1347,7 +1347,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod1(ptr addrspa
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e32 v3, -1.0, v3
+; SI-GISEL-NEXT:    v_max_f32_e64 v3, -v3, -v3
 ; SI-GISEL-NEXT:    v_med3_f32 v2, v2, v3, v4
 ; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[10:11]
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
@@ -1537,7 +1537,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod2(ptr addrspa
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e32 v4, -1.0, v4
+; SI-GISEL-NEXT:    v_max_f32_e64 v4, -v4, -v4
 ; SI-GISEL-NEXT:    v_med3_f32 v2, v2, v3, v4
 ; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[10:11]
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
@@ -1727,8 +1727,8 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod012(ptr addrs
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e32 v2, -1.0, v2
-; SI-GISEL-NEXT:    v_mul_f32_e64 v4, -1.0, |v4|
+; SI-GISEL-NEXT:    v_max_f32_e64 v2, -v2, -v2
+; SI-GISEL-NEXT:    v_max_f32_e64 v4, -|v4|, -|v4|
 ; SI-GISEL-NEXT:    v_med3_f32 v2, v2, |v3|, v4
 ; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[10:11]
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
@@ -1927,9 +1927,9 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_negabs012(ptr addrs
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e64 v2, -1.0, |v2|
-; SI-GISEL-NEXT:    v_mul_f32_e64 v3, -1.0, |v3|
-; SI-GISEL-NEXT:    v_mul_f32_e64 v4, -1.0, |v4|
+; SI-GISEL-NEXT:    v_max_f32_e64 v2, -|v2|, -|v2|
+; SI-GISEL-NEXT:    v_max_f32_e64 v3, -|v3|, -|v3|
+; SI-GISEL-NEXT:    v_max_f32_e64 v4, -|v4|, -|v4|
 ; SI-GISEL-NEXT:    v_med3_f32 v2, v2, v3, v4
 ; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[10:11]
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
@@ -3080,7 +3080,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat1_srcmod0(ptr addrspa
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e32 v2, -1.0, v2
+; SI-GISEL-NEXT:    v_max_f32_e64 v2, -v2, -v2
 ; SI-GISEL-NEXT:    v_med3_f32 v2, v2, v3, v4
 ; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[10:11]
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
@@ -5537,9 +5537,9 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(ptr addrspace(1)
 ; SI-SDAG-NEXT:    buffer_load_dword v4, v[0:1], s[16:19], 0 addr64 glc
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SI-SDAG-NEXT:    s_mov_b32 s10, -1
-; SI-SDAG-NEXT:    v_mul_f32_e32 v2, 1.0, v2
-; SI-SDAG-NEXT:    v_mul_f32_e32 v3, 1.0, v3
-; SI-SDAG-NEXT:    v_mul_f32_e32 v4, 1.0, v4
+; SI-SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
+; SI-SDAG-NEXT:    v_max_f32_e32 v3, v3, v3
+; SI-SDAG-NEXT:    v_max_f32_e32 v4, v4, v4
 ; SI-SDAG-NEXT:    v_min_f32_e32 v5, v2, v3
 ; SI-SDAG-NEXT:    v_max_f32_e32 v2, v2, v3
 ; SI-SDAG-NEXT:    buffer_store_dword v5, off, s[8:11], 0
@@ -5568,11 +5568,11 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(ptr addrspace(1)
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e32 v2, 1.0, v2
-; SI-GISEL-NEXT:    v_mul_f32_e32 v3, 1.0, v3
+; SI-GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
+; SI-GISEL-NEXT:    v_max_f32_e32 v3, v3, v3
 ; SI-GISEL-NEXT:    v_min_f32_e32 v5, v2, v3
 ; SI-GISEL-NEXT:    v_max_f32_e32 v2, v2, v3
-; SI-GISEL-NEXT:    v_mul_f32_e32 v3, 1.0, v4
+; SI-GISEL-NEXT:    v_max_f32_e32 v3, v4, v4
 ; SI-GISEL-NEXT:    buffer_store_dword v5, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-GISEL-NEXT:    v_min_f32_e32 v2, v2, v3
@@ -5739,9 +5739,9 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(ptr addrspace(1)
 ; SI-SDAG-NEXT:    buffer_load_dword v4, v[0:1], s[16:19], 0 addr64 glc
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SI-SDAG-NEXT:    s_mov_b32 s10, -1
-; SI-SDAG-NEXT:    v_mul_f32_e32 v2, 1.0, v2
-; SI-SDAG-NEXT:    v_mul_f32_e32 v3, 1.0, v3
-; SI-SDAG-NEXT:    v_mul_f32_e32 v4, 1.0, v4
+; SI-SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
+; SI-SDAG-NEXT:    v_max_f32_e32 v3, v3, v3
+; SI-SDAG-NEXT:    v_max_f32_e32 v4, v4, v4
 ; SI-SDAG-NEXT:    v_min_f32_e32 v5, v2, v3
 ; SI-SDAG-NEXT:    v_max_f32_e32 v2, v2, v3
 ; SI-SDAG-NEXT:    buffer_store_dword v2, off, s[8:11], 0
@@ -5770,11 +5770,11 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(ptr addrspace(1)
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e32 v2, 1.0, v2
-; SI-GISEL-NEXT:    v_mul_f32_e32 v3, 1.0, v3
+; SI-GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
+; SI-GISEL-NEXT:    v_max_f32_e32 v3, v3, v3
 ; SI-GISEL-NEXT:    v_min_f32_e32 v5, v2, v3
 ; SI-GISEL-NEXT:    v_max_f32_e32 v2, v2, v3
-; SI-GISEL-NEXT:    v_mul_f32_e32 v3, 1.0, v4
+; SI-GISEL-NEXT:    v_max_f32_e32 v3, v4, v4
 ; SI-GISEL-NEXT:    buffer_store_dword v2, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-GISEL-NEXT:    v_min_f32_e32 v2, v2, v3
@@ -5966,9 +5966,9 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use2(ptr addrspace(1)
 ; SI-SDAG-NEXT:    buffer_load_dword v4, v[0:1], s[16:19], 0 addr64 glc
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SI-SDAG-NEXT:    s_mov_b32 s10, -1
-; SI-SDAG-NEXT:    v_mul_f32_e32 v2, 1.0, v2
-; SI-SDAG-NEXT:    v_mul_f32_e32 v3, 1.0, v3
-; SI-SDAG-NEXT:    v_mul_f32_e32 v4, 1.0, v4
+; SI-SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
+; SI-SDAG-NEXT:    v_max_f32_e32 v3, v3, v3
+; SI-SDAG-NEXT:    v_max_f32_e32 v4, v4, v4
 ; SI-SDAG-NEXT:    v_min_f32_e32 v5, v2, v3
 ; SI-SDAG-NEXT:    v_max_f32_e32 v2, v2, v3
 ; SI-SDAG-NEXT:    v_min_f32_e32 v2, v2, v4
@@ -5997,11 +5997,11 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use2(ptr addrspace(1)
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e32 v2, 1.0, v2
-; SI-GISEL-NEXT:    v_mul_f32_e32 v3, 1.0, v3
+; SI-GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
+; SI-GISEL-NEXT:    v_max_f32_e32 v3, v3, v3
 ; SI-GISEL-NEXT:    v_min_f32_e32 v5, v2, v3
 ; SI-GISEL-NEXT:    v_max_f32_e32 v2, v2, v3
-; SI-GISEL-NEXT:    v_mul_f32_e32 v3, 1.0, v4
+; SI-GISEL-NEXT:    v_max_f32_e32 v3, v4, v4
 ; SI-GISEL-NEXT:    v_min_f32_e32 v2, v2, v3
 ; SI-GISEL-NEXT:    buffer_store_dword v2, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
@@ -6166,11 +6166,11 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0(ptr addrspace(1) %out, ptr 
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[10:11]
 ; SI-SDAG-NEXT:    buffer_load_dword v4, v[0:1], s[12:15], 0 addr64 glc
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SI-SDAG-NEXT:    v_mul_f32_e32 v2, 1.0, v2
-; SI-SDAG-NEXT:    v_mul_f32_e32 v3, 1.0, v3
+; SI-SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
+; SI-SDAG-NEXT:    v_max_f32_e32 v3, v3, v3
 ; SI-SDAG-NEXT:    v_min_f32_e32 v5, v2, v3
 ; SI-SDAG-NEXT:    v_max_f32_e32 v2, v2, v3
-; SI-SDAG-NEXT:    v_mul_f32_e32 v3, 1.0, v4
+; SI-SDAG-NEXT:    v_max_f32_e32 v3, v4, v4
 ; SI-SDAG-NEXT:    v_min_f32_e32 v2, v2, v3
 ; SI-SDAG-NEXT:    v_max_f32_e32 v2, v5, v2
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
@@ -6193,11 +6193,11 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0(ptr addrspace(1) %out, ptr 
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e32 v2, 1.0, v2
-; SI-GISEL-NEXT:    v_mul_f32_e32 v3, 1.0, v3
+; SI-GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
+; SI-GISEL-NEXT:    v_max_f32_e32 v3, v3, v3
 ; SI-GISEL-NEXT:    v_min_f32_e32 v5, v2, v3
 ; SI-GISEL-NEXT:    v_max_f32_e32 v2, v2, v3
-; SI-GISEL-NEXT:    v_mul_f32_e32 v3, 1.0, v4
+; SI-GISEL-NEXT:    v_max_f32_e32 v3, v4, v4
 ; SI-GISEL-NEXT:    v_min_f32_e32 v2, v2, v3
 ; SI-GISEL-NEXT:    v_max_f32_e32 v2, v5, v2
 ; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[10:11]
@@ -6919,7 +6919,7 @@ define amdgpu_kernel void @v_test_nnan_on_call_med3_f32_pat0_srcmod0(ptr addrspa
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e32 v2, -1.0, v2
+; SI-GISEL-NEXT:    v_max_f32_e64 v2, -v2, -v2
 ; SI-GISEL-NEXT:    v_med3_f32 v2, v2, v3, v4
 ; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[10:11]
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
@@ -7111,7 +7111,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0_mismatch(pt
 ; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e32 v5, -1.0, v2
+; SI-GISEL-NEXT:    v_max_f32_e64 v5, -v2, -v2
 ; SI-GISEL-NEXT:    v_min_f32_e32 v5, v5, v3
 ; SI-GISEL-NEXT:    v_max_f32_e32 v2, v2, v3
 ; SI-GISEL-NEXT:    v_min_f32_e32 v2, v2, v4
@@ -8367,7 +8367,7 @@ define float @v_test_fmed3_r_i_i_f32_minimumnum_maximumnum(float %a) {
 ; SI-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; SI-NEXT:    v_max_f32_e32 v0, v0, v0
 ; SI-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -8408,8 +8408,8 @@ define <2 x float> @v_test_fmed3_r_i_i_v2f32_minimumnum_maximumnum(<2 x float> %
 ; SI-SDAG-LABEL: v_test_fmed3_r_i_i_v2f32_minimumnum_maximumnum:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    v_mul_f32_e32 v1, 1.0, v1
-; SI-SDAG-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; SI-SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
+; SI-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
 ; SI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; SI-SDAG-NEXT:    v_med3_f32 v1, v1, 2.0, 4.0
 ; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -8417,8 +8417,8 @@ define <2 x float> @v_test_fmed3_r_i_i_v2f32_minimumnum_maximumnum(<2 x float> %
 ; SI-GISEL-LABEL: v_test_fmed3_r_i_i_v2f32_minimumnum_maximumnum:
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; SI-GISEL-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; SI-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; SI-GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
 ; SI-GISEL-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; SI-GISEL-NEXT:    v_med3_f32 v1, v1, 2.0, 4.0
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -8476,7 +8476,7 @@ define { float, float } @v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use(
 ; SI-SDAG-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; SI-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
 ; SI-SDAG-NEXT:    v_max_f32_e32 v1, 2.0, v0
 ; SI-SDAG-NEXT:    v_min_f32_e32 v0, 4.0, v1
 ; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -8484,7 +8484,7 @@ define { float, float } @v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use(
 ; SI-GISEL-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use:
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; SI-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
 ; SI-GISEL-NEXT:    v_max_f32_e32 v1, 2.0, v0
 ; SI-GISEL-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]

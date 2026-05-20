@@ -130,7 +130,7 @@ define amdgpu_kernel void @cvt_rpi_i32_f32_fneg(ptr addrspace(1) %out, float %x)
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e64 v0, -1.0, s3
+; SI-GISEL-NEXT:    v_max_f32_e64 v0, -s3, -s3
 ; SI-GISEL-NEXT:    v_cvt_rpi_i32_f32_e32 v0, v0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -190,7 +190,7 @@ define amdgpu_kernel void @cvt_rpi_i32_f32_fabs_fneg(ptr addrspace(1) %out, floa
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e64 v0, -1.0, |s3|
+; SI-GISEL-NEXT:    v_max_f32_e64 v0, -|s3|, -|s3|
 ; SI-GISEL-NEXT:    v_cvt_rpi_i32_f32_e32 v0, v0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0

@@ -3042,14 +3042,9 @@ define amdgpu_ps i16 @s_copysign_out_bf16_mag_bf16_sign_f64(bfloat inreg %mag, d
 define amdgpu_ps i16 @s_copysign_out_bf16_mag_f32_sign_bf16(float inreg %mag, bfloat inreg %sign) {
 ; GCN-LABEL: s_copysign_out_bf16_mag_f32_sign_bf16:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_e32 v0, 0x400000
-; GCN-NEXT:    v_mov_b32_e32 v1, s0
-; GCN-NEXT:    v_or_b32_e32 v0, s0, v0
-; GCN-NEXT:    v_cmp_u_f32_e64 vcc, s0, 0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GCN-NEXT:    v_bfe_u32 v0, v0, 16, 15
+; GCN-NEXT:    v_max_f32_e64 v0, s0, s0
 ; GCN-NEXT:    s_and_b32 s0, s1, 0xffff8000
+; GCN-NEXT:    v_bfe_u32 v0, v0, 16, 15
 ; GCN-NEXT:    v_or_b32_e32 v0, s0, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -3379,8 +3374,8 @@ define <2 x bfloat> @v_copysign_out_v2bf16_mag_v2f32_sign_v2bf16(<2 x float> %ma
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT:    v_max_f32_e32 v1, v1, v1
+; GCN-NEXT:    v_max_f32_e32 v0, v0, v0
 ; GCN-NEXT:    v_and_b32_e32 v2, 0x8000, v2
 ; GCN-NEXT:    v_bfe_u32 v0, v0, 16, 15
 ; GCN-NEXT:    v_and_b32_e32 v3, 0x8000, v3
@@ -3758,8 +3753,8 @@ define <2 x bfloat> @v_copysign_out_v2bf16_mag_v2bf16_sign_v2f32(<2 x bfloat> %m
 ; GCN-LABEL: v_copysign_out_v2bf16_mag_v2bf16_sign_v2f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v2, 1.0, v2
-; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GCN-NEXT:    v_max_f32_e32 v2, v2, v2
+; GCN-NEXT:    v_max_f32_e32 v1, v1, v1
 ; GCN-NEXT:    v_and_b32_e32 v3, 0x7fff, v0
 ; GCN-NEXT:    v_bfe_u32 v0, v0, 16, 15
 ; GCN-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
@@ -4258,25 +4253,16 @@ define amdgpu_ps i32 @s_copysign_out_v2bf16_mag_v2f32_sign_v2bf16(<2 x float> in
 ; GCN-LABEL: s_copysign_out_v2bf16_mag_v2f32_sign_v2bf16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_lshr_b32 s3, s2, 16
-; GCN-NEXT:    v_mov_b32_e32 v0, 0x400000
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    v_mov_b32_e32 v2, s0
-; GCN-NEXT:    s_and_b32 s2, s2, 0x8000
-; GCN-NEXT:    v_or_b32_e32 v3, s1, v0
-; GCN-NEXT:    v_or_b32_e32 v0, s0, v0
-; GCN-NEXT:    s_and_b32 s3, s3, 0x8000
-; GCN-NEXT:    v_cmp_u_f32_e64 vcc, s1, 0
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
-; GCN-NEXT:    v_cmp_u_f32_e64 vcc, s0, 0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GCN-NEXT:    v_bfe_u32 v0, v0, 16, 15
+; GCN-NEXT:    v_max_f32_e64 v0, s1, s1
+; GCN-NEXT:    v_max_f32_e64 v1, s0, s0
+; GCN-NEXT:    s_and_b32 s0, s2, 0x8000
 ; GCN-NEXT:    v_bfe_u32 v1, v1, 16, 15
-; GCN-NEXT:    v_or_b32_e32 v0, s2, v0
-; GCN-NEXT:    v_or_b32_e32 v1, s3, v1
-; GCN-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
+; GCN-NEXT:    s_and_b32 s1, s3, 0x8000
+; GCN-NEXT:    v_bfe_u32 v0, v0, 16, 15
+; GCN-NEXT:    v_or_b32_e32 v1, s0, v1
+; GCN-NEXT:    v_or_b32_e32 v0, s1, v0
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GCN-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    ; return to shader part epilog
 ;
@@ -4662,27 +4648,18 @@ define amdgpu_ps i32 @s_copysign_out_v2bf16_mag_v2f64_sign_v2bf16(<2 x double> i
 define amdgpu_ps i32 @s_copysign_out_v2bf16_mag_v2bf16_sign_v2f32(<2 x bfloat> inreg %mag, <2 x float> inreg %sign) {
 ; GCN-LABEL: s_copysign_out_v2bf16_mag_v2bf16_sign_v2f32:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_e32 v0, 0x400000
-; GCN-NEXT:    v_mov_b32_e32 v1, s2
-; GCN-NEXT:    v_mov_b32_e32 v2, s1
-; GCN-NEXT:    s_and_b32 s3, s0, 0x7fff
+; GCN-NEXT:    v_max_f32_e64 v0, s2, s2
+; GCN-NEXT:    v_max_f32_e64 v1, s1, s1
+; GCN-NEXT:    s_and_b32 s1, s0, 0x7fff
 ; GCN-NEXT:    s_bfe_u32 s0, s0, 0xf0010
-; GCN-NEXT:    v_or_b32_e32 v3, s2, v0
-; GCN-NEXT:    v_or_b32_e32 v0, s1, v0
-; GCN-NEXT:    v_cmp_u_f32_e64 vcc, s2, 0
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
-; GCN-NEXT:    v_cmp_u_f32_e64 vcc, s1, 0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GCN-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GCN-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GCN-NEXT:    v_and_b32_e32 v0, 0x8000, v0
+; GCN-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GCN-NEXT:    v_and_b32_e32 v1, 0x8000, v1
-; GCN-NEXT:    v_or_b32_e32 v0, s3, v0
-; GCN-NEXT:    v_or_b32_e32 v1, s0, v1
-; GCN-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
+; GCN-NEXT:    v_and_b32_e32 v0, 0x8000, v0
+; GCN-NEXT:    v_or_b32_e32 v1, s1, v1
+; GCN-NEXT:    v_or_b32_e32 v0, s0, v0
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GCN-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    ; return to shader part epilog
 ;
@@ -5153,9 +5130,9 @@ define <3 x bfloat> @v_copysign_out_v3bf16_mag_v3f32_sign_v3bf16(<3 x float> %ma
 ; GCN-LABEL: v_copysign_out_v3bf16_mag_v3f32_sign_v3bf16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GCN-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; GCN-NEXT:    v_max_f32_e32 v1, v1, v1
+; GCN-NEXT:    v_max_f32_e32 v0, v0, v0
+; GCN-NEXT:    v_max_f32_e32 v2, v2, v2
 ; GCN-NEXT:    v_and_b32_e32 v4, 0x8000, v4
 ; GCN-NEXT:    v_and_b32_e32 v5, 0x8000, v3
 ; GCN-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
@@ -5675,9 +5652,9 @@ define <3 x bfloat> @v_copysign_out_v3bf16_mag_v3bf16_sign_v3f32(<3 x bfloat> %m
 ; GCN-LABEL: v_copysign_out_v3bf16_mag_v3bf16_sign_v3f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v3, 1.0, v3
-; GCN-NEXT:    v_mul_f32_e32 v2, 1.0, v2
-; GCN-NEXT:    v_mul_f32_e32 v4, 1.0, v4
+; GCN-NEXT:    v_max_f32_e32 v3, v3, v3
+; GCN-NEXT:    v_max_f32_e32 v2, v2, v2
+; GCN-NEXT:    v_max_f32_e32 v4, v4, v4
 ; GCN-NEXT:    v_and_b32_e32 v1, 0x7fff, v1
 ; GCN-NEXT:    v_and_b32_e32 v5, 0x7fff, v0
 ; GCN-NEXT:    v_bfe_u32 v0, v0, 16, 15
@@ -6274,10 +6251,10 @@ define <4 x bfloat> @v_copysign_out_v4bf16_mag_v4f32_sign_v4bf16(<4 x float> %ma
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_lshrrev_b32_e32 v6, 16, v4
 ; GCN-NEXT:    v_lshrrev_b32_e32 v7, 16, v5
-; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GCN-NEXT:    v_mul_f32_e32 v3, 1.0, v3
-; GCN-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; GCN-NEXT:    v_max_f32_e32 v1, v1, v1
+; GCN-NEXT:    v_max_f32_e32 v0, v0, v0
+; GCN-NEXT:    v_max_f32_e32 v3, v3, v3
+; GCN-NEXT:    v_max_f32_e32 v2, v2, v2
 ; GCN-NEXT:    v_and_b32_e32 v5, 0x8000, v5
 ; GCN-NEXT:    v_and_b32_e32 v4, 0x8000, v4
 ; GCN-NEXT:    v_bfe_u32 v2, v2, 16, 15
@@ -6929,10 +6906,10 @@ define <4 x bfloat> @v_copysign_out_v4bf16_mag_v4bf16_sign_v4f32(<4 x bfloat> %m
 ; GCN-LABEL: v_copysign_out_v4bf16_mag_v4bf16_sign_v4f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v3, 1.0, v3
-; GCN-NEXT:    v_mul_f32_e32 v5, 1.0, v5
-; GCN-NEXT:    v_mul_f32_e32 v2, 1.0, v2
-; GCN-NEXT:    v_mul_f32_e32 v4, 1.0, v4
+; GCN-NEXT:    v_max_f32_e32 v3, v3, v3
+; GCN-NEXT:    v_max_f32_e32 v5, v5, v5
+; GCN-NEXT:    v_max_f32_e32 v2, v2, v2
+; GCN-NEXT:    v_max_f32_e32 v4, v4, v4
 ; GCN-NEXT:    v_and_b32_e32 v6, 0x7fff, v1
 ; GCN-NEXT:    v_and_b32_e32 v7, 0x7fff, v0
 ; GCN-NEXT:    v_bfe_u32 v1, v1, 16, 15
@@ -7338,12 +7315,7 @@ define bfloat @v_copysign_bf16_0_bf16(bfloat %sign) {
 define amdgpu_ps i32 @s_copysign_bf16_0_f32(float inreg %sign) {
 ; GCN-LABEL: s_copysign_bf16_0_f32:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_e32 v0, 0x400000
-; GCN-NEXT:    v_mov_b32_e32 v1, s0
-; GCN-NEXT:    v_or_b32_e32 v0, s0, v0
-; GCN-NEXT:    v_cmp_u_f32_e64 vcc, s0, 0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT:    v_max_f32_e64 v0, s0, s0
 ; GCN-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x8000, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
@@ -7422,7 +7394,7 @@ define bfloat @v_copysign_bf16_0_f32(float %sign) {
 ; GCN-LABEL: v_copysign_bf16_0_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT:    v_max_f32_e32 v0, v0, v0
 ; GCN-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x8000, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -7740,18 +7712,9 @@ define <2 x bfloat> @v_copysign_v2bf16_0_v2bf16(<2 x bfloat> %sign) {
 define amdgpu_ps i32 @s_copysign_v2bf16_0_v2f32(<2 x float> inreg %sign) {
 ; GCN-LABEL: s_copysign_v2bf16_0_v2f32:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_e32 v0, 0x400000
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    v_mov_b32_e32 v2, s0
-; GCN-NEXT:    v_or_b32_e32 v3, s1, v0
-; GCN-NEXT:    v_or_b32_e32 v0, s0, v0
-; GCN-NEXT:    v_cmp_u_f32_e64 vcc, s1, 0
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
-; GCN-NEXT:    v_cmp_u_f32_e64 vcc, s0, 0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
-; GCN-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT:    v_max_f32_e64 v0, s1, s1
+; GCN-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GCN-NEXT:    v_max_f32_e64 v0, s0, s0
 ; GCN-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x80008000, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
@@ -7875,9 +7838,9 @@ define <2 x bfloat> @v_copysign_v2bf16_0_v2bf32(<2 x float> %sign) {
 ; GCN-LABEL: v_copysign_v2bf16_0_v2bf32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GCN-NEXT:    v_max_f32_e32 v1, v1, v1
 ; GCN-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT:    v_max_f32_e32 v0, v0, v0
 ; GCN-NEXT:    v_alignbit_b32 v0, v1, v0, 16
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x80008000, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]

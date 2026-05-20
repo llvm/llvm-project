@@ -103,7 +103,7 @@ define amdgpu_kernel void @test_class_fneg_f32(ptr addrspace(1) %out, [8 x i32],
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e64 v0, -1.0, s3
+; SI-GISEL-NEXT:    v_max_f32_e64 v0, -s3, -s3
 ; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, s6
 ; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
@@ -140,7 +140,7 @@ define amdgpu_kernel void @test_class_fneg_fabs_f32(ptr addrspace(1) %out, [8 x 
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e64 v0, -1.0, |s3|
+; SI-GISEL-NEXT:    v_max_f32_e64 v0, -|s3|, -|s3|
 ; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, s6
 ; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0

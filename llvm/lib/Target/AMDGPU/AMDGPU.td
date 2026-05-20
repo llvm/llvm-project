@@ -2683,6 +2683,8 @@ def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarryInsts()">;
 
 def HasXNACKEnabled : Predicate<"Subtarget->isXNACKEnabled()">;
 
+def NotHasDX10ClampAndIEEEMode : Predicate<"!Subtarget->hasDX10ClampAndIEEEMode()">;
+
 def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">,
   AssemblerPredicate<(all_of (not FeatureTrue16BitInsts))>;
 
