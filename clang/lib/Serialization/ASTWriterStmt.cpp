@@ -475,7 +475,8 @@ void ASTStmtWriter::VisitCoyieldExpr(CoyieldExpr *E) {
 }
 
 void ASTStmtWriter::VisitCXXReflectExpr(CXXReflectExpr *E) {
-  // TODO(Reflection): Implement this.
+  // TODO(Reflection): add support for TemplateReference, NamespaceReference and
+  // DeclRefExpr
   VisitExpr(E);
   Record.AddSourceLocation(E->getOperatorLoc());
   Record.push_back(static_cast<uint64_t>(E->getKind()));
@@ -485,8 +486,6 @@ void ASTStmtWriter::VisitCXXReflectExpr(CXXReflectExpr *E) {
   case ReflectionKind::Type:
     Record.AddTypeSourceInfo(E->getTypeSourceInfo());
     break;
-  default:
-    assert(false && "unimplemented or unknown reflection entities");
   }
   Code = serialization::EXPR_REFLECT;
 }

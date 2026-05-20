@@ -540,7 +540,8 @@ void ASTStmtReader::VisitCapturedStmt(CapturedStmt *S) {
 }
 
 void ASTStmtReader::VisitCXXReflectExpr(CXXReflectExpr *E) {
-  // TODO(Reflection): Implement this.
+  // TODO(Reflection): add support for TemplateReference, NamespaceReference and
+  // DeclRefExpr
   VisitExpr(E);
   E->CaretCaretLoc = readSourceLocation();
   E->Kind = static_cast<ReflectionKind>(Record.readInt());
@@ -551,8 +552,6 @@ void ASTStmtReader::VisitCXXReflectExpr(CXXReflectExpr *E) {
   case ReflectionKind::Type:
     E->Operand = Record.readTypeSourceInfo();
     break;
-  default:
-    assert(false && "unimplemented or unknown reflection entities");
   }
 }
 
