@@ -251,11 +251,9 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
     unsigned Opcode, Type *Ty, Align Alignment, unsigned AddressSpace,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo OpInfo,
     const Instruction *I) const {
-  // FIXME: Arbitrary cost
-  if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
-    return 4;
-
-  if (!ST->hasSIMD128() || !isa<FixedVectorType>(Ty)) {
+  // FIXME: Load latency isn't handled here
+  if (!ST->hasSIMD128() || !isa<FixedVectorType>(Ty) ||
+      (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)) {
     return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace,
                                   CostKind);
   }

@@ -5306,9 +5306,10 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
                                             const Instruction *I) const {
-  // FIXME: Arbitrary cost
+  // FIXME: Load latency isn't handled here
   if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
-    return 4;
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
 
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput) {

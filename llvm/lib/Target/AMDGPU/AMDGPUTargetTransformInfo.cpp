@@ -1790,12 +1790,9 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
                                             const Instruction *I) const {
-  // FIXME: Arbitrary cost
-  if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
-    return 4;
-
   if (VectorType *VecTy = dyn_cast<VectorType>(Src)) {
     if ((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
+        CostKind != TTI::TCK_Latency &&
         VecTy->getElementType()->isIntegerTy(8)) {
       return divideCeil(DL.getTypeSizeInBits(VecTy) - 1,
                         getLoadStoreVecRegBitWidth(AddressSpace));
