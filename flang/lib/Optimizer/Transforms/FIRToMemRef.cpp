@@ -710,8 +710,8 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   //         compute strides (e.g. rebox sourced array_coor).
   const bool descriptorOwnsLayout =
       sliceInfo.hasProjectedSlice || shapeVec.empty() ||
-      (isDescriptor && sliceInfo.shiftVec.empty() &&
-       arrayCoorOp.getShape() && arrayCoorOp.getSlice());
+      (isDescriptor && sliceInfo.shiftVec.empty() && arrayCoorOp.getShape() &&
+       arrayCoorOp.getSlice());
   if (descriptorOwnsLayout) {
     // Projected slices carry their physical layout in the descriptor. Rebuild
     // the MemRef view from box metadata instead of from slice triplets.
