@@ -153,7 +153,7 @@ class InProcessBuiltinIOMemory(InProcessBuiltinIOObject):
         return self.encoding
 
 
-class InProcessBuiltinIO:
+class InProcessBuiltinIOStreams:
     """
     Holds IO streams for an inproc builtin invocation.
 
@@ -210,7 +210,7 @@ class InProcessBuiltinIO:
 # - `shenv`: The shell environment.
 # - `io`: Holds the input and output streams for the invocation. These are file-like objects (files, StringIO)
 InProcessBuiltinExecuteFn = Callable[
-    [Command, "list[str]", ShellEnvironment, InProcessBuiltinIO],
+    [Command, "list[str]", ShellEnvironment, InProcessBuiltinIOStreams],
     int,
 ]
 
@@ -225,7 +225,10 @@ class InProcessBuiltin:
 
 
 def executeBuiltinCd(
-    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InProcessBuiltinIO
+    cmd: Command,
+    args: list[str],
+    shenv: ShellEnvironment,
+    io: InProcessBuiltinIOStreams,
 ) -> int:
     """executeBuiltinCd - Change the current directory."""
     if len(args) != 2:
@@ -238,7 +241,10 @@ def executeBuiltinCd(
 
 
 def executeBuiltinPushd(
-    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InProcessBuiltinIO
+    cmd: Command,
+    args: list[str],
+    shenv: ShellEnvironment,
+    io: InProcessBuiltinIOStreams,
 ) -> int:
     """executeBuiltinPushd - Change the current dir and save the old."""
     if len(args) != 2:
@@ -249,7 +255,10 @@ def executeBuiltinPushd(
 
 
 def executeBuiltinPopd(
-    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InProcessBuiltinIO
+    cmd: Command,
+    args: list[str],
+    shenv: ShellEnvironment,
+    io: InProcessBuiltinIOStreams,
 ) -> int:
     """executeBuiltinPopd - Restore a previously saved working directory."""
     if len(args) != 1:
@@ -261,7 +270,10 @@ def executeBuiltinPopd(
 
 
 def executeBuiltinExport(
-    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InProcessBuiltinIO
+    cmd: Command,
+    args: list[str],
+    shenv: ShellEnvironment,
+    io: InProcessBuiltinIOStreams,
 ) -> int:
     """executeBuiltinExport - Set an environment variable."""
     if len(args) != 2:
@@ -271,7 +283,10 @@ def executeBuiltinExport(
 
 
 def executeBuiltinEcho(
-    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InProcessBuiltinIO
+    cmd: Command,
+    args: list[str],
+    shenv: ShellEnvironment,
+    io: InProcessBuiltinIOStreams,
 ) -> int:
     """Interpret a redirected echo or @echo command"""
     opened_files = []
@@ -328,7 +343,10 @@ def executeBuiltinEcho(
 
 
 def executeBuiltinMkdir(
-    cmd: Command, args: list[str], cmd_shenv: ShellEnvironment, io: InProcessBuiltinIO
+    cmd: Command,
+    args: list[str],
+    cmd_shenv: ShellEnvironment,
+    io: InProcessBuiltinIOStreams,
 ):
     """executeBuiltinMkdir - Create new directories."""
     try:
@@ -364,7 +382,10 @@ def executeBuiltinMkdir(
 
 
 def executeBuiltinRm(
-    cmd: Command, args: list[str], cmd_shenv: ShellEnvironment, io: InProcessBuiltinIO
+    cmd: Command,
+    args: list[str],
+    cmd_shenv: ShellEnvironment,
+    io: InProcessBuiltinIOStreams,
 ):
     """executeBuiltinRm - Removes (deletes) files or directories."""
     try:
@@ -475,7 +496,10 @@ def executeBuiltinRm(
 
 
 def executeBuiltinUmask(
-    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InProcessBuiltinIO
+    cmd: Command,
+    args: list[str],
+    shenv: ShellEnvironment,
+    io: InProcessBuiltinIOStreams,
 ):
     """executeBuiltinUmask - Change the current umask."""
     if os.name != "posix":
@@ -490,7 +514,9 @@ def executeBuiltinUmask(
     return 0
 
 
-def executeBuiltinUlimit(cmd: Command, args: list[str], shenv, io: InProcessBuiltinIO):
+def executeBuiltinUlimit(
+    cmd: Command, args: list[str], shenv, io: InProcessBuiltinIOStreams
+):
     """executeBuiltinUlimit - Change the current limits."""
     try:
         # Try importing the resource module (available on POSIX systems) and
@@ -525,7 +551,10 @@ def executeBuiltinUlimit(cmd: Command, args: list[str], shenv, io: InProcessBuil
 
 
 def executeBuiltinColon(
-    cmd: Command, args: list[str], cmd_shenv: ShellEnvironment, io: InProcessBuiltinIO
+    cmd: Command,
+    args: list[str],
+    cmd_shenv: ShellEnvironment,
+    io: InProcessBuiltinIOStreams,
 ):
     """executeBuiltinColon - Discard arguments and exit with status 0."""
     return 0

@@ -15,7 +15,7 @@ import lit.ShUtil as ShUtil
 import lit.Test as Test
 import lit.util
 from lit.BooleanExpression import BooleanExpression
-from lit.InProcessBuiltins import InProcessBuiltinIO, get_default_inproc_builtins
+from lit.InProcessBuiltins import InProcessBuiltinIOStreams, get_default_inproc_builtins
 from lit.ShCommands import Command
 from lit.ShellEnvironment import (
     InternalShellError,
@@ -347,7 +347,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                 j, subprocess.PIPE, shenv, opened_files
             )
 
-            builtin_io = InProcessBuiltinIO(stdin, stdout, stderr)
+            builtin_io = InProcessBuiltinIOStreams(stdin, stdout, stderr)
 
             args = expand_glob_expressions(args, cmd_shenv.cwd)
 
