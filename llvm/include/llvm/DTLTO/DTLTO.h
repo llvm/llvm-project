@@ -135,6 +135,9 @@ private:
   // Keep temporary files when true.
   bool SaveTemps = false;
 
+  // Saves the content of Buffer to Path overwriting any existing file.
+  static Error save(StringRef Buffer, StringRef Path);
+
 public:
   struct Job {
     // Task index (combines RegularLTO parallel codegen offset with module
