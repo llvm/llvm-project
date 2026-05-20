@@ -34,8 +34,8 @@
 #elif _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// Calling a `void(const char *)` takes fewer bytes than calling a
-// `void(const char *, ...)`.
+// Calling this saves code size compared to
+// `__libcpp_verbose_abort("%s", "error message")`.
 [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_NOINLINE
 inline void __libcpp_android_verbose_abort(const char *__message) {
   _LIBCPP_VERBOSE_ABORT("%s", __message);
