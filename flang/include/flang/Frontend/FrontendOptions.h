@@ -145,10 +145,10 @@ enum class FortranForm {
   /// The user has not specified a form. Base the form off the file extension.
   Unknown,
 
-  /// -ffree-form
+  /// -ffixed-form
   FixedForm,
 
-  /// -ffixed-form
+  /// -ffree-form
   FreeForm
 };
 
@@ -285,6 +285,12 @@ struct FrontendOptions {
   // The column after which characters are ignored in fixed form lines in the
   // source file.
   int fixedFormColumns = 72;
+
+  // The column after which characters are ignored in free form lines in the
+  // source file.
+  // In F2023 6.3.2.1 p1, in free form source a line shall contain at most ten
+  // thousand characters.
+  int freeFormColumns = 10000;
 
   /// The input kind, either specified via -x argument or deduced from the input
   /// file name.

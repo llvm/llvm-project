@@ -1840,10 +1840,30 @@ let Predicates = [HasStdExtP, IsRV32] in {
 // Codegen patterns
 //===----------------------------------------------------------------------===//
 
-// Pattern class for GPRPair operations
+class PatGprSplatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT,
+                     ValueType ScalarVT = XLenVT>
+    : Pat<(VecVT (OpNode GPR:$rs1, (splat_vector (ScalarVT GPR:$rs2)))),
+          (Inst GPR:$rs1, GPR:$rs2)>;
+
+// Pattern classes for GPRPair operations
 class PatGprPairGprPair<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), (vt GPRPair:$rs2))),
           (Inst GPRPair:$rs1, GPRPair:$rs2)>;
+
+class PatGprPairImm<SDPatternOperator OpNode, RVInst Inst,
+                    SDPatternOperator ImmType, ValueType vt>
+    : Pat<(vt (OpNode (vt GPRPair:$rs1), ImmType:$imm)),
+          (Inst GPRPair:$rs1, ImmType:$imm)>;
+
+class PatGprPairShiftMask<SDPatternOperator OpNode, RVInst Inst,
+                          ComplexPattern ShiftMask, ValueType vt>
+    : Pat<(vt (OpNode GPRPair:$rs1, ShiftMask:$rs2)),
+          (Inst GPRPair:$rs1, ShiftMask:$rs2)>;
+
+class PatGprPairSplatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT,
+                         ValueType ScalarVT = XLenVT>
+    : Pat<(VecVT (OpNode GPRPair:$rs1, (splat_vector (ScalarVT GPR:$rs2)))),
+          (Inst GPRPair:$rs1, GPR:$rs2)>;
 
 def riscv_absw : RVSDNode<"ABSW", SDT_RISCVIntUnaryOpW>;
 def riscv_clsw : RVSDNode<"CLSW", SDT_RISCVIntUnaryOpW>;
@@ -2095,8 +2115,10 @@ let Predicates = [HasStdExtP] in {
   def : PatGprShiftMask<riscv_psra, PSRA_HS, shiftMask16, XLenVecI16VT>;
 
   // // splat pattern
-  def : Pat<(XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))), (PADD_BS (XLenVT X0), GPR:$rs2)>;
-  def : Pat<(XLenVecI16VT (splat_vector (XLenVT GPR:$rs2))), (PADD_HS (XLenVT X0), GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))),
+            (PADD_BS (XLenVecI8VT X0), GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (splat_vector (XLenVT GPR:$rs2))),
+            (PADD_HS (XLenVecI16VT X0), GPR:$rs2)>;
 
   // 8/16-bit comparison patterns (result is all 1s or all 0s per element)
   // a == b
@@ -2213,14 +2235,17 @@ let Predicates = [HasStdExtP, IsRV32] in {
   // Basic 8-bit arithmetic patterns
   def : PatGprPairGprPair<add, PADD_DB, v8i8>;
   def : PatGprPairGprPair<sub, PSUB_DB, v8i8>;
+  def : PatGprPairSplatGpr<add, PADD_DBS, v8i8>;
 
   // Basic 16-bit arithmetic patterns
   def : PatGprPairGprPair<add, PADD_DH, v4i16>;
   def : PatGprPairGprPair<sub, PSUB_DH, v4i16>;
+  def : PatGprPairSplatGpr<add, PADD_DHS, v4i16>;
 
   // Basic 32-bit arithmetic patterns
   def : PatGprPairGprPair<add, PADD_DW, v2i32>;
   def : PatGprPairGprPair<sub, PSUB_DW, v2i32>;
+  def : PatGprPairSplatGpr<add, PADD_DWS, v2i32>;
 
   // 8-bit saturating add/sub patterns
   def : PatGprPairGprPair<saddsat, PSADD_DB, v8i8>;
@@ -2268,6 +2293,54 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def : PatGprPairGprPair<abds, PABD_DH, v4i16>;
   def : PatGprPairGprPair<abdu, PABDU_DH, v4i16>;
 
+  // 8-bit logical shift left/right patterns
+  def : PatGprPairImm<riscv_pshl, PSLLI_DB, uimm3, v8i8>;
+  def : PatGprPairImm<riscv_psrl, PSRLI_DB, uimm3, v8i8>;
+
+  // 16-bit logical shift left/right patterns
+  def : PatGprPairImm<riscv_pshl, PSLLI_DH, uimm4, v4i16>;
+  def : PatGprPairImm<riscv_psrl, PSRLI_DH, uimm4, v4i16>;
+
+  // 32-bit logical shift left/right patterns
+  def : PatGprPairImm<riscv_pshl, PSLLI_DW, uimm5, v2i32>;
+  def : PatGprPairImm<riscv_psrl, PSRLI_DW, uimm5, v2i32>;
+
+  // 8-bit arithmetic shift right patterns
+  def : PatGprPairImm<riscv_psra, PSRAI_DB, uimm3, v8i8>;
+
+  // 16-bit arithmetic shift right patterns
+  def : PatGprPairImm<riscv_psra, PSRAI_DH, uimm4, v4i16>;
+
+  // 32-bit arithmetic shift left/right patterns
+  def : PatGprPairImm<riscv_psra, PSRAI_DW, uimm5, v2i32>;
+
+  // 16-bit signed saturation shift left patterns
+  def : PatGprPairImm<riscv_psslai, PSSLAI_DH, timm, v4i16>;
+
+  // 32-bit signed saturation shift left patterns
+  def : PatGprPairImm<riscv_psslai, PSSLAI_DW, timm, v2i32>;
+
+  // 8-bit logical shift left/right
+  def : PatGprPairShiftMask<riscv_pshl, PSLL_DBS, shiftMask8, v8i8>;
+  def : PatGprPairShiftMask<riscv_psrl, PSRL_DBS, shiftMask8, v8i8>;
+
+  // 8-bit arithmetic shift left/right
+  def : PatGprPairShiftMask<riscv_psra, PSRA_DBS, shiftMask8, v8i8>;
+
+  // 16-bit logical shift left/right
+  def : PatGprPairShiftMask<riscv_pshl, PSLL_DHS, shiftMask16, v4i16>;
+  def : PatGprPairShiftMask<riscv_psrl, PSRL_DHS, shiftMask16, v4i16>;
+
+  // 16-bit arithmetic shift left/right
+  def : PatGprPairShiftMask<riscv_psra, PSRA_DHS, shiftMask16, v4i16>;
+
+  // 32-bit logical shift left/right
+  def : PatGprPairShiftMask<riscv_pshl, PSLL_DWS, shiftMask32, v2i32>;
+  def : PatGprPairShiftMask<riscv_psrl, PSRL_DWS, shiftMask32, v2i32>;
+
+  // 32-bit arithmetic shift left/right
+  def : PatGprPairShiftMask<riscv_psra, PSRA_DWS, shiftMask32, v2i32>;
+
   // [s|u]min/[s|u]max patterns
   def : PatGprPairGprPair<smin, PMIN_DB, v8i8>;
   def : PatGprPairGprPair<umin, PMINU_DB, v8i8>;
@@ -2281,6 +2354,13 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def : PatGprPairGprPair<umax, PMAXU_DH, v4i16>;
   def : PatGprPairGprPair<smax, PMAX_DW, v2i32>;
   def : PatGprPairGprPair<umax, PMAXU_DW, v2i32>;
+
+  // splat pattern
+  def : Pat<(v8i8 (splat_vector (XLenVT GPR:$rs2))),
+            (PADD_DBS (v8i8 X0_Pair), GPR:$rs2)>;
+  def : Pat<(v4i16 (splat_vector (XLenVT GPR:$rs2))),
+            (PADD_DHS (v4i16 X0_Pair), GPR:$rs2)>;
+  // v2i32 on RV32 is handled by buildGPRPair in RISCVISelDAGToDAG.cpp
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
@@ -2390,7 +2470,7 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def : PatGprShiftMask<riscv_psra, PSRA_WS, shiftMask32, v2i32>;
 
   // splat pattern
-  def : Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))), (PADD_WS (XLenVT X0), GPR:$rs2)>;
+  def : Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))), (PADD_WS (v2i32 X0), GPR:$rs2)>;
 
   // 32-bit comparison patterns (result is all 1s or all 0s per element)
   // a == b
