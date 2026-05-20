@@ -536,12 +536,8 @@ def executeBuiltinColon(
 
 def get_default_inproc_builtins() -> dict[str, InProcessBuiltin]:
     """
-    get_default_inproc_builtins - Returns the map of command names to Lit's
-    in-process built-in implementations.
-    The entries are a pair of the callable for the builtin and a bool
-    that determines whether this inproc builtin may fall back to a
-    command of the same name in cases where in-proc builtins cannot be
-    used (e.g. as the argument to not --crash).
+    Returns the map of command names to Lit's in-process built-in
+    implementations.
     """
 
     return {
