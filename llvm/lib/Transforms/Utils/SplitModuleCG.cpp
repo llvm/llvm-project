@@ -32,6 +32,25 @@ static void externalize(GlobalValue *GV) {
     GV->setName("__llvmsplit_unnamed");
 }
 
+template <typename T>
+static std::vector<DenseSet<const T *>>
+doGValuePartitioning(
+    const DenseMap<const Function *, DenseSet<const T *>> &Record,
+    const std::vector<DenseSet<const Function *>> &Partitions,
+    unsigned NumParts) {
+  std::vector<DenseSet<const T *>> GValuePartitions;
+  GValuePartitions.resize(NumParts);
+
+  for (unsigned i = 0; i < Partitions.size(); ++i) {
+    for (const auto *F : Partitions[i]) {
+      auto It = Record.find(F);
+      if (It != Record.end()) {
+        GValuePartitions[i].insert(It->second.begin(), It->second.end());
+      }
+    }
+  }
+  return GValuePartitions;
+}
 } // namespace
 
 std::vector<DenseSet<const Function *>> SplitModuleCG::doPartitioning() {
@@ -107,6 +126,43 @@ void SplitModuleCG::calculateFunctionCosts() {
   }
 }
 
+void SplitModuleCG::calculateComdatMembers() {
+  for (GlobalValue &GValue : M.global_values()) {
+    if (Comdat *C = GValue.getComdat()) {
+      ComdatMembers[C].insert(&GValue);
+    }
+  }
+
+  for (auto &ComdatMember : ComdatMembers) {
+    if (ComdatMember.second.size() == 1) {
+      continue;
+    }
+    const Function *FirstFn = nullptr;
+    for (auto *GValue : ComdatMember.second) {
+      if (auto *F = dyn_cast<Function>(GValue)) {
+        FirstFn = F;
+        break;
+      }
+    }
+    if (!FirstFn)
+      continue;
+
+    // Comdat members must be partitioned together. Trace dependencies from the
+    // primary function (FirstFn) to all other members: functions are added to
+    // the call graph, while Globals are tracked via mappings.
+    auto *CallNode = SCG->getOrInsertFunction(FirstFn);
+    for (auto *GValue : ComdatMember.second) {
+      if (auto *F = dyn_cast<Function>(GValue)) {
+        CallNode->addCalledFunction(SCG->getOrInsertFunction(F));
+        SCG->getOrInsertFunction(F)->addCalledFunction(CallNode);
+      } else if (auto *GV = dyn_cast<GlobalVariable>(GValue)) {
+        SpecialGV.insert(GV);
+        GVRecord[FirstFn].insert(GV);
+      }
+    }
+  }
+}
+
 void SplitModuleCG::dealWithMpart(Module &MPart, unsigned I,
                                   function_ref<bool(const GlobalValue *)> NeedsConservativeImport) {
   // collect symbols to rename
@@ -131,6 +187,11 @@ void SplitModuleCG::dealWithMpart(Module &MPart, unsigned I,
     Func.setComdat(nullptr);
   };
 
+  auto AvailableExternalizeGV = [&](llvm::GlobalVariable &GV) {
+    GV.setLinkage(GlobalValue::AvailableExternallyLinkage);
+    GV.setComdat(nullptr);
+  };
+
   for (const auto &GV : MPart.global_values())
     checkPromoted(GV);
   // Clean-up conservatively imported GVs without any users.
@@ -147,6 +208,18 @@ void SplitModuleCG::dealWithMpart(Module &MPart, unsigned I,
       } else {
         externalFunction[Fn] = false;
       }
+    }
+  }
+
+  // if a function is available externally, we need to ensure its globals
+  // (which have same comdat as the function) are too.
+  for (auto &func : MPart.functions()) {
+    auto FinM = M.getFunction(func.getName());
+    if (!FinM || FinM->isDeclaration() || !func.hasAvailableExternallyLinkage())
+      continue;
+    for (auto GVinM : GVRecord[FinM]) {
+      auto GV = MPart.getNamedGlobal(GVinM->getName());
+      AvailableExternalizeGV(*GV);
     }
   }
 
@@ -236,6 +309,8 @@ void SplitModuleCG::SplitModule(ModuleCreationCallback ModuleCallback,
   // Assign callgraphs into N partitions.
   auto Partitions = doPartitioning();
   assert(Partitions.size() == N);
+  // Assign GlobalVariables into N partitions according to Partitions.
+  auto GVPartitions = doGValuePartitioning(GVRecord, Partitions, N);
 
   // local GVs need to be conservatively imported into [dependency] every module,
  	// and then cleaned up afterwards.
@@ -253,6 +328,13 @@ void SplitModuleCG::SplitModule(ModuleCreationCallback ModuleCallback,
     if (const auto *newFn = dyn_cast<Function>(GV)) {
       const auto *Fn = M.getFunction(newFn->getName());
       return FnsInPart.contains(Fn);
+    }
+    // GlobalVariable go in their assigned partition.
+    if (const auto *newGV = dyn_cast<GlobalVariable>(GV)) {
+      const auto *GVinM = M.getGlobalVariable(newGV->getName());
+      // GlobalVariable with comdat go in their assigned partition.
+      if (SpecialGV.count(GVinM))
+        return GVPartitions[I].contains(GVinM);
     }
     if (NeedsConservativeImport(GV))
       return true;
@@ -311,7 +393,8 @@ SplitModuleCG::SplitModuleCG(Module &M,
 
   // Construct a simplified call graph to facilitate worklist generation.
   SCG = std::make_unique<SimplifyCallGraph>(CG, CombinedIndex, M);
-  // TODO: When the SCG is established, the special cases of comdat and
+  calculateComdatMembers();
+  // TODO: When the SCG is established, the special cases of
   // initarray need to be considered.
 
   // Populate the worklist with root functions and their transitive

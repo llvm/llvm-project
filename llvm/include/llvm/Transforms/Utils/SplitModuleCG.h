@@ -198,10 +198,14 @@ private:
   StringSet<> OriginalExternals;
   StringMap<std::string> PromotedRenames;
   DenseMap<const Function *, bool> externalFunction;
+  DenseMap<const Function *, DenseSet<const GlobalVariable *>> GVRecord;
   DenseMap<const Function *, CostType> FuncsCosts;
+  DenseMap<const Comdat *, DenseSet<const GlobalValue *>> ComdatMembers;
+  DenseSet<const GlobalValue *> SpecialGV;
   SmallVector<FunctionWithDependencies> FWDWorkList;
 
   void calculateFunctionCosts();
+  void calculateComdatMembers();
   std::vector<DenseSet<const Function *>> doPartitioning();
   void dealWithMpart(
       Module &MPart, unsigned I,
