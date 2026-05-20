@@ -10,8 +10,10 @@ add_libc_unittest(
     alarm_test.cpp
   DEPENDS
     libc.hdr.signal_macros
+    libc.hdr.types.struct_timespec
     libc.include.unistd
     libc.src.signal.signal
+    libc.src.time.nanosleep
     libc.src.unistd.alarm
 )
 
