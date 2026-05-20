@@ -8,8 +8,8 @@
 ; REQUIRES: amdgpu-registered-target
 ; REQUIRES: x86-registered-target
 
-define void @dont_create_memset(ptr %p) {
-; CHECK-LABEL: @dont_create_memset(
+define void @stores_to_memset(ptr %p) {
+; CHECK-LABEL: @stores_to_memset(
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[P]], i64 2
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr i32, ptr [[P]], i64 3
@@ -28,8 +28,8 @@ define void @dont_create_memset(ptr %p) {
 
 %ty = type { i64 }
 
-define void @dont_create_memcpy(ptr %p1, ptr %p2) {
-; CHECK-LABEL: @dont_create_memcpy(
+define void @load_store_to_memmove(ptr %p1, ptr %p2) {
+; CHECK-LABEL: @load_store_to_memmove(
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[P2:%.*]], ptr align 8 [[P1:%.*]], i64 8, i1 false)
 ; CHECK-NEXT:    ret void
 ;
