@@ -693,6 +693,9 @@ include $(wildcard $(PREREQS) $(DYLIB_PREREQS))
 .PHONY: clean
 dsym:	$(DSYM)
 all:	$(EXE) $(DSYM)
+ifeq "$(MAKE_DWP)" "YES"
+all:	$(DWP_NAME)
+endif
 clean::
 ifeq "$(findstring lldb-test-build.noindex, $(BUILDDIR))" ""
 	$(error Trying to invoke the clean rule, but not using the default build tree layout)
