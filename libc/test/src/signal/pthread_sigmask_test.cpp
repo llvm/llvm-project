@@ -22,16 +22,16 @@
 
 class LlvmLibcPthreadSigmaskTest
     : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
-  sigset_t oldSet;
+  sigset_t old_set;
 
 public:
   void SetUp() override {
     ErrnoCheckingTest::SetUp();
-    LIBC_NAMESPACE::pthread_sigmask(0, nullptr, &oldSet);
+    LIBC_NAMESPACE::pthread_sigmask(0, nullptr, &old_set);
   }
 
   void TearDown() override {
-    LIBC_NAMESPACE::pthread_sigmask(SIG_SETMASK, &oldSet, nullptr);
+    LIBC_NAMESPACE::pthread_sigmask(SIG_SETMASK, &old_set, nullptr);
     ErrnoCheckingTest::TearDown();
   }
 };
@@ -47,7 +47,8 @@ TEST_F(LlvmLibcPthreadSigmaskTest, PthreadSigmaskInvalid) {
   sigset_t *invalid = reinterpret_cast<sigset_t *>(-1);
   EXPECT_EQ(LIBC_NAMESPACE::pthread_sigmask(SIG_SETMASK, invalid, nullptr),
             EFAULT);
-  EXPECT_EQ(LIBC_NAMESPACE::pthread_sigmask(-4, nullptr, invalid), EFAULT);
+  EXPECT_EQ(LIBC_NAMESPACE::pthread_sigmask(SIG_SETMASK, nullptr, invalid),
+            EFAULT);
 }
 
 // This tests that when nothing is blocked, a process gets killed and also tests
