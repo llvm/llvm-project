@@ -105,7 +105,6 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
 )
 
-
 add_entrypoint_object(
   sigemptyset
   SRCS
