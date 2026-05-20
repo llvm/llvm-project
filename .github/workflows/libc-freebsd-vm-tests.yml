@@ -20,7 +20,7 @@ jobs:
     
     # MPFR is required by some of the mathlib tests.
     - name: Setup FreeBSD
-      uses: vmactions/freebsd-vm@5b592a73e766fea2379264365f3a1a6b089ec989
+      uses: vmactions/freebsd-vm@d1e65811565151536c0c894fff74f06351ed26e6 # v 1.4.5
       with:
         usesh: true
         sync: nfs
