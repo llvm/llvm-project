@@ -55,7 +55,6 @@ using namespace llvm;
 #endif
 
 namespace {
-namespace util {
 /// RAII mechanism to redirect a file descriptor to the file pointed to by a
 /// different file descriptor. The destructor will reset the file descriptor to
 /// its original file.
@@ -123,8 +122,6 @@ static ErrorOr<std::string> readNextLine(FILE *File) {
 
   return Result;
 }
-
-} // namespace util
 
 /// Status code returned if the daemon fails to initialize, for example due to
 /// incorrect command line arguments.
@@ -313,7 +310,7 @@ public:
     respondReady();
 
     while (!feof(stdin)) {
-      const ErrorOr<std::string> Command = util::readNextLine(stdin);
+      const ErrorOr<std::string> Command = readNextLine(stdin);
       if (!Command) {
         exitWithError(Twine("Error reading standard input: ") +
                       Command.getError().message());
@@ -458,7 +455,7 @@ private:
       ArgsCStr.push_back(const_cast<char *>(Arg.data()));
     }
 
-    std::optional<util::ScopedFileRedirect> StderrRedirect;
+    std::optional<ScopedFileRedirect> StderrRedirect;
     if (NextInvocation.RedirectStderrToStdout)
       StderrRedirect.emplace(STDERR_FILENO, STDOUT_FILENO);
 
