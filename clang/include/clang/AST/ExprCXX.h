@@ -5503,6 +5503,8 @@ public:
 ///  - a type-id, or
 ///  - an id-expression.
 class CXXReflectExpr : public Expr {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
 
 private:
   // TODO(Reflection): add support for TemplateReference, NamespaceReference and

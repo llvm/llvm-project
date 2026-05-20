@@ -476,7 +476,19 @@ void ASTStmtWriter::VisitCoyieldExpr(CoyieldExpr *E) {
 
 void ASTStmtWriter::VisitCXXReflectExpr(CXXReflectExpr *E) {
   // TODO(Reflection): Implement this.
-  assert(false && "not implemented yet");
+  VisitExpr(E);
+  Record.AddSourceLocation(E->getOperatorLoc());
+  Record.push_back(static_cast<uint64_t>(E->getKind()));
+  switch (E->getKind()) {
+  case ReflectionKind::Null:
+    break;
+  case ReflectionKind::Type:
+    Record.AddTypeSourceInfo(E->getTypeSourceInfo());
+    break;
+  default:
+    assert(false && "unimplemented or unknown reflection entities");
+  }
+  Code = serialization::EXPR_REFLECT;
 }
 
 void ASTStmtWriter::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
