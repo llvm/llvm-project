@@ -29,8 +29,7 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP4]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[CURRENT_ITERATION_IV]]
 ; CHECK-NEXT:    [[VP_OP_LOAD3:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP5]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP3]])
-; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 16 x i8> @llvm.vp.merge.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[VP_OP_LOAD]], <vscale x 16 x i8> splat (i8 1), i32 [[TMP3]])
-; CHECK-NEXT:    [[TMP7:%.*]] = sdiv <vscale x 16 x i8> [[VP_OP_LOAD3]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 16 x i8> @llvm.vp.sdiv.nxv16i8(<vscale x 16 x i8> [[VP_OP_LOAD3]], <vscale x 16 x i8> [[VP_OP_LOAD]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP3]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 [[CURRENT_ITERATION_IV]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP7]], ptr align 1 [[TMP8]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP3]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP3]] to i64
