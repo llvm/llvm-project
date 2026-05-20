@@ -6560,38 +6560,41 @@ static void redirectAllPredecessorsTo(BasicBlock *OldTarget,
 /// Determine which blocks in \p BBs are reachable from outside and remove the
 /// ones that are not reachable from the function.
 static void removeUnusedBlocksFromParent(ArrayRef<BasicBlock *> BBs) {
-  SmallPtrSet<BasicBlock *, 6> BBsToErase(llvm::from_range, BBs);
-  auto HasRemainingUses = [&BBsToErase](BasicBlock *BB) {
-    for (Use &U : BB->uses()) {
-      auto *UseInst = dyn_cast<Instruction>(U.getUser());
-      if (!UseInst)
-        continue;
-      if (BBsToErase.count(UseInst->getParent()))
-        continue;
-      return true;
+  DenseMap<BasicBlock *, unsigned> BB2Index(BBs.size());
+  for (const auto [I, BB] : enumerate(BBs))
+    BB2Index.insert({BB, I});
+
+  // Optimistically assume all BBs are dead. We iteratively remove
+  // immediately-used blocks from this set until we reach a fixed point.
+  SmallBitVector BBsToErase(BBs.size(), true);
+  // Accumulates immediately-used blocks for one iteration.
+  SmallBitVector BBsToKeep(BBs.size());
+  do {
+    BBsToKeep.reset();
+    for (unsigned BBToEraseIndex : BBsToErase.set_bits()) {
+      for (Use &U : BBs[BBToEraseIndex]->uses()) {
+        auto *UseInst = dyn_cast<Instruction>(U.getUser());
+        if (!UseInst)
+          continue;
+        BasicBlock *UseBB = UseInst->getParent();
+        auto UseBBIndexI = BB2Index.find(UseBB);
+        // If this use is from an external block, or from a block in BBs we have
+        // already proved is transitively used by an external block, then this
+        // block is also used.
+        if (UseBBIndexI == BB2Index.end() ||
+            !BBsToErase.test(UseBBIndexI->second)) {
+          BBsToKeep.set(BBToEraseIndex);
+          break;
+        }
+      }
     }
-    return false;
-  };
+    BBsToErase &= ~BBsToKeep;
+  } while (BBsToKeep.any());
 
-  // HasRemainingUses queries BBsToErase, so it cannot be used as a predicate
-  // for SmallPtrSet::remove_if on the same set.
-  SmallVector<BasicBlock *> BBsToKeep;
-  while (true) {
-    bool Changed = false;
-    BBsToKeep.clear();
-
-    for (BasicBlock *BB : BBsToErase)
-      if (HasRemainingUses(BB))
-        BBsToKeep.push_back(BB);
-    for (BasicBlock *BB : BBsToKeep)
-      Changed |= BBsToErase.erase(BB);
-
-    if (!Changed)
-      break;
-  }
-
-  SmallVector<BasicBlock *, 7> BBVec(BBsToErase.begin(), BBsToErase.end());
-  DeleteDeadBlocks(BBVec);
+  SmallVector<BasicBlock *> FinalBBsToErase;
+  for (unsigned BBToEraseIndex : BBsToErase.set_bits())
+    FinalBBsToErase.push_back(BBs[BBToEraseIndex]);
+  DeleteDeadBlocks(FinalBBsToErase);
 }
 
 CanonicalLoopInfo *

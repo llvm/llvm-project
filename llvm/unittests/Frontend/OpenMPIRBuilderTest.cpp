@@ -8461,6 +8461,9 @@ TEST_F(OpenMPIRBuilderTest, ScopeDirectiveNowait) {
   }
 }
 
+// This test ensures loop fusion does not leave orphaned non-entry blocks.
+// It's a regression test for SmallPtrSet::remove_if behavior change from
+// #197637.
 TEST_F(OpenMPIRBuilderTest, FuseLoopRangeNoDeadBlocks) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
