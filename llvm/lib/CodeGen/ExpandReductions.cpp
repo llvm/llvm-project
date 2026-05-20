@@ -35,7 +35,8 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI,
   for (auto &I : instructions(F)) {
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
       switch (II->getIntrinsicID()) {
-      default: break;
+      default:
+        break;
       case Intrinsic::vector_reduce_fadd:
       case Intrinsic::vector_reduce_fmul:
       case Intrinsic::vector_reduce_add:
@@ -50,11 +51,12 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI,
       case Intrinsic::vector_reduce_fmax:
       case Intrinsic::vector_reduce_fmin:
       case Intrinsic::vector_reduce_fmaximum:
-      case Intrinsic::vector_reduce_fminimum:
+      case Intrinsic::vector_reduce_fminimum: {
+        // Only expand if the target doesn't support this operation natively
         if (TTI->shouldExpandReduction(II))
           Worklist.push_back(II);
-
         break;
+      }
       }
     }
   }
@@ -72,7 +74,8 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI,
     IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
     Builder.setFastMathFlags(FMF);
     switch (ID) {
-    default: llvm_unreachable("Unexpected intrinsic!");
+    default:
+      llvm_unreachable("Unexpected intrinsic!");
     case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul: {
       // FMFs must be attached to the call, otherwise it's an ordered reduction
@@ -162,12 +165,9 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI,
     }
     case Intrinsic::vector_reduce_fmaximum:
     case Intrinsic::vector_reduce_fminimum: {
-      // We require "nnan" to use a shuffle reduction; "nsz" is implied by the
-      // semantics of the reduction.
       Value *Vec = II->getArgOperand(0);
       if (!isPowerOf2_32(
-              cast<FixedVectorType>(Vec->getType())->getNumElements()) ||
-          !FMF.noNaNs())
+              cast<FixedVectorType>(Vec->getType())->getNumElements()))
         continue;
       unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
       Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
