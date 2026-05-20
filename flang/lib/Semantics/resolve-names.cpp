@@ -1943,6 +1943,7 @@ bool OmpVisitor::HasDataEnvironment(llvm::omp::Directive dir) {
     case llvm::omp::Directive::OMPD_sections: // work-distribution
     case llvm::omp::Directive::OMPD_simd:
     case llvm::omp::Directive::OMPD_single: // work-distribution
+    case llvm::omp::Directive::OMPD_taskgraph:
     case llvm::omp::Directive::OMPD_target: // task-generating
     case llvm::omp::Directive::OMPD_target_data: // task-generating
     case llvm::omp::Directive::OMPD_target_enter_data: // task-generating
