@@ -7189,10 +7189,10 @@ static void emitLoadScalarOpsFromVGPRLoop(
           .addReg(VScalarOp);
 
       if (UseNewExecInstructions) {
-        auto CmpxMI = BuildMI(LoopBB, LoopBB.end(), DL,
-                              TII.get(LMC.CmpXEqU32TermOpc))
-            .addReg(CurReg)
-            .addReg(VScalarOp);
+        auto CmpxMI =
+            BuildMI(LoopBB, LoopBB.end(), DL, TII.get(LMC.CmpXEqU32TermOpc))
+                .addReg(CurReg)
+                .addReg(VScalarOp);
         if (I == LoopBB.end())
           I = CmpxMI.getInstr()->getIterator();
       } else {
@@ -7261,10 +7261,10 @@ static void emitLoadScalarOpsFromVGPRLoop(
             NumSubRegs <= 2 ? 0 : TRI->getSubRegFromChannel(Idx, 2);
 
         if (UseNewExecInstructions) {
-          auto CmpxMI = BuildMI(LoopBB, LoopBB.end(), DL,
-                                TII.get(LMC.CmpXEqU64TermOpc))
-              .addReg(CurReg)
-              .addReg(VScalarOp, VScalarOpUndef, SubReg);
+          auto CmpxMI =
+              BuildMI(LoopBB, LoopBB.end(), DL, TII.get(LMC.CmpXEqU64TermOpc))
+                  .addReg(CurReg)
+                  .addReg(VScalarOp, VScalarOpUndef, SubReg);
           if (I == LoopBB.end())
             I = CmpxMI.getInstr()->getIterator();
         } else {
