@@ -96,8 +96,8 @@ void RTNAME(feclearexcept)(uint32_t excepts) {
 #endif
 }
 void RTDEF(feraiseexcept)(uint32_t excepts) {
-  FLANG_FP_TRAP_ON
 #if !defined(RT_DEVICE_COMPILATION)
+  FLANG_FP_TRAP_ON
   feraiseexcept(excepts);
 #if defined(_MM_EXCEPT_DENORM)
   _mm_setcsr(_mm_getcsr() | (excepts & _MM_EXCEPT_MASK));
