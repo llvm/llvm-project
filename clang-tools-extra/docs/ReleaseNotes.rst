@@ -676,6 +676,10 @@ Changes in existing checks
   - Fixed a false positive where function templates could be diagnosed as generic
     identifiers when `DefaultCase` was enabled.
 
+  - Fixed forward declarations incorrectly falling back to `DefaultCase`
+    instead of using their semantic declaration kind (for example
+    `ClassCase`, `StructCase`, or `UnionCase`).
+
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check:
 
