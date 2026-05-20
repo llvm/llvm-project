@@ -323,3 +323,21 @@ func.func @multi_level_tiled_matmul() {
   }
   return
 }
+
+// -----
+
+// PROMOTE-SINGLE-ITER-LABEL: func @bound_value_promote_single_iter
+
+func.func @bound_value_promote_single_iter() -> index {
+  %c0 = arith.constant 0 :index
+  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  %res = affine.for %iv = %bound to 2 step 2 iter_args(%arg = %c0) -> index {
+      %sum = arith.addi %arg, %c0 : index
+      affine.yield %sum : index
+  }
+  return %res : index
+}
+// PROMOTE-SINGLE-ITER-NEXT: %[[C0:.*]] = arith.constant 0 : index
+// PROMOTE-SINGLE-ITER-NEXT: %[[VALUE_WITH_BOUNDS_0:.*]] = test.value_with_bounds
+// PROMOTE-SINGLE-ITER-NEXT: %[[ADD:.*]] = arith.addi %[[C0]], %[[C0]] : index
+// PROMOTE-SINGLE-ITER-NEXT: return %[[ADD]] : index
