@@ -1920,14 +1920,10 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   // For non-anchor ops, derive the operand layout from the op's result
   // layout via op-specific semantics.
   xegpu::DistributeLayoutAttr resLayout;
-  if (op->getNumResults() == 1) {
-    resLayout = xegpu::getDistributeLayoutAttr(op->getResult(0));
-  } else {
-    Value val = operand.get();
-    if (auto opResult = dyn_cast<OpResult>(val)) {
-      auto resultIdx = opResult.getResultNumber();
-      resLayout = xegpu::getDistributeLayoutAttr(op->getResult(resultIdx));
-    }
+  Value val = operand.get();
+  if (auto opResult = dyn_cast<OpResult>(val)) {
+    auto resultIdx = opResult.getResultNumber();
+    resLayout = xegpu::getDistributeLayoutAttr(op->getResult(resultIdx));
   }
   return inferSourceLayoutFromResultForNonAnchorOp(operand, resLayout);
 }
