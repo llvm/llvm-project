@@ -510,7 +510,7 @@ class MetadataLoader::MetadataLoaderImpl {
           for (unsigned I = 0; I < GVs->getNumOperands(); I++)
             if (auto *GV =
                     dyn_cast_or_null<DIGlobalVariable>(GVs->getOperand(I))) {
-              auto *&DGVE = GlobalVariableExpression[GV];
+              DIGlobalVariableExpression *&DGVE = GlobalVariableExpression[GV];
               if (!DGVE) {
                 DGVE = DIGlobalVariableExpression::getDistinct(
                     Context, GV, DIExpression::get(Context, {}));
@@ -526,7 +526,7 @@ class MetadataLoader::MetadataLoaderImpl {
       GV.eraseMetadata(LLVMContext::MD_dbg);
       for (auto *MD : MDs)
         if (auto *DGV = dyn_cast<DIGlobalVariable>(MD)) {
-          auto *&DGVE = GlobalVariableExpression[DGV];
+          DIGlobalVariableExpression *&DGVE = GlobalVariableExpression[DGV];
           if (!DGVE) {
             DGVE = DIGlobalVariableExpression::getDistinct(
                 Context, DGV, DIExpression::get(Context, {}));
