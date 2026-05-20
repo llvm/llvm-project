@@ -343,11 +343,8 @@ unsigned LoongArchInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     const MachineFunction *MF = MI.getParent()->getParent();
     const Function &F = MF->getFunction();
     if (F.hasFnAttribute("patchable-function-entry")) {
-      unsigned Num;
-      if (F.getFnAttribute("patchable-function-entry")
-              .getValueAsString()
-              .getAsInteger(10, Num))
-        return 0;
+      unsigned Num =
+          F.getFnAttributeAsParsedInteger("patchable-function-entry");
       return Num * 4;
     }
     [[fallthrough]];

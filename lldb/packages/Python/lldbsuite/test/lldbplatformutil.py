@@ -104,6 +104,8 @@ def finalize_build_dictionary(dictionary):
         "windows": "Windows_NT",
         "macosx": "Darwin",
         "darwin": "Darwin",
+        "wasip1": "WASI",
+        "wasi": "WASI",
     }
 
     if dictionary is None:
@@ -124,8 +126,11 @@ def finalize_build_dictionary(dictionary):
 def _get_platform_os(p):
     # Use the triple to determine the platform if set.
     triple = p.GetTriple()
-    if triple:
-        platform = triple.split("-")[2]
+    if not triple:
+        triple = getattr(configuration, "triple", None) or ""
+    parts = triple.split("-")
+    if len(parts) >= 3:
+        platform = parts[2]
         if platform.startswith("freebsd"):
             platform = "freebsd"
         elif platform.startswith("netbsd"):
@@ -133,6 +138,8 @@ def _get_platform_os(p):
         elif platform.startswith("openbsd"):
             platform = "openbsd"
         return platform
+    if len(parts) >= 2:
+        return parts[1]
 
     return ""
 

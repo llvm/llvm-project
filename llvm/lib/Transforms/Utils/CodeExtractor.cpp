@@ -707,6 +707,9 @@ void CodeExtractor::findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
     }
   }
 
+  // Reset stale state from any prior call in HotColdSplitting; the CFG may
+  // have changed since.
+  FuncRetVal = nullptr;
   if (!VoidReturnWithSingleOutput && !AggregateArgs && Outputs.size() == 1 &&
       getCommonExitBlock(Blocks)) {
     FuncRetVal = Outputs[0];
@@ -2122,11 +2125,9 @@ void CodeExtractor::insertReplacerCall(
   }
 
   if (FuncRetVal)
-    for (User *U : FuncRetVal->users()) {
-      Instruction *inst = cast<Instruction>(U);
-      if (inst->getParent()->getParent() == oldFunction)
-        inst->replaceUsesOfWith(FuncRetVal, ReplacerCall);
-    }
+    FuncRetVal->replaceUsesWithIf(ReplacerCall, [&](Use &U) {
+      return cast<Instruction>(U.getUser())->getFunction() == oldFunction;
+    });
 
   // Update the branch weights for the exit block.
   if (BFI && ExtractedFuncRetVals.size() > 1)

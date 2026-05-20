@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/sys_mman_macros.h"
 #include "src/fcntl/fcntl.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"

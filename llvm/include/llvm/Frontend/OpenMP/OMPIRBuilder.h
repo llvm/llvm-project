@@ -3046,6 +3046,19 @@ public:
                ArrayRef<llvm::Value *> CPVars = {},
                ArrayRef<llvm::Function *> CPFuncs = {});
 
+  /// Generator for '#omp scope'
+  ///
+  /// \param Loc The source location description.
+  /// \param BodyGenCB Callback that will generate the region code.
+  /// \param FiniCB Callback to finalize variable copies.
+  /// \param IsNowait If false, a barrier is emitted.
+  ///
+  /// \returns The insertion position *after* the scope.
+  LLVM_ABI InsertPointOrErrorTy createScope(const LocationDescription &Loc,
+                                            BodyGenCallbackTy BodyGenCB,
+                                            FinalizeCallbackTy FiniCB,
+                                            bool IsNowait);
+
   /// Generator for '#omp master'
   ///
   /// \param Loc The insert and source location description.
@@ -3570,7 +3583,8 @@ public:
           InsertPointTy CodeGenIP, llvm::Value *PtrPHI, llvm::Value *BeginArg)>
           PrivAndGenMapInfoCB,
       llvm::Type *ElemTy, StringRef FuncName,
-      CustomMapperCallbackTy CustomMapperCB);
+      CustomMapperCallbackTy CustomMapperCB,
+      bool PreserveMemberOfFlags = false);
 
   /// Generator for '#omp target data'
   ///
@@ -3995,6 +4009,18 @@ public:
   ///                     the case the comparison is '=='.
   ///
   /// \return Insertion point after generated atomic capture IR.
+  /// Whether to emit special handling for IEEE 754 -0.0 == +0.0 in
+  /// atomic compare operations on floating-point types.
+  bool HandleFPNegZero = false;
+
+  /// Set whether atomic compare should handle -0.0/+0.0 equivalence.
+  /// Returns the previous value so callers can save and restore it.
+  bool setHandleFPNegZero(bool FPNegZero) {
+    bool Old = HandleFPNegZero;
+    HandleFPNegZero = FPNegZero;
+    return Old;
+  }
+
   LLVM_ABI InsertPointTy
   createAtomicCompare(const LocationDescription &Loc, AtomicOpValue &X,
                       AtomicOpValue &V, AtomicOpValue &R, Value *E, Value *D,

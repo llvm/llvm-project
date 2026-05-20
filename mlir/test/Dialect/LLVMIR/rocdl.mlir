@@ -111,6 +111,12 @@ func.func @rocdl.barrier() {
   llvm.return
 }
 
+func.func @rocdl.wave_barrier() {
+  // CHECK: rocdl.wave.barrier
+  rocdl.wave.barrier
+  llvm.return
+}
+
 func.func @rocdl.sched_barrier() {
   // CHECK: rocdl.sched.barrier
   rocdl.sched.barrier 0
@@ -782,6 +788,19 @@ llvm.func @rocdl.global.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3
   rocdl.global.load.async.to.lds.b32 %src, %dst, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
   rocdl.global.load.async.to.lds.b64 %src, %dst, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
   rocdl.global.load.async.to.lds.b128 %src, %dst, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  llvm.return
+}
+
+// CHECK-LABEL: @rocdl.global.store.async.from.lds
+llvm.func @rocdl.global.store.async.from.lds(%dst : !llvm.ptr<1>, %src: !llvm.ptr<3>) {
+  // CHECK: rocdl.global.store.async.from.lds.b8 %{{.*}}, %{{.*}}, 0, 0
+  // CHECK: rocdl.global.store.async.from.lds.b32 %{{.*}}, %{{.*}}, 0, 0
+  // CHECK: rocdl.global.store.async.from.lds.b64 %{{.*}}, %{{.*}}, 0, 0
+  // CHECK: rocdl.global.store.async.from.lds.b128 %{{.*}}, %{{.*}}, 0, 0
+  rocdl.global.store.async.from.lds.b8 %dst, %src, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  rocdl.global.store.async.from.lds.b32 %dst, %src, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  rocdl.global.store.async.from.lds.b64 %dst, %src, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  rocdl.global.store.async.from.lds.b128 %dst, %src, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
   llvm.return
 }
 

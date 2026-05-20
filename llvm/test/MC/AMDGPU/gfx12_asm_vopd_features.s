@@ -47,6 +47,14 @@
 // A VOPD OpY mov_b32 instruction uses SRC2 source-cache if OpX is also mov_b32
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// SRCX0 and SRCY0 may use the same bank if they are using the same VGPR; same for
+// VSRCX1 and VSRCY1.
+//===----------------------------------------------------------------------===//
+
+v_dual_add_f32 v2, v2, v5 :: v_dual_mul_f32 v3, v2, v5
+// GFX12: v_dual_add_f32 v2, v2, v5 :: v_dual_mul_f32 v3, v2, v5 ; encoding: [0x02,0x0b,0x06,0xc9,0x02,0x0b,0x02,0x02]
+
 v_dual_add_f32      v255, s105, v2               ::  v_dual_cndmask_b32   v6, s105, v3
 // GFX12: v_dual_add_f32 v255, s105, v2 :: v_dual_cndmask_b32 v6, s105, v3 ; encoding: [0x69,0x04,0x12,0xc9,0x69,0x06,0x06,0xff]
 

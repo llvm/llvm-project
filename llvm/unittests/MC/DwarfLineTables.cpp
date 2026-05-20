@@ -13,6 +13,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
@@ -26,6 +27,7 @@ struct Context {
   Triple TT;
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
+  std::unique_ptr<MCSubtargetInfo> STI;
   std::unique_ptr<MCContext> Ctx;
 
   Context() : TT(TripleName) {
@@ -42,8 +44,8 @@ struct Context {
     MRI.reset(TheTarget->createMCRegInfo(TT));
     MCTargetOptions MCOptions;
     MAI.reset(TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
-    Ctx = std::make_unique<MCContext>(TT, *MAI, MRI.get(),
-                                      /*MSTI=*/nullptr);
+    STI.reset(TheTarget->createMCSubtargetInfo(TT, "", ""));
+    Ctx = std::make_unique<MCContext>(TT, *MAI, *MRI, *STI);
   }
 
   operator bool() { return Ctx.get(); }

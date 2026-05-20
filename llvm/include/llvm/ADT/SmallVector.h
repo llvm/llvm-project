@@ -137,7 +137,7 @@ protected:
   }
   // Space after 'FirstEl' is clobbered, do not add any instance vars after it.
 
-  SmallVectorTemplateCommon(size_t Size) : Base(getFirstEl(), Size) {}
+  SmallVectorTemplateCommon(size_t SizeArg) : Base(getFirstEl(), SizeArg) {}
 
   void grow_pod(size_t MinSize, size_t TSize) {
     Base::grow_pod(getFirstEl(), MinSize, TSize);
@@ -342,7 +342,8 @@ protected:
   static constexpr bool TakesParamByValue = false;
   using ValueParamT = const T &;
 
-  SmallVectorTemplateBase(size_t Size) : SmallVectorTemplateCommon<T>(Size) {}
+  SmallVectorTemplateBase(size_t SizeArg)
+      : SmallVectorTemplateCommon<T>(SizeArg) {}
 
   static void destroy_range(T *S, T *E) {
     while (S != E) {
@@ -493,14 +494,15 @@ protected:
   /// parameters by value.
   using ValueParamT = std::conditional_t<TakesParamByValue, T, const T &>;
 
-  SmallVectorTemplateBase(size_t Size) : SmallVectorTemplateCommon<T>(Size) {}
+  SmallVectorTemplateBase(size_t SizeArg)
+      : SmallVectorTemplateCommon<T>(SizeArg) {}
 
   // No need to do a destroy loop for POD's.
   static void destroy_range(T *, T *) {}
 
   /// Move the range [I, E) onto the uninitialized memory
   /// starting with "Dest", constructing elements into it as needed.
-  template<typename It1, typename It2>
+  template <typename It1, typename It2>
   static void uninitialized_move(It1 I, It1 E, It2 Dest) {
     // Just do a copy.
     uninitialized_copy(I, E, Dest);
@@ -1229,14 +1231,12 @@ public:
     this->destroy_range(this->begin(), this->end());
   }
 
-  explicit SmallVector(size_t Size)
-    : SmallVectorImpl<T>(N) {
-    this->resize(Size);
+  explicit SmallVector(size_t SizeArg) : SmallVectorImpl<T>(N) {
+    this->resize(SizeArg);
   }
 
-  SmallVector(size_t Size, const T &Value)
-    : SmallVectorImpl<T>(N) {
-    this->assign(Size, Value);
+  SmallVector(size_t SizeArg, const T &Value) : SmallVectorImpl<T>(N) {
+    this->assign(SizeArg, Value);
   }
 
   template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>
@@ -1323,20 +1323,22 @@ using ValueTypeFromRangeType =
 /// when you want to iterate a range and then sort the results.
 template <unsigned Size, typename R>
 SmallVector<ValueTypeFromRangeType<R>, Size> to_vector(R &&Range) {
-  return {adl_begin(Range), adl_end(Range)};
+  return SmallVector<ValueTypeFromRangeType<R>, Size>(adl_begin(Range),
+                                                      adl_end(Range));
 }
 template <typename R>
 SmallVector<ValueTypeFromRangeType<R>> to_vector(R &&Range) {
-  return {adl_begin(Range), adl_end(Range)};
+  return SmallVector<ValueTypeFromRangeType<R>>(adl_begin(Range),
+                                                adl_end(Range));
 }
 
 template <typename Out, unsigned Size, typename R>
 SmallVector<Out, Size> to_vector_of(R &&Range) {
-  return {adl_begin(Range), adl_end(Range)};
+  return SmallVector<Out, Size>(adl_begin(Range), adl_end(Range));
 }
 
 template <typename Out, typename R> SmallVector<Out> to_vector_of(R &&Range) {
-  return {adl_begin(Range), adl_end(Range)};
+  return SmallVector<Out>(adl_begin(Range), adl_end(Range));
 }
 
 // Explicit instantiations

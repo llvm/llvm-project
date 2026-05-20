@@ -253,6 +253,7 @@ public:
                             std::string localName{
                                 std::get<0>(names.t).source.ToString()};
                             stmt.renames.push_back(localName);
+                            stmt.hasOnlyWithRenames = true;
                           },
                           [&](const parser::Rename::Operators &) {
                             // Operator renames - not commonly needed for debug
@@ -2219,6 +2220,25 @@ struct SymbolVisitor {
     if (const semantics::Symbol *symbol = name.symbol)
       visitSymbol(*symbol);
     return false;
+  }
+
+  bool Pre(const Fortran::parser::AccClause::UseDevice &useDevice) {
+    // For use_device, each symbol's parser Name has been given a local copy
+    // of the symbol with the DEVICE attribute. The original symbol will be
+    // needed in lowering and may not appear in the parse tree of the function
+    // anymore. Visit it now: it is not directly accessible from the construct
+    // symbol, so the parent scope must be searched to find it.
+    for (const auto &accObject : useDevice.v.v) {
+      if (const semantics::Symbol *deviceSym =
+              Fortran::parser::GetFirstName(accObject).symbol) {
+        if (const semantics::Symbol *hostSym =
+                deviceSym->owner().parent().FindSymbol(deviceSym->name()))
+          visitSymbol(*hostSym);
+      }
+    }
+    // Continue visiting the ACC construct symbol and any symbols used in
+    // designator index expressions.
+    return true;
   }
 
   template <typename T>
