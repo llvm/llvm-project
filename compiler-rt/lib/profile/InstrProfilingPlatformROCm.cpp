@@ -27,12 +27,8 @@ extern "C" {
 #include <pthread.h>
 #endif
 
-/* Sync primitives used to serialize first-time HIP runtime resolution
- * (ensureHipLoaded) and concurrent mutations of the DynamicModules array.
- *
- * pthread_once / pthread_mutex on POSIX, INIT_ONCE / CRITICAL_SECTION on
- * Windows. Kept inline in this TU to avoid a sanitizer_common dependency
- * in the profile runtime. */
+/* Serialize one-time HIP loader resolution and DynamicModules mutations.
+ * Inline to avoid a sanitizer_common dependency. */
 #ifdef _WIN32
 static INIT_ONCE HipLoadedOnce = INIT_ONCE_STATIC_INIT;
 static CRITICAL_SECTION DynamicModulesLock;
@@ -81,9 +77,8 @@ typedef int (*hipGetDeviceCountTy)(int *);
 typedef int (*hipGetDeviceTy)(int *);
 typedef int (*hipSetDeviceTy)(int);
 
-/* hipDeviceProp_t layout for HIP 6.x+ (R0600).
- * We only need gcnArchName at offset 1160. Pad to 4096 to safely
- * accommodate future struct growth without recompilation. */
+/* Minimal hipDeviceProp_t (HIP 6.x R0600): only gcnArchName at offset 1160
+ * is read. Padded to 4096 to tolerate ABI growth. */
 typedef struct {
   char padding[1160];
   char gcnArchName[256];
@@ -196,9 +191,8 @@ static int hipMemcpy(void *dest, const void *src, size_t len,
   return pHipMemcpy ? pHipMemcpy(dest, src, len, kind) : -1;
 }
 
-/* Copy from device to host using HIP.
- * This requires that the device section symbols are registered with CLR,
- * otherwise hipMemcpy may attempt a CPU path and crash. */
+/* Device section symbols must be registered with CLR first; otherwise
+ * hipMemcpy may take a CPU path and crash. */
 static int memcpyDeviceToHost(void *Dst, const void *Src, size_t Size) {
   return hipMemcpy(Dst, Src, Size, 2 /* DToH */);
 }
@@ -250,11 +244,8 @@ static int NumDynamicModules = 0;
 static int CapDynamicModules = 0;
 
 /* -------------------------------------------------------------------------- */
-/*  ELF symbol enumeration                                                    */
-/*                                                                            */
-/*  AMDGPU code objects are always ELF.  We use manual parsing because this   */
-/*  is compiler-rt (standalone C runtime) and cannot link against LLVM's C++  */
-/*  Support libraries.                                                        */
+/*  ELF symbol enumeration (manual parse: compiler-rt cannot link LLVM Support)
+ */
 /* -------------------------------------------------------------------------- */
 
 #if __has_include(<elf.h>)
@@ -264,9 +255,8 @@ static int CapDynamicModules = 0;
  * Return 0 to continue iteration, non-zero to stop. */
 typedef int (*SymbolCallback)(const char *Name, void *UserData);
 
-/* If Image is a clang offload bundle (__CLANG_OFFLOAD_BUNDLE__), find the
- * first embedded code object that is a valid ELF and return a pointer to it.
- * Otherwise return Image unchanged. Returns nullptr if no ELF is found. */
+/* If Image is a clang offload bundle, return a pointer to the first embedded
+ * ELF. Returns Image if not a bundle, nullptr if a bundle holds no ELF. */
 static const void *unwrapOffloadBundle(const void *Image) {
   static const char BundleMagic[] = "__CLANG_OFFLOAD_BUNDLE__";
   if (memcmp(Image, BundleMagic, sizeof(BundleMagic) - 1) != 0)
@@ -287,10 +277,8 @@ static const void *unwrapOffloadBundle(const void *Image) {
     Cursor += sizeof(EntrySize);
     __builtin_memcpy(&IDSize, Cursor, sizeof(IDSize));
     Cursor += sizeof(IDSize);
-    /* Skip the entry ID string. */
-    Cursor += IDSize;
+    Cursor += IDSize; /* skip entry ID */
 
-    /* Check if this entry contains an ELF. */
     if (EntrySize >= sizeof(Elf64_Ehdr)) {
       const Elf64_Ehdr *E = (const Elf64_Ehdr *)(Buf + EntryOffset);
       if (E->e_ident[EI_MAG0] == ELFMAG0 && E->e_ident[EI_MAG1] == ELFMAG1 &&
@@ -304,16 +292,13 @@ static const void *unwrapOffloadBundle(const void *Image) {
   return nullptr;
 }
 
-/* Parse an AMDGPU code-object ELF and invoke CB for every global symbol whose
- * name starts with PREFIX.  Image may be nullptr (e.g. hipModuleLoad from file)
- * or a clang offload bundle containing an ELF;
- * in that case the function unwraps the bundle first. */
+/* Invoke CB for every global symbol in Image (an AMDGPU ELF or offload bundle)
+ * whose name starts with PREFIX. Image may be null. */
 static void enumerateElfSymbols(const void *Image, const char *Prefix,
                                 SymbolCallback CB, void *UserData) {
   if (!Image)
     return;
 
-  /* Handle clang offload bundle wrapping. */
   Image = unwrapOffloadBundle(Image);
   if (!Image)
     return;
@@ -357,18 +342,15 @@ typedef struct {
   OffloadDynamicModuleInfo *ModInfo;
 } EnumState;
 
-/* Grow the TU array inside a module entry and register one
- * __llvm_profile_sections_<CUID> symbol. Also pre-registers the corresponding
- * per-TU section symbols with CLR (needed so hipMemcpy can copy from those
- * device addresses later). */
+/* Register one __llvm_profile_sections_<CUID> symbol on the module entry.
+ * hipModuleGetGlobal also registers the device address with CLR so hipMemcpy
+ * can copy from it later. */
 static int registerPrfSymbol(const char *Name, void *UserData) {
   EnumState *S = (EnumState *)UserData;
   OffloadDynamicModuleInfo *MI = S->ModInfo;
 
-  /* Look up the device address of the per-TU __llvm_profile_sections_<CUID>
-   * struct.  In the current design Clang emits the struct itself at this
-   * symbol (not a pointer indirection), so the address from hipModuleGetGlobal
-   * is what processDeviceOffloadPrf needs to hipMemcpy from. */
+  /* The symbol is the per-TU sections struct itself, not a pointer
+   * indirection, so this address is the hipMemcpy source. */
   void *DeviceVar = nullptr;
   size_t Bytes = 0;
   if (hipModuleGetGlobal(&DeviceVar, &Bytes, S->Module, Name) != 0) {
@@ -376,7 +358,6 @@ static int registerPrfSymbol(const char *Name, void *UserData) {
     return 0; /* continue */
   }
 
-  /* Grow TU array if needed. */
   if (MI->NumTUs >= MI->CapTUs) {
     int NewCap = MI->CapTUs ? MI->CapTUs * 2 : 4;
     OffloadDynamicTUInfo *New = (OffloadDynamicTUInfo *)realloc(
@@ -392,8 +373,7 @@ static int registerPrfSymbol(const char *Name, void *UserData) {
   TU->DeviceVar = DeviceVar;
   TU->Processed = 0;
 
-  (void)Name; /* CUID suffix available for future per-TU section lookup */
-
+  (void)Name;
   return 0; /* continue enumeration */
 }
 
@@ -433,12 +413,7 @@ __llvm_profile_offload_register_dynamic_module(int ModuleLoadRc, void **Ptr,
   MI->NumTUs = 0;
   MI->CapTUs = 0;
 
-  /* Enumerate all __llvm_profile_sections_<CUID> symbols in the ELF image.
-   * For each one, look it up via hipModuleGetGlobal (which also registers
-   * the device address with CLR for later hipMemcpy) and store the entry.
-   *
-   * ELF parsing requires <elf.h>.  On platforms without it, dynamic module
-   * profiling is not yet supported. */
+  /* Dynamic-module profiling needs ELF parsing for symbol enumeration. */
 #if __has_include(<elf.h>)
   EnumState State = {*Ptr, MI};
   enumerateElfSymbols(Image, "__llvm_profile_sections_", registerPrfSymbol,
@@ -465,9 +440,8 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
   for (int i = 0; i < NumDynamicModules; ++i) {
     OffloadDynamicModuleInfo *MI = &DynamicModules[i];
 
-    /* HIP recycles hipModule_t addresses after unload. Drained slots
-     * are cleared (ModulePtr = nullptr) below so a recycled-handle
-     * lookup finds the new slot, not the dead one. */
+    /* HIP recycles hipModule_t addresses; drained slots are cleared so a
+     * recycled handle finds the new slot, not the dead one. */
     if (MI->ModulePtr != Ptr)
       continue;
 
@@ -475,7 +449,6 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
       PROF_NOTE("Unregistering module %p (%d TUs)\n", MI->ModulePtr,
                 MI->NumTUs);
 
-    /* Process every TU in this module. */
     for (int t = 0; t < MI->NumTUs; ++t) {
       OffloadDynamicTUInfo *TU = &MI->TUs[t];
       if (TU->Processed) {
@@ -483,16 +456,14 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
           PROF_NOTE("Module %p TU %d already processed, skipping\n", Ptr, t);
         continue;
       }
-      /* Use a globally unique index as TU index for the output filename. */
+      /* Globally unique TU index for the output filename. */
       int TUIndex = i * 1000 + t;
       if (TU->DeviceVar) {
         int CurDev = 0;
         hipGetDevice(&CurDev);
         const char *ArchName = getDeviceArchName(CurDev);
-        /* Encode TUIndex in Target so each drain writes to its own
-         * profraw ("<arch>.<TUIndex>.profile.<pid>.profraw"); otherwise
-         * back-to-back drains overwrite the same file. Static-load
-         * (processShadowVariable) keeps the bare arch target. */
+        /* Encode TUIndex in Target so each drain writes a distinct profraw;
+         * otherwise back-to-back drains overwrite the same file. */
         char TargetWithTU[64];
         snprintf(TargetWithTU, sizeof(TargetWithTU), "%s.%d", ArchName,
                  TUIndex);
@@ -503,7 +474,6 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
                     t);
       }
     }
-    /* Mark the slot dead so a recycled handle finds the new slot. */
     MI->ModulePtr = nullptr;
     unlockDynamicModules();
     return;
@@ -550,50 +520,25 @@ __llvm_profile_offload_register_section_shadow_variable(void *ptr) {
   OffloadSectionShadowVariables[NumSectionShadowVariables++] = ptr;
 }
 
-// Free host-side copies of device sections on error or success. Factored out
-// so we can return early: C++ forbids goto past initializations of automatic
-// locals declared later in this function (e.g. const uint64_t NumData).
-// Callers pass nullptr for reused (cached) sections so we only free malloc'd
-// buffers; free(nullptr) is a no-op (C/C++).
-static void freeCopiedHostSections(char *HostCountersBegin, char *HostDataBegin,
-                                   char *HostNamesBegin) {
-  free(HostCountersBegin);
-  free(HostDataBegin);
-  free(HostNamesBegin);
-}
-
 namespace {
 
-struct CopiedHostSectionsCleanup {
-  char *Counters;
-  char *Data;
-  char *Names;
-  int CntsReused;
-  int DataReused;
-  int NamesReused;
-
-  CopiedHostSectionsCleanup(char *C, char *D, char *N, int CR, int DR, int NR)
-      : Counters(C), Data(D), Names(N), CntsReused(CR), DataReused(DR),
-        NamesReused(NR) {}
-
-  ~CopiedHostSectionsCleanup() {
-    freeCopiedHostSections(CntsReused ? nullptr : Counters,
-                           DataReused ? nullptr : Data,
-                           NamesReused ? nullptr : Names);
-  }
-
-  CopiedHostSectionsCleanup(const CopiedHostSectionsCleanup &) = delete;
-  CopiedHostSectionsCleanup &
-  operator=(const CopiedHostSectionsCleanup &) = delete;
-};
-
-struct MallocBufferCleanup {
+// free()-based scope guard. Use .release() to transfer ownership.
+struct UniqueFree {
   void *Ptr;
-  explicit MallocBufferCleanup(void *P) : Ptr(P) {}
-  ~MallocBufferCleanup() { free(Ptr); }
-  MallocBufferCleanup(const MallocBufferCleanup &) = delete;
-  MallocBufferCleanup &operator=(const MallocBufferCleanup &) = delete;
+  explicit UniqueFree(void *P = nullptr) : Ptr(P) {}
+  ~UniqueFree() { free(Ptr); }
+  UniqueFree(const UniqueFree &) = delete;
+  UniqueFree &operator=(const UniqueFree &) = delete;
   char *get() const { return static_cast<char *>(Ptr); }
+  void reset(void *P) {
+    free(Ptr);
+    Ptr = P;
+  }
+  void *release() {
+    void *P = Ptr;
+    Ptr = nullptr;
+    return P;
+  }
 };
 
 } // namespace
@@ -649,6 +594,9 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
   static char *CachedHostData = nullptr;
   static size_t CachedDataSize = 0;
 
+  // Owns freshly malloc'd buffers; release() transfers ownership to the cache.
+  UniqueFree CntsOwner, DataOwner, NamesOwner;
+
   if (CountersSize > 0 && DevCntsBegin == CachedDevCntsBegin &&
       CountersSize == CachedCntsSize) {
     HostCountersBegin = CachedHostCnts;
@@ -657,6 +605,7 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
       PROF_NOTE("Reusing cached counters section (%zu bytes)\n", CountersSize);
   } else if (CountersSize > 0) {
     HostCountersBegin = (char *)malloc(CountersSize);
+    CntsOwner.reset(HostCountersBegin);
   }
 
   if (DataSize > 0 && DevDataBegin == CachedDevDataBegin &&
@@ -667,6 +616,7 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
       PROF_NOTE("Reusing cached data section (%zu bytes)\n", DataSize);
   } else if (DataSize > 0) {
     HostDataBegin = (char *)malloc(DataSize);
+    DataOwner.reset(HostDataBegin);
   }
 
   if (NamesSize > 0 && DevNamesBegin == CachedDevNamesBegin &&
@@ -677,23 +627,15 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
       PROF_NOTE("Reusing cached names section (%zu bytes)\n", NamesSize);
   } else if (NamesSize > 0) {
     HostNamesBegin = (char *)malloc(NamesSize);
+    NamesOwner.reset(HostNamesBegin);
   }
 
-  // On failure before the contiguous buffer exists, free host copies and
-  // return. Do not use goto cleanup: later locals make that ill-formed C++.
   if ((DataSize > 0 && !HostDataBegin) ||
       (CountersSize > 0 && !HostCountersBegin) ||
       (NamesSize > 0 && !HostNamesBegin)) {
     PROF_ERR("%s\n", "failed to allocate host memory for device sections");
-    freeCopiedHostSections(CntsReused ? nullptr : HostCountersBegin,
-                           DataReused ? nullptr : HostDataBegin,
-                           NamesReused ? nullptr : HostNamesBegin);
     return -1;
   }
-
-  CopiedHostSectionsCleanup HostCopies(HostCountersBegin, HostDataBegin,
-                                       HostNamesBegin, CntsReused, DataReused,
-                                       NamesReused);
 
   if ((DataSize > 0 && !DataReused &&
        memcpyDeviceToHost(HostDataBegin, DevDataBegin, DataSize) != 0) ||
@@ -706,28 +648,25 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
     return -1;
   }
 
-  /* Cache the freshly allocated host buffers so subsequent drains with the
-   * same device-side section pointers (the RDC-mode multi-shadow case) can
-   * reuse them. Once cached, ownership transfers to the cache: tell the
-   * RAII cleanup not to free, otherwise the cache holds dangling pointers
-   * for the next call. */
+  /* Cache buffers so RDC-mode multi-shadow drains can reuse them.
+   * release() prevents the scope guards from freeing what the cache owns. */
   if (!CntsReused && CountersSize > 0) {
     CachedDevCntsBegin = DevCntsBegin;
     CachedHostCnts = HostCountersBegin;
     CachedCntsSize = CountersSize;
-    HostCopies.CntsReused = 1;
+    CntsOwner.release();
   }
   if (!DataReused && DataSize > 0) {
     CachedDevDataBegin = DevDataBegin;
     CachedHostData = HostDataBegin;
     CachedDataSize = DataSize;
-    HostCopies.DataReused = 1;
+    DataOwner.release();
   }
   if (!NamesReused && NamesSize > 0) {
     CachedDevNamesBegin = DevNamesBegin;
     CachedHostNames = HostNamesBegin;
     CachedNamesSize = NamesSize;
-    HostCopies.NamesReused = 1;
+    NamesOwner.release();
   }
 
   if (isVerboseMode())
@@ -755,7 +694,7 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
 
   size_t ContiguousBufferSize =
       DataSize + PaddingBytesBeforeCounters + CountersSize + NamesSize;
-  MallocBufferCleanup ContiguousBuf(malloc(ContiguousBufferSize));
+  UniqueFree ContiguousBuf(malloc(ContiguousBufferSize));
   if (!ContiguousBuf.get()) {
     PROF_ERR("%s\n", "failed to allocate contiguous buffer");
     return -1;
@@ -772,9 +711,8 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
   __builtin_memcpy(BufCountersBegin, HostCountersBegin, CountersSize);
   __builtin_memcpy(BufNamesBegin, HostNamesBegin, NamesSize);
 
-  // Relocate CounterPtr in data records for file layout.
-  // CounterPtr is device-relative offset; adjust for file layout where
-  // Data section comes first, then Counters section.
+  // CounterPtr is a device-relative offset; relocate it for the file layout
+  // where the Data section precedes Counters.
   __llvm_profile_data *RelocatedData = (__llvm_profile_data *)BufDataBegin;
   for (uint64_t i = 0; i < NumData; ++i) {
     if (RelocatedData[i].CounterPtr) {
@@ -801,9 +739,7 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
                          sizeof(RelocatedData[i].Values));
   }
 
-  /* TUIndex is encoded into Target by the dynamic-load caller; the
-   * static-load path passes bare arch and would need the same treatment
-   * to support multi-shadow drains. */
+  /* Target already encodes TUIndex when needed. */
   (void)TUIndex;
 
   ret = __llvm_write_custom_profile(
@@ -829,13 +765,10 @@ static int processShadowVariable(void *ShadowVar, int TUIndex,
               ShadowVar);
     return -1;
   }
-  /* The shadow's device address is the address of the per-TU
-   * __llvm_profile_sections_<CUID> struct itself. processDeviceOffloadPrf
-   * reads the 7 pointers from there with one hipMemcpy. */
+  /* DeviceSections points at the per-TU sections struct itself. */
   return processDeviceOffloadPrf(DeviceSections, TUIndex, Target);
 }
 
-/* Check if HIP runtime is available and loaded */
 static int isHipAvailable(void) {
   ensureHipLoaded();
   return pHipMemcpy != nullptr && pHipGetSymbolAddress != nullptr;
@@ -854,8 +787,7 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
 
   int Ret = 0;
 
-  /* Shadow variables (static-linked kernels).
-   * Iterate over all devices to collect profile data from each GPU. */
+  /* Shadow variables (static-linked kernels): drain from every device. */
   if (NumShadowVariables > 0) {
     int OrigDevice = -1;
     hipGetDevice(&OrigDevice);
@@ -871,10 +803,8 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
         PROF_NOTE("Collecting static profile data from device %d (%s)\n", Dev,
                   ArchName);
       for (int i = 0; i < NumShadowVariables; ++i) {
-        /* Encode the shadow-variable index in Target so per-TU drains
-         * in RDC mode (multiple shadows registered into one device
-         * image) write to distinct profraw files. Single-TU programs
-         * still get the bare arch target via the i==0 case. */
+        /* RDC-mode multi-shadow drains need a distinct profraw per TU;
+         * single-TU programs keep the bare arch target. */
         const char *Target = ArchName;
         char TargetWithIdx[64];
         if (NumShadowVariables > 1) {
@@ -909,10 +839,7 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
   return Ret;
 }
 
-/* Interceptors for hipModuleLoad* / hipModuleUnload.
- *
- * Linux only. Windows would need import-table or trampoline patching
- * via interception_win.cpp instead of dlsym(RTLD_NEXT). */
+/* Interceptors for hipModuleLoad* / hipModuleUnload. Linux only. */
 
 #if defined(__linux__) && !defined(_WIN32)
 
@@ -945,15 +872,11 @@ INTERCEPTOR(int, hipModuleUnload, void *module) {
   return REAL(hipModuleUnload)(module);
 }
 
-/* Runs at C++ dynamic init time, before any user hipModuleLoad* call.
- *
- * INTERCEPT_FUNCTION must run unconditionally: our wrapper symbol
- * preempts libamdhip64.so's at link time, so REAL() must be populated
- * or the first user call segfaults. */
 static int installHipModuleInterceptors() {
+  if (!INTERCEPT_FUNCTION(hipModuleLoad))
+    return 0;
   if (isVerboseMode())
     PROF_NOTE("%s", "Installing hipModuleLoad*/hipModuleUnload interceptors\n");
-  INTERCEPT_FUNCTION(hipModuleLoad);
   INTERCEPT_FUNCTION(hipModuleLoadData);
   INTERCEPT_FUNCTION(hipModuleLoadDataEx);
   INTERCEPT_FUNCTION(hipModuleUnload);
