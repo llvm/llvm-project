@@ -2,16 +2,16 @@
 ; RUN: opt < %s -S -mtriple=aarch64-none-linux-gnu -mattr=+neon -passes=early-cse -earlycse-debug-hash | FileCheck %s
 ; RUN: opt < %s -S -mtriple=aarch64-none-linux-gnu -mattr=+neon -aa-pipeline=basic-aa -passes='early-cse<memssa>' -verify-analysis-invalidation | FileCheck %s
 
-define <4 x i32> @test_cse(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n) {
+define <4 x i32> @test_cse(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n, <4 x i32> %dummy) {
 ; CHECK-LABEL: define <4 x i32> @test_cse(
-; CHECK-SAME: ptr [[A:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr [[A:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]], <4 x i32> [[DUMMY:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[S_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 0
 ; CHECK-NEXT:    [[S_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 1
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY:.*]] ]
-; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ undef, %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ [[DUMMY:%.*]], %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_BODY]]:
@@ -34,7 +34,7 @@ entry:
 
 for.cond:                                         ; preds = %for.body, %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %res.0 = phi <4 x i32> [ undef, %entry ], [ %call, %for.body ]
+  %res.0 = phi <4 x i32> [ %dummy, %entry ], [ %call, %for.body ]
   %cmp = icmp slt i32 %i.0, %n
   br i1 %cmp, label %for.body, label %for.end
 
@@ -55,16 +55,16 @@ for.end:                                          ; preds = %for.cond
   ret <4 x i32> %res.0
 }
 
-define <4 x i32> @test_cse2(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n) {
+define <4 x i32> @test_cse2(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n, <4 x i32> %dummy) {
 ; CHECK-LABEL: define <4 x i32> @test_cse2(
-; CHECK-SAME: ptr [[A:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[A:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]], <4 x i32> [[DUMMY:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[S_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 0
 ; CHECK-NEXT:    [[S_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 1
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY:.*]] ]
-; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ undef, %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ [[DUMMY:%.*]], %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_BODY]]:
@@ -88,7 +88,7 @@ entry:
 
 for.cond:                                         ; preds = %for.body, %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %res.0 = phi <4 x i32> [ undef, %entry ], [ %call, %for.body ]
+  %res.0 = phi <4 x i32> [ %dummy, %entry ], [ %call, %for.body ]
   %cmp = icmp slt i32 %i.0, %n
   br i1 %cmp, label %for.body, label %for.end
 
@@ -110,14 +110,14 @@ for.end:                                          ; preds = %for.cond
   ret <4 x i32> %res.0
 }
 
-define <4 x i32> @test_cse3(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n) #0 {
+define <4 x i32> @test_cse3(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n, <4 x i32> %dummy) #0 {
 ; CHECK-LABEL: define <4 x i32> @test_cse3(
-; CHECK-SAME: ptr [[A:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[A:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]], <4 x i32> [[DUMMY:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY:.*]] ]
-; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ undef, %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ [[DUMMY:%.*]], %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_BODY]]:
@@ -137,7 +137,7 @@ entry:
 
 for.cond:                                         ; preds = %for.body, %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %res.0 = phi <4 x i32> [ undef, %entry ], [ %call, %for.body ]
+  %res.0 = phi <4 x i32> [ %dummy, %entry ], [ %call, %for.body ]
   %cmp = icmp slt i32 %i.0, %n
   br i1 %cmp, label %for.body, label %for.end
 
@@ -157,16 +157,16 @@ for.end:                                          ; preds = %for.cond
 }
 
 
-define <4 x i32> @test_nocse(ptr %a, ptr %b, [2 x <4 x i32>] %s.coerce, i32 %n) {
+define <4 x i32> @test_nocse(ptr %a, ptr %b, [2 x <4 x i32>] %s.coerce, i32 %n, <4 x i32> %dummy) {
 ; CHECK-LABEL: define <4 x i32> @test_nocse(
-; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]], <4 x i32> [[DUMMY:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[S_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 0
 ; CHECK-NEXT:    [[S_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 1
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY:.*]] ]
-; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ undef, %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ [[DUMMY:%.*]], %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_BODY]]:
@@ -191,7 +191,7 @@ entry:
 
 for.cond:                                         ; preds = %for.body, %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %res.0 = phi <4 x i32> [ undef, %entry ], [ %call, %for.body ]
+  %res.0 = phi <4 x i32> [ %dummy, %entry ], [ %call, %for.body ]
   %cmp = icmp slt i32 %i.0, %n
   br i1 %cmp, label %for.body, label %for.end
 
@@ -213,16 +213,16 @@ for.end:                                          ; preds = %for.cond
   ret <4 x i32> %res.0
 }
 
-define <4 x i32> @test_nocse2(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n) {
+define <4 x i32> @test_nocse2(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n, <4 x i32> %dummy) {
 ; CHECK-LABEL: define <4 x i32> @test_nocse2(
-; CHECK-SAME: ptr [[A:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[A:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]], <4 x i32> [[DUMMY:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[S_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 0
 ; CHECK-NEXT:    [[S_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 1
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY:.*]] ]
-; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ undef, %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ [[DUMMY:%.*]], %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_BODY]]:
@@ -247,7 +247,7 @@ entry:
 
 for.cond:                                         ; preds = %for.body, %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %res.0 = phi <4 x i32> [ undef, %entry ], [ %call, %for.body ]
+  %res.0 = phi <4 x i32> [ %dummy, %entry ], [ %call, %for.body ]
   %cmp = icmp slt i32 %i.0, %n
   br i1 %cmp, label %for.body, label %for.end
 
@@ -268,16 +268,16 @@ for.end:                                          ; preds = %for.cond
   ret <4 x i32> %res.0
 }
 
-define <4 x i32> @test_nocse3(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n) {
+define <4 x i32> @test_nocse3(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n, <4 x i32> %dummy) {
 ; CHECK-LABEL: define <4 x i32> @test_nocse3(
-; CHECK-SAME: ptr [[A:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[A:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]], <4 x i32> [[DUMMY:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[S_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 0
 ; CHECK-NEXT:    [[S_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 1
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY:.*]] ]
-; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ undef, %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ [[DUMMY:%.*]], %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_BODY]]:
@@ -302,7 +302,7 @@ entry:
 
 for.cond:                                         ; preds = %for.body, %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %res.0 = phi <4 x i32> [ undef, %entry ], [ %call, %for.body ]
+  %res.0 = phi <4 x i32> [ %dummy, %entry ], [ %call, %for.body ]
   %cmp = icmp slt i32 %i.0, %n
   br i1 %cmp, label %for.body, label %for.end
 
