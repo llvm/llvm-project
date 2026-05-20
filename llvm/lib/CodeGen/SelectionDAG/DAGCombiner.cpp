@@ -2988,10 +2988,11 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
             N, m_Add(m_OneUse(m_Value(InnerAdd, m_Add(m_Value(X), m_Value(Y)))),
                      m_Deferred(X)))) {
       if (X != Y) {
-        // Redistribute shared NUW flag.
-        // TODO: If NSW+NUW occurs on both adds, that can be redistributed too.
-        SDNodeFlags NewFlags =
-            N->getFlags() & InnerAdd->getFlags() & SDNodeFlags::NoUnsignedWrap;
+        // Redistribute shared NUW/NSW flags.
+        SDNodeFlags CommonFlags = N->getFlags() & InnerAdd->getFlags();
+        SDNodeFlags NewFlags = CommonFlags & SDNodeFlags::NoUnsignedWrap;
+        if (NewFlags.hasNoUnsignedWrap() && CommonFlags.hasNoSignedWrap())
+          NewFlags |= SDNodeFlags::NoSignedWrap;
         SDValue X2 = DAG.getNode(ISD::ADD, DL, VT, X, X, NewFlags);
         return DAG.getNode(ISD::ADD, DL, VT, Y, X2, NewFlags);
       }
