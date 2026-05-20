@@ -31,7 +31,7 @@
     "LIBC_COPT_PRINTF_DISABLE_BITINT": {
       "value": true
     },
-    "LIBC_COPT_PRINTF_MODULAR": {
+    "LIBC_CONF_PRINTF_MODULAR": {
       "value": true
     }
   },
