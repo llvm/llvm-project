@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan %s -stop-after=spirv-legalize-bitcast -o - | FileCheck %s --check-prefix=IRCHECK
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan %s -stop-after=spirv-legalize-pointer-cast -o - | FileCheck %s --check-prefix=IRCHECK
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 

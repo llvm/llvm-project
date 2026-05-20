@@ -93,10 +93,10 @@ def err_conflict_marker : Error<"version control conflict marker in file">;
 def err_counter_overflow : Error<
   "'__COUNTER__' value cannot exceed 2'147'483'647">;
 def ext_counter : Extension<
-  "'__COUNTER__' is a C2y extension">, InGroup<C2y>;
+  "'__COUNTER__' is a C2y extension">, InGroup<C2y>, SuppressInSystemMacro;
 def warn_counter : Warning<
   "'__COUNTER__' is incompatible with standards before C2y">,
-  InGroup<CPre2yCompat>, DefaultIgnore;
+  InGroup<CPre2yCompat>, DefaultIgnore, SuppressInSystemMacro;
 
 def err_raw_delim_too_long : Error<
   "raw string delimiter longer than 16 characters"
@@ -999,6 +999,8 @@ def err_undeclared_use_of_module : Error<
   "module %0 does not depend on a module exporting '%1'">;
 def err_undeclared_use_of_module_indirect : Error<
   "module %0 does not directly depend on a module exporting '%1', which is part of indirectly-used module %2">;
+def err_undeclared_use_of_module_private : Error<
+  "module %0 does not depend on a module exporting '%1', which is part of module %2, although its private module does">;
 def warn_non_modular_include_in_framework_module : Warning<
   "include of non-modular header inside framework module '%0': '%1'">,
   InGroup<NonModularIncludeInFrameworkModule>, DefaultIgnore;

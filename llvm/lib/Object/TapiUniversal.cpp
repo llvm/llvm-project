@@ -19,9 +19,11 @@ using namespace llvm;
 using namespace MachO;
 using namespace object;
 
-TapiUniversal::TapiUniversal(MemoryBufferRef Source, Error &Err)
+TapiUniversal::TapiUniversal(MemoryBufferRef Source, bool SkipUnknownTriples,
+                             Error &Err)
     : Binary(ID_TapiUniversal, Source) {
-  Expected<std::unique_ptr<InterfaceFile>> Result = TextAPIReader::get(Source);
+  Expected<std::unique_ptr<InterfaceFile>> Result =
+      TextAPIReader::get(Source, SkipUnknownTriples);
   ErrorAsOutParameter ErrAsOuParam(Err);
   if (!Result) {
     Err = Result.takeError();
@@ -60,9 +62,10 @@ TapiUniversal::ObjectForArch::getAsObjectFile() const {
 }
 
 Expected<std::unique_ptr<TapiUniversal>>
-TapiUniversal::create(MemoryBufferRef Source) {
+TapiUniversal::create(MemoryBufferRef Source, bool SkipUnknownTriples) {
   Error Err = Error::success();
-  std::unique_ptr<TapiUniversal> Ret(new TapiUniversal(Source, Err));
+  std::unique_ptr<TapiUniversal> Ret(
+      new TapiUniversal(Source, SkipUnknownTriples, Err));
   if (Err)
     return std::move(Err);
   return std::move(Ret);

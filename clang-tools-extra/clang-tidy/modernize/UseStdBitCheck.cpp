@@ -71,13 +71,13 @@ void UseStdBitCheck::registerMatchers(MatchFinder *Finder) {
   };
 
   // Determining if an integer is a power of 2 with following pattern:
-  // has_one_bit(v) = v && !(v & (v - 1));
+  // has_single_bit(v) = v && !(v & (v - 1));
   Finder->addMatcher(
       LogicalAnd(IsNonNull(BindDeclRef("v")),
                  LogicalNot(BitwiseAnd(
                      BoundDeclRef("v"),
                      Sub(BoundDeclRef("v"), integerLiteral(equals(1))))))
-          .bind("has_one_bit_expr"),
+          .bind("has_single_bit_expr"),
       this);
 
   // Computing popcount with following pattern:
@@ -120,16 +120,17 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceManager &Source = Context.getSourceManager();
 
   if (const auto *MatchedExpr =
-          Result.Nodes.getNodeAs<BinaryOperator>("has_one_bit_expr")) {
+          Result.Nodes.getNodeAs<BinaryOperator>("has_single_bit_expr")) {
     const auto *MatchedVarDecl = Result.Nodes.getNodeAs<VarDecl>("v");
 
     auto Diag =
-        diag(MatchedExpr->getBeginLoc(), "use 'std::has_one_bit' instead");
+        diag(MatchedExpr->getBeginLoc(), "use 'std::has_single_bit' instead");
     if (auto R = MatchedExpr->getSourceRange();
         !R.getBegin().isMacroID() && !R.getEnd().isMacroID()) {
       Diag << FixItHint::CreateReplacement(
                   MatchedExpr->getSourceRange(),
-                  ("std::has_one_bit(" + MatchedVarDecl->getName() + ")").str())
+                  ("std::has_single_bit(" + MatchedVarDecl->getName() + ")")
+                      .str())
            << IncludeInserter.createIncludeInsertion(
                   Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
     }

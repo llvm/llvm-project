@@ -572,7 +572,7 @@ end
 !  real(4) :: x
 !  real(4) :: y(1_8:4_8, 1_8:n)
 !  real(4) :: z(1_8:2_8, 1_8:2_8, 1_8:2_8)
-!  real(4) :: a(1_8:int(int(4_8*size(y,dim=2,kind=8),kind=4),kind=8))
+!  real(4) :: a(1_8:__builtin_int(__builtin_int(4_8*size(y,dim=2,kind=8),kind=4),kind=8))
 !  real(4) :: b(1_8:add(y, z))
 ! end
 !end
@@ -608,7 +608,7 @@ end
 !module m7
 ! type :: t(k)
 !  integer(4), kind :: k
-!  real(int(int(k,kind=4),kind=8))::a
+!  real(__builtin_int(__builtin_int(k,kind=4),kind=8))::a
 ! end type
 ! interface
 !  pure function f1(x, y)

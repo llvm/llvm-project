@@ -180,8 +180,8 @@ TEST_F(AArch64GISelMITest, LowerRotatesVector) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-// Test CTTZ expansion when CTTZ_ZERO_UNDEF is legal or custom,
-// in which case it becomes CTTZ_ZERO_UNDEF with select.
+// Test CTTZ expansion when CTTZ_ZERO_POISON is legal or custom,
+// in which case it becomes CTTZ_ZERO_POISON with select.
 TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ0) {
   setUp();
   if (!TM)
@@ -189,7 +189,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ0) {
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).legalFor({{s32, s64}});
+    getActionDefinitionsBuilder(G_CTTZ_ZERO_POISON).legalFor({{s32, s64}});
   });
   // Build Instr
   auto MIBCTTZ =
@@ -202,7 +202,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ0) {
             Helper.lower(*MIBCTTZ, 0, LLT::scalar(64)));
 
   auto CheckStr = R"(
-  CHECK: [[CZU:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF %0
+  CHECK: [[CZU:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_POISON %0
   CHECK: [[ZERO:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   CHECK: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), %0:_(s64), [[ZERO]]
   CHECK: [[SIXTY4:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
@@ -274,7 +274,7 @@ TEST_F(AArch64GISelMITest, NarrowScalarCTLZ) {
   CHECK: [[CTLZ_LO:%[0-9]+]]:_(s32) = G_CTLZ [[UNMERGE_LO]]:_(s32)
   CHECK: [[THIRTYTWO:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
   CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[CTLZ_LO]]:_, [[THIRTYTWO]]:_
-  CHECK: [[CTLZ_HI:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[UNMERGE_HI]]:_(s32)
+  CHECK: [[CTLZ_HI:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_POISON [[UNMERGE_HI]]:_(s32)
   CHECK: %{{[0-9]+}}:_(s32) = G_SELECT [[CMP]]:_(i1), [[ADD]]:_, [[CTLZ_HI]]:_
   )";
 
@@ -309,7 +309,7 @@ TEST_F(AArch64GISelMITest, NarrowScalarCTTZ) {
   CHECK: [[CTTZ_HI:%[0-9]+]]:_(s32) = G_CTTZ [[UNMERGE_HI]]:_(s32)
   CHECK: [[THIRTYTWO:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
   CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[CTTZ_HI]]:_, [[THIRTYTWO]]:_
-  CHECK: [[CTTZ_LO:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[UNMERGE_LO]]:_(s32)
+  CHECK: [[CTTZ_LO:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_POISON [[UNMERGE_LO]]:_(s32)
   CHECK: %{{[0-9]+}}:_(s32) = G_SELECT [[CMP]]:_(s1), [[ADD]]:_, [[CTTZ_LO]]:_
   )";
 
@@ -419,7 +419,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP2) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-// CTTZ_ZERO_UNDEF expansion in terms of CTTZ
+// CTTZ_ZERO_POISON expansion in terms of CTTZ
 TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ3) {
   setUp();
   if (!TM)
@@ -430,7 +430,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ3) {
     getActionDefinitionsBuilder(G_CTTZ).legalFor({{s64, s64}});
   });
   // Build
-  auto MIBCTTZ = B.buildInstr(TargetOpcode::G_CTTZ_ZERO_UNDEF,
+  auto MIBCTTZ = B.buildInstr(TargetOpcode::G_CTTZ_ZERO_POISON,
                               {LLT::scalar(64)}, {Copies[0]});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
@@ -446,7 +446,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ3) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-// CTLZ expansion in terms of CTLZ_ZERO_UNDEF
+// CTLZ expansion in terms of CTLZ_ZERO_POISON
 TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ0) {
   setUp();
   if (!TM)
@@ -454,7 +454,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ0) {
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).legalFor({{s64, s64}});
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON).legalFor({{s64, s64}});
   });
   // Build
   auto MIBCTLZ =
@@ -466,7 +466,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ0) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[CZU:%[0-9]+]]:_(s64) = G_CTLZ_ZERO_UNDEF %0
+  CHECK: [[CZU:%[0-9]+]]:_(s64) = G_CTLZ_ZERO_POISON %0
   CHECK: [[ZERO:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   CHECK: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), %0:_(s64), [[ZERO]]
   CHECK: [[SIXTY4:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
@@ -477,7 +477,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ0) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-// CTLZ expansion in terms of CTLZ_ZERO_UNDEF if the latter is a libcall
+// CTLZ expansion in terms of CTLZ_ZERO_POISON if the latter is a libcall
 TEST_F(AArch64GISelMITest, LowerBitCountingCTLZLibcall) {
   setUp();
   if (!TM)
@@ -485,7 +485,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZLibcall) {
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).libcallFor({{s32, s64}});
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON).libcallFor({{s32, s64}});
   });
   // Build
   auto MIBCTLZ =
@@ -497,7 +497,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZLibcall) {
             Helper.lower(*MIBCTLZ, 0, LLT::scalar(32)));
 
   auto CheckStr = R"(
-  CHECK: [[CZU:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF %0
+  CHECK: [[CZU:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_POISON %0
   CHECK: [[ZERO:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   CHECK: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), %0:_(s64), [[ZERO]]
   CHECK: [[THIRTY2:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
@@ -584,15 +584,15 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTLZ) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-// CTLZ_ZERO_UNDEF widening.
-TEST_F(AArch64GISelMITest, WidenBitCountingCTLZZeroUndef) {
+// CTLZ_ZERO_POISON widening.
+TEST_F(AArch64GISelMITest, WidenBitCountingCTLZZeroPoison) {
   setUp();
   if (!TM)
     GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).legalFor({{s16, s16}});
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON).legalFor({{s16, s16}});
   });
   // Build
   // Trunc it to s8.
@@ -600,7 +600,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTLZZeroUndef) {
   LLT s16{LLT::scalar(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
   auto MIBCTLZ_ZU =
-      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {s8}, {MIBTrunc});
+      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_POISON, {s8}, {MIBTrunc});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
@@ -612,7 +612,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTLZZeroUndef) {
   CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ANYEXT [[Trunc]]
   CHECK: [[Cst8:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
   CHECK: [[Shl:%[0-9]+]]:_(s16) = G_SHL [[Zext]]:_, [[Cst8]]:_
-  CHECK: [[CtlzZu:%[0-9]+]]:_(s16) = G_CTLZ_ZERO_UNDEF [[Shl]]
+  CHECK: [[CtlzZu:%[0-9]+]]:_(s16) = G_CTLZ_ZERO_POISON [[Shl]]
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[CtlzZu]]
   )";
 
@@ -653,33 +653,33 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-// CTTZ_ZERO_UNDEF widening.
-TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ_ZERO_UNDEF) {
+// CTTZ_ZERO_POISON widening.
+TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ_ZERO_POISON) {
   setUp();
   if (!TM)
     GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).legalFor({{s16, s16}});
+    getActionDefinitionsBuilder(G_CTTZ_ZERO_POISON).legalFor({{s16, s16}});
   });
   // Build
   // Trunc it to s8.
   LLT s8{LLT::scalar(8)};
   LLT s16{LLT::scalar(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  auto MIBCTTZ_ZERO_UNDEF =
-      B.buildInstr(TargetOpcode::G_CTTZ_ZERO_UNDEF, {s8}, {MIBTrunc});
+  auto MIBCTTZ_ZERO_POISON =
+      B.buildInstr(TargetOpcode::G_CTTZ_ZERO_POISON, {s8}, {MIBTrunc});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  EXPECT_TRUE(Helper.widenScalar(*MIBCTTZ_ZERO_UNDEF, 1, s16) ==
+  EXPECT_TRUE(Helper.widenScalar(*MIBCTTZ_ZERO_POISON, 1, s16) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
   CHECK: [[AnyExt:%[0-9]+]]:_(s16) = G_ANYEXT [[Trunc]]
-  CHECK: [[CttzZu:%[0-9]+]]:_(s16) = G_CTTZ_ZERO_UNDEF [[AnyExt]]
+  CHECK: [[CttzZu:%[0-9]+]]:_(s16) = G_CTTZ_ZERO_POISON [[AnyExt]]
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[CttzZu]]
   )";
 
@@ -714,7 +714,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ) {
   CHECK: [[AnyExt:%[0-9]+]]:_(s16) = G_ANYEXT [[Trunc]]
   CHECK: [[Cst:%[0-9]+]]:_(s16) = G_CONSTANT i16 256
   CHECK: [[Or:%[0-9]+]]:_(s16) = G_OR [[AnyExt]]:_, [[Cst]]
-  CHECK: [[Cttz:%[0-9]+]]:_(s16) = G_CTTZ_ZERO_UNDEF [[Or]]
+  CHECK: [[Cttz:%[0-9]+]]:_(s16) = G_CTTZ_ZERO_POISON [[Or]]
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[Cttz]]
   )";
 
@@ -2310,14 +2310,14 @@ TEST_F(AArch64GISelMITest, LibcallURem) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(AArch64GISelMITest, LibcallCtlzZeroUndef) {
+TEST_F(AArch64GISelMITest, LibcallCtlzZeroPoison) {
   setUp();
   if (!TM)
     GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON)
         .libcallFor({{s32, s32}, {s64, s64}, {s128, s128}});
   });
 
@@ -2328,11 +2328,11 @@ TEST_F(AArch64GISelMITest, LibcallCtlzZeroUndef) {
   auto MIBExt = B.buildAnyExt(S128, Copies[0]);
 
   auto MIBCtlz32 =
-      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {S32}, {MIBTrunc});
+      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_POISON, {S32}, {MIBTrunc});
   auto MIBCtlz64 =
-      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {S64}, {Copies[0]});
+      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_POISON, {S64}, {Copies[0]});
   auto MIBCtlz128 =
-      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {S128}, {MIBExt});
+      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_POISON, {S128}, {MIBExt});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;

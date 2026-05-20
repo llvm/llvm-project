@@ -60,6 +60,7 @@ struct PreservedUseStmt {
   std::string moduleName;
   std::vector<std::string> onlyNames; // For USE ONLY
   std::vector<std::string> renames; // local_name (resolved via GetUltimate)
+  bool hasOnlyWithRenames{false}; // true if there are renames in an ONLY clause
 
   PreservedUseStmt(std::string modName) : moduleName(std::move(modName)) {}
 };
