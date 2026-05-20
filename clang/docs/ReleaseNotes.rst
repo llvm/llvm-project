@@ -54,6 +54,9 @@ C++ Specific Potentially Breaking Changes
   matching the deduction of array sizes from ``int(&)[N]``.
   This is a breaking change for code that depended on the previously deduced type. (#GH195033)
 
+- Clang now rejects nested local classes defined in a different
+  block scope than their parent class. (#GH193472)
+
 ABI Changes in This Version
 ---------------------------
 
@@ -611,7 +614,7 @@ Bug Fixes to C++ Support
   which could make the program mistakenly ill-formed.
 - Fixed a crash when an immediate-invoked ``consteval`` lambda is used as an invalid initializer. (#GH185270)
 - Fixed an assertion failure when using a global destructor with a target with a non-default program address space. (#GH186484)
-
+- Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
 - Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching
   MSVC behavior. Constructors with variadic arguments or callee-cleanup parameters are not yet supported
   and produce a warning. (#GH162640)
