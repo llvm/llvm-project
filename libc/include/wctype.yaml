@@ -1,4 +1,6 @@
 header: wctype.h
+standards:
+  - stdc
 types:
   - type_name: wint_t
   - type_name: wctype_t

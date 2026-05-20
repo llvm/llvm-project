@@ -150,6 +150,7 @@ add_libc_test(
   SRCS
     towlower_test.cpp
   DEPENDS
+    libc.hdr.wchar_macros
     libc.src.wctype.towlower
     libc.src.__support.wctype_utils
 )
@@ -161,6 +162,7 @@ add_libc_test(
   SRCS
     towupper_test.cpp
   DEPENDS
+    libc.hdr.wchar_macros
     libc.src.wctype.towupper
     libc.src.__support.wctype_utils
 )
