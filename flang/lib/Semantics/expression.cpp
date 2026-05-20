@@ -3769,6 +3769,10 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
   bool treatExternalAsImplicit{
       IsExternalCalledImplicitly(callSite, proc.GetSymbol())};
   const Symbol *procSymbol{proc.GetSymbol()};
+  // Statement functions have implicit interfaces and require the same checks
+  bool isStatementFunction{procSymbol &&
+      procSymbol->has<semantics::SubprogramDetails>() &&
+      procSymbol->get<semantics::SubprogramDetails>().stmtFunction()};
   std::optional<characteristics::Procedure> chars;
   if (procSymbol && procSymbol->has<semantics::ProcEntityDetails>() &&
       procSymbol->owner().IsGlobal()) {
@@ -3836,6 +3840,17 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
         Say(callSite,
             "Procedure %s referenced in pure subprogram '%s' must be pure too"_err_en_US,
             name, DEREF(pure->symbol()).name());
+      }
+    }
+    if (isStatementFunction) {
+      // Statement functions have implicit interfaces; check for
+      // keyword arguments and other implicit interface constraints
+      parser::ContextualMessages &messages{
+          context_.foldingContext().messages()};
+      for (auto &arg : arguments) {
+        if (arg) {
+          semantics::CheckImplicitInterfaceArg(*arg, messages, context_);
+        }
       }
     }
     ok &= semantics::CheckArguments(*chars, arguments, context_,

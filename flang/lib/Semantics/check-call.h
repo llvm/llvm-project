@@ -25,6 +25,11 @@ namespace Fortran::semantics {
 class Scope;
 class SemanticsContext;
 
+// Check constraints on actual arguments for procedures with implicit
+// interfaces. Used for statement function calls and external procedures.
+void CheckImplicitInterfaceArg(evaluate::ActualArgument &,
+    parser::ContextualMessages &, SemanticsContext &);
+
 // Argument treatingExternalAsImplicit should be true when the called procedure
 // does not actually have an explicit interface at the call site, but
 // its characteristics are known because it is a subroutine or function
