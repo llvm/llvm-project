@@ -333,10 +333,13 @@ ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
 
 /// Test if the given value is known to have exactly one bit set. This differs
 /// from computeKnownBits in that it doesn't necessarily determine which bit is
-/// set.
+/// set. When \p OrNegative is true, the value is also considered a power of two
+/// if its negation is a power of two (i.e. its absolute value is a power of
+/// two).
 LLVM_ABI bool
 isKnownToBeAPowerOfTwo(Register Val, const MachineRegisterInfo &MRI,
-                       GISelValueTracking *ValueTracking = nullptr);
+                       GISelValueTracking *ValueTracking = nullptr,
+                       bool OrNegative = false);
 
 LLVM_ABI Align inferAlignFromPtrInfo(MachineFunction &MF,
                                      const MachinePointerInfo &MPO);

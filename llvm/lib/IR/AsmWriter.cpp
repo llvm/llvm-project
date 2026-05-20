@@ -1643,7 +1643,7 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
     Type *Ty = CFP->getType();
 
     if (Ty->isVectorTy()) {
-      if (CFP->isPosZero()) {
+      if (CFP->getValue().bitcastToAPInt().isZero()) {
         Out << "zeroinitializer";
         return;
       }
@@ -1694,9 +1694,9 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
     unsigned NumOpsToWrite = 2;
     if (!CPA->getOperand(2)->isNullValue())
       NumOpsToWrite = 3;
-    if (!CPA->getOperand(3)->isNullValue())
+    if (!isa<ConstantPointerNull>(CPA->getOperand(3)))
       NumOpsToWrite = 4;
-    if (!CPA->getOperand(4)->isNullValue())
+    if (!isa<ConstantPointerNull>(CPA->getOperand(4)))
       NumOpsToWrite = 5;
 
     ListSeparator LS;
