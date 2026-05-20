@@ -2255,7 +2255,8 @@ static bool isReachingDefAGPRForm(MachineInstr *RD,
                                   const SIInstrInfo &TII) {
   if (TII.isMAI(*RD))
     return true;
-  if (RD->getOpcode() == AMDGPU::AV_MOV_B32_IMM_PSEUDO)
+  if (RD->getOpcode() == AMDGPU::AV_MOV_B32_IMM_PSEUDO ||
+      RD->getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO)
     return true;
   if (RD->isCopy() && CandSrc2Regs.contains(RD->getOperand(1).getReg()))
     return true;
