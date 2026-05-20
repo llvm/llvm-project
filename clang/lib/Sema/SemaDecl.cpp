@@ -4918,6 +4918,8 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
       VarDecl *Def = Old->getDefinition();
       if (Def && checkVarDeclRedefinition(Def, New))
         return;
+      if (Old->isInvalidDecl())
+        New->setInvalidDecl();
     }
   } else {
     // C++ may not have a tentative definition rule, but it has a different
@@ -7968,6 +7970,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
             Diag(D.getIdentifierLoc(),
                  diag::err_static_data_member_not_allowed_in_local_class)
                 << Name << RD->getDeclName() << RD->getTagKind();
+            Invalid = true;
           } else if (AnonStruct) {
             // C++ [class.static.data]p4: Unnamed classes and classes contained
             // directly or indirectly within unnamed classes shall not contain
@@ -18540,6 +18543,27 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
             S->isDeclScope(PrevDecl)) {
           Diag(NameLoc, diag::ext_member_redeclared);
           Diag(PrevTagDecl->getLocation(), diag::note_previous_declaration);
+        }
+
+        // C++ [class.local]p3:
+        //   A class nested within a local class is a local class. A member of
+        //   a local class X shall be declared only in the definition of X or,
+        //   if the member is a nested class, in the nearest enclosing block
+        //   scope of X.
+        if (TUK == TagUseKind::Definition && SS.isValid()) {
+          if (const auto *OutermostClass = dyn_cast<CXXRecordDecl>(PrevDecl)) {
+            while (const auto *ParentClass =
+                       dyn_cast<CXXRecordDecl>(OutermostClass->getParent()))
+              OutermostClass = ParentClass;
+
+            if (OutermostClass->isLocalClass() &&
+                !S->isDeclScope(OutermostClass)) {
+              Diag(NameLoc, diag::err_local_nested_class_invalid_scope)
+                  << Name << OutermostClass;
+              Diag(OutermostClass->getLocation(), diag::note_defined_here)
+                  << OutermostClass;
+            }
+          }
         }
 
         if (!Invalid) {
