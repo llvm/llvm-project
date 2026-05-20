@@ -1600,8 +1600,8 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
 
 llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
                                                  BreakpointAction action,
-                                                 bool do_it_now) {
-  if (do_it_now)
+                                                 bool forbid_delay) {
+  if (forbid_delay)
     if (llvm::Error E = FlushDelayedBreakpoints())
       LLDB_LOG_ERROR(
           GetLog(LLDBLog::Breakpoints), std::move(E),
@@ -1614,7 +1614,7 @@ llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
   if (IsBreakpointSiteEnabled(*site_sp) == (action == BreakpointAction::Enable))
     return llvm::Error::success();
 
-  if (!do_it_now && ShouldUseDelayedBreakpoints()) {
+  if (!forbid_delay && ShouldUseDelayedBreakpoints()) {
     m_delayed_breakpoints.Enqueue(site_sp, action);
     return llvm::Error::success();
   }
@@ -1774,10 +1774,10 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
   bool bp_from_address =
       constituent->GetBreakpoint().GetResolver()->GetResolverTy() ==
       BreakpointResolver::ResolverTy::AddressResolver;
-  bool should_be_eager = use_hardware || bp_from_address;
+  bool forbid_delay = use_hardware || bp_from_address;
 
   auto error = Status::FromError(ExecuteBreakpointSiteAction(
-      *bp_site_sp, BreakpointAction::Enable, /*do_it_now=*/should_be_eager));
+      *bp_site_sp, BreakpointAction::Enable, forbid_delay));
   if (error.Success()) {
     constituent->SetBreakpointSite(bp_site_sp);
     return m_breakpoint_site_list.Add(bp_site_sp);
