@@ -183,6 +183,32 @@ spirv.func @smin(%arg0: i16, %arg1: vector<3xi32>) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.UMax
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @umax
+spirv.func @umax(%arg0: i16, %arg1: vector<3xi32>) "None" {
+  // CHECK: llvm.intr.umax(%{{.*}}, %{{.*}}) : (i16, i16) -> i16
+  %0 = spirv.GL.UMax %arg0, %arg0 : i16
+  // CHECK: llvm.intr.umax(%{{.*}}, %{{.*}}) : (vector<3xi32>, vector<3xi32>) -> vector<3xi32>
+  %1 = spirv.GL.UMax %arg1, %arg1 : vector<3xi32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.UMin
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @umin
+spirv.func @umin(%arg0: i16, %arg1: vector<3xi32>) "None" {
+  // CHECK: llvm.intr.umin(%{{.*}}, %{{.*}}) : (i16, i16) -> i16
+  %0 = spirv.GL.UMin %arg0, %arg0 : i16
+  // CHECK: llvm.intr.umin(%{{.*}}, %{{.*}}) : (vector<3xi32>, vector<3xi32>) -> vector<3xi32>
+  %1 = spirv.GL.UMin %arg1, %arg1 : vector<3xi32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Sqrt
 //===----------------------------------------------------------------------===//
 
