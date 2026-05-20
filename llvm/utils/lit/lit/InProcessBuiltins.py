@@ -202,20 +202,17 @@ class InProcessBuiltinIO:
             self.stderr = resolve_io_obj(stderr)
 
 
+# Function called by an in-process builtin command. The return value is the
+# exit code.
+# Parameters:
+# - `cmd`: The command itself.
+# - `args`: glob-expanded list of arguments (including argv[0] as the program name).
+# - `shenv`: The shell environment.
+# - `io`: Holds the input and output streams for the invocation. These are file-like objects (files, StringIO)
 InProcessBuiltinExecuteFn = Callable[
     [Command, "list[str]", ShellEnvironment, InProcessBuiltinIO],
     int,
 ]
-"""
-Function called by an in-process builtin command.
-Parameters:
-    - `cmd`: The command itself.
-    - `args`: glob-expanded list of arguments (including argv[0] as the program name).
-    - `shenv`: The shell environment.
-    - `io`: Holds the input and output streams for the invocation. These are file-like objects (files, StringIO)
-
-The return value is the exit code.
-"""
 
 
 @dataclass
