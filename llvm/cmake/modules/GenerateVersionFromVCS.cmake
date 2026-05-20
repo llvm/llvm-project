@@ -5,9 +5,9 @@
 #   <NAME>_SOURCE_DIR - A path to source directory for each name in NAMES.
 #   HEADER_FILE       - The header file to write
 #
-# The output header will contain macros <NAME>_REPOSITORY, <NAME>_REVISION,
-# and <NAME>_COMMIT_COUNT, where "<NAME>" is substituted with the names specified
-# in the input variables, for each of the <NAME>_SOURCE_DIR given.
+# The output header will contain macros <NAME>_REPOSITORY and <NAME>_REVISION,
+# where "<NAME>" is substituted with the names specified in the input variables,
+# for each of the <NAME>_SOURCE_DIR given.
 
 get_filename_component(LLVM_CMAKE_DIR "${CMAKE_SCRIPT_MODE_FILE}" PATH)
 
@@ -18,7 +18,7 @@ include(VersionFromVCS)
 # Handle strange terminals
 set(ENV{TERM} "dumb")
 
-function(append_info name revision repository commit_count)
+function(append_info name revision repository)
   if(revision)
     file(APPEND "${HEADER_FILE}.tmp"
       "#define ${name}_REVISION R\"(${revision})\"\n")
@@ -33,17 +33,9 @@ function(append_info name revision repository commit_count)
     file(APPEND "${HEADER_FILE}.tmp"
       "#undef ${name}_REPOSITORY\n")
   endif()
-  if(commit_count)
-    file(APPEND "${HEADER_FILE}.tmp"
-      "#define ${name}_COMMIT_COUNT ${commit_count}u\n")
-  else()
-    file(APPEND "${HEADER_FILE}.tmp"
-      "#undef ${name}_COMMIT_COUNT\n")
-  endif()
 endfunction()
 
 foreach(name IN LISTS NAMES)
-  set(commit_count "")
   if(LLVM_FORCE_VC_REVISION AND LLVM_FORCE_VC_REPOSITORY)
     set(revision ${LLVM_FORCE_VC_REVISION})
     set(repository ${LLVM_FORCE_VC_REPOSITORY})
@@ -56,12 +48,12 @@ foreach(name IN LISTS NAMES)
     set(repository ${${name}_VC_REPOSITORY})
   elseif(DEFINED ${name}_SOURCE_DIR)
     if (${name}_SOURCE_DIR)
-      get_source_info("${${name}_SOURCE_DIR}" revision repository commit_count)
+      get_source_info("${${name}_SOURCE_DIR}" revision repository)
     endif()
   else()
     message(FATAL_ERROR "${name}_SOURCE_DIR is not defined")
   endif()
-  append_info(${name} "${revision}" "${repository}" "${commit_count}")
+  append_info(${name} "${revision}" "${repository}")
 endforeach()
 
 # Copy the file only if it has changed.

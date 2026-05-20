@@ -684,11 +684,7 @@ TEST(DXCFile, ComputeVERSPart) {
   EXPECT_FALSE(!!(Header.Flags & dxbc::CompilerVersionFlags::Debug));
 #endif
   EXPECT_FALSE(!!(Header.Flags & dxbc::CompilerVersionFlags::Internal));
-#ifdef LLVM_COMMIT_COUNT
-  EXPECT_EQ(Header.CommitCount, LLVM_COMMIT_COUNT);
-#else
-  EXPECT_EQ(Header.CommitCount, 0);
-#endif
+  EXPECT_EQ(Header.CommitCount, 0u);
 #ifdef LLVM_REVISION
   EXPECT_EQ(VERS->CommitSha, LLVM_REVISION);
 #else

@@ -49,11 +49,7 @@ CompilerVersion::CompilerVersion() {
 #ifndef NDEBUG
   Parameters.Flags |= dxbc::CompilerVersionFlags::Debug;
 #endif
-#ifdef LLVM_COMMIT_COUNT
-  Parameters.CommitCount = LLVM_COMMIT_COUNT;
-#else
   Parameters.CommitCount = 0;
-#endif
   Parameters.ContentSizeInBytes = 0;
 #ifdef LLVM_REVISION
   CommitSha = LLVM_REVISION;

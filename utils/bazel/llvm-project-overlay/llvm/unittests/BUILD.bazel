@@ -632,7 +632,6 @@ cc_test(
         "//llvm:ObjectYAML",
         "//llvm:Support",
         "//llvm:TestingSupport",
-        "//llvm:config",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
