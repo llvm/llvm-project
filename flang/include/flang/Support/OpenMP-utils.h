@@ -30,8 +30,8 @@ struct EntryBlockArgs {
 
   auto getVars() const {
     return llvm::concat<const mlir::Value>(hasDeviceAddrVars, hostEvalVars,
-        inReductionVars, mapVars, privVars, reductionVars,
-        taskReductionVars, useDeviceAddrVars, useDevicePtrVars);
+        inReductionVars, mapVars, privVars, reductionVars, taskReductionVars,
+        useDeviceAddrVars, useDevicePtrVars);
   }
 };
 
