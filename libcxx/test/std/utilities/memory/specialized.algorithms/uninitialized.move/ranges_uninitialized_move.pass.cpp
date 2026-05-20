@@ -92,6 +92,21 @@ TEST_CONSTEXPR_CXX26 bool test() {
     alloc.deallocate(out, m);
   }
 
+  // Any existing values should be overwritten by move constructors.
+  {
+    constexpr int N = 5;
+    int in[N]       = {1, 2, 3, 4, 5};
+    int out[N]      = {6, 7, 8, 9, 10};
+    assert(!std::equal(in, in + N, out, out + N));
+
+    std::ranges::uninitialized_move(in, in + 1, out, out + N);
+    assert(out[0] == 1);
+    assert(out[1] == 7);
+
+    std::ranges::uninitialized_move(in, in + N, out, out + N);
+    assert(std::equal(in, in + N, out, out + N));
+  }
+
   return true;
 }
 
@@ -264,21 +279,6 @@ int main(int, char**) {
     std::destroy(out.begin(), out.begin() + N);
   }
   Counted::reset();
-
-  // Any existing values should be overwritten by move constructors.
-  {
-    constexpr int N = 5;
-    int in[N] = {1, 2, 3, 4, 5};
-    int out[N] = {6, 7, 8, 9, 10};
-    assert(!std::equal(in, in + N, out, out + N));
-
-    std::ranges::uninitialized_move(in, in + 1, out, out + N);
-    assert(out[0] == 1);
-    assert(out[1] == 7);
-
-    std::ranges::uninitialized_move(in, in + N, out, out + N);
-    assert(std::equal(in, in + N, out, out + N));
-  }
 
   // An exception is thrown while objects are being created -- check that the objects in the source
   // range have been moved from. (iterator, sentinel) overload.
