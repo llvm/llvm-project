@@ -155,12 +155,6 @@ C++ Language Changes
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
-- Implemented `P2843R3 <https://wg21.link/P2843R3>`_ Preprocessing is never
-  undefined. Clang now diagnoses a macro expansion producing ``defined`` in a
-  conditional expression, an embedded directive within macro arguments, macro
-  names reserved for keywords, special identifiers, or standard attribute
-  tokens by default.
-
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
