@@ -12,6 +12,7 @@
 #include <dispatch/dispatch.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl::__libdispatch {
 
 void __dispatch_apply(size_t chunk_count, void* context, void (*func)(void* context, size_t chunk)) noexcept {
@@ -29,4 +30,5 @@ __chunk_partitions __partition_chunks(ptrdiff_t element_count) noexcept {
 }
 
 } // namespace __pstl::__libdispatch
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

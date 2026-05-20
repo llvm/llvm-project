@@ -462,8 +462,7 @@ define void @simple_idiv(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[DST:%.*]], i64 [[INDEX1]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP11]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i32> poison)
-; CHECK-NEXT:    [[TMP15:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD2]], <vscale x 4 x i32> splat (i32 1)
-; CHECK-NEXT:    [[TMP16:%.*]] = udiv <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = call <vscale x 4 x i32> @llvm.masked.udiv.nxv4i32(<vscale x 4 x i32> [[WIDE_MASKED_LOAD]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD2]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP16]], ptr align 4 [[TMP12]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT3]] = add i64 [[INDEX1]], [[TMP6]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_NEXT3]], i64 [[UMAX]])
@@ -501,8 +500,6 @@ define void @simple_memset_trip1024(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -511,11 +508,10 @@ define void @simple_memset_trip1024(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT2]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 1024
+; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END_LOOPEXIT:%.*]], label [[SCALAR_PH:%.*]]
+; CHECK-NEXT:    br i1 true, label [[WHILE_END_LOOPEXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:

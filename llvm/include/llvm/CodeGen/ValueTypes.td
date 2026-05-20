@@ -184,6 +184,7 @@ def v128i64 : VTVec<128, i64>; // 128 x i64 vector value
 def v256i64 : VTVec<256, i64>; // 256 x i64 vector value
 
 def v1i128  : VTVec<1,  i128>; //  1 x i128 vector value
+def v2i128  : VTVec<2,  i128>; //  2 x i128 vector value
 
 def v1f16    : VTVec<1,    f16>; //    1 x f16 vector value
 def v2f16    : VTVec<2,    f16>; //    2 x f16 vector value

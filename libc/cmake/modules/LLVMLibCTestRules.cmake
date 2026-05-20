@@ -66,6 +66,10 @@ function(_get_common_test_compile_options output_var c_test flags)
       list(APPEND compile_options "-Wnonportable-system-include-path")
       list(APPEND compile_options "-Wthread-safety")
     endif()
+
+    if(LIBC_CC_SUPPORTS_NO_FENV_ACCESS)
+      list(APPEND compile_options "-Wno-fenv-access")
+    endif()
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
@@ -659,15 +663,20 @@ function(add_integration_test test_name)
   # requires specific command-line arguments or environment variables.  The
   # LibcTest lit format reads this file at test time.  Format: one arg per line,
   # a "---" separator, then one KEY=VALUE env entry per line.
-  if(INTEGRATION_TEST_ARGS OR INTEGRATION_TEST_ENV)
-    set(_params_content "")
-    foreach(_arg IN LISTS INTEGRATION_TEST_ARGS)
-      string(APPEND _params_content "${_arg}\n")
-    endforeach()
-    string(APPEND _params_content "---\n")
-    foreach(_env_entry IN LISTS INTEGRATION_TEST_ENV)
-      string(APPEND _params_content "${_env_entry}\n")
-    endforeach()
+  set(_params_content "")
+  foreach(_arg IN LISTS INTEGRATION_TEST_LOADER_ARGS)
+    string(APPEND _params_content "${_arg}\n")
+  endforeach()
+  string(APPEND _params_content "---\n")
+  foreach(_arg IN LISTS INTEGRATION_TEST_ARGS)
+    string(APPEND _params_content "${_arg}\n")
+  endforeach()
+  string(APPEND _params_content "---\n")
+  foreach(_env_entry IN LISTS INTEGRATION_TEST_ENV)
+    string(APPEND _params_content "${_env_entry}\n")
+  endforeach()
+
+  if(INTEGRATION_TEST_LOADER_ARGS OR INTEGRATION_TEST_ARGS OR INTEGRATION_TEST_ENV)
     file(GENERATE
       OUTPUT  "${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name}.params"
       CONTENT "${_params_content}"

@@ -96,9 +96,8 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; CHECK-NEXT:    [[VP_OP_LOAD4:%.*]] = call <vscale x 4 x i64> @llvm.vp.load.nxv4i64.p0(ptr align 8 [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP4]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = call <vscale x 4 x i64> @llvm.experimental.vp.reverse.nxv4i64(<vscale x 4 x i64> [[VP_OP_LOAD4]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP4]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp sgt <vscale x 4 x i64> [[TMP12]], [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[TMP16]], <vscale x 4 x i1> zeroinitializer, i32 [[TMP4]])
 ; CHECK-NEXT:    [[TMP18]] = call <vscale x 4 x i64> @llvm.vp.merge.nxv4i64(<vscale x 4 x i1> [[TMP16]], <vscale x 4 x i64> [[VEC_IND]], <vscale x 4 x i64> [[VEC_PHI]], i32 [[TMP4]])
-; CHECK-NEXT:    [[TMP19]] = or <vscale x 4 x i1> [[VEC_PHI1]], [[TMP17]]
+; CHECK-NEXT:    [[TMP19]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> [[TMP16]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[VEC_PHI1]], i32 [[TMP4]])
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP5]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP5]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]

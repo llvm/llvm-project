@@ -87,18 +87,10 @@ define void @simplify_udiv_4_in_replicate_region2(i8 %arg, ptr noalias %src, ptr
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP3]]
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x ptr> [[TMP16]], ptr [[TMP13]], i32 1
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x ptr> [[TMP17]], ptr [[TMP14]], i32 2
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x ptr> [[TMP18]], ptr [[TMP15]], i32 3
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP4]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP5]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP6]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP7]]
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP20]], i32 0
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x ptr> [[TMP24]], ptr [[TMP21]], i32 1
-; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x ptr> [[TMP25]], ptr [[TMP22]], i32 2
-; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x ptr> [[TMP26]], ptr [[TMP23]], i32 3
 ; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i1> [[TMP10]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP28]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
@@ -165,57 +157,49 @@ define void @simplify_udiv_4_in_replicate_region2(i8 %arg, ptr noalias %src, ptr
 ; CHECK-NEXT:    [[TMP59:%.*]] = phi <4 x i8> [ [[TMP54]], %[[PRED_LOAD_CONTINUE13]] ], [ [[TMP58]], %[[PRED_LOAD_IF14]] ]
 ; CHECK-NEXT:    [[TMP60:%.*]] = lshr <4 x i8> [[TMP43]], splat (i8 1)
 ; CHECK-NEXT:    [[TMP61:%.*]] = lshr <4 x i8> [[TMP59]], splat (i8 1)
-; CHECK-NEXT:    [[TMP62:%.*]] = extractelement <4 x i1> [[TMP10]], i64 0
-; CHECK-NEXT:    br i1 [[TMP62]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK-NEXT:    br i1 [[TMP28]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[TMP63:%.*]] = extractelement <4 x i8> [[TMP60]], i64 0
 ; CHECK-NEXT:    store i8 [[TMP63]], ptr [[TMP12]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP64:%.*]] = extractelement <4 x i1> [[TMP10]], i64 1
-; CHECK-NEXT:    br i1 [[TMP64]], label %[[PRED_STORE_IF16:.*]], label %[[PRED_STORE_CONTINUE17:.*]]
+; CHECK-NEXT:    br i1 [[TMP32]], label %[[PRED_STORE_IF16:.*]], label %[[PRED_STORE_CONTINUE17:.*]]
 ; CHECK:       [[PRED_STORE_IF16]]:
 ; CHECK-NEXT:    [[TMP65:%.*]] = extractelement <4 x i8> [[TMP60]], i64 1
 ; CHECK-NEXT:    store i8 [[TMP65]], ptr [[TMP13]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE17]]
 ; CHECK:       [[PRED_STORE_CONTINUE17]]:
-; CHECK-NEXT:    [[TMP66:%.*]] = extractelement <4 x i1> [[TMP10]], i64 2
-; CHECK-NEXT:    br i1 [[TMP66]], label %[[PRED_STORE_IF18:.*]], label %[[PRED_STORE_CONTINUE19:.*]]
+; CHECK-NEXT:    br i1 [[TMP36]], label %[[PRED_STORE_IF18:.*]], label %[[PRED_STORE_CONTINUE19:.*]]
 ; CHECK:       [[PRED_STORE_IF18]]:
 ; CHECK-NEXT:    [[TMP67:%.*]] = extractelement <4 x i8> [[TMP60]], i64 2
 ; CHECK-NEXT:    store i8 [[TMP67]], ptr [[TMP14]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE19]]
 ; CHECK:       [[PRED_STORE_CONTINUE19]]:
-; CHECK-NEXT:    [[TMP68:%.*]] = extractelement <4 x i1> [[TMP10]], i64 3
-; CHECK-NEXT:    br i1 [[TMP68]], label %[[PRED_STORE_IF20:.*]], label %[[PRED_STORE_CONTINUE21:.*]]
+; CHECK-NEXT:    br i1 [[TMP40]], label %[[PRED_STORE_IF20:.*]], label %[[PRED_STORE_CONTINUE21:.*]]
 ; CHECK:       [[PRED_STORE_IF20]]:
 ; CHECK-NEXT:    [[TMP69:%.*]] = extractelement <4 x i8> [[TMP60]], i64 3
 ; CHECK-NEXT:    store i8 [[TMP69]], ptr [[TMP15]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE21]]
 ; CHECK:       [[PRED_STORE_CONTINUE21]]:
-; CHECK-NEXT:    [[TMP70:%.*]] = extractelement <4 x i1> [[TMP11]], i64 0
-; CHECK-NEXT:    br i1 [[TMP70]], label %[[PRED_STORE_IF22:.*]], label %[[PRED_STORE_CONTINUE23:.*]]
+; CHECK-NEXT:    br i1 [[TMP44]], label %[[PRED_STORE_IF22:.*]], label %[[PRED_STORE_CONTINUE23:.*]]
 ; CHECK:       [[PRED_STORE_IF22]]:
 ; CHECK-NEXT:    [[TMP71:%.*]] = extractelement <4 x i8> [[TMP61]], i64 0
 ; CHECK-NEXT:    store i8 [[TMP71]], ptr [[TMP20]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE23]]
 ; CHECK:       [[PRED_STORE_CONTINUE23]]:
-; CHECK-NEXT:    [[TMP72:%.*]] = extractelement <4 x i1> [[TMP11]], i64 1
-; CHECK-NEXT:    br i1 [[TMP72]], label %[[PRED_STORE_IF24:.*]], label %[[PRED_STORE_CONTINUE25:.*]]
+; CHECK-NEXT:    br i1 [[TMP48]], label %[[PRED_STORE_IF24:.*]], label %[[PRED_STORE_CONTINUE25:.*]]
 ; CHECK:       [[PRED_STORE_IF24]]:
 ; CHECK-NEXT:    [[TMP73:%.*]] = extractelement <4 x i8> [[TMP61]], i64 1
 ; CHECK-NEXT:    store i8 [[TMP73]], ptr [[TMP21]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE25]]
 ; CHECK:       [[PRED_STORE_CONTINUE25]]:
-; CHECK-NEXT:    [[TMP74:%.*]] = extractelement <4 x i1> [[TMP11]], i64 2
-; CHECK-NEXT:    br i1 [[TMP74]], label %[[PRED_STORE_IF26:.*]], label %[[PRED_STORE_CONTINUE27:.*]]
+; CHECK-NEXT:    br i1 [[TMP52]], label %[[PRED_STORE_IF26:.*]], label %[[PRED_STORE_CONTINUE27:.*]]
 ; CHECK:       [[PRED_STORE_IF26]]:
 ; CHECK-NEXT:    [[TMP75:%.*]] = extractelement <4 x i8> [[TMP61]], i64 2
 ; CHECK-NEXT:    store i8 [[TMP75]], ptr [[TMP22]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE27]]
 ; CHECK:       [[PRED_STORE_CONTINUE27]]:
-; CHECK-NEXT:    [[TMP76:%.*]] = extractelement <4 x i1> [[TMP11]], i64 3
-; CHECK-NEXT:    br i1 [[TMP76]], label %[[PRED_STORE_IF28:.*]], label %[[PRED_STORE_CONTINUE29]]
+; CHECK-NEXT:    br i1 [[TMP56]], label %[[PRED_STORE_IF28:.*]], label %[[PRED_STORE_CONTINUE29]]
 ; CHECK:       [[PRED_STORE_IF28]]:
 ; CHECK-NEXT:    [[TMP77:%.*]] = extractelement <4 x i8> [[TMP61]], i64 3
 ; CHECK-NEXT:    store i8 [[TMP77]], ptr [[TMP23]], align 1

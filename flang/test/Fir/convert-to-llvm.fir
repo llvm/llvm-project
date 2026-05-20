@@ -1104,7 +1104,7 @@ func.func @box_isarray(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
 // CHECK-SAME:                         %[[ARG0:.*]]: !llvm.ptr) -> i1
 // CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][0, 3] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
 // CHECK:         %[[RANK:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> i8
-// CHECK:         %[[C0_ISARRAY:.*]] = llvm.mlir.constant(0 : i64) : i8
+// CHECK:         %[[C0_ISARRAY:.*]] = llvm.mlir.constant(0 : i8) : i8
 // CHECK:         %[[IS_ARRAY:.*]] = llvm.icmp "ne" %[[RANK]], %[[C0_ISARRAY]] : i8
 // CHECK:         llvm.return %[[IS_ARRAY]] : i1
 
@@ -1482,7 +1482,7 @@ func.func @select_case_logical(%arg0: !fir.ref<!fir.logical<4>>) {
 // CHECK-LABEL: llvm.func @select_case_logical(
 // CHECK-SAME:                                 %[[ARG0:.*]]: !llvm.ptr
 // CHECK:         %[[LOAD_ARG0:.*]] = llvm.load %[[ARG0]] : !llvm.ptr -> i32
-// CHECK:         %[[CST_ZERO:.*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK:         %[[CST_ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:         %[[SELECT_VALUE:.*]] = llvm.icmp "ne" %[[LOAD_ARG0]], %[[CST_ZERO]] : i32
 // CHECK:         %[[CST_FALSE:.*]] = llvm.mlir.constant(false) : i1
 // CHECK:         %[[CST_TRUE:.*]] = llvm.mlir.constant(true) : i1

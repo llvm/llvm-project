@@ -137,7 +137,7 @@ define <2 x i1> @uno_self_vec(<2 x float> %x) {
 
 define <2 x i1> @uno_vec_with_nan(<2 x double> %x) {
 ; CHECK-LABEL: @uno_vec_with_nan(
-; CHECK-NEXT:    [[F:%.*]] = fcmp uno <2 x double> [[X:%.*]], <double 3.000000e+00, double 0x7FF00000FFFFFFFF>
+; CHECK-NEXT:    [[F:%.*]] = fcmp uno <2 x double> [[X:%.*]], <double 3.000000e+00, double +snan(0xFFFFFFFF)>
 ; CHECK-NEXT:    ret <2 x i1> [[F]]
 ;
   %f = fcmp uno <2 x double> %x, <double 3.0, double 0x7FF00000FFFFFFFF>
@@ -208,7 +208,7 @@ define i1 @negative_zero_oge(double %x) {
 
 define i1 @negative_zero_uge(half %x) {
 ; CHECK-LABEL: @negative_zero_uge(
-; CHECK-NEXT:    [[R:%.*]] = fcmp fast uge half [[X:%.*]], 0xH0000
+; CHECK-NEXT:    [[R:%.*]] = fcmp fast uge half [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = fcmp fast uge half %x, -0.0
