@@ -2216,50 +2216,38 @@ define <8 x i8> @test_psslai_b(<8 x i8> %a) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 4(sp)
-; RV32-NEXT:    lbu a1, 7(sp)
-; RV32-NEXT:    sw a0, 0(sp)
-; RV32-NEXT:    slli a1, a1, 24
-; RV32-NEXT:    sslai a0, a1, 2
-; RV32-NEXT:    srli a0, a0, 24
-; RV32-NEXT:    sb a0, 15(sp)
-; RV32-NEXT:    lbu a0, 6(sp)
-; RV32-NEXT:    slli a0, a0, 24
-; RV32-NEXT:    sslai a0, a0, 2
-; RV32-NEXT:    srli a0, a0, 24
-; RV32-NEXT:    sb a0, 14(sp)
-; RV32-NEXT:    lbu a0, 5(sp)
-; RV32-NEXT:    slli a0, a0, 24
-; RV32-NEXT:    sslai a0, a0, 2
-; RV32-NEXT:    srli a0, a0, 24
-; RV32-NEXT:    sb a0, 13(sp)
-; RV32-NEXT:    lbu a0, 4(sp)
-; RV32-NEXT:    slli a0, a0, 24
-; RV32-NEXT:    sslai a0, a0, 2
-; RV32-NEXT:    srli a0, a0, 24
-; RV32-NEXT:    sb a0, 12(sp)
-; RV32-NEXT:    lbu a0, 3(sp)
-; RV32-NEXT:    slli a0, a0, 24
-; RV32-NEXT:    sslai a0, a0, 2
-; RV32-NEXT:    srli a0, a0, 24
-; RV32-NEXT:    sb a0, 11(sp)
-; RV32-NEXT:    lbu a0, 2(sp)
-; RV32-NEXT:    slli a0, a0, 24
-; RV32-NEXT:    sslai a0, a0, 2
-; RV32-NEXT:    srli a0, a0, 24
-; RV32-NEXT:    sb a0, 10(sp)
-; RV32-NEXT:    lbu a0, 1(sp)
-; RV32-NEXT:    slli a0, a0, 24
-; RV32-NEXT:    sslai a0, a0, 2
-; RV32-NEXT:    srli a0, a0, 24
-; RV32-NEXT:    sb a0, 9(sp)
-; RV32-NEXT:    lbu a0, 0(sp)
-; RV32-NEXT:    slli a0, a0, 24
-; RV32-NEXT:    sslai a0, a0, 2
-; RV32-NEXT:    srli a0, a0, 24
-; RV32-NEXT:    sb a0, 8(sp)
-; RV32-NEXT:    lw a0, 8(sp)
-; RV32-NEXT:    lw a1, 12(sp)
+; RV32-NEXT:    pli.b a2, -128
+; RV32-NEXT:    pslli.db a4, a0, 2
+; RV32-NEXT:    psrai.db a6, a4, 2
+; RV32-NEXT:    pmseq.db a6, a0, a6
+; RV32-NEXT:    sw a6, 8(sp)
+; RV32-NEXT:    sw a7, 12(sp)
+; RV32-NEXT:    lbu a3, 12(sp)
+; RV32-NEXT:    lbu a6, 13(sp)
+; RV32-NEXT:    lbu a7, 14(sp)
+; RV32-NEXT:    lbu t0, 15(sp)
+; RV32-NEXT:    lbu t1, 8(sp)
+; RV32-NEXT:    lbu t2, 9(sp)
+; RV32-NEXT:    lbu t3, 10(sp)
+; RV32-NEXT:    lbu t4, 11(sp)
+; RV32-NEXT:    not t6, t0
+; RV32-NEXT:    not t5, a6
+; RV32-NEXT:    not a7, a7
+; RV32-NEXT:    not a6, a3
+; RV32-NEXT:    ppaire.db a6, a6, t5
+; RV32-NEXT:    not t6, t4
+; RV32-NEXT:    not t5, t2
+; RV32-NEXT:    not t2, t3
+; RV32-NEXT:    not t1, t1
+; RV32-NEXT:    pli.b a3, 127
+; RV32-NEXT:    pmsltz.db t3, a0
+; RV32-NEXT:    merge t4, a3, a2
+; RV32-NEXT:    ppaire.db t1, t1, t5
+; RV32-NEXT:    pack a1, a6, a7
+; RV32-NEXT:    pack a0, t1, t2
+; RV32-NEXT:    merge a1, a5, t4
+; RV32-NEXT:    merge t3, a3, a2
+; RV32-NEXT:    merge a0, a4, t3
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
@@ -2285,31 +2273,31 @@ define <4 x i16> @test_pssla_hs(<4 x i16> %a, i16 %shamt) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 4(sp)
-; RV32-NEXT:    lh a1, 6(sp)
-; RV32-NEXT:    sw a0, 0(sp)
-; RV32-NEXT:    zext.h a0, a2
-; RV32-NEXT:    slli a1, a1, 16
-; RV32-NEXT:    ssha a1, a1, a0
-; RV32-NEXT:    srli a1, a1, 16
-; RV32-NEXT:    sh a1, 14(sp)
-; RV32-NEXT:    lh a1, 4(sp)
-; RV32-NEXT:    slli a1, a1, 16
-; RV32-NEXT:    ssha a1, a1, a0
-; RV32-NEXT:    srli a1, a1, 16
-; RV32-NEXT:    sh a1, 12(sp)
-; RV32-NEXT:    lh a1, 2(sp)
-; RV32-NEXT:    slli a1, a1, 16
-; RV32-NEXT:    ssha a1, a1, a0
-; RV32-NEXT:    srli a1, a1, 16
-; RV32-NEXT:    sh a1, 10(sp)
-; RV32-NEXT:    lh a1, 0(sp)
-; RV32-NEXT:    slli a1, a1, 16
-; RV32-NEXT:    ssha a0, a1, a0
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    sh a0, 8(sp)
-; RV32-NEXT:    lw a0, 8(sp)
-; RV32-NEXT:    lw a1, 12(sp)
+; RV32-NEXT:    lui a3, 8
+; RV32-NEXT:    psll.dhs a4, a0, a2
+; RV32-NEXT:    psra.dhs a6, a4, a2
+; RV32-NEXT:    pmseq.dh a6, a0, a6
+; RV32-NEXT:    sw a6, 8(sp)
+; RV32-NEXT:    sw a7, 12(sp)
+; RV32-NEXT:    lh a2, 14(sp)
+; RV32-NEXT:    lh a6, 12(sp)
+; RV32-NEXT:    lh a7, 10(sp)
+; RV32-NEXT:    lh t0, 8(sp)
+; RV32-NEXT:    not a2, a2
+; RV32-NEXT:    not a6, a6
+; RV32-NEXT:    pack a2, a6, a2
+; RV32-NEXT:    plui.h a6, -512
+; RV32-NEXT:    pmsltz.dh t1, a0
+; RV32-NEXT:    addi a3, a3, -1
+; RV32-NEXT:    pmv.hs a0, a3
+; RV32-NEXT:    merge t2, a0, a6
+; RV32-NEXT:    merge a2, a5, t2
+; RV32-NEXT:    merge t1, a0, a6
+; RV32-NEXT:    not a0, a7
+; RV32-NEXT:    not a1, t0
+; RV32-NEXT:    pack a0, a1, a0
+; RV32-NEXT:    merge a0, a4, t1
+; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
@@ -2366,36 +2354,61 @@ define <4 x i16> @test_pssla_h(<4 x i16> %a, <4 x i16> %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -32
 ; RV32-NEXT:    .cfi_def_cfa_offset 32
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a3, 20(sp)
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    sw a2, 16(sp)
-; RV32-NEXT:    lh a0, 14(sp)
-; RV32-NEXT:    lhu a1, 22(sp)
-; RV32-NEXT:    slli a0, a0, 16
-; RV32-NEXT:    ssha a0, a0, a1
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    sh a0, 30(sp)
-; RV32-NEXT:    lh a0, 12(sp)
-; RV32-NEXT:    lhu a1, 20(sp)
-; RV32-NEXT:    slli a0, a0, 16
-; RV32-NEXT:    ssha a0, a0, a1
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    sh a0, 28(sp)
-; RV32-NEXT:    lh a0, 10(sp)
-; RV32-NEXT:    lhu a1, 18(sp)
-; RV32-NEXT:    slli a0, a0, 16
-; RV32-NEXT:    ssha a0, a0, a1
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    sh a0, 26(sp)
-; RV32-NEXT:    lh a0, 8(sp)
-; RV32-NEXT:    lhu a1, 16(sp)
-; RV32-NEXT:    slli a0, a0, 16
-; RV32-NEXT:    ssha a0, a0, a1
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    sh a0, 24(sp)
-; RV32-NEXT:    lw a0, 24(sp)
-; RV32-NEXT:    lw a1, 28(sp)
+; RV32-NEXT:    sw a3, 12(sp)
+; RV32-NEXT:    sw a1, 4(sp)
+; RV32-NEXT:    sw a2, 8(sp)
+; RV32-NEXT:    sw a0, 0(sp)
+; RV32-NEXT:    lhu a3, 14(sp)
+; RV32-NEXT:    lh a2, 6(sp)
+; RV32-NEXT:    sll a2, a2, a3
+; RV32-NEXT:    sext.h a4, a2
+; RV32-NEXT:    sra a3, a4, a3
+; RV32-NEXT:    sh a3, 22(sp)
+; RV32-NEXT:    lhu a4, 12(sp)
+; RV32-NEXT:    lh a3, 4(sp)
+; RV32-NEXT:    sll a3, a3, a4
+; RV32-NEXT:    sext.h a5, a3
+; RV32-NEXT:    sra a4, a5, a4
+; RV32-NEXT:    sh a4, 20(sp)
+; RV32-NEXT:    lhu a4, 10(sp)
+; RV32-NEXT:    lh a5, 2(sp)
+; RV32-NEXT:    sll a5, a5, a4
+; RV32-NEXT:    sext.h a6, a5
+; RV32-NEXT:    sra a4, a6, a4
+; RV32-NEXT:    sh a4, 18(sp)
+; RV32-NEXT:    lhu a4, 8(sp)
+; RV32-NEXT:    lh a6, 0(sp)
+; RV32-NEXT:    lw a7, 20(sp)
+; RV32-NEXT:    sll t0, a6, a4
+; RV32-NEXT:    sext.h a6, t0
+; RV32-NEXT:    sra a4, a6, a4
+; RV32-NEXT:    sh a4, 16(sp)
+; RV32-NEXT:    lw a6, 16(sp)
+; RV32-NEXT:    pmseq.dh a6, a0, a6
+; RV32-NEXT:    sw a6, 24(sp)
+; RV32-NEXT:    sw a7, 28(sp)
+; RV32-NEXT:    lh a4, 24(sp)
+; RV32-NEXT:    lh a6, 26(sp)
+; RV32-NEXT:    lh a7, 28(sp)
+; RV32-NEXT:    lh t1, 30(sp)
+; RV32-NEXT:    pack a3, a3, a2
+; RV32-NEXT:    pack a5, t0, a5
+; RV32-NEXT:    lui t0, 8
+; RV32-NEXT:    not a2, t1
+; RV32-NEXT:    not a7, a7
+; RV32-NEXT:    pack a2, a7, a2
+; RV32-NEXT:    plui.h a7, -512
+; RV32-NEXT:    pmsltz.dh t1, a0
+; RV32-NEXT:    addi t0, t0, -1
+; RV32-NEXT:    pmv.hs a0, t0
+; RV32-NEXT:    merge t2, a0, a7
+; RV32-NEXT:    not a1, a6
+; RV32-NEXT:    not a4, a4
+; RV32-NEXT:    merge a2, a3, t2
+; RV32-NEXT:    merge t1, a0, a7
+; RV32-NEXT:    pack a0, a4, a1
+; RV32-NEXT:    merge a0, a5, t1
+; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
@@ -5207,55 +5220,9 @@ define <2 x i32> @test_select_v2i32(i1 %cond, <2 x i32> %a, <2 x i32> %b) {
 define <4 x i16> @test_vselect_v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) {
 ; RV32-LABEL: test_vselect_v4i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -32
-; RV32-NEXT:    .cfi_def_cfa_offset 32
 ; RV32-NEXT:    pmseq.dh a0, a0, a2
-; RV32-NEXT:    sw a3, 4(sp)
-; RV32-NEXT:    sw a5, 12(sp)
-; RV32-NEXT:    sw a1, 20(sp)
-; RV32-NEXT:    sw a2, 0(sp)
-; RV32-NEXT:    sw a4, 8(sp)
-; RV32-NEXT:    lhu a1, 22(sp)
-; RV32-NEXT:    sw a0, 16(sp)
-; RV32-NEXT:    bnez a1, .LBB214_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    lh a0, 6(sp)
-; RV32-NEXT:    j .LBB214_3
-; RV32-NEXT:  .LBB214_2:
-; RV32-NEXT:    lh a0, 14(sp)
-; RV32-NEXT:  .LBB214_3:
-; RV32-NEXT:    sh a0, 30(sp)
-; RV32-NEXT:    lhu a0, 20(sp)
-; RV32-NEXT:    bnez a0, .LBB214_5
-; RV32-NEXT:  # %bb.4:
-; RV32-NEXT:    lh a0, 4(sp)
-; RV32-NEXT:    j .LBB214_6
-; RV32-NEXT:  .LBB214_5:
-; RV32-NEXT:    lh a0, 12(sp)
-; RV32-NEXT:  .LBB214_6:
-; RV32-NEXT:    sh a0, 28(sp)
-; RV32-NEXT:    lhu a0, 18(sp)
-; RV32-NEXT:    bnez a0, .LBB214_8
-; RV32-NEXT:  # %bb.7:
-; RV32-NEXT:    lh a0, 2(sp)
-; RV32-NEXT:    j .LBB214_9
-; RV32-NEXT:  .LBB214_8:
-; RV32-NEXT:    lh a0, 10(sp)
-; RV32-NEXT:  .LBB214_9:
-; RV32-NEXT:    sh a0, 26(sp)
-; RV32-NEXT:    lhu a0, 16(sp)
-; RV32-NEXT:    bnez a0, .LBB214_11
-; RV32-NEXT:  # %bb.10:
-; RV32-NEXT:    lh a0, 0(sp)
-; RV32-NEXT:    j .LBB214_12
-; RV32-NEXT:  .LBB214_11:
-; RV32-NEXT:    lh a0, 8(sp)
-; RV32-NEXT:  .LBB214_12:
-; RV32-NEXT:    sh a0, 24(sp)
-; RV32-NEXT:    lw a0, 24(sp)
-; RV32-NEXT:    lw a1, 28(sp)
-; RV32-NEXT:    addi sp, sp, 32
-; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    merge a1, a3, a5
+; RV32-NEXT:    merge a0, a2, a4
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_vselect_v4i16:
@@ -5271,91 +5238,9 @@ define <4 x i16> @test_vselect_v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) {
 define <8 x i8> @test_vselect_v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 ; RV32-LABEL: test_vselect_v8i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -32
-; RV32-NEXT:    .cfi_def_cfa_offset 32
 ; RV32-NEXT:    pmsltu.db a0, a0, a2
-; RV32-NEXT:    sw a3, 4(sp)
-; RV32-NEXT:    sw a5, 12(sp)
-; RV32-NEXT:    sw a1, 20(sp)
-; RV32-NEXT:    sw a2, 0(sp)
-; RV32-NEXT:    sw a4, 8(sp)
-; RV32-NEXT:    lbu a1, 23(sp)
-; RV32-NEXT:    sw a0, 16(sp)
-; RV32-NEXT:    bnez a1, .LBB215_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    lbu a0, 7(sp)
-; RV32-NEXT:    j .LBB215_3
-; RV32-NEXT:  .LBB215_2:
-; RV32-NEXT:    lbu a0, 15(sp)
-; RV32-NEXT:  .LBB215_3:
-; RV32-NEXT:    sb a0, 31(sp)
-; RV32-NEXT:    lbu a0, 22(sp)
-; RV32-NEXT:    bnez a0, .LBB215_5
-; RV32-NEXT:  # %bb.4:
-; RV32-NEXT:    lbu a0, 6(sp)
-; RV32-NEXT:    j .LBB215_6
-; RV32-NEXT:  .LBB215_5:
-; RV32-NEXT:    lbu a0, 14(sp)
-; RV32-NEXT:  .LBB215_6:
-; RV32-NEXT:    sb a0, 30(sp)
-; RV32-NEXT:    lbu a0, 21(sp)
-; RV32-NEXT:    bnez a0, .LBB215_8
-; RV32-NEXT:  # %bb.7:
-; RV32-NEXT:    lbu a0, 5(sp)
-; RV32-NEXT:    j .LBB215_9
-; RV32-NEXT:  .LBB215_8:
-; RV32-NEXT:    lbu a0, 13(sp)
-; RV32-NEXT:  .LBB215_9:
-; RV32-NEXT:    sb a0, 29(sp)
-; RV32-NEXT:    lbu a0, 20(sp)
-; RV32-NEXT:    bnez a0, .LBB215_11
-; RV32-NEXT:  # %bb.10:
-; RV32-NEXT:    lbu a0, 4(sp)
-; RV32-NEXT:    j .LBB215_12
-; RV32-NEXT:  .LBB215_11:
-; RV32-NEXT:    lbu a0, 12(sp)
-; RV32-NEXT:  .LBB215_12:
-; RV32-NEXT:    sb a0, 28(sp)
-; RV32-NEXT:    lbu a0, 19(sp)
-; RV32-NEXT:    bnez a0, .LBB215_14
-; RV32-NEXT:  # %bb.13:
-; RV32-NEXT:    lbu a0, 3(sp)
-; RV32-NEXT:    j .LBB215_15
-; RV32-NEXT:  .LBB215_14:
-; RV32-NEXT:    lbu a0, 11(sp)
-; RV32-NEXT:  .LBB215_15:
-; RV32-NEXT:    sb a0, 27(sp)
-; RV32-NEXT:    lbu a0, 18(sp)
-; RV32-NEXT:    bnez a0, .LBB215_17
-; RV32-NEXT:  # %bb.16:
-; RV32-NEXT:    lbu a0, 2(sp)
-; RV32-NEXT:    j .LBB215_18
-; RV32-NEXT:  .LBB215_17:
-; RV32-NEXT:    lbu a0, 10(sp)
-; RV32-NEXT:  .LBB215_18:
-; RV32-NEXT:    sb a0, 26(sp)
-; RV32-NEXT:    lbu a0, 17(sp)
-; RV32-NEXT:    bnez a0, .LBB215_20
-; RV32-NEXT:  # %bb.19:
-; RV32-NEXT:    lbu a0, 1(sp)
-; RV32-NEXT:    j .LBB215_21
-; RV32-NEXT:  .LBB215_20:
-; RV32-NEXT:    lbu a0, 9(sp)
-; RV32-NEXT:  .LBB215_21:
-; RV32-NEXT:    sb a0, 25(sp)
-; RV32-NEXT:    lbu a0, 16(sp)
-; RV32-NEXT:    bnez a0, .LBB215_23
-; RV32-NEXT:  # %bb.22:
-; RV32-NEXT:    lbu a0, 0(sp)
-; RV32-NEXT:    j .LBB215_24
-; RV32-NEXT:  .LBB215_23:
-; RV32-NEXT:    lbu a0, 8(sp)
-; RV32-NEXT:  .LBB215_24:
-; RV32-NEXT:    sb a0, 24(sp)
-; RV32-NEXT:    lw a0, 24(sp)
-; RV32-NEXT:    lw a1, 28(sp)
-; RV32-NEXT:    addi sp, sp, 32
-; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    merge a1, a3, a5
+; RV32-NEXT:    merge a0, a2, a4
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_vselect_v8i8:
