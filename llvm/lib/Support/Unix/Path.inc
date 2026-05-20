@@ -1176,7 +1176,8 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
       if (auto EC = llvm::disableAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
-        if (auto EC = llvm::setzOSFileTag(ResultFD, FT_BINARY, /*IsText=*/false))
+        if (auto EC =
+                 llvm::setzOSFileTag(ResultFD, FT_BINARY, /*IsText=*/false))
           return EC;
       }
     }

@@ -84,9 +84,9 @@ int enablezOSAutoConversion(int FD) {
 
 int enablezOSAutoConversionCcsid(int FD, int ccsid) {
   struct f_cnvrt cvt = {
-      SETCVTALL,    // cvtcmd
-      CCSID_UTF_8,  // pccsid
-      0,            // fccsid
+      SETCVTALL,   // cvtcmd
+      CCSID_UTF_8, // pccsid
+      0,           // fccsid
   };
   if (ccsid == FT_UNTAGGED)
     return -1;
@@ -157,7 +157,8 @@ std::error_code llvm::copyFileTagAttributes(const std::string &Source,
     return std::error_code(errno, std::generic_category());
 
   if (SourceAttributes.st_tag.ft_txtflag)
-    if (enablezOSAutoConversionCcsid(DestinationFD, SourceAttributes.st_tag.ft_ccsid) == -1)
+    if (enablezOSAutoConversionCcsid(DestinationFD,
+                                     SourceAttributes.st_tag.ft_ccsid) == -1)
       return errnoAsErrorCode();
 
   return setzOSFileTag(DestinationFD, SourceAttributes.st_tag.ft_ccsid,
