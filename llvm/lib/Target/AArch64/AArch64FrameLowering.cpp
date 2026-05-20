@@ -922,7 +922,9 @@ AArch64FrameLowering::findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
   if (LiveRegs.available(MRI, AArch64::X9))
     return AArch64::X9;
 
-  for (unsigned Reg : AArch64::GPR64RegClass) {
+  // GPR64common excludes XZR/WZR and SP/WSP, which are not valid scratch regs
+  // for stack adjustment (GPR64sp) instructions.
+  for (MCPhysReg Reg : AArch64::GPR64commonRegClass) {
     if (LiveRegs.available(MRI, Reg))
       return Reg;
   }
@@ -939,9 +941,8 @@ bool AArch64FrameLowering::canUseAsPrologue(
   const AArch64FunctionInfo *AFI = MF->getInfo<AArch64FunctionInfo>();
 
   if (AFI->hasSwiftAsyncContext()) {
-    const AArch64RegisterInfo &TRI = *Subtarget.getRegisterInfo();
     const MachineRegisterInfo &MRI = MF->getRegInfo();
-    LivePhysRegs LiveRegs(TRI);
+    LivePhysRegs LiveRegs(*RegInfo);
     getLiveRegsForEntryMBB(LiveRegs, MBB);
     // The StoreSwiftAsyncContext clobbers X16 and X17. Make sure they are
     // available.
@@ -3369,15 +3370,13 @@ bool isMergeableStackTaggingInstruction(MachineInstr &MI, int64_t &Offset,
 static size_t countAvailableScavengerSlots(LivePhysRegs &LiveRegs,
                                            MachineRegisterInfo &MRI,
                                            RegScavenger *RS) {
-  auto FreeGPRs =
-      llvm::count_if(AArch64::GPR64RegClass, [&LiveRegs, &MRI](auto Reg) {
+  unsigned FreeGPRs =
+      llvm::count_if(AArch64::GPR64commonRegClass, [&](MCPhysReg Reg) {
         return LiveRegs.available(MRI, Reg);
       });
-
   size_t NumEmergencySlots = 0;
   if (RS)
     NumEmergencySlots = RS->getNumScavengingFrameIndices();
-
   return FreeGPRs + NumEmergencySlots;
 }
 
@@ -3448,7 +3447,7 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
   // FIXME : This approach of bailing out from merge is conservative in
   // some ways like even if stg loops are not present after merge the
   // insert list, this liveness check is done (which is not needed).
-  LivePhysRegs LiveRegs(*(MBB->getParent()->getSubtarget().getRegisterInfo()));
+  LivePhysRegs LiveRegs(*MBB->getParent()->getSubtarget().getRegisterInfo());
   LiveRegs.addLiveOuts(*MBB);
   for (auto I = MBB->rbegin();; ++I) {
     MachineInstr &MI = *I;

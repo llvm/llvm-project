@@ -32,7 +32,7 @@ namespace {
 class DeadMachineInstructionElimImpl {
   const MachineRegisterInfo *MRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
-  LiveRegUnits LivePhysRegs;
+  LiveRegUnits LiveRegs;
 
 public:
   bool runImpl(MachineFunction &MF);
@@ -81,7 +81,7 @@ bool DeadMachineInstructionElimImpl::runImpl(MachineFunction &MF) {
 
   const TargetSubtargetInfo &ST = MF.getSubtarget();
   TII = ST.getInstrInfo();
-  LivePhysRegs.init(*ST.getRegisterInfo());
+  LiveRegs.init(*ST.getRegisterInfo());
 
   bool NeedAnotherIteration;
   bool AnyChanges = eliminateDeadMI(MF, NeedAnotherIteration);
@@ -99,7 +99,7 @@ bool DeadMachineInstructionElimImpl::eliminateDeadMI(
   // more likely that chains of dependent but ultimately dead instructions will
   // be cleaned up.
   for (MachineBasicBlock *MBB : post_order(&MF)) {
-    LivePhysRegs.addLiveOuts(*MBB);
+    LiveRegs.addLiveOuts(*MBB);
     NeedsProcessing.erase(MBB);
 
     // Now scan the instructions and delete dead ones, tracking physreg
@@ -108,7 +108,7 @@ bool DeadMachineInstructionElimImpl::eliminateDeadMI(
       if (MI.isDebugInstr())
         continue;
       // If the instruction is dead, delete it!
-      if (MI.isDead(*MRI, &LivePhysRegs)) {
+      if (MI.isDead(*MRI, &LiveRegs)) {
         if (MI.isPHI()) {
           for (MachineBasicBlock *P : MBB->predecessors())
             NeedsProcessing.insert(P);
@@ -122,10 +122,10 @@ bool DeadMachineInstructionElimImpl::eliminateDeadMI(
         ++NumDeletes;
         continue;
       }
-      LivePhysRegs.stepBackward(MI);
+      LiveRegs.stepBackward(MI);
     }
   }
-  LivePhysRegs.clear();
+  LiveRegs.clear();
   NeedAnotherIteration = !NeedsProcessing.empty();
   return AnyChanges;
 }
