@@ -16,6 +16,7 @@
 #include <__functional/identity.h>
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/invoke.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -36,7 +37,7 @@ __count_if(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
 
   // We implement __count_if using __for_each to inherit its optimizations for
   // segmented iterators. This improves performance without adding complexity.
-  std::__for_each(__first, __last, __apply, __proj);
+  std::__for_each(std::move(__first), std::move(__last), __apply, __proj);
   return __counter;
 }
 
