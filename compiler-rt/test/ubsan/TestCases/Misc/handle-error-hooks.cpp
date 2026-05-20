@@ -20,8 +20,7 @@ static bool IsHookActive{false};
 #if (__APPLE__)
 __attribute__((weak))
 #endif
-extern "C" void
-__ubsan_on_handle_error_begin(void) {
+extern "C" void __ubsan_on_handle_error_begin(void) {
   if (IsHookActive) {
     printf("%s ERROR: Unexpected IsHookActive\n", __FUNCTION__);
     exit(1);
@@ -34,8 +33,7 @@ __ubsan_on_handle_error_begin(void) {
 #if (__APPLE__)
 __attribute__((weak))
 #endif
-extern "C" void
-__ubsan_on_handle_error_end(void) {
+extern "C" void __ubsan_on_handle_error_end(void) {
   if (!IsHookActive) {
     printf("%s ERROR: Unexpected IsHookActive\n", __FUNCTION__);
     exit(1);
