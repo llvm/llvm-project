@@ -13,7 +13,7 @@ import pickle
 import shutil
 import platform
 import json
-from typing import Optional, Union
+from typing import Optional
 
 from dex.command.ParseCommand import get_command_infos
 from dex.debugger.Debuggers import run_debugger_subprocess
