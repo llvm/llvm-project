@@ -34,11 +34,10 @@ bool negative_test_if() {
   if (true; ) {} /* expected-error {{first clause in condition must be a declaration}}
                     expected-error {{expected expression}}
                     expected-warning {{expression result unused}} */
-  if (bool x = true; bool y = x) return y; /* expected-error {{expected expression}}
-                                              expected-error {{use of undeclared identifier 'y'}} */
+  if (bool x = true; bool y = x) return y; // expected-error {{expected expression}}
+
   if (true; bool y = true) return y; /* expected-error {{first clause in condition must be a declaration}}
                                         expected-error {{expected expression}}
-                                        expected-error {{use of undeclared identifier 'y'}}
                                         expected-warning {{expression result unused}}*/
   return false;
 }
@@ -54,6 +53,6 @@ int negative_test_switch() {
                         expected-warning {{expression result unused}} */
   switch (int x = 1; int y = x) { // expected-error {{expected expression}}
   default:
-    return y; // expected-error {{use of undeclared identifier 'y'}}
+    return y;
   }
 }

@@ -169,6 +169,12 @@ def ext_c2y_generic_with_type_arg : Extension<
 def warn_c2y_compat_generic_with_type_arg : Warning<
   "passing a type argument as the first operand to '_Generic' is incompatible "
   "with C standards before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
+def warn_c2y_compat_init_statement : Warning<
+  "%select{if|switch}0 initialization statements are incompatible with "
+  "C standards before C2y">, DefaultIgnore, InGroup<CPre2yCompat>;
+def ext_c2y_init_statement : ExtWarn<
+  "'%select{if|switch}0' initialization statements are a C2y extension">,
+  InGroup<C2y>;
 
 def ext_c99_feature : Extension<
   "'%0' is a C99 extension">, InGroup<C99>;

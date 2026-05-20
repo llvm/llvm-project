@@ -1264,18 +1264,7 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
   T.consumeOpen();
   SourceLocation Start = Tok.getLocation();
 
-  if (getLangOpts().CPlusPlus || getLangOpts().C2y) {
-    Cond = ParseCXXCondition(InitStmt, Loc, CK, false);
-  } else {
-    ExprResult CondExpr = ParseExpression();
-
-    // If required, convert to a boolean value.
-    if (CondExpr.isInvalid())
-      Cond = Sema::ConditionError();
-    else
-      Cond = Actions.ActOnCondition(getCurScope(), Loc, CondExpr.get(), CK,
-                                    /*MissingOK=*/false);
-  }
+  Cond = ParseCXXCondition(InitStmt, Loc, CK, false);
 
   // If the parser was confused by the condition and we don't have a ')', try to
   // recover by skipping ahead to a semi and bailing out.  If condexp is
@@ -1295,6 +1284,27 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
     if (!CondExpr.isInvalid())
       Cond = Actions.ActOnCondition(getCurScope(), Loc, CondExpr.get(), CK,
                                     /*MissingOK=*/false);
+  }
+
+  if (getLangOpts().C99 && InitStmt->get() != nullptr &&
+      InitStmt->get()->getStmtClass() != Stmt::DeclStmtClass){
+    // C2y only permits declaration in the first clause of an if condition,
+    // so it makes sense to error out in other conditions.
+    Diag(InitStmt->get()->getBeginLoc(),
+         diag::err_c2y_first_condition_clause_is_not_declaration)
+        << InitStmt->get()->getSourceRange();
+    Cond = Sema::ConditionError();
+    return true;
+  }
+
+  if (getLangOpts().C99 && InitStmt->get() != nullptr &&
+      Cond.get().first != nullptr){
+    // C2y only permits expression in the second clause of an if condition,
+    // so it makes sense to error out in other conditions.
+    Diag(Cond.get().first->getBeginLoc(), diag::err_expected_expression)
+        << Cond.get().first->getSourceRange();
+    Cond = Sema::ConditionError();
+    return true;
   }
 
   // Either the condition is valid or the rparen is present.

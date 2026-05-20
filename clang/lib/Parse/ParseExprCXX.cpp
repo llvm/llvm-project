@@ -1868,8 +1868,7 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
 Sema::ConditionResult
 Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
                           Sema::ConditionKind CK, bool MissingOK,
-                          ForRangeInfo *FRI, bool EnterForConditionScope,
-                          bool ParsingSecondClauseOfC2yIfCondition) {
+                          ForRangeInfo *FRI, bool EnterForConditionScope) {
   // Helper to ensure we always enter a continue/break scope if requested.
   struct ForConditionScopeRAII {
     Scope *S;
@@ -1884,8 +1883,6 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
         S->setIsConditionVarScope(false);
     }
   } ForConditionScope{EnterForConditionScope ? getCurScope() : nullptr};
-  bool parsingC2yIfOrSwitchCondition =
-      getLangOpts().C2y && !EnterForConditionScope;
 
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
   PreferredType.enterCondition(Actions, Tok.getLocation());
@@ -1901,10 +1898,15 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
   MaybeParseCXX11Attributes(attrs);
 
   const auto WarnOnInit = [this, &CK] {
-    if (!getLangOpts().C2y)
+    if (getLangOpts().CPlusPlus)
       Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
                                   ? diag::warn_cxx14_compat_init_statement
                                   : diag::ext_init_statement)
+          << (CK == Sema::ConditionKind::Switch);
+    else
+      Diag(Tok.getLocation(), getLangOpts().C2y
+                                  ? diag::warn_c2y_compat_init_statement
+                                  : diag::ext_c2y_init_statement)
           << (CK == Sema::ConditionKind::Switch);
   };
 
@@ -1928,9 +1930,7 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
       }
       ConsumeToken();
       *InitStmt = Actions.ActOnNullStmt(SemiLoc);
-      return ParseCXXCondition(nullptr, Loc, CK, MissingOK, FRI,
-                               EnterForConditionScope,
-                               parsingC2yIfOrSwitchCondition);
+      return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
     }
 
     EnterExpressionEvaluationContext Eval(
@@ -1945,21 +1945,10 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
       return Sema::ConditionError();
 
     if (InitStmt && Tok.is(tok::semi)) {
-      if (parsingC2yIfOrSwitchCondition && !ParsingSecondClauseOfC2yIfCondition)
-        // C2y only permits declaration in the first clause of an if condition,
-        // so it makes sense to error out in other condition. We can stop
-        // parsing here and just report an error but we chose to continue to
-        // generate an error about the second clause of the condition since
-        // there's a ';' found.
-        Diag(Tok.getLocation(),
-             diag::err_c2y_first_condition_clause_is_not_declaration);
-
       WarnOnInit();
       *InitStmt = Actions.ActOnExprStmt(Expr.get());
       ConsumeToken();
-      return ParseCXXCondition(nullptr, Loc, CK, MissingOK, FRI,
-                               EnterForConditionScope,
-                               parsingC2yIfOrSwitchCondition);
+      return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
     }
 
     return Actions.ActOnCondition(getCurScope(), Loc, Expr.get(), CK,
@@ -1979,9 +1968,7 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
                                   attrs, DeclSpecAttrs, /*RequireSemi=*/true);
     }
     *InitStmt = Actions.ActOnDeclStmt(DG, DeclStart, DeclEnd);
-    return ParseCXXCondition(nullptr, Loc, CK, MissingOK, FRI,
-                             EnterForConditionScope,
-                             parsingC2yIfOrSwitchCondition);
+    return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
   }
 
   case ConditionOrInitStatement::ForRangeDecl: {
@@ -1999,10 +1986,6 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
 
   case ConditionOrInitStatement::ConditionDecl:
   case ConditionOrInitStatement::Error:
-    if (getLangOpts().C2y && ParsingSecondClauseOfC2yIfCondition) {
-      Diag(Tok.getLocation(), diag::err_expected_expression);
-      return Sema::ConditionError();
-    }
     break;
   }
 
