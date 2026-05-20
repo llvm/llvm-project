@@ -3679,13 +3679,15 @@ QualType QualType::getNonLValueExprType(const ASTContext &Context) const {
   if (const auto *RefType = getTypePtr()->getAs<ReferenceType>())
     return RefType->getPointeeType();
 
-  // C++0x [basic.lval]:
-  //   Class prvalues can have cv-qualified types; non-class prvalues always
-  //   have cv-unqualified types.
+  // C++26 [expr.type]p2 (see also CWG1261):
+  //   If a prvalue initially has the type "cv T", where T is a cv-unqualified
+  //   non-class, non-array type, the type of the expression is adjusted to T
+  //   prior to any further analysis.
   //
   // See also C99 6.3.2.1p2.
   if (!Context.getLangOpts().CPlusPlus ||
-      (!getTypePtr()->isDependentType() && !getTypePtr()->isRecordType()))
+      (!getTypePtr()->isDependentType() && !getTypePtr()->isRecordType() &&
+       !getTypePtr()->isArrayType()))
     return getUnqualifiedType();
 
   return *this;
