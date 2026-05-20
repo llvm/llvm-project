@@ -2307,6 +2307,9 @@ protected:
   UpdateBreakpointSites(const BreakpointSiteToActionMap &site_to_action);
 
 public:
+  /// Performs `action` on `site`. If `forbid_delay` is true, the action is
+  /// performed immediately, otherwise the method will delay the breakpoint if
+  /// it is correct to do so.
   llvm::Error ExecuteBreakpointSiteAction(BreakpointSite &site,
                                           Process::BreakpointAction action,
                                           bool forbid_delay);
