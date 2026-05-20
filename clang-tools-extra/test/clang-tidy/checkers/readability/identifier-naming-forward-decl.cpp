@@ -77,4 +77,4 @@ union GoodTemplateUnion;
 template <typename T>
 union bad_template_union;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for union 'bad_template_union'
-// CHECK-FIXES: template BadTemplateUnion;
+// CHECK-FIXES: union BadTemplateUnion;
