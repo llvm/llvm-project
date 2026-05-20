@@ -516,6 +516,12 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
       CmdArgs.push_back(Args.MakeArgString(Twine("-cs-profile-path=") + Path));
     }
   }
+
+  if (Arg *A = getLastProfileSampleUseArg(Args)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-sample-profile-file=") + A->getValue()));
+  }
 }
 
 /// Determine whether we are linking the ObjC runtime.
