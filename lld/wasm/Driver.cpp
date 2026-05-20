@@ -885,9 +885,7 @@ createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
 }
 
 static UndefinedFunction *
-createUndefinedFunction(StringRef name, std::optional<StringRef> importName,
-                        std::optional<StringRef> importModule,
-                        WasmSignature *signature) {
+createUndefinedFunction(StringRef name, WasmSignature *signature) {
   auto *sym = cast<UndefinedFunction>(symtab->addUndefinedFunction(
       name, importName, importModule, WASM_SYMBOL_UNDEFINED, nullptr, signature,
       true));
@@ -988,12 +986,10 @@ static void createSyntheticSymbols() {
       ctx.sym.tlsAlign->markLive();
       static WasmSignature setTLSBaseSignature{{}, {ValType::I32}};
       ctx.sym.setTLSBase =
-          createUndefinedFunction("__wasm_set_tls_base", std::nullopt,
-                                  std::nullopt, &setTLSBaseSignature);
+          createUndefinedFunction("__wasm_set_tls_base", &setTLSBaseSignature);
       static WasmSignature getTLSBaseSignature{{ValType::I32}, {}};
       ctx.sym.getTLSBase =
-          createUndefinedFunction("__wasm_get_tls_base", std::nullopt,
-                                  std::nullopt, &getTLSBaseSignature);
+          createUndefinedFunction("__wasm_get_tls_base", &getTLSBaseSignature);
     }
   }
 }
