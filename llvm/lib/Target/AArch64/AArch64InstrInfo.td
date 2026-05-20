@@ -5553,6 +5553,13 @@ def : Pat<(i64 (any_llrint f32:$Rn)),
 def : Pat<(i64 (any_llrint f64:$Rn)),
           (FCVTZSUXDr (FRINTXDr f64:$Rn))>;
 
+let Predicates = [HasFullFP16] in {
+  def : Pat<(bf16 (fabs (bf16 FPR16:$Rn))),
+            (bf16 (FABSHr (bf16 FPR16:$Rn)))>;
+  def : Pat<(bf16 (fneg (bf16 FPR16:$Rn))),
+            (bf16 (FNEGHr (bf16 FPR16:$Rn)))>;
+}
+
 //===----------------------------------------------------------------------===//
 // Floating point two operand instructions.
 //===----------------------------------------------------------------------===//
@@ -5980,6 +5987,17 @@ def : InstAlias<"mvn{ $Vd.8b, $Vn.8b|.8b $Vd, $Vn}",
                 (NOTv8i8 V64:$Vd, V64:$Vn)>;
 def : InstAlias<"mvn{ $Vd.16b, $Vn.16b|.16b $Vd, $Vn}",
                 (NOTv16i8 V128:$Vd, V128:$Vn)>;
+}
+
+let Predicates = [HasFullFP16] in {
+  def : Pat<(v4bf16 (fabs (v4bf16 V64:$Rn))),
+            (v4bf16 (FABSv4f16 (v4bf16 V64:$Rn)))>;
+  def : Pat<(v8bf16 (fabs (v8bf16 V128:$Rn))),
+            (v8bf16 (FABSv8f16 (v8bf16 V128:$Rn)))>;
+  def : Pat<(v4bf16 (fneg (v4bf16 V64:$Rn))),
+            (v4bf16 (FNEGv4f16 (v4bf16 V64:$Rn)))>;
+  def : Pat<(v8bf16 (fneg (v8bf16 V128:$Rn))),
+            (v8bf16 (FNEGv8f16 (v8bf16 V128:$Rn)))>;
 }
 
 def : Pat<(vnot (v4i16 V64:$Rn)),  (NOTv8i8  V64:$Rn)>;

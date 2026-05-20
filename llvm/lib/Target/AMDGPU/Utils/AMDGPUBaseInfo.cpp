@@ -26,7 +26,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <optional>
 
 #define GET_INSTRINFO_NAMED_OPS
@@ -1184,6 +1184,14 @@ std::string AMDGPUTargetID::toString() const {
   raw_string_ostream OS(Str);
   OS << *this;
   return Str;
+}
+
+unsigned getInstCacheLineSize(const MCSubtargetInfo &STI) {
+  if (STI.getFeatureBits().test(FeatureInstCacheLineSize128))
+    return 128;
+  if (STI.getFeatureBits().test(FeatureInstCacheLineSize64))
+    return 64;
+  return 64;
 }
 
 unsigned getWavefrontSize(const MCSubtargetInfo &STI) {

@@ -1217,7 +1217,6 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       if (const SectionAttr *sa = d->getAttr<SectionAttr>())
         gv.setSectionAttr(builder.getStringAttr(sa->getName()));
     }
-    gv.setGlobalVisibility(getGlobalVisibilityAttrFromDecl(d).getValue());
 
     // Handle XCore specific ABI requirements.
     if (getTriple().getArch() == llvm::Triple::xcore)
@@ -2789,9 +2788,65 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
   return false;
 }
 
-void CIRGenModule::setGlobalVisibility(mlir::Operation *gv,
+void CIRGenModule::setGlobalVisibility(cir::CIRGlobalValueInterface gv,
                                        const NamedDecl *d) const {
-  assert(!cir::MissingFeatures::opGlobalVisibility());
+  // Internal definitions always have default visibility.
+  if (gv.hasLocalLinkage()) {
+    gv.setGlobalVisibility(cir::VisibilityKind::Default);
+    return;
+  }
+  if (!d)
+    return;
+
+  // Set visibility for definitions, and for declarations if requested globally
+  // or set explicitly.
+  LinkageInfo lv = d->getLinkageAndVisibility();
+
+  // OpenMP declare target variables must be visible to the host so they can
+  // be registered. We require protected visibility unless the variable has
+  // the DT_nohost modifier and does not need to be registered.
+  if (getASTContext().getLangOpts().OpenMP &&
+      getASTContext().getLangOpts().OpenMPIsTargetDevice && isa<VarDecl>(d) &&
+      d->hasAttr<OMPDeclareTargetDeclAttr>() &&
+      d->getAttr<OMPDeclareTargetDeclAttr>()->getDevType() !=
+          OMPDeclareTargetDeclAttr::DT_NoHost &&
+      lv.getVisibility() == HiddenVisibility) {
+    llvm_unreachable("setGlobalVisibility: OpenMP is NYI");
+    return;
+  }
+
+  // CUDA/HIP device kernels and global variables must be visible to the host
+  // so they can be registered / initialized. We require protected visibility
+  // unless the user explicitly requested hidden via an attribute.
+  if (getASTContext().getLangOpts().CUDAIsDevice &&
+      lv.getVisibility() == HiddenVisibility && !lv.isVisibilityExplicit() &&
+      !d->hasAttr<OMPDeclareTargetDeclAttr>()) {
+    bool needsProtected = false;
+    if (isa<FunctionDecl>(d)) {
+      needsProtected =
+          d->hasAttr<CUDAGlobalAttr>() || d->hasAttr<DeviceKernelAttr>();
+    } else if (const auto *vd = dyn_cast<VarDecl>(d)) {
+      needsProtected = vd->hasAttr<CUDADeviceAttr>() ||
+                       vd->hasAttr<CUDAConstantAttr>() ||
+                       vd->getType()->isCUDADeviceBuiltinSurfaceType() ||
+                       vd->getType()->isCUDADeviceBuiltinTextureType();
+    }
+    if (needsProtected) {
+      gv.setGlobalVisibility(cir::VisibilityKind::Protected);
+      return;
+    }
+  }
+
+  if (getASTContext().getLangOpts().HLSL && !d->isInExportDeclContext()) {
+    gv.setGlobalVisibility(cir::VisibilityKind::Hidden);
+    return;
+  }
+
+  assert(!cir::MissingFeatures::opGlobalDLLImportExport());
+
+  if (lv.isVisibilityExplicit() || getLangOpts().SetVisibilityForExternDecls ||
+      !gv.isDeclarationForLinker())
+    gv.setGlobalVisibility(getCIRVisibilityKind(lv.getVisibility()));
 }
 
 void CIRGenModule::setDSOLocal(cir::CIRGlobalValueInterface gv) const {
@@ -2811,7 +2866,7 @@ void CIRGenModule::setGVProperties(mlir::Operation *op,
 
 void CIRGenModule::setGVPropertiesAux(mlir::Operation *op,
                                       const NamedDecl *d) const {
-  setGlobalVisibility(op, d);
+  setGlobalVisibility(cast<cir::CIRGlobalValueInterface>(op), d);
   setDSOLocal(op);
   assert(!cir::MissingFeatures::opGlobalPartition());
 }
@@ -2914,15 +2969,6 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 
   if (!isIncompleteFunction && func.isDeclaration())
     getTargetCIRGenInfo().setTargetAttributes(funcDecl, func, *this);
-
-  // TODO(cir): This needs a lot of work to better match CodeGen. That
-  // ultimately ends up in setGlobalVisibility, which already has the linkage of
-  // the LLVM GV (corresponding to our FuncOp) computed, so it doesn't have to
-  // recompute it here. This is a minimal fix for now.
-  if (!isLocalLinkage(getFunctionLinkage(globalDecl))) {
-    const Decl *decl = globalDecl.getDecl();
-    func.setGlobalVisibility(getGlobalVisibilityAttrFromDecl(decl).getValue());
-  }
 
   // If we plan on emitting this inline builtin, we can't treat it as a builtin.
   if (funcDecl->isInlineBuiltinDeclaration()) {

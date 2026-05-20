@@ -8,7 +8,6 @@
 
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 // REQUIRES: locale.fr_FR.UTF-8
 

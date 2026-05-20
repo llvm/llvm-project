@@ -65,6 +65,16 @@ typedef struct ol_kernel_launch_size_args_t {
   size_t DynSharedMemory;
 } ol_kernel_launch_size_args_t;
 
+typedef enum ol_kernel_launch_prop_type_t {
+  OL_KERNEL_LAUNCH_PROP_TYPE_NONE = 0,
+  OL_KERNEL_LAUNCH_PROP_TYPE_FORCE_UINT32 = 0x7fffffff
+} ol_kernel_launch_prop_type_t;
+
+typedef struct ol_kernel_launch_prop_t {
+  ol_kernel_launch_prop_type_t type;
+  void *data;
+} ol_kernel_launch_prop_t;
+
 typedef enum ol_platform_backend_t {
   OL_PLATFORM_BACKEND_UNKNOWN = 0,
   OL_PLATFORM_BACKEND_CUDA = 1,
@@ -124,7 +134,8 @@ ol_result_t (*olGetSymbol)(ol_program_handle_t Program, const char *Name,
 ol_result_t (*olLaunchKernel)(
     ol_queue_handle_t Queue, ol_device_handle_t Device,
     ol_symbol_handle_t Kernel, const void *ArgumentsData, size_t ArgumentsSize,
-    const ol_kernel_launch_size_args_t *LaunchSizeArgs);
+    const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+    const ol_kernel_launch_prop_t *Properties);
 
 ol_result_t (*olCreateQueue)(ol_device_handle_t Device,
                              ol_queue_handle_t *Queue);

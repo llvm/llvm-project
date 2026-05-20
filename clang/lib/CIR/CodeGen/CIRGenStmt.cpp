@@ -1253,9 +1253,16 @@ void CIRGenFunction::emitReturnOfRValue(mlir::Location loc, RValue rv,
   if (rv.isScalar()) {
     builder.createStore(loc, rv.getValue(), returnValue);
   } else if (rv.isAggregate()) {
-    LValue dest = makeAddrLValue(returnValue, ty);
-    LValue src = makeAddrLValue(rv.getAggregateAddress(), ty);
-    emitAggregateCopy(dest, src, ty, getOverlapForReturnValue());
+    Address rvAddr = rv.getAggregateAddress();
+    // If the aggregate is already in the return slot (e.g. a callee was
+    // invoked through a ReturnValueSlot bound to returnValue), the copy is
+    // a no-op.  Calling emitAggregateCopy here would also incorrectly
+    // require the type to have a trivial copy/move.
+    if (rvAddr.getPointer() != returnValue.getPointer()) {
+      LValue dest = makeAddrLValue(returnValue, ty);
+      LValue src = makeAddrLValue(rvAddr, ty);
+      emitAggregateCopy(dest, src, ty, getOverlapForReturnValue());
+    }
   } else {
     cgm.errorNYI(loc, "emitReturnOfRValue: complex return type");
   }

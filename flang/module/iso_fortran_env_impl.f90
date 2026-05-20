@@ -1,4 +1,4 @@
-!===-- module/iso_fortran_env_impl.f90 --=--------------------------------===!
+!===-- module/iso_fortran_env_impl.f90 --=----------------------------------===!
 !
 ! Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ! See https://llvm.org/LICENSE.txt for license information.
@@ -9,6 +9,9 @@
 ! This MODULE implements part of the ISO_FORTRAN_ENV module file, which
 ! partially requires linkable symbols for some entities defined
 ! (e.g., real_kinds).
+!
+! The runtime symbols are in flang-rt/lib/runtime/iso_fortran_env_impl.cpp and
+! must be kept up-to-date.
 
 module iso_fortran_env_impl
   implicit none

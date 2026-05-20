@@ -1654,6 +1654,13 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
           BuildVector->getOperand(BuildVector->getNumOperands() - 1));
       return;
     }
+
+    if (match(A, m_Broadcast(m_VPValue(X))))
+      return Def->replaceAllUsesWith(X);
+
+    if (vputils::isSingleScalar(A))
+      return Def->replaceAllUsesWith(A);
+
     if (Plan->hasScalarVFOnly())
       return Def->replaceAllUsesWith(A);
   }
@@ -1778,18 +1785,6 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
       return PhiR && PhiR->isInLoop();
     });
     return;
-  }
-
-  if (match(Def, m_ExtractLastLane(m_Broadcast(m_VPValue(A))))) {
-    Def->replaceAllUsesWith(A);
-    return;
-  }
-
-  if (match(Def, m_ExtractLastLane(m_VPValue(A))) &&
-      vputils::isSingleScalar(A) && all_of(A->users(), [Def, A](VPUser *U) {
-        return U->usesScalars(A) || Def == U;
-      })) {
-    return Def->replaceAllUsesWith(A);
   }
 
   if (Plan->getConcreteUF() == 1 && match(Def, m_ExtractLastPart(m_VPValue(A))))

@@ -160,7 +160,7 @@ void dr106(void *p, int i) {
 void dr108(void) {
 #define const
   const int i = 12;
-#undef const /* expected-warning {{keyword or identifier with special meaning is used as a macro name}} */
+#undef const
   const int j = 12; /* expected-note {{variable 'j' declared const here}} */
 
   i = 100; /* Okay, the keyword was hidden by the macro. */

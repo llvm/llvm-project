@@ -35,13 +35,7 @@ for.body:                                         ; preds = %entry
   %5 = icmp sgt <8 x i32> %4, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %6 = sub nsw <8 x i32> zeroinitializer, %4
   %7 = select <8 x i1> %5, <8 x i32> %4, <8 x i32> %6
-  %rdx.shuf = shufflevector <8 x i32> %7, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <8 x i32> %7, %rdx.shuf
-  %rdx.shuf229 = shufflevector <8 x i32> %bin.rdx, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx230 = add <8 x i32> %bin.rdx, %rdx.shuf229
-  %rdx.shuf231 = shufflevector <8 x i32> %bin.rdx230, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx232 = add <8 x i32> %bin.rdx230, %rdx.shuf231
-  %8 = extractelement <8 x i32> %bin.rdx232, i32 0
+  %8 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %7)
   ret i32 %8
 }
 
@@ -74,13 +68,7 @@ for.body:                                         ; preds = %entry
   %5 = icmp sgt <8 x i32> %4, zeroinitializer
   %6 = sub nsw <8 x i32> zeroinitializer, %4
   %7 = select <8 x i1> %5, <8 x i32> %4, <8 x i32> %6
-  %rdx.shuf = shufflevector <8 x i32> %7, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <8 x i32> %7, %rdx.shuf
-  %rdx.shuf229 = shufflevector <8 x i32> %bin.rdx, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx230 = add <8 x i32> %bin.rdx, %rdx.shuf229
-  %rdx.shuf231 = shufflevector <8 x i32> %bin.rdx230, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx232 = add <8 x i32> %bin.rdx230, %rdx.shuf231
-  %8 = extractelement <8 x i32> %bin.rdx232, i32 0
+  %8 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %7)
   ret i32 %8
 }
 
@@ -113,13 +101,7 @@ for.body:                                         ; preds = %entry
   %5 = icmp slt <8 x i32> %4, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %6 = sub nsw <8 x i32> zeroinitializer, %4
   %7 = select <8 x i1> %5, <8 x i32> %6, <8 x i32> %4
-  %rdx.shuf = shufflevector <8 x i32> %7, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <8 x i32> %7, %rdx.shuf
-  %rdx.shuf229 = shufflevector <8 x i32> %bin.rdx, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx230 = add <8 x i32> %bin.rdx, %rdx.shuf229
-  %rdx.shuf231 = shufflevector <8 x i32> %bin.rdx230, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx232 = add <8 x i32> %bin.rdx230, %rdx.shuf231
-  %8 = extractelement <8 x i32> %bin.rdx232, i32 0
+  %8 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %7)
   ret i32 %8
 }
 
@@ -152,13 +134,7 @@ for.body:                                         ; preds = %entry
   %5 = icmp slt <8 x i32> %4, zeroinitializer
   %6 = sub nsw <8 x i32> zeroinitializer, %4
   %7 = select <8 x i1> %5, <8 x i32> %6, <8 x i32> %4
-  %rdx.shuf = shufflevector <8 x i32> %7, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <8 x i32> %7, %rdx.shuf
-  %rdx.shuf229 = shufflevector <8 x i32> %bin.rdx, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx230 = add <8 x i32> %bin.rdx, %rdx.shuf229
-  %rdx.shuf231 = shufflevector <8 x i32> %bin.rdx230, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx232 = add <8 x i32> %bin.rdx230, %rdx.shuf231
-  %8 = extractelement <8 x i32> %bin.rdx232, i32 0
+  %8 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %7)
   ret i32 %8
 }
 
@@ -191,13 +167,7 @@ for.body:                                         ; preds = %entry
   %6 = sub nsw <8 x i32> zeroinitializer, %4
   %7 = select <8 x i1> %5, <8 x i32> %6, <8 x i32> %4
   %8 = sext <8 x i32> %7 to <8 x i64>
-  %rdx.shuf = shufflevector <8 x i64> %8, <8 x i64> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <8 x i64> %rdx.shuf, %8
-  %rdx.shuf236 = shufflevector <8 x i64> %bin.rdx, <8 x i64> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx237 = add <8 x i64> %bin.rdx, %rdx.shuf236
-  %rdx.shuf238 = shufflevector <8 x i64> %bin.rdx237, <8 x i64> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx239 = add <8 x i64> %bin.rdx237, %rdx.shuf238
-  %9 = extractelement <8 x i64> %bin.rdx239, i32 0
+  %9 = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %8)
   ret i64 %9
 }
 
@@ -230,13 +200,7 @@ for.body:                                         ; preds = %entry
   %6 = sub nsw <8 x i32> zeroinitializer, %4
   %7 = select <8 x i1> %5, <8 x i32> %6, <8 x i32> %4
   %8 = zext <8 x i32> %7 to <8 x i64>
-  %rdx.shuf = shufflevector <8 x i64> %8, <8 x i64> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <8 x i64> %rdx.shuf, %8
-  %rdx.shuf236 = shufflevector <8 x i64> %bin.rdx, <8 x i64> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx237 = add <8 x i64> %bin.rdx, %rdx.shuf236
-  %rdx.shuf238 = shufflevector <8 x i64> %bin.rdx237, <8 x i64> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx239 = add <8 x i64> %bin.rdx237, %rdx.shuf238
-  %9 = extractelement <8 x i64> %bin.rdx239, i32 0
+  %9 = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %8)
   ret i64 %9
 }
 
@@ -268,12 +232,6 @@ for.body:                                         ; preds = %entry
   %5 = icmp slt <8 x i64> %4, zeroinitializer
   %6 = sub nsw <8 x i64> zeroinitializer, %4
   %7 = select <8 x i1> %5, <8 x i64> %6, <8 x i64> %4
-  %rdx.shuf = shufflevector <8 x i64> %7, <8 x i64> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <8 x i64> %rdx.shuf, %7
-  %rdx.shuf236 = shufflevector <8 x i64> %bin.rdx, <8 x i64> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx237 = add <8 x i64> %bin.rdx, %rdx.shuf236
-  %rdx.shuf238 = shufflevector <8 x i64> %bin.rdx237, <8 x i64> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx239 = add <8 x i64> %bin.rdx237, %rdx.shuf238
-  %8 = extractelement <8 x i64> %bin.rdx239, i32 0
+  %8 = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %7)
   ret i64 %8
 }

@@ -1,0 +1,64 @@
+# This workflow is for pre-commit testing of the LLVM-libc project.
+name: LLVM-libc Pre-commit Overlay Tests (FreeBSD VM)
+permissions:
+  contents: read
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'libc/**'
+      - '.github/workflows/libc-freebsd-vm-tests.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        persist-credentials: false
+    
+    # MPFR is required by some of the mathlib tests.
+    - name: Setup FreeBSD
+      uses: vmactions/freebsd-vm@5b592a73e766fea2379264365f3a1a6b089ec989
+      with:
+        usesh: true
+        sync: nfs
+        release: "15.0"
+        mem: 12288
+        run: |
+          pkg update
+          pkg upgrade -y
+          pkg install -y mpfr gmp mpc ninja cmake llvm22 python3
+
+    # Use MinSizeRel to reduce the size of the build.
+    # Notice that CMP0141=NEW and MSVC_DEBUG_INFORMATION_FORMAT=Embedded are required
+    # by the sccache tool.
+    - name: Configure CMake
+      shell: freebsd {0}
+      run: >
+        cmake -B build
+        -DCMAKE_CXX_COMPILER=clang++22
+        -DCMAKE_C_COMPILER=clang22
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        -DLLVM_ENABLE_RUNTIMES=libc
+        -DLLVM_LIBC_MPFR_INSTALL_PATH=/usr/local
+        -DLIBC_MPC_INSTALL_PATH=/usr/local
+        -G Ninja
+        -S runtimes
+
+    - name: Build
+      shell: freebsd {0}
+      run: >
+        cmake 
+        --build build
+        --parallel 
+        --target libc
+
+    - name: Test
+      shell: freebsd {0}
+      run: >
+        cmake 
+        --build build
+        --parallel 
+        --target check-libc

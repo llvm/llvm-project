@@ -579,15 +579,6 @@ void CombinerHelper::applyCombineShuffleConcat(
   MI.eraseFromParent();
 }
 
-bool CombinerHelper::tryCombineShuffleVector(MachineInstr &MI) const {
-  SmallVector<Register, 4> Ops;
-  if (matchCombineShuffleVector(MI, Ops)) {
-    applyCombineShuffleVector(MI, Ops);
-    return true;
-  }
-  return false;
-}
-
 bool CombinerHelper::matchCombineShuffleVector(
     MachineInstr &MI, SmallVectorImpl<Register> &Ops) const {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&

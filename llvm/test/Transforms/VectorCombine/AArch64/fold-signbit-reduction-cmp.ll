@@ -331,7 +331,7 @@ define i1 @negative_wrong_shift(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @negative_wrong_shift(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[X]], splat (i32 30)
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[SHR]])
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[SHR]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -362,7 +362,7 @@ define i1 @negative_multi_use_shift(<4 x i32> %x, ptr %p) {
 ; CHECK-SAME: <4 x i32> [[X:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[X]], splat (i32 31)
 ; CHECK-NEXT:    store <4 x i32> [[SHR]], ptr [[P]], align 16
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[SHR]])
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[SHR]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -1013,7 +1013,7 @@ define i1 @negative_multi_shift_multiuse(<4 x i32> %a, <4 x i32> %b, ptr %p) {
 ; CHECK-NEXT:    store <4 x i32> [[SA]], ptr [[P]], align 16
 ; CHECK-NEXT:    [[SB:%.*]] = lshr <4 x i32> [[B]], splat (i32 31)
 ; CHECK-NEXT:    [[SUM:%.*]] = add <4 x i32> [[SA]], [[SB]]
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[SUM]])
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[SUM]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -1036,7 +1036,7 @@ define i1 @negative_multi_tree_node_multiuse(<4 x i32> %a, <4 x i32> %b, <4 x i3
 ; CHECK-NEXT:    [[AB:%.*]] = add <4 x i32> [[SA]], [[SB]]
 ; CHECK-NEXT:    store <4 x i32> [[AB]], ptr [[P]], align 16
 ; CHECK-NEXT:    [[ABC:%.*]] = add <4 x i32> [[AB]], [[SC]]
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[ABC]])
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[ABC]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

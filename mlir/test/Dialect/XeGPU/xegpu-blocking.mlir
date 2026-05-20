@@ -252,8 +252,10 @@ gpu.module @test_kernel   {
     %0 = xegpu.create_nd_tdesc %a : memref<512x32xf32> -> !xegpu.tensor_desc<32x128xf32, #l>
     %1 = xegpu.load_nd %0[0, 0] {layout = #l}: !xegpu.tensor_desc<32x128xf32, #l> -> vector<32x128xf32>
 
-    // CHECK: vector.multi_reduction <add>, {{.*}}, [[INIT:%[0-9A-Za-z]+]] [1] : vector<16x16xf32> to vector<16xf32>
-    // CHECK-COUNT-1: vector.multi_reduction <add>, {{.*}}, [[INIT]] [1] : vector<16x16xf32> to vector<16xf32>
+    // CHECK-COUNT-7: arith.addf {{.*}} : vector<16x16xf32>
+    // CHECK: vector.multi_reduction <add>, {{.*}} [1] : vector<16x16xf32> to vector<16xf32>
+    // CHECK-COUNT-7: arith.addf {{.*}} : vector<16x16xf32>
+    // CHECK: vector.multi_reduction <add>, {{.*}} [1] : vector<16x16xf32> to vector<16xf32>
 
     %2 = vector.multi_reduction <add>, %1, %acc [1]: vector<32x128xf32> to vector<32xf32>
     %3 = xegpu.create_nd_tdesc %b : memref<512xf32> -> !xegpu.tensor_desc<32xf32, #r>

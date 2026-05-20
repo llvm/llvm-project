@@ -264,6 +264,28 @@ def CIR_CastOp : CIR_Op<"cast", [
   let extraLLVMLoweringPatternDecl = [{
     mlir::Type convertTy(mlir::Type ty) const;
   }];
+
+  let extraClassDeclaration = [{
+    // Return true if the result of this cast refers to the same underlying
+    // storage as its operand, so any defining alloca reached transitively
+    // through such casts can still be considered the underlying object of the
+    // result.
+    //
+    // Note: array_to_pointer decay preserves the pointer value, but it changes
+    // the scope of the memory object, so we exclude it here.
+    bool isAllocaPreservingCast() {
+      if (!mlir::isa<cir::PointerType>(getSrc().getType()))
+        return false;
+      switch (getKind()) {
+      case cir::CastKind::bitcast:
+      case cir::CastKind::address_space:
+        return true;
+      default:
+        return false;
+      }
+    }
+  }];
+
 }
 
 //===----------------------------------------------------------------------===//

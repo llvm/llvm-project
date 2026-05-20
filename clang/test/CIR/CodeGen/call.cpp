@@ -130,4 +130,25 @@ void f16() {
 // LLVM-NEXT:    %{{.+}} = call{{.*}} i32 @_Z3f15v()
 // LLVM:       }
 
+template<typename Func>
+inline decltype(auto) TakesFunc(const Func &f) {
+  return f();
+}
+
+int Passed();
+
+void use_TakesFunc() {
+  TakesFunc(Passed);
+}
+
+// CIR-LABEL: _Z9TakesFuncIFivEEDcRKT_
+// CIR-NEXT: %[[FUNC_ALLOCA:.*]] = cir.alloca !cir.ptr<!cir.func<() -> !s32i>>, !cir.ptr<!cir.ptr<!cir.func<() -> !s32i>>>, ["f", init, const]
+// CIR: %[[FUNC_LOAD:.*]] = cir.load %[[FUNC_ALLOCA]] : !cir.ptr<!cir.ptr<!cir.func<() -> !s32i>>>, !cir.ptr<!cir.func<() -> !s32i>>
+// CIR-NEXT: %[[CALL:.*]] = cir.call %[[FUNC_LOAD]]() : (!cir.ptr<!cir.func<() -> !s32i>>) -> (!s32i {llvm.noundef})
+
+// LLVM-LABEL: _Z9TakesFuncIFivEEDcRKT_
+// LLVM-NEXT: %[[FUNC_ALLOCA:.*]] = alloca ptr
+// LLVM: %[[FUNC_LOAD:.*]] = load ptr, ptr %[[FUNC_ALLOCA]]
+// LLVM-NEXT: %[[CALL:.*]] = call noundef i32 %[[FUNC_LOAD]]()
+
 // LLVM: attributes #[[LLVM_ATTR_0]] = { nounwind }

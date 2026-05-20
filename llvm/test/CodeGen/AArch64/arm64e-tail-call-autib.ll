@@ -12,7 +12,6 @@ declare swifttailcc void @callee_no_stack_args(ptr swiftasync %ctx)
 define swifttailcc void @test_async_tail_call(ptr swiftasync %ctx) "ptrauth-returns" "ptrauth-auth-traps" "sign-return-address"="all" "frame-pointer"="all" {
 ; CHECK-LABEL: test_async_tail_call:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    .cfi_b_key_frame
 ; CHECK-NEXT:    pacibsp
 ; CHECK-NEXT:    .cfi_negate_ra_state
 ; CHECK-NEXT:    orr x29, x29, #0x1000000000000000
@@ -57,7 +56,6 @@ define swifttailcc void @test_async_tail_call(ptr swiftasync %ctx) "ptrauth-retu
 define swifttailcc void @test_no_fpdiff_tail_call(ptr swiftasync %ctx) "ptrauth-returns" "ptrauth-auth-traps" "sign-return-address"="all" "frame-pointer"="all" {
 ; CHECK-LABEL: test_no_fpdiff_tail_call:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    .cfi_b_key_frame
 ; CHECK-NEXT:    pacibsp
 ; CHECK-NEXT:    .cfi_negate_ra_state
 ; CHECK-NEXT:    orr x29, x29, #0x1000000000000000

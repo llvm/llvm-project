@@ -238,6 +238,7 @@ add_libc_unittest(
     libc.include.sys_socket
     libc.hdr.sys_socket_macros
     libc.hdr.types.ssize_t
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.sys.socket.shutdown
     libc.src.sys.socket.socketpair

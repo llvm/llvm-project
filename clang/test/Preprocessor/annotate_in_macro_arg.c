@@ -3,7 +3,6 @@
 
 M1( // expected-error{{unterminated function-like macro invocation}}
 
-// expected-warning@+1 {{embedding a #if directive within macro arguments has undefined behavior}}
 #if M1() // expected-error{{expected value in expression}}
 #endif
 #pragma pack()

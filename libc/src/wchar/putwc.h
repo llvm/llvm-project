@@ -16,6 +16,7 @@
 #define LLVM_LIBC_SRC_WCHAR_PUTWC_H
 
 #include "hdr/types/FILE.h"
+#include "hdr/types/wchar_t.h"
 #include "hdr/types/wint_t.h"
 #include "src/__support/macros/config.h"
 

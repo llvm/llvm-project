@@ -722,7 +722,7 @@ def PPCbcdus     : SDNode<"PPCISD::BCDUSHIFT", SDT_PPCBcdUShift, []>;
 // information.
 def nzFPImmAsi32 : PatLeaf<(fpimm), [{
   APFloat APFloatOfN = N->getValueAPF();
-  return convertToNonDenormSingle(APFloatOfN) && !N->isExactlyValue(+0.0);
+  return convertToNonDenormSingle(APFloatOfN) && !N->isPosZero();
 }]>;
 
 // A floating point immediate that is exactly an integer (for example 3.0, -5.0)
@@ -736,8 +736,8 @@ def nzFPImmExactInti5 : PatLeaf<(fpimm), [{
 }]>;
 
 // Floating point zero immediates (positive and negative)
-def fpimm0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
-def fpimm0neg : PatLeaf<(fpimm), [{return N->isExactlyValue(-0.0);}]>;
+def fpimm0 : PatLeaf<(fpimm), [{ return N->isPosZero(); }]>;
+def fpimm0neg : PatLeaf<(fpimm), [{return N->isNegZero();}]>;
 
 def getFPAs5BitExactInt : SDNodeXForm<fpimm, [{
   APFloat FloatValue = N->getValueAPF();
@@ -761,7 +761,7 @@ def getFPAs32BitInt : SDNodeXForm<fpimm, [{
 // precision before exploiting with XXSPLTI32DX.
 def nzFPImmAsi64 : PatLeaf<(fpimm), [{
   APFloat APFloatOfN = N->getValueAPF();
-  return !N->isExactlyValue(+0.0) && !checkConvertToNonDenormSingle(APFloatOfN);
+  return !N->isPosZero() && !checkConvertToNonDenormSingle(APFloatOfN);
 }]>;
 
 // Get the Hi bits of a 64 bit immediate.

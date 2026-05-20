@@ -476,6 +476,7 @@ writeStringsAndOffsets(DWPWriter &Out, DWPStringPool &Strings,
   uint32_t OldOffsetSize = 4;
   uint32_t NewOffsetSize =
       StrOffsetsOptValue == Dwarf64StrOffsetsPromotion::Always ? 8 : 4;
+  Out.switchSection(DS_Str);
   while (const char *S = Data.getCStr(&LocalOffset)) {
     uint64_t NewOffset = Strings.getOffset(S, LocalOffset - PrevOffset);
     OffsetRemapping[PrevOffset] = NewOffset;
@@ -732,7 +733,7 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
   StringRef FirstInput;
   bool AnySectionOverflow = false;
 
-  DWPStringPool Strings(Out.getSectionBuffer(DS_Str));
+  DWPStringPool Strings(Out);
 
   SmallVector<OwningBinary<object::ObjectFile>, 128> Objects;
   Objects.reserve(Inputs.size());

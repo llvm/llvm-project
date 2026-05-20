@@ -34,8 +34,8 @@ function(add_fp_unittest name)
     endif()
     set(test_type UNIT_TEST_ONLY)
     list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper -lmpfr -lgmp)
-    if(NOT(LIBC_TARGET_OS_IS_DARWIN))
-      # macOS does not have libatomic.
+    if(NOT(LIBC_TARGET_OS_IS_DARWIN) AND NOT(LIBC_TARGET_OS_IS_FREEBSD))
+      # macOS/FreeBSD does not have libatomic.
       list(APPEND MATH_UNITTEST_LINK_LIBRARIES -latomic)
     endif()
   endif()

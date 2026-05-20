@@ -363,7 +363,8 @@ void AtomicInfo::emitCopyIntoMemory(RValue rvalue) const {
   if (rvalue.isScalar()) {
     cgf.emitStoreOfScalar(rvalue.getValue(), tempLValue, /*isInit=*/true);
   } else {
-    cgf.cgm.errorNYI("copying complex into atomic lvalue");
+    cgf.emitStoreOfComplex(loc, rvalue.getComplexValue(), tempLValue,
+                           /*isInit=*/true);
   }
 }
 

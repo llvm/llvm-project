@@ -240,13 +240,16 @@ ifeq "$(OS)" "Windows_NT"
 	DEBUG_INFO_FLAG ?= -gdwarf
 endif
 
-ifeq "$(MAKE_NO_DEBUG_INFO)" "YES"
-	DEBUG_INFO_FLAG := -g0
-endif
-
 DEBUG_INFO_FLAG ?= -g
 
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0
+
+# Some tests require no debug information. When lldb-dotest specifies a DWARF version,
+# it adds `-gdwarf-{version}` to the CFLAGS environment variable which causes those tests
+# to fail. Strip any existing debug flags from CFLAGS and force -g0 to prevent this.
+ifeq "$(MAKE_NO_DEBUG_INFO)" "YES"
+    CFLAGS := $(filter-out -g%,$(CFLAGS)) -g0
+endif
 CFLAGS += $(SYSROOT_FLAGS)
 
 ifeq "$(OS)" "Darwin"

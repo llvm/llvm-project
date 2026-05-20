@@ -21,6 +21,11 @@ module attributes {
     // CHECK: spirv.IsInf %{{.*}} : vector<4xf32>
     %5 = math.isinf %v : vector<4xf32>
 
+    // CHECK: spirv.IsNormal %{{.*}} : f32
+    %6 = math.isnormal %x : f32
+    // CHECK: spirv.IsNormal %{{.*}} : vector<4xf32>
+    %7 = math.isnormal %v : vector<4xf32>
+
     return
   }
 

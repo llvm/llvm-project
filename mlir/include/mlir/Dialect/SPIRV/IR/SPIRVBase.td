@@ -4536,6 +4536,7 @@ def SPIRV_OC_OpAll                            : I32EnumAttrCase<"OpAll", 155>;
 def SPIRV_OC_OpIsNan                          : I32EnumAttrCase<"OpIsNan", 156>;
 def SPIRV_OC_OpIsInf                          : I32EnumAttrCase<"OpIsInf", 157>;
 def SPIRV_OC_OpIsFinite                       : I32EnumAttrCase<"OpIsFinite", 158>;
+def SPIRV_OC_OpIsNormal                       : I32EnumAttrCase<"OpIsNormal", 159>;
 def SPIRV_OC_OpOrdered                        : I32EnumAttrCase<"OpOrdered", 162>;
 def SPIRV_OC_OpUnordered                      : I32EnumAttrCase<"OpUnordered", 163>;
 def SPIRV_OC_OpLogicalEqual                   : I32EnumAttrCase<"OpLogicalEqual", 164>;
@@ -4748,7 +4749,7 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpISubBorrow, SPIRV_OC_OpUMulExtended, SPIRV_OC_OpSMulExtended,
       SPIRV_OC_OpAny, SPIRV_OC_OpAll,
       SPIRV_OC_OpIsNan, SPIRV_OC_OpIsInf, SPIRV_OC_OpIsFinite,
-      SPIRV_OC_OpOrdered, SPIRV_OC_OpUnordered,
+      SPIRV_OC_OpIsNormal, SPIRV_OC_OpOrdered, SPIRV_OC_OpUnordered,
       SPIRV_OC_OpLogicalEqual, SPIRV_OC_OpLogicalNotEqual, SPIRV_OC_OpLogicalOr,
       SPIRV_OC_OpLogicalAnd, SPIRV_OC_OpLogicalNot, SPIRV_OC_OpSelect,
       SPIRV_OC_OpIEqual, SPIRV_OC_OpINotEqual, SPIRV_OC_OpUGreaterThan,

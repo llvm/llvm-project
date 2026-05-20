@@ -13,8 +13,12 @@
 #define m_foo
 #define TEST(a) (defined(m_##a) && a)
 
-// A function-like macro expansion producing 'defined' warns by default.
-#if TEST(foo) // expected-warning {{macro expansion producing 'defined' has undefined behavior}}
+#if defined(PEDANTIC)
+// expected-warning@+4{{macro expansion producing 'defined' has undefined behavior}}
+#endif
+
+// This shouldn't warn by default, only with pedantic:
+#if TEST(foo)
 #endif
 
 

@@ -672,6 +672,23 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   }
   assert(!isa<FieldDecl>(D) && "Didn't expect a FieldDecl!");
 
+  // FIXME: This gives internal linkage to names that should have no linkage
+  // (those not covered by [basic.link]p6).
+  if (D->isInAnonymousNamespace()) {
+    const auto *Var = dyn_cast<VarDecl>(D);
+    const auto *Func = dyn_cast<FunctionDecl>(D);
+    // FIXME: The check for extern "C" here is not justified by the standard
+    // wording, but we retain it from the pre-DR1113 model to avoid breaking
+    // code.
+    //
+    // C++11 [basic.link]p4:
+    //   An unnamed namespace or a namespace declared directly or indirectly
+    //   within an unnamed namespace has internal linkage.
+    if ((!Var || !isFirstInExternCContext(Var)) &&
+        (!Func || !isFirstInExternCContext(Func)))
+      return LinkageInfo::internal();
+  }
+
   // Set up the defaults.
 
   // C99 6.2.2p5:
@@ -679,12 +696,6 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   //   scope and no storage-class specifier, its linkage is
   //   external.
   LinkageInfo LV = getExternalLinkageFor(D);
-
-  // Inherit linkage from the enclosing namespace, if there is any.
-  if (const auto *ND = dyn_cast<NamespaceDecl>(
-          D->getDeclContext()->getEnclosingNamespaceContext())) {
-    LV.setLinkage(ND->getLinkageInternal());
-  }
 
   if (!hasExplicitVisibilityAlready(computation)) {
     if (std::optional<Visibility> Vis = getExplicitVisibility(D, computation)) {
@@ -738,14 +749,6 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
 
   //     - a variable; or
   if (const auto *Var = dyn_cast<VarDecl>(D)) {
-    // FIXME: The check for extern "C" here is not justified by the standard
-    // wording, but we retain it from the pre-DR1113 model to avoid breaking
-    // code.
-    if (isFirstInExternCContext(Var)) {
-      LV.setLinkage(Linkage::External);
-      return LV;
-    }
-
     // GCC applies the following optimization to variables and static
     // data members, but not to functions:
     //
@@ -768,7 +771,8 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // Note that we don't want to make the variable non-external
     // because of this, but unique-external linkage suits us.
 
-    if (Context.getLangOpts().CPlusPlus && !IgnoreVarTypeLinkage) {
+    if (Context.getLangOpts().CPlusPlus && !isFirstInExternCContext(Var) &&
+        !IgnoreVarTypeLinkage) {
       LinkageInfo TypeLV = getLVForType(*Var->getType(), computation);
       if (!isExternallyVisible(TypeLV.getLinkage()))
         return LinkageInfo::uniqueExternal();
@@ -813,27 +817,18 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // merging storage classes and visibility attributes, so we don't have to
     // look at previous decls in here.
 
-    // FIXME: The check for extern "C" here is not justified by the standard
-    // wording, but we retain it from the pre-DR1113 model to avoid breaking
-    // code.
-    if (isFirstInExternCContext(Function)) {
-      LV.setLinkage(Linkage::External);
-      return LV;
-    }
-
     // In C++, then if the type of the function uses a type with
     // unique-external linkage, it's not legally usable from outside
-    // this translation unit.
-    if (Context.getLangOpts().CPlusPlus) {
+    // this translation unit.  However, we should use the C linkage
+    // rules instead for extern "C" declarations.
+    if (Context.getLangOpts().CPlusPlus && !isFirstInExternCContext(Function)) {
       // Only look at the type-as-written. Otherwise, deducing the return type
       // of a function could change its linkage.
       QualType TypeAsWritten = Function->getType();
       if (TypeSourceInfo *TSI = Function->getTypeSourceInfo())
         TypeAsWritten = TSI->getType();
-      if (!isExternallyVisible(TypeAsWritten->getLinkage())) {
-        LV.mergeLinkage(LinkageInfo::uniqueExternal());
-        return LV;
-      }
+      if (!isExternallyVisible(TypeAsWritten->getLinkage()))
+        return LinkageInfo::uniqueExternal();
     }
 
     // Consider LV from the template and the template arguments.
@@ -881,13 +876,13 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   //     An unnamed namespace or a namespace declared directly or indirectly
   //     within an unnamed namespace has internal linkage. All other namespaces
   //     have external linkage.
-  } else if (auto *ND = dyn_cast<NamespaceDecl>(D)) {
-    if (ND->isAnonymousNamespace()) {
-      LV.mergeLinkage(Linkage::Internal);
-    }
+  //
+  // We handled names in anonymous namespaces above.
+  } else if (isa<NamespaceDecl>(D)) {
+    return LV;
 
-    // By extension, we assign external linkage to Objective-C
-    // interfaces.
+  // By extension, we assign external linkage to Objective-C
+  // interfaces.
   } else if (isa<ObjCInterfaceDecl>(D)) {
     // fallout
 

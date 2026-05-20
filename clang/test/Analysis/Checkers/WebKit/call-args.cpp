@@ -444,6 +444,30 @@ namespace call_with_explicit_temporary_obj {
 }
 
 namespace call_with_explicit_construct {
+  class Obj {
+  public:
+    Obj(RefCountable* obj = provide(), RefCountable* otherObj = nullptr) {
+      // expected-warning@-1{{Call argument for parameter 'obj' is uncounted and unsafe}}
+      consume_refcntbl(obj);
+      if (otherObj)
+        otherObj->method();
+    }
+    Obj(RefCountable& obj) {
+      obj.method();
+    }
+  };
+
+  void foo(RefCountable* arg) {
+    Obj obj1;
+    Obj obj2(provide());
+    // expected-warning@-1{{Call argument for parameter 'obj' is uncounted and unsafe}}
+    Obj obj3(*provide());
+    // expected-warning@-1{{Call argument for parameter 'obj' is uncounted and unsafe}}
+    Obj obj4(Ref<RefCountable> { *provide() }.get());
+    Obj obj5(arg);
+    Obj obj6(arg, provide());
+    // expected-warning@-1{{Call argument for parameter 'otherObj' is uncounted and unsafe}}
+  }
 }
 
 namespace call_with_adopt_ref {
@@ -479,5 +503,4 @@ namespace call_with_weak_ptr {
     weakPtr->method();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
-
 }

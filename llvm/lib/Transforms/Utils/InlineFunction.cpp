@@ -937,6 +937,62 @@ propagateMemProfMetadata(Function *Callee, CallBase &CB,
   }
 }
 
+/// Collect all calls that produce RetVal, following only pointer-preserving
+/// instructions (cast, phi, select).
+static void collectPointerReturningCalls(Value *RetVal,
+                                         SmallVectorImpl<CallBase *> &Out) {
+  SmallVector<Value *, 8> Worklist{RetVal};
+  SmallPtrSet<Value *, 8> Visited;
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!V->getType()->isPointerTy() || !Visited.insert(V).second)
+      continue;
+    if (auto *CB = dyn_cast<CallBase>(V))
+      Out.push_back(CB);
+    else if (isa<BitCastInst, AddrSpaceCastInst>(V))
+      Worklist.push_back(cast<CastInst>(V)->getOperand(0));
+    else if (auto *PN = dyn_cast<PHINode>(V))
+      append_range(Worklist, PN->incoming_values());
+    else if (auto *SI = dyn_cast<SelectInst>(V)) {
+      Worklist.push_back(SI->getTrueValue());
+      Worklist.push_back(SI->getFalseValue());
+    }
+  }
+}
+
+/// When inlining a call that carries !alloc_token metadata, propagate that
+/// metadata onto calls exposed by inlining the wrapper body.  Propagation is
+/// restricted to return-value producing calls, which avoids instrumenting
+/// unrelated calls in the wrapper body.
+static void
+propagateAllocTokenMetadata(Function *CalledFunc, CallBase &CB,
+                            const ValueMap<const Value *, WeakTrackingVH> &VMap,
+                            ClonedCodeInfo &InlinedFunctionInfo) {
+  MDNode *AllocTokenMD = CB.getMetadata(LLVMContext::MD_alloc_token);
+  if (!AllocTokenMD)
+    return;
+
+  SmallVector<CallBase *, 2> AllocCalls;
+  for (BasicBlock &BB : *CalledFunc)
+    if (auto *RI = dyn_cast<ReturnInst>(BB.getTerminator()))
+      if (Value *RV = RI->getReturnValue())
+        collectPointerReturningCalls(RV, AllocCalls);
+
+  for (CallBase *OrigCall : AllocCalls) {
+    auto *ClonedCall = dyn_cast_or_null<CallBase>(VMap.lookup(OrigCall));
+    if (!ClonedCall)
+      continue;
+    // Skip calls simplified during inlining; propagation may be incorrect.
+    if (InlinedFunctionInfo.isSimplified(OrigCall, ClonedCall))
+      continue;
+    // Fill missing only: never overwrite a more specific token the wrapper
+    // already set on an internal allocation.
+    if (ClonedCall->getMetadata(LLVMContext::MD_alloc_token))
+      continue;
+    ClonedCall->setMetadata(LLVMContext::MD_alloc_token, AllocTokenMD);
+  }
+}
+
 /// When inlining a call site that has !llvm.mem.parallel_loop_access,
 /// !llvm.access.group, !alias.scope or !noalias metadata, that metadata should
 /// be propagated to all memory-accessing cloned instructions.
@@ -2902,6 +2958,9 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
 
     // Propagate metadata on the callsite if necessary.
     PropagateCallSiteMetadata(CB, FirstNewBlock, Caller->end());
+
+    // Propagate an allocation wrapper's !alloc_token if necessary.
+    propagateAllocTokenMetadata(CalledFunc, CB, VMap, InlinedFunctionInfo);
 
     // Propagate implicit ref metadata.
     if (CalledFunc->hasMetadata(LLVMContext::MD_implicit_ref)) {

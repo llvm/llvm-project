@@ -10,7 +10,7 @@
 define amdgpu_kernel void @invert1() #0 {
 entry:
   call void @llvm.amdgcn.sched.barrier(i32 1) #1
-  call void @llvm.amdcn.s.nop(i16 0) #1
+  call void @llvm.amdgcn.s.nop(i16 0) #1
   ret void
 }
 
@@ -19,7 +19,7 @@ entry:
 define amdgpu_kernel void @invert2() #0 {
 entry:
   call void @llvm.amdgcn.sched.barrier(i32 2) #1
-  call void @llvm.amdcn.s.nop(i16 0) #1
+  call void @llvm.amdgcn.s.nop(i16 0) #1
   ret void
 }
 
@@ -28,7 +28,7 @@ entry:
 define amdgpu_kernel void @invert4() #0 {
 entry:
   call void @llvm.amdgcn.sched.barrier(i32 4) #1
-  call void @llvm.amdcn.s.nop(i16 0) #1
+  call void @llvm.amdgcn.s.nop(i16 0) #1
   ret void
 }
 
@@ -37,7 +37,7 @@ entry:
 define amdgpu_kernel void @invert8() #0 {
 entry:
   call void @llvm.amdgcn.sched.barrier(i32 8) #1
-  call void @llvm.amdcn.s.nop(i16 0) #1
+  call void @llvm.amdgcn.s.nop(i16 0) #1
   ret void
 }
 
@@ -46,7 +46,7 @@ entry:
 define amdgpu_kernel void @invert16() #0 {
 entry:
   call void @llvm.amdgcn.sched.barrier(i32 16) #1
-  call void @llvm.amdcn.s.nop(i16 0) #1
+  call void @llvm.amdgcn.s.nop(i16 0) #1
   ret void
 }
 
@@ -55,7 +55,7 @@ entry:
 define amdgpu_kernel void @invert32() #0 {
 entry:
   call void @llvm.amdgcn.sched.barrier(i32 32) #1
-  call void @llvm.amdcn.s.nop(i16 0) #1
+  call void @llvm.amdgcn.s.nop(i16 0) #1
   ret void
 }
 
@@ -64,7 +64,7 @@ entry:
 define amdgpu_kernel void @invert64() #0 {
 entry:
   call void @llvm.amdgcn.sched.barrier(i32 64) #1
-  call void @llvm.amdcn.s.nop(i16 0) #1
+  call void @llvm.amdgcn.s.nop(i16 0) #1
   ret void
 }
 
@@ -73,7 +73,7 @@ entry:
 define amdgpu_kernel void @invert128() #0 {
 entry:
   call void @llvm.amdgcn.sched.barrier(i32 128) #1
-  call void @llvm.amdcn.s.nop(i16 0) #1
+  call void @llvm.amdgcn.s.nop(i16 0) #1
   ret void
 }
 
@@ -82,7 +82,7 @@ entry:
 define amdgpu_kernel void @invert256() #0 {
 entry:
   call void @llvm.amdgcn.sched.barrier(i32 256) #1
-  call void @llvm.amdcn.s.nop(i16 0) #1
+  call void @llvm.amdgcn.s.nop(i16 0) #1
   ret void
 }
 
@@ -91,7 +91,7 @@ entry:
 define amdgpu_kernel void @invert512() #0 {
 entry:
   call void @llvm.amdgcn.sched.barrier(i32 512) #1
-  call void @llvm.amdcn.s.nop(i16 0) #1
+  call void @llvm.amdgcn.s.nop(i16 0) #1
   ret void
 }
 
@@ -100,7 +100,7 @@ entry:
 define amdgpu_kernel void @invert1024() #0 {
 entry:
   call void @llvm.amdgcn.sched.barrier(i32 1024) #1
-  call void @llvm.amdcn.s.nop(i16 0) #1
+  call void @llvm.amdgcn.s.nop(i16 0) #1
   ret void
 }
 
@@ -109,12 +109,12 @@ entry:
 define amdgpu_kernel void @invert2048() #0 {
 entry:
   call void @llvm.amdgcn.sched.barrier(i32 2048) #1
-  call void @llvm.amdcn.s.nop(i16 0) #1
+  call void @llvm.amdgcn.s.nop(i16 0) #1
   ret void
 }
 
 declare void @llvm.amdgcn.sched.barrier(i32) #1
-declare void @llvm.amdcn.s.nop(i16) #1
+declare void @llvm.amdgcn.s.nop(i16) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind }

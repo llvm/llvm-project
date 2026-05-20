@@ -190,9 +190,8 @@ bool fir::mayBeAbsentBox(mlir::Value val) {
       // arguments to the operands (though, the meaning
       // of operands/block-arguments of acc.compute_region
       // is tricky).
-      if (mlir::Operation *accOp =
-              mlir::acc::getACCDataClauseOpForBlockArg(val)) {
-        val = mlir::acc::getVar(accOp);
+      if (mlir::Value accOperand = mlir::acc::getACCOperandForBlockArg(val)) {
+        val = accOperand;
         continue;
       }
 
@@ -215,6 +214,11 @@ bool fir::mayBeAbsentBox(mlir::Value val) {
       return reboxAROp.getOptional();
     if (mlir::isa<fir::LoadOp>(defOp))
       return false;
+
+    if (mlir::isa<ACC_DATA_ENTRY_AND_INIT_OPS>(defOp)) {
+      val = mlir::acc::getVar(defOp);
+      continue;
+    }
 
     if (auto viewIface =
             mlir::dyn_cast<fir::FortranObjectViewOpInterface>(defOp)) {

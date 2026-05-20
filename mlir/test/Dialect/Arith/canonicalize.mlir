@@ -579,6 +579,154 @@ func.func @orOfExtUI_nneg_mixed(%arg0: i8, %arg1: i8) -> i64 {
 
 // -----
 
+// CHECK-LABEL: @andOfAndConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 8 : i32
+//       CHECK:   %[[and:.+]] = arith.andi %arg0, %[[cres]] : i32
+//       CHECK:   return %[[and]]
+func.func @andOfAndConstant(%arg0: i32) -> i32 {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %a1 = arith.andi %arg0, %c12 : i32
+  %a2 = arith.andi %a1, %c10 : i32
+  return %a2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @andOfAndConstantIndex
+//       CHECK:   %[[cres:.+]] = arith.constant 8 : index
+//       CHECK:   %[[and:.+]] = arith.andi %arg0, %[[cres]] : index
+//       CHECK:   return %[[and]]
+func.func @andOfAndConstantIndex(%arg0: index) -> index {
+  %c12 = arith.constant 12 : index
+  %c10 = arith.constant 10 : index
+  %a1 = arith.andi %arg0, %c12 : index
+  %a2 = arith.andi %a1, %c10 : index
+  return %a2 : index
+}
+
+// -----
+
+// CHECK-LABEL: @andOfAndConstantMultiUse
+//       CHECK:   %[[C8:.+]] = arith.constant 8 : i32
+//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
+//       CHECK:   %[[A1:.+]] = arith.andi %arg0, %[[C12]] : i32
+//       CHECK:   %[[A2:.+]] = arith.andi %arg0, %[[C8]] : i32
+//       CHECK:   return %[[A1]], %[[A2]]
+func.func @andOfAndConstantMultiUse(%arg0: i32) -> (i32, i32) {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %a1 = arith.andi %arg0, %c12 : i32
+  %a2 = arith.andi %a1, %c10 : i32
+  return %a1, %a2 : i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: @andOfAndConstantChain
+//       CHECK:   %[[C8:.+]] = arith.constant 8 : i32
+//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
+//       CHECK:   %[[C14:.+]] = arith.constant 14 : i32
+//       CHECK:   %[[A1:.+]] = arith.andi %arg0, %[[C14]] : i32
+//       CHECK:   %[[A2:.+]] = arith.andi %arg0, %[[C12]] : i32
+//       CHECK:   %[[A3:.+]] = arith.andi %arg0, %[[C8]] : i32
+//       CHECK:   return %[[A1]], %[[A2]], %[[A3]]
+func.func @andOfAndConstantChain(%arg0: i32) -> (i32, i32, i32) {
+  %c14 = arith.constant 14 : i32
+  %c13 = arith.constant 13 : i32
+  %c11 = arith.constant 11 : i32
+  %a1 = arith.andi %arg0, %c14 : i32
+  %a2 = arith.andi %a1, %c13 : i32
+  %a3 = arith.andi %a2, %c11 : i32
+  return %a1, %a2, %a3 : i32, i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: @orOfOrConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 14 : i32
+//       CHECK:   %[[or:.+]] = arith.ori %arg0, %[[cres]] : i32
+//       CHECK:   return %[[or]]
+func.func @orOfOrConstant(%arg0: i32) -> i32 {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %o1 = arith.ori %arg0, %c12 : i32
+  %o2 = arith.ori %o1, %c10 : i32
+  return %o2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @orOfOrConstantIndex
+//       CHECK:   %[[cres:.+]] = arith.constant 14 : index
+//       CHECK:   %[[or:.+]] = arith.ori %arg0, %[[cres]] : index
+//       CHECK:   return %[[or]]
+func.func @orOfOrConstantIndex(%arg0: index) -> index {
+  %c12 = arith.constant 12 : index
+  %c10 = arith.constant 10 : index
+  %o1 = arith.ori %arg0, %c12 : index
+  %o2 = arith.ori %o1, %c10 : index
+  return %o2 : index
+}
+
+// -----
+
+// CHECK-LABEL: @orOfOrConstantMultiUse
+//       CHECK:   %[[C14:.+]] = arith.constant 14 : i32
+//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
+//       CHECK:   %[[O1:.+]] = arith.ori %arg0, %[[C12]] : i32
+//       CHECK:   %[[O2:.+]] = arith.ori %arg0, %[[C14]] : i32
+//       CHECK:   return %[[O1]], %[[O2]]
+func.func @orOfOrConstantMultiUse(%arg0: i32) -> (i32, i32) {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %o1 = arith.ori %arg0, %c12 : i32
+  %o2 = arith.ori %o1, %c10 : i32
+  return %o1, %o2 : i32, i32
+}
+
+// -----
+
+// Negative test case to ensure no further folding is performed when there's a type mismatch between the values and the result.
+// CHECK-LABEL:   func.func @nested_andi() -> i32 {
+// CHECK:           %[[VAL_0:.*]] = "test.constant"() <{value = 2147483647 : i64}> : () -> i32
+// CHECK:           %[[VAL_1:.*]] = "test.constant"() <{value = -2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_2:.*]] = "test.constant"() <{value = 2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_3:.*]] = arith.andi %[[VAL_0]], %[[VAL_1]] : i32
+// CHECK:           %[[VAL_4:.*]] = arith.andi %[[VAL_3]], %[[VAL_2]] : i32
+// CHECK:           return %[[VAL_4]] : i32
+// CHECK:         }
+func.func @nested_andi() -> (i32) {
+  %0 = "test.constant"() {value = 0x7fffffff} : () -> i32
+  %1 = "test.constant"() {value = -2147483648} : () -> i32
+  %2 = "test.constant"() {value = 0x80000000} : () -> i32
+  %4 = arith.andi %0, %1 : i32
+  %5 = arith.andi %4, %2 : i32
+  return %5 : i32
+}
+
+// -----
+
+// Negative test case to ensure no further folding is performed when there's a type mismatch between the values and the result.
+// CHECK-LABEL:   func.func @nested_ori() -> i32 {
+// CHECK:           %[[VAL_0:.*]] = "test.constant"() <{value = 2147483647 : i64}> : () -> i32
+// CHECK:           %[[VAL_1:.*]] = "test.constant"() <{value = -2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_2:.*]] = "test.constant"() <{value = 2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_3:.*]] = arith.ori %[[VAL_0]], %[[VAL_1]] : i32
+// CHECK:           %[[VAL_4:.*]] = arith.ori %[[VAL_3]], %[[VAL_2]] : i32
+// CHECK:           return %[[VAL_4]] : i32
+// CHECK:         }
+func.func @nested_ori() -> (i32) {
+  %0 = "test.constant"() {value = 0x7fffffff} : () -> i32
+  %1 = "test.constant"() {value = -2147483648} : () -> i32
+  %2 = "test.constant"() {value = 0x80000000} : () -> i32
+  %4 = arith.ori %0, %1 : i32
+  %5 = arith.ori %4, %2 : i32
+  return %5 : i32
+}
+
+// -----
+
 // CHECK-LABEL: @indexCastOfSignExtend
 //       CHECK:   %[[res:.+]] = arith.index_cast %arg0 : i8 to index
 //       CHECK:   return %[[res]]
@@ -2235,6 +2383,70 @@ func.func @xorOfExtUI_nneg_mixed(%arg0: i8, %arg1: i8) -> i64 {
   %ext1 = arith.extui %arg1 : i8 to i64
   %res = arith.xori %ext0, %ext1 : i64
   return %res : i64
+}
+
+// -----
+
+// CHECK-LABEL: @xorOfXorConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 6 : i32
+//       CHECK:   %[[xor:.+]] = arith.xori %arg0, %[[cres]] : i32
+//       CHECK:   return %[[xor]]
+func.func @xorOfXorConstant(%arg0: i32) -> i32 {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %x1 = arith.xori %arg0, %c12 : i32
+  %x2 = arith.xori %x1, %c10 : i32
+  return %x2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @xorOfXorConstantIndex
+//       CHECK:   %[[cres:.+]] = arith.constant 6 : index
+//       CHECK:   %[[xor:.+]] = arith.xori %arg0, %[[cres]] : index
+//       CHECK:   return %[[xor]]
+func.func @xorOfXorConstantIndex(%arg0: index) -> index {
+  %c12 = arith.constant 12 : index
+  %c10 = arith.constant 10 : index
+  %x1 = arith.xori %arg0, %c12 : index
+  %x2 = arith.xori %x1, %c10 : index
+  return %x2 : index
+}
+
+// -----
+
+// CHECK-LABEL: @xorOfXorConstantMultiUse
+//       CHECK:   %[[C6:.+]] = arith.constant 6 : i32
+//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
+//       CHECK:   %[[X1:.+]] = arith.xori %arg0, %[[C12]] : i32
+//       CHECK:   %[[X2:.+]] = arith.xori %arg0, %[[C6]] : i32
+//       CHECK:   return %[[X1]], %[[X2]]
+func.func @xorOfXorConstantMultiUse(%arg0: i32) -> (i32, i32) {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %x1 = arith.xori %arg0, %c12 : i32
+  %x2 = arith.xori %x1, %c10 : i32
+  return %x1, %x2 : i32, i32
+}
+
+// -----
+
+// Negative test case to ensure no further folding is performed when there's a type mismatch between the values and the result.
+// CHECK-LABEL:   func.func @nested_xori() -> i32 {
+// CHECK:           %[[VAL_0:.*]] = "test.constant"() <{value = 2147483647 : i64}> : () -> i32
+// CHECK:           %[[VAL_1:.*]] = "test.constant"() <{value = -2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_2:.*]] = "test.constant"() <{value = 2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_3:.*]] = arith.xori %[[VAL_0]], %[[VAL_1]] : i32
+// CHECK:           %[[VAL_4:.*]] = arith.xori %[[VAL_3]], %[[VAL_2]] : i32
+// CHECK:           return %[[VAL_4]] : i32
+// CHECK:         }
+func.func @nested_xori() -> (i32) {
+  %0 = "test.constant"() {value = 0x7fffffff} : () -> i32
+  %1 = "test.constant"() {value = -2147483648} : () -> i32
+  %2 = "test.constant"() {value = 0x80000000} : () -> i32
+  %4 = arith.xori %0, %1 : i32
+  %5 = arith.xori %4, %2 : i32
+  return %5 : i32
 }
 
 // -----

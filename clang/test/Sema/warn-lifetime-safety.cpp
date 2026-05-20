@@ -133,6 +133,26 @@ void multiple_pointers() {
   (void)*r;     // expected-note {{later used here}}
 }
 
+void multiple_pointers_chained() {
+  MyObj *p;
+  {
+    MyObj s;
+    MyObj* obj1, *obj2;
+    p = obj1 = obj2 = &s; // expected-warning {{does not live long enough}}
+  }                       // expected-note {{destroyed here}}
+  (void)*p;               // expected-note {{later used here}}
+}
+
+void multiple_pointers_chained_safe() {
+  MyObj *p;
+  MyObj s;
+  {
+    MyObj* obj1, *obj2;
+    p = obj1 = obj2 = &s;
+  }
+  (void)*p;
+}
+
 void single_pointer_multiple_loans(bool cond) {
   MyObj *p;
   if (cond){
@@ -887,6 +907,15 @@ void lifetimebound_with_pointers() {
     ptr = GetPointer(obj); // expected-warning {{object whose reference is captured does not live long enough}}
   }                        // expected-note {{destroyed here}}
   (void)*ptr;              // expected-note {{later used here}}
+}
+
+void chained_assignment_lifetimebound_call() {
+  MyObj *p, *obj;
+  {
+    MyObj s;
+    p = Identity(obj = &s); // expected-warning {{does not live long enough}}
+  }                         // expected-note {{destroyed here}}
+  (void)*p;                 // expected-note {{later used here}}
 }
 
 void lifetimebound_no_error_safe_usage() {
@@ -2363,6 +2392,16 @@ void assignment_propagation() {
   use(b);          // expected-note {{later used here}}
 }
 
+void chained_defaulted_assignment_propagation() {
+  S b, c;
+  {
+    std::string str{"abc"};
+    S a = getS(str); // expected-warning {{object whose reference is captured does not live long enough}}
+    c = b = a;
+  }                  // expected-note {{destroyed here}}
+  use(c);            // expected-note {{later used here}}
+}
+
 S getSNoAnnotation(const std::string &s);
 
 void no_annotation() {
@@ -3199,6 +3238,15 @@ std::function<void()> copy_assign() {
   std::function<void()> f2 = []() {};
   f2 = f;
   return f2; // expected-note {{returned here}}
+}
+
+std::function<void()> chained_copy_assign() {
+  int x;
+  std::function<void()> f = [&x]() { (void)x; }; // expected-warning {{address of stack memory is returned later}}
+  std::function<void()> f2 = []() {};
+  std::function<void()> f3 = []() {};
+  f3 = f2 = f;
+  return f3; // expected-note {{returned here}}
 }
 
 // FIXME: False negative. std::move's lifetimebound handling in

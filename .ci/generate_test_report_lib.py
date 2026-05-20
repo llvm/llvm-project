@@ -212,7 +212,11 @@ def generate_report(
             report.extend(
                 [
                     ":white_check_mark: The build succeeded and no tests ran. "
-                    "This is expected in some build configurations."
+                    "This is not expected and likely means something was "
+                    "configured incorrectly. If you suspect an infrastructure "
+                    "issue, please open an issue at "
+                    "https://github.com/llvm/llvm-project/issues and attach the "
+                    "infrastructure label."
                 ]
             )
         else:
