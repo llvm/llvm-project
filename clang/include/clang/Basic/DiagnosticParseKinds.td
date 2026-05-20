@@ -1691,6 +1691,8 @@ def err_omp_expected_interop_type : Error<
 def warn_omp_more_one_interop_type
   : Warning<"interop type '%0' cannot be specified more than once">,
     InGroup<OpenMPClauses>;
+def err_omp_interop_multiple_fr : Error<
+  "only one 'fr' selector allowed per preference-specification">;
 def err_expected_sequence_or_directive : Error<
   "expected an OpenMP 'directive' or 'sequence' attribute argument">;
 def ext_omp_attributes : ExtWarn<

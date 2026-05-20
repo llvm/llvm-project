@@ -11786,9 +11786,13 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_order:
     C = new (Context) OMPOrderClause();
     break;
-  case llvm::omp::OMPC_init:
-    C = OMPInitClause::CreateEmpty(Context, Record.readInt());
+  case llvm::omp::OMPC_init: {
+    unsigned VarListSize = Record.readInt();
+    unsigned NumAttrs = Record.readInt();
+    C = OMPInitClause::CreateEmpty(Context, /*NumPrefs=*/VarListSize - 1,
+                                   NumAttrs);
     break;
+  }
   case llvm::omp::OMPC_use:
     C = new (Context) OMPUseClause();
     break;
@@ -12103,6 +12107,20 @@ void OMPClauseReader::VisitOMPInitClause(OMPInitClause *C) {
   C->setVarRefs(Vars);
   C->setIsTarget(Record.readBool());
   C->setIsTargetSync(Record.readBool());
+  C->setHasPreferAttrs(Record.readBool());
+
+  unsigned NumPrefs = C->getNumPrefs();
+  SmallVector<unsigned, 4> Counts;
+  SmallVector<Expr *, 8> Attrs;
+  Counts.reserve(NumPrefs);
+  for (unsigned I = 0; I < NumPrefs; ++I) {
+    unsigned NA = Record.readInt();
+    Counts.push_back(NA);
+    for (unsigned J = 0; J < NA; ++J)
+      Attrs.push_back(Record.readSubExpr());
+  }
+  C->setAttrs(Counts, Attrs);
+
   C->setLParenLoc(Record.readSourceLocation());
   C->setVarLoc(Record.readSourceLocation());
 }

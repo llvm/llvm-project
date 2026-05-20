@@ -8851,7 +8851,7 @@ public:
 /// \endcode
 class OMPInitClause final
     : public OMPVarListClause<OMPInitClause>,
-      private llvm::TrailingObjects<OMPInitClause, Expr *> {
+      private llvm::TrailingObjects<OMPInitClause, Expr *, unsigned> {
   friend class OMPClauseReader;
   friend OMPVarListClause;
   friend TrailingObjects;
@@ -8861,12 +8861,40 @@ class OMPInitClause final
 
   bool IsTarget = false;
   bool IsTargetSync = false;
+  bool HasPreferAttrs = false;
+
+  /// Total number of attr() exprs across all pref-specs (sum of the
+  /// per-pref-spec counts in the trailing unsigned[]).
+  unsigned NumAttrs = 0;
+
+  /// Trailing-objects layout (single contiguous Expr* array):
+  ///   Expr*[ varlist_size() + NumAttrs ]:
+  ///     [0]                    = InteropVar
+  ///     [1 .. NumPrefs]        = Fr expr per pref-spec (null if attr-only)
+  ///     [varlist_size() ..]    = flat list of attr exprs, concatenated in
+  ///                              pref-spec order
+  ///   unsigned[ NumPrefs ]:
+  ///     [i]                    = number of attr() exprs in pref-spec i
+  ///
+  /// varlist_size() = 1 + NumPrefs, so OMPVarListClause iteration covers
+  /// InteropVar + the Fr block.
+
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return varlist_size() + NumAttrs;
+  }
+  size_t numTrailingObjects(OverloadToken<unsigned>) const {
+    return getNumPrefs();
+  }
 
   void setInteropVar(Expr *E) { varlist_begin()[0] = E; }
 
   void setIsTarget(bool V) { IsTarget = V; }
 
   void setIsTargetSync(bool V) { IsTargetSync = V; }
+
+  void setHasPreferAttrs(bool V) { HasPreferAttrs = V; }
+
+  void setAttrs(ArrayRef<unsigned> Counts, ArrayRef<Expr *> Attrs);
 
   /// Sets the location of the interop variable.
   void setVarLoc(SourceLocation Loc) { VarLoc = Loc; }
@@ -8879,7 +8907,7 @@ class OMPInitClause final
   /// \param LParenLoc Location of '('.
   /// \param VarLoc Location of the interop variable.
   /// \param EndLoc Ending location of the clause.
-  /// \param N Number of expressions.
+  /// \param N Number of varlist entries (1 + NumPrefs).
   OMPInitClause(bool IsTarget, bool IsTargetSync, SourceLocation StartLoc,
                 SourceLocation LParenLoc, SourceLocation VarLoc,
                 SourceLocation EndLoc, unsigned N)
@@ -8894,6 +8922,14 @@ class OMPInitClause final
   }
 
 public:
+  struct PrefView {
+    /// Foreign-runtime-id expression. Null for attr-only specs.
+    Expr *Fr;
+    /// attr() string-literal expressions. Empty for fr-only or OMP 5.1
+    /// flat specs.
+    ArrayRef<Expr *> Attrs;
+  };
+
   /// Creates a fully specified clause.
   ///
   /// \param C AST context.
@@ -8909,11 +8945,14 @@ public:
                                SourceLocation LParenLoc, SourceLocation VarLoc,
                                SourceLocation EndLoc);
 
-  /// Creates an empty clause with \a N expressions.
+  /// Creates an empty clause sized for \a NumPrefs pref-specs and \a NumAttrs
+  /// total attr() exprs across them.
   ///
   /// \param C AST context.
-  /// \param N Number of expression items.
-  static OMPInitClause *CreateEmpty(const ASTContext &C, unsigned N);
+  /// \param NumPrefs Number of pref-specs (length of the Fr block).
+  /// \param NumAttrs Total attr() exprs across all pref-specs.
+  static OMPInitClause *CreateEmpty(const ASTContext &C, unsigned NumPrefs,
+                                    unsigned NumAttrs);
 
   /// Returns the location of the interop variable.
   SourceLocation getVarLoc() const { return VarLoc; }
@@ -8928,9 +8967,38 @@ public:
   /// Returns true is interop-type 'targetsync' is used.
   bool getIsTargetSync() const { return IsTargetSync; }
 
+  /// Returns true if OMP 6.0 {fr/attr} syntax is used.
+  bool getHasPreferAttrs() const { return HasPreferAttrs; }
+
+  /// Number of pref-specs in prefer_type(...).
+  unsigned getNumPrefs() const { return varlist_size() - 1; }
+
+  /// Total attrs across all pref-specs.
+  unsigned getNumAttrs() const { return NumAttrs; }
+
+  /// Per-pref-spec attr counts (one entry per pref-spec).
+  ArrayRef<unsigned> getAttrCounts() const {
+    return getTrailingObjects<unsigned>(getNumPrefs());
+  }
+
+  PrefView getPref(unsigned I) {
+    assert(I < getNumPrefs() && "pref-spec index out of range");
+    Expr **E = getTrailingObjects<Expr *>();
+    ArrayRef<unsigned> Counts = getAttrCounts();
+    unsigned AttrStart = 0;
+    for (unsigned K = 0; K < I; ++K)
+      AttrStart += Counts[K];
+    return PrefView{
+        E[1 + I], ArrayRef<Expr *>(E + varlist_size() + AttrStart, Counts[I])};
+  }
+  PrefView getPref(unsigned I) const {
+    return const_cast<OMPInitClause *>(this)->getPref(I);
+  }
+
   child_range children() {
-    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
-                       reinterpret_cast<Stmt **>(varlist_end()));
+    return child_range(
+        reinterpret_cast<Stmt **>(varlist_begin()),
+        reinterpret_cast<Stmt **>(varlist_begin() + varlist_size() + NumAttrs));
   }
 
   const_child_range children() const {

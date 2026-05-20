@@ -8282,11 +8282,23 @@ void OMPClauseWriter::VisitOMPSIMDClause(OMPSIMDClause *) {}
 void OMPClauseWriter::VisitOMPNogroupClause(OMPNogroupClause *) {}
 
 void OMPClauseWriter::VisitOMPInitClause(OMPInitClause *C) {
+  // Sizes for CreateEmpty on the read side: varlist_size = 1 + NumPrefs, then
+  // NumAttrs (total attrs across all pref-specs).
   Record.push_back(C->varlist_size());
+  Record.push_back(C->getNumAttrs());
+  // Varlist (interop var + Fr block).
   for (Expr *VE : C->varlist())
     Record.AddStmt(VE);
   Record.writeBool(C->getIsTarget());
   Record.writeBool(C->getIsTargetSync());
+  Record.writeBool(C->getHasPreferAttrs());
+  // Per-pref-spec: attr count + that many attr exprs, in order.
+  for (unsigned I = 0, E = C->getNumPrefs(); I < E; ++I) {
+    OMPInitClause::PrefView P = C->getPref(I);
+    Record.push_back(P.Attrs.size());
+    for (Expr *A : P.Attrs)
+      Record.AddStmt(A);
+  }
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getVarLoc());
 }

@@ -10997,13 +10997,28 @@ OMPClause *TreeTransform<Derived>::TransformOMPInitClause(OMPInitClause *C) {
     return nullptr;
 
   OMPInteropInfo InteropInfo(C->getIsTarget(), C->getIsTargetSync());
-  InteropInfo.PreferTypes.reserve(C->varlist_size() - 1);
-  for (Expr *E : llvm::drop_begin(C->varlist())) {
-    ExprResult ER = getDerived().TransformExpr(cast<Expr>(E));
-    if (ER.isInvalid())
-      return nullptr;
-    InteropInfo.PreferTypes.push_back(ER.get());
+  unsigned NumPrefs = C->getNumPrefs();
+  InteropInfo.Prefs.reserve(NumPrefs);
+  for (unsigned I = 0; I < NumPrefs; ++I) {
+    OMPInitClause::PrefView P = C->getPref(I);
+    Expr *NewFr = nullptr;
+    if (P.Fr) {
+      ExprResult ER = getDerived().TransformExpr(P.Fr);
+      if (ER.isInvalid())
+        return nullptr;
+      NewFr = ER.get();
+    }
+    SmallVector<Expr *, 2> NewAttrs;
+    NewAttrs.reserve(P.Attrs.size());
+    for (Expr *A : P.Attrs) {
+      ExprResult ER = getDerived().TransformExpr(A);
+      if (ER.isInvalid())
+        return nullptr;
+      NewAttrs.push_back(ER.get());
+    }
+    InteropInfo.Prefs.push_back({NewFr, std::move(NewAttrs)});
   }
+  InteropInfo.HasPreferAttrs = C->getHasPreferAttrs();
   return getDerived().RebuildOMPInitClause(IVR.get(), InteropInfo,
                                            C->getBeginLoc(), C->getLParenLoc(),
                                            C->getVarLoc(), C->getEndLoc());

@@ -18967,9 +18967,14 @@ OMPClause *SemaOpenMP::ActOnOpenMPInitClause(
   if (!isValidInteropVariable(SemaRef, InteropVar, VarLoc, OMPC_init))
     return nullptr;
 
-  // Check prefer_type values.  These foreign-runtime-id values are either
-  // string literals or constant integral expressions.
-  for (const Expr *E : InteropInfo.PreferTypes) {
+  // Check prefer_type values. fr() arguments are either string literals or
+  // constant integral expressions; null Fr is only valid in OMP 6.0
+  for (const OMPInteropPref &P : InteropInfo.Prefs) {
+    const Expr *E = P.Fr;
+    if (!E) {
+      assert(InteropInfo.HasPreferAttrs && "null Fr requires OMP 6.0 syntax");
+      continue;
+    }
     if (E->isValueDependent() || E->isTypeDependent() ||
         E->isInstantiationDependent() || E->containsUnexpandedParameterPack())
       continue;
