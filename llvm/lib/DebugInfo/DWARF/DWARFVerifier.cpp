@@ -1990,9 +1990,9 @@ void DWARFVerifier::verifyNameIndexCompleteness(
   case DW_TAG_member:
     return;
 
-  // DW_TAG_LLVM_annotation DIEs attach metadata to other DIEs. 
-  // Their DW_AT_name carries the annotation kind,
-  // not a globally visible symbol, so they should not be indexed.
+  // DW_TAG_LLVM_annotation DIEs attach metadata to other DIEs.
+  // Their DW_AT_name carries the annotation kind, not a globally visible
+  // symbol, so they should not be indexed.
   case DW_TAG_LLVM_annotation:
     return;
 
