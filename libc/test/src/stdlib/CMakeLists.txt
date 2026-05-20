@@ -360,8 +360,9 @@ add_libc_test(
     libc-stdlib-tests
   SRCS
     qsort_r_test.cpp
+  HDRS
+    QsortReentrantTest.h
   DEPENDS
-    libc.hdr.types.size_t
     libc.src.stdlib.qsort_r
 )
 
