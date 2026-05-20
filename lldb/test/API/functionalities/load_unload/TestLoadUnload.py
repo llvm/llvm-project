@@ -410,7 +410,7 @@ class LoadUnloadTestCase(TestBase):
         oslist=["freebsd", "linux", "netbsd"],
         remote=False,
     )
-    @expectedFailureAll(oslist=["windows"], archs=["aarch64"])
+    @skipIfWindows
     def test_static_init_during_load(self):
         """Test that we can set breakpoints correctly in static initializers"""
         self.copy_shlibs_to_remote()
