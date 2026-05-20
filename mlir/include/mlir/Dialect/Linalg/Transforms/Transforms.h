@@ -2101,7 +2101,7 @@ void populateTransposeMatmulPatterns(RewritePatternSet &patterns,
 
 /// Patterns to rewrite softmax -> matmul into online softmax form:
 /// local_softmax + rescaling matmul (linalg.generic).
-void populateOnlineSoftmaxPatterns(RewritePatternSet &patterns,
+void populateSoftmaxMatmulFusionPatterns(RewritePatternSet &patterns,
                                    int64_t tileSize = 32);
 
 /// Patterns to block pack Linalg matmul ops.

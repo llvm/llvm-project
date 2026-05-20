@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:   --test-linalg-transform-patterns="test-online-softmax-rewrite online-softmax-tile-size=32" \
+// RUN:   --test-linalg-transform-patterns="test-softmax-matmul-fusion-rewrite softmax-matmul-fusion-tile-size=32" \
 // RUN:   --transform-interpreter \
 // RUN:   --canonicalize --cse | FileCheck %s
 

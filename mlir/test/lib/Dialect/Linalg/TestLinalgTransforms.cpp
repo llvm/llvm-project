@@ -135,12 +135,12 @@ struct TestLinalgTransforms
       *this, "test-decompose-local-softmax",
       llvm::cl::desc("Test decompose local_softmax op"),
       llvm::cl::init(false)};
-  Option<bool> testOnlineSoftmaxRewrite{
-      *this, "test-online-softmax-rewrite",
+  Option<bool> testSoftmaxMatmulFusionRewrite{
+      *this, "test-softmax-matmul-fusion-rewrite",
       llvm::cl::desc("Test rewrite of softmax+matmul to online softmax"),
       llvm::cl::init(false)};
-  Option<int64_t> onlineSoftmaxTileSize{
-      *this, "online-softmax-tile-size",
+  Option<int64_t> softmaxMatmulFusionTileSize{
+      *this, "softmax-matmul-fusion-tile-size",
       llvm::cl::desc("Tile size for online softmax rewrite"),
       llvm::cl::init(32)};
   Option<bool> testFoldIntoPackAndUnpack{
@@ -255,11 +255,11 @@ static void applyDecomposeLocalSoftmax(func::FuncOp funcOp) {
   });
 }
 
-static void applyOnlineSoftmaxRewrite(func::FuncOp funcOp,
+static void applySoftmaxMatmulFusionRewrite(func::FuncOp funcOp,
                                        int64_t tileSize) {
   MLIRContext *ctx = funcOp.getContext();
   RewritePatternSet patterns(ctx);
-  linalg::populateOnlineSoftmaxPatterns(patterns, tileSize);
+  linalg::populateSoftmaxMatmulFusionPatterns(patterns, tileSize);
   (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 
@@ -305,8 +305,8 @@ void TestLinalgTransforms::runOnOperation() {
     return applyDecomposeWinogradOps(getOperation());
   if (testDecomposeLocalSoftmax)
     return applyDecomposeLocalSoftmax(getOperation());
-  if (testOnlineSoftmaxRewrite)
-    return applyOnlineSoftmaxRewrite(getOperation(), onlineSoftmaxTileSize);
+  if (testSoftmaxMatmulFusionRewrite)
+    return applySoftmaxMatmulFusionRewrite(getOperation(), softmaxMatmulFusionTileSize);
   Operation *rootOp = getOperation();
   if (testFoldIntoPackAndUnpack)
     applyFoldIntoPackAndUnpackPatterns(rootOp);

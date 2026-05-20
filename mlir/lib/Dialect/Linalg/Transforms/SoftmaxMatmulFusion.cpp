@@ -1,4 +1,4 @@
-//===- OnlineSoftmax.cpp - Rewrite softmax+matmul to online softmax -------===//
+//===- SoftmaxMatmulFusion.cpp - Rewrite softmax+matmul to online softmax -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/PatternMatch.h"
 
-#define DEBUG_TYPE "linalg-online-softmax"
+#define DEBUG_TYPE "linalg-softmax-matmul-fusion"
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -103,9 +103,9 @@ static Value createFilledTensor(OpBuilder &b, Location loc,
 /// Rewrites to: local_softmax + rescaling_matmul generic.
 /// If the softmax has other users besides the matched matmul, also emits
 /// a rescaling_softmax generic to recover global softmax.
-struct SoftmaxMatmulToOnlineSoftmax
+struct SoftmaxMatmulToSoftmaxMatmulFusion
     : public OpRewritePattern<linalg::SoftmaxOp> {
-  SoftmaxMatmulToOnlineSoftmax(MLIRContext *ctx, int64_t tileSize)
+  SoftmaxMatmulToSoftmaxMatmulFusion(MLIRContext *ctx, int64_t tileSize)
       : OpRewritePattern(ctx), tileSize(tileSize) {}
 
   LogicalResult matchAndRewrite(linalg::SoftmaxOp softmaxOp,
@@ -395,7 +395,7 @@ private:
 
 } // namespace
 
-void mlir::linalg::populateOnlineSoftmaxPatterns(RewritePatternSet &patterns,
+void mlir::linalg::populateSoftmaxMatmulFusionPatterns(RewritePatternSet &patterns,
                                                   int64_t tileSize) {
-  patterns.add<SoftmaxMatmulToOnlineSoftmax>(patterns.getContext(), tileSize);
+  patterns.add<SoftmaxMatmulToSoftmaxMatmulFusion>(patterns.getContext(), tileSize);
 }

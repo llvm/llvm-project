@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-linalg-transform-patterns="test-online-softmax-rewrite online-softmax-tile-size=32" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-transform-patterns="test-softmax-matmul-fusion-rewrite softmax-matmul-fusion-tile-size=32" -split-input-file | FileCheck %s
 
 // Test basic softmax -> matmul pattern match and rewrite.
 

@@ -23,7 +23,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Interchange.cpp
   Loops.cpp
   MorphOps.cpp
-  OnlineSoftmax.cpp
+  SoftmaxMatmulFusion.cpp
   TransposeMatmul.cpp
   ShardingInterfaceImpl.cpp
   SimplifyDepthwiseConv.cpp
