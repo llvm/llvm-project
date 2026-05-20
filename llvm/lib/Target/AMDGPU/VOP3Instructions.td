@@ -1089,14 +1089,31 @@ def AMDGPUmul_u24_24bit_ops : PatFrag<
 
 // Handle cases where amdgpu-codegenprepare-mul24 made a mul24 instead of a normal mul.
 // We need to separate this because otherwise OtherPredicates would be overriden.
+// Preferred form: operands provably fit in 24 unsigned bits, no masking needed.
 class IMAD32_Mul24_Pats_Impl<VOP3_Pseudo inst, SDPatternOperator AddOp> : GCNPat <
     (i64 (AddOp (i64 (AMDGPUmul_u24_24bit_ops i32:$src0, i32:$src1)), i64:$src2)),
     (inst $src0, $src1, $src2, 0 /* clamp */)
+    > {
+  let AddedComplexity = 1;
+}
+
+// Fallback: AMDGPUmul_u24 only uses the low 24 bits of its operands, but
+// V_MAD_U64_U32 does a full 32x32 multiply. Mask the high bits explicitly so
+// the fold remains valid even when SDAG cannot prove the operands already fit
+// in 24 bits. DAGCombine folds the AND away when the high bits are known zero,
+// recovering the single-instruction form.
+class IMAD32_Mul24_Mask_Pats_Impl<VOP3_Pseudo inst, SDPatternOperator AddOp> : GCNPat <
+    (i64 (AddOp (i64 (AMDGPUmul_u24 i32:$src0, i32:$src1)), i64:$src2)),
+    (inst (V_AND_B32_e64 (S_MOV_B32 (i32 0x00ffffff)), $src0),
+          (V_AND_B32_e64 (S_MOV_B32 (i32 0x00ffffff)), $src1),
+          $src2, 0 /* clamp */)
     >;
 
 multiclass IMAD32_Mul24_Pats<VOP3_Pseudo inst> {
   def : IMAD32_Mul24_Pats_Impl<inst, add>;
   def : IMAD32_Mul24_Pats_Impl<inst, ptradd_commutative>;
+  def : IMAD32_Mul24_Mask_Pats_Impl<inst, add>;
+  def : IMAD32_Mul24_Mask_Pats_Impl<inst, ptradd_commutative>;
 }
 
 // exclude pre-GFX9 where it was slow
