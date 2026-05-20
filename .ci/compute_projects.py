@@ -201,12 +201,7 @@ SKIP_PROJECTS = ["docs", "gn"]
 # where a project can be built but its tests are not yet stable on that
 # platform, so we still want a compile-time signal.
 PROJECT_CHECK_TARGETS_OVERRIDE = {
-    "Windows": {
-        # TODO(issues/132800): LLDB tests need environment setup on Windows.
-        # In the meantime, at least compile lldb and lldb-dap to catch
-        # breakage.
-        "lldb": "lldb lldb-dap",
-    },
+    "Windows": {},
 }
 
 
