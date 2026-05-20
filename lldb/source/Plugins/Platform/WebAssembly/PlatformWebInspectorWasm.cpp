@@ -133,7 +133,7 @@ llvm::Error PlatformWebInspectorWasm::LaunchPlatformServer() {
 }
 
 llvm::Error PlatformWebInspectorWasm::EnsureConnected() {
-  if (m_remote_platform_sp)
+  if (m_remote_platform_sp && m_remote_platform_sp->IsConnected())
     return llvm::Error::success();
   return LaunchPlatformServer();
 }

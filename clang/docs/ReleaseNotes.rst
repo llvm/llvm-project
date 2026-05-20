@@ -54,6 +54,9 @@ C++ Specific Potentially Breaking Changes
   matching the deduction of array sizes from ``int(&)[N]``.
   This is a breaking change for code that depended on the previously deduced type. (#GH195033)
 
+- Clang now rejects nested local classes defined in a different
+  block scope than their parent class. (#GH193472)
+
 ABI Changes in This Version
 ---------------------------
 
@@ -154,6 +157,8 @@ C++2c Feature Support
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+
+- Partially implement Itanium mangling for pack indexing. Partially substituted packs are not yet supported. (#GH112003)
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -257,6 +262,8 @@ Non-comprehensive list of changes in this release
 
 - ``typeid`` on references and pointers of ``final`` types no longer emits a
   vtable lookup at runtime.
+
+- Updated support for Unicode from 15.1 to 18.0.
 
 New Compiler Flags
 ------------------
@@ -504,6 +511,11 @@ Improvements to Clang's diagnostics
 
 - Added ``-Wattribute-alias`` to diagnose type mismatches between an alias and its aliased function. (#GH195550)
 
+- Added warnings for floating-point exception function calls (fenv.h) without enabling
+  floating-point exception behavior via the appropriate flags or pragmas. (#GH128239)
+  
+- The diagnostics around ``__block`` now explain why a variable cannot be marked ``__block``. (#GH197213)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -548,6 +560,7 @@ Bug Fixes in This Version
 - Fixed an issue where an assert was thrown instead of an error if no vulkan env was specified with ``--triple spirv``. (#GH189964)
 - Fixed incorrect rejection of ``auto`` with reordered declaration specifiers in C23. (#GH164121)
 - Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
+- Fixed a bug where Clang fails to find instantiation of Decls in constraint checking. (#GH173086)
 - Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
 - Fixed a crash caused by declaring multiple ``ownership_returns`` attributes with mismatched or missing arguments. (#GH188733)
 - Clang now emits an error for friend declarations of lambda members. (#GH26540)
@@ -556,6 +569,7 @@ Bug Fixes in This Version
 - Fixed a potential stack-use-after-return issue in Clang when copy-initializing
   an array via an element-at-a-time copy loop (#GH192026)
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
+- Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -600,7 +614,7 @@ Bug Fixes to C++ Support
   which could make the program mistakenly ill-formed.
 - Fixed a crash when an immediate-invoked ``consteval`` lambda is used as an invalid initializer. (#GH185270)
 - Fixed an assertion failure when using a global destructor with a target with a non-default program address space. (#GH186484)
-
+- Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
 - Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching
   MSVC behavior. Constructors with variadic arguments or callee-cleanup parameters are not yet supported
   and produce a warning. (#GH162640)
@@ -614,6 +628,7 @@ Bug Fixes to C++ Support
 - Fixed an invalid rejection and assertion failure while generating ``operator=`` for fields with the ``__restrict`` qualifier. (#GH37979)
 - Fixed a use-after-free bug when parsing default arguments containing lambdas in declarations with template-id declarators. (#GH196725)
 - Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
+- Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

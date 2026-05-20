@@ -52,12 +52,8 @@ public:
   ~DependencyScanningWorker();
 
   /// Run the dependency scanning tool for all given frontend command-lines,
-  /// and report the discovered dependencies to the provided consumer.
-  ///
-  /// OverlayFS should be based on the Worker's dependency scanning file-system
-  /// and can be used to provide any input specified on the command-line as
-  /// in-memory file. If no overlay file-system is provided, the Worker's
-  /// dependency scanning file-system is used instead.
+  /// and report the discovered dependencies to the provided consumer. The
+  /// \c OverlayFS will be used to call \c makeEffectiveVFS().
   ///
   /// \returns false if any errors occurred (with diagnostics reported to
   /// \c DiagConsumer), true otherwise.
@@ -65,9 +61,17 @@ public:
       StringRef WorkingDirectory, ArrayRef<ArrayRef<std::string>> CommandLines,
       DependencyConsumer &DepConsumer, DependencyActionController &Controller,
       DiagnosticConsumer &DiagConsumer,
-      IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr);
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
 
-  llvm::vfs::FileSystem &getVFS() const { return *DepFS; }
+  /// Creates the effective VFS that will be used for the scan.
+  ///
+  /// If provided, OverlayFS will be overlaid on top of the Worker's dependency
+  /// scanning file-system and can be used to provide any input specified on the
+  /// command-line as in-memory file. If no overlay file-system is provided, the
+  /// Worker's dependency scanning file-system is used directly.
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> makeEffectiveVFS(
+      StringRef WorkingDirectory,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr) const;
 
   /// Returns the worker tracing VFS, if it was requested via the service.
   llvm::vfs::TracingFileSystem *getTracingVFS() const {

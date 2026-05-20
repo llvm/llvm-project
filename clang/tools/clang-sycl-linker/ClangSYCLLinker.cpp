@@ -228,7 +228,6 @@ Expected<SmallVector<std::string>> getSYCLDeviceLibs(const ArgList &Args) {
   if (Arg *A = Args.getLastArg(OPT_device_libs_EQ)) {
     if (A->getValues().size() == 0)
       return createStringError(
-          inconvertibleErrorCode(),
           "Number of device library files cannot be zero.");
     for (StringRef Val : A->getValues()) {
       SmallString<128> LibName(LibraryPath);
@@ -236,9 +235,8 @@ Expected<SmallVector<std::string>> getSYCLDeviceLibs(const ArgList &Args) {
       if (llvm::sys::fs::exists(LibName))
         DeviceLibFiles.push_back(std::string(LibName));
       else
-        return createStringError(inconvertibleErrorCode(),
-                                 "\'" + std::string(LibName) + "\'" +
-                                     " SYCL device library file is not found.");
+        return createStringError("'" + LibName +
+                                 "' SYCL device library file is not found.");
     }
   }
   return DeviceLibFiles;
@@ -432,9 +430,7 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   CmdArgs.push_back("-spirv_input");
 
   StringRef Arch(Args.getLastArgValue(OPT_arch_EQ));
-  if (Arch.empty())
-    return createStringError(inconvertibleErrorCode(),
-                             "Arch must be specified for AOT compilation");
+  assert(!Arch.empty() && "Arch must be specified for AOT compilation");
   CmdArgs.push_back("-device");
   CmdArgs.push_back(Arch);
 
@@ -465,7 +461,7 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
   if (IsIntelCPUOffloadArch(OA))
     return runAOTCompileIntelCPU(InputFile, OutputFile, Args);
 
-  return createStringError(inconvertibleErrorCode(), "Unsupported arch");
+  llvm_unreachable("runAOTCompile dispatched on unsupported arch");
 }
 
 static constexpr char AttrSYCLModuleId[] = "sycl-module-id";
@@ -698,8 +694,6 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   // Collect all images to be packed into a single OffloadBinary.
   SmallVector<OffloadingImage> Images;
   for (SplitModule &SI : SplitModules) {
-    if (SI.Symbols.empty())
-      continue;
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
         llvm::MemoryBuffer::getFileOrSTDIN(SI.ModuleFilePath);
     if (std::error_code EC = FileOrErr.getError()) {
@@ -747,8 +741,8 @@ int main(int argc, char **argv) {
   const OptTable &Tbl = getOptTable();
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
-  auto Args = Tbl.parseArgs(argc, argv, OPT_INVALID, Saver, [&](StringRef Err) {
-    reportError(createStringError(inconvertibleErrorCode(), Err));
+  auto Args = Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [](StringRef Err) {
+    reportError(createStringError(Err));
   });
 
   if (Args.hasArg(OPT_help) || Args.hasArg(OPT_help_hidden)) {
