@@ -2622,7 +2622,7 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
              });
 
   for (std::pair<const ValueName *, const Value *> &SI : SortedTable) {
-    const ValueName *Name = *SI.first;
+    const ValueName &Name = *SI.first;
     const Value *Value = SI.second;
 
     // Figure out the encoding to use for the name.
