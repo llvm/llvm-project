@@ -80,6 +80,18 @@ public:
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                          BreakpointSite *bp_site) override;
 
+  llvm::Expected<std::pair<XcodeSDKPath, bool>>
+  GetSDKPathFromDebugInfo(Module &module) override;
+
+  llvm::Expected<std::string>
+  ResolveSDKPathFromDebugInfo(Module &module) override;
+
+  llvm::Expected<XcodeSDKPath>
+  GetSDKPathFromDebugInfo(CompileUnit &unit) override;
+
+  llvm::Expected<std::string>
+  ResolveSDKPathFromDebugInfo(CompileUnit &unit) override;
+
   std::vector<ArchSpec> m_supported_architectures;
 
 private:

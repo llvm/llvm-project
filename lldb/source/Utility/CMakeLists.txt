@@ -77,6 +77,7 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   VASprintf.cpp
   VirtualDataExtractor.cpp
   XcodeSDK.cpp
+  XcodeSDKPath.cpp
   ZipFile.cpp
 
   ADDITIONAL_HEADER_DIRS
