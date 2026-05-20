@@ -18,12 +18,12 @@
 #include "src/unistd/alarm.h"
 #include "test/UnitTest/Test.h"
 
-static volatile int alarm_fired = 0;
-extern "C" void alarm_handler(int) { alarm_fired = 1; }
+static volatile bool alarm_fired = false;
+extern "C" void alarm_handler(int) { alarm_fired = true; }
 
 TEST(LlvmLibcAlarmTest, Basic) {
   LIBC_NAMESPACE::signal(SIGALRM, alarm_handler);
-  alarm_fired = 0;
+  alarm_fired = false;
 
   // Set alarm for 10 seconds.
   unsigned int prev = LIBC_NAMESPACE::alarm(10);
@@ -44,13 +44,13 @@ TEST(LlvmLibcAlarmTest, Basic) {
   EXPECT_LE(prev, 5U);
 
   // Ensure it didn't fire since we canceled it immediately.
-  EXPECT_EQ(alarm_fired, 0);
+  EXPECT_FALSE(alarm_fired);
 }
 
 // This test actually waits for the alarm to fire, which takes at least 1s.
 TEST(LlvmLibcAlarmTest, FiringTest) {
   LIBC_NAMESPACE::signal(SIGALRM, alarm_handler);
-  alarm_fired = 0;
+  alarm_fired = false;
 
   // Set alarm for 1 second.
   LIBC_NAMESPACE::alarm(1);
@@ -60,5 +60,5 @@ TEST(LlvmLibcAlarmTest, FiringTest) {
   struct timespec tv = {5, 0};
   LIBC_NAMESPACE::nanosleep(&tv, nullptr);
 
-  EXPECT_NE(alarm_fired, 0);
+  EXPECT_TRUE(alarm_fired);
 }
