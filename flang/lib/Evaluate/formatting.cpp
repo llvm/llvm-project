@@ -676,6 +676,9 @@ llvm::raw_ostream &StructureConstructor::AsFortran(llvm::raw_ostream &o) const {
 std::string DynamicType::AsFortran() const {
   if (derived_) {
     CHECK(category_ == TypeCategory::Derived);
+    if (derived_->IsVectorType()) {
+      return derived_->VectorTypeAsFortran();
+    }
     std::string result{DerivedTypeSpecAsFortran(*derived_)};
     if (IsPolymorphic()) {
       result = "CLASS("s + result + ')';
