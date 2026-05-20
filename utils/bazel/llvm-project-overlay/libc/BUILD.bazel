@@ -1517,6 +1517,23 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_bind",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/bind.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_socklen_t",
+        ":types_struct_sockaddr",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_chdir",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/chdir.h"],
     target_compatible_with = select({
@@ -1642,6 +1659,41 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_recvfrom",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/recvfrom.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_socklen_t",
+        ":types_ssize_t",
+        ":types_struct_sockaddr",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_recvmsg",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/recvmsg.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_ssize_t",
+        ":types_struct_msghdr",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_rename",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/rename.h"],
     target_compatible_with = select({
@@ -1670,6 +1722,71 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":hdr_fcntl_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_sendmsg",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/sendmsg.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_ssize_t",
+        ":types_struct_msghdr",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_sendto",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/sendto.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_socklen_t",
+        ":types_ssize_t",
+        ":types_struct_sockaddr",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_socket",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/socket.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_socketpair",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/socketpair.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
     ],
 )
 
@@ -15359,6 +15476,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_socket",
         ":__support_osutil_syscall",
         ":errno",
     ],
@@ -15373,6 +15491,7 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_macros_sanitizer",
+        ":__support_osutil_linux_syscall_wrappers_socketpair",
         ":__support_osutil_syscall",
         ":errno",
     ],
@@ -15386,6 +15505,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sendto",
         ":__support_osutil_syscall",
         ":errno",
         ":types_socklen_t",
@@ -15402,6 +15522,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sendto",
         ":__support_osutil_syscall",
         ":errno",
         ":types_socklen_t",
@@ -15418,6 +15539,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sendmsg",
         ":__support_osutil_syscall",
         ":errno",
         ":types_ssize_t",
@@ -15448,6 +15570,7 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_macros_sanitizer",
+        ":__support_osutil_linux_syscall_wrappers_recvfrom",
         ":__support_osutil_syscall",
         ":errno",
         ":types_socklen_t",
@@ -15465,6 +15588,7 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_macros_sanitizer",
+        ":__support_osutil_linux_syscall_wrappers_recvfrom",
         ":__support_osutil_syscall",
         ":errno",
         ":types_socklen_t",
@@ -15482,6 +15606,7 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_macros_sanitizer",
+        ":__support_osutil_linux_syscall_wrappers_recvmsg",
         ":__support_osutil_syscall",
         ":errno",
         ":types_ssize_t",
