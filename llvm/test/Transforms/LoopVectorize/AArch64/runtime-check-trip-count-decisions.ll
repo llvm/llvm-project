@@ -79,10 +79,10 @@ for.end:
   ret i32 0
 }
 
-; If trip-count is equal to 13, the function is vectorised when predicated tail
+; If trip-count is equal to 12, the function is vectorised when predicated tail
 ; folding is chosen.
-define i32 @foo_mid_trip_count_13(ptr %a, ptr %b, ptr %c, i32 %bound) {
-; CHECK-LABEL: @foo_mid_trip_count_13(
+define i32 @foo_mid_trip_count_12(ptr %a, ptr %b, ptr %c, i32 %bound) {
+; CHECK-LABEL: @foo_mid_trip_count_12(
 ; PREDICATED: vector.body
 ; SCALAR-NOT: vector.body
 entry:
@@ -133,4 +133,4 @@ for.end:
 !0 = !{!"branch_weights", i32 10, i32 30}
 !1 = !{!"branch_weights", i32 10, i32 90}
 !2 = !{!"branch_weights", i32 10, i32 390}
-!3 = !{!"branch_weights", i32 10, i32 120}
+!3 = !{!"branch_weights", i32 10, i32 110}

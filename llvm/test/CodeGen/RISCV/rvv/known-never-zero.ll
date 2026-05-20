@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+v -verify-machineinstrs | FileCheck %s
 
 ; Use cttz to test if we properly prove never-zero. There is a very
-; simple transform from cttz -> cttz_zero_undef if its operand is
+; simple transform from cttz -> cttz_zero_poison if its operand is
 ; known never zero.
 
 ; Even without vscale_range, vscale is always guaranteed to be non-zero.

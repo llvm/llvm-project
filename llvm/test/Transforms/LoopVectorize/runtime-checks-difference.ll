@@ -634,3 +634,66 @@ exit:
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.mustprogress"}
+
+; Source and sink are the same pointer: SCEV folds Diff to 0 and the new
+; (Diff - 1) <u (Threshold - 1) check folds away entirely, so the vector loop
+; is reached without a runtime memcheck.
+define void @same_pointer_no_diff_check(ptr %p, i64 %n) {
+; CHECK-LABEL: define void @same_pointer_no_diff_check(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], [[VECTOR_PH:label %.*]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.l = getelementptr inbounds i32, ptr %p, i64 %iv
+  %l = load i32, ptr %gep.l
+  %add = add nsw i32 %l, 1
+  %gep.s = getelementptr inbounds i32, ptr %p, i64 %iv
+  store i32 %add, ptr %gep.s
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Reverse iteration with negative step: exercises the std::swap of SrcStart and
+; SinkStart in tryToCreateDiffCheck. The diff check uses (Diff - 1) <u
+; (Threshold - 1) on the swapped operands.
+define void @reverse_iteration_diff_check(ptr %a, ptr %b, i64 %n) {
+; CHECK-LABEL: define void @reverse_iteration_diff_check(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[B2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 15
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %n, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw i64 %iv, -1
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv.next
+  %l = load i32, ptr %gep.a
+  %mul = mul nsw i32 %l, 3
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv.next
+  store i32 %mul, ptr %gep.b
+  %exitcond = icmp eq i64 %iv.next, 0
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}

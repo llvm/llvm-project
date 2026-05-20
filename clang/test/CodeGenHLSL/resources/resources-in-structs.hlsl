@@ -60,14 +60,14 @@ C c : register(t10);
 void main() {
 
 // CHECK: %[[PTR1:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr noundef nonnull align 4 dereferenceable(4) @a.Buf, i32 noundef 0)
-// CHECK-NEXT: store float 0x3FF3AE1480000000, ptr %[[PTR1]], align 4
+// CHECK-NEXT: store float 1.230000e+00, ptr %[[PTR1]], align 4
   a.Buf[0] = 1.230f;
 
 // Resource array access - first create the resource from binding, then access the element and store to it.
 // CHECK: call void @hlsl::RWBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
 // CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[TMP1]], i32 noundef 2, i32 noundef 0, i32 noundef 10, i32 noundef 5, ptr noundef @[[bBufsStr]])
 // CHECK-NEXT: %[[PTR2:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} %[[TMP1]], i32 noundef 0)
-// CHECK-NEXT: store float 0x40123D70A0000000, ptr %[[PTR2]], align 4
+// CHECK-NEXT: store float 4.560000e+00, ptr %[[PTR2]], align 4
   b.Bufs[5][0] = 4.56f;
 
 // CHECK: %[[PTR3:.*]] = call {{.*}} ptr @hlsl::StructuredBuffer<float>::operator[](unsigned int) const(ptr noundef nonnull align 4 dereferenceable(4) @c.BufOne, i32 noundef 0)

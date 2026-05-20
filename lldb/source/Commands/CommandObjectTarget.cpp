@@ -305,6 +305,8 @@ protected:
       if (!label.empty()) {
         if (auto E = target_sp->SetLabel(label))
           result.SetError(std::move(E));
+        else
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
         return;
       }
 
@@ -433,6 +435,8 @@ protected:
             result.AppendMessageWithFormatv(
                 "Core file '{0}' ({1}) was loaded.\n", core_file.GetPath(),
                 target_sp->GetArchitecture().GetArchitectureName());
+            if (auto core_args = process_sp->GetCoreFileArgs())
+              core_args->Format(result.GetOutputStream());
             result.SetStatus(eReturnStatusSuccessFinishNoResult);
             on_error.release();
           }
@@ -989,6 +993,8 @@ protected:
 
     m_interpreter.PrintWarningsIfNecessary(result.GetOutputStream(),
                                            m_cmd_name);
+    if (result.GetStatus() != eReturnStatusFailed)
+      result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   OptionGroupOptions m_option_group;
@@ -3104,6 +3110,8 @@ protected:
       result.AppendError("either the \"--file <module>\" or the \"--uuid "
                          "<uuid>\" option must be specified.\n");
     }
+    if (result.GetStatus() != eReturnStatusFailed)
+      result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   OptionGroupOptions m_option_group;
@@ -3485,7 +3493,7 @@ public:
           m_cached = value;
         } else {
           return Status::FromErrorStringWithFormatv(
-              "invalid boolean value '%s' passed for -c option", option_arg);
+              "invalid boolean value '{}' passed for -c option", option_arg);
         }
         break;
 
@@ -3556,7 +3564,7 @@ protected:
     SymbolContextList sc_list;
 
     if (m_options.m_type == eLookupTypeFunctionOrSymbol) {
-      ConstString function_name(m_options.m_str.c_str());
+      ConstString function_name(m_options.m_str);
       ModuleFunctionSearchOptions function_options;
       function_options.include_symbols = true;
       function_options.include_inlines = false;
@@ -3772,6 +3780,7 @@ protected:
 
       result.GetOutputStream().Printf("\n");
     }
+    result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   CommandOptions m_options;
@@ -4964,8 +4973,8 @@ protected:
     //  First step, make the specifier.
     std::unique_ptr<SymbolContextSpecifier> specifier_up;
     if (m_options.m_sym_ctx_specified) {
-      specifier_up = std::make_unique<SymbolContextSpecifier>(
-          GetDebugger().GetSelectedTarget());
+      specifier_up =
+          std::make_unique<SymbolContextSpecifier>(target.shared_from_this());
 
       if (!m_options.m_module_name.empty()) {
         specifier_up->AddSpecification(
@@ -5607,8 +5616,8 @@ protected:
 
     // Set up symbol context specifier if filter options were provided.
     if (m_options.m_sym_ctx_specified) {
-      auto specifier_up = std::make_unique<SymbolContextSpecifier>(
-          GetDebugger().GetSelectedTarget());
+      auto specifier_up =
+          std::make_unique<SymbolContextSpecifier>(target.shared_from_this());
 
       if (!m_options.m_module_name.empty())
         specifier_up->AddSpecification(
