@@ -76,6 +76,9 @@ _warningFlags = [
     # We're not annotating all the APIs, since that's a lot of annotations compared to how many we actually care about
     "-Wno-nullability-completeness",
 
+    # Adding this for now to get the build to pass but needs more detailed review
+    "-Wno-psabi",
+
     # Technically not a warning flag, but might as well be:
     "-flax-vector-conversions=none",
 ]

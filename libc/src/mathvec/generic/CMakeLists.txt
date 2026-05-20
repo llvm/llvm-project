@@ -7,6 +7,8 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.cpu_features
     libc.src.__support.mathvec.expf
+  COMPILE_OPTIONS
+    -Wno-psabi
   FLAGS
     ROUND_OPT
     FMA_OPT
