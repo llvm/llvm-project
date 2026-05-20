@@ -254,17 +254,14 @@ llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
   assert(getLoans(StartOID, StartPoint).contains(TargetLoan) &&
          "TargetLoan must be present in the StartOID at the StartPoint");
 
-  size_t StartIndex = 0;
   OriginID CurrOID = StartOID;
   llvm::SmallVector<OriginID> OriginFlowChain;
   llvm::ArrayRef<const Fact *> Facts = FactMgr.getBlockContaining(StartPoint);
+  const auto *StartIt = llvm::find(Facts, StartPoint);
+  assert(StartIt != Facts.end());
 
-  for (; StartIndex < Facts.size(); ++StartIndex)
-    if (Facts[StartIndex] == StartPoint)
-      break;
-
-  for (size_t i = StartIndex + 1; i > 0; --i) {
-    const Fact *F = Facts[i - 1];
+  for (const Fact *F :
+       llvm::reverse(llvm::make_range(Facts.begin(), StartIt))) {
     if (const auto *IF = F->getAs<IssueFact>())
       if (IF->getLoanID() == TargetLoan) {
         assert(IF->getOriginID() == CurrOID);
@@ -285,7 +282,7 @@ llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
   }
 
   // FIXME: Ideally, this return is unreachable and should be an assert because
-  // we expect to always finish at a IssueFact. But since current traversal is
+  // we expect to always finish at an IssueFact. But since current traversal is
   // limited to a single CFG block, multi-block OriginFlowChain construction
   // might miss the IssueFact.
   // We should add llvm_unreachable here once multi-block support is

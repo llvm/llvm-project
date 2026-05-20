@@ -21,6 +21,7 @@ namespace clang::lifetimes::internal {
 namespace {
 
 using namespace ast_matchers;
+using ::testing::Contains;
 using ::testing::Not;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAreArray;
@@ -2007,8 +2008,24 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithSelfAssignment) {
   const llvm::SmallVector<OriginID> OriginFlowChain =
       Helper->buildOriginFlowChainInOneBlock("s", "tgt", "after_use");
 
-  EXPECT_TRUE(
-      llvm::is_contained(OriginFlowChain, *Helper->getOriginForDecl("a")));
+  EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
+}
+
+TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithMultiAssignInSameStmt) {
+  SetupTest(R"(
+    void target() {
+      int tgt = 2;
+      int *a, *b, *c;
+      a = b = c = &tgt;
+      int *s = a;
+      POINT(after_use);
+    }
+  )");
+
+  const llvm::SmallVector<OriginID> OriginFlowChain =
+      Helper->buildOriginFlowChainInOneBlock("s", "tgt", "after_use");
+
+  EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
 }
 
 TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithLifetimeBound) {
@@ -2025,40 +2042,18 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithLifetimeBound) {
     }
   )");
 
-  const llvm::SmallVector<OriginID> OriginFlowChainForTgtA =
+  llvm::SmallVector<OriginID> ChainForTgtA =
       Helper->buildOriginFlowChainInOneBlock("s", "tgta", "after_use");
-
-  const llvm::SmallVector<OriginID> OriginFlowChainForTgtB =
+  llvm::SmallVector<OriginID> ChainForTgtB =
       Helper->buildOriginFlowChainInOneBlock("s", "tgtb", "after_use");
 
-  EXPECT_TRUE(llvm::is_contained(OriginFlowChainForTgtA,
-                                 *Helper->getOriginForDecl("a")));
-  EXPECT_FALSE(llvm::is_contained(OriginFlowChainForTgtA,
-                                  *Helper->getOriginForDecl("b")));
-  EXPECT_TRUE(llvm::is_contained(OriginFlowChainForTgtB,
-                                 *Helper->getOriginForDecl("b")));
-  EXPECT_FALSE(llvm::is_contained(OriginFlowChainForTgtB,
-                                  *Helper->getOriginForDecl("a")));
-}
+  EXPECT_THAT(ChainForTgtA, Contains(*Helper->getOriginForDecl("a")));
+  EXPECT_THAT(ChainForTgtA, Contains(*Helper->getOriginForDecl("result")));
+  EXPECT_THAT(ChainForTgtA, Not(Contains(*Helper->getOriginForDecl("b"))));
 
-TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithMultiAssignInSameStmt) {
-  SetupTest(R"(
-    void target() {
-      int tgt = 2;
-      int *a, *b, *c;
-      a = b = c = &tgt;
-      int *s = a;
-      POINT(after_use);
-    }
-  )");
-
-// FIXME: Handle chained assignments. The current implementation lacks this
-//  support, causing the assertion failure.
-//  https://github.com/llvm/llvm-project/pull/196075#discussion_r3264392605
-#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH(Helper->buildOriginFlowChainInOneBlock("s", "a", "after_use"),
-               "TargetLoan must be present in the StartOID at the StartPoint");
-#endif
+  EXPECT_THAT(ChainForTgtB, Contains(*Helper->getOriginForDecl("b")));
+  EXPECT_THAT(ChainForTgtB, Contains(*Helper->getOriginForDecl("result")));
+  EXPECT_THAT(ChainForTgtB, Not(Contains(*Helper->getOriginForDecl("a"))));
 }
 } // anonymous namespace
 } // namespace clang::lifetimes::internal
