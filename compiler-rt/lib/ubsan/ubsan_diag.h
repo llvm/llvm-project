@@ -213,16 +213,15 @@ bool ignoreReport(SourceLocation SLoc, ReportOptions Opts, ErrorType ET);
 
 // Called when a UBSan handler begins processing an error.
 // Used internally for running sanitizers at the same time as ubsan
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
-__ubsan_on_handle_error_begin(void);
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __ubsan_handle_error_begin(void);
 
 // Called when a UBSan handler finishes processing an error.
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __ubsan_on_handle_error_end(void);
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __ubsan_handle_error_end(void);
 
 class ScopedHandleErrorHook {
 public:
-  ScopedHandleErrorHook() { __ubsan_on_handle_error_begin(); }
-  ~ScopedHandleErrorHook() { __ubsan_on_handle_error_end(); }
+  ScopedHandleErrorHook() { __ubsan_handle_error_begin(); }
+  ~ScopedHandleErrorHook() { __ubsan_handle_error_end(); }
 
   ScopedHandleErrorHook(const ScopedHandleErrorHook &) = delete;
   void operator=(const ScopedHandleErrorHook &) = delete;
