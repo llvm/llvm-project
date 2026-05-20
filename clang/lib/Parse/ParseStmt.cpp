@@ -1293,7 +1293,7 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
         // C2y only permits declaration in the first clause of an if condition,
         // so it makes sense to error out in other conditions.
         Diag(InitStmt->get()->getBeginLoc(),
-            diag::err_c2y_first_condition_clause_is_not_declaration)
+             diag::err_c2y_first_condition_clause_is_not_declaration)
             << InitStmt->get()->getSourceRange();
 
       if (Cond.get().first != nullptr)
