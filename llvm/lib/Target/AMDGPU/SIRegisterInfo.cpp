@@ -616,6 +616,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Reserve async counters pseudo registers
   reserveRegisterTuples(Reserved, AMDGPU::ASYNCcnt);
   reserveRegisterTuples(Reserved, AMDGPU::TENSORcnt);
+  reserveRegisterTuples(Reserved, AMDGPU::AsyncMarker);
 
   // Reserve src_pops_exiting_wave_id - support is not implemented in Codegen.
   reserveRegisterTuples(Reserved, AMDGPU::SRC_POPS_EXITING_WAVE_ID);

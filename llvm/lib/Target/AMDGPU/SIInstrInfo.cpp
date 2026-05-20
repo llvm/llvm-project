@@ -10597,6 +10597,10 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
       Opcode = MFMAOp;
   }
 
+  // preGFX12Async pseudos share the encoding of their non-async sibling.
+  if (int NonAsync = AMDGPU::getPreGFX12NonAsyncOp(Opcode); NonAsync != -1)
+    Opcode = NonAsync;
+
   int32_t MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
 
   if (MCOp == AMDGPU::INSTRUCTION_LIST_END && ST.hasGFX11_7Insts())
