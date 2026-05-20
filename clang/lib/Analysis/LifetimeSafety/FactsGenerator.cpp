@@ -152,6 +152,21 @@ static OriginList *getRValueOrigins(const Expr *E, OriginList *List) {
   return E->isGLValue() ? List->peelOuterOrigin() : List;
 }
 
+static bool containsUnmodeledSubobject(const Expr *E) {
+  E = E->IgnoreParenImpCasts();
+
+  // Filter subobject expressions until access paths can model them.
+  if (isa<MemberExpr, ArraySubscriptExpr>(E))
+    return true;
+
+  // Filter a conditional if either possible result is an unmodeled subobject.
+  if (const auto *CO = dyn_cast<AbstractConditionalOperator>(E))
+    return containsUnmodeledSubobject(CO->getTrueExpr()) ||
+           containsUnmodeledSubobject(CO->getFalseExpr());
+
+  return false;
+}
+
 void FactsGenerator::VisitDeclStmt(const DeclStmt *DS) {
   for (const Decl *D : DS->decls())
     if (const auto *VD = dyn_cast<VarDecl>(D))
@@ -811,10 +826,10 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
   if (!isInvalidationMethod(*MD))
     return;
 
-  // Heuristics to turn-down false positives. Skip member field expressions for
-  // now. This is not a perfect filter and will still surface some false
-  // positives (e.g. `auto& r = s.v`).
-  if (!isa<DeclRefExpr>(Args[0]->IgnoreParenImpCasts()))
+  // Heuristic to turn down false positives. Skip subobject expressions for now.
+  // This is not a perfect filter and can still surface alias false positives
+  // (e.g. `auto& r = s.v`).
+  if (containsUnmodeledSubobject(Args[0]))
     return;
 
   OriginList *ThisList = getOriginsList(*Args[0]);
