@@ -54,12 +54,6 @@ class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
   const AArch64Subtarget *getST() const { return ST; }
   const AArch64TargetLowering *getTLI() const { return TLI; }
 
-  enum MemIntrinsicType {
-    VECTOR_LDST_TWO_ELEMENTS,
-    VECTOR_LDST_THREE_ELEMENTS,
-    VECTOR_LDST_FOUR_ELEMENTS
-  };
-
   /// Given a add/sub/mul operation, detect a widening addl/subl/mull pattern
   /// where both operands can be treated like extends. Returns the minimal type
   /// needed to compute the operation.
