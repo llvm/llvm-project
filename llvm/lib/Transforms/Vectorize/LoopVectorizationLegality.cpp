@@ -703,7 +703,7 @@ static bool isLoadSpeculativelyHoistable(Loop *L, LoadInst *LoadCandidate,
 }
 
 LoadInst *
-LoopVectorizationLegality::tryToFindDyanmicBoundLoadCandidate(Loop *L,
+LoopVectorizationLegality::tryToFindDynamicBoundLoadCandidate(Loop *L,
                                                               AAResults &AA) {
   if (!L->isInnermost())
     return nullptr;

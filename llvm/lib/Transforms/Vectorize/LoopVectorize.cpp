@@ -8163,8 +8163,10 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
       Phi.eraseFromParent();
 }
 
-// Is profitable to generate runtime check dominated version of the loop? which
-// has speculatively hoisted the loop bound load.
+// Profitability stub for speculative bound-load versioning.  Currently always
+// returns true.  Intended to be progressively refined with cost-model
+// heuristics (e.g. minimum trip count, vectorization width threshold) to rule
+// out obvious performance regressions before committing to the IR transform.
 static bool isSpeculativeBoundVersioningProfitable() { return true; }
 
 bool LoopVectorizePass::processLoop(Loop *L) {
@@ -8241,7 +8243,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       // again. 3) If the versioned loop is generated successfully, re-try
       // vectorization on the versioned loop.
       if (LoadInst *BoundLoad =
-              LVL.tryToFindDyanmicBoundLoadCandidate(L, *AA)) {
+              LVL.tryToFindDynamicBoundLoadCandidate(L, *AA)) {
         if (isSpeculativeBoundVersioningProfitable())
           if (Loop *Cand = versionLoopForInvariantBoundLoad(L, BoundLoad, *DT,
                                                             *LI, *AA, PSE, AC)) {
