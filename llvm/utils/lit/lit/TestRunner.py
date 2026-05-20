@@ -15,7 +15,7 @@ import lit.ShUtil as ShUtil
 import lit.Test as Test
 import lit.util
 from lit.BooleanExpression import BooleanExpression
-from lit.InprocBuiltins import InprocBuiltinIO, get_default_inproc_builtins
+from lit.InProcessBuiltins import InprocBuiltinIO, get_default_inproc_builtins
 from lit.ShCommands import Command
 from lit.ShellEnvironment import (
     InternalShellError,
