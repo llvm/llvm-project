@@ -268,6 +268,9 @@ public:
   // Pointer to this input file's .llvm_addrsig section, if it has one.
   const Elf_Shdr *addrsigSec = nullptr;
 
+  // Embedded unoptimized dynamic debug input section.
+  std::unique_ptr<InputSection> dynDbgSec;
+
   // SHT_LLVM_CALL_GRAPH_PROFILE section index.
   uint32_t cgProfileSectionIndex = 0;
 
@@ -384,6 +387,9 @@ std::unique_ptr<ELFFileBase> createObjFile(Ctx &, MemoryBufferRef mb,
                                            bool lazy = false);
 
 std::string replaceThinLTOSuffix(Ctx &, StringRef path);
+
+// Name of embedded unoptimized dynamic debug input/output section.
+constexpr StringRef dynDbgSecName = ".debug_llvm_dyndbg";
 
 } // namespace elf
 } // namespace lld

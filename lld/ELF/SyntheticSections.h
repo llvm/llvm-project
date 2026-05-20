@@ -1314,6 +1314,20 @@ private:
   SmallVector<const Symbol *, 0> symbols;
 };
 
+class DynamicDebugSection final : public SyntheticSection {
+public:
+  DynamicDebugSection(Ctx &);
+  size_t getSize() const override;
+  void writeTo(uint8_t *buf) override;
+};
+
+class DynamicDebugNote final : public SyntheticSection {
+public:
+  DynamicDebugNote(Ctx &);
+  size_t getSize() const override;
+  void writeTo(uint8_t *buf) override;
+};
+
 template <class ELFT> void createSyntheticSections(Ctx &);
 InputSection *createInterpSection(Ctx &);
 MergeInputSection *createCommentSection(Ctx &);

@@ -1,0 +1,381 @@
+REQUIRES: x86
+
+## This test simulates the input from dynamic debugging objects to test ELF LLD's handling
+## of various specific situations that can arise with such objects. These are mainly
+## related to dependencies from the "inner" unoptimized objects.
+
+RUN: rm -rf %t && split-file %s %t
+
+## Create the "outer" optimized objects.
+RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t/main.s -o %t/main.o
+RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t/foo.s -o %t/foo.o
+
+## Link only the "outer" optimized objects using `--gc-sections`.
+RUN: ld.lld -e main --gc-sections -o %t/out %t/main.o %t/foo.o
+RUN: llvm-readelf -s %t/out | FileCheck %s
+
+CHECK: Symbol table '.symtab' contains 12 entries:
+CHECK-DAG: {{.*}} 0 FUNC    LOCAL  DEFAULT [[#]] static_func
+CHECK-DAG: {{.*}} 0 OBJECT  LOCAL  DEFAULT [[#]] static_data
+CHECK-DAG: {{.*}} 0 FUNC    LOCAL  HIDDEN  [[#]] static_func.dyndbg.main
+CHECK-DAG: {{.*}} 0 OBJECT  LOCAL  HIDDEN  [[#]] static_data.dyndbg.main
+CHECK-DAG: {{.*}} 0 FUNC    LOCAL  DEFAULT [[#]] static_func
+CHECK-DAG: {{.*}} 0 OBJECT  LOCAL  DEFAULT [[#]] static_data
+CHECK-DAG: {{.*}} 0 FUNC    LOCAL  HIDDEN  [[#]] static_func.dyndbg.foo
+CHECK-DAG: {{.*}} 0 OBJECT  LOCAL  HIDDEN  [[#]] static_data.dyndbg.foo
+CHECK-DAG: {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] func
+CHECK-DAG: {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] main
+CHECK-DAG: {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] foo
+
+## Create and embed the "inner" unoptimized objects to simulate dynamic debugging objects.
+## Note that the embedded `.debug_llvm_dyndbg` section should be aligned to 8.
+RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t/main-unopt.s -o %t/main-unopt.o
+RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t/foo-unopt.s -o %t/foo-unopt.o
+RUN: llvm-objcopy --add-section=.debug_llvm_dyndbg=%t/main-unopt.o %t/main.o
+RUN: llvm-objcopy --set-section-alignment=.debug_llvm_dyndbg=8 %t/main.o
+RUN: llvm-objcopy --add-section=.debug_llvm_dyndbg=%t/foo-unopt.o %t/foo.o
+RUN: llvm-objcopy --set-section-alignment=.debug_llvm_dyndbg=8 %t/foo.o
+
+## Create shared object to test handling of "inner" only dependencies.
+RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t/shared.s -o %t/shared.o
+RUN: ld.lld -shared -o %t/shared.so %t/shared.o
+
+## Link simulated dynamic debugging objects.
+RUN: ld.lld -e main -o %t/out-dd %t/main.o %t/foo.o %t/shared.so
+RUN: llvm-readelf -Srsn %t/out-dd | FileCheck --check-prefixes=DD,NO-GC %s
+
+## Link simulated dynamic debugging objects using `--gc-sections`.
+## Note that `--gc-sections` is not yet supported for the "inner" unoptimized relocatable
+## link.
+RUN: ld.lld -e main --gc-sections -o %t/out-dd-gc %t/main.o %t/foo.o %t/shared.so
+RUN: llvm-readelf -Srsn %t/out-dd-gc | FileCheck --check-prefixes=DD,GC %s
+
+## Check dynamic debugging related sections.
+DD: There are 20 section headers, starting at offset {{.*}}:
+DD:     Name               Type     Address          Off    Size   ES Flg Lk    Inf   Al
+DD-DAG: .debug_llvm_dyndbg PROGBITS 0000000000000000 {{.*}} {{.*}} 00      0      0    8
+DD-DAG: .note.llvm.dyndbg  NOTE     0000000000000000 {{.*}} {{.*}} 00      0      0    4
+
+## Check GOT/PLT entries in "outer" ELF for shared symbols only referenced by "inner"
+## unoptimized objects.
+DD: Relocation section '.rela.dyn' at offset {{.*}} contains 1 entries:
+DD: {{.*}} {{.*}} R_X86_64_GLOB_DAT 0000000000000000 shared_data_for_unopt
+DD: Relocation section '.rela.plt' at offset {{.*}} contains 1 entries:
+DD: {{.*}} {{.*}} R_X86_64_JUMP_SLOT 0000000000000000 shared_func_for_unopt
+
+NO-GC: Symbol table '.dynsym' contains 4 entries:
+GC:    Symbol table '.dynsym' contains 3 entries:
+DD-DAG:    0000000000000000     0 OBJECT  GLOBAL DEFAULT   UND shared_data_for_unopt
+DD-DAG:    0000000000000000     0 FUNC    GLOBAL DEFAULT   UND shared_func_for_unopt
+NO-GC-DAG: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND undef_used_by_non_alloc
+
+NO-GC: Symbol table '.symtab' contains 20 entries:
+GC:    Symbol table '.symtab' contains 18 entries:
+DD-DAG:    {{.*}} 0 FUNC    LOCAL  DEFAULT [[#]] static_func
+DD-DAG:    {{.*}} 0 OBJECT  LOCAL  DEFAULT [[#]] static_data
+DD-DAG:    {{.*}} 0 FUNC    LOCAL  HIDDEN  [[#]] static_func.dyndbg.main
+DD-DAG:    {{.*}} 0 OBJECT  LOCAL  HIDDEN  [[#]] static_data.dyndbg.main
+DD-DAG:    {{.*}} 0 FUNC    LOCAL  DEFAULT [[#]] static_func
+DD-DAG:    {{.*}} 0 OBJECT  LOCAL  DEFAULT [[#]] static_data
+DD-DAG:    {{.*}} 0 FUNC    LOCAL  HIDDEN  [[#]] static_func.dyndbg.foo
+DD-DAG:    {{.*}} 0 OBJECT  LOCAL  HIDDEN  [[#]] static_data.dyndbg.foo
+DD-DAG:    {{.*}} 0 NOTYPE  LOCAL  HIDDEN  [[#]] _DYNAMIC
+DD-DAG:    {{.*}} 0 FUNC    WEAK   DEFAULT [[#]] comdat_func
+DD-DAG:    {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] func
+DD-DAG:    {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] main
+DD-DAG:    {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] foo
+DD-DAG:    {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] inlined_in_opt
+NO-GC-DAG: {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] unused_func
+DD-DAG:    {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] used_by_unused_func
+DD-DAG:    {{.*}} 0 OBJECT  GLOBAL DEFAULT   UND shared_data_for_unopt
+DD-DAG:    {{.*}} 0 FUNC    GLOBAL DEFAULT   UND shared_func_for_unopt
+NO-GC-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND undef_used_by_non_alloc
+
+DD:      LLVM  0x00000004  Unknown note type: (0x00000004)
+DD-NEXT: description data: 00 00 00 00
+
+## Extract and check "inner" ELF for the default link.
+RUN: llvm-objcopy --dump-section=.debug_llvm_dyndbg=%t/in-dd.o %t/out-dd /dev/null
+RUN: llvm-readelf -Ssg %t/in-dd.o | FileCheck --check-prefix=IN %s
+
+## Extract and check "inner" ELF for the `--gc-sections` link.
+RUN: llvm-objcopy --dump-section=.debug_llvm_dyndbg=%t/in-dd-gc.o %t/out-dd-gc /dev/null
+RUN: llvm-readelf -Ssg %t/in-dd-gc.o | FileCheck --check-prefix=IN %s
+
+IN: There are 9 section headers, starting at offset {{.*}}:
+IN:      Name            Type     Address          Off    Size   ES Flg Lk    Inf   Al
+IN:      .text           PROGBITS 0000000000000000 {{.*}} {{.*}} 00  AX  0      0    4
+IN-NEXT: .rela.text      RELA     0000000000000000 {{.*}} {{.*}} 18   I [[#]] [[#]]  8
+IN-NEXT: .debug_xyz      PROGBITS 0000000000000000 {{.*}} {{.*}} 00      0      0    1
+IN-NEXT: .rela.debug_xyz RELA     0000000000000000 {{.*}} {{.*}} 18   I [[#]] [[#]]  8
+IN-NEXT: .note.GNU-stack PROGBITS 0000000000000000 {{.*}} {{.*}} 00      0      0    1
+IN-NEXT: .symtab         SYMTAB   0000000000000000 {{.*}} {{.*}} 18     [[#]] [[#]]  8
+IN-NEXT: .shstrtab       STRTAB   0000000000000000 {{.*}} {{.*}} 00      0      0    1
+IN-NEXT: .strtab         STRTAB   0000000000000000 {{.*}} {{.*}} 00      0      0    1
+
+IN: Symbol table '.symtab' contains 24 entries:
+IN-DAG: {{.*}} 0 SECTION LOCAL  DEFAULT [[#]] .text
+IN-DAG: {{.*}} 0 SECTION LOCAL  DEFAULT [[#]] .debug_xyz
+IN-DAG: {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.static_func.dyndbg.main
+IN-DAG: {{.*}} 0 FUNC    WEAK   HIDDEN  [[#]] __dyndbg.comdat_func
+IN-DAG: {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.func
+IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND static_func.dyndbg.main
+IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND static_data.dyndbg.main
+IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND inlined_in_opt
+IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND comdat_func
+IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND shared_data_for_unopt
+IN-DAG: {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.main
+IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND foo
+IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND func
+IN-DAG: {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] __dyndbg.inlined_in_opt
+IN-DAG: {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.unused_func
+IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND used_by_unused_func
+IN-DAG: {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.static_func.dyndbg.foo
+IN-DAG: {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.foo
+IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND static_func.dyndbg.foo
+IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND static_data.dyndbg.foo
+IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND shared_func_for_unopt
+IN-DAG: {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.used_by_unused_func
+IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND undef_used_by_non_alloc
+## Groups have been resolved.
+IN: There are no section groups in this file.
+
+## Check disabling of incompatible ICF options.
+RUN: ld.lld -e main --icf=all -o %t/out-dd-icf-all %t/main.o %t/foo.o %t/shared.so 2>&1 \
+RUN:   | FileCheck --check-prefix=ICF-WARN %s
+RUN: cmp %t/out-dd-icf-all %t/out-dd
+RUN: ld.lld -e main --icf=safe -o %t/out-dd-icf-safe %t/main.o %t/foo.o %t/shared.so 2>&1 \
+RUN:   | FileCheck --check-prefix=ICF-WARN %s
+RUN: cmp %t/out-dd-icf-safe %t/out-dd
+
+ICF-WARN: ICF disabled because it is incompatible with dynamic debugging
+
+## Check relocatable link of simulated dynamic debugging objects.
+RUN: ld.lld -r -o %t/rel.o %t/main.o %t/foo.o
+RUN: llvm-objcopy --dump-section=.debug_llvm_dyndbg=%t/rel-dd.o %t/rel.o /dev/null
+RUN: ld.lld -r -o %t/rel-unopt.o %t/main-unopt.o %t/foo-unopt.o
+RUN: cmp %t/rel-dd.o %t/rel-unopt.o
+
+## Link the above relocatable link output with and without `--gc-sections`.
+RUN: ld.lld -e main -o %t/out-rel-dd %t/rel.o %t/shared.so
+RUN: llvm-readelf -Srsn %t/out-rel-dd | FileCheck --check-prefixes=DD,NO-GC %s
+RUN: ld.lld -e main --gc-sections -o %t/out-rel-dd-gc %t/rel.o %t/shared.so
+RUN: llvm-readelf -Srsn %t/out-rel-dd-gc | FileCheck --check-prefixes=DD,GC %s
+
+## Extract and check "inner" ELF for the above links.
+RUN: llvm-objcopy --dump-section=.debug_llvm_dyndbg=%t/in-rel-dd.o %t/out-rel-dd /dev/null
+RUN: llvm-readelf -Ssg %t/in-rel-dd.o | FileCheck --check-prefix=IN %s
+RUN: llvm-objcopy --dump-section=.debug_llvm_dyndbg=%t/in-rel-dd-gc.o %t/out-rel-dd-gc /dev/null
+RUN: llvm-readelf -Ssg %t/in-rel-dd-gc.o | FileCheck --check-prefix=IN %s
+
+#--- main.s
+# Optimized version of "main"
+
+.local static_func
+.type static_func,@function
+.section .text.static_func,"ax",@progbits
+static_func:
+  ret
+
+.global static_func.dyndbg.main
+.hidden static_func.dyndbg.main
+static_func.dyndbg.main = static_func
+
+.weak comdat_func
+.type comdat_func,@function
+.section .text.comdat_func,"axG",@progbits,comdat_func,comdat
+comdat_func:
+  ret
+
+.global func
+.type func,@function
+.section .text.func,"ax",@progbits
+func:
+  call static_func
+  mov static_data,%rax
+  ret
+
+.global main
+.type main,@function
+.section .text.main,"ax",@progbits
+main:
+  call foo
+  call func
+  ret
+
+.global inlined_in_opt
+.type inlined_in_opt,@function
+.section .text.inlined_in_opt,"ax",@progbits
+inlined_in_opt:
+  ret
+
+.global unused_func
+.type unused_func,@function
+.section .text.unused_func,"ax",@progbits
+unused_func:
+  call used_by_unused_func
+  ret
+
+.local static_data
+.type static_data,@object
+.section .data.static_data,"aw",@progbits
+static_data:
+.asciz "main static data"
+
+.global static_data.dyndbg.main
+.hidden static_data.dyndbg.main
+static_data.dyndbg.main = static_data
+
+#--- main-unopt.s
+# Unoptimized version of "main"
+
+.global __dyndbg.static_func.dyndbg.main
+.hidden __dyndbg.static_func.dyndbg.main
+.type __dyndbg.static_func.dyndbg.main,@function
+.section .text.__dyndbg.static_func.dyndbg.main,"ax",@progbits
+__dyndbg.static_func.dyndbg.main:
+  ret
+
+.weak __dyndbg.comdat_func
+.hidden __dyndbg.comdat_func
+.type __dyndbg.comdat_func,@function
+.section .text.__dyndbg.comdat_func,"axG",@progbits,__dyndbg.comdat_func,comdat
+__dyndbg.comdat_func:
+  ret
+
+.global __dyndbg.func
+.hidden __dyndbg.func
+.type __dyndbg.func,@function
+.section .text.__dyndbg.func,"ax",@progbits
+__dyndbg.func:
+  call static_func.dyndbg.main
+  mov static_data.dyndbg.main,%rax
+
+  # The following is only in the unoptimized due to inlining in the optimized.
+  call inlined_in_opt
+  call comdat_func
+  mov shared_data_for_unopt,%rax
+
+  ret
+
+.global __dyndbg.main
+.hidden __dyndbg.main
+.type __dyndbg.main,@function
+.section .text.__dyndbg.main,"ax",@progbits
+__dyndbg.main:
+  call foo
+  call func
+  ret
+
+.global __dyndbg.inlined_in_opt
+.type __dyndbg.inlined_in_opt,@function
+.section .text.__dyndbg.inlined_in_opt,"ax",@progbits
+__dyndbg.inlined_in_opt:
+  ret
+
+.global __dyndbg.unused_func
+.hidden __dyndbg.unused_func
+.type __dyndbg.unused_func,@function
+.section .text.__dyndbg.unused_func,"ax",@progbits
+__dyndbg.unused_func:
+  call used_by_unused_func
+  ret
+
+#--- foo.s
+# Optimized version of "foo"
+
+.local static_func
+.type static_func,@function
+.section .text.static_func,"ax",@progbits
+static_func:
+  ret
+
+.global static_func.dyndbg.foo
+.hidden static_func.dyndbg.foo
+static_func.dyndbg.foo = static_func
+
+.weak comdat_func
+.type comdat_func,@function
+.section .text.comdat_func,"axG",@progbits,comdat_func,comdat
+comdat_func:
+  ret
+
+.global foo
+.type foo,@function
+.section .text.foo,"ax",@progbits
+foo:
+  call static_func
+  mov static_data,%rax
+  ret
+
+.global used_by_unused_func
+.type used_by_unused_func,@function
+.section .text.used_by_unused_func,"ax",@progbits
+used_by_unused_func:
+  ret
+
+.local static_data
+.type static_data,@object
+.section .data.static_data,"aw",@progbits
+static_data:
+.asciz "foo static data"
+
+.global static_data.dyndbg.foo
+.hidden static_data.dyndbg.foo
+static_data.dyndbg.foo = static_data
+
+#--- foo-unopt.s
+# Unoptimized version of "foo"
+
+.global __dyndbg.static_func.dyndbg.foo
+.hidden __dyndbg.static_func.dyndbg.foo
+.type __dyndbg.static_func.dyndbg.foo,@function
+.section .text.__dyndbg.static_func.dyndbg.foo,"ax",@progbits
+__dyndbg.static_func.dyndbg.foo:
+  ret
+
+.weak __dyndbg.comdat_func
+.hidden __dyndbg.comdat_func
+.type __dyndbg.comdat_func,@function
+.section .text.__dyndbg.comdat_func,"axG",@progbits,__dyndbg.comdat_func,comdat
+__dyndbg.comdat_func:
+  ret
+
+.global __dyndbg.foo
+.hidden __dyndbg.foo
+.type __dyndbg.foo,@function
+.section .text.__dyndbg.foo,"ax",@progbits
+__dyndbg.foo:
+  call static_func.dyndbg.foo
+  mov static_data.dyndbg.foo,%rax
+
+  # The following is only in the unoptimized due to inlining in the optimized.
+  call shared_func_for_unopt
+  call comdat_func
+
+  ret
+
+.global __dyndbg.used_by_unused_func
+.hidden __dyndbg.used_by_unused_func
+.type __dyndbg.used_by_unused_func,@function
+.section .text.__dyndbg.used_by_unused_func,"ax",@progbits
+__dyndbg.used_by_unused_func:
+  ret
+
+.global undef_used_by_non_alloc
+
+.section .debug_xyz,"",@progbits
+.quad undef_used_by_non_alloc
+
+#--- shared.s
+.global shared_func_for_unopt
+.type shared_func_for_unopt,@function
+shared_func_for_unopt:
+  ret
+
+.data
+
+.global shared_func_for_unopt,shared_data_for_unopt
+.type shared_data_for_unopt,@object
+shared_data_for_unopt:
+.word 0xcafe
