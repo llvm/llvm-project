@@ -16110,7 +16110,7 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
     // If dx10_clamp is enabled, NaNs clamp to 0.0. This is the same as the
     // hardware fmed3 behavior converting to a min.
     // FIXME: Should this be allowing -0.0?
-    if (K1->isExactlyValue(1.0) && K0->isExactlyValue(0.0))
+    if (K1->isExactlyValue(1.0) && K0->isPosZero())
       return DAG.getNode(AMDGPUISD::CLAMP, SL, VT, Op0.getOperand(0));
   }
 
@@ -16308,8 +16308,8 @@ static bool isClampZeroToOne(SDValue A, SDValue B) {
   if (ConstantFPSDNode *CA = dyn_cast<ConstantFPSDNode>(A)) {
     if (ConstantFPSDNode *CB = dyn_cast<ConstantFPSDNode>(B)) {
       // FIXME: Should this be allowing -0.0?
-      return (CA->isExactlyValue(0.0) && CB->isExactlyValue(1.0)) ||
-             (CA->isExactlyValue(1.0) && CB->isExactlyValue(0.0));
+      return (CA->isPosZero() && CB->isExactlyValue(1.0)) ||
+             (CA->isExactlyValue(1.0) && CB->isPosZero());
     }
   }
 
