@@ -1252,8 +1252,7 @@ static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   return Intrinsic::not_intrinsic;
 }
 
-static bool shouldUpgradeNVPTXBF16IntrinsicSignature(Function *F,
-                                                     Intrinsic::ID IID) {
+static bool isLegacyNVPTXBF16IntSignature(Function *F, Intrinsic::ID IID) {
   FunctionType *NewFnTy = Intrinsic::getType(F->getContext(), IID);
   FunctionType *OldFnTy = F->getFunctionType();
   auto IsOldBF16StorageTy = [](Type *OldTy, Type *NewTy) {
@@ -1645,7 +1644,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       {
         Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
         if (IID != Intrinsic::not_intrinsic &&
-            shouldUpgradeNVPTXBF16IntrinsicSignature(F, IID)) {
+            isLegacyNVPTXBF16IntSignature(F, IID)) {
           NewFn = nullptr;
           return true;
         }
@@ -2909,7 +2908,7 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
   } else {
     Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
     if (IID != Intrinsic::not_intrinsic &&
-        shouldUpgradeNVPTXBF16IntrinsicSignature(F, IID)) {
+        isLegacyNVPTXBF16IntSignature(F, IID)) {
       rename(F);
       Function *NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
       SmallVector<Value *, 2> Args;
