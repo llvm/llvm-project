@@ -5115,12 +5115,12 @@ void SubprogramVisitor::CreateEntry(
   }()};
   std::optional<SourceName> distinctResultName;
   if (resultName) {
-    if (resultName->source != entryName.source) {
-      distinctResultName = resultName->source;
-    } else {
+    if (resultName->source == entryName.source) {
       Say(*resultName,
           "RESULT name '%s' must be different from ENTRY name '%s'"_err_en_US,
           resultName->source, entryName.source);
+    } else {
+      distinctResultName = resultName->source;
     }
   }
   if (outer.IsModule() && !attrs.test(Attr::PRIVATE)) {
