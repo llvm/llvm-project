@@ -1437,7 +1437,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S16, {{Sgpr16}, {Sgpr16}}, hasPST)
       .Uni(S16, {{UniInVgprS16}, {Vgpr16}}, !hasPST);
 
-  addRulesForGOpcs({G_FPTOUI, G_FPTOSI})
+  addRulesForGOpcs({G_FPTOUI, G_FPTOSI, G_FPTOUI_SAT, G_FPTOSI_SAT})
       .Any({{UniS16, S16}, {{UniInVgprS16}, {Vgpr16}}})
       .Any({{DivS16, S16}, {{Vgpr16}, {Vgpr16}}})
       .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}}, hasSALUFloat)
