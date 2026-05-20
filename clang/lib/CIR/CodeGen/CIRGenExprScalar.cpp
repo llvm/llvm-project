@@ -2821,19 +2821,25 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     auto testMSB = cir::VecCmpOp::create(
         builder, loc, vecTy, cir::CmpOpKind::lt, condValue, zeroVec);
     mlir::Value tmp = builder.createIntCast(testMSB, vecTy);
-    mlir::Value tmp2 = builder.createNot(testMSB);
+    mlir::Value tmp2 = builder.createNot(tmp);
 
-    auto rhsVecTy = cast<cir::VectorType>(rhsValue.getType());
     // Cast float to int to perform ANDs if necessary.
-    if (rhsVecTy.getElementType().isFloat()) {
-      cgf.cgm.errorNYI(loc, "VisitAbstractConditionalOperator: OpenCL "
-                            "TernaryOp Vec of type float");
-      return {};
+    mlir::Value rhsTmp = rhsValue;
+    mlir::Value lhsTmp = lhsValue;
+    bool wasCast = false;
+    auto rhsVecTy = cast<cir::VectorType>(rhsValue.getType());
+    if (cir::isAnyFloatingPointType(rhsVecTy.getElementType())) {
+      rhsTmp = builder.createBitcast(rhsValue, tmp2.getType());
+      lhsTmp = builder.createBitcast(lhsValue, tmp.getType());
+      wasCast = true;
     }
 
-    mlir::Value tmp3 = builder.createAnd(loc, rhsValue, tmp2);
-    mlir::Value tmp4 = builder.createAnd(loc, lhsValue, tmp);
-    return builder.createOr(loc, tmp3, tmp4);
+    mlir::Value tmp3 = builder.createAnd(loc, rhsTmp, tmp2);
+    mlir::Value tmp4 = builder.createAnd(loc, lhsTmp, tmp);
+    mlir::Value tmp5 = builder.createOr(loc, tmp3, tmp4);
+    if (wasCast)
+      tmp5 = builder.createBitcast(tmp5, rhsValue.getType());
+    return tmp5;
   }
 
   if (condType->isVectorType() || condType->isSveVLSBuiltinType()) {
