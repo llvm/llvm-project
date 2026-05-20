@@ -9502,6 +9502,38 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs, Inputs, Output));
 }
 
+// Options that need the profile compiler-rt library on the target toolchain.
+// Coverage mapping flags require -fprofile-instr-generate, so they belong here
+// too.
+static bool requiresProfileRT(unsigned ID) {
+  switch (ID) {
+  case options::OPT_fprofile_generate:
+  case options::OPT_fprofile_generate_EQ:
+  case options::OPT_fprofile_instr_generate:
+  case options::OPT_fprofile_instr_generate_EQ:
+  case options::OPT_fcoverage_mapping:
+  case options::OPT_fno_coverage_mapping:
+  case options::OPT_fcoverage_compilation_dir_EQ:
+  case options::OPT_fcoverage_prefix_map_EQ:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Options that need the ubsan compiler-rt library on the target toolchain.
+static bool requiresUBSanRT(unsigned ID) {
+  switch (ID) {
+  case options::OPT_fsanitize_EQ:
+  case options::OPT_fno_sanitize_EQ:
+  case options::OPT_fsanitize_minimal_runtime:
+  case options::OPT_fno_sanitize_minimal_runtime:
+    return true;
+  default:
+    return false;
+  }
+}
+
 void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
                                  const InputInfo &Output,
                                  const InputInfoList &Inputs,
@@ -9561,35 +9593,22 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fsanitize_trap_EQ,
       OPT_fno_sanitize_trap_EQ};
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
+  auto ToolChainHasRT = [&](const ToolChain &TC, StringRef Name) {
+    return TC.getVFS().exists(
+        TC.getCompilerRT(Args, Name, ToolChain::FT_Static));
+  };
   auto ShouldForwardForToolChain = [&](Arg *A, const ToolChain &TC) {
-    auto HasProfileRT = TC.getVFS().exists(
-        TC.getCompilerRT(Args, "profile", ToolChain::FT_Static));
-    // Don't forward profiling arguments if the toolchain doesn't support it.
-    // Without this check using it on the host would result in linker errors.
-    // Coverage mapping flags require -fprofile-instr-generate, so drop them
-    // together to avoid a device cc1 diagnostic.
-    if (!HasProfileRT &&
-        (A->getOption().matches(OPT_fprofile_generate) ||
-         A->getOption().matches(OPT_fprofile_generate_EQ) ||
-         A->getOption().matches(OPT_fprofile_instr_generate) ||
-         A->getOption().matches(OPT_fprofile_instr_generate_EQ) ||
-         A->getOption().matches(OPT_fcoverage_mapping) ||
-         A->getOption().matches(OPT_fno_coverage_mapping) ||
-         A->getOption().matches(OPT_fcoverage_compilation_dir_EQ) ||
-         A->getOption().matches(OPT_fcoverage_prefix_map_EQ)))
+    unsigned ID = A->getOption().getID();
+    // Don't forward arguments whose runtime support is missing from the target
+    // toolchain; forwarding them would produce linker errors or cc1
+    // diagnostics. Coverage mapping flags require -fprofile-instr-generate, so
+    // they are grouped with the profile flags.
+    if (requiresProfileRT(ID) && !ToolChainHasRT(TC, "profile"))
       return false;
-    auto HasUBSanRT = TC.getVFS().exists(
-        TC.getCompilerRT(Args, "ubsan_minimal", ToolChain::FT_Static));
-    // Don't forward sanitizer arguments if the toolchain doesn't support it.
-    // Without this check using it on the host would result in linker errors.
-    if (!HasUBSanRT &&
-        (A->getOption().matches(OPT_fsanitize_EQ) ||
-         A->getOption().matches(OPT_fno_sanitize_EQ) ||
-         A->getOption().matches(OPT_fsanitize_minimal_runtime) ||
-         A->getOption().matches(OPT_fno_sanitize_minimal_runtime)))
+    if (requiresUBSanRT(ID) && !ToolChainHasRT(TC, "ubsan_minimal"))
       return false;
     // Don't forward -mllvm to toolchains that don't support LLVM.
-    return TC.HasNativeLLVMSupport() || A->getOption().getID() != OPT_mllvm;
+    return TC.HasNativeLLVMSupport() || ID != OPT_mllvm;
   };
   auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A,
                            const ToolChain &TC) {
