@@ -40,7 +40,7 @@ define i32 @two_reductions(i64 %N, ptr %a, ptr %b) {
 ; UF1-NEXT:    WIDEN ir<%sum.a.next> = add ir<%sum.a>, ir<%la>
 ; UF1-NEXT:    WIDEN ir<%sum.b.next> = add ir<%sum.b>, ir<%lb>
 ; UF1-NEXT:    EMIT vp<%index.next> = add vp<%index>, ir<4>
-; UF1-NEXT:    EMIT vp<%vec.ind.next> = add vp<[[VP6]]>, vp<[[VP5]]>
+; UF1-NEXT:    EMIT vp<%vec.ind.next> = add nuw vp<[[VP6]]>, vp<[[VP5]]>
 ; UF1-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
 ; UF1-NEXT:    EMIT branch-on-cond vp<[[VP8]]>
 ; UF1-NEXT:  Successor(s): middle.block, vector.body
@@ -75,7 +75,7 @@ define i32 @two_reductions(i64 %N, ptr %a, ptr %b) {
 ; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b>.3 = phi (add) ir<0>, ir<%sum.b.next>.3
 ; UF4-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast vp<%index>
 ; UF4-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = step-vector i64
-; UF4-NEXT:    EMIT vp<%vec.iv> = add vp<[[VP4]]>, vp<[[VP5]]>
+; UF4-NEXT:    EMIT vp<%vec.iv> = add nuw vp<[[VP4]]>, vp<[[VP5]]>
 ; UF4-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = broadcast ir<4>
 ; UF4-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = add vp<[[VP6]]>, vp<[[VP5]]>
 ; UF4-NEXT:    EMIT vp<%vec.iv>.1 = add vp<[[VP4]]>, vp<[[VP7]]>

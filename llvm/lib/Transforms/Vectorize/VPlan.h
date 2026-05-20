@@ -3968,11 +3968,9 @@ protected:
 /// A Recipe for widening the canonical induction variable of the vector loop.
 /// First operand is the canonical IV recipe, a second step operand  (VF * Part)
 /// is added during unrolling.
-class VPWidenCanonicalIVRecipe : public VPSingleDefRecipe {
+class VPWidenCanonicalIVRecipe : public VPRecipeWithIRFlags {
 public:
-  VPWidenCanonicalIVRecipe(VPRegionValue *CanonicalIV)
-      : VPSingleDefRecipe(VPRecipeBase::VPWidenCanonicalIVSC, {CanonicalIV},
-                          CanonicalIV->getType(), /*UV=*/nullptr) {}
+  VPWidenCanonicalIVRecipe(VPRegionValue *CanonicalIV);
 
   ~VPWidenCanonicalIVRecipe() override = default;
 
