@@ -3633,13 +3633,13 @@ public:
         m_description.assign(std::string(option_arg));
         break;
       case 'm': {
-        uint64_t this_mask = (uint64_t) OptionArgParser::ToOptionEnum(
-            option_arg, g_breakpoint_override_add_options[option_idx].enum_values,
+        uint64_t this_mask = (uint64_t)OptionArgParser::ToOptionEnum(
+            option_arg,
+            g_breakpoint_override_add_options[option_idx].enum_values,
             eResolverUnknown, error);
-            if (error.Success())
-              m_mask |= this_mask;
-        }
-        break;
+        if (error.Success())
+          m_mask |= this_mask;
+      } break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -3778,9 +3778,10 @@ protected:
         }
       }
     }
-    target->DescribeBreakpointOverrides(result.GetOutputStream(), idxs,
-          GetCommandInterpreter().GetDebugger().GetTerminalWidth(),
-          GetCommandInterpreter().GetDebugger().GetUseColor());
+    target->DescribeBreakpointOverrides(
+        result.GetOutputStream(), idxs,
+        GetCommandInterpreter().GetDebugger().GetTerminalWidth(),
+        GetCommandInterpreter().GetDebugger().GetUseColor());
 
     if (idxs.empty()) {
       result.SetStatus(eReturnStatusSuccessFinishResult);

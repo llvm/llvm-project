@@ -30,7 +30,7 @@ public:
   CopyIntoNewTarget(Target &target) override {
     return Target::BreakpointResolverOverrideUP(
         new ScriptedBreakpointResolverOverride(target, m_desc, m_type_mask,
-            m_class_name, m_args_data));
+                                               m_class_name, m_args_data));
   }
 
   lldb::BreakpointResolverSP

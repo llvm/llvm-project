@@ -952,11 +952,9 @@ void Target::GetBreakpointNames(std::vector<std::string> &names) {
   llvm::sort(names);
 }
 
-llvm::Expected<lldb::user_id_t>
-Target::AddBreakpointResolverOverride(llvm::StringRef class_name,
-                                      uint64_t type_mask,
-                                      StructuredData::DictionarySP args_data_sp,
-                                      llvm::StringRef description) {
+llvm::Expected<lldb::user_id_t> Target::AddBreakpointResolverOverride(
+    llvm::StringRef class_name, uint64_t type_mask,
+    StructuredData::DictionarySP args_data_sp, llvm::StringRef description) {
   if (class_name.empty())
     return LLDB_INVALID_INDEX64;
 
@@ -965,7 +963,8 @@ Target::AddBreakpointResolverOverride(llvm::StringRef class_name,
 
   BreakpointResolverOverrideUP new_override_up(
       new ScriptedBreakpointResolverOverride(*this, std::string(description),
-                                             type_mask, std::string(class_name), impl));
+                                             type_mask, std::string(class_name),
+                                             impl));
   llvm::Error error = new_override_up->Validate();
   if (error)
     return error;
@@ -978,7 +977,9 @@ std::string Target::BreakpointResolverOverride::DescribeTypeMask() {
 }
 
 void Target::DescribeBreakpointOverrides(Stream &stream,
-    std::vector<lldb::user_id_t> &idxs, uint32_t output_width, bool use_color) {
+                                         std::vector<lldb::user_id_t> &idxs,
+                                         uint32_t output_width,
+                                         bool use_color) {
   if (m_breakpoint_overrides.size() == 0) {
     stream << "No overrides.\n";
     return;
@@ -992,14 +993,15 @@ void Target::DescribeBreakpointOverrides(Stream &stream,
       if (print_first) {
 
         ansi::OutputWordWrappedLines(stream, "ID    Mask    Description\n",
-            output_width, use_color);
+                                     output_width, use_color);
         ansi::OutputWordWrappedLines(stream, "----  ------  -----------\n",
-            output_width, use_color);
+                                     output_width, use_color);
         print_first = false;
       }
       auto content = llvm::formatv("{0,4}  {1,6}  {2}\n", elem.first,
-          elem.second->DescribeTypeMask(),
-          elem.second->GetDescription()).str();
+                                   elem.second->DescribeTypeMask(),
+                                   elem.second->GetDescription())
+                         .str();
       ansi::OutputWordWrappedLines(stream, content, output_width, use_color);
       if (!empty)
         idxs.erase(idx_pos);

@@ -69,7 +69,9 @@ class TestOverridesResolver(TestBase):
             self.assertError(error, "Made the override successfully")
 
         # Check the override listing, make sure our new entry is present:
-        self.expect("breakpoint override list", substrs=[str(override_id), mask_str, help_text])
+        self.expect(
+            "breakpoint override list", substrs=[str(override_id), mask_str, help_text]
+        )
 
         return override_id
 
@@ -127,7 +129,7 @@ class TestOverridesResolver(TestBase):
         # Make sure that the override was called but trivial was not:
         self.expect("checker override", startstr="1")
         self.expect("checker trivial", startstr="0")
-        
+
         # Now continue and we'll hit this breakpoint but not in the
         # right place:
         (target, process, thread, bkpt) = lldbutil.run_to_breakpoint_do_run(
@@ -151,7 +153,7 @@ class TestOverridesResolver(TestBase):
         # override functions should have been called.
         self.expect("checker trivial", startstr="1")
         self.expect("checker override", startstr="1")
-        
+
         threads = lldbutil.continue_to_breakpoint(process, name_bkpt)
         self.assertEqual(len(threads), 1, "Hit our name breakpoint")
         func_name = threads[0].frames[0].name
@@ -182,7 +184,7 @@ class TestOverridesResolver(TestBase):
         # so the counts should still be at 1 each:
         self.expect("checker trivial", startstr="1")
         self.expect("checker override", startstr="1")
-        
+
         self.assertEqual(new_bkpt.num_locations, 1, "Made breakpoint")
         threads = lldbutil.continue_to_breakpoint(process, new_bkpt)
         self.assertEqual(len(threads), 1, "Hit our new breakpoint")
@@ -193,4 +195,3 @@ class TestOverridesResolver(TestBase):
         # type that was not part of the mask.
         self.expect("checker trivial_not_name", startstr="0")
         self.expect("checker override_not_file", startstr="0")
-        

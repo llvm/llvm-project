@@ -39,7 +39,6 @@ const char *BreakpointResolver::g_ty_to_name[] = {"FileAndLine", "Address",
                                                   "SymbolName",  "SourceRegex",
                                                   "Python",   "Exception",
                                                   "Unknown"};
-            
 
 const char *BreakpointResolver::g_option_names[static_cast<uint32_t>(
     BreakpointResolver::OptionNames::LastOptionName)] = {
@@ -95,16 +94,15 @@ std::string BreakpointResolver::DescribeMask(uint64_t mask) {
     result.push_back('F');
   if (mask & eResolverAddress)
     result.push_back('A');
-  if (mask &  eResolverName)
+  if (mask & eResolverName)
     result.push_back('N');
   if (mask & eResolverFileRegex)
     result.push_back('S');
-  if (mask &  eResolverPython)
+  if (mask & eResolverPython)
     result.push_back('P');
-  if (mask &  eResolverException)
+  if (mask & eResolverException)
     result.push_back('E');
   return result;
-
 }
 
 BreakpointResolver::BreakpointResolver(const BreakpointSP &bkpt,

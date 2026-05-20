@@ -8,17 +8,20 @@ trivial_count = 0
 override_not_file = 0
 trivial_not_name = 0
 
+
 class CheckerCommand:
     def __init__(self, debugger, internal_dict):
         self.debugger = debugger
+
     def get_short_help(self):
         return "A command the checks how many times the resolvers were called"
+
     def __call__(self, debugger, command, exe_ctx, result):
         global override_count
         global trivial_count
         global override_not_file
         global trivial_not_name
-        
+
         result.SetStatus(lldb.eReturnStatusSuccessFinishResult)
         if command == "trivial":
             result.AppendMessage(str(trivial_count))
@@ -32,10 +35,9 @@ class CheckerCommand:
         if command == "trivial_not_name":
             result.AppendMessage(str(trivial_not_name))
             return
-    
+
         result.AppendError(f"unknown check type: {command}")
-            
-    
+
 
 class OverrideExample:
     def __init__(
@@ -72,11 +74,11 @@ class OverrideExample:
     ):
         global override_count
         global override_not_file
-        
+
         override_count += 1
 
         strm = lldb.SBStream()
-        
+
         initial_resolver.GetAsJSON(strm)
         type = initial_resolver.GetValueForKey("Type").GetStringValue(1000)
         if type == "FileAndLine":
@@ -110,9 +112,9 @@ class TrivialExample:
         global trivial_count
         global trivial_not_name
         trivial_count += 1
-        
+
         strm = lldb.SBStream()
-        
+
         initial_resolver.GetAsJSON(strm)
         type = initial_resolver.GetValueForKey("Type").GetStringValue(1000)
         if type != "SymbolName":
@@ -121,6 +123,7 @@ class TrivialExample:
         """Trivial - overrides nothing"""
         return False
 
+
 def __lldb_init_module(debugger, dict):
     print(f"About to run: command script add -c {__name__}.CheckerCommand checker")
-    debugger.HandleCommand(f"command script add -c {__name__}.CheckerCommand checker") 
+    debugger.HandleCommand(f"command script add -c {__name__}.CheckerCommand checker")

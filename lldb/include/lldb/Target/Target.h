@@ -1009,17 +1009,18 @@ public:
   // the original one.
 
   /// This is the abstract version of the override.  Particular implementations
-  /// e.g. the scripted override resolve instantiate actual versions of the class.
-  /// The constructor takes the target this resolver is registered in, a
+  /// e.g. the scripted override resolve instantiate actual versions of the
+  /// class. The constructor takes the target this resolver is registered in, a
   /// description for the override and a mask of the resolver types this
-  /// overrides, made of elements of the BreakpointResolverType enum. 
+  /// overrides, made of elements of the BreakpointResolverType enum.
   class BreakpointResolverOverride;
   using BreakpointResolverOverrideUP =
       std::unique_ptr<BreakpointResolverOverride>;
 
   class BreakpointResolverOverride {
   public:
-    BreakpointResolverOverride(Target &target, const std::string &description, uint64_t type_mask)
+    BreakpointResolverOverride(Target &target, const std::string &description,
+                               uint64_t type_mask)
         : m_target(target), m_desc(description), m_type_mask(type_mask) {}
 
     virtual BreakpointResolverOverrideUP CopyIntoNewTarget(Target &target) = 0;
@@ -1032,6 +1033,7 @@ public:
     const std::string &GetDescription() { return m_desc; }
     uint64_t GetTypeMask() { return m_type_mask; }
     std::string DescribeTypeMask();
+
   protected:
     Target &m_target;
     std::string m_desc;
@@ -1049,8 +1051,7 @@ public:
 
   /// Add a breakpoint override resolver.  Return the ID or an error:
   llvm::Expected<lldb::user_id_t>
-  AddBreakpointResolverOverride(llvm::StringRef class_name,
-                                uint64_t type_mask,
+  AddBreakpointResolverOverride(llvm::StringRef class_name, uint64_t type_mask,
                                 StructuredData::DictionarySP args_data_sp,
                                 llvm::StringRef description);
 
@@ -1061,7 +1062,8 @@ public:
 
   void ClearBreakpointResolverOverrides() { m_breakpoint_overrides.clear(); }
 
-  lldb::BreakpointResolverSP CheckBreakpointOverrides(lldb::BreakpointResolverSP original_sp);
+  lldb::BreakpointResolverSP
+  CheckBreakpointOverrides(lldb::BreakpointResolverSP original_sp);
 
   /// Describe the breakpoint overrides.  If ixds is empty, list all.  Otherwise
   /// list the overrides whose ids match the ones given in idxs.  The matched

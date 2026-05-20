@@ -163,10 +163,10 @@ public:
       return ResolverTy::UnknownResolver;
     return (enum ResolverTy)SubclassID;
   }
-  
+
   uint64_t MaskForResolverTy();
-  
-  /// Returns true if this resolver is in the mask (made of elements of 
+
+  /// Returns true if this resolver is in the mask (made of elements of
   /// BreakpointResolverType.
   bool ResolverInMask(uint64_t mask);
   static std::string DescribeMask(uint64_t mask);
@@ -175,7 +175,7 @@ public:
   static const char *ResolverTyToName(enum ResolverTy);
 
   static ResolverTy NameToResolverTy(llvm::StringRef name);
-  
+
   virtual lldb::BreakpointResolverSP
   CopyForBreakpoint(lldb::BreakpointSP &breakpoint) = 0;
 
