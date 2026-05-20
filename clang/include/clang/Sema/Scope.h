@@ -140,12 +140,8 @@ public:
     /// This is the scope of a C++ catch statement.
     CatchScope = 0x1000000,
 
-    /// This is the scope corresponding to a C++26 expansion statement.
-    ///
-    /// NOTE: While currently unused, this flag is reserved for the
-    /// implementation of expansion statements; do not remove it or
-    /// reuse it for anything else.
-    ExpansionStmtScope = 0x2000000,
+    /// This bit is currently unused.
+    Unused = 0x2000000,
 
     /// This is a scope of some OpenMP directive with
     /// order clause which specifies concurrent
