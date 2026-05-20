@@ -163,9 +163,22 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     // call right here.
     auto gd = GlobalDecl(dtor, Dtor_Complete);
     fnOp = cgm.getAddrAndTypeOfCXXStructor(gd).second;
+    // When a global has a constant initializer that fixes the active member
+    // of a union (e.g. an SSO short variant), CIR creates the global with
+    // the initializer's narrowed record type, so `getAddrOfGlobalVar` returns
+    // a pointer to the narrowed type rather than the variable's declared
+    // type.  Mirror the cast pattern from `emitGlobalVarDeclLValue` so the
+    // destructor receives a `this` pointer typed as the declared class.
+    mlir::Value thisAddr = cgm.getAddrOfGlobalVar(vd);
+    mlir::Type realVarTy = cgm.getTypes().convertTypeForMem(type);
+    cir::PointerType realPtrTy = cir::PointerType::get(
+        realVarTy,
+        mlir::cast<cir::PointerType>(thisAddr.getType()).getAddrSpace());
+    if (realPtrTy != thisAddr.getType())
+      thisAddr = builder.createBitcast(thisAddr.getLoc(), thisAddr, realPtrTy);
     builder.createCallOp(cgf.getLoc(vd->getSourceRange()),
                          mlir::FlatSymbolRefAttr::get(fnOp.getSymNameAttr()),
-                         mlir::ValueRange{cgm.getAddrOfGlobalVar(vd)});
+                         mlir::ValueRange{thisAddr});
     assert(fnOp && "expected cir.func");
     // TODO(cir): This doesn't do anything but check for unhandled conditions.
     // What it is meant to do should really be happening in LoweringPrepare.
@@ -180,6 +193,8 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     // address of the global into whose dtor region we are emiiting the destroy.
     // The same applies to code above where it is calling getAddrOfGlobalVar.
     mlir::Value globalVal = builder.createGetGlobal(addr);
+    globalVal.getDefiningOp<cir::GetGlobalOp>().setStaticLocal(
+        addr.getStaticLocalGuard().has_value());
     CharUnits alignment = cgf.getContext().getDeclAlign(vd);
     Address globalAddr{globalVal, cgf.convertTypeForMem(type), alignment};
     cgf.emitDestroy(globalAddr, type, cgf.getDestroyer(dtorKind));
@@ -293,7 +308,11 @@ void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
                                      builder.getInsertionBlock()};
   scope.setAsGlobalInit();
   builder.setInsertionPointToStart(block);
-  mlir::Value getGlobal = builder.createGetGlobal(addr);
+  mlir::Value getGlobal = builder.createGetGlobal(addr, varDecl->getTLSKind());
+  // If we're initializing a static local with a guard variable, set the flag
+  // that indicates that.
+  getGlobal.getDefiningOp<cir::GetGlobalOp>().setStaticLocal(
+      addr.getStaticLocalGuard().has_value());
 
   Address declAddr(getGlobal, getASTContext().getDeclAlign(varDecl));
   assert(performInit && "cannot have a constant initializer which needs "
@@ -322,8 +341,7 @@ void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
 void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
                                             cir::GlobalOp addr,
                                             bool performInit) {
-  assert(!varDecl->isStaticLocal() &&
-         varDecl->getTLSKind() == VarDecl::TLS_None);
+  assert(!varDecl->isStaticLocal());
 
   // Create a CIRGenFunction to emit the initializer. While this isn't a true
   // function, the handling works the same way.

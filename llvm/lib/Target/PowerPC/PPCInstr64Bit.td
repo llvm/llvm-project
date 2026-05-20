@@ -207,6 +207,26 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
     Requires<[IsPPC64]>;
 }
 
+let Predicates = [IsAIX] in {
+  let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
+      Defs = [LR8, X2], Uses = [RM, X1], RST = 2, RA = 1, D = 40 in {
+    def BL8_LDinto_toc : IForm_and_DForm_1<18, 0, 1, 58,
+                        (outs), (ins calltarget:$LI),
+                        "bl $LI\n\tld 2, 40(1)", IIC_BrB,
+                        []>,
+                         Requires<[IsPPC64]>;
+  }
+
+  let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
+      Defs = [LR8, X2, RM], Uses = [RM, X1], RST = 2, RA = 1, D = 40 in {
+    def BL8_LDinto_toc_RM : IForm_and_DForm_1<18, 0, 1, 58,
+                          (outs), (ins calltarget:$LI),
+                          "bl $LI\n\tld 2, 40(1)", IIC_BrB,
+                          []>,
+                           Requires<[IsPPC64]>;
+  }
+}
+
 } // Interpretation64Bit
 
 // FIXME: Duplicating this for the asm parser should be unnecessary, but the
@@ -259,16 +279,25 @@ def : Pat<(PPCcall_rm (i64 mcsym:$dst)),
 def : Pat<(PPCcall_nop_rm (i64 mcsym:$dst)),
           (BL8_NOP_RM mcsym:$dst)>;
 
+let Predicates = [IsAIX] in {
+  def : Pat<(PPCbl_load_toc (i64 texternalsym:$dst)),
+            (BL8_LDinto_toc texternalsym:$dst)>;
+
+  def : Pat<(PPCbl_load_toc_rm (i64 texternalsym:$dst)),
+            (BL8_LDinto_toc_RM texternalsym:$dst)>;
+}
+
 // Atomic operations
 // FIXME: some of these might be used with constant operands. This will result
 // in constant materialization instructions that may be redundant. We currently
 // clean this up in PPCMIPeephole with calls to
 // PPCInstrInfo::convertToImmediateForm() but we should probably not emit them
 // in the first place.
-foreach op = ["add", "sub", "and", "or", "xor", "nand", "min", "max", "umax",
-              "umin"] in {
-  defvar pat = !cast<PatFrag>("atomic_load_"#op#"_i64");
-  defvar pseudo = "ATOMIC_LOAD_"#!toupper(op)#"_I64";
+foreach op = ["load_add", "load_sub", "load_and", "load_or", "load_xor",
+              "load_nand", "load_min", "load_max", "load_umax", "load_umin",
+              "swap"] in {
+  defvar pat = !cast<PatFrag>("atomic_"#op#"_i64");
+  defvar pseudo = "ATOMIC_"#!toupper(op)#"_I64";
   let Defs = [CR0] in
     def pseudo : PPCCustomInserterPseudo<
         (outs g8rc:$dst), (ins memrr:$ptr, i32imm:$sz, g8rc:$incr),
@@ -277,20 +306,13 @@ foreach op = ["add", "sub", "and", "or", "xor", "nand", "min", "max", "umax",
           (!cast<Instruction>(pseudo) memrr:$ptr, 8, g8rc:$incr)>;
 }
 
-let Defs = [CR0] in {
+let Defs = [CR0] in
   def ATOMIC_CMP_SWAP_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$old, g8rc:$new),
     "#" # NAME, []>;
 
-  def ATOMIC_SWAP_I64 : PPCCustomInserterPseudo<
-    (outs g8rc:$dst), (ins memrr:$ptr, i32imm:$sz, g8rc:$new),
-    "#" # NAME, []>;
-}
-
 def : Pat<(i64 (atomic_cmp_swap_i64 ForceXForm:$ptr, g8rc:$old, g8rc:$new)),
           (ATOMIC_CMP_SWAP_I64 memrr:$ptr, i64:$old, i64:$new)>;
-def : Pat<(i64 (atomic_swap_i64 ForceXForm:$ptr, g8rc:$new)),
-          (ATOMIC_SWAP_I64 memrr:$ptr, 8, i64:$new)>;
 
 // Instructions to support atomic operations
 let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
@@ -320,25 +342,17 @@ def LDAT : X_RD5_RS5_IM5<31, 614, (outs g8prc:$RST), (ins g8prc:$RSTi, ptr_rc_no
            RegConstraint<"$RSTi = $RST">;
 
 let hasExtraSrcRegAllocReq = 1, mayStore = 1,
-      isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in
-def LDAT_CSNE : X_RD5_RS5_IM5<31, 614, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, u5imm:$RB),
-                         "ldat $RST, $RA, $RB", IIC_LdStLoad>,
+      isCodeGenOnly = 1, hasNoSchedulingInfo = 1, RB = 16 in
+def LDAT_CSNE : X_RD5_RS5_IM5<31, 614, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA),
+                         "ldat $RST, $RA, 16", IIC_LdStLoad>,
            Requires<[IsISA3_0]>;
 }
 
-def LDAT_PSEUDO : PPCCustomInserterPseudo<
-    (outs g8rc:$dst),
-    (ins ptr_rc_nor0:$ptr, g8rc:$val, u5imm:$fc),
-    "#LDAT_PSEUDO",
-    [(set i64:$dst, (int_ppc_amo_ldat ptr_rc_nor0:$ptr, g8rc:$val,
-                                      u5imm_timm:$fc))]>;
+def : Pat<(int_ppc_amo_ldat ptr_rc_nor0:$ptr, g8rc:$val, u5imm_timm:$fc),
+          (EVEN8 (LDAT (PAIR8 (i64 (IMPLICIT_DEF)), $val), $ptr, $fc))>;
 
-def LDAT_COND_PSEUDO : PPCCustomInserterPseudo <
-    (outs g8rc:$dst),
-    (ins ptr_rc_nor0:$ptr, u5imm:$fc),
-    "#LDAT_COND_PSEUDO",
-    [(set i64:$dst, (int_ppc_amo_ldat_cond ptr_rc_nor0:$ptr,
-                                            u5imm_timm:$fc))]>;
+def : Pat<(int_ppc_amo_ldat_cond ptr_rc_nor0:$ptr, u5imm_timm:$fc),
+          (EVEN8 (LDAT (PAIR8 (i64 (IMPLICIT_DEF)), (i64 (IMPLICIT_DEF))), $ptr, $fc))>;
 
 let Defs = [X8, X9, X10], Uses = [X9, X10] in
 def LDAT_CSNE_PSEUDO : PPCPostRAExpPseudo<
@@ -412,11 +426,11 @@ def : Pat<(int_ppc_cmpxchg_i128 ForceXForm:$ptr,
                            g8rc:$new_lo,
                            g8rc:$new_hi))>;
 
-let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
+let mayStore = 1, mayLoad = 1, hasSideEffects = 0 in
 def STDAT : XForm_base_r3xo_memOp<31, 742, (outs),
                                   (ins g8rc:$RST, ptr_rc_nor0:$RA, u5imm:$RB),
                                   "stdat $RST, $RA, $RB", IIC_LdStStore,
-                                  [(PPCstat i64:$RST, ptr_rc_nor0:$RA,
+                                  [(int_ppc_amo_stdat ptr_rc_nor0:$RA, i64:$RST,
                                             u5imm_timm:$RB)]>, isPPC64,
             Requires<[IsISA3_0]>;
 
@@ -642,6 +656,9 @@ defm ORC8 : XForm_6r<31, 412, (outs g8rc:$RA), (ins g8rc:$RST, g8rc:$RB),
                      "orc", "$RA, $RST, $RB", IIC_IntSimple,
                      [(set i64:$RA, (or i64:$RST, (not i64:$RB)))]>;
 let isCommutable = 1 in {
+defm EQV8 : XForm_6r<31, 284, (outs g8rc:$RA), (ins g8rc:$RST, g8rc:$RB),
+                     "eqv", "$RA, $RST, $RB", IIC_IntSimple,
+                     [(set i64:$RA, (not (xor i64:$RST, i64:$RB)))]>;
 defm XOR8 : XForm_6r<31, 316, (outs g8rc:$RA), (ins g8rc:$RST, g8rc:$RB),
                      "xor", "$RA, $RST, $RB", IIC_IntSimple,
                      [(set i64:$RA, (xor i64:$RST, i64:$RB))]>;

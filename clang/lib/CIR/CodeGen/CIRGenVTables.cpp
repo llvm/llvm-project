@@ -752,9 +752,18 @@ void CIRGenFunction::emitCallAndReturnForThunk(cir::FuncOp callee,
   else
     assert(!cir::MissingFeatures::opCallMustTail());
 
-  // Emit return.
-  if (!resultType->isVoidType() && slot.isNull())
-    cgm.getCXXABI().emitReturnFromThunk(*this, rv, resultType);
+  // Emit return.  For aggregate returns the call has already written the
+  // result through the slot bound to returnValue above; emit the
+  // corresponding load+return here rather than leaving the function to
+  // fall off the end and have LexicalScope::emitImplicitReturn drop a
+  // `cir.trap` / `cir.unreachable` in its place (which would silently
+  // discard the result we just stored).
+  if (!resultType->isVoidType()) {
+    if (slot.isNull())
+      cgm.getCXXABI().emitReturnFromThunk(*this, rv, resultType);
+    else
+      emitReturnOfRValue(loc, rv, resultType);
+  }
 
   // Disable final ARC autorelease.
   assert(!cir::MissingFeatures::objCLifetime());
@@ -900,10 +909,12 @@ cir::FuncOp CIRGenVTables::maybeEmitThunk(GlobalDecl gd,
     assert(oldThunkFn.isDeclaration() && "Shouldn't replace non-declaration");
 
     // Remove the name from the old thunk function and get a new thunk.
+    cgm.eraseGlobalSymbol(oldThunkFn);
     oldThunkFn.setName(StringRef());
     thunkFn =
         cir::FuncOp::create(cgm.getBuilder(), thunk->getLoc(), name.str(),
                             thunkFnTy, cir::GlobalLinkageKind::ExternalLinkage);
+    cgm.insertGlobalSymbol(thunkFn);
     cgm.setCIRFunctionAttributes(md, fnInfo, thunkFn, /*isThunk=*/false);
 
     if (!oldThunkFn->use_empty())

@@ -146,19 +146,17 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    sra.w $a1, $a0, $a1
+; CHECK-NEXT:    sra.w $a0, $a0, $a1
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB4_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    addi.w $a0, $a1, 0
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(bar)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    bstrpick.d $a1, $a0, 31, 0
-; CHECK-NEXT:    vldi $vr0, 0
-; CHECK-NEXT:    vinsgr2vr.d $vr0, $a1, 0
-; CHECK-NEXT:    vpcnt.d $vr0, $vr0
-; CHECK-NEXT:    vpickve2gr.d $a1, $vr0, 0
-; CHECK-NEXT:    bnez $a0, .LBB4_1
+; CHECK-NEXT:    move $a1, $a0
+; CHECK-NEXT:    vreplgr2vr.w $vr0, $a0
+; CHECK-NEXT:    vpcnt.w $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
+; CHECK-NEXT:    bnez $a1, .LBB4_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -175,11 +173,9 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:    addi.w $a0, $a1, 0
 ; NORMV-NEXT:    pcaddu18i $ra, %call36(bar)
 ; NORMV-NEXT:    jirl $ra, $ra, 0
-; NORMV-NEXT:    bstrpick.d $a1, $a0, 31, 0
-; NORMV-NEXT:    vldi $vr0, 0
-; NORMV-NEXT:    vinsgr2vr.d $vr0, $a1, 0
-; NORMV-NEXT:    vpcnt.d $vr0, $vr0
-; NORMV-NEXT:    vpickve2gr.d $a1, $vr0, 0
+; NORMV-NEXT:    vreplgr2vr.w $vr0, $a0
+; NORMV-NEXT:    vpcnt.w $vr0, $vr0
+; NORMV-NEXT:    vpickve2gr.w $a1, $vr0, 0
 ; NORMV-NEXT:    bnez $a0, .LBB4_1
 ; NORMV-NEXT:  # %bb.2: # %bb7
 ; NORMV-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
@@ -275,8 +271,7 @@ define void @test7(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(foo)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    vldi $vr0, 0
-; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; CHECK-NEXT:    vreplgr2vr.d $vr0, $a0
 ; CHECK-NEXT:    vpcnt.d $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 0
 ; CHECK-NEXT:    bnez $a0, .LBB6_1
@@ -296,8 +291,7 @@ define void @test7(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    pcaddu18i $ra, %call36(foo)
 ; NORMV-NEXT:    jirl $ra, $ra, 0
-; NORMV-NEXT:    vldi $vr0, 0
-; NORMV-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; NORMV-NEXT:    vreplgr2vr.d $vr0, $a0
 ; NORMV-NEXT:    vpcnt.d $vr0, $vr0
 ; NORMV-NEXT:    vpickve2gr.d $a0, $vr0, 0
 ; NORMV-NEXT:    bnez $a0, .LBB6_1

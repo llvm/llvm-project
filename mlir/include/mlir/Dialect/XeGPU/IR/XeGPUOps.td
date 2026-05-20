@@ -1138,9 +1138,9 @@ def XeGPU_FenceOp: XeGPU_Op<"fence", []> {
   let extraClassDeclaration = extraBaseClassDeclaration;
 }
 
-def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [AllTypesMatch<["source", "result"]>, 
-      MemoryEffects<[MemRead, MemWrite]>, 
-      AnchorLayoutInterface]> {    
+def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [AllTypesMatch<["source", "result"]>,
+      MemoryEffects<[MemRead, MemWrite]>,
+      AnchorLayoutInterface]> {
   let summary = "Convert the layout of the input operand";
     let description = [{
       `convert_layout` redistribute data across subgroups and/or lanes from the `input_layout` to
@@ -1403,7 +1403,6 @@ def XeGPU_TruncfOp
 }
 
 def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
-                                          AllElementTypesMatch<["a", "b"]>,
                                           AnchorLayoutInterface]> {
   let summary = "It performs scaled mma computation";
 
@@ -1450,7 +1449,9 @@ def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
                           VectorOfRankAndType<[1, 2], [F8E8M0FNU]>]>>:$scale_b,
       OptionalAttr<DistributeLayoutAttr>:$layout_a,
       OptionalAttr<DistributeLayoutAttr>:$layout_b,
-      OptionalAttr<DistributeLayoutAttr>:$layout_cd);
+      OptionalAttr<DistributeLayoutAttr>:$layout_cd,
+      OptionalAttr<DistributeLayoutAttr>:$layout_a_scale,
+      OptionalAttr<DistributeLayoutAttr>:$layout_b_scale);
   let results = (outs XeGPU_DpasResType:$result);
   let extraClassDeclaration = [{
 
@@ -1491,10 +1492,7 @@ def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
     $a `,` $b (`,` $acc^)?
     (`scale_a` `=` $scale_a^)?
     (`scale_b` `=` $scale_b^)?
-    attr-dict `:` type($a)`,` type($b)
-    (`,` type($acc)^)?
-    (`,` type($scale_a)^)?
-    (`,` type($scale_b)^)? `->` type($result)
+    attr-dict `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
 }

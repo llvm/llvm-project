@@ -450,6 +450,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
 
   cir::GlobalOp gv = builder.createVersionedGlobal(
       getModule(), getLoc(d.getLocation()), name, lty, false, linkage);
+  insertGlobalSymbol(gv);
   // TODO(cir): infer visibility from linkage in global op builder.
   gv.setVisibility(getMLIRVisibilityFromCIRLinkage(linkage));
   gv.setInitialValueAttr(init);
@@ -486,10 +487,10 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   }
 
   GlobalDecl gd;
-  if (isa<CXXConstructorDecl>(dc))
-    errorNYI(d.getSourceRange(), "C++ constructors static var context");
-  else if (isa<CXXDestructorDecl>(dc))
-    errorNYI(d.getSourceRange(), "C++ destructors static var context");
+  if (const auto *cd = dyn_cast<CXXConstructorDecl>(dc))
+    gd = GlobalDecl(cd, Ctor_Base);
+  else if (const auto *dd = dyn_cast<CXXDestructorDecl>(dc))
+    gd = GlobalDecl(dd, Dtor_Base);
   else if (const auto *fd = dyn_cast<FunctionDecl>(dc))
     gd = GlobalDecl(fd);
   else {
@@ -545,6 +546,7 @@ Address CIRGenModule::createUnnamedGlobalFrom(const VarDecl &d,
     cir::GlobalOp gv = builder.createVersionedGlobal(
         getModule(), getLoc(d.getLocation()), name, ty, isConstant,
         cir::GlobalLinkageKind::PrivateLinkage);
+    insertGlobalSymbol(gv);
     // TODO(cir): infer visibility from linkage in global op builder.
     gv.setVisibility(getMLIRVisibilityFromCIRLinkage(
         cir::GlobalLinkageKind::PrivateLinkage));

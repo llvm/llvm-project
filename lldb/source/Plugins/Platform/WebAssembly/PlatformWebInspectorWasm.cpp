@@ -30,6 +30,13 @@ static constexpr llvm::StringLiteral kServerBinary =
 static constexpr uint8_t kConnectAttempts = 5;
 static constexpr auto kConnectDelay = std::chrono::milliseconds(100);
 
+PlatformWebInspectorWasm::PlatformWebInspectorWasm() {
+  if (llvm::Error err = EnsureConnected()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Platform), std::move(err),
+                   "EnsureConnected failed: {0}");
+  }
+}
+
 llvm::StringRef PlatformWebInspectorWasm::GetPluginDescriptionStatic() {
   return "Platform for debugging Wasm via WebInspector";
 }
@@ -126,7 +133,7 @@ llvm::Error PlatformWebInspectorWasm::LaunchPlatformServer() {
 }
 
 llvm::Error PlatformWebInspectorWasm::EnsureConnected() {
-  if (m_remote_platform_sp)
+  if (m_remote_platform_sp && m_remote_platform_sp->IsConnected())
     return llvm::Error::success();
   return LaunchPlatformServer();
 }

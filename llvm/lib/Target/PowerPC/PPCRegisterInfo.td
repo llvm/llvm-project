@@ -462,12 +462,6 @@ def G8pRC : PPCRegisterClassWithSize<[untyped], 128,
   }];
 }
 
-// Register class for operations valid in 32 and 64 bit mode.
-def XLenVT : ValueTypeByHwMode<[PPC32, PPC64],
-                               [i32, i64]>;
-def GxRC : RegClassByHwMode<[PPC32, PPC64],
-                            [GPRC, G8RC]>;
-
 //===----------------------------------------------------------------------===//
 // PowerPC Register Operand Definitions.
 
@@ -484,7 +478,6 @@ def GxRC : RegClassByHwMode<[PPC32, PPC64],
 
 defm GPRC : PPCRegOperand<"isRegNumber">;
 defm G8RC : PPCRegOperand<"isRegNumber">;
-defm GxRC : PPCRegOperand<"isRegNumber">;
 defm GPRC_NOR0 : PPCRegOperand<"isRegNumber">;
 defm G8RC_NOX0 : PPCRegOperand<"isRegNumber">;
 defm SPERC : PPCRegOperand<"isRegNumber">;
@@ -522,6 +515,18 @@ def ptr_rc_nor0 : RegisterOperand<ptr_rc_nor0_by_hwmode> {
   let ParserMatchClass = PPCRegGxRCNoR0Operand;
 }
 
+// A version of ptr_rc usable with the asm parser.
+def PPCRegGxRCOperand : AsmOperandClass {
+  let Name = "RegGxRC"; let PredicateMethod = "isRegNumber";
+}
+
+def ptr_rc_idx_by_hwmode : RegClassByHwMode<[PPC32, PPC64],
+                                            [GPRC, G8RC]>;
+
+def ptr_rc_idx : RegisterOperand<ptr_rc_idx_by_hwmode> {
+  let ParserMatchClass = PPCRegGxRCOperand;
+}
+
 include "PPCRegisterInfoMMA.td"
 include "PPCRegisterInfoDMR.td"
 
@@ -547,7 +552,7 @@ def memri : Operand<iPTR> {
 }
 def memrr : Operand<iPTR> {
   let PrintMethod = "printMemRegReg";
-  let MIOperandInfo = (ops ptr_rc_nor0:$ptrreg, gxrc:$offreg);
+  let MIOperandInfo = (ops ptr_rc_nor0:$ptrreg, ptr_rc_idx:$offreg);
   let OperandType = "OPERAND_MEMORY";
 }
 def memrix : Operand<iPTR> {   // memri where the imm is 4-aligned.
