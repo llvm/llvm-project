@@ -1281,16 +1281,13 @@ static void showBRDiagnostics(llvm::raw_svector_ostream &OS, StoreInfo SI) {
     // We don't need to check here, all these conditions were
     // checked by StoreSiteFinder, when it figured out that it is
     // initialization.
-    const auto *VR = dyn_cast<VarRegion>(SI.Dest);
-    if (VR) {
-      const auto *VD = VR->getDecl();
-      bool HasInit = VD->getInit();
-      bool HasGlobalStorage = VD->hasGlobalStorage();
+    if (const auto *VR = dyn_cast<VarRegion>(SI.Dest)) {
+      const VarDecl *VD = VR->getDecl();
 
-      if (SI.Value.isUndef() && HasInit) {
+      if (SI.Value.isUndef() && VD->getInit()) {
         OS << (HasPrefix ? "initialized" : "Initializing")
            << " to a garbage value";
-      } else if (!HasInit && !HasGlobalStorage) {
+      } else if (!VD->getInit() && !VD->hasGlobalStorage()) {
         OS << (HasPrefix ? "declared" : "Declared")
            << " without an initial value";
       } else {
