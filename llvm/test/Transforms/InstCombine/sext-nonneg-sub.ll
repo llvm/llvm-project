@@ -114,7 +114,7 @@ define <vscale x 4 x i64> @select_nonnegative_slt_scalable(<vscale x 4 x i32> no
 define i64 @slt_commuted(i32 %x, i32 noundef %y) {
 ; CHECK-LABEL: define i64 @slt_commuted(
 ; CHECK-SAME: i32 [[X:%.*]], i32 noundef [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    [[SEL:%.*]] = sub nsw i32 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[SEL]] to i64
 ; CHECK-NEXT:    ret i64 [[EXT]]
@@ -129,7 +129,7 @@ define i64 @slt_commuted(i32 %x, i32 noundef %y) {
 define i64 @sgt_commuted(i32 noundef %x, i32 %y) {
 ; CHECK-LABEL: define i64 @sgt_commuted(
 ; CHECK-SAME: i32 noundef [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 [[X]])
 ; CHECK-NEXT:    [[SEL:%.*]] = sub nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[SEL]] to i64
 ; CHECK-NEXT:    ret i64 [[EXT]]
