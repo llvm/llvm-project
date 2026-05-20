@@ -25,7 +25,7 @@ define i32 @foo() {
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[GV2]](p0) :: (dereferenceable load (i32) from @var1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[GV2]](p0) :: (load (i32) from @var1)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[LOAD]](i32), [[C3]]
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.2
@@ -81,7 +81,7 @@ define i32 @darwin_tls() {
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[GV2]](p0) :: (dereferenceable load (i32) from @var1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[GV2]](p0) :: (load (i32) from @var1)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[LOAD]](i32), [[C1]]
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.2
@@ -90,7 +90,7 @@ define i32 @darwin_tls() {
   ; CHECK-NEXT: bb.2.if.then:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(i32) = G_LOAD [[GV]](p0) :: (dereferenceable load (i32) from @tls_gv)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(i32) = G_LOAD [[GV]](p0) :: (load (i32) from @tls_gv)
   ; CHECK-NEXT:   [[GV3:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2
   ; CHECK-NEXT:   G_STORE [[LOAD1]](i32), [[GV3]](p0) :: (store (i32) into @var2)
   ; CHECK-NEXT:   G_BR %bb.3
@@ -122,7 +122,7 @@ define i32 @imm_cost_too_large_cost_of_2() {
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[GV2]](p0) :: (dereferenceable load (i32) from @var1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[GV2]](p0) :: (load (i32) from @var1)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2228259
   ; CHECK-NEXT:   [[CONSTANT_FOLD_BARRIER:%[0-9]+]]:_(i32) = G_CONSTANT_FOLD_BARRIER [[C1]]
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
@@ -178,7 +178,7 @@ define i64 @imm_cost_too_large_cost_of_4() {
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3_64
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1_64
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[GV2]](p0) :: (dereferenceable load (i64) from @var1_64, align 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[GV2]](p0) :: (load (i64) from @var1_64, align 4)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 -2228259
   ; CHECK-NEXT:   [[CONSTANT_FOLD_BARRIER:%[0-9]+]]:_(i64) = G_CONSTANT_FOLD_BARRIER [[C1]]
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
@@ -236,7 +236,7 @@ define i64 @f64_imm_cost_too_high(double %a) {
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3_64
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1_64
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[GV2]](p0) :: (dereferenceable load (i64) from @var1_64, align 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[GV2]](p0) :: (load (i64) from @var1_64, align 4)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[LOAD]](i64), [[C2]]
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.2
@@ -291,7 +291,7 @@ define i64 @f64_imm_cheap(double %a) {
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3_64
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1_64
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[GV2]](p0) :: (dereferenceable load (i64) from @var1_64, align 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[GV2]](p0) :: (load (i64) from @var1_64, align 4)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[LOAD]](i64), [[C2]]
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.2

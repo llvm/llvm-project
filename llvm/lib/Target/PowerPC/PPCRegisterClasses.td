@@ -69,7 +69,7 @@ class PPCGPRRegisterClass<list<ValueType> regTypes, int alignment, dag regList,
 // Usage: def spe4rc : PPCRegOperandOnly<"GPRC">;
 //   Creates: spe4rc RegisterOperand wrapping GPRC, using PPCRegGPRCAsmOperand.
 class PPCRegOperandOnly<string regClassName>
-  : RegisterOperand<!cast<RegisterClassLike>(regClassName)> {
+  : RegisterOperand<!cast<RegisterClass>(regClassName)> {
   let ParserMatchClass =
         !cast<AsmOperandClass>(!strconcat("PPCReg", regClassName, "AsmOperand"));
 }
@@ -95,7 +95,7 @@ multiclass PPCRegOperand<string predicate, string operandName = ""> {
   // Define the RegisterOperand with custom name if provided,
   // otherwise use lowercase of NAME.
   def !if(!eq(operandName, ""), !tolower(NAME), operandName)
-    : RegisterOperand<!cast<RegisterClassLike>(NAME)> {
+    : RegisterOperand<!cast<RegisterClass>(NAME)> {
     let ParserMatchClass = !cast<AsmOperandClass>("PPCReg"#NAME#"AsmOperand");
   }
 }

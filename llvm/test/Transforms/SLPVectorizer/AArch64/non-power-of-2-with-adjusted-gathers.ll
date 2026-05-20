@@ -18,7 +18,7 @@ define i1 @test(ptr %arg, ptr %arg1, i1 %arg2, i1 %arg3, i1 %arg4) {
 ; CHECK-NEXT:    [[AND12:%.*]] = and i1 false, [[ICMP11]]
 ; CHECK-NEXT:    [[ICMP14:%.*]] = icmp ult ptr null, null
 ; CHECK-NEXT:    [[AND15:%.*]] = and i1 false, [[ICMP14]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <8 x ptr> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <8 x ptr> [[TMP2]], splat (ptr null)
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i1> <i1 false, i1 poison, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, i1 [[ARG2]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = and <8 x i1> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x ptr> [[TMP2]], i32 3

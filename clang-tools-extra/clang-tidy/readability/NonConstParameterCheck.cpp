@@ -103,14 +103,31 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
     }
   } else if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("Mark")) {
     const QualType T = VD->getType();
-    if (T->isDependentType())
-      markCanNotBeConst(VD->getInit(), false);
-    else if ((T->isPointerType() && !T->getPointeeType().isConstQualified()) ||
-             T->isArrayType() || T->isRecordType())
+    if (T->isDependentType()) {
+      const Expr *Init = VD->getInit()->IgnoreParenCasts();
+      if (const auto *U = dyn_cast<UnaryOperator>(Init);
+          U && U->getOpcode() == UO_Deref) {
+        markCanNotBeConst(U->getSubExpr(), true);
+      } else if (const auto *PLE = dyn_cast<ParenListExpr>(Init)) {
+        for (const Expr *E : PLE->exprs()) {
+          E = E->IgnoreParenCasts();
+          if (const auto *U = dyn_cast<UnaryOperator>(E);
+              U && U->getOpcode() == UO_Deref)
+            markCanNotBeConst(U->getSubExpr(), true);
+          else
+            markCanNotBeConst(E, true);
+        }
+      } else {
+        markCanNotBeConst(Init, true);
+      }
+    } else if ((T->isPointerType() &&
+                !T->getPointeeType().isConstQualified()) ||
+               T->isArrayType() || T->isRecordType()) {
       markCanNotBeConst(VD->getInit(), true);
-    else if (T->isLValueReferenceType() &&
-             !T->getPointeeType().isConstQualified())
+    } else if (T->isLValueReferenceType() &&
+               !T->getPointeeType().isConstQualified()) {
       markCanNotBeConst(VD->getInit(), false);
+    }
   }
 }
 

@@ -143,20 +143,31 @@ bool isOwnerPtr(const std::string &Name) {
          Name == "UniqueRef" || Name == "LazyUniqueRef";
 }
 
+static bool isWeakPtrClass(const std::string &Name) {
+  return Name == "WeakPtr" || Name == "SingleThreadPackedWeakPtr" ||
+         Name == "SingleThreadWeakPtr" || Name == "ThreadSafeWeakPtr" ||
+         Name == "ThreadSafeWeakOrStrongPtr" || Name == "InlineWeakPtr";
+}
+
 bool isSmartPtrClass(const std::string &Name) {
   return isRefType(Name) || isCheckedPtr(Name) || isRetainPtrOrOSPtr(Name) ||
-         Name == "WeakPtr" || Name == "WeakPtrFactory" ||
+         isWeakPtrClass(Name) || Name == "WeakPtrFactory" ||
          Name == "WeakPtrFactoryWithBitField" || Name == "WeakPtrImplBase" ||
-         Name == "WeakPtrImplBaseSingleThread" || Name == "ThreadSafeWeakPtr" ||
+         Name == "WeakPtrImplBaseSingleThread" ||
          Name == "ThreadSafeWeakOrStrongPtr" ||
          Name == "ThreadSafeWeakPtrControlBlock" ||
          Name == "ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr";
 }
 
+std::string getConstructorName(const clang::FunctionDecl *F) {
+  if (auto *Ctor = dyn_cast_or_null<CXXConstructorDecl>(F))
+    return safeGetName(Ctor->getParent());
+  return safeGetName(F);
+}
+
 bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
   assert(F);
-  const std::string &FunctionName = safeGetName(F);
-
+  auto FunctionName = getConstructorName(F);
   return isRefType(FunctionName) || FunctionName == "adoptRef" ||
          FunctionName == "UniqueRef" || FunctionName == "makeUniqueRef" ||
          FunctionName == "makeUniqueRefWithoutFastMallocCheck"
@@ -169,15 +180,16 @@ bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
 
 bool isCtorOfCheckedPtr(const clang::FunctionDecl *F) {
   assert(F);
-  return isCheckedPtr(safeGetName(F));
+  return isCheckedPtr(getConstructorName(F));
 }
 
 bool isCtorOfRetainPtrOrOSPtr(const clang::FunctionDecl *F) {
-  const std::string &FunctionName = safeGetName(F);
-  return FunctionName == "RetainPtr" || FunctionName == "adoptNS" ||
-         FunctionName == "adoptCF" || FunctionName == "retainPtr" ||
-         FunctionName == "RetainPtrArc" || FunctionName == "adoptNSArc" ||
-         FunctionName == "adoptOSObject" || FunctionName == "adoptOSObjectArc";
+  auto FunctionName = getConstructorName(F);
+  return isRetainPtrOrOSPtr(FunctionName) || FunctionName == "adoptNS" ||
+         FunctionName == "adoptNSNullable" || FunctionName == "adoptCF" ||
+         FunctionName == "adoptCFNullable" || FunctionName == "retainPtr" ||
+         FunctionName == "adoptNSArc" || FunctionName == "adoptOSObject" ||
+         FunctionName == "adoptOSObjectArc";
 }
 
 bool isCtorOfSafePtr(const clang::FunctionDecl *F) {
@@ -396,6 +408,13 @@ bool isRetainPtrOrOSPtr(const CXXRecordDecl *R) {
   assert(R);
   if (auto *TmplR = R->getTemplateInstantiationPattern())
     return isRetainPtrOrOSPtr(safeGetName(TmplR));
+  return false;
+}
+
+bool isWeakPtr(const CXXRecordDecl *R) {
+  assert(R);
+  if (auto *TmplR = R->getTemplateInstantiationPattern())
+    return isWeakPtrClass(safeGetName(TmplR));
   return false;
 }
 

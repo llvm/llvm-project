@@ -833,10 +833,15 @@ unsigned CodeGenRegisterClass::getWeight(const CodeGenRegBank &RegBank) const {
   if (TheDef && !TheDef->isValueUnset("Weight"))
     return TheDef->getValueAsInt("Weight");
 
-  if (Members.empty() || Artificial)
+  if (Artificial)
     return 0;
 
-  return (*Members.begin())->getWeight(RegBank);
+  for (const CodeGenRegister *Reg : Members) {
+    if (!Reg->Artificial)
+      return Reg->getWeight(RegBank);
+  }
+
+  return 0;
 }
 
 // This is a simple lexicographical order that can be used to search for sets.
