@@ -170,8 +170,9 @@ bool GIMatchTableExecutor::executeMatchTable(
                         dbgs() << CurrentIdx
                                << ": Features do not match, rejected\n");
         CurrentIdx = OnFail;
-      } else
+      } else {
         OnFailResumeAt.push_back(OnFail);
+      }
       break;
     }
     case GIM_RecordInsn:
