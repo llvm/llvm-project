@@ -131,10 +131,6 @@ struct TestLinalgTransforms
   Option<bool> testDecomposeWinogradOps{
       *this, "test-decompose-winograd-ops",
       llvm::cl::desc("Test decompose Winograd ops"), llvm::cl::init(false)};
-  Option<bool> testDecomposeLocalSoftmax{
-      *this, "test-decompose-local-softmax",
-      llvm::cl::desc("Test decompose local_softmax op"),
-      llvm::cl::init(false)};
   Option<bool> testSoftmaxMatmulFusionRewrite{
       *this, "test-softmax-matmul-fusion-rewrite",
       llvm::cl::desc("Test rewrite of softmax+matmul to online softmax"),
@@ -244,16 +240,6 @@ static void applyDecomposeWinogradOps(func::FuncOp funcOp) {
   (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 
-static void applyDecomposeLocalSoftmax(func::FuncOp funcOp) {
-  IRRewriter rewriter(funcOp.getContext());
-  funcOp.walk([&](linalg::LocalSoftmaxOp op) {
-    rewriter.setInsertionPoint(op);
-    FailureOr<SmallVector<Value>> result = op.decomposeOperation(rewriter);
-    if (succeeded(result)) {
-      rewriter.replaceOp(op, *result);
-    }
-  });
-}
 
 static void applySoftmaxMatmulFusionRewrite(func::FuncOp funcOp,
                                        int64_t tileSize) {
@@ -303,8 +289,6 @@ void TestLinalgTransforms::runOnOperation() {
     return applyWinogradConv2D(getOperation());
   if (testDecomposeWinogradOps)
     return applyDecomposeWinogradOps(getOperation());
-  if (testDecomposeLocalSoftmax)
-    return applyDecomposeLocalSoftmax(getOperation());
   if (testSoftmaxMatmulFusionRewrite)
     return applySoftmaxMatmulFusionRewrite(getOperation(), softmaxMatmulFusionTileSize);
   Operation *rootOp = getOperation();
