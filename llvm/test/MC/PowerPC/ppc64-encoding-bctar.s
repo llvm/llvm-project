@@ -83,29 +83,29 @@
             blttarl-
 
 # bdnztar/bdztar
-# CHECK-BE: bctar 16, 0, 0                  # encoding: [0x4e,0x00,0x04,0x60]
-# CHECK-LE: bctar 16, 0, 0                  # encoding: [0x60,0x04,0x00,0x4e]
+# CHECK-BE: bctar 16, 0                  # encoding: [0x4e,0x00,0x04,0x60]
+# CHECK-LE: bctar 16, 0                  # encoding: [0x60,0x04,0x00,0x4e]
             bdnztar
-# CHECK-BE: bctar 18, 0, 0                  # encoding: [0x4e,0x40,0x04,0x60]
-# CHECK-LE: bctar 18, 0, 0                  # encoding: [0x60,0x04,0x40,0x4e]
+# CHECK-BE: bctar 18, 0                  # encoding: [0x4e,0x40,0x04,0x60]
+# CHECK-LE: bctar 18, 0                  # encoding: [0x60,0x04,0x40,0x4e]
             bdztar
-# CHECK-BE: bctarl 16, 0, 0                 # encoding: [0x4e,0x00,0x04,0x61]
-# CHECK-LE: bctarl 16, 0, 0                 # encoding: [0x61,0x04,0x00,0x4e]
+# CHECK-BE: bctarl 16, 0                 # encoding: [0x4e,0x00,0x04,0x61]
+# CHECK-LE: bctarl 16, 0                 # encoding: [0x61,0x04,0x00,0x4e]
             bdnztarl
-# CHECK-BE: bctarl 18, 0, 0                 # encoding: [0x4e,0x40,0x04,0x61]
-# CHECK-LE: bctarl 18, 0, 0                 # encoding: [0x61,0x04,0x40,0x4e]
+# CHECK-BE: bctarl 18, 0                 # encoding: [0x4e,0x40,0x04,0x61]
+# CHECK-LE: bctarl 18, 0                 # encoding: [0x61,0x04,0x40,0x4e]
             bdztarl
 
 # bdnztar/bdztar with prediction hints
-# CHECK-BE: bctar 25, 0, 0                  # encoding: [0x4f,0x20,0x04,0x60]
-# CHECK-LE: bctar 25, 0, 0                  # encoding: [0x60,0x04,0x20,0x4f]
+# CHECK-BE: bctar 25, 0                  # encoding: [0x4f,0x20,0x04,0x60]
+# CHECK-LE: bctar 25, 0                  # encoding: [0x60,0x04,0x20,0x4f]
             bdnztar+
-# CHECK-BE: bctar 24, 0, 0                  # encoding: [0x4f,0x00,0x04,0x60]
-# CHECK-LE: bctar 24, 0, 0                  # encoding: [0x60,0x04,0x00,0x4f]
+# CHECK-BE: bctar 24, 0                  # encoding: [0x4f,0x00,0x04,0x60]
+# CHECK-LE: bctar 24, 0                  # encoding: [0x60,0x04,0x00,0x4f]
             bdnztar-
-# CHECK-BE: bctar 27, 0, 0                  # encoding: [0x4f,0x60,0x04,0x60]
-# CHECK-LE: bctar 27, 0, 0                  # encoding: [0x60,0x04,0x60,0x4f]
+# CHECK-BE: bctar 27, 0                  # encoding: [0x4f,0x60,0x04,0x60]
+# CHECK-LE: bctar 27, 0                  # encoding: [0x60,0x04,0x60,0x4f]
             bdztar+
-# CHECK-BE: bctar 26, 0, 0                  # encoding: [0x4f,0x40,0x04,0x60]
-# CHECK-LE: bctar 26, 0, 0                  # encoding: [0x60,0x04,0x40,0x4f]
+# CHECK-BE: bctar 26, 0                  # encoding: [0x4f,0x40,0x04,0x60]
+# CHECK-LE: bctar 26, 0                  # encoding: [0x60,0x04,0x40,0x4f]
             bdztar-
