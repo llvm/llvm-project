@@ -4303,8 +4303,9 @@ Status Target::StopHookScripted::SetScriptCallback(
   m_class_name = class_name;
   m_extra_args.SetObjectSP(extra_args_sp);
 
+  ScriptedMetadata scripted_metadata(m_class_name, {});
   auto obj_or_err = m_interface_sp->CreatePluginObject(
-      m_class_name, GetTarget(), m_extra_args);
+      scripted_metadata, GetTarget(), m_extra_args);
   if (!obj_or_err) {
     return Status::FromError(obj_or_err.takeError());
   }
@@ -4610,8 +4611,9 @@ Status Target::HookScripted::SetScriptCallback(
   m_class_name = std::move(class_name);
   m_extra_args.SetObjectSP(extra_args_sp);
 
+  ScriptedMetadata scripted_metadata(m_class_name, {});
   auto obj_or_err = m_interface_sp->CreatePluginObject(
-      m_class_name, GetTarget(), m_extra_args);
+      scripted_metadata, GetTarget(), m_extra_args);
   if (!obj_or_err)
     return Status::FromError(obj_or_err.takeError());
 
