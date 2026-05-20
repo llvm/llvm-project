@@ -1699,7 +1699,7 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 bool AtomicExpandImpl::isIdempotentRMW(AtomicRMWInst *RMWI) {
   if (RMWI->isVolatile())
     return false;
-  // TODO: Add floating point support.  
+  // TODO: Add floating point support.
   auto C = dyn_cast<ConstantInt>(RMWI->getValOperand());
   if (!C)
     return false;
