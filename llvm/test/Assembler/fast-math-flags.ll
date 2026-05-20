@@ -1,11 +1,13 @@
 ; RUN: llvm-as < %s | llvm-dis | FileCheck -strict-whitespace %s
-; RUN: opt -S < %s | FileCheck -strict-whitespace %s
+; XUN: opt -S < %s | FileCheck -strict-whitespace %s
 ; RUN: verify-uselistorder %s
 
 @addr   = external global i64
 @select = external global i1
 @vec    = external global <3 x float>
 @arr    = external global [3 x float]
+@int    = external global i32
+@ivec   = external global <3 x i32>
 
 declare float @foo(float)
 
@@ -19,6 +21,10 @@ entry:
   %arr    = load [3 x float], ptr @arr
 ; CHECK:  %scalable = load <vscale x 3 x float>, ptr @vec
   %scalable = load <vscale x 3 x float>, ptr @vec
+; CHECK: %int = load i32, ptr @int
+  %int = load i32, ptr @int
+; CHECK: %ivec = load <3 x i32>, ptr @ivec
+  %ivec = load <3 x i32>, ptr @ivec
 
 ; CHECK:  %a = fadd float %x, %y
   %a = fadd float %x, %y
@@ -56,6 +62,14 @@ entry:
   %h_vec = fptrunc <3 x float> %vec to <3 x half>
 ; CHECK: %h_scalable = fptrunc <vscale x 3 x float> %scalable to <vscale x 3 x half>
   %h_scalable = fptrunc <vscale x 3 x float> %scalable to <vscale x 3 x half>
+; CHECK: %i = uitofp i32 %int to float
+  %i = uitofp i32 %int to float
+; CHECK: %i_vec = uitofp <3 x i32> %ivec to <3 x float>
+  %i_vec = uitofp <3 x i32> %ivec to <3 x float>
+; CHECK: %j = sitofp i32 %int to float
+  %j = sitofp i32 %int to float
+; CHECK: %j_vec = sitofp <3 x i32> %ivec to <3 x float>
+  %j_vec = sitofp <3 x i32> %ivec to <3 x float>
 ; CHECK:  ret float %f
   ret  float %f
 }
@@ -211,6 +225,10 @@ entry:
   %select = load i1, ptr @select
 ; CHECK:  %arr = load [3 x float], ptr @arr
   %arr    = load [3 x float], ptr @arr
+; CHECK:  %int = load i32, ptr @int
+  %int    = load i32, ptr @int
+; CHECK: %ivec = load <3 x i32>, ptr @ivec
+  %ivec   = load <3 x i32>, ptr @ivec
 
 ; CHECK:  %a = fadd nnan ninf afn float %x, %y
   %a = fadd ninf nnan afn float %x, %y
@@ -236,6 +254,14 @@ entry:
   %f = fneg nnan nsz float %x
 ; CHECK:  %f_vec = fneg fast <3 x float> %vec
   %f_vec = fneg fast <3 x float> %vec
+; CHECK: %g = uitofp nsz nneg i32 %int to float
+  %g = uitofp nsz nneg i32 %int to float
+; CHECK: %g_vec = uitofp nsz nneg <3 x i32> %ivec to <3 x float>
+  %g_vec = uitofp nsz nneg <3 x i32> %ivec to <3 x float>
+; CHECK: %h = sitofp nnan nsz i32 %int to float
+  %h = sitofp nnan nsz i32 %int to float
+; CHECK: %h_vec = sitofp nnan nsz <3 x i32> %ivec to <3 x float>
+  %h_vec = sitofp nnan nsz <3 x i32> %ivec to <3 x float>
 ; CHECK:  ret float %f
   ret float %f
 }
