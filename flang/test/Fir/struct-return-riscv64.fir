@@ -11,6 +11,7 @@
 !too_big = !fir.type<t3{i:i64,j:i64,k:i8}>
 !complex_double = !fir.type<t4{i:complex<f64>}>
 !mixed_float = !fir.type<t5{i:f32,j:i32}>
+!large_scalar = !fir.type<t6{i:i128}>
 
 module attributes {llvm.data_layout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128", llvm.target_triple = "riscv64-unknown-linux-gnu"} {
 
@@ -78,6 +79,29 @@ func.func @test_call_too_big_return(%arg0 : !fir.ref<!too_big>) {
 // CHECK-INT           fir.store %[[LOAD_0]] to %[[ARG0]] : !fir.ref<!fir.type<t3{i:i64,j:i64,k:i8}>>
 // CHECK-INT           return
 
+
+// ================================================
+
+func.func private @large_scalar_return() -> !large_scalar
+func.func @test_call_large_scalar_return(%arg0 : !fir.ref<!large_scalar>) {
+  %out = fir.call @large_scalar_return() : () -> !large_scalar
+  fir.store %out to %arg0 : !fir.ref<!large_scalar>
+  return
+}
+
+// CHECK-INT-LABEL:   func.func private @large_scalar_return() -> i128
+// CHECK-INT-LABEL:   func.func @test_call_large_scalar_return(
+// CHECK-INT-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.type<t6{i:i128}>>) {
+// CHECK-INT:           %[[CALL_0:.*]] = fir.call @large_scalar_return() : () -> i128
+// CHECK-INT:           %[[INTR_0:.*]] = llvm.intr.stacksave : !llvm.ptr
+// CHECK-INT:           %[[ALLOCA_0:.*]] = fir.alloca i128
+// CHECK-INT:           fir.store %[[CALL_0]] to %[[ALLOCA_0]] : !fir.ref<i128>
+// CHECK-INT:           %[[CONVERT_0:.*]] = fir.convert %[[ALLOCA_0]] : (!fir.ref<i128>) -> !fir.ref<!fir.type<t6{i:i128}>>
+// CHECK-INT:           %[[LOAD_0:.*]] = fir.load %[[CONVERT_0]] : !fir.ref<!fir.type<t6{i:i128}>>
+// CHECK-INT:           llvm.intr.stackrestore %[[INTR_0]] : !llvm.ptr
+// CHECK-INT:           fir.store %[[LOAD_0]] to %[[ARG0]] : !fir.ref<!fir.type<t6{i:i128}>>
+// CHECK-INT:           return
+// CHECK-INT:         }
 
 // ================================================
 
