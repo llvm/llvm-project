@@ -1042,87 +1042,49 @@ define <4 x i32> @reduction_sum_v4i32_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32
 ; SSSE3-SLOW-NEXT:    paddd %xmm3, %xmm6
 ; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm3 = xmm6[1,1,1,1]
 ; SSSE3-SLOW-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; SSSE3-SLOW-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm2[0]
 ; SSSE3-SLOW-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm6[0],xmm1[1],xmm6[1]
+; SSSE3-SLOW-NEXT:    paddd %xmm2, %xmm1
 ; SSSE3-SLOW-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1]
-; SSSE3-SLOW-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSSE3-SLOW-NEXT:    paddd %xmm4, %xmm0
+; SSSE3-SLOW-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSSE3-SLOW-NEXT:    retq
 ;
 ; SSSE3-FAST-LABEL: reduction_sum_v4i32_v4i32:
 ; SSSE3-FAST:       # %bb.0:
-; SSSE3-FAST-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
-; SSSE3-FAST-NEXT:    paddd %xmm4, %xmm0
-; SSSE3-FAST-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
-; SSSE3-FAST-NEXT:    paddd %xmm1, %xmm4
-; SSSE3-FAST-NEXT:    phaddd %xmm4, %xmm0
-; SSSE3-FAST-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,3,2,3]
-; SSSE3-FAST-NEXT:    paddd %xmm2, %xmm1
-; SSSE3-FAST-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[2,3,2,3]
-; SSSE3-FAST-NEXT:    paddd %xmm3, %xmm2
-; SSSE3-FAST-NEXT:    phaddd %xmm2, %xmm1
-; SSSE3-FAST-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSSE3-FAST-NEXT:    phaddd %xmm3, %xmm2
+; SSSE3-FAST-NEXT:    phaddd %xmm1, %xmm0
+; SSSE3-FAST-NEXT:    phaddd %xmm2, %xmm0
 ; SSSE3-FAST-NEXT:    retq
 ;
-; AVX1-SLOW-LABEL: reduction_sum_v4i32_v4i32:
-; AVX1-SLOW:       # %bb.0:
-; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
-; AVX1-SLOW-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
-; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[1,1,1,1]
-; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm5 = xmm1[2,3,2,3]
-; AVX1-SLOW-NEXT:    vpaddd %xmm5, %xmm1, %xmm1
-; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm5 = xmm1[1,1,1,1]
-; AVX1-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1]
-; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[2,3,2,3]
-; AVX1-SLOW-NEXT:    vpaddd %xmm5, %xmm2, %xmm2
-; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[1,1,1,1]
-; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm6 = xmm3[2,3,2,3]
-; AVX1-SLOW-NEXT:    vpaddd %xmm6, %xmm3, %xmm3
-; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm6 = xmm3[1,1,1,1]
-; AVX1-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm5[0],xmm6[0],xmm5[1],xmm6[1]
-; AVX1-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; AVX1-SLOW-NEXT:    vpaddd %xmm5, %xmm2, %xmm2
-; AVX1-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX1-SLOW-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
-; AVX1-SLOW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; AVX1-SLOW-NEXT:    retq
+; AVX-SLOW-LABEL: reduction_sum_v4i32_v4i32:
+; AVX-SLOW:       # %bb.0:
+; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
+; AVX-SLOW-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
+; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[1,1,1,1]
+; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm5 = xmm1[2,3,2,3]
+; AVX-SLOW-NEXT:    vpaddd %xmm5, %xmm1, %xmm1
+; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm5 = xmm1[1,1,1,1]
+; AVX-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1]
+; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[2,3,2,3]
+; AVX-SLOW-NEXT:    vpaddd %xmm5, %xmm2, %xmm2
+; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[1,1,1,1]
+; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm6 = xmm3[2,3,2,3]
+; AVX-SLOW-NEXT:    vpaddd %xmm6, %xmm3, %xmm3
+; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm6 = xmm3[1,1,1,1]
+; AVX-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm5[0],xmm6[0],xmm5[1],xmm6[1]
+; AVX-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; AVX-SLOW-NEXT:    vpaddd %xmm5, %xmm2, %xmm2
+; AVX-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX-SLOW-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
+; AVX-SLOW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; AVX-SLOW-NEXT:    retq
 ;
 ; AVX-FAST-LABEL: reduction_sum_v4i32_v4i32:
 ; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
-; AVX-FAST-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
-; AVX-FAST-NEXT:    vpshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
-; AVX-FAST-NEXT:    vpaddd %xmm4, %xmm1, %xmm1
+; AVX-FAST-NEXT:    vphaddd %xmm3, %xmm2, %xmm2
 ; AVX-FAST-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
-; AVX-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm2[2,3,2,3]
-; AVX-FAST-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
-; AVX-FAST-NEXT:    vpshufd {{.*#+}} xmm2 = xmm3[2,3,2,3]
-; AVX-FAST-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
-; AVX-FAST-NEXT:    vphaddd %xmm2, %xmm1, %xmm1
-; AVX-FAST-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX-FAST-NEXT:    vphaddd %xmm2, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    retq
-;
-; AVX2-SLOW-LABEL: reduction_sum_v4i32_v4i32:
-; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
-; AVX2-SLOW-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[1,1,1,1]
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm5 = xmm1[2,3,2,3]
-; AVX2-SLOW-NEXT:    vpaddd %xmm5, %xmm1, %xmm1
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[2,3,2,3]
-; AVX2-SLOW-NEXT:    vpaddd %xmm5, %xmm2, %xmm2
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm5 = xmm3[2,3,2,3]
-; AVX2-SLOW-NEXT:    vpaddd %xmm5, %xmm3, %xmm3
-; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm4 = xmm4[0],xmm1[1],xmm4[2,3]
-; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm4 = xmm4[0,1],xmm5[2,3]
-; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX2-SLOW-NEXT:    vpbroadcastd %xmm3, %xmm1
-; AVX2-SLOW-NEXT:    vpbroadcastd %xmm2, %xmm2
-; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
-; AVX2-SLOW-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    retq
   %5 = call i32 @llvm.vector.reduce.add.i32.v4i32(<4 x i32> %0)
   %6 = call i32 @llvm.vector.reduce.add.i32.v4i32(<4 x i32> %1)
   %7 = call i32 @llvm.vector.reduce.add.i32.v4i32(<4 x i32> %2)

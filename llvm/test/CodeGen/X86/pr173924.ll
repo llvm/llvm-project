@@ -6,30 +6,40 @@ define i256 @PR173924(<8 x i256> %a0) {
 ; CHECK-LABEL: PR173924:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edi
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r8d
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edx
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r10d
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r11d
-; CHECK-NEXT:    andl $1, %r11d
-; CHECK-NEXT:    andl $1, %r9d
-; CHECK-NEXT:    addl %r11d, %r9d
-; CHECK-NEXT:    andl $1, %r10d
-; CHECK-NEXT:    andl $1, %edx
-; CHECK-NEXT:    addl %r10d, %edx
-; CHECK-NEXT:    addl %r9d, %edx
-; CHECK-NEXT:    andl $1, %r8d
-; CHECK-NEXT:    andl $1, %esi
-; CHECK-NEXT:    addl %r8d, %esi
-; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r8
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r11
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    andl $1, %ecx
-; CHECK-NEXT:    addl %edi, %ecx
-; CHECK-NEXT:    addl %esi, %ecx
-; CHECK-NEXT:    addl %edx, %ecx
-; CHECK-NEXT:    vmovd %ecx, %xmm0
-; CHECK-NEXT:    vmovdqu %ymm0, (%rax)
-; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    andl $1, %edx
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    andl $1, %r11d
+; CHECK-NEXT:    andl $1, %r8d
+; CHECK-NEXT:    addq %r11, %r8
+; CHECK-NEXT:    andl $1, %r10d
+; CHECK-NEXT:    andl $1, %r9d
+; CHECK-NEXT:    andl $1, %esi
+; CHECK-NEXT:    addq %r9, %rsi
+; CHECK-NEXT:    addq %r10, %rsi
+; CHECK-NEXT:    addq %r8, %rsi
+; CHECK-NEXT:    xorl %r8d, %r8d
+; CHECK-NEXT:    addq %rdi, %rsi
+; CHECK-NEXT:    setb %r8b
+; CHECK-NEXT:    addq %rdx, %rsi
+; CHECK-NEXT:    adcq $0, %r8
+; CHECK-NEXT:    setb %dl
+; CHECK-NEXT:    movzbl %dl, %edx
+; CHECK-NEXT:    addq %rcx, %rsi
+; CHECK-NEXT:    adcq $0, %r8
+; CHECK-NEXT:    adcq $0, %rdx
+; CHECK-NEXT:    setb %cl
+; CHECK-NEXT:    movzbl %cl, %ecx
+; CHECK-NEXT:    movq %rsi, (%rax)
+; CHECK-NEXT:    movq %r8, 8(%rax)
+; CHECK-NEXT:    movq %rdx, 16(%rax)
+; CHECK-NEXT:    movq %rcx, 24(%rax)
 ; CHECK-NEXT:    retq
   %m = and <8 x i256> %a0, splat (i256 1)
   %r = call i256 @llvm.vector.reduce.add.v8i256(<8 x i256> %m)
