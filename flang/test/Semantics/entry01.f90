@@ -266,7 +266,7 @@ end
 !ERROR: Explicit RESULT('f8e1') of function 'f8' cannot have the same name as a distinct ENTRY into the same scope
 function f8() result(f8e1)
   entry f8e1()
-  !ERROR: RESULT name 'f8e2' must be different from ENTRY name 'f8e2'
+  !ERROR: Explicit RESULT('f8e2') of ENTRY 'f8e2' cannot have the same name as the ENTRY
   entry f8e2() result(f8e2)
   !ERROR: Explicit RESULT('f8e1') of function 'f8e3' cannot have the same name as a distinct ENTRY into the same scope
   entry f8e3() result(f8e1)

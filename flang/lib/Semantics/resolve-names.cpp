@@ -5117,7 +5117,7 @@ void SubprogramVisitor::CreateEntry(
   if (resultName) {
     if (resultName->source == entryName.source) {
       Say(*resultName,
-          "RESULT name '%s' must be different from ENTRY name '%s'"_err_en_US,
+          "Explicit RESULT('%s') of ENTRY '%s' cannot have the same name as the ENTRY"_err_en_US,
           resultName->source, entryName.source);
     } else {
       distinctResultName = resultName->source;
