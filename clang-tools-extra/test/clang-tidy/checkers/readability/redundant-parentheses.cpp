@@ -169,12 +169,27 @@ constexpr bool UseOperatorAmpersand5(FoldLevel level) {
   FoldLevel hf = FoldLevel::HeaderFlag;
   // currently this check doesn't take into account order of operations, so the
   // parentheses around `left & rhs` is needed
-  return (((level & hf) * hf) != FoldLevel::None);
+  return ((level & hf) * hf) != FoldLevel::None;
 }
 
 constexpr bool UseOperatorAmpersand6(FoldLevel level) {
   FoldLevel hf = FoldLevel::HeaderFlag;
-  return ((!(level & hf) * hf) != FoldLevel::None);
+  return (!(level & hf) * hf) != FoldLevel::None;
+}
+
+constexpr FoldLevel UseOperatorAmpersand7(FoldLevel level) {
+  FoldLevel hf = FoldLevel::HeaderFlag;
+  return !(level & hf) * hf;
+}
+
+constexpr FoldLevel UseOperatorAmpersand8(FoldLevel level) {
+  FoldLevel hf = FoldLevel::HeaderFlag;
+  return hf * !(level & hf);
+}
+
+constexpr FoldLevel UseOperatorAmpersand9(FoldLevel level) {
+  FoldLevel hf = FoldLevel::HeaderFlag;
+  return !(level & hf);
 }
 
 constexpr bool UseOperatorPlus1(FoldLevel level) {
@@ -182,6 +197,13 @@ constexpr bool UseOperatorPlus1(FoldLevel level) {
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: redundant parentheses around expression [readability-redundant-parentheses]
   // CHECK-FIXES:    return FoldLevelToInt(level + FoldLevel::None) != 1;
 }
+
+constexpr bool UseOperatorPlus2(FoldLevel level) {
+  return (FoldLevelToInt(!(level + FoldLevel::None))) != 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    return FoldLevelToInt(!(level + FoldLevel::None)) != 1;
+}
+
 
 const int bracket_int_plus_num = (4) + 5;
 // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: redundant parentheses around expression [readability-redundant-parentheses]
