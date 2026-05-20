@@ -106,6 +106,7 @@ translateAarch64ToMsvcIntrin(unsigned BuiltinID) {
   case clang::AArch64::BI_InterlockedCompareExchange16_nf:
   case clang::AArch64::BI_InterlockedCompareExchange_nf:
   case clang::AArch64::BI_InterlockedCompareExchange64_nf:
+  case clang::AArch64::BI_InterlockedCompareExchangePointer_nf:
     return MSVCIntrin::_InterlockedCompareExchange_nf;
   case clang::AArch64::BI_InterlockedCompareExchange128:
     return MSVCIntrin::_InterlockedCompareExchange128;

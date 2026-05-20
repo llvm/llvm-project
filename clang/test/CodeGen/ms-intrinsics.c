@@ -283,6 +283,14 @@ void *test_InterlockedCompareExchangePointer_nf(void * volatile *Destination,
 // CHECK:   %[[RESULT:[0-9]+]] = inttoptr [[iPTR]] %[[EXTRACT]] to ptr
 // CHECK:   ret ptr %[[RESULT:[0-9]+]]
 // CHECK: }
+// CHECK-ARM64: define{{.*}}ptr @test_InterlockedCompareExchangePointer_nf(ptr {{.*}}%Destination, ptr {{[a-z_ ]*}}%Exchange, ptr {{[a-z_ ]*}}%Comparand){{.*}}{
+// CHECK-ARM64:   %[[EXCHANGE:[0-9]+]] = ptrtoint ptr %Exchange to [[iPTR]]
+// CHECK-ARM64:   %[[COMPARAND:[0-9]+]] = ptrtoint ptr %Comparand to [[iPTR]]
+// CHECK-ARM64:   %[[XCHG:[0-9]+]] = cmpxchg volatile ptr %[[DEST:.+]], [[iPTR]] %[[COMPARAND:[0-9]+]], [[iPTR]] %[[EXCHANGE:[0-9]+]] monotonic monotonic, align {{4|8}}
+// CHECK-ARM64:   %[[EXTRACT:[0-9]+]] = extractvalue { [[iPTR]], i1 } %[[XCHG]], 0
+// CHECK-ARM64:   %[[RESULT:[0-9]+]] = inttoptr [[iPTR]] %[[EXTRACT]] to ptr
+// CHECK-ARM64:   ret ptr %[[RESULT:[0-9]+]]
+// CHECK-ARM64: }
 
 #if defined(__arm__) || defined(__aarch64__)
 void *test_InterlockedCompareExchangePointer_acq(void * volatile *Destination,
