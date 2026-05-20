@@ -342,7 +342,7 @@ protected:
                                      Value *UV = nullptr);
 
 public:
-  ~VPSingleDefValue() override = default;
+  ~VPSingleDefValue() override;
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVSingleDefValueSC;
@@ -359,7 +359,7 @@ class VPMultiDefValue : public VPRecipeValue {
 public:
   LLVM_ABI_FOR_TEST VPMultiDefValue(VPRecipeBase *Def, Value *UV = nullptr);
 
-  ~VPMultiDefValue() override = default;
+  ~VPMultiDefValue() override;
 
   VPRecipeBase *getDef() const { return Def; }
 

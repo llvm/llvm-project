@@ -17,6 +17,12 @@ breaks build of llvm
 breaks windows build
 [cmake] Refactor DIA SDK detection into FindDIASDK module (#160354)
 ---
-needs dbg team to merge
-[MC][Dwarf] Add custom CFI pseudo-ops for use in AMD
+file move breaks spirv:
+[NFC][AMDGPU] Move AMDGPU related code out of generic TargetParser.cpp 
+---
+breaks offload build
+[Offload] Fix build install directory and remove 'add_llvm_library
+---
+need flang help
+[Flang][OpenMP][NFC] Track Objects for BlockArgs
 ---
