@@ -1672,19 +1672,19 @@ TEST_F(ScalarEvolutionsTest, ForgetValueWithOverflowInst) {
 TEST_F(ScalarEvolutionsTest, ForgetLoopPreservesUnrelatedCachesInLoopBody) {
   LLVMContext C;
   SMDiagnostic Err;
-  std::unique_ptr<Module> M = parseAssemblyString(
-      "define void @foo(i32 %n) { "
-      "entry: "
-      "  br label %loop "
-      "loop: "
-      "  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ] "
-      "  %iv.next = add nsw i32 %iv, 1 "
-      "  %cmp = icmp slt i32 %iv, %n "
-      "  br i1 %cmp, label %loop, label %exit "
-      "exit: "
-      "  ret void "
-      "} ",
-      Err, C);
+  std::unique_ptr<Module> M =
+      parseAssemblyString("define void @foo(i32 %n) { "
+                          "entry: "
+                          "  br label %loop "
+                          "loop: "
+                          "  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ] "
+                          "  %iv.next = add nsw i32 %iv, 1 "
+                          "  %cmp = icmp slt i32 %iv, %n "
+                          "  br i1 %cmp, label %loop, label %exit "
+                          "exit: "
+                          "  ret void "
+                          "} ",
+                          Err, C);
 
   ASSERT_TRUE(M && "Could not parse module?");
   ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");

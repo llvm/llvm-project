@@ -8786,9 +8786,9 @@ void ScalarEvolution::forgetValue(Value *V) {
         Worklist.emplace_back(UI, S);
       else if (AllowMissingSCEV)
         Worklist.emplace_back(UI, nullptr);
-    }
-    else if (IsWO)
+    } else if (IsWO) {
       Worklist.emplace_back(UI, nullptr);
+    }
   };
 
   PushIntoWorklist(I, true);
