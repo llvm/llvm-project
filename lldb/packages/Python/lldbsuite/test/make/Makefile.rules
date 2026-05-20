@@ -218,7 +218,6 @@ else
 		MAKE_DWO := YES
 		DWP_NAME = $(EXE).dwp
 		DYLIB_DWP_NAME = $(DYLIB_NAME).dwp
-		DSYM = $(DWP_NAME)
 	endif
 endif
 
