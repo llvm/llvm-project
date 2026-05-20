@@ -15,3 +15,16 @@
 
 include "WebAssembly.td"
 include "WebAssemblyCombine.td"
+
+//===----------------------------------------------------------------------===//
+// Miscellaneous patterns
+//===----------------------------------------------------------------------===//
+
+def : Pat<(i32 (fp_to_sint_sat_gi F32:$src)), (I32_TRUNC_S_SAT_F32 F32:$src)>;
+def : Pat<(i32 (fp_to_uint_sat_gi F32:$src)), (I32_TRUNC_U_SAT_F32 F32:$src)>;
+def : Pat<(i32 (fp_to_sint_sat_gi F64:$src)), (I32_TRUNC_S_SAT_F64 F64:$src)>;
+def : Pat<(i32 (fp_to_uint_sat_gi F64:$src)), (I32_TRUNC_U_SAT_F64 F64:$src)>;
+def : Pat<(i64 (fp_to_sint_sat_gi F32:$src)), (I64_TRUNC_S_SAT_F32 F32:$src)>;
+def : Pat<(i64 (fp_to_uint_sat_gi F32:$src)), (I64_TRUNC_U_SAT_F32 F32:$src)>;
+def : Pat<(i64 (fp_to_sint_sat_gi F64:$src)), (I64_TRUNC_S_SAT_F64 F64:$src)>;
+def : Pat<(i64 (fp_to_uint_sat_gi F64:$src)), (I64_TRUNC_U_SAT_F64 F64:$src)>;

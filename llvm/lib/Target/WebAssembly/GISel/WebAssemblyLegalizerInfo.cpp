@@ -140,18 +140,12 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .clampScalar(0, s32, s64)
       .minScalar(1, s32);
 
-  // TODO: once comparison ops are in place
-  /*if (ST.hasNontrappingFPToInt()) {
-    getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
-        .legalForCartesianProduct({i32, i64}, {f32, f64})
-        .clampScalar(0, s32, s64)
-        .minScalar(1, s32);
-  } else {
-    getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
-        .lowerForCartesianProduct({i32, i64}, {f32, f64})
-        .clampScalar(0, s32, s64)
-        .minScalar(1, s32);
-  }*/
+  getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
+      .legalFor(ST.hasNontrappingFPToInt(),
+                {{i32, f32}, {i32, f64}, {i64, f32}, {i64, f64}})
+      .clampScalar(0, s32, s64)
+      .minScalar(1, s32)
+      .lower();
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
       .legalForCartesianProduct({f32, f64}, {i32, i64})
