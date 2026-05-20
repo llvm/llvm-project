@@ -273,8 +273,8 @@ public:
       : MST(MST), STS(STS), DI(DI) {}
 
   void emitMDNodeAnnot(const MDNode *N, formatted_raw_ostream &os) override {
-    if (auto *NewMD = DI.MDReplace.lookup(N)) {
-      if (auto *NewN = dyn_cast<MDNode>(NewMD))
+    if (const Metadata *NewMD = DI.MDReplace.lookup(N)) {
+      if (const auto *NewN = dyn_cast<MDNode>(NewMD))
         if (STS.getMetadataSlot(NewN) == -1)
           STS.createMetadataSlot(NewN);
 
@@ -286,8 +286,8 @@ public:
       return;
     }
 
-    if (auto *ExtraMD = DI.MDExtra.lookup(N)) {
-      if (auto *ExtraN = dyn_cast<MDNode>(ExtraMD))
+    if (const Metadata *ExtraMD = DI.MDExtra.lookup(N)) {
+      if (const auto *ExtraN = dyn_cast<MDNode>(ExtraMD))
         if (STS.getMetadataSlot(ExtraN) == -1)
           STS.createMetadataSlot(ExtraN);
 
@@ -308,7 +308,7 @@ static void prettyPrint(raw_ostream &OS, Module &M, const DXILResourceMap &DRM,
 
   prettyPrintResources(FOS, DRM, DRTM);
 
-  auto DI = DXILDebugInfoPass::run(M);
+  DXILDebugInfoMap DI = DXILDebugInfoPass::run(M);
 
   ModuleSlotTracker MST(&M);
   AbstractSlotTrackerStorage *STS = nullptr;
@@ -328,8 +328,10 @@ static void prettyPrint(raw_ostream &OS, Module &M, const DXILResourceMap &DRM,
 
   ModuleSlotTracker::MachineMDNodeListType MDNodes;
   MST.collectMDNodes(MDNodes, NextMetadataSlot, ~0u);
-  std::sort(MDNodes.begin(), MDNodes.end(),
-            [](auto &A, auto &B) { return A.first < B.first; });
+  std::sort(
+      MDNodes.begin(), MDNodes.end(),
+      [](std::pair<unsigned, const MDNode *> &A,
+         std::pair<unsigned, const MDNode *> &B) { return A.first < B.first; });
   for (auto [_, MDNode] : MDNodes) {
     DAAW.emitMDNodeAnnot(MDNode, FOS);
     MDNode->print(FOS, MST);
