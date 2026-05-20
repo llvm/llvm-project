@@ -51,6 +51,16 @@ TEST(LlvmLibcSemaphoreTest, Post) {
   ASSERT_EQ(sem.getvalue(), 0);
 }
 
+TEST(LlvmLibcSemaphoreTest, WaitNonBlocking) {
+  Semaphore sem(2);
+
+  // value is positive: wait() should decrement without blocking.
+  ASSERT_EQ(sem.wait(), 0);
+  ASSERT_EQ(sem.getvalue(), 1);
+  ASSERT_EQ(sem.wait(), 0);
+  ASSERT_EQ(sem.getvalue(), 0);
+}
+
 // Named semaphore tests.
 
 TEST(LlvmLibcSemaphoreTest, NamedOpenCloseUnlink) {

@@ -93,6 +93,22 @@ public:
     return EAGAIN;
   }
 
+  // Blocking wait, decrements the value when positive, or blocks until a
+  // post() makes it positive again.
+  LIBC_INLINE int wait() {
+    for (;;) {
+      if (trywait() == 0)
+        return 0;
+
+      // Blocks when value was zero.
+      // Futex wait re-checks the value atomically,
+      // so a racing post() before sleep is not lost.
+      // Spurious wakeups just send back to trywait().
+      (void)value.wait(/*expected=*/0, /*timeout=*/cpp::nullopt,
+                       /*is_shared=*/true);
+    }
+  }
+
   // Named semaphore operations.
   // creates or opens a named semaphore backed by a file in /dev/shm/.
   // When O_CREAT is specified in oflag, mode and value are used for
