@@ -107,23 +107,23 @@ taken as the exit code for the task, and the daemon should be restarted.
 Each command and response has a space before its argument. An example exchange
 may look like:
 
-* Command: ``arg 3`` followed by ``opt``
+* Command: ``arg 3\\n`` followed by ``opt``
 
-* Command: ``arg 2`` followed by ``-S``
+* Command: ``arg 2\\n`` followed by ``-S``
 
-* Command: ``arg 20`` followed by ``--passes=instcombine``
+* Command: ``arg 20\\n`` followed by ``--passes=instcombine``
 
-* Command: ``input_file llvm/test/Transforms/InstCombine/range-check.ll``
+* Command: ``input_file llvm/test/Transforms/InstCombine/range-check.ll\\n``
 
-* Command: ``run``
+* Command: ``run\\n``
 
 * (``stdout`` and ``stderr`` are sent as usual.)
 
-* Response: ``returned 0``
+* Response: ``returned 0\\n``
 
-* Command: ``bad command``
+* Command: ``bad command\\n``
 
-* Response: ``error Unexpected command: bad command``
+* Response: ``error Unexpected command: bad command\\n``
 
 Running a Daemon
 ================
