@@ -3460,6 +3460,16 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
       return CGF.MakeAddrLValue(Addr, T, AlignmentSource::Decl);
   }
 
+  // Global HLSL resource arrays initialized on access; create a temporary with
+  // the initialized global resource array.
+  if (CGF.getLangOpts().HLSL && VD->getType()->isHLSLResourceRecordArray()) {
+    std::optional<LValue> LV =
+        CGF.CGM.getHLSLRuntime().emitGlobalResourceArrayAsLValue(
+            CGF, VD, E->getExprLoc());
+    if (LV.has_value())
+      return LV.value();
+  }
+
   llvm::Value *V = CGF.CGM.GetAddrOfGlobalVar(VD);
 
   if (VD->getTLSKind() != VarDecl::TLS_None)
@@ -6767,9 +6777,14 @@ LValue CodeGenFunction::EmitHLSLArrayAssignLValue(const BinaryOperator *E) {
 
   // If the RHS is a global resource array, copy all individual resources
   // into LHS.
-  if (E->getRHS()->getType()->isHLSLResourceRecordArray())
-    if (CGM.getHLSLRuntime().emitResourceArrayCopy(LHS, E->getRHS(), *this))
+  if (E->getRHS()->getType()->isHLSLResourceRecordArray()) {
+    AggValueSlot Slot = AggValueSlot::forAddr(
+        LHS.getAddress(), Qualifiers(), AggValueSlot::IsDestructed_t(true),
+        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsAliased_t(false),
+        AggValueSlot::DoesNotOverlap);
+    if (CGM.getHLSLRuntime().emitGlobalResourceArray(*this, E->getRHS(), Slot))
       return LHS;
+  }
 
   // In C the RHS of an assignment operator is an RValue.
   // EmitAggregateAssign takes an LValue for the RHS. Instead we can call
