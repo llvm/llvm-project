@@ -1903,11 +1903,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    bool IsMixedFixedFromScalable =
-        DstTy.isFixedVector() && SrcTy.isScalableVector();
-
-    if (!IsMixedFixedFromScalable &&
-        ElementCount::isKnownGT(DstTy.getElementCount(),
+    if (ElementCount::isKnownGT(DstTy.getElementCount(),
                                 SrcTy.getElementCount())) {
       report("Destination vector must be smaller than source vector", MI);
       break;
@@ -1922,6 +1918,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
+    bool IsMixedFixedFromScalable =
+        DstTy.isFixedVector() && SrcTy.isScalableVector();
     uint64_t SrcMinLen = SrcTy.getElementCount().getKnownMinValue();
     if (Idx >= SrcMinLen ||
         (!IsMixedFixedFromScalable && Idx + DstMinLen > SrcMinLen)) {
