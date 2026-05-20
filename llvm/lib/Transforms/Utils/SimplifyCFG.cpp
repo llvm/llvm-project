@@ -7582,7 +7582,13 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   if (isSwitchDense(Values))
     return false;
 
-  auto TryBase = [&](int64_t CandidateBase, unsigned &CandidateShift) {
+  struct RangeReduction {
+    int64_t Base;
+    unsigned Shift;
+  };
+
+  auto TryGetRangeReductionForBase = [&](int64_t CandidateBase)
+      -> std::optional<RangeReduction> {
     SmallVector<int64_t, 4> ReducedValues;
     ReducedValues.reserve(Values.size());
     uint64_t ReducedBits = 0;
@@ -7592,25 +7598,34 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
       ReducedValues.push_back((int64_t)Reduced);
     }
 
-    CandidateShift = llvm::countr_zero(ReducedBits);
+    unsigned CandidateShift = llvm::countr_zero(ReducedBits);
     if (CandidateShift >= 64)
-      return false;
+      return std::nullopt;
     if (CandidateShift > 0)
       for (auto &V : ReducedValues)
         V = (int64_t)((uint64_t)V >> CandidateShift);
 
-    return isSwitchDense(ReducedValues);
+    if (!isSwitchDense(ReducedValues))
+      return std::nullopt;
+
+    return RangeReduction{CandidateBase, CandidateShift};
   };
 
-  // Choose the base to subtract from the switch condition. The default is the
-  // local minimum, but prefer Base=0 when the case values are still dense
-  // after shifting out their common low zero bits without subtracting a base.
-  // This avoids creating an unnecessary `(condition - local_min)` expression.
-  int64_t Base = Values[0];
-  unsigned Shift = 0;
-  if (Base >= 0 && TryBase(0, Shift))
-    Base = 0;
-  else if (!TryBase(Base, Shift))
+  auto GetRangeReduction = [&]() -> std::optional<RangeReduction> {
+    // Choose the base to subtract from the switch condition. The default is the
+    // local minimum, but prefer Base=0 when the case values are still dense
+    // after shifting out their common low zero bits without subtracting a base.
+    // This avoids creating an unnecessary `(condition - local_min)` expression.
+    int64_t LocalMin = Values[0];
+    if (LocalMin >= 0) {
+      if (auto Reduction = TryGetRangeReductionForBase(0))
+        return Reduction;
+    }
+    return TryGetRangeReductionForBase(LocalMin);
+  };
+
+  std::optional<RangeReduction> Reduction = GetRangeReduction();
+  if (!Reduction)
     return false;
 
   // The obvious transform is to shift the switch condition right and emit a
@@ -7626,17 +7641,19 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
   Builder.SetInsertPoint(SI);
   Value *Sub = SI->getCondition();
-  if (Base != 0)
-    Sub = Builder.CreateSub(Sub, ConstantInt::getSigned(Ty, Base));
+  if (Reduction->Base != 0)
+    Sub = Builder.CreateSub(Sub, ConstantInt::getSigned(Ty, Reduction->Base));
   Value *Rot = Builder.CreateIntrinsic(
       Ty, Intrinsic::fshl,
-      {Sub, Sub, ConstantInt::get(Ty, Ty->getBitWidth() - Shift)});
+      {Sub, Sub, ConstantInt::get(Ty, Ty->getBitWidth() - Reduction->Shift)});
   SI->replaceUsesOfWith(SI->getCondition(), Rot);
 
   for (auto Case : SI->cases()) {
     auto *Orig = Case.getCaseValue();
-    auto Sub = Orig->getValue() - APInt(Ty->getBitWidth(), Base, true);
-    Case.setValue(cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(Shift))));
+    auto Sub =
+        Orig->getValue() - APInt(Ty->getBitWidth(), Reduction->Base, true);
+    Case.setValue(
+        cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(Reduction->Shift))));
   }
   return true;
 }
