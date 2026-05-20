@@ -142,6 +142,7 @@
 
 #include <limits>
 #include <map>
+#include <memory>
 #include <optional>
 
 namespace llvm {
@@ -2487,6 +2488,10 @@ private:
   /// from a live entry point. The functions are added to ToBeDeletedFunctions.
   void identifyDeadInternalFunctions();
 
+  /// Return all uses of \p Fn after looking through pointer cast constant
+  /// expressions.
+  ArrayRef<const Use *> getPotentialCallSiteUses(const Function &Fn);
+
   /// Run `::update` on \p AA and track the dependences queried while doing so.
   /// Also adjust the state if we know further updates are not necessary.
   LLVM_ABI ChangeStatus updateAA(AbstractAttribute &AA);
@@ -2553,6 +2558,11 @@ private:
 
   /// A set to remember the functions we already assume to be live and visited.
   DenseSet<const Function *> VisitedFunctions;
+
+  /// Cached function uses after looking through pointer cast constant
+  /// expressions. Only used before the Attributor starts changing the IR.
+  DenseMap<const Function *, std::unique_ptr<SmallVector<const Use *, 8>>>
+      PotentialCallSiteUsesMap;
 
   /// Uses we replace with a new value after manifest is done. We will remove
   /// then trivially dead instructions as well.

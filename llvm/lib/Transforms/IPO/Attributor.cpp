@@ -1954,6 +1954,40 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
                               &QueryingAA, UsedAssumedInformation);
 }
 
+ArrayRef<const Use *> Attributor::getPotentialCallSiteUses(const Function &Fn) {
+  std::unique_ptr<SmallVector<const Use *, 8>> &PotentialUsesPtr =
+      PotentialCallSiteUsesMap[&Fn];
+  if (PotentialUsesPtr)
+    return *PotentialUsesPtr;
+
+  PotentialUsesPtr = std::make_unique<SmallVector<const Use *, 8>>();
+  SmallVectorImpl<const Use *> &PotentialUses = *PotentialUsesPtr;
+
+  SmallVector<const Use *, 8> Worklist;
+  SmallPtrSet<const Use *, 8> Seen;
+  auto AddUse = [&](const Use &U) {
+    if (Seen.insert(&U).second)
+      Worklist.push_back(&U);
+  };
+
+  for (const Use &U : Fn.uses())
+    AddUse(U);
+
+  for (unsigned UIdx = 0; UIdx < Worklist.size(); ++UIdx) {
+    const Use &U = *Worklist[UIdx];
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(U.getUser())) {
+      if (CE->isCast() && CE->getType()->isPointerTy()) {
+        for (const Use &CEU : CE->uses())
+          AddUse(CEU);
+        continue;
+      }
+    }
+    PotentialUses.push_back(&U);
+  }
+
+  return PotentialUses;
+}
+
 bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
                                       const Function &Fn,
                                       bool RequireAllCallSites,
@@ -1972,9 +2006,16 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
     if (!CB(*this, QueryingAA))
       return false;
 
-  SmallVector<const Use *, 8> Uses(make_pointer_range(Fn.uses()));
-  for (unsigned u = 0; u < Uses.size(); ++u) {
-    const Use &U = *Uses[u];
+  SmallVector<const Use *, 8> Uses;
+  ArrayRef<const Use *> PotentialUses;
+  if (Phase == AttributorPhase::SEEDING || Phase == AttributorPhase::UPDATE)
+    PotentialUses = getPotentialCallSiteUses(Fn);
+  else {
+    append_range(Uses, make_pointer_range(Fn.uses()));
+    PotentialUses = Uses;
+  }
+  for (unsigned u = 0; u < PotentialUses.size(); ++u) {
+    const Use &U = *PotentialUses[u];
     DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE, {
       if (auto *Fn = dyn_cast<Function>(U))
         dbgs() << "[Attributor] Check use: " << Fn->getName() << " in "
@@ -1996,8 +2037,12 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
           dbgs() << "[Attributor] Use, is constant cast expression, add "
                  << CE->getNumUses() << " uses of that expression instead!\n";
         });
+        assert((Phase != AttributorPhase::SEEDING &&
+                Phase != AttributorPhase::UPDATE) &&
+               "Constant expression uses should be expanded in the cache");
         for (const Use &CEU : CE->uses())
           Uses.push_back(&CEU);
+        PotentialUses = Uses;
         continue;
       }
     }
