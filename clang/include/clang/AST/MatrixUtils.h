@@ -44,28 +44,6 @@ inline bool isMatrixRowMajor(const LangOptions &LangOpts, QualType T) {
   return LangOpts.getDefaultMatrixMemoryLayout() ==
          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
 }
-
-/// Returns true if matrices of \p T should be laid out in column-major order.
-/// Mirrors `isMatrixRowMajor`; per-decl HLSL attributes win over the
-/// `-fmatrix-memory-layout=` default.
-inline bool isMatrixColumnMajor(const LangOptions &LangOpts, QualType T) {
-  if (LangOpts.HLSL && !T.isNull()) {
-    QualType Cur = T;
-    while (const auto *AT = Cur->getAs<AttributedType>()) {
-      switch (AT->getAttrKind()) {
-      case attr::HLSLColumnMajor:
-        return true;
-      case attr::HLSLRowMajor:
-        return false;
-      default:
-        break;
-      }
-      Cur = AT->getModifiedType();
-    }
-  }
-  return LangOpts.getDefaultMatrixMemoryLayout() ==
-         LangOptions::MatrixMemoryLayout::MatrixColMajor;
-}
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_MATRIXUTILS_H
