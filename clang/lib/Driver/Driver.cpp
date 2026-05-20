@@ -98,12 +98,14 @@
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/TarWriter.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -2271,7 +2273,69 @@ void Driver::generateCompilationDiagnostics(
                << "\n";
     if (Report)
       Report->TemporaryFiles.push_back(std::string(Script));
+    TempFiles.push_back(std::string(Script));
+    ScriptOS.close();
     Diag(clang::diag::note_drv_command_failed_diag_msg) << Script;
+  }
+
+  if (Arg *A = C.getArgs().getLastArg(options::OPT_fcrash_diagnostics_tar)) {
+    StringRef CrashDiagnosticsTar = A->getValue();
+    Expected<std::unique_ptr<llvm::TarWriter>> TarOrErr =
+        llvm::TarWriter::create(CrashDiagnosticsTar,
+                                llvm::sys::path::stem(CrashDiagnosticsTar));
+    if (!TarOrErr) {
+      Diag(clang::diag::note_drv_command_failed_diag_msg)
+          << (std::string("Error creating reproducer tarball: ") +
+              llvm::toString(TarOrErr.takeError()));
+    } else {
+      std::unique_ptr<llvm::TarWriter> &Tar = *TarOrErr;
+      for (const std::string &TempFile : TempFiles) {
+        if (llvm::sys::fs::is_directory(TempFile)) {
+          std::error_code EC;
+          for (llvm::sys::fs::recursive_directory_iterator I(TempFile, EC), E;
+               I != E && !EC; I.increment(EC)) {
+            if (llvm::sys::fs::is_regular_file(I->path())) {
+              auto BufferOrErr = llvm::MemoryBuffer::getFile(I->path());
+              if (BufferOrErr) {
+                // Construct path of file relative to TempFile.
+                llvm::SmallString<128> PathInTar =
+                    llvm::sys::path::filename(TempFile);
+                StringRef SubPath = I->path();
+                if (SubPath.consume_front(TempFile)) {
+                  if (!SubPath.empty() &&
+                      llvm::sys::path::is_separator(SubPath.front())) {
+                    SubPath = SubPath.drop_front();
+                  }
+                  llvm::sys::path::append(PathInTar, SubPath);
+                  Tar->append(PathInTar, (*BufferOrErr)->getBuffer());
+                }
+              } else {
+                Diag(clang::diag::note_drv_command_failed_diag_msg)
+                    << (std::string("Error reading file for tarball: ") +
+                        I->path());
+              }
+            }
+          }
+          if (EC) {
+            Diag(clang::diag::note_drv_command_failed_diag_msg)
+                << (std::string("Error iterating directory for tarball: ") +
+                    TempFile + " " + EC.message());
+          }
+        } else {
+          auto BufferOrErr = llvm::MemoryBuffer::getFile(TempFile);
+          if (BufferOrErr) {
+            Tar->append(llvm::sys::path::filename(TempFile),
+                        (*BufferOrErr)->getBuffer());
+          } else {
+            Diag(clang::diag::note_drv_command_failed_diag_msg)
+                << (std::string("Error reading file for tarball: ") + TempFile);
+          }
+        }
+      }
+      Diag(clang::diag::note_drv_command_failed_diag_msg)
+          << (std::string("Crash reproducer tarball created at: ") +
+              CrashDiagnosticsTar);
+    }
   }
 
   // On darwin, provide information about the .crash diagnostic report.
