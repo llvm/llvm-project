@@ -19,6 +19,7 @@ module @gemm attributes {gpu.container_module} {
   gpu.module @kernel {
     gpu.func @gemm_mxfp(%arg0: memref<1024x4096xf4E2M1FN>, %arg1: memref<2048x1024xi8>, %arg2: memref<1024x128xf8E8M0FNU>, %arg3: memref<128x1024xf8E8M0FNU>, %arg4: memref<1024x1024xf32>) kernel {
       %c0 = arith.constant 0 : index
+      %c2 = arith.constant 2 : index
       %c4 = arith.constant 4 : index
       %c128 = arith.constant 128 : index
       %c1024 = arith.constant 1024 : index
@@ -45,7 +46,8 @@ module @gemm attributes {gpu.container_module} {
 
         // load_nd with offset
         %a = xegpu.load_nd %a_tdesc[%0, %id_k] {layout = #a}: !xegpu.tensor_desc<128x512xf4E2M1FN> -> vector<128x512xf4E2M1FN>
-        %bp = xegpu.load_nd %bp_tdesc[%id_k, %1] {layout = #b_packed}: !xegpu.tensor_desc<256x128xi8> -> vector<256x128xi8>
+        %id_k_packed = arith.divsi %id_k, %c2 : index
+        %bp = xegpu.load_nd %bp_tdesc[%id_k_packed, %1] {layout = #b_packed}: !xegpu.tensor_desc<256x128xi8> -> vector<256x128xi8>
 
         // Bitcast to fp4: 256x128 uint8 -> 256x256 fp4 (each uint8 holds 2 fp4 values)
         %b_bitcast = vector.bitcast %bp : vector<256x128xi8> to vector<256x256xf4E2M1FN>
