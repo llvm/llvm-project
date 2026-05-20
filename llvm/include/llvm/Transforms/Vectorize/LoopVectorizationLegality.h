@@ -174,10 +174,6 @@ public:
     return (ScalableForceKind)Scalable.Value == SK_AlwaysScalable;
   }
 
-  /// If hints are provided that force vectorization, use the AlwaysPrint
-  /// pass name to force the frontend to print the diagnostic.
-  const char *vectorizeAnalysisPassName() const;
-
   /// When enabling loop hints are provided we allow the vectorizer to change
   /// the order of operations that is given by the scalar loop. This is not
   /// enabled by default because can be unsafe or inefficient. For example,

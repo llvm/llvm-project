@@ -28,9 +28,9 @@ OperatingSystemPythonInterface::OperatingSystemPythonInterface(
 
 llvm::Expected<StructuredData::GenericSP>
 OperatingSystemPythonInterface::CreatePluginObject(
-    llvm::StringRef class_name, ExecutionContext &exe_ctx,
-    StructuredData::DictionarySP args_sp, StructuredData::Generic *script_obj) {
-  return ScriptedPythonInterface::CreatePluginObject(class_name, nullptr,
+    const ScriptedMetadata &scripted_metadata, ExecutionContext &exe_ctx,
+    StructuredData::Generic *script_obj) {
+  return ScriptedPythonInterface::CreatePluginObject(scripted_metadata, nullptr,
                                                      exe_ctx.GetProcessSP());
 }
 
