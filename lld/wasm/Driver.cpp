@@ -884,11 +884,11 @@ createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
   return sym;
 }
 
-static UndefinedFunction *
-createUndefinedFunction(StringRef name, WasmSignature *signature) {
+static UndefinedFunction *createUndefinedFunction(StringRef name,
+                                                  WasmSignature *signature) {
   auto *sym = cast<UndefinedFunction>(symtab->addUndefinedFunction(
-      name, std::nullopt, std::nullopt, WASM_SYMBOL_UNDEFINED, nullptr, signature,
-      true));
+      name, std::nullopt, std::nullopt, WASM_SYMBOL_UNDEFINED, nullptr,
+      signature, true));
   ctx.arg.allowUndefinedSymbols.insert(sym->getName());
   sym->isUsedInRegularObj = true;
   return sym;
