@@ -1867,22 +1867,13 @@ TypeSourceInfo *ExplicitInstantiationDecl::getTypeAsWritten() const {
   return getRawTypeSourceInfo();
 }
 
-bool ExplicitInstantiationDecl::hasTemplateArgs() const {
-  if (getTrailingArgsInfo())
-    return true;
-  if (auto TL = getClassTypeLoc())
-    if (TL->getAs<TemplateSpecializationTypeLoc>())
-      return true;
-  return false;
-}
-
-unsigned ExplicitInstantiationDecl::getNumTemplateArgs() const {
+std::optional<unsigned> ExplicitInstantiationDecl::getNumTemplateArgs() const {
   if (const auto *Args = getTrailingArgsInfo())
     return Args->NumTemplateArgs;
   if (auto TL = getClassTypeLoc())
     if (auto TST = TL->getAs<TemplateSpecializationTypeLoc>())
       return TST.getNumArgs();
-  llvm_unreachable("template arguments not found in trailing args or TypeLoc");
+  return std::nullopt;
 }
 
 TemplateArgumentLoc
@@ -1920,7 +1911,7 @@ SourceLocation ExplicitInstantiationDecl::getEndLoc() const {
     if (TSI->getType().hasPostfixDeclaratorSyntax())
       return TSI->getTypeLoc().getEndLoc();
   // Otherwise, template args RAngleLoc or NameLoc.
-  if (hasTemplateArgs()) {
+  if (getNumTemplateArgs()) {
     SourceLocation RAngle = getTemplateArgsRAngleLoc();
     if (RAngle.isValid())
       return RAngle;

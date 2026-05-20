@@ -686,8 +686,8 @@ public:
   void VisitExplicitInstantiationDecl(const ExplicitInstantiationDecl *D) {
     if (TypeSourceInfo *TSI = D->getTypeAsWritten())
       Visit(TSI->getTypeLoc());
-    if (D->hasTemplateArgs()) {
-      for (unsigned I = 0, E = D->getNumTemplateArgs(); I != E; ++I) {
+    if (auto NumArgs = D->getNumTemplateArgs()) {
+      for (unsigned I = 0; I != *NumArgs; ++I) {
         TemplateArgumentLoc Loc = D->getTemplateArg(I);
         Visit(Loc.getArgument(), Loc.getSourceRange());
       }

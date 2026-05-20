@@ -3519,11 +3519,9 @@ public:
   /// for function / variable templates, from a trailing object.
   NestedNameSpecifierLoc getQualifierLoc() const;
 
-  /// Whether this explicit instantiation has a template argument list.
-  /// Must be checked before calling getNumTemplateArgs() and friends.
-  bool hasTemplateArgs() const;
-
-  unsigned getNumTemplateArgs() const;
+  /// Returns the number of explicit template arguments, or std::nullopt if
+  /// this entity has no template argument list (e.g., nested classes).
+  std::optional<unsigned> getNumTemplateArgs() const;
   TemplateArgumentLoc getTemplateArg(unsigned I) const;
   SourceLocation getTemplateArgsLAngleLoc() const;
   SourceLocation getTemplateArgsRAngleLoc() const;

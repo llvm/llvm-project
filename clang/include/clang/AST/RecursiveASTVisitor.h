@@ -1765,8 +1765,8 @@ DEF_TRAVERSE_DECL(ExplicitInstantiationDecl, {
     TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
   if (TypeSourceInfo *TSI = D->getTypeAsWritten())
     TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));
-  if (D->hasTemplateArgs())
-    for (unsigned I = 0, E = D->getNumTemplateArgs(); I != E; ++I)
+  if (auto NumArgs = D->getNumTemplateArgs())
+    for (unsigned I = 0; I != *NumArgs; ++I)
       TRY_TO(TraverseTemplateArgumentLoc(D->getTemplateArg(I)));
 })
 
