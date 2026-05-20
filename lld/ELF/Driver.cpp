@@ -132,8 +132,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   ctx.symAux.emplace_back();
   ctx.symtab = std::make_unique<SymbolTable>(ctx);
 
-  ctx.partitions.clear();
-  ctx.partitions.emplace_back(ctx);
+  ctx.partitions.reset(ctx);
 
   ctx.arg.progName = args[0];
 
@@ -2771,12 +2770,9 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
     return;
 
   StringRef partName = reinterpret_cast<const char *>(s->content().data());
-  for (Partition &part : ctx.partitions) {
-    if (part.name == partName) {
-      sym->partition = part.getNumber(ctx);
+  for (Partition &shim : ctx.partitions.shims())
+    if (shim.name == partName)
       return;
-    }
-  }
 
   // Forbid partitions from being used on incompatible targets, and forbid them
   // from being used together with various linker features that assume a single
@@ -2794,16 +2790,7 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
   if (ctx.arg.emachine == EM_MIPS)
     ErrAlways(ctx) << s->file << ": partitions cannot be used on this target";
 
-  // Impose a limit of no more than 254 partitions. This limit comes from the
-  // sizes of the Partition fields in InputSectionBase and Symbol, as well as
-  // the amount of space devoted to the partition number in RankFlags.
-  if (ctx.partitions.size() == 254)
-    Fatal(ctx) << "may not have more than 254 partitions";
-
-  ctx.partitions.emplace_back(ctx);
-  Partition &newPart = ctx.partitions.back();
-  newPart.name = partName;
-  sym->partition = newPart.getNumber(ctx);
+  ctx.partitions.addShim(ctx).name = partName;
 }
 
 static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
@@ -3555,7 +3542,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Now that the number of partitions is fixed, save a pointer to the main
   // partition.
-  ctx.mainPart = &ctx.partitions[0];
+  ctx.mainPart = &ctx.partitions.main();
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
@@ -3590,10 +3577,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Garbage collection and removal of shared symbols from unused shared objects.
   markLive<ELFT>(ctx);
-
-  // Make copies of any input sections that need to be copied into each
-  // partition.
-  copySectionsIntoPartitions(ctx);
 
   if (canHaveMemtagGlobals(ctx)) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");

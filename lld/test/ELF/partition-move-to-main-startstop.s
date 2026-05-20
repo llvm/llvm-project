@@ -4,19 +4,13 @@
 // RUN: ld.lld -shared -soname=ts %ts.o -o %ts.so
 // RUN: llvm-mc %s -o %t.o -filetype=obj --triple=x86_64-unknown-linux
 // RUN: ld.lld %t.o %ts.so -o %t --export-dynamic --gc-sections
-// RUN: llvm-readelf -S %t | FileCheck --implicit-check-not=has_startstop %s
+// RUN: llvm-readelf -S %t | FileCheck --implicit-check-not=has_startstop --implicit-check-not=no_startstop %s
 
-// We can't let the has_startstop section be split by partition because it is
-// referenced by __start_ and __stop_ symbols, so the split could result in
-// some sections being moved out of the __start_/__stop_ range. Make sure that
-// that didn't happen by checking that there is only one section.
-//
-// It's fine for us to split no_startstop because of the lack of
-// __start_/__stop_ symbols.
+/// All input sections now live in the main partition, so a section that
+/// could otherwise have been split (no_startstop) is also merged into a
+/// single output section. __start_/__stop_ semantics keep working naturally.
 
 // CHECK: has_startstop
-// CHECK: no_startstop
-
 // CHECK: no_startstop
 
 .section .llvm_sympart.f1,"",@llvm_sympart

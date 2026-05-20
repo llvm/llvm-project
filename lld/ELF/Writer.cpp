@@ -122,29 +122,6 @@ removeEmptyPTLoad(Ctx &ctx, SmallVector<std::unique_ptr<PhdrEntry>, 0> &phdrs) {
   phdrs.erase(it, phdrs.end());
 }
 
-void elf::copySectionsIntoPartitions(Ctx &ctx) {
-  SmallVector<InputSectionBase *, 0> newSections;
-  const size_t ehSize = ctx.ehInputSections.size();
-  for (unsigned part = 2; part != ctx.partitions.size() + 1; ++part) {
-    for (InputSectionBase *s : ctx.inputSections) {
-      if (!(s->flags & SHF_ALLOC) || !s->isLive() || s->type != SHT_NOTE)
-        continue;
-      auto *copy = make<InputSection>(cast<InputSection>(*s));
-      copy->partition = part;
-      newSections.push_back(copy);
-    }
-    for (size_t i = 0; i != ehSize; ++i) {
-      assert(ctx.ehInputSections[i]->isLive());
-      auto *copy = make<EhInputSection>(*ctx.ehInputSections[i]);
-      copy->partition = part;
-      ctx.ehInputSections.push_back(copy);
-    }
-  }
-
-  ctx.inputSections.insert(ctx.inputSections.end(), newSections.begin(),
-                           newSections.end());
-}
-
 static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
                                    uint64_t val, uint8_t stOther = STV_HIDDEN) {
   Symbol *s = ctx.symtab->find(name);
@@ -335,16 +312,14 @@ template <class ELFT> void Writer<ELFT>::run() {
   // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
   // 0 sized region. This has to be done late since only after assignAddresses
   // we know the size of the sections.
-  for (Partition &part : ctx.partitions)
-    removeEmptyPTLoad(ctx, part.phdrs);
+  removeEmptyPTLoad(ctx, ctx.mainPart->phdrs);
 
   if (!ctx.arg.oFormatBinary)
     assignFileOffsets();
   else
     assignFileOffsetsBinary();
 
-  for (Partition &part : ctx.partitions)
-    setPhdrs(part);
+  setPhdrs(*ctx.mainPart);
 
   // Handle --print-map(-M)/--Map and --cref. Dump them before checkSections()
   // because the files may be useful in case checkSections() or openFile()
@@ -883,7 +858,8 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   auto isLarge = [&ctx = ctx](OutputSection *osec) {
     return ctx.arg.emachine == EM_X86_64 && osec->flags & SHF_X86_64_LARGE;
   };
-  for (Partition &part : ctx.partitions) {
+  {
+    Partition &part = *ctx.mainPart;
     for (auto &p : part.phdrs) {
       if (p->p_type != PT_LOAD)
         continue;
@@ -1533,8 +1509,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   // increasing. Anything here must be repeatable, since spilling may change
   // section order.
   const auto finalizeOrderDependentContent = [this] {
-    for (Partition &part : ctx.partitions)
-      finalizeSynthetic(ctx, part.armExidx.get());
+    finalizeSynthetic(ctx, ctx.mainPart->armExidx.get());
     resolveShfLinkOrder();
   };
   finalizeOrderDependentContent();
@@ -1575,7 +1550,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     if (ctx.in.mipsGot)
       ctx.in.mipsGot->updateAllocSize(ctx);
 
-    for (Partition &part : ctx.partitions) {
+    {
+      Partition &part = *ctx.mainPart;
       // The R_AARCH64_AUTH_RELATIVE has a smaller addend field as bits [63:32]
       // encode the signing schema. We've put relocations in .relr.auth.dyn
       // during RelocationScanner::processAux, but the target VA for some of
@@ -1889,8 +1865,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // earlier.
     {
       llvm::TimeTraceScope timeScope("Finalize .eh_frame");
-      for (Partition &part : ctx.partitions)
-        finalizeSynthetic(ctx, part.ehFrame.get());
+      finalizeSynthetic(ctx, ctx.mainPart->ehFrame.get());
     }
   }
 
@@ -1988,25 +1963,13 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       // computeBinding might localize a symbol that was considered exported
       // but then synthesized as hidden (e.g. _DYNAMIC).
       if ((sym->isExported || sym->isPreemptible) && !sym->isLocal()) {
-        ctx.partitions[sym->partition - 1].dynSymTab->addSymbol(sym);
+        ctx.mainPart->dynSymTab->addSymbol(sym);
         if (auto *file = dyn_cast<SharedFile>(sym->file))
           if (file->isNeeded && !sym->isUndefined())
             addVerneed(ctx, *sym);
       }
     }
 
-    // We also need to scan the dynamic relocation tables of the other
-    // partitions and add any referenced symbols to the partition's dynsym.
-    for (Partition &part :
-         MutableArrayRef<Partition>(ctx.partitions).slice(1)) {
-      DenseSet<Symbol *> syms;
-      for (const SymbolTableEntry &e : part.dynSymTab->getSymbols())
-        syms.insert(e.sym);
-      for (DynamicReloc &reloc : part.relaDyn->relocs)
-        if (reloc.sym && reloc.needsDynSymIndex() &&
-            syms.insert(reloc.sym).second)
-          part.dynSymTab->addSymbol(reloc.sym);
-    }
   }
 
   if (ctx.in.mipsGot)
@@ -2049,7 +2012,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // The headers have to be created before finalize as that can influence the
   // image base and the dynamic section on mips includes the image base.
   if (!ctx.arg.relocatable && !ctx.arg.oFormatBinary) {
-    for (Partition &part : ctx.partitions) {
+    {
+      Partition &part = *ctx.mainPart;
       part.phdrs = ctx.script->hasPhdrsCommands() ? ctx.script->createPhdrs()
                                                   : createPhdrs(part);
       if (ctx.arg.emachine == EM_ARM) {
@@ -2066,6 +2030,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
         addPhdrForSection(part, SHT_RISCV_ATTRIBUTES, PT_RISCV_ATTRIBUTES,
                           PF_R);
     }
+    // Shims only need the basic PT_PHDR/PT_LOAD set; no target-specific
+    // segments since shims hold no input sections.
+    for (Partition &shim : ctx.partitions.shims())
+      shim.phdrs = createPhdrs(shim);
     ctx.out.programHeaders->size =
         sizeof(Elf_Phdr) * ctx.mainPart->phdrs.size();
 
@@ -2103,11 +2071,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     finalizeSynthetic(ctx, ctx.in.plt.get());
     finalizeSynthetic(ctx, ctx.in.iplt.get());
     finalizeSynthetic(ctx, ctx.in.ppc32Got2.get());
-    finalizeSynthetic(ctx, ctx.in.partIndex.get());
 
     // Dynamic section must be the last one in this list and dynamic
     // symbol table section (dynSymTab) must be the first one.
-    for (Partition &part : ctx.partitions) {
+    {
+      Partition &part = *ctx.mainPart;
       finalizeSynthetic(ctx, part.relaDyn.get());
       finalizeSynthetic(ctx, part.relrDyn.get());
       finalizeSynthetic(ctx, part.relrAuthDyn.get());
@@ -2313,7 +2281,7 @@ Writer<ELFT>::createPhdrs(Partition &part) {
     return ret.back().get();
   };
 
-  unsigned partNo = part.getNumber(ctx);
+  unsigned partNo = part.getNumber();
   bool isMain = partNo == 1;
 
   // Add the first PT_LOAD segment for regular output sections.
@@ -2438,9 +2406,10 @@ Writer<ELFT>::createPhdrs(Partition &part) {
   if (tlsHdr->firstSec)
     ret.push_back(std::move(tlsHdr));
 
-  // Add an entry for .dynamic.
-  if (OutputSection *sec = part.dynamic->getParent())
-    addHdr(PT_DYNAMIC, sec->getPhdrFlags())->add(sec);
+  // Add an entry for .dynamic. Shim partitions don't carry a .dynamic.
+  if (part.dynamic)
+    if (OutputSection *sec = part.dynamic->getParent())
+      addHdr(PT_DYNAMIC, sec->getPhdrFlags())->add(sec);
 
   if (relRo->firstSec)
     ret.push_back(std::move(relRo));
@@ -2513,7 +2482,7 @@ Writer<ELFT>::createPhdrs(Partition &part) {
 template <class ELFT>
 void Writer<ELFT>::addPhdrForSection(Partition &part, unsigned shType,
                                      unsigned pType, unsigned pFlags) {
-  unsigned partNo = part.getNumber(ctx);
+  unsigned partNo = part.getNumber();
   auto i = llvm::find_if(ctx.outputSections, [=](OutputSection *cmd) {
     return cmd->partition == partNo && cmd->type == shType;
   });
@@ -2583,14 +2552,17 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
     }
   };
 
-  for (Partition &part : ctx.partitions) {
+  auto alignPhdrs = [&](Partition &p) {
     prev = nullptr;
-    for (auto &p : part.phdrs)
-      if (p->p_type == PT_LOAD && p->firstSec) {
-        pageAlign(p.get());
-        prev = p.get();
+    for (auto &ph : p.phdrs)
+      if (ph->p_type == PT_LOAD && ph->firstSec) {
+        pageAlign(ph.get());
+        prev = ph.get();
       }
-  }
+  };
+  alignPhdrs(*ctx.mainPart);
+  for (Partition &shim : ctx.partitions.shims())
+    alignPhdrs(shim);
 }
 
 // Compute an in-file position for a given section. The file offset must be the
@@ -2649,10 +2621,9 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
   uint64_t off = ctx.out.elfHeader->size + ctx.out.programHeaders->size;
 
   PhdrEntry *lastRX = nullptr;
-  for (Partition &part : ctx.partitions)
-    for (auto &p : part.phdrs)
-      if (p->p_type == PT_LOAD && (p->p_flags & PF_X))
-        lastRX = p.get();
+  for (auto &p : ctx.mainPart->phdrs)
+    if (p->p_type == PT_LOAD && (p->p_flags & PF_X))
+      lastRX = p.get();
 
   // Layout SHF_ALLOC sections before non-SHF_ALLOC sections. A non-SHF_ALLOC
   // will not occupy file offsets contained by a PT_LOAD.
@@ -2961,7 +2932,8 @@ static void fillTrap(std::array<uint8_t, 4> trapInstr, uint8_t *i,
 // boundary. Even though it is not required by any standard, it is in general
 // a good thing to do for security reasons.
 template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
-  for (Partition &part : ctx.partitions) {
+  {
+    Partition &part = *ctx.mainPart;
     // Fill gaps between consecutive sections in the same executable segment.
     OutputSection *prev = nullptr;
     for (OutputSection *sec : ctx.outputSections) {
@@ -3055,8 +3027,7 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
     return;
 
   if (ctx.arg.buildId == BuildIdKind::Hexstring) {
-    for (Partition &part : ctx.partitions)
-      part.buildId->writeBuildId(ctx.arg.buildIdVector);
+    ctx.mainPart->buildId->writeBuildId(ctx.arg.buildIdVector);
     return;
   }
 
@@ -3095,8 +3066,7 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
   default:
     llvm_unreachable("unknown BuildIdKind");
   }
-  for (Partition &part : ctx.partitions)
-    part.buildId->writeBuildId(output);
+  ctx.mainPart->buildId->writeBuildId(output);
 }
 
 template void elf::writeResult<ELF32LE>(Ctx &);
