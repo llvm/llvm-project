@@ -665,6 +665,13 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
             padding = {!cir.array<!u8i x 8>}>
     ```
 
+    Tail padding is represented differently by record kind.  For structs and
+    classes, `padded` still appends the tail-padding byte array as the last
+    entry in `members` (see `!rec_p2` / `!rec_p3` above).  For unions,
+    `padded` sets the flag and the tail-padding type lives in the optional
+    `padding = { … }` slot so `members` lists only the real variants (see
+    `!rec_u`).
+
     Incomplete records are mutable, meaning they can be later completed with a
     body automatically updating in place every type in the code that uses the
     incomplete record. Mutability allows for recursive types to be represented,

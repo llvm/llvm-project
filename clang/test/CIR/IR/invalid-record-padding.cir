@@ -1,0 +1,24 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
+
+// expected-error@+1 {{padded unions must specify a padding type}}
+!rec_bad = !cir.record<union "U" padded {!u8i, !u64i}>
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
+
+// expected-error@+1 {{padded keyword required when padding is set}}
+!rec_bad = !cir.record<union "U" {!u8i, !u64i}, padding = {!u8i}>
+
+// -----
+
+!u8i = !cir.int<u, 8>
+
+// expected-error@+1 {{record padding is only supported on union types}}
+!rec_bad = !cir.record<struct "S" {!u8i}, padding = {!u8i}>

@@ -222,14 +222,18 @@ Type RecordType::parse(mlir::AsmParser &parser) {
     type = getChecked(eLoc, context, name, kind);
   } else if (!name && !incomplete) { // Anonymous & complete
     type = getChecked(eLoc, context, membersRef, packed, padded, kind, padding);
+    if (!type)
+      return {};
   } else if (!incomplete) { // Identified & complete
     type = getChecked(eLoc, context, membersRef, name, packed, padded, kind,
                       padding);
+    if (!type)
+      return {};
     // If the record has a self-reference, its type already exists in a
     // incomplete state. In this case, we must complete it.
-    if (mlir::cast<RecordType>(type).isIncomplete())
-      mlir::cast<RecordType>(type).complete(membersRef, packed, padded,
-                                            padding);
+    if (auto recordTy = mlir::dyn_cast<RecordType>(type))
+      if (recordTy.isIncomplete())
+        recordTy.complete(membersRef, packed, padded, padding);
     assert(!cir::MissingFeatures::astRecordDeclAttr());
   } else { // anonymous & incomplete
     parser.emitError(loc, "anonymous records must be complete");
@@ -303,6 +307,8 @@ RecordType::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
     if (!padded)
       return emitError() << "padded keyword required when padding is set";
   }
+  if (padded && kind == RecordKind::Union && !padding)
+    return emitError() << "padded unions must specify a padding type";
   return mlir::success();
 }
 
