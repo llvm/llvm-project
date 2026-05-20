@@ -14,20 +14,19 @@ module attributes {llvm.data_layout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128
 // CHECK-INT-LABEL: func.func private @single_i32i32(i64)
 // CHECK-INT-LABEL: func.func private @single_i8i8i8(i32)
 // CHECK-INT-LABEL: func.func private @single_i8i8i32(i64)
+// CHECK-INT-LABEL: func.func private @single_i128(i128)
 func.func private @single_i64(!fir.type<single_i64{i:i64}>)
 func.func private @single_i32i32(!fir.type<single_i32i32{i:i32,j:i32}>)
 func.func private @single_i8i8i8(!fir.type<single_i8i8i8{i:i8,j:i8,k:i8}>)
 func.func private @single_i8i8i32(!fir.type<single_i8i8i32{i:i8,j:i8,k:i32}>)
+func.func private @single_int128(!fir.type<single_int128{i:i128}>)
 
 // ================================================
 
 // CHECK-INT-LABEL: func.func private @double_i8i64(!fir.array<2xi64>)
-// CHECK-INT-LABEL: func.func private @double_int128(!fir.array<2xi64>)
 // CHECK-INT-LABEL: func.func private @double_complex(!fir.array<2xi64>)
-// CHECK-FLOAT-LABEL: func.func private @double_int128(!fir.array<2xi64>)
 // CHECK-FLOAT-LABEL: func.func private @double_complex(f64, f64)
 func.func private @double_i8i64(!fir.type<double_i8i64{i:i8,j:i64}>)
-func.func private @double_int128(!fir.type<double_int128{i:i128}>)
 func.func private @double_complex(!fir.type<double_complex{i:complex<f64>}>)
 
 // ================================================
@@ -44,10 +43,16 @@ func.func private @large_bad_alignment(!fir.type<large_bad_alignment{i:i8,j:i64,
 
 // CHECK-INT-LABEL:   func.func private @single_float(i32)
 // CHECK-INT-LABEL:   func.func private @float_int(i64)
+// CHECK-INT-LABEL:   func.func private @float_char(i64)
+// CHECK-INT-LABEL:   func.func private @logical_double(!fir.array<2xi64>)
 // CHECK-FLOAT-LABEL: func.func private @single_float(f32)
 // CHECK-FLOAT-LABEL: func.func private @float_int(f32, i32)
+// CHECK-FLOAT-LABEL: func.func private @float_char(f32, i8)
+// CHECK-FLOAT-LABEL: func.func private @logical_double(i8, f64)
 func.func private @single_float(!fir.type<single_float{f:f32}>)
 func.func private @float_int(!fir.type<float_int{f:f32,i:i32}>)
+func.func private @float_char(!fir.type<float_char{f:f32,c:!fir.char<1>}>)
+func.func private @logical_double(!fir.type<logical_double{l:!fir.logical<1>,f:f64}>)
 
 // ================================================
 

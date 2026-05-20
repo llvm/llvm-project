@@ -1434,50 +1434,6 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
     return marshal;
   }
 
-  void checkValidTypeOrCrash(mlir::Location loc, mlir::Type type) const {
-    llvm::TypeSwitch<mlir::Type>(type)
-        .Case<mlir::IntegerType>([&](auto integerTy) {
-          // 128 bit int will be passed like any other 128bit struct as 2
-          // registers.
-          if (integerTy.getWidth() > 128)
-            TODO(loc,
-                 "integerType with width exceeding 128 bits is unsupported");
-        })
-        .Case<mlir::FloatType>([&](auto floatTy) {
-          if (floatTy.getWidth() > 64)
-            TODO(loc, "128 bit float is not supported by RISCV64");
-        })
-        .Case([&](mlir::ComplexType cmplx) {
-          const auto *sem = &floatToSemantics(kindMap, cmplx.getElementType());
-          if (sem != &llvm::APFloat::IEEEsingle() &&
-              sem != &llvm::APFloat::IEEEdouble())
-            TODO(loc, "unsupported complex type(not IEEEsingle, IEEEdouble) "
-                      "as a structure component for BIND(C), "
-                      "VALUE derived type argument and type return");
-        })
-        .Case<fir::LogicalType, fir::CharacterType>([&](auto ty) {
-          // Always fine, characters with len>1 get already rejected before.
-        })
-        .Case([&](fir::RecordType recTy) {
-          for (auto [name, ty] : recTy.getTypeList())
-            checkValidTypeOrCrash(loc, ty);
-        })
-        .Case([&](fir::SequenceType seqTy) {
-          if (seqTy.hasDynamicExtents())
-            TODO(loc, "passing dynamic sequence argument to C by value is not "
-                      "supported");
-          checkValidTypeOrCrash(loc, seqTy.getElementType());
-        })
-        .Case([&](fir::VectorType vecTy) {
-          TODO(loc, "passing vector argument to C by value is not supported");
-        })
-        .Default([&](mlir::Type ty) {
-          if (!fir::conformsWithPassByRef(ty))
-            TODO(loc, "unsupported component type for BIND(C), VALUE derived "
-                      "type argument and type return");
-        });
-  }
-
   CodeGenSpecifics::Marshalling
   passOnTheStack(unsigned short recAlign, mlir::Type ty, bool isResult) const {
     CodeGenSpecifics::Marshalling marshal;
@@ -1488,48 +1444,88 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
     return marshal;
   }
 
-  // Flatten a RecordType::TypeList containing more record types or array types
-  static std::vector<mlir::Type>
-  flattenTypeList(const RecordType::TypeList &types) {
-    std::vector<mlir::Type> flatTypes;
-    // The flat list will be at least the same size as the non-flat list.
-    flatTypes.reserve(types.size());
-    for (auto [c, type] : types) {
-      // Flatten record type
-      if (auto recTy = mlir::dyn_cast<RecordType>(type)) {
-        auto subTypeList = flattenTypeList(recTy.getTypeList());
-        llvm::copy(subTypeList, std::back_inserter(flatTypes));
-        continue;
-      }
+  const llvm::SmallVector<mlir::Type>
+  flattenTypeList(mlir::Location loc, const mlir::Type type) const {
+    llvm::SmallVector<mlir::Type> flatTypes;
 
-      // Flatten array type
-      if (auto seqTy = mlir::dyn_cast<SequenceType>(type)) {
-        assert(!seqTy.hasDynamicExtents() &&
-               "dynamic sequences should have been caught before.");
-        std::size_t n = seqTy.getConstantArraySize();
-        auto eleTy = seqTy.getElementType();
-        // Flatten array of record types
-        if (auto recTy = mlir::dyn_cast<RecordType>(eleTy)) {
-          auto subTypeList = flattenTypeList(recTy.getTypeList());
-          for (std::size_t i = 0; i < n; ++i)
-            llvm::copy(subTypeList, std::back_inserter(flatTypes));
-        } else {
-          std::fill_n(std::back_inserter(flatTypes),
-                      seqTy.getConstantArraySize(), eleTy);
-        }
-        continue;
-      }
+    llvm::TypeSwitch<mlir::Type>(type)
+        .Case([&](mlir::IntegerType intTy) {
+          if (intTy.getWidth() <= 128)
+            flatTypes.push_back(intTy);
+          else
+            TODO(loc,
+                 "integerType with width exceeding 128 bits is unsupported");
+        })
+        .Case([&](mlir::FloatType floatTy) {
+          if (floatTy.getWidth() <= 64)
+            flatTypes.push_back(floatTy);
+          else
+            TODO(loc, "128 bit float is not supported by RISCV64");
+        })
+        .Case([&](mlir::ComplexType cmplx) {
+          const auto *sem = &floatToSemantics(kindMap, cmplx.getElementType());
+          if (sem == &llvm::APFloat::IEEEsingle() ||
+              sem == &llvm::APFloat::IEEEdouble())
+            std::fill_n(std::back_inserter(flatTypes), 2,
+                        cmplx.getElementType());
+          else
+            TODO(loc, "unsupported complex type(not IEEEsingle, IEEEdouble"
+                      "as a structure component for BIND(C), "
+                      "VALUE derived type argument and type return");
+        })
+        .Case([&](fir::LogicalType logicalTy) {
+          const unsigned width =
+              kindMap.getLogicalBitsize(logicalTy.getFKind());
+          flatTypes.push_back(mlir::IntegerType::get(type.getContext(), width));
+        })
+        .Case([&](fir::CharacterType charTy) {
+          if (charTy.getLen() == 1)
+            flatTypes.push_back(mlir::IntegerType::get(type.getContext(), 8));
+          else
+            TODO(loc,
+                 "fir.type value arg character components must have length 1");
+        })
+        .Case([&](fir::SequenceType seqTy) {
+          if (!seqTy.hasDynamicExtents()) {
+            const std::uint64_t numOfEle = seqTy.getConstantArraySize();
+            mlir::Type eleTy = seqTy.getEleTy();
+            // Don't check for subtype again if element-type is scalar.
+            if (mlir::isa<mlir::IntegerType, mlir::FloatType, fir::LogicalType>(
+                    eleTy)) {
+              std::fill_n(std::back_inserter(flatTypes), numOfEle, eleTy);
+            } else {
+              llvm::SmallVector<mlir::Type> subTypeList =
+                  flattenTypeList(loc, eleTy);
+              if (subTypeList.size() != 0)
+                for (std::uint64_t i = 0; i < numOfEle; ++i)
+                  llvm::copy(subTypeList, std::back_inserter(flatTypes));
+            }
+          } else
+            TODO(loc, "unsupported dynamic extent sequence type as a structure "
+                      "component for BIND(C), "
+                      "VALUE derived type argument and type return");
+        })
+        .Case([&](fir::RecordType recTy) {
+          for (auto &component : recTy.getTypeList()) {
+            mlir::Type eleTy = component.second;
+            llvm::SmallVector<mlir::Type> subTypeList =
+                flattenTypeList(loc, eleTy);
+            if (subTypeList.size() != 0)
+              llvm::copy(subTypeList, std::back_inserter(flatTypes));
+          }
+        })
+        .Case([&](fir::VectorType vecTy) {
+          TODO(loc, "passing vector argument to C by value is not supported");
+        })
+        .Default([&](mlir::Type ty) {
+          if (fir::conformsWithPassByRef(ty))
+            flatTypes.push_back(
+                mlir::IntegerType::get(type.getContext(), defaultWidth));
+          else
+            TODO(loc, "unsupported component type for BIND(C), VALUE derived "
+                      "type argument and type return");
+        });
 
-      // Complex type is made up of 2 floats
-      if (auto compTy = mlir::dyn_cast<mlir::ComplexType>(type)) {
-        flatTypes.push_back(compTy.getElementType());
-        flatTypes.push_back(compTy.getElementType());
-        continue;
-      }
-
-      // Other types are already flat
-      flatTypes.push_back(type);
-    }
     return flatTypes;
   }
 
@@ -1550,9 +1546,11 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
       if (gprArgs <= 0 && fprArgs <= 0)
         break;
 
-      // previous argument was passed by value and thus takes no registers.
-      if (attr.isByVal())
+      if (attr.isByVal()) {
+        if (gprArgs)
+          gprArgs--;
         continue;
+      }
 
       llvm::TypeSwitch<mlir::Type>(ty)
           .Case<mlir::IntegerType>([&](mlir::IntegerType intTy) {
@@ -1588,26 +1586,33 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
           // NOTE: Tuples are only used to marshal result types and so can't
           // appear in `previousArguments`.
           .Default([&](mlir::Type ty) {
-            if (fir::conformsWithPassByRef(ty))
-              if (gprArgs)
-                gprArgs--;
+            if (fir::conformsWithPassByRef(ty) && gprArgs)
+              gprArgs--;
           });
     }
   }
 
   CodeGenSpecifics::Marshalling
   getIntCCArgs(mlir::MLIRContext *context,
-               CodeGenSpecifics::Marshalling marshal,
-               std::uint64_t recordSize) const {
+               CodeGenSpecifics::Marshalling marshal, std::uint64_t recordSize,
+               std::uint64_t recordAlign) const {
     assert(recordSize <= defaultWidthBytes * 2);
 
     // NOTE: Clang doesn't handle split struct case when only a single register
     // remains. In general it lets the code generator take care of properly
     // handling excess integer register usage, do the same for Flang.
+    // For more info see comment in: llvm/lib/Target/RISCV/RISCVCallingConv.cpp
     if (recordSize <= defaultWidthBytes) {
       // Pass this as an integer.
       int width = llvm::PowerOf2Ceil(recordSize * 8);
       marshal.emplace_back(mlir::IntegerType::get(context, width), AT{});
+      return marshal;
+    }
+
+    // Splitting of large scalars is handled in the backend.
+    if (recordAlign == 2 * defaultWidthBytes) {
+      marshal.emplace_back(mlir::IntegerType::get(context, 2 * defaultWidth),
+                           AT{});
       return marshal;
     }
 
@@ -1620,7 +1625,6 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
   classifyStruct(mlir::Location loc, fir::RecordType recTy, int gprArgs,
                  int fprArgs, bool isResult,
                  const Marshalling &previousArguments) const {
-    checkValidTypeOrCrash(loc, recTy);
     auto [recordSize, recordAlign] = fir::getTypeSizeAndAlignmentOrCrash(
         loc, recTy, getDataLayout(), kindMap);
 
@@ -1638,8 +1642,8 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
       // registers.
       return passOnTheStack(recordAlign, recTy, isResult);
 
-    const std::vector<mlir::Type> &flattenedTypes =
-        flattenTypeList(recTy.getTypeList());
+    const llvm::SmallVector<mlir::Type> &flattenedTypes =
+        flattenTypeList(loc, recTy);
 
     checkAvailableRegisters(loc, previousArguments, gprArgs, fprArgs);
 
@@ -1651,7 +1655,7 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
         marshal.emplace_back(flattenedTypes[0], AT{});
         return marshal;
       }
-      return getIntCCArgs(context, marshal, recordSize);
+      return getIntCCArgs(context, marshal, recordSize, recordAlign);
     }
 
     if (flattenedTypes.size() == 2 &&
@@ -1676,7 +1680,7 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
         }
         return marshal;
       }
-      return getIntCCArgs(context, marshal, recordSize);
+      return getIntCCArgs(context, marshal, recordSize, recordAlign);
     }
 
     if (flattenedTypes.size() == 2 &&
@@ -1708,7 +1712,7 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
       }
     }
 
-    return getIntCCArgs(context, marshal, recordSize);
+    return getIntCCArgs(context, marshal, recordSize, recordAlign);
   }
 
   CodeGenSpecifics::Marshalling
