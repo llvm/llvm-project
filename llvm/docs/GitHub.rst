@@ -228,6 +228,8 @@ pull-request. Do not create any branches in the `llvm/llvm-project` repository
 otherwise, please use a fork (see above). User branches that aren't
 associated with a pull-request **will be deleted**.
 
+.. _stacked_pull_requests:
+
 Stacked Pull Requests
 =====================
 

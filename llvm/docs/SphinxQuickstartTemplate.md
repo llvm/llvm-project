@@ -200,11 +200,11 @@ These are some goals to keep in mind during a migration:
 * Enable source code archaelogy: Expect future readers to want to know when documentation policy changed, so keep your changes mechanical to make that easy.
 * Minimize conflicts: LLVM is a big community of many developers with lots of development branches and downstreams. Make conflict resolution easy.
 
-For that reason, break out any documentation rewrites into two or three PRs:
+For that reason, it's helpful to create 2-3 {ref}`stacked pull requests <stacked_pull_requests>`:
 
 * Rename `.rst` -> `.md` and update cross-references. This will presumably break the docs build, but to follow the one-PR-per-commit policy, it must be its own PR.
-* Mechanically update reST conventions to markdown (`\`\`` -> `\``). Avoid unnecessary reflow. This means you should avoid tools like pandoc, which reflow paragraphs.
+* Mechanically update reST conventions to markdown (\`\` -> \`). Avoid unnecessary reflow. This means you should avoid tools like pandoc, which reflow paragraphs.
 * (optional) Reflow text in line with current project policy. You don't have to do this, but if you feel the need to, make it a separate step. This can be resequenced as step 1. Separating out the text reflow step makes it easy to review and follow blame.
 
 Don't rely too heavily on automated error checking to catch any documentation bugs.
-If you are migrating a long doc, you are reponsible for building the docs locally and validating the rendering yourself.
+If you are migrating a long doc, you are reponsible for building the docs locally and validating the rendering yourself using the steps above.
