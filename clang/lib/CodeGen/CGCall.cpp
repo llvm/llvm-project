@@ -813,13 +813,6 @@ const CGFunctionInfo &CodeGenTypes::arrangeDeviceKernelCallerDeclaration(
 /// does not count `this`.
 const CGFunctionInfo &CodeGenTypes::arrangeCXXMethodCall(
     const CallArgList &args, const FunctionProtoType *proto,
-    RequiredArgs required, unsigned numPrefixArgs) {
-  return arrangeCXXMethodCall(args, proto, required, numPrefixArgs,
-                              /*FD=*/nullptr);
-}
-
-const CGFunctionInfo &CodeGenTypes::arrangeCXXMethodCall(
-    const CallArgList &args, const FunctionProtoType *proto,
     RequiredArgs required, unsigned numPrefixArgs,
     const FunctionDecl *ABIInfoFD) {
   assert(numPrefixArgs + 1 <= args.size() &&
