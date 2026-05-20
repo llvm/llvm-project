@@ -107,6 +107,14 @@ void LiveRangeEdit::eraseVirtReg(Register Reg) {
     LIS.removeInterval(Reg);
 }
 
+void LiveRangeEdit::eraseMachineInstr(MachineInstr &MI) {
+  if (TheDelegate)
+    TheDelegate->LRE_WillEraseInstruction(&MI);
+  if (SlotIndexes *Indexes = LIS.getSlotIndexes())
+    Indexes->removeSingleMachineInstrFromMaps(MI);
+  MI.eraseFromBundle();
+}
+
 bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
                                SmallVectorImpl<MachineInstr*> &Dead) {
   MachineInstr *DefMI = nullptr, *UseMI = nullptr;

@@ -1384,15 +1384,9 @@ void InlineSpiller::spillAll() {
   }
 
   // Finally delete the SnippetCopies.
-  for (Register Reg : RegsToSpill) {
-    for (MachineInstr &MI :
-         llvm::make_early_inc_range(MRI.reg_instructions(Reg))) {
-      assert(SnippetCopies.count(&MI) && "Remaining use wasn't a snippet copy");
-      // FIXME: Do this with a LiveRangeEdit callback.
-      LIS.getSlotIndexes()->removeSingleMachineInstrFromMaps(MI);
-      MI.eraseFromBundle();
-    }
-  }
+  for (MachineInstr *MI : SnippetCopies)
+    Edit->eraseMachineInstr(*MI);
+  SnippetCopies.clear();
 
   // Delete all spilled registers.
   for (Register Reg : RegsToSpill)

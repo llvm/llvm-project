@@ -207,6 +207,12 @@ public:
   /// to erase it from LIS.
   void eraseVirtReg(Register Reg);
 
+  /// eraseMachineInstr - Remove \p MI from slot indexes and its parent block.
+  /// Notifies the delegate via LRE_WillEraseInstruction. Used when removing
+  /// instructions that are obsolete but not necessarily allDefsAreDead, e.g.
+  /// snippet copies after inline spilling.
+  void eraseMachineInstr(MachineInstr &MI);
+
   /// eliminateDeadDefs - Try to delete machine instructions that are now dead
   /// (allDefsAreDead returns true). This may cause live intervals to be trimmed
   /// and further dead efs to be eliminated.
