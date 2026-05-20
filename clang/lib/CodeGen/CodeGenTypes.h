@@ -286,10 +286,6 @@ public:
   const CGFunctionInfo &arrangeCXXMethodCall(const CallArgList &args,
                                              const FunctionProtoType *type,
                                              RequiredArgs required,
-                                             unsigned numPrefixArgs);
-  const CGFunctionInfo &arrangeCXXMethodCall(const CallArgList &args,
-                                             const FunctionProtoType *type,
-                                             RequiredArgs required,
                                              unsigned numPrefixArgs,
                                              const FunctionDecl *ABIInfoFD);
   const CGFunctionInfo &
