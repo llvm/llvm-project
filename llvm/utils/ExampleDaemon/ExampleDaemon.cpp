@@ -1,17 +1,17 @@
-//===- ExampleDaemon.cpp - Example tool for testing daemon driverexampledaemon.c
-//----------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This is an example tool used for testing the daemon driver functionality.
-// The tool reads input from stdin character-by-character and prints
-// uppercase letters on `stderr` and everything else on `stdout`. It
-// returns the number of times a letter was printed to `stderr`.
-//
+///
+/// \file
+/// This is an example tool used for testing the daemon driver functionality.
+/// The tool reads input from stdin character-by-character and prints
+/// uppercase letters on `stderr` and everything else on `stdout`. It
+/// returns the number of times a letter was printed to `stderr`.
+///
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/CommandLine.h"

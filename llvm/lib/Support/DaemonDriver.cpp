@@ -1,14 +1,15 @@
-//===- llvm/Support/DaemonDriver.cpp - Daemon driver interface ---- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements the interface for tools to be run in "daemon mode",
-// following the IPC protocol as described in docs/DaemonMode.rst.
-//
+///
+/// \file
+/// This file implements the interface for tools to be run in "daemon mode",
+/// following the IPC protocol as described in docs/DaemonMode.rst.
+///
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/DaemonDriver.h"

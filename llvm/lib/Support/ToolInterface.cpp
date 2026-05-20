@@ -1,13 +1,14 @@
-//===- llvm/Support/ToolInterface.cpp - Abstract tool interface -*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Abstract class for LLVM tools that can be re-invoked in the same process.
-//
+///
+/// \file
+/// Abstract class for LLVM tools that can be re-invoked in the same process.
+///
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ToolInterface.h"
