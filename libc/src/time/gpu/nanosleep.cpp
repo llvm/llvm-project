@@ -31,7 +31,7 @@ LLVM_LIBC_FUNCTION(int, nanosleep,
   // we will sleep again if we undershot the time.
   while (cur < end) {
     if (__nvvm_reflect("__CUDA_ARCH") >= 700)
-      LIBC_INLINE_ASM("nanosleep.u32 %0;" ::"r"(nsecs));
+      __nvvm_nanosleep(nsecs);
     cur = gpu::fixed_frequency_clock();
     nsecs -= nsecs > cur - start ? cur - start : 0;
   }
