@@ -271,8 +271,8 @@ TEST_F(UnsafeBufferReachableAnalysisTest, Diamond2) {
             (std::set<Node>{{'a', 2}, {'b', 3}, {'c', 3}, {'d', 4}}));
 }
 
-// DisconnectedDiamond: (a,1) -> (b,2), (a,1) -> (c,2), (b,5) -> (d,1), (c,5) -> (d,1).
-// Start from {(a,2)} => {(a,2), (b,3), (c,3)}
+// DisconnectedDiamond: (a,1) -> (b,2), (a,1) -> (c,2), (b,5) -> (d,1), (c,5) ->
+// (d,1). Start from {(a,2)} => {(a,2), (b,3), (c,3)}
 TEST_F(UnsafeBufferReachableAnalysisTest, DisconnectedDiamond) {
   auto Reachables = singlePartition(
       /* EntityDomain */ {'a', 'b', 'c', 'd'},
