@@ -8776,20 +8776,22 @@ void ScalarEvolution::forgetValue(Value *V) {
   SmallPtrSet<Instruction *, 8> Visited;
   SmallVector<SCEVUse, 8> ToForget;
 
-  auto It = ValueExprMap.find_as(static_cast<Value *>(I));
-  Worklist.emplace_back(I, It != ValueExprMap.end() ? It->second : nullptr);
-  Visited.insert(I);
-
-  auto PushUser = [&](Instruction *UI) {
+  auto PushIntoWorklist = [&](Instruction *UI, bool AllowMissingSCEV = false) {
     bool IsSCEVable = isSCEVable(UI->getType());
     bool IsWO = isa<WithOverflowInst>(UI);
     if ((!IsSCEVable && !IsWO) || !Visited.insert(UI).second)
       return;
-    if (IsSCEVable)
-      Worklist.emplace_back(UI, getExistingSCEV(UI));
+    if (IsSCEVable) {
+      if (const SCEV *S = getExistingSCEV(UI))
+        Worklist.emplace_back(UI, S);
+      else if (AllowMissingSCEV)
+        Worklist.emplace_back(UI, nullptr);
+    }
     else if (IsWO)
       Worklist.emplace_back(UI, nullptr);
   };
+
+  PushIntoWorklist(I, true);
 
   while (!Worklist.empty()) {
     auto [Cur, S] = Worklist.pop_back_val();
@@ -8799,7 +8801,7 @@ void ScalarEvolution::forgetValue(Value *V) {
         ConstantEvolutionLoopExitValue.erase(PN);
     }
     for (User *U : Cur->users())
-      PushUser(cast<Instruction>(U));
+      PushIntoWorklist(cast<Instruction>(U));
   }
 
   forgetMemoizedResults(ToForget);
