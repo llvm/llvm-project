@@ -1601,6 +1601,9 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
 llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
                                                  BreakpointAction action,
                                                  bool forbid_delay) {
+  // Breakpoints immediately affect running processes, so do not delay them.
+  forbid_delay |= IsRunning();
+
   if (forbid_delay)
     if (llvm::Error E = FlushDelayedBreakpoints())
       LLDB_LOG_ERROR(
