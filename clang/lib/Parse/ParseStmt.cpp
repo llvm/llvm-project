@@ -1264,7 +1264,7 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
   T.consumeOpen();
   SourceLocation Start = Tok.getLocation();
 
-  Cond = ParseCXXCondition(InitStmt, Loc, CK, false);
+  Cond = ParseCondition(InitStmt, Loc, CK, false);
 
   // If the parser was confused by the condition and we don't have a ')', try to
   // recover by skipping ahead to a semi and bailing out.  If condexp is
@@ -2121,7 +2121,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
         ColonProtectionRAIIObject ColonProtection(*this, MightBeForRangeStmt);
         SourceLocation SecondPartStart = Tok.getLocation();
         Sema::ConditionKind CK = Sema::ConditionKind::Boolean;
-        SecondPart = ParseCXXCondition(
+        SecondPart = ParseCondition(
             /*InitStmt=*/nullptr, ForLoc, CK,
             // FIXME: recovery if we don't see another semi!
             /*MissingOK=*/true, MightBeForRangeStmt ? &ForRangeInfo : nullptr,

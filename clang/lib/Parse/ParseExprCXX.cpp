@@ -1865,10 +1865,11 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
   return DG;
 }
 
-Sema::ConditionResult
-Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
-                          Sema::ConditionKind CK, bool MissingOK,
-                          ForRangeInfo *FRI, bool EnterForConditionScope) {
+Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
+                                             SourceLocation Loc,
+                                             Sema::ConditionKind CK,
+                                             bool MissingOK, ForRangeInfo *FRI,
+                                             bool EnterForConditionScope) {
   // Helper to ensure we always enter a continue/break scope if requested.
   struct ForConditionScopeRAII {
     Scope *S;
@@ -1930,7 +1931,7 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
       }
       ConsumeToken();
       *InitStmt = Actions.ActOnNullStmt(SemiLoc);
-      return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
+      return ParseCondition(nullptr, Loc, CK, MissingOK);
     }
 
     EnterExpressionEvaluationContext Eval(
@@ -1948,7 +1949,7 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
       WarnOnInit();
       *InitStmt = Actions.ActOnExprStmt(Expr.get());
       ConsumeToken();
-      return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
+      return ParseCondition(nullptr, Loc, CK, MissingOK);
     }
 
     return Actions.ActOnCondition(getCurScope(), Loc, Expr.get(), CK,
@@ -1968,7 +1969,7 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
                                   attrs, DeclSpecAttrs, /*RequireSemi=*/true);
     }
     *InitStmt = Actions.ActOnDeclStmt(DG, DeclStart, DeclEnd);
-    return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
+    return ParseCondition(nullptr, Loc, CK, MissingOK);
   }
 
   case ConditionOrInitStatement::ForRangeDecl: {

@@ -5039,12 +5039,10 @@ private:
   /// appropriate moment for a 'for' loop.
   ///
   /// \returns The parsed condition.
-  Sema::ConditionResult ParseCXXCondition(StmtResult *InitStmt,
-                                          SourceLocation Loc,
-                                          Sema::ConditionKind CK,
-                                          bool MissingOK,
-                                          ForRangeInfo *FRI = nullptr,
-                                          bool EnterForConditionScope = false);
+  Sema::ConditionResult ParseCondition(StmtResult *InitStmt, SourceLocation Loc,
+                                       Sema::ConditionKind CK, bool MissingOK,
+                                       ForRangeInfo *FRI = nullptr,
+                                       bool EnterForConditionScope = false);
   DeclGroupPtrTy ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
                                                       ParsedAttributes &Attrs);
 
