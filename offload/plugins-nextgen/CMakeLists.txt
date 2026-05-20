@@ -36,6 +36,11 @@ function(add_target_library target_name lib_name)
     BUILDTREE_ONLY
   )
 
+  llvm_map_components_to_libnames(llvm_libs
+    AggressiveInstCombine Analysis BinaryFormat BitReader BitWriter CodeGen
+    Core Extensions FrontendOffloading InstCombine Instrumentation IPO IRReader
+    Linker MC Object Passes ProfileData Remarks ScalarOpts Support Target
+    TargetParser TransformUtils Vectorize)
   llvm_update_compile_flags(${target_name})
   target_include_directories(${target_name} PUBLIC ${common_dir}/include
                              ${CMAKE_INSTALL_PREFIX}/include/offload
@@ -45,7 +50,7 @@ function(add_target_library target_name lib_name)
   endif()
 
   target_link_libraries(${target_name} PRIVATE
-                        PluginCommon ${llvm_libs} ${OFFLOAD_PTHREAD_LIB})
+                        PluginCommon ${OFFLOAD_PTHREAD_LIB} ${llvm_libs})
 
   target_compile_definitions(${target_name} PRIVATE TARGET_NAME=${lib_name})
   target_compile_definitions(${target_name} PRIVATE
