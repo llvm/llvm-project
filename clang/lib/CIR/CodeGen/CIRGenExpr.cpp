@@ -2244,8 +2244,30 @@ RValue CIRGenFunction::getUndefRValue(QualType ty) {
   if (ty->isVoidType())
     return RValue::get(nullptr);
 
-  cgm.errorNYI("unsupported type for undef rvalue");
-  return RValue::get(nullptr);
+  mlir::Location loc = builder.getUnknownLoc();
+
+  switch (getEvaluationKind(ty)) {
+  case cir::TEK_Complex: {
+    mlir::Type cirTy = convertType(ty);
+    mlir::Value v = builder.getConstant(loc, cir::UndefAttr::get(cirTy));
+    return RValue::getComplex(v);
+  }
+
+  // If this is a use of an undefined aggregate type, the aggregate must have
+  // an identifiable address.  Just because the contents of the value are
+  // undefined doesn't mean that the address can't be taken and compared.
+  case cir::TEK_Aggregate: {
+    Address destPtr = createMemTemp(ty, loc, "undef.agg.tmp");
+    return RValue::getAggregate(destPtr);
+  }
+
+  case cir::TEK_Scalar: {
+    mlir::Type cirTy = convertType(ty);
+    mlir::Value v = builder.getConstant(loc, cir::UndefAttr::get(cirTy));
+    return RValue::get(v);
+  }
+  }
+  llvm_unreachable("bad evaluation kind");
 }
 
 RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
