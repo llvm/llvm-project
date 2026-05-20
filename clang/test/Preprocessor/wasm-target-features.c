@@ -217,6 +217,7 @@
 // GENERIC-NOT: #define __wasm_simd128__ 1{{$}}
 // GENERIC-NOT: #define __wasm_tail_call__ 1{{$}}
 // GENERIC-NOT: #define __wasm_wide_arithmetic__ 1{{$}}
+// GENERIC-NOT: #define __wasm_libcall_thread_context__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mcpu=bleeding-edge \
