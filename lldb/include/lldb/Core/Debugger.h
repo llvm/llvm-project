@@ -196,10 +196,6 @@ public:
   // GetSourceManager on the target instead.
   SourceManager &GetSourceManager();
 
-  lldb::TargetSP GetSelectedTarget() {
-    return m_target_list.GetSelectedTarget();
-  }
-
   /// Get the execution context representing the selected entities in the
   /// selected target. If no target is selected, the execution context will
   /// contain the dummy target if adopt_dummy_target is true.
