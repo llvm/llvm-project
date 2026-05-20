@@ -47,14 +47,12 @@ namespace llvm {
 /// sets are often small.  In this case, no memory allocation is used, and only
 /// light-weight and cache-efficient scanning is used.
 ///
-/// Large sets use a linear-probed hash table with deletion implemented using
-/// Knuth TAOCP 6.4 Algorithm R: `erase` opens a hole, walks forward sliding
-/// each following entry whose probe path crosses the hole back into it (the
-/// hole moves with each slide), and stops at the next empty slot.  Empty
-/// buckets are represented with an illegal pointer value (-1) to allow null
-/// pointers to be inserted; no tombstone state is needed.  The hash table is
-/// resized when the table is 2/3 or more.  When this happens, the table is
-/// doubled in size.
+/// Large sets use a classic quadratically-probed hash table.  Empty buckets are
+/// represented with an illegal pointer value (-1) to allow null pointers to be
+/// inserted.  Tombstones are represented with another illegal pointer value
+/// (-2), to allow deletion.  The hash table is resized when the table is 3/4 or
+/// more.  When this happens, the table is doubled in size.
+///
 class SmallPtrSetImplBase : public DebugEpochBase {
   friend class SmallPtrSetIteratorImpl;
 
@@ -68,6 +66,8 @@ protected:
   /// If small, all these elements are at the beginning of CurArray and the rest
   /// is uninitialized.
   unsigned NumEntries;
+  /// Number of tombstones in CurArray.
+  unsigned NumTombstones;
   /// Whether the set is in small representation.
   bool IsSmall;
 
@@ -80,7 +80,7 @@ protected:
 
   explicit SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize)
       : CurArray(SmallStorage), CurArraySize(SmallSize), NumEntries(0),
-        IsSmall(true) {
+        NumTombstones(0), IsSmall(true) {
     assert(llvm::has_single_bit(SmallSize) &&
            "Initial size must be a power of two!");
   }
@@ -111,6 +111,7 @@ public:
     }
 
     NumEntries = 0;
+    NumTombstones = 0;
   }
 
   void reserve(size_type NewNumEntries) {
@@ -121,13 +122,13 @@ public:
     // No need to expand if we're small and NewNumEntries will fit in the space.
     if (isSmall() && NewNumEntries <= CurArraySize)
       return;
-    // insert_imp_big will reallocate if stores is more than 2/3 full, on the
+    // insert_imp_big will reallocate if stores is more than 75% full, on the
     // /final/ insertion.
-    if (!isSmall() && ((NewNumEntries - 1) * 3) < (CurArraySize * 2))
+    if (!isSmall() && ((NewNumEntries - 1) * 4) < (CurArraySize * 3))
       return;
-    // We must Grow -- find the size where we'd be 2/3 full, then round up to
+    // We must Grow -- find the size where we'd be 75% full, then round up to
     // the next power of two.
-    size_type NewSize = NewNumEntries + (NewNumEntries / 2);
+    size_type NewSize = NewNumEntries + (NewNumEntries / 3);
     NewSize = llvm::bit_ceil(NewSize);
     // Like insert_imp_big, always allocate at least 128 elements.
     NewSize = std::max(128u, NewSize);
@@ -135,6 +136,8 @@ public:
   }
 
 protected:
+  static void *getTombstoneMarker() { return reinterpret_cast<void *>(-2); }
+
   static void *getEmptyMarker() {
     // Note that -1 is chosen to make clear() efficiently implementable with
     // memset and because it's not a valid pointer value.
@@ -203,8 +206,11 @@ protected:
     if (!Bucket)
       return false;
 
-    eraseFromBucket(const_cast<const void **>(Bucket));
+    *const_cast<const void **>(Bucket) = getTombstoneMarker();
+    NumTombstones++;
     --NumEntries;
+    // Treat this consistently from an API perspective, even if we don't
+    // actually invalidate iterators here.
     incrementEpoch();
     return true;
   }
@@ -248,16 +254,10 @@ private:
   const void *const *FindBucketFor(const void *Ptr) const;
   LLVM_ABI void shrink_and_clear();
 
-protected:
-  /// Erase the entry at \p Bucket and close the resulting hole via Knuth
-  /// TAOCP 6.4 Algorithm R. Caller must update \c NumEntries and the epoch.
-  LLVM_ABI void eraseFromBucket(const void **Bucket);
-
-  /// Allocate a larger backing store for the buckets and move it over.
-  /// Passing the current size triggers a same-size rehash, used by batch
-  /// erase to compact away empty slots left by mark-then-rebuild.
+  /// Grow - Allocate a larger backing store for the buckets and move it over.
   LLVM_ABI void Grow(unsigned NewSize);
 
+protected:
   /// swap - Swaps the elements of two sets.
   /// Note: This method assumes that both sets have the same small size.
   LLVM_ABI void swap(const void **SmallStorage, const void **RHSSmallStorage,
@@ -313,7 +313,9 @@ private:
   /// valid.
   void AdvanceIfNotValid() {
     assert(Bucket <= End);
-    while (Bucket != End && *Bucket == SmallPtrSetImplBase::getEmptyMarker())
+    while (Bucket != End &&
+           (*Bucket == SmallPtrSetImplBase::getEmptyMarker() ||
+            *Bucket == SmallPtrSetImplBase::getTombstoneMarker()))
       ++Bucket;
   }
 
@@ -412,11 +414,9 @@ public:
   ///       if (Pred(P))
   ///         Set.erase(P);
   ///
-  /// Returns whether anything was removed. The predicate must not access the
-  /// set being modified: it may inspect the element passed to it and return
-  /// true to request removal, but must not read (e.g. count()/find()) or
-  /// otherwise mutate the set. If anything is removed, all iterators and
-  /// references into the set are invalidated.
+  /// Returns whether anything was removed. It is safe to read the set inside
+  /// the predicate function. However, the predicate must not modify the set
+  /// itself, only indicate a removal by returning true.
   template <typename UnaryPredicate> bool remove_if(UnaryPredicate P) {
     bool Removed = false;
     if (isSmall()) {
@@ -436,23 +436,17 @@ public:
       return Removed;
     }
 
-    // Mark-then-rebuild: one pass to clear matches without sliding (which
-    // would re-walk the cluster on every erase), then a single rehash to
-    // restore the linear-probe invariant.  O(N) total, vs O(N * cluster)
-    // for repeated per-match Algorithm R erases.
     for (const void *&Bucket : buckets()) {
-      if (Bucket == getEmptyMarker())
+      if (Bucket == getTombstoneMarker() || Bucket == getEmptyMarker())
         continue;
       PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(Bucket));
       if (P(Ptr)) {
-        Bucket = getEmptyMarker();
+        Bucket = getTombstoneMarker();
+        ++NumTombstones;
         --NumEntries;
+        incrementEpoch();
         Removed = true;
       }
-    }
-    if (Removed) {
-      incrementEpoch();
-      Grow(CurArraySize);
     }
     return Removed;
   }
