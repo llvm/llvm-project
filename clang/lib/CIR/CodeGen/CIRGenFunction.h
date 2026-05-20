@@ -1512,6 +1512,12 @@ public:
                          AggValueSlot::Overlap_t mayOverlap,
                          bool isVolatile = false);
 
+  /// Emit an aggregate assignment.
+  void emitAggregateAssign(LValue dest, LValue src, QualType eltTy) {
+    emitAggregateCopy(dest, src, eltTy, AggValueSlot::MayOverlap,
+                      hasVolatileMember(eltTy));
+  }
+
   /// Emit code to compute the specified expression which can have any type. The
   /// result is returned as an RValue struct. If this is an aggregate
   /// expression, the aggloc/agglocvolatile arguments indicate where the result

@@ -30,10 +30,6 @@ struct Foo {
   ~Foo();
 };
 
-// Trivial copy/move assignment operator definitions appear at module level.
-// CIR: @_ZN4FlubaSERKS_(%arg0: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}})) -> (!cir.ptr<!rec_Flub>{{.*}}) special_member<#cir.cxx_assign<!rec_Flub, copy, trivial true>>
-// CIR: @_ZN4FlubaSEOS_(%arg0: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}})) -> (!cir.ptr<!rec_Flub>{{.*}}) special_member<#cir.cxx_assign<!rec_Flub, move, trivial true>>
-
 void trivial_func() {
   Flub f1{};
 
@@ -45,7 +41,11 @@ void trivial_func() {
   // CIR: cir.copy {{.*}} : !cir.ptr<!rec_Flub>
 
   f2 = f1;
+  // CIR: cir.copy {{.*}} : !cir.ptr<!rec_Flub>
+  // CIR-NOT: cir.call{{.*}}@_ZN4FlubaSERKS_
   f1 = static_cast<Flub&&>(f3);
+  // CIR: cir.copy {{.*}} : !cir.ptr<!rec_Flub>
+  // CIR-NOT: cir.call{{.*}}@_ZN4FlubaSEOS_
 }
 
 void non_trivial_func() {

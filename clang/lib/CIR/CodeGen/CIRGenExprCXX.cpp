@@ -169,24 +169,28 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
     }
   }
 
-  // Note on trivial assignment
-  // --------------------------
-  // Classic codegen avoids generating the trivial copy/move assignment operator
-  // when it isn't necessary, choosing instead to just produce IR with an
-  // equivalent effect. We have chosen not to do that in CIR, instead emitting
-  // trivial copy/move assignment operators and allowing later transformations
-  // to optimize them away if appropriate.
+  bool trivialForCodegen =
+      md->isTrivial() || (md->isDefaulted() && md->getParent()->isUnion());
+  bool trivialAssignment =
+      trivialForCodegen &&
+      (md->isCopyAssignmentOperator() || md->isMoveAssignmentOperator()) &&
+      !md->getParent()->mayInsertExtraPadding();
 
   // C++17 demands that we evaluate the RHS of a (possibly-compound) assignment
   // operator before the LHS.
   CallArgList rtlArgStorage;
   CallArgList *rtlArgs = nullptr;
+  LValue trivialAssignmentRhs;
   if (auto *oce = dyn_cast<CXXOperatorCallExpr>(ce)) {
     if (oce->isAssignmentOp()) {
-      rtlArgs = &rtlArgStorage;
-      emitCallArgs(*rtlArgs, md->getType()->castAs<FunctionProtoType>(),
-                   drop_begin(ce->arguments(), 1), ce->getDirectCallee(),
-                   /*ParamsToSkip*/ 0);
+      if (trivialAssignment)
+        trivialAssignmentRhs = emitLValue(oce->getArg(1));
+      else {
+        rtlArgs = &rtlArgStorage;
+        emitCallArgs(*rtlArgs, md->getType()->castAs<FunctionProtoType>(),
+                     drop_begin(ce->arguments(), 1), ce->getDirectCallee(),
+                     /*ParamsToSkip*/ 0);
+      }
     }
   }
 
@@ -195,7 +199,8 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
     LValueBaseInfo baseInfo;
     assert(!cir::MissingFeatures::opTBAA());
     Address thisValue = emitPointerWithAlignment(base, &baseInfo);
-    thisPtr = makeAddrLValue(thisValue, base->getType(), baseInfo);
+    thisPtr =
+        makeAddrLValue(thisValue, base->getType()->getPointeeType(), baseInfo);
   } else {
     thisPtr = emitLValue(base);
   }
@@ -206,9 +211,20 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
     return RValue::get(nullptr);
   }
 
-  if ((md->isTrivial() || (md->isDefaulted() && md->getParent()->isUnion())) &&
-      isa<CXXDestructorDecl>(md))
-    return RValue::get(nullptr);
+  if (trivialForCodegen) {
+    if (isa<CXXDestructorDecl>(md))
+      return RValue::get(nullptr);
+
+    if (trivialAssignment) {
+      LValue rhs = isa<CXXOperatorCallExpr>(ce) ? trivialAssignmentRhs
+                                                : emitLValue(*ce->arg_begin());
+      emitAggregateAssign(thisPtr, rhs, ce->getType());
+      return RValue::get(thisPtr.getPointer());
+    }
+
+    assert(md->getParent()->mayInsertExtraPadding() &&
+           "unknown trivial member function");
+  }
 
   // Compute the function type we're calling
   const CXXMethodDecl *calleeDecl =
