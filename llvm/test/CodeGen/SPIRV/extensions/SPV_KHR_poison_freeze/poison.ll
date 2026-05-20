@@ -16,7 +16,7 @@
 ; CHECK-DAG: %[[#PV:]] = OpPoisonKHR %[[#V4]]
 ; CHECK-DAG: %[[#PVF:]] = OpPoisonKHR %[[#V4F]]
 ; CHECK-DAG: %[[#PF:]] = OpPoisonKHR %[[#F32]]
-; CHECK-DAG: %[[#CC:]] = OpConstantComposite %[[#ARR]] %[[#PI]] %[[#PI]] %[[#PI]] %[[#PI]]
+; CHECK-DAG: %[[#PA:]] = OpPoisonKHR %[[#ARR]]
 
 ; CHECK: OpFunction
 ; CHECK: OpStore %[[#]] %[[#PI]]
@@ -27,7 +27,7 @@
 ; CHECK: OpStore %[[#]] %[[#PV]]
 
 ; CHECK: OpFunction
-; CHECK: OpStore %[[#]] %[[#CC]]
+; CHECK: OpStore %[[#]] %[[#PA]]
 
 ; CHECK: OpFunction
 ; CHECK: OpVectorShuffle %[[#V4F]] %[[#]] %[[#PVF]]
