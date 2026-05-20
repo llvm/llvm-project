@@ -659,11 +659,7 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                                      std::vector<StringRef> &Features) {
   // Add target ID features to -target-feature options. No diagnostics should
   // be emitted here since invalid target ID is diagnosed at other places.
-  StringRef TargetID;
-  if (Args.hasArg(options::OPT_mcpu_EQ))
-    TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
-  else if (Args.hasArg(options::OPT_march_EQ))
-    TargetID = Args.getLastArgValue(options::OPT_march_EQ);
+  StringRef TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
   if (!TargetID.empty()) {
     llvm::StringMap<bool> FeatureMap;
     auto OptionalGpuArch = parseTargetID(Triple, TargetID, &FeatureMap);
@@ -728,6 +724,13 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
 
   for (Arg *A : Args)
     DAL->append(A);
+
+  // AMDGPU is intended to use `-mcpu` but we accept `-march` for legacy.
+  if (Arg *A = DAL->getLastArg(options::OPT_march_EQ)) {
+    DAL->eraseArg(options::OPT_march_EQ);
+    if (!DAL->hasArg(options::OPT_mcpu_EQ))
+      DAL->AddJoinedArg(A, Opts.getOption(options::OPT_mcpu_EQ), A->getValue());
+  }
 
   // Replace -mcpu=native with detected GPU.
   Arg *LastMCPUArg = DAL->getLastArg(options::OPT_mcpu_EQ);
