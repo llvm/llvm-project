@@ -13,7 +13,7 @@ emitc.class @modelClass {
 }
 
 // CHECK-LABEL: class modelClass {
-// CHECK-NEXT:    public:
+// CHECK-NEXT:   public:
 // CHECK-NEXT:    float fieldName0[1];
 // CHECK-NEXT:    float fieldName1[1];
 // CHECK-NEXT:    void execute() {
@@ -35,7 +35,7 @@ emitc.class final @finalClass {
 }
 
 // CHECK-LABEL: class finalClass final {
-// CHECK-NEXT:    public:
+// CHECK-NEXT:   public:
 // CHECK-NEXT:    float fieldName0[1];
 // CHECK-NEXT:    float fieldName1[1];
 // CHECK-NEXT:    void execute() {
@@ -53,7 +53,7 @@ emitc.class @mainClass {
 }
 
 // CHECK-LABEL: class mainClass {
-// CHECK-NEXT:    public:
+// CHECK-NEXT:   public:
 // CHECK-NEXT:    float fieldName0[2] = {0.0e+00f, 0.0e+00f};
 // CHECK-NEXT:    void get_fieldName0() {
 // CHECK-NEXT:     return;
@@ -69,7 +69,7 @@ emitc.class @reflectionClass {
 }
 
 // CHECK-LABEL: class reflectionClass {
-// CHECK-NEXT:    public:
+// CHECK-NEXT:   public:
 // CHECK-NEXT:    const std::map<std::string, std::string> reflectionMap = { { "another_feature", "fieldName0" } };
 // CHECK-NEXT:    void get_reflectionMap() {
 // CHECK-NEXT:     return;

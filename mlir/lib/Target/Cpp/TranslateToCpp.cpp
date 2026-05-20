@@ -1230,10 +1230,11 @@ static LogicalResult printOperation(CppEmitter &emitter, ClassOp classOp) {
   if (classOp.getFinalSpecifier())
     os << " final";
   os << " {\n";
-  os.indent();
 
   if (classType == ClassType::class_)
-    os << "public:\n";
+    os << " public:\n";
+
+  os.indent();
 
   for (Operation &op : classOp) {
     if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/false)))
