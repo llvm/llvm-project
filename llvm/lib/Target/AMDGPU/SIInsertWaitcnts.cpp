@@ -789,6 +789,11 @@ private:
     return It != VMem.end() ? It->second.Scores[T] : 0;
   }
 
+  unsigned getVMemD16Score(VMEMID TID, AMDGPU::InstCounterType T) const {
+    auto It = VMem.find(TID);
+    return It != VMem.end() ? It->second.D16Scores[T] : 0;
+  }
+
 public:
   bool merge(const WaitcntBrackets &Other);
 
@@ -999,10 +1004,19 @@ private:
   struct VMEMInfo {
     // Scores for all instruction counters. Zero-initialized.
     CounterValueArray Scores{};
+    // Scores of the most recent D16 VMEM op that wrote this regunit. Only
+    // meaningful on subtargets with hasD16Writes32BitVgpr(): a D16 op writing
+    // one 16-bit half may clobber the other half of the same 32-bit VGPR, so
+    // we track these separately to decide whether a use of the *other* half
+    // needs to wait. Zero-initialized.
+    CounterValueArray D16Scores{};
     // Bitmask of the VmemTypes of VMEM instructions for this VGPR.
     unsigned VMEMTypes = 0;
 
-    bool empty() const { return all_of(Scores, equal_to(0)) && !VMEMTypes; }
+    bool empty() const {
+      return all_of(Scores, equal_to(0)) && all_of(D16Scores, equal_to(0)) &&
+             !VMEMTypes;
+    }
   };
 
   /// Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
@@ -1257,8 +1271,20 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
           // this with another potential dependency
           if (hasPointSampleAccel(Inst))
             TypesMask |= 1 << VMEM_NOSAMPLER;
-          for (MCRegUnit RU : regunits(Op.getReg().asMCReg()))
+          // On hasD16Writes32BitVgpr() targets, a D16 VMEM load may clobber the
+          // sibling half of the destination VGPR32. Record this so that a later
+          // use of the other half can decide whether it must widen its wait.
+          bool IsD16Write = false;
+          if (Context->ST.hasD16Writes32BitVgpr()) {
+            const MachineOperand *D16Op =
+                TII.getNamedOperand(Inst, AMDGPU::OpName::d16);
+            IsD16Write = D16Op && D16Op->getImm();
+          }
+          for (MCRegUnit RU : regunits(Op.getReg().asMCReg())) {
             VMem[toVMEMID(RU)].VMEMTypes |= TypesMask;
+            if (IsD16Write)
+              VMem[toVMEMID(RU)].D16Scores[T] = CurrScore;
+          }
         }
       }
       setScoreByOperand(Op, T, CurrScore);
@@ -1641,13 +1667,15 @@ AMDGPU::Waitcnt WaitcntBrackets::determineAsyncWait(unsigned N) {
   return Wait;
 }
 
-// With D16Write32BitVgpr, D16 inst might be clobbered by events running on the
-// other half 16bit.
-//
-// Replace VGPR16 to VGPR32 for wait check if:
-// 1. MI is a VALU, and there is a wait event on the other half
-// 2. MI is a LdSt, and there is a wait event on the other half from different
-// order group
+// With D16Write32BitVgpr, a D16 VMEM op writing one 16-bit half of a VGPR32
+// may also clobber the other half. Replace VGPR16 with VGPR32 for the wait
+// check if:
+// 1. MI is a VALU, and there is any wait event on the other half (the VALU
+//    path has no way to disambiguate which writer produced the pending event,
+//    so we stay conservative).
+// 2. MI is a LdSt, and the pending event on the other half came from a D16
+//    op (tracked via VMEMInfo::D16Scores). Non-D16 writers of the other half
+//    cannot clobber our half, so no widening is needed in that case.
 MCPhysReg WaitcntBrackets::determineVGPR16Dependency(const MachineInstr &MI,
                                                      AMDGPU::InstCounterType T,
                                                      MCPhysReg Reg) const {
@@ -1657,8 +1685,6 @@ MCPhysReg WaitcntBrackets::determineVGPR16Dependency(const MachineInstr &MI,
   if (Size != 16 || !Context->ST.hasD16Writes32BitVgpr())
     return Reg;
 
-  // With D16Writes32BitVgpr, D16 Inst might clobber the whole vgpr32
-  // check dependency on the other half
   Register Reg32 = Context->TRI.get32BitRegister(Reg);
   Register OtherHalf = Context->TRI.getSubReg(
       Reg32,
@@ -1668,18 +1694,18 @@ MCPhysReg WaitcntBrackets::determineVGPR16Dependency(const MachineInstr &MI,
   for (MCRegUnit RU : regunits(OtherHalf))
     determineWaitForScore(T, getVMemScore(toVMEMID(RU), T), Wait);
 
-  // No wait on otherhalf
+  // No pending writer on the other half: no clobber risk.
   if (!Wait.hasWait())
     return Reg;
 
   if (Context->TII.isVALU(MI))
     return Reg32;
 
-  // If hi/lo16 mixed events
-  WaitEventSet MIEvents = Context->getEventsFor(MI);
-  WaitEventSet OtherHalfEvents = Context->getWaitEvents(T);
-  WaitEventSet Events = MIEvents & OtherHalfEvents;
-  if (Events.twoOrMore())
+  // LdSt MI: only widen if the pending other-half writer is a D16 op.
+  AMDGPU::Waitcnt D16Wait;
+  for (MCRegUnit RU : regunits(OtherHalf))
+    determineWaitForScore(T, getVMemD16Score(toVMEMID(RU), T), D16Wait);
+  if (D16Wait.hasWait())
     return Reg32;
   return Reg;
 }
@@ -3214,8 +3240,11 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
       }
     }
 
-    for (auto &[RegID, Info] : VMem)
+    for (auto &[RegID, Info] : VMem) {
       StrictDom |= mergeScore(M, Info.Scores[T], Other.getVMemScore(RegID, T));
+      StrictDom |=
+          mergeScore(M, Info.D16Scores[T], Other.getVMemD16Score(RegID, T));
+    }
 
     if (isSmemCounter(T)) {
       for (auto &[RegID, Info] : SGPRs) {
