@@ -1867,13 +1867,22 @@ TypeSourceInfo *ExplicitInstantiationDecl::getTypeAsWritten() const {
   return getRawTypeSourceInfo();
 }
 
+bool ExplicitInstantiationDecl::hasTemplateArgs() const {
+  if (getTrailingArgsInfo())
+    return true;
+  if (auto TL = getClassTypeLoc())
+    if (TL->getAs<TemplateSpecializationTypeLoc>())
+      return true;
+  return false;
+}
+
 unsigned ExplicitInstantiationDecl::getNumTemplateArgs() const {
   if (const auto *Args = getTrailingArgsInfo())
     return Args->NumTemplateArgs;
   if (auto TL = getClassTypeLoc())
     if (auto TST = TL->getAs<TemplateSpecializationTypeLoc>())
       return TST.getNumArgs();
-  return 0;
+  llvm_unreachable("template arguments not found in trailing args or TypeLoc");
 }
 
 TemplateArgumentLoc
@@ -1892,7 +1901,7 @@ SourceLocation ExplicitInstantiationDecl::getTemplateArgsLAngleLoc() const {
   if (auto TL = getClassTypeLoc())
     if (auto TST = TL->getAs<TemplateSpecializationTypeLoc>())
       return TST.getLAngleLoc();
-  return SourceLocation();
+  llvm_unreachable("template arguments not found in trailing args or TypeLoc");
 }
 
 SourceLocation ExplicitInstantiationDecl::getTemplateArgsRAngleLoc() const {
@@ -1901,7 +1910,7 @@ SourceLocation ExplicitInstantiationDecl::getTemplateArgsRAngleLoc() const {
   if (auto TL = getClassTypeLoc())
     if (auto TST = TL->getAs<TemplateSpecializationTypeLoc>())
       return TST.getRAngleLoc();
-  return SourceLocation();
+  llvm_unreachable("template arguments not found in trailing args or TypeLoc");
 }
 
 SourceLocation ExplicitInstantiationDecl::getEndLoc() const {
@@ -1911,8 +1920,12 @@ SourceLocation ExplicitInstantiationDecl::getEndLoc() const {
     if (TSI->getType().hasPostfixDeclaratorSyntax())
       return TSI->getTypeLoc().getEndLoc();
   // Otherwise, template args RAngleLoc or NameLoc.
-  SourceLocation RAngle = getTemplateArgsRAngleLoc();
-  return RAngle.isValid() ? RAngle : NameLoc;
+  if (hasTemplateArgs()) {
+    SourceLocation RAngle = getTemplateArgsRAngleLoc();
+    if (RAngle.isValid())
+      return RAngle;
+  }
+  return NameLoc;
 }
 
 SourceRange ExplicitInstantiationDecl::getSourceRange() const {
