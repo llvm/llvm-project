@@ -340,8 +340,18 @@ public:
 
                     // Parameters are guaranteed to be safe for the duration of
                     // the call by another checker.
-                    if (isa<ParmVarDecl>(MaybeGuardian))
-                      return true;
+                    if (isa<ParmVarDecl>(MaybeGuardian)) {
+                      if (auto *FD = dyn_cast<FunctionDecl>(DeclWithIssue)) {
+                        GuardianVisitor guardianVisitor(MaybeGuardian);
+                        if (guardianVisitor.TraverseStmt(FD->getBody()))
+                          return true;
+                      }
+                      if (auto *MD = dyn_cast<ObjCMethodDecl>(DeclWithIssue)) {
+                        GuardianVisitor guardianVisitor(MaybeGuardian);
+                        if (guardianVisitor.TraverseStmt(MD->getBody()))
+                          return true;
+                      }
+                    }
                   }
                 }
 
