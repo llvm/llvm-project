@@ -13,6 +13,8 @@ MyST is a Markdown flavor that adds Sphinx documentation extensions.
 MyST is preferred for new docs, and migrating old docs from reST to MyST is an open, ongoing project.
 [Sphinx], a documentation generator originally written for Python documentation, generates the LLVM HTML documentation from MyST and reST.
 
+See the {ref}`migration <markdown_migration_guidelines>` section for more information on how to migrate existing docs.
+
 [myst]: https://myst-parser.readthedocs.io/en/latest/
 [reStructuredText]: http://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html
 [Sphinx]: http://www.sphinx-doc.org
@@ -187,3 +189,22 @@ just set the CMake variable `LLVM_ENABLE_SPHINX=On`.
 
 After that you find the generated documentation in `build/docs/html`
 folder.
+
+(markdown_migration_guidelines)=
+
+## Markdown migration guidelines
+
+These are some goals to keep in mind during a migration:
+
+* Optimize for review: Decompose the migration into mechanical steps that are easy to review and validate.
+* Enable source code archaelogy: Expect future readers to want to know when documentation policy changed, so keep your changes mechanical to make that easy.
+* Minimize conflicts: LLVM is a big community of many developers with lots of development branches and downstreams. Make conflict resolution easy.
+
+For that reason, break out any documentation rewrites into two or three PRs:
+
+* Rename `.rst` -> `.md` and update cross-references. This will presumably break the docs build, but to follow the one-PR-per-commit policy, it must be its own PR.
+* Mechanically update reST conventions to markdown (`\`\`` -> `\``). Avoid unnecessary reflow. This means you should avoid tools like pandoc, which reflow paragraphs.
+* (optional) Reflow text in line with current project policy. You don't have to do this, but if you feel the need to, make it a separate step. This can be resequenced as step 1. Separating out the text reflow step makes it easy to review and follow blame.
+
+Don't rely too heavily on automated error checking to catch any documentation bugs.
+If you are migrating a long doc, you are reponsible for building the docs locally and validating the rendering yourself.
