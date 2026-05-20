@@ -175,66 +175,140 @@ struct SoftmaxMatmulToSoftmaxMatmulFusion
 
     // --- Rewrite ---
 
-    // (a) Create empty tensors for local_softmax outputs:
-    //     P: [M, tn, ts], m: [M, tn], l: [M, tn]
-    Value P_init = tensor::EmptyOp::create(rewriter, loc,
-                                           ArrayRef<int64_t>{M, tn, ts},
-                                           elemType)
-                       .getResult();
-    Value m_init = tensor::EmptyOp::create(rewriter, loc,
-                                           ArrayRef<int64_t>{M, tn}, elemType)
-                       .getResult();
-    Value l_init = tensor::EmptyOp::create(rewriter, loc,
-                                           ArrayRef<int64_t>{M, tn}, elemType)
-                       .getResult();
+    // (a) Reshape S: [M, N] -> [M, tn, ts] via expand_shape.
+    auto expandedSType = RankedTensorType::get({M, tn, ts}, elemType);
+    SmallVector<ReassociationIndices> sReassoc = {{0}, {1, 2}};
+    Value S_tiled = tensor::ExpandShapeOp::create(rewriter, loc, expandedSType,
+                                                  softmaxInput, sReassoc);
 
-    // (b) Create linalg.local_softmax.
-    auto localSoftmaxOp = linalg::LocalSoftmaxOp::create(
+    // (b) Compute per-tile max: m[M, tn] = max over ts of S_tiled[M, tn, ts]
+    MLIRContext *ctx = rewriter.getContext();
+    AffineExpr e0, e1, e2;
+    bindDims(ctx, e0, e1, e2);
+
+    Value negInfScalar = arith::ConstantOp::create(
         rewriter, loc,
-        /*resultTypes=*/
-        TypeRange{RankedTensorType::get({M, tn, ts}, elemType),
-                  RankedTensorType::get({M, tn}, elemType),
-                  RankedTensorType::get({M, tn}, elemType)},
-        /*input=*/softmaxInput,
-        /*output=*/P_init,
-        /*max=*/m_init,
-        /*den=*/l_init,
-        /*dimension=*/rewriter.getI64IntegerAttr(softmaxDim),
-        /*tile_size=*/rewriter.getI64IntegerAttr(ts));
+        rewriter.getFloatAttr(
+            elemType, APFloat::getInf(
+                          cast<FloatType>(elemType).getFloatSemantics(), true)));
+    Value m_init = createFilledTensor(rewriter, loc, {M, tn}, elemType, negInfScalar);
 
-    Value P = localSoftmaxOp.getResults()[0];
-    Value m = localSoftmaxOp.getResults()[1];
-    Value l = localSoftmaxOp.getResults()[2];
+    auto maxGeneric = linalg::GenericOp::create(
+        rewriter, loc,
+        TypeRange{RankedTensorType::get({M, tn}, elemType)},
+        /*inputs=*/ValueRange{S_tiled},
+        /*outputs=*/ValueRange{m_init},
+        SmallVector<AffineMap>{
+            AffineMap::get(3, 0, {e0, e1, e2}, ctx),  // S_tiled
+            AffineMap::get(3, 0, {e0, e1}, ctx),      // m
+        },
+        SmallVector<utils::IteratorType>{
+            utils::IteratorType::parallel,   // m
+            utils::IteratorType::parallel,   // tn
+            utils::IteratorType::reduction,  // ts
+        },
+        [&](OpBuilder &b, Location nestedLoc, ValueRange args) {
+          Value result = arith::MaxNumFOp::create(b, nestedLoc, args[0], args[1]);
+          linalg::YieldOp::create(b, nestedLoc, result);
+        });
+    Value m = maxGeneric.getResult(0);
 
-    // (c) Reshape V: [N, Kv] -> [tn, ts, Kv]
+    // (c) Compute num = exp(S_tiled - m): elementwise [M, tn, ts]
+    Value num_init = tensor::EmptyOp::create(rewriter, loc,
+                                             ArrayRef<int64_t>{M, tn, ts}, elemType)
+                         .getResult();
+    auto expGeneric = linalg::GenericOp::create(
+        rewriter, loc,
+        TypeRange{RankedTensorType::get({M, tn, ts}, elemType)},
+        /*inputs=*/ValueRange{S_tiled, m},
+        /*outputs=*/ValueRange{num_init},
+        SmallVector<AffineMap>{
+            AffineMap::get(3, 0, {e0, e1, e2}, ctx),  // S_tiled
+            AffineMap::get(3, 0, {e0, e1}, ctx),      // m (broadcast over ts)
+            AffineMap::get(3, 0, {e0, e1, e2}, ctx),  // num output
+        },
+        SmallVector<utils::IteratorType>{
+            utils::IteratorType::parallel,
+            utils::IteratorType::parallel,
+            utils::IteratorType::parallel,
+        },
+        [&](OpBuilder &b, Location nestedLoc, ValueRange args) {
+          Value diff = arith::SubFOp::create(b, nestedLoc, args[0], args[1]);
+          Value result = math::ExpOp::create(b, nestedLoc, diff);
+          linalg::YieldOp::create(b, nestedLoc, result);
+        });
+    Value num = expGeneric.getResult(0);
+
+    // (d) Compute per-tile sum: l[M, tn] = sum over ts of num[M, tn, ts]
+    Value zeroScalar = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getFloatAttr(elemType, 0.0));
+    Value l_init = createFilledTensor(rewriter, loc, {M, tn}, elemType, zeroScalar);
+
+    auto sumGeneric = linalg::GenericOp::create(
+        rewriter, loc,
+        TypeRange{RankedTensorType::get({M, tn}, elemType)},
+        /*inputs=*/ValueRange{num},
+        /*outputs=*/ValueRange{l_init},
+        SmallVector<AffineMap>{
+            AffineMap::get(3, 0, {e0, e1, e2}, ctx),  // num
+            AffineMap::get(3, 0, {e0, e1}, ctx),      // l
+        },
+        SmallVector<utils::IteratorType>{
+            utils::IteratorType::parallel,
+            utils::IteratorType::parallel,
+            utils::IteratorType::reduction,
+        },
+        [&](OpBuilder &b, Location nestedLoc, ValueRange args) {
+          Value result = arith::AddFOp::create(b, nestedLoc, args[0], args[1]);
+          linalg::YieldOp::create(b, nestedLoc, result);
+        });
+    Value l = sumGeneric.getResult(0);
+
+    // (e) Compute P = num / l: elementwise [M, tn, ts]
+    Value P_init = tensor::EmptyOp::create(rewriter, loc,
+                                           ArrayRef<int64_t>{M, tn, ts}, elemType)
+                       .getResult();
+    auto divGeneric = linalg::GenericOp::create(
+        rewriter, loc,
+        TypeRange{RankedTensorType::get({M, tn, ts}, elemType)},
+        /*inputs=*/ValueRange{num, l},
+        /*outputs=*/ValueRange{P_init},
+        SmallVector<AffineMap>{
+            AffineMap::get(3, 0, {e0, e1, e2}, ctx),  // num
+            AffineMap::get(3, 0, {e0, e1}, ctx),      // l (broadcast over ts)
+            AffineMap::get(3, 0, {e0, e1, e2}, ctx),  // P output
+        },
+        SmallVector<utils::IteratorType>{
+            utils::IteratorType::parallel,
+            utils::IteratorType::parallel,
+            utils::IteratorType::parallel,
+        },
+        [&](OpBuilder &b, Location nestedLoc, ValueRange args) {
+          Value result = arith::DivFOp::create(b, nestedLoc, args[0], args[1]);
+          linalg::YieldOp::create(b, nestedLoc, result);
+        });
+    Value P = divGeneric.getResult(0);
+
+    // (f) Reshape V: [N, Kv] -> [tn, ts, Kv]
     auto expandedVType = RankedTensorType::get({tn, ts, Kv}, elemType);
     SmallVector<ReassociationIndices> vReassoc = {{0, 1}, {2}};
     Value V_tiled =
         tensor::ExpandShapeOp::create(rewriter, loc, expandedVType, V, vReassoc);
 
-    // (d) Create init tensors for rescaling matmul:
+    // (g) Create init tensors for rescaling matmul:
     //     O: [M, Kv] filled with 0.0
     //     M_run: [M, Kv] filled with -inf
     //     L_run: [M, Kv] filled with 0.0
-    Value zero = arith::ConstantOp::create(
-        rewriter, loc, rewriter.getFloatAttr(elemType, 0.0));
-    Value negInf = arith::ConstantOp::create(
-        rewriter, loc,
-        rewriter.getFloatAttr(
-            elemType, APFloat::getInf(
-                          cast<FloatType>(elemType).getFloatSemantics(), true)));
-
     Value O_init =
-        createFilledTensor(rewriter, loc, {M, Kv}, elemType, zero);
+        createFilledTensor(rewriter, loc, {M, Kv}, elemType, zeroScalar);
     Value M_init =
-        createFilledTensor(rewriter, loc, {M, Kv}, elemType, negInf);
+        createFilledTensor(rewriter, loc, {M, Kv}, elemType, negInfScalar);
     Value L_init =
-        createFilledTensor(rewriter, loc, {M, Kv}, elemType, zero);
+        createFilledTensor(rewriter, loc, {M, Kv}, elemType, zeroScalar);
 
-    // (e) Build the rescaling matmul linalg.generic.
+    // (h) Build the rescaling matmul linalg.generic.
     // Dimensions: (m, tn, ts, kv)
     //   m  = parallel, tn = reduction, ts = reduction, kv = parallel
-    MLIRContext *ctx = rewriter.getContext();
     AffineExpr d0, d1, d2, d3;
     bindDims(ctx, d0, d1, d2, d3);
 
@@ -346,11 +420,11 @@ struct SoftmaxMatmulToSoftmaxMatmulFusion
 
       // Init tensors for rescaling softmax: O_s:[M, N], M_s:[M, N], L_s:[M, N]
       Value Os_init =
-          createFilledTensor(rewriter, loc, {M, N}, elemType, zero);
+          createFilledTensor(rewriter, loc, {M, N}, elemType, zeroScalar);
       Value Ms_init =
-          createFilledTensor(rewriter, loc, {M, N}, elemType, negInf);
+          createFilledTensor(rewriter, loc, {M, N}, elemType, negInfScalar);
       Value Ls_init =
-          createFilledTensor(rewriter, loc, {M, N}, elemType, zero);
+          createFilledTensor(rewriter, loc, {M, N}, elemType, zeroScalar);
 
       // Indexing maps for rescaling softmax (dims: m, tn, ts, n_s):
       SmallVector<AffineMap> softmaxMaps = {
