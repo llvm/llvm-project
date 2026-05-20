@@ -5,7 +5,13 @@ import functools
 import lit.util
 from lit.InprocBuiltins import InprocBuiltin
 from lit.LitConfig import LitConfig
-from lit.llvm.daemon_tool import DaemonTool, invoke_llvm_daemon_tool
+from lit.llvm.daemon_tool import (
+    DaemonError,
+    DaemonExited,
+    DaemonTool,
+    UnexpectedDaemonOutput,
+    invoke_llvm_daemon_tool,
+)
 from lit.TestingConfig import TestingConfig
 
 
@@ -20,7 +26,7 @@ def check_daemon_support(executable: str) -> bool:
         daemon = DaemonTool(executable)
         daemon.start_daemon()
         daemon.send_commands(["exit"])
-    except:
+    except (DaemonError, DaemonExited, UnexpectedDaemonOutput):
         return False
 
     return True
