@@ -2562,55 +2562,29 @@ define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: umulo_v2i64:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovq %xmm0, %rcx
-; AVX512F-NEXT:    vmovq %xmm1, %rsi
-; AVX512F-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX512F-NEXT:    vpextrq $1, %xmm1, %rdx
-; AVX512F-NEXT:    mulq %rdx
-; AVX512F-NEXT:    seto %r8b
-; AVX512F-NEXT:    vmovq %rax, %xmm0
-; AVX512F-NEXT:    movq %rcx, %rax
-; AVX512F-NEXT:    mulq %rsi
-; AVX512F-NEXT:    vmovq %rax, %xmm1
-; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; AVX512F-NEXT:    seto %al
-; AVX512F-NEXT:    andl $1, %eax
-; AVX512F-NEXT:    kmovw %eax, %k0
-; AVX512F-NEXT:    kmovw %r8d, %k1
-; AVX512F-NEXT:    kshiftlw $15, %k1, %k1
-; AVX512F-NEXT:    kshiftrw $14, %k1, %k1
-; AVX512F-NEXT:    korw %k1, %k0, %k1
-; AVX512F-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512F-NEXT:    vmovdqa %xmm1, (%rdi)
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: umulo_v2i64:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovq %xmm0, %rcx
-; AVX512BW-NEXT:    vmovq %xmm1, %rsi
-; AVX512BW-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX512BW-NEXT:    vpextrq $1, %xmm1, %rdx
-; AVX512BW-NEXT:    mulq %rdx
-; AVX512BW-NEXT:    seto %r8b
-; AVX512BW-NEXT:    vmovq %rax, %xmm0
-; AVX512BW-NEXT:    movq %rcx, %rax
-; AVX512BW-NEXT:    mulq %rsi
-; AVX512BW-NEXT:    vmovq %rax, %xmm1
-; AVX512BW-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; AVX512BW-NEXT:    seto %al
-; AVX512BW-NEXT:    andl $1, %eax
-; AVX512BW-NEXT:    kmovw %eax, %k0
-; AVX512BW-NEXT:    kmovd %r8d, %k1
-; AVX512BW-NEXT:    kshiftlw $15, %k1, %k1
-; AVX512BW-NEXT:    kshiftrw $14, %k1, %k1
-; AVX512BW-NEXT:    korw %k1, %k0, %k1
-; AVX512BW-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512BW-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512BW-NEXT:    vmovdqa %xmm1, (%rdi)
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: umulo_v2i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rcx
+; AVX512-NEXT:    vpextrq $1, %xmm1, %r8
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vmovq %xmm1, %rdx
+; AVX512-NEXT:    mulq %rdx
+; AVX512-NEXT:    movq %rax, %rsi
+; AVX512-NEXT:    seto %r9b
+; AVX512-NEXT:    movq %rcx, %rax
+; AVX512-NEXT:    mulq %r8
+; AVX512-NEXT:    vmovq %rax, %xmm0
+; AVX512-NEXT:    vmovq %rsi, %xmm1
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    seto %al
+; AVX512-NEXT:    vmovd %r9d, %xmm0
+; AVX512-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
+; AVX512-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vmovdqa %xmm1, (%rdi)
+; AVX512-NEXT:    retq
   %t = call {<2 x i64>, <2 x i1>} @llvm.umul.with.overflow.v2i64(<2 x i64> %a0, <2 x i64> %a1)
   %val = extractvalue {<2 x i64>, <2 x i1>} %t, 0
   %obit = extractvalue {<2 x i64>, <2 x i1>} %t, 1

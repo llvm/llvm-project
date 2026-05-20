@@ -56,34 +56,22 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
         static_cast<DISubprogram::DIFlags>(DISubprogram::FlagExportSymbols - 1);
     static constexpr auto SupportedDISPFlags =
         static_cast<DISubprogram::DISPFlags>(DISubprogram::SPFlagPure - 1);
-    if (SP->getFlags() & ~SupportedDIFlags ||
+    if (SP->isDistinct() || SP->getFlags() & ~SupportedDIFlags ||
         SP->getSPFlags() & ~SupportedDISPFlags) {
-      if (SP->isDistinct()) {
-        NewSP = DISubprogram::getDistinct(
-            M.getContext(), SP->getScope(), SP->getName(), SP->getLinkageName(),
-            SP->getFile(), SP->getLine(), SP->getType(), SP->getScopeLine(),
-            SP->getContainingType(), SP->getVirtualIndex(),
-            SP->getThisAdjustment(), SP->getFlags() & SupportedDIFlags,
-            SP->getSPFlags() & SupportedDISPFlags, SP->getUnit(),
-            SP->getTemplateParams(), SP->getDeclaration(),
-            SP->getRetainedNodes(), SP->getThrownTypes(), SP->getAnnotations(),
-            SP->getTargetFuncName(), SP->getKeyInstructionsEnabled());
-      } else {
-        NewSP = DISubprogram::get(
-            M.getContext(), SP->getScope(), SP->getName(), SP->getLinkageName(),
-            SP->getFile(), SP->getLine(), SP->getType(), SP->getScopeLine(),
-            SP->getContainingType(), SP->getVirtualIndex(),
-            SP->getThisAdjustment(), SP->getFlags() & SupportedDIFlags,
-            SP->getSPFlags() & SupportedDISPFlags, SP->getUnit(),
-            SP->getTemplateParams(), SP->getDeclaration(),
-            SP->getRetainedNodes(), SP->getThrownTypes(), SP->getAnnotations(),
-            SP->getTargetFuncName(), SP->getKeyInstructionsEnabled());
-      }
+      NewSP = DISubprogram::get(
+          M.getContext(), SP->getScope(), SP->getName(), SP->getLinkageName(),
+          SP->getFile(), SP->getLine(), SP->getType(), SP->getScopeLine(),
+          SP->getContainingType(), SP->getVirtualIndex(),
+          SP->getThisAdjustment(), SP->getFlags() & SupportedDIFlags,
+          SP->getSPFlags() & SupportedDISPFlags, SP->getUnit(),
+          SP->getTemplateParams(), SP->getDeclaration(), SP->getRetainedNodes(),
+          SP->getThrownTypes(), SP->getAnnotations(), SP->getTargetFuncName(),
+          SP->getKeyInstructionsEnabled());
 
       Res.MDReplace.insert({SP, NewSP});
 
       if (auto It = Res.MDExtra.find(SP); It != Res.MDExtra.end()) {
-        auto *FunctionMD = It->second;
+        const Metadata *FunctionMD = It->second;
         Res.MDExtra.erase(It);
         Res.MDExtra.insert({NewSP, FunctionMD});
       }
@@ -108,6 +96,18 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
     } while (++It != End && It->first == CU);
     const auto *SubprogramsMD = MDTuple::get(M.getContext(), Subprograms);
     Res.MDExtra.insert({NewCU, SubprogramsMD});
+  }
+
+  for (DIType *T : DIF.types()) {
+    if (auto *SR = dyn_cast<DISubrangeType>(T)) {
+      DIType *BT = SR->getBaseType();
+      if (!BT)
+        BT = DIBasicType::get(
+            SR->getContext(), dwarf::DW_TAG_base_type, SR->getName(),
+            SR->getSizeInBits(), SR->getAlignInBits(), dwarf::DW_ATE_unsigned,
+            SR->getNumExtraInhabitants(), /*DataSizeInBits=*/0, SR->getFlags());
+      Res.MDReplace.insert({T, BT});
+    }
   }
 
   return Res;
