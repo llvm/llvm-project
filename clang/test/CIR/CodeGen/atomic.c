@@ -921,6 +921,53 @@ void clear_volatile(volatile void *p) {
   // OGCG: store atomic volatile i8 0, ptr %{{.+}} seq_cst, align 1
 }
 
+float *atomic_fetch_ptr_to_ptr(float **ptr, int value) {
+  // CIR-LABEL: @atomic_fetch_ptr_to_ptr
+  // LLVM-LABEL: @atomic_fetch_ptr_to_ptr
+  // OGCG-LABEL: @atomic_fetch_ptr_to_ptr
+
+  return __atomic_fetch_add(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %[[PTR:.*]] = cir.alloca !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, ["ptr", init]
+  // CIR: %[[ATOMIC_TEMP:.*]] = cir.alloca !cir.ptr<!cir.float>, !cir.ptr<!cir.ptr<!cir.float>>, ["atomic-temp"] {alignment = 8 : i64}
+  // CIR: %[[PTR_LOAD:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, !cir.ptr<!cir.ptr<!cir.float>>
+  // CIR: %[[PTR_CAST:.*]] = cir.cast bitcast %[[PTR_LOAD]] : !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!s64i>
+  // CIR: %[[RESULT:.*]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR_CAST]], %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
+  // CIR: %[[RESULT_CAST:.*]] = cir.cast int_to_ptr %[[RESULT]] : !s64i -> !cir.ptr<!cir.float>
+  // CIR: cir.store align(8) %[[RESULT_CAST]], %[[ATOMIC_TEMP]] : !cir.ptr<!cir.float>, !cir.ptr<!cir.ptr<!cir.float>>
+
+  // LLVM: %[[RESULT:.*]] = atomicrmw add ptr %{{.*}}, i64 %{{.*}} seq_cst, align 8
+  // LLVM: %[[RESULT_CAST:.*]] = inttoptr i64 %[[RESULT]] to ptr
+  // LLVM: store ptr %[[RESULT_CAST]], ptr %{{.*}}, align 8
+
+  // OGCG: %[[RESULT:.*]] = atomicrmw add ptr %{{.*}}, i64 %{{.*}} seq_cst, align 8
+  // OGCG Skips the cast and just stores it directly.
+  // OGCG: store i64 %[[RESULT]], ptr %{{.*}}, align 8
+}
+
+float *atomic_fetch_ptr_to_ptr2(float **ptr, int value) {
+  // CIR-LABEL: @atomic_fetch_ptr_to_ptr2
+  // LLVM-LABEL: @atomic_fetch_ptr_to_ptr2
+  // OGCG-LABEL: @atomic_fetch_ptr_to_ptr2
+  return __atomic_add_fetch(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %[[PTR:.*]] = cir.alloca !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, ["ptr", init]
+  // CIR: %[[ATOMIC_TEMP:.*]] = cir.alloca !cir.ptr<!cir.float>, !cir.ptr<!cir.ptr<!cir.float>>, ["atomic-temp"] {alignment = 8 : i64}
+  // CIR: %[[PTR_LOAD:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, !cir.ptr<!cir.ptr<!cir.float>>
+  // CIR: %[[PTR_CAST:.*]] = cir.cast bitcast %[[PTR_LOAD]] : !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!s64i>
+  // CIR: %[[RESULT:.*]] = cir.atomic.fetch add seq_cst syncscope(system) %[[PTR_CAST]], %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
+  // CIR: %[[RESULT_CAST:.*]] = cir.cast int_to_ptr %[[RESULT]] : !s64i -> !cir.ptr<!cir.float>
+  // CIR: cir.store align(8) %[[RESULT_CAST]], %[[ATOMIC_TEMP]] : !cir.ptr<!cir.float>, !cir.ptr<!cir.ptr<!cir.float>>
+
+  // LLVM: %[[RESULT:.*]] = atomicrmw add ptr %{{.*}}, i64 %[[VAL:.*]] seq_cst, align 8
+  // LLVM: %[[ADD_RES:.*]] = add i64 %[[RESULT]], %[[VAL]]
+  // LLVM: %[[RESULT_CAST:.*]] = inttoptr i64 %[[ADD_RES]] to ptr
+  // LLVM: store ptr %[[RESULT_CAST]], ptr %{{.*}}, align 8
+
+  // OGCG: %[[RESULT:.*]] = atomicrmw add ptr %{{.*}}, i64 %[[VAL:.*]] seq_cst, align 8
+  // OGCG: %[[ADD_RES:.*]] = add i64 %[[RESULT]], %[[VAL]]
+  // OGCG Skips the cast and just stores it directly.
+  // OGCG: store i64 %[[ADD_RES]], ptr %{{.*}}, align 8
+}
+
 int atomic_fetch_add(int *ptr, int value) {
   // CIR-LABEL: @atomic_fetch_add
   // LLVM-LABEL: @atomic_fetch_add
