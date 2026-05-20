@@ -9514,6 +9514,7 @@ static bool requiresProfileRT(unsigned ID) {
   case options::OPT_fcoverage_mapping:
   case options::OPT_fno_coverage_mapping:
   case options::OPT_fcoverage_compilation_dir_EQ:
+  case options::OPT_ffile_compilation_dir_EQ:
   case options::OPT_fcoverage_prefix_map_EQ:
     return true;
   default:
@@ -9599,12 +9600,14 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   };
   auto ShouldForwardForToolChain = [&](Arg *A, const ToolChain &TC) {
     unsigned ID = A->getOption().getID();
-    // Don't forward arguments whose runtime support is missing from the target
-    // toolchain; forwarding them would produce linker errors or cc1
-    // diagnostics. Coverage mapping flags require -fprofile-instr-generate, so
-    // they are grouped with the profile flags.
+    // Don't forward profiling arguments if the toolchain doesn't support it.
+    // Without this check using it on the host would result in linker errors.
+    // Coverage mapping flags require -fprofile-instr-generate, so drop them
+    // together to avoid a device cc1 diagnostic.
     if (requiresProfileRT(ID) && !ToolChainHasRT(TC, "profile"))
       return false;
+    // Don't forward sanitizer arguments if the toolchain doesn't support it.
+    // Without this check using it on the host would result in linker errors.
     if (requiresUBSanRT(ID) && !ToolChainHasRT(TC, "ubsan_minimal"))
       return false;
     // Don't forward -mllvm to toolchains that don't support LLVM.
