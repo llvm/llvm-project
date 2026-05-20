@@ -106,11 +106,23 @@ TEST(Exceptions, RaiseSetsExactlyRequestedFlag) {
     GTEST_SKIP() << "no FE_* exceptions defined on this platform";
   }
 
+  // C99 7.6.2.3 p2 leaves it implementation-defined whether feraiseexcept
+  // additionally raises FE_INEXACT when raising FE_OVERFLOW or FE_UNDERFLOW.
+  // AArch64 glibc does, so exclude FE_INEXACT from the "no spurious flag"
+  // mask to keep the test portable.
+  constexpr std::uint32_t kInexactTolerated =
+#ifdef FE_INEXACT
+      static_cast<std::uint32_t>(FE_INEXACT);
+#else
+      0u;
+#endif
+
   for (std::uint32_t bit : bits) {
     RTNAME(feclearexcept)(kAllSupported);
     RTNAME(feraiseexcept)(bit);
     EXPECT_NE(RTNAME(fetestexcept)(bit), 0u) << "bit 0x" << std::hex << bit;
-    EXPECT_EQ(RTNAME(fetestexcept)(kAllSupported & ~bit), 0u)
+    const std::uint32_t forbidden = kAllSupported & ~bit & ~kInexactTolerated;
+    EXPECT_EQ(RTNAME(fetestexcept)(forbidden), 0u)
         << "spurious flag set when raising 0x" << std::hex << bit;
   }
 }
