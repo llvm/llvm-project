@@ -6656,8 +6656,8 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
                       Config.getInLoopReductions(), Hints.allowReordering()))
     return;
 
-  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::simplifyRecipes, *VPlan0);
-  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::removeDeadRecipes, *VPlan0);
+  RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
+  RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
   // TODO: Remove this once we can properly check the VPlan itself for both
