@@ -8970,12 +8970,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       auto [FalseLo, FalseHi] = DAG.SplitVector(FalseVal, DL);
 
       // Perform VSELECT on each half
-      SDValue ResLo =
-          DAG.getNode(ISD::VSELECT, DL, TrueLo.getValueType(), MaskLo, TrueLo,
-                      FalseLo);
-      SDValue ResHi =
-          DAG.getNode(ISD::VSELECT, DL, TrueHi.getValueType(), MaskHi, TrueHi,
-                      FalseHi);
+      SDValue ResLo = DAG.getNode(ISD::VSELECT, DL, TrueLo.getValueType(),
+                                  MaskLo, TrueLo, FalseLo);
+      SDValue ResHi = DAG.getNode(ISD::VSELECT, DL, TrueHi.getValueType(),
+                                  MaskHi, TrueHi, FalseHi);
 
       // Combine the two halves using CONCAT_VECTORS
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ResLo, ResHi);
