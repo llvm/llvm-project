@@ -830,3 +830,22 @@ func.func @test28_box_addr_derived_rank_reducing_typeparams(
   %ac = fir.array_coor %ba(%sh1) %c1 typeparams %len : (!fir.ref<!fir.array<?x!fir.type<dt(l:i32){x:i32}>>>, !fir.shape<1>, index, i32) -> !fir.ref<!fir.type<dt(l:i32){x:i32}>>
   return %ac : !fir.ref<!fir.type<dt(l:i32){x:i32}>>
 }
+
+// Merged type mismatch on fir.box_addr (no fir.convert): box<2x2> -> ref<4x3>.
+// Canonicalization must not peel box_addr and fold to array_coor on %arg0.
+// CHECK-LABEL:   func.func @test29_merged_box_addr_no_fold(
+// CHECK:           fir.embox
+// CHECK:           fir.box_addr
+// CHECK-NOT:       fir.array_coor %{{.*}}({{.*}}) [{{.*}}]
+func.func @test29_merged_box_addr_no_fold(%arg0: !fir.ref<!fir.array<4x3xf32>>) -> !fir.ref<f32> {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+  %c3 = arith.constant 3 : index
+  %sh = fir.shape %c4, %c3 : (index, index) -> !fir.shape<2>
+  %sl = fir.slice %c1, %c2, %c1, %c1, %c2, %c1 : (index, index, index, index, index, index) -> !fir.slice<2>
+  %b = fir.embox %arg0(%sh) [%sl] : (!fir.ref<!fir.array<4x3xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<2x2xf32>>
+  %ba = fir.box_addr %b : (!fir.box<!fir.array<2x2xf32>>) -> !fir.ref<!fir.array<4x3xf32>>
+  %ac = fir.array_coor %ba(%sh) %c1, %c1 : (!fir.ref<!fir.array<4x3xf32>>, !fir.shape<2>, index, index) -> !fir.ref<f32>
+  return %ac : !fir.ref<f32>
+}
