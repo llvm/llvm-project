@@ -15,6 +15,7 @@
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -6561,44 +6562,38 @@ static void redirectAllPredecessorsTo(BasicBlock *OldTarget,
     redirectTo(Pred, NewTarget, DL);
 }
 
-/// Determine which blocks in \p BBs are reachable from outside and remove the
-/// ones that are not reachable from the function.
 static void removeUnusedBlocksFromParent(ArrayRef<BasicBlock *> BBs) {
-  DenseMap<BasicBlock *, unsigned> BB2Index(BBs.size());
-  for (const auto [I, BB] : enumerate(BBs))
-    BB2Index.insert({BB, I});
+  SmallPtrSet<BasicBlock *, 8> InternalBBs(from_range, BBs);
+  // We add a block to BBsToKeep iff we have proven it has an external use.
+  SmallPtrSet<BasicBlock *, 8> BBsToKeep;
 
-  // Optimistically assume all BBs are dead. We iteratively remove
-  // immediately-used blocks from this set until we reach a fixed point.
-  SmallBitVector BBsToErase(BBs.size(), true);
-  // Accumulates immediately-used blocks for one iteration.
-  SmallBitVector BBsToKeep(BBs.size());
-  do {
-    BBsToKeep.reset();
-    for (unsigned BBToEraseIndex : BBsToErase.set_bits()) {
-      for (Use &U : BBs[BBToEraseIndex]->uses()) {
+  while (true) {
+    bool Changed = false;
+
+    for (BasicBlock *BB : BBs) {
+      if (BBsToKeep.contains(BB))
+        continue;
+
+      for (Use &U : BB->uses()) {
         auto *UseInst = dyn_cast<Instruction>(U.getUser());
         if (!UseInst)
           continue;
         BasicBlock *UseBB = UseInst->getParent();
-        auto UseBBIndexI = BB2Index.find(UseBB);
-        // If this use is from an external block, or from a block in BBs we have
-        // already proved is transitively used by an external block, then this
-        // block is also used.
-        if (UseBBIndexI == BB2Index.end() ||
-            !BBsToErase.test(UseBBIndexI->second)) {
-          BBsToKeep.set(BBToEraseIndex);
+        if (!InternalBBs.contains(UseBB) || BBsToKeep.contains(UseBB)) {
+          BBsToKeep.insert(BB);
+          Changed = true;
           break;
         }
       }
     }
-    BBsToErase &= ~BBsToKeep;
-  } while (BBsToKeep.any());
 
-  SmallVector<BasicBlock *> FinalBBsToErase;
-  for (unsigned BBToEraseIndex : BBsToErase.set_bits())
-    FinalBBsToErase.push_back(BBs[BBToEraseIndex]);
-  DeleteDeadBlocks(FinalBBsToErase);
+    if (!Changed)
+      break;
+  }
+
+  SmallVector<BasicBlock *> BBsToDelete = filter_to_vector(
+      BBs, [&BBsToKeep](BasicBlock *BB) { return !BBsToKeep.contains(BB); });
+  DeleteDeadBlocks(BBsToDelete);
 }
 
 CanonicalLoopInfo *
