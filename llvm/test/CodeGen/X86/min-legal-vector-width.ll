@@ -320,7 +320,7 @@ define dso_local i32 @_Z9test_charPcS_i_512(ptr nocapture readonly, ptr nocaptur
 ; CHECK-SKX-NEXT:  # %bb.2: # %middle.block
 ; CHECK-SKX-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; CHECK-SKX-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; CHECK-SKX-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; CHECK-SKX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; CHECK-SKX-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-SKX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-SKX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -350,7 +350,7 @@ define dso_local i32 @_Z9test_charPcS_i_512(ptr nocapture readonly, ptr nocaptur
 ; CHECK-AVX512-NEXT:  # %bb.2: # %middle.block
 ; CHECK-AVX512-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; CHECK-AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; CHECK-AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; CHECK-AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; CHECK-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -380,7 +380,7 @@ define dso_local i32 @_Z9test_charPcS_i_512(ptr nocapture readonly, ptr nocaptur
 ; CHECK-VBMI-NEXT:  # %bb.2: # %middle.block
 ; CHECK-VBMI-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; CHECK-VBMI-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; CHECK-VBMI-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; CHECK-VBMI-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; CHECK-VBMI-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-VBMI-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-VBMI-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -537,7 +537,7 @@ define dso_local i32 @sad_16i8_512() "min-legal-vector-width"="512" {
 ; CHECK-SKX-NEXT:    jne .LBB11_1
 ; CHECK-SKX-NEXT:  # %bb.2: # %middle.block
 ; CHECK-SKX-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; CHECK-SKX-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; CHECK-SKX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; CHECK-SKX-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-SKX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-SKX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -562,7 +562,7 @@ define dso_local i32 @sad_16i8_512() "min-legal-vector-width"="512" {
 ; CHECK-AVX512-NEXT:    jne .LBB11_1
 ; CHECK-AVX512-NEXT:  # %bb.2: # %middle.block
 ; CHECK-AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; CHECK-AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; CHECK-AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; CHECK-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -587,7 +587,7 @@ define dso_local i32 @sad_16i8_512() "min-legal-vector-width"="512" {
 ; CHECK-VBMI-NEXT:    jne .LBB11_1
 ; CHECK-VBMI-NEXT:  # %bb.2: # %middle.block
 ; CHECK-VBMI-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; CHECK-VBMI-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; CHECK-VBMI-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; CHECK-VBMI-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-VBMI-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-VBMI-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]

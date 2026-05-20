@@ -417,8 +417,7 @@ define i32 @dot_ext_v2i16_v2i32(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    movzwl (%rdi), %eax
 ; SSE4-NEXT:    movd %eax, %xmm0
-; SSE4-NEXT:    pinsrw $1, (%rdi,%rsi), %xmm0
-; SSE4-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; SSE4-NEXT:    pinsrw $2, (%rdi,%rsi), %xmm0
 ; SSE4-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE4-NEXT:    pmovsxwd %xmm1, %xmm1
 ; SSE4-NEXT:    pmulld %xmm0, %xmm1
@@ -431,8 +430,7 @@ define i32 @dot_ext_v2i16_v2i32(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movzwl (%rdi), %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vpinsrw $1, (%rdi,%rsi), %xmm0, %xmm0
-; AVX-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX-NEXT:    vpinsrw $2, (%rdi,%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vpmovsxwd %xmm1, %xmm1
 ; AVX-NEXT:    vpmulld %xmm0, %xmm1, %xmm0

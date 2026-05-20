@@ -42,7 +42,7 @@ public:
   bool run(Function &F);
 
 private:
-  bool tryMAddReplacement(Instruction *Op, bool ReduceInOneBB);
+  bool tryMAddReplacement(Instruction *Op);
   bool trySADReplacement(Instruction *Op);
 };
 
@@ -106,8 +106,7 @@ static bool matchVPDPBUSDPattern(const X86Subtarget *ST, BinaryOperator *Mul,
   return false;
 }
 
-bool X86PartialReduction::tryMAddReplacement(Instruction *Op,
-                                             bool ReduceInOneBB) {
+bool X86PartialReduction::tryMAddReplacement(Instruction *Op) {
   if (!ST->hasSSE2())
     return false;
 
@@ -128,9 +127,7 @@ bool X86PartialReduction::tryMAddReplacement(Instruction *Op,
 
   // If the target support VNNI, leave it to ISel to combine reduce operation
   // to VNNI instruction.
-  // TODO: we can support transforming reduce to VNNI intrinsic for across block
-  // in this pass.
-  if (ReduceInOneBB && matchVPDPBUSDPattern(ST, Mul, DL))
+  if (matchVPDPBUSDPattern(ST, Mul, DL))
     return false;
 
   // LHS and RHS should be only used once or if they are the same then only
@@ -353,67 +350,6 @@ bool X86PartialReduction::trySADReplacement(Instruction *Op) {
   return true;
 }
 
-// Walk backwards from the ExtractElementInst and determine if it is the end of
-// a horizontal reduction. Return the input to the reduction if we find one.
-static Value *matchAddReduction(const ExtractElementInst &EE,
-                                bool &ReduceInOneBB) {
-  ReduceInOneBB = true;
-  // Make sure we're extracting index 0.
-  auto *Index = dyn_cast<ConstantInt>(EE.getIndexOperand());
-  if (!Index || !Index->isNullValue())
-    return nullptr;
-
-  const auto *BO = dyn_cast<BinaryOperator>(EE.getVectorOperand());
-  if (!BO || BO->getOpcode() != Instruction::Add || !BO->hasOneUse())
-    return nullptr;
-  if (EE.getParent() != BO->getParent())
-    ReduceInOneBB = false;
-
-  unsigned NumElems = cast<FixedVectorType>(BO->getType())->getNumElements();
-  // Ensure the reduction size is a power of 2.
-  if (!isPowerOf2_32(NumElems))
-    return nullptr;
-
-  const Value *Op = BO;
-  unsigned Stages = Log2_32(NumElems);
-  for (unsigned i = 0; i != Stages; ++i) {
-    const auto *BO = dyn_cast<BinaryOperator>(Op);
-    if (!BO || BO->getOpcode() != Instruction::Add)
-      return nullptr;
-    if (EE.getParent() != BO->getParent())
-      ReduceInOneBB = false;
-
-    // If this isn't the first add, then it should only have 2 users, the
-    // shuffle and another add which we checked in the previous iteration.
-    if (i != 0 && !BO->hasNUses(2))
-      return nullptr;
-
-    Value *LHS = BO->getOperand(0);
-    Value *RHS = BO->getOperand(1);
-
-    auto *Shuffle = dyn_cast<ShuffleVectorInst>(LHS);
-    if (Shuffle) {
-      Op = RHS;
-    } else {
-      Shuffle = dyn_cast<ShuffleVectorInst>(RHS);
-      Op = LHS;
-    }
-
-    // The first operand of the shuffle should be the same as the other operand
-    // of the bin op.
-    if (!Shuffle || Shuffle->getOperand(0) != Op)
-      return nullptr;
-
-    // Verify the shuffle has the expected (at this stage of the pyramid) mask.
-    unsigned MaskEnd = 1 << i;
-    for (unsigned Index = 0; Index < MaskEnd; ++Index)
-      if (Shuffle->getMaskValue(Index) != (int)(MaskEnd + Index))
-        return nullptr;
-  }
-
-  return const_cast<Value *>(Op);
-}
-
 // See if this BO is reachable from this Phi by walking forward through single
 // use BinaryOperators with the same opcode. If we get back then we know we've
 // found a loop and it is safe to step through this Add to find more leaves.
@@ -447,9 +383,7 @@ static void collectLeaves(Value *Root, SmallVectorImpl<Instruction *> &Leaves) {
       continue;
 
     if (auto *PN = dyn_cast<PHINode>(V)) {
-      // PHI node should have single use unless it is the root node, then it
-      // has 2 uses.
-      if (!PN->hasNUses(PN == Root ? 2 : 1))
+      if (!PN->hasNUses(1))
         break;
 
       // Push incoming values to the worklist.
@@ -461,14 +395,14 @@ static void collectLeaves(Value *Root, SmallVectorImpl<Instruction *> &Leaves) {
     if (auto *BO = dyn_cast<BinaryOperator>(V)) {
       if (BO->getOpcode() == Instruction::Add) {
         // Simple case. Single use, just push its operands to the worklist.
-        if (BO->hasNUses(BO == Root ? 2 : 1)) {
+        if (BO->hasNUses(1)) {
           append_range(Worklist, BO->operands());
           continue;
         }
 
         // If there is additional use, make sure it is an unvisited phi that
         // gets us back to this node.
-        if (BO->hasNUses(BO == Root ? 3 : 2)) {
+        if (BO->hasNUses(2)) {
           PHINode *PN = nullptr;
           for (auto *U : BO->users())
             if (auto *P = dyn_cast<PHINode>(U))
@@ -492,7 +426,7 @@ static void collectLeaves(Value *Root, SmallVectorImpl<Instruction *> &Leaves) {
 
     // Not an add or phi, make it a leaf.
     if (auto *I = dyn_cast<Instruction>(V)) {
-      if (!V->hasNUses(I == Root ? 2 : 1))
+      if (!V->hasNUses(1))
         continue;
 
       // Add this as a leaf.
@@ -508,22 +442,18 @@ bool X86PartialReduction::run(Function &F) {
   bool MadeChange = false;
   for (auto &BB : F) {
     for (auto &I : BB) {
-      auto *EE = dyn_cast<ExtractElementInst>(&I);
-      if (!EE)
-        continue;
-
-      bool ReduceInOneBB;
       // First find a reduction tree.
-      // FIXME: Do we need to handle other opcodes than Add?
-      Value *Root = matchAddReduction(*EE, ReduceInOneBB);
-      if (!Root)
+      // FIXME: Do we need to handle other reduction opcodes than Add?
+      auto *II = dyn_cast<IntrinsicInst>(&I);
+      if (!II || II->getIntrinsicID() != Intrinsic::vector_reduce_add)
         continue;
 
+      Value *Root = II->getOperand(0);
       SmallVector<Instruction *, 8> Leaves;
       collectLeaves(Root, Leaves);
 
       for (Instruction *I : Leaves) {
-        if (tryMAddReplacement(I, ReduceInOneBB)) {
+        if (tryMAddReplacement(I)) {
           MadeChange = true;
           continue;
         }

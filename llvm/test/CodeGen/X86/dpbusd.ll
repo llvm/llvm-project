@@ -111,7 +111,7 @@ define i32 @mul_zext(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVXVNNI-AVX512-NEXT:    vpmullw %ymm0, %ymm1, %ymm0
 ; AVXVNNI-AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVXVNNI-AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVXVNNI-AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVXVNNI-AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVXVNNI-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVXVNNI-AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVXVNNI-AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -130,7 +130,7 @@ define i32 @mul_zext(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVX512-NEXT:    vpmullw %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -184,7 +184,7 @@ define i32 @mul_sext(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVXVNNI-AVX512-NEXT:    vpmullw %ymm0, %ymm1, %ymm0
 ; AVXVNNI-AVX512-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVXVNNI-AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVXVNNI-AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVXVNNI-AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVXVNNI-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVXVNNI-AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVXVNNI-AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -203,7 +203,7 @@ define i32 @mul_sext(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVX512-NEXT:    vpmullw %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]

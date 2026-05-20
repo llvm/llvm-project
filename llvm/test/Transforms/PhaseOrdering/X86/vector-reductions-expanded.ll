@@ -11,12 +11,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define i32 @add_v4i32(ptr %p) {
 ; CHECK-LABEL: @add_v4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4, !tbaa [[TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP1]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[BIN_RDX4:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF3]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[BIN_RDX4]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP0]])
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:

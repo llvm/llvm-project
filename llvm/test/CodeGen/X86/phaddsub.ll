@@ -878,10 +878,10 @@ define i32 @PR39936_v8i32(<8 x i32>) {
 ;
 ; SSSE3-FAST-LABEL: PR39936_v8i32:
 ; SSSE3-FAST:       # %bb.0:
-; SSSE3-FAST-NEXT:    phaddd %xmm0, %xmm1
-; SSSE3-FAST-NEXT:    phaddd %xmm1, %xmm1
-; SSSE3-FAST-NEXT:    phaddd %xmm1, %xmm1
-; SSSE3-FAST-NEXT:    movd %xmm1, %eax
+; SSSE3-FAST-NEXT:    paddd %xmm1, %xmm0
+; SSSE3-FAST-NEXT:    phaddd %xmm0, %xmm0
+; SSSE3-FAST-NEXT:    phaddd %xmm0, %xmm0
+; SSSE3-FAST-NEXT:    movd %xmm0, %eax
 ; SSSE3-FAST-NEXT:    retq
 ;
 ; AVX1-SLOW-LABEL: PR39936_v8i32:
@@ -899,7 +899,7 @@ define i32 @PR39936_v8i32(<8 x i32>) {
 ; AVX1-FAST-LABEL: PR39936_v8i32:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm1, %xmm0
+; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
@@ -921,7 +921,7 @@ define i32 @PR39936_v8i32(<8 x i32>) {
 ; AVX2-FAST-LABEL: PR39936_v8i32:
 ; AVX2-FAST:       # %bb.0:
 ; AVX2-FAST-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-FAST-NEXT:    vphaddd %xmm0, %xmm1, %xmm0
+; AVX2-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vmovd %xmm0, %eax
