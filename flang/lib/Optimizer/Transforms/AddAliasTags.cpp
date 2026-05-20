@@ -65,10 +65,12 @@ extern llvm::cl::opt<bool> supportCrayPointers;
 
 namespace {
 
-// Return the size and alignment (in bytes) for the given type.
+// Return the size and alignment (in bytes) for the given type, or std::nullopt
+// if the type cannot be converted.
+//
 // TODO: this must be combined with DebugTypeGenerator::getFieldSizeAndAlign().
 // We'd better move fir::LLVMTypeConverter out of the FIRCodeGen component.
-static std::pair<std::uint64_t, unsigned short>
+static std::optional<std::pair<std::uint64_t, unsigned short>>
 getTypeSizeAndAlignment(mlir::Type type,
                         fir::LLVMTypeConverter &llvmTypeConverter) {
   mlir::Type llvmTy;
@@ -76,6 +78,12 @@ getTypeSizeAndAlignment(mlir::Type type,
     llvmTy = llvmTypeConverter.convertBoxTypeAsStruct(boxTy, getBoxRank(boxTy));
   else
     llvmTy = llvmTypeConverter.convertType(type);
+
+  if (!llvmTy) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "Skipping TBAA size computation for type: " << type << "\n");
+    return std::nullopt;
+  }
 
   const mlir::DataLayout &dataLayout = llvmTypeConverter.getDataLayout();
   uint64_t byteSize = dataLayout.getTypeSize(llvmTy);
@@ -237,9 +245,10 @@ public:
   // Return the byte size of the given declaration.
   std::size_t getDeclarationSize(fir::FortranVariableStorageOpInterface decl) {
     mlir::Type memType = fir::unwrapRefType(decl.getBase().getType());
-    auto [size, alignment] =
-        getTypeSizeAndAlignment(memType, llvmTypeConverter);
-    return llvm::alignTo(size, alignment);
+    auto sizeAndAlign = getTypeSizeAndAlignment(memType, llvmTypeConverter);
+    if (!sizeAndAlign)
+      return 0;
+    return llvm::alignTo(sizeAndAlign->first, sizeAndAlign->second);
   }
 
   // A StorageDesc specifies an operation that defines a physical storage
