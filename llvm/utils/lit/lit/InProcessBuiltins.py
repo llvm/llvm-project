@@ -376,7 +376,7 @@ def executeBuiltinMkdir(
             try:
                 dir.mkdir(exist_ok=True)
             except OSError as err:
-                io.stderr.write(("Error: 'mkdir' command failed, %s\n" % str(err)))
+                io.stderr.write("Error: 'mkdir' command failed, %s\n" % str(err))
                 exitCode = 1
     return exitCode
 
@@ -424,7 +424,7 @@ def executeBuiltinRm(
                 os.remove(path)
             elif os.path.isdir(path):
                 if not recursive:
-                    io.stderr.write(("Error: %s is a directory\n" % path))
+                    io.stderr.write("Error: %s is a directory\n" % path)
                     exitCode = 1
                 if kIsWindows:
                     # NOTE: use ctypes to access `SHFileOperationsW` on Windows to
@@ -490,7 +490,7 @@ def executeBuiltinRm(
                     os.chmod(path, stat.S_IMODE(os.stat(path).st_mode) | stat.S_IWRITE)
                 os.remove(path)
         except OSError as err:
-            io.stderr.write(("Error: 'rm' command failed, %s" % str(err)))
+            io.stderr.write("Error: 'rm' command failed, %s" % str(err))
             exitCode = 1
     return exitCode
 
