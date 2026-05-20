@@ -772,16 +772,7 @@ define <4 x i8> @test_psslai_b(<4 x i8> %a) {
 define <2 x i16> @test_pssla_hs(<2 x i16> %a, i16 %shamt) {
 ; CHECK-LABEL: test_pssla_hs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pmsltz.h a2, a0
-; CHECK-NEXT:    lui a3, 8
-; CHECK-NEXT:    plui.h a4, -512
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    pmv.hs a3, a3
-; CHECK-NEXT:    merge a2, a3, a4
-; CHECK-NEXT:    psll.hs a3, a0, a1
-; CHECK-NEXT:    psra.hs a1, a3, a1
-; CHECK-NEXT:    pmseq.h a0, a0, a1
-; CHECK-NEXT:    merge a0, a2, a3
+; CHECK-NEXT:    pssha.hs a0, a0, a1
 ; CHECK-NEXT:    ret
   %insert = insertelement <2 x i16> poison, i16 %shamt, i32 0
   %b = shufflevector <2 x i16> %insert, <2 x i16> poison, <2 x i32> zeroinitializer

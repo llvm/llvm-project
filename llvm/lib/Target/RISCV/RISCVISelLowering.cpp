@@ -8952,6 +8952,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SHL:
   case ISD::SRL:
   case ISD::SRA:
+  case ISD::SSHLSAT:
     if (Op.getSimpleValueType().isFixedLengthVector()) {
       if (Subtarget.hasStdExtP()) {
         SDValue ShAmtVec = Op.getOperand(1);
@@ -8961,8 +8962,13 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
         else if (ShAmtVec.getOpcode() == ISD::BUILD_VECTOR)
           SplatVal = cast<BuildVectorSDNode>(ShAmtVec)->getSplatValue();
 
-        if (!SplatVal)
+        if (!SplatVal) {
+          if (Op.getOpcode() == ISD::SSHLSAT)
+            return SDValue();
           return DAG.UnrollVectorOp(Op.getNode());
+        }
+
+        SDLoc DL(Op);
 
         unsigned Opc;
         switch (Op.getOpcode()) {
@@ -8977,30 +8983,20 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
         case ISD::SRA:
           Opc = RISCVISD::PSRA;
           break;
+        case ISD::SSHLSAT:
+          Opc = RISCVISD::PSSHA;
+          break;
         }
-        return DAG.getNode(Opc, SDLoc(Op), Op.getValueType(), Op.getOperand(0),
+        return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(0),
                            SplatVal);
       }
       return lowerToScalableOp(Op, DAG);
     }
+    assert(Op.getOpcode() != ISD::SSHLSAT);
     // This can be called for an i32 shift amount that needs to be promoted.
     assert(Op.getOperand(1).getValueType() == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     return SDValue();
-  case ISD::SSHLSAT: {
-    MVT VT = Op.getSimpleValueType();
-    assert(VT.isFixedLengthVector() && Subtarget.hasStdExtP() &&
-           "Unexptect custom legalisation");
-    APInt Splat;
-    if (!ISD::isConstantSplatVector(Op.getOperand(1).getNode(), Splat))
-      return SDValue();
-    uint64_t ShAmt = Splat.getZExtValue();
-    if (ShAmt >= VT.getVectorElementType().getSizeInBits())
-      return SDValue();
-    SDLoc DL(Op);
-    return DAG.getNode(RISCVISD::PSSLAI, DL, VT, Op.getOperand(0),
-                       DAG.getTargetConstant(ShAmt, DL, Subtarget.getXLenVT()));
-  }
   case ISD::MASKED_UDIV:
   case ISD::MASKED_SDIV:
   case ISD::MASKED_UREM:
