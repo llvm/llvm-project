@@ -8772,39 +8772,32 @@ void ScalarEvolution::forgetValue(Value *V) {
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I) return;
 
-  SmallVector<std::pair<Instruction *, ValueExprMapType::iterator>, 16>
-      Worklist;
+  SmallVector<std::pair<Instruction *, const SCEV *>, 16> Worklist;
   SmallPtrSet<Instruction *, 8> Visited;
   SmallVector<SCEVUse, 8> ToForget;
 
+  auto It = ValueExprMap.find_as(static_cast<Value *>(I));
+  Worklist.emplace_back(I, It != ValueExprMap.end() ? It->second : nullptr);
+  Visited.insert(I);
+
   auto PushUser = [&](Instruction *UI) {
+    bool IsSCEVable = isSCEVable(UI->getType());
     bool IsWO = isa<WithOverflowInst>(UI);
-    if (!isSCEVable(UI->getType()) && !IsWO)
+    if ((!IsSCEVable && !IsWO) || !Visited.insert(UI).second)
       return;
-    if (!Visited.insert(UI).second)
-      return;
-    auto It = ValueExprMap.find_as(static_cast<Value *>(UI));
-    if (It == ValueExprMap.end() && !IsWO)
-      return;
-    Worklist.emplace_back(UI, It);
+    if (IsSCEVable)
+      Worklist.emplace_back(UI, getExistingSCEV(UI));
+    else if (IsWO)
+      Worklist.emplace_back(UI, nullptr);
   };
 
-  if (isSCEVable(I->getType()) || isa<WithOverflowInst>(I)) {
-    Visited.insert(I);
-    Worklist.emplace_back(
-        I, ValueExprMap.find_as(static_cast<Value *>(I)));
-  }
-
   while (!Worklist.empty()) {
-    auto [Cur, It] = Worklist.pop_back_val();
-
-    if (It != ValueExprMap.end()) {
-      ToForget.push_back(It->second);
+    auto [Cur, S] = Worklist.pop_back_val();
+    if (S) {
+      ToForget.push_back(S);
       if (auto *PN = dyn_cast<PHINode>(Cur))
         ConstantEvolutionLoopExitValue.erase(PN);
-      eraseValueFromMap(It->first);
     }
-
     for (User *U : Cur->users())
       PushUser(cast<Instruction>(U));
   }
