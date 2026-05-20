@@ -353,20 +353,55 @@ public:
             Scope};
   }
 
+  /// Returns the declaration of a function that is visible across translation
+  /// units, if such a declaration exists and is different from the definition.
+  static const FunctionDecl *getCrossTUDecl(const FunctionDecl &FD,
+                                            SourceManager &SM) {
+    if (!FD.isExternallyVisible())
+      return nullptr;
+    const FileID DefinitionFile = SM.getFileID(FD.getLocation());
+    for (const FunctionDecl *Redecl : FD.redecls())
+      if (SM.getFileID(Redecl->getLocation()) != DefinitionFile)
+        return Redecl;
+
+    return nullptr;
+  }
+
+  static const FunctionDecl *getCrossTUDecl(const ParmVarDecl &PVD,
+                                            SourceManager &SM) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(PVD.getDeclContext()))
+      return getCrossTUDecl(*FD, SM);
+    return nullptr;
+  }
+
   void suggestWithScopeForParmVar(const ParmVarDecl *PVD,
                                   EscapingTarget EscapeTarget) {
     if (llvm::isa<const VarDecl *>(EscapeTarget))
       return;
 
-    auto [Parm, Scope] = getCanonicalDeclForAttr(cast<FunctionDecl>(FD), PVD);
-    SemaHelper->suggestLifetimeboundToParmVar(Scope, Parm, EscapeTarget);
+    auto [CanonicalPVD, Scope] =
+        getCanonicalDeclForAttr(cast<FunctionDecl>(FD), PVD);
+    const auto *CrossTUFD = getCrossTUDecl(*PVD, AST.getSourceManager());
+    const auto *CrossTUParm =
+        CrossTUFD ? CrossTUFD->getParamDecl(PVD->getFunctionScopeIndex())
+                  : nullptr;
+
+    SemaHelper->suggestLifetimeboundToParmVar(Scope, CanonicalPVD,
+                                              EscapeTarget);
+    if (CrossTUParm && CrossTUParm != CanonicalPVD)
+      SemaHelper->suggestLifetimeboundToParmVar(WarningScope::CrossTU,
+                                                CrossTUParm, EscapeTarget);
   }
 
   void suggestWithScopeForImplicitThis(const CXXMethodDecl *MD,
                                        const Expr *EscapeExpr) {
-    auto [MethodDecl, Scope] = getCanonicalDeclForAttr(MD);
-    SemaHelper->suggestLifetimeboundToImplicitThis(Scope, MethodDecl,
+    auto [CanonicalDecl, Scope] = getCanonicalDeclForAttr(MD);
+    const auto *CrossTUDecl = getCrossTUDecl(*MD, AST.getSourceManager());
+    SemaHelper->suggestLifetimeboundToImplicitThis(Scope, CanonicalDecl,
                                                    EscapeExpr);
+    if (CrossTUDecl && CrossTUDecl != CanonicalDecl)
+      SemaHelper->suggestLifetimeboundToImplicitThis(
+          WarningScope::CrossTU, cast<CXXMethodDecl>(CrossTUDecl), EscapeExpr);
   }
 
   void suggestAnnotations() {

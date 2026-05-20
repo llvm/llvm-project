@@ -31,6 +31,8 @@ struct [[gsl::Pointer()]] View {
 
 View definition_before_header(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
 
+View redeclared_before_header_include(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
+
 View return_view_directly(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
 
 View conditional_return_view(
@@ -67,11 +69,18 @@ struct ReturnThisPointer {
 
 //--- test_source.cpp
 
+struct View;
+View redeclared_before_header_include(View a); // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+
 #include "test_header.h"
 #include "Inputs/lifetime-analysis.h"
 
 View definition_before_header(View a) {
   return a;                               // expected-note {{param returned here}}
+}
+
+View redeclared_before_header_include(View a) {
+  return a;                               // expected-note 2 {{param returned here}}
 }
 
 View return_view_directly(View a) {
