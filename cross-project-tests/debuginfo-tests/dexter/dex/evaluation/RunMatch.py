@@ -15,31 +15,48 @@ from typing import Any, Dict, List, Tuple
 
 from dex.dextIR import DextIR, StepIR
 from dex.evaluation.ExpectMatch import DebuggerExpectMatch, get_expect_match
-from dex.evaluation.Metrics import Metric, get_variable_metrics, serialize_metric_to_json
+from dex.evaluation.Metrics import (
+    Metric,
+    get_variable_metrics,
+    serialize_metric_to_json,
+)
 from dex.evaluation.StateMatch import get_active_where_expects
 from dex.test_script import DexterScript, Scope
 from dex.test_script.Nodes import Expect, Value
+
 
 class DebuggerStepMatch:
     """Class used to record the match between a DexterScript and a StepIR, including the state match, determining which
     script nodes are "active", and the expect matches, which compare the debugger's output to the DexterScript's
     expected output."""
+
     def __init__(self, step: StepIR, script: DexterScript):
         self.step = step
         self.script = script
         self.state_match = get_active_where_expects(script, step)
-        expects_to_match = {expect for frame_idx, expects in self.state_match.values() for expect in expects}
+        expects_to_match = {
+            expect
+            for frame_idx, expects in self.state_match.values()
+            for expect in expects
+        }
         self.expect_matches: Dict[Expect, DebuggerExpectMatch] = {}
+
         def add_expected_values(expect: Expect, expected_value: Any, scope: Scope):
             assert isinstance(expect, Value), "Non-Value expects currently unsupported"
             if expect in expects_to_match:
-                self.expect_matches[expect] = get_expect_match(expect, expected_value, step.watches[expect.get_watched_expr()])
+                self.expect_matches[expect] = get_expect_match(
+                    expect, expected_value, step.watches[expect.get_watched_expr()]
+                )
+
         script.visit_script(visit_expect=add_expected_values)
+
 
 class DebuggerRunMatch(object):
     """Class used to record the complete match of a debugger session and a DexterScript. Compares debugger steps to the
     script one-at-a-time, rather than comparing individual variables longtitudinally, as there will exist some shared
-    state across evaluation that is updated step-by-step and can be shared across variables."""
+    state across evaluation that is updated step-by-step and can be shared across variables.
+    """
+
     def __init__(self, context, dext_ir: DextIR):
         self.context = context
         self.dext_ir = dext_ir
@@ -54,10 +71,12 @@ class DebuggerRunMatch(object):
 
         # Gather the expected values for each Expect.
         expected_values = {}
+
         def add_expected_values(expect: Expect, expected_value: Any, scope: Scope):
             assert isinstance(expect, Value), "Non-Value expects currently unsupported"
             expected_values[expect] = expected_value
             self.per_expect_results[expect] = []
+
         script.visit_script(visit_expect=add_expected_values)
 
         # Then produce all of our step matches.
@@ -67,18 +86,23 @@ class DebuggerRunMatch(object):
         # Then, for each expect, produce the list of results for just that variable.
         for step_match in self.step_matches:
             for expect, expect_match in step_match.expect_matches.items():
-                self.per_expect_results[expect].append((step_match.step.step_index, expect_match))
+                self.per_expect_results[expect].append(
+                    (step_match.step.step_index, expect_match)
+                )
 
         # Finally, compare the match results against the expected values to produce the metrics.
         for expect, expect_results in self.per_expect_results.items():
             expect_matches = [match for step, match in expect_results]
-            expect_metrics = get_variable_metrics(expect, expected_values[expect], expect_matches)
+            expect_metrics = get_variable_metrics(
+                expect, expected_values[expect], expect_matches
+            )
             for metric_name, metric in expect_metrics.items():
                 if metric_name not in self.metrics:
                     self.metrics[metric_name] = metric
                 else:
-                    self.metrics[metric_name] = self.metrics[metric_name].aggregate(metric)
-
+                    self.metrics[metric_name] = self.metrics[metric_name].aggregate(
+                        metric
+                    )
 
     def dump_step_results(self) -> str:
         result = ""
@@ -91,15 +115,29 @@ class DebuggerRunMatch(object):
             if not frame_active_wheres:
                 result += f"  No active !where nodes.\n"
                 continue
-            frame_active_wheres_list = sorted([(frame_idx, wheres) for frame_idx, wheres in frame_active_wheres.items()], key=lambda entry: entry[0])
+            frame_active_wheres_list = sorted(
+                [
+                    (frame_idx, wheres)
+                    for frame_idx, wheres in frame_active_wheres.items()
+                ],
+                key=lambda entry: entry[0],
+            )
             result += f"  Active !where nodes:\n"
             for frame_idx, wheres in frame_active_wheres_list:
                 result += f"    Frame {frame_idx}: [{', '.join(wheres)}]\n"
             if not step_match.expect_matches:
                 continue
             result += f"  Active !expect nodes:\n"
-            matching_expects = [(expect, match) for expect, match in step_match.expect_matches.items() if match.match_result]
-            non_matching_expects = [(expect, match) for expect, match in step_match.expect_matches.items() if not match.match_result]
+            matching_expects = [
+                (expect, match)
+                for expect, match in step_match.expect_matches.items()
+                if match.match_result
+            ]
+            non_matching_expects = [
+                (expect, match)
+                for expect, match in step_match.expect_matches.items()
+                if not match.match_result
+            ]
             if matching_expects:
                 result += f"    Matching nodes:     [{', '.join(f'{expect}={match.actual_result}' for expect, match in matching_expects)}]\n"
             if non_matching_expects:
@@ -117,4 +155,7 @@ class DebuggerRunMatch(object):
     def get_metric_json_output(self):
         if not self.metrics:
             return "No expects found."
-        return {metric_type: serialize_metric_to_json(metric) for metric_type, metric in self.metrics.items()}
+        return {
+            metric_type: serialize_metric_to_json(metric)
+            for metric_type, metric in self.metrics.items()
+        }

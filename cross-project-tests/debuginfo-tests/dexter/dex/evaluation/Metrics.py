@@ -14,7 +14,7 @@ from dex.test_script.Nodes import Expect, Value
 
 
 class Metric:
-    def __init__(self, improves_asc = True):
+    def __init__(self, improves_asc=True):
         self.improves_asc = improves_asc
 
     def as_scalar(self) -> float:
@@ -36,8 +36,9 @@ class Metric:
         else:
             return 0
 
+
 class ScalarMetric(Metric):
-    def __init__(self, value: Union[int, float], improves_asc = True):
+    def __init__(self, value: Union[int, float], improves_asc=True):
         self.value = value
         super().__init__(improves_asc)
 
@@ -50,8 +51,9 @@ class ScalarMetric(Metric):
     def __repr__(self):
         return f"{self.value}"
 
+
 class FractionMetric(Metric):
-    def __init__(self, numerator: int, denominator: int, improves_asc = True):
+    def __init__(self, numerator: int, denominator: int, improves_asc=True):
         self.num = numerator
         self.dom = denominator
         super().__init__(improves_asc)
@@ -63,10 +65,13 @@ class FractionMetric(Metric):
         return self.as_scalar() * 100
 
     def aggregate(self, other):
-        return FractionMetric(self.num + other.num, self.dom + other.dom, self.improves_asc)
+        return FractionMetric(
+            self.num + other.num, self.dom + other.dom, self.improves_asc
+        )
 
     def __repr__(self):
         return f"{self.as_pct():.1f}% ({self.num}/{self.dom})"
+
 
 def serialize_metric_to_json(metric):
     if isinstance(metric, ScalarMetric):
@@ -75,7 +80,10 @@ def serialize_metric_to_json(metric):
         return metric.as_pct()
     raise Exception("Invalid metric type!")
 
-def get_variable_metrics(expect: Expect, expected_values: Any, matches: List[DebuggerExpectMatch]) -> Dict[str, Metric]:
+
+def get_variable_metrics(
+    expect: Expect, expected_values: Any, matches: List[DebuggerExpectMatch]
+) -> Dict[str, Metric]:
     """Given an Expect node with its expected values and a list of all matches for that Expect in a debugger session,
     returns the computed metrics for that Expect node."""
     assert isinstance(expect, Value), "Non-Value expects currently unsupported"
@@ -103,7 +111,9 @@ def get_variable_metrics(expect: Expect, expected_values: Any, matches: List[Deb
         # The number of steps where the expected value sequence was observed.
         "correct_steps": ScalarMetric(num_correct_steps),
         # The number of steps which did not match the expected value sequence.
-        "incorrect_steps": ScalarMetric(num_total_steps - num_correct_steps, improves_asc=False),
+        "incorrect_steps": ScalarMetric(
+            num_total_steps - num_correct_steps, improves_asc=False
+        ),
         # The number of steps where the watched variable/expression was not available in the debugger.
         "missing_var_steps": ScalarMetric(num_missing_var_steps, improves_asc=False),
         # The number of steps where the watched variable/expression had a value not in the set of expected values.
@@ -115,6 +125,8 @@ def get_variable_metrics(expect: Expect, expected_values: Any, matches: List[Deb
         # The number of expected values that were observed at least once.
         "seen_values": ScalarMetric(num_seen_values),
         # The number of expected values that were not observed.
-        "missing_values": ScalarMetric(len(expected_values) - num_seen_values, improves_asc=False),
+        "missing_values": ScalarMetric(
+            len(expected_values) - num_seen_values, improves_asc=False
+        ),
     }
     return metrics

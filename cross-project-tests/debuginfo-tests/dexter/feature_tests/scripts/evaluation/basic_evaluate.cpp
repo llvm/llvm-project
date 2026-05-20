@@ -14,15 +14,15 @@
 // CHECK: missing_values: 5
 
 int multiply(int b, int a) {
-    int result = a * b;
-    return result;
+  int result = a * b;
+  return result;
 }
 
 int main() {
-    int a = 6;
-    int b = 7;
-    int c = multiply(a, b);
-    return c;
+  int a = 6;
+  int b = 7;
+  int c = multiply(a, b);
+  return c;
 }
 
 /*

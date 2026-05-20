@@ -50,6 +50,7 @@ def match_where_to_frame(
         )
     return True
 
+
 def get_active_where_expects(
     script: DexterScript, step_info: StepIR
 ) -> Dict[Where, Tuple[int, List[Value]]]:

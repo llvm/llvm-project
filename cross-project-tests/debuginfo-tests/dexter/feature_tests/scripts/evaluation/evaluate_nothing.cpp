@@ -7,11 +7,12 @@
 // CHECK: No expects found.
 
 int main() {
-    return 0;
+  // A comment.
+  return 0;
 }
 
 /*
 ---
-!where {lines: 10}: {} # No expects
+!where {lines: 11}: {} # No expects
 ...
 */

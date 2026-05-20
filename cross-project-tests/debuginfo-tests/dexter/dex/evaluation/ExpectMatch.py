@@ -12,16 +12,19 @@ from dex.dextIR import ValueIR
 from dex.test_script.Nodes import Expect, Value
 
 
-
 class DebuggerExpectMatch:
     """Class that represents the match between a particular expected value for an Expect node and the actual debugger
     output corresponding to the watched value for that node."""
+
     def __init__(self, expect: Expect, expected, actual: ValueIR):
         self.expect = expect
         self.expected = expected
         self.actual = actual
         self.actual_result = self.expect.get_variable_result(self.actual)
-        self.match_result = self.expected is not None and str(self.expected) == self.actual_result
+        self.match_result = (
+            self.expected is not None and str(self.expected) == self.actual_result
+        )
+
 
 def get_expect_match(expect: Expect, expected_values, actual: ValueIR):
     """Given one or more expected values for an Expect node and an actual ValueIR, returns a match for the first
@@ -33,4 +36,3 @@ def get_expect_match(expect: Expect, expected_values, actual: ValueIR):
         if expect_match.match_result:
             return expect_match
     return DebuggerExpectMatch(expect, None, actual)
-

@@ -34,7 +34,14 @@ from dex.utils.ReturnCode import ReturnCode
 
 
 class TestCase(object):
-    def __init__(self, context, name, heuristic: Optional[Heuristic]=None, error=None, run_match: Optional[DebuggerRunMatch]=None):
+    def __init__(
+        self,
+        context,
+        name,
+        heuristic: Optional[Heuristic] = None,
+        error=None,
+        run_match: Optional[DebuggerRunMatch] = None,
+    ):
         self.context = context
         self.name = name
         self.heuristic = heuristic
@@ -310,7 +317,9 @@ class Tool(TestToolBase):
             else:
                 heuristic_score = Heuristic(self.context, steps)
                 self._record_heuristic(test_name, heuristic_score)
-                self._record_successful_test_heuristic(test_name, steps, heuristic_score)
+                self._record_successful_test_heuristic(
+                    test_name, steps, heuristic_score
+                )
         except (BuildScriptException, DebuggerException, HeuristicException) as e:
             self._record_failed_test(test_name, e)
 
