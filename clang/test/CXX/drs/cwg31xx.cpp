@@ -29,8 +29,6 @@ static_assert(noexcept(noexcept(f())), "");
 #endif
 } // namespace cwg3128
 
-// cwg3172: na
-
 namespace cwg3135 { // cwg3135: 23
 #if __cplusplus >= 201703L
 struct Pinned {
@@ -91,3 +89,5 @@ decltype([b = C(3)](){ return 4; }()) x;
 //   since-cxx20-note@#cwg3156-C {{candidate constructor (the implicit move constructor)}}
 #endif
 } // namespace cwg3156
+
+// cwg3172: na
