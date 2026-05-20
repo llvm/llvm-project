@@ -2,7 +2,7 @@
 ## generated in `-shared/`-pie` binaries.
 
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: not wasm-ld -pie --experimental-pic %t.o -o %t.wasm 2>&1 | FileCheck %s
+# RUN: not wasm-ld -pie %t.o -o %t.wasm 2>&1 | FileCheck %s
 
 # CHECK: wasm-ld: error: invalid runtime relocation type in data section: R_WASM_FUNCTION_INDEX_I32
 

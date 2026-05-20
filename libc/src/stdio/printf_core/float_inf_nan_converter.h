@@ -22,15 +22,15 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
-#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-using StorageType = UInt128;
-#else
-using StorageType = fputil::FPBits<long double>::StorageType;
-#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-
 template <WriteMode write_mode>
 LIBC_INLINE int convert_inf_nan(Writer<write_mode> *writer,
                                 const FormatSection &to_conv) {
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  using StorageType = UInt128;
+#else
+  using StorageType = fputil::FPBits<long double>::StorageType;
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+
   // All of the letters will be defined relative to variable a, which will be
   // the appropriate case based on the case of the conversion.
   bool is_negative;

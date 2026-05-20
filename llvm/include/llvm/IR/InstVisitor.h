@@ -263,7 +263,9 @@ public:
   //
   RetTy visitCastInst(CastInst &I)                { DELEGATE(UnaryInstruction);}
   RetTy visitUnaryOperator(UnaryOperator &I)      { DELEGATE(UnaryInstruction);}
+  RetTy visitFPUnaryOperator(FPUnaryOperator &I) { DELEGATE(UnaryOperator); }
   RetTy visitBinaryOperator(BinaryOperator &I)    { DELEGATE(Instruction);}
+  RetTy visitFPBinaryOperator(FPBinaryOperator &I) { DELEGATE(BinaryOperator); }
   RetTy visitCmpInst(CmpInst &I)                  { DELEGATE(Instruction);}
   RetTy visitUnaryInstruction(UnaryInstruction &I){ DELEGATE(Instruction);}
 

@@ -6,14 +6,17 @@
 ; CHECK-DAG: OpName [[VECTOR_MUL:%.+]] "vector_mul"
 ; CHECK-DAG: OpName [[VECTOR_UDIV:%.+]] "vector_udiv"
 ; CHECK-DAG: OpName [[VECTOR_SDIV:%.+]] "vector_sdiv"
-;; TODO: add tests for urem + srem
-;; TODO: add test for OpSNegate
+; CHECK-DAG: OpName [[VECTOR_UREM:%.+]] "vector_urem"
+; CHECK-DAG: OpName [[VECTOR_SREM:%.+]] "vector_srem"
+; CHECK-DAG: OpName [[VECTOR_SNEGATE:%.+]] "vector_snegate"
 
 ; CHECK-NOT: DAG-FENCE
 
 ; CHECK-DAG: [[I16:%.+]] = OpTypeInt 16
 ; CHECK-DAG: [[VECTOR:%.+]] = OpTypeVector [[I16]]
 ; CHECK-DAG: [[VECTOR_FN:%.+]] = OpTypeFunction [[VECTOR]] [[VECTOR]] [[VECTOR]]
+; CHECK-DAG: [[VECTOR_FN1:%.+]] = OpTypeFunction [[VECTOR]] [[VECTOR]]
+; CHECK-DAG: [[ZERO:%.+]] = OpConstantNull [[VECTOR]]
 
 ; CHECK-NOT: DAG-FENCE
 
@@ -89,5 +92,49 @@ define <2 x i16> @vector_sdiv(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[VECTOR]]
 ; CHECK:      OpLabel
 ; CHECK:      [[C:%.+]] = OpSDiv [[VECTOR]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+
+;; Test urem on vector:
+define <2 x i16> @vector_urem(<2 x i16> %a, <2 x i16> %b) {
+    %c = urem <2 x i16> %a, %b
+    ret <2 x i16> %c
+}
+
+; CHECK:      [[VECTOR_UREM]] = OpFunction [[VECTOR]] None [[VECTOR_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[VECTOR]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[VECTOR]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpUMod [[VECTOR]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+
+;; Test srem on vector:
+define <2 x i16> @vector_srem(<2 x i16> %a, <2 x i16> %b) {
+    %c = srem <2 x i16> %a, %b
+    ret <2 x i16> %c
+}
+
+; CHECK:      [[VECTOR_SREM]] = OpFunction [[VECTOR]] None [[VECTOR_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[VECTOR]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[VECTOR]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpSRem [[VECTOR]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+
+;; Test snegate on vector:
+define <2 x i16> @vector_snegate(<2 x i16> %a) {
+    %c = sub <2 x i16> zeroinitializer, %a
+    ret <2 x i16> %c
+}
+
+; CHECK:      [[VECTOR_SNEGATE]] = OpFunction [[VECTOR]] None [[VECTOR_FN1]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[VECTOR]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpISub [[VECTOR]] [[ZERO]] [[A]]
 ; CHECK:      OpReturnValue [[C]]
 ; CHECK-NEXT: OpFunctionEnd

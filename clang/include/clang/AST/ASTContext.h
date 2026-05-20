@@ -104,6 +104,7 @@ class CXXRecordDecl;
 class DiagnosticsEngine;
 class DynTypedNodeList;
 class Expr;
+class ExplicitInstantiationDecl;
 enum class FloatModeKind;
 class GlobalDecl;
 class IdentifierTable;
@@ -656,6 +657,12 @@ private:
 
   llvm::DenseMap<FieldDecl *, FieldDecl *> InstantiatedFromUnnamedFieldDecl;
 
+  /// Maps a canonical specialization Decl to all ExplicitInstantiationDecls
+  /// that reference it (declarations and definitions).
+  llvm::DenseMap<const NamedDecl *,
+                 llvm::TinyPtrVector<ExplicitInstantiationDecl *>>
+      ExplicitInstantiations;
+
   /// Mapping that stores the methods overridden by a given C++
   /// member function.
   ///
@@ -1133,6 +1140,14 @@ public:
 
   /// Erase the attributes corresponding to the given declaration.
   void eraseDeclAttrs(const Decl *D);
+
+  /// Get all ExplicitInstantiationDecls for a given specialization.
+  ArrayRef<ExplicitInstantiationDecl *>
+  getExplicitInstantiationDecls(const NamedDecl *Spec) const;
+
+  /// Add an ExplicitInstantiationDecl for a given specialization.
+  void addExplicitInstantiationDecl(const NamedDecl *Spec,
+                                    ExplicitInstantiationDecl *EID);
 
   /// If this variable is an instantiated static data member of a
   /// class template specialization, returns the templated static data member
@@ -1983,8 +1998,7 @@ public:
   QualType getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack);
 
   QualType
-  getTemplateTypeParmType(unsigned Depth, unsigned Index,
-                          bool ParameterPack,
+  getTemplateTypeParmType(int Depth, int Index, bool ParameterPack,
                           TemplateTypeParmDecl *ParmDecl = nullptr) const;
 
   QualType getCanonicalTemplateSpecializationType(

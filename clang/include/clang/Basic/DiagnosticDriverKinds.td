@@ -93,6 +93,11 @@ def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to SPIR-V unless '-nogpuinc' "
   "is given">;
 
+// SYCL Windows-specific diagnostics
+def err_drv_sycl_requires_dynamic_crt : Error<
+  "SYCL requires dynamic C++ runtime (/MD or /MDd); "
+  "static C++ runtime (/MT or /MTd) is not supported">;
+
 def err_drv_no_spv_tools : Error<"cannot find SPIR-V Tools binary '%0', which "
                                  "is required for SPIR-V compilation. "
                                  "It can be obtained from your system package "
@@ -167,10 +172,13 @@ def warn_drv_unsupported_option_for_runtime : Warning<
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
-def warn_openmp_incomplete : Warning<
+def warn_openmp_impl_incomplete : Warning<
   "OpenMP support for version %0 in flang is still incomplete">,
   InGroup<ExperimentalOption>;
-
+def warn_openmp_spec_incomplete : Warning<
+  "the specification for OpenMP version %0 is still under development; "
+  "the syntax and semantics of new features may be subject to change">,
+  InGroup<ExperimentalOption>;
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<
@@ -231,6 +239,8 @@ def err_drv_argument_not_allowed_with : Error<
 def warn_drv_argument_not_allowed_with : Warning<
   "invalid argument '%0' not allowed with '%1'">,
   InGroup<OptionIgnored>;
+def err_drv_sycl_requires_cxx17 : Error<
+  "SYCL requires C++17 or later; '%0' is not supported">;
 def err_drv_cannot_open_randomize_layout_seed_file : Error<
   "cannot read randomize layout seed file '%0'">;
 def err_drv_invalid_version_number : Error<
@@ -412,7 +422,7 @@ def err_drv_unsupported_embed_bitcode
     : Error<"%0 is not supported with -fembed-bitcode">;
 def err_drv_bitcode_unsupported_on_toolchain : Error<
   "-fembed-bitcode is not supported on versions of iOS prior to 6.0">;
-def err_drv_negative_columns : Error<
+def err_drv_invalid_columns : Error<
   "invalid value '%1' in '%0', value must be 'none' or a positive integer">;
 def err_drv_small_columns : Error<
   "invalid value '%1' in '%0', value must be '%2' or greater">;
@@ -613,6 +623,8 @@ def err_drv_reduced_module_output_overrided : Warning<
   "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
 
+def err_drv_modules_driver_requires_reduced_bmi : Error<
+  "'-fmodules-driver' is currently incompatible with '-fno-modules-reduced-bmi'">;
 def remark_performing_driver_managed_module_build : Remark<
   "performing driver managed module build">, InGroup<ModulesDriver>;
 def remark_modules_manifest_not_found : Remark<
@@ -635,6 +647,9 @@ def err_modules_driver_named_module_redefinition : Error<
 def remark_printing_module_graph : Remark<
   "printing module dependency graph">,
   InGroup<ModulesDriver>;
+def err_module_defined_outside_of_module_source : Error<
+  "module '%0' is defined in file '%1', but module declarations are only "
+  "allowed in C++ module inputs; use the '.cppm' extension or '-x c++module'">;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,

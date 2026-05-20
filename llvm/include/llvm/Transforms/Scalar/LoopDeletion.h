@@ -21,7 +21,7 @@ namespace llvm {
 class Loop;
 class LPMUpdater;
 
-class LoopDeletionPass : public PassInfoMixin<LoopDeletionPass> {
+class LoopDeletionPass : public OptionalPassInfoMixin<LoopDeletionPass> {
 public:
   LoopDeletionPass() = default;
 

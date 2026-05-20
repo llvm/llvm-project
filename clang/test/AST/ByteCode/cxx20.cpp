@@ -775,7 +775,7 @@ namespace FailingDestructor {
     }
   };
   template<D d>
-  void f() {} // both-note {{invalid explicitly-specified argument}}
+  void f() {} // both-note {{non-type template argument is not a constant expression}}
 
   void g() {
     f<D{0, false}>(); // both-error {{no matching function}}
@@ -1353,4 +1353,17 @@ namespace ConstIntPotentialConstantExpr {
     a = 20; // both-error {{cannot assign to variable 'a' with const-qualified type 'const int'}}
     return 1;
   }
+}
+
+namespace IndirectFieldInitializer {
+  struct A {
+    struct {
+      union {
+        int x = x = 3;
+      };
+    };
+    constexpr A() {}
+  };
+  static_assert(A().x == 3, "");
+
 }

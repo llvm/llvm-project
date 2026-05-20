@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lldb-python.h"
+
+#include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Breakpoint/BreakpointResolverScripted.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
-
-// LLDB Python header must be included first
-#include "../lldb-python.h"
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
@@ -35,6 +36,35 @@ ScriptedBreakpointPythonInterface::CreatePluginObject(
                                                      break_sp, args_sp);
 }
 
+bool ScriptedBreakpointPythonInterface::OverridesResolver(
+    Target &target, StructuredDataImpl &resolver_data) {
+  Status error;
+
+  TargetSP target_sp = target.shared_from_this();
+
+  StructuredData::ObjectSP obj =
+      Dispatch("overrides_resolver", error, target_sp, resolver_data);
+
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error)) {
+    Log *log = GetLog(LLDBLog::Script);
+    LLDB_LOG(log, "Error calling overrides_resolver method: {0}", error);
+    return false;
+  }
+  return obj->GetBooleanValue();
+}
+
+void ScriptedBreakpointPythonInterface::SetBreakpoint(
+    lldb::BreakpointSP break_sp) {
+  Status error;
+  StructuredData::ObjectSP obj = Dispatch("set_breakpoint", error, break_sp);
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error)) {
+    Log *log = GetLog(LLDBLog::Script);
+    LLDB_LOG(log, "Error calling set_breakpoint method: {0}", error);
+  }
+}
+
 bool ScriptedBreakpointPythonInterface::ResolverCallback(
     SymbolContext sym_ctx) {
   Status error;
@@ -44,7 +74,7 @@ bool ScriptedBreakpointPythonInterface::ResolverCallback(
   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
                                                     error)) {
     Log *log = GetLog(LLDBLog::Script);
-    LLDB_LOG(log, "Error calling __callback__ method: {1}", error);
+    LLDB_LOG(log, "Error calling __callback__ method: {}", error);
     return true;
   }
   return obj->GetBooleanValue();
