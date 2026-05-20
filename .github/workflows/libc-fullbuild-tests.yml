@@ -4,7 +4,6 @@ permissions:
   contents: read
 on:
   pull_request:
-    branches: [ "main" ]
     paths:
       - 'libc/**'
       - '.github/workflows/libc-fullbuild-tests.yml'
