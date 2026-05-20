@@ -657,6 +657,42 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
   return nullptr;
 }
 
+static Value *canoncalizeSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
+                                          Value *FVal,
+                                          InstCombiner::BuilderTy &Builder,
+                                          const SimplifyQuery &SQ) {
+  Value *CmpLHS = Cmp->getOperand(0);
+  Value *CmpRHS = Cmp->getOperand(1);
+  ICmpInst::Predicate Pred = Cmp->getPredicate();
+  if (match(FVal, m_Zero())) {
+    std::swap(TVal, FVal);
+    Pred = ICmpInst::getInversePredicate(Pred);
+  }
+  if (!match(TVal, m_Zero())) {
+    return nullptr;
+  }
+
+  if (Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE) {
+    std::swap(CmpLHS, CmpRHS);
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  }
+
+  // Handles:
+  // (X <= Y) ? 0 : (X - Y)
+  // (X <= Y) ? (Y - X) : 0
+  // (X >= Y) ? 0 : (Y - X)
+  // (X >= Y) ? (X - Y) : 0
+  if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE) &&
+      match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))) &&
+      isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, SQ.CxtI, SQ.DT)) {
+    Value *SMin =
+        Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
+    return Builder.CreateNSWSub(CmpLHS, SMin);
+  }
+
+  return nullptr;
+}
+
 /// Try to fold a select to a min/max intrinsic. Many cases are already handled
 /// by matchDecomposedSelectPattern but here we handle the cases where more
 /// extensive modification of the IR is required.
@@ -668,45 +704,9 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
   Value *CmpRHS = Cmp->getOperand(1);
   ICmpInst::Predicate Pred = Cmp->getPredicate();
 
-  if (match(TVal, m_Zero())) {
-    // (X <= Y) ? 0 : (X - Y)
-    if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE) &&
-        match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))) &&
-        isGuaranteedNotToBeUndef(CmpLHS, nullptr, Cmp, nullptr)) {
-      Value *SMin =
-          Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
-      return Builder.CreateNSWSub(CmpLHS, SMin);
-    }
+  if (Value *V = canoncalizeSelectICmpMinMax(Cmp, TVal, FVal, Builder, SQ))
+    return V;
 
-    // (X >= Y) ? 0 : (Y - X)
-    if ((Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE) &&
-        match(FVal, m_NSWSub(m_Specific(CmpRHS), m_Specific(CmpLHS))) &&
-        isGuaranteedNotToBeUndef(CmpRHS, nullptr, Cmp, nullptr)) {
-      Value *SMin =
-          Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
-      return Builder.CreateNSWSub(CmpRHS, SMin);
-    }
-  }
-
-  if (match(FVal, m_Zero())) {
-    // (X <= Y) ? (Y - X) : 0
-    if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE) &&
-        match(TVal, m_NSWSub(m_Specific(CmpRHS), m_Specific(CmpLHS))) &&
-        isGuaranteedNotToBeUndef(CmpRHS, nullptr, Cmp, nullptr)) {
-      Value *SMin =
-          Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
-      return Builder.CreateNSWSub(CmpRHS, SMin);
-    }
-
-    // (X >= Y) ? (X - Y) : 0
-    if ((Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE) &&
-        match(TVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))) &&
-        isGuaranteedNotToBeUndef(CmpLHS, nullptr, Cmp, nullptr)) {
-      Value *SMin =
-          Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpLHS, CmpRHS);
-      return Builder.CreateNSWSub(CmpLHS, SMin);
-    }
-  }
   // (X > Y) ? X : (Y - 1) ==> MIN(X, Y - 1)
   // (X < Y) ? X : (Y + 1) ==> MAX(X, Y + 1)
   // This transformation is valid when overflow corresponding to the sign of
