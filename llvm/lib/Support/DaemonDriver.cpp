@@ -73,9 +73,6 @@ public:
   }
 
   ~ScopedFileRedirect() {
-    if (Moved)
-      return;
-
     // Close the source FD and reopen it to the original file.
     DUP2_FN(DuplicateFd, FromFd);
 
@@ -83,23 +80,14 @@ public:
     CLOSE_FN(DuplicateFd);
   }
 
-  ScopedFileRedirect(ScopedFileRedirect &&Other) {
-    *this = Other;
-    Other.Moved = true;
-  }
-  ScopedFileRedirect &operator=(ScopedFileRedirect &&Other) {
-    *this = Other;
-    Other.Moved = true;
-    return *this;
-  }
+  ScopedFileRedirect(const ScopedFileRedirect &) = delete;
+  ScopedFileRedirect &operator=(const ScopedFileRedirect &) = delete;
+  ScopedFileRedirect(ScopedFileRedirect &&) = delete;
+  ScopedFileRedirect &operator=(const ScopedFileRedirect &&) = delete;
 
 private:
-  ScopedFileRedirect(const ScopedFileRedirect &Other) = default;
-  ScopedFileRedirect &operator=(const ScopedFileRedirect &Other) = default;
-
   int FromFd;
   int DuplicateFd;
-  bool Moved = false;
 };
 
 static ErrorOr<std::string> readNextLine(FILE *File) {
@@ -456,9 +444,10 @@ private:
       ArgsCStr.push_back(const_cast<char *>(Arg.data()));
     }
 
-    std::optional<ScopedFileRedirect> StderrRedirect;
+    std::unique_ptr<ScopedFileRedirect> StderrRedirect;
     if (NextInvocation.RedirectStderrToStdout)
-      StderrRedirect.emplace(STDERR_FILENO, STDOUT_FILENO);
+      StderrRedirect =
+          std::make_unique<ScopedFileRedirect>(STDERR_FILENO, STDOUT_FILENO);
 
     const int ExitCode =
         Tool.run(ArgsCStr.size(), ArgsCStr.data(), NextInvocation.InputSource);
