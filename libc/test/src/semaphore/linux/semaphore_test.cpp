@@ -8,6 +8,9 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
+#include "hdr/time_macros.h"
+#include "hdr/types/struct_timespec.h"
+#include "src/__support/time/clock_gettime.h"
 #include "src/semaphore/linux/semaphore.h"
 #include "test/UnitTest/Test.h"
 
@@ -59,6 +62,73 @@ TEST(LlvmLibcSemaphoreTest, WaitNonBlocking) {
   ASSERT_EQ(sem.getvalue(), 1);
   ASSERT_EQ(sem.wait(), 0);
   ASSERT_EQ(sem.getvalue(), 0);
+}
+
+TEST(LlvmLibcSemaphoreTest, TimedWaitNonBlocking) {
+  Semaphore sem(2);
+  timespec ts{};
+  LIBC_NAMESPACE::internal::clock_gettime(CLOCK_REALTIME, &ts);
+  ts.tv_sec += 60;
+
+  // value is positive: timedwait should decrement without consulting the
+  // clock.
+  ASSERT_EQ(sem.timedwait(&ts), 0);
+  ASSERT_EQ(sem.getvalue(), 1);
+}
+
+TEST(LlvmLibcSemaphoreTest, TimedWaitTimeout) {
+  Semaphore sem(0);
+  timespec ts{};
+  LIBC_NAMESPACE::internal::clock_gettime(CLOCK_REALTIME, &ts);
+  // a few milliseconds in the future.
+  ts.tv_nsec += 10'000'000;
+  if (ts.tv_nsec >= 1'000'000'000) {
+    ts.tv_sec += 1;
+    ts.tv_nsec -= 1'000'000'000;
+  }
+
+  // value is zero and no post() arrives: must time out.
+  ASSERT_EQ(sem.timedwait(&ts), ETIMEDOUT);
+}
+
+TEST(LlvmLibcSemaphoreTest, TimedWaitBeforeEpoch) {
+  Semaphore sem(0);
+  // tv_sec < 0 is treated as an already expired deadline.
+  timespec ts{};
+  ts.tv_sec = -1;
+  ts.tv_nsec = 0;
+  ASSERT_EQ(sem.timedwait(&ts), ETIMEDOUT);
+}
+
+TEST(LlvmLibcSemaphoreTest, TimedWaitInvalidTimespec) {
+  Semaphore sem(0);
+  // tv_nsec out of [0, 1e9) is malformed.
+  timespec ts{};
+  ts.tv_sec = 1;
+  ts.tv_nsec = 1'000'000'001;
+  ASSERT_EQ(sem.timedwait(&ts), EINVAL);
+}
+
+TEST(LlvmLibcSemaphoreTest, ClockWaitMonotonicTimeout) {
+  Semaphore sem(0);
+  timespec ts{};
+  LIBC_NAMESPACE::internal::clock_gettime(CLOCK_MONOTONIC, &ts);
+  ts.tv_nsec += 10'000'000;
+  if (ts.tv_nsec >= 1'000'000'000) {
+    ts.tv_sec += 1;
+    ts.tv_nsec -= 1'000'000'000;
+  }
+
+  ASSERT_EQ(sem.clockwait(CLOCK_MONOTONIC, &ts), ETIMEDOUT);
+}
+
+TEST(LlvmLibcSemaphoreTest, ClockWaitUnsupportedClock) {
+  Semaphore sem(0);
+  timespec ts{};
+  ts.tv_sec = 1;
+  ts.tv_nsec = 0;
+  // any clock other than CLOCK_MONOTONIC / CLOCK_REALTIME is rejected.
+  ASSERT_EQ(sem.clockwait(static_cast<clockid_t>(99), &ts), EINVAL);
 }
 
 // Named semaphore tests.

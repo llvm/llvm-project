@@ -4,11 +4,15 @@ add_header_library(
     semaphore.h
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.time_macros
+    libc.hdr.types.clockid_t
     libc.hdr.types.mode_t
+    libc.hdr.types.struct_timespec
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.limits
     libc.src.__support.error_or
     libc.src.__support.threads.futex_utils
+    libc.src.__support.time.abs_timeout
 )
 
 add_object_library(

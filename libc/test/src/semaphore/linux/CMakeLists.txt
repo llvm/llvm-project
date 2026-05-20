@@ -9,6 +9,9 @@ add_libc_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fcntl_macros
+    libc.hdr.time_macros
+    libc.hdr.types.struct_timespec
+    libc.src.__support.time.clock_gettime
     libc.src.semaphore.linux.semaphore
     libc.src.semaphore.linux.named_semaphore
 )

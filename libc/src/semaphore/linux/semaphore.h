@@ -10,12 +10,16 @@
 #define LLVM_LIBC_SRC_SEMAPHORE_LINUX_SEMAPHORE_H
 
 #include "hdr/errno_macros.h"
+#include "hdr/time_macros.h"
+#include "hdr/types/clockid_t.h"
 #include "hdr/types/mode_t.h"
+#include "hdr/types/struct_timespec.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/threads/futex_utils.h"
+#include "src/__support/time/abs_timeout.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -32,11 +36,24 @@ class Semaphore {
   // 0x4D='M', 0x31='1').
   static constexpr unsigned int SEM_CANARY = 0x53454D31U;
 
-public:
-  // TODO:
-  // Add the blocking waiting operations: sem_wait, sem_timedwait,
-  //    sem_clockwait.
+  // Helper function for timed blocking wait, wait for a required
+  // absolute timeout.
+  LIBC_INLINE int wait_until(internal::AbsTimeout timeout) {
+    for (;;) {
+      if (trywait() == 0)
+        return 0;
 
+      auto wait_or = value.wait(/*expected=*/0, timeout, /*is_shared=*/true);
+      if (!wait_or.has_value() && wait_or.error() == ETIMEDOUT) {
+        // Final attempt in case a post() raced with the timeout.
+        if (trywait() == 0)
+          return 0;
+        return ETIMEDOUT;
+      }
+    }
+  }
+
+public:
   LIBC_INLINE constexpr Semaphore(unsigned int value)
       : value(value), canary(SEM_CANARY) {}
 
@@ -107,6 +124,32 @@ public:
       (void)value.wait(/*expected=*/0, /*timeout=*/cpp::nullopt,
                        /*is_shared=*/true);
     }
+  }
+
+  // Blocking wait against an absolute CLOCK_REALTIME deadline.
+  LIBC_INLINE int timedwait(const timespec *abstime) {
+    return clockwait(CLOCK_REALTIME, abstime);
+  }
+
+  // Blocking wait against a deadline on the given clock:
+  // CLOCK_REALTIME or CLOCK_MONOTONIC
+  LIBC_INLINE int clockwait(clockid_t clock_id, const timespec *abstime) {
+    if (clock_id != CLOCK_MONOTONIC && clock_id != CLOCK_REALTIME)
+      return EINVAL;
+
+    bool is_realtime = (clock_id == CLOCK_REALTIME);
+    auto timeout =
+        internal::AbsTimeout::from_timespec(*abstime, /*realtime=*/is_realtime);
+    if (LIBC_LIKELY(timeout.has_value()))
+      return wait_until(timeout.value());
+
+    switch (timeout.error()) {
+    case internal::AbsTimeout::Error::Invalid:
+      return EINVAL;
+    case internal::AbsTimeout::Error::BeforeEpoch:
+      return ETIMEDOUT;
+    }
+    __builtin_unreachable();
   }
 
   // Named semaphore operations.
