@@ -20343,6 +20343,12 @@ SITargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 
 bool SITargetLowering::supportsUnalignedAtomicLoadInIR(
     const LoadInst *LI) const {
+  // Only unordered and monotonic orderings are supported for sub naturally
+  // aligned atomic loads. Stronger orderings require synchronization
+  // guarantees that cannot be verified for cache line crossing accesses.
+  if (isStrongerThanMonotonic(LI->getOrdering()))
+    return false;
+
   unsigned AS = LI->getPointerAddressSpace();
   // LDS uses ds_read2_b32 for 4 byte aligned 8 byte accesses (two separate
   // loads), but that technique breaks atomicity. ds_load_b64 requires 8 byte
@@ -20365,6 +20371,12 @@ bool SITargetLowering::supportsUnalignedAtomicLoadInIR(
 
 bool SITargetLowering::supportsUnalignedAtomicStoreInIR(
     const StoreInst *SI) const {
+  // Only unordered and monotonic orderings are supported for sub naturally
+  // aligned atomic stores. Stronger orderings require synchronization
+  // guarantees that cannot be verified for cache line crossing accesses.
+  if (isStrongerThanMonotonic(SI->getOrdering()))
+    return false;
+
   unsigned AS = SI->getPointerAddressSpace();
   // LDS uses ds_write2_b32 for 4 byte aligned 8 byte accesses (two separate
   // stores), but that technique breaks atomicity. ds_store_b64 requires
