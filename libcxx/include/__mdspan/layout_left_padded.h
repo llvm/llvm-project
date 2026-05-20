@@ -23,8 +23,6 @@
 #include <__fwd/span.h>
 #include <__mdspan/extents.h>
 #include <__mdspan/layout_common.h>
-#include <__mdspan/layout_left.h>
-#include <__mdspan/layout_right.h>
 #include <__mdspan/layout_stride.h>
 #include <__memory/addressof.h>
 #include <__type_traits/common_type.h>
