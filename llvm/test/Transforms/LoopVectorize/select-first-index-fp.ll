@@ -355,21 +355,56 @@ define i64 @test_fminimum_first_idx(ptr %src, i64 %n) {
 ; CHECK-LABEL: define i64 @test_fminimum_first_idx(
 ; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi float [ f0x7F7FFFFF, %[[ENTRY]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float f0x7F7FFFFF), %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp nnan ogt <4 x float> [[VEC_PHI1]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP2]] = call nnan <4 x float> @llvm.minimum.v4f32(<4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI1]])
+; CHECK-NEXT:    [[TMP3]] = select <4 x i1> [[TMP1]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> [[TMP2]])
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP5]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = fcmp oeq <4 x float> [[TMP2]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP3]], <4 x i64> splat (i64 -9223372036854775808)
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.smax.v4i64(<4 x i64> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i64 [[TMP8]], -9223372036854775808
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i64 [[TMP8]], i64 0
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX2:%.*]] = phi float [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ f0x7F7FFFFF, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi float [ [[BC_MERGE_RDX2]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr float, ptr [[SRC]], i64 [[IV1]]
+; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ogt float [[MIN_VAL]], [[L]]
 ; CHECK-NEXT:    [[MIN_VAL_NEXT]] = call nnan float @llvm.minimum.f32(float [[L]], float [[MIN_VAL]])
-; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV]], i64 [[MIN_IDX]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV1]], i64 [[MIN_IDX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP1]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -398,21 +433,56 @@ define i64 @test_fmaximumnum_first_idx(ptr %src, i64 %n) {
 ; CHECK-LABEL: define i64 @test_fmaximumnum_first_idx(
 ; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MAX_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MAX_IDX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MAX_VAL:%.*]] = phi float [ f0xFF7FFFFF, %[[ENTRY]] ], [ [[MAX_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float f0xFF7FFFFF), %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp nnan olt <4 x float> [[VEC_PHI1]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP2]] = call nnan <4 x float> @llvm.maximumnum.v4f32(<4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI1]])
+; CHECK-NEXT:    [[TMP3]] = select <4 x i1> [[TMP1]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP2]])
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP5]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = fcmp oeq <4 x float> [[TMP2]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP3]], <4 x i64> splat (i64 -9223372036854775808)
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.smax.v4i64(<4 x i64> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i64 [[TMP8]], -9223372036854775808
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i64 [[TMP8]], i64 0
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX2:%.*]] = phi float [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ f0xFF7FFFFF, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[MAX_IDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MAX_IDX_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[MAX_VAL:%.*]] = phi float [ [[BC_MERGE_RDX2]], %[[SCALAR_PH]] ], [ [[MAX_VAL_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr float, ptr [[SRC]], i64 [[IV1]]
+; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan olt float [[MAX_VAL]], [[L]]
 ; CHECK-NEXT:    [[MAX_VAL_NEXT]] = call nnan float @llvm.maximumnum.f32(float [[L]], float [[MAX_VAL]])
-; CHECK-NEXT:    [[MAX_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV]], i64 [[MAX_IDX]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[MAX_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV1]], i64 [[MAX_IDX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MAX_IDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MAX_IDX_NEXT]], %[[LOOP1]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -441,21 +511,56 @@ define i64 @test_fminimumnum_first_idx(ptr %src, i64 %n) {
 ; CHECK-LABEL: define i64 @test_fminimumnum_first_idx(
 ; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi float [ f0x7F7FFFFF, %[[ENTRY]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float f0x7F7FFFFF), %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp nnan ogt <4 x float> [[VEC_PHI1]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP2]] = call nnan <4 x float> @llvm.minimumnum.v4f32(<4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI1]])
+; CHECK-NEXT:    [[TMP3]] = select <4 x i1> [[TMP1]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP2]])
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP5]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = fcmp oeq <4 x float> [[TMP2]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP3]], <4 x i64> splat (i64 -9223372036854775808)
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.smax.v4i64(<4 x i64> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i64 [[TMP8]], -9223372036854775808
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i64 [[TMP8]], i64 0
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX2:%.*]] = phi float [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ f0x7F7FFFFF, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi float [ [[BC_MERGE_RDX2]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr float, ptr [[SRC]], i64 [[IV1]]
+; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ogt float [[MIN_VAL]], [[L]]
 ; CHECK-NEXT:    [[MIN_VAL_NEXT]] = call nnan float @llvm.minimumnum.f32(float [[L]], float [[MIN_VAL]])
-; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV]], i64 [[MIN_IDX]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV1]], i64 [[MIN_IDX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP1]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -484,21 +589,56 @@ define i64 @test_fmaximum_first_idx(ptr %src, i64 %n) {
 ; CHECK-LABEL: define i64 @test_fmaximum_first_idx(
 ; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MAX_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MAX_IDX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MAX_VAL:%.*]] = phi float [ f0xFF7FFFFF, %[[ENTRY]] ], [ [[MAX_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float f0xFF7FFFFF), %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp nnan olt <4 x float> [[VEC_PHI1]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP2]] = call nnan <4 x float> @llvm.maximum.v4f32(<4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI1]])
+; CHECK-NEXT:    [[TMP3]] = select <4 x i1> [[TMP1]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> [[TMP2]])
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP5]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = fcmp oeq <4 x float> [[TMP2]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP3]], <4 x i64> splat (i64 -9223372036854775808)
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.smax.v4i64(<4 x i64> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i64 [[TMP8]], -9223372036854775808
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i64 [[TMP8]], i64 0
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX2:%.*]] = phi float [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ f0xFF7FFFFF, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[MAX_IDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MAX_IDX_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[MAX_VAL:%.*]] = phi float [ [[BC_MERGE_RDX2]], %[[SCALAR_PH]] ], [ [[MAX_VAL_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr float, ptr [[SRC]], i64 [[IV1]]
+; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan olt float [[MAX_VAL]], [[L]]
 ; CHECK-NEXT:    [[MAX_VAL_NEXT]] = call nnan float @llvm.maximum.f32(float [[L]], float [[MAX_VAL]])
-; CHECK-NEXT:    [[MAX_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV]], i64 [[MAX_IDX]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[MAX_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV1]], i64 [[MAX_IDX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MAX_IDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MAX_IDX_NEXT]], %[[LOOP1]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
