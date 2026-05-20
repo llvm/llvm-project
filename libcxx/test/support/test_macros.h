@@ -266,8 +266,10 @@
 
 #ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
 #  define LIBCPP_NON_FROZEN_ASSERT(...) static_assert(true, "")
+#  define LIBCPP_NON_FROZEN_STATIC_ASSERT(...) static_assert(true, "")
 #else
 #  define LIBCPP_NON_FROZEN_ASSERT(...) LIBCPP_ASSERT(__VA_ARGS__)
+#  define LIBCPP_NON_FROZEN_STATIC_ASSERT(...) LIBCPP_STATIC_ASSERT(__VA_ARGS__)
 #endif
 
 #if __has_cpp_attribute(nodiscard)
