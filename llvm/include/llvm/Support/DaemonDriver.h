@@ -27,8 +27,8 @@ namespace llvm {
 /// passes, should be performed before this function is called. Per-invocation
 /// initialization logic, for example parsing command line options or setting up
 /// the pass pipeline, should be performed inside of the tool's `run` function.
-/// The invoke function is responsible for resetting all global state that may
-/// affect its output on the next invocation.
+/// The `resetState` function is responsible for resetting all global state that
+/// may affect the tool's output on the next invocation.
 LLVM_ABI int runWithDaemonSupport(LLVMTool &Tool, int Argc, char **Argv);
 } // namespace llvm
 
