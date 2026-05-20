@@ -888,17 +888,59 @@ public:
   }
 
   bool checkArguments(const CallExpr *CE) {
+    auto *Callee = CE->getDirectCallee();
+    unsigned ArgOffset =
+        isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(Callee);
+    unsigned ArgIndex = 0;
     for (const Expr *Arg : CE->arguments()) {
-      if (Arg && !Visit(Arg))
+      if (ArgIndex >= ArgOffset) {
+        unsigned ParamIndex = ArgIndex - ArgOffset;
+        if (Callee && ParamIndex < Callee->getNumParams() &&
+            isTempConsumedByRValue(Arg, Callee->getParamDecl(ParamIndex))) {
+          ArgIndex++;
+          continue;
+        }
+      }
+      if (!Visit(Arg))
         return false;
+      ArgIndex++;
     }
     return true;
   }
 
+  bool isTempConsumedByRValue(const Expr *Arg, const ParmVarDecl *ParamDecl) {
+    auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Arg);
+    if (!MTE)
+      return false;
+    auto ParamType = ParamDecl->getType();
+    if (ParamType.isNull())
+      return false;
+
+    auto *RValueRef = dyn_cast<RValueReferenceType>(ParamType.getTypePtr());
+    if (!RValueRef)
+      return false;
+
+    auto *SubExpr = MTE->getSubExpr();
+    if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(SubExpr)) {
+      auto RValueType = RValueRef->getPointeeType().getCanonicalType();
+      if (BTE->getType().getCanonicalType() == RValueType)
+        SubExpr = BTE->getSubExpr();
+    }
+    return Visit(SubExpr);
+  }
+
   bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {
+    auto *Ctor = CE->getConstructor();
+    unsigned ArgIndex = 0;
     for (const Expr *Arg : CE->arguments()) {
-      if (Arg && !Visit(Arg))
+      if (Ctor && ArgIndex < Ctor->getNumParams() &&
+          isTempConsumedByRValue(Arg, Ctor->getParamDecl(ArgIndex))) {
+        ArgIndex++;
+        continue;
+      }
+      if (!Visit(Arg))
         return false;
+      ArgIndex++;
     }
 
     // Recursively descend into the callee to confirm that it's trivial.

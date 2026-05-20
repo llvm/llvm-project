@@ -198,12 +198,21 @@ public:
   const Number& real() const { return realPart; }
   const Number& complex() const;
 
+  static Ref<ComplexNumber> [[clang::annotate_type("webkit.nodelete")]] create(int = 0);
   void ref() const;
   void deref() const;
 
 private:
   Number realPart;
   Number complexPart;
+};
+void [[clang::annotate_type("webkit.nodelete")]] adoptComplex(Ref<ComplexNumber>&&);
+struct ComplexNumberContainer {
+  ComplexNumberContainer(Ref<ComplexNumber>&& number, int x = 0)
+    : m_number(std::move(number))
+  { }
+private:
+  Ref<ComplexNumber> m_number;
 };
 
 class ObjectWithNonTrivialDestructor {
@@ -396,6 +405,8 @@ public:
   unsigned trivial71() { return std::bit_cast<unsigned>(nullptr); }
   unsigned trivial72() { Number n { 5 }; return WTF::move(n).value(); }
   bool trivial73(const ComparedObj& a, const ComparedObj& b) { return a != b; }
+  void trivial74() { adoptComplex(ComplexNumber::create()); }
+  ComplexNumberContainer trivial75() { return ComplexNumberContainer { ComplexNumber::create() }; }
 
   unsigned [[clang::annotate_type("webkit.nodelete")]] nodelete1();
   void [[clang::annotate_type("webkit.nodelete")]] nodelete2();
@@ -502,6 +513,8 @@ public:
   virtual void nonTrivial25() { }
   virtual ComplexNumber* operator->() { return nullptr; }
   bool nonTrivial26(const ComparedObj& a) { return 3 == a; }
+  void nonTrivial27() { adoptComplex(ComplexNumber::create(atoi("1"))); }
+  ComplexNumberContainer nonTrivial28() { return ComplexNumberContainer { ComplexNumber::create(), atoi("2") }; }
 
   static unsigned s_v;
   unsigned v { 0 };
@@ -604,6 +617,8 @@ public:
     getFieldTrivial().trivial71(); // no-warning
     // FIXME: Missing test case for trivial72.
     getFieldTrivial().trivial73(ComparedObj { }, ComparedObj { }); // no-warning
+    getFieldTrivial().trivial74(); // no-warning
+    getFieldTrivial().trivial75(); // no-warning
 
     getFieldTrivial().nodelete1(); // no-warning
     getFieldTrivial().nodelete2(); // no-warning
@@ -689,6 +704,10 @@ public:
     getFieldTrivial()->complex();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
     getFieldTrivial().nonTrivial26(ComparedObj { });
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial27();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial28();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
 
