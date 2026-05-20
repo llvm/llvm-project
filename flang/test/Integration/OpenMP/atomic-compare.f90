@@ -6,6 +6,7 @@
 ! added to this directory and sub-directories.
 !===----------------------------------------------------------------------===!
 
+!REQUIRES: x86-registered-target
 !RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s
 
 ! Int "==" → cmpxchg, default (monotonic) ordering
