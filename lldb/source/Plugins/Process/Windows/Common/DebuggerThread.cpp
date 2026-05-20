@@ -578,7 +578,9 @@ GetFileNameFromImageNameField(HANDLE hProcess,
   if (info.fUnicode) {
     std::array<wchar_t, MAX_PATH + 1> wbuf{};
     if (!::ReadProcessMemory(hProcess, name_addr, wbuf.data(),
-                             (wbuf.size() - 1) * sizeof(wchar_t), &bytes_read))
+                             wbuf.size() * sizeof(wchar_t), &bytes_read))
+      return std::nullopt;
+    if (wbuf[MAX_PATH] != L'\0')
       return std::nullopt;
     std::string path_utf8;
     llvm::convertWideToUTF8(wbuf.data(), path_utf8);
@@ -588,8 +590,10 @@ GetFileNameFromImageNameField(HANDLE hProcess,
   }
 
   std::array<char, MAX_PATH + 1> abuf{};
-  if (!::ReadProcessMemory(hProcess, name_addr, abuf.data(), abuf.size() - 1,
+  if (!::ReadProcessMemory(hProcess, name_addr, abuf.data(), abuf.size(),
                            &bytes_read))
+    return std::nullopt;
+  if (abuf[MAX_PATH] != '\0')
     return std::nullopt;
   std::string path(abuf.data());
   if (path.empty())
