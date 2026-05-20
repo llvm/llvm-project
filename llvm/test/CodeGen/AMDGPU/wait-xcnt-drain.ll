@@ -130,4 +130,3 @@ else:
   store volatile i32 0, ptr addrspace(1) %q
   ret void
 }
-
