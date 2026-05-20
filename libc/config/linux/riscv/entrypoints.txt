@@ -354,6 +354,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.termios.tcsetattr
 
     # unistd.h entrypoints
+    libc.src.unistd.alarm
     libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.chown
@@ -1390,13 +1391,13 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # wchar.h entrypoints
     libc.src.wchar.fgetwc
-    # libc.src.wchar.fgetws
-    # libc.src.wchar.fputwc
-    # libc.src.wchar.fputws
+    libc.src.wchar.fgetws
+    libc.src.wchar.fputwc
+    libc.src.wchar.fputws
     libc.src.wchar.fwide
     libc.src.wchar.getwc
-    # libc.src.wchar.getwchar
-    # libc.src.wchar.putwc
+    libc.src.wchar.getwchar
+    libc.src.wchar.putwc
     libc.src.wchar.putwchar
     libc.src.wchar.ungetwc
   )

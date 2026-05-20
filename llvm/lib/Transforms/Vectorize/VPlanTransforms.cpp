@@ -1484,6 +1484,15 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // select x, (i1 y | z), y -> y | (x && z)
+  if (CanCreateNewRecipe &&
+      match(Def, m_Select(m_VPValue(X),
+                          m_OneUse(m_c_BinaryOr(m_VPValue(Y), m_VPValue(Z))),
+                          m_Deferred(Y))) &&
+      TypeInfo.inferScalarType(Y)->isIntegerTy(1))
+    return Def->replaceAllUsesWith(
+        Builder.createOr(Y, Builder.createLogicalAnd(X, Z)));
+
   if (match(Def, m_c_Add(m_VPValue(A), m_ZeroInt())))
     return Def->replaceAllUsesWith(A);
 
@@ -1645,6 +1654,13 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
           BuildVector->getOperand(BuildVector->getNumOperands() - 1));
       return;
     }
+
+    if (match(A, m_Broadcast(m_VPValue(X))))
+      return Def->replaceAllUsesWith(X);
+
+    if (vputils::isSingleScalar(A))
+      return Def->replaceAllUsesWith(A);
+
     if (Plan->hasScalarVFOnly())
       return Def->replaceAllUsesWith(A);
   }
@@ -1771,18 +1787,6 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  if (match(Def, m_ExtractLastLane(m_Broadcast(m_VPValue(A))))) {
-    Def->replaceAllUsesWith(A);
-    return;
-  }
-
-  if (match(Def, m_ExtractLastLane(m_VPValue(A))) &&
-      vputils::isSingleScalar(A) && all_of(A->users(), [Def, A](VPUser *U) {
-        return U->usesScalars(A) || Def == U;
-      })) {
-    return Def->replaceAllUsesWith(A);
-  }
-
   if (Plan->getConcreteUF() == 1 && match(Def, m_ExtractLastPart(m_VPValue(A))))
     return Def->replaceAllUsesWith(A);
 }
@@ -1885,7 +1889,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         VPBuilder Builder(IntrR);
         VPValue *SafeDivisor = Builder.createSelect(
             IntrR->getOperand(2), IntrR->getOperand(1),
-            Plan.getConstantInt(IntrR->getResultType(), 1));
+            Plan.getConstantInt(IntrR->getScalarType(), 1));
         VPValue *Clone = Builder.createNaryOp(
             *Opc, {IntrR->getOperand(0), SafeDivisor},
             VPIRFlags::getDefaultFlags(*Opc), IntrR->getDebugLoc());
@@ -3038,7 +3042,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                           {IntrR->getOperand(0),
                                            IntrR->getOperand(1),
                                            Mask ? Mask : Plan->getTrue(), &EVL},
-                                          IntrR->getResultType(), {}, {}, DL);
+                                          IntrR->getScalarType(), {}, {}, DL);
 
   return nullptr;
 }
@@ -4551,14 +4555,14 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         Ext0->getOpcode() == Ext1->getOpcode() &&
         IsMulAccValidAndClampRange(Mul, Ext0, Ext1, Ext) && Mul->hasOneUse()) {
       auto *NewExt0 = new VPWidenCastRecipe(
-          Ext0->getOpcode(), Ext0->getOperand(0), Ext->getResultType(), nullptr,
+          Ext0->getOpcode(), Ext0->getOperand(0), Ext->getScalarType(), nullptr,
           *Ext0, *Ext0, Ext0->getDebugLoc());
       NewExt0->insertBefore(Ext0);
 
       VPWidenCastRecipe *NewExt1 = NewExt0;
       if (Ext0 != Ext1) {
         NewExt1 = new VPWidenCastRecipe(Ext1->getOpcode(), Ext1->getOperand(0),
-                                        Ext->getResultType(), nullptr, *Ext1,
+                                        Ext->getScalarType(), nullptr, *Ext1,
                                         *Ext1, Ext1->getDebugLoc());
         NewExt1->insertBefore(Ext1);
       }
@@ -5978,12 +5982,12 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *Op,
     VPBuilder Builder(Mul);
     Mul->setOperand(0, Builder.createWidenCast(MulLHS->getOpcode(),
                                                MulLHS->getOperand(0),
-                                               Ext->getResultType()));
+                                               Ext->getScalarType()));
     Mul->setOperand(1, MulLHS == MulRHS
                            ? Mul->getOperand(0)
                            : Builder.createWidenCast(MulRHS->getOpcode(),
                                                      MulRHS->getOperand(0),
-                                                     Ext->getResultType()));
+                                                     Ext->getScalarType()));
     return Mul;
   }
 
