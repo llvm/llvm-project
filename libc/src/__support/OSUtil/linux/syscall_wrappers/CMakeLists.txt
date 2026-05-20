@@ -67,6 +67,20 @@ add_header_library(
 )
 
 add_header_library(
+  bind
+  HDRS
+    bind.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.socklen_t
+    libc.hdr.types.struct_sockaddr
+    libc.include.sys_syscall
+)
+
+add_header_library(
   connect
   HDRS
     connect.h
@@ -147,6 +161,64 @@ add_header_library(
 )
 
 add_header_library(
+  recvfrom
+  HDRS
+    recvfrom.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.socklen_t
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_sockaddr
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  recvmsg
+  HDRS
+    recvmsg.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_msghdr
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sendmsg
+  HDRS
+    sendmsg.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_msghdr
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sendto
+  HDRS
+    sendto.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.socklen_t
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_sockaddr
+    libc.include.sys_syscall
+)
+
+add_header_library(
   setsockopt
   HDRS
     setsockopt.h
@@ -163,6 +235,30 @@ add_header_library(
   shutdown
   HDRS
     shutdown.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  socket
+  HDRS
+    socket.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  socketpair
+  HDRS
+    socketpair.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
