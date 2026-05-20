@@ -92,7 +92,7 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
   if (!I)
     return false;
 
-  if (!L->contains(I))  
+  if (!L->contains(I))
     return false;
   for (const Value *V : I->operand_values()) {
     if (const PHINode *PHI = dyn_cast<PHINode>(V)) {
