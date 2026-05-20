@@ -379,10 +379,9 @@ class FunctionInstrumenter final {
   // values. Supporting other values is relatively straight-forward - just
   // another counter range within the context.
   bool isValueProfilingDisabled() const {
-    const Triple &TT = M.getTargetTriple();
     return DisableValueProfiling ||
            InstrumentationType == PGOInstrumentationType::CTXPROF ||
-           TT.isAMDGPU() || TT.isNVPTX();
+           M.getTargetTriple().isGPU();
   }
 
   bool shouldInstrumentEntryBB() const {
