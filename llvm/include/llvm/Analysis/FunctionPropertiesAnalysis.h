@@ -45,6 +45,11 @@ public:
   LLVM_ABI static FunctionPropertiesInfo
   getFunctionPropertiesInfo(Function &F, FunctionAnalysisManager &FAM);
 
+  // Does not consider domtree, loopinfo nor ir2vec because of bloat in
+  // nagivation that gets cleaned up anyways
+  LLVM_ABI static FunctionPropertiesInfo
+  getPreOptimizationFunctionPropertiesInfo(const Function &F);
+
   LLVM_ABI bool operator==(const FunctionPropertiesInfo &FPI) const;
 
   bool operator!=(const FunctionPropertiesInfo &FPI) const {
@@ -186,8 +191,11 @@ public:
 /// Statistics pass for the FunctionPropertiesAnalysis results.
 class FunctionPropertiesStatisticsPass
     : public RequiredPassInfoMixin<FunctionPropertiesStatisticsPass> {
+  bool IsPreOptimization;
+
 public:
-  explicit FunctionPropertiesStatisticsPass() {}
+  explicit FunctionPropertiesStatisticsPass(bool IsPreOptimization = false)
+      : IsPreOptimization(IsPreOptimization) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };

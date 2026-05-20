@@ -29,9 +29,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "func-properties-stats"
 
-#define FUNCTION_PROPERTY(Name, Description) STATISTIC(Num##Name, Description);
+#define FUNCTION_PROPERTY(Name, Description)                                   \
+  STATISTIC(Num##Name, Description);                                           \
+  STATISTIC(Num##Name##PreOptimization, Description " (before "                \
+                                                    "optimizations)");
 #define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  STATISTIC(Num##Name, Description);
+  STATISTIC(Num##Name, Description);                                           \
+  STATISTIC(Num##Name##PreOptimization, Description " (before "                \
+                                                    "optimizations)");
 #include "llvm/IR/FunctionProperties.def"
 
 namespace llvm {
@@ -282,6 +287,16 @@ FunctionPropertiesInfo FunctionPropertiesInfo::getFunctionPropertiesInfo(
   return FPI;
 }
 
+FunctionPropertiesInfo
+FunctionPropertiesInfo::getPreOptimizationFunctionPropertiesInfo(
+    const Function &F) {
+  FunctionPropertiesInfo FPI;
+  for (const auto &BB : F)
+    FPI.reIncludeBB(BB);
+  FPI.Uses = getUses(F);
+  return FPI;
+}
+
 bool FunctionPropertiesInfo::operator==(
     const FunctionPropertiesInfo &FPI) const {
   if (BasicBlockCount != FPI.BasicBlockCount ||
@@ -380,12 +395,25 @@ FunctionPropertiesStatisticsPass::run(Function &F,
                                       FunctionAnalysisManager &FAM) {
   LLVM_DEBUG(dbgs() << "STATSCOUNT: running on function " << F.getName()
                     << "\n");
-  auto &AnalysisResults = FAM.getResult<FunctionPropertiesAnalysis>(F);
-
+  if (IsPreOptimization) {
+    auto AnalysisResults =
+        FunctionPropertiesInfo::getPreOptimizationFunctionPropertiesInfo(F);
+#define FUNCTION_PROPERTY(Name, Description)                                   \
+  Num##Name##PreOptimization += AnalysisResults.Name;
+#define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
+  Num##Name##PreOptimization += AnalysisResults.Name;
+#include "llvm/IR/FunctionProperties.def"
+#undef FUNCTION_PROPERTY
+#undef DETAILED_FUNCTION_PROPERTY
+  } else {
+    auto &AnalysisResults = FAM.getResult<FunctionPropertiesAnalysis>(F);
 #define FUNCTION_PROPERTY(Name, Description) Num##Name += AnalysisResults.Name;
 #define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
   Num##Name += AnalysisResults.Name;
 #include "llvm/IR/FunctionProperties.def"
+#undef FUNCTION_PROPERTY
+#undef DETAILED_FUNCTION_PROPERTY
+  }
 
   return PreservedAnalyses::all();
 }
