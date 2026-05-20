@@ -1018,7 +1018,6 @@ Expected<ze_command_list_handle_t> L0DeviceTy::createImmCopyCmdList() {
   return createImmCmdList(Ordinal, /*Index*/ 0);
 }
 
-
 Expected<ze_command_list_handle_t> L0DeviceTy::getImmCmdList() {
   auto &TLS = getTLS();
   auto CmdList = TLS.getImmCmdList();

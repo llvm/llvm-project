@@ -217,8 +217,7 @@ Error LevelZeroPluginTy::syncBarrierImpl(omp_interop_val_t *Interop) {
                   << Interop << " with ImmCmdList barrier";
   auto ImmCmdList = L0->ImmCmdList;
 
-  CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, ImmCmdList,
-                    L0DefaultTimeout);
+  CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, ImmCmdList, L0DefaultTimeout);
 
   return Plugin::success();
 }
