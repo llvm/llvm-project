@@ -296,19 +296,21 @@ bool linalg::isaElemwiseSingleBinaryOpInterface(linalg::GenericOp op,
 // ContractionOpInterface implementation
 //===----------------------------------------------------------------------===//
 
-/// If the value is defined by a chain of unary side effect-free, go up the
-/// use-def chain until the first value that isn't defined by such an op.
-// TODO: relax to multi-operands with constants, which are technically unary ops
-// as needed (e.g. add5).
-static Value getSourceSkipUnary(Value value) {
+/// Return true for scalar arith cast ops modeled by current linalg contraction
+/// cast semantics.
+static bool isSupportedContractionCast(Operation *op) {
+  return isa_and_present<arith::ExtFOp, arith::TruncFOp, arith::ExtSIOp,
+                         arith::ExtUIOp, arith::TruncIOp, arith::SIToFPOp,
+                         arith::UIToFPOp, arith::FPToSIOp, arith::FPToUIOp>(
+      op);
+}
+
+/// If the value is defined by a supported contraction cast op, return its
+/// source. Otherwise, return the value unchanged.
+static Value getSourceSkipCast(Value value) {
   Operation *op = value.getDefiningOp();
-  while (op && op->getNumOperands() == 1) {
-    auto iface = dyn_cast<MemoryEffectOpInterface>(op);
-    if (!iface || !iface.hasNoEffect())
-      break;
-    value = op->getOperand(0);
-    op = value.getDefiningOp();
-  }
+  if (op && op->getNumOperands() == 1 && isSupportedContractionCast(op))
+    return op->getOperand(0);
   return value;
 }
 
@@ -331,7 +333,7 @@ bool mlir::linalg::detail::isContractionBody(
     return false;
   }
 
-  Value yielded = getSourceSkipUnary(terminator->getOperand(0));
+  Value yielded = terminator->getOperand(0);
   Operation *reductionOp = yielded.getDefiningOp();
   if (!reductionOp || reductionOp->getNumResults() != 1 ||
       reductionOp->getNumOperands() != 2) {
@@ -339,18 +341,20 @@ bool mlir::linalg::detail::isContractionBody(
     return false;
   }
 
-  Value reductionLHS = getSourceSkipUnary(reductionOp->getOperand(0));
-  Value reductionRHS = getSourceSkipUnary(reductionOp->getOperand(1));
+  Value reductionLHS = reductionOp->getOperand(0);
+  Value reductionRHS = reductionOp->getOperand(1);
+  bool lhsIsAccumulator =
+      getSourceSkipCast(reductionLHS) == block.getArgument(2);
+  bool rhsIsAccumulator =
+      getSourceSkipCast(reductionRHS) == block.getArgument(2);
 
-  if (reductionLHS != block.getArgument(2) &&
-      reductionRHS != block.getArgument(2)) {
+  if (!lhsIsAccumulator && !rhsIsAccumulator) {
     errs << "expected reduction to take block argument #2 as one of the "
-            "operands (modulo unary casts)";
+            "operands (modulo supported contraction casts)";
     return false;
   }
 
-  Value contributed = getSourceSkipUnary(
-      isa<BlockArgument>(reductionLHS) ? reductionRHS : reductionLHS);
+  Value contributed = lhsIsAccumulator ? reductionRHS : reductionLHS;
   Operation *elementwiseOp = contributed.getDefiningOp();
   if (!elementwiseOp || elementwiseOp->getNumResults() != 1 ||
       elementwiseOp->getNumOperands() != 2) {
@@ -363,8 +367,8 @@ bool mlir::linalg::detail::isContractionBody(
     return false;
   }
 
-  Value elementwiseLHS = getSourceSkipUnary(elementwiseOp->getOperand(0));
-  Value elementwiseRHS = getSourceSkipUnary(elementwiseOp->getOperand(1));
+  Value elementwiseLHS = getSourceSkipCast(elementwiseOp->getOperand(0));
+  Value elementwiseRHS = getSourceSkipCast(elementwiseOp->getOperand(1));
   if ((elementwiseLHS == block.getArgument(0) &&
        elementwiseRHS == block.getArgument(1)) ||
       (elementwiseLHS == block.getArgument(1) &&
@@ -372,8 +376,8 @@ bool mlir::linalg::detail::isContractionBody(
     return true;
   }
 
-  errs << "expected elementwise op to apply to block arguments (modulo unary "
-          "casts)";
+  errs << "expected elementwise op to apply to block arguments (modulo "
+          "supported contraction casts)";
   return false;
 }
 
@@ -594,9 +598,9 @@ bool mlir::linalg::isaContractionOpInterface(LinalgOp linalgOp) {
 ///   1. Has 2 input and 1 output shapes.
 ///   2. Has at least one reduction dimension.
 ///   3. Has only projected permutation indexing maps.
-///   4. its body computes `u5(u1(c) + u2(u3(a) * u4(b)))` on some field
-///   (AddOpType, MulOpType), where u1, u2, u3, u4 and u5 represent scalar unary
-///   operations that may change the type (e.g. for mixed-precision).
+///   4. its body computes `cast(c) + (cast(a) * cast(b))` on some field
+///   (AddOpType, MulOpType), where each `cast` is either identity or one scalar
+///   arith cast operation emitted by `linalg.generalize`.
 /// As a consequence, when vectorization of such an op occurs, the only special
 /// behavior is that the (unique) MulOpType is vectorized into a
 /// `vector.contract`. All other ops are handled in a generic fashion.

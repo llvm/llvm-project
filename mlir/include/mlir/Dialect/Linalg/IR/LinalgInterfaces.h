@@ -165,17 +165,20 @@ namespace detail {
 
 /// Returns true if the block contains a contraction of the following form:
 ///
-///   %0 = <elemwise>(permutation-of(cu(block-argument-0),
-///                                  cu(block-argument-1)))
-///   %1 = <reduce>(permutation-of(cu(%0), cu(block-argument-2)))
-///   return-like cu(%1)
+///   %0 = <elemwise>(permutation-of(c(block-argument-0),
+///                                  c(block-argument-1)))
+///   %1 = <reduce>(permutation-of(%0, c(block-argument-2)))
+///   return-like %1
 ///
 /// where <elemwise> and <reduce> are binary operations constituting a
 /// contraction (in the canonical case, <elemwise> is a multiplication and
 /// <reduce> is an addition). The name and other properties of these operations
-/// are checked by `isaPair`. All operands of all operations may be supplied
-/// through a chain of side effect-free unary operations, such as casts, which
-/// is denoted as `cu` above.
+/// are checked by `isaPair`. The notation `c(...)` denotes either identity or
+/// one supported scalar arith cast.
+///
+/// Note: This is structural matching only. Callers must separately validate
+/// that cast semantics match forms produced by linalg.generalize for named-op
+/// round-trip semantics.
 ///
 /// When the body does not contain a contraction, a more precise description of
 /// the failed precondition is send to the `errs` stream, if provided.
