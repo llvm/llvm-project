@@ -166,6 +166,7 @@ bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
 class RawPtrRefLocalVarsChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
   BugType Bug;
+  TrivialFunctionAnalysis TFA;
   EnsureFunctionAnalysis EFA;
 
 protected:
@@ -194,10 +195,10 @@ public:
       const RawPtrRefLocalVarsChecker *Checker;
       Decl *DeclWithIssue{nullptr};
 
-      TrivialFunctionAnalysis TFA;
+      const TrivialFunctionAnalysis &TFA;
 
       explicit LocalVisitor(const RawPtrRefLocalVarsChecker *Checker)
-          : Checker(Checker) {
+          : Checker(Checker), TFA(Checker->TFA) {
         assert(Checker);
         ShouldVisitTemplateInstantiations = true;
         ShouldVisitImplicitCode = false;
@@ -314,7 +315,7 @@ public:
                 if (isConstOwnerPtrMemberExpr(InitArgOrigin))
                   return true;
 
-                if (EFA.isACallToEnsureFn(InitArgOrigin))
+                if (EFA.isACallToEnsureFn(InitArgOrigin, TFA))
                   return true;
 
                 if (isSafeExpr(InitArgOrigin))

@@ -88,7 +88,8 @@ class EnsureFunctionAnalysis {
   mutable CacheTy Cache{};
 
 public:
-  bool isACallToEnsureFn(const Expr *E) const;
+  bool isACallToEnsureFn(const Expr *E,
+                         const class TrivialFunctionAnalysis &) const;
 };
 
 /// \returns name of AST node or empty string.

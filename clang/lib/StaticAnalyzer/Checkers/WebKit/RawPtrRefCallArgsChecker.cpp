@@ -259,7 +259,7 @@ public:
             return true;
           if (isASafeCallArg(ArgOrigin))
             return true;
-          if (EFA.isACallToEnsureFn(ArgOrigin))
+          if (EFA.isACallToEnsureFn(ArgOrigin, TFA))
             return true;
           if (isSafeExpr(ArgOrigin))
             return true;

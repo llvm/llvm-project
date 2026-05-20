@@ -403,15 +403,18 @@ public:
   }
 };
 
-bool EnsureFunctionAnalysis::isACallToEnsureFn(const clang::Expr *E) const {
+bool EnsureFunctionAnalysis::isACallToEnsureFn(
+    const clang::Expr *E, const class TrivialFunctionAnalysis &TFA) const {
   auto *MCE = dyn_cast<CXXMemberCallExpr>(E);
   if (!MCE)
     return false;
-  auto *Callee = MCE->getDirectCallee();
+  auto *Callee = MCE->getMethodDecl();
   if (!Callee)
     return false;
   auto *Body = Callee->getBody();
-  if (!Body || Callee->isVirtualAsWritten())
+  if (!Body || Callee->isVirtual())
+    return false;
+  if (!TFA.isTrivial(Body))
     return false;
   auto [CacheIt, IsNew] = Cache.insert(std::make_pair(Callee, false));
   if (IsNew)
