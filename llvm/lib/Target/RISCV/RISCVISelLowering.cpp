@@ -640,6 +640,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::CONCAT_VECTORS, {MVT::v4i16, MVT::v8i8}, Legal);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, {MVT::v2i16, MVT::v4i8},
                          Legal);
+      setOperationAction(ISD::SETCC, P64VecVTs, Legal);
+      setCondCodeAction(
+          {ISD::SETGE, ISD::SETUGT, ISD::SETUGE, ISD::SETULE, ISD::SETLE}, P64VecVTs,
+          Expand);
+      setCondCodeAction({ISD::SETNE, ISD::SETGT}, P64VecVTs, Custom);
     }
   }
 
