@@ -142,6 +142,8 @@ static bool globalViewMatchesPointerLeaf(cir::GlobalViewAttr gv,
             cirSymbol.getAddrSpaceAttr()))
       sourceAddrSpace = targetAS.getValue();
   } else {
+    // cir.func and other symbols not yet lowered to globals cannot be used as
+    // bulk constant leaves; those cases keep the insertvalue fallback.
     return false;
   }
 
@@ -178,6 +180,20 @@ lowerPointerElementAttr(mlir::Attribute elt, mlir::MLIRContext *ctx,
   return std::nullopt;
 }
 
+static bool containsPoison(mlir::Attribute attr) {
+  if (mlir::isa<cir::PoisonAttr>(attr))
+    return true;
+  if (auto elts = mlir::dyn_cast<mlir::ArrayAttr>(attr))
+    return llvm::any_of(elts, containsPoison);
+  if (auto constArr = mlir::dyn_cast<cir::ConstArrayAttr>(attr)) {
+    if (mlir::isa<mlir::StringAttr>(constArr.getElts()))
+      return false;
+    if (auto elts = mlir::dyn_cast<mlir::ArrayAttr>(constArr.getElts()))
+      return llvm::any_of(elts, containsPoison);
+  }
+  return false;
+}
+
 std::optional<mlir::Attribute>
 lowerConstArrayAttr(cir::ConstArrayAttr constArr,
                     const mlir::TypeConverter *converter,
@@ -196,12 +212,8 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
     type = arrayType.getElementType();
   }
 
-  if (auto eltsArr = mlir::dyn_cast<mlir::ArrayAttr>(constArr.getElts())) {
-    for (mlir::Attribute elt : eltsArr) {
-      if (mlir::isa<cir::PoisonAttr>(elt))
-        return std::nullopt;
-    }
-  }
+  if (containsPoison(constArr))
+    return std::nullopt;
 
   if (mlir::isa<mlir::StringAttr>(constArr.getElts()))
     return convertStringAttrToDenseElementsAttr(constArr,

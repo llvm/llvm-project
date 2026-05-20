@@ -1,0 +1,29 @@
+// RUN: cir-opt %s --cir-to-llvm -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.global external @tz_arr =
+      #cir.const_array<"ab" : !cir.array<!s8i x 2>, trailing_zeros> :
+      !cir.array<!s8i x 8>
+
+  cir.global external target_address_space(1) @as1 = #cir.int<1> : !s32i
+  cir.global external @as_mismatch =
+      #cir.const_array<[#cir.global_view<@as1> : !cir.ptr<!s32i>]> :
+      !cir.array<!cir.ptr<!s32i> x 1>
+
+  cir.global external @matrix = #cir.const_array<[
+      #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>,
+      #cir.const_array<[#cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.array<!s32i x 2>
+  ]> : !cir.array<!cir.array<!s32i x 2> x 2>
+}
+
+// CHECK-LABEL: llvm.mlir.global external @tz_arr
+// CHECK:       llvm.insertvalue
+
+// CHECK-LABEL: llvm.mlir.global external @as_mismatch
+// CHECK:       llvm.insertvalue
+
+// CHECK-LABEL: llvm.mlir.global external @matrix(
+// CHECK-SAME:    dense<

@@ -1932,13 +1932,33 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+static mlir::Type getConstArrayLeafType(mlir::Type ty) {
+  while (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty))
+    ty = arrTy.getElementType();
+  return ty;
+}
+
+static bool isBulkLowerableConstArrayLeaf(mlir::Type leafTy) {
+  return mlir::isa<cir::PointerType, cir::IntType, cir::FPTypeInterface>(
+      leafTy);
+}
+
 bool hasTrailingZeros(cir::ConstArrayAttr attr) {
-  auto array = mlir::dyn_cast<mlir::ArrayAttr>(attr.getElts());
-  return attr.hasTrailingZeros() ||
-         (array && std::count_if(array.begin(), array.end(), [](auto elt) {
-            auto ar = dyn_cast<cir::ConstArrayAttr>(elt);
-            return ar && hasTrailingZeros(ar);
-          }));
+  if (attr.hasTrailingZeros())
+    return true;
+
+  auto elts = mlir::dyn_cast<mlir::ArrayAttr>(attr.getElts());
+  if (!elts)
+    return false;
+
+  auto cirArrTy = mlir::dyn_cast<cir::ArrayType>(attr.getType());
+  if (!cirArrTy || !mlir::isa<cir::ArrayType>(cirArrTy.getElementType()))
+    return false;
+
+  return llvm::any_of(elts, [](mlir::Attribute elt) {
+    auto nested = mlir::dyn_cast<cir::ConstArrayAttr>(elt);
+    return nested && hasTrailingZeros(nested);
+  });
 }
 
 mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
@@ -2490,30 +2510,33 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
         op.emitError() << "unsupported initializer '" << init.value() << "'";
         return mlir::failure();
       }
-    } else if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
-                         cir::ConstRecordAttr, cir::ConstPtrAttr,
-                         cir::ConstComplexAttr, cir::GlobalViewAttr,
-                         cir::TypeInfoAttr, cir::UndefAttr, cir::PoisonAttr,
-                         cir::VTableAttr, cir::ZeroAttr>(init.value())) {
-      if (auto constArr = mlir::dyn_cast<cir::ConstArrayAttr>(init.value())) {
-        if (!hasTrailingZeros(constArr)) {
-          mlir::Type elTy = constArr.getType();
-          while (auto arrTy = mlir::dyn_cast<cir::ArrayType>(elTy))
-            elTy = arrTy.getElementType();
-          if (mlir::isa<cir::PointerType>(elTy)) {
-            mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
-            if (std::optional<mlir::Attribute> bulkInit =
-                    lowerConstArrayAttr(constArr, typeConverter, module)) {
-              mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
-              rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
-                  op, llvmType, isConst, linkage, symbol, bulkInit.value(),
-                  alignment, addrSpace, isDsoLocal, isThreadLocal, comdatAttr,
-                  attributes);
-              return mlir::success();
-            }
-          }
+    } else if (auto constArr =
+                   mlir::dyn_cast<cir::ConstArrayAttr>(init.value())) {
+      // Bulk-emit llvm.mlir.global when lowerConstArrayAttr can build the
+      // whole initializer as one aggregate attribute (no insertvalue
+      // region). Skip arrays with trailing-zero compression: those need
+      // per-element zero/undef setup. Leaf type must match what
+      // lowerConstArrayAttr handles (pointers, integers, floats today).
+      if (!hasTrailingZeros(constArr) &&
+          isBulkLowerableConstArrayLeaf(
+              getConstArrayLeafType(constArr.getType()))) {
+        mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
+        if (std::optional<mlir::Attribute> bulkInit =
+                lowerConstArrayAttr(constArr, typeConverter, module)) {
+          mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
+          rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
+              op, llvmType, isConst, linkage, symbol, bulkInit.value(),
+              alignment, addrSpace, isDsoLocal, isThreadLocal, comdatAttr,
+              attributes);
+          return mlir::success();
         }
       }
+      return matchAndRewriteRegionInitializedGlobal(op, init.value(), rewriter);
+    } else if (mlir::isa<cir::ConstVectorAttr, cir::ConstRecordAttr,
+                         cir::ConstPtrAttr, cir::ConstComplexAttr,
+                         cir::GlobalViewAttr, cir::TypeInfoAttr, cir::UndefAttr,
+                         cir::PoisonAttr, cir::VTableAttr, cir::ZeroAttr>(
+                   init.value())) {
       // TODO(cir): once LLVM's dialect has proper equivalent attributes this
       // should be updated. For now, we use a custom op to initialize globals
       // to the appropriate value.

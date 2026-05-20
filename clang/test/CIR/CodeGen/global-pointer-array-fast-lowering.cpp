@@ -6,7 +6,11 @@
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
 const char *names[] = { "a", "b", "c" };
-int len() { return sizeof(names)/sizeof(*names); }
+const int table[] = { 0, 1, 2, 3 };
+const int matrix[2][2] = { { 1, 2 }, { 3, 4 } };
+int len() {
+  return sizeof(names) / sizeof(*names) + table[0] + matrix[1][1];
+}
 
 // CIR: cir.global {{.*}}@names = #cir.const_array<[#cir.global_view<@".str"> : !cir.ptr<!s8i>, #cir.global_view<@".str.1"> : !cir.ptr<!s8i>, #cir.global_view<@".str.2"> : !cir.ptr<!s8i>]>
 
@@ -14,3 +18,13 @@ int len() { return sizeof(names)/sizeof(*names); }
 // LLVM-NOT:   insertvalue
 
 // OGCG:       @names = {{.*}}global [3 x ptr] [ptr @.str{{.*}}, ptr @.str{{.*}}, ptr @.str{{.*}}]
+
+// CIR: cir.global {{.*}}table = #cir.const_array<[#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i]>
+// LLVM:       {{.*}}table{{.*}} = {{.*}}constant [4 x i32] [i32 0, i32 1, i32 2, i32 3]
+// LLVM-NOT:   insertvalue
+// OGCG:       {{.*}}table{{.*}} = {{.*}}constant [4 x i32] [i32 0, i32 1, i32 2, i32 3]
+
+// CIR: cir.global {{.*}}matrix = #cir.const_array<
+// LLVM:       {{.*}}matrix{{.*}} = {{.*}}constant [2 x [2 x i32]]
+// LLVM-NOT:   insertvalue
+// OGCG:       {{.*}}matrix{{.*}} = {{.*}}constant [2 x [2 x i32]]
