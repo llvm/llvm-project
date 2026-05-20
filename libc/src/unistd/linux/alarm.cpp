@@ -35,8 +35,8 @@ LLVM_LIBC_FUNCTION(unsigned int, alarm, (unsigned int seconds)) {
   itv.it_interval.tv_usec = 0;
   itv.it_value.tv_sec = seconds;
   itv.it_value.tv_usec = 0;
-  if (LIBC_NAMESPACE::syscall_impl<int>(SYS_setitimer, 0 /* ITIMER_REAL */, &itv,
-                                        &old_itv) < 0)
+  if (LIBC_NAMESPACE::syscall_impl<int>(SYS_setitimer, 0 /* ITIMER_REAL */,
+                                        &itv, &old_itv) < 0)
     return 0;
   return static_cast<unsigned int>(old_itv.it_value.tv_sec +
                                    (old_itv.it_value.tv_usec > 0 ? 1 : 0));
