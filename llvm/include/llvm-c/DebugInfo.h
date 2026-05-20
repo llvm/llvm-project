@@ -307,10 +307,6 @@ LLVM_C_ABI void LLVMDIBuilderFinalizeSubprogram(LLVMDIBuilderRef Builder,
  * \param SysRootLen      The length of the C string passed to \c SysRoot.
  * \param SDK           The SDK. On Darwin, the last component of the sysroot.
  * \param SDKLen        The length of the C string passed to \c SDK.
- *
- * This entry point leaves the \c DW_AT_LLVM_language_dialect attribute
- * unset; use \c LLVMDIBuilderCreateCompileUnitWithDialect if a dialect is
- * required.
  */
 LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
     LLVMDIBuilderRef Builder, LLVMDWARFSourceLanguage Lang,
@@ -320,37 +316,6 @@ LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
     LLVMDWARFEmissionKind Kind, unsigned DWOId, LLVMBool SplitDebugInlining,
     LLVMBool DebugInfoForProfiling, const char *SysRoot, size_t SysRootLen,
     const char *SDK, size_t SDKLen);
-
-/**
- * Source-language dialects known by DWARF (the
- * \c DW_LLVM_LANG_DIALECT_* family declared in
- * \c include/llvm/BinaryFormat/Dwarf.def). Used by
- * \c LLVMDIBuilderCreateCompileUnitWithDialect to encode the
- * \c DW_AT_LLVM_language_dialect attribute. To leave the dialect
- * unset, use \c LLVMDIBuilderCreateCompileUnit instead.
- */
-typedef enum {
-  LLVMDWARFLanguageDialectSIMT = 0x01,
-  LLVMDWARFLanguageDialectTile = 0x02
-} LLVMDWARFLanguageDialect;
-
-/**
- * Variant of \c LLVMDIBuilderCreateCompileUnit that also encodes a
- * \c DW_AT_LLVM_language_dialect attribute describing a target-specific
- * execution model (see \c LLVMDWARFLanguageDialect /
- * \c dwarf::LanguageDialectAttribute). All other parameters behave
- * identically to \c LLVMDIBuilderCreateCompileUnit.
- *
- * \param Dialect       The DWARF language dialect.
- */
-LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateCompileUnitWithDialect(
-    LLVMDIBuilderRef Builder, LLVMDWARFSourceLanguage Lang,
-    LLVMMetadataRef FileRef, const char *Producer, size_t ProducerLen,
-    LLVMBool isOptimized, const char *Flags, size_t FlagsLen,
-    unsigned RuntimeVer, const char *SplitName, size_t SplitNameLen,
-    LLVMDWARFEmissionKind Kind, unsigned DWOId, LLVMBool SplitDebugInlining,
-    LLVMBool DebugInfoForProfiling, const char *SysRoot, size_t SysRootLen,
-    const char *SDK, size_t SDKLen, LLVMDWARFLanguageDialect Dialect);
 
 /**
  * Create a file descriptor to hold debugging information for a file.
