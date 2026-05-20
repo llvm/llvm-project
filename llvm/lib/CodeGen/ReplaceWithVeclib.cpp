@@ -301,7 +301,7 @@ static bool runImpl(const TargetLibraryInfo &TLI, Function &F) {
   SmallVector<Instruction *> ReplacedCalls;
   for (auto &I : instructions(F)) {
     auto *II = dyn_cast<IntrinsicInst>(&I);
-    if (!II || II->getIntrinsicID() == Intrinsic::not_intrinsic)
+    if (!II)
       continue;
 
     // Vector llvm.sincos returns a struct so it does not fit the generic
