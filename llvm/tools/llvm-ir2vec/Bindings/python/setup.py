@@ -13,10 +13,9 @@ class BinaryDistribution(Distribution):
         return True
 
 
-if (
-    not glob.glob("ir2vec/*.so")
-    + glob.glob("ir2vec/*.pyd")
-    + glob.glob("ir2vec/*.dylib")
+if not any(
+    glob.glob(pattern)
+    for pattern in ("ir2vec/*.so", "ir2vec/*.pyd", "ir2vec/*.dylib")
 ):
     warnings.warn(
         "No native module (.so/.pyd/.dylib) found in ir2vec/. "

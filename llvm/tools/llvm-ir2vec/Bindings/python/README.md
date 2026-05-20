@@ -44,7 +44,7 @@ The package ships a pre-trained seed embedding vocabulary:
 |---|---|
 | `ir2vec.vocab.seedEmbedding75D` | 75 |
 
-Pass this or a vocab of your choice directly to `loadVocab(vocabPath=...)`.
+This pre-packaged vocab file has been taken from `llvm/Analysis/models/seedEmbeddingVocab75D.json` in the LLVM monorepo. Pass this or a vocab of your choice directly to `loadVocab(vocabPath=...)`.
 
 ## Building from source
 
@@ -59,6 +59,26 @@ cmake -G Ninja -B build \
 
 ninja -C build llvm-ir2vec
 ```
+
+This produces the native extension (e.g. `ir2vec*.so`) under
+`build/tools/llvm-ir2vec/Bindings/`. To build a wheel from it:
+
+1. Copy the extension into the package directory:
+
+       cp build/tools/llvm-ir2vec/Bindings/ir2vec*.so \
+          llvm/tools/llvm-ir2vec/Bindings/python/ir2vec/
+
+2. Build the wheel:
+
+       pip wheel . \
+        --no-build-isolation \
+        --no-deps \
+        --wheel-dir "$DIST_DIR" \
+        --quiet
+
+3. Install the resulting wheel:
+
+       pip install ir2vec-*.whl
 
 ## License
 
