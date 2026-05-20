@@ -658,6 +658,16 @@ static bool splitOptAndCodeGenThin(unsigned task, const Config &C,
         cgdata::saveModuleForTwoRounds(*MPart, task + CurrentThreadId,
                                        IRAddStream);
     }
+    
+    // Rename the GlobalValues whose internal is changed to external. That's
+    // can avoid duplicate symbols.
+    auto PromotedRenames = SplitModuleCG.getPromotedRenames();
+    for (auto &GV : MPart->global_values()) {
+      if (auto It = PromotedRenames.find(GV.getName());
+          It != PromotedRenames.end()) {
+        GV.setName(It->second);
+      }
+    }
 
     auto splitStream = [&](unsigned task, const Twine &moduleName)
         -> Expected<std::unique_ptr<CachedFileStream>> {
