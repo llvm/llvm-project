@@ -26,22 +26,10 @@ static_assert(!has_byteswap<float>);
 static_assert(!has_byteswap<char[2]>);
 static_assert(!has_byteswap<std::byte>);
 
-#if TEST_HAS_EXTENSION(bit_int)
-// _BitInt(N) is a candidate when N is a multiple of 16 (or sizeof == 1, the
-// identity case). Other widths are SFINAE-rejected via the requires clause.
-static_assert(has_byteswap<unsigned _BitInt(8)>);
-static_assert(has_byteswap<signed _BitInt(8)>);
-static_assert(has_byteswap<unsigned _BitInt(7)>);
-static_assert(has_byteswap<signed _BitInt(7)>);
-static_assert(has_byteswap<unsigned _BitInt(16)>);
-static_assert(has_byteswap<signed _BitInt(16)>);
-static_assert(has_byteswap<unsigned _BitInt(64)>);
-static_assert(!has_byteswap<unsigned _BitInt(13)>);
-static_assert(!has_byteswap<signed _BitInt(13)>);
-static_assert(!has_byteswap<unsigned _BitInt(17)>);
-static_assert(!has_byteswap<signed _BitInt(33)>);
-static_assert(!has_byteswap<unsigned _BitInt(65)>);
-#endif
+// _BitInt(N) candidacy is controlled by the `integral` constraint; the
+// padding-bit rejection (per [bit.byteswap]/Mandates) is a static_assert
+// inside the function body, not a SFINAE check. See byteswap.verify.cpp
+// for diagnostic verification of the rejected widths.
 
 template <class T>
 constexpr void test_num(T in, T expected) {
@@ -111,14 +99,13 @@ constexpr bool test() {
   test_implementation_defined_size<unsigned long long>();
 
 #if TEST_HAS_EXTENSION(bit_int)
-  // sizeof == 1: identity. Returns the input unchanged regardless of the
-  // value bits, so non-byte-aligned widths up to CHAR_BIT (e.g. _BitInt(7))
-  // are also identity.
-  assert(std::byteswap(static_cast<unsigned _BitInt(8)>(0xAB)) == static_cast<unsigned _BitInt(8)>(0xAB));
+  // _BitInt(N) where digits + is_signed == sizeof * CHAR_BIT (no padding
+  // bits) is accepted; other widths are rejected by the static_assert
+  // inside the function body (see byteswap.verify.cpp).
+
+  // sizeof == 1
   test_num<unsigned _BitInt(8)>(0xAB, 0xAB);
   test_num<signed _BitInt(8)>(0x12, 0x12);
-  assert(std::byteswap(static_cast<signed _BitInt(7)>(42)) == static_cast<signed _BitInt(7)>(42));
-  assert(std::byteswap(static_cast<unsigned _BitInt(7)>(42)) == static_cast<unsigned _BitInt(7)>(42));
 
   // sizeof == 2: __builtin_bswap16 fallback or __builtin_bswapg
   test_num<unsigned _BitInt(16)>(0xCDEF, 0xEFCD);

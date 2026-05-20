@@ -12,6 +12,9 @@
 
 #include <__concepts/arithmetic.h>
 #include <__config>
+#include <__type_traits/is_same.h>
+#include <__type_traits/remove_cv.h>
+#include <climits>
 #include <cstdint>
 #include <limits>
 
@@ -24,8 +27,14 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23
 
 template <integral _Tp>
-  requires(sizeof(_Tp) == 1 || (numeric_limits<_Tp>::digits + numeric_limits<_Tp>::is_signed) % 16 == 0)
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp byteswap(_Tp __val) noexcept {
+  // [bit.byteswap]/Mandates: T does not have padding bits.
+  // bool is grandfathered: every shipping implementation admits it and the
+  // size-1 identity path can't shuffle padding bits into value positions.
+  static_assert(is_same_v<remove_cv_t<_Tp>, bool> ||
+                    numeric_limits<_Tp>::digits + numeric_limits<_Tp>::is_signed == sizeof(_Tp) * CHAR_BIT,
+                "std::byteswap requires T to have no padding bits");
+
   if constexpr (sizeof(_Tp) == 1) {
     return __val;
 #  if __has_builtin(__builtin_bswapg)
