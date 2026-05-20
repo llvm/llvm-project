@@ -13,7 +13,7 @@
 
 #include "AMDGPUMIRFormatter.h"
 #include "SIMachineFunctionInfo.h"
-#include "llvm/TargetParser/AMDGPUTargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
 

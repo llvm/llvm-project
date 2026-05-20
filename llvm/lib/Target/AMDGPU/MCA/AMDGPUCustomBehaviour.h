@@ -20,6 +20,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MCA/CustomBehaviour.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 namespace llvm {
 namespace mca {

@@ -18,7 +18,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/WithColor.h"
-#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 namespace llvm::mca {
 
