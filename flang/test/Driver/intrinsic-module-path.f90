@@ -1,6 +1,6 @@
 ! Ensure argument -fintrinsic-modules-path works as expected.
 ! WITHOUT the option, the default location for the module is checked and no error generated.
-! With the option WRONG and GIVEN, find the module in the first first
+! With the option WRONG and GIVEN, find the module in the first
 ! -fintrinsic-modules-path that contains a matching file.
 
 !-----------------------------------------
