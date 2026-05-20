@@ -55,12 +55,10 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
                     parenExpr(), ConstantExpr,
                     declRefExpr(to(namedDecl(unless(
                         matchers::matchesAnyListedRegexName(AllowedDecls))))),
-                    memberExpr(), callExpr())),
+                    memberExpr(), callExpr(unless(cxxOperatorCallExpr())))),
                 unless(anyOf(isInMacro(),
                              // sizeof(...) is common used.
-                             hasParent(unaryExprOrTypeTraitExpr()),
-                             allOf(has(cxxOperatorCallExpr()),
-                                   hasParent(binaryOperator())))))
+                             hasParent(unaryExprOrTypeTraitExpr()))))
           .bind("dup"),
       this);
 }

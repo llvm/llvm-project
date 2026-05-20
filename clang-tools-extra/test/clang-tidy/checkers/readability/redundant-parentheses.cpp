@@ -139,6 +139,10 @@ constexpr FoldLevel operator*(FoldLevel lhs, FoldLevel rhs) {
   return static_cast<FoldLevel>(static_cast<int>(lhs) * static_cast<int>(rhs));
 }
 
+constexpr FoldLevel operator!(FoldLevel operand) {
+  return static_cast<FoldLevel>(!static_cast<int>(operand));
+}
+
 
 constexpr FoldLevel operator+(FoldLevel lhs, FoldLevel rhs) {
   return lhs;
@@ -149,30 +153,28 @@ constexpr bool UseOperatorAmpersand1(FoldLevel level) {
 }
 
 constexpr bool UseOperatorAmpersand2(FoldLevel level) {
-  const FoldLevel l = (level & FoldLevel::HeaderFlag);
-  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: redundant parentheses around expression [readability-redundant-parentheses]
-  // CHECK-FIXES:    const FoldLevel l = level & FoldLevel::HeaderFlag;
-  return l != FoldLevel::None;
-}
-
-constexpr bool UseOperatorAmpersand3(FoldLevel level) {
   const FoldLevel l = level & FoldLevel::HeaderFlag;
   return (l != FoldLevel::None);
 }
 
-constexpr bool UseOperatorAmpersand4(FoldLevel level) {
+constexpr bool UseOperatorAmpersand3(FoldLevel level) {
   return ((level & FoldLevel::HeaderFlag) != FoldLevel::None);
 }
 
-constexpr bool UseOperatorAmpersand5(FoldLevel level) {
+constexpr bool UseOperatorAmpersand4(FoldLevel level) {
   return FoldLevel::None != (level & FoldLevel::HeaderFlag);
+}
+
+constexpr bool UseOperatorAmpersand5(FoldLevel level) {
+  FoldLevel hf = FoldLevel::HeaderFlag;
+  // currently this check doesn't take into account order of operations, so the
+  // parentheses around `left & rhs` is needed
+  return (((level & hf) * hf) != FoldLevel::None);
 }
 
 constexpr bool UseOperatorAmpersand6(FoldLevel level) {
   FoldLevel hf = FoldLevel::HeaderFlag;
-  return (((level & hf) * hf) != FoldLevel::None);
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant parentheses around expression [readability-redundant-parentheses]
-  // CHECK-FIXES:    return ((level & hf * hf) != FoldLevel::None);
+  return ((!(level & hf) * hf) != FoldLevel::None);
 }
 
 constexpr bool UseOperatorPlus1(FoldLevel level) {
