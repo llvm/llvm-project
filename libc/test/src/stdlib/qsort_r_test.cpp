@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdlib/qsort_r.h"
 #include "QsortReentrantTest.h"
+#include "src/stdlib/qsort_r.h"
 
 QSORTREENTRANT_TEST(QsortR, LIBC_NAMESPACE::qsort_r, size_t)
