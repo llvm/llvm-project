@@ -96,11 +96,11 @@ struct RewriteRule {
 
 // -- Named constants ----------------------------------------------------------
 
-// Kernel descriptor size and RSRC1 offset from upstream
-// AMDHSAKernelDescriptor.h.
+// Kernel descriptor size from upstream AMDHSAKernelDescriptor.h. Field
+// offsets are resolved via offsetof(amdhsa::kernel_descriptor_t, field)
+// at the access site so the struct definition stays the single source
+// of truth and the *_OFFSET constants do not get spelled out twice.
 static constexpr uint64_t KdSize = sizeof(llvm::amdhsa::kernel_descriptor_t);
-static constexpr uint64_t KdRsrc1Offset =
-    llvm::amdhsa::COMPUTE_PGM_RSRC1_OFFSET;
 
 // Maximum distance (bytes) between an instruction and a NOP sled for the
 // sled to be considered reachable by a single s_branch.
@@ -182,6 +182,24 @@ public:
   /// Returns std::nullopt if the descriptor is not found.
   std::optional<unsigned> getKernelVgprCount(llvm::StringRef KernelName,
                                              unsigned VgprGranuleSize) const;
+
+  /// Read `group_segment_fixed_size` from the kernel descriptor for
+  /// \p KernelName, i.e. the **static** (compile-time-fixed) LDS allocation
+  /// per work-group in bytes. Returns std::nullopt if the descriptor symbol
+  /// is missing.
+  ///
+  /// This is the only LDS quantity visible in the ELF. Dynamic LDS is
+  /// allocated by the host at dispatch time (carried in the AQL packet's
+  /// `group_segment_size` and propagated to the device via the
+  /// `hidden_dynamic_lds_size` kernarg) and is *not* included here, so the
+  /// returned value is a lower bound on the total LDS the kernel may
+  /// touch. Callers that need to flag potential overflow of A0's 16-bit M0
+  /// limit (DEGFXMI400-12025) can use this as a "definitely exceeds"
+  /// check; "static fits, dynamic pushes over" cannot be detected
+  /// statically. See AMDGPUUsage "Code Object V3 Kernel Descriptor"
+  /// (GROUP_SEGMENT_FIXED_SIZE).
+  std::optional<uint32_t>
+  getKernelStaticLdsSize(llvm::StringRef KernelName) const;
 
   /// Update the RSRC1 VGPR/SGPR granule counts in the kernel descriptor for
   /// \p KernelName by adding \p ExtraVgprs / \p ExtraSgprs, using
