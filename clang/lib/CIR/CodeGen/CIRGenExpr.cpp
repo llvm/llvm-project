@@ -2360,8 +2360,8 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
            "unexpected implicit cast on function pointers");
   } else if (const auto *declRef = dyn_cast<DeclRefExpr>(e)) {
     // Resolve direct calls.
-    const auto *funcDecl = cast<FunctionDecl>(declRef->getDecl());
-    return emitDirectCallee(funcDecl);
+    if (const auto *funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()))
+      return emitDirectCallee(funcDecl);
   } else if (auto me = dyn_cast<MemberExpr>(e)) {
     if (const auto *fd = dyn_cast<FunctionDecl>(me->getMemberDecl())) {
       emitIgnoredExpr(me->getBase());
@@ -2983,11 +2983,18 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
     CIRGenFunction::LexicalScope lexScope{*this, loc, b.getInsertionBlock()};
     curLexScope->setAsTernary();
 
-    assert(!cir::MissingFeatures::incrementProfileCounter());
-    eval.beginEvaluation();
-    resultLV = branchGenFunc(*this, expr);
-    mlir::Value resultPtr = resultLV ? resultLV->getPointer() : mlir::Value();
-    eval.endEvaluation();
+    mlir::Value resultPtr;
+    {
+      // Emit any cleanups that were needed on this branch so we can spill
+      // and reload the return value.
+      CIRGenFunction::RunCleanupsScope branchCleanups(*this);
+      assert(!cir::MissingFeatures::incrementProfileCounter());
+      eval.beginEvaluation();
+      resultLV = branchGenFunc(*this, expr);
+      resultPtr = resultLV ? resultLV->getPointer() : mlir::Value();
+      eval.endEvaluation();
+      branchCleanups.forceCleanup({&resultPtr});
+    }
 
     if (resultPtr) {
       yieldTy = resultPtr.getType();

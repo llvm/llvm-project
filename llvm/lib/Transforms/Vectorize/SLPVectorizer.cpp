@@ -29353,6 +29353,15 @@ public:
     Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
     Builder.SetInsertPoint(RdxRootInst);
 
+    // Track the reduced values in case if they are replaced by extractelement
+    // because of the vectorization.
+    SmallDenseMap<Value *, WeakTrackingVH> TrackedVals(
+        ReducedVals.size() * ReducedVals.front().size());
+    // Need to track reduced vals, they may be changed during vectorization of
+    // subvectors.
+    for (ArrayRef<Value *> Candidates : ReducedVals)
+      for (Value *V : Candidates)
+        TrackedVals.try_emplace(V, V);
     SmallVector<Value *> Candidates(ReducedVals.back());
 
     // Intersect the fast-math-flags from all reduction operations.
@@ -29503,15 +29512,16 @@ public:
 
     // Fold leading scalars [0, SuccessStart) into an accumulator.
     Type *DestTy = ReductionRoot->getType();
-    Value *VectorizedTree = nullptr;
+    WeakTrackingVH VectorizedTree = nullptr;
     for (Value *RdxVal : ArrayRef(Candidates).take_front(SuccessStart)) {
       Builder.SetCurrentDebugLocation(
           ReducedValsToOps.at(RdxVal).front()->getDebugLoc());
       if (!VectorizedTree)
-        VectorizedTree = RdxVal;
+        VectorizedTree = TrackedVals.at(RdxVal);
       else
-        VectorizedTree = createOp(Builder, RdxKind, VectorizedTree, RdxVal,
-                                  "op.rdx", ReductionOps);
+        VectorizedTree =
+            createOp(Builder, RdxKind, VectorizedTree, TrackedVals.at(RdxVal),
+                     "op.rdx", ReductionOps);
     }
 
     // Emit ordered reduction for the vectorized window.

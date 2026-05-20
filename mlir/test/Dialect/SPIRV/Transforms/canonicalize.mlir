@@ -380,6 +380,50 @@ func.func @const_fold_vector_iaddcarry() -> !spirv.struct<(vector<3xi32>, vector
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.ISubBorrow
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @isubborrow_x_0
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @isubborrow_x_0(%arg0 : i32) -> !spirv.struct<(i32, i32)> {
+  // CHECK: %[[C0:.*]] = spirv.Constant 0
+  // CHECK: %[[RET:.*]] = spirv.CompositeConstruct %[[ARG]], %[[C0]]
+  %c0 = spirv.Constant 0 : i32
+  %0 = spirv.ISubBorrow %arg0, %c0 : !spirv.struct<(i32, i32)>
+
+  // CHECK: return %[[RET]]
+  return %0 : !spirv.struct<(i32, i32)>
+}
+
+// CHECK-LABEL: @const_fold_scalar_isubborrow
+func.func @const_fold_scalar_isubborrow() -> (!spirv.struct<(i32, i32)>, !spirv.struct<(i32, i32)>) {
+  %c5 = spirv.Constant 5 : i32
+  %c8 = spirv.Constant 8 : i32
+
+  // CHECK-DAG: %[[CST_CN3_C1:.*]] = spirv.Constant [-3 : i32, 1 : i32] : !spirv.struct<(i32, i32)>
+  // CHECK-DAG: %[[CST_C3_C0:.*]] = spirv.Constant [3 : i32, 0 : i32] : !spirv.struct<(i32, i32)>
+  %0 = spirv.ISubBorrow %c5, %c8 : !spirv.struct<(i32, i32)>
+  %1 = spirv.ISubBorrow %c8, %c5 : !spirv.struct<(i32, i32)>
+
+  // CHECK: return %[[CST_CN3_C1]], %[[CST_C3_C0]]
+  return %0, %1 : !spirv.struct<(i32, i32)>, !spirv.struct<(i32, i32)>
+}
+
+// CHECK-LABEL: @const_fold_vector_isubborrow
+func.func @const_fold_vector_isubborrow() -> !spirv.struct<(vector<3xi32>, vector<3xi32>)> {
+  %v0 = spirv.Constant dense<[5, 8, -1]> : vector<3xi32>
+  %v1 = spirv.Constant dense<[8, 5, 1]> : vector<3xi32>
+
+  // CHECK: %[[CST:.*]] = spirv.Constant [dense<[-3, 3, -2]> : vector<3xi32>, dense<[1, 0, 0]> : vector<3xi32>] : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
+  %0 = spirv.ISubBorrow %v0, %v1 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
+
+  // CHECK: return %[[CST]]
+  return %0 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.IMul
 //===----------------------------------------------------------------------===//
 
