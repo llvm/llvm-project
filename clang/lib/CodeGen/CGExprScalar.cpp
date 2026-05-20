@@ -2246,10 +2246,11 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
   auto *ResultTy = llvm::FixedVectorType::get(ElemTy, NumColumns);
   Value *RowVec = llvm::PoisonValue::get(ResultTy);
 
+  bool IsMatrixRowMajor =
+      isMatrixRowMajor(CGF.getLangOpts(), E->getBase()->getType());
+
   for (unsigned Col = 0; Col != NumColumns; ++Col) {
     Value *ColVal = llvm::ConstantInt::get(RowIdx->getType(), Col);
-    bool IsMatrixRowMajor =
-        isMatrixRowMajor(CGF.getLangOpts(), E->getBase()->getType());
     Value *EltIdx = MB.CreateIndex(RowIdx, ColVal, NumRows, NumColumns,
                                    IsMatrixRowMajor, "matrix_row_idx");
     Value *Elt =
@@ -3181,8 +3182,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       assert(NumCols <= SrcMatTy->getNumColumns());
 
       // isMatrixRowMajor needs the full sugared QualType to find matrix layout
-      // attrs. So use Use E->getType() (the source QualType) rather than
-      // SrcMatTy b\c getAs<ConstantMatrixType>() strips the sugar.
+      // attrs. So use E->getType() (the source QualType) rather than
+      // SrcMatTy b/c getAs<ConstantMatrixType>() strips the sugar.
       bool IsRowMajor = isMatrixRowMajor(CGF.getLangOpts(), E->getType());
       for (unsigned R = 0; R < NumRows; R++)
         for (unsigned C = 0; C < NumCols; C++)

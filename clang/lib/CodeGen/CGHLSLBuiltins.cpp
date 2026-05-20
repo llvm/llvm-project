@@ -1248,7 +1248,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     Value *Result =
         MB.CreateMatrixMultiply(Op0, Op1, Rows0, Cols0, Cols1, "hlsl.mul");
-    if (IsRowMajorMat0 || IsRowMajorMat1)
+
+    bool IsResultRowMajor = isMatrixRowMajor(getLangOpts(), E->getType());
+    if (IsResultRowMajor)
       Result = MB.CreateColumnMajorToRowMajorTransform(Result, Rows0, Cols1);
     return Result;
   }

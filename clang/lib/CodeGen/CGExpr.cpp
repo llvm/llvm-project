@@ -2361,8 +2361,8 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
   // getEncodedElementAccess returns row-major linearized indices
   // If the matrix memory layout is column-major, convert indices
   // to column-major indices.
-  bool IsRowlMajor = isMatrixRowMajor(getLangOpts(), E->getBase()->getType());
-  if (!IsRowlMajor) {
+  bool IsRowMajor = isMatrixRowMajor(getLangOpts(), E->getBase()->getType());
+  if (!IsRowMajor) {
     const auto *MT = E->getBase()->getType()->castAs<ConstantMatrixType>();
     unsigned NumCols = MT->getNumColumns();
     for (uint32_t &Idx : Indices) {
