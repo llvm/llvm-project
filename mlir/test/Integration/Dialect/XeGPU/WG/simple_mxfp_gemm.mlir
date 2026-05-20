@@ -19,18 +19,18 @@ module @gemm attributes {gpu.container_module} {
   gpu.module @kernel {
     gpu.func @gemm_mxfp(%arg0: memref<1024x4096xf4E2M1FN>, %arg1: memref<2048x1024xi8>, %arg2: memref<1024x128xf8E8M0FNU>, %arg3: memref<128x1024xf8E8M0FNU>, %arg4: memref<1024x1024xf32>) kernel {
       %c0 = arith.constant 0 : index
-      %c2 = arith.constant 2 : index
-      %c4 = arith.constant 4 : index
-      %c128 = arith.constant 128 : index
-      %c1024 = arith.constant 1024 : index
-      %k = arith.constant 4096 : index
-      %c16 = arith.constant 16 : index
-      %scale_block = arith.constant 32 : index
-      %kStep = arith.constant 512 : index
+      %mstep = arith.constant 128 : index
+      %nstep = arith.constant 128 : index
+      %kstep = arith.constant 512 : index
+      %mbound = arith.constant 1024 : index
+      %nbound = arith.constant 1024 : index
+      %kbound = arith.constant 4096 : index
+      %b_kfactor = arith.constant 2 : index
+      %scale_kfactor = arith.constant 32 : index
       %block_id_x = gpu.block_id x
       %block_id_y = gpu.block_id y
-      %0 = arith.muli %block_id_x, %c128 : index
-      %1 = arith.muli %block_id_y, %c128 : index
+      %m = arith.muli %block_id_x, %mstep : index
+      %n = arith.muli %block_id_y, %nstep : index
 
       %a_tdesc = xegpu.create_nd_tdesc %arg0 : memref<1024x4096xf4E2M1FN> -> !xegpu.tensor_desc<128x512xf4E2M1FN>
       %bp_tdesc = xegpu.create_nd_tdesc %arg1 : memref<2048x1024xi8> -> !xegpu.tensor_desc<256x128xi8>
@@ -39,15 +39,18 @@ module @gemm attributes {gpu.container_module} {
 
       // Load initial C
       %cd_tdesc = xegpu.create_nd_tdesc %arg4 : memref<1024x1024xf32> -> !xegpu.tensor_desc<128x128xf32, #c>
-      %c = xegpu.load_nd %cd_tdesc[%0, %1] {layout = #c}: !xegpu.tensor_desc<128x128xf32, #c> -> vector<128x128xf32>
+      %c_init = xegpu.load_nd %cd_tdesc[%m, %n] {layout = #c}: !xegpu.tensor_desc<128x128xf32, #c> -> vector<128x128xf32>
 
-      %d = scf.for %id_k = %c0 to %k step %kStep
-        iter_args(%c_value = %c) -> (vector<128x128xf32>) {
+      %d = scf.for %k = %c0 to %kbound step %kstep
+        iter_args(%c_partial = %c_init) -> (vector<128x128xf32>) {
+        // b, a_scale and b_scale take different steps compared to a
+        // compute adjusted k index for those tiles.
+        %kb = arith.divsi %k, %b_kfactor : index
+        %kscale = arith.divsi %k, %scale_kfactor : index
 
         // load_nd with offset
-        %a = xegpu.load_nd %a_tdesc[%0, %id_k] {layout = #a}: !xegpu.tensor_desc<128x512xf4E2M1FN> -> vector<128x512xf4E2M1FN>
-        %id_k_packed = arith.divsi %id_k, %c2 : index
-        %bp = xegpu.load_nd %bp_tdesc[%id_k_packed, %1] {layout = #b_packed}: !xegpu.tensor_desc<256x128xi8> -> vector<256x128xi8>
+        %a = xegpu.load_nd %a_tdesc[%m, %k] {layout = #a}: !xegpu.tensor_desc<128x512xf4E2M1FN> -> vector<128x512xf4E2M1FN>
+        %bp = xegpu.load_nd %bp_tdesc[%kb, %n] {layout = #b_packed}: !xegpu.tensor_desc<256x128xi8> -> vector<256x128xi8>
 
         // Bitcast to fp4: 256x128 uint8 -> 256x256 fp4 (each uint8 holds 2 fp4 values)
         %b_bitcast = vector.bitcast %bp : vector<256x128xi8> to vector<256x256xf4E2M1FN>
@@ -64,11 +67,10 @@ module @gemm attributes {gpu.container_module} {
         %b_interleaved = vector.interleave %b_even_t, %b_odd_t : vector<128x256xf4E2M1FN> -> vector<128x512xf4E2M1FN>
         %b = vector.transpose %b_interleaved, [1, 0] : vector<128x512xf4E2M1FN> to vector<512x128xf4E2M1FN>
 
-        %id_scale = arith.divsi %id_k, %scale_block : index
-        %scale_a = xegpu.load_nd %a_scale_tdesc[%0, %id_scale] {layout = #a_scale}: !xegpu.tensor_desc<128x16xf8E8M0FNU> -> vector<128x16xf8E8M0FNU>
+        %scale_a = xegpu.load_nd %a_scale_tdesc[%m, %kscale] {layout = #a_scale}: !xegpu.tensor_desc<128x16xf8E8M0FNU> -> vector<128x16xf8E8M0FNU>
 
-        %scale_b = xegpu.load_nd %b_scale_tdesc[%id_scale, %1] {layout = #b_scale}: !xegpu.tensor_desc<16x128xf8E8M0FNU> -> vector<16x128xf8E8M0FNU>
-        %new_c_value = xegpu.dpas_mx %a, %b, %c_value scale_a = %scale_a scale_b = %scale_b
+        %scale_b = xegpu.load_nd %b_scale_tdesc[%kscale, %n] {layout = #b_scale}: !xegpu.tensor_desc<16x128xf8E8M0FNU> -> vector<16x128xf8E8M0FNU>
+        %new_c_partial = xegpu.dpas_mx %a, %b, %c_partial scale_a = %scale_a scale_b = %scale_b
               {layout_a = #a,
                layout_b = #b,
                layout_cd = #c,
@@ -79,11 +81,11 @@ module @gemm attributes {gpu.container_module} {
                vector<128x16xf8E8M0FNU>, vector<16x128xf8E8M0FNU>)
             -> vector<128x128xf32>
 
-        scf.yield %new_c_value : vector<128x128xf32>
+        scf.yield %new_c_partial : vector<128x128xf32>
       }
 
       // store_nd with offset
-      xegpu.store_nd %d, %cd_tdesc[%0, %1] {layout = #c} : vector<128x128xf32>, !xegpu.tensor_desc<128x128xf32, #c>
+      xegpu.store_nd %d, %cd_tdesc[%m, %n] {layout = #c} : vector<128x128xf32>, !xegpu.tensor_desc<128x128xf32, #c>
       gpu.return
     }
   }
