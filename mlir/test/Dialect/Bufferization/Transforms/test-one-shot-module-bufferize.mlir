@@ -37,31 +37,6 @@ module @BufferizeEncodingThroughFunctionBoundaryAndCustomOps {
 
 // -----
 
-#enc1 = #test.tensor_encoding<"hello">
-#enc2 = #test.tensor_encoding<"not hello">
-
-// The memref's layout must come from the encoding, not from the default
-// static-identity layout.
-module @BufferizeEncodingForAlloc {
-  // CHECK: func @some_func(
-  // CHECK-SAME:  %[[arg0:.*]]: memref<42xf32, #test.memref_layout<"hello">>)
-  // CHECK-SAME:  -> (memref<42xf32, #test.memref_layout<"hello">>,
-  // CHECK-SAME:      memref<42xf32, #test.memref_layout<"not hello">>)
-  func.func @some_func(%t0: tensor<42xf32, #enc1>)
-      -> (tensor<42xf32, #enc1>, tensor<42xf32, #enc2>) {
-    // CHECK: %[[T0:.+]] = memref.alloc() {{.*}} : memref<42xf32, #test.memref_layout<"hello">>
-    %0 = bufferization.alloc_tensor() : tensor<42xf32, #enc1>
-
-    // CHECK: %[[T1:.+]] = memref.alloc() {{.*}} : memref<42xf32, #test.memref_layout<"not hello">>
-    %1 = bufferization.alloc_tensor() : tensor<42xf32, #enc2>
-
-    // CHECK: return %[[T0]], %[[T1]]
-    return %0, %1 : tensor<42xf32, #enc1>, tensor<42xf32, #enc2>
-  }
-}
-
-// -----
-
 #enc1 = #test.tensor_encoding<"custom">
 
 module @BufferizeEncodingForCustomOpsInsideScf {
