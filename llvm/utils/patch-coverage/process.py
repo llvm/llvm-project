@@ -7,9 +7,7 @@ from utils import classify_tests
 from utils import log
 
 
-def process_single_profraw(
-    profraw_file, source_files, binary, llvm_profdata, llvm_cov
-):
+def process_single_profraw(profraw_file, source_files, binary, llvm_profdata, llvm_cov):
     results = {}
 
     profdata_output = os.path.splitext(profraw_file)[0] + ".profdata"
@@ -17,20 +15,19 @@ def process_single_profraw(
     log("\nProfraw File:", profraw_file)
     log("Profdata File:", profdata_output)
 
-    subprocess.check_call(
-        [llvm_profdata, "merge", "-o", profdata_output, profraw_file]
-    )
+    subprocess.check_call([llvm_profdata, "merge", "-o", profdata_output, profraw_file])
     log(f"Converted {profraw_file} to {profdata_output}")
 
     for cpp_file in source_files:
         output_file = (
-            os.path.splitext(profdata_output)[0]
-            + f"_{os.path.basename(cpp_file)}.txt"
+            os.path.splitext(profdata_output)[0] + f"_{os.path.basename(cpp_file)}.txt"
         )
 
         llvm_cov_cmd = [
-            llvm_cov, "show",
-            "-instr-profile", profdata_output,
+            llvm_cov,
+            "show",
+            "-instr-profile",
+            profdata_output,
             binary,
             "--format=text",
             cpp_file,

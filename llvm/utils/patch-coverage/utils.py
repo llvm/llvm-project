@@ -44,8 +44,7 @@ def delete_profraw(inst_build_dir):
     abs_dir = os.path.abspath(inst_build_dir)
     try:
         subprocess.run(
-            ["find", abs_dir, "-type", "f", "-name", "*.profraw", "-delete"],
-            check=True
+            ["find", abs_dir, "-type", "f", "-name", "*.profraw", "-delete"], check=True
         )
         log("Older '.profraw' files successfully deleted.")
     except subprocess.CalledProcessError as e:
