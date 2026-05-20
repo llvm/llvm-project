@@ -29,9 +29,10 @@ define i32 @PR37890_v4i32(<4 x i32> %a)  {
 ;
 ; SSSE3-FAST-LABEL: PR37890_v4i32:
 ; SSSE3-FAST:       # %bb.0:
-; SSSE3-FAST-NEXT:    phaddd %xmm0, %xmm0
-; SSSE3-FAST-NEXT:    phaddd %xmm0, %xmm0
-; SSSE3-FAST-NEXT:    movd %xmm0, %eax
+; SSSE3-FAST-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSSE3-FAST-NEXT:    paddd %xmm0, %xmm1
+; SSSE3-FAST-NEXT:    phaddd %xmm1, %xmm1
+; SSSE3-FAST-NEXT:    movd %xmm1, %eax
 ; SSSE3-FAST-NEXT:    retq
 ;
 ; AVX1-SLOW-LABEL: PR37890_v4i32:
@@ -45,7 +46,8 @@ define i32 @PR37890_v4i32(<4 x i32> %a)  {
 ;
 ; AVX1-FAST-LABEL: PR37890_v4i32:
 ; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX1-FAST-NEXT:    retq
@@ -96,8 +98,10 @@ define i16 @PR37890_v8i16(<8 x i16> %a)  {
 ;
 ; SSSE3-FAST-LABEL: PR37890_v8i16:
 ; SSSE3-FAST:       # %bb.0:
-; SSSE3-FAST-NEXT:    phaddw %xmm0, %xmm0
-; SSSE3-FAST-NEXT:    phaddw %xmm0, %xmm0
+; SSSE3-FAST-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSSE3-FAST-NEXT:    paddw %xmm0, %xmm1
+; SSSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; SSSE3-FAST-NEXT:    paddw %xmm1, %xmm0
 ; SSSE3-FAST-NEXT:    phaddw %xmm0, %xmm0
 ; SSSE3-FAST-NEXT:    movd %xmm0, %eax
 ; SSSE3-FAST-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -117,8 +121,10 @@ define i16 @PR37890_v8i16(<8 x i16> %a)  {
 ;
 ; AVX1-FAST-LABEL: PR37890_v8i16:
 ; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX1-FAST-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX1-FAST-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX1-FAST-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -171,9 +177,10 @@ define i32 @PR37890_v8i32(<8 x i32> %a)  {
 ; SSSE3-FAST-LABEL: PR37890_v8i32:
 ; SSSE3-FAST:       # %bb.0:
 ; SSSE3-FAST-NEXT:    paddd %xmm1, %xmm0
-; SSSE3-FAST-NEXT:    phaddd %xmm0, %xmm0
-; SSSE3-FAST-NEXT:    phaddd %xmm0, %xmm0
-; SSSE3-FAST-NEXT:    movd %xmm0, %eax
+; SSSE3-FAST-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSSE3-FAST-NEXT:    paddd %xmm0, %xmm1
+; SSSE3-FAST-NEXT:    phaddd %xmm1, %xmm1
+; SSSE3-FAST-NEXT:    movd %xmm1, %eax
 ; SSSE3-FAST-NEXT:    retq
 ;
 ; AVX1-SLOW-LABEL: PR37890_v8i32:
@@ -191,8 +198,9 @@ define i32 @PR37890_v8i32(<8 x i32> %a)  {
 ; AVX1-FAST-LABEL: PR37890_v8i32:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm1, %xmm0
-; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX1-FAST-NEXT:    vzeroupper
@@ -253,8 +261,10 @@ define i16 @PR37890_v16i16(<16 x i16> %a)  {
 ; SSSE3-FAST-LABEL: PR37890_v16i16:
 ; SSSE3-FAST:       # %bb.0:
 ; SSSE3-FAST-NEXT:    paddw %xmm1, %xmm0
-; SSSE3-FAST-NEXT:    phaddw %xmm0, %xmm0
-; SSSE3-FAST-NEXT:    phaddw %xmm0, %xmm0
+; SSSE3-FAST-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSSE3-FAST-NEXT:    paddw %xmm0, %xmm1
+; SSSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; SSSE3-FAST-NEXT:    paddw %xmm1, %xmm0
 ; SSSE3-FAST-NEXT:    phaddw %xmm0, %xmm0
 ; SSSE3-FAST-NEXT:    movd %xmm0, %eax
 ; SSSE3-FAST-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -278,9 +288,11 @@ define i16 @PR37890_v16i16(<16 x i16> %a)  {
 ; AVX1-FAST-LABEL: PR37890_v16i16:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm1, %xmm0
-; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX1-FAST-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX1-FAST-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX1-FAST-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -369,12 +381,13 @@ define i32 @PR37890_v16i32(<16 x i32> %a)  {
 ;
 ; AVX1-FAST-LABEL: PR37890_v16i32:
 ; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
-; AVX1-FAST-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-FAST-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-FAST-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
 ; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vphaddd %xmm2, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX1-FAST-NEXT:    vzeroupper
