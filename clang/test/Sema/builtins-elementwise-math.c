@@ -207,6 +207,9 @@ void test_builtin_elementwise_clmul(int i, short s, double d, float4 v,
   i = __builtin_elementwise_clmul(uv, iv);
   // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
 
+  unsigned _BitInt(31) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
+  ext = __builtin_elementwise_clmul(ext, ext);
+
   u = __builtin_elementwise_clmul(u, u);
   vu = __builtin_elementwise_clmul(vu, vu);
 }
