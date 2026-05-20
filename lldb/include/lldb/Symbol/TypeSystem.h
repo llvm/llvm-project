@@ -566,10 +566,10 @@ public:
   /// back-pointer when it first hands out the TypeSystem so that lazy
   /// type-completion callbacks can route through it.
   ///
-  /// Each Module owns at most one SymbolFile and one TypeSystem per
+  /// Each Module owns at most one SymbolFile and one (Module-)TypeSystem per
   /// language, so the binding is expected to be established exactly once.
-  /// Repeated calls with the same pointer are no-ops. Rebinding to a
-  /// different non-null SymbolFile is a programming error.
+  /// Repeated calls with the same pointer are no-ops. Rebinding to a different
+  /// non-null SymbolFile is a programming error.
   void SetSymbolFile(SymbolFile *sym_file) {
     SymbolFile *expected = nullptr;
     if (m_sym_file.compare_exchange_strong(expected, sym_file))
