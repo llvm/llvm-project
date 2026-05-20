@@ -39,6 +39,7 @@ bool negative_test_if() {
   if (true; bool y = true) return y; /* expected-error {{first clause in condition must be a declaration}}
                                         expected-error {{expected expression}}
                                         expected-warning {{expression result unused}}*/
+  if (int x) {} // expected-error {{variable declaration in condition must have an initializer}}
   return false;
 }
 
@@ -48,6 +49,9 @@ int negative_test_switch() {
   default:
     break;
   }
+
+  switch (int x) {} // expected-error {{variable declaration in condition must have an initializer}}
+
   switch (true; ) {} /* expected-error {{first clause in condition must be a declaration}}
                         expected-error {{expected expression}}
                         expected-warning {{expression result unused}} */
