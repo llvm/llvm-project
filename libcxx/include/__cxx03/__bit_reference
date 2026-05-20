@@ -76,9 +76,6 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI void flip() _NOEXCEPT { *__seg_ ^= __mask_; }
-  _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false> operator&() const _NOEXCEPT {
-    return __bit_iterator<_Cp, false>(__seg_, static_cast<unsigned>(std::__libcpp_ctz(__mask_)));
-  }
 
 private:
   _LIBCPP_HIDE_FROM_ABI explicit __bit_reference(__storage_pointer __s, __storage_type __m) _NOEXCEPT
