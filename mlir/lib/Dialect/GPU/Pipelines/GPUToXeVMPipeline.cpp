@@ -96,6 +96,8 @@ void buildGPUPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(createLoopInvariantCodeMotionPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUVectorLinearize());
+    pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
+    pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   }
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertMathToXeVM());
   ConvertXeGPUToXeVMPassOptions xegpuToXeVMOptions;

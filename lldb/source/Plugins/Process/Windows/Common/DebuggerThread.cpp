@@ -483,6 +483,37 @@ DebuggerThread::HandleExitProcessEvent(const EXIT_PROCESS_DEBUG_INFO &info,
   return DBG_CONTINUE;
 }
 
+static std::optional<std::string>
+ConvertNtDevicePathToDosPath(llvm::ArrayRef<wchar_t> nt_path) {
+  std::array<wchar_t, 512> drive_strings;
+  drive_strings[0] = L'\0';
+  if (!::GetLogicalDriveStringsW(drive_strings.size(), drive_strings.data()))
+    return std::nullopt;
+
+  std::array<wchar_t, 3> drive = {L"_:"};
+  for (const wchar_t *it = drive_strings.data(); *it != L'\0';
+       it += wcslen(it) + 1) {
+    drive[0] = it[0];
+    std::array<wchar_t, MAX_PATH> device_name;
+    if (!::QueryDosDeviceW(drive.data(), device_name.data(),
+                           device_name.size()))
+      continue;
+    size_t device_name_len = wcslen(device_name.data());
+    if (device_name_len >= nt_path.size())
+      continue;
+    bool match =
+        _wcsnicmp(nt_path.data(), device_name.data(), device_name_len) == 0;
+    if (match && nt_path[device_name_len] == L'\\') {
+      std::wstring rebuilt_path(drive.data());
+      rebuilt_path.append(&nt_path[device_name_len]);
+      std::string path_utf8;
+      llvm::convertWideToUTF8(rebuilt_path, path_utf8);
+      return path_utf8;
+    }
+  }
+  return std::nullopt;
+}
+
 static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
   // Check that file is not empty as we cannot map a file with zero length.
   DWORD dwFileSizeHi = 0;
@@ -506,36 +537,7 @@ static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
                             mapped_filename.data(), mapped_filename.size()))
     return std::nullopt;
 
-  // A series of null-terminated strings, plus an additional null character
-  std::array<wchar_t, 512> drive_strings;
-  drive_strings[0] = L'\0';
-  if (!::GetLogicalDriveStringsW(drive_strings.size(), drive_strings.data()))
-    return std::nullopt;
-
-  std::array<wchar_t, 3> drive = {L"_:"};
-  for (const wchar_t *it = drive_strings.data(); *it != L'\0';
-       it += wcslen(it) + 1) {
-    // Copy the drive letter to the template string
-    drive[0] = it[0];
-    std::array<wchar_t, MAX_PATH> device_name;
-    if (::QueryDosDeviceW(drive.data(), device_name.data(),
-                          device_name.size())) {
-      size_t device_name_len = wcslen(device_name.data());
-      if (device_name_len < mapped_filename.size()) {
-        bool match = _wcsnicmp(mapped_filename.data(), device_name.data(),
-                               device_name_len) == 0;
-        if (match && mapped_filename[device_name_len] == L'\\') {
-          // Replace device path with its drive letter
-          std::wstring rebuilt_path(drive.data());
-          rebuilt_path.append(&mapped_filename[device_name_len]);
-          std::string path_utf8;
-          llvm::convertWideToUTF8(rebuilt_path, path_utf8);
-          return path_utf8;
-        }
-      }
-    }
-  }
-  return std::nullopt;
+  return ConvertNtDevicePathToDosPath(mapped_filename);
 }
 
 DWORD

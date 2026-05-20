@@ -50,6 +50,27 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
   }
 
   for (const DISubprogram *SP : DIF.subprograms()) {
+    const DISubprogram *NewSP = SP;
+
+    if (SP->isDistinct()) {
+      NewSP = DISubprogram::get(
+          M.getContext(), SP->getScope(), SP->getName(), SP->getLinkageName(),
+          SP->getFile(), SP->getLine(), SP->getType(), SP->getScopeLine(),
+          SP->getContainingType(), SP->getVirtualIndex(),
+          SP->getThisAdjustment(), SP->getFlags(), SP->getSPFlags(),
+          SP->getUnit(), SP->getTemplateParams(), SP->getDeclaration(),
+          SP->getRetainedNodes(), SP->getThrownTypes(), SP->getAnnotations(),
+          SP->getTargetFuncName(), SP->getKeyInstructionsEnabled());
+
+      Res.MDReplace.insert({SP, NewSP});
+
+      if (auto It = Res.MDExtra.find(SP); It != Res.MDExtra.end()) {
+        const Metadata *FunctionMD = It->second;
+        Res.MDExtra.erase(It);
+        Res.MDExtra.insert({NewSP, FunctionMD});
+      }
+    }
+
     if (SP->getUnit())
       CUSubprograms.push_back(
           {SP->getUnit(), static_cast<const Metadata *>(SP)});
@@ -69,6 +90,18 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
     } while (++It != End && It->first == CU);
     const auto *SubprogramsMD = MDTuple::get(M.getContext(), Subprograms);
     Res.MDExtra.insert({NewCU, SubprogramsMD});
+  }
+
+  for (DIType *T : DIF.types()) {
+    if (auto *SR = dyn_cast<DISubrangeType>(T)) {
+      DIType *BT = SR->getBaseType();
+      if (!BT)
+        BT = DIBasicType::get(
+            SR->getContext(), dwarf::DW_TAG_base_type, SR->getName(),
+            SR->getSizeInBits(), SR->getAlignInBits(), dwarf::DW_ATE_unsigned,
+            SR->getNumExtraInhabitants(), /*DataSizeInBits=*/0, SR->getFlags());
+      Res.MDReplace.insert({T, BT});
+    }
   }
 
   return Res;
