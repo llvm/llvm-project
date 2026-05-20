@@ -180,8 +180,8 @@ struct ArgCommand {
     Remaining = Remaining.trim();
 
     size_t ExpectedLength;
-    if (Remaining.consumeInteger(10, ExpectedLength))
-      return createStringError("Expected integer");
+    if (Remaining.consumeInteger(10, ExpectedLength) || ExpectedLength < 0)
+      return createStringError("Expected non-negative integer");
 
     if (!Remaining.empty())
       return createStringError("Unexpected trailing characters in command");
@@ -200,8 +200,8 @@ struct InputStringCommand {
     Remaining = Remaining.trim();
 
     size_t ExpectedLength;
-    if (Remaining.consumeInteger(10, ExpectedLength))
-      return createStringError("Expected integer");
+    if (Remaining.consumeInteger(10, ExpectedLength) || ExpectedLength < 0)
+      return createStringError("Expected non-negative integer");
 
     if (!Remaining.trim().empty())
       return createStringError("Unexpected trailing characters in command");
