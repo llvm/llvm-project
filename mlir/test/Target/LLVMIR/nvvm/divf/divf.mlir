@@ -1,6 +1,6 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
-// f32 divf — all 8 forms (4 rounding modes × 2 ftz states).
+// f32 divf — rounded, all 8 forms (4 rounding modes × 2 ftz states).
 llvm.func @divf_f32(%a : f32, %b : f32) -> f32 {
   // CHECK-LABEL: define float @divf_f32(float %0, float %1) {
   // CHECK: call float @llvm.nvvm.div.rn.f(float %{{.*}}, float %{{.*}})
@@ -22,7 +22,7 @@ llvm.func @divf_f32(%a : f32, %b : f32) -> f32 {
   llvm.return %r8 : f32
 }
 
-// f64 divf — all 4 forms (4 rounding modes, no ftz).
+// f64 divf — rounded, all 4 forms (no ftz).
 llvm.func @divf_f64(%a : f64, %b : f64) -> f64 {
   // CHECK-LABEL: define double @divf_f64(double %0, double %1) {
   // CHECK: call double @llvm.nvvm.div.rn.d(double %{{.*}}, double %{{.*}})
@@ -41,8 +41,8 @@ llvm.func @divf_approx(%a : f32, %b : f32) -> f32 {
   // CHECK-LABEL: define float @divf_approx(float %0, float %1) {
   // CHECK: call float @llvm.nvvm.div.approx.f(float %{{.*}}, float %{{.*}})
   // CHECK: call float @llvm.nvvm.div.approx.ftz.f(float %{{.*}}, float %{{.*}})
-  %r1 = nvvm.divf.approx %a, %b : f32
-  %r2 = nvvm.divf.approx %r1, %r1 {ftz = true} : f32
+  %r1 = nvvm.divf %a,  %b  {approx = true} : f32
+  %r2 = nvvm.divf %r1, %r1 {approx = true, ftz = true} : f32
   llvm.return %r2 : f32
 }
 
@@ -51,7 +51,7 @@ llvm.func @divf_full(%a : f32, %b : f32) -> f32 {
   // CHECK-LABEL: define float @divf_full(float %0, float %1) {
   // CHECK: call float @llvm.nvvm.div.full(float %{{.*}}, float %{{.*}})
   // CHECK: call float @llvm.nvvm.div.full.ftz(float %{{.*}}, float %{{.*}})
-  %r1 = nvvm.divf.full %a, %b : f32
-  %r2 = nvvm.divf.full %r1, %r1 {ftz = true} : f32
+  %r1 = nvvm.divf %a,  %b  {full = true} : f32
+  %r2 = nvvm.divf %r1, %r1 {full = true, ftz = true} : f32
   llvm.return %r2 : f32
 }

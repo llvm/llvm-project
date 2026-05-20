@@ -6589,50 +6589,16 @@ def NVVM_DivFOp
   let description = [{
     Divides lhs by rhs, stores result in res (`res = lhs / rhs`).
 
-    For more information, see PTX ISA:
-    [div](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-div)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-div)
   }];
   let arguments = (ins AnyTypeOf<[F32, F64]>:$lhs, AnyTypeOf<[F32, F64]>:$rhs,
-      FPArithRoundingMode:$rnd, DefaultValuedAttr<BoolAttr, "false">:$ftz);
+      DefaultValuedAttr<FPArithRoundingMode, "FPRoundingMode::NONE">:$rnd,
+      DefaultValuedAttr<BoolAttr, "false">:$ftz,
+      DefaultValuedAttr<BoolAttr, "false">:$approx,
+      DefaultValuedAttr<BoolAttr, "false">:$full);
   let results = (outs AnyTypeOf<[F32, F64]>:$res);
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($res)";
   let hasVerifier = 1;
-}
-
-def NVVM_DivFApproxOp
-    : NVVM_SingleResultIntrinsicOp<"divf.approx", [Pure,
-                                                   SameOperandsAndResultType]> {
-  let summary = "Fast, approximate divide";
-  let description = [{
-    Implements a fast approximation to divide, computed as `res = lhs * (1/rhs)`.
-    The maximum ulp error is 2 in the normal range.
-
-    For more information, see PTX ISA:
-    [div](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-div)
-  }];
-  let arguments = (ins F32:$lhs, F32:$rhs,
-      DefaultValuedAttr<BoolAttr, "false">:$ftz);
-  let results = (outs F32:$res);
-  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($res)";
-}
-
-def NVVM_DivFFullOp
-    : NVVM_SingleResultIntrinsicOp<"divf.full", [Pure,
-                                                 SameOperandsAndResultType]> {
-  let summary = "Full-range approximate divide";
-  let description = [{
-    Implements a relatively fast, full-range approximation that scales
-    operands to achieve better accuracy, but is not fully IEEE 754 compliant
-    and does not support rounding modifiers. The maximum ulp error is 2
-    across the full range of inputs.
-
-    For more information, see PTX ISA:
-    [div](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-div)
-  }];
-  let arguments = (ins F32:$lhs, F32:$rhs,
-      DefaultValuedAttr<BoolAttr, "false">:$ftz);
-  let results = (outs F32:$res);
-  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($res)";
 }
 
 //===----------------------------------------------------------------------===//
