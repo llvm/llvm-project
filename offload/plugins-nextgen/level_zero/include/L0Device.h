@@ -188,6 +188,7 @@ class L0DeviceTy final : public GenericDeviceTy {
   ze_device_compute_properties_t ComputeProperties{};
   ze_device_memory_properties_t MemoryProperties{};
   ze_device_cache_properties_t CacheProperties{};
+  ze_device_module_properties_t ModuleProperties{};
 
   /// Devices' default target allocation kind for internal allocation.
   int32_t AllocKind = TARGET_ALLOC_DEVICE;
@@ -217,6 +218,9 @@ class L0DeviceTy final : public GenericDeviceTy {
 
   bool IsAsyncEnabled = false;
 
+  /// Whether the device supports cooperative kernels.
+  bool SupportsCooperativeKernels = false;
+
   /// Lock for this device.
   std::mutex Mutex;
 
@@ -242,6 +246,9 @@ class L0DeviceTy final : public GenericDeviceTy {
   Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
                                  bool IsCtor);
 
+  /// Check if device supports cooperative kernels.
+  bool checkCooperativeKernelSupport();
+
 public:
   L0DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
              ze_device_handle_t zeDevice, L0ContextTy &DriverInfo,
@@ -257,6 +264,8 @@ public:
     MemoryProperties.pNext = nullptr;
     CacheProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_CACHE_PROPERTIES;
     CacheProperties.pNext = nullptr;
+    ModuleProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_MODULE_PROPERTIES;
+    ModuleProperties.pNext = nullptr;
   }
 
   static L0DeviceTy &makeL0Device(GenericDeviceTy &Device) {
@@ -272,6 +281,8 @@ public:
   Error initImpl(GenericPluginTy &Plugin) override;
   Error deinitImpl() override;
   ze_device_handle_t getZeDevice() const { return zeDevice; }
+
+  bool supportsCooperativeKernels() const { return SupportsCooperativeKernels; }
 
   const L0ContextTy &getL0Context() const { return l0Context; }
   L0ContextTy &getL0Context() { return l0Context; }
@@ -383,6 +394,26 @@ public:
   size_t getCacheSize() const { return CacheProperties.cacheSize; }
   uint64_t getMaxMemAllocSize() const {
     return DeviceProperties.maxMemAllocSize;
+  }
+
+  bool supportsFP64() const {
+    return ModuleProperties.flags & ZE_DEVICE_MODULE_FLAG_FP64;
+  }
+
+  bool supportsFP16() const {
+    return ModuleProperties.flags & ZE_DEVICE_MODULE_FLAG_FP16;
+  }
+
+  ze_device_fp_flags_t getFP64Flags() const {
+    return ModuleProperties.fp64flags;
+  }
+
+  ze_device_fp_flags_t getFP16Flags() const {
+    return ModuleProperties.fp16flags;
+  }
+
+  ze_device_fp_flags_t getFP32Flags() const {
+    return ModuleProperties.fp32flags;
   }
 
   int32_t getAllocKind() const { return AllocKind; }

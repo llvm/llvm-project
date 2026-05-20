@@ -138,7 +138,6 @@ if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
 endif()
 
 add_subdirectory(BLAKE3)
-add_subdirectory(HTTP)
 
 add_llvm_component_library(LLVMSupport
   ABIBreak.cpp
@@ -205,7 +204,6 @@ add_llvm_component_library(LLVMSupport
   FormatVariadic.cpp
   GlobPattern.cpp
   GraphWriter.cpp
-  Hash.cpp
   HexagonAttributeParser.cpp
   HexagonAttributes.cpp
   InitLLVM.cpp

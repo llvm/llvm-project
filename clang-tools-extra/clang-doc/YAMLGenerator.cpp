@@ -69,6 +69,13 @@ template <typename T> struct SequenceTraits<llvm::simple_ilist<T>> {
   }
 };
 
+template <typename T> struct SequenceTraits<clang::doc::DocList<T>> {
+  static size_t size(IO &io, clang::doc::DocList<T> &seq) { return seq.size(); }
+  static T &element(IO &io, clang::doc::DocList<T> &seq, size_t index) {
+    return *(std::next(seq.begin(), index));
+  }
+};
+
 // Map pointers to the value mappings as clang-doc only does output
 // serialization.
 template <typename T> struct PointerMappingTraits {

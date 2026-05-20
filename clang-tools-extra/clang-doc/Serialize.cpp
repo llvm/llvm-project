@@ -233,14 +233,16 @@ void ClangDocCommentVisitor::parseComment(const comments::Comment *C) {
   if (NumChildren > 0) {
     CommentInfo *ChildrenArray =
         TransientArena.Allocate<CommentInfo>(NumChildren);
-    unsigned I = 0;
+    unsigned Idx = 0;
     for (comments::Comment *Child :
          llvm::make_range(C->child_begin(), C->child_end())) {
-      new (&ChildrenArray[I]) CommentInfo();
-      ClangDocCommentVisitor Visitor(ChildrenArray[I]);
+      new (&ChildrenArray[Idx]) CommentInfo();
+      ClangDocCommentVisitor Visitor(ChildrenArray[Idx]);
       Visitor.parseComment(Child);
-      I++;
+      Idx++;
     }
+    assert(Idx == NumChildren &&
+           "Mismatch between child_count and actual children");
     CurrentCI.Children =
         llvm::ArrayRef<CommentInfo>(ChildrenArray, NumChildren);
   }
@@ -458,42 +460,35 @@ bool Serializer::shouldSerializeInfo(bool PublicOnly,
 //
 // See MakeAndInsertIntoParent().
 void Serializer::InsertChild(ScopeChildren &Scope, const NamespaceInfo &Info) {
-  Reference *R = allocatePtr<Reference>(TransientArena, Info.USR, Info.Name,
-                                        InfoType::IT_namespace, Info.Name,
-                                        getInfoRelativePath(Info.Namespace));
-  Scope.Namespaces.push_back(*R);
+  Scope.Namespaces.push_back(*allocateListNodeTransient<Reference>(
+      Info.USR, Info.Name, InfoType::IT_namespace, Info.Name,
+      getInfoRelativePath(Info.Namespace)));
 }
 
 void Serializer::InsertChild(ScopeChildren &Scope, const RecordInfo &Info) {
-  Reference *R = allocatePtr<Reference>(
+  Scope.Records.push_back(*allocateListNodeTransient<Reference>(
       Info.USR, Info.Name, InfoType::IT_record, Info.Name,
-      getInfoRelativePath(Info.Namespace), Info.MangledName);
-  Scope.Records.push_back(*R);
+      getInfoRelativePath(Info.Namespace), Info.MangledName));
 }
 
-void Serializer::InsertChild(ScopeChildren &Scope, EnumInfo Info) {
-  EnumInfo *E = allocatePtr<EnumInfo>(std::move(Info));
-  Scope.Enums.push_back(*E);
+void Serializer::InsertChild(ScopeChildren &Scope, EnumInfo &Info) {
+  Scope.Enums.push_back(*allocateListNodeTransient<EnumInfo>(&Info));
 }
 
-void Serializer::InsertChild(ScopeChildren &Scope, FunctionInfo Info) {
-  FunctionInfo *F = allocatePtr<FunctionInfo>(std::move(Info));
-  Scope.Functions.push_back(*F);
+void Serializer::InsertChild(ScopeChildren &Scope, FunctionInfo &Info) {
+  Scope.Functions.push_back(*allocateListNodeTransient<FunctionInfo>(&Info));
 }
 
-void Serializer::InsertChild(ScopeChildren &Scope, TypedefInfo Info) {
-  TypedefInfo *T = allocatePtr<TypedefInfo>(std::move(Info));
-  Scope.Typedefs.push_back(*T);
+void Serializer::InsertChild(ScopeChildren &Scope, TypedefInfo &Info) {
+  Scope.Typedefs.push_back(*allocateListNodeTransient<TypedefInfo>(&Info));
 }
 
-void Serializer::InsertChild(ScopeChildren &Scope, ConceptInfo Info) {
-  ConceptInfo *C = allocatePtr<ConceptInfo>(std::move(Info));
-  Scope.Concepts.push_back(*C);
+void Serializer::InsertChild(ScopeChildren &Scope, ConceptInfo &Info) {
+  Scope.Concepts.push_back(*allocateListNodeTransient<ConceptInfo>(&Info));
 }
 
-void Serializer::InsertChild(ScopeChildren &Scope, VarInfo Info) {
-  VarInfo *V = allocatePtr<VarInfo>(std::move(Info));
-  Scope.Variables.push_back(*V);
+void Serializer::InsertChild(ScopeChildren &Scope, VarInfo &Info) {
+  Scope.Variables.push_back(*allocateListNodeTransient<VarInfo>(&Info));
 }
 
 // Creates a parent of the correct type for the given child and inserts it into
@@ -511,11 +506,11 @@ void Serializer::InsertChild(ScopeChildren &Scope, VarInfo Info) {
 // parameter. Since each variant is used once, it's not worth having a more
 // elaborate system to automatically deduce this information.
 template <typename ChildType>
-OwnedPtr<Info> Serializer::makeAndInsertIntoParent(ChildType Child) {
+OwnedPtr<Info> Serializer::makeAndInsertIntoParent(ChildType &Child) {
   if (Child.Namespace.empty()) {
     // Insert into unnamed parent namespace.
     auto ParentNS = allocatePtr<NamespaceInfo>();
-    InsertChild(ParentNS->Children, std::forward<ChildType>(Child));
+    InsertChild(ParentNS->Children, Child);
     return ParentNS;
   }
 
@@ -523,13 +518,13 @@ OwnedPtr<Info> Serializer::makeAndInsertIntoParent(ChildType Child) {
   case InfoType::IT_namespace: {
     auto ParentNS = allocatePtr<NamespaceInfo>();
     ParentNS->USR = Child.Namespace[0].USR;
-    InsertChild(ParentNS->Children, std::forward<ChildType>(Child));
+    InsertChild(ParentNS->Children, Child);
     return ParentNS;
   }
   case InfoType::IT_record: {
     auto ParentRec = allocatePtr<RecordInfo>();
     ParentRec->USR = Child.Namespace[0].USR;
-    InsertChild(ParentRec->Children, std::forward<ChildType>(Child));
+    InsertChild(ParentRec->Children, Child);
     return ParentRec;
   }
   case InfoType::IT_default:
@@ -617,9 +612,9 @@ void Serializer::parseEnumerators(EnumInfo &I, const EnumDecl *D) {
             E->getASTContext().getRawCommentForDeclNoCache(E)) {
       Comment->setAttached();
       if (comments::FullComment *Fc = Comment->parse(Context, nullptr, E)) {
-        CommentInfo *NewCI = allocatePtr<CommentInfo>();
+        auto *NewCI = allocateListNodeTransient<CommentInfo>();
         Member.Description.push_back(*NewCI);
-        parseFullComment(Fc, Member.Description.back());
+        parseFullComment(Fc, *NewCI->Ptr);
       }
     }
   }
@@ -800,9 +795,9 @@ void Serializer::populateInfo(Info &I, const T *D, const FullComment *C,
     I.Namespace = allocateArray<Reference>(LocalNamespaces, TransientArena);
   if (C) {
 
-    CommentInfo *NewCI = allocatePtr<CommentInfo>();
+    auto *NewCI = allocateListNodeTransient<CommentInfo>();
     I.Description.push_back(*NewCI);
-    parseFullComment(C, I.Description.back());
+    parseFullComment(C, *NewCI->Ptr);
   }
 }
 
@@ -814,8 +809,7 @@ void Serializer::populateSymbolInfo(SymbolInfo &I, const T *D,
   if (D->isThisDeclarationADefinition())
     I.DefLoc = Loc;
   else {
-    Location *NewL = allocatePtr<Location>(Loc);
-    I.Loc.push_back(*NewL);
+    I.Loc.push_back(*allocateListNodeTransient<Location>(Loc));
   }
 
   auto *Mangler = ItaniumMangleContext::create(
@@ -937,9 +931,9 @@ void Serializer::populateMemberTypeInfo(T &I, const Decl *D) {
 
   Comment->setAttached();
   if (comments::FullComment *Fc = Comment->parse(Context, nullptr, D)) {
-    CommentInfo *NewCI = allocatePtr<CommentInfo>();
+    auto *NewCI = allocateListNodeTransient<CommentInfo>();
     I.Description.push_back(*NewCI);
-    parseFullComment(Fc, I.Description.back());
+    parseFullComment(Fc, *NewCI->Ptr);
   }
 }
 
@@ -998,7 +992,8 @@ void Serializer::parseBases(llvm::SmallVectorImpl<BaseRecordInfo> &Bases,
             FI.Access =
                 getFinalAccessSpecifier(BI.Access, MD->getAccessUnsafe());
             FunctionInfo *FIPtr = allocatePtr<FunctionInfo>(std::move(FI));
-            BI.Children.Functions.push_back(*FIPtr);
+            BI.Children.Functions.push_back(
+                *allocatePtr<InfoNode<FunctionInfo>>(FIPtr));
           }
         Bases.emplace_back(std::move(BI));
         // Call this function recursively to get the inherited classes of
@@ -1173,28 +1168,28 @@ Serializer::emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
 std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 Serializer::emitInfo(const FunctionDecl *D, const FullComment *FC, Location Loc,
                      bool PublicOnly) {
-  FunctionInfo Func;
+  FunctionInfo *Func = allocatePtr<FunctionInfo>();
   bool IsInAnonymousNamespace = false;
-  populateFunctionInfo(Func, D, FC, Loc, IsInAnonymousNamespace);
-  Func.Access = clang::AccessSpecifier::AS_none;
+  populateFunctionInfo(*Func, D, FC, Loc, IsInAnonymousNamespace);
+  Func->Access = clang::AccessSpecifier::AS_none;
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
 
   // Info is wrapped in its parent scope so is returned in the second position.
-  return {nullptr, makeAndInsertIntoParent<FunctionInfo &&>(std::move(Func))};
+  return {nullptr, makeAndInsertIntoParent(*Func)};
 }
 
 std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 Serializer::emitInfo(const CXXMethodDecl *D, const FullComment *FC,
                      Location Loc, bool PublicOnly) {
-  FunctionInfo Func;
+  FunctionInfo *Func = allocatePtr<FunctionInfo>();
   bool IsInAnonymousNamespace = false;
-  populateFunctionInfo(Func, D, FC, Loc, IsInAnonymousNamespace);
+  populateFunctionInfo(*Func, D, FC, Loc, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
 
-  Func.IsMethod = true;
-  Func.IsStatic = D->isStatic();
+  Func->IsMethod = true;
+  Func->IsStatic = D->isStatic();
 
   const NamedDecl *Parent = nullptr;
   if (const auto *SD =
@@ -1204,13 +1199,13 @@ Serializer::emitInfo(const CXXMethodDecl *D, const FullComment *FC,
     Parent = D->getParent();
 
   SymbolID ParentUSR = getUSRForDecl(Parent);
-  Func.Parent =
+  Func->Parent =
       Reference{ParentUSR, Parent->getNameAsString(), InfoType::IT_record,
                 Parent->getQualifiedNameAsString()};
-  Func.Access = D->getAccess();
+  Func->Access = D->getAccess();
 
   // Info is wrapped in its parent scope so is returned in the second position.
-  return {nullptr, makeAndInsertIntoParent<FunctionInfo &&>(std::move(Func))};
+  return {nullptr, makeAndInsertIntoParent(*Func)};
 }
 
 void Serializer::extractCommentFromDecl(const Decl *D, TypedefInfo &Info) {
@@ -1222,40 +1217,40 @@ void Serializer::extractCommentFromDecl(const Decl *D, TypedefInfo &Info) {
 
   Comment->setAttached();
   if (comments::FullComment *Fc = Comment->parse(Context, nullptr, D)) {
-    CommentInfo *NewCI = allocatePtr<CommentInfo>();
+    auto *NewCI = allocateListNodeTransient<CommentInfo>();
     Info.Description.push_back(*NewCI);
-    parseFullComment(Fc, *NewCI);
+    parseFullComment(Fc, *NewCI->Ptr);
   }
 }
 
 std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 Serializer::emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
                      bool PublicOnly) {
-  TypedefInfo Info;
+  TypedefInfo *Info = allocatePtr<TypedefInfo>();
   bool IsInAnonymousNamespace = false;
-  populateInfo(Info, D, FC, IsInAnonymousNamespace);
+  populateInfo(*Info, D, FC, IsInAnonymousNamespace);
 
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
 
-  Info.DefLoc = Loc;
+  Info->DefLoc = Loc;
   auto &LO = D->getLangOpts();
-  Info.Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
-  populateTemplateParameters(Info.Template, D);
-  if (Info.Template)
-    populateConstraints(Info.Template.value(), D->getDescribedTemplate());
+  Info->Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
+  populateTemplateParameters(Info->Template, D);
+  if (Info->Template)
+    populateConstraints(Info->Template.value(), D->getDescribedTemplate());
 
-  if (Info.Underlying.Type.Name.empty()) {
+  if (Info->Underlying.Type.Name.empty()) {
     // Typedef for an unnamed type. This is like "typedef struct { } Foo;"
     // The record serializer explicitly checks for this syntax and constructs
     // a record with that name, so we don't want to emit a duplicate here.
     return {};
   }
-  Info.IsUsing = false;
-  extractCommentFromDecl(D, Info);
+  Info->IsUsing = false;
+  extractCommentFromDecl(D, *Info);
 
   // Info is wrapped in its parent scope so is returned in the second position.
-  return {nullptr, makeAndInsertIntoParent<TypedefInfo &&>(std::move(Info))};
+  return {nullptr, makeAndInsertIntoParent(*Info)};
 }
 
 // A type alias is a C++ "using" declaration for a type. It gets mapped to a
@@ -1263,58 +1258,58 @@ Serializer::emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
 std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 Serializer::emitInfo(const TypeAliasDecl *D, const FullComment *FC,
                      Location Loc, bool PublicOnly) {
-  TypedefInfo Info;
+  TypedefInfo *Info = allocatePtr<TypedefInfo>();
   bool IsInAnonymousNamespace = false;
-  populateInfo(Info, D, FC, IsInAnonymousNamespace);
+  populateInfo(*Info, D, FC, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
 
-  Info.DefLoc = Loc;
+  Info->DefLoc = Loc;
   const LangOptions &LO = D->getLangOpts();
-  Info.Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
-  Info.TypeDeclaration = getTypeAlias(D);
-  Info.IsUsing = true;
-  populateTemplateParameters(Info.Template, D);
-  if (Info.Template)
-    populateConstraints(Info.Template.value(), D->getDescribedAliasTemplate());
+  Info->Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
+  Info->TypeDeclaration = getTypeAlias(D);
+  Info->IsUsing = true;
+  populateTemplateParameters(Info->Template, D);
+  if (Info->Template)
+    populateConstraints(Info->Template.value(), D->getDescribedAliasTemplate());
 
-  extractCommentFromDecl(D, Info);
+  extractCommentFromDecl(D, *Info);
 
   // Info is wrapped in its parent scope so is returned in the second position.
-  return {nullptr, makeAndInsertIntoParent<TypedefInfo &&>(std::move(Info))};
+  return {nullptr, makeAndInsertIntoParent(*Info)};
 }
 
 std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 Serializer::emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc,
                      bool PublicOnly) {
-  EnumInfo Enum;
+  EnumInfo *Enum = allocatePtr<EnumInfo>();
   bool IsInAnonymousNamespace = false;
-  populateSymbolInfo(Enum, D, FC, Loc, IsInAnonymousNamespace);
+  populateSymbolInfo(*Enum, D, FC, Loc, IsInAnonymousNamespace);
 
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
 
-  Enum.Scoped = D->isScoped();
+  Enum->Scoped = D->isScoped();
   if (const TypeSourceInfo *TSI = D->getIntegerTypeSourceInfo()) {
     auto Name = TSI->getType().getAsString();
-    Enum.BaseType = TypeInfo(Name, Name);
+    Enum->BaseType = TypeInfo(Name, Name);
   }
-  parseEnumerators(Enum, D);
+  parseEnumerators(*Enum, D);
 
   // Info is wrapped in its parent scope so is returned in the second position.
-  return {nullptr, makeAndInsertIntoParent<EnumInfo &&>(std::move(Enum))};
+  return {nullptr, makeAndInsertIntoParent(*Enum)};
 }
 
 std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 Serializer::emitInfo(const ConceptDecl *D, const FullComment *FC,
                      const Location &Loc, bool PublicOnly) {
-  ConceptInfo Concept;
+  ConceptInfo *Concept = allocatePtr<ConceptInfo>();
 
   bool IsInAnonymousNamespace = false;
-  populateInfo(Concept, D, FC, IsInAnonymousNamespace);
-  Concept.IsType = D->isTypeConcept();
-  Concept.DefLoc = Loc;
-  Concept.ConstraintExpression = exprToString(D->getConstraintExpr());
+  populateInfo(*Concept, D, FC, IsInAnonymousNamespace);
+  Concept->IsType = D->isTypeConcept();
+  Concept->DefLoc = Loc;
+  Concept->ConstraintExpression = exprToString(D->getConstraintExpr());
 
   if (auto *ConceptParams = D->getTemplateParameters()) {
     llvm::SmallVector<TemplateParamInfo, 4> LocalParams;
@@ -1322,34 +1317,34 @@ Serializer::emitInfo(const ConceptDecl *D, const FullComment *FC,
       LocalParams.emplace_back(getSourceCode(Param, Param->getSourceRange()));
     }
     if (!LocalParams.empty())
-      Concept.Template.Params =
+      Concept->Template.Params =
           allocateArray<TemplateParamInfo>(LocalParams, TransientArena);
   }
 
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
 
-  return {nullptr, makeAndInsertIntoParent<ConceptInfo &&>(std::move(Concept))};
+  return {nullptr, makeAndInsertIntoParent(*Concept)};
 }
 
 std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 Serializer::emitInfo(const VarDecl *D, const FullComment *FC,
                      const Location &Loc, bool PublicOnly) {
-  VarInfo Var;
+  VarInfo *Var = allocatePtr<VarInfo>();
   bool IsInAnonymousNamespace = false;
-  populateSymbolInfo(Var, D, FC, Loc, IsInAnonymousNamespace);
+  populateSymbolInfo(*Var, D, FC, Loc, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
 
   if (D->getStorageClass() == StorageClass::SC_Static)
-    Var.IsStatic = true;
-  Var.Type =
+    Var->IsStatic = true;
+  Var->Type =
       getTypeInfoForType(D->getType(), D->getASTContext().getPrintingPolicy());
 
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
 
-  return {nullptr, makeAndInsertIntoParent<VarInfo &&>(std::move(Var))};
+  return {nullptr, makeAndInsertIntoParent(*Var)};
 }
 
 } // namespace serialize

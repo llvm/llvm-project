@@ -19,6 +19,7 @@
 #include "AArch64TargetTransformInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "TargetInfo/AArch64TargetInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
@@ -240,45 +241,56 @@ LLVMInitializeAArch64Target() {
   initializeGlobalISel(PR);
   initializeAArch64A53Fix835769LegacyPass(PR);
   initializeAArch64A57FPLoadBalancingLegacyPass(PR);
+  initializeAArch64CodeLayoutOptPass(PR);
   initializeAArch64AdvSIMDScalarLegacyPass(PR);
   initializeAArch64AsmPrinterPass(PR);
   initializeAArch64BranchTargetsLegacyPass(PR);
   initializeAArch64CollectLOHLegacyPass(PR);
   initializeAArch64CompressJumpTablesLegacyPass(PR);
-  initializeAArch64ConditionalComparesPass(PR);
+  initializeAArch64ConditionalComparesLegacyPass(PR);
   initializeAArch64ConditionOptimizerLegacyPass(PR);
   initializeAArch64DeadRegisterDefinitionsLegacyPass(PR);
   initializeAArch64ExpandPseudoLegacyPass(PR);
   initializeAArch64LoadStoreOptLegacyPass(PR);
   initializeAArch64MIPeepholeOptLegacyPass(PR);
-  initializeAArch64SIMDInstrOptPass(PR);
+  initializeAArch64SIMDInstrOptLegacyPass(PR);
   initializeAArch64O0PreLegalizerCombinerLegacyPass(PR);
   initializeAArch64PreLegalizerCombinerLegacyPass(PR);
   initializeAArch64PointerAuthLegacyPass(PR);
   initializeAArch64PostCoalescerLegacyPass(PR);
   initializeAArch64PostLegalizerCombinerPass(PR);
-  initializeAArch64PostLegalizerLoweringPass(PR);
-  initializeAArch64PostSelectOptimizePass(PR);
+  initializeAArch64PostSelectOptimizeLegacyPass(PR);
+  initializeAArch64PostLegalizerLoweringLegacyPass(PR);
   initializeAArch64PromoteConstantPass(PR);
   initializeAArch64RedundantCopyEliminationLegacyPass(PR);
-  initializeAArch64RedundantCondBranchPass(PR);
+  initializeAArch64RedundantCondBranchLegacyPass(PR);
   initializeAArch64StorePairSuppressPass(PR);
   initializeFalkorHWPFFixPass(PR);
   initializeFalkorMarkStridedAccessesLegacyPass(PR);
   initializeLDTLSCleanupPass(PR);
-  initializeKCFIPass(PR);
+  initializeMachineKCFILegacyPass(PR);
   initializeMachineSMEABIPass(PR);
   initializeAArch64SRLTDefineSuperRegsPass(PR);
   initializeSMEPeepholeOptPass(PR);
   initializeSVEIntrinsicOptsPass(PR);
   initializeAArch64SpeculationHardeningPass(PR);
-  initializeAArch64SLSHardeningPass(PR);
+  initializeAArch64SLSHardeningLegacyPass(PR);
   initializeAArch64StackTaggingPass(PR);
-  initializeAArch64StackTaggingPreRAPass(PR);
-  initializeAArch64LowerHomogeneousPrologEpilogPass(PR);
+  initializeAArch64StackTaggingPreRALegacyPass(PR);
+  initializeAArch64LowerHomogeneousPrologEpilogLegacyPass(PR);
   initializeAArch64DAGToDAGISelLegacyPass(PR);
   initializeAArch64CondBrTuningPass(PR);
   initializeAArch64Arm64ECCallLoweringPass(PR);
+}
+
+bool AArch64TargetMachine::isGlobalISelOptNone() const {
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
+
+  return getOptLevel() == CodeGenOptLevel::None ||
+         (static_cast<unsigned>(getOptLevel()) >
+              static_cast<unsigned>(EnableGlobalISelAtO) &&
+          !GlobalISelFlag);
 }
 
 void AArch64TargetMachine::reset() { SubtargetMap.clear(); }
@@ -359,7 +371,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     this->Options.NoTrapAfterNoreturn = true;
   }
 
-  if (getMCAsmInfo()->usesWindowsCFI()) {
+  if (getMCAsmInfo().usesWindowsCFI()) {
     // Unwinding can get confused if the last instruction in an
     // exception-handling region (function, funclet, try block, etc.)
     // is a call.
@@ -397,6 +409,8 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     setGlobalISelAbort(GlobalISelAbortMode::Disable);
   }
 
+  LLT::setUseExtended(true);
+
   // AArch64 supports the MachineOutliner.
   setMachineOutliner(true);
 
@@ -407,7 +421,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
   setSupportsDebugEntryValues(true);
 
   // AArch64 supports fixing up the DWARF unwind information.
-  if (!getMCAsmInfo()->usesWindowsCFI())
+  if (!getMCAsmInfo().usesWindowsCFI())
     setCFIFixup(true);
 }
 
@@ -459,11 +473,21 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   }
 
   SmallString<512> Key;
-  raw_svector_ostream(Key) << "SVEMin" << MinSVEVectorSize << "SVEMax"
-                           << MaxSVEVectorSize << "IsStreaming=" << IsStreaming
-                           << "IsStreamingCompatible=" << IsStreamingCompatible
-                           << CPU << TuneCPU << FS
-                           << "HasMinSize=" << HasMinSize;
+  // This lookup is hot during repeated TTI queries, so build the key directly
+  // instead of formatting through raw_svector_ostream.
+  Key += "SVEMin";
+  Key += utostr(MinSVEVectorSize);
+  Key += "SVEMax";
+  Key += utostr(MaxSVEVectorSize);
+  Key += "IsStreaming=";
+  Key += utostr(IsStreaming);
+  Key += "IsStreamingCompatible=";
+  Key += utostr(IsStreamingCompatible);
+  Key += CPU;
+  Key += TuneCPU;
+  Key += FS;
+  Key += "HasMinSize=";
+  Key += utostr(HasMinSize);
 
   auto &I = SubtargetMap[Key];
   if (!I) {
@@ -571,9 +595,6 @@ public:
   bool addRegAssignAndRewriteOptimized() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
-
-private:
-  bool isGlobalISelOptNone() const;
 };
 
 } // end anonymous namespace
@@ -605,21 +626,6 @@ TargetPassConfig *AArch64TargetMachine::createPassConfig(PassManagerBase &PM) {
 
 std::unique_ptr<CSEConfigBase> AArch64PassConfig::getCSEConfig() const {
   return getStandardCSEConfigForOpt(TM->getOptLevel());
-}
-
-// This function checks whether the opt level is explicitly set to none,
-// or whether GlobalISel was enabled due to SDAG encountering an optnone
-// function. If the opt level is greater than the level we automatically enable
-// globalisel at, and it wasn't enabled via CLI, we know that it must be because
-// of an optnone function.
-bool AArch64PassConfig::isGlobalISelOptNone() const {
-  const bool GlobalISelFlag =
-      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
-
-  return getOptLevel() == CodeGenOptLevel::None ||
-         (static_cast<unsigned>(getOptLevel()) >
-              getAArch64TargetMachine().getEnableGlobalISelAtO() &&
-          !GlobalISelFlag);
 }
 
 void AArch64PassConfig::addIRPasses() {
@@ -691,7 +697,7 @@ void AArch64PassConfig::addIRPasses() {
     if (TM->getTargetTriple().isWindowsArm64EC())
       addPass(createAArch64Arm64ECCallLoweringPass());
     else
-      addPass(createCFGuardCheckPass());
+      addPass(createCFGuardPass());
   }
 
   if (TM->Options.JMCInstrument)
@@ -750,7 +756,7 @@ bool AArch64PassConfig::addIRTranslator() {
 }
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
-  if (isGlobalISelOptNone()) {
+  if (getAArch64TargetMachine().isGlobalISelOptNone()) {
     addPass(createAArch64O0PreLegalizerCombiner());
     addPass(new Localizer());
   } else {
@@ -767,8 +773,10 @@ bool AArch64PassConfig::addLegalizeMachineIR() {
 }
 
 void AArch64PassConfig::addPreRegBankSelect() {
-  if (!isGlobalISelOptNone()) {
-    addPass(createAArch64PostLegalizerCombiner(isGlobalISelOptNone()));
+  const bool IsGlobalISelOptNone =
+      getAArch64TargetMachine().isGlobalISelOptNone();
+  if (!IsGlobalISelOptNone) {
+    addPass(createAArch64PostLegalizerCombiner(IsGlobalISelOptNone));
     if (EnableGISelLoadStoreOptPostLegal)
       addPass(new LoadStoreOpt());
   }
@@ -782,7 +790,7 @@ bool AArch64PassConfig::addRegBankSelect() {
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
-  if (!isGlobalISelOptNone())
+  if (!getAArch64TargetMachine().isGlobalISelOptNone())
     addPass(createAArch64PostSelectOptimize());
   return false;
 }
@@ -816,7 +824,7 @@ bool AArch64PassConfig::addILPOpts() {
     addPass(createAArch64StorePairSuppressPass());
   addPass(createAArch64SIMDInstrOptPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createAArch64StackTaggingPreRAPass());
+    addPass(createAArch64StackTaggingPreRALegacyPass());
   return true;
 }
 
@@ -908,10 +916,15 @@ void AArch64PassConfig::addPreEmitPass() {
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableCollectLOH &&
       TM->getTargetTriple().isOSBinFormatMachO())
     addPass(createAArch64CollectLOHPass());
+
+  // Apply code layout optimizations. Run late so detection reflects the
+  // final MI stream.
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createAArch64CodeLayoutOptPass());
 }
 
 void AArch64PassConfig::addPostBBSections() {
-  addPass(createAArch64SLSHardeningPass());
+  addPass(createAArch64SLSHardeningLegacyPass());
   addPass(createAArch64PointerAuthPass());
   if (EnableBranchTargets)
     addPass(createAArch64BranchTargetsPass());

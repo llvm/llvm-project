@@ -1329,14 +1329,20 @@ bool LoopInterchangeLegality::findInductions(
   return !Inductions.empty();
 }
 
-// We currently only support LCSSA PHI nodes in the inner loop exit, if their
-// users are either reduction PHIs or PHIs outside the outer loop (which means
-// the we are only interested in the final value after the loop).
+/// We currently only support LCSSA PHI nodes in the inner loop exit if their
+/// users are either of the following:
+///
+/// - Reduction PHIs
+/// - PHIs outside the outer loop
+/// - PHIs belonging to the latch of the outer loop
+///
+/// These conditions mean that we are only interested in the final value after
+/// the inner loop.
 static bool
-areInnerLoopExitPHIsSupported(Loop *InnerL, Loop *OuterL,
+areInnerLoopExitPHIsSupported(Loop *OuterL, Loop *InnerL,
                               SmallPtrSetImpl<PHINode *> &Reductions,
                               PHINode *LcssaReduction) {
-  BasicBlock *InnerExit = OuterL->getUniqueExitBlock();
+  BasicBlock *InnerExit = InnerL->getUniqueExitBlock();
   for (PHINode &PHI : InnerExit->phis()) {
     // The reduction LCSSA PHI will have only one incoming block, which comes
     // from the loop latch.
@@ -1346,11 +1352,16 @@ areInnerLoopExitPHIsSupported(Loop *InnerL, Loop *OuterL,
       return true;
     if (any_of(PHI.users(), [&Reductions, OuterL](User *U) {
           PHINode *PN = dyn_cast<PHINode>(U);
-          return !PN ||
-                 (!Reductions.count(PN) && OuterL->contains(PN->getParent()));
-        })) {
+          if (!PN)
+            return true;
+          if (Reductions.count(PN))
+            return false;
+          BasicBlock *PB = PN->getParent();
+          if (!OuterL->contains(PB))
+            return false;
+          return PB != OuterL->getLoopLatch();
+        }))
       return false;
-    }
   }
   return true;
 }
@@ -1520,6 +1531,20 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
                                       OuterLoop->getStartLoc(),
                                       OuterLoop->getHeader())
              << "Found unsupported PHI node in loop exit.";
+    });
+    return false;
+  }
+
+  if (any_of(OuterLoop->getLoopLatch()->phis(),
+             [](PHINode &PHI) { return PHI.getNumIncomingValues() != 1; })) {
+    LLVM_DEBUG(dbgs() << "Only outer loop latch PHI nodes with one incoming "
+                         "value are supported.\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLatchPHI",
+                                      OuterLoop->getStartLoc(),
+                                      OuterLoop->getHeader())
+             << "Only outer loop latch PHI nodes with one incoming value are "
+                "supported.";
     });
     return false;
   }
@@ -1935,7 +1960,6 @@ bool LoopInterchangeTransform::transform(
     reduction2Memory();
 
   if (InnerLoop->getSubLoops().empty()) {
-    BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
     LLVM_DEBUG(dbgs() << "Splitting the inner loop latch\n");
     auto &InductionPHIs = LIL.getInnerLoopInductions();
     if (InductionPHIs.empty()) {
@@ -1945,12 +1969,13 @@ bool LoopInterchangeTransform::transform(
 
     SmallVector<Instruction *, 8> InnerIndexVarList;
     for (PHINode *CurInductionPHI : InductionPHIs) {
-      if (CurInductionPHI->getIncomingBlock(0) == InnerLoopPreHeader)
-        InnerIndexVarList.push_back(
-            dyn_cast<Instruction>(CurInductionPHI->getIncomingValue(1)));
-      else
-        InnerIndexVarList.push_back(
-            dyn_cast<Instruction>(CurInductionPHI->getIncomingValue(0)));
+      Instruction *IncomingValue = dyn_cast<Instruction>(
+          CurInductionPHI->getIncomingValueForBlock(InnerLoop->getLoopLatch()));
+      assert(IncomingValue &&
+             "Incoming value from loop latch doesn't an instruction");
+      if (is_contained(InductionPHIs, IncomingValue))
+        continue;
+      InnerIndexVarList.push_back(IncomingValue);
     }
 
     // Create a new latch block for the inner loop. We split at the
@@ -2019,7 +2044,15 @@ bool LoopInterchangeTransform::transform(
   // instructions outside the loop nest.
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
   BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
+
   if (InnerLoopPreHeader != OuterLoopHeader) {
+    // Eliminate PHIs in the inner-loop preheader.
+    for (PHINode &P : make_early_inc_range(InnerLoopPreHeader->phis())) {
+      assert(P.getNumIncomingValues() == 1 &&
+             "Expected single-incoming PHIs in inner loop preheader");
+      P.replaceAllUsesWith(P.getIncomingValue(0));
+      P.eraseFromParent();
+    }
     for (Instruction &I :
          make_early_inc_range(make_range(InnerLoopPreHeader->begin(),
                                          std::prev(InnerLoopPreHeader->end()))))

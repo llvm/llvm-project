@@ -56,7 +56,6 @@ struct Config {
   bool compressRelocations;
   bool demangle;
   bool disableVerify;
-  bool experimentalPic;
   bool emitRelocs;
   bool exportAll;
   bool exportDynamic;
@@ -82,8 +81,9 @@ struct Config {
   bool stripAll;
   bool stripDebug;
   bool stackFirst;
-  // Because dyamanic linking under Wasm is still experimental we default to
-  // static linking
+  // Static linking is currently the default under WebAssembly.  This may
+  // change as some point in the future if dynamic linking becomes more widely
+  // used.
   bool isStatic = true;
   bool thinLTOEmitImportsFiles;
   bool thinLTOEmitIndexFiles;

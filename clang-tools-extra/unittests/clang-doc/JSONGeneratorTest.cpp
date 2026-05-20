@@ -35,7 +35,8 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
   E.Scoped = false;
   EnumValueInfo EV[] = {EnumValueInfo("RED", "0")};
   E.Members = llvm::ArrayRef(EV);
-  I.Children.Enums.push_back(E);
+  InfoNode<EnumInfo> ENode(&E);
+  I.Children.Enums.push_back(ENode);
 
   MemberTypeInfo M[] = {
       MemberTypeInfo(TypeInfo("int"), "X", AccessSpecifier::AS_protected)};
@@ -45,7 +46,8 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
                    true);
   FunctionInfo F;
   F.Name = "InheritedFunctionOne";
-  B.Children.Functions.push_back(F);
+  InfoNode<FunctionInfo> FNode(&F);
+  B.Children.Functions.push_back(FNode);
   MemberTypeInfo BM[] = {
       MemberTypeInfo(TypeInfo("int"), "N", AccessSpecifier::AS_public)};
   B.Members = llvm::ArrayRef(BM);
@@ -62,11 +64,13 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
 
   Reference ChildStruct(EmptySID, "ChildStruct", InfoType::IT_record,
                         "path::to::A::r::ChildStruct", "path/to/A/r");
-  I.Children.Records.push_back(ChildStruct);
+  InfoNode<Reference> ChildStructNode(&ChildStruct);
+  I.Children.Records.push_back(ChildStructNode);
 
   FunctionInfo F2;
   F2.Name = "OneFunction";
-  I.Children.Functions.push_back(F2);
+  InfoNode<FunctionInfo> F2Node(&F2);
+  I.Children.Functions.push_back(F2Node);
 
   auto G = getJSONGenerator();
   assert(G);
@@ -218,20 +222,24 @@ TEST_F(JSONGeneratorTest, emitNamespaceJSON) {
   Reference NewNamespace(EmptySID, "ChildNamespace", InfoType::IT_namespace,
                          "path::to::A::Namespace::ChildNamespace",
                          "path/to/A/Namespace");
-  I.Children.Namespaces.push_back(NewNamespace);
+  InfoNode<Reference> NewNamespaceNode(&NewNamespace);
+  I.Children.Namespaces.push_back(NewNamespaceNode);
 
   Reference ChildStruct(EmptySID, "ChildStruct", InfoType::IT_record,
                         "path::to::A::Namespace::ChildStruct",
                         "path/to/A/Namespace");
-  I.Children.Records.push_back(ChildStruct);
+  InfoNode<Reference> ChildStructNode(&ChildStruct);
+  I.Children.Records.push_back(ChildStructNode);
   FunctionInfo F;
   F.Name = "OneFunction";
   F.Access = AccessSpecifier::AS_none;
-  I.Children.Functions.push_back(F);
+  InfoNode<FunctionInfo> FNode(&F);
+  I.Children.Functions.push_back(FNode);
 
   EnumInfo E;
   E.Name = "OneEnum";
-  I.Children.Enums.push_back(E);
+  InfoNode<EnumInfo> ENode(&E);
+  I.Children.Enums.push_back(ENode);
 
   auto G = getJSONGenerator();
   assert(G);

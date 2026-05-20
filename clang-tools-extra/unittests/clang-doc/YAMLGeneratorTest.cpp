@@ -34,19 +34,25 @@ TEST_F(YAMLGeneratorTest, emitNamespaceYAML) {
   Reference NewNamespace(EmptySID, "ChildNamespace", InfoType::IT_namespace,
                          "path::to::A::Namespace::ChildNamespace",
                          "path/to/A/Namespace");
-  I.Children.Namespaces.push_back(NewNamespace);
+  InfoNode<Reference> NewNamespaceNode(&NewNamespace);
+  I.Children.Namespaces.push_back(NewNamespaceNode);
+
   Reference ChildStruct(EmptySID, "ChildStruct", InfoType::IT_record,
                         "path::to::A::Namespace::ChildStruct",
                         "path/to/A/Namespace");
-  I.Children.Records.push_back(ChildStruct);
+  InfoNode<Reference> ChildStructNode(&ChildStruct);
+  I.Children.Records.push_back(ChildStructNode);
+
   FunctionInfo F;
   F.Name = "OneFunction";
   F.Access = AccessSpecifier::AS_none;
-  I.Children.Functions.push_back(F);
+  InfoNode<FunctionInfo> FNode(&F);
+  I.Children.Functions.push_back(FNode);
 
   EnumInfo E;
   E.Name = "OneEnum";
-  I.Children.Enums.push_back(E);
+  InfoNode<EnumInfo> ENode(&E);
+  I.Children.Enums.push_back(ENode);
 
   auto G = getYAMLGenerator();
   assert(G);
@@ -95,7 +101,8 @@ TEST_F(YAMLGeneratorTest, emitRecordYAML) {
 
   I.DefLoc = Location(10, 10, "test.cpp");
   Location Loc1(12, 12, "test.cpp");
-  I.Loc.push_back(Loc1);
+  InfoNode<Location> Loc1Node(&Loc1);
+  I.Loc.push_back(Loc1Node);
 
   MemberTypeInfo M(TypeInfo("int"), "X", AccessSpecifier::AS_private);
 
@@ -106,7 +113,8 @@ TEST_F(YAMLGeneratorTest, emitRecordYAML) {
   CommentInfo TopCommentChildren[] = {
       CommentInfo(CommentKind::CK_ParagraphComment, BriefChildren)};
   CommentInfo TopComment(CommentKind::CK_FullComment, TopCommentChildren);
-  M.Description.push_back(TopComment);
+  InfoNode<CommentInfo> TopCommentNode(&TopComment);
+  M.Description.push_back(TopCommentNode);
   MemberTypeInfo MemArr[] = {std::move(M)};
   I.Members = llvm::ArrayRef(MemArr);
 
@@ -115,7 +123,8 @@ TEST_F(YAMLGeneratorTest, emitRecordYAML) {
                    true);
   FunctionInfo F;
   F.Name = "InheritedFunctionOne";
-  B.Children.Functions.push_back(F);
+  InfoNode<FunctionInfo> FNode(&F);
+  B.Children.Functions.push_back(FNode);
   MemberTypeInfo BMem[] = {
       MemberTypeInfo(TypeInfo("int"), "N", AccessSpecifier::AS_private)};
   B.Members = llvm::ArrayRef(BMem);
@@ -131,14 +140,18 @@ TEST_F(YAMLGeneratorTest, emitRecordYAML) {
 
   Reference ChildStruct(EmptySID, "ChildStruct", InfoType::IT_record,
                         "path::to::A::r::ChildStruct", "path/to/A/r");
-  I.Children.Records.push_back(ChildStruct);
+  InfoNode<Reference> ChildStructNode(&ChildStruct);
+  I.Children.Records.push_back(ChildStructNode);
+
   FunctionInfo F2;
   F2.Name = "OneFunction";
-  I.Children.Functions.push_back(F2);
+  InfoNode<FunctionInfo> F2Node(&F2);
+  I.Children.Functions.push_back(F2Node);
 
   EnumInfo E;
   E.Name = "OneEnum";
-  I.Children.Enums.push_back(E);
+  InfoNode<EnumInfo> ENode(&E);
+  I.Children.Enums.push_back(ENode);
 
   auto G = getYAMLGenerator();
   assert(G);
@@ -230,7 +243,8 @@ TEST_F(YAMLGeneratorTest, emitFunctionYAML) {
 
   I.DefLoc = Location(10, 10, "test.cpp");
   Location Loc1(12, 12, "test.cpp");
-  I.Loc.push_back(Loc1);
+  InfoNode<Location> Loc1Node(&Loc1);
+  I.Loc.push_back(Loc1Node);
 
   I.Access = AccessSpecifier::AS_none;
 
@@ -300,7 +314,8 @@ TEST_F(YAMLGeneratorTest, emitSimpleEnumYAML) {
 
   I.DefLoc = Location(10, 10, "test.cpp");
   Location Loc1(12, 12, "test.cpp");
-  I.Loc.push_back(Loc1);
+  InfoNode<Location> Loc1Node(&Loc1);
+  I.Loc.push_back(Loc1Node);
 
   EnumValueInfo EV[] = {EnumValueInfo("X")};
   I.Members = llvm::ArrayRef(EV);
@@ -473,8 +488,8 @@ TEST_F(YAMLGeneratorTest, emitCommentYAML) {
   CommentInfo TopChildren[] = {BlankLine, Brief,    Extended, HTML,
                                Verbatim,  ParamOut, ParamIn,  Return};
   CommentInfo Top(CommentKind::CK_FullComment, TopChildren);
-
-  I.Description.push_back(Top);
+  InfoNode<CommentInfo> TopNode(&Top);
+  I.Description.push_back(TopNode);
 
   auto G = getYAMLGenerator();
   assert(G);

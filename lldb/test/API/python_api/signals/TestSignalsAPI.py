@@ -10,10 +10,10 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.lldbutil import get_stopped_thread, state_type_to_str
 
 
+@skipIfNoSignals
 class SignalsAPITestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfWindows  # Windows doesn't have signals
     def test_ignore_signal(self):
         """Test Python SBUnixSignals.Suppress/Stop/Notify() API."""
         self.build()

@@ -23,7 +23,7 @@ DEBUGADDR: 0x0000000000000059
 DEBUGADDR: 0x0000000000000000
 DEBUGADDR: ]
 
-RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx-0x0-last.out -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
+RUN: dsymutil --linker classic -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx-0x0-last.out -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
 RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 | FileCheck %s
 RUN: llvm-dwarfdump --verbose -debug-info %t.dSYM | FileCheck %s --check-prefix DEBUGINFO
 RUN: llvm-dwarfdump --verbose -debug-line %t.dSYM | FileCheck %s --check-prefix DEBUGLINE

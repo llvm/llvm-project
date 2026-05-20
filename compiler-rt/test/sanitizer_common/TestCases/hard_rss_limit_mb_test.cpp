@@ -10,8 +10,8 @@
 // RUN: %env_tool_opts=hard_rss_limit_mb=4000 %run %t
 // RUN: %run %t
 //
-// Neither Tysan nor Ubsan intercept pthread_create.
-// XFAIL: tysan, ubsan
+// Ubsan does not intercept pthread_create.
+// XFAIL: ubsan
 // UNSUPPORTED: target={{.*(freebsd|solaris).*}}, darwin
 
 // THUMB starts background thead only for Asan.

@@ -147,7 +147,14 @@ public:
   MemberPointer takeInstance(Pointer Instance) const {
     assert(this->Base.isZero());
     return MemberPointer(Instance, DeclAndIsDerivedMember.getPointer(),
-                         this->PtrOffset);
+                         this->PtrOffset, PathLength, Path,
+                         DeclAndIsDerivedMember.getInt());
+  }
+
+  MemberPointer withPath(uint8_t PathLength, const CXXRecordDecl **Path,
+                         bool IsDerived) const {
+    return MemberPointer(this->Base, DeclAndIsDerivedMember.getPointer(),
+                         PtrOffset, PathLength, Path, IsDerived);
   }
 
   APValue toAPValue(const ASTContext &) const;

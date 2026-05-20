@@ -81,7 +81,7 @@ class TableCommentWriter {
 public:
   explicit TableCommentWriter(llvm::raw_ostream &OS) : OS(OS) {}
 
-  void write(const OwningVec<CommentInfo> &Comments) {
+  void write(const DocList<CommentInfo> &Comments) {
     for (const auto &C : Comments)
       writeTableSafeComment(C);
 
@@ -388,7 +388,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const RecordInfo &I,
   if (!I.Children.Records.empty()) {
     writeHeader("Records", 2, OS);
     for (const auto &R : I.Children.Records)
-      writeLine(R.Name, OS);
+      writeLine(R->Name, OS);
     writeNewLine(OS);
   }
   if (!I.Children.Functions.empty()) {

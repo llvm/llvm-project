@@ -41,6 +41,10 @@ public:
 
     llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Attach(lldb::pid_t pid, NativeDelegate &native_delegate) override;
+
+    Extension GetSupportedExtensions() const override {
+      return Extension::libraries;
+    }
   };
 
   Status Resume(const ResumeActionList &resume_actions) override;
@@ -95,6 +99,10 @@ public:
   Status GetFileLoadAddress(const llvm::StringRef &file_name,
                             lldb::addr_t &load_addr) override;
 
+  llvm::Expected<std::vector<LoadedLibraryInfo>> GetLoadedLibraries() override;
+
+  bool HasPendingLibraryEvents() override;
+
   // ProcessDebugger Overrides
   void OnExitProcess(uint32_t exit_code) override;
   void OnDebuggerConnected(lldb::addr_t image_base) override;
@@ -134,6 +142,10 @@ private:
 
   Status CacheLoadedModules();
   std::map<lldb_private::FileSpec, lldb::addr_t> m_loaded_modules;
+
+  /// Set whenever an OS DLL load/unload event has been seen since the last stop
+  /// reply.
+  bool m_pending_library_events = true;
 };
 
 //------------------------------------------------------------------

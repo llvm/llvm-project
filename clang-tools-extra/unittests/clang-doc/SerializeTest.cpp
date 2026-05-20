@@ -137,7 +137,8 @@ TEST_F(SerializeTest, emitNamespaceInfo) {
                      Reference(EmptySID, "A", InfoType::IT_namespace)};
   F.Namespace = llvm::ArrayRef(NsF);
   F.Access = AccessSpecifier::AS_none;
-  ExpectedBWithFunction.Children.Functions.push_back(F);
+  InfoNode<FunctionInfo> FNode(&F);
+  ExpectedBWithFunction.Children.Functions.push_back(FNode);
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
 
@@ -199,7 +200,8 @@ typedef struct {} G;)raw",
   EConstructor.Namespace = llvm::ArrayRef(NsEC);
   EConstructor.Access = AccessSpecifier::AS_public;
   EConstructor.IsMethod = true;
-  ExpectedRecordWithEConstructor.Children.Functions.push_back(EConstructor);
+  InfoNode<FunctionInfo> EConstructorNode(&EConstructor);
+  ExpectedRecordWithEConstructor.Children.Functions.push_back(EConstructorNode);
   CheckRecordInfo(&ExpectedRecordWithEConstructor, RecordWithEConstructor);
 
   RecordInfo *RecordWithMethod = InfoAsRecord(Infos[3]);
@@ -209,14 +211,16 @@ typedef struct {} G;)raw",
   Method.Parent = Reference(EmptySID, "E", InfoType::IT_record);
   Method.ReturnType = TypeInfo("void");
   Location LMethod(0, 0, "test.cpp");
-  Method.Loc.push_back(LMethod);
+  InfoNode<Location> LMethodNode(&LMethod);
+  Method.Loc.push_back(LMethodNode);
   Reference NsMethod[] = {
       Reference(EmptySID, "E", InfoType::IT_record),
       Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
   Method.Namespace = llvm::ArrayRef(NsMethod);
   Method.Access = AccessSpecifier::AS_protected;
   Method.IsMethod = true;
-  ExpectedRecordWithMethod.Children.Functions.push_back(Method);
+  InfoNode<FunctionInfo> MethodNode(&Method);
+  ExpectedRecordWithMethod.Children.Functions.push_back(MethodNode);
   CheckRecordInfo(&ExpectedRecordWithMethod, RecordWithMethod);
 
   RecordInfo *F = InfoAsRecord(Infos[4]);
@@ -235,14 +239,17 @@ typedef struct {} G;)raw",
   TemplateMethod.Parent = Reference(EmptySID, "F", InfoType::IT_record);
   TemplateMethod.ReturnType = TypeInfo("void");
   Location LTemp1(0, 0, "test.cpp");
-  TemplateMethod.Loc.push_back(LTemp1);
+  InfoNode<Location> LTemp1Node(&LTemp1);
+  TemplateMethod.Loc.push_back(LTemp1Node);
   Reference NsT1[] = {
       Reference(EmptySID, "F", InfoType::IT_record),
       Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
   TemplateMethod.Namespace = llvm::ArrayRef(NsT1);
   TemplateMethod.Access = AccessSpecifier::AS_public;
   TemplateMethod.IsMethod = true;
-  ExpectedRecordWithTemplateMethod.Children.Functions.push_back(TemplateMethod);
+  InfoNode<FunctionInfo> TemplateMethodNode(&TemplateMethod);
+  ExpectedRecordWithTemplateMethod.Children.Functions.push_back(
+      TemplateMethodNode);
   CheckRecordInfo(&ExpectedRecordWithTemplateMethod, RecordWithTemplateMethod);
 
   RecordInfo *TemplatedRecord = InfoAsRecord(Infos[7]);
@@ -253,15 +260,18 @@ typedef struct {} G;)raw",
       Reference(EmptySID, "F", InfoType::IT_record);
   SpecializedTemplateMethod.ReturnType = TypeInfo("void");
   Location LTemp2(0, 0, "test.cpp");
-  SpecializedTemplateMethod.Loc.push_back(LTemp2);
+  InfoNode<Location> LTemp2Node(&LTemp2);
+  SpecializedTemplateMethod.Loc.push_back(LTemp2Node);
   Reference NsT2[] = {
       Reference(EmptySID, "F", InfoType::IT_record),
       Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
   SpecializedTemplateMethod.Namespace = llvm::ArrayRef(NsT2);
   SpecializedTemplateMethod.Access = AccessSpecifier::AS_public;
   SpecializedTemplateMethod.IsMethod = true;
+  InfoNode<FunctionInfo> SpecializedTemplateMethodNode(
+      &SpecializedTemplateMethod);
   ExpectedTemplatedRecord.Children.Functions.push_back(
-      SpecializedTemplateMethod);
+      SpecializedTemplateMethodNode);
   CheckRecordInfo(&ExpectedTemplatedRecord, TemplatedRecord);
 
   RecordInfo *G = InfoAsRecord(Infos[8]);
@@ -288,7 +298,8 @@ TEST_F(SerializeTest, emitEnumInfo) {
   E.DefLoc = Location(0, 0, "test.cpp");
   EnumValueInfo EMem[] = {EnumValueInfo("X", "0"), EnumValueInfo("Y", "1")};
   E.Members = llvm::ArrayRef(EMem);
-  ExpectedNamespaceWithEnum.Children.Enums.push_back(E);
+  InfoNode<EnumInfo> ENode(&E);
+  ExpectedNamespaceWithEnum.Children.Enums.push_back(ENode);
   CheckNamespaceInfo(&ExpectedNamespaceWithEnum, NamespaceWithEnum);
 
   NamespaceInfo *NamespaceWithScopedEnum = InfoAsNamespace(Infos[1]);
@@ -299,7 +310,8 @@ TEST_F(SerializeTest, emitEnumInfo) {
   G.DefLoc = Location(0, 0, "test.cpp");
   EnumValueInfo GMem[] = {EnumValueInfo("A", "0"), EnumValueInfo("B", "1")};
   G.Members = llvm::ArrayRef(GMem);
-  ExpectedNamespaceWithScopedEnum.Children.Enums.push_back(G);
+  InfoNode<EnumInfo> GNode(&G);
+  ExpectedNamespaceWithScopedEnum.Children.Enums.push_back(GNode);
   CheckNamespaceInfo(&ExpectedNamespaceWithScopedEnum, NamespaceWithScopedEnum);
 }
 
@@ -314,7 +326,8 @@ TEST_F(SerializeTest, emitUndefinedRecordInfo) {
   ExpectedE.Namespace = llvm::ArrayRef(NsE);
   ExpectedE.TagType = TagTypeKind::Class;
   Location LE(0, 0, "test.cpp");
-  ExpectedE.Loc.push_back(LE);
+  InfoNode<Location> LENode(&LE);
+  ExpectedE.Loc.push_back(LENode);
   CheckRecordInfo(&ExpectedE, E);
 }
 
@@ -381,7 +394,8 @@ TEST_F(SerializeTest, emitPublicFunctionInternalInfo) {
   F.ReturnType = TypeInfo("int");
   F.DefLoc = Location(0, 0, "test.cpp");
   F.Access = AccessSpecifier::AS_none;
-  ExpectedBWithFunction.Children.Functions.push_back(F);
+  InfoNode<FunctionInfo> FNode(&F);
+  ExpectedBWithFunction.Children.Functions.push_back(FNode);
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
 
@@ -399,7 +413,8 @@ TEST_F(SerializeTest, emitInlinedFunctionInfo) {
   FieldTypeInfo Params[] = {FieldTypeInfo(TypeInfo("int"), "I")};
   F.Params = llvm::ArrayRef(Params);
   F.Access = AccessSpecifier::AS_none;
-  ExpectedBWithFunction.Children.Functions.push_back(F);
+  InfoNode<FunctionInfo> FNode(&F);
+  ExpectedBWithFunction.Children.Functions.push_back(FNode);
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
 
@@ -454,7 +469,8 @@ class J : public I<int> {} ;)raw",
   FunctionSet.Name = "set";
   FunctionSet.ReturnType = TypeInfo("void");
   Location LSet;
-  FunctionSet.Loc.push_back(LSet);
+  InfoNode<Location> LSetNode(&LSet);
+  FunctionSet.Loc.push_back(LSetNode);
   FieldTypeInfo ParamsSet[] = {FieldTypeInfo(TypeInfo("int"), "N")};
   FunctionSet.Params = llvm::ArrayRef(ParamsSet);
   Reference NsSet[] = {
@@ -468,7 +484,8 @@ class J : public I<int> {} ;)raw",
                                 // original it was AS_protected.
   FunctionSet.Access = AccessSpecifier::AS_protected;
   FunctionSet.IsMethod = true;
-  BaseF.Children.Functions.push_back(FunctionSet);
+  InfoNode<FunctionInfo> FunctionSetNode(&FunctionSet);
+  BaseF.Children.Functions.push_back(FunctionSetNode);
 
   BaseRecordInfo BaseG(EmptySID, /*Name=*/"G",
                        /*Path=*/"GlobalNamespace", true,
@@ -484,7 +501,8 @@ class J : public I<int> {} ;)raw",
   FunctionGet.Namespace = llvm::ArrayRef(NsGet);
   FunctionGet.Access = AccessSpecifier::AS_private;
   FunctionGet.IsMethod = true;
-  BaseG.Children.Functions.push_back(FunctionGet);
+  InfoNode<FunctionInfo> FunctionGetNode(&FunctionGet);
+  BaseG.Children.Functions.push_back(FunctionGetNode);
   MemberTypeInfo MemG2[] = {
       MemberTypeInfo(TypeInfo("int"), "I", AccessSpecifier::AS_private)};
   BaseG.Members = llvm::ArrayRef(MemG2);
@@ -521,7 +539,8 @@ class J : public I<int> {} ;)raw",
   FunctionSetNew.Name = "set";
   FunctionSetNew.ReturnType = TypeInfo("void");
   Location LSetNew;
-  FunctionSetNew.Loc.push_back(LSetNew);
+  InfoNode<Location> LSetNewNode(&LSetNew);
+  FunctionSetNew.Loc.push_back(LSetNewNode);
   FieldTypeInfo ParamsSetNew[] = {FieldTypeInfo(TypeInfo("int"), "N")};
   FunctionSetNew.Params = llvm::ArrayRef(ParamsSetNew);
   Reference NsSetNew[] = {
@@ -530,7 +549,8 @@ class J : public I<int> {} ;)raw",
   FunctionSetNew.Namespace = llvm::ArrayRef(NsSetNew);
   FunctionSetNew.Access = AccessSpecifier::AS_private;
   FunctionSetNew.IsMethod = true;
-  BaseHF.Children.Functions.push_back(FunctionSetNew);
+  InfoNode<FunctionInfo> FunctionSetNewNode(&FunctionSetNew);
+  BaseHF.Children.Functions.push_back(FunctionSetNewNode);
   BaseRecordInfo BaseHG(EmptySID, /*Name=*/"G",
                         /*Path=*/"GlobalNamespace", true,
                         AccessSpecifier::AS_private, false);
@@ -545,7 +565,8 @@ class J : public I<int> {} ;)raw",
   FunctionGetNew.Namespace = llvm::ArrayRef(NsGetNew);
   FunctionGetNew.Access = AccessSpecifier::AS_private;
   FunctionGetNew.IsMethod = true;
-  BaseHG.Children.Functions.push_back(FunctionGetNew);
+  InfoNode<FunctionInfo> FunctionGetNewNode(&FunctionGetNew);
+  BaseHG.Children.Functions.push_back(FunctionGetNewNode);
   MemberTypeInfo MemHG[] = {
       MemberTypeInfo(TypeInfo("int"), "I", AccessSpecifier::AS_private)};
   BaseHG.Members = llvm::ArrayRef(MemHG);
@@ -598,13 +619,15 @@ export double exportedModuleFunction(double y);)raw",
   F.Name = "moduleFunction";
   F.ReturnType = TypeInfo("int");
   Location LF1(0, 0, "test.cpp");
-  F.Loc.push_back(LF1);
+  InfoNode<Location> LF1Node(&LF1);
+  F.Loc.push_back(LF1Node);
   FieldTypeInfo ParamsF[] = {FieldTypeInfo(TypeInfo("int"), "x"),
                              FieldTypeInfo(TypeInfo("double"), "d")};
   ParamsF[1].DefaultValue = "3.2 - 1.0";
   F.Params = llvm::ArrayRef(ParamsF);
   F.Access = AccessSpecifier::AS_none;
-  ExpectedBWithFunction.Children.Functions.push_back(F);
+  InfoNode<FunctionInfo> FNode(&F);
+  ExpectedBWithFunction.Children.Functions.push_back(FNode);
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 
   NamespaceInfo *BWithExportedFunction = InfoAsNamespace(Infos[1]);
@@ -614,11 +637,13 @@ export double exportedModuleFunction(double y);)raw",
   ExportedF.ReturnType =
       TypeInfo(Reference(EmptySID, "double", InfoType::IT_default));
   Location LF2(0, 0, "test.cpp");
-  ExportedF.Loc.push_back(LF2);
+  InfoNode<Location> LF2Node(&LF2);
+  ExportedF.Loc.push_back(LF2Node);
   FieldTypeInfo ParamsExportedF[] = {FieldTypeInfo(TypeInfo("double"), "y")};
   ExportedF.Params = llvm::ArrayRef(ParamsExportedF);
   ExportedF.Access = AccessSpecifier::AS_none;
-  ExpectedBWithExportedFunction.Children.Functions.push_back(ExportedF);
+  InfoNode<FunctionInfo> ExportedFNode(&ExportedF);
+  ExpectedBWithExportedFunction.Children.Functions.push_back(ExportedFNode);
   CheckNamespaceInfo(&ExpectedBWithExportedFunction, BWithExportedFunction);
 }
 
@@ -631,7 +656,8 @@ TEST_F(SerializeTest, emitChildRecords) {
   NamespaceInfo *ParentA = InfoAsNamespace(Infos[1]);
   NamespaceInfo ExpectedParentA(EmptySID);
   Reference RA(EmptySID, "A", InfoType::IT_record, "A", "GlobalNamespace");
-  ExpectedParentA.Children.Records.push_back(RA);
+  InfoNode<Reference> RANode(&RA);
+  ExpectedParentA.Children.Records.push_back(RANode);
   CheckNamespaceInfo(&ExpectedParentA, ParentA);
 
   RecordInfo *ParentB = InfoAsRecord(Infos[3]);
@@ -639,13 +665,15 @@ TEST_F(SerializeTest, emitChildRecords) {
   llvm::SmallString<128> ExpectedParentBPath("GlobalNamespace/A");
   llvm::sys::path::native(ExpectedParentBPath);
   Reference RB(EmptySID, "B", InfoType::IT_record, "A::B", ExpectedParentBPath);
-  ExpectedParentB.Children.Records.push_back(RB);
+  InfoNode<Reference> RBNode(&RB);
+  ExpectedParentB.Children.Records.push_back(RBNode);
   CheckRecordInfo(&ExpectedParentB, ParentB);
 
   NamespaceInfo *ParentC = InfoAsNamespace(Infos[7]);
   NamespaceInfo ExpectedParentC(EmptySID);
   Reference RC(EmptySID, "C", InfoType::IT_record, "C", "@nonymous_namespace");
-  ExpectedParentC.Children.Records.push_back(RC);
+  InfoNode<Reference> RCNode(&RC);
+  ExpectedParentC.Children.Records.push_back(RCNode);
   CheckNamespaceInfo(&ExpectedParentC, ParentC);
 }
 
@@ -658,13 +686,15 @@ TEST_F(SerializeTest, emitChildNamespaces) {
   NamespaceInfo *ParentA = InfoAsNamespace(Infos[1]);
   NamespaceInfo ExpectedParentA(EmptySID);
   Reference RA(EmptySID, "A", InfoType::IT_namespace);
-  ExpectedParentA.Children.Namespaces.push_back(RA);
+  InfoNode<Reference> RANode(&RA);
+  ExpectedParentA.Children.Namespaces.push_back(RANode);
   CheckNamespaceInfo(&ExpectedParentA, ParentA);
 
   NamespaceInfo *ParentB = InfoAsNamespace(Infos[3]);
   NamespaceInfo ExpectedParentB(EmptySID);
   Reference RB(EmptySID, "B", InfoType::IT_namespace, "A::B", "A");
-  ExpectedParentB.Children.Namespaces.push_back(RB);
+  InfoNode<Reference> RBNode(&RB);
+  ExpectedParentB.Children.Namespaces.push_back(RBNode);
   CheckNamespaceInfo(&ExpectedParentB, ParentB);
 }
 

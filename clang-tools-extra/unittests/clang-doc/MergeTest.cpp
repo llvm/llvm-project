@@ -22,19 +22,23 @@ TEST_F(MergeTest, mergeNamespaceInfos) {
   One.Namespace = llvm::ArrayRef(Ns1);
 
   Reference RA(NonEmptySID, "ChildNamespace", InfoType::IT_namespace);
-  One.Children.Namespaces.push_back(RA);
+  InfoNode<Reference> RANode(&RA);
+  One.Children.Namespaces.push_back(RANode);
   Reference RC1(NonEmptySID, "ChildStruct", InfoType::IT_record);
-  One.Children.Records.push_back(RC1);
+  InfoNode<Reference> RC1Node(&RC1);
+  One.Children.Records.push_back(RC1Node);
 
   FunctionInfo F1;
   F1.Name = "OneFunction";
   F1.USR = NonEmptySID;
-  One.Children.Functions.push_back(F1);
+  InfoNode<FunctionInfo> F1Node(&F1);
+  One.Children.Functions.push_back(F1Node);
 
   EnumInfo E1;
   E1.Name = "OneEnum";
   E1.USR = NonEmptySID;
-  One.Children.Enums.push_back(E1);
+  InfoNode<EnumInfo> E1Node(&E1);
+  One.Children.Enums.push_back(E1Node);
 
   NamespaceInfo Two;
   Two.Name = "Namespace";
@@ -42,19 +46,23 @@ TEST_F(MergeTest, mergeNamespaceInfos) {
   Two.Namespace = llvm::ArrayRef(Ns2);
 
   Reference RB(EmptySID, "OtherChildNamespace", InfoType::IT_namespace);
-  Two.Children.Namespaces.push_back(RB);
+  InfoNode<Reference> RBNode(&RB);
+  Two.Children.Namespaces.push_back(RBNode);
   Reference RC2(EmptySID, "OtherChildStruct", InfoType::IT_record);
-  Two.Children.Records.push_back(RC2);
+  InfoNode<Reference> RC2Node(&RC2);
+  Two.Children.Records.push_back(RC2Node);
 
   FunctionInfo F2;
   F2.Name = "TwoFunction";
-  Two.Children.Functions.push_back(F2);
+  InfoNode<FunctionInfo> F2Node(&F2);
+  Two.Children.Functions.push_back(F2Node);
 
   EnumInfo E2;
   E2.Name = "TwoEnum";
-  Two.Children.Enums.push_back(E2);
+  InfoNode<EnumInfo> E2Node(&E2);
+  Two.Children.Enums.push_back(E2Node);
 
-  OwningPtrVec<Info> Infos;
+  SmallVector<Info *> Infos;
   Infos.push_back(&One);
   Infos.push_back(&Two);
 
@@ -64,35 +72,150 @@ TEST_F(MergeTest, mergeNamespaceInfos) {
   Expected.Namespace = llvm::ArrayRef(NsExpected);
 
   Reference RC(NonEmptySID, "ChildNamespace", InfoType::IT_namespace);
-  Expected.Children.Namespaces.push_back(RC);
+  InfoNode<Reference> RCNode(&RC);
+  Expected.Children.Namespaces.push_back(RCNode);
   Reference RCE1(NonEmptySID, "ChildStruct", InfoType::IT_record);
-  Expected.Children.Records.push_back(RCE1);
+  InfoNode<Reference> RCE1Node(&RCE1);
+  Expected.Children.Records.push_back(RCE1Node);
   Reference RD(EmptySID, "OtherChildNamespace", InfoType::IT_namespace);
-  Expected.Children.Namespaces.push_back(RD);
+  InfoNode<Reference> RDNode(&RD);
+  Expected.Children.Namespaces.push_back(RDNode);
   Reference RCE2(EmptySID, "OtherChildStruct", InfoType::IT_record);
-  Expected.Children.Records.push_back(RCE2);
+  InfoNode<Reference> RCE2Node(&RCE2);
+  Expected.Children.Records.push_back(RCE2Node);
 
   FunctionInfo FE1;
   FE1.Name = "OneFunction";
   FE1.USR = NonEmptySID;
-  Expected.Children.Functions.push_back(FE1);
+  InfoNode<FunctionInfo> FE1Node(&FE1);
+  Expected.Children.Functions.push_back(FE1Node);
 
   FunctionInfo FE2;
   FE2.Name = "TwoFunction";
-  Expected.Children.Functions.push_back(FE2);
+  InfoNode<FunctionInfo> FE2Node(&FE2);
+  Expected.Children.Functions.push_back(FE2Node);
 
   EnumInfo EE1;
   EE1.Name = "OneEnum";
   EE1.USR = NonEmptySID;
-  Expected.Children.Enums.push_back(EE1);
+  InfoNode<EnumInfo> EE1Node(&EE1);
+  Expected.Children.Enums.push_back(EE1Node);
 
   EnumInfo EE2;
   EE2.Name = "TwoEnum";
-  Expected.Children.Enums.push_back(EE2);
+  InfoNode<EnumInfo> EE2Node(&EE2);
+  Expected.Children.Enums.push_back(EE2Node);
 
   auto Actual = mergeInfos(Infos);
   assert(Actual);
   CheckNamespaceInfo(InfoAsNamespace(&Expected), InfoAsNamespace(Actual.get()));
+}
+
+TEST_F(MergeTest, mergeSingleNamespaceInfo) {
+  NamespaceInfo One;
+  One.Name = "Namespace";
+  Reference Ns1[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  One.Namespace = llvm::ArrayRef(Ns1);
+
+  Reference RA(NonEmptySID, "ChildNamespace", InfoType::IT_namespace);
+  InfoNode<Reference> RANode(&RA);
+  One.Children.Namespaces.push_back(RANode);
+  Reference RC1(NonEmptySID, "ChildStruct", InfoType::IT_record);
+  InfoNode<Reference> RC1Node(&RC1);
+  One.Children.Records.push_back(RC1Node);
+
+  FunctionInfo F1;
+  F1.Name = "OneFunction";
+  F1.USR = NonEmptySID;
+  InfoNode<FunctionInfo> F1Node(&F1);
+  One.Children.Functions.push_back(F1Node);
+
+  EnumInfo E1;
+  E1.Name = "OneEnum";
+  E1.USR = NonEmptySID;
+  InfoNode<EnumInfo> E1Node(&E1);
+  One.Children.Enums.push_back(E1Node);
+
+  NamespaceInfo Two;
+  Two.Name = "Namespace";
+  Reference Ns2[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  Two.Namespace = llvm::ArrayRef(Ns2);
+
+  Reference RB(EmptySID, "OtherChildNamespace", InfoType::IT_namespace);
+  InfoNode<Reference> RBNode(&RB);
+  Two.Children.Namespaces.push_back(RBNode);
+  Reference RC2(EmptySID, "OtherChildStruct", InfoType::IT_record);
+  InfoNode<Reference> RC2Node(&RC2);
+  Two.Children.Records.push_back(RC2Node);
+
+  FunctionInfo F2;
+  F2.Name = "TwoFunction";
+  InfoNode<FunctionInfo> F2Node(&F2);
+  Two.Children.Functions.push_back(F2Node);
+
+  EnumInfo E2;
+  E2.Name = "TwoEnum";
+  InfoNode<EnumInfo> E2Node(&E2);
+  Two.Children.Enums.push_back(E2Node);
+
+  NamespaceInfo Expected;
+  Expected.Name = "Namespace";
+  Reference NsExpected[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  Expected.Namespace = llvm::ArrayRef(NsExpected);
+
+  Reference RC(NonEmptySID, "ChildNamespace", InfoType::IT_namespace);
+  InfoNode<Reference> RCNode(&RC);
+  Expected.Children.Namespaces.push_back(RCNode);
+  Reference RCE1(NonEmptySID, "ChildStruct", InfoType::IT_record);
+  InfoNode<Reference> RCE1Node(&RCE1);
+  Expected.Children.Records.push_back(RCE1Node);
+  Reference RD(EmptySID, "OtherChildNamespace", InfoType::IT_namespace);
+  InfoNode<Reference> RDNode(&RD);
+  Expected.Children.Namespaces.push_back(RDNode);
+  Reference RCE2(EmptySID, "OtherChildStruct", InfoType::IT_record);
+  InfoNode<Reference> RCE2Node(&RCE2);
+  Expected.Children.Records.push_back(RCE2Node);
+
+  FunctionInfo FE1;
+  FE1.Name = "OneFunction";
+  FE1.USR = NonEmptySID;
+  InfoNode<FunctionInfo> FE1Node(&FE1);
+  Expected.Children.Functions.push_back(FE1Node);
+
+  FunctionInfo FE2;
+  FE2.Name = "TwoFunction";
+  InfoNode<FunctionInfo> FE2Node(&FE2);
+  Expected.Children.Functions.push_back(FE2Node);
+
+  EnumInfo EE1;
+  EE1.Name = "OneEnum";
+  EE1.USR = NonEmptySID;
+  InfoNode<EnumInfo> EE1Node(&EE1);
+  Expected.Children.Enums.push_back(EE1Node);
+
+  EnumInfo EE2;
+  EE2.Name = "TwoEnum";
+  InfoNode<EnumInfo> EE2Node(&EE2);
+  Expected.Children.Enums.push_back(EE2Node);
+  NamespaceInfo ReducedObj;
+  ReducedObj.IT = InfoType::IT_namespace;
+  doc::OwnedPtr<doc::Info> Reduced = &ReducedObj;
+
+  Info *PtrOne = &One;
+  auto Err1 = mergeSingleInfo(Reduced, std::move(PtrOne), doc::PersistentArena);
+  assert(!Err1);
+
+  Info *PtrTwo = &Two;
+  auto Err2 = mergeSingleInfo(Reduced, std::move(PtrTwo), doc::PersistentArena);
+  assert(!Err2);
+
+  CheckNamespaceInfo(InfoAsNamespace(&Expected),
+                     static_cast<NamespaceInfo *>(getPtr(Reduced)));
+
+  auto *RedNS = static_cast<NamespaceInfo *>(getPtr(Reduced));
+  // Check that children functions are NOT the same instances as in One or Two
+  ASSERT_NE(RedNS->Children.Functions.front().Ptr, &F1);
+  ASSERT_NE(RedNS->Children.Functions.back().Ptr, &F2);
 }
 
 TEST_F(MergeTest, mergeRecordInfos) {
@@ -117,17 +240,20 @@ TEST_F(MergeTest, mergeRecordInfos) {
                                         AccessSpecifier::AS_protected, true)};
   One.Bases = llvm::ArrayRef(B1);
   Reference RCShared1(NonEmptySID, "SharedChildStruct", InfoType::IT_record);
-  One.Children.Records.push_back(RCShared1);
+  InfoNode<Reference> RCShared1Node(&RCShared1);
+  One.Children.Records.push_back(RCShared1Node);
 
   FunctionInfo F1;
   F1.Name = "OneFunction";
   F1.USR = NonEmptySID;
-  One.Children.Functions.push_back(F1);
+  InfoNode<FunctionInfo> F1Node(&F1);
+  One.Children.Functions.push_back(F1Node);
 
   EnumInfo E1;
   E1.Name = "OneEnum";
   E1.USR = NonEmptySID;
-  One.Children.Enums.push_back(E1);
+  InfoNode<EnumInfo> E1Node(&E1);
+  One.Children.Enums.push_back(E1Node);
 
   RecordInfo Two;
   Two.Name = "r";
@@ -135,23 +261,27 @@ TEST_F(MergeTest, mergeRecordInfos) {
   Two.Namespace = llvm::ArrayRef(Ns2);
 
   Location Loc2(12, 12, "test.cpp");
-  Two.Loc.push_back(Loc2);
+  InfoNode<Location> Loc2Node(&Loc2);
+  Two.Loc.push_back(Loc2Node);
 
   Two.TagType = TagTypeKind::Class;
 
   Reference RCShared2(NonEmptySID, "SharedChildStruct", InfoType::IT_record,
                       "path");
-  Two.Children.Records.push_back(RCShared2);
+  InfoNode<Reference> RCShared2Node(&RCShared2);
+  Two.Children.Records.push_back(RCShared2Node);
 
   FunctionInfo F2;
   F2.Name = "TwoFunction";
-  Two.Children.Functions.push_back(F2);
+  InfoNode<FunctionInfo> F2Node(&F2);
+  Two.Children.Functions.push_back(F2Node);
 
   EnumInfo E2;
   E2.Name = "TwoEnum";
-  Two.Children.Enums.push_back(E2);
+  InfoNode<EnumInfo> E2Node(&E2);
+  Two.Children.Enums.push_back(E2Node);
 
-  OwningPtrVec<Info> Infos;
+  SmallVector<Info *> Infos;
   Infos.push_back(&One);
   Infos.push_back(&Two);
 
@@ -163,7 +293,8 @@ TEST_F(MergeTest, mergeRecordInfos) {
 
   Expected.DefLoc = Location(10, 10, "test.cpp");
   Location LocE(12, 12, "test.cpp");
-  Expected.Loc.push_back(LocE);
+  InfoNode<Location> LocENode(&LocE);
+  Expected.Loc.push_back(LocENode);
 
   MemberTypeInfo ME[] = {
       MemberTypeInfo(TypeInfo("int"), "X", AccessSpecifier::AS_private)};
@@ -179,24 +310,29 @@ TEST_F(MergeTest, mergeRecordInfos) {
 
   Reference RCSharedE(NonEmptySID, "SharedChildStruct", InfoType::IT_record,
                       "path");
-  Expected.Children.Records.push_back(RCSharedE);
+  InfoNode<Reference> RCSharedENode(&RCSharedE);
+  Expected.Children.Records.push_back(RCSharedENode);
   FunctionInfo FE1;
   FE1.Name = "OneFunction";
   FE1.USR = NonEmptySID;
-  Expected.Children.Functions.push_back(FE1);
+  InfoNode<FunctionInfo> FE1Node(&FE1);
+  Expected.Children.Functions.push_back(FE1Node);
 
   FunctionInfo FE2;
   FE2.Name = "TwoFunction";
-  Expected.Children.Functions.push_back(FE2);
+  InfoNode<FunctionInfo> FE2Node(&FE2);
+  Expected.Children.Functions.push_back(FE2Node);
 
   EnumInfo EE1;
   EE1.Name = "OneEnum";
   EE1.USR = NonEmptySID;
-  Expected.Children.Enums.push_back(EE1);
+  InfoNode<EnumInfo> EE1Node(&EE1);
+  Expected.Children.Enums.push_back(EE1Node);
 
   EnumInfo EE2;
   EE2.Name = "TwoEnum";
-  Expected.Children.Enums.push_back(EE2);
+  InfoNode<EnumInfo> EE2Node(&EE2);
+  Expected.Children.Enums.push_back(EE2Node);
 
   auto Actual = mergeInfos(Infos);
   assert(Actual);
@@ -211,7 +347,8 @@ TEST_F(MergeTest, mergeFunctionInfos) {
 
   One.DefLoc = Location(10, 10, "test.cpp");
   Location Loc1(12, 12, "test.cpp");
-  One.Loc.push_back(Loc1);
+  InfoNode<Location> Loc1Node(&Loc1);
+  One.Loc.push_back(Loc1Node);
 
   One.IsMethod = true;
   One.Parent = Reference(EmptySID, "Parent", InfoType::IT_namespace);
@@ -221,7 +358,8 @@ TEST_F(MergeTest, mergeFunctionInfos) {
   CommentInfo OnePara[] = {
       CommentInfo(CommentKind::CK_ParagraphComment, OneText)};
   CommentInfo TopOne(CommentKind::CK_FullComment, OnePara);
-  One.Description.push_back(TopOne);
+  InfoNode<CommentInfo> TopOneNode(&TopOne);
+  One.Description.push_back(TopOneNode);
 
   FunctionInfo Two;
   Two.Name = "f";
@@ -229,7 +367,8 @@ TEST_F(MergeTest, mergeFunctionInfos) {
   Two.Namespace = llvm::ArrayRef(Ns2);
 
   Location Loc2(12, 12, "test.cpp");
-  Two.Loc.push_back(Loc2);
+  InfoNode<Location> Loc2Node(&Loc2);
+  Two.Loc.push_back(Loc2Node);
 
   Two.ReturnType = TypeInfo("void");
   FieldTypeInfo P2(TypeInfo("int"), "P");
@@ -241,9 +380,10 @@ TEST_F(MergeTest, mergeFunctionInfos) {
   CommentInfo TwoPara[] = {
       CommentInfo(CommentKind::CK_ParagraphComment, TwoText)};
   CommentInfo TopTwo(CommentKind::CK_FullComment, TwoPara);
-  Two.Description.push_back(TopTwo);
+  InfoNode<CommentInfo> TopTwoNode(&TopTwo);
+  Two.Description.push_back(TopTwoNode);
 
-  OwningPtrVec<Info> Infos;
+  SmallVector<Info *> Infos;
   Infos.push_back(&One);
   Infos.push_back(&Two);
 
@@ -254,7 +394,8 @@ TEST_F(MergeTest, mergeFunctionInfos) {
 
   Expected.DefLoc = Location(10, 10, "test.cpp");
   Location LocE(12, 12, "test.cpp");
-  Expected.Loc.push_back(LocE);
+  InfoNode<Location> LocENode(&LocE);
+  Expected.Loc.push_back(LocENode);
 
   Expected.ReturnType = TypeInfo("void");
   FieldTypeInfo PE(TypeInfo("int"), "P");
@@ -268,7 +409,8 @@ TEST_F(MergeTest, mergeFunctionInfos) {
   CommentInfo ExpectedPara[] = {
       CommentInfo(CommentKind::CK_ParagraphComment, ExpectedText)};
   CommentInfo TopE(CommentKind::CK_FullComment, ExpectedPara);
-  Expected.Description.push_back(TopE);
+  InfoNode<CommentInfo> TopENode(&TopE);
+  Expected.Description.push_back(TopENode);
 
   auto Actual = mergeInfos(Infos);
   assert(Actual);
@@ -283,7 +425,8 @@ TEST_F(MergeTest, mergeEnumInfos) {
 
   One.DefLoc = Location(10, 10, "test.cpp");
   Location Loc1(12, 12, "test.cpp");
-  One.Loc.push_back(Loc1);
+  InfoNode<Location> Loc1Node(&Loc1);
+  One.Loc.push_back(Loc1Node);
 
   One.Scoped = true;
 
@@ -293,12 +436,13 @@ TEST_F(MergeTest, mergeEnumInfos) {
   Two.Namespace = llvm::ArrayRef(Ns2);
 
   Location Loc2(20, 20, "test.cpp");
-  Two.Loc.push_back(Loc2);
+  InfoNode<Location> Loc2Node(&Loc2);
+  Two.Loc.push_back(Loc2Node);
 
   EnumValueInfo EV2[] = {EnumValueInfo("X"), EnumValueInfo("Y")};
   Two.Members = llvm::ArrayRef(EV2);
 
-  OwningPtrVec<Info> Infos;
+  SmallVector<Info *> Infos;
   Infos.push_back(&One);
   Infos.push_back(&Two);
 
@@ -309,9 +453,11 @@ TEST_F(MergeTest, mergeEnumInfos) {
 
   Expected.DefLoc = Location(10, 10, "test.cpp");
   Location LocE1(12, 12, "test.cpp");
-  Expected.Loc.push_back(LocE1);
+  InfoNode<Location> LocE1Node(&LocE1);
+  Expected.Loc.push_back(LocE1Node);
   Location LocE2(20, 20, "test.cpp");
-  Expected.Loc.push_back(LocE2);
+  InfoNode<Location> LocE2Node(&LocE2);
+  Expected.Loc.push_back(LocE2Node);
 
   EnumValueInfo EV_E[] = {EnumValueInfo("X"), EnumValueInfo("Y")};
   Expected.Members = llvm::ArrayRef(EV_E);

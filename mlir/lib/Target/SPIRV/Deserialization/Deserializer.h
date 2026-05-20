@@ -177,6 +177,11 @@ private:
   /// Processes an OpDecorate instruction.
   LogicalResult processDecoration(ArrayRef<uint32_t> words);
 
+  /// Resolves all OpDecorateId entries previously queued during
+  /// processDecoration. Called after all module ops have been deserialized so
+  /// the operand <id>s can be looked up as MLIR symbols.
+  LogicalResult resolveDeferredIdDecorations();
+
   // Processes an OpMemberDecorate instruction.
   LogicalResult processMemberDecoration(ArrayRef<uint32_t> words);
 
@@ -318,6 +323,8 @@ private:
   LogicalResult processSampledImageType(ArrayRef<uint32_t> operands);
 
   LogicalResult processSamplerType(ArrayRef<uint32_t> operands);
+
+  LogicalResult processNamedBarrierType(ArrayRef<uint32_t> operands);
 
   LogicalResult processRuntimeArrayType(ArrayRef<uint32_t> operands);
 
@@ -511,6 +518,15 @@ private:
   sliceInstruction(spirv::Opcode &opcode, ArrayRef<uint32_t> &operands,
                    std::optional<spirv::Opcode> expectedOpcode = std::nullopt);
 
+  /// If `opcode` is a SPV_INTEL_long_composites splittable opcode and the
+  /// next binary instruction(s) are matching `*ContinuedINTEL` ops, consumes
+  /// them and rebinds `operands` to a buffer (held in `mergedStorage`)
+  /// containing the parent + continuation operands concatenated.
+  void
+  mergeLongCompositeContinuations(spirv::Opcode opcode,
+                                  ArrayRef<uint32_t> &operands,
+                                  SmallVectorImpl<uint32_t> &mergedStorage);
+
   /// Processes a SPIR-V instruction with the given `opcode` and `operands`.
   /// This method is the main entrance for handling SPIR-V instruction; it
   /// checks the instruction opcode and dispatches to the corresponding handler.
@@ -681,6 +697,16 @@ private:
 
   // Result <id> to decorations mapping.
   DenseMap<uint32_t, NamedAttrList> decorations;
+
+  // Decoration entries from OpDecorateId whose operand <id>s must be resolved
+  // to MLIR symbols after all module ops have been deserialized.
+  struct DeferredIdDecoration {
+    uint32_t targetID;
+    spirv::Decoration decoration;
+    uint32_t operandID;
+    Location loc;
+  };
+  SmallVector<DeferredIdDecoration> pendingIdDecorations;
 
   // Result <id> to type decorations.
   DenseMap<uint32_t, uint32_t> typeDecorations;

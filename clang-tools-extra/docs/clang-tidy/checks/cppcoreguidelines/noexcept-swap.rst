@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cppcoreguidelines-noexcept-swap
-.. meta::
-   :http-equiv=refresh: 5;URL=../performance/noexcept-swap.html
 
 cppcoreguidelines-noexcept-swap
 ===============================
