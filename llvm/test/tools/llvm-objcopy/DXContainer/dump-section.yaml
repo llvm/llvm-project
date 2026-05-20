@@ -39,8 +39,6 @@ Header:
   PartCount:       3
   PartOffsets:     [ 44, 1784, 3524 ]
 Parts:
-  # TODO: replace with a section with real debug info once we can generate it.
-  # For now, this is a copy of DXIL section, but they have the same format.
   - Name:            ILDB
     Size:            1732
     Program:
