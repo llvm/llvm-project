@@ -34,8 +34,10 @@
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -45,6 +47,8 @@
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
+#include "llvm/Transforms/Utils/SplitModuleCG.h"
+#include <filesystem>
 #include <optional>
 
 using namespace llvm;
@@ -79,6 +83,23 @@ static cl::list<std::string>
                     cl::desc("Only save bitcode for module whose name without "
                              "path matches this for -save-temps options"),
                     cl::CommaSeparated, cl::Hidden);
+
+static cl::opt<unsigned> ThinLTOSplitModuleSizeThreshold(
+    "thinlto-split-module-size-threshold", cl::Hidden, cl::init(500),
+    cl::desc("Control the amount of whether split in thinlto backend"
+             "accroding to the size of a module."));
+
+static cl::opt<float> ThinLTOSplitModuleSizeRateThreshold(
+    "thinlto-split-module-size-rate-threshold", cl::Hidden, cl::init(0.5),
+    cl::desc("Whether to split in thinlto backend based on the ratio of "
+             "(callgraph size)/(module size)"));
+
+static cl::opt<unsigned> ThinLTOSplitPartitions(
+    "thinlto-split-partitions", cl::Hidden, cl::init(0),
+    cl::desc("Control split to how many partitions in thinlto backend."));
+
+static cl::opt<bool> ThinLTOSplit("thinlto-split", cl::init(false),
+			   cl::desc("Enable split module in thinlto backend."));
 
 namespace llvm {
 extern cl::opt<bool> NoPGOWarnMismatch;
@@ -124,12 +145,19 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
       if (LinkerHook && !LinkerHook(Task, M))
         return false;
 
+      auto extract_filename = [](const std::string &path) -> std::string {
+        std::filesystem::path fs_path(path);
+        return fs_path.filename().string();
+      };
+
       std::string PathPrefix;
       // If this is the combined module (not a ThinLTO backend compile) or the
       // user hasn't requested using the input module's path, emit to a file
       // named from the provided OutputFileName with the Task ID appended.
       if (M.getModuleIdentifier() == "ld-temp.o" || !UseInputModulePath) {
         PathPrefix = OutputFileName;
+        if (ThinLTOSplit)
+          PathPrefix += extract_filename(M.getSourceFileName()) + ".";
         if (Task != (unsigned)-1)
           PathPrefix += utostr(Task) + ".";
       } else
@@ -513,6 +541,212 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     report_fatal_error(std::move(Err));
 }
 
+static unsigned calFunctionSize(const llvm::Function &F) {
+  unsigned size = 0;
+  for (const auto &BB : F)
+    size += std::distance(BB.begin(), BB.end());
+  return size;
+}
+
+static unsigned calModuleSize(const llvm::Module &M) {
+  unsigned size = 0;
+  for (const auto &F : M)
+    size += calFunctionSize(F);
+  return size;
+}
+
+static bool canDoSplitModule(const llvm::Module &M) {
+  if (calModuleSize(M) < ThinLTOSplitModuleSizeThreshold)
+    return false;
+  return true;
+}
+
+static bool HasLargeCG(Module &Mod, const ModuleSummaryIndex &CombinedIndex) {
+  // TODO: Check whether there has large callgraphs. When multiple callgraphs
+  // are split, thinlto parallel compilation can bring benefits.
+  return true;
+}
+
+struct TaskIdAllocator {
+  using TaskId = unsigned;
+
+  // Use the most significant bit (MSB) as a namespace tag.
+  // - Original ThinLTO backend tasks are expected to have MSB == 0.
+  // - Split partitions allocated by this allocator always have MSB == 1.
+  // This guarantees the two ID spaces never overlap.
+  static constexpr TaskId tag() {
+    return TaskId{1} << (std::numeric_limits<TaskId>::digits - 1);
+  }
+
+  // Monotonic sequence counter for split partitions (MSB must remain 0 here).
+  std::atomic<TaskId> seq{0};
+
+  // Allocate a globally unique TaskId for a split partition.
+  // The returned ID is `tag() | seq`, so it lives in the MSB==1 namespace.
+  TaskId alloc() {
+    TaskId v = seq.fetch_add(1, std::memory_order_relaxed);
+
+    // If the counter ever reaches the MSB, we'd overlap namespaces.
+    // This indicates an overflow / too many partitions.
+    if (v & tag())
+      report_fatal_error("Partition TaskId overflow: seq reached the tag bit.");
+
+    return tag() | v;
+  }
+
+  // Helper for sanity checks / debugging.
+  static bool isPartition(TaskId id) { return (id & tag()) != 0; }
+};
+
+// Global allocator shared by all split partitions.
+static TaskIdAllocator gSplitTaskIds;
+
+static bool splitOptAndCodeGenThin(unsigned task, const Config &C,
+                                   TargetMachine *TM, AddStreamFn AddStream,
+                                   unsigned ParallelCodeGenParallelismLevel,
+                                   Module &Mod,
+                                   const ModuleSummaryIndex &CombinedIndex,
+                                   const std::vector<uint8_t> &CmdArgs,
+                                   bool DoOpt, AddStreamFn IRAddStream,
+                                   ArrayRef<StringRef> &BitcodeLibFuncs) {
+  unsigned ThreadCount = 0;
+  const Target *T = &TM->getTarget();
+
+  static std::mutex PrintMutex;
+
+  SplitModuleCG SplitModuleCG(Mod, CombinedIndex, ParallelCodeGenParallelismLevel);
+  ParallelCodeGenParallelismLevel = SplitModuleCG.getPartitionNum();
+
+  std::vector<std::string> TempObjectFiles(ParallelCodeGenParallelismLevel);
+  std::vector<llvm::FileRemover> TempFileRemovers(ParallelCodeGenParallelismLevel);
+
+  const auto HandleModulePartition = [&](std::unique_ptr<Module> MPart,
+                                         unsigned PartitionId) {
+    unsigned CurrentThreadId, UniqueTaskId;
+    {
+      std::lock_guard<std::mutex> Lock(PrintMutex);
+      CurrentThreadId = ThreadCount++;
+
+      // In distributed ThinLTO, `task` may be a sentinel (e.g. -1 cast to
+      // unsigned), which becomes UINT_MAX and naturally has MSB==1. Treat it
+      // as "no base task id" and don't enforce the namespace check on it.
+      //
+      // We do not rely on the incoming `task` for partition uniqueness: split
+      // partitions get a dedicated UniqueTaskId allocated below.
+      if (task != std::numeric_limits<unsigned>::max()) {
+        assert(!TaskIdAllocator::isPartition(task) &&
+               "Original ThinLTO TaskId unexpectedly overlaps the partition "
+               "namespace");
+      }
+      UniqueTaskId = gSplitTaskIds.alloc();
+    }
+
+    std::unique_ptr<TargetMachine> ThreadTM = createTargetMachine(C, T, *MPart);
+
+    if (DoOpt) {
+      if (!opt(C, ThreadTM.get(), UniqueTaskId, *MPart, /*IsThinLTO=*/true,
+               /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
+               CmdArgs, BitcodeLibFuncs)) {
+        report_fatal_error("Failed to gen opt for split mod in thread.");
+      }
+
+      // Save the current module before the first codegen round.
+      // Note that the second codegen round runs only `codegen()` without
+      // running `opt()`. We're not reaching here as it's bailed out earlier
+      // with `CodeGenOnly` which has been set in `SecondRoundThinBackend`.
+      if (IRAddStream)
+        cgdata::saveModuleForTwoRounds(*MPart, task + CurrentThreadId,
+                                       IRAddStream);
+    }
+
+    auto splitStream = [&](unsigned task, const Twine &moduleName)
+        -> Expected<std::unique_ptr<CachedFileStream>> {
+      int FD;
+      SmallString<128> TempFilename;
+      if (std::error_code EC = sys::fs::createTemporaryFile(
+              "thinlto-split", "o", FD, TempFilename))
+        return errorCodeToError(EC);
+
+      TempObjectFiles[PartitionId] = std::string(TempFilename.str());
+      TempFileRemovers[PartitionId].setFile(TempObjectFiles[PartitionId]);
+
+      auto OS = std::make_unique<raw_fd_ostream>(
+          FD, true, /*CloseOnDestruct*/true);
+
+      auto Stream = std::make_unique<CachedFileStream>(
+          std::move(OS), std::string(TempFilename.str()));
+
+      return std::move(Stream);
+    };
+
+    codegen(C, ThreadTM.get(), splitStream, UniqueTaskId, *MPart,
+            CombinedIndex);
+  };
+
+  SplitModuleCG.SplitModule(HandleModulePartition, C);
+
+  // Use ld.lld to combine the partitions into a object.
+  if (TempObjectFiles.empty()) {
+    llvm::errs() << "TempObjectFiles.empty()\n";
+    return true;
+  }
+
+  auto FinalStream = AddStream(task, Mod.getModuleIdentifier());
+  if (!FinalStream)
+    report_fatal_error("Failed to open final output stream");
+
+  int MergedFD;
+  SmallString<128> MergedFilename;
+  if (sys::fs::createTemporaryFile("thinlto-merged", "o", MergedFD,
+                                   MergedFilename))
+    report_fatal_error("Failed to create merged temp file.");
+  llvm::FileRemover MergedFileRemover(MergedFilename);
+  sys::fs::closeFile(MergedFD);
+
+  std::vector<StringRef> Args;
+  std::string LinkerPath = "";
+  if (auto Path = sys::findProgramByName("ld.lld"))
+    LinkerPath = *Path;
+  else if (auto Path = sys::findProgramByName("ld"))
+    LinkerPath = *Path;
+
+  if (LinkerPath.empty())
+    report_fatal_error("Cannot find linkeer (ld or ld.lld) to merge partitions.");
+
+  Args.push_back(LinkerPath);
+  Args.push_back("-r");
+  Args.push_back("-o");
+  Args.push_back(MergedFilename);
+
+  for (const auto &File : TempObjectFiles)
+    Args.push_back(File);
+
+  std::string ErrMsg;
+  int Result = sys::ExecuteAndWait(LinkerPath, Args, /*Env=*/std::nullopt,
+                                   /*Redirects=*/{}, /*SecondsToWait=*/0,
+                                   /*MemoryLimit=*/0, &ErrMsg);
+
+  if (Result != 0) {
+    errs() << "Linker failed: " << ErrMsg << "\n";
+    report_fatal_error("Failed to merge split objects.");
+  }
+
+  {
+    std::unique_ptr<CachedFileStream> &FinalFileStream = *FinalStream;
+    auto BufferOrErr = MemoryBuffer::getFile(MergedFilename);
+    if (!BufferOrErr)
+      report_fatal_error("Failed to read merged object.");
+
+    FinalFileStream->OS->write(BufferOrErr.get()->getBufferStart(),
+                               BufferOrErr.get()->getBufferSize());
+    if (Error Err = FinalFileStream->commit()) {
+      report_fatal_error(Twine("Failed to commit final file stream: ") +
+                         toString(std::move(Err)));
+    }
+  }
+  return true;
+}
+
 static void splitCodeGen(const Config &C, TargetMachine *TM,
                          AddStreamFn AddStream,
                          unsigned ParallelCodeGenParallelismLevel, Module &Mod,
@@ -677,11 +911,28 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   // the module, if applicable.
   Mod.setPartialSampleProfileRatio(CombinedIndex);
 
+  bool ProfitableToSplit = true;
+  if (ThinLTOSplit) {
+    if (!canDoSplitModule(Mod) || !HasLargeCG(Mod, CombinedIndex)) {
+      ProfitableToSplit = false;
+      LLVM_DEBUG(dbgs() << "warning: thinlto split not enable for module: "
+                        << Mod.getName());
+    } else {
+      LLVM_DEBUG(dbgs() << "thinlto: split codegen for module: "
+                        << Mod.getName());
+    }
+  }
+
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
   if (CodeGenOnly) {
-    // If CodeGenOnly is set, we only perform code generation and skip
-    // optimization. This value may differ from Conf.CodeGenOnly.
-    codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
+    if (ThinLTOSplit && ProfitableToSplit)
+      splitOptAndCodeGenThin(Task, Conf, TM.get(), AddStream,
+                             ThinLTOSplitPartitions, Mod, CombinedIndex,
+                             CmdArgs, false, IRAddStream, BitcodeLibFuncs);
+    else
+      // If CodeGenOnly is set, we only perform code generation and skip
+      // optimization. This value may differ from Conf.CodeGenOnly.
+      codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   }
 
@@ -691,20 +942,27 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   auto OptimizeAndCodegen =
       [&](Module &Mod, TargetMachine *TM,
           LLVMRemarkFileHandle DiagnosticOutputFile) {
-        // Perform optimization and code generation for ThinLTO.
-        if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
-                 /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
-                 CmdArgs, BitcodeLibFuncs))
-          return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+        if (ThinLTOSplit && ProfitableToSplit) {
+          if (!splitOptAndCodeGenThin(
+                  Task, Conf, TM, AddStream, ThinLTOSplitPartitions, Mod,
+                  CombinedIndex, CmdArgs, true, IRAddStream, BitcodeLibFuncs))
+            return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+        } else {
+          // Perform optimization and code generation for ThinLTO.
+          if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
+                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
+                  CmdArgs, BitcodeLibFuncs))
+            return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
-        // Save the current module before the first codegen round.
-        // Note that the second codegen round runs only `codegen()` without
-        // running `opt()`. We're not reaching here as it's bailed out earlier
-        // with `CodeGenOnly` which has been set in `SecondRoundThinBackend`.
-        if (IRAddStream)
-          cgdata::saveModuleForTwoRounds(Mod, Task, IRAddStream);
+          // Save the current module before the first codegen round.
+          // Note that the second codegen round runs only `codegen()` without
+          // running `opt()`. We're not reaching here as it's bailed out earlier
+          // with `CodeGenOnly` which has been set in `SecondRoundThinBackend`.
+          if (IRAddStream)
+            cgdata::saveModuleForTwoRounds(Mod, Task, IRAddStream);
 
-        codegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);
+          codegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);
+        }
         return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
       };
 
