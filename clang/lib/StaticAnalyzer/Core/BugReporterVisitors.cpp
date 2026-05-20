@@ -1287,15 +1287,15 @@ static void showBRDiagnostics(llvm::raw_svector_ostream &OS, StoreInfo SI) {
       if (SI.Value.isUndef() && VD->getInit()) {
         OS << (HasPrefix ? "initialized" : "Initializing")
            << " to a garbage value";
-      } else if (!VD->getInit() && !VD->hasGlobalStorage()) {
+        return;
+      }
+      if (!VD->getInit() && !VD->hasGlobalStorage()) {
         OS << (HasPrefix ? "declared" : "Declared")
            << " without an initial value";
-      } else {
-        OS << (HasPrefix ? "initialized" : "Initialized") << " here";
+        return;
       }
-    } else {
-      OS << (HasPrefix ? "initialized" : "Initialized") << " here";
     }
+    OS << (HasPrefix ? "initialized" : "Initialized") << " here";
   }
 }
 
