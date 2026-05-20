@@ -35,9 +35,7 @@ Header:
   Version:
     Major:           1
     Minor:           0
-  FileSize:        3616
   PartCount:       3
-  PartOffsets:     [ 44, 1784, 3524 ]
 Parts:
   - Name:            ILDB
     Size:            1732
