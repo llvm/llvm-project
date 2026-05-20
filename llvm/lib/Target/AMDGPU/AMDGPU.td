@@ -2187,7 +2187,6 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
   [FeatureAddressableLocalMemorySize327680,
    FeatureSetregVGPRMSBFixup,
-   FeatureRealTrue16Insts,
    FeatureRequiresCOV6,
    FeatureXNACKAnyOnly])>;
 
