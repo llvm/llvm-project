@@ -75,6 +75,7 @@
 #include "clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h" // IWYU pragma: keep
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2129,8 +2130,8 @@ void Driver::generateCompilationDiagnostics(
     return;
   }
 
-  // Don't attempt to generate preprocessed files if multiple -arch options are
-  // used, unless they're all duplicates.
+  // If there are multiple -arch options, build a reproducer only for the bound
+  // arch that crashed.
   llvm::StringSet<> ArchNames;
   for (const Arg *A : C.getArgs()) {
     if (A->getOption().matches(options::OPT_arch)) {
@@ -2139,10 +2140,17 @@ void Driver::generateCompilationDiagnostics(
     }
   }
   if (ArchNames.size() > 1) {
-    Diag(clang::diag::note_drv_command_failed_diag_msg)
-        << "Error generating preprocessed source(s) - cannot generate "
-           "preprocessed source with multiple -arch options.";
-    return;
+    // Build a reproducer only for the bound arch that crashed.
+    StringRef FailingArch = Cmd.getBoundArch();
+    if (FailingArch.empty()) {
+      Diag(clang::diag::note_drv_command_failed_diag_msg)
+          << "Error generating preprocessed source(s) - cannot generate "
+             "preprocessed source with multiple -arch options.";
+      return;
+    }
+    C.getArgs().eraseArg(options::OPT_arch);
+    C.getArgs().AddJoinedArg(nullptr, getOpts().getOption(options::OPT_arch),
+                             FailingArch);
   }
 
   // If we only have IR inputs there's no need for preprocessing.
@@ -6062,6 +6070,13 @@ InputInfoList Driver::BuildJobsForActionNoCache(
     Action::OffloadKind TargetDeviceOffloadKind) const {
   llvm::PrettyStackTraceString CrashInfo("Building compilation jobs");
 
+  // Track the bound arch for commands constructed in this scope so
+  // generateCompilationDiagnostics can identify the crashing arch.
+  StringRef SavedBoundArch = C.getCurrentBoundArch();
+  C.setCurrentBoundArch(BoundArch);
+  auto RestoreBoundArch =
+      llvm::scope_exit([&] { C.setCurrentBoundArch(SavedBoundArch); });
+
   InputInfoList OffloadDependencesInputInfo;
   bool BuildingForOffloadDevice = TargetDeviceOffloadKind != Action::OFK_None;
   if (const OffloadAction *OA = dyn_cast<OffloadAction>(A)) {
@@ -6770,6 +6785,17 @@ std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
   if (llvm::sys::fs::exists(Twine(P)))
     return std::string(P);
 
+  // With Flang, also look for intrinsic modules
+  if (IsFlangMode()) {
+    if (std::optional<std::string> IntrPath =
+            TC.getDefaultIntrinsicModuleDir()) {
+      SmallString<128> P(*IntrPath);
+      llvm::sys::path::append(P, Name);
+      if (llvm::sys::fs::exists(P))
+        return std::string(P);
+    }
+  }
+
   SmallString<128> D(Dir);
   llvm::sys::path::append(D, "..", Name);
   if (llvm::sys::fs::exists(Twine(D)))
@@ -7166,7 +7192,12 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       break;
     case llvm::Triple::Vulkan:
     case llvm::Triple::ShaderModel:
-      TC = std::make_unique<toolchains::HLSLToolChain>(*this, Target, Args);
+      if ((Target.getArch() == llvm::Triple::spirv32 ||
+           Target.getArch() == llvm::Triple::spirv64) &&
+          !usesInput(Args, types::isHLSL))
+        TC = std::make_unique<toolchains::SPIRVToolChain>(*this, Target, Args);
+      else
+        TC = std::make_unique<toolchains::HLSLToolChain>(*this, Target, Args);
       break;
     case llvm::Triple::ChipStar:
       TC = std::make_unique<toolchains::HIPSPVToolChain>(*this, Target, Args);

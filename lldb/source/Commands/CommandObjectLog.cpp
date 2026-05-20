@@ -273,7 +273,8 @@ protected:
       if (Log::DisableLogChannel(channel, args.GetArgumentArrayRef(),
                                  error_stream))
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      result.GetErrorStream() << error;
+      else
+        result.AppendError(error);
     }
   }
 };

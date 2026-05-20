@@ -67,7 +67,7 @@ subroutine checkC7115()
   !ERROR: Implied DO index 'i' is active in a surrounding implied DO loop and may not have the same name
   real, dimension(100), parameter :: bad = [((88.8, i = 1, 10), i = 1, 10)]
 
-  !ERROR: Value of named constant 'bad2' ([INTEGER(4)::(int(j,kind=4),INTEGER(8)::j=1_8,1_8,0_8)]) cannot be computed as a constant value
+  !ERROR: Value of named constant 'bad2' ([INTEGER(4)::(__builtin_int(j,kind=4),INTEGER(8)::j=1_8,1_8,0_8)]) cannot be computed as a constant value
   !ERROR: The stride of an implied DO loop must not be zero
   integer, parameter :: bad2(*) = [(j, j=1,1,0)]
   integer, parameter, dimension(-1:0) :: negLower = (/343,512/)

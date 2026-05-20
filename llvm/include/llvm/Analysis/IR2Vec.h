@@ -639,7 +639,7 @@ public:
 class IR2VecVocabAnalysis : public AnalysisInfoMixin<IR2VecVocabAnalysis> {
   std::optional<ir2vec::VocabStorage> Vocab;
 
-  void emitError(Error Err, LLVMContext &Ctx);
+  void emitError(Error Err);
 
 public:
   LLVM_ABI static AnalysisKey Key;

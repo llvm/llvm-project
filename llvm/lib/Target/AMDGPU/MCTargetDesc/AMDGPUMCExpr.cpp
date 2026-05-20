@@ -116,7 +116,7 @@ evaluateMCExprs(ArrayRef<const MCExpr *> Exprs, const MCAssembler *Asm,
 
 bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res,
                                       const MCAssembler *Asm) const {
-  const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
+  const MCSubtargetInfo &STI = *Ctx.getSubtargetInfo();
   uint64_t VCCUsed = 0, FlatScrUsed = 0, XNACKUsed = 0;
 
   if (!evaluateMCExprs(Args, Asm, {VCCUsed, FlatScrUsed, XNACKUsed}))
@@ -130,10 +130,10 @@ bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res,
 
 bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res,
                                         const MCAssembler *Asm) const {
-  const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
+  const MCSubtargetInfo &STI = *Ctx.getSubtargetInfo();
   uint64_t NumAGPR = 0, NumVGPR = 0;
 
-  bool Has90AInsts = AMDGPU::isGFX90A(*STI);
+  bool Has90AInsts = AMDGPU::isGFX90A(STI);
 
   if (!evaluateMCExprs(Args, Asm, {NumAGPR, NumVGPR}))
     return false;
@@ -677,4 +677,11 @@ int64_t AMDGPU::getLitValue(const MCExpr *Expr) {
   assert(isLitExpr(Expr));
   return cast<MCConstantExpr>(cast<AMDGPUMCExpr>(Expr)->getArgs()[0])
       ->getValue();
+}
+
+AMDGPUMCExpr::VariantKind AMDGPU::getExprKind(const MCExpr *Expr) {
+  const auto *E = dyn_cast<AMDGPUMCExpr>(Expr);
+  if (!E)
+    return AMDGPUMCExpr::AGVK_None;
+  return E->getKind();
 }

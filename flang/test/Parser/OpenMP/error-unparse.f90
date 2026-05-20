@@ -3,7 +3,7 @@
 program main
   character(*), parameter :: message = "This is an error"
   !CHECK: !$OMP ERROR AT(COMPILATION) SEVERITY(WARNING) MESSAGE("some message here")
-  !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPUtilityConstruct -> OmpErrorDirective
+  !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpUtilityDirective -> OmpErrorDirective
   !PARSE-TREE: OmpClauseList -> OmpClause -> At -> OmpAtClause -> ActionTime = Compilation
   !PARSE-TREE: OmpClause -> Severity -> OmpSeverityClause -> SevLevel = Warning
   !PARSE-TREE:  OmpClause -> Message -> OmpMessageClause -> Expr = '"some message here"'
@@ -11,14 +11,14 @@ program main
   !PARSE-TREE:  string = 'some message here'
   !$omp error at(compilation) severity(warning) message("some message here")
   !CHECK: !$OMP ERROR AT(COMPILATION) SEVERITY(FATAL) MESSAGE("This is an error")
-  !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPUtilityConstruct -> OmpErrorDirective
+  !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpUtilityDirective -> OmpErrorDirective
   !PARSE-TREE: OmpClauseList -> OmpClause -> At -> OmpAtClause -> ActionTime = Compilation
   !PARSE-TREE: OmpClause -> Severity -> OmpSeverityClause -> SevLevel = Fatal
   !PARSE-TREE:  OmpClause -> Message -> OmpMessageClause -> Expr = '"This is an error"'
   !PARSE-TREE:  Designator -> DataRef -> Name = 'message'
   !$omp error at(compilation) severity(fatal) message(message)
   !CHECK: !$OMP ERROR AT(EXECUTION) SEVERITY(FATAL) MESSAGE("This is an error")
-  !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPUtilityConstruct -> OmpErrorDirective
+  !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpUtilityDirective -> OmpErrorDirective
   !PARSE-TREE: OmpClauseList -> OmpClause -> At -> OmpAtClause -> ActionTime = Execution
   !PARSE-TREE: OmpClause -> Severity -> OmpSeverityClause -> SevLevel = Fatal
   !PARSE-TREE:  OmpClause -> Message -> OmpMessageClause -> Expr = '"This is an error"'

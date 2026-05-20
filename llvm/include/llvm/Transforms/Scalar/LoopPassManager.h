@@ -184,7 +184,7 @@ typedef PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
 template <typename AnalysisT>
 struct RequireAnalysisPass<AnalysisT, Loop, LoopAnalysisManager,
                            LoopStandardAnalysisResults &, LPMUpdater &>
-    : RequiredPassInfoMixin<
+    : OptionalPassInfoMixin<
           RequireAnalysisPass<AnalysisT, Loop, LoopAnalysisManager,
                               LoopStandardAnalysisResults &, LPMUpdater &>> {
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
@@ -482,7 +482,7 @@ createFunctionToLoopPassAdaptor<LoopPassManager>(LoopPassManager &&LPM,
 }
 
 /// Pass for printing a loop's contents as textual IR.
-class PrintLoopPass : public OptionalPassInfoMixin<PrintLoopPass> {
+class PrintLoopPass : public RequiredPassInfoMixin<PrintLoopPass> {
   raw_ostream &OS;
   std::string Banner;
 
