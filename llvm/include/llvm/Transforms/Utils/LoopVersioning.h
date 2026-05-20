@@ -156,6 +156,41 @@ class LoopVersioningPass : public PassInfoMixin<LoopVersioningPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
+
+class AAResults;
+class AssumptionCache;
+class LoadInst;
+class PredicatedScalarEvolution;
+
+/// Version \p L for speculative hoisting of an invariant bound load.
+///
+/// When a loop's trip count depends on a value loaded through a pointer that
+/// may alias stores inside the loop, SCEV cannot prove the bound is invariant
+/// and the loop is treated as uncountable.  This function handles that pattern
+/// by emitting a versioned CFG:
+///
+///           preheader
+///               |
+///         ivbound.rtcheck          <- new block: hoisted load + RTCs
+///            /       \
+///    for.preheader  ver.preheader  <- original (fallback) / clone (fast path)
+///         |               |
+///      for.body       ver.for.body
+///
+/// The bound load is speculatively hoisted into the rtcheck block.  Runtime
+/// alias checks (LAA mem-checks + SCEV predicates + write-range checks) guard
+/// whether the hoist is safe.  If safe, control flows to the versioned clone
+/// (ver.for.body) which now has a countable trip count and can be vectorized.
+/// If unsafe, control falls back to the original loop which re-reads the bound
+/// on every iteration.
+///
+/// Returns the versioned (fast-path) loop clone on success, or nullptr if the
+/// loop does not qualify or the transform cannot be applied safely.
+Loop *versionLoopForInvariantBoundLoad(Loop *L, LoadInst *BoundLoad,
+                                       DominatorTree &DT, LoopInfo &LI,
+                                       AAResults &AA,
+                                       PredicatedScalarEvolution &PSE,
+                                       AssumptionCache *AC);
 }
 
 #endif
