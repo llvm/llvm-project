@@ -106,3 +106,11 @@ functions:
       - type: int
       - type: const sigset_t *__restrict
       - type: sigset_t *__restrict
+  - name: pthread_sigmask
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
+      - type: const sigset_t *__restrict
+      - type: sigset_t *__restrict

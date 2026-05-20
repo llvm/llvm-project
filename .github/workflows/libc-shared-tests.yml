@@ -10,6 +10,7 @@ on:
 jobs:
   windows-msvc-shared:
     name: libc-shared-test with MSVC (${{ matrix.arch }})
+    if: github.repository_owner == 'llvm'
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:
@@ -47,6 +48,7 @@ jobs:
 
   linux-cross-arch-shared:
     name: libc-shared-tests on (${{ matrix.arch }})
+    if: github.repository_owner == 'llvm'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false # If one arch fails, let the other finish

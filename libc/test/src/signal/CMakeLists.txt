@@ -56,6 +56,21 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  pthread_sigmask_test
+  SUITE
+    libc_signal_unittests
+  SRCS
+    pthread_sigmask_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.signal.pthread_sigmask
+    libc.src.signal.raise
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_unittest(
   sigaddset_test
   SUITE
     libc_signal_unittests
