@@ -1286,25 +1286,27 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
                                     /*MissingOK=*/false);
   }
 
-  if (getLangOpts().C99 && InitStmt->get() != nullptr &&
-      InitStmt->get()->getStmtClass() != Stmt::DeclStmtClass) {
-    // C2y only permits declaration in the first clause of an if condition,
-    // so it makes sense to error out in other conditions.
-    Diag(InitStmt->get()->getBeginLoc(),
-         diag::err_c2y_first_condition_clause_is_not_declaration)
-        << InitStmt->get()->getSourceRange();
-    Cond = Sema::ConditionError();
-    return true;
-  }
+  if (getLangOpts().C99) {
+    if (InitStmt != nullptr && InitStmt->isUsable()) {
+      // handle the 2 clauses of declaration: (clause1; clause2)
+      if (InitStmt->get()->getStmtClass() != Stmt::DeclStmtClass)
+        // C2y only permits declaration in the first clause of an if condition,
+        // so it makes sense to error out in other conditions.
+        Diag(InitStmt->get()->getBeginLoc(),
+            diag::err_c2y_first_condition_clause_is_not_declaration)
+            << InitStmt->get()->getSourceRange();
 
-  if (getLangOpts().C99 && InitStmt->get() != nullptr &&
-      Cond.get().first != nullptr) {
-    // C2y only permits expression in the second clause of an if condition,
-    // so it makes sense to error out in other conditions.
-    Diag(Cond.get().first->getBeginLoc(), diag::err_expected_expression)
-        << Cond.get().first->getSourceRange();
-    Cond = Sema::ConditionError();
-    return true;
+      if (Cond.get().first != nullptr)
+        // C2y only permits expression in the second clause of an if condition,
+        // so it makes sense to error out in other conditions.
+        Diag(Cond.get().first->getBeginLoc(), diag::err_expected_expression)
+            << Cond.get().first->getSourceRange();
+    } else if (Cond.get().first != nullptr)
+      // handle: if (int decl = 0) {}
+      Diag(Cond.get().first->getBeginLoc(),
+           getLangOpts().C2y ? diag::warn_c2y_compat_init_statement
+                             : diag::ext_c2y_init_statement)
+          << (CK == Sema::ConditionKind::Switch);
   }
 
   // Either the condition is valid or the rparen is present.
