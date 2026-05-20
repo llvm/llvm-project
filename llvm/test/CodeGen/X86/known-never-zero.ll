@@ -2903,9 +2903,7 @@ define i32 @and_known_nonzero_vec(<4 x i32> %x, <4 x i32> %y, ptr %p) {
 ; X86-NEXT:    pand %xmm0, %xmm1
 ; X86-NEXT:    movdqa %xmm1, (%eax)
 ; X86-NEXT:    movd %xmm1, %eax
-; X86-NEXT:    bsfl %eax, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_known_nonzero_vec:
@@ -2915,9 +2913,8 @@ define i32 @and_known_nonzero_vec(<4 x i32> %x, <4 x i32> %y, ptr %p) {
 ; X64-NEXT:    vpor %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %xx = or <4 x i32> %x, <i32 1, i32 0, i32 0, i32 0>
   %yy = or <4 x i32> %y, <i32 1, i32 0, i32 0, i32 0>
@@ -2975,9 +2972,7 @@ define i32 @xor_known_nonzero_vec(<4 x i32> %x, <4 x i32> %y, ptr %p) {
 ; X86-NEXT:    pxor %xmm0, %xmm1
 ; X86-NEXT:    movdqa %xmm1, (%eax)
 ; X86-NEXT:    movd %xmm1, %eax
-; X86-NEXT:    bsfl %eax, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor_known_nonzero_vec:
@@ -2986,9 +2981,8 @@ define i32 @xor_known_nonzero_vec(<4 x i32> %x, <4 x i32> %y, ptr %p) {
 ; X64-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; X64-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %xx = and <4 x i32> %x, <i32 0, i32 1, i32 1, i32 1>
   %yy = or <4 x i32> %y, <i32 1, i32 0, i32 0, i32 0>

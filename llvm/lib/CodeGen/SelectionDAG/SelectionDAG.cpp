@@ -6698,9 +6698,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
   }
   }
 
-  LLVM_DEBUG(dbgs() << "isKnownNeverZero: using default computeKnownBits for opcode " 
-                   << Op.getOpcode() << "\n");
-  return computeKnownBits(Op, Depth).isNonZero();
+  return computeKnownBits(Op, DemandedElts, Depth).isNonZero();
 }
 
 bool SelectionDAG::cannotBeOrderedNegativeFP(SDValue Op) const {
