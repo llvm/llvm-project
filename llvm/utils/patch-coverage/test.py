@@ -7,7 +7,7 @@ from pathlib import Path
 from utils import log
 from utils import target_name
 
-# TODO: Can we run llvm-lit in batch mode
+# TODO: We should run llvm-lit in batch mode.
 
 
 def run_single_test_with_coverage(llvm_lit_path, test_path, inst_build_dir):

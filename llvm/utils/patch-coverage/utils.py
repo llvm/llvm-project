@@ -41,15 +41,13 @@ def mark_build_success(build_dir, patch_path):
 
 
 def delete_profraw(inst_build_dir):
-    cwd = os.getcwd()
-    os.chdir(inst_build_dir)
-
-    command = 'find . -type f -name "*.profraw" -delete'
-    os.chdir(cwd)
-
+    abs_dir = os.path.abspath(inst_build_dir)
     try:
-        subprocess.run(command, shell=True, check=True)
-        log("Older '.profraw' files are successfully deleted.")
+        subprocess.run(
+            ["find", abs_dir, "-type", "f", "-name", "*.profraw", "-delete"],
+            check=True
+        )
+        log("Older '.profraw' files successfully deleted.")
     except subprocess.CalledProcessError as e:
         log(f"Error: {e}")
 

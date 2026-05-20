@@ -157,7 +157,7 @@ def main():
         mark_build_success(inst_build_dir, patch_path)
     else:
         print("\n[patch-coverage] Skipping patch coverage (no changes)")
-        sys.exit(1)
+        sys.exit(0)
 
     # Run all the test cases of patch with instrumented binary.
     inst_lit_path = os.path.join(inst_build_dir, "bin/llvm-lit")
