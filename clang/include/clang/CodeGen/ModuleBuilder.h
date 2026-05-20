@@ -32,6 +32,7 @@ namespace llvm {
 inline constexpr llvm::StringRef ClangTrapPrefix = "__clang_trap_msg";
 
 namespace clang {
+  class BaseSubobject;
   class CodeGenOptions;
   class CoverageSourceInfo;
   class Decl;
@@ -104,6 +105,8 @@ public:
   ///   code generator will schedule the entity for emission if a
   ///   definition has been registered with this code generator.
   llvm::Constant *GetAddrOfGlobal(GlobalDecl decl, bool isForDefinition);
+
+  llvm::Constant *GetAddrOfVTable(BaseSubobject base, CXXRecordDecl *decl);
 
   /// Create a new \c llvm::Module after calling HandleTranslationUnit. This
   /// enable codegen in interactive processing environments.

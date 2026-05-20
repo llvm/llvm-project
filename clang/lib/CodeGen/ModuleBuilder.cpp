@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CodeGen/ModuleBuilder.h"
+#include "CGCXXABI.h"
 #include "CGDebugInfo.h"
 #include "CodeGenModule.h"
 #include "clang/AST/ASTContext.h"
@@ -129,6 +130,11 @@ namespace {
 
     llvm::Constant *GetAddrOfGlobal(GlobalDecl global, bool isForDefinition) {
       return Builder->GetAddrOfGlobal(global, ForDefinition_t(isForDefinition));
+    }
+
+    llvm::Constant *GetAddrOfVTable(BaseSubobject subobject,
+                                    CXXRecordDecl *decl) {
+      return Builder->getCXXABI().getVTableAddressPoint(subobject, decl);
     }
 
     llvm::Module *StartModule(llvm::StringRef ModuleName,
@@ -376,6 +382,11 @@ llvm::Constant *CodeGenerator::GetAddrOfGlobal(GlobalDecl global,
                                                bool isForDefinition) {
   return static_cast<CodeGeneratorImpl*>(this)
            ->GetAddrOfGlobal(global, isForDefinition);
+}
+
+llvm::Constant *CodeGenerator::GetAddrOfVTable(BaseSubobject base,
+                                               CXXRecordDecl *decl) {
+  return static_cast<CodeGeneratorImpl *>(this)->GetAddrOfVTable(base, decl);
 }
 
 llvm::Module *CodeGenerator::StartModule(llvm::StringRef ModuleName,
