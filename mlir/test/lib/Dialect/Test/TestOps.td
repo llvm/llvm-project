@@ -3969,6 +3969,29 @@ def TestTransparentCastAlias : TEST_Op<"transparent_cast_alias",
   let assemblyFormat = "$source attr-dict `:` functional-type($source, $result)";
 }
 
+// Records the value last stored to a memref slot to test
+// `PromotableOpInterface::visitReplacedValues`. When promoted, it emits a
+// `test.tracked_value` after every `memref.store` of the reaching
+// definitions (similar to `llvm.intr.dbg.declare` and `dbg.value`).
+def TestSlotTracker : TEST_Op<"slot_tracker",
+    [DeclareOpInterfaceMethods<PromotableOpInterface,
+                               ["canUsesBeRemoved",
+                                "removeBlockingUses",
+                                "requiresReplacedValues",
+                                "visitReplacedValues"]>]> {
+  let arguments = (ins AnyMemRef:$source, StrAttr:$name);
+  let assemblyFormat =
+      "$source `,` $name attr-dict `:` type($source)";
+}
+
+// Marker emitted by `test.slot_tracker` at each reaching-definition store.
+// Carries the stored value and the tracker's name.
+def TestTrackedValue : TEST_Op<"tracked_value"> {
+  let arguments = (ins AnyType:$value, StrAttr:$name);
+  let assemblyFormat =
+      "$value `,` $name attr-dict `:` type($value)";
+}
+
 // Transparent alias of a memref slot exposing two simultaneously-usable
 // aliases of the same bit-width at different signednesses (signed and
 // unsigned 32-bit integers, both aliasing the signless i32 storage).
