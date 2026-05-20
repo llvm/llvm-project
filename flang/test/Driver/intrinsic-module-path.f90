@@ -14,7 +14,7 @@
 ! RUN:     %flang_fc1 -fsyntax-only -fintrinsic-modules-path %S/Inputs/module-dir-one -fintrinsic-modules-path %S/Inputs/module-dir     %s 2>&1 | FileCheck %s --allow-empty --check-prefix=GIVEN
 
 !-----------------------------------------
-! BURNSIDE BRIDGE_COMPILER (bbc)
+! BURNSIDE BRIDGE COMPILER (bbc)
 !-----------------------------------------
 ! RUN: not bbc                                                                                                     %s 2>&1 | FileCheck %s --check-prefix=WITHOUT
 ! RUN: not bbc -fintrinsic-modules-path %S/Inputs/module-dir                                                       %s 2>&1 | FileCheck %s --check-prefix=WRONG
