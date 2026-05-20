@@ -448,8 +448,8 @@ public:
   }
 
   VPValue *createScalarFreeze(VPValue *Op, Type *ResultTy, DebugLoc DL) {
-    return tryInsertInstruction(new VPInstructionWithType(
-        Instruction::Freeze, Op, ResultTy, {}, {}, DL));
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::Freeze, Op, {}, {}, DL));
   }
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,

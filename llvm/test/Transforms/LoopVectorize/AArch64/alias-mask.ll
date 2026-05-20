@@ -28,8 +28,7 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP11]], <vscale x 16 x i1> [[TMP10]], <vscale x 16 x i8> poison)
 ; CHECK-TF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-TF-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP12]], <vscale x 16 x i1> [[TMP10]], <vscale x 16 x i8> poison)
-; CHECK-TF-NEXT:    [[TMP13:%.*]] = select <vscale x 16 x i1> [[TMP10]], <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], <vscale x 16 x i8> splat (i8 1)
-; CHECK-TF-NEXT:    [[TMP14:%.*]] = sdiv <vscale x 16 x i8> [[WIDE_MASKED_LOAD3]], [[TMP13]]
+; CHECK-TF-NEXT:    [[TMP14:%.*]] = call <vscale x 16 x i8> @llvm.masked.sdiv.nxv16i8(<vscale x 16 x i8> [[WIDE_MASKED_LOAD3]], <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], <vscale x 16 x i1> [[TMP10]])
 ; CHECK-TF-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-TF-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP14]], ptr align 1 [[TMP15]], <vscale x 16 x i1> [[TMP10]])
 ; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[NUM_ACTIVE_LANES]]

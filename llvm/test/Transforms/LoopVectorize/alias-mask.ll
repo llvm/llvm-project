@@ -43,8 +43,7 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr align 1 [[TMP10]], <4 x i1> [[TMP9]], <4 x i8> poison)
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr align 1 [[TMP11]], <4 x i1> [[TMP9]], <4 x i8> poison)
-; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP9]], <4 x i8> [[WIDE_MASKED_LOAD]], <4 x i8> splat (i8 1)
-; CHECK-NEXT:    [[TMP13:%.*]] = sdiv <4 x i8> [[WIDE_MASKED_LOAD5]], [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call <4 x i8> @llvm.masked.sdiv.v4i8(<4 x i8> [[WIDE_MASKED_LOAD5]], <4 x i8> [[WIDE_MASKED_LOAD]], <4 x i1> [[TMP9]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i8.p0(<4 x i8> [[TMP13]], ptr align 1 [[TMP14]], <4 x i1> [[TMP9]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[NUM_ACTIVE_LANES]]
@@ -182,8 +181,7 @@ define void @alias_mask_non_default_address_space(ptr addrspace(1) noalias %a, p
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i8> @llvm.masked.load.v4i8.p1(ptr addrspace(1) align 1 [[TMP10]], <4 x i1> [[TMP9]], <4 x i8> poison)
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <4 x i8> @llvm.masked.load.v4i8.p1(ptr addrspace(1) align 1 [[TMP11]], <4 x i1> [[TMP9]], <4 x i8> poison)
-; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP9]], <4 x i8> [[WIDE_MASKED_LOAD]], <4 x i8> splat (i8 1)
-; CHECK-NEXT:    [[TMP13:%.*]] = sdiv <4 x i8> [[WIDE_MASKED_LOAD5]], [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call <4 x i8> @llvm.masked.sdiv.v4i8(<4 x i8> [[WIDE_MASKED_LOAD5]], <4 x i8> [[WIDE_MASKED_LOAD]], <4 x i1> [[TMP9]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i8.p1(<4 x i8> [[TMP13]], ptr addrspace(1) align 1 [[TMP14]], <4 x i1> [[TMP9]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[NUM_ACTIVE_LANES]]

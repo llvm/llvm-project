@@ -1736,12 +1736,6 @@ void VPInstructionWithType::execute(VPTransformState &State) {
     return;
   }
   switch (getOpcode()) {
-  case Instruction::Freeze: {
-    Value *Op = State.get(getOperand(0), VPLane(0));
-    Value *Freeze = State.Builder.CreateFreeze(Op);
-    State.set(this, Freeze, VPLane(0));
-    break;
-  }
   case VPInstruction::StepVector: {
     Value *StepVector =
         State.Builder.CreateStepVector(VectorType::get(ResultTy, State.VF));
