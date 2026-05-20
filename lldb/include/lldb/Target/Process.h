@@ -2309,7 +2309,7 @@ protected:
 public:
   llvm::Error ExecuteBreakpointSiteAction(BreakpointSite &site,
                                           Process::BreakpointAction action,
-                                          bool forbid_delay = false);
+                                          bool forbid_delay);
 
   // This is implemented completely using the lldb::Process API. Subclasses
   // don't need to implement this function unless the standard flow of read

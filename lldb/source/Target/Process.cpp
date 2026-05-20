@@ -1569,8 +1569,8 @@ Process::GetBreakpointSiteList() const {
 
 void Process::DisableAllBreakpointSites() {
   m_breakpoint_site_list.ForEach([this](BreakpointSite *bp_site) -> void {
-    llvm::consumeError(
-        ExecuteBreakpointSiteAction(*bp_site, BreakpointAction::Disable));
+    llvm::consumeError(ExecuteBreakpointSiteAction(
+        *bp_site, BreakpointAction::Disable, /*forbid_delay=*/false));
   });
 }
 
@@ -1588,8 +1588,8 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
     if (IsBreakpointSiteEnabled(*bp_site_sp))
-      error = Status::FromError(
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable));
+      error = Status::FromError(ExecuteBreakpointSiteAction(
+          *bp_site_sp, BreakpointAction::Disable, /*forbid_delay=*/false));
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
@@ -1637,8 +1637,8 @@ Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
     if (!IsBreakpointSiteEnabled(*bp_site_sp))
-      error = Status::FromError(
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Enable));
+      error = Status::FromError(ExecuteBreakpointSiteAction(
+          *bp_site_sp, BreakpointAction::Enable, /*forbid_delay=*/false));
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
@@ -1802,8 +1802,8 @@ void Process::RemoveConstituentFromBreakpointSite(
   if (num_constituents == 0) {
     // Don't try to disable the site if we don't have a live process anymore.
     if (IsAlive())
-      llvm::consumeError(
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable));
+      llvm::consumeError(ExecuteBreakpointSiteAction(
+          *bp_site_sp, BreakpointAction::Disable, /*forbid_delay=*/false));
     m_breakpoint_site_list.RemoveByAddress(bp_site_sp->GetLoadAddress());
   }
 }
