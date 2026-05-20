@@ -2644,7 +2644,8 @@ static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
         cir::PtrStrideOp::create(builder, loc, i8PtrTy, vtablePtr,
                                  builder.getSInt64(virtualAdjustment, loc));
     if (cgf.cgm.getLangOpts().RelativeCXXABIVTables) {
-      offset = builder.createAlignedLoad(loc, builder.getSInt32Ty(), offsetPtr, CharUnits::fromQuantity(4));
+      offset = builder.createAlignedLoad(loc, builder.getSInt32Ty(), offsetPtr,
+                                         CharUnits::fromQuantity(4));
     } else {
       offset = builder.createAlignedLoad(loc, cgf.ptrDiffTy, offsetPtr,
                                          cgf.getPointerAlign());

@@ -180,10 +180,13 @@ CIRGenVTables::getRTTIProxy(cir::GlobalOp &vtable, /* to calculate loc*/
     rttiProxyName.append(".rtti_proxy");
     proxy = cgm.createOrReplaceCXXRuntimeVariable(
         vtable->getLoc(), rttiProxyName, r.getType(),
-        cir::GlobalLinkageKind::PrivateLinkage,
+        cir::GlobalLinkageKind::LinkOnceODRLinkage,
         CharUnits::fromQuantity(
             cgm.getDataLayout().getABITypeAlign(r.getType())));
   }
+  proxy.setGlobalVisibility(cir::VisibilityKind::Hidden);
+  proxy.setComdat(true);
+  proxy.setConstant(true);
   cgm.setInitializer(proxy, rtti);
   return proxy;
 }
@@ -346,8 +349,7 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
                            base.getBase(), out);
   SmallString<256> name(outName);
 
-  assert(!cir::MissingFeatures::
-             vtableRelativeLayout()); // generateConstructionVTable
+  // We don't use .local here by @Elio
 
   cir::RecordType vtType = getVTableType(*vtLayout);
 
@@ -382,8 +384,7 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
   cgm.setGVProperties(vtable, rd);
 
   assert(!cir::MissingFeatures::vtableEmitMetadata());
-  assert(!cir::MissingFeatures::
-             vtableRelativeLayout()); // generateConstructionVTable
+  // RemoveHwasanMetadata? by @Elio
 
   return vtable;
 }
@@ -1032,7 +1033,6 @@ cir::FuncOp CIRGenVTables::maybeEmitThunk(GlobalDecl gd,
       return thunkFn;
     cgm.errorNYI("varargs thunk cloning");
   } else {
-    llvm::errs() << "generateThunk\n";
     // Normal thunk body generation.
     mlir::OpBuilder::InsertionGuard guard(cgm.getBuilder());
     CIRGenFunction cgf(cgm, cgm.getBuilder());
