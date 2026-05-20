@@ -938,8 +938,8 @@ public:
     CM_Scalarize,
     CM_VectorCall,
     CM_IntrinsicCall,
-    /// A widening decision that has been invalidated since the corresponding
-    /// recipe was replaced during VPlan transforms.
+    /// A widening decision that has been invalidated after replacing the
+    /// corresponding recipe during VPlan transforms.
     /// TODO: Remove once the legacy exit cost computation is retired.
     CM_InvalidatedDecision
   };

@@ -6811,7 +6811,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
         continue;
 
       // Check if this is a strided access by analyzing the address SCEV for an
-      // affine add recurrence pattern.
+      // affine addRec.
       const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, &L);
       const SCEV *Start;
       const APInt *Step;
