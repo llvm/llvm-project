@@ -6573,8 +6573,17 @@ static void removeUnusedBlocksFromParent(ArrayRef<BasicBlock *> BBs) {
     return false;
   };
 
-  while (BBsToErase.remove_if(HasRemainingUses)) {
-    // Try again if anything was removed.
+  // Compute the keep set before mutating BBsToErase; otherwise the result can
+  // depend on SmallPtrSet iteration order.
+  bool Changed = true;
+  while (Changed) {
+    Changed = false;
+    SmallVector<BasicBlock *, 4> BBsToKeep;
+    for (BasicBlock *BB : BBsToErase)
+      if (HasRemainingUses(BB))
+        BBsToKeep.push_back(BB);
+    for (BasicBlock *BB : BBsToKeep)
+      Changed |= BBsToErase.erase(BB);
   }
 
   SmallVector<BasicBlock *, 7> BBVec(BBsToErase.begin(), BBsToErase.end());
