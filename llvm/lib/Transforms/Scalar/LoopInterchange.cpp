@@ -997,10 +997,11 @@ static bool checkReductionKind(Loop *L, PHINode *PHI,
     case RecurKind::AnyOf:
       return true;
 
-    // Change the order of floating-point operations may alter the results. If a
-    // certain instruction has ninf flag, it means that reordering can produce a
-    // poison value, which may lead to undefined behavior. To prevent this, we
-    // must drop the ninf flags if we decide to apply the transformation.
+    // Changing the order of floating-point operations may alter the results. If
+    // a certain instruction has the ninf flag, it means that reordering can
+    // produce a poison value, which may lead to undefined behavior. To prevent
+    // this, we must drop the ninf flags if we decide to apply the
+    // transformation.
     case RecurKind::FAdd:
     case RecurKind::FMul:
     case RecurKind::FMin:
