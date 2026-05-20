@@ -29,7 +29,7 @@
 // 
 //===------------------------------------------------------===//
 
-// ALL-LABEL: {{.*}} @test_vqrshrun_n_s16(
+// ALL-LABEL: @test_vqrshrun_n_s16(
 uint8x8_t test_vqrshrun_n_s16(int16x8_t a) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
 
@@ -41,7 +41,7 @@ uint8x8_t test_vqrshrun_n_s16(int16x8_t a) {
   return vqrshrun_n_s16(a, 3);
 }
 
-// ALL-LABEL: {{.*}} @test_vqrshrun_n_s32(
+// ALL-LABEL: @test_vqrshrun_n_s32(
 uint16x4_t test_vqrshrun_n_s32(int32x4_t a) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
 
@@ -53,7 +53,7 @@ uint16x4_t test_vqrshrun_n_s32(int32x4_t a) {
   return vqrshrun_n_s32(a, 9);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrun_n_s64(
+// ALL-LABEL: @test_vqrshrun_n_s64(
 uint32x2_t test_vqrshrun_n_s64(int64x2_t a) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
 
@@ -65,7 +65,7 @@ uint32x2_t test_vqrshrun_n_s64(int64x2_t a) {
   return vqrshrun_n_s64(a, 19);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrunh_n_s16(
+// ALL-LABEL: @test_vqrshrunh_n_s16(
 uint8_t test_vqrshrunh_n_s16(int16_t a) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
 
@@ -75,7 +75,7 @@ uint8_t test_vqrshrunh_n_s16(int16_t a) {
   return (uint8_t)vqrshrunh_n_s16(a, 8);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshruns_n_s32(
+// ALL-LABEL: @test_vqrshruns_n_s32(
 uint16_t test_vqrshruns_n_s32(int32_t a) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
 
@@ -85,7 +85,7 @@ uint16_t test_vqrshruns_n_s32(int32_t a) {
   return (uint16_t)vqrshruns_n_s32(a, 16);
 }
 
-//ALL-LABEL: {{.*}} @test_vqrshrund_n_s64(
+//ALL-LABEL:  @test_vqrshrund_n_s64(
 uint32_t test_vqrshrund_n_s64(int64_t a) {
   //CIR: {{%.*}} =  cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
   // 
@@ -96,7 +96,7 @@ uint32_t test_vqrshrund_n_s64(int64_t a) {
   return (uint32_t)vqrshrund_n_s64(a, 32);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrn_n_s16(
+// ALL-LABEL: @test_vqrshrn_n_s16(
 int8x8_t test_vqrshrn_n_s16(int16x8_t a) {
   // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
 
@@ -108,7 +108,7 @@ int8x8_t test_vqrshrn_n_s16(int16x8_t a) {
   return vqrshrn_n_s16(a, 3);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrn_n_s32(
+// ALL-LABEL: @test_vqrshrn_n_s32(
 int16x4_t test_vqrshrn_n_s32(int32x4_t a) {
   // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
 
@@ -120,7 +120,7 @@ int16x4_t test_vqrshrn_n_s32(int32x4_t a) {
   return vqrshrn_n_s32(a, 9);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrn_n_s64(
+// ALL-LABEL: @test_vqrshrn_n_s64(
 int32x2_t test_vqrshrn_n_s64(int64x2_t a) {
   // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
 
@@ -132,7 +132,7 @@ int32x2_t test_vqrshrn_n_s64(int64x2_t a) {
   return vqrshrn_n_s64(a, 19);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrun_high_n_s16(
+// ALL-LABEL: @test_vqrshrun_high_n_s16(
 uint8x16_t test_vqrshrun_high_n_s16(uint8x8_t a, int16x8_t b) {
   // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
 
@@ -145,7 +145,7 @@ uint8x16_t test_vqrshrun_high_n_s16(uint8x8_t a, int16x8_t b) {
   return vqrshrun_high_n_s16(a, b, 3);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrun_high_n_s32(
+// ALL-LABEL: @test_vqrshrun_high_n_s32(
 uint16x8_t test_vqrshrun_high_n_s32(uint16x4_t a, int32x4_t b) {
   // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
   
@@ -158,7 +158,7 @@ uint16x8_t test_vqrshrun_high_n_s32(uint16x4_t a, int32x4_t b) {
   return vqrshrun_high_n_s32(a, b, 9);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrun_high_n_s64(
+// ALL-LABEL: @test_vqrshrun_high_n_s64(
 uint32x4_t test_vqrshrun_high_n_s64(uint32x2_t a, int64x2_t b) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
 
@@ -171,7 +171,7 @@ uint32x4_t test_vqrshrun_high_n_s64(uint32x2_t a, int64x2_t b) {
   return vqrshrun_high_n_s64(a, b, 19);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrn_n_u16(
+// ALL-LABEL: @test_vqrshrn_n_u16(
 uint8x8_t test_vqrshrn_n_u16(uint16x8_t a) {
   // CIR: cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" {{%.*}}
 
@@ -183,7 +183,7 @@ uint8x8_t test_vqrshrn_n_u16(uint16x8_t a) {
   return vqrshrn_n_u16(a, 3);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrn_n_u32(
+// ALL-LABEL: @test_vqrshrn_n_u32(
 uint16x4_t test_vqrshrn_n_u32(uint32x4_t a) {
   // CIR: cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" {{%.*}}
 
@@ -195,7 +195,7 @@ uint16x4_t test_vqrshrn_n_u32(uint32x4_t a) {
   return vqrshrn_n_u32(a, 9);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrn_n_u64(
+// ALL-LABEL: @test_vqrshrn_n_u64(
 uint32x2_t test_vqrshrn_n_u64(uint64x2_t a) {
   // CIR: cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" {{%.*}}
 
@@ -207,7 +207,7 @@ uint32x2_t test_vqrshrn_n_u64(uint64x2_t a) {
   return vqrshrn_n_u64(a, 19);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrnh_n_s16(
+// ALL-LABEL: @test_vqrshrnh_n_s16(
 int8_t test_vqrshrnh_n_s16(int16_t a) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
 
@@ -217,7 +217,7 @@ int8_t test_vqrshrnh_n_s16(int16_t a) {
   return (int8_t)vqrshrnh_n_s16(a, 8);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrns_n_s32(
+// ALL-LABEL: @test_vqrshrns_n_s32(
 int16_t test_vqrshrns_n_s32(int32_t a) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
 
@@ -227,7 +227,7 @@ int16_t test_vqrshrns_n_s32(int32_t a) {
   return (int16_t)vqrshrns_n_s32(a, 16);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrnd_n_s64(
+// ALL-LABEL: @test_vqrshrnd_n_s64(
 int32_t test_vqrshrnd_n_s64(int64_t a) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
 
@@ -237,7 +237,7 @@ int32_t test_vqrshrnd_n_s64(int64_t a) {
   return (int32_t)vqrshrnd_n_s64(a, 32);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrnh_n_u16(
+// ALL-LABEL: @test_vqrshrnh_n_u16(
 uint8_t test_vqrshrnh_n_u16(uint16_t a) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" {{%.*}}
 
@@ -247,7 +247,7 @@ uint8_t test_vqrshrnh_n_u16(uint16_t a) {
   return (uint8_t)vqrshrnh_n_u16(a, 8);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrns_n_u32(
+// ALL-LABEL: @test_vqrshrns_n_u32(
 uint16_t test_vqrshrns_n_u32(uint32_t a) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" {{%.*}}
 
@@ -257,7 +257,7 @@ uint16_t test_vqrshrns_n_u32(uint32_t a) {
   return (uint16_t)vqrshrns_n_u32(a, 16);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrnd_n_u64(
+// ALL-LABEL: @test_vqrshrnd_n_u64(
 uint32_t test_vqrshrnd_n_u64(uint64_t a) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" {{%.*}}
 
@@ -267,7 +267,7 @@ uint32_t test_vqrshrnd_n_u64(uint64_t a) {
   return (uint32_t)vqrshrnd_n_u64(a, 32);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrn_high_n_s16(
+// ALL-LABEL: @test_vqrshrn_high_n_s16(
 int8x16_t test_vqrshrn_high_n_s16(int8x8_t a, int16x8_t b) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
 
@@ -280,7 +280,7 @@ int8x16_t test_vqrshrn_high_n_s16(int8x8_t a, int16x8_t b) {
   return vqrshrn_high_n_s16(a, b, 3);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrn_high_n_s32(
+// ALL-LABEL: @test_vqrshrn_high_n_s32(
 int16x8_t test_vqrshrn_high_n_s32(int16x4_t a, int32x4_t b) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
 
@@ -293,7 +293,7 @@ int16x8_t test_vqrshrn_high_n_s32(int16x4_t a, int32x4_t b) {
   return vqrshrn_high_n_s32(a, b, 9);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrn_high_n_s64(
+// ALL-LABEL:  @test_vqrshrn_high_n_s64(
 int32x4_t test_vqrshrn_high_n_s64(int32x2_t a, int64x2_t b) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
 
@@ -306,7 +306,7 @@ int32x4_t test_vqrshrn_high_n_s64(int32x2_t a, int64x2_t b) {
   return vqrshrn_high_n_s64(a, b, 19);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrn_high_n_u16(
+// ALL-LABEL:  @test_vqrshrn_high_n_u16(
 uint8x16_t test_vqrshrn_high_n_u16(uint8x8_t a, uint16x8_t b) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" {{%.*}}
 
@@ -319,7 +319,7 @@ uint8x16_t test_vqrshrn_high_n_u16(uint8x8_t a, uint16x8_t b) {
   return vqrshrn_high_n_u16(a, b, 3);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrn_high_n_u32(
+// ALL-LABEL: @test_vqrshrn_high_n_u32(
 uint16x8_t test_vqrshrn_high_n_u32(uint16x4_t a, uint32x4_t b) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" {{%.*}}
 
@@ -332,7 +332,7 @@ uint16x8_t test_vqrshrn_high_n_u32(uint16x4_t a, uint32x4_t b) {
   return vqrshrn_high_n_u32(a, b, 9);
 }
 
-// ALL-LABEL: {{.*}}@test_vqrshrn_high_n_u64(
+// ALL-LABEL: @test_vqrshrn_high_n_u64(
 uint32x4_t test_vqrshrn_high_n_u64(uint32x2_t a, uint64x2_t b) {
   // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" {{%.*}}
 
