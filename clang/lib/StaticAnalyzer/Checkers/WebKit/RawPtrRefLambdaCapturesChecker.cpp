@@ -63,6 +63,18 @@ public:
         ShouldVisitImplicitCode = false;
       }
 
+      bool TraverseCXXConstructorDecl(CXXConstructorDecl *Ctor) override {
+        llvm::SaveAndRestore SavedDecl(ClsType);
+        ClsType = Ctor->getThisType();
+        return DynamicRecursiveASTVisitor::TraverseCXXConstructorDecl(Ctor);
+      }
+
+      bool TraverseCXXDestructorDecl(CXXDestructorDecl *Dtor) override {
+        llvm::SaveAndRestore SavedDecl(ClsType);
+        ClsType = Dtor->getThisType();
+        return DynamicRecursiveASTVisitor::TraverseCXXDestructorDecl(Dtor);
+      }
+
       bool TraverseCXXMethodDecl(CXXMethodDecl *CXXMD) override {
         llvm::SaveAndRestore SavedDecl(ClsType);
         if (CXXMD->isInstance())
