@@ -128,8 +128,8 @@ program p
   print *, y(2:3)
 end
 
-! CHECK: fir.global linkonce @_QQMmFtest1.nonTbpDefinedIoTable.list constant : !fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i8>>
+! CHECK: fir.global linkonce @_QQMmFtest1.nonTbpDefinedIoTable.list {alignment = 64 : i64} constant : !fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i8>>
 ! CHECK: fir.global linkonce @_QQMmFtest1.nonTbpDefinedIoTable constant : tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i8>>>, i1>
 ! CHECK: fir.global linkonce @_QQdefault.nonTbpDefinedIoTable constant : tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i8>>>, i1>
-! CHECK: fir.global linkonce @_QQF.nonTbpDefinedIoTable.list constant : !fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i8>>
+! CHECK: fir.global linkonce @_QQF.nonTbpDefinedIoTable.list {alignment = 64 : i64} constant : !fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i8>>
 ! CHECK: fir.global linkonce @_QQF.nonTbpDefinedIoTable constant : tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i8>>>, i1>

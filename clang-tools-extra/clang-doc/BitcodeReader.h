@@ -31,7 +31,7 @@ public:
       : Stream(Stream), Diags(Diags) {}
 
   // Main entry point, calls readBlock to read each block in the given stream.
-  llvm::Expected<OwningPtrArray<Info>> readBitcode();
+  llvm::Expected<std::vector<Info *>> readBitcode();
 
 private:
   enum class Cursor { BadBlock = 1, Record, BlockEnd, BlockBegin };
