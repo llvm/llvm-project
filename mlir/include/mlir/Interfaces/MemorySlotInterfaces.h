@@ -69,13 +69,23 @@ void populatePromotableAliasMap(PromotableAliaserInterface aliaser,
                                 const MemorySlot &rootSlot,
                                 PromotableAliasMap &aliasMap);
 
-/// Finds the memory slot accessed by `op` that aliases `rootSlot.ptr`.
-/// Returns `nullopt` if no operand aliases `rootSlot`, or if the operation
-/// uses multiple distinct aliases of `rootSlot` (as `PromotableMemOpInterface`
-/// only supports a single slot).
+/// Returns a `MemorySlot` for the operand of `op` that aliases `rootSlot.ptr`
+/// (either the root itself or a known entry in `aliasMap`), providing the
+/// alias's element type. Returns `nullopt` if no operand of `op` reaches
+/// `rootSlot`. If `op` reaches `rootSlot` through multiple distinct aliases
+/// (e.g., a memcpy between two aliases of the same root), the result is one
+/// of them; use `referencesAtMostOneAliasOfSlot` to rule this out.
 std::optional<MemorySlot> getOpAliasSlot(Operation *op,
                                          const MemorySlot &rootSlot,
                                          const PromotableAliasMap &aliasMap);
+
+/// Returns true if `op`'s operands reach `rootSlot` through at most one
+/// distinct alias pointer (the root itself or a single `aliasMap` entry).
+/// Multiple operands referencing the same alias are allowed. This is used to
+/// guard `PromotableMemOpInterface` calls, which assume a single slot per
+/// operation.
+bool referencesAtMostOneAliasOfSlot(Operation *op, const MemorySlot &rootSlot,
+                                    const PromotableAliasMap &aliasMap);
 
 /// Projects `slotValue` down to the element type of `aliasPtr` by chaining
 /// `projectSlotValueToAliasValue` calls along the alias chain. Returns a null

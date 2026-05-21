@@ -46,16 +46,26 @@ void mlir::populatePromotableAliasMap(PromotableAliaserInterface aliaser,
 std::optional<MemorySlot>
 mlir::getOpAliasSlot(Operation *op, const MemorySlot &rootSlot,
                      const PromotableAliasMap &aliasMap) {
-  std::optional<MemorySlot> uniqueSlot;
+  for (Value operand : op->getOperands())
+    if (std::optional<MemorySlot> slot =
+            getParentSlot(operand, rootSlot, aliasMap))
+      return slot;
+  return std::nullopt;
+}
+
+bool mlir::referencesAtMostOneAliasOfSlot(Operation *op,
+                                          const MemorySlot &rootSlot,
+                                          const PromotableAliasMap &aliasMap) {
+  Value uniqueAliasPtr;
   for (Value operand : op->getOperands()) {
     std::optional<MemorySlot> slot = getParentSlot(operand, rootSlot, aliasMap);
     if (!slot)
       continue;
-    if (uniqueSlot && uniqueSlot->ptr != slot->ptr)
-      return std::nullopt;
-    uniqueSlot = slot;
+    if (uniqueAliasPtr && uniqueAliasPtr != slot->ptr)
+      return false;
+    uniqueAliasPtr = slot->ptr;
   }
-  return uniqueSlot;
+  return true;
 }
 
 namespace {

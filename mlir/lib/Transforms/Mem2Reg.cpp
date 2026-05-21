@@ -409,14 +409,14 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
         return failure();
       regionsWithDirectUse.insert(user->getParentRegion());
     } else if (auto promotable = dyn_cast<PromotableMemOpInterface>(user)) {
-      // `getOpAliasSlot` returns `nullopt` if the op uses multiple distinct
-      // aliases. Promotion fails in this case, as `PromotableMemOpInterface`
-      // expects a single slot per call.
-      std::optional<MemorySlot> aliasSlotOpt =
-          getOpAliasSlot(user, slot, aliasMap);
-      if (!aliasSlotOpt)
+      // If the memop reaches the root slot through multiple distinct alias
+      // operands, promotion fails. `PromotableMemOpInterface` expects a
+      // single slot per call. Supporting multiple aliases would require
+      // extending the interface.
+      if (!referencesAtMostOneAliasOfSlot(user, slot, aliasMap))
         return failure();
-      MemorySlot aliasSlot = *aliasSlotOpt;
+      MemorySlot aliasSlot =
+          getOpAliasSlot(user, slot, aliasMap).value_or(slot);
       if (!promotable.canUsesBeRemoved(aliasSlot, blockingUses, newBlockingUses,
                                        dataLayout))
         return failure();
