@@ -500,6 +500,14 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
       });
 }
 
+bool vputils::mustReplicate(const VPRecipeBase *R) {
+  if (auto *RepR = dyn_cast<VPReplicateRecipe>(R))
+    return RepR->mustReplicate();
+  if (auto *VPI = dyn_cast<VPInstruction>(R))
+    return VPI->mustReplicate();
+  return isa<VPScalarIVStepsRecipe>(R);
+}
+
 VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
   auto DepthFirst = vp_depth_first_shallow(Plan.getEntry());
   auto I = find_if(DepthFirst, [&VPDT](VPBlockBase *VPB) {

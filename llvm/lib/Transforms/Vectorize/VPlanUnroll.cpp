@@ -936,12 +936,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
   SmallVector<VPRecipeBase *> ToRemove;
   for (VPBasicBlock *VPBB : VPBBsToUnroll) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (!isa<VPInstruction, VPReplicateRecipe, VPScalarIVStepsRecipe>(&R) ||
-          (isa<VPReplicateRecipe>(&R) &&
-           cast<VPReplicateRecipe>(&R)->isSingleScalar()) ||
-          (isa<VPInstruction>(&R) &&
-           !cast<VPInstruction>(&R)->doesGeneratePerAllLanes() &&
-           cast<VPInstruction>(&R)->getOpcode() != VPInstruction::Unpack))
+      if (!vputils::mustReplicate(&R))
         continue;
 
       auto *DefR = cast<VPSingleDefRecipe>(&R);
