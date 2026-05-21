@@ -806,6 +806,69 @@ static bool isSavedLocal(const fir::AliasAnalysis::Source &src) {
   return false;
 }
 
+/// Return true if `declareOp`'s address may have been bound to a Fortran
+/// POINTER before `callOp`. Uses textually after the call in the same block
+/// are skipped; anything else is conservative.
+static bool mayBeCapturedByPointer(mlir::Operation *declareOp,
+                                   mlir::Operation *callOp) {
+  if (!declareOp || !callOp)
+    return true;
+  auto funcOp = callOp->getParentOfType<mlir::FunctionOpInterface>();
+  if (!funcOp)
+    return true;
+  mlir::Operation *callAnchor = callOp;
+  while (callAnchor->getParentOp() && callAnchor->getParentOp() != funcOp)
+    callAnchor = callAnchor->getParentOp();
+
+  llvm::SmallVector<mlir::Value, 8> worklist;
+  llvm::SmallPtrSet<mlir::Value, 8> seen;
+  for (mlir::Value res : declareOp->getResults())
+    if (seen.insert(res).second)
+      worklist.push_back(res);
+
+  while (!worklist.empty()) {
+    mlir::Value v = worklist.pop_back_val();
+    for (mlir::OpOperand &use : v.getUses()) {
+      mlir::Operation *userOp = use.getOwner();
+      if (userOp == callOp || userOp == callAnchor)
+        continue;
+      if (userOp->getBlock() == callAnchor->getBlock() &&
+          callAnchor->isBeforeInBlock(userOp))
+        continue;
+      if (mlir::isa<fir::DeclareOp, hlfir::DeclareOp, hlfir::DesignateOp,
+                    fir::ArrayCoorOp, fir::CoordinateOp>(userOp)) {
+        for (mlir::Value r : userOp->getResults())
+          if (seen.insert(r).second)
+            worklist.push_back(r);
+        continue;
+      }
+      if (mlir::isa<fir::LoadOp, hlfir::AssignOp>(userOp))
+        continue;
+      if (auto store = mlir::dyn_cast<fir::StoreOp>(userOp)) {
+        if (store.getValue() == v)
+          return true;
+        continue;
+      }
+      if (auto embox = mlir::dyn_cast<fir::EmboxOp>(userOp)) {
+        if (auto boxT =
+                mlir::dyn_cast<fir::BoxType>(embox.getResult().getType())) {
+          if (mlir::isa<fir::PointerType, fir::HeapType>(boxT.getEleTy()))
+            return true;
+          for (mlir::Value r : userOp->getResults())
+            if (seen.insert(r).second)
+              worklist.push_back(r);
+          continue;
+        }
+      }
+      if (mlir::isa<ACC_DATA_CLAUSE_OPS, mlir::acc::ReductionInitOp,
+                    mlir::omp::MapInfoOp>(userOp))
+        continue;
+      return true;
+    }
+  }
+  return false;
+}
+
 bool AliasAnalysis::isCallToFortranUserProcedure(Operation *op) {
   fir::CallOp call = dyn_cast<fir::CallOp>(op);
   if (!call)
@@ -859,9 +922,15 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   // attribute, which would lead this analysis to believe it cannot escape.
   if (!varSrc.isFortranUserVariable() || !isCallToFortranUserProcedure(call))
     return ModRefResult::getModAndRef();
-  // Pointer and target may have been captured.
-  if (varSrc.isTargetOrPointer())
+  // Pointer or non-local TARGET: may have been bound to a POINTER outside
+  // this procedure. Local TARGET: check for an intraprocedural binding.
+  if (varSrc.isPointer())
     return ModRefResult::getModAndRef();
+  if (varSrc.isTarget()) {
+    if (varSrc.kind != fir::AliasAnalysis::SourceKind::Allocate ||
+        mayBeCapturedByPointer(varSrc.origin.instantiationPoint, call))
+      return ModRefResult::getModAndRef();
+  }
   // Host associated variables may be addressed indirectly via an internal
   // function call, whether the call is in the parent or an internal procedure.
   // Note that the host associated/internal procedure may be referenced
