@@ -66,5 +66,5 @@ end subroutine
 !CHECK: #[[BAR_LOC]] = loc("{{.*}}location.f90":46:9)
 !CHECK: #[[TW_LOC]] = loc("{{.*}}location.f90":48:9)
 !CHECK: #[[TY_LOC]] = loc("{{.*}}location.f90":50:9)
-!CHECK: #[[IF_LOC]] = loc("{{.*}}location.f90":57:14)
 !CHECK: #[[TASK_LOC]] = loc("{{.*}}location.f90":57:9)
+!CHECK: #[[IF_LOC]] = loc("{{.*}}location.f90":57:14)

@@ -8,11 +8,11 @@
 
 #ifdef cl_khr_extended_bit_ops
 
-#include <clc/integer/clc_bit_reverse.h>
+#include "clc/integer/clc_bit_reverse.h"
 
 #define __CLC_FUNCTION bit_reverse
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __CLC_BODY "clc/shared/unary_def.inc"
 
-#include <clc/integer/gentype.inc>
+#include "clc/integer/gentype.inc"
 
 #endif // cl_khr_extended_bit_ops

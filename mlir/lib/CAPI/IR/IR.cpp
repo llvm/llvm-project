@@ -403,6 +403,14 @@ MlirLocation mlirLocationUnknownGet(MlirContext context) {
   return wrap(Location(UnknownLoc::get(unwrap(context))));
 }
 
+MlirTypeID mlirLocationUnknownGetTypeID() {
+  return wrap(UnknownLoc::getTypeID());
+}
+
+bool mlirLocationIsAUnknown(MlirLocation location) {
+  return isa<UnknownLoc>(unwrap(location));
+}
+
 bool mlirLocationEqual(MlirLocation l1, MlirLocation l2) {
   return unwrap(l1) == unwrap(l2);
 }
@@ -552,11 +560,11 @@ static LogicalResult inferOperationTypes(OperationState &state) {
   }
 
   DictionaryAttr attributes = state.attributes.getDictionary(context);
-  OpaqueProperties properties = state.getRawProperties();
+  PropertyRef properties = state.getRawProperties();
 
   if (!properties && info->getOpPropertyByteSize() > 0 && !attributes.empty()) {
-    auto prop = std::make_unique<char[]>(info->getOpPropertyByteSize());
-    properties = OpaqueProperties(prop.get());
+    auto propAlloc = std::make_unique<char[]>(info->getOpPropertyByteSize());
+    properties = PropertyRef(info->getOpPropertiesTypeID(), propAlloc.get());
     if (properties) {
       auto emitError = [&]() {
         return mlir::emitError(state.location)
@@ -649,6 +657,12 @@ size_t mlirOperationHashValue(MlirOperation op) {
 
 MlirContext mlirOperationGetContext(MlirOperation op) {
   return wrap(unwrap(op)->getContext());
+}
+
+bool mlirOperationNameHasTrait(MlirStringRef opName, MlirTypeID traitTypeID,
+                               MlirContext context) {
+  return OperationName(unwrap(opName), unwrap(context))
+      .hasTrait(unwrap(traitTypeID));
 }
 
 MlirLocation mlirOperationGetLocation(MlirOperation op) {

@@ -4,8 +4,8 @@ void test_too_few_arg()
 {
   return cross();
   // expected-error@-1 {{no matching function for call to 'cross'}}
-  // expected-note@hlsl/hlsl_alias_intrinsics.h:* {{candidate function not viable: requires 2 arguments, but 0 were provided}}
-  // expected-note@hlsl/hlsl_alias_intrinsics.h:* {{candidate function not viable: requires 2 arguments, but 0 were provided}}
+  // expected-note@hlsl/hlsl_alias_intrinsics_gen.inc:* {{candidate function not viable: requires 2 arguments, but 0 were provided}}
+  // expected-note@hlsl/hlsl_alias_intrinsics_gen.inc:* {{candidate function not viable: requires 2 arguments, but 0 were provided}}
 }
 
 void test_too_few_arg_f32()
@@ -24,8 +24,8 @@ void test_too_many_arg(float3 p0)
 {
   return cross(p0, p0, p0);
   // expected-error@-1 {{no matching function for call to 'cross'}}
-  // expected-note@hlsl/hlsl_alias_intrinsics.h:* {{candidate function not viable: requires 2 arguments, but 3 were provided}}
-  // expected-note@hlsl/hlsl_alias_intrinsics.h:* {{candidate function not viable: requires 2 arguments, but 3 were provided}}
+  // expected-note@hlsl/hlsl_alias_intrinsics_gen.inc:* {{candidate function not viable: requires 2 arguments, but 3 were provided}}
+  // expected-note@hlsl/hlsl_alias_intrinsics_gen.inc:* {{candidate function not viable: requires 2 arguments, but 3 were provided}}
 }
 
 void test_too_many_arg_f32(float3 p0)
@@ -56,6 +56,6 @@ void test_ambiguous(int p0)
 {
   return cross(p0,p0);
   // expected-error@-1 {{call to 'cross' is ambiguous}}
-  // expected-note@hlsl/hlsl_alias_intrinsics.h:* {{candidate function}}
-  // expected-note@hlsl/hlsl_alias_intrinsics.h:* {{candidate function}}
+  // expected-note@hlsl/hlsl_alias_intrinsics_gen.inc:* {{candidate function}}
+  // expected-note@hlsl/hlsl_alias_intrinsics_gen.inc:* {{candidate function}}
 }

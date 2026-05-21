@@ -235,11 +235,18 @@ LLVMFunctionType::getChecked(function_ref<InFlightDiagnostic()> emitError,
 
 LLVMFunctionType LLVMFunctionType::clone(TypeRange inputs,
                                          TypeRange results) const {
-  if (results.size() != 1 || !isValidResultType(results[0]))
+  // LLVM functions have exactly one return type. An empty results range
+  // corresponds to a void return type (as FunctionOpInterface represents void
+  // functions with 0 results). More than one result is not valid.
+  if (results.size() > 1)
+    return {};
+  Type resultType =
+      results.empty() ? LLVMVoidType::get(getContext()) : results[0];
+  if (!isValidResultType(resultType))
     return {};
   if (!llvm::all_of(inputs, isValidArgumentType))
     return {};
-  return get(results[0], llvm::to_vector(inputs), isVarArg());
+  return get(resultType, llvm::to_vector(inputs), isVarArg());
 }
 
 ArrayRef<Type> LLVMFunctionType::getReturnTypes() const {

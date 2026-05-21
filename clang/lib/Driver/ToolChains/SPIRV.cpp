@@ -83,8 +83,22 @@ void SPIRV::constructLLVMLinkCommand(Compilation &C, const Tool &T,
 
   ArgStringList LlvmLinkArgs;
 
-  for (auto Input : Inputs)
-    LlvmLinkArgs.push_back(Input.getFilename());
+  for (auto Input : Inputs) {
+    if (Input.isFilename()) {
+      LlvmLinkArgs.push_back(Input.getFilename());
+    } else {
+      // Warn that any linker arguments will be dropped.
+      assert(Input.isInputArg() && "Unexpected linker input");
+      const llvm::opt::Arg &LinkerOpt = Input.getInputArg();
+      std::string LinkerOptStr = LinkerOpt.getAsString(Args);
+      const llvm::opt::Arg *EmitLLVM = Args.getLastArg(options::OPT_emit_llvm);
+      assert(EmitLLVM && "Unexpected linker input");
+      std::string EmitLLVMStr = EmitLLVM ? EmitLLVM->getAsString(Args) : "";
+      llvm::Triple Triple(T.getToolChain().getTriple());
+      C.getDriver().Diag(clang::diag::warn_drv_input_file_unused)
+          << Triple.getTriple() << LinkerOptStr << false << EmitLLVMStr;
+    }
+  }
 
   tools::constructLLVMLinkCommand(C, T, JA, Inputs, LlvmLinkArgs, Output, Args);
 }
@@ -170,6 +184,8 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Use of --sycl-link will call the clang-sycl-linker instead of
     // the default linker (spirv-link).
     Linker = ToolChain.GetProgramPath("clang-sycl-linker");
+    if (Args.hasArg(options::OPT_v))
+      CmdArgs.push_back("-v");
   } else if (!llvm::sys::fs::can_execute(Linker) &&
              !C.getArgs().hasArg(clang::options::OPT__HASH_HASH_HASH)) {
     C.getDriver().Diag(clang::diag::err_drv_no_spv_tools) << getShortName();

@@ -437,8 +437,8 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   if (!State)
     return nullptr;
 
-  const MemRegion *R = Element.getAsRegion();
-  const auto *ER = dyn_cast_or_null<ElementRegion>(R);
+  SVal BufVal = C.getSVal(Buffer.Expression);
+  const auto *ER = dyn_cast_or_null<ElementRegion>(BufVal.getAsRegion());
   if (!ER)
     return State;
 
@@ -455,10 +455,9 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   ASTContext &Ctx = SVB.getContext();
 
   const QualType ElemTy = Ctx.getBaseElementType(SuperR->getValueType());
-  const NonLoc Zero = SVB.makeZeroArrayIndex();
 
   std::optional<Loc> FirstElementVal =
-      State->getLValue(ElemTy, Zero, loc::MemRegionVal(SuperR)).getAs<Loc>();
+      State->getLValue(ElemTy, SVB.makeZeroArrayIndex(), BufVal).getAs<Loc>();
   if (!FirstElementVal)
     return State;
 
@@ -475,11 +474,11 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
     return nullptr;
   }
 
-  // We won't check whether the entire region is fully initialized -- lets just
+  // We won't check whether the entire region is fully initialized -- let's just
   // check that the first and the last element is. So, onto checking the last
   // element:
-  const QualType IdxTy = SVB.getArrayIndexType();
 
+  const QualType IdxTy = SVB.getArrayIndexType();
   NonLoc ElemSize =
       SVB.makeIntVal(Ctx.getTypeSizeInChars(ElemTy).getQuantity(), IdxTy)
           .castAs<NonLoc>();
@@ -507,15 +506,14 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
                       IdxTy)
           .getAs<NonLoc>();
 
-  // Retrieve the index of the last element.
-  const NonLoc One = SVB.makeIntVal(1, IdxTy).castAs<NonLoc>();
-  SVal LastIdx = SVB.evalBinOpNN(State, BO_Sub, *Offset, One, IdxTy);
-
   if (!Offset)
     return State;
 
-  SVal LastElementVal =
-      State->getLValue(ElemTy, LastIdx, loc::MemRegionVal(SuperR));
+  // Retrieve the index of the last element relative to the buffer pointer.
+  const NonLoc One = SVB.makeIntVal(1, IdxTy).castAs<NonLoc>();
+  SVal LastIdx = SVB.evalBinOpNN(State, BO_Sub, *Offset, One, IdxTy);
+
+  SVal LastElementVal = State->getLValue(ElemTy, LastIdx, BufVal);
   if (!isa<Loc>(LastElementVal))
     return State;
 
@@ -576,8 +574,20 @@ ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
 
   auto [StInBound, StOutBound] = state->assumeInBoundDual(*Idx, Size);
   if (StOutBound && !StInBound) {
+    // The analyzer determined that the access is out-of-bounds, which is
+    // a fatal error: ideally we'd return nullptr to terminate this path
+    // regardless of whether the OutOfBounds checker frontend is enabled.
+    // However, the current out-of-bounds modeling produces too many false
+    // positives, so when the frontend is disabled we return the original
+    // (unconstrained) state and let the analysis continue. This is
+    // inconsistent: returning `state` instead of `StOutBound` discards the
+    // constraint that the index is out-of-bounds, and callers cannot
+    // distinguish "we proved an error" from "we couldn't determine anything"
+    // since both return the original state.
+    // TODO: Once the OutOfBounds frontend is stable, return nullptr here
+    // unconditionally to stop the analysis on this path.
     if (!OutOfBounds.isEnabled())
-      return nullptr;
+      return state;
 
     ErrorMessage Message =
         createOutOfBoundErrorMsg(CurrentFunctionDescription, Access);
@@ -610,10 +620,6 @@ CStringChecker::CheckBufferAccess(CheckerContext &C, ProgramStateRef State,
   if (!State)
     return nullptr;
 
-  // If out-of-bounds checking is turned off, skip the rest.
-  if (!OutOfBounds.isEnabled())
-    return State;
-
   SVal BufStart =
       svalBuilder.evalCast(BufVal, PtrTy, Buffer.Expression->getType());
 
@@ -645,7 +651,7 @@ CStringChecker::CheckBufferAccess(CheckerContext &C, ProgramStateRef State,
         svalBuilder.evalBinOpLN(State, BO_Add, *BufLoc, LastOffset, PtrTy);
     State = CheckLocation(C, State, Buffer, BufEnd, Access, CK);
     if (Access == AccessKind::read)
-      State = checkInit(C, State, Buffer, BufEnd, *Length);
+      State = checkInit(C, State, Buffer, BufStart, *Length);
 
     // If the buffer isn't large enough, abort.
     if (!State)
@@ -661,9 +667,6 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
                                              SizeArgExpr Size, AnyArgExpr First,
                                              AnyArgExpr Second,
                                              CharKind CK) const {
-  if (!BufferOverlap.isEnabled())
-    return state;
-
   // Do a simple check for overlap: if the two arguments are from the same
   // buffer, see if the end of the first is greater than the start of the second
   // or vice versa.
@@ -702,9 +705,24 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
       state->assume(svalBuilder.evalEQ(state, *firstLoc, *secondLoc));
 
   if (stateTrue && !stateFalse) {
-    // If the values are known to be equal, that's automatically an overlap.
-    emitOverlapBug(C, stateTrue, First.Expression, Second.Expression);
-    return nullptr;
+    if (BufferOverlap.isEnabled()) {
+      // If the values are known to be equal, that's automatically an overlap.
+      emitOverlapBug(C, stateTrue, First.Expression, Second.Expression);
+      return nullptr;
+    }
+    // The analyzer proved that the two pointers are equal, which guarantees
+    // overlap. When BufferOverlap is disabled, we return the original state
+    // instead of nullptr (to avoid stopping the path) or stateTrue (which
+    // would encode the equality constraint). This creates an inconsistency:
+    // callers treat any non-null return as "no overlap found" and proceed
+    // with subsequent modeling (e.g. memcpy side effects), even though the
+    // operation has undefined behavior. Additionally, returning `state` instead
+    // of `stateTrue` discards the pointer-equality constraint, making the
+    // analysis less precise.
+    // FIXME: At minimum, return stateTrue to preserve the equality
+    // constraint. Ideally, return nullptr to stop the path unconditionally,
+    // since overlap is proven regardless of whether we report it.
+    return state;
   }
 
   // assume the two expressions are not equal.
@@ -768,9 +786,20 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
   std::tie(stateTrue, stateFalse) = state->assume(*OverlapTest);
 
   if (stateTrue && !stateFalse) {
-    // Overlap!
-    emitOverlapBug(C, stateTrue, First.Expression, Second.Expression);
-    return nullptr;
+    if (BufferOverlap.isEnabled()) {
+      emitOverlapBug(C, stateTrue, First.Expression, Second.Expression);
+      return nullptr;
+    }
+    // The analyzer proved that the end of the first buffer is past the start
+    // of the second, which means the buffers overlap. This is the same
+    // inconsistency as the equal-pointers case above: when BufferOverlap is
+    // disabled, we return the original state, so callers cannot distinguish
+    // "proven overlap" from "couldn't determine anything" and will proceed
+    // to model side effects (e.g. memcpy) on a path with proven UB.
+    // Returning `stateTrue` would at least preserve the overlap constraint;
+    // returning nullptr would correctly terminate the path.
+    // FIXME: Return nullptr unconditionally once BufferOverlap is stable.
+    return state;
   }
 
   // assume the two expressions don't overlap.
@@ -779,7 +808,10 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
 }
 
 void CStringChecker::emitOverlapBug(CheckerContext &C, ProgramStateRef state,
-                                  const Stmt *First, const Stmt *Second) const {
+                                    const Stmt *First,
+                                    const Stmt *Second) const {
+  assert(BufferOverlap.isEnabled() &&
+         "Can't emit from a checker that is not enabled!");
   ExplodedNode *N = C.generateErrorNode(state);
   if (!N)
     return;
@@ -795,6 +827,8 @@ void CStringChecker::emitOverlapBug(CheckerContext &C, ProgramStateRef state,
 
 void CStringChecker::emitNullArgBug(CheckerContext &C, ProgramStateRef State,
                                     const Stmt *S, StringRef WarningMsg) const {
+  assert(NullArg.isEnabled() &&
+         "Can't emit from a checker that is not enabled!");
   if (ExplodedNode *N = C.generateErrorNode(State)) {
     auto Report =
         std::make_unique<PathSensitiveBugReport>(NullArg, WarningMsg, N);
@@ -809,6 +843,8 @@ void CStringChecker::emitUninitializedReadBug(CheckerContext &C,
                                               ProgramStateRef State,
                                               const Expr *E, const MemRegion *R,
                                               StringRef Msg) const {
+  assert(UninitializedRead.isEnabled() &&
+         "Can't emit from a checker that is not enabled!");
   if (ExplodedNode *N = C.generateErrorNode(State)) {
     auto Report =
         std::make_unique<PathSensitiveBugReport>(UninitializedRead, Msg, N);
@@ -824,6 +860,8 @@ void CStringChecker::emitUninitializedReadBug(CheckerContext &C,
 void CStringChecker::emitOutOfBoundsBug(CheckerContext &C,
                                         ProgramStateRef State, const Stmt *S,
                                         StringRef WarningMsg) const {
+  assert(OutOfBounds.isEnabled() &&
+         "Can't emit from a checker that is not enabled!");
   if (ExplodedNode *N = C.generateErrorNode(State)) {
     // FIXME: It would be nice to eventually make this diagnostic more clear,
     // e.g., by referencing the original declaration or by saying *why* this
@@ -838,6 +876,8 @@ void CStringChecker::emitOutOfBoundsBug(CheckerContext &C,
 void CStringChecker::emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
                                        const Stmt *S,
                                        StringRef WarningMsg) const {
+  assert(NotNullTerm.isEnabled() &&
+         "Can't emit from a checker that is not enabled!");
   if (ExplodedNode *N = C.generateNonFatalErrorNode(State)) {
     auto Report =
         std::make_unique<PathSensitiveBugReport>(NotNullTerm, WarningMsg, N);
@@ -848,13 +888,9 @@ void CStringChecker::emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
 }
 
 ProgramStateRef CStringChecker::checkAdditionOverflow(CheckerContext &C,
-                                                     ProgramStateRef state,
-                                                     NonLoc left,
-                                                     NonLoc right) const {
-  // If out-of-bounds checking is turned off, skip the rest.
-  if (!OutOfBounds.isEnabled())
-    return state;
-
+                                                      ProgramStateRef state,
+                                                      NonLoc left,
+                                                      NonLoc right) const {
   // If a previous check has failed, propagate the failure.
   if (!state)
     return nullptr;
@@ -2966,3 +3002,5 @@ REGISTER_CHECKER(OutOfBounds)
 REGISTER_CHECKER(BufferOverlap)
 REGISTER_CHECKER(NotNullTerm)
 REGISTER_CHECKER(UninitializedRead)
+
+#undef REGISTER_CHECKER

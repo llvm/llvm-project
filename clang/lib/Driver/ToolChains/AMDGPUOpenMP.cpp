@@ -71,9 +71,8 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
   }
 
   if (!BoundArch.empty()) {
-    DAL->eraseArg(options::OPT_march_EQ);
-    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
-                      BoundArch);
+    DAL->eraseArg(options::OPT_mcpu_EQ);
+    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ), BoundArch);
   }
 
   return DAL;
@@ -105,7 +104,8 @@ void AMDGPUOpenMPToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
   HostTC.AddIAMCUIncludeArgs(Args, CC1Args);
 }
 
-SanitizerMask AMDGPUOpenMPToolChain::getSupportedSanitizers() const {
+SanitizerMask AMDGPUOpenMPToolChain::getSupportedSanitizers(
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
   // The AMDGPUOpenMPToolChain only supports sanitizers in the sense that it
   // allows sanitizer arguments on the command line if they are supported by the
   // host toolchain. The AMDGPUOpenMPToolChain will later filter unsupported
@@ -114,7 +114,9 @@ SanitizerMask AMDGPUOpenMPToolChain::getSupportedSanitizers() const {
   // This behavior is necessary because the host and device toolchains
   // invocations often share the command line, so the device toolchain must
   // tolerate flags meant only for the host toolchain.
-  return HostTC.getSupportedSanitizers();
+
+  // FIXME: Be accurate and use DeviceOffloadKind.
+  return HostTC.getSupportedSanitizers(BoundArch, DeviceOffloadKind);
 }
 
 VersionTuple
@@ -131,7 +133,7 @@ AMDGPUOpenMPToolChain::getDeviceLibs(
     return {};
 
   StringRef GpuArch = getProcessorFromTargetID(
-      getTriple(), Args.getLastArgValue(options::OPT_march_EQ));
+      getTriple(), Args.getLastArgValue(options::OPT_mcpu_EQ));
 
   SmallVector<BitCodeLibraryInfo, 12> BCLibs;
   for (auto BCLib :

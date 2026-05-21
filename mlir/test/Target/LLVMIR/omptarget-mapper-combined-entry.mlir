@@ -40,3 +40,5 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK: store ptr null, ptr %[[MAPPER1]]
 // CHECK: %[[MAPPER2:.*]] = getelementptr inbounds [4 x ptr], ptr %[[MAPPERS]], i64 0, i64 2
 // CHECK: store ptr null, ptr %[[MAPPER2]]
+// CHECK: %[[MAPPER3:.*]] = getelementptr inbounds [4 x ptr], ptr %[[MAPPERS]], i64 0, i64 3
+// CHECK: store ptr null, ptr %[[MAPPER3]]

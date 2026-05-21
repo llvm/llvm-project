@@ -9,9 +9,8 @@
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/DependencyScanning/DependencyConsumer.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
-#include "clang/Driver/Driver.h"
-#include "clang/Driver/Tool.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -31,16 +30,17 @@ DependencyScanningWorker::DependencyScanningWorker(
 
   auto BaseFS = Service.getOpts().MakeVFS();
 
-  if (Service.getOpts().TraceVFS)
-    BaseFS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(
+  if (Service.getOpts().TraceVFS) {
+    TracingFS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(
         std::move(BaseFS));
+    BaseFS = TracingFS;
+  }
 
   DepFS = llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
       Service.getSharedCache(), std::move(BaseFS));
 }
 
 DependencyScanningWorker::~DependencyScanningWorker() = default;
-DependencyActionController::~DependencyActionController() = default;
 
 static bool createAndRunToolInvocation(
     ArrayRef<std::string> CommandLine, DependencyScanningAction &Action,
@@ -56,34 +56,27 @@ static bool createAndRunToolInvocation(
                               Diags.getClient());
 }
 
-bool DependencyScanningWorker::computeDependencies(
-    StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
-    DependencyConsumer &DepConsumer, DependencyActionController &Controller,
-    DiagnosticConsumer &DiagConsumer,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
-  return computeDependencies(WorkingDirectory,
-                             ArrayRef<ArrayRef<std::string>>(CommandLine),
-                             DepConsumer, Controller, DiagConsumer, OverlayFS);
+IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+DependencyScanningWorker::makeEffectiveVFS(
+    StringRef WorkingDirectory,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) const {
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = DepFS;
+  if (OverlayFS) {
+    auto NewFS =
+        llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(std::move(FS));
+    NewFS->pushOverlay(std::move(OverlayFS));
+    FS = std::move(NewFS);
+  }
+  FS->setCurrentWorkingDirectory(WorkingDirectory);
+  return FS;
 }
 
 bool DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, ArrayRef<ArrayRef<std::string>> CommandLines,
     DependencyConsumer &DepConsumer, DependencyActionController &Controller,
     DiagnosticConsumer &DiagConsumer,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr;
-  if (OverlayFS) {
-#ifndef NDEBUG
-    bool SawDepFS = false;
-    OverlayFS->visit(
-        [&](llvm::vfs::FileSystem &VFS) { SawDepFS |= &VFS == DepFS.get(); });
-    assert(SawDepFS && "OverlayFS not based on DepFS");
-#endif
-    FS = std::move(OverlayFS);
-  } else {
-    FS = DepFS;
-    FS->setCurrentWorkingDirectory(WorkingDirectory);
-  }
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) {
+  auto FS = makeEffectiveVFS(WorkingDirectory, std::move(OverlayFS));
 
   DependencyScanningAction Action(Service, WorkingDirectory, DepConsumer,
                                   Controller, DepFS);
@@ -107,59 +100,4 @@ bool DependencyScanningWorker::computeDependencies(
   });
 
   return Success && Action.hasScanned();
-}
-
-std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
-          std::vector<std::string>>
-dependencies::initVFSForTUBufferScanning(
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
-    llvm::MemoryBufferRef TUBuffer) {
-  // Reset what might have been modified in the previous worker invocation.
-  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
-
-  auto OverlayFS =
-      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
-  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
-  auto InputPath = TUBuffer.getBufferIdentifier();
-  InMemoryFS->addFile(
-      InputPath, 0, llvm::MemoryBuffer::getMemBufferCopy(TUBuffer.getBuffer()));
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
-
-  OverlayFS->pushOverlay(InMemoryOverlay);
-  std::vector<std::string> ModifiedCommandLine(CommandLine);
-  ModifiedCommandLine.emplace_back(InputPath);
-
-  return std::make_pair(OverlayFS, ModifiedCommandLine);
-}
-
-std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
-          std::vector<std::string>>
-dependencies::initVFSForByNameScanning(
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
-    StringRef ModuleName) {
-  // Reset what might have been modified in the previous worker invocation.
-  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
-
-  // If we're scanning based on a module name alone, we don't expect the client
-  // to provide us with an input file. However, the driver really wants to have
-  // one. Let's just make it up to make the driver happy.
-  auto OverlayFS =
-      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
-  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
-  SmallString<128> FakeInputPath;
-  // TODO: We should retry the creation if the path already exists.
-  llvm::sys::fs::createUniquePath(ModuleName + "-%%%%%%%%.input", FakeInputPath,
-                                  /*MakeAbsolute=*/false);
-  InMemoryFS->addFile(FakeInputPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
-  OverlayFS->pushOverlay(InMemoryOverlay);
-
-  std::vector<std::string> ModifiedCommandLine(CommandLine);
-  ModifiedCommandLine.emplace_back(FakeInputPath);
-
-  return std::make_pair(OverlayFS, ModifiedCommandLine);
 }

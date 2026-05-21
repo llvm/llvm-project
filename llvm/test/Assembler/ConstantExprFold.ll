@@ -37,8 +37,8 @@
 ; CHECK: @cons = weak global i32 0, align 8
 ; CHECK: @gep1 = global <2 x ptr> undef
 ; CHECK: @gep2 = global <2 x ptr> undef
-; CHECK: @gep3 = global <2 x ptr> zeroinitializer
-; CHECK: @gep4 = global <2 x ptr> zeroinitializer
+; CHECK: @gep3 = global <2 x ptr> splat (ptr null)
+; CHECK: @gep4 = global <2 x ptr> splat (ptr null)
 ; CHECK: @bitcast1 = global <2 x i32> splat (i32 -1)
 ; CHECK: @bitcast2 = global <4 x i16> splat (i16 -1)
 ;.

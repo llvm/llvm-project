@@ -28,6 +28,37 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
+#ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
+LIBC_PRINTF_MODULE((template <WriteMode write_mode>
+                    int convert_float(Writer<write_mode> *writer,
+                                      const FormatSection &to_conv)),
+                   {
+                     switch (to_conv.conv_name) {
+                     case 'f':
+                     case 'F':
+                       return convert_float_decimal(writer, to_conv);
+                     case 'e':
+                     case 'E':
+                       return convert_float_dec_exp(writer, to_conv);
+                     case 'a':
+                     case 'A':
+                       return convert_float_hex_exp(writer, to_conv);
+                     case 'g':
+                     case 'G':
+                       return convert_float_dec_auto(writer, to_conv);
+                     }
+                     __builtin_unreachable();
+                   })
+#endif // not LIBC_COPT_PRINTF_DISABLE_FLOAT
+
+#ifdef LIBC_PRINTF_DEFINE_MODULES
+#define HANDLE_WRITE_MODE(MODE)                                                \
+  template int convert_float<WriteMode::MODE>(                                 \
+      Writer<WriteMode::MODE> * writer, const FormatSection &to_conv);
+#include "src/stdio/printf_core/write_modes.def"
+#undef HANDLE_WRITE_MODE
+#endif // LIBC_PRINTF_DEFINE_MODULES
+
 // convert will call a conversion function to convert the FormatSection into
 // its string representation, and then that will write the result to the
 // writer.
@@ -72,16 +103,13 @@ int convert(Writer<write_mode> *writer, const FormatSection &to_conv) {
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
   case 'f':
   case 'F':
-    return convert_float_decimal(writer, to_conv);
   case 'e':
   case 'E':
-    return convert_float_dec_exp(writer, to_conv);
   case 'a':
   case 'A':
-    return convert_float_hex_exp(writer, to_conv);
   case 'g':
   case 'G':
-    return convert_float_dec_auto(writer, to_conv);
+    return convert_float(writer, to_conv);
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
   case 'r':

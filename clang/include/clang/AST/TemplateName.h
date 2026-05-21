@@ -17,7 +17,7 @@
 #include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"
-#include "clang/Basic/UnsignedOrNone.h"
+#include "clang/Basic/OptionalUnsigned.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"

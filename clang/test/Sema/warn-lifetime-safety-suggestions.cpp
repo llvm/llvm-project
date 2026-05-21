@@ -1,8 +1,9 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -verify %t/test_source.cpp
-// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -fixit %t/test_source.cpp
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wno-dangling -I%t -Werror=lifetime-safety-suggestions %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
+// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -I%S -fixit %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wno-dangling -I%t -I%S -Werror=lifetime-safety-suggestions %t/test_source.cpp
 
 View definition_before_header(View a);
 
@@ -67,6 +68,7 @@ struct ReturnThisPointer {
 //--- test_source.cpp
 
 #include "test_header.h"
+#include "Inputs/lifetime-analysis.h"
 
 View definition_before_header(View a) {
   return a;                               // expected-note {{param returned here}}
@@ -394,6 +396,8 @@ View Reassigned(View a) {
   return a;
 }
 
+namespace lambda_captures {
+
 struct NoSuggestionForThisCapturedByLambda {
   MyObj s;
   bool cond;
@@ -403,3 +407,233 @@ struct NoSuggestionForThisCapturedByLambda {
     };
   }
 };
+
+void Foo(int, int*, const MyObj&, View);
+
+auto implicit_ref_capture(int integer, int* ptr,
+                          const MyObj& ref, // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+                          View view) {
+  return [&]() { Foo(integer, ptr, ref, view); }; // expected-warning 3 {{address of stack memory is returned later}} \
+                                                  // expected-note 3 {{returned here}} \
+                                                  // expected-note {{param returned here}}
+}
+
+auto implicit_value_capture(int integer,
+                            int* ptr, // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+                            const MyObj& ref,
+                            View view) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return [=]() { Foo(integer, ptr, ref, view); }; // expected-note 2 {{param returned here}}
+}
+} // namespace lambda_captures
+
+namespace array {
+
+struct MemberArrayReturn {
+  int arr[10];
+
+  int* getFirst() { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return &arr[0]; // expected-note {{param returned here}}
+  }
+
+  int* getData() { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return arr;    // expected-note {{param returned here}}
+  }
+  int* getLast() {   // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return arr + 10; // expected-note {{param returned here}}
+  }
+};
+
+} // namespace array
+
+namespace track_origins_for_lifetimebound_record_type {
+
+struct S {
+  View view;
+};
+
+S getS(const MyObj &obj [[clang::lifetimebound]]);
+
+S forward(const MyObj &obj) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return getS(obj);           // expected-note {{param returned here}}
+}
+
+} // namespace track_origins_for_lifetimebound_record_type
+
+namespace capturing_constructor {
+struct CaptureRefToView {
+  View v; // expected-note {{escapes to this field}}
+  CaptureRefToView(const MyObj& obj) : v(obj) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+
+CaptureRefToView test_ref_to_view() {
+  MyObj obj;
+  CaptureRefToView x(obj); // expected-warning {{address of stack memory is returned later}}
+  return x; // expected-note {{returned here}}
+}
+
+struct CaptureRefToPtr {
+  const MyObj* p; // expected-note {{escapes to this field}}
+  CaptureRefToPtr(const MyObj& obj) : p(&obj) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+
+CaptureRefToPtr test_ref_to_ptr() {
+  MyObj obj;
+  CaptureRefToPtr x(obj); // expected-warning {{address of stack memory is returned later}}
+  return x; // expected-note {{returned here}}
+}
+
+struct CaptureViewToView {
+  View v; // expected-note {{escapes to this field}}
+  CaptureViewToView(View v_param) : v(v_param) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+
+CaptureViewToView test_view_to_view() {
+  MyObj obj;
+  View v(obj); // expected-warning {{address of stack memory is returned later}}
+  CaptureViewToView x(v);
+  return x; // expected-note {{returned here}}
+}
+
+struct CapturePtrToPtr {
+  const MyObj* p; // expected-note {{escapes to this field}}
+  CapturePtrToPtr(const MyObj* p_param) : p(p_param) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+
+CapturePtrToPtr test_ptr_to_ptr() {
+  MyObj obj;
+  CapturePtrToPtr x(&obj); // expected-warning {{address of stack memory is returned later}}
+  return x; // expected-note {{returned here}}
+}
+
+struct CaptureRefToRef {
+  const MyObj& r; // expected-note {{escapes to this field}}
+  CaptureRefToRef(const MyObj& obj) : r(obj) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+
+CaptureRefToRef test_ref_to_ref() {
+  MyObj obj;
+  CaptureRefToRef x(obj); // expected-warning {{address of stack memory is returned later}}
+  return x; // expected-note {{returned here}}
+}
+
+struct BaseWithView {
+  View v; // expected-note {{escapes to this field}}
+};
+struct CaptureRefToBaseView : BaseWithView {
+  CaptureRefToBaseView(const MyObj& obj) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+    v = obj;
+  }
+};
+
+CaptureRefToBaseView test_ref_to_base_view() {
+  MyObj obj;
+  CaptureRefToBaseView x(obj); // expected-warning {{address of stack memory is returned later}}
+  return x; // expected-note {{returned here}}
+}
+} // namespace capturing_constructor
+
+namespace callable_wrappers {
+
+std::function<void()> return_lambda_capturing_param(int &x) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return [&]() { (void)x; }; // expected-note {{param returned here}}
+}
+
+void uaf_via_inferred_lifetimebound() {
+  std::function<void()> f = []() {};
+  {
+    int local;
+    f = return_lambda_capturing_param(local); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)f; // expected-note {{later used here}}
+}
+
+} // namespace callable_wrappers
+
+namespace make_unique_suggestion {
+
+struct LifetimeBoundCtor {
+  View v;
+  // FIXME: This test fails to propagate the lifetimebound in ctor if this is inferred (instead of the current explicit annotation).
+  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]): v(obj) {}
+};
+
+std::unique_ptr<LifetimeBoundCtor> create_target(const MyObj& obj) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return std::make_unique<LifetimeBoundCtor>(obj); // expected-note {{param returned here}}
+}
+
+void test_inference() {
+  std::unique_ptr<LifetimeBoundCtor> ptr;
+  {
+    MyObj obj;
+    ptr = create_target(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)ptr; // expected-note {{later used here}}
+}
+} // namespace make_unique_suggestion
+
+namespace new_allocation_suggestion {
+
+View* MakeView(const MyObj& in) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return new View(in);            // expected-note {{param returned here}} {{destroyed here}}
+}
+
+void test_new_allocation() {
+  View* v = MakeView(MyObj{}); // expected-warning {{object whose reference is captured does not live long enough}} \
+                               // expected-note {{destroyed here}}
+  (void)v;                     // expected-note {{later used here}}
+}
+
+struct LifetimeBoundCtor {
+  View v;
+  LifetimeBoundCtor();
+  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]) : v(obj) {}
+};
+
+struct HasCtorField {
+  LifetimeBoundCtor* field;                                             // expected-note {{escapes to this field}}
+  HasCtorField(const MyObj& obj) : field(new LifetimeBoundCtor(obj)) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+
+HasCtorField test_dangling_field_ctor() {
+  MyObj obj;
+  HasCtorField x(obj); // expected-warning {{address of stack memory is returned later}}
+  return x;            // expected-note {{returned here}}
+}
+
+struct HasSetterField {
+  LifetimeBoundCtor* field; // expected-note {{this field dangles}}
+  // FIXME: Does not currently suggest `lifetime_capture_by(this)` (even without `new`)
+  void set(const MyObj& obj) {
+    field = new LifetimeBoundCtor(obj);
+  }
+  void reset() {
+    MyObj obj;
+    field = new LifetimeBoundCtor(obj); // expected-warning {{address of stack memory escapes to a field}}
+  }
+};
+
+HasSetterField test_dangling_field_member_fn() {
+  MyObj obj;
+  HasSetterField x;
+  x.set(obj);
+  return x;
+}
+
+} // namespace new_allocation_suggestion
+
+namespace GH193747 {
+
+std::unique_ptr<int> create_up();
+std::shared_ptr<int> create_sp() {
+  return create_up();
+}
+
+struct S {
+  int* field;
+  S(std::unique_ptr<int>&& up) : field(up.get()) { up.release(); }
+};
+
+S foo() {
+  return S(create_up());
+}
+} // namespace GH193747

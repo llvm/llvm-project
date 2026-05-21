@@ -180,8 +180,9 @@
 ; ASM-LABEL:  .short  4423                    # Record kind: S_GPROC32_ID
 ; ASM:        .asciz  "nested"                # Function name
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
+; ASM: 	      .long   4123                    # TypeIndex
 ; ASM:        .asciz  "o"
-; ASM:        .cv_def_range    .Lfunc_begin3 .Lfunc_end3, reg_rel, 330, 0, 0
+; ASM:        .cv_def_range    .Lfunc_begin3 .Lfunc_end3, reg_rel_indir, 330, 0, 0, 0
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
 ; ASM:        .asciz  "p"
 ; ASM:        .cv_def_range    [[p_start]] .Lfunc_end3, subfield_reg, 17, 4
@@ -191,14 +192,15 @@
 ; OBJ:         DisplayName: nested
 ; OBJ:       }
 ; OBJ:       LocalSym {
-; OBJ:         Type: Nested&
+; OBJ:         Type: Nested
 ; OBJ:         VarName: o
 ; OBJ:       }
-; OBJ:       DefRangeRegisterRelSym {
+; OBJ:       DefRangeRegisterRelIndirSym {
 ; OBJ:         BaseRegister: RCX (0x14A)
 ; OBJ:         HasSpilledUDTMember: No
 ; OBJ:         OffsetInParent: 0
 ; OBJ:         BasePointerOffset: 0
+; OBJ:         OffsetInUDT: 0
 ; OBJ:         LocalVariableAddrRange {
 ; OBJ:         }
 ; OBJ:       }

@@ -215,6 +215,9 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
 
   basicCheckForEHAndSjLj(this);
   initAsmInfo();
+
+  LLT::setUseExtended(true);
+
   // Note that we don't use setRequiresStructuredCFG(true). It disables
   // optimizations than we're ok with, and want, such as critical edge
   // splitting and tail merging.
@@ -516,6 +519,9 @@ void WebAssemblyPassConfig::addIRPasses() {
 
   // Expand indirectbr instructions to switches.
   addPass(createIndirectBrExpandPass());
+
+  // Try to expand `vecreduce_{and, or}` into `{any, all}_true`.
+  addPass(createWebAssemblyReduceToAnyAllTrue(getWebAssemblyTargetMachine()));
 
   TargetPassConfig::addIRPasses();
 }

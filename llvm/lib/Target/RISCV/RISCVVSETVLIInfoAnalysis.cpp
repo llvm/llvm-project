@@ -313,12 +313,6 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     Res.MaskPolicy = false;
   }
 
-  if (RISCVInstrInfo::isVExtractInstr(MI)) {
-    assert(!RISCVII::hasVLOp(TSFlags));
-    // TODO: LMUL can be any larger value (without cost)
-    Res.TailPolicy = false;
-  }
-
   Res.AltFmt = RISCVII::getAltFmtType(MI.getDesc().TSFlags) !=
                RISCVII::AltFmtType::DontCare;
   Res.TWiden = RISCVII::hasTWidenOp(MI.getDesc().TSFlags) ||
@@ -360,9 +354,9 @@ RISCVVSETVLIInfoAnalysis::getInfoForVSETVLI(const MachineInstr &MI) const {
   if (MI.getOpcode() == RISCV::PseudoVSETIVLI) {
     NewInfo.setAVLImm(MI.getOperand(1).getImm());
   } else if (RISCVInstrInfo::isXSfmmVectorConfigTNInstr(MI)) {
-    assert(MI.getOpcode() == RISCV::PseudoSF_VSETTNT ||
-           MI.getOpcode() == RISCV::PseudoSF_VSETTNTX0);
     switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected opcode");
     case RISCV::PseudoSF_VSETTNTX0:
       NewInfo.setAVLVLMAX();
       break;
@@ -481,8 +475,7 @@ RISCVVSETVLIInfoAnalysis::computeInfoForInstr(const MachineInstr &MI) const {
       InstrInfo.setAVLRegDef(VNI, VLOp.getReg());
     }
   } else {
-    assert(RISCVInstrInfo::isScalarExtractInstr(MI) ||
-           RISCVInstrInfo::isVExtractInstr(MI));
+    assert(RISCVInstrInfo::isScalarExtractInstr(MI));
     // Pick a random value for state tracking purposes, will be ignored via
     // the demanded fields mechanism
     InstrInfo.setAVLImm(1);

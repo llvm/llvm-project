@@ -113,10 +113,10 @@ define <2 x i32> @udot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) {
 ; CHECK-NODOT-NEXT:    ushll v2.4s, v1.4h, #0
 ; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    ushll2 v3.4s, v1.8h, #0
-; CHECK-NODOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NODOT-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
+; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
-; CHECK-NODOT-NEXT:    ext v2.16b, v3.16b, v3.16b, #8
+; CHECK-NODOT-NEXT:    mov d2, v3.d[1]
 ; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
 ; CHECK-NODOT-NEXT:    ret
@@ -172,10 +172,10 @@ define <2 x i32> @sdot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) {
 ; CHECK-NODOT-NEXT:    sshll v2.4s, v1.4h, #0
 ; CHECK-NODOT-NEXT:    saddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    sshll2 v3.4s, v1.8h, #0
-; CHECK-NODOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NODOT-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
+; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
-; CHECK-NODOT-NEXT:    ext v2.16b, v3.16b, v3.16b, #8
+; CHECK-NODOT-NEXT:    mov d2, v3.d[1]
 ; CHECK-NODOT-NEXT:    saddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
 ; CHECK-NODOT-NEXT:    ret
@@ -324,11 +324,11 @@ define <2 x i32> @usdot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
 ; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NODOT-NEXT:    smull v3.4s, v2.4h, v1.4h
 ; CHECK-NODOT-NEXT:    smlal v0.4s, v2.4h, v1.4h
-; CHECK-NODOT-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-NODOT-NEXT:    ext v5.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    mov d4, v1.d[1]
+; CHECK-NODOT-NEXT:    mov d5, v2.d[1]
 ; CHECK-NODOT-NEXT:    smull2 v1.4s, v2.8h, v1.8h
-; CHECK-NODOT-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECK-NODOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NODOT-NEXT:    mov d3, v3.d[1]
+; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
 ; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
 ; CHECK-NODOT-NEXT:    smlal v0.4s, v5.4h, v4.4h
 ; CHECK-NODOT-NEXT:    add v0.2s, v1.2s, v0.2s
@@ -341,11 +341,11 @@ define <2 x i32> @usdot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
 ; CHECK-DOT-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-DOT-NEXT:    smull v3.4s, v2.4h, v1.4h
 ; CHECK-DOT-NEXT:    smlal v0.4s, v2.4h, v1.4h
-; CHECK-DOT-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-DOT-NEXT:    ext v5.16b, v2.16b, v2.16b, #8
+; CHECK-DOT-NEXT:    mov d4, v1.d[1]
+; CHECK-DOT-NEXT:    mov d5, v2.d[1]
 ; CHECK-DOT-NEXT:    smull2 v1.4s, v2.8h, v1.8h
-; CHECK-DOT-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECK-DOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-DOT-NEXT:    mov d3, v3.d[1]
+; CHECK-DOT-NEXT:    mov d1, v1.d[1]
 ; CHECK-DOT-NEXT:    add v0.2s, v3.2s, v0.2s
 ; CHECK-DOT-NEXT:    smlal v0.4s, v5.4h, v4.4h
 ; CHECK-DOT-NEXT:    add v0.2s, v1.2s, v0.2s
@@ -490,11 +490,11 @@ define <2 x i32> @sudot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
 ; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NODOT-NEXT:    smull v3.4s, v2.4h, v1.4h
 ; CHECK-NODOT-NEXT:    smlal v0.4s, v2.4h, v1.4h
-; CHECK-NODOT-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-NODOT-NEXT:    ext v5.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    mov d4, v1.d[1]
+; CHECK-NODOT-NEXT:    mov d5, v2.d[1]
 ; CHECK-NODOT-NEXT:    smull2 v1.4s, v2.8h, v1.8h
-; CHECK-NODOT-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECK-NODOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NODOT-NEXT:    mov d3, v3.d[1]
+; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
 ; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
 ; CHECK-NODOT-NEXT:    smlal v0.4s, v5.4h, v4.4h
 ; CHECK-NODOT-NEXT:    add v0.2s, v1.2s, v0.2s
@@ -507,11 +507,11 @@ define <2 x i32> @sudot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
 ; CHECK-DOT-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-DOT-NEXT:    smull v3.4s, v2.4h, v1.4h
 ; CHECK-DOT-NEXT:    smlal v0.4s, v2.4h, v1.4h
-; CHECK-DOT-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-DOT-NEXT:    ext v5.16b, v2.16b, v2.16b, #8
+; CHECK-DOT-NEXT:    mov d4, v1.d[1]
+; CHECK-DOT-NEXT:    mov d5, v2.d[1]
 ; CHECK-DOT-NEXT:    smull2 v1.4s, v2.8h, v1.8h
-; CHECK-DOT-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECK-DOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-DOT-NEXT:    mov d3, v3.d[1]
+; CHECK-DOT-NEXT:    mov d1, v1.d[1]
 ; CHECK-DOT-NEXT:    add v0.2s, v3.2s, v0.2s
 ; CHECK-DOT-NEXT:    smlal v0.4s, v5.4h, v4.4h
 ; CHECK-DOT-NEXT:    add v0.2s, v1.2s, v0.2s
@@ -876,10 +876,10 @@ define <2 x i32> @udot_no_bin_op_narrow(<2 x i32> %acc, <8 x i8> %a){
 ; CHECK-NODOT-NEXT:    ushll v2.4s, v1.4h, #0
 ; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    ushll2 v3.4s, v1.8h, #0
-; CHECK-NODOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NODOT-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
+; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
-; CHECK-NODOT-NEXT:    ext v2.16b, v3.16b, v3.16b, #8
+; CHECK-NODOT-NEXT:    mov d2, v3.d[1]
 ; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
 ; CHECK-NODOT-NEXT:    ret
@@ -908,10 +908,10 @@ define <2 x i32> @sdot_no_bin_op_narrow(<2 x i32> %acc, <8 x i8> %a){
 ; CHECK-NODOT-NEXT:    sshll v2.4s, v1.4h, #0
 ; CHECK-NODOT-NEXT:    saddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    sshll2 v3.4s, v1.8h, #0
-; CHECK-NODOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NODOT-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
+; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
-; CHECK-NODOT-NEXT:    ext v2.16b, v3.16b, v3.16b, #8
+; CHECK-NODOT-NEXT:    mov d2, v3.d[1]
 ; CHECK-NODOT-NEXT:    saddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
 ; CHECK-NODOT-NEXT:    ret
@@ -1036,7 +1036,7 @@ define <2 x i32> @not_udot_narrow(<2 x i32> %acc, <4 x i8> %u, <4 x i8> %s) {
 ; CHECK-COMMON-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-COMMON-NEXT:    umull v3.4s, v2.4h, v1.4h
 ; CHECK-COMMON-NEXT:    umlal v0.4s, v2.4h, v1.4h
-; CHECK-COMMON-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
+; CHECK-COMMON-NEXT:    mov d1, v3.d[1]
 ; CHECK-COMMON-NEXT:    add v0.2s, v1.2s, v0.2s
 ; CHECK-COMMON-NEXT:    ret
   %u.wide = zext <4 x i8> %u to <4 x i32>
@@ -1461,19 +1461,19 @@ define <2 x i32> @udot_v16i8tov2i32(<2 x i32> %acc, <16 x i8> %input) {
 ; CHECK-NODOT-NEXT:    ushll v3.4s, v2.4h, #0
 ; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v2.4h
 ; CHECK-NODOT-NEXT:    ushll2 v4.4s, v2.8h, #0
-; CHECK-NODOT-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-NODOT-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
+; CHECK-NODOT-NEXT:    mov d3, v3.d[1]
 ; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
-; CHECK-NODOT-NEXT:    ext v3.16b, v4.16b, v4.16b, #8
+; CHECK-NODOT-NEXT:    mov d3, v4.d[1]
 ; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v2.4h
 ; CHECK-NODOT-NEXT:    ushll v2.4s, v1.4h, #0
 ; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
-; CHECK-NODOT-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
 ; CHECK-NODOT-NEXT:    ushll2 v3.4s, v1.8h, #0
 ; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
-; CHECK-NODOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
-; CHECK-NODOT-NEXT:    ext v2.16b, v3.16b, v3.16b, #8
+; CHECK-NODOT-NEXT:    mov d2, v3.d[1]
 ; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
 ; CHECK-NODOT-NEXT:    ret

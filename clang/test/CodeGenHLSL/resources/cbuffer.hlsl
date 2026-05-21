@@ -153,13 +153,13 @@ cbuffer CBVectors {
 }
 
 // CHECK: @CBVectors.cb = global target("dx.CBuffer", %__cblayout_CBVectors)
-// CHECK: @b1 = external hidden addrspace(2) global <3 x float>, align 16
-// CHECK: @b2 = external hidden addrspace(2) global <3 x double>, align 32
-// CHECK: @b3 = external hidden addrspace(2) global <2 x half>, align 4
-// CHECK: @b4 = external hidden addrspace(2) global <3 x i64>, align 32
-// CHECK: @b5 = external hidden addrspace(2) global <4 x i32>, align 16
-// CHECK: @b6 = external hidden addrspace(2) global <3 x i16>, align 8
-// CHECK: @b7 = external hidden addrspace(2) global <3 x i64>, align 32
+// CHECK: @b1 = external hidden addrspace(2) global <3 x float>, align 4
+// CHECK: @b2 = external hidden addrspace(2) global <3 x double>, align 8
+// CHECK: @b3 = external hidden addrspace(2) global <2 x half>, align 2
+// CHECK: @b4 = external hidden addrspace(2) global <3 x i64>, align 8
+// CHECK: @b5 = external hidden addrspace(2) global <4 x i32>, align 4
+// CHECK: @b6 = external hidden addrspace(2) global <3 x i16>, align 2
+// CHECK: @b7 = external hidden addrspace(2) global <3 x i64>, align 8
 // CHECK: @CBVectors.str = private unnamed_addr constant [10 x i8] c"CBVectors\00", align 1
 
 cbuffer CBArrays : register(b2) {
@@ -175,10 +175,10 @@ cbuffer CBArrays : register(b2) {
 
 // CHECK: @CBArrays.cb = global target("dx.CBuffer", %__cblayout_CBArrays)
 // CHECK: @c1 = external hidden addrspace(2) global <{ [2 x <{ float, target("dx.Padding", 12) }>], float }>, align 4
-// CHECK: @c2 = external hidden addrspace(2) global <{ [1 x <{ <3 x double>, target("dx.Padding", 8) }>], <3 x double> }>, align 32
+// CHECK: @c2 = external hidden addrspace(2) global <{ [1 x <{ <3 x double>, target("dx.Padding", 8) }>], <3 x double> }>, align 8
 // CHECK: @c3 = external hidden addrspace(2) global <{ [1 x <{ <{ [1 x <{ half, target("dx.Padding", 14) }>], half }>, target("dx.Padding", 14) }>], <{ [1 x <{ half, target("dx.Padding", 14) }>], half }> }>, align 2
 // CHECK: @c4 = external hidden addrspace(2) global <{ [2 x <{ i64, target("dx.Padding", 8) }>], i64 }>, align 8
-// CHECK: @c5 = external hidden addrspace(2) global [2 x [3 x [4 x <4 x i32>]]], align 16
+// CHECK: @c5 = external hidden addrspace(2) global [2 x [3 x [4 x <4 x i32>]]], align 4
 // CHECK: @c6 = external hidden addrspace(2) global [1 x i16], align 2
 // CHECK: @c7 = external hidden addrspace(2) global <{ [1 x <{ i64, target("dx.Padding", 8) }>], i64 }>, align 8
 // CHECK: @c8 = external hidden addrspace(2) global <{ [3 x <{ i32, target("dx.Padding", 12) }>], i32 }>, align 4
@@ -194,8 +194,8 @@ cbuffer CBTypedefArray : register(space2) {
 }
 
 // CHECK: @CBTypedefArray.cb = global target("dx.CBuffer", %__cblayout_CBTypedefArray)
-// CHECK: @t1 = external hidden addrspace(2) global [2 x [2 x <4 x i32>]], align 16
-// CHECK: @t2 = external hidden addrspace(2) global [2 x [2 x <4 x i32>]], align 16
+// CHECK: @t1 = external hidden addrspace(2) global [2 x [2 x <4 x i32>]], align 4
+// CHECK: @t2 = external hidden addrspace(2) global [2 x [2 x <4 x i32>]], align 4
 // CHECK: @CBTypedefArray.str = private unnamed_addr constant [15 x i8] c"CBTypedefArray\00", align 1
 struct Empty {};
 
@@ -224,7 +224,7 @@ struct D {
 // CHECK: @array_of_A = external hidden addrspace(2) global <{ [4 x <{ %A, target("dx.Padding", 8) }>], %A }>, align 1
 // CHECK: @d = external hidden addrspace(2) global %__cblayout_D, align 1
 // CHECK: @e = external hidden addrspace(2) global half, align 2
-// CHECK: @f = external hidden addrspace(2) global <3 x i16>, align 8
+// CHECK: @f = external hidden addrspace(2) global <3 x i16>, align 2
 // CHECK: @CBStructs.str = private unnamed_addr constant [10 x i8] c"CBStructs\00", align 1
 
 cbuffer CBStructs {
@@ -271,7 +271,7 @@ struct Test {
 // CHECK: @CBMix.cb = global target("dx.CBuffer", %__cblayout_CBMix)
 // CHECK: @test = external hidden addrspace(2) global <{ [1 x <{ %Test, target("dx.Padding", 8) }>], %Test }>, align 1
 // CHECK: @f1 = external hidden addrspace(2) global float, align 4
-// CHECK: @f2 = external hidden addrspace(2) global <{ [2 x <{ <{ [1 x <{ <2 x float>, target("dx.Padding", 8) }>], <2 x float> }>, target("dx.Padding", 8) }>], <{ [1 x <{ <2 x float>, target("dx.Padding", 8) }>], <2 x float> }> }>, align 8
+// CHECK: @f2 = external hidden addrspace(2) global <{ [2 x <{ <{ [1 x <{ <2 x float>, target("dx.Padding", 8) }>], <2 x float> }>, target("dx.Padding", 8) }>], <{ [1 x <{ <2 x float>, target("dx.Padding", 8) }>], <2 x float> }> }>, align 4
 // CHECK: @f3 = external hidden addrspace(2) global float, align 4
 // CHECK: @f4 = external hidden addrspace(2) global %anon, align 1
 // CHECK: @f5 = external hidden addrspace(2) global double, align 8

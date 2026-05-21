@@ -92,7 +92,7 @@ MATCHER_P(snippetSuffix, Text, "") { return arg.SnippetSuffix == Text; }
 MATCHER_P(origin, OriginSet, "") { return arg.Origin == OriginSet; }
 MATCHER_P(signature, S, "") { return arg.Signature == S; }
 MATCHER_P(replacesRange, Range, "") {
-  return arg.CompletionTokenRange == Range;
+  return arg.CompletionInsertRange == Range;
 }
 
 // Shorthand for Contains(named(Name)).
@@ -531,18 +531,25 @@ TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
 
   Annotations Code(R"cpp(
       struct Foo {
-        static int staticMethod(int);
-        int method(int) const;
+        static int staticMethod(int name);
+        int method(int name) const;
         template <typename T, typename U, typename V = int>
-        T generic(U, V);
+        T generic(U nameU, V nameV);
         template <typename T, int U>
         static T staticGeneric();
         Foo() {
-          this->$canBeCall^
+          this->$canBeCallNoStatic^
           $canBeCall^
           Foo::$canBeCall^
         }
       };
+
+      int Foo::$isDefinition^ {
+      }
+      ;
+
+      int i = Foo::$canBeCallStaticOnly^
+      ;
 
       struct Derived : Foo {
         using Foo::method;
@@ -556,9 +563,10 @@ TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
         OtherClass() {
           Foo f;
           Derived d;
-          f.$canBeCall^
+          f.$canBeCallNoStatic^
           ; // Prevent parsing as 'f.f'
           f.Foo::$canBeCall^
+          ;
           &Foo::$canNotBeCall^
           ;
           d.Foo::$canBeCall^
@@ -573,6 +581,7 @@ TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
         f.$canBeCall^
         ; // Prevent parsing as 'f.f'
         f.Foo::$canBeCall^
+        ;
         &Foo::$canNotBeCall^
         ;
         d.Foo::$canBeCall^
@@ -585,39 +594,129 @@ TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
   for (const auto &P : Code.points("canNotBeCall")) {
     auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
     EXPECT_THAT(Results.Completions,
-                Contains(AllOf(named("method"), signature("(int) const"),
+                Contains(AllOf(named("method"), signature("(int name) const"),
                                snippetSuffix(""))));
     // We don't have any arguments to deduce against if this isn't a call.
-    // Thus, we should emit these deducible template arguments explicitly.
     EXPECT_THAT(
         Results.Completions,
         Contains(AllOf(named("generic"),
-                       signature("<typename T, typename U>(U, V)"),
+                       signature("<typename T, typename U>(U nameU, V nameV)"),
                        snippetSuffix("<${1:typename T}, ${2:typename U}>"))));
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("staticMethod"), signature("(int name)"),
+                               snippetSuffix(""))));
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(
+                    named("staticGeneric"), signature("<typename T, int U>()"),
+                    snippetSuffix("<${1:typename T}, ${2:int U}>"))));
   }
 
   for (const auto &P : Code.points("canBeCall")) {
     auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
     EXPECT_THAT(Results.Completions,
-                Contains(AllOf(named("method"), signature("(int) const"),
-                               snippetSuffix("(${1:int})"))));
+                Contains(AllOf(named("method"), signature("(int name) const"),
+                               snippetSuffix("(${1:int name})"))));
     EXPECT_THAT(
         Results.Completions,
-        Contains(AllOf(named("generic"), signature("<typename T>(U, V)"),
-                       snippetSuffix("<${1:typename T}>(${2:U}, ${3:V})"))));
-  }
-
-  // static method will always keep the snippet
-  for (const auto &P : Code.points()) {
-    auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
+        Contains(AllOf(
+            named("generic"), signature("<typename T>(U nameU, V nameV)"),
+            snippetSuffix("<${1:typename T}>(${2:U nameU}, ${3:V nameV})"))));
     EXPECT_THAT(Results.Completions,
-                Contains(AllOf(named("staticMethod"), signature("(int)"),
-                               snippetSuffix("(${1:int})"))));
+                Contains(AllOf(named("staticMethod"), signature("(int name)"),
+                               snippetSuffix("(${1:int name})"))));
     EXPECT_THAT(Results.Completions,
                 Contains(AllOf(
                     named("staticGeneric"), signature("<typename T, int U>()"),
                     snippetSuffix("<${1:typename T}, ${2:int U}>()"))));
   }
+
+  for (const auto &P : Code.points("canBeCallNoStatic")) {
+    auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("method"), signature("(int name) const"),
+                               snippetSuffix("(${1:int name})"))));
+    EXPECT_THAT(
+        Results.Completions,
+        Contains(AllOf(
+            named("generic"), signature("<typename T>(U nameU, V nameV)"),
+            snippetSuffix("<${1:typename T}>(${2:U nameU}, ${3:V nameV})"))));
+  }
+
+  for (const auto &P : Code.points("canBeCallStaticOnly")) {
+    auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("method"), signature("(int name) const"),
+                               snippetSuffix(""))));
+    EXPECT_THAT(
+        Results.Completions,
+        Contains(AllOf(named("generic"),
+                       signature("<typename T, typename U>(U nameU, V nameV)"),
+                       snippetSuffix("<${1:typename T}, ${2:typename U}>"))));
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("staticMethod"), signature("(int name)"),
+                               snippetSuffix("(${1:int name})"))));
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(
+                    named("staticGeneric"), signature("<typename T, int U>()"),
+                    snippetSuffix("<${1:typename T}, ${2:int U}>()"))));
+  }
+
+  for (const auto &P : Code.points("isDefinition")) {
+    auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
+
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("method"), signature("(int name) const"),
+                               snippetSuffix("(int name) const"))));
+    EXPECT_THAT(
+        Results.Completions,
+        Contains(AllOf(named("generic"),
+                       signature("<typename T, typename U>(U nameU, V nameV)"),
+                       snippetSuffix("(U nameU, V nameV)"))));
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("staticMethod"), signature("(int name)"),
+                               snippetSuffix("(int name)"))));
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("staticGeneric"),
+                               signature("<typename T, int U>()"),
+                               snippetSuffix("()"))));
+  }
+}
+
+TEST(CompletionTest, PrivateMemberDefinition) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableSnippets = true;
+  auto Results = completions(
+      R"cpp(
+    class Foo {
+        int func(int a, int b);
+    };
+    int Foo::func^
+  )cpp",
+      /*IndexSymbols=*/{}, Opts);
+  EXPECT_THAT(Results.Completions,
+              Contains(AllOf(named("func"), signature("(int a, int b)"),
+                             snippetSuffix("(int a, int b)"))));
+}
+
+TEST(CompletionTest, DefaultArgsWithValues) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableSnippets = true;
+  auto Results = completions(
+      R"cpp(
+    struct Arg {
+        Arg(int a, int b);
+    };
+    struct Foo {
+      void foo(int x = 42, int y = 0, Arg arg = Arg(42,  0));
+    };
+    void Foo::foo^
+  )cpp",
+      /*IndexSymbols=*/{}, Opts);
+  EXPECT_THAT(Results.Completions,
+              Contains(AllOf(
+                  named("foo"),
+                  signature("(int x = 42, int y = 0, Arg arg = Arg(42,  0))"),
+                  snippetSuffix("(int x, int y, Arg arg)"))));
 }
 
 TEST(CompletionTest, NoSnippetsInUsings) {
@@ -2440,6 +2539,45 @@ TEST(CompletionTest, CodeCompletionContext) {
   EXPECT_THAT(Results.Context, CodeCompletionContext::CCC_DotMemberAccess);
 }
 
+TEST(CompletionTest, OffsetOfDesignator) {
+  auto Results = completions(R"cpp(
+    struct S { int field; int other; void fieldFn(); };
+    int x = __builtin_offsetof(S, fiel^d);
+  )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      ElementsAre(AllOf(named("field"), kind(CompletionItemKind::Field))));
+  EXPECT_THAT(Results.Context, CodeCompletionContext::CCC_DotMemberAccess);
+
+  Results = completions(R"cpp(
+    struct Inner { int field; void fieldFn(); };
+    struct Outer { Inner inner; };
+    int x = __builtin_offsetof(Outer, inner.fiel^d);
+  )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      ElementsAre(AllOf(named("field"), kind(CompletionItemKind::Field))));
+
+  Results = completions(R"cpp(
+    struct Inner { int field; void fieldFn(); };
+    struct Outer { Inner inner[2]; };
+    int i;
+    int x = __builtin_offsetof(Outer, inner[i].fiel^d);
+  )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      ElementsAre(AllOf(named("field"), kind(CompletionItemKind::Field))));
+
+  Results = completions(R"cpp(
+    struct Base { int field; void fieldFn(); };
+    struct Derived : Base {};
+    int x = __builtin_offsetof(Derived, fiel^d);
+  )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      ElementsAre(AllOf(named("field"), kind(CompletionItemKind::Field))));
+}
+
 TEST(CompletionTest, FixItForArrowToDot) {
   MockFS FS;
   MockCompilationDatabase CDB;
@@ -2520,14 +2658,14 @@ TEST(CompletionTest, RenderWithFixItMerged) {
   C.Name = "x";
   C.RequiredQualifier = "Foo::";
   C.FixIts = {FixIt};
-  C.CompletionTokenRange.start.character = 5;
+  C.CompletionInsertRange.start.character = 5;
 
   CodeCompleteOptions Opts;
   Opts.IncludeFixIts = true;
 
   auto R = C.render(Opts);
   EXPECT_TRUE(R.textEdit);
-  EXPECT_EQ(R.textEdit->newText, "->Foo::x");
+  EXPECT_EQ(std::get<TextEdit>(*R.textEdit).newText, "->Foo::x");
   EXPECT_TRUE(R.additionalTextEdits.empty());
 }
 
@@ -2540,18 +2678,18 @@ TEST(CompletionTest, RenderWithFixItNonMerged) {
   C.Name = "x";
   C.RequiredQualifier = "Foo::";
   C.FixIts = {FixIt};
-  C.CompletionTokenRange.start.character = 5;
+  C.CompletionInsertRange.start.character = 5;
 
   CodeCompleteOptions Opts;
   Opts.IncludeFixIts = true;
 
   auto R = C.render(Opts);
   EXPECT_TRUE(R.textEdit);
-  EXPECT_EQ(R.textEdit->newText, "Foo::x");
+  EXPECT_EQ(std::get<TextEdit>(*R.textEdit).newText, "Foo::x");
   EXPECT_THAT(R.additionalTextEdits, UnorderedElementsAre(FixIt));
 }
 
-TEST(CompletionTest, CompletionTokenRange) {
+TEST(CompletionTest, CompletionInsertRange) {
   MockFS FS;
   MockCompilationDatabase CDB;
   TestTU TU;
@@ -2593,7 +2731,7 @@ TEST(CompletionTest, CompletionTokenRange) {
       ADD_FAILURE() << "Results.Completions.size() != 1" << Text;
       continue;
     }
-    EXPECT_THAT(Results.Completions.front().CompletionTokenRange,
+    EXPECT_THAT(Results.Completions.front().CompletionInsertRange,
                 TestCode.range());
   }
 }
@@ -3981,23 +4119,155 @@ TEST(CompletionTest, DelayedTemplateParsing) {
 TEST(CompletionTest, CompletionRange) {
   const char *WithRange = "auto x = [[abc]]^";
   auto Completions = completions(WithRange);
-  EXPECT_EQ(Completions.CompletionRange, Annotations(WithRange).range());
+  EXPECT_EQ(Completions.InsertRange, Annotations(WithRange).range());
   Completions = completionsNoCompile(WithRange);
-  EXPECT_EQ(Completions.CompletionRange, Annotations(WithRange).range());
+  EXPECT_EQ(Completions.InsertRange, Annotations(WithRange).range());
 
   const char *EmptyRange = "auto x = [[]]^";
   Completions = completions(EmptyRange);
-  EXPECT_EQ(Completions.CompletionRange, Annotations(EmptyRange).range());
+  EXPECT_EQ(Completions.InsertRange, Annotations(EmptyRange).range());
   Completions = completionsNoCompile(EmptyRange);
-  EXPECT_EQ(Completions.CompletionRange, Annotations(EmptyRange).range());
+  EXPECT_EQ(Completions.InsertRange, Annotations(EmptyRange).range());
 
   // Sema doesn't trigger at all here, while the no-sema completion runs
   // heuristics as normal and reports a range. It'd be nice to be consistent.
   const char *NoCompletion = "/* foo [[]]^ */";
   Completions = completions(NoCompletion);
-  EXPECT_EQ(Completions.CompletionRange, std::nullopt);
+  EXPECT_EQ(Completions.InsertRange, std::nullopt);
   Completions = completionsNoCompile(NoCompletion);
-  EXPECT_EQ(Completions.CompletionRange, Annotations(NoCompletion).range());
+  EXPECT_EQ(Completions.InsertRange, Annotations(NoCompletion).range());
+}
+
+TEST(CompletionTest, ReplaceRange) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableInsertReplace = true;
+
+  // Cursor at end of token: insert == replace.
+  const char *EndOfToken =
+      "struct S { int abc; }; void f() { S s; s.[[abc]]^; }";
+  CodeCompleteResult Completions =
+      completions(EndOfToken, /*IndexSymbols=*/{}, Opts);
+  Annotations A(EndOfToken);
+  EXPECT_EQ(Completions.InsertRange, A.range());
+  EXPECT_EQ(Completions.ReplaceRange, A.range());
+
+  // Cursor mid-word: replace extends past cursor.
+  const char *MidWord = "struct S { int abcd; }; void f() { S s; "
+                        "s.$replace[[$insert[[ab^]]cd]]; }";
+  Completions = completions(MidWord, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(MidWord);
+  EXPECT_EQ(Completions.InsertRange, A.range("insert"));
+  EXPECT_EQ(Completions.ReplaceRange, A.range("replace"));
+
+  // Empty prefix: insert range is empty, replace covers the word.
+  const char *EmptyPrefix = "struct S { int abcd; }; void f() { S s; "
+                            "s.$replace[[$insert[[^]]abcd]]; }";
+  Completions = completions(EmptyPrefix, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(EmptyPrefix);
+  EXPECT_EQ(Completions.InsertRange, A.range("insert"));
+  EXPECT_EQ(Completions.ReplaceRange, A.range("replace"));
+
+  // Cursor mid-word with UTF-8 continuation: replace extends past UTF-8.
+  const char *MidWordUTF8 = "struct S { int naïve; }; void f() { S s; "
+                            "s.$replace[[$insert[[na^]]ïve]]; }";
+  Completions = completions(MidWordUTF8, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(MidWordUTF8);
+  EXPECT_EQ(Completions.InsertRange, A.range("insert"));
+  EXPECT_EQ(Completions.ReplaceRange, A.range("replace"));
+
+  // Replace range stops at '(' (method call).
+  const char *BeforeParen = "struct S { int abcd(); }; void f() { S s; "
+                            "s.$replace[[$insert[[ab^]]cd]](123); }";
+  Completions = completions(BeforeParen, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(BeforeParen);
+  EXPECT_EQ(Completions.InsertRange, A.range("insert"));
+  EXPECT_EQ(Completions.ReplaceRange, A.range("replace"));
+
+  // Replace range stops at '<' (template arguments).
+  const char *BeforeAngle =
+      "struct S { template <typename T> int abcd(); }; void f() { S s; "
+      "s.$replace[[$insert[[ab^]]cd]]<int>(); }";
+  Completions = completions(BeforeAngle, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(BeforeAngle);
+  EXPECT_EQ(Completions.InsertRange, A.range("insert"));
+  EXPECT_EQ(Completions.ReplaceRange, A.range("replace"));
+
+  // Replace range stops at ' ' (before '=').
+  const char *BeforeEquals =
+      "void f() { int $replace[[$insert[[ab^]]cd]] = 1; }";
+  Completions = completions(BeforeEquals, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(BeforeEquals);
+  EXPECT_EQ(Completions.InsertRange, A.range("insert"));
+  EXPECT_EQ(Completions.ReplaceRange, A.range("replace"));
+
+  // EnableInsertReplace off: ReplaceRange should not be set.
+  Opts.EnableInsertReplace = false;
+  const char *NoReplace = "auto x = [[abc]]^";
+  Completions = completions(NoReplace, /*IndexSymbols=*/{}, Opts);
+  EXPECT_EQ(Completions.InsertRange, Annotations(NoReplace).range());
+  EXPECT_EQ(Completions.ReplaceRange, std::nullopt);
+}
+
+TEST(CompletionTest, ReplaceRangeNoCompile) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableInsertReplace = true;
+
+  // Cursor at end of token: insert == replace.
+  const char *EndOfToken = "auto x = [[abc]]^";
+  Annotations A(EndOfToken);
+  CodeCompleteResult Results =
+      completionsNoCompile(EndOfToken, /*IndexSymbols=*/{}, Opts);
+  EXPECT_EQ(Results.InsertRange, A.range());
+  EXPECT_EQ(Results.ReplaceRange, A.range());
+
+  // Cursor mid-word: replace extends past cursor.
+  const char *MidWord = "auto x = $replace[[$insert[[ab^]]cd]]";
+  Results = completionsNoCompile(MidWord, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(MidWord);
+  EXPECT_EQ(Results.InsertRange, A.range("insert"));
+  EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
+
+  // Empty prefix: insert range is empty, replace covers the word.
+  const char *EmptyPrefix = "auto x = $replace[[$insert[[^]]abcd]]";
+  Results = completionsNoCompile(EmptyPrefix, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(EmptyPrefix);
+  EXPECT_EQ(Results.InsertRange, A.range("insert"));
+  EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
+
+  // ASCII heuristic stops at non-ASCII: replace doesn't extend past UTF-8.
+  const char *MidWordUTF8 = "auto x = $replace[[$insert[[na^]]]]ïve";
+  Results = completionsNoCompile(MidWordUTF8, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(MidWordUTF8);
+  EXPECT_EQ(Results.InsertRange, A.range("insert"));
+  EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
+
+  // Replace range stops at '(' (method call).
+  const char *BeforeParen = "auto x = $replace[[$insert[[ab^]]cd]](123);";
+  Results = completionsNoCompile(BeforeParen, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(BeforeParen);
+  EXPECT_EQ(Results.InsertRange, A.range("insert"));
+  EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
+
+  // Replace range stops at '<' (template arguments).
+  const char *BeforeAngle = "auto x = $replace[[$insert[[ab^]]cd]]<int>();";
+  Results = completionsNoCompile(BeforeAngle, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(BeforeAngle);
+  EXPECT_EQ(Results.InsertRange, A.range("insert"));
+  EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
+
+  // Replace range stops at ' ' (before '=').
+  const char *BeforeEquals = "auto $replace[[$insert[[ab^]]cd]] = 1;";
+  Results = completionsNoCompile(BeforeEquals, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(BeforeEquals);
+  EXPECT_EQ(Results.InsertRange, A.range("insert"));
+  EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
+
+  // EnableInsertReplace off: ReplaceRange should not be set.
+  Opts.EnableInsertReplace = false;
+  const char *NoReplace = "auto x = [[abc]]^";
+  Results = completionsNoCompile(NoReplace, /*IndexSymbols=*/{}, Opts);
+  EXPECT_EQ(Results.InsertRange, Annotations(NoReplace).range());
+  EXPECT_EQ(Results.ReplaceRange, std::nullopt);
 }
 
 TEST(NoCompileCompletionTest, Basic) {
@@ -4146,14 +4416,15 @@ TEST(CompletionTest, FunctionArgsExist) {
   EXPECT_THAT(
       completions(Context + "int y = fo^(42)", {}, Opts).Completions,
       UnorderedElementsAre(AllOf(labeled("foo(int A)"), snippetSuffix(""))));
-  // FIXME(kirillbobyrev): No snippet should be produced here.
-  EXPECT_THAT(completions(Context + "int y = fo^o(42)", {}, Opts).Completions,
-              UnorderedElementsAre(
-                  AllOf(labeled("foo(int A)"), snippetSuffix("(${1:int A})"))));
+  EXPECT_THAT(
+      completions(Context + "int y = fo^o(42)", {}, Opts).Completions,
+      UnorderedElementsAre(AllOf(labeled("foo(int A)"), snippetSuffix(""))));
   EXPECT_THAT(
       completions(Context + "int y = ba^", {}, Opts).Completions,
       UnorderedElementsAre(AllOf(labeled("bar()"), snippetSuffix("()"))));
   EXPECT_THAT(completions(Context + "int y = ba^()", {}, Opts).Completions,
+              UnorderedElementsAre(AllOf(labeled("bar()"), snippetSuffix(""))));
+  EXPECT_THAT(completions(Context + "int y = ba^r()", {}, Opts).Completions,
               UnorderedElementsAre(AllOf(labeled("bar()"), snippetSuffix(""))));
   EXPECT_THAT(
       completions(Context + "Object o = Obj^", {}, Opts).Completions,
@@ -4177,7 +4448,15 @@ TEST(CompletionTest, FunctionArgsExist) {
       Contains(AllOf(labeled("Container<typename T>(int Size)"),
                      snippetSuffix(""),
                      kind(CompletionItemKind::Constructor))));
+  EXPECT_THAT(
+      completions(Context + "Container c = Cont^ainer()", {}, Opts).Completions,
+      Contains(AllOf(labeled("Container<typename T>(int Size)"),
+                     snippetSuffix("<${1:typename T}>"),
+                     kind(CompletionItemKind::Constructor))));
   EXPECT_THAT(completions(Context + "MAC^(2)", {}, Opts).Completions,
+              Contains(AllOf(labeled("MACRO(x)"), snippetSuffix(""),
+                             kind(CompletionItemKind::Function))));
+  EXPECT_THAT(completions(Context + "MAC^RO(2)", {}, Opts).Completions,
               Contains(AllOf(labeled("MACRO(x)"), snippetSuffix(""),
                              kind(CompletionItemKind::Function))));
 }
@@ -4300,7 +4579,7 @@ TEST(CompletionTest, CommentParamName) {
   {
     std::string CompletionRangeTest(Code + "fun(/*[[^]]");
     auto Results = completions(CompletionRangeTest);
-    EXPECT_THAT(Results.CompletionRange,
+    EXPECT_THAT(Results.InsertRange,
                 llvm::ValueIs(Annotations(CompletionRangeTest).range()));
     EXPECT_THAT(
         Results.Completions,
@@ -4311,13 +4590,50 @@ TEST(CompletionTest, CommentParamName) {
   {
     std::string CompletionRangeTest(Code + "fun(/*[[fo^]]");
     auto Results = completions(CompletionRangeTest);
-    EXPECT_THAT(Results.CompletionRange,
+    EXPECT_THAT(Results.InsertRange,
                 llvm::ValueIs(Annotations(CompletionRangeTest).range()));
     EXPECT_THAT(
         Results.Completions,
         testing::Each(
             AllOf(replacesRange(Annotations(CompletionRangeTest).range()),
                   origin(SymbolOrigin::AST), kind(CompletionItemKind::Text))));
+  }
+
+  // Test replace ranges (comment completion replaces up to */).
+  clangd::CodeCompleteOptions ReplaceOpts;
+  ReplaceOpts.EnableInsertReplace = true;
+  {
+    // With */ (no =): replace extends past suffix to */.
+    const std::string NoEquals(Code + "fun(/*$replace[[$insert[[fo^]]o*/]])");
+    const CodeCompleteResult Results = completions(NoEquals, {}, ReplaceOpts);
+    const Annotations A(NoEquals);
+    EXPECT_EQ(Results.InsertRange, A.range("insert"));
+    EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
+  }
+  {
+    // With = and */: replace extends past = to */.
+    const std::string WithEquals(Code +
+                                 "fun(/*$replace[[$insert[[fo^]]o=*/]])");
+    const CodeCompleteResult Results = completions(WithEquals, {}, ReplaceOpts);
+    const Annotations A(WithEquals);
+    EXPECT_EQ(Results.InsertRange, A.range("insert"));
+    EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
+  }
+  {
+    // Without */: replace == insert.
+    const std::string NoClose(Code + "fun(/*[[fo^]]");
+    const CodeCompleteResult Results = completions(NoClose, {}, ReplaceOpts);
+    const Annotations A(NoClose);
+    EXPECT_EQ(Results.InsertRange, A.range());
+    EXPECT_EQ(Results.ReplaceRange, A.range());
+  }
+  {
+    // With */ and UTF-8 suffix: replace extends past UTF-8 to */.
+    const std::string WithUTF8(Code + "fun(/*$replace[[$insert[[ca^]]fé=*/]])");
+    const CodeCompleteResult Results = completions(WithUTF8, {}, ReplaceOpts);
+    const Annotations A(WithUTF8);
+    EXPECT_EQ(Results.InsertRange, A.range("insert"));
+    EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
   }
 }
 

@@ -1378,6 +1378,15 @@ def bc_v8i64 : PatFrag<(ops node:$in), (v8i64 (bitconvert node:$in))>;
 def bc_v8f64 : PatFrag<(ops node:$in), (v8f64 (bitconvert node:$in))>;
 def bc_v16f32 : PatFrag<(ops node:$in), (v16f32 (bitconvert node:$in))>;
 
+// Match node that has known zeros in every element except the lowest.
+class X86vzelts <ValueType vt, RegisterClass rc> : PatLeaf<(vt rc:$src), [{
+  unsigned NumElts = Op.getValueType().getVectorNumElements();
+  APInt UpperMask = APInt::getHighBitsSet(NumElts, NumElts - 1);
+  return CurDAG->MaskedVectorIsZero(Op, UpperMask);
+}]> {
+  let GISelPredicateCode = [{return false;}]; // TODO
+}
+
 def X86vzload16 : PatFrag<(ops node:$src),
                           (X86vzld node:$src), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getStoreSize() == 2;
@@ -1451,19 +1460,19 @@ def sse_load_f64 : PatFrags<(ops node:$ptr),
                              (v2f64 (scalar_to_vector (loadf64 node:$ptr)))]>;
 
 def fp16imm0 : PatLeaf<(f16 fpimm), [{
-  return N->isExactlyValue(+0.0);
+  return N->isPosZero();
 }]>;
 
 def fp32imm0 : PatLeaf<(f32 fpimm), [{
-  return N->isExactlyValue(+0.0);
+  return N->isPosZero();
 }]>;
 
 def fp64imm0 : PatLeaf<(f64 fpimm), [{
-  return N->isExactlyValue(+0.0);
+  return N->isPosZero();
 }]>;
 
 def fp128imm0 : PatLeaf<(f128 fpimm), [{
-  return N->isExactlyValue(+0.0);
+  return N->isPosZero();
 }]>;
 
 // EXTRACT_get_vextract128_imm xform function: convert extract_subvector index

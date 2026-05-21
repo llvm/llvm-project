@@ -29,6 +29,7 @@
 #include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Breakpoint/BreakpointList.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Breakpoint/ScriptedBreakpointOverrideResolver.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressResolver.h"
 #include "lldb/Core/Debugger.h"
@@ -40,6 +41,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -158,7 +160,7 @@ SBModule SBTarget::GetModuleAtIndexFromEvent(const uint32_t idx,
 const char *SBTarget::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Target::GetStaticBroadcasterClass()).AsCString();
+  return ConstString(Target::GetStaticBroadcasterClass()).AsCString(nullptr);
 }
 
 bool SBTarget::IsValid() const {
@@ -333,6 +335,9 @@ SBProcess SBTarget::Launch(SBListener &listener, char const **argv,
 
     if (getenv("LLDB_LAUNCH_FLAG_DISABLE_ASLR"))
       launch_flags |= eLaunchFlagDisableASLR;
+
+    if (getenv("LLDB_LAUNCH_FLAG_USE_PIPES"))
+      launch_flags |= eLaunchFlagUsePipes;
 
     StateType state = eStateInvalid;
     process_sp = target_sp->GetProcessSP();
@@ -674,6 +679,48 @@ size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
   }
 
   return bytes_read;
+}
+
+uint64_t SBTarget::AddBreakpointOverride(const char *class_name,
+                                         const char *description,
+                                         SBStructuredData &args_data,
+                                         SBError &error) {
+  if (!class_name || class_name[0] == '\0') {
+    error.SetErrorString("empty class name");
+    return LLDB_INVALID_INDEX64;
+  }
+
+  if (TargetSP target_sp = GetSP()) {
+    StructuredDataImpl impl;
+    args_data.CopyImpl(impl);
+    StructuredData::ObjectSP object_sp = impl.GetObjectSP();
+    StructuredData::DictionarySP args_dict(
+        new StructuredData::Dictionary(object_sp));
+    if (!args_dict->IsValid()) {
+      error.SetErrorString("args data is not a dictionary");
+      return LLDB_INVALID_INDEX64;
+    }
+
+    llvm::Expected<lldb::user_id_t> id_or_err =
+        target_sp->AddBreakpointResolverOverride(
+            class_name, args_dict,
+            description ? description : "<No Description>");
+    if (id_or_err)
+      return *id_or_err;
+    error.SetErrorString(llvm::toString(id_or_err.takeError()).c_str());
+    return LLDB_INVALID_INDEX64;
+
+  } else {
+    error.SetErrorString("invalid SBTarget.");
+    return LLDB_INVALID_INDEX64;
+  }
+}
+
+bool SBTarget::RemoveBreakpointOverride(uint64_t id) {
+  if (TargetSP target_sp = GetSP()) {
+    return target_sp->RemoveBreakpointResolverOverride(id);
+  }
+  return false;
 }
 
 SBBreakpoint SBTarget::BreakpointCreateByLocation(const char *file,
@@ -1614,11 +1661,11 @@ const char *SBTarget::GetTriple() {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP()) {
-    std::string triple(target_sp->GetArchitecture().GetTriple().str());
+    const std::string &triple = target_sp->GetArchitecture().GetTriple().str();
     // Unique the string so we don't run into ownership issues since the const
     // strings put the string into the string pool once and the strings never
     // comes out
-    ConstString const_triple(triple.c_str());
+    ConstString const_triple(triple);
     return const_triple.GetCString();
   }
   return nullptr;
@@ -1641,8 +1688,7 @@ const char *SBTarget::GetABIName() {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP()) {
-    std::string abi_name(target_sp->GetABIName().str());
-    ConstString const_name(abi_name.c_str());
+    ConstString const_name(target_sp->GetABIName());
     return const_name.GetCString();
   }
   return nullptr;
@@ -1652,7 +1698,7 @@ const char *SBTarget::GetLabel() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP())
-    return ConstString(target_sp->GetLabel().data()).AsCString();
+    return ConstString(target_sp->GetLabel()).AsCString(nullptr);
   return nullptr;
 }
 
@@ -1668,7 +1714,7 @@ const char *SBTarget::GetTargetSessionName() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP())
-    return ConstString(target_sp->GetTargetSessionName()).AsCString();
+    return ConstString(target_sp->GetTargetSessionName()).AsCString(nullptr);
   return nullptr;
 }
 

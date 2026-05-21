@@ -129,8 +129,12 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
     // Check if this is a normal object file by iterating through all
     // object file plugin instances.
     for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
-      ObjectFileSP object_file_sp(cbs.create_callback(
-          module_sp, extractor_sp, data_offset, file, file_offset, file_size));
+      // Make a copy of the extractor in case any plugin modifies it while
+      // processing.
+      DataExtractorSP extractor_copy_sp = extractor_sp->Clone();
+      ObjectFileSP object_file_sp(
+          cbs.create_callback(module_sp, extractor_copy_sp, data_offset, file,
+                              file_offset, file_size));
       if (object_file_sp.get())
         return object_file_sp;
     }
@@ -190,11 +194,9 @@ bool ObjectFile::IsObjectFile(lldb_private::FileSpec file_spec) {
       extractor_sp, data_offset));
 }
 
-size_t ObjectFile::GetModuleSpecifications(const FileSpec &file,
-                                           lldb::offset_t file_offset,
-                                           lldb::offset_t file_size,
-                                           ModuleSpecList &specs,
-                                           DataExtractorSP extractor_sp) {
+ModuleSpecList ObjectFile::GetModuleSpecifications(
+    const FileSpec &file, lldb::offset_t file_offset, lldb::offset_t file_size,
+    DataExtractorSP extractor_sp) {
   if (!extractor_sp)
     extractor_sp = std::make_shared<DataExtractor>();
   if (!extractor_sp->HasData()) {
@@ -209,35 +211,31 @@ size_t ObjectFile::GetModuleSpecifications(const FileSpec &file,
       if (actual_file_size > file_offset)
         file_size = actual_file_size - file_offset;
     }
-    return ObjectFile::GetModuleSpecifications(file,         // file spec
-                                               extractor_sp, // data bytes
-                                               0,            // data offset
-                                               file_offset,  // file offset
-                                               file_size,    // file length
-                                               specs);
+    return ObjectFile::GetModuleSpecifications(file, extractor_sp, file_offset,
+                                               file_size);
   }
-  return 0;
+  return {};
 }
 
-size_t ObjectFile::GetModuleSpecifications(
+ModuleSpecList ObjectFile::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
-  const size_t initial_count = specs.GetSize();
+    lldb::offset_t file_offset, lldb::offset_t file_size) {
   // Try the ObjectFile plug-ins
   for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
-    if (cbs.get_module_specifications(file, extractor_sp, data_offset,
-                                      file_offset, file_size, specs) > 0)
-      return specs.GetSize() - initial_count;
+    ModuleSpecList specs = cbs.get_module_specifications(
+        file, extractor_sp, file_offset, file_size);
+    if (specs.GetSize() > 0)
+      return specs;
   }
 
   // Try the ObjectContainer plug-ins
   for (auto &cbs : PluginManager::GetObjectContainerCallbacks()) {
-    if (cbs.get_module_specifications(file, extractor_sp, data_offset,
-                                      file_offset, file_size, specs) > 0)
-      return specs.GetSize() - initial_count;
+    ModuleSpecList specs = cbs.get_module_specifications(
+        file, extractor_sp, file_offset, file_size);
+    if (specs.GetSize() > 0)
+      return specs;
   }
-  return 0;
+  return {};
 }
 
 ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
@@ -605,17 +603,17 @@ void ObjectFile::ClearSymtab() {
 }
 
 SectionList *ObjectFile::GetSectionList(bool update_module_section_list) {
-  if (m_sections_up == nullptr) {
-    if (update_module_section_list) {
-      ModuleSP module_sp(GetModule());
-      if (module_sp) {
-        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-        CreateSections(*module_sp->GetUnifiedSectionList());
-      }
-    } else {
-      SectionList unified_section_list;
-      CreateSections(unified_section_list);
+  std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
+  if (m_sections_up)
+    return m_sections_up.get();
+  if (update_module_section_list) {
+    if (ModuleSP module_sp = GetModule()) {
+      std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+      CreateSections(*module_sp->GetUnifiedSectionList());
     }
+  } else {
+    SectionList unified_section_list;
+    CreateSections(unified_section_list);
   }
   return m_sections_up.get();
 }

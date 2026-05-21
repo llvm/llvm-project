@@ -16,6 +16,7 @@
 #include "types_private.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace chrono {
 
@@ -23,6 +24,7 @@ void __init_tzdb(tzdb& __tzdb, __tz::__rules_storage_type& __rules);
 
 } // namespace chrono
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_SRC_INCLUDE_TZDB_TZ_PRIVATE_H

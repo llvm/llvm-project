@@ -155,38 +155,40 @@ public:
     const Expr *RHS = S->getRHS();
     assert(RHS != nullptr);
 
-    // Do compound assignments up-front, as there are so many of them and we
-    // don't want to list all of them in the switch statement below.
-    // To avoid generating unnecessary values, we don't create a new value but
-    // instead leave it to the specific analysis to do this if desired.
-    if (S->isCompoundAssignmentOp())
-      propagateStorageLocation(*S->getLHS(), *S, Env);
-
-    switch (S->getOpcode()) {
-    case BO_Assign: {
+    // Do assignments and compound assignments up-front, as there are
+    // so many of them and we don't want to list all of them in
+    // the switch statement below.
+    if (S->isAssignmentOp()) {
       auto *LHSLoc = Env.getStorageLocation(*LHS);
       if (LHSLoc == nullptr)
-        break;
+        return;
 
-      auto *RHSVal = Env.getValue(*RHS);
+      // Assign a storage location for the whole expression.
+      Env.setStorageLocation(*S, *LHSLoc);
+
+      // Compound assignments involve arithmetic we don't model yet.
+      // Regular assignments preserve the value so they're easy.
+      Value *RHSVal =
+          S->isCompoundAssignmentOp() ? nullptr : Env.getValue(*RHS);
       if (RHSVal == nullptr) {
+        // Either way, we need to conjure a value if we don't have any so that
+        // future lookups into that location produce consistent results.
         RHSVal = Env.createValue(LHS->getType());
         if (RHSVal == nullptr) {
           // At least make sure the old value is gone. It's unlikely to be there
           // in the first place given that we don't even know how to create
           // a basic unknown value of that type.
           Env.clearValue(*LHSLoc);
-          break;
+          return;
         }
       }
 
       // Assign a value to the storage location of the left-hand side.
       Env.setValue(*LHSLoc, *RHSVal);
-
-      // Assign a storage location for the whole expression.
-      Env.setStorageLocation(*S, *LHSLoc);
-      break;
+      return;
     }
+
+    switch (S->getOpcode()) {
     case BO_LAnd:
     case BO_LOr: {
       BoolValue &LHSVal = getLogicOperatorSubExprValue(*LHS);
@@ -253,7 +255,7 @@ public:
     // If this is the holding variable for a `BindingDecl`, we may already
     // have a storage location set up -- so check. (See also explanation below
     // where we process the `BindingDecl`.)
-    if (D.getType()->isReferenceType() && Env.getStorageLocation(D) != nullptr)
+    if (D.isImplicit() && Env.getStorageLocation(D) != nullptr)
       return;
 
     assert(Env.getStorageLocation(D) == nullptr);
