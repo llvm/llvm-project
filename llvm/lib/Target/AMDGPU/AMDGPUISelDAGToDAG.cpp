@@ -357,8 +357,8 @@ bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
       CurDAG->getCopyToReg(Chain, DL, AMDGPU::SCC, CondNode, SDValue());
   SDValue Ops[4] = {
       TrueValue, FalseValue,
-      CopyToSCC.getValue(1), // Explicitly state SCC is read
-      CopyToSCC.getValue(2)  // Glue
+      CurDAG->getRegister(AMDGPU::SCC, MVT::i1), // Explicitly state SCC is read
+      CopyToSCC.getValue(1)                      // Glue
   };
   bool IsInt32 = ResType == MVT::i32;
   unsigned SelectCode = IsInt32 ? AMDGPU::S_CSELECT_B32 : AMDGPU::S_CSELECT_B64;
