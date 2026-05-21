@@ -645,8 +645,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SELECT, {MVT::v4i16, MVT::v8i8}, Custom);
       setOperationAction(ISD::SETCC, P64VecVTs, Legal);
       setCondCodeAction(
-          {ISD::SETGE, ISD::SETUGT, ISD::SETUGE, ISD::SETULE, ISD::SETLE}, P64VecVTs,
-          Expand);
+          {ISD::SETGE, ISD::SETUGT, ISD::SETUGE, ISD::SETULE, ISD::SETLE},
+          P64VecVTs, Expand);
       setCondCodeAction({ISD::SETNE, ISD::SETGT}, P64VecVTs, Custom);
     }
   }
