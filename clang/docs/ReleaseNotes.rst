@@ -40,6 +40,37 @@ Potentially Breaking Changes
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- Clang now makes it ill-formed to try to ``break`` out of or ``continue`` a loop inside its own condition,
+  increment, or init-statement in all C and C++ language modes. This means that code such as
+
+  .. code-block:: c++
+
+    while (({ break; })) {}
+
+  is now ill-formed. An outer loop can still be broken out of or continued so long as the inner loop is
+  in the body of the outer loop:
+
+  .. code-block:: c++
+
+    // Ok, this breaks out of the 'for' loop.
+    for (;;) {
+      while (({ break; true; })) {}
+    }
+
+    // Error: can't break out of the 'for' loop from within its own increment.
+    for (;;({ while (({ break; true; })) {} })) {}
+
+  This also resolves a divergence from GCC: in a construct such as
+
+  .. code-block:: c++
+
+    for (;;) {
+      while (({ break; true; })) {}
+    }
+
+  Clang would previously ``break`` out of the ``while`` loop, whereas GCC (since version 9) would
+  ``break`` out of the ``for`` loop here. Now, Clang and GCC both break out of the ``for`` loop.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
@@ -53,6 +84,9 @@ C++ Specific Potentially Breaking Changes
   as being of type ``std::size_t`` instead of ``int``,
   matching the deduction of array sizes from ``int(&)[N]``.
   This is a breaking change for code that depended on the previously deduced type. (#GH195033)
+
+- Clang now rejects nested local classes defined in a different
+  block scope than their parent class. (#GH193472)
 
 ABI Changes in This Version
 ---------------------------
@@ -507,9 +541,6 @@ Improvements to Clang's diagnostics
 - Clang now errors when a function declaration aliases a variable or vice versa. (#GH195550)
 
 - Added ``-Wattribute-alias`` to diagnose type mismatches between an alias and its aliased function. (#GH195550)
-
-- Added warnings for floating-point exception function calls (fenv.h) without enabling
-  floating-point exception behavior via the appropriate flags or pragmas. (#GH128239)
   
 - The diagnostics around ``__block`` now explain why a variable cannot be marked ``__block``. (#GH197213)
 

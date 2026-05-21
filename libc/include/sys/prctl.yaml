@@ -11,7 +11,4 @@ functions:
     return_type: int
     arguments:
       - type: int
-      - type: unsigned long
-      - type: unsigned long
-      - type: unsigned long
-      - type: unsigned long
+      - type: '...'

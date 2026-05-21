@@ -335,11 +335,6 @@ bool VPRecipeBase::isPhi() const {
          isa<VPPhi, VPIRPhi>(this);
 }
 
-bool VPRecipeBase::isScalarCast() const {
-  auto *VPI = dyn_cast<VPInstruction>(this);
-  return VPI && Instruction::isCast(VPI->getOpcode());
-}
-
 void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
   assert(OpType == Other.OpType && "OpType must match");
   switch (OpType) {
@@ -424,6 +419,20 @@ void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
     Metadata->print(O, SlotTracker);
 }
 #endif
+
+Type *llvm::getScalarTypeOrInfer(VPValue *V) {
+  if (Type *Ty = V->getScalarType())
+    return Ty;
+  auto *Recipe = V->getDefiningRecipe();
+  assert(Recipe && Recipe->getParent() &&
+         "operand without scalar type must be a recipe in a plan");
+  VPTypeAnalysis TypeInfo(*Recipe->getParent()->getPlan());
+  return TypeInfo.inferScalarType(V);
+}
+
+VPExpandSCEVRecipe::VPExpandSCEVRecipe(const SCEV *Expr)
+    : VPSingleDefRecipe(VPRecipeBase::VPExpandSCEVSC, {}, Expr->getType()),
+      Expr(Expr) {}
 
 VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                              const VPIRFlags &Flags, const VPIRMetadata &MD,
@@ -1324,7 +1333,7 @@ bool VPInstruction::isSingleScalar() const {
   case VPInstruction::VScale:
     return true;
   default:
-    return isScalarCast();
+    return Instruction::isCast(getOpcode());
   }
 }
 
@@ -1605,7 +1614,7 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPInstructionWithType::execute(VPTransformState &State) {
-  if (isScalarCast()) {
+  if (Instruction::isCast(getOpcode())) {
     Value *Op = State.get(getOperand(0), VPLane(0));
     Value *Cast = State.Builder.CreateCast(Instruction::CastOps(getOpcode()),
                                            Op, ResultTy);
@@ -1933,7 +1942,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   // Add return type if intrinsic is overloaded on it.
   if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
                                              State.TTI)) {
-    Type *RetTy = toVectorizedTy(getResultType(), State.VF);
+    Type *RetTy = toVectorizedTy(getScalarType(), State.VF);
     ArrayRef<Type *> ContainedTys = getContainedTypes(RetTy);
     for (auto [Idx, Ty] : enumerate(ContainedTys)) {
       if (isVectorIntrinsicWithStructReturnOverloadAtField(VectorIntrinsicID,
@@ -2044,7 +2053,7 @@ bool VPWidenIntrinsicRecipe::usesFirstLaneOnly(const VPValue *Op) const {
 void VPWidenIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                          VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-INTRINSIC ";
-  if (ResultTy->isVoidTy()) {
+  if (getScalarType()->isVoidTy()) {
     O << "void ";
   } else {
     printAsOperand(O, SlotTracker);
@@ -2564,7 +2573,7 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   /// Vectorize casts.
   assert(State.VF.isVector() && "Not vectorizing?");
-  Type *DestTy = VectorType::get(getResultType(), State.VF);
+  Type *DestTy = VectorType::get(getScalarType(), State.VF);
   VPValue *Op = getOperand(0);
   Value *A = State.get(Op);
   Value *Cast = Builder.CreateCast(Instruction::CastOps(Opcode), A, DestTy);
@@ -2588,7 +2597,7 @@ void VPWidenCastRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = " << Instruction::getOpcodeName(Opcode);
   printFlags(O);
   printOperands(O, SlotTracker);
-  O << " to " << *getResultType();
+  O << " to " << *getScalarType();
 }
 #endif
 
@@ -3025,7 +3034,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
 VPExpressionRecipe::VPExpressionRecipe(
     ExpressionTypes ExpressionType,
     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
-    : VPSingleDefRecipe(VPRecipeBase::VPExpressionSC, {}, {}),
+    : VPSingleDefRecipe(VPRecipeBase::VPExpressionSC, {}),
       ExpressionRecipes(ExpressionRecipes), ExpressionType(ExpressionType) {
   assert(!ExpressionRecipes.empty() && "Nothing to combine?");
   assert(
@@ -3198,7 +3207,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
     auto *Ext0 = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
     O << Instruction::getOpcodeName(Ext0->getOpcode()) << " to "
-      << *Ext0->getResultType();
+      << *Ext0->getScalarType();
     if (Red->isConditional()) {
       O << ", ";
       Red->getCondOp()->printAsOperand(O, SlotTracker);
@@ -3218,11 +3227,11 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     getOperand(0)->printAsOperand(O, SlotTracker);
     auto *Ext0 = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
     O << " " << Instruction::getOpcodeName(Ext0->getOpcode()) << " to "
-      << *Ext0->getResultType() << "), (";
+      << *Ext0->getScalarType() << "), (";
     getOperand(1)->printAsOperand(O, SlotTracker);
     auto *Ext1 = cast<VPWidenCastRecipe>(ExpressionRecipes[1]);
     O << " " << Instruction::getOpcodeName(Ext1->getOpcode()) << " to "
-      << *Ext1->getResultType() << ")";
+      << *Ext1->getScalarType() << ")";
     if (Red->isConditional()) {
       O << ", ";
       Red->getCondOp()->printAsOperand(O, SlotTracker);
@@ -3248,7 +3257,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     if (IsExtended) {
       auto *Ext0 = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
       O << " " << Instruction::getOpcodeName(Ext0->getOpcode()) << " to "
-        << *Ext0->getResultType() << "), (";
+        << *Ext0->getScalarType() << "), (";
     } else {
       O << ", ";
     }
@@ -3256,7 +3265,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     if (IsExtended) {
       auto *Ext1 = cast<VPWidenCastRecipe>(ExpressionRecipes[1]);
       O << " " << Instruction::getOpcodeName(Ext1->getOpcode()) << " to "
-        << *Ext1->getResultType() << ")";
+        << *Ext1->getScalarType() << ")";
     }
     if (Red->isConditional()) {
       O << ", ";
