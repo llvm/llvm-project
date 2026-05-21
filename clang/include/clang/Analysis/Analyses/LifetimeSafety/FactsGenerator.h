@@ -91,7 +91,7 @@ private:
   void handleMovedArgsInCall(const FunctionDecl *FD,
                              ArrayRef<const Expr *> Args);
 
-  // Detects [[clang::lifetime_capture_by(X)]] annotations on a function call to
+  // Handles [[clang::lifetime_capture_by(X)]] annotations on a function call to
   // create flow facts from captured arguments to the capturer
   void handleLifetimeCaptureBy(const FunctionDecl *FD,
                                ArrayRef<const Expr *> Args);
