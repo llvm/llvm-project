@@ -8,7 +8,7 @@
 //
 // This file is used to generate lib/Support/UnicodeNameToCodepointGenerated.cpp
 // using UnicodeData.txt and NameAliases.txt available at
-// https://unicode.org/Public/draft/ucd/
+// https://unicode.org/Public/18.0.0/ucd/
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
