@@ -4262,7 +4262,11 @@ void UnwrappedLineParser::parseObjCUntilAtEnd() {
       addUnwrappedLine();
     } else if (FormatTok->isOneOf(tok::minus, tok::plus)) {
       nextToken();
-      parseObjCMethod();
+      // Guard against malformed input where '-'/'+' is not followed by a
+      // method declaration. parseObjCMethod() asserts the next token is '('
+      // or an identifier; silently skip the stray sign token otherwise.
+      if (FormatTok->isOneOf(tok::l_paren, tok::identifier))
+        parseObjCMethod();
     } else {
       parseStructuralElement();
     }
