@@ -2883,10 +2883,17 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     CIRGenFunction::LexicalScope lexScope{cgf, loc, b.getInsertionBlock()};
     cgf.curLexScope->setAsTernary();
 
-    assert(!cir::MissingFeatures::incrementProfileCounter());
-    eval.beginEvaluation();
-    mlir::Value branch = Visit(expr);
-    eval.endEvaluation();
+    mlir::Value branch;
+    {
+      // Emit any cleanups that were needed on this branch so we can spill
+      // and reload the return value.
+      CIRGenFunction::RunCleanupsScope branchCleanups(cgf);
+      assert(!cir::MissingFeatures::incrementProfileCounter());
+      eval.beginEvaluation();
+      branch = Visit(expr);
+      eval.endEvaluation();
+      branchCleanups.forceCleanup({&branch});
+    }
 
     if (branch) {
       yieldTy = branch.getType();

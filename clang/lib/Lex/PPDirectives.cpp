@@ -2382,6 +2382,11 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // error.
   if (Filename.empty())
     return {ImportAction::None};
+  if (Filename.ends_with(' ') || Filename.ends_with('.')) {
+    unsigned Selection = Filename.ends_with('.') ? 1 : 0;
+    Diag(FilenameTok, diag::pp_nonportable_path_trailing)
+        << Filename << Selection;
+  }
 
   bool IsImportDecl = HashLoc.isInvalid();
   SourceLocation StartLoc = IsImportDecl ? IncludeTok.getLocation() : HashLoc;
