@@ -344,13 +344,15 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   };
 
   /// This plugin does not support the event API. Do nothing without failing.
-  Error createEventImpl(void **EventPtrStorage) override {
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
     *EventPtrStorage = nullptr;
     return Plugin::success();
   }
-  Error destroyEventImpl(void *EventPtr) override { return Plugin::success(); }
-  Error recordEventImpl(void *EventPtr,
-                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
+    return Plugin::success();
+  }
+  Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
+                        bool EnableProfiling) override {
     return Plugin::success();
   }
   Error waitEventImpl(void *EventPtr,
