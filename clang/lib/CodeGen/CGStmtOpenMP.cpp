@@ -2609,7 +2609,7 @@ void CodeGenFunction::EmitOMPLinearClauseFinal(
       }
       const auto *OrigDecl = cast<DeclRefExpr>(*IC)->getDecl();
       Address OrigAddr = [&]() -> Address {
-        if (const auto *BD = dyn_cast<BindingDecl>(OrigDecl)) {
+        if (dyn_cast<BindingDecl>(OrigDecl)) {
           // BindingDecl: use the original expression directly.
           return EmitLValue(*IC).getAddress();
         } else {
