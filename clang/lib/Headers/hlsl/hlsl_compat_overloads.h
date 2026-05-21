@@ -379,6 +379,19 @@ _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(frac)
 _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(frac)
 
 //===----------------------------------------------------------------------===//
+// isfinite builtins overloads
+//===----------------------------------------------------------------------===//
+
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool isfinite(double V) { return isfinite((float)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool2 isfinite(double2 V) { return isfinite((float2)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool3 isfinite(double3 V) { return isfinite((float3)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool4 isfinite(double4 V) { return isfinite((float4)V); }
+
+//===----------------------------------------------------------------------===//
 // isinf builtins overloads
 //===----------------------------------------------------------------------===//
 

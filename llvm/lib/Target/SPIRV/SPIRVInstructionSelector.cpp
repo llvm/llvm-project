@@ -3433,11 +3433,38 @@ bool SPIRVInstructionSelector::selectOpIsNan(Register ResVReg,
 bool SPIRVInstructionSelector::selectOpIsFinite(Register ResVReg,
                                                 SPIRVTypeInst ResType,
                                                 MachineInstr &I) const {
+  // OpIsFinite requires Kernel capability; emulate with OpIsInf & OpIsNan
   MachineBasicBlock &BB = *I.getParent();
-  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIsFinite))
+  Register Src = I.getOperand(2).getReg();
+  Register TypeID = GR.getSPIRVTypeID(ResType);
+  const DebugLoc &DL = I.getDebugLoc();
+
+  Register IsInfReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+  BuildMI(BB, I, DL, TII.get(SPIRV::OpIsInf))
+      .addDef(IsInfReg)
+      .addUse(TypeID)
+      .addUse(Src)
+      .constrainAllUses(TII, TRI, RBI);
+
+  Register IsNanReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+  BuildMI(BB, I, DL, TII.get(SPIRV::OpIsNan))
+      .addDef(IsNanReg)
+      .addUse(TypeID)
+      .addUse(Src)
+      .constrainAllUses(TII, TRI, RBI);
+
+  Register OrReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+  BuildMI(BB, I, DL, TII.get(SPIRV::OpLogicalOr))
+      .addDef(OrReg)
+      .addUse(TypeID)
+      .addUse(IsInfReg)
+      .addUse(IsNanReg)
+      .constrainAllUses(TII, TRI, RBI);
+
+  BuildMI(BB, I, DL, TII.get(SPIRV::OpLogicalNot))
       .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(I.getOperand(2).getReg())
+      .addUse(TypeID)
+      .addUse(OrReg)
       .constrainAllUses(TII, TRI, RBI);
   return true;
 }
