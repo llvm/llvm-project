@@ -42,4 +42,16 @@ module {
 // CHECK:       !cir.ptr<!void>) : !cir.bool
 // CHECK:   cir.return
 // CHECK: }
+
+  cir.func @assume_align(%ptr : !cir.ptr<!void>, %align : !u64i) {
+    %0 = cir.const #cir.bool<true> : !cir.bool
+    cir.assume %0 align(%ptr, %align : !cir.ptr<!void>, !u64i) : !cir.bool
+    cir.return
+  }
+// CHECK: cir.func{{.*}} @assume_align(
+// CHECK:   %0 = cir.const #true
+// CHECK:   cir.assume %0 align(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i)
+// CHECK:       : !cir.bool
+// CHECK:   cir.return
+// CHECK: }
 }

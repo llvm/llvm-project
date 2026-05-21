@@ -6157,7 +6157,7 @@ def CIR_AssumeOp : CIR_Op<"assume"> {
   let summary = "Tell the optimizer that a boolean value is true";
   let description = [{
     The `cir.assume` operation takes a single boolean predicate as its first
-    argument and does not have any results.  The operation tells the optimizer
+    argument and does not have any results. The operation tells the optimizer
     that the predicate is always true.
 
     An optional operand bundle carries additional assumption metadata,
