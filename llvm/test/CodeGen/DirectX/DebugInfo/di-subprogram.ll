@@ -21,7 +21,7 @@ declare !dbg !14 double @fma(double %x, double %y, double %z)
 ; CHECK: !3 = !{i32 2, !"Dwarf Version", i32 4}
 ; CHECK: !4 = !{i32 2, !"Debug Info Version", i32 3}
 
-; CHECK: DXIL: !8: additional data: ptr @fmaf
+; CHECK: DXIL: !8: to be replaced by: !17
 ; CHECK: !8 = distinct !DISubprogram(name: "fmaf", scope: !1, file: !1, line: 1, type: !9, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
 !4 = distinct !DISubprogram(name: "fmaf", scope: !1, file: !1, line: 1, type: !5, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
 
@@ -55,3 +55,6 @@ declare !dbg !14 double @fma(double %x, double %y, double %z)
 !17 = !DIBasicType(name: "double", size: 64, encoding: DW_ATE_float)
 
 ; CHECK: !16 = !{!8}
+
+; CHECK: DXIL: !17: additional data: ptr @fmaf
+; CHECK: !17 = !DISubprogram(name: "fmaf", scope: !1, file: !1, line: 1, type: !9, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
