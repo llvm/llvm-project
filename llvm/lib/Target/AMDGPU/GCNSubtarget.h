@@ -80,8 +80,8 @@ protected:
   bool DynamicVGPR = false;
   bool DynamicVGPRBlockSize32 = false;
   bool ScalarizeGlobal = false;
-  bool BufferOOBRelaxed = false;
-  bool TBufferOOBRelaxed = false;
+  const bool BufferOOBRelaxed;
+  const bool TBufferOOBRelaxed;
 
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
@@ -99,7 +99,8 @@ private:
 
 public:
   GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-               const GCNTargetMachine &TM);
+               const GCNTargetMachine &TM, bool BufferOOBRelaxed = false,
+               bool TBufferOOBRelaxed = false);
   ~GCNSubtarget() override;
 
   GCNSubtarget &initializeSubtargetDependencies(const Triple &TT, StringRef GPU,
@@ -332,8 +333,6 @@ public:
 
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
-  void setBufferOOBRelaxed(bool V) { BufferOOBRelaxed = V; }
-  void setTBufferOOBRelaxed(bool V) { TBufferOOBRelaxed = V; }
 
   bool isCuModeEnabled() const { return EnableCuMode; }
 

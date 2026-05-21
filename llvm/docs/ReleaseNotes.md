@@ -105,6 +105,12 @@ Changes to the AMDGPU Backend
 -----------------------------
 
 * Initial support for gfx1310
+* The `relaxed-buffer-oob-mode` subtarget feature has been replaced by two
+  module flags, `amdgpu.buffer.oob.mode` and `amdgpu.tbuffer.oob.mode`, which
+  control out-of-bounds semantics (see the AMDGPU User Guide). Frontends that
+  previously relied on the subtarget feature to enable misaligned buffer merging
+  must now set the corresponding module flag to `1` (relaxed). An absent flag is
+  treated as strict by the backend.
 
 Changes to the ARM Backend
 --------------------------
