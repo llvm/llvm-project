@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LEX_MACROINFO_H
 #define LLVM_CLANG_LEX_MACROINFO_H
 
+#include "clang/Lex/MacroBase.h"
 #include "clang/Lex/Token.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
