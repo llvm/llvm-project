@@ -1874,33 +1874,35 @@ bool HoistSpillHelper::LRE_CanEraseVirtReg(Register VirtReg) {
 /// For VirtReg clone, the \p New register should have the same physreg or
 /// stackslot as the \p old register.
 void HoistSpillHelper::LRE_DidCloneVirtReg(Register New, Register Old) {
-  auto AssignToPhys = [&](Register VReg, MCRegister PhysReg) {
-    if (Matrix && LIS.hasInterval(VReg))
-      Matrix->assign(LIS.getInterval(VReg), PhysReg);
-    else
-      VRM.assignVirt2Phys(VReg, PhysReg);
-  };
+  // New is freshly created by LiveRangeEdit::eliminateDeadDefs and its interval
+  // is guaranteed to exist on every path below.
+  assert(LIS.hasInterval(New) && "Cloned vreg without live interval");
 
   auto PendingIt = PendingReassignments.find(Old);
   if (PendingIt != PendingReassignments.end()) {
-    // Old was already unassigned in LRE_WillShrinkVirtReg.
-    assert(LIS.hasInterval(Old) &&
-           "Pending reassignment for vreg without live interval");
+    // Old was already unassigned in LRE_WillShrinkVirtReg, which only
+    // enrolls vregs when Matrix is non-null and the interval exists.
+    assert(Matrix && LIS.hasInterval(Old) &&
+           "Pending reassignment without matrix or live interval");
     MCRegister PhysReg = PendingIt->second;
     PendingReassignments.erase(PendingIt);
 
     // Reassign both Old (with its shrunk interval) and New to the matrix.
-    AssignToPhys(Old, PhysReg);
-    AssignToPhys(New, PhysReg);
+    Matrix->assign(LIS.getInterval(Old), PhysReg);
+    Matrix->assign(LIS.getInterval(New), PhysReg);
   } else if (VRM.hasPhys(Old)) {
     MCRegister PhysReg = VRM.getPhys(Old);
     if (Matrix && LIS.hasInterval(Old)) {
+      const LiveInterval &LI = LIS.getInterval(Old);
       // Drop the stale pre-clone segments before reassigning Old's current LI.
-      Matrix->unassign(LIS.getInterval(Old),
+      Matrix->unassign(LI,
                        /*ClearAllReferencingSegments=*/true);
-      AssignToPhys(Old, PhysReg);
+      Matrix->assign(LI, PhysReg);
     }
-    AssignToPhys(New, PhysReg);
+    if (Matrix)
+      Matrix->assign(LIS.getInterval(New), PhysReg);
+    else
+      VRM.assignVirt2Phys(New, PhysReg);
   } else if (VRM.getStackSlot(Old) != VirtRegMap::NO_STACK_SLOT) {
     VRM.assignVirt2StackSlot(New, VRM.getStackSlot(Old));
   } else {
