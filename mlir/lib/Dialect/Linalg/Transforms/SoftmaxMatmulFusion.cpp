@@ -400,64 +400,118 @@ struct SoftmaxMatmulToSoftmaxMatmulFusion
     }
 
     if (hasOtherUsers) {
-      // TODO: Generalize rescaling softmax for arbitrary rank.
-      // For now, only emit for rank-2 case.
-      if (inputRank == 2) {
-        // Build the rescaling softmax generic to recover global softmax.
-        SmallVector<int64_t> softmaxOutShape(batchAndM);
-        softmaxOutShape.push_back(N);
-        auto softmaxOutType = RankedTensorType::get(softmaxOutShape, elemType);
+      // Recover global softmax from (P, m, l) using two generics + collapse_shape:
+      //
+      // Generic 1: Reduce (m, l) over tn to get M_global[..., M] and L_global[..., M]
+      //   M_global = max over all tn of m[..., tn]
+      //   L_global = sum over all tn of l[..., tn] * exp(m[..., tn] - M_global)
+      //
+      // Generic 2: Elementwise correction of P
+      //   corrected_P[..., tn, ts] = P[..., tn, ts] * l[..., tn] * exp(m[..., tn] - M_global) / L_global
+      //
+      // collapse_shape: [..., tn, ts] -> [..., N]
 
-        // Create identity tensor: [tn, ts, N]
-        Value I_empty =
-            tensor::EmptyOp::create(rewriter, loc,
-                                    ArrayRef<int64_t>{tn, ts, N}, elemType)
-                .getResult();
-        AffineExpr i0, i1, i2;
-        bindDims(ctx, i0, i1, i2);
-        auto identityGeneric = linalg::GenericOp::create(
-            rewriter, loc,
-            TypeRange{RankedTensorType::get({tn, ts, N}, elemType)},
-            /*inputs=*/ValueRange{},
-            /*outputs=*/ValueRange{I_empty},
-            SmallVector<AffineMap>{AffineMap::get(3, 0, {i0, i1, i2}, ctx)},
-            SmallVector<utils::IteratorType>(3, utils::IteratorType::parallel),
-            [&](OpBuilder &b, Location nestedLoc, ValueRange args) {
-              Value tIdx = linalg::IndexOp::create(b, nestedLoc, 0);
-              Value sIdx = linalg::IndexOp::create(b, nestedLoc, 1);
-              Value nIdx = linalg::IndexOp::create(b, nestedLoc, 2);
-              Value tsConst = arith::ConstantIndexOp::create(b, nestedLoc, ts);
-              Value tTimesTs = arith::MulIOp::create(b, nestedLoc, tIdx, tsConst);
-              Value globalIdx = arith::AddIOp::create(b, nestedLoc, tTimesTs, sIdx);
-              Value cond = arith::CmpIOp::create(b, nestedLoc,
-                                                 arith::CmpIPredicate::eq,
-                                                 globalIdx, nIdx);
-              Value oneVal = arith::ConstantOp::create(
-                  b, nestedLoc, b.getFloatAttr(elemType, 1.0));
-              Value zeroVal = arith::ConstantOp::create(
-                  b, nestedLoc, b.getFloatAttr(elemType, 0.0));
-              Value result =
-                  arith::SelectOp::create(b, nestedLoc, cond, oneVal, zeroVal);
-              linalg::YieldOp::create(b, nestedLoc, result);
-            });
-        Value I_tiled = identityGeneric.getResult(0);
+      // Shapes: mGlobalShape = [...batch, M], same as batchAndM
+      SmallVector<int64_t> mGlobalShape(batchAndM);
+      auto mGlobalType = RankedTensorType::get(mGlobalShape, elemType);
 
-        Value Os_init = createFilledTensor(rewriter, loc, softmaxOutShape, elemType, zeroScalar);
-        Value Ms_init = createFilledTensor(rewriter, loc, softmaxOutShape, elemType, negInfScalar);
-        Value Ls_init = createFilledTensor(rewriter, loc, softmaxOutShape, elemType, zeroScalar);
+      // --- Generic 1: Compute M_global and L_global via reduction over tn ---
+      // Dims: (batch..., m, tn) with tn as reduction
+      int64_t numReduceDims = mlShape.size(); // [...batch, M, tn]
+      SmallVector<AffineExpr> reduceDims;
+      for (int64_t i = 0; i < numReduceDims; ++i)
+        reduceDims.push_back(rewriter.getAffineDimExpr(i));
 
-        // Reuse the same indexing maps/iteratorTypes as the rescaling matmul
-        // (they have the same structure: P, m, l, matrix -> O, M_run, L_run)
-        auto rescalingSoftmaxOp = linalg::GenericOp::create(
-            rewriter, loc,
-            TypeRange{softmaxOutType, softmaxOutType, softmaxOutType},
-            /*inputs=*/ValueRange{P, m, l, I_tiled},
-            /*outputs=*/ValueRange{Os_init, Ms_init, Ls_init}, indexingMaps,
-            iteratorTypes, buildRescalingBody);
+      // Input map (m, l): identity over all dims [..., M, tn]
+      AffineMap reduceFullMap = AffineMap::get(numReduceDims, 0, reduceDims, ctx);
+      // Output map (M_global, L_global): drop last dim (tn)
+      SmallVector<AffineExpr> reduceOutExprs(reduceDims.begin(), reduceDims.end() - 1);
+      AffineMap reduceOutMap = AffineMap::get(numReduceDims, 0, reduceOutExprs, ctx);
 
-        Value recoveredSoftmax = rescalingSoftmaxOp.getResult(0);
-        rewriter.replaceAllUsesExcept(softmaxResult, recoveredSoftmax, matmulOp);
-      }
+      SmallVector<utils::IteratorType> reduceIters(numReduceDims,
+                                                    utils::IteratorType::parallel);
+      reduceIters.back() = utils::IteratorType::reduction;
+
+      Value Mg_init = createFilledTensor(rewriter, loc, mGlobalShape, elemType, negInfScalar);
+      Value Lg_init = createFilledTensor(rewriter, loc, mGlobalShape, elemType, zeroScalar);
+
+      auto globalReduceOp = linalg::GenericOp::create(
+          rewriter, loc,
+          TypeRange{mGlobalType, mGlobalType},
+          /*inputs=*/ValueRange{m, l},
+          /*outputs=*/ValueRange{Mg_init, Lg_init},
+          SmallVector<AffineMap>{reduceFullMap, reduceFullMap, reduceOutMap, reduceOutMap},
+          reduceIters,
+          [&](OpBuilder &b, Location nestedLoc, ValueRange args) {
+            Value m_i = args[0], l_i = args[1], Mg_acc = args[2], Lg_acc = args[3];
+            // M_new = max(Mg_acc, m_i)
+            Value Mg_new = arith::MaxNumFOp::create(b, nestedLoc, Mg_acc, m_i);
+            // L_new = Lg_acc * exp(Mg_acc - Mg_new) + l_i * exp(m_i - Mg_new)
+            Value diff1 = arith::SubFOp::create(b, nestedLoc, Mg_acc, Mg_new);
+            Value corr = math::ExpOp::create(b, nestedLoc, diff1);
+            Value Lg_rescaled = arith::MulFOp::create(b, nestedLoc, Lg_acc, corr);
+            Value diff2 = arith::SubFOp::create(b, nestedLoc, m_i, Mg_new);
+            Value exp2 = math::ExpOp::create(b, nestedLoc, diff2);
+            Value contrib = arith::MulFOp::create(b, nestedLoc, l_i, exp2);
+            Value Lg_new = arith::AddFOp::create(b, nestedLoc, Lg_rescaled, contrib);
+            linalg::YieldOp::create(b, nestedLoc, ValueRange{Mg_new, Lg_new});
+          });
+      Value M_global = globalReduceOp.getResult(0);
+      Value L_global = globalReduceOp.getResult(1);
+
+      // --- Generic 2: Correct P elementwise ---
+      // corrected_P[..., M, tn, ts] = P[..., M, tn, ts] * l[..., M, tn] * exp(m[..., M, tn] - M_global[..., M]) / L_global[..., M]
+      // Dims: (batch..., M, tn, ts) — all parallel
+      // expandedSShape = [...batch, M, tn, ts]
+      auto correctedType = RankedTensorType::get(expandedSShape, elemType);
+      Value corrected_init = tensor::EmptyOp::create(rewriter, loc, expandedSShape, elemType).getResult();
+
+      // Maps for the correction generic:
+      // P:        fullMap = identity over all dims
+      // l:        reducedMap = [..., M, tn] (drop ts)
+      // m:        reducedMap = [..., M, tn] (drop ts)
+      // M_global: [..., M] (drop tn and ts)
+      // L_global: [..., M] (drop tn and ts)
+      // output:   fullMap = identity
+      SmallVector<AffineExpr> globalExprs(allDims.begin(), allDims.end() - 2); // drop tn and ts
+      AffineMap globalMap = AffineMap::get(numLocalDims, 0, globalExprs, ctx);
+
+      auto correctionOp = linalg::GenericOp::create(
+          rewriter, loc,
+          TypeRange{correctedType},
+          /*inputs=*/ValueRange{P, l, m, M_global, L_global},
+          /*outputs=*/ValueRange{corrected_init},
+          SmallVector<AffineMap>{fullMap, reducedMap, reducedMap, globalMap, globalMap, fullMap},
+          allParallel,
+          [&](OpBuilder &b, Location nestedLoc, ValueRange args) {
+            Value p = args[0], l_i = args[1], m_i = args[2];
+            Value Mg = args[3], Lg = args[4];
+            // w = l_i * exp(m_i - Mg) / Lg
+            Value diff = arith::SubFOp::create(b, nestedLoc, m_i, Mg);
+            Value expDiff = math::ExpOp::create(b, nestedLoc, diff);
+            Value num = arith::MulFOp::create(b, nestedLoc, l_i, expDiff);
+            Value w = arith::DivFOp::create(b, nestedLoc, num, Lg);
+            // corrected = P * w
+            Value result = arith::MulFOp::create(b, nestedLoc, p, w);
+            linalg::YieldOp::create(b, nestedLoc, result);
+          });
+      Value correctedP = correctionOp.getResult(0);
+
+      // --- collapse_shape: [..., M, tn, ts] -> [..., M, N] ---
+      SmallVector<int64_t> softmaxOutShape(batchAndM);
+      softmaxOutShape.push_back(N);
+      auto softmaxOutType = RankedTensorType::get(softmaxOutShape, elemType);
+      // Reassociation: keep batch+M dims as-is, merge [tn, ts] into one dim.
+      SmallVector<ReassociationIndices> collapseReassoc;
+      for (int64_t i = 0; i < static_cast<int64_t>(batchAndM.size()); ++i)
+        collapseReassoc.push_back({static_cast<int>(i)});
+      collapseReassoc.push_back({static_cast<int>(batchAndM.size()),
+                                 static_cast<int>(batchAndM.size() + 1)});
+
+      Value recoveredSoftmax = tensor::CollapseShapeOp::create(
+          rewriter, loc, softmaxOutType, correctedP, collapseReassoc);
+
+      rewriter.replaceAllUsesExcept(softmaxResult, recoveredSoftmax, matmulOp);
     }
 
     // (g) Replace the matmul result with rescaledO.
