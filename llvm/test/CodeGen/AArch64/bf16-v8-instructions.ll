@@ -6818,20 +6818,52 @@ define <8 x bfloat> @test_fma(<8 x bfloat> %a, <8 x bfloat> %b, <8 x bfloat> %c)
 }
 
 define <8 x bfloat> @test_fabs(<8 x bfloat> %a) #0 {
-; CHECK-LABEL: test_fabs:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic v0.8h, #128, lsl #8
-; CHECK-NEXT:    ret
+; CHECK-CVT-LABEL: test_fabs:
+; CHECK-CVT:       // %bb.0:
+; CHECK-CVT-NEXT:    bic v0.8h, #128, lsl #8
+; CHECK-CVT-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fabs:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    bic v0.8h, #128, lsl #8
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-BF16SVE-SD-LABEL: test_fabs:
+; CHECK-BF16SVE-SD:       // %bb.0:
+; CHECK-BF16SVE-SD-NEXT:    fabs v0.8h, v0.8h
+; CHECK-BF16SVE-SD-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fabs:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    bic v0.8h, #128, lsl #8
+; CHECK-BF16-GI-NEXT:    ret
   %r = call <8 x bfloat> @llvm.fabs.v8bf16(<8 x bfloat> %a)
   ret <8 x bfloat> %r
 }
 
 define <8 x bfloat> @test_fneg(<8 x bfloat> %a) #0 {
-; CHECK-LABEL: test_fneg:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.8h, #128, lsl #8
-; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-CVT-LABEL: test_fneg:
+; CHECK-CVT:       // %bb.0:
+; CHECK-CVT-NEXT:    movi v1.8h, #128, lsl #8
+; CHECK-CVT-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-CVT-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fneg:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    movi v1.8h, #128, lsl #8
+; CHECK-BF16-SD-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-BF16SVE-SD-LABEL: test_fneg:
+; CHECK-BF16SVE-SD:       // %bb.0:
+; CHECK-BF16SVE-SD-NEXT:    fneg v0.8h, v0.8h
+; CHECK-BF16SVE-SD-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fneg:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    movi v1.8h, #128, lsl #8
+; CHECK-BF16-GI-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-BF16-GI-NEXT:    ret
   %r = fneg <8 x bfloat> %a
   ret <8 x bfloat> %r
 }
