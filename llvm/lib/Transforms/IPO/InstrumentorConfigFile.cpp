@@ -200,8 +200,7 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
             "malformed JSON configuration, expected an object", DS_Warning));
         continue;
       }
-      auto *ChoiceIt = IChoiceMap.find(ObjIt.first);
-      auto *IO = (ChoiceIt != IChoiceMap.end()) ? ChoiceIt->second : nullptr;
+      auto *IO = IChoiceMap.lookup(ObjIt.first);
       if (!IO) {
         Ctx.diagnose(DiagnosticInfoInstrumentation(
             Twine("malformed JSON configuration, expected an object matching "
