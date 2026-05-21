@@ -13,6 +13,7 @@
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
+#include <thread>
 #include <type_traits>
 
 using namespace lldb_private;
@@ -83,10 +84,9 @@ TEST(LockedTest, ExclusivePtrAccess) {
   ASSERT_TRUE(handle);
   EXPECT_EQ(handle.get(), &widget);
 
-  // Recursive mutex lets us reacquire on the same thread, proving the lock
-  // really is held.
-  EXPECT_TRUE(mutex.try_lock());
-  mutex.unlock();
+  // A different thread cannot acquire the mutex while the handle holds it.
+  std::thread other([&] { EXPECT_FALSE(mutex.try_lock()); });
+  other.join();
 
   handle->value = 7;
   EXPECT_EQ((*handle).value, 7);
