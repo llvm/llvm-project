@@ -49,9 +49,6 @@ struct DeviceTy {
   GenericPluginTy *RTL;
   int32_t RTLDeviceID;
 
-  /// Flag to force synchronous execution (used by OMPT device tracing)
-  bool ForceSynchronousTargetRegions = false;
-
   DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;

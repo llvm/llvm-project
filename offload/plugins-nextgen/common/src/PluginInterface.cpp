@@ -65,12 +65,6 @@ void AsyncInfoWrapperTy::finalize(Error &Err) {
   if (AsyncInfoPtr == &LocalAsyncInfo && LocalAsyncInfo.Queue && !Err)
     Err = Device.synchronize(&LocalAsyncInfo);
 
-  // When ExecAsync is false (e.g., for profiling/tracing), synchronize the
-  // queue even if it's not the local async info, so completion callbacks run
-  // before we return to the caller.
-  if (AsyncInfoPtr && !AsyncInfoPtr->ExecAsync && AsyncInfoPtr->Queue && !Err)
-    Err = Device.synchronize(AsyncInfoPtr);
-
   // Invalidate the wrapper object.
   AsyncInfoPtr = nullptr;
 }
