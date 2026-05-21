@@ -4412,6 +4412,7 @@ cc_library(
         ":TosaToLinalg",
         ":TosaToMLProgram",
         ":TosaToSCF",
+        ":TosaToSPIRVTosa",
         ":TosaToTensor",
         ":UBToLLVM",
         ":UBToSPIRV",
@@ -12219,6 +12220,32 @@ cc_library(
         ":TensorDialect",
         ":TosaDialect",
         ":TransformUtils",
+    ],
+)
+
+cc_library(
+    name = "TosaToSPIRVTosa",
+    srcs = glob([
+        "lib/Conversion/TosaToSPIRVTosa/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/TosaToSPIRVTosa/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/Conversion/TosaToSPIRVTosa",
+    ],
+    deps = [
+        ":ConversionPassIncGen",
+        ":FuncDialect",
+        ":IR",
+        ":Pass",
+        ":SPIRVConversion",
+        ":SPIRVDialect",
+        ":Support",
+        ":TosaDialect",
+        ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 
