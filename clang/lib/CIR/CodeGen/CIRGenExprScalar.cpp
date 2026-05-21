@@ -2810,8 +2810,30 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
   // the select function.
   if (cgf.getLangOpts().OpenCL &&
       (condType->isVectorType() || condType->isExtVectorType())) {
-    assert(!cir::MissingFeatures::vectorType());
-    cgf.cgm.errorNYI(e->getSourceRange(), "OpenCL vector ternary op");
+    assert(!cir::MissingFeatures::incrementProfileCounter());
+
+    mlir::Value condValue = cgf.emitScalarExpr(condExpr);
+    mlir::Value lhsValue = Visit(lhsExpr);
+    mlir::Value rhsValue = Visit(rhsExpr);
+
+    mlir::Type vecTy = convertType(condType);
+    mlir::Value zeroVec = builder.getNullValue(vecTy, loc);
+    auto testMSB = cir::VecCmpOp::create(
+        builder, loc, vecTy, cir::CmpOpKind::lt, condValue, zeroVec);
+    mlir::Value tmp = builder.createIntCast(testMSB, vecTy);
+    mlir::Value tmp2 = builder.createNot(testMSB);
+
+    auto rhsVecTy = cast<cir::VectorType>(rhsValue.getType());
+    // Cast float to int to perform ANDs if necessary.
+    if (rhsVecTy.getElementType().isFloat()) {
+      cgf.cgm.errorNYI(loc, "VisitAbstractConditionalOperator: OpenCL "
+                            "TernaryOp Vec of type float");
+      return {};
+    }
+
+    mlir::Value tmp3 = builder.createAnd(loc, rhsValue, tmp2);
+    mlir::Value tmp4 = builder.createAnd(loc, lhsValue, tmp);
+    return builder.createOr(loc, tmp3, tmp4);
   }
 
   if (condType->isVectorType() || condType->isSveVLSBuiltinType()) {
@@ -2861,10 +2883,17 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     CIRGenFunction::LexicalScope lexScope{cgf, loc, b.getInsertionBlock()};
     cgf.curLexScope->setAsTernary();
 
-    assert(!cir::MissingFeatures::incrementProfileCounter());
-    eval.beginEvaluation();
-    mlir::Value branch = Visit(expr);
-    eval.endEvaluation();
+    mlir::Value branch;
+    {
+      // Emit any cleanups that were needed on this branch so we can spill
+      // and reload the return value.
+      CIRGenFunction::RunCleanupsScope branchCleanups(cgf);
+      assert(!cir::MissingFeatures::incrementProfileCounter());
+      eval.beginEvaluation();
+      branch = Visit(expr);
+      eval.endEvaluation();
+      branchCleanups.forceCleanup({&branch});
+    }
 
     if (branch) {
       yieldTy = branch.getType();
