@@ -27,26 +27,23 @@ using namespace mlir::x86;
 
 namespace {
 
+// Recursively follows single-use values through scf.yield operations
+// and returns the first non-yield user result in the contraction chain.
 static Value contractionUsersAfterYield(Value v) {
-  if (v.getNumUses() > 1)
+  if (v.getNumUses() != 1)
     return nullptr;
 
-  for (OpOperand &use : v.getUses()) {
-    Operation *user = use.getOwner();
+  OpOperand &use = *v.use_begin();
+  Operation *user = use.getOwner();
 
-    if (!isa<scf::YieldOp>(user))
-      return v;
+  if (!isa<scf::YieldOp>(user))
+    return v;
 
-    if (auto yield = dyn_cast<scf::YieldOp>(user)) {
-      Operation *parent = yield->getParentOp();
-      unsigned idx = use.getOperandNumber();
-      if (auto res = contractionUsersAfterYield(parent->getResult(idx)))
-        return res;
-      continue;
-    }
-  }
+  auto yield = cast<scf::YieldOp>(user);
+  Operation *parent = yield->getParentOp();
+  unsigned idx = use.getOperandNumber();
 
-  return nullptr;
+  return contractionUsersAfterYield(parent->getResult(idx));
 }
 
 // Function to collapse the last two dimension (vnni and k) to help the
@@ -137,6 +134,9 @@ static LogicalResult validateContractOps(OpBuilder &rewriter,
       return failure();
 
     if (buffRhs != srcBuffRhs)
+      return failure();
+
+    if (!contractionUsersAfterYield(contractOp.getResult()))
       return failure();
   }
 
@@ -572,7 +572,7 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
         Value matB;
         Operation *rhsOp = vectorOpRhs;
 
-        // Clone only if the op has operands.
+        // Clone for the subview type operations
         if (rhsOp->getNumOperands() > 0) {
 
           if (outerLoop) {
@@ -599,7 +599,7 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
           matB = rhsClone->getResult(0);
 
         } else {
-          // memref.get_global / constants
+          // The mat B is of kind 'memref.get_global @__constant'
           matB = rhsOp->getResult(0);
         }
 
@@ -803,7 +803,7 @@ struct VectorContractToAMXDotProduct
         return rewriter.notifyMatchFailure(
             contractOp, "The contract operation doesn't satisfy the operands "
                         "dimensions. M, N, and vnni dims are 16, 16, and 2/4. "
-                        "The rest dims should be 1.");
+                        "The rest dims should be 1. Op should have one user.");
 
       Location loc = contractOp.getLoc();
 
@@ -978,7 +978,7 @@ struct VectorContractToAMXDotProduct
             mlir::vector::ShapeCastOp::create(rewriter, loc, vecType, vecRow);
       }
 
-      resultOp.replaceAllUsesWith(vecRow);
+      rewriter.replaceAllUsesWith(resultOp, vecRow);
       return success();
     }
 
@@ -1044,9 +1044,10 @@ struct VectorContractToAMXDotProduct
 
         if (failed(validate))
           return rewriter.notifyMatchFailure(
-              contractOp, "The associated contract operations doesn't satisfy "
-                          "the re-write conditions either the dimensions are "
-                          "wrong or MemRef source are different.");
+              contractOp,
+              "The associated contract operations doesn't satisfy "
+              "the re-write conditions either the dimensions are "
+              "wrong or MemRef source are different or many users.");
 
         ops.push_back(contract);
       }
@@ -1072,7 +1073,6 @@ struct VectorContractToAMXDotProduct
     scf::ForOp newLoop;
     // Case 2a: Reduction loop depth is 2.
     if (loopLists.size() == 2) {
-
       outerLoop = loopLists[1];
       innerLoop = loopLists[0];
 
@@ -1328,12 +1328,12 @@ struct VectorContractToAMXDotProduct
     auto c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
     auto c16 = arith::ConstantIndexOp::create(rewriter, loc, 16);
     auto one = arith::ConstantIndexOp::create(rewriter, loc, 1);
-    auto mBound = arith::ConstantIndexOp::create(rewriter, loc, N);
+    auto nBound = arith::ConstantIndexOp::create(rewriter, loc, N);
 
     // Create a loop that iterates over the MxN memerf, retrives two rows +
     // shuffle them, add up the C element values and stores them to temp buffer.
     scf::ForOp::create(
-        rewriter, loc, c0, mBound, one, ValueRange{},
+        rewriter, loc, c0, nBound, one, ValueRange{},
         [&](OpBuilder &nestedBuilder, Location loc, Value iv,
             ValueRange iterArgs) {
           auto row =
@@ -1418,14 +1418,14 @@ struct VectorContractToAMXDotProduct
     // Replace use of vector.contract with dot-products.
     for (size_t i = 0; i < ops.size(); i++) {
       vector::ContractionOp contOp = ops[i];
-      Value vecRoc = writeResults[i];
+      Value vecRow = writeResults[i];
 
       Value resultWriteOp = contractionUsersAfterYield(contOp.getResult());
       if (auto vecType = llvm::dyn_cast<VectorType>(resultWriteOp.getType()))
-        vecRoc = mlir::vector::ShapeCastOp::create(rewriter, loc, vecType,
+        vecRow = mlir::vector::ShapeCastOp::create(rewriter, loc, vecType,
                                                    writeResults[i]);
 
-      resultWriteOp.replaceAllUsesWith(vecRoc);
+      rewriter.replaceAllUsesWith(resultWriteOp, vecRow);
     }
 
     return success();
