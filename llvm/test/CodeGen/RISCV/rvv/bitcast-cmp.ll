@@ -101,3 +101,39 @@ define i1 @bitcast_from_v8i32(ptr %a0) {
   %iszero = icmp eq i256 %int, 0
   ret i1 %iszero
 }
+
+; Compare a plain i256 against a bitcasted vector.
+define i1 @cmp_plain_to_v16i16(ptr %a0, ptr %a1) {
+; CHECK-LABEL: cmp_plain_to_v16i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v10, (a1)
+; CHECK-NEXT:    vmsne.vv v12, v8, v10
+; CHECK-NEXT:    vcpop.m a0, v12
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %x = load i256, ptr %a0, align 32
+  %y_vec = load <16 x i16>, ptr %a1, align 32
+  %y = bitcast <16 x i16> %y_vec to i256
+  %cmp = icmp eq i256 %x, %y
+  ret i1 %cmp
+}
+
+; Flipped operands to guarantee the Y-path is covered regardless of DAG sorting.
+define i1 @cmp_v16i16_to_plain(ptr %a0, ptr %a1) {
+; CHECK-LABEL: cmp_v16i16_to_plain:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v10, (a1)
+; CHECK-NEXT:    vmsne.vv v12, v8, v10
+; CHECK-NEXT:    vcpop.m a0, v12
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %x_vec = load <16 x i16>, ptr %a0, align 32
+  %x = bitcast <16 x i16> %x_vec to i256
+  %y = load i256, ptr %a1, align 32
+  %cmp = icmp eq i256 %x, %y
+  ret i1 %cmp
+}
