@@ -15,6 +15,7 @@
 
 #include <cassert>
 #include <ranges>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "types.h"
@@ -46,6 +47,14 @@ constexpr bool test() {
   {
     const std::ranges::transform_view transformView(MoveOnlyView{buff}, PlusOne{});
     assert(*transformView.begin() == 1);
+  }
+
+  // LWG4027 ensures that the behavior is unchanged in C++23.
+  {
+    [[maybe_unused]] auto r = std::views::single(0) | std::views::transform([](int) { return 0; });
+    using CIt1              = decltype(std::ranges::cbegin(r));
+    using CIt2              = decltype(std::cbegin(r));
+    static_assert(std::is_same_v<CIt1, CIt2>);
   }
 
   static_assert(!BeginInvocable<const std::ranges::transform_view<MoveOnlyView, PlusOneMutable>>);

@@ -48,6 +48,9 @@ Implemented Papers
 - P2164R9: ``views::enumerate`` (`Github <https://llvm.org/PR105251>`__)
 - P2322R6: ``ranges::fold`` (`Github <https://llvm.org/PR105208>`__)
 - P4144R1: Remove ``span``'s ``initializer_list`` constructor for C++26 (`Github <https://llvm.org/PR189612>`__)
+- P2278R4: ``cbegin`` should always return a constant iterator (`Github <https://llvm.org/PR105201>`__)
+- P2836R1: ``std::basic_const_iterator`` should follow its underlying type's convertibility
+  (`Github <https://llvm.org/PR105406>`__)
 
 Improvements and New Features
 -----------------------------

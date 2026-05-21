@@ -489,6 +489,7 @@ set(files
   __iterator/capacity_aware_iterator.h
   __iterator/common_iterator.h
   __iterator/concepts.h
+  __iterator/const_iterator.h
   __iterator/counted_iterator.h
   __iterator/cpp17_iterator_concepts.h
   __iterator/data.h
@@ -720,14 +721,15 @@ set(files
   __ranges/adjacent_transform_view.h
   __ranges/adjacent_view.h
   __ranges/all.h
+  __ranges/as_const_view.h
   __ranges/as_rvalue_view.h
   __ranges/chunk_by_view.h
   __ranges/common_view.h
   __ranges/concepts.h
+  __ranges/const_access.h
   __ranges/container_compatible_range.h
   __ranges/counted.h
   __ranges/dangling.h
-  __ranges/data.h
   __ranges/drop_view.h
   __ranges/drop_while_view.h
   __ranges/elements_of.h
