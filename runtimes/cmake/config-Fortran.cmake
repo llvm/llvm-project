@@ -82,7 +82,7 @@ endfunction ()
 set(RUNTIMES_ENABLE_FORTRAN OFF)
 
 # Targets compiling Fortran sources can depend on this target to ensure toolchain
-# prerequisites are built before (runtime library and intrinsic modules).
+# prerequisites (runtime library and intrinsic modules) are built before.
 add_library(fortran-compile-options INTERFACE)
 add_library(fortran-compile-depends INTERFACE)
 add_library(fortran-link-depends INTERFACE)
@@ -163,7 +163,7 @@ if (CMAKE_Fortran_COMPILER)
 
   if (CMAKE_Fortran_COMPILER_ID MATCHES "LLVM")
     target_compile_options(fortran-compile-options INTERFACE
-      # Flang bug workaround: Reformating of cooked token buffer causes
+      # Flang bug workaround: Reformatting of cooked token buffer causes
       # identifier to be split between lines
       "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-Xflang;SHELL:-fno-reformat>"
     )
