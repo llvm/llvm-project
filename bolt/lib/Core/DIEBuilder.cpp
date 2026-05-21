@@ -140,10 +140,7 @@ void DIEBuilder::updateReferences() {
   // Handling references in location expressions.
   for (LocWithReference &LocExpr : getState().LocWithReferencesToProcess) {
     SmallVector<uint8_t, 32> Buffer;
-    DataExtractor Data(StringRef((const char *)LocExpr.BlockData.data(),
-                                 LocExpr.BlockData.size()),
-                       LocExpr.U.isLittleEndian(),
-                       LocExpr.U.getAddressByteSize());
+    DataExtractor Data(LocExpr.BlockData, LocExpr.U.isLittleEndian());
     DWARFExpression Expr(Data, LocExpr.U.getAddressByteSize(),
                          LocExpr.U.getFormParams().Format);
     cloneExpression(Data, Expr, LocExpr.U, Buffer, CloneExpressionStage::PATCH);
@@ -708,7 +705,8 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
          Description.Op[0] == Encoding::BaseTypeRef) ||
         (Description.Op.size() == 2 &&
          Description.Op[1] == Encoding::BaseTypeRef &&
-         Description.Op[0] != Encoding::Size1))
+         Description.Op[0] != Encoding::Size1 &&
+         Description.Op[0] != Encoding::SizeLEB))
       BC.outs() << "BOLT-WARNING: [internal-dwarf-error]: unsupported DW_OP "
                    "encoding.\n";
 
@@ -716,9 +714,8 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
          Description.Op[0] == Encoding::BaseTypeRef) ||
         (Description.Op.size() == 2 &&
          Description.Op[1] == Encoding::BaseTypeRef &&
-         Description.Op[0] == Encoding::Size1)) {
-      // This code assumes that the other non-typeref operand fits into 1
-      // byte.
+         (Description.Op[0] == Encoding::Size1 ||
+          Description.Op[0] == Encoding::SizeLEB))) {
       assert(OpOffset < Op.getEndOffset());
       const uint32_t ULEBsize = Op.getEndOffset() - OpOffset - 1;
       (void)ULEBsize;
@@ -730,7 +727,9 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
       if (Description.Op.size() == 1) {
         RefOffset = Op.getRawOperand(0);
       } else {
-        OutputBuffer.push_back(Op.getRawOperand(0));
+        const StringRef FirstOpBytes =
+            Data.getData().slice(OpOffset + 1, Op.getOperandEndOffset(0));
+        OutputBuffer.append(FirstOpBytes.begin(), FirstOpBytes.end());
         RefOffset = Op.getRawOperand(1);
       }
       uint32_t Offset = 0;
@@ -794,8 +793,7 @@ void DIEBuilder::cloneBlockAttribute(
   if (DWARFAttribute::mayHaveLocationExpr(AttrSpec.Attr) &&
       (Val.isFormClass(DWARFFormValue::FC_Block) ||
        Val.isFormClass(DWARFFormValue::FC_Exprloc))) {
-    DataExtractor Data(StringRef((const char *)Bytes.data(), Bytes.size()),
-                       U.isLittleEndian(), U.getAddressByteSize());
+    DataExtractor Data(Bytes, U.isLittleEndian());
     DWARFExpression Expr(Data, U.getAddressByteSize(),
                          U.getFormParams().Format);
     if (cloneExpression(Data, Expr, U, Buffer, CloneExpressionStage::INIT))
@@ -907,6 +905,7 @@ void DIEBuilder::cloneAttribute(
   case dwarf::DW_FORM_ref2:
   case dwarf::DW_FORM_ref4:
   case dwarf::DW_FORM_ref8:
+  case dwarf::DW_FORM_ref_udata:
     cloneDieOffsetReferenceAttribute(Die, U, InputDIE, AttrSpec,
                                      Val.getUnit()->getOffset() +
                                          *Val.getAsRelativeReference());

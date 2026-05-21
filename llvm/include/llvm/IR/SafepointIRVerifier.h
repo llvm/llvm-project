@@ -34,14 +34,13 @@ FunctionPass *createSafepointIRVerifierPass();
 
 /// Create an instance of the safepoint verifier pass which can be added to
 /// a pass pipeline to check for relocation bugs.
-class SafepointIRVerifierPass : public PassInfoMixin<SafepointIRVerifierPass> {
+class SafepointIRVerifierPass
+    : public RequiredPassInfoMixin<SafepointIRVerifierPass> {
 
 public:
   explicit SafepointIRVerifierPass() = default;
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 }
 

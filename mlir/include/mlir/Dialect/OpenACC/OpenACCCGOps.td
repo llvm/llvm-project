@@ -181,6 +181,17 @@ def OpenACC_KernelEnvironmentOp
   }];
 
   let hasCanonicalizer = 1;
+
+  let extraClassDeclaration = [{
+    /// Create a `KernelEnvironmentOp` populated with data mapping, async, and
+    /// wait clauses extracted from the given ACC compute construct. Emplaces
+    /// a block in the region and sets the rewriter's insertion point to the
+    /// start of that block so callers can create operations inside it
+    /// (e.g., `acc.compute_region`).
+    template <typename ComputeConstructT>
+    static KernelEnvironmentOp createAndPopulate(
+        ComputeConstructT computeConstruct, ::mlir::OpBuilder &builder);
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -211,6 +222,71 @@ def OpenACC_FirstprivateMapInitialOp
 }
 
 //===----------------------------------------------------------------------===//
+// acc.privatize
+//===----------------------------------------------------------------------===//
+
+def OpenACC_PrivatizeOp : OpenACC_Op<"privatize", []> {
+  let summary = "Create a handle for privatized storage along parallel dimensions";
+  let description = [{
+    Introduces a privatization handle for storage that varies across the active
+    parallel dimensions (for example OpenACC `private` / `firstprivate` after
+    recipe materialization). The handle type is `acc.private_type<T>` where
+    `T` is the logical storage type (commonly a `memref`).
+
+    Optional `index` operands supply dynamic sizes when the privatized shape
+    depends on SSA values (for example `memref<?xi32>` row lengths).
+
+    The optional `acc.par_dims` attribute records which GPU parallel dimensions
+    participate in the privatization.
+  }];
+  let arguments = (ins Variadic<Index>:$dynamicSizes,
+                       OptionalAttr<OpenACC_GPUParallelDimsAttr>:$par_dims);
+  let results = (outs OpenACC_PrivateType:$result);
+  let assemblyFormat = [{
+    (`(` $dynamicSizes^ `)`)? (`[` qualified($par_dims)^ `]`)? attr-dict `:` functional-type(operands, results)
+  }];
+  let builders = [
+    OpBuilder<(ins "::mlir::Type":$resultType,
+                   CArg<"::mlir::ValueRange", "{}">:$dynamicSizes), [{
+      $_state.addTypes(resultType);
+      $_state.addOperands(dynamicSizes);
+    }]>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// acc.private_local
+//===----------------------------------------------------------------------===//
+
+def OpenACC_PrivateLocalOp
+    : OpenACC_Op<"private_local", [NoMemoryEffect, AlwaysSpeculatable]> {
+  let summary = "Materialize privatized storage for the current parallelism context";
+  let description = [{
+    Given a value of type `acc.private_type<T>`, materializes the underlying
+    storage (typically a `memref`) for the current thread / iteration. Which
+    slice of the privatized allocation is selected is determined by surrounding
+    parallelism assigned in the context.
+
+    The result type is usually `T` (often a `memref` that matches the logical
+    storage type). The result may instead use a different surface type that
+    still aliases the same underlying storage as `T`; in that case passes that
+    consume this operation must treat the handle type and the result type as
+    describing the same storage layout.
+  }];
+  let arguments = (ins OpenACC_PrivateType:$privatized);
+  let results = (outs AnyType:$output);
+  let assemblyFormat = [{
+    $privatized attr-dict `:` functional-type(operands, results)
+  }];
+  let builders = [
+    OpBuilder<(ins "::mlir::Type":$resultType, "::mlir::Value":$privatized), [{
+      $_state.addOperands(privatized);
+      $_state.addTypes(resultType);
+    }]>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // acc.par_width
 //===----------------------------------------------------------------------===//
 
@@ -238,7 +314,7 @@ def OpenACC_ParWidthOp
   }];
   let arguments = (ins Optional<Index>:$launchArg,
                        OpenACC_GPUParallelDimAttr:$par_dim);
-  let results = (outs OpenACC_ParWidthType:$output);
+  let results = (outs Index:$output);
   let assemblyFormat = [{
     ($launchArg^)? attr-dict
   }];
@@ -273,10 +349,10 @@ def OpenACC_ComputeRegionOp
     The operation is `IsolatedFromAbove`: all values used inside the
     region must be explicitly captured. Values are captured in two ways:
 
-    - Launch arguments (`launch`): Results of operations that define
-      the parallel launch configuration. These are `!acc.par_width`-typed
-      and become block arguments representing the parallel width for each
-      dimension.
+    - Launch arguments (`launch`): Results of `acc.par_width`
+      operations that define the parallel launch configuration. These
+      become `index`-typed block arguments representing the parallel
+      width for each dimension.
 
     - Input arguments (`ins`): Arbitrary values captured from outside
       the region (data pointers, scalars, etc.). These become block
@@ -285,6 +361,11 @@ def OpenACC_ComputeRegionOp
     The `origin` attribute records which construct produced this compute
     region (e.g., `"acc.parallel"`, `"acc.kernels"`). This is intended to
     be solely informational.
+
+    Canonicalization may simplify `ins` captures: duplicate `ins` operands
+    (same SSA value threaded more than once) are merged by reusing the first
+    block argument, and unused `ins` operands (block arguments with no uses)
+    are removed. `launch` operands are never merged or dropped.
 
     Example:
 
@@ -305,7 +386,7 @@ def OpenACC_ComputeRegionOp
     ```
   }];
 
-  let arguments = (ins Variadic<OpenACC_ParWidthType>:$launchArgs,
+  let arguments = (ins Variadic<Index>:$launchArgs,
                        Variadic<AnyType>:$inputArgs,
                        Optional<OpenACC_GPUAsyncTokenType>:$stream,
                        StrAttr:$origin,
@@ -315,6 +396,8 @@ def OpenACC_ComputeRegionOp
   let results = (outs Variadic<AnyType>:$results);
 
   let regions = (region AnyRegion:$region);
+
+  let hasCanonicalizer = 1;
 
   let extraClassDeclaration = [{
     /// Look up the par_width op for the given dimension among launch args.
@@ -332,6 +415,16 @@ def OpenACC_ComputeRegionOp
     /// Add a new input argument, appending to both the operand list and
     /// the region block arguments. Returns the new block argument.
     ::mlir::BlockArgument appendInputArg(::mlir::Value);
+
+    /// After hoisting `value`'s defining op, wire it into this region: append it
+    /// as an `ins` operand, add the matching body entry argument, and replace
+    /// uses under this region with that argument (excluding this op's own `ins`
+    /// operand uses).
+    ///
+    /// Requires that `value` is defined outside `getRegion()` and is still used
+    /// inside the region. Otherwise returns `std::nullopt`.
+    std::optional<::mlir::BlockArgument>
+    wireHoistedValueThroughIns(::mlir::Value value);
 
     /// Check whether all parallel dimensions have width 1.
     bool isEffectivelySerial();
@@ -354,9 +447,17 @@ def OpenACC_ComputeRegionOp
       return &getRegion().back().back();
     }
 
-    /// Map a block argument back to its corresponding operand
-    /// ($launchArgs or $inputArgs).
+    /// Return the `launch` or `ins` operand threaded to `blockArg`, or a null
+    /// `Value` if `blockArg` is not an argument of `getBody()` or its index is
+    /// out of range for this op's `launch` and `ins` operands.
     ::mlir::Value getOperand(::mlir::BlockArgument blockArg);
+
+    /// If `value` is a launch or input operand, return the body block argument
+    /// it is threaded through; otherwise `std::nullopt`. If `value` matches
+    /// more than one `ins` operand, the first match is returned (canonicalization
+    /// may merge duplicate `ins` values). Duplicate `launch` operands are not
+    /// folded.
+    std::optional<::mlir::BlockArgument> getBlockArg(::mlir::Value value);
   }];
 
   let hasVerifier = 1;

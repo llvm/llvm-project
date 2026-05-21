@@ -482,6 +482,14 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   --MII; // Point to store instruction.
   LLVM_DEBUG(dbgs() << "\thoisted: " << SrcVNI->def << '\t' << *MII);
 
+  // When the def is a PHI, SkipPHIsLabelsAndDebug may place the store past
+  // prologue instructions. Therefore if that copy was the end of a segment
+  // we need to extend it to the store.
+  if (SrcVNI->isPHIDef()) {
+    SlotIndex StoreUseIdx = LIS.getInstructionIndex(*MII).getRegSlot(true);
+    SrcLI.extendInBlock(LIS.getMBBStartIdx(MBB), StoreUseIdx);
+  }
+
   // If there is only 1 store instruction is required for spill, add it
   // to mergeable list. In X86 AMX, 2 intructions are required to store.
   // We disable the merge for this case.
@@ -680,10 +688,45 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // live interval; this happens if we rematted to all uses, and
   // then further split one of those live ranges.
   if (!DefMI) {
-    markValueUsed(&VirtReg, ParentVNI);
-    LLVM_DEBUG(dbgs() << "\tcannot remat missing def for " << UseIdx << '\t'
-                      << MI);
-    return false;
+    // Try to find the rematerializable definition by tracing through COPY
+    // chains.
+    LiveInterval &LI = LIS.getInterval(VirtReg.reg());
+    VNInfo *CurVNI = LI.getVNInfoAt(UseIdx);
+    MachineInstr *CurDef = nullptr;
+
+    LLVM_DEBUG(dbgs() << "\ttracing COPY chain from "
+                      << printReg(VirtReg.reg(), &TRI) << "\n");
+
+    // Trace backwards through COPY chain using VNInfo
+    while (CurVNI) {
+      CurDef = LIS.getInstructionFromIndex(CurVNI->def);
+
+      LLVM_DEBUG(dbgs() << "\t -> def at " << CurVNI->def << ": "
+                        << (CurDef ? TII.getName(CurDef->getOpcode()) : "null")
+                        << "\n");
+
+      if (!CurDef || !CurDef->isFullCopy())
+        break;
+
+      Register SrcReg = CurDef->getOperand(1).getReg();
+      if (!SrcReg.isVirtual())
+        break;
+      LLVM_DEBUG(dbgs() << "\t -> tracing through COPY to "
+                        << printReg(SrcReg, &TRI) << "\n");
+      LiveInterval &SrcLI = LIS.getInterval(SrcReg);
+      CurVNI = SrcLI.getVNInfoBefore(CurVNI->def);
+    }
+    if (CurDef && TII.isReMaterializable(*CurDef)) {
+      DefMI = CurDef;
+      LLVM_DEBUG(dbgs() << "\tFound remat possibility through COPY chain: "
+                        << *DefMI);
+    }
+    if (!DefMI) {
+      markValueUsed(&VirtReg, ParentVNI);
+      LLVM_DEBUG(dbgs() << "\tcannot remat missing def for " << UseIdx << '\t'
+                        << MI);
+      return false;
+    }
   }
 
   LiveRangeEdit::Remat RM(ParentVNI);
@@ -726,9 +769,18 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // Constrain it to the register class of MI.
   MRI.constrainRegClass(NewVReg, MRI.getRegClass(VirtReg.reg()));
 
+  // Compute which lanes of the virtual register are live at the use point.
+  LaneBitmask UsedLanes = LaneBitmask::getAll();
+  if (VirtReg.hasSubRanges()) {
+    UsedLanes = LaneBitmask::getNone();
+    for (const LiveInterval::SubRange &SR : VirtReg.subranges())
+      if (SR.liveAt(UseIdx))
+        UsedLanes |= SR.LaneMask;
+  }
+
   // Finally we can rematerialize OrigMI before MI.
-  SlotIndex DefIdx =
-      Edit->rematerializeAt(*MI.getParent(), MI, NewVReg, RM, TRI);
+  SlotIndex DefIdx = Edit->rematerializeAt(*MI.getParent(), MI, NewVReg, RM,
+                                           TRI, false, 0, nullptr, UsedLanes);
 
   // We take the DebugLoc from MI, since OrigMI may be attributed to a
   // different source location.
@@ -1007,9 +1059,11 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
       MI->untieRegOperand(Idx);
     }
 
+  MachineInstr *CopyMI = nullptr;
   MachineInstr *FoldMI =
-      LoadMI ? TII.foldMemoryOperand(*MI, FoldOps, *LoadMI, &LIS)
-             : TII.foldMemoryOperand(*MI, FoldOps, StackSlot, &LIS, &VRM);
+      LoadMI
+          ? TII.foldMemoryOperand(*MI, FoldOps, *LoadMI, CopyMI, &LIS, &VRM)
+          : TII.foldMemoryOperand(*MI, FoldOps, StackSlot, CopyMI, &LIS, &VRM);
   if (!FoldMI) {
     // Re-tie operands.
     for (auto Tied : TiedOps)
@@ -1041,7 +1095,15 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   if (TII.isStoreToStackSlot(*MI, FI) &&
       HSpiller.rmFromMergeableSpills(*MI, FI))
     --NumSpills;
-  LIS.ReplaceMachineInstrInMaps(*MI, *FoldMI);
+  SlotIndex FoldIdx = LIS.ReplaceMachineInstrInMaps(*MI, *FoldMI);
+  if (CopyMI) {
+    SlotIndex CopyIdx = LIS.InsertMachineInstrInMaps(*CopyMI).getRegSlot();
+    if (!MRI.isSSA()) {
+      LiveInterval &LI = LIS.getInterval(CopyMI->getOperand(0).getReg());
+      VNInfo *VNI = LI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
+      LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
+    }
+  }
   // Update the call info.
   if (MI->isCandidateForAdditionalCallInfo())
     MI->getMF()->moveAdditionalCallInfo(MI, FoldMI);
@@ -1083,8 +1145,18 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   // Insert any new instructions other than FoldMI into the LIS maps.
   assert(!MIS.empty() && "Unexpected empty span of instructions!");
   for (MachineInstr &MI : MIS)
-    if (&MI != FoldMI)
+    if (&MI != FoldMI && &MI != CopyMI)
       LIS.InsertMachineInstrInMaps(MI);
+
+  if (CopyMI) {
+    Register R = CopyMI->getOperand(1).getReg();
+    if (R.isVirtual()) {
+      LiveInterval &LI = LIS.getInterval(R);
+      LIS.shrinkToUses(&LI);
+    } else {
+      assert(MRI.isReserved(R) && "Unexpected PhysReg in source operand!");
+    }
+  }
 
   // TII.foldMemoryOperand may have left some implicit operands on the
   // instruction.  Strip them.

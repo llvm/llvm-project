@@ -19,6 +19,7 @@ add_lldb_unittest(UtilityTests
   LogTest.cpp
   NameMatchesTest.cpp
   NonNullSharedPtrTest.cpp
+  PolicyTest.cpp
   PredicateTest.cpp
   ProcessInfoTest.cpp
   ProcessInstanceInfoTest.cpp
@@ -48,7 +49,6 @@ add_lldb_unittest(UtilityTests
   UUIDTest.cpp
   VASprintfTest.cpp
   VirtualDataExtractorTest.cpp
-  VMRangeTest.cpp
   XcodeSDKTest.cpp
 
   LINK_COMPONENTS

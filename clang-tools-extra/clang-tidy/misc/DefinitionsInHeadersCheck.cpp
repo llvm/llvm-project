@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DefinitionsInHeadersCheck.h"
+#include "../utils/FileExtensionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -27,17 +28,17 @@ AST_MATCHER_P(NamedDecl, usesHeaderFileExtension, FileExtensionsSet,
 
 DefinitionsInHeadersCheck::DefinitionsInHeadersCheck(StringRef Name,
                                                      ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
+    : ClangTidyCheck(Name, Context) {}
 
 void DefinitionsInHeadersCheck::registerMatchers(MatchFinder *Finder) {
   auto DefinitionMatcher =
       anyOf(functionDecl(isDefinition(), unless(isDeleted())),
             varDecl(isDefinition()));
-  Finder->addMatcher(namedDecl(DefinitionMatcher,
-                               usesHeaderFileExtension(HeaderFileExtensions))
-                         .bind("name-decl"),
-                     this);
+  Finder->addMatcher(
+      namedDecl(DefinitionMatcher,
+                usesHeaderFileExtension(getHeaderFileExtensions()))
+          .bind("name-decl"),
+      this);
 }
 
 void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {

@@ -1,35 +1,10 @@
-// RUN: %check_clang_tidy -check-suffixes=,CLASSIC %s readability-container-data-pointer %t -- -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -check-suffixes=,WITH-CONFIG %s readability-container-data-pointer %t -- -config="{CheckOptions: {readability-container-data-pointer.IgnoredContainers: '::std::basic_string'}}" -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -check-suffixes=,CLASSIC %s readability-container-data-pointer %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -check-suffixes=,WITH-CONFIG %s readability-container-data-pointer %t -- -config="{CheckOptions: {readability-container-data-pointer.IgnoredContainers: '::std::basic_string'}}" -- -fno-delayed-template-parsing
 
 #include <string>
+#include <type_traits>
 #include <vector>
-
-typedef __SIZE_TYPE__ size_t;
-
-namespace std {
-
-template <typename T>
-struct is_integral;
-
-template <>
-struct is_integral<size_t> {
-  static const bool value = true;
-};
-
-template <bool, typename T = void>
-struct enable_if { };
-
-template <typename T>
-struct enable_if<true, T> {
-  typedef T type;
-};
-
-template <typename T>
-struct unique_ptr {
-  T &operator*() const;
-  T *operator->() const;
-};
-}
+#include <memory>
 
 template <typename T>
 void f(const T *);

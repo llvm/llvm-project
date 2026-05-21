@@ -5,17 +5,14 @@
 // RUN:              modernize-use-std-format.StrFormatLikeFunctions: '::strprintf; mynamespace::strprintf2; any_format_type_strprintf', \
 // RUN:              modernize-use-std-format.ReplacementFormatFunction: 'fmt::format', \
 // RUN:              modernize-use-std-format.FormatHeader: '<fmt/core.h>' \
-// RUN:            }}"                                                  \
-// RUN:   -- -isystem %clang_tidy_headers
+// RUN:            }}"
 // RUN: %check_clang_tidy -check-suffixes=,NOTSTRICT                    \
 // RUN:   -std=c++20-or-later %s modernize-use-std-format %t --                  \
 // RUN:   -config="{CheckOptions: {                                     \
 // RUN:              modernize-use-std-format.StrFormatLikeFunctions: '::strprintf; mynamespace::strprintf2; any_format_type_strprintf', \
 // RUN:              modernize-use-std-format.ReplacementFormatFunction: 'fmt::format', \
 // RUN:              modernize-use-std-format.FormatHeader: '<fmt/core.h>' \
-// RUN:            }}"                                                  \
-// RUN:   -- -isystem %clang_tidy_headers
-
+// RUN:            }}"
 #include <cstdio>
 #include <string>
 // CHECK-FIXES: #include <fmt/core.h>

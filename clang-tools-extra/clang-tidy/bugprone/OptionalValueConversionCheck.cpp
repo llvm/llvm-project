@@ -153,7 +153,7 @@ void OptionalValueConversionCheck::check(
          << FixItHint::CreateRemoval(
                 CharSourceRange::getTokenRange(Begin, CallExpr->getEndLoc()));
     if (const auto *Member =
-            llvm::dyn_cast<MemberExpr>(CallExpr->getCallee()->IgnoreImplicit());
+            dyn_cast<MemberExpr>(CallExpr->getCallee()->IgnoreImplicit());
         Member && Member->isArrow())
       Diag << FixItHint::CreateInsertion(CallExpr->getBeginLoc(), "*");
     return;

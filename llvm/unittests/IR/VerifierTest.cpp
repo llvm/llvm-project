@@ -21,7 +21,7 @@
 #include "llvm/IR/Module.h"
 #include "gtest/gtest.h"
 
-namespace llvm {
+using namespace llvm;
 namespace {
 
 TEST(VerifierTest, Branch_i1) {
@@ -33,11 +33,11 @@ TEST(VerifierTest, Branch_i1) {
   BasicBlock *Exit = BasicBlock::Create(C, "exit", F);
   ReturnInst::Create(C, Exit);
 
-  // To avoid triggering an assertion in BranchInst::Create, we first create
+  // To avoid triggering an assertion in CondBrInst::Create, we first create
   // a branch with an 'i1' condition ...
 
   Constant *False = ConstantInt::getFalse(C);
-  BranchInst *BI = BranchInst::Create(Exit, Exit, False, Entry);
+  CondBrInst *BI = CondBrInst::Create(False, Exit, Exit, Entry);
 
   // ... then use setOperand to redirect it to a value of different type.
 
@@ -259,8 +259,9 @@ TEST(VerifierTest, DetectInvalidDebugInfo) {
                                Function::ExternalLinkage, "f", M);
     IRBuilder<> Builder(BasicBlock::Create(C, "", F));
     Builder.CreateUnreachable();
+    auto *SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
     F->setSubprogram(DIB.createFunction(
-        CU, "f", "f", DIB.createFile("broken.c", "/"), 1, nullptr, 1,
+        CU, "f", "f", DIB.createFile("broken.c", "/"), 1, SPType, 1,
         DINode::FlagZero,
         DISubprogram::SPFlagLocalToUnit | DISubprogram::SPFlagDefinition));
     DIB.finalize();
@@ -318,9 +319,9 @@ TEST(VerifierTest, SwitchInst) {
 
   BasicBlock *Exit = BasicBlock::Create(C, "exit", F);
 
-  BranchInst::Create(Exit, Default);
-  BranchInst::Create(Exit, OnTwo);
-  BranchInst::Create(Exit, OnOne);
+  UncondBrInst::Create(Exit, Default);
+  UncondBrInst::Create(Exit, OnTwo);
+  UncondBrInst::Create(Exit, OnOne);
   ReturnInst::Create(C, Exit);
 
   Value *Cond = F->getArg(0);
@@ -373,7 +374,107 @@ TEST(VerifierTest, AtomicRMW) {
   Constant *CV = ConstantVector::getSplat(ElementCount::getScalable(2), CF);
   new AtomicRMWInst(AtomicRMWInst::FAdd, Ptr, CV, Align(8),
                     AtomicOrdering::SequentiallyConsistent, SyncScope::System,
-                    Entry);
+                    /*Elementwise=*/false, Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(StringRef(Error).starts_with(
+      "atomicrmw fadd operand must have floating-point or "
+      "fixed vector of floating-point type!"))
+      << Error;
+}
+
+TEST(VerifierTest, AtomicRMWElementwiseScalar) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *I32Ty = Type::getInt32Ty(C);
+  Constant *CI = ConstantInt::get(I32Ty, 0);
+
+  new AtomicRMWInst(AtomicRMWInst::Add, Ptr, CI, Align(4),
+                    AtomicOrdering::Monotonic, SyncScope::System,
+                    /*Elementwise=*/true, Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(StringRef(Error).starts_with(
+      "atomicrmw elementwise operand must have fixed vector type!"))
+      << Error;
+}
+
+TEST(VerifierTest, AtomicRMWElementwiseIntOpOnFPVector) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *FPTy = Type::getFloatTy(C);
+  Constant *CV = ConstantVector::getSplat(ElementCount::getFixed(4),
+                                          ConstantFP::getZero(FPTy));
+
+  new AtomicRMWInst(AtomicRMWInst::Add, Ptr, CV, Align(16),
+                    AtomicOrdering::Monotonic, SyncScope::System,
+                    /*Elementwise=*/true, Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(
+      StringRef(Error).starts_with("atomicrmw add operand must have integer"))
+      << Error;
+}
+
+TEST(VerifierTest, AtomicRMWElementwiseOddSizedVector) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *I32Ty = Type::getInt32Ty(C);
+  Constant *CV = ConstantVector::getSplat(ElementCount::getFixed(5),
+                                          ConstantInt::get(I32Ty, 0));
+
+  new AtomicRMWInst(AtomicRMWInst::Add, Ptr, CV, Align(4),
+                    AtomicOrdering::Monotonic, SyncScope::System,
+                    /*Elementwise=*/true, Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(StringRef(Error).starts_with(
+      "atomic memory access' operand must have a power-of-two size"))
+      << Error;
+}
+
+TEST(VerifierTest, AtomicRMWElementwiseFPOpOnIntVector) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *I32Ty = Type::getInt32Ty(C);
+  Constant *CV = ConstantVector::getSplat(ElementCount::getFixed(4),
+                                          ConstantInt::get(I32Ty, 0));
+
+  new AtomicRMWInst(AtomicRMWInst::FAdd, Ptr, CV, Align(16),
+                    AtomicOrdering::Monotonic, SyncScope::System,
+                    /*Elementwise=*/true, Entry);
   ReturnInst::Create(C, Entry);
 
   std::string Error;
@@ -415,5 +516,61 @@ TEST(VerifierTest, GetElementPtrInst) {
       << Error;
 }
 
+TEST(VerifierTest, DeeplyNested) {
+  LLVMContext Ctx;
+  Module M("M", Ctx);
+
+  // Construct an extremely deeply nested metadata node that should cause
+  // a stack overflow on most platforms if recursion through the entire
+  // chain is performed.
+  Metadata *CurrentMetadataNode =
+      ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(Ctx), 0));
+  for (int i = 0; i < 100000; ++i) {
+    CurrentMetadataNode = MDTuple::get(Ctx, {CurrentMetadataNode});
+  }
+
+  NamedMDNode *NamedMetadataNode = M.getOrInsertNamedMetadata("foo");
+  NamedMetadataNode->addOperand(cast<MDNode>(CurrentMetadataNode));
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_FALSE(verifyModule(M, &ErrorOS));
+}
+
+TEST(VerifierTest, IntrinsicRetInvalidStruct) {
+  LLVMContext Ctx;
+
+  // Create 2 invalid struct types for @llvm.nvvm.elect.sync intrinsic.
+  Type *I32Ty = Type::getInt32Ty(Ctx);
+  Type *I1Ty = Type::getInt1Ty(Ctx);
+
+  StructType *NonLiteral = StructType::create(Ctx, {I32Ty, I1Ty}, "st");
+  StructType *LiteralPacked =
+      StructType::get(Ctx, {I32Ty, I1Ty}, /*isPacked=*/true);
+  for (StructType *STy : {NonLiteral, LiteralPacked}) {
+    Module M("M", Ctx);
+    FunctionType *IntrFTy = FunctionType::get(STy, I32Ty, /*isVarArg=*/false);
+    Function *Intr = Function::Create(IntrFTy, Function::InternalLinkage,
+                                      "llvm.nvvm.elect.sync", M);
+
+    FunctionType *FTy =
+        FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
+    Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+    BasicBlock *Entry = BasicBlock::Create(Ctx, "entry", F);
+
+    Constant *Zero = ConstantInt::get(I32Ty, 0);
+    CallInst::Create(Intr, Zero, /*Bundles=*/{}, "ci", Entry);
+    ReturnInst::Create(Ctx, Entry);
+
+    std::string Error;
+    raw_string_ostream ErrorOS(Error);
+    EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+
+    EXPECT_TRUE(StringRef(Error).starts_with(
+        "intrinsic return type expected literal non-packed struct with 2 "
+        "elements, but got"))
+        << Error;
+  }
+}
+
 } // end anonymous namespace
-} // end namespace llvm

@@ -1737,8 +1737,8 @@ define void @void_func_byval_i8_align32_i16_align64(ptr addrspace(5) byval(i8) %
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX1]](p5)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p5) :: (dereferenceable load (s8) from %ir.arg0, addrspace 5)
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[COPY1]](p5) :: (dereferenceable load (s16) from %ir.arg1, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p5) :: (load (s8) from %ir.arg0, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[COPY1]](p5) :: (load (s16) from %ir.arg1, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD]](s8), [[C]](p1) :: (store (s8) into `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[LOAD1]](s16), [[C]](p1) :: (store (s16) into `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
@@ -1758,14 +1758,14 @@ define void @byval_a3i32_align128_byval_i16_align64(ptr addrspace(5) byval([3 x 
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX1]](p5)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (dereferenceable load (s32) from %ir.arg0, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s32) from %ir.arg0, addrspace 5)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s32)
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (dereferenceable load (s32) from %ir.arg0 + 4, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (load (s32) from %ir.arg0 + 4, addrspace 5)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = nuw inbounds G_PTR_ADD [[COPY]], [[C2]](s32)
-  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p5) :: (dereferenceable load (s32) from %ir.arg0 + 8, addrspace 5)
-  ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[COPY1]](p5) :: (dereferenceable load (s16) from %ir.arg1, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p5) :: (load (s32) from %ir.arg0 + 8, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[COPY1]](p5) :: (load (s16) from %ir.arg1, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD]](s32), [[C]](p1) :: (store (s32) into `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(p1) = G_CONSTANT i64 4
@@ -1828,7 +1828,7 @@ define void @void_func_v32i32_i32_byval_i8(<32 x i32> %arg0, i32 %arg1, ptr addr
   ; CHECK-NEXT:   [[COPY31:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX2]](p5)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
   ; CHECK-NEXT:   G_STORE [[LOAD1]](s32), [[C]](p1) :: (store (s32) into `ptr addrspace(1) null`, addrspace 1)
-  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[COPY31]](p5) :: (dereferenceable load (s8) from %ir.arg2, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[COPY31]](p5) :: (load (s8) from %ir.arg2, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD2]](s8), [[C]](p1) :: (store (s8) into `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i32 %arg1, ptr addrspace(1) null
@@ -1883,7 +1883,7 @@ define void @void_func_v32i32_byval_i8_i32(<32 x i32> %arg0, ptr addrspace(5) by
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.0, align 8, addrspace 5)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
   ; CHECK-NEXT:   G_STORE [[LOAD1]](s32), [[C]](p1) :: (store (s32) into `ptr addrspace(1) null`, addrspace 1)
-  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[COPY31]](p5) :: (dereferenceable load (s8) from %ir.arg1, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[COPY31]](p5) :: (load (s8) from %ir.arg1, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD2]](s8), [[C]](p1) :: (store (s8) into `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i32 %arg2, ptr addrspace(1) null

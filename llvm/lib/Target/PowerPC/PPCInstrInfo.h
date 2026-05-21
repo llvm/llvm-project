@@ -700,6 +700,9 @@ public:
   ///
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
+  InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const override;
+
   MCInst getNop() const override;
 
   std::pair<unsigned, unsigned>
@@ -713,6 +716,7 @@ public:
 
   // Lower pseudo instructions after register allocation.
   bool expandPostRAPseudo(MachineInstr &MI) const override;
+  bool expandAMOCSNEPseudo(MachineInstr &MI) const;
 
   const TargetRegisterClass *updatedRC(const TargetRegisterClass *RC) const;
   static int getRecordFormOpcode(unsigned Opcode);

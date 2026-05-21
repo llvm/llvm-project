@@ -69,6 +69,10 @@ constexpr _BitInt(32) nope = top / bottom;  // both-error {{must be initialized 
 constexpr _BitInt(32) noooo = top % bottom; // both-error {{must be initialized by a constant expression}} \
                                             // both-note {{value 2147483648 is outside the range}}
 
+struct {
+  _BitInt(35) void : 33; // both-error {{cannot combine with previous '_BitInt' declaration specifier}}
+} s;
+
 namespace APCast {
   constexpr _BitInt(10) A = 1;
   constexpr _BitInt(11) B = A;

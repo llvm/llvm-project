@@ -41,7 +41,7 @@ cl::opt<cl::boolOrDefault> UseLEB128Directives(
     cl::init(cl::BOU_UNSET));
 }
 
-MCAsmInfo::MCAsmInfo() {
+MCAsmInfo::MCAsmInfo(const MCTargetOptions &Options) : TargetOptions(Options) {
   if (DwarfExtendedLoc != Default)
     SupportsExtendedDwarfLocDirective = DwarfExtendedLoc == Enable;
   if (UseLEB128Directives != cl::BOU_UNSET)

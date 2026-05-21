@@ -721,3 +721,18 @@ define <2 x i32> @src_v128tov2_i32_multiuse_sel1(<128 x i1> %a, <128 x i1> %b, <
   %res = shufflevector <128 x i32> %select.xz, <128 x i32> %select.yx, <2 x i32> <i32 0, i32 128>
   ret <2 x i32> %res
 }
+
+define <1 x double> @shuffle_of_selects_single_element(<2 x i1> %cond1, <2 x i1> %cond2, <2 x double> %t1, <2 x double> %f1, <2 x double> %t2, <2 x double> %f2) {
+; CHECK-LABEL: define <1 x double> @shuffle_of_selects_single_element(
+; CHECK-SAME: <2 x i1> [[COND1:%.*]], <2 x i1> [[COND2:%.*]], <2 x double> [[T1:%.*]], <2 x double> [[F1:%.*]], <2 x double> [[T2:%.*]], <2 x double> [[F2:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[COND1]], <2 x i1> [[COND2]], <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[T1]], <2 x double> [[T2]], <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[F1]], <2 x double> [[F2]], <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[SHUF:%.*]] = select <1 x i1> [[TMP1]], <1 x double> [[TMP2]], <1 x double> [[TMP3]]
+; CHECK-NEXT:    ret <1 x double> [[SHUF]]
+;
+  %sel1 = select <2 x i1> %cond1, <2 x double> %t1, <2 x double> %f1
+  %sel2 = select <2 x i1> %cond2, <2 x double> %t2, <2 x double> %f2
+  %shuf = shufflevector <2 x double> %sel1, <2 x double> %sel2, <1 x i32> <i32 0>
+  ret <1 x double> %shuf
+}

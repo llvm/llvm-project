@@ -431,52 +431,62 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_atom_add_gen_i:
   case NVPTX::BI__nvvm_atom_add_gen_l:
   case NVPTX::BI__nvvm_atom_add_gen_ll:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Add, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Add, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_sub_gen_i:
   case NVPTX::BI__nvvm_atom_sub_gen_l:
   case NVPTX::BI__nvvm_atom_sub_gen_ll:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Sub, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Sub, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_and_gen_i:
   case NVPTX::BI__nvvm_atom_and_gen_l:
   case NVPTX::BI__nvvm_atom_and_gen_ll:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::And, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::And, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_or_gen_i:
   case NVPTX::BI__nvvm_atom_or_gen_l:
   case NVPTX::BI__nvvm_atom_or_gen_ll:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Or, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Or, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_xor_gen_i:
   case NVPTX::BI__nvvm_atom_xor_gen_l:
   case NVPTX::BI__nvvm_atom_xor_gen_ll:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Xor, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Xor, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_xchg_gen_i:
   case NVPTX::BI__nvvm_atom_xchg_gen_l:
   case NVPTX::BI__nvvm_atom_xchg_gen_ll:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Xchg, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Xchg, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_max_gen_i:
   case NVPTX::BI__nvvm_atom_max_gen_l:
   case NVPTX::BI__nvvm_atom_max_gen_ll:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Max, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Max, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_max_gen_ui:
   case NVPTX::BI__nvvm_atom_max_gen_ul:
   case NVPTX::BI__nvvm_atom_max_gen_ull:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UMax, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UMax, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_min_gen_i:
   case NVPTX::BI__nvvm_atom_min_gen_l:
   case NVPTX::BI__nvvm_atom_min_gen_ll:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Min, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Min, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_min_gen_ui:
   case NVPTX::BI__nvvm_atom_min_gen_ul:
   case NVPTX::BI__nvvm_atom_min_gen_ull:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UMin, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UMin, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_cas_gen_us:
   case NVPTX::BI__nvvm_atom_cas_gen_i:
@@ -484,7 +494,9 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_atom_cas_gen_ll:
     // __nvvm_atom_cas_gen_* should return the old value rather than the
     // success flag.
-    return MakeAtomicCmpXchgValue(*this, E, /*ReturnBool=*/false);
+    return MakeAtomicCmpXchgValue(*this, E, /*ReturnBool=*/false,
+                                  AtomicOrdering::Monotonic,
+                                  AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_add_gen_f:
   case NVPTX::BI__nvvm_atom_add_gen_d: {
@@ -492,14 +504,16 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     Value *Val = EmitScalarExpr(E->getArg(1));
 
     return Builder.CreateAtomicRMW(llvm::AtomicRMWInst::FAdd, DestAddr, Val,
-                                   AtomicOrdering::SequentiallyConsistent);
+                                   AtomicOrdering::Monotonic);
   }
 
   case NVPTX::BI__nvvm_atom_inc_gen_ui:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UIncWrap, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UIncWrap, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_dec_gen_ui:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UDecWrap, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UDecWrap, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_ldg_c:
   case NVPTX::BI__nvvm_ldg_sc:
@@ -1094,8 +1108,7 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_fabs_ftz,
                                         EmitScalarExpr(E->getArg(0)));
   case NVPTX::BI__nvvm_fabs_d:
-    return Builder.CreateUnaryIntrinsic(Intrinsic::fabs,
-                                        EmitScalarExpr(E->getArg(0)));
+    return Builder.CreateFAbs(EmitScalarExpr(E->getArg(0)));
   case NVPTX::BI__nvvm_ex2_approx_d:
   case NVPTX::BI__nvvm_ex2_approx_f:
     return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_ex2_approx,

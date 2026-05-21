@@ -33,7 +33,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK:      @[[IDENT:.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[SRC_LOC]] }, align 8
 // CHECK:      @[[DYNA_ENV:.*]] = weak_odr protected global %struct.DynamicEnvironmentTy zeroinitializer
 // CHECK:      @[[KERNEL_ENV:.*]] = weak_odr protected constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 1, i32 256, i32 -1, i32 -1, i32 0, i32 0 }, ptr @[[IDENT]], ptr @[[DYNA_ENV]] }
-// CHECK:      define weak_odr protected amdgpu_kernel void @__omp_offloading_{{[^_]+}}_{{[^_]+}}_omp_target_region__l{{[0-9]+}}(ptr %[[DYN_PTR:.*]], ptr %[[ADDR_A:.*]], ptr %[[ADDR_B:.*]], ptr %[[ADDR_C:.*]])
+// CHECK:      define weak_odr protected amdgpu_kernel void @__omp_offloading_{{[^_]+}}_{{[^_]+}}_omp_target_region__l{{[0-9]+}}(ptr %[[ADDR_A:.*]], ptr %[[ADDR_B:.*]], ptr %[[ADDR_C:.*]], ptr %[[DYN_PTR:.*]])
 // CHECK:        %[[TMP_A:.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK:        %[[ASCAST_A:.*]] = addrspacecast ptr addrspace(5) %[[TMP_A]] to ptr
 // CHECK:        store ptr %[[ADDR_A]], ptr %[[ASCAST_A]], align 8
@@ -56,7 +56,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK:        %[[B:.*]] = load i32, ptr %[[PTR_B]], align 4
 // CHECK:        %[[C:.*]] = add i32 %[[A]], %[[B]]
 // CHECK:        store i32 %[[C]], ptr %[[PTR_C]], align 4
-// CHECK:        br label %[[LABEL_DEINIT:.*]]
+// CHECK:        br label %[[LABEL_TARGET_EXIT:.*]]
+// CHECK:        [[LABEL_TARGET_EXIT]]:
+// CHECK-NEXT:   br label %[[LABEL_DEINIT:.*]]
 // CHECK:        [[LABEL_DEINIT]]:
 // CHECK-NEXT:   call void @__kmpc_target_deinit()
 // CHECK-NEXT:   ret void

@@ -11,13 +11,14 @@
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
 using namespace llvm;
 
 void Matcher::anchor() {}
 
-void Matcher::dump() const { printOne(errs()); }
+void Matcher::dump() const { printOne(dbgs()); }
 
 void Matcher::printOne(raw_ostream &OS, indent Indent) const {
   printImpl(OS, indent(0));
@@ -430,4 +431,4 @@ void MatcherList::print(raw_ostream &OS, indent Indent) const {
     M->printOne(OS, Indent);
 }
 
-void MatcherList::dump() const { print(errs()); }
+void MatcherList::dump() const { print(dbgs()); }

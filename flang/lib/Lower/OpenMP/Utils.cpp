@@ -67,113 +67,6 @@ llvm::cl::opt<bool> treatIndexAsSection(
 namespace Fortran {
 namespace lower {
 namespace omp {
-
-mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
-    lower::AbstractConverter &converter, mlir::Location loc,
-    fir::RecordType recordType, llvm::StringRef mapperNameStr) {
-  if (mapperNameStr.empty())
-    return {};
-
-  if (converter.getModuleOp().lookupSymbol(mapperNameStr))
-    return mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
-                                        mapperNameStr);
-
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
-
-  firOpBuilder.setInsertionPointToStart(converter.getModuleOp().getBody());
-  auto declMapperOp = mlir::omp::DeclareMapperOp::create(
-      firOpBuilder, loc, mapperNameStr, recordType);
-  auto &region = declMapperOp.getRegion();
-  firOpBuilder.createBlock(&region);
-  auto mapperArg = region.addArgument(firOpBuilder.getRefType(recordType), loc);
-
-  auto declareOp = hlfir::DeclareOp::create(firOpBuilder, loc, mapperArg,
-                                            /*uniq_name=*/"");
-
-  const auto genBoundsOps = [&](mlir::Value mapVal,
-                                llvm::SmallVectorImpl<mlir::Value> &bounds) {
-    fir::ExtendedValue extVal =
-        hlfir::translateToExtendedValue(mapVal.getLoc(), firOpBuilder,
-                                        hlfir::Entity{mapVal},
-                                        /*contiguousHint=*/true)
-            .first;
-    fir::factory::AddrAndBoundsInfo info = fir::factory::getDataOperandBaseAddr(
-        firOpBuilder, mapVal, /*isOptional=*/false, mapVal.getLoc());
-    bounds = fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-                                                mlir::omp::MapBoundsType>(
-        firOpBuilder, info, extVal,
-        /*dataExvIsAssumedSize=*/false, mapVal.getLoc());
-  };
-
-  const auto getFieldRef = [&](mlir::Value rec, llvm::StringRef fieldName,
-                               mlir::Type fieldTy, mlir::Type recType) {
-    mlir::Value field = fir::FieldIndexOp::create(
-        firOpBuilder, loc, fir::FieldType::get(recType.getContext()), fieldName,
-        recType, fir::getTypeParams(rec));
-    return fir::CoordinateOp::create(
-        firOpBuilder, loc, firOpBuilder.getRefType(fieldTy), rec, field);
-  };
-
-  llvm::SmallVector<mlir::Value> clauseMapVars;
-  llvm::SmallVector<llvm::SmallVector<int64_t>> memberPlacementIndices;
-  llvm::SmallVector<mlir::Value> memberMapOps;
-
-  mlir::omp::ClauseMapFlags mapFlag = mlir::omp::ClauseMapFlags::to |
-                                      mlir::omp::ClauseMapFlags::from |
-                                      mlir::omp::ClauseMapFlags::implicit;
-  mlir::omp::VariableCaptureKind captureKind =
-      mlir::omp::VariableCaptureKind::ByRef;
-
-  for (const auto &entry : llvm::enumerate(recordType.getTypeList())) {
-    const auto &memberName = entry.value().first;
-    const auto &memberType = entry.value().second;
-    mlir::FlatSymbolRefAttr mapperId;
-    if (auto recType = mlir::dyn_cast<fir::RecordType>(
-            fir::getFortranElementType(memberType))) {
-      std::string mapperIdName =
-          recType.getName().str() + llvm::omp::OmpDefaultMapperName;
-      if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
-        mapperIdName = converter.mangleName(mapperIdName, sym->owner());
-      else if (auto *memberSym =
-                   converter.getCurrentScope().FindSymbol(memberName))
-        mapperIdName = converter.mangleName(mapperIdName, memberSym->owner());
-
-      mapperId = getOrGenImplicitDefaultDeclareMapper(converter, loc, recType,
-                                                      mapperIdName);
-    }
-
-    auto ref =
-        getFieldRef(declareOp.getBase(), memberName, memberType, recordType);
-    llvm::SmallVector<mlir::Value> bounds;
-    genBoundsOps(ref, bounds);
-    mlir::Value mapOp = Fortran::utils::openmp::createMapInfoOp(
-        firOpBuilder, loc, ref, /*varPtrPtr=*/mlir::Value{}, /*name=*/"",
-        bounds,
-        /*members=*/{},
-        /*membersIndex=*/mlir::ArrayAttr{}, mapFlag, captureKind, ref.getType(),
-        /*partialMap=*/false, mapperId);
-    memberMapOps.emplace_back(mapOp);
-    memberPlacementIndices.emplace_back(
-        llvm::SmallVector<int64_t>{(int64_t)entry.index()});
-  }
-
-  llvm::SmallVector<mlir::Value> bounds;
-  genBoundsOps(declareOp.getOriginalBase(), bounds);
-  mlir::omp::ClauseMapFlags parentMapFlag = mlir::omp::ClauseMapFlags::implicit;
-  mlir::omp::MapInfoOp mapOp = Fortran::utils::openmp::createMapInfoOp(
-      firOpBuilder, loc, declareOp.getOriginalBase(),
-      /*varPtrPtr=*/mlir::Value(), /*name=*/"", bounds, memberMapOps,
-      firOpBuilder.create2DI64ArrayAttr(memberPlacementIndices), parentMapFlag,
-      captureKind, declareOp.getType(0),
-      /*partialMap=*/true);
-
-  clauseMapVars.emplace_back(mapOp);
-  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseMapVars);
-  return mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
-                                      mapperNameStr);
-}
-
 bool requiresImplicitDefaultDeclareMapper(
     const semantics::DerivedTypeSpec &typeSpec) {
   // ISO C interoperable types (e.g., c_ptr, c_funptr) must always have implicit
@@ -562,6 +455,12 @@ mlir::Value createParentSymAndGenIntermediateMaps(
         interimMapType &= ~mlir::omp::ClauseMapFlags::to;
         interimMapType &= ~mlir::omp::ClauseMapFlags::from;
         interimMapType &= ~mlir::omp::ClauseMapFlags::return_param;
+        // We do not want to carry over the separation of descriptor and pointer
+        // mapping of any intermediate components we emit maps for as this can
+        // result in very odd differing behaviour when either ref_ptr/ptee is
+        // specified.
+        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptr;
+        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptee;
 
         // Create a map for the intermediate member and insert it and it's
         // indices into the parentMemberIndices list to track it.
@@ -669,16 +568,16 @@ void insertChildMapInfoIntoParent(
     lower::StatementContext &stmtCtx,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) {
+    llvm::SmallVectorImpl<Object> &mapObjects) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   for (auto indices : parentMemberIndices) {
     auto *parentIter =
-        llvm::find_if(mapSyms, [&indices](const semantics::Symbol *v) {
-          return v == indices.first.sym();
+        llvm::find_if(mapObjects, [&indices](const Object &object) {
+          return object.sym() == indices.first.sym();
         });
-    if (parentIter != mapSyms.end()) {
+    if (parentIter != mapObjects.end()) {
       auto mapOp = llvm::cast<mlir::omp::MapInfoOp>(
-          mapOperands[std::distance(mapSyms.begin(), parentIter)]
+          mapOperands[std::distance(mapObjects.begin(), parentIter)]
               .getDefiningOp());
 
       // Once explicit members are attached to a parent map, do not also invoke
@@ -704,13 +603,16 @@ void insertChildMapInfoIntoParent(
       mapOp.setMembersIndexAttr(firOpBuilder.create2DI64ArrayAttr(
           indices.second.memberPlacementIndices));
     } else {
-      // NOTE: We take the map type of the first child, this may not
-      // be the correct thing to do, however, we shall see. For the moment
-      // it allows this to work with enter and exit without causing MLIR
-      // verification issues. The more appropriate thing may be to take
-      // the "main" map type clause from the directive being used.
-      mlir::omp::ClauseMapFlags mapType =
-          indices.second.memberMap[0].getMapType();
+      // NOTE: We do not assign default mapped parents a map type, as
+      // selecting a child can result in the incorrect map type being
+      // applied to the parent and data being incorrectly moved to or
+      // from device. We make an exception currently for present.
+      mlir::omp::ClauseMapFlags mapType = mlir::omp::ClauseMapFlags::storage;
+
+      for (mlir::omp::MapInfoOp memberMap : indices.second.memberMap)
+        if ((memberMap.getMapType() & mlir::omp::ClauseMapFlags::present) ==
+            mlir::omp::ClauseMapFlags::present)
+          mapType |= mlir::omp::ClauseMapFlags::present;
 
       llvm::SmallVector<mlir::Value> members;
       members.reserve(indices.second.memberMap.size());
@@ -738,7 +640,7 @@ void insertChildMapInfoIntoParent(
           /*partialMap=*/true);
 
       mapOperands.push_back(mapOp);
-      mapSyms.push_back(indices.first.sym());
+      mapObjects.push_back(indices.first);
     }
   }
 }
@@ -809,9 +711,13 @@ pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
     //     <<DoConstruct>> -> 7
     if (nested.getIf<parser::NonLabelDoStmt>())
       continue;
-    assert(nested.getIf<parser::DoConstruct>() &&
-           "Unexpected construct in the nested evaluations");
-    return &nested;
+    if (nested.getIf<parser::DoConstruct>())
+      return &nested;
+    // Loop transformations can introduce nested OpenMP
+    // constructs between the directive and the actual do-loop nest.
+    if (nested.getIf<parser::OpenMPConstruct>())
+      return getNestedDoConstruct(nested);
+    assert(false && "Unexpected construct in the nested evaluations");
   }
   llvm_unreachable("Expected do loop to be in the nested evaluations");
 }
@@ -1100,6 +1006,15 @@ bool hasIteratorIVReference(
       return true;
   }
   return false;
+}
+
+void defaultMangler(Fortran::lower::AbstractConverter &converter,
+                    std::string &mapperIdName, llvm::StringRef memberName) {
+  if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
+    mapperIdName = converter.mangleName(mapperIdName, sym->owner());
+  else if (auto *memberSym =
+               converter.getCurrentScope().FindSymbol(memberName.str()))
+    mapperIdName = converter.mangleName(mapperIdName, memberSym->owner());
 }
 
 // Build the array coordinate for an object that uses iterator variables.

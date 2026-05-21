@@ -71,7 +71,7 @@ if config.enable_profcheck:
     config.excludes.append("AMDGPU")
     # TODO targets where profiling may make sense but will be addressed later
     config.excludes.extend(
-        ["Hexagon", "NVPTX", "PowerPC", "RISCV", "SPARC", "WebAssembly"]
+        ["Hexagon", "NVPTX", "PowerPC", "RISCV", "SPARC", "SPIRV", "WebAssembly"]
     )
     # these passes aren't hooked up to the pass pipeline:
     config.excludes.extend(["IRCE", "LoopBoundSplit", "LoopInterchange", "Scalarizer"])
@@ -243,6 +243,7 @@ tools = [
     ToolSubst("%llvm-strip", FindTool("llvm-strip")),
     ToolSubst("%llvm-install-name-tool", FindTool("llvm-install-name-tool")),
     ToolSubst("%llvm-bitcode-strip", FindTool("llvm-bitcode-strip")),
+    ToolSubst("%llvm-extract-bundle-entry", FindTool("llvm-extract-bundle-entry")),
     ToolSubst("%split-file", FindTool("split-file")),
 ]
 
@@ -275,6 +276,7 @@ tools.extend(
         "llvm-dlltool",
         "llvm-exegesis",
         "llvm-extract",
+        "llvm-extract-bundle-entry",
         "llvm-ir2vec",
         "llvm-isel-fuzzer",
         "llvm-ifs",
@@ -589,6 +591,9 @@ if config.link_llvm_dylib:
 if config.have_tf_aot:
     config.available_features.add("have_tf_aot")
 
+if getattr(config, "have_opencsd", False):
+    config.available_features.add("opencsd")
+
 if config.have_tflite:
     config.available_features.add("have_tflite")
 
@@ -827,6 +832,8 @@ if config.have_ondisk_cas:
 if "MemoryWithOrigins" in config.llvm_use_sanitizer:
     config.available_features.add("use_msan_with_origins")
 
+if "Undefined" in config.llvm_use_sanitizer:
+    config.available_features.add("ubsan")
 
 # Restrict the size of the on-disk CAS for tests. This allows testing in
 # constrained environments (e.g. small TMPDIR). It also prevents leaving

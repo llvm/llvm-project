@@ -51,7 +51,7 @@ class MemorySSAUpdater;
 class ScalarEvolution;
 
 /// This pass is responsible for loop canonicalization.
-class LoopSimplifyPass : public PassInfoMixin<LoopSimplifyPass> {
+class LoopSimplifyPass : public OptionalPassInfoMixin<LoopSimplifyPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

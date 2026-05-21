@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/posix/Support.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/BinaryFormat/XCOFF.h"
+#include "llvm/Object/XCOFFObjectFile.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <dirent.h>
 #include <sys/proc.h>
 #include <sys/procfs.h>
@@ -81,6 +84,37 @@ static bool GetStatusInfo(::pid_t pid, ProcessInstanceInfo &processInfo,
   return true;
 }
 
+static ArchSpec GetXCOFFProcessCPUType(llvm::StringRef exe_path) {
+  Log *log = GetLog(LLDBLog::Host);
+
+  auto file_buffer = llvm::MemoryBuffer::getFile(exe_path);
+  if (!file_buffer)
+    return ArchSpec();
+
+  llvm::Expected<std::unique_ptr<llvm::object::ObjectFile>> obj_or_err =
+      llvm::object::ObjectFile::createObjectFile(
+          (*file_buffer)->getMemBufferRef());
+
+  if (!obj_or_err) {
+    LLDB_LOG(log, "failed to create ObjectFile from buffer");
+    return ArchSpec();
+  }
+
+  llvm::object::ObjectFile *obj = obj_or_err->get();
+
+  const llvm::object::XCOFFObjectFile *xcoff_obj =
+      llvm::dyn_cast<llvm::object::XCOFFObjectFile>(obj);
+  if (!xcoff_obj) {
+    LLDB_LOG(log, "Not an valid XCOFF object file: {0}", exe_path);
+    return ArchSpec();
+  }
+
+  if (xcoff_obj->is64Bit())
+    return HostInfo::GetArchitecture(HostInfo::eArchKind64);
+
+  return HostInfo::GetArchitecture(HostInfo::eArchKind32);
+}
+
 static bool GetExePathAndIds(::pid_t pid, ProcessInstanceInfo &process_info) {
   struct psinfo psinfoData;
   auto BufferOrError = getProcFile(pid, "psinfo");
@@ -100,9 +134,9 @@ static bool GetExePathAndIds(::pid_t pid, ProcessInstanceInfo &process_info) {
     return false;
 
   process_info.GetExecutableFile().SetFile(PathRef, FileSpec::Style::native);
-  ArchSpec arch_spec = ArchSpec();
-  arch_spec.SetArchitecture(eArchTypeXCOFF, llvm::XCOFF::TCPU_PPC64,
-                            LLDB_INVALID_CPUTYPE, llvm::Triple::AIX);
+  ArchSpec arch_spec = GetXCOFFProcessCPUType(PathRef);
+  if (!arch_spec)
+    return false;
   process_info.SetArchitecture(arch_spec);
   process_info.SetParentProcessID(psinfoData.pr_ppid);
   process_info.SetGroupID(psinfoData.pr_gid);

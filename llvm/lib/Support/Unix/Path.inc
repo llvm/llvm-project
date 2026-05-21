@@ -241,7 +241,7 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   const char *curproc = "/proc/curproc/file";
   char exe_path[PATH_MAX];
   if (sys::fs::exists(curproc)) {
-    ssize_t len = readlink(curproc, exe_path, sizeof(exe_path));
+    ssize_t len = ::readlink(curproc, exe_path, sizeof(exe_path));
     if (len > 0) {
       // Null terminate the string for realpath. readlink never null
       // terminates its output.
@@ -259,7 +259,7 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   const char *aPath = "/proc/self/exe";
   if (sys::fs::exists(aPath)) {
     // /proc is not always mounted under Linux (chroot for example).
-    ssize_t len = readlink(aPath, exe_path, sizeof(exe_path));
+    ssize_t len = ::readlink(aPath, exe_path, sizeof(exe_path));
     if (len < 0)
       return "";
 
@@ -430,9 +430,7 @@ std::error_code create_directory(const Twine &path, bool IgnoreExisting,
   return std::error_code();
 }
 
-// Note that we are using symbolic link because hard links are not supported by
-// all filesystems (SMB doesn't).
-std::error_code create_link(const Twine &to, const Twine &from) {
+std::error_code create_symlink(const Twine &to, const Twine &from) {
   // Get arguments.
   SmallString<128> from_storage;
   SmallString<128> to_storage;
@@ -443,6 +441,13 @@ std::error_code create_link(const Twine &to, const Twine &from) {
     return errnoAsErrorCode();
 
   return std::error_code();
+}
+
+std::error_code create_link(const Twine &to, const Twine &from) {
+  std::error_code EC = create_symlink(to, from);
+  if (EC)
+    EC = create_hard_link(to, from);
+  return EC;
 }
 
 std::error_code create_hard_link(const Twine &to, const Twine &from) {
@@ -607,7 +612,7 @@ std::error_code rename(const Twine &from, const Twine &to) {
 std::error_code resize_file(int FD, uint64_t Size) {
   // Use ftruncate as a fallback. It may or may not allocate space. At least on
   // OS X with HFS+ it does.
-  if (::ftruncate(FD, Size) == -1)
+  if (sys::RetryAfterSignal(-1, ::ftruncate, FD, Size) == -1)
     return errnoAsErrorCode();
 
   return std::error_code();
@@ -855,8 +860,8 @@ std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
 #endif
 }
 
-std::error_code mapped_file_region::init(int FD, uint64_t Offset,
-                                         mapmode Mode) {
+std::error_code mapped_file_region::init(int FD, uint64_t Offset, mapmode Mode,
+                                         const char *Name) {
   assert(Size != 0);
 
   int flags = (Mode == readwrite) ? MAP_SHARED : MAP_PRIVATE;
@@ -891,12 +896,13 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
 }
 
 mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
-                                       uint64_t offset, std::error_code &ec)
+                                       uint64_t offset, std::error_code &ec,
+                                       const char *name)
     : Size(length), Mode(mode) {
   sandbox::violationIfEnabled();
 
   (void)Mode;
-  ec = init(fd, offset, mode);
+  ec = init(fd, offset, mode, name);
   if (ec)
     copyFrom(mapped_file_region());
 }
@@ -907,7 +913,7 @@ void mapped_file_region::unmapImpl() {
 }
 
 std::error_code mapped_file_region::sync() const {
-  if (int Res = ::msync(Mapping, Size, MS_SYNC))
+  if (int Res = sys::RetryAfterSignal(-1, ::msync, Mapping, Size, MS_SYNC))
     return std::error_code(Res, std::generic_category());
   return std::error_code();
 }
@@ -1334,7 +1340,7 @@ std::error_code lockFile(int FD, LockKind Kind) {
   Lock.l_whence = SEEK_SET;
   Lock.l_start = 0;
   Lock.l_len = 0;
-  if (::fcntl(FD, F_SETLKW, &Lock) != -1)
+  if (sys::RetryAfterSignal(-1, ::fcntl, FD, F_SETLKW, &Lock) != -1)
     return std::error_code();
   return errnoAsErrorCode();
 }
@@ -1345,7 +1351,7 @@ std::error_code unlockFile(int FD) {
   Lock.l_whence = SEEK_SET;
   Lock.l_start = 0;
   Lock.l_len = 0;
-  if (::fcntl(FD, F_SETLK, &Lock) != -1)
+  if (sys::RetryAfterSignal(-1, ::fcntl, FD, F_SETLK, &Lock) != -1)
     return std::error_code();
   return errnoAsErrorCode();
 }
@@ -1420,6 +1426,36 @@ std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
     return errnoAsErrorCode();
   dest.append(Buffer, Buffer + strlen(Buffer));
   return std::error_code();
+}
+
+std::error_code readlink(const Twine &path, SmallVectorImpl<char> &dest) {
+  dest.clear();
+
+  SmallString<128> Storage;
+  StringRef P = path.toNullTerminatedStringRef(Storage);
+
+  // Call ::readlink in a loop, growing the buffer until the result fits. We
+  // can't use lstat to get the size ahead of time because it's racy (the
+  // symlink can be replaced between lstat and readlink), and some filesystems
+  // (e.g. /proc on Linux) report st_size == 0 for symlinks.
+  //
+  // Default buffer starts at destination's current capacity unless that's too
+  // small. 32 is the somewhat arbitrary lower bound, but if we're going to have
+  // to allocate anyway it should have a reasonable chance of holding the
+  // result. This is to handle cases of `SmallString<0>` as buffers.
+  size_t BufSize = std::max(std::size_t{32}, dest.capacity());
+  for (;;) {
+    dest.resize_for_overwrite(BufSize);
+    ssize_t Len = ::readlink(P.begin(), dest.data(), dest.size());
+    if (Len < 0)
+      return errnoAsErrorCode();
+    if (static_cast<size_t>(Len) < BufSize) {
+      dest.truncate(Len);
+      return std::error_code();
+    }
+    // Result may have been truncated. Grow and retry.
+    BufSize *= 2;
+  }
 }
 
 std::error_code changeFileOwnership(int FD, uint32_t Owner, uint32_t Group) {
