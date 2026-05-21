@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -inline -split-input-file | FileCheck %s
 
-#di_file = #llvm.di_file<"file.mlir" in "/">
+#di_file = #llvm.di_file<"test.mlir" in "/">
 
 // CHECK: #[[START_ORIGINAL:.*]] = loc({{.*}}:42
 #loc1 = loc("test.mlir":42:4)

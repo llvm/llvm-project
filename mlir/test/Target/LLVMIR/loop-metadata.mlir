@@ -292,7 +292,7 @@ llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
 
 // -----
 
-#di_file = #llvm.di_file<"metadata-loop.ll" in "/">
+#di_file = #llvm.di_file<"loop-metadata.mlir" in "/">
 
 #loc1 = loc("loop-metadata.mlir":42:4)
 #loc2 = loc("loop-metadata.mlir":52:4)

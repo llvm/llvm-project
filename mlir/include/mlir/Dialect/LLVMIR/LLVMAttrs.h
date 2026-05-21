@@ -109,4 +109,14 @@ bool isValidLoadStoreImpl(Type type, ptr::AtomicOrdering ordering,
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.h.inc"
 
+namespace mlir {
+namespace LLVM {
+
+/// Walk the `getScope()` chain from `scope` and return the first reachable
+/// `DIFileAttr`. Returns null when no scope in the chain carries a file.
+DIFileAttr findFileInScope(DIScopeAttr scope);
+
+} // namespace LLVM
+} // namespace mlir
+
 #endif // MLIR_DIALECT_LLVMIR_LLVMATTRS_H_

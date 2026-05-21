@@ -683,6 +683,15 @@ def LLVM_DILocationAttr : LocationAttrDef<LLVM_Dialect, "DILocation"> {
 
     Note: Older code represents this with a FusedLoc carrying the debug
     scope as its metadata and a convention on how to interpret it.
+
+    Verifier: when the scope chain reaches a `DIFileAttr`, the source
+    filename in `sourceLoc` must equal either the scope's `DIFile.name` or
+    the directory-joined `<DIFile.directory>/<DIFile.name>` rendering. The
+    check is a no-op when the scope chain has no reachable `DIFileAttr`,
+    when the scope file name is empty, or when the source filename is the
+    `-` sentinel (MLIR's placeholder for an empty filename — see
+    `BuiltinLocationAttributes.td`'s `FileLineColRange::get(StringRef, ...)`
+    builder, which substitutes `-` for `""`).
   }];
   let mnemonic = "di_location";
 
@@ -699,6 +708,8 @@ def LLVM_DILocationAttr : LocationAttrDef<LLVM_Dialect, "DILocation"> {
       return $_get(sourceLoc.getContext(), sourceLoc, scope);
     }]>,
   ];
+
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -83,7 +83,7 @@ llvm.func @loop_annotation() {
 
 // -----
 
-#di_file = #llvm.di_file<"metadata-loop.ll" in "/">
+#di_file = #llvm.di_file<"loop-metadata.mlir" in "/">
 
 // CHECK-DAG: #[[START_LOC:.*]] = loc("loop-metadata.mlir":42:4)
 #loc1 = loc("loop-metadata.mlir":42:4)
