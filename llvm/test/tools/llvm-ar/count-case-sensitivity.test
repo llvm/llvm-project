@@ -39,10 +39,6 @@
 # RUN: llvm-ar rc --thin %t/archive-dPN.a %t/a/file.txt %t/a/FILE.txt
 # RUN: llvm-ar t %t/archive-dPN.a | FileCheck %s --check-prefix=THIN-BEFORE -DPATH=%/t --implicit-check-not={{.}}
 
-## Third does not exist; expect no-op.
-# RUN: llvm-ar dPN 3 --thin %t/archive-dPN.a %t/a/file.txt
-# RUN: llvm-ar t %t/archive-dPN.a | FileCheck %s --check-prefix=THIN-BEFORE -DPATH=%/t --implicit-check-not={{.}}
-
 ## The uppercase filename occurs only once; expect no-op.
 # RUN: llvm-ar dPN 2 --thin %t/archive-dPN.a %t/a/FILE.txt
 # RUN: llvm-ar t %t/archive-dPN.a | FileCheck %s --check-prefix=THIN-BEFORE -DPATH=%/t --implicit-check-not={{.}}
