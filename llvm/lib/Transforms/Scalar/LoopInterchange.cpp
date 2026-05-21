@@ -1598,54 +1598,82 @@ const DenseMap<const Loop *, unsigned> &CacheCostManager::getCostMap() {
   return CostMap;
 }
 
+/// If \S contains an affine addrec for \p L, return the step recurrence of it.
+/// If \S is loop invariant with respect to \p L, return nullptr. Otherwise,
+/// return std::nullopt, which indicates we cannot determine the coefficient of
+/// the addrec for \p L in \S.
+/// TODO: Handle more complex cases. Maybe using SCEVTraversal is a good way to
+/// do that.
+std::optional<const SCEV *> getAddRecCoefficient(ScalarEvolution &SE,
+                                                 const SCEV *S, const Loop *L) {
+  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S);
+  if (!AR) {
+    if (SE.isLoopInvariant(S, L))
+      return nullptr;
+    return std::nullopt;
+  }
+
+  if (!AR->isAffine()) {
+    LLVM_DEBUG(dbgs() << "Unexpected non-affine addrec\n");
+    return std::nullopt;
+  }
+
+  std::optional<const SCEV *> Coeff =
+      getAddRecCoefficient(SE, AR->getStart(), L);
+  if (!Coeff.has_value())
+    return std::nullopt;
+
+  if (AR->getLoop() == L) {
+    assert(!*Coeff && "Found more than one addrec for the same loop");
+    Coeff = AR->getStepRecurrence(SE);
+  }
+  return Coeff;
+}
+
 int LoopInterchangeProfitability::getInstrOrderCost() {
   unsigned GoodOrder, BadOrder;
   BadOrder = GoodOrder = 0;
   for (BasicBlock *BB : InnerLoop->blocks()) {
     for (Instruction &Ins : *BB) {
-      if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&Ins)) {
-        bool FoundInnerInduction = false;
-        bool FoundOuterInduction = false;
-        for (Value *Op : GEP->operands()) {
-          // Skip operands that are not SCEV-able.
-          if (!SE->isSCEVable(Op->getType()))
-            continue;
+      if (!isa<LoadInst, StoreInst>(&Ins))
+        continue;
+      const SCEV *Ptr = SE->getSCEV(getLoadStorePointerOperand(&Ins));
+      std::optional<const SCEV *> OuterCoeff =
+          getAddRecCoefficient(*SE, Ptr, OuterLoop);
+      std::optional<const SCEV *> InnerCoeff =
+          getAddRecCoefficient(*SE, Ptr, InnerLoop);
 
-          const SCEV *OperandVal = SE->getSCEV(Op);
-          const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(OperandVal);
-          if (!AR)
-            continue;
+      if (!OuterCoeff.has_value() || !*OuterCoeff || !InnerCoeff.has_value() ||
+          !*InnerCoeff)
+        continue;
 
-          // If we find the inner induction after an outer induction e.g.
-          // for(int i=0;i<N;i++)
-          //   for(int j=0;j<N;j++)
-          //     A[i][j] = A[i-1][j-1]+k;
-          // then it is a good order.
-          if (AR->getLoop() == InnerLoop) {
-            // We found an InnerLoop induction after OuterLoop induction. It is
-            // a good order.
-            FoundInnerInduction = true;
-            if (FoundOuterInduction) {
-              GoodOrder++;
-              break;
-            }
-          }
-          // If we find the outer induction after an inner induction e.g.
-          // for(int i=0;i<N;i++)
-          //   for(int j=0;j<N;j++)
-          //     A[j][i] = A[j-1][i-1]+k;
-          // then it is a bad order.
-          if (AR->getLoop() == OuterLoop) {
-            // We found an OuterLoop induction after InnerLoop induction. It is
-            // a bad order.
-            FoundOuterInduction = true;
-            if (FoundInnerInduction) {
-              BadOrder++;
-              break;
-            }
-          }
-        }
-      }
+      // This heuristic assumes that a smaller step recurrence implies that the
+      // induction variable corresponding to the loop is used in the inner
+      // dimension of the array. Placing such a loop in the inner position would
+      // be beneficial in terms of locality. If the array access is of the form
+      // like `A[3*i + 2*j]`, this heuristic may lead to an unprofitable
+      // interchange, but we expect such cases to be rare.
+      const SCEV *OuterStep = SE->getAbsExpr(*OuterCoeff, /*IsNSW=*/false);
+      const SCEV *InnerStep = SE->getAbsExpr(*InnerCoeff, /*IsNSW=*/false);
+      // If we find the inner induction after an outer induction e.g.
+      //
+      //   for(int i=0;i<N;i++)
+      //     for(int j=0;j<N;j++)
+      //       A[i][j] = A[i-1][j-1]+k;
+      //
+      //
+      // then it is a good order. If we find the outer induction after an inner
+      // induction e.g.
+      //
+      //   for(int i=0;i<N;i++)
+      //     for(int j=0;j<N;j++)
+      //       A[j][i] = A[j-1][i-1]+k;
+      //
+      // then it is a bad order.
+      if (SE->isKnownPredicate(ICmpInst::ICMP_SLT, InnerStep, OuterStep))
+        GoodOrder++;
+      else if (SE->isKnownPredicate(ICmpInst::ICMP_SLT, OuterStep, InnerStep))
+        BadOrder++;
     }
   }
   return GoodOrder - BadOrder;
@@ -1977,75 +2005,72 @@ bool LoopInterchangeTransform::transform(
   if (InnerReductions.size() == 1)
     reduction2Memory();
 
-  if (InnerLoop->getSubLoops().empty()) {
-    LLVM_DEBUG(dbgs() << "Splitting the inner loop latch\n");
-    auto &InductionPHIs = LIL.getInnerLoopInductions();
-    if (InductionPHIs.empty()) {
-      LLVM_DEBUG(dbgs() << "Failed to find the point to split loop latch \n");
-      return false;
-    }
-
-    SmallVector<Instruction *, 8> InnerIndexVarList;
-    for (PHINode *CurInductionPHI : InductionPHIs) {
-      Instruction *IncomingValue = dyn_cast<Instruction>(
-          CurInductionPHI->getIncomingValueForBlock(InnerLoop->getLoopLatch()));
-      assert(IncomingValue &&
-             "Incoming value from loop latch doesn't an instruction");
-      if (is_contained(InductionPHIs, IncomingValue))
-        continue;
-      InnerIndexVarList.push_back(IncomingValue);
-    }
-
-    // Create a new latch block for the inner loop. We split at the
-    // current latch's terminator and then move the condition and all
-    // operands that are not either loop-invariant or the induction PHI into the
-    // new latch block.
-    BasicBlock *NewLatch =
-        SplitBlock(InnerLoop->getLoopLatch(),
-                   InnerLoop->getLoopLatch()->getTerminator(), DT, LI);
-
-    SmallSetVector<Instruction *, 4> WorkList;
-    unsigned i = 0;
-    auto MoveInstructions = [&i, &WorkList, this, &InductionPHIs, NewLatch]() {
-      for (; i < WorkList.size(); i++) {
-        // Duplicate instruction and move it the new latch. Update uses that
-        // have been moved.
-        Instruction *NewI = WorkList[i]->clone();
-        NewI->insertBefore(NewLatch->getFirstNonPHIIt());
-        assert(!NewI->mayHaveSideEffects() &&
-               "Moving instructions with side-effects may change behavior of "
-               "the loop nest!");
-        for (Use &U : llvm::make_early_inc_range(WorkList[i]->uses())) {
-          Instruction *UserI = cast<Instruction>(U.getUser());
-          if (!InnerLoop->contains(UserI->getParent()) ||
-              UserI->getParent() == NewLatch ||
-              llvm::is_contained(InductionPHIs, UserI))
-            U.set(NewI);
-        }
-        // Add operands of moved instruction to the worklist, except if they are
-        // outside the inner loop or are the induction PHI.
-        for (Value *Op : WorkList[i]->operands()) {
-          Instruction *OpI = dyn_cast<Instruction>(Op);
-          if (!OpI ||
-              this->LI->getLoopFor(OpI->getParent()) != this->InnerLoop ||
-              llvm::is_contained(InductionPHIs, OpI))
-            continue;
-          WorkList.insert(OpI);
-        }
-      }
-    };
-
-    // FIXME: Should we interchange when we have a constant condition?
-    Instruction *CondI = dyn_cast<Instruction>(
-        cast<CondBrInst>(InnerLoop->getLoopLatch()->getTerminator())
-            ->getCondition());
-    if (CondI)
-      WorkList.insert(CondI);
-    MoveInstructions();
-    for (Instruction *InnerIndexVar : InnerIndexVarList)
-      WorkList.insert(cast<Instruction>(InnerIndexVar));
-    MoveInstructions();
+  LLVM_DEBUG(dbgs() << "Splitting the inner loop latch\n");
+  auto &InductionPHIs = LIL.getInnerLoopInductions();
+  if (InductionPHIs.empty()) {
+    LLVM_DEBUG(dbgs() << "Failed to find the point to split loop latch \n");
+    return false;
   }
+
+  SmallVector<Instruction *, 8> InnerIndexVarList;
+  for (PHINode *CurInductionPHI : InductionPHIs) {
+    Instruction *IncomingValue = dyn_cast<Instruction>(
+        CurInductionPHI->getIncomingValueForBlock(InnerLoop->getLoopLatch()));
+    assert(IncomingValue &&
+           "Incoming value from loop latch isn't an instruction");
+    if (is_contained(InductionPHIs, IncomingValue))
+      continue;
+    InnerIndexVarList.push_back(IncomingValue);
+  }
+
+  // Create a new latch block for the inner loop. We split at the
+  // current latch's terminator and then move the condition and all
+  // operands that are not either loop-invariant or the induction PHI into the
+  // new latch block.
+  BasicBlock *NewLatch =
+      SplitBlock(InnerLoop->getLoopLatch(),
+                 InnerLoop->getLoopLatch()->getTerminator(), DT, LI);
+
+  SmallSetVector<Instruction *, 4> WorkList;
+  unsigned i = 0;
+  auto MoveInstructions = [&i, &WorkList, this, &InductionPHIs, NewLatch]() {
+    for (; i < WorkList.size(); i++) {
+      // Duplicate instruction and move it to the new latch. Update uses that
+      // have been moved.
+      Instruction *NewI = WorkList[i]->clone();
+      NewI->insertBefore(NewLatch->getFirstNonPHIIt());
+      assert(!NewI->mayHaveSideEffects() &&
+             "Moving instructions with side-effects may change behavior of "
+             "the loop nest!");
+      for (Use &U : llvm::make_early_inc_range(WorkList[i]->uses())) {
+        Instruction *UserI = cast<Instruction>(U.getUser());
+        if (!InnerLoop->contains(UserI->getParent()) ||
+            UserI->getParent() == NewLatch ||
+            llvm::is_contained(InductionPHIs, UserI))
+          U.set(NewI);
+      }
+      // Add operands of moved instruction to the worklist, except if they are
+      // outside the inner loop or are the induction PHI.
+      for (Value *Op : WorkList[i]->operands()) {
+        Instruction *OpI = dyn_cast<Instruction>(Op);
+        if (!OpI || this->LI->getLoopFor(OpI->getParent()) != this->InnerLoop ||
+            llvm::is_contained(InductionPHIs, OpI))
+          continue;
+        WorkList.insert(OpI);
+      }
+    }
+  };
+
+  // FIXME: Should we interchange when we have a constant condition?
+  Instruction *CondI = dyn_cast<Instruction>(
+      cast<CondBrInst>(InnerLoop->getLoopLatch()->getTerminator())
+          ->getCondition());
+  if (CondI)
+    WorkList.insert(CondI);
+  MoveInstructions();
+  for (Instruction *InnerIndexVar : InnerIndexVarList)
+    WorkList.insert(cast<Instruction>(InnerIndexVar));
+  MoveInstructions();
 
   // Ensure the inner loop phi nodes have a separate basic block.
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
