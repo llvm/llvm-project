@@ -575,6 +575,7 @@ add_header(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL
   HDR
     EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL.h
   DEPENDS
+    libc.include.llvm-libc-macros.EFIAPI_macros
     libc.include.llvm-libc-macros.stdint_macros
     .EFI_STATUS
     .size_t

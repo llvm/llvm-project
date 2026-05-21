@@ -351,6 +351,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.termios.tcsetattr
 
     # unistd.h entrypoints
+    libc.src.unistd.alarm
     libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.close
@@ -1158,6 +1159,7 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # signal.h entrypoints
     libc.src.signal.kill
+    libc.src.signal.pthread_sigmask
     libc.src.signal.raise
     libc.src.signal.sigaction
     libc.src.signal.sigaddset

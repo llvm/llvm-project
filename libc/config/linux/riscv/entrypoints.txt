@@ -354,6 +354,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.termios.tcsetattr
 
     # unistd.h entrypoints
+    libc.src.unistd.alarm
     libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.chown
