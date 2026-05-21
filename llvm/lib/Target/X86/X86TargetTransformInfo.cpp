@@ -6720,6 +6720,18 @@ bool X86TTIImpl::enableInterleavedAccessVectorization() const {
   return !(ST->isAtom());
 }
 
+bool X86TTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
+  switch (II->getIntrinsicID()) {
+  default:
+    return true;
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_umin:
+    return false;
+  }
+}
+
 // Get estimation for interleaved load/store operations and strided load.
 // \p Indices contains indices for strided load.
 // \p Factor - the factor of interleaving.

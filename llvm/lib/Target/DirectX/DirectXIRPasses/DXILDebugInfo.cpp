@@ -50,6 +50,33 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
   }
 
   for (const DISubprogram *SP : DIF.subprograms()) {
+    const DISubprogram *NewSP = SP;
+
+    static constexpr auto SupportedDIFlags =
+        static_cast<DISubprogram::DIFlags>(DISubprogram::FlagExportSymbols - 1);
+    static constexpr auto SupportedDISPFlags =
+        static_cast<DISubprogram::DISPFlags>(DISubprogram::SPFlagPure - 1);
+    if (SP->isDistinct() || SP->getFlags() & ~SupportedDIFlags ||
+        SP->getSPFlags() & ~SupportedDISPFlags) {
+      NewSP = DISubprogram::get(
+          M.getContext(), SP->getScope(), SP->getName(), SP->getLinkageName(),
+          SP->getFile(), SP->getLine(), SP->getType(), SP->getScopeLine(),
+          SP->getContainingType(), SP->getVirtualIndex(),
+          SP->getThisAdjustment(), SP->getFlags() & SupportedDIFlags,
+          SP->getSPFlags() & SupportedDISPFlags, SP->getUnit(),
+          SP->getTemplateParams(), SP->getDeclaration(), SP->getRetainedNodes(),
+          SP->getThrownTypes(), SP->getAnnotations(), SP->getTargetFuncName(),
+          SP->getKeyInstructionsEnabled());
+
+      Res.MDReplace.insert({SP, NewSP});
+
+      if (auto It = Res.MDExtra.find(SP); It != Res.MDExtra.end()) {
+        const Metadata *FunctionMD = It->second;
+        Res.MDExtra.erase(It);
+        Res.MDExtra.insert({NewSP, FunctionMD});
+      }
+    }
+
     if (SP->getUnit())
       CUSubprograms.push_back(
           {SP->getUnit(), static_cast<const Metadata *>(SP)});
