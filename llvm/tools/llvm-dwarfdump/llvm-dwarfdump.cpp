@@ -23,6 +23,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
@@ -198,6 +199,11 @@ static opt<bool> DumpNonSkeleton(
          "skeleton DIE from the main executable. This allows dumping the .dwo "
          "files with resolved addresses."),
     value_desc("d"), cat(DwarfDumpCategory));
+static opt<bool> NoDebugMap(
+    "no-debug-map",
+    desc("Do not follow Mach-O debug map (N_OSO) references to dump DWARF "
+         "from referenced object files."),
+    cat(DwarfDumpCategory));
 
 static alias IgnoreCaseAlias("i", desc("Alias for --ignore-case."),
                              aliasopt(IgnoreCase), cl::NotHidden);
@@ -791,6 +797,50 @@ static bool verifyObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
 static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
                          HandlerFn HandleObj, raw_ostream &OS);
 
+/// Extract unique N_OSO object file paths from a Mach-O binary's symbol table.
+static SmallVector<std::string> collectOSOPaths(const MachOObjectFile &MachO) {
+  StringSet<> Seen;
+  SmallVector<std::string> Paths;
+
+  for (const SymbolRef &Sym : MachO.symbols()) {
+    DataRefImpl DRI = Sym.getRawDataRefImpl();
+    uint8_t NType = MachO.is64Bit() ? MachO.getSymbol64TableEntry(DRI).n_type
+                                    : MachO.getSymbolTableEntry(DRI).n_type;
+    if (NType != MachO::N_OSO)
+      continue;
+
+    Expected<StringRef> NameOrErr = Sym.getName();
+    if (!NameOrErr) {
+      WithColor::warning() << "N_OSO symbol has no name: "
+                           << toString(NameOrErr.takeError()) << "\n";
+      continue;
+    }
+
+    if (!NameOrErr->empty() && Seen.insert(*NameOrErr).second)
+      Paths.push_back(NameOrErr->str());
+  }
+
+  return Paths;
+}
+
+static bool handleDebugMap(const MachOObjectFile &MachO, HandlerFn HandleObj,
+                           raw_ostream &OS) {
+  bool Result = true;
+  for (const std::string &OSOPath : collectOSOPaths(MachO)) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
+        MemoryBuffer::getFile(OSOPath);
+    if (!BuffOrErr) {
+      WithColor::warning() << "unable to open N_OSO referenced file '"
+                           << OSOPath << "': " << BuffOrErr.getError().message()
+                           << "\n";
+      continue;
+    }
+
+    Result &= handleBuffer(OSOPath, **BuffOrErr, HandleObj, OS);
+  }
+  return Result;
+}
+
 static bool handleArchive(StringRef Filename, Archive &Arch,
                           HandlerFn HandleObj, raw_ostream &OS) {
   bool Result = true;
@@ -827,6 +877,10 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
       DICtx->setParseCUTUIndexManually(ManuallyGenerateUnitIndex);
       if (!HandleObj(*Obj, *DICtx, Filename, OS))
         Result = false;
+
+      if (DICtx->getNumCompileUnits() == 0 && !NoDebugMap)
+        if (auto *MachO = dyn_cast<MachOObjectFile>(Obj))
+          Result = handleDebugMap(*MachO, HandleObj, OS);
     }
   } else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get()))
     for (auto &ObjForArch : Fat->objects()) {
