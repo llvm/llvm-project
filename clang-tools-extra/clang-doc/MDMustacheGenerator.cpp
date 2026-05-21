@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Contains the Markdown generator using Mustache template files.
+/// This file contains the implementation of the MDMustacheGenerator, which
+/// generates documentation in Markdown format using Mustache templates. It
+/// defines how the structured data in Info objects is mapped to template
+/// tags to produce readable markdown documents.
 ///
 //===----------------------------------------------------------------------===//
 

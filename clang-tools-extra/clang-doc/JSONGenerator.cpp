@@ -1,3 +1,19 @@
+//===-- JSONGenerator.cpp - JSON Generator ----------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the implementation of the JSONGenerator, which serializes
+/// the clang-doc internal representation (Info structures) into JSON format.
+/// It handles the mapping of C++ constructs like namespaces, records,
+/// functions, and enums to their JSON equivalents, enabling downstream tools
+/// to consume the structured documentation data.
+///
+//===----------------------------------------------------------------------===//
 #include "Generators.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
