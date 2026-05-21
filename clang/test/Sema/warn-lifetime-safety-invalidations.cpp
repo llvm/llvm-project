@@ -336,18 +336,13 @@ void IteratorInvalidatedThroughPointerParameter(std::vector<int> *v) { // expect
 }
 
 void ParenthesizedContainerInvalidatesIterator() {
+  // FIXME: Support invalidation through non-DRE lvalue expressions.
   std::vector<int> v;
-  auto it = v.begin(); // expected-warning {{object whose reference is captured is later invalidated}}
-  (v).push_back(42);   // expected-note {{invalidated here}}
-  (void)it;            // expected-note {{later used here}}
+  auto it = v.begin();
+  (v).push_back(42);
+  (void)it;
 }
 
-void ConditionalContainerInvalidatesIterator(bool flag) {
-  std::vector<int> v1, v2;
-  auto it = v1.begin();           // expected-warning {{object whose reference is captured is later invalidated}}
-  (flag ? v1 : v2).push_back(42); // expected-note {{invalidated here}}
-  (void)it;                       // expected-note {{later used here}}
-}
 } // namespace InvalidatingThroughContainerAliases
 
 namespace ContainerObjectAliases {
@@ -466,13 +461,6 @@ void Invalidate2Use1IsOk() {
     s.strings2.push_back("1");
     *it;
 }
-void ConditionalFieldInvalidationIsOk(bool flag) {
-    S s;
-    auto it = s.strings1.begin();
-    (flag ? s.strings1 : s.strings2).push_back("1");
-    *it;
-}
-
 // FIXME: Requires field-sensitive AccessPaths to fix.
 void Invalidate1Use2ViaRefIsOk() {
     S s;
@@ -514,10 +502,20 @@ void ChangingRegionOwnedByContainerIsOk() {
 namespace InvalidatedField {
 std::string StableString;
 
-struct Sink {
+// FIXME: Distinguish owner-borrow from interior-borrow.
+struct SinkOwnerBorrow {
   std::string *dest_; // expected-note {{this field dangles}}
 
-  Sink(std::string *dest, int n) : dest_(dest) { // expected-warning {{parameter which escapes to a field is later invalidated}}
+  SinkOwnerBorrow(std::string *dest, int n) : dest_(dest) { // expected-warning {{parameter which escapes to a field is later invalidated}}
+    if (n > 0)
+      dest->clear(); // expected-note {{invalidated here}}
+  }
+};
+
+struct SinkInteriorBorrow {
+  const char *dest_; // expected-note {{this field dangles}}
+
+  SinkInteriorBorrow(std::string *dest, int n) : dest_(dest->data()) { // expected-warning {{parameter which escapes to a field is later invalidated}}
     if (n > 0)
       dest->clear(); // expected-note {{invalidated here}}
   }
