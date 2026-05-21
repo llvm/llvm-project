@@ -28,6 +28,7 @@ add_entrypoint_library(
     libc.src.unistd.__llvm_libc_syscall
     libc.src.unistd.close
     libc.src.unistd.read
+    libc.src.unistd.sysconf
     libc.src.unistd.write
 )
 

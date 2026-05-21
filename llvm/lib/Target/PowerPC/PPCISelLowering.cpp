@@ -490,7 +490,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   } else {
     setOperationAction(ISD::BSWAP, MVT::i32, Expand);
     setOperationAction(ISD::BSWAP, MVT::i64,
-                       (Subtarget.hasP9Vector() && isPPC64) ? Custom : Expand);
+                       ((Subtarget.hasP8Vector()) && isPPC64) ? Custom
+                                                              : Expand);
   }
 
   // CTPOP or CTTZ were introduced in P8/P9 respectively
@@ -556,8 +557,16 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::UINT_TO_FP, MVT::i32, Legal);
 
     // SPE supports signaling compare of f32/f64.
-    setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Legal);
+    // But it doesn't comply IEEE-754 rules for comparing
+    // special values like NaNs, Infs.
+    setOperationAction(ISD::SETCC, MVT::f32, Custom);
+    setOperationAction(ISD::SETCC, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_FSETCC, MVT::f64, Custom);
+    setOperationAction(ISD::BR_CC, MVT::f32, Custom);
+    setOperationAction(ISD::BR_CC, MVT::f64, Custom);
   } else {
     // PowerPC turns FP_TO_SINT into FCTIWZ and some load/stores.
     setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i32, Custom);
@@ -3589,6 +3598,7 @@ SDValue PPCTargetLowering::LowerGlobalAddress(SDValue Op,
 
 SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
+  const SDNodeFlags Flags = Op.getNode()->getFlags();
   ISD::CondCode CC =
       cast<CondCodeSDNode>(Op.getOperand(IsStrict ? 3 : 2))->get();
   SDValue LHS = Op.getOperand(IsStrict ? 1 : 0);
@@ -3597,8 +3607,10 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   EVT LHSVT = LHS.getValueType();
   SDLoc dl(Op);
 
-  // Soften the setcc with libcall if it is fp128.
-  if (LHSVT == MVT::f128) {
+  // Soften the setcc with libcall if it is fp128 or it is SPE and fp32/fp64.
+  if (LHSVT == MVT::f128 ||
+      (Subtarget.hasSPE() && (LHSVT == MVT::f32 || LHSVT == MVT::f64) &&
+       (!Flags.hasNoNaNs() || !Flags.hasNoInfs()))) {
     assert(!Subtarget.hasP9Vector() &&
            "SETCC for f128 is already legal under Power9!");
     softenSetCCOperands(DAG, LHSVT, LHS, RHS, CC, dl, LHS, RHS, Chain,
@@ -3609,6 +3621,8 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     if (IsStrict)
       return DAG.getMergeValues({LHS, Chain}, dl);
     return LHS;
+  } else if (LHSVT == MVT::f32 || LHSVT == MVT::f64) {
+    return Op;
   }
 
   assert(!IsStrict && "Don't know how to handle STRICT_FSETCC!");
@@ -3661,6 +3675,35 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getSetCC(dl, VT, Sub, DAG.getConstant(0, dl, LHSVT), CC);
   }
   return SDValue();
+}
+
+SDValue PPCTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
+  const SDNodeFlags Flags = Op->getFlags();
+  SDValue Chain = Op.getOperand(0);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  SDValue LHS = Op.getOperand(2);
+  SDValue RHS = Op.getOperand(3);
+  SDValue Dest = Op.getOperand(4);
+  EVT LHSVT = LHS.getValueType();
+  SDLoc dl(Op);
+
+  assert(Subtarget.hasSPE() && "LowerBR_CC used only for targets with SPE");
+
+  if ((LHSVT == MVT::f32 || LHSVT == MVT::f64) && Flags.hasNoNaNs() &&
+      Flags.hasNoInfs())
+    return Op;
+
+  softenSetCCOperands(DAG, LHSVT, LHS, RHS, CC, dl, LHS, RHS);
+
+  // If softenSetCCOperands returned a scalar, we need to compare the result
+  // against zero to select between true and false values.
+  if (!RHS) {
+    RHS = DAG.getConstant(0, dl, LHSVT);
+    CC = ISD::SETNE;
+  }
+
+  return DAG.getNode(ISD::BR_CC, dl, Op.getValueType(), Chain,
+                     DAG.getCondCode(CC), LHS, RHS, Dest);
 }
 
 SDValue PPCTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
@@ -11605,16 +11648,6 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getStore(Op.getOperand(0), DL, Op.getOperand(ArgStart + 2),
                         Op.getOperand(ArgStart + 1), MachinePointerInfo());
   }
-  case Intrinsic::ppc_amo_stwat:
-  case Intrinsic::ppc_amo_stdat: {
-    SDLoc dl(Op);
-    SDValue Chain = Op.getOperand(0);
-    SDValue Ptr = Op.getOperand(ArgStart + 1);
-    SDValue Val = Op.getOperand(ArgStart + 2);
-    SDValue FC = Op.getOperand(ArgStart + 3);
-
-    return DAG.getNode(PPCISD::STAT, dl, MVT::Other, Chain, Val, Ptr, FC);
-  }
   default:
     break;
   }
@@ -11626,18 +11659,60 @@ SDValue PPCTargetLowering::LowerBSWAP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
   if (!Subtarget.isPPC64())
     return Op;
-  // MTVSRDD
-  Op = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v2i64, Op.getOperand(0),
-                   Op.getOperand(0));
-  // XXBRD
-  Op = DAG.getNode(ISD::BSWAP, dl, MVT::v2i64, Op);
-  // MFVSRD
-  int VectorIndex = 0;
-  if (Subtarget.isLittleEndian())
-    VectorIndex = 1;
-  Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Op,
-                   DAG.getTargetConstant(VectorIndex, dl, MVT::i32));
-  return Op;
+
+  if (Subtarget.hasP9Vector()) {
+    // MTVSRDD
+    Op = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v2i64, Op.getOperand(0),
+                     Op.getOperand(0));
+    // XXBRD
+    Op = DAG.getNode(ISD::BSWAP, dl, MVT::v2i64, Op);
+    // MFVSRD
+    int VectorIndex = 0;
+    if (Subtarget.isLittleEndian())
+      VectorIndex = 1;
+    Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Op,
+                     DAG.getTargetConstant(VectorIndex, dl, MVT::i32));
+    return Op;
+  }
+
+  // For Power8, use parallel rotate instructions for faster bswap64.
+  SDValue Input = Op.getOperand(0);
+  // Helper to create rotate-and-insert operations (RLWIMI/RLDIMI).
+  auto CreateRotateInsert =
+      [&](unsigned Opcode, MVT VT, SDValue Dest, SDValue Src, unsigned RotAmt,
+          unsigned MaskBegin,
+          std::optional<unsigned> MaskEnd = std::nullopt) -> SDValue {
+    SmallVector<SDValue, 5> Ops = {
+        Dest, Src, DAG.getTargetConstant(RotAmt, dl, MVT::i32),
+        DAG.getTargetConstant(MaskBegin, dl, MVT::i32)};
+    if (MaskEnd.has_value())
+      Ops.push_back(DAG.getTargetConstant(*MaskEnd, dl, MVT::i32));
+
+    return SDValue(DAG.getMachineNode(Opcode, dl, VT, Ops), 0);
+  };
+
+  // Helper to perform 32-bit byte swap using rotl(8) + 2x rlwimi.
+  auto Swap32 = [&](SDValue Val32) -> SDValue {
+    SDValue Rot = DAG.getNode(ISD::ROTL, dl, MVT::i32, Val32,
+                              DAG.getConstant(8, dl, MVT::i32));
+    // Insert bits [24:31] from Val32 into Rot at position [0:7].
+    SDValue Swap =
+        CreateRotateInsert(PPC::RLWIMI, MVT::i32, Rot, Val32, 24, 0, 7);
+    // Insert bits [16:23] from Val32 into Swap at position [16:23].
+    return CreateRotateInsert(PPC::RLWIMI, MVT::i32, Swap, Val32, 24, 16, 23);
+  };
+  // Extract and swap high and low 32-bit halves independently for parallelism.
+  SDValue Hi32 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32,
+                             DAG.getNode(ISD::SRL, dl, MVT::i64, Input,
+                                         DAG.getConstant(32, dl, MVT::i64)));
+  SDValue Lo32 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Input);
+
+  // Combine swapped halves: rotate LoSwap left by 32 bits and insert into
+  // HiSwap to swap their positions, completing the 64-bit byte reversal.
+  SDValue HiSwap = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Swap32(Hi32));
+  SDValue LoSwap = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Swap32(Lo32));
+
+  return CreateRotateInsert(PPC::RLDIMI, MVT::i64, HiSwap, LoSwap, 32, 0);
 }
 
 // ATOMIC_CMP_SWAP for i8/i16 needs to zero-extend its input since it will be
@@ -12729,6 +12804,7 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
   case ISD::SETCC:              return LowerSETCC(Op, DAG);
+  case ISD::BR_CC:              return LowerBR_CC(Op, DAG);
   case ISD::INIT_TRAMPOLINE:    return LowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::ADJUST_TRAMPOLINE:  return LowerADJUST_TRAMPOLINE(Op, DAG);
   case ISD::SSUBO:
@@ -15759,17 +15835,27 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
 }
 
 // The function check a i128 load can convert to 16i8 load for Vcmpequb.
-static bool canConvertToVcmpequb(SDValue &LHS, SDValue &RHS) {
+static bool canConvertToVcmpequb(SDValue &LHS, SDValue &RHS, bool IsPPC64) {
 
-  auto isValidForConvert = [](SDValue &Operand) {
+  auto isValidForConvert = [IsPPC64](SDValue &Operand) {
     if (!Operand.hasOneUse())
       return false;
 
     if (Operand.getValueType() != MVT::i128)
       return false;
 
-    if (Operand.getOpcode() == ISD::Constant)
+    if (Operand.getOpcode() == ISD::Constant) {
+      auto *C = cast<ConstantSDNode>(Operand);
+      const APInt &Val = C->getAPIntValue();
+      // On PPC64, comparing an i128 value loaded from memory against a
+      // constant smaller than 2^16 is usually better left to scalar lowering.
+      // In that case, the compare can be lowered using xori (since xori has a
+      // 16-bit immediate field), which is cheaper than materializing a vector
+      // constant and using vcmpequb.
+      if (IsPPC64 && Val.ult(1ULL << 16))
+        return false;
       return true;
+    }
 
     auto *LoadNode = dyn_cast<LoadSDNode>(Operand);
     if (!LoadNode)
@@ -15820,10 +15906,19 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
     assert(Operand.getOpcode() == ISD::LOAD && "Must be LoadSDNode here.");
 
     auto *LoadNode = cast<LoadSDNode>(Operand);
-    SDValue NewLoad =
-        DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
-                    LoadNode->getBasePtr(), LoadNode->getMemOperand());
-    DAG.ReplaceAllUsesOfValueWith(Operand.getValue(1), NewLoad.getValue(1));
+    // Create a new MachineMemOperand without range metadata.
+    // Range metadata is only valid for integer scalar types, not vectors.
+    // The original i128 load may have range metadata, but when we convert
+    // to v16i8, that metadata is no longer semantically valid.
+    MachineMemOperand *MMO = LoadNode->getMemOperand();
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachineMemOperand *NewMMO = MF.getMachineMemOperand(
+        MMO->getPointerInfo(), MMO->getFlags(), MMO->getSize(), MMO->getAlign(),
+        MMO->getAAInfo(), nullptr, MMO->getSyncScopeID(),
+        MMO->getSuccessOrdering(), MMO->getFailureOrdering());
+    SDValue NewLoad = DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
+                                  LoadNode->getBasePtr(), NewMMO);
+    DAG.ReplaceAllUsesOfValueWith(SDValue(LoadNode, 1), NewLoad.getValue(1));
     return NewLoad;
   };
 
@@ -16052,7 +16147,8 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
     //   This transformation replaces memcmp(a, b, 16) with two vector loads
     //   and one vector compare instruction.
 
-    if (Subtarget.hasAltivec() && canConvertToVcmpequb(LHS, RHS))
+    if (Subtarget.hasAltivec() &&
+        canConvertToVcmpequb(LHS, RHS, Subtarget.isPPC64()))
       return convertTwoLoadsAndCmpToVCMPEQUB(DCI.DAG, N, SDLoc(N));
   }
 

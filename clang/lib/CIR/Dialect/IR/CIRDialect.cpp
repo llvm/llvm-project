@@ -3183,7 +3183,11 @@ LogicalResult cir::GetMethodOp::verify() {
            << "the first parameter of callee must be a void pointer";
   }
 
-  if (calleeArgsTy.slice(1) != methodFuncArgsTy)
+  if (calleeArgsTy.size() != methodFuncArgsTy.size())
+    return emitError() << "callee and method parameter counts do not match";
+
+  if (calleeArgsTy.size() > 1 &&
+      calleeArgsTy.slice(1) != methodFuncArgsTy.slice(1))
     return emitError()
            << "callee parameters and method parameters do not match";
 
@@ -4294,11 +4298,14 @@ cir::EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
 LogicalResult cir::ConstructCatchParamOp::verifySymbolUses(
     SymbolTableCollection &symbolTable) {
+  auto copyFnAttr = getCopyFnAttr();
+  if (!copyFnAttr)
+    return success();
   auto fn =
       symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(*this, getCopyFnAttr());
   if (!fn)
     return emitOpError("'")
-           << getCopyFn() << "' does not reference a valid cir.func";
+           << *getCopyFn() << "' does not reference a valid cir.func";
 
   if (!fn->hasAttr(cir::CIRDialect::getCatchCopyThunkAttrName()))
     return emitOpError("catch-init copy_fn must be tagged with the ")

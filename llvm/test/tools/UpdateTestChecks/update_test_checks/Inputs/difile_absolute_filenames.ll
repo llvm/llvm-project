@@ -1,28 +1,45 @@
 ; RUN: opt < %s -S | FileCheck %s
 
-source_filename = "/llvm-project/foo.c"
-
-define dso_local void @f() !dbg !10 {
+define void @f() !dbg !5 {
 entry:
-  ret void, !dbg !14
+  ret void
+}
+
+define void @non_absolute_filename_non_empty_directory() !dbg !8 {
+entry:
+  ret void
+}
+
+define void @absolute_filename_non_empty_directory() !dbg !10 {
+entry:
+  ret void
+}
+
+define void @non_absolute_filename_empty_directory() !dbg !12 {
+entry:
+  ret void
+}
+
+define void @absolute_filename_empty_directory() !dbg !14 {
+entry:
+  ret void
 }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!2, !3, !4, !5, !6, !7, !8}
-!llvm.ident = !{!9}
+!llvm.module.flags = !{!3, !4}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-!1 = !DIFile(filename: "/llvm-project/foo.c", directory: "/llvm-project")
-!2 = !{i32 7, !"Dwarf Version", i32 5}
-!3 = !{i32 2, !"Debug Info Version", i32 3}
-!4 = !{i32 1, !"wchar_size", i32 4}
-!5 = !{i32 8, !"PIC Level", i32 2}
-!6 = !{i32 7, !"PIE Level", i32 2}
-!7 = !{i32 7, !"uwtable", i32 2}
-!8 = !{i32 7, !"frame-pointer", i32 2}
-!9 = !{!"clang"}
-!10 = distinct !DISubprogram(name: "f", scope: !11, file: !11, line: 1, type: !12, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)
-!11 = !DIFile(filename: "foo.c", directory: "/llvm-project")
-!12 = !DISubroutineType(types: !13)
-!13 = !{null}
-!14 = !DILocation(line: 1, column: 11, scope: !10)
+!0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1)
+!1 = !DIFile(filename: "file", directory: "")
+!3 = !{i32 7, !"Dwarf Version", i32 5}
+!4 = !{i32 2, !"Debug Info Version", i32 3}
+!5 = distinct !DISubprogram(name: "f", scope: !1, file: !1, type: !6, unit: !0)
+!6 = !DISubroutineType(types: !7)
+!7 = !{null}
+!8 = distinct !DISubprogram(name: "non_absolute_filename_non_empty_directory", scope: !9, file: !9, type: !6, unit: !0)
+!9 = !DIFile(filename: "file.c", directory: "dir")
+!10 = distinct !DISubprogram(name: "absolute_filename_non_empty_directory", scope: !11, file: !11, type: !6, unit: !0)
+!11 = !DIFile(filename: "/abs/path/file.c", directory: "dir")
+!12 = distinct !DISubprogram(name: "non_absolute_filename_empty_directory", scope: !13, file: !13, type: !6, unit: !0)
+!13 = !DIFile(filename: "file.c", directory: "")
+!14 = distinct !DISubprogram(name: "absolute_filename_empty_directory", scope: !15, file: !15, type: !6, unit: !0)
+!15 = !DIFile(filename: "/abs/path/file.c", directory: "")

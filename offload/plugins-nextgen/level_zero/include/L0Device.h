@@ -218,6 +218,9 @@ class L0DeviceTy final : public GenericDeviceTy {
 
   bool IsAsyncEnabled = false;
 
+  /// Whether the device supports cooperative kernels.
+  bool SupportsCooperativeKernels = false;
+
   /// Lock for this device.
   std::mutex Mutex;
 
@@ -242,6 +245,9 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// Helper function to call global constructors or destructors.
   Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
                                  bool IsCtor);
+
+  /// Check if device supports cooperative kernels.
+  bool checkCooperativeKernelSupport();
 
 public:
   L0DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
@@ -275,6 +281,8 @@ public:
   Error initImpl(GenericPluginTy &Plugin) override;
   Error deinitImpl() override;
   ze_device_handle_t getZeDevice() const { return zeDevice; }
+
+  bool supportsCooperativeKernels() const { return SupportsCooperativeKernels; }
 
   const L0ContextTy &getL0Context() const { return l0Context; }
   L0ContextTy &getL0Context() { return l0Context; }
@@ -633,12 +641,14 @@ public:
     return true;
   }
 
-  Error createEventImpl(void **EventPtrStorage) override {
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
     return Plugin::success();
   }
-  Error destroyEventImpl(void *EventPtr) override { return Plugin::success(); }
-  Error recordEventImpl(void *EventPtr,
-                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
+    return Plugin::success();
+  }
+  Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
+                        bool EnableProfiling) override {
     return Plugin::success();
   }
 

@@ -52,7 +52,6 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
-#include "lldb/Target/Policy.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterTypeBuilder.h"
 #include "lldb/Target/SectionLoadList.h"
@@ -67,11 +66,13 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/ErrorExtras.h"
@@ -977,13 +978,11 @@ void Target::DescribeBreakpointOverrides(Stream &stream,
     return;
   }
 
-  auto begin = idxs.begin();
-  auto end = idxs.end();
   bool empty = idxs.empty();
   bool print_first = true;
   for (auto const &elem : m_breakpoint_overrides) {
-    auto idx_pos = empty ? end : std::find(begin, end, elem.first);
-    if (empty || idx_pos != end) {
+    auto idx_pos = llvm::find(idxs, elem.first);
+    if (empty || idx_pos != idxs.end()) {
       if (print_first) {
         // FIXME: Is there some good way to flow the description?
         stream << "ID    Description\n";
@@ -4303,8 +4302,9 @@ Status Target::StopHookScripted::SetScriptCallback(
   m_class_name = class_name;
   m_extra_args.SetObjectSP(extra_args_sp);
 
+  ScriptedMetadata scripted_metadata(m_class_name, {});
   auto obj_or_err = m_interface_sp->CreatePluginObject(
-      m_class_name, GetTarget(), m_extra_args);
+      scripted_metadata, GetTarget(), m_extra_args);
   if (!obj_or_err) {
     return Status::FromError(obj_or_err.takeError());
   }
@@ -4610,8 +4610,9 @@ Status Target::HookScripted::SetScriptCallback(
   m_class_name = std::move(class_name);
   m_extra_args.SetObjectSP(extra_args_sp);
 
+  ScriptedMetadata scripted_metadata(m_class_name, {});
   auto obj_or_err = m_interface_sp->CreatePluginObject(
-      m_class_name, GetTarget(), m_extra_args);
+      scripted_metadata, GetTarget(), m_extra_args);
   if (!obj_or_err)
     return Status::FromError(obj_or_err.takeError());
 

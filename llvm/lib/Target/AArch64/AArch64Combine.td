@@ -62,6 +62,7 @@ def push_mul_through_sext : push_opcode_through_ext<G_MUL, G_SEXT>;
 
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
+                                      combine_shuffle_vector,
                                       icmp_redundant_trunc,
                                       fold_global_offset,
                                       ext_addv_to_udot_addv,
@@ -76,7 +77,8 @@ def AArch64PreLegalizerCombiner: GICombiner<
 }
 
 def AArch64O0PreLegalizerCombiner: GICombiner<
-  "AArch64O0PreLegalizerCombinerImpl", [optnone_combines]> {
+  "AArch64O0PreLegalizerCombinerImpl", [optnone_combines,
+                                        combine_shuffle_vector]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -378,6 +380,7 @@ def AArch64PostLegalizerCombiner
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
                         select_to_minmax, or_to_bsp, combine_concat_vector,
+                        combine_build_vector_of_bitcast,
                         commute_constant_to_rhs, extract_vec_elt_combines,
                         push_freeze_to_prevent_poison_from_propagating,
                         combine_mul_cmlt, combine_use_vector_truncate,
