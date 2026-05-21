@@ -210,8 +210,7 @@ protected:
     BB = BasicBlock::Create(Ctx, "", F);
 
     DIBuilder DIB(*M);
-    auto File = DIB.createFile("test.dbg", "/src", std::nullopt,
-                               std::optional<StringRef>("/src/test.dbg"));
+    auto File = DIB.createFile("test.dbg", "/");
     auto CU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C),
                                     File, "llvm-C", true, "", 0);
     auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
@@ -625,7 +624,7 @@ TEST_F(OpenMPIRBuilderTest, DbgLoc) {
       dyn_cast<ConstantDataArray>(SrcStrGlob->getInitializer());
   if (!SrcSrc)
     return;
-  EXPECT_EQ(SrcSrc->getAsCString(), ";/src/test.dbg;foo;3;7;;");
+  EXPECT_EQ(SrcSrc->getAsCString(), ";test.dbg;foo;3;7;;");
 }
 
 TEST_F(OpenMPIRBuilderTest, ParallelSimpleGPU) {
@@ -8374,6 +8373,146 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysNonContigCountExpression) {
   // Verify SizesArray is constant, not runtime
   EXPECT_NE(dyn_cast<GlobalVariable>(RTArgs.SizesArray), nullptr);
   EXPECT_EQ(dyn_cast<AllocaInst>(RTArgs.SizesArray), nullptr);
+}
+
+TEST_F(OpenMPIRBuilderTest, ScopeDirective) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  // Track the basic block where the body was emitted so we can find the
+  // barrier that scope must insert after the body.
+  BasicBlock *BodyBB = nullptr;
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                       ArrayRef<BasicBlock *> DeallocBlocks) {
+    BodyBB = CodeGenIP.getBlock();
+    Builder.restoreIP(CodeGenIP);
+    // Emit a no-op store so the body block is non-empty.
+    Builder.CreateStore(Builder.getInt32(42),
+                        Builder.CreateAlloca(Builder.getInt32Ty()));
+  };
+
+  auto FiniCB = [&](InsertPointTy IP) {};
+
+  ASSERT_EXPECTED_INIT(InsertPointTy, AfterIP,
+                       OMPBuilder.createScope(Loc, BODYGENCB_WRAPPER(BodyGenCB),
+                                              FINICB_WRAPPER(FiniCB),
+                                              /*IsNowait=*/false));
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  // Scope with IsNowait=false must emit a __kmpc_barrier after the body.
+  bool FoundBarrier = false;
+  for (BasicBlock &Block : *F) {
+    for (Instruction &I : Block) {
+      auto *CI = dyn_cast<CallInst>(&I);
+      if (CI && CI->getCalledFunction() &&
+          CI->getCalledFunction()->getName() == "__kmpc_barrier") {
+        FoundBarrier = true;
+        break;
+      }
+    }
+  }
+  EXPECT_TRUE(FoundBarrier);
+}
+
+TEST_F(OpenMPIRBuilderTest, ScopeDirectiveNowait) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                       ArrayRef<BasicBlock *> DeallocBlocks) {
+    Builder.restoreIP(CodeGenIP);
+    Builder.CreateStore(Builder.getInt32(42),
+                        Builder.CreateAlloca(Builder.getInt32Ty()));
+  };
+
+  auto FiniCB = [&](InsertPointTy IP) {};
+
+  ASSERT_EXPECTED_INIT(InsertPointTy, AfterIP,
+                       OMPBuilder.createScope(Loc, BODYGENCB_WRAPPER(BodyGenCB),
+                                              FINICB_WRAPPER(FiniCB),
+                                              /*IsNowait=*/true));
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  // Scope with IsNowait=true must NOT emit any __kmpc_barrier.
+  for (BasicBlock &Block : *F) {
+    for (Instruction &I : Block) {
+      auto *CI = dyn_cast<CallInst>(&I);
+      if (CI && CI->getCalledFunction())
+        EXPECT_NE(CI->getCalledFunction()->getName(), "__kmpc_barrier");
+    }
+  }
+}
+
+// This test ensures loop fusion does not leave orphaned non-entry blocks.
+// It's a regression test for SmallPtrSet::remove_if behavior change from
+// #197637.
+TEST_F(OpenMPIRBuilderTest, FuseLoopRangeNoDeadBlocks) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+
+  IRBuilder<> Builder(BB);
+  Type *LCTy = F->getArg(0)->getType();
+  Value *TripCount = F->getArg(0);
+
+  auto LoopBodyGenCB = [&](InsertPointTy CodeGenIP, Value *LC) {
+    Builder.restoreIP(CodeGenIP);
+    createPrintfCall(Builder, "%d\n", {LC});
+    return Error::success();
+  };
+
+  OpenMPIRBuilder::LocationDescription Loc1({Builder.saveIP(), DL});
+  ASSERT_EXPECTED_INIT(
+      CanonicalLoopInfo *, Loop1,
+      OMPBuilder.createCanonicalLoop(Loc1, LoopBodyGenCB, TripCount, "loop1"));
+  Builder.restoreIP(Loop1->getAfterIP());
+
+  Value *TripCount2 = Builder.CreateAdd(TripCount, ConstantInt::get(LCTy, 1));
+  OpenMPIRBuilder::LocationDescription Loc2({Builder.saveIP(), DL});
+  ASSERT_EXPECTED_INIT(
+      CanonicalLoopInfo *, Loop2,
+      OMPBuilder.createCanonicalLoop(Loc2, LoopBodyGenCB, TripCount2, "loop2"));
+  Builder.restoreIP(Loop2->getAfterIP());
+
+  Value *TripCount3 = Builder.CreateAdd(TripCount, ConstantInt::get(LCTy, 2));
+  OpenMPIRBuilder::LocationDescription Loc3({Builder.saveIP(), DL});
+  ASSERT_EXPECTED_INIT(
+      CanonicalLoopInfo *, Loop3,
+      OMPBuilder.createCanonicalLoop(Loc3, LoopBodyGenCB, TripCount3, "loop3"));
+  Builder.restoreIP(Loop3->getAfterIP());
+  Builder.CreateRetVoid();
+
+  CanonicalLoopInfo *Fused = OMPBuilder.fuseLoops(DL, {Loop1, Loop2});
+
+  OMPBuilder.finalize();
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+
+  Fused->assertOK();
+  for (BasicBlock &Block : *F) {
+    if (&Block == &F->getEntryBlock())
+      continue;
+    EXPECT_TRUE(Block.hasNPredecessorsOrMore(1))
+        << "Dead block found: " << Block.getName().str();
+  }
 }
 
 } // namespace

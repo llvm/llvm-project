@@ -3046,6 +3046,19 @@ public:
                ArrayRef<llvm::Value *> CPVars = {},
                ArrayRef<llvm::Function *> CPFuncs = {});
 
+  /// Generator for '#omp scope'
+  ///
+  /// \param Loc The source location description.
+  /// \param BodyGenCB Callback that will generate the region code.
+  /// \param FiniCB Callback to finalize variable copies.
+  /// \param IsNowait If false, a barrier is emitted.
+  ///
+  /// \returns The insertion position *after* the scope.
+  LLVM_ABI InsertPointOrErrorTy createScope(const LocationDescription &Loc,
+                                            BodyGenCallbackTy BodyGenCB,
+                                            FinalizeCallbackTy FiniCB,
+                                            bool IsNowait);
+
   /// Generator for '#omp master'
   ///
   /// \param Loc The insert and source location description.
@@ -3570,7 +3583,8 @@ public:
           InsertPointTy CodeGenIP, llvm::Value *PtrPHI, llvm::Value *BeginArg)>
           PrivAndGenMapInfoCB,
       llvm::Type *ElemTy, StringRef FuncName,
-      CustomMapperCallbackTy CustomMapperCB);
+      CustomMapperCallbackTy CustomMapperCB,
+      bool PreserveMemberOfFlags = false);
 
   /// Generator for '#omp target data'
   ///

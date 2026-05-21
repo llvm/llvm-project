@@ -42,13 +42,14 @@ func.func @saving_mask_and_rhs(%arg0: !fir.ref<!fir.array<10xi32>>) {
 // Creating RHS temporary using the mask temporary (and not the hlfir.elemental)
 
 // CHECK:  %[[VAL_25:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} {bindc_name = ".tmp.where", uniq_name = ""}
-// CHECK:  %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_25]]({{.*}}) {uniq_name = ".tmp.where"}
-// CHECK:  fir.do_loop
+// CHECK:  %[[RHS_SHAPE:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
+// CHECK:  %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_25]](%[[RHS_SHAPE]]) {uniq_name = ".tmp.where"}
+// CHECK:  fir.do_loop %[[IV:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
 // CHECK:    %[[VAL_29:.*]] = hlfir.designate %[[VAL_14]]#0 ({{.*}})
 // CHECK:    %[[VAL_30:.*]] = fir.load %[[VAL_29]] : !fir.ref<!fir.logical<4>>
 // CHECK:    %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (!fir.logical<4>) -> i1
 // CHECK:    fir.if %[[VAL_31]] {
-// CHECK:      %[[VAL_36:.*]] = hlfir.designate %[[VAL_27]]#0 ({{.*}})
+// CHECK:      %[[VAL_36:.*]] = hlfir.designate %[[VAL_27]]#0 (%[[IV]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:      hlfir.assign %{{.*}} to %[[VAL_36]] : i32, !fir.ref<i32>
 // CHECK:    }
 // CHECK:  }
@@ -91,14 +92,17 @@ func.func @forall_mask_and_rhs(%arg0: !fir.ref<!fir.array<10xi32>>) {
 
 // CHECK-LABEL:   func.func @forall_mask_and_rhs(
 // CHECK:           %[[VAL_18:.*]] = fir.allocmem !fir.array<?xi1>, %{{.*}} {bindc_name = ".tmp.forall", uniq_name = ""}
-// CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_18]](%{{.*}}) {uniq_name = ".tmp.forall"}
+// CHECK:           %[[MASK_SHAPE:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
+// CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_18]](%[[MASK_SHAPE]]) {uniq_name = ".tmp.forall"}
 // CHECK:           %[[VAL_29:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} {bindc_name = ".tmp.forall", uniq_name = ""}
-// CHECK:           %[[VAL_31:.*]]:2 = hlfir.declare %[[VAL_29]](%{{.*}}) {uniq_name = ".tmp.forall"}
+// CHECK:           %[[RHS_SHAPE:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
+// CHECK:           %[[VAL_31:.*]]:2 = hlfir.declare %[[VAL_29]](%[[RHS_SHAPE]]) {uniq_name = ".tmp.forall"}
+// CHECK:           fir.do_loop %[[IV:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
 // CHECK:             %[[VAL_36:.*]] = arith.cmpi sgt, %{{.*}}, %{{.*}} : i32
-// CHECK:             %[[VAL_39:.*]] = hlfir.designate %[[VAL_20]]#0 (%{{.*}})
+// CHECK:             %[[VAL_39:.*]] = hlfir.designate %[[VAL_20]]#0 (%[[IV]])  : (!fir.box<!fir.array<?xi1>>, index) -> !fir.ref<i1>
 // CHECK:             hlfir.assign %[[VAL_36]] to %[[VAL_39]] : i1, !fir.ref<i1>
 // CHECK:             fir.if %[[VAL_36]] {
-// CHECK:               %[[VAL_45:.*]] = hlfir.designate %[[VAL_31]]#0 (%{{.*}})
+// CHECK:               %[[VAL_45:.*]] = hlfir.designate %[[VAL_31]]#0 (%[[IV]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:               hlfir.assign %{{.*}} to %[[VAL_45]] : i32, !fir.ref<i32>
 // CHECK:             }
 // CHECK:           }

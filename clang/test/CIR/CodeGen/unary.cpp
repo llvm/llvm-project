@@ -533,7 +533,7 @@ void test_logical_not() {
 // OGCG:   %[[A_CAST:.*]] = zext i1 %[[A_NOT]] to i32
 // OGCG:   store i32 %[[A_CAST]], ptr %[[A_ADDR]], align 4
 // OGCG:   %[[B:.*]] = load i8, ptr %[[B_ADDR:.*]], align 1
-// OGCG:   %[[B_BOOL:.*]] = trunc i8 %[[B]] to i1
+// OGCG:   %[[B_BOOL:.*]] = icmp ne i8 %[[B]], 0
 // OGCG:   %[[B_NOT:.*]] = xor i1 %[[B_BOOL]], true
 // OGCG:   %[[B_CAST:.*]] = zext i1 %[[B_NOT]] to i8
 // OGCG:   store i8 %[[B_CAST]], ptr %[[B_ADDR]], align 1

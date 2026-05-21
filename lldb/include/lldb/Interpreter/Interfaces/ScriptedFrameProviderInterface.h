@@ -22,9 +22,8 @@ public:
   }
 
   virtual llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(llvm::StringRef class_name,
-                     lldb::StackFrameListSP input_frames,
-                     StructuredData::DictionarySP args_sp) = 0;
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
+                     lldb::StackFrameListSP input_frames) = 0;
 
   /// Get a description string for the frame provider.
   ///

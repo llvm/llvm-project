@@ -27,11 +27,11 @@ define void @stores(ptr noalias %p) {
 ; CHECK-LABEL: define void @stores(
 ; CHECK-SAME: ptr noalias [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[_M_VALUE_IMAGP_I266:%.*]] = getelementptr { fp128, fp128 }, ptr null, i64 0, i32 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load fp128, ptr null, align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load fp128, ptr [[_M_VALUE_IMAGP_I266]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x fp128>, ptr null, align 16
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr fp128, ptr [[P]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x fp128> [[TMP2]], i32 0
 ; CHECK-NEXT:    store fp128 [[TMP0]], ptr [[P1]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x fp128> [[TMP2]], i32 1
 ; CHECK-NEXT:    store fp128 [[TMP1]], ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;

@@ -218,6 +218,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_jLLDBTraceGetBinaryData,
       &GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceGetBinaryData);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jMultiBreakpoint,
+      &GDBRemoteCommunicationServerLLGS::Handle_jMultiBreakpoint);
 
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_g,
                                 &GDBRemoteCommunicationServerLLGS::Handle_g);
@@ -1049,6 +1052,11 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
     response.Printf("%s:p%" PRIx64 ".%" PRIx64 ";", reason_str,
                     tid_stop_info.details.fork.child_pid,
                     tid_stop_info.details.fork.child_tid);
+  }
+
+  if (process.HasPendingLibraryEvents()) {
+    // 1 is an arbitrary value here. The parameter is ignored.
+    response.PutCString("library:1;");
   }
 
   return response;
@@ -3108,6 +3116,70 @@ GDBRemoteCommunicationServerLLGS::Handle_z(StringExtractorGDBRemote &packet) {
 }
 
 GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jMultiBreakpoint(
+    StringExtractorGDBRemote &packet) {
+  llvm::StringRef packet_str = packet.GetStringRef();
+  if (!packet_str.consume_front("jMultiBreakpoint:"))
+    return SendIllFormedResponse(packet,
+                                 "Invalid jMultiBreakpoint packet prefix");
+
+  llvm::Expected<llvm::json::Value> parsed = llvm::json::parse(packet_str);
+  if (!parsed) {
+    llvm::consumeError(parsed.takeError());
+    return SendIllFormedResponse(packet,
+                                 "jMultiBreakpoint did not contain valid JSON");
+  }
+  llvm::json::Object *request_dict = parsed->getAsObject();
+  if (!request_dict)
+    return SendIllFormedResponse(
+        packet, "jMultiBreakpoint did not contain a JSON dictionary");
+
+  llvm::json::Array *request_array =
+      request_dict->getArray("breakpoint_requests");
+  if (!request_array)
+    return SendIllFormedResponse(
+        packet,
+        "jMultiBreakpoint did not contain a valid 'breakpoint_requests' field");
+
+  llvm::json::Array reply_array;
+  for (const llvm::json::Value &value : *request_array) {
+    std::optional<llvm::StringRef> request = value.getAsString();
+    if (!request)
+      return SendIllFormedResponse(packet,
+                                   "jMultiBreakpoint had a non-string entry");
+    BreakpointResult result = request->starts_with("Z")
+                                  ? ExecuteSetBreakpoint(*request)
+                                  : ExecuteRemoveBreakpoint(*request);
+    std::visit(
+        [&](const auto &arg) {
+          using T = std::decay_t<decltype(arg)>;
+          static_assert(std::is_same_v<T, BreakpointOK> ||
+                            std::is_same_v<T, BreakpointError> ||
+                            std::is_same_v<T, BreakpointIllFormed>,
+                        "non-exhaustive visitor!");
+          if constexpr (std::is_same_v<T, BreakpointOK>)
+            reply_array.push_back("OK");
+          else if constexpr (std::is_same_v<T, BreakpointError>)
+            reply_array.push_back(
+                llvm::formatv("E{0:X-2}", arg.error_code).str());
+          else
+            reply_array.push_back("E03");
+        },
+        result);
+  }
+
+  llvm::json::Object dict;
+  dict.try_emplace("results", std::move(reply_array));
+
+  StreamString stream;
+  stream.AsRawOstream() << llvm::json::Value(std::move(dict));
+  StringRef response_str = stream.GetString();
+  StreamGDBRemote response;
+  response.PutEscapedBytes(response_str.data(), response_str.size());
+  return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_s(StringExtractorGDBRemote &packet) {
   Log *log = GetLog(LLDBLog::Process | LLDBLog::Thread);
 
@@ -3316,6 +3388,24 @@ GDBRemoteCommunicationServerLLGS::ReadXferObject(llvm::StringRef object,
       response.Printf("l_ld=\"0x%" PRIx64 "\" />", library.ld_addr);
     }
     response.Printf("</library-list-svr4>");
+    return MemoryBuffer::getMemBufferCopy(response.GetString(), __FUNCTION__);
+  }
+
+  if (object == "libraries") {
+    auto library_list = m_current_process->GetLoadedLibraries();
+    if (!library_list)
+      return library_list.takeError();
+
+    StreamString response;
+    response.Printf("<library-list>");
+    for (auto const &library : *library_list) {
+      response.Printf("<library name=\"%s\">",
+                      XMLEncodeAttributeValue(library.name.c_str()).c_str());
+      response.Printf("<section address=\"0x%" PRIx64 "\"/>",
+                      library.base_addr);
+      response.Printf("</library>");
+    }
+    response.Printf("</library-list>");
     return MemoryBuffer::getMemBufferCopy(response.GetString(), __FUNCTION__);
   }
 
@@ -4322,6 +4412,7 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
                             "QListThreadsInStopReply+",
                             "qXfer:features:read+",
                             "QNonStop+",
+                            "jMultiBreakpoint+",
                         });
 
   // report server-only features
@@ -4333,6 +4424,8 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
     ret.push_back("qXfer:auxv:read+");
   if (bool(plugin_features & Extension::libraries_svr4))
     ret.push_back("qXfer:libraries-svr4:read+");
+  if (bool(plugin_features & Extension::libraries))
+    ret.push_back("qXfer:libraries:read+");
   if (bool(plugin_features & Extension::siginfo_read))
     ret.push_back("qXfer:siginfo:read+");
   if (bool(plugin_features & Extension::memory_tagging))

@@ -1200,9 +1200,10 @@ void ObjCMethodDecl::createImplicitParams(ASTContext &Context,
   if (selfIsPseudoStrong)
     Self->setARCPseudoStrong(true);
 
-  setCmdDecl(ImplicitParamDecl::Create(
+  auto *CmdDecl = ImplicitParamDecl::Create(
       Context, this, SourceLocation(), &Context.Idents.get("_cmd"),
-      Context.getObjCSelType(), ImplicitParamKind::ObjCCmd));
+      Context.getObjCSelType(), ImplicitParamKind::ObjCCmd);
+  setCmdDecl(CmdDecl);
 }
 
 ObjCInterfaceDecl *ObjCMethodDecl::getClassInterface() {

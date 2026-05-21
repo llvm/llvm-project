@@ -14,7 +14,7 @@ define <8 x i64> @pluto.6(ptr %arg1, i64 %mul, <8 x i64> %shufflevector, <8 x i6
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i64> [[DOTSPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[GETELEMENTPTR13:%.*]] = getelementptr [8 x i8], ptr [[ARG1]], i64 [[MUL]]
 ; CHECK-NEXT:    [[GETELEMENTPTR24:%.*]] = getelementptr i8, ptr [[GETELEMENTPTR13]], <8 x i64> [[SHUFFLEVECTOR]]
-; CHECK-NEXT:    [[ICMP25:%.*]] = icmp ne <8 x ptr> [[GETELEMENTPTR24]], zeroinitializer
+; CHECK-NEXT:    [[ICMP25:%.*]] = icmp ne <8 x ptr> [[GETELEMENTPTR24]], splat (ptr null)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add <8 x i64> [[DOTSPLAT]], [[PHI16]]
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne <8 x i64> [[GETELEMENTPTR19_IDX]], [[TMP0]]
 ; CHECK-NEXT:    [[ADD211:%.*]] = or <8 x i1> [[ICMP25]], [[ICMP]]

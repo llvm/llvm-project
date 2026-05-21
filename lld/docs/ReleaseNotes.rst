@@ -49,6 +49,10 @@ COFF Improvements
 MinGW Improvements
 ------------------
 
+* Added ``--push-state`` and ``--pop-state``, offering the same semantics as
+  when used with the ELF linker: The state of ``--Bstatic``/``--Bdynamic`` and
+  ``--whole-archive`` are pushed onto a stack and popped from it.
+
 MachO Improvements
 ------------------
 

@@ -140,6 +140,10 @@ static void initField(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
   Desc->IsVolatile = IsVolatile || D->IsVolatile;
   // True if this field is const AND the parent is mutable.
   Desc->IsConstInMutable = Desc->IsConst && IsMutable;
+  Desc->LifeState =
+      D->isPrimitiveArray()
+          ? Lifetime::Started
+          : (Desc->IsActive ? Lifetime::NotStarted : Lifetime::Started);
 
   if (auto Fn = D->CtorFn)
     Fn(B, Ptr + FieldOffset, Desc->IsConst, Desc->IsFieldMutable,
@@ -489,6 +493,8 @@ bool Descriptor::isUnion() const { return isRecord() && ElemRecord->isUnion(); }
 unsigned Descriptor::getElemDataSize() const {
   if ((isPrimitive() || isPrimitiveArray()) &&
       isIntegerOrBoolType(getPrimType())) {
+    if (getPrimType() == PT_Bool)
+      return 1;
     FIXED_SIZE_INT_TYPE_SWITCH(getPrimType(), { return T::bitWidth() / 8; });
   }
   return ElemSize;

@@ -334,7 +334,6 @@ class PseudoLoad<string opcodestr, DAGOperand rdty = GPR>
   let mayLoad = 1;
   let mayStore = 0;
   let isCodeGenOnly = 0;
-  let isAsmParserOnly = 1;
 }
 
 class PseudoFloatLoad<string opcodestr, RegisterClass rdty>
@@ -343,7 +342,6 @@ class PseudoFloatLoad<string opcodestr, RegisterClass rdty>
   let mayLoad = 1;
   let mayStore = 0;
   let isCodeGenOnly = 0;
-  let isAsmParserOnly = 1;
 }
 
 // Pseudo store instructions.
@@ -353,7 +351,6 @@ class PseudoStore<string opcodestr, DAGOperand rsty = GPR>
   let mayLoad = 0;
   let mayStore = 1;
   let isCodeGenOnly = 0;
-  let isAsmParserOnly = 1;
 }
 
 // Instruction formats are listed in the order they appear in the RISC-V

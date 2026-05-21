@@ -582,7 +582,12 @@ void SourceManager::File::CommonInitializerImpl(SupportFileNSP support_file_nsp,
 }
 
 void SourceManager::File::SetSupportFile(SupportFileNSP support_file_nsp) {
-  FileSpec file_spec = support_file_nsp->GetSpecOnly();
+  // Use Materialize here to allow for the possibility of support files
+  // that may have special semantics for "generating" a file spec from
+  // a support file (e.g., DWARF with embedded source through
+  // DW_LNCT_LLVM_source).
+  FileSpec file_spec = support_file_nsp->Materialize();
+
   resolve_tilde(file_spec);
   m_support_file_nsp =
       std::make_shared<SupportFile>(file_spec, support_file_nsp->GetChecksum());
