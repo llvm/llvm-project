@@ -24,7 +24,7 @@ class HostThread;
 // notification of events that happen in a debugged process.
 class IDebugDelegate {
 public:
-  virtual ~IDebugDelegate() {}
+  virtual ~IDebugDelegate() = default;
 
   virtual void OnExitProcess(uint32_t exit_code) = 0;
   virtual void OnDebuggerConnected(lldb::addr_t image_base) = 0;

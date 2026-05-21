@@ -58,9 +58,9 @@ Potentially Breaking Changes
 - Removed the :program:`clang-tidy` ``hicpp`` module. All checks have been moved
   to the other modules. Use the replacement checks instead:
 
-  ================================== =========================================================
+  ================================== ========================================================================
   Removed check                      Replacement check
-  ================================== =========================================================
+  ================================== ========================================================================
   ``hicpp-avoid-c-arrays``           :doc:`modernize-avoid-c-arrays
                                      <clang-tidy/checks/modernize/avoid-c-arrays>`
   ``hicpp-avoid-goto``               :doc:`cppcoreguidelines-avoid-goto
@@ -77,7 +77,53 @@ Potentially Breaking Changes
                                      <clang-tidy/checks/readability/function-size>`
   ``hicpp-ignored-remove-result``    :doc:`bugprone-unused-return-value
                                      <clang-tidy/checks/bugprone/unused-return-value>`
-  ================================== =========================================================
+  ``hicpp-invalid-access-moved``     :doc:`bugprone-use-after-move
+                                     <clang-tidy/checks/bugprone/use-after-move>`
+  ``hicpp-member-init``              :doc:`cppcoreguidelines-pro-type-member-init
+                                     <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>`
+  ``hicpp-move-const-arg``           :doc:`performance-move-const-arg
+                                     <clang-tidy/checks/performance/move-const-arg>`
+  ``hicpp-multiway-paths-covered``   :doc:`bugprone-unhandled-code-paths
+                                     <clang-tidy/checks/bugprone/unhandled-code-paths>`
+  ``hicpp-named-parameter``          :doc:`readability-named-parameter
+                                     <clang-tidy/checks/readability/named-parameter>`
+  ``hicpp-new-delete-operators``     :doc:`misc-new-delete-overloads
+                                     <clang-tidy/checks/misc/new-delete-overloads>`
+  ``hicpp-no-array-decay``           :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay
+                                     <clang-tidy/checks/cppcoreguidelines/pro-bounds-array-to-pointer-decay>`
+  ``hicpp-no-assembler``             :doc:`portability-no-assembler
+                                     <clang-tidy/checks/portability/no-assembler>`
+  ``hicpp-no-malloc``                :doc:`cppcoreguidelines-no-malloc
+                                     <clang-tidy/checks/cppcoreguidelines/no-malloc>`
+  ``hicpp-noexcept-move``            :doc:`performance-noexcept-move-constructor
+                                     <clang-tidy/checks/performance/noexcept-move-constructor>`
+  ``hicpp-signed-bitwise``           :doc:`bugprone-signed-bitwise
+                                     <clang-tidy/checks/bugprone/signed-bitwise>`
+  ``hicpp-special-member-functions`` :doc:`cppcoreguidelines-special-member-functions
+                                     <clang-tidy/checks/cppcoreguidelines/special-member-functions>`
+  ``hicpp-static-assert``            :doc:`misc-static-assert
+                                     <clang-tidy/checks/misc/static-assert>`
+  ``hicpp-uppercase-literal-suffix`` :doc:`readability-uppercase-literal-suffix
+                                     <clang-tidy/checks/readability/uppercase-literal-suffix>`
+  ``hicpp-undelegated-constructor``  :doc:`bugprone-undelegated-constructor
+                                     <clang-tidy/checks/bugprone/undelegated-constructor>`
+  ``hicpp-use-auto``                 :doc:`modernize-use-auto
+                                     <clang-tidy/checks/modernize/use-auto>`
+  ``hicpp-use-emplace``              :doc:`modernize-use-emplace
+                                     <clang-tidy/checks/modernize/use-emplace>`
+  ``hicpp-use-equals-default``       :doc:`modernize-use-equals-default
+                                     <clang-tidy/checks/modernize/use-equals-default>`
+  ``hicpp-use-equals-delete``        :doc:`modernize-use-equals-delete
+                                     <clang-tidy/checks/modernize/use-equals-delete>`
+  ``hicpp-use-noexcept``             :doc:`modernize-use-noexcept
+                                     <clang-tidy/checks/modernize/use-noexcept>`
+  ``hicpp-use-nullptr``              :doc:`modernize-use-nullptr
+                                     <clang-tidy/checks/modernize/use-nullptr>`
+  ``hicpp-use-override``             :doc:`modernize-use-override
+                                     <clang-tidy/checks/modernize/use-override>`
+  ``hicpp-vararg``                   :doc:`cppcoreguidelines-pro-type-vararg
+                                     <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>`
+  ================================== ========================================================================
 
 Improvements to clangd
 ----------------------
@@ -118,6 +164,9 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- A new tweak "Create function body out-of-line" was added that creates
+  an implementation for a function declaration.
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -147,6 +196,17 @@ Improvements to clang-tidy
 - Improved :program:`clang-tidy` ``-store-check-profile`` by generating valid
   JSON when the source file path contains characters that require JSON escaping.
 
+- Ensured that :program:`clang-tidy` and the clang compiler uses the same logic
+  for the suppression of compiler diagnostics in system headers and expansions
+  of macros defined in system headers. Previously the default setting of tidy
+  overzealously suppressed some diagnostics that would have been emitted by the
+  compiler. (E.g. tidy suppressed many ``clang-diagnostic-invalid-offsetof``
+  reports because they usually occur in expansion of the macro ``offsetof``.)
+
+- :program:`clang-tidy` will no longer exit immediately if the only enabled
+  checks are `clang-diagnostic-*` ones. This allows using
+  :program:`clang-tidy` purely as a frontend to Clang's builtin warnings.
+
 New checks
 ^^^^^^^^^^
 
@@ -161,12 +221,19 @@ New checks
   Finds functions where throwing exceptions is unsafe but the function is still
   marked as potentially throwing.
 
+- New :doc:`llvm-formatv-string
+  <clang-tidy/checks/llvm/formatv-string>` check.
+
+  Validates ``llvm::formatv`` format strings against the provided arguments,
+  diagnosing mismatched argument counts, unused arguments, and mixed index styles.
+
 - New :doc:`llvm-redundant-casting
   <clang-tidy/checks/llvm/redundant-casting>` check.
 
   Points out uses of ``cast<>``, ``dyn_cast<>`` and their ``or_null`` variants
   that are unnecessary because the argument already is of the target type, or a
-  derived type thereof.
+  derived type thereof. Also does similar analysis for calls to ``isa<>`` that
+  always return ``true``.
 
 - New :doc:`llvm-type-switch-case-types
   <clang-tidy/checks/llvm/type-switch-case-types>` check.
@@ -180,6 +247,11 @@ New checks
   Finds calls to ``llvm::to_vector(llvm::map_range(...))`` and
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
+
+- New :doc:`misc-static-initialization-cycle
+  <clang-tidy/checks/misc/static-initialization-cycle>` check.
+
+  Finds cyclical initialization of static variables.
 
 - New :doc:`modernize-use-std-bit
   <clang-tidy/checks/modernize/use-std-bit>` check.
@@ -246,22 +318,6 @@ New check aliases
   to :doc:`misc-explicit-constructor
   <clang-tidy/checks/misc/explicit-constructor>`. The
   `google-explicit-constructor` name is kept as an alias.
-
-- Renamed :doc:`hicpp-multiway-paths-covered
-  <clang-tidy/checks/hicpp/multiway-paths-covered>`
-  to :doc:`bugprone-unhandled-code-paths
-  <clang-tidy/checks/bugprone/unhandled-code-paths>`.
-  The `hicpp-multiway-paths-covered` name is kept as an alias.
-
-- Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
-  to :doc:`portability-no-assembler
-  <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
-  name is kept as an alias.
-
-- Renamed :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp/signed-bitwise>`
-  to :doc:`bugprone-signed-bitwise
-  <clang-tidy/checks/bugprone/signed-bitwise>`. The `hicpp-signed-bitwise`
-  name is kept as an alias.
 
 - Renamed :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` to
@@ -332,6 +388,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` check
   by fixing a false positive when ``operator[]`` is used in a dependent context.
 
+- Improved :doc:`bugprone-random-generator-seed
+  <clang-tidy/checks/bugprone/random-generator-seed>` check by adding
+  a new note at the location of the field if the generator is implicitly
+  initialized with a default seed value.
+
 - Improved :doc:`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` check by fixing
   false positives when extending the standard library with a specialization of
@@ -373,6 +434,9 @@ Changes in existing checks
   - Avoid false positives when moving object to a base type then accessing
     non-base members.
 
+  - Avoid false positives when moving object is reinitialized via the base
+    class's ``operator=``.
+
 - Improved :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>`
   check by adding the `AllowExplicitObjectParameters` option. When enabled,
@@ -410,6 +474,11 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
   by fixing a false positive on implicitly generated functions such as
   inherited constructors.
+
+- Improved :doc:`cppcoreguidelines-use-enum-class
+  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by adding the
+  `IgnoreMacros` option. When enabled, unscoped ``enum`` declarations within
+  macros are ignored.
 
 - Improved :doc:`llvm-use-ranges
   <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
@@ -630,7 +699,7 @@ Changes in existing checks
   <clang-tidy/checks/readability/non-const-parameter>` check:
 
   - Avoid false positives on parameters used in dependent expressions
-    (e.g. inside generic lambdas).
+    (e.g. inside generic lambdas), including constructor-style dependent initializers.
 
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.

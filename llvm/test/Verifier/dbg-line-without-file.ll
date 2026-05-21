@@ -12,4 +12,6 @@ define void @foo() !dbg !3 {
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "foo.c", directory: "")
-!3 = distinct !DISubprogram(name: "foo", scope: !1, line: 1, unit: !1)
+!3 = distinct !DISubprogram(name: "foo", scope: !1, line: 1, unit: !1, type: !5)
+!4 = !{null}
+!5 = !DISubroutineType(types: !4)
