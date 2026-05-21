@@ -9,6 +9,7 @@
 #include "../lldb-python.h"
 
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Target/ThreadPlan.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
 
