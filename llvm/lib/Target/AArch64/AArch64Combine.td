@@ -63,7 +63,7 @@ def push_mul_through_sext : push_opcode_through_ext<G_MUL, G_SEXT>;
 def simplify_uaddo_matchinfo : GIDefMatchData<"std::pair<Register, Register>">;
 def simplify_uaddo : GICombineRule<
   (defs root:$root, simplify_uaddo_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_UADDO):$root,
+  (match (G_UADDO $dst, $carry_out, $src1, $src2):$root,
          [{ return matchSimplifyUADDO(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applySimplifyUADDO(*${root}, MRI, B, Observer, Helper,
                                ${matchinfo}); }])>;
