@@ -349,3 +349,25 @@ auto test_null_incomplete() -> int Incomplete::* {
 
 // OGCG: define {{.*}} i64 @_Z20test_null_incompletev()
 // OGCG:   ret i64 -1
+
+struct BaseMember {
+  int b;
+};
+
+struct DerivedMember : BaseMember {
+  int d;
+};
+
+auto take_base_member() -> int DerivedMember::* {
+  return &DerivedMember::b;
+}
+
+// CIR-BEFORE: cir.func {{.*}} @_Z16take_base_memberv() -> !cir.data_member<!s32i in !rec_DerivedMember>
+// CIR-BEFORE:   %[[MEMBER:.*]] = cir.const #cir.data_member<0> : !cir.data_member<!s32i in !rec_BaseMember>
+// CIR-BEFORE:   %[[CAST:.*]] = cir.derived_data_member %[[MEMBER]][0] : !cir.data_member<!s32i in !rec_BaseMember> -> !cir.data_member<!s32i in !rec_DerivedMember>
+// CIR-BEFORE:   cir.store %[[CAST]], %{{.*}} : !cir.data_member<!s32i in !rec_DerivedMember>
+// CIR-AFTER:   %[[OFFSET:.*]] = cir.const #cir.int<0> : !s64i
+// LLVM: define {{.*}} i64 @_Z16take_base_memberv()
+// LLVM:   store i64 0
+// OGCG: define {{.*}} i64 @_Z16take_base_memberv()
+// OGCG:   ret i64 0

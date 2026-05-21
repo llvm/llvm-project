@@ -1907,12 +1907,6 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     if (!memberDecl)
       return builder.getZeroInitAttr(cgm.convertType(destType));
 
-    if (value.isMemberPointerToDerivedMember()) {
-      cgm.errorNYI(
-          "ConstExprEmitter::tryEmitPrivate member pointer to derived member");
-      return {};
-    }
-
     if (auto const *cxxDecl = dyn_cast<CXXMethodDecl>(memberDecl)) {
       auto ty = mlir::cast<cir::MethodType>(cgm.convertType(destType));
       if (cxxDecl->isVirtual())
@@ -1923,10 +1917,14 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
       return cgm.getBuilder().getMethodAttr(ty, methodFuncOp);
     }
 
-    auto cirTy = mlir::cast<cir::DataMemberType>(cgm.convertType(destType));
-
     const auto *fieldDecl = cast<FieldDecl>(memberDecl);
-    return builder.getDataMemberAttr(cirTy, fieldDecl->getFieldIndex());
+    const auto *mpt = destType->castAs<MemberPointerType>();
+    const CXXRecordDecl *pointerClass = mpt->getMostRecentCXXRecordDecl();
+    const auto *fieldParent = cast<CXXRecordDecl>(fieldDecl->getParent());
+    if (fieldParent != pointerClass)
+      return {};
+
+    return cgm.getDataMemberAttrForField(mpt, fieldDecl);
   }
   case APValue::LValue:
     return ConstantLValueEmitter(*this, value, destType).tryEmit();

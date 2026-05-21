@@ -34,10 +34,8 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include "CIRGenFunctionInfo.h"
 #include "TargetInfo.h"
@@ -806,47 +804,7 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
   const auto *tc = fd ? fd->getAttr<TargetClonesAttr>() : nullptr;
   bool addedAttr = false;
   if (td || tv || sd || tc) {
-    llvm::StringMap<bool> featureMap;
-    astContext.getFunctionFeatureMap(featureMap, gd);
-
-    // Now add the target-cpu and target-features to the function.
-    // While we populated the feature map above, we still need to
-    // get and parse the target/target_clones attribute so we can
-    // get the cpu for the function.
-    llvm::StringRef featureStr = td ? td->getFeaturesStr() : llvm::StringRef();
-    if (tc && (getTriple().isOSAIX() || getTriple().isX86()))
-      featureStr = tc->getFeatureStr(gd.getMultiVersionIndex());
-    if (!featureStr.empty()) {
-      clang::ParsedTargetAttr parsedAttr =
-          getTarget().parseTargetAttr(featureStr);
-      if (!parsedAttr.CPU.empty() &&
-          getTarget().isValidCPUName(parsedAttr.CPU)) {
-        targetCPU = parsedAttr.CPU;
-        tuneCPU = ""; // Clear the tune CPU.
-      }
-      if (!parsedAttr.Tune.empty() &&
-          getTarget().isValidCPUName(parsedAttr.Tune))
-        tuneCPU = parsedAttr.Tune;
-    }
-
-    if (sd) {
-      // Apply the given CPU name as the 'tune-cpu' so that the optimizer can
-      // favor this processor.
-      tuneCPU = sd->getCPUName(gd.getMultiVersionIndex())->getName();
-    }
-
-    // For AMDGPU, only emit delta features (features that differ from the
-    // target CPU's defaults). Other targets might want to follow a similar
-    // pattern.
-    if (getTarget().getTriple().isAMDGPU()) {
-      features = getFeatureDeltaFromDefault(*this, targetCPU, featureMap);
-    } else {
-      // Produce the canonical string for this set of features.
-      features.reserve(features.size() + featureMap.size());
-      for (const auto &entry : featureMap)
-        features.push_back((entry.getValue() ? "+" : "-") +
-                           entry.getKey().str());
-    }
+    assert(!cir::MissingFeatures::opFuncMultiVersioning());
   } else {
     // Just add the existing target cpu and target features to the function.
     if (setTargetFeatures && getTarget().getTriple().isAMDGPU()) {
@@ -1244,6 +1202,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       if (const SectionAttr *sa = d->getAttr<SectionAttr>())
         gv.setSectionAttr(builder.getStringAttr(sa->getName()));
     }
+    gv.setGlobalVisibility(getGlobalVisibilityAttrFromDecl(d).getValue());
 
     // Handle XCore specific ABI requirements.
     if (getTriple().getArch() == llvm::Triple::xcore)
@@ -2205,11 +2164,9 @@ LangAS CIRGenModule::getLangTempAllocaAddressSpace() const {
   if (getLangOpts().CUDAIsDevice)
     return LangAS::Default;
 
-  if (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice)
-    assert(!cir::MissingFeatures::openMP());
-  if (getLangOpts().SYCLIsDevice)
-    errorNYI("SYCL temp address space");
-
+  if (getLangOpts().SYCLIsDevice ||
+      (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice))
+    errorNYI("SYCL or OpenMP temp address space");
   return LangAS::Default;
 }
 
@@ -2220,6 +2177,90 @@ void CIRGenModule::emitExplicitCastExprType(const ExplicitCastExpr *e,
 
   assert(!cir::MissingFeatures::generateDebugInfo() &&
          "emitExplicitCastExprType");
+}
+
+bool CIRGenModule::buildDataMemberBaseChain(
+    const CXXRecordDecl *pointerClass, const CXXRecordDecl *fieldParent,
+    llvm::SmallVectorImpl<const CXXRecordDecl *> &chain) {
+  chain.clear();
+  chain.push_back(pointerClass);
+
+  if (fieldParent == pointerClass)
+    return true;
+
+  const CXXRecordDecl *current = pointerClass;
+  while (current != fieldParent) {
+    const CXXRecordDecl *nextBase = nullptr;
+    for (const CXXBaseSpecifier &base : current->bases()) {
+      if (base.isVirtual())
+        continue;
+
+      const auto *baseDecl =
+          cast<CXXRecordDecl>(base.getType()->getAsCXXRecordDecl());
+      if (fieldParent->isDerivedFrom(baseDecl) || baseDecl == fieldParent) {
+        current = baseDecl;
+        nextBase = baseDecl;
+        chain.push_back(current);
+        break;
+      }
+    }
+    if (!nextBase)
+      return false;
+  }
+
+  return true;
+}
+
+mlir::Value CIRGenModule::emitDataMemberPointer(mlir::Location loc,
+                                                const MemberPointerType *mpt,
+                                                const FieldDecl *field) {
+  const CXXRecordDecl *pointerClass = mpt->getMostRecentCXXRecordDecl();
+  const auto *fieldParent = cast<CXXRecordDecl>(field->getParent());
+
+  QualType leafMpt = getASTContext().getMemberPointerType(
+      field->getType(), std::nullopt, fieldParent);
+  auto leafTy = mlir::cast<cir::DataMemberType>(convertType(leafMpt));
+  const CIRGenRecordLayout &fieldLayout =
+      getTypes().getCIRGenRecordLayout(fieldParent);
+  mlir::Value memberPtr = cir::ConstantOp::create(
+      builder, loc,
+      builder.getDataMemberAttr(leafTy, fieldLayout.getCIRFieldNo(field)));
+
+  llvm::SmallVector<const CXXRecordDecl *, 4> chain;
+  if (!buildDataMemberBaseChain(pointerClass, fieldParent, chain))
+    llvm_unreachable("could not find base path to data member parent");
+
+  for (int i = static_cast<int>(chain.size()) - 2; i >= 0; --i) {
+    const CXXRecordDecl *derived = chain[i];
+    const CXXRecordDecl *base = chain[i + 1];
+    QualType derivedMpt = getASTContext().getMemberPointerType(
+        field->getType(), std::nullopt, derived);
+    auto derivedTy = mlir::cast<cir::DataMemberType>(convertType(derivedMpt));
+    CharUnits offset =
+        getASTContext().getASTRecordLayout(derived).getBaseClassOffset(base);
+    memberPtr = cir::DerivedDataMemberOp::create(
+        builder, loc, derivedTy, memberPtr,
+        builder.getIndexAttr(offset.getQuantity()));
+  }
+
+  return memberPtr;
+}
+
+mlir::TypedAttr
+CIRGenModule::getDataMemberAttrForField(const MemberPointerType *destMpt,
+                                        const FieldDecl *field) {
+  const CXXRecordDecl *destClass = destMpt->getMostRecentCXXRecordDecl();
+  const auto *fieldParent = cast<CXXRecordDecl>(field->getParent());
+  auto destTy =
+      mlir::cast<cir::DataMemberType>(convertType(QualType(destMpt, 0)));
+  unsigned memberIndex =
+      getTypes().getCIRGenRecordLayout(fieldParent).getCIRFieldNo(field);
+  if (fieldParent != destClass) {
+    errorNYI(field->getLocation(),
+             "constexpr data member attr requires field in dest class");
+    return {};
+  }
+  return builder.getDataMemberAttr(destTy, memberIndex);
 }
 
 mlir::TypedAttr CIRGenModule::emitNullMemberAttr(QualType destTy,
@@ -2256,10 +2297,9 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   }
 
   // Otherwise, a member data pointer.
-  auto ty = mlir::cast<cir::DataMemberType>(convertType(e->getType()));
   const auto *fieldDecl = cast<FieldDecl>(decl);
-  return cir::ConstantOp::create(
-      builder, loc, builder.getDataMemberAttr(ty, fieldDecl->getFieldIndex()));
+  const auto *mpt = cast<MemberPointerType>(e->getType().getTypePtr());
+  return emitDataMemberPointer(loc, mpt, fieldDecl);
 }
 
 void CIRGenModule::emitDeclContext(const DeclContext *dc) {
@@ -2811,65 +2851,9 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
   return false;
 }
 
-void CIRGenModule::setGlobalVisibility(cir::CIRGlobalValueInterface gv,
+void CIRGenModule::setGlobalVisibility(mlir::Operation *gv,
                                        const NamedDecl *d) const {
-  // Internal definitions always have default visibility.
-  if (gv.hasLocalLinkage()) {
-    gv.setGlobalVisibility(cir::VisibilityKind::Default);
-    return;
-  }
-  if (!d)
-    return;
-
-  // Set visibility for definitions, and for declarations if requested globally
-  // or set explicitly.
-  LinkageInfo lv = d->getLinkageAndVisibility();
-
-  // OpenMP declare target variables must be visible to the host so they can
-  // be registered. We require protected visibility unless the variable has
-  // the DT_nohost modifier and does not need to be registered.
-  if (getASTContext().getLangOpts().OpenMP &&
-      getASTContext().getLangOpts().OpenMPIsTargetDevice && isa<VarDecl>(d) &&
-      d->hasAttr<OMPDeclareTargetDeclAttr>() &&
-      d->getAttr<OMPDeclareTargetDeclAttr>()->getDevType() !=
-          OMPDeclareTargetDeclAttr::DT_NoHost &&
-      lv.getVisibility() == HiddenVisibility) {
-    llvm_unreachable("setGlobalVisibility: OpenMP is NYI");
-    return;
-  }
-
-  // CUDA/HIP device kernels and global variables must be visible to the host
-  // so they can be registered / initialized. We require protected visibility
-  // unless the user explicitly requested hidden via an attribute.
-  if (getASTContext().getLangOpts().CUDAIsDevice &&
-      lv.getVisibility() == HiddenVisibility && !lv.isVisibilityExplicit() &&
-      !d->hasAttr<OMPDeclareTargetDeclAttr>()) {
-    bool needsProtected = false;
-    if (isa<FunctionDecl>(d)) {
-      needsProtected =
-          d->hasAttr<CUDAGlobalAttr>() || d->hasAttr<DeviceKernelAttr>();
-    } else if (const auto *vd = dyn_cast<VarDecl>(d)) {
-      needsProtected = vd->hasAttr<CUDADeviceAttr>() ||
-                       vd->hasAttr<CUDAConstantAttr>() ||
-                       vd->getType()->isCUDADeviceBuiltinSurfaceType() ||
-                       vd->getType()->isCUDADeviceBuiltinTextureType();
-    }
-    if (needsProtected) {
-      gv.setGlobalVisibility(cir::VisibilityKind::Protected);
-      return;
-    }
-  }
-
-  if (getASTContext().getLangOpts().HLSL && !d->isInExportDeclContext()) {
-    gv.setGlobalVisibility(cir::VisibilityKind::Hidden);
-    return;
-  }
-
-  assert(!cir::MissingFeatures::opGlobalDLLImportExport());
-
-  if (lv.isVisibilityExplicit() || getLangOpts().SetVisibilityForExternDecls ||
-      !gv.isDeclarationForLinker())
-    gv.setGlobalVisibility(getCIRVisibilityKind(lv.getVisibility()));
+  assert(!cir::MissingFeatures::opGlobalVisibility());
 }
 
 void CIRGenModule::setDSOLocal(cir::CIRGlobalValueInterface gv) const {
@@ -2889,7 +2873,7 @@ void CIRGenModule::setGVProperties(mlir::Operation *op,
 
 void CIRGenModule::setGVPropertiesAux(mlir::Operation *op,
                                       const NamedDecl *d) const {
-  setGlobalVisibility(cast<cir::CIRGlobalValueInterface>(op), d);
+  setGlobalVisibility(op, d);
   setDSOLocal(op);
   assert(!cir::MissingFeatures::opGlobalPartition());
 }
@@ -2992,6 +2976,15 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 
   if (!isIncompleteFunction && func.isDeclaration())
     getTargetCIRGenInfo().setTargetAttributes(funcDecl, func, *this);
+
+  // TODO(cir): This needs a lot of work to better match CodeGen. That
+  // ultimately ends up in setGlobalVisibility, which already has the linkage of
+  // the LLVM GV (corresponding to our FuncOp) computed, so it doesn't have to
+  // recompute it here. This is a minimal fix for now.
+  if (!isLocalLinkage(getFunctionLinkage(globalDecl))) {
+    const Decl *decl = globalDecl.getDecl();
+    func.setGlobalVisibility(getGlobalVisibilityAttrFromDecl(decl).getValue());
+  }
 
   // If we plan on emitting this inline builtin, we can't treat it as a builtin.
   if (funcDecl->isInlineBuiltinDeclaration()) {

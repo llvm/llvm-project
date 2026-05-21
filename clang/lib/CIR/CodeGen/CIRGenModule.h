@@ -431,19 +431,6 @@ public:
     llvm_unreachable("unknown visibility!");
   }
 
-  static cir::VisibilityKind getCIRVisibilityKind(Visibility v) {
-    switch (v) {
-    case DefaultVisibility:
-      return cir::VisibilityKind::Default;
-    case HiddenVisibility:
-      return cir::VisibilityKind::Hidden;
-    case ProtectedVisibility:
-      return cir::VisibilityKind::Protected;
-    }
-
-    llvm_unreachable("unknown visibility!");
-  }
-
   llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
   llvm::DenseMap<const UnnamedGlobalConstantDecl *, cir::GlobalOp>
       unnamedGlobalConstantDeclMap;
@@ -615,8 +602,7 @@ public:
   mlir::Type convertType(clang::QualType type);
 
   /// Set the visibility for the given global.
-  void setGlobalVisibility(cir::CIRGlobalValueInterface gv,
-                           const NamedDecl *d) const;
+  void setGlobalVisibility(mlir::Operation *op, const NamedDecl *d) const;
   void setDSOLocal(mlir::Operation *op) const;
   void setDSOLocal(cir::CIRGlobalValueInterface gv) const;
 
@@ -704,6 +690,19 @@ public:
   mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *record);
 
   mlir::Value emitMemberPointerConstant(const UnaryOperator *e);
+
+  bool
+  buildDataMemberBaseChain(const CXXRecordDecl *pointerClass,
+                           const CXXRecordDecl *fieldParent,
+                           llvm::SmallVectorImpl<const CXXRecordDecl *> &chain);
+
+  mlir::Value emitDataMemberPointer(mlir::Location loc,
+                                    const MemberPointerType *mpt,
+                                    const FieldDecl *field);
+
+  mlir::TypedAttr getDataMemberAttrForField(const MemberPointerType *destMpt,
+                                            const FieldDecl *field);
+
   /// Returns a null attribute to represent either a null method or null data
   /// member, depending on the type of mpt.
   mlir::TypedAttr emitNullMemberAttr(QualType t, const MemberPointerType *mpt);

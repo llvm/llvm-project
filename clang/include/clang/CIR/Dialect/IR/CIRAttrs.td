@@ -543,9 +543,12 @@ def CIR_DataMemberAttr : CIR_ValueLikeAttr<"DataMember", "data_member"> {
     A data member attribute is a literal attribute that represents a constant
     pointer-to-data-member value.
 
-    The `member_index` parameter represents the index of the pointed-to member
-    within its containing record. It is an optional parameter; lack of this
-    parameter indicates a null pointer-to-data-member value.
+    The `member_index` parameter is the index of the pointed-to member within
+    its containing record (the attribute's `classTy`).  It is an optional
+    parameter; lack of this parameter indicates a null pointer-to-data-member
+    value.  A non-null pointer to a member of a base class subobject in a
+    derived class is represented by a leaf attribute in the base class type
+    wrapped in `cir.derived_data_member` operations.
 
     Example:
     ```

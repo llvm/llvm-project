@@ -194,20 +194,16 @@ mlir::Type LowerItaniumCXXABI::lowerMethodType(
 mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(
     cir::DataMemberAttr attr, const mlir::DataLayout &layout,
     const mlir::TypeConverter &typeConverter) const {
-  int64_t memberOffset;
-  if (attr.isNullPtr()) {
-    // Itanium C++ ABI 2.3:
-    //   A NULL pointer is represented as -1.
-    memberOffset = -1;
-  } else {
-    // Itanium C++ ABI 2.3:
-    //   A pointer to data member is an offset from the base address of
-    //   the class object containing it, represented as a ptrdiff_t
-    unsigned memberIndex = attr.getMemberIndex().value();
+  // Itanium C++ ABI 2.3:
+  //   A pointer to data member is an offset from the base address of the
+  //   class object containing it, represented as a ptrdiff_t.  A NULL
+  //   pointer is represented as -1.
+  int64_t memberOffset = -1;
+  if (!attr.isNullPtr()) {
+    cir::RecordType recTy = attr.getType().getClassTy();
     memberOffset =
-        attr.getType().getClassTy().getElementOffset(layout, memberIndex);
+        recTy.getElementOffset(layout, attr.getMemberIndex().value());
   }
-
   mlir::Type abiTy = lowerDataMemberType(attr.getType(), typeConverter);
   return cir::IntAttr::get(abiTy, memberOffset);
 }

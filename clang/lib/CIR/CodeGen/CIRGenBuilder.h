@@ -472,13 +472,13 @@ public:
   //===--------------------------------------------------------------------===//
   // UnaryOp creation helpers
   //===--------------------------------------------------------------------===//
-  mlir::Value createNeg(mlir::Value value, bool nsw = false) {
+  mlir::Value createNeg(mlir::Value value) {
 
     if (auto intTy = mlir::dyn_cast<cir::IntType>(value.getType())) {
       // Source is a unsigned integer: first cast it to signed.
       if (intTy.isUnsigned())
         value = createIntCast(value, getSIntNTy(intTy.getWidth()));
-      return createMinus(value.getLoc(), value, nsw);
+      return createMinus(value.getLoc(), value);
     }
 
     llvm_unreachable("negation for the given type is NYI");
