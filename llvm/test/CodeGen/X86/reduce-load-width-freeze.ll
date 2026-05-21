@@ -354,3 +354,32 @@ define i16 @srl_freeze_load_i64_to_i16(ptr %p) {
   %trunc = trunc i64 %srl to i16
   ret i16 %trunc
 }
+
+@g6 = global i8 0
+@g1 = global i16 0
+
+; no incorrect sext -> zext
+define i1 @issue196590() {
+; CHECK-LABEL: issue196590:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq g6@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movsbl (%rax), %eax
+; CHECK-NEXT:    movzbl %al, %ecx
+; CHECK-NEXT:    movq g1@GOTPCREL(%rip), %rdx
+; CHECK-NEXT:    movw %cx, (%rdx)
+; CHECK-NEXT:    leal (%rax,%rax), %ecx
+; CHECK-NEXT:    cmpl %eax, %ecx
+; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    retq
+  %a = load i8, ptr @g6
+  %zx = zext i8 %a to i16
+  store i16 %zx, ptr @g1
+  %sx = sext i8 %a to i32
+  %b = load i8, ptr @g6
+  %fr = freeze i8 %b
+  %fr16 = sext i8 %fr to i16
+  %add = add i16 %fr16, %fr16
+  %selsx = sext i16 %add to i32
+  %cmp = icmp sgt i32 %selsx, %sx
+  ret i1 %cmp
+}

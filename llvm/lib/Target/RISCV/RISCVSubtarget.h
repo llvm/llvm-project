@@ -337,6 +337,7 @@ public:
   }
 
   bool isPExtPackedType(MVT VT) const;
+  bool isPExtPackedDoubleType(MVT VT) const;
 
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
   // vector hardware implementation which may be less than VLEN.

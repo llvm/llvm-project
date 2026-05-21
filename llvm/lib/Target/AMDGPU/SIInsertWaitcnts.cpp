@@ -40,7 +40,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DebugCounter.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 
@@ -528,6 +528,10 @@ class SIInsertWaitcnts {
   struct BlockInfo {
     std::unique_ptr<WaitcntBrackets> Incoming;
     bool Dirty = true;
+    BlockInfo() = default;
+    BlockInfo(BlockInfo &&) = default;
+    BlockInfo &operator=(BlockInfo &&) = default;
+    ~BlockInfo();
   };
 
   MapVector<MachineBasicBlock *, BlockInfo> BlockInfos;
@@ -1050,6 +1054,8 @@ private:
   // mark yet. Initialized to all zeros.
   CounterValueArray AsyncScore{};
 };
+
+SIInsertWaitcnts::BlockInfo::~BlockInfo() = default;
 
 class SIInsertWaitcntsLegacy : public MachineFunctionPass {
 public:
@@ -4001,7 +4007,7 @@ bool SIInsertWaitcnts::run() {
               ST.getOccupancyWithNumVGPRs(
                   TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass),
                   /*IsDynamicVGPR=*/false) <
-                  AMDGPU::IsaInfo::getMaxWavesPerEU(&ST))) {
+                  AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
     for (auto [MI, Flag] : EndPgmInsts) {
       if (Flag) {
         if (ST.requiresNopBeforeDeallocVGPRs()) {

@@ -3583,7 +3583,8 @@ public:
           InsertPointTy CodeGenIP, llvm::Value *PtrPHI, llvm::Value *BeginArg)>
           PrivAndGenMapInfoCB,
       llvm::Type *ElemTy, StringRef FuncName,
-      CustomMapperCallbackTy CustomMapperCB);
+      CustomMapperCallbackTy CustomMapperCB,
+      bool PreserveMemberOfFlags = false);
 
   /// Generator for '#omp target data'
   ///
