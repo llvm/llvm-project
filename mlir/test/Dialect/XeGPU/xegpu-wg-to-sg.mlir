@@ -1204,6 +1204,34 @@ gpu.module @test_distribution {
     gpu.return
   }
 
+  // CHECK-LABEL: gpu.func @scf_while_multi_vector_iter_args
+  gpu.func @scf_while_multi_vector_iter_args(%arg0: memref<1024x1024xf32>, %arg1: memref<1024x1024xf32>) {
+    %c1_i32 = arith.constant 1 : i32
+    %c10_i32 = arith.constant 10 : i32
+    %c0_i32 = arith.constant 0 : i32
+    %0 = xegpu.create_nd_tdesc %arg0 : memref<1024x1024xf32> -> !xegpu.tensor_desc<128x128xf32>
+    %1 = xegpu.load_nd %0[0, 0] {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>} : !xegpu.tensor_desc<128x128xf32> -> vector<128x128xf32>
+    %2 = xegpu.create_nd_tdesc %arg1 : memref<1024x1024xf32> -> !xegpu.tensor_desc<128x128xf32>
+    %3 = xegpu.load_nd %2[0, 0] {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>} : !xegpu.tensor_desc<128x128xf32> -> vector<128x128xf32>
+
+    // CHECK: scf.while {{.*}} : (vector<16x16xf32>, vector<16x16xf32>, i32) -> (vector<16x16xf32>, vector<16x16xf32>, i32)
+    %4:3 = scf.while (%arg2 = %1, %arg3 = %3, %arg4 = %c0_i32) : (vector<128x128xf32>, vector<128x128xf32>, i32) -> (vector<128x128xf32>, vector<128x128xf32>, i32) {
+      %cond = arith.cmpi slt, %arg4, %c10_i32 : i32
+      // CHECK: scf.condition{{.*}} : vector<16x16xf32>, vector<16x16xf32>, i32
+      scf.condition(%cond) %arg2, %arg3, %arg4 : vector<128x128xf32>, vector<128x128xf32>, i32
+    } do {
+    // CHECK: (%{{.*}}: vector<16x16xf32>, %{{.*}}: vector<16x16xf32>, %{{.*}}: i32)
+    ^bb0(%arg2: vector<128x128xf32>, %arg3: vector<128x128xf32>, %arg4: i32):
+      %nx = arith.addi %arg4, %c1_i32 : i32
+      %ld0 = xegpu.load_nd %0[0, 0] {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>} : !xegpu.tensor_desc<128x128xf32> -> vector<128x128xf32>
+      %ld1 = xegpu.load_nd %2[0, 0] {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>} : !xegpu.tensor_desc<128x128xf32> -> vector<128x128xf32>
+      scf.yield %ld0, %ld1, %nx : vector<128x128xf32>, vector<128x128xf32>, i32
+    }
+    xegpu.store_nd %4#0, %2[0, 0] {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>} : vector<128x128xf32>, !xegpu.tensor_desc<128x128xf32>
+    xegpu.store_nd %4#1, %2[0, 0] {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>} : vector<128x128xf32>, !xegpu.tensor_desc<128x128xf32>
+    gpu.return
+  }
+
   gpu.func @scf_if(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
     %c10 = arith.constant 10 : index
     %id = gpu.subgroup_id : index

@@ -936,6 +936,20 @@ void xegpu::addContextAwareVectorTypeConversion(
 void xegpu::cleanupUnrealizedConversionCasts(
     Operation *root,
     const llvm::SmallSetVector<UnrealizedConversionCastOp, 8> &existingCasts) {
+  // Structural type conversion can generate some redundant
+  // UnrealizedConversionCastOps to materialize the original type from the
+  // type converted (sub-tile) type. These are redundant at this point and
+  // can be eliminated by either folding the cancelling cast chain or, when
+  // the original and final shapes differ but their element counts match,
+  // inserting a vector.shape_cast instead.
+  //
+  // Example (shape differs but element count matches -> shape_cast):
+  //   %1 = UnrealizedConversionCastOp %0 : vector<16x1xf32>
+  //                                     to vector<16x16xf32>
+  //   %2 = UnrealizedConversionCastOp %1 : vector<16x16xf32>
+  //                                     to vector<16xf32>
+  // becomes:
+  //   %2 = vector.shape_cast %0 : vector<16x1xf32> to vector<16xf32>
   OpBuilder builder(root);
   root->walk([&](UnrealizedConversionCastOp op) {
     if (existingCasts.contains(op))
