@@ -31690,27 +31690,32 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       // Use pessimistic cost estimation to avoid long compile time when there
       // are many stores in the list.
       Type *ScalarTy = getValueType(PostProcessStores.front());
-      if (!::isValidElementType(ScalarTy))
-        return Changed;
-      auto *IF =
-          dyn_cast<Instruction>(PostProcessStores.front()->getValueOperand());
-      auto *IB =
-          dyn_cast<Instruction>(PostProcessStores.back()->getValueOperand());
-      if (!NonVectReductions && PostProcessStores.size() == 2 &&
-          (!IF || !IB || IF->getOpcode() != IB->getOpcode()))
-        return Changed;
-      ScalarTy =
-          IntegerType::get(ScalarTy->getContext(),
-                           DL->getTypeSizeInBits(ScalarTy->getScalarType()));
-      if (auto *ValTy = dyn_cast<VectorType>(
-              PostProcessStores.front()->getValueOperand()->getType()))
-        ScalarTy = ::getWidenedType(ScalarTy, getNumElements(ValTy));
-      auto *VecTy = ::getWidenedType(ScalarTy, PostProcessStores.size());
-      InstructionCost ExtractsCost = ::getScalarizationOverhead(
-          *TTI, ScalarTy, VecTy, APInt::getAllOnes(PostProcessStores.size()),
-          /*Insert=*/false, /*Extract=*/true, TTI::TCK_RecipThroughput,
-          /*ForPoisonSrc=*/true, {}, TTI::VectorInstrContext::Store);
-      TryVectorize = ExtractsCost <= PostProcessStores.size() + 1;
+      if (!::isValidElementType(ScalarTy)) {
+        TryVectorize = false;
+      } else {
+        auto *IF =
+            dyn_cast<Instruction>(PostProcessStores.front()->getValueOperand());
+        auto *IB =
+            dyn_cast<Instruction>(PostProcessStores.back()->getValueOperand());
+        if (!NonVectReductions && PostProcessStores.size() == 2 &&
+            (!IF || !IB || IF->getOpcode() != IB->getOpcode())) {
+          TryVectorize = false;
+        } else {
+          ScalarTy = IntegerType::get(
+              ScalarTy->getContext(),
+              DL->getTypeSizeInBits(ScalarTy->getScalarType()));
+          if (auto *ValTy = dyn_cast<VectorType>(
+                  PostProcessStores.front()->getValueOperand()->getType()))
+            ScalarTy = ::getWidenedType(ScalarTy, getNumElements(ValTy));
+          auto *VecTy = ::getWidenedType(ScalarTy, PostProcessStores.size());
+          InstructionCost ExtractsCost = ::getScalarizationOverhead(
+              *TTI, ScalarTy, VecTy,
+              APInt::getAllOnes(PostProcessStores.size()),
+              /*Insert=*/false, /*Extract=*/true, TTI::TCK_RecipThroughput,
+              /*ForPoisonSrc=*/true, {}, TTI::VectorInstrContext::Store);
+          TryVectorize = ExtractsCost <= PostProcessStores.size() + 1;
+        }
+      }
     }
     if (TryVectorize) {
       Changed |= vectorizeNonVectorizableInsts(reverse(PostProcessStores), BB,
