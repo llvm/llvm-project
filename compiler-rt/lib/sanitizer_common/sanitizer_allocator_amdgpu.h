@@ -6,21 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Part of the Sanitizer Allocator.
+// AMDGPU / HSA device memory backend for DeviceAllocatorT.
 //
 //===----------------------------------------------------------------------===//
 #ifndef SANITIZER_ALLOCATOR_H
-#  error This file must be included inside sanitizer_allocator_device.h
+#  error This file must be included inside sanitizer_allocator.h
 #endif
 
 #if SANITIZER_AMDGPU
-class AmdgpuMemFuncs {
- public:
-  enum DeviceAllocFailure {
-    kNotInitialized,
-    kOutOfResources,
-  };
 
+static const DeviceAllocationType DAT_AMDGPU =
+    static_cast<DeviceAllocationType>(1);
+
+class AmdgpuDeviceAllocator {
+ public:
   static bool Init();
   static void* Allocate(uptr size, uptr alignment,
                         DeviceAllocationInfo* da_info);
@@ -28,15 +27,13 @@ class AmdgpuMemFuncs {
   static bool GetPointerInfo(uptr ptr, DevicePointerInfo* ptr_info);
   static uptr GetPageSize();
   static void RegisterSystemEventHandlers();
-  static bool IsAmdgpuRuntimeShutdown();
-  static void ClearAmdgpuRuntimeShutdownState();
-  // Record an HSA error on da_info when DeviceAllocatorT fails before/without a
-  // successful AmdgpuMemFuncs::Allocate (keeps HSA types out of device.h).
+  static bool IsRuntimeShutdown();
+  static void ClearRuntimeShutdownState();
   static void NoteDeviceAllocatorFailure(DeviceAllocationInfo* da_info,
                                          DeviceAllocFailure failure);
 
  private:
-  static void NotifyAmdgpuRuntimeShutdown();
+  static void NotifyRuntimeShutdown();
 };
 
 struct AmdgpuAllocationInfo : public DeviceAllocationInfo {
@@ -60,4 +57,9 @@ struct AmdgpuAllocationInfo : public DeviceAllocationInfo {
   u32 flags;
   void* ptr;
 };
+
+template <class MapUnmapCallback>
+using DefaultDeviceAllocator =
+    DeviceAllocatorT<MapUnmapCallback, AmdgpuDeviceAllocator>;
+
 #endif  // SANITIZER_AMDGPU

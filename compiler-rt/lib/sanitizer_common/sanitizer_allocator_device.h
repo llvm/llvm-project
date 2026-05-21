@@ -13,21 +13,22 @@
 #  error This file must be included inside sanitizer_allocator.h
 #endif
 
-struct DeviceAllocationInfo;
-#if SANITIZER_AMDGPU
-// Device memory allocation usually requires additional information, we can put
-// all the additional information into a data structure DeviceAllocationInfo.
-// This is only a parent structure since different vendors may require
-// different allocation info.
-typedef enum {
+// Vendor-neutral device heap book-keeping. Runtime access (allocate, pointer
+// queries, deallocate etc.) is provided by a DeviceAllocator template
+// parameter.
+
+enum DeviceAllocationType {
   DAT_UNKNOWN = 0,
-  DAT_AMDGPU = 1,
-} DeviceAllocationType;
+};
+
+enum DeviceAllocFailure {
+  DEV_ALLOC_FAILURE_NOT_INITIALIZED,
+  DEV_ALLOC_FAILURE_OUT_OF_RESOURCES,
+};
 
 struct DeviceAllocationInfo {
-  DeviceAllocationInfo(DeviceAllocationType type = DAT_UNKNOWN) {
-    type_ = type;
-  }
+  explicit DeviceAllocationInfo(DeviceAllocationType type = DAT_UNKNOWN)
+      : type_(type) {}
   DeviceAllocationType type_;
 };
 
@@ -37,13 +38,41 @@ struct DevicePointerInfo {
   uptr map_size;
 };
 
-#  include "sanitizer_allocator_amdgpu.h"
+struct NoOpDeviceAllocator {
+  static bool Init() { return false; }
 
-template <class MapUnmapCallback = NoOpMapUnmapCallback>
+  static void* Allocate(uptr size, uptr alignment,
+                        DeviceAllocationInfo* da_info) {
+    (void)size;
+    (void)alignment;
+    (void)da_info;
+    return nullptr;
+  }
+
+  static void Deallocate(void* p) { (void)p; }
+
+  static bool GetPointerInfo(uptr ptr, DevicePointerInfo* ptr_info) {
+    (void)ptr;
+    (void)ptr_info;
+    return false;
+  }
+
+  static uptr GetPageSize() { return 4096; }
+
+  static bool IsRuntimeShutdown() { return false; }
+
+  static void NoteDeviceAllocatorFailure(DeviceAllocationInfo* da_info,
+                                         DeviceAllocFailure failure) {
+    (void)da_info;
+    (void)failure;
+  }
+};
+
+template <class MapUnmapCallback = NoOpMapUnmapCallback,
+          class DeviceAllocator = NoOpDeviceAllocator>
 class DeviceAllocatorT {
  public:
   using PtrArrayT = DefaultLargeMmapAllocatorPtrArray;
-  using DeviceMemFuncs = AmdgpuMemFuncs;
 
   void Init(bool enable, uptr kMetadataSize) {
     internal_memset(this, 0, sizeof(*this));
@@ -59,8 +88,8 @@ class DeviceAllocatorT {
                  DeviceAllocationInfo* da_info) {
     if (!da_info || !InitMemFuncs()) {
       if (da_info)
-        DeviceMemFuncs::NoteDeviceAllocatorFailure(
-            da_info, DeviceMemFuncs::kNotInitialized);
+        DeviceAllocator::NoteDeviceAllocatorFailure(
+            da_info, DEV_ALLOC_FAILURE_NOT_INITIALIZED);
       return nullptr;
     }
 
@@ -78,14 +107,14 @@ class DeviceAllocatorT {
           "WARNING: %s: DeviceAllocator allocation overflow: "
           "0x%zx bytes with 0x%zx alignment requested\n",
           SanitizerToolName, map_size, alignment);
-      DeviceMemFuncs::NoteDeviceAllocatorFailure(
-          da_info, DeviceMemFuncs::kOutOfResources);
+      DeviceAllocator::NoteDeviceAllocatorFailure(
+          da_info, DEV_ALLOC_FAILURE_OUT_OF_RESOURCES);
       return nullptr;
     }
-    void* ptr = DeviceMemFuncs::Allocate(map_size, alignment, da_info);
+    void* ptr = DeviceAllocator::Allocate(map_size, alignment, da_info);
     if (!ptr) {
-      DeviceMemFuncs::NoteDeviceAllocatorFailure(
-          da_info, DeviceMemFuncs::kOutOfResources);
+      DeviceAllocator::NoteDeviceAllocatorFailure(
+          da_info, DEV_ALLOC_FAILURE_OUT_OF_RESOURCES);
       return nullptr;
     }
     uptr map_beg = reinterpret_cast<uptr>(ptr);
@@ -139,7 +168,7 @@ class DeviceAllocatorT {
       stat->Sub(AllocatorStatMapped, h->map_size);
     }
     MapUnmapCallback().OnUnmap(h->map_beg, h->map_size);
-    DeviceMemFuncs::Deallocate(p);
+    DeviceAllocator::Deallocate(p);
   }
 
   uptr TotalMemoryUsed() {
@@ -302,10 +331,10 @@ class DeviceAllocatorT {
     if (!enabled_ || mem_funcs_inited_ || mem_funcs_init_count_ >= 2) {
       return mem_funcs_inited_;
     }
-    mem_funcs_inited_ = DeviceMemFuncs::Init();
+    mem_funcs_inited_ = DeviceAllocator::Init();
     mem_funcs_init_count_++;
     if (mem_funcs_inited_)
-      page_size_ = DeviceMemFuncs::GetPageSize();
+      page_size_ = DeviceAllocator::GetPageSize();
     return mem_funcs_inited_;
   }
 
@@ -313,7 +342,7 @@ class DeviceAllocatorT {
 
   Header* GetHeaderAnyPointer(uptr p, Header* h) const {
     CHECK(IsAligned(p, page_size_));
-    return DeviceMemFuncs::GetPointerInfo(p, h) ? h : nullptr;
+    return DeviceAllocator::GetPointerInfo(p, h) ? h : nullptr;
   }
 
   Header* GetHeader(uptr chunk, Header* h) const {
@@ -321,12 +350,12 @@ class DeviceAllocatorT {
     // is unloaded, GetPointerInfo() will fail. For such case, we can still
     // return a valid value for map_beg, map_size will be limited to one page
     if (LIKELY(!dev_runtime_unloaded_)) {
-      if (DeviceMemFuncs::GetPointerInfo(chunk, h))
+      if (DeviceAllocator::GetPointerInfo(chunk, h))
         return h;
       // If GetPointerInfo() fails, we don't assume the runtime is unloaded yet.
       // We just return a conservative single-page header. Here mark/check the
       // runtime shutdown state
-      dev_runtime_unloaded_ = DeviceMemFuncs::IsAmdgpuRuntimeShutdown();
+      dev_runtime_unloaded_ = DeviceAllocator::IsRuntimeShutdown();
     }
     // If we reach here, device runtime is unloaded.
     // Fallback: conservative single-page header
@@ -346,7 +375,7 @@ class DeviceAllocatorT {
   mutable bool dev_runtime_unloaded_;
   // Maximum of mem_funcs_init_count_ is 2:
   //   1. The initial init called from Init(...), it could fail if
-  //      libhsa-runtime64.so is dynamically loaded with dlopen()
+  //      the device runtime is dynamically loaded with dlopen()
   //   2. A potential deferred init called by Allocate(...)
   u32 mem_funcs_init_count_;
   uptr kMetadataSize_;
@@ -360,4 +389,9 @@ class DeviceAllocatorT {
   } stats;
   mutable StaticSpinMutex mutex_;
 };
-#endif  // SANITIZER_AMDGPU
+
+#if !SANITIZER_AMDGPU
+template <class MapUnmapCallback>
+using DefaultDeviceAllocator =
+    DeviceAllocatorT<MapUnmapCallback, NoOpDeviceAllocator>;
+#endif

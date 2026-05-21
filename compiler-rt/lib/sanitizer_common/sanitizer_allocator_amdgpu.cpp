@@ -51,14 +51,12 @@ static atomic_uint8_t amdgpu_event_registered{0};
       success = false;                                                \
     }
 
-// Check AMDGPU runtime shutdown state
-bool AmdgpuMemFuncs::IsAmdgpuRuntimeShutdown() {
+bool AmdgpuDeviceAllocator::IsRuntimeShutdown() {
   return static_cast<bool>(
       atomic_load(&amdgpu_runtime_shutdown, memory_order_acquire));
 }
 
-// Notify AMDGPU runtime shutdown to allocator
-void AmdgpuMemFuncs::NotifyAmdgpuRuntimeShutdown() {
+void AmdgpuDeviceAllocator::NotifyRuntimeShutdown() {
   uint8_t shutdown = 0;
   if (atomic_compare_exchange_strong(&amdgpu_runtime_shutdown, &shutdown, 1,
                                      memory_order_acq_rel)) {
@@ -70,28 +68,28 @@ void AmdgpuMemFuncs::NotifyAmdgpuRuntimeShutdown() {
 // Resets amdgpu_runtime_shutdown so allocator operations are enabled, and
 // amdgpu_event_registered so RegisterSystemEventHandlers() will register the
 // shutdown callback for the new runtime instance.
-void AmdgpuMemFuncs::ClearAmdgpuRuntimeShutdownState() {
+void AmdgpuDeviceAllocator::ClearRuntimeShutdownState() {
   atomic_store(&amdgpu_runtime_shutdown, 0, memory_order_release);
   atomic_store(&amdgpu_event_registered, 0, memory_order_release);
 }
 
-void AmdgpuMemFuncs::NoteDeviceAllocatorFailure(DeviceAllocationInfo* da_info,
-                                                DeviceAllocFailure failure) {
+void AmdgpuDeviceAllocator::NoteDeviceAllocatorFailure(
+    DeviceAllocationInfo* da_info, DeviceAllocFailure failure) {
   if (!da_info || da_info->type_ != DAT_AMDGPU)
     return;
   AmdgpuAllocationInfo* aa_info =
       reinterpret_cast<AmdgpuAllocationInfo*>(da_info);
   switch (failure) {
-    case kNotInitialized:
+    case DEV_ALLOC_FAILURE_NOT_INITIALIZED:
       aa_info->EnsureFailureStatus(HSA_STATUS_ERROR_NOT_INITIALIZED);
       break;
-    case kOutOfResources:
+    case DEV_ALLOC_FAILURE_OUT_OF_RESOURCES:
       aa_info->EnsureFailureStatus(HSA_STATUS_ERROR_OUT_OF_RESOURCES);
       break;
   }
 }
 
-bool AmdgpuMemFuncs::Init() {
+bool AmdgpuDeviceAllocator::Init() {
   bool success = true;
   LOAD_HSA_FUNC_WITH_ERROR_CHECK(hsa_amd.memory_pool_allocate,
                                  "hsa_amd_memory_pool_allocate", success);
@@ -113,13 +111,13 @@ bool AmdgpuMemFuncs::Init() {
   return true;
 }
 
-void* AmdgpuMemFuncs::Allocate(uptr size, uptr alignment,
-                               DeviceAllocationInfo* da_info) {
+void* AmdgpuDeviceAllocator::Allocate(uptr size, uptr alignment,
+                                      DeviceAllocationInfo* da_info) {
   AmdgpuAllocationInfo* aa_info =
       reinterpret_cast<AmdgpuAllocationInfo*>(da_info);
 
   // Do not allocate if AMDGPU runtime is shutdown
-  if (UNLIKELY(IsAmdgpuRuntimeShutdown())) {
+  if (UNLIKELY(IsRuntimeShutdown())) {
     VReport(1,
             "Amdgpu Allocate: Runtime shutdown, skipping allocation for size "
             "%zu alignment %zu\n",
@@ -142,9 +140,9 @@ void* AmdgpuMemFuncs::Allocate(uptr size, uptr alignment,
   return aa_info->ptr;
 }
 
-void AmdgpuMemFuncs::Deallocate(void* p) {
+void AmdgpuDeviceAllocator::Deallocate(void* p) {
   // Deallocate does nothing after AMDGPU runtime shutdown
-  if (UNLIKELY(IsAmdgpuRuntimeShutdown())) {
+  if (UNLIKELY(IsRuntimeShutdown())) {
     VReport(
         1,
         "Amdgpu Deallocate: Runtime shutdown, skipping deallocation for %p\n",
@@ -153,7 +151,8 @@ void AmdgpuMemFuncs::Deallocate(void* p) {
   }
 
   DevicePointerInfo DevPtrInfo;
-  if (AmdgpuMemFuncs::GetPointerInfo(reinterpret_cast<uptr>(p), &DevPtrInfo)) {
+  if (AmdgpuDeviceAllocator::GetPointerInfo(reinterpret_cast<uptr>(p),
+                                            &DevPtrInfo)) {
     if (DevPtrInfo.type == HSA_EXT_POINTER_TYPE_HSA) {
       UNUSED hsa_status_t status = hsa_amd.memory_pool_free(p);
     } else if (DevPtrInfo.type == HSA_EXT_POINTER_TYPE_RESERVED_ADDR) {
@@ -163,9 +162,10 @@ void AmdgpuMemFuncs::Deallocate(void* p) {
   }
 }
 
-bool AmdgpuMemFuncs::GetPointerInfo(uptr ptr, DevicePointerInfo* ptr_info) {
+bool AmdgpuDeviceAllocator::GetPointerInfo(uptr ptr,
+                                           DevicePointerInfo* ptr_info) {
   // GetPointerInfo returns false after AMDGPU runtime shutdown
-  if (UNLIKELY(IsAmdgpuRuntimeShutdown())) {
+  if (UNLIKELY(IsRuntimeShutdown())) {
     VReport(1,
             "Amdgpu GetPointerInfo: Runtime shutdown, skipping query for %p\n",
             reinterpret_cast<void*>(ptr));
@@ -191,7 +191,7 @@ bool AmdgpuMemFuncs::GetPointerInfo(uptr ptr, DevicePointerInfo* ptr_info) {
 }
 // Register shutdown system event handler only once
 // TODO: Register multiple event handlers if needed in future
-void AmdgpuMemFuncs::RegisterSystemEventHandlers() {
+void AmdgpuDeviceAllocator::RegisterSystemEventHandlers() {
   uint8_t registered = 0;
   // Check if shutdown event handler is already registered
   if (atomic_compare_exchange_strong(&amdgpu_event_registered, &registered, 1,
@@ -202,7 +202,7 @@ void AmdgpuMemFuncs::RegisterSystemEventHandlers() {
       if (!event)
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
       if (event->event_type == HSA_AMD_SYSTEM_SHUTDOWN_EVENT)
-        AmdgpuMemFuncs::NotifyAmdgpuRuntimeShutdown();
+        AmdgpuDeviceAllocator::NotifyRuntimeShutdown();
       return HSA_STATUS_SUCCESS;
     };
     // Register the event callback
@@ -222,6 +222,6 @@ void AmdgpuMemFuncs::RegisterSystemEventHandlers() {
   }
 }
 
-uptr AmdgpuMemFuncs::GetPageSize() { return kPageSize_; }
+uptr AmdgpuDeviceAllocator::GetPageSize() { return kPageSize_; }
 }  // namespace __sanitizer
 #endif  // SANITIZER_AMDGPU

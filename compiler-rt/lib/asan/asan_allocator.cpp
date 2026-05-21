@@ -393,14 +393,11 @@ struct Allocator {
 
   void InitLinkerInitialized(const AllocatorOptions& options) {
     SetAllocatorMayReturnNull(options.may_return_null);
-#if SANITIZER_AMDGPU
-    // Device-backed HSA allocations (e.g. hsa_amd_memory_pool_allocate) use
-    // CombinedAllocator's device path; it must be enabled for InitMemFuncs/
-    // AmdgpuMemFuncs::Init to run at startup.
-    allocator.InitLinkerInitialized(options.release_to_os_interval_ms, 0, true);
-#else
-    allocator.InitLinkerInitialized(options.release_to_os_interval_ms);
-#endif
+    // Device-backed allocations use CombinedAllocator's device path. On
+    // SANITIZER_AMDGPU builds, enable it so InitMemFuncs() /
+    // AmdgpuDeviceAllocator::Init() run at startup.
+    allocator.InitLinkerInitialized(options.release_to_os_interval_ms, 0,
+                                    SANITIZER_AMDGPU);
     SharedInitCode(options);
     max_user_defined_malloc_size = common_flags()->max_allocation_size_mb
                                        ? common_flags()->max_allocation_size_mb
@@ -1738,12 +1735,12 @@ hsa_status_t asan_hsa_init() {
   if (status == HSA_STATUS_SUCCESS) {
     // Only clear state when recovering from a prior shutdown (avoids clearing
     // amdgpu_event_registered on every refcount bump and re-registering).
-    if (__sanitizer::AmdgpuMemFuncs::IsAmdgpuRuntimeShutdown())
-      __sanitizer::AmdgpuMemFuncs::ClearAmdgpuRuntimeShutdownState();
+    if (__sanitizer::AmdgpuDeviceAllocator::IsRuntimeShutdown())
+      __sanitizer::AmdgpuDeviceAllocator::ClearRuntimeShutdownState();
     // Load HSA entry points once the runtime is up; device allocator may stay
     // disabled, but interceptors and RegisterSystemEventHandlers need them.
-    if (__sanitizer::AmdgpuMemFuncs::Init())
-      __sanitizer::AmdgpuMemFuncs::RegisterSystemEventHandlers();
+    if (__sanitizer::AmdgpuDeviceAllocator::Init())
+      __sanitizer::AmdgpuDeviceAllocator::RegisterSystemEventHandlers();
   }
   return status;
 }
