@@ -4,11 +4,11 @@
 define i8 @abs_sub_two_sexts(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @abs_sub_two_sexts(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i32
-; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[SX]], [[SY]]
-; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i16
+; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i16
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i16 [[SX]], [[SY]]
+; CHECK-NEXT:    [[A:%.*]] = call i16 @llvm.abs.i16(i16 [[SUB]], i1 false)
+; CHECK-NEXT:    [[T:%.*]] = trunc i16 [[A]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
   %sx = sext i8 %x to i32
@@ -22,12 +22,12 @@ define i8 @abs_sub_two_sexts(i8 %x, i8 %y) {
 define i8 @smin_of_abs_chain(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @smin_of_abs_chain(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i32
-; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[SX]], [[SY]]
-; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
-; CHECK-NEXT:    [[U:%.*]] = call i32 @llvm.smin.i32(i32 [[A]], i32 100)
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[U]] to i8
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i16
+; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i16
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i16 [[SX]], [[SY]]
+; CHECK-NEXT:    [[A:%.*]] = call i16 @llvm.abs.i16(i16 [[SUB]], i1 false)
+; CHECK-NEXT:    [[U:%.*]] = call i16 @llvm.smin.i16(i16 [[A]], i16 100)
+; CHECK-NEXT:    [[T:%.*]] = trunc i16 [[U]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
   %sx = sext i8 %x to i32
@@ -42,11 +42,11 @@ define i8 @smin_of_abs_chain(i8 %x, i8 %y) {
 define i8 @abs_sub_intmin_poison_dropped(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @abs_sub_intmin_poison_dropped(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i32
-; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[SX]], [[SY]]
-; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 true)
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i16
+; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i16
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i16 [[SX]], [[SY]]
+; CHECK-NEXT:    [[A:%.*]] = call i16 @llvm.abs.i16(i16 [[SUB]], i1 false)
+; CHECK-NEXT:    [[T:%.*]] = trunc i16 [[A]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
   %sx = sext i8 %x to i32
@@ -60,11 +60,11 @@ define i8 @abs_sub_intmin_poison_dropped(i8 %x, i8 %y) {
 define i8 @abs_sub_intmin_poison_false(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @abs_sub_intmin_poison_false(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i32
-; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[SX]], [[SY]]
-; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i16
+; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i16
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i16 [[SX]], [[SY]]
+; CHECK-NEXT:    [[A:%.*]] = call i16 @llvm.abs.i16(i16 [[SUB]], i1 false)
+; CHECK-NEXT:    [[T:%.*]] = trunc i16 [[A]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
   %sx = sext i8 %x to i32
