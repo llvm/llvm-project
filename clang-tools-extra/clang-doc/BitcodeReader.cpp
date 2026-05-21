@@ -12,6 +12,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <utility>
 
 namespace clang {
 namespace doc {
@@ -36,9 +37,15 @@ static llvm::Error decodeRecord(const Record &R, llvm::StringRef &Field,
 
 static llvm::Error decodeRecord(const Record &R, SymbolID &Field,
                                 llvm::StringRef Blob) {
+  if (R.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "empty record for SymbolID");
   if (R[0] != BitCodeConstants::USRHashSize)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "incorrect USR size");
+  if (R.size() < R[0] + 1)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "record too short for SymbolID");
 
   // First position in the record is the length of the following array, so we
   // copy the following elements to the field.
@@ -49,12 +56,18 @@ static llvm::Error decodeRecord(const Record &R, SymbolID &Field,
 
 static llvm::Error decodeRecord(const Record &R, bool &Field,
                                 llvm::StringRef Blob) {
+  if (R.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "empty record for bool");
   Field = R[0] != 0;
   return llvm::Error::success();
 }
 
 static llvm::Error decodeRecord(const Record &R, AccessSpecifier &Field,
                                 llvm::StringRef Blob) {
+  if (R.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "empty record for AccessSpecifier");
   switch (R[0]) {
   case AS_public:
   case AS_private:
@@ -68,6 +81,9 @@ static llvm::Error decodeRecord(const Record &R, AccessSpecifier &Field,
 
 static llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,
                                 llvm::StringRef Blob) {
+  if (R.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "empty record for TagTypeKind");
   switch (static_cast<TagTypeKind>(R[0])) {
   case TagTypeKind::Struct:
   case TagTypeKind::Interface:
@@ -83,6 +99,9 @@ static llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,
 
 static llvm::Error decodeRecord(const Record &R, std::optional<Location> &Field,
                                 llvm::StringRef Blob) {
+  if (R.size() < 3)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "record too short for Location");
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "integer too large to parse");
@@ -93,6 +112,9 @@ static llvm::Error decodeRecord(const Record &R, std::optional<Location> &Field,
 
 static llvm::Error decodeRecord(const Record &R, InfoType &Field,
                                 llvm::StringRef Blob) {
+  if (R.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "empty record for InfoType");
   switch (auto IT = static_cast<InfoType>(R[0])) {
   case InfoType::IT_namespace:
   case InfoType::IT_record:
@@ -112,6 +134,9 @@ static llvm::Error decodeRecord(const Record &R, InfoType &Field,
 
 static llvm::Error decodeRecord(const Record &R, FieldId &Field,
                                 llvm::StringRef Blob) {
+  if (R.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "empty record for FieldId");
   switch (auto F = static_cast<FieldId>(R[0])) {
   case FieldId::F_namespace:
   case FieldId::F_parent:
@@ -129,15 +154,18 @@ static llvm::Error decodeRecord(const Record &R, FieldId &Field,
                                  "invalid value for FieldId");
 }
 
-static llvm::Error decodeRecord(const Record &R, OwningVec<Location> &Field,
+static llvm::Error decodeRecord(const Record &R, DocList<Location> &Field,
                                 llvm::StringRef Blob) {
+  if (R.size() < 3)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "record too short for Location");
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "integer too large to parse");
 
-  Field.push_back(*allocatePtr<Location>(static_cast<int>(R[0]),
-                                         static_cast<int>(R[1]), Blob,
-                                         static_cast<bool>(R[2])));
+  Field.push_back(*allocateListNodeTransient<Location>(
+      static_cast<int>(R[0]), static_cast<int>(R[1]), Blob,
+      static_cast<bool>(R[2])));
   return llvm::Error::success();
 }
 
@@ -884,9 +912,9 @@ template <typename T> static llvm::Expected<CommentInfo *> getCommentInfo(T I) {
   if constexpr (std::is_pointer_v<T>) {
     using Pointee = std::remove_pointer_t<T>;
     if constexpr (has_description<Pointee>::value) {
-      auto *NewComment = allocatePtr<CommentInfo>();
+      auto *NewComment = allocateListNodeTransient<CommentInfo>();
       I->Description.push_back(*NewComment);
-      return NewComment;
+      return NewComment->Ptr;
     }
   }
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -934,11 +962,8 @@ static llvm::Error addReference(T I, Reference &&R, FieldId F) {
 }
 
 template <> llvm::Error addReference(VarInfo *I, Reference &&R, FieldId F) {
-  switch (F) {
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "VarInfo cannot contain this Reference");
-  }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "VarInfo cannot contain this Reference");
 }
 
 template <> llvm::Error addReference(TypeInfo *I, Reference &&R, FieldId F) {
@@ -977,19 +1002,13 @@ llvm::Error addReference(MemberTypeInfo *I, Reference &&R, FieldId F) {
 }
 
 template <> llvm::Error addReference(EnumInfo *I, Reference &&R, FieldId F) {
-  switch (F) {
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "invalid type cannot contain Reference");
-  }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid type cannot contain Reference");
 }
 
 template <> llvm::Error addReference(TypedefInfo *I, Reference &&R, FieldId F) {
-  switch (F) {
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "invalid type cannot contain Reference");
-  }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid type cannot contain Reference");
 }
 
 template <>
@@ -997,11 +1016,11 @@ llvm::Error addReference(NamespaceInfo *I, Reference &&R, FieldId F) {
   switch (F) {
   case FieldId::F_child_namespace:
     I->Children.Namespaces.push_back(
-        *allocatePtr<Reference>(TransientArena, std::move(R)));
+        *allocateListNodeTransient<Reference>(std::move(R)));
     return llvm::Error::success();
   case FieldId::F_child_record:
     I->Children.Records.push_back(
-        *allocatePtr<Reference>(TransientArena, std::move(R)));
+        *allocateListNodeTransient<Reference>(std::move(R)));
     return llvm::Error::success();
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -1025,7 +1044,7 @@ template <> llvm::Error addReference(RecordInfo *I, Reference &&R, FieldId F) {
   switch (F) {
   case FieldId::F_child_record:
     I->Children.Records.push_back(
-        *allocatePtr<Reference>(TransientArena, std::move(R)));
+        *allocateListNodeTransient<Reference>(std::move(R)));
     return llvm::Error::success();
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -1080,10 +1099,24 @@ static void addChild(Target I, Child &&R) {
     if constexpr (has_children<Pointee>::value) {
       using BareChild = std::remove_cv_t<std::remove_reference_t<Child>>;
       if constexpr (is_valid_child<BareChild>::value) {
-        auto *Node = allocatePtr<BareChild>(std::move(R));
-        getList(I->Children, Node).push_back(*Node);
+        auto *Node = allocatePtr<BareChild>(std::forward<Child>(R));
+        getList(I->Children, Node).push_back(*allocateListNodeTransient(Node));
         return;
       }
+    }
+  }
+  ExitOnErr(llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                    "invalid child type for info"));
+}
+
+template <typename Target, typename Child>
+static void addChildPtr(Target I, Child *Node) {
+  if constexpr (std::is_pointer_v<Target>) {
+    using Pointee = std::remove_pointer_t<Target>;
+    if constexpr (has_children<Pointee>::value &&
+                  is_valid_child<Child>::value) {
+      getList(I->Children, Node).push_back(*allocateListNodeTransient(Node));
+      return;
     }
   }
   ExitOnErr(llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -1243,6 +1276,15 @@ llvm::Error ClangDocBitcodeReader::handleSubBlock(unsigned ID, T Parent,
   }
 }
 
+template <typename InfoType, typename T>
+llvm::Error ClangDocBitcodeReader::handleSubBlock(unsigned ID, T Parent) {
+  InfoType *Info = allocatePtr<InfoType>();
+  if (auto Err = readBlock(ID, Info))
+    return Err;
+  addChildPtr(Parent, Info);
+  return llvm::Error::success();
+}
+
 template <typename T>
 llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
   llvm::TimeTraceScope("Reducing infos", "readSubBlock");
@@ -1284,16 +1326,14 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
     return llvm::Error::success();
   }
   case BI_FUNCTION_BLOCK_ID: {
-    return handleSubBlock<FunctionInfo>(
-        ID, I, CreateAddFunc(addChild<T, FunctionInfo>));
+    return handleSubBlock<FunctionInfo>(ID, I);
   }
   case BI_BASE_RECORD_BLOCK_ID: {
     return handleSubBlock<BaseRecordInfo>(
         ID, I, CreateAddFunc(addChild<T, BaseRecordInfo>));
   }
   case BI_ENUM_BLOCK_ID: {
-    return handleSubBlock<EnumInfo>(ID, I,
-                                    CreateAddFunc(addChild<T, EnumInfo>));
+    return handleSubBlock<EnumInfo>(ID, I);
   }
   case BI_ENUM_VALUE_BLOCK_ID: {
     return handleSubBlock<EnumValueInfo>(
@@ -1311,19 +1351,17 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
         ID, I, CreateAddFunc(addTemplateParam<T>));
   }
   case BI_TYPEDEF_BLOCK_ID: {
-    return handleSubBlock<TypedefInfo>(ID, I,
-                                       CreateAddFunc(addChild<T, TypedefInfo>));
+    return handleSubBlock<TypedefInfo>(ID, I);
   }
   case BI_CONSTRAINT_BLOCK_ID: {
     return handleSubBlock<ConstraintInfo>(ID, I,
                                           CreateAddFunc(addConstraint<T>));
   }
   case BI_CONCEPT_BLOCK_ID: {
-    return handleSubBlock<ConceptInfo>(ID, I,
-                                       CreateAddFunc(addChild<T, ConceptInfo>));
+    return handleSubBlock<ConceptInfo>(ID, I);
   }
   case BI_VAR_BLOCK_ID: {
-    return handleSubBlock<VarInfo>(ID, I, CreateAddFunc(addChild<T, VarInfo>));
+    return handleSubBlock<VarInfo>(ID, I);
   }
   case BI_FRIEND_BLOCK_ID: {
     return handleSubBlock<FriendInfo>(ID, I,
@@ -1442,8 +1480,8 @@ ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
 }
 
 // Entry point
-llvm::Expected<OwningPtrArray<Info>> ClangDocBitcodeReader::readBitcode() {
-  OwningPtrArray<Info> Infos;
+llvm::Expected<std::vector<Info *>> ClangDocBitcodeReader::readBitcode() {
+  std::vector<Info *> Infos;
   if (auto Err = validateStream())
     return std::move(Err);
 

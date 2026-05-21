@@ -31,7 +31,7 @@ public:
       : Stream(Stream), Diags(Diags) {}
 
   // Main entry point, calls readBlock to read each block in the given stream.
-  llvm::Expected<OwningPtrArray<Info>> readBitcode();
+  llvm::Expected<std::vector<Info *>> readBitcode();
 
 private:
   enum class Cursor { BadBlock = 1, Record, BlockEnd, BlockBegin };
@@ -90,13 +90,16 @@ private:
   template <typename InfoType, typename T, typename CallbackFunction>
   llvm::Error handleSubBlock(unsigned ID, T Parent, CallbackFunction Function);
 
+  template <typename InfoType, typename T>
+  llvm::Error handleSubBlock(unsigned ID, T Parent);
+
   template <typename InfoType, typename T, typename CallbackFunction>
   llvm::Error handleTypeSubBlock(unsigned ID, T Parent,
                                  CallbackFunction Function);
 
   llvm::BitstreamCursor &Stream;
   std::optional<llvm::BitstreamBlockInfo> BlockInfo;
-  FieldId CurrentReferenceField;
+  FieldId CurrentReferenceField = FieldId::F_default;
   DiagnosticsEngine &Diags;
 };
 

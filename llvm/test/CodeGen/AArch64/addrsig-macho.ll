@@ -145,10 +145,10 @@ attributes #0 = { noinline }
 !2 = !{i32 7, !"Dwarf Version", i32 4}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 
-!4 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !0)
+!4 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false, type: !10, unit: !0)
 !5 = !DILocation(line: 0, scope: !4)
 !6 = !DILocalVariable(scope: !7)
-!7 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !0)
+!7 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false, type: !10, unit: !0)
 !8 = !DILocation(line: 0, scope: !7, inlinedAt: !5)
 !9 = distinct !DISubprogram(scope: null, file: !1, line: 1, type: !10, unit: !0)
 !10 = !DISubroutineType(types: !{})

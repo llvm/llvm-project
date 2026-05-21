@@ -384,13 +384,13 @@ void JSONGenerator::generateContext(const Info &I, Object &Obj) {
   ContextArrayRef.back().getAsObject()->insert({"End", true});
 }
 
-static void serializeDescription(const OwningVec<CommentInfo> &Description,
+static void serializeDescription(const DocList<CommentInfo> &Description,
                                  json::Object &Obj, StringRef Key = "") {
   if (Description.empty())
     return;
 
   // Skip straight to the FullComment's children
-  auto &Comments = Description.front().Children;
+  auto &Comments = Description.front()->Children;
   Object DescriptionObj = Object();
   for (const auto &CommentInfo : Comments) {
     json::Value Comment = serializeComment(CommentInfo, DescriptionObj);
@@ -696,7 +696,7 @@ void JSONGenerator::serializeInfo(const RecordInfo &I, json::Object &Obj) {
       json::Value FunctionVal = Object();
       auto &FunctionObj = *FunctionVal.getAsObject();
       serializeInfo(Function, FunctionObj);
-      AccessSpecifier Access = Function.Access;
+      AccessSpecifier Access = Function->Access;
       if (Access == AccessSpecifier::AS_public)
         PubFunctionsArrayRef.push_back(FunctionVal);
       else if (Access == AccessSpecifier::AS_protected)

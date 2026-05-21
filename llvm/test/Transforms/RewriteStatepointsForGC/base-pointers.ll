@@ -88,13 +88,13 @@ define void @test2(i1 %cnd, ptr addrspace(1) %base_obj, ptr addrspace(1) %base_a
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[DOT0:%.*]] = phi ptr addrspace(1) [ [[BASE_ARG2:%.*]], [[ENTRY:%.*]] ], [ [[BASE_ARG2_RELOCATED:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[CURRENT_BASE:%.*]] = phi ptr addrspace(1) [ [[BASE_OBJ]], [[ENTRY]] ], [ [[NEXT_BASE_RELOCATED:%.*]], [[LOOP]] ], !is_base_value !0
+; CHECK-NEXT:    [[CURRENT_BASE:%.*]] = phi ptr addrspace(1) [ [[BASE_OBJ]], [[ENTRY]] ], [ [[NEXT_BASE_RELOCATED:%.*]], [[LOOP]] ], !is_base_value [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[CURRENT:%.*]] = phi ptr addrspace(1) [ [[OBJ]], [[ENTRY]] ], [ [[NEXT_RELOCATED:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[EXTRA:%.*]] = phi ptr addrspace(1) [ [[OBJ]], [[ENTRY]] ], [ [[EXTRA2_RELOCATED:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[NEXTA:%.*]] = getelementptr i64, ptr addrspace(1) [[CURRENT]], i32 1
-; CHECK-NEXT:    [[NEXT_BASE:%.*]] = select i1 [[CND:%.*]], ptr addrspace(1) [[CURRENT_BASE]], ptr addrspace(1) [[DOT0]], !is_base_value !0
+; CHECK-NEXT:    [[NEXT_BASE:%.*]] = select i1 [[CND:%.*]], ptr addrspace(1) [[CURRENT_BASE]], ptr addrspace(1) [[DOT0]], !is_base_value [[META0]]
 ; CHECK-NEXT:    [[NEXT:%.*]] = select i1 [[CND]], ptr addrspace(1) [[NEXTA]], ptr addrspace(1) [[DOT0]]
-; CHECK-NEXT:    [[EXTRA2_BASE:%.*]] = select i1 [[CND]], ptr addrspace(1) [[CURRENT_BASE]], ptr addrspace(1) [[DOT0]], !is_base_value !0
+; CHECK-NEXT:    [[EXTRA2_BASE:%.*]] = select i1 [[CND]], ptr addrspace(1) [[CURRENT_BASE]], ptr addrspace(1) [[DOT0]], !is_base_value [[META0]]
 ; CHECK-NEXT:    [[EXTRA2:%.*]] = select i1 [[CND]], ptr addrspace(1) [[NEXTA]], ptr addrspace(1) [[DOT0]]
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0), "gc-live"(ptr addrspace(1) [[NEXT_BASE]], ptr addrspace(1) [[NEXT]], ptr addrspace(1) [[EXTRA2]], ptr addrspace(1) [[DOT0]], ptr addrspace(1) [[EXTRA2_BASE]]) ]
 ; CHECK-NEXT:    [[NEXT_BASE_RELOCATED]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
@@ -226,12 +226,12 @@ declare i32 @snork()
 define void @test7() gc "statepoint-example" {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, <2 x ptr addrspace(1)> zeroinitializer, <2 x i64> <i64 888, i64 908>
-; CHECK-NEXT:    [[SHUFFLEVECTOR_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> zeroinitializer, <2 x ptr addrspace(1)> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>, !is_base_value !0
-; CHECK-NEXT:    [[SHUFFLEVECTOR:%.*]] = shufflevector <2 x ptr addrspace(1)> [[GETELEMENTPTR]], <2 x ptr addrspace(1)> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[SHUFFLEVECTOR1_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> zeroinitializer, <2 x ptr addrspace(1)> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>, !is_base_value !0
-; CHECK-NEXT:    [[SHUFFLEVECTOR1:%.*]] = shufflevector <2 x ptr addrspace(1)> [[GETELEMENTPTR]], <2 x ptr addrspace(1)> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[SELECT_BASE:%.*]] = select i1 false, <4 x ptr addrspace(1)> [[SHUFFLEVECTOR1_BASE]], <4 x ptr addrspace(1)> [[SHUFFLEVECTOR_BASE]], !is_base_value !0
+; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, <2 x ptr addrspace(1)> splat (ptr addrspace(1) null), <2 x i64> <i64 888, i64 908>
+; CHECK-NEXT:    [[SHUFFLEVECTOR_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> zeroinitializer, <2 x ptr addrspace(1)> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>, !is_base_value [[META0]]
+; CHECK-NEXT:    [[SHUFFLEVECTOR:%.*]] = shufflevector <2 x ptr addrspace(1)> [[GETELEMENTPTR]], <2 x ptr addrspace(1)> splat (ptr addrspace(1) null), <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[SHUFFLEVECTOR1_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> zeroinitializer, <2 x ptr addrspace(1)> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>, !is_base_value [[META0]]
+; CHECK-NEXT:    [[SHUFFLEVECTOR1:%.*]] = shufflevector <2 x ptr addrspace(1)> [[GETELEMENTPTR]], <2 x ptr addrspace(1)> splat (ptr addrspace(1) null), <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[SELECT_BASE:%.*]] = select i1 false, <4 x ptr addrspace(1)> [[SHUFFLEVECTOR1_BASE]], <4 x ptr addrspace(1)> [[SHUFFLEVECTOR_BASE]], !is_base_value [[META0]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 false, <4 x ptr addrspace(1)> [[SHUFFLEVECTOR1]], <4 x ptr addrspace(1)> [[SHUFFLEVECTOR]]
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(i32 ()) @snork, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(<4 x ptr addrspace(1)> [[SELECT]], <4 x ptr addrspace(1)> [[SELECT_BASE]]) ]
 ; CHECK-NEXT:    [[SELECT_RELOCATED:%.*]] = call coldcc <4 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v4p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)

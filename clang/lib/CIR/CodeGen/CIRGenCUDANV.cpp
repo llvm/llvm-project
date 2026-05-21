@@ -333,9 +333,9 @@ mlir::Operation *CIRGenNVCUDARuntime::getKernelHandle(cir::FuncOp fn,
   CIRGenBuilderTy &builder = cgm.getBuilder();
   StringRef globalName = cgm.getMangledName(
       gd.getWithKernelReferenceKind(KernelReferenceKind::Kernel));
-  cir::GlobalOp globalOp = CIRGenModule::createGlobalOp(
-      cgm, fn.getLoc(), globalName, fn.getFunctionType(),
-      /*isConstant=*/true);
+  cir::PointerType fnPtrTy = builder.getPointerTo(fn.getFunctionType());
+  cir::GlobalOp globalOp =
+      cgm.createGlobalOp(fn.getLoc(), globalName, fnPtrTy, /*isConstant=*/true);
 
   globalOp->setAttr("alignment", builder.getI64IntegerAttr(
                                      cgm.getPointerAlign().getQuantity()));

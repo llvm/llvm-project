@@ -2130,7 +2130,7 @@ void CodeGenFunction::EmitSEHExceptionCodeSave(CodeGenFunction &ParentCGF,
     // On Win64, the info is passed as the first parameter to the filter.
     SEHInfo = &*CurFn->arg_begin();
     SEHCodeSlotStack.push_back(
-        CreateMemTemp(getContext().IntTy, "__exception_code"));
+        CreateMemTempWithoutCast(getContext().IntTy, "__exception_code"));
   } else {
     // On Win32, the EBP on entry to the filter points to the end of an
     // exception registration object. It contains 6 32-bit fields, and the info
@@ -2181,7 +2181,8 @@ llvm::Value *CodeGenFunction::EmitSEHAbnormalTermination() {
 
 void CodeGenFunction::pushSEHCleanup(CleanupKind Kind,
                                      llvm::Function *FinallyFunc) {
-  EHStack.pushCleanup<PerformSEHFinally>(Kind, FinallyFunc);
+  EHStack.pushCleanup<PerformSEHFinally>(
+      static_cast<CleanupKind>(Kind | SEHFinallyCleanup), FinallyFunc);
 }
 
 void CodeGenFunction::EnterSEHTryStmt(const SEHTryStmt &S) {
@@ -2193,7 +2194,8 @@ void CodeGenFunction::EnterSEHTryStmt(const SEHTryStmt &S) {
         HelperCGF.GenerateSEHFinallyFunction(*this, *Finally);
 
     // Push a cleanup for __finally blocks.
-    EHStack.pushCleanup<PerformSEHFinally>(NormalAndEHCleanup, FinallyFunc);
+    EHStack.pushCleanup<PerformSEHFinally>(NormalAndEHSEHFinallyCleanup,
+                                           FinallyFunc);
     return;
   }
 
@@ -2202,7 +2204,7 @@ void CodeGenFunction::EnterSEHTryStmt(const SEHTryStmt &S) {
   assert(Except);
   EHCatchScope *CatchScope = EHStack.pushCatch(1);
   SEHCodeSlotStack.push_back(
-      CreateMemTemp(getContext().IntTy, "__exception_code"));
+      CreateMemTempWithoutCast(getContext().IntTy, "__exception_code"));
 
   // If the filter is known to evaluate to 1, then we can use the clause
   // "catch i8* null". We can't do this on x86 because the filter has to save
@@ -2245,6 +2247,17 @@ void CodeGenFunction::ExitSEHTryStmt(const SEHTryStmt &S) {
   // TODO: Model unwind edges from instructions, either with iload / istore or
   // a try body function.
   if (!CatchScope.hasEHBranches()) {
+    // Even though we skip emitting the __except body, diagnose variables
+    // with non-trivial destructors that would normally be caught by
+    // EmitAutoVarCleanups.
+    if (getLangOpts().CXXExceptions && currentFunctionUsesSEHTry())
+      for (const Stmt *S : Except->getBlock()->body())
+        if (const auto *DS = dyn_cast<DeclStmt>(S))
+          for (const Decl *D : DS->decls())
+            if (const auto *VD = dyn_cast<VarDecl>(D))
+              if (VD->needsDestruction(getContext()))
+                getContext().getDiagnostics().Report(
+                    VD->getLocation(), diag::err_seh_object_unwinding);
     CatchScope.clearHandlerBlocks();
     EHStack.popCatch();
     SEHCodeSlotStack.pop_back();

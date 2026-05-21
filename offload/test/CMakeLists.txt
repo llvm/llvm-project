@@ -16,7 +16,7 @@ endif()
 # char into the lit command.
 string(REPLACE " " ";" LIBOMPTARGET_LIT_ARG_LIST "${LIBOMPTARGET_LIT_ARGS}")
 
-find_package(CUDAToolkit QUIET)
+find_package(CUDAToolkit QUIET ${OFFLOAD_MIN_CUDA_VERSION})
 if(CUDAToolkit_FOUND)
   get_filename_component(CUDA_ROOT "${CUDAToolkit_BIN_DIR}" DIRECTORY ABSOLUTE)
   get_filename_component(CUDA_LIBDIR "${CUDA_cudart_static_LIBRARY}" DIRECTORY)
@@ -52,6 +52,7 @@ add_offload_testsuite(check-libomptarget
   ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
 
 # Add liboffload unit tests - the test binary will run on all available devices
+set(OFFLOAD_UNITTEST_DIR ${CMAKE_CURRENT_BINARY_DIR}/../unittests)
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/unit/lit.site.cfg

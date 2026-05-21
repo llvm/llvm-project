@@ -15,7 +15,10 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUASMPRINTER_H
 
 #include "AMDGPUMCResourceInfo.h"
+#include "AMDGPUResourceUsageAnalysis.h"
+#include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "SIProgramInfo.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 
 namespace llvm {
@@ -86,6 +89,13 @@ private:
 
   void initTargetStreamer(Module &M);
 
+  void emitAMDGPUInfo(Module &M);
+  void collectCallEdge(const MachineInstr &MI);
+
+  SetVector<std::pair<MCSymbol *, MCSymbol *>> DirectCallEdges;
+
+  SmallVector<AMDGPU::FuncInfo, 8> FunctionInfos;
+
   SmallString<128> getMCExprStr(const MCExpr *Value);
 
   /// Attempts to replace the validation that is missed in getSIProgramInfo due
@@ -126,7 +136,7 @@ public:
 
   void emitFunctionBodyStart() override;
 
-  void emitFunctionBodyEnd() override;
+  void endFunction(const MachineFunction *MF);
 
   void emitImplicitDef(const MachineInstr *MI) const override;
 

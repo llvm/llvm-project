@@ -117,14 +117,14 @@ private:
 
   void InsertChild(ScopeChildren &Scope, const NamespaceInfo &Info);
   void InsertChild(ScopeChildren &Scope, const RecordInfo &Info);
-  void InsertChild(ScopeChildren &Scope, EnumInfo Info);
-  void InsertChild(ScopeChildren &Scope, FunctionInfo Info);
-  void InsertChild(ScopeChildren &Scope, TypedefInfo Info);
-  void InsertChild(ScopeChildren &Scope, ConceptInfo Info);
-  void InsertChild(ScopeChildren &Scope, VarInfo Info);
+  void InsertChild(ScopeChildren &Scope, EnumInfo &Info);
+  void InsertChild(ScopeChildren &Scope, FunctionInfo &Info);
+  void InsertChild(ScopeChildren &Scope, TypedefInfo &Info);
+  void InsertChild(ScopeChildren &Scope, ConceptInfo &Info);
+  void InsertChild(ScopeChildren &Scope, VarInfo &Info);
 
   template <typename ChildType>
-  OwnedPtr<Info> makeAndInsertIntoParent(ChildType Child);
+  OwnedPtr<Info> makeAndInsertIntoParent(ChildType &Child);
 
   AccessSpecifier getFinalAccessSpecifier(AccessSpecifier FirstAS,
                                           AccessSpecifier SecondAS);

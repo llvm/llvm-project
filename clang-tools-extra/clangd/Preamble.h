@@ -239,6 +239,10 @@ private:
   MainFileMacros PatchedMacros;
 };
 
+PreambleBounds computePreambleBounds(const LangOptions &LangOpts,
+                                     const llvm::MemoryBufferRef &Buffer,
+                                     bool SkipPreambleBuild);
+
 } // namespace clangd
 } // namespace clang
 

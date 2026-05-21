@@ -379,20 +379,19 @@ BugReporterVisitor::getDefaultEndPath(const BugReporterContext &BRC,
 
 bool NoStateChangeFuncVisitor::isModifiedInFrame(const ExplodedNode *N) {
   const LocationContext *Ctx = N->getLocationContext();
-  const StackFrameContext *SCtx = Ctx->getStackFrame();
-  if (!FramesModifyingCalculated.count(SCtx))
+  const StackFrame *SF = Ctx->getStackFrame();
+  if (!FramesModifyingCalculated.count(SF))
     findModifyingFrames(N);
-  return FramesModifying.count(SCtx);
+  return FramesModifying.count(SF);
 }
 
-void NoStateChangeFuncVisitor::markFrameAsModifying(
-    const StackFrameContext *SCtx) {
-  while (!SCtx->inTopFrame()) {
-    auto p = FramesModifying.insert(SCtx);
+void NoStateChangeFuncVisitor::markFrameAsModifying(const StackFrame *SF) {
+  while (!SF->inTopFrame()) {
+    auto p = FramesModifying.insert(SF);
     if (!p.second)
       break; // Frame and all its parents already inserted.
 
-    SCtx = SCtx->getParent()->getStackFrame();
+    SF = SF->getParent()->getStackFrame();
   }
 }
 
@@ -400,13 +399,13 @@ static const ExplodedNode *getMatchingCallExitEnd(const ExplodedNode *N) {
   assert(N->getLocationAs<CallEnter>());
   // The stackframe of the callee is only found in the nodes succeeding
   // the CallEnter node. CallEnter's stack frame refers to the caller.
-  const StackFrameContext *OrigSCtx = N->getFirstSucc()->getStackFrame();
+  const StackFrame *OrigSF = N->getFirstSucc()->getStackFrame();
 
   // Similarly, the nodes preceding CallExitEnd refer to the callee's stack
   // frame.
-  auto IsMatchingCallExitEnd = [OrigSCtx](const ExplodedNode *N) {
+  auto IsMatchingCallExitEnd = [OrigSF](const ExplodedNode *N) {
     return N->getLocationAs<CallExitEnd>() &&
-           OrigSCtx == N->getFirstPred()->getStackFrame();
+           OrigSF == N->getFirstPred()->getStackFrame();
   };
   while (N && !IsMatchingCallExitEnd(N)) {
     assert(N->succ_size() <= 1 &&
@@ -421,19 +420,19 @@ void NoStateChangeFuncVisitor::findModifyingFrames(
 
   assert(CallExitBeginN->getLocationAs<CallExitBegin>());
 
-  const StackFrameContext *const OriginalSCtx =
+  const StackFrame *const OriginalSF =
       CallExitBeginN->getLocationContext()->getStackFrame();
 
   const ExplodedNode *CurrCallExitBeginN = CallExitBeginN;
-  const StackFrameContext *CurrentSCtx = OriginalSCtx;
+  const StackFrame *CurrentSF = OriginalSF;
 
   for (const ExplodedNode *CurrN = CallExitBeginN; CurrN;
        CurrN = CurrN->getFirstPred()) {
     // Found a new inlined call.
     if (CurrN->getLocationAs<CallExitBegin>()) {
       CurrCallExitBeginN = CurrN;
-      CurrentSCtx = CurrN->getStackFrame();
-      FramesModifyingCalculated.insert(CurrentSCtx);
+      CurrentSF = CurrN->getStackFrame();
+      FramesModifyingCalculated.insert(CurrentSF);
       // We won't see a change in between two identical exploded nodes: skip.
       continue;
     }
@@ -441,10 +440,10 @@ void NoStateChangeFuncVisitor::findModifyingFrames(
     if (auto CE = CurrN->getLocationAs<CallEnter>()) {
       if (const ExplodedNode *CallExitEndN = getMatchingCallExitEnd(CurrN))
         if (wasModifiedInFunction(CurrN, CallExitEndN))
-          markFrameAsModifying(CurrentSCtx);
+          markFrameAsModifying(CurrentSF);
 
       // We exited this inlined call, lets actualize the stack frame.
-      CurrentSCtx = CurrN->getStackFrame();
+      CurrentSF = CurrN->getStackFrame();
 
       // Stop calculating at the current function, but always regard it as
       // modifying, so we can avoid notes like this:
@@ -452,14 +451,14 @@ void NoStateChangeFuncVisitor::findModifyingFrames(
       //     F.field = 0; // note: 0 assigned to 'F.field'
       //                  // note: returning without writing to 'F.field'
       //   }
-      if (CE->getCalleeContext() == OriginalSCtx) {
-        markFrameAsModifying(CurrentSCtx);
+      if (CE->getCalleeContext() == OriginalSF) {
+        markFrameAsModifying(CurrentSF);
         break;
       }
     }
 
     if (wasModifiedBeforeCallExit(CurrN, CurrCallExitBeginN))
-      markFrameAsModifying(CurrentSCtx);
+      markFrameAsModifying(CurrentSF);
   }
 }
 
@@ -467,7 +466,7 @@ PathDiagnosticPieceRef NoStateChangeFuncVisitor::VisitNode(
     const ExplodedNode *N, BugReporterContext &BR, PathSensitiveBugReport &R) {
 
   const LocationContext *Ctx = N->getLocationContext();
-  const StackFrameContext *SCtx = Ctx->getStackFrame();
+  const StackFrame *SF = Ctx->getStackFrame();
   ProgramStateRef State = N->getState();
   auto CallExitLoc = N->getLocationAs<CallExitBegin>();
 
@@ -476,7 +475,7 @@ PathDiagnosticPieceRef NoStateChangeFuncVisitor::VisitNode(
     return nullptr;
 
   CallEventRef<> Call =
-      BR.getStateManager().getCallEventManager().getCaller(SCtx, State);
+      BR.getStateManager().getCallEventManager().getCaller(SF, State);
 
   // Optimistically suppress uninitialized value bugs that result
   // from system headers having a chance to initialize the value
@@ -901,7 +900,7 @@ namespace {
 /// This visitor is intended to be used when another visitor discovers that an
 /// interesting value comes from an inlined function call.
 class ReturnVisitor : public TrackingBugReporterVisitor {
-  const StackFrameContext *CalleeSFC;
+  const StackFrame *CalleeSF;
   enum {
     Initial,
     MaybeUnsuppress,
@@ -914,10 +913,10 @@ class ReturnVisitor : public TrackingBugReporterVisitor {
   bugreporter::TrackingKind TKind;
 
 public:
-  ReturnVisitor(TrackerRef ParentTracker, const StackFrameContext *Frame,
+  ReturnVisitor(TrackerRef ParentTracker, const StackFrame *Frame,
                 bool Suppressed, AnalyzerOptions &Options,
                 bugreporter::TrackingKind TKind)
-      : TrackingBugReporterVisitor(ParentTracker), CalleeSFC(Frame),
+      : TrackingBugReporterVisitor(ParentTracker), CalleeSF(Frame),
         EnableNullFPSuppression(Suppressed), Options(Options), TKind(TKind) {}
 
   static void *getTag() {
@@ -927,7 +926,7 @@ public:
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     ID.AddPointer(ReturnVisitor::getTag());
-    ID.AddPointer(CalleeSFC);
+    ID.AddPointer(CalleeSF);
     ID.AddBoolean(EnableNullFPSuppression);
   }
 
@@ -935,7 +934,7 @@ public:
                                           BugReporterContext &BRC,
                                           PathSensitiveBugReport &BR) {
     // Only print a message at the interesting return statement.
-    if (N->getLocationContext() != CalleeSFC)
+    if (N->getLocationContext() != CalleeSF)
       return nullptr;
 
     std::optional<StmtPoint> SP = N->getLocationAs<StmtPoint>();
@@ -949,7 +948,10 @@ public:
     // Okay, we're at the right return statement, but do we have the return
     // value available?
     ProgramStateRef State = N->getState();
-    SVal V = State->getSVal(Ret, CalleeSFC);
+    const Expr *RV = Ret->getRetValue();
+    if (!RV)
+      return nullptr;
+    SVal V = State->getSVal(RV, CalleeSF);
     if (V.isUnknownOrUndef())
       return nullptr;
 
@@ -1034,7 +1036,7 @@ public:
           Out << " (loaded from '" << *DD << "')";
     }
 
-    PathDiagnosticLocation L(Ret, BRC.getSourceManager(), CalleeSFC);
+    PathDiagnosticLocation L(Ret, BRC.getSourceManager(), CalleeSF);
     if (!L.isValid() || !L.asLocation().isValid())
       return nullptr;
 
@@ -1048,7 +1050,7 @@ public:
     if (WouldEventBeMeaningless)
       EventPiece->setPrunable(true);
     else
-      BR.markInteresting(CalleeSFC);
+      BR.markInteresting(CalleeSF);
 
     return EventPiece;
   }
@@ -1063,7 +1065,7 @@ public:
     if (!CE)
       return nullptr;
 
-    if (CE->getCalleeContext() != CalleeSFC)
+    if (CE->getCalleeContext() != CalleeSF)
       return nullptr;
 
     Mode = Satisfied;
@@ -1075,7 +1077,7 @@ public:
     CallEventManager &CallMgr = StateMgr.getCallEventManager();
 
     ProgramStateRef State = N->getState();
-    CallEventRef<> Call = CallMgr.getCaller(CalleeSFC, State);
+    CallEventRef<> Call = CallMgr.getCaller(CalleeSF, State);
     for (unsigned I = 0, E = Call->getNumArgs(); I != E; ++I) {
       std::optional<Loc> ArgV = Call->getArgSVal(I).getAs<Loc>();
       if (!ArgV)
@@ -1120,7 +1122,7 @@ public:
   void finalizeVisitor(BugReporterContext &, const ExplodedNode *,
                        PathSensitiveBugReport &BR) override {
     if (EnableNullFPSuppression && ShouldInvalidate)
-      BR.markInvalid(ReturnVisitor::getTag(), CalleeSFC);
+      BR.markInvalid(ReturnVisitor::getTag(), CalleeSF);
   }
 };
 
@@ -1136,13 +1138,13 @@ class StoreSiteFinder final : public TrackingBugReporterVisitor {
   bool Satisfied = false;
 
   TrackingOptions Options;
-  const StackFrameContext *OriginSFC;
+  const StackFrame *OriginSF;
 
 public:
   /// \param V We're searching for the store where \c R received this value.
   /// \param R The region we're tracking.
   /// \param Options Tracking behavior options.
-  /// \param OriginSFC Only adds notes when the last store happened in a
+  /// \param OriginSF Only adds notes when the last store happened in a
   ///        different stackframe to this one. Disregarded if the tracking kind
   ///        is thorough.
   ///        This is useful, because for non-tracked regions, notes about
@@ -1151,9 +1153,9 @@ public:
   ///        much.
   StoreSiteFinder(bugreporter::TrackerRef ParentTracker, SVal V,
                   const MemRegion *R, TrackingOptions Options,
-                  const StackFrameContext *OriginSFC = nullptr)
+                  const StackFrame *OriginSF = nullptr)
       : TrackingBugReporterVisitor(ParentTracker), R(R), V(V), Options(Options),
-        OriginSFC(OriginSFC) {
+        OriginSF(OriginSF) {
     assert(R);
   }
 
@@ -1715,8 +1717,8 @@ PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
     }
   }
 
-  if (Options.Kind == TrackingKind::Condition && OriginSFC &&
-      !OriginSFC->isParentOf(StoreSite->getStackFrame()))
+  if (Options.Kind == TrackingKind::Condition && OriginSF &&
+      !OriginSF->isParentOf(StoreSite->getStackFrame()))
     return nullptr;
 
   // Okay, we've found the binding. Emit an appropriate message.
@@ -1737,17 +1739,17 @@ PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
 
     if (DS) {
       SI.StoreKind = StoreInfo::Initialization;
-    } else if (isa<BlockExpr>(S)) {
+    } else if (const auto *BExpr = dyn_cast<BlockExpr>(S)) {
       SI.StoreKind = StoreInfo::BlockCapture;
       if (VR) {
         // See if we can get the BlockVarRegion.
         ProgramStateRef State = StoreSite->getState();
-        SVal V = StoreSite->getSVal(S);
+        SVal V = StoreSite->getSVal(BExpr);
         if (const auto *BDR =
                 dyn_cast_or_null<BlockDataRegion>(V.getAsRegion())) {
           if (const VarRegion *OriginalR = BDR->getOriginalRegion(VR)) {
             getParentTracker().track(State->getSVal(OriginalR), OriginalR,
-                                     Options, OriginSFC);
+                                     Options, OriginSF);
           }
         }
       }
@@ -2293,7 +2295,7 @@ public:
                          const ExplodedNode *LVNode,
                          TrackingOptions Opts) override {
     ProgramStateRef LVState = LVNode->getState();
-    const StackFrameContext *SFC = LVNode->getStackFrame();
+    const StackFrame *SF = LVNode->getStackFrame();
     PathSensitiveBugReport &Report = getParentTracker().getReport();
     Tracker::Result Result;
 
@@ -2309,7 +2311,7 @@ public:
       // pointer. In addition, we should find the store at which the reference
       // got initialized.
       if (RR && !LVIsNull)
-        Result.combineWith(getParentTracker().track(LVal, RR, Opts, SFC));
+        Result.combineWith(getParentTracker().track(LVal, RR, Opts, SF));
 
       // In case of C++ references, we want to differentiate between a null
       // reference and reference to null pointer.
@@ -2354,7 +2356,7 @@ public:
             // previously.
             Report.addVisitor<SuppressInlineDefensiveChecksVisitor>(*DV,
                                                                     InputNode);
-        getParentTracker().track(V, R, Opts, SFC);
+        getParentTracker().track(V, R, Opts, SF);
       }
     }
 
@@ -2385,7 +2387,7 @@ class InlinedFunctionCallHandler final : public ExpressionHandler {
     const bool BypassCXXNewExprEval = isa<CXXNewExpr>(E);
 
     // This is moving forward when we enter into another context.
-    const StackFrameContext *CurrentSFC = ExprNode->getStackFrame();
+    const StackFrame *CurrentSF = ExprNode->getStackFrame();
 
     do {
       // If that is satisfied we found our statement as an inlined call.
@@ -2399,7 +2401,7 @@ class InlinedFunctionCallHandler final : public ExpressionHandler {
       if (!ExprNode)
         break;
 
-      const StackFrameContext *PredSFC = ExprNode->getStackFrame();
+      const StackFrame *PredSF = ExprNode->getStackFrame();
 
       // If that is satisfied we found our statement.
       // FIXME: This code currently bypasses the call site for the
@@ -2407,11 +2409,11 @@ class InlinedFunctionCallHandler final : public ExpressionHandler {
       if (!BypassCXXNewExprEval)
         if (std::optional<StmtPoint> SP = ExprNode->getLocationAs<StmtPoint>())
           // See if we do not enter into another context.
-          if (SP->getStmt() == E && CurrentSFC == PredSFC)
+          if (SP->getStmt() == E && CurrentSF == PredSF)
             break;
 
-      CurrentSFC = PredSFC;
-    } while (ExprNode->getStackFrame() == CurrentSFC);
+      CurrentSF = PredSF;
+    } while (ExprNode->getStackFrame() == CurrentSF);
 
     // Next, step over any post-statement checks.
     while (ExprNode && ExprNode->getLocation().getAs<PostStmt>())
@@ -2424,7 +2426,7 @@ class InlinedFunctionCallHandler final : public ExpressionHandler {
     if (!CEE)
       return {};
 
-    const StackFrameContext *CalleeContext = CEE->getCalleeContext();
+    const StackFrame *CalleeContext = CEE->getCalleeContext();
     if (CalleeContext->getCallSite() != E)
       return {};
 
@@ -2461,7 +2463,7 @@ public:
                          const ExplodedNode *LVNode,
                          TrackingOptions Opts) override {
     ProgramStateRef LVState = LVNode->getState();
-    const StackFrameContext *SFC = LVNode->getStackFrame();
+    const StackFrame *SF = LVNode->getStackFrame();
     PathSensitiveBugReport &Report = getParentTracker().getReport();
     Tracker::Result Result;
 
@@ -2497,7 +2499,7 @@ public:
 
         if (!RVal.isUnknown())
           Result.combineWith(
-              getParentTracker().track(RVal, L->getRegion(), Opts, SFC));
+              getParentTracker().track(RVal, L->getRegion(), Opts, SF));
       }
 
       const MemRegion *RegionRVal = RVal.getAsRegion();
@@ -2618,7 +2620,7 @@ Tracker::Result Tracker::track(const Expr *E, const ExplodedNode *N,
 }
 
 Tracker::Result Tracker::track(SVal V, const MemRegion *R, TrackingOptions Opts,
-                               const StackFrameContext *Origin) {
+                               const StackFrame *Origin) {
   if (!V.isUnknown()) {
     Report.addVisitor<StoreSiteFinder>(this, V, R, Opts, Origin);
     return {true};
@@ -2651,7 +2653,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
 void bugreporter::trackStoredValue(SVal V, const MemRegion *R,
                                    PathSensitiveBugReport &Report,
                                    TrackingOptions Opts,
-                                   const StackFrameContext *Origin) {
+                                   const StackFrame *Origin) {
   Tracker::create(Report)->track(V, R, Opts, Origin);
 }
 

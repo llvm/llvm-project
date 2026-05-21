@@ -68,11 +68,12 @@ void genDeallocateIfAllocated(AbstractConverter &converter,
 /// Create a MutableBoxValue for an allocatable or pointer entity.
 /// If the variables is a local variable that is not a dummy, it will be
 /// initialized to unallocated/diassociated status.
-fir::MutableBoxValue
-createMutableBox(AbstractConverter &converter, mlir::Location loc,
-                 const pft::Variable &var, mlir::Value boxAddr,
-                 mlir::ValueRange nonDeferredParams, bool alwaysUseBox,
-                 unsigned allocator = kDefaultAllocator);
+fir::MutableBoxValue createMutableBox(AbstractConverter &converter,
+                                      mlir::Location loc,
+                                      const pft::Variable &var,
+                                      mlir::Value boxAddr,
+                                      mlir::ValueRange nonDeferredParams,
+                                      unsigned allocator = kDefaultAllocator);
 
 /// Assign a boxed value to a boxed variable, \p box (known as a
 /// MutableBoxValue). Expression \p source will be lowered to build the

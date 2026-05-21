@@ -53,7 +53,7 @@ struct outer ret_outer() {
   return o;
 
   // CIR-LABEL: ret_outer
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca !rec_outer, !cir.ptr<!rec_outer>, ["__retval"]
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca !rec_outer, !cir.ptr<!rec_outer>, ["__retval", init]
   // CIR: %[[BITCAST:.*]] = cir.cast bitcast %0 : !cir.ptr<!rec_outer> -> !cir.ptr<!{{.*}}>
   // CIR: %[[RECORD:.*]] = cir.const #cir.const_record<{#cir.zero : !{{.*}}, #cir.int<1> : !s32i, #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 4>}> 
   // CIR: cir.store {{.*}}%[[RECORD]], %[[BITCAST]] 

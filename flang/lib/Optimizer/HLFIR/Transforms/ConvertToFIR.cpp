@@ -365,23 +365,30 @@ public:
     if (mlir::isa<fir::BaseBoxType>(hlfirBaseType)) {
       fir::FirOpBuilder builder(rewriter, declareOp.getOperation());
       // Helper to generate the hlfir fir.box with the local lower bounds and
-      // type parameters.
+      // type parameters and OPTIONAL aspect.
+      const bool isOptional =
+          mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation())
+              .isOptional();
       auto genHlfirBox = [&]() -> mlir::Value {
         if (auto baseBoxType =
                 mlir::dyn_cast<fir::BaseBoxType>(firBase.getType())) {
           if (declareOp.getSkipRebox())
             return firBase;
           // Rebox so that lower bounds and attributes are correct.
-          if (baseBoxType.isAssumedRank())
+          if (baseBoxType.isAssumedRank()) {
             return fir::ReboxAssumedRankOp::create(
                 builder, loc, hlfirBaseType, firBase,
-                fir::LowerBoundModifierAttribute::SetToOnes);
+                fir::LowerBoundModifierAttribute::SetToOnes, isOptional);
+          }
           if (!fir::extractSequenceType(baseBoxType.getEleTy()) &&
               baseBoxType == hlfirBaseType)
             return firBase;
-          return fir::ReboxOp::create(builder, loc, hlfirBaseType, firBase,
-                                      declareOp.getShape(),
-                                      /*slice=*/mlir::Value{});
+          auto rebox = fir::ReboxOp::create(builder, loc, hlfirBaseType,
+                                            firBase, declareOp.getShape(),
+                                            /*slice=*/mlir::Value{});
+          if (isOptional)
+            rebox.setOptional(true);
+          return rebox.getResult();
         } else {
           llvm::SmallVector<mlir::Value> typeParams;
           auto maybeCharType = mlir::dyn_cast<fir::CharacterType>(
@@ -389,14 +396,16 @@ public:
           if (!maybeCharType || maybeCharType.hasDynamicLen())
             typeParams.append(declareOp.getTypeparams().begin(),
                               declareOp.getTypeparams().end());
-          return fir::EmboxOp::create(builder, loc, hlfirBaseType, firBase,
-                                      declareOp.getShape(),
-                                      /*slice=*/mlir::Value{}, typeParams);
+          auto embox = fir::EmboxOp::create(
+              builder, loc, hlfirBaseType, firBase, declareOp.getShape(),
+              /*slice=*/mlir::Value{}, typeParams);
+          if (isOptional)
+            embox.setOptional(true);
+          return embox.getResult();
         }
       };
-      if (!mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation())
-               .isOptional()) {
-        hlfirBase = genHlfirBox();
+      hlfirBase = genHlfirBox();
+      if (!isOptional) {
         // If the original base is a box too, we could as well
         // use the HLFIR box as the FIR base: otherwise, the two
         // boxes are "alive" at the same time, and the FIR box
@@ -406,26 +415,6 @@ public:
         // the representation a little bit more clear.
         if (hlfirBase.getType() == declareOp.getOriginalBase().getType())
           firBase = hlfirBase;
-      } else {
-        // Need to conditionally rebox/embox the optional: the input fir.box
-        // may be null and the rebox would be illegal. It is also important to
-        // preserve the optional aspect: the hlfir fir.box should be null if
-        // the entity is absent so that later fir.is_present on the hlfir base
-        // are valid.
-        mlir::Value isPresent = fir::IsPresentOp::create(
-            builder, loc, builder.getI1Type(), firBase);
-        hlfirBase =
-            builder
-                .genIfOp(loc, {hlfirBaseType}, isPresent,
-                         /*withElseRegion=*/true)
-                .genThen(
-                    [&] { fir::ResultOp::create(builder, loc, genHlfirBox()); })
-                .genElse([&]() {
-                  mlir::Value absent =
-                      fir::AbsentOp::create(builder, loc, hlfirBaseType);
-                  fir::ResultOp::create(builder, loc, absent);
-                })
-                .getResults()[0];
       }
     } else if (mlir::isa<fir::BoxCharType>(hlfirBaseType)) {
       assert(declareOp.getTypeparams().size() == 1 &&

@@ -42,6 +42,7 @@ Prescanner::Prescanner(const Prescanner &that, Preprocessor &prepro,
       backslashFreeFormContinuation_{that.backslashFreeFormContinuation_},
       inFixedForm_{that.inFixedForm_},
       fixedFormColumnLimit_{that.fixedFormColumnLimit_},
+      freeFormColumnLimit_{that.freeFormColumnLimit_},
       encoding_{that.encoding_},
       prescannerNesting_{that.prescannerNesting_ + 1},
       skipLeadingAmpersand_{that.skipLeadingAmpersand_},
@@ -568,6 +569,9 @@ void Prescanner::SkipToEndOfLine() {
 bool Prescanner::MustSkipToEndOfLine() const {
   if (inFixedForm_ && column_ > fixedFormColumnLimit_ && !tabInCurrentLine_) {
     return true; // skip over ignored columns in right margin (73:80)
+  } else if (!inFixedForm_ && (freeFormColumnLimit_ != 0) &&
+      column_ > freeFormColumnLimit_) {
+    return true;
   } else if (*at_ == '!' && !inCharLiteral_ &&
       (!inFixedForm_ || tabInCurrentLine_ || column_ != 6)) {
     return InCompilerDirective() ||
@@ -1014,9 +1018,9 @@ void Prescanner::QuotedCharacterLiteral(
     if (*at_ == '\\') {
       if (escapesEnabled) {
         isEscaped = !isEscaped;
-      } else {
-        // The parser always processes escape sequences, so don't confuse it
-        // when escapes are disabled.
+      } else if (!preprocessingOnly_) {
+        // Except when -E is used, the parser always processes escape sequences,
+        // so don't confuse it when escapes are disabled.
         insert('\\');
       }
     } else {

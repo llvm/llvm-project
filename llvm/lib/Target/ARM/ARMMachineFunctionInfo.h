@@ -252,7 +252,7 @@ public:
   }
 
   unsigned getOriginalCPIdx(unsigned CloneIdx) const {
-    DenseMap<unsigned, unsigned>::const_iterator I = CPEClones.find(CloneIdx);
+    auto I = CPEClones.find(CloneIdx);
     if (I != CPEClones.end())
       return I->second;
     else

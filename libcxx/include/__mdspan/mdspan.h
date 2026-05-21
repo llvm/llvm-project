@@ -30,6 +30,7 @@
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_object.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/rank.h>
@@ -66,6 +67,9 @@ class mdspan {
 private:
   static_assert(__mdspan_detail::__is_extents_v<_Extents>,
                 "mdspan: Extents template parameter must be a specialization of extents.");
+  static_assert(
+      is_object_v<_ElementType> && requires { sizeof(_ElementType); },
+      "mdspan: ElementType template parameter must be a complete object type");
   static_assert(!is_array_v<_ElementType>, "mdspan: ElementType template parameter may not be an array type");
   static_assert(!is_abstract_v<_ElementType>, "mdspan: ElementType template parameter may not be an abstract class");
   static_assert(is_same_v<_ElementType, typename _AccessorPolicy::element_type>,
@@ -187,11 +191,11 @@ public:
              (is_nothrow_constructible_v<index_type, _OtherIndexTypes> && ...) &&
              (sizeof...(_OtherIndexTypes) == rank()))
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](_OtherIndexTypes... __indices) const {
-    // Note the standard layouts would also check this, but user provided ones may not, so we
-    // check the precondition here
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__mdspan_detail::__is_multidimensional_index_in(extents(), __indices...),
-                                        "mdspan: operator[] out of bounds access");
-    return __acc_.access(__ptr_, __map_(static_cast<index_type>(std::move(__indices))...));
+    return [&]<class... _IndexTypes>(_IndexTypes... __idxs) -> reference {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__mdspan_detail::__is_multidimensional_index_in(extents(), __idxs...),
+                                          "mdspan: operator[] out of bounds access");
+      return __acc_.access(__ptr_, __map_(static_cast<index_type>(std::move(__idxs))...));
+    }(extents_type::__index_cast(std::move(__indices))...);
   }
 
   template <class _OtherIndexType>
@@ -200,7 +204,7 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference
   operator[](const array< _OtherIndexType, rank()>& __indices) const {
     return __acc_.access(__ptr_, [&]<size_t... _Idxs>(index_sequence<_Idxs...>) {
-      return __map_(__indices[_Idxs]...);
+      return __map_(extents_type::__index_cast(__indices[_Idxs])...);
     }(make_index_sequence<rank()>()));
   }
 
@@ -209,7 +213,7 @@ public:
              is_nothrow_constructible_v<index_type, const _OtherIndexType&>)
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](span<_OtherIndexType, rank()> __indices) const {
     return __acc_.access(__ptr_, [&]<size_t... _Idxs>(index_sequence<_Idxs...>) {
-      return __map_(__indices[_Idxs]...);
+      return __map_(extents_type::__index_cast(__indices[_Idxs])...);
     }(make_index_sequence<rank()>()));
   }
 
@@ -309,7 +313,7 @@ mdspan(_ElementType*, const _MappingType&)
     -> mdspan<_ElementType, typename _MappingType::extents_type, typename _MappingType::layout_type>;
 
 template <class _MappingType, class _AccessorType>
-mdspan(const typename _AccessorType::data_handle_type, const _MappingType&, const _AccessorType&)
+mdspan(typename _AccessorType::data_handle_type, const _MappingType&, const _AccessorType&)
     -> mdspan<typename _AccessorType::element_type,
               typename _MappingType::extents_type,
               typename _MappingType::layout_type,

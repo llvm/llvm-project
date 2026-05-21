@@ -3125,12 +3125,10 @@ OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
       ConsumeToken();
 
       CXXScopeSpec SS;
-      Token Replacement;
       ExprResult AllocatorExpr =
           getLangOpts().CPlusPlus
               ? ParseCXXIdExpression()
-              : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false,
-                                        Replacement);
+              : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false);
 
       if (AllocatorExpr.isInvalid()) {
         SkipUntil(
@@ -3159,12 +3157,10 @@ OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
 
     // Parse 'Allocator(expr)' for <5.2
     CXXScopeSpec SS;
-    Token Replacement;
     ExprResult Allocator =
         getLangOpts().CPlusPlus
             ? ParseCXXIdExpression()
-            : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false,
-                                      Replacement);
+            : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false);
     if (Allocator.isInvalid()) {
       SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);
@@ -3850,12 +3846,13 @@ OMPClause *Parser::ParseOpenMPOMPXAttributesClause(bool ParseOnly) {
       continue;
     case ParsedAttr::AT_CUDALaunchBounds:
       if (!PA.checkAtLeastNumArgs(Actions, 1) ||
-          !PA.checkAtMostNumArgs(Actions, 2))
+          !PA.checkAtMostNumArgs(Actions, 3))
         continue;
       if (auto *A = Actions.CreateLaunchBoundsAttr(
               PA, PA.getArgAsExpr(0),
               PA.getNumArgs() > 1 ? PA.getArgAsExpr(1) : nullptr,
-              PA.getNumArgs() > 2 ? PA.getArgAsExpr(2) : nullptr))
+              PA.getNumArgs() > 2 ? PA.getArgAsExpr(2) : nullptr,
+              /*IgnoreArch=*/true))
         Attrs.push_back(A);
       continue;
     default:

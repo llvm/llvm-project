@@ -56,8 +56,8 @@ TypedefInfo *InfoAsTypedef(Info *I) {
 
 void CheckCommentInfo(ArrayRef<CommentInfo> Expected,
                       ArrayRef<CommentInfo> Actual);
-void CheckCommentInfo(const OwningVec<CommentInfo> &Expected,
-                      const OwningVec<CommentInfo> &Actual);
+void CheckCommentInfo(const DocList<CommentInfo> &Expected,
+                      const DocList<CommentInfo> &Actual);
 
 void CheckCommentInfo(const CommentInfo &Expected, const CommentInfo &Actual) {
   EXPECT_EQ(Expected.Kind, Actual.Kind);
@@ -96,8 +96,8 @@ void CheckCommentInfo(ArrayRef<CommentInfo> Expected,
   EXPECT_TRUE(ItE == Expected.end() && ItA == Actual.end());
 }
 
-void CheckCommentInfo(const OwningVec<CommentInfo> &Expected,
-                      const OwningVec<CommentInfo> &Actual) {
+void CheckCommentInfo(const DocList<CommentInfo> &Expected,
+                      const DocList<CommentInfo> &Actual) {
   auto ItE = Expected.begin();
   auto ItA = Actual.begin();
   while (ItE != Expected.end() && ItA != Actual.end()) {
@@ -235,7 +235,7 @@ void CheckNamespaceInfo(const NamespaceInfo *Expected,
   auto ItF_A = Actual->Children.Functions.begin();
   while (ItF_E != Expected->Children.Functions.end() &&
          ItF_A != Actual->Children.Functions.end()) {
-    CheckFunctionInfo(&(*ItF_E), &(*ItF_A));
+    CheckFunctionInfo(ItF_E->Ptr, ItF_A->Ptr);
     ++ItF_E;
     ++ItF_A;
   }
@@ -246,7 +246,7 @@ void CheckNamespaceInfo(const NamespaceInfo *Expected,
   auto ItEnum_A = Actual->Children.Enums.begin();
   while (ItEnum_E != Expected->Children.Enums.end() &&
          ItEnum_A != Actual->Children.Enums.end()) {
-    CheckEnumInfo(&(*ItEnum_E), &(*ItEnum_A));
+    CheckEnumInfo(ItEnum_E->Ptr, ItEnum_A->Ptr);
     ++ItEnum_E;
     ++ItEnum_A;
   }
@@ -316,7 +316,7 @@ void CheckRecordInfo(const RecordInfo *Expected, const RecordInfo *Actual) {
   auto ItF_A = Actual->Children.Functions.begin();
   while (ItF_E != Expected->Children.Functions.end() &&
          ItF_A != Actual->Children.Functions.end()) {
-    CheckFunctionInfo(&(*ItF_E), &(*ItF_A));
+    CheckFunctionInfo(ItF_E->Ptr, ItF_A->Ptr);
     ++ItF_E;
     ++ItF_A;
   }
@@ -327,7 +327,7 @@ void CheckRecordInfo(const RecordInfo *Expected, const RecordInfo *Actual) {
   auto ItEnum_A = Actual->Children.Enums.begin();
   while (ItEnum_E != Expected->Children.Enums.end() &&
          ItEnum_A != Actual->Children.Enums.end()) {
-    CheckEnumInfo(&(*ItEnum_E), &(*ItEnum_A));
+    CheckEnumInfo(ItEnum_E->Ptr, ItEnum_A->Ptr);
     ++ItEnum_E;
     ++ItEnum_A;
   }
