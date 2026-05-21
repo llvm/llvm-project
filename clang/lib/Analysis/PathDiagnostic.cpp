@@ -693,11 +693,11 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
                  P.getAs<PostImplicitCall>()) {
     return PathDiagnosticLocation(PIE->getLocation(), SMng);
   } else if (std::optional<CallEnter> CE = P.getAs<CallEnter>()) {
-    return getLocationForCaller(CE->getCalleeContext(), CE->getStackFrame(),
+    return getLocationForCaller(CE->getCalleeStackFrame(), CE->getStackFrame(),
                                 SMng);
   } else if (std::optional<CallExitEnd> CEE = P.getAs<CallExitEnd>()) {
-    return getLocationForCaller(CEE->getCalleeContext(), CEE->getStackFrame(),
-                                SMng);
+    return getLocationForCaller(CEE->getCalleeStackFrame(),
+                                CEE->getStackFrame(), SMng);
   } else if (auto CEB = P.getAs<CallExitBegin>()) {
     if (const ReturnStmt *RS = CEB->getReturnStmt())
       return PathDiagnosticLocation::createBegin(RS, SMng,
@@ -841,7 +841,7 @@ PathDiagnosticCallPiece::construct(const CallExitEnd &CE,
                                    const SourceManager &SM) {
   const Decl *caller = CE.getStackFrame()->getDecl();
   PathDiagnosticLocation pos =
-      getLocationForCaller(CE.getCalleeContext(), CE.getStackFrame(), SM);
+      getLocationForCaller(CE.getCalleeStackFrame(), CE.getStackFrame(), SM);
   return std::shared_ptr<PathDiagnosticCallPiece>(
       new PathDiagnosticCallPiece(caller, pos));
 }
@@ -859,7 +859,7 @@ PathDiagnosticCallPiece::construct(PathPieces &path,
 
 void PathDiagnosticCallPiece::setCallee(const CallEnter &CE,
                                         const SourceManager &SM) {
-  const StackFrame *CalleeSF = CE.getCalleeContext();
+  const StackFrame *CalleeSF = CE.getCalleeStackFrame();
   Callee = CalleeSF->getDecl();
 
   callEnterWithin = PathDiagnosticLocation::createBegin(Callee, SM);

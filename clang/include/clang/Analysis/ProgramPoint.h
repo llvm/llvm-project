@@ -636,13 +636,13 @@ public:
     return static_cast<const Stmt *>(getData1());
   }
 
-  const StackFrame *getCalleeContext() const {
+  const StackFrame *getCalleeStackFrame() const {
     return static_cast<const StackFrame *>(getData2());
   }
 
   /// Returns the entry block in the CFG for the entered function.
   const CFGBlock *getEntry() const {
-    const StackFrame *CalleeSF = getCalleeContext();
+    const StackFrame *CalleeSF = getCalleeStackFrame();
     const CFG *CalleeCFG = CalleeSF->getCFG();
     return &(CalleeCFG->getEntry());
   }
@@ -690,7 +690,7 @@ public:
   CallExitEnd(const StackFrame *CalleeSF, const StackFrame *CallerSF)
       : ProgramPoint(CalleeSF, CallExitEndKind, CallerSF, nullptr) {}
 
-  const StackFrame *getCalleeContext() const {
+  const StackFrame *getCalleeStackFrame() const {
     return static_cast<const StackFrame *>(getData1());
   }
 

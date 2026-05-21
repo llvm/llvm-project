@@ -322,7 +322,7 @@ std::string StackHintGeneratorForSymbol::getMessage(const ExplodedNode *N){
   CallExitEnd CExit = P.castAs<CallExitEnd>();
 
   // FIXME: Use CallEvent to abstract this over all calls.
-  const Expr *CallSite = CExit.getCalleeContext()->getCallSite();
+  const Expr *CallSite = CExit.getCalleeStackFrame()->getCallSite();
   const auto *CE = dyn_cast_or_null<CallExpr>(CallSite);
   if (!CE)
     return {};
@@ -1157,7 +1157,7 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
 
     if (C.shouldAddPathEdges()) {
       // Add an edge to the start of the function.
-      const StackFrame *CalleeLC = CE->getCalleeContext();
+      const StackFrame *CalleeLC = CE->getCalleeStackFrame();
       const Decl *D = CalleeLC->getDecl();
       // Add the edge only when the callee has body. We jump to the beginning
       // of the *declaration*, however we expect it to be followed by the
@@ -1197,7 +1197,7 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
       assert(!C.isInLocCtxMap(&Call->path) &&
              "When we ascend to a previously unvisited call, this must be the "
              "first time we encounter the caller stack frame!");
-      C.updateLocCtxMap(&Call->path, CE->getCalleeContext());
+      C.updateLocCtxMap(&Call->path, CE->getCalleeStackFrame());
     }
     Call->setCallee(*CE, SM);
 
@@ -1225,7 +1225,7 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
     assert(!C.isInLocCtxMap(&Call->path) &&
            "We just entered a call, this must've been the first time we "
            "encounter its stack frame!");
-    C.updateLocCtxMap(&Call->path, CE->getCalleeContext());
+    C.updateLocCtxMap(&Call->path, CE->getCalleeStackFrame());
 
     if (C.shouldAddPathEdges()) {
       // Add the edge to the return site.
@@ -3259,7 +3259,7 @@ findExecutedLines(const SourceManager &SM, const ExplodedNode *N) {
       populateExecutedLinesWithFunctionSignature(D, SM, *ExecutedLines);
     } else if (auto CE = N->getLocationAs<CallEnter>()) {
       // Inlined function: show signature.
-      const Decl* D = CE->getCalleeContext()->getDecl();
+      const Decl *D = CE->getCalleeStackFrame()->getDecl();
       populateExecutedLinesWithFunctionSignature(D, SM, *ExecutedLines);
     } else if (const Stmt *S = N->getStmtForDiagnostics()) {
       populateExecutedLinesWithStmt(S, SM, *ExecutedLines);

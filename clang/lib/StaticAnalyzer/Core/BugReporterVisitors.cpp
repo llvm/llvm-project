@@ -449,7 +449,7 @@ void NoStateChangeFuncVisitor::findModifyingFrames(
       //     F.field = 0; // note: 0 assigned to 'F.field'
       //                  // note: returning without writing to 'F.field'
       //   }
-      if (CE->getCalleeContext() == OriginalSF) {
+      if (CE->getCalleeStackFrame() == OriginalSF) {
         markFrameAsModifying(CurrentSF);
         break;
       }
@@ -1061,7 +1061,7 @@ public:
     if (!CE)
       return nullptr;
 
-    if (CE->getCalleeContext() != CalleeSF)
+    if (CE->getCalleeStackFrame() != CalleeSF)
       return nullptr;
 
     Mode = Satisfied;
@@ -1611,14 +1611,16 @@ PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
           ProgramStateManager &StateMgr = BRC.getStateManager();
           CallEventManager &CallMgr = StateMgr.getCallEventManager();
 
-          CallEventRef<> Call = CallMgr.getCaller(CE->getCalleeContext(),
-                                                  Succ->getState());
+          CallEventRef<> Call =
+              CallMgr.getCaller(CE->getCalleeStackFrame(), Succ->getState());
           InitE = Call->getArgExpr(Param->getFunctionScopeIndex());
         } else {
           // Handle Objective-C 'self'.
           assert(isa<ImplicitParamDecl>(VR->getDecl()));
-          InitE = cast<ObjCMessageExpr>(CE->getCalleeContext()->getCallSite())
-                      ->getInstanceReceiver()->IgnoreParenCasts();
+          InitE =
+              cast<ObjCMessageExpr>(CE->getCalleeStackFrame()->getCallSite())
+                  ->getInstanceReceiver()
+                  ->IgnoreParenCasts();
         }
         IsParam = true;
       }
@@ -2388,7 +2390,7 @@ class InlinedFunctionCallHandler final : public ExpressionHandler {
       // If that is satisfied we found our statement as an inlined call.
       if (std::optional<CallExitEnd> CEE =
               ExprNode->getLocationAs<CallExitEnd>())
-        if (CEE->getCalleeContext()->getCallSite() == E)
+        if (CEE->getCalleeStackFrame()->getCallSite() == E)
           break;
 
       // Try to move forward to the end of the call-chain.
@@ -2421,7 +2423,7 @@ class InlinedFunctionCallHandler final : public ExpressionHandler {
     if (!CEE)
       return {};
 
-    const StackFrame *CalleeContext = CEE->getCalleeContext();
+    const StackFrame *CalleeContext = CEE->getCalleeStackFrame();
     if (CalleeContext->getCallSite() != E)
       return {};
 
@@ -3360,7 +3362,7 @@ UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
 
   // Check if one of the arguments is the region the visitor is tracking.
   CallEventManager &CEMgr = BRC.getStateManager().getCallEventManager();
-  CallEventRef<> Call = CEMgr.getCaller(CEnter->getCalleeContext(), State);
+  CallEventRef<> Call = CEMgr.getCaller(CEnter->getCalleeStackFrame(), State);
   unsigned Idx = 0;
   ArrayRef<ParmVarDecl *> parms = Call->parameters();
 
@@ -3390,7 +3392,7 @@ UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
     // argument is undefined or '0'/'NULL'.
     SVal BoundVal = State->getSVal(R);
     if (BoundVal.isUndef() || BoundVal.isZeroConstant()) {
-      BR.markInteresting(CEnter->getCalleeContext());
+      BR.markInteresting(CEnter->getCalleeStackFrame());
       return nullptr;
     }
   }

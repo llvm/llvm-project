@@ -199,7 +199,7 @@ void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
   case ProgramPoint::CallEnterKind:
     Out << "CallEnter\", \"callee_decl\": \"";
     Out << AnalysisDeclContext::getFunctionName(
-               castAs<CallEnter>().getCalleeContext()->getDecl())
+               castAs<CallEnter>().getCalleeStackFrame()->getDecl())
         << '\"';
     break;
   case ProgramPoint::CallExitBeginKind:

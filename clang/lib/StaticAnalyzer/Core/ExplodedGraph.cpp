@@ -331,7 +331,7 @@ const Stmt *ExplodedNode::getStmtForDiagnostics() const {
   if (auto CE = P.getAs<CallEnter>())
     return CE->getCallExpr();
   if (auto CEE = P.getAs<CallExitEnd>())
-    return CEE->getCalleeContext()->getCallSite();
+    return CEE->getCalleeStackFrame()->getCallSite();
   if (auto PIPP = P.getAs<PostInitializer>())
     return PIPP->getInitializer()->getInit();
   if (auto CEB = P.getAs<CallExitBegin>())

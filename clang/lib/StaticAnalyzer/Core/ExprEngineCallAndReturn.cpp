@@ -51,7 +51,7 @@ void ExprEngine::processCallEnter(CallEnter CE, ExplodedNode *Pred) {
   const CFGBlock *Succ = *(Entry->succ_begin());
 
   // Construct an edge representing the starting location in the callee.
-  BlockEdge Loc(Entry, Succ, CE.getCalleeContext());
+  BlockEdge Loc(Entry, Succ, CE.getCalleeStackFrame());
 
   ProgramStateRef state = Pred->getState();
 
@@ -90,7 +90,7 @@ static std::pair<const Stmt*,
         S = SP->getStmt();
         break;
       } else if (std::optional<CallExitEnd> CEE = PP.getAs<CallExitEnd>()) {
-        S = CEE->getCalleeContext()->getCallSite();
+        S = CEE->getCalleeStackFrame()->getCallSite();
         if (S)
           break;
 
@@ -101,7 +101,8 @@ static std::pair<const Stmt*,
         do {
           Node = Node->getFirstPred();
           CE = Node->getLocationAs<CallEnter>();
-        } while (!CE || CE->getCalleeContext() != CEE->getCalleeContext());
+        } while (!CE ||
+                 CE->getCalleeStackFrame() != CEE->getCalleeStackFrame());
 
         // Continue searching the graph.
       } else if (std::optional<BlockEdge> BE = PP.getAs<BlockEdge>()) {
@@ -109,7 +110,7 @@ static std::pair<const Stmt*,
       }
     } else if (std::optional<CallEnter> CE = PP.getAs<CallEnter>()) {
       // If we reached the CallEnter for this function, it has no statements.
-      if (CE->getCalleeContext() == SF)
+      if (CE->getCalleeStackFrame() == SF)
         break;
     }
 
@@ -247,14 +248,12 @@ ProgramStateRef ExprEngine::removeStateTraitsUsedForArrayEvaluation(
 /// 3. Run Remove dead bindings to clean up the dead symbols from the callee.
 /// 4. CallExitEnd
 /// 5. PostStmt<CallExpr>
-/// Steps 1-3. happen in the callee context; but there is a context switch and
-/// steps 4-5. happen in the caller context.
+/// Steps 1-3. happen in the callee stack frame; but there is a stack frame
+/// switch and steps 4-5. happen in the caller stack frame.
 void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // Step 1 CEBNode was generated before the call.
   const StackFrame *CalleeSF = CEBNode->getStackFrame();
 
-  // The parent context might not be a stack frame, so make sure we
-  // look up the first enclosing stack frame.
   const StackFrame *CallerSF = CalleeSF->getParent();
 
   const Expr *CE = CalleeSF->getCallSite();
@@ -264,7 +263,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
 
   const CFGBlock *PrePurgeBlock =
       isa_and_nonnull<ReturnStmt>(LastSt) ? Blk : &CEBNode->getCFG().getExit();
-  // The first half of this process happens in the callee context:
+  // The first half of this process happens in the callee stack frame:
   setCurrStackFrameAndBlock(CalleeSF, PrePurgeBlock);
 
   // Generate a CallEvent /before/ cleaning the State, so that we can get the
@@ -348,7 +347,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // Step 3: BoundRetNode -> CleanedNodes
   // If we can find a statement and a block in the inlined function, run remove
   // dead bindings before returning from the call. This is important to ensure
-  // that we report the issues such as leaks in the stack contexts in which
+  // that we report the issues such as leaks in the stack frames in which
   // they occurred.
   ExplodedNodeSet CleanedNodes;
   if (LastSt && Blk && AMgr.options.AnalysisPurgeOpt != PurgeNone) {
@@ -362,7 +361,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
     if (!BoundRetNode)
       return;
 
-    // We call removeDead in the context of the callee.
+    // We call removeDead in the stack frame of the callee.
     removeDead(BoundRetNode, CleanedNodes, /*ReferenceStmt=*/nullptr, CalleeSF,
                /*DiagnosticStmt=*/CalleeSF->getAnalysisDeclContext()->getBody(),
                ProgramPoint::PostStmtPurgeDeadSymbolsKind);
@@ -370,8 +369,8 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
     CleanedNodes.insert(CEBNode);
   }
 
-  // The second half of this process happens in the caller context. This is an
-  // exception to the general rule that the current StackFrame and Block
+  // The second half of this process happens in the caller stack frame. This is
+  // an exception to the general rule that the current StackFrame and Block
   // stay the same within a single call to dispatchWorkItem.
   resetCurrStackFrameAndBlock();
   setCurrStackFrameAndBlock(CallerSF, CalleeSF->getCallSiteBlock());

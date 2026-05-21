@@ -662,7 +662,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
           if (const Expr *RecExpr = ME->getInstanceReceiver()) {
             SVal RecV = St->getSVal(RecExpr, NStackFrame);
             if (ME->getMethodFamily() == OMF_init && RecV.getAsSymbol() == Sym)
-              InitMethodStackFrame = CEP->getCalleeContext();
+              InitMethodStackFrame = CEP->getCalleeStackFrame();
           }
         }
       }
