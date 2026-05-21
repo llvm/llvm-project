@@ -807,7 +807,7 @@ struct AddressSanitizer {
                    bool Recover = false, bool UseAfterScope = false,
                    AsanDetectStackUseAfterReturnMode UseAfterReturn =
                        AsanDetectStackUseAfterReturnMode::Runtime)
-      : M(M), Inserter(M),
+      : M(M),
         CompileKernel(ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan
                                                             : CompileKernel),
         Recover(ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover),
@@ -919,7 +919,6 @@ private:
   };
 
   Module &M;
-  AsanFunctionInserter Inserter;
   LLVMContext *C;
   const DataLayout *DL;
   Triple TargetTriple;
@@ -962,7 +961,7 @@ public:
                          bool UseGlobalsGC = true, bool UseOdrIndicator = true,
                          AsanDtorKind DestructorKind = AsanDtorKind::Global,
                          AsanCtorKind ConstructorKind = AsanCtorKind::Global)
-      : M(M), Inserter(M),
+      : M(M),
         CompileKernel(ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan
                                                             : CompileKernel),
         InsertVersionCheck(ClInsertVersionCheck.getNumOccurrences() > 0
@@ -1042,7 +1041,6 @@ private:
   GlobalVariable *getOrCreateModuleName();
 
   Module &M;
-  AsanFunctionInserter Inserter;
   bool CompileKernel;
   bool InsertVersionCheck;
   bool Recover;
@@ -1942,6 +1940,7 @@ Instruction *AddressSanitizer::instrumentAMDGPUAddress(
 
 Instruction *AddressSanitizer::genAMDGPUReportBlock(IRBuilder<> &IRB,
                                                     Value *Cond, bool Recover) {
+  AsanFunctionInserter Inserter(M);
   Value *ReportCond = Cond;
   if (!Recover) {
     auto Ballot = Inserter.insertFunction(kAMDGPUBallotName, IRB.getInt64Ty(),
@@ -2321,6 +2320,7 @@ StringRef ModuleAddressSanitizer::getGlobalMetadataSection() const {
 
 void ModuleAddressSanitizer::initializeCallbacks() {
   IRBuilder<> IRB(*C);
+  AsanFunctionInserter Inserter(M);
 
   // Declare our poisoning and unpoisoning functions.
   AsanPoisonGlobals = Inserter.insertFunction(kAsanPoisonGlobalsName,
@@ -2900,6 +2900,7 @@ bool ModuleAddressSanitizer::instrumentModule() {
 
 void AddressSanitizer::initializeCallbacks(const TargetLibraryInfo *TLI) {
   IRBuilder<> IRB(*C);
+  AsanFunctionInserter Inserter(M);
   // Create __asan_report* callbacks.
   // IsWrite, TypeSize and Exp are encoded in the function name.
   for (int Exp = 0; Exp < 2; Exp++) {
@@ -3233,8 +3234,9 @@ bool AddressSanitizer::LooksLikeCodeInBug11395(Instruction *I) {
   return true;
 }
 
-void FunctionStackPoisoner::initializeCallbacks(Module &) {
+void FunctionStackPoisoner::initializeCallbacks(Module &M) {
   IRBuilder<> IRB(*C);
+  AsanFunctionInserter Inserter(M);
   if (ASan.UseAfterReturn == AsanDetectStackUseAfterReturnMode::Always ||
       ASan.UseAfterReturn == AsanDetectStackUseAfterReturnMode::Runtime) {
     const char *MallocNameTemplate =
@@ -3243,17 +3245,17 @@ void FunctionStackPoisoner::initializeCallbacks(Module &) {
             : kAsanStackMallocNameTemplate;
     for (int Index = 0; Index <= kMaxAsanStackMallocSizeClass; Index++) {
       std::string Suffix = itostr(Index);
-      AsanStackMallocFunc[Index] = ASan.Inserter.insertFunction(
+      AsanStackMallocFunc[Index] = Inserter.insertFunction(
           MallocNameTemplate + Suffix, IntptrTy, IntptrTy);
       AsanStackFreeFunc[Index] =
-          ASan.Inserter.insertFunction(kAsanStackFreeNameTemplate + Suffix,
-                                       IRB.getVoidTy(), IntptrTy, IntptrTy);
+          Inserter.insertFunction(kAsanStackFreeNameTemplate + Suffix,
+                                  IRB.getVoidTy(), IntptrTy, IntptrTy);
     }
   }
   if (ASan.UseAfterScope) {
-    AsanPoisonStackMemoryFunc = ASan.Inserter.insertFunction(
+    AsanPoisonStackMemoryFunc = Inserter.insertFunction(
         kAsanPoisonStackMemoryName, IRB.getVoidTy(), IntptrTy, IntptrTy);
-    AsanUnpoisonStackMemoryFunc = ASan.Inserter.insertFunction(
+    AsanUnpoisonStackMemoryFunc = Inserter.insertFunction(
         kAsanUnpoisonStackMemoryName, IRB.getVoidTy(), IntptrTy, IntptrTy);
   }
 
@@ -3262,13 +3264,13 @@ void FunctionStackPoisoner::initializeCallbacks(Module &) {
     std::ostringstream Name;
     Name << kAsanSetShadowPrefix;
     Name << std::setw(2) << std::setfill('0') << std::hex << Val;
-    AsanSetShadowFunc[Val] = ASan.Inserter.insertFunction(
+    AsanSetShadowFunc[Val] = Inserter.insertFunction(
         Name.str(), IRB.getVoidTy(), IntptrTy, IntptrTy);
   }
 
-  AsanAllocaPoisonFunc = ASan.Inserter.insertFunction(
+  AsanAllocaPoisonFunc = Inserter.insertFunction(
       kAsanAllocaPoison, IRB.getVoidTy(), IntptrTy, IntptrTy);
-  AsanAllocasUnpoisonFunc = ASan.Inserter.insertFunction(
+  AsanAllocasUnpoisonFunc = Inserter.insertFunction(
       kAsanAllocasUnpoison, IRB.getVoidTy(), IntptrTy, IntptrTy);
 }
 
