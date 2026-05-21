@@ -174,8 +174,10 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
       // Mark private vars as undefs.
       for (const auto *C : LD->getClausesOfKind<OMPPrivateClause>()) {
         for (const Expr *IRef : C->varlist()) {
-          const auto *OrigVD =
-              cast<VarDecl>(cast<DeclRefExpr>(IRef)->getDecl());
+          const auto *OrigDecl = cast<DeclRefExpr>(IRef)->getDecl();
+          const auto *OrigVD = dyn_cast<VarDecl>(OrigDecl);
+          if (!OrigVD)
+            continue;
           if (EmittedAsPrivate.insert(OrigVD->getCanonicalDecl()).second) {
             QualType OrigVDTy = OrigVD->getType().getNonReferenceType();
             (void)PreCondVars.setVarAddr(
