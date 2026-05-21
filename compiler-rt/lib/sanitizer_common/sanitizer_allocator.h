@@ -88,6 +88,9 @@ struct NoOpMapUnmapCallback {
 #include "sanitizer_allocator_local_cache.h"
 #include "sanitizer_allocator_secondary.h"
 #include "sanitizer_allocator_device.h"
+#if SANITIZER_AMDGPU
+#  include "sanitizer_allocator_amdgpu.h"
+#endif
 #include "sanitizer_allocator_combined.h"
 // clang-format on
 
