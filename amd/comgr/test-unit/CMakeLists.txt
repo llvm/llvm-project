@@ -1,12 +1,17 @@
 # GTest discovery for Comgr unit tests. Three sources, in priority order:
 #
 # 1. In-tree llvm_gtest target (LLVM monorepo build with utils/unittest/).
-# 2. Vanilla GTest CMake package (find_package(GTest CONFIG)). Used by
+# 2. LLVM-installed gtest (-DLLVM_INSTALL_GTEST=ON on the LLVM build),
+#    discovered via find_library in LLVM_LIBRARY_DIRS with NO_DEFAULT_PATH.
+#    Preferred over find_package(GTest) for standalone Comgr builds against
+#    an installed ROCm/LLVM, because find_package(GTest CONFIG) searches
+#    CMake's default paths and can pick up a system gtest at /usr/local
+#    that wasn't built with -fPIC, breaking PIE link of the test binaries
+#    (https://github.com/ROCm/llvm-project/issues/2505).
+# 3. Vanilla GTest CMake package (find_package(GTest CONFIG)). Used by
 #    superproject builds (e.g. TheRock) that supply googletest via the
 #    standard GTest:: imported targets. This avoids forcing the LLVM
 #    build to enable LLVM_INSTALL_GTEST just to test Comgr.
-# 3. LLVM-installed gtest (-DLLVM_INSTALL_GTEST=ON on the LLVM build).
-#    Legacy fallback for installs that ship llvm_gtest alongside LLVM.
 #
 # If none is available, skip the test-unit suite with a warning rather
 # than failing configure.
@@ -14,29 +19,28 @@ if(TARGET llvm_gtest)
   set(COMGR_GTEST_LIBS llvm_gtest_main llvm_gtest)
   set(COMGR_GTEST_INCLUDE_DIRS "")
 else()
-  find_package(GTest CONFIG QUIET)
-  if(GTest_FOUND)
-    set(COMGR_GTEST_LIBS GTest::gtest_main GTest::gtest)
-    set(COMGR_GTEST_INCLUDE_DIRS "")
+  find_library(COMGR_LLVM_GTEST_LIB llvm_gtest
+    PATHS ${LLVM_LIBRARY_DIRS} NO_DEFAULT_PATH)
+  find_library(COMGR_LLVM_GTEST_MAIN_LIB llvm_gtest_main
+    PATHS ${LLVM_LIBRARY_DIRS} NO_DEFAULT_PATH)
+  find_path(COMGR_LLVM_GTEST_INCLUDE_DIR gtest/gtest.h
+    PATHS ${LLVM_INCLUDE_DIRS} PATH_SUFFIXES llvm-gtest NO_DEFAULT_PATH)
+  if(COMGR_LLVM_GTEST_LIB AND COMGR_LLVM_GTEST_MAIN_LIB
+      AND COMGR_LLVM_GTEST_INCLUDE_DIR)
+    set(COMGR_GTEST_LIBS
+      ${COMGR_LLVM_GTEST_MAIN_LIB} ${COMGR_LLVM_GTEST_LIB})
+    set(COMGR_GTEST_INCLUDE_DIRS ${COMGR_LLVM_GTEST_INCLUDE_DIR})
   else()
-    find_library(COMGR_LLVM_GTEST_LIB llvm_gtest
-      PATHS ${LLVM_LIBRARY_DIRS} NO_DEFAULT_PATH)
-    find_library(COMGR_LLVM_GTEST_MAIN_LIB llvm_gtest_main
-      PATHS ${LLVM_LIBRARY_DIRS} NO_DEFAULT_PATH)
-    find_path(COMGR_LLVM_GTEST_INCLUDE_DIR gtest/gtest.h
-      PATHS ${LLVM_INCLUDE_DIRS} PATH_SUFFIXES llvm-gtest NO_DEFAULT_PATH)
-    if(COMGR_LLVM_GTEST_LIB AND COMGR_LLVM_GTEST_MAIN_LIB
-        AND COMGR_LLVM_GTEST_INCLUDE_DIR)
-      set(COMGR_GTEST_LIBS
-        ${COMGR_LLVM_GTEST_MAIN_LIB} ${COMGR_LLVM_GTEST_LIB})
-      set(COMGR_GTEST_INCLUDE_DIRS ${COMGR_LLVM_GTEST_INCLUDE_DIR})
+    find_package(GTest CONFIG QUIET)
+    if(GTest_FOUND)
+      set(COMGR_GTEST_LIBS GTest::gtest_main GTest::gtest)
+      set(COMGR_GTEST_INCLUDE_DIRS "")
     else()
       message(WARNING
-        "Comgr test-unit skipped: no llvm_gtest target, no GTest "
-        "CMake package, and no LLVM-installed gtest found at "
-        "${LLVM_INCLUDE_DIRS}/llvm-gtest. Provide one of: in-tree LLVM "
-        "with utils/unittest/, find_package(GTest), or "
-        "-DLLVM_INSTALL_GTEST=ON on the LLVM build.")
+        "Comgr test-unit skipped: no llvm_gtest target, no LLVM-installed "
+        "gtest at ${LLVM_INCLUDE_DIRS}/llvm-gtest, and no GTest CMake "
+        "package found. Provide one of: in-tree LLVM with utils/unittest/, "
+        "-DLLVM_INSTALL_GTEST=ON on the LLVM build, or find_package(GTest).")
       return()
     endif()
   endif()
