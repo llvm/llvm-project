@@ -2222,6 +2222,14 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     break;
   }
+  case TargetOpcode::G_SREM: {
+    // The sign bit is the LHS's sign bit, except when the result of the
+    // remainder is zero. The magnitude of the result should be less than or
+    // equal to the magnitude of the LHS. Therefore, the result should have
+    // at least as many sign bits as the left hand side.
+    Register Src = MI.getOperand(0).getReg();
+    return computeNumSignBits(Src, DemandedElts, Depth + 1);
+  }
   case TargetOpcode::G_TRUNC: {
     Register Src = MI.getOperand(1).getReg();
     LLT SrcTy = MRI.getType(Src);
