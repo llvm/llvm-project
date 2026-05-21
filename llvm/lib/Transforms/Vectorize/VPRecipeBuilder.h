@@ -78,7 +78,7 @@ public:
   bool replaceWithFinalIfReductionStore(VPInstruction *VPI,
                                         VPBuilder &FinalRedStoresBuilder);
 
-  /// Build a VPReplicationRecipe or VPInstrucionWithType for \p VPI. If it is
+  /// Build a replicating or single-scalar recipe for \p VPI. If it is
   /// predicated, add the mask as last operand. Range.End may be decreased to
   /// ensure same recipe behavior  from \p Range.Start to \p Range.End.
   VPSingleDefRecipe *handleReplication(VPInstruction *VPI, VFRange &Range);
