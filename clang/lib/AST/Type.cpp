@@ -2786,6 +2786,10 @@ QualType Type::getRVVEltType(const ASTContext &Ctx) const {
 }
 
 bool QualType::isPODType(const ASTContext &Context) const {
+  // HLSL has a more relaxed definition of POD than C++11.
+  if (Context.getLangOpts().HLSL)
+    return isHLSLPODType(Context);
+
   // C++11 has a more relaxed definition of POD.
   if (Context.getLangOpts().CPlusPlus11)
     return isCXX11PODType(Context);
@@ -3287,6 +3291,22 @@ bool QualType::isCXX11PODType(const ASTContext &Context) const {
   }
 
   // No other types can match.
+  return false;
+}
+
+bool QualType::isHLSLPODType(const ASTContext &Context) const {
+  if (isCXX11PODType(Context))
+    return true;
+
+  const Type *BaseTy = getTypePtr()->getBaseElementTypeUnsafe();
+  if (const auto *RD =
+          dyn_cast_or_null<CXXRecordDecl>(BaseTy->getAsRecordDecl())) {
+    // User-defined records in HLSL do not have constructors or copy/assignment
+    // operators. They are still considered POD.
+    if (!RD->hasUserProvidedSpecialMembers() || RD->isTrivial() ||
+        RD->isStandardLayout())
+      return true;
+  }
   return false;
 }
 

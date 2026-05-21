@@ -5745,6 +5745,17 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
   return true;
 }
 
+// Returns true if the given type can have an overload of the given
+// binary operator.
+bool SemaHLSL::canHaveOverloadedBinOp(QualType LHSTy, BinaryOperatorKind Opc) {
+  CXXRecordDecl *RD = LHSTy->getAsCXXRecordDecl();
+  if (!RD)
+    return true;
+  // hasUserProvidedSpecialMembers() should be true only for HLSL built-in
+  // records like resources.
+  return RD->hasUserProvidedSpecialMembers() || Opc != BO_Assign;
+}
+
 // Walks though the global variable declaration, collects all resource binding
 // requirements and adds them to Bindings
 void SemaHLSL::collectResourceBindingsOnVarDecl(VarDecl *VD) {

@@ -1525,14 +1525,10 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
     // isConstantInitializer produces wrong answers for structs with
     // reference or bitfield members, and a few other cases, and checking
     // for POD-ness protects us from some of these.
-    QualType BaseTy = getContext().getBaseElementType(Ty);
     if (D.getInit() && (Ty->isArrayType() || Ty->isRecordType()) &&
         (D.isConstexpr() ||
-         ((Ty.isPODType(getContext()) || BaseTy->isObjCObjectPointerType() ||
-           // If HLSL, check if it's a constant initializer anyway because
-           // POD-ness will no longer be true for user defined structs
-           // (since they do not have constructors).
-           (getLangOpts().HLSL && BaseTy->isRecordType())) &&
+         ((Ty.isPODType(getContext()) ||
+           getContext().getBaseElementType(Ty)->isObjCObjectPointerType()) &&
           D.getInit()->isConstantInitializer(getContext())))) {
 
       // If the variable's a const type, and it's neither an NRVO

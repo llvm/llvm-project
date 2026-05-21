@@ -1111,6 +1111,11 @@ public:
   /// CXXRecordDecl::isCXX11StandardLayout, this takes DRs into account.
   bool isCXX11PODType(const ASTContext &Context) const;
 
+  /// Return true if this is a POD type according to the HLSL rules.
+  /// User-defined records in HLSL do not have default constructors, which
+  /// is a POD requirement for C++.
+  bool isHLSLPODType(const ASTContext &Context) const;
+
   /// Return true if this is a trivial type per (C++0x [basic.types]p9)
   bool isTrivialType(const ASTContext &Context) const;
 

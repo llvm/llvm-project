@@ -16125,21 +16125,12 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
   }
 
   if (getLangOpts().CPlusPlus) {
-    // Otherwise, build an overloaded op if either expression is type-dependent
-    // or has an overloadable type.
-    // In HLSL, user-defined structs/classes do not have ctors or
-    // overloadable operators.
-    QualType LHSTy = LHSExpr->getType();
-    QualType RHSTy = RHSExpr->getType();
-    bool IsLHSNonOverloadableHLSLType =
-        getLangOpts().HLSL && LHSTy->isRecordType() &&
-        !LHSTy->getAsCXXRecordDecl()->hasUserProvidedSpecialMembers();
-    bool IsRHSNonOverloadableHLSLType =
-        getLangOpts().HLSL && RHSTy->isRecordType() &&
-        !RHSTy->getAsCXXRecordDecl()->hasUserProvidedSpecialMembers();
-    if (LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent() ||
-        (LHSTy->isOverloadableType() && !IsLHSNonOverloadableHLSLType) ||
-        (RHSTy->isOverloadableType() && !IsRHSNonOverloadableHLSLType))
+    if ((LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent() ||
+         LHSExpr->getType()->isOverloadableType() ||
+         RHSExpr->getType()->isOverloadableType()) &&
+        (!getLangOpts().HLSL ||
+         HLSL().canHaveOverloadedBinOp(LHSExpr->getType(), Opc) ||
+         HLSL().canHaveOverloadedBinOp(RHSExpr->getType(), Opc)))
       return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
   }
 
