@@ -1170,3 +1170,14 @@ define <vscale x 2 x float> @commute_vfmadd(<vscale x 2 x float> %passthru, <vsc
   %merge = call <vscale x 2 x float> @llvm.vp.merge(<vscale x 2 x i1> %mask, <vscale x 2 x float> %fadd, <vscale x 2 x float> %passthru, i32 %evl)
   ret <vscale x 2 x float> %merge
 }
+
+; Test for crash where we didn't sink to ensure AVL dominated
+define i32 @pr198733(<vscale x 16 x i32> %0, <vscale x 16 x i1> %1, i32 %2) {
+entry:
+  %3 = zext <vscale x 16 x i1> %1 to <vscale x 16 x i32>
+  %4 = or <vscale x 16 x i32> %0, %3
+  %5 = zext i32 %2 to i64
+  %6 = add i64 %5, -1
+  %7 = extractelement <vscale x 16 x i32> %4, i64 %6
+  ret i32 %7
+}
