@@ -1022,15 +1022,17 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
 
 /// Check whether \p AR is a non-wrapping AddRec. If \p Ptr is not nullptr, use
 /// informating from the IR pointer value to determine no-wrap.
-static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
-                     Value *Ptr, Type *AccessTy, const Loop *L, bool Assume,
-                     const DominatorTree &DT,
-                     std::optional<int64_t> Stride = std::nullopt) {
+static bool
+isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
+         Type *AccessTy, const Loop *L, const DominatorTree &DT,
+         std::optional<int64_t> Stride = std::nullopt,
+         SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) {
   // FIXME: This should probably only return true for NUW.
   if (any(AR->getNoWrapFlags(SCEV::NoWrapMask)))
     return true;
 
-  if (Ptr && PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
+  if (Ptr && isa<SCEVAddRecExpr>(PSE.getSCEV(Ptr)) &&
+      PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
     return true;
 
   // An nusw getelementptr that is an AddRec cannot wrap. If it would wrap,
@@ -1066,8 +1068,12 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
       return true;
   }
 
-  if (Ptr && Assume) {
-    PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
+  if (Ptr && Predicates) {
+    ScalarEvolution *SE = PSE.getSE();
+    SCEVWrapPredicate::IncrementWrapFlags Flags = SCEVWrapPredicate::clearFlags(
+        SCEVWrapPredicate::IncrementNUSW,
+        SCEVWrapPredicate::getImpliedFlags(AR, *SE));
+    Predicates->push_back(SE->getWrapPredicate(AR, Flags));
     LLVM_DEBUG(dbgs() << "LAA: Pointer may wrap:\n"
                       << "LAA:   Pointer: " << *Ptr << "\n"
                       << "LAA:   SCEV: " << *AR << "\n"
@@ -1295,6 +1301,7 @@ bool AccessAnalysis::createCheckForAccess(
 
   /// Check whether all pointers can participate in a runtime bounds check. They
   /// must either be invariant or non-wrapping affine AddRecs.
+  SmallVector<const SCEVPredicate *> Predicates;
   for (auto &P : RTCheckPtrs) {
     // The bounds for loop-invariant pointer is trivial.
     if (SE->isLoopInvariant(P.getPointer(), TheLoop))
@@ -1315,9 +1322,12 @@ bool AccessAnalysis::createCheckForAccess(
     }
 
     if (!isNoWrap(PSE, AR, RTCheckPtrs.size() == 1 ? Ptr : nullptr, AccessTy,
-                  TheLoop, Assume, DT))
+                  TheLoop, DT, /*Stride=*/std::nullopt,
+                  Assume ? &Predicates : nullptr))
       return false;
   }
+  for (const SCEVPredicate *P : Predicates)
+    PSE.addPredicate(*P);
 
   for (const auto &[PtrExpr, NeedsFreeze] : RTCheckPtrs) {
     // The id of the dependence set.
@@ -1646,11 +1656,10 @@ void AccessAnalysis::buildDependenceSets() {
 }
 
 /// Check whether the access through \p Ptr has a constant stride.
-std::optional<int64_t>
-llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
-                   const Loop *Lp, const DominatorTree &DT,
-                   const DenseMap<Value *, const SCEV *> &StridesMap,
-                   bool Assume, bool ShouldCheckWrap) {
+std::optional<int64_t> llvm::getPtrStride(
+    PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr, const Loop *Lp,
+    const DominatorTree &DT, const DenseMap<Value *, const SCEV *> &StridesMap,
+    bool ShouldCheckWrap, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
   if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
     return 0;
@@ -1658,8 +1667,10 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   assert(Ptr->getType()->isPointerTy() && "Unexpected non-ptr");
 
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);
-  if (Assume && !AR)
-    AR = PSE.getAsAddRec(Ptr);
+  if (Predicates && !AR) {
+    AR = PSE.getSE()->convertSCEVToAddRecWithPredicates(PtrScev, Lp,
+                                                        *Predicates);
+  }
 
   if (!AR) {
     LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not an AddRecExpr pointer " << *Ptr
@@ -1672,13 +1683,28 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   if (!ShouldCheckWrap || !Stride)
     return Stride;
 
-  if (isNoWrap(PSE, AR, Ptr, AccessTy, Lp, Assume, DT, Stride))
+  if (isNoWrap(PSE, AR, Ptr, AccessTy, Lp, DT, Stride, Predicates))
     return Stride;
 
   LLVM_DEBUG(
       dbgs() << "LAA: Bad stride - Pointer may wrap in the address space "
              << *Ptr << " SCEV: " << *AR << "\n");
   return std::nullopt;
+}
+
+/// Check whether the access through \p Ptr has a constant stride.
+std::optional<int64_t>
+llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
+                   const Loop *Lp, const DominatorTree &DT,
+                   const DenseMap<Value *, const SCEV *> &StridesMap,
+                   bool Assume, bool ShouldCheckWrap) {
+  SmallVector<const SCEVPredicate *> Predicates;
+  std::optional<int64_t> Stride =
+      getPtrStride(PSE, AccessTy, Ptr, Lp, DT, StridesMap, ShouldCheckWrap,
+                   Assume ? &Predicates : nullptr);
+  for (const SCEVPredicate *P : Predicates)
+    PSE.addPredicate(*P);
+  return Stride;
 }
 
 std::optional<int64_t> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,

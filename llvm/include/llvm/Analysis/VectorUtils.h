@@ -805,8 +805,12 @@ private:
     delete Group;
   }
 
-  /// Collect all the accesses with a constant stride in program order.
+  /// Collect all the accesses with a constant stride in program order. Any
+  /// SCEV predicates needed to compute the strides are appended to \p
+  /// Predicates rather than being added to PSE, so they can be discarded if no
+  /// interleave group is formed.
   void collectConstStrideAccesses(
+      SmallVectorImpl<const SCEVPredicate *> &Predicates,
       MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
       const DenseMap<Value *, const SCEV *> &Strides);
 

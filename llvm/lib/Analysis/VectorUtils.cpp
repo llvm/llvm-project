@@ -1308,8 +1308,9 @@ bool InterleavedAccessInfo::isStrided(int Stride) {
 }
 
 void InterleavedAccessInfo::collectConstStrideAccesses(
+    SmallVectorImpl<const SCEVPredicate *> &Predicates,
     MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-    const DenseMap<Value*, const SCEV*> &Strides) {
+    const DenseMap<Value *, const SCEV *> &Strides) {
   auto &DL = TheLoop->getHeader()->getDataLayout();
 
   // Since it's desired that the load/store instructions be maintained in
@@ -1341,7 +1342,7 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
       // even without the transformation. The wrapping checks are therefore
       // deferred until after we've formed the interleaved groups.
       int64_t Stride = getPtrStride(PSE, ElementTy, Ptr, TheLoop, *DT, Strides,
-                                    /*Assume=*/true, /*ShouldCheckWrap=*/false)
+                                    /*ShouldCheckWrap=*/false, &Predicates)
                            .value_or(0);
 
       const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
@@ -1391,9 +1392,14 @@ void InterleavedAccessInfo::analyzeInterleaving(
   LLVM_DEBUG(dbgs() << "LV: Analyzing interleaved accesses...\n");
   const auto &Strides = LAI->getSymbolicStrides();
 
+  // Collect the SCEV predicates needed by the stride analysis below. They are
+  // only added to PSE if at least one interleave group is formed, so they can
+  // be discarded otherwise.
+  SmallVector<const SCEVPredicate *> Predicates;
+
   // Holds all accesses with a constant stride.
   MapVector<Instruction *, StrideDescriptor> AccessStrideInfo;
-  collectConstStrideAccesses(AccessStrideInfo, Strides);
+  collectConstStrideAccesses(Predicates, AccessStrideInfo, Strides);
 
   if (AccessStrideInfo.empty())
     return;
@@ -1588,6 +1594,15 @@ void InterleavedAccessInfo::analyzeInterleaving(
       }
     } // Iteration over A accesses.
   }   // Iteration over B accesses.
+
+  // The predicates collected while forming the candidate groups above are
+  // needed by the wrap-check below (which uses Assume=false and therefore
+  // relies on the no-wrap assumptions already being available in PSE) and by
+  // later passes. Commit them now if any candidate group was formed; otherwise
+  // they are unused and discarded.
+  if (!LoadGroups.empty() || !StoreGroups.empty())
+    for (const SCEVPredicate *P : Predicates)
+      PSE.addPredicate(*P);
 
   auto InvalidateGroupIfMemberMayWrap = [&](InterleaveGroup<Instruction> *Group,
                                             int Index,
