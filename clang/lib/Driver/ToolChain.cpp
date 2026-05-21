@@ -516,8 +516,15 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
 }
 
 SanitizerArgs
-ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
-  SanitizerArgs SanArgs(*this, JobArgs, !SanitizerArgsChecked);
+ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs,
+                            StringRef BoundArch,
+                            Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerArgs SanArgs(*this, JobArgs,
+                        /*DiagnoseErrors=*/!SanitizerArgsChecked,
+                        /*DiagnoseBoundArchErrors=*/
+                        BoundArchSanitizerArgsChecked.insert(BoundArch).second,
+                        BoundArch, DeviceOffloadKind);
+
   SanitizerArgsChecked = true;
   return SanArgs;
 }
@@ -1765,7 +1772,9 @@ ToolChain::getSystemGPUArchs(const llvm::opt::ArgList &Args) const {
   return SmallVector<std::string>();
 }
 
-SanitizerMask ToolChain::getSupportedSanitizers() const {
+SanitizerMask
+ToolChain::getSupportedSanitizers(StringRef BoundArch,
+                                  Action::OffloadKind DeviceOffloadKind) const {
   // Return sanitizers which don't require runtime support and are not
   // platform dependent.
 

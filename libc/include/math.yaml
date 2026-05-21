@@ -1590,19 +1590,19 @@ functions:
       - type: long double
   - name: isnan
     standards:
-      - BSDExtensions
+      - bsd
     return_type: int
     arguments:
       - type: double
   - name: isnanf
     standards:
-      - BSDExtensions
+      - bsd
     return_type: int
     arguments:
       - type: float
   - name: isnanl
     standards:
-      - BSDExtensions
+      - bsd
     return_type: int
     arguments:
       - type: long double

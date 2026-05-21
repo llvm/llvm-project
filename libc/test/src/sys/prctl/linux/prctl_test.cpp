@@ -9,25 +9,19 @@
 #include "src/sys/prctl/prctl.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include <sys/prctl.h>
+#include <linux/prctl.h> // Definition of PR_* constants
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcSysPrctlTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcSysPrctlTest, GetSetName) {
+  ASSERT_THAT(LIBC_NAMESPACE::prctl(PR_GET_NAME, nullptr), Fails(EFAULT, -1));
+
+  ASSERT_THAT(LIBC_NAMESPACE::prctl(PR_SET_NAME, "libc-test"), Succeeds());
+
   char name[17];
-  unsigned long name_addr = 0;
-  ASSERT_THAT(LIBC_NAMESPACE::prctl(PR_GET_NAME, name_addr, 0, 0, 0),
-              Fails(EFAULT, -1));
-
-  name_addr = reinterpret_cast<unsigned long>("libc-test");
-  ASSERT_THAT(LIBC_NAMESPACE::prctl(PR_SET_NAME, name_addr, 0, 0, 0),
-              Succeeds());
-
-  name_addr = reinterpret_cast<unsigned long>(name);
-  ASSERT_THAT(LIBC_NAMESPACE::prctl(PR_GET_NAME, name_addr, 0, 0, 0),
-              Succeeds());
+  ASSERT_THAT(LIBC_NAMESPACE::prctl(PR_GET_NAME, name), Succeeds());
   ASSERT_STREQ(name, "libc-test");
 }
 
