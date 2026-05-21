@@ -195,8 +195,8 @@ template <> struct ScalarTraits<SymbolID> {
 struct QuotedString {
   StringRef Ref;
   QuotedString() = default;
-  QuotedString(StringRef R) : Ref(R) {}
-  operator StringRef() const { return Ref; }
+  explicit QuotedString(StringRef R) : Ref(R) {}
+  explicit operator StringRef() const { return Ref; }
   bool operator==(const QuotedString &Other) const { return Ref == Other.Ref; }
 };
 

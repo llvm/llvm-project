@@ -203,7 +203,7 @@ StringRef Serializer::getInfoRelativePath(const Decl *D) {
 class ClangDocCommentVisitor
     : public ConstCommentVisitor<ClangDocCommentVisitor> {
 public:
-  ClangDocCommentVisitor(CommentInfo &CI) : CurrentCI(CI) {}
+  explicit ClangDocCommentVisitor(CommentInfo &CI) : CurrentCI(CI) {}
 
   void parseComment(const comments::Comment *C);
 
@@ -608,8 +608,7 @@ void Serializer::parseEnumerators(EnumInfo &I, const EnumDecl *D) {
     EnumValueInfo &Member = LocalMembers.emplace_back(
         E->getNameAsString(), ValueStr.str(), ValueExpr);
     ASTContext &Context = E->getASTContext();
-    if (RawComment *Comment =
-            E->getASTContext().getRawCommentForDeclNoCache(E)) {
+    if (RawComment *Comment = E->getASTContext().getRawCommentNoCache(E)) {
       Comment->setAttached();
       if (comments::FullComment *Fc = Comment->parse(Context, nullptr, E)) {
         auto *NewCI = allocateListNodeTransient<CommentInfo>();
@@ -925,7 +924,7 @@ void Serializer::populateMemberTypeInfo(T &I, const Decl *D) {
   ASTContext &Context = D->getASTContext();
   // TODO investigate whether we can use ASTContext::getCommentForDecl instead
   // of this logic. See also similar code in Mapper.cpp.
-  RawComment *Comment = Context.getRawCommentForDeclNoCache(D);
+  RawComment *Comment = Context.getRawCommentNoCache(D);
   if (!Comment)
     return;
 
@@ -1210,7 +1209,7 @@ std::pair<Info *, Info *> Serializer::emitInfo(const CXXMethodDecl *D,
 void Serializer::extractCommentFromDecl(const Decl *D, TypedefInfo &Info) {
   assert(D && "Invalid Decl when extracting comment");
   ASTContext &Context = D->getASTContext();
-  RawComment *Comment = Context.getRawCommentForDeclNoCache(D);
+  RawComment *Comment = Context.getRawCommentNoCache(D);
   if (!Comment)
     return;
 
