@@ -1838,11 +1838,10 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 '``llvm.amdgcn.av``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The '``llvm.amdgcn.av``' intrinsics perform load and store operations on flat or
-global memory, with explicit control on how their side-effects propagate through
-the system. They take a *scope* argument as a string metadata, which indicates
-the scope within which these side-effects are guaranteed to be observable.
-[TODO: The exact semantics as a memory consistency model is a work in progress.]
+The '``llvm.amdgcn.av``' intrinsics perform
+:ref:`store-available<amdgpu-store-available>` and
+:ref:`load-visible<amdgpu-load-visible>` operations on flat or global memory
+with *scope* supplied as a metadata argument.
 
 The pointer argument can be a global pointer (``addrspace(1)``) or a flat
 pointer (``addrspace(0)``). Global pointers select ``global_load``/
@@ -1874,8 +1873,7 @@ Implementation Details
 
 This section is informational and for **internal reference only**. Users should
 not rely on the expansions described below. The only reliable user-level
-guarantees are those provided by the memory consistency model, which is
-currently a work in progress.
+guarantees are those provided by the :ref:`AMDGPU memory model<amdgpu-memmodel>`.
 
 The tables below show the cache policy bits for global pointer variants.
 Flat pointer variants use the corresponding ``flat_load``/``flat_store``

@@ -1,8 +1,8 @@
 .. _amdgpu-memmodel:
 
-=================================
+=====================
  AMDGPU Memory Model
-=================================
+=====================
 
 .. contents::
    :local:
@@ -40,6 +40,66 @@ Synchronization Operations
   propagated in the system. Typical examples are atomic operations (including
   fences) with at least ``release`` or ``acquire`` ordering.
 
+.. _amdgpu-scopes:
+
+Scopes
+======
+
+A *scope* describes sets of memory accesses and synchronization operations in a
+multi-threaded execution environment. Each such set is called an *instance* of
+that scope, or a *scope instance* for short.
+
+- Each memory access or synchronization operation belongs to at most one
+  instance of every scope defined by the target.
+- When an operation *X* specifies a scope *S*, it indicates the instance of *S*
+  that contains *X*. This scope instance is also termed as *X's instance of
+  scope S* or just "*X*'s scope instance", when *S* is implied by the context.
+- When an operation does not specify a scope, it indicates the anonymous
+  system-wide scope.
+
+LLVM scopes
+-----------
+
+The LLVM Language Reference defines the following :ref:`scopes<syncscope>`:
+
+Anonymous system-wide scope ("")
+  There exists a single instance of this scope that contains the memory accesses
+  and synchronization operations performed by all threads. This is typically
+  called "system" scope in languages and targets supported by Clang/LLVM.
+
+"singlethread" scope
+  Each thread corresponds to a "singlethread" scope instance that contains the
+  memory accesses and synchronization operations performed by that thread.
+
+AMDGPU scopes
+-------------
+
+The AMDGPU backend further refines the LLVM scopes with the following
+target-defined scopes and constraints:
+
+- The anonymous system-wide scope (same as LLVM)
+- "agent" scope
+- "cluster" scope
+- "workgroup" scope
+- "wavefront" scope
+- "singlethread" scope (same as LLVM)
+
+These are arranged from largest scope ("") to smallest scope ("singlethread").
+
+- Every instance *X* of some scope *S1* other than "singlethread" scope is
+  partitioned by the scope *S2* one level below it. Each subset defined by this
+  partition is an instance of *S2* and is called a *subscope instance* of *X*.
+- It follows that if two scope instances *X* and *Y* intersect, then their
+  intersection is the smaller of *X* and *Y*.
+- A scope *S1* is a *subscope* of a scope *S2* if every instance of *S1* is a
+  subscope instance of some instance of *S2*.
+
+**Inclusive Scopes**: Two operations *X* and *Y* are said to have *inclusive scopes*
+if the scope instance of each operation contains the other operation. In that
+case, the *common scope instance* *S'* of *X* and *Y* is the intersection of their
+scope instances. The scope corresponding to *S'* is also termed as the *common
+scope* of *X* and *Y*.
+
 Availability and Visibility
 ===========================
 
@@ -69,6 +129,8 @@ these necessary conditions, and hence they can be explained using the rules from
 either memory model. But the new intrinsics and metadata *opt out* of the LLVM
 memory model, and can only be explained using the AMDGPU memory model.
 
+.. _amdgpu-store-available:
+
 store-available
 ---------------
 
@@ -80,11 +142,12 @@ store-available
    cmpxchg      [syncscope("<target-scope>")]
 
 The ``@llvm.amdgcn.av.global.store.b128`` intrinsic performs a non-atomic
-*store-available* operation on ``ptr`` whose side-effects are made available to
-:ref:`its instance<amdgpu-scopes>` of ``scope``.
+*store-available* operation on ``ptr`` with scope ``scope``.
 
 An atomic operation that results in a store operation is a *store-available*
 operation with scope ``syncscope``.
+
+.. _amdgpu-load-visible:
 
 load-visible
 ------------
@@ -97,8 +160,7 @@ load-visible
    cmpxchg      [syncscope("<target-scope>")]
 
 The ``@llvm.amdgcn.av.global.load.b128`` intrinsic performs a non-atomic
-*load-visible* operation which ensures the visibility of all side-effects on
-``ptr`` available at :ref:`its instance<amdgpu-scopes>` of ``scope``.
+*load-visible* operation on ``ptr`` with scope ``scope``.
 
 An atomic operation that results in a read operation is a *load-visible* operation
 with scope ``syncscope``.
@@ -150,70 +212,17 @@ the ordering of other memory accesses.
 
 .. code-block:: llvm
 
-   ; This includes a MakeAvailable operation.
-   store atomic [syncscope("<target-scope>")] <ordering>
+   ; This includes the following operations:
+   ; - The atomic store at "agent" scope,
+   ; - A store-available operation at "agent" scope on `ptr`,
+   ; - A `MakeAvailable` operation at "agent" scope that affects previous memory accesses.
+   store atomic syncscope("agent") release ptr
 
-   ; This **does not** include a MakeAvailable operation.
-   store atomic [syncscope("<target-scope>")] <ordering> !amdgcn-av-none
-
-.. _amdgpu-scopes:
-
-Scopes
-======
-
-A *scope* describes sets of memory accesses and synchronization operations in a
-multi-threaded execution environment. Each such set is called an *instance* of
-that scope, or a *scope instance* for short. Each memory access or
-synchronization operation belongs to at most one instance of every scope defined
-by the target.
-
-- A scope instance *S1* is a *subscope instance* of a scope instance *S2* if
-  *S1* is a subset of *S2*.
-- A scope *S1* is a *subscope* of a scope *S2* if every instance of *S1* is a
-  subset of some instance of *S2*.
-
-When an operation *X* specifies a scope *S*, it indicates the instance of *S* that
-contains *X*. This scope instance is also termed as *X's instance of scope S* or
-just "*X*'s scope instance", when *S* is implied by the context.
-
-When an operation does not specify a scope, it indicates the singleton instance
-of the LLVM system-wide scope defined below.
-
-**Inclusive Scopes**: Two operations *X* and *Y* are said to have *inclusive scopes*
-if the scope instance of each operation contains the other operation. In that
-case, the *common scope instance* *S'* of *X* and *Y* is the intersection of their
-scope instances. The scope corresponding to *S'* is also termed as the *common
-scope* of *X* and *Y*. [Informational note -- Since scopes are arranged in a linear
-hierarchy, clearly *S'* is the smaller of the two scope instances.]
-
-LLVM scopes
------------
-
-The LLVM Language Reference defines the following :ref:`scopes<syncscope>`:
-
-- A "singlethread" scope. Each thread has a corresponding "singlethread" scope
-  instance that contains the memory accesses and synchronization operations
-  performed by that thread.
-- An anonymous system-wide scope with a single instance that contains the memory
-  accesses and synchronization operations performed by all threads. This is
-  typically called "system" scope in languages and targets supported by
-  Clang/LLVM.
-
-AMDGPU scopes
--------------
-
-The AMDGPU backend defines the following target-defined scopes:
-
-- The anonymous system-wide scope (same as LLVM)
-- "agent" scope
-- "cluster" scope
-- "workgroup" scope
-- "wavefront" scope
-- "singlethread" scope (same as LLVM)
-
-These are arranged from largest scope ("") to smallest scope
-("singlethread"). Every scope instance (except the singleton default scope
-instance) is included in a scope instance at the level above it.
+   ; This includes the following operations:
+   ; - The atomic store at "agent" scope,
+   ; - A store-available operation at "agent" scope on `ptr`.
+   ; Noteably, it does not include a `MakeAvailable` operation on other memory accesses.
+   store atomic syncscope("agent") release ptr !amdgcn-av-none
 
 Ordering
 ========
@@ -262,8 +271,8 @@ and one of the following holds:
   - *X* makes *W* visible in a scope instance *S1* that includes *Y*, and,
   - *X* is included in the scope instance *S2* of *Y*.
 
-  Then *Y* makes *W* visible in the intersection of *S1* and *S2*, and every
-  subscope instance of *S2* that includes *Y*.
+  Then *Y* makes *W* visible in the intersection *S* of *S1* and *S2*, and every
+  subscope instance of *S* that includes *Y*.
 
 Location Order
 --------------
