@@ -158,8 +158,9 @@ std::size_t DynamicType::GetAlignment(
     switch (GetDerivedTypeSpec().category()) {
       SWITCH_COVERS_ALL_CASES
     case semantics::DerivedTypeSpec::Category::DerivedType:
-      if (derived_ && derived_->scope()) {
-        return derived_->scope()->alignment().value_or(1);
+    case semantics::DerivedTypeSpec::Category::EnumerationType:
+      if (derived_ && derived_->GetScope()) {
+        return derived_->GetScope()->alignment().value_or(1);
       }
       break;
     case semantics::DerivedTypeSpec::Category::IntrinsicVector:
@@ -199,9 +200,9 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
     }
     break;
   case TypeCategory::Derived:
-    if (!IsPolymorphic() && derived_ && derived_->scope()) {
-      auto size{derived_->scope()->size()};
-      auto align{aligned ? derived_->scope()->alignment().value_or(0) : 0};
+    if (!IsPolymorphic() && derived_ && derived_->GetScope()) {
+      auto size{derived_->GetScope()->size()};
+      auto align{aligned ? derived_->GetScope()->alignment().value_or(0) : 0};
       auto alignedSize{align > 0 ? ((size + align - 1) / align) * align : size};
       return Expr<SubscriptInteger>{
           static_cast<ConstantSubscript>(alignedSize)};
