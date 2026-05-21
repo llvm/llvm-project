@@ -86,10 +86,12 @@ public:
       if (v >= SEM_VALUE_MAX)
         return EOVERFLOW;
       // RELEASE on success, since post should publish prior writes
-      // RELAXED on failture, since no synchronization event occurs
+      // RELAXED on failure, since no synchronization event occurs
     } while (!value.compare_exchange_weak(v, v + 1, cpp::MemoryOrder::RELEASE,
                                           cpp::MemoryOrder::RELAXED));
 
+    // Wake one waiter if any,
+    // waiter selection is left to linux futex implementation.
     // Named semaphores live in MAP_SHARED memory and may be shared across
     // processes, so use a shared wake.
     value.notify_one(/*is_shared=*/true);
