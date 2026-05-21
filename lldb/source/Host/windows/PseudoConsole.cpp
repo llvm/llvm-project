@@ -18,11 +18,11 @@
 
 using namespace lldb_private;
 
-typedef HRESULT(WINAPI *CreatePseudoConsole_t)(COORD size, HANDLE hInput,
-                                               HANDLE hOutput, DWORD dwFlags,
-                                               HPCON *phPC);
+using CreatePseudoConsole_t = HRESULT(WINAPI *)(COORD size, HANDLE hInput,
+                                                HANDLE hOutput, DWORD dwFlags,
+                                                HPCON *phPC);
 
-typedef VOID(WINAPI *ClosePseudoConsole_t)(HPCON hPC);
+using ClosePseudoConsole_t = VOID(WINAPI *)(HPCON hPC);
 
 static constexpr DWORD PSEUDOCONSOLE_INHERIT_CURSOR = 0x1;
 
