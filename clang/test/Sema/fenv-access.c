@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -verify -Wfenv-access %s
 // RUN: %clang_cc1 -verify -Wfenv-access -ffp-exception-behavior=maytrap -DNO_WARN %s
 // RUN: %clang_cc1 -verify -Wfenv-access -ffp-exception-behavior=strict -DNO_WARN %s
+// RUN: %clang_cc1 -verify -Wfenv-access -triple armv7-linux-gnueabihf -DNO_WARN -DUNSUPPORTED %s
 
 typedef struct {} fenv_t;
 typedef unsigned short int fexcept_t;
@@ -52,7 +53,9 @@ void test_fenv_access_off(void) {
 }
 
 void test_fenv_access_on(void) {
+#ifndef UNSUPPORTED
   #pragma STDC FENV_ACCESS ON
+#endif
   fesetround(0);
   feclearexcept(FE_INVALID);
   fegetexceptflag(flagp, FE_INVALID);
