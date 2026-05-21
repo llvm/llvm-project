@@ -703,14 +703,26 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
 
 bool llvm::willNotFreeBetween(const Instruction *Assume,
                               const Instruction *CtxI) {
-  // Helper to check if there are any calls in the range that may free memory.
+  // Helper to make sure the current function cannot arrange for
+  // another thread to free on its behalf and to check if there
+  // are any calls in the range that may free memory.
   auto hasNoFreeCalls = [](auto Range) {
     for (const auto &[Idx, I] : enumerate(Range)) {
       if (Idx > MaxInstrsToCheckForFree)
         return false;
-      if (const auto *CB = dyn_cast<CallBase>(&I))
-        if (!CB->hasFnAttr(Attribute::NoFree))
-          return false;
+      if (I.isVolatile())
+        return false;
+
+      if (I.maySynchronize())
+        return false;
+
+      auto *CB = dyn_cast<CallBase>(&I);
+      if (CB) {
+        // Non call site cases covered by the two checks above
+        if (!CB->hasFnAttr(Attribute::NoSync) ||
+            !CB->hasFnAttr(Attribute::NoFree))
+            return false;
+      }
     }
     return true;
   };
@@ -739,7 +751,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
   }
 
   // Check if there are any calls between Assume and CtxIter that may free
-  // memory.
+  // memory or synchronize.
   return hasNoFreeCalls(make_range(Assume->getIterator(), CtxIter));
 }
 
