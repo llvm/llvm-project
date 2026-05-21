@@ -1200,6 +1200,18 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
       break;
     }
 
+    // If this is a function type ref and a reference type info this is an objc
+    // block. Blocks have no children.
+    if (const auto *func_tr =
+            llvm::dyn_cast_or_null<swift::reflection::FunctionTypeRef>(tr)) {
+      assert(func_tr->getFlags().getConvention() ==
+                 swift::FunctionMetadataConvention::Block &&
+             "Unexpected convention for reference function typeref!");
+      if (count_only)
+        return 0;
+      return success;
+    }
+
     bool found_start = false;
     using namespace swift::Demangle;
     Demangler dem;
