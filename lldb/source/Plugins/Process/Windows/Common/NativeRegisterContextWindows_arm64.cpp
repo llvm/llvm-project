@@ -101,52 +101,62 @@ CreateRegisterInfoInterface(const ArchSpec &target_arch) {
       target_arch, RegisterInfoPOSIX_arm64::eRegsetMaskDefault);
 }
 
-static Status
-GetThreadContextHelper(lldb::thread_t thread_handle, DWORD context_flags,
-                       PCONTEXT &context,
-                       std::shared_ptr<DataBufferHeap> &context_buffer) {
+static Status GetThreadContextLength(DWORD context_flags,
+                                     DWORD &context_length) {
   Log *log = GetLog(WindowsLog::Registers);
   Status error;
-  DWORD context_length = 0;
 
   if (InitializeContext(nullptr, context_flags, nullptr, &context_length)) {
     error = Status::FromErrorString("InitializeContext succeeded unexpectedly");
-    LLDB_LOG(log, "{0} {1}", __FUNCTION__, error);
+    LLDB_LOG(log, "{0}", error);
     return error;
   }
 
   if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
     error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log,
-             "{0} InitializeContext failed with unexpected error {1}, expected "
+             "InitializeContext failed with unexpected error {0}, expected "
              "ERROR_INSUFFICIENT_BUFFER",
-             __FUNCTION__, error);
+             error);
     return error;
   }
 
-  if (context_buffer)
-    context_buffer->SetByteSize(context_length);
-  else
-    context_buffer = std::make_shared<DataBufferHeap>(context_length, 0);
+  return error;
+}
+
+static Status GetThreadContextHelper(lldb::thread_t thread_handle,
+                                     DWORD context_flags, PCONTEXT &context,
+                                     DataBufferHeap *context_buffer) {
+  Log *log = GetLog(WindowsLog::Registers);
+  Status error;
+  DWORD context_length = 0;
 
   if (!context_buffer) {
-    error = Status::FromErrorString("Failed to allocate context buffer");
-    LLDB_LOG(log, "{0} {1}", __FUNCTION__, error);
+    error = Status::FromErrorString("context buffer not allocated");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  error = GetThreadContextLength(context_flags, context_length);
+  if (error.Fail())
+    return error;
+
+  if (context_buffer->SetByteSize(context_length) != context_length) {
+    error = Status::FromErrorString("failed to resize context buffer");
+    LLDB_LOG(log, "{0}", error);
     return error;
   }
 
   if (!InitializeContext(context_buffer->GetBytes(), context_flags, &context,
                          &context_length)) {
     error = Status(GetLastError(), eErrorTypeWin32);
-    LLDB_LOG(log, "{0} InitializeContext failed with error {1}", __FUNCTION__,
-             error);
+    LLDB_LOG(log, "InitializeContext failed with error {0}", error);
     return error;
   }
 
   if (!::GetThreadContext(thread_handle, context)) {
     error = Status(GetLastError(), eErrorTypeWin32);
-    LLDB_LOG(log, "{0} GetThreadContext failed with error {1}", __FUNCTION__,
-             error);
+    LLDB_LOG(log, "GetThreadContext failed with error {0}", error);
     return error;
   }
 
@@ -159,8 +169,7 @@ static Status SetThreadContextHelper(lldb::thread_t thread_handle,
   Status error;
   if (!::SetThreadContext(thread_handle, context)) {
     error = Status(GetLastError(), eErrorTypeWin32);
-    LLDB_LOG(log, "{0} SetThreadContext failed with error {1}", __FUNCTION__,
-             error);
+    LLDB_LOG(log, "SetThreadContext failed with error {0}", error);
     return error;
   }
   return error;
@@ -302,12 +311,12 @@ NativeRegisterContextWindows_arm64::GPRWrite(const uint32_t reg,
   auto cleanup = llvm::make_scope_exit([&]() { m_context = nullptr; });
 
   PCONTEXT context = nullptr;
-  std::shared_ptr<DataBufferHeap> context_buffer;
+  DataBufferHeap context_buffer;
   DWORD context_flags = CONTEXT_CONTROL | CONTEXT_INTEGER;
   auto thread_handle = GetThreadHandle();
 
   Status error = GetThreadContextHelper(thread_handle, context_flags, context,
-                                        context_buffer);
+                                        &context_buffer);
   if (error.Fail())
     return error;
 
@@ -527,12 +536,12 @@ NativeRegisterContextWindows_arm64::FPRWrite(const uint32_t reg,
   auto cleanup = llvm::make_scope_exit([&]() { m_context = nullptr; });
 
   PCONTEXT context = nullptr;
-  std::shared_ptr<DataBufferHeap> context_buffer;
+  DataBufferHeap context_buffer;
   DWORD context_flags = CONTEXT_CONTROL | CONTEXT_FLOATING_POINT;
   auto thread_handle = GetThreadHandle();
 
   Status error = GetThreadContextHelper(thread_handle, context_flags, context,
-                                        context_buffer);
+                                        &context_buffer);
   if (error.Fail())
     return error;
 
@@ -722,20 +731,12 @@ Status NativeRegisterContextWindows_arm64::ReadAllRegisterValues(
 
   if (!m_context_buffer) {
     error = Status::FromErrorString("register context buffer is not available");
-    LLDB_LOG(log, "{0} {1}", __FUNCTION__, error);
+    LLDB_LOG(log, "{0}", error);
     return error;
   }
 
-  const size_t data_size = m_context_buffer->GetByteSize();
-  data_sp = std::make_shared<DataBufferHeap>(data_size, 0);
-
-  if (!data_sp) {
-    error = Status::FromErrorString("failed to allocate register data buffer");
-    LLDB_LOG(log, "{0} {1}", __FUNCTION__, error);
-    return error;
-  }
-
-  ::memcpy(data_sp->GetBytes(), m_context_buffer->GetBytes(), data_size);
+  data_sp = std::make_shared<DataBufferHeap>(m_context_buffer->GetBytes(),
+                                             m_context_buffer->GetByteSize());
 
   return error;
 }
@@ -749,44 +750,33 @@ Status NativeRegisterContextWindows_arm64::WriteAllRegisterValues(
 
   if (!data_sp) {
     error = Status::FromErrorString("invalid data_sp");
-    LLDB_LOG(log, "{0} {1}", __FUNCTION__, error);
+    LLDB_LOG(log, "{0}", error);
     return error;
   }
 
   DWORD context_flags = CONTEXT_ALL;
-
   DWORD context_length = 0;
-  if (InitializeContext(nullptr, context_flags, nullptr, &context_length)) {
-    error = Status::FromErrorString("InitializeContext succeeded unexpectedly");
-    LLDB_LOG(log, "{0} {1}", __FUNCTION__, error);
-    return error;
-  }
 
-  if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
-    error = Status(GetLastError(), eErrorTypeWin32);
-    LLDB_LOG(log,
-             "{0} InitializeContext failed with unexpected error {1}, expected "
-             "ERROR_INSUFFICIENT_BUFFER",
-             __FUNCTION__, error);
+  error = GetThreadContextLength(context_flags, context_length);
+  if (error.Fail())
     return error;
-  }
 
   if (data_sp->GetByteSize() != context_length) {
     error = Status::FromErrorStringWithFormatv(
         "data_sp contained mismatched data size, expected {0}, actual {1}",
         context_length, data_sp->GetByteSize());
-    LLDB_LOG(log, "{0} {1}", __FUNCTION__, error);
+    LLDB_LOG(log, "{0}", error);
     return error;
   }
 
   PCONTEXT context = nullptr;
-  std::shared_ptr<DataBufferHeap> context_buffer;
+  DataBufferHeap context_buffer;
   error = GetThreadContextHelper(GetThreadHandle(), context_flags, context,
-                                 context_buffer);
+                                 &context_buffer);
   if (error.Fail())
     return error;
 
-  ::memcpy(context_buffer->GetBytes(), data_sp->GetBytes(), context_length);
+  ::memcpy(context_buffer.GetBytes(), data_sp->GetBytes(), context_length);
 
   return SetThreadContextHelper(GetThreadHandle(), context);
 }
@@ -809,12 +799,12 @@ NativeRegisterContextWindows_arm64::WriteHardwareDebugRegs(DREGType hwbType) {
   auto cleanup = llvm::make_scope_exit([&]() { m_context = nullptr; });
 
   PCONTEXT context = nullptr;
-  std::shared_ptr<DataBufferHeap> context_buffer;
+  DataBufferHeap context_buffer;
   DWORD context_flags = CONTEXT_DEBUG_REGISTERS;
   auto thread_handle = GetThreadHandle();
 
   Status error = GetThreadContextHelper(thread_handle, context_flags, context,
-                                        context_buffer);
+                                        &context_buffer);
   if (error.Fail())
     return error.ToError();
 
@@ -842,13 +832,14 @@ Status NativeRegisterContextWindows_arm64::CacheAllRegisterValues() {
 
   m_context = nullptr;
 
-  auto cleanup = llvm::make_scope_exit([&]() {
-    if (error.Fail())
-      m_context = nullptr;
-  });
+  if (!m_context_buffer)
+    m_context_buffer = std::make_shared<DataBufferHeap>();
 
   error = GetThreadContextHelper(GetThreadHandle(), context_flags, m_context,
-                                 m_context_buffer);
+                                 m_context_buffer.get());
+
+  if (error.Fail())
+    m_context = nullptr;
 
   return error;
 }
