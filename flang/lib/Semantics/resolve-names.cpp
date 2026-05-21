@@ -1723,8 +1723,6 @@ void AccVisitor::Post(const parser::OpenACCCombinedConstruct &x) { PopScope(); }
 // Create scopes for OpenMP constructs
 class OmpVisitor : public virtual DeclarationVisitor {
 public:
-  static bool HasDataEnvironment(llvm::omp::Directive dir);
-
   void AddOmpSourceRange(const parser::CharBlock &);
   void PushScopeWithSource(
       Scope::Kind kind, parser::CharBlock source, Symbol *symbol = nullptr);
@@ -1852,7 +1850,7 @@ public:
     declaratives_.push_back(nullptr);
 
     auto name{parser::omp::GetOmpDirectiveName(x)};
-    if (HasDataEnvironment(name.v)) {
+    if (omp::HasDataEnvironment(name.v)) {
       PushScope(Scope::Kind::OtherConstruct, nullptr);
     }
 
@@ -1867,7 +1865,7 @@ public:
     declaratives_.pop_back();
 
     auto name{parser::omp::GetOmpDirectiveName(x)};
-    if (HasDataEnvironment(name.v)) {
+    if (omp::HasDataEnvironment(name.v)) {
       PopScope();
     }
     messageHandler().set_currStmtSource(std::nullopt);
