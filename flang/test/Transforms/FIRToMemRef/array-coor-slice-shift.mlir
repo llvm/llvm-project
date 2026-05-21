@@ -127,4 +127,3 @@ func.func @array_coor_slice_scalar_full_rank_dim1_shifted() {
   fir.store %c1_i32 to %4 : !fir.ref<i32>
   return
 }
-
