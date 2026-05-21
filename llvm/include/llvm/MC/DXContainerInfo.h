@@ -9,7 +9,7 @@
 #ifndef LLVM_MC_DXCONTAINERINFO_H
 #define LLVM_MC_DXCONTAINERINFO_H
 
-#include "llvm/Object/DXContainer.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 
 namespace llvm {
 
@@ -18,11 +18,14 @@ class raw_ostream;
 namespace mcdxbc {
 
 struct DebugName {
-  object::DXContainer::ILDNData BaseData;
+  dxbc::DebugNameHeader Parameters;
+  StringRef Filename;
 
-  DebugName() { BaseData.first.Flags = 0; }
+  DebugName() { Parameters.Flags = 0; }
+  DebugName(dxbc::DebugNameHeader &Parameters, StringRef Filename)
+      : Parameters(Parameters), Filename(Filename) {}
 
-  void setFileName(StringRef FileName);
+  void setFilename(StringRef DebugFilename);
   void write(raw_ostream &OS) const;
 };
 

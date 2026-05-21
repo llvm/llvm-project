@@ -19,7 +19,7 @@ class ScriptedMetadata {
 public:
   ScriptedMetadata(llvm::StringRef class_name,
                    StructuredData::DictionarySP dict_sp)
-      : m_class_name(class_name.data()), m_args_sp(dict_sp) {}
+      : m_class_name(class_name.str()), m_args_sp(dict_sp) {}
 
   ScriptedMetadata(const ProcessInfo &process_info) {
     lldb::ScriptedMetadataSP metadata_sp = process_info.GetScriptedMetadata();
@@ -29,8 +29,8 @@ public:
     }
   }
 
-  ScriptedMetadata(const ScriptedMetadata &other)
-      : m_class_name(other.m_class_name), m_args_sp(other.m_args_sp) {}
+  ScriptedMetadata(const ScriptedMetadata &other) = default;
+  ScriptedMetadata &operator=(const ScriptedMetadata &other) = default;
 
   explicit operator bool() const { return !m_class_name.empty(); }
 

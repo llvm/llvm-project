@@ -299,7 +299,7 @@ struct Signature {
 struct DebugName {
   std::optional<uint16_t> Flags;
   std::optional<uint16_t> NameLength;
-  std::string DebugName;
+  std::string Filename;
 };
 
 struct Part {
@@ -320,6 +320,9 @@ struct Object {
   FileHeader Header;
   std::vector<Part> Parts;
 };
+
+LLVM_ABI Expected<std::unique_ptr<DXContainerYAML::Object>>
+fromDXContainer(object::DXContainer &DXC);
 
 } // namespace DXContainerYAML
 } // namespace llvm

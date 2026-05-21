@@ -123,10 +123,18 @@ struct LoweringPreparePass
   /// When looking at the 'global' op, create the wrapper function.
   void defineGlobalThreadLocalWrapper(cir::GlobalOp op, cir::FuncOp initAlias,
                                       bool isVarDefinition);
+  /// Create an initialization alias for a thread-local variable.
+  cir::FuncOp defineGlobalThreadLocalInitAlias(cir::GlobalOp op,
+                                               cir::FuncOp aliasee);
   /// Get the declaration for the 'wrapper' function for a global-TLS variable.
   cir::FuncOp getOrCreateThreadLocalWrapper(CIRBaseBuilderTy &builder,
                                             cir::GlobalOp op);
-
+  // Function that generates the guard global variable, get-global, and 'if'
+  // condition for global TLS init function generation. This inserts an 'if'
+  // with the store at the beginning of the 'then' region, so inserts into the
+  // body should happen after that.
+  cir::IfOp buildGlobalTlsGuardCheck(CIRBaseBuilderTy &builder,
+                                     mlir::Location loc, cir::GlobalOp guard);
   /// Handle the dtor region by registering destructor with __cxa_atexit
   cir::FuncOp getOrCreateDtorFunc(CIRBaseBuilderTy &builder, cir::GlobalOp op,
                                   mlir::Region &dtorRegion,
@@ -134,6 +142,9 @@ struct LoweringPreparePass
 
   /// Build a module init function that calls all the dynamic initializers.
   void buildCXXGlobalInitFunc();
+  // Build an init function for all of the ordered global thread local storage
+  // variables.
+  void buildCXXGlobalTlsFunc();
 
   /// Materialize global ctor/dtor list
   void buildGlobalCtorDtorList();
@@ -173,6 +184,13 @@ struct LoweringPreparePass
   /// Get or create __cxa_guard_release function.
   cir::FuncOp getGuardReleaseFn(cir::PointerType guardPtrTy);
 
+  /// Get or create the __init_tls function.
+  cir::FuncOp getTlsInitFn();
+
+  // Create the __tls_guard variable.
+  cir::GlobalOp createGlobalThreadLocalGuard(CIRBaseBuilderTy &builder,
+                                             mlir::Location loc);
+
   /// Create a guard global variable for a static local.
   cir::GlobalOp createGuardGlobalOp(CIRBaseBuilderTy &builder,
                                     mlir::Location loc, llvm::StringRef name,
@@ -195,16 +213,35 @@ struct LoweringPreparePass
 
   /// Get or create the guard variable for a static local declaration.
   cir::GlobalOp getOrCreateStaticLocalDeclGuardAddress(
-      CIRBaseBuilderTy &builder, cir::GlobalOp globalOp,
-      cir::ASTVarDeclInterface varDecl, cir::IntType guardTy,
-      clang::CharUnits guardAlignment) {
+      CIRBaseBuilderTy &builder, cir::GlobalOp globalOp, StringRef guardName,
+      bool isLocalVarDecl, bool useInt8GuardVariable) {
+
+    cir::CIRDataLayout dataLayout(mlirModule);
+    cir::IntType guardTy;
+    clang::CharUnits guardAlignment;
+    // Guard variables are 64 bits in the generic ABI and size width on ARM
+    // (i.e. 32-bit on AArch32, 64-bit on AArch64).
+    if (useInt8GuardVariable) {
+      guardTy = cir::IntType::get(&getContext(), 8, /*isSigned=*/true);
+      guardAlignment = clang::CharUnits::One();
+    } else if (useARMGuardVarABI()) {
+      // Guard variables are size width on ARM (32-bit AArch32, 64-bit AArch64).
+      const unsigned sizeTypeSize =
+          astCtx->getTypeSize(astCtx->getSignedSizeType());
+      guardTy =
+          cir::IntType::get(&getContext(), sizeTypeSize, /*isSigned=*/true);
+      guardAlignment =
+          clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
+    } else {
+      guardTy = cir::IntType::get(&getContext(), 64, /*isSigned=*/true);
+      guardAlignment =
+          clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
+    }
+    assert(guardTy && guardAlignment.getQuantity() != 0);
+
     llvm::StringRef globalSymName = globalOp.getSymName();
     cir::GlobalOp guard = getStaticLocalDeclGuardAddress(globalSymName);
     if (!guard) {
-      // Get the guard name from the static_local attribute.
-      llvm::StringRef guardName =
-          globalOp.getStaticLocalGuard()->getName().getValue();
-
       // Create the guard variable with a zero-initializer.
       guard = createGuardGlobalOp(builder, globalOp->getLoc(), guardName,
                                   guardTy, globalOp.getLinkage());
@@ -219,10 +256,12 @@ struct LoweringPreparePass
       // Wasm.
       bool hasComdat = globalOp.getComdat();
       const llvm::Triple &triple = astCtx->getTargetInfo().getTriple();
-      if (!varDecl.isLocalVarDecl() && hasComdat &&
+      // TODO(cir): for now, we're just setting comdat to true, but it should
+      // contain a comdat reference name here instead.
+      if (!isLocalVarDecl && hasComdat &&
           (triple.isOSBinFormatELF() || triple.isOSBinFormatWasm())) {
-        globalOp->emitError("NYI: guard COMDAT for non-local variables");
-        return {};
+        // This should be a comdat for the variable.
+        guard.setComdat(true);
       } else if (hasComdat && globalOp.isWeakForLinker()) {
         guard.setComdat(true);
       }
@@ -264,7 +303,9 @@ struct LoweringPreparePass
   /// Tracks existing dynamic initializers.
   llvm::StringMap<uint32_t> dynamicInitializerNames;
   llvm::SmallVector<cir::FuncOp> dynamicInitializers;
+  llvm::SmallVector<cir::FuncOp> globalThreadLocalInitializers;
   llvm::StringMap<cir::FuncOp> threadLocalWrappers;
+  llvm::StringMap<cir::FuncOp> threadLocalInitAliases;
 
   /// Tracks guard variables for static locals (keyed by global symbol name).
   llvm::StringMap<cir::GlobalOp> staticLocalDeclGuardMap;
@@ -346,6 +387,9 @@ struct LoweringPreparePass
     entryBB.getOperations().splice(entryBB.end(), dtorBlock.getOperations(),
                                    dtorBlock.begin(),
                                    std::prev(dtorBlock.end()));
+    // make sure we leave the insert location after the operations we just
+    // inserted.
+    builder.setInsertionPointToEnd(&entryBB);
   }
 
   /// Emit the guarded initialization for a static local variable.
@@ -988,7 +1032,6 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
                                                      cir::CallOp &dtorCall) {
   mlir::OpBuilder::InsertionGuard guard(builder);
   assert(!cir::MissingFeatures::astVarDeclInterface());
-  assert(!cir::MissingFeatures::opGlobalThreadLocal());
 
   cir::VoidType voidTy = builder.getVoidTy();
   auto voidPtrTy = cir::PointerType::get(voidTy);
@@ -1113,20 +1156,44 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   // the function entry, and discard extra blocks (which contain only
   // unreachable terminators from EH cleanup paths).
   mlir::Block *entryBB = f.addEntryBlock();
+  builder.setInsertionPointToStart(entryBB);
+
+  // If this is a global TLS variable (that is, declared at namespace scope), we
+  // have to emit the guard variable here.
+  bool needsTlsGuard = op.getDynTlsRefs() && op.getDynTlsRefs()->getGuardName();
+  cir::IfOp guardIf;
+  if (needsTlsGuard) {
+    guardIf = buildGlobalTlsGuardCheck(
+        builder, op.getLoc(),
+        getOrCreateStaticLocalDeclGuardAddress(
+            builder, op, op.getDynTlsRefs()->getGuardName().getValue(),
+            /*isLocalVarDecl=*/false,
+            /*useInt8GuardVariable=*/op.hasInternalLinkage()));
+    builder.setInsertionPointToEnd(&guardIf.getThenRegion().front());
+  }
+
   if (!op.getCtorRegion().empty()) {
     mlir::Block &block = op.getCtorRegion().front();
-    entryBB->getOperations().splice(entryBB->begin(), block.getOperations(),
-                                    block.begin(), std::prev(block.end()));
+    mlir::Block *insertBlock = builder.getBlock();
+    insertBlock->getOperations().splice(insertBlock->end(),
+                                        block.getOperations(), block.begin(),
+                                        std::prev(block.end()));
   }
 
   // Register the destructor call with __cxa_atexit
   mlir::Region &dtorRegion = op.getDtorRegion();
   if (!dtorRegion.empty()) {
     assert(!cir::MissingFeatures::astVarDeclInterface());
-    assert(!cir::MissingFeatures::opGlobalThreadLocal());
 
     emitGlobalGuardedDtorRegion(builder, op, dtorRegion,
-                                op.getTlsModel().has_value(), *entryBB);
+                                op.getTlsModel().has_value(),
+                                *builder.getBlock());
+  }
+
+  // If we're actually in the 'if' above, create a yield.
+  if (needsTlsGuard) {
+    builder.setInsertionPointToEnd(&guardIf.getThenRegion().back());
+    cir::YieldOp::create(builder, op.getLoc());
   }
 
   // Replace cir.yield with cir.return
@@ -1168,6 +1235,17 @@ LoweringPreparePass::getGuardReleaseFn(cir::PointerType guardPtrTy) {
   cir::VoidType voidTy = cir::VoidType::get(&getContext());
   auto fnType = cir::FuncType::get({guardPtrTy}, voidTy);
   return buildRuntimeFunction(builder, "__cxa_guard_release", loc, fnType);
+}
+
+cir::FuncOp LoweringPreparePass::getTlsInitFn() {
+  // void __tls_init(void);
+  CIRBaseBuilderTy builder(getContext());
+  mlir::OpBuilder::InsertionGuard _{builder};
+  builder.setInsertionPointToStart(mlirModule.getBody());
+  mlir::Location loc = mlirModule.getLoc();
+  auto fnType = builder.getVoidFnTy();
+  return buildRuntimeFunction(builder, "__tls_init", loc, fnType,
+                              cir::GlobalLinkageKind::InternalLinkage);
 }
 
 cir::GlobalOp LoweringPreparePass::createGuardGlobalOp(
@@ -1225,33 +1303,11 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
   // If we have a global variable with internal linkage and thread-safe statics
   // are disabled, we can just let the guard variable be of type i8.
   bool useInt8GuardVariable = !threadsafe && globalOp.hasInternalLinkage();
-  cir::CIRDataLayout dataLayout(mlirModule);
-  cir::IntType guardTy;
-  clang::CharUnits guardAlignment;
-  // Guard variables are 64 bits in the generic ABI and size width on ARM
-  // (i.e. 32-bit on AArch32, 64-bit on AArch64).
-  if (useInt8GuardVariable) {
-    guardTy = cir::IntType::get(&getContext(), 8, /*isSigned=*/true);
-    guardAlignment = clang::CharUnits::One();
-  } else if (useARMGuardVarABI()) {
-    // Guard variables are size width on ARM (32-bit AArch32, 64-bit AArch64).
-    const unsigned sizeTypeSize =
-        astCtx->getTypeSize(astCtx->getSignedSizeType());
-    guardTy = cir::IntType::get(&getContext(), sizeTypeSize, /*isSigned=*/true);
-    guardAlignment =
-        clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
-  } else {
-    guardTy = cir::IntType::get(&getContext(), 64, /*isSigned=*/true);
-    guardAlignment =
-        clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
-  }
-  assert(guardTy && guardAlignment.getQuantity() != 0);
-
-  auto guardPtrTy = cir::PointerType::get(guardTy);
 
   // Create the guard variable if we don't already have it.
   cir::GlobalOp guard = getOrCreateStaticLocalDeclGuardAddress(
-      builder, globalOp, varDecl, guardTy, guardAlignment);
+      builder, globalOp, globalOp.getStaticLocalGuard()->getName().getValue(),
+      varDecl.isLocalVarDecl(), useInt8GuardVariable);
   if (!guard) {
     // Error was already emitted, just restore the terminator and return.
     localInitBlock->push_back(ret);
@@ -1288,7 +1344,7 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
     auto bytePtrTy = cir::PointerType::get(builder.getSIntNTy(8));
     mlir::Value bytePtr = builder.createBitcast(guardPtr, bytePtrTy);
     mlir::Value guardLoad = builder.createAlignedLoad(
-        localInitOp.getLoc(), bytePtr, guardAlignment.getAsAlign().value());
+        localInitOp.getLoc(), bytePtr, *guard.getAlignment());
 
     // Itanium ABI:
     //   An implementation supporting thread-safety on multiprocessor
@@ -1341,7 +1397,8 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
         /*withElseRegion=*/false, [&](mlir::OpBuilder &, mlir::Location) {
           emitCXXGuardedInitIf(builder, globalOp, localInitOp.getCtorRegion(),
                                localInitOp.getDtorRegion(), varDecl, guardPtr,
-                               guardPtrTy, threadsafe);
+                               builder.getPointerTo(guard.getSymType()),
+                               threadsafe);
         });
   } else {
     // Threadsafe statics without inline atomics - call __cxa_guard_acquire
@@ -1447,10 +1504,61 @@ void LoweringPreparePass::defineGlobalThreadLocalWrapper(cir::GlobalOp op,
   // If we are a situation where we have/need one, emit a call to the init
   // function.
   if (initAlias) {
-    op->emitError("not yet implemented, wrapper with an init alias");
+    mlir::Location aliasLoc = initAlias.getLoc();
+    if (!isVarDefinition) {
+      // If this isn't a definition, we have to check that the alias exists.
+      mlir::Value funcLoad = cir::GetGlobalOp::create(
+          builder, aliasLoc, cir::PointerType::get(initAlias.getFunctionType()),
+          initAlias.getSymName());
+      mlir::Value nullCheck =
+          builder.getNullValue(funcLoad.getType(), aliasLoc);
+      mlir::Value cmp = cir::CmpOp::create(
+          builder, aliasLoc, cir::CmpOpKind::ne, funcLoad, nullCheck);
+      cir::IfOp::create(builder, aliasLoc, cmp, /*withElseRegion=*/false,
+                        [&](mlir::OpBuilder &, mlir::Location loc) {
+                          builder.createCallOp(aliasLoc, initAlias, {});
+                          cir::YieldOp::create(builder, aliasLoc);
+                        });
+    } else {
+      // If this IS a definition, we know the alias exists, so we can just emit
+      // a call to it.
+      builder.createCallOp(aliasLoc, initAlias, {});
+    }
   }
-  auto get = builder.createGetGlobal(op, /*tls=*/true);
+  cir::GetGlobalOp get = builder.createGetGlobal(op, /*tls=*/true);
   cir::ReturnOp::create(builder, op.getLoc(), {get});
+}
+
+cir::FuncOp
+LoweringPreparePass::defineGlobalThreadLocalInitAlias(cir::GlobalOp op,
+                                                      cir::FuncOp aliasee) {
+  CIRBaseBuilderTy builder(getContext());
+  mlir::OpBuilder::InsertionGuard insertGuard(builder);
+  builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
+  mlir::StringAttr aliasName = op.getDynTlsRefs()->getInitName();
+  auto existingAliasIter = threadLocalInitAliases.find(aliasName.getValue());
+
+  if (existingAliasIter != threadLocalInitAliases.end())
+    return existingAliasIter->second;
+
+  auto funcType = builder.getVoidFnTy();
+  cir::FuncOp alias =
+      cir::FuncOp::create(builder, op.getLoc(), aliasName, funcType);
+  alias.setLinkage(op.getLinkage());
+
+  if (aliasee) {
+    alias.setAliasee(aliasee.getSymName());
+  } else {
+    // If we don't have anything to alias (because this isn't a variable
+    // definition!), we set this as just a function definition with no alias,
+    // and extern-weak.
+    alias.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
+    mlir::SymbolTable::setSymbolVisibility(
+        alias, mlir::SymbolTable::Visibility::Private);
+  }
+
+  threadLocalInitAliases.insert({aliasName.getValue(), alias});
+  return alias;
 }
 
 void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
@@ -1460,7 +1568,6 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
 
   mlir::Region &ctorRegion = op.getCtorRegion();
   mlir::Region &dtorRegion = op.getDtorRegion();
-  // TODO(cir): Implement the initialization of this.
   cir::FuncOp initAlias;
 
   if (!ctorRegion.empty() || !dtorRegion.empty()) {
@@ -1473,7 +1580,38 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
     dtorRegion.getBlocks().clear();
 
     assert(!cir::MissingFeatures::astVarDeclInterface());
-    dynamicInitializers.push_back(f);
+    if (op.getTlsModel() == TLS_Model::GeneralDynamic &&
+        !op.getStaticLocalGuard().has_value()) {
+      // There are two types of global TLS variables: 'ordered' and 'unordered'.
+      // 'ordered' are the common case. A call to any of them causes all of the
+      // initializers for all other 'ordered' ones to be called, via a
+      // `__tls_init` function. So the 'init alias' that gets called in the
+      // wrapper for these goes directly to `__tls_init`.
+
+      // 'Unordered' values are the case for variable templates. In this case,
+      // their init alias goes directly to their init function. The FE generates
+      // a guard variable for them (since they cannot use the global guard), so
+      // we differentiate them that way.
+
+      if (op.getDynTlsRefs()->getGuardName()) {
+        // Unordered: the alias is the function we just generated.
+        initAlias = defineGlobalThreadLocalInitAlias(op, f);
+      } else {
+        // Ordered: Get the __tls_init, and make the alias to that.
+        initAlias = defineGlobalThreadLocalInitAlias(op, getTlsInitFn());
+        // Ordered inits also need to get called from the __tls_init function,
+        // so we add the init function to the list, so that we can add them to
+        // it later.
+        globalThreadLocalInitializers.push_back(f);
+      }
+    } else {
+      dynamicInitializers.push_back(f);
+    }
+  } else if (op.getTlsModel() == TLS_Model::GeneralDynamic &&
+             op.getDynTlsRefs() && op.isDeclaration()) {
+    // If this is a declaration and has no init function, we probably DO have to
+    // create an alias that needs checking, so create it as extern-weak.
+    initAlias = defineGlobalThreadLocalInitAlias(op, {});
   }
 
   // We need a wrapper for TLS globals that MIGHT have a non-constant
@@ -1607,6 +1745,78 @@ void LoweringPreparePass::buildGlobalCtorDtorList() {
     mlirModule->setAttr(cir::CIRDialect::getGlobalDtorsAttrName(),
                         mlir::ArrayAttr::get(&getContext(), globalDtors));
   }
+}
+
+cir::GlobalOp
+LoweringPreparePass::createGlobalThreadLocalGuard(CIRBaseBuilderTy &builder,
+                                                  mlir::Location loc) {
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(mlirModule.getBody());
+
+  // The TLS Guard is always an Int8Ty.
+  cir::IntType guardTy = builder.getSIntNTy(8);
+  auto g = cir::GlobalOp::create(builder, loc, "__tls_guard", guardTy);
+  g.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
+      builder.getContext(), cir::GlobalLinkageKind::InternalLinkage));
+  g.setAlignment(clang::CharUnits::One().getAsAlign().value());
+  // At the moment, we only have implementation for this mode, as it is the
+  // default.  At one point we might need to load this mode from the module.
+  g.setTlsModel(TLS_Model::GeneralDynamic);
+  g.setInitialValueAttr(cir::IntAttr::get(guardTy, 0));
+  return g;
+}
+
+cir::IfOp LoweringPreparePass::buildGlobalTlsGuardCheck(
+    CIRBaseBuilderTy &builder, mlir::Location loc, cir::GlobalOp guard) {
+  cir::GetGlobalOp getGuard = builder.createGetGlobal(guard, /*tls=*/true);
+  mlir::Value getGuardValue = getGuard;
+
+  // Classic codegen always just loads the first byte of the guard instead of
+  // the whole thing. __tls_guard is already only 8 bits, but for the case of
+  // unordered TLS, it gets created as 64 bits.
+  if (guard.getSymType() != builder.getSIntNTy(8))
+    getGuardValue = builder.createBitcast(
+        getGuard, cir::PointerType::get(builder.getSIntNTy(8)));
+
+  mlir::Value guardLoad =
+      builder.createAlignedLoad(loc, getGuardValue, *guard.getAlignment());
+  auto zero = builder.getConstantInt(loc, builder.getSIntNTy(8), 0);
+  cir::CmpOp compare =
+      builder.createCompare(loc, cir::CmpOpKind::eq, guardLoad, zero);
+  return cir::IfOp::create(
+      builder, loc, compare,
+      /*withElseRegion=*/false, [&](mlir::OpBuilder &, mlir::Location loc) {
+        // Classic codegen still does this store as a i8, but it doesn't seem
+        // reasonable to do an i8 store into a 64 bit value?
+        builder.createStore(
+            loc, builder.getConstantInt(loc, guard.getSymType(), 1), getGuard);
+      });
+}
+
+void LoweringPreparePass::buildCXXGlobalTlsFunc() {
+  if (globalThreadLocalInitializers.empty())
+    return;
+
+  // The global-ordered-init function for TLS variables just calls each of the
+  // init-functions in order after doing a guard.
+
+  cir::FuncOp tlsInit = getTlsInitFn();
+  mlir::Location loc = tlsInit.getLoc();
+  CIRBaseBuilderTy builder(getContext());
+  mlir::Block *entryBB = tlsInit.addEntryBlock();
+  builder.setInsertionPointToStart(entryBB);
+
+  cir::IfOp ifOperation = buildGlobalTlsGuardCheck(
+      builder, loc, createGlobalThreadLocalGuard(builder, loc));
+
+  // Emit the body of the guarded spot.
+  builder.setInsertionPointToEnd(&ifOperation.getThenRegion().front());
+  for (cir::FuncOp initFunc : globalThreadLocalInitializers)
+    builder.createCallOp(loc, initFunc, {});
+  cir::YieldOp::create(builder, loc);
+
+  builder.setInsertionPointAfter(ifOperation);
+  cir::ReturnOp::create(builder, loc);
 }
 
 void LoweringPreparePass::buildCXXGlobalInitFunc() {
@@ -2584,6 +2794,7 @@ void LoweringPreparePass::runOnOperation() {
     runOnOp(o);
 
   buildCXXGlobalInitFunc();
+  buildCXXGlobalTlsFunc();
   if (astCtx->getLangOpts().CUDA && !astCtx->getLangOpts().CUDAIsDevice)
     buildCUDAModuleCtor();
 
