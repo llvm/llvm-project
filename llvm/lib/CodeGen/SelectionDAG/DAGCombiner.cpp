@@ -10330,8 +10330,8 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
       default:
         llvm_unreachable("Unhandled SetCC Equivalent!");
       case ISD::SETCC:
-        return DAG.getSetCC(SDLoc(N0), VT, LHS, RHS, NotCC,
-                            SDValue(), /*IsSignaling=*/false, Flags);
+        return DAG.getSetCC(SDLoc(N0), VT, LHS, RHS, NotCC, SDValue(),
+                            /*IsSignaling=*/false, Flags);
       case ISD::SELECT_CC:
         return DAG.getSelectCC(SDLoc(N0), LHS, RHS, N0.getOperand(2),
                                N0.getOperand(3), NotCC, Flags);
@@ -10341,9 +10341,8 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
           // FIXME Can we handle multiple uses? Could we token factor the chain
           // results from the new/old setcc?
           SDValue SetCC =
-              DAG.getSetCC(SDLoc(N0), VT, LHS, RHS, NotCC,
-                           N0.getOperand(0), N0Opcode == ISD::STRICT_FSETCCS,
-                           Flags);
+              DAG.getSetCC(SDLoc(N0), VT, LHS, RHS, NotCC, N0.getOperand(0),
+                           N0Opcode == ISD::STRICT_FSETCCS, Flags);
           CombineTo(N, SetCC);
           DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), SetCC.getValue(1));
           recursivelyDeleteUnusedNodes(N0.getNode());
