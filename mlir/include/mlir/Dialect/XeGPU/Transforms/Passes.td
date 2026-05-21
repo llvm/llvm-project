@@ -118,5 +118,42 @@ def XeGPUSgToWiDistributeExperimental : Pass<"xegpu-sg-to-wi-distribute-experime
                            "vector::VectorDialect", "index::IndexDialect"];
 }
 
+def XeGPUCoalesceGatherScatter : Pass<"xegpu-coalesce-gather-scatter"> {
+  let summary = "Coalesce neighbouring lanes of xegpu.load/store into chunked accesses";
+  let description = [{
+    Rewrites `xegpu.load` / `xegpu.store` ops whose offsets vector describes a
+    contiguous-per-lane access into an equivalent op with a smaller offsets
+    vector and a larger `chunk_size`. The transformation reduces the number of
+    memory messages by having each lane fetch / write multiple contiguous
+    elements.
+
+    Two index patterns are recognized:
+    - Affine offsets of the form `base + i * stride` (e.g. `vector.step` or a
+      dense constant arithmetic progression). The offsets are coalescible with
+      a factor `N` when `stride` divides `N` and the original `chunk_size`
+      multiplied by `N` does not exceed the configured maximum.
+    - All-equal offsets (e.g. `dense<0>`). All lanes load from the same
+      address; this is rewritten as a broadcast: a single load of one element
+      is materialized and the result is splatted via `vector.broadcast`.
+
+    The mask must also be uniformly `true` (a `dense<true>` constant) for the
+    coalesced lanes; partial-mask coalescing is not yet supported.
+
+    This pass is intended to run before `xegpu-propagate-layout` so that the
+    coalesced shape participates in `inst_data` selection.
+
+    Pass options:
+    - `max-chunk-size`: upper bound on the produced `chunk_size`. Defaults to
+      8, matching typical Xe scatter chunk-size limits.
+  }];
+  let dependentDialects = [
+      "arith::ArithDialect", "memref::MemRefDialect", "xegpu::XeGPUDialect",
+      "vector::VectorDialect"];
+  let options = [Option<
+    "maxChunkSize", "max-chunk-size", "unsigned",
+    /*default=*/"8",
+    "Upper bound on the produced chunk_size when coalescing.">];
+}
+
 
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD
