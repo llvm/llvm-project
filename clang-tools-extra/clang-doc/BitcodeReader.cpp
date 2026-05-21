@@ -962,11 +962,8 @@ static llvm::Error addReference(T I, Reference &&R, FieldId F) {
 }
 
 template <> llvm::Error addReference(VarInfo *I, Reference &&R, FieldId F) {
-  switch (F) {
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "VarInfo cannot contain this Reference");
-  }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "VarInfo cannot contain this Reference");
 }
 
 template <> llvm::Error addReference(TypeInfo *I, Reference &&R, FieldId F) {
@@ -1005,19 +1002,13 @@ llvm::Error addReference(MemberTypeInfo *I, Reference &&R, FieldId F) {
 }
 
 template <> llvm::Error addReference(EnumInfo *I, Reference &&R, FieldId F) {
-  switch (F) {
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "invalid type cannot contain Reference");
-  }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid type cannot contain Reference");
 }
 
 template <> llvm::Error addReference(TypedefInfo *I, Reference &&R, FieldId F) {
-  switch (F) {
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "invalid type cannot contain Reference");
-  }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid type cannot contain Reference");
 }
 
 template <>

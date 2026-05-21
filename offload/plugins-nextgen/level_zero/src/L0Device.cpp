@@ -362,11 +362,15 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
     std::copy_n(static_cast<const char *>(std::get<0>(USM2M)),
                 std::get<2>(USM2M), static_cast<char *>(std::get<1>(USM2M)));
   }
+  AsyncQueue->USM2MList.clear();
+
   // Commit delayed H2M copies.
   for (auto &H2M : AsyncQueue->H2MList) {
     std::copy_n(static_cast<char *>(std::get<0>(H2M)), std::get<2>(H2M),
                 static_cast<char *>(std::get<1>(H2M)));
   }
+  AsyncQueue->H2MList.clear();
+
   if (ReleaseQueue) {
     Plugin.releaseAsyncQueue(AsyncQueue);
     getStagingBuffer().reset();
@@ -415,11 +419,14 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
     std::copy_n(static_cast<const char *>(std::get<0>(USM2M)),
                 std::get<2>(USM2M), static_cast<char *>(std::get<1>(USM2M)));
   }
+  AsyncQueue->USM2MList.clear();
   // Commit delayed H2M copies.
   for (auto &H2M : AsyncQueue->H2MList) {
     std::copy_n(static_cast<char *>(std::get<0>(H2M)), std::get<2>(H2M),
                 static_cast<char *>(std::get<1>(H2M)));
   }
+  AsyncQueue->H2MList.clear();
+
   if (ReleaseQueue) {
     Plugin.releaseAsyncQueue(AsyncQueue);
     getStagingBuffer().reset();

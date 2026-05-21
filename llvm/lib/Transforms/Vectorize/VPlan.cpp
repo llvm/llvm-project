@@ -146,22 +146,44 @@ Value *VPValue::getLiveInIRValue() const {
 
 Type *VPIRValue::getType() const { return getUnderlyingValue()->getType(); }
 
+Type *VPValue::getScalarType() const {
+  switch (getVPValueID()) {
+  case VPVIRValueSC:
+    return cast<VPIRValue>(this)->getType();
+  case VPRegionValueSC:
+    return cast<VPRegionValue>(this)->getType();
+  case VPVSymbolicSC:
+    return cast<VPSymbolicValue>(this)->getType();
+  case VPVMultiDefValueSC:
+  case VPVSingleDefValueSC:
+    return cast<VPRecipeValue>(this)->getScalarType();
+  }
+  llvm_unreachable("Unhandled VPValue subclass");
+}
+
 VPRecipeValue::~VPRecipeValue() {
   assert(Users.empty() &&
          "trying to delete a VPRecipeValue with remaining users");
-  getDefiningRecipe()->removeDefinedValue(this);
 }
 
-VPSingleDefValue::VPSingleDefValue(VPSingleDefRecipe *Def, Value *UV)
-    : VPRecipeValue(VPVSingleDefValueSC, UV) {
+VPSingleDefValue::VPSingleDefValue(VPSingleDefRecipe *Def, Value *UV, Type *Ty)
+    : VPRecipeValue(VPVSingleDefValueSC, UV, Ty) {
   assert(Def && "VPSingleDefValue requires a defining recipe");
   Def->addDefinedValue(this);
 }
 
-VPMultiDefValue::VPMultiDefValue(VPRecipeBase *Def, Value *UV)
-    : VPRecipeValue(VPVMultiDefValueSC, UV), Def(Def) {
+VPSingleDefValue::~VPSingleDefValue() {
+  getDefiningRecipe()->removeDefinedValue(this);
+}
+
+VPMultiDefValue::VPMultiDefValue(VPRecipeBase *Def, Value *UV, Type *Ty)
+    : VPRecipeValue(VPVMultiDefValueSC, UV, Ty), Def(Def) {
   assert(Def && "VPMultiDefValue requires a defining recipe");
   Def->addDefinedValue(this);
+}
+
+VPMultiDefValue::~VPMultiDefValue() {
+  getDefiningRecipe()->removeDefinedValue(this);
 }
 
 // Get the top-most entry block of \p Start. This is the entry block of the
