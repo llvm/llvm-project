@@ -2240,6 +2240,11 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
   return CIRGenCallee::forDirect(callee, gd);
 }
 
+mlir::Value CIRGenFunction::getUndefConstant(mlir::Location loc,
+                                             mlir::Type cirTy) {
+  return builder.getConstant(loc, cir::UndefAttr::get(cirTy));
+}
+
 RValue CIRGenFunction::getUndefRValue(QualType ty) {
   if (ty->isVoidType())
     return RValue::get(nullptr);
@@ -2248,8 +2253,10 @@ RValue CIRGenFunction::getUndefRValue(QualType ty) {
 
   switch (getEvaluationKind(ty)) {
   case cir::TEK_Complex: {
-    mlir::Type cirTy = convertType(ty);
-    mlir::Value v = builder.getConstant(loc, cir::UndefAttr::get(cirTy));
+    QualType elemTy = ty->castAs<ComplexType>()->getElementType();
+    mlir::Type elemCirTy = convertType(elemTy);
+    mlir::Value undefElem = getUndefConstant(loc, elemCirTy);
+    mlir::Value v = builder.createComplexCreate(loc, undefElem, undefElem);
     return RValue::getComplex(v);
   }
 
@@ -2257,15 +2264,12 @@ RValue CIRGenFunction::getUndefRValue(QualType ty) {
   // an identifiable address.  Just because the contents of the value are
   // undefined doesn't mean that the address can't be taken and compared.
   case cir::TEK_Aggregate: {
-    Address destPtr = createMemTemp(ty, loc, "undef.agg.tmp");
+    Address destPtr = createMemTempWithoutCast(ty, loc, "undef.agg.tmp");
     return RValue::getAggregate(destPtr);
   }
 
-  case cir::TEK_Scalar: {
-    mlir::Type cirTy = convertType(ty);
-    mlir::Value v = builder.getConstant(loc, cir::UndefAttr::get(cirTy));
-    return RValue::get(v);
-  }
+  case cir::TEK_Scalar:
+    return RValue::get(getUndefConstant(loc, convertType(ty)));
   }
   llvm_unreachable("bad evaluation kind");
 }
@@ -2754,6 +2758,13 @@ mlir::Value CIRGenFunction::createDummyValue(mlir::Location loc,
 //===----------------------------------------------------------------------===//
 // CIR builder helpers
 //===----------------------------------------------------------------------===//
+
+Address CIRGenFunction::createMemTempWithoutCast(QualType ty,
+                                                 mlir::Location loc,
+                                                 const Twine &name) {
+  return createTempAllocaWithoutCast(
+      convertTypeForMem(ty), getContext().getTypeAlignInChars(ty), loc, name);
+}
 
 Address CIRGenFunction::createMemTemp(QualType ty, mlir::Location loc,
                                       const Twine &name, Address *alloca,
