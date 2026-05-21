@@ -79,11 +79,8 @@ getTypeSizeAndAlignment(mlir::Type type,
   else
     llvmTy = llvmTypeConverter.convertType(type);
 
-  if (!llvmTy) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "Skipping TBAA size computation for type: " << type << "\n");
+  if (!llvmTy)
     return std::nullopt;
-  }
 
   const mlir::DataLayout &dataLayout = llvmTypeConverter.getDataLayout();
   uint64_t byteSize = dataLayout.getTypeSize(llvmTy);
@@ -242,12 +239,14 @@ public:
   // about their physical storages and layouts.
   void collectPhysicalStorageAliasSets(mlir::Operation *op);
 
-  // Return the byte size of the given declaration.
-  std::size_t getDeclarationSize(fir::FortranVariableStorageOpInterface decl) {
+  // Return the byte size of the given declaration, or std::nullopt if the
+  // size could not be computed (e.g. the type contains !fir.boxproc members).
+  std::optional<std::size_t>
+  getDeclarationSize(fir::FortranVariableStorageOpInterface decl) {
     mlir::Type memType = fir::unwrapRefType(decl.getBase().getType());
     auto sizeAndAlign = getTypeSizeAndAlignment(memType, llvmTypeConverter);
     if (!sizeAndAlign)
-      return 0;
+      return std::nullopt;
     return llvm::alignTo(sizeAndAlign->first, sizeAndAlign->second);
   }
 
@@ -463,30 +462,33 @@ void PassState::collectPhysicalStorageAliasSets(mlir::Operation *op) {
     fir::GlobalOp globalDef =
         getGlobalDefiningOp(addrOfOp.getSymbol().getRootReference());
     std::uint64_t storageOffset = decl.getStorageOffset();
-    std::size_t declSize = getDeclarationSize(decl);
+    std::optional<std::size_t> declSize = getDeclarationSize(decl);
     LLVM_DEBUG(llvm::dbgs()
                << "Found variable with storage:\n"
                << "Declaration: " << decl << "\n"
                << "Storage: " << (globalDef ? globalDef : nullptr) << "\n"
                << "Offset: " << storageOffset << "\n"
-               << "Size: " << declSize << "\n");
+               << "Size: "
+               << (declSize ? llvm::Twine(*declSize)
+                            : llvm::Twine("could not be computed"))
+               << "\n");
     if (!globalDef) {
       seenUnknownStorage = true;
       return mlir::WalkResult::advance();
     }
-    // Zero-sized variables do not need any TBAA tags, because
-    // they cannot be accessed.
-    if (declSize == 0)
+    // Skip variables whose size could not be computed or that are zero-sized,
+    // as they do not need any TBAA tags.
+    if (!declSize || *declSize == 0)
       return mlir::WalkResult::advance();
 
     declToStorageMap.try_emplace(decl.getOperation(), globalDef.getOperation(),
-                                 storageOffset, declSize);
+                                 storageOffset, *declSize);
     storageDecls.try_emplace(globalDef.getOperation())
         .first->second.push_back(decl.getOperation());
 
     auto &set =
         memberIntervals.try_emplace(globalDef.getOperation()).first->second;
-    set.insert(IntervalTy(storageOffset, declSize));
+    set.insert(IntervalTy(storageOffset, *declSize));
     return mlir::WalkResult::advance();
   });
 
