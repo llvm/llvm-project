@@ -2014,7 +2014,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     if (constArr &&
         (denseAttr = lowerConstArrayAttr(constArr, typeConverter))) {
       attr = denseAttr.value();
-    } else if (constArr) {
+    } else {
       const mlir::Value initVal =
           lowerCirAttrAsValue(op, op.getValue(), rewriter, typeConverter);
       rewriter.replaceOp(op, initVal);
