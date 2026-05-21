@@ -308,9 +308,161 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
       {newPadOp}, {castResult(newPadOp->getResult(0))}, {sliceOp}};
 }
 
+/// TilingInterface for ExpandShapeOp.
+///
+/// Limitation: only supports the case where the tile request slices complete
+/// reassociation groups (i.e., tiling does not cut across expanded dims that
+/// belong to the same source dim). This covers the common case of tiling one
+/// of the expanded dims with full extent on the others within the same group.
+struct ExpandShapeOpTiling
+    : public TilingInterface::ExternalModel<ExpandShapeOpTiling,
+                                            ExpandShapeOp> {
+
+  SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
+    auto expandOp = cast<ExpandShapeOp>(op);
+    SmallVector<utils::IteratorType> iteratorTypes(
+        expandOp.getResultType().getRank(), utils::IteratorType::parallel);
+    return iteratorTypes;
+  }
+
+  SmallVector<Range> getIterationDomain(Operation *op, OpBuilder &b) const {
+    auto expandOp = cast<ExpandShapeOp>(op);
+    Location loc = op->getLoc();
+    auto resultType = expandOp.getResultType();
+    int64_t rank = resultType.getRank();
+    OpFoldResult zero = b.getIndexAttr(0);
+    OpFoldResult one = b.getIndexAttr(1);
+    SmallVector<Range> loopRanges(rank, {zero, one, one});
+    for (int64_t i = 0; i < rank; ++i) {
+      if (resultType.isDynamicDim(i)) {
+        Value dimVal = b.create<tensor::DimOp>(loc, expandOp.getResult(), i);
+        loopRanges[i].size = dimVal;
+      } else {
+        loopRanges[i].size = b.getIndexAttr(resultType.getDimSize(i));
+      }
+    }
+    return loopRanges;
+  }
+
+  FailureOr<TilingResult>
+  getTiledImplementation(Operation *op, OpBuilder &b,
+                         ArrayRef<OpFoldResult> offsets,
+                         ArrayRef<OpFoldResult> sizes) const {
+    auto expandOp = cast<ExpandShapeOp>(op);
+    Location loc = op->getLoc();
+
+    // Compute the input (collapsed) offsets and sizes from the output
+    // (expanded) offsets and sizes.
+    auto reassoc = expandOp.getReassociationIndices();
+    auto srcType = expandOp.getSrcType();
+    int64_t srcRank = srcType.getRank();
+
+    SmallVector<OpFoldResult> inputOffsets(srcRank);
+    SmallVector<OpFoldResult> inputSizes(srcRank);
+    SmallVector<OpFoldResult> inputStrides(srcRank, b.getIndexAttr(1));
+
+    auto resultType = expandOp.getResultType();
+
+    for (int64_t srcDim = 0; srcDim < srcRank; ++srcDim) {
+      ArrayRef<int64_t> expandedDims = reassoc[srcDim];
+
+      if (expandedDims.size() == 1) {
+        // 1-to-1 mapping: pass through offset and size.
+        inputOffsets[srcDim] = offsets[expandedDims[0]];
+        inputSizes[srcDim] = sizes[expandedDims[0]];
+      } else {
+        // 1-to-many mapping: compute linearized offset and size.
+        // offset = sum_i(offset[expandedDims[i]] * product(sizes[expandedDims[i+1:]]))
+        // size = product(sizes[expandedDims[i]])
+        // This only works correctly when slicing selects contiguous elements.
+        AffineExpr offsetExpr = b.getAffineConstantExpr(0);
+        AffineExpr sizeExpr = b.getAffineConstantExpr(1);
+        SmallVector<OpFoldResult> symbolOperands;
+
+        int64_t stride = 1;
+        for (int64_t i = expandedDims.size() - 1; i >= 0; --i) {
+          int64_t expandedDim = expandedDims[i];
+          int64_t dimSize = resultType.getDimSize(expandedDim);
+
+          // Accumulate offset: offset += expandedOffset[i] * stride
+          unsigned symIdx = symbolOperands.size();
+          symbolOperands.push_back(offsets[expandedDim]);
+          offsetExpr = offsetExpr +
+                       b.getAffineSymbolExpr(symIdx) * stride;
+
+          // Accumulate size: size *= expandedSize[i]
+          unsigned sizeSymIdx = symbolOperands.size();
+          symbolOperands.push_back(sizes[expandedDim]);
+          sizeExpr = sizeExpr * b.getAffineSymbolExpr(sizeSymIdx);
+
+          stride *= dimSize;
+        }
+
+        AffineMap offsetMap =
+            AffineMap::get(0, symbolOperands.size(), offsetExpr, b.getContext());
+        AffineMap sizeMap =
+            AffineMap::get(0, symbolOperands.size(), sizeExpr, b.getContext());
+
+        inputOffsets[srcDim] = affine::makeComposedFoldedAffineApply(
+            b, loc, offsetMap, symbolOperands);
+        inputSizes[srcDim] = affine::makeComposedFoldedAffineApply(
+            b, loc, sizeMap, symbolOperands);
+      }
+    }
+
+    // Create extract_slice on the input.
+    Value inputSlice = b.create<tensor::ExtractSliceOp>(
+        loc, expandOp.getSrc(), inputOffsets, inputSizes, inputStrides);
+
+    // Create expand_shape on the sliced input to produce the tiled output.
+    SmallVector<int64_t> tiledResultShape;
+    for (int64_t i = 0, e = resultType.getRank(); i < e; ++i) {
+      if (auto cst = getConstantIntValue(sizes[i]))
+        tiledResultShape.push_back(*cst);
+      else
+        tiledResultShape.push_back(ShapedType::kDynamic);
+    }
+    auto tiledResultType =
+        RankedTensorType::get(tiledResultShape, resultType.getElementType());
+    Value tiledExpand = b.create<tensor::ExpandShapeOp>(
+        loc, tiledResultType, inputSlice, reassoc);
+
+    return TilingResult{{op}, {tiledExpand}, {inputSlice.getDefiningOp()}};
+  }
+
+  LogicalResult
+  getResultTilePosition(Operation *op, OpBuilder &b, unsigned resultNumber,
+                        ArrayRef<OpFoldResult> offsets,
+                        ArrayRef<OpFoldResult> sizes,
+                        SmallVector<OpFoldResult> &resultOffsets,
+                        SmallVector<OpFoldResult> &resultSizes) const {
+    resultOffsets.assign(offsets.begin(), offsets.end());
+    resultSizes.assign(sizes.begin(), sizes.end());
+    return success();
+  }
+
+  LogicalResult getIterationDomainTileFromResultTile(
+      Operation *op, OpBuilder &b, unsigned resultNumber,
+      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+      SmallVectorImpl<OpFoldResult> &iterDomainOffsets,
+      SmallVectorImpl<OpFoldResult> &iterDomainSizes) const {
+    iterDomainOffsets.assign(offsets.begin(), offsets.end());
+    iterDomainSizes.assign(sizes.begin(), sizes.end());
+    return success();
+  }
+
+  FailureOr<TilingResult>
+  generateResultTileValue(Operation *op, OpBuilder &b, unsigned resultNumber,
+                          ArrayRef<OpFoldResult> offsets,
+                          ArrayRef<OpFoldResult> sizes) const {
+    return getTiledImplementation(op, b, offsets, sizes);
+  }
+};
+
 void mlir::tensor::registerTilingInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
     tensor::PadOp::attachInterface<PadOpTiling>(*ctx);
+    tensor::ExpandShapeOp::attachInterface<ExpandShapeOpTiling>(*ctx);
   });
 }
