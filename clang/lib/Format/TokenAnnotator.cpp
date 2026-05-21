@@ -1213,7 +1213,13 @@ private:
     unsigned CommaCount = 0;
     while (CurrentToken) {
       if (CurrentToken->is(tok::r_brace)) {
-        assert(!Scopes.empty());
+        // Scopes can be empty if a closing brace is encountered before its
+        // matching opener was pushed, e.g. when angle-bracket parsing resets
+        // the token stream and a brace is consumed twice through
+        // parseConditional(). Return without asserting if the scope stack is
+        // unexpectedly empty.
+        if (Scopes.empty())
+          return false;
         assert(Scopes.back() == getScopeType(OpeningBrace));
         Scopes.pop_back();
         assert(OpeningBrace.Optional == CurrentToken->Optional);
