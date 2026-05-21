@@ -17675,9 +17675,8 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
 
   // Get preferred VT from either X or Y.
   MVT EltVT = GetPreferredEltVT(X);
-  if (!IsValidEltVT(EltVT)) {
+  if (!IsValidEltVT(EltVT))
     EltVT = GetPreferredEltVT(Y);
-  }
 
   // If both are unsuitable, use the safe default (i8)
   if (!IsValidEltVT(EltVT))
