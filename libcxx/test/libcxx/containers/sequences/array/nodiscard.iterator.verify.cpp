@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY
-
 // <array>
 
 // Check that functions are marked [[nodiscard]]
