@@ -1284,7 +1284,7 @@ void llvm::ComputeCrossModuleImport(
     // exporting module. We do this after the above insertion since we may hit
     // the same ref/call target multiple times in above loop, and it is more
     // efficient to avoid a set lookup each time.
-    SmallVector<ValueInfo, 8> ToRemove;
+    SmallVector<ValueInfo> ToRemove;
     for (const auto &VI : NewExports)
       if (!DefinedGVSummaries.count(VI.getGUID()))
         ToRemove.push_back(VI);

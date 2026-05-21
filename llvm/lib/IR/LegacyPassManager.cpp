@@ -903,7 +903,7 @@ void PMDataManager::removeNotPreservedAnalysis(Pass *P) {
     return;
 
   const AnalysisUsage::VectorType &PreservedSet = AnUsage->getPreservedSet();
-  SmallVector<AnalysisID, 16> ToRemove;
+  SmallVector<AnalysisID> ToRemove;
   for (auto &Entry : AvailableAnalysis) {
     if (Entry.second->getAsImmutablePass() == nullptr &&
         !is_contained(PreservedSet, Entry.first)) {
