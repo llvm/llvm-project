@@ -127,7 +127,6 @@ def yaml_to_classes(yaml_data, header_class, entry_points=None):
         obj = Object(object_data["object_name"], object_data["object_type"])
         obj.standards = object_data.get("standards", [])
         header.add_object(obj)
-    header.validate()
     return header
 
 
