@@ -13,7 +13,7 @@
                      // expected-error {{'simple.h ' file not found}}
 
 // Trailing dots: warn about non-portable path, error because file not found.
-#include "simple.h." // expected-warning {{non-portable path to file 'simple.h.'; specified path contains trailing dots}} \
+#include "simple.h." // expected-warning {{non-portable path to file 'simple.h.'; specified path contains trailing dot}} \
                      // expected-error {{'simple.h.' file not found}}
 
 // Correct path: no diagnostics expected.

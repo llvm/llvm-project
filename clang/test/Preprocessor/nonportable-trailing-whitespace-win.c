@@ -12,7 +12,7 @@
 #include "simple.h " // expected-warning {{non-portable path to file 'simple.h '; specified path contains trailing whitespace}}
 
 // Trailing dots: warn about non-portable path, but file is found.
-#include "simple.h." // expected-warning {{non-portable path to file 'simple.h.'; specified path contains trailing dots}}
+#include "simple.h." // expected-warning {{non-portable path to file 'simple.h.'; specified path contains trailing dot}}
 
 // Correct path: no diagnostics expected.
 #include "simple.h" // no-warning
