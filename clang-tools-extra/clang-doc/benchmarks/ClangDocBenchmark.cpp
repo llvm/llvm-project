@@ -102,10 +102,10 @@ static void BM_SerializeFunctionInfo(benchmark::State &State) {
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags(DiagID, DiagOpts, new IgnoringDiagConsumer());
 
-  OwnedPtr<Info> InfoPtr = std::move(I);
+  Info *InfoPtr = I;
 
   for (auto _ : State) {
-    auto Result = serialize::serialize(InfoPtr, Diags);
+    auto Result = serialize::serialize(*InfoPtr, Diags);
     benchmark::DoNotOptimize(Result);
   }
 }
@@ -200,7 +200,7 @@ static void BM_JSONGenerator_Scale(benchmark::State &State) {
 
   for (auto _ : State) {
     Output.clear();
-    auto Err = (*G)->generateDocForInfo(getPtr(NI), OS, CDCtx);
+    auto Err = (*G)->generateDocForInfo(NI, OS, CDCtx);
     if (Err) {
       State.SkipWithError("generateDocForInfo failed");
       llvm::consumeError(std::move(Err));
