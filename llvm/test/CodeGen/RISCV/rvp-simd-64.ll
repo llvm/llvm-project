@@ -5446,49 +5446,15 @@ define <2 x i32> @test_umax_w(<2 x i32> %a, <2 x i32> %b) {
 define <4 x i16> @test_select_v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b) {
 ; RV32-LABEL: test_select_v4i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -32
-; RV32-NEXT:    .cfi_def_cfa_offset 32
-; RV32-NEXT:    andi a0, a0, 1
-; RV32-NEXT:    sw a4, 20(sp)
-; RV32-NEXT:    sw a2, 12(sp)
-; RV32-NEXT:    sw a3, 16(sp)
-; RV32-NEXT:    sw a1, 8(sp)
-; RV32-NEXT:    bnez a0, .LBB205_5
+; RV32-NEXT:    andi a5, a0, 1
+; RV32-NEXT:    bnez a5, .LBB205_2
 ; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    lh a1, 22(sp)
-; RV32-NEXT:    sh a1, 30(sp)
-; RV32-NEXT:    beqz a0, .LBB205_6
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:    mv a1, a4
+; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB205_2:
-; RV32-NEXT:    lh a1, 12(sp)
-; RV32-NEXT:    sh a1, 28(sp)
-; RV32-NEXT:    beqz a0, .LBB205_7
-; RV32-NEXT:  .LBB205_3:
-; RV32-NEXT:    lh a1, 10(sp)
-; RV32-NEXT:    sh a1, 26(sp)
-; RV32-NEXT:    beqz a0, .LBB205_8
-; RV32-NEXT:  .LBB205_4:
-; RV32-NEXT:    lh a0, 8(sp)
-; RV32-NEXT:    j .LBB205_9
-; RV32-NEXT:  .LBB205_5:
-; RV32-NEXT:    lh a1, 14(sp)
-; RV32-NEXT:    sh a1, 30(sp)
-; RV32-NEXT:    bnez a0, .LBB205_2
-; RV32-NEXT:  .LBB205_6:
-; RV32-NEXT:    lh a1, 20(sp)
-; RV32-NEXT:    sh a1, 28(sp)
-; RV32-NEXT:    bnez a0, .LBB205_3
-; RV32-NEXT:  .LBB205_7:
-; RV32-NEXT:    lh a1, 18(sp)
-; RV32-NEXT:    sh a1, 26(sp)
-; RV32-NEXT:    bnez a0, .LBB205_4
-; RV32-NEXT:  .LBB205_8:
-; RV32-NEXT:    lh a0, 16(sp)
-; RV32-NEXT:  .LBB205_9:
-; RV32-NEXT:    sh a0, 24(sp)
-; RV32-NEXT:    lw a0, 24(sp)
-; RV32-NEXT:    lw a1, 28(sp)
-; RV32-NEXT:    addi sp, sp, 32
-; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_select_v4i16:
@@ -5507,81 +5473,15 @@ define <4 x i16> @test_select_v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b) {
 define <8 x i8> @test_select_v8i8(i1 %cond, <8 x i8> %a, <8 x i8> %b) {
 ; RV32-LABEL: test_select_v8i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -32
-; RV32-NEXT:    .cfi_def_cfa_offset 32
-; RV32-NEXT:    andi a0, a0, 1
-; RV32-NEXT:    sw a4, 20(sp)
-; RV32-NEXT:    sw a2, 12(sp)
-; RV32-NEXT:    sw a3, 16(sp)
-; RV32-NEXT:    sw a1, 8(sp)
-; RV32-NEXT:    bnez a0, .LBB206_9
+; RV32-NEXT:    andi a5, a0, 1
+; RV32-NEXT:    bnez a5, .LBB206_2
 ; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    lbu a1, 23(sp)
-; RV32-NEXT:    sb a1, 31(sp)
-; RV32-NEXT:    beqz a0, .LBB206_10
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:    mv a1, a4
+; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB206_2:
-; RV32-NEXT:    lbu a1, 14(sp)
-; RV32-NEXT:    sb a1, 30(sp)
-; RV32-NEXT:    beqz a0, .LBB206_11
-; RV32-NEXT:  .LBB206_3:
-; RV32-NEXT:    lbu a1, 13(sp)
-; RV32-NEXT:    sb a1, 29(sp)
-; RV32-NEXT:    beqz a0, .LBB206_12
-; RV32-NEXT:  .LBB206_4:
-; RV32-NEXT:    lbu a1, 12(sp)
-; RV32-NEXT:    sb a1, 28(sp)
-; RV32-NEXT:    beqz a0, .LBB206_13
-; RV32-NEXT:  .LBB206_5:
-; RV32-NEXT:    lbu a1, 11(sp)
-; RV32-NEXT:    sb a1, 27(sp)
-; RV32-NEXT:    beqz a0, .LBB206_14
-; RV32-NEXT:  .LBB206_6:
-; RV32-NEXT:    lbu a1, 10(sp)
-; RV32-NEXT:    sb a1, 26(sp)
-; RV32-NEXT:    beqz a0, .LBB206_15
-; RV32-NEXT:  .LBB206_7:
-; RV32-NEXT:    lbu a1, 9(sp)
-; RV32-NEXT:    sb a1, 25(sp)
-; RV32-NEXT:    beqz a0, .LBB206_16
-; RV32-NEXT:  .LBB206_8:
-; RV32-NEXT:    lbu a0, 8(sp)
-; RV32-NEXT:    j .LBB206_17
-; RV32-NEXT:  .LBB206_9:
-; RV32-NEXT:    lbu a1, 15(sp)
-; RV32-NEXT:    sb a1, 31(sp)
-; RV32-NEXT:    bnez a0, .LBB206_2
-; RV32-NEXT:  .LBB206_10:
-; RV32-NEXT:    lbu a1, 22(sp)
-; RV32-NEXT:    sb a1, 30(sp)
-; RV32-NEXT:    bnez a0, .LBB206_3
-; RV32-NEXT:  .LBB206_11:
-; RV32-NEXT:    lbu a1, 21(sp)
-; RV32-NEXT:    sb a1, 29(sp)
-; RV32-NEXT:    bnez a0, .LBB206_4
-; RV32-NEXT:  .LBB206_12:
-; RV32-NEXT:    lbu a1, 20(sp)
-; RV32-NEXT:    sb a1, 28(sp)
-; RV32-NEXT:    bnez a0, .LBB206_5
-; RV32-NEXT:  .LBB206_13:
-; RV32-NEXT:    lbu a1, 19(sp)
-; RV32-NEXT:    sb a1, 27(sp)
-; RV32-NEXT:    bnez a0, .LBB206_6
-; RV32-NEXT:  .LBB206_14:
-; RV32-NEXT:    lbu a1, 18(sp)
-; RV32-NEXT:    sb a1, 26(sp)
-; RV32-NEXT:    bnez a0, .LBB206_7
-; RV32-NEXT:  .LBB206_15:
-; RV32-NEXT:    lbu a1, 17(sp)
-; RV32-NEXT:    sb a1, 25(sp)
-; RV32-NEXT:    bnez a0, .LBB206_8
-; RV32-NEXT:  .LBB206_16:
-; RV32-NEXT:    lbu a0, 16(sp)
-; RV32-NEXT:  .LBB206_17:
-; RV32-NEXT:    sb a0, 24(sp)
-; RV32-NEXT:    lw a0, 24(sp)
-; RV32-NEXT:    lw a1, 28(sp)
-; RV32-NEXT:    addi sp, sp, 32
-; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_select_v8i8:
