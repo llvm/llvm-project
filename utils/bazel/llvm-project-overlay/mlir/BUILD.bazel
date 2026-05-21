@@ -5731,6 +5731,7 @@ cc_library(
     deps = [
         ":AMDGPUToROCDL",
         ":AffineToStandard",
+        ":ArithDialect",
         ":ArithToLLVM",
         ":ConversionPasses",
         ":FuncDialect",
@@ -5744,6 +5745,7 @@ cc_library(
         ":LLVMDialect",
         ":LLVMIRTransforms",
         ":LinalgTransforms",
+        ":MathDialect",
         ":MathToLLVM",
         ":MathToXeVM",
         ":MemRefToLLVM",
