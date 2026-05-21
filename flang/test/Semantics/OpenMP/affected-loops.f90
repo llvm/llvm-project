@@ -12,9 +12,6 @@ subroutine f
   end do
 end
 
-! Check that k is privatized in the scope of DO, and that i, j are privatized
-! in the scope of TILE.
-
 !CHECK: Subprogram scope: f size=12 alignment=4 sourceRange=139 bytes
 !CHECK:   f (Subroutine): HostAssoc => f (Subroutine): Subprogram ()
 !CHECK:   i size=4 offset=0: ObjectEntity type: INTEGER(4)
