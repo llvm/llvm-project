@@ -75,7 +75,6 @@ _warningFlags = [
 
     # We're not annotating all the APIs, since that's a lot of annotations compared to how many we actually care about
     "-Wno-nullability-completeness",
-
     # Adding this for now to get the build to pass but needs more detailed review
     "-Wno-psabi",
 
