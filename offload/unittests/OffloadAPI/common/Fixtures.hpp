@@ -190,6 +190,14 @@ struct OffloadDeviceTest
     Device = DeviceParam.Handle;
     if (Device == nullptr)
       GTEST_SKIP() << "No available devices.";
+
+    ASSERT_SUCCESS(olCreateContext(1, &Device, &Context));
+  }
+
+  void TearDown() override {
+    if (Context)
+      olDestroyContext(Context);
+    RETURN_ON_FATAL_FAILURE(OffloadTest::TearDown());
   }
 
   ol_platform_backend_t getPlatformBackend() const {
@@ -205,6 +213,7 @@ struct OffloadDeviceTest
   }
 
   ol_device_handle_t Device = nullptr;
+  ol_context_handle_t Context = nullptr;
 };
 
 struct OffloadPlatformTest : OffloadDeviceTest {

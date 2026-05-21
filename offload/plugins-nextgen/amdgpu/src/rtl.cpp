@@ -3867,7 +3867,32 @@ struct AMDGPUGlobalHandlerTy final : public GenericGlobalHandlerTy {
   }
 };
 
-/// Class implementing the AMDGPU-specific functionalities of the plugin.
+struct AMDGPUPluginContextTy final : public PluginContextTy {
+  AMDGPUPluginContextTy(GenericPluginTy &Plugin,
+                        llvm::ArrayRef<GenericDeviceTy *> Devices)
+      : PluginContextTy(Plugin, Devices) {}
+
+  Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
+                            TargetAllocTy Kind) override;
+  Error deallocate(GenericDeviceTy &Device, void *Ptr,
+                   TargetAllocTy Kind) override;
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
+
+private:
+  // ROCm's host fine-grained pool backs both TARGET_ALLOC_HOST and
+  // TARGET_ALLOC_SHARED, and hsa_amd_pointer_info cannot recover which kind
+  // the user requested or which device the SHARED alloc was bound to. Track
+  // both here so getAllocInfo can report them back, and so deallocate() can
+  // route to the right cleanup path (HOST deallocs go through
+  // PinnedAllocs.unregisterHostBuffer; SHARED do not).
+  struct HostPoolAllocInfo {
+    TargetAllocTy Kind;
+    GenericDeviceTy *Device;
+  };
+  llvm::DenseMap<const void *, HostPoolAllocInfo> HostPoolAllocs;
+  std::mutex HostPoolAllocsMutex;
+};
+
 struct AMDGPUPluginTy final : public GenericPluginTy {
   /// Create an AMDGPU plugin and initialize the AMDGPU driver.
   AMDGPUPluginTy()
@@ -3969,6 +3994,11 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
                                 int32_t NumDevices) override {
     return new AMDGPUDeviceTy(Plugin, DeviceId, NumDevices, getHostDevice(),
                               getKernelAgent(DeviceId));
+  }
+
+  Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) override {
+    return std::make_unique<AMDGPUPluginContextTy>(*this, Devices);
   }
 
   /// Creates an AMDGPU global handler.
@@ -4168,6 +4198,89 @@ private:
   /// The device representing all HSA host agents.
   AMDHostDeviceTy *HostDevice;
 };
+
+Expected<void *> AMDGPUPluginContextTy::allocate(GenericDeviceTy &Device,
+                                                 int64_t Size,
+                                                 TargetAllocTy Kind) {
+  auto PtrOrErr = PluginContextTy::allocate(Device, Size, Kind);
+  if (!PtrOrErr || !*PtrOrErr)
+    return PtrOrErr;
+  if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED) {
+    std::lock_guard<std::mutex> Lock(HostPoolAllocsMutex);
+    HostPoolAllocs[*PtrOrErr] = {Kind, &Device};
+  }
+  return PtrOrErr;
+}
+
+Error AMDGPUPluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
+                                        TargetAllocTy Kind) {
+  if (auto Err = PluginContextTy::deallocate(Device, Ptr, Kind))
+    return Err;
+  if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED) {
+    std::lock_guard<std::mutex> Lock(HostPoolAllocsMutex);
+    HostPoolAllocs.erase(Ptr);
+  }
+  return Plugin::success();
+}
+
+Expected<PluginAllocInfoTy>
+AMDGPUPluginContextTy::getAllocInfo(const void *Ptr) {
+  hsa_amd_pointer_info_t Info;
+  Info.size = sizeof(hsa_amd_pointer_info_t);
+  Info.userData = nullptr;
+
+  hsa_status_t Status = hsa_amd_pointer_info(
+      const_cast<void *>(Ptr), &Info, /*Allocator=*/nullptr,
+      /*num_agents_accessible=*/nullptr, /*accessible=*/nullptr);
+  if (auto Err = Plugin::check(Status, "error in hsa_amd_pointer_info: %s"))
+    return std::move(Err);
+
+  if (Info.type != HSA_EXT_POINTER_TYPE_HSA)
+    return Plugin::error(ErrorCode::NOT_FOUND,
+                         "pointer is not a known HSA allocation");
+
+  // HSA_EXT_POINTER_TYPE_HSA covers any HSA-allocated buffer: device pool
+  // (TARGET_ALLOC_DEVICE) and host fine-grained pool (TARGET_ALLOC_HOST or
+  // TARGET_ALLOC_SHARED). ROCm cannot tell HOST from SHARED post-hoc, nor
+  // recover the device a SHARED alloc was bound to, since both back onto a
+  // single global fine-grained host pool. For host-pool pointers we
+  // therefore consult the per-context HostPoolAllocs map populated at
+  // allocate() time.
+  auto IsKernelAgent = [&](hsa_agent_t Agent) {
+    auto &P = static_cast<AMDGPUPluginTy &>(this->Plugin);
+    for (hsa_agent_t Kernel : P.getKernelAgents())
+      if (Kernel.handle == Agent.handle)
+        return true;
+    return false;
+  };
+
+  TargetAllocTy Kind;
+  GenericDeviceTy *OwnerDevice = nullptr;
+  if (IsKernelAgent(Info.agentOwner)) {
+    Kind = TARGET_ALLOC_DEVICE;
+    for (auto *D : Devices) {
+      auto &AD = static_cast<AMDGPUDeviceTy &>(*D);
+      if (AD.getAgent().handle == Info.agentOwner.handle) {
+        OwnerDevice = D;
+        break;
+      }
+    }
+  } else {
+    // Host-pool allocation. Recover the requested kind and bound device
+    // from HostPoolAllocs; fall back to HOST/null for pointers we did not
+    // allocate (e.g. externally registered host buffers).
+    Kind = TARGET_ALLOC_HOST;
+    std::lock_guard<std::mutex> Lock(HostPoolAllocsMutex);
+    auto It = HostPoolAllocs.find(Info.agentBaseAddress);
+    if (It != HostPoolAllocs.end()) {
+      Kind = It->second.Kind;
+      OwnerDevice = It->second.Device;
+    }
+  }
+
+  return PluginAllocInfoTy{OwnerDevice, Kind, Info.agentBaseAddress,
+                           Info.sizeInBytes};
+}
 
 Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  uint32_t NumThreads[3], uint32_t NumBlocks[3],

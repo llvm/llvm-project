@@ -487,7 +487,69 @@ public:
   }
 };
 
-/// Class implementing the plugin functionalities for GenELF64.
+struct GenELF64PluginContextTy final : public PluginContextTy {
+  GenELF64PluginContextTy(GenericPluginTy &Plugin,
+                          llvm::ArrayRef<GenericDeviceTy *> Devices)
+      : PluginContextTy(Plugin, Devices) {}
+
+  Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
+                            TargetAllocTy Kind) override {
+    auto AllocOrErr = Device.dataAlloc(Size, /*HostPtr=*/nullptr, Kind);
+    if (!AllocOrErr || !*AllocOrErr)
+      return AllocOrErr;
+    std::lock_guard<std::mutex> Lock(Mtx);
+    Allocations.insert(
+        {*AllocOrErr, Entry{&Device, Kind, static_cast<size_t>(Size)}});
+    return *AllocOrErr;
+  }
+
+  Error deallocate(void *Ptr) override {
+    assert(!Devices.empty() && "context constructed without devices");
+    {
+      std::lock_guard<std::mutex> Lock(Mtx);
+      Allocations.erase(Ptr);
+    }
+    return Devices.front()->dataDelete(Ptr, TARGET_ALLOC_HOST);
+  }
+
+  Error deallocate(GenericDeviceTy &Device, void *Ptr,
+                   TargetAllocTy Kind) override {
+    {
+      std::lock_guard<std::mutex> Lock(Mtx);
+      Allocations.erase(Ptr);
+    }
+    return Device.dataDelete(Ptr, Kind);
+  }
+
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {
+    std::lock_guard<std::mutex> Lock(Mtx);
+    if (Allocations.empty())
+      return Plugin::error(ErrorCode::NOT_FOUND,
+                           "pointer is not a known host allocation");
+    auto It = Allocations.upper_bound(const_cast<void *>(Ptr));
+    if (It == Allocations.begin())
+      return Plugin::error(ErrorCode::NOT_FOUND,
+                           "pointer is not a known host allocation");
+    --It;
+    auto Base = reinterpret_cast<uintptr_t>(It->first);
+    auto Tail = Base + It->second.Size;
+    if (reinterpret_cast<uintptr_t>(Ptr) >= Tail)
+      return Plugin::error(ErrorCode::NOT_FOUND,
+                           "pointer is not a known host allocation");
+    return PluginAllocInfoTy{It->second.Device, It->second.Kind, It->first,
+                             It->second.Size};
+  }
+
+private:
+  struct Entry {
+    GenericDeviceTy *Device;
+    TargetAllocTy Kind;
+    size_t Size;
+  };
+  std::mutex Mtx;
+  std::map<void *, Entry> Allocations;
+};
+
 struct GenELF64PluginTy final : public GenericPluginTy {
   /// Create the GenELF64 plugin.
   GenELF64PluginTy() : GenericPluginTy(getTripleArch()) {}
@@ -510,6 +572,11 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override {
     return new GenELF64DeviceTy(Plugin, DeviceId, NumDevices);
+  }
+
+  Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) override {
+    return std::make_unique<GenELF64PluginContextTy>(*this, Devices);
   }
 
   /// Creates a generic global handler.

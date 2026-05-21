@@ -28,7 +28,8 @@ struct olMemFillTest : OffloadQueueTest {
     }
 
     void *Alloc;
-    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+    ASSERT_SUCCESS(
+        olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
 
     PatternTy Pattern = PatternVal;
     ASSERT_SUCCESS(olMemFill(Queue, Alloc, sizeof(Pattern), &Pattern, Size));
@@ -44,7 +45,7 @@ struct olMemFillTest : OffloadQueueTest {
       ASSERT_EQ(AllocPtr[i], Pattern);
     }
 
-    olMemFree(Alloc);
+    olMemFree(Context, Alloc);
   }
 };
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olMemFillTest);
@@ -79,7 +80,8 @@ TEST_P(olMemFillTest, Success32Enqueue) {
 TEST_P(olMemFillTest, SuccessLarge) {
   constexpr size_t Size = 1024;
   void *Alloc;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+  ASSERT_SUCCESS(
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
 
   struct PatternT {
     uint64_t A;
@@ -97,7 +99,7 @@ TEST_P(olMemFillTest, SuccessLarge) {
     ASSERT_EQ(AllocPtr[i].B, UINT64_MAX);
   }
 
-  olMemFree(Alloc);
+  olMemFree(Context, Alloc);
 }
 
 TEST_P(olMemFillTest, SuccessLargeEnqueue) {
@@ -106,7 +108,8 @@ TEST_P(olMemFillTest, SuccessLargeEnqueue) {
   ManuallyTriggeredTask Manual;
   ASSERT_SUCCESS(Manual.enqueue(Queue));
 
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+  ASSERT_SUCCESS(
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
 
   struct PatternT {
     uint64_t A;
@@ -125,13 +128,14 @@ TEST_P(olMemFillTest, SuccessLargeEnqueue) {
     ASSERT_EQ(AllocPtr[i].B, UINT64_MAX);
   }
 
-  olMemFree(Alloc);
+  olMemFree(Context, Alloc);
 }
 
 TEST_P(olMemFillTest, SuccessLargeByteAligned) {
   constexpr size_t Size = 17 * 64;
   void *Alloc;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+  ASSERT_SUCCESS(
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
 
   struct __attribute__((packed)) PatternT {
     uint64_t A;
@@ -151,7 +155,7 @@ TEST_P(olMemFillTest, SuccessLargeByteAligned) {
     ASSERT_EQ(AllocPtr[i].C, 255);
   }
 
-  olMemFree(Alloc);
+  olMemFree(Context, Alloc);
 }
 
 TEST_P(olMemFillTest, SuccessLargeByteAlignedEnqueue) {
@@ -160,7 +164,8 @@ TEST_P(olMemFillTest, SuccessLargeByteAlignedEnqueue) {
   ManuallyTriggeredTask Manual;
   ASSERT_SUCCESS(Manual.enqueue(Queue));
 
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+  ASSERT_SUCCESS(
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
 
   struct __attribute__((packed)) PatternT {
     uint64_t A;
@@ -181,18 +186,19 @@ TEST_P(olMemFillTest, SuccessLargeByteAlignedEnqueue) {
     ASSERT_EQ(AllocPtr[i].C, 255);
   }
 
-  olMemFree(Alloc);
+  olMemFree(Context, Alloc);
 }
 
 TEST_P(olMemFillTest, InvalidPatternSize) {
   constexpr size_t Size = 1025;
   void *Alloc;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+  ASSERT_SUCCESS(
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
 
   uint16_t Pattern = 0x4242;
   ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
                olMemFill(Queue, Alloc, sizeof(Pattern), &Pattern, Size));
 
   olSyncQueue(Queue);
-  olMemFree(Alloc);
+  olMemFree(Context, Alloc);
 }

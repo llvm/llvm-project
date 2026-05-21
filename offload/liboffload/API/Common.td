@@ -96,6 +96,7 @@ def ol_errc_t : Enum {
     Etor<"INVALID_NULL_HANDLE", "a handle argument is null when it should not be">,
     Etor<"INVALID_PLATFORM", "invalid platform">,
     Etor<"INVALID_DEVICE", "invalid device">,
+    Etor<"INVALID_CONTEXT", "invalid context">,
     Etor<"INVALID_QUEUE", "invalid queue">,
     Etor<"INVALID_EVENT", "invalid event">,
     Etor<"SYMBOL_KIND", "the operation does not support this symbol kind">,

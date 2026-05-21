@@ -36,7 +36,7 @@ TEST_P(olWaitEventsTest, Success) {
   ol_event_handle_t Events[NUM_KERNELS];
 
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
                             NUM_KERNELS * sizeof(uint32_t), &Mem));
   uint32_t Idx = 0;
   void *ArgPtrs[] = {&Idx, &Mem};
@@ -71,7 +71,7 @@ TEST_P(olWaitEventsTest, SuccessSingleQueue) {
   ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
 
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
                             NUM_KERNELS * sizeof(uint32_t), &Mem));
   uint32_t Idx = 0;
   void *ArgPtrs[] = {&Idx, &Mem};
@@ -102,7 +102,7 @@ TEST_P(olWaitEventsTest, SuccessMultipleEvents) {
   ol_event_handle_t Events[NUM_KERNELS];
 
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
                             NUM_KERNELS * sizeof(uint32_t), &Mem));
   uint32_t Idx = 0;
   void *ArgPtrs[] = {&Idx, &Mem};

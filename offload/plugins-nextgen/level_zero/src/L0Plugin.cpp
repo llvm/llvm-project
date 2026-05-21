@@ -123,6 +123,10 @@ Error LevelZeroPluginTy::deinitImpl() {
   ODBG(OLDT_Deinit) << "Deinit Level0 plugin!";
   if (auto Err = ContextTLSTable.deinit())
     return Err;
+  {
+    std::lock_guard<std::mutex> Lock(DefaultContextsMutex);
+    DefaultContexts.clear();
+  }
   for (auto &Context : ContextList)
     if (auto Err = Context.deinit())
       return Err;
@@ -152,6 +156,88 @@ GenericDeviceTy *LevelZeroPluginTy::createDevice(GenericPluginTy &Plugin,
 
 GenericGlobalHandlerTy *LevelZeroPluginTy::createGlobalHandler() {
   return new L0GlobalHandlerTy();
+}
+
+Expected<std::unique_ptr<PluginContextTy>>
+LevelZeroPluginTy::createPluginContext(
+    llvm::ArrayRef<GenericDeviceTy *> Devices) {
+  if (Devices.empty())
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "createPluginContext called with no devices");
+
+  auto &First = static_cast<L0DeviceTy &>(*Devices[0]);
+  L0ContextTy &DriverCtx = First.getL0Context();
+  ze_driver_handle_t Driver = DriverCtx.getZeDriver();
+  for (auto *D : Devices.drop_front()) {
+    auto &L0D = static_cast<L0DeviceTy &>(*D);
+    if (&L0D.getL0Context() != &DriverCtx)
+      return Plugin::error(
+          ErrorCode::INVALID_ARGUMENT,
+          "All devices in an L0 context must share the same driver");
+  }
+
+  // When the user requests every device on the driver, share the L0 default
+  // context so we interop cleanly with other L0 clients on the same driver.
+  // Partial device sets get their own fresh context.
+  size_t DriverDeviceCount = 0;
+  for (int i = 0; i < (int)getNumDevices(); ++i) {
+    auto &L0D = static_cast<const L0DeviceTy &>(getDevice(i));
+    if (&L0D.getL0Context() == &DriverCtx)
+      ++DriverDeviceCount;
+  }
+  const bool IsFullPlatform = (Devices.size() == DriverDeviceCount);
+
+  ze_context_handle_t ZeContext = nullptr;
+  bool OwnsZeContext = false;
+  if (IsFullPlatform && DriverCtx.zeDriverGetDefaultContext)
+    ZeContext = DriverCtx.zeDriverGetDefaultContext(Driver);
+  if (!ZeContext) {
+    ze_context_desc_t Desc{ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
+    CALL_ZE_RET_ERROR(zeContextCreate, Driver, &Desc, &ZeContext);
+    OwnsZeContext = true;
+  }
+
+  auto Ctx = std::make_unique<L0ContextTy>(*this, Driver, ZeContext,
+                                           OwnsZeContext, Devices);
+  if (auto Err = Ctx->initWithDevices())
+    return std::move(Err);
+  return std::unique_ptr<PluginContextTy>(std::move(Ctx));
+}
+
+Expected<std::unique_ptr<PluginContextTy>>
+LevelZeroPluginTy::createDefaultPluginContext() {
+  // The L0 default is per-driver and built lazily by getDefaultContext; the
+  // plugin-level DefaultContext is never read. Return a harmless empty
+  // placeholder so generic init has something to store.
+  return std::make_unique<DefaultPluginContextTy>(*this);
+}
+
+Expected<PluginContextTy *>
+LevelZeroPluginTy::getDefaultContext(GenericDeviceTy &Device) {
+  auto &L0Dev = static_cast<L0DeviceTy &>(Device);
+  L0ContextTy *Driver = &L0Dev.getL0Context();
+
+  std::lock_guard<std::mutex> Lock(DefaultContextsMutex);
+  auto It = DefaultContexts.find(Driver);
+  if (It != DefaultContexts.end())
+    return It->second.get();
+
+  llvm::SmallVector<GenericDeviceTy *> DriverDevices;
+  for (int i = 0; i < (int)getNumDevices(); ++i) {
+    auto &D = static_cast<L0DeviceTy &>(getDevice(i));
+    if (&D.getL0Context() == Driver)
+      DriverDevices.push_back(&D);
+  }
+
+  // Reuse createPluginContext so the default wraps the driver's default
+  // ze_context (full-driver case) and gets the same per-device pools as a
+  // user-created L0 context.
+  auto CtxOrErr = createPluginContext(DriverDevices);
+  if (!CtxOrErr)
+    return CtxOrErr.takeError();
+  PluginContextTy *Raw = CtxOrErr->get();
+  DefaultContexts[Driver] = std::move(*CtxOrErr);
+  return Raw;
 }
 
 Error LevelZeroPluginTy::flushQueueImpl(omp_interop_val_t *Interop) {

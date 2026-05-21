@@ -381,11 +381,12 @@ bool MemAllocatorTy::MemAllocInfoMapTy::remove(void *Ptr,
 }
 
 Error MemAllocatorTy::initDevicePools(L0DeviceTy &L0Device,
-                                      const L0OptionsTy &Options) {
+                                      const L0OptionsTy &Options,
+                                      L0ContextTy *Context) {
   SupportsLargeMem = L0Device.supportsLargeMem();
   IsHostMem = false;
   Device = &L0Device;
-  L0Context = &L0Device.getL0Context();
+  L0Context = Context ? Context : &L0Device.getL0Context();
   for (auto Kind : {TARGET_ALLOC_DEVICE, TARGET_ALLOC_SHARED}) {
     if (Options.MemPoolConfig[Kind].Use) {
       std::lock_guard<std::mutex> Lock(Mtx);

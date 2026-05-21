@@ -15,7 +15,8 @@ def ol_alloc_type_t : Enum {
   let etors = [
     Etor<"HOST", "Host allocation">,
     Etor<"DEVICE", "Device allocation">,
-    Etor<"MANAGED", "Managed allocation">
+    Etor<"MANAGED",
+         "Managed (shared) allocation accessible from host and device.">
   ];
 }
 
@@ -36,9 +37,11 @@ def ol_memory_register_flag_t : Enum {
 def olMemAlloc : Function {
   let desc = "Creates a memory allocation on the specified device.";
   let details = [
-      "All allocations through olMemAlloc regardless of source share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory."
+      "The allocation is scoped to `Context` and `Device` must belong to it.",
+      "Allocation pointers from different platforms may alias; a returned pointer is only meaningful when paired with the context it was allocated in."
   ];
   let params = [
+    Param<"ol_context_handle_t", "Context", "handle of the context", PARAM_IN>,
     Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
     Param<"ol_alloc_type_t", "Type", "type of the allocation", PARAM_IN>,
     Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>,
@@ -47,6 +50,9 @@ def olMemAlloc : Function {
   let returns = [
     Return<"OL_ERRC_INVALID_SIZE", [
       "`Size == 0`"
+    ]>,
+    Return<"OL_ERRC_INVALID_DEVICE", [
+      "Device does not belong to `Context`"
     ]>
   ];
 }
@@ -54,9 +60,14 @@ def olMemAlloc : Function {
 def olMemFree : Function {
   let desc = "Frees a memory allocation previously made by olMemAlloc.";
   let params = [
+    Param<"ol_context_handle_t", "Context", "handle of the context the allocation was made in", PARAM_IN>,
     Param<"void*", "Address", "address of the allocation to free", PARAM_IN>,
   ];
-  let returns = [];
+  let returns = [
+    Return<"OL_ERRC_INVALID_CONTEXT", [
+      "The allocation was not made in `Context`"
+    ]>
+  ];
 }
 
 def ol_mem_info_t : Enum {
@@ -75,8 +86,10 @@ def olGetMemInfo : Function {
   let details = [
     "`olGetMemInfoSize` can be used to query the storage size required for the given query.",
     "The provided pointer can point to any location inside the allocation.",
+    "The allocation must have been made in `Context`.",
   ];
   let params = [
+    Param<"ol_context_handle_t", "Context", "handle of the context the allocation was made in", PARAM_IN>,
     Param<"const void *", "Ptr", "pointer to the allocated memory", PARAM_IN>,
     Param<"ol_mem_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
     Param<"size_t", "PropSize", "the number of bytes pointed to by PropValue.", PARAM_IN>,
@@ -90,7 +103,7 @@ def olGetMemInfo : Function {
       "`PropSize == 0`",
       "If `PropSize` is less than the real number of bytes needed to return the info."
     ]>,
-    Return<"OL_ERRC_NOT_FOUND", ["memory was not allocated by liboffload"]>
+    Return<"OL_ERRC_NOT_FOUND", ["memory was not allocated in `Context`"]>
   ];
 }
 
@@ -98,14 +111,16 @@ def olGetMemInfoSize : Function {
   let desc = "Returns the storage size of the given queue query.";
   let details = [
     "The provided pointer can point to any location inside the allocation.",
+    "The allocation must have been made in `Context`.",
   ];
   let params = [
+    Param<"ol_context_handle_t", "Context", "handle of the context the allocation was made in", PARAM_IN>,
     Param<"const void *", "Ptr", "pointer to the allocated memory", PARAM_IN>,
     Param<"ol_mem_info_t", "PropName", "type of the info to query", PARAM_IN>,
     Param<"size_t*", "PropSizeRet", "pointer to the number of bytes required to store the query", PARAM_OUT>
   ];
   let returns = [
-    Return<"OL_ERRC_NOT_FOUND", ["memory was not allocated by liboffload"]>
+    Return<"OL_ERRC_NOT_FOUND", ["memory was not allocated in `Context`"]>
   ];
 }
 

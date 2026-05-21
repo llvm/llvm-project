@@ -15,23 +15,25 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olMemAllocTest);
 
 TEST_P(olMemAllocTest, SuccessAllocManaged) {
   void *Alloc = nullptr;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, 1024, &Alloc));
+  ASSERT_SUCCESS(
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED, 1024, &Alloc));
   ASSERT_NE(Alloc, nullptr);
-  olMemFree(Alloc);
+  olMemFree(Context, Alloc);
 }
 
 TEST_P(olMemAllocTest, SuccessAllocHost) {
   void *Alloc = nullptr;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_HOST, 1024, &Alloc));
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_HOST, 1024, &Alloc));
   ASSERT_NE(Alloc, nullptr);
-  olMemFree(Alloc);
+  olMemFree(Context, Alloc);
 }
 
 TEST_P(olMemAllocTest, SuccessAllocDevice) {
   void *Alloc = nullptr;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, 1024, &Alloc));
+  ASSERT_SUCCESS(
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, 1024, &Alloc));
   ASSERT_NE(Alloc, nullptr);
-  olMemFree(Alloc);
+  olMemFree(Context, Alloc);
 }
 
 TEST_P(olMemAllocTest, SuccessAllocMany) {
@@ -43,24 +45,32 @@ TEST_P(olMemAllocTest, SuccessAllocMany) {
 
   for (size_t I = 1; I < 1000; I++) {
     void *Alloc = nullptr;
-    ASSERT_SUCCESS(olMemAlloc(Device, TYPES[I % 3], 1024 * I, &Alloc));
+    ASSERT_SUCCESS(olMemAlloc(Context, Device, TYPES[I % 3], 1024 * I, &Alloc));
     ASSERT_NE(Alloc, nullptr);
 
     Allocs.push_back(Alloc);
   }
 
   for (auto *A : Allocs) {
-    olMemFree(A);
+    olMemFree(Context, A);
   }
+}
+
+TEST_P(olMemAllocTest, InvalidNullContext) {
+  void *Alloc = nullptr;
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
+               olMemAlloc(nullptr, Device, OL_ALLOC_TYPE_DEVICE, 1024, &Alloc));
 }
 
 TEST_P(olMemAllocTest, InvalidNullDevice) {
   void *Alloc = nullptr;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
-               olMemAlloc(nullptr, OL_ALLOC_TYPE_DEVICE, 1024, &Alloc));
+  ASSERT_ERROR(
+      OL_ERRC_INVALID_NULL_HANDLE,
+      olMemAlloc(Context, nullptr, OL_ALLOC_TYPE_DEVICE, 1024, &Alloc));
 }
 
 TEST_P(olMemAllocTest, InvalidNullOutPtr) {
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
-               olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, 1024, nullptr));
+  ASSERT_ERROR(
+      OL_ERRC_INVALID_NULL_POINTER,
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, 1024, nullptr));
 }
