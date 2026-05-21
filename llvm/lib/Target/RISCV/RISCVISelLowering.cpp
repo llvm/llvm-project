@@ -1950,6 +1950,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setMaxLargeFPConvertBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
 
+  setJumpIsExpensive(Subtarget.isJumpExpensive());
+
   // Disable strict node mutation.
   IsStrictFPEnabled = true;
   EnableExtLdPromotion = true;
