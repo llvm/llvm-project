@@ -866,28 +866,27 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
 
 void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
                                              ArrayRef<const Expr *> Args) {
-  bool isInstance = false;
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
-    isInstance = true;
-  }
+  if (Args.empty())
+    return;
+  // FIXME: Add support for capture_by on constructors.
+  if (isa<CXXConstructorDecl>(FD))
+    return;
+  const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+  bool IsInstance =
+      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD);
   auto getArgCaptureBy = [FD,
-                          isInstance](unsigned I) -> LifetimeCaptureByAttr * {
+                          IsInstance](unsigned I) -> LifetimeCaptureByAttr * {
     const ParmVarDecl *PVD = nullptr;
-    // FIXME: Add support for capture_by on function declarations
-    if (isInstance) {
-      if (I > 0 && I - 1 < FD->getNumParams()) {
+    if (IsInstance) {
+      // FIXME: Add support for capture_by on function declarations
+      if (I > 0 && I - 1 < FD->getNumParams())
         PVD = FD->getParamDecl(I - 1);
-      }
     } else {
-      if (I < FD->getNumParams()) {
+      if (I < FD->getNumParams())
         PVD = FD->getParamDecl(I);
-      }
     }
     return PVD ? PVD->getAttr<LifetimeCaptureByAttr>() : nullptr;
   };
-  if (Args.empty())
-    return;
   for (unsigned I = 0; I < Args.size(); ++I) {
     const LifetimeCaptureByAttr *Attr = getArgCaptureBy(I);
     if (!Attr)
@@ -902,32 +901,24 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
     if (!CapturedOriginList)
       continue;
     for (int CapturedByIdx : Attr->params()) {
-      if (CapturedByIdx == LifetimeCaptureByAttr::Global) {
-        for (OriginList *L = CapturedOriginList; L != nullptr;
-             L = L->peelOuterOrigin())
-          EscapesInCurrentBlock.push_back(FactMgr.createFact<GlobalEscapeFact>(
-              L->getOuterOriginID(), nullptr));
-        continue;
-      }
-      if (CapturedByIdx == LifetimeCaptureByAttr::Unknown ||
+      // FIXME: Add support for capturing to Global/unknown.
+      if (CapturedByIdx == LifetimeCaptureByAttr::Global ||
+          CapturedByIdx == LifetimeCaptureByAttr::Unknown ||
           CapturedByIdx == LifetimeCaptureByAttr::Invalid)
         continue;
-      unsigned CapturedByArgIdx =
-          (CapturedByIdx == LifetimeCaptureByAttr::This)
-              ? 0
-              : (unsigned)CapturedByIdx + (isInstance ? 1 : 0);
-      if (CapturedByArgIdx >= Args.size())
+      ArrayRef<const Expr *> CallArgs = IsInstance ? Args.slice(1) : Args;
+      const Expr *CapturedByArg = (CapturedByIdx == LifetimeCaptureByAttr::This)
+                                      ? Args[0]
+                                      : CallArgs[CapturedByIdx];
+      assert(CapturedByArg && "Capturer expression must be valid");
+
+      OriginList *CapturedByOriginList = getOriginsList(*CapturedByArg);
+      OriginList *Dest = getRValueOrigins(CapturedByArg, CapturedByOriginList);
+      if (!Dest)
         continue;
-      OriginList *CapturedByOriginList =
-          getOriginsList(*Args[CapturedByArgIdx]);
-      if (CapturedByOriginList) {
-        OriginList *Dest =
-            (isGslPointerType(Args[CapturedByArgIdx]->getType()) ||
-             isGslOwnerType(Args[CapturedByArgIdx]->getType()))
-                ? CapturedByOriginList->peelOuterOrigin()
-                : CapturedByOriginList;
-        flow(Dest, CapturedOriginList, /*Kill=*/false);
-      }
+      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+          Dest->getOuterOriginID(), CapturedOriginList->getOuterOriginID(),
+          /*KillDest=*/false));
     }
   }
 }

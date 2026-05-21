@@ -3289,7 +3289,7 @@ void assign_non_capturing_to_function_ref(function_ref &r) {
 // lifetime-capture-by
 //===----------------------------------------------------------------------===//
 
-void setCaptureBy(View& in, View out [[clang::lifetime_capture_by(in)]]);
+void setCaptureBy(View& res, View in [[clang::lifetime_capture_by(res)]]);
 
 void use_after_free_capture_by() {
   View res;
@@ -3318,6 +3318,40 @@ void transitive_capture() {
   (void)v2;         // expected-note {{later used here}}   
 }
 
+void set1(View& res, const MyObj& in [[clang::lifetime_capture_by(res)]]);
+
+void test_reference_to_view() {
+  View v;
+  {
+    MyObj local;
+    set1(v, local);   // expected-warning {{object whose reference is captured does not live long enough}}
+  }                   // expected-note {{destroyed here}}
+  (void)v;            // expected-note {{later used here}} 
+}
+
+// FIXME: Add special handling for multi-level pointers and lvalue expressions which are not DeclRefExpr.
+void set2(MyObj** res, const MyObj& in [[clang::lifetime_capture_by(res)]]);
+
+void test_pointer_to_pointer() {
+  MyObj *ptr = nullptr;
+  {
+    MyObj local;
+    set2(&ptr, local);
+  }
+  (void)ptr;
+}
+
+void set3(MyObj*& res, const MyObj& in [[clang::lifetime_capture_by(res)]]);
+
+void test_reference_to_pointer() {
+  MyObj *ptr = nullptr;
+  {
+    MyObj local;
+    set3(ptr, local);   // expected-warning {{object whose reference is captured does not live long enough}}
+  }                     // expected-note {{destroyed here}}
+  (void)ptr;            // expected-note {{later used here}} 
+}
+
 struct [[gsl::Pointer]] MyContainer {
   View stored;
   void set(View s [[clang::lifetime_capture_by(this)]]);
@@ -3330,6 +3364,21 @@ void member_capture() {
     c.set(local);   // expected-warning {{object whose reference is captured does not live long enough}}
   }                 // expected-note {{destroyed here}}
   (void)c.stored;   // expected-note {{later used here}}
+}
+
+// FIXME: Add support for simple containers without annotations.
+struct SimpleContainer {
+  View stored;
+  void set(View s [[clang::lifetime_capture_by(this)]]);
+};
+
+void member_capture_simple_container() {
+  SimpleContainer c;
+  {
+    MyObj local;
+    c.set(local);   
+  }                 
+  (void)c.stored;   
 }
 
 void captureTwo(View& into, 
