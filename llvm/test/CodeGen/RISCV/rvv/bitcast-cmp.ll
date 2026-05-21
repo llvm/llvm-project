@@ -55,3 +55,49 @@ define { i1, <8 x i32> } @bitcast_v8i32(ptr %a0) {
   %res2 = insertvalue { i1, <8 x i32> } %res1, <8 x i32> %src256.bitcast, 1
   ret { i1, <8 x i32> } %res2
 }
+
+define i1 @bitcast_from_v32i8(ptr %a0) {
+; CHECK-LABEL: bitcast_from_v32i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vmsne.vi v10, v8, 0
+; CHECK-NEXT:    vcpop.m a0, v10
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %vec = load <32 x i8>, ptr %a0, align 32
+  %int = bitcast <32 x i8> %vec to i256
+  %iszero = icmp eq i256 %int, 0
+  ret i1 %iszero
+}
+
+define i1 @bitcast_from_v16i16(ptr %a0) {
+; CHECK-LABEL: bitcast_from_v16i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vmsne.vi v10, v8, 0
+; CHECK-NEXT:    vcpop.m a0, v10
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %vec = load <16 x i16>, ptr %a0, align 32
+  %int = bitcast <16 x i16> %vec to i256
+  %iszero = icmp eq i256 %int, 0
+  ret i1 %iszero
+}
+
+define i1 @bitcast_from_v8i32(ptr %a0) {
+; CHECK-LABEL: bitcast_from_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vmsne.vi v10, v8, 0
+; CHECK-NEXT:    vcpop.m a0, v10
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %vec = load <8 x i32>, ptr %a0, align 32
+  %int = bitcast <8 x i32> %vec to i256
+  %iszero = icmp eq i256 %int, 0
+  ret i1 %iszero
+}
