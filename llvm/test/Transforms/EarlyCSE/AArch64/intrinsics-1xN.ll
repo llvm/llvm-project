@@ -2,364 +2,175 @@
 ; RUN: opt < %s -S -mtriple=aarch64-none-linux-gnu -mattr=+neon -passes=early-cse -earlycse-debug-hash | FileCheck %s
 ; RUN: opt < %s -S -mtriple=aarch64-none-linux-gnu -mattr=+neon -aa-pipeline=basic-aa -passes='early-cse<memssa>' -verify-analysis-invalidation | FileCheck %s
 
-define <4 x i32> @test_cse(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n, <4 x i32> %dummy) {
-; CHECK-LABEL: define <4 x i32> @test_cse(
-; CHECK-SAME: ptr [[A:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]], <4 x i32> [[DUMMY:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[S_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 0
-; CHECK-NEXT:    [[S_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 1
-; CHECK-NEXT:    br label %[[FOR_COND:.*]]
-; CHECK:       [[FOR_COND]]:
-; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY:.*]] ]
-; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ [[DUMMY:%.*]], %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[S_COERCE_FCA_0_EXTRACT]] to <16 x i8>
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[S_COERCE_FCA_1_EXTRACT]] to <16 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <4 x i32>, <4 x i32> } poison, <4 x i32> [[S_COERCE_FCA_0_EXTRACT]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <4 x i32>, <4 x i32> } [[TMP2]], <4 x i32> [[S_COERCE_FCA_1_EXTRACT]], 1
-; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> [[S_COERCE_FCA_0_EXTRACT]], <4 x i32> [[S_COERCE_FCA_1_EXTRACT]], ptr [[A]])
-; CHECK-NEXT:    [[CALL]] = call <4 x i32> @vaddq_s32(<4 x i32> [[S_COERCE_FCA_0_EXTRACT]], <4 x i32> [[S_COERCE_FCA_0_EXTRACT]])
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
-; CHECK-NEXT:    br label %[[FOR_COND]]
-; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    ret <4 x i32> [[RES_0]]
-;
-entry:
-; Check that @llvm.aarch64.neon.ld1x2 is optimized away by Early CSE.
-  %s.coerce.fca.0.extract = extractvalue [2 x <4 x i32>] %s.coerce, 0
-  %s.coerce.fca.1.extract = extractvalue [2 x <4 x i32>] %s.coerce, 1
-  br label %for.cond
-
-for.cond:                                         ; preds = %for.body, %entry
-  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %res.0 = phi <4 x i32> [ %dummy, %entry ], [ %call, %for.body ]
-  %cmp = icmp slt i32 %i.0, %n
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %0 = bitcast <4 x i32> %s.coerce.fca.0.extract to <16 x i8>
-  %1 = bitcast <4 x i32> %s.coerce.fca.1.extract to <16 x i8>
-  %2 = bitcast <16 x i8> %0 to <4 x i32>
-  %3 = bitcast <16 x i8> %1 to <4 x i32>
-  call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %2, <4 x i32> %3, ptr %a)
-  %vld1x2 = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x2.v4i32.p0(ptr %a)
-  %vld1x2.fca.0.extract = extractvalue { <4 x i32>, <4 x i32> } %vld1x2, 0
-  %vld1x2.fca.1.extract = extractvalue { <4 x i32>, <4 x i32> } %vld1x2, 1
-  %call = call <4 x i32> @vaddq_s32(<4 x i32> %vld1x2.fca.0.extract, <4 x i32> %vld1x2.fca.0.extract)
-  %inc = add nsw i32 %i.0, 1
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  ret <4 x i32> %res.0
-}
-
-define <4 x i32> @test_cse2(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n, <4 x i32> %dummy) {
-; CHECK-LABEL: define <4 x i32> @test_cse2(
-; CHECK-SAME: ptr [[A:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]], <4 x i32> [[DUMMY:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[S_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 0
-; CHECK-NEXT:    [[S_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 1
-; CHECK-NEXT:    br label %[[FOR_COND:.*]]
-; CHECK:       [[FOR_COND]]:
-; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY:.*]] ]
-; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ [[DUMMY:%.*]], %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[S_COERCE_FCA_0_EXTRACT]] to <16 x i8>
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[S_COERCE_FCA_1_EXTRACT]] to <16 x i8>
-; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> [[S_COERCE_FCA_0_EXTRACT]], <4 x i32> [[S_COERCE_FCA_0_EXTRACT]], ptr [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <4 x i32>, <4 x i32> } poison, <4 x i32> [[S_COERCE_FCA_0_EXTRACT]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <4 x i32>, <4 x i32> } [[TMP2]], <4 x i32> [[S_COERCE_FCA_1_EXTRACT]], 1
-; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> [[S_COERCE_FCA_0_EXTRACT]], <4 x i32> [[S_COERCE_FCA_1_EXTRACT]], ptr [[A]])
-; CHECK-NEXT:    [[CALL]] = call <4 x i32> @vaddq_s32(<4 x i32> [[S_COERCE_FCA_0_EXTRACT]], <4 x i32> [[S_COERCE_FCA_0_EXTRACT]])
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
-; CHECK-NEXT:    br label %[[FOR_COND]]
-; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    ret <4 x i32> [[RES_0]]
-;
-entry:
-; Check that the first @llvm.aarch64.neon.st1x2 is optimized away by Early CSE.
-  %s.coerce.fca.0.extract = extractvalue [2 x <4 x i32>] %s.coerce, 0
-  %s.coerce.fca.1.extract = extractvalue [2 x <4 x i32>] %s.coerce, 1
-  br label %for.cond
-
-for.cond:                                         ; preds = %for.body, %entry
-  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %res.0 = phi <4 x i32> [ %dummy, %entry ], [ %call, %for.body ]
-  %cmp = icmp slt i32 %i.0, %n
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %0 = bitcast <4 x i32> %s.coerce.fca.0.extract to <16 x i8>
-  %1 = bitcast <4 x i32> %s.coerce.fca.1.extract to <16 x i8>
-  %2 = bitcast <16 x i8> %0 to <4 x i32>
-  %3 = bitcast <16 x i8> %1 to <4 x i32>
-  call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %2, <4 x i32> %2, ptr %a)
-  call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %2, <4 x i32> %3, ptr %a)
-  %vld1x2 = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x2.v4i32.p0(ptr %a)
-  %vld1x2.fca.0.extract = extractvalue { <4 x i32>, <4 x i32> } %vld1x2, 0
-  %vld1x2.fca.1.extract = extractvalue { <4 x i32>, <4 x i32> } %vld1x2, 1
-  %call = call <4 x i32> @vaddq_s32(<4 x i32> %vld1x2.fca.0.extract, <4 x i32> %vld1x2.fca.0.extract)
-  %inc = add nsw i32 %i.0, 1
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  ret <4 x i32> %res.0
-}
-
-define <4 x i32> @test_cse3(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n, <4 x i32> %dummy) #0 {
-; CHECK-LABEL: define <4 x i32> @test_cse3(
-; CHECK-SAME: ptr [[A:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]], <4 x i32> [[DUMMY:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_COND:.*]]
-; CHECK:       [[FOR_COND]]:
-; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY:.*]] ]
-; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ [[DUMMY:%.*]], %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[VLD2:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x2.v4i32.p0(ptr [[A]])
-; CHECK-NEXT:    [[VLD2_FCA_0_EXTRACT:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLD2]], 0
-; CHECK-NEXT:    [[CALL]] = call <4 x i32> @vaddq_s32(<4 x i32> [[VLD2_FCA_0_EXTRACT]], <4 x i32> [[VLD2_FCA_0_EXTRACT]])
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
-; CHECK-NEXT:    br label %[[FOR_COND]]
-; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    ret <4 x i32> [[RES_0]]
-;
-entry:
-; Check that the first @llvm.aarch64.neon.ld1x2 is optimized away by Early CSE.
-  %s.coerce.fca.0.extract = extractvalue [2 x <4 x i32>] %s.coerce, 0
-  %s.coerce.fca.1.extract = extractvalue [2 x <4 x i32>] %s.coerce, 1
-  br label %for.cond
-
-for.cond:                                         ; preds = %for.body, %entry
-  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %res.0 = phi <4 x i32> [ %dummy, %entry ], [ %call, %for.body ]
-  %cmp = icmp slt i32 %i.0, %n
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %vld1x2 = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x2.v4i32.p0(ptr %a)
-  %vld1x2.fca.0.extract = extractvalue { <4 x i32>, <4 x i32> } %vld1x2, 0
-  %vld1x2.fca.1.extract = extractvalue { <4 x i32>, <4 x i32> } %vld1x2, 1
-  %vld1x2.2 = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x2.v4i32.p0(ptr %a)
-  %vld1x2.2.fca.0.extract = extractvalue { <4 x i32>, <4 x i32> } %vld1x2.2, 0
-  %vld1x2.2.fca.1.extract = extractvalue { <4 x i32>, <4 x i32> } %vld1x2.2, 1
-  %call = call <4 x i32> @vaddq_s32(<4 x i32> %vld1x2.fca.0.extract, <4 x i32> %vld1x2.2.fca.0.extract)
-  %inc = add nsw i32 %i.0, 1
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  ret <4 x i32> %res.0
-}
-
-
-define <4 x i32> @test_nocse(ptr %a, ptr %b, [2 x <4 x i32>] %s.coerce, i32 %n, <4 x i32> %dummy) {
-; CHECK-LABEL: define <4 x i32> @test_nocse(
-; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]], <4 x i32> [[DUMMY:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[S_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 0
-; CHECK-NEXT:    [[S_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 1
-; CHECK-NEXT:    br label %[[FOR_COND:.*]]
-; CHECK:       [[FOR_COND]]:
-; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY:.*]] ]
-; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ [[DUMMY:%.*]], %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[S_COERCE_FCA_0_EXTRACT]] to <16 x i8>
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[S_COERCE_FCA_1_EXTRACT]] to <16 x i8>
-; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> [[S_COERCE_FCA_0_EXTRACT]], <4 x i32> [[S_COERCE_FCA_1_EXTRACT]], ptr [[A]])
-; CHECK-NEXT:    store i32 0, ptr [[B]], align 4
-; CHECK-NEXT:    [[VLD2:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x2.v4i32.p0(ptr [[A]])
-; CHECK-NEXT:    [[VLD2_FCA_0_EXTRACT:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLD2]], 0
-; CHECK-NEXT:    [[CALL]] = call <4 x i32> @vaddq_s32(<4 x i32> [[VLD2_FCA_0_EXTRACT]], <4 x i32> [[VLD2_FCA_0_EXTRACT]])
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
-; CHECK-NEXT:    br label %[[FOR_COND]]
-; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    ret <4 x i32> [[RES_0]]
-;
-entry:
-; Check that the store prevents @llvm.aarch64.neon.ld1x2 from being optimized
-; away by Early CSE.
-  %s.coerce.fca.0.extract = extractvalue [2 x <4 x i32>] %s.coerce, 0
-  %s.coerce.fca.1.extract = extractvalue [2 x <4 x i32>] %s.coerce, 1
-  br label %for.cond
-
-for.cond:                                         ; preds = %for.body, %entry
-  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %res.0 = phi <4 x i32> [ %dummy, %entry ], [ %call, %for.body ]
-  %cmp = icmp slt i32 %i.0, %n
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %0 = bitcast <4 x i32> %s.coerce.fca.0.extract to <16 x i8>
-  %1 = bitcast <4 x i32> %s.coerce.fca.1.extract to <16 x i8>
-  %2 = bitcast <16 x i8> %0 to <4 x i32>
-  %3 = bitcast <16 x i8> %1 to <4 x i32>
-  call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %2, <4 x i32> %3, ptr %a)
-  store i32 0, ptr %b, align 4
-  %vld1x2 = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x2.v4i32.p0(ptr %a)
-  %vld1x2.fca.0.extract = extractvalue { <4 x i32>, <4 x i32> } %vld1x2, 0
-  %vld1x2.fca.1.extract = extractvalue { <4 x i32>, <4 x i32> } %vld1x2, 1
-  %call = call <4 x i32> @vaddq_s32(<4 x i32> %vld1x2.fca.0.extract, <4 x i32> %vld1x2.fca.0.extract)
-  %inc = add nsw i32 %i.0, 1
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  ret <4 x i32> %res.0
-}
-
-define <4 x i32> @test_nocse2(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n, <4 x i32> %dummy) {
-; CHECK-LABEL: define <4 x i32> @test_nocse2(
-; CHECK-SAME: ptr [[A:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]], <4 x i32> [[DUMMY:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[S_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 0
-; CHECK-NEXT:    [[S_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 1
-; CHECK-NEXT:    br label %[[FOR_COND:.*]]
-; CHECK:       [[FOR_COND]]:
-; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY:.*]] ]
-; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ [[DUMMY:%.*]], %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[S_COERCE_FCA_0_EXTRACT]] to <16 x i8>
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[S_COERCE_FCA_1_EXTRACT]] to <16 x i8>
-; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> [[S_COERCE_FCA_0_EXTRACT]], <4 x i32> [[S_COERCE_FCA_1_EXTRACT]], ptr [[A]])
-; CHECK-NEXT:    [[VLD3:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x3.v4i32.p0(ptr [[A]])
-; CHECK-NEXT:    [[VLD3_FCA_0_EXTRACT:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLD3]], 0
-; CHECK-NEXT:    [[VLD3_FCA_2_EXTRACT:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLD3]], 2
-; CHECK-NEXT:    [[CALL]] = call <4 x i32> @vaddq_s32(<4 x i32> [[VLD3_FCA_0_EXTRACT]], <4 x i32> [[VLD3_FCA_2_EXTRACT]])
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
-; CHECK-NEXT:    br label %[[FOR_COND]]
-; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    ret <4 x i32> [[RES_0]]
-;
-entry:
-; Check that @llvm.aarch64.neon.ld1x3 is not optimized away by Early CSE due
-; to mismatch between st1x2 and ld1x3.
-  %s.coerce.fca.0.extract = extractvalue [2 x <4 x i32>] %s.coerce, 0
-  %s.coerce.fca.1.extract = extractvalue [2 x <4 x i32>] %s.coerce, 1
-  br label %for.cond
-
-for.cond:                                         ; preds = %for.body, %entry
-  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %res.0 = phi <4 x i32> [ %dummy, %entry ], [ %call, %for.body ]
-  %cmp = icmp slt i32 %i.0, %n
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %0 = bitcast <4 x i32> %s.coerce.fca.0.extract to <16 x i8>
-  %1 = bitcast <4 x i32> %s.coerce.fca.1.extract to <16 x i8>
-  %2 = bitcast <16 x i8> %0 to <4 x i32>
-  %3 = bitcast <16 x i8> %1 to <4 x i32>
-  call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %2, <4 x i32> %3, ptr %a)
-  %vld1x3 = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x3.v4i32.p0(ptr %a)
-  %vld1x3.fca.0.extract = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } %vld1x3, 0
-  %vld1x3.fca.2.extract = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } %vld1x3, 2
-  %call = call <4 x i32> @vaddq_s32(<4 x i32> %vld1x3.fca.0.extract, <4 x i32> %vld1x3.fca.2.extract)
-  %inc = add nsw i32 %i.0, 1
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  ret <4 x i32> %res.0
-}
-
-define <4 x i32> @test_nocse3(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n, <4 x i32> %dummy) {
-; CHECK-LABEL: define <4 x i32> @test_nocse3(
-; CHECK-SAME: ptr [[A:%.*]], [2 x <4 x i32>] [[S_COERCE:%.*]], i32 [[N:%.*]], <4 x i32> [[DUMMY:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[S_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 0
-; CHECK-NEXT:    [[S_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x <4 x i32>] [[S_COERCE]], 1
-; CHECK-NEXT:    br label %[[FOR_COND:.*]]
-; CHECK:       [[FOR_COND]]:
-; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY:.*]] ]
-; CHECK-NEXT:    [[RES_0:%.*]] = phi <4 x i32> [ [[DUMMY:%.*]], %[[ENTRY]] ], [ [[CALL:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[S_COERCE_FCA_0_EXTRACT]] to <16 x i8>
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[S_COERCE_FCA_1_EXTRACT]] to <16 x i8>
-; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x3.v4i32.p0(<4 x i32> [[S_COERCE_FCA_1_EXTRACT]], <4 x i32> [[S_COERCE_FCA_0_EXTRACT]], <4 x i32> [[S_COERCE_FCA_0_EXTRACT]], ptr [[A]])
-; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> [[S_COERCE_FCA_0_EXTRACT]], <4 x i32> [[S_COERCE_FCA_0_EXTRACT]], ptr [[A]])
-; CHECK-NEXT:    [[VLD3:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x3.v4i32.p0(ptr [[A]])
-; CHECK-NEXT:    [[VLD3_FCA_0_EXTRACT:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLD3]], 0
-; CHECK-NEXT:    [[CALL]] = call <4 x i32> @vaddq_s32(<4 x i32> [[VLD3_FCA_0_EXTRACT]], <4 x i32> [[VLD3_FCA_0_EXTRACT]])
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
-; CHECK-NEXT:    br label %[[FOR_COND]]
-; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    ret <4 x i32> [[RES_0]]
-;
-entry:
-; Check that @llvm.aarch64.neon.st1x3 is not optimized away by Early CSE due to
-; mismatch between st1x2 and st1x3.
-  %s.coerce.fca.0.extract = extractvalue [2 x <4 x i32>] %s.coerce, 0
-  %s.coerce.fca.1.extract = extractvalue [2 x <4 x i32>] %s.coerce, 1
-  br label %for.cond
-
-for.cond:                                         ; preds = %for.body, %entry
-  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %res.0 = phi <4 x i32> [ %dummy, %entry ], [ %call, %for.body ]
-  %cmp = icmp slt i32 %i.0, %n
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %0 = bitcast <4 x i32> %s.coerce.fca.0.extract to <16 x i8>
-  %1 = bitcast <4 x i32> %s.coerce.fca.1.extract to <16 x i8>
-  %2 = bitcast <16 x i8> %0 to <4 x i32>
-  %3 = bitcast <16 x i8> %1 to <4 x i32>
-  call void @llvm.aarch64.neon.st1x3.v4i32.p0(<4 x i32> %3, <4 x i32> %2, <4 x i32> %2, ptr %a)
-  call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %2, <4 x i32> %2, ptr %a)
-  %vld1x3 = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x3.v4i32.p0(ptr %a)
-  %vld1x3.fca.0.extract = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } %vld1x3, 0
-  %vld1x3.fca.1.extract = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } %vld1x3, 1
-  %call = call <4 x i32> @vaddq_s32(<4 x i32> %vld1x3.fca.0.extract, <4 x i32> %vld1x3.fca.0.extract)
-  %inc = add nsw i32 %i.0, 1
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  ret <4 x i32> %res.0
-}
-
-define void @test_ld1x4_st1x4_no_cse(ptr %p, <16 x i8> %A, <16 x i8> %B) {
-; CHECK-LABEL: define void @test_ld1x4_st1x4_no_cse(
-; CHECK-SAME: ptr [[P:%.*]], <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; Check that ld1x2 is optimized away by EarlyCSE.
+define <4 x i32> @test_cse_for_st1x2_ld1x2(ptr %p, <4 x i32> %A, <4 x i32> %B) {
+; CHECK-LABEL: define <4 x i32> @test_cse_for_st1x2_ld1x2(
+; CHECK-SAME: ptr [[P:%.*]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[LD:%.*]] = tail call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld1x4.v16i8.p0(ptr [[P]])
-; CHECK-NEXT:    [[EXT:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[LD]], 0
-; CHECK-NEXT:    tail call void @llvm.aarch64.neon.st1x4.v16i8.p0(<16 x i8> [[EXT]], <16 x i8> [[A]], <16 x i8> [[B]], <16 x i8> zeroinitializer, ptr [[P]])
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <4 x i32>, <4 x i32> } poison, <4 x i32> [[A]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <4 x i32>, <4 x i32> } [[TMP0]], <4 x i32> [[B]], 1
+; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> [[A]], <4 x i32> [[B]], ptr [[P]])
+; CHECK-NEXT:    ret <4 x i32> [[A]]
+;
+entry:
+  call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %A, <4 x i32> %B, ptr %p)
+  %ld = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x2.v4i32.p0(ptr %p)
+  %ext = extractvalue { <4 x i32>, <4 x i32> } %ld, 0
+  ret <4 x i32> %ext
+}
+
+; Currently, the redundant st1x2 in this case is not optimized by EarlyCSE.
+define void @test_no_cse_for_st1x2_st1x2_case1(ptr %p, <4 x i32> %A, <4 x i32> %B) {
+; CHECK-LABEL: define void @test_no_cse_for_st1x2_st1x2_case1(
+; CHECK-SAME: ptr [[P:%.*]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> [[A]], <4 x i32> [[B]], ptr [[P]])
+; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> [[A]], <4 x i32> [[B]], ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %ld = tail call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld1x4.v16i8.p0(ptr %p)
-  %ext = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %ld, 0
-  tail call void @llvm.aarch64.neon.st1x4.v16i8.p0(<16 x i8> %ext, <16 x i8> %A, <16 x i8> %B, <16 x i8> zeroinitializer, ptr %p)
+  call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %A, <4 x i32> %B, ptr %p)
+  call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %A, <4 x i32> %B, ptr %p)
   ret void
 }
 
-; Function Attrs: nounwind
-declare void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32>, <4 x i32>, ptr nocapture)
-
-; Function Attrs: nounwind
-declare void @llvm.aarch64.neon.st1x3.v4i32.p0(<4 x i32>, <4 x i32>, <4 x i32>, ptr nocapture)
-
-; Function Attrs: nounwind readonly
-declare { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x2.v4i32.p0(ptr)
-
-; Function Attrs: nounwind readonly
-declare { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x3.v4i32.p0(ptr)
-
-define internal fastcc <4 x i32> @vaddq_s32(<4 x i32> %__p0, <4 x i32> %__p1) {
-; CHECK-LABEL: define internal fastcc <4 x i32> @vaddq_s32(
-; CHECK-SAME: <4 x i32> [[__P0:%.*]], <4 x i32> [[__P1:%.*]]) #[[ATTR0]] {
+; Currently, the redundant st1x2 in this case is not optimized by EarlyCSE.
+define void @test_no_cse_for_st1x2_st1x2_case2(ptr %p, <4 x i32> %A, <4 x i32> %B) {
+; CHECK-LABEL: define void @test_no_cse_for_st1x2_st1x2_case2(
+; CHECK-SAME: ptr [[P:%.*]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[__P0]], [[__P1]]
-; CHECK-NEXT:    ret <4 x i32> [[ADD]]
+; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> [[A]], <4 x i32> [[A]], ptr [[P]])
+; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> [[A]], <4 x i32> [[B]], ptr [[P]])
+; CHECK-NEXT:    ret void
 ;
 entry:
-  %add = add <4 x i32> %__p0, %__p1
-  ret <4 x i32> %add
+  call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %A, <4 x i32> %A, ptr %p)
+  call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %A, <4 x i32> %B, ptr %p)
+  ret void
+}
+
+; Check that redundant ld1x2 is optimized away by EarlyCSE.
+define <4 x i32> @test_cse_for_ld1x2_ld1x2(ptr %p) {
+; CHECK-LABEL: define <4 x i32> @test_cse_for_ld1x2_ld1x2(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LD1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x2.v4i32.p0(ptr [[P]])
+; CHECK-NEXT:    [[EXT1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[LD1]], 0
+; CHECK-NEXT:    [[EXT2:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[LD1]], 1
+; CHECK-NEXT:    [[RES:%.*]] = add <4 x i32> [[EXT1]], [[EXT2]]
+; CHECK-NEXT:    ret <4 x i32> [[RES]]
+;
+entry:
+  %ld1 = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x2.v4i32.p0(ptr %p)
+  %ext1 = extractvalue { <4 x i32>, <4 x i32> } %ld1, 0
+  %ld2 = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x2.v4i32.p0(ptr %p)
+  %ext2 = extractvalue { <4 x i32>, <4 x i32> } %ld2, 1
+  %res = add <4 x i32> %ext1, %ext2
+  ret <4 x i32> %res
+}
+
+; Check that the store prevents ld1x2 from being optimized away by EarlyCSE.
+define <4 x i32> @test_no_cse_for_st1x2_store_ld1x2(ptr %p, ptr %q, <4 x i32> %A, <4 x i32> %B) {
+; CHECK-LABEL: define <4 x i32> @test_no_cse_for_st1x2_store_ld1x2(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> [[A]], <4 x i32> [[A]], ptr [[P]])
+; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
+; CHECK-NEXT:    [[LD:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x2.v4i32.p0(ptr [[P]])
+; CHECK-NEXT:    [[EXT:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[LD]], 0
+; CHECK-NEXT:    ret <4 x i32> [[EXT]]
+;
+entry:
+  call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %A, <4 x i32> %A, ptr %p)
+  store i32 0, ptr %q
+  %ld = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x2.v4i32.p0(ptr %p)
+  %ext = extractvalue { <4 x i32>, <4 x i32> } %ld, 0
+  ret <4 x i32> %ext
+}
+
+; Check that ld1x3 is not optimized away by EarlyCSE.
+define <4 x i32> @test_no_cse_for_st1x2_ld1x3(ptr %p, <4 x i32> %A, <4 x i32> %B) {
+; CHECK-LABEL: define <4 x i32> @test_no_cse_for_st1x2_ld1x3(
+; CHECK-SAME: ptr [[P:%.*]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> [[A]], <4 x i32> [[B]], ptr [[P]])
+; CHECK-NEXT:    [[LD:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x3.v4i32.p0(ptr [[P]])
+; CHECK-NEXT:    [[EXT:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[LD]], 0
+; CHECK-NEXT:    ret <4 x i32> [[EXT]]
+;
+entry:
+  call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %A, <4 x i32> %B, ptr %p)
+  %ld = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld1x3.v4i32.p0(ptr %p)
+  %ext = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } %ld, 0
+  ret <4 x i32> %ext
+}
+
+; Check that st1x3 is not optimized away by EarlyCSE.
+define void @test_no_cse_for_st1x3_st1x2(ptr %p, <4 x i32> %A, <4 x i32> %B) {
+; CHECK-LABEL: define void @test_no_cse_for_st1x3_st1x2(
+; CHECK-SAME: ptr [[P:%.*]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x3.v4i32.p0(<4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> [[B]], ptr [[P]])
+; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> [[A]], <4 x i32> [[A]], ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @llvm.aarch64.neon.st1x3.v4i32.p0(<4 x i32> %A, <4 x i32> %B, <4 x i32> %B, ptr %p)
+  call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %A, <4 x i32> %A, ptr %p)
+  ret void
+}
+
+; Check that st1x4 is not optimized away by EarlyCSE.
+define void @test_no_cse_for_ld1x4_st1x4(ptr %p, <16 x i8> %A, <16 x i8> %B) {
+; CHECK-LABEL: define void @test_no_cse_for_ld1x4_st1x4(
+; CHECK-SAME: ptr [[P:%.*]], <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LD:%.*]] = call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld1x4.v16i8.p0(ptr [[P]])
+; CHECK-NEXT:    [[EXT:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[LD]], 0
+; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x4.v16i8.p0(<16 x i8> [[EXT]], <16 x i8> [[A]], <16 x i8> [[B]], <16 x i8> zeroinitializer, ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %ld = call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld1x4.v16i8.p0(ptr %p)
+  %ext = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %ld, 0
+  call void @llvm.aarch64.neon.st1x4.v16i8.p0(<16 x i8> %ext, <16 x i8> %A, <16 x i8> %B, <16 x i8> zeroinitializer, ptr %p)
+  ret void
+}
+
+; Check that st1x4 is not optimized away by EarlyCSE.
+define void @test_no_cse_for_ld2_st1x2(ptr %p) {
+; CHECK-LABEL: define void @test_no_cse_for_ld2_st1x2(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LD:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld2.v4i32.p0(ptr [[P]])
+; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[LD]], 0
+; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[LD]], 1
+; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> [[X0]], <4 x i32> [[X1]], ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %ld = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld2.v4i32.p0(ptr %p)
+  %x0 = extractvalue { <4 x i32>, <4 x i32> } %ld, 0
+  %x1 = extractvalue { <4 x i32>, <4 x i32> } %ld, 1
+  call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %x0, <4 x i32> %x1, ptr %p)
+  ret void
+}
+
+; Check that ld1x4 is optimized away by EarlyCSE.
+define <16 x i8> @test_cse_for_st1x4_ld1x4(ptr %p, <16 x i8> %A, <16 x i8> %B) {
+; CHECK-LABEL: define <16 x i8> @test_cse_for_st1x4_ld1x4(
+; CHECK-SAME: ptr [[P:%.*]], <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } poison, <16 x i8> [[A]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[TMP0]], <16 x i8> [[A]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[TMP1]], <16 x i8> [[B]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[TMP2]], <16 x i8> [[B]], 3
+; CHECK-NEXT:    call void @llvm.aarch64.neon.st1x4.v16i8.p0(<16 x i8> [[A]], <16 x i8> [[A]], <16 x i8> [[B]], <16 x i8> [[B]], ptr [[P]])
+; CHECK-NEXT:    ret <16 x i8> [[A]]
+;
+entry:
+  call void @llvm.aarch64.neon.st1x4.v16i8.p0(<16 x i8> %A, <16 x i8> %A, <16 x i8> %B, <16 x i8> %B, ptr %p)
+  %ld = call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld1x4.v16i8.p0(ptr %p)
+  %ext = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %ld, 0
+  ret <16 x i8> %ext
 }
