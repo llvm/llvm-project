@@ -17,18 +17,11 @@ class TestCase(TestBase):
         frame = thread.GetFrameAtIndex(0)
 
         self._do_test(frame, "parent", "child")
-        self._do_test(frame, "vec", 1)
+        self._do_test(frame, "vec", 0)
 
-    def test_create_child_at_offset(self):
-        """Values returned by CreateChildAtOffset should return the synthetic parent from GetParent."""
-        self.build()
-        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec("main.cpp")
-        )
-        frame = thread.GetFrameAtIndex(0)
-
+        # Test Python synthetic formatters using CreateChildAtOffset.
         self.runCmd("command script import MyContainer_synthetic.py")
-        self._do_test(frame, "container", 1)
+        self._do_test(frame, "container", 0)
 
     def _do_test(
         self, frame: lldb.SBFrame, parent_name: str, child_key: Union[str, int]
@@ -43,7 +36,7 @@ class TestCase(TestBase):
             child = parent.GetChildMemberWithName(child_key)
         self.assertTrue(child.IsValid())
 
-        # GetParent of child should be the parent struct.
+        # GetParent of child should be the original parent.
         child_parent = child.GetParent()
         self.assertTrue(child_parent.IsValid())
         self.assertEqual(child_parent.name, parent_name)
