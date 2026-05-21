@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -954,9 +955,8 @@ static MemRefType withMemorySpace(MemRefType memrefTy, Attribute newMemSpace) {
 
 // Rewrite every `memref.alloca` not already in shared local memory (SLM) to
 // be in SLM (address space 3), and propagate the new memory space through
-// memref-producing aliasing users (memref.cast, memref.subview,
-// memref.expand_shape, memref.collapse_shape, memref.reinterpret_cast,
-// memref.transpose, memref.view). Consumers that take a memref operand but
+// memref-producing aliasing users (e.g. memref.cast, memref.subview,
+// memref.expand_shape, ...). Consumers that take a memref operand but
 // produce a non-memref result (e.g. vector.transfer_read, vector.load) are
 // left untouched: their operand type simply reflects the new memory space.
 //
@@ -967,10 +967,15 @@ static void promoteAllocasToSLM(Operation *root) {
   MLIRContext *ctx = root->getContext();
   Attribute slmAttr = IntegerAttr::get(IntegerType::get(ctx, 64), 3);
 
+  // A user is treated as a memref-producing alias (e.g. memref.cast,
+  // memref.subview, memref.expand_shape, ...) if it is side-effect free and
+  // produces at least one memref result. This excludes ops like memref.copy
+  // that have memory effects.
   auto isMemrefResultOp = [](Operation *op) {
-    return isa<memref::CastOp, memref::SubViewOp, memref::ExpandShapeOp,
-               memref::CollapseShapeOp, memref::ReinterpretCastOp,
-               memref::TransposeOp, memref::ViewOp>(op);
+    if (!isMemoryEffectFree(op))
+      return false;
+    return llvm::any_of(op->getResultTypes(),
+                        [](Type t) { return isa<MemRefType>(t); });
   };
 
   // Update `v`'s type to have SLM memory space, then walk forward through
