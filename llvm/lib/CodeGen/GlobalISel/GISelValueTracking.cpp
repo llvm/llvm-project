@@ -2150,18 +2150,58 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     const MachineMemOperand *MMO = *MI.memoperands_begin();
     return TyBits - MMO->getSizeInBits().getValue();
   }
-  case TargetOpcode::G_AND:
+  case TargetOpcode::G_AND: {
+    Register Op0 = MI.getOperand(1).getReg();
+    Register Op1 = MI.getOperand(2).getReg();
+
+    auto IsConstOne = [&](Register R) {
+      MachineInstr *Def = MRI.getVRegDef(R);
+      if (!Def || Def->getOpcode() != TargetOpcode::G_CONSTANT)
+        return false;
+
+      auto *C = Def->getOperand(1).getCImm();
+      return C && C->getValue().isOne();
+    };
+
+    auto IsCTPOP = [&](Register R) {
+      MachineInstr *Def = MRI.getVRegDef(R);
+      return Def && Def->getOpcode() == TargetOpcode::G_CTPOP;
+    };
+
+    if ((IsCTPOP(Op0) && IsConstOne(Op1)) ||
+        (IsCTPOP(Op1) && IsConstOne(Op0))) {
+      FirstAnswer = MRI.getType(R).getScalarSizeInBits();
+      break;
+    }
+
+    Register Src1 = MI.getOperand(1).getReg();
+    unsigned Src1NumSignBits =
+        computeNumSignBits(Src1, DemandedElts, Depth + 1);
+
+    if (Src1NumSignBits != 1) {
+      Register Src2 = MI.getOperand(2).getReg();
+      unsigned Src2NumSignBits =
+          computeNumSignBits(Src2, DemandedElts, Depth + 1);
+
+      FirstAnswer = std::min(Src1NumSignBits, Src2NumSignBits);
+    }
+
+    break;
+  }
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR: {
     Register Src1 = MI.getOperand(1).getReg();
     unsigned Src1NumSignBits =
         computeNumSignBits(Src1, DemandedElts, Depth + 1);
+
     if (Src1NumSignBits != 1) {
       Register Src2 = MI.getOperand(2).getReg();
       unsigned Src2NumSignBits =
           computeNumSignBits(Src2, DemandedElts, Depth + 1);
+
       FirstAnswer = std::min(Src1NumSignBits, Src2NumSignBits);
     }
+
     break;
   }
   case TargetOpcode::G_ASHR: {
