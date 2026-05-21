@@ -27,7 +27,7 @@ class JSONGenerator : public Generator {
   void serializeCommonChildren(
       const ScopeChildren &Children, json::Object &Obj,
       std::optional<ReferenceFunc> MDReferenceLambda = std::nullopt);
-  void serializeContexts(Info *I, llvm::StringMap<OwnedPtr<Info>> &Infos);
+  void serializeContexts(Info *I, llvm::StringMap<Info *> &Infos);
   void serializeInfo(const ConstraintInfo &I, Object &Obj);
   void serializeInfo(const TemplateInfo &Template, Object &Obj);
   void serializeInfo(const ConceptInfo &I, Object &Obj);
@@ -70,7 +70,7 @@ public:
   static const char *Format;
 
   Error generateDocumentation(StringRef RootDir,
-                              llvm::StringMap<OwnedPtr<doc::Info>> Infos,
+                              llvm::StringMap<doc::Info *> Infos,
                               const ClangDocContext &CDCtx,
                               std::string DirName) override;
   Error createResources(ClangDocContext &CDCtx) override;
@@ -920,8 +920,7 @@ Error JSONGenerator::serializeIndex(StringRef RootDir) {
   return Error::success();
 }
 
-void JSONGenerator::serializeContexts(Info *I,
-                                      StringMap<OwnedPtr<Info>> &Infos) {
+void JSONGenerator::serializeContexts(Info *I, StringMap<Info *> &Infos) {
   if (I->USR == GlobalNamespaceID)
     return;
   auto ParentUSR = I->ParentUSR;
@@ -949,14 +948,15 @@ void JSONGenerator::serializeContexts(Info *I,
   }
 }
 
-Error JSONGenerator::generateDocumentation(
-    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
-    const ClangDocContext &CDCtx, std::string DirName) {
+Error JSONGenerator::generateDocumentation(StringRef RootDir,
+                                           llvm::StringMap<doc::Info *> Infos,
+                                           const ClangDocContext &CDCtx,
+                                           std::string DirName) {
   this->CDCtx = &CDCtx;
   StringSet<> CreatedDirs;
   StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
-    Info *Info = getPtr(Group.getValue());
+    Info *Info = Group.getValue();
 
     SmallString<128> Path;
     auto RootDirStr = RootDir.str() + "/json";

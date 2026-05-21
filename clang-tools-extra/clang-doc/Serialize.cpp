@@ -354,7 +354,7 @@ StringRef Serializer::getSourceCode(const Decl *D, const SourceRange &R) {
 }
 
 template <typename T>
-static std::string serialize(T &I, DiagnosticsEngine &Diags) {
+static std::string serialize(const T &I, DiagnosticsEngine &Diags) {
   SmallString<2048> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
   ClangDocBitcodeWriter Writer(Stream, Diags);
@@ -362,20 +362,20 @@ static std::string serialize(T &I, DiagnosticsEngine &Diags) {
   return Buffer.str().str();
 }
 
-std::string serialize(OwnedPtr<Info> &I, DiagnosticsEngine &Diags) {
-  switch (I->IT) {
+std::string serialize(const Info &I, DiagnosticsEngine &Diags) {
+  switch (I.IT) {
   case InfoType::IT_namespace:
-    return serialize(*static_cast<NamespaceInfo *>(getPtr(I)), Diags);
+    return serialize(static_cast<const NamespaceInfo &>(I), Diags);
   case InfoType::IT_record:
-    return serialize(*static_cast<RecordInfo *>(getPtr(I)), Diags);
+    return serialize(static_cast<const RecordInfo &>(I), Diags);
   case InfoType::IT_enum:
-    return serialize(*static_cast<EnumInfo *>(getPtr(I)), Diags);
+    return serialize(static_cast<const EnumInfo &>(I), Diags);
   case InfoType::IT_function:
-    return serialize(*static_cast<FunctionInfo *>(getPtr(I)), Diags);
+    return serialize(static_cast<const FunctionInfo &>(I), Diags);
   case InfoType::IT_concept:
-    return serialize(*static_cast<ConceptInfo *>(getPtr(I)), Diags);
+    return serialize(static_cast<const ConceptInfo &>(I), Diags);
   case InfoType::IT_variable:
-    return serialize(*static_cast<VarInfo *>(getPtr(I)), Diags);
+    return serialize(static_cast<const VarInfo &>(I), Diags);
   case InfoType::IT_friend:
   case InfoType::IT_typedef:
   case InfoType::IT_default:
@@ -506,7 +506,7 @@ void Serializer::InsertChild(ScopeChildren &Scope, VarInfo &Info) {
 // parameter. Since each variant is used once, it's not worth having a more
 // elaborate system to automatically deduce this information.
 template <typename ChildType>
-OwnedPtr<Info> Serializer::makeAndInsertIntoParent(ChildType &Child) {
+Info *Serializer::makeAndInsertIntoParent(ChildType &Child) {
   if (Child.Namespace.empty()) {
     // Insert into unnamed parent namespace.
     auto *ParentNS = allocateTransient<NamespaceInfo>();
@@ -1005,9 +1005,9 @@ void Serializer::parseBases(llvm::SmallVectorImpl<BaseRecordInfo> &Bases,
   }
 }
 
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const NamespaceDecl *D, const FullComment *FC,
-                     Location Loc, bool PublicOnly) {
+std::pair<Info *, Info *> Serializer::emitInfo(const NamespaceDecl *D,
+                                               const FullComment *FC,
+                                               Location Loc, bool PublicOnly) {
   auto *NSI = allocateTransient<NamespaceInfo>();
   bool IsInAnonymousNamespace = false;
   populateInfo(*NSI, D, FC, IsInAnonymousNamespace);
@@ -1017,7 +1017,7 @@ Serializer::emitInfo(const NamespaceDecl *D, const FullComment *FC,
   NSI->Name = D->isAnonymousNamespace() ? "@nonymous_namespace" : NSI->Name;
   NSI->Path = getInfoRelativePath(NSI->Namespace);
   if (NSI->Namespace.empty() && NSI->USR == SymbolID())
-    return {OwnedPtr<Info>{std::move(NSI)}, nullptr};
+    return {NSI, nullptr};
 
   // Namespaces are inserted into the parent by reference, so we need to return
   // both the parent and the record itself.
@@ -1080,9 +1080,9 @@ void Serializer::parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
     RI.Friends = allocateArray<FriendInfo>(LocalFriends, TransientArena);
 }
 
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
-                     bool PublicOnly) {
+std::pair<Info *, Info *> Serializer::emitInfo(const RecordDecl *D,
+                                               const FullComment *FC,
+                                               Location Loc, bool PublicOnly) {
 
   auto *RI = allocateTransient<RecordInfo>();
   bool IsInAnonymousNamespace = false;
@@ -1164,9 +1164,9 @@ Serializer::emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
   return {std::move(RI), std::move(Parent)};
 }
 
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const FunctionDecl *D, const FullComment *FC, Location Loc,
-                     bool PublicOnly) {
+std::pair<Info *, Info *> Serializer::emitInfo(const FunctionDecl *D,
+                                               const FullComment *FC,
+                                               Location Loc, bool PublicOnly) {
   FunctionInfo *Func = allocateTransient<FunctionInfo>();
   bool IsInAnonymousNamespace = false;
   populateFunctionInfo(*Func, D, FC, Loc, IsInAnonymousNamespace);
@@ -1178,9 +1178,9 @@ Serializer::emitInfo(const FunctionDecl *D, const FullComment *FC, Location Loc,
   return {nullptr, makeAndInsertIntoParent(*Func)};
 }
 
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const CXXMethodDecl *D, const FullComment *FC,
-                     Location Loc, bool PublicOnly) {
+std::pair<Info *, Info *> Serializer::emitInfo(const CXXMethodDecl *D,
+                                               const FullComment *FC,
+                                               Location Loc, bool PublicOnly) {
   FunctionInfo *Func = allocateTransient<FunctionInfo>();
   bool IsInAnonymousNamespace = false;
   populateFunctionInfo(*Func, D, FC, Loc, IsInAnonymousNamespace);
@@ -1222,9 +1222,9 @@ void Serializer::extractCommentFromDecl(const Decl *D, TypedefInfo &Info) {
   }
 }
 
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
-                     bool PublicOnly) {
+std::pair<Info *, Info *> Serializer::emitInfo(const TypedefDecl *D,
+                                               const FullComment *FC,
+                                               Location Loc, bool PublicOnly) {
   TypedefInfo *Info = allocateTransient<TypedefInfo>();
   bool IsInAnonymousNamespace = false;
   populateInfo(*Info, D, FC, IsInAnonymousNamespace);
@@ -1254,9 +1254,9 @@ Serializer::emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
 
 // A type alias is a C++ "using" declaration for a type. It gets mapped to a
 // TypedefInfo with the IsUsing flag set.
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const TypeAliasDecl *D, const FullComment *FC,
-                     Location Loc, bool PublicOnly) {
+std::pair<Info *, Info *> Serializer::emitInfo(const TypeAliasDecl *D,
+                                               const FullComment *FC,
+                                               Location Loc, bool PublicOnly) {
   TypedefInfo *Info = allocateTransient<TypedefInfo>();
   bool IsInAnonymousNamespace = false;
   populateInfo(*Info, D, FC, IsInAnonymousNamespace);
@@ -1278,9 +1278,9 @@ Serializer::emitInfo(const TypeAliasDecl *D, const FullComment *FC,
   return {nullptr, makeAndInsertIntoParent(*Info)};
 }
 
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc,
-                     bool PublicOnly) {
+std::pair<Info *, Info *> Serializer::emitInfo(const EnumDecl *D,
+                                               const FullComment *FC,
+                                               Location Loc, bool PublicOnly) {
   EnumInfo *Enum = allocateTransient<EnumInfo>();
   bool IsInAnonymousNamespace = false;
   populateSymbolInfo(*Enum, D, FC, Loc, IsInAnonymousNamespace);
@@ -1299,9 +1299,10 @@ Serializer::emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc,
   return {nullptr, makeAndInsertIntoParent(*Enum)};
 }
 
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const ConceptDecl *D, const FullComment *FC,
-                     const Location &Loc, bool PublicOnly) {
+std::pair<Info *, Info *> Serializer::emitInfo(const ConceptDecl *D,
+                                               const FullComment *FC,
+                                               const Location &Loc,
+                                               bool PublicOnly) {
   ConceptInfo *Concept = allocateTransient<ConceptInfo>();
 
   bool IsInAnonymousNamespace = false;
@@ -1326,9 +1327,10 @@ Serializer::emitInfo(const ConceptDecl *D, const FullComment *FC,
   return {nullptr, makeAndInsertIntoParent(*Concept)};
 }
 
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const VarDecl *D, const FullComment *FC,
-                     const Location &Loc, bool PublicOnly) {
+std::pair<Info *, Info *> Serializer::emitInfo(const VarDecl *D,
+                                               const FullComment *FC,
+                                               const Location &Loc,
+                                               bool PublicOnly) {
   VarInfo *Var = allocateTransient<VarInfo>();
   bool IsInAnonymousNamespace = false;
   populateSymbolInfo(*Var, D, FC, Loc, IsInAnonymousNamespace);

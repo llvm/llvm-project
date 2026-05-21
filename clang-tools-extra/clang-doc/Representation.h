@@ -104,20 +104,14 @@ llvm::ArrayRef<T> deepCopyArray(llvm::ArrayRef<T> V,
   return llvm::ArrayRef<T>(Allocated, V.size());
 }
 
-// An abstraction for owned pointers. Initially mapped to OwnedPtr,
-// to be eventually transitioned to bare pointers in an arena.
-template <typename T> using OwnedPtr = T *;
-
 // A helper function to create an owned pointer, abstracting away the memory
 // allocation mechanism.
-template <typename T, typename... Args>
-OwnedPtr<T> allocateTransient(Args &&...args) {
+template <typename T, typename... Args> T *allocateTransient(Args &&...args) {
   return new (TransientArena.Allocate<T>()) T(std::forward<Args>(args)...);
 }
 
 // A helper function to create memory allocated in the TransientArena.
-template <typename T, typename... Args>
-OwnedPtr<T> allocatePersistent(Args &&...args) {
+template <typename T, typename... Args> T *allocatePersistent(Args &&...args) {
   return new (PersistentArena.Allocate<T>()) T(std::forward<Args>(args)...);
 }
 
@@ -126,10 +120,6 @@ template <typename T, typename... Args>
 T *allocatePtr(llvm::BumpPtrAllocator &Alloc, Args &&...args) {
   return new (Alloc.Allocate<T>()) T(std::forward<Args>(args)...);
 }
-
-// A helper function to access the underlying pointer from an owned pointer,
-// abstracting away the pointer dereferencing mechanism.
-template <typename T> T *getPtr(const OwnedPtr<T> &O) { return O; }
 
 template <typename T> struct InfoNode : public llvm::ilist_node<InfoNode<T>> {
   InfoNode(T *P) : Ptr(P) {}
@@ -190,14 +180,6 @@ template <typename T> InfoNode<T> *allocateListNodePersistent(T *Item) {
 // An abstraction for lists that are dynamically managed (inserted/removed).
 // To be eventually transitioned to llvm::simple_ilist.
 template <typename T> using DocList = llvm::simple_ilist<InfoNode<T>>;
-
-// An abstraction for dynamic lists of owned pointers.
-// To be eventually transitioned to llvm::simple_ilist<T*> or similar.
-template <typename T> using OwningPtrVec = std::vector<OwnedPtr<T>>;
-
-// An abstraction for arrays of owned pointers.
-// To be eventually transitioned to arena-allocated arrays of bare pointers.
-template <typename T> using OwningPtrArray = std::vector<OwnedPtr<T>>;
 
 // SHA1'd hash of a USR.
 using SymbolID = std::array<uint8_t, 20>;
@@ -837,8 +819,7 @@ llvm::Expected<Info *> mergeInfos(SmallVectorImpl<Info *> &Values);
 
 // Merges a single new Info into an existing Reduced Info (allocating it if
 // needed).
-llvm::Error mergeSingleInfo(doc::OwnedPtr<doc::Info> &Reduced,
-                            doc::OwnedPtr<doc::Info> &&NewInfo,
+llvm::Error mergeSingleInfo(doc::Info *&Reduced, doc::Info *NewInfo,
                             llvm::BumpPtrAllocator &Arena);
 
 struct ClangDocContext {
