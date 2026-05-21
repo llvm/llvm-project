@@ -5621,13 +5621,13 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 
   if (!OrigLoop->isInnermost()) {
     // For outer loops, computeMaxVF returns a single non-scalar VF; build a
-    // plan for only that VF.
-    auto VPlan0 = buildVPlan0();
-    if (!VPlan0)
+    // plan for that VF only.
+    auto VPlan1 = tryToBuildVPlan1();
+    if (!VPlan1)
       return;
     ElementCount VF =
         MaxFactors.FixedVF ? MaxFactors.FixedVF : MaxFactors.ScalableVF;
-    buildVPlans(*VPlan0, VF, VF);
+    buildVPlans(*VPlan1, VF, VF);
     LLVM_DEBUG(printPlans(dbgs()));
     return;
   }
@@ -5661,7 +5661,6 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 
   ElementCount MaxUserVF =
       UserVF.isScalable() ? MaxFactors.ScalableVF : MaxFactors.FixedVF;
-
   if (UserVF) {
     if (!ElementCount::isKnownLE(UserVF, MaxUserVF)) {
       reportVectorizationInfo(
@@ -5670,6 +5669,8 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     } else {
       assert(isPowerOf2_32(UserVF.getKnownMinValue()) &&
              "VF needs to be a power of two");
+      // Collect the instructions (and their associated costs) that will be more
+      // profitable to scalarize.
       CM.collectNonVectorizedAndSetWideningDecisions(UserVF);
       ElementCount EpilogueUserVF =
           ElementCount::getFixed(EpilogueVectorizationForceVF);
@@ -5677,12 +5678,12 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
                                ElementCount::isKnownLT(EpilogueUserVF, UserVF);
       if (UseEpilogueUserVF)
         CM.collectNonVectorizedAndSetWideningDecisions(EpilogueUserVF);
-      auto VPlan0 = buildVPlan0();
-      if (!VPlan0)
+      auto VPlan1 = tryToBuildVPlan1();
+      if (!VPlan1)
         return;
       if (UseEpilogueUserVF)
-        buildVPlans(*VPlan0, EpilogueUserVF, EpilogueUserVF);
-      buildVPlans(*VPlan0, UserVF, UserVF);
+        buildVPlans(*VPlan1, EpilogueUserVF, EpilogueUserVF);
+      buildVPlans(*VPlan1, UserVF, UserVF);
       if (!VPlans.empty() && VPlans.back()->getSingleVF() == UserVF) {
         // For scalar VF, skip VPlan cost check as VPlan cost is designed for
         // vector VFs only.
@@ -5713,11 +5714,11 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     CM.collectNonVectorizedAndSetWideningDecisions(VF);
   }
 
-  auto VPlan0 = buildVPlan0();
-  if (!VPlan0)
+  auto VPlan1 = tryToBuildVPlan1();
+  if (!VPlan1)
     return;
-  buildVPlans(*VPlan0, ElementCount::getFixed(1), MaxFactors.FixedVF);
-  buildVPlans(*VPlan0, ElementCount::getScalable(1), MaxFactors.ScalableVF);
+  buildVPlans(*VPlan1, ElementCount::getFixed(1), MaxFactors.FixedVF);
+  buildVPlans(*VPlan1, ElementCount::getScalable(1), MaxFactors.ScalableVF);
 
   LLVM_DEBUG(printPlans(dbgs()));
 }
@@ -6652,7 +6653,7 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
 // optimizations.
 static void printOptimizedVPlan(VPlan &) {}
 
-VPlanPtr LoopVectorizationPlanner::buildVPlan0() {
+VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   bool IsInnerLoop = OrigLoop->isInnermost();
 
   // Set up loop versioning for inner loops with memory runtime checks.
@@ -6720,7 +6721,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan0() {
   return VPlan0;
 }
 
-void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan0, ElementCount MinVF,
+void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
                                            ElementCount MaxVF) {
   if (ElementCount::isKnownGT(MinVF, MaxVF))
     return;
@@ -6729,7 +6730,7 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan0, ElementCount MinVF,
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     auto Plan =
-        tryToBuildVPlan(std::unique_ptr<VPlan>(VPlan0.duplicate()), SubRange);
+        tryToBuildVPlan(std::unique_ptr<VPlan>(VPlan1.duplicate()), SubRange);
     VF = SubRange.End;
 
     if (!Plan)

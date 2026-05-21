@@ -924,6 +924,11 @@ public:
       bool DisableRuntimeUnroll);
 
 private:
+  /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
+  /// scalar transformations applied. Returns null if an initial VPlan cannot be
+  /// built.
+  VPlanPtr tryToBuildVPlan1();
+
   /// Build a VPlan using VPRecipes according to the information gathered by
   /// Legal and VPlan-based analysis. For outer loops, performs basic recipe
   /// conversion only. For inner loops, \p Range's largest included VF is
@@ -937,10 +942,7 @@ private:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is
   /// legal to vectorize the loop.
-  void buildVPlans(VPlan &VPlan0, ElementCount MinVF, ElementCount MaxVF);
-
-  /// Build base VPlan0 with scalar transformations applied.
-  VPlanPtr buildVPlan0();
+  void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF);
 
   /// Add ComputeReductionResult recipes to the middle block to compute the
   /// final reduction results. Add Select recipes to the latch block when
