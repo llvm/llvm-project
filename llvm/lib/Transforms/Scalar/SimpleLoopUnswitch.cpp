@@ -598,7 +598,7 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
         L.contains(BI.getSuccessor(1))) {
       LatchIdx = 0;
     }
-    if (BI.getSuccessor(1) == L.getLoopLatch() &&
+    else if (BI.getSuccessor(1) == L.getLoopLatch() &&
         L.contains(BI.getSuccessor(0))) {
       LatchIdx = 1;
     }
@@ -611,21 +611,28 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
       !llvm::any_of(*L.getLoopLatch(),
                     [](Instruction &I) { return I.mayHaveSideEffects(); })) {
 
-    SmallVector<cfg::Update<BasicBlock *>, 2> Updates;
-    Updates.push_back(
-        {cfg::UpdateKind::Delete, BI.getParent(), BI.getSuccessor(*LatchIdx)});
-    Updates.push_back(
-        {cfg::UpdateKind::Insert, BI.getParent(), L.getUniqueLatchExitBlock()});
-    L.getLoopLatch()->removePredecessor(BI.getParent());
-    BI.setSuccessor(*LatchIdx, L.getUniqueLatchExitBlock());
-    for (PHINode &PN : L.getUniqueLatchExitBlock()->phis()) {
-      Value *V = PN.getIncomingValueForBlock(L.getLoopLatch());
-      PN.addIncoming(V, BI.getParent());
+    // We need to prove the loop is finite, otherwise this change will convert
+    // it to a finite loop. This conservative check is good enough as we are
+    // mostly interested in perfect countable loop nests that perform
+    // calculations on arrays.
+    const SCEV *MaxBECount = SE->getConstantMaxBackedgeTakenCount(&L);
+    if (!isa<SCEVCouldNotCompute>(MaxBECount)) {
+      SmallVector<cfg::Update<BasicBlock *>, 2> Updates;
+      Updates.push_back(
+          {cfg::UpdateKind::Delete, BI.getParent(), BI.getSuccessor(*LatchIdx)});
+      Updates.push_back(
+          {cfg::UpdateKind::Insert, BI.getParent(), L.getUniqueLatchExitBlock()});
+      L.getLoopLatch()->removePredecessor(BI.getParent());
+      BI.setSuccessor(*LatchIdx, L.getUniqueLatchExitBlock());
+      for (PHINode &PN : L.getUniqueLatchExitBlock()->phis()) {
+        Value *V = PN.getIncomingValueForBlock(L.getLoopLatch());
+        PN.addIncoming(V, BI.getParent());
+      }
+      DT.applyUpdates(Updates);
+      if (MSSAU)
+        MSSAU->applyUpdates(Updates, DT);
+      ModifiedBranch = true;
     }
-    DT.applyUpdates(Updates);
-    if (MSSAU)
-      MSSAU->applyUpdates(Updates, DT);
-    ModifiedBranch = true;
   }
 
   // Check that one of the branch's successors exits, and which one.
