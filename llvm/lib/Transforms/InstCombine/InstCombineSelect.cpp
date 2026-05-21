@@ -668,9 +668,8 @@ static Value *canoncalizeSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
     std::swap(TVal, FVal);
     Pred = ICmpInst::getInversePredicate(Pred);
   }
-  if (!match(TVal, m_Zero())) {
+  if (!match(TVal, m_Zero()))
     return nullptr;
-  }
 
   if (Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE) {
     std::swap(CmpLHS, CmpRHS);
