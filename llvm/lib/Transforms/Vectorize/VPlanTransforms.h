@@ -94,8 +94,7 @@ struct VPlanTransforms {
   /// The created loop is wrapped in an initial skeleton to facilitate
   /// vectorization, consisting of a vector pre-header, an exit block for the
   /// main vector loop (middle.block) and a new block as preheader of the scalar
-  /// loop (scalar.ph). See below for an illustration. It also adds a canonical
-  /// IV and its increment, using \p InductionTy and \p IVDL, and creates a
+  /// loop (scalar.ph). See below for an illustration. It also creates a
   /// VPValue expression for the original trip count.
   ///
   ///    [ ] <-- Plan's entry VPIRBasicBlock, wrapping the original loop's
@@ -129,8 +128,12 @@ struct VPlanTransforms {
   ///     \  v
   ///      >[ ]     <-- original loop exit block(s), wrapped in VPIRBasicBlocks.
   LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan>
-  buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy, DebugLoc IVDL,
+  buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
               PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
+
+  /// Add a canonical IV and its increment, using \p InductionTy and \p DL to \p
+  /// Plan
+  static void addCanonicalIVRecipes(VPlan &Plan, DebugLoc DL);
 
   /// Replace VPPhi recipes in \p Plan's header with corresponding
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and
@@ -164,15 +167,13 @@ struct VPlanTransforms {
   /// be added to the middle block.
   LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan, bool TailFolded);
 
-  // Create a check to \p Plan to see if the vector loop should be executed.
-  // If \p CheckBlock is non-null, the compare and branch are placed there;
-  // ExpandSCEV recipes are always placed in Entry.
+  // Create a check in \p CheckBlock to see if the vector loop should be
+  // executed.
   static void addMinimumIterationCheck(
       VPlan &Plan, ElementCount VF, unsigned UF,
       ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
       bool TailFolded, Loop *OrigLoop, const uint32_t *MinItersBypassWeights,
-      DebugLoc DL, PredicatedScalarEvolution &PSE,
-      VPBasicBlock *CheckBlock = nullptr);
+      DebugLoc DL, PredicatedScalarEvolution &PSE, VPBasicBlock *CheckBlock);
 
   /// Add a new check block before the vector preheader to \p Plan to check if
   /// the main vector loop should be executed (TC >= VF * UF).
@@ -385,11 +386,6 @@ struct VPlanTransforms {
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
 
-  /// Hoist single-scalar loads with invariant addresses out of the vector loop
-  /// to the preheader, if they are proven not to alias with any stores in the
-  /// plan using noalias metadata.
-  static void hoistInvariantLoads(VPlan &Plan);
-
   /// Hoist predicated loads from the same address to the loop entry block, if
   /// they are guaranteed to execute on both paths (i.e., in replicate regions
   /// with complementary masks P and NOT P).
@@ -537,6 +533,12 @@ struct VPlanTransforms {
   /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains
   /// enabled by prior widening of consecutive memory operations for now.
   static void makeScalarizationDecisions(VPlan &Plan, VFRange &Range);
+
+  /// Convert call VPInstructions in \p Plan into widened call, vector
+  /// intrinsic or replicate recipes based on a cost comparison via \p CostCtx.
+  static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
+                                        VPRecipeBuilder &RecipeBuilder,
+                                        VPCostContext &CostCtx);
 };
 
 } // namespace llvm

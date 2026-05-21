@@ -2181,3 +2181,17 @@ loop:
 exit:
   ret void
 }
+
+define void @add_nuw_zext_no_flags(i32 %x) {
+; CHECK-LABEL: 'add_nuw_zext_no_flags'
+; CHECK-NEXT:  Classifying expressions for: @add_nuw_zext_no_flags
+; CHECK-NEXT:    %add = add nuw i32 %x, 1
+; CHECK-NEXT:    --> (1 + %x) U: full-set S: full-set
+; CHECK-NEXT:    %zext = zext i32 %add to i64
+; CHECK-NEXT:    --> (zext i32 (1 + %x) to i64) U: [0,4294967296) S: [0,4294967296)
+; CHECK-NEXT:  Determining loop execution counts for: @add_nuw_zext_no_flags
+;
+  %add = add nuw i32 %x, 1
+  %zext = zext i32 %add to i64
+  ret void
+}

@@ -30,8 +30,8 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[SDIVWr:%[0-9]+]]:gpr32 = SDIVWr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $w0 = COPY [[SDIVWr]]
-    %0(s32) = COPY $w0
-    %1(s32) = COPY $w1
-    %2(s32) = G_INTRINSIC intrinsic(@llvm.aarch64.sdiv.i32), %0, %1
-    $w0 = COPY %2(s32)
+    %0(i32) = COPY $w0
+    %1(i32) = COPY $w1
+    %2(i32) = G_INTRINSIC intrinsic(@llvm.aarch64.sdiv.i32), %0, %1
+    $w0 = COPY %2(i32)
 ...

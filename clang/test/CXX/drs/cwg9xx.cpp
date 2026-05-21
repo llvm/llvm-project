@@ -22,6 +22,34 @@ static_assert(alignof(int[][2]) == alignof(int[2]), "");
 #endif
 } // namespace cwg930
 
+namespace cwg941 { // cwg941: 3.9
+#if __cplusplus >= 201103L
+template <typename>
+void f() = delete;
+
+template<> void f<int>() {}
+
+template <typename>
+struct A {
+  void f() = delete;
+
+  template <typename>
+  void g() = delete;
+};
+
+template<> void A<int>::f() {}
+
+template<> template<> void A<int>::g<int>() {}
+
+struct B {
+  template <typename>
+  void f() = delete;
+};
+
+template<> void B::f<int>() {}
+#endif
+} // namespace cwg941
+
 namespace cwg948 { // cwg948: 3.7
 #if __cplusplus >= 201103L
   class A {
@@ -50,6 +78,16 @@ namespace cwg948 { // cwg948: 3.7
   }
 #endif
 } // namespace cwg948
+
+namespace cwg950 { // cwg950: 3.1
+#if __cplusplus >= 201103L
+struct A {};
+struct B : decltype(A()) {};
+
+template <typename T>
+struct C : decltype(T()) {};
+#endif
+} // namespace cwg950
 
 namespace cwg952 { // cwg952: 2.8
 namespace example1 {
