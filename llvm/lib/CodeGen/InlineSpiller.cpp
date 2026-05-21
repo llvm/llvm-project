@@ -1837,15 +1837,22 @@ void HoistSpillHelper::hoistAllSpills() {
 
   // Flush vregs that were unassigned from the matrix during shrinking but
   // were not split (so LRE_DidCloneVirtReg never re-assigned them).
-  for (auto &[VReg, PhysReg] : PendingReassignments)
-    if (LIS.hasInterval(VReg))
-      Matrix->assign(LIS.getInterval(VReg), PhysReg);
+  for (auto &[VReg, PhysReg] : PendingReassignments) {
+    assert(Matrix && LIS.hasInterval(VReg) &&
+           "Pending reassignment without matrix or live interval");
+    Matrix->assign(LIS.getInterval(VReg), PhysReg);
+  }
   PendingReassignments.clear();
 }
 
+/// Called when a virtual register's live interval is about to be shrunk.
+/// Unassign from the matrix so the shrunk interval can be re-assigned by a
+/// later LRE_DidCloneVirtReg or by hoistAllSpills' flush, and stash the
+/// physreg in PendingReassignments since the unassign clears VRM.
 void HoistSpillHelper::LRE_WillShrinkVirtReg(Register VirtReg) {
   if (!Matrix || !VRM.hasPhys(VirtReg) || !LIS.hasInterval(VirtReg))
     return;
+
   MCRegister PhysReg = VRM.getPhys(VirtReg);
   LiveInterval &LI = LIS.getInterval(VirtReg);
   Matrix->unassign(LI, /*ClearAllReferencingSegments=*/true);
@@ -1876,7 +1883,7 @@ void HoistSpillHelper::LRE_DidCloneVirtReg(Register New, Register Old) {
 
   auto PendingIt = PendingReassignments.find(Old);
   if (PendingIt != PendingReassignments.end()) {
-    // LRE_WillShrinkVirtReg only enrolls regs that had a live interval.
+    // Old was already unassigned in LRE_WillShrinkVirtReg.
     assert(LIS.hasInterval(Old) &&
            "Pending reassignment for vreg without live interval");
     MCRegister PhysReg = PendingIt->second;
@@ -1888,6 +1895,7 @@ void HoistSpillHelper::LRE_DidCloneVirtReg(Register New, Register Old) {
   } else if (VRM.hasPhys(Old)) {
     MCRegister PhysReg = VRM.getPhys(Old);
     if (Matrix && LIS.hasInterval(Old)) {
+      // Drop the stale pre-clone segments before reassigning Old's current LI.
       Matrix->unassign(LIS.getInterval(Old),
                        /*ClearAllReferencingSegments=*/true);
       AssignToPhys(Old, PhysReg);
