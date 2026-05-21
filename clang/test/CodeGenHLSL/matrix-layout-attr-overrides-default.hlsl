@@ -130,15 +130,46 @@ export float3x2 transpose_cm(column_major float2x3 m) { return transpose(m); }
 // source matrix uses the operand's per-decl layout to flatten indices.
 // -----------------------------------------------------------------------------
 
+typedef row_major    float2x2 RM22;
+typedef column_major float2x2 CM22;
+typedef row_major    float3x3 RM33;
+typedef column_major float3x3 CM33;
+
 // Row-major source 3x2 -> row-major dest 2x2: flat row-major mask is {0,1,2,3}.
-export float2x2 truncate_rm(row_major float3x2 m) { return (float2x2)m; }
+export row_major float2x2 truncate_rm(row_major float3x2 m) { return (RM22)m; }
 // CHECK-LABEL: define {{.*}} <4 x float> @_Z11truncate_rmu11matrix_typeILm3ELm2EfE
 // CHECK: shufflevector <6 x float> %{{.*}}, <6 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 
 // Column-major source 3x2 -> column-major dest 2x2: flat column-major mask is {0,1,3,4}.
-export float2x2 truncate_cm(column_major float3x2 m) { return (float2x2)m; }
+export column_major float2x2 truncate_cm(column_major float3x2 m) { return (CM22)m; }
 // CHECK-LABEL: define {{.*}} <4 x float> @_Z11truncate_cmu11matrix_typeILm3ELm2EfE
 // CHECK: shufflevector <6 x float> %{{.*}}, <6 x float> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 4>
+
+// -----------------------------------------------------------------------------
+// CK_HLSLMatrixTruncation cross-layout: when source and destination carry
+// different layout keywords, `IsSrcRowMajor` and `IsDstRowMajor` differ. The
+// source indices flatten using the source layout while the destination
+// positions flatten using the destination layout. This is independent of the
+// `-fmatrix-memory-layout=` default.
+// -----------------------------------------------------------------------------
+
+// Row-major src 3x4 -> column-major dst 3x3.
+// src idx (R,C) = R*4+C; dst slot (R,C) = C*3+R.
+//   (0,0)->mask[0]=0  (0,1)->mask[3]=1  (0,2)->mask[6]=2
+//   (1,0)->mask[1]=4  (1,1)->mask[4]=5  (1,2)->mask[7]=6
+//   (2,0)->mask[2]=8  (2,1)->mask[5]=9  (2,2)->mask[8]=10
+export column_major float3x3 truncate_rm_to_cm(row_major float3x4 m) { return (CM33)m; }
+// CHECK-LABEL: define {{.*}} <9 x float> @_Z17truncate_rm_to_cmu11matrix_typeILm3ELm4EfE
+// CHECK: shufflevector <12 x float> %{{.*}}, <12 x float> poison, <9 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10>
+
+// Column-major src 3x4 -> row-major dst 3x3.
+// src idx (R,C) = C*3+R; dst slot (R,C) = R*3+C.
+//   (0,0)->mask[0]=0  (0,1)->mask[1]=3  (0,2)->mask[2]=6
+//   (1,0)->mask[3]=1  (1,1)->mask[4]=4  (1,2)->mask[5]=7
+//   (2,0)->mask[6]=2  (2,1)->mask[7]=5  (2,2)->mask[8]=8
+export row_major float3x3 truncate_cm_to_rm(column_major float3x4 m) { return (RM33)m; }
+// CHECK-LABEL: define {{.*}} <9 x float> @_Z17truncate_cm_to_rmu11matrix_typeILm3ELm4EfE
+// CHECK: shufflevector <12 x float> %{{.*}}, <12 x float> poison, <9 x i32> <i32 0, i32 3, i32 6, i32 1, i32 4, i32 7, i32 2, i32 5, i32 8>
 
 // -----------------------------------------------------------------------------
 // Array of matrix: the per-decl layout attribute propagates through

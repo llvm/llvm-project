@@ -3181,14 +3181,15 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       assert(NumRows <= SrcMatTy->getNumRows());
       assert(NumCols <= SrcMatTy->getNumColumns());
 
-      // isMatrixRowMajor needs the full sugared QualType to find matrix layout
-      // attrs. So use E->getType() (the source QualType) rather than
-      // SrcMatTy b/c getAs<ConstantMatrixType>() strips the sugar.
-      bool IsRowMajor = isMatrixRowMajor(CGF.getLangOpts(), E->getType());
+      // isMatrix[Src|Dst]RowMajor needs the full sugared QualType to find
+      // matrix layout attrs. So use E->getType() &  DestTy rather than SrcMatTy
+      // & MatTy b/c getAs<ConstantMatrixType>() strips the sugar.
+      bool IsSrcRowMajor = isMatrixRowMajor(CGF.getLangOpts(), E->getType());
+      bool IsDstRowMajor = isMatrixRowMajor(CGF.getLangOpts(), DestTy);
       for (unsigned R = 0; R < NumRows; R++)
         for (unsigned C = 0; C < NumCols; C++)
-          Mask[MatTy->getFlattenedIndex(R, C, IsRowMajor)] =
-              SrcMatTy->getFlattenedIndex(R, C, IsRowMajor);
+          Mask[MatTy->getFlattenedIndex(R, C, IsDstRowMajor)] =
+              SrcMatTy->getFlattenedIndex(R, C, IsSrcRowMajor);
 
       return Builder.CreateShuffleVector(Mat, Mask, "trunc");
     }
