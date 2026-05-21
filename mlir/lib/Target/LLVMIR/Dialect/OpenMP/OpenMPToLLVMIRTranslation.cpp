@@ -5950,6 +5950,42 @@ static void mapParentWithMembers(
       llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
   auto *parentMapper = mapData.Mappers[mapDataIndex];
 
+  auto getLowAndHighAddr = [&builder, &mapData,
+                            &moduleTranslation](omp::MapInfoOp mapOp) {
+    llvm::Value *lowAddr, *highAddr;
+    int firstMemberIdx = getMapDataMemberIdx(
+        mapData, getFirstOrLastMappedMemberPtr(mapOp, true));
+    lowAddr = builder.CreatePointerCast(mapData.BasePointers[firstMemberIdx],
+                                        builder.getPtrTy());
+
+    int lastMemberIdx = getMapDataMemberIdx(
+        mapData, getFirstOrLastMappedMemberPtr(mapOp, false));
+    auto lastMemberMapInfo =
+        cast<omp::MapInfoOp>(mapData.MapClause[lastMemberIdx]);
+
+    // NOTE: Currently, for RefPtee the BaseType is set to the varPtrPtr field,
+    // which is the pointer datas type and not the member within the structure
+    // that it's part of, so we have to make sure we use the member type in this
+    // case when calculating the parents size offsets.
+    // TODO: May be good to extend MapInfoData to support tracking of both
+    // VarPtr/VarPtrPtr BaseType's to better distinguish what's being used more
+    // consistently.
+    bool isRefPteeMap = bitEnumContainsAll(lastMemberMapInfo.getMapType(),
+                                           omp::ClauseMapFlags::ref_ptee) &&
+                        !bitEnumContainsAll(lastMemberMapInfo.getMapType(),
+                                            omp::ClauseMapFlags::ref_ptr);
+    llvm::Type *castType = mapData.BaseType[lastMemberIdx];
+    if (isRefPteeMap)
+      castType =
+          moduleTranslation.convertType(lastMemberMapInfo.getVarPtrType());
+    highAddr = builder.CreatePointerCast(
+        builder.CreateGEP(castType, mapData.BasePointers[lastMemberIdx],
+                          builder.getInt64(1)),
+        builder.getPtrTy());
+    return std::make_pair(std::make_pair(lowAddr, firstMemberIdx),
+                          std::make_pair(highAddr, lastMemberIdx));
+  };
+
   // Map the first segment of the parent. If a user-defined mapper is attached,
   // include the parent's to/from-style bits (and common modifiers) in this
   // base entry so the mapper receives correct copy semantics via its 'type'
@@ -5996,7 +6032,6 @@ static void mapParentWithMembers(
   // Fortran pointers and allocatables, the mapping of the pointed to
   // data by the descriptor (which itself, is a structure containing
   // runtime information on the dynamically allocated data).
-
   llvm::Value *lowAddr, *highAddr;
   if (!parentClause.getPartialMap()) {
     lowAddr = builder.CreatePointerCast(mapData.Pointers[mapDataIndex],
@@ -6007,37 +6042,11 @@ static void mapParentWithMembers(
         builder.getPtrTy());
     combinedInfo.Pointers.emplace_back(mapData.Pointers[mapDataIndex]);
   } else {
-    auto mapOp = dyn_cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
-    int firstMemberIdx = getMapDataMemberIdx(
-        mapData, getFirstOrLastMappedMemberPtr(mapOp, true));
-    lowAddr = builder.CreatePointerCast(mapData.BasePointers[firstMemberIdx],
-                                        builder.getPtrTy());
-
-    int lastMemberIdx = getMapDataMemberIdx(
-        mapData, getFirstOrLastMappedMemberPtr(mapOp, false));
-    auto lastMemberMapInfo =
-        cast<omp::MapInfoOp>(mapData.MapClause[lastMemberIdx]);
-
-    // NOTE: Currently, for RefPtee the BaseType is set to the varPtrPtr field,
-    // which is the pointer datas type and not the member within the structure
-    // that it's part of, so we have to make sure we use the member type in this
-    // case when calculating the parents size offsets.
-    // TODO: May be good to extend MapInfoData to support tracking of both
-    // VarPtr/VarPtrPtr BaseType's to better distinguish what's being used more
-    // consistently.
-    bool isRefPteeMap = bitEnumContainsAll(lastMemberMapInfo.getMapType(),
-                                           omp::ClauseMapFlags::ref_ptee) &&
-                        !bitEnumContainsAll(lastMemberMapInfo.getMapType(),
-                                            omp::ClauseMapFlags::ref_ptr);
-    llvm::Type *castType = mapData.BaseType[lastMemberIdx];
-    if (isRefPteeMap)
-      castType =
-          moduleTranslation.convertType(lastMemberMapInfo.getVarPtrType());
-    highAddr = builder.CreatePointerCast(
-        builder.CreateGEP(castType, mapData.BasePointers[lastMemberIdx],
-                          builder.getInt64(1)),
-        builder.getPtrTy());
-    combinedInfo.Pointers.emplace_back(mapData.BasePointers[firstMemberIdx]);
+    auto lowAndHigh = getLowAndHighAddr(parentClause);
+    highAddr = std::get<0>(std::get<1>(lowAndHigh));
+    lowAddr = std::get<0>(std::get<0>(lowAndHigh));
+    combinedInfo.Pointers.emplace_back(
+        mapData.BasePointers[std::get<1>(std::get<0>(lowAndHigh))]);
   }
 
   llvm::Value *size = builder.CreateIntCast(
@@ -6062,16 +6071,18 @@ static void mapParentWithMembers(
                        MapFlags::OMP_MAP_CLOSE;
     ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
 
-    llvm::SmallVector<size_t> overlapIdxs;
     // Find all of the members that "overlap", i.e. occlude other members that
     // were mapped alongside the parent, e.g. member [0], occludes
+    llvm::SmallVector<size_t> overlapIdxs;
     getOverlappedMembers(overlapIdxs, parentClause);
 
     // When we only have one overlap we skip the case that tries to segment the
-    // mapping as best it can without creating holes, as the calculation is more
-    // likely to have more overhead than anything we gain from mapping a smaller
-    // chunk of data. This can be seen in cases where we are mapping Fortran
-    // descriptors which are a special case of record type mapping.
+    // mapping as best it can without creating holes. This is because in these
+    // scenarios we have a singular map, so can reduce the complexity of the
+    // map or we have a pointer/descriptor map, in which case segmenting the
+    // map based on pointee record members doesn't make sense and will cause
+    // runtime issues. TODO: For the latter case we need a clearer method of
+    // checking this, the method is a tad overkill and non-obvious.
     //
     // The cases for close and update are unique edge cases where the segmenting
     // does not play well with the runtime currently.
@@ -6088,17 +6099,6 @@ static void mapParentWithMembers(
       combinedInfo.Pointers.emplace_back(mapData.Pointers[mapDataIndex]);
       combinedInfo.Sizes.emplace_back(mapData.Sizes[mapDataIndex]);
     } else {
-      // We need to make sure the overlapped members are sorted in order of
-      // lowest address to highest address
-      sortMapIndices(overlapIdxs, parentClause);
-
-      lowAddr = builder.CreatePointerCast(mapData.Pointers[mapDataIndex],
-                                          builder.getPtrTy());
-      highAddr = builder.CreatePointerCast(
-          builder.CreateConstGEP1_32(mapData.BaseType[mapDataIndex],
-                                     mapData.Pointers[mapDataIndex], 1),
-          builder.getPtrTy());
-
       // Currently, the return parameter should be the over-riding parent in
       // cases where we have a return parameter that is echoed to all members,
       // the main case of this currently is with fortran descriptors. It may
@@ -6106,44 +6106,9 @@ static void mapParentWithMembers(
       // members of derived types.
       mapFlag &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
 
-      // TODO: We may want to skip arrays/array sections in this as Clang does.
-      // It appears to be an optimisation rather than a necessity though,
-      // but this requires further investigation. However, we would have to make
-      // sure to not exclude maps with bounds that ARE pointers, as these are
-      // processed as seperate components, i.e. pointer + data.
-      for (auto v : overlapIdxs) {
-        auto mapDataOverlapIdx = getMapDataMemberIdx(
-            mapData,
-            cast<omp::MapInfoOp>(parentClause.getMembers()[v].getDefiningOp()));
-        auto isPtrMap = checkIfPointerMap(
-            llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataOverlapIdx]));
-        combinedInfo.Types.emplace_back(mapFlag);
-        combinedInfo.DevicePointers.emplace_back(
-            llvm::OpenMPIRBuilder::DeviceInfoTy::None);
-        combinedInfo.Mappers.emplace_back(nullptr);
-        combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
-            mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder));
-        combinedInfo.BasePointers.emplace_back(
-            mapData.BasePointers[mapDataIndex]);
-        combinedInfo.Pointers.emplace_back(lowAddr);
-        auto sizeCalc = builder.CreateIntCast(
-            builder.CreatePtrDiff(builder.getInt8Ty(),
-                                  mapData.OriginalValue[mapDataOverlapIdx],
-                                  lowAddr),
-            builder.getInt64Ty(), /*isSigned=*/true);
-        // In certain cases, we'll generate a size of 0 if we're not careful
-        // (e.g. if lowAddr happens to be the first member), which isn't
-        // correct, even if the runtimes is sometimes fine with it so, in these
-        // scenarios we select the types size instead.
-        auto sizeSel = builder.CreateSelect(
-            builder.CreateICmpNE(builder.getInt64(0), sizeCalc), sizeCalc,
-            isPtrMap ? llvm::ConstantExpr::getSizeOf(builder.getPtrTy())
-                     : mapData.Sizes[mapDataOverlapIdx]);
-        combinedInfo.Sizes.emplace_back(sizeSel);
-        lowAddr = builder.CreateConstGEP1_32(
-            isPtrMap ? builder.getPtrTy() : mapData.BaseType[mapDataOverlapIdx],
-            mapData.BasePointers[mapDataOverlapIdx], 1);
-      }
+      auto lowAndHigh = getLowAndHighAddr(parentClause);
+      highAddr = std::get<0>(std::get<1>(lowAndHigh));
+      lowAddr = std::get<0>(std::get<0>(lowAndHigh));
 
       combinedInfo.Types.emplace_back(mapFlag);
       combinedInfo.DevicePointers.emplace_back(
