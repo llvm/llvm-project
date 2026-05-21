@@ -189,22 +189,24 @@ void CallConvLoweringPass::runOnOperation() {
       signalPassFailure();
       return;
     }
-    for (Operation *callOp : callers.lookup(func))
+    for (Operation *callOp : callers.lookup(func)) {
       if (failed(rewriteCtx.rewriteCallSite(callOp, fc, builder))) {
         signalPassFailure();
         return;
       }
+    }
   }
 
   // Reject indirect calls when the module contains any ABI rewrite that
   // would need call-site lowering.  We cannot strip or coerce operands
   // without a resolved callee symbol.
   const FunctionClassification *rewriteFc = nullptr;
-  for (auto &kv : classifications)
+  for (auto &kv : classifications) {
     if (needsRewrite(kv.second)) {
       rewriteFc = &kv.second;
       break;
     }
+  }
   if (rewriteFc) {
     moduleOp.walk([&](cir::CallOp c) {
       if (!c.isIndirect())

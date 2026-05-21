@@ -217,16 +217,18 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   // attribute array would have stale entries that no longer match any
   // block argument.
   SmallVector<unsigned> ignored = ignoredArgIndices(fc);
-  if (!ignored.empty())
+  if (!ignored.empty()) {
     if (auto existing = funcOp->getAttrOfType<ArrayAttr>("arg_attrs")) {
       SmallVector<Attribute> kept;
       kept.reserve(newArgTypes.size());
-      for (auto [oldIdx, attr] : llvm::enumerate(existing.getValue()))
+      for (auto [oldIdx, attr] : llvm::enumerate(existing.getValue())) {
         if (oldIdx >= fc.argInfos.size() ||
             fc.argInfos[oldIdx].kind != ArgKind::Ignore)
           kept.push_back(attr);
+      }
       funcOp->setAttr("arg_attrs", ArrayAttr::get(ctx, kept));
     }
+  }
 
   return success();
 }
