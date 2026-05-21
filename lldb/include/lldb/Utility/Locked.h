@@ -11,6 +11,7 @@
 
 #include "llvm/Support/RWMutex.h"
 
+#include <cassert>
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
@@ -61,10 +62,18 @@ public:
   Locked() = default;
   Locked(mutex_type &m, PtrT p) : m_lock(m), m_ptr(std::move(p)) {}
   Locked(lock_type lock, PtrT p)
-      : m_lock(std::move(lock)), m_ptr(std::move(p)) {}
+      : m_lock(std::move(lock)), m_ptr(std::move(p)) {
+    assert(m_lock.owns_lock() && "Locked requires an owning lock");
+  }
 
-  Locked(Locked &&) noexcept = default;
-  Locked &operator=(Locked &&) noexcept = default;
+  Locked(Locked &&other)
+      : m_lock(std::move(other.m_lock)),
+        m_ptr(std::exchange(other.m_ptr, PtrT{})) {}
+  Locked &operator=(Locked &&other) {
+    m_lock = std::move(other.m_lock);
+    m_ptr = std::exchange(other.m_ptr, PtrT{});
+    return *this;
+  }
   Locked(const Locked &) = delete;
   Locked &operator=(const Locked &) = delete;
 
@@ -90,6 +99,20 @@ class SharedLocked
     : public detail::LockedAccessors<SharedLocked<PtrT, Mutex>, PtrT> {
   friend class detail::LockedAccessors<SharedLocked<PtrT, Mutex>, PtrT>;
 
+  // The class is intended to be instantiated only via the
+  // SharedLockedPtr/SP/UP aliases, which all bake in `const`. Enforcing it
+  // here catches direct uses that would otherwise hand readers a mutable
+  // pointer.
+  static constexpr bool PointeeIsConst = []() {
+    if constexpr (std::is_pointer_v<PtrT>)
+      return std::is_const_v<std::remove_pointer_t<PtrT>>;
+    else
+      return std::is_const_v<typename PtrT::element_type>;
+  }();
+  static_assert(PointeeIsConst,
+                "SharedLocked requires a pointer to a const-qualified type; "
+                "use the SharedLockedPtr/SP/UP aliases.");
+
 public:
   using mutex_type = Mutex;
   using lock_type = std::shared_lock<Mutex>;
@@ -99,12 +122,20 @@ public:
       : m_lock(std::make_shared<lock_type>(m)), m_ptr(std::move(p)) {}
   SharedLocked(lock_type lock, PtrT p)
       : m_lock(std::make_shared<lock_type>(std::move(lock))),
-        m_ptr(std::move(p)) {}
+        m_ptr(std::move(p)) {
+    assert(m_lock->owns_lock() && "SharedLocked requires an owning lock");
+  }
 
   SharedLocked(const SharedLocked &) = default;
   SharedLocked &operator=(const SharedLocked &) = default;
-  SharedLocked(SharedLocked &&) noexcept = default;
-  SharedLocked &operator=(SharedLocked &&) noexcept = default;
+  SharedLocked(SharedLocked &&other)
+      : m_lock(std::move(other.m_lock)),
+        m_ptr(std::exchange(other.m_ptr, PtrT{})) {}
+  SharedLocked &operator=(SharedLocked &&other) {
+    m_lock = std::move(other.m_lock);
+    m_ptr = std::exchange(other.m_ptr, PtrT{});
+    return *this;
+  }
 
 private:
   std::shared_ptr<lock_type> m_lock;

@@ -114,6 +114,12 @@ TEST(LockedTest, MoveTransfersLock) {
   EXPECT_FALSE(mutex.try_lock());
   EXPECT_TRUE(second);
   EXPECT_EQ(second.get(), &widget);
+
+  // The moved-from handle no longer points anywhere — the raw pointer must
+  // be nulled out so operator bool can't claim ownership of a lock the
+  // handle no longer holds.
+  EXPECT_FALSE(first);
+  EXPECT_EQ(first.get(), nullptr);
 }
 
 TEST(LockedTest, AcceptsExternallyAcquiredLock) {
@@ -195,6 +201,18 @@ TEST(LockedTest, SharedAcceptsExternallyAcquiredLock) {
   SharedLockedPtr<Widget> handle(std::move(lock), &widget);
   ASSERT_TRUE(handle);
   EXPECT_FALSE(mutex.try_lock());
+}
+
+TEST(LockedTest, SharedMoveNullsSource) {
+  llvm::sys::RWMutex mutex;
+  Widget widget;
+
+  SharedLockedPtr<Widget> first(mutex, &widget);
+  SharedLockedPtr<Widget> second = std::move(first);
+  EXPECT_TRUE(second);
+  EXPECT_EQ(second.get(), &widget);
+  EXPECT_FALSE(first);
+  EXPECT_EQ(first.get(), nullptr);
 }
 
 TEST(LockedTest, ExclusiveAccessOnRWMutex) {
