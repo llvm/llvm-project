@@ -1,4 +1,4 @@
-//===-- LockedTest.cpp ----------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,18 +25,18 @@ struct Widget {
 
 // Default mutex types match the LLDB conventions: recursive_mutex for write
 // access, llvm::sys::RWMutex for read access.
-static_assert(std::is_same_v<LockedPtr<Widget>::mutex_type,
-                             std::recursive_mutex>);
-static_assert(std::is_same_v<LockedSP<Widget>::mutex_type,
-                             std::recursive_mutex>);
-static_assert(std::is_same_v<LockedUP<Widget>::mutex_type,
-                             std::recursive_mutex>);
-static_assert(std::is_same_v<SharedLockedPtr<Widget>::mutex_type,
-                             llvm::sys::RWMutex>);
-static_assert(std::is_same_v<SharedLockedSP<Widget>::mutex_type,
-                             llvm::sys::RWMutex>);
-static_assert(std::is_same_v<SharedLockedUP<Widget>::mutex_type,
-                             llvm::sys::RWMutex>);
+static_assert(
+    std::is_same_v<LockedPtr<Widget>::mutex_type, std::recursive_mutex>);
+static_assert(
+    std::is_same_v<LockedSP<Widget>::mutex_type, std::recursive_mutex>);
+static_assert(
+    std::is_same_v<LockedUP<Widget>::mutex_type, std::recursive_mutex>);
+static_assert(
+    std::is_same_v<SharedLockedPtr<Widget>::mutex_type, llvm::sys::RWMutex>);
+static_assert(
+    std::is_same_v<SharedLockedSP<Widget>::mutex_type, llvm::sys::RWMutex>);
+static_assert(
+    std::is_same_v<SharedLockedUP<Widget>::mutex_type, llvm::sys::RWMutex>);
 
 // Force compile-time validation of every (pointer-flavor x mutex) combination
 // the templates are intended to support.
@@ -158,9 +158,8 @@ TEST(LockedTest, SharedAccessOnRWMutex) {
   ASSERT_TRUE(reader);
   EXPECT_EQ(reader->value, 5);
 
-  static_assert(
-      std::is_same_v<decltype(reader.get()), const Widget *>,
-      "shared access borrows a const-qualified pointer");
+  static_assert(std::is_same_v<decltype(reader.get()), const Widget *>,
+                "shared access borrows a const-qualified pointer");
 }
 
 // Copies of a SharedLocked share the same reader lock; the lock is released
