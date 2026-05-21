@@ -1005,8 +1005,7 @@ public:
   ///
   /// Raw comments are owned by Comments list.  This mapping is populated
   /// lazily.
-  mutable llvm::DenseMap<RawCommentLookupKey, const RawComment *>
-      RawComments;
+  mutable llvm::DenseMap<RawCommentLookupKey, const RawComment *> RawComments;
 
   /// Mapping from canonical declaration to the first redeclaration in chain
   /// that has a comment attached.

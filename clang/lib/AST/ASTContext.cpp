@@ -306,8 +306,8 @@ RawComment *ASTContext::getRawCommentNoCacheImpl(
 
   // Get the corresponding buffer.
   bool Invalid = false;
-  const char *Buffer = SourceMgr.getBufferData(LocDecomp.first,
-                                               &Invalid).data();
+  const char *Buffer =
+      SourceMgr.getBufferData(LocDecomp.first, &Invalid).data();
   if (Invalid)
     return nullptr;
 
@@ -327,8 +327,8 @@ RawComment *ASTContext::getRawCommentNoCache(RawCommentLookupKey Key) const {
   const auto Locs = getLocsForCommentSearch(Key, SourceMgr);
 
   for (const auto Loc : Locs) {
-    // If the declaration or macro doesn't map directly to a location in a file, we
-    // can't find the comment.
+    // If the declaration or macro doesn't map directly to a location in a file,
+    // we can't find the comment.
     if (Loc.isInvalid() || !Loc.isFileID())
       continue;
 
