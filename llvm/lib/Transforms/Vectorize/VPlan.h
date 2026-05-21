@@ -1140,7 +1140,8 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
            R->getVPRecipeID() == VPRecipeBase::VPReductionEVLSC ||
            R->getVPRecipeID() == VPRecipeBase::VPReplicateSC ||
            R->getVPRecipeID() == VPRecipeBase::VPVectorEndPointerSC ||
-           R->getVPRecipeID() == VPRecipeBase::VPVectorPointerSC;
+           R->getVPRecipeID() == VPRecipeBase::VPVectorPointerSC ||
+           R->getVPRecipeID() == VPRecipeBase::VPWidenCanonicalIVSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -3970,12 +3971,16 @@ protected:
 /// is added during unrolling.
 class VPWidenCanonicalIVRecipe : public VPRecipeWithIRFlags {
 public:
-  VPWidenCanonicalIVRecipe(VPRegionValue *CanonicalIV);
+  VPWidenCanonicalIVRecipe(VPRegionValue *CanonicalIV,
+                           const VPIRFlags::WrapFlagsTy &Flags = {false, false})
+      : VPRecipeWithIRFlags(VPRecipeBase::VPWidenCanonicalIVSC, CanonicalIV,
+                            CanonicalIV->getType(), Flags) {}
 
   ~VPWidenCanonicalIVRecipe() override = default;
 
   VPWidenCanonicalIVRecipe *clone() override {
-    auto *WideCanIV = new VPWidenCanonicalIVRecipe(getCanonicalIV());
+    auto *WideCanIV =
+        new VPWidenCanonicalIVRecipe(getCanonicalIV(), getNoWrapFlags());
     if (VPValue *Step = getStepValue())
       WideCanIV->addOperand(Step);
     return WideCanIV;

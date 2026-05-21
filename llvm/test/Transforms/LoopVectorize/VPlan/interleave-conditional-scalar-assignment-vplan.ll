@@ -106,7 +106,7 @@ define i32 @find_last_int_select(i64 %N, ptr %data, i32 %a) {
 ; IC2-TF-NEXT:    EMIT vp<%vec.iv> = add nuw vp<[[VP6]]>, vp<[[VP7]]>
 ; IC2-TF-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = broadcast ir<4>
 ; IC2-TF-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = add vp<[[VP8]]>, vp<[[VP7]]>
-; IC2-TF-NEXT:    EMIT vp<%vec.iv>.1 = add vp<[[VP6]]>, vp<[[VP9]]>
+; IC2-TF-NEXT:    EMIT vp<%vec.iv>.1 = add nuw vp<[[VP6]]>, vp<[[VP9]]>
 ; IC2-TF-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = icmp ule vp<%vec.iv>, vp<[[VP2]]>
 ; IC2-TF-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = icmp ule vp<%vec.iv>.1, vp<[[VP2]]>
 ; IC2-TF-NEXT:    CLONE ir<%ld.addr> = getelementptr inbounds ir<%data>, vp<%index>

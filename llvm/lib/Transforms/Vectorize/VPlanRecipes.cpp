@@ -4479,12 +4479,6 @@ void VPExpandSCEVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-VPWidenCanonicalIVRecipe::VPWidenCanonicalIVRecipe(VPRegionValue *CanonicalIV)
-    : VPRecipeWithIRFlags(
-          VPRecipeBase::VPWidenCanonicalIVSC, {CanonicalIV},
-          VPIRFlags::WrapFlagsTy(
-              CanonicalIV->getDefiningRegion()->hasCanonicalIVNUW(), false)) {}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenCanonicalIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                            VPSlotTracker &SlotTracker) const {
