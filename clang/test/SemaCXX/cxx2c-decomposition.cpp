@@ -62,7 +62,7 @@ void test() {
     test_tpl(0);
 }
 
-constexpr auto [a, b] = B{};
+constexpr auto [a, b] = B {};
 static_assert(a.n == 0);
 
 constinit auto [init1] = Y {42};
@@ -70,3 +70,63 @@ constinit auto [init2] = X {};  // expected-error {{variable does not have a con
 // expected-note {{required by 'constinit' specifier here}} \
 // expected-note {{non-constexpr constructor 'X' cannot be used in a constant expression}} \
 // expected-note@#X-decl {{declared here}}
+
+constexpr auto [init3] = X {}; 
+// expected-error@-1 {{constexpr variable cannot have non-literal type 'const X'}}
+//   expected-note@#X-decl {{'X' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
+
+struct C {};
+template<> struct std::tuple_size<C> { constexpr static auto value = 1; };
+template<> struct std::tuple_size<const C> { constexpr static auto value = 1; };
+template<> struct std::tuple_element<0, const C> { using type = int; };
+template<> struct std::tuple_element<0, C> { using type = int; };
+
+template<int N>
+auto get(C) { // #non-constexpr-get
+  return 0;
+};
+
+auto [c1] = C();
+static_assert(c1 == 0);
+// expected-error@-1 {{static assertion expression is not an integral constant expression}} \
+//   expected-note@-1 {{read of non-const variable 'c1' is not allowed in a constant expression}}
+//   expected-note@-4 {{declared here}}
+
+constexpr auto [c2] = C();
+// expected-error@-1 {{constexpr variable 'c2' must be initialized by a constant expression}} \
+//   expected-note@-1 {{in implicit initialization of binding declaration 'c2'}} \
+//   expected-note@-1 {{non-constexpr function 'get<0>' cannot be used in a constant expression}} \
+//   expected-note@#non-constexpr-get {{declared here}}
+
+constinit auto [c3] = C();
+// expected-error@-1 {{variable does not have a constant initializer}} \
+//   expected-note@-1 {{in implicit initialization of binding declaration 'c3'}} \
+//   expected-note@-1 {{required by 'constinit' specifier here}} \
+//   expected-note@-1 {{non-constexpr function 'get<0>' cannot be used in a constant expression}}
+//   expected-note@#non-constexpr-get {{declared here}}
+
+struct D {};
+template<> struct std::tuple_size<D> { constexpr static auto value = 1; };
+template<> struct std::tuple_size<const D> { constexpr static auto value = 1; };
+template<> struct std::tuple_element<0, D> { using type = int; };
+template<> struct std::tuple_element<0, const D> { using type = int; };
+
+template<int N>
+constexpr auto get(D) {
+  return 0;
+};
+
+auto [d1] = D();
+static_assert(d1 == 0);
+// expected-error@-1 {{static assertion expression is not an integral constant expression}} \
+//   expected-note@-1 {{read of non-const variable 'd1' is not allowed in a constant expression}}
+//   expected-note@-4 {{declared here}}
+
+constexpr auto [d2] = D();
+static_assert(d2 == 0);
+
+constinit auto [d3] = D();
+static_assert(d3 == 0);
+// expected-error@-1 {{static assertion expression is not an integral constant expression}} \
+//   expected-note@-1 {{read of non-const variable 'd3' is not allowed in a constant expression}}
+//   expected-note@-4 {{declared here}}

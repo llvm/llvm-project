@@ -186,6 +186,8 @@ C++ Language Changes
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Clang now propagates ``constinit`` and ``constexpr`` in structured bindings with tuple-like initializers. (#GH195860)
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
