@@ -1487,19 +1487,19 @@ multiclass Z22Form_FRTA5_SH6r<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
 let hasCtrlDep = 1 in {
 let Defs = [R1], Uses = [R1] in {
 def ADJCALLSTACKDOWN : PPCEmitTimePseudo<(outs), (ins u32imm:$amt1, u32imm:$amt2),
-                              "#ADJCALLSTACKDOWN $amt1 $amt2",
-                              [(callseq_start u32imm_timm:$amt1, u32imm_timm:$amt2)]>;
+                              [(callseq_start u32imm_timm:$amt1, u32imm_timm:$amt2)],
+                              "#ADJCALLSTACKDOWN $amt1 $amt2">;
 def ADJCALLSTACKUP   : PPCEmitTimePseudo<(outs), (ins u32imm:$amt1, u32imm:$amt2),
-                              "#ADJCALLSTACKUP $amt1 $amt2",
-                              [(callseq_end u32imm_timm:$amt1, u32imm_timm:$amt2)]>;
+                              [(callseq_end u32imm_timm:$amt1, u32imm_timm:$amt2)],
+                              "#ADJCALLSTACKUP $amt1 $amt2">;
 }
 } // hasCtrlDep
 
 let Defs = [R1], Uses = [R1] in
-def DYNALLOC : PPCEmitTimePseudo<(outs gprc:$result), (ins gprc:$negsize, memri:$fpsi), "#DYNALLOC",
+def DYNALLOC : PPCEmitTimePseudo<(outs gprc:$result), (ins gprc:$negsize, memri:$fpsi),
                        [(set i32:$result,
                              (PPCdynalloc i32:$negsize, iaddr:$fpsi))]>;
-def DYNAREAOFFSET : PPCEmitTimePseudo<(outs i32imm:$result), (ins memri:$fpsi), "#DYNAREAOFFSET",
+def DYNAREAOFFSET : PPCEmitTimePseudo<(outs i32imm:$result), (ins memri:$fpsi),
                        [(set i32:$result, (PPCdynareaoffset iaddr:$fpsi))]>;
 // Probed alloca to support stack clash protection.
 let Defs = [R1], Uses = [R1], hasNoSchedulingInfo = 1 in {
@@ -1509,15 +1509,13 @@ def PROBED_ALLOCA_32 : PPCCustomInserterPseudo<(outs gprc:$result),
                              (PPCprobedalloca i32:$negsize, iaddr:$fpsi))]>;
 def PREPARE_PROBED_ALLOCA_32 : PPCEmitTimePseudo<(outs
     gprc:$fp, gprc:$actual_negsize),
-    (ins gprc:$negsize, memri:$fpsi), "#PREPARE_PROBED_ALLOCA_32", []>;
+    (ins gprc:$negsize, memri:$fpsi)>;
 def PREPARE_PROBED_ALLOCA_NEGSIZE_SAME_REG_32 : PPCEmitTimePseudo<(outs
     gprc:$fp, gprc:$actual_negsize),
-    (ins gprc:$negsize, memri:$fpsi),
-    "#PREPARE_PROBED_ALLOCA_NEGSIZE_SAME_REG_32", []>,
+    (ins gprc:$negsize, memri:$fpsi)>,
     RegConstraint<"$actual_negsize = $negsize">;
 def PROBED_STACKALLOC_32 : PPCEmitTimePseudo<(outs gprc:$scratch, gprc:$temp),
-    (ins i64imm:$stacksize),
-    "#PROBED_STACKALLOC_32", []>;
+    (ins i64imm:$stacksize)>;
 }
 
 // SELECT_CC_* - Used to implement the SELECT_CC DAG operation.  Expanded after
@@ -1569,19 +1567,15 @@ let Predicates = [HasFPU] in {
 // SPILL_CR - Indicate that we're dumping the CR register, so we'll need to
 // scavenge a register for it.
 let mayStore = 1 in {
-def SPILL_CR : PPCEmitTimePseudo<(outs), (ins crrc:$cond, memri:$F),
-                     "#SPILL_CR", []>;
-def SPILL_CRBIT : PPCEmitTimePseudo<(outs), (ins crbitrc:$cond, memri:$F),
-                         "#SPILL_CRBIT", []>;
+def SPILL_CR : PPCEmitTimePseudo<(outs), (ins crrc:$cond, memri:$F)>;
+def SPILL_CRBIT : PPCEmitTimePseudo<(outs), (ins crbitrc:$cond, memri:$F)>;
 }
 
 // RESTORE_CR - Indicate that we're restoring the CR register (previously
 // spilled), so we'll need to scavenge a register for it.
 let mayLoad = 1 in {
-def RESTORE_CR : PPCEmitTimePseudo<(outs crrc:$cond), (ins memri:$F),
-                     "#RESTORE_CR", []>;
-def RESTORE_CRBIT : PPCEmitTimePseudo<(outs crbitrc:$cond), (ins memri:$F),
-                           "#RESTORE_CRBIT", []>;
+def RESTORE_CR : PPCEmitTimePseudo<(outs crrc:$cond), (ins memri:$F)>;
+def RESTORE_CRBIT : PPCEmitTimePseudo<(outs crbitrc:$cond), (ins memri:$F)>;
 }
 
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
@@ -1619,13 +1613,13 @@ def SETFLM : PPCCustomInserterPseudo<(outs f8rc:$FRT), (ins f8rc:$FLM),
 }
 
 let isBarrier = 1, hasSideEffects = 1, Defs = [RM] in
-def FENCE : PPCEmitTimePseudo<(outs), (ins), "#FENCE", []>;
+def FENCE : PPCEmitTimePseudo<(outs), (ins)>;
 
 let Defs = [LR] in
-  def MovePCtoLR : PPCEmitTimePseudo<(outs), (ins), "#MovePCtoLR", []>,
+  def MovePCtoLR : PPCEmitTimePseudo<(outs), (ins)>,
                    PPC970_Unit_BRU;
 let Defs = [LR] in
-  def MoveGOTtoLR : PPCEmitTimePseudo<(outs), (ins), "#MoveGOTtoLR", []>,
+  def MoveGOTtoLR : PPCEmitTimePseudo<(outs), (ins)>,
                     PPC970_Unit_BRU;
 
 let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7,
@@ -1853,19 +1847,19 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR, RM], isCodeGenOnly = 1 in {
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [RM] in
 def TCRETURNdi :PPCEmitTimePseudo< (outs),
                         (ins calltarget:$dst, i32imm:$offset),
-                 "#TC_RETURNd $dst $offset",
-                 []>;
+                 [],
+                 "#TC_RETURNd $dst $offset">;
 
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [RM] in
 def TCRETURNai :PPCEmitTimePseudo<(outs), (ins abscalltarget:$func, i32imm:$offset),
-                 "#TC_RETURNa $func $offset",
-                 [(PPCtc_return (i32 imm:$func), imm:$offset)]>;
+                 [(PPCtc_return (i32 imm:$func), imm:$offset)],
+                 "#TC_RETURNa $func $offset">;
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [RM] in
 def TCRETURNri : PPCEmitTimePseudo<(outs), (ins CTRRC:$dst, i32imm:$offset),
-                 "#TC_RETURNr $dst $offset",
-                 []>;
+                 [],
+                 "#TC_RETURNr $dst $offset">;
 
 let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
     Defs = [LR, R2], Uses = [CTR, RM], RST = 2 in {
@@ -1948,7 +1942,7 @@ let hasSideEffects = 1, isBarrier = 1 in {
 // from emitting it.
 let isBranch = 1, isTerminator = 1, Size = 0 in {
   def EH_SjLj_Setup : PPCEmitTimePseudo<(outs), (ins directbrtarget:$dst),
-                        "#EH_SjLj_Setup\t$dst", []>;
+                        [], "#EH_SjLj_Setup\t$dst">;
 }
 
 // System call.
@@ -2496,8 +2490,8 @@ let isCodeGenOnly = 1 in {
 def EnforceIEIO : XForm_24_eieio<31, 854, (outs), (ins),
                                  "eieio", IIC_LdStLoad, []>;
 
-def PseudoEIEIO : PPCEmitTimePseudo<(outs), (ins), "#PPCEIEIO",
-                  [(int_ppc_eieio)]> {
+def PseudoEIEIO : PPCEmitTimePseudo<(outs), (ins), [(int_ppc_eieio)],
+                            "#PPCEIEIO"> {
   let Size = 12;
 }
 
@@ -2953,7 +2947,7 @@ def MTCTRloop : XFXForm_1_ext<31, 467, 9, (outs), (ins gprc:$RST),
 
 let hasSideEffects = 1, hasNoSchedulingInfo = 1, isNotDuplicable = 1, Uses = [CTR], Defs = [CTR] in
 def DecreaseCTRloop : PPCEmitTimePseudo<(outs crbitrc:$rT), (ins i32imm:$stride),
-                                       "#DecreaseCTRloop", [(set i1:$rT, (int_loop_decrement (i32 imm:$stride)))]>;
+                                       [(set i1:$rT, (int_loop_decrement (i32 imm:$stride)))]>;
 
 let hasSideEffects = 0 in {
 let Defs = [LR] in {
@@ -3472,7 +3466,7 @@ def : Pat<(add i32:$in, (PPChi tblockaddress:$g, 0)),
           (ADDIS $in, tblockaddress:$g)>;
 
 // Support for thread-local storage.
-def PPC32GOT: PPCEmitTimePseudo<(outs gprc:$rD), (ins), "#PPC32GOT",
+def PPC32GOT: PPCEmitTimePseudo<(outs gprc:$rD), (ins),
                 [(set i32:$rD, (PPCppc32GOT))]> {
   let Size = 8;
 }
@@ -3481,20 +3475,17 @@ def PPC32GOT: PPCEmitTimePseudo<(outs gprc:$rD), (ins), "#PPC32GOT",
 // This uses two output registers, the first as the real output, the second as a
 // temporary register, used internally in code generation. A "bl" also clobbers LR.
 let Defs = [LR] in
-def PPC32PICGOT: PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins), "#PPC32PICGOT",
-                []> {
+def PPC32PICGOT: PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins)> {
   let Size = 20;
 }
 
 def LDgotTprelL32: PPCEmitTimePseudo<(outs gprc_nor0:$rD), (ins s16imm:$disp, gprc_nor0:$reg),
-                           "#LDgotTprelL32",
                            [(set i32:$rD,
                              (PPCldGotTprelL tglobaltlsaddr:$disp, i32:$reg))]>;
 def : Pat<(PPCaddTls i32:$in, tglobaltlsaddr:$g),
           (ADD4TLS $in, tglobaltlsaddr:$g)>;
 
 def ADDItlsgdL32 : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, s16imm:$disp),
-                         "#ADDItlsgdL32",
                          [(set i32:$rD,
                            (PPCaddiTlsgdL i32:$reg, tglobaltlsaddr:$disp))]>;
 // LR is a true define, while the rest of the Defs are clobbers.  R3 is
@@ -3502,7 +3493,6 @@ def ADDItlsgdL32 : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, s16im
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
     Defs = [R0,R4,R5,R6,R7,R8,R9,R10,R11,R12,LR,CTR,CR0,CR1,CR5,CR6,CR7] in
 def GETtlsADDR32 : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$reg, tlsgd32:$sym),
-                          "GETtlsADDR32",
                           [(set i32:$rD,
                             (PPCgetTlsAddr i32:$reg, tglobaltlsaddr:$sym))]>;
 // R3 is explicitly defined when this op is created, so not mentioned here.
@@ -3511,11 +3501,9 @@ def GETtlsADDR32 : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$reg, tlsgd32:$s
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
     Defs = [R0,R4,R5,R11,LR,CR0] in {
 def GETtlsADDR32AIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$offset, gprc:$handle),
-                          "GETtlsADDR32AIX",
                           [(set i32:$rD,
                             (PPCgetTlsAddr i32:$offset, i32:$handle))]>;
 def GETtlsMOD32AIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$handle),
-                          "GETtlsMOD32AIX",
                           [(set i32:$rD,
                             (PPCgetTlsMod i32:$handle))]>;
 }
@@ -3526,7 +3514,6 @@ def GETtlsMOD32AIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$handle),
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
     Defs = [R3,LR] in
 def GETtlsTpointer32AIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins),
-                          "GETtlsTpointer32AIX",
                           [(set i32:$rD, (PPCgetTpointer))]>;
 
 // The following pattern matches local- and initial-exec TLS accesses on 32-bit AIX.
@@ -3543,30 +3530,26 @@ let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
     Defs = [R0,R3,R4,R5,R6,R7,R8,R9,R10,R11,R12,LR,CTR,CR0,CR1,CR5,CR6,CR7] in
 def ADDItlsgdLADDR32 : PPCEmitTimePseudo<(outs gprc:$rD),
                               (ins gprc_nor0:$reg, s16imm:$disp, tlsgd32:$sym),
-                              "#ADDItlsgdLADDR32",
                               [(set i32:$rD,
                                 (PPCaddiTlsgdLAddr i32:$reg,
                                                    tglobaltlsaddr:$disp,
                                                    tglobaltlsaddr:$sym))]>;
 def ADDItlsldL32 : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, s16imm:$disp),
-                          "#ADDItlsldL32",
                           [(set i32:$rD,
                             (PPCaddiTlsldL i32:$reg, tglobaltlsaddr:$disp))]>;
 // This pseudo is expanded to two copies to put the variable offset in R4 and
 // the region handle in R3 and GETtlsADDR32AIX.
 def TLSGDAIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$offset, gprc:$handle),
-                          "#TLSGDAIX",
                           [(set i32:$rD,
                             (PPCTlsgdAIX i32:$offset, i32:$handle))]>;
 // This pseudo is expanded to the call to GETtlsMOD32AIX.
 def TLSLDAIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$handle),
-                          "#TLSLDAIX", [(set i32:$rD, (PPCTlsldAIX i32:$handle))]>;
+                          [(set i32:$rD, (PPCTlsldAIX i32:$handle))]>;
 // LR is a true define, while the rest of the Defs are clobbers.  R3 is
 // explicitly defined when this op is created, so not mentioned here.
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
     Defs = [R0,R4,R5,R6,R7,R8,R9,R10,R11,R12,LR,CTR,CR0,CR1,CR5,CR6,CR7] in
 def GETtlsldADDR32 : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$reg, tlsgd32:$sym),
-                            "GETtlsldADDR32",
                             [(set i32:$rD,
                               (PPCgetTlsldAddr i32:$reg,
                                                tglobaltlsaddr:$sym))]>;
@@ -3576,41 +3559,33 @@ let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
     Defs = [R0,R3,R4,R5,R6,R7,R8,R9,R10,R11,R12,LR,CTR,CR0,CR1,CR5,CR6,CR7] in
 def ADDItlsldLADDR32 : PPCEmitTimePseudo<(outs gprc:$rD),
                               (ins gprc_nor0:$reg, s16imm:$disp, tlsgd32:$sym),
-                              "#ADDItlsldLADDR32",
                               [(set i32:$rD,
                                 (PPCaddiTlsldLAddr i32:$reg,
                                                    tglobaltlsaddr:$disp,
                                                    tglobaltlsaddr:$sym))]>;
 def ADDIdtprelL32 : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, s16imm:$disp),
-                           "#ADDIdtprelL32",
                            [(set i32:$rD,
                              (PPCaddiDtprelL i32:$reg, tglobaltlsaddr:$disp))]>;
 def ADDISdtprelHA32 : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, s16imm:$disp),
-                            "#ADDISdtprelHA32",
                             [(set i32:$rD,
                               (PPCaddisDtprelHA i32:$reg,
                                                 tglobaltlsaddr:$disp))]>;
 
 // Support for Position-independent code
 def LWZtoc : PPCEmitTimePseudo<(outs gprc:$rD), (ins tocentry32:$disp, gprc:$reg),
-                   "#LWZtoc",
                    [(set i32:$rD,
                      (PPCtoc_entry tglobaladdr:$disp, i32:$reg))]>;
 def LWZtocL : PPCEmitTimePseudo<(outs gprc:$rD), (ins tocentry32:$disp, gprc_nor0:$reg),
-                    "#LWZtocL",
                     [(set i32:$rD,
                       (PPCtoc_entry tglobaladdr:$disp, i32:$reg))]>;
-def ADDIStocHA : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, tocentry32:$disp),
-                       "#ADDIStocHA", []>;
+def ADDIStocHA : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, tocentry32:$disp)>;
 // TOC Data Transform on AIX
-def ADDItoc : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$reg, tocentry32:$disp),
-                   "#ADDItoc", []>;
-def ADDItocL : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, tocentry32:$disp),
-                   "#ADDItocL", []>;
+def ADDItoc : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$reg, tocentry32:$disp)>;
+def ADDItocL : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, tocentry32:$disp)>;
 
 // Get Global (GOT) Base Register offset, from the word immediately preceding
 // the function label.
-def UpdateGBR : PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins gprc:$rI), "#UpdateGBR", []> {
+def UpdateGBR : PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins gprc:$rI)> {
   let Size = 8;
 }
 
@@ -3618,7 +3593,7 @@ def UpdateGBR : PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins gprc:$rI), "#U
 // cause iterator invalidation in MIR transformation passes, this pseudo can be
 // used instead. It will be removed unconditionally at pre-emit time (prior to
 // branch selection).
-def UNENCODED_NOP: PPCEmitTimePseudo<(outs), (ins), "#UNENCODED_NOP", []>;
+def UNENCODED_NOP: PPCEmitTimePseudo<(outs), (ins)>;
 
 // Standard shifts.  These are represented separately from the real shifts above
 // so that we can distinguish between shifts that allow 5-bit and 6-bit shift
