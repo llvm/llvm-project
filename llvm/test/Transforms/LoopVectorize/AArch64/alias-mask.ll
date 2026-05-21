@@ -138,10 +138,6 @@ define i8 @alias_masking_exit_value(ptr %ptrA, ptr %ptrB) {
 ; CHECK-TF-NEXT:    [[TMP1:%.*]] = zext <vscale x 16 x i1> [[ALIAS_MASK]] to <vscale x 16 x i64>
 ; CHECK-TF-NEXT:    [[NUM_ACTIVE_LANES:%.*]] = call i64 @llvm.vector.reduce.add.nxv16i64(<vscale x 16 x i64> [[TMP1]])
 ; CHECK-TF-NEXT:    [[TMP5:%.*]] = trunc i64 [[NUM_ACTIVE_LANES]] to i32
-; CHECK-TF-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i8
-; CHECK-TF-NEXT:    [[TMP7:%.*]] = mul i8 1, [[TMP6]]
-; CHECK-TF-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[TMP7]], i64 0
-; CHECK-TF-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; CHECK-TF-NEXT:    [[VF_IS_SCALAR:%.*]] = icmp ule i32 [[TMP5]], 1
 ; CHECK-TF-NEXT:    [[VF_STEP_OVERFLOW:%.*]] = icmp ult i32 -1001, [[TMP5]]
 ; CHECK-TF-NEXT:    [[TMP8:%.*]] = or i1 [[VF_IS_SCALAR]], [[VF_STEP_OVERFLOW]]
@@ -149,6 +145,9 @@ define i8 @alias_masking_exit_value(ptr %ptrA, ptr %ptrB) {
 ; CHECK-TF:       [[VECTOR_PH]]:
 ; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 0, i32 1000)
 ; CHECK-TF-NEXT:    [[TMP12:%.*]] = call <vscale x 16 x i8> @llvm.stepvector.nxv16i8()
+; CHECK-TF-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i8
+; CHECK-TF-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[TMP6]], i64 0
+; CHECK-TF-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; CHECK-TF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF:       [[VECTOR_BODY]]:
 ; CHECK-TF-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
