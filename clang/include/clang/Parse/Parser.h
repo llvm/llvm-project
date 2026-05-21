@@ -5005,7 +5005,7 @@ private:
   //===--------------------------------------------------------------------===//
   // C++ if/switch/while/for condition expression.
 
-  /// ParseCXXCondition - if/switch/while condition expression.
+  /// ParseCondition - if/switch/while condition expression.
   ///
   /// \verbatim
   ///       condition:
@@ -5036,11 +5036,9 @@ private:
   /// returned.
   ///
   /// \returns The parsed condition.
-  Sema::ConditionResult ParseCXXCondition(StmtResult *InitStmt,
-                                          SourceLocation Loc,
-                                          Sema::ConditionKind CK,
-                                          bool MissingOK,
-                                          ForRangeInfo *FRI = nullptr);
+  Sema::ConditionResult ParseCondition(StmtResult *InitStmt, SourceLocation Loc,
+                                       Sema::ConditionKind CK, bool MissingOK,
+                                       ForRangeInfo *FRI = nullptr);
   DeclGroupPtrTy ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
                                                       ParsedAttributes &Attrs);
 
