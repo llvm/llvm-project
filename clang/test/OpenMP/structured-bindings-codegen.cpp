@@ -399,6 +399,22 @@ void test_static_bindings() {
   }
 }
 
+void use(int a);
+
+void test_shadowing() {
+  auto [a, b] = Point{1, 2};
+#pragma omp parallel private(a)
+  {
+  use(a);
+  {
+    auto [a, b] = Point{10, 20};
+    use(a);
+  }
+  use(a);
+  }
+  use(a);
+}
+
 int main() {
   test_target_explicit_map();
   test_target_implicit_map();
@@ -425,6 +441,7 @@ int main() {
   test_firstprivate_individual_bindings();
   test_mixed_dsa();
   test_static_bindings();
+  test_shadowing();
   return 0;
 }
 
@@ -2127,8 +2144,35 @@ int main() {
 // CHECK:    ret void
 //
 //
+// CHECK-LABEL: define dso_local void @_Z14test_shadowingv(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP0:%.*]], ptr align 4 @__const._Z14test_shadowingv., i64 8, i1 false)
+// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 0, ptr @_Z14test_shadowingv.omp_outlined)
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
+// CHECK:    call void @_Z3usei(i32 noundef [[TMP1]])
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define internal void @_Z14test_shadowingv.omp_outlined(
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2]] {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
+// CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
+// CHECK:    [[TMP1:%.*]] = load i32, ptr [[A:%.*]], align 4
+// CHECK:    call void @_Z3usei(i32 noundef [[TMP1]])
+// CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP0:%.*]], ptr align 4 @"__const.<captured>.", i64 8, i1 false)
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
+// CHECK:    call void @_Z3usei(i32 noundef [[TMP2]])
+// CHECK:    [[TMP3:%.*]] = load i32, ptr [[A]], align 4
+// CHECK:    call void @_Z3usei(i32 noundef [[TMP3]])
+// CHECK:    ret void
+//
+//
 // CHECK-LABEL: define dso_local noundef i32 @main(
-// CHECK-SAME: ) #[[ATTR7:[0-9]+]] {
+// CHECK-SAME: ) #[[ATTR8:[0-9]+]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store i32 0, ptr [[RETVAL:%.*]], align 4
 // CHECK:    call void @_Z24test_target_explicit_mapv()
@@ -2156,5 +2200,6 @@ int main() {
 // CHECK:    call void @_Z37test_firstprivate_individual_bindingsv()
 // CHECK:    call void @_Z14test_mixed_dsav()
 // CHECK:    call void @_Z20test_static_bindingsv()
+// CHECK:    call void @_Z14test_shadowingv()
 // CHECK:    ret i32 0
 //
