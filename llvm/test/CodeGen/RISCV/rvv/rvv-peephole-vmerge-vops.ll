@@ -1173,6 +1173,17 @@ define <vscale x 2 x float> @commute_vfmadd(<vscale x 2 x float> %passthru, <vsc
 
 ; Test for crash where we didn't sink to ensure AVL dominated
 define i32 @pr198733(<vscale x 16 x i32> %0, <vscale x 16 x i1> %1, i32 %2) {
+; CHECK-LABEL: pr198733:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    slli a0, a0, 32
+; CHECK-NEXT:    srli a0, a0, 32
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
+; CHECK-NEXT:    vor.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    vsetivli zero, 1, e32, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
 entry:
   %3 = zext <vscale x 16 x i1> %1 to <vscale x 16 x i32>
   %4 = or <vscale x 16 x i32> %0, %3
