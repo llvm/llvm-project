@@ -4152,18 +4152,18 @@ static bool isSupportedExtend(SDValue V) {
 
 /// Returns how profitable it is to fold a comparison's operand's shift and/or
 /// extension operations.
-static unsigned getCmpOperandFoldingProfit(SDValue Op, bool extendOk) {
+static unsigned getCmpOperandFoldingProfit(SDValue Op, bool AllowExtend) {
   if (!Op.hasOneUse())
     return 0;
 
-  if (extendOk && isSupportedExtend(Op))
+  if (AllowExtend && isSupportedExtend(Op))
     return 1;
 
   unsigned Opc = Op.getOpcode();
   if (Opc == ISD::SHL || Opc == ISD::SRL || Opc == ISD::SRA)
     if (ConstantSDNode *ShiftCst = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
       uint64_t Shift = ShiftCst->getZExtValue();
-      if (extendOk && isSupportedExtend(Op.getOperand(0)))
+      if (AllowExtend && isSupportedExtend(Op.getOperand(0)))
         return (Shift <= 4) ? 2 : 1;
       EVT VT = Op.getValueType();
       if ((VT == MVT::i32 && Shift <= 31) || (VT == MVT::i64 && Shift <= 63))
