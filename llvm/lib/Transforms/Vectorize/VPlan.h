@@ -436,6 +436,7 @@ public:
     VPWidenCastSC,
     VPWidenGEPSC,
     VPWidenIntrinsicSC,
+    VPWidenMemIntrinsicSC,
     VPWidenLoadEVLSC,
     VPWidenLoadSC,
     VPWidenStoreEVLSC,
@@ -638,6 +639,7 @@ public:
     case VPRecipeBase::VPWidenCastSC:
     case VPRecipeBase::VPWidenGEPSC:
     case VPRecipeBase::VPWidenIntrinsicSC:
+    case VPRecipeBase::VPWidenMemIntrinsicSC:
     case VPRecipeBase::VPWidenSC:
     case VPRecipeBase::VPBlendSC:
     case VPRecipeBase::VPPredInstPHISC:
@@ -1133,6 +1135,7 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
            R->getVPRecipeID() == VPRecipeBase::VPWidenCallSC ||
            R->getVPRecipeID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPRecipeID() == VPRecipeBase::VPWidenIntrinsicSC ||
+           R->getVPRecipeID() == VPRecipeBase::VPWidenMemIntrinsicSC ||
            R->getVPRecipeID() == VPRecipeBase::VPReductionSC ||
            R->getVPRecipeID() == VPRecipeBase::VPReductionEVLSC ||
            R->getVPRecipeID() == VPRecipeBase::VPReplicateSC ||
@@ -1897,6 +1900,28 @@ class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   /// True if the intrinsic may have side-effects.
   bool MayHaveSideEffects;
 
+protected:
+  VPWidenIntrinsicRecipe(const unsigned char SC,
+                         Intrinsic::ID VectorIntrinsicID,
+                         ArrayRef<VPValue *> CallArguments, Type *Ty,
+                         const VPIRFlags &Flags = {},
+                         const VPIRMetadata &MD = {},
+                         DebugLoc DL = DebugLoc::getUnknown())
+      : VPRecipeWithIRFlags(SC, CallArguments, Ty, Flags, DL), VPIRMetadata(MD),
+        VectorIntrinsicID(VectorIntrinsicID) {
+    LLVMContext &Ctx = Ty->getContext();
+    AttributeSet Attrs = Intrinsic::getFnAttributes(Ctx, VectorIntrinsicID);
+    MemoryEffects ME = Attrs.getMemoryEffects();
+    MayReadFromMemory = !ME.onlyWritesMemory();
+    MayWriteToMemory = !ME.onlyReadsMemory();
+    MayHaveSideEffects = MayWriteToMemory ||
+                         !Attrs.hasAttribute(Attribute::NoUnwind) ||
+                         !Attrs.hasAttribute(Attribute::WillReturn);
+  }
+
+  /// Helper function to produce the widened intrinsic call.
+  CallInst *createVectorCall(VPTransformState &State);
+
 public:
   VPWidenIntrinsicRecipe(CallInst &CI, Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
@@ -1917,18 +1942,9 @@ public:
                          const VPIRFlags &Flags = {},
                          const VPIRMetadata &Metadata = {},
                          DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeWithIRFlags(VPRecipeBase::VPWidenIntrinsicSC, CallArguments, Ty,
-                            Flags, DL),
-        VPIRMetadata(Metadata), VectorIntrinsicID(VectorIntrinsicID) {
-    LLVMContext &Ctx = Ty->getContext();
-    AttributeSet Attrs = Intrinsic::getFnAttributes(Ctx, VectorIntrinsicID);
-    MemoryEffects ME = Attrs.getMemoryEffects();
-    MayReadFromMemory = !ME.onlyWritesMemory();
-    MayWriteToMemory = !ME.onlyReadsMemory();
-    MayHaveSideEffects = MayWriteToMemory ||
-                         !Attrs.hasAttribute(Attribute::NoUnwind) ||
-                         !Attrs.hasAttribute(Attribute::WillReturn);
-  }
+      : VPWidenIntrinsicRecipe(VPRecipeBase::VPWidenIntrinsicSC,
+                               VectorIntrinsicID, CallArguments, Ty, Flags,
+                               Metadata, DL) {}
 
   ~VPWidenIntrinsicRecipe() override = default;
 
@@ -1942,7 +1958,24 @@ public:
                                       getDebugLoc());
   }
 
-  VP_CLASSOF_IMPL(VPRecipeBase::VPWidenIntrinsicSC)
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPRecipeID() == VPRecipeBase::VPWidenIntrinsicSC ||
+           R->getVPRecipeID() == VPRecipeBase::VPWidenMemIntrinsicSC;
+  }
+
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
+  }
+
+  static inline bool classof(const VPValue *V) {
+    auto *R = V->getDefiningRecipe();
+    return R && classof(R);
+  }
+
+  static inline bool classof(const VPSingleDefRecipe *R) {
+    return classof(static_cast<const VPRecipeBase *>(R));
+  }
 
   /// Produce a widened version of the vector intrinsic.
   LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
@@ -1980,6 +2013,48 @@ protected:
   LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const override;
 #endif
+};
+
+/// A recipe for widening vector memory intrinsics.
+class VPWidenMemIntrinsicRecipe final : public VPWidenIntrinsicRecipe {
+  /// Alignment information for this memory access.
+  Align Alignment;
+
+public:
+  // TODO: support StoreInst for strided store
+  VPWidenMemIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
+                            ArrayRef<VPValue *> CallArguments, Type *Ty,
+                            Align Alignment, const VPIRMetadata &MD = {},
+                            DebugLoc DL = DebugLoc::getUnknown())
+      : VPWidenIntrinsicRecipe(VPRecipeBase::VPWidenMemIntrinsicSC,
+                               VectorIntrinsicID, CallArguments, Ty, {}, MD,
+                               DL),
+        Alignment(Alignment) {
+    assert(VectorIntrinsicID == Intrinsic::experimental_vp_strided_load &&
+           "Unexpected intrinsic");
+  }
+
+  ~VPWidenMemIntrinsicRecipe() override = default;
+
+  VPWidenMemIntrinsicRecipe *clone() override {
+    return new VPWidenMemIntrinsicRecipe(getVectorIntrinsicID(), operands(),
+                                         getScalarType(), Alignment, *this,
+                                         getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPRecipeBase::VPWidenMemIntrinsicSC)
+
+  /// Produce a widened version of the vector memory intrinsic.
+  void execute(VPTransformState &State) override;
+
+  /// Helper function for computing the cost of vector memory intrinsic.
+  static InstructionCost computeMemIntrinsicCost(Intrinsic::ID IID, Type *Ty,
+                                                 bool IsMasked, Align Alignment,
+                                                 VPCostContext &Ctx);
+
+  /// Return the cost of this vector memory intrinsic.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 };
 
 /// A recipe for widening Call instructions using library calls.
@@ -2228,22 +2303,26 @@ protected:
 };
 
 /// A recipe to compute the pointers for widened memory accesses of \p
-/// SourceElementTy. Unrolling adds an extra offset operand for unrolled parts >
-/// 0 and it produces `GEP Ptr, Offset`. The offset for unrolled part 0 is 0.
+/// SourceElementTy, with the \p Stride expressed in units of \p
+/// SourceElementTy. Unrolling adds an extra \p VFxPart operand for unrolled
+/// parts > 0 and it produces `GEP SourceElementTy Ptr, VFxPart * Stride`.
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 
 public:
-  VPVectorPointerRecipe(VPValue *Ptr, Type *SourceElementTy,
+  VPVectorPointerRecipe(VPValue *Ptr, Type *SourceElementTy, VPValue *Stride,
                         GEPNoWrapFlags GEPFlags, DebugLoc DL)
-      : VPRecipeWithIRFlags(VPRecipeBase::VPVectorPointerSC, Ptr,
+      : VPRecipeWithIRFlags(VPRecipeBase::VPVectorPointerSC,
+                            ArrayRef<VPValue *>({Ptr, Stride}),
                             getScalarTypeOrInfer(Ptr), GEPFlags, DL),
         SourceElementTy(SourceElementTy) {}
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPVectorPointerSC)
 
-  VPValue *getOffset() {
-    return getNumOperands() == 2 ? getOperand(1) : nullptr;
+  VPValue *getStride() const { return getOperand(1); }
+
+  VPValue *getVFxPart() const {
+    return getNumOperands() > 2 ? getOperand(2) : nullptr;
   }
 
   void execute(VPTransformState &State) override;
@@ -2265,10 +2344,11 @@ public:
   }
 
   VPVectorPointerRecipe *clone() override {
-    auto *Clone = new VPVectorPointerRecipe(getOperand(0), SourceElementTy,
-                                            getGEPNoWrapFlags(), getDebugLoc());
-    if (auto *Off = getOffset())
-      Clone->addOperand(Off);
+    auto *Clone =
+        new VPVectorPointerRecipe(getOperand(0), SourceElementTy, getStride(),
+                                  getGEPNoWrapFlags(), getDebugLoc());
+    if (auto *VFxPart = getVFxPart())
+      Clone->addOperand(VFxPart);
     return Clone;
   }
 
