@@ -1977,75 +1977,72 @@ bool LoopInterchangeTransform::transform(
   if (InnerReductions.size() == 1)
     reduction2Memory();
 
-  if (InnerLoop->getSubLoops().empty()) {
-    LLVM_DEBUG(dbgs() << "Splitting the inner loop latch\n");
-    auto &InductionPHIs = LIL.getInnerLoopInductions();
-    if (InductionPHIs.empty()) {
-      LLVM_DEBUG(dbgs() << "Failed to find the point to split loop latch \n");
-      return false;
-    }
-
-    SmallVector<Instruction *, 8> InnerIndexVarList;
-    for (PHINode *CurInductionPHI : InductionPHIs) {
-      Instruction *IncomingValue = dyn_cast<Instruction>(
-          CurInductionPHI->getIncomingValueForBlock(InnerLoop->getLoopLatch()));
-      assert(IncomingValue &&
-             "Incoming value from loop latch doesn't an instruction");
-      if (is_contained(InductionPHIs, IncomingValue))
-        continue;
-      InnerIndexVarList.push_back(IncomingValue);
-    }
-
-    // Create a new latch block for the inner loop. We split at the
-    // current latch's terminator and then move the condition and all
-    // operands that are not either loop-invariant or the induction PHI into the
-    // new latch block.
-    BasicBlock *NewLatch =
-        SplitBlock(InnerLoop->getLoopLatch(),
-                   InnerLoop->getLoopLatch()->getTerminator(), DT, LI);
-
-    SmallSetVector<Instruction *, 4> WorkList;
-    unsigned i = 0;
-    auto MoveInstructions = [&i, &WorkList, this, &InductionPHIs, NewLatch]() {
-      for (; i < WorkList.size(); i++) {
-        // Duplicate instruction and move it the new latch. Update uses that
-        // have been moved.
-        Instruction *NewI = WorkList[i]->clone();
-        NewI->insertBefore(NewLatch->getFirstNonPHIIt());
-        assert(!NewI->mayHaveSideEffects() &&
-               "Moving instructions with side-effects may change behavior of "
-               "the loop nest!");
-        for (Use &U : llvm::make_early_inc_range(WorkList[i]->uses())) {
-          Instruction *UserI = cast<Instruction>(U.getUser());
-          if (!InnerLoop->contains(UserI->getParent()) ||
-              UserI->getParent() == NewLatch ||
-              llvm::is_contained(InductionPHIs, UserI))
-            U.set(NewI);
-        }
-        // Add operands of moved instruction to the worklist, except if they are
-        // outside the inner loop or are the induction PHI.
-        for (Value *Op : WorkList[i]->operands()) {
-          Instruction *OpI = dyn_cast<Instruction>(Op);
-          if (!OpI ||
-              this->LI->getLoopFor(OpI->getParent()) != this->InnerLoop ||
-              llvm::is_contained(InductionPHIs, OpI))
-            continue;
-          WorkList.insert(OpI);
-        }
-      }
-    };
-
-    // FIXME: Should we interchange when we have a constant condition?
-    Instruction *CondI = dyn_cast<Instruction>(
-        cast<CondBrInst>(InnerLoop->getLoopLatch()->getTerminator())
-            ->getCondition());
-    if (CondI)
-      WorkList.insert(CondI);
-    MoveInstructions();
-    for (Instruction *InnerIndexVar : InnerIndexVarList)
-      WorkList.insert(cast<Instruction>(InnerIndexVar));
-    MoveInstructions();
+  LLVM_DEBUG(dbgs() << "Splitting the inner loop latch\n");
+  auto &InductionPHIs = LIL.getInnerLoopInductions();
+  if (InductionPHIs.empty()) {
+    LLVM_DEBUG(dbgs() << "Failed to find the point to split loop latch \n");
+    return false;
   }
+
+  SmallVector<Instruction *, 8> InnerIndexVarList;
+  for (PHINode *CurInductionPHI : InductionPHIs) {
+    Instruction *IncomingValue = dyn_cast<Instruction>(
+        CurInductionPHI->getIncomingValueForBlock(InnerLoop->getLoopLatch()));
+    assert(IncomingValue &&
+           "Incoming value from loop latch isn't an instruction");
+    if (is_contained(InductionPHIs, IncomingValue))
+      continue;
+    InnerIndexVarList.push_back(IncomingValue);
+  }
+
+  // Create a new latch block for the inner loop. We split at the
+  // current latch's terminator and then move the condition and all
+  // operands that are not either loop-invariant or the induction PHI into the
+  // new latch block.
+  BasicBlock *NewLatch =
+      SplitBlock(InnerLoop->getLoopLatch(),
+                 InnerLoop->getLoopLatch()->getTerminator(), DT, LI);
+
+  SmallSetVector<Instruction *, 4> WorkList;
+  unsigned i = 0;
+  auto MoveInstructions = [&i, &WorkList, this, &InductionPHIs, NewLatch]() {
+    for (; i < WorkList.size(); i++) {
+      // Duplicate instruction and move it to the new latch. Update uses that
+      // have been moved.
+      Instruction *NewI = WorkList[i]->clone();
+      NewI->insertBefore(NewLatch->getFirstNonPHIIt());
+      assert(!NewI->mayHaveSideEffects() &&
+             "Moving instructions with side-effects may change behavior of "
+             "the loop nest!");
+      for (Use &U : llvm::make_early_inc_range(WorkList[i]->uses())) {
+        Instruction *UserI = cast<Instruction>(U.getUser());
+        if (!InnerLoop->contains(UserI->getParent()) ||
+            UserI->getParent() == NewLatch ||
+            llvm::is_contained(InductionPHIs, UserI))
+          U.set(NewI);
+      }
+      // Add operands of moved instruction to the worklist, except if they are
+      // outside the inner loop or are the induction PHI.
+      for (Value *Op : WorkList[i]->operands()) {
+        Instruction *OpI = dyn_cast<Instruction>(Op);
+        if (!OpI || this->LI->getLoopFor(OpI->getParent()) != this->InnerLoop ||
+            llvm::is_contained(InductionPHIs, OpI))
+          continue;
+        WorkList.insert(OpI);
+      }
+    }
+  };
+
+  // FIXME: Should we interchange when we have a constant condition?
+  Instruction *CondI = dyn_cast<Instruction>(
+      cast<CondBrInst>(InnerLoop->getLoopLatch()->getTerminator())
+          ->getCondition());
+  if (CondI)
+    WorkList.insert(CondI);
+  MoveInstructions();
+  for (Instruction *InnerIndexVar : InnerIndexVarList)
+    WorkList.insert(cast<Instruction>(InnerIndexVar));
+  MoveInstructions();
 
   // Ensure the inner loop phi nodes have a separate basic block.
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
