@@ -2456,17 +2456,32 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
   // expression.
   if (Value.isArray()) {
     QualType EltTy = Type->castAsArrayTypeUnsafe()->getElementType();
+
+    // C++26 [expr.const]p2:
+    //   A union elemental subobject is a direct member of a union or an
+    //   element of an array that is a union elemental subobject.
+    //   An inactive union elemental subobject is one not within its lifetime.
+    // Skip such elements during constituent values checking.
+    bool IsUnionArrayMember =
+        Info.getLangOpts().CPlusPlus26 && SubobjectDecl &&
+        SubobjectDecl->getDeclContext()->isRecord() &&
+        cast<RecordDecl>(SubobjectDecl->getDeclContext())->isUnion();
+
     for (unsigned I = 0, N = Value.getArrayInitializedElts(); I != N; ++I) {
-      if (!CheckEvaluationResult(CERK, Info, DiagLoc, EltTy,
-                                 Value.getArrayInitializedElt(I), Kind,
+      const APValue &Elt = Value.getArrayInitializedElt(I);
+      if (IsUnionArrayMember && !Elt.hasValue())
+        continue;
+      if (!CheckEvaluationResult(CERK, Info, DiagLoc, EltTy, Elt, Kind,
                                  SubobjectDecl, CheckedTemps))
         return false;
     }
     if (!Value.hasArrayFiller())
       return true;
-    return CheckEvaluationResult(CERK, Info, DiagLoc, EltTy,
-                                 Value.getArrayFiller(), Kind, SubobjectDecl,
-                                 CheckedTemps);
+    const APValue &Filler = Value.getArrayFiller();
+    if (IsUnionArrayMember && !Filler.hasValue())
+      return true;
+    return CheckEvaluationResult(CERK, Info, DiagLoc, EltTy, Filler, Kind,
+                                 SubobjectDecl, CheckedTemps);
   }
   if (Value.isUnion() && Value.getUnionField()) {
     return CheckEvaluationResult(
@@ -6803,6 +6818,52 @@ struct StartLifetimeOfUnionMemberHandler {
 } // end anonymous namespace
 
 const AccessKinds StartLifetimeOfUnionMemberHandler::AccessKind;
+
+namespace {
+/// Handler for __builtin_start_lifetime (see C++26 [obj.lifetime]).
+/// Starts the lifetime of the target object without initializing subobjects.
+struct BuiltinStartLifetimeHandler {
+  EvalInfo &Info;
+  static const AccessKinds AccessKind = AK_Construct;
+  typedef bool result_type;
+  bool failed() { return false; }
+  bool found(APValue &Subobj, QualType SubobjType) {
+    // C++26 [obj.lifetime]p3:
+    //   If the object referenced by r is already within its lifetime,
+    //   there are no effects.
+    if (Subobj.hasValue())
+      return true;
+
+    // Begin the lifetime of the object without initializing subobjects.
+    if (auto *RD = SubobjType->getAsCXXRecordDecl()) {
+      if (RD->isUnion()) {
+        Subobj = APValue((const FieldDecl *)nullptr);
+      } else {
+        Subobj = APValue(APValue::UninitStruct(), RD->getNumBases(),
+                         std::distance(RD->field_begin(), RD->field_end()));
+      }
+    } else if (auto *AT = dyn_cast_or_null<ConstantArrayType>(
+                   SubobjType->getAsArrayTypeUnsafe())) {
+      unsigned NumElems = AT->getZExtSize();
+      Subobj = APValue(APValue::UninitArray(), 0, NumElems);
+      // CWG guidance (Croyden): starting the lifetime of a multi-dimensional
+      // array also starts the lifetime of each nested sub-array, but not
+      // scalar elements. Recurse via the filler so that expandArray
+      // propagates the started state to each element on demand.
+      QualType ElemType = AT->getElementType();
+      if (ElemType->isArrayType())
+        found(Subobj.getArrayFiller(), ElemType);
+    } else {
+      Subobj = APValue::IndeterminateValue();
+    }
+    return true;
+  }
+  bool found(APSInt &, QualType) { return true; }
+  bool found(APFloat &, QualType) { return true; }
+};
+} // end anonymous namespace
+
+const AccessKinds BuiltinStartLifetimeHandler::AccessKind;
 
 /// Handle a builtin simple-assignment or a call to a trivial assignment
 /// operator whose left-hand side might involve a union member access. If it
@@ -20888,6 +20949,8 @@ static bool EvaluateAtomic(const Expr *E, const LValue *This, APValue &Result,
 // comma operator
 //===----------------------------------------------------------------------===//
 
+static bool EvaluateBuiltinStartLifetime(EvalInfo &Info, const CallExpr *E);
+
 namespace {
 class VoidExprEvaluator
   : public ExprEvaluatorBase<VoidExprEvaluator> {
@@ -20920,6 +20983,9 @@ public:
 
     case Builtin::BI__builtin_operator_delete:
       return HandleOperatorDeleteCall(Info, E);
+
+    case Builtin::BI__builtin_start_lifetime:
+      return EvaluateBuiltinStartLifetime(Info, E);
 
     default:
       return false;
@@ -22633,3 +22699,55 @@ std::optional<bool> EvaluateBuiltinIsWithinLifetime(IntExprEvaluator &IEE,
   return findSubobject(Info, E, CO, Val.getLValueDesignator(), handler);
 }
 } // namespace
+
+/// Evaluate __builtin_start_lifetime(ptr) (see C++26 [obj.lifetime]).
+/// Starts the lifetime of the object pointed to by ptr without initialization.
+/// If the object is a union member, it becomes the active member.
+static bool EvaluateBuiltinStartLifetime(EvalInfo &Info, const CallExpr *E) {
+  if (!Info.InConstantContext)
+    return false;
+
+  assert(E->getBuiltinCallee() == Builtin::BI__builtin_start_lifetime);
+  const Expr *Arg = E->getArg(0);
+  if (Arg->isValueDependent())
+    return false;
+
+  LValue Val;
+  if (!EvaluatePointer(Arg, Val, Info))
+    return false;
+
+  auto Error = [&](int Diag) {
+    bool CalledFromStd = false;
+    const auto *Callee = Info.CurrentCall->getCallee();
+    if (Callee && Callee->isInStdNamespace()) {
+      const IdentifierInfo *Identifier = Callee->getIdentifier();
+      CalledFromStd = Identifier && Identifier->isStr("start_lifetime");
+    }
+    Info.FFDiag(CalledFromStd ? Info.CurrentCall->getCallRange().getBegin()
+                              : E->getExprLoc(),
+                diag::err_invalid_start_lifetime)
+        << (CalledFromStd ? "std::start_lifetime" : "__builtin_start_lifetime")
+        << Diag;
+    return false;
+  };
+
+  if (Val.isNullPointer() || Val.getLValueBase().isNull())
+    return Error(0);
+
+  if (Val.getLValueDesignator().isOnePastTheEnd())
+    return Error(1);
+
+  QualType T = Val.getLValueBase().getType();
+
+  // Find the complete object.
+  CompleteObject CO =
+      findCompleteObject(Info, E, AccessKinds::AK_Construct, Val, T);
+  if (!CO)
+    return false;
+
+  // Navigate to the target subobject. Use AK_Construct so that
+  // findSubobject will activate inactive union members along the path.
+  // The handler starts the lifetime without initializing subobjects.
+  BuiltinStartLifetimeHandler Handler{Info};
+  return findSubobject(Info, E, CO, Val.getLValueDesignator(), Handler);
+}

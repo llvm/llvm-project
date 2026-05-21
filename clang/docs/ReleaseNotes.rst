@@ -186,6 +186,11 @@ C++ Language Changes
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `P3074R7: Trivial unions <https://wg21.link/P3074R7>`_
+  (``__cpp_trivial_union``).
+- Implemented `P3726R2: Adjustments to Union Lifetime Rules
+  <https://wg21.link/P3726R2>`_ (``__builtin_start_lifetime``).
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 

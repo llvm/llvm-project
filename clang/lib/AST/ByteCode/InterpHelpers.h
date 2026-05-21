@@ -69,6 +69,8 @@ bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest);
 UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
                                          unsigned Kind, Pointer &Ptr);
 
+void startLifetimeRecurse(const Pointer &Ptr);
+
 template <typename T>
 static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
   const Expr *E = S.Current->getExpr(OpPC);

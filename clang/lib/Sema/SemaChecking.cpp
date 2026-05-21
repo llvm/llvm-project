@@ -2036,6 +2036,57 @@ static ExprResult BuiltinIsWithinLifetime(Sema &S, CallExpr *TheCall) {
   return TheCall;
 }
 
+static ExprResult BuiltinStartLifetime(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 1))
+    return ExprError();
+
+  ExprResult Arg = S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
+  if (Arg.isInvalid())
+    return ExprError();
+  QualType ParamTy = Arg.get()->getType();
+  TheCall->setArg(0, Arg.get());
+  TheCall->setType(S.Context.VoidTy);
+
+  const auto *PT = ParamTy->getAs<PointerType>();
+  if (!PT) {
+    S.Diag(TheCall->getArg(0)->getExprLoc(),
+           diag::err_builtin_start_lifetime_invalid_arg)
+        << ParamTy;
+    return ExprError();
+  }
+
+  QualType PointeeTy = PT->getPointeeType();
+
+  // Mandates: T is a complete type
+  if (S.RequireCompleteType(TheCall->getArg(0)->getExprLoc(), PointeeTy,
+                            diag::err_incomplete_type))
+    return ExprError();
+
+  // Mandates: T is an implicit-lifetime aggregate type
+  // Check aggregate first
+  if (!PointeeTy->isAggregateType()) {
+    S.Diag(TheCall->getArg(0)->getExprLoc(),
+           diag::err_builtin_start_lifetime_invalid_arg)
+        << PointeeTy;
+    return ExprError();
+  }
+
+  // Check implicit-lifetime: for aggregates, destructor must not be
+  // user-provided
+  if (const auto *RD = PointeeTy->getAsCXXRecordDecl()) {
+    if (const auto *Dtor = RD->getDestructor()) {
+      if (Dtor->isUserProvided()) {
+        S.Diag(TheCall->getArg(0)->getExprLoc(),
+               diag::err_builtin_start_lifetime_invalid_arg)
+            << PointeeTy;
+        return ExprError();
+      }
+    }
+  }
+
+  return TheCall;
+}
+
 static ExprResult BuiltinTriviallyRelocate(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 3))
     return ExprError();
@@ -3123,6 +3174,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return BuiltinLaunder(*this, TheCall);
   case Builtin::BI__builtin_is_within_lifetime:
     return BuiltinIsWithinLifetime(*this, TheCall);
+  case Builtin::BI__builtin_start_lifetime:
+    return BuiltinStartLifetime(*this, TheCall);
   case Builtin::BI__builtin_trivially_relocate:
     return BuiltinTriviallyRelocate(*this, TheCall);
 

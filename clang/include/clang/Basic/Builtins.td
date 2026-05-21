@@ -1190,6 +1190,12 @@ def IsWithinLifetime : LangBuiltin<"CXX_LANG"> {
   let Prototype = "bool(void*)";
 }
 
+def StartLifetime : LangBuiltin<"CXX_LANG"> {
+  let Spellings = ["__builtin_start_lifetime"];
+  let Attributes = [NoThrow, CustomTypeChecking, Consteval];
+  let Prototype = "void(void*)";
+}
+
 def GetVtablePointer : LangBuiltin<"CXX_LANG"> {
   let Spellings = ["__builtin_get_vtable_pointer"];
   let Attributes = [CustomTypeChecking, NoThrow, Const];

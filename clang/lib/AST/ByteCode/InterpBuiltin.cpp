@@ -4425,6 +4425,39 @@ static bool interp__builtin_ia32_gfni_mul(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_start_lifetime(InterpState &S, CodePtr OpPC,
+                                           const CallExpr *Call) {
+  if (!S.inConstantContext())
+    return false;
+
+  Pointer Ptr = S.Stk.pop<Pointer>();
+
+  auto Error = [&](int Diag) {
+    bool CalledFromStd = false;
+    const auto *Callee = S.Current->getCallee();
+    if (Callee && Callee->isInStdNamespace()) {
+      const IdentifierInfo *Identifier = Callee->getIdentifier();
+      CalledFromStd = Identifier && Identifier->isStr("start_lifetime");
+    }
+    S.FFDiag(CalledFromStd ? S.Current->Caller->getSource(S.Current->getRetPC())
+                           : S.Current->getSource(OpPC),
+             diag::err_invalid_start_lifetime)
+        << (CalledFromStd ? "std::start_lifetime" : "__builtin_start_lifetime")
+        << Diag;
+    return false;
+  };
+
+  if (Ptr.isZero())
+    return Error(0);
+  if (Ptr.isOnePastEnd())
+    return Error(1);
+
+  startLifetimeRecurse(Ptr);
+  Ptr.activate();
+  assert(Ptr.isActive());
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -6501,6 +6534,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         },
         /*IsScalar=*/true);
 
+  case Builtin::BI__builtin_start_lifetime:
+    return interp__builtin_start_lifetime(S, OpPC, Call);
+
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)
@@ -6714,6 +6750,8 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
         DestElem.initialize();
       });
     }
+    if (Activate)
+      Dest.activate();
     return true;
   }
 

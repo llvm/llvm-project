@@ -1147,6 +1147,13 @@ public:
   /// structs).
   bool hasInClassInitializer() const { return data().HasInClassInitializer; }
 
+  /// Whether this class has any in-class initializer for a non-static data
+  /// member whose type (or base element type) has a non-trivial destructor.
+  /// Used for C++26 union destructor deletion ([class.dtor]p7 bullet 2).
+  bool hasDMIWithNonTrivialDtor() const {
+    return data().HasDMIWithNonTrivialDtor;
+  }
+
   /// Whether this class or any of its subobjects has any members of
   /// reference type which would make value-initialization ill-formed.
   ///
