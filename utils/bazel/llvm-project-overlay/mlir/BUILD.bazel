@@ -6776,6 +6776,71 @@ gentbl_cc_library(
 )
 
 td_library(
+    name = "PolygeistOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Polygeist/IR/PolygeistBase.td",
+        "include/mlir/Dialect/Polygeist/IR/PolygeistOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":BuiltinDialectTdFiles",
+        ":LLVMOpsTdFiles",
+        ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
+        ":ViewLikeInterfaceTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "PolygeistBaseIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/Polygeist/IR/PolygeistOpsDialect.h.inc": [
+            "-gen-dialect-decls",
+            "-dialect=polygeist",
+        ],
+        "include/mlir/Dialect/Polygeist/IR/PolygeistOpsDialect.cpp.inc": [
+            "-gen-dialect-defs",
+            "-dialect=polygeist",
+        ],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Polygeist/IR/PolygeistBase.td",
+    deps = [":PolygeistOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "PolygeistOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/Polygeist/IR/PolygeistOps.h.inc": ["-gen-op-decls"],
+        "include/mlir/Dialect/Polygeist/IR/PolygeistOps.cpp.inc": ["-gen-op-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Polygeist/IR/PolygeistOps.td",
+    deps = [":PolygeistOpsTdFiles"],
+)
+
+cc_library(
+    name = "PolygeistDialect",
+    srcs = glob(["lib/Dialect/Polygeist/IR/*.cpp"]),
+    hdrs = ["include/mlir/Dialect/Polygeist/IR/Polygeist.h"],
+    includes = ["include"],
+    deps = [
+        ":AffineDialect",
+        ":ArithDialect",
+        ":IR",
+        ":LLVMDialect",
+        ":MemRefDialect",
+        ":PolygeistBaseIncGen",
+        ":PolygeistOpsIncGen",
+        ":SCFDialect",
+        ":SideEffectInterfaces",
+        ":Support",
+        ":ViewLikeInterface",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
     name = "PtrTdFiles",
     srcs = [
         "include/mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td",
@@ -9666,6 +9731,7 @@ cc_library(
         ":OpenMPDialect",
         ":PDLDialect",
         ":PDLInterpDialect",
+        ":PolygeistDialect",
         ":PtrDialect",
         ":QuantOps",
         ":ROCDLDialect",
