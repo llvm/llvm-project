@@ -473,15 +473,17 @@ public:
   // "const T &". For a class D derived from B, and an explicit overload
   // of Pre(const B &), a call to Pre(D) will select the template instead
   // of the base clase overload.
-  // Force user-defined conversion from any const-reference, to make sure
-  // that the Pre(AbsorbAnyReference) and Post(AbsorbAnyReference) overloads
-  // will be worse than derived-to-base conversions. This will, for example,
-  // invoke Pre(const OmpBlockConstruct &) for directives derived from it.
-  struct AbsorbAnyReference {
-    template <typename T> AbsorbAnyReference(const T &) {}
+  // Don't use the inherited Pre/Post functions. Instead, create a last-
+  // resort catch-all overload that is worse than any derived-to-base
+  // conversion. This will, for example,invoke Pre(const OmpBlockConstruct &)
+  // for directives derived from it.
+  struct Anything {
+    // User-defined conversion constructor will be worse than all more
+    // "natural" conversions.
+    template <typename T> Anything(const T &) {}
   };
-  bool Pre(AbsorbAnyReference) { return true; }
-  void Post(AbsorbAnyReference) {}
+  bool Pre(Anything) { return true; }
+  void Post(Anything) {}
 
   bool Pre(const parser::SpecificationPart &) {
     partStack_.push_back(PartKind::SpecificationPart);
@@ -590,8 +592,8 @@ public:
   bool Pre(const parser::OpenMPSectionsConstruct &);
   void Post(const parser::OpenMPSectionsConstruct &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPSectionConstruct &);
-  void Post(const parser::OpenMPSectionConstruct &) { PopContext(); }
+  bool Pre(const parser::OmpSectionDirective &);
+  void Post(const parser::OmpSectionDirective &) { PopContext(); }
 
   bool Pre(const parser::OpenMPCriticalConstruct &critical);
   void Post(const parser::OpenMPCriticalConstruct &) { PopContext(); }
@@ -705,8 +707,8 @@ public:
 
   bool Pre(const parser::OmpAllocateDirective &);
 
-  bool Pre(const parser::OpenMPAssumeConstruct &);
-  void Post(const parser::OpenMPAssumeConstruct &) { PopContext(); }
+  bool Pre(const parser::OmpAssumeDirective &);
+  void Post(const parser::OmpAssumeDirective &) { PopContext(); }
 
   bool Pre(const parser::OpenMPAtomicConstruct &);
   void Post(const parser::OpenMPAtomicConstruct &) { PopContext(); }
@@ -1812,6 +1814,25 @@ void AccAttributeVisitor::Post(const parser::AccDefaultClause &x) {
   }
 }
 
+// Returns true iff symbol qualifies for the pre-OpenACC-3.2 DEFAULT(NONE)
+// scalar extension: an intrinsic numeric or logical non-array, non-pointer,
+// non-allocatable variable.  Characters, derived types, allocatables, and
+// pointers are excluded because their data-sharing semantics under
+// DEFAULT(NONE) differ materially from plain scalar copy.
+static bool IsAccScalar(const Symbol &symbol) {
+  if (IsAllocatable(symbol) || IsPointer(symbol))
+    return false;
+  const auto *type{symbol.GetType()};
+  if (!type)
+    return false;
+  auto cat{type->category()};
+  if (cat != Fortran::semantics::DeclTypeSpec::Category::Numeric &&
+      cat != Fortran::semantics::DeclTypeSpec::Category::Logical)
+    return false;
+  const auto *det{symbol.detailsIf<ObjectEntityDetails>()};
+  return det && !det->IsArray();
+}
+
 void AccAttributeVisitor::Post(const parser::Name &name) {
   if (name.symbol && WithinConstruct()) {
     const Symbol &symbol{name.symbol->GetUltimate()};
@@ -1825,9 +1846,17 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
           name.symbol = found;
         } else if (GetContext().defaultDSA == Symbol::Flag::AccNone) {
           // 2.5.14.
-          context_.Say(name.source,
-              "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-mapping clause"_err_en_US,
-              symbol.name());
+          if (context_.IsEnabled(
+                  common::LanguageFeature::AccDefaultNoneScalars) &&
+              IsAccScalar(symbol)) {
+            context_.Warn(common::UsageWarning::AccImplicitScalar, name.source,
+                "Implicit attribute inferred for DEFAULT(NONE) scalar '%s'"_warn_en_US,
+                symbol.name());
+          } else {
+            context_.Say(name.source,
+                "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-mapping clause"_err_en_US,
+                symbol.name());
+          }
         }
       } else {
         // TODO: assertion here?  or clear name.symbol?
@@ -2179,7 +2208,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionsConstruct &x) {
   return true;
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionConstruct &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpSectionDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_section);
   GetContext().withinConstruct = true;
   return true;
@@ -2255,7 +2284,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpAllocateDirective &x) {
   return false;
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPAssumeConstruct &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpAssumeDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_assume);
   return true;
 }

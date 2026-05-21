@@ -15,8 +15,6 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -Wthread-safety
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <mutex>
 
 #include "test_macros.h"

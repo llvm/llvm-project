@@ -164,6 +164,9 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- A new tweak "Create function body out-of-line" was added that creates
+  an implementation for a function declaration.
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -229,7 +232,8 @@ New checks
 
   Points out uses of ``cast<>``, ``dyn_cast<>`` and their ``or_null`` variants
   that are unnecessary because the argument already is of the target type, or a
-  derived type thereof.
+  derived type thereof. Also does similar analysis for calls to ``isa<>`` that
+  always return ``true``.
 
 - New :doc:`llvm-type-switch-case-types
   <clang-tidy/checks/llvm/type-switch-case-types>` check.
@@ -429,6 +433,9 @@ Changes in existing checks
 
   - Avoid false positives when moving object to a base type then accessing
     non-base members.
+
+  - Avoid false positives when moving object is reinitialized via the base
+    class's ``operator=``.
 
 - Improved :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>`

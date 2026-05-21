@@ -308,6 +308,7 @@ struct MissingFeatures {
   static bool msvcBuiltins() { return false; }
   static bool openCL() { return false; }
   static bool openMP() { return false; }
+  static bool sycl() { return false; }
   static bool opTBAA() { return false; }
   static bool peepholeProtection() { return false; }
   static bool pgoUse() { return false; }
@@ -372,6 +373,7 @@ struct MissingFeatures {
 
   // Maybe only needed for Windows exception handling
   static bool currentFuncletPad() { return false; }
+  static bool sizeOfUnwindException() { return false; }
 };
 
 } // namespace cir
