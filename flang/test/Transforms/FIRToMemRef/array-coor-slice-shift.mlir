@@ -75,10 +75,8 @@ func.func @array_coor_slice_shift_section() {
   return
 }
 
-// Descriptor-backed array_coor with shape_shift + slice. Even though the
-// memref is a fir.box, the explicit shape_shift carries lower bounds, so the
-// shapeVec path (synthesize row-major strides from extents) must be taken,
-// not the box_dims descriptor path.
+// Descriptor-backed array_coor with shape_shift + slice.
+// TODO: the strides must still be taken from the descriptor.
 // CHECK-LABEL: func.func @array_coor_box_shape_shift_slice
 // CHECK:       %[[C1:.*]] = arith.constant 1 : index
 // CHECK:       %[[C5:.*]] = arith.constant 5 : index
