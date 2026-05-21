@@ -929,6 +929,10 @@ public:
     CM_Interleave,
     CM_GatherScatter,
     CM_Scalarize,
+    /// A widening decision that has been invalidated after replacing the
+    /// corresponding recipe during VPlan transforms.
+    /// TODO: Remove once the legacy exit cost computation is retired.
+    CM_InvalidatedDecision
   };
 
   /// Save vectorization decision \p W and \p Cost taken by the cost model for
@@ -3237,6 +3241,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPWidenCastSC:
       case VPRecipeBase::VPWidenGEPSC:
       case VPRecipeBase::VPWidenIntrinsicSC:
+      case VPRecipeBase::VPWidenMemIntrinsicSC:
       case VPRecipeBase::VPWidenSC:
       case VPRecipeBase::VPBlendSC:
       case VPRecipeBase::VPFirstOrderRecurrencePHISC:
@@ -5205,6 +5210,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
         return TTI::CastContextHint::Reversed;
       case LoopVectorizationCostModel::CM_Unknown:
         llvm_unreachable("Instr did not go through cost modelling?");
+      case LoopVectorizationCostModel::CM_InvalidatedDecision:
+        return TTI::CastContextHint::None;
       }
 
       llvm_unreachable("Unhandled case!");
@@ -5524,6 +5531,12 @@ bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
   return CM.ValuesToIgnore.contains(UI) ||
          (IsVector && CM.VecValuesToIgnore.contains(UI)) ||
          SkipCostComputation.contains(UI);
+}
+
+void VPCostContext::invalidateWideningDecision(Instruction *I,
+                                               ElementCount VF) {
+  CM.setWideningDecision(I, VF,
+                         LoopVectorizationCostModel::CM_InvalidatedDecision, 0);
 }
 
 uint64_t VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {
@@ -6122,8 +6135,11 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
           Ptr, &Plan.getVF(), getLoadStoreType(I),
           /*Stride*/ -1, ReverseFlags, VPI->getDebugLoc());
     } else {
-      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I), Flags,
-                                            VPI->getDebugLoc());
+      const DataLayout &DL = I->getDataLayout();
+      auto *StrideTy = DL.getIndexType(Ptr->getUnderlyingValue()->getType());
+      VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
+      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I), StrideOne,
+                                            Flags, VPI->getDebugLoc());
     }
     Builder.setInsertPoint(VPI);
     Builder.insert(VectorPtr);
@@ -6455,6 +6471,9 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
                       Config.getInLoopReductions(), Hints.allowReordering()))
     return;
 
+  if (const LoopAccessInfo *LAI = Legal->getLAI())
+    RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *VPlan0, PSE,
+                   LAI->getSymbolicStrides());
   RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::addCanonicalIVRecipes, *VPlan0,
@@ -6724,6 +6743,17 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
                    Range);
   }
 
+  // Interleave memory: for each Interleave Group we marked earlier as relevant
+  // for this VPlan, replace the Recipes widening its memory instructions with a
+  // single VPInterleaveRecipe at its insertion point.
+  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
+                 InterleaveGroups, CM.isEpilogueAllowed());
+
+  // Convert memory recipes to strided access recipes if the strided access is
+  // legal and profitable.
+  RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
+                 *OrigLoop, CostCtx, Range);
+
   // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
   if (Range.Start.isScalar())
     Range.End = Range.Start * 2;
@@ -6731,16 +6761,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   for (ElementCount VF : Range)
     Plan->addVF(VF);
   Plan->setName("Initial VPlan");
-
-  // Interleave memory: for each Interleave Group we marked earlier as relevant
-  // for this VPlan, replace the Recipes widening its memory instructions with a
-  // single VPInterleaveRecipe at its insertion point.
-  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
-                 InterleaveGroups, CM.isEpilogueAllowed());
-
-  // Replace VPValues for known constant strides.
-  RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *Plan, PSE,
-                 Legal->getLAI()->getSymbolicStrides());
 
   RUN_VPLAN_PASS(VPlanTransforms::dropPoisonGeneratingRecipes, *Plan);
 
@@ -7401,11 +7421,10 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
   assert(all_of(IV->users(),
                 [](const VPUser *U) {
-                  return isa<VPScalarIVStepsRecipe>(U) ||
-                         isa<VPDerivedIVRecipe>(U) ||
-                         cast<VPRecipeBase>(U)->isScalarCast() ||
-                         cast<VPInstruction>(U)->getOpcode() ==
-                             Instruction::Add;
+                  if (isa<VPScalarIVStepsRecipe, VPDerivedIVRecipe>(U))
+                    return true;
+                  unsigned Opc = cast<VPInstruction>(U)->getOpcode();
+                  return Instruction::isCast(Opc) || Opc == Instruction::Add;
                 }) &&
          "the canonical IV should only be used by its increment or "
          "ScalarIVSteps when resetting the start value");
