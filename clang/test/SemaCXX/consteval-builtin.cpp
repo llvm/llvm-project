@@ -26,7 +26,7 @@
 // c-error@-4 {{does not have the constexpr builtin}}
 
 #if __cplusplus < 201103L
-#define static_assert __extension__ _Static_assert // c-warning {{keyword is hidden by macro definition}}
+#define static_assert __extension__ _Static_assert
 #define CONSTEXPR11
 #else
 #define CONSTEXPR11 constexpr
