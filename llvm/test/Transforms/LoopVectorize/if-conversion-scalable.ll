@@ -3,11 +3,11 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=8  -scalable-vectorization=on \
 ; RUN:     -force-target-supports-masked-memory-ops -force-target-supports-scalable-vectors \
 ; RUN:     -enable-interleaved-mem-accesses -enable-masked-interleaved-mem-accesses -force-target-supports-gather-scatter-ops \
-; RUN:     -S < %s | FileCheck %s --check-prefix=CHECK-GATHER-ENABLED
+; RUN:     -S < %s | FileCheck %s
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=8  -scalable-vectorization=on \
 ; RUN:     -force-target-supports-masked-memory-ops -force-target-supports-scalable-vectors \
 ; RUN:     -enable-interleaved-mem-accesses -enable-masked-interleaved-mem-accesses \
-; RUN:     -S < %s | FileCheck %s --check-prefix=CHECK-GATHER-DISABLED
+; RUN:     -S < %s | FileCheck %s
 
 ; Test whether the legality of gather/scatter has an impact on if-conversion
 ; for scalable VFs. In either case, the example below should be vectorized with
@@ -15,78 +15,45 @@
 
 ; Loop with two conditional (interleaved) loads.
 define void @conv_interleaved_loads_load(ptr noalias %a, ptr readonly %b, ptr readonly %c, ptr readonly %flags, i64 %cond) {
-; CHECK-GATHER-ENABLED-LABEL: define void @conv_interleaved_loads_load(
-; CHECK-GATHER-ENABLED-SAME: ptr noalias [[A:%.*]], ptr readonly [[B:%.*]], ptr readonly [[C:%.*]], ptr readonly [[FLAGS:%.*]], i64 [[COND:%.*]]) {
-; CHECK-GATHER-ENABLED-NEXT:  [[ENTRY:.*:]]
-; CHECK-GATHER-ENABLED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-GATHER-ENABLED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-GATHER-ENABLED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
-; CHECK-GATHER-ENABLED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK-GATHER-ENABLED:       [[VECTOR_PH]]:
-; CHECK-GATHER-ENABLED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-GATHER-ENABLED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
-; CHECK-GATHER-ENABLED-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
-; CHECK-GATHER-ENABLED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[COND]], i64 0
-; CHECK-GATHER-ENABLED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-GATHER-ENABLED-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK-GATHER-ENABLED:       [[VECTOR_BODY]]:
-; CHECK-GATHER-ENABLED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-GATHER-ENABLED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[B]], i64 [[INDEX]]
-; CHECK-GATHER-ENABLED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i16>, ptr [[TMP4]], align 2
-; CHECK-GATHER-ENABLED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[FLAGS]], i64 [[INDEX]]
-; CHECK-GATHER-ENABLED-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x i64>, ptr [[TMP5]], align 8
-; CHECK-GATHER-ENABLED-NEXT:    [[TMP6:%.*]] = icmp ne <vscale x 8 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
-; CHECK-GATHER-ENABLED-NEXT:    [[TMP7:%.*]] = getelementptr [2 x i16], ptr [[C]], i64 [[INDEX]], i64 0
-; CHECK-GATHER-ENABLED-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1> [[TMP6]], <vscale x 8 x i1> [[TMP6]])
-; CHECK-GATHER-ENABLED-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 16 x i16> @llvm.masked.load.nxv16i16.p0(ptr align 2 [[TMP7]], <vscale x 16 x i1> [[INTERLEAVED_MASK]], <vscale x 16 x i16> poison)
-; CHECK-GATHER-ENABLED-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.vector.deinterleave2.nxv16i16(<vscale x 16 x i16> [[WIDE_MASKED_VEC]])
-; CHECK-GATHER-ENABLED-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[STRIDED_VEC]], 0
-; CHECK-GATHER-ENABLED-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[STRIDED_VEC]], 1
-; CHECK-GATHER-ENABLED-NEXT:    [[TMP10:%.*]] = add <vscale x 8 x i16> [[TMP8]], [[TMP9]]
-; CHECK-GATHER-ENABLED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 8 x i1> [[TMP6]], <vscale x 8 x i16> [[TMP10]], <vscale x 8 x i16> zeroinitializer
-; CHECK-GATHER-ENABLED-NEXT:    [[TMP11:%.*]] = add <vscale x 8 x i16> [[WIDE_LOAD]], [[PREDPHI]]
-; CHECK-GATHER-ENABLED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[INDEX]]
-; CHECK-GATHER-ENABLED-NEXT:    store <vscale x 8 x i16> [[TMP11]], ptr [[TMP12]], align 2
-; CHECK-GATHER-ENABLED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; CHECK-GATHER-ENABLED-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-GATHER-ENABLED-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK-GATHER-ENABLED:       [[MIDDLE_BLOCK]]:
-; CHECK-GATHER-ENABLED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-GATHER-ENABLED-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
-; CHECK-GATHER-ENABLED:       [[SCALAR_PH]]:
-;
-; CHECK-GATHER-DISABLED-LABEL: define void @conv_interleaved_loads_load(
-; CHECK-GATHER-DISABLED-SAME: ptr noalias [[A:%.*]], ptr readonly [[B:%.*]], ptr readonly [[C:%.*]], ptr readonly [[FLAGS:%.*]], i64 [[COND:%.*]]) {
-; CHECK-GATHER-DISABLED-NEXT:  [[ENTRY:.*:]]
-; CHECK-GATHER-DISABLED-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK-GATHER-DISABLED:       [[VECTOR_PH]]:
-; CHECK-GATHER-DISABLED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[COND]], i64 0
-; CHECK-GATHER-DISABLED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
-; CHECK-GATHER-DISABLED-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK-GATHER-DISABLED:       [[VECTOR_BODY]]:
-; CHECK-GATHER-DISABLED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-GATHER-DISABLED-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, ptr [[B]], i64 [[INDEX]]
-; CHECK-GATHER-DISABLED-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[TMP0]], align 2
-; CHECK-GATHER-DISABLED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FLAGS]], i64 [[INDEX]]
-; CHECK-GATHER-DISABLED-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i64>, ptr [[TMP1]], align 8
-; CHECK-GATHER-DISABLED-NEXT:    [[TMP2:%.*]] = icmp ne <8 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
-; CHECK-GATHER-DISABLED-NEXT:    [[TMP3:%.*]] = getelementptr [2 x i16], ptr [[C]], i64 [[INDEX]], i64 0
-; CHECK-GATHER-DISABLED-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
-; CHECK-GATHER-DISABLED-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <16 x i16> @llvm.masked.load.v16i16.p0(ptr align 2 [[TMP3]], <16 x i1> [[INTERLEAVED_MASK]], <16 x i16> poison)
-; CHECK-GATHER-DISABLED-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i16> [[WIDE_MASKED_VEC]], <16 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; CHECK-GATHER-DISABLED-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <16 x i16> [[WIDE_MASKED_VEC]], <16 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-; CHECK-GATHER-DISABLED-NEXT:    [[TMP4:%.*]] = add <8 x i16> [[STRIDED_VEC]], [[STRIDED_VEC2]]
-; CHECK-GATHER-DISABLED-NEXT:    [[PREDPHI:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP4]], <8 x i16> zeroinitializer
-; CHECK-GATHER-DISABLED-NEXT:    [[TMP5:%.*]] = add <8 x i16> [[WIDE_LOAD]], [[PREDPHI]]
-; CHECK-GATHER-DISABLED-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[INDEX]]
-; CHECK-GATHER-DISABLED-NEXT:    store <8 x i16> [[TMP5]], ptr [[TMP6]], align 2
-; CHECK-GATHER-DISABLED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-GATHER-DISABLED-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-GATHER-DISABLED-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK-GATHER-DISABLED:       [[MIDDLE_BLOCK]]:
-; CHECK-GATHER-DISABLED-NEXT:    br label %[[EXIT:.*]]
-; CHECK-GATHER-DISABLED:       [[EXIT]]:
-; CHECK-GATHER-DISABLED-NEXT:    ret void
+; CHECK-LABEL: define void @conv_interleaved_loads_load(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr readonly [[B:%.*]], ptr readonly [[C:%.*]], ptr readonly [[FLAGS:%.*]], i64 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[COND]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i16>, ptr [[TMP4]], align 2
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[FLAGS]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x i64>, ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <vscale x 8 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [2 x i16], ptr [[C]], i64 [[INDEX]], i64 0
+; CHECK-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1> [[TMP6]], <vscale x 8 x i1> [[TMP6]])
+; CHECK-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 16 x i16> @llvm.masked.load.nxv16i16.p0(ptr align 2 [[TMP7]], <vscale x 16 x i1> [[INTERLEAVED_MASK]], <vscale x 16 x i16> poison)
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.vector.deinterleave2.nxv16i16(<vscale x 16 x i16> [[WIDE_MASKED_VEC]])
+; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[STRIDED_VEC]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[STRIDED_VEC]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = add <vscale x 8 x i16> [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 8 x i1> [[TMP6]], <vscale x 8 x i16> [[TMP10]], <vscale x 8 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = add <vscale x 8 x i16> [[WIDE_LOAD]], [[PREDPHI]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    store <vscale x 8 x i16> [[TMP11]], ptr [[TMP12]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
   br label %for.body

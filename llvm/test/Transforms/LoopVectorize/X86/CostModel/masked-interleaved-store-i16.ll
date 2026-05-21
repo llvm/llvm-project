@@ -147,8 +147,10 @@ define void @test(ptr noalias nocapture %points, ptr noalias nocapture readonly 
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %0, ptr %arrayidx6, align 2
 ; ENABLED_MASKED_STRIDED:  Cost of 2 for VF 2: profitable to scalarize store i16 %0, ptr %arrayidx6, align 2
 ; ENABLED_MASKED_STRIDED:  Cost of 4 for VF 4: profitable to scalarize store i16 %0, ptr %arrayidx6, align 2
-; ENABLED_MASKED_STRIDED:  Cost of 8 for VF 8: profitable to scalarize store i16 %0, ptr %arrayidx6, align 2
-; ENABLED_MASKED_STRIDED:  Cost of 16.5 for VF 16: profitable to scalarize store i16 %0, ptr %arrayidx6, align 2
+; ENABLED_MASKED_STRIDED:  Cost of 12 for VF 8: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%arrayidx6>, ir<%cmp1>
+; ENABLED_MASKED_STRIDED:    store ir<%0> to index 0
+; ENABLED_MASKED_STRIDED:  Cost of 22 for VF 16: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%arrayidx6>, ir<%cmp1>
+; ENABLED_MASKED_STRIDED:    store ir<%0> to index 0
 ;
 entry:
   br label %for.body

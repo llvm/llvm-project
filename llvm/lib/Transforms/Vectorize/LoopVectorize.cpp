@@ -2496,10 +2496,13 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
     return getCallWideningDecision(cast<CallInst>(I), VF).Kind == CM_Scalarize;
   case Instruction::Load:
   case Instruction::Store: {
-    bool IsConsecutive = Legal->isConsecutivePtr(getLoadStoreType(I),
-                                                 getLoadStorePointerOperand(I));
-    return !(IsConsecutive && Config.isLegalMaskedLoadOrStore(I, VF)) &&
-           !Config.isLegalGatherOrScatter(I, VF);
+    LoopVectorizationCostModel::InstWidening WidenKind =
+        getWideningDecision(I, VF);
+    assert(WidenKind != CM_Unknown);
+    // According to the legacy cost model, a masked access is never considered
+    // profitable for scalarization when gather/scatter is available, even if
+    // the chosen widening is CM_Scalarize.
+    return WidenKind == CM_Scalarize && !Config.isLegalGatherOrScatter(I, VF);
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
@@ -2741,7 +2744,7 @@ bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
 
   // If the instruction is a store located in a predicated block, it will be
   // scalarized.
-  if (isScalarWithPredication(I, VF))
+  if (isPredicatedInst(I) && !Config.isLegalMaskedLoadOrStore(I, VF))
     return false;
 
   // If the instruction's allocated size doesn't equal it's type size, it
@@ -4766,7 +4769,9 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
   NumPredStores = 0;
   for (BasicBlock *BB : TheLoop->blocks())
     for (Instruction &I : *BB)
-      if (isa<StoreInst>(&I) && isScalarWithPredication(&I, VF))
+      if (isa<StoreInst>(&I) && isPredicatedInst(&I) &&
+          !memoryInstructionCanBeWidened(&I, VF) &&
+          !Config.isLegalGatherOrScatter(&I, VF))
         ++NumPredStores;
 
   for (BasicBlock *BB : TheLoop->blocks()) {
