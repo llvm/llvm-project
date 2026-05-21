@@ -2,10 +2,10 @@
 // RUN: wasm-ld --no-entry -Bsymbolic %t.o -o %t.wasm 2>&1 | FileCheck -check-prefix=WARNING %s
 // WARNING: warning: -Bsymbolic is only meaningful when combined with -shared
 
-// RUN: wasm-ld --experimental-pic -shared %t.o -o %t0.so
+// RUN: wasm-ld -shared %t.o -o %t0.so
 // RUN: obj2yaml %t0.so | FileCheck -check-prefix=NOOPTION %s
 
-// RUN: wasm-ld --experimental-pic -shared -Bsymbolic %t.o -o %t1.so
+// RUN: wasm-ld -shared -Bsymbolic %t.o -o %t1.so
 // RUN: obj2yaml %t1.so | FileCheck -check-prefix=SYMBOLIC %s
 
 // NOOPTION:       - Type:            IMPORT

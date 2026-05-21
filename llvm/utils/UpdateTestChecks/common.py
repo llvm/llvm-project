@@ -597,6 +597,10 @@ LOOP_PASS_DEBUG_RE = re.compile(
     r"^\s*\'(?P<func>[\w.$-]+?)\'[^\n]*" r"\s*\n(?P<body>.*)$", flags=(re.X | re.S)
 )
 
+VPLAN_RE = re.compile(
+    r"\'(?P<func>[\w.$-]+?)\'[^\n]*\n(?P<body>.*)\n$", flags=(re.X | re.S)
+)
+
 IR_FUNCTION_RE = re.compile(r'^\s*define\s+(?:internal\s+)?[^@]*@"?([\w.$-]+)"?\s*\(')
 IR_FUNCTION_LABEL_RE = re.compile(
     r'^\s*(?:define\s+(?:internal\s+)?[^@]*)?@"?([\w.$-]+)"?\s*\('
@@ -2427,9 +2431,12 @@ def add_analyze_checks(
     func_name,
     ginfo: GeneralizerInfo,
     is_filtered,
+    check_label_prefix="",
 ):
     assert ginfo.is_analyze()
-    check_label_format = "{} %s-LABEL: '%s%s%s%s'".format(comment_marker)
+    check_label_format = "{} %s-LABEL: {}'%s%s%s%s'".format(
+        comment_marker, check_label_prefix
+    )
     global_vars_seen_dict = {}
     return add_checks(
         output_lines,
@@ -2534,7 +2541,7 @@ METADATA_FILTERS = [
         r"(?<=\")(.+ )?(\w+ version )[\d.]+(?:[^\" ]*)(?: \([^)]+\))?",
         r"{{.*}}\2{{.*}}",
     ),  # preface with glob also, to capture optional CLANG_VENDOR
-    (r'(!DIFile\(filename: ")(.+/)?([^/]+", directory: )".+"', r"\1{{.*}}\3{{.*}}"),
+    (r'(!DIFile\(filename: ")(.+/)?([^/]+", directory: )"[^"]*"', r"\1{{.*}}\3{{.*}}"),
 ]
 METADATA_FILTERS_RE = [(re.compile(f), r) for (f, r) in METADATA_FILTERS]
 
@@ -2723,6 +2730,7 @@ def get_autogennote_suffix(parser, args):
             "tool_binary",
             "opt_binary",
             "llc_binary",
+            "llubi_binary",
             "clang",
             "opt",
             "llvm_bin",

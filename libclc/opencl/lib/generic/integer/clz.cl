@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/integer/clc_clz.h>
+#include "clc/integer/clc_clz.h"
 
 #define __CLC_FUNCTION clz
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __CLC_BODY "clc/shared/unary_def.inc"
 
-#include <clc/integer/gentype.inc>
+#include "clc/integer/gentype.inc"

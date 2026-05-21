@@ -53,6 +53,7 @@
 
 #include "llvm/Transforms/IPO/ExpandVariadics.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -60,6 +61,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -124,12 +126,18 @@ public:
   };
   virtual VAArgSlotInfo slotInfo(const DataLayout &DL, Type *Parameter) = 0;
 
-  // Per-target overrides of special symbols.
-  virtual bool ignoreFunction(Function *F) { return false; }
-
   // Targets implemented so far all have the same trivial lowering for these
   bool vaEndIsNop() { return true; }
   bool vaCopyIsMemcpy() { return true; }
+
+  // Per-target overrides of special symbols.
+  virtual bool ignoreFunction(const Function *F) { return false; }
+
+  // Any additional address spaces used in va intrinsics that should be
+  // expanded.
+  virtual SmallVector<unsigned> getTargetSpecificVaIntrinAddrSpaces() const {
+    return {};
+  }
 
   virtual ~VariadicABIInfo() = default;
 };
@@ -364,13 +372,21 @@ bool ExpandVariadics::runOnModule(Module &M) {
   // variadic functions have also been replaced.
 
   {
-    // 0 and AllocaAddrSpace are sufficient for the targets implemented so far
     unsigned Addrspace = 0;
     Changed |= expandVAIntrinsicUsersWithAddrspace(M, Builder, Addrspace);
 
     Addrspace = DL.getAllocaAddrSpace();
     if (Addrspace != 0)
       Changed |= expandVAIntrinsicUsersWithAddrspace(M, Builder, Addrspace);
+
+    // Process any addrspaces targets declare to be important.
+    const SmallVector<unsigned> &TargetASVec =
+        ABI->getTargetSpecificVaIntrinAddrSpaces();
+    for (unsigned TargetAS : TargetASVec) {
+      if (TargetAS == 0 || TargetAS == DL.getAllocaAddrSpace())
+        continue;
+      Changed |= expandVAIntrinsicUsersWithAddrspace(M, Builder, TargetAS);
+    }
   }
 
   if (Mode != ExpandVariadicsMode::Lowering)
@@ -932,11 +948,11 @@ struct NVPTX final : public VariadicABIInfo {
   bool vaListPassedInSSARegister() override { return true; }
 
   Type *vaListType(LLVMContext &Ctx) override {
-    return PointerType::getUnqual(Ctx);
+    return PointerType::get(Ctx, NVPTXAS::ADDRESS_SPACE_LOCAL);
   }
 
   Type *vaListParameterType(Module &M) override {
-    return PointerType::getUnqual(M.getContext());
+    return PointerType::get(M.getContext(), NVPTXAS::ADDRESS_SPACE_LOCAL);
   }
 
   Value *initializeVaList(Module &M, LLVMContext &Ctx, IRBuilder<> &Builder,
@@ -978,10 +994,25 @@ struct SPIRV final : public VariadicABIInfo {
     return {A, false};
   }
 
-  // The SPIR-V backend has special handling for SPIR-V mangled printf
-  // functions.
-  bool ignoreFunction(Function *F) override {
-    return F->getName().starts_with('_') && F->getName().contains("printf");
+  // The SPIR-V backend has special handling for builtins.
+  bool ignoreFunction(const Function *F) override {
+    if (!F->isDeclaration())
+      return false;
+
+    std::string Demangled = llvm::demangle(F->getName());
+    StringRef DemangledName(Demangled);
+
+    // Skip any SPIR-V builtins.
+    if (DemangledName.starts_with("__spirv_") ||
+        DemangledName.starts_with("printf("))
+      return true;
+
+    return false;
+  }
+
+  // We will likely see va intrinsics in the generic addrspace (4).
+  SmallVector<unsigned> getTargetSpecificVaIntrinAddrSpaces() const override {
+    return {4};
   }
 };
 
@@ -1041,6 +1072,7 @@ std::unique_ptr<VariadicABIInfo> VariadicABIInfo::create(const Triple &T) {
   }
 
   case Triple::spirv:
+  case Triple::spirv32:
   case Triple::spirv64: {
     return std::make_unique<SPIRV>();
   }

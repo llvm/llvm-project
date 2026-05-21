@@ -132,7 +132,10 @@ def DereferenceableOrNull : IntAttr<"dereferenceable_or_null", IntersectMin,
 def DisableSanitizerInstrumentation: EnumAttr<"disable_sanitizer_instrumentation", IntersectPreserve, [FnAttr]>;
 
 /// Provide pointer element type to intrinsic.
-def ElementType : TypeAttr<"elementtype", IntersectPreserve, [ParamAttr]>;
+def ElementType : TypeAttr<"elementtype", IntersectPreserve, [RetAttr, ParamAttr]>;
+
+/// Flatten function by recursively inlining all calls.
+def Flatten : EnumAttr<"flatten", IntersectPreserve, [FnAttr]>;
 
 /// Whether to keep return instructions, or replace with a jump to an external
 /// symbol.
@@ -211,6 +214,9 @@ def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;
 
 /// inline=never.
 def NoInline : EnumAttr<"noinline", IntersectPreserve, [FnAttr]>;
+
+/// nooutline
+def NoOutline : EnumAttr<"nooutline", IntersectPreserve, [FnAttr]>;
 
 /// Function is called early and/or often, so lazy binding isn't worthwhile.
 def NonLazyBind : EnumAttr<"nonlazybind", IntersectPreserve, [FnAttr]>;
@@ -416,7 +422,6 @@ def AllowDirectAccessInHotPatchFunction
 
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
-def NoNansFPMath : StrBoolAttr<"no-nans-fp-math">;
 def NoSignedZerosFPMath : StrBoolAttr<"no-signed-zeros-fp-math">;
 def NoJumpTables : StrBoolAttr<"no-jump-tables">;
 def NoInlineLineTables : StrBoolAttr<"no-inline-line-tables">;
@@ -475,7 +480,6 @@ class MergeRule<string F> {
 }
 
 def : MergeRule<"setAND<LessPreciseFPMADAttr>">;
-def : MergeRule<"setAND<NoNansFPMathAttr>">;
 def : MergeRule<"setAND<NoSignedZerosFPMathAttr>">;
 def : MergeRule<"setOR<NoImplicitFloatAttr>">;
 def : MergeRule<"setOR<NoJumpTablesAttr>">;

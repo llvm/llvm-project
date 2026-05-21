@@ -159,6 +159,7 @@ public:
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
   bool enableSubRegLiveness() const override { return EnableSubregLiveness; }
+  bool enableSpillageCopyElimination() const override { return true; }
 
   bool enableMachinePipeliner() const override;
   bool useDFAforSMS() const override { return false; }
@@ -263,7 +264,8 @@ public:
   bool hasFusion() const {
     return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
            hasFuseAES() || hasFuseArithmeticLogic() || hasFuseCmpCSel() ||
-           hasFuseCmpCSet() || hasFuseAdrpAdd() || hasFuseLiterals();
+           hasFuseFCmpFCSel() || hasFuseCmpCSet() || hasFuseAdrpAdd() ||
+           hasFuseLiterals();
   }
 
   unsigned getEpilogueVectorizationMinVF() const {

@@ -961,7 +961,8 @@ bool X86InstrInfo::isReMaterializableImpl(
 void X86InstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
                                  Register DestReg, unsigned SubIdx,
-                                 const MachineInstr &Orig) const {
+                                 const MachineInstr &Orig,
+                                 LaneBitmask UsedLanes) const {
   bool ClobbersEFLAGS = Orig.modifiesRegister(X86::EFLAGS, &TRI);
   if (ClobbersEFLAGS && MBB.computeRegisterLiveness(&TRI, X86::EFLAGS, I) !=
                             MachineBasicBlock::LQR_Dead) {
@@ -5698,7 +5699,7 @@ static bool canConvert2Copy(unsigned Opc) {
 
 /// Convert an ALUrr opcode to corresponding ALUri opcode. Such as
 ///     ADD32rr  ==>  ADD32ri
-static unsigned convertALUrr2ALUri(unsigned Opc) {
+static unsigned convertALUrr2ALUri(unsigned Opc, bool HasNDDI) {
   switch (Opc) {
   default:
     return 0;
@@ -5707,9 +5708,7 @@ static unsigned convertALUrr2ALUri(unsigned Opc) {
     return X86::TO;                                                            \
   case X86::FROM##_ND:                                                         \
     return X86::TO##_ND;
-    FROM_TO(ADD64rr, ADD64ri32)
     FROM_TO(ADC64rr, ADC64ri32)
-    FROM_TO(SUB64rr, SUB64ri32)
     FROM_TO(SBB64rr, SBB64ri32)
     FROM_TO(AND64rr, AND64ri32)
     FROM_TO(OR64rr, OR64ri32)
@@ -5739,6 +5738,8 @@ static unsigned convertALUrr2ALUri(unsigned Opc) {
 #define FROM_TO(FROM, TO)                                                      \
   case X86::FROM:                                                              \
     return X86::TO;
+    FROM_TO(ADD64rr, ADD64ri32)
+    FROM_TO(SUB64rr, SUB64ri32)
     FROM_TO(TEST64rr, TEST64ri32)
     FROM_TO(CTEST64rr, CTEST64ri32)
     FROM_TO(CMP64rr, CMP64ri32)
@@ -5748,6 +5749,10 @@ static unsigned convertALUrr2ALUri(unsigned Opc) {
     FROM_TO(CMP32rr, CMP32ri)
     FROM_TO(CCMP32rr, CCMP32ri)
 #undef FROM_TO
+  case X86::ADD64rr_ND:
+    return HasNDDI ? X86::ADD64ri32_ND : 0;
+  case X86::SUB64rr_ND:
+    return HasNDDI ? X86::SUB64ri32_ND : 0;
   }
 }
 
@@ -5834,7 +5839,7 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
     else
       return false;
   } else
-    NewOpc = convertALUrr2ALUri(Opc);
+    NewOpc = convertALUrr2ALUri(Opc, Subtarget.hasNDDI());
 
   if (!NewOpc)
     return false;
@@ -6023,7 +6028,7 @@ static bool ExpandMOVImmSExti8(MachineInstrBuilder &MIB,
   // Build CFI if necessary.
   MachineFunction &MF = *MBB.getParent();
   const X86FrameLowering *TFL = Subtarget.getFrameLowering();
-  bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+  bool IsWin64Prologue = MF.getTarget().getMCAsmInfo().usesWindowsCFI();
   bool NeedsDwarfCFI = !IsWin64Prologue && MF.needsFrameMoves();
   bool EmitCFI = !TFL->hasFP(MF) && NeedsDwarfCFI;
   if (EmitCFI) {
@@ -7480,17 +7485,24 @@ static void printFailMsgforFold(const MachineInstr &MI, unsigned Idx) {
 MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, unsigned OpNum,
     ArrayRef<MachineOperand> MOs, MachineBasicBlock::iterator InsertPt,
-    unsigned Size, Align Alignment, bool AllowCommute) const {
+    unsigned Size, Align Alignment, bool AllowCommute, MachineInstr *&CopyMI,
+    VirtRegMap *VRM) const {
   bool isSlowTwoMemOps = Subtarget.slowTwoMemOps();
+  bool isSlowIndirectCall = Subtarget.slowIndirectCall();
   unsigned Opc = MI.getOpcode();
 
-  // For CPUs that favor the register form of a call or push,
-  // do not fold loads into calls or pushes, unless optimizing for size
-  // aggressively.
-  if (isSlowTwoMemOps && !MF.getFunction().hasMinSize() &&
+  // For CPUs that favor the register form of a call,
+  // do not fold loads into calls, unless optimizing for size aggressively.
+  if ((isSlowTwoMemOps || isSlowIndirectCall) &&
+      !MF.getFunction().hasMinSize() &&
       (Opc == X86::CALL32r || Opc == X86::CALL64r ||
-       Opc == X86::CALL64r_ImpCall || Opc == X86::PUSH16r ||
-       Opc == X86::PUSH32r || Opc == X86::PUSH64r))
+       Opc == X86::CALL64r_ImpCall))
+    return nullptr;
+
+  // For CPUs that favor the register form of a push,
+  // do not fold loads into pushes, unless optimizing for size aggressively.
+  if (isSlowTwoMemOps && !MF.getFunction().hasMinSize() &&
+      (Opc == X86::PUSH16r || Opc == X86::PUSH32r || Opc == X86::PUSH64r))
     return nullptr;
 
   // Avoid partial and undef register update stalls unless optimizing for size.
@@ -7534,9 +7546,33 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   //
   // Utilize the mapping NonNDD -> RMW for the NDD variant.
   unsigned NonNDOpc = Subtarget.hasNDD() ? X86::getNonNDVariant(Opc) : 0U;
+  // Utilize the mapping NonNDD if NDD memory variant is not preferred.
+  bool NoNDDM = NonNDOpc && !Subtarget.hasNDDM();
+
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  if (NoNDDM && !IsTwoAddr && !MRI.isSSA()) {
+    // Bail out if dst has subreg. It happens during register-coalescer from
+    // 704B  %19:gr32 = SUB32rr_ND killed %0:gr32, killed %7:gr32, ...
+    // 752B  undef %23.sub_32bit:gr64 = COPY killed %19:gr32
+    // 768B  %25:gr32 = LEA64_32r killed %23:gr64, 1, killed %21:gr64_nosp, ...
+    // to
+    // 704B  undef %23.sub_32bit:gr64_with_sub_8bit = SUB32rr_ND %0:gr32, ...
+    // 768B  %25:gr32 = LEA64_32r %23:gr64_with_sub_8bit, 1, %21:gr64_nosp, ...
+    // Machine verifier fails if we try to tie %23 to the source.
+    if (MI.getOperand(0).getSubReg())
+      return nullptr;
+
+    // Bail out if dst has been assigned a physical register. Otherwise, we
+    // cannot update LiveRegMatrix properly.
+    Register Dst = MI.getOperand(0).getReg();
+    if (VRM && Dst != MI.getOperand(1).getReg() &&
+        (!Dst.isVirtual() || VRM->getPhys(Dst)))
+      return nullptr;
+  }
+
   const X86FoldTableEntry *I =
       IsTwoAddr ? lookupTwoAddrFoldTable(NonNDOpc ? NonNDOpc : Opc)
-                : lookupFoldTable(Opc, OpNum);
+                : lookupFoldTable(NoNDDM ? NonNDOpc : Opc, OpNum);
 
   MachineInstr *NewMI = nullptr;
   if (I) {
@@ -7583,6 +7619,27 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       else
         NewMI->getOperand(0).setSubReg(X86::sub_32bit);
     }
+
+    if (NoNDDM && !IsTwoAddr) {
+      Register SrcReg = MI.getOperand(1).getReg();
+      unsigned SrcSub = MI.getOperand(1).getSubReg();
+      if (MI.killsRegister(SrcReg, /*TRI=*/nullptr) ||
+          MI.getOperand(0).getReg() == SrcReg)
+        return NewMI;
+
+      Register NewSrc = MI.getOperand(0).getReg();
+      if (MRI.isSSA()) {
+        const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
+        NewSrc = MRI.createVirtualRegister(&RC);
+      }
+
+      CopyMI = BuildMI(*NewMI->getParent(), *NewMI, MI.getDebugLoc(),
+                       get(TargetOpcode::COPY))
+                   .addDef(NewSrc)
+                   .addReg(SrcReg, {}, SrcSub);
+      NewMI->getOperand(1).setReg(NewSrc);
+      NewMI->getOperand(1).setSubReg(0);
+    }
     return NewMI;
   }
 
@@ -7596,7 +7653,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     }
     // Attempt to fold with the commuted version of the instruction.
     NewMI = foldMemoryOperandImpl(MF, MI, CommuteOpIdx2, MOs, InsertPt, Size,
-                                  Alignment, /*AllowCommute=*/false);
+                                  Alignment, /*AllowCommute=*/false, CopyMI);
     if (NewMI)
       return NewMI;
     // Folding failed again - undo the commute before returning.
@@ -7607,10 +7664,12 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   return nullptr;
 }
 
-MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
-    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex, LiveIntervals *LIS,
-    VirtRegMap *VRM) const {
+MachineInstr *
+X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                    ArrayRef<unsigned> Ops, int FrameIndex,
+                                    MachineInstr *&CopyMI, LiveIntervals *LIS,
+                                    VirtRegMap *VRM) const {
+  MachineBasicBlock::iterator InsertPt = MI;
   // Check switch flag
   if (NoFusing)
     return nullptr;
@@ -7643,9 +7702,9 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         std::min(Alignment, Subtarget.getFrameLowering()->getStackAlign());
 
   auto Impl = [&]() {
-    return foldMemoryOperandImpl(MF, MI, Ops[0],
-                                 MachineOperand::CreateFI(FrameIndex), InsertPt,
-                                 Size, Alignment, /*AllowCommute=*/true);
+    return foldMemoryOperandImpl(
+        MF, MI, Ops[0], MachineOperand::CreateFI(FrameIndex), InsertPt, Size,
+        Alignment, /*AllowCommute=*/true, CopyMI, VRM);
   };
   if (Ops.size() == 2 && Ops[0] == 0 && Ops[1] == 1) {
     unsigned NewOpc = 0;
@@ -8122,10 +8181,12 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
   return false;
 }
 
-MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
-    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-    LiveIntervals *LIS) const {
+MachineInstr *
+X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                    ArrayRef<unsigned> Ops,
+                                    MachineInstr &LoadMI, MachineInstr *&CopyMI,
+                                    LiveIntervals *LIS, VirtRegMap *VRM) const {
+  MachineBasicBlock::iterator InsertPt = MI;
 
   // If LoadMI is a masked load, check MI having the same mask.
   const MCInstrDesc &MCID = get(LoadMI.getOpcode());
@@ -8147,6 +8208,11 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       MaskReg = Op2.getReg();
 
     if (MaskReg) {
+      // Some instructions are invalid to fold into even with the same mask.
+      // Folding is unsafe if an active destination element may read from a
+      // source element that is masked off.
+      if (isNonFoldableWithSameMask(MI.getOpcode()))
+        return nullptr;
       bool HasSameMask = false;
       for (unsigned I = 1, E = MI.getDesc().getNumOperands(); I < E; ++I) {
         const MachineOperand &Op = MI.getOperand(I);
@@ -8172,7 +8238,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (isLoadFromStackSlot(LoadMI, FrameIndex)) {
     if (isNonFoldablePartialRegisterLoad(LoadMI, MI, MF))
       return nullptr;
-    return foldMemoryOperandImpl(MF, MI, Ops, InsertPt, FrameIndex, LIS);
+    return foldMemoryOperandImpl(MF, MI, Ops, FrameIndex, CopyMI, LIS, VRM);
   }
 
   // Check switch flag
@@ -8417,7 +8483,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   }
   }
   return foldMemoryOperandImpl(MF, MI, Ops[0], MOs, InsertPt,
-                               /*Size=*/0, Alignment, /*AllowCommute=*/true);
+                               /*Size=*/0, Alignment, /*AllowCommute=*/true,
+                               CopyMI);
 }
 
 MachineInstr *
@@ -10404,109 +10471,6 @@ X86InstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   return ArrayRef(TargetFlags);
 }
 
-namespace {
-/// Create Global Base Reg pass. This initializes the PIC
-/// global base register for x86-32.
-struct CGBR : public MachineFunctionPass {
-  static char ID;
-  CGBR() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    const X86TargetMachine *TM =
-        static_cast<const X86TargetMachine *>(&MF.getTarget());
-    const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
-
-    // Only emit a global base reg in PIC mode.
-    if (!TM->isPositionIndependent())
-      return false;
-
-    X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
-    Register GlobalBaseReg = X86FI->getGlobalBaseReg();
-
-    // If we didn't need a GlobalBaseReg, don't insert code.
-    if (GlobalBaseReg == 0)
-      return false;
-
-    // Insert the set of GlobalBaseReg into the first MBB of the function
-    MachineBasicBlock &FirstMBB = MF.front();
-    MachineBasicBlock::iterator MBBI = FirstMBB.begin();
-    DebugLoc DL = FirstMBB.findDebugLoc(MBBI);
-    MachineRegisterInfo &RegInfo = MF.getRegInfo();
-    const X86InstrInfo *TII = STI.getInstrInfo();
-
-    Register PC;
-    if (STI.isPICStyleGOT())
-      PC = RegInfo.createVirtualRegister(&X86::GR32RegClass);
-    else
-      PC = GlobalBaseReg;
-
-    if (STI.is64Bit()) {
-      if (TM->getCodeModel() == CodeModel::Large) {
-        // In the large code model, we are aiming for this code, though the
-        // register allocation may vary:
-        //   leaq .LN$pb(%rip), %rax
-        //   movq $_GLOBAL_OFFSET_TABLE_ - .LN$pb, %rcx
-        //   addq %rcx, %rax
-        // RAX now holds address of _GLOBAL_OFFSET_TABLE_.
-        Register PBReg = RegInfo.createVirtualRegister(&X86::GR64RegClass);
-        Register GOTReg = RegInfo.createVirtualRegister(&X86::GR64RegClass);
-        BuildMI(FirstMBB, MBBI, DL, TII->get(X86::LEA64r), PBReg)
-            .addReg(X86::RIP)
-            .addImm(0)
-            .addReg(0)
-            .addSym(MF.getPICBaseSymbol())
-            .addReg(0);
-        std::prev(MBBI)->setPreInstrSymbol(MF, MF.getPICBaseSymbol());
-        BuildMI(FirstMBB, MBBI, DL, TII->get(X86::MOV64ri), GOTReg)
-            .addExternalSymbol("_GLOBAL_OFFSET_TABLE_",
-                               X86II::MO_PIC_BASE_OFFSET);
-        BuildMI(FirstMBB, MBBI, DL, TII->get(X86::ADD64rr), PC)
-            .addReg(PBReg, RegState::Kill)
-            .addReg(GOTReg, RegState::Kill);
-      } else {
-        // In other code models, use a RIP-relative LEA to materialize the
-        // GOT.
-        BuildMI(FirstMBB, MBBI, DL, TII->get(X86::LEA64r), PC)
-            .addReg(X86::RIP)
-            .addImm(0)
-            .addReg(0)
-            .addExternalSymbol("_GLOBAL_OFFSET_TABLE_")
-            .addReg(0);
-      }
-    } else {
-      // Operand of MovePCtoStack is completely ignored by asm printer. It's
-      // only used in JIT code emission as displacement to pc.
-      BuildMI(FirstMBB, MBBI, DL, TII->get(X86::MOVPC32r), PC).addImm(0);
-
-      // If we're using vanilla 'GOT' PIC style, we should use relative
-      // addressing not to pc, but to _GLOBAL_OFFSET_TABLE_ external.
-      if (STI.isPICStyleGOT()) {
-        // Generate addl $__GLOBAL_OFFSET_TABLE_ + [.-piclabel],
-        // %some_register
-        BuildMI(FirstMBB, MBBI, DL, TII->get(X86::ADD32ri), GlobalBaseReg)
-            .addReg(PC)
-            .addExternalSymbol("_GLOBAL_OFFSET_TABLE_",
-                               X86II::MO_GOT_ABSOLUTE_ADDRESS);
-      }
-    }
-
-    return true;
-  }
-
-  StringRef getPassName() const override {
-    return "X86 PIC Global Base Reg Initialization";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-};
-} // namespace
-
-char CGBR::ID = 0;
-FunctionPass *llvm::createX86GlobalBaseRegPass() { return new CGBR(); }
-
 /// Constants defining how certain sequences should be outlined.
 ///
 /// \p MachineOutlinerDefault implies that the function is called with a call
@@ -10886,6 +10850,27 @@ void X86InstrInfo::getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
   M.BaseType = X86AddressMode::FrameIndexBase;
   M.Base.FrameIndex = FI;
   M.getFullAddress(Ops);
+}
+
+MachineInstr *
+X86InstrInfo::insertCodePrefetchInstr(MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator InsertBefore,
+                                      const GlobalValue *GV) const {
+  MachineFunction &MF = *MBB.getParent();
+  MachineInstr *PrefetchInstr = MF.CreateMachineInstr(
+      get(X86::PREFETCHIT1),
+      InsertBefore == MBB.instr_end() ? MBB.findPrevDebugLoc(InsertBefore)
+                                      : InsertBefore->getDebugLoc(),
+      true);
+  MachineInstrBuilder MIB(MF, PrefetchInstr);
+  MIB.addMemOperand(MF.getMachineMemOperand(MachinePointerInfo(GV),
+                                            MachineMemOperand::MOLoad, /*s=*/8,
+                                            /*base_alignment=*/llvm::Align(1)));
+  MIB.addReg(X86::RIP).addImm(1).addReg(X86::NoRegister);
+  MIB.addGlobalAddress(GV);
+  MIB.addReg(X86::NoRegister);
+  MBB.insert(InsertBefore, PrefetchInstr);
+  return PrefetchInstr;
 }
 
 #define GET_INSTRINFO_HELPERS

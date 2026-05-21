@@ -148,7 +148,7 @@ bool FastISel::lowerArguments() {
   for (Function::const_arg_iterator I = FuncInfo.Fn->arg_begin(),
                                     E = FuncInfo.Fn->arg_end();
        I != E; ++I) {
-    DenseMap<const Value *, Register>::iterator VI = LocalValueMap.find(&*I);
+    auto VI = LocalValueMap.find(&*I);
     assert(VI != LocalValueMap.end() && "Missed an argument?");
     FuncInfo.ValueMap[&*I] = VI->second;
   }
@@ -354,7 +354,7 @@ Register FastISel::lookUpRegForValue(const Value *V) {
   // cache values defined by Instructions across blocks, and other values
   // only locally. This is because Instructions already have the SSA
   // def-dominates-use requirement enforced.
-  DenseMap<const Value *, Register>::iterator I = FuncInfo.ValueMap.find(V);
+  auto I = FuncInfo.ValueMap.find(V);
   if (I != FuncInfo.ValueMap.end())
     return I->second;
   return LocalValueMap[V];
@@ -1417,9 +1417,14 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     updateValueMap(II, ResultReg);
     return true;
   }
-  case Intrinsic::fake_use:
-    // At -O0, we don't need fake use, so just ignore it.
+  case Intrinsic::fake_use: {
+    const Value *V = II->getArgOperand(0);
+    if (Register Reg = getRegForValue(V))
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+              TII.get(TargetOpcode::FAKE_USE))
+          .addReg(Reg);
     return true;
+  }
   case Intrinsic::experimental_stackmap:
     return selectStackmap(II);
   case Intrinsic::experimental_patchpoint_void:
@@ -1712,7 +1717,7 @@ bool FastISel::selectExtractValue(const User *U) {
 
   // Get the base result register.
   Register ResultReg;
-  DenseMap<const Value *, Register>::iterator I = FuncInfo.ValueMap.find(Op0);
+  auto I = FuncInfo.ValueMap.find(Op0);
   if (I != FuncInfo.ValueMap.end())
     ResultReg = I->second;
   else if (isa<Instruction>(Op0))
@@ -1779,19 +1784,12 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
   case Instruction::GetElementPtr:
     return selectGetElementPtr(I);
 
-  case Instruction::Br: {
-    const BranchInst *BI = cast<BranchInst>(I);
-
-    if (BI->isUnconditional()) {
-      const BasicBlock *LLVMSucc = BI->getSuccessor(0);
-      MachineBasicBlock *MSucc = FuncInfo.getMBB(LLVMSucc);
-      fastEmitBranch(MSucc, BI->getDebugLoc());
-      return true;
-    }
-
-    // Conditional branches are not handed yet.
-    // Halt "fast" selection and bail.
-    return false;
+  case Instruction::UncondBr: {
+    const UncondBrInst *BI = cast<UncondBrInst>(I);
+    const BasicBlock *LLVMSucc = BI->getSuccessor(0);
+    MachineBasicBlock *MSucc = FuncInfo.getMBB(LLVMSucc);
+    fastEmitBranch(MSucc, BI->getDebugLoc());
+    return true;
   }
 
   case Instruction::Unreachable: {

@@ -67,6 +67,16 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
+  bool
+  reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
+  bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
+                             unsigned &SrcOpIdx2) const override;
+  MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
+                                       unsigned OpIdx1,
+                                       unsigned OpIdx2) const override;
+
+private:
+  bool invertPredicateBranchInstr(MachineBasicBlock &MBB) const;
 };
 
 } // namespace llvm

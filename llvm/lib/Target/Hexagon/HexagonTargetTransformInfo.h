@@ -156,7 +156,7 @@ public:
                  const Instruction *I = nullptr) const override {
     return 1;
   }
-
+  bool shouldExpandReduction(const IntrinsicInst *II) const override;
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
                           unsigned AddressSpace,
                           TTI::MaskKind MaskKind) const override;
@@ -168,6 +168,15 @@ public:
                                   Align Alignment) const override;
   bool forceScalarizeMaskedScatter(VectorType *VTy,
                                    Align Alignment) const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
 
   /// @}
 

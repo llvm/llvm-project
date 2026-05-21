@@ -54,20 +54,22 @@ declare ptr @direct_leaf_func(ptr)
 attributes #0 = {"use-sample-profile"}
 
 !llvm.dbg.cu = !{!0}
+!13 = !{null}
+!14 = !DISubroutineType(types: !13)
 !llvm.module.flags = !{!2}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 !1 = !DIFile(filename: "test.cc", directory: "/")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
-!3 = distinct !DISubprogram(name: "sample_loader_inlinee", scope: !1, file: !1, line: 11, spFlags: DISPFlagDefinition, unit: !0)
+!3 = distinct !DISubprogram(name: "sample_loader_inlinee", scope: !1, file: !1, line: 11, spFlags: DISPFlagDefinition, type: !14, unit: !0)
 !4 = !DILocation(line: 12, scope: !3)
 !5 = !DILocation(line: 13, scope: !3)
-!6 = distinct !DISubprogram(name: "cgscc_inlinee", scope: !1, file: !1, line: 31, spFlags: DISPFlagDefinition, unit: !0)
+!6 = distinct !DISubprogram(name: "cgscc_inlinee", scope: !1, file: !1, line: 31, spFlags: DISPFlagDefinition, type: !14, unit: !0)
 !7 = !DILocation(line: 32, scope: !6)
 !8 = !DILocation(line: 33, scope: !6)
-!9 = distinct !DISubprogram(name: "test_sample_loader_inline", scope: !1, file: !1, line: 3, spFlags: DISPFlagDefinition, unit: !0)
+!9 = distinct !DISubprogram(name: "test_sample_loader_inline", scope: !1, file: !1, line: 3, spFlags: DISPFlagDefinition, type: !14, unit: !0)
 !10 = !DILocation(line: 4, scope: !9)
-!11 = distinct !DISubprogram(name: "test_cgscc_inline", scope: !1, file: !1, line: 20, spFlags: DISPFlagDefinition, unit: !0)
+!11 = distinct !DISubprogram(name: "test_cgscc_inline", scope: !1, file: !1, line: 20, spFlags: DISPFlagDefinition, type: !14, unit: !0)
 !12 = !DILocation(line: 21, scope: !11)
 
 ; Make sure the ImportGUID stays with entry count metadata for ThinLTO-PreLink

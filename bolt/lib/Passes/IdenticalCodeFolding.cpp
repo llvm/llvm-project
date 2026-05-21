@@ -605,6 +605,19 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
 
   } while (NumFoldedLastIteration > 0);
 
+  // Flatten folded function chains so FoldedIntoFunction always points
+  // to the root parent.
+  for (auto &BFI : BC.getBinaryFunctions()) {
+    BinaryFunction &BF = BFI.second;
+    if (!BF.isFolded())
+      continue;
+    BinaryFunction *Parent = BF.getFoldedIntoFunction();
+    while (Parent->isFolded())
+      Parent = Parent->getFoldedIntoFunction();
+    if (Parent != BF.getFoldedIntoFunction())
+      BF.setFolded(Parent);
+  }
+
   LLVM_DEBUG({
     // Print functions that are congruent but not identical.
     for (auto &CBI : CongruentBuckets) {

@@ -112,10 +112,14 @@
 #    include <__locale_dir/support/freebsd.h>
 #  elif defined(__NetBSD__)
 #    include <__locale_dir/support/netbsd.h>
+#  elif defined(__OpenBSD__)
+#    include <__locale_dir/support/openbsd.h>
 #  elif defined(_LIBCPP_MSVCRT_LIKE)
 #    include <__locale_dir/support/windows.h>
 #  elif defined(__Fuchsia__)
 #    include <__locale_dir/support/fuchsia.h>
+#  elif _LIBCPP_LIBC_LLVM_LIBC
+#    include <__locale_dir/support/llvm_libc.h>
 #  elif defined(__linux__)
 #    include <__locale_dir/support/linux.h>
 #  elif _LIBCPP_LIBC_NEWLIB
@@ -128,11 +132,7 @@
 //       (by providing global non-reserved names) and the new API. As we move individual platforms
 //       towards the new way of defining the locale base API, this should disappear since each platform
 //       will define those directly.
-#    if defined(__MVS__)
-#      include <__locale_dir/locale_base_api/ibm.h>
-#    elif defined(__OpenBSD__)
-#      include <__locale_dir/locale_base_api/openbsd.h>
-#    endif
+#    include <__locale_dir/locale_base_api/ibm.h>
 
 #    include <__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
 
@@ -228,8 +228,8 @@ inline _LIBCPP_HIDE_FROM_ABI wint_t __towupper(wint_t __ch, __locale_t __loc) { 
 inline _LIBCPP_HIDE_FROM_ABI wint_t __towlower(wint_t __ch, __locale_t __loc) { return towlower_l(__ch, __loc); }
 #      endif
 
-inline _LIBCPP_HIDE_FROM_ABI size_t
-__strftime(char* __s, size_t __max, const char* __format, const tm* __tm, __locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__strftime__, 3, 0) size_t
+    __strftime(char* __s, size_t __max, const char* __format, const tm* __tm, __locale_t __loc) {
   return strftime_l(__s, __max, __format, __tm, __loc);
 }
 

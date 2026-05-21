@@ -23,6 +23,7 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 23
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Err>
 class bad_expected_access;
@@ -66,6 +67,7 @@ private:
   _Err __unex_;
 };
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 23

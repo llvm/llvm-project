@@ -10,6 +10,7 @@
 #include "EventHelper.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBEvent.h"
+#include "lldb/API/SBListener.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/Host/MainLoopBase.h"
 #include "llvm/Support/Threading.h"
@@ -85,8 +86,7 @@ llvm::Error DAPSessionManager::WaitForAllSessionsToDisconnect() {
 
   // Check if any disconnection failed and return appropriate error.
   if (m_client_failed)
-    return llvm::make_error<llvm::StringError>(
-        "disconnecting all clients failed", llvm::inconvertibleErrorCode());
+    return llvm::createStringError("disconnecting all clients failed");
 
   return llvm::Error::success();
 }
@@ -105,6 +105,20 @@ DAPSessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
     // Our weak pointer has expired.
     m_debugger_event_threads.erase(it);
   }
+
+  // Add the listener for the 'StopEventThread' event before starting the
+  // event thread to prevent a race condition. Under heavy load, a stop event
+  // could be sent immediately after the thread starts. If the listener isn't
+  // registered first, the event is missed, leading to a deadlock.
+  lldb::SBListener listener = debugger.GetListener();
+  requesting_dap->broadcaster.AddListener(listener,
+                                          eBroadcastBitStopEventThread);
+  debugger.GetBroadcaster().AddListener(
+      listener, lldb::eBroadcastBitError | lldb::eBroadcastBitWarning);
+  // listen for thread events.
+  listener.StartListeningForEventClass(
+      debugger, lldb::SBThread::GetBroadcasterClassName(),
+      lldb::SBThread::eBroadcastBitStackChanged);
 
   // Create a new event thread and store it.
   auto new_thread_sp = std::make_shared<ManagedEventThread>(

@@ -824,6 +824,152 @@ TEST_F(ValueTrackingTest, impliesPoisonTest_MaskCmp) {
   EXPECT_TRUE(impliesPoison(A2, A));
 }
 
+TEST_F(ValueTrackingTest, impliesPoison_BinOp_SameValue) {
+  parseAssembly("define void @test(i32 %1, i32 %2) {\n"
+                "  %A = add i32 %1, 0\n"
+                "  %A3 = and i32 %A, %A\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A, A3));
+  EXPECT_TRUE(impliesPoison(A3, A));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_BinOp_SameValueUsed) {
+  parseAssembly("define void @test(i32 %1, i32 %2) {\n"
+                "  %A = add i32 %1, 0\n"
+                "  %aplus42 = add i32 %A, 42\n"
+                "  %aplusA = add i32 %A, %A\n"
+                "  %A3 = and i32 %aplus42, %aplusA\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A, A3));
+  EXPECT_TRUE(impliesPoison(A3, A));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_BinOp_DifferentValues) {
+  parseAssembly("define void @test(i32 %1, i32 %2) {\n"
+                "  %A = add i32 %1, 0\n"
+                "  %A2 = add i32 %2, 0\n"
+                "  %A3 = and i32 %A, %A2\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A, A3));
+  EXPECT_TRUE(impliesPoison(A2, A3));
+
+  EXPECT_FALSE(impliesPoison(A3, A));
+  EXPECT_FALSE(impliesPoison(A3, A2));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_Select) {
+  parseAssembly("define void @test(i1 %cond, i32 %tv, i32 %fv) {\n"
+                "  %A = and i1 %cond, true\n"
+                "  %A2 = add i32 %tv, 0\n"
+                "  %A3 = add i32 %fv, 0\n"
+                "  %A4 = select i1 %A, i32 %A2, i32 %A3\n"
+                "  ret void\n"
+                "}");
+  // If the condition is poison, then the result is poison.
+  EXPECT_TRUE(impliesPoison(A, A4));
+  // But, if one if the arms is poison, then the result might not be poison.
+  EXPECT_FALSE(impliesPoison(A2, A4));
+  EXPECT_FALSE(impliesPoison(A3, A4));
+
+  // The poison may come from any of the arms or condition. Can't surely tell
+  // from where so it won't imply poison for any of the operands.
+  EXPECT_FALSE(impliesPoison(A4, A));
+  EXPECT_FALSE(impliesPoison(A4, A2));
+  EXPECT_FALSE(impliesPoison(A4, A3));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_Select_AllParamsSame) {
+  parseAssembly("define void @test(i1 %cond) {\n"
+                "  %A = and i1 %cond, true\n"
+                "  %A4 = select i1 %A, i1 %A, i1 %A\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A, A4));
+
+  // Since all operators are the same value if the select is poison the it must
+  // be because of that value.
+  EXPECT_TRUE(impliesPoison(A4, A));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_Select_SameArm) {
+  parseAssembly("define void @test(i1 %cond, i32 %tv, i32 %fv) {\n"
+                "  %A = and i1 %cond, true\n"
+                "  %A2 = add i32 %tv, 0\n"
+                "  %A4 = select i1 %A, i32 %A2, i32 %A2\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A, A4));
+  EXPECT_FALSE(impliesPoison(A2, A4));
+
+  EXPECT_FALSE(impliesPoison(A4, A));
+  EXPECT_FALSE(impliesPoison(A4, A2));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_Select_SameValuesUsedInCondAndArm) {
+  parseAssembly("define void @test(i32 %tv) {\n"
+                "  %A = icmp eq i32 %tv, 42\n"
+                "  %A2 = add i32 %tv, 42\n"
+                "  %A4 = select i1 %A, i32 %A2, i32 42\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A2, A4));
+  EXPECT_TRUE(impliesPoison(A4, A2));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_Select_AllValueUsedInArmUsedInCond) {
+  parseAssembly("define void @test(i32 %x, i32 %y) {\n"
+                "  %cmp1 = icmp ne i32 %x, 0\n"
+                "  %cmp2 = icmp ugt i32 %x, %y\n"
+                "  %A = select i1 %cmp2, i1 %cmp1, i1 false\n"
+                "  %A2 = and i1 %cmp1, %cmp2\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A, A2));
+  EXPECT_TRUE(impliesPoison(A2, A));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_Select_AllValuesUsedInCondBinOps) {
+  parseAssembly("define void @test(i32 %1, i32 %2) {\n"
+                "  %A = add i32 %1, 0\n"
+                "  %A2 = add i32 %2, 0\n"
+                "  %aEQ = icmp eq i32 %A, 0\n"
+                "  %a2EQ = icmp eq i32 %A2, 0\n"
+                "  %A3 = and i1 %aEQ, %a2EQ\n"
+                "  %A5 = select i1 %A3, i32 %A, i32 %A2\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A, A3));
+  EXPECT_TRUE(impliesPoison(A2, A3));
+
+  // These should be true ideally, but the recursion limit doesn't let us go
+  // deep enough.
+  EXPECT_FALSE(impliesPoison(A2, A5));
+  EXPECT_FALSE(impliesPoison(A, A5));
+
+  EXPECT_TRUE(impliesPoison(A3, A5));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_Select_CondLogic) {
+  parseAssembly("define void @test(i32 %6, i32 %44) {\n"
+                "  %A2 = add i32 %6, 0\n"
+                "  %A3 = add i32 %44, 0\n"
+                "  %46 = icmp eq i32 %A3, 4\n"
+                "  %47 = icmp eq i32 %A2, 4\n"
+                "  %or.cond.i = and i1 %47, %46\n"
+                "  %48 = xor i1 %47, true\n"
+                "  %A = or i1 %46, %48\n"
+                "  %A4 = select i1 %A, i32 %A2, i32 %A3\n"
+                "  ret void\n"
+                "}");
+  // These should be true ideally, but the recursion limit doesn't let us go
+  // deep enough.
+  EXPECT_FALSE(impliesPoison(A2, A4));
+  EXPECT_FALSE(impliesPoison(A3, A4));
+}
+
 TEST_F(ValueTrackingTest, ComputeNumSignBits_Shuffle_Pointers) {
   parseAssembly(
       "define <2 x ptr> @test(<2 x ptr> %x) {\n"
@@ -1208,7 +1354,28 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       {{false, false},
        "call {i32, i1} @llvm.usub.with.overflow.i32(i32 %x, i32 %y)"},
       {{false, false},
-       "call {i32, i1} @llvm.umul.with.overflow.i32(i32 %x, i32 %y)"}};
+       "call {i32, i1} @llvm.umul.with.overflow.i32(i32 %x, i32 %y)"},
+      {{false, false}, "call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %vx)"},
+      {{false, false}, "call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> %vx)"},
+      {{false, false}, "call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> %vx)"},
+      {{false, false}, "call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %vx)"},
+      {{false, false}, "call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.fmax.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.fmin.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.fmaximum.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.fmaximum.v4i32(<4 x i32> %vx)"}};
 
   std::string AssemblyStr = AsmHead;
   for (auto &Itm : Data)
@@ -1744,6 +1911,74 @@ TEST_F(ComputeKnownFPClassTest, MaximumNumSignBit) {
   expectKnownFPClass(fcPositive, false, A5);
   expectKnownFPClass(~fcNan, std::nullopt, A6);
   expectKnownFPClass(fcPositive, false, A7);
+}
+
+TEST_F(ComputeKnownFPClassTest, PowiInfFirst) {
+  parseAssembly(
+      "declare float @llvm.powi.f32.i32(float, i32)\n"
+      "define float @test(i1 %cond, i32 %x, float %unknown,\n"
+      "                   float nofpclass(inf) %finite,\n"
+      "                   float nofpclass(zero sub inf) %normal,\n"
+      "                   float nofpclass(zero inf) %finite.may.sub,\n"
+      "                   float nofpclass(inf norm sub) %zero.or.nan) {\n"
+      "  %small = zext i1 %cond to i32\n"
+      "  %nonneg = and i32 %x, 2147483647\n"
+      "  %A = call float @llvm.powi.f32.i32(float %finite, i32 1)\n"
+      "  %A2 = call float @llvm.powi.f32.i32(float %finite, i32 2)\n"
+      "  %A3 = call float @llvm.powi.f32.i32(float %normal, i32 -1)\n"
+      "  %A4 = call float @llvm.powi.f32.i32(float %finite, i32 %small)\n"
+      "  %A5 = call float @llvm.powi.f32.i32(float %unknown, i32 %small)\n"
+      "  %A6 = call float @llvm.powi.f32.i32(float %finite.may.sub, i32 -1)\n"
+      "  %A7 = call float @llvm.powi.f32.i32(float %zero.or.nan, i32 %nonneg)\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcInf, std::nullopt, A);
+  expectKnownFPClass(fcPositive | fcNan, std::nullopt, A2);
+  expectKnownFPClass(~fcInf, std::nullopt, A3);
+  expectKnownFPClass(~fcInf, std::nullopt, A4);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A5);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A6);
+  expectKnownFPClass(~fcInf, std::nullopt, A7);
+
+  auto ExpectKnownNeverInf = [&](Instruction *I, bool Expected) {
+    KnownFPClass Known = computeKnownFPClass(I, M->getDataLayout(), fcInf);
+    EXPECT_EQ(Expected, Known.isKnownNeverInfinity());
+  };
+
+  ExpectKnownNeverInf(A, true);
+  ExpectKnownNeverInf(A2, false);
+  ExpectKnownNeverInf(A3, true);
+  ExpectKnownNeverInf(A4, true);
+  ExpectKnownNeverInf(A5, false);
+  ExpectKnownNeverInf(A6, false);
+  ExpectKnownNeverInf(A7, true);
+}
+
+TEST_F(ComputeKnownFPClassTest, PowiInfSecond) {
+  parseAssembly(
+      "declare float @llvm.powi.f32.i32(float, i32)\n"
+      "define float @test(i32 %x, float %unknown,\n"
+      "                   float nofpclass(inf) %finite,\n"
+      "                   float nofpclass(inf norm sub) %zero.or.nan,\n"
+      "                   float nofpclass(zero norm sub) %inf.or.nan) {\n"
+      "  %neg = or i32 %x, -2147483648\n"
+      "  %nonneg = and i32 %x, 2147483647\n"
+      "  %A = call float @llvm.powi.f32.i32(float %unknown, i32 0)\n"
+      "  %A2 = call float @llvm.powi.f32.i32(float %finite, i32 -2)\n"
+      "  %A3 = call float @llvm.powi.f32.i32(float %zero.or.nan, i32 -1)\n"
+      "  %A4 = call float @llvm.powi.f32.i32(float %inf.or.nan, i32 -1)\n"
+      "  %A5 = call float @llvm.powi.f32.i32(float %inf.or.nan, i32 %neg)\n"
+      "  %A6 = call float @llvm.powi.f32.i32(float %finite, i32 %nonneg)\n"
+      "  %A7 = call float @llvm.powi.f32.i32(float %zero.or.nan, i32 %neg)\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcPosNormal | fcNan, std::nullopt, A);
+  expectKnownFPClass(fcPositive | fcNan, std::nullopt, A2);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A3);
+  expectKnownFPClass(~fcInf, std::nullopt, A4);
+  expectKnownFPClass(~fcInf, std::nullopt, A5);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A6);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A7);
 }
 
 TEST_F(ComputeKnownFPClassTest, Phi) {
@@ -3225,13 +3460,119 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
 
     AssumptionCache AC(*F);
     Value *Stride = &*F->arg_begin();
-    ConstantRange CR1 = computeConstantRange(Stride, false, true, &AC, nullptr);
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC);
+    ConstantRange CR1 = computeConstantRange(Stride, /*ForSigned=*/false, SQ);
     EXPECT_TRUE(CR1.isFullSet());
 
     Instruction *I = &findInstructionByName(F, "stride.plus.one");
-    ConstantRange CR2 = computeConstantRange(Stride, false, true, &AC, I);
+    ConstantRange CR2 = computeConstantRange(Stride, /*ForSigned=*/false,
+                                             SQ.getWithInstruction(I));
     EXPECT_EQ(5, CR2.getLower());
     EXPECT_EQ(10, CR2.getUpper());
+  }
+
+  {
+    // Assumptions:
+    //  * stride >= 5 (unsigned)
+    //
+    // stride = [5, 0)
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i32 @test(i32 %stride) {
+    %gt = icmp uge i32 %stride, 5
+    call void @llvm.assume(i1 %gt)
+    %stride.plus.one = add nsw nuw i32 %stride, 1
+    ret i32 %stride.plus.one
+  })");
+    Function *F = M->getFunction("test");
+
+    AssumptionCache AC(*F);
+    Value *Stride = &*F->arg_begin();
+
+    Instruction *I = &findInstructionByName(F, "stride.plus.one");
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CxtI=*/I);
+    ConstantRange CR2 = computeConstantRange(Stride, false, SQ);
+    EXPECT_EQ(5, CR2.getLower());
+    EXPECT_EQ(0, CR2.getUpper());
+  }
+
+  {
+    // Assumptions:
+    //  * stride > 5 (unsigned)
+    //
+    // stride = [5, 0)
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i32 @test(i32 %stride) {
+    %gt = icmp ugt i32 %stride, 5
+    call void @llvm.assume(i1 %gt)
+    %stride.plus.one = add nsw nuw i32 %stride, 1
+    ret i32 %stride.plus.one
+  })");
+    Function *F = M->getFunction("test");
+
+    AssumptionCache AC(*F);
+    Value *Stride = &*F->arg_begin();
+
+    Instruction *I = &findInstructionByName(F, "stride.plus.one");
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CxtI=*/I);
+    ConstantRange CR2 = computeConstantRange(Stride, false, SQ);
+    EXPECT_EQ(6, CR2.getLower());
+    EXPECT_EQ(0, CR2.getUpper());
+  }
+
+  {
+    // Assumptions:
+    //  * stride >= 5 (samesign unsigned)
+    //
+    // stride = [5, MIN_SIGNED)
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i32 @test(i32 %stride) {
+    %gt = icmp samesign uge i32 %stride, 5
+    call void @llvm.assume(i1 %gt)
+    %stride.plus.one = add nsw nuw i32 %stride, 1
+    ret i32 %stride.plus.one
+  })");
+    Function *F = M->getFunction("test");
+
+    AssumptionCache AC(*F);
+    Value *Stride = &*F->arg_begin();
+
+    Instruction *I = &findInstructionByName(F, "stride.plus.one");
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CxtI=*/I);
+    ConstantRange CR2 = computeConstantRange(Stride, false, SQ);
+    EXPECT_EQ(5, CR2.getLower());
+    EXPECT_EQ(APInt::getSignedMinValue(32), CR2.getUpper());
+  }
+
+  {
+    // Assumptions:
+    //  * stride > 5 (samesign unsigned)
+    //
+    // stride = [5, MIN_SIGNED)
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i32 @test(i32 %stride) {
+    %gt = icmp samesign ugt i32 %stride, 5
+    call void @llvm.assume(i1 %gt)
+    %stride.plus.one = add nsw nuw i32 %stride, 1
+    ret i32 %stride.plus.one
+  })");
+    Function *F = M->getFunction("test");
+
+    AssumptionCache AC(*F);
+    Value *Stride = &*F->arg_begin();
+
+    Instruction *I = &findInstructionByName(F, "stride.plus.one");
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CxtI=*/I);
+    ConstantRange CR2 = computeConstantRange(Stride, false, SQ);
+    EXPECT_EQ(6, CR2.getLower());
+    EXPECT_EQ(APInt::getSignedMinValue(32), CR2.getUpper());
   }
 
   {
@@ -3259,7 +3600,8 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     AssumptionCache AC(*F);
     Value *Stride = &*F->arg_begin();
     Instruction *I = &findInstructionByName(F, "stride.plus.one");
-    ConstantRange CR = computeConstantRange(Stride, false, true, &AC, I);
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CxtI=*/I);
+    ConstantRange CR = computeConstantRange(Stride, /*ForSigned=*/false, SQ);
     EXPECT_EQ(99, *CR.getSingleElement());
   }
 
@@ -3297,12 +3639,14 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     AssumptionCache AC(*F);
     Value *Stride = &*F->arg_begin();
     Instruction *GT2 = &findInstructionByName(F, "gt.2");
-    ConstantRange CR = computeConstantRange(Stride, false, true, &AC, GT2);
+    SimplifyQuery SQ(M->getDataLayout(), nullptr, &AC, GT2);
+    ConstantRange CR = computeConstantRange(Stride, /*ForSigned=*/false, SQ);
     EXPECT_EQ(5, CR.getLower());
     EXPECT_EQ(0, CR.getUpper());
 
     Instruction *I = &findInstructionByName(F, "stride.plus.one");
-    ConstantRange CR2 = computeConstantRange(Stride, false, true, &AC, I);
+    ConstantRange CR2 = computeConstantRange(Stride, /*ForSigned=*/false,
+                                             SQ.getWithInstruction(I));
     EXPECT_EQ(50, CR2.getLower());
     EXPECT_EQ(100, CR2.getUpper());
   }
@@ -3330,7 +3674,8 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     Value *Stride = &*F->arg_begin();
 
     Instruction *I = &findInstructionByName(F, "stride.plus.one");
-    ConstantRange CR = computeConstantRange(Stride, false, true, &AC, I);
+    SimplifyQuery SQ(M->getDataLayout(), nullptr, &AC, I);
+    ConstantRange CR = computeConstantRange(Stride, /*ForSigned=*/false, SQ);
     EXPECT_TRUE(CR.isEmptySet());
   }
 
@@ -3358,8 +3703,9 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     Value *X2 = &*std::next(F->arg_begin());
 
     Instruction *I = &findInstructionByName(F, "stride.plus.one");
-    ConstantRange CR1 = computeConstantRange(X1, false, true, &AC, I);
-    ConstantRange CR2 = computeConstantRange(X2, false, true, &AC, I);
+    SimplifyQuery SQ(M->getDataLayout(), nullptr, &AC, I);
+    ConstantRange CR1 = computeConstantRange(X1, /*ForSigned=*/false, SQ);
+    ConstantRange CR2 = computeConstantRange(X2, /*ForSigned=*/false, SQ);
 
     EXPECT_EQ(5, CR1.getLower());
     EXPECT_EQ(0, CR1.getUpper());
@@ -3369,7 +3715,7 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
 
     // Check the depth cutoff results in a conservative result (full set) by
     // passing Depth == MaxDepth == 6.
-    ConstantRange CR3 = computeConstantRange(X2, false, true, &AC, I, nullptr, 6);
+    ConstantRange CR3 = computeConstantRange(X2, /*ForSigned=*/false, SQ, 6);
     EXPECT_TRUE(CR3.isFullSet());
   }
   {
@@ -3390,7 +3736,8 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     Value *X2 = &*std::next(F->arg_begin());
 
     Instruction *I = &findInstructionByName(F, "stride.plus.one");
-    ConstantRange CR1 = computeConstantRange(X2, false, true, &AC, I);
+    SimplifyQuery SQ(M->getDataLayout(), nullptr, &AC, I);
+    ConstantRange CR1 = computeConstantRange(X2, /*ForSigned=*/false, SQ);
     // If we don't know the value of x.2, we don't know the value of x.1.
     EXPECT_TRUE(CR1.isFullSet());
   }

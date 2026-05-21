@@ -340,10 +340,10 @@ define <2 x i64> @usqadd2d(ptr %A, ptr %B) nounwind {
 define i64 @usqadd_d(i64 %l, i64 %r) nounwind {
 ; CHECK-LABEL: usqadd_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    fmov d1, x1
-; CHECK-NEXT:    usqadd d0, d1
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov d0, x1
+; CHECK-NEXT:    fmov d1, x0
+; CHECK-NEXT:    usqadd d1, d0
+; CHECK-NEXT:    fmov x0, d1
 ; CHECK-NEXT:    ret
   %sum = call i64 @llvm.aarch64.neon.usqadd.i64(i64 %l, i64 %r)
   ret i64 %sum
@@ -352,10 +352,10 @@ define i64 @usqadd_d(i64 %l, i64 %r) nounwind {
 define i32 @usqadd_s(i32 %l, i32 %r) nounwind {
 ; CHECK-LABEL: usqadd_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    usqadd s0, s1
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    fmov s0, w1
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    usqadd s1, s0
+; CHECK-NEXT:    fmov w0, s1
 ; CHECK-NEXT:    ret
   %sum = call i32 @llvm.aarch64.neon.usqadd.i32(i32 %l, i32 %r)
   ret i32 %sum
@@ -482,10 +482,10 @@ define <2 x i64> @suqadd2d(ptr %A, ptr %B) nounwind {
 define i64 @suqadd_d(i64 %l, i64 %r) nounwind {
 ; CHECK-LABEL: suqadd_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    fmov d1, x1
-; CHECK-NEXT:    suqadd d0, d1
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov d0, x1
+; CHECK-NEXT:    fmov d1, x0
+; CHECK-NEXT:    suqadd d1, d0
+; CHECK-NEXT:    fmov x0, d1
 ; CHECK-NEXT:    ret
   %sum = call i64 @llvm.aarch64.neon.suqadd.i64(i64 %l, i64 %r)
   ret i64 %sum
@@ -494,10 +494,10 @@ define i64 @suqadd_d(i64 %l, i64 %r) nounwind {
 define i32 @suqadd_s(i32 %l, i32 %r) nounwind {
 ; CHECK-LABEL: suqadd_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    suqadd s0, s1
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    fmov s0, w1
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    suqadd s1, s0
+; CHECK-NEXT:    fmov w0, s1
 ; CHECK-NEXT:    ret
   %sum = call i32 @llvm.aarch64.neon.suqadd.i32(i32 %l, i32 %r)
   ret i32 %sum

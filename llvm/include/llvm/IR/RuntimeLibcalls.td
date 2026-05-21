@@ -27,6 +27,7 @@ def isPS : RuntimeLibcallPredicate<"TT.isPS()">;
 def isMacOSX : RuntimeLibcallPredicate<[{TT.isMacOSX()}]>;
 def isNotOSWindowsOrIsCygwinMinGW
   : RuntimeLibcallPredicate<"!TT.isOSWindows() || TT.isOSCygMing()">;
+
 def isWindowsMSVCEnvironment : RuntimeLibcallPredicate<
   [{TT.isWindowsMSVCEnvironment()}]>;
 
@@ -47,6 +48,8 @@ def hasStackChkFail : RuntimeLibcallPredicate<
 
 def isWindowsMSVCOrItaniumEnvironment : RuntimeLibcallPredicate<
   [{TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()}]>;
+
+def isAndroid : RuntimeLibcallPredicate<"TT.isAndroid()">;
 
 def isGNUEnvironment : RuntimeLibcallPredicate<"TT.isGNUEnvironment()">;
 def darwinHasSinCosStret : RuntimeLibcallPredicate<"darwinHasSinCosStret(TT)">;
@@ -215,7 +218,9 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def COSH_#S : RuntimeLibcall;
   def COSPI_#S : RuntimeLibcall;
   def ERFC_#S : RuntimeLibcall;
+  def ERFCINV_#S : RuntimeLibcall;
   def ERF_#S : RuntimeLibcall;
+  def ERFINV_#S : RuntimeLibcall;
   def EXP_#S : RuntimeLibcall;
   def EXP_FINITE_#S : RuntimeLibcall;
   def EXP10_#S : RuntimeLibcall;
@@ -249,6 +254,9 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def TAN_#S : RuntimeLibcall;
   def TANH_#S : RuntimeLibcall;
   def TGAMMA_#S : RuntimeLibcall;
+  def CDFNORM_#S : RuntimeLibcall;
+  def CDFNORMINV_#S : RuntimeLibcall;
+  def ROUND_#S : RuntimeLibcall;
 }
 
 foreach S = F64VectorSuffixes in {
@@ -479,6 +487,9 @@ def STACK_SMASH_HANDLER : RuntimeLibcall;
 
 // Safe stack
 def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall;
+
+// Really a global variable, not a function
+def SAFESTACK_UNSAFE_STACK_PTR : RuntimeLibcall;
 
 def STACK_PROBE : RuntimeLibcall;
 def SECURITY_CHECK_COOKIE : RuntimeLibcall;
@@ -1139,9 +1150,6 @@ foreach lc = LibCalls__sync in {
 foreach lc = LibCalls__atomic in {
   def __#!tolower(!cast<string>(lc)) : RuntimeLibcallImpl<lc>;
 }
-
-// Safe stack.
-def __safestack_pointer_address : RuntimeLibcallImpl<SAFESTACK_POINTER_ADDRESS>;
 
 // Deoptimization
 def __llvm_deoptimize : RuntimeLibcallImpl<DEOPTIMIZE>;
@@ -1856,6 +1864,10 @@ def __security_check_cookie : RuntimeLibcallImpl<SECURITY_CHECK_COOKIE>;
 def __security_check_cookie_arm64ec : RuntimeLibcallImpl<SECURITY_CHECK_COOKIE,
   "#__security_check_cookie_arm64ec">;
 
+// Safe stack.
+def __safestack_pointer_address : RuntimeLibcallImpl<SAFESTACK_POINTER_ADDRESS>;
+def __safestack_unsafe_stack_ptr : RuntimeLibcallImpl<SAFESTACK_UNSAFE_STACK_PTR>;
+
 //===----------------------------------------------------------------------===//
 // F128 libm Runtime Libcalls
 //===----------------------------------------------------------------------===//
@@ -2055,6 +2067,14 @@ defvar has___guard_local = LibcallImpls<(add __guard_local), isOSOpenBSD>;
 defvar DefaultStackProtector = (add has__stack_chk_fail, has__stack_chk_guard,
     has__stack_smash_handler, has___guard_local);
 
+defvar LibcSafestackPointerAddress =
+    LibcallImpls<(add __safestack_pointer_address), isAndroid>;
+
+// compiler-rt sources suggest this is only available if
+// (TT.isOSLinux() || TT.isOSFreeBSD() || TT.isOSNetBSD() ||
+// TT.isOSSolaris()), but tests exist for other os targets.
+defvar DefaultSafeStackGlobals = (add __safestack_unsafe_stack_ptr);
+
 //===----------------------------------------------------------------------===//
 // Objective-C Runtime Libcalls
 //===----------------------------------------------------------------------===//
@@ -2165,7 +2185,9 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        LibcallImpls<(add __chkstk), isOSWindows>,
        SMEABI_LibCalls_PreserveMost_From_X0,
        SMEABI_LibCalls_PreserveMost_From_X1,
-       SMEABI_LibCalls_PreserveMost_From_X2)
+       SMEABI_LibCalls_PreserveMost_From_X2,
+       DefaultSafeStackGlobals,
+       LibcSafestackPointerAddress)
 >;
 
 // Prepend a # to every name
@@ -2474,8 +2496,8 @@ def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32>;
 // non-watchos platforms, but are needed for some targets which use a
 // hard-float calling convention by default.
 def ARMHalfConvertLibcallCallingConv : LibcallCallingConv<
-  [{TT.isWatchABI() ? DefaultCC :
-    (isAAPCS_ABI(TT, ABIName) ? CallingConv::ARM_AAPCS : CallingConv::ARM_APCS)}]
+  [{TT.isWatchABI() ? static_cast<CallingConv::ID>(DefaultCC) :
+    static_cast<CallingConv::ID>(isAAPCS_ABI(TT, ABIName) ? CallingConv::ARM_AAPCS : CallingConv::ARM_APCS)}]
 >;
 
 def ARMLibgccHalfConvertCalls :
@@ -2649,6 +2671,7 @@ def ARMSystemLibrary
            DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern,
            LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
            DefaultLibmExp10,
+           LibcSafestackPointerAddress,
 
            AEABICalls,
            AEABI45MemCalls,
@@ -2667,7 +2690,8 @@ def ARMSystemLibrary
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
                         RuntimeLibcallPredicate<[{TT.isOSBinFormatMachO() &&
                                                   (!TT.isiOS() || !TT.isOSVersionLT(5, 0))}]>>,
-           DefaultStackProtector)> {
+           DefaultStackProtector,
+           DefaultSafeStackGlobals)> {
   let DefaultLibcallCallingConv = LibcallCallingConv<[{
      TT.isOSDarwin() ? CallingConv::C :
         (FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP
@@ -2779,7 +2803,8 @@ def HexagonSystemLibrary
     __umoddi3, __divdf3, __muldf3, __divsi3, __subdf3, sqrtf,
     __divdi3, __umodsi3, __moddi3, __modsi3), HexagonLibcalls,
     LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-    exp10f, exp10, exp10l_f128, __stack_chk_fail, __stack_chk_guard)>;
+    exp10f, exp10, exp10l_f128, __stack_chk_fail, __stack_chk_guard,
+    DefaultSafeStackGlobals)>;
 
 //===----------------------------------------------------------------------===//
 // Lanai Runtime Libcalls
@@ -3142,6 +3167,7 @@ defset list<RuntimeLibcallImpl> PPCRuntimeLibcalls = {
 }
 
 defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
+  def ___memccpy64 : RuntimeLibcallImpl<MEMCCPY>;
   def ___memcmp64 : RuntimeLibcallImpl<MEMCMP>;
   def ___memmove64 : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset64 : RuntimeLibcallImpl<MEMSET>;
@@ -3153,6 +3179,7 @@ defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
 }
 
 defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
+  def ___memccpy : RuntimeLibcallImpl<MEMCCPY>;
   def ___memcmp : RuntimeLibcallImpl<MEMCMP>;
   def ___memmove : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset : RuntimeLibcallImpl<MEMSET>;
@@ -3216,7 +3243,8 @@ def RISCVSystemLibrary
            exp10f, exp10, exp10l_f128,
            __riscv_flush_icache,
            LibcallImpls<(add Int128RTLibcalls), isRISCV64>,
-           DefaultStackProtector)>;
+           DefaultStackProtector,
+           DefaultSafeStackGlobals)>;
 
 //===----------------------------------------------------------------------===//
 // SPARC Runtime Libcalls
@@ -3287,6 +3315,7 @@ def SPARCSystemLibrary
        has__stack_chk_fail,
        has__stack_smash_handler,
        has___guard_local,
+       DefaultSafeStackGlobals,
        AvailableIf<__stack_chk_guard, isNotOSLinuxAndNotOSOpenBSD>)
 >;
 
@@ -3371,11 +3400,13 @@ defvar X86CommonLibcalls =
        // hack for one test relying on it.
        __powitf2_f128,
        DefaultStackProtector,
+       DefaultSafeStackGlobals,
        LibcallImpls<(add MemChkLibcalls), isNotPS>,
        LibcallImpls<(add ___chkstk_ms), isCygwinMinGW64>,
        LibcallImpls<(add __chkstk), isWin64NotCygMing>,
        LibcallImpls<(add _alloca), isCygwinMinGW32>,
-       LibcallImpls<(add _chkstk), isWin32NotCygMing>
+       LibcallImpls<(add _chkstk), isWin32NotCygMing>,
+       LibcSafestackPointerAddress
 );
 
 defvar Windows32DivRemMulCalls =
@@ -3555,7 +3586,7 @@ def LegacyDefaultSystemLibrary
          exp10f, exp10, exp10l_f128,
          __powisf2, __powidf2, __powitf2_f128,
          LibcallImpls<(add Int128RTLibcalls), isArch64Bit>,
-         DefaultStackProtector
+         DefaultStackProtector, DefaultSafeStackGlobals
 )>;
 
 //===----------------------------------------------------------------------===//
@@ -4397,13 +4428,13 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd2_exp : RuntimeLibcallImpl<EXP_V2F64>;
   def amd_vrd2_exp10 : RuntimeLibcallImpl<EXP10_V2F64>;
   def amd_vrd2_exp2 : RuntimeLibcallImpl<EXP2_V2F64>;
-  def amd_vrd2_expm1 : RuntimeLibcallImpl<EXPM1_V2F64>;
   def amd_vrd2_log : RuntimeLibcallImpl<LOG_V2F64>;
   def amd_vrd2_log10 : RuntimeLibcallImpl<LOG10_V2F64>;
   def amd_vrd2_log1p : RuntimeLibcallImpl<LOG1P_V2F64>;
   def amd_vrd2_log2 : RuntimeLibcallImpl<LOG2_V2F64>;
   def amd_vrd2_pow : RuntimeLibcallImpl<POW_V2F64>;
   def amd_vrd2_sin : RuntimeLibcallImpl<SIN_V2F64>;
+  def amd_vrd2_sincos : RuntimeLibcallImpl<SINCOS_V2F64>;
   def amd_vrd2_tan : RuntimeLibcallImpl<TAN_V2F64>;
   def amd_vrd4_atan : RuntimeLibcallImpl<ATAN_V4F64>;
   def amd_vrd4_cos : RuntimeLibcallImpl<COS_V4F64>;
@@ -4428,6 +4459,12 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd8_sin : RuntimeLibcallImpl<SIN_V8F64>;
   def amd_vrd8_sincos : RuntimeLibcallImpl<SINCOS_V8F64>;
   def amd_vrd8_tan : RuntimeLibcallImpl<TAN_V8F64>;
+  def amd_vrd2_erfinv : RuntimeLibcallImpl<ERFINV_V2F64>;
+  def amd_vrd4_erfinv : RuntimeLibcallImpl<ERFINV_V4F64>;
+  def amd_vrd8_erfinv : RuntimeLibcallImpl<ERFINV_V8F64>;
+  def amd_vrd2_erfcinv : RuntimeLibcallImpl<ERFCINV_V2F64>;
+  def amd_vrd4_erfcinv : RuntimeLibcallImpl<ERFCINV_V4F64>;
+  def amd_vrd8_erfcinv : RuntimeLibcallImpl<ERFCINV_V8F64>;
   def amd_vrs16_acosf : RuntimeLibcallImpl<ACOS_V16F32>;
   def amd_vrs16_asinf : RuntimeLibcallImpl<ASIN_V16F32>;
   def amd_vrs16_atanf : RuntimeLibcallImpl<ATAN_V16F32>;
@@ -4479,4 +4516,16 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs8_sinf : RuntimeLibcallImpl<SIN_V8F32>;
   def amd_vrs8_tanf : RuntimeLibcallImpl<TAN_V8F32>;
   def amd_vrs8_tanhf : RuntimeLibcallImpl<TANH_V8F32>;
+  def amd_vrd2_cdfnorm : RuntimeLibcallImpl<CDFNORM_V2F64>;
+  def amd_vrd4_cdfnorm : RuntimeLibcallImpl<CDFNORM_V4F64>;
+  def amd_vrd8_cdfnorm : RuntimeLibcallImpl<CDFNORM_V8F64>;
+  def amd_vrd2_cdfnorminv : RuntimeLibcallImpl<CDFNORMINV_V2F64>;
+  def amd_vrd4_cdfnorminv : RuntimeLibcallImpl<CDFNORMINV_V4F64>;
+  def amd_vrd8_cdfnorminv : RuntimeLibcallImpl<CDFNORMINV_V8F64>;
+  def amd_vrs4_roundf : RuntimeLibcallImpl<ROUND_V4F32>;
+  def amd_vrs8_roundf : RuntimeLibcallImpl<ROUND_V8F32>;
+  def amd_vrs16_roundf : RuntimeLibcallImpl<ROUND_V16F32>;
+  def amd_vrd2_round : RuntimeLibcallImpl<ROUND_V2F64>;
+  def amd_vrd4_round : RuntimeLibcallImpl<ROUND_V4F64>;
+  def amd_vrd8_round : RuntimeLibcallImpl<ROUND_V8F64>;
 }

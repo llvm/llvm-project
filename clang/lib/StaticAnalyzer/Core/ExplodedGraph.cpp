@@ -320,7 +320,7 @@ const Stmt *ExplodedNode::getStmtForDiagnostics() const {
   const LocationContext *LC = getLocationContext();
   if (LC->getAnalysisDeclContext()->isBodyAutosynthesized()) {
     // It must be a stack frame because we only autosynthesize functions.
-    return cast<StackFrameContext>(findTopAutosynthesizedParentContext(LC))
+    return cast<StackFrame>(findTopAutosynthesizedParentContext(LC))
         ->getCallSite();
   }
   // Otherwise, see if the node's program point directly points to a statement.

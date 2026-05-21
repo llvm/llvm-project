@@ -31,7 +31,7 @@ float4 getFloatVecMatrixDynamic(float4x4 M, int index) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z27getFloatScalarMatrixDynamicu11matrix_typeILm2ELm1EfEi(
 // CHECK-SAME: <2 x float> noundef nofpclass(nan inf) [[M:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [2 x <1 x float>], align 4
+// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [1 x <2 x float>], align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store <2 x float> [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[INDEX]], ptr [[INDEX_ADDR]], align 4
@@ -50,7 +50,7 @@ float getFloatScalarMatrixDynamic(float2x1 M, int index) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z28getFloatScalarMatrixConstantu11matrix_typeILm2ELm1EfE(
 // CHECK-SAME: <2 x float> noundef nofpclass(nan inf) [[M:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [2 x <1 x float>], align 4
+// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [1 x <2 x float>], align 4
 // CHECK-NEXT:    store <2 x float> [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[MATRIX_ELEM:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
@@ -65,7 +65,7 @@ float getFloatScalarMatrixConstant(float2x1 M) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z29getFloatScalarMatrixConstant2u11matrix_typeILm2ELm1EfE(
 // CHECK-SAME: <2 x float> noundef nofpclass(nan inf) [[M:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [2 x <1 x float>], align 4
+// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [1 x <2 x float>], align 4
 // CHECK-NEXT:    store <2 x float> [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[MATRIX_ELEM:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
@@ -207,7 +207,7 @@ int4 AddIntMatrixConstant(int4x4 M) {
 // CHECK-LABEL: define hidden noundef <3 x i1> @_Z23getBoolVecMatrixDynamicu11matrix_typeILm2ELm3EbEi(
 // CHECK-SAME: <6 x i1> noundef [[M:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [2 x <3 x i32>], align 4
+// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [3 x <2 x i32>], align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <6 x i1> [[M]] to <6 x i32>
 // CHECK-NEXT:    store <6 x i32> [[TMP0]], ptr [[M_ADDR]], align 4
@@ -223,7 +223,7 @@ int4 AddIntMatrixConstant(int4x4 M) {
 // CHECK-NEXT:    [[TMP5:%.*]] = add i32 4, [[TMP1]]
 // CHECK-NEXT:    [[MATRIX_ELEM3:%.*]] = extractelement <6 x i32> [[TMP2]], i32 [[TMP5]]
 // CHECK-NEXT:    [[MATRIX_ROW_INS4:%.*]] = insertelement <3 x i32> [[MATRIX_ROW_INS2]], i32 [[MATRIX_ELEM3]], i32 2
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc <3 x i32> [[MATRIX_ROW_INS4]] to <3 x i1>
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne <3 x i32> [[MATRIX_ROW_INS4]], zeroinitializer
 // CHECK-NEXT:    ret <3 x i1> [[LOADEDV]]
 //
 bool3 getBoolVecMatrixDynamic(bool2x3 M, int index) {
@@ -245,7 +245,7 @@ bool3 getBoolVecMatrixDynamic(bool2x3 M, int index) {
 // CHECK-NEXT:    [[MATRIX_ROW_INS4:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS2]], i32 [[MATRIX_ELEM3]], i32 2
 // CHECK-NEXT:    [[MATRIX_ELEM5:%.*]] = extractelement <16 x i32> [[TMP1]], i32 12
 // CHECK-NEXT:    [[MATRIX_ROW_INS6:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS4]], i32 [[MATRIX_ELEM5]], i32 3
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc <4 x i32> [[MATRIX_ROW_INS6]] to <4 x i1>
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne <4 x i32> [[MATRIX_ROW_INS6]], zeroinitializer
 // CHECK-NEXT:    ret <4 x i1> [[LOADEDV]]
 //
 bool4 getBoolVecMatrixConstant(bool4x4 M) {
@@ -255,13 +255,13 @@ bool4 getBoolVecMatrixConstant(bool4x4 M) {
 // CHECK-LABEL: define hidden noundef i1 @_Z27getBoolScalarMatrixConstantu11matrix_typeILm3ELm1EbE(
 // CHECK-SAME: <3 x i1> noundef [[M:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [3 x <1 x i32>], align 4
+// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [1 x <3 x i32>], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <3 x i1> [[M]] to <3 x i32>
 // CHECK-NEXT:    store <3 x i32> [[TMP0]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[MATRIX_ELEM:%.*]] = extractelement <3 x i32> [[TMP1]], i32 1
 // CHECK-NEXT:    [[MATRIX_ROW_INS:%.*]] = insertelement <1 x i32> poison, i32 [[MATRIX_ELEM]], i32 0
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc <1 x i32> [[MATRIX_ROW_INS]] to <1 x i1>
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne <1 x i32> [[MATRIX_ROW_INS]], zeroinitializer
 // CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i1> [[LOADEDV]], i32 0
 // CHECK-NEXT:    ret i1 [[CAST_VTRUNC]]
 //

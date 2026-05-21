@@ -368,6 +368,8 @@ omp_memspace_handle_t const omp_high_bw_mem_space =
     (omp_memspace_handle_t const)3;
 omp_memspace_handle_t const omp_low_lat_mem_space =
     (omp_memspace_handle_t const)4;
+omp_memspace_handle_t const omp_cgroup_mem_space =
+    (omp_memspace_handle_t const)5;
 omp_memspace_handle_t const llvm_omp_target_host_mem_space =
     (omp_memspace_handle_t const)100;
 omp_memspace_handle_t const llvm_omp_target_shared_mem_space =
@@ -452,6 +454,31 @@ void omp_free(void *ptr, omp_allocator_handle_t allocator) {
 #else
   free(ptr);
 #endif
+}
+
+void *omp_get_dyn_gprivate_ptr(size_t offset, omp_access_t access_group) {
+  i;
+  return NULL;
+}
+
+void *omp_get_dyn_gprivate_nofb_ptr(size_t offset, omp_access_t access_group) {
+  i;
+  return NULL;
+}
+
+size_t omp_get_dyn_gprivate_size(omp_access_t access_group) {
+  i;
+  return 0;
+}
+
+omp_memspace_handle_t omp_get_dyn_gprivate_memspace(omp_access_t access_group) {
+  i;
+  return omp_null_mem_space;
+}
+
+size_t omp_get_gprivate_limit(int device_num, omp_access_t access_group) {
+  i;
+  return 0;
 }
 
 /* OpenMP 5.0 Affinity Format */

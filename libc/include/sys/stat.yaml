@@ -1,6 +1,9 @@
 header: sys/stat.h
-header_template: stat.h.def
-macros: []
+standards:
+  - posix
+macros:
+  - macro_name: S_IFMT
+    macro_header: sys-stat-macros.h
 types:
   - type_name: blkcnt_t
   - type_name: blksize_t
@@ -18,22 +21,16 @@ enums: []
 objects: []
 functions:
   - name: chmod
-    standards:
-      - POSIX
     return_type: int
     arguments:
       - type: const char *
       - type: mode_t
   - name: fchmod
-    standards:
-      - POSIX
     return_type: int
     arguments:
       - type: int
       - type: mode_t
   - name: fchmodat
-    standards:
-      - POSIX
     return_type: int
     arguments:
       - type: int
@@ -41,38 +38,35 @@ functions:
       - type: mode_t
       - type: int
   - name: fstat
-    standards:
-      - POSIX
     return_type: int
     arguments:
       - type: int
       - type: struct stat *
   - name: lstat
-    standards:
-      - POSIX
     return_type: int
     arguments:
       - type: const char *__restrict
       - type: struct stat *__restrict
   - name: mkdir
-    standards:
-      - POSIX
     return_type: int
     arguments:
       - type: const char *
       - type: mode_t
   - name: mkdirat
-    standards:
-      - POSIX
     return_type: int
     arguments:
       - type: int
       - type: const char *
       - type: mode_t
   - name: stat
-    standards:
-      - POSIX
     return_type: int
     arguments:
       - type: const char *__restrict
       - type: struct stat *__restrict
+  - name: utimensat
+    return_type: int
+    arguments:
+      - type: int
+      - type: const char *
+      - type: const struct timespec *
+      - type: int

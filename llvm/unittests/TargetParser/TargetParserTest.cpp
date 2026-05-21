@@ -1448,19 +1448,18 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_F8F16MM,      AArch64::AEK_LSFE,
       AArch64::AEK_FPRCVT,       AArch64::AEK_CMPBR,
       AArch64::AEK_LSUI,         AArch64::AEK_OCCMO,
-      AArch64::AEK_PCDPHINT,     AArch64::AEK_POPS,
       AArch64::AEK_SVEAES,       AArch64::AEK_SME_MOP4,
       AArch64::AEK_SME_TMOP,     AArch64::AEK_SVEBITPERM,
       AArch64::AEK_SSVE_BITPERM, AArch64::AEK_SVESHA3,
-      AArch64::AEK_SVESM4,       AArch64::AEK_CMH,
       AArch64::AEK_LSCP,         AArch64::AEK_TLBID,
-      AArch64::AEK_MPAMV2,       AArch64::AEK_MTETC,
       AArch64::AEK_GCIE,         AArch64::AEK_SME2P3,
       AArch64::AEK_SVE2P3,       AArch64::AEK_SVE_B16MM,
       AArch64::AEK_F16MM,        AArch64::AEK_F16F32DOT,
       AArch64::AEK_F16F32MM,     AArch64::AEK_MOPS_GO,
       AArch64::AEK_POE2,         AArch64::AEK_TEV,
       AArch64::AEK_BTIE,         AArch64::AEK_F64MM,
+      AArch64::AEK_POPS,         AArch64::AEK_SVESM4,
+      AArch64::AEK_MTETC,
   };
 
   std::vector<StringRef> Features;
@@ -1567,14 +1566,11 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+cmpbr"));
   EXPECT_TRUE(llvm::is_contained(Features, "+lsui"));
   EXPECT_TRUE(llvm::is_contained(Features, "+occmo"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+pcdphint"));
   EXPECT_TRUE(llvm::is_contained(Features, "+pops"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-mop4"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-tmop"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+cmh"));
   EXPECT_TRUE(llvm::is_contained(Features, "+lscp"));
   EXPECT_TRUE(llvm::is_contained(Features, "+tlbid"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+mpamv2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+mtetc"));
   EXPECT_TRUE(llvm::is_contained(Features, "+gcie"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme2p3"));
@@ -1748,14 +1744,11 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"cmpbr", "nocmpbr", "+cmpbr", "-cmpbr"},
       {"lsui", "nolsui", "+lsui", "-lsui"},
       {"occmo", "nooccmo", "+occmo", "-occmo"},
-      {"pcdphint", "nopcdphint", "+pcdphint", "-pcdphint"},
       {"pops", "nopops", "+pops", "-pops"},
       {"sme-mop4", "nosme-mop4", "+sme-mop4", "-sme-mop4"},
       {"sme-tmop", "nosme-tmop", "+sme-tmop", "-sme-tmop"},
-      {"cmh", "nocmh", "+cmh", "-cmh"},
       {"lscp", "nolscp", "+lscp", "-lscp"},
       {"tlbid", "notlbid", "+tlbid", "-tlbid"},
-      {"mpamv2", "nompamv2", "+mpamv2", "-mpamv2"},
       {"mtetc", "nomtetc", "+mtetc", "-mtetc"},
       {"gcie", "nogcie", "+gcie", "-gcie"},
       {"sme2p3", "nosme2p3", "+sme2p3", "-sme2p3"},
@@ -1913,6 +1906,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {"v8.1a", "crc", "fp-armv8", "lse", "rdm", "neon"},
          {}},
         {AArch64::ARMV9_5A, {}, {"v9.5a", "mops", "cpa"}, {}},
+        {AArch64::ARMV9_7A, {}, {"v9.7a", "f16f32dot"}, {}},
 
         // Positive modifiers
         {AArch64::ARMV8A, {"fp16"}, {"fullfp16"}, {}},
@@ -2028,6 +2022,8 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"sve", "nofp16"}, {}, {"fullfp16", "sve"}},
         {AArch64::ARMV9_7A, {"nofp16", "f16mm"}, {"fullfp16", "f16mm"}, {}},
         {AArch64::ARMV9_7A, {"f16mm", "nofp16"}, {}, {"fullfp16", "f16mm"}},
+        {AArch64::ARMV9_7A, {"nosimd", "f16mm"}, {"neon", "f16mm"}, {}},
+        {AArch64::ARMV9_7A, {"f16mm", "nosimd"}, {}, {"neon", "f16mm"}},
         {AArch64::ARMV9_7A,
          {"nofp16", "f16f32mm"},
          {"fullfp16", "f16f32mm"},

@@ -6,12 +6,14 @@ add_subdirectory(device_code)
 add_offload_unittest("device"
     device/olIterateDevices.cpp
     device/olGetDeviceInfo.cpp
-    device/olGetDeviceInfoSize.cpp)
+    device/olGetDeviceInfoSize.cpp
+    device/olGetHostInfo.cpp)
 
 add_offload_unittest("event"
     event/olCreateEvent.cpp
     event/olDestroyEvent.cpp
     event/olSyncEvent.cpp
+    event/olGetEventElapsedTime.cpp
     event/olGetEventInfo.cpp
     event/olGetEventInfoSize.cpp)
 
@@ -21,7 +23,8 @@ target_compile_definitions("init.unittests" PRIVATE DISABLE_WRAPPER)
 
 add_offload_unittest("kernel"
     kernel/olCalculateOptimalOccupancy.cpp
-    kernel/olLaunchKernel.cpp)
+    kernel/olLaunchKernel.cpp
+    kernel/olLaunchKernelCooperative.cpp)
 
 add_offload_unittest("memory"
     memory/olMemAlloc.cpp

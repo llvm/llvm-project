@@ -136,5 +136,90 @@ int main(int, char**)
     test<std::uintptr_t>();
     test<std::size_t>();
 
+    // _BitInt tests. Width tiers follow C23 7.18.2.5.
+#if TEST_HAS_EXTENSION(bit_int)
+    {
+      using T8  = unsigned _BitInt(8);
+      using T13 = unsigned _BitInt(13);
+      using T32 = unsigned _BitInt(32);
+      using T64 = unsigned _BitInt(64);
+
+      // Byte-aligned widths: numeric_limits::digits is correct, so all
+      // values including zero are safe to test.
+      assert(std::countl_zero(T8(0)) == 8);
+      assert(std::countl_zero(T8(1)) == 7);
+      assert(std::countl_zero(T8(2)) == 6);
+      assert(std::countl_zero(T8(3)) == 6);
+      assert(std::countl_zero(T8(4)) == 5);
+      assert(std::countl_zero(T8(8)) == 4);
+      assert(std::countl_zero(T8(127)) == 1);
+      assert(std::countl_zero(T8(128)) == 0);
+      assert(std::countl_zero(T8(~T8(0))) == 0);
+      assert(std::countl_zero(T32(0)) == 32);
+      assert(std::countl_zero(T32(1)) == 31);
+      assert(std::countl_zero(T32(2)) == 30);
+      assert(std::countl_zero(T32(3)) == 30);
+      assert(std::countl_zero(T32(127)) == 25);
+      assert(std::countl_zero(T32(128)) == 24);
+      assert(std::countl_zero(T32(~T32(0))) == 0);
+      assert(std::countl_zero(T64(0)) == 64);
+      assert(std::countl_zero(T64(1)) == 63);
+      assert(std::countl_zero(T64(T64(1) << 63)) == 0);
+      assert(std::countl_zero(T64(~T64(0))) == 0);
+
+      // Odd widths: safe for nonzero inputs only (digits is the fallback
+      // for zero via __builtin_clzg).
+      assert(std::countl_zero(T13(1)) == 12);
+      assert(std::countl_zero(T13(2)) == 11);
+      assert(std::countl_zero(T13(3)) == 11);
+      assert(std::countl_zero(T13(127)) == 6);
+      assert(std::countl_zero(T13(128)) == 5);
+      assert(std::countl_zero(T13(~T13(0))) == 0);
+    }
+#  if __BITINT_MAXWIDTH__ >= 128
+    {
+      using T77  = unsigned _BitInt(77);
+      using T128 = unsigned _BitInt(128);
+      assert(std::countl_zero(T77(1)) == 76);
+      assert(std::countl_zero(T77(T77(1) << 76)) == 0);
+      assert(std::countl_zero(T77(~T77(0))) == 0);
+
+      assert(std::countl_zero(T128(0)) == 128);
+      assert(std::countl_zero(T128(1)) == 127);
+      assert(std::countl_zero(T128(T128(1) << 64)) == 63);
+      assert(std::countl_zero(T128(T128(1) << 127)) == 0);
+      assert(std::countl_zero(T128(~T128(0))) == 0);
+    }
+#  endif
+#  if __BITINT_MAXWIDTH__ >= 256
+    {
+      using T129 = unsigned _BitInt(129);
+      using T256 = unsigned _BitInt(256);
+      // Odd width around 128-bit limb boundary.
+      assert(std::countl_zero(T129(1)) == 128);
+      assert(std::countl_zero(T129(1) << 128) == 0);
+      assert(std::countl_zero(T129(~T129(0))) == 0);
+
+      assert(std::countl_zero(T256(~T256(0))) == 0);
+      assert(std::countl_zero(T256(1)) == 255);
+      // Bit set at position 200: 55 leading zeros.
+      assert(std::countl_zero(T256(1) << 200) == 55);
+      // Bit at position 127 (just below 128-bit boundary): 128 leading zeros.
+      assert(std::countl_zero(T256(1) << 127) == 128);
+      // Bit at position 128 (just at 128-bit boundary): 127 leading zeros.
+      assert(std::countl_zero(T256(1) << 128) == 127);
+    }
+#  endif
+#  if __BITINT_MAXWIDTH__ >= 4096
+    {
+      using T4096 = unsigned _BitInt(4096);
+      assert(std::countl_zero(T4096(1)) == 4095);
+      assert(std::countl_zero(T4096(1) << 4095) == 0);
+      assert(std::countl_zero(T4096(1) << 2048) == 2047);
+      assert(std::countl_zero(T4096(~T4096(0))) == 0);
+    }
+#  endif
+#endif // TEST_HAS_EXTENSION(bit_int)
+
     return 0;
 }

@@ -77,8 +77,8 @@ class MSP430AsmParser : public MCTargetAsmParser {
 
 public:
   MSP430AsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-                  const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), Parser(Parser) {
+                  const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII), Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
 

@@ -95,7 +95,8 @@
 // RUN: %clang_cl -m32 -arch:AVX10.2 --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify -DTEST_32_ARCH_AVX10_1_ADD -- %s
 #if defined(TEST_32_ARCH_AVX10_1_ADD)
 #if !__AVX512VL__  || !__AVX512CD__ || !__AVX512DQ__ || !__AVX512VBMI__ || !__AVX512IFMA__ || !__AVX512VNNI__ ||\
-    !__AVX512BF16__ || !__AVX512VPOPCNTDQ__ || !__AVX512VBMI2__ || !__AVX512VPOPCNTDQ__ || !__AVX512BITALG__ || !__AVX512FP16__
+    !__AVX512BF16__ || !__AVX512VPOPCNTDQ__ || !__AVX512VBMI2__ || !__AVX512VPOPCNTDQ__ || !__AVX512BITALG__ ||\
+    !__AVX512FP16__ || __AMX_TILE__
 #error fail
 #endif
 #endif
@@ -105,7 +106,7 @@
 
 // RUN: %clang_cl -m32 -arch:AVX10.2 --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify -DTEST_32_ARCH_AVX10_2_ADD -- %s
 #if defined(TEST_32_ARCH_AVX10_2_ADD)
-#if !__AVX10_2__
+#if !__AVX10_2__ || __APX_F__
 #error fail
 #endif
 #endif
@@ -159,7 +160,8 @@
 // RUN: %clang_cl -m64 -arch:AVX10.2 --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify -DTEST_64_ARCH_AVX10_1_ADD -- %s
 #if defined(TEST_64_ARCH_AVX10_1_ADD)
 #if !__AVX512VL__  || !__AVX512CD__ || !__AVX512DQ__ || !__AVX512VBMI__ || !__AVX512IFMA__ || !__AVX512VNNI__ ||\
-    !__AVX512BF16__ || !__AVX512VPOPCNTDQ__ || !__AVX512VBMI2__ || !__AVX512VPOPCNTDQ__ || !__AVX512BITALG__ || !__AVX512FP16__
+    !__AVX512BF16__ || !__AVX512VPOPCNTDQ__ || !__AVX512VBMI2__ || !__AVX512VPOPCNTDQ__ || !__AVX512BITALG__ ||\
+    !__AVX512FP16__ || __AMX_TILE__
 #error fail
 #endif
 #endif
@@ -169,7 +171,7 @@
 
 // RUN: %clang_cl -m64 -arch:AVX10.2 --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify -DTEST_64_ARCH_AVX10_2_ADD -- %s
 #if defined(TEST_64_ARCH_AVX10_2_ADD)
-#if !__AVX10_2__
+#if !__AVX10_2__ || __APX_F__
 #error fail
 #endif
 #endif
@@ -222,7 +224,7 @@ void f(void) {
 
 // RUN: %clang_cl --target=x86_64-pc-windows -mapxf -### -- 2>&1 %s | FileCheck -check-prefix=APXF %s
 // RUN: %clang_cl --target=x86_64-pc-windows -mapxf -mno-apxf -### -- 2>&1 %s | FileCheck -check-prefix=NO-APXF %s
-// RUN: %clang_cl --target=x86_64-pc-windows -mapx-features=egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu -### -- 2>&1 %s | FileCheck -check-prefix=APXALL %s
-// APXF: "-target-feature" "+egpr" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+zu"
-// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-zu"
-// APXALL: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+cf" "-target-feature" "+zu"
+// RUN: %clang_cl --target=x86_64-pc-windows -mapx-features=egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu,jmpabs -### -- 2>&1 %s | FileCheck -check-prefix=APXALL %s
+// APXF: "-target-feature" "+egpr" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+zu" "-target-feature" "+jmpabs"
+// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-zu" "-target-feature" "-jmpabs"
+// APXALL: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+cf" "-target-feature" "+zu" "-target-feature" "+jmpabs"

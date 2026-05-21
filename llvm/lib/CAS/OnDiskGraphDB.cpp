@@ -916,6 +916,9 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
     if (auto E = UpstreamDB->validate(Deep, Hasher))
       return E;
   }
+  if (!isAligned(Align(8), DataPool.size()))
+    return createStringError(llvm::errc::illegal_byte_sequence,
+                             "data pool bump pointer is not aligned");
   return Index.validate([&](FileOffset Offset,
                             OnDiskTrieRawHashMap::ConstValueProxy Record)
                             -> Error {
@@ -953,13 +956,28 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
       // the record. It can be reused by later insertion so just skip this entry
       // for now.
       return Error::success();
-    case TrieRecord::StorageKind::DataPool:
+    case TrieRecord::StorageKind::DataPool: {
       // Check offset is a postive value, and large enough to hold the
       // header for the data record.
       if (D.Offset.get() <= 0 ||
           D.Offset.get() + sizeof(DataRecordHandle::Header) >= DataPool.size())
         return formatError("datapool record out of bound");
+
+      // DataRecord start needs to be aligned.
+      if (!isAligned(Align(8), D.Offset.get()))
+        return formatError("data record offset is not aligned");
+
+      // Validate the layout flags before getFromDataPool calls getTotalSize().
+      auto HeaderData =
+          DataPool.get(D.Offset, sizeof(DataRecordHandle::Header));
+      if (!HeaderData)
+        return formatError(toString(HeaderData.takeError()));
+      auto LF = DataRecordHandle::get(HeaderData->data()).getLayoutFlags();
+      if (LF.NumRefs > DataRecordHandle::NumRefsFlags::Max ||
+          LF.DataSize > DataRecordHandle::DataSizeFlags::Max)
+        return formatError("data record has invalid layout flags");
       break;
+    }
     case TrieRecord::StorageKind::Standalone:
     case TrieRecord::StorageKind::StandaloneLeaf:
     case TrieRecord::StorageKind::StandaloneLeaf0:
@@ -999,6 +1017,8 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
         return dataError(toString(DataRecord.takeError()));
 
       for (auto InternRef : DataRecord->getRefs()) {
+        if (InternRef.getFileOffset().get() <= 0)
+          return dataError("invalid ref offset");
         auto Index = getIndexProxyFromRef(InternRef);
         if (!Index)
           return Index.takeError();
@@ -1015,6 +1035,8 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
         return dataError(
             "data record span passed the end of the standalone file");
       for (auto InternRef : DataRecord.getRefs()) {
+        if (InternRef.getFileOffset().get() <= 0)
+          return dataError("invalid ref offset");
         auto Index = getIndexProxyFromRef(InternRef);
         if (!Index)
           return Index.takeError();
@@ -1665,31 +1687,11 @@ Error OnDiskGraphDB::storeFile(
     return store(ID, {}, arrayRefFromStringRef<char>((*Buf)->getBuffer()));
   }
 
-  StringRef FromPath;
-  SmallString<256> TmpPath;
-
-  auto RemoveTmpFile = scope_exit([&TmpPath] {
-    if (!TmpPath.empty())
-      sys::fs::remove(TmpPath);
-  });
-
-  // \c clonefile requires that the destination path doesn't exist. We create
-  // a "placeholder" temporary file, then modify its path a bit and use that
-  // for \c clonefile to write to.
-  // FIXME: Instead of creating a dummy file, add a new file system API for
-  // copying to a unique path that can loop while checking EEXIST.
-  SmallString<256> UniqueTmpPath;
-  if (std::error_code EC =
-          sys::fs::createUniqueFile(RootPath + "/tmp.%%%%%%%", UniqueTmpPath))
-    return createFileError(RootPath + "/tmp.%%%%%%%", EC);
-  auto RemoveUniqueFile =
-      scope_exit([&UniqueTmpPath] { sys::fs::remove(UniqueTmpPath); });
-  TmpPath = UniqueTmpPath;
-  TmpPath += 'c'; // modify so that there's no file at that path.
-  // \c copy_file will use \c clonefile when applicable.
-  if (std::error_code EC = sys::fs::copy_file(FilePath, TmpPath))
-    return createFileError(FilePath, EC);
-  FromPath = TmpPath;
+  UniqueTempFile UniqueTmp;
+  auto ExpectedPath = UniqueTmp.createAndCopyFrom(RootPath, FilePath);
+  if (!ExpectedPath)
+    return ExpectedPath.takeError();
+  StringRef TmpPath = *ExpectedPath;
 
   TrieRecord::StorageKind SK;
   if (ImportKind.has_value()) {
@@ -1710,23 +1712,22 @@ Error OnDiskGraphDB::storeFile(
     if (Leaf0) {
       // Add a nul byte at the end.
       std::error_code EC;
-      raw_fd_ostream OS(FromPath, EC, sys::fs::CD_OpenExisting,
+      raw_fd_ostream OS(TmpPath, EC, sys::fs::CD_OpenExisting,
                         sys::fs::FA_Write, sys::fs::OF_Append);
       if (EC)
-        return createFileError(FromPath, EC);
+        return createFileError(TmpPath, EC);
       OS.write(0);
       OS.close();
       if (OS.has_error())
-        return createFileError(FromPath, OS.error());
+        return createFileError(TmpPath, OS.error());
     }
   }
 
   SmallString<256> StandalonePath;
   getStandalonePath(TrieRecord::getStandaloneFilePrefix(SK), I->Offset,
                     StandalonePath);
-  if (std::error_code EC = sys::fs::rename(FromPath, StandalonePath))
-    return createFileError(FromPath, EC);
-  TmpPath.clear();
+  if (Error E = UniqueTmp.renameTo(StandalonePath))
+    return E;
 
   // Store the object reference.
   TrieRecord::Data Existing;

@@ -283,6 +283,7 @@ WHOLE_TYPE_IN_MACRO Macro2;
 WHOLE_DECLARATION_IN_MACRO;
 
 template <typename T> struct Wrapper {};
+
 template <typename T>
 struct ClassWrapper {
   using R = T;
@@ -302,16 +303,34 @@ typename ClassWrapper<T>::R ClassWrapper<T>::g() {
   return {};
 }
 
-template <typename T> struct StructWrapper {};
+template <typename T>
+struct IntWrapper {
+  using R = int;
+  Wrapper<R> f();
+  R g();
+};
+
+template <typename T>
+Wrapper<typename IntWrapper<T>::R> IntWrapper<T>::f() {
+  return {};
+}
+
+template <typename T>
+typename IntWrapper<T>::R IntWrapper<T>::g() {
+// CHECK-MESSAGES-20: :[[@LINE-1]]:1: warning: redundant 'typename' [readability-redundant-typename]
+// CHECK-FIXES-20: IntWrapper<T>::R IntWrapper<T>::g() {
+  return {};
+}
+
 template <typename T>
 class ClassWithNestedStruct {
   struct Nested {};
-  StructWrapper<Nested> f();
+  Wrapper<Nested> f();
   Nested g();
 };
 
 template <typename T>
-StructWrapper<typename ClassWithNestedStruct<T>::Nested> ClassWithNestedStruct<T>::f() {
+Wrapper<typename ClassWithNestedStruct<T>::Nested> ClassWithNestedStruct<T>::f() {
   return {};
 }
 
@@ -347,3 +366,15 @@ typename T::R Foo::PartiallySpecializedDataMember<T, typename T::V> = false;
 // CHECK-FIXES-20: T::R Foo::PartiallySpecializedDataMember<T, typename T::V> = false;
 
 #endif // __cplusplus >= 201402L
+
+struct Int {
+  using R = int;
+};
+
+template <typename T>
+struct BaseClass {};
+
+template <typename T>
+struct SubClass : BaseClass<typename T::R> {};
+
+template struct SubClass<Int>;

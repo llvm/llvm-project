@@ -9,6 +9,7 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/SymbolTable.h"
@@ -20,13 +21,31 @@
 #include "llvm/Support/Casting.h"
 
 mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
-  mlir::Operation *parentOp = region.getParentOp();
-  while (parentOp) {
-    if (mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS>(parentOp))
-      return parentOp;
-    parentOp = parentOp->getParentOp();
-  }
-  return nullptr;
+  return region
+      .getParentOfType<ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::ComputeRegionOp>();
+}
+
+mlir::Value mlir::acc::getACCOperandForBlockArg(mlir::Value v) {
+  auto barg = mlir::dyn_cast<mlir::BlockArgument>(v);
+  if (!barg)
+    return nullptr;
+
+  mlir::Block *block = barg.getOwner();
+  auto computeReg =
+      mlir::dyn_cast<mlir::acc::ComputeRegionOp>(block->getParentOp());
+  if (!computeReg)
+    return nullptr;
+  assert(block == computeReg.getBody() &&
+         "block must be the body of acc.compute_region");
+  return computeReg.getOperand(barg);
+}
+
+mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
+  mlir::Value orig = getACCOperandForBlockArg(v);
+  if (!orig)
+    return nullptr;
+  mlir::Operation *def = orig.getDefiningOp();
+  return mlir::isa_and_nonnull<ACC_DATA_ENTRY_OPS>(def) ? def : nullptr;
 }
 
 template <typename OpTy>
@@ -92,6 +111,10 @@ std::string mlir::acc::getVariableName(mlir::Value v) {
 
   // Walk through view operations until a name is found or can't go further
   while (Operation *definingOp = current.getDefiningOp()) {
+    // For integer constants, return their value as a string.
+    if (std::optional<int64_t> constVal = getConstantIntValue(current))
+      return std::to_string(*constVal);
+
     // Check for `acc.var_name` attribute
     if (auto varNameAttr =
             definingOp->getAttrOfType<VarNameAttr>(getVarNameAttrName()))
@@ -227,23 +250,33 @@ bool mlir::acc::isDeviceValue(mlir::Value val) {
     if (pointerLikeTy.isDeviceData(val))
       return true;
 
+  mlir::Operation *defOp = val.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  // `acc.declare` with deviceptr marks data that is already associated with
+  // the device.
+  if (auto declareAttr = defOp->getAttrOfType<mlir::acc::DeclareAttr>(
+          mlir::acc::getDeclareAttrName()))
+    if (declareAttr.getDataClause().getValue() ==
+        mlir::acc::DataClause::acc_deviceptr)
+      return true;
+
   // Handle operations that access a partial entity - check if the base entity
   // is device data.
-  if (auto *defOp = val.getDefiningOp()) {
-    if (auto partialAccess =
-            dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
-      if (mlir::Value base = partialAccess.getBaseEntity())
-        return isDeviceValue(base);
-    }
+  if (auto partialAccess =
+          dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
+    if (mlir::Value base = partialAccess.getBaseEntity())
+      return isDeviceValue(base);
+  }
 
-    // Handle address_of - check if the referenced global is device data.
-    if (auto addrOfIface =
-            dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
-      auto symbol = addrOfIface.getSymbol();
-      if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
-              mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
-        return global.isDeviceData();
-    }
+  // Handle address_of - check if the referenced global is device data.
+  if (auto addrOfIface =
+          dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
+    auto symbol = addrOfIface.getSymbol();
+    if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
+            mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
+      return global.isDeviceData();
   }
 
   return false;
@@ -331,7 +364,8 @@ mlir::acc::getDominatingDataClauses(mlir::Operation *computeConstructOp,
 }
 
 mlir::remark::detail::InFlightRemark
-mlir::acc::emitRemark(mlir::Operation *op, const llvm::Twine &message,
+mlir::acc::emitRemark(mlir::Operation *op,
+                      const std::function<std::string()> &messageFn,
                       llvm::StringRef category) {
   using namespace mlir::remark;
   mlir::Location loc = op->getLoc();
@@ -351,6 +385,6 @@ mlir::acc::emitRemark(mlir::Operation *op, const llvm::Twine &message,
 
   auto remark = engine->emitOptimizationRemark(loc, opts);
   if (remark)
-    remark << message.str();
+    remark << messageFn();
   return remark;
 }

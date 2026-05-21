@@ -2163,9 +2163,14 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
       return failure();
     }
 
-    // Finalize the rewrite.
-    rewriter.replaceOpWithNewOp<ConversionOpType>(
-        conversionOp, conversionOp.getType(), subByteExt);
+    // Finalize the rewrite. If subByteExt already has the destination type
+    // (e.g. extsi i4->i8 where the container is i8), replace directly without
+    // creating a new conversion op that would have identical src and dst types.
+    if (subByteExt.getType() == conversionOp.getType())
+      rewriter.replaceOp(conversionOp, subByteExt);
+    else
+      rewriter.replaceOpWithNewOp<ConversionOpType>(
+          conversionOp, conversionOp.getType(), subByteExt);
     return success();
   }
 };
@@ -2213,11 +2218,13 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
             /*containerTy=*/rewriter.getI8Type(), truncOp)))
       return failure();
 
-    // Create a new iX -> i8 truncation op.
+    // Create a new iX -> i8 truncation op, unless the source is already i8.
     Location loc = truncOp.getLoc();
     auto i8VecType = srcVecType.cloneWith(std::nullopt, rewriter.getI8Type());
     Value i8TruncVal =
-        arith::TruncIOp::create(rewriter, loc, i8VecType, srcValue);
+        srcVecType == i8VecType
+            ? srcValue
+            : arith::TruncIOp::create(rewriter, loc, i8VecType, srcValue);
 
     // Rewrite the i8 -> i4 truncation part.
     Value subByteTrunc = rewriteI8ToI4Trunc(rewriter, loc, i8TruncVal);

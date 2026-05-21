@@ -625,7 +625,8 @@ static bool X86SelectAddress(MachineInstr &I, const X86TargetMachine &TM,
     }
     break;
   }
-  case TargetOpcode::G_GLOBAL_VALUE: {
+  case TargetOpcode::G_GLOBAL_VALUE:
+  case X86::G_WRAPPER_RIP: {
     auto GV = I.getOperand(1).getGlobal();
     if (GV->isThreadLocal()) {
       return false; // TODO: we don't support TLS yet.
@@ -636,15 +637,12 @@ static bool X86SelectAddress(MachineInstr &I, const X86TargetMachine &TM,
     AM.GV = GV;
     AM.GVOpFlags = STI.classifyGlobalReference(GV);
 
-    // TODO: The ABI requires an extra load. not supported yet.
-    if (isGlobalStubReference(AM.GVOpFlags))
-      return false;
-
     // TODO: This reference is relative to the pic base. not supported yet.
     if (isGlobalRelativeToPICBase(AM.GVOpFlags))
       return false;
 
-    if (STI.isPICStyleRIPRel()) {
+    if (STI.isPICStyleRIPRel() || AM.GVOpFlags == X86II::MO_GOTPCREL ||
+        AM.GVOpFlags == X86II::MO_GOTPCREL_NORELAX) {
       // Use rip-relative addressing.
       assert(AM.Base.Reg == 0 && AM.IndexReg == 0 &&
              "RIP-relative addresses can't have additional register operands");
@@ -823,8 +821,9 @@ bool X86InstructionSelector::selectConstant(MachineInstr &I,
     NewOpc = X86::MOV32ri;
     break;
   case 64:
-    // TODO: in case isUInt<32>(Val), X86::MOV32ri can be used
-    if (isInt<32>(Val))
+    if (isUInt<32>(Val))
+      NewOpc = X86::MOV32ri64;
+    else if (isInt<32>(Val))
       NewOpc = X86::MOV64ri32;
     else
       NewOpc = X86::MOV64ri;
@@ -1436,9 +1435,15 @@ bool X86InstructionSelector::emitInsertSubreg(Register DstReg, Register SrcReg,
     return false;
   }
 
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::COPY))
-      .addReg(DstReg, RegState::DefineNoRead, SubIdx)
-      .addReg(SrcReg);
+  Register ImpDefReg = MRI.createVirtualRegister(DstRC);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::IMPLICIT_DEF),
+          ImpDefReg);
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::INSERT_SUBREG),
+          DstReg)
+      .addReg(ImpDefReg)
+      .addReg(SrcReg)
+      .addImm(SubIdx);
 
   return true;
 }
@@ -1973,7 +1978,8 @@ X86InstructionSelector::selectAddr(MachineOperand &Root) const {
   MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
   MachineInstr *Ptr = MRI.getVRegDef(Root.getReg());
   X86AddressMode AM;
-  X86SelectAddress(*Ptr, TM, MRI, STI, AM);
+  if (!X86SelectAddress(*Ptr, TM, MRI, STI, AM))
+    return std::nullopt;
 
   if (AM.IndexReg)
     return std::nullopt;

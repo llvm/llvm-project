@@ -20,7 +20,7 @@ namespace llvm {
 class LPMUpdater;
 class LoopNest;
 
-class LoopFlattenPass : public PassInfoMixin<LoopFlattenPass> {
+class LoopFlattenPass : public OptionalPassInfoMixin<LoopFlattenPass> {
 public:
   LoopFlattenPass() = default;
 
