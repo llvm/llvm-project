@@ -85,6 +85,80 @@ makeObjects(llvm::ArrayRef<const semantics::Symbol *> syms) {
   return objects;
 }
 
+/// Structure holding the information needed to create and bind entry block
+/// arguments associated to a single clause during OpenMP lowering.
+struct ObjectEntryBlockArgsEntry {
+  llvm::SmallVector<Object> objects;
+  llvm::ArrayRef<mlir::Value> vars;
+
+  bool isValid() const { return objects.size() <= vars.size(); }
+
+  llvm::SmallVector<const semantics::Symbol *> getSyms() const {
+    llvm::SmallVector<const semantics::Symbol *> syms;
+    syms.reserve(objects.size());
+    llvm::transform(objects, std::back_inserter(syms),
+                    [](const Object &object) { return object.sym(); });
+    return syms;
+  }
+};
+
+struct ObjectEntryBlockArgs {
+  ObjectEntryBlockArgsEntry hasDeviceAddr;
+  llvm::ArrayRef<mlir::Value> hostEvalVars;
+  ObjectEntryBlockArgsEntry inReduction;
+  ObjectEntryBlockArgsEntry map;
+  ObjectEntryBlockArgsEntry priv;
+  ObjectEntryBlockArgsEntry reduction;
+  ObjectEntryBlockArgsEntry taskReduction;
+  ObjectEntryBlockArgsEntry useDeviceAddr;
+  ObjectEntryBlockArgsEntry useDevicePtr;
+
+  bool isValid() const {
+    return hasDeviceAddr.isValid() && inReduction.isValid() && map.isValid() &&
+           priv.isValid() && reduction.isValid() && taskReduction.isValid() &&
+           useDeviceAddr.isValid() && useDevicePtr.isValid();
+  }
+
+  llvm::SmallVector<const semantics::Symbol *> getSyms() const {
+    llvm::SmallVector<const semantics::Symbol *> syms;
+    auto appendSyms = [&syms](const ObjectEntryBlockArgsEntry &entry) {
+      syms.reserve(syms.size() + entry.objects.size());
+      llvm::transform(entry.objects, std::back_inserter(syms),
+                      [](const Object &object) { return object.sym(); });
+    };
+    appendSyms(hasDeviceAddr);
+    appendSyms(inReduction);
+    appendSyms(map);
+    appendSyms(priv);
+    appendSyms(reduction);
+    appendSyms(taskReduction);
+    appendSyms(useDeviceAddr);
+    appendSyms(useDevicePtr);
+    return syms;
+  }
+
+  auto getVars() const {
+    return llvm::concat<const mlir::Value>(
+        hasDeviceAddr.vars, hostEvalVars, inReduction.vars, map.vars, priv.vars,
+        reduction.vars, taskReduction.vars, useDeviceAddr.vars,
+        useDevicePtr.vars);
+  }
+
+  Fortran::common::openmp::EntryBlockArgs asEntryBlockArgs() const {
+    Fortran::common::openmp::EntryBlockArgs args;
+    args.hasDeviceAddrVars = hasDeviceAddr.vars;
+    args.hostEvalVars = hostEvalVars;
+    args.inReductionVars = inReduction.vars;
+    args.mapVars = map.vars;
+    args.privVars = priv.vars;
+    args.reductionVars = reduction.vars;
+    args.taskReductionVars = taskReduction.vars;
+    args.useDeviceAddrVars = useDeviceAddr.vars;
+    args.useDevicePtrVars = useDevicePtr.vars;
+    return args;
+  }
+};
+
 namespace {
 /// Structure holding information that is needed to pass host-evaluated
 /// information to later lowering stages.
@@ -249,80 +323,6 @@ public:
       : sectionsConstruct{sectionsConstruct} {}
 
   const parser::OpenMPSectionsConstruct &sectionsConstruct;
-};
-
-/// Structure holding the information needed to create and bind entry block
-/// arguments associated to a single clause during OpenMP lowering.
-struct ObjectEntryBlockArgsEntry {
-  llvm::SmallVector<Object> objects;
-  llvm::ArrayRef<mlir::Value> vars;
-
-  bool isValid() const { return objects.size() <= vars.size(); }
-
-  llvm::SmallVector<const semantics::Symbol *> getSyms() const {
-    llvm::SmallVector<const semantics::Symbol *> syms;
-    syms.reserve(objects.size());
-    llvm::transform(objects, std::back_inserter(syms),
-                    [](const Object &object) { return object.sym(); });
-    return syms;
-  }
-};
-
-struct ObjectEntryBlockArgs {
-  ObjectEntryBlockArgsEntry hasDeviceAddr;
-  llvm::ArrayRef<mlir::Value> hostEvalVars;
-  ObjectEntryBlockArgsEntry inReduction;
-  ObjectEntryBlockArgsEntry map;
-  ObjectEntryBlockArgsEntry priv;
-  ObjectEntryBlockArgsEntry reduction;
-  ObjectEntryBlockArgsEntry taskReduction;
-  ObjectEntryBlockArgsEntry useDeviceAddr;
-  ObjectEntryBlockArgsEntry useDevicePtr;
-
-  bool isValid() const {
-    return hasDeviceAddr.isValid() && inReduction.isValid() && map.isValid() &&
-           priv.isValid() && reduction.isValid() && taskReduction.isValid() &&
-           useDeviceAddr.isValid() && useDevicePtr.isValid();
-  }
-
-  llvm::SmallVector<const semantics::Symbol *> getSyms() const {
-    llvm::SmallVector<const semantics::Symbol *> syms;
-    auto appendSyms = [&syms](const ObjectEntryBlockArgsEntry &entry) {
-      syms.reserve(syms.size() + entry.objects.size());
-      llvm::transform(entry.objects, std::back_inserter(syms),
-                      [](const Object &object) { return object.sym(); });
-    };
-    appendSyms(hasDeviceAddr);
-    appendSyms(inReduction);
-    appendSyms(map);
-    appendSyms(priv);
-    appendSyms(reduction);
-    appendSyms(taskReduction);
-    appendSyms(useDeviceAddr);
-    appendSyms(useDevicePtr);
-    return syms;
-  }
-
-  auto getVars() const {
-    return llvm::concat<const mlir::Value>(
-        hasDeviceAddr.vars, hostEvalVars, inReduction.vars, map.vars, priv.vars,
-        reduction.vars, taskReduction.vars, useDeviceAddr.vars,
-        useDevicePtr.vars);
-  }
-
-  Fortran::common::openmp::EntryBlockArgs asEntryBlockArgs() const {
-    Fortran::common::openmp::EntryBlockArgs args;
-    args.hasDeviceAddrVars = hasDeviceAddr.vars;
-    args.hostEvalVars = hostEvalVars;
-    args.inReductionVars = inReduction.vars;
-    args.mapVars = map.vars;
-    args.privVars = priv.vars;
-    args.reductionVars = reduction.vars;
-    args.taskReductionVars = taskReduction.vars;
-    args.useDeviceAddrVars = useDeviceAddr.vars;
-    args.useDevicePtrVars = useDevicePtr.vars;
-    return args;
-  }
 };
 
 static const parser::OpenMPSectionsConstruct *
