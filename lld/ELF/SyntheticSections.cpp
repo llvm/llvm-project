@@ -4562,7 +4562,6 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
     }
   } while (0);
 
-  // Emit a PART_EHDR/PART_PHDR pair per shim.
   for (Partition &shim : llvm::drop_begin(ctx.partitions)) {
     shim.elfHeader = std::make_unique<PartitionElfHeaderSection<ELFT>>(ctx);
     shim.elfHeader->name = shim.name;

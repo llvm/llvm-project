@@ -2748,9 +2748,8 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   }
 }
 
-// This function reads a symbol partition specification section. These sections
-// are used to control which partition a symbol is allocated to. See
-// https://lld.llvm.org/Partitions.html for more details on partitions.
+// Read an SHT_LLVM_SYMPART specification. Each unique partition name now just
+// allocates an empty shim so `llvm-objcopy --extract-partition` keeps working.
 template <typename ELFT>
 static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
   // Read the relocation that refers to the partition's entry point symbol.

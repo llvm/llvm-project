@@ -638,7 +638,7 @@ struct Ctx : CommonLinkerContext {
   };
   OutSections out;
   SmallVector<OutputSection *, 0> outputSections;
-  // [0] main; [1..] shims emitted for the deprecated SHT_LLVM_SYMPART.
+  // [0] main output; [1..] header-only shims for SHT_LLVM_SYMPART inputs.
   std::vector<Partition> partitions;
 
   InStruct in;
