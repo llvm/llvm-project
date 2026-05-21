@@ -32249,16 +32249,6 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Z = DAG.getConstant(0, DL, VT);
 
   if (!IsROTL) {
-    // rotr(x,1) -> pavgb(x, 0 - (x & 1))
-    if (EltSizeInBits == 8 && IsCstSplat &&
-        CstSplatValue.urem(EltSizeInBits) == 1 && !Subtarget.hasGFNI()) {
-      SDValue One = DAG.getConstant(1, DL, VT);
-      SDValue LSB = DAG.getNode(ISD::AND, DL, VT, R, One);
-      SDValue Zero = DAG.getConstant(0, DL, VT);
-      SDValue Neg = DAG.getNode(ISD::SUB, DL, VT, Zero, LSB);
-      return DAG.getNode(ISD::AVGCEILU, DL, VT, R, Neg);
-    }
-
     // If the ISD::ROTR amount is constant, we're always better converting to
     // ISD::ROTL.
     if (SDValue NegAmt = DAG.FoldConstantArithmetic(ISD::SUB, DL, VT, {Z, Amt}))
@@ -32282,6 +32272,16 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   // Split 256-bit integers on XOP/pre-AVX2 targets.
   if (VT.is256BitVector() && (Subtarget.hasXOP() || !Subtarget.hasAVX2()))
     return splitVectorIntBinary(Op, DAG, DL);
+
+  // rotl(x,7) -> pavgb(x, 0 - (x & 1))
+  if (EltSizeInBits == 8 && IsCstSplat &&
+      CstSplatValue.urem(EltSizeInBits) == 7 && IsROTL) {
+    SDValue One = DAG.getConstant(1, DL, VT);
+    SDValue LSB = DAG.getNode(ISD::AND, DL, VT, R, One);
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    SDValue Neg = DAG.getNode(ISD::SUB, DL, VT, Zero, LSB);
+    return DAG.getNode(ISD::AVGCEILU, DL, VT, R, Neg);
+  }
 
   // Rotate by an uniform constant - expand back to shifts.
   // TODO: Can't use generic expansion as UNDEF amt elements can be converted

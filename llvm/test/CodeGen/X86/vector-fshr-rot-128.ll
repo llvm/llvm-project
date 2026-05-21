@@ -2063,10 +2063,7 @@ define <16 x i8> @splatconstant_funnnel_v16i8_by_one(<16 x i8> %x) nounwind {
 ;
 ; XOP-LABEL: splatconstant_funnnel_v16i8_by_one:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; XOP-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; XOP-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
-; XOP-NEXT:    vpavgb %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    vprotb $7, %xmm0, %xmm0
 ; XOP-NEXT:    retq
 ;
 ; X86-SSE2-LABEL: splatconstant_funnnel_v16i8_by_one:

@@ -1758,15 +1758,16 @@ define <32 x i8> @splatconstant_funnnel_v32i8(<32 x i8> %x) nounwind {
 define <32 x i8> @splatconstant_funnnel_v32i8_by_one(<32 x i8> %x) nounwind {
 ; AVX1-LABEL: splatconstant_funnnel_v32i8_by_one:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpsubb %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; AVX1-NEXT:    vpavgb %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vpsubb %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vpavgb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpsubb %xmm3, %xmm4, %xmm3
+; AVX1-NEXT:    vpavgb %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm2
+; AVX1-NEXT:    vpsubb %xmm2, %xmm4, %xmm2
+; AVX1-NEXT:    vpavgb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: splatconstant_funnnel_v32i8_by_one:
@@ -1827,23 +1828,18 @@ define <32 x i8> @splatconstant_funnnel_v32i8_by_one(<32 x i8> %x) nounwind {
 ;
 ; XOPAVX1-LABEL: splatconstant_funnnel_v32i8_by_one:
 ; XOPAVX1:       # %bb.0:
-; XOPAVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; XOPAVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; XOPAVX1-NEXT:    vpsubb %xmm2, %xmm3, %xmm2
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; XOPAVX1-NEXT:    vpavgb %xmm2, %xmm4, %xmm2
-; XOPAVX1-NEXT:    vpsubb %xmm1, %xmm3, %xmm1
-; XOPAVX1-NEXT:    vpavgb %xmm1, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; XOPAVX1-NEXT:    vprotb $7, %xmm0, %xmm1
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; XOPAVX1-NEXT:    vprotb $7, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: splatconstant_funnnel_v32i8_by_one:
 ; XOPAVX2:       # %bb.0:
-; XOPAVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
-; XOPAVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; XOPAVX2-NEXT:    vpsubb %ymm1, %ymm2, %ymm1
-; XOPAVX2-NEXT:    vpavgb %ymm1, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vprotb $7, %xmm0, %xmm1
+; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; XOPAVX2-NEXT:    vprotb $7, %xmm0, %xmm0
+; XOPAVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; XOPAVX2-NEXT:    retq
   %res = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %x, <32 x i8> %x, <32 x i8> splat (i8 1))
   ret <32 x i8> %res
