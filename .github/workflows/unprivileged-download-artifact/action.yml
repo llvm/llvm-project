@@ -85,8 +85,8 @@ runs:
             })
 
             artifact_ids.push(artifact_to_download.id)
-            artifact_urls.push('"' + url_response.url + '"')
-            artifact_names.push('"' + artifact_to_download.name + '"')
+            artifact_urls.push(url_response.url)
+            artifact_names.push(artifact_to_download.name)
           }
 
           core.setOutput("urls", artifact_urls.join(" "));
