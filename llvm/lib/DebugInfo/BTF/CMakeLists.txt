@@ -1,4 +1,6 @@
 add_llvm_component_library(LLVMDebugInfoBTF
+  BTFBuilder.cpp
+  BTFDedup.cpp
   BTFParser.cpp
   BTFContext.cpp
   ADDITIONAL_HEADER_DIRS
