@@ -384,7 +384,8 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
       CallArgs, FPT, RequiredArgs::forPrototypePlus(FPT, 1), PrefixArgs, MD);
   assert(CallFnInfo.getRegParm() == CurFnInfo->getRegParm() &&
          CallFnInfo.isNoReturn() == CurFnInfo->isNoReturn() &&
-         CallFnInfo.getCallingConvention() == CurFnInfo->getCallingConvention() &&
+         CallFnInfo.getCallingConvention() ==
+             CurFnInfo->getCallingConvention() &&
          CallFnInfo.getX86ABIAVXLevel() == CurFnInfo->getX86ABIAVXLevel());
   assert(isa<CXXDestructorDecl>(MD) || // ignore dtor return types
          similar(CallFnInfo.getReturnInfo(), CallFnInfo.getReturnType(),
