@@ -94,11 +94,7 @@ function(lldb_check_header_layering target)
     file(STRINGS "${file}" _includes
          REGEX "^[ \t]*#[ \t]*include[ \t]+\"lldb/[A-Za-z_][A-Za-z0-9_]*/")
     foreach(line ${_includes})
-      # Special case: lldb/Host/windows/windows.h is a system-header wrapper
-      # (sets NTDDI_VERSION/NOMINMAX/etc. before <windows.h> and undefs
-      # conflicting macros). It carries no module dependency but is the
-      # canonical way to pull in <windows.h> across the tree, so allow it
-      # from any target regardless of layering rules.
+      # Allow Windows system-header wrapper.
       if(line MATCHES "\"lldb/Host/windows/windows\\.h\"")
         continue()
       endif()
