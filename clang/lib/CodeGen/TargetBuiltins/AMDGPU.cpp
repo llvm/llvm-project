@@ -383,6 +383,30 @@ static llvm::AtomicOrdering mapCABIAtomicOrdering(unsigned AO) {
   llvm_unreachable("Unknown AtomicOrderingCABI enum");
 }
 
+// Map a __MEMORY_SCOPE_* integer constant to the AMDGPU-specific syncscope.
+// Invalid scope values are mapped to system scope (empty string).
+static StringRef getAMDGPUSyncScopeStr(CodeGenModule &CGM, unsigned ScopeInt,
+                                       llvm::AtomicOrdering AO) {
+  AtomicScopeGenericModel ScopeModel;
+  if (!ScopeModel.isValid(ScopeInt))
+    return "";
+  clang::SyncScope Scope = ScopeModel.map(ScopeInt);
+  return CGM.getTargetCodeGenInfo().getLLVMSyncScopeStr(CGM.getLangOpts(),
+                                                        Scope, AO);
+}
+
+/// Convert a __MEMORY_SCOPE_* integer constant to a metadata node containing
+/// the target-specific sync scope string.
+static llvm::MetadataAsValue *emitScopeMD(
+    CodeGenFunction &CGF, unsigned ScopeInt,
+    llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent) {
+  StringRef ScopeStr = getAMDGPUSyncScopeStr(CGF.CGM, ScopeInt, AO);
+  llvm::LLVMContext &Ctx = CGF.CGM.getLLVMContext();
+  llvm::MDNode *MD =
+      llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, ScopeStr)});
+  return llvm::MetadataAsValue::get(Ctx, MD);
+}
+
 // For processing memory ordering and memory scope arguments of various
 // amdgcn builtins.
 // \p Order takes a C++11 compatible memory-ordering specifier and converts
@@ -407,33 +431,9 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   }
 
   // Older builtins had an enum argument for the memory scope.
-  const char *SSN = nullptr;
-  int scope = cast<llvm::ConstantInt>(Scope)->getZExtValue();
-  switch (scope) {
-  case AtomicScopeGenericModel::System: // __MEMORY_SCOPE_SYSTEM
-    SSID = llvm::SyncScope::System;
-    break;
-  case AtomicScopeGenericModel::Device: // __MEMORY_SCOPE_DEVICE
-    SSN = getTarget().getTriple().isSPIRV() ? "device" : "agent";
-    break;
-  case AtomicScopeGenericModel::Workgroup: // __MEMORY_SCOPE_WRKGRP
-    SSN = "workgroup";
-    break;
-  case AtomicScopeGenericModel::Cluster: // __MEMORY_SCOPE_CLUSTR
-    SSN = getTarget().getTriple().isSPIRV() ? "workgroup" : "cluster";
-    break;
-  case AtomicScopeGenericModel::Wavefront: // __MEMORY_SCOPE_WVFRNT
-    SSN = getTarget().getTriple().isSPIRV() ? "subgroup" : "wavefront";
-    break;
-  case AtomicScopeGenericModel::Single: // __MEMORY_SCOPE_SINGLE
-    SSID = llvm::SyncScope::SingleThread;
-    break;
-  default:
-    SSID = llvm::SyncScope::System;
-    break;
-  }
-  if (SSN)
-    SSID = getLLVMContext().getOrInsertSyncScopeID(SSN);
+  unsigned scope = cast<llvm::ConstantInt>(Scope)->getZExtValue();
+  StringRef SSN = getAMDGPUSyncScopeStr(CGM, scope, AO);
+  SSID = getLLVMContext().getOrInsertSyncScopeID(SSN);
 }
 
 void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
@@ -927,22 +927,14 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       break;
     }
 
-    LLVMContext &Ctx = CGM.getLLVMContext();
     llvm::Type *LoadTy = ConvertType(E->getType());
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
 
     auto *AOExpr = cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(1)));
     auto *ScopeExpr = cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(2)));
-
-    auto Scope = static_cast<SyncScope>(ScopeExpr->getZExtValue());
     llvm::AtomicOrdering AO = mapCABIAtomicOrdering(AOExpr->getZExtValue());
 
-    StringRef ScopeStr = CGM.getTargetCodeGenInfo().getLLVMSyncScopeStr(
-        CGM.getLangOpts(), Scope, AO);
-
-    llvm::MDNode *MD =
-        llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, ScopeStr)});
-    llvm::Value *ScopeMD = llvm::MetadataAsValue::get(Ctx, MD);
+    llvm::Value *ScopeMD = emitScopeMD(*this, ScopeExpr->getZExtValue(), AO);
     llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
     return Builder.CreateCall(F, {Addr, AOExpr, ScopeMD});
   }

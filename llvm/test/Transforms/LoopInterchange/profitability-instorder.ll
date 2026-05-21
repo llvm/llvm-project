@@ -141,8 +141,8 @@ exit:
 ;
 ; The above loop should NOT be interchanged in terms of locality of reference.
 ;
-define void @unprofitable(ptr %A) {
-; CHECK-LABEL: define void @unprofitable(
+define void @unprofitable0(ptr %A) {
+; CHECK-LABEL: define void @unprofitable0(
 ; CHECK-SAME: ptr [[A:%.*]]) {
 ; CHECK-NEXT:  [[LOOP_I_HEADER_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_I_HEADER1:.*]]
@@ -183,6 +183,80 @@ loop.j:
 loop.i.latch:
   %i.inc = add i64 %i, 1
   %ec.i = icmp eq i64 %i.inc, 10
+  br i1 %ec.i, label %exit, label %loop.i.header
+
+exit:
+  ret void
+}
+
+; for (i = 0; i < 42; i++)
+;   for (j = 0; j < 42; j++)
+;     A[100*i + j] = B[100*i + j] + C[i + 100*j] + C[i + 99*j] + C[i + 98*j];
+;
+; The above loop should NOT be interchanged in terms of locality of reference.
+;
+define void @unprofitable1(ptr noalias %A, ptr noalias %B, ptr noalias %C) {
+; CHECK-LABEL: define void @unprofitable1(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) {
+; CHECK-NEXT:  [[LOOP_J_PREHEADER:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_J:.*]]
+; CHECK:       [[LOOP_J]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[LOOP_J_PREHEADER]] ], [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER:.*]]
+; CHECK:       [[LOOP_I_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[LOOP_J]] ], [ [[TMP0:%.*]], %[[LOOP_I_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds [100 x i8], ptr [[A]], i64 [[I]], i64 [[J]]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds [100 x i8], ptr [[B]], i64 [[I]], i64 [[J]]
+; CHECK-NEXT:    [[GEP_C0:%.*]] = getelementptr inbounds [100 x i8], ptr [[C]], i64 [[J]], i64 [[I]]
+; CHECK-NEXT:    [[GEP_C1:%.*]] = getelementptr inbounds [99 x i8], ptr [[C]], i64 [[J]], i64 [[I]]
+; CHECK-NEXT:    [[GEP_C2:%.*]] = getelementptr inbounds [98 x i8], ptr [[C]], i64 [[J]], i64 [[I]]
+; CHECK-NEXT:    [[VAL_B:%.*]] = load i8, ptr [[GEP_B]], align 1
+; CHECK-NEXT:    [[VAL_C0:%.*]] = load i8, ptr [[GEP_C0]], align 1
+; CHECK-NEXT:    [[VAL_C1:%.*]] = load i8, ptr [[GEP_C1]], align 1
+; CHECK-NEXT:    [[VAL_C2:%.*]] = load i8, ptr [[GEP_C2]], align 1
+; CHECK-NEXT:    [[SUM_0:%.*]] = add i8 [[VAL_B]], [[VAL_C0]]
+; CHECK-NEXT:    [[SUM_1:%.*]] = add i8 [[SUM_0]], [[VAL_C1]]
+; CHECK-NEXT:    [[SUM_2:%.*]] = add i8 [[SUM_1]], [[VAL_C2]]
+; CHECK-NEXT:    store i8 [[SUM_2]], ptr [[GEP_A]], align 1
+; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 42
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_I_LATCH]], label %[[LOOP_I_HEADER_PREHEADER]]
+; CHECK:       [[LOOP_I_LATCH]]:
+; CHECK-NEXT:    [[I_INC]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 42
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[LOOP_J]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.i.header
+
+loop.i.header:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %loop.i.latch ]
+  br label %loop.j
+
+loop.j:
+  %j = phi i64 [ 0, %loop.i.header ], [ %j.inc, %loop.j ]
+  %gep.A = getelementptr inbounds [100 x i8], ptr %A, i64 %i, i64 %j
+  %gep.B = getelementptr inbounds [100 x i8], ptr %B, i64 %i, i64 %j
+  %gep.C0 = getelementptr inbounds [100 x i8], ptr %C, i64 %j, i64 %i
+  %gep.C1 = getelementptr inbounds [99 x i8], ptr %C, i64 %j, i64 %i
+  %gep.C2 = getelementptr inbounds [98 x i8], ptr %C, i64 %j, i64 %i
+  %val.B = load i8, ptr %gep.B
+  %val.C0 = load i8, ptr %gep.C0
+  %val.C1 = load i8, ptr %gep.C1
+  %val.C2 = load i8, ptr %gep.C2
+  %sum.0 = add i8 %val.B, %val.C0
+  %sum.1 = add i8 %sum.0, %val.C1
+  %sum.2 = add i8 %sum.1, %val.C2
+  store i8 %sum.2, ptr %gep.A
+  %j.inc = add i64 %j, 1
+  %ec.j = icmp eq i64 %j.inc, 42
+  br i1 %ec.j, label %loop.i.latch, label %loop.j
+
+loop.i.latch:
+  %i.inc = add i64 %i, 1
+  %ec.i = icmp eq i64 %i.inc, 42
   br i1 %ec.i, label %exit, label %loop.i.header
 
 exit:
