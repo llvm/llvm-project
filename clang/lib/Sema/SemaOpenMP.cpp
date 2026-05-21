@@ -21459,7 +21459,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPLinearClause(
     VarDecl *Init = buildVarDecl(SemaRef, ELoc, Type, ".linear.start");
     Expr *InitExpr;
     DeclRefExpr *Ref = nullptr;
-    if (!VD && !SemaRef.CurContext->isDependentContext()) {
+    bool IsBindingDecl = isa<BindingDecl>(D);
+    if (!VD && !IsBindingDecl && !SemaRef.CurContext->isDependentContext()) {
       Ref = buildCapture(SemaRef, D, SimpleRefExpr, /*WithInit=*/false);
       if (!isOpenMPCapturedDecl(D)) {
         ExprCaptures.push_back(Ref->getDecl());
@@ -21480,16 +21481,17 @@ OMPClause *SemaOpenMP::ActOnOpenMPLinearClause(
     if (LinKind == OMPC_LINEAR_uval)
       InitExpr = VD ? VD->getInit() : SimpleRefExpr;
     else
-      InitExpr = VD ? SimpleRefExpr : Ref;
+      InitExpr = (VD || IsBindingDecl) ? SimpleRefExpr : Ref;
     SemaRef.AddInitializerToDecl(
         Init, SemaRef.DefaultLvalueConversion(InitExpr).get(),
         /*DirectInit=*/false);
     DeclRefExpr *InitRef = buildDeclRefExpr(SemaRef, Init, Type, ELoc);
 
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_linear, Ref);
-    Vars.push_back((VD || SemaRef.CurContext->isDependentContext())
-                       ? RefExpr->IgnoreParens()
-                       : Ref);
+    Vars.push_back(
+        (VD || IsBindingDecl || SemaRef.CurContext->isDependentContext())
+            ? RefExpr->IgnoreParens()
+            : Ref);
     Privates.push_back(PrivateRef);
     Inits.push_back(InitRef);
   }
@@ -21588,13 +21590,16 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
     // Build privatized reference to the current linear var.
     auto *DE = cast<DeclRefExpr>(SimpleRefExpr);
     Expr *CapturedRef;
-    if (LinKind == OMPC_LINEAR_uval)
+    if (auto *BD = dyn_cast<BindingDecl>(DE->getDecl())) {
+      CapturedRef = SimpleRefExpr;
+    } else if (LinKind == OMPC_LINEAR_uval) {
       CapturedRef = cast<VarDecl>(DE->getDecl())->getInit();
-    else
+    } else {
       CapturedRef =
           buildDeclRefExpr(SemaRef, cast<VarDecl>(DE->getDecl()),
                            DE->getType().getUnqualifiedType(), DE->getExprLoc(),
                            /*RefersToCapture=*/true);
+    }
 
     // Build update: Var = InitExpr + IV * Step
     ExprResult Update;

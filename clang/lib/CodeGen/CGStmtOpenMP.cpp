@@ -1879,7 +1879,8 @@ checkForLastprivateConditionalUpdate(CodeGenFunction &CGF,
       const auto *DRE = dyn_cast<DeclRefExpr>(Ref->IgnoreParenImpCasts());
       if (!DRE)
         continue;
-      PrivateDecls.insert(cast<VarDecl>(DRE->getDecl()));
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+        PrivateDecls.insert(VD);
       CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, Ref);
     }
   }
@@ -2555,17 +2556,21 @@ bool CodeGenFunction::EmitOMPLinearClauseInit(const OMPLoopDirective &D) {
       const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(Init)->getDecl());
       if (const auto *Ref =
               dyn_cast<DeclRefExpr>(VD->getInit()->IgnoreImpCasts())) {
-        AutoVarEmission Emission = EmitAutoVarAlloca(*VD);
-        const auto *OrigVD = cast<VarDecl>(Ref->getDecl());
-        DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD),
-                        CapturedStmtInfo->lookup(OrigVD) != nullptr,
-                        VD->getInit()->getType(), VK_LValue,
-                        VD->getInit()->getExprLoc());
-        EmitExprAsInit(
-            &DRE, VD,
-            MakeAddrLValue(Emission.getAllocatedAddress(), VD->getType()),
-            /*capturedByInit=*/false);
-        EmitAutoVarCleanups(Emission);
+        if (isa<BindingDecl>(Ref->getDecl())) {
+          EmitVarDecl(*VD);
+        } else {
+          AutoVarEmission Emission = EmitAutoVarAlloca(*VD);
+          const auto *OrigVD = cast<VarDecl>(Ref->getDecl());
+          DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD),
+                          CapturedStmtInfo->lookup(OrigVD) != nullptr,
+                          VD->getInit()->getType(), VK_LValue,
+                          VD->getInit()->getExprLoc());
+          EmitExprAsInit(
+              &DRE, VD,
+              MakeAddrLValue(Emission.getAllocatedAddress(), VD->getType()),
+              /*capturedByInit=*/false);
+          EmitAutoVarCleanups(Emission);
+        }
       } else {
         EmitVarDecl(*VD);
       }
@@ -2602,13 +2607,21 @@ void CodeGenFunction::EmitOMPLinearClauseFinal(
           EmitBlock(ThenBB);
         }
       }
-      const auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IC)->getDecl());
-      DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD),
-                      CapturedStmtInfo->lookup(OrigVD) != nullptr,
-                      (*IC)->getType(), VK_LValue, (*IC)->getExprLoc());
-      Address OrigAddr = EmitLValue(&DRE).getAddress();
-      CodeGenFunction::OMPPrivateScope VarScope(*this);
-      VarScope.addPrivate(OrigVD, OrigAddr);
+      const auto *OrigDecl = cast<DeclRefExpr>(*IC)->getDecl();
+      Address OrigAddr = [&]() -> Address {
+        if (const auto *BD = dyn_cast<BindingDecl>(OrigDecl)) {
+          // BindingDecl: use the original expression directly.
+          return EmitLValue(*IC).getAddress();
+        } else {
+          const auto *OrigVD = cast<VarDecl>(OrigDecl);
+          DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD),
+                          CapturedStmtInfo->lookup(OrigVD) != nullptr,
+                          (*IC)->getType(), VK_LValue, (*IC)->getExprLoc());
+          return EmitLValue(&DRE).getAddress();
+        }
+      }();
+     CodeGenFunction::OMPPrivateScope VarScope(*this);
+      VarScope.addPrivate(OrigDecl, OrigAddr);
       (void)VarScope.Privatize();
       EmitIgnoredExpr(F);
       ++IC;
@@ -2751,10 +2764,14 @@ void CodeGenFunction::EmitOMPLinearClause(
   for (const auto *C : D.getClausesOfKind<OMPLinearClause>()) {
     auto CurPrivate = C->privates().begin();
     for (const Expr *E : C->varlist()) {
-      const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
+      const auto *VD = cast<DeclRefExpr>(E)->getDecl();
       const auto *PrivateVD =
           cast<VarDecl>(cast<DeclRefExpr>(*CurPrivate)->getDecl());
-      if (!SIMDLCVs.count(VD->getCanonicalDecl())) {
+      bool IsSIMDLCV = false;
+      if (const auto *VarD = dyn_cast<VarDecl>(VD)) {
+        IsSIMDLCV = SIMDLCVs.count(VarD->getCanonicalDecl());
+      }
+      if (!IsSIMDLCV) {
         // Emit private VarDecl with copy init.
         EmitVarDecl(*PrivateVD);
         bool IsRegistered =
