@@ -2078,25 +2078,21 @@ LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
 
   Type *RetTy = CI->getType();
   SmallVector<Type *, 4> Tys;
-  for (Value *Arg : CI->args())
-    Tys.push_back(Arg->getType());
+  for (auto &ArgOp : CI->args())
+    Tys.push_back(ArgOp->getType());
   InstructionCost ScalarCallCost = TTI.getCallInstrCost(
       CI->getCalledFunction(), RetTy, Tys, Config.CostKind);
 
   // Cost of the scalar call (scalar VF) or its scalarization (vector VF). The
   // scalarization cost is only meaningful for fixed VFs.
-  InstructionCost Cost = InstructionCost::getInvalid();
-  if (VF.isScalar())
-    Cost = ScalarCallCost;
-  else if (VF.isFixed())
-    Cost = ScalarCallCost * VF.getKnownMinValue() +
-           getScalarizationOverhead(CI, VF);
+  InstructionCost Cost = VF.isScalable()
+                             ? InstructionCost::getInvalid()
+                             : ScalarCallCost * VF.getKnownMinValue() +
+                                   getScalarizationOverhead(CI, VF);
 
-  // A matching vector intrinsic lowering may be cheaper.
   if (getVectorIntrinsicIDForCall(CI, TLI)) {
     InstructionCost IntrinsicCost = getVectorIntrinsicCost(CI, VF);
-    if (IntrinsicCost.isValid() && (!Cost.isValid() || IntrinsicCost <= Cost))
-      Cost = IntrinsicCost;
+    return std::min(Cost, IntrinsicCost);
   }
 
   return Cost;
