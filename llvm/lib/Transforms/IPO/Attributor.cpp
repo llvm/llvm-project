@@ -2008,9 +2008,9 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
 
   SmallVector<const Use *, 8> Uses;
   ArrayRef<const Use *> PotentialUses;
-  if (Phase == AttributorPhase::SEEDING || Phase == AttributorPhase::UPDATE)
+  if (Phase == AttributorPhase::SEEDING || Phase == AttributorPhase::UPDATE) {
     PotentialUses = getPotentialCallSiteUses(Fn);
-  else {
+  } else {
     append_range(Uses, make_pointer_range(Fn.uses()));
     PotentialUses = Uses;
   }
