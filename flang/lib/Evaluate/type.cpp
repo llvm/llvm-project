@@ -163,14 +163,14 @@ std::size_t DynamicType::GetAlignment(
       }
       break;
 
-      // EnumerationTypes skip normal instantiation and may not have scope set.
+    // EnumerationTypes skip normal instantiation and may not have scope set.
     case semantics::DerivedTypeSpec::Category::EnumerationType:
       if (derived_ && derived_->GetScope()) {
         return derived_->GetScope()->alignment().value_or(1);
       }
       break;
 
-      case semantics::DerivedTypeSpec::Category::IntrinsicVector:
+    case semantics::DerivedTypeSpec::Category::IntrinsicVector:
     case semantics::DerivedTypeSpec::Category::PairVector:
     case semantics::DerivedTypeSpec::Category::QuadVector:
       if (derived_ && derived_->scope()) {
@@ -207,7 +207,10 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
     }
     break;
   case TypeCategory::Derived:
-    // EnumerationTypes might not have scope set yet.
+    // EnumerationTypes might not have scope set yet, so they need to use
+    // GetScope() instead of scope().  Since EnumerationTypes are an internal
+    // only type, they can never be polymorphic, so the check in the
+    // corresponding conditional below is unnecessary here.
     if (derived_ && (GetDerivedTypeSpec().category() ==
           semantics::DerivedTypeSpec::Category::EnumerationType) &&
           derived_->GetScope()) {
@@ -217,6 +220,7 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
       return Expr<SubscriptInteger>{
           static_cast<ConstantSubscript>(alignedSize)};
     }
+    // Regular derived type path.
     if (!IsPolymorphic() && derived_ && derived_->scope()) {
       auto size{derived_->scope()->size()};
       auto align{aligned ? derived_->scope()->alignment().value_or(0) : 0};
