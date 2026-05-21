@@ -1663,7 +1663,9 @@ safely deallocated with the standard ``free()``.
 The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory
 leak reports (concerning the specified parameter); the difference between them
 is that using taken memory is a use-after-free error, while using held memory
-is assumed to be legitimate.
+is assumed to be legitimate. However, releasing the held memory or passing it
+to another holding call is reported by the analyzer as an "attempt to release
+non-owned memory".
 
 Example:
 

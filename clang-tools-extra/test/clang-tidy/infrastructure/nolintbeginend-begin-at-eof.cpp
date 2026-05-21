@@ -1,4 +1,4 @@
-// RUN: not clang-tidy %s --checks='-*,google-explicit-constructor' 2>&1 | FileCheck %s
+// RUN: not clang-tidy %s --checks='-*,google-explicit-constructor' -- 2>&1 | FileCheck %s
 
 // CHECK: :[[@LINE+8]]:11: warning: single-argument constructors must be marked explicit
 // Note: the expected output has been split over several lines so that clang-tidy

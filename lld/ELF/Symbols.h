@@ -106,7 +106,7 @@ public:
   uint8_t symbolKind;
 
   // The partition whose dynamic symbol table contains this symbol's definition.
-  uint8_t partition;
+  uint8_t partition = 1;
 
   // True if this symbol is preemptible at load time.
   //
@@ -239,8 +239,13 @@ protected:
   Symbol(Kind k, InputFile *file, StringRef name, uint8_t binding,
          uint8_t stOther, uint8_t type)
       : file(file), nameData(name.data()), nameSize(name.size()), type(type),
-        binding(binding), stOther(stOther), symbolKind(k), ltoCanOmit(false),
-        archSpecificBit(false) {}
+        binding(binding), stOther(stOther), symbolKind(k), isPreemptible(false),
+        isUsedInRegularObj(false), isExported(false), ltoCanOmit(false),
+        traced(false), hasVersionSuffix(false), isInIplt(false),
+        gotInIgot(false), folded(false), archSpecificBit(false),
+        scriptDefined(false), dsoDefined(false), dsoProtected(false),
+        versionScriptAssigned(false), thunkAccessed(false),
+        inDynamicList(false), referenced(false), referencedAfterWrap(false) {}
 
   void overwrite(Symbol &sym, Kind k) const {
     if (sym.traced)
@@ -299,12 +304,12 @@ public:
 
   // Temporary flags used to communicate which symbol entries need PLT and GOT
   // entries during postScanRelocations();
-  std::atomic<uint16_t> flags;
+  std::atomic<uint16_t> flags = 0;
 
   // A ctx.symAux index used to access GOT/PLT entry indexes. This is allocated
   // in postScanRelocations().
-  uint32_t auxIdx;
-  uint32_t dynsymIndex;
+  uint32_t auxIdx = 0;
+  uint32_t dynsymIndex = 0;
 
   // If `file` is SharedFile (for SharedSymbol or copy-relocated Defined), this
   // represents the Verdef index within the input DSO, which will be converted
@@ -312,7 +317,7 @@ public:
   // index (VER_NDX_LOCAL, VER_NDX_GLOBAL, or a named version).
   // VER_NDX_LOCAL indicates a defined symbol that has been localized by a
   // version script's local: directive or --exclude-libs.
-  uint16_t versionId;
+  uint16_t versionId = 0;
   LLVM_PREFERRED_TYPE(bool)
   uint8_t versionScriptAssigned : 1;
 
@@ -523,7 +528,6 @@ union SymbolUnion {
 
 template <typename... T> Defined *makeDefined(T &&...args) {
   auto *sym = getSpecificAllocSingleton<SymbolUnion>().Allocate();
-  memset(sym, 0, sizeof(Symbol));
   auto &s = *new (reinterpret_cast<Defined *>(sym)) Defined(std::forward<T>(args)...);
   return &s;
 }

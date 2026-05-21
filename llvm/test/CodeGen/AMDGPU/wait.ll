@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -strict-whitespace %s --check-prefix=DEFAULT
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -strict-whitespace %s --check-prefix=DEFAULT
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -strict-whitespace %s --check-prefix=DEFAULT
-; RUN: llc -mtriple=amdgcn --misched=ilpmax < %s | FileCheck -strict-whitespace %s --check-prefix=ILPMAX
+; RUN: llc -mtriple=amdgcn --misched=ilpmax -mcpu=tahiti < %s | FileCheck -strict-whitespace %s --check-prefix=ILPMAX
 ; RUN: llc -mtriple=amdgcn --misched=ilpmax -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -strict-whitespace %s --check-prefix=ILPMAX
 ; The ilpmax scheduler is used for the second test to get the ordering we want for the test.
 

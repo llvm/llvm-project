@@ -421,14 +421,6 @@ function(runtime_register_target name)
         endif()
       endif()
     endforeach()
-    foreach(variable_name ${${name}_extra_args})
-      string(FIND "${variable_name}" "-DRUNTIMES_${extra_name}_" out)
-      if("${out}" EQUAL 0)
-        string(REPLACE "-DRUNTIMES_${extra_name}_" "" new_name ${variable_name})
-        string(REPLACE ";" "|" new_value "${new_name}")
-        list(APPEND ${name}_extra_args "-D${new_value}")
-      endif()
-    endforeach()
   endforeach()
 
   set_enable_per_target_runtime_dir()
@@ -581,6 +573,12 @@ if(build_runtimes)
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
+    # Pass the location of LLVM tools to the runtime build so libclc can find them
+    if (LLVM_NATIVE_TOOL_DIR)
+      list(APPEND extra_cmake_args "-DLLVM_NATIVE_TOOL_DIR=${LLVM_NATIVE_TOOL_DIR}")
+    else()
+      list(APPEND extra_cmake_args "-DLLVM_NATIVE_TOOL_DIR=${LLVM_RUNTIME_OUTPUT_INTDIR}")
+    endif()
   endif()
   # Tools needed by build_symbolizer.sh.
   if("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
@@ -713,7 +711,6 @@ if(build_runtimes)
         runtime_register_target(${name}+${multilib}
           DEPENDS runtimes-${name}
           CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name}
-                     -DLLVM_RUNTIMES_PREFIX=${name}/
                      -DLLVM_RUNTIMES_LIBDIR_SUBDIR=${multilib}
                      ${extra_cmake_args}
           BASE_NAME ${name}
@@ -816,7 +813,7 @@ ${_flag_values}\
 endif()
 
 if(LIBOMP_ENABLE_ARM64X)
-  # TODO: This only needs to depend on openmp-arm64ec-pc-windows-msvc, but the 
+  # TODO: This only needs to depend on openmp-arm64ec-pc-windows-msvc, but the
   # openmp targets set up for cross build runtimes don't currently work correctly.
   add_dependencies(runtimes-configure runtimes-arm64ec-pc-windows-msvc-build)
 endif()
