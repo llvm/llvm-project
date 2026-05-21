@@ -243,13 +243,15 @@ RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
          LangOpts.CommentOpts.ParseAllComments) &&
         CommentBehindDecl->isTrailingComment() &&
         (isa<FieldDecl>(D) || isa<EnumConstantDecl>(D) || isa<VarDecl>(D) ||
-         isa<ObjCMethodDecl>(D) || isa<ObjCPropertyDecl>(D))) {
+         isa<ObjCMethodDecl>(D) || isa<ObjCPropertyDecl>(D) ||
+         isa<FunctionDecl>(D))) {
 
-      // Check that Doxygen trailing comment comes after the declaration, starts
-      // on the same line and in the same file as the declaration.
-      if (SourceMgr.getLineNumber(DeclLocDecomp.first, DeclLocDecomp.second) ==
+      // Check that Doxygen trailing comment comes after the declaration and in
+      // the same file as the declaration.
+      if (SourceMgr.getLineNumber(DeclLocDecomp.first, DeclLocDecomp.second) <=
           Comments.getCommentBeginLine(CommentBehindDecl, DeclLocDecomp.first,
                                        OffsetCommentBehindDecl->first)) {
+
         return CommentBehindDecl;
       }
     }
