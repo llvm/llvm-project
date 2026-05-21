@@ -355,6 +355,7 @@ struct MachineVerifier {
   void verifyStackFrame();
   /// Check that the stack protector is the top-most object in the stack.
   void verifyStackProtector();
+  void verifyCFI();
 
   void verifySlotIndexes() const;
   void verifyProperties(const MachineFunction &MF);
@@ -712,6 +713,7 @@ void MachineVerifier::visitMachineFunctionBefore() {
   MRI->verifyUseLists();
 
   if (!MF->empty()) {
+    verifyCFI();
     verifyStackFrame();
     verifyStackProtector();
   }
@@ -4182,6 +4184,29 @@ void MachineVerifier::verifyStackProtector() {
         (!StackGrowsDown && SPStart >= ObjStart)) {
       report("Stack protector is not the top-most object on the stack", MF);
       break;
+    }
+  }
+}
+
+void MachineVerifier::verifyCFI() {
+  auto CIs = MF->getFrameInstructions();
+  for (auto &MBB : *MF) {
+    SmallVector<unsigned, 16> FrameDestroyCFI;
+    SmallVector<unsigned, 16> Restores;
+    for (auto &MI : MBB) {
+      if (auto Id = TII->isReloadOfCSR(&MI))
+        Restores.push_back(*Id);
+      if (auto Id = TII->isCFIRestoreOfCSR(&MI))
+        FrameDestroyCFI.push_back(*Id);
+    }
+    if (Restores.size() != FrameDestroyCFI.size() || any_of(FrameDestroyCFI, [&](auto Reg) {
+      for (auto Reg2 : Restores)
+        if (TRI->regsOverlap(Reg, Reg2))
+          return false;
+      return true;
+    })) {
+      report("Invalid CFI informarion", MF);
+      OS << "\nCFI info does not match restores of CSRs.\n" << MBB << "\n";
     }
   }
 }

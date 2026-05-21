@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/MBFIWrapper.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -387,6 +388,37 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
   return TailLen;
 }
 
+void BranchFolder::tryFixupCFI(MachineBasicBlock::iterator OldInst) {
+  MachineBasicBlock *MBB = OldInst->getParent();
+  auto CIs = MBB->getParent()->getFrameInstructions();
+  SmallSet<unsigned, 16> Restores;
+  auto MI = MBB->begin();
+  for (; MI != OldInst; ++MI) {
+    if (auto Id = TII->isReloadOfCSR(&*MI))
+      Restores.insert(*Id);
+    if (auto Id = TII->isCFIRestoreOfCSR(&*MI)) {
+      auto RestoredId = find_if(Restores, [&](auto Id2) {
+        return TRI->regsOverlap(*Id, Id2);
+      });
+      assert(Restores.contains(*RestoredId) && "Must've seen reload of register before CFI restore.");
+      Restores.erase(*RestoredId);
+    }
+  }
+  if (Restores.empty())
+    return;
+  auto InsertPos = OldInst--;
+  for (auto E = MBB->end(); MI != E; ++MI) {
+    auto Id = TII->isCFIRestoreOfCSR(&*MI);
+    if (!Id)
+      continue;
+    for (auto Reg2 : Restores) {
+      if (TRI->regsOverlap(*Id, Reg2)) {
+        MI->moveBefore(&*InsertPos);
+      }
+    }
+  }
+}
+
 void BranchFolder::replaceTailWithBranchTo(MachineBasicBlock::iterator OldInst,
                                            MachineBasicBlock &NewDest) {
   if (UpdateLiveIns) {
@@ -417,6 +449,7 @@ void BranchFolder::replaceTailWithBranchTo(MachineBasicBlock::iterator OldInst,
     }
   }
 
+  tryFixupCFI(OldInst);
   TII->ReplaceTailWithBranchTo(OldInst, &NewDest);
   ++NumTailMerge;
 }
@@ -769,6 +802,7 @@ bool BranchFolder::CreateCommonTailOnlyBlock(MachineBasicBlock *&PredBB,
   // SuccBB is an inner loop, the common tail is still part of the inner loop.
   const BasicBlock *BB = (SuccBB && MBB->succ_size() == 1) ?
     SuccBB->getBasicBlock() : MBB->getBasicBlock();
+  tryFixupCFI(BBI);
   MachineBasicBlock *newMBB = SplitMBBAt(*MBB, BBI, BB);
   if (!newMBB) {
     LLVM_DEBUG(dbgs() << "... failed!");
