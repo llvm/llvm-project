@@ -46,25 +46,16 @@ void mlir::populatePromotableAliasMap(PromotableAliaserInterface aliaser,
 std::optional<MemorySlot>
 mlir::getOpAliasSlot(Operation *op, const MemorySlot &rootSlot,
                      const PromotableAliasMap &aliasMap) {
-  for (Value operand : op->getOperands())
-    if (std::optional<MemorySlot> slot =
-            getParentSlot(operand, rootSlot, aliasMap))
-      return slot;
-  return std::nullopt;
-}
-
-bool mlir::isUsingAtMostOneSlotAlias(Operation *op, const MemorySlot &rootSlot,
-                                     const PromotableAliasMap &aliasMap) {
-  Value uniqueAliasPtr;
+  std::optional<MemorySlot> uniqueSlot;
   for (Value operand : op->getOperands()) {
     std::optional<MemorySlot> slot = getParentSlot(operand, rootSlot, aliasMap);
     if (!slot)
       continue;
-    if (uniqueAliasPtr && uniqueAliasPtr != slot->ptr)
-      return false;
-    uniqueAliasPtr = slot->ptr;
+    if (uniqueSlot && uniqueSlot->ptr != slot->ptr)
+      return std::nullopt;
+    uniqueSlot = slot;
   }
-  return true;
+  return uniqueSlot;
 }
 
 namespace {
@@ -78,41 +69,40 @@ struct ChainStep {
 };
 } // namespace
 
-/// Walks back from `aliasPtr` to `rootSlot.ptr` through `aliasMap`,
-/// populating `chainOut` from leaf to root. Returns false if `aliasPtr`
-/// is not a known alias of `rootSlot`.
-static bool buildAliasChain(Value aliasPtr, const MemorySlot &rootSlot,
-                            const PromotableAliasMap &aliasMap,
-                            SmallVectorImpl<ChainStep> &chainOut) {
-  if (aliasPtr == rootSlot.ptr)
-    return true;
+/// Walks from `aliasPtr` back to `rootSlot.ptr` via `aliasMap`. Returns the
+/// leaf-to-root chain, or `nullopt` if `aliasPtr` is not a known alias.
+static std::optional<SmallVector<ChainStep>>
+buildAliasChain(Value aliasPtr, const MemorySlot &rootSlot,
+                const PromotableAliasMap &aliasMap) {
+  SmallVector<ChainStep> chain;
   Value current = aliasPtr;
   while (current != rootSlot.ptr) {
     auto it = aliasMap.find(current);
     if (it == aliasMap.end())
-      return false;
+      return std::nullopt;
     OpOperand *operand = it->second.aliasedSlotPointerOperand;
     auto aliaser = cast<PromotableAliaserInterface>(operand->getOwner());
     std::optional<MemorySlot> parent =
         getParentSlot(operand->get(), rootSlot, aliasMap);
     if (!parent)
-      return false;
-    chainOut.push_back(ChainStep{aliaser, operand, *parent, it->second.slot});
+      return std::nullopt;
+    chain.push_back(ChainStep{aliaser, operand, *parent, it->second.slot});
     current = operand->get();
   }
-  return true;
+  return chain;
 }
 
 Value mlir::convertSlotValueToAliasValue(Value slotValue, Value aliasPtr,
                                          const MemorySlot &rootSlot,
                                          const PromotableAliasMap &aliasMap,
                                          OpBuilder &builder) {
-  SmallVector<ChainStep> chain;
-  if (!buildAliasChain(aliasPtr, rootSlot, aliasMap, chain))
+  std::optional<SmallVector<ChainStep>> chain =
+      buildAliasChain(aliasPtr, rootSlot, aliasMap);
+  if (!chain)
     return {};
   Value current = slotValue;
   // Root-to-leaf walk: reverse the leaf-first chain.
-  for (ChainStep &step : llvm::reverse(chain)) {
+  for (ChainStep &step : llvm::reverse(*chain)) {
     current = step.aliaser.projectSlotValueToAliasValue(
         *step.aliasedSlotPointerOperand, step.parentSlot, step.aliasSlot,
         current, builder);
@@ -127,9 +117,11 @@ Value mlir::convertAliasValueToSlotValue(Value aliasValue, Value aliasPtr,
                                          const MemorySlot &rootSlot,
                                          const PromotableAliasMap &aliasMap,
                                          OpBuilder &builder) {
-  SmallVector<ChainStep> chain;
-  if (!buildAliasChain(aliasPtr, rootSlot, aliasMap, chain))
+  std::optional<SmallVector<ChainStep>> chainOpt =
+      buildAliasChain(aliasPtr, rootSlot, aliasMap);
+  if (!chainOpt)
     return {};
+  SmallVector<ChainStep> &chain = *chainOpt;
 
   // Project `rootReachingDef` down to each step's parent level so the
   // per-step projector can use it (needed for partial sub-aliases; full

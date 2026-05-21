@@ -294,6 +294,28 @@ func.func @promotable_through_alias_across_regions(%cond: i1, %a: i32) {
 
 // -----
 
+// Chained aliasers: an identity alias is aliased by a type-changing alias.
+// The alias-map walk must follow both hops and project through each step.
+
+// CHECK-LABEL: func.func @promotable_through_chained_aliases
+// CHECK-SAME: (%[[A:.*]]: f32) -> f32
+// CHECK-NOT: test.multi_slot_alloca
+// CHECK-NOT: test.transparent_alias
+// CHECK-NOT: test.transparent_cast_alias
+// CHECK: %[[I32:.*]] = builtin.unrealized_conversion_cast %[[A]] : f32 to i32
+// CHECK: %{{.*}} = builtin.unrealized_conversion_cast %[[I32]] : i32 to f32
+// CHECK: return %{{.*}} : f32
+func.func @promotable_through_chained_aliases(%a: f32) -> f32 {
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  %alias1 = test.transparent_alias %slot : (memref<i32>) -> memref<i32>
+  %alias2 = test.transparent_cast_alias %alias1 : (memref<i32>) -> memref<f32>
+  memref.store %a, %alias2[] : memref<f32>
+  %v = memref.load %alias2[] : memref<f32>
+  return %v : f32
+}
+
+// -----
+
 // Dual-alias case: a single aliaser op exposes two simultaneously usable
 // aliases of the same parent slot (signless i32) at different signednesses
 // (signed and unsigned i32). `getPromotableSlotAliases` populates two

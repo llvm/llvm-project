@@ -48,11 +48,10 @@ enum class DeletionKind {
 
 namespace mlir {
 
-/// An entry in a `PromotableAliasMap`: the memory slot exposed by an aliaser
-/// operation, along with the operand it aliases from.
+/// An entry in a `PromotableAliasMap`: the memory slot defined by an aliaser
+/// operation and its source operand.
 struct PromotableSlotAliasInfo {
-  /// The slot exposed by the aliaser (its `ptr` is a result of the aliaser
-  /// and equals the map key).
+  /// The slot defined by the aliaser (its `ptr` is the map key).
   MemorySlot slot;
   /// The aliaser operand whose value is the parent slot's pointer.
   OpOperand *aliasedSlotPointerOperand;
@@ -70,19 +69,13 @@ void populatePromotableAliasMap(PromotableAliaserInterface aliaser,
                                 const MemorySlot &rootSlot,
                                 PromotableAliasMap &aliasMap);
 
-/// Returns a `MemorySlot` representing the operand of `op` that aliases
-/// `rootSlot.ptr`, using the alias's element type. Returns `nullopt` if no
-/// operand is an alias of `rootSlot`.
+/// Finds the memory slot accessed by `op` that aliases `rootSlot.ptr`.
+/// Returns `nullopt` if no operand aliases `rootSlot`, or if the operation
+/// uses multiple distinct aliases of `rootSlot` (as `PromotableMemOpInterface`
+/// only supports a single slot).
 std::optional<MemorySlot> getOpAliasSlot(Operation *op,
                                          const MemorySlot &rootSlot,
                                          const PromotableAliasMap &aliasMap);
-
-/// Returns true if at most one of `op`'s operands aliases `rootSlot`.
-/// This is useful to guard `getOpAliasSlot` calls, as operations reaching
-/// the root through multiple distinct aliases (e.g., memcpy between aliases)
-/// cannot be handled by interfaces expecting a single slot.
-bool isUsingAtMostOneSlotAlias(Operation *op, const MemorySlot &rootSlot,
-                               const PromotableAliasMap &aliasMap);
 
 /// Projects `slotValue` down to the element type of `aliasPtr` by chaining
 /// `projectSlotValueToAliasValue` calls along the alias chain. Returns a null
