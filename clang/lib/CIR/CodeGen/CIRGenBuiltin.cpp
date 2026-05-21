@@ -2403,6 +2403,17 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_printf:
   case Builtin::BIprintf:
+    if (getTarget().getTriple().isNVPTX() ||
+        getTarget().getTriple().isAMDGCN() ||
+        (getTarget().getTriple().isSPIRV() &&
+         getTarget().getTriple().getVendor() == llvm::Triple::AMD)) {
+      if (getTarget().getTriple().isNVPTX())
+        return RValue::get(emitNVPTXDevicePrintfCallExpr(e));
+      if ((getTarget().getTriple().isAMDGCN() ||
+           getTarget().getTriple().isSPIRV()) &&
+          getLangOpts().HIP)
+        return errorBuiltinNYI(*this, e, builtinID);
+    }
     break;
   case Builtin::BI__builtin_canonicalize:
   case Builtin::BI__builtin_canonicalizef:

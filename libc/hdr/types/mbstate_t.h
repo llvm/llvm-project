@@ -17,6 +17,6 @@
 
 #error "Cannot overlay mbstate_t"
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_TYPES_MBSTATE_T_H
