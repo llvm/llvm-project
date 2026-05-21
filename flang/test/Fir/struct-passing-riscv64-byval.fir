@@ -1,10 +1,7 @@
-// Test RISCV64 lp64 ABI rewrite of struct passed by value (BIND(C), VALUE derived types).
+// Test RISCV64 lp64/lp64d ABI rewrite of struct passed by value (BIND(C), VALUE derived types).
 
-// TODO: There is currently no way to query the ABI kind (`lp64` vs. `lp64d`) from TargetRewritePass, so only check
-// `lp64d` (current default) for now. Once this changes in the future can enable `lp64` tests too.
-// SKIP: fir-opt --target-rewrite="target=riscv64-unknown-linux-gnu,target-abi=lp64" %s | FileCheck %s --check-prefixes=CHECK-INT
-
-// RUN: fir-opt --target-rewrite="target=riscv64-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=CHECK-FLOAT
+// RUN: fir-opt --target-rewrite="target=riscv64" %s | FileCheck %s --check-prefixes=CHECK-INT
+// RUN: fir-opt --target-rewrite="target=riscv64 target-features=+d" %s | FileCheck %s --check-prefixes=CHECK-FLOAT
 
 module attributes {llvm.data_layout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128", llvm.target_triple = "riscv64-unknown-linux-gnu"} {
 
@@ -19,7 +16,7 @@ func.func private @single_i64(!fir.type<single_i64{i:i64}>)
 func.func private @single_i32i32(!fir.type<single_i32i32{i:i32,j:i32}>)
 func.func private @single_i8i8i8(!fir.type<single_i8i8i8{i:i8,j:i8,k:i8}>)
 func.func private @single_i8i8i32(!fir.type<single_i8i8i32{i:i8,j:i8,k:i32}>)
-func.func private @single_int128(!fir.type<single_int128{i:i128}>)
+func.func private @single_i128(!fir.type<single_i128{i:i128}>)
 
 // ================================================
 
