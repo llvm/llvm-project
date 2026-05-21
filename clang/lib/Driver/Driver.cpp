@@ -5098,11 +5098,7 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
            OffloadTriple->getOS() == llvm::Triple::OSType::ChipStar);
       bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
                                           options::OPT_no_use_spirv_backend,
-                                          /*Default=*/false);
-      if (OffloadTriple && OffloadTriple->isSPIRV() &&
-          OffloadTriple->getVendor() == llvm::Triple::AMD &&
-          !Args.hasArg(options::OPT_no_use_spirv_backend))
-        UseSPIRVBackend = true;
+                                          /*Default=*/true);
 
       // Special handling for the HIP SPIR-V toolchains in device-only.
       // The translator path has a linking step, whereas the SPIR-V backend path
@@ -5358,11 +5354,7 @@ Action *Driver::ConstructPhaseAction(
     auto OffloadingToolChain = Input->getOffloadingToolChain();
     bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
                                         options::OPT_no_use_spirv_backend,
-                                        /*Default=*/false);
-    if (OffloadingToolChain && OffloadingToolChain->getTriple().isSPIRV() &&
-        OffloadingToolChain->getTriple().getVendor() == llvm::Triple::AMD &&
-        !Args.hasArg(options::OPT_no_use_spirv_backend))
-      UseSPIRVBackend = true;
+                                        /*Default=*/true);
     // For AMD SPIRV, if offloadDeviceOnly(), we call the SPIRV backend unless
     // LLVM bitcode was requested explicitly or RDC is set. If
     // !offloadDeviceOnly, we emit LLVM bitcode, and clang-linker-wrapper will
