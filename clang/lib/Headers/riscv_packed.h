@@ -18,17 +18,17 @@ extern "C" {
 
 /* Packed SIMD Types */
 
-typedef int8_t int8x4_t __attribute__((__vector_size__(4), __aligned__(4)));
-typedef uint8_t uint8x4_t __attribute__((__vector_size__(4), __aligned__(4)));
-typedef int16_t int16x2_t __attribute__((__vector_size__(4), __aligned__(4)));
-typedef uint16_t uint16x2_t __attribute__((__vector_size__(4), __aligned__(4)));
+typedef int8_t int8x4_t __attribute__((__vector_size__(4)));
+typedef uint8_t uint8x4_t __attribute__((__vector_size__(4)));
+typedef int16_t int16x2_t __attribute__((__vector_size__(4)));
+typedef uint16_t uint16x2_t __attribute__((__vector_size__(4)));
 
-typedef int8_t int8x8_t __attribute__((__vector_size__(8), __aligned__(8)));
-typedef uint8_t uint8x8_t __attribute__((__vector_size__(8), __aligned__(8)));
-typedef int16_t int16x4_t __attribute__((__vector_size__(8), __aligned__(8)));
-typedef uint16_t uint16x4_t __attribute__((__vector_size__(8), __aligned__(8)));
-typedef int32_t int32x2_t __attribute__((__vector_size__(8), __aligned__(8)));
-typedef uint32_t uint32x2_t __attribute__((__vector_size__(8), __aligned__(8)));
+typedef int8_t int8x8_t __attribute__((__vector_size__(8)));
+typedef uint8_t uint8x8_t __attribute__((__vector_size__(8)));
+typedef int16_t int16x4_t __attribute__((__vector_size__(8)));
+typedef uint16_t uint16x4_t __attribute__((__vector_size__(8)));
+typedef int32_t int32x2_t __attribute__((__vector_size__(8)));
+typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
 
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 
