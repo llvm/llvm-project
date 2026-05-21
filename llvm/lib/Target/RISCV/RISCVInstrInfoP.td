@@ -2341,7 +2341,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
   // 32-bit arithmetic shift left/right
   def : PatGprPairShiftMask<riscv_psra, PSRA_DWS, shiftMask32, v2i32>;
 
-  // 8/16/31-bit comparison patterns (result is all 1s or all 0s per element)
+  // 8/16/32-bit comparison patterns (result is all 1s or all 0s per element)
   // a == b
   def : PatGprPairGprPair<seteq, PMSEQ_DB, v8i8>;
   def : PatGprPairGprPair<seteq, PMSEQ_DH, v4i16>;
