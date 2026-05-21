@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY
 
 // <array>
 
@@ -16,11 +17,18 @@
 
 #include "test_macros.h"
 
-void test() { // __static_bounded_iter
+void test() {
   typedef std::array<int, 94> Container;
-  ASSERT_SAME_TYPE(Container::iterator, std::__static_bounded_iter<int*, 94>);
+  Container c;
+  Container::iterator it = c.begin();
 
-  Container::iterator it;
+#if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
+  ASSERT_SAME_TYPE(Container::iterator, std::__static_bounded_iter<int*, 94>);
+#elif defined(_LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY)
+  ASSERT_SAME_TYPE(Container::iterator, std::__wrap_iter<int*>);
+#else
+  ASSERT_SAME_TYPE(Container::iterator, int*);
+#endif
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   *it;
@@ -40,8 +48,8 @@ void test() { // __static_bounded_iter
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it - it;
 
-  std::pointer_traits<Container::iterator> pt;
-
+#if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  pt.to_address(it);
+  std::pointer_traits<Container::iterator>::to_address(it);
+#endif
 }
