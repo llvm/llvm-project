@@ -4838,6 +4838,11 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
       name.symbol = nullptr;
     } else if (auto *entity{ultimate.detailsIf<EntityDetails>()};
                entity && !ultimate.has<ProcEntityDetails>()) {
+      if (entity->isDummy()) {
+        Say(name,
+            "Dummy argument '%s' may not be used as a statement function"_err_en_US);
+        return false;
+      }
       resultType = entity->type();
       ultimate.details() = UnknownDetails{}; // will be replaced below
     } else {
@@ -9697,7 +9702,8 @@ void ResolveNamesVisitor::HandleProcedureName(
 bool ResolveNamesVisitor::CheckImplicitNoneExternal(
     const SourceName &name, const Symbol &symbol) {
   if (symbol.has<ProcEntityDetails>() && isImplicitNoneExternal() &&
-      !symbol.attrs().test(Attr::EXTERNAL) &&
+      (!symbol.attrs().test(Attr::EXTERNAL) ||
+          symbol.implicitAttrs().test(Attr::EXTERNAL)) &&
       !symbol.attrs().test(Attr::INTRINSIC) && !symbol.HasExplicitInterface()) {
     Say(name,
         "'%s' is an external procedure without the EXTERNAL attribute in a scope with IMPLICIT NONE(EXTERNAL)"_err_en_US);
@@ -9723,7 +9729,7 @@ void ResolveNamesVisitor::NoteExecutablePartCall(
       ConvertToProcEntity(*symbol, name);
       if (auto *details{symbol->detailsIf<ProcEntityDetails>()}) {
         symbol->set(flag);
-        if (IsDummy(*symbol)) {
+        if (IsDummy(*symbol) && !symbol->attrs().test(Attr::EXTERNAL)) {
           SetImplicitAttr(*symbol, Attr::EXTERNAL);
         }
         ApplyImplicitRules(*symbol);
@@ -10178,18 +10184,27 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         SetBindNameOn(symbol);
       }
     }
-    // Implicitly treat allocatable arrays as managed when feature is enabled.
-    // This is done after all explicit CUDA attributes have been processed.
-    // Only applies when CUDA Fortran is enabled; otherwise -gpu=mem:managed
-    // on a non-CUDA-Fortran translation unit (e.g. pure OpenACC) would
-    // incorrectly route every allocatable through the CUDA Fortran managed
-    // descriptor pipeline.
-    if (context().languageFeatures().IsEnabled(
-            common::LanguageFeature::CudaManaged) &&
-        context().languageFeatures().IsEnabled(common::LanguageFeature::CUDA))
-      if (auto *object{symbol.detailsIf<ObjectEntityDetails>()})
-        if (IsAllocatable(symbol) && !object->cudaDataAttr())
+
+    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+      if (IsAllocatable(symbol) && !object->cudaDataAttr()) {
+        // Implicitly treat allocatable arrays as managed when feature is
+        // enabled. This is done after all explicit CUDA attributes have been
+        // processed. Only applies when CUDA Fortran is enabled; otherwise
+        // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
+        // OpenACC) would incorrectly route every allocatable through the CUDA
+        // Fortran managed descriptor pipeline.
+        if (context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CudaManaged) &&
+            context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CUDA))
           object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+        // Implicitly treat allocatable arrays as pinned when feature is
+        // enabled.
+        else if (context().languageFeatures().IsEnabled(
+                     common::LanguageFeature::CudaPinned))
+          object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+      }
+    }
   }
   currScope().InstantiateDerivedTypes();
   for (const auto &decl : decls) {

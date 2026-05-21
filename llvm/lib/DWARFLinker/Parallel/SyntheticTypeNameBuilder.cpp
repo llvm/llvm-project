@@ -671,7 +671,8 @@ OrderedChildrenIndexAssigner::OrderedChildrenIndexAssigner(
   case dwarf::DW_TAG_subroutine_type:
   case dwarf::DW_TAG_union_type:
   case dwarf::DW_TAG_GNU_template_template_param:
-  case dwarf::DW_TAG_GNU_formal_parameter_pack: {
+  case dwarf::DW_TAG_GNU_formal_parameter_pack:
+  case dwarf::DW_TAG_GNU_template_parameter_pack: {
     NeedCountChildren = true;
   } break;
   case dwarf::DW_TAG_enumeration_type: {
@@ -724,6 +725,7 @@ std::optional<size_t> OrderedChildrenIndexAssigner::tagToArrayIndex(
     return 0;
   case dwarf::DW_TAG_template_value_parameter:
   case dwarf::DW_TAG_template_type_parameter:
+  case dwarf::DW_TAG_GNU_template_template_param:
     return 1;
   case dwarf::DW_TAG_enumeration_type:
     if (std::optional<uint32_t> ParentIdx = DieEntry->getParentIdx()) {
