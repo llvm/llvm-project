@@ -103,6 +103,8 @@ static bool hasSupportedElementType(Value memref) {
   return type.getElementType().isIntOrFloat();
 }
 
+/// Compute the type that will be used to linearize the memref.
+/// Used so we don't create IR like `getLinearizedMemRefOffsetAndSize` would.
 static FailureOr<MemRefType> getFlattenedMemRefType(MemRefType sourceType) {
   int64_t sourceOffset;
   SmallVector<int64_t> sourceStrides;
