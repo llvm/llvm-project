@@ -2071,7 +2071,7 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
   bool MadeChange = false;
 
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  for (VPRecipeBase &Phi : make_early_inc_range(HeaderVPBB->phis())) {
+  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
 
     // Currently only handle canonical IVs as it is trivial to replace the start
