@@ -441,6 +441,28 @@ static bool foldTruncOfI32Constant(MachineInstr &MI, unsigned OpIdx,
   return true;
 }
 
+Register AArch64RegisterBankInfo::widenNarrowGPRConstant(
+    MachineIRBuilder &Builder, MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && "Expected a G_CONSTANT");
+
+  Register Dst = MI.getOperand(0).getReg();
+  [[maybe_unused]] LLT DstTy = MRI.getType(Dst);
+  assert(MRI.getRegBank(Dst) == &AArch64::GPRRegBank && DstTy.isScalar() &&
+         DstTy.getSizeInBits() < 32 &&
+         "Expected a scalar smaller than 32 bits on a GPR.");
+  Builder.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
+  Register ExtReg = MRI.createGenericVirtualRegister(LLT::integer(32));
+  Builder.buildTrunc(Dst, ExtReg);
+
+  APInt Val = MI.getOperand(1).getCImm()->getValue().zext(32);
+  LLVMContext &Ctx = Builder.getMF().getFunction().getContext();
+  MI.getOperand(1).setCImm(ConstantInt::get(Ctx, Val));
+  MI.getOperand(0).setReg(ExtReg);
+  MRI.setRegBank(ExtReg, AArch64::GPRRegBank);
+
+  return ExtReg;
+}
+
 void AArch64RegisterBankInfo::applyMappingImpl(
     MachineIRBuilder &Builder, const OperandsMapper &OpdMapper) const {
   MachineInstr &MI = OpdMapper.getMI();
@@ -448,21 +470,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
 
   switch (MI.getOpcode()) {
   case TargetOpcode::G_CONSTANT: {
-    Register Dst = MI.getOperand(0).getReg();
-    [[maybe_unused]] LLT DstTy = MRI.getType(Dst);
-    assert(MRI.getRegBank(Dst) == &AArch64::GPRRegBank && DstTy.isScalar() &&
-           DstTy.getSizeInBits() < 32 &&
-           "Expected a scalar smaller than 32 bits on a GPR.");
-    Builder.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
-    Register ExtReg = MRI.createGenericVirtualRegister(LLT::integer(32));
-    Builder.buildTrunc(Dst, ExtReg);
-
-    APInt Val = MI.getOperand(1).getCImm()->getValue().zext(32);
-    LLVMContext &Ctx = Builder.getMF().getFunction().getContext();
-    MI.getOperand(1).setCImm(ConstantInt::get(Ctx, Val));
-    MI.getOperand(0).setReg(ExtReg);
-    MRI.setRegBank(ExtReg, AArch64::GPRRegBank);
-
+    widenNarrowGPRConstant(Builder, MI, MRI);
     return applyDefaultMapping(OpdMapper);
   }
   case TargetOpcode::G_FCONSTANT: {

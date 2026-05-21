@@ -41,10 +41,11 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties()
-        .setIsSSA()
-        .setLegalized()
-        .setRegBankSelected();
+    MachineFunctionProperties Properties;
+    Properties.setIsSSA().setLegalized();
+    if (RequireRegBankSelected)
+      Properties.setRegBankSelected();
+    return Properties;
   }
 
   MachineFunctionProperties getSetProperties() const override {
@@ -52,7 +53,7 @@ public:
   }
 
   InstructionSelect(CodeGenOptLevel OL = CodeGenOptLevel::Default,
-                    char &PassID = ID);
+                    bool RequireRegBankSelected = true, char &PassID = ID);
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   bool selectMachineFunction(MachineFunction &MF);
@@ -67,6 +68,7 @@ protected:
   ProfileSummaryInfo *PSI = nullptr;
 
   CodeGenOptLevel OptLevel = CodeGenOptLevel::None;
+  bool RequireRegBankSelected = true;
 
   bool selectInstr(MachineInstr &MI);
 };

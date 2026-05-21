@@ -39,4 +39,3 @@ entry:
   %2 = load float, ptr %0, align 4
   ret i32 0
 }
-

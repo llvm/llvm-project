@@ -118,6 +118,12 @@ static cl::opt<bool> EnableAtomicTidy(
              " to make use of cmpxchg flow-based information"),
     cl::init(true));
 
+static cl::opt<int> SkipRegBankSelectAtO(
+    "aarch64-skip-regbankselect-at-O", cl::Hidden,
+    cl::desc("Skip RegBankSelect at or below an opt level (-1 to disable) "
+             "and assign register banks during instruction selection"),
+    cl::init(0));
+
 static cl::opt<bool>
 EnableEarlyIfConversion("aarch64-enable-early-ifcvt", cl::Hidden,
                         cl::desc("Run early if-conversion"),
@@ -567,6 +573,8 @@ public:
     if (TM.getOptLevel() != CodeGenOptLevel::None)
       substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
     setEnableSinkAndFold(EnableSinkFold);
+    SkipRegBankSelect =
+        static_cast<int>(TM.getOptLevel()) <= SkipRegBankSelectAtO;
   }
 
   AArch64TargetMachine &getAArch64TargetMachine() const {
@@ -595,6 +603,9 @@ public:
   bool addRegAssignAndRewriteOptimized() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
+
+private:
+  bool SkipRegBankSelect = false;
 };
 
 } // end anonymous namespace
@@ -784,12 +795,14 @@ void AArch64PassConfig::addPreRegBankSelect() {
 }
 
 bool AArch64PassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  if (!SkipRegBankSelect)
+    addPass(new RegBankSelect());
   return false;
 }
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelect(getOptLevel(),
+                                /*RequireRegBankSelected=*/!SkipRegBankSelect));
   if (!getAArch64TargetMachine().isGlobalISelOptNone())
     addPass(createAArch64PostSelectOptimize());
   return false;

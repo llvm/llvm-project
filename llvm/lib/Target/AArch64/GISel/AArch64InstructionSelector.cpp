@@ -88,6 +88,7 @@ public:
         !MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening);
     MFReturnAddr = Register();
 
+    assignFallbackRegBanks(MF);
     processPHIs(MF);
   }
 
@@ -119,6 +120,7 @@ private:
 
   bool convertPtrAddToAdd(MachineInstr &I, MachineRegisterInfo &MRI);
 
+  void assignFallbackRegBanks(MachineFunction &MF) const;
   bool selectVaStartAAPCS(MachineInstr &I, MachineFunction &MF,
                           MachineRegisterInfo &MRI) const;
   bool selectVaStartDarwin(MachineInstr &I, MachineFunction &MF,
@@ -705,6 +707,42 @@ static unsigned getMinSizeForRegBank(const RegisterBank &RB) {
   }
 }
 
+static const RegisterBank *
+getCheapRegBankForDef(Register Reg, MachineInstr &MI, MachineRegisterInfo &MRI,
+                      const AArch64RegisterBankInfo &RBI) {
+  if (!Reg.isVirtual())
+    return nullptr;
+
+  const RegisterBank *GPR = &RBI.getRegBank(AArch64::GPRRegBankID);
+  const RegisterBank *FPR = &RBI.getRegBank(AArch64::FPRRegBankID);
+
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_CONSTANT: {
+    LLT DstTy = MRI.getType(Reg);
+    if (!DstTy.isVector() && DstTy.getSizeInBits() <= 64 &&
+        (!DstTy.isScalar() || DstTy.getSizeInBits() >= 32))
+      return GPR;
+    return nullptr;
+  }
+  case TargetOpcode::G_FRAME_INDEX:
+    return GPR;
+  case TargetOpcode::G_FCONSTANT:
+    return FPR;
+  case TargetOpcode::G_LOAD: {
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    if (DstTy.isPointer())
+      return GPR;
+
+    LLT MemTy = cast<GLoad>(MI).getMMO().getMemoryType();
+    if (DstTy.isInteger() && MemTy.getSizeInBits() == DstTy.getSizeInBits())
+      return GPR;
+    return nullptr;
+  }
+  default:
+    return nullptr;
+  }
+}
+
 /// Create a REG_SEQUENCE instruction using the registers in \p Regs.
 /// Helper function for functions like createDTuple and createQTuple.
 ///
@@ -737,6 +775,57 @@ static Register createTuple(ArrayRef<Register> Regs,
     RegSequence.addImm(SubRegs[I]);
   }
   return RegSequence.getReg(0);
+}
+
+// Preassign banks for unbanked virtual defs when standalone RegBankSelect is
+// skipped.
+void AArch64InstructionSelector::assignFallbackRegBanks(
+    MachineFunction &MF) const {
+  if (MF.getProperties().hasRegBankSelected())
+    return;
+
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineIRBuilder Builder(MF);
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : make_early_inc_range(MBB)) {
+      for (unsigned OpIdx = 0, End = MI.getNumOperands(); OpIdx != End;
+           ++OpIdx) {
+        MachineOperand &MO = MI.getOperand(OpIdx);
+        if (!MO.isReg() || !MO.isDef())
+          continue;
+        Register Reg = MO.getReg();
+        if (!Reg || Reg.isPhysical())
+          continue;
+        if (RBI.getRegBank(Reg, MRI, TRI))
+          continue;
+
+        if (const RegisterBank *RB = getCheapRegBankForDef(Reg, MI, MRI, RBI)) {
+          MRI.setRegBank(Reg, *RB);
+          continue;
+        }
+
+        const RegisterBankInfo::InstructionMapping &Mapping =
+            RBI.getInstrMapping(MI);
+        if (!Mapping.isValid() || OpIdx >= Mapping.getNumOperands())
+          continue;
+
+        const RegisterBankInfo::ValueMapping &OpMapping =
+            Mapping.getOperandMapping(OpIdx);
+        if (OpMapping.isValid() && OpMapping.NumBreakDowns == 1 &&
+            OpMapping.BreakDown[0].RegBank)
+          MRI.setRegBank(Reg, *OpMapping.BreakDown[0].RegBank);
+      }
+
+      if (MI.getOpcode() == TargetOpcode::G_CONSTANT) {
+        Register Dst = MI.getOperand(0).getReg();
+        LLT DstTy = MRI.getType(Dst);
+        const RegisterBank *RB = MRI.getRegBankOrNull(Dst);
+        if (RB == &RBI.getRegBank(AArch64::GPRRegBankID) && DstTy.isScalar() &&
+            DstTy.getSizeInBits() < 32)
+          AArch64RegisterBankInfo::widenNarrowGPRConstant(Builder, MI, MRI);
+      }
+    }
+  }
 }
 
 /// Create a tuple of D-registers using the registers in \p Regs.
@@ -1007,6 +1096,10 @@ static bool selectDebugInstr(MachineInstr &I, MachineRegisterInfo &MRI,
       continue;
     LLT Ty = MRI.getType(Reg);
     const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
+    if (RegClassOrBank.isNull()) {
+      LLVM_DEBUG(dbgs() << "Warning: DBG_VALUE operand has no register bank\n");
+      break;
+    }
     const TargetRegisterClass *RC =
         dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
     if (!RC) {
