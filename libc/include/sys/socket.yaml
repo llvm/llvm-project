@@ -124,7 +124,7 @@ functions:
       - type: int
   - name: sendmmsg
     standards:
-      - Linux
+      - linux
     return_type: int
     arguments:
       - type: int
