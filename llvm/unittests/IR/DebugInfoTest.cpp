@@ -1461,9 +1461,9 @@ TEST(DIBuilder, CompositeTypeAnnotations) {
   EXPECT_EQ(DynStruct->getAnnotations().get(), DynStructAnnotations.get());
 
   DINodeArray UnionAnnotations = MakeAnnotations("union_tag", "union_value");
-  DICompositeType *Union = DIB.createUnionType(
-      CU, "MyUnion", F, 0, 8, 8, {}, {}, 0, "UnionUniqueIdentifier",
-      UnionAnnotations);
+  DICompositeType *Union =
+      DIB.createUnionType(CU, "MyUnion", F, 0, 8, 8, {}, {}, 0,
+                          "UnionUniqueIdentifier", UnionAnnotations);
   EXPECT_EQ(Union->getAnnotations().get(), UnionAnnotations.get());
 
   DICompositeType *NoAnnotClass =
@@ -1471,13 +1471,14 @@ TEST(DIBuilder, CompositeTypeAnnotations) {
                           nullptr, nullptr, "NoAnnotClassUniqueIdentifier");
   EXPECT_EQ(NoAnnotClass->getAnnotations().get(), nullptr);
 
-  DICompositeType *NoAnnotStruct = DIB.createStructType(
-      CU, "NoAnnotStruct", F, 0, 8, 8, {}, {}, {}, 0, {},
-      "NoAnnotStructUniqueIdentifier");
+  DICompositeType *NoAnnotStruct =
+      DIB.createStructType(CU, "NoAnnotStruct", F, 0, 8, 8, {}, {}, {}, 0, {},
+                           "NoAnnotStructUniqueIdentifier");
   EXPECT_EQ(NoAnnotStruct->getAnnotations().get(), nullptr);
 
-  DICompositeType *NoAnnotUnion = DIB.createUnionType(
-      CU, "NoAnnotUnion", F, 0, 8, 8, {}, {}, 0, "NoAnnotUnionUniqueIdentifier");
+  DICompositeType *NoAnnotUnion =
+      DIB.createUnionType(CU, "NoAnnotUnion", F, 0, 8, 8, {}, {}, 0,
+                          "NoAnnotUnionUniqueIdentifier");
   EXPECT_EQ(NoAnnotUnion->getAnnotations().get(), nullptr);
 }
 
