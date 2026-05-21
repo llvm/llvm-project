@@ -35,7 +35,9 @@ void SymbolFile::PreloadSymbols() {
 }
 
 std::recursive_mutex &SymbolFile::GetModuleMutex() const {
-  return GetObjectFile()->GetModule()->GetMutex();
+  const ObjectFile *obj_file = GetObjectFile();
+  assert(obj_file && "SymbolFile has no ObjectFile");
+  return obj_file->GetModuleMutex();
 }
 
 SymbolFile *SymbolFile::FindPlugin(ObjectFileSP objfile_sp) {

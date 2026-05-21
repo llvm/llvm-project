@@ -803,12 +803,19 @@ Symtab *ObjectFile::GetSymtab(bool can_create) {
 }
 
 uint32_t ObjectFile::GetCacheHash() {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (m_cache_hash)
     return *m_cache_hash;
   StreamString strm;
   strm.Format("{0}-{1}-{2}", m_file, GetType(), GetStrata());
   m_cache_hash = llvm::djbHash(strm.GetString());
   return *m_cache_hash;
+}
+
+std::recursive_mutex &ObjectFile::GetModuleMutex() const {
+  ModuleSP module_sp = GetModule();
+  assert(module_sp && "ObjectFile has no Module");
+  return module_sp->GetMutex();
 }
 
 std::string ObjectFile::GetObjectName() const {

@@ -24,6 +24,7 @@
 #include "lldb/lldb-private.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
+#include <mutex>
 #include <optional>
 
 namespace lldb_private {
@@ -576,7 +577,10 @@ public:
   /// In cases where the type can't be calculated (elf files), this routine
   /// allows someone to explicitly set it. As an example, SymbolVendorELF uses
   /// this routine to set eTypeDebugInfo when loading debug link files.
-  virtual void SetType(Type type) { m_type = type; }
+  virtual void SetType(Type type) {
+    std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+    m_type = type;
+  }
 
   /// The object file should be able to calculate the strata of the object
   /// file.
@@ -636,12 +640,14 @@ public:
 
   // Member Functions
   Type GetType() {
+    std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
     if (m_type == eTypeInvalid)
       m_type = CalculateType();
     return m_type;
   }
 
   Strata GetStrata() {
+    std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
     if (m_strata == eStrataInvalid)
       m_strata = CalculateStrata();
     return m_strata;
@@ -752,6 +758,12 @@ public:
                                         uint64_t Offset);
   std::string GetObjectName() const;
 
+  /// Returns the recursive mutex owned by this ObjectFile's Module.
+  ///
+  /// Methods that mutate or lazily initialize ObjectFile state acquire this
+  /// to serialize concurrent access across Targets that share the Module.
+  std::recursive_mutex &GetModuleMutex() const;
+
 protected:
   typedef NonNullSharedPtr<lldb_private::DataExtractor> DataExtractorNSP;
 
@@ -773,6 +785,8 @@ protected:
   const lldb::addr_t m_memory_addr;
 
   std::unique_ptr<lldb_private::SectionList> m_sections_up;
+  /// Guards lazy section-list construction, which nests the Module mutex
+  /// inside it. Acquired around the Module mutex, never under it.
   std::recursive_mutex m_sections_mutex;
 
   std::unique_ptr<lldb_private::Symtab> m_symtab_up;
