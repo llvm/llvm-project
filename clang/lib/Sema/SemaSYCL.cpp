@@ -704,7 +704,7 @@ public:
         auto *BS = Parent.get<CXXBaseSpecifier *>();
         CXXRecordDecl *RD = BS->getType()->getAsCXXRecordDecl();
         assert(RD);
-        SemaSYCLRef.Diag(RD->getLocation(), diag::note_within_base_of_type)
+        SemaSYCLRef.Diag(BS->getBeginLoc(), diag::note_within_base_of_type)
             << RD;
       }
     }

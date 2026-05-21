@@ -21,8 +21,8 @@ struct S { // expected-note 3{{within field of type 'S' declared here}}
 void fooarr(int (&arr)[5]) {
 }
 
-template <typename T> class Callable { // expected-note {{within field of type 'Callable<int &>' declared here}}
-  T data; // expected-error {{'int &' cannot be used as the type of a kernel parameter}}
+template <typename T> class Callable { // expected-note 2{{within field of type 'Callable<int &>' declared here}}
+  T data; // expected-error 2{{'int &' cannot be used as the type of a kernel parameter}}
 public:
   Callable(T d) : data(d) {}
   void operator()() {
@@ -33,6 +33,12 @@ class Derived1 : Callable<int> { // expected-note {{within field of type 'Derive
   int &a; // expected-error {{'int &' cannot be used as the type of a kernel parameter}}
 public:
   Derived1(int d, int &b) : Callable<int>(d), a(b) {}
+};
+
+class Derived2 : Callable<int&> { // expected-note {{within base of type 'Callable<int &>' declared here}}
+  int a;
+public:
+  Derived2(int d, int &b) : Callable<int&>(b), a(d) {}
 };
 
 void refCases(int AS) {
@@ -82,5 +88,6 @@ void refCases(int AS) {
   kernel_single_task<class KN<8>>(Callable<int&>{p}); // expected-note {{requested here}}
   kernel_single_task<class KN<9>>(Callable<int>{p});
   kernel_single_task<class KN<10>>(Derived1{p, p}); // expected-note {{requested here}}
+  kernel_single_task<class KN<11>>(Derived2{p, p}); // expected-note {{requested here}}
 }
 
