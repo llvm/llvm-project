@@ -7,6 +7,9 @@ bool test_if() {
   if ([[maybe_unused]] bool x = true) {}
   if (bool x [[maybe_unused]] = true) {}
   if ([[maybe_unused]] int x = 3; x > 0) {}
+  if (struct A { int x;} a = {.x = 1}; a.x) {}
+  if (int arr[] = {1,2,3}; arr[1]) {}
+  if (auto x = 1; x) {}
   return false;
 }
 
@@ -21,6 +24,10 @@ int test_switch() {
 
   switch (int x [[maybe_unused]] = 1) {}
   switch ([[maybe_unused]] int x = 1) {}
+
+  switch (struct A { int x;} a = {.x = 1}; a.x) {}
+  switch (int arr[] = {1,2,3}; arr[1]) {}
+  switch (auto x = 1; x) {}
 
   switch (int x = 1) {
   default:
