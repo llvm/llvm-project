@@ -2092,9 +2092,12 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
       continue;
 
     // Update IV operands and comparison bound to use new narrower type.
-    auto *NewWideIV = WideIV->cloneWithOperands(Plan.getZero(NewIVTy),
-                                                Plan.getConstantInt(NewIVTy, 1),
-                                                WideIV->getVFValue());
+    assert(!WideIV->getTruncInst() &&
+           "canonical IV is not expected to have a truncation");
+    auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
+        WideIV->getPHINode(), Plan.getZero(NewIVTy),
+        Plan.getConstantInt(NewIVTy, 1), WideIV->getVFValue(),
+        WideIV->getInductionDescriptor(), *WideIV, WideIV->getDebugLoc());
     NewWideIV->insertBefore(WideIV);
 
     auto *NewBTC = new VPWidenCastRecipe(
@@ -3133,13 +3136,12 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
-  // EVL is i32 but VF/VFxUF are IdxTy. Materialize an IdxTy-typed EVL right
-  // after EVL so replacements preserve operand scalar types.
+  // EVL is i32 but VF/VFxUF are IdxTy. Convert as needed.
   VPValue *EVLAsIdx =
       VPBuilder::getToInsertAfter(EVL.getDefiningRecipe())
-          .createScalarZExtOrTrunc(
-              &EVL, TypeInfo.inferScalarType(&Plan.getVF()),
-              TypeInfo.inferScalarType(&EVL), DebugLoc::getUnknown());
+          .createScalarZExtOrTrunc(&EVL, Plan.getVF().getType(),
+                                   TypeInfo.inferScalarType(&EVL),
+                                   DebugLoc::getUnknown());
 
   assert(all_of(Plan.getVF().users(),
                 [&Plan](VPUser *U) {

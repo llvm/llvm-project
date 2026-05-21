@@ -2572,19 +2572,10 @@ public:
 
   ~VPWidenIntOrFpInductionRecipe() override = default;
 
-  VPWidenIntOrFpInductionRecipe *cloneWithOperands(VPIRValue *Start,
-                                                   VPValue *Step, VPValue *VF) {
-    if (Trunc)
-      return new VPWidenIntOrFpInductionRecipe(getPHINode(), Start, Step, VF,
-                                               getInductionDescriptor(), Trunc,
-                                               *this, getDebugLoc());
-    return new VPWidenIntOrFpInductionRecipe(getPHINode(), Start, Step, VF,
-                                             getInductionDescriptor(), *this,
-                                             getDebugLoc());
-  }
-
   VPWidenIntOrFpInductionRecipe *clone() override {
-    return cloneWithOperands(getStartValue(), getStepValue(), getVFValue());
+    return new VPWidenIntOrFpInductionRecipe(
+        getPHINode(), getStartValue(), getStepValue(), getVFValue(),
+        getInductionDescriptor(), Trunc, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenIntOrFpInductionSC)

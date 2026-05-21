@@ -7066,11 +7066,15 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       if (TrueValIsPhi)
         Cmp = Builder.createNot(Cmp);
 
+      // Convert the reduction phi to operate on bools.
       auto *NewPhiR =
           PhiR->cloneWithOperands(Plan->getFalse(), PhiR->getBackedgeValue());
       NewPhiR->insertBefore(PhiR);
       VPValue *Or = Builder.createOr(NewPhiR, Cmp);
 
+      // Only replace uses inside the vector region with Or. External uses
+      // (e.g. scalar preheader resume phis) must be replaced by the user
+      // update loop below with FinalReductionResult.
       auto InRegion = [](VPUser &U, unsigned) {
         return cast<VPRecipeBase>(&U)->getRegion();
       };
