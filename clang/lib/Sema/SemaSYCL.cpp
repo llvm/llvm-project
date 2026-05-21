@@ -688,9 +688,8 @@ public:
   }
 
   bool visitReferenceType(const ReferenceType *RT) {
-
     // Reference cannot be a base, so just assume we came via a FieldDecl.
-    auto *DirectParent = SubobjectAccessPath.back().get<FieldDecl *>();
+    auto *DirectParent = cast<FieldDecl *>(SubobjectAccessPath.back());
     SemaSYCLRef.Diag(DirectParent->getLocation(),
                      diag::err_bad_kernel_param_type)
         << DirectParent->getType();
@@ -701,7 +700,7 @@ public:
                          diag::note_within_field_of_type)
             << FD->getParent();
       } else {
-        auto *BS = Parent.get<CXXBaseSpecifier *>();
+        auto *BS = cast<CXXBaseSpecifier *>(Parent);
         CXXRecordDecl *RD = BS->getType()->getAsCXXRecordDecl();
         assert(RD);
         SemaSYCLRef.Diag(BS->getBeginLoc(), diag::note_within_base_of_type)
