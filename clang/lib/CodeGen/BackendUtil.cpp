@@ -837,17 +837,17 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
                         CodeGenOpts.MemoryProfileUsePath, PGOOptions::IRInstr,
                         PGOOptions::NoCSAction, ClPGOColdFuncAttr,
                         CodeGenOpts.DebugInfoForProfiling,
-                        /*PseudoProbeForProfiling=*/false,
+                        CodeGenOpts.PseudoProbeForProfiling,
                         CodeGenOpts.AtomicProfileUpdate);
   else if (CodeGenOpts.hasProfileIRUse()) {
     // -fprofile-use.
     auto CSAction = CodeGenOpts.hasProfileCSIRUse() ? PGOOptions::CSIRUse
                                                     : PGOOptions::NoCSAction;
-    PGOOpt = PGOOptions(CodeGenOpts.ProfileInstrumentUsePath, "",
-                        CodeGenOpts.ProfileRemappingFile,
-                        CodeGenOpts.MemoryProfileUsePath, PGOOptions::IRUse,
-                        CSAction, ClPGOColdFuncAttr,
-                        CodeGenOpts.DebugInfoForProfiling);
+    PGOOpt = PGOOptions(
+        CodeGenOpts.ProfileInstrumentUsePath, "",
+        CodeGenOpts.ProfileRemappingFile, CodeGenOpts.MemoryProfileUsePath,
+        PGOOptions::IRUse, CSAction, ClPGOColdFuncAttr,
+        CodeGenOpts.DebugInfoForProfiling, CodeGenOpts.PseudoProbeForProfiling);
   } else if (!CodeGenOpts.SampleProfileFile.empty())
     // -fprofile-sample-use
     PGOOpt = PGOOptions(
