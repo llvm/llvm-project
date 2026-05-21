@@ -3284,9 +3284,15 @@ void CommandInterpreter::FindCommandsForApropos(llvm::StringRef search_word,
 
 ExecutionContext
 CommandInterpreter::GetExecutionContext(bool adopt_dummy_target) const {
-  return !m_overriden_exe_contexts.empty()
-             ? m_overriden_exe_contexts.top()
-             : m_debugger.GetSelectedExecutionContext(adopt_dummy_target);
+  if (!m_overriden_exe_contexts.empty()) {
+    ExecutionContext override_ctx = m_overriden_exe_contexts.top();
+    if (!adopt_dummy_target && override_ctx.GetTargetPtr() &&
+        override_ctx.GetTargetPtr()->IsDummyTarget()) {
+      override_ctx.Clear();
+    }
+    return override_ctx;
+  }
+  return m_debugger.GetSelectedExecutionContext(adopt_dummy_target);
 }
 
 void CommandInterpreter::OverrideExecutionContext(
