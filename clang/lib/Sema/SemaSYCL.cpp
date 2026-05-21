@@ -722,11 +722,8 @@ public:
 bool verifyKernelArguments(FunctionDecl *FD, SemaSYCL &SemaSYCLRef) {
   KernelArgsChecker KAC(SemaSYCLRef, FD->getLocation());
   for (auto Param : FD->parameters()) {
-    if (Param->getType()->isRecordType()) {
-      CXXRecordDecl *ObjRecord = Param->getType()->getAsCXXRecordDecl();
-      assert(ObjRecord && "object is expected");
-      KAC.traverseRecord(ObjRecord);
-    }
+    if (Param->getType()->isRecordType())
+      KAC.visit(Param->getType());
   }
   return KAC.isInvalid();
 }
