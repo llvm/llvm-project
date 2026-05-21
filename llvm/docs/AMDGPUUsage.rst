@@ -1324,6 +1324,9 @@ as the pointer operand of a regular memory access instruction or intrinsic.
 Pointers to named barrier objects are intended to be used with dedicated
 intrinsics. Reading from or writing to such pointers is undefined behavior.
 
+The NULL named barrier (needed for un-joining a barrier) is represented in IR by
+``ptr addrspace(3) nullptr``.
+
 LLVM IR Intrinsics
 ------------------
 
