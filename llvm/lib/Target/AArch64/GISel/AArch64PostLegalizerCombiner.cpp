@@ -840,8 +840,8 @@ bool runCombiner(MachineFunction &MF, GISelCSEInfo *CSEInfo,
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
   const LegalizerInfo *LI = ST.getLegalizerInfo();
 
-  CombinerInfo CInfo(/*AllowIllegalOps=*/true, /*ShouldLegalizeIllegal=*/false,
-                     /*LegalizerInfo=*/nullptr, EnableOpt, F.hasOptSize(),
+  CombinerInfo CInfo(/*AllowIllegalOps=*/false, /*ShouldLegalizeIllegal=*/false,
+                     /*LegalizerInfo=*/LI, EnableOpt, F.hasOptSize(),
                      F.hasMinSize());
   // Disable fixed-point iteration to reduce compile-time
   CInfo.MaxIterations = 1;
