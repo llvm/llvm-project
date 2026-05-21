@@ -721,7 +721,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
         // Non call site cases covered by the two checks above
         if (!CB->hasFnAttr(Attribute::NoSync) ||
             !CB->hasFnAttr(Attribute::NoFree))
-            return false;
+          return false;
       }
     }
     return true;
