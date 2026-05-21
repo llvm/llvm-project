@@ -90,6 +90,12 @@ static bool isCppAttribute(bool IsCpp, const FormatToken &Tok) {
   // The first square bracket is part of an ObjC array literal
   if (Tok.Previous && Tok.Previous->is(tok::at))
     return false;
+  // A C++ attribute specifier '[[...]]' never appears directly inside another
+  // '['. Treating malformed input like '[[[a]]' as one would mis-annotate the
+  // inner '[' as TT_AttributeLSquare while leaving the outer '[' as a raw
+  // tok::l_square, tripping an assertion in canBreakBefore.
+  if (Tok.Previous && Tok.Previous->is(tok::l_square))
+    return false;
   const FormatToken *AttrTok = Tok.Next->Next;
   if (!AttrTok)
     return false;
