@@ -501,12 +501,71 @@ void DataAggregator::filterBinaryMMapInfo() {
   }
 }
 
+void DataAggregator::loadAndSlicePerfText(StringRef Name) {
+  // Parse the perf text file if not loaded yet, and store the slices for
+  // different event types in a map for later retrieval.
+  if (!PerfTextLoaded) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+        MemoryBuffer::getFileOrSTDIN(opts::ReadPerfEvents);
+    if (std::error_code EC = MB.getError()) {
+      errs() << "PERF2BOLT-ERROR: Cannot open " << opts::ReadPerfEvents << ": "
+             << EC.message() << "\n";
+      exit(1);
+    }
+    FileBuf = std::move(*MB);
+    StringRef Buf = FileBuf->getBuffer();
+
+    // Parse the header, length = 133, to get the size of each slice
+    if (Buf.starts_with(PerfTextMagicStr)) {
+      size_t Offset = 133;
+      StringRef Header = Buf.substr(0, 133);
+      SmallVector<StringRef, 8> Fields;
+      Header.split(Fields, ';');
+      for (StringRef Field : Fields) {
+        if (Field.empty() || Field.trim().empty() || Field == PerfTextMagicStr)
+          continue;
+        auto KV = Field.split('=');
+        uint64_t Size = 0;
+        // formatv("{0:x-}", *FsRes)
+        if (!KV.second.getAsInteger(16, Size)) {
+          PerfTextSlices[KV.first] = Buf.substr(Offset, Size);
+          Offset += Size;
+        }
+      }
+    } else {
+      // Fallback, treat the entire file as a single stream
+      PerfTextSlices["ALL"] = Buf;
+    }
+    PerfTextLoaded = true;
+    outs() << "PERF2BOLT: Loaded pre-processed perf events from '"
+           << opts::ReadPerfEvents << "'\n";
+  }
+
+  // Find the corresponding slice for the requested event type
+  StringRef Key;
+  if (Name == "buildid")
+    Key = "BUILDIDS";
+  else if (Name == "mmap events")
+    Key = "MMAP";
+  else if (Name == "events" || Name.contains("branch events"))
+    Key = "MAIN";
+  else if (Name == "task events")
+    Key = "TASK";
+  else if (Name == "mem events")
+    Key = "MEM";
+  else
+    Key = "ALL";
+  ParsingBuf = PerfTextSlices.lookup(Key);
+  Col = 0;
+  Line = 1;
+  outs() << "PERF2BOLT: using pre-processed perf events for '" << Name
+         << "' (Size: " << ParsingBuf.size() << " bytes)\n";
+}
+
 int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
                                    PerfProcessErrorCallbackTy Callback) {
   if (!opts::ReadPerfEvents.empty()) {
-    outs() << "PERF2BOLT: using pre-processed perf events for '" << Name
-           << "' (perf-script-events)\n";
-    ParsingBuf = opts::ReadPerfEvents;
+    loadAndSlicePerfText(Name);
     return 0;
   }
 

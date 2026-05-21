@@ -1,0 +1,35 @@
+## Test that perf2bolt correctly parses pre-processed perf-script output 
+## (PERFTEXT format) and slices it into appropriate chunks for processing.
+
+# REQUIRES: system-linux
+
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %t/main.s -o %t.o
+# RUN: ld.lld %t.o -o %t/main -q --no-rosegment --build-id
+
+## Create a dummy perf.data file with the required "PERFILE" magic bytes
+# RUN: echo -n "PERFILE" > %t.perf.data
+
+# RUN: perf2bolt %t/main -p %t.perf.data -perf-script-events %t/main.perf.script \
+# RUN:   -o %t.fdata --ignore-build-id 2>&1 | FileCheck %s
+
+# CHECK: PERF2BOLT: Loaded pre-processed perf events from
+# CHECK: PERF2BOLT: using pre-processed perf events for 'buildid' (Size: 51 bytes)
+# CHECK: PERF2BOLT: using pre-processed perf events for 'mmap events' (Size: 98 bytes)
+# CHECK: PERF2BOLT: using pre-processed perf events for 'task events' (Size: 118 bytes)
+# CHECK: PERF2BOLT: using pre-processed perf events for 'events' (Size: 27 bytes)
+# CHECK: PERF2BOLT: using pre-processed perf events for 'mem events' (Size: 30 bytes)
+
+#--- main.s
+.globl _start
+_start:
+  ret
+
+#--- main.perf.script
+PERFTEXT;BUILDIDS=33;MMAP=62;MAIN=1b;TASK=76;MEM=1e;                                                                          PAD=0;
+0000000000000000000000000000000000000000 /tmp/main
+main 1000 1000.000: PERF_RECORD_MMAP2 1000/1000: [0x200000(0x1000) @ 0 00:00 0 0]: r-xp /tmp/main
+1000 200010/200000/M/-/-/0
+main 1000 1000.000: PERF_RECORD_COMM exec: main:1000/1000
+main 1000 1000.000: PERF_RECORD_FORK(1001:1001):(1000:1000)
+1000 mem-loads: 200010 200000

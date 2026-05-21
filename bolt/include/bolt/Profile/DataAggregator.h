@@ -610,6 +610,15 @@ private:
     return std::nullopt;
   }
 
+  /// Map to store slices of pre-processed perf text data
+  llvm::StringMap<llvm::StringRef> PerfTextSlices;
+
+  /// Flag to indicate if the pre-processed perf text has been loaded
+  bool PerfTextLoaded{false};
+
+  /// Helper function to load and slice pre-processed perf text data
+  void loadAndSlicePerfText(StringRef Name);
+
 public:
   /// If perf.data was collected without build ids, the buildid-list may contain
   /// incomplete entries. Return true if the buffer containing
