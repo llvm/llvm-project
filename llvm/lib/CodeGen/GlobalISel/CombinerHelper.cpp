@@ -3449,7 +3449,7 @@ bool CombinerHelper::matchAshrShlToSextInreg(
   if (ShlCst != AshrCst)
     return false;
   if (!isLegalOrBeforeLegalizer(
-          {TargetOpcode::G_SEXT_INREG, {MRI.getType(Src)}}))
+          {TargetOpcode::G_SEXT_INREG, {MRI.getType(Src)}, {}, {Src - ShlCst}}))
     return false;
   MatchInfo = std::make_tuple(Src, ShlCst);
   return true;
@@ -5855,7 +5855,10 @@ bool CombinerHelper::matchUDivOrURemByConst(MachineInstr &MI) const {
     if (!isLegalOrBeforeLegalizer(
             {TargetOpcode::G_ICMP,
              {DstTy.isVector() ? DstTy.changeElementSize(1) : LLT::scalar(1),
-              DstTy}}))
+              DstTy},
+             {},
+             {},
+             {CmpInst::Predicate::ICMP_EQ}}))
       return false;
     if (Opcode == TargetOpcode::G_UREM &&
         !isLegalOrBeforeLegalizer({TargetOpcode::G_SUB, {DstTy, DstTy}}))
@@ -8058,11 +8061,9 @@ bool CombinerHelper::tryFoldLogicOfFCmps(GLogicalBinOp *Logic,
   LLT CmpTy = MRI.getType(Cmp1->getReg(0));
   LLT CmpOperandTy = MRI.getType(Cmp1->getLHSReg());
 
-  // We build one fcmp, want to fold the fcmps, replace the logic op,
+  // We want to fold the fcmps, replace the logic op,
   // and the fcmps must have the same shape.
-  if (!isLegalOrBeforeLegalizer(
-          {TargetOpcode::G_FCMP, {CmpTy, CmpOperandTy}}) ||
-      !MRI.hasOneNonDBGUse(Logic->getReg(0)) ||
+  if (!MRI.hasOneNonDBGUse(Logic->getReg(0)) ||
       !MRI.hasOneNonDBGUse(Cmp1->getReg(0)) ||
       !MRI.hasOneNonDBGUse(Cmp2->getReg(0)) ||
       MRI.getType(Cmp1->getLHSReg()) != MRI.getType(Cmp2->getLHSReg()))
@@ -8085,11 +8086,23 @@ bool CombinerHelper::tryFoldLogicOfFCmps(GLogicalBinOp *Logic,
     // We determine the new predicate.
     unsigned CmpCodeL = getFCmpCode(PredL);
     unsigned CmpCodeR = getFCmpCode(PredR);
-    unsigned NewPred = IsAnd ? CmpCodeL & CmpCodeR : CmpCodeL | CmpCodeR;
+
+    // The fcmp predicates fill the lower part of the enum.
+    FCmpInst::Predicate Pred = static_cast<FCmpInst::Predicate>(
+        IsAnd ? CmpCodeL & CmpCodeR : CmpCodeL | CmpCodeR);
+
+    // Make sure the fcmp will be legal, or otherwise replaced by an appropriate
+    // constant.
+    if (!isLegalOrBeforeLegalizer(
+            {TargetOpcode::G_FCMP, {CmpTy, CmpOperandTy}, {}, {Pred}}) &&
+        !(Pred == FCmpInst::FCMP_FALSE &&
+          isConstantLegalOrBeforeLegalizer(CmpTy)) &&
+        !(Pred == FCmpInst::FCMP_TRUE &&
+          isConstantLegalOrBeforeLegalizer(CmpTy)))
+      return false;
+
     unsigned Flags = Cmp1->getFlags() | Cmp2->getFlags();
     MatchInfo = [=](MachineIRBuilder &B) {
-      // The fcmp predicates fill the lower part of the enum.
-      FCmpInst::Predicate Pred = static_cast<FCmpInst::Predicate>(NewPred);
       if (Pred == FCmpInst::FCMP_FALSE &&
           isConstantLegalOrBeforeLegalizer(CmpTy)) {
         auto False = B.buildConstant(CmpTy, 0);

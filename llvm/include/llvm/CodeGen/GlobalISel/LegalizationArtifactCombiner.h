@@ -205,11 +205,12 @@ public:
     Register TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLT DstTy = MRI.getType(DstReg);
-      if (isInstUnsupported({TargetOpcode::G_SEXT_INREG, {DstTy}}))
-        return false;
-      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI);
       LLT SrcTy = MRI.getType(SrcReg);
       uint64_t SizeInBits = SrcTy.getScalarSizeInBits();
+      if (isInstUnsupported(
+              {TargetOpcode::G_SEXT_INREG, {DstTy}, {}, {(int64_t)SizeInBits}}))
+        return false;
+      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI);
       if (DstTy != MRI.getType(TruncSrc))
         TruncSrc = Builder.buildAnyExtOrTrunc(DstTy, TruncSrc).getReg(0);
       // Elide G_SEXT_INREG if possible. This is similar to eliding G_AND in

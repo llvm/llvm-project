@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
@@ -132,9 +133,15 @@ struct LegalityQuery {
   /// memory type for each MMO.
   ArrayRef<MemDesc> MMODescrs;
 
+  ArrayRef<int64_t> Immediates;
+  ArrayRef<CmpInst::Predicate> Predicates;
+
   constexpr LegalityQuery(unsigned Opcode, ArrayRef<LLT> Types,
-                          ArrayRef<MemDesc> MMODescrs = {})
-      : Opcode(Opcode), Types(Types), MMODescrs(MMODescrs) {}
+                          ArrayRef<MemDesc> MMODescrs = {},
+                          ArrayRef<int64_t> Immediates = {},
+                          ArrayRef<CmpInst::Predicate> Predicates = {})
+      : Opcode(Opcode), Types(Types), MMODescrs(MMODescrs),
+        Immediates(Immediates), Predicates(Predicates) {}
 
   LLVM_ABI raw_ostream &print(raw_ostream &OS) const;
 };
@@ -370,6 +377,25 @@ LLVM_ABI LegalityPredicate numElementsNotPow2(unsigned TypeIdx);
 /// stronger.
 LLVM_ABI LegalityPredicate
 atomicOrderingAtLeastOrStrongerThan(unsigned MMOIdx, AtomicOrdering Ordering);
+
+/// True iff the immediate at the given index has the specified value.
+LLVM_ABI LegalityPredicate immIs(unsigned ImmIdx, int64_t Imm);
+/// True iff the immediate at the given index has one of the specified values.
+LLVM_ABI LegalityPredicate immInSet(unsigned ImmIdx,
+                                    std::initializer_list<int64_t> ImmsInit);
+/// True iff the immediate at the given index does not have the specified value.
+LLVM_ABI LegalityPredicate immIsNot(unsigned ImmIdx, int64_t Imm);
+
+/// True iff the predicate at the given index is the specfied predicate
+LLVM_ABI LegalityPredicate predicateIs(unsigned PredIdx,
+                                       CmpInst::Predicate Pred);
+/// True iff the predicate at the given index is one of the specified predicates
+LLVM_ABI LegalityPredicate predicateInSet(
+    unsigned PredIdx, std::initializer_list<CmpInst::Predicate> PredsInit);
+/// True iff the predicate at the given index is not the specified predicate
+LLVM_ABI LegalityPredicate predicateIsNot(unsigned PredIdx,
+                                          CmpInst::Predicate Pred);
+
 } // end namespace LegalityPredicates
 
 namespace LegalizeMutations {

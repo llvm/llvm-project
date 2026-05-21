@@ -20,6 +20,7 @@
 
 using namespace llvm;
 using namespace LegalizeActions;
+using namespace LegalityPredicates;
 
 WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
     const WebAssemblySubtarget &ST) {
@@ -76,10 +77,17 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .clampScalar(0, s32, s32)
       .clampScalar(1, s64, s64);
 
-  getActionDefinitionsBuilder(G_SEXT_INREG)
-      .customFor(ST.hasSignExt(), {i32, i64})
-      .clampScalar(0, s32, s64)
-      .lower();
+  {
+    LegalizeRuleSet &Builder = getActionDefinitionsBuilder(G_SEXT_INREG);
+
+    if (ST.hasSignExt())
+      Builder.legalIf(
+          all(typeInSet(0, {i32, i64}),
+              LegalityPredicates::any(immInSet(0, {8, 16}),
+                                      all(typeIs(0, i64), immIs(0, 32)))));
+
+    Builder.clampScalar(0, s32, s64).lower();
+  }
 
   getActionDefinitionsBuilder({G_FCONSTANT, G_FABS, G_FNEG, G_FCEIL, G_FFLOOR,
                                G_INTRINSIC_TRUNC, G_FNEARBYINT, G_FRINT,
@@ -110,20 +118,6 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
   switch (MI.getOpcode()) {
-  case TargetOpcode::G_SEXT_INREG: {
-    assert(MI.getOperand(2).isImm() && "Expected immediate");
-
-    // Mark only 8/16/32-bit SEXT_INREG as legal
-    auto [DstType, SrcType] = MI.getFirst2LLTs();
-    auto ExtFromWidth = MI.getOperand(2).getImm();
-
-    if (ExtFromWidth == 8 || ExtFromWidth == 16 ||
-        (DstType.getScalarSizeInBits() == 64 && ExtFromWidth == 32)) {
-      return true;
-    }
-
-    return Helper.lower(MI, 0, DstType) != LegalizerHelper::UnableToLegalize;
-  }
   default:
     break;
   }

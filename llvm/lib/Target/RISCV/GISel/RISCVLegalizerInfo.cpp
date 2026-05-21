@@ -178,10 +178,18 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder(G_TRUNC).alwaysLegal();
 
-  getActionDefinitionsBuilder(G_SEXT_INREG)
-      .customFor({sXLen})
-      .clampScalar(0, sXLen, sXLen)
-      .lower();
+  {
+    LegalityPredicate ValidSextInRegWidth = all(sizeIs(0, 64), immIs(0, 32));
+
+    if (STI.hasStdExtZbb())
+      ValidSextInRegWidth =
+          LegalityPredicates::any(ValidSextInRegWidth, immInSet(0, {8, 16}));
+
+    getActionDefinitionsBuilder(G_SEXT_INREG)
+        .legalIf(all(typeIs(0, sXLen), ValidSextInRegWidth))
+        .clampScalar(0, sXLen, sXLen)
+        .lower();
+  }
 
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
@@ -1494,19 +1502,6 @@ bool RISCVLegalizerInfo::legalizeCustom(
 
     Helper.Observer.changedInstr(MI);
     return true;
-  }
-  case TargetOpcode::G_SEXT_INREG: {
-    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-    int64_t SizeInBits = MI.getOperand(2).getImm();
-    // Source size of 32 is sext.w.
-    if (DstTy.getSizeInBits() == 64 && SizeInBits == 32)
-      return true;
-
-    if (STI.hasStdExtZbb() && (SizeInBits == 8 || SizeInBits == 16))
-      return true;
-
-    return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==
-           LegalizerHelper::Legalized;
   }
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
