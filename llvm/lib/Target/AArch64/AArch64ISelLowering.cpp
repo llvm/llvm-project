@@ -4180,33 +4180,32 @@ static SDValue emitConjunction(SelectionDAG &DAG, SDValue Val,
 
 /// @}
 
+static bool isSupportedExtend(SDValue V) {
+  if (V.getOpcode() == ISD::SIGN_EXTEND_INREG)
+    return true;
+
+  if (V.getOpcode() == ISD::AND)
+    if (ConstantSDNode *MaskCst = dyn_cast<ConstantSDNode>(V.getOperand(1))) {
+      uint64_t Mask = MaskCst->getZExtValue();
+      return (Mask == 0xFF || Mask == 0xFFFF || Mask == 0xFFFFFFFF);
+    }
+  return false;
+}
+
 /// Returns how profitable it is to fold a comparison's operand's shift and/or
 /// extension operations.
-static unsigned getCmpOperandFoldingProfit(SDValue Op) {
-  auto isSupportedExtend = [&](SDValue V) {
-    if (V.getOpcode() == ISD::SIGN_EXTEND_INREG)
-      return true;
-
-    if (V.getOpcode() == ISD::AND)
-      if (ConstantSDNode *MaskCst = dyn_cast<ConstantSDNode>(V.getOperand(1))) {
-        uint64_t Mask = MaskCst->getZExtValue();
-        return (Mask == 0xFF || Mask == 0xFFFF || Mask == 0xFFFFFFFF);
-      }
-
-    return false;
-  };
-
+static unsigned getCmpOperandFoldingProfit(SDValue Op, bool AllowExtend) {
   if (!Op.hasOneUse())
     return 0;
 
-  if (isSupportedExtend(Op))
+  if (AllowExtend && isSupportedExtend(Op))
     return 1;
 
   unsigned Opc = Op.getOpcode();
   if (Opc == ISD::SHL || Opc == ISD::SRL || Opc == ISD::SRA)
     if (ConstantSDNode *ShiftCst = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
       uint64_t Shift = ShiftCst->getZExtValue();
-      if (isSupportedExtend(Op.getOperand(0)))
+      if (AllowExtend && isSupportedExtend(Op.getOperand(0)))
         return (Shift <= 4) ? 2 : 1;
       EVT VT = Op.getValueType();
       if ((VT == MVT::i32 && Shift <= 31) || (VT == MVT::i64 && Shift <= 63))
@@ -4290,7 +4289,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
         }
         break;
       case ISD::SETULE:
-      case ISD::SETUGT: {
+      case ISD::SETUGT:
         if (!C.isAllOnes()) {
           APInt CPlusOne = C + 1;
           if (isLegalCmpImmed(CPlusOne) ||
@@ -4301,7 +4300,10 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
         }
         break;
       }
-      }
+    } else if (C.isZero() && getCmpOperandFoldingProfit(LHS, false) != 0) {
+      // Fold into CMP WZR, reg, shift #amount
+      std::swap(LHS, RHS);
+      CC = ISD::getSetCCSwappedOperands(CC);
     }
   }
 
@@ -4321,8 +4323,8 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     SDValue TheLHS = LHSIsCMN ? LHS.getOperand(1) : LHS;
     SDValue TheRHS = RHSIsCMN ? RHS.getOperand(1) : RHS;
 
-    if (getCmpOperandFoldingProfit(TheLHS) + (LHSIsCMN ? 1 : 0) >
-        getCmpOperandFoldingProfit(TheRHS) + (RHSIsCMN ? 1 : 0)) {
+    if (getCmpOperandFoldingProfit(TheLHS, true) + (LHSIsCMN ? 1 : 0) >
+        getCmpOperandFoldingProfit(TheRHS, true) + (RHSIsCMN ? 1 : 0)) {
       std::swap(LHS, RHS);
       CC = ISD::getSetCCSwappedOperands(CC);
     }

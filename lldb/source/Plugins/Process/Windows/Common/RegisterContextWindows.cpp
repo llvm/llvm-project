@@ -30,7 +30,7 @@ RegisterContextWindows::RegisterContextWindows(Thread &thread,
     : RegisterContext(thread, concrete_frame_idx), m_context(),
       m_context_stale(true) {}
 
-RegisterContextWindows::~RegisterContextWindows() {}
+RegisterContextWindows::~RegisterContextWindows() = default;
 
 void RegisterContextWindows::InvalidateAllRegisters() {
   m_context_stale = true;
