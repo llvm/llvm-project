@@ -92,10 +92,10 @@ static mlir::Value emitX86CompressStore(CIRGenBuilderTy &builder,
   auto resultTy = cast<cir::VectorType>(ops[1].getType());
   mlir::Value maskValue =
       getMaskVecValue(builder, loc, ops[2], resultTy.getSize());
-  
-  return builder.emitIntrinsicCallOp(loc, "masked.compressstore", 
-                                     cir::VoidType::get(builder.getContext()),
-                                     mlir::ValueRange{ops[1], ops[0], maskValue});
+
+  return builder.emitIntrinsicCallOp(
+      loc, "masked.compressstore", cir::VoidType::get(builder.getContext()),
+      mlir::ValueRange{ops[1], ops[0], maskValue});
 }
 
 // Builds the VecShuffleOp for pshuflw and pshufhw x86 builtins.
