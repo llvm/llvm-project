@@ -303,7 +303,7 @@ struct ParenState {
 
   /// The precedence. The outermost level and the levels corresponding to tokens
   /// have prec::Unknown.
-  prec::Level precedence = prec::Unknown;
+  prec::Level Precedence = prec::Unknown;
 
   /// Whether a newline needs to be inserted before the block's closing
   /// brace.

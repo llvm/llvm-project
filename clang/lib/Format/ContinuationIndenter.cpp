@@ -1543,7 +1543,7 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
            Current.MatchingParen->getPreviousNonComment()->is(
                TT_StartOfName)) ||
           (State.Stack.size() == 3 &&
-           State.Stack[1].precedence == prec::Assignment)) {
+           State.Stack[1].Precedence == prec::Assignment)) {
         return State.FirstIndent;
       }
       return State.Stack[State.Stack.size() - 2].LastSpace;
@@ -1997,7 +1997,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     NewParenState.UnindentOperator = false;
     NewParenState.NoLineBreak =
         NewParenState.NoLineBreak || CurrentState.NoLineBreakInOperand;
-    NewParenState.precedence = PrecedenceLevel;
+    NewParenState.Precedence = PrecedenceLevel;
 
     // Don't propagate AvoidBinPacking into subexpressions of arg/param lists.
     if (PrecedenceLevel > prec::Comma)
