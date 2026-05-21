@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
 add_bolt_unittest(ProfileTests
   DataAggregator.cpp
   PerfSpeEvents.cpp
+  PerfScriptsData.cpp
 
   DISABLE_LLVM_LINK_LLVM_DYLIB
   )

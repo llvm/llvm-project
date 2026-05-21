@@ -93,6 +93,7 @@ private:
 
   friend struct PerfSpeEventsTestHelper;
   friend struct PreAggregatedTestHelper;
+  friend struct PerfScriptDataTestHelper;
 
   struct PerfBranchSample {
     SmallVector<LBREntry, 32> LBR;
