@@ -63,6 +63,12 @@ functions:
     return_type: _Noreturn void
     arguments:
       - type: int
+  - name: alarm
+    standards:
+      - posix
+    return_type: unsigned int
+    arguments:
+      - type: unsigned int
   - name: access
     standards:
       - posix
