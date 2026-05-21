@@ -40,7 +40,9 @@ def mappings(f):
         if "b" in group_1: group_1 = group_1[2:]
         from_char = int(group_1, 16)
         to_char = int(m.group(2), 16)
-        from_name = m.group(3)
+        group_3 = m.group(3)
+        if "\\n" in group_3: group_3 = group_3[:-3]
+        from_name = group_3
 
         if from_char <= previous_from:
             raise Exception("Duplicate or unsorted characters in input")
@@ -68,7 +70,6 @@ def stride(block):
 # shift and the stride between adjecant mappings (if any) is constant.
 def dump_block(b):
     global body
-
     if len(b) == 1:
         # Special case for handling blocks of length 1. We don't even need to
         # emit the "if (C < X) return C" check below as all characters in this
