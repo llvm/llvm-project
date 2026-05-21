@@ -1343,6 +1343,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   case tok::kw_auto:
   case tok::kw_typename:
   case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
   case tok::kw___vector:
   case tok::kw__Accum:
   case tok::kw__Fract:
