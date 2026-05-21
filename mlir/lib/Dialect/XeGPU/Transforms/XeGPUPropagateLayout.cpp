@@ -1744,8 +1744,8 @@ updateControlFlowOps(mlir::OpBuilder &builder,
 /// redirects to `getTemporaryLayout(tiedInit)` on the parent op. Without
 /// writing the entry-operand layout back here, that lookup returns null even
 /// when backward propagation has fully determined the layout (e.g. from a
-/// downstream `xegpu.dpas` anchor through a `scf.yield` back-edge), and
-/// downstream vector consumers are treated as having a layout-less producer.
+/// downward `xegpu.dpas` anchor through a `scf.yield` back-edge), and
+/// vector consumers are treated as having a layout-less producer.
 ///
 /// Written against `RegionBranchOpInterface` so it covers loops, `scf.if`,
 /// `scf.while`, and any other op implementing the interface symmetrically.
