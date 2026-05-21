@@ -405,14 +405,25 @@ void test_shadowing() {
   auto [a, b] = Point{1, 2};
 #pragma omp parallel private(a)
   {
-  use(a);
-  {
-    auto [a, b] = Point{10, 20};
+    use(a);
+    {
+      auto [a, b] = Point{10, 20};
+      use(a);
+    }
     use(a);
   }
   use(a);
+}
+
+void test_simd_private_then_parallel() {
+  Point p{1,2};
+  auto [a,b] = p;
+#pragma omp simd private(a)
+  for (int i=0;i<10;++i) a += i;
+#pragma omp parallel
+  {
+    use(a);
   }
-  use(a);
 }
 
 int main() {
@@ -442,6 +453,7 @@ int main() {
   test_mixed_dsa();
   test_static_bindings();
   test_shadowing();
+  test_simd_private_then_parallel();
   return 0;
 }
 
@@ -2171,6 +2183,53 @@ int main() {
 // CHECK:    ret void
 //
 //
+// CHECK-LABEL: define dso_local void @_Z31test_simd_private_then_parallelv(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P:%.*]], ptr align 4 @__const._Z31test_simd_private_then_parallelv.p, i64 8, i1 false)
+// CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP0:%.*]], ptr align 4 [[P]], i64 8, i1 false)
+// CHECK:    store i32 0, ptr [[DOTOMP_IV:%.*]], align 4
+// CHECK:    br label %[[OMP_INNER_FOR_COND:.*]]
+// CHECK:       [[OMP_INNER_FOR_COND]]:
+// CHECK:    [[TMP1:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP76:![0-9]+]]
+// CHECK:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 10
+// CHECK:    br i1 [[CMP]], label %[[OMP_INNER_FOR_BODY:.*]], label %[[OMP_INNER_FOR_END:.*]]
+// CHECK:       [[OMP_INNER_FOR_BODY]]:
+// CHECK:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP76]]
+// CHECK:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], 1
+// CHECK:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
+// CHECK:    store i32 [[ADD]], ptr [[I:%.*]], align 4, !llvm.access.group [[ACC_GRP76]]
+// CHECK:    [[TMP3:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP76]]
+// CHECK:    [[TMP4:%.*]] = load i32, ptr [[A:%.*]], align 4, !llvm.access.group [[ACC_GRP76]]
+// CHECK:    [[ADD1:%.*]] = add nsw i32 [[TMP4]], [[TMP3]]
+// CHECK:    store i32 [[ADD1]], ptr [[A]], align 4, !llvm.access.group [[ACC_GRP76]]
+// CHECK:    br label %[[OMP_BODY_CONTINUE:.*]]
+// CHECK:       [[OMP_BODY_CONTINUE]]:
+// CHECK:    br label %[[OMP_INNER_FOR_INC:.*]]
+// CHECK:       [[OMP_INNER_FOR_INC]]:
+// CHECK:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP76]]
+// CHECK:    [[ADD2:%.*]] = add nsw i32 [[TMP5]], 1
+// CHECK:    store i32 [[ADD2]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP76]]
+// CHECK:    br label %[[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP77:![0-9]+]]
+// CHECK:       [[OMP_INNER_FOR_END]]:
+// CHECK:    store i32 10, ptr [[I]], align 4
+// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z31test_simd_private_then_parallelv.omp_outlined, ptr [[TMP0]])
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define internal void @_Z31test_simd_private_then_parallelv.omp_outlined(
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
+// CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
+// CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
+// CHECK:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
+// CHECK:    call void @_Z3usei(i32 noundef [[TMP2]])
+// CHECK:    ret void
+//
+//
 // CHECK-LABEL: define dso_local noundef i32 @main(
 // CHECK-SAME: ) #[[ATTR8:[0-9]+]] {
 // CHECK:  [[ENTRY:.*:]]
@@ -2201,5 +2260,6 @@ int main() {
 // CHECK:    call void @_Z14test_mixed_dsav()
 // CHECK:    call void @_Z20test_static_bindingsv()
 // CHECK:    call void @_Z14test_shadowingv()
+// CHECK:    call void @_Z31test_simd_private_then_parallelv()
 // CHECK:    ret i32 0
 //
