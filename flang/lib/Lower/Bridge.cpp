@@ -2539,9 +2539,10 @@ private:
       return;
     }
 
-    // Loops with induction variables inside OpenACC compute constructs
-    // need special handling to ensure that the IVs are privatized.
-    if (Fortran::lower::isInsideOpenACCComputeConstruct(*builder)) {
+    // Loops with induction variables inside OpenACC compute constructs or
+    // explicit `!$acc routine` procedures need special handling to ensure that
+    // the IVs are privatized.
+    if (Fortran::lower::shouldLowerDoConstructAsAccLoop(*builder)) {
       // Open up a new scope for the loop variables.
       localSymbols.pushScope();
       llvm::scope_exit scopeGuard([&]() { localSymbols.popScope(); });
@@ -3973,7 +3974,7 @@ private:
           mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
           builder->setInsertionPointToStart(builder->getAllocaBlock());
           ivValue = builder->createTemporaryAlloc(
-              loc, idxTy, toStringRef(name.symbol->name()));
+              loc, genType(*name.symbol), toStringRef(name.symbol->name()));
           builder->restoreInsertionPoint(insPt);
         }
 
@@ -4057,8 +4058,9 @@ private:
 
     if (crtEval->lowerAsStructured()) {
       crtEval = &crtEval->getFirstNestedEvaluation();
-      for (int64_t i = 1; i < nestedLoops; i++)
-        crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
+      if (!outerDoConstruct->IsDoConcurrent())
+        for (int64_t i = 1; i < nestedLoops; i++)
+          crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
     }
 
     // Generate loop body

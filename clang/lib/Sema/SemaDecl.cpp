@@ -7257,7 +7257,6 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
   checkHybridPatchableAttr(S, ND);
   checkInheritableAttr(S, ND);
   checkLifetimeBoundAttr(S, ND);
-  checkModularFormatAttr(S, ND);
 }
 
 static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
@@ -11080,6 +11079,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   checkAttributesAfterMerging(*this, *NewFD);
 
   AddKnownFunctionAttributes(NewFD);
+  // The above can add the format attribute for known builtin/library functions
+  // which is required by the modular_format attribute, thus
+  // validate modular_format now after those attributes have been added.
+  checkModularFormatAttr(*this, *NewFD);
 
   if (NewFD->hasAttr<OverloadableAttr>() &&
       !NewFD->getType()->getAs<FunctionProtoType>()) {
@@ -18543,6 +18546,27 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
             S->isDeclScope(PrevDecl)) {
           Diag(NameLoc, diag::ext_member_redeclared);
           Diag(PrevTagDecl->getLocation(), diag::note_previous_declaration);
+        }
+
+        // C++ [class.local]p3:
+        //   A class nested within a local class is a local class. A member of
+        //   a local class X shall be declared only in the definition of X or,
+        //   if the member is a nested class, in the nearest enclosing block
+        //   scope of X.
+        if (TUK == TagUseKind::Definition && SS.isValid()) {
+          if (const auto *OutermostClass = dyn_cast<CXXRecordDecl>(PrevDecl)) {
+            while (const auto *ParentClass =
+                       dyn_cast<CXXRecordDecl>(OutermostClass->getParent()))
+              OutermostClass = ParentClass;
+
+            if (OutermostClass->isLocalClass() &&
+                !S->isDeclScope(OutermostClass)) {
+              Diag(NameLoc, diag::err_local_nested_class_invalid_scope)
+                  << Name << OutermostClass;
+              Diag(OutermostClass->getLocation(), diag::note_defined_here)
+                  << OutermostClass;
+            }
+          }
         }
 
         if (!Invalid) {

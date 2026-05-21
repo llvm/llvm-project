@@ -560,6 +560,10 @@ public:
   // Returns Triple without the OSs version.
   llvm::Triple getTripleWithoutOSVersion() const;
 
+  /// Returns the target-specific path for Flang's intrinsic modules in the
+  /// resource directory if it exists.
+  std::optional<std::string> getDefaultIntrinsicModuleDir() const;
+
   // Returns the target specific runtime path if it exists.
   std::optional<std::string> getRuntimePath() const;
 
@@ -843,7 +847,9 @@ public:
                                 llvm::opt::ArgStringList &CmdArgs) const {}
 
   /// Return sanitizers which are available in this toolchain.
-  virtual SanitizerMask getSupportedSanitizers() const;
+  virtual SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const;
 
   /// Return sanitizers which are enabled by default.
   virtual SanitizerMask getDefaultSanitizers() const {

@@ -759,10 +759,9 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
     VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
     VPBlockUtils::connectBlocks(VPBB1, VPBB2);
 
-    auto *WidenPhi = new VPWidenPHIRecipe({});
     IntegerType *Int32 = IntegerType::get(C, 32);
     VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-    WidenPhi->addOperand(Val);
+    auto *WidenPhi = new VPWidenPHIRecipe(ArrayRef<VPValue *>{Val});
     VPBB2->appendRecipe(WidenPhi);
 
     VPBasicBlock *VPBBNew = Plan.createVPBasicBlock("VPBBNew");
@@ -781,11 +780,9 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
                                               "R1", VPBB2, VPBB2);
     VPBlockUtils::connectBlocks(VPBB1, R1);
 
-    auto *WidenPhi = new VPWidenPHIRecipe({});
     IntegerType *Int32 = IntegerType::get(C, 32);
     VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-    WidenPhi->addOperand(Val);
-    WidenPhi->addOperand(Val);
+    auto *WidenPhi = new VPWidenPHIRecipe({Val, Val});
     VPBB2->appendRecipe(WidenPhi);
 
     VPBasicBlock *VPBBNew = Plan.createVPBasicBlock("VPBBNew");
@@ -1735,9 +1732,10 @@ TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
 } // namespace
 
 struct VPDoubleValueDef : public VPRecipeBase {
-  VPDoubleValueDef(ArrayRef<VPValue *> Operands) : VPRecipeBase(99, Operands) {
-    new VPMultiDefValue(this);
-    new VPMultiDefValue(this);
+  VPDoubleValueDef(ArrayRef<VPValue *> Operands, Type *Ty)
+      : VPRecipeBase(99, Operands) {
+    new VPMultiDefValue(this, /*UV=*/nullptr, Ty);
+    new VPMultiDefValue(this, /*UV=*/nullptr, Ty);
   }
 
   VPRecipeBase *clone() override { return nullptr; }
@@ -1756,9 +1754,10 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
   // directions.
 
   // Create a new VPRecipeBase which defines 2 values and has 2 operands.
+  LLVMContext C;
   VPInstruction Op0(VPInstruction::StepVector, {});
   VPInstruction Op1(VPInstruction::VScale, {});
-  VPDoubleValueDef DoubleValueDef({&Op0, &Op1});
+  VPDoubleValueDef DoubleValueDef({&Op0, &Op1}, IntegerType::get(C, 32));
 
   // Create a new users of the defined values.
   VPInstruction I1(Instruction::Add,
@@ -1879,6 +1878,39 @@ TEST_F(VPInstructionTest, VPSymbolicValueAddUserAfterMaterialization) {
   EXPECT_DEATH(I->addOperand(VF), "accessing materialized symbolic value");
 }
 #endif
+
+TEST_F(VPRecipeTest, UFVScaleUserBeforeMaterialization) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Header = Plan.createVPBasicBlock("vector.header");
+  VPBasicBlock *Latch = Plan.createVPBasicBlock("vector.latch");
+  VPRegionBlock *LoopRegion =
+      Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc::getUnknown(),
+                            "vector.loop", Header, Latch);
+  VPBlockUtils::connectBlocks(Header, Latch);
+  VPBlockUtils::connectBlocks(Plan.getEntry(), LoopRegion);
+  VPBlockUtils::connectBlocks(LoopRegion, Plan.getScalarHeader());
+
+  auto *VScale = new VPInstruction(VPInstruction::VScale, {});
+  Plan.getVectorPreheader()->appendRecipe(VScale);
+
+  VPValue *UF = &Plan.getUF();
+  auto *Step = new VPInstruction(Instruction::Mul, {VScale, UF},
+                                 VPIRFlags::getDefaultFlags(Instruction::Mul));
+  Plan.getVectorPreheader()->appendRecipe(Step);
+
+  auto *Increment = new VPInstruction(
+      Instruction::Add, {LoopRegion->getCanonicalIV(), Step},
+      VPIRFlags::WrapFlagsTy(LoopRegion->hasCanonicalIVNUW(), false), {},
+      DebugLoc::getUnknown(), "index.next");
+  Latch->appendRecipe(Increment);
+
+  auto *Br = new VPInstruction(VPInstruction::BranchOnCount,
+                               {Increment, &Plan.getVectorTripCount()});
+  Latch->appendRecipe(Br);
+
+  Plan.getVFxUF().markMaterialized();
+  EXPECT_EQ(Increment, LoopRegion->getOrCreateCanonicalIVIncrement());
+}
 
 } // namespace
 } // namespace llvm

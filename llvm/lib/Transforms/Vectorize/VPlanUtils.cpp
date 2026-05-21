@@ -750,7 +750,9 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
 
     VPSymbolicValue &UF = Plan.getUF();
     if (!UF.isMaterialized())
-      return Step == &UF;
+      return Step == &UF ||
+             match(Step, m_c_Mul(m_Specific(&Plan.getUF()),
+                                 m_VPInstruction<VPInstruction::VScale>()));
 
     unsigned ConcreteUF = Plan.getConcreteUF();
     // Fixed VF: step is just the concrete UF.
