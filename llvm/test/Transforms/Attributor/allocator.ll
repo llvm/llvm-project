@@ -54,10 +54,10 @@ define dso_local void @positive_malloc_1(ptr noundef %val) #0 {
 ; CHECK-NEXT:    store ptr [[VAL]], ptr [[VAL_ADDR]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 noundef 12)
 ; CHECK-NEXT:    store ptr [[CALL]], ptr [[F]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VAL]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VAL]], align 4, !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], 10
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[CALL]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
@@ -91,9 +91,9 @@ define dso_local void @positive_malloc_2(ptr noundef %val) #0 {
 ; CHECK-NEXT:    store ptr [[VAL]], ptr [[VAL_ADDR]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 noundef 60)
 ; CHECK-NEXT:    store ptr [[CALL]], ptr [[F]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VAL]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VAL]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[CALL]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
@@ -134,7 +134,7 @@ define dso_local ptr @negative_test_escaping_pointer(i32 noundef %val) #0 {
 ; CHECK-NEXT:    store i32 2, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 10, [[VAL]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[F]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP2]], [[ADD]]
 ; CHECK-NEXT:    store i32 [[ADD2]], ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[F]], align 8
@@ -240,9 +240,9 @@ define dso_local void @baz(ptr noundef %val, i32 noundef %arrayLength) #0 {
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 4, [[CONV]]
 ; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 noundef [[MUL]])
 ; CHECK-NEXT:    store ptr [[CALL]], ptr [[F]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VAL]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VAL]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[CALL]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
@@ -308,7 +308,7 @@ define dso_local void @positive_test_reduce_array_allocation_2() #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4
 ; CHECK-NEXT:    [[IDXPROM4:%.*]] = sext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[CALL]], i64 [[IDXPROM4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[TMP6]], 1
 ; CHECK-NEXT:    store i32 [[ADD6]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC7:%.*]]
@@ -328,7 +328,7 @@ define dso_local void @positive_test_reduce_array_allocation_2() #0 {
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[I]], align 4
 ; CHECK-NEXT:    [[IDXPROM13:%.*]] = sext i32 [[TMP9]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, ptr [[CALL]], i64 [[IDXPROM13]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX14]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX14]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[CALL15:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP10]])
 ; CHECK-NEXT:    br label [[FOR_INC16:%.*]]
 ; CHECK:       for.inc16:
@@ -475,7 +475,7 @@ define internal void @pthread_allocation_should_be_reduced(ptr %arg) {
 ; CGSCC-LABEL: define internal void @pthread_allocation_should_be_reduced
 ; CGSCC-SAME: (ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(12) [[ARG:%.*]]) {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARG]], align 4
+; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARG]], align 4, !invariant.load [[META0]]
 ; CGSCC-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP0]])
 ; CGSCC-NEXT:    ret void
 ;
@@ -515,9 +515,11 @@ declare noalias ptr @malloc(i64 noundef) #1
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; TUNIT: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
-; TUNIT: [[META1]] = !{i64 2, i64 3, i1 false}
+; TUNIT: [[META0]] = !{}
+; TUNIT: [[META1:![0-9]+]] = !{[[META2:![0-9]+]]}
+; TUNIT: [[META2]] = !{i64 2, i64 3, i1 false}
 ;.
-; CGSCC: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
-; CGSCC: [[META1]] = !{i64 2, i64 3, i1 false}
+; CGSCC: [[META0]] = !{}
+; CGSCC: [[META1:![0-9]+]] = !{[[META2:![0-9]+]]}
+; CGSCC: [[META2]] = !{i64 2, i64 3, i1 false}
 ;.
