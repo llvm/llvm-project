@@ -49,11 +49,9 @@ Status HostThreadWindows::Join(lldb::thread_result_t *result) {
 }
 
 Status HostThreadWindows::Cancel() {
-  Status error;
-
-  DWORD result = ::QueueUserAPC(::ExitThreadProxy, m_thread, 0);
-  error = Status(result, eErrorTypeWin32);
-  return error;
+  if (!::QueueUserAPC(&ExitThreadProxy, m_thread, 0))
+    return Status(::GetLastError(), eErrorTypeWin32);
+  return Status();
 }
 
 lldb::tid_t HostThreadWindows::GetThreadId() const {

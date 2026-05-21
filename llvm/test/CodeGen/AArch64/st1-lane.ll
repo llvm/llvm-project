@@ -108,21 +108,13 @@ define void @v8bf16(<8 x bfloat> %a, ptr %p1, ptr %p2) {
 
 
 define ptr @post_v2i64(<2 x i64> %a, ptr %p1, ptr %p2) {
-; CHECK-SD-LABEL: post_v2i64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    str d0, [x0]
-; CHECK-SD-NEXT:    str d1, [x1], #8
-; CHECK-SD-NEXT:    mov x0, x1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: post_v2i64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    str d0, [x0]
-; CHECK-GI-NEXT:    str d1, [x1], #8
-; CHECK-GI-NEXT:    mov x0, x1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: post_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov d1, v0.d[1]
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    str d1, [x1], #8
+; CHECK-NEXT:    mov x0, x1
+; CHECK-NEXT:    ret
   %s1 = shufflevector <2 x i64> %a, <2 x i64> poison, <1 x i32> <i32 0>
   store <1 x i64> %s1, ptr %p1, align 8
   %s2 = shufflevector <2 x i64> %a, <2 x i64> poison, <1 x i32> <i32 1>
@@ -134,7 +126,7 @@ define ptr @post_v2i64(<2 x i64> %a, ptr %p1, ptr %p2) {
 define ptr @post_v4i32(<4 x i32> %a, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: post_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    str d1, [x1], #8
 ; CHECK-NEXT:    mov x0, x1
@@ -150,7 +142,7 @@ define ptr @post_v4i32(<4 x i32> %a, ptr %p1, ptr %p2) {
 define ptr @post_v8i16(<8 x i16> %a, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: post_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    str d1, [x1], #8
 ; CHECK-NEXT:    mov x0, x1
@@ -166,7 +158,7 @@ define ptr @post_v8i16(<8 x i16> %a, ptr %p1, ptr %p2) {
 define ptr @post_v16i8(<16 x i8> %a, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: post_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    str d1, [x1], #8
 ; CHECK-NEXT:    mov x0, x1
@@ -180,21 +172,13 @@ define ptr @post_v16i8(<16 x i8> %a, ptr %p1, ptr %p2) {
 }
 
 define ptr @post_v2f64(<2 x double> %a, ptr %p1, ptr %p2) {
-; CHECK-SD-LABEL: post_v2f64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    str d0, [x0]
-; CHECK-SD-NEXT:    str d1, [x1], #8
-; CHECK-SD-NEXT:    mov x0, x1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: post_v2f64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    str d0, [x0]
-; CHECK-GI-NEXT:    str d1, [x1], #8
-; CHECK-GI-NEXT:    mov x0, x1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: post_v2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov d1, v0.d[1]
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    str d1, [x1], #8
+; CHECK-NEXT:    mov x0, x1
+; CHECK-NEXT:    ret
   %s1 = shufflevector <2 x double> %a, <2 x double> poison, <1 x i32> <i32 0>
   store <1 x double> %s1, ptr %p1, align 8
   %s2 = shufflevector <2 x double> %a, <2 x double> poison, <1 x i32> <i32 1>
@@ -206,7 +190,7 @@ define ptr @post_v2f64(<2 x double> %a, ptr %p1, ptr %p2) {
 define ptr @post_v4f32(<4 x float> %a, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: post_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    str d1, [x1], #8
 ; CHECK-NEXT:    mov x0, x1
@@ -222,7 +206,7 @@ define ptr @post_v4f32(<4 x float> %a, ptr %p1, ptr %p2) {
 define ptr @post_v8f16(<8 x half> %a, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: post_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    str d1, [x1], #8
 ; CHECK-NEXT:    mov x0, x1
@@ -238,7 +222,7 @@ define ptr @post_v8f16(<8 x half> %a, ptr %p1, ptr %p2) {
 define ptr @post_v8bf16(<8 x bfloat> %a, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: post_v8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    str d1, [x1], #8
 ; CHECK-NEXT:    mov x0, x1

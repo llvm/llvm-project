@@ -158,7 +158,9 @@ struct NameUniquer {
 
   /// True if \p uniquedName denotes module-scope data (variable, named
   /// constant, or common block), as opposed to procedures, types, or other
-  /// symbols that may still carry a module prefix in the mangling.
+  /// symbols that may still carry a module prefix in the mangling. This
+  /// excludes symbols nested in a procedure according to the mangled prefix
+  /// (including \c SAVE locals in module procedures).
   static bool isModuleScopeDataUniquedName(llvm::StringRef uniquedName);
 
   /// Given a mangled derived type name, get the name of the related derived
