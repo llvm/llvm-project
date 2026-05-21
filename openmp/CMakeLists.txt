@@ -162,11 +162,6 @@ add_dependencies(install-openmp-stripped openmp)
 
 if(LIBOMP_FORTRAN_MODULES)
   add_subdirectory(module)
-else()
-  message(STATUS "Building omp_lib.mod disabled by LIBOMP_FORTRAN_MODULES='${LIBOMP_FORTRAN_MODULES}'; libomp-mod does nothing")
-  add_custom_target(libomp-mod
-    COMMAND ${CMAKE_COMMAND} -E echo "Building omp_lib.mod disabled by LIBOMP_FORTRAN_MODULES=${LIBOMP_FORTRAN_MODULES}"
-  )
 endif()
 
 # Use the current compiler target to determine the appropriate runtime to build.

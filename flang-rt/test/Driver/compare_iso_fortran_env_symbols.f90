@@ -1,4 +1,5 @@
 ! UNSUPPORTED: offload-cuda, system-windows
+! REQUIRES: fortran-modules
 
 ! RUN: %flang -c -funsigned %S/../../lib/runtime/iso_fortran_env_impl.f90 -o %t.f90.o
 

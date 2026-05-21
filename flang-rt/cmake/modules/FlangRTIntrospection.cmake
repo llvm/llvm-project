@@ -1,4 +1,5 @@
 include(CMakePushCheckState)
+include(CheckFortranSourceCompiles)
 
 # Check whether the Fortran compiler supports real(16)/quadmath types
 #

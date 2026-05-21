@@ -107,3 +107,6 @@ config.substitutions.append(("%libdir", config.flang_rt_output_resource_lib_dir)
 # For CUDA offloading, additional steps (device linking) and libraries (cudart) are needed.
 if config.flang_rt_experimental_offload_support == "CUDA":
     config.available_features.add("offload-cuda")
+
+if config.flang_rt_fortran_modules:
+    config.available_features.add("fortran-modules")

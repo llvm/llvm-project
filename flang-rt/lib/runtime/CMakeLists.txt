@@ -265,41 +265,62 @@ if (TARGET FortranFloat128MathILib)
   endif ()
 endif ()
 
-if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
-  # If not compiling the library, only build the modules.
-  set(sources ${module_sources})
-elseif ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
-  set(sources ${gpu_sources} ${module_sources})
-else ()
-  set(sources ${supported_sources} ${host_sources} ${module_sources} ${f128_sources})
-endif ()
-
-
-# check-flang depends on flang-rt-mod to build intrinsic modules
-add_custom_target(flang-rt-mod)
-
-if (NOT WIN32)
+# Build module files if requested
+if (FLANG_RT_FORTRAN_MODULES)
   # CMake ignores intrinsic USE dependencies
   # CMake has an option Fortran_BUILDING_INSTRINSIC_MODULES/Fortran_BUILDING_INTRINSIC_MODULES
   # to disable this behavior, unfortunately it does not work with Ninja
   # (https://gitlab.kitware.com/cmake/cmake/-/issues/26803)
   # As a workaround, we build those intrinsic modules first such that the main
   # runtime can depend on it.
-  add_flangrt_library(flang_rt.intrinsics.obj OBJECT
+  add_flangrt_library(flang_rt.mod.intrinsics OBJECT
     ${intrinsics_sources}
   )
+  flang_module_target(flang_rt.mod.intrinsics PUBLIC)
 
   # This barrier exists to force all of the intrinsic modules of
   # flang_rt.intrinsics.obj to be built before anything that depends on it.
   # Without it, CMake/Ninja seem to think that the modules of
   # flang_rt.intrinsics.obj can be built concurrently to those in
   # flang_rt.runtime.
-  add_custom_target(flang_rt.intrinsics)
-  add_dependencies(flang_rt.intrinsics flang_rt.intrinsics.obj)
+  # An actually COMMAND seems to be necessary under Windows.
+  add_custom_target(flang_rt.mod.intrinsics.barrier
+    COMMAND ${CMAKE_COMMAND} -E true
+  )
+  add_dependencies(flang_rt.mod.intrinsics.barrier flang_rt.mod.intrinsics)
 
+  # The modules themselves
+  add_flangrt_library(flang_rt.mod OBJECT
+    ${module_sources}
+  )
+  add_dependencies(flang_rt.mod flang_rt.mod.intrinsics.barrier)
+  flang_module_target(flang_rt.mod PUBLIC)
+
+  add_custom_target(flang-rt-mod
+    COMMAND ${CMAKE_COMMAND} -E true
+  )
+  add_dependencies(flang-rt-mod flang_rt.mod)
+endif ()
+
+
+# Skip building libraries if not requested
+if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
+  return ()
+endif ()
+
+if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
+  set(sources ${gpu_sources})
+elseif(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
+  set(sources ${supported_sources})
+else ()
+  set(sources ${supported_sources} ${host_sources} ${f128_sources})
+endif ()
+
+
+if (NOT WIN32)
   add_flangrt_library(flang_rt.runtime STATIC SHARED
-    ${sources} $<TARGET_OBJECTS:flang_rt.intrinsics.obj>
-    LINK_LIBRARIES flang_rt.intrinsics.obj ${Backtrace_LIBRARY}
+    ${sources}
+    LINK_LIBRARIES ${Backtrace_LIBRARY}
     INSTALL_WITH_TOOLCHAIN
     ADDITIONAL_HEADERS ${public_headers} ${private_headers}
   )
@@ -307,17 +328,10 @@ if (NOT WIN32)
   enable_cuda_compilation(flang_rt.runtime "${supported_sources}")
 
   # Select a default runtime, which is used for unit and regression tests.
-  if (FLANG_RT_INCLUDE_TESTS)
+  if (TARGET flang_rt.runtime.default)
     get_target_property(default_target flang_rt.runtime.default ALIASED_TARGET)
     add_library(flang_rt.runtime.unittest ALIAS "${default_target}")
   endif ()
-
-  # Select a target that compiles the sources to build the public module files.
-  get_target_property(compile_target flang_rt.runtime.compile ALIASED_TARGET)
-  flang_module_target(flang_rt.intrinsics.obj PUBLIC)
-  flang_module_target(${compile_target} PUBLIC)
-  add_dependencies(${compile_target} flang_rt.intrinsics)
-  add_dependencies(flang-rt-mod flang_rt.intrinsics ${compile_target})
 else()
   # Target for building all versions of the runtime
   add_custom_target(flang_rt.runtime)
@@ -325,22 +339,12 @@ else()
 
   function (add_win_flangrt_runtime libtype suffix msvc_lib)
     set(name "flang_rt.runtime.${suffix}")
-
-    add_flangrt_library(${name}.intrinsics.obj OBJECT
-      ${intrinsics_sources}
-    )
-    add_custom_target(${name}.intrinsics
-      COMMAND echo "${name} Dependency barrier"
-    )
-    add_dependencies(${name}.intrinsics ${name}.intrinsics.obj)
-
     add_flangrt_library(${name} ${libtype}
-        ${sources} $<TARGET_OBJECTS:${name}.intrinsics.obj>
+        ${sources}
         ${ARGN}
-        LINK_LIBRARIES ${name}.intrinsics.obj ${Backtrace_LIBRARY}
+        LINK_LIBRARIES ${Backtrace_LIBRARY}
         ADDITIONAL_HEADERS ${public_headers} ${private_headers}
       )
-    get_target_property(compile_target ${name}.compile ALIASED_TARGET)
 
     if (msvc_lib)
       set_target_properties(${name}
@@ -350,19 +354,11 @@ else()
     endif ()
 
     # Setting an unique Fortran_MODULE_DIRECTORY is required for each variant to
-    # write a different .mod file. One of them has to be selected to be the
-    # public module that is to be installed. We select the first.
-    if (_has_public_intrinsics)
-      set(is_public "")
-    else ()
-      set(is_public PUBLIC)
-      add_dependencies(flang-rt-mod ${name}.intrinsics ${compile_target})
-      set(_has_public_intrinsics "YES" PARENT_SCOPE)
-    endif ()
-
-    flang_module_target(${name}.intrinsics.obj ${is_public})
-    flang_module_target(${compile_target} ${is_public})
-    add_dependencies(${compile_target} ${name}.intrinsics)
+    # write a different .mod file.
+    set_target_properties(${name}
+        PROPERTIES
+          Fortran_MODULE_DIRECTORY "module.${suffix}"
+      )
 
     enable_cuda_compilation(${name} "${supported_sources}")
     add_dependencies(flang_rt.runtime ${name})

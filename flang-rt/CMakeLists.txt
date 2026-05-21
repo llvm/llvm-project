@@ -115,7 +115,6 @@ endif ()
 
 # Enable building Fortran modules if Fortran is enabled
 option(FLANG_RT_FORTRAN_MODULES "Build Flang-RT modules" "${RUNTIMES_ENABLE_FORTRAN}")
-
 if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED AND NOT FLANG_RT_FORTRAN_MODULES)
   message(WARNING "LLVM_ENABLE_RUNTIMES=flang-rt, but not building anything")
 endif ()
