@@ -64,9 +64,8 @@ class CallDescriptionConsumer : public ExprEngineConsumer {
     if (!D->hasBody())
       return;
 
-    const StackFrameContext *SFC =
-        Eng.getAnalysisDeclContextManager().getStackFrame(D);
-    const ProgramStateRef State = Eng.getInitialState(SFC);
+    const StackFrame *SF = Eng.getAnalysisDeclContextManager().getStackFrame(D);
+    const ProgramStateRef State = Eng.getInitialState(SF);
 
     // FIXME: Maybe use std::variant and std::visit for these.
     const auto MatcherCreator = []() {
@@ -85,13 +84,13 @@ class CallDescriptionConsumer : public ExprEngineConsumer {
 
     CallEventManager &CEMgr = Eng.getStateManager().getCallEventManager();
     CallEventRef<> Call = [=, &CEMgr]() -> CallEventRef<CallEvent> {
-      CFGBlock::ConstCFGElementRef ElemRef = {SFC->getCallSiteBlock(),
-                                              SFC->getIndex()};
+      CFGBlock::ConstCFGElementRef ElemRef = {SF->getCallSiteBlock(),
+                                              SF->getIndex()};
       if (std::is_base_of<CallExpr, T>::value)
-        return CEMgr.getCall(E, State, SFC, ElemRef);
+        return CEMgr.getCall(E, State, SF, ElemRef);
       if (std::is_same<T, CXXConstructExpr>::value)
         return CEMgr.getCXXConstructorCall(cast<CXXConstructExpr>(E),
-                                           /*Target=*/nullptr, State, SFC,
+                                           /*Target=*/nullptr, State, SF,
                                            ElemRef);
       llvm_unreachable("Only these expressions are supported for now.");
     }();

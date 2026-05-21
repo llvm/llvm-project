@@ -295,6 +295,7 @@ def t2addrmode_imm8s4_pre : T2AddrMode_Imm8s4 {
 def t2am_imm8s4_offset_asmoperand : AsmOperandClass { let Name = "Imm8s4"; }
 def t2am_imm8s4_offset : MemOperand {
   let PrintMethod = "printT2AddrModeImm8s4OffsetOperand";
+  let ParserMatchClass = t2am_imm8s4_offset_asmoperand;
   let EncoderMethod = "getT2ScaledImmOpValue<8,2>";
   let DecoderMethod = "DecodeT2Imm8S4";
 }
@@ -4347,7 +4348,9 @@ def t2HVC : T2XI <(outs), (ins imm0_65535:$imm16), IIC_Br, "hvc.w\t$imm16", []>,
 }
 
 // Alias for HVC without the ".w" optional width specifier
-def : t2InstAlias<"hvc\t$imm16", (t2HVC imm0_65535:$imm16)>;
+def : t2InstAlias<"hvc\t$imm16", (t2HVC imm0_65535:$imm16)> {
+  let Predicates = [IsThumb2, HasVirtualization];
+}
 
 //===----------------------------------------------------------------------===//
 // Non-Instruction Patterns
@@ -4396,6 +4399,9 @@ def t2LDRLIT_ga_pcrel : PseudoInst<(outs rGPR:$dst), (ins i32imm:$addr),
                                         (ARMWrapperPIC tglobaladdr:$addr))]>,
                        Requires<[IsThumb, HasV8MBaseline, DontUseMovtInPic]>;
 }
+
+// Exception Handling
+def : T2Pat<(ARMLocalRecover mcsym:$sym), (t2MOVi32imm mcsym:$sym)>;
 
 // TLS globals
 def : Pat<(ARMWrapperPIC tglobaltlsaddr:$addr),

@@ -33,7 +33,7 @@ define i32 @flsnotconst(i64 %z) {
 ; CHECK-LABEL: @flsnotconst(
 ; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[Z:%.*]], i1 false)
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i64 [[CTLZ]] to i32
-; CHECK-NEXT:    [[GOO:%.*]] = sub nsw i32 64, [[TMP1]]
+; CHECK-NEXT:    [[GOO:%.*]] = sub nuw nsw i32 64, [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[GOO]]
 ;
   %goo = call i32 @flsl(i64 %z)

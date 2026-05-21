@@ -86,8 +86,7 @@ public:
     return Visit(pe->getReplacement());
   }
   mlir::Value VisitCoawaitExpr(CoawaitExpr *s) {
-    cgf.cgm.errorNYI(s->getExprLoc(), "ComplexExprEmitter VisitCoawaitExpr");
-    return {};
+    return cgf.emitCoawaitExpr(*s).getComplexValue();
   }
   mlir::Value VisitCoyieldExpr(CoyieldExpr *s) {
     cgf.cgm.errorNYI(s->getExprLoc(), "ComplexExprEmitter VisitCoyieldExpr");
@@ -155,18 +154,10 @@ public:
     return emitCast(e->getCastKind(), e->getSubExpr(), e->getType());
   }
   mlir::Value VisitCastExpr(CastExpr *e) {
-    if (const auto *ece = dyn_cast<ExplicitCastExpr>(e)) {
-      // Bind VLAs in the cast type.
-      if (ece->getType()->isVariablyModifiedType()) {
-        cgf.cgm.errorNYI(e->getExprLoc(),
-                         "VisitCastExpr Bind VLAs in the cast type");
-        return {};
-      }
-    }
-
+    if (const auto *ece = dyn_cast<ExplicitCastExpr>(e))
+      cgf.cgm.emitExplicitCastExprType(ece);
     if (e->changesVolatileQualification())
       return emitLoadOfLValue(e);
-
     return emitCast(e->getCastKind(), e->getSubExpr(), e->getType());
   }
   mlir::Value VisitCallExpr(const CallExpr *e);
@@ -209,11 +200,11 @@ public:
     return Visit(die->getExpr());
   }
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *e) {
-    CIRGenFunction::RunCleanupsScope scope(cgf);
+    CIRGenFunction::FullExprCleanupScope scope(cgf, e->getSubExpr());
     mlir::Value complexVal = Visit(e->getSubExpr());
     // Defend against dominance problems caused by jumps out of expression
     // evaluation through the shared cleanup block.
-    scope.forceCleanup({&complexVal});
+    scope.exit({&complexVal});
     return complexVal;
   }
   mlir::Value VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
@@ -354,8 +345,7 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
                                             LValue lv, bool isInit) {
   if (lv.getType()->isAtomicType() ||
       (!isInit && cgf.isLValueSuitableForInlineAtomic(lv))) {
-    cgf.cgm.errorNYI(loc, "StoreOfComplex with Atomic LV");
-    return;
+    return cgf.emitAtomicStore(RValue::getComplex(val), lv, isInit);
   }
 
   const Address destAddr = lv.getAddress();
@@ -464,14 +454,16 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
   case CK_Dependent:
     llvm_unreachable("dependent type must be resolved before the CIR codegen");
 
+  // Atomic to non-atomic casts may be more than a no-op for some platforms
+  // and for some types.
+  case CK_NonAtomicToAtomic:
   case CK_NoOp:
   case CK_LValueToRValue:
   case CK_UserDefinedConversion:
     return Visit(op);
 
-  case CK_AtomicToNonAtomic:
-  case CK_NonAtomicToAtomic: {
-    cgf.cgm.errorNYI("ComplexExprEmitter::emitCast Atmoic");
+  case CK_AtomicToNonAtomic: {
+    cgf.cgm.errorNYI("ComplexExprEmitter::emitCast AtomicToNonAtomic");
     return {};
   }
 

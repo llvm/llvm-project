@@ -75,7 +75,6 @@ define void @mask_reuse(ptr %a) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%a>, ir<%iv>
 ; CHECK-NEXT:      EMIT ir<%c0> = icmp sle ir<%iv>, ir<0>
-; CHECK-NEXT:      EMIT ir<%add0> = add ir<%iv>, ir<0>
 ; CHECK-NEXT:    Successor(s): bb1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb1:
@@ -92,7 +91,7 @@ define void @mask_reuse(ptr %a) {
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not ir<%c1>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP5]]>
 ; CHECK-NEXT:      BLEND ir<%phi3> = ir<%add2>/vp<[[VP4]]> ir<%add1>/vp<[[VP6]]>
-; CHECK-NEXT:      EMIT ir<%add3> = add ir<%iv>, ir<3>, ir<%c0>
+; CHECK-NEXT:      EMIT ir<%add3> = add ir<%phi3>, ir<3>, ir<%c0>
 ; CHECK-NEXT:    Successor(s): bb4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb4:
@@ -138,7 +137,7 @@ bb2:
 
 bb3:
   %phi3 = phi i64 [%add1, %bb1], [%add2, %bb2]
-  %add3 = add i64 %iv, 3
+  %add3 = add i64 %phi3, 3
   br label %bb4
 
 bb4:
@@ -170,7 +169,6 @@ define void @optimized_mask(ptr %a) {
 ; CHECK-NEXT:    Successor(s): bb1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb1:
-; CHECK-NEXT:      EMIT ir<%add1> = add ir<%iv>, ir<1>, ir<%c0>
 ; CHECK-NEXT:      EMIT ir<%c1> = icmp sle ir<%iv>, ir<1>, ir<%c0>
 ; CHECK-NEXT:    Successor(s): bb3
 ; CHECK-EMPTY:
@@ -190,7 +188,7 @@ define void @optimized_mask(ptr %a) {
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = logical-and vp<[[VP6]]>, ir<%c3>
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = or vp<[[VP8]]>, vp<[[VP7]]>
 ; CHECK-NEXT:      BLEND ir<%phi4> = ir<%add3>/vp<[[VP8]]> ir<%add2>/vp<[[VP7]]>
-; CHECK-NEXT:      EMIT ir<%add4> = add ir<%iv>, ir<4>, vp<[[VP9]]>
+; CHECK-NEXT:      EMIT ir<%add4> = add ir<%phi4>, ir<4>, vp<[[VP9]]>
 ; CHECK-NEXT:    Successor(s): bb5
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb5:
@@ -200,7 +198,7 @@ define void @optimized_mask(ptr %a) {
 ; CHECK-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = logical-and vp<[[VP6]]>, vp<[[VP12]]>
 ; CHECK-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = or vp<[[VP11]]>, vp<[[VP13]]>
 ; CHECK-NEXT:      BLEND ir<%phi5> = ir<%add6>/vp<[[VP10]]> ir<%add4>/vp<[[VP9]]> ir<%add3>/vp<[[VP13]]>
-; CHECK-NEXT:      EMIT ir<%add5> = add ir<%iv>, ir<5>, vp<[[VP14]]>
+; CHECK-NEXT:      EMIT ir<%add5> = add ir<%phi5>, ir<5>, vp<[[VP14]]>
 ; CHECK-NEXT:    Successor(s): bb7
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb7:
@@ -254,12 +252,12 @@ bb3:
 
 bb4:
   %phi4 = phi i64 [%add2, %bb2], [%add3, %bb3]
-  %add4 = add i64 %iv, 4
+  %add4 = add i64 %phi4, 4
   br label %bb5
 
 bb5:
   %phi5 = phi i64 [%add4, %bb4], [%add3, %bb3], [%add6, %bb6]
-  %add5 = add i64 %iv, 5
+  %add5 = add i64 %phi5, 5
   br label %bb7
 
 bb6:
@@ -287,7 +285,6 @@ define void @switch(ptr %a) {
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%a>, ir<%iv>
 ; CHECK-NEXT:      EMIT ir<%c0> = icmp sle ir<%iv>, ir<0>
-; CHECK-NEXT:      EMIT ir<%add0> = add ir<%iv>, ir<0>
 ; CHECK-NEXT:    Successor(s): bb2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb2:
@@ -313,7 +310,7 @@ define void @switch(ptr %a) {
 ; CHECK-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP13]]>
 ; CHECK-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = or vp<[[VP5]]>, vp<[[VP11]]>
 ; CHECK-NEXT:      BLEND ir<%phi3> = ir<%add2>/vp<[[VP5]]> ir<%add1>/vp<[[VP11]]> ir<%add1>/vp<[[VP11]]>
-; CHECK-NEXT:      EMIT ir<%add3> = add ir<%iv>, ir<3>, vp<[[VP15]]>
+; CHECK-NEXT:      EMIT ir<%add3> = add ir<%phi3>, ir<3>, vp<[[VP15]]>
 ; CHECK-NEXT:    Successor(s): bb4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb4:
@@ -367,7 +364,7 @@ bb2:
 
 bb3:
   %phi3 = phi i64 [%add1, %bb1], [%add1, %bb1], [%add2, %bb2]
-  %add3 = add i64 %iv, 3
+  %add3 = add i64 %phi3, 3
   br label %bb5
 
 bb4:

@@ -5,16 +5,16 @@ using handle_t = __hlsl_resource_t
     [[hlsl::resource_class(UAV)]] [[hlsl::contained_type(int)]];
 
 void test_args(unsigned int x) {
-  // expected-error@+1 {{too few arguments to function call, expected 2, have 1}}
+  // expected-error@+1 {{used type 'unsigned int' where __hlsl_resource_t is required}}
   __builtin_hlsl_resource_getpointer(x);
 
-  // expected-error@+1 {{too many arguments to function call, expected 2, have 3}}
+  // expected-error@+1 {{too many arguments to function call, expected at most 2, have 3}}
   __builtin_hlsl_resource_getpointer(x, x, x);
 
-  // expected-error@+1 {{used type 'unsigned int' where __hlsl_resource_t is required}}
-  __builtin_hlsl_resource_getpointer(x, x);
-
   handle_t res;
+
+  // no error
+  __builtin_hlsl_resource_getpointer(res);
 
   // expected-error@+1 {{used type 'const char *' where integer is required}}
   __builtin_hlsl_resource_getpointer(res, "1");

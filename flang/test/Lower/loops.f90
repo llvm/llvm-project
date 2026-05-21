@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false --enable-delayed-privatization=false -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -mllvm --enable-delayed-privatization=false -o - %s | FileCheck %s
 
 ! CHECK-LABEL: loop_test
 subroutine loop_test
@@ -18,7 +18,7 @@ subroutine loop_test
 
   ! CHECK: fir.do_concurrent.loop (%{{.*}}, %{{.*}}, %{{.*}}) = {{.*}}
   do concurrent (i=1:5, j=1:5, k=1:5) ! shared(a)
-    ! CHECK: fir.coordinate_of
+    ! CHECK: hlfir.designate
     a(i,j,k) = 0
   enddo
   ! CHECK: fir.call @_FortranAioBeginExternalListOutput
@@ -27,7 +27,7 @@ subroutine loop_test
   ! CHECK: fir.do_concurrent.loop (%{{.*}}, %{{.*}}, %{{.*}}) = {{.*}}
   ! CHECK: fir.if
   do concurrent (integer(1)::i=1:5, j=1:5, k=1:5, i.ne.j .and. k.ne.3) shared(a)
-    ! CHECK-COUNT-2: fir.coordinate_of
+    ! CHECK-COUNT-2: hlfir.designate
     a(i,j,k) = a(i,j,k) + 1
   enddo
 
@@ -36,7 +36,7 @@ subroutine loop_test
   do i=1,5
     do j=1,5
       do k=1,5
-        ! CHECK: fir.coordinate_of
+        ! CHECK: hlfir.designate
         asum = asum + a(i,j,k)
       enddo
     enddo
@@ -97,10 +97,7 @@ subroutine lis(n)
   integer, pointer   :: p(:,:,:) ! local_init locality
 
   p => a
-  ! CHECK:     fir.do_loop %arg1 = %c0{{.*}} to %{{.*}} step %c1{{.*}} unordered iter_args(%arg2 = %{{.*}}) -> (!fir.array<?x?xi32>) {
-  ! CHECK:       fir.do_loop %arg3 = %c0{{.*}} to %{{.*}} step %c1{{.*}} unordered iter_args(%arg4 = %arg2) -> (!fir.array<?x?xi32>) {
-  ! CHECK:       }
-  ! CHECK:     }
+  ! CHECK:     hlfir.assign %c0{{.*}} to %{{.*}} : i32, !fir.box<!fir.array<?x?xi32>>
   r = 0
 
   ! CHECK:     fir.do_concurrent {
@@ -116,19 +113,19 @@ subroutine lis(n)
 
   ! CHECK:       fir.do_concurrent.loop (%{{.*}}, %{{.*}}) = (%{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}}) {
   ! CHECK:         fir.if %{{.*}} {
-  ! CHECK:           %[[V_95:[0-9]+]] = fir.alloca !fir.array<?x?xi32>, %{{.*}}, %{{.*}} {bindc_name = "t", pinned, uniq_name = "_QFlisEt"}
-  ! CHECK:           %[[V_96:[0-9]+]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?x?xi32>>> {bindc_name = "p", pinned, uniq_name = "_QFlisEp"}
-  ! CHECK:           fir.store %{{.*}} to %[[V_96]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xi32>>>>
+  ! CHECK:           %[[V_T_ALLOC:[0-9]+]] = fir.alloca !fir.array<?x?xi32>, %{{.*}}, %{{.*}} {bindc_name = "t", pinned, uniq_name = "_QFlisEt"}
+  ! CHECK:           %[[V_T_DECL:.*]]:2 = hlfir.declare %[[V_T_ALLOC]]({{.*}}) {uniq_name = "_QFlisEt"}
+  ! CHECK:           %[[V_P_ALLOC:[0-9]+]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?x?xi32>>> {bindc_name = "p", pinned, uniq_name = "_QFlisEp"}
+  ! CHECK:           fir.store %{{.*}} to %[[V_P_ALLOC]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xi32>>>>
+  ! CHECK:           %[[V_P_DECL:.*]]:2 = hlfir.declare %[[V_P_ALLOC]]
   ! CHECK:           fir.do_loop %arg3 = %{{.*}} to %{{.*}} step %c1{{.*}} iter_args(%arg4 = %{{.*}}) -> (i32) {
   ! CHECK:             fir.do_concurrent {
   ! CHECK:               fir.alloca i32 {bindc_name = "m"}
   ! CHECK:               fir.do_concurrent.loop (%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {
-  ! CHECK:                 fir.load %[[V_96]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xi32>>>>
-  ! CHECK:                 fir.convert %[[V_95]] : (!fir.ref<!fir.array<?x?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+  ! CHECK:                 fir.load %[[V_P_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xi32>>>>
   ! CHECK:               }
   ! CHECK:             }
   ! CHECK:           }
-  ! CHECK:           fir.convert %[[V_95]] : (!fir.ref<!fir.array<?x?xi32>>) -> !fir.ref<!fir.array<?xi32>>
   ! CHECK:         }
   ! CHECK:       }
   ! CHECK:     }

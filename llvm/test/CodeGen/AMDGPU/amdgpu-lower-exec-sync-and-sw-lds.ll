@@ -15,13 +15,13 @@
 define void @bar() #0 {
 ; CHECK-LABEL: define void @bar(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
-; CHECK:    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
 ; CHECK:    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar2)
+; CHECK:    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
 ; CHECK:    call void @llvm.amdgcn.s.barrier.wait(i16 1)
 ; CHECK:    store i8 7, ptr addrspace(1) {{.*}}, align 4
 ;
-  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
   call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar2)
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
   call void @llvm.amdgcn.s.barrier.wait(i16 1)
   store i8 7, ptr addrspace(3) @lds1, align 4
   ret void
@@ -32,15 +32,15 @@ define amdgpu_kernel void @barkernel() #0 {
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] !llvm.amdgcn.lds.kernel.id [[META4:![0-9]+]] {
 ; CHECK:    {{.*}} = call i64 @__asan_malloc_impl(i64 {{.*}}, i64 {{.*}})
 ; CHECK:    call void @llvm.amdgcn.s.barrier()
-; CHECK:    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 9)
 ; CHECK:    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar1)
+; CHECK:    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 9)
 ; CHECK:    call void @llvm.amdgcn.s.barrier.wait(i16 1)
 ; CHECK:    call void @bar()
 ; CHECK:    store i8 10, ptr addrspace(1) {{.*}}, align 4
 ; CHECK:    call void @__asan_free_impl(i64 {{.*}}, i64 {{.*}})
 ;
-  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 9)
   call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar1)
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 9)
   call void @llvm.amdgcn.s.barrier.wait(i16 1)
   call void @bar()
   store i8 10, ptr addrspace(3) @lds1, align 4

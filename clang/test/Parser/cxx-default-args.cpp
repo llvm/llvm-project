@@ -40,3 +40,9 @@ struct U {
   void i(int x = ) {} // expected-error{{expected expression}}
   typedef int *fp(int x = ); // expected-error{{default arguments can only be specified for parameters in a function declaration}}
 };
+
+namespace GH196725 {
+template <class T> void f();
+template <> void f<int>(int = []{ ; return 0; }()) {} // expected-error{{no function template matches function template specialization 'f'}} \
+                                                      // expected-note@-1{{candidate template ignored}}
+}

@@ -3,7 +3,7 @@
 ; RUN: -force-vector-width=4 -disable-output 2>&1 < %s | FileCheck %s
 ; RUN: opt -passes=loop-vectorize -vplan-print-after=printOptimizedVPlan \
 ; RUN: -force-vector-width=4 -force-target-supports-masked-memory-ops \
-; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN: -tail-folding-policy=must-fold-tail \
 ; RUN: -disable-output 2>&1 < %s | FileCheck %s --check-prefix=CHECK-TF
 
 ; This function is derived from the following C program:
@@ -33,7 +33,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<-1>, vp<[[VP9:%[0-9]+]]>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi (find-last) ir<-1>, vp<[[VP9:%[0-9]+]]>
 ; CHECK-NEXT:      WIDEN-PHI vp<[[VP4:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP8:%[0-9]+]]>, vector.body ]
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%ld.addr> = getelementptr inbounds ir<%data>, vp<[[VP5]]>
@@ -94,7 +94,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-TF-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:    vector.body:
-; CHECK-TF-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<-1>, vp<[[VP13:%[0-9]+]]>
+; CHECK-TF-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi (find-last) ir<-1>, vp<[[VP13:%[0-9]+]]>
 ; CHECK-TF-NEXT:      WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP12:%[0-9]+]]>, vector.body ]
 ; CHECK-TF-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
@@ -180,7 +180,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<%default_val>, vp<[[VP11:%[0-9]+]]>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi (find-last) ir<%default_val>, vp<[[VP11:%[0-9]+]]>
 ; CHECK-NEXT:      WIDEN-PHI vp<[[VP4:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP10:%[0-9]+]]>, if.then.0 ]
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%a.addr> = getelementptr inbounds nuw ir<%a>, vp<[[VP5]]>
@@ -258,7 +258,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:    vector.body:
-; CHECK-TF-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<%default_val>, vp<[[VP14:%[0-9]+]]>
+; CHECK-TF-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi (find-last) ir<%default_val>, vp<[[VP14:%[0-9]+]]>
 ; CHECK-TF-NEXT:      WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP13:%[0-9]+]]>, vector.body ]
 ; CHECK-TF-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>

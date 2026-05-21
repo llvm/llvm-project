@@ -83,6 +83,10 @@ OPTIONS
 
  Print load commands.
 
+.. option:: -m
+
+ Don't use archive(member) syntax.
+
 .. option:: -mcpu=<value>
 
  Select cpu for disassembly.

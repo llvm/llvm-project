@@ -306,6 +306,13 @@ enum TransformationMode {
   TM_SuppressedByUser = TM_Disable | TM_Force
 };
 
+/// Return a short prefix describing the loop's vectorizer origin based on
+/// the \c llvm.loop.vectorize.body and \c llvm.loop.vectorize.epilogue
+/// metadata.  The result is one of \c "vectorized epilogue ", \c "vectorized ",
+/// \c "epilogue ", or \c "" (empty) and is intended to be prepended to
+/// loop-kind tokens in optimization remarks.
+LLVM_ABI StringRef getLoopVectorizeKindPrefix(const Loop *L);
+
 /// @{
 /// Get the mode for LLVM's supported loop transformations.
 LLVM_ABI TransformationMode hasUnrollTransformation(const Loop *L);
@@ -448,6 +455,18 @@ LLVM_ABI bool canSinkOrHoistInst(Instruction &I, AAResults *AA,
                                  SinkAndHoistLICMFlags &LICMFlags,
                                  OptimizationRemarkEmitter *ORE = nullptr);
 
+/// Returns true if it is legal to hoist \p LI out of \p CurLoop. This is the
+/// load-specific subset of \c canSinkOrHoistInst: it rejects volatile or
+/// ordered loads, allows constant-memory / invariant.load / invariant.start-
+/// dominated loads unconditionally, and otherwise queries \p MSSA for an
+/// in-loop clobber. \p TargetExecutesOncePerLoop has the same meaning as in
+/// \c canSinkOrHoistInst (set to true when hoisting to the preheader).
+LLVM_ABI bool canHoistLoad(LoadInst &LI, AAResults *AA, DominatorTree *DT,
+                           Loop *CurLoop, MemorySSA &MSSA,
+                           bool TargetExecutesOncePerLoop,
+                           SinkAndHoistLICMFlags &LICMFlags,
+                           OptimizationRemarkEmitter *ORE = nullptr);
+
 /// Returns the llvm.vector.reduce intrinsic that corresponds to the recurrence
 /// kind.
 LLVM_ABI constexpr Intrinsic::ID getReductionIntrinsicID(RecurKind RK);
@@ -490,6 +509,16 @@ LLVM_ABI Value *createMinMaxOp(IRBuilderBase &Builder, RecurKind RK,
 LLVM_ABI Value *getOrderedReduction(IRBuilderBase &Builder, Value *Acc,
                                     Value *Src, unsigned Op,
                                     RecurKind MinMaxKind = RecurKind::None);
+
+/// Expand a scalable vector reduction into a runtime loop that applies
+/// \p RdxOpcode element by element, starting from \p Acc as the initial
+/// accumulator value (typically the reduction identity).
+/// If \p DT and/or \p LI are provided, they are updated to reflect the
+/// new basic blocks.
+LLVM_ABI Value *expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
+                                       unsigned RdxOpcode, Value *Acc,
+                                       DominatorTree *DT = nullptr,
+                                       LoopInfo *LI = nullptr);
 
 /// Generates a vector reduction using shufflevectors to reduce the value.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
