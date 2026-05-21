@@ -1625,14 +1625,7 @@ private:
     // intrinsics, semantics converts BOZ to the expected type before lowering.
     Fortran::evaluate::Constant<Fortran::evaluate::LargestInt> intConstant{
         expr};
-    mlir::Location loc{getLoc()};
-    fir::ExtendedValue exv{Fortran::lower::convertConstant(
-        getConverter(), loc, intConstant,
-        /*outlineBigConstantInReadOnlyMemory=*/false)};
-    if (const auto *scalarBox{exv.getUnboxed()})
-      if (fir::isa_trivial(scalarBox->getType()))
-        return hlfir::EntityWithAttributes(*scalarBox);
-    fir::emitFatalError(loc, "BOZ literal was lowered to unexpected format");
+    return gen(intConstant);
   }
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::NullPointer &expr) {
