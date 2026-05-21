@@ -3,28 +3,42 @@
 
 target triple = "arm64-apple-macosx"
 
-; FIXME: should vectorize without predicates.
 define void @urem_lookup(ptr noalias %src, ptr noalias %dst, ptr noalias %tbl, i64 %N) #0 {
 ; CHECK-LABEL: define void @urem_lookup(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], ptr noalias [[TBL:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[LOOP]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[TMP2]], %[[LOOP]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[X:%.*]] = load float, ptr [[GEP_SRC]], align 4
-; CHECK-NEXT:    [[CLAMPED:%.*]] = urem i64 [[IV]], 4
-; CHECK-NEXT:    [[GEP_TBL:%.*]] = getelementptr inbounds float, ptr [[TBL]], i64 [[CLAMPED]]
-; CHECK-NEXT:    [[T:%.*]] = load float, ptr [[GEP_TBL]], align 4
-; CHECK-NEXT:    [[M1:%.*]] = fmul float [[X]], [[T]]
-; CHECK-NEXT:    [[M2:%.*]] = fadd float [[M1]], [[X]]
-; CHECK-NEXT:    [[M3:%.*]] = fmul float [[M2]], [[T]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 4 [[GEP_SRC]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> poison)
+; CHECK-NEXT:    [[TMP4:%.*]] = urem <vscale x 4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TBL]], <vscale x 4 x i64> [[TMP4]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[TMP5]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> poison)
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <vscale x 4 x float> [[WIDE_MASKED_LOAD]], [[WIDE_MASKED_GATHER]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <vscale x 4 x float> [[TMP6]], [[WIDE_MASKED_LOAD]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <vscale x 4 x float> [[TMP7]], [[WIDE_MASKED_GATHER]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    store float [[M3]], ptr [[GEP_DST]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP8]], ptr align 4 [[GEP_DST]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[IV]], [[TMP1]]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = xor i1 [[TMP10]], true
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[EXIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:

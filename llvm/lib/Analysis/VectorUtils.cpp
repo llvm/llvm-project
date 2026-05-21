@@ -1355,8 +1355,9 @@ bool InterleavedAccessInfo::isStrided(int Stride) {
 }
 
 void InterleavedAccessInfo::collectConstStrideAccesses(
+    PredicatedScalarEvolution &PSE,
     MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-    const DenseMap<Value*, const SCEV*> &Strides) {
+    const DenseMap<Value *, const SCEV *> &Strides) {
   auto &DL = TheLoop->getHeader()->getDataLayout();
 
   // Since it's desired that the load/store instructions be maintained in
@@ -1438,9 +1439,13 @@ void InterleavedAccessInfo::analyzeInterleaving(
   LLVM_DEBUG(dbgs() << "LV: Analyzing interleaved accesses...\n");
   const auto &Strides = LAI->getSymbolicStrides();
 
+  // Use temporary PSE for analysis below potentially adding new predicates, so
+  // we can discard them if no interleave groups are found.
+  PredicatedScalarEvolution TmpPSE(PSE);
+
   // Holds all accesses with a constant stride.
   MapVector<Instruction *, StrideDescriptor> AccessStrideInfo;
-  collectConstStrideAccesses(AccessStrideInfo, Strides);
+  collectConstStrideAccesses(TmpPSE, AccessStrideInfo, Strides);
 
   if (AccessStrideInfo.empty())
     return;
@@ -1643,7 +1648,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     assert(Member && "Group member does not exist");
     Value *MemberPtr = getLoadStorePointerOperand(Member);
     Type *AccessTy = getLoadStoreType(Member);
-    if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, *DT, Strides,
+    if (getPtrStride(TmpPSE, AccessTy, MemberPtr, TheLoop, *DT, Strides,
                      /*Assume=*/false, /*ShouldCheckWrap=*/true)
             .value_or(0))
       return false;
@@ -1735,6 +1740,9 @@ void InterleavedAccessInfo::analyzeInterleaving(
         break;
       }
   }
+
+  if (!InterleaveGroups.empty())
+    PSE.addPredicate(TmpPSE.getPredicate());
 }
 
 void InterleavedAccessInfo::invalidateGroupsRequiringScalarEpilogue() {
