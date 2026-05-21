@@ -60,7 +60,7 @@ jobs:
           LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
       - name: Validate Input
-        ./.github/workflows/validate-release-version
+        uses: ./.github/workflows/validate-release-version
         with:
           release-version: ${{ inputs.release-version }}
 
