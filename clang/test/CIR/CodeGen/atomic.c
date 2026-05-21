@@ -932,15 +932,13 @@ float *atomic_fetch_ptr_to_ptr(float **ptr, int value) {
   // CIR: %[[PTR_LOAD:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[PTR_CAST:.*]] = cir.cast bitcast %[[PTR_LOAD]] : !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!s64i>
   // CIR: %[[RESULT:.*]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR_CAST]], %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
-  // CIR: %[[RESULT_CAST:.*]] = cir.cast int_to_ptr %[[RESULT]] : !s64i -> !cir.ptr<!cir.float>
-  // CIR: cir.store align(8) %[[RESULT_CAST]], %[[ATOMIC_TEMP]] : !cir.ptr<!cir.float>, !cir.ptr<!cir.ptr<!cir.float>>
+  // CIR: %[[ATOMIC_TEMP_CAST:.*]] = cir.cast bitcast %[[ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!s64i>
+  // CIR: cir.store align(8) %[[RESULT]], %[[ATOMIC_TEMP_CAST]] : !s64i, !cir.ptr<!s64i>
 
   // LLVM: %[[RESULT:.*]] = atomicrmw add ptr %{{.*}}, i64 %{{.*}} seq_cst, align 8
-  // LLVM: %[[RESULT_CAST:.*]] = inttoptr i64 %[[RESULT]] to ptr
-  // LLVM: store ptr %[[RESULT_CAST]], ptr %{{.*}}, align 8
+  // LLVM: store i64 %[[RESULT]], ptr %{{.*}}, align 8
 
   // OGCG: %[[RESULT:.*]] = atomicrmw add ptr %{{.*}}, i64 %{{.*}} seq_cst, align 8
-  // OGCG Skips the cast and just stores it directly.
   // OGCG: store i64 %[[RESULT]], ptr %{{.*}}, align 8
 }
 
@@ -954,17 +952,15 @@ float *atomic_fetch_ptr_to_ptr2(float **ptr, int value) {
   // CIR: %[[PTR_LOAD:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[PTR_CAST:.*]] = cir.cast bitcast %[[PTR_LOAD]] : !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!s64i>
   // CIR: %[[RESULT:.*]] = cir.atomic.fetch add seq_cst syncscope(system) %[[PTR_CAST]], %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
-  // CIR: %[[RESULT_CAST:.*]] = cir.cast int_to_ptr %[[RESULT]] : !s64i -> !cir.ptr<!cir.float>
-  // CIR: cir.store align(8) %[[RESULT_CAST]], %[[ATOMIC_TEMP]] : !cir.ptr<!cir.float>, !cir.ptr<!cir.ptr<!cir.float>>
+  // CIR: %[[ATOMIC_TEMP_CAST:.*]] = cir.cast bitcast %[[ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!s64i>
+  // CIR: cir.store align(8) %[[RESULT]], %[[ATOMIC_TEMP_CAST]] : !s64i, !cir.ptr<!s64i>
 
   // LLVM: %[[RESULT:.*]] = atomicrmw add ptr %{{.*}}, i64 %[[VAL:.*]] seq_cst, align 8
   // LLVM: %[[ADD_RES:.*]] = add i64 %[[RESULT]], %[[VAL]]
-  // LLVM: %[[RESULT_CAST:.*]] = inttoptr i64 %[[ADD_RES]] to ptr
-  // LLVM: store ptr %[[RESULT_CAST]], ptr %{{.*}}, align 8
+  // LLVM: store i64 %[[ADD_RES]], ptr %{{.*}}, align 8
 
   // OGCG: %[[RESULT:.*]] = atomicrmw add ptr %{{.*}}, i64 %[[VAL:.*]] seq_cst, align 8
   // OGCG: %[[ADD_RES:.*]] = add i64 %[[RESULT]], %[[VAL]]
-  // OGCG Skips the cast and just stores it directly.
   // OGCG: store i64 %[[ADD_RES]], ptr %{{.*}}, align 8
 }
 
