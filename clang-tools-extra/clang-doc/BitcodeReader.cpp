@@ -1446,16 +1446,15 @@ llvm::Error ClangDocBitcodeReader::readBlockInfoBlock() {
 }
 
 template <typename T>
-llvm::Expected<OwnedPtr<Info>> ClangDocBitcodeReader::createInfo(unsigned ID) {
+llvm::Expected<Info *> ClangDocBitcodeReader::createInfo(unsigned ID) {
   llvm::TimeTraceScope("Reducing infos", "createInfo");
   auto *I = doc::allocateTransient<T>();
-  if (auto Err = readBlock(ID, static_cast<T *>(getPtr(I))))
+  if (auto Err = readBlock(ID, I))
     return std::move(Err);
   return I;
 }
 
-llvm::Expected<OwnedPtr<Info>>
-ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
+llvm::Expected<Info *> ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
   llvm::TimeTraceScope("Reducing infos", "readBlockToInfo");
   switch (ID) {
   case BI_NAMESPACE_BLOCK_ID:
