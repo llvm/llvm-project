@@ -334,16 +334,14 @@ class BytecodeSection:
         self._build(builder)
 
         print(
-            textwrap.dedent(
-                """\
-                #if swift(>=6.3)
+            textwrap.dedent("""\
+                #if swift(>=6.3) && !objectFormat(Wasm)
                 #if objectFormat(MachO)
                 @section("__DATA_CONST,__lldbformatters")
                 #else
                 @section(".lldbformatters")
                 #endif
-                @used"""
-            ),
+                @used"""),
             file=output,
         )
         print(
