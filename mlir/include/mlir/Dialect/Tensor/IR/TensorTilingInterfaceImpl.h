@@ -59,6 +59,13 @@ FailureOr<TilingResult> bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
 /// implementation is moved to a separate library.
 void registerTilingInterfaceExternalModels(mlir::DialectRegistry &registry);
 
+/// Register TilingInterface for tensor.expand_shape. This enables
+/// tile-and-fuse to trace producer chains through expand_shape operations.
+/// Registered separately because it changes fusion behavior for existing
+/// pipelines that have expand_shape in the graph.
+void registerExpandShapeTilingInterfaceExternalModels(
+    DialectRegistry &registry);
+
 /// Similar to the above registeration, but it is only for `tensor.pack` and
 /// `tensor.unpack` ops.
 void registerTilingInterfaceExternalModelsForPackUnPackOps(

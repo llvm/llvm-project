@@ -6,19 +6,19 @@
 // End-to-end FlashAttention (2D) using ONLY linalg.generic ops.
 // See softmax-matmul-fusion-generic-e2e-3d.mlir for the batched (3D) case.
 //
-// Local softmax generics + rescaling matmul fuse into a single scf.for loop.
-// The first GEMM stays outside (expand_shape blocks producer fusion).
+// Full fusion: first GEMM + local softmax + rescaling matmul all in one loop.
+// expand_shape implements TilingInterface, enabling the matmul to be fused.
 
 // CHECK-LABEL: func.func @flash_attention_2d
-// CHECK: linalg.matmul
-// CHECK: tensor.expand_shape
 // CHECK: scf.for
+// CHECK:   linalg.matmul
 // CHECK:   linalg.generic
 // CHECK:   linalg.generic
 // CHECK:   linalg.generic
 // CHECK:   linalg.generic
 // CHECK:   linalg.generic
 // CHECK:   scf.yield
+// CHECK-NOT: linalg.matmul
 // CHECK: return
 
 func.func @flash_attention_2d(%Q : tensor<4x16xf32>, %K_T : tensor<16x128xf32>, %V : tensor<128x64xf32>) -> tensor<4x64xf32> {

@@ -463,6 +463,12 @@ void mlir::tensor::registerTilingInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
     tensor::PadOp::attachInterface<PadOpTiling>(*ctx);
+  });
+}
+
+void mlir::tensor::registerExpandShapeTilingInterfaceExternalModels(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
     tensor::ExpandShapeOp::attachInterface<ExpandShapeOpTiling>(*ctx);
   });
 }

@@ -22,6 +22,7 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/IR/TensorTilingInterfaceImpl.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -52,6 +53,7 @@ struct TestLinalgTransforms
                     vector::VectorDialect,
                     gpu::GPUDialect>();
     // clang-format on
+    tensor::registerExpandShapeTilingInterfaceExternalModels(registry);
   }
   StringRef getArgument() const final {
     return "test-linalg-transform-patterns";
