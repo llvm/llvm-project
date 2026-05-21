@@ -13,9 +13,9 @@ template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
 void kernel_single_task(T) {}
 
-struct S { // expected-note 4{{within field of type 'S' declared here}}
+struct S { // expected-note 3{{within field of type 'S' declared here}}
   int a;
-  int &b; //expected-error 4{{'int &' cannot be used as the type of a kernel parameter}}
+  int &b; //expected-error 3{{'int &' cannot be used as the type of a kernel parameter}}
 };
 
 void fooarr(int (&arr)[5]) {
@@ -52,7 +52,7 @@ void refCases(int AS) {
 
    auto L = [&]() { (void)p;}; // expected-error {{'int &' cannot be used as the type of a kernel parameter}}
                                // expected-note@-1 {{within field of type}}
-   S Str {p, p};
+  S Str {p, p};
   kernel_single_task<class KN<2>>( // expected-note {{requested here}}
       [=] { // expected-note 2{{within field of type}}
         (void)L;
@@ -66,7 +66,7 @@ void refCases(int AS) {
 
   S arr[2] = {Str, Str};
   kernel_single_task<class KN<4>>( // expected-note {{requested here}}
-      [=] { // expected-note 2{{within field of type}}
+      [=] { // expected-note {{within field of type}}
         (void)arr;
       });
   int arr1[AS];

@@ -52,7 +52,7 @@ public:
       return;
     }
 
-    visitGenericType(QT.getTypePtr());
+    visitGenericType(QT.getCanonicalType().getTypePtr());
   }
 
   void traverseRecord(ptr_t<RecordDecl> RD) {
