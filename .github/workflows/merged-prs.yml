@@ -40,7 +40,7 @@ jobs:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
           python3 ./github-automation.py \
-            --token "$GITHUB_TOKEN" \
+            --token "$GH_TOKEN" \
             pr-buildbot-information \
             --issue-number "$ISSUE_NUMBER" \
             --author "$PR_AUTHOR"
