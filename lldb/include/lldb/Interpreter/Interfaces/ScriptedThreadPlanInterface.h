@@ -17,7 +17,7 @@ namespace lldb_private {
 class ScriptedThreadPlanInterface : public ScriptedInterface {
 public:
   virtual llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(llvm::StringRef class_name,
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
                      lldb::ThreadPlanSP thread_plan_sp,
                      const StructuredDataImpl &args_sp) = 0;
 

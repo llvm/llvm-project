@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains file I/O utility functions used in clang-doc,
+/// such as creating directories and writing output files.
+///
+//===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_FILE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_FILE_H
 

@@ -248,7 +248,7 @@ TEST_P(olLaunchKernelSingleCounterSyncEventTest, SuccessSyncEvent) {
   ASSERT_SUCCESS(olMemcpy(Queue, &FinalResVal, Host, ResNum, Device, Size));
 
   ol_event_handle_t Event = nullptr;
-  ASSERT_SUCCESS(olCreateEvent(Queue, &Event));
+  ASSERT_SUCCESS(olCreateEvent(Queue, OL_EVENT_FLAGS_NONE, &Event));
   ASSERT_SUCCESS(olSyncEvent(Event));
 
   ASSERT_EQ(FinalResVal, NumberToAdd * LoopRange);
@@ -298,7 +298,7 @@ TEST_P(olLaunchKernelSingleCounterSyncEventTest, SuccessTwoQueues) {
                                 &LaunchArgs, nullptr));
 
   ol_event_handle_t Event = nullptr;
-  ASSERT_SUCCESS(olCreateEvent(Queue, &Event));
+  ASSERT_SUCCESS(olCreateEvent(Queue, OL_EVENT_FLAGS_NONE, &Event));
   ASSERT_SUCCESS(olWaitEvents(Queue2, &Event, 1));
   ArgsSingleCounter Args2{LoopRange, NumberToAdd, (uint32_t *)ResNum1,
                           (uint32_t *)ResNum2};

@@ -962,11 +962,8 @@ static llvm::Error addReference(T I, Reference &&R, FieldId F) {
 }
 
 template <> llvm::Error addReference(VarInfo *I, Reference &&R, FieldId F) {
-  switch (F) {
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "VarInfo cannot contain this Reference");
-  }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "VarInfo cannot contain this Reference");
 }
 
 template <> llvm::Error addReference(TypeInfo *I, Reference &&R, FieldId F) {
@@ -1005,19 +1002,13 @@ llvm::Error addReference(MemberTypeInfo *I, Reference &&R, FieldId F) {
 }
 
 template <> llvm::Error addReference(EnumInfo *I, Reference &&R, FieldId F) {
-  switch (F) {
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "invalid type cannot contain Reference");
-  }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid type cannot contain Reference");
 }
 
 template <> llvm::Error addReference(TypedefInfo *I, Reference &&R, FieldId F) {
-  switch (F) {
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "invalid type cannot contain Reference");
-  }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid type cannot contain Reference");
 }
 
 template <>
@@ -1108,8 +1099,9 @@ static void addChild(Target I, Child &&R) {
     if constexpr (has_children<Pointee>::value) {
       using BareChild = std::remove_cv_t<std::remove_reference_t<Child>>;
       if constexpr (is_valid_child<BareChild>::value) {
-        auto *Node = allocatePtr<BareChild>(std::forward<Child>(R));
-        getList(I->Children, Node).push_back(*allocateListNodeTransient(Node));
+        auto *Node =
+            allocateListNodeTransient<BareChild>(std::forward<Child>(R));
+        getList(I->Children, Node->Ptr).push_back(*Node);
         return;
       }
     }
@@ -1287,7 +1279,7 @@ llvm::Error ClangDocBitcodeReader::handleSubBlock(unsigned ID, T Parent,
 
 template <typename InfoType, typename T>
 llvm::Error ClangDocBitcodeReader::handleSubBlock(unsigned ID, T Parent) {
-  InfoType *Info = allocatePtr<InfoType>();
+  InfoType *Info = allocateTransient<InfoType>();
   if (auto Err = readBlock(ID, Info))
     return Err;
   addChildPtr(Parent, Info);
@@ -1454,16 +1446,15 @@ llvm::Error ClangDocBitcodeReader::readBlockInfoBlock() {
 }
 
 template <typename T>
-llvm::Expected<OwnedPtr<Info>> ClangDocBitcodeReader::createInfo(unsigned ID) {
+llvm::Expected<Info *> ClangDocBitcodeReader::createInfo(unsigned ID) {
   llvm::TimeTraceScope("Reducing infos", "createInfo");
-  OwnedPtr<Info> I = doc::allocatePtr<T>();
-  if (auto Err = readBlock(ID, static_cast<T *>(getPtr(I))))
+  auto *I = doc::allocateTransient<T>();
+  if (auto Err = readBlock(ID, I))
     return std::move(Err);
-  return OwnedPtr<Info>{std::move(I)};
+  return I;
 }
 
-llvm::Expected<OwnedPtr<Info>>
-ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
+llvm::Expected<Info *> ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
   llvm::TimeTraceScope("Reducing infos", "readBlockToInfo");
   switch (ID) {
   case BI_NAMESPACE_BLOCK_ID:

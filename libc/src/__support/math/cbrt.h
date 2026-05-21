@@ -144,7 +144,7 @@ LIBC_INLINE constexpr double get_error(const DoubleDouble &x_3,
 // exceptional handling, similar to what was done in the CORE-MATH project:
 // https://gitlab.inria.fr/core-math/core-math/-/blob/master/src/binary64/cbrt/cbrt.c
 
-LIBC_INLINE constexpr double cbrt(double x) {
+LIBC_INLINE double cbrt(double x) {
   using DoubleDouble = fputil::DoubleDouble;
   using namespace cbrt_internal;
   using FPBits = fputil::FPBits<double>;

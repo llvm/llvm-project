@@ -34,9 +34,13 @@ jobs:
 
       - name: Add Buildbot information comment
         working-directory: ./llvm/utils/git/
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
           python3 ./github-automation.py \
-            --token '${{ secrets.GITHUB_TOKEN }}' \
+            --token "$GH_TOKEN" \
             pr-buildbot-information \
-            --issue-number "${{ github.event.pull_request.number }}" \
-            --author "${{ github.event.pull_request.user.login }}"
+            --issue-number "$ISSUE_NUMBER" \
+            --author "$PR_AUTHOR"

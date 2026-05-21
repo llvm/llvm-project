@@ -242,10 +242,9 @@ LIBC_INLINE constexpr void quick_mul_hi(cpp::array<word, N> &dst,
 
 template <typename word, size_t N>
 LIBC_INLINE constexpr bool is_negative(const cpp::array<word, N> &array) {
-  using signed_word = cpp::make_signed_t<word>;
-  return cpp::bit_cast<signed_word>(array.back()) < 0;
+  constexpr size_t WORD_BITS = cpp::numeric_limits<word>::digits;
+  return (array.back() >> (WORD_BITS - 1)) != 0;
 }
-
 // An enum for the shift function below.
 enum Direction { LEFT, RIGHT };
 
@@ -257,6 +256,7 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
                                                 size_t offset) {
   static_assert(direction == LEFT || direction == RIGHT);
   constexpr size_t WORD_BITS = cpp::numeric_limits<word>::digits;
+#if LIBC_HAS_BUILTIN_BIT_CAST
 #ifdef LIBC_TYPES_HAS_INT128
   constexpr size_t TOTAL_BITS = N * WORD_BITS;
   if constexpr (TOTAL_BITS == 128 &&
@@ -270,6 +270,8 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
     return cpp::bit_cast<cpp::array<word, N>>(tmp);
   }
 #endif
+#endif // LIBC_HAS_BUILTIN_BIT_CAST
+
   if (LIBC_UNLIKELY(offset == 0))
     return array;
   const bool is_neg = is_signed && is_negative(array);
@@ -366,7 +368,7 @@ public:
   LIBC_INLINE constexpr BigInt(
       const BigInt<OtherBits, OtherSigned, OtherWordType> &other) {
     using BigIntOther = BigInt<OtherBits, OtherSigned, OtherWordType>;
-    const bool should_sign_extend = Signed && other.is_neg();
+    [[maybe_unused]] const bool should_sign_extend = Signed && other.is_neg();
 
     static_assert(!(Bits == OtherBits && WORD_SIZE != BigIntOther::WORD_SIZE) &&
                   "This is currently untested for casting between bigints with "
@@ -1184,7 +1186,7 @@ namespace cpp {
 
 // Specialization of cpp::bit_cast ('bit.h') from T to BigInt.
 template <typename To, typename From>
-LIBC_INLINE constexpr cpp::enable_if_t<
+LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR cpp::enable_if_t<
     (sizeof(To) == sizeof(From)) && cpp::is_trivially_copyable<To>::value &&
         cpp::is_trivially_copyable<From>::value && is_big_int<To>::value,
     To>
@@ -1197,13 +1199,13 @@ bit_cast(const From &from) {
 
 // Specialization of cpp::bit_cast ('bit.h') from BigInt to T.
 template <typename To, size_t Bits>
-LIBC_INLINE constexpr cpp::enable_if_t<
-    sizeof(To) == sizeof(UInt<Bits>) &&
-        cpp::is_trivially_constructible<To>::value &&
-        cpp::is_trivially_copyable<To>::value &&
-        cpp::is_trivially_copyable<UInt<Bits>>::value,
-    To>
-bit_cast(const UInt<Bits> &from) {
+LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR
+    cpp::enable_if_t<sizeof(To) == sizeof(UInt<Bits>) &&
+                         cpp::is_trivially_constructible<To>::value &&
+                         cpp::is_trivially_copyable<To>::value &&
+                         cpp::is_trivially_copyable<UInt<Bits>>::value,
+                     To>
+    bit_cast(const UInt<Bits> &from) {
   return cpp::bit_cast<To>(from.val);
 }
 

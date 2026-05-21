@@ -22,6 +22,7 @@ def static_libgfortran : Flag<["-"], "static-libgfortran">, Group<gfortran_Group
 def fblas_matmul_limit_EQ : Joined<["-"], "fblas-matmul-limit=">, Group<gfortran_Group>;
 def fcheck_EQ : Joined<["-"], "fcheck=">, Group<gfortran_Group>;
 def ffpe_trap_EQ : Joined<["-"], "ffpe-trap=">, Group<gfortran_Group>;
+def ffree_line_length_VALUE : Joined<["-"], "ffree-line-length-">, Group<gfortran_Group>;
 def finit_character_EQ : Joined<["-"], "finit-character=">, Group<gfortran_Group>;
 def finit_integer_EQ : Joined<["-"], "finit-integer=">, Group<gfortran_Group>;
 def finit_logical_EQ : Joined<["-"], "finit-logical=">, Group<gfortran_Group>;
@@ -147,11 +148,6 @@ def ffixed_line_length_EQ : Joined<["-"], "ffixed-line-length=">, Group<f_Group>
   DocBrief<[{Set column after which characters are ignored in typical fixed-form lines in the source
 file}]>;
 def ffixed_line_length_VALUE : Joined<["-"], "ffixed-line-length-">, Group<f_Group>, Alias<ffixed_line_length_EQ>;
-def ffree_line_length_EQ : Joined<["-"], "ffree-line-length=">, Group<f_Group>,
-  HelpText<"Use <value> as the maximum line width in free-form mode">,
-  DocBrief<[{Set column after which characters are ignored in free-form lines in the source
-file}]>;
-def ffree_line_length_VALUE : Joined<["-"], "ffree-line-length-">, Group<f_Group>, Alias<ffree_line_length_EQ>;
 def fconvert_EQ : Joined<["-"], "fconvert=">, Group<f_Group>,
   HelpText<"Set endian conversion of data for unformatted files">;
 def fdefault_double_8 : Flag<["-"],"fdefault-double-8">, Group<f_Group>,

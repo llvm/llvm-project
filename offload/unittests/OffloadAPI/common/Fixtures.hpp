@@ -110,7 +110,7 @@ struct ManuallyTriggeredTask {
             this))
       return Err;
 
-    return olCreateEvent(Queue, &CompleteEvent);
+    return olCreateEvent(Queue, OL_EVENT_FLAGS_NONE, &CompleteEvent);
   }
 
   void wait() {
@@ -241,7 +241,7 @@ struct OffloadQueueTest : OffloadDeviceTest {
 struct OffloadEventTest : OffloadQueueTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
-    ASSERT_SUCCESS(olCreateEvent(Queue, &Event));
+    ASSERT_SUCCESS(olCreateEvent(Queue, OL_EVENT_FLAGS_NONE, &Event));
     ASSERT_SUCCESS(olSyncQueue(Queue));
   }
 

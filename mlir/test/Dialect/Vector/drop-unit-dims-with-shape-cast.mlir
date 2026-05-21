@@ -150,10 +150,26 @@ func.func @fold_all_unit_dims(%vec: vector<1x1xf32>) -> vector<1xf32> {
 
 // CHECK-LABEL: func.func @fold_all_unit_dims(
 // CHECK-SAME:    %[[VAL_0:.*]]: vector<1x1xf32>) -> vector<1xf32>
-// CHECK:         %[[VAL_1:.*]] = vector.shape_cast %[[VAL_0]] : vector<1x1xf32> to vector<1xf32>
-// CHECK:         %[[VAL_2:.*]] = vector.shape_cast %[[VAL_0]] : vector<1x1xf32> to vector<1xf32>
-// CHECK:         %[[VAL_3:.*]] = arith.mulf %[[VAL_1]], %[[VAL_2]] : vector<1xf32>
-// CHECK:         return %[[VAL_3]] : vector<1xf32>
+// CHECK:         %[[VAL_1:.*]] = vector.shape_cast %[[VAL_0]] : vector<1x1xf32> to vector<f32>
+// CHECK:         %[[VAL_2:.*]] = vector.shape_cast %[[VAL_0]] : vector<1x1xf32> to vector<f32>
+// CHECK:         %[[VAL_3:.*]] = arith.mulf %[[VAL_1]], %[[VAL_2]] : vector<f32>
+// CHECK:         %[[VAL_4:.*]] = vector.shape_cast %[[VAL_3]] : vector<f32> to vector<1xf32>
+// CHECK:         return %[[VAL_4]] : vector<1xf32>
+
+// -----
+
+func.func @fold_rank1_unit_dim(%vec: vector<1xf32>) -> vector<1xf32> {
+  %res = arith.addf %vec, %vec : vector<1xf32>
+  return %res : vector<1xf32>
+}
+
+// CHECK-LABEL: func.func @fold_rank1_unit_dim(
+// CHECK-SAME:    %[[VAL_0:.*]]: vector<1xf32>) -> vector<1xf32>
+// CHECK:         %[[VAL_1:.*]] = vector.shape_cast %[[VAL_0]] : vector<1xf32> to vector<f32>
+// CHECK:         %[[VAL_2:.*]] = vector.shape_cast %[[VAL_0]] : vector<1xf32> to vector<f32>
+// CHECK:         %[[VAL_3:.*]] = arith.addf %[[VAL_1]], %[[VAL_2]] : vector<f32>
+// CHECK:         %[[VAL_4:.*]] = vector.shape_cast %[[VAL_3]] : vector<f32> to vector<1xf32>
+// CHECK:         return %[[VAL_4]] : vector<1xf32>
 
 ///----------------------------------------------------------------------------------------
 /// [Pattern: DropUnitDimsFromTransposeOp]
@@ -249,11 +265,11 @@ func.func @scf_for_with_all_unit_dims(%vec: vector<1x1xf32>) -> vector<1x1xf32> 
 
 // CHECK-LABEL: func.func @scf_for_with_all_unit_dims
 //  CHECK-SAME:   %[[VEC:[A-Za-z0-9]+]]: vector<1x1xf32>
-//       CHECK:   %[[CAST:.+]] = vector.shape_cast %[[VEC]] : vector<1x1xf32> to vector<1xf32>
+//       CHECK:   %[[CAST:.+]] = vector.shape_cast %[[VEC]] : vector<1x1xf32> to vector<f32>
 //       CHECK:   %[[LOOP:.+]] = scf.for {{.*}} iter_args(%[[ITER:.+]] = %[[CAST]])
-//       CHECK:     %[[SQRT:.+]] = math.sqrt %[[ITER]] : vector<1xf32>
+//       CHECK:     %[[SQRT:.+]] = math.sqrt %[[ITER]] : vector<f32>
 //       CHECK:     scf.yield %[[SQRT]]
-//       CHECK:   %[[CASTBACK:.+]] = vector.shape_cast %[[LOOP]] : vector<1xf32> to vector<1x1xf32>
+//       CHECK:   %[[CASTBACK:.+]] = vector.shape_cast %[[LOOP]] : vector<f32> to vector<1x1xf32>
 //       CHECK:   return %[[CASTBACK]]
 
 // -----

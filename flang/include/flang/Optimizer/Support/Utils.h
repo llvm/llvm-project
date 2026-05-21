@@ -24,8 +24,10 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
+#include <string>
 
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 
@@ -244,6 +246,10 @@ mlir::Value integerCast(const fir::LLVMTypeConverter &converter,
 /// it return false iff it is not a new allocation,
 /// otherwise it returns std::nullopt.
 std::optional<bool> isNewAllocationResult(mlir::OpResult result);
+
+/// Used to obtain user-facing function name that can be used in
+/// diagnostics and remarks without mangling or underscores.
+std::string getPresentableFunctionName(mlir::FunctionOpInterface func);
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_UTILS_H

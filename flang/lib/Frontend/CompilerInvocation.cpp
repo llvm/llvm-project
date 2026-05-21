@@ -807,15 +807,10 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                            : FortranForm::FreeForm;
   }
 
-  // Set fixedFormColumns based on -ffixed-line-length=<value> or
-  // set freeFormColumns based on -ffree-line-length=<value>.
-  for (const auto *arg :
-       args.filtered(clang::options::OPT_ffixed_line_length_EQ,
-                     clang::options::OPT_ffree_line_length_EQ)) {
-
+  // Set fixedFormColumns based on -ffixed-line-length=<value>
+  if (const auto *arg =
+          args.getLastArg(clang::options::OPT_ffixed_line_length_EQ)) {
     llvm::StringRef argValue = llvm::StringRef(arg->getValue());
-    bool isFixedLineFlag =
-        arg->getOption().matches(clang::options::OPT_ffixed_line_length_EQ);
     std::int64_t columns = -1;
     if (argValue == "none") {
       columns = 0;
@@ -823,17 +818,16 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       columns = -1;
     }
     if (columns < 0) {
-      diags.Report(clang::diag::err_drv_invalid_columns)
+      diags.Report(clang::diag::err_drv_negative_columns)
           << arg->getOption().getName() << arg->getValue();
-    } else if (columns == 0 && isFixedLineFlag) {
-      columns = 1000000;
-    } else if (columns < 7 && isFixedLineFlag) {
-      // Specific to the fixed form
+    } else if (columns == 0) {
+      opts.fixedFormColumns = 1000000;
+    } else if (columns < 7) {
       diags.Report(clang::diag::err_drv_small_columns)
           << arg->getOption().getName() << arg->getValue() << "7";
+    } else {
+      opts.fixedFormColumns = columns;
     }
-
-    (isFixedLineFlag ? opts.fixedFormColumns : opts.freeFormColumns) = columns;
   }
 
   // Set conversion based on -fconvert=<value>
@@ -1896,7 +1890,6 @@ void CompilerInvocation::setFortranOpts() {
         frontendOptions.fortranForm == FortranForm::FixedForm;
   }
   fortranOptions.fixedFormColumns = frontendOptions.fixedFormColumns;
-  fortranOptions.freeFormColumns = frontendOptions.freeFormColumns;
 
   // -E
   fortranOptions.prescanAndReformat =

@@ -55,6 +55,7 @@ alignas(8) int aligned_attr;
     // expected-warning {{unknown attribute 'mutable' ignored}} \
     // expected-warning {{unknown attribute 'bitand' ignored}} \
     // expected-warning {{unknown attribute 'bitor::compl' ignored}}
+// expected-error@+1 {{expected unqualified-id}}
 [[u8"invalid!"]] int invalid_string_attr; // expected-error {{expected ']'}}
 void fn_attr () [[]];
 void noexcept_fn_attr () noexcept [[]];
@@ -401,7 +402,7 @@ namespace {
 [[ // expected-error {{expected ']'}}
 #pragma pack(pop)
 deprecated
-]] void bad();
+]] void bad(); // expected-error {{expected unqualified-id}}
 }
 
 int fallthru(int n) {

@@ -354,6 +354,10 @@ struct VPCostContext {
   /// has already been pre-computed.
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
 
+  /// Mark the widening decision for \p I at \p VF as invalidated since a VPlan
+  /// transform replaced the original recipe.
+  void invalidateWideningDecision(Instruction *I, ElementCount VF);
+
   /// \returns how much the cost of a predicated block should be divided by.
   /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
   uint64_t getPredBlockCostDivisor(BasicBlock *BB) const;

@@ -9,16 +9,9 @@ define { i16, i16 } @test_reduce_v16i16_with_umin(<16 x i16> %x, <16 x i16> %y) 
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm4
 ; SSE41-NEXT:    pminuw %xmm1, %xmm4
-; SSE41-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[2,3,2,3]
-; SSE41-NEXT:    pminuw %xmm4, %xmm5
-; SSE41-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[1,1,1,1]
-; SSE41-NEXT:    pminuw %xmm5, %xmm6
-; SSE41-NEXT:    movdqa %xmm6, %xmm5
-; SSE41-NEXT:    psrld $16, %xmm5
-; SSE41-NEXT:    pminuw %xmm6, %xmm5
 ; SSE41-NEXT:    phminposuw %xmm4, %xmm4
 ; SSE41-NEXT:    movd %xmm4, %eax
-; SSE41-NEXT:    pshuflw {{.*#+}} xmm4 = xmm5[0,0,0,0,4,5,6,7]
+; SSE41-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[0,0,0,0,4,5,6,7]
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,1,0,1]
 ; SSE41-NEXT:    pcmpeqw %xmm4, %xmm1
 ; SSE41-NEXT:    pcmpeqd %xmm5, %xmm5
@@ -38,14 +31,9 @@ define { i16, i16 } @test_reduce_v16i16_with_umin(<16 x i16> %x, <16 x i16> %y) 
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX2-NEXT:    vpminuw %xmm2, %xmm0, %xmm2
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[2,3,2,3]
-; AVX2-NEXT:    vpminuw %xmm3, %xmm2, %xmm3
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[1,1,1,1]
-; AVX2-NEXT:    vpminuw %xmm4, %xmm3, %xmm3
-; AVX2-NEXT:    vpsrld $16, %xmm3, %xmm4
 ; AVX2-NEXT:    vphminposuw %xmm2, %xmm2
 ; AVX2-NEXT:    vmovd %xmm2, %eax
-; AVX2-NEXT:    vpminuw %xmm4, %xmm3, %xmm2
+; AVX2-NEXT:    vmovd %eax, %xmm2
 ; AVX2-NEXT:    vpbroadcastw %xmm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2

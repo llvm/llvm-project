@@ -34,7 +34,8 @@ PipeWindows::PipeWindows()
 }
 
 PipeWindows::PipeWindows(pipe_t read, pipe_t write)
-    : m_read((HANDLE)read), m_write((HANDLE)write),
+    : m_read(reinterpret_cast<HANDLE>(read)),
+      m_write(reinterpret_cast<HANDLE>(write)),
       m_read_fd(PipeWindows::kInvalidDescriptor),
       m_write_fd(PipeWindows::kInvalidDescriptor) {
   assert(read != LLDB_INVALID_PIPE || write != LLDB_INVALID_PIPE);
@@ -170,7 +171,7 @@ Status PipeWindows::OpenNamedPipe(llvm::StringRef name, bool is_read) {
 
   if (is_read) {
     m_read = ::CreateFileA(pipe_path.c_str(), GENERIC_READ, 0, &attributes,
-                           OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+                           OPEN_EXISTING, FILE_FLAG_OVERLAPPED, nullptr);
     if (INVALID_HANDLE_VALUE == m_read)
       return Status(::GetLastError(), eErrorTypeWin32);
 
@@ -180,7 +181,7 @@ Status PipeWindows::OpenNamedPipe(llvm::StringRef name, bool is_read) {
     m_read_overlapped.hEvent = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
   } else {
     m_write = ::CreateFileA(pipe_path.c_str(), GENERIC_WRITE, 0, &attributes,
-                            OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+                            OPEN_EXISTING, FILE_FLAG_OVERLAPPED, nullptr);
     if (INVALID_HANDLE_VALUE == m_write)
       return Status(::GetLastError(), eErrorTypeWin32);
 

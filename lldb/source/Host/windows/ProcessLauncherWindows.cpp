@@ -114,7 +114,7 @@ ProcThreadAttributeList::Create(STARTUPINFOEXW &startupinfoex) {
 llvm::Error ProcThreadAttributeList::SetupPseudoConsole(HPCON hPC) {
   BOOL ok = UpdateProcThreadAttribute(lpAttributeList, 0,
                                       PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, hPC,
-                                      sizeof(hPC), NULL, NULL);
+                                      sizeof(hPC), nullptr, nullptr);
   if (!ok)
     return llvm::errorCodeToError(llvm::mapWindowsError(GetLastError()));
   return llvm::Error::success();
@@ -235,11 +235,11 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   PROCESS_INFORMATION pi = {};
 
   BOOL result = ::CreateProcessW(
-      wexecutable.c_str(), pwcommandLine, NULL, NULL,
+      wexecutable.c_str(), pwcommandLine, nullptr, nullptr,
       /*bInheritHandles=*/!inherited_handles.empty() ||
           pty_mode != PseudoConsole::Mode::None,
       flags, environment.data(),
-      wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
+      wworkingDirectory.size() == 0 ? nullptr : wworkingDirectory.c_str(),
       reinterpret_cast<STARTUPINFOW *>(&startupinfoex), &pi);
 
   if (!result) {
@@ -337,7 +337,7 @@ ProcessLauncherWindows::GetStdioHandle(const ProcessLaunchInfo &launch_info,
                                        int fd) {
   const FileAction *action = launch_info.GetFileActionForFD(fd);
   if (action == nullptr)
-    return NULL;
+    return nullptr;
   const std::string path = action->GetFileSpec().GetPath();
 
   return GetStdioHandle(path, fd);
@@ -346,7 +346,7 @@ ProcessLauncherWindows::GetStdioHandle(const ProcessLaunchInfo &launch_info,
 HANDLE ProcessLauncherWindows::GetStdioHandle(const llvm::StringRef path,
                                               int fd) {
   if (path.empty())
-    return NULL;
+    return nullptr;
   SECURITY_ATTRIBUTES secattr = {};
   secattr.nLength = sizeof(SECURITY_ATTRIBUTES);
   secattr.bInheritHandle = TRUE;
@@ -375,6 +375,6 @@ HANDLE ProcessLauncherWindows::GetStdioHandle(const llvm::StringRef path,
   std::wstring wpath;
   llvm::ConvertUTF8toWide(path, wpath);
   HANDLE result = ::CreateFileW(wpath.c_str(), access, share, &secattr, create,
-                                flags, NULL);
-  return (result == INVALID_HANDLE_VALUE) ? NULL : result;
+                                flags, nullptr);
+  return (result == INVALID_HANDLE_VALUE) ? nullptr : result;
 }

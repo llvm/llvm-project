@@ -61,7 +61,9 @@ public:
     return true;
   }
 
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
   unsigned GetDefaultDwarfVersion() const override { return 4; }
 
   bool GetDefaultStandaloneDebug() const override { return true; }

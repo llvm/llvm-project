@@ -9,81 +9,30 @@
 #ifndef FORTRAN_SUPPORT_OPENMP_UTILS_H_
 #define FORTRAN_SUPPORT_OPENMP_UTILS_H_
 
-#include "flang/Lower/OpenMP/Clauses.h"
-#include "flang/Semantics/symbol.h"
-
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Value.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace Fortran::common::openmp {
 /// Structure holding the information needed to create and bind entry block
-/// arguments associated to a single clause.
-struct EntryBlockArgsEntry {
-  llvm::SmallVector<Fortran::lower::omp::Object> objects;
-  llvm::ArrayRef<mlir::Value> vars;
-
-  bool isValid() const {
-    // This check allows specifying a smaller number of objects than values
-    // because in some case cases a single symbol generates multiple block
-    // arguments.
-    return objects.size() <= vars.size();
-  }
-
-  llvm::SmallVector<const Fortran::semantics::Symbol *> getSyms() const {
-    llvm::SmallVector<const Fortran::semantics::Symbol *> syms;
-    syms.reserve(objects.size());
-    llvm::transform(objects, std::back_inserter(syms),
-        [](const Fortran::lower::omp::Object &object) { return object.sym(); });
-    return syms;
-  }
-};
-
-/// Structure holding the information needed to create and bind entry block
 /// arguments associated to all clauses that can define them.
 struct EntryBlockArgs {
-  EntryBlockArgsEntry hasDeviceAddr;
+  llvm::ArrayRef<mlir::Value> hasDeviceAddrVars;
   llvm::ArrayRef<mlir::Value> hostEvalVars;
-  EntryBlockArgsEntry inReduction;
-  EntryBlockArgsEntry map;
-  EntryBlockArgsEntry priv;
-  EntryBlockArgsEntry reduction;
-  EntryBlockArgsEntry taskReduction;
-  EntryBlockArgsEntry useDeviceAddr;
-  EntryBlockArgsEntry useDevicePtr;
-
-  bool isValid() const {
-    return hasDeviceAddr.isValid() && inReduction.isValid() && map.isValid() &&
-        priv.isValid() && reduction.isValid() && taskReduction.isValid() &&
-        useDeviceAddr.isValid() && useDevicePtr.isValid();
-  }
-
-  llvm::SmallVector<const semantics::Symbol *> getSyms() const {
-    llvm::SmallVector<const semantics::Symbol *> syms;
-    auto appendSyms = [&syms](const EntryBlockArgsEntry &entry) {
-      syms.reserve(syms.size() + entry.objects.size());
-      llvm::transform(entry.objects, std::back_inserter(syms),
-          [](const Fortran::lower::omp::Object &object) {
-            return object.sym();
-          });
-    };
-    appendSyms(hasDeviceAddr);
-    appendSyms(inReduction);
-    appendSyms(map);
-    appendSyms(priv);
-    appendSyms(reduction);
-    appendSyms(taskReduction);
-    appendSyms(useDeviceAddr);
-    appendSyms(useDevicePtr);
-    return syms;
-  }
+  llvm::ArrayRef<mlir::Value> inReductionVars;
+  llvm::ArrayRef<mlir::Value> mapVars;
+  llvm::ArrayRef<mlir::Value> privVars;
+  llvm::ArrayRef<mlir::Value> reductionVars;
+  llvm::ArrayRef<mlir::Value> taskReductionVars;
+  llvm::ArrayRef<mlir::Value> useDeviceAddrVars;
+  llvm::ArrayRef<mlir::Value> useDevicePtrVars;
 
   auto getVars() const {
-    return llvm::concat<const mlir::Value>(hasDeviceAddr.vars, hostEvalVars,
-        inReduction.vars, map.vars, priv.vars, reduction.vars,
-        taskReduction.vars, useDeviceAddr.vars, useDevicePtr.vars);
+    return llvm::concat<const mlir::Value>(hasDeviceAddrVars, hostEvalVars,
+        inReductionVars, mapVars, privVars, reductionVars, taskReductionVars,
+        useDeviceAddrVars, useDevicePtrVars);
   }
 };
 

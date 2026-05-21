@@ -2184,9 +2184,11 @@ LangAS CIRGenModule::getLangTempAllocaAddressSpace() const {
   if (getLangOpts().CUDAIsDevice)
     return LangAS::Default;
 
-  if (getLangOpts().SYCLIsDevice ||
-      (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice))
-    errorNYI("SYCL or OpenMP temp address space");
+  if (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice)
+    assert(!cir::MissingFeatures::openMP());
+  if (getLangOpts().SYCLIsDevice)
+    errorNYI("SYCL temp address space");
+
   return LangAS::Default;
 }
 

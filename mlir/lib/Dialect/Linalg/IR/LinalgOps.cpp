@@ -2405,9 +2405,39 @@ struct FoldBroadcasts : OpRewritePattern<linalg::BroadcastOp> {
   }
 };
 
+/// Rewrite a broadcast of a dense splat constant into a dense splat constant of
+/// the broadcast output shape.
+struct FoldBroadcastSplatConstant : OpRewritePattern<linalg::BroadcastOp> {
+  using OpRewritePattern<linalg::BroadcastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::BroadcastOp broadcastOp,
+                                PatternRewriter &rewriter) const override {
+    if (!broadcastOp.hasPureTensorSemantics())
+      return failure();
+
+    auto splatValue =
+        getScalarConstantAttrFromDenseSplat(broadcastOp.getInput());
+
+    if (!splatValue.has_value())
+      return failure();
+
+    auto resultType =
+        cast<RankedTensorType>(broadcastOp.getResult()[0].getType());
+    if (!resultType.hasStaticShape())
+      return rewriter.notifyMatchFailure(broadcastOp,
+                                         "result type has dynamic shape");
+
+    auto resultAttr = DenseElementsAttr::get(resultType, splatValue.value());
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(broadcastOp, resultType,
+                                                   resultAttr);
+    return success();
+  }
+};
+
 void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<EraseIdentityLinalgOp<BroadcastOp>, FoldBroadcasts>(context);
+  results.add<EraseIdentityLinalgOp<BroadcastOp>, FoldBroadcasts,
+              FoldBroadcastSplatConstant>(context);
 }
 
 //===----------------------------------------------------------------------===//

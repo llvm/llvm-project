@@ -6,7 +6,11 @@ add_library(LLVMOffload SHARED
 )
 add_dependencies(LLVMOffload OffloadAPI PluginErrcodes)
 
-llvm_map_components_to_libnames(llvm_libs FrontendOpenMP Support)
+if(LLVM_LINK_LLVM_DYLIB)
+  set(llvm_libs LLVM)
+else()
+  llvm_map_components_to_libnames(llvm_libs FrontendOpenMP Support)
+endif()
 target_link_libraries(LLVMOffload PRIVATE ${llvm_libs})
 
 foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_POLICY_H
-#define LLDB_TARGET_POLICY_H
+#ifndef LLDB_UTILITY_POLICY_H
+#define LLDB_UTILITY_POLICY_H
 
 #include "llvm/ADT/SmallVector.h"
 
@@ -116,4 +116,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_POLICY_H
+#endif // LLDB_UTILITY_POLICY_H

@@ -32,8 +32,13 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 #define LIBC_LOOP_NOUNROLL _Pragma("nounroll")
 #define LIBC_LOOP_UNROLL _Pragma("unroll")
 #elif defined(LIBC_COMPILER_IS_GCC)
+#if LIBC_COMPILER_GCC_VER >= 800
 #define LIBC_LOOP_NOUNROLL _Pragma("GCC unroll 0")
 #define LIBC_LOOP_UNROLL _Pragma("GCC unroll 2048")
+#else
+#define LIBC_LOOP_NOUNROLL
+#define LIBC_LOOP_UNROLL
+#endif
 #elif defined(LIBC_COMPILER_IS_MSVC)
 #define LIBC_LOOP_NOUNROLL
 #define LIBC_LOOP_UNROLL

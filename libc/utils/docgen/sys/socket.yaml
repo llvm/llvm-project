@@ -126,6 +126,8 @@ functions:
     in-latest-posix: ''
   send:
     in-latest-posix: ''
+  sendmmsg:
+    c-definition: ''
   sendmsg:
     in-latest-posix: ''
   sendto:

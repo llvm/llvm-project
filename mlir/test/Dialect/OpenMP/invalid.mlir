@@ -1420,6 +1420,523 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
 
 // -----
 
+func.func @omp_atomic_compare_no_block_arg(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{the region must accept exactly one argument}}
+  omp.atomic.compare %x : memref<i32> {
+    omp.yield
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_empty_region(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{region must contain a comparison operation}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    omp.yield(%xval : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_hint(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{the hints omp_sync_hint_uncontended and omp_sync_hint_contended cannot be combined}}
+  omp.atomic.compare hint(contended, uncontended) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "eq" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_hint2(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{the hints omp_sync_hint_nonspeculative and omp_sync_hint_speculative cannot be combined}}
+  omp.atomic.compare hint(nonspeculative, speculative) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "eq" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+// float comparison operators mentionend in ArithBase.td not permitted for
+//     !omp atomic compare
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'one' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = arith.cmpf one, %xval, %e : f32
+    %sel = arith.select %cmp, %d, %xval : f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'one' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = llvm.fcmp "one" %xval, %e : f64
+    %sel = llvm.select %cmp, %d, %xval : i1, f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'oge' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = arith.cmpf oge, %xval, %e : f32
+    %sel = arith.select %cmp, %d, %xval : f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'oge' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = llvm.fcmp "oge" %xval, %e : f64
+    %sel = llvm.select %cmp, %d, %xval : i1, f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'ole' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = arith.cmpf ole, %xval, %e : f64
+    %sel = arith.select %cmp, %d, %xval : f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'ole' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = llvm.fcmp "ole" %xval, %e : f32
+    %sel = llvm.select %cmp, %d, %xval : i1, f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'ord' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = arith.cmpf ord, %xval, %e : f64
+    %sel = arith.select %cmp, %d, %xval : f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'ord' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = llvm.fcmp "ord" %xval, %e : f32
+    %sel = llvm.select %cmp, %d, %xval : i1, f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'ueq' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = arith.cmpf ueq, %xval, %e : f32
+    %sel = arith.select %cmp, %d, %xval : f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'ueq' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = llvm.fcmp "ueq" %xval, %e : f64
+    %sel = llvm.select %cmp, %d, %xval : i1, f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'ugt' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = arith.cmpf ugt, %xval, %e : f32
+    %sel = arith.select %cmp, %d, %xval : f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'ugt' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = llvm.fcmp "ugt" %xval, %e : f64
+    %sel = llvm.select %cmp, %d, %xval : i1, f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'uge' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = arith.cmpf uge, %xval, %e : f32
+    %sel = arith.select %cmp, %d, %xval : f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'uge' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = llvm.fcmp "uge" %xval, %e : f32
+    %sel = llvm.select %cmp, %d, %xval : i1, f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'ult' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = arith.cmpf ult, %xval, %e : f64
+    %sel = arith.select %cmp, %d, %xval : f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'ult' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = llvm.fcmp "ult" %xval, %e : f32
+    %sel = llvm.select %cmp, %d, %xval : i1, f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'ule' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = arith.cmpf ule, %xval, %e : f32
+    %sel = arith.select %cmp, %d, %xval : f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'ule' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = llvm.fcmp "ule" %xval, %e : f64
+    %sel = llvm.select %cmp, %d, %xval : i1, f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'une' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = arith.cmpf une, %xval, %e : f32
+    %sel = arith.select %cmp, %d, %xval : f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'une' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = llvm.fcmp "une" %xval, %e : f32
+    %sel = llvm.select %cmp, %d, %xval : i1, f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'uno' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = arith.cmpf uno, %xval, %e : f64
+    %sel = arith.select %cmp, %d, %xval : f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'uno' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = llvm.fcmp "uno" %xval, %e : f32
+    %sel = llvm.select %cmp, %d, %xval : i1, f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpi_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'ne' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi ne, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_icmp_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'ne' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "ne" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpi_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'sle' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi sle, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_icmp_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'sle' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "sle" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpi_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'sge' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi sge, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_icmp_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'sge' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "sge" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpi_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'ult' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi ult, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_icmp_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'ult' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "ult" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpi_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'ule' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi ule, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_icmp_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'ule' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "ule" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpi_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'ugt' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi ugt, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_icmp_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'ugt' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "ugt" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpi_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'uge' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi uge, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_icmp_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'uge' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "uge" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
 func.func @omp_teams_parent() {
   omp.parallel {
     // expected-error @below {{expected to be nested inside of omp.target or not nested in any OpenMP dialect operations}}

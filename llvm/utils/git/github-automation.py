@@ -891,6 +891,7 @@ pr_subscriber_parser.add_argument("--issue-number", type=int, required=True)
 
 pr_greeter_parser = subparsers.add_parser("pr-greeter")
 pr_greeter_parser.add_argument("--issue-number", type=int, required=True)
+pr_greeter_parser.add_argument("--author", type=str, required=True)
 
 commit_request_greeter = subparsers.add_parser("commit-request-greeter")
 commit_request_greeter.add_argument("--issue-number", type=int, required=True)

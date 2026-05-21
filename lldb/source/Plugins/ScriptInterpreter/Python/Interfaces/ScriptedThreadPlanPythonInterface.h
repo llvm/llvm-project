@@ -23,7 +23,7 @@ public:
   ScriptedThreadPlanPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 
   llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(const llvm::StringRef class_name,
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
                      lldb::ThreadPlanSP thread_plan_sp,
                      const StructuredDataImpl &args_sp) override;
 

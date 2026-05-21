@@ -260,7 +260,7 @@ struct CUDAEventRef final : public GenericDeviceResourceRef {
       return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                            "creating an existing event");
 
-    CUresult Res = cuEventCreate(&Event, CU_EVENT_DEFAULT);
+    CUresult Res = cuEventCreate(&Event, CU_EVENT_DISABLE_TIMING);
     if (auto Err = Plugin::check(Res, "error in cuEventCreate: %s"))
       return Err;
 
@@ -968,21 +968,31 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuStreamLaunchHostFunc: %s");
   };
 
-  /// Create an event.
-  Error createEventImpl(void **EventPtrStorage) override {
+  /// Non-profiling events use CU_EVENT_DISABLE_TIMING from the pool.
+  /// Profiling events are created directly with timing and not pooled.
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
     CUevent *Event = reinterpret_cast<CUevent *>(EventPtrStorage);
+    if (EnableProfiling) {
+      CUresult Res = cuEventCreate(Event, CU_EVENT_DEFAULT);
+      return Plugin::check(Res, "error in cuEventCreate: %s");
+    }
     return CUDAEventManager.getResource(*Event);
   }
 
-  /// Destroy a previously created event.
-  Error destroyEventImpl(void *EventPtr) override {
+  /// Profiling events are destroyed directly; non-profiling events return to
+  /// the pool.
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
     CUevent Event = reinterpret_cast<CUevent>(EventPtr);
+    if (EnableProfiling) {
+      CUresult Res = cuEventDestroy(Event);
+      return Plugin::check(Res, "error in cuEventDestroy: %s");
+    }
     return CUDAEventManager.returnResource(Event);
   }
 
   /// Record the event.
-  Error recordEventImpl(void *EventPtr,
-                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+  Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
+                        bool EnableProfiling) override {
     CUevent Event = reinterpret_cast<CUevent>(EventPtr);
 
     CUstream Stream;

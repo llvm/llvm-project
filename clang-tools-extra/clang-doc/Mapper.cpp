@@ -65,7 +65,7 @@ bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
       return true;
   }
 
-  std::pair<OwnedPtr<Info>, OwnedPtr<Info>> CP;
+  std::pair<Info *, Info *> CP;
 
   {
     llvm::TimeTraceScope TS("emit info from astnode");
@@ -99,10 +99,10 @@ bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
     // this decl for some reason (e.g. we're only reporting public decls).
     if (Child)
       CDCtx.ECtx->reportResult(llvm::toHex(llvm::toStringRef(Child->USR)),
-                               serialize::serialize(Child, CDCtx.Diags));
+                               serialize::serialize(*Child, CDCtx.Diags));
     if (Parent)
       CDCtx.ECtx->reportResult(llvm::toHex(llvm::toStringRef(Parent->USR)),
-                               serialize::serialize(Parent, CDCtx.Diags));
+                               serialize::serialize(*Parent, CDCtx.Diags));
   }
   return true;
 }

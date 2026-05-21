@@ -86,8 +86,9 @@ void test_ok13() {
 [[clang::sycl_kernel_entry_point()]] void bad2();
 
 struct B3;
-// expected-error@+2 {{expected ')'}}
-// expected-error@+1 {{expected ']'}}
+// expected-error@+3 {{expected ')'}}
+// expected-error@+2 {{expected ']'}}
+// expected-error@+1 {{expected unqualified-id}}
 [[clang::sycl_kernel_entry_point(B3,)]] void bad3();
 
 struct B4;

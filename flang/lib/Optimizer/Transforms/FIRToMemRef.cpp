@@ -694,7 +694,25 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   strides.reserve(rank);
 
   SmallVector<Value> &shapeVec = sliceInfo.shapeVec;
-  if (sliceInfo.hasProjectedSlice || shapeVec.empty()) {
+  // Pick how to derive sizes/strides for the reinterpret_cast view:
+  //
+  //   shapeVec path: use the collected fir.shape extents and synthesize
+  //     row-major strides. Valid when those extents describe the underlying
+  //     memref's layout -- shape from a defining embox, a shape_shift that
+  //     carries lower bounds, or no slicing at all.
+  //
+  //   box_dims path: query the descriptor at runtime. Required when:
+  //     (a) the slice is projected (physical layout is owned by the box);
+  //     (b) we have no shape information at all; or
+  //     (c) the array_coor itself carries fir.shape + fir.slice on a
+  //         descriptor-backed memref with no shift -- those extents describe
+  //         the post-slice view, not the source, so they cannot be used to
+  //         compute strides (e.g. rebox sourced array_coor).
+  const bool descriptorOwnsLayout =
+      sliceInfo.hasProjectedSlice || shapeVec.empty() ||
+      (isDescriptor && sliceInfo.shiftVec.empty() && arrayCoorOp.getShape() &&
+       arrayCoorOp.getSlice());
+  if (descriptorOwnsLayout) {
     // Projected slices carry their physical layout in the descriptor. Rebuild
     // the MemRef view from box metadata instead of from slice triplets.
     auto boxElementSize =

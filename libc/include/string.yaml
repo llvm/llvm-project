@@ -50,7 +50,7 @@ functions:
       - type: size_t
   - name: memmem
     standards:
-      - GNUExtensions
+      - gnu
     return_type: void *
     arguments:
       - type: const void *
@@ -75,7 +75,7 @@ functions:
       - type: size_t
   - name: memrchr
     standards:
-      - GNUExtensions
+      - gnu
     return_type: void *
     arguments:
       - type: const void *
@@ -114,7 +114,7 @@ functions:
       - type: size_t
   - name: strcasestr
     standards:
-      - GNUExtensions
+      - gnu
     return_type: char *
     arguments:
       - type: const char *
@@ -135,7 +135,7 @@ functions:
       - type: int
   - name: strchrnul
     standards:
-      - GNUExtensions
+      - gnu
     return_type: char *
     arguments:
       - type: const char *
@@ -188,7 +188,7 @@ functions:
       - type: int
   - name: strerror_r
     standards:
-      - GNUExtensions
+      - gnu
     return_type: char *
     arguments:
       - type: int
@@ -196,7 +196,7 @@ functions:
       - type: size_t
   - name: strlcat
     standards:
-      - BSDExtensions
+      - bsd
     return_type: size_t
     arguments:
       - type: char *__restrict
@@ -204,7 +204,7 @@ functions:
       - type: size_t
   - name: strlcpy
     standards:
-      - BSDExtensions
+      - bsd
     return_type: size_t
     arguments:
       - type: char *__restrict
@@ -278,7 +278,7 @@ functions:
       - type: int
   - name: strsep
     standards:
-      - BSDExtensions
+      - bsd
     return_type: char *
     arguments:
       - type: char **__restrict

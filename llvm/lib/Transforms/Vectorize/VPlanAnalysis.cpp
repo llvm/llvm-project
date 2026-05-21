@@ -195,17 +195,6 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
   llvm_unreachable("Unhandled opcode!");
 }
 
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenCallRecipe *R) {
-  auto &CI = *cast<CallInst>(R->getUnderlyingInstr());
-  return CI.getType();
-}
-
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R) {
-  assert((isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R->getAsRecipe())) &&
-         "Store recipes should not define any values");
-  return cast<LoadInst>(&R->getIngredient())->getType();
-}
-
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPReplicateRecipe *R) {
   unsigned Opcode = R->getUnderlyingInstr()->getOpcode();
 
@@ -266,14 +255,16 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (Type *CachedTy = CachedTypes.lookup(V))
     return CachedTy;
 
-  if (auto *IRV = dyn_cast<VPIRValue>(V))
-    return IRV->getType();
-
-  if (auto *SymbolicV = dyn_cast<VPSymbolicValue>(V))
-    return SymbolicV->getType();
-
-  if (auto *RegionV = dyn_cast<VPRegionValue>(V))
-    return RegionV->getType();
+  if (isa<VPIRValue, VPRegionValue, VPSymbolicValue, VPMultiDefValue,
+          VPExpandSCEVRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe,
+          VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe, VPWidenCastRecipe,
+          VPWidenIntrinsicRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
+          VPVectorEndPointerRecipe, VPWidenCallRecipe, VPWidenLoadRecipe,
+          VPWidenLoadEVLRecipe>(V)) {
+    Type *Ty = V->getScalarType();
+    assert(Ty && "Scalar type must be set by recipe construction");
+    return Ty;
+  }
 
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
@@ -288,26 +279,11 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
           })
           .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe>(
               [](const auto *R) { return R->getScalarType(); })
-          .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
-                VPScalarIVStepsRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
-                VPVectorEndPointerRecipe, VPWidenCanonicalIVRecipe>(
-              [this](const VPRecipeBase *R) {
-                return inferScalarType(R->getOperand(0));
-              })
           // VPInstructionWithType must be handled before VPInstruction.
-          .Case<VPInstructionWithType, VPWidenIntrinsicRecipe,
-                VPWidenCastRecipe>(
+          .Case<VPInstructionWithType>(
               [](const auto *R) { return R->getResultType(); })
-          .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
-                VPWidenCallRecipe, VPWidenMemoryRecipe>(
+          .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
-          .Case([V](const VPInterleaveBase *R) {
-            // TODO: Use info from interleave group.
-            return V->getUnderlyingValue()->getType();
-          })
-          .Case([](const VPExpandSCEVRecipe *R) {
-            return R->getSCEV()->getType();
-          })
           .Case([this](const VPReductionRecipe *R) {
             return inferScalarType(R->getChainOp());
           })

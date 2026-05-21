@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 \
-; RUN:     -pass-remarks-output=%t -disable-output
+; RUN:     -pass-remarks-output=%t -disable-output -loop-interchange-profitabilities=instorder
 ; RUN: FileCheck -input-file %t --check-prefix=PROFIT-CACHE %s
 
 ; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 \
@@ -27,7 +27,7 @@
 ; PROFIT-CACHE-NEXT: Name:            InterchangeNotProfitable
 ; PROFIT-CACHE-NEXT: Function:        f
 ; PROFIT-CACHE-NEXT: Args:
-; PROFIT-CACHE-NEXT:   - String:          Interchanging loops is not considered to improve cache locality nor vectorization.
+; PROFIT-CACHE-NEXT:   - String:          Insufficient information to calculate the cost of loop for interchange.
 ; PROFIT-CACHE-NEXT: ...
 
 ; PROFIT-VEC:      --- !Passed

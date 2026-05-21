@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Contains the Markdown generator using Mustache template files.
+/// This file contains the implementation of the MDMustacheGenerator, which
+/// generates documentation in Markdown format using Mustache templates. It
+/// defines how the structured data in Info objects is mapped to template
+/// tags to produce readable markdown documents.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -26,8 +29,7 @@ static std::unique_ptr<MustacheTemplateFile> IndexTemplate = nullptr;
 
 struct MDMustacheGenerator : public MustacheGenerator {
   static const char *Format;
-  Error generateDocumentation(StringRef RootDir,
-                              StringMap<doc::OwnedPtr<doc::Info>> Infos,
+  Error generateDocumentation(StringRef RootDir, StringMap<doc::Info *> Infos,
                               const ClangDocContext &CDCtx,
                               std::string DirName) override;
   Error setupTemplateFiles(const ClangDocContext &CDCtx) override;
@@ -72,7 +74,7 @@ Error MDMustacheGenerator::setupTemplateFiles(const ClangDocContext &CDCtx) {
 }
 
 Error MDMustacheGenerator::generateDocumentation(
-    StringRef RootDir, StringMap<doc::OwnedPtr<doc::Info>> Infos,
+    StringRef RootDir, StringMap<doc::Info *> Infos,
     const clang::doc::ClangDocContext &CDCtx, std::string Dirname) {
   return MustacheGenerator::generateDocumentation(RootDir, std::move(Infos),
                                                   CDCtx, "md");

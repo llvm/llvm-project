@@ -244,7 +244,7 @@ private:
   void emitRecordID(RecordId ID);
   void emitBlockID(BlockId ID);
   void emitBlockInfoBlock();
-  void emitBlockInfo(BlockId BID, const std::vector<RecordId> &RIDs);
+  void emitBlockInfo(BlockId BID, llvm::ArrayRef<RecordId> RIDs);
 
   // Emission of individual record types.
   void emitRecord(StringRef Str, RecordId ID);

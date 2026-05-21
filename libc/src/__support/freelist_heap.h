@@ -128,6 +128,9 @@ LIBC_INLINE void *FreeListHeap::aligned_allocate(size_t alignment,
 }
 
 LIBC_INLINE void FreeListHeap::free(void *ptr) {
+  if (ptr == nullptr)
+    return;
+
   cpp::byte *bytes = static_cast<cpp::byte *>(ptr);
 
   LIBC_ASSERT(is_valid_ptr(bytes) && "Invalid pointer");

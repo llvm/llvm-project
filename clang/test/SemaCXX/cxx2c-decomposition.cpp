@@ -66,8 +66,8 @@ void test() {
 constexpr auto [a, b] = B{};
 static_assert(a.n == 0);
 // expected-error@-1 {{static assertion expression is not an integral constant expression}} \
-// expected-note@-1 {{read of temporary is not allowed in a constant expression outside the expression that created the temporary}}\
-// expected-note@-2 {{temporary created here}}
+// expected-note@-1 {{read of non-constexpr variable 'a' is not allowed in a constant expression}} \
+// expected-note@-2 {{declared here}}
 
 constinit auto [init1] = Y {42};
 constinit auto [init2] = X {};  // expected-error {{variable does not have a constant initializer}} \

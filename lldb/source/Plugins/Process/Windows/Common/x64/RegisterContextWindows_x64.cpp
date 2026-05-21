@@ -34,10 +34,10 @@ using namespace lldb_private;
 
 #define DEFINE_GPR_BIN(reg, alt) #reg, alt, 8, 0, eEncodingUint, eFormatBinary
 #define DEFINE_FPU_XMM(reg)                                                    \
-  #reg, NULL, 16, 0, eEncodingUint, eFormatVectorOfUInt64,                     \
-  {dwarf_##reg##_x86_64, dwarf_##reg##_x86_64, LLDB_INVALID_REGNUM,            \
-   LLDB_INVALID_REGNUM, lldb_##reg##_x86_64},                                  \
-  nullptr, nullptr, nullptr,
+  #reg, nullptr, 16, 0, eEncodingUint, eFormatVectorOfUInt64,                  \
+      {dwarf_##reg##_x86_64, dwarf_##reg##_x86_64, LLDB_INVALID_REGNUM,        \
+       LLDB_INVALID_REGNUM, lldb_##reg##_x86_64},                              \
+      nullptr, nullptr, nullptr,
 
 #define DEFINE_GPR_PSEUDO_32(reg)                                              \
 {                                                                              \
@@ -319,7 +319,7 @@ const RegisterInfo *
 RegisterContextWindows_x64::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < k_num_register_infos)
     return &g_register_infos[reg];
-  return NULL;
+  return nullptr;
 }
 
 size_t RegisterContextWindows_x64::GetRegisterSetCount() {

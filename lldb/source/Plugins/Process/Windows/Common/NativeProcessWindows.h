@@ -22,7 +22,7 @@ class NativeProcessWindows;
 class NativeThreadWindows;
 class NativeDebugDelegate;
 
-typedef std::shared_ptr<NativeDebugDelegate> NativeDebugDelegateSP;
+using NativeDebugDelegateSP = std::shared_ptr<NativeDebugDelegate>;
 
 //------------------------------------------------------------------
 // NativeProcessWindows

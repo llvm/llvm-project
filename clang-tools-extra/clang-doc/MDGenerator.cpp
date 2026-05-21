@@ -500,9 +500,10 @@ class MDGenerator : public Generator {
 public:
   static const char *Format;
 
-  llvm::Error generateDocumentation(
-      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
-      const ClangDocContext &CDCtx, std::string DirName) override;
+  llvm::Error generateDocumentation(StringRef RootDir,
+                                    llvm::StringMap<doc::Info *> Infos,
+                                    const ClangDocContext &CDCtx,
+                                    std::string DirName) override;
   llvm::Error createResources(ClangDocContext &CDCtx) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
@@ -511,7 +512,7 @@ public:
 const char *MDGenerator::Format = "md";
 
 llvm::Error MDGenerator::generateDocumentation(
-    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
+    StringRef RootDir, llvm::StringMap<doc::Info *> Infos,
     const ClangDocContext &CDCtx, std::string DirName) {
   // Track which directories we already tried to create.
   llvm::StringSet<> CreatedDirs;
@@ -519,7 +520,7 @@ llvm::Error MDGenerator::generateDocumentation(
   // Collect all output by file name and create the necessary directories.
   llvm::StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
-    doc::Info *Info = getPtr(Group.getValue());
+    doc::Info *Info = Group.getValue();
 
     llvm::SmallString<128> Path;
     llvm::sys::path::native(RootDir, Path);
