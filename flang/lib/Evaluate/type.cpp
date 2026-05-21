@@ -158,12 +158,19 @@ std::size_t DynamicType::GetAlignment(
     switch (GetDerivedTypeSpec().category()) {
       SWITCH_COVERS_ALL_CASES
     case semantics::DerivedTypeSpec::Category::DerivedType:
+      if (derived_ && derived_->scope()) {
+        return derived_->scope()->alignment().value_or(1);
+      }
+      break;
+
+      // EnumerationTypes skip normal instantiation and may not have scope set.
     case semantics::DerivedTypeSpec::Category::EnumerationType:
       if (derived_ && derived_->GetScope()) {
         return derived_->GetScope()->alignment().value_or(1);
       }
       break;
-    case semantics::DerivedTypeSpec::Category::IntrinsicVector:
+
+      case semantics::DerivedTypeSpec::Category::IntrinsicVector:
     case semantics::DerivedTypeSpec::Category::PairVector:
     case semantics::DerivedTypeSpec::Category::QuadVector:
       if (derived_ && derived_->scope()) {
@@ -200,9 +207,19 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
     }
     break;
   case TypeCategory::Derived:
-    if (!IsPolymorphic() && derived_ && derived_->GetScope()) {
+    // EnumerationTypes might not have scope set yet.
+    if (derived_ && (GetDerivedTypeSpec().category() ==
+          semantics::DerivedTypeSpec::Category::EnumerationType) &&
+          derived_->GetScope()) {
       auto size{derived_->GetScope()->size()};
       auto align{aligned ? derived_->GetScope()->alignment().value_or(0) : 0};
+      auto alignedSize{align > 0 ? ((size + align - 1) / align) * align : size};
+      return Expr<SubscriptInteger>{
+          static_cast<ConstantSubscript>(alignedSize)};
+    }
+    if (!IsPolymorphic() && derived_ && derived_->scope()) {
+      auto size{derived_->scope()->size()};
+      auto align{aligned ? derived_->scope()->alignment().value_or(0) : 0};
       auto alignedSize{align > 0 ? ((size + align - 1) / align) * align : size};
       return Expr<SubscriptInteger>{
           static_cast<ConstantSubscript>(alignedSize)};
