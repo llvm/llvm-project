@@ -4212,6 +4212,13 @@ static unsigned getCmpOperandFoldingProfit(SDValue Op, bool AllowExtend) {
   return 0;
 }
 
+static unsigned getCmpOrCmnOperandFoldingProfit(SDValue Op, ISD::CondCode CC,
+                                                SelectionDAG &DAG) {
+  if (isCMN(Op, CC, DAG))
+    return getCmpOperandFoldingProfit(Op.getOperand(1), true) + 1;
+  return getCmpOperandFoldingProfit(Op, true);
+}
+
 // emitComparison() converts comparison with one or negative one to comparison
 // with 0. Note that this only works for signed comparisons because of how ANDS
 // works.
@@ -4317,13 +4324,8 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   //    cmp     w12, w11, lsl #1
   if (!isa<ConstantSDNode>(RHS) ||
       !AArch64_AM::isLegalCmpImmed(RHS->getAsAPIntVal())) {
-    bool LHSIsCMN = isCMN(LHS, CC, DAG);
-    bool RHSIsCMN = isCMN(RHS, CC, DAG);
-    SDValue TheLHS = LHSIsCMN ? LHS.getOperand(1) : LHS;
-    SDValue TheRHS = RHSIsCMN ? RHS.getOperand(1) : RHS;
-
-    if (getCmpOperandFoldingProfit(TheLHS, true) + (LHSIsCMN ? 1 : 0) >
-        getCmpOperandFoldingProfit(TheRHS, true) + (RHSIsCMN ? 1 : 0)) {
+    if (getCmpOrCmnOperandFoldingProfit(LHS, CC, DAG) >
+        getCmpOrCmnOperandFoldingProfit(RHS, CC, DAG)) {
       std::swap(LHS, RHS);
       CC = ISD::getSetCCSwappedOperands(CC);
     }
