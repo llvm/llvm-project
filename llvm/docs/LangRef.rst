@@ -16371,7 +16371,7 @@ vector based on the single condition).
 Semantics:
 """"""""""
 
-If the condition evaluates to 1, the intrinsic returns the first value
+If the condition evaluates to true, the intrinsic returns the first value
 argument; otherwise, it returns the second value argument.
 
 The key semantic difference from :ref:`select <i_select>` is the constant-time

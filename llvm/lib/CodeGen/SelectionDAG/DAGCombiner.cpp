@@ -13232,11 +13232,8 @@ SDValue DAGCombiner::visitCT_SELECT(SDNode *N) {
   // This is a CT-safe canonicalization: flip negated condition by swapping
   // arms. extractBooleanFlip only matches boolean xor-with-1, so this preserves
   // dataflow semantics and does not introduce data-dependent control flow.
-  if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false)) {
-    SDValue SelectOp = DAG.getNode(ISD::CT_SELECT, DL, VT, F, N2, N1);
-    SelectOp->setFlags(Flags);
-    return SelectOp;
-  }
+  if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false))
+    return DAG.getCTSelect(DL, VT, F, N2, N1, Flags);
 
   if (VT0 == MVT::i1) {
     // Nested CT_SELECT merging optimizations for i1 conditions.
@@ -13256,10 +13253,7 @@ SDValue DAGCombiner::visitCT_SELECT(SDNode *N) {
       SDValue N1_2 = N1->getOperand(2);
       if (N1_2 == N2 && N0.getValueType() == N1_0.getValueType()) {
         SDValue And = DAG.getNode(ISD::AND, DL, N0.getValueType(), N0, N1_0);
-        SDValue SelectOp =
-            DAG.getNode(ISD::CT_SELECT, DL, N1.getValueType(), And, N1_1, N2);
-        SelectOp->setFlags(Flags);
-        return SelectOp;
+        return DAG.getCTSelect(DL, N1.getValueType(), And, N1_1, N2, Flags);
       }
     }
 
@@ -13272,10 +13266,7 @@ SDValue DAGCombiner::visitCT_SELECT(SDNode *N) {
       SDValue N2_2 = N2->getOperand(2);
       if (N2_1 == N1 && N0.getValueType() == N2_0.getValueType()) {
         SDValue Or = DAG.getNode(ISD::OR, DL, N0.getValueType(), N0, N2_0);
-        SDValue SelectOp =
-            DAG.getNode(ISD::CT_SELECT, DL, N1.getValueType(), Or, N1, N2_2);
-        SelectOp->setFlags(Flags);
-        return SelectOp;
+        return DAG.getCTSelect(DL, N1.getValueType(), Or, N1, N2_2, Flags);
       }
     }
   }
