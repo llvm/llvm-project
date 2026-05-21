@@ -117,6 +117,7 @@ set(supported_sources
 
 # List of source not used for GPU offloading.
 set(host_sources
+  iso_fortran_env_impl.cpp
   command.cpp
   complex-powi.cpp
   complex-reduction.c
