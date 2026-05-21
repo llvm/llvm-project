@@ -5,8 +5,8 @@ define <8 x i64> @zext_shufflevector(<16 x i32> %v) {
 ; CHECK-LABEL: define <8 x i64> @zext_shufflevector(
 ; CHECK-SAME: <16 x i32> [[V:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32> [[V]] to <8 x i64>
-; CHECK-NEXT:    [[Z0:%.*]] = and <8 x i64> [[TMP1]], splat (i64 4294967295)
 ; CHECK-NEXT:    [[Z1:%.*]] = lshr <8 x i64> [[TMP1]], splat (i64 32)
+; CHECK-NEXT:    [[Z0:%.*]] = and <8 x i64> [[TMP1]], splat (i64 4294967295)
 ; CHECK-NEXT:    [[R:%.*]] = mul nuw <8 x i64> [[Z0]], [[Z1]]
 ; CHECK-NEXT:    ret <8 x i64> [[R]]
 ;
@@ -34,8 +34,8 @@ define <vscale x 8 x i64> @zext_deinterleave(<vscale x 16 x i32> %v) {
 ; CHECK-LABEL: define <vscale x 8 x i64> @zext_deinterleave(
 ; CHECK-SAME: <vscale x 16 x i32> [[V:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i32> [[V]] to <vscale x 8 x i64>
-; CHECK-NEXT:    [[Z0:%.*]] = and <vscale x 8 x i64> [[TMP1]], splat (i64 4294967295)
 ; CHECK-NEXT:    [[Z1:%.*]] = lshr <vscale x 8 x i64> [[TMP1]], splat (i64 32)
+; CHECK-NEXT:    [[Z0:%.*]] = and <vscale x 8 x i64> [[TMP1]], splat (i64 4294967295)
 ; CHECK-NEXT:    [[R:%.*]] = mul nuw <vscale x 8 x i64> [[Z0]], [[Z1]]
 ; CHECK-NEXT:    ret <vscale x 8 x i64> [[R]]
 ;
@@ -46,6 +46,27 @@ define <vscale x 8 x i64> @zext_deinterleave(<vscale x 16 x i32> %v) {
   %z1 = zext <vscale x 8 x i32> %f1 to <vscale x 8 x i64>
   %r = mul <vscale x 8 x i64> %z0, %z1
   ret <vscale x 8 x i64> %r
+}
+
+define <vscale x 8 x i64> @zext_deinterleave_multi_zext_per_field(<vscale x 16 x i32> %v) {
+; CHECK-LABEL: define <vscale x 8 x i64> @zext_deinterleave_multi_zext_per_field(
+; CHECK-SAME: <vscale x 16 x i32> [[V:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i32> [[V]] to <vscale x 8 x i64>
+; CHECK-NEXT:    [[Z1:%.*]] = lshr <vscale x 8 x i64> [[TMP1]], splat (i64 32)
+; CHECK-NEXT:    [[Z0:%.*]] = and <vscale x 8 x i64> [[TMP1]], splat (i64 4294967295)
+; CHECK-NEXT:    [[R:%.*]] = mul nuw <vscale x 8 x i64> [[Z0]], [[Z1]]
+; CHECK-NEXT:    [[R2:%.*]] = mul <vscale x 8 x i64> [[R]], [[Z0]]
+; CHECK-NEXT:    ret <vscale x 8 x i64> [[R2]]
+;
+  %d = call {<vscale x 8 x i32>, <vscale x 8 x i32>} @llvm.vector.deinterleave2(<vscale x 16 x i32> %v)
+  %f0 = extractvalue {<vscale x 8 x i32>, <vscale x 8 x i32>} %d, 0
+  %f1 = extractvalue {<vscale x 8 x i32>, <vscale x 8 x i32>} %d, 1
+  %z0 = zext <vscale x 8 x i32> %f0 to <vscale x 8 x i64>
+  %z0.1 = zext <vscale x 8 x i32> %f0 to <vscale x 8 x i64>
+  %z1 = zext <vscale x 8 x i32> %f1 to <vscale x 8 x i64>
+  %r = mul <vscale x 8 x i64> %z0, %z1
+  %r2 = mul <vscale x 8 x i64> %r, %z0.1
+  ret <vscale x 8 x i64> %r2
 }
 
 define <vscale x 8 x i64> @zext_deinterleave_single_field(<vscale x 16 x i32> %v) {

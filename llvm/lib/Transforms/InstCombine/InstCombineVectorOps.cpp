@@ -2904,12 +2904,6 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (Instruction *I = simplifyBinOpSplats(SVI))
     return I;
 
-  if (foldExtractionOfVectorDeinterleave(&SVI)) {
-    // If the transform is successful, we're removing this
-    // shufflevector instruction, hence returning null.
-    return nullptr;
-  }
-
   // Canonicalize splat shuffle to use poison RHS. Handle this explicitly in
   // order to support scalable vectors.
   if (match(SVI.getShuffleMask(), m_ZeroMask()) && !isa<PoisonValue>(RHS))
@@ -3319,14 +3313,22 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
 /// ```
 /// This transformation is almost always benefitial as shufflevector is more
 /// expensive than normal arithmetics.
-bool InstCombinerImpl::foldExtractionOfVectorDeinterleave(Instruction *DI) {
+Instruction *
+InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
   // This pattern involves bitcast that is not compatible with big endian.
   if (DL.isBigEndian())
-    return false;
+    return nullptr;
 
-  using namespace PatternMatch;
   // The actual value that got de-interleaved.
   Value *DIV;
+
+  using namespace PatternMatch;
+  Value *SVI = nullptr, *DI = nullptr;
+  if (!match(&RootZExt,
+             m_ZExt(m_CombineOr(
+                 m_ExtractValue(m_Value(DI, m_Deinterleave2(m_Value(DIV)))),
+                 m_Value(SVI, m_Shuffle(m_Value(), m_Value()))))))
+    return nullptr;
 
   auto isDeinterleaveShuffle =
       [](Instruction *I) -> std::pair<Value *, unsigned> {
@@ -3348,31 +3350,35 @@ bool InstCombinerImpl::foldExtractionOfVectorDeinterleave(Instruction *DI) {
     return {nullptr, UINT_MAX};
   };
 
-  // Try matching shufflevector. The point here is to just find the first
-  // shufflevector. We'll find other shufflevectors later.
-  DIV = isDeinterleaveShuffle(DI).first;
-  // Try matching llvm.vector.deinterleave2.
-  if (!DIV) {
-    if (!match(DI, m_Deinterleave2(m_Value(DIV))) ||
-        !all_of(DI->users(), [](User *Usr) -> bool {
+  // Validate either the shufflevector or the vector.deinterleave2 and obtain
+  // the value they're de-interleaving.
+  if (SVI) {
+    // We will find other shufflevectors later.
+    DIV = isDeinterleaveShuffle(cast<Instruction>(SVI)).first;
+    if (!DIV)
+      return nullptr;
+  } else {
+    // We should already capture the value that got de-interleaved (i.e. DIV).
+    assert(DI && DIV);
+    if (!all_of(DI->users(), [](User *Usr) -> bool {
           auto *EV = dyn_cast<ExtractValueInst>(Usr);
           return EV && EV->getNumIndices() == 1;
         }))
-      return false;
+      return nullptr;
   }
 
   auto *InputVecTy = dyn_cast<VectorType>(DIV->getType());
   if (!InputVecTy)
-    return false;
+    return nullptr;
   auto *InElementTy = dyn_cast<IntegerType>(InputVecTy->getElementType());
   if (!InElementTy)
-    return false;
+    return nullptr;
   if (!InputVecTy->getElementCount().isKnownEven())
-    return false;
+    return nullptr;
 
   // {Field instruction, Field index}
   SmallVector<std::pair<Instruction *, unsigned>, 4> Fields;
-  if (isa<ShuffleVectorInst>(DI)) {
+  if (SVI) {
     for (auto *Usr : DIV->users()) {
       auto *FieldI = dyn_cast<Instruction>(Usr);
       if (!FieldI)
@@ -3396,16 +3402,16 @@ bool InstCombinerImpl::foldExtractionOfVectorDeinterleave(Instruction *DI) {
   // We commit the transformation only if all the field users can be replaced,
   // otherwise the primary de-interleaving construction, regardless of
   // llvm.vector.deinterleave2 or shufflevectors, will still be there.
-  SmallVector<Instruction *, 4> Field0Replacements;
-  SmallVector<Instruction *, 4> Field1Replacements;
+  SmallVector<ZExtInst *, 4> Field0Replacements;
+  SmallVector<ZExtInst *, 4> Field1Replacements;
   for (auto [Field, FieldIdx] : Fields) {
     for (User *FieldUsr : Field->users()) {
       auto *ZExt = dyn_cast<ZExtInst>(FieldUsr);
       if (!ZExt)
-        return false;
+        return nullptr;
       // Only if it's doubling the element size.
       if (ZExt->getDestTy() != ZExt->getSrcTy()->getExtendedType())
-        return false;
+        return nullptr;
       if (FieldIdx)
         Field1Replacements.push_back(ZExt);
       else
@@ -3422,10 +3428,29 @@ bool InstCombinerImpl::foldExtractionOfVectorDeinterleave(Instruction *DI) {
   Value *NewField0 = Builder.CreateAnd(Bitcast, Mask);
   Value *NewField1 = Builder.CreateLShr(Bitcast, InElementBitWidth);
 
-  for (Instruction *I : Field0Replacements)
+  Value *RootNewField = nullptr;
+  for (ZExtInst *I : Field0Replacements) {
+    // The root ZExt will be replaced by the InstCombiner upon
+    // returning from this function.
+    if (I == &RootZExt) {
+      assert(!RootNewField);
+      RootNewField = NewField0;
+      continue;
+    }
     replaceInstUsesWith(*I, NewField0);
-  for (Instruction *I : Field1Replacements)
+  }
+  for (ZExtInst *I : Field1Replacements) {
+    if (I == &RootZExt) {
+      assert(!RootNewField);
+      RootNewField = NewField1;
+      continue;
+    }
     replaceInstUsesWith(*I, NewField1);
+  }
 
-  return true;
+  assert(RootNewField && "cannot find replacement for the root zext");
+  auto *NewRootInst = cast<Instruction>(RootNewField);
+  // The InstCombiner expects a parent-less instruction.
+  NewRootInst->removeFromParent();
+  return NewRootInst;
 }

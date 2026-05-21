@@ -243,7 +243,7 @@ define <8 x half> @test_cvtnp_v8i16_bt(<8 x half> %a, <8 x half> %b, <4 x float>
 
 define <4 x i32> @test_vshrn_const(<8 x i16> %a) {
 ; CHECK-LABEL: @test_vshrn_const(
-; CHECK-NEXT:    [[Y:%.*]] = call <8 x i16> @llvm.arm.mve.vshrn.v8i16.v4i32(<8 x i16> [[A:%.*]], <4 x i32> <i32 512, i32 0, i32 0, i32 0>, i32 3, i32 0, i32 0, i32 0, i32 0, i32 1)
+; CHECK-NEXT:    [[Y:%.*]] = call <8 x i16> @llvm.arm.mve.vshrn.v8i16.v4i32(<8 x i16> poison, <4 x i32> <i32 512, i32 0, i32 0, i32 0>, i32 3, i32 0, i32 0, i32 0, i32 0, i32 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[Y]] to <4 x i32>
 ; CHECK-NEXT:    [[ZA:%.*]] = lshr <4 x i32> [[TMP1]], splat (i32 16)
 ; CHECK-NEXT:    ret <4 x i32> [[ZA]]
@@ -257,7 +257,7 @@ define <4 x i32> @test_vshrn_const(<8 x i16> %a) {
 define zeroext i16 @test_undef_bits() {
 ; CHECK-LABEL: @test_undef_bits(
 ; CHECK-NEXT:  e:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.arm.mve.vshrn.v8i16.v4i32(<8 x i16> <i16 0, i16 poison, i16 0, i16 poison, i16 0, i16 poison, i16 0, i16 poison>, <4 x i32> <i32 256, i32 0, i32 0, i32 0>, i32 8, i32 1, i32 1, i32 1, i32 0, i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.arm.mve.vshrn.v8i16.v4i32(<8 x i16> poison, <4 x i32> <i32 256, i32 0, i32 0, i32 0>, i32 8, i32 1, i32 1, i32 1, i32 0, i32 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP2]] to <8 x i16>

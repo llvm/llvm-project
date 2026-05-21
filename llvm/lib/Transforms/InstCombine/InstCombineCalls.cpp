@@ -3970,14 +3970,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
-  case Intrinsic::vector_deinterleave2: {
-    if (foldExtractionOfVectorDeinterleave(II)) {
-      // If the transform is successful, we're removing this
-      // deinterleave2 instruction, hence returning null.
-      return nullptr;
-    }
-    break;
-  }
   case Intrinsic::vp_load: {
     auto *VPI = cast<VPIntrinsic>(II);
     // Fold away bit casts of the loaded value by loading the desired type,
