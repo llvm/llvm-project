@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, inet_aton, (const char *cp, struct in_addr *inp)) {
-  cpp::optional<in_addr_t> addr = internal::inet_addr(cp);
+  cpp::optional<in_addr_t> addr = net::inet_addr(cp);
   if (!addr.has_value())
     return 0;
   if (inp)

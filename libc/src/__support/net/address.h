@@ -20,11 +20,11 @@
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
-namespace internal {
+namespace net {
 
 cpp::optional<in_addr_t> inet_addr(const char *cp);
 
-} // namespace internal
+} // namespace net
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_NET_ADDRESS_H

@@ -18,7 +18,7 @@
 #include "src/__support/str_to_integer.h"
 
 namespace LIBC_NAMESPACE_DECL {
-namespace internal {
+namespace net {
 
 cpp::optional<in_addr_t> inet_addr(const char *cp) {
   constexpr int IPV4_MAX_DOT_NUM = 3;
@@ -28,16 +28,16 @@ cpp::optional<in_addr_t> inet_addr(const char *cp) {
   for (; dot_num <= IPV4_MAX_DOT_NUM; ++dot_num) {
     // strtointeger skips leading whitespace signs (1.+2.-3. 4), but we don't
     // want that, so we explicitly check that the first character is a digit.
-    if (!isdigit(*cp))
+    if (!internal::isdigit(*cp))
       return cpp::nullopt;
 
-    auto result = strtointeger<in_addr_t>(cp, 0);
+    auto result = internal::strtointeger<in_addr_t>(cp, 0);
     parts[dot_num] = result;
 
     if (result.has_error() || result.parsed_len == 0)
       return cpp::nullopt;
     cp += result.parsed_len;
-    if (*cp == '\0' || isspace(*cp))
+    if (*cp == '\0' || internal::isspace(*cp))
       break;
     if (*cp != '.')
       return cpp::nullopt;
@@ -58,8 +58,8 @@ cpp::optional<in_addr_t> inet_addr(const char *cp) {
     result |= parts[i] << shift;
   }
 
-  return LIBC_NAMESPACE::Endian::to_big_endian(result);
+  return Endian::to_big_endian(result);
 }
 
-} // namespace internal
+} // namespace net
 } // namespace LIBC_NAMESPACE_DECL
