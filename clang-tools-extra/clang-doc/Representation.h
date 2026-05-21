@@ -111,8 +111,14 @@ template <typename T> using OwnedPtr = T *;
 // A helper function to create an owned pointer, abstracting away the memory
 // allocation mechanism.
 template <typename T, typename... Args>
-OwnedPtr<T> allocatePtr(Args &&...args) {
+OwnedPtr<T> allocateTransient(Args &&...args) {
   return new (TransientArena.Allocate<T>()) T(std::forward<Args>(args)...);
+}
+
+// A helper function to create memory allocated in the TransientArena.
+template <typename T, typename... Args>
+OwnedPtr<T> allocatePersistent(Args &&...args) {
+  return new (PersistentArena.Allocate<T>()) T(std::forward<Args>(args)...);
 }
 
 // An overload to explicitly allocate on an arena, returning a bare pointer.

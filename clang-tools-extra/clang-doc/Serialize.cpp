@@ -509,20 +509,20 @@ template <typename ChildType>
 OwnedPtr<Info> Serializer::makeAndInsertIntoParent(ChildType &Child) {
   if (Child.Namespace.empty()) {
     // Insert into unnamed parent namespace.
-    auto ParentNS = allocatePtr<NamespaceInfo>();
+    auto *ParentNS = allocateTransient<NamespaceInfo>();
     InsertChild(ParentNS->Children, Child);
     return ParentNS;
   }
 
   switch (Child.Namespace[0].RefType) {
   case InfoType::IT_namespace: {
-    auto ParentNS = allocatePtr<NamespaceInfo>();
+    auto *ParentNS = allocateTransient<NamespaceInfo>();
     ParentNS->USR = Child.Namespace[0].USR;
     InsertChild(ParentNS->Children, Child);
     return ParentNS;
   }
   case InfoType::IT_record: {
-    auto ParentRec = allocatePtr<RecordInfo>();
+    auto *ParentRec = allocateTransient<RecordInfo>();
     ParentRec->USR = Child.Namespace[0].USR;
     InsertChild(ParentRec->Children, Child);
     return ParentRec;
@@ -991,9 +991,8 @@ void Serializer::parseBases(llvm::SmallVectorImpl<BaseRecordInfo> &Bases,
                                  IsInAnonymousNamespace);
             FI.Access =
                 getFinalAccessSpecifier(BI.Access, MD->getAccessUnsafe());
-            FunctionInfo *FIPtr = allocatePtr<FunctionInfo>(std::move(FI));
             BI.Children.Functions.push_back(
-                *allocatePtr<InfoNode<FunctionInfo>>(FIPtr));
+                *allocateListNodeTransient<FunctionInfo>(std::move(FI)));
           }
         Bases.emplace_back(std::move(BI));
         // Call this function recursively to get the inherited classes of
@@ -1009,7 +1008,7 @@ void Serializer::parseBases(llvm::SmallVectorImpl<BaseRecordInfo> &Bases,
 std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 Serializer::emitInfo(const NamespaceDecl *D, const FullComment *FC,
                      Location Loc, bool PublicOnly) {
-  auto NSI = allocatePtr<NamespaceInfo>();
+  auto *NSI = allocateTransient<NamespaceInfo>();
   bool IsInAnonymousNamespace = false;
   populateInfo(*NSI, D, FC, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
@@ -1085,7 +1084,7 @@ std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 Serializer::emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
                      bool PublicOnly) {
 
-  auto RI = allocatePtr<RecordInfo>();
+  auto *RI = allocateTransient<RecordInfo>();
   bool IsInAnonymousNamespace = false;
 
   populateSymbolInfo(*RI, D, FC, Loc, IsInAnonymousNamespace);
@@ -1168,7 +1167,7 @@ Serializer::emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
 std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 Serializer::emitInfo(const FunctionDecl *D, const FullComment *FC, Location Loc,
                      bool PublicOnly) {
-  FunctionInfo *Func = allocatePtr<FunctionInfo>();
+  FunctionInfo *Func = allocateTransient<FunctionInfo>();
   bool IsInAnonymousNamespace = false;
   populateFunctionInfo(*Func, D, FC, Loc, IsInAnonymousNamespace);
   Func->Access = clang::AccessSpecifier::AS_none;
@@ -1182,7 +1181,7 @@ Serializer::emitInfo(const FunctionDecl *D, const FullComment *FC, Location Loc,
 std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 Serializer::emitInfo(const CXXMethodDecl *D, const FullComment *FC,
                      Location Loc, bool PublicOnly) {
-  FunctionInfo *Func = allocatePtr<FunctionInfo>();
+  FunctionInfo *Func = allocateTransient<FunctionInfo>();
   bool IsInAnonymousNamespace = false;
   populateFunctionInfo(*Func, D, FC, Loc, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
@@ -1226,7 +1225,7 @@ void Serializer::extractCommentFromDecl(const Decl *D, TypedefInfo &Info) {
 std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 Serializer::emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
                      bool PublicOnly) {
-  TypedefInfo *Info = allocatePtr<TypedefInfo>();
+  TypedefInfo *Info = allocateTransient<TypedefInfo>();
   bool IsInAnonymousNamespace = false;
   populateInfo(*Info, D, FC, IsInAnonymousNamespace);
 
@@ -1258,7 +1257,7 @@ Serializer::emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
 std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 Serializer::emitInfo(const TypeAliasDecl *D, const FullComment *FC,
                      Location Loc, bool PublicOnly) {
-  TypedefInfo *Info = allocatePtr<TypedefInfo>();
+  TypedefInfo *Info = allocateTransient<TypedefInfo>();
   bool IsInAnonymousNamespace = false;
   populateInfo(*Info, D, FC, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
@@ -1282,7 +1281,7 @@ Serializer::emitInfo(const TypeAliasDecl *D, const FullComment *FC,
 std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 Serializer::emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc,
                      bool PublicOnly) {
-  EnumInfo *Enum = allocatePtr<EnumInfo>();
+  EnumInfo *Enum = allocateTransient<EnumInfo>();
   bool IsInAnonymousNamespace = false;
   populateSymbolInfo(*Enum, D, FC, Loc, IsInAnonymousNamespace);
 
@@ -1303,7 +1302,7 @@ Serializer::emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc,
 std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 Serializer::emitInfo(const ConceptDecl *D, const FullComment *FC,
                      const Location &Loc, bool PublicOnly) {
-  ConceptInfo *Concept = allocatePtr<ConceptInfo>();
+  ConceptInfo *Concept = allocateTransient<ConceptInfo>();
 
   bool IsInAnonymousNamespace = false;
   populateInfo(*Concept, D, FC, IsInAnonymousNamespace);
@@ -1330,7 +1329,7 @@ Serializer::emitInfo(const ConceptDecl *D, const FullComment *FC,
 std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 Serializer::emitInfo(const VarDecl *D, const FullComment *FC,
                      const Location &Loc, bool PublicOnly) {
-  VarInfo *Var = allocatePtr<VarInfo>();
+  VarInfo *Var = allocateTransient<VarInfo>();
   bool IsInAnonymousNamespace = false;
   populateSymbolInfo(*Var, D, FC, Loc, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
