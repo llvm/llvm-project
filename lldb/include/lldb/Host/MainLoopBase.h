@@ -14,9 +14,12 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <mutex>
 #include <queue>
+#include <tuple>
+#include <vector>
 
 namespace lldb_private {
 
@@ -99,11 +102,27 @@ protected:
   std::optional<TimePoint> GetNextWakeupTime();
 
   std::mutex m_callback_mutex;
-  std::priority_queue<std::pair<TimePoint, Callback>,
-                      std::vector<std::pair<TimePoint, Callback>>,
-                      llvm::on_first<std::greater<TimePoint>>>
-      m_callbacks;
-  bool m_terminate_request : 1;
+
+  struct CallbackEntry {
+    TimePoint time_point;
+    Callback callback;
+
+    CallbackEntry(TimePoint tp, Callback cb, uint64_t seq)
+        : time_point(std::move(tp)), callback(std::move(cb)), sequence(seq) {}
+
+    bool operator<(const CallbackEntry &other) const {
+      if (time_point != other.time_point)
+        return time_point > other.time_point;
+      return sequence > other.sequence;
+    }
+
+  private:
+    uint64_t sequence;
+  };
+
+  std::priority_queue<CallbackEntry> m_callbacks;
+  uint64_t m_callback_sequence = 0;
+  bool m_terminate_request = false;
 
 private:
   class ReadHandle {
