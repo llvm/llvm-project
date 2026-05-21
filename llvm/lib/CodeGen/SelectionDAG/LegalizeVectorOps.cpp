@@ -661,7 +661,7 @@ void VectorLegalizer::PromoteSETCC(SDNode *Node,
       TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), NewVecVT);
   SDValue Res =
       DAG.getNode(Node->getOpcode(), DL, ResVT, Operands, Node->getFlags());
-  if (ResVT != Node->getSimpleValueType(0))
+  if (ResVT != Node->getValueType(0))
     Res = DAG.getBoolExtOrTrunc(Res, DL, Node->getValueType(0), NewVecVT);
   Results.push_back(Res);
 }
