@@ -21590,7 +21590,7 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
     // Build privatized reference to the current linear var.
     auto *DE = cast<DeclRefExpr>(SimpleRefExpr);
     Expr *CapturedRef;
-    if (auto *BD = dyn_cast<BindingDecl>(DE->getDecl())) {
+    if (dyn_cast<BindingDecl>(DE->getDecl())) {
       CapturedRef = SimpleRefExpr;
     } else if (LinKind == OMPC_LINEAR_uval) {
       CapturedRef = cast<VarDecl>(DE->getDecl())->getInit();
