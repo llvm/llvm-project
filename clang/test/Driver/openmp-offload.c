@@ -4,8 +4,6 @@
 
 /// ###########################################################################
 
-// XFAIL: *
-
 /// Check whether an invalid OpenMP target is specified:
 // RUN:   not %clang -### -fopenmp=libomp -fopenmp-targets=aaa-bbb-ccc-ddd %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-INVALID-TARGET %s
