@@ -10,19 +10,19 @@ objects: []
 functions:
   - name: htonl
     standards:
-      - POSIX
+      - posix
     return_type: uint32_t
     arguments:
       - type: uint32_t
   - name: htons
     standards:
-      - POSIX
+      - posix
     return_type: uint16_t
     arguments:
       - type: uint16_t
   - name: inet_addr
     standards:
-      - POSIX
+      - posix
     return_type: in_addr_t
     arguments:
       - type: const char *
@@ -35,13 +35,13 @@ functions:
       - type: struct in_addr *
   - name: ntohl
     standards:
-      - POSIX
+      - posix
     return_type: uint32_t
     arguments:
       - type: uint32_t
   - name: ntohs
     standards:
-      - POSIX
+      - posix
     return_type: uint16_t
     arguments:
       - type: uint16_t
