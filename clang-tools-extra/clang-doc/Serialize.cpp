@@ -203,7 +203,7 @@ StringRef Serializer::getInfoRelativePath(const Decl *D) {
 class ClangDocCommentVisitor
     : public ConstCommentVisitor<ClangDocCommentVisitor> {
 public:
-  ClangDocCommentVisitor(CommentInfo &CI) : CurrentCI(CI) {}
+  explicit ClangDocCommentVisitor(CommentInfo &CI) : CurrentCI(CI) {}
 
   void parseComment(const comments::Comment *C);
 

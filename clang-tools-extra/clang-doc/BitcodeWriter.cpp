@@ -100,7 +100,7 @@ struct RecordIdDsc {
       : Name(Name), Abbrev(Abbrev) {}
 
   // Is this 'description' valid?
-  operator bool() const {
+  explicit operator bool() const {
     return Abbrev != nullptr && Name.data() != nullptr && !Name.empty();
   }
 
