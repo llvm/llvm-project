@@ -300,16 +300,14 @@ foreach op = ["load_add", "load_sub", "load_and", "load_or", "load_xor",
   defvar pseudo = "ATOMIC_"#!toupper(op)#"_I64";
   let Defs = [CR0] in
     def pseudo : PPCCustomInserterPseudo<
-        (outs g8rc:$dst), (ins memrr:$ptr, i32imm:$sz, g8rc:$incr),
-        "#" # NAME, []>;
+        (outs g8rc:$dst), (ins memrr:$ptr, i32imm:$sz, g8rc:$incr)>;
   def : Pat<(i64 (pat ForceXForm:$ptr, g8rc:$incr)),
           (!cast<Instruction>(pseudo) memrr:$ptr, 8, g8rc:$incr)>;
 }
 
 let Defs = [CR0] in
   def ATOMIC_CMP_SWAP_I64 : PPCCustomInserterPseudo<
-    (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$old, g8rc:$new),
-    "#" # NAME, []>;
+    (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$old, g8rc:$new)>;
 
 def : Pat<(i64 (atomic_cmp_swap_i64 ForceXForm:$ptr, g8rc:$old, g8rc:$new)),
           (ATOMIC_CMP_SWAP_I64 memrr:$ptr, i64:$old, i64:$new)>;
@@ -371,8 +369,7 @@ def STQCX : XForm_1_memOp<31, 182, (outs), (ins g8prc:$RST, (memrr $RA, $RB):$ad
 }
 
 def SPLIT_QUADWORD : PPCCustomInserterPseudo<(outs g8rc:$lo, g8rc:$hi),
-                                             (ins g8prc:$src),
-                                             "#SPLIT_QUADWORD", []>;
+                                             (ins g8prc:$src)>;
 class AtomicRMW128<string asmstr>
   : PPCPostRAExpPseudo<(outs g8prc:$RTp, g8prc:$scratch),
                        (ins memrr:$ptr, g8rc:$incr_lo, g8rc:$incr_hi),
@@ -519,16 +516,16 @@ def MFCR8 : XFXForm_3<31, 19, (outs g8rc:$RT), (ins),
 let hasSideEffects = 1 in {
   let Defs = [CTR8] in
   def EH_SjLj_SetJmp64  : PPCCustomInserterPseudo<(outs gprc:$dst), (ins memr:$buf),
-                            "#EH_SJLJ_SETJMP64",
-                            [(set i32:$dst, (PPCeh_sjlj_setjmp addr:$buf))]>,
+                            [(set i32:$dst, (PPCeh_sjlj_setjmp addr:$buf))],
+                            "#EH_SJLJ_SETJMP64">,
                           Requires<[IsPPC64]>;
 }
 
 let hasSideEffects = 1, isBarrier = 1 in {
   let isTerminator = 1 in
   def EH_SjLj_LongJmp64 : PPCCustomInserterPseudo<(outs), (ins memr:$buf),
-                            "#EH_SJLJ_LONGJMP64",
-                            [(PPCeh_sjlj_longjmp addr:$buf)]>,
+                            [(PPCeh_sjlj_longjmp addr:$buf)],
+                            "#EH_SJLJ_LONGJMP64">,
                           Requires<[IsPPC64]>;
 }
 
@@ -582,7 +579,7 @@ def DYNAREAOFFSET8 : PPCEmitTimePseudo<(outs i64imm:$result), (ins memri:$fpsi),
 // Probed alloca to support stack clash protection.
 let Defs = [X1], Uses = [X1], hasNoSchedulingInfo = 1 in {
 def PROBED_ALLOCA_64 : PPCCustomInserterPseudo<(outs g8rc:$result),
-                         (ins g8rc:$negsize, memri:$fpsi), "#PROBED_ALLOCA_64",
+                         (ins g8rc:$negsize, memri:$fpsi),
                            [(set i64:$result,
                              (PPCprobedalloca i64:$negsize, iaddr:$fpsi))]>;
 def PREPARE_PROBED_ALLOCA_64 : PPCEmitTimePseudo<(outs
@@ -1463,8 +1460,7 @@ def LQ   : DQForm_RTp5_RA17_MEM<56, 0,
 // handle x-form during isel. Make it pre-ra may expose
 // oppotunities to some opts(CSE, LICM and etc.) for the result of adding
 // RA and RB.
-def LQX_PSEUDO : PPCCustomInserterPseudo<(outs g8prc:$RTp),
-                                         (ins memrr:$src), "#LQX_PSEUDO", []>;
+def LQX_PSEUDO : PPCCustomInserterPseudo<(outs g8prc:$RTp), (ins memrr:$src)>;
 
 def RESTORE_QUADWORD : PPCEmitTimePseudo<(outs g8prc:$RTp), (ins memrix:$src),
                                          "#RESTORE_QUADWORD", []>;
@@ -1686,9 +1682,7 @@ def STQ : DSForm_1<62, 2, (outs), (ins g8prc:$RST, (memrix $D, $RA):$addr),
                    "stq $RST, $addr", IIC_LdStSTQ,
                    []>, isPPC64;
 
-def STQX_PSEUDO : PPCCustomInserterPseudo<(outs),
-                                          (ins g8prc:$RSp, memrr:$dst),
-                                          "#STQX_PSEUDO", []>;
+def STQX_PSEUDO : PPCCustomInserterPseudo<(outs), (ins g8prc:$RSp, memrr:$dst)>;
 
 def SPILL_QUADWORD : PPCEmitTimePseudo<(outs), (ins g8prc:$RSp, memrix:$dst),
                                        "#SPILL_QUADWORD", []>;
