@@ -16,7 +16,7 @@
 target datalayout = "e-m:e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
 target triple = "amdgcn-amd-amdhsa"
 
-define amdgpu_kernel void @v5_local_prefetch() #0 {
+define amdgpu_kernel void @v5_local_prefetch(<8 x half> %v) #0 {
 .lr.ph:
   %0 = load <8 x half>, ptr addrspace(3) null, align 16
   %1 = shufflevector <8 x half> %0, <8 x half> zeroinitializer, <2 x i32> <i32 0, i32 1>
@@ -65,7 +65,7 @@ define amdgpu_kernel void @v5_local_prefetch() #0 {
   %42 = phi float [ 0.000000e+00, %.lr.ph ], [ %41, %3 ]
   %43 = phi <2 x half> [ %1, %.lr.ph ], [ zeroinitializer, %3 ]
   %44 = phi <2 x half> [ %2, %.lr.ph ], [ zeroinitializer, %3 ]
-  %45 = phi <8 x half> [ zeroinitializer, %.lr.ph ], [ <half 0.000000e+00, half 0.000000e+00, half undef, half undef, half undef, half undef, half undef, half undef>, %3 ]
+  %45 = phi <8 x half> [ zeroinitializer, %.lr.ph ], [ %v, %3 ]
   %46 = shufflevector <2 x half> %43, <2 x half> %44, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
   %47 = shufflevector <8 x half> %46, <8 x half> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 poison, i32 poison>
   %48 = shufflevector <8 x half> %46, <8 x half> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
