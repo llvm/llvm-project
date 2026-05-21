@@ -127,9 +127,15 @@ bool HostInfoWindows::GetEnvironmentVar(const std::string &var_name,
   if (!llvm::ConvertUTF8toWide(var_name, wvar_name))
     return false;
 
-  if (const wchar_t *wvar = _wgetenv(wvar_name.c_str()))
-    return llvm::convertWideToUTF8(wvar, var);
-  return false;
+  DWORD len = ::GetEnvironmentVariableW(wvar_name.c_str(), nullptr, 0);
+  if (len == 0)
+    return false;
+  std::vector<wchar_t> buffer(len);
+  DWORD written =
+      ::GetEnvironmentVariableW(wvar_name.c_str(), buffer.data(), len);
+  if (written == 0 || written >= len)
+    return false;
+  return llvm::convertWideToUTF8(buffer.data(), var);
 }
 
 static llvm::ManagedStatic<WindowsUserIDResolver> g_user_id_resolver;
