@@ -88,6 +88,7 @@ private:
 
   friend struct PerfSpeEventsTestHelper;
   friend struct PreAggregatedTestHelper;
+  friend struct PreParsedTextualEventsHelper;
 
   struct PerfBranchSample {
     SmallVector<LBREntry, 32> LBR;
