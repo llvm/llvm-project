@@ -202,4 +202,17 @@ define void @store_trunc_v32i16i8(ptr %ap, ptr %dest) #0 {
   ret void
 }
 
+define void @store_trunc_v4i64i32(ptr %src, ptr %dest) vscale_range(1,0) "target-features"="+neon,+sve" {
+; CHECK-LABEL: store_trunc_v4i64i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    str q0, [x1]
+; CHECK-NEXT:    ret
+  %ld = load <4 x i64>, ptr %src, align 4
+  %trunc = trunc <4 x i64> %ld to <4 x i32>
+  store <4 x i32> %trunc, ptr %dest, align 8
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve" }
