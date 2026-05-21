@@ -731,7 +731,6 @@ CIRAttrToValue::visitCirAttr(cir::RelativeVTableComponentAttr attr) {
       llvm::ArrayRef<mlir::LLVM::GEPArg>{0, attr.getVtableComponentIndex(),
                                          attr.getVtableAddressPoint()},
       mlir::LLVM::GEPNoWrapFlags::inbounds);
-  addressPoint->dump();
 
   auto targetInt = mlir::LLVM::PtrToIntOp::create(rewriter, loc, i64Ty, target);
 
