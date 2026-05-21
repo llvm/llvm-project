@@ -549,6 +549,13 @@ void ProcessDebugger::OnDebuggerError(const Status &error, uint32_t type) {
   llvm::sys::ScopedLock lock(m_mutex);
   Log *log = GetLog(WindowsLog::Process);
 
+  if (!m_session_data) {
+    LLDB_LOG(log,
+             "OnDebuggerError called with no active session: error {0}: {1}",
+             error.GetError(), error);
+    return;
+  }
+
   if (m_session_data->m_initial_stop_received) {
     // This happened while debugging.  Do we shutdown the debugging session,
     // try to continue, or do something else?
