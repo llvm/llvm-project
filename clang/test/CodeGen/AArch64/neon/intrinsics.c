@@ -26,14 +26,14 @@
 
 //===------------------------------------------------------===//
 // 2.1.3.2.7  Vector saturating rounding shift right and narrow
-// 
+// TODO: Implement SISD variants
 //===------------------------------------------------------===//
 
 // ALL-LABEL: @test_vqrshrun_n_s16(
 uint8x8_t test_vqrshrun_n_s16(int16x8_t a) {
-  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
+  // CIR:   cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" 
 
-  // LLVM-SAME: <8 x i16> noundef [[A:%.*]])
+  // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]])
   // LLVM:      {{.*}} = bitcast <8 x i16> [[A]] to <16 x i8>
   // LLVM:      [[TMP:%.*]] = bitcast <16 x i8> {{.*}} to <8 x i16>
   // LLVM:      [[VQRSHRUN_N1:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqrshrun.v8i8(<8 x i16> [[TMP]], i32 3)
@@ -43,9 +43,9 @@ uint8x8_t test_vqrshrun_n_s16(int16x8_t a) {
 
 // ALL-LABEL: @test_vqrshrun_n_s32(
 uint16x4_t test_vqrshrun_n_s32(int32x4_t a) {
-  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
+  // CIR:   cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" 
 
-  // LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]])
+  // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]])
   // LLVM:      [[BC1:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
   // LLVM:      [[BC2:%.*]] = bitcast <16 x i8> [[BC1]] to <4 x i32>
   // LLVM:      [[VQRSHRUN_N1:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrun.v4i16(<4 x i32> [[BC2]], i32 9)
@@ -55,9 +55,9 @@ uint16x4_t test_vqrshrun_n_s32(int32x4_t a) {
 
 // ALL-LABEL: @test_vqrshrun_n_s64(
 uint32x2_t test_vqrshrun_n_s64(int64x2_t a) {
-  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
+  // CIR:   cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" 
 
-  // LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]])
+  // LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]])
   // LLVM:      [[BC1:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
   // LLVM:      [[BC2:%.*]] = bitcast <16 x i8> [[BC1]] to <2 x i64>
   // LLVM:      [[VQRSHRUN_N1:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqrshrun.v2i32(<2 x i64> [[BC2]], i32 19)
@@ -67,10 +67,9 @@ uint32x2_t test_vqrshrun_n_s64(int64x2_t a) {
 
 //ALL-LABEL:  @test_vqrshrund_n_s64(
 uint32_t test_vqrshrund_n_s64(int64_t a) {
-  //CIR: {{%.*}} =  cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
-  // 
-  // 
-  // LLVM-SAME: i64 {{.*}}[[A:%.*]])
+  //CIR:  cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" 
+
+  // LLVM-SAME: i64 {{.*}} [[A:%.*]])
   // LLVM:   [[VQRSHRUND_N_S64:%.*]] = call i32 @llvm.aarch64.neon.sqrshrun.i32(i64 [[A]], i32 32)
   // LLVM:  ret i32 [[VQRSHRUND_N_S64]]
   return (uint32_t)vqrshrund_n_s64(a, 32);
@@ -78,9 +77,9 @@ uint32_t test_vqrshrund_n_s64(int64_t a) {
 
 // ALL-LABEL: @test_vqrshrn_n_s16(
 int8x8_t test_vqrshrn_n_s16(int16x8_t a) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" 
 
-  // LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]])
+  // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]])
   // LLVM:      [[BC1:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
   // LLVM:      [[BC2:%.*]] = bitcast <16 x i8> [[BC1]] to <8 x i16>
   // LLVM:      [[VQRSHRN_N1:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqrshrn.v8i8(<8 x i16> [[BC2]], i32 3)
@@ -90,9 +89,9 @@ int8x8_t test_vqrshrn_n_s16(int16x8_t a) {
 
 // ALL-LABEL: @test_vqrshrn_n_s32(
 int16x4_t test_vqrshrn_n_s32(int32x4_t a) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" 
 
-  // LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]])
+  // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]])
   // LLVM:      [[BC1:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
   // LLVM:      [[BC2:%.*]] = bitcast <16 x i8> [[BC1]] to <4 x i32>
   // LLVM:      [[VQRSHRN_N1:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrn.v4i16(<4 x i32> [[BC2]], i32 9)
@@ -102,9 +101,9 @@ int16x4_t test_vqrshrn_n_s32(int32x4_t a) {
 
 // ALL-LABEL: @test_vqrshrn_n_s64(
 int32x2_t test_vqrshrn_n_s64(int64x2_t a) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" 
 
-  // LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]])
+  // LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]])
   // LLVM:      [[BC1:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
   // LLVM:      [[BC2:%.*]] = bitcast <16 x i8> [[BC1]] to <2 x i64>
   // LLVM:      [[VQRSHRN_N1:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqrshrn.v2i32(<2 x i64> [[BC2]], i32 19)
@@ -114,9 +113,9 @@ int32x2_t test_vqrshrn_n_s64(int64x2_t a) {
 
 // ALL-LABEL: @test_vqrshrun_high_n_s16(
 uint8x16_t test_vqrshrun_high_n_s16(uint8x8_t a, int16x8_t b) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" 
 
-  // LLVM-SAME: <8 x i8> noundef [[A:%.*]], <8 x i16> noundef [[B:%.*]])
+  // LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i16> {{.*}}  [[B:%.*]])
   // LLVM:      [[TMP0:%.*]] = bitcast <8 x i16> [[B]] to <16 x i8>
   // LLVM:      [[VQRSHRUN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
   // LLVM:      [[VQRSHRUN_N3:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqrshrun.v8i8(<8 x i16> [[VQRSHRUN_N]], i32 3)
@@ -127,9 +126,9 @@ uint8x16_t test_vqrshrun_high_n_s16(uint8x8_t a, int16x8_t b) {
 
 // ALL-LABEL: @test_vqrshrun_high_n_s32(
 uint16x8_t test_vqrshrun_high_n_s32(uint16x4_t a, int32x4_t b) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" 
   
-  // LLVM-SAME: <4 x i16> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]])
+  // LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i32> {{.*}}  [[B:%.*]])
   // LLVM:      [[TMP0:%.*]] = bitcast <4 x i32> [[B]] to <16 x i8>
   // LLVM:      [[VQRSHRUN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
   // LLVM:      [[VQRSHRUN_N3:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrun.v4i16(<4 x i32> [[VQRSHRUN_N]], i32 9)
@@ -140,9 +139,9 @@ uint16x8_t test_vqrshrun_high_n_s32(uint16x4_t a, int32x4_t b) {
 
 // ALL-LABEL: @test_vqrshrun_high_n_s64(
 uint32x4_t test_vqrshrun_high_n_s64(uint32x2_t a, int64x2_t b) {
-  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" {{%.*}}
+  // CIR:    cir.call_llvm_intrinsic "aarch64.neon.sqrshrun" 
 
-  // LLVM-SAME: <2 x i32> noundef [[A:%.*]], <2 x i64> noundef [[B:%.*]])
+  // LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]], <2 x i64> {{.*}} [[B:%.*]])
   // LLVM:      [[TMP0:%.*]] = bitcast <2 x i64> [[B]] to <16 x i8>
   // LLVM:      [[VQRSHRUN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
   // LLVM:      [[VQRSHRUN_N3:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqrshrun.v2i32(<2 x i64> [[VQRSHRUN_N]], i32 19)
@@ -153,9 +152,9 @@ uint32x4_t test_vqrshrun_high_n_s64(uint32x2_t a, int64x2_t b) {
 
 // ALL-LABEL: @test_vqrshrn_n_u16(
 uint8x8_t test_vqrshrn_n_u16(uint16x8_t a) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" {{%.*}}
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" 
 
-  // LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]])
+  // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]])
   // LLVM:      [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
   // LLVM:      [[VQRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
   // LLVM:      [[VQRSHRN_N1:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqrshrn.v8i8(<8 x i16> [[VQRSHRN_N]], i32 3)
@@ -165,9 +164,9 @@ uint8x8_t test_vqrshrn_n_u16(uint16x8_t a) {
 
 // ALL-LABEL: @test_vqrshrn_n_u32(
 uint16x4_t test_vqrshrn_n_u32(uint32x4_t a) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" {{%.*}}
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" 
 
-  // LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]])
+  // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]])
   // LLVM:      [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
   // LLVM:      [[VQRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
   // LLVM:      [[VQRSHRN_N1:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqrshrn.v4i16(<4 x i32> [[VQRSHRN_N]], i32 9)
@@ -177,9 +176,9 @@ uint16x4_t test_vqrshrn_n_u32(uint32x4_t a) {
 
 // ALL-LABEL: @test_vqrshrn_n_u64(
 uint32x2_t test_vqrshrn_n_u64(uint64x2_t a) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" {{%.*}}
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" 
 
-  // LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]])
+  // LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]])
   // LLVM:      [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
   // LLVM:      [[VQRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
   // LLVM:      [[VQRSHRN_N1:%.*]] = call <2 x i32> @llvm.aarch64.neon.uqrshrn.v2i32(<2 x i64> [[VQRSHRN_N]], i32 19)
@@ -189,7 +188,7 @@ uint32x2_t test_vqrshrn_n_u64(uint64x2_t a) {
 
 // ALL-LABEL: @test_vqrshrnd_n_s64(
 int32_t test_vqrshrnd_n_s64(int64_t a) {
-  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
+  // CIR:    cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" 
 
   // LLVM-SAME: i64 noundef [[A:%.*]])
   // LLVM:      [[VQRSHRND_N_S64:%.*]] = call i32 @llvm.aarch64.neon.sqrshrn.i32(i64 [[A]], i32 32)
@@ -199,7 +198,7 @@ int32_t test_vqrshrnd_n_s64(int64_t a) {
 
 // ALL-LABEL: @test_vqrshrnd_n_u64(
 uint32_t test_vqrshrnd_n_u64(uint64_t a) {
-  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" {{%.*}}
+  // CIR:    cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" 
 
   // LLVM-SAME: i64 noundef [[A:%.*]])
   // LLVM:      [[VQRSHRND_N_U64:%.*]] = call i32 @llvm.aarch64.neon.uqrshrn.i32(i64 [[A]], i32 32)
@@ -209,9 +208,9 @@ uint32_t test_vqrshrnd_n_u64(uint64_t a) {
 
 // ALL-LABEL: @test_vqrshrn_high_n_s16(
 int8x16_t test_vqrshrn_high_n_s16(int8x8_t a, int16x8_t b) {
-  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
+  // CIR:    cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" 
 
-  // LLVM-SAME: <8 x i8> noundef [[A:%.*]], <8 x i16> noundef [[B:%.*]])
+  // LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i16> {{.*}}  [[B:%.*]])
   // LLVM:      [[TMP0:%.*]] = bitcast <8 x i16> [[B]] to <16 x i8>
   // LLVM:      [[VQRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
   // LLVM:      [[VQRSHRN_N3:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqrshrn.v8i8(<8 x i16> [[VQRSHRN_N]], i32 3)
@@ -222,9 +221,9 @@ int8x16_t test_vqrshrn_high_n_s16(int8x8_t a, int16x8_t b) {
 
 // ALL-LABEL: @test_vqrshrn_high_n_s32(
 int16x8_t test_vqrshrn_high_n_s32(int16x4_t a, int32x4_t b) {
-  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
+  // CIR:    cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" 
 
-  // LLVM-SAME: <4 x i16> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]])
+  // LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i32> {{.*}}  [[B:%.*]])
   // LLVM:      [[TMP0:%.*]] = bitcast <4 x i32> [[B]] to <16 x i8>
   // LLVM:      [[VQRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
   // LLVM:      [[VQRSHRN_N3:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrn.v4i16(<4 x i32> [[VQRSHRN_N]], i32 9)
@@ -235,9 +234,9 @@ int16x8_t test_vqrshrn_high_n_s32(int16x4_t a, int32x4_t b) {
 
 // ALL-LABEL:  @test_vqrshrn_high_n_s64(
 int32x4_t test_vqrshrn_high_n_s64(int32x2_t a, int64x2_t b) {
-  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" {{%.*}}
+  // CIR:  cir.call_llvm_intrinsic "aarch64.neon.sqrshrn" 
 
-  // LLVM-SAME: <2 x i32> noundef [[A:%.*]], <2 x i64> noundef [[B:%.*]])
+  // LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]], <2 x i64> {{.*}}  [[B:%.*]])
   // LLVM:      [[TMP0:%.*]] = bitcast <2 x i64> [[B]] to <16 x i8>
   // LLVM:      [[VQRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
   // LLVM:      [[VQRSHRN_N3:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqrshrn.v2i32(<2 x i64> [[VQRSHRN_N]], i32 19)
@@ -248,9 +247,9 @@ int32x4_t test_vqrshrn_high_n_s64(int32x2_t a, int64x2_t b) {
 
 // ALL-LABEL:  @test_vqrshrn_high_n_u16(
 uint8x16_t test_vqrshrn_high_n_u16(uint8x8_t a, uint16x8_t b) {
-  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" {{%.*}}
+  // CIR:    cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" 
 
-  // LLVM-SAME: <8 x i8> noundef [[A:%.*]], <8 x i16> noundef [[B:%.*]])
+  // LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i16> {{.*}}  [[B:%.*]])
   // LLVM:      [[TMP0:%.*]] = bitcast <8 x i16> [[B]] to <16 x i8>
   // LLVM:      [[VQRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
   // LLVM:      [[VQRSHRN_N3:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqrshrn.v8i8(<8 x i16> [[VQRSHRN_N]], i32 3)
@@ -261,9 +260,9 @@ uint8x16_t test_vqrshrn_high_n_u16(uint8x8_t a, uint16x8_t b) {
 
 // ALL-LABEL: @test_vqrshrn_high_n_u32(
 uint16x8_t test_vqrshrn_high_n_u32(uint16x4_t a, uint32x4_t b) {
-  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" {{%.*}}
+  // CIR:   cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" 
 
-  // LLVM-SAME: <4 x i16> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]])
+  // LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i32> {{.*}}  [[B:%.*]])
   // LLVM:      [[TMP0:%.*]] = bitcast <4 x i32> [[B]] to <16 x i8>
   // LLVM:      [[VQRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
   // LLVM:      [[VQRSHRN_N3:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqrshrn.v4i16(<4 x i32> [[VQRSHRN_N]], i32 9)
@@ -274,9 +273,9 @@ uint16x8_t test_vqrshrn_high_n_u32(uint16x4_t a, uint32x4_t b) {
 
 // ALL-LABEL: @test_vqrshrn_high_n_u64(
 uint32x4_t test_vqrshrn_high_n_u64(uint32x2_t a, uint64x2_t b) {
-  // CIR:   {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" {{%.*}}
+  // CIR:    cir.call_llvm_intrinsic "aarch64.neon.uqrshrn" 
 
-  // LLVM-SAME: <2 x i32> noundef [[A:%.*]], <2 x i64> noundef [[B:%.*]])
+  // LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]], <2 x i64> {{.*}}  [[B:%.*]])
   // LLVM:      [[TMP0:%.*]] = bitcast <2 x i64> [[B]] to <16 x i8>
   // LLVM:      [[VQRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
   // LLVM:      [[VQRSHRN_N3:%.*]] = call <2 x i32> @llvm.aarch64.neon.uqrshrn.v2i32(<2 x i64> [[VQRSHRN_N]], i32 19)
@@ -285,6 +284,7 @@ uint32x4_t test_vqrshrn_high_n_u64(uint32x2_t a, uint64x2_t b) {
   return vqrshrn_high_n_u64(a, b, 19);
 }
 
+//===------------------------------------------------------===//
 // 2.1.1.13.3 Maximum across vector
 //===------------------------------------------------------===//
 
