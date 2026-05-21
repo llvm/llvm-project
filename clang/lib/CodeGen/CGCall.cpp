@@ -3561,8 +3561,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
           dyn_cast<llvm::StructType>(ArgI.getCoerceToType());
 
       RawAddress DebugAddr = Address::invalid();
-      Address Alloca = CreateMemTemp(
-          Ty, getContext().getDeclAlign(Arg), Arg->getName());
+      Address Alloca =
+          CreateMemTemp(Ty, getContext().getDeclAlign(Arg), Arg->getName());
 
       // Pointer to store into.
       Address Ptr = emitAddressAtOffset(*this, Alloca, ArgI);
@@ -3733,8 +3733,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       if (!hasScalarEvaluationKind(Ty)) {
         RawAddress DebugAddr = Address::invalid();
         RawAddress Alloca = CreateMemTemp(Ty, "tmp", &DebugAddr);
-        ArgVals.push_back(
-            ParamValue::forIndirect(CreateMemTemp(Ty)));
+        ArgVals.push_back(ParamValue::forIndirect(CreateMemTemp(Ty)));
       } else {
         llvm::Value *U = llvm::UndefValue::get(ConvertType(Arg->getType()));
         ArgVals.push_back(ParamValue::forDirect(U));

@@ -1558,7 +1558,7 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
 
     CharUnits align = getContext().getDeclAlign(variable);
     Address alloca =
-      CreateMemTemp(variable->getType(), align, "block.captured-const");
+        CreateMemTemp(variable->getType(), align, "block.captured-const");
 
     Builder.CreateStore(capture.getConstant(), alloca);
 
