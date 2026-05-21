@@ -15,6 +15,7 @@
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
 #include "CIRGenFunctionInfo.h"
+#include "TargetInfo.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "clang/CIR/ABIArgInfo.h"
@@ -42,6 +43,7 @@ CIRGenFunctionInfo *CIRGenFunctionInfo::create(
 
   fi->required = required;
   fi->numArgs = argTypes.size();
+  fi->returnInfo = cir::ABIArgInfo::getDirect();
 
   fi->getArgTypes()[0] = resultType;
   std::copy(argTypes.begin(), argTypes.end(), fi->argTypesBegin());
@@ -56,7 +58,10 @@ cir::FuncType CIRGenTypes::getFunctionType(GlobalDecl gd) {
 }
 
 cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &info) {
+  const cir::ABIArgInfo &retInfo = info.getReturnInfo();
   mlir::Type resultType = convertType(info.getReturnType());
+  if (retInfo.getDirectOffset() != 0 && retInfo.getCoerceToType())
+    resultType = retInfo.getCoerceToType();
   SmallVector<mlir::Type, 8> argTypes;
   argTypes.reserve(info.getNumRequiredArgs());
 
@@ -1156,6 +1161,35 @@ CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionNoProtoType> fnpt) {
                                 fnpt->getExtInfo(), RequiredArgs(0));
 }
 
+static Address emitAddressAtOffset(CIRGenFunction &cgf, Address addr,
+                                   const cir::ABIArgInfo &info,
+                                   mlir::Location loc) {
+  if (!info.getDirectOffset())
+    return addr;
+  mlir::Value offsetVal =
+      cgf.getBuilder().getUnsignedInt(loc, info.getDirectOffset(), 64);
+  Address byteAddr =
+      addr.withElementType(cgf.getBuilder(), cgf.getBuilder().getUInt8Ty());
+  return byteAddr.withPointer(
+      cgf.getBuilder().createPtrStride(loc, byteAddr.getPointer(), offsetVal));
+}
+
+static void emitCoercedReturnStore(CIRGenFunction &cgf, mlir::Location loc,
+                                   mlir::Value retVal, QualType retTy,
+                                   Address destPtr,
+                                   const cir::ABIArgInfo &retInfo) {
+  if (isEmptyRecordForLayout(cgf.getContext(), retTy))
+    return;
+  Address storePtr = emitAddressAtOffset(cgf, destPtr, retInfo, loc);
+  mlir::Type storeTy = retInfo.getCoerceToType();
+  if (!storeTy)
+    storeTy = retVal.getType();
+  if (retVal.getType() != storeTy)
+    cgf.cgm.errorNYI(loc, "coerced return value type mismatch");
+  storePtr = storePtr.withElementType(cgf.getBuilder(), storeTy);
+  cgf.getBuilder().createStore(loc, retVal, storePtr);
+}
+
 RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                                 const CIRGenCallee &callee,
                                 ReturnValueSlot returnValue,
@@ -1354,8 +1388,13 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     mlir::ResultRange results = theCall->getOpResults();
     assert(results.size() <= 1 && "multiple returns from a call");
 
-    SourceLocRAIIObject loc{*this, callLoc};
-    emitAggregateStore(results[0], destPtr);
+    SourceLocRAIIObject locRAII{*this, callLoc};
+    const cir::ABIArgInfo retInfo = funcInfo.getReturnInfo();
+    if (retInfo.getDirectOffset() != 0)
+      emitCoercedReturnStore(*this, callLoc, results[0], retTy, destPtr,
+                             retInfo);
+    else
+      emitAggregateStore(results[0], destPtr);
     return RValue::getAggregate(destPtr);
   }
   case cir::TEK_Scalar: {

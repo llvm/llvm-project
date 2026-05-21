@@ -95,6 +95,8 @@ class CIRGenFunctionInfo final
 
   RequiredArgs required;
 
+  cir::ABIArgInfo returnInfo;
+
   unsigned numArgs;
 
   CanQualType *getArgTypes() { return getTrailingObjects(); }
@@ -123,6 +125,7 @@ public:
   // Friending class TrailingObjects is apparantly not good enough for MSVC, so
   // these have to be public.
   friend class TrailingObjects;
+  friend class CIRGenTypes;
 
   using const_arg_iterator = const CanQualType *;
   using arg_iterator = CanQualType *;
@@ -160,14 +163,7 @@ public:
 
   CanQualType getReturnType() const { return getArgTypes()[0]; }
 
-  cir::ABIArgInfo getReturnInfo() const {
-    assert(!cir::MissingFeatures::abiArgInfo());
-    // TODO(cir): we currently just 'fake' this, but should calculate
-    // this/figure out what it means when we get our ABI info set correctly.
-    // For now, we leave this as a direct return.
-
-    return cir::ABIArgInfo::getDirect();
-  }
+  cir::ABIArgInfo getReturnInfo() const { return returnInfo; }
 
   const_arg_iterator argTypesBegin() const { return getArgTypes() + 1; }
   const_arg_iterator argTypesEnd() const { return getArgTypes() + 1 + numArgs; }

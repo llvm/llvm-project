@@ -11,7 +11,10 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
+#include "llvm/TargetParser/Triple.h"
+
 #include <cassert>
+#include <iterator>
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -711,6 +714,66 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
   return getCIRGenRecordLayout(rd).isZeroInitializable();
 }
 
+cir::ABIArgInfo CIRGenTypes::classifyCIRReturnType(CanQualType retTy) {
+  mlir::Type fullTy = convertType(retTy);
+  const llvm::Triple &triple = cgm.getTriple();
+  if (triple.getArch() != llvm::Triple::x86_64 ||
+      triple.getOS() != llvm::Triple::Linux)
+    return cir::ABIArgInfo::getDirect(fullTy);
+
+  if (!isa<RecordType>(retTy))
+    return cir::ABIArgInfo::getDirect(fullTy);
+
+  const auto *recTy = cast<RecordType>(retTy);
+  const RecordDecl *rd = cast<RecordDecl>(recTy->getDecl());
+  if (!rd->isCompleteDefinition())
+    return cir::ABIArgInfo::getDirect(fullTy);
+
+  CharUnits size = astContext.getTypeSizeInChars(retTy);
+  if (size != CharUnits::fromQuantity(16))
+    return cir::ABIArgInfo::getDirect(fullTy);
+
+  const ASTRecordLayout &layout = astContext.getASTRecordLayout(rd);
+  if (layout.getFieldCount() < 2)
+    return cir::ABIArgInfo::getDirect(fullTy);
+
+  if (layout.getFieldOffset(1) !=
+      static_cast<uint64_t>(astContext.toBits(CharUnits::fromQuantity(8))))
+    return cir::ABIArgInfo::getDirect(fullTy);
+
+  auto hiFieldIt = rd->field_begin();
+  std::advance(hiFieldIt, 1);
+  QualType hiTy = hiFieldIt->getType();
+  if (astContext.getTypeSizeInChars(hiTy) != CharUnits::fromQuantity(8))
+    return cir::ABIArgInfo::getDirect(fullTy);
+
+  mlir::Type coerceTy;
+  if (hiTy->isIntegralOrEnumerationType() || hiTy->isPointerType())
+    coerceTy = convertType(hiTy);
+  else if (const RecordDecl *hiRd = hiTy->getAsRecordDecl()) {
+    if (!hiRd->isCompleteDefinition())
+      return cir::ABIArgInfo::getDirect(fullTy);
+    const ASTRecordLayout &hiLayout = astContext.getASTRecordLayout(hiRd);
+    if (hiLayout.getFieldCount() != 1)
+      return cir::ABIArgInfo::getDirect(fullTy);
+    QualType innerTy = hiRd->field_begin()->getType();
+    if (!innerTy->isIntegralOrEnumerationType())
+      return cir::ABIArgInfo::getDirect(fullTy);
+    coerceTy = convertType(innerTy);
+  } else {
+    return cir::ABIArgInfo::getDirect(fullTy);
+  }
+
+  if (!mlir::isa<cir::IntType>(coerceTy))
+    return cir::ABIArgInfo::getDirect(fullTy);
+
+  auto intTy = mlir::cast<cir::IntType>(coerceTy);
+  if (intTy.getWidth() > 64)
+    return cir::ABIArgInfo::getDirect(fullTy);
+
+  return cir::ABIArgInfo::getDirect(coerceTy, 8);
+}
+
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     CanQualType returnType, bool isInstanceMethod,
     llvm::ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
@@ -739,6 +802,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   // Construction the function info. We co-allocate the ArgInfos.
   fi = CIRGenFunctionInfo::create(info, isInstanceMethod, returnType, argTypes,
                                   required);
+  fi->returnInfo = classifyCIRReturnType(returnType);
   functionInfos.InsertNode(fi, insertPos);
 
   return *fi;

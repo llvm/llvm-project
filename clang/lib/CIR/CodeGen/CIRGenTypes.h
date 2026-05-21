@@ -82,6 +82,8 @@ class CIRGenTypes {
   /// Heper for convertType.
   mlir::Type convertFunctionTypeInternal(clang::QualType ft);
 
+  cir::ABIArgInfo classifyCIRReturnType(clang::CanQualType retTy);
+
 public:
   CIRGenTypes(CIRGenModule &cgm);
   ~CIRGenTypes();

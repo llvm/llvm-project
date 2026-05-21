@@ -329,6 +329,19 @@ void CIRGenFunction::LexicalScope::cleanup() {
   }
 }
 
+static Address emitReturnSlotAtOffset(CIRGenFunction &cgf, Address addr,
+                                      const cir::ABIArgInfo &info,
+                                      mlir::Location loc) {
+  if (!info.getDirectOffset())
+    return addr;
+  mlir::Value offsetVal =
+      cgf.getBuilder().getUnsignedInt(loc, info.getDirectOffset(), 64);
+  Address byteAddr =
+      addr.withElementType(cgf.getBuilder(), cgf.getBuilder().getUInt8Ty());
+  return byteAddr.withPointer(
+      cgf.getBuilder().createPtrStride(loc, byteAddr.getPointer(), offsetVal));
+}
+
 cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
@@ -336,9 +349,20 @@ cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   assert(fn && "emitReturn from non-function");
 
   if (!fn.getFunctionType().hasVoidReturn()) {
-    // Load the value from `__retval` and return it via the `cir.return` op.
-    auto value = cir::LoadOp::create(
-        builder, loc, fn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
+    const CIRGenFunctionInfo &fnInfo =
+        cgf.cgm.getTypes().arrangeGlobalDeclaration(cgf.curGD);
+    const cir::ABIArgInfo &retInfo = fnInfo.getReturnInfo();
+    mlir::Type loadTy = fn.getFunctionType().getReturnType();
+    Address loadAddr = cgf.returnValue;
+    if (retInfo.getDirectOffset() != 0) {
+      loadAddr = emitReturnSlotAtOffset(cgf, loadAddr, retInfo, loc);
+      if (retInfo.getCoerceToType()) {
+        loadTy = retInfo.getCoerceToType();
+        loadAddr = loadAddr.withElementType(cgf.getBuilder(), loadTy);
+      }
+    }
+    auto value =
+        cir::LoadOp::create(builder, loc, loadTy, loadAddr.getPointer());
     return cir::ReturnOp::create(builder, loc,
                                  llvm::ArrayRef(value.getResult()));
   }

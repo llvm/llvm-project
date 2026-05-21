@@ -53,10 +53,10 @@ private:
 public:
   ABIArgInfo(Kind k = Direct) : directAttr{0, 0}, theKind(k) {}
 
-  static ABIArgInfo getDirect(mlir::Type ty = nullptr) {
+  static ABIArgInfo getDirect(mlir::Type ty = nullptr, unsigned offset = 0) {
     ABIArgInfo info(Direct);
     info.setCoerceToType(ty);
-    assert(!cir::MissingFeatures::abiArgInfo());
+    info.directAttr.offset = offset;
     return info;
   }
 
@@ -82,13 +82,10 @@ public:
     return false;
   }
 
-  bool canHaveCoerceToType() const {
-    assert(!cir::MissingFeatures::abiArgInfo());
-    return isDirect();
-  }
+  bool canHaveCoerceToType() const { return isDirect(); }
 
   unsigned getDirectOffset() const {
-    assert(!cir::MissingFeatures::abiArgInfo());
+    assert(isDirect() && "ABIArgInfo offset is only valid for Direct");
     return directAttr.offset;
   }
 
