@@ -5,8 +5,7 @@
 ! supported contexts.
 
 subroutine teams_workdistribute()
-  use iso_fortran_env
-  real(kind=real32) :: a
+  integer :: a
   !$omp teams
   !$omp workdistribute
   a = 1
@@ -15,8 +14,7 @@ subroutine teams_workdistribute()
 end subroutine teams_workdistribute
 
 subroutine target_teams_workdistribute()
-  use iso_fortran_env
-  real(kind=real32) :: a
+  integer :: a
   !$omp target teams
   !$omp workdistribute
   a = 1
