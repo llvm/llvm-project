@@ -399,6 +399,10 @@ bool SemaCUDA::isImplicitHostDeviceFunction(const FunctionDecl *D) {
   return IsImplicitDevAttr && IsImplicitHostAttr;
 }
 
+bool SemaCUDA::isImplicitHDExplicitInstantiation(const FunctionDecl *FD) {
+  return FD && FD->isImplicitHDExplicitInstantiation();
+}
+
 void SemaCUDA::EraseUnwantedMatches(
     const FunctionDecl *Caller,
     SmallVectorImpl<std::pair<DeclAccessPair, FunctionDecl *>> &Matches) {
@@ -922,6 +926,8 @@ SemaBase::SemaDiagnosticBuilder SemaCUDA::DiagIfDeviceCode(SourceLocation Loc,
       if (SemaRef.IsLastErrorImmediate &&
           getDiagnostics().getDiagnosticIDs()->isNote(DiagID))
         return SemaDiagnosticBuilder::K_Immediate;
+      if (isImplicitHDExplicitInstantiation(CurFunContext))
+        return SemaDiagnosticBuilder::K_Deferred;
       return (SemaRef.getEmissionStatus(CurFunContext) ==
               Sema::FunctionEmissionStatus::Emitted)
                  ? SemaDiagnosticBuilder::K_ImmediateWithCallStack
@@ -989,8 +995,11 @@ bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
   // Otherwise, mark the call in our call graph so we can traverse it later.
   bool CallerKnownEmitted = SemaRef.getEmissionStatus(Caller) ==
                             Sema::FunctionEmissionStatus::Emitted;
+  bool CallerIsImplicitHDExplicitInst =
+      isImplicitHDExplicitInstantiation(Caller);
   SemaDiagnosticBuilder::Kind DiagKind = [this, Caller, Callee,
-                                          CallerKnownEmitted] {
+                                          CallerKnownEmitted,
+                                          CallerIsImplicitHDExplicitInst] {
     switch (IdentifyPreference(Caller, Callee)) {
     case CFP_Never:
     case CFP_WrongSide:
@@ -998,7 +1007,7 @@ bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
       // If we know the caller will be emitted, we know this wrong-side call
       // will be emitted, so it's an immediate error.  Otherwise, defer the
       // error until we know the caller is emitted.
-      return CallerKnownEmitted
+      return (CallerKnownEmitted && !CallerIsImplicitHDExplicitInst)
                  ? SemaDiagnosticBuilder::K_ImmediateWithCallStack
                  : SemaDiagnosticBuilder::K_Deferred;
     default:

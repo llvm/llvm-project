@@ -3123,6 +3123,10 @@ public:
   void setTemplateSpecializationKind(TemplateSpecializationKind TSK,
                         SourceLocation PointOfInstantiation = SourceLocation());
 
+  /// True if both __host__ and __device__ are implicit attributes and this is
+  /// (or is a member of) an explicit template instantiation.
+  bool isImplicitHDExplicitInstantiation() const;
+
   /// Retrieve the (first) point of instantiation of a function template
   /// specialization or a member of a class template specialization.
   ///

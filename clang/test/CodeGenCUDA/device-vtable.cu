@@ -13,18 +13,16 @@
 
 #include "Inputs/cuda.h"
 
-// Implicit H+D virtual dtor of an explicit instantiation, no device use:
-// device vtable slots get a per-dtor trap stub (named after the dtor)
-// instead of the real body. Comdat globals appear first in IR, so this
-// block is checked before non-comdat ones.
+// Implicit H+D virtual dtor of an explicit instantiation with a safe body:
+// vtable slots reference the real dtor mangled name. No trap.
 template <typename T>
 struct ETI {
   virtual ~ETI() = default;
 };
 template class ETI<float>;
 // CHECK-DEVICE: @_ZTV3ETIIfE =
-// CHECK-DEVICE-SAME: @__clang_cuda_unreachable_dtor._ZN3ETIIfED1Ev
-// CHECK-DEVICE-SAME: @__clang_cuda_unreachable_dtor._ZN3ETIIfED0Ev
+// CHECK-DEVICE-SAME: @_ZN3ETIIfED1Ev
+// CHECK-DEVICE-SAME: @_ZN3ETIIfED0Ev
 // CHECK-HOST: @_ZTV3ETIIfE = {{.*}} @_ZN3ETIIfED
 
 // Device uses ETI_Used (local var): vtable D1 slot holds the real dtor.
@@ -120,10 +118,11 @@ void HD::h_method() {}
 // CHECK-HOST: define{{.*}} void @_ZN2HD8h_methodEv
 // CHECK-DEVICE-NOT: define{{.*}} void @_ZN2HD8h_methodEv
 
-// Trap stub body (emitted before user dtor bodies in IR).
-// CHECK-DEVICE: define internal void @__clang_cuda_unreachable_dtor._ZN3ETIIfED1Ev
-// CHECK-DEVICE: call void @llvm.trap()
-// CHECK-DEVICE-NEXT: unreachable
+// No more separately-named trap stub — vtable slots reference the real
+// dtor symbol directly. If the deferred-diag walker found the dtor's
+// body unsafe, CodeGen replaces that body itself with trap (covered by
+// a separate test).
+// CHECK-DEVICE-NOT: __clang_cuda_unreachable_dtor
 
 // ETI_Poly D1/D0 bodies must be emitted on device.
 // CHECK-DEVICE: define{{.*}} @_ZN8ETI_PolyIfED1Ev
