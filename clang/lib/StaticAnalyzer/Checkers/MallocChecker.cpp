@@ -985,14 +985,14 @@ protected:
 
   // A release function stack frame in which memory was released. Used for
   // miscellaneous false positive suppression.
-  const StackFrame *ReleaseFunctionLC;
+  const StackFrame *ReleaseFunctionSF;
 
   bool IsLeak;
 
 public:
   MallocBugVisitor(SymbolRef S, bool isLeak = false)
       : Sym(S), Mode(Normal), FailedReallocSymbol(nullptr),
-        ReleaseFunctionLC(nullptr), IsLeak(isLeak) {}
+        ReleaseFunctionSF(nullptr), IsLeak(isLeak) {}
 
   static void *getTag() {
     static int Tag = 0;
@@ -3943,8 +3943,8 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
   // original reference count is positive, we should not report use-after-frees
   // on objects deleted in such functions. This can probably be improved
   // through better shared pointer modeling.
-  if (ReleaseFunctionLC && (ReleaseFunctionLC == CurrentSF ||
-                            ReleaseFunctionLC->isParentOf(CurrentSF))) {
+  if (ReleaseFunctionSF && (ReleaseFunctionSF == CurrentSF ||
+                            ReleaseFunctionSF->isParentOf(CurrentSF))) {
     if (const auto *AE = dyn_cast<AtomicExpr>(S)) {
       // Check for manual use of atomic builtins.
       AtomicExpr::AtomicOp Op = AE->getOp();
@@ -4045,7 +4045,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
         //
         // Usually (e.g. in C) we say that the _responsible_ stack frame is the
         // current innermost stack frame:
-        ReleaseFunctionLC = CurrentSF;
+        ReleaseFunctionSF = CurrentSF;
         // ...but if the stack contains a destructor call, then we say that the
         // outermost destructor stack frame is the _responsible_ one:
         for (const StackFrame *SF = CurrentSF; SF; SF = SF->getParent()) {
@@ -4073,7 +4073,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
             //   free(buffer);
             // }
             //
-            // This way ReleaseFunctionLC will point to outermost destructor and
+            // This way ReleaseFunctionSF will point to outermost destructor and
             // it would be possible to catch wider range of FP.
             //
             // NOTE: it would be great to support smth like that in C, since
@@ -4085,7 +4085,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
             //   if (refPut(data))
             //     doFree(data);
             // }
-            ReleaseFunctionLC = SF;
+            ReleaseFunctionSF = SF;
           }
         }
 

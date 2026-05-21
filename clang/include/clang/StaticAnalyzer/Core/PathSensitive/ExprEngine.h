@@ -176,7 +176,7 @@ private:
   const NodeBuilderContext *currBldrCtx = nullptr;
   /// Historically `currBldrCtx` pointed to a local variable in some stack
   /// frame. This field is introduced as a temporary measure to allow a gradual
-  /// transition. Only use this in {re,}setStackFrameAndBlock!
+  /// transition. Only use this in {re,}setCurrStackFrameAndBlock!
   /// TODO: Remove this temporary hack.
   std::optional<NodeBuilderContext> OwnedCurrBldrCtx;
 
@@ -204,10 +204,10 @@ public:
   virtual ~ExprEngine() = default;
 
   /// Returns true if there is still simulation state on the worklist.
-  bool ExecuteWorkList(const StackFrame *L, unsigned Steps = 150000) {
-    assert(L->inTopFrame());
-    BR.setAnalysisEntryPoint(L->getDecl());
-    return Engine.ExecuteWorkList(L, Steps, nullptr);
+  bool ExecuteWorkList(const StackFrame *SF, unsigned Steps = 150000) {
+    assert(SF->inTopFrame());
+    BR.setAnalysisEntryPoint(SF->getDecl());
+    return Engine.ExecuteWorkList(SF, Steps, nullptr);
   }
 
   /// getContext - Return the ASTContext associated with this analysis.
@@ -320,7 +320,7 @@ public:
 
   /// getInitialState - Return the initial state used for the root vertex
   ///  in the ExplodedGraph.
-  ProgramStateRef getInitialState(const StackFrame *InitLoc);
+  ProgramStateRef getInitialState(const StackFrame *InitSF);
 
   ExplodedGraph &getGraph() { return G; }
   const ExplodedGraph &getGraph() const { return G; }

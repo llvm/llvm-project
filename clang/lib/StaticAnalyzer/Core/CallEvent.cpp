@@ -1459,16 +1459,16 @@ CallEventManager::getSimpleCall(const CallExpr *CE, ProgramStateRef State,
 
 CallEventRef<> CallEventManager::getCaller(const StackFrame *CalleeSF,
                                            ProgramStateRef State) {
-  const StackFrame *ParentCtx = CalleeSF->getParent();
-  const StackFrame *CallerCtx = ParentCtx;
+  const StackFrame *ParentSF = CalleeSF->getParent();
+  const StackFrame *CallerSF = ParentSF;
   CFGBlock::ConstCFGElementRef ElemRef = {CalleeSF->getCallSiteBlock(),
                                           CalleeSF->getIndex()};
-  assert(CallerCtx && "This should not be used for top-level stack frames");
+  assert(CallerSF && "This should not be used for top-level stack frames");
 
   const Expr *CallSite = CalleeSF->getCallSite();
 
   if (CallSite) {
-    if (CallEventRef<> Out = getCall(CallSite, State, CallerCtx, ElemRef))
+    if (CallEventRef<> Out = getCall(CallSite, State, CallerSF, ElemRef))
       return Out;
 
     SValBuilder &SVB = State->getStateManager().getSValBuilder();
@@ -1477,11 +1477,11 @@ CallEventRef<> CallEventManager::getCaller(const StackFrame *CalleeSF,
     SVal ThisVal = State->getSVal(ThisPtr);
 
     if (const auto *CE = dyn_cast<CXXConstructExpr>(CallSite))
-      return getCXXConstructorCall(CE, ThisVal.getAsRegion(), State, CallerCtx,
+      return getCXXConstructorCall(CE, ThisVal.getAsRegion(), State, CallerSF,
                                    ElemRef);
     if (const auto *CIE = dyn_cast<CXXInheritedCtorInitExpr>(CallSite))
       return getCXXInheritedConstructorCall(CIE, ThisVal.getAsRegion(), State,
-                                            CallerCtx, ElemRef);
+                                            CallerSF, ElemRef);
     // All other cases are handled by getCall.
     llvm_unreachable("This is not an inlineable statement");
   }
@@ -1509,7 +1509,7 @@ CallEventRef<> CallEventManager::getCaller(const StackFrame *CalleeSF,
 
   return getCXXDestructorCall(Dtor, Trigger, ThisVal.getAsRegion(),
                               E.getAs<CFGBaseDtor>().has_value(), State,
-                              CallerCtx, ElemRef);
+                              CallerSF, ElemRef);
 }
 
 CallEventRef<> CallEventManager::getCall(const Stmt *S, ProgramStateRef State,

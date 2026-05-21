@@ -2423,8 +2423,8 @@ class InlinedFunctionCallHandler final : public ExpressionHandler {
     if (!CEE)
       return {};
 
-    const StackFrame *CalleeContext = CEE->getCalleeStackFrame();
-    if (CalleeContext->getCallSite() != E)
+    const StackFrame *CalleeSF = CEE->getCalleeStackFrame();
+    if (CalleeSF->getCallSite() != E)
       return {};
 
     // Check the return value.
@@ -2445,7 +2445,7 @@ class InlinedFunctionCallHandler final : public ExpressionHandler {
         EnableNullFPSuppression = State->isNull(*RetLoc).isConstrainedTrue();
 
     PathSensitiveBugReport &Report = getParentTracker().getReport();
-    Report.addVisitor<ReturnVisitor>(&getParentTracker(), CalleeContext,
+    Report.addVisitor<ReturnVisitor>(&getParentTracker(), CalleeSF,
                                      EnableNullFPSuppression, Options,
                                      Opts.Kind);
     return {true};

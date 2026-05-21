@@ -299,7 +299,7 @@ const CFGBlock *ExplodedNode::getCFGBlock() const {
 }
 
 static const StackFrame *
-findTopAutosynthesizedParentContext(const StackFrame *SF) {
+findTopAutosynthesizedParentStackFrame(const StackFrame *SF) {
   assert(SF->getAnalysisDeclContext()->isBodyAutosynthesized());
   const StackFrame *ParentSF = SF->getParent();
   assert(ParentSF && "We don't start analysis from autosynthesized code");
@@ -318,7 +318,7 @@ const Stmt *ExplodedNode::getStmtForDiagnostics() const {
   const StackFrame *SF = getStackFrame();
   if (SF->getAnalysisDeclContext()->isBodyAutosynthesized()) {
     // It must be a stack frame because we only autosynthesize functions.
-    return cast<StackFrame>(findTopAutosynthesizedParentContext(SF))
+    return cast<StackFrame>(findTopAutosynthesizedParentStackFrame(SF))
         ->getCallSite();
   }
   // Otherwise, see if the node's program point directly points to a statement.

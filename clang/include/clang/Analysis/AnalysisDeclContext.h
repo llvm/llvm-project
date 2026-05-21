@@ -249,7 +249,7 @@ public:
 
   int64_t getID() const { return ID; }
 
-  bool isParentOf(const StackFrame *LC) const;
+  bool isParentOf(const StackFrame *SF) const;
 
   const Decl *getDecl() const { return Ctx->getDecl(); }
 
@@ -281,15 +281,15 @@ public:
   /// \param NL    The newline.
   /// \param Space The space count for indentation.
   /// \param IsDot Whether the output format is \c dot.
-  /// \param printMoreInfoPerContext
-  /// A callback to print more information for each context, for example:
+  /// \param printMoreInfoPerStackFrame
+  /// A callback to print more information for each stack frame, for example:
   /// \code
   ///   [&](const StackFrame *SF) { SF->dump(); }
   /// \endcode
   void printJson(
       raw_ostream &Out, const char *NL = "\n", unsigned int Space = 0,
       bool IsDot = false,
-      std::function<void(const StackFrame *)> printMoreInfoPerContext =
+      std::function<void(const StackFrame *)> printMoreInfoPerStackFrame =
           [](const StackFrame *) {}) const;
 
   /// Prints out the call stack.

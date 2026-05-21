@@ -200,14 +200,14 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
   ++Space;
   if (!SF) {
     // Find the freshest location context.
-    llvm::SmallPtrSet<const StackFrame *, 16> FoundContexts;
+    llvm::SmallPtrSet<const StackFrame *, 16> FoundStackFrames;
     for (const auto &I : *this) {
       const StackFrame *currentSF = I.first.getStackFrame();
-      if (FoundContexts.count(currentSF) == 0) {
+      if (FoundStackFrames.count(currentSF) == 0) {
         // This context is fresher than all other contexts so far.
         SF = currentSF;
         for (const StackFrame *SFI = currentSF; SFI; SFI = SFI->getParent())
-          FoundContexts.insert(SFI);
+          FoundStackFrames.insert(SFI);
       }
     }
   }

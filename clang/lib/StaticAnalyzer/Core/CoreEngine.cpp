@@ -84,35 +84,34 @@ void CoreEngine::setBlockCounter(BlockCounter C) {
 }
 
 /// ExecuteWorkList - Run the worklist algorithm for a maximum number of steps.
-bool CoreEngine::ExecuteWorkList(const StackFrame *L, unsigned MaxSteps,
+bool CoreEngine::ExecuteWorkList(const StackFrame *SF, unsigned MaxSteps,
                                  ProgramStateRef InitState) {
   if (G.empty()) {
     assert(!G.getRoot() && "empty graph must not have a root node");
     // Initialize the analysis by constructing the root if there are no nodes.
 
-    const CFGBlock *Entry = &(L->getCFG()->getEntry());
+    const CFGBlock *Entry = &(SF->getCFG()->getEntry());
 
     assert(Entry->empty() && "Entry block must be empty.");
 
     assert(Entry->succ_size() == 1 && "Entry block must have 1 successor.");
 
     // Mark the entry block as visited.
-    FunctionSummaries->markVisitedBasicBlock(Entry->getBlockID(),
-                                             L->getDecl(),
-                                             L->getCFG()->getNumBlockIDs());
+    FunctionSummaries->markVisitedBasicBlock(Entry->getBlockID(), SF->getDecl(),
+                                             SF->getCFG()->getNumBlockIDs());
 
     // Get the solitary successor.
     const CFGBlock *Succ = *(Entry->succ_begin());
 
     // Construct an edge representing the
     // starting location in the function.
-    BlockEdge StartLoc(Entry, Succ, L);
+    BlockEdge StartLoc(Entry, Succ, SF);
 
     // Set the current block counter to being empty.
     setBlockCounter(BCounterFactory.GetEmptyCounter());
 
     if (!InitState)
-      InitState = ExprEng.getInitialState(L);
+      InitState = ExprEng.getInitialState(SF);
 
     bool IsNew;
     ExplodedNode *Node = G.getNode(StartLoc, InitState, false, &IsNew);

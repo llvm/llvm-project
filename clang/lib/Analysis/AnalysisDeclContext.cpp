@@ -478,7 +478,7 @@ void StackFrame::dumpStack(raw_ostream &Out) const {
 
 void StackFrame::printJson(
     raw_ostream &Out, const char *NL, unsigned int Space, bool IsDot,
-    std::function<void(const StackFrame *)> printMoreInfoPerContext) const {
+    std::function<void(const StackFrame *)> printMoreInfoPerStackFrame) const {
   ASTContext &Ctx = getAnalysisDeclContext()->getASTContext();
   PrintingPolicy PP(Ctx.getLangOpts());
   PP.TerseOutput = 1;
@@ -506,7 +506,7 @@ void StackFrame::printJson(
 
     Out << ", \"items\": ";
 
-    printMoreInfoPerContext(SF);
+    printMoreInfoPerStackFrame(SF);
 
     Out << '}';
     if (SF->getParent())

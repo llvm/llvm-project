@@ -1157,8 +1157,8 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
 
     if (C.shouldAddPathEdges()) {
       // Add an edge to the start of the function.
-      const StackFrame *CalleeLC = CE->getCalleeStackFrame();
-      const Decl *D = CalleeLC->getDecl();
+      const StackFrame *CalleeSF = CE->getCalleeStackFrame();
+      const Decl *D = CalleeSF->getDecl();
       // Add the edge only when the callee has body. We jump to the beginning
       // of the *declaration*, however we expect it to be followed by the
       // body. This isn't the case for autosynthesized property accessors in
@@ -2070,8 +2070,8 @@ PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
   if (PDC->shouldAddPathEdges()) {
     // Add an edge to the start of the function.
     // We'll prune it out later, but it helps make diagnostics more uniform.
-    const StackFrame *CalleeLC = Construct.getStackFrameForActivePath();
-    const Decl *D = CalleeLC->getDecl();
+    const StackFrame *CalleeSF = Construct.getStackFrameForActivePath();
+    const Decl *D = CalleeSF->getDecl();
     addEdgeToPath(Construct.getActivePath(), PrevLoc,
                   PathDiagnosticLocation::createBegin(D, SM));
   }

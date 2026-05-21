@@ -219,7 +219,7 @@ private:
   ExplodedNode *tryToReportBug(const MemRegion *Region, const CXXRecordDecl *RD,
                                CheckerContext &C, MisuseKind MK) const;
 
-  bool isInMoveSafeContext(const StackFrame *SF) const;
+  bool isInMoveSafeStackFrame(const StackFrame *SF) const;
   bool isStateResetMethod(const CXXMethodDecl *MethodDec) const;
   bool isMoveSafeMethod(const CXXMethodDecl *MethodDec) const;
   const ExplodedNode *getMoveLocation(const ExplodedNode *N,
@@ -362,7 +362,7 @@ void MoveChecker::modelUse(ProgramStateRef State, const MemRegion *Region,
     MK = MK_FunCall;
 
   if (!RS || !shouldWarnAbout(OK, MK) ||
-      isInMoveSafeContext(C.getStackFrame())) {
+      isInMoveSafeStackFrame(C.getStackFrame())) {
     // Finalize changes made by the caller.
     C.addTransition(State);
     return;
@@ -529,7 +529,7 @@ bool MoveChecker::isStateResetMethod(const CXXMethodDecl *MethodDec) const {
 
 // Don't report an error inside a move related operation.
 // We assume that the programmer knows what she does.
-bool MoveChecker::isInMoveSafeContext(const StackFrame *SF) const {
+bool MoveChecker::isInMoveSafeStackFrame(const StackFrame *SF) const {
   do {
     const auto *SFDec = SF->getDecl();
     auto *CtorDec = dyn_cast_or_null<CXXConstructorDecl>(SFDec);
