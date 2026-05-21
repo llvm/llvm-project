@@ -1197,15 +1197,13 @@ template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
     }
     auto scanEH = [&] {
       RelocScan scanner(ctx);
-      {
-        Partition &part = *ctx.mainPart;
-        for (EhInputSection *sec : part.ehFrame->sections)
-          scanner.scanEhSection(*sec);
-        if (part.armExidx && part.armExidx->isLive())
-          for (InputSection *sec : part.armExidx->exidxSections)
-            if (sec->isLive())
-              ctx.target->scanSection(*sec);
-      }
+      for (EhInputSection *sec : ctx.mainPart->ehFrame->sections)
+        scanner.scanEhSection(*sec);
+      ARMExidxSyntheticSection *armExidx = ctx.mainPart->armExidx.get();
+      if (armExidx && armExidx->isLive())
+        for (InputSection *sec : armExidx->exidxSections)
+          if (sec->isLive())
+            ctx.target->scanSection(*sec);
     };
     if (serial)
       scanEH();

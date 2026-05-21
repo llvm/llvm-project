@@ -1375,7 +1375,6 @@ struct PhdrEntry {
 
 // Linker generated per-partition sections.
 struct Partition {
-  Ctx &ctx;
   StringRef name;
   unsigned partno = 1;
 
@@ -1401,32 +1400,11 @@ struct Partition {
   std::unique_ptr<VersionDefinitionSection> verDef;
   std::unique_ptr<SyntheticSection> verNeed;
   std::unique_ptr<VersionTableSection> verSym;
-
-  Partition(Ctx &ctx) : ctx(ctx) {}
-  unsigned getNumber() const { return partno; }
 };
 
 inline Partition &SectionBase::getPartition(Ctx &ctx) const {
   assert(isLive());
   return *ctx.mainPart;
-}
-
-inline void Partitions::reset(Ctx &ctx) {
-  storage.clear();
-  storage.emplace_back(ctx);
-}
-inline Partition &Partitions::main() { return storage[0]; }
-inline Partition &Partitions::addShim(Ctx &ctx) {
-  storage.emplace_back(ctx);
-  Partition &s = storage.back();
-  s.partno = storage.size();
-  return s;
-}
-inline Partition &Partitions::getByNumber(unsigned partno) {
-  return storage[partno - 1];
-}
-inline llvm::MutableArrayRef<Partition> Partitions::shims() {
-  return llvm::MutableArrayRef(storage).drop_front();
 }
 
 } // namespace lld::elf

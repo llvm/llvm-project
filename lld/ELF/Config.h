@@ -175,23 +175,6 @@ struct VersionDefinition {
   SmallVector<SymbolVersion, 0> localPatterns;
 };
 
-// Contains the main partition (always present), and one shim partition per
-// the deprecated SHT_LLVM_SYMPART. Code that needs to operate on the main
-// partition uses `ctx.mainPart` directly; shim partitions are reached via
-// `shims()`.
-class Partitions {
-  // [0] main; [1..] shims
-  std::vector<Partition> storage;
-
-public:
-  // Definitions in SyntheticSections.h (Partition must be complete).
-  void reset(Ctx &);
-  Partition &main();
-  Partition &addShim(Ctx &);
-  Partition &getByNumber(unsigned partno);
-  llvm::MutableArrayRef<Partition> shims();
-};
-
 // Deferred file-load job: one per input, expanded by loadFiles().
 struct LoadJob {
   enum Kind : uint8_t { Obj, Bitcode, Archive, Shared, Binary };
@@ -655,7 +638,8 @@ struct Ctx : CommonLinkerContext {
   };
   OutSections out;
   SmallVector<OutputSection *, 0> outputSections;
-  Partitions partitions;
+  // [0] main; [1..] shims emitted for the deprecated SHT_LLVM_SYMPART.
+  std::vector<Partition> partitions;
 
   InStruct in;
 

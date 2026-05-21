@@ -43,9 +43,9 @@ ELF Improvements
 Breaking changes
 ----------------
 
-* The symbol partition feature is deprecated. Every input section and every
-  symbol now stays in the main partition. Every loadable partition from input
-  ``SHT_LLVM_SYMPART`` produces empty shim ``.so`` output so the existing
+* The symbol partition feature is now shim-only. Every input section and every
+  symbol stays in the main partition; each loadable partition from input
+  ``SHT_LLVM_SYMPART`` produces an empty ``.so`` shim so the existing
   ``llvm-objcopy --extract-partition`` extraction pipeline keeps working.
 
 COFF Improvements

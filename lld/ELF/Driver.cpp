@@ -132,7 +132,8 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   ctx.symAux.emplace_back();
   ctx.symtab = std::make_unique<SymbolTable>(ctx);
 
-  ctx.partitions.reset(ctx);
+  ctx.partitions.clear();
+  ctx.partitions.emplace_back();
 
   ctx.arg.progName = args[0];
 
@@ -2770,7 +2771,7 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
     return;
 
   StringRef partName = reinterpret_cast<const char *>(s->content().data());
-  for (Partition &shim : ctx.partitions.shims())
+  for (Partition &shim : llvm::drop_begin(ctx.partitions))
     if (shim.name == partName)
       return;
 
@@ -2790,7 +2791,9 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
   if (ctx.arg.emachine == EM_MIPS)
     ErrAlways(ctx) << s->file << ": partitions cannot be used on this target";
 
-  ctx.partitions.addShim(ctx).name = partName;
+  Partition &shim = ctx.partitions.emplace_back();
+  shim.partno = ctx.partitions.size();
+  shim.name = partName;
 }
 
 static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
@@ -3542,7 +3545,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Now that the number of partitions is fixed, save a pointer to the main
   // partition.
-  ctx.mainPart = &ctx.partitions.main();
+  ctx.mainPart = &ctx.partitions[0];
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.

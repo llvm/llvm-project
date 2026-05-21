@@ -4255,7 +4255,7 @@ size_t PartitionElfHeaderSection<ELFT>::getSize() const {
 
 template <typename ELFT>
 void PartitionElfHeaderSection<ELFT>::writeTo(uint8_t *buf) {
-  writeEhdr<ELFT>(ctx, buf, ctx.partitions.getByNumber(partition));
+  writeEhdr<ELFT>(ctx, buf, ctx.partitions[partition - 1]);
 
   // Loadable partitions are always ET_DYN.
   auto *eHdr = reinterpret_cast<typename ELFT::Ehdr *>(buf);
@@ -4269,12 +4269,12 @@ PartitionProgramHeadersSection<ELFT>::PartitionProgramHeadersSection(Ctx &ctx)
 template <typename ELFT>
 size_t PartitionProgramHeadersSection<ELFT>::getSize() const {
   return sizeof(typename ELFT::Phdr) *
-         ctx.partitions.getByNumber(partition).phdrs.size();
+         ctx.partitions[partition - 1].phdrs.size();
 }
 
 template <typename ELFT>
 void PartitionProgramHeadersSection<ELFT>::writeTo(uint8_t *buf) {
-  writePhdrs<ELFT>(buf, ctx.partitions.getByNumber(partition));
+  writePhdrs<ELFT>(buf, ctx.partitions[partition - 1]);
 }
 
 static bool needsInterpSection(Ctx &ctx) {
@@ -4468,7 +4468,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   do {
     Partition &part = *ctx.mainPart;
     auto add = [&](SyntheticSection &sec) {
-      sec.partition = part.getNumber();
+      sec.partition = part.partno;
       ctx.inputSections.push_back(&sec);
     };
 
@@ -4563,7 +4563,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   } while (0);
 
   // Emit a PART_EHDR/PART_PHDR pair per shim.
-  for (Partition &shim : ctx.partitions.shims()) {
+  for (Partition &shim : llvm::drop_begin(ctx.partitions)) {
     shim.elfHeader = std::make_unique<PartitionElfHeaderSection<ELFT>>(ctx);
     shim.elfHeader->name = shim.name;
     shim.elfHeader->partition = shim.partno;
@@ -4575,7 +4575,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
     ctx.inputSections.push_back(shim.programHeaders.get());
   }
 
-  if (!ctx.partitions.shims().empty()) {
+  if (ctx.partitions.size() > 1) {
     // Create the partition end marker. This needs to be in partition number 255
     // so that it is sorted after all other partitions. It also has other
     // special handling (see createPhdrs() and combineEhSections()).
