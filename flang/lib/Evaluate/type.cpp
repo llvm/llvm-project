@@ -211,9 +211,10 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
     // GetScope() instead of scope().  Since EnumerationTypes are an internal
     // only type, they can never be polymorphic, so the check in the
     // corresponding conditional below is unnecessary here.
-    if (derived_ && (GetDerivedTypeSpec().category() ==
-          semantics::DerivedTypeSpec::Category::EnumerationType) &&
-          derived_->GetScope()) {
+    if (derived_ &&
+        (GetDerivedTypeSpec().category() ==
+            semantics::DerivedTypeSpec::Category::EnumerationType) &&
+        derived_->GetScope()) {
       auto size{derived_->GetScope()->size()};
       auto align{aligned ? derived_->GetScope()->alignment().value_or(0) : 0};
       auto alignedSize{align > 0 ? ((size + align - 1) / align) * align : size};
