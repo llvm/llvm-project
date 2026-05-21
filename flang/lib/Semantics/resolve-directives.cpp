@@ -2904,7 +2904,7 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
           name->symbol = func;
         }
       }
-      // OMP 5.2 §7.8.2 ¶10: If a name appears in a declare target directive
+      // OMP 5.2 §7.8.1 ¶10: If a name appears in a declare target directive
       // and has not been explicitly typed as a variable or procedure, and
       // no other declaration gives it a procedure property, treat it as an
       // external subroutine.
