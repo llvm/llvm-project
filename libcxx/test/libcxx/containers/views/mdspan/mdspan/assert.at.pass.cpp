@@ -8,6 +8,7 @@
 
 // REQUIRES: has-unix-headers
 // REQUIRES: std-at-least-c++26
+// UNSUPPORTED: no-exceptions
 
 // <mdspan>
 
