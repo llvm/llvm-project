@@ -265,7 +265,13 @@ if (TARGET FortranFloat128MathILib)
   endif ()
 endif ()
 
-# Build module files if requested
+
+# Build module files if requested.
+# The object files written by Flang for theses are unused. In the future parts
+# of flang-rt may itself be implemented in Fortran in which case these Fortran
+# sources need to be added to ${sources} to be included in
+# libflang_rt.runtime{.a/.so}. If they also provide an importable .mod, add them to
+# flang_module_target(... PUBLIC).
 if (FLANG_RT_FORTRAN_MODULES)
   # CMake ignores intrinsic USE dependencies
   # CMake has an option Fortran_BUILDING_INSTRINSIC_MODULES/Fortran_BUILDING_INTRINSIC_MODULES
@@ -283,7 +289,7 @@ if (FLANG_RT_FORTRAN_MODULES)
   # Without it, CMake/Ninja seem to think that the modules of
   # flang_rt.intrinsics.obj can be built concurrently to those in
   # flang_rt.runtime.
-  # An actually COMMAND seems to be necessary under Windows.
+  # An actual COMMAND seems to be necessary on Windows to have the same effect.
   add_custom_target(flang_rt.mod.intrinsics.barrier
     COMMAND ${CMAKE_COMMAND} -E true
   )
