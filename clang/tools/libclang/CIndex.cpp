@@ -9335,9 +9335,19 @@ static const RawComment *getCursorRawComment(CXCursor C) {
     if (!Def)
       return nullptr;
     Preprocessor &PP = getCursorASTUnit(C)->getPreprocessor();
-    if (const MacroInfo *MI =
-            PP.getMacroDefinition(Def->getName()).getMacroInfo())
-      return Context.getRawCommentForAnyRedecl(MI);
+    // Walk the macro directive history to find the specific MacroInfo for
+    // this cursor's definition. Looking up by name alone would always return
+    // the latest definition, which is wrong for redefined macros.
+    for (const MacroDirective *MD =
+             PP.getLocalMacroDirectiveHistory(Def->getName());
+         MD; MD = MD->getPrevious()) {
+      const auto *DMD = dyn_cast<DefMacroDirective>(MD);
+      if (!DMD)
+        continue;
+      const MacroInfo *MI = DMD->getInfo();
+      if (MI && MI->getDefinitionLoc() == Def->getLocation())
+        return Context.getRawCommentForAnyRedecl(MI);
+    }
   }
   return nullptr;
 }

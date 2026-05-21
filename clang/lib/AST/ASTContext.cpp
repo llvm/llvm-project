@@ -139,11 +139,9 @@ getLocsForCommentSearch(ASTContext::RawCommentLookupKey Key,
     if (Invalid)
       return {};
     unsigned Offset = Decomposed.second;
-    while (Offset > 0 && Buffer[Offset - 1] != '#' &&
-           Buffer[Offset - 1] != '\n')
-      --Offset;
-    if (Offset > 0 && Buffer[Offset - 1] == '#')
-      --Offset;
+    if (size_t Found = Buffer.find_last_of("#\n", Offset);
+        Found != StringRef::npos)
+      Offset = Found;
     return {SourceMgr.getLocForStartOfFile(Decomposed.first)
                 .getLocWithOffset(Offset)};
   }

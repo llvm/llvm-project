@@ -12,6 +12,12 @@
 
 #define TRAILING 3 ///< Trailing macro doc.
 
+/// First definition.
+#define REDEF 1
+#undef REDEF
+/// Second definition.
+#define REDEF 2
+
 // RUN: c-index-test -test-load-source all %s | FileCheck %s
 
 // Documented object-like macro picks up the preceding `///` comment.
@@ -25,3 +31,7 @@
 
 // Trailing `///<` comments attach to macros, mirroring fields/enumerators.
 // CHECK: annotate-comments-macros.c:13:9: macro definition=TRAILING RawComment=[///< Trailing macro doc.] RawCommentRange=[13:20 - 13:44] BriefComment=[Trailing macro doc.]
+
+// Each redefinition of a macro carries its own preceding doc comment.
+// CHECK: annotate-comments-macros.c:16:9: macro definition=REDEF RawComment=[/// First definition.] RawCommentRange=[15:1 - 15:22] BriefComment=[First definition.]
+// CHECK: annotate-comments-macros.c:19:9: macro definition=REDEF RawComment=[/// Second definition.] RawCommentRange=[18:1 - 18:23] BriefComment=[Second definition.]
