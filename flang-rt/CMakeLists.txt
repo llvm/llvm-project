@@ -67,11 +67,9 @@ list(APPEND CMAKE_MODULE_PATH
 include(AddFlangRT)
 include(GetToolchainDirs)
 include(FlangCommon)
-include(FlangRTIntrospection)
 include(HandleCompilerRT)
 include(ExtendPath)
-include(CheckFortranSourceCompiles)
-include(CMakePushCheckState)
+include(FlangRTIntrospection)
 
 
 ############################
@@ -101,14 +99,7 @@ if (NOT "${FLANG_RT_LIBCXX_PROVIDER}" IN_LIST FLANG_RT_SUPPORTED_PROVIDERS)
   message(FATAL_ERROR "Unsupported library: '${FLANG_RT_LIBCXX_PROVIDER}'. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
 endif ()
 
-if (LLVM_RUNTIMES_TARGET MATCHES "^amdgcn|^nvptx")
-  # Compiling libraries for offload targets is currently experimental;
-  # Only build the builtin modules by default.
-  set(FLANG_RT_ENABLE_STATIC_default OFF)
-else ()
-  set(FLANG_RT_ENABLE_STATIC_default ON)
-endif ()
-option(FLANG_RT_ENABLE_STATIC "Build Flang-RT as a static library." "${FLANG_RT_ENABLE_STATIC_default}")
+option(FLANG_RT_ENABLE_STATIC "Build Flang-RT as a static library." ON)
 if (WIN32)
   # Windows DLL currently not implemented.
   set(FLANG_RT_ENABLE_SHARED OFF)
@@ -122,8 +113,12 @@ else ()
   option(FLANG_RT_ENABLE_SHARED "Build Flang-RT as a shared library." OFF)
 endif ()
 
-option(FLANG_RT_FORTRAN_MODULES "Build Flang-RT modules" "${RUNTIMES_FLANG_MODULES_ENABLED}")
+# Enable building Fortran modules if Fortran is enabled
+option(FLANG_RT_FORTRAN_MODULES "Build Flang-RT modules" "${RUNTIMES_ENABLE_FORTRAN}")
 
+if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED AND NOT FLANG_RT_FORTRAN_MODULES)
+  message(WARNING "LLVM_ENABLE_RUNTIMES=flang-rt, but not building anything")
+endif ()
 
 # TODO: Support tests for the GPU target.
 set(FLANG_RT_INCLUDE_TESTS_default ${LLVM_INCLUDE_TESTS})

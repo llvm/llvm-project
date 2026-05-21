@@ -1,6 +1,6 @@
 ! UNSUPPORTED: offload-cuda
 
-! RUN: %flang -c -funsigned %include/../module/iso_fortran_env_impl.f90 -o %t.f90.o
+! RUN: %flang -c -funsigned %S/../../lib/runtime/iso_fortran_env_impl.f90 -o %t.f90.o
 ! RUN: %clang -x c++ -std=c++17 -c -I "%include" %S/../../lib/runtime/iso_fortran_env_impl.cpp -o %t.cpp.o
 
 ! Extract defined symbol names and sizes from both objects.

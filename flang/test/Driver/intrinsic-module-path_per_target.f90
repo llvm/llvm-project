@@ -1,5 +1,4 @@
 ! Ensure argument -fintrinsic-modules-path works as expected.
-! REQUIRES: x86-registered-target
 
 !-----------------------------------------
 ! FLANG DRIVER
