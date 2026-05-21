@@ -3438,6 +3438,9 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
       continue;
     }
     replaceInstUsesWith(*I, NewField0);
+    // Make sure non-root ZExt are in the worklist so that they
+    // can be removed in the following iterations.
+    addToWorklist(I);
   }
   for (ZExtInst *I : Field1Replacements) {
     if (I == &RootZExt) {
@@ -3446,6 +3449,7 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
       continue;
     }
     replaceInstUsesWith(*I, NewField1);
+    addToWorklist(I);
   }
 
   assert(RootNewField && "cannot find replacement for the root zext");
