@@ -207,6 +207,9 @@ Resolutions to C++ Defect Reports
 - Clang now allows omitting ``typename`` before a template name in a
   conversion operator, implementing `CWG2413 <https://wg21.link/cwg2413>`_.
 
+- Clang now uses non-reference types for structured bindings whose initializer
+  returns a prvalue. This resolves `CWG3135 <https://wg21.link/cwg3135>`_.
+
 C Language Changes
 ------------------
 
@@ -546,6 +549,8 @@ Improvements to Clang's diagnostics
 
 - Extended ``-Wnonportable-include-path`` to warn about trailing whitespace and dots in ``#include`` paths. (#GH190610)
 
+- Clang now emits error when attribute is missing closing ``]]`` followed by ``;;``. (#GH187223)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -766,6 +771,10 @@ AIX Support
   (instead of `all`) which only extracts static init from archive members which
   would otherwise be referenced.
   (See https://www.ibm.com/docs/en/aix/7.2.0?topic=l-ld-command for details).
+- The driver now uses ``-lcompiler_rt`` instead of ``-latomic``, and the compiler-rt
+  archive has been renamed from ``libatomic.a`` to ``libcompiler_rt.a`` to avoid conflicts
+  between the LLVM libatomic and the GNU libatomic from the AIX toolbox as they share
+  the same library name.
 
 NetBSD Support
 ^^^^^^^^^^^^^^
