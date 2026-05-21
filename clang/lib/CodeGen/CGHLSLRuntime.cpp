@@ -1612,13 +1612,8 @@ CGHLSLRuntime::emitResourceMemberExpr(CodeGenFunction &CGF,
     return std::nullopt;
 
   // Handle member of resource array type.
-  if (ResourceVD->getType()->isHLSLResourceRecordArray()) {
-    std::optional<LValue> LV =
-        emitGlobalResourceArrayAsLValue(CGF, ResourceVD, ME->getExprLoc());
-    if (LV)
-      return LV;
-    return std::nullopt;
-  }
+  if (ResourceVD->getType()->isHLSLResourceRecordArray())
+    return emitGlobalResourceArrayAsLValue(CGF, ResourceVD, ME->getExprLoc());
 
   // Handle member that is an individual resource.
   GlobalVariable *ResGV =
