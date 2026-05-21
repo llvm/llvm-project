@@ -42,7 +42,7 @@ void g() {
   template_param_kinds_1<int>(); // ok, from cxx-templates-b.h
 
   template_param_kinds_2<Tmpl_T_C>(); // expected-error {{no matching function for call}}
-  // expected-note@Inputs/cxx-templates-a.h:11 {{candidate}}
+  // expected-note@Inputs/cxx-templates-a.h:11 {{non-type parameter of template template parameter cannot be narrowed from type 'int' to 'char'}}
   // expected-note@Inputs/cxx-templates-b.h:11 {{candidate}}
 
   template_param_kinds_2<Tmpl_T_I_I>(); // expected-error {{ambiguous}}
@@ -243,7 +243,7 @@ namespace Std {
 // CHECK-NAMESPACE-N-NEXT: |-FunctionTemplate {{.*}} 'f'
 // CHECK-NAMESPACE-N-NEXT: `-FunctionTemplate {{.*}} 'f'
 
-// CHECK-DUMP:      ClassTemplateDecl {{.*}} <{{.*[/\\]}}cxx-templates-common.h:1:1, {{.*}}>  col:{{.*}} in cxx_templates_common SomeTemplate
+// CHECK-DUMP:      ClassTemplateDecl {{.*}} <{{.*[/\\]}}cxx-templates-common.h:1:1, {{.*}}>  col:{{.*}} in cxx_templates_common referenced SomeTemplate
 // CHECK-DUMP:        ClassTemplateSpecializationDecl {{.*}} prev {{.*}} SomeTemplate
 // CHECK-DUMP-NEXT:     TemplateArgument type 'char[{{1|2}}]'
 // CHECK-DUMP:        ClassTemplateSpecializationDecl {{.*}} SomeTemplate definition

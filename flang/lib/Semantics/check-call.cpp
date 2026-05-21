@@ -1166,7 +1166,11 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     bool isHostDeviceProc{procedure.cudaSubprogramAttrs &&
         *procedure.cudaSubprogramAttrs ==
             common::CUDASubprogramAttrs::HostDevice};
-    if (!common::AreCompatibleCUDADataAttrs(dummyDataAttr, actualDataAttr,
+    // TYPE(*) assumed-size/rank dummies are opaque buffers (e.g. MPI) and do
+    // not impose a CUDA address space on their actual argument.
+    bool skipCudaDataAttrCheck{IsCUDAAddressSpaceAgnostic(dummy)};
+    if (!skipCudaDataAttrCheck &&
+        !common::AreCompatibleCUDADataAttrs(dummyDataAttr, actualDataAttr,
             dummy.ignoreTKR, /*allowUnifiedMatchingRule=*/true,
             isHostDeviceProc, &context.languageFeatures())) {
       auto toStr{[](std::optional<common::CUDADataAttr> x) {

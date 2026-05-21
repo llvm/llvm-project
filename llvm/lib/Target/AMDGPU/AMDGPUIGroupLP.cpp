@@ -78,8 +78,9 @@ enum class SchedGroupMask {
   DS_READ = 1u << 8,
   DS_WRITE = 1u << 9,
   TRANS = 1u << 10,
+  LDSDMA = 1u << 11,
   ALL = ALU | VALU | SALU | MFMA | VMEM | VMEM_READ | VMEM_WRITE | DS |
-        DS_READ | DS_WRITE | TRANS,
+        DS_READ | DS_WRITE | TRANS | LDSDMA,
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
 };
 
@@ -694,11 +695,14 @@ template <typename T>
 void PipelineSolver::greedyFind(
     std::list<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E) {
   SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
-  int BestNodeCost = -1;
-  int TempCost;
-  SchedGroup *BestGroup = nullptr;
-  int BestGroupID = -1;
-  std::list<std::pair<SUnit *, SUnit *>> BestEdges;
+
+  struct GroupInfo {
+    SchedGroup *SG;
+    std::list<std::pair<SUnit *, SUnit *>> Edges;
+    int Cost = 0;
+  };
+  std::optional<GroupInfo> Best;
+
   auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
   LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
                     << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
@@ -727,41 +731,38 @@ void PipelineSolver::greedyFind(
     }
 
     std::list<std::pair<SUnit *, SUnit *>> TempEdges;
-    TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, TempEdges);
+    int TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, TempEdges);
     LLVM_DEBUG(dbgs() << "Cost of Group " << TempCost << "\n");
 
-    if (TempCost < BestNodeCost || BestNodeCost == -1) {
-      BestEdges = TempEdges;
-      BestGroup = Match;
-      BestNodeCost = TempCost;
-      BestGroupID = CandSGID;
-
-      if (BestNodeCost == 0)
+    if (!Best || TempCost < Best->Cost) {
+      Best = {Match, TempEdges, TempCost};
+      if (Best->Cost == 0)
         break;
     }
 
     removeEdges(TempEdges);
   }
 
-  if (BestGroupID != -1) {
-    BestGroup->add(*CurrSU.first);
-    if (AddedEdges.empty())
-      AddedEdges = BestEdges;
-    else
-      AddedEdges.splice(std::prev(AddedEdges.cend()), BestEdges);
+  if (Best) {
+    SchedGroup *SG = Best->SG;
+    std::list<std::pair<SUnit *, SUnit *>> &Edges = Best->Edges;
 
-    for (const std::pair<SUnit *, SUnit *> &E : BestEdges) {
-      if (!BestGroup->tryAddEdge(E.first, E.second))
+    SG->add(*CurrSU.first);
+    if (AddedEdges.empty())
+      AddedEdges = Edges;
+    else
+      AddedEdges.splice(std::prev(AddedEdges.cend()), Edges);
+
+    for (const std::pair<SUnit *, SUnit *> &E : Edges) {
+      if (!SG->tryAddEdge(E.first, E.second))
         llvm_unreachable("Edges known to be insertable.");
     }
 
-    LLVM_DEBUG(dbgs() << "Best Group has ID: " << BestGroupID << " and Mask"
-                      << (int)BestGroup->getMask() << "\n");
-    BestCost += TempCost;
+    LLVM_DEBUG(dbgs() << "Best Group has ID: " << SG->getSGID() << " and Mask"
+                      << (int)SG->getMask() << "\n");
+    BestCost += Best->Cost;
   } else
     BestCost += MissPenalty;
-
-  CurrPipeline[CurrSyncGroupIdx] = SyncPipeline;
 }
 
 bool PipelineSolver::solveGreedy() {
@@ -813,6 +814,7 @@ void PipelineSolver::solve() {
   } else { // Use the Greedy Algorithm by default
     LLVM_DEBUG(dbgs() << "Starting GREEDY pipeline solver\n");
     solveGreedy();
+    LLVM_DEBUG(dbgs() << "Greedy produced best cost of " << BestCost << "\n");
   }
 
   makePipeline();
@@ -2449,7 +2451,8 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = !MI.mayLoadOrStore();
 
   else if (((SGMask & SchedGroupMask::VALU) != SchedGroupMask::NONE) &&
-           TII->isVALU(MI) && !TII->isMFMAorWMMA(MI) && !TII->isTRANS(MI)) {
+           TII->isVALU(MI) && !TII->isMFMAorWMMA(MI) && !TII->isTRANS(MI) &&
+           !TII->isLDSDMA(MI)) {
     // Some memory instructions may be marked as VALU (e.g. BUFFER_LOAD_*_LDS).
     // For our purposes, these shall not be classified as VALU as this results
     // in unexpected behavior.
@@ -2465,7 +2468,7 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM) != SchedGroupMask::NONE) &&
-           TII->isVMEM(MI))
+           (TII->isVMEM(MI) || TII->isLDSDMA(MI)))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_READ) != SchedGroupMask::NONE) &&
@@ -2477,7 +2480,7 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS) != SchedGroupMask::NONE) &&
-           TII->isDS(MI))
+           (TII->isDS(MI) || TII->isLDSDMA(MI)))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS_READ) != SchedGroupMask::NONE) &&
@@ -2490,6 +2493,10 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
 
   else if (((SGMask & SchedGroupMask::TRANS) != SchedGroupMask::NONE) &&
            TII->isTRANS(MI))
+    Result = true;
+
+  else if (((SGMask & SchedGroupMask::LDSDMA) != SchedGroupMask::NONE) &&
+           TII->isLDSDMA(MI))
     Result = true;
 
   LLVM_DEBUG(
@@ -2657,17 +2664,21 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
            (InvertedMask & SchedGroupMask::TRANS) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::ALU;
 
-  // VMEM implies VMEM_READ, VMEM_WRITE.
+  // VMEM implies VMEM_READ, VMEM_WRITE, LDSDMA.
   if ((InvertedMask & SchedGroupMask::VMEM) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::VMEM_READ & ~SchedGroupMask::VMEM_WRITE;
-  // VMEM_READ, VMEM_WRITE implies VMEM.
+    InvertedMask &= ~SchedGroupMask::VMEM_READ & ~SchedGroupMask::VMEM_WRITE &
+                    ~SchedGroupMask::LDSDMA;
+  // VMEM_READ, VMEM_WRITE, LDSDMA implies VMEM.
   else if ((InvertedMask & SchedGroupMask::VMEM_READ) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::VMEM_WRITE) == SchedGroupMask::NONE)
+           (InvertedMask & SchedGroupMask::VMEM_WRITE) ==
+               SchedGroupMask::NONE ||
+           (InvertedMask & SchedGroupMask::LDSDMA) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::VMEM;
 
-  // DS implies DS_READ, DS_WRITE.
+  // DS implies DS_READ, DS_WRITE, LDSDMA.
   if ((InvertedMask & SchedGroupMask::DS) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::DS_READ & ~SchedGroupMask::DS_WRITE;
+    InvertedMask &= ~SchedGroupMask::DS_READ & ~SchedGroupMask::DS_WRITE &
+                    ~SchedGroupMask::LDSDMA;
   // DS_READ, DS_WRITE implies DS.
   else if ((InvertedMask & SchedGroupMask::DS_READ) == SchedGroupMask::NONE ||
            (InvertedMask & SchedGroupMask::DS_WRITE) == SchedGroupMask::NONE)

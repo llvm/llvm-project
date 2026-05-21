@@ -312,25 +312,23 @@ entry:
 define amdgpu_kernel void @rotr_v8i32(ptr addrspace(1) %in, <8 x i32> %x, <8 x i32> %y) {
 ; R600-LABEL: rotr_v8i32:
 ; R600:       ; %bb.0: ; %entry
-; R600-NEXT:    ALU 13, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T2.XYZW, T3.X, 0
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T1.X, 1
+; R600-NEXT:    ALU 11, @4, KC0[CB0:0-32], KC1[]
+; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XYZW, T3.X, 0
+; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T2.X, 1
 ; R600-NEXT:    CF_END
 ; R600-NEXT:    ALU clause starting at 4:
 ; R600-NEXT:     BIT_ALIGN_INT * T0.W, KC0[5].X, KC0[5].X, KC0[7].X,
 ; R600-NEXT:     BIT_ALIGN_INT * T0.Z, KC0[4].W, KC0[4].W, KC0[6].W,
 ; R600-NEXT:     BIT_ALIGN_INT * T0.Y, KC0[4].Z, KC0[4].Z, KC0[6].Z,
 ; R600-NEXT:     BIT_ALIGN_INT * T0.X, KC0[4].Y, KC0[4].Y, KC0[6].Y,
-; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
+; R600-NEXT:     BIT_ALIGN_INT * T1.W, KC0[6].X, KC0[6].X, KC0[8].X,
+; R600-NEXT:     BIT_ALIGN_INT * T1.Z, KC0[5].W, KC0[5].W, KC0[7].W,
+; R600-NEXT:     BIT_ALIGN_INT * T1.Y, KC0[5].Z, KC0[5].Z, KC0[7].Z,
+; R600-NEXT:     BIT_ALIGN_INT * T1.X, KC0[5].Y, KC0[5].Y, KC0[7].Y,
+; R600-NEXT:     LSHR * T2.X, KC0[2].Y, literal.x,
 ; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; R600-NEXT:     BIT_ALIGN_INT * T2.W, KC0[6].X, KC0[6].X, KC0[8].X,
-; R600-NEXT:     BIT_ALIGN_INT * T2.Z, KC0[5].W, KC0[5].W, KC0[7].W,
-; R600-NEXT:     BIT_ALIGN_INT * T2.Y, KC0[5].Z, KC0[5].Z, KC0[7].Z,
-; R600-NEXT:     BIT_ALIGN_INT * T2.X, KC0[5].Y, KC0[5].Y, KC0[7].Y,
-; R600-NEXT:     ADD_INT * T1.W, KC0[2].Y, literal.x,
-; R600-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; R600-NEXT:     LSHR * T3.X, PV.W, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; R600-NEXT:     ADD_INT * T3.X, PV.X, literal.x,
+; R600-NEXT:    4(5.605194e-45), 0(0.000000e+00)
 ;
 ; SI-LABEL: rotr_v8i32:
 ; SI:       ; %bb.0: ; %entry

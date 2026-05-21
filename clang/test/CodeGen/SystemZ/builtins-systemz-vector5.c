@@ -18,12 +18,22 @@ volatile vec_schar vsc;
 volatile vec_sshort vss;
 volatile vec_sint vsi;
 volatile vec_slong vsl;
+volatile vec_slong vsl1;
+volatile vec_slong vsl2;
 volatile vec_uchar vuc;
+volatile vec_uchar vuc1;
+volatile vec_uchar vuc2;
 volatile vec_ushort vus;
 volatile vec_uint vui;
 volatile vec_ulong vul;
+volatile vec_ulong vul1;
+volatile vec_ulong vul2;
 volatile signed __int128 si128;
+volatile signed __int128 si1281;
+volatile signed __int128 si1282;
 volatile unsigned __int128 ui128;
+volatile unsigned __int128 ui1281;
+volatile unsigned __int128 ui1282;
 
 int cc;
 
@@ -50,54 +60,54 @@ void test_core(void) {
 }
 
 void test_integer(void) {
-  si128 = __builtin_s390_vavgq(si128, si128);
+  si128 = __builtin_s390_vavgq(si128, si1281);
   // CHECK: call i128 @llvm.s390.vavgq(i128 %{{.*}}, i128 %{{.*}})
-  ui128 = __builtin_s390_vavglq(ui128, ui128);
+  ui128 = __builtin_s390_vavglq(ui128, ui1281);
   // CHECK: call i128 @llvm.s390.vavglq(i128 %{{.*}}, i128 %{{.*}})
 
-  vuc = __builtin_s390_veval(vuc, vuc, vuc, 0);
+  vuc = __builtin_s390_veval(vuc, vuc1, vuc2, 0);
   // CHECK: call <16 x i8> @llvm.s390.veval(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
 
-  vsl = __builtin_s390_vmahg(vsl, vsl, vsl);
+  vsl = __builtin_s390_vmahg(vsl, vsl1, vsl2);
   // CHECK: call <2 x i64> @llvm.s390.vmahg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
-  si128 = __builtin_s390_vmahq(si128, si128, si128);
+  si128 = __builtin_s390_vmahq(si128, si1281, si1282);
   // CHECK: call i128 @llvm.s390.vmahq(i128 %{{.*}}, i128 %{{.*}}, i128 %{{.*}})
-  vul = __builtin_s390_vmalhg(vul, vul, vul);
+  vul = __builtin_s390_vmalhg(vul, vul1, vul2);
   // CHECK: call <2 x i64> @llvm.s390.vmalhg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
-  ui128 = __builtin_s390_vmalhq(ui128, ui128, ui128);
+  ui128 = __builtin_s390_vmalhq(ui128, ui1281, ui1282);
   // CHECK: call i128 @llvm.s390.vmalhq(i128 %{{.*}}, i128 %{{.*}}, i128 %{{.*}})
 
-  si128 = __builtin_s390_vmaeg(vsl, vsl, si128);
+  si128 = __builtin_s390_vmaeg(vsl, vsl1, si128);
   // CHECK: call i128 @llvm.s390.vmaeg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i128 %{{.*}})
-  ui128 = __builtin_s390_vmaleg(vul, vul, ui128);
+  ui128 = __builtin_s390_vmaleg(vul, vul1, ui128);
   // CHECK: call i128 @llvm.s390.vmaleg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i128 %{{.*}})
-  si128 = __builtin_s390_vmaog(vsl, vsl, si128);
+  si128 = __builtin_s390_vmaog(vsl, vsl1, si128);
   // CHECK: call i128 @llvm.s390.vmaog(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i128 %{{.*}})
-  ui128 = __builtin_s390_vmalog(vul, vul, ui128);
+  ui128 = __builtin_s390_vmalog(vul, vul1, ui128);
   // CHECK: call i128 @llvm.s390.vmalog(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i128 %{{.*}})
 
-  vsl = __builtin_s390_vmhg(vsl, vsl);
+  vsl = __builtin_s390_vmhg(vsl, vsl1);
   // CHECK: call <2 x i64> @llvm.s390.vmhg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
-  si128 = __builtin_s390_vmhq(si128, si128);
+  si128 = __builtin_s390_vmhq(si128, si1281);
   // CHECK: call i128 @llvm.s390.vmhq(i128 %{{.*}}, i128 %{{.*}})
-  vul = __builtin_s390_vmlhg(vul, vul);
+  vul = __builtin_s390_vmlhg(vul, vul1);
   // CHECK: call <2 x i64> @llvm.s390.vmlhg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
-  ui128 = __builtin_s390_vmlhq(ui128, ui128);
+  ui128 = __builtin_s390_vmlhq(ui128, ui1281);
   // CHECK: call i128 @llvm.s390.vmlhq(i128 %{{.*}}, i128 %{{.*}})
 
-  si128 = __builtin_s390_vmeg(vsl, vsl);
+  si128 = __builtin_s390_vmeg(vsl, vsl1);
   // CHECK: call i128 @llvm.s390.vmeg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
-  ui128 = __builtin_s390_vmleg(vul, vul);
+  ui128 = __builtin_s390_vmleg(vul, vul1);
   // CHECK: call i128 @llvm.s390.vmleg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
-  si128 = __builtin_s390_vmog(vsl, vsl);
+  si128 = __builtin_s390_vmog(vsl, vsl1);
   // CHECK: call i128 @llvm.s390.vmog(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
-  ui128 = __builtin_s390_vmlog(vul, vul);
+  ui128 = __builtin_s390_vmlog(vul, vul1);
   // CHECK: call i128 @llvm.s390.vmlog(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
-  si128 = __builtin_s390_vceqqs(ui128, ui128, &cc);
+  si128 = __builtin_s390_vceqqs(ui128, ui1281, &cc);
   // CHECK: call { i128, i32 } @llvm.s390.vceqqs(i128 %{{.*}}, i128 %{{.*}})
-  si128 = __builtin_s390_vchqs(si128, si128, &cc);
+  si128 = __builtin_s390_vchqs(si128, si1281, &cc);
   // CHECK: call { i128, i32 } @llvm.s390.vchqs(i128 %{{.*}}, i128 %{{.*}})
-  si128 = __builtin_s390_vchlqs(ui128, ui128, &cc);
+  si128 = __builtin_s390_vchlqs(ui128, ui1281, &cc);
   // CHECK: call { i128, i32 } @llvm.s390.vchlqs(i128 %{{.*}}, i128 %{{.*}})
 }

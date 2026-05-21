@@ -296,24 +296,36 @@ static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
 
   Ret += "-m:e";
 
-  // Pointer and integer sizes.
+  // TODO: Maybe we should move RISCVABI to TargetParser, so we can reuse that
+  // logic here instead of duplicating the string handling?
+  bool IsPureCapABI = ABIName.starts_with("il32pc64") ||
+                      ABIName.starts_with("l64pc128") ||
+                      ABIName.starts_with("cheriot");
+
   if (TT.isRISCV64()) {
-    Ret += "-p:64:64-i64:64-i128:128";
-    Ret += "-n32:64";
+    Ret += "-p:64:64";
+    if (IsPureCapABI)
+      Ret += "-pe200:128:128:128:64";
+    Ret += "-i64:64-i128:128-n32:64";
   } else {
     assert(TT.isRISCV32() && "only RV32 and RV64 are currently supported");
-    Ret += "-p:32:32-i64:64";
-    Ret += "-n32";
+    Ret += "-p:32:32";
+    if (IsPureCapABI)
+      Ret += "-pe200:64:64:64:32";
+    Ret += "-i64:64-n32";
   }
 
   // Stack alignment based on ABI.
-  StringRef ABI = ABIName;
-  if (ABI == "ilp32e")
+  if (ABIName == "ilp32e")
     Ret += "-S32";
-  else if (ABI == "lp64e")
+  else if (ABIName == "lp64e")
     Ret += "-S64";
   else
     Ret += "-S128";
+
+  // TODO: Support non-purecap CHERI ABIs.
+  if (IsPureCapABI)
+    Ret += "-A200-P200-G200";
 
   return Ret;
 }
@@ -600,7 +612,20 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::systemz:
     return computeSystemZDataLayout(*this);
   case Triple::tce:
+    return "E-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:32:32-"
+           "f16:16:16-f32:32:32-f64:32:32-v64:64:64-i128:128-v128:128:128-"
+           "v256:256:256-v512:512:512-v1024:1024:1024-v2048:2048:2048-"
+           "v4096:4096:4096-a0:0:32-n32";
   case Triple::tcele:
+    return "e-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:32:32-"
+           "f16:16:16-f32:32:32-f64:32:32-v64:64:64-i128:128-v128:128:128-"
+           "v256:256:256-v512:512:512-v1024:1024:1024-v2048:2048:2048-"
+           "v4096:4096:4096-a0:0:32-n32";
+  case Triple::tcele64:
+    return "e-p:64:64:64-i1:8:64-i8:8:64-i16:16:64-i32:32:64-i64:64:64-"
+           "f16:16:64-f32:32:64-f64:64:64-v64:64:64-i128:128-v128:128:128-"
+           "v256:256:256-v512:512:512-v1024:1024:1024-v2048:2048:2048-"
+           "v4096:4096:4096-a0:0:64-n64";
   case Triple::x86:
   case Triple::x86_64:
     return computeX86DataLayout(*this);

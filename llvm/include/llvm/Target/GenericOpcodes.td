@@ -84,6 +84,7 @@ def G_TRUNC : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Truncate the signed operand to a signed result with saturation.
@@ -111,12 +112,14 @@ def G_IMPLICIT_DEF : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 def G_PHI : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins variable_ops);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 def G_FRAME_INDEX : GenericInstruction {
@@ -159,6 +162,7 @@ def G_BITCAST : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Only supports scalar result types
@@ -166,6 +170,7 @@ def G_CONSTANT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$imm);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Only supports scalar result types
@@ -173,6 +178,7 @@ def G_FCONSTANT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$imm);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 def G_VASTART : GenericInstruction {
@@ -196,7 +202,7 @@ def G_CTLZ : GenericInstruction {
   let hasSideEffects = false;
 }
 
-def G_CTLZ_ZERO_UNDEF : GenericInstruction {
+def G_CTLZ_ZERO_POISON : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
   let hasSideEffects = false;
@@ -208,7 +214,7 @@ def G_CTTZ : GenericInstruction {
   let hasSideEffects = false;
 }
 
-def G_CTTZ_ZERO_UNDEF : GenericInstruction {
+def G_CTTZ_ZERO_POISON : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
   let hasSideEffects = false;
@@ -230,6 +236,7 @@ def G_BSWAP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 def G_BITREVERSE : GenericInstruction {
@@ -278,6 +285,7 @@ def G_FREEZE : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 def G_LROUND: GenericInstruction {
@@ -1334,6 +1342,7 @@ def G_LOAD : GenericInstruction {
   let InOperandList = (ins ptype1:$addr);
   let hasSideEffects = false;
   let mayLoad = true;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Generic sign-extended load. Expects a MachineMemOperand in addition to explicit operands.
@@ -1352,6 +1361,15 @@ def G_ZEXTLOAD : GenericInstruction {
   let mayLoad = true;
 }
 
+// Generic floating-point extending load. Expects a MachineMemOperand in
+// addition to explicit operands.
+def G_FPEXTLOAD : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins ptype1:$addr);
+  let hasSideEffects = false;
+  let mayLoad = true;
+}
+
 // Generic indexed load. Combines a GEP with a load. $newaddr is set to $base + $offset.
 // If $am is 0 (post-indexed), then the value is loaded from $base; if $am is 1 (pre-indexed)
 //  then the value is loaded from $newaddr.
@@ -1360,6 +1378,7 @@ def G_INDEXED_LOAD : GenericInstruction {
   let InOperandList = (ins ptype1:$base, type2:$offset, unknown:$am);
   let hasSideEffects = false;
   let mayLoad = true;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Same as G_INDEXED_LOAD except that the load performed is sign-extending, as with G_SEXTLOAD.
@@ -1384,6 +1403,16 @@ def G_STORE : GenericInstruction {
   let InOperandList = (ins type0:$src, ptype1:$addr);
   let hasSideEffects = false;
   let mayStore = true;
+  let GISelMatchGenericTypes = 1;
+}
+
+// Generic floating-point truncating store. Expects a MachineMemOperand in
+// addition to explicit operands.
+def G_FPTRUNCSTORE : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src, ptype1:$addr);
+  let hasSideEffects = false;
+  let mayStore = true;
 }
 
 // Combines a store with a GEP. See description of G_INDEXED_LOAD for indexing behaviour.
@@ -1393,6 +1422,7 @@ def G_INDEXED_STORE : GenericInstruction {
                            unknown:$am);
   let hasSideEffects = false;
   let mayStore = true;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Generic atomic cmpxchg with internal success check. Expects a
@@ -1403,6 +1433,7 @@ def G_ATOMIC_CMPXCHG_WITH_SUCCESS : GenericInstruction {
   let hasSideEffects = false;
   let mayLoad = true;
   let mayStore = true;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Generic atomic cmpxchg. Expects a MachineMemOperand in addition to explicit
@@ -1413,6 +1444,7 @@ def G_ATOMIC_CMPXCHG : GenericInstruction {
   let hasSideEffects = false;
   let mayLoad = true;
   let mayStore = true;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Generic atomicrmw. Expects a MachineMemOperand in addition to explicit
@@ -1423,6 +1455,7 @@ class G_ATOMICRMW_OP : GenericInstruction {
   let hasSideEffects = false;
   let mayLoad = true;
   let mayStore = true;
+  let GISelMatchGenericTypes = 1;
 }
 
 def G_ATOMICRMW_XCHG : G_ATOMICRMW_OP;
@@ -1475,6 +1508,7 @@ def G_EXTRACT : GenericInstruction {
   let OutOperandList = (outs type0:$res);
   let InOperandList = (ins type1:$src, untyped_imm_0:$offset);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Extract multiple registers specified size, starting from blocks given by
@@ -1488,6 +1522,7 @@ def G_UNMERGE_VALUES : GenericInstruction {
   let InOperandList = (ins type1:$src);
   let hasSideEffects = false;
   let variadicOpsType = type0;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Insert a smaller register into a larger one at the specified bit-index.
@@ -1506,6 +1541,7 @@ def G_MERGE_VALUES : GenericInstruction {
   let InOperandList = (ins type1:$src0, variable_ops);
   let hasSideEffects = false;
   let variadicOpsType = type1;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Generic vscale.
@@ -1525,6 +1561,7 @@ def G_BUILD_VECTOR : GenericInstruction {
   let InOperandList = (ins type1:$src0, variable_ops);
   let hasSideEffects = false;
   let variadicOpsType = type1;
+  let GISelMatchGenericTypes = 1;
 }
 
 /// Like G_BUILD_VECTOR, but truncates the larger operand types to fit the
@@ -1540,6 +1577,7 @@ def G_CONCAT_VECTORS : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src0, variable_ops);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Intrinsic without side effects.
@@ -1659,6 +1697,7 @@ def G_INSERT_SUBVECTOR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type1:$src1, untyped_imm_0:$idx);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Generic extract subvector.
@@ -1666,6 +1705,7 @@ def G_EXTRACT_SUBVECTOR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src, untyped_imm_0:$idx);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Generic insertelement.
@@ -1673,6 +1713,7 @@ def G_INSERT_VECTOR_ELT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src, type1:$elt, type2:$idx);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Generic extractelement.
@@ -1680,6 +1721,7 @@ def G_EXTRACT_VECTOR_ELT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src, type2:$idx);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Generic shufflevector.
@@ -1690,6 +1732,7 @@ def G_SHUFFLE_VECTOR: GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$v1, type1:$v2, unknown:$mask);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Generic splatvector.
@@ -1697,6 +1740,7 @@ def G_SPLAT_VECTOR: GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$val);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Generic stepvector.

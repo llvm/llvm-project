@@ -58,33 +58,33 @@
 # CHECK: FLAT_LOAD_DWORDX4
 # Global loads will return in order so we should:
 # s_waitcnt vmcnt(1)
-# CHECK-NEXT: S_WAITCNT 3953
+# CHECK-NEXT: S_WAITCNT .Vmcnt_1
 
 # CHECK-LABEL: bb.1:
 # CHECK: FLAT_LOAD_DWORD
 # s_waitcnt vmcnt(0)
-# GFX89: S_WAITCNT 3952
+# GFX89: S_WAITCNT .Vmcnt_0
 # CHECK: FLAT_LOAD_DWORDX4
 
 # CHECK-LABEL: bb.2:
 # CHECK: FLAT_LOAD_DWORD
 # s_waitcnt vmcnt(0)
-# GFX89: S_WAITCNT 3952
+# GFX89: S_WAITCNT .Vmcnt_0
 # CHECK: FLAT_LOAD_DWORDX4
 
 # CHECK-LABEL: bb.3:
 # s_waitcnt vmcnt(0)
-# GFX89: S_WAITCNT 3952
+# GFX89: S_WAITCNT .Vmcnt_0
 # CHECK: FLAT_LOAD_DWORD
 # CHECK: FLAT_LOAD_DWORD
 # s_waitcnt vmcnt(0) lgkmcnt(0)
-# GFX89: S_WAITCNT 112
+# GFX89: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 
 # CHECK-LABEL: bb.4:
 # GFX89-NOT: S_WAITCNT
 # CHECK: FLAT_LOAD_DWORD
 # s_waitcnt vmcnt(0) lgkmcnt(0)
-# GFX89: S_WAITCNT 112
+# GFX89: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 
 name: flat_zero_waitcnt
 
@@ -132,7 +132,7 @@ body: |
 
 # CHECK: bb.1:
 # CHECK-NEXT: V_LSHLREV_B64_e64
-# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 # CHECK-NEXT: FLAT_STORE_DWORD
 name: single_fallthrough_successor_no_end_block_wait
 
@@ -159,7 +159,7 @@ body: |
 
 # CHECK: bb.2:
 # CHECK-NEXT: V_LSHLREV_B64_e64
-# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 # CHECK-NEXT: FLAT_STORE_DWORD
 name: single_branch_successor_not_next_block
 
@@ -181,7 +181,7 @@ body: |
 
 # CHECK-LABEL: name: preexisting_waitcnt{{$}}
 # CHECK: FLAT_LOAD_DWORD
-# CHECK-NEXT: S_WAITCNT 0
+# CHECK-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # CHECK-NOT: S_WAITCNT
 name: preexisting_waitcnt
 tracksRegLiveness: true
@@ -204,7 +204,7 @@ body: |
 # CHECK-NEXT: S_NOP
 # CHECK-NEXT: S_NOP
 # CHECK-NEXT: }
-# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 name: bundle_no_waitcnt
 tracksRegLiveness: true
 machineFunctionInfo:
@@ -226,7 +226,7 @@ body: |
 # See the waitcnt inside the bundle and don't insert an extra
 # CHECK-LABEL: name: preexisting_waitcnt_in_bundle{{$}}
 # CHECK: FLAT_LOAD_DWORD
-# CHECK: S_WAITCNT 0
+# CHECK: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # CHECK-NOT: S_WAITCNT
 name: preexisting_waitcnt_in_bundle
 tracksRegLiveness: true
@@ -250,7 +250,7 @@ body: |
 # CHECK-LABEL: name: insert_in_bundle{{$}}
 # CHECK: BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
 # CHECK-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
-# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 # CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, internal $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
 # CHECK-NEXT: }
 
@@ -275,7 +275,7 @@ body: |
 # CHECK: BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
 # CHECK-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
 # CHECK-NEXT: }
-# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 # CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
 
 name: exit_bundle
@@ -302,7 +302,7 @@ body: |
 # CHECK-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
 # CHECK-NEXT: }
 # CHECK-NEXT: BUNDLE implicit $vgpr0, implicit $vgpr1_vgpr2 {
-# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 # CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
 # CHECK-NEXT: }
 
@@ -323,7 +323,7 @@ body: |
 
 ---
 # CHECK-LABEL: name: subregs16bit
-# CHECK: S_WAITCNT 112
+# CHECK: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 # CHECK-NEXT: V_NOP_e32
 
 name: subregs16bit

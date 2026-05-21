@@ -1441,12 +1441,16 @@ void OpEmitter::genPropertiesSupport() {
       {1};
 )decl";
   const char *attrGetNoDefaultFmt = R"decl(;
-      if (attr && ::mlir::failed(setFromAttr(prop.{0}, attr, emitError)))
+      if (attr && ::mlir::failed(setFromAttr(prop.{0}, attr, [&]() {{
+            return emitError() << "for `{0}`: ";
+          })))
         return ::mlir::failure();
 )decl";
   const char *attrGetDefaultFmt = R"decl(;
       if (attr) {{
-        if (::mlir::failed(setFromAttr(prop.{0}, attr, emitError)))
+        if (::mlir::failed(setFromAttr(prop.{0}, attr, [&]() {{
+              return emitError() << "for `{0}`: ";
+            })))
           return ::mlir::failure();
       } else {{
         prop.{0} = {1};
