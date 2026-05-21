@@ -72,6 +72,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
     return !cast<VPWidenCallRecipe>(this)
                 ->getCalledScalarFunction()
                 ->onlyReadsMemory();
+  case VPWidenMemIntrinsicSC:
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
   case VPActiveLaneMaskPHISC:
@@ -124,6 +125,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
     return !cast<VPWidenCallRecipe>(this)
                 ->getCalledScalarFunction()
                 ->onlyWritesMemory();
+  case VPWidenMemIntrinsicSC:
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayReadFromMemory();
   case VPBranchOnMaskSC:
@@ -183,6 +185,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     Function *Fn = cast<VPWidenCallRecipe>(this)->getCalledScalarFunction();
     return mayWriteToMemory() || !Fn->doesNotThrow() || !Fn->willReturn();
   }
+  case VPWidenMemIntrinsicSC:
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayHaveSideEffects();
   case VPBlendSC:
@@ -1946,7 +1949,7 @@ void VPWidenCallRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
+CallInst *VPWidenIntrinsicRecipe::createVectorCall(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
 
   SmallVector<Type *, 2> TysForDecl;
@@ -1994,6 +1997,11 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   applyFlags(*V);
   applyMetadata(*V);
 
+  return V;
+}
+
+void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
+  CallInst *V = createVectorCall(State);
   if (!V->getType()->isVoidTy())
     State.set(this, V);
 }
@@ -2081,6 +2089,30 @@ void VPWidenIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << ")";
 }
 #endif
+
+void VPWidenMemIntrinsicRecipe::execute(VPTransformState &State) {
+  CallInst *MemI = createVectorCall(State);
+  MemI->addParamAttr(
+      0, Attribute::getWithAlignment(MemI->getContext(), Alignment));
+  State.set(this, MemI);
+}
+
+InstructionCost VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
+    Intrinsic::ID IID, Type *Ty, bool IsMasked, Align Alignment,
+    VPCostContext &Ctx) {
+  return Ctx.TTI.getMemIntrinsicInstrCost(
+      MemIntrinsicCostAttributes(IID, Ty, /*Ptr=*/nullptr, IsMasked, Alignment),
+      Ctx.CostKind);
+}
+
+InstructionCost
+VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
+                                       VPCostContext &Ctx) const {
+  Type *Ty = toVectorTy(getScalarType(), VF);
+  return computeMemIntrinsicCost(getVectorIntrinsicID(), Ty,
+                                 !match(getOperand(2), m_True()), Alignment,
+                                 Ctx);
+}
 
 void VPHistogramRecipe::execute(VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
@@ -2845,11 +2877,18 @@ void VPVectorEndPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPVectorPointerRecipe::execute(VPTransformState &State) {
+  assert(getVFxPart() &&
+         "Expected prior simplification of recipe without VFxPart");
+
   auto &Builder = State.Builder;
-  assert(getOffset() &&
-         "Expected prior simplification of recipe without offset");
   Value *Ptr = State.get(getOperand(0), VPLane(0));
-  Value *Offset = State.get(getOffset(), true);
+  Value *Offset = State.get(getVFxPart(), true);
+  // TODO: Expand to VPInstruction to support constant folding.
+  if (!match(getStride(), m_One())) {
+    Value *Stride = Builder.CreateZExtOrTrunc(State.get(getStride(), true),
+                                              Offset->getType());
+    Offset = Builder.CreateMul(Offset, Stride);
+  }
   Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Offset, "",
                                        getGEPNoWrapFlags());
   State.set(this, ResultPtr, /*IsScalar*/ true);
@@ -3339,9 +3378,9 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
          "VPReplicateRecipes must be unrolled before ::execute");
   auto *Instr = getUnderlyingInstr();
   Instruction *Cloned = Instr->clone();
-  if (!Instr->getType()->isVoidTy()) {
+  Type *ResultTy = State.TypeAnalysis.inferScalarType(this);
+  if (!ResultTy->isVoidTy()) {
     Cloned->setName(Instr->getName() + ".cloned");
-    Type *ResultTy = State.TypeAnalysis.inferScalarType(this);
     // The operands of the replicate recipe may have been narrowed, resulting in
     // a narrower result type. Update the type of the cloned instruction to the
     // correct type.
@@ -3647,7 +3686,8 @@ void VPReplicateRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
   O << Indent << (IsSingleScalar ? "CLONE " : "REPLICATE ");
 
-  if (!getUnderlyingInstr()->getType()->isVoidTy()) {
+  VPTypeAnalysis TypeInfo(*getParent()->getPlan());
+  if (!TypeInfo.inferScalarType(this)->isVoidTy()) {
     printAsOperand(O, SlotTracker);
     O << " = ";
   }
