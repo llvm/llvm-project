@@ -522,7 +522,8 @@ static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
     return std::nullopt;
 
   AutoHandle filemap(
-      ::CreateFileMappingW(hFile, nullptr, PAGE_READONLY, 0, 1, NULL), nullptr);
+      ::CreateFileMappingW(hFile, nullptr, PAGE_READONLY, 0, 1, nullptr),
+      nullptr);
   if (!filemap.IsValid())
     return std::nullopt;
 

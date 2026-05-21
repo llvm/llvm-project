@@ -106,7 +106,9 @@ public:
   AddFlangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &FlangArgs) const override;
 
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 
   StringRef getAsanRTLPath() const {
     return RocmInstallation->getAsanRTLPath();
