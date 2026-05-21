@@ -17,8 +17,6 @@
 //     size_t operator()(T val) const;
 // };
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // Not very portable
 
 #include <cassert>

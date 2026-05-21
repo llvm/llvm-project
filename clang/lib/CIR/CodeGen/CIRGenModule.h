@@ -275,9 +275,9 @@ public:
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                      ForDefinition_t isForDefinition);
 
-  static cir::GlobalOp
-  createGlobalOp(CIRGenModule &cgm, mlir::Location loc, llvm::StringRef name,
-                 mlir::Type t, bool isConstant = false,
+  cir::GlobalOp
+  createGlobalOp(mlir::Location loc, llvm::StringRef name, mlir::Type t,
+                 bool isConstant = false,
                  mlir::ptr::MemorySpaceAttrInterface addrSpace = {},
                  mlir::Operation *insertPoint = nullptr);
 
@@ -428,6 +428,19 @@ public:
       // is visible.
       return mlir::SymbolTable::Visibility::Public;
     }
+    llvm_unreachable("unknown visibility!");
+  }
+
+  static cir::VisibilityKind getCIRVisibilityKind(Visibility v) {
+    switch (v) {
+    case DefaultVisibility:
+      return cir::VisibilityKind::Default;
+    case HiddenVisibility:
+      return cir::VisibilityKind::Hidden;
+    case ProtectedVisibility:
+      return cir::VisibilityKind::Protected;
+    }
+
     llvm_unreachable("unknown visibility!");
   }
 
@@ -602,7 +615,8 @@ public:
   mlir::Type convertType(clang::QualType type);
 
   /// Set the visibility for the given global.
-  void setGlobalVisibility(mlir::Operation *op, const NamedDecl *d) const;
+  void setGlobalVisibility(cir::CIRGlobalValueInterface gv,
+                           const NamedDecl *d) const;
   void setDSOLocal(mlir::Operation *op) const;
   void setDSOLocal(cir::CIRGlobalValueInterface gv) const;
 
@@ -648,6 +662,7 @@ public:
   void emitCXXGlobalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
                                 bool performInit);
 
+  void setGlobalTlsReferences(const VarDecl &vd, cir::GlobalOp globalOp);
   void emitCXXGlobalVarDeclInitFunc(const VarDecl *vd, cir::GlobalOp addr,
                                     bool performInit);
 

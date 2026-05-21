@@ -1412,6 +1412,15 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
       return *regionBranchReturn;
     if (accSourceReturn)
       return *accSourceReturn;
+
+    if (!breakFromLoop && v) {
+      // If we have reached a BlockArgument, try to pass through it
+      // for some OpenACC operations.
+      if (mlir::Value accOperand = mlir::acc::getACCOperandForBlockArg(v)) {
+        v = accOperand;
+        defOp = v.getDefiningOp();
+      }
+    }
   }
   if (!defOp && type == SourceKind::Unknown) {
     // Check if the memory source is coming through a dummy argument.
@@ -1427,14 +1436,6 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
       // hlfir.eval_in_mem block operands is allocated by the operation.
       type = SourceKind::Allocate;
       ty = v.getType();
-    } else if (mlir::Operation *accOp =
-                   mlir::acc::getACCDataClauseOpForBlockArg(v)) {
-      return getSourceForACCMappedValue(
-          v, accOp,
-          [&](mlir::Value x) {
-            return getSource(x, getLastInstantiationPoint);
-          },
-          followingData, attributes);
     }
   }
 

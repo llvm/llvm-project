@@ -672,9 +672,8 @@ CanQualType ClassTemplateDecl::getCanonicalInjectedSpecializationType(
 
 TemplateTypeParmDecl *TemplateTypeParmDecl::Create(
     const ASTContext &C, DeclContext *DC, SourceLocation KeyLoc,
-    SourceLocation NameLoc, unsigned D, unsigned P, IdentifierInfo *Id,
-    bool Typename, bool ParameterPack, bool HasTypeConstraint,
-    UnsignedOrNone NumExpanded) {
+    SourceLocation NameLoc, int D, int P, IdentifierInfo *Id, bool Typename,
+    bool ParameterPack, bool HasTypeConstraint, UnsignedOrNone NumExpanded) {
   auto *TTPDecl =
       new (C, DC,
            additionalSizeToAlloc<TypeConstraint>(HasTypeConstraint ? 1 : 0))
@@ -756,8 +755,8 @@ void TemplateTypeParmDecl::setTypeConstraint(
 //===----------------------------------------------------------------------===//
 
 NonTypeTemplateParmDecl::NonTypeTemplateParmDecl(
-    DeclContext *DC, SourceLocation StartLoc, SourceLocation IdLoc, unsigned D,
-    unsigned P, const IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo,
+    DeclContext *DC, SourceLocation StartLoc, SourceLocation IdLoc, int D,
+    int P, const IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo,
     ArrayRef<QualType> ExpandedTypes, ArrayRef<TypeSourceInfo *> ExpandedTInfos)
     : DeclaratorDecl(NonTypeTemplateParm, DC, IdLoc, Id, T, TInfo, StartLoc),
       TemplateParmPosition(D, P), ParameterPack(true),
@@ -774,8 +773,8 @@ NonTypeTemplateParmDecl::NonTypeTemplateParmDecl(
 
 NonTypeTemplateParmDecl *NonTypeTemplateParmDecl::Create(
     const ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
-    SourceLocation IdLoc, unsigned D, unsigned P, const IdentifierInfo *Id,
-    QualType T, bool ParameterPack, TypeSourceInfo *TInfo) {
+    SourceLocation IdLoc, int D, int P, const IdentifierInfo *Id, QualType T,
+    bool ParameterPack, TypeSourceInfo *TInfo) {
   AutoType *AT =
       C.getLangOpts().CPlusPlus20 ? T->getContainedAutoType() : nullptr;
   const bool HasConstraint = AT && AT->isConstrained();
@@ -792,8 +791,8 @@ NonTypeTemplateParmDecl *NonTypeTemplateParmDecl::Create(
 
 NonTypeTemplateParmDecl *NonTypeTemplateParmDecl::Create(
     const ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
-    SourceLocation IdLoc, unsigned D, unsigned P, const IdentifierInfo *Id,
-    QualType T, TypeSourceInfo *TInfo, ArrayRef<QualType> ExpandedTypes,
+    SourceLocation IdLoc, int D, int P, const IdentifierInfo *Id, QualType T,
+    TypeSourceInfo *TInfo, ArrayRef<QualType> ExpandedTypes,
     ArrayRef<TypeSourceInfo *> ExpandedTInfos) {
   AutoType *AT = TInfo->getType()->getContainedAutoType();
   const bool HasConstraint = AT && AT->isConstrained();
@@ -865,9 +864,9 @@ void NonTypeTemplateParmDecl::setDefaultArgument(
 void TemplateTemplateParmDecl::anchor() {}
 
 TemplateTemplateParmDecl::TemplateTemplateParmDecl(
-    DeclContext *DC, SourceLocation L, unsigned D, unsigned P,
-    IdentifierInfo *Id, TemplateNameKind Kind, bool Typename,
-    TemplateParameterList *Params, ArrayRef<TemplateParameterList *> Expansions)
+    DeclContext *DC, SourceLocation L, int D, int P, IdentifierInfo *Id,
+    TemplateNameKind Kind, bool Typename, TemplateParameterList *Params,
+    ArrayRef<TemplateParameterList *> Expansions)
     : TemplateDecl(TemplateTemplateParm, DC, L, Id, Params),
       TemplateParmPosition(D, P), ParameterKind(Kind), Typename(Typename),
       ParameterPack(true), ExpandedParameterPack(true),
@@ -876,8 +875,8 @@ TemplateTemplateParmDecl::TemplateTemplateParmDecl(
 }
 
 TemplateTemplateParmDecl *TemplateTemplateParmDecl::Create(
-    const ASTContext &C, DeclContext *DC, SourceLocation L, unsigned D,
-    unsigned P, bool ParameterPack, IdentifierInfo *Id, TemplateNameKind Kind,
+    const ASTContext &C, DeclContext *DC, SourceLocation L, int D, int P,
+    bool ParameterPack, IdentifierInfo *Id, TemplateNameKind Kind,
     bool Typename, TemplateParameterList *Params) {
   assert(!Params->empty() && "template with no template parameters");
   return new (C, DC) TemplateTemplateParmDecl(DC, L, D, P, ParameterPack, Id,
@@ -886,7 +885,7 @@ TemplateTemplateParmDecl *TemplateTemplateParmDecl::Create(
 
 TemplateTemplateParmDecl *
 TemplateTemplateParmDecl::Create(const ASTContext &C, DeclContext *DC,
-                                 SourceLocation L, unsigned D, unsigned P,
+                                 SourceLocation L, int D, int P,
                                  IdentifierInfo *Id, TemplateNameKind Kind,
                                  bool Typename, TemplateParameterList *Params,
                                  ArrayRef<TemplateParameterList *> Expansions) {

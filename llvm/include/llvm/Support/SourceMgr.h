@@ -65,11 +65,14 @@ private:
     /// dynamically based on the size of Buffer.
     mutable void *OffsetCache = nullptr;
 
-    /// Look up a given \p Ptr in the buffer, determining which line it came
-    /// from.
-    LLVM_ABI unsigned getLineNumber(const char *Ptr) const;
+    /// Look up a given \p Ptr in the buffer, determining which line and column
+    /// it came from. This method has O(log n) complexity, where n is the number
+    /// of lines in the buffer.
+    LLVM_ABI std::pair<unsigned, unsigned>
+    getLineAndColumn(const char *Ptr) const;
     template <typename T>
-    unsigned getLineNumberSpecialized(const char *Ptr) const;
+    std::pair<unsigned, unsigned>
+    getLineAndColumnSpecialized(const char *Ptr) const;
 
     /// Return a pointer to the first character of the specified line number or
     /// null if the line number is invalid.
@@ -209,13 +212,15 @@ public:
   LLVM_ABI unsigned FindBufferContainingLoc(SMLoc Loc) const;
 
   /// Find the line number for the specified location in the specified file.
-  /// This is not a fast method.
+  /// This method has O(log n) complexity, where n is the number of lines in the
+  /// buffer.
   unsigned FindLineNumber(SMLoc Loc, unsigned BufferID = 0) const {
     return getLineAndColumn(Loc, BufferID).first;
   }
 
   /// Find the line and column number for the specified location in the
-  /// specified file. This is not a fast method.
+  /// specified file. This method has O(log n) complexity, where n is the number
+  /// of lines in the buffer.
   LLVM_ABI std::pair<unsigned, unsigned>
   getLineAndColumn(SMLoc Loc, unsigned BufferID = 0) const;
 

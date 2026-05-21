@@ -10,11 +10,9 @@
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevelFormat.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
-#include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
-#include <cstdint>
 
 using namespace clang;
 using namespace ssaf;
@@ -84,25 +82,3 @@ static llvm::Registry<JSONFormat::FormatInfo>::Add<
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int UnsafeBufferUsageSSAFJSONFormatAnchorSource = 0;
-
-// For unit test:
-llvm::Expected<std::unique_ptr<EntitySummary>>
-ssaf::serializeDeserializeRoundTrip(
-    const UnsafeBufferUsageEntitySummary &S,
-    std::function<uint64_t(EntityId)> IdToIntFn,
-    std::function<llvm::Expected<EntityId>(uint64_t)> IdFromIntFn) {
-
-  auto IdToJson = [&IdToIntFn](EntityId Id) -> Object {
-    return Object({{"@", IdToIntFn(Id)}});
-  };
-  auto IdFromJson =
-      [&IdFromIntFn](const Object &O) -> llvm::Expected<EntityId> {
-    const auto *Int = O.get("@");
-
-    if (Int && Int->getAsUINT64())
-      return IdFromIntFn(*Int->getAsUINT64());
-    return llvm::createStringError("failed to get EntityId from Object");
-  };
-
-  return deserializeImpl(serialize(S, IdToJson), IdFromJson);
-}
