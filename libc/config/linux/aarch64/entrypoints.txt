@@ -351,6 +351,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.termios.tcsetattr
 
     # unistd.h entrypoints
+    libc.src.unistd.alarm
     libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.close
@@ -1158,6 +1159,7 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # signal.h entrypoints
     libc.src.signal.kill
+    libc.src.signal.pthread_sigmask
     libc.src.signal.raise
     libc.src.signal.sigaction
     libc.src.signal.sigaddset
@@ -1256,18 +1258,29 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # wchar.h entrypoints
     libc.src.wchar.fgetwc
-    # libc.src.wchar.fgetws
-    # libc.src.wchar.fputwc
-    # libc.src.wchar.fputws
+    libc.src.wchar.fgetws
+    libc.src.wchar.fputwc
+    libc.src.wchar.fputws
     libc.src.wchar.fwide
     libc.src.wchar.getwc
-    # libc.src.wchar.getwchar
-    # libc.src.wchar.putwc
+    libc.src.wchar.getwchar
+    libc.src.wchar.putwc
     libc.src.wchar.putwchar
     libc.src.wchar.ungetwc
   )
 endif()
 
+if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  if(LLVM_LIBC_FULL_BUILD)
+    list(APPEND TARGET_LIBC_ENTRYPOINTS
+      # regex.h entrypoints
+      libc.src.regex.regcomp
+      libc.src.regex.regexec
+      libc.src.regex.regerror
+      libc.src.regex.regfree
+    )
+  endif()
+endif()
 
 set(TARGET_LIBMVEC_ENTRYPOINTS)
 

@@ -40,6 +40,7 @@ PROJECT_DEPENDENCIES = {
 # just invert the dependencies list to give more control over what exactly is
 # tested.
 DEPENDENTS_TO_TEST = {
+    "libc-shared": {"llvm", "clang"},
     "llvm": {
         "bolt",
         "clang",
@@ -80,9 +81,10 @@ DEPENDENT_RUNTIMES_TO_BUILD = {
 # This mapping describes runtimes that should be tested when the key project is
 # touched.
 DEPENDENT_RUNTIMES_TO_TEST = {
-    "clang": {"compiler-rt"},
+    "clang": {"compiler-rt", "libc"},
     "clang-tools-extra": {"libc"},
     "libc": {"libc"},
+    "libc-shared": {"libcxx", "libcxxabi", "libunwind"},
     "libclc": {"libclc"},
     "compiler-rt": {"compiler-rt"},
     "flang": {"flang-rt"},
@@ -183,10 +185,12 @@ META_PROJECTS = {
     (".github", "workflows", "premerge.yaml"): ".ci",
     ("third-party",): ".ci",
     ("llvm", "utils", "lit"): "lit",
+    ("libc", "shared"): "libc-shared",
+    ("libc", "src", "__support", "math"): "libc-shared",
 }
 
 # Projects that should run tests but cannot be explicitly built.
-SKIP_BUILD_PROJECTS = ["CIR", "lit"]
+SKIP_BUILD_PROJECTS = ["CIR", "lit", "libc-shared"]
 
 # Projects that should not run any tests. These need to be metaprojects.
 SKIP_PROJECTS = ["docs", "gn"]

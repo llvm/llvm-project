@@ -1041,11 +1041,6 @@ def err_ptrauth_indirect_goto_addrlabel_arithmetic : Error<
   "%select{subtraction|addition}0 of address-of-label expressions is not "
   "supported with ptrauth indirect gotos">;
 
-def warn_fe_access_without_fenv_access : Warning<
-  "'%0' used without enabling floating-point exception behavior; use 'pragma STDC "
-  "FENV_ACCESS ON' or compile with '-ffp-exception-behavior=maytrap'">,
-  InGroup<DiagGroup<"fenv-access">>;
-
 // __ptrauth qualifier
 def err_ptrauth_qualifier_invalid : Error<
   "%select{return type|parameter type|property}1 may not be qualified with "
@@ -6904,9 +6899,6 @@ def note_goto_ms_asm_label : Note<
 def warn_unused_label : Warning<"unused label %0">,
   InGroup<UnusedLabel>, DefaultIgnore;
 
-def err_continue_from_cond_var_init : Error<
-  "cannot jump from this continue statement to the loop increment; "
-  "jump bypasses initialization of loop condition variable">;
 def err_goto_into_protected_scope : Error<
   "cannot jump from this goto statement to its label">;
 def ext_goto_into_protected_scope : ExtWarn<
@@ -10272,6 +10264,8 @@ def ext_ms_anonymous_record : ExtWarn<
 def err_reference_to_local_in_enclosing_context : Error<
   "reference to local %select{variable|binding}1 %0 declared in enclosing "
   "%select{%3|block literal|lambda expression|context}2">;
+def err_local_nested_class_invalid_scope : Error<
+  "nested local class %0 must be defined in the same block scope as %1">;
 def err_capture_binding_openmp : Error<
   "capturing a structured binding is not yet supported in OpenMP">;
 def ext_capture_binding : ExtWarn<
@@ -11023,6 +11017,16 @@ def warn_lifetime_safety_lifetimebound_violation
       InGroup<LifetimeSafetyLifetimeboundViolation>,
       DefaultIgnore;
 
+def warn_lifetime_safety_intra_tu_misplaced_lifetimebound
+    : Warning<"'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead">,
+      InGroup<LifetimeSafetyIntraTUMisplacedLifetimebound>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_cross_tu_misplaced_lifetimebound
+    : Warning<"'lifetimebound' attribute on this definition is not visible to callers in other translation units; add it to the declaration instead">,
+      InGroup<LifetimeSafetyCrossTUMisplacedLifetimebound>,
+      DefaultIgnore;
+
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_invalidated_here : Note<"invalidated here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
@@ -11035,6 +11039,7 @@ def note_lifetime_safety_dangling_static_here: Note<"this static storage dangles
 def note_lifetime_safety_escapes_to_field_here: Note<"escapes to this field">;
 def note_lifetime_safety_escapes_to_global_here: Note<"escapes to this global storage">;
 def note_lifetime_safety_escapes_to_static_storage_here: Note<"escapes to this static storage">;
+def note_lifetime_safety_lifetimebound_here: Note<"'lifetimebound' attribute appears here on the definition">;
 
 def warn_lifetime_safety_intra_tu_param_suggestion
     : Warning<"parameter in intra-TU function should be marked "
@@ -11196,9 +11201,6 @@ def err_break_continue_label_not_found : Error<
   "%select{loop or 'switch'|loop}0">;
 def err_continue_switch : Error<
   "label of 'continue' refers to a switch statement">;
-def warn_loop_ctrl_binds_to_inner : Warning<
-  "'%0' is bound to current loop, GCC binds it to the enclosing loop">,
-  InGroup<GccCompat>;
 def err_omp_bind_required_on_loop : Error<
   "expected 'bind' clause for 'loop' construct without an enclosing OpenMP "
   "construct">;
@@ -11206,9 +11208,6 @@ def err_omp_loop_reduction_clause : Error<
   "'reduction' clause not allowed with '#pragma omp loop bind(teams)'">;
 def err_omp_split_counts_not_one_omp_fill : Error<
   "exactly one 'omp_fill' must appear in the 'counts' clause">;
-def warn_break_binds_to_switch : Warning<
-  "'break' is bound to loop, GCC binds it to switch">,
-  InGroup<GccCompat>;
 def err_default_not_in_switch : Error<
   "'default' statement not in switch statement">;
 def err_case_not_in_switch : Error<"'case' statement not in switch statement">;
@@ -11384,10 +11383,15 @@ def note_carries_dependency_missing_first_decl : Note<
 def err_carries_dependency_param_not_function_decl : Error<
   "'[[carries_dependency]]' attribute only allowed on parameter in a function "
   "declaration or lambda">;
-def err_block_on_nonlocal : Error<
-  "__block attribute not allowed, only allowed on local variables">;
-def err_block_on_vm : Error<
-  "__block attribute not allowed on declaration with a variably modified type">;
+def err_block_not_allowed_on : Error<
+  "'__block' is not allowed on %enum_select<NotAllowedBlockVarReason>{"
+  "%NonlocalVariable{a nonlocal variable}|"
+  "%StaticLocalVariable{a static local variable}|"
+  "%CppStaticDataMember{a C++ static data member}|"
+  "%ObjCInstanceVariable{an Objective-C instance variable}|"
+  "%RegisterVariable{a 'register' variable}|"
+  "%VariablyModifiedType{a declaration with a variably modified type}|"
+  "}0">;
 def err_sizeless_nonlocal : Error<
   "non-local variable with sizeless type %0">;
 

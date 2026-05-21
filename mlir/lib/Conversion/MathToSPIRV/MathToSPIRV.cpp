@@ -524,7 +524,8 @@ void populateMathToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
       .add<CopySignPattern,
            CheckedElementwiseOpPattern<math::IsInfOp, spirv::IsInfOp>,
            CheckedElementwiseOpPattern<math::IsNaNOp, spirv::IsNanOp>,
-           CheckedElementwiseOpPattern<math::IsFiniteOp, spirv::IsFiniteOp>>(
+           CheckedElementwiseOpPattern<math::IsFiniteOp, spirv::IsFiniteOp>,
+           CheckedElementwiseOpPattern<math::IsNormalOp, spirv::IsNormalOp>>(
           typeConverter, patterns.getContext());
 
   // GLSL patterns

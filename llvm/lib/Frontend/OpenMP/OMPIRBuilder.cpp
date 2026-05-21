@@ -83,6 +83,10 @@ static cl::opt<double> UnrollThresholdFactor(
              "simplifications still taking place"),
     cl::init(1.5));
 
+static cl::opt<bool> UseDefaultMaxThreads(
+    "openmp-ir-builder-use-default-max-threads", cl::Hidden,
+    cl::desc("Use a default max threads if none is provided."), cl::init(true));
+
 #ifndef NDEBUG
 /// Return whether IP1 and IP2 are ambiguous, i.e. that inserting instructions
 /// at position IP1 may change the meaning of IP2 or vice-versa. This is because
@@ -6560,25 +6564,41 @@ static void redirectAllPredecessorsTo(BasicBlock *OldTarget,
 /// Determine which blocks in \p BBs are reachable from outside and remove the
 /// ones that are not reachable from the function.
 static void removeUnusedBlocksFromParent(ArrayRef<BasicBlock *> BBs) {
-  SmallPtrSet<BasicBlock *, 6> BBsToErase(llvm::from_range, BBs);
-  auto HasRemainingUses = [&BBsToErase](BasicBlock *BB) {
-    for (Use &U : BB->uses()) {
-      auto *UseInst = dyn_cast<Instruction>(U.getUser());
-      if (!UseInst)
-        continue;
-      if (BBsToErase.count(UseInst->getParent()))
-        continue;
-      return true;
+  DenseMap<BasicBlock *, unsigned> BB2Index(BBs.size());
+  for (const auto [I, BB] : enumerate(BBs))
+    BB2Index.insert({BB, I});
+
+  // Optimistically assume all BBs are dead. We iteratively remove
+  // immediately-used blocks from this set until we reach a fixed point.
+  SmallBitVector BBsToErase(BBs.size(), true);
+  // Accumulates immediately-used blocks for one iteration.
+  SmallBitVector BBsToKeep(BBs.size());
+  do {
+    BBsToKeep.reset();
+    for (unsigned BBToEraseIndex : BBsToErase.set_bits()) {
+      for (Use &U : BBs[BBToEraseIndex]->uses()) {
+        auto *UseInst = dyn_cast<Instruction>(U.getUser());
+        if (!UseInst)
+          continue;
+        BasicBlock *UseBB = UseInst->getParent();
+        auto UseBBIndexI = BB2Index.find(UseBB);
+        // If this use is from an external block, or from a block in BBs we have
+        // already proved is transitively used by an external block, then this
+        // block is also used.
+        if (UseBBIndexI == BB2Index.end() ||
+            !BBsToErase.test(UseBBIndexI->second)) {
+          BBsToKeep.set(BBToEraseIndex);
+          break;
+        }
+      }
     }
-    return false;
-  };
+    BBsToErase &= ~BBsToKeep;
+  } while (BBsToKeep.any());
 
-  while (BBsToErase.remove_if(HasRemainingUses)) {
-    // Try again if anything was removed.
-  }
-
-  SmallVector<BasicBlock *, 7> BBVec(BBsToErase.begin(), BBsToErase.end());
-  DeleteDeadBlocks(BBVec);
+  SmallVector<BasicBlock *> FinalBBsToErase;
+  for (unsigned BBToEraseIndex : BBsToErase.set_bits())
+    FinalBBsToErase.push_back(BBs[BBToEraseIndex]);
+  DeleteDeadBlocks(FinalBBsToErase);
 }
 
 CanonicalLoopInfo *
@@ -8155,10 +8175,10 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
   if (Attrs.MinTeams > 1 || Attrs.MaxTeams.front() > 0)
     writeTeamsForKernel(T, *Kernel, Attrs.MinTeams, Attrs.MaxTeams.front());
 
-  // If MaxThreads not set, select the maximum between the default workgroup
-  // size and the MinThreads value.
+  // If MaxThreads is not set and needs adjustment, select the maximum between
+  // the default workgroup size and the MinThreads value.
   int32_t MaxThreadsVal = Attrs.MaxThreads.front();
-  if (MaxThreadsVal < 0) {
+  if (MaxThreadsVal < 0 && UseDefaultMaxThreads) {
     if (hasGridValue(T)) {
       MaxThreadsVal =
           std::max(int32_t(getGridValue(T, Kernel).GV_Default_WG_Size),
