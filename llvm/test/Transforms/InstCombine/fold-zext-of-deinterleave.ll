@@ -4,7 +4,8 @@
 define <8 x i64> @zext_shufflevector(<16 x i32> %v) {
 ; CHECK-LABEL: define <8 x i64> @zext_shufflevector(
 ; CHECK-SAME: <16 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32> [[V]] to <8 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <16 x i32> [[V]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32> [[TMP2]] to <8 x i64>
 ; CHECK-NEXT:    [[Z1:%.*]] = lshr <8 x i64> [[TMP1]], splat (i64 32)
 ; CHECK-NEXT:    [[Z0:%.*]] = and <8 x i64> [[TMP1]], splat (i64 4294967295)
 ; CHECK-NEXT:    [[R:%.*]] = mul nuw <8 x i64> [[Z0]], [[Z1]]
@@ -21,7 +22,8 @@ define <8 x i64> @zext_shufflevector(<16 x i32> %v) {
 define <8 x i64> @zext_shufflevector_single_field(<16 x i32> %v) {
 ; CHECK-LABEL: define <8 x i64> @zext_shufflevector_single_field(
 ; CHECK-SAME: <16 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32> [[V]] to <8 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <16 x i32> [[V]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32> [[TMP2]] to <8 x i64>
 ; CHECK-NEXT:    [[Z0:%.*]] = and <8 x i64> [[TMP1]], splat (i64 4294967295)
 ; CHECK-NEXT:    ret <8 x i64> [[Z0]]
 ;
@@ -33,7 +35,8 @@ define <8 x i64> @zext_shufflevector_single_field(<16 x i32> %v) {
 define <vscale x 8 x i64> @zext_deinterleave(<vscale x 16 x i32> %v) {
 ; CHECK-LABEL: define <vscale x 8 x i64> @zext_deinterleave(
 ; CHECK-SAME: <vscale x 16 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i32> [[V]] to <vscale x 8 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <vscale x 16 x i32> [[V]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i32> [[TMP2]] to <vscale x 8 x i64>
 ; CHECK-NEXT:    [[Z1:%.*]] = lshr <vscale x 8 x i64> [[TMP1]], splat (i64 32)
 ; CHECK-NEXT:    [[Z0:%.*]] = and <vscale x 8 x i64> [[TMP1]], splat (i64 4294967295)
 ; CHECK-NEXT:    [[R:%.*]] = mul nuw <vscale x 8 x i64> [[Z0]], [[Z1]]
@@ -51,7 +54,8 @@ define <vscale x 8 x i64> @zext_deinterleave(<vscale x 16 x i32> %v) {
 define <vscale x 8 x i64> @zext_deinterleave_multi_zext_per_field(<vscale x 16 x i32> %v) {
 ; CHECK-LABEL: define <vscale x 8 x i64> @zext_deinterleave_multi_zext_per_field(
 ; CHECK-SAME: <vscale x 16 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i32> [[V]] to <vscale x 8 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <vscale x 16 x i32> [[V]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i32> [[TMP2]] to <vscale x 8 x i64>
 ; CHECK-NEXT:    [[Z1:%.*]] = lshr <vscale x 8 x i64> [[TMP1]], splat (i64 32)
 ; CHECK-NEXT:    [[Z0:%.*]] = and <vscale x 8 x i64> [[TMP1]], splat (i64 4294967295)
 ; CHECK-NEXT:    [[R:%.*]] = mul nuw <vscale x 8 x i64> [[Z0]], [[Z1]]
@@ -72,7 +76,8 @@ define <vscale x 8 x i64> @zext_deinterleave_multi_zext_per_field(<vscale x 16 x
 define <vscale x 8 x i64> @zext_deinterleave_single_field(<vscale x 16 x i32> %v) {
 ; CHECK-LABEL: define <vscale x 8 x i64> @zext_deinterleave_single_field(
 ; CHECK-SAME: <vscale x 16 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i32> [[V]] to <vscale x 8 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <vscale x 16 x i32> [[V]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i32> [[TMP2]] to <vscale x 8 x i64>
 ; CHECK-NEXT:    [[Z1:%.*]] = lshr <vscale x 8 x i64> [[TMP1]], splat (i64 32)
 ; CHECK-NEXT:    ret <vscale x 8 x i64> [[Z1]]
 ;
@@ -86,7 +91,9 @@ define <vscale x 8 x i64> @zext_deinterleave_single_field(<vscale x 16 x i32> %v
 define <8 x i64> @to_bitcast(ptr %p) {
 ; CHECK-LABEL: define <8 x i64> @to_bitcast(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[LD1:%.*]] = load <8 x i64>, ptr [[P]], align 4
+; CHECK-NEXT:    [[LD:%.*]] = load <16 x i32>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <16 x i32> [[LD]]
+; CHECK-NEXT:    [[LD1:%.*]] = bitcast <16 x i32> [[TMP1]] to <8 x i64>
 ; CHECK-NEXT:    ret <8 x i64> [[LD1]]
 ;
   %ld = load <16 x i32>, ptr %p, align 4
@@ -102,7 +109,9 @@ define <8 x i64> @to_bitcast(ptr %p) {
 define <vscale x 8 x i64> @to_bitcast_deinterleave(ptr %p) {
 ; CHECK-LABEL: define <vscale x 8 x i64> @to_bitcast_deinterleave(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[LD1:%.*]] = load <vscale x 8 x i64>, ptr [[P]], align 4
+; CHECK-NEXT:    [[LD:%.*]] = load <vscale x 16 x i32>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <vscale x 16 x i32> [[LD]]
+; CHECK-NEXT:    [[LD1:%.*]] = bitcast <vscale x 16 x i32> [[TMP1]] to <vscale x 8 x i64>
 ; CHECK-NEXT:    ret <vscale x 8 x i64> [[LD1]]
 ;
   %ld = load <vscale x 16 x i32>, ptr %p, align 4

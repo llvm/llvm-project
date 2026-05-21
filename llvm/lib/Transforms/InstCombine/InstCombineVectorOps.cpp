@@ -3422,7 +3422,10 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
   // Double the element size but half the vector length.
   auto *BitcastedTy = VectorType::getExtendedElementVectorType(InputVecTy);
   BitcastedTy = VectorType::getHalfElementsVectorType(BitcastedTy);
-  Value *Bitcast = Builder.CreateBitCast(DIV, BitcastedTy);
+  // Since we're going to "merge" lanes via bitcast, we need to freeze any
+  // potential poison lanes first.
+  Value *Freeze = Builder.CreateFreeze(DIV);
+  Value *Bitcast = Builder.CreateBitCast(Freeze, BitcastedTy);
   unsigned InElementBitWidth = InElementTy->getBitWidth();
   auto Mask = APInt::getLowBitsSet(InElementBitWidth * 2, InElementBitWidth);
   Value *NewField0 = Builder.CreateAnd(Bitcast, Mask);
