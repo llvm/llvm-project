@@ -204,8 +204,6 @@ constexpr bool test() {
 
 #if TEST_STD_VER >= 26
 constexpr bool test_ref() {
-  // Test that no matter the ref qualifier on the object .transform() is invoked on, only the added
-  // const (no ref-qualifier) overload is used
   {
     std::optional<int&> opt1;
     std::same_as<std::optional<int>> decltype(auto) opt1r = opt1.transform([](int i) { return i + 2; });
@@ -229,7 +227,6 @@ constexpr bool test_ref() {
     assert(*o2 == 4.0f);
   }
 
-  // &
   {
     // Without & qualifier on F's operator()
     {
@@ -250,7 +247,6 @@ constexpr bool test_ref() {
       assert(*o3 == 1);
     }
   }
-  // const& overload
   {
     // Without & qualifier on F's operator()
     {
@@ -308,6 +304,23 @@ constexpr bool test_ref() {
     auto o6r               = o6.transform([](int) { return 42; });
     assert(!o6r);
   }
+
+  {
+    int i = 42;
+    int j{43};
+
+    auto func = [&j](int&) -> int& { return j; };
+
+    std::optional<int&> opt{i};
+    std::same_as<std::optional<int&>> decltype(auto) o = opt.transform(func);
+    assert(o == j);
+    assert(&(*o) == &j);
+
+    std::same_as<std::optional<int&>> decltype(auto) o2 = std::as_const(opt).transform(func);
+    assert(o2 == j);
+    assert(&(*o2) == &j);
+  }
+
   return true;
 }
 #endif
