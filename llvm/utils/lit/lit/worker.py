@@ -97,8 +97,6 @@ def _tick_ceiling(now, load1m):
     int(ceiling), so concurrency only changes once the float crosses an
     integer boundary -- this naturally damps churn near the limit.
     """
-    if not _load_limit:
-        return
     if (now - _load_state[_S_LAST_TICK]) < _LOAD_TICK_INTERVAL:
         return
     _load_state[_S_LAST_TICK] = now
@@ -115,14 +113,15 @@ def _acquire_run_slot():
     a dynamic ceiling whose movement is proportional to the (signed)
     distance between the 1-minute system load and --load-limit; see
     _tick_ceiling().  A new test is admitted when:
-      * running == 0           (forward progress - never wait forever), or
-      * running <  int(ceiling)  (within the current concurrency budget).
+      * running == 0             (forward progress - never wait forever), or
+      * running <  int(ceiling)  (within the current concurrency budget), or
+      * running <  _min_ceiling  (optional).
 
     The ceiling is stored as a float internally so that near-limit
     fluctuations of well under one worker accumulate smoothly instead of
     flipping concurrency on every tick.
     """
-    if _load_state is None or _load_limit is None or not _HAS_LOADAVG:
+    if _load_state is None or not _HAS_LOADAVG:
         return
 
     debug = _debug_enabled()
@@ -165,14 +164,18 @@ def _acquire_run_slot():
 
 
 def _release_run_slot():
-    if _load_state is None or _load_limit is None or not _HAS_LOADAVG:
+    if _load_state is None or not _HAS_LOADAVG:
         return
+
+    debug = _debug_enabled()
+
     with _load_state.get_lock():
         if _load_state[_S_RUNNING] > 0:
             _load_state[_S_RUNNING] -= 1
-        running = int(_load_state[_S_RUNNING])
-        ceiling_f = float(_load_state[_S_CEILING])
-    if _debug_enabled():
+            if debug:
+                running = int(_load_state[_S_RUNNING])
+                ceiling_f = float(_load_state[_S_CEILING])
+    if debug:
         load1m = os.getloadavg()[0] if _HAS_LOADAVG else 0.0
         _lit_config.dbg(
             "test done:  pid=%d running=%d ceiling=%d (%.2f) load=%.2f"
@@ -188,12 +191,14 @@ def execute(test):
     Arguments and results of this function are pickled, so they should be cheap
     to copy.
     """
-    _acquire_run_slot()
+    if _load_limit:
+        _acquire_run_slot()
     try:
         with _get_parallelism_semaphore(test):
             result = _execute(test, _lit_config)
     finally:
-        _release_run_slot()
+        if _load_limit:
+            _release_run_slot()
 
     test.setResult(result)
     return test
