@@ -727,11 +727,6 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     return true;
   };
 
-  // Make sure the current function cannot arrange for another thread to free on
-  // its behalf.
-  if (!CtxI->getFunction()->hasNoSync())
-    return false;
-
   // Handle cross-block case: CtxI in a successor of Assume's block.
   const BasicBlock *CtxBB = CtxI->getParent();
   const BasicBlock *AssumeBB = Assume->getParent();
