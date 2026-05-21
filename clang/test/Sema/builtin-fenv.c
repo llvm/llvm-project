@@ -5,10 +5,6 @@
 
 // tests inspired by clang/test/Sema/builtin-setjmp.c
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #if WRONG_FEXCEPT_T
 typedef unsigned short int fexcept_t;
 extern int fegetexceptflag(int, int); // c-warning {{incompatible redeclaration of library function 'fegetexceptflag'}}
@@ -44,8 +40,3 @@ void use(void) {
 
 // CHECK1: FunctionDecl {{.*}} used fegetexceptflag
 // CHECK2: BuiltinAttr {{.*}} Implicit
-
-
-#ifdef __cplusplus
-}
-#endif
