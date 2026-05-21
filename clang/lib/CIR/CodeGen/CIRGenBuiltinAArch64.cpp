@@ -2732,8 +2732,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                         loc);
   }
   case NEON::BI__builtin_neon_vqrshrun_n_v: {
-    cir::VectorType argTy =
-        builder.getExtendedOrTruncatedElementVectorType(ty, /*isExtended=*/true, /*isSigned=*/true);
+    cir::VectorType argTy = builder.getExtendedOrTruncatedElementVectorType(
+        ty, /*isExtended=*/true, /*isSigned=*/true);
     return emitNeonCall(cgm, builder, {argTy, sInt32Ty}, ops,
                         "aarch64.neon.sqrshrun", ty, loc);
   }
