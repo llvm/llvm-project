@@ -3630,6 +3630,11 @@ TEST_F(AlignmentTest, ContinuedAligned) {
                Style);
 }
 
+TEST_F(AlignmentTest, AlignChainedConditionalsNoCrashOnPointerLikeOperator) {
+  verifyNoCrash(
+      "  #xxxx??x<xxxxxxx||??x<xxxxxxx and xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+}
+
 } // namespace
 } // namespace test
 } // namespace format

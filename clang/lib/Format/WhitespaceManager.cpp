@@ -415,9 +415,11 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
     // This is for lines that are split across multiple lines, as mentioned in
     // the ScopeStack comment. The stack size being 1 means that the token is
     // not in a scope that should not move.
-    if ((!Matches.empty() && Matches[0] == i) ||
+    const bool ShiftAppliedToCurrent =
+        (!Matches.empty() && Matches[0] == i) ||
         (ScopeStack.size() == 1u && CurrentChange.NewlinesBefore > 0 &&
-         InsideNestedScope)) {
+         InsideNestedScope);
+    if (ShiftAppliedToCurrent) {
       CurrentChange.IndentedFromColumn += Shift;
       IncrementChangeSpaces(i, Shift, Changes);
     }
@@ -430,7 +432,9 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
 
     // If PointerAlignment is PAS_Right, keep *s or &s next to the token,
     // except if the token is equal, then a space is needed.
-    if ((Style.PointerAlignment == FormatStyle::PAS_Right ||
+    // Skip unless the +Shift increment above ran on CurrentChange.
+    if (ShiftAppliedToCurrent &&
+        (Style.PointerAlignment == FormatStyle::PAS_Right ||
          Style.ReferenceAlignment == FormatStyle::RAS_Right) &&
         CurrentChange.Spaces != 0 &&
         CurrentChange.Tok->isNoneOf(tok::equal, tok::r_paren,
