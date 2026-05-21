@@ -137,24 +137,6 @@ static StringRef toFileFormatName(FileFormat Fmt) {
   }
 }
 
-/// Returns the format name for \p B, or an empty string if \p B is not an
-/// ObjectFile (e.g. an Archive).
-static StringRef getObjectFormatName(const object::Binary *B) {
-  if (const auto *OF = dyn_cast<object::ObjectFile>(B))
-    return OF->getFileFormatName();
-  return {};
-}
-
-/// Prints the verbose "copy from ... to ..." message to stdout.
-static void printCopyMessage(StringRef InFilename, StringRef InFormatName,
-                              StringRef OutFilename, FileFormat OutputFormat) {
-  StringRef OutFormatName = toFileFormatName(OutputFormat);
-  if (OutFormatName.empty())
-    OutFormatName = InFormatName;
-  outs() << "copy from '" << InFilename << "' [" << InFormatName << "] to '"
-         << OutFilename << "' [" << OutFormatName << "]\n";
-}
-
 /// The function executeObjcopy does the higher level dispatch based on the type
 /// of input (raw binary, archive or single object file) and takes care of the
 /// format-agnostic modifications, i.e. preserving dates.
@@ -180,8 +162,9 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
     MemoryBufferHolder = std::move(*BufOrErr);
 
     if (Config.Verbose)
-      printCopyMessage(Config.InputFilename, toFileFormatName(Config.InputFormat),
-                       Config.OutputFilename, Config.OutputFormat);
+      printCopyMessage(
+          Config.InputFilename, toFileFormatName(Config.InputFormat),
+          Config.OutputFilename, toFileFormatName(Config.OutputFormat));
 
     if (Config.InputFormat == FileFormat::Binary)
       ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
@@ -209,8 +192,9 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
     } else {
       if (Config.Verbose)
         printCopyMessage(Config.InputFilename,
-                         getObjectFormatName(BinaryHolder.getBinary()),
-                         Config.OutputFilename, Config.OutputFormat);
+                         getObjectFormatName(*BinaryHolder.getBinary()),
+                         Config.OutputFilename,
+                         toFileFormatName(Config.OutputFormat));
       // Handle llvm::object::Binary.
       ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
         return executeObjcopyOnBinary(ConfigMgr, *BinaryHolder.getBinary(),

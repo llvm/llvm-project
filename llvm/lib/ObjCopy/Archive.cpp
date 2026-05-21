@@ -11,21 +11,12 @@
 #include "llvm/ObjCopy/MultiFormatConfig.h"
 #include "llvm/ObjCopy/ObjCopy.h"
 #include "llvm/Object/Error.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 
 using namespace llvm;
 using namespace llvm::objcopy;
 using namespace llvm::object;
-
-/// Returns the format name for \p B, or an empty string if \p B is not an
-/// ObjectFile (e.g. an Archive).
-static StringRef getObjectFormatName(const Binary *B) {
-  if (const auto *OF = dyn_cast<object::ObjectFile>(B))
-    return OF->getFileFormatName();
-  return {};
-}
 
 Expected<std::vector<NewArchiveMember>>
 objcopy::createNewArchiveMembers(const MultiFormatConfig &Config,
@@ -44,10 +35,12 @@ objcopy::createNewArchiveMembers(const MultiFormatConfig &Config,
 
     const CommonConfig &CC = Config.getCommonConfig();
     if (CC.Verbose) {
-      StringRef FormatName = getObjectFormatName(ChildOrErr->get());
-      outs() << "copy from '" << Ar.getFileName() << "(" << *ChildNameOrErr
-             << ")' [" << FormatName << "] to '" << CC.OutputFilename << "("
-             << *ChildNameOrErr << ")' [" << FormatName << "]\n";
+      StringRef FormatName = getObjectFormatName(*ChildOrErr->get());
+      printCopyMessage(
+          (Twine(Ar.getFileName()) + "(" + *ChildNameOrErr + ")").str(),
+          FormatName,
+          (Twine(CC.OutputFilename) + "(" + *ChildNameOrErr + ")").str(),
+          FormatName);
     }
 
     SmallVector<char, 0> Buffer;

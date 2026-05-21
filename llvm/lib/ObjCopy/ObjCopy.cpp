@@ -26,11 +26,27 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Object/XCOFFObjectFile.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::object;
+
+StringRef objcopy::getObjectFormatName(const object::Binary &B) {
+  if (const auto *OF = dyn_cast<ObjectFile>(&B))
+    return OF->getFileFormatName();
+  return {};
+}
+
+void objcopy::printCopyMessage(StringRef InPath, StringRef InFormatName,
+                               StringRef OutPath, StringRef OutFormatName) {
+  if (OutFormatName.empty())
+    OutFormatName = InFormatName;
+  outs() << "copy from '" << InPath << "' [" << InFormatName << "] to '"
+         << OutPath << "' [" << OutFormatName << "]\n";
+}
 
 /// The function executeObjcopyOnBinary does the dispatch based on the format
 /// of the input binary (ELF, MachO or COFF).
