@@ -5359,10 +5359,11 @@ Action *Driver::ConstructPhaseAction(
           Args.hasArg(options::OPT_S) ? types::TY_LTO_IR : types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
-    auto OffloadingToolChain = Input->getOffloadingToolChain();
     bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
                                         options::OPT_no_use_spirv_backend,
                                         /*Default=*/true);
+
+    auto OffloadingToolChain = Input->getOffloadingToolChain();
     // For AMD SPIRV, if offloadDeviceOnly(), we call the SPIRV backend unless
     // LLVM bitcode was requested explicitly or RDC is set. If
     // !offloadDeviceOnly, we emit LLVM bitcode, and clang-linker-wrapper will
