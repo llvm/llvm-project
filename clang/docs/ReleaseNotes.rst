@@ -40,6 +40,37 @@ Potentially Breaking Changes
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- Clang now makes it ill-formed to try to ``break`` out of or ``continue`` a loop inside its own condition,
+  increment, or init-statement in all C and C++ language modes. This means that code such as
+
+  .. code-block:: c++
+
+    while (({ break; })) {}
+
+  is now ill-formed. An outer loop can still be broken out of or continued so long as the inner loop is
+  in the body of the outer loop:
+
+  .. code-block:: c++
+
+    // Ok, this breaks out of the 'for' loop.
+    for (;;) {
+      while (({ break; true; })) {}
+    }
+
+    // Error: can't break out of the 'for' loop from within its own increment.
+    for (;;({ while (({ break; true; })) {} })) {}
+
+  This also resolves a divergence from GCC: in a construct such as
+
+  .. code-block:: c++
+
+    for (;;) {
+      while (({ break; true; })) {}
+    }
+
+  Clang would previously ``break`` out of the ``while`` loop, whereas GCC (since version 9) would
+  ``break`` out of the ``for`` loop here. Now, Clang and GCC both break out of the ``for`` loop.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
@@ -53,6 +84,9 @@ C++ Specific Potentially Breaking Changes
   as being of type ``std::size_t`` instead of ``int``,
   matching the deduction of array sizes from ``int(&)[N]``.
   This is a breaking change for code that depended on the previously deduced type. (#GH195033)
+
+- Clang now rejects nested local classes defined in a different
+  block scope than their parent class. (#GH193472)
 
 ABI Changes in This Version
 ---------------------------
@@ -259,6 +293,8 @@ Non-comprehensive list of changes in this release
 
 - ``typeid`` on references and pointers of ``final`` types no longer emits a
   vtable lookup at runtime.
+
+- Updated support for Unicode from 15.1 to 18.0.
 
 New Compiler Flags
 ------------------
@@ -506,6 +542,10 @@ Improvements to Clang's diagnostics
 
 - Added ``-Wattribute-alias`` to diagnose type mismatches between an alias and its aliased function. (#GH195550)
 
+- The diagnostics around ``__block`` now explain why a variable cannot be marked ``__block``. (#GH197213)
+
+- Extended ``-Wnonportable-include-path`` to warn about trailing whitespace and dots in ``#include`` paths. (#GH190610)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -550,6 +590,7 @@ Bug Fixes in This Version
 - Fixed an issue where an assert was thrown instead of an error if no vulkan env was specified with ``--triple spirv``. (#GH189964)
 - Fixed incorrect rejection of ``auto`` with reordered declaration specifiers in C23. (#GH164121)
 - Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
+- Fixed a bug where Clang fails to find instantiation of Decls in constraint checking. (#GH173086)
 - Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
 - Fixed a crash caused by declaring multiple ``ownership_returns`` attributes with mismatched or missing arguments. (#GH188733)
 - Clang now emits an error for friend declarations of lambda members. (#GH26540)
@@ -558,6 +599,7 @@ Bug Fixes in This Version
 - Fixed a potential stack-use-after-return issue in Clang when copy-initializing
   an array via an element-at-a-time copy loop (#GH192026)
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
+- Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -602,7 +644,7 @@ Bug Fixes to C++ Support
   which could make the program mistakenly ill-formed.
 - Fixed a crash when an immediate-invoked ``consteval`` lambda is used as an invalid initializer. (#GH185270)
 - Fixed an assertion failure when using a global destructor with a target with a non-default program address space. (#GH186484)
-
+- Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
 - Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching
   MSVC behavior. Constructors with variadic arguments or callee-cleanup parameters are not yet supported
   and produce a warning. (#GH162640)

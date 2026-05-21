@@ -15,6 +15,7 @@
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -82,6 +83,10 @@ static cl::opt<double> UnrollThresholdFactor(
     cl::desc("Factor for the unroll threshold to account for code "
              "simplifications still taking place"),
     cl::init(1.5));
+
+static cl::opt<bool> UseDefaultMaxThreads(
+    "openmp-ir-builder-use-default-max-threads", cl::Hidden,
+    cl::desc("Use a default max threads if none is provided."), cl::init(true));
 
 #ifndef NDEBUG
 /// Return whether IP1 and IP2 are ambiguous, i.e. that inserting instructions
@@ -6557,28 +6562,38 @@ static void redirectAllPredecessorsTo(BasicBlock *OldTarget,
     redirectTo(Pred, NewTarget, DL);
 }
 
-/// Determine which blocks in \p BBs are reachable from outside and remove the
-/// ones that are not reachable from the function.
 static void removeUnusedBlocksFromParent(ArrayRef<BasicBlock *> BBs) {
-  SmallPtrSet<BasicBlock *, 6> BBsToErase(llvm::from_range, BBs);
-  auto HasRemainingUses = [&BBsToErase](BasicBlock *BB) {
-    for (Use &U : BB->uses()) {
-      auto *UseInst = dyn_cast<Instruction>(U.getUser());
-      if (!UseInst)
-        continue;
-      if (BBsToErase.count(UseInst->getParent()))
-        continue;
-      return true;
-    }
-    return false;
-  };
+  SmallPtrSet<BasicBlock *, 8> InternalBBs(from_range, BBs);
+  // We add a block to BBsToKeep iff we have proven it has an external use.
+  SmallPtrSet<BasicBlock *, 8> BBsToKeep;
 
-  while (BBsToErase.remove_if(HasRemainingUses)) {
-    // Try again if anything was removed.
+  while (true) {
+    bool Changed = false;
+
+    for (BasicBlock *BB : BBs) {
+      if (BBsToKeep.contains(BB))
+        continue;
+
+      for (Use &U : BB->uses()) {
+        auto *UseInst = dyn_cast<Instruction>(U.getUser());
+        if (!UseInst)
+          continue;
+        BasicBlock *UseBB = UseInst->getParent();
+        if (!InternalBBs.contains(UseBB) || BBsToKeep.contains(UseBB)) {
+          BBsToKeep.insert(BB);
+          Changed = true;
+          break;
+        }
+      }
+    }
+
+    if (!Changed)
+      break;
   }
 
-  SmallVector<BasicBlock *, 7> BBVec(BBsToErase.begin(), BBsToErase.end());
-  DeleteDeadBlocks(BBVec);
+  SmallVector<BasicBlock *> BBsToDelete = filter_to_vector(
+      BBs, [&BBsToKeep](BasicBlock *BB) { return !BBsToKeep.contains(BB); });
+  DeleteDeadBlocks(BBsToDelete);
 }
 
 CanonicalLoopInfo *
@@ -8155,10 +8170,10 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
   if (Attrs.MinTeams > 1 || Attrs.MaxTeams.front() > 0)
     writeTeamsForKernel(T, *Kernel, Attrs.MinTeams, Attrs.MaxTeams.front());
 
-  // If MaxThreads not set, select the maximum between the default workgroup
-  // size and the MinThreads value.
+  // If MaxThreads is not set and needs adjustment, select the maximum between
+  // the default workgroup size and the MinThreads value.
   int32_t MaxThreadsVal = Attrs.MaxThreads.front();
-  if (MaxThreadsVal < 0) {
+  if (MaxThreadsVal < 0 && UseDefaultMaxThreads) {
     if (hasGridValue(T)) {
       MaxThreadsVal =
           std::max(int32_t(getGridValue(T, Kernel).GV_Default_WG_Size),

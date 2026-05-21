@@ -28,50 +28,6 @@ mfloat8x16_t test_vsetq_lane_mf8(mfloat8_t a, mfloat8x16_t b) {
 }
 
 
-// CHECK-LABEL: define dso_local <1 x i8> @test_vget_lane_mf8(
-// CHECK-SAME: <8 x i8> [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <8 x i8> [[A]], i32 7
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8 [[VGET_LANE]] to <1 x i8>
-// CHECK-NEXT:    ret <1 x i8> [[TMP0]]
-//
-mfloat8_t test_vget_lane_mf8(mfloat8x8_t a) {
-  return vget_lane_mf8(a, 7);
-}
-
-// CHECK-LABEL: define dso_local <1 x i8> @test_vdupb_lane_mf8(
-// CHECK-SAME: <8 x i8> [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <8 x i8> [[A]], i32 7
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8 [[VGET_LANE]] to <1 x i8>
-// CHECK-NEXT:    ret <1 x i8> [[TMP0]]
-//
-mfloat8_t test_vdupb_lane_mf8(mfloat8x8_t a) {
-  return vdupb_lane_mf8(a, 7);
-}
-
-// CHECK-LABEL: define dso_local <1 x i8> @test_vgetq_lane_mf8(
-// CHECK-SAME: <16 x i8> [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <16 x i8> [[A]], i32 15
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8 [[VGET_LANE]] to <1 x i8>
-// CHECK-NEXT:    ret <1 x i8> [[TMP0]]
-//
-mfloat8_t test_vgetq_lane_mf8(mfloat8x16_t a) {
-  return vgetq_lane_mf8(a, 15);
-}
-
-// CHECK-LABEL: define dso_local <1 x i8> @test_vdupb_laneq_mf8(
-// CHECK-SAME: <16 x i8> [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <16 x i8> [[A]], i32 15
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8 [[VGET_LANE]] to <1 x i8>
-// CHECK-NEXT:    ret <1 x i8> [[TMP0]]
-//
-mfloat8_t test_vdupb_laneq_mf8(mfloat8x16_t a) {
-  return vdupb_laneq_mf8(a, 15);
-}
-
 // CHECK-LABEL: define dso_local <8 x i8> @test_vcreate_mf8(
 // CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

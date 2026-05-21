@@ -253,7 +253,7 @@ RPC_ATTRS constexpr void invoke(rpc::Server::Port &port, FnTy fn) {
   port.recv_n(arg_buf);
 
   // Convert the received arguments into an invocable argument list.
-  TupleTy args[NUM_LANES];
+  TupleTy args[NUM_LANES]{};
   for (uint32_t id = 0; id < NUM_LANES; ++id) {
     if (port.get_lane_mask() & (uint64_t(1) << id))
       args[id] = Bytes::unpack(arg_buf[id]);
