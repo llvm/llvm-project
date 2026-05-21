@@ -15,8 +15,12 @@
 #ifndef LLVM_SUPPORT_WIN64EH_H
 #define LLVM_SUPPORT_WIN64EH_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace Win64EH {
@@ -221,6 +225,78 @@ struct UnwindInfo {
   }
 };
 
+//===----------------------------------------------------------------------===//
+// V3 Unwind Information
+//===----------------------------------------------------------------------===//
+
+/// V3 Winding Operation Descriptor opcodes.
+enum WODOpcode : uint8_t {
+  WOD_SET_FPREG = 0,            // 8-bit opcode, 2 bytes
+  WOD_ALLOC_HUGE = 1,           // 8-bit opcode, 5 bytes
+  WOD_ALLOC_LARGE = 2,          // 8-bit opcode, 3 bytes
+  WOD_PUSH_CANONICAL_FRAME = 3, // 8-bit opcode, 2 bytes
+  WOD_PUSH = 4,                 // 3-bit opcode, 1 byte
+  WOD_SAVE_NONVOL_FAR = 5,      // 3-bit opcode, 5 bytes
+  WOD_SAVE_NONVOL = 6,          // 3-bit opcode, 3 bytes
+  WOD_PUSH_CONSECUTIVE_2 = 7,   // 3-bit opcode, 1 byte
+  WOD_ALLOC_SMALL = 8,          // 4-bit opcode, 1 byte
+  WOD_SAVE_XMM128_FAR = 9,      // 4-bit opcode, 5 bytes
+  WOD_SAVE_XMM128 = 10,         // 4-bit opcode, 3 bytes
+  WOD_PUSH2 = 32,               // 6-bit opcode, 2 bytes
+};
+
+/// V3 EPILOG_INFO flags.
+enum EpilogInfoFlagsV3 : uint8_t {
+  EPILOG_PARENT_FRAGMENT_TRANSFER = 0x01,
+};
+
+/// Decoded V3 Winding Operation Descriptor.
+struct DecodedWOD {
+  WODOpcode Opcode;
+  uint8_t Register;      // For applicable ops (5-bit for int, 4-bit for XMM)
+  uint8_t Register2;     // For WOD_PUSH2
+  uint8_t Type;          // For WOD_PUSH_CANONICAL_FRAME
+  uint8_t ByteSize;      // How many bytes this WOD consumed (max 5)
+  uint32_t Size;         // For alloc ops: final computed size
+  uint32_t Displacement; // For save ops: final computed displacement
+};
+
+/// Decoded V3 epilog descriptor.
+struct DecodedEpilogV3 {
+  uint8_t Flags;
+  uint8_t NumberOfOps;
+  int16_t EpilogOffset;
+  uint16_t FirstOp;
+  uint8_t IpOffsetOfLastInstruction;
+  SmallVector<uint8_t, 8> IpOffsets;
+};
+
+/// Decoded V3 UNWIND_INFO.
+struct DecodedUnwindInfoV3 {
+  uint8_t Version;
+  uint8_t Flags;
+  uint8_t SizeOfProlog;
+  uint8_t CountOfCodes;
+  uint8_t NumberOfOps;
+  uint8_t NumberOfEpilogs;
+  /// Total bytes consumed by the payload (used to locate handler/chain).
+  uint16_t PayloadSize;
+  SmallVector<uint8_t, 8> PrologIpOffsets;
+  SmallVector<DecodedEpilogV3, 4> Epilogs;
+  ArrayRef<uint8_t> WODPool;
+};
+
+/// Return the register name for a 5-bit AMD64 integer register number.
+/// Covers 0-15 (RAX-R15) and 16-31 (R16-R31 for APX).
+StringRef getRegisterNameV3(unsigned Reg);
+
+/// Decode one WOD from the pool at the given byte offset.
+/// Returns an error on malformed data.
+Expected<DecodedWOD> decodeWOD(ArrayRef<uint8_t> Pool, unsigned Offset);
+
+/// Parse a V3 UNWIND_INFO from raw bytes.
+/// Returns an error on malformed data.
+Expected<DecodedUnwindInfoV3> decodeUnwindInfoV3(ArrayRef<uint8_t> Data);
 
 } // End of namespace Win64EH
 } // End of namespace llvm

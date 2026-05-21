@@ -685,6 +685,158 @@ static void printWin64EHUnwindInfo(const Win64EH::UnwindInfo *UI) {
   outs().flush();
 }
 
+/// Helper to format a decoded WOD for llvm-objdump plain-text output.
+static void printDecodedWODObjdump(const DecodedWOD &W) {
+  switch (W.Opcode) {
+  case WOD_PUSH:
+    outs() << "WOD_PUSH Reg=" << getRegisterNameV3(W.Register);
+    break;
+  case WOD_PUSH2:
+    outs() << "WOD_PUSH2 Reg1=" << getRegisterNameV3(W.Register)
+           << ", Reg2=" << getRegisterNameV3(W.Register2);
+    break;
+  case WOD_PUSH_CONSECUTIVE_2:
+    outs() << "WOD_PUSH_CONSECUTIVE_2 Reg=" << getRegisterNameV3(W.Register)
+           << " (+" << getRegisterNameV3(W.Register + 1) << ")";
+    break;
+  case WOD_ALLOC_SMALL:
+    outs() << format("WOD_ALLOC_SMALL Size=0x%X", W.Size);
+    break;
+  case WOD_ALLOC_LARGE:
+    outs() << format("WOD_ALLOC_LARGE Size=0x%X", W.Size);
+    break;
+  case WOD_ALLOC_HUGE:
+    outs() << format("WOD_ALLOC_HUGE Size=0x%X", W.Size);
+    break;
+  case WOD_SET_FPREG:
+    outs() << "WOD_SET_FPREG Reg=" << getRegisterNameV3(W.Register)
+           << format(", Offset=0x%X", W.Displacement);
+    break;
+  case WOD_SAVE_NONVOL:
+    outs() << "WOD_SAVE_NONVOL Reg=" << getRegisterNameV3(W.Register)
+           << format(", Disp=0x%X", W.Displacement);
+    break;
+  case WOD_SAVE_NONVOL_FAR:
+    outs() << "WOD_SAVE_NONVOL_FAR Reg=" << getRegisterNameV3(W.Register)
+           << format(", Disp=0x%X", W.Displacement);
+    break;
+  case WOD_SAVE_XMM128:
+    outs() << "WOD_SAVE_XMM128 Reg=XMM" << static_cast<unsigned>(W.Register)
+           << format(", Disp=0x%X", W.Displacement);
+    break;
+  case WOD_SAVE_XMM128_FAR:
+    outs() << "WOD_SAVE_XMM128_FAR Reg=XMM" << static_cast<unsigned>(W.Register)
+           << format(", Disp=0x%X", W.Displacement);
+    break;
+  case WOD_PUSH_CANONICAL_FRAME:
+    outs() << "WOD_PUSH_CANONICAL_FRAME Type=" << static_cast<unsigned>(W.Type);
+    break;
+  default:
+    outs() << "<unknown WOD opcode " << static_cast<unsigned>(W.Opcode) << ">";
+    break;
+  }
+}
+
+/// Decode and print N WODs from the pool for llvm-objdump.
+static void printWODSequenceObjdump(ArrayRef<uint8_t> WODPool,
+                                    unsigned PoolOffset,
+                                    ArrayRef<uint8_t> IpOffsets, unsigned Count,
+                                    StringRef Indent) {
+  unsigned CurrentOffset = PoolOffset;
+  for (unsigned I = 0; I < Count; ++I) {
+    Expected<DecodedWOD> WOrErr = decodeWOD(WODPool, CurrentOffset);
+    if (!WOrErr) {
+      WithColor::warning(errs()) << toString(WOrErr.takeError()) << "\n";
+      return;
+    }
+    const DecodedWOD &W = *WOrErr;
+    outs() << Indent
+           << format("[%u] IP +0x%02X: ", I,
+                     I < IpOffsets.size() ? IpOffsets[I] : 0);
+    printDecodedWODObjdump(W);
+    outs() << "\n";
+    CurrentOffset += W.ByteSize;
+  }
+}
+
+static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
+  Expected<DecodedUnwindInfoV3> InfoOrErr = decodeUnwindInfoV3(Data);
+  if (!InfoOrErr) {
+    WithColor::warning(errs()) << toString(InfoOrErr.takeError()) << "\n";
+    return;
+  }
+  const DecodedUnwindInfoV3 &Info = *InfoOrErr;
+
+  outs() << "    Version: " << static_cast<int>(Info.Version) << "\n";
+  outs() << "    Flags: " << static_cast<int>(Info.Flags);
+  if (Info.Flags) {
+    if (Info.Flags & UNW_ExceptionHandler)
+      outs() << " UNW_ExceptionHandler";
+    if (Info.Flags & UNW_TerminateHandler)
+      outs() << " UNW_TerminateHandler";
+    if (Info.Flags & UNW_ChainInfo)
+      outs() << " UNW_ChainInfo";
+  }
+  outs() << "\n";
+  outs() << format("    Size of prolog: 0x%X\n",
+                   static_cast<unsigned>(Info.SizeOfProlog));
+  outs() << "    CountOfCodes: " << static_cast<int>(Info.CountOfCodes) << "\n";
+  outs() << "    NumberOfOps: " << static_cast<int>(Info.NumberOfOps) << "\n";
+  outs() << "    NumberOfEpilogs: " << static_cast<int>(Info.NumberOfEpilogs)
+         << "\n";
+
+  // Validation: SizeOfProlog must be >= first (largest) prolog IP offset.
+  if (Info.NumberOfOps > 0 && Info.SizeOfProlog < Info.PrologIpOffsets[0]) {
+    WithColor::warning(errs())
+        << format("SizeOfProlog (%u) is smaller than first prolog IP offset "
+                  "(%u)\n",
+                  Info.SizeOfProlog, Info.PrologIpOffsets[0]);
+  }
+
+  // Prolog ops
+  outs() << format("    Prolog [%u ops]:\n", Info.NumberOfOps);
+  printWODSequenceObjdump(Info.WODPool, 0, ArrayRef(Info.PrologIpOffsets),
+                          Info.NumberOfOps, "      ");
+
+  // Epilog descriptors
+  for (unsigned I = 0; I < Info.NumberOfEpilogs; ++I) {
+    const DecodedEpilogV3 &Epi = Info.Epilogs[I];
+
+    // Format the signed EpilogOffset as hex with explicit sign so negative
+    // tail-relative offsets remain readable (e.g. "-0x14" rather than
+    // "0xFFFFFFEC").
+    int32_t SignedOff = static_cast<int32_t>(Epi.EpilogOffset);
+    uint32_t AbsOff =
+        SignedOff < 0 ? static_cast<uint32_t>(-static_cast<int64_t>(SignedOff))
+                      : static_cast<uint32_t>(SignedOff);
+    const char *Sign = SignedOff < 0 ? "-" : "+";
+
+    if (Epi.NumberOfOps == 0) {
+      outs() << format(
+          "    Epilog [%u] (Flags=0x%02X, Offset=%s0x%X) [inherited]:\n", I,
+          Epi.Flags, Sign, AbsOff);
+      if (I == 0)
+        WithColor::warning(errs())
+            << "first epilog cannot inherit (NumberOfOps=0)\n";
+      else
+        outs() << "      (inherits from previous epilog)\n";
+    } else {
+      outs() << format(
+          "    Epilog [%u] (Flags=0x%02X, Offset=%s0x%X, IpOfLast=+0x%X) "
+          "[%u ops, FirstOp=0x%X]:\n",
+          I, Epi.Flags, Sign, AbsOff,
+          static_cast<unsigned>(Epi.IpOffsetOfLastInstruction), Epi.NumberOfOps,
+          Epi.FirstOp);
+      printWODSequenceObjdump(Info.WODPool, Epi.FirstOp,
+                              ArrayRef(Epi.IpOffsets), Epi.NumberOfOps,
+                              "      ");
+    }
+  }
+
+  outs() << "\n";
+  outs().flush();
+}
+
 /// Prints out the given RuntimeFunction struct for x64, assuming that Obj is
 /// pointing to an executable file.
 static void printRuntimeFunction(const COFFObjectFile *Obj,
@@ -701,7 +853,20 @@ static void printRuntimeFunction(const COFFObjectFile *Obj,
   uintptr_t addr;
   if (Obj->getRvaPtr(RF.UnwindInfoOffset, addr))
     return;
-  printWin64EHUnwindInfo(reinterpret_cast<const Win64EH::UnwindInfo *>(addr));
+
+  // Check version before interpreting through V1/V2 struct.
+  const uint8_t *RawBytes = reinterpret_cast<const uint8_t *>(addr);
+  uint8_t Version = RawBytes[0] & 0x07;
+  if (Version == 3) {
+    // Estimate available size conservatively. The unwind info is terminated
+    // by CountOfCodes * 2 bytes of payload starting at byte 4, plus the
+    // 4-byte header, plus possible handler/chain data.
+    unsigned CountOfCodes = RawBytes[2];
+    unsigned MinSize = 4 + CountOfCodes * 2;
+    printWin64EHUnwindInfoV3(ArrayRef<uint8_t>(RawBytes, MinSize));
+  } else {
+    printWin64EHUnwindInfo(reinterpret_cast<const Win64EH::UnwindInfo *>(addr));
+  }
 }
 
 /// Prints out the given RuntimeFunction struct for x64, assuming that Obj is
@@ -748,12 +913,19 @@ static void printRuntimeFunctionRels(const COFFObjectFile *Obj,
     return;
 
   UnwindInfoOffset += RF.UnwindInfoOffset;
-  if (UnwindInfoOffset > XContents.size())
+  if (UnwindInfoOffset >= XContents.size())
     return;
 
-  auto *UI = reinterpret_cast<const Win64EH::UnwindInfo *>(XContents.data() +
-                                                           UnwindInfoOffset);
-  printWin64EHUnwindInfo(UI);
+  // Check version before interpreting through V1/V2 struct.
+  uint8_t Version = XContents[UnwindInfoOffset] & 0x07;
+  if (Version == 3) {
+    ArrayRef<uint8_t> RawData = XContents.slice(UnwindInfoOffset);
+    printWin64EHUnwindInfoV3(RawData);
+  } else {
+    auto *UI = reinterpret_cast<const Win64EH::UnwindInfo *>(XContents.data() +
+                                                             UnwindInfoOffset);
+    printWin64EHUnwindInfo(UI);
+  }
 }
 
 void objdump::printCOFFUnwindInfo(const COFFObjectFile *Obj) {

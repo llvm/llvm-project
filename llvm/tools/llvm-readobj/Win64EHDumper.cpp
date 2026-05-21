@@ -11,6 +11,8 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/WithColor.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -407,8 +409,185 @@ void Dumper::printRuntimeFunction(const Context &Ctx,
   if (Offset > Contents.size())
     return;
 
-  const auto UI = reinterpret_cast<const UnwindInfo*>(Contents.data() + Offset);
-  printUnwindInfo(Ctx, XData, Offset, *UI);
+  // Check version before casting to UnwindInfo struct.
+  // Only byte 0 (VersionAndFlags) is layout-compatible between V1/V2 and V3.
+  uint8_t VersionByte = Contents[Offset];
+  uint8_t Version = VersionByte & 0x07;
+
+  if (Version == 3) {
+    ArrayRef<uint8_t> RawData = Contents.slice(Offset);
+    printUnwindInfoV3(Ctx, XData, Offset, RawData);
+  } else {
+    const auto UI =
+        reinterpret_cast<const UnwindInfo *>(Contents.data() + Offset);
+    printUnwindInfo(Ctx, XData, Offset, *UI);
+  }
+}
+
+/// Helper to print decoded WOD fields for llvm-readobj.
+static void printDecodedWOD(ScopedPrinter &SW, raw_ostream &OS,
+                            const DecodedWOD &W) {
+  switch (W.Opcode) {
+  case WOD_PUSH:
+    OS << "PUSH Reg=" << getRegisterNameV3(W.Register);
+    break;
+  case WOD_PUSH2:
+    OS << "PUSH2 Reg1=" << getRegisterNameV3(W.Register)
+       << ", Reg2=" << getRegisterNameV3(W.Register2);
+    break;
+  case WOD_PUSH_CONSECUTIVE_2:
+    OS << "PUSH_CONSECUTIVE_2 Reg=" << getRegisterNameV3(W.Register) << " (+"
+       << getRegisterNameV3(W.Register + 1) << ")";
+    break;
+  case WOD_ALLOC_SMALL:
+    OS << format("ALLOC_SMALL Size=0x%X", W.Size);
+    break;
+  case WOD_ALLOC_LARGE:
+    OS << format("ALLOC_LARGE Size=0x%X", W.Size);
+    break;
+  case WOD_ALLOC_HUGE:
+    OS << format("ALLOC_HUGE Size=0x%X", W.Size);
+    break;
+  case WOD_SET_FPREG:
+    OS << "SET_FPREG Reg=" << getRegisterNameV3(W.Register)
+       << format(", Offset=0x%X", W.Displacement);
+    break;
+  case WOD_SAVE_NONVOL:
+    OS << "SAVE_NONVOL Reg=" << getRegisterNameV3(W.Register)
+       << format(", Disp=0x%X", W.Displacement);
+    break;
+  case WOD_SAVE_NONVOL_FAR:
+    OS << "SAVE_NONVOL_FAR Reg=" << getRegisterNameV3(W.Register)
+       << format(", Disp=0x%X", W.Displacement);
+    break;
+  case WOD_SAVE_XMM128:
+    OS << "SAVE_XMM128 Reg=XMM" << static_cast<unsigned>(W.Register)
+       << format(", Disp=0x%X", W.Displacement);
+    break;
+  case WOD_SAVE_XMM128_FAR:
+    OS << "SAVE_XMM128_FAR Reg=XMM" << static_cast<unsigned>(W.Register)
+       << format(", Disp=0x%X", W.Displacement);
+    break;
+  case WOD_PUSH_CANONICAL_FRAME:
+    OS << "PUSH_CANONICAL_FRAME Type=" << static_cast<unsigned>(W.Type);
+    break;
+  default:
+    OS << "<unknown opcode " << static_cast<unsigned>(W.Opcode) << ">";
+    break;
+  }
+}
+
+/// Decode and print N WODs from the pool starting at byte offset PoolOffset,
+/// pairing each with the corresponding IP offset from IpOffsets.
+static void printWODSequence(ScopedPrinter &SW, raw_ostream &OS,
+                             ArrayRef<uint8_t> WODPool, unsigned PoolOffset,
+                             ArrayRef<uint8_t> IpOffsets, unsigned Count) {
+  unsigned CurrentOffset = PoolOffset;
+  for (unsigned I = 0; I < Count; ++I) {
+    Expected<DecodedWOD> WOrErr = decodeWOD(WODPool, CurrentOffset);
+    if (!WOrErr) {
+      WithColor::warning(errs()) << toString(WOrErr.takeError()) << "\n";
+      return;
+    }
+    const DecodedWOD &W = *WOrErr;
+    SW.startLine() << format("[%u] IP +0x%02X: ", I,
+                             I < IpOffsets.size() ? IpOffsets[I] : 0);
+    printDecodedWOD(SW, OS, W);
+    OS << "\n";
+    CurrentOffset += W.ByteSize;
+  }
+}
+
+void Dumper::printUnwindInfoV3(const Context &Ctx,
+                               const object::coff_section *Section,
+                               off_t Offset, ArrayRef<uint8_t> Data) {
+  DictScope UIS(SW, "UnwindInfo");
+
+  Expected<DecodedUnwindInfoV3> InfoOrErr = decodeUnwindInfoV3(Data);
+  if (!InfoOrErr) {
+    WithColor::warning(errs()) << toString(InfoOrErr.takeError()) << "\n";
+    return;
+  }
+  const DecodedUnwindInfoV3 &Info = *InfoOrErr;
+
+  SW.printNumber("Version", Info.Version);
+  SW.printFlags("Flags", Info.Flags, ArrayRef(UnwindFlags));
+  SW.printHex("SizeOfProlog", Info.SizeOfProlog);
+  SW.printNumber("CountOfCodes", Info.CountOfCodes);
+  SW.printNumber("NumberOfOps", Info.NumberOfOps);
+  SW.printNumber("NumberOfEpilogs", Info.NumberOfEpilogs);
+
+  // Validation: SizeOfProlog must be >= first (largest) prolog IP offset.
+  // SizeOfProlog is the total prolog size in bytes, while the first IP offset
+  // is the start of the last unwind-affecting instruction within the prolog.
+  if (Info.NumberOfOps > 0 && Info.SizeOfProlog < Info.PrologIpOffsets[0]) {
+    WithColor::warning(errs())
+        << format("SizeOfProlog (%u) is smaller than first prolog IP offset "
+                  "(%u)\n",
+                  Info.SizeOfProlog, Info.PrologIpOffsets[0]);
+  }
+
+  // Print prolog ops
+  {
+    SW.startLine() << format("Prolog [%u ops]:\n", Info.NumberOfOps);
+    SW.indent();
+    printWODSequence(SW, OS, Info.WODPool, 0, ArrayRef(Info.PrologIpOffsets),
+                     Info.NumberOfOps);
+    SW.unindent();
+  }
+
+  // Print epilog descriptors
+  for (unsigned I = 0; I < Info.NumberOfEpilogs; ++I) {
+    const DecodedEpilogV3 &Epi = Info.Epilogs[I];
+
+    DictScope ES(SW, formatv("Epilog [{0}]", I).str());
+    SW.printHex("Flags", Epi.Flags);
+    // Format the signed EpilogOffset as hex with explicit sign so negative
+    // tail-relative offsets remain readable (e.g. "-0x14" rather than
+    // "0xFFFFFFEC").
+    {
+      int32_t SignedOff = static_cast<int32_t>(Epi.EpilogOffset);
+      uint32_t AbsOff =
+          SignedOff < 0
+              ? static_cast<uint32_t>(-static_cast<int64_t>(SignedOff))
+              : static_cast<uint32_t>(SignedOff);
+      SW.printString(
+          "EpilogOffset",
+          formatv("{0}0x{1:X-}", SignedOff < 0 ? "-" : "+", AbsOff).str());
+    }
+    SW.printNumber("NumberOfOps", Epi.NumberOfOps);
+
+    if (Epi.NumberOfOps == 0) {
+      if (I == 0) {
+        WithColor::warning(errs())
+            << "first epilog cannot inherit (NumberOfOps=0)\n";
+      } else {
+        SW.startLine() << "(inherits from previous epilog)\n";
+      }
+    } else {
+      SW.printHex("FirstOp", Epi.FirstOp);
+      SW.printHex("IpOffsetOfLastInstruction", Epi.IpOffsetOfLastInstruction);
+      printWODSequence(SW, OS, Info.WODPool, Epi.FirstOp,
+                       ArrayRef(Epi.IpOffsets), Epi.NumberOfOps);
+    }
+  }
+
+  // Handle exception handler / chain info
+  uint64_t LSDAOffset = Offset + Info.PayloadSize;
+  if (Info.Flags & (UNW_ExceptionHandler | UNW_TerminateHandler)) {
+    if (LSDAOffset + 4 <= Data.size() + Offset) {
+      uint32_t HandlerRVA = support::endian::read32le(&Data[Info.PayloadSize]);
+      SW.printString("Handler",
+                     formatSymbol(Ctx, Section, LSDAOffset, HandlerRVA));
+    }
+  } else if (Info.Flags & UNW_ChainInfo) {
+    if (LSDAOffset + sizeof(RuntimeFunction) <= Data.size() + Offset) {
+      const auto *Chained =
+          reinterpret_cast<const RuntimeFunction *>(&Data[Info.PayloadSize]);
+      DictScope CS(SW, "Chained");
+      printRuntimeFunctionEntry(Ctx, Section, LSDAOffset, *Chained);
+    }
+  }
 }
 
 void Dumper::printData(const Context &Ctx) {
