@@ -655,11 +655,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
   let assemblyFormat = [{
     $allocaType `,` qualified(type($addr)) `,`
     ($dynAllocSize^ `:` type($dynAllocSize) `,`)?
-    `[` $name
-       (`,` `init` $init^)?
-       (`,` `const` $constant^)?
-       (`,` `cleanup_dest_slot` $cleanup_dest_slot^)?
-    `]`
+    `[` custom<AllocaFlags>($name, $init, $constant, $cleanup_dest_slot) `]`
     ($annotations^)? attr-dict
   }];
 

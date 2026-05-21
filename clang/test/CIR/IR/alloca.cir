@@ -3,6 +3,7 @@
 
 !u64i = !cir.int<u, 64>
 !u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
 !void = !cir.void
 module {
   cir.func dso_local @_Z11test_allocam(%arg0: !u64i) -> !cir.ptr<!void> {
@@ -29,4 +30,42 @@ module {
   // CHECK:   %5 = cir.load %1 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   // CHECK:   cir.return %5 : !cir.ptr<!void>
   // CHECK: }
+  // Parse tests for all flag combinations
+  cir.func dso_local @test_alloca_flags() {
+    // No flags
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"] {alignment = 4 : i64}
+
+    // init only
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
+
+    // const only
+    %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["c", const] {alignment = 4 : i64}
+
+    // init + const
+    %3 = cir.alloca !s32i, !cir.ptr<!s32i>, ["d", init, const] {alignment = 4 : i64}
+
+    // cleanup_dest_slot only
+    %4 = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", cleanup_dest_slot] {alignment = 4 : i64}
+
+    // all flags
+    %6 = cir.alloca !s32i, !cir.ptr<!s32i>, ["f", init, const, cleanup_dest_slot] {alignment = 4 : i64}
+
+    // dynamic size, no flags
+    %sz = cir.const #cir.int<4> : !u64i
+    %7 = cir.alloca !u8i, !cir.ptr<!u8i>, %sz : !u64i, ["h"] {alignment = 16 : i64}
+
+    // dynamic size + init
+    %8 = cir.alloca !u8i, !cir.ptr<!u8i>, %sz : !u64i, ["i", init] {alignment = 16 : i64}
+
+    cir.return
+  }
+  // CHECK-LABEL: cir.func dso_local @test_alloca_flags
+  // CHECK:   cir.alloca !s32i, !cir.ptr<!s32i>, ["a"] {alignment = 4 : i64}
+  // CHECK:   cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
+  // CHECK:   cir.alloca !s32i, !cir.ptr<!s32i>, ["c", const] {alignment = 4 : i64}
+  // CHECK:   cir.alloca !s32i, !cir.ptr<!s32i>, ["d", init, const] {alignment = 4 : i64}
+  // CHECK:   cir.alloca !s32i, !cir.ptr<!s32i>, ["e", cleanup_dest_slot] {alignment = 4 : i64}
+  // CHECK:   cir.alloca !s32i, !cir.ptr<!s32i>, ["f", init, const, cleanup_dest_slot] {alignment = 4 : i64}
+  // CHECK:   cir.alloca !u8i, !cir.ptr<!u8i>, %{{.*}} : !u64i, ["h"] {alignment = 16 : i64}
+  // CHECK:   cir.alloca !u8i, !cir.ptr<!u8i>, %{{.*}} : !u64i, ["i", init] {alignment = 16 : i64}
 }
