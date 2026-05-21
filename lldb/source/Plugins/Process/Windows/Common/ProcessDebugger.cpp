@@ -248,6 +248,12 @@ Status ProcessDebugger::HaltProcess(bool &caused_stop) {
   Log *log = GetLog(WindowsLog::Process);
   Status error;
   llvm::sys::ScopedLock lock(m_mutex);
+  if (!m_session_data) {
+    caused_stop = false;
+    LLDB_LOG(log, "HaltProcess called with no active session.");
+    return Status::FromErrorString(
+        "HaltProcess called with no active debugger session.");
+  }
   caused_stop = ::DebugBreakProcess(m_session_data->m_debugger->GetProcess()
                                         .GetNativeProcess()
                                         .GetSystemHandle());
