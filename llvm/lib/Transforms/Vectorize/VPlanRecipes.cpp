@@ -1395,9 +1395,9 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
   case VPInstruction::Not: {
     // InstCombine will fold `xor` to the conditional branch.
-    if (hasOneUse() && match(const_cast<VPUser *>(getSingleUser()),
-                             m_BranchOnCond(m_VPValue())))
-      return 0;
+    if (auto *U = const_cast<VPUser *>(getSingleUser()))
+      if (match(U, m_BranchOnCond(m_VPValue())))
+        return 0;
     return getCostForRecipeWithOpcode(
         getOpcode(),
         vputils::onlyFirstLaneUsed(this) ? ElementCount::getFixed(1) : VF, Ctx);
