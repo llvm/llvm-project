@@ -17664,7 +17664,7 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
     // Make sure we don't try to create an impossible vector type where the
     // elements don't perfectly fill up the OpSize boundary.
     unsigned EltSize = VT.getSizeInBits();
-    if (EltSize == 0 || OpSize % EltSize != 0)
+    if (OpSize % EltSize != 0)
       return false;
 
     // Construct the proposed vector type to check its legality
