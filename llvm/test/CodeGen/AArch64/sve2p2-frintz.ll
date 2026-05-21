@@ -29,6 +29,19 @@ define <vscale x 2 x double> @frint32z_f64_i32_f64(<vscale x 2 x double> %in) {
     ret <vscale x 2 x double> %res2
 }
 
+define <vscale x 8 x float> @frint32z_f32_i32_f32_nxv8i32(<vscale x 8 x float> %in) {
+; CHECK-LABEL: frint32z_f32_i32_f32_nxv8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    frint32z z0.s, p0/z, z0.s
+; CHECK-NEXT:    frint32z z1.s, p0/z, z1.s
+; CHECK-NEXT:    ret
+    %res = fptosi <vscale x 8 x float> %in to <vscale x 8 x i32>
+    %res2 = sitofp <vscale x 8 x i32> %res to <vscale x 8 x float>
+    ret <vscale x 8 x float> %res2
+}
+
+
 ; FRINT64Z
 
 define <vscale x 2 x double> @frint64z_f64_i64_f64(<vscale x 2 x double> %in) {
@@ -53,5 +66,14 @@ define <vscale x 4 x float> @frint64z_f32_i64_f32(<vscale x 4 x float> %in) {
     ret <vscale x 4 x float> %res2
 }
 
-
-
+define <vscale x 4 x double> @frint64z_f64_i64_f64_nxv4i64(<vscale x 4 x double> %in) {
+; CHECK-LABEL: frint64z_f64_i64_f64_nxv4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    frint64z z0.d, p0/z, z0.d
+; CHECK-NEXT:    frint64z z1.d, p0/z, z1.d
+; CHECK-NEXT:    ret
+    %res = fptosi <vscale x 4 x double> %in to <vscale x 4 x i64>
+    %res2 = sitofp <vscale x 4 x i64> %res to <vscale x 4 x double>
+    ret <vscale x 4 x double> %res2
+}

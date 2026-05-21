@@ -21041,11 +21041,7 @@ static SDValue performFpToSIntToFPCombineNEON(SelectionDAG &DAG, SDLoc DL,
   else
     return SDValue();
 
-  auto IsNEONVT = [](EVT VT) {
-    return VT == MVT::v2f32 || VT == MVT::v4f32 || VT == MVT::v2f64;
-  };
-
-  if (!IsNEONVT(VT))
+  if (VT != MVT::v2f32 && VT != MVT::v4f32 && VT != MVT::v2f64)
     return SDValue();
 
   return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
@@ -21079,7 +21075,7 @@ static SDValue performFpToSIntToFPCombineSVE(SelectionDAG &DAG, SDLoc DL,
                                   : Res;
 }
 
-// Combine (sint_to_fp (fp_to_sint (x) )) to FRINT*X instructions
+// Combine (sint_to_fp (fp_to_sint (x) )) to FRINT*Z instructions
 static SDValue performFpToSIntToFPCombine(SDNode *N, SelectionDAG &DAG,
                                           const AArch64Subtarget *Subtarget,
                                           const AArch64TargetLowering &TLI) {
@@ -21110,8 +21106,9 @@ static SDValue performFpToSIntToFPCombine(SDNode *N, SelectionDAG &DAG,
       return Res;
   }
 
-  if (Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSVE2p2()) {
-    if (VT.isScalableVector() ||
+  if (Subtarget->isSVEorStreamingSVEAvailable() &&
+      (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2())) {
+    if ((VT.isScalableVector() && TLI.isTypeLegal(VT)) ||
         (VT.isFixedLengthVector() &&
          TLI.useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable())))
       return performFpToSIntToFPCombineSVE(DAG, DL, VT, IntBits, FPSrc,
