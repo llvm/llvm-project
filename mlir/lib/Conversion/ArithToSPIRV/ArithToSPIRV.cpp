@@ -10,7 +10,6 @@
 
 #include "../SPIRVCommon/Pattern.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
@@ -1619,7 +1618,6 @@ struct ConvertArithToSPIRVPass
     target->addIllegalDialect<arith::ArithDialect>();
 
     RewritePatternSet patterns(&getContext());
-    arith::populateCeilFloorDivExpandOpsPatterns(patterns);
     arith::populateArithToSPIRVPatterns(typeConverter, patterns);
 
     if (failed(applyPartialConversion(op, *target, std::move(patterns))))
