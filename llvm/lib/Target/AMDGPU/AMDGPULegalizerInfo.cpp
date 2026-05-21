@@ -464,7 +464,11 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
     MemSize = std::max(MemSize, Align);
 #endif
 
-  // Only allow extloads to up to 32 bits.
+  // We want to allow extending loads into up to a 32-bit destination register.
+  // However, this would potentially allow 16-bit destinations even without
+  // True16. This function is used by isLoadStoreLegal, which will also call
+  // isRegisterType on the destination register type which will disallow
+  // 16-bit types without True16, so this is safe.
   if (MemSize != RegSize && RegSize > 32)
     return false;
 
