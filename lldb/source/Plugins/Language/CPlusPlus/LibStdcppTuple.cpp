@@ -75,7 +75,7 @@ lldb::ChildCacheState LibStdcppTupleSyntheticFrontEnd::Update() {
         if (value_sp) {
           StreamString name;
           name.Printf("[%zd]", m_members.size());
-          m_members.push_back(value_sp->Clone(ConstString(name.GetString())).get());
+          m_members.push_back(value_sp->Clone(name.GetString()).get());
         }
       }
     }

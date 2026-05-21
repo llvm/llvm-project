@@ -74,8 +74,8 @@ bool set_thread_ptr(uintptr_t val) {
 // https://github.com/gcc-mirror/gcc/commit/fc42900d21abd5eacb7537c3c8ffc5278d510195
 #if __has_builtin(__builtin_arm_wsr64)
   __builtin_arm_wsr64("tpidr_el0", val);
-#elif __has_builtin(__builtin_aarch64_wsr)
-  __builtin_aarch64_wsr("tpidr_el0", val);
+#elif __has_builtin(__builtin_aarch64_wsr64)
+  __builtin_aarch64_wsr64("tpidr_el0", val);
 #elif defined(__GNUC__)
   asm volatile("msr tpidr_el0, %0" ::"r"(val));
 #else

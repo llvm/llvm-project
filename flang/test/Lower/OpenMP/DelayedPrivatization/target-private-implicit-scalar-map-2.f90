@@ -14,8 +14,8 @@ module test_data
 end module
 
 ! CHECK-MOD: module {{.*}}
-! CHECK-MOD: fir.global @_QMtest_dataEj : !fir.array<200xi8> {
-! CHECK-MOD: fir.global @_QMtest_dataEi : !fir.array<10x10xf32> {
+! CHECK-MOD: fir.global @_QMtest_dataEj {alignment = 64 : i64} : !fir.array<200xi8> {
+! CHECK-MOD: fir.global @_QMtest_dataEi {alignment = 64 : i64} : !fir.array<10x10xf32> {
 ! CHECK-MOD: fir.global @_QMtest_dataEz : i32 {
 
 !--- imp_scalar_map_target.f90

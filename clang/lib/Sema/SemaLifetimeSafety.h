@@ -40,7 +40,14 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_dangling_global_moved,
       diag::warn_lifetime_safety_noescape_escapes,
       diag::warn_lifetime_safety_lifetimebound_violation,
-  };
+      diag::warn_lifetime_safety_cross_tu_misplaced_lifetimebound,
+      diag::warn_lifetime_safety_intra_tu_misplaced_lifetimebound,
+      diag::warn_lifetime_safety_invalidated_field,
+      diag::warn_lifetime_safety_invalidated_global,
+      diag::warn_lifetime_safety_cross_tu_param_suggestion,
+      diag::warn_lifetime_safety_intra_tu_param_suggestion,
+      diag::warn_lifetime_safety_cross_tu_this_suggestion,
+      diag::warn_lifetime_safety_intra_tu_this_suggestion};
   for (unsigned DiagID : DiagIDs)
     if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
       return true;
@@ -225,11 +232,11 @@ public:
           << DanglingGlobal->getEndLoc();
   }
 
-  void suggestLifetimeboundToParmVar(SuggestionScope Scope,
+  void suggestLifetimeboundToParmVar(WarningScope Scope,
                                      const ParmVarDecl *ParmToAnnotate,
                                      EscapingTarget Target) override {
     unsigned DiagID =
-        (Scope == SuggestionScope::CrossTU)
+        (Scope == WarningScope::CrossTU)
             ? diag::warn_lifetime_safety_cross_tu_param_suggestion
             : diag::warn_lifetime_safety_intra_tu_param_suggestion;
     SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
@@ -281,10 +288,43 @@ public:
         << 2 << "" << Attr->getRange();
   }
 
-  void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
+  void reportMisplacedLifetimebound(WarningScope Scope,
+                                    const CXXMethodDecl *FDef,
+                                    const CXXMethodDecl *FDecl) override {
+    const auto *Attr = getDirectImplicitObjectLifetimeBoundAttr(FDef);
+    assert(Attr && "Expected lifetimebound attribute");
+    unsigned DiagID =
+        Scope == WarningScope::CrossTU
+            ? diag::warn_lifetime_safety_cross_tu_misplaced_lifetimebound
+            : diag::warn_lifetime_safety_intra_tu_misplaced_lifetimebound;
+    S.Diag(Lexer::getLocForEndOfToken(FDecl->getEndLoc(), 0,
+                                      S.getSourceManager(), S.getLangOpts()),
+           DiagID);
+
+    S.Diag(Attr->getLocation(), diag::note_lifetime_safety_lifetimebound_here)
+        << Attr->getRange();
+  }
+
+  void reportMisplacedLifetimebound(WarningScope Scope,
+                                    const ParmVarDecl *PVDDef,
+                                    const ParmVarDecl *PVDDecl) override {
+
+    const auto *Attr = PVDDef->getAttr<LifetimeBoundAttr>();
+    assert(Attr && "Expected lifetimebound attribute");
+    unsigned DiagID =
+        Scope == WarningScope::CrossTU
+            ? diag::warn_lifetime_safety_cross_tu_misplaced_lifetimebound
+            : diag::warn_lifetime_safety_intra_tu_misplaced_lifetimebound;
+    S.Diag(PVDDecl->getBeginLoc(), DiagID) << PVDDecl->getSourceRange();
+
+    S.Diag(Attr->getLocation(), diag::note_lifetime_safety_lifetimebound_here)
+        << Attr->getRange();
+  }
+
+  void suggestLifetimeboundToImplicitThis(WarningScope Scope,
                                           const CXXMethodDecl *MD,
                                           const Expr *EscapeExpr) override {
-    unsigned DiagID = (Scope == SuggestionScope::CrossTU)
+    unsigned DiagID = (Scope == WarningScope::CrossTU)
                           ? diag::warn_lifetime_safety_cross_tu_this_suggestion
                           : diag::warn_lifetime_safety_intra_tu_this_suggestion;
     const auto MDL = MD->getTypeSourceInfo()->getTypeLoc();
