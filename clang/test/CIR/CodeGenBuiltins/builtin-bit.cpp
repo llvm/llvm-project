@@ -414,7 +414,7 @@ unsigned test_builtin_popcountg_u8(unsigned char x) {
 // OGCG:         %{{.+}} = call i8 @llvm.ctpop.i8(i8 %{{.+}})
 
 #if defined(__SIZEOF_INT128__) && __SIZEOF_INT128__ == 16
-typedef unsigned __int128 u128;
+using u128 = unsigned __int128;
 
 int test_builtin_popcountg_u128(u128 x) {
   return __builtin_popcountg(x);
