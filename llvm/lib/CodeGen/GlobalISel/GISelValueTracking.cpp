@@ -2227,7 +2227,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     // remainder is zero. The magnitude of the result should be less than or
     // equal to the magnitude of the LHS. Therefore, the result should have
     // at least as many sign bits as the left hand side.
-    Register Src = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
     return computeNumSignBits(Src, DemandedElts, Depth + 1);
   }
   case TargetOpcode::G_TRUNC: {

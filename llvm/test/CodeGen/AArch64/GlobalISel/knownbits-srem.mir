@@ -92,7 +92,7 @@ body: |
 # CHECK-LABEL: name: @srem_const_const
 # CHECK-NEXT:  %0:_ KnownBits:00000000000000000000000000001010 SignBits:28
 # CHECK-NEXT:  %1:_ KnownBits:00000000000000000000000000000011 SignBits:30
-# CHECK-NEXT:  %2:_ KnownBits:000000000000000000000000000000?? SignBits:1
+# CHECK-NEXT:  %2:_ KnownBits:000000000000000000000000000000?? SignBits:28
 
 ---
 name: srem_const_const
@@ -146,7 +146,7 @@ body: |
 # CHECK-LABEL: name: @numsignbits_srem_const_const
 # CHECK-NEXT:  %0:_ KnownBits:00000000000000000000000000001010 SignBits:28
 # CHECK-NEXT:  %1:_ KnownBits:00000000000000000000000000000011 SignBits:30
-# CHECK-NEXT:  %2:_ KnownBits:000000000000000000000000000000?? SignBits:1
+# CHECK-NEXT:  %2:_ KnownBits:000000000000000000000000000000?? SignBits:28
 
 ---
 name: numsignbits_srem_const_const
