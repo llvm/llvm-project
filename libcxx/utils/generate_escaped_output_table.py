@@ -322,7 +322,7 @@ def generate_data_tables() -> str:
 
     # The output table has two large entries at the end, with a small "gap"
     #   E0100..E01EF  ; Grapheme_Extend # Mn [240] VARIATION SELECTOR-17..VARIATION SELECTOR-256
-    # Based on Unicode 15.1.0:
+    # Based on Unicode 18.0.0:
     # - Encoding all these entries in the table requires 1173 entries.
     # - Manually handling these last two blocks reduces the size to 729 entries.
     # This not only reduces the binary size, but also improves the performance
