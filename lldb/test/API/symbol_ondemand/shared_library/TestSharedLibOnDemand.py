@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class SharedLibTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().

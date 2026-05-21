@@ -24,6 +24,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include <optional>
 #include <string_view>
 
@@ -908,6 +909,9 @@ clang::FunctionDecl *PdbAstBuilderClang::CreateFunctionDecl(
           index.tpi().findFullDeclForForwardRef(class_index);
       if (eti) {
         tag_record = CVTagRecord::create(index.tpi().getType(*eti)).asTag();
+      } else {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), eti.takeError(),
+                       "failed to find full decl for forward ref: {0}");
       }
     }
 

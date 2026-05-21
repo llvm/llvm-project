@@ -45,12 +45,12 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
-#include <llvm/Support/Casting.h>
 #include <optional>
 
 #define DEBUG_TYPE "expand-ir-insts"
@@ -59,18 +59,17 @@ using namespace llvm;
 
 static cl::opt<unsigned>
     ExpandFpConvertBits("expand-fp-convert-bits", cl::Hidden,
-                        cl::init(llvm::IntegerType::MAX_INT_BITS),
+                        cl::init(IntegerType::MAX_INT_BITS),
                         cl::desc("fp convert instructions on integers with "
                                  "more than <N> bits are expanded."));
 
 static cl::opt<unsigned>
     ExpandDivRemBits("expand-div-rem-bits", cl::Hidden,
-                     cl::init(llvm::IntegerType::MAX_INT_BITS),
+                     cl::init(IntegerType::MAX_INT_BITS),
                      cl::desc("div and rem instructions on integers with "
                               "more than <N> bits are expanded."));
 
-namespace {
-bool isConstantPowerOfTwo(llvm::Value *V, bool SignedOp) {
+static bool isConstantPowerOfTwo(Value *V, bool SignedOp) {
   auto *C = dyn_cast<ConstantInt>(V);
   if (!C)
     return false;
@@ -81,7 +80,7 @@ bool isConstantPowerOfTwo(llvm::Value *V, bool SignedOp) {
   return Val.isPowerOf2();
 }
 
-bool isSigned(unsigned int Opcode) {
+static bool isSigned(unsigned Opcode) {
   return Opcode == Instruction::SDiv || Opcode == Instruction::SRem;
 }
 
@@ -185,6 +184,7 @@ static void expandPow2DivRem(BinaryOperator *BO) {
 /// This class implements a precise expansion of the frem instruction.
 /// The generated code is based on the fmod implementation in the AMD device
 /// libs.
+namespace {
 class FRemExpander {
   /// The IRBuilder to use for the expansion.
   IRBuilder<> &B;
@@ -258,8 +258,7 @@ public:
       MaxIter = 1;
     }
 
-    unsigned Precision =
-        llvm::APFloat::semanticsPrecision(Ty->getFltSemantics());
+    unsigned Precision = APFloat::semanticsPrecision(Ty->getFltSemantics());
     return FRemExpander{B, Ty, Precision / MaxIter, ComputeTy};
   }
 
@@ -277,7 +276,7 @@ public:
 private:
   FRemExpander(IRBuilder<> &B, Type *FremTy, unsigned Bits, Type *ComputeFpTy)
       : B(B), FremTy(FremTy), ComputeFpTy(ComputeFpTy), ExTy(B.getInt32Ty()),
-        Bits(ConstantInt::get(ExTy, Bits)), One(ConstantInt::get(ExTy, 1)) {};
+        Bits(ConstantInt::get(ExTy, Bits)), One(ConstantInt::get(ExTy, 1)) {}
 
   Value *createRcp(Value *V, const Twine &Name) const {
     // Leave it to later optimizations to turn this into an rcp
@@ -429,13 +428,13 @@ private:
     Value *XFinite =
         NoInfs || (SQ && isKnownNeverInfinity(X, *SQ))
             ? B.getTrue()
-            : B.CreateFCmpULT(B.CreateUnaryIntrinsic(Intrinsic::fabs, X),
-                              ConstantFP::getInfinity(FremTy));
+            : B.CreateFCmpULT(B.CreateFAbs(X), ConstantFP::getInfinity(FremTy));
     Ret = B.CreateSelect(XFinite, Ret, Nan);
 
     return Ret;
   }
 };
+} // namespace
 
 Value *FRemExpander::buildApproxFRem(Value *X, Value *Y) const {
   IRBuilder<>::FastMathFlagGuard Guard(B);
@@ -465,8 +464,8 @@ Value *FRemExpander::buildFRem(Value *X, Value *Y,
   //   { ret = x or 0 with sign of x }
   //   Adjust ret to NaN/inf in input
   //   return ret
-  Value *Ax = B.CreateUnaryIntrinsic(Intrinsic::fabs, X, {}, "ax");
-  Value *Ay = B.CreateUnaryIntrinsic(Intrinsic::fabs, Y, {}, "ay");
+  Value *Ax = B.CreateFAbs(X, {}, "ax");
+  Value *Ay = B.CreateFAbs(Y, {}, "ay");
   if (ComputeFpTy != X->getType()) {
     Ax = B.CreateFPExt(Ax, ComputeFpTy, "ax");
     Ay = B.CreateFPExt(Ay, ComputeFpTy, "ay");
@@ -511,7 +510,6 @@ Value *FRemExpander::buildFRem(Value *X, Value *Y,
 
   return Ret;
 }
-} // namespace
 
 static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
   LLVM_DEBUG(dbgs() << "Expanding instruction: " << I << '\n');
@@ -930,7 +928,7 @@ static void expandIToFP(Instruction *IToFP) {
 
   // if.then4:
   Builder.SetInsertPoint(IfThen4);
-  llvm::SwitchInst *SI = Builder.CreateSwitch(Sub1, SwDefault);
+  SwitchInst *SI = Builder.CreateSwitch(Sub1, SwDefault);
   SI->addCase(Builder.getIntN(BitWidthNew, FPMantissaWidth + 2), SwBB);
   SI->addCase(Builder.getIntN(BitWidthNew, FPMantissaWidth + 3), SwEpilog);
 
@@ -1164,17 +1162,17 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
 
   unsigned MaxLegalFpConvertBitWidth =
       TLI.getMaxLargeFPConvertBitWidthSupported();
-  if (ExpandFpConvertBits != llvm::IntegerType::MAX_INT_BITS)
+  if (ExpandFpConvertBits != IntegerType::MAX_INT_BITS)
     MaxLegalFpConvertBitWidth = ExpandFpConvertBits;
 
   unsigned MaxLegalDivRemBitWidth = TLI.getMaxDivRemBitWidthSupported();
-  if (ExpandDivRemBits != llvm::IntegerType::MAX_INT_BITS)
+  if (ExpandDivRemBits != IntegerType::MAX_INT_BITS)
     MaxLegalDivRemBitWidth = ExpandDivRemBits;
 
   bool DisableExpandLargeFp =
-      MaxLegalFpConvertBitWidth >= llvm::IntegerType::MAX_INT_BITS;
+      MaxLegalFpConvertBitWidth >= IntegerType::MAX_INT_BITS;
   bool DisableExpandLargeDivRem =
-      MaxLegalDivRemBitWidth >= llvm::IntegerType::MAX_INT_BITS;
+      MaxLegalDivRemBitWidth >= IntegerType::MAX_INT_BITS;
   bool DisableFrem = !FRemExpander::shouldExpandAnyFremType(TLI);
 
   if (DisableExpandLargeFp && DisableFrem && DisableExpandLargeDivRem)
@@ -1308,7 +1306,7 @@ public:
   ExpandIRInstsLegacyPass(CodeGenOptLevel OptLevel)
       : FunctionPass(ID), OptLevel(OptLevel) {}
 
-  ExpandIRInstsLegacyPass() : ExpandIRInstsLegacyPass(CodeGenOptLevel::None) {};
+  ExpandIRInstsLegacyPass() : ExpandIRInstsLegacyPass(CodeGenOptLevel::None) {}
 
   bool runOnFunction(Function &F) override {
     auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();

@@ -41,6 +41,7 @@
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleCache.h"
+#include "clang/Serialization/ModuleManager.h"
 #include "clang/Serialization/SerializationDiagnostic.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
@@ -117,6 +118,12 @@ bool CompilerInstance::createTarget() {
                                          getInvocation().getTargetOpts()));
   if (!hasTarget())
     return false;
+
+  if (getLangOpts().SYCLIsDevice && !getTarget().getTriple().isGPU()) {
+    getDiagnostics().Report(diag::err_sycl_device_invalid_target)
+        << getTarget().getTriple().str();
+    return false;
+  }
 
   // Check whether AuxTarget exists, if not, then create TargetInfo for the
   // other side of CUDA/OpenMP/SYCL compilation.
@@ -944,10 +951,30 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
 
 // High-Level Operations
 
+void CompilerInstance::PrepareForExecution() {
+  // Set up the frontend timer for -ftime-report. BackendConsumer uses
+  // getTimerGroup() and getFrontendTimer() when TimePasses is set. In the
+  // cc1 driver path this was done in cc1_main before calling
+  // ExecuteCompilerInvocation; we consolidate it here so that all tools
+  // (cc1, clang-repl, libclang, etc.) get consistent behavior.
+  if (getCodeGenOpts().TimePasses && !FrontendTimer) {
+    createFrontendTimer();
+    getFrontendTimer().startTimer();
+  }
+
+  // FIXME: Consider consolidating additional per-instance setup here:
+  // - llvm::timeTraceProfilerInitialize) when TimeTracePath is set.
+  // - Plugin loading (LoadRequestedPlugins) and -mllvm argument processing.
+}
+
 bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   assert(hasDiagnostics() && "Diagnostics engine is not initialized!");
   assert(!getFrontendOpts().ShowHelp && "Client must handle '-help'!");
   assert(!getFrontendOpts().ShowVersion && "Client must handle '-version'!");
+
+  llvm::TimeTraceScope TimeScope("ExecuteCompiler");
+
+  PrepareForExecution();
 
   // Mark this point as the bottom of the stack if we don't have somewhere
   // better. We generally expect frontend actions to be invoked with (nearly)
@@ -985,6 +1012,8 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
     // regular files.
     if (hasSourceManager() && !Act.isModelParsingAction())
       getSourceManager().clearIDTables();
+
+    ModuleImportResults.clear();
 
     if (Act.BeginSourceFile(*this, FIF)) {
       if (llvm::Error Err = Act.Execute()) {
@@ -1470,8 +1499,10 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
     }
   }
 
-  std::error_code EC =
-      ImportingInstance.getModuleCache().write(ModuleFileName, *Buffer);
+  off_t Size;
+  time_t ModTime;
+  std::error_code EC = ImportingInstance.getModuleCache().write(
+      ModuleFileName, *Buffer, Size, ModTime);
   if (EC) {
     ImportingInstance.getDiagnostics().Report(ModuleNameLoc,
                                               diag::err_module_not_written)
@@ -1498,7 +1529,7 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
   Buffer = llvm::MemoryBuffer::getMemBufferCopy(ExtractedBuffer);
 
   ImportingInstance.getModuleCache().getInMemoryModuleCache().addBuiltPCM(
-      ModuleFileName, std::move(Buffer));
+      ModuleFileName, std::move(Buffer), Size, ModTime);
 
   return true;
 }
@@ -1921,7 +1952,8 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
 
     // Check whether M refers to the file in the prebuilt module path.
     if (M && M->getASTFileKey() &&
-        *M->getASTFileKey() == ModuleFilename.makeKey(*FileMgr))
+        *M->getASTFileKey() ==
+            getASTReader()->getModuleManager().makeKey(ModuleFilename))
       return M;
 
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_prebuilt)
@@ -2017,14 +2049,15 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   SourceLocation ModuleNameLoc = Path[0].getLoc();
 
   // If we've already handled this import, just return the cached result.
-  // This one-element cache is important to eliminate redundant diagnostics
-  // when both the preprocessor and parser see the same import declaration.
-  if (ImportLoc.isValid() && LastModuleImportLoc == ImportLoc) {
-    // Make the named module visible.
-    if (LastModuleImportResult && ModuleName != getLangOpts().CurrentModule)
-      TheASTReader->makeModuleVisible(LastModuleImportResult, Visibility,
-                                      ImportLoc);
-    return LastModuleImportResult;
+  // This cache eliminates redundant diagnostics when both the preprocessor
+  // and parser see the same import declaration.
+  if (ImportLoc.isValid()) {
+    auto CacheIt = ModuleImportResults.find(ImportLoc);
+    if (CacheIt != ModuleImportResults.end()) {
+      if (CacheIt->second && ModuleName != getLangOpts().CurrentModule)
+        TheASTReader->makeModuleVisible(CacheIt->second, Visibility, ImportLoc);
+      return CacheIt->second;
+    }
   }
 
   // If we don't already have information on this module, load the module now.
@@ -2065,7 +2098,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
         clang::Module *M = Worklist.back();
         Worklist.pop_back();
         M->IsFromModuleFile = true;
-        for (auto *SubM : M->submodules())
+        for (clang::Module *SubM : M->submodules())
           Worklist.push_back(SubM);
       }
     }
@@ -2200,8 +2233,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
                                              *Module, getDiagnostics())) {
       getDiagnostics().Report(ImportLoc, diag::note_module_import_here)
           << SourceRange(Path.front().getLoc(), Path.back().getLoc());
-      LastModuleImportLoc = ImportLoc;
-      LastModuleImportResult = ModuleLoadResult();
+      ModuleImportResults[ImportLoc] = ModuleLoadResult();
       return ModuleLoadResult();
     }
 
@@ -2214,9 +2246,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       .getModuleMap()
       .resolveLinkAsDependencies(Module->getTopLevelModule());
 
-  LastModuleImportLoc = ImportLoc;
-  LastModuleImportResult = ModuleLoadResult(Module);
-  return LastModuleImportResult;
+  ModuleImportResults[ImportLoc] = ModuleLoadResult(Module);
+  return ModuleLoadResult(Module);
 }
 
 void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,

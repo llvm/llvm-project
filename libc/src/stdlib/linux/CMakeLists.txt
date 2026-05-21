@@ -10,13 +10,16 @@ add_header_library(
 )
 
 add_entrypoint_object(
-  abort
+  setenv
   SRCS
-    abort.cpp
+    setenv.cpp
   HDRS
-    ../abort.h
+    ../setenv.h
   DEPENDS
-    .abort_utils
-    libc.src.signal.linux.__restore
-    libc.include.stdlib
+    libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.stdlib.environ_internal
 )

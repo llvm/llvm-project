@@ -142,8 +142,9 @@ llvm::parseCachePruningPolicy(StringRef PolicyStr) {
 }
 
 /// Prune the cache of files that haven't been accessed in a long time.
-bool llvm::pruneCache(StringRef Path, CachePruningPolicy Policy,
-                      const std::vector<std::unique_ptr<MemoryBuffer>> &Files) {
+Expected<bool>
+llvm::pruneCache(StringRef Path, CachePruningPolicy Policy,
+                 const std::vector<std::unique_ptr<MemoryBuffer>> &Files) {
   using namespace std::chrono;
 
   if (Path.empty())
@@ -278,13 +279,14 @@ bool llvm::pruneCache(StringRef Path, CachePruningPolicy Policy,
 
   // Prune for size now if needed
   if (Policy.MaxSizePercentageOfAvailableSpace > 0 || Policy.MaxSizeBytes > 0) {
-    auto ErrOrSpaceInfo = sys::fs::disk_space(Path);
-    if (!ErrOrSpaceInfo) {
-      auto EC = ErrOrSpaceInfo.getError();
-      report_fatal_error(Twine("Can't get available size for '") + Path.str() +
-                         "': " + EC.message());
+    auto SpaceInfoOrErr = sys::fs::disk_space(Path);
+    if (!SpaceInfoOrErr) {
+      auto EC = SpaceInfoOrErr.getError();
+      return createStringError(EC,
+                               "cannot get available disk space for '%s': '%s'",
+                               Path.str().c_str(), EC.message().c_str());
     }
-    sys::fs::space_info SpaceInfo = ErrOrSpaceInfo.get();
+    sys::fs::space_info SpaceInfo = SpaceInfoOrErr.get();
     auto AvailableSpace = TotalSize + SpaceInfo.free;
 
     if (Policy.MaxSizePercentageOfAvailableSpace == 0)

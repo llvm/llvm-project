@@ -571,6 +571,7 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def PSSLAI_W : RVPShiftW_ri<0b101, 0b010, "psslai.w">;
 } // Predicates = [HasStdExtP, IsRV64]
 
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 let Predicates = [HasStdExtP] in
 def PLI_H : PLI_i<0b1011000, "pli.h", simm10_pli_h>;
 let Predicates = [HasStdExtP, IsRV64] in
@@ -584,7 +585,8 @@ let Predicates = [HasStdExtP] in {
     let Inst{23-16} = imm8;
     let Inst{15}    = 0b0;
   }
-}
+} // Predicates = [HasStdExtP]
+} // isReMaterializable = 1, isAsCheapAsAMove = 1
 
 let Predicates = [HasStdExtP] in {
   def PSEXT_H_B : RVPUnary_ri<0b00, 0b00100, "psext.h.b">;
@@ -599,10 +601,12 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def PSEXT_W_H : RVPUnary_ri<0b01, 0b00101, "psext.w.h">;
 } // Predicates = [HasStdExtP, IsRV64]
 
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 let Predicates = [HasStdExtP] in
 def PLUI_H : PLUI_i<0b1111000, "plui.h">;
 let Predicates = [HasStdExtP, IsRV64] in
 def PLUI_W : PLUI_i<0b1111001, "plui.w">;
+}
 
 let Predicates = [HasStdExtP] in {
   def PSLL_HS   : RVPBinaryScalar_rr<0b000, 0b00, 0b010, "psll.hs">;
@@ -641,25 +645,21 @@ let Predicates = [HasStdExtP, IsRV64] in {
 
   def PADD_WS   : RVPBinaryScalar_rr<0b001, 0b01, 0b010, "padd.ws">;
 
-  let Defs = [VXSAT] in {
+  let Defs = [VXSAT] in
   def PSSHL_WS  : RVPBinaryScalar_rr<0b010, 0b01, 0b010, "psshl.ws">;
   def SHL       : RVPBinaryScalar_rr<0b010, 0b11, 0b010, "shl">;
-  } // Defs = [VXSAT]
 
-  let Defs = [VXSAT] in {
+  let Defs = [VXSAT] in
   def PSSHLR_WS : RVPBinaryScalar_rr<0b011, 0b01, 0b010, "psshlr.ws">;
   def SHLR      : RVPBinaryScalar_rr<0b011, 0b11, 0b010, "shlr">;
-  } // Defs = [VXSAT]
 
-  let Defs = [VXSAT] in {
+  let Defs = [VXSAT] in
   def PSSHA_WS  : RVPBinaryScalar_rr<0b110, 0b01, 0b010, "pssha.ws">;
   def SHA       : RVPBinaryScalar_rr<0b110, 0b11, 0b010, "sha">;
-  } // Defs = [VXSAT]
 
-  let Defs = [VXSAT] in {
+  let Defs = [VXSAT] in
   def PSSHAR_WS : RVPBinaryScalar_rr<0b111, 0b01, 0b010, "psshar.ws">;
   def SHAR      : RVPBinaryScalar_rr<0b111, 0b11, 0b010, "shar">;
-  } // Defs = [VXSAT]
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
@@ -1097,8 +1097,10 @@ let Predicates = [HasStdExtP] in {
   def PAS_HX   : RVPBinary_rr<0b0000, 0b00, 0b110, "pas.hx">;
   def PSA_HX   : RVPBinary_rr<0b0000, 0b10, 0b110, "psa.hx">;
 
+  let Defs = [VXSAT] in {
   def PSAS_HX  : RVPBinary_rr<0b0010, 0b00, 0b110, "psas.hx">;
   def PSSA_HX  : RVPBinary_rr<0b0010, 0b10, 0b110, "pssa.hx">;
+  } // Defs = [VXSAT]
 
   def PAAS_HX  : RVPBinary_rr<0b0011, 0b00, 0b110, "paas.hx">;
   def PASA_HX  : RVPBinary_rr<0b0011, 0b10, 0b110, "pasa.hx">;
@@ -1135,8 +1137,10 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def PAS_WX   : RVPBinary_rr<0b0000, 0b01, 0b110, "pas.wx">;
   def PSA_WX   : RVPBinary_rr<0b0000, 0b11, 0b110, "psa.wx">;
 
+  let Defs = [VXSAT] in {
   def PSAS_WX  : RVPBinary_rr<0b0010, 0b01, 0b110, "psas.wx">;
   def PSSA_WX  : RVPBinary_rr<0b0010, 0b11, 0b110, "pssa.wx">;
+  } // Defs = [VXSAT]
 
   def PAAS_WX  : RVPBinary_rr<0b0011, 0b01, 0b110, "paas.wx">;
   def PASA_WX  : RVPBinary_rr<0b0011, 0b11, 0b110, "pasa.wx">;
@@ -1628,8 +1632,10 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PAS_DHX      : RVPPairBinaryExchanged_rr<0b0000, 0b00, "pas.dhx">;
   def PSA_DHX      : RVPPairBinaryExchanged_rr<0b0000, 0b10, "psa.dhx">;
 
+  let Defs = [VXSAT] in {
   def PSAS_DHX     : RVPPairBinaryExchanged_rr<0b0010, 0b00, "psas.dhx">;
   def PSSA_DHX     : RVPPairBinaryExchanged_rr<0b0010, 0b10, "pssa.dhx">;
+  } // Defs = [VXSAT]
 
   def PAAS_DHX     : RVPPairBinaryExchanged_rr<0b0011, 0b00, "paas.dhx">;
   def PASA_DHX     : RVPPairBinaryExchanged_rr<0b0011, 0b10, "pasa.dhx">;
@@ -1663,10 +1669,201 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PMAXU_DB     : RVPPairBinaryExchanged_rr<0b1111, 0b10, "pmaxu.db", Commutable=1>;
 } // Predicates = [HasStdExtP, IsRV32]
 
+//===----------------------------------------------------------------------===//
+// Assembler Pseudo Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtP] in {
+  def : InstAlias<"pmv.bs $rd, $rs", (PADD_BS GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pmv.hs $rd, $rs", (PADD_HS GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pneg.b $rd, $rs", (PSUB_B GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pneg.h $rd, $rs", (PSUB_H GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pabs.b $rd, $rs", (PABD_B GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pabs.h $rd, $rs", (PABD_H GPR:$rd, GPR:$rs, X0)>;
+  // No pabd.w instruction
+
+  def : InstAlias<"pzext.h.b $rd, $rs", (PPAIRE_B GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmseqz.b $rd, $rs", (PMSEQ_B GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pmseqz.h $rd, $rs", (PMSEQ_H GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmsnez.b $rd, $rs", (PMSLTU_B GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pmsnez.h $rd, $rs", (PMSLTU_H GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pmsltz.b $rd, $rs", (PMSLT_B GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pmsltz.h $rd, $rs", (PMSLT_H GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmsgtz.b $rd, $rs", (PMSLT_B GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pmsgtz.h $rd, $rs", (PMSLT_H GPR:$rd, X0, GPR:$rs)>;
+
+  // The canonical pmslt(u) form will always be printed. Therefore,
+  // set a zero weight.
+  def : InstAlias<"pmsgt.b $rd, $rs, $rt",  (PMSLT_B GPR:$rd, GPR:$rt, GPR:$rs),  0>;
+  def : InstAlias<"pmsgt.h $rd, $rs, $rt",  (PMSLT_H GPR:$rd, GPR:$rt, GPR:$rs),  0>;
+  def : InstAlias<"pmsgtu.b $rd, $rs, $rt", (PMSLTU_B GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+  def : InstAlias<"pmsgtu.h $rd, $rs, $rt", (PMSLTU_H GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+}
+let Predicates = [HasStdExtP, IsRV32] in {
+  def : InstAlias<"mseqz $rd, $rs", (MSEQ GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"msnez $rd, $rs", (MSLTU GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"msltz $rd, $rs", (MSLT GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"msgtz $rd, $rs", (MSLT GPR:$rd, X0, GPR:$rs)>;
+
+  // The canonical mslt(u) form will always be printed. Therefore,
+  // set a zero weight.
+  def : InstAlias<"msgt $rd, $rs, $rt",  (MSLT GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+  def : InstAlias<"msgtu $rd, $rs, $rt", (MSLTU GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+}
+let Predicates = [HasStdExtP, IsRV64] in {
+  def : InstAlias<"pmv.ws $rd, $rs", (PADD_WS GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pneg.w $rd, $rs", (PSUB_W GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pzext.w.h $rd, $rs", (PPAIRE_H GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmseqz.w $rd, $rs", (PMSEQ_W GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmsnez.w $rd, $rs", (PMSLTU_W GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pmsltz.w $rd, $rs", (PMSLT_W GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmsgtz.w $rd, $rs", (PMSLT_W GPR:$rd, X0, GPR:$rs)>;
+
+  // The canonical pmslt(u) form will always be printed. Therefore,
+  // set a zero weight.
+  def : InstAlias<"pmsgt.w $rd, $rs, $rt", (PMSLT_W GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+  def : InstAlias<"pmsgtu.w $rd, $rs, $rt", (PMSLTU_W GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+
+  // No pwcvt.b/h for RV64.
+  def : InstAlias<"pwcvtu.b $rd, $rs", (ZIP8P GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvtu.h $rd, $rs", (ZIP16P GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvth.b $rd, $rs", (ZIP8P GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pwcvth.h $rd, $rs", (ZIP16P GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pncvt.b $rd, $rs", (UNZIP8P GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pncvt.h $rd, $rs", (UNZIP16P GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pncvth.b $rd, $rs", (UNZIP8HP GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pncvth.h $rd, $rs", (UNZIP16HP GPR:$rd, GPR:$rs, X0)>;
+}
+
+let Predicates = [HasStdExtP, IsRV32] in {
+  def : InstAlias<"pmv.dbs $rd, $rs",
+                  (PADD_DBS GPRPairRV32:$rd, X0_Pair, GPR:$rs)>;
+  def : InstAlias<"pmv.dhs $rd, $rs",
+                  (PADD_DHS GPRPairRV32:$rd, X0_Pair, GPR:$rs)>;
+  def : InstAlias<"pmv.dws $rd, $rs",
+                  (PADD_DWS GPRPairRV32:$rd, X0_Pair, GPR:$rs)>;
+
+  def : InstAlias<"pneg.db $rd, $rs",
+                  (PSUB_DB GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pneg.dh $rd, $rs",
+                  (PSUB_DH GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pneg.dw $rd, $rs",
+                  (PSUB_DW GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"negd $rd, $rs",
+                  (SUBD GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+
+  def : InstAlias<"pabs.db $rd, $rs",
+                  (PABD_DB GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pabs.dh $rd, $rs",
+                  (PABD_DH GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  // No pabd.dw instruction
+
+  def : InstAlias<"pzext.dh.b $rd, $rs",
+                  (PPAIRE_DB GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pzext.dw.h $rd, $rs",
+                  (PPAIRE_DH GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+
+  def : InstAlias<"pmseqz.db $rd, $rs",
+                  (PMSEQ_DB GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pmseqz.dh $rd, $rs",
+                  (PMSEQ_DH GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pmseqz.dw $rd, $rs",
+                  (PMSEQ_DW GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+
+  def : InstAlias<"pmsnez.db $rd, $rs",
+                  (PMSLTU_DB GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pmsnez.dh $rd, $rs",
+                  (PMSLTU_DH GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pmsnez.dw $rd, $rs",
+                  (PMSLTU_DW GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+
+  def : InstAlias<"pmsltz.db $rd, $rs",
+                  (PMSLT_DB GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pmsltz.dh $rd, $rs",
+                  (PMSLT_DH GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pmsltz.dw $rd, $rs",
+                  (PMSLT_DW GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+
+  def : InstAlias<"pmsgtz.db $rd, $rs",
+                  (PMSLT_DB GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pmsgtz.dh $rd, $rs",
+                  (PMSLT_DH GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pmsgtz.dw $rd, $rs",
+                  (PMSLT_DW GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+
+  // The canonical pmslt(u) form will always be printed. Therefore,
+  // set a zero weight.
+  def : InstAlias<"pmsgt.db $rd, $rs, $rt",
+                  (PMSLT_DB GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+  def : InstAlias<"pmsgt.dh $rd, $rs, $rt",
+                  (PMSLT_DH GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+  def : InstAlias<"pmsgt.dw $rd, $rs, $rt",
+                  (PMSLT_DW GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+  def : InstAlias<"pmsgtu.db $rd, $rs, $rt",
+                  (PMSLTU_DB GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+  def : InstAlias<"pmsgtu.dh $rd, $rs, $rt",
+                  (PMSLTU_DH GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+  def : InstAlias<"pmsgtu.dw $rd, $rs, $rt",
+                  (PMSLTU_DW GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+
+  def : InstAlias<"pwcvt.b $rd, $rs", (PWADD_B GPRPairRV32:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvt.h $rd, $rs", (PWADD_H GPRPairRV32:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pwcvtu.b $rd, $rs", (WZIP8P GPRPairRV32:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvtu.h $rd, $rs", (WZIP16P GPRPairRV32:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvth.b $rd, $rs", (WZIP8P GPRPairRV32:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pwcvth.h $rd, $rs", (WZIP16P GPRPairRV32:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pncvt.b $rd, $rs", (PNSRLI_B GPR:$rd, GPRPairRV32:$rs, 0)>;
+  def : InstAlias<"pncvt.h $rd, $rs", (PNSRLI_H GPR:$rd, GPRPairRV32:$rs, 0)>;
+  def : InstAlias<"pncvth.b $rd, $rs", (PNSRLI_B GPR:$rd, GPRPairRV32:$rs, 8)>;
+  def : InstAlias<"pncvth.h $rd, $rs", (PNSRLI_H GPR:$rd, GPRPairRV32:$rs, 16)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Codegen patterns
 //===----------------------------------------------------------------------===//
+
+class PatGprSplatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT,
+                     ValueType ScalarVT = XLenVT>
+    : Pat<(VecVT (OpNode GPR:$rs1, (splat_vector (ScalarVT GPR:$rs2)))),
+          (Inst GPR:$rs1, GPR:$rs2)>;
+
+// Pattern classes for GPRPair operations
+class PatGprPairGprPair<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
+    : Pat<(vt (OpNode (vt GPRPair:$rs1), (vt GPRPair:$rs2))),
+          (Inst GPRPair:$rs1, GPRPair:$rs2)>;
+
+class PatGprPairImm<SDPatternOperator OpNode, RVInst Inst,
+                    SDPatternOperator ImmType, ValueType vt>
+    : Pat<(vt (OpNode (vt GPRPair:$rs1), ImmType:$imm)),
+          (Inst GPRPair:$rs1, ImmType:$imm)>;
+
+class PatGprPairShiftMask<SDPatternOperator OpNode, RVInst Inst,
+                          ComplexPattern ShiftMask, ValueType vt>
+    : Pat<(vt (OpNode GPRPair:$rs1, ShiftMask:$rs2)),
+          (Inst GPRPair:$rs1, ShiftMask:$rs2)>;
+
+class PatGprPairSplatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT,
+                         ValueType ScalarVT = XLenVT>
+    : Pat<(VecVT (OpNode GPRPair:$rs1, (splat_vector (ScalarVT GPR:$rs2)))),
+          (Inst GPRPair:$rs1, GPR:$rs2)>;
 
 def riscv_absw : RVSDNode<"ABSW", SDT_RISCVIntUnaryOpW>;
 def riscv_clsw : RVSDNode<"CLSW", SDT_RISCVIntUnaryOpW>;
@@ -1764,6 +1961,23 @@ def IncImm : SDNodeXForm<imm, [{
     return CurDAG->getTargetConstant(N->getZExtValue() + 1, SDLoc(N),
                                      N->getValueType(0));
 }]>;
+
+def SDT_RISCVBuildPairGPRVec : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                                    SDTCisVT<1, i32>,
+                                                    SDTCisSameAs<1, 2>]>;
+def SDT_RISCVSplitGPRVec : SDTypeProfile<2, 1, [SDTCisVT<0, i32>,
+                                                SDTCisSameAs<0, 1>,
+                                                SDTCisVec<2>]>;
+
+// These nodes are used to handle 64-bit vector arguments and returns on RV32.
+// One side is a pair of i32 GPRs, the other is a 64-bit vector.
+// TOD: We might be able to use 32-bit vectors with concat_vectors/build_vector
+// and extract_subvector/extract_vectorelt instead. Using custom nodes prevents
+// 64-bit vector aithmetic operations in our lit tests from being split until
+// we can tune some generic combines.
+def RISCVBuildPairGPRVec : RVSDNode<"BuildPairGPRVec",
+                                    SDT_RISCVBuildPairGPRVec>;
+def RISCVSplitGPRVec     : RVSDNode<"SplitGPRVec", SDT_RISCVSplitGPRVec>;
 
 let Predicates = [HasStdExtP] in {
 
@@ -1901,8 +2115,10 @@ let Predicates = [HasStdExtP] in {
   def : PatGprShiftMask<riscv_psra, PSRA_HS, shiftMask16, XLenVecI16VT>;
 
   // // splat pattern
-  def : Pat<(XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))), (PADD_BS (XLenVT X0), GPR:$rs2)>;
-  def : Pat<(XLenVecI16VT (splat_vector (XLenVT GPR:$rs2))), (PADD_HS (XLenVT X0), GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))),
+            (PADD_BS (XLenVecI8VT X0), GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (splat_vector (XLenVT GPR:$rs2))),
+            (PADD_HS (XLenVecI16VT X0), GPR:$rs2)>;
 
   // 8/16-bit comparison patterns (result is all 1s or all 0s per element)
   // a == b
@@ -1951,6 +2167,18 @@ let Predicates = [HasStdExtP, IsRV32] in {
   // 32-bit averaging patterns
   def : PatGprGpr<avgfloors, AADD, i32>;
   def : PatGprGpr<avgflooru, AADDU, i32>;
+
+  // Halfword multiply patterns where one operand is a sext.h or zext.h and
+  // the other is a sext.h or zext.h or is known to be sign/zero-extended. We
+  // prefer plain mul when both operands are known to be sign/zero-extended.
+  def : Pat<(i32 (mul sexti16:$rs1, (sext_inreg GPR:$rs2, i16))),
+            (MUL_H00 sexti16:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (mul zexti16:$rs1, (and GPR:$rs2, 0xffff))),
+            (MULU_H00 zexti16:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (mul sexti16:$rs1, (and GPR:$rs2, 0xffff))),
+            (MULSU_H00 sexti16:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (mul (sext_inreg GPR:$rs1, i16), zexti16:$rs2)),
+            (MULSU_H00 GPR:$rs1, zexti16:$rs2)>;
 
   def : Pat<(i32 (add GPR:$rd, (mul_oneuse sexti16:$rs1, sexti16:$rs2))),
             (MACC_H00 GPR:$rd, sexti16:$rs1, sexti16:$rs2)>;
@@ -2003,6 +2231,136 @@ let Predicates = [HasStdExtP, IsRV32] in {
   // Build vector patterns
   def : Pat<(v2i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
             (PACK GPR:$a, GPR:$b)>;
+
+  // Basic 8-bit arithmetic patterns
+  def : PatGprPairGprPair<add, PADD_DB, v8i8>;
+  def : PatGprPairGprPair<sub, PSUB_DB, v8i8>;
+  def : PatGprPairSplatGpr<add, PADD_DBS, v8i8>;
+
+  // Basic 16-bit arithmetic patterns
+  def : PatGprPairGprPair<add, PADD_DH, v4i16>;
+  def : PatGprPairGprPair<sub, PSUB_DH, v4i16>;
+  def : PatGprPairSplatGpr<add, PADD_DHS, v4i16>;
+
+  // Basic 32-bit arithmetic patterns
+  def : PatGprPairGprPair<add, PADD_DW, v2i32>;
+  def : PatGprPairGprPair<sub, PSUB_DW, v2i32>;
+  def : PatGprPairSplatGpr<add, PADD_DWS, v2i32>;
+
+  // 8-bit saturating add/sub patterns
+  def : PatGprPairGprPair<saddsat, PSADD_DB, v8i8>;
+  def : PatGprPairGprPair<uaddsat, PSADDU_DB, v8i8>;
+  def : PatGprPairGprPair<ssubsat, PSSUB_DB, v8i8>;
+  def : PatGprPairGprPair<usubsat, PSSUBU_DB, v8i8>;
+
+  // 16-bit saturating add/sub patterns
+  def : PatGprPairGprPair<saddsat, PSADD_DH, v4i16>;
+  def : PatGprPairGprPair<uaddsat, PSADDU_DH, v4i16>;
+  def : PatGprPairGprPair<ssubsat, PSSUB_DH, v4i16>;
+  def : PatGprPairGprPair<usubsat, PSSUBU_DH, v4i16>;
+
+  // 32-bit saturating add/sub patterns
+  def : PatGprPairGprPair<saddsat, PSADD_DW, v2i32>;
+  def : PatGprPairGprPair<uaddsat, PSADDU_DW, v2i32>;
+  def : PatGprPairGprPair<ssubsat, PSSUB_DW, v2i32>;
+  def : PatGprPairGprPair<usubsat, PSSUBU_DW, v2i32>;
+
+  // 8-bit averaging patterns
+  def : PatGprPairGprPair<avgfloors, PAADD_DB, v8i8>;
+  def : PatGprPairGprPair<avgflooru, PAADDU_DB, v8i8>;
+  def : PatGprPairGprPair<riscv_asub, PASUB_DB, v8i8>;
+  def : PatGprPairGprPair<riscv_asubu, PASUBU_DB, v8i8>;
+
+  // 16-bit averaging patterns
+  def : PatGprPairGprPair<avgfloors, PAADD_DH, v4i16>;
+  def : PatGprPairGprPair<avgflooru, PAADDU_DH, v4i16>;
+  def : PatGprPairGprPair<riscv_asub, PASUB_DH, v4i16>;
+  def : PatGprPairGprPair<riscv_asubu, PASUBU_DH, v4i16>;
+
+  // 32-bit averaging patterns
+  def : PatGprPairGprPair<avgfloors, PAADD_DW, v2i32>;
+  def : PatGprPairGprPair<avgflooru, PAADDU_DW, v2i32>;
+  def : PatGprPairGprPair<riscv_asub, PASUB_DW, v2i32>;
+  def : PatGprPairGprPair<riscv_asubu, PASUBU_DW, v2i32>;
+
+  // 8-bit absolute difference patterns
+  def : Pat<(v8i8 (abs GPRPair:$rs1)), (PABD_DB GPRPair:$rs1, (v8i8 X0_Pair))>;
+  def : PatGprPairGprPair<abds, PABD_DB, v8i8>;
+  def : PatGprPairGprPair<abdu, PABDU_DB, v8i8>;
+
+  // 16-bit absolute difference patterns
+  def : Pat<(v4i16 (abs GPRPair:$rs1)), (PABD_DH GPRPair:$rs1, (v4i16 X0_Pair))>;
+  def : PatGprPairGprPair<abds, PABD_DH, v4i16>;
+  def : PatGprPairGprPair<abdu, PABDU_DH, v4i16>;
+
+  // 8-bit logical shift left/right patterns
+  def : PatGprPairImm<riscv_pshl, PSLLI_DB, uimm3, v8i8>;
+  def : PatGprPairImm<riscv_psrl, PSRLI_DB, uimm3, v8i8>;
+
+  // 16-bit logical shift left/right patterns
+  def : PatGprPairImm<riscv_pshl, PSLLI_DH, uimm4, v4i16>;
+  def : PatGprPairImm<riscv_psrl, PSRLI_DH, uimm4, v4i16>;
+
+  // 32-bit logical shift left/right patterns
+  def : PatGprPairImm<riscv_pshl, PSLLI_DW, uimm5, v2i32>;
+  def : PatGprPairImm<riscv_psrl, PSRLI_DW, uimm5, v2i32>;
+
+  // 8-bit arithmetic shift right patterns
+  def : PatGprPairImm<riscv_psra, PSRAI_DB, uimm3, v8i8>;
+
+  // 16-bit arithmetic shift right patterns
+  def : PatGprPairImm<riscv_psra, PSRAI_DH, uimm4, v4i16>;
+
+  // 32-bit arithmetic shift left/right patterns
+  def : PatGprPairImm<riscv_psra, PSRAI_DW, uimm5, v2i32>;
+
+  // 16-bit signed saturation shift left patterns
+  def : PatGprPairImm<riscv_psslai, PSSLAI_DH, timm, v4i16>;
+
+  // 32-bit signed saturation shift left patterns
+  def : PatGprPairImm<riscv_psslai, PSSLAI_DW, timm, v2i32>;
+
+  // 8-bit logical shift left/right
+  def : PatGprPairShiftMask<riscv_pshl, PSLL_DBS, shiftMask8, v8i8>;
+  def : PatGprPairShiftMask<riscv_psrl, PSRL_DBS, shiftMask8, v8i8>;
+
+  // 8-bit arithmetic shift left/right
+  def : PatGprPairShiftMask<riscv_psra, PSRA_DBS, shiftMask8, v8i8>;
+
+  // 16-bit logical shift left/right
+  def : PatGprPairShiftMask<riscv_pshl, PSLL_DHS, shiftMask16, v4i16>;
+  def : PatGprPairShiftMask<riscv_psrl, PSRL_DHS, shiftMask16, v4i16>;
+
+  // 16-bit arithmetic shift left/right
+  def : PatGprPairShiftMask<riscv_psra, PSRA_DHS, shiftMask16, v4i16>;
+
+  // 32-bit logical shift left/right
+  def : PatGprPairShiftMask<riscv_pshl, PSLL_DWS, shiftMask32, v2i32>;
+  def : PatGprPairShiftMask<riscv_psrl, PSRL_DWS, shiftMask32, v2i32>;
+
+  // 32-bit arithmetic shift left/right
+  def : PatGprPairShiftMask<riscv_psra, PSRA_DWS, shiftMask32, v2i32>;
+
+  // [s|u]min/[s|u]max patterns
+  def : PatGprPairGprPair<smin, PMIN_DB, v8i8>;
+  def : PatGprPairGprPair<umin, PMINU_DB, v8i8>;
+  def : PatGprPairGprPair<smin, PMIN_DH, v4i16>;
+  def : PatGprPairGprPair<umin, PMINU_DH, v4i16>;
+  def : PatGprPairGprPair<smin, PMIN_DW, v2i32>;
+  def : PatGprPairGprPair<umin, PMINU_DW, v2i32>;
+  def : PatGprPairGprPair<smax, PMAX_DB, v8i8>;
+  def : PatGprPairGprPair<umax, PMAXU_DB, v8i8>;
+  def : PatGprPairGprPair<smax, PMAX_DH, v4i16>;
+  def : PatGprPairGprPair<umax, PMAXU_DH, v4i16>;
+  def : PatGprPairGprPair<smax, PMAX_DW, v2i32>;
+  def : PatGprPairGprPair<umax, PMAXU_DW, v2i32>;
+
+  // splat pattern
+  def : Pat<(v8i8 (splat_vector (XLenVT GPR:$rs2))),
+            (PADD_DBS (v8i8 X0_Pair), GPR:$rs2)>;
+  def : Pat<(v4i16 (splat_vector (XLenVT GPR:$rs2))),
+            (PADD_DHS (v4i16 X0_Pair), GPR:$rs2)>;
+  // v2i32 on RV32 is handled by buildGPRPair in RISCVISelDAGToDAG.cpp
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
@@ -2015,6 +2373,18 @@ let Predicates = [HasStdExtP, IsRV64] in {
             (SATI_RV64 GPR:$rs1, (IncImm timm:$imm))>;
   def : Pat<(XLenVT (riscv_usati GPR:$rs1, timm:$imm)),
             (USATI_RV64 GPR:$rs1, timm:$imm)>;
+
+  // Word multiply patterns where one operand is a sext.w or zext.w and
+  // the other is a sext.w or zext.w or is known to be sign/zero-extended. We
+  // prefer plain mul when both operands are known to be sign/zero-extended.
+  def : Pat<(i64 (mul sexti32:$rs1, (sext_inreg GPR:$rs2, i32))),
+            (MUL_W00 sexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (mul zexti32:$rs1, (and GPR:$rs2, 0xffffffff))),
+            (MULU_W00 zexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (mul sexti32:$rs1, (and GPR:$rs2, 0xffffffff))),
+            (MULSU_W00 sexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (mul (sext_inreg GPR:$rs1, i32), zexti32:$rs2)),
+            (MULSU_W00 GPR:$rs1, zexti32:$rs2)>;
 
   def : Pat<(i64 (add GPR:$rd, (mul_oneuse sexti32:$rs1, sexti32:$rs2))),
             (MACC_W00 GPR:$rd, sexti32:$rs1, sexti32:$rs2)>;
@@ -2100,7 +2470,7 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def : PatGprShiftMask<riscv_psra, PSRA_WS, shiftMask32, v2i32>;
 
   // splat pattern
-  def : Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))), (PADD_WS (XLenVT X0), GPR:$rs2)>;
+  def : Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))), (PADD_WS (v2i32 X0), GPR:$rs2)>;
 
   // 32-bit comparison patterns (result is all 1s or all 0s per element)
   // a == b

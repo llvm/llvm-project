@@ -83,7 +83,7 @@ polly::buildCanonicalicationPassesForNPM(llvm::ModulePassManager &MPM,
   FPM.addPass(ReassociatePass());
   {
     LoopPassManager LPM;
-    LPM.addPass(LoopRotatePass(Level != OptimizationLevel::Oz));
+    LPM.addPass(LoopRotatePass());
     FPM.addPass(createFunctionToLoopPassAdaptor<LoopPassManager>(
         std::move(LPM), /*UseMemorySSA=*/false));
   }

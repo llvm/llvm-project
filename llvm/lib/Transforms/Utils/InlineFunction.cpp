@@ -560,6 +560,7 @@ static Value *getUnwindDestToken(Instruction *EHPad,
 /// nodes in that block with the values specified in InvokeDestPHIValues.
 static BasicBlock *HandleCallsInBlockInlinedThroughInvoke(
     BasicBlock *BB, BasicBlock *UnwindEdge,
+    SmallSetVector<const Value *, 4> &OriginallyIndirectCalls,
     UnwindDestMemoTy *FuncletUnwindMap = nullptr) {
   for (Instruction &I : llvm::make_early_inc_range(*BB)) {
     // We only need to check for function calls: inlined invoke
@@ -605,7 +606,10 @@ static BasicBlock *HandleCallsInBlockInlinedThroughInvoke(
 #endif // NDEBUG
     }
 
+    bool WasIndirect = OriginallyIndirectCalls.remove(CI);
     changeToInvokeAndSplitBasicBlock(CI, UnwindEdge);
+    if (WasIndirect)
+      OriginallyIndirectCalls.insert(BB->getTerminator());
     return BB;
   }
   return nullptr;
@@ -651,7 +655,8 @@ static void HandleInlinedLandingPad(InvokeInst *II, BasicBlock *FirstNewBlock,
        BB != E; ++BB) {
     if (InlinedCodeInfo.ContainsCalls)
       if (BasicBlock *NewBB = HandleCallsInBlockInlinedThroughInvoke(
-              &*BB, Invoke.getOuterResumeDest()))
+              &*BB, Invoke.getOuterResumeDest(),
+              InlinedCodeInfo.OriginallyIndirectCalls))
         // Update any PHI nodes in the exceptional block to indicate that there
         // is now a new entry in them.
         Invoke.addIncomingPHIValuesFor(NewBB);
@@ -785,7 +790,8 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
                             E = Caller->end();
          BB != E; ++BB)
       if (BasicBlock *NewBB = HandleCallsInBlockInlinedThroughInvoke(
-              &*BB, UnwindDest, &FuncletUnwindMap))
+              &*BB, UnwindDest, InlinedCodeInfo.OriginallyIndirectCalls,
+              &FuncletUnwindMap))
         // Update any PHI nodes in the exceptional block to indicate that there
         // is now a new entry in them.
         UpdatePHINodes(NewBB);
@@ -928,6 +934,62 @@ propagateMemProfMetadata(Function *Callee, CallBase &CB,
       continue;
     }
     propagateMemProfHelper(OrigCall, ClonedCall, CallsiteMD, ORE);
+  }
+}
+
+/// Collect all calls that produce RetVal, following only pointer-preserving
+/// instructions (cast, phi, select).
+static void collectPointerReturningCalls(Value *RetVal,
+                                         SmallVectorImpl<CallBase *> &Out) {
+  SmallVector<Value *, 8> Worklist{RetVal};
+  SmallPtrSet<Value *, 8> Visited;
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!V->getType()->isPointerTy() || !Visited.insert(V).second)
+      continue;
+    if (auto *CB = dyn_cast<CallBase>(V))
+      Out.push_back(CB);
+    else if (isa<BitCastInst, AddrSpaceCastInst>(V))
+      Worklist.push_back(cast<CastInst>(V)->getOperand(0));
+    else if (auto *PN = dyn_cast<PHINode>(V))
+      append_range(Worklist, PN->incoming_values());
+    else if (auto *SI = dyn_cast<SelectInst>(V)) {
+      Worklist.push_back(SI->getTrueValue());
+      Worklist.push_back(SI->getFalseValue());
+    }
+  }
+}
+
+/// When inlining a call that carries !alloc_token metadata, propagate that
+/// metadata onto calls exposed by inlining the wrapper body.  Propagation is
+/// restricted to return-value producing calls, which avoids instrumenting
+/// unrelated calls in the wrapper body.
+static void
+propagateAllocTokenMetadata(Function *CalledFunc, CallBase &CB,
+                            const ValueMap<const Value *, WeakTrackingVH> &VMap,
+                            ClonedCodeInfo &InlinedFunctionInfo) {
+  MDNode *AllocTokenMD = CB.getMetadata(LLVMContext::MD_alloc_token);
+  if (!AllocTokenMD)
+    return;
+
+  SmallVector<CallBase *, 2> AllocCalls;
+  for (BasicBlock &BB : *CalledFunc)
+    if (auto *RI = dyn_cast<ReturnInst>(BB.getTerminator()))
+      if (Value *RV = RI->getReturnValue())
+        collectPointerReturningCalls(RV, AllocCalls);
+
+  for (CallBase *OrigCall : AllocCalls) {
+    auto *ClonedCall = dyn_cast_or_null<CallBase>(VMap.lookup(OrigCall));
+    if (!ClonedCall)
+      continue;
+    // Skip calls simplified during inlining; propagation may be incorrect.
+    if (InlinedFunctionInfo.isSimplified(OrigCall, ClonedCall))
+      continue;
+    // Fill missing only: never overwrite a more specific token the wrapper
+    // already set on an internal allocation.
+    if (ClonedCall->getMetadata(LLVMContext::MD_alloc_token))
+      continue;
+    ClonedCall->setMetadata(LLVMContext::MD_alloc_token, AllocTokenMD);
   }
 }
 
@@ -2896,6 +2958,9 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
 
     // Propagate metadata on the callsite if necessary.
     PropagateCallSiteMetadata(CB, FirstNewBlock, Caller->end());
+
+    // Propagate an allocation wrapper's !alloc_token if necessary.
+    propagateAllocTokenMetadata(CalledFunc, CB, VMap, InlinedFunctionInfo);
 
     // Propagate implicit ref metadata.
     if (CalledFunc->hasMetadata(LLVMContext::MD_implicit_ref)) {

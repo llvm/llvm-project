@@ -746,6 +746,10 @@ enum NodeType {
   /// is performed.
   ABS,
 
+  /// ABS with a poison result for INT_MIN. This corresponds to
+  /// llvm.abs(x, true) where the "int min is poison" flag is set.
+  ABS_MIN_POISON,
+
   /// Shift and rotation operations.  After legalization, the type of the
   /// shift amount is known to be TLI.getShiftAmountTy().  Before legalization
   /// the shift amount can be any type, but care must be taken to ensure it is
@@ -783,9 +787,9 @@ enum NodeType {
   BITREVERSE,
   PARITY,
 
-  /// Bit counting operators with an undefined result for zero inputs.
-  CTTZ_ZERO_UNDEF,
-  CTLZ_ZERO_UNDEF,
+  /// Bit counting operators with a poisoned result for zero inputs.
+  CTTZ_ZERO_POISON,
+  CTLZ_ZERO_POISON,
 
   /// Count leading redundant sign bits. Equivalent to
   /// (sub (ctlz (x < 0 ? ~x : x)), 1).
@@ -1618,6 +1622,14 @@ enum NodeType {
   LOOP_DEPENDENCE_WAR_MASK,
   LOOP_DEPENDENCE_RAW_MASK,
 
+  /// Masked vector arithmetic that returns poison on disabled lanes. Disabled
+  /// lanes do not have undefined behaviour on division by zero or overflow. The
+  /// first two operands are input vectors, the third operand is the mask.
+  MASKED_UDIV,
+  MASKED_SDIV,
+  MASKED_UREM,
+  MASKED_SREM,
+
   /// llvm.clear_cache intrinsic
   /// Operands: Input Chain, Start Addres, End Address
   /// Outputs: Output Chain
@@ -1637,6 +1649,12 @@ inline bool isBitwiseLogicOp(unsigned Opcode) {
   return Opcode == ISD::AND || Opcode == ISD::OR || Opcode == ISD::XOR;
 }
 
+/// Whether this is an integer absolute-value opcode (ISD::ABS or
+/// ISD::ABS_MIN_POISON).
+inline bool isAbsOpcode(unsigned Opcode) {
+  return Opcode == ISD::ABS || Opcode == ISD::ABS_MIN_POISON;
+}
+
 /// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
 /// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
 LLVM_ABI NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
@@ -1649,6 +1667,10 @@ LLVM_ABI NodeType getOppositeSignednessMinMaxOpcode(unsigned MinMaxOpc);
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.
 LLVM_ABI NodeType getVecReduceBaseOpcode(unsigned VecReduceOpcode);
+
+/// Given a \p MaskedOpc of ISD::MASKED_(U|S)(DIV|REM), returns the unmasked
+/// ISD::(U|S)(DIV|REM).
+LLVM_ABI NodeType getUnmaskedBinOpOpcode(unsigned MaskedOpc);
 
 /// Whether this is a vector-predicated Opcode.
 LLVM_ABI bool isVPOpcode(unsigned Opcode);

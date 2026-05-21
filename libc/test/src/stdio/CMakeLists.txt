@@ -24,6 +24,25 @@ add_libc_test(
 )
 
 add_libc_test(
+  rewind_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    rewind_test.cpp
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.CPP.scope
+    libc.src.stdio.fclose
+    libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.fwrite
+    libc.src.stdio.fread
+    libc.src.stdio.rewind
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   ungetc_test
   SUITE
     libc_stdio_unittests
@@ -419,6 +438,7 @@ add_libc_test(
   SRCS
     fopen_test.cpp
   DEPENDS
+    libc.src.__support.CPP.scope
     libc.src.stdio.fread
     libc.src.stdio.fwrite
     libc.src.stdio.fclose
@@ -447,6 +467,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       remove_test.cpp
     DEPENDS
+      libc.hdr.sys_stat_macros
       libc.include.unistd
       libc.src.errno.errno
       libc.src.fcntl.open
@@ -464,6 +485,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       rename_test.cpp
     DEPENDS
+      libc.hdr.sys_stat_macros
       libc.src.errno.errno
       libc.src.fcntl.open
       libc.src.stdio.rename
@@ -499,6 +521,7 @@ add_libc_test(
     fgetc_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.feof
@@ -519,6 +542,7 @@ add_libc_test(
     fgetc_unlocked_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.ferror
@@ -543,6 +567,7 @@ add_libc_test(
     fgets_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.feof

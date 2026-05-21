@@ -423,6 +423,12 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
     and loop interchange permutation can be provided as either static
     attributes or dynamic values (transform parameters or payload handles).
 
+    Additionally, tile sizes can also be provided as a single handle containing
+    variadic number of values. In that case, the number of loops generated is
+    determined at runtime from the number of values in the packed handle.
+    For each target, created loops are appended to the single return handle in
+    the same order as the target operations.
+
     If `apply_cleanup` is true then slice canonicalization is applied between
     fusion steps. If `use_forall` is true then tiling method generates a
     `scf.forall` loop instead of `scf.for` loops.
@@ -432,6 +438,7 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
     (ins TransformHandleTypeInterface:$target,
         Variadic<TransformAnyParamTypeOrAnyHandle> : $tile_sizes,
         Variadic<TransformAnyParamTypeOrAnyHandle> : $tile_interchange,
+        Optional<TransformAnyParamTypeOrAnyHandle> : $packed_tile_sizes,
         DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_sizes,
         DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_interchange,
         UnitAttr:$apply_cleanup,
@@ -465,7 +472,9 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
 
   let assemblyFormat = [{
     $target oilist(
-      `tile_sizes` custom<DynamicIndexList>($tile_sizes, $static_tile_sizes) |
+      `tile_sizes` custom<PackedOrDynamicIndexList>($packed_tile_sizes,
+                                                    $tile_sizes,
+                                                    $static_tile_sizes) |
       `interchange` custom<DynamicIndexList>($tile_interchange, $static_tile_interchange)
     )
     attr-dict `:` functional-type(operands, results)
@@ -1632,7 +1641,21 @@ def DecomposeInterfaceOp : Op<Transform_Dialect, "structured.decompose_interface
      TransformEachOpTrait,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    TODO
+    Decomposes target operations into sequences of simpler ops.
+
+    #### Return modes
+
+    This operation ignores ops that do not implement the AggregatedOpInterface
+    and drops them in the return. If any such op is encountered, the transform
+    emits a silenceable failure.
+
+    If all the operations referred to by the `target` handle decompose
+    properly, the transform succeeds. Otherwise the transform produces a
+    silenceable failure.
+    The return handle points to a subset of successfully produced operations.
+    For each target, the handle contains one value per its result. That is,
+    the handle contains at most as many ops as the targets had results.
+    The handle can be empty.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target);
