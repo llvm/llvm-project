@@ -92,6 +92,40 @@ static unsigned getLength(const Expr *E,
   return 0;
 }
 
+// Returns the number of characters that may be read from \p E when it is used
+// as an argument of an 'ncmp' function.
+static unsigned getNcmpLength(const Expr *E,
+                              const MatchFinder::MatchResult &Result) {
+  if (!E)
+    return 0;
+
+  E = E->IgnoreParenImpCasts();
+
+  // String literals including the null terminator.
+  // e.g. "foo" -> 4.
+  if (const auto *SL = dyn_cast<StringLiteral>(E))
+    return SL->getLength() + 1;
+
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+      // Character arrays are readable up to their full array bound.
+      // e.g. char buf[8] = "foo" -> 8.
+      if (const auto *CAT =
+              Result.Context->getAsConstantArrayType(VD->getType()))
+        if (CAT->getElementType()->isAnyCharacterType())
+          return CAT->getSize().getZExtValue();
+
+      // Pointer variables initialized from literals inherit the literal size.
+      // e.g. const char *buf = "foo" -> 4.
+      if (const Expr *Init = VD->getInit())
+        if (const auto *SL =
+                dyn_cast<StringLiteral>(Init->IgnoreParenImpCasts()))
+          return SL->getLength() + 1;
+    }
+
+  return 0;
+}
+
 // Returns the capacity of the destination array.
 // For example in 'char dest[13]; memcpy(dest, ...)' it returns 13.
 static int getDestCapacity(const MatchFinder::MatchResult &Result) {
@@ -957,24 +991,26 @@ void NotNullTerminatedResultCheck::strerrorSFix(
 void NotNullTerminatedResultCheck::ncmpFix(
     StringRef Name, const MatchFinder::MatchResult &Result) {
   const auto *FunctionExpr = Result.Nodes.getNodeAs<CallExpr>(FunctionExprName);
-  const Expr *FirstArgExpr = FunctionExpr->getArg(0)->IgnoreImpCasts();
-  const Expr *SecondArgExpr = FunctionExpr->getArg(1)->IgnoreImpCasts();
+  const Expr *FirstArgExpr = FunctionExpr->getArg(0)->IgnoreParenImpCasts();
+  const Expr *SecondArgExpr = FunctionExpr->getArg(1)->IgnoreParenImpCasts();
+  const int GivenLength = getGivenLength(Result);
+  const Expr *NcmpArgExpr = Result.Nodes.getNodeAs<Expr>(SrcExprName);
   bool IsLengthTooLong = false;
 
   if (const CallExpr *StrlenExpr = getStrlenExpr(Result)) {
-    const Expr *LengthExprArg = StrlenExpr->getArg(0);
+    const Expr *LengthExprArg = StrlenExpr->getArg(0)->IgnoreParenImpCasts();
     const StringRef FirstExprStr = exprToStr(FirstArgExpr, Result).trim();
     const StringRef SecondExprStr = exprToStr(SecondArgExpr, Result).trim();
     const StringRef LengthArgStr = exprToStr(LengthExprArg, Result).trim();
-    IsLengthTooLong =
-        LengthArgStr == FirstExprStr || LengthArgStr == SecondExprStr;
-  } else {
-    const int SrcLength =
-        getLength(Result.Nodes.getNodeAs<Expr>(SrcExprName), Result);
-    const int GivenLength = getGivenLength(Result);
-    if (SrcLength != 0 && GivenLength != 0)
-      IsLengthTooLong = GivenLength > SrcLength;
+    if (LengthArgStr == FirstExprStr)
+      NcmpArgExpr = SecondArgExpr;
+    else if (LengthArgStr == SecondExprStr)
+      NcmpArgExpr = FirstArgExpr;
   }
+
+  const int NcmpLength = getNcmpLength(NcmpArgExpr, Result);
+  if (NcmpLength != 0 && GivenLength != 0)
+    IsLengthTooLong = GivenLength > NcmpLength;
 
   if (!IsLengthTooLong && !isStringDataAndLength(Result))
     return;

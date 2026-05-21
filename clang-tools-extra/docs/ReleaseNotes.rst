@@ -383,6 +383,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing a false
   positive when converting a ``bool`` to a signed integer type.
 
+- Improved :doc:`bugprone-not-null-terminated-result
+  <clang-tidy/checks/bugprone/not-null-terminated-result>` check by avoiding
+  false positives for ``strncmp`` and ``wcsncmp`` calls whose comparison length
+  does not exceed a known readable object size.
+
 - Improved :doc:`bugprone-pointer-arithmetic-on-polymorphic-object
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` check
   by fixing a false positive when ``operator[]`` is used in a dependent context.
