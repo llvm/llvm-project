@@ -203,13 +203,12 @@ define dso_local i32 @b(ptr %c, i32 %d, i32 %e, ptr %n) "frame-pointer"="all" {
 ; CHECK-NEXT:    adds r0, #4
 ; CHECK-NEXT:    add.w r2, r2, #-2147483648
 ; CHECK-NEXT:    asrl r12, r5, r2
-; CHECK-NEXT:    smull r2, r5, r4, r12
-; CHECK-NEXT:    lsll r2, r5, #30
 ; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    asr.w r11, r5, #31
-; CHECK-NEXT:    mov r12, r5
-; CHECK-NEXT:    lsll r12, r11, r4
+; CHECK-NEXT:    smull r12, r5, r4, r12
 ; CHECK-NEXT:    mul r2, r2, r9
+; CHECK-NEXT:    lsrl r12, r5, #2
+; CHECK-NEXT:    asr.w r11, r12, #31
+; CHECK-NEXT:    lsll r12, r11, r4
 ; CHECK-NEXT:    lsrl r12, r11, #2
 ; CHECK-NEXT:    adds r2, #2
 ; CHECK-NEXT:    lsll r12, r11, r2

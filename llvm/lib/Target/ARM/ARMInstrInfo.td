@@ -3942,6 +3942,14 @@ def : ARMV6Pat<(add rGPR:$Rn, (and (srl rGPR:$Rm, rot_imm:$rot), 0xFF)),
                (UXTAB rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
 def : ARMV6Pat<(add rGPR:$Rn, (and (srl rGPR:$Rm, imm8_or_16:$rot), 0xFFFF)),
                (UXTAH rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
+
+// Standalone (srl; and #0xff) is equivalent to uxtb with ROR — avoids a
+// separate logical shift when extracting bytes from a word.
+def : ARMV6Pat<(and (srl GPRnopc:$Rm, rot_imm:$rot), 0xFF),
+               (UXTB GPRnopc:$Rm, rot_imm:$rot)>;
+// Same for 16-bit zero-extract: (srl; and #0xffff) -> uxth with ROR.
+def : ARMV6Pat<(and (srl GPRnopc:$Rm, rot_imm:$rot), 0xFFFF),
+               (UXTH GPRnopc:$Rm, rot_imm:$rot)>;
 }
 
 // This isn't safe in general, the add is two 16-bit units, not a 32-bit add.
@@ -6331,6 +6339,10 @@ def : ARMV6Pat<(add GPR:$Rn, (and GPR:$Rm, 0xFFFF)),
 
 def : ARMV6Pat<(sext_inreg GPR:$Src, i8),  (SXTB GPR:$Src, 0)>;
 def : ARMV6Pat<(sext_inreg GPR:$Src, i16), (SXTH GPR:$Src, 0)>;
+def : ARMV6Pat<(sext_inreg (srl GPRnopc:$Rm, rot_imm:$rot), i8),
+               (SXTB GPRnopc:$Rm, rot_imm:$rot)>;
+def : ARMV6Pat<(sext_inreg (srl GPRnopc:$Rm, rot_imm:$rot), i16),
+               (SXTH GPRnopc:$Rm, rot_imm:$rot)>;
 
 def : ARMV6Pat<(add GPR:$Rn, (sext_inreg GPRnopc:$Rm, i8)),
                (SXTAB GPR:$Rn, GPRnopc:$Rm, 0)>;

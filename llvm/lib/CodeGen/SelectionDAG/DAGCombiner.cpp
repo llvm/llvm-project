@@ -11321,11 +11321,10 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
     return DAG.getNOT(DL, NewShift, VT);
   }
 
-  // fold (sra (shl X, m), (sub result_size, n))
-  // -> (sign_extend (trunc (shl X, (sub (sub result_size, n), m)))) for
-  // result_size - n != m.
-  // If truncate is free for the target sext(shl) is likely to result in better
-  // code.
+  // fold (sra (shl X, m), (size - n)) when m < n:
+  // - (sext (trunc (srl X, (n - m)))) if truncate is free, or
+  // - (sext_inreg (srl X, (n - m)), TruncVT) if SIGN_EXTEND_INREG is legal on
+  //   TruncVT (targets such as ARM/RISC-V vendor may select this in ISel).
   if (N0.getOpcode() == ISD::SHL && N1C) {
     // Get the two constants of the shifts, CN0 = m, CN = n.
     const ConstantSDNode *N01C = isConstOrConstSplat(N0.getOperand(1));
@@ -11353,6 +11352,22 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
                                     Shift);
         return DAG.getNode(ISD::SIGN_EXTEND, DL,
                            N->getValueType(0), Trunc);
+      }
+
+      // (sra (shl X, HalfSize), Size-1) is the canonical in-register sign
+      // extension (e.g. RV64 sext.w), not an arbitrary bitfield extract.
+      unsigned LeftShAmt = N01C->getZExtValue();
+      unsigned RightShAmt = N1C->getZExtValue();
+      bool IsCanonicalSignExtension =
+          LeftShAmt * 2 == OpSizeInBits && RightShAmt == OpSizeInBits - 1;
+
+      if (ShiftAmt > 0 && !IsCanonicalSignExtension &&
+          TLI.getOperationAction(ISD::SIGN_EXTEND_INREG, TruncVT) ==
+              TargetLowering::Legal) {
+        SDValue Amt = DAG.getShiftAmountConstant(ShiftAmt, VT, DL);
+        SDValue Shift = DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(0), Amt);
+        return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Shift,
+                           DAG.getValueType(TruncVT));
       }
     }
   }

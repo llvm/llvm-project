@@ -1116,8 +1116,8 @@ define void @sextw_removal_ext(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:  .LBB36_1: # %bb2
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    call foo
-; RV64I-NEXT:    slli a0, a0, 16
-; RV64I-NEXT:    srai a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 16
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    bnez a0, .LBB36_1
 ; RV64I-NEXT:  # %bb.2: # %bb7
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload

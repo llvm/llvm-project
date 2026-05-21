@@ -472,7 +472,7 @@ define amdgpu_ps i32 @orn264(i64 inreg %val0, i64 inreg %val1) {
 define amdgpu_ps i32 @bfe_i32(i32 inreg %val0) {
 ; CHECK-LABEL: bfe_i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_bfe_i32 s0, s0, 0x80010
+; CHECK-NEXT:    s_bfe_u32 s0, s0, 0x80010
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0

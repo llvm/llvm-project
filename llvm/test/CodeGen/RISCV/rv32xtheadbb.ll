@@ -483,12 +483,19 @@ define i64 @sexth_i64(i64 %a) nounwind {
 }
 
 define i64 @no_sexth_i64(i64 %a) nounwind {
-; CHECK-LABEL: no_sexth_i64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a1, a0, 17
-; CHECK-NEXT:    srai a0, a1, 16
-; CHECK-NEXT:    srai a1, a1, 31
-; CHECK-NEXT:    ret
+; RV32I-LABEL: no_sexth_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a0, 17
+; RV32I-NEXT:    srai a0, a1, 16
+; RV32I-NEXT:    srai a1, a1, 31
+; RV32I-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: no_sexth_i64:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    slli a2, a0, 17
+; RV32XTHEADBB-NEXT:    th.ext a1, a0, 14, 14
+; RV32XTHEADBB-NEXT:    srai a0, a2, 16
+; RV32XTHEADBB-NEXT:    ret
   %shl = shl i64 %a, 49
   %shr = ashr exact i64 %shl, 48
   ret i64 %shr
