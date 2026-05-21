@@ -2022,22 +2022,20 @@ let Predicates = [HasStdExtP] in {
   def : PatGprGpr<or,  OR,  XLenVecI8VT>;
   def : PatGprGpr<xor, XOR, XLenVecI8VT>;
   def : Pat<(XLenVecI8VT (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
-  let Predicates = [HasStdExtP, HasStdExtZbbOrZbkb] in {
-    def : Pat<(XLenVecI8VT (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
-    def : Pat<(XLenVecI8VT (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
-    def : Pat<(XLenVecI8VT (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
-  }
+  // P implies Zbb so we can select ANDN/ORN/XNOR.
+  def : Pat<(XLenVecI8VT (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
 
   // 16-bit bitwise operation patterns
   def : PatGprGpr<and, AND, XLenVecI16VT>;
   def : PatGprGpr<or,  OR,  XLenVecI16VT>;
   def : PatGprGpr<xor, XOR, XLenVecI16VT>;
   def : Pat<(XLenVecI16VT (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
-  let Predicates = [HasStdExtP, HasStdExtZbbOrZbkb] in {
-    def : Pat<(XLenVecI16VT (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
-    def : Pat<(XLenVecI16VT (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
-    def : Pat<(XLenVecI16VT (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
-  }
+  // P implies Zbb so we can select ANDN/ORN/XNOR.
+  def : Pat<(XLenVecI16VT (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
 
   // 8-bit saturating add/sub patterns
   def : PatGprGpr<saddsat, PSADD_B, XLenVecI8VT>;
@@ -2427,11 +2425,10 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def : PatGprGpr<or, OR, v2i32>;
   def : PatGprGpr<xor, XOR, v2i32>;
   def : Pat<(v2i32 (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
-  let Predicates = [HasStdExtP, HasStdExtZbbOrZbkb] in {
-    def : Pat<(v2i32 (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
-    def : Pat<(v2i32 (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
-    def : Pat<(v2i32 (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
-  }
+  // P implies Zbb so we can select ANDN/ORN/XNOR.
+  def : Pat<(v2i32 (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
 
   // 32-bit saturating add/sub patterns
   def : PatGprGpr<saddsat, PSADD_W, v2i32>;
