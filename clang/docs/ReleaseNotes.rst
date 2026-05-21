@@ -825,6 +825,10 @@ libclang
 - Visit switch initializer statements (https://bugs.kde.org/show_bug.cgi?id=415537#c2)
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
 - The clang_Module_getASTFile API is deprecated and now always returns nullptr
+- Added ``clang_CXXMethod_getQualifiers`` to query const/volatile/__restrict qualifiers of a member function.
+- Added ``clang_Cursor_isConstexpr`` to determine if a cursor refers to a constexpr declaration.
+- Added ``clang_CXXMethod_isExplicitObjectMemberFunction`` to determine if a method has an
+  explicit object parameter (C++23).
 
 Code Completion
 ---------------
@@ -872,6 +876,10 @@ Python Binding Changes
   so it can be used the same as ``CodeCompletionResults.results``.
 - Added a new helper method ``get_clang_version`` to the class ``Config`` to
   read the version string of the libclang in use.
+- Added ``Cursor.get_method_qualifiers``, a binding for ``clang_CXXMethod_getQualifiers``.
+- Added ``Cursor.is_constexpr``, a binding for ``clang_Cursor_isConstexpr``.
+- Added ``Cursor.is_explicit_object_member_function``, a binding for
+  ``clang_CXXMethod_isExplicitObjectMemberFunction``.
 
 OpenMP Support
 --------------

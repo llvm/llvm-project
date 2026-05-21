@@ -9536,6 +9536,33 @@ unsigned clang_CXXMethod_isConst(CXCursor C) {
   return (Method && Method->getMethodQualifiers().hasConst()) ? 1 : 0;
 }
 
+CXQualifiers clang_CXXMethod_getQualifiers(CXCursor C) {
+  CXQualifiers Q = {};
+  if (!clang_isDeclaration(C.kind))
+    return Q;
+
+  const Decl *D = cxcursor::getCursorDecl(C);
+  const CXXMethodDecl *Method =
+      D ? dyn_cast_or_null<CXXMethodDecl>(D->getAsFunction()) : nullptr;
+  if (Method) {
+    Qualifiers MQ = Method->getMethodQualifiers();
+    Q.Const = MQ.hasConst();
+    Q.Volatile = MQ.hasVolatile();
+    Q.Restrict = MQ.hasRestrict();
+  }
+  return Q;
+}
+
+unsigned clang_CXXMethod_isExplicitObjectMemberFunction(CXCursor C) {
+  if (!clang_isDeclaration(C.kind))
+    return 0;
+
+  const Decl *D = cxcursor::getCursorDecl(C);
+  const CXXMethodDecl *Method =
+      D ? dyn_cast_or_null<CXXMethodDecl>(D->getAsFunction()) : nullptr;
+  return (Method && Method->isExplicitObjectMemberFunction()) ? 1 : 0;
+}
+
 unsigned clang_CXXMethod_isDefaulted(CXCursor C) {
   if (!clang_isDeclaration(C.kind))
     return 0;
@@ -9613,6 +9640,22 @@ unsigned clang_CXXMethod_isExplicit(CXCursor C) {
 
   if (const auto *Conv = dyn_cast<CXXConversionDecl>(FD))
     return Conv->isExplicit();
+
+  return 0;
+}
+
+unsigned clang_Cursor_isConstexpr(CXCursor C) {
+  if (!clang_isDeclaration(C.kind))
+    return 0;
+
+  const Decl *D = cxcursor::getCursorDecl(C);
+  if (!D)
+    return 0;
+
+  if (const auto *VD = dyn_cast<VarDecl>(D))
+    return VD->isConstexpr();
+  if (const FunctionDecl *FD = D->getAsFunction())
+    return FD->isConstexpr();
 
   return 0;
 }

@@ -952,8 +952,17 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
       printf(" (static)");
     if (clang_CXXMethod_isVirtual(Cursor))
       printf(" (virtual)");
-    if (clang_CXXMethod_isConst(Cursor))
-      printf(" (const)");
+    {
+      CXQualifiers Q = clang_CXXMethod_getQualifiers(Cursor);
+      if (Q.Const)
+        printf(" (const)");
+      if (Q.Volatile)
+        printf(" (volatile)");
+      if (Q.Restrict)
+        printf(" (restrict)");
+    }
+    if (clang_CXXMethod_isExplicitObjectMemberFunction(Cursor))
+      printf(" (explicit object)");
     if (clang_CXXMethod_isPureVirtual(Cursor))
       printf(" (pure)");
     if (clang_CXXMethod_isCopyAssignmentOperator(Cursor))
@@ -966,6 +975,8 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
       printf(" (abstract)");
     if (clang_EnumDecl_isScoped(Cursor))
       printf(" (scoped)");
+    if (clang_Cursor_isConstexpr(Cursor))
+      printf(" (constexpr)");
     if (clang_Cursor_isVariadic(Cursor))
       printf(" (variadic)");
     if (clang_Cursor_isObjCOptional(Cursor))
