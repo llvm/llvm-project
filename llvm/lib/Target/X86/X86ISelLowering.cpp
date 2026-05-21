@@ -32250,14 +32250,15 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
 
   if (!IsROTL) {
     // rotr(x,1) -> pavgb(x, 0 - (x & 1))
-    if (EltSizeInBits == 8 && IsCstSplat && CstSplatValue.urem(EltSizeInBits) == 1) {
+    if (EltSizeInBits == 8 && IsCstSplat &&
+        CstSplatValue.urem(EltSizeInBits) == 1 && !Subtarget.hasGFNI()) {
       SDValue One = DAG.getConstant(1, DL, VT);
       SDValue LSB = DAG.getNode(ISD::AND, DL, VT, R, One);
       SDValue Zero = DAG.getConstant(0, DL, VT);
       SDValue Neg = DAG.getNode(ISD::SUB, DL, VT, Zero, LSB);
       return DAG.getNode(ISD::AVGCEILU, DL, VT, R, Neg);
     }
-    
+
     // If the ISD::ROTR amount is constant, we're always better converting to
     // ISD::ROTL.
     if (SDValue NegAmt = DAG.FoldConstantArithmetic(ISD::SUB, DL, VT, {Z, Amt}))
