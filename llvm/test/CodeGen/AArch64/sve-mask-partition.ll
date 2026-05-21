@@ -381,12 +381,12 @@ define <32 x i1> @mask_exclude_active_v32(<32 x i1> %mask.in) {
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
-; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
-; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
-; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    zip1 v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    zip1 v0.16b, v0.16b, v3.16b
+; CHECK-NEXT:    addv h1, v1.8h
+; CHECK-NEXT:    addv h0, v0.8h
 ; CHECK-NEXT:    str h1, [x8, #2]
 ; CHECK-NEXT:    str h0, [x8]
 ; CHECK-NEXT:    ret
