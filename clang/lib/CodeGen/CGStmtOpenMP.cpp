@@ -2648,7 +2648,7 @@ void CodeGenFunction::EmitOMPLinearClauseFinal(
           return EmitLValue(&DRE).getAddress();
         }
       }();
-     CodeGenFunction::OMPPrivateScope VarScope(*this);
+      CodeGenFunction::OMPPrivateScope VarScope(*this);
       VarScope.addPrivate(OrigDecl, OrigAddr);
       (void)VarScope.Privatize();
       EmitIgnoredExpr(F);
