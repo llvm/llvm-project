@@ -74,6 +74,9 @@ protected:
   bool tryPendingCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
                            SchedBoundary *Zone) const;
 
+  bool tryEffectiveStall(SchedCandidate &Cand, SchedCandidate &TryCand,
+                         SchedBoundary &Zone) const;
+
   void printCandidateDecision(const SchedCandidate &Current,
                               const SchedCandidate &Preferred);
 

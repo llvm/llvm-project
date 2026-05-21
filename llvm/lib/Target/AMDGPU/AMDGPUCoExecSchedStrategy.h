@@ -299,8 +299,6 @@ public:
 
 class AMDGPUCoExecSchedStrategy final : public GCNSchedStrategy {
 protected:
-  bool tryEffectiveStall(SchedCandidate &Cand, SchedCandidate &TryCand,
-                         SchedBoundary &Zone) const;
   AMDGPU::AMDGPUSchedReason LastAMDGPUReason = AMDGPU::AMDGPUSchedReason::None;
   CandidateHeuristics Heurs;
 
