@@ -41,9 +41,9 @@ static Operation *findMatchingMatmulUser(linalg::SoftmaxOp softmaxOp) {
     if (!matmulOp && !batchMatmulOp)
       continue;
 
-    // Get the LHS input.
-    Value lhs = matmulOp ? matmulOp.getInputs()[0]
-                         : batchMatmulOp.getInputs()[0];
+    // Get the LHS input (first DPS input operand).
+    auto dpsOp = cast<linalg::LinalgOp>(user);
+    Value lhs = dpsOp.getDpsInputs()[0];
     if (lhs != softmaxResult)
       continue;
 

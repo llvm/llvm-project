@@ -8,9 +8,10 @@
 // Batch dimension (32) is fully parallel across all ops.
 
 // CHECK-LABEL: func.func @flash_attention_3d_batch
+// Local softmax generics + rescaling matmul fused inside nested loops.
+// batch_matmul stays outside (expand_shape blocks producer fusion).
 // CHECK: linalg.batch_matmul
 // CHECK: tensor.expand_shape
-// Outer loop over batch (0 to 32), inner loop over tn (0 to 4):
 // CHECK: scf.for
 // CHECK:   scf.for
 // CHECK:     linalg.generic
