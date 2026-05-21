@@ -46,6 +46,12 @@ template <> struct int_type_of<long double> {
   using type = fputil::FPBits<long double>::StorageType;
 };
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+#if defined(LIBC_TYPES_HAS_FLOAT128) &&                                        \
+    defined(LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE)
+template <> struct int_type_of<float128> {
+  using type = fputil::FPBits<float128>::StorageType;
+};
+#endif // LIBC_TYPES_HAS_FLOAT128 && !LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 template <typename T>
@@ -243,6 +249,11 @@ public:
           }
           break;
 #endif // LIBC_COPT_PRINTF_DISABLE_BITINT
+#if defined(LIBC_TYPES_HAS_FLOAT128)
+        case (LengthModifier::Q):
+          section.has_conv = false;
+          break;
+#endif // LIBC_TYPES_HAS_FLOAT128
         }
         break;
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
@@ -254,12 +265,22 @@ public:
       case ('A'):
       case ('g'):
       case ('G'):
-        if (lm != LengthModifier::L) {
-          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, double, conv_index);
-        } else {
+#if defined(LIBC_TYPES_HAS_FLOAT128)
+        if (lm == LengthModifier::Q) {
+#if !defined(LIBC_COPT_PRINTF_DISABLE_Q_LENGTH_MODIFIER)
+          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, float128, conv_index);
+#else
+          section.has_conv = false;
+#endif // LIBC_COPT_PRINTF_DISABLE_Q_LENGTH_MODIFIER
+        } else
+#endif // LIBC_TYPES_HAS_FLOAT128 && !LIBC_COPT_PRINTF_DISABLE_Q_LENGTH_MODIFIER
 #ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+            if (lm == LengthModifier::L) {
           WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long double, conv_index);
+        } else
 #endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+        {
+          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, double, conv_index);
         }
         break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
@@ -396,6 +417,12 @@ private:
     case ('L'):
       ++*local_pos;
       return {LengthModifier::L, 0};
+#if defined(LIBC_TYPES_HAS_FLOAT128) &&                                        \
+    !defined(LIBC_COPT_PRINTF_DISABLE_Q_LENGTH_MODIFIER)
+    case ('Q'):
+      ++*local_pos;
+      return {LengthModifier::Q, 0};
+#endif // LIBC_TYPES_HAS_FLOAT128 && !LIBC_COPT_PRINTF_DISABLE_Q_LENGTH_MODIFIER
     case ('j'):
       ++*local_pos;
       return {LengthModifier::j, 0};
@@ -654,6 +681,11 @@ private:
             }
             break;
 #endif // LIBC_COPT_PRINTF_DISABLE_BITINT
+#if defined(LIBC_TYPES_HAS_FLOAT128)
+          case (LengthModifier::Q):
+            conv_size = type_desc_from_type<void>();
+            break;
+#endif // LIBC_TYPES_HAS_FLOAT128
           }
           break;
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
@@ -665,12 +697,20 @@ private:
         case ('A'):
         case ('g'):
         case ('G'):
-          if (lm != LengthModifier::L)
-            conv_size = type_desc_from_type<double>();
+#if defined(LIBC_TYPES_HAS_FLOAT128) &&                                        \
+    !defined(LIBC_COPT_PRINTF_DISABLE_Q_LENGTH_MODIFIER)
+          if (lm == LengthModifier::Q) {
+            conv_size = type_desc_from_type<float128>();
+          } else
+#endif // LIBC_TYPES_HAS_FLOAT128 && !LIBC_COPT_PRINTF_DISABLE_Q_LENGTH_MODIFIER
 #ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-          else
+              if (lm == LengthModifier::L) {
             conv_size = type_desc_from_type<long double>();
+          } else
 #endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+          {
+            conv_size = type_desc_from_type<double>();
+          }
           break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT

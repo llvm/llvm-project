@@ -71,6 +71,7 @@ static void display(FormatSection form) {
       CASE_LM(z);
       CASE_LM(t);
       CASE_LM(L);
+      CASE_LM(Q);
 #ifndef LIBC_COPT_PRINTF_DISABLE_BITINT
       CASE_LM_BIT_WIDTH(w, form.bit_width);
       CASE_LM_BIT_WIDTH(wf, form.bit_width);

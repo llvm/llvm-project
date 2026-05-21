@@ -105,6 +105,13 @@ with hexadecimal long double conversions (%La). This will improve performance
 significantly, but may cause some tests to fail. This has no effect when float
 conversions are disabled.
 
+LIBC_COPT_PRINTF_DISABLE_Q_LENGTH_MODIFIER
+------------------------------------------
+When set, this flag disables support for __float128 conversions using the "Q"
+length modifier (%Qa, %Qf, %Qe, %Qg). This flag has no effect on conversions
+using the "L" length modifier when long double is the same type as __float128.
+This has little to no effect on performance or binary size.
+
 --------------------------------
 Float Conversion Internal Flags:
 --------------------------------
@@ -129,7 +136,7 @@ LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
 -------------------------------------------------
 When set, the float to string decimal conversion algorithm will use a larger
 table to accelerate long double conversions. This larger table is around 5MB of
-size when compiled.
+size when compiled. This flag also affects __float128 conversions.
 
 LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT
 ---------------------------------------
@@ -244,3 +251,10 @@ value of errno as an integer with the %d format, including all options. If
 errno = 0 and alt form is specified, the conversion will be a string conversion
 on "0" for simplicity of implementation. This matches what other libcs
 implementing this feature have done.
+
+If the compiler is detected as having support for __float128, "Q" is an accepted
+length modifier for floating point conversions (%Qa, %Qf, %Qe, %Qg), unless
+disabled by LIBC_COPT_PRINTF_DISABLE_Q_LENGTH_MODIFIER. A conversion using the
+"Q" length modifier will be treated as invalid in any of the following
+conditions: __float128 is not supported, the "Q" length modifier is disabled, or
+the conversion does not use a floating point format specifier.
