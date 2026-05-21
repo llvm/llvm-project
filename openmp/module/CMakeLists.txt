@@ -8,14 +8,14 @@
 
 # Build the module files if a Fortran compiler is available.
 
-configure_file(omp_lib.F90.var "{CMAKE_CURRENT_BINARY_DIR}/omp_lib.F90" @ONLY)
+configure_file(omp_lib.F90.var "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.F90" @ONLY)
 configure_file(omp_lib.h.var "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.h" @ONLY)
 
 # One compilation step creates both, omp_lib.mod and omp_lib_kinds.mod. Only
 # these files are used, the object file itself can be discarded.
-# TODO: Adding it to libomp ($<TARGET_OBJECTS:libomp-mod) would allow implementing Fortran API in Fortran
+# TODO: Adding it to libomp ($<TARGET_OBJECTS:libomp-mod>) would allow implementing Fortran API in Fortran
 add_library(libomp-mod OBJECT
-  "{CMAKE_CURRENT_BINARY_DIR}/omp_lib.F90"
+  "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.F90"
 )
 set_target_properties(libomp-mod PROPERTIES FOLDER "OpenMP/Fortran Modules")
 

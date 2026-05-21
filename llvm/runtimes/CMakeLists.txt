@@ -288,8 +288,7 @@ function(runtime_default_target)
     endif ()
   endif ()
   if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-    # The target flang-rt-mod is a dependee of check-flang needed to run its
-    # tests.
+    # The target flang-rt-mod is a dependee of check-flang.
     list(APPEND extra_targets "flang-rt-mod")
   endif ()
 
@@ -586,18 +585,6 @@ if(build_runtimes)
       endif()
     endforeach()
   endif()
-  # Allow openmp to see the Fortran compiler
-  if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND "flang" IN_LIST LLVM_ENABLE_PROJECTS)
-    list(APPEND extra_args ENABLE_FORTRAN)
-  endif()
-  if("flang" IN_LIST LLVM_ENABLE_PROJECTS)
-    # Ensure REAL(16) support in runtimes to be consistent with compiler
-    if(FLANG_RUNTIME_F128_MATH_LIB OR HAVE_LDBL_MANT_DIG_113)
-      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=TRUE")
-    else()
-      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=FALSE")
-    endif()
-  endif()
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
     foreach(dep opt llvm-link llvm-extract clang llvm-offload-binary clang-nvlink-wrapper)
       if(TARGET ${dep})
@@ -623,12 +610,18 @@ if(build_runtimes)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
   endif()
-  if("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-    list(APPEND extra_args ENABLE_FORTRAN)
-    if (${LLVM_TOOL_FLANG_BUILD})
-      list(APPEND extra_deps "flang" "module_files")
+  if("flang" IN_LIST LLVM_ENABLE_PROJECTS)
+    # Allow runtimes that can use it to access the Flang compiler
+    if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+      list(APPEND extra_args ENABLE_FORTRAN)
     endif()
-  endif ()
+    # Ensure REAL(16) support in runtimes to be consistent with compiler
+    if(FLANG_RUNTIME_F128_MATH_LIB OR HAVE_LDBL_MANT_DIG_113)
+      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=TRUE")
+    else()
+      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=FALSE")
+    endif()
+  endif()
 
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
