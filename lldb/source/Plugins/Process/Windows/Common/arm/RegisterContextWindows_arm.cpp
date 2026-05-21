@@ -80,7 +80,7 @@ RegisterContextWindows_arm::RegisterContextWindows_arm(
     Thread &thread, uint32_t concrete_frame_idx)
     : RegisterContextWindows(thread, concrete_frame_idx) {}
 
-RegisterContextWindows_arm::~RegisterContextWindows_arm() {}
+RegisterContextWindows_arm::~RegisterContextWindows_arm() = default;
 
 size_t RegisterContextWindows_arm::GetRegisterCount() {
   return std::size(g_register_infos_arm);
