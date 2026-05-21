@@ -36,7 +36,9 @@ def mappings(f):
         m = expr.match(line)
         if not m:
             continue
-        from_char = int(m.group(1), 16)
+        group_1 = m.group(1)
+        if "b" in group_1: group_1 = group_1[2:]
+        from_char = int(group_1, 16)
         to_char = int(m.group(2), 16)
         from_name = m.group(3)
 
@@ -101,28 +103,28 @@ def dump_block(b):
 
 
 current_block = []
-f = urlopen(sys.argv[1])
-for m in mappings(f):
-    if len(current_block) == 0:
-        current_block.append(m)
-        continue
+with urlopen(sys.argv[1]) as f:
+    g = [str(x) for x in f.readlines()]
+    for m in mappings(g):
+        if len(current_block) == 0:
+            current_block.append(m)
+            continue
 
-    if shift(current_block[0]) != shift(m):
-        # Incompatible shift, start a new block.
+        if shift(current_block[0]) != shift(m):
+            # Incompatible shift, start a new block.
+            dump_block(current_block)
+            current_block = [m]
+            continue
+
+        if len(current_block) == 1 or stride(current_block) == stride2(
+            current_block[-1], m
+        ):
+            current_block.append(m)
+            continue
+
+        # Incompatible stride, start a new block.
         dump_block(current_block)
         current_block = [m]
-        continue
-
-    if len(current_block) == 1 or stride(current_block) == stride2(
-        current_block[-1], m
-    ):
-        current_block.append(m)
-        continue
-
-    # Incompatible stride, start a new block.
-    dump_block(current_block)
-    current_block = [m]
-f.close()
 
 dump_block(current_block)
 
