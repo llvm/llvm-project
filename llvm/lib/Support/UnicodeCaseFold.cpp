@@ -19,7 +19,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 26 characters
   if (C <= 0x005a)
     return C + 32;
-  // MICRO SIGN\n'
+  // MICRO SIGN
   if (C == 0x00b5)
     return 0x03bc;
   if (C < 0x00c0)
@@ -52,7 +52,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 23 characters
   if (C <= 0x0176)
     return C | 1;
-  // LATIN CAPITAL LETTER Y WITH DIAERESIS\n'
+  // LATIN CAPITAL LETTER Y WITH DIAERESIS
   if (C == 0x0178)
     return 0x00ff;
   if (C < 0x0179)
@@ -60,10 +60,10 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 3 characters
   if (C <= 0x017d && C % 2 == 1)
     return C + 1;
-  // LATIN SMALL LETTER LONG S\n'
+  // LATIN SMALL LETTER LONG S
   if (C == 0x017f)
     return 0x0073;
-  // LATIN CAPITAL LETTER B WITH HOOK\n'
+  // LATIN CAPITAL LETTER B WITH HOOK
   if (C == 0x0181)
     return 0x0253;
   if (C < 0x0182)
@@ -71,10 +71,10 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 2 characters
   if (C <= 0x0184)
     return C | 1;
-  // LATIN CAPITAL LETTER OPEN O\n'
+  // LATIN CAPITAL LETTER OPEN O
   if (C == 0x0186)
     return 0x0254;
-  // LATIN CAPITAL LETTER C WITH HOOK\n'
+  // LATIN CAPITAL LETTER C WITH HOOK
   if (C == 0x0187)
     return 0x0188;
   if (C < 0x0189)
@@ -82,43 +82,43 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 2 characters
   if (C <= 0x018a)
     return C + 205;
-  // LATIN CAPITAL LETTER D WITH TOPBAR\n'
+  // LATIN CAPITAL LETTER D WITH TOPBAR
   if (C == 0x018b)
     return 0x018c;
-  // LATIN CAPITAL LETTER REVERSED E\n'
+  // LATIN CAPITAL LETTER REVERSED E
   if (C == 0x018e)
     return 0x01dd;
-  // LATIN CAPITAL LETTER SCHWA\n'
+  // LATIN CAPITAL LETTER SCHWA
   if (C == 0x018f)
     return 0x0259;
-  // LATIN CAPITAL LETTER OPEN E\n'
+  // LATIN CAPITAL LETTER OPEN E
   if (C == 0x0190)
     return 0x025b;
-  // LATIN CAPITAL LETTER F WITH HOOK\n'
+  // LATIN CAPITAL LETTER F WITH HOOK
   if (C == 0x0191)
     return 0x0192;
-  // LATIN CAPITAL LETTER G WITH HOOK\n'
+  // LATIN CAPITAL LETTER G WITH HOOK
   if (C == 0x0193)
     return 0x0260;
-  // LATIN CAPITAL LETTER GAMMA\n'
+  // LATIN CAPITAL LETTER GAMMA
   if (C == 0x0194)
     return 0x0263;
-  // LATIN CAPITAL LETTER IOTA\n'
+  // LATIN CAPITAL LETTER IOTA
   if (C == 0x0196)
     return 0x0269;
-  // LATIN CAPITAL LETTER I WITH STROKE\n'
+  // LATIN CAPITAL LETTER I WITH STROKE
   if (C == 0x0197)
     return 0x0268;
-  // LATIN CAPITAL LETTER K WITH HOOK\n'
+  // LATIN CAPITAL LETTER K WITH HOOK
   if (C == 0x0198)
     return 0x0199;
-  // LATIN CAPITAL LETTER TURNED M\n'
+  // LATIN CAPITAL LETTER TURNED M
   if (C == 0x019c)
     return 0x026f;
-  // LATIN CAPITAL LETTER N WITH LEFT HOOK\n'
+  // LATIN CAPITAL LETTER N WITH LEFT HOOK
   if (C == 0x019d)
     return 0x0272;
-  // LATIN CAPITAL LETTER O WITH MIDDLE TILDE\n'
+  // LATIN CAPITAL LETTER O WITH MIDDLE TILDE
   if (C == 0x019f)
     return 0x0275;
   if (C < 0x01a0)
@@ -126,22 +126,22 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 3 characters
   if (C <= 0x01a4)
     return C | 1;
-  // LATIN LETTER YR\n'
+  // LATIN LETTER YR
   if (C == 0x01a6)
     return 0x0280;
-  // LATIN CAPITAL LETTER TONE TWO\n'
+  // LATIN CAPITAL LETTER TONE TWO
   if (C == 0x01a7)
     return 0x01a8;
-  // LATIN CAPITAL LETTER ESH\n'
+  // LATIN CAPITAL LETTER ESH
   if (C == 0x01a9)
     return 0x0283;
-  // LATIN CAPITAL LETTER T WITH HOOK\n'
+  // LATIN CAPITAL LETTER T WITH HOOK
   if (C == 0x01ac)
     return 0x01ad;
-  // LATIN CAPITAL LETTER T WITH RETROFLEX HOOK\n'
+  // LATIN CAPITAL LETTER T WITH RETROFLEX HOOK
   if (C == 0x01ae)
     return 0x0288;
-  // LATIN CAPITAL LETTER U WITH HORN\n'
+  // LATIN CAPITAL LETTER U WITH HORN
   if (C == 0x01af)
     return 0x01b0;
   if (C < 0x01b1)
@@ -154,7 +154,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 2 characters
   if (C <= 0x01b5 && C % 2 == 1)
     return C + 1;
-  // LATIN CAPITAL LETTER EZH\n'
+  // LATIN CAPITAL LETTER EZH
   if (C == 0x01b7)
     return 0x0292;
   if (C < 0x01b8)
@@ -162,19 +162,19 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 2 characters
   if (C <= 0x01bc && C % 4 == 0)
     return C + 1;
-  // LATIN CAPITAL LETTER DZ WITH CARON\n'
+  // LATIN CAPITAL LETTER DZ WITH CARON
   if (C == 0x01c4)
     return 0x01c6;
-  // LATIN CAPITAL LETTER D WITH SMALL LETTER Z WITH CARON\n'
+  // LATIN CAPITAL LETTER D WITH SMALL LETTER Z WITH CARON
   if (C == 0x01c5)
     return 0x01c6;
-  // LATIN CAPITAL LETTER LJ\n'
+  // LATIN CAPITAL LETTER LJ
   if (C == 0x01c7)
     return 0x01c9;
-  // LATIN CAPITAL LETTER L WITH SMALL LETTER J\n'
+  // LATIN CAPITAL LETTER L WITH SMALL LETTER J
   if (C == 0x01c8)
     return 0x01c9;
-  // LATIN CAPITAL LETTER NJ\n'
+  // LATIN CAPITAL LETTER NJ
   if (C == 0x01ca)
     return 0x01cc;
   if (C < 0x01cb)
@@ -187,7 +187,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 9 characters
   if (C <= 0x01ee)
     return C | 1;
-  // LATIN CAPITAL LETTER DZ\n'
+  // LATIN CAPITAL LETTER DZ
   if (C == 0x01f1)
     return 0x01f3;
   if (C < 0x01f2)
@@ -195,10 +195,10 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 2 characters
   if (C <= 0x01f4)
     return C | 1;
-  // LATIN CAPITAL LETTER HWAIR\n'
+  // LATIN CAPITAL LETTER HWAIR
   if (C == 0x01f6)
     return 0x0195;
-  // LATIN CAPITAL LETTER WYNN\n'
+  // LATIN CAPITAL LETTER WYNN
   if (C == 0x01f7)
     return 0x01bf;
   if (C < 0x01f8)
@@ -206,7 +206,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 20 characters
   if (C <= 0x021e)
     return C | 1;
-  // LATIN CAPITAL LETTER N WITH LONG RIGHT LEG\n'
+  // LATIN CAPITAL LETTER N WITH LONG RIGHT LEG
   if (C == 0x0220)
     return 0x019e;
   if (C < 0x0222)
@@ -214,28 +214,28 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 9 characters
   if (C <= 0x0232)
     return C | 1;
-  // LATIN CAPITAL LETTER A WITH STROKE\n'
+  // LATIN CAPITAL LETTER A WITH STROKE
   if (C == 0x023a)
     return 0x2c65;
-  // LATIN CAPITAL LETTER C WITH STROKE\n'
+  // LATIN CAPITAL LETTER C WITH STROKE
   if (C == 0x023b)
     return 0x023c;
-  // LATIN CAPITAL LETTER L WITH BAR\n'
+  // LATIN CAPITAL LETTER L WITH BAR
   if (C == 0x023d)
     return 0x019a;
-  // LATIN CAPITAL LETTER T WITH DIAGONAL STROKE\n'
+  // LATIN CAPITAL LETTER T WITH DIAGONAL STROKE
   if (C == 0x023e)
     return 0x2c66;
-  // LATIN CAPITAL LETTER GLOTTAL STOP\n'
+  // LATIN CAPITAL LETTER GLOTTAL STOP
   if (C == 0x0241)
     return 0x0242;
-  // LATIN CAPITAL LETTER B WITH STROKE\n'
+  // LATIN CAPITAL LETTER B WITH STROKE
   if (C == 0x0243)
     return 0x0180;
-  // LATIN CAPITAL LETTER U BAR\n'
+  // LATIN CAPITAL LETTER U BAR
   if (C == 0x0244)
     return 0x0289;
-  // LATIN CAPITAL LETTER TURNED V\n'
+  // LATIN CAPITAL LETTER TURNED V
   if (C == 0x0245)
     return 0x028c;
   if (C < 0x0246)
@@ -243,7 +243,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 5 characters
   if (C <= 0x024e)
     return C | 1;
-  // COMBINING GREEK YPOGEGRAMMENI\n'
+  // COMBINING GREEK YPOGEGRAMMENI
   if (C == 0x0345)
     return 0x03b9;
   if (C < 0x0370)
@@ -251,13 +251,13 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 2 characters
   if (C <= 0x0372)
     return C | 1;
-  // GREEK CAPITAL LETTER PAMPHYLIAN DIGAMMA\n'
+  // GREEK CAPITAL LETTER PAMPHYLIAN DIGAMMA
   if (C == 0x0376)
     return 0x0377;
-  // GREEK CAPITAL LETTER YOT\n'
+  // GREEK CAPITAL LETTER YOT
   if (C == 0x037f)
     return 0x03f3;
-  // GREEK CAPITAL LETTER ALPHA WITH TONOS\n'
+  // GREEK CAPITAL LETTER ALPHA WITH TONOS
   if (C == 0x0386)
     return 0x03ac;
   if (C < 0x0388)
@@ -265,7 +265,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 3 characters
   if (C <= 0x038a)
     return C + 37;
-  // GREEK CAPITAL LETTER OMICRON WITH TONOS\n'
+  // GREEK CAPITAL LETTER OMICRON WITH TONOS
   if (C == 0x038c)
     return 0x03cc;
   if (C < 0x038e)
@@ -283,22 +283,22 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 9 characters
   if (C <= 0x03ab)
     return C + 32;
-  // GREEK SMALL LETTER FINAL SIGMA\n'
+  // GREEK SMALL LETTER FINAL SIGMA
   if (C == 0x03c2)
     return 0x03c3;
-  // GREEK CAPITAL KAI SYMBOL\n'
+  // GREEK CAPITAL KAI SYMBOL
   if (C == 0x03cf)
     return 0x03d7;
-  // GREEK BETA SYMBOL\n'
+  // GREEK BETA SYMBOL
   if (C == 0x03d0)
     return 0x03b2;
-  // GREEK THETA SYMBOL\n'
+  // GREEK THETA SYMBOL
   if (C == 0x03d1)
     return 0x03b8;
-  // GREEK PHI SYMBOL\n'
+  // GREEK PHI SYMBOL
   if (C == 0x03d5)
     return 0x03c6;
-  // GREEK PI SYMBOL\n'
+  // GREEK PI SYMBOL
   if (C == 0x03d6)
     return 0x03c0;
   if (C < 0x03d8)
@@ -306,25 +306,25 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 12 characters
   if (C <= 0x03ee)
     return C | 1;
-  // GREEK KAPPA SYMBOL\n'
+  // GREEK KAPPA SYMBOL
   if (C == 0x03f0)
     return 0x03ba;
-  // GREEK RHO SYMBOL\n'
+  // GREEK RHO SYMBOL
   if (C == 0x03f1)
     return 0x03c1;
-  // GREEK CAPITAL THETA SYMBOL\n'
+  // GREEK CAPITAL THETA SYMBOL
   if (C == 0x03f4)
     return 0x03b8;
-  // GREEK LUNATE EPSILON SYMBOL\n'
+  // GREEK LUNATE EPSILON SYMBOL
   if (C == 0x03f5)
     return 0x03b5;
-  // GREEK CAPITAL LETTER SHO\n'
+  // GREEK CAPITAL LETTER SHO
   if (C == 0x03f7)
     return 0x03f8;
-  // GREEK CAPITAL LUNATE SIGMA SYMBOL\n'
+  // GREEK CAPITAL LUNATE SIGMA SYMBOL
   if (C == 0x03f9)
     return 0x03f2;
-  // GREEK CAPITAL LETTER SAN\n'
+  // GREEK CAPITAL LETTER SAN
   if (C == 0x03fa)
     return 0x03fb;
   if (C < 0x03fd)
@@ -352,7 +352,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 27 characters
   if (C <= 0x04be)
     return C | 1;
-  // CYRILLIC LETTER PALOCHKA\n'
+  // CYRILLIC LETTER PALOCHKA
   if (C == 0x04c0)
     return 0x04cf;
   if (C < 0x04c1)
@@ -385,13 +385,13 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 6 characters
   if (C <= 0x13fd)
     return C + -8;
-  // CYRILLIC SMALL LETTER ROUNDED VE\n'
+  // CYRILLIC SMALL LETTER ROUNDED VE
   if (C == 0x1c80)
     return 0x0432;
-  // CYRILLIC SMALL LETTER LONG-LEGGED DE\n'
+  // CYRILLIC SMALL LETTER LONG-LEGGED DE
   if (C == 0x1c81)
     return 0x0434;
-  // CYRILLIC SMALL LETTER NARROW O\n'
+  // CYRILLIC SMALL LETTER NARROW O
   if (C == 0x1c82)
     return 0x043e;
   if (C < 0x1c83)
@@ -399,19 +399,19 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 2 characters
   if (C <= 0x1c84)
     return C + -6210;
-  // CYRILLIC SMALL LETTER THREE-LEGGED TE\n'
+  // CYRILLIC SMALL LETTER THREE-LEGGED TE
   if (C == 0x1c85)
     return 0x0442;
-  // CYRILLIC SMALL LETTER TALL HARD SIGN\n'
+  // CYRILLIC SMALL LETTER TALL HARD SIGN
   if (C == 0x1c86)
     return 0x044a;
-  // CYRILLIC SMALL LETTER TALL YAT\n'
+  // CYRILLIC SMALL LETTER TALL YAT
   if (C == 0x1c87)
     return 0x0463;
-  // CYRILLIC SMALL LETTER UNBLENDED UK\n'
+  // CYRILLIC SMALL LETTER UNBLENDED UK
   if (C == 0x1c88)
     return 0xa64b;
-  // CYRILLIC CAPITAL LETTER TJE\n'
+  // CYRILLIC CAPITAL LETTER TJE
   if (C == 0x1c89)
     return 0x1c8a;
   if (C < 0x1c90)
@@ -429,10 +429,10 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 75 characters
   if (C <= 0x1e94)
     return C | 1;
-  // LATIN SMALL LETTER LONG S WITH DOT ABOVE\n'
+  // LATIN SMALL LETTER LONG S WITH DOT ABOVE
   if (C == 0x1e9b)
     return 0x1e61;
-  // LATIN CAPITAL LETTER SHARP S\n'
+  // LATIN CAPITAL LETTER SHARP S
   if (C == 0x1e9e)
     return 0x00df;
   if (C < 0x1ea0)
@@ -500,10 +500,10 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 2 characters
   if (C <= 0x1fbb)
     return C + -74;
-  // GREEK CAPITAL LETTER ALPHA WITH PROSGEGRAMMENI\n'
+  // GREEK CAPITAL LETTER ALPHA WITH PROSGEGRAMMENI
   if (C == 0x1fbc)
     return 0x1fb3;
-  // GREEK PROSGEGRAMMENI\n'
+  // GREEK PROSGEGRAMMENI
   if (C == 0x1fbe)
     return 0x03b9;
   if (C < 0x1fc8)
@@ -511,10 +511,10 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 4 characters
   if (C <= 0x1fcb)
     return C + -86;
-  // GREEK CAPITAL LETTER ETA WITH PROSGEGRAMMENI\n'
+  // GREEK CAPITAL LETTER ETA WITH PROSGEGRAMMENI
   if (C == 0x1fcc)
     return 0x1fc3;
-  // GREEK SMALL LETTER IOTA WITH DIALYTIKA AND OXIA\n'
+  // GREEK SMALL LETTER IOTA WITH DIALYTIKA AND OXIA
   if (C == 0x1fd3)
     return 0x0390;
   if (C < 0x1fd8)
@@ -527,7 +527,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 2 characters
   if (C <= 0x1fdb)
     return C + -100;
-  // GREEK SMALL LETTER UPSILON WITH DIALYTIKA AND OXIA\n'
+  // GREEK SMALL LETTER UPSILON WITH DIALYTIKA AND OXIA
   if (C == 0x1fe3)
     return 0x03b0;
   if (C < 0x1fe8)
@@ -540,7 +540,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 2 characters
   if (C <= 0x1feb)
     return C + -112;
-  // GREEK CAPITAL LETTER RHO WITH DASIA\n'
+  // GREEK CAPITAL LETTER RHO WITH DASIA
   if (C == 0x1fec)
     return 0x1fe5;
   if (C < 0x1ff8)
@@ -553,19 +553,19 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 2 characters
   if (C <= 0x1ffb)
     return C + -126;
-  // GREEK CAPITAL LETTER OMEGA WITH PROSGEGRAMMENI\n'
+  // GREEK CAPITAL LETTER OMEGA WITH PROSGEGRAMMENI
   if (C == 0x1ffc)
     return 0x1ff3;
-  // OHM SIGN\n'
+  // OHM SIGN
   if (C == 0x2126)
     return 0x03c9;
-  // KELVIN SIGN\n'
+  // KELVIN SIGN
   if (C == 0x212a)
     return 0x006b;
-  // ANGSTROM SIGN\n'
+  // ANGSTROM SIGN
   if (C == 0x212b)
     return 0x00e5;
-  // TURNED CAPITAL F\n'
+  // TURNED CAPITAL F
   if (C == 0x2132)
     return 0x214e;
   if (C < 0x2160)
@@ -573,7 +573,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 16 characters
   if (C <= 0x216f)
     return C + 16;
-  // ROMAN NUMERAL REVERSED ONE HUNDRED\n'
+  // ROMAN NUMERAL REVERSED ONE HUNDRED
   if (C == 0x2183)
     return 0x2184;
   if (C < 0x24b6)
@@ -586,16 +586,16 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 48 characters
   if (C <= 0x2c2f)
     return C + 48;
-  // LATIN CAPITAL LETTER L WITH DOUBLE BAR\n'
+  // LATIN CAPITAL LETTER L WITH DOUBLE BAR
   if (C == 0x2c60)
     return 0x2c61;
-  // LATIN CAPITAL LETTER L WITH MIDDLE TILDE\n'
+  // LATIN CAPITAL LETTER L WITH MIDDLE TILDE
   if (C == 0x2c62)
     return 0x026b;
-  // LATIN CAPITAL LETTER P WITH STROKE\n'
+  // LATIN CAPITAL LETTER P WITH STROKE
   if (C == 0x2c63)
     return 0x1d7d;
-  // LATIN CAPITAL LETTER R WITH TAIL\n'
+  // LATIN CAPITAL LETTER R WITH TAIL
   if (C == 0x2c64)
     return 0x027d;
   if (C < 0x2c67)
@@ -603,16 +603,16 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 3 characters
   if (C <= 0x2c6b && C % 2 == 1)
     return C + 1;
-  // LATIN CAPITAL LETTER ALPHA\n'
+  // LATIN CAPITAL LETTER ALPHA
   if (C == 0x2c6d)
     return 0x0251;
-  // LATIN CAPITAL LETTER M WITH HOOK\n'
+  // LATIN CAPITAL LETTER M WITH HOOK
   if (C == 0x2c6e)
     return 0x0271;
-  // LATIN CAPITAL LETTER TURNED A\n'
+  // LATIN CAPITAL LETTER TURNED A
   if (C == 0x2c6f)
     return 0x0250;
-  // LATIN CAPITAL LETTER TURNED ALPHA\n'
+  // LATIN CAPITAL LETTER TURNED ALPHA
   if (C == 0x2c70)
     return 0x0252;
   if (C < 0x2c72)
@@ -665,7 +665,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 2 characters
   if (C <= 0xa77b && C % 2 == 1)
     return C + 1;
-  // LATIN CAPITAL LETTER INSULAR G\n'
+  // LATIN CAPITAL LETTER INSULAR G
   if (C == 0xa77d)
     return 0x1d79;
   if (C < 0xa77e)
@@ -673,10 +673,10 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 5 characters
   if (C <= 0xa786)
     return C | 1;
-  // LATIN CAPITAL LETTER SALTILLO\n'
+  // LATIN CAPITAL LETTER SALTILLO
   if (C == 0xa78b)
     return 0xa78c;
-  // LATIN CAPITAL LETTER TURNED H\n'
+  // LATIN CAPITAL LETTER TURNED H
   if (C == 0xa78d)
     return 0x0265;
   if (C < 0xa790)
@@ -689,31 +689,31 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 10 characters
   if (C <= 0xa7a8)
     return C | 1;
-  // LATIN CAPITAL LETTER H WITH HOOK\n'
+  // LATIN CAPITAL LETTER H WITH HOOK
   if (C == 0xa7aa)
     return 0x0266;
-  // LATIN CAPITAL LETTER REVERSED OPEN E\n'
+  // LATIN CAPITAL LETTER REVERSED OPEN E
   if (C == 0xa7ab)
     return 0x025c;
-  // LATIN CAPITAL LETTER SCRIPT G\n'
+  // LATIN CAPITAL LETTER SCRIPT G
   if (C == 0xa7ac)
     return 0x0261;
-  // LATIN CAPITAL LETTER L WITH BELT\n'
+  // LATIN CAPITAL LETTER L WITH BELT
   if (C == 0xa7ad)
     return 0x026c;
-  // LATIN CAPITAL LETTER SMALL CAPITAL I\n'
+  // LATIN CAPITAL LETTER SMALL CAPITAL I
   if (C == 0xa7ae)
     return 0x026a;
-  // LATIN CAPITAL LETTER TURNED K\n'
+  // LATIN CAPITAL LETTER TURNED K
   if (C == 0xa7b0)
     return 0x029e;
-  // LATIN CAPITAL LETTER TURNED T\n'
+  // LATIN CAPITAL LETTER TURNED T
   if (C == 0xa7b1)
     return 0x0287;
-  // LATIN CAPITAL LETTER J WITH CROSSED-TAIL\n'
+  // LATIN CAPITAL LETTER J WITH CROSSED-TAIL
   if (C == 0xa7b2)
     return 0x029d;
-  // LATIN CAPITAL LETTER CHI\n'
+  // LATIN CAPITAL LETTER CHI
   if (C == 0xa7b3)
     return 0xab53;
   if (C < 0xa7b4)
@@ -721,13 +721,13 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 8 characters
   if (C <= 0xa7c2)
     return C | 1;
-  // LATIN CAPITAL LETTER C WITH PALATAL HOOK\n'
+  // LATIN CAPITAL LETTER C WITH PALATAL HOOK
   if (C == 0xa7c4)
     return 0xa794;
-  // LATIN CAPITAL LETTER S WITH HOOK\n'
+  // LATIN CAPITAL LETTER S WITH HOOK
   if (C == 0xa7c5)
     return 0x0282;
-  // LATIN CAPITAL LETTER Z WITH PALATAL HOOK\n'
+  // LATIN CAPITAL LETTER Z WITH PALATAL HOOK
   if (C == 0xa7c6)
     return 0x1d8e;
   if (C < 0xa7c7)
@@ -735,7 +735,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 2 characters
   if (C <= 0xa7c9 && C % 2 == 1)
     return C + 1;
-  // LATIN CAPITAL LETTER RAMS HORN\n'
+  // LATIN CAPITAL LETTER RAMS HORN
   if (C == 0xa7cb)
     return 0x0264;
   if (C < 0xa7cc)
@@ -743,7 +743,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 8 characters
   if (C <= 0xa7da)
     return C | 1;
-  // LATIN CAPITAL LETTER LAMBDA WITH STROKE\n'
+  // LATIN CAPITAL LETTER LAMBDA WITH STROKE
   if (C == 0xa7dc)
     return 0x019b;
   if (C < 0xa7dd)
@@ -751,7 +751,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 2 characters
   if (C <= 0xa7e2 && C % 5 == 3)
     return C + -42342;
-  // LATIN CAPITAL LETTER REVERSED HALF H\n'
+  // LATIN CAPITAL LETTER REVERSED HALF H
   if (C == 0xa7f5)
     return 0xa7f6;
   if (C < 0xab6c)
@@ -764,7 +764,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 80 characters
   if (C <= 0xabbf)
     return C + -38864;
-  // LATIN SMALL LIGATURE LONG S T\n'
+  // LATIN SMALL LIGATURE LONG S T
   if (C == 0xfb05)
     return 0xfb06;
   if (C < 0xff21)
@@ -852,7 +852,7 @@ int llvm::sys::unicode::foldCharSimple(int C) {
   // 7 characters
   if (C <= 0x1df7e)
     return C | 1;
-  // LATIN SMALL LIGATURE LONG S WITH DESCENDER S\n'
+  // LATIN SMALL LIGATURE LONG S WITH DESCENDER S
   if (C == 0x1df95)
     return 0x00df;
   if (C < 0x1e900)
