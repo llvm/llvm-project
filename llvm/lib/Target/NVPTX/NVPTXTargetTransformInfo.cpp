@@ -80,6 +80,10 @@ bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) const {
   if (const Argument *Arg = dyn_cast<Argument>(V))
     return !isKernelFunction(*Arg->getParent());
 
+  // The value of a local address is divergent
+  if (isa<AllocaInst>(V))
+    return true;
+
   if (const Instruction *I = dyn_cast<Instruction>(V)) {
     // Without pointer analysis, we conservatively assume values loaded from
     // local address space are divergent.  We optimistically assume that
