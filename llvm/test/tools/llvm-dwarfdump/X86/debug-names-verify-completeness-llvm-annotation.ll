@@ -1,11 +1,20 @@
-; Verify that DW_TAG_LLVM_annotation DIEs are not required to appear in
-; .debug_names. 
+; Verify that DW_TAG_LLVM_annotation DIEs are not emitted into .debug_names,
+; and that the verifier does not require them to be.
 
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -accel-tables=Dwarf -filetype=obj -o %t %s
 ; RUN: llvm-dwarfdump -verify %t | FileCheck %s
+; RUN: llvm-dwarfdump --debug-names %t | FileCheck %s --check-prefix=NAMES
 
 ; CHECK: Verifying .debug_names...
 ; CHECK-NEXT: No errors.
+
+; The annotation DIE is present in .debug_info (see DW_AT_name "btf_decl_tag"
+; with DW_AT_const_value "tag1"), but neither the tag nor its strings should
+; appear anywhere in the .debug_names index.
+; NAMES:     .debug_names contents:
+; NAMES-NOT: DW_TAG_LLVM_annotation
+; NAMES-NOT: btf_decl_tag
+; NAMES-NOT: tag1
 
 ; Source:
 ;   #define __tag1 __attribute__((btf_decl_tag("tag1")))
