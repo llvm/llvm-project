@@ -218,11 +218,106 @@ struct SimplifyDelinearizeOfLinearizeDisjoint final
   }
 };
 
+/// Simplifies the affine map results by eliminating redundant expressions.
+///
+/// This function performs a pairwise comparison of all expressions in the map
+/// using the analysis from `ValueBoundsConstraintSet`. If an expression `a` is
+/// statically proven to be strictly bounded or covered by another expression
+/// `b` (based on the given comparison operator `cmp`), `a` is considered
+/// redundant and is safely pruned from the results. NOTE: We iterate backwards
+/// (from size-1 down to 0) to safely erase elements from the `SmallVector`
+/// without causing iterator invalidation or indexing shifts for upcoming
+/// elements.
+static SmallVector<AffineExpr>
+simplifyRedundantMapResults(AffineMap map, SmallVector<Value> operands,
+                            ValueBoundsConstraintSet::ComparisonOperator cmp) {
+  SmallVector<AffineExpr> mapResults(map.getResults());
+  auto *context = map.getContext();
+
+  for (int i = mapResults.size() - 1; i >= 0; --i) {
+    AffineExpr a = mapResults[i];
+
+    AffineMap mapA =
+        AffineMap::get(map.getNumDims(), map.getNumSymbols(), a, context);
+    ValueBoundsConstraintSet::Variable varA(mapA, operands);
+    bool shouldErase = false;
+
+    for (int j = 0, e = mapResults.size(); j < e; ++j) {
+      if (i == j)
+        continue;
+
+      AffineExpr b = mapResults[j];
+      AffineMap mapB =
+          AffineMap::get(map.getNumDims(), map.getNumSymbols(), b, context);
+      ValueBoundsConstraintSet::Variable varB(mapB, operands);
+
+      if (ValueBoundsConstraintSet::compare(varB, cmp, varA)) {
+        shouldErase = true;
+        break;
+      }
+    }
+
+    if (shouldErase)
+      mapResults.erase(mapResults.begin() + i);
+  }
+
+  return mapResults;
+}
+
+/// A canonicalization pattern that simplifies multi-result lower and upper
+/// bounds of `affine.for` loops by pruning redundant expressions leveraging
+/// `ValueBoundsConstraintSet`.
+struct SimplifyAffineLoopBoundMap final : OpRewritePattern<AffineForOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(AffineForOp forOp,
+                                PatternRewriter &rewriter) const override {
+    AffineMap lowerBoundMap = forOp.getLowerBoundMap();
+    auto lowerBoundOperands = forOp.getLowerBoundOperands();
+    AffineMap upperBoundMap = forOp.getUpperBoundMap();
+    auto upperBoundOperands = forOp.getUpperBoundOperands();
+    if (lowerBoundMap.getNumResults() < 2 &&
+        forOp.getUpperBoundMap().getNumResults() < 2)
+      return failure();
+
+    SmallVector<AffineExpr> lowerMapExprs = simplifyRedundantMapResults(
+        lowerBoundMap, lowerBoundOperands, ValueBoundsConstraintSet::GT);
+    SmallVector<AffineExpr> upperMapExprs = simplifyRedundantMapResults(
+        upperBoundMap, upperBoundOperands, ValueBoundsConstraintSet::LT);
+
+    bool lowerBoundUpdate =
+        lowerMapExprs.size() < lowerBoundMap.getNumResults();
+    bool upperBoundUpdate =
+        upperMapExprs.size() < upperBoundMap.getNumResults();
+    if (!(lowerBoundUpdate || upperBoundUpdate))
+      return failure();
+
+    auto *context = forOp->getContext();
+    if (lowerBoundUpdate) {
+      AffineMap newMap =
+          AffineMap::get(lowerBoundMap.getNumDims(),
+                         lowerBoundMap.getNumSymbols(), lowerMapExprs, context);
+      rewriter.modifyOpInPlace(forOp, [&]() {
+        forOp.setLowerBound(forOp.getLowerBoundOperands(), newMap);
+      });
+    }
+    if (upperBoundUpdate) {
+      AffineMap newMap =
+          AffineMap::get(upperBoundMap.getNumDims(),
+                         upperBoundMap.getNumSymbols(), upperMapExprs, context);
+      rewriter.modifyOpInPlace(forOp, [&]() {
+        forOp.setUpperBound(forOp.getUpperBoundOperands(), newMap);
+      });
+    }
+    return success();
+  }
+};
 } // namespace
 
 void affine::populateSimplifyAffineWithBoundsPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<SimplifyDelinearizeOfLinearizeDisjoint>(patterns.getContext());
+  patterns
+      .add<SimplifyDelinearizeOfLinearizeDisjoint, SimplifyAffineLoopBoundMap>(
+          patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//
