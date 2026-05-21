@@ -11,9 +11,9 @@ define void @store_16_elements(<16 x i8> %vec, ptr %out) {
 ; CHECK-NEXT:  Lloh1:
 ; CHECK-NEXT:    ldr q1, [x8, lCPI0_0@PAGEOFF]
 ; CHECK-NEXT:    bic.16b v0, v1, v0
-; CHECK-NEXT:    addp.16b v0, v0, v0
-; CHECK-NEXT:    addp.16b v0, v0, v0
-; CHECK-NEXT:    addp.16b v0, v0, v0
+; CHECK-NEXT:    ext.16b v1, v0, v0, #8
+; CHECK-NEXT:    zip1.16b v0, v0, v1
+; CHECK-NEXT:    addv.8h h0, v0
 ; CHECK-NEXT:    str h0, [x0]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1

@@ -460,9 +460,8 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
   }
 
   if (!BoundArch.empty()) {
-    DAL->eraseArg(options::OPT_march_EQ);
-    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
-                      BoundArch);
+    DAL->eraseArg(options::OPT_mcpu_EQ);
+    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ), BoundArch);
   }
 
   return DAL;
@@ -572,7 +571,7 @@ AMDGPUOpenMPToolChain::getDeviceLibs(
     return {};
 
   StringRef GpuArch = getProcessorFromTargetID(
-      getTriple(), Args.getLastArgValue(options::OPT_march_EQ));
+      getTriple(), Args.getLastArgValue(options::OPT_mcpu_EQ));
 
   SmallVector<BitCodeLibraryInfo, 12> BCLibs;
   for (auto BCLib :

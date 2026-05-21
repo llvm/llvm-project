@@ -702,10 +702,7 @@ void tools::AddTargetFeature(const ArgList &Args,
 /// Get the (LLVM) name of the AMDGPU gpu we are targeting.
 static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
                                       const ArgList &Args) {
-  Arg *MArch = Args.getLastArg(options::OPT_march_EQ);
   Arg *A = Args.getLastArg(options::OPT_mcpu_EQ);
-  if (!A)
-    A = Args.getLastArg(options::OPT_march_EQ);
   if (!A)
     A = Args.getLastArg(options::OPT_offload_arch_EQ);
   if (A) {
@@ -720,8 +717,6 @@ static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
         .Case("aruba", "cayman")
         .Default(GPUName.str());
   }
-  if (MArch)
-    return getProcessorFromTargetID(T, MArch->getValue()).str();
   return "";
 }
 
@@ -3317,8 +3312,7 @@ void tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
 
   // First check for a CPU-specific library in <ResourceDir>/lib/<triple>/<CPU>.
   // TODO: Factor this into common logic that checks for valid subtargets.
-  if (const Arg *CPUArg =
-          DriverArgs.getLastArg(options::OPT_mcpu_EQ, options::OPT_march_EQ)) {
+  if (const Arg *CPUArg = DriverArgs.getLastArg(options::OPT_mcpu_EQ)) {
     StringRef CPU = CPUArg->getValue();
     if (!CPU.empty()) {
       SmallString<128> CPUPath(BasePath);

@@ -559,8 +559,16 @@ void CIRGenFunction::popCleanupBlock(bool forDeactivation) {
   assert(isa<EHCleanupScope>(*ehStack.begin()) && "top not a cleanup!");
   EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
 
+  // If we pushed an EH-only cleanup but exceptions are disabled, it will leave
+  // an effectively empty cleanup on the EH stack. In that case, there is
+  // nothing to do here except pop the cleanup.
   cir::CleanupScopeOp cleanupScope = scope.getCleanupScopeOp();
-  assert(cleanupScope && "CleanupScopeOp is nullptr");
+  if (!cleanupScope) {
+    assert(!scope.isNormalCleanup() && !scope.isEHCleanup() &&
+           "missing cir.cleanup.scope for active cleanup");
+    ehStack.popCleanup();
+    return;
+  }
 
   bool requiresNormalCleanup = scope.isNormalCleanup();
   bool requiresEHCleanup = scope.isEHCleanup();
