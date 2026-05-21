@@ -1802,6 +1802,25 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
   }
 }
 
+void VPlanTransforms::simplifyReverses(VPlan &Plan) {
+  VPValue *X, *EVL;
+  PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
+    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
+      if (match(&R,
+                m_CombineOr(m_Reverse(m_Reverse(m_VPValue(X))),
+                            m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                                m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                                    m_VPValue(X), m_VPValue(), m_VPValue(EVL)),
+                                m_VPValue(), m_Deferred(EVL))))) {
+        R.getVPSingleValue()->replaceAllUsesWith(X);
+        R.eraseFromParent();
+      }
+    }
+  }
+}
+
 /// Reassociate (headermask && x) && y -> headermask && (x && y) to allow the
 /// header mask to be simplified further when tail folding, e.g. in
 /// optimizeEVLMasks.

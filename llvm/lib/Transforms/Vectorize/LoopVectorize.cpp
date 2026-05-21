@@ -6723,6 +6723,7 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
                      Config.getMaxSafeElements());
       RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
     }
+    RUN_VPLAN_PASS(VPlanTransforms::simplifyReverses, *Plan);
 
     if (auto P = VPlanTransforms::narrowInterleaveGroups(*Plan, TTI))
       VPlans.push_back(std::move(P));
