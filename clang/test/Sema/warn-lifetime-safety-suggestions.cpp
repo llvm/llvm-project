@@ -67,13 +67,39 @@ struct ReturnThisPointer {
 
 #endif // TEST_HEADER_H
 
+//--- test_redecls_header.h
+
+View earliest_decl_in_header(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
+View earliest_decl_in_header(View a);
+
+View multi_redecl_one_file(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
+View multi_redecl_one_file(View a);
+View multi_redecl_one_file(View a);
+
+View source_and_header(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
+
+//--- test_redecls_header_1.h
+
+View in_two_headers(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
+
+//--- test_redecls_header_2.h
+
+View in_two_headers(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
+
 //--- test_source.cpp
 
 struct View;
 View redeclared_before_header_include(View a); // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+View source_and_header(View a); // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
 
 #include "test_header.h"
+#include "test_redecls_header.h"
+#include "test_redecls_header_1.h"
+#include "test_redecls_header_2.h"
 #include "Inputs/lifetime-analysis.h"
+
+View earliest_decl_in_source(View a); // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+View earliest_decl_in_source(View a);
 
 View definition_before_header(View a) {
   return a;                               // expected-note {{param returned here}}
@@ -110,6 +136,26 @@ View return_unnamed_view(View a) {
 
 MyObj& return_unnamed_ref(MyObj& a, bool c) {
   return a;                               // expected-note {{param returned here}}
+}
+
+View earliest_decl_in_header(View a) {
+  return a;                               // expected-note {{param returned here}}
+}
+
+View earliest_decl_in_source(View a) {
+  return a;                               // expected-note {{param returned here}}
+}
+
+View multi_redecl_one_file(View a) {
+  return a;                               // expected-note {{param returned here}}
+}
+
+View in_two_headers(View a) {
+  return a;                               // expected-note 2 {{param returned here}}
+}
+
+View source_and_header(View a) {
+  return a;                               // expected-note 2 {{param returned here}}
 }
 
 MyObj& return_reference(MyObj& a, // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}

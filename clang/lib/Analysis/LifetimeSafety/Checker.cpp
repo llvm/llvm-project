@@ -316,62 +316,57 @@ public:
     }
   }
 
-  std::pair<const FunctionDecl *, WarningScope>
-  getCanonicalFunctionDeclForAttr(const FunctionDecl *FDef) {
+  // Returns diagnostic targets for annotations on FDef: the canonical
+  // declaration and the earliest redeclaration in each other file. Each
+  // target is paired with the warning scope appropriate for its file.
+  llvm::SmallVector<std::pair<const FunctionDecl *, WarningScope>, 2>
+  getTargetDeclsForAttr(const FunctionDecl *FDef) {
     if (!FDef)
-      return {nullptr, WarningScope::IntraTU};
+      return {};
 
     assert(FDef->isThisDeclarationADefinition() &&
            "Expected FunctionDecl to be a definition");
 
     const auto &SM = FDef->getASTContext().getSourceManager();
-    const FileID DefFile =
-        SM.getFileID(SM.getExpansionLoc(FDef->getLocation()));
-    const FunctionDecl *CanonicalDecl = FDef->getCanonicalDecl();
-    WarningScope Scope = WarningScope::IntraTU;
 
-    Scope = SM.getFileID(SM.getExpansionLoc(CanonicalDecl->getLocation())) !=
-                    DefFile
-                ? WarningScope::CrossTU
-                : WarningScope::IntraTU;
+    auto GetLoc = [&SM](const FunctionDecl *FD) {
+      return SM.getExpansionLoc(FD->getLocation());
+    };
+    auto GetFile = [&SM, &GetLoc](const FunctionDecl *FD) {
+      return SM.getFileID(GetLoc(FD));
+    };
 
-    return {CanonicalDecl, Scope};
-  }
+    const FileID DefFile = GetFile(FDef);
+    llvm::SmallVector<std::pair<FileID, const FunctionDecl *>, 2>
+        EarliestDeclForFile{
+            {GetFile(FDef->getCanonicalDecl()), FDef->getCanonicalDecl()}};
 
-  std::pair<const CXXMethodDecl *, WarningScope>
-  getCanonicalDeclForAttr(const CXXMethodDecl *MDef) {
-    auto [CanonicalFDecl, Scope] = getCanonicalFunctionDeclForAttr(MDef);
-    return {cast_or_null<CXXMethodDecl>(CanonicalFDecl), Scope};
-  }
+    auto AddCrossTUDecl = [&](const FunctionDecl *FD) {
+      FileID File = GetFile(FD);
+      if (File == DefFile)
+        return;
+      for (auto &[SeenFile, SeenFD] : EarliestDeclForFile) {
+        if (SeenFile != File)
+          continue;
+        if (SM.isBeforeInTranslationUnit(GetLoc(FD), GetLoc(SeenFD)))
+          SeenFD = FD;
+        return;
+      }
+      EarliestDeclForFile.push_back({File, FD});
+    };
 
-  std::pair<const ParmVarDecl *, WarningScope>
-  getCanonicalDeclForAttr(const FunctionDecl *FDef, const ParmVarDecl *PVDDef) {
-    auto [CanonicalFDecl, Scope] = getCanonicalFunctionDeclForAttr(FDef);
-    if (!CanonicalFDecl)
-      return {nullptr, Scope};
-    return {CanonicalFDecl->getParamDecl(PVDDef->getFunctionScopeIndex()),
-            Scope};
-  }
+    for (const FunctionDecl *Redecl : FDef->redecls()) {
+      AddCrossTUDecl(Redecl);
+    }
 
-  /// Returns the declaration of a function that is visible across translation
-  /// units, if such a declaration exists and is different from the definition.
-  static const FunctionDecl *getCrossTUDecl(const FunctionDecl &FD,
-                                            SourceManager &SM) {
-    if (!FD.isExternallyVisible())
-      return nullptr;
-    const FileID DefinitionFile = SM.getFileID(FD.getLocation());
-    for (const FunctionDecl *Redecl : FD.redecls())
-      if (SM.getFileID(Redecl->getLocation()) != DefinitionFile)
-        return Redecl;
+    llvm::SmallVector<std::pair<const FunctionDecl *, WarningScope>, 2> Targets;
+    for (auto [File, FD] : EarliestDeclForFile) {
+      WarningScope Scope =
+          File == DefFile ? WarningScope::IntraTU : WarningScope::CrossTU;
+      Targets.push_back({FD, Scope});
+    }
 
-    return nullptr;
-  }
-
-  static const FunctionDecl *getCrossTUDecl(const ParmVarDecl &PVD,
-                                            SourceManager &SM) {
-    if (const auto *FD = dyn_cast<FunctionDecl>(PVD.getDeclContext()))
-      return getCrossTUDecl(*FD, SM);
-    return nullptr;
+    return Targets;
   }
 
   void suggestWithScopeForParmVar(const ParmVarDecl *PVD,
@@ -379,29 +374,20 @@ public:
     if (llvm::isa<const VarDecl *>(EscapeTarget))
       return;
 
-    auto [CanonicalPVD, Scope] =
-        getCanonicalDeclForAttr(cast<FunctionDecl>(FD), PVD);
-    const auto *CrossTUFD = getCrossTUDecl(*PVD, AST.getSourceManager());
-    const auto *CrossTUParm =
-        CrossTUFD ? CrossTUFD->getParamDecl(PVD->getFunctionScopeIndex())
-                  : nullptr;
-
-    SemaHelper->suggestLifetimeboundToParmVar(Scope, CanonicalPVD,
-                                              EscapeTarget);
-    if (CrossTUParm && CrossTUParm != CanonicalPVD)
-      SemaHelper->suggestLifetimeboundToParmVar(WarningScope::CrossTU,
-                                                CrossTUParm, EscapeTarget);
+    for (auto [Decl, Scope] : getTargetDeclsForAttr(cast<FunctionDecl>(FD))) {
+      const auto *ParmToAnnotate =
+          Decl->getParamDecl(PVD->getFunctionScopeIndex());
+      SemaHelper->suggestLifetimeboundToParmVar(Scope, ParmToAnnotate,
+                                                EscapeTarget);
+    }
   }
 
   void suggestWithScopeForImplicitThis(const CXXMethodDecl *MD,
                                        const Expr *EscapeExpr) {
-    auto [CanonicalDecl, Scope] = getCanonicalDeclForAttr(MD);
-    const auto *CrossTUDecl = getCrossTUDecl(*MD, AST.getSourceManager());
-    SemaHelper->suggestLifetimeboundToImplicitThis(Scope, CanonicalDecl,
-                                                   EscapeExpr);
-    if (CrossTUDecl && CrossTUDecl != CanonicalDecl)
+    for (auto [Decl, Scope] : getTargetDeclsForAttr(MD)) {
       SemaHelper->suggestLifetimeboundToImplicitThis(
-          WarningScope::CrossTU, cast<CXXMethodDecl>(CrossTUDecl), EscapeExpr);
+          Scope, cast<CXXMethodDecl>(Decl), EscapeExpr);
+    }
   }
 
   void suggestAnnotations() {
@@ -458,13 +444,17 @@ public:
     const FunctionDecl *FDef = dyn_cast<FunctionDecl>(FD);
     if (!FDef)
       return;
+
+    auto TargetDecls = getTargetDeclsForAttr(FDef);
     // Check if implicit 'this' has lifetimebound on definition but not on
     // declaration.
     if (const auto *MDef = dyn_cast<CXXMethodDecl>(FDef);
         MDef && getDirectImplicitObjectLifetimeBoundAttr(MDef))
-      if (auto [MDecl, Scope] = getCanonicalDeclForAttr(MDef);
-          MDecl && !getDirectImplicitObjectLifetimeBoundAttr(MDecl))
-        SemaHelper->reportMisplacedLifetimebound(Scope, MDef, MDecl);
+      for (auto [Decl, Scope] : TargetDecls) {
+        const auto *MDecl = cast<CXXMethodDecl>(Decl);
+        if (!getDirectImplicitObjectLifetimeBoundAttr(MDecl))
+          SemaHelper->reportMisplacedLifetimebound(Scope, MDef, MDecl);
+      }
 
     // Check each parameter for explicit lifetimebound on definition but not on
     // declaration.
@@ -472,9 +462,11 @@ public:
       const auto *Attr = PDef->getAttr<LifetimeBoundAttr>();
       if (!Attr || Attr->isImplicit())
         continue;
-      if (auto [PDecl, Scope] = getCanonicalDeclForAttr(FDef, PDef);
-          PDecl && !PDecl->hasAttr<LifetimeBoundAttr>())
-        SemaHelper->reportMisplacedLifetimebound(Scope, PDef, PDecl);
+      for (auto [Decl, Scope] : TargetDecls) {
+        const auto *PDecl = Decl->getParamDecl(PDef->getFunctionScopeIndex());
+        if (!PDecl->hasAttr<LifetimeBoundAttr>())
+          SemaHelper->reportMisplacedLifetimebound(Scope, PDef, PDecl);
+      }
     }
   }
 
