@@ -933,11 +933,18 @@ public:
     switch (e->getCastKind()) {
     case CK_ToUnion:
     case CK_AddressSpaceConversion:
-    case CK_ReinterpretMemberPointer:
-    case CK_DerivedToBaseMemberPointer:
-    case CK_BaseToDerivedMemberPointer:
       cgm.errorNYI(e->getBeginLoc(), "ConstExprEmitter::VisitCastExpr");
       return {};
+
+    case CK_ReinterpretMemberPointer:
+    case CK_DerivedToBaseMemberPointer:
+    case CK_BaseToDerivedMemberPointer: {
+      mlir::Attribute srcAttr =
+          emitter.tryEmitPrivate(subExpr, subExpr->getType());
+      if (!srcAttr)
+        return {};
+      return cgm.getCXXABI().emitMemberPointerConversion(e, srcAttr);
+    }
 
     case CK_LValueToRValue:
     case CK_AtomicToNonAtomic:

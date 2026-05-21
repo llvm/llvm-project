@@ -703,6 +703,11 @@ public:
   mlir::TypedAttr getDataMemberAttrForField(const MemberPointerType *destMpt,
                                             const FieldDecl *field);
 
+  CharUnits computeDataMemberOffset(cir::DataMemberAttr attr);
+
+  const FieldDecl *findDataMemberFieldAtOffset(const CXXRecordDecl *record,
+                                               CharUnits offset);
+
   /// Returns a null attribute to represent either a null method or null data
   /// member, depending on the type of mpt.
   mlir::TypedAttr emitNullMemberAttr(QualType t, const MemberPointerType *mpt);

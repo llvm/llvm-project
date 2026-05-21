@@ -64,6 +64,13 @@ public:
   virtual cir::MethodAttr buildVirtualMethodAttr(cir::MethodType methodTy,
                                                  const CXXMethodDecl *md) = 0;
 
+  virtual mlir::Attribute emitMemberPointerConversion(const CastExpr *e,
+                                                      mlir::Attribute src) = 0;
+
+  virtual mlir::Value emitMemberPointerConversion(CIRGenFunction &cgf,
+                                                  const CastExpr *e,
+                                                  mlir::Value src) = 0;
+
 public:
   /// Similar to AddedStructorArgs, but only notes the number of additional
   /// arguments.

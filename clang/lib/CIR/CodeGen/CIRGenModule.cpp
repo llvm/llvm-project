@@ -2263,6 +2263,44 @@ CIRGenModule::getDataMemberAttrForField(const MemberPointerType *destMpt,
   return builder.getDataMemberAttr(destTy, memberIndex);
 }
 
+CharUnits CIRGenModule::computeDataMemberOffset(cir::DataMemberAttr attr) {
+  if (attr.isNullPtr())
+    return CharUnits::fromQuantity(-1);
+
+  const mlir::DataLayout &dataLayout = getDataLayout().layout;
+  cir::RecordType recTy = attr.getType().getClassTy();
+  return CharUnits::fromQuantity(
+      recTy.getElementOffset(dataLayout, attr.getMemberIndex().value()));
+}
+
+const FieldDecl *
+CIRGenModule::findDataMemberFieldAtOffset(const CXXRecordDecl *record,
+                                          CharUnits offset) {
+  const ASTContext &astContext = getASTContext();
+  for (const FieldDecl *field : record->fields()) {
+    CharUnits fieldOffset =
+        astContext.toCharUnitsFromBits(astContext.getFieldOffset(field));
+    if (fieldOffset == offset)
+      return field;
+  }
+
+  const ASTRecordLayout &layout = astContext.getASTRecordLayout(record);
+  for (const CXXBaseSpecifier &base : record->bases()) {
+    if (base.isVirtual())
+      continue;
+    const auto *baseDecl =
+        cast<CXXRecordDecl>(base.getType()->castAsCXXRecordDecl());
+    CharUnits baseOffset = layout.getBaseClassOffset(baseDecl);
+    if (offset < baseOffset)
+      continue;
+    if (const FieldDecl *field =
+            findDataMemberFieldAtOffset(baseDecl, offset - baseOffset))
+      return field;
+  }
+
+  return nullptr;
+}
+
 mlir::TypedAttr CIRGenModule::emitNullMemberAttr(QualType destTy,
                                                  const MemberPointerType *mpt) {
   if (mpt->isMemberFunctionPointerType()) {

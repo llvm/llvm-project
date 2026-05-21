@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenCXXABI.h"
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenValue.h"
@@ -2329,44 +2330,11 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
         loc, cgf.cgm.emitNullMemberAttr(destTy, mpt));
   }
 
-  case CK_ReinterpretMemberPointer: {
-    mlir::Value src = Visit(subExpr);
-    return builder.createBitcast(cgf.getLoc(subExpr->getExprLoc()), src,
-                                 cgf.convertType(destTy));
-  }
+  case CK_ReinterpretMemberPointer:
   case CK_BaseToDerivedMemberPointer:
   case CK_DerivedToBaseMemberPointer: {
     mlir::Value src = Visit(subExpr);
-
-    assert(!cir::MissingFeatures::memberFuncPtrAuthInfo());
-
-    QualType derivedTy =
-        kind == CK_DerivedToBaseMemberPointer ? subExpr->getType() : destTy;
-    const auto *mpType = derivedTy->castAs<MemberPointerType>();
-    NestedNameSpecifier qualifier = mpType->getQualifier();
-    assert(qualifier && "member pointer without class qualifier");
-    const Type *qualifierType = qualifier.getAsType();
-    assert(qualifierType && "member pointer qualifier is not a type");
-    const CXXRecordDecl *derivedClass = qualifierType->getAsCXXRecordDecl();
-    CharUnits offset =
-        cgf.cgm.computeNonVirtualBaseClassOffset(derivedClass, ce->path());
-
-    mlir::Location loc = cgf.getLoc(subExpr->getExprLoc());
-    mlir::Type resultTy = cgf.convertType(destTy);
-    mlir::IntegerAttr offsetAttr = builder.getIndexAttr(offset.getQuantity());
-
-    if (subExpr->getType()->isMemberFunctionPointerType()) {
-      if (kind == CK_BaseToDerivedMemberPointer)
-        return cir::DerivedMethodOp::create(builder, loc, resultTy, src,
-                                            offsetAttr);
-      return cir::BaseMethodOp::create(builder, loc, resultTy, src, offsetAttr);
-    }
-
-    if (kind == CK_BaseToDerivedMemberPointer)
-      return cir::DerivedDataMemberOp::create(builder, loc, resultTy, src,
-                                              offsetAttr);
-    return cir::BaseDataMemberOp::create(builder, loc, resultTy, src,
-                                         offsetAttr);
+    return cgf.cgm.getCXXABI().emitMemberPointerConversion(cgf, ce, src);
   }
 
   case CK_LValueToRValue:

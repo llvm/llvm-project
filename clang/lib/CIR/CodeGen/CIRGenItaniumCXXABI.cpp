@@ -190,6 +190,13 @@ public:
   cir::MethodAttr buildVirtualMethodAttr(cir::MethodType methodTy,
                                          const CXXMethodDecl *md) override;
 
+  mlir::Attribute emitMemberPointerConversion(const CastExpr *e,
+                                              mlir::Attribute src) override;
+
+  mlir::Value emitMemberPointerConversion(CIRGenFunction &cgf,
+                                          const CastExpr *e,
+                                          mlir::Value src) override;
+
   Address initializeArrayCookie(CIRGenFunction &cgf, Address newPtr,
                                 mlir::Value numElements, const CXXNewExpr *e,
                                 QualType elementType) override;
@@ -2402,6 +2409,120 @@ CIRGenItaniumCXXABI::buildVirtualMethodAttr(cir::MethodType methodTy,
 
   return cir::MethodAttr::get(methodTy, vtableOffset);
 }
+
+/// Peel casts and return the field decl for a constant member-data-pointer
+/// initializer rooted at a member expression.
+static const FieldDecl *getDataMemberFieldFromExpr(const Expr *e) {
+  e = e->IgnoreParenImpCasts();
+  if (const auto *declRef = dyn_cast<DeclRefExpr>(e))
+    return dyn_cast<FieldDecl>(declRef->getDecl());
+  if (const auto *memberExpr = dyn_cast<MemberExpr>(e))
+    return dyn_cast<FieldDecl>(memberExpr->getMemberDecl());
+  if (const auto *unaryOp = dyn_cast<UnaryOperator>(e)) {
+    if (unaryOp->getOpcode() == UO_AddrOf)
+      return getDataMemberFieldFromExpr(unaryOp->getSubExpr());
+  }
+  if (const auto *castExpr = dyn_cast<CastExpr>(e))
+    return getDataMemberFieldFromExpr(castExpr->getSubExpr());
+  return nullptr;
+}
+
+mlir::Attribute
+CIRGenItaniumCXXABI::emitMemberPointerConversion(const CastExpr *e,
+                                                 mlir::Attribute src) {
+  assert(e->getCastKind() == CK_DerivedToBaseMemberPointer ||
+         e->getCastKind() == CK_BaseToDerivedMemberPointer ||
+         e->getCastKind() == CK_ReinterpretMemberPointer);
+
+  if (mlir::isa<cir::MethodAttr>(src)) {
+    cgm.errorNYI(e->getBeginLoc(),
+                 "emitMemberPointerConversion for member function pointer");
+    return {};
+  }
+
+  auto destTy = mlir::cast<cir::DataMemberType>(cgm.convertType(e->getType()));
+  auto dataMember = mlir::cast<cir::DataMemberAttr>(src);
+
+  if (dataMember.isNullPtr())
+    return cgm.getBuilder().getNullDataMemberAttr(destTy);
+
+  const auto *destMpt = e->getType()->getAs<MemberPointerType>();
+
+  if (e->getCastKind() == CK_ReinterpretMemberPointer) {
+    if (dataMember.getType().getClassTy() == destTy.getClassTy())
+      return cgm.getBuilder().getDataMemberAttr(
+          destTy, dataMember.getMemberIndex().value());
+
+    CharUnits offset = cgm.computeDataMemberOffset(dataMember);
+    const FieldDecl *field = cgm.findDataMemberFieldAtOffset(
+        destMpt->getMostRecentCXXRecordDecl(), offset);
+    if (!field) {
+      cgm.errorNYI(e->getBeginLoc(),
+                   "reinterpret member pointer with unmapped offset");
+      return {};
+    }
+    return cgm.getDataMemberAttrForField(destMpt, field);
+  }
+
+  if (const FieldDecl *field = getDataMemberFieldFromExpr(e->getSubExpr())) {
+    const auto *fieldParent = cast<CXXRecordDecl>(field->getParent());
+    if (fieldParent == destMpt->getMostRecentCXXRecordDecl())
+      return cgm.getDataMemberAttrForField(destMpt, field);
+    return {};
+  }
+
+  cgm.errorNYI(e->getBeginLoc(),
+               "member-pointer cast without underlying field decl");
+  return {};
+}
+
+mlir::Value CIRGenItaniumCXXABI::emitMemberPointerConversion(
+    CIRGenFunction &cgf, const CastExpr *e, mlir::Value src) {
+  assert(e->getCastKind() == CK_DerivedToBaseMemberPointer ||
+         e->getCastKind() == CK_BaseToDerivedMemberPointer ||
+         e->getCastKind() == CK_ReinterpretMemberPointer);
+
+  CastKind kind = e->getCastKind();
+  const Expr *subExpr = e->getSubExpr();
+  QualType destTy = e->getType();
+
+  if (kind == CK_ReinterpretMemberPointer)
+    return cgf.getBuilder().createBitcast(cgf.getLoc(subExpr->getExprLoc()),
+                                          src, cgf.convertType(destTy));
+
+  assert(!cir::MissingFeatures::memberFuncPtrAuthInfo());
+
+  QualType derivedTy =
+      kind == CK_DerivedToBaseMemberPointer ? subExpr->getType() : destTy;
+  const auto *mpType = derivedTy->castAs<MemberPointerType>();
+  NestedNameSpecifier qualifier = mpType->getQualifier();
+  assert(qualifier && "member pointer without class qualifier");
+  const Type *qualifierType = qualifier.getAsType();
+  assert(qualifierType && "member pointer qualifier is not a type");
+  const CXXRecordDecl *derivedClass = qualifierType->getAsCXXRecordDecl();
+  CharUnits offset =
+      cgm.computeNonVirtualBaseClassOffset(derivedClass, e->path());
+
+  mlir::Location loc = cgf.getLoc(subExpr->getExprLoc());
+  mlir::Type resultTy = cgf.convertType(destTy);
+  mlir::IntegerAttr offsetAttr =
+      cgf.getBuilder().getIndexAttr(offset.getQuantity());
+
+  if (subExpr->getType()->isMemberFunctionPointerType()) {
+    if (kind == CK_BaseToDerivedMemberPointer)
+      return cir::DerivedMethodOp::create(cgf.getBuilder(), loc, resultTy, src,
+                                          offsetAttr);
+    return cir::BaseMethodOp::create(cgf.getBuilder(), loc, resultTy, src,
+                                     offsetAttr);
+  }
+
+  if (kind == CK_BaseToDerivedMemberPointer)
+    return cir::DerivedDataMemberOp::create(cgf.getBuilder(), loc, resultTy,
+                                            src, offsetAttr);
+  return cir::BaseDataMemberOp::create(cgf.getBuilder(), loc, resultTy, src,
+                                       offsetAttr);
+}
+
 /// The Itanium ABI always places an offset to the complete object
 /// at entry -2 in the vtable.
 void CIRGenItaniumCXXABI::emitVirtualObjectDelete(
