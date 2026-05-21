@@ -1885,37 +1885,6 @@ private:
   std::vector<const parser::OpenMPDeclarativeConstruct *> declaratives_;
 };
 
-bool OmpVisitor::HasDataEnvironment(llvm::omp::Directive dir) {
-  for (auto leaf : llvm::omp::getLeafConstructsOrSelf(dir)) {
-    switch (leaf) {
-    case llvm::omp::Directive::OMPD_distribute: // work-distribution
-    case llvm::omp::Directive::OMPD_do: // work-distribution
-    case llvm::omp::Directive::OMPD_for: // work-distribution
-    case llvm::omp::Directive::OMPD_loop: // work-distribution
-    case llvm::omp::Directive::OMPD_parallel: // team-generating
-    case llvm::omp::Directive::OMPD_scope: // work-distribution
-    case llvm::omp::Directive::OMPD_sections: // work-distribution
-    case llvm::omp::Directive::OMPD_simd:
-    case llvm::omp::Directive::OMPD_single: // work-distribution
-    case llvm::omp::Directive::OMPD_target: // task-generating
-    case llvm::omp::Directive::OMPD_target_data: // task-generating
-    case llvm::omp::Directive::OMPD_target_enter_data: // task-generating
-    case llvm::omp::Directive::OMPD_target_exit_data: // task-generating
-    case llvm::omp::Directive::OMPD_target_update: // task-generating
-    case llvm::omp::Directive::OMPD_task: // task-generating
-    case llvm::omp::Directive::OMPD_taskgroup:
-    case llvm::omp::Directive::OMPD_taskloop: // task-generating
-    case llvm::omp::Directive::OMPD_teams: // team-generating
-    case llvm::omp::Directive::OMPD_workdistribute: // work-distribution
-    case llvm::omp::Directive::OMPD_workshare: // work-distribution
-      return true;
-    default:
-      break;
-    }
-  }
-  return false;
-}
-
 bool OmpVisitor::NeedsScope(const parser::OmpClause &x) {
   // Iterators contain declarations, whose scope extends until the end
   // the clause.
