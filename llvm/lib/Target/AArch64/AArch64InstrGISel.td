@@ -216,7 +216,7 @@ def G_SMULL : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_PMUL : AArch64GenericInstruction {
+def G_CLMUL : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
   let hasSideEffects = 0;
@@ -334,7 +334,7 @@ def : GINodeEquiv<G_FCMGT, AArch64fcmgt>;
 
 def : GINodeEquiv<G_BSP, AArch64bsp>;
 
-def : GINodeEquiv<G_PMUL, clmul>;
+def : GINodeEquiv<G_CLMUL, clmul>;
 
 def : GINodeEquiv<G_PMULL, AArch64pmull>;
 def : GINodeEquiv<G_UMULL, AArch64umull>;

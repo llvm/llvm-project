@@ -1942,7 +1942,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::aarch64_neon_fminnm:
     return LowerBinOp(TargetOpcode::G_FMINNUM);
   case Intrinsic::aarch64_neon_pmul:
-    return LowerBinOp(AArch64::G_PMUL);
+    return LowerBinOp(AArch64::G_CLMUL);
   case Intrinsic::aarch64_neon_pmull:
   case Intrinsic::aarch64_neon_pmull64:
     return LowerBinOp(AArch64::G_PMULL);
