@@ -271,7 +271,7 @@ Symbols:
   - Name:  baz
 ...
 
-## Check that the first call graph section is processed and the second call graph section is ignored.
+## Check that both the call graph sections are processed and printed.
 ## Note that we do not expect an object file to have more than one call graph section as we merge the
 ## call graph sections when there are more than one.
 # RUN: yaml2obj --docnum=7 %s -o %t12
@@ -308,7 +308,6 @@ Symbols:
 # LLVM-FIRST-CGSECTION-NEXT:       IndirectTypeIDs: []
 # LLVM-FIRST-CGSECTION-NEXT:     }
 # LLVM-FIRST-CGSECTION-NEXT:   ]
-# LLVM-FIRST-CGSECTION-NOT: {{.}}
 
 # JSON-FIRST-CGSECTION:     "CallGraph": [
 # JSON-FIRST-CGSECTION-NEXT:      {
@@ -344,9 +343,6 @@ Symbols:
 # JSON-FIRST-CGSECTION-NEXT:        }
 # JSON-FIRST-CGSECTION-NEXT:      }
 # JSON-FIRST-CGSECTION-NEXT:    ]
-# JSON-FIRST-CGSECTION-NEXT:   }
-# JSON-FIRST-CGSECTION-NEXT:  ]
-# JSON-FIRST-CGSECTION-NOT: {{.}}
 
 --- !ELF
 FileHeader:

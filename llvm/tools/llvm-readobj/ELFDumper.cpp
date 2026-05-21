@@ -8257,8 +8257,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     const Elf_Shdr *CGRelSection = CGMapEntry.second;
 
     this->FuncCGInfos.clear();
-    if (!this->processCallGraphSection(CGSection) ||
-        this->FuncCGInfos.empty())
+    if (!this->processCallGraphSection(CGSection) || this->FuncCGInfos.empty())
       continue;
 
     std::vector<Relocation<ELFT>> Relocations;
@@ -8275,8 +8274,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
           return;
         }
         RelocSymTab = *SymtabOrErr;
-        this->forEachRelocationDo(
-            *CGRelSection, [&](const auto &R, ...) { Relocations.push_back(R); });
+        this->forEachRelocationDo(*CGRelSection, [&](const auto &R, ...) {
+          Relocations.push_back(R);
+        });
         llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
           return LHS.Offset < RHS.Offset;
         });
@@ -8320,9 +8320,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
 
     auto PrintFunc = [&](uint64_t FuncPC) {
       uint64_t FuncEntryPC = FuncPC;
-      // In ARM thumb mode the LSB of the function pointer is set to 1. Since this
-      // detail is unncessary in call graph reconstruction, we are clearing this
-      // bit to facilate tooling.
+      // In ARM thumb mode the LSB of the function pointer is set to 1. Since
+      // this detail is unncessary in call graph reconstruction, we are clearing
+      // this bit to facilate tooling.
       if (this->Obj.getHeader().e_machine == ELF::EM_ARM)
         FuncEntryPC = FuncPC & ~1;
       if (this->Obj.getHeader().e_type == ELF::ET_REL)
@@ -8347,8 +8347,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
         }
       }
       W.printNumber("NumIndirectTargetTypeIDs", CGInfo.IndirectTypeIDs.size());
-      SmallVector<uint64_t, 4> IndirectTypeIDsList(CGInfo.IndirectTypeIDs.begin(),
-                                                   CGInfo.IndirectTypeIDs.end());
+      SmallVector<uint64_t, 4> IndirectTypeIDsList(
+          CGInfo.IndirectTypeIDs.begin(), CGInfo.IndirectTypeIDs.end());
       W.printHexList("IndirectTypeIDs", ArrayRef(IndirectTypeIDsList));
     }
   }
