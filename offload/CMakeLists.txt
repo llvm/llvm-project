@@ -113,18 +113,19 @@ if(NOT "openmp" IN_LIST RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES AND
 endif()
 
 # Set the path of all resulting libraries to a unified location so that it can
-# be used for testing.
-# TODO: Use common runtimes infrastructure for output and install paths
-set(LIBOMPTARGET_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+# be used for testing and found in the build tree.
+if(LLVM_LIBRARY_OUTPUT_INTDIR)
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+    set(LIBOMPTARGET_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${OFFLOAD_TARGET_SUBDIR})
+  else()
+    set(LIBOMPTARGET_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+  endif()
+else()
+  set(LIBOMPTARGET_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+endif()
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
-
-if(NOT LLVM_LIBRARY_OUTPUT_INTDIR)
-  set(LIBOMPTARGET_INTDIR ${LIBOMPTARGET_LIBRARY_DIR})
-else()
-  set(LIBOMPTARGET_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
-endif()
 
 # Get dependencies for the different components of the project.
 include(LibomptargetGetDependencies)
@@ -357,7 +358,7 @@ endif()
 # TODO: Use RUNTIMES_OUTPUT_RESOURCE_LIB_DIR instead
 set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
   "Path to folder containing llvm library libomptarget.so")
-set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
+set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_LIBRARY_DIR}" CACHE STRING
   "Path to folder where intermediate libraries will be output")
 
 if(SANITIZER_AMDGPU)
