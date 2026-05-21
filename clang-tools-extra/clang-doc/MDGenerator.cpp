@@ -81,7 +81,7 @@ class TableCommentWriter {
 public:
   explicit TableCommentWriter(llvm::raw_ostream &OS) : OS(OS) {}
 
-  void write(const OwningVec<CommentInfo> &Comments) {
+  void write(const DocList<CommentInfo> &Comments) {
     for (const auto &C : Comments)
       writeTableSafeComment(C);
 

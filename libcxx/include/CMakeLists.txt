@@ -533,7 +533,6 @@ set(files
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/ibm.h
-  __locale_dir/locale_base_api/openbsd.h
   __locale_dir/messages.h
   __locale_dir/money.h
   __locale_dir/num.h
@@ -552,6 +551,7 @@ set(files
   __locale_dir/support/no_locale/conversions.h
   __locale_dir/support/no_locale/formatting.h
   __locale_dir/support/no_locale/strtonum.h
+  __locale_dir/support/openbsd.h
   __locale_dir/support/windows.h
   __locale_dir/time.h
   __locale_dir/wbuffer_convert.h
@@ -782,7 +782,6 @@ set(files
   __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
   __support/xlocale/__posix_l_fallback.h
-  __support/xlocale/__strtonum_fallback.h
   __system_error/errc.h
   __system_error/error_category.h
   __system_error/error_code.h

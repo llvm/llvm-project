@@ -29,15 +29,22 @@ set(supported_sources
   derived.cpp
   descriptor-io.cpp
   descriptor.cpp
-  dot-product.cpp
+  dot-product-integer.cpp
+  dot-product-real.cpp
+  dot-product-complex.cpp
   edit-input.cpp
   edit-output.cpp
   environment.cpp
   exceptions.cpp
   external-unit.cpp
-  extrema.cpp
+  extrema-maxloc.cpp
+  extrema-minloc.cpp
+  extrema-maxloc-dim.cpp
+  extrema-minloc-dim.cpp
+  extrema-value.cpp
   file.cpp
-  findloc.cpp
+  findloc-total.cpp
+  findloc-dim.cpp
   format.cpp
   inquiry.cpp
   internal-unit.cpp
@@ -46,8 +53,18 @@ set(supported_sources
   io-error.cpp
   io-stmt.cpp
   iostat.cpp
-  matmul-transpose.cpp
-  matmul.cpp
+  matmul-transpose-integer.cpp
+  matmul-transpose-real.cpp
+  matmul-transpose-complex.cpp
+  matmul-transpose-extypes-int16.cpp
+  matmul-transpose-extypes-real10.cpp
+  matmul-transpose-extypes-real16.cpp
+  matmul-integer.cpp
+  matmul-real.cpp
+  matmul-complex.cpp
+  matmul-extypes-int16.cpp
+  matmul-extypes-real10.cpp
+  matmul-extypes-real16.cpp
   memory.cpp
   misc-intrinsic.cpp
   namelist.cpp
@@ -75,7 +92,7 @@ set(supported_sources
 
 # List of source not used for GPU offloading.
 set(host_sources
-  ${FLANG_SOURCE_DIR}/module/iso_fortran_env_impl.f90
+  iso_fortran_env_impl.cpp
   command.cpp
   complex-powi.cpp
   complex-reduction.c
@@ -112,17 +129,34 @@ set(gpu_sources
   derived-api.cpp
   derived.cpp
   descriptor.cpp
-  dot-product.cpp
+  dot-product-integer.cpp
+  dot-product-real.cpp
+  dot-product-complex.cpp
   edit-output.cpp
-  extrema.cpp
+  extrema-maxloc.cpp
+  extrema-minloc.cpp
+  extrema-maxloc-dim.cpp
+  extrema-minloc-dim.cpp
+  extrema-value.cpp
   environment.cpp
-  findloc.cpp
+  findloc-total.cpp
+  findloc-dim.cpp
   format.cpp
   inquiry.cpp
   internal-unit.cpp
   iostat.cpp
-  matmul-transpose.cpp
-  matmul.cpp
+  matmul-transpose-integer.cpp
+  matmul-transpose-real.cpp
+  matmul-transpose-complex.cpp
+  matmul-transpose-extypes-int16.cpp
+  matmul-transpose-extypes-real10.cpp
+  matmul-transpose-extypes-real16.cpp
+  matmul-integer.cpp
+  matmul-real.cpp
+  matmul-complex.cpp
+  matmul-extypes-int16.cpp
+  matmul-extypes-real10.cpp
+  matmul-extypes-real16.cpp
   memory.cpp
   misc-intrinsic.cpp
   non-tbp-dio.cpp

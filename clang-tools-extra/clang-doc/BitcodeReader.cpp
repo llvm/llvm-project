@@ -154,7 +154,7 @@ static llvm::Error decodeRecord(const Record &R, FieldId &Field,
                                  "invalid value for FieldId");
 }
 
-static llvm::Error decodeRecord(const Record &R, OwningVec<Location> &Field,
+static llvm::Error decodeRecord(const Record &R, DocList<Location> &Field,
                                 llvm::StringRef Blob) {
   if (R.size() < 3)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -962,11 +962,8 @@ static llvm::Error addReference(T I, Reference &&R, FieldId F) {
 }
 
 template <> llvm::Error addReference(VarInfo *I, Reference &&R, FieldId F) {
-  switch (F) {
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "VarInfo cannot contain this Reference");
-  }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "VarInfo cannot contain this Reference");
 }
 
 template <> llvm::Error addReference(TypeInfo *I, Reference &&R, FieldId F) {
@@ -1005,19 +1002,13 @@ llvm::Error addReference(MemberTypeInfo *I, Reference &&R, FieldId F) {
 }
 
 template <> llvm::Error addReference(EnumInfo *I, Reference &&R, FieldId F) {
-  switch (F) {
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "invalid type cannot contain Reference");
-  }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid type cannot contain Reference");
 }
 
 template <> llvm::Error addReference(TypedefInfo *I, Reference &&R, FieldId F) {
-  switch (F) {
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "invalid type cannot contain Reference");
-  }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid type cannot contain Reference");
 }
 
 template <>
@@ -1489,8 +1480,8 @@ ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
 }
 
 // Entry point
-llvm::Expected<OwningPtrArray<Info>> ClangDocBitcodeReader::readBitcode() {
-  OwningPtrArray<Info> Infos;
+llvm::Expected<std::vector<Info *>> ClangDocBitcodeReader::readBitcode() {
+  std::vector<Info *> Infos;
   if (auto Err = validateStream())
     return std::move(Err);
 
