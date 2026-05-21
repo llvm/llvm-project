@@ -34,10 +34,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "gcn-vopd-utils"
 
-bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
-                                   const MachineInstr &MIX,
-                                   const MachineInstr &MIY, bool IsVOPD3,
-                                   bool AllowSameVGPR) {
+static bool checkVOPDRegConstraints(const SIInstrInfo &TII,
+                                    const MachineInstr &MIX,
+                                    const MachineInstr &MIY, bool IsVOPD3,
+                                    bool AllowSameVGPR) {
   namespace VOPD = AMDGPU::VOPD;
 
   const MachineFunction *MF = MIX.getMF();
@@ -169,18 +169,32 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   return true;
 }
 
+static AMDGPU::CanBeVOPD cachedGetCanBeVOPD(unsigned Opc,
+                                            unsigned EncodingFamily,
+                                            bool IsVOPD3,
+                                            CanBeVOPDCache &Cache) {
+  return Cache
+      .try_emplace((Opc << 1) | IsVOPD3,
+                   AMDGPU::getCanBeVOPD(Opc, EncodingFamily, IsVOPD3))
+      .first->second;
+}
+
 /// Core pair-eligibility check for a single VOPD encoding variant (VOPD or
-/// VOPD3).  Returns the X/Y assignment on success, or std::nullopt otherwise.
+/// VOPD3). Returns the X/Y assignment on success, or std::nullopt otherwise.
 static std::optional<VOPDMatchInfo>
 tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
                         MachineInstr &FirstMI, MachineInstr &SecondMI,
-                        bool IsVOPD3) {
+                        bool IsVOPD3, CanBeVOPDCache &Cache) {
   unsigned Opc = FirstMI.getOpcode();
   unsigned Opc2 = SecondMI.getOpcode();
   AMDGPU::CanBeVOPD FirstCanBeVOPD =
-      AMDGPU::getCanBeVOPD(Opc, EncodingFamily, IsVOPD3);
+      cachedGetCanBeVOPD(Opc, EncodingFamily, IsVOPD3, Cache);
   AMDGPU::CanBeVOPD SecondCanBeVOPD =
-      AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, IsVOPD3);
+      cachedGetCanBeVOPD(Opc2, EncodingFamily, IsVOPD3, Cache);
+
+  if (!(FirstCanBeVOPD.X && SecondCanBeVOPD.Y) &&
+      !(FirstCanBeVOPD.Y && SecondCanBeVOPD.X))
+    return std::nullopt;
 
   // If SecondMI depends on FirstMI they cannot execute at the same time.
   if (TII.hasRAWDependency(FirstMI, SecondMI))
@@ -211,54 +225,17 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
 
 std::optional<VOPDMatchInfo> llvm::tryMatchVOPDPair(const SIInstrInfo &TII,
                                                     MachineInstr &FirstMI,
-                                                    MachineInstr &SecondMI) {
+                                                    MachineInstr &SecondMI,
+                                                    CanBeVOPDCache &Cache) {
   const GCNSubtarget &ST = TII.getSubtarget();
   unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
   if (auto Match = tryMatchVOPDPairVariant(TII, EncodingFamily, FirstMI,
-                                           SecondMI, /*IsVOPD3=*/false))
+                                           SecondMI, /*IsVOPD3=*/false, Cache))
     return Match;
   if (ST.hasVOPD3())
     return tryMatchVOPDPairVariant(TII, EncodingFamily, FirstMI, SecondMI,
-                                   /*IsVOPD3=*/true);
+                                   /*IsVOPD3=*/true, Cache);
   return std::nullopt;
-}
-
-/// Check if the instr pair, FirstMI and SecondMI, should be scheduled
-/// together. Given SecondMI, when FirstMI is unspecified, then check if
-/// SecondMI may be part of a fused pair at all.
-static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
-                                       const TargetSubtargetInfo &TSI,
-                                       const MachineInstr *FirstMI,
-                                       const MachineInstr &SecondMI) {
-  const SIInstrInfo &STII = static_cast<const SIInstrInfo &>(TII);
-  const GCNSubtarget &ST = STII.getSubtarget();
-
-  // One instruction case: just check whether SecondMI is eligible at all.
-  if (!FirstMI) {
-    unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
-    unsigned Opc2 = SecondMI.getOpcode();
-    auto checkCanBeVOPD = [&](bool VOPD3) {
-      AMDGPU::CanBeVOPD CanBeVOPD =
-          AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, VOPD3);
-      return CanBeVOPD.Y || CanBeVOPD.X;
-    };
-    return checkCanBeVOPD(false) || (ST.hasVOPD3() && checkCanBeVOPD(true));
-  }
-
-#ifdef EXPENSIVE_CHECKS
-  assert([&]() -> bool {
-    for (auto MII = MachineBasicBlock::const_iterator(FirstMI);
-         MII != FirstMI->getParent()->instr_end(); ++MII) {
-      if (&*MII == &SecondMI)
-        return true;
-    }
-    return false;
-  }() && "Expected FirstMI to precede SecondMI");
-#endif
-
-  return tryMatchVOPDPair(STII, *const_cast<MachineInstr *>(FirstMI),
-                          const_cast<MachineInstr &>(SecondMI))
-      .has_value();
 }
 
 namespace {
@@ -267,11 +244,45 @@ namespace {
 /// be turned into VOPD instructions
 /// Greedily pairs instruction candidates. O(n^2) algorithm.
 struct VOPDPairingMutation : ScheduleDAGMutation {
-  MacroFusionPredTy shouldScheduleAdjacent; // NOLINT: function pointer
+  CanBeVOPDCache VOPDCache;
 
-  VOPDPairingMutation(
-      MacroFusionPredTy shouldScheduleAdjacent) // NOLINT: function pointer
-      : shouldScheduleAdjacent(shouldScheduleAdjacent) {}
+  /// Check if the instr pair, FirstMI and SecondMI, should be scheduled
+  /// together. Given SecondMI, when FirstMI is unspecified, then check if
+  /// SecondMI may be part of a fused pair at all.
+  bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
+                                  const TargetSubtargetInfo &TSI,
+                                  const MachineInstr *FirstMI,
+                                  const MachineInstr &SecondMI) {
+    const SIInstrInfo &STII = static_cast<const SIInstrInfo &>(TII);
+    const GCNSubtarget &ST = STII.getSubtarget();
+
+    // One instruction case: just check whether SecondMI is eligible at all.
+    if (!FirstMI) {
+      unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
+      unsigned Opc2 = SecondMI.getOpcode();
+      auto CheckCanBeVOPD = [&](bool VOPD3) {
+        AMDGPU::CanBeVOPD CanBeVOPD =
+            cachedGetCanBeVOPD(Opc2, EncodingFamily, VOPD3, VOPDCache);
+        return CanBeVOPD.Y || CanBeVOPD.X;
+      };
+      return CheckCanBeVOPD(false) || (ST.hasVOPD3() && CheckCanBeVOPD(true));
+    }
+
+#ifdef EXPENSIVE_CHECKS
+    assert([&]() -> bool {
+      for (auto MII = MachineBasicBlock::const_iterator(FirstMI);
+           MII != FirstMI->getParent()->instr_end(); ++MII) {
+        if (&*MII == &SecondMI)
+          return true;
+      }
+      return false;
+    }() && "Expected FirstMI to precede SecondMI");
+#endif
+
+    return tryMatchVOPDPair(STII, *const_cast<MachineInstr *>(FirstMI),
+                            const_cast<MachineInstr &>(SecondMI), VOPDCache)
+        .has_value();
+  }
 
   void apply(ScheduleDAGInstrs *DAG) override {
     const TargetInstrInfo &TII = *DAG->TII;
@@ -284,7 +295,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
     std::vector<SUnit>::iterator ISUI, JSUI;
     for (ISUI = DAG->SUnits.begin(); ISUI != DAG->SUnits.end(); ++ISUI) {
       const MachineInstr *IMI = ISUI->getInstr();
-      if (!shouldScheduleAdjacent(TII, ST, nullptr, *IMI))
+      if (!shouldScheduleVOPDAdjacent(TII, ST, nullptr, *IMI))
         continue;
       if (!hasLessThanNumFused(*ISUI, 2))
         continue;
@@ -294,7 +305,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
           continue;
         const MachineInstr *JMI = JSUI->getInstr();
         if (!hasLessThanNumFused(*JSUI, 2) ||
-            !shouldScheduleAdjacent(TII, ST, IMI, *JMI))
+            !shouldScheduleVOPDAdjacent(TII, ST, IMI, *JMI))
           continue;
         if (fuseInstructionPair(*DAG, *ISUI, *JSUI))
           break;
@@ -306,5 +317,5 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
 } // namespace
 
 std::unique_ptr<ScheduleDAGMutation> llvm::createVOPDPairingMutation() {
-  return std::make_unique<VOPDPairingMutation>(shouldScheduleVOPDAdjacent);
+  return std::make_unique<VOPDPairingMutation>();
 }

@@ -51,6 +51,8 @@ private:
     bool IsVOPD3;
   };
 
+  CanBeVOPDCache VOPDCache;
+
 public:
   const GCNSubtarget *ST = nullptr;
 
@@ -149,7 +151,8 @@ public:
           continue;
         auto *SecondMI = &*MII;
 
-        if (auto Match = tryMatchVOPDPair(*SII, *FirstMI, *SecondMI)) {
+        if (auto Match =
+                tryMatchVOPDPair(*SII, *FirstMI, *SecondMI, VOPDCache)) {
           ReplaceCandidates.push_back(
               VOPDCombineInfo(Match->MIX, Match->MIY, Match->IsVOPD3));
           ++MII;
