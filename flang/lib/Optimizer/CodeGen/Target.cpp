@@ -1396,11 +1396,6 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
 
   static constexpr int defaultWidth = 64;
   static constexpr int defaultWidthBytes = defaultWidth / 8;
-  // TODO: Can't query ABI from inside TargetRewrite so assume the more common
-  // `lp64d` for now. Alternatively could check float-support from
-  // target-features, but that could be overridden by manually setting
-  // `-mabi=lp64`.
-  static constexpr bool hasHardFloatABI = true;
 
   CodeGenSpecifics::Marshalling
   complexArgumentType(mlir::Location loc, mlir::Type eleTy) const override {
@@ -1432,6 +1427,18 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
       typeTodo(sem, loc, "return");
     }
     return marshal;
+  }
+
+  // NOTE: Currently only supports lp64/lp64d.
+  // TODO: Can't query target-abi from inside TargetRewrite so try to get it
+  // from target-features for now. Detailed logic from clang is explained in:
+  // riscv::getRISCVABI() in clang/lib/Driver/ToolChains/Arch/RISCV.cpp
+  bool hasHardFloatABI() const {
+    if (!targetFeatures.nullOrEmpty())
+      return targetFeatures.contains("+d");
+
+    // Fallback to get ABI from target-triple.
+    return triple.getOS() != llvm::Triple::UnknownOS;
   }
 
   CodeGenSpecifics::Marshalling
@@ -1720,7 +1727,7 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
   structArgumentType(mlir::Location loc, fir::RecordType recTy,
                      const Marshalling &previousArguments) const override {
     int gprArgs = 8;
-    int fprArgs = hasHardFloatABI ? 8 : 0;
+    int fprArgs = hasHardFloatABI() ? 8 : 0;
 
     return classifyStruct(loc, recTy, gprArgs, fprArgs, /*isResult=*/false,
                           previousArguments);
@@ -1729,7 +1736,7 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
   CodeGenSpecifics::Marshalling
   structReturnType(mlir::Location loc, fir::RecordType recTy) const override {
     int gprArgs = 2;
-    int fprArgs = hasHardFloatABI ? 2 : 0;
+    int fprArgs = hasHardFloatABI() ? 2 : 0;
 
     return classifyStruct(loc, recTy, gprArgs, fprArgs, /*isResult=*/true, {});
   }
