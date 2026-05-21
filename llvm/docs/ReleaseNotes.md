@@ -89,6 +89,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Fast math flags are now permitted on `uitofp` and `sitofp`.
 
+* The ``modular-format`` attribute now supports the ``fixed`` aspect for C
+  N1169 fixed-point ``printf`` specifiers.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
