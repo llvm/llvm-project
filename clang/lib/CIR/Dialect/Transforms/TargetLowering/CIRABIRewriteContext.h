@@ -38,12 +38,12 @@ public:
   mlir::LogicalResult
   rewriteFunctionDefinition(mlir::FunctionOpInterface funcOp,
                             const mlir::abi::FunctionClassification &fc,
-                            mlir::OpBuilder &rewriter) override;
+                            mlir::OpBuilder &builder) override;
 
   mlir::LogicalResult
   rewriteCallSite(mlir::Operation *callOp,
                   const mlir::abi::FunctionClassification &fc,
-                  mlir::OpBuilder &rewriter) override;
+                  mlir::OpBuilder &builder) override;
 
   mlir::StringRef getDialectNamespace() const override { return "cir"; }
 

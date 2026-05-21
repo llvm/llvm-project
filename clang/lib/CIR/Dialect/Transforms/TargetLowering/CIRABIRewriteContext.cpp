@@ -128,7 +128,7 @@ Value createIgnoredValue(OpBuilder &builder, Location loc, Type ty) {
 
 LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
     FunctionOpInterface funcOpInterface, const FunctionClassification &fc,
-    OpBuilder &rewriter) {
+    OpBuilder &builder) {
   // The pass driver (CallConvLoweringPass) only ever hands us cir.func ops,
   // and the body of this routine is end-to-end CIR (it creates cir.constant,
   // cir.return, etc.).  Cast once at the top so the rest of the function
@@ -179,9 +179,9 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
           continue;
         BlockArgument arg = entry.getArgument(blockIdx);
         if (!arg.use_empty()) {
-          rewriter.setInsertionPointToStart(&entry);
+          builder.setInsertionPointToStart(&entry);
           Value poison =
-              createIgnoredValue(rewriter, funcOp.getLoc(), arg.getType());
+              createIgnoredValue(builder, funcOp.getLoc(), arg.getType());
           arg.replaceAllUsesWith(poison);
         }
         entry.eraseArgument(blockIdx);
@@ -202,8 +202,8 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
       for (cir::ReturnOp r : returns) {
         if (r.getNumOperands() == 0)
           continue;
-        rewriter.setInsertionPoint(r);
-        cir::ReturnOp::create(rewriter, r.getLoc());
+        builder.setInsertionPoint(r);
+        cir::ReturnOp::create(builder, r.getLoc());
         r.erase();
       }
     }
@@ -232,7 +232,7 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
 }
 
 LogicalResult CIRABIRewriteContext::rewriteCallSite(
-    Operation *callOp, const FunctionClassification &fc, OpBuilder &rewriter) {
+    Operation *callOp, const FunctionClassification &fc, OpBuilder &builder) {
   if (!needsRewrite(fc))
     return success();
 
@@ -270,18 +270,16 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
   SmallVector<Value> newArgs;
   ValueRange argOperands = call.getArgOperands();
   newArgs.reserve(argOperands.size());
-  // The classifier sees the function's named-arg list; the call site sees
-  // those plus any variadic operands appended at the end.  So argOperands
-  // is at least as long as argInfos.
-  assert(fc.argInfos.size() <= argOperands.size() &&
-         "call has fewer operands than the function has classified args");
+  if (argOperands.size() > fc.argInfos.size())
+    return call.emitOpError()
+           << "variadic arguments not yet implemented in CallConvLowering";
+  assert(fc.argInfos.size() == argOperands.size() &&
+         "call operand count must match classified arg count");
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
     if (ac.kind == ArgKind::Ignore)
       continue;
     newArgs.push_back(argOperands[idx]);
   }
-  for (unsigned i = fc.argInfos.size(); i < argOperands.size(); ++i)
-    newArgs.push_back(argOperands[i]);
 
   bool hasResult = call.getNumResults() > 0;
   Type origRetTy = hasResult ? call.getResult().getType()
@@ -296,8 +294,8 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
                               << "call-site not yet implemented in "
                               << "CallConvLowering";
 
-  rewriter.setInsertionPoint(call);
-  auto newCall = cir::CallOp::create(rewriter, call.getLoc(),
+  builder.setInsertionPoint(call);
+  auto newCall = cir::CallOp::create(builder, call.getLoc(),
                                      call.getCalleeAttr(), callRetTy, newArgs);
   for (NamedAttribute attr : call->getAttrs())
     if (!newCall->hasAttr(attr.getName()))
@@ -309,8 +307,8 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
     // those uses remain well-formed without pretending we have a real
     // value at the ABI boundary.
     if (!call.getResult().use_empty()) {
-      rewriter.setInsertionPointAfter(newCall);
-      Value poison = createIgnoredValue(rewriter, call.getLoc(), origRetTy);
+      builder.setInsertionPointAfter(newCall);
+      Value poison = createIgnoredValue(builder, call.getLoc(), origRetTy);
       call.getResult().replaceAllUsesWith(poison);
     }
   } else if (hasResult) {

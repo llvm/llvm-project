@@ -140,9 +140,9 @@ void CallConvLoweringPass::runOnOperation() {
   CIRABIRewriteContext rewriteCtx(moduleOp);
   SymbolTable symbolTable(moduleOp);
 
-  // Phase 1: classify every cir.func.  No IR mutation happens here, so
-  // running this as a single up-front walk lets later phases consult any
-  // function's classification regardless of visitation order.
+  // Classify every cir.func up front.  No IR mutation happens here, so
+  // later walks can consult any function's classification regardless of
+  // visitation order.
   llvm::MapVector<cir::FuncOp, FunctionClassification> classifications;
   bool anyFailed = false;
   moduleOp.walk([&](cir::FuncOp f) {
@@ -158,11 +158,10 @@ void CallConvLoweringPass::runOnOperation() {
     return;
   }
 
-  // Phase 2: build a callee -> callers index.  A single module walk gives
-  // us every direct cir.call / cir.try_call to each cir.func; we use this
-  // in phase 3 to rewrite a function and all of its call sites together.
-  // Indirect or unresolved callees are skipped here (rewriteCallSite
-  // rejects indirect calls; see phase 4).
+  // Build a callee-to-callers index.  One module walk collects every direct
+  // cir.call / cir.try_call to each cir.func; the loop below rewrites a
+  // function and all of its call sites together.  Indirect or unresolved
+  // callees are skipped here; rewriteCallSite errors on those at the end.
   llvm::DenseMap<cir::FuncOp, SmallVector<Operation *>> callers;
   moduleOp.walk([&](Operation *op) {
     if (!isa<cir::CallOp, cir::TryCallOp>(op))
@@ -171,35 +170,34 @@ void CallConvLoweringPass::runOnOperation() {
       callers[callee].push_back(op);
   });
 
-  // Phase 3: rewrite each function together with every direct call to
-  // it.  By the time we move on to function F+1, F's signature and every
-  // direct call to F have already been brought into alignment, and
-  // F+1..FN are still in their original (mutually consistent) form, so
-  // the IR is verifier-clean at every outer-iteration boundary.
+  // Rewrite each function together with every direct call to it.  By the
+  // time we move on to function F+1, F's signature and every direct call to
+  // F have already been brought into alignment, and F+1..FN are still in
+  // their original (mutually consistent) form, so the IR is verifier-clean
+  // at every outer-iteration boundary.
   //
   // There is still a brief inner window where F's signature has been
-  // rewritten but its callers have not yet caught up -- the MLIR
-  // rewriter API gives us no way to mutate both sides of a call
-  // atomically.  No verifier runs inside the pass, and at pass exit the
-  // module is verifier-clean.  Fusing the inner loop here is what keeps
-  // the invalid window per-function rather than module-wide.
-  OpBuilder rewriter(ctx);
+  // rewritten but its callers have not yet caught up -- we have no way to
+  // mutate both sides of a call atomically.  No verifier runs inside the
+  // pass, and at pass exit the module is verifier-clean.  Fusing the inner
+  // loop here keeps the invalid window per-function rather than module-wide.
+  OpBuilder builder(ctx);
   for (auto &kv : classifications) {
     cir::FuncOp func = kv.first;
     const FunctionClassification &fc = kv.second;
-    if (failed(rewriteCtx.rewriteFunctionDefinition(func, fc, rewriter))) {
+    if (failed(rewriteCtx.rewriteFunctionDefinition(func, fc, builder))) {
       signalPassFailure();
       return;
     }
     for (Operation *callOp : callers.lookup(func))
-      if (failed(rewriteCtx.rewriteCallSite(callOp, fc, rewriter))) {
+      if (failed(rewriteCtx.rewriteCallSite(callOp, fc, builder))) {
         signalPassFailure();
         return;
       }
   }
 
-  // Phase 4: reject indirect calls when the module contains any ABI rewrite
-  // that would need call-site lowering.  We cannot strip or coerce operands
+  // Reject indirect calls when the module contains any ABI rewrite that
+  // would need call-site lowering.  We cannot strip or coerce operands
   // without a resolved callee symbol.
   const FunctionClassification *rewriteFc = nullptr;
   for (auto &kv : classifications)
@@ -211,7 +209,7 @@ void CallConvLoweringPass::runOnOperation() {
     moduleOp.walk([&](cir::CallOp c) {
       if (!c.isIndirect())
         return;
-      if (failed(rewriteCtx.rewriteCallSite(c, *rewriteFc, rewriter)))
+      if (failed(rewriteCtx.rewriteCallSite(c, *rewriteFc, builder)))
         anyFailed = true;
     });
     if (anyFailed) {
