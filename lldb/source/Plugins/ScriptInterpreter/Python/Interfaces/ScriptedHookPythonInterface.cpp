@@ -53,9 +53,9 @@ ScriptedHookPythonInterface::GetSupportedMethods() {
 
 llvm::Expected<StructuredData::GenericSP>
 ScriptedHookPythonInterface::CreatePluginObject(
-    llvm::StringRef class_name, lldb::TargetSP target_sp,
+    const ScriptedMetadata &scripted_metadata, lldb::TargetSP target_sp,
     const StructuredDataImpl &args_sp) {
-  return ScriptedPythonInterface::CreatePluginObject(class_name, nullptr,
+  return ScriptedPythonInterface::CreatePluginObject(scripted_metadata, nullptr,
                                                      target_sp, args_sp);
 }
 

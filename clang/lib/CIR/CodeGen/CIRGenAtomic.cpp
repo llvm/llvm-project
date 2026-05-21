@@ -570,6 +570,28 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   cir::AtomicFetchKindAttr fetchAttr;
   bool fetchFirst = true;
 
+  bool fetchRequiredIntCast = false;
+  mlir::Type pointeeType = ptr.getElementType();
+  auto handleFetchOp = [&](cir::AtomicFetchKind kind) {
+    opName = cir::AtomicFetchOp::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(), kind);
+
+    // The fetch operation only takes int/float as its element type, so
+    // pointer-to-pointer needs to just be cast to a intptr type. Do the first
+    // part here, and we can cast the rest later. Classic codegen has to do a
+    // bit more to handle floating point types for exchange, but this isn't
+    // really necessary for CIR. This mirrors the logic in CIRGenBuiltin for
+    // binary atomic values. Clang type checking enforces that 'val' is a
+    // PtrDiffT, so we cast to that.
+    if (mlir::isa<cir::PointerType>(pointeeType)) {
+      fetchRequiredIntCast = true;
+      mlir::Type ptrSizeInt =
+          cgf.convertType(cgf.getContext().getPointerDiffType());
+
+      ptr = ptr.withElementType(builder, ptrSizeInt);
+    }
+  };
+
   switch (expr->getOp()) {
   case AtomicExpr::AO__c11_atomic_init:
     llvm_unreachable("already handled!");
@@ -644,9 +666,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_add:
   case AtomicExpr::AO__atomic_fetch_add:
   case AtomicExpr::AO__scoped_atomic_fetch_add:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::Add);
+    handleFetchOp(cir::AtomicFetchKind::Add);
     break;
 
   case AtomicExpr::AO__atomic_sub_fetch:
@@ -656,9 +676,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_sub:
   case AtomicExpr::AO__atomic_fetch_sub:
   case AtomicExpr::AO__scoped_atomic_fetch_sub:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::Sub);
+    handleFetchOp(cir::AtomicFetchKind::Sub);
     break;
 
   case AtomicExpr::AO__atomic_min_fetch:
@@ -668,9 +686,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_min:
   case AtomicExpr::AO__atomic_fetch_min:
   case AtomicExpr::AO__scoped_atomic_fetch_min:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::Min);
+    handleFetchOp(cir::AtomicFetchKind::Min);
     break;
 
   case AtomicExpr::AO__atomic_max_fetch:
@@ -680,9 +696,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_max:
   case AtomicExpr::AO__atomic_fetch_max:
   case AtomicExpr::AO__scoped_atomic_fetch_max:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::Max);
+    handleFetchOp(cir::AtomicFetchKind::Max);
     break;
 
   case AtomicExpr::AO__atomic_and_fetch:
@@ -692,9 +706,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_and:
   case AtomicExpr::AO__atomic_fetch_and:
   case AtomicExpr::AO__scoped_atomic_fetch_and:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::And);
+    handleFetchOp(cir::AtomicFetchKind::And);
     break;
 
   case AtomicExpr::AO__atomic_or_fetch:
@@ -704,9 +716,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_or:
   case AtomicExpr::AO__atomic_fetch_or:
   case AtomicExpr::AO__scoped_atomic_fetch_or:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::Or);
+    handleFetchOp(cir::AtomicFetchKind::Or);
     break;
 
   case AtomicExpr::AO__atomic_xor_fetch:
@@ -716,9 +726,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_xor:
   case AtomicExpr::AO__atomic_fetch_xor:
   case AtomicExpr::AO__scoped_atomic_fetch_xor:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::Xor);
+    handleFetchOp(cir::AtomicFetchKind::Xor);
     break;
 
   case AtomicExpr::AO__atomic_nand_fetch:
@@ -728,9 +736,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_nand:
   case AtomicExpr::AO__atomic_fetch_nand:
   case AtomicExpr::AO__scoped_atomic_fetch_nand:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::Nand);
+    handleFetchOp(cir::AtomicFetchKind::Nand);
     break;
 
   case AtomicExpr::AO__atomic_test_and_set: {
@@ -752,16 +758,12 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
 
   case AtomicExpr::AO__atomic_fetch_uinc:
   case AtomicExpr::AO__scoped_atomic_fetch_uinc:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::UIncWrap);
+    handleFetchOp(cir::AtomicFetchKind::UIncWrap);
     break;
 
   case AtomicExpr::AO__atomic_fetch_udec:
   case AtomicExpr::AO__scoped_atomic_fetch_udec:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::UDecWrap);
+    handleFetchOp(cir::AtomicFetchKind::UDecWrap);
     break;
 
   case AtomicExpr::AO__opencl_atomic_init:
@@ -823,6 +825,10 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     rmwOp->setAttr("fetch_first", builder.getUnitAttr());
 
   mlir::Value result = rmwOp->getResult(0);
+
+  if (fetchRequiredIntCast)
+    result = builder.createIntToPtr(result, pointeeType);
+
   builder.createStore(loc, result, dest);
 }
 
