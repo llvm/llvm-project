@@ -1921,6 +1921,23 @@ def _expandLateSubstitutionsExternal(commandLine):
         commandLine = "%s && test -e %s" % (commandLine, filePath)
     return commandLine
 
+def _applyCheckFilter(test, check_filter):
+    """Keep only CommandDirective entries whose 0-indexed integer(s)
+    is/are in check_filter.
+    """
+    if check_filter is None:
+        return test
+    out = []
+    n = -1
+    for d in test:
+        if isinstance(d, CommandDirective):
+            n += 1
+            if n not in check_filter:
+                continue
+        out.append(d)
+    return out
+
+
 def executeShTest(
     test, litConfig, useExternalSh, extra_substitutions=[], preamble_commands=[]
 ):
@@ -1933,6 +1950,7 @@ def executeShTest(
     parsed = parseIntegratedTestScript(test, require_script=not script)
     if isinstance(parsed, lit.Test.Result):
         return parsed
+    parsed = _applyCheckFilter(parsed, litConfig.checkFilter)
     script += parsed
 
     if litConfig.noExecute:
