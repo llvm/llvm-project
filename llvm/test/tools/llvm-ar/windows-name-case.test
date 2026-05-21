@@ -58,14 +58,14 @@ EMPTY: !<thin>
 
 # DELETE-SECOND: foo.txt
 
-## test thin archive d option with -P and N modifiers (full path matching)
+## Test thin archive d option with P and N modifiers (full path matching).
 
 # RUN: echo one > %t/a/file.txt
 # RUN: rm -f %t/archive-dPN.a
 # RUN: llvm-ar rc --thin %t/archive-dPN.a %t/a/file.txt %t/a/FILE.txt
 # RUN: llvm-ar t %t/archive-dPN.a | FileCheck %s --check-prefix=THIN-BEFORE -DPATH=%/t --implicit-check-not={{.}}
 
-## third does not exists, expect no-op
+## Third does not exist, expect no-op.
 # RUN: llvm-ar dPN 3 --thin %t/archive-dPN.a %t/a/file.txt
 # RUN: llvm-ar t %t/archive-dPN.a | FileCheck %s --check-prefix=THIN-BEFORE -DPATH=%/t --implicit-check-not={{.}}
 
