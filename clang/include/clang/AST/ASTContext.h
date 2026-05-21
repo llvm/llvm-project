@@ -1006,7 +1006,7 @@ public:
   /// Raw comments are owned by Comments list.  This mapping is populated
   /// lazily.
   mutable llvm::DenseMap<RawCommentLookupKey, const RawComment *>
-      DeclRawComments;
+      RawComments;
 
   /// Mapping from canonical declaration to the first redeclaration in chain
   /// that has a comment attached.
@@ -1043,7 +1043,7 @@ public:
   /// comments. \p CommentsInFile is a mapping offset -> comment of files in the
   /// same file where \p RepresentativeLocForDecl is.
   RawComment *getRawCommentNoCacheImpl(
-      RawCommentLookupKey Key, const SourceLocation RepresentativeLocForDecl,
+      RawCommentLookupKey Key, const SourceLocation RepresentativeLoc,
       const std::map<unsigned, RawComment *> &CommentsInFile) const;
 
   /// Return the documentation comment attached to a given declaration or

@@ -245,12 +245,11 @@ getLocsForCommentSearch(ASTContext::RawCommentLookupKey Key,
 }
 
 RawComment *ASTContext::getRawCommentNoCacheImpl(
-    RawCommentLookupKey Key, const SourceLocation RepresentativeLocForDecl,
+    RawCommentLookupKey Key, const SourceLocation RepresentativeLoc,
     const std::map<unsigned, RawComment *> &CommentsInTheFile) const {
   // If the declaration doesn't map directly to a location in a file, we
   // can't find the comment.
-  if (RepresentativeLocForDecl.isInvalid() ||
-      !RepresentativeLocForDecl.isFileID())
+  if (RepresentativeLoc.isInvalid() || !RepresentativeLoc.isFileID())
     return nullptr;
 
   // If there are no comments anywhere, we won't find anything.
@@ -262,12 +261,12 @@ RawComment *ASTContext::getRawCommentNoCacheImpl(
 
   // Decompose the location for the declaration and find the beginning of the
   // file buffer.
-  const FileIDAndOffset DeclLocDecomp =
-      SourceMgr.getDecomposedLoc(RepresentativeLocForDecl);
+  const FileIDAndOffset LocDecomp =
+      SourceMgr.getDecomposedLoc(RepresentativeLoc);
 
   // Slow path.
   auto OffsetCommentBehindDecl =
-      CommentsInTheFile.lower_bound(DeclLocDecomp.second);
+      CommentsInTheFile.lower_bound(LocDecomp.second);
 
   // First check whether we have a trailing comment.
   if (OffsetCommentBehindDecl != CommentsInTheFile.end()) {
@@ -281,8 +280,8 @@ RawComment *ASTContext::getRawCommentNoCacheImpl(
 
       // Check that Doxygen trailing comment comes after the declaration, starts
       // on the same line and in the same file as the declaration.
-      if (SourceMgr.getLineNumber(DeclLocDecomp.first, DeclLocDecomp.second) ==
-          Comments.getCommentBeginLine(CommentBehindDecl, DeclLocDecomp.first,
+      if (SourceMgr.getLineNumber(LocDecomp.first, LocDecomp.second) ==
+          Comments.getCommentBeginLine(CommentBehindDecl, LocDecomp.first,
                                        OffsetCommentBehindDecl->first)) {
         return CommentBehindDecl;
       }
@@ -309,14 +308,14 @@ RawComment *ASTContext::getRawCommentNoCacheImpl(
 
   // Get the corresponding buffer.
   bool Invalid = false;
-  const char *Buffer = SourceMgr.getBufferData(DeclLocDecomp.first,
+  const char *Buffer = SourceMgr.getBufferData(LocDecomp.first,
                                                &Invalid).data();
   if (Invalid)
     return nullptr;
 
   // Extract text between the comment and declaration.
   StringRef Text(Buffer + CommentEndOffset,
-                 DeclLocDecomp.second - CommentEndOffset);
+                 LocDecomp.second - CommentEndOffset);
 
   // There should be no other declarations or preprocessor directives between
   // comment and declaration.
@@ -327,12 +326,12 @@ RawComment *ASTContext::getRawCommentNoCacheImpl(
 }
 
 RawComment *ASTContext::getRawCommentNoCache(RawCommentLookupKey Key) const {
-  const auto DeclLocs = getLocsForCommentSearch(Key, SourceMgr);
+  const auto Locs = getLocsForCommentSearch(Key, SourceMgr);
 
-  for (const auto DeclLoc : DeclLocs) {
-    // If the declaration doesn't map directly to a location in a file, we
+  for (const auto Loc : Locs) {
+    // If the declaration or macro doesn't map directly to a location in a file, we
     // can't find the comment.
-    if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
+    if (Loc.isInvalid() || !Loc.isFileID())
       continue;
 
     if (ExternalSource && !CommentsLoaded) {
@@ -343,7 +342,7 @@ RawComment *ASTContext::getRawCommentNoCache(RawCommentLookupKey Key) const {
     if (Comments.empty())
       continue;
 
-    const FileID File = SourceMgr.getDecomposedLoc(DeclLoc).first;
+    const FileID File = SourceMgr.getDecomposedLoc(Loc).first;
     if (!File.isValid())
       continue;
 
@@ -352,7 +351,7 @@ RawComment *ASTContext::getRawCommentNoCache(RawCommentLookupKey Key) const {
       continue;
 
     if (RawComment *Comment =
-            getRawCommentNoCacheImpl(Key, DeclLoc, *CommentsInThisFile))
+            getRawCommentNoCacheImpl(Key, Loc, *CommentsInThisFile))
       return Comment;
   }
 
@@ -379,8 +378,8 @@ ASTContext::getRawCommentForAnyRedecl(RawCommentLookupKey Key,
   if (const auto *MI = dyn_cast<const MacroInfo *>(Key)) {
     if (OriginalDecl)
       *OriginalDecl = nullptr;
-    auto Existing = DeclRawComments.find(Key);
-    if (Existing != DeclRawComments.end())
+    auto Existing = RawComments.find(Key);
+    if (Existing != RawComments.end())
       return Existing->second;
     if (const RawComment *RC = getRawCommentNoCache(Key)) {
       cacheRawComment(MI, *RC);
@@ -394,8 +393,8 @@ ASTContext::getRawCommentForAnyRedecl(RawCommentLookupKey Key,
 
   // Any comment directly attached to D?
   {
-    auto DeclComment = DeclRawComments.find(D);
-    if (DeclComment != DeclRawComments.end()) {
+    auto DeclComment = RawComments.find(D);
+    if (DeclComment != RawComments.end()) {
       if (OriginalDecl)
         *OriginalDecl = D;
       return DeclComment->second;
@@ -412,8 +411,8 @@ ASTContext::getRawCommentForAnyRedecl(RawCommentLookupKey Key,
     if (RedeclComment != RedeclChainComments.end()) {
       if (OriginalDecl)
         *OriginalDecl = RedeclComment->second;
-      auto CommentAtRedecl = DeclRawComments.find(RedeclComment->second);
-      assert(CommentAtRedecl != DeclRawComments.end() &&
+      auto CommentAtRedecl = RawComments.find(RedeclComment->second);
+      assert(CommentAtRedecl != RawComments.end() &&
              "This decl is supposed to have comment attached.");
       return CommentAtRedecl->second;
     }
@@ -466,7 +465,7 @@ ASTContext::getRawCommentForAnyRedecl(RawCommentLookupKey Key,
 void ASTContext::cacheRawComment(RawCommentLookupKey Original,
                                  const RawComment &Comment) const {
   assert(Comment.isDocumentation() || LangOpts.CommentOpts.ParseAllComments);
-  DeclRawComments.try_emplace(Original, &Comment);
+  RawComments.try_emplace(Original, &Comment);
   if (const auto *D = dyn_cast<const Decl *>(Original)) {
     const Decl *const CanonicalDecl = D->getCanonicalDecl();
     RedeclChainComments.try_emplace(CanonicalDecl, D);
@@ -533,7 +532,7 @@ void ASTContext::attachCommentsToJustParsedDecls(ArrayRef<Decl *> Decls,
 
     D = &adjustDeclToTemplate(*D);
 
-    if (DeclRawComments.count(D) > 0)
+    if (RawComments.count(D) > 0)
       continue;
 
     const auto DeclLocs = getLocsForCommentSearch(D, SourceMgr);
