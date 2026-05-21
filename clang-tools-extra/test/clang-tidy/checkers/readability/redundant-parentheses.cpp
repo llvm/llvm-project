@@ -123,45 +123,45 @@ void memberExpr() {
 }
 
 int (x);
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in declaration
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in type
 // CHECK-FIXES: int x;
 
 void f(int (arg));
-// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant parentheses in declaration
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant parentheses in type
 // CHECK-FIXES: void f(int arg);
 
 int ((nestedX));
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in declaration
-// CHECK-MESSAGES: :[[@LINE-2]]:6: warning: redundant parentheses in declaration
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in type
+// CHECK-MESSAGES: :[[@LINE-2]]:6: warning: redundant parentheses in type
 // CHECK-FIXES: int nestedX;
 
 void nestedParam(int ((arg)));
-// CHECK-MESSAGES: :[[@LINE-1]]:22: warning: redundant parentheses in declaration
-// CHECK-MESSAGES: :[[@LINE-2]]:23: warning: redundant parentheses in declaration
+// CHECK-MESSAGES: :[[@LINE-1]]:22: warning: redundant parentheses in type
+// CHECK-MESSAGES: :[[@LINE-2]]:23: warning: redundant parentheses in type
 // CHECK-FIXES: void nestedParam(int arg);
 
 int (&referenceVar) = x;
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in declaration
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in type
 // CHECK-FIXES: int &referenceVar = x;
 
 struct S {};
 int (S::*memberPtr);
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in declaration
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in type
 // CHECK-FIXES: int S::*memberPtr;
 
 int (arrayVar)[2];
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in declaration
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in type
 // CHECK-FIXES: int arrayVar[2];
 
 template <class T>
 void templatedParam(T (arg));
-// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: redundant parentheses in declaration
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: redundant parentheses in type
 // CHECK-FIXES: void templatedParam(T arg);
 
 template <class T>
 struct TemplateStruct {
   T (member);
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in declaration
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in type
 // CHECK-FIXES: T member;
 };
 
@@ -178,3 +178,7 @@ void instantiateTemplates() {
   templatedParam<int>(0);
   TemplateStruct<int> s;
 }
+using Fn = void(int);
+Fn (*funcPtr);
+void (func)(int);
+int (*ptr)(int);

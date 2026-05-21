@@ -76,17 +76,16 @@ void RedundantParenthesesCheck::check(const MatchFinder::MatchResult &Result) {
   }
   if (const auto *TL = Result.Nodes.getNodeAs<TypeLoc>("parentheses-decl")) {
     const auto ParenType = TL->getAs<ParenTypeLoc>();
-    if (ParenType.isNull())
-      return;
-    SourceLocation LParen = ParenType.getLParenLoc();
-    SourceLocation RParen = ParenType.getRParenLoc();
+    assert(!ParenType.isNull() && "Expected ParenTypeLoc");
+    const SourceLocation LParen = ParenType.getLParenLoc();
+    const SourceLocation RParen = ParenType.getRParenLoc();
     if (LParen.isMacroID() || RParen.isMacroID())
       return;
     const TypeLoc Inner = ParenType.getInnerLoc();
     if (Inner.getType()->isFunctionType() ||
         Inner.getType()->isFunctionPointerType())
       return;
-    diag(LParen, "redundant parentheses in declaration")
+    diag(LParen, "redundant parentheses in type")
         << FixItHint::CreateRemoval(LParen) << FixItHint::CreateRemoval(RParen);
     return;
   }
