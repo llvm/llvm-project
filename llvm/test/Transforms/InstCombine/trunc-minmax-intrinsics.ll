@@ -6,10 +6,10 @@ declare void @use_i32(i32)
 define i8 @umin_mul3_clamp(i8 %x) {
 ; CHECK-LABEL: define i8 @umin_mul3_clamp(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[X]] to i32
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[Z]], 3
-; CHECK-NEXT:    [[U:%.*]] = call i32 @llvm.umin.i32(i32 [[M]], i32 255)
-; CHECK-NEXT:    [[T:%.*]] = trunc nuw i32 [[U]] to i8
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i16 [[Z]], 3
+; CHECK-NEXT:    [[U:%.*]] = call i16 @llvm.umin.i16(i16 [[M]], i16 255)
+; CHECK-NEXT:    [[T:%.*]] = trunc nuw i16 [[U]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
   %z = zext i8 %x to i32
@@ -22,11 +22,11 @@ define i8 @umin_mul3_clamp(i8 %x) {
 define i8 @umin_add_two_zexts(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @umin_add_two_zexts(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X]] to i32
-; CHECK-NEXT:    [[ZY:%.*]] = zext i8 [[Y]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZX]], [[ZY]]
-; CHECK-NEXT:    [[U:%.*]] = call i32 @llvm.umin.i32(i32 [[ADD]], i32 200)
-; CHECK-NEXT:    [[T:%.*]] = trunc nuw i32 [[U]] to i8
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[ZY:%.*]] = zext i8 [[Y]] to i16
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[ZX]], [[ZY]]
+; CHECK-NEXT:    [[U:%.*]] = call i16 @llvm.umin.i16(i16 [[ADD]], i16 200)
+; CHECK-NEXT:    [[T:%.*]] = trunc nuw i16 [[U]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
   %zx = zext i8 %x to i32
@@ -40,11 +40,11 @@ define i8 @umin_add_two_zexts(i8 %x, i8 %y) {
 define i8 @umax_add_two_zexts(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @umax_add_two_zexts(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X]] to i32
-; CHECK-NEXT:    [[ZY:%.*]] = zext i8 [[Y]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZX]], [[ZY]]
-; CHECK-NEXT:    [[U:%.*]] = call i32 @llvm.umax.i32(i32 [[ADD]], i32 50)
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[U]] to i8
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[ZY:%.*]] = zext i8 [[Y]] to i16
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[ZX]], [[ZY]]
+; CHECK-NEXT:    [[U:%.*]] = call i16 @llvm.umax.i16(i16 [[ADD]], i16 50)
+; CHECK-NEXT:    [[T:%.*]] = trunc i16 [[U]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
   %zx = zext i8 %x to i32
@@ -83,11 +83,11 @@ define i8 @umax_boundary_max(i8 %x) {
 define i8 @umin_mul_two_zexts_too_wide(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @umin_mul_two_zexts_too_wide(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X]] to i32
-; CHECK-NEXT:    [[ZY:%.*]] = zext i8 [[Y]] to i32
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[ZX]], [[ZY]]
-; CHECK-NEXT:    [[U:%.*]] = call i32 @llvm.umin.i32(i32 [[M]], i32 200)
-; CHECK-NEXT:    [[T:%.*]] = trunc nuw i32 [[U]] to i8
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[ZY:%.*]] = zext i8 [[Y]] to i16
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i16 [[ZX]], [[ZY]]
+; CHECK-NEXT:    [[U:%.*]] = call i16 @llvm.umin.i16(i16 [[M]], i16 200)
+; CHECK-NEXT:    [[T:%.*]] = trunc nuw i16 [[U]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
   %zx = zext i8 %x to i32
@@ -115,10 +115,10 @@ define i8 @umin_unknown_operand(i32 %x) {
 define i8 @umin_const_above_i8_max(i8 %x) {
 ; CHECK-LABEL: define i8 @umin_const_above_i8_max(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[X]] to i32
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[Z]], 3
-; CHECK-NEXT:    [[U:%.*]] = call i32 @llvm.umin.i32(i32 [[M]], i32 256)
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[U]] to i8
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i16 [[Z]], 3
+; CHECK-NEXT:    [[U:%.*]] = call i16 @llvm.umin.i16(i16 [[M]], i16 256)
+; CHECK-NEXT:    [[T:%.*]] = trunc i16 [[U]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
   %z = zext i8 %x to i32
@@ -150,11 +150,11 @@ define i8 @umin_const_above_i16_max(i32 %y) {
 define i8 @smax_const_above_i8_smax(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @smax_const_above_i8_smax(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i32
-; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[SX]], [[SY]]
-; CHECK-NEXT:    [[U:%.*]] = call i32 @llvm.smax.i32(i32 [[ADD]], i32 200)
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[U]] to i8
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i16
+; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i16
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i16 [[SX]], [[SY]]
+; CHECK-NEXT:    [[U:%.*]] = call i16 @llvm.smax.i16(i16 [[ADD]], i16 200)
+; CHECK-NEXT:    [[T:%.*]] = trunc i16 [[U]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
   %sx = sext i8 %x to i32
@@ -169,11 +169,11 @@ define i8 @smax_const_above_i8_smax(i8 %x, i8 %y) {
 define i8 @smin_const_below_i8_smin(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @smin_const_below_i8_smin(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i32
-; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[SX]], [[SY]]
-; CHECK-NEXT:    [[U:%.*]] = call i32 @llvm.smin.i32(i32 [[ADD]], i32 -200)
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[U]] to i8
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i16
+; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i16
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i16 [[SX]], [[SY]]
+; CHECK-NEXT:    [[U:%.*]] = call i16 @llvm.smin.i16(i16 [[ADD]], i16 -200)
+; CHECK-NEXT:    [[T:%.*]] = trunc i16 [[U]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
   %sx = sext i8 %x to i32
@@ -207,10 +207,10 @@ declare void @use_i8(i8)
 define i8 @umin_trunc_multi_use(i8 %x) {
 ; CHECK-LABEL: define i8 @umin_trunc_multi_use(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[X]] to i32
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[Z]], 3
-; CHECK-NEXT:    [[U:%.*]] = call i32 @llvm.umin.i32(i32 [[M]], i32 255)
-; CHECK-NEXT:    [[T:%.*]] = trunc nuw i32 [[U]] to i8
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i16 [[Z]], 3
+; CHECK-NEXT:    [[U:%.*]] = call i16 @llvm.umin.i16(i16 [[M]], i16 255)
+; CHECK-NEXT:    [[T:%.*]] = trunc nuw i16 [[U]] to i8
 ; CHECK-NEXT:    call void @use_i8(i8 [[T]])
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
@@ -239,11 +239,11 @@ define i8 @umin_asymmetric(i8 %x, i32 %y) {
 define i8 @umin_shared_subexpr(i8 %x) {
 ; CHECK-LABEL: define i8 @umin_shared_subexpr(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[X]] to i32
-; CHECK-NEXT:    [[A:%.*]] = mul nuw nsw i32 [[Z]], 3
-; CHECK-NEXT:    [[B:%.*]] = add nuw nsw i32 [[Z]], 50
-; CHECK-NEXT:    [[U:%.*]] = call i32 @llvm.umin.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[U]] to i8
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[A:%.*]] = mul nuw nsw i16 [[Z]], 3
+; CHECK-NEXT:    [[B:%.*]] = add nuw nsw i16 [[Z]], 50
+; CHECK-NEXT:    [[U:%.*]] = call i16 @llvm.umin.i16(i16 [[A]], i16 [[B]])
+; CHECK-NEXT:    [[T:%.*]] = trunc i16 [[U]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
   %z = zext i8 %x to i32
@@ -275,11 +275,11 @@ define i8 @umin_or_known_high_bit(i8 %x, i32 %y) {
 define i8 @smin_add_two_sexts(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @smin_add_two_sexts(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i32
-; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[SX]], [[SY]]
-; CHECK-NEXT:    [[U:%.*]] = call i32 @llvm.smin.i32(i32 [[ADD]], i32 100)
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[U]] to i8
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i16
+; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i16
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i16 [[SX]], [[SY]]
+; CHECK-NEXT:    [[U:%.*]] = call i16 @llvm.smin.i16(i16 [[ADD]], i16 100)
+; CHECK-NEXT:    [[T:%.*]] = trunc i16 [[U]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
   %sx = sext i8 %x to i32
@@ -293,11 +293,11 @@ define i8 @smin_add_two_sexts(i8 %x, i8 %y) {
 define i8 @smax_add_two_sexts(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @smax_add_two_sexts(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i32
-; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[SX]], [[SY]]
-; CHECK-NEXT:    [[U:%.*]] = call i32 @llvm.smax.i32(i32 [[ADD]], i32 -100)
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[U]] to i8
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i16
+; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i16
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i16 [[SX]], [[SY]]
+; CHECK-NEXT:    [[U:%.*]] = call i16 @llvm.smax.i16(i16 [[ADD]], i16 -100)
+; CHECK-NEXT:    [[T:%.*]] = trunc i16 [[U]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
   %sx = sext i8 %x to i32

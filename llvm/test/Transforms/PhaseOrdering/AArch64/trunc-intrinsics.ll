@@ -14,14 +14,14 @@ define void @mul3_clamp_u8_select(ptr noalias %out, ptr noalias %in) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD2]] to <16 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw nsw <16 x i32> [[TMP2]], splat (i32 3)
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw <16 x i32> [[TMP3]], splat (i32 3)
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP4]], <16 x i32> splat (i32 255))
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP5]], <16 x i32> splat (i32 255))
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc nuw <16 x i32> [[TMP6]] to <16 x i8>
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc nuw <16 x i32> [[TMP7]] to <16 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD2]] to <16 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw nsw <16 x i16> [[TMP2]], splat (i16 3)
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw <16 x i16> [[TMP3]], splat (i16 3)
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call <16 x i16> @llvm.umin.v16i16(<16 x i16> [[TMP4]], <16 x i16> splat (i16 255))
+; CHECK-NEXT:    [[TMP7:%.*]] = tail call <16 x i16> @llvm.umin.v16i16(<16 x i16> [[TMP5]], <16 x i16> splat (i16 255))
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc nuw <16 x i16> [[TMP6]] to <16 x i8>
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc nuw <16 x i16> [[TMP7]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP10]], i64 16
 ; CHECK-NEXT:    store <16 x i8> [[TMP8]], ptr [[TMP10]], align 1
@@ -32,10 +32,10 @@ define void @mul3_clamp_u8_select(ptr noalias %out, ptr noalias %in) {
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 992
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <8 x i8>, ptr [[TMP13]], align 1
-; CHECK-NEXT:    [[TMP14:%.*]] = zext <8 x i8> [[WIDE_LOAD6]] to <8 x i32>
-; CHECK-NEXT:    [[TMP15:%.*]] = mul nuw nsw <8 x i32> [[TMP14]], splat (i32 3)
-; CHECK-NEXT:    [[TMP16:%.*]] = tail call <8 x i32> @llvm.umin.v8i32(<8 x i32> [[TMP15]], <8 x i32> splat (i32 255))
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc nuw <8 x i32> [[TMP16]] to <8 x i8>
+; CHECK-NEXT:    [[TMP14:%.*]] = zext <8 x i8> [[WIDE_LOAD6]] to <8 x i16>
+; CHECK-NEXT:    [[TMP15:%.*]] = mul nuw nsw <8 x i16> [[TMP14]], splat (i16 3)
+; CHECK-NEXT:    [[TMP16:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[TMP15]], <8 x i16> splat (i16 255))
+; CHECK-NEXT:    [[TMP17:%.*]] = trunc nuw <8 x i16> [[TMP16]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 992
 ; CHECK-NEXT:    store <8 x i8> [[TMP17]], ptr [[TMP18]], align 1
 ; CHECK-NEXT:    ret void
