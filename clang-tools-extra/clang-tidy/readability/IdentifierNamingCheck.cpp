@@ -1171,28 +1171,25 @@ StyleKind IdentifierNamingCheck::findStyleKind(
           return SK_AbstractClass;
       }
     }
-    const auto *Record = Decl->getDefinition();
-    // Fall back to declarations when definitions are not available
-    if (!Record)
-      Record = Decl;
+    if (const auto *Record = Decl->getDefinitionOrSelf()) {
+      if (Record->isStruct() && NamingStyles[SK_Struct])
+        return SK_Struct;
 
-    if (Record->isStruct() && NamingStyles[SK_Struct])
-      return SK_Struct;
+      if (Record->isStruct() && NamingStyles[SK_Class])
+        return SK_Class;
 
-    if (Record->isStruct() && NamingStyles[SK_Class])
-      return SK_Class;
+      if (Record->isClass() && NamingStyles[SK_Class])
+        return SK_Class;
 
-    if (Record->isClass() && NamingStyles[SK_Class])
-      return SK_Class;
+      if (Record->isClass() && NamingStyles[SK_Struct])
+        return SK_Struct;
 
-    if (Record->isClass() && NamingStyles[SK_Struct])
-      return SK_Struct;
+      if (Record->isUnion() && NamingStyles[SK_Union])
+        return SK_Union;
 
-    if (Record->isUnion() && NamingStyles[SK_Union])
-      return SK_Union;
-
-    if (Record->isEnum() && NamingStyles[SK_Enum])
-      return SK_Enum;
+      if (Record->isEnum() && NamingStyles[SK_Enum])
+        return SK_Enum;
+    }
 
     return undefinedStyle(NamingStyles);
   }
