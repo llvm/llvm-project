@@ -16,21 +16,37 @@
 #include "mlir/IR/SymbolTable.h"
 #include "clang/CIR/MissingFeatures.h"
 
+static unsigned getIntOrBoolBitWidth(mlir::Type ty) {
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(ty))
+    return intTy.getWidth();
+  if (mlir::isa<cir::BoolType>(ty))
+    return 1;
+  llvm_unreachable("expected CIR integer or bool element type");
+}
+
 mlir::DenseElementsAttr
 convertStringAttrToDenseElementsAttr(cir::ConstArrayAttr attr,
                                      mlir::Type type) {
-  auto values = llvm::SmallVector<mlir::APInt, 8>{};
   const auto stringAttr = mlir::cast<mlir::StringAttr>(attr.getElts());
+  const auto arrayTy = mlir::cast<cir::ArrayType>(attr.getType());
+  const unsigned totalSize = arrayTy.getSize();
+  const unsigned trailingZeros = attr.getTrailingZerosNum();
+  assert(stringAttr.size() + trailingZeros == totalSize &&
+         "string const_array size must match explicit elements plus "
+         "trailing_zeros");
+
+  const unsigned bitWidth = getIntOrBoolBitWidth(arrayTy.getElementType());
+  auto values = llvm::SmallVector<mlir::APInt, 8>{};
+  values.reserve(totalSize);
 
   for (const char element : stringAttr)
-    values.push_back({8, (uint64_t)element});
+    values.emplace_back(bitWidth, (uint64_t)(unsigned char)element);
 
-  const auto arrayTy = mlir::cast<cir::ArrayType>(attr.getType());
-  if (arrayTy.getSize() != stringAttr.size())
-    assert(!cir::MissingFeatures::stringTypeWithDifferentArraySize());
+  for (unsigned i = 0; i < trailingZeros; ++i)
+    values.push_back(mlir::APInt::getZero(bitWidth));
 
   return mlir::DenseElementsAttr::get(
-      mlir::RankedTensorType::get({(int64_t)values.size()}, type),
+      mlir::RankedTensorType::get({(int64_t)totalSize}, type),
       llvm::ArrayRef(values));
 }
 
@@ -70,6 +86,8 @@ void convertToDenseElementsAttrImpl(
         auto intAttr = cir::IntAttr::get(arrayType.getElementType(), element);
         values[currentIndex++] = mlir::dyn_cast<AttrTy>(intAttr).getValue();
       }
+      // Remaining slots are trailing zeros; values was zero-initialized.
+      currentIndex += attr.getTrailingZerosNum();
       return;
     }
   }

@@ -1943,24 +1943,6 @@ static bool isBulkLowerableConstArrayLeaf(mlir::Type leafTy) {
                    cir::FPTypeInterface>(leafTy);
 }
 
-bool hasTrailingZeros(cir::ConstArrayAttr attr) {
-  if (attr.hasTrailingZeros())
-    return true;
-
-  auto elts = mlir::dyn_cast<mlir::ArrayAttr>(attr.getElts());
-  if (!elts)
-    return false;
-
-  auto cirArrTy = mlir::dyn_cast<cir::ArrayType>(attr.getType());
-  if (!cirArrTy || !mlir::isa<cir::ArrayType>(cirArrTy.getElementType()))
-    return false;
-
-  return llvm::any_of(elts, [](mlir::Attribute elt) {
-    auto nested = mlir::dyn_cast<cir::ConstArrayAttr>(elt);
-    return nested && hasTrailingZeros(nested);
-  });
-}
-
 mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     cir::ConstantOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -2029,15 +2011,10 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
       return op.emitError() << "array does not have a constant initializer";
 
     std::optional<mlir::Attribute> denseAttr;
-    if (constArr && hasTrailingZeros(constArr)) {
-      const mlir::Value newOp =
-          lowerCirAttrAsValue(op, constArr, rewriter, getTypeConverter());
-      rewriter.replaceOp(op, newOp);
-      return mlir::success();
-    } else if (constArr &&
-               (denseAttr = lowerConstArrayAttr(constArr, typeConverter))) {
+    if (constArr &&
+        (denseAttr = lowerConstArrayAttr(constArr, typeConverter))) {
       attr = denseAttr.value();
-    } else {
+    } else if (constArr) {
       const mlir::Value initVal =
           lowerCirAttrAsValue(op, op.getValue(), rewriter, typeConverter);
       rewriter.replaceOp(op, initVal);
@@ -2514,11 +2491,10 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
                    mlir::dyn_cast<cir::ConstArrayAttr>(init.value())) {
       // Bulk-emit llvm.mlir.global when lowerConstArrayAttr can build the
       // whole initializer as one aggregate attribute (no insertvalue
-      // region). Skip arrays with trailing-zero compression: those need
-      // per-element zero/undef setup. Leaf type must match what
-      // lowerConstArrayAttr handles (pointers, integers, bools, floats).
-      if (!hasTrailingZeros(constArr) &&
-          isBulkLowerableConstArrayLeaf(
+      // region). Leaf type must match what lowerConstArrayAttr handles
+      // (pointers, integers, bools, floats, and string literals with
+      // trailing_zeros).
+      if (isBulkLowerableConstArrayLeaf(
               getConstArrayLeafType(constArr.getType()))) {
         mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
         if (std::optional<mlir::Attribute> bulkInit =

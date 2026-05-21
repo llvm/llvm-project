@@ -36,13 +36,19 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   ]> : !cir.array<!cir.array<!cir.ptr<!s8i> x 2> x 2>
 }
 
-// CHECK-LABEL: llvm.mlir.global external @tz_arr
-// CHECK:       llvm.insertvalue
+// CHECK-LABEL: llvm.mlir.global external @tz_arr(
+// CHECK-SAME:    dense<
 
 // CHECK-LABEL: llvm.mlir.global external @as_mismatch
 // CHECK:       llvm.insertvalue
 
 // CHECK-LABEL: llvm.mlir.global external @matrix(
+// CHECK-SAME:    dense<
+
+// CHECK-LABEL: llvm.mlir.global private constant @s0(
+// CHECK-SAME:    dense<
+
+// CHECK-LABEL: llvm.mlir.global private constant @s1(
 // CHECK-SAME:    dense<
 
 // CHECK-LABEL: llvm.mlir.global external @ptr2d

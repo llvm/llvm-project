@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
+const char *foo = "asdf";
 const char *names[] = { "a", "b", "c" };
 const int table[] = { 0, 1, 2, 3 };
 const int matrix[2][2] = { { 1, 2 }, { 3, 4 } };
@@ -14,7 +15,13 @@ int len() {
          flags[2];
 }
 
-// CIR: cir.global {{.*}}@names = #cir.const_array<[#cir.global_view<@".str"> : !cir.ptr<!s8i>, #cir.global_view<@".str.1"> : !cir.ptr<!s8i>, #cir.global_view<@".str.2"> : !cir.ptr<!s8i>]>
+// CIR: cir.global {{.*}}@".str" = #cir.const_array<"asdf" : !cir.array<!s8i x 4>, trailing_zeros>
+
+// LLVM:       @.str = {{.*}}constant [5 x i8]
+// LLVM-NOT:   insertvalue
+// OGCG:       @.str = {{.*}}constant [5 x i8]
+
+// CIR: cir.global {{.*}}@names = #cir.const_array<[#cir.global_view<@".str.1"> : !cir.ptr<!s8i>, #cir.global_view<@".str.2"> : !cir.ptr<!s8i>, #cir.global_view<@".str.3"> : !cir.ptr<!s8i>]>
 
 // LLVM:       @names = {{.*}}global [3 x ptr] [ptr @.str{{.*}}, ptr @.str{{.*}}, ptr @.str{{.*}}]
 // LLVM-NOT:   insertvalue
