@@ -244,6 +244,12 @@ private:
   bool selectOpIsNan(Register ResVReg, SPIRVTypeInst ResType,
                      MachineInstr &I) const;
 
+  bool selectOpIsFinite(Register ResVReg, SPIRVTypeInst ResType,
+                        MachineInstr &I) const;
+
+  bool selectOpIsNormal(Register ResVReg, SPIRVTypeInst ResType,
+                        MachineInstr &I) const;
+
   bool selectPopCount(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
                       unsigned Opcode) const;
 
@@ -695,6 +701,8 @@ static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
   case Intrinsic::spv_insertv:
   case Intrinsic::spv_isinf:
   case Intrinsic::spv_isnan:
+  case Intrinsic::spv_isfinite:
+  case Intrinsic::spv_isnormal:
   case Intrinsic::spv_lerp:
   case Intrinsic::spv_length:
   case Intrinsic::spv_normalize:
@@ -2989,6 +2997,30 @@ bool SPIRVInstructionSelector::selectOpIsNan(Register ResVReg,
   return true;
 }
 
+bool SPIRVInstructionSelector::selectOpIsFinite(Register ResVReg,
+                                                SPIRVTypeInst ResType,
+                                                MachineInstr &I) const {
+  MachineBasicBlock &BB = *I.getParent();
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIsFinite))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectOpIsNormal(Register ResVReg,
+                                                SPIRVTypeInst ResType,
+                                                MachineInstr &I) const {
+  MachineBasicBlock &BB = *I.getParent();
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIsNormal))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
 template <bool Signed>
 bool SPIRVInstructionSelector::selectDot4AddPacked(Register ResVReg,
                                                    SPIRVTypeInst ResType,
@@ -4946,6 +4978,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectOpIsInf(ResVReg, ResType, I);
   case Intrinsic::spv_isnan:
     return selectOpIsNan(ResVReg, ResType, I);
+  case Intrinsic::spv_isfinite:
+    return selectOpIsFinite(ResVReg, ResType, I);
+  case Intrinsic::spv_isnormal:
+    return selectOpIsNormal(ResVReg, ResType, I);
   case Intrinsic::spv_normalize:
     return selectExtInst(ResVReg, ResType, I, CL::normalize, GL::Normalize);
   case Intrinsic::spv_refract:
