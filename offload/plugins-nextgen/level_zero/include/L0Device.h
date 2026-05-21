@@ -641,12 +641,14 @@ public:
     return true;
   }
 
-  Error createEventImpl(void **EventPtrStorage) override {
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
     return Plugin::success();
   }
-  Error destroyEventImpl(void *EventPtr) override { return Plugin::success(); }
-  Error recordEventImpl(void *EventPtr,
-                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
+    return Plugin::success();
+  }
+  Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
+                        bool EnableProfiling) override {
     return Plugin::success();
   }
 
