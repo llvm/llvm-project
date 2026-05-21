@@ -29586,8 +29586,8 @@ public:
          ArrayRef(Candidates).drop_front(SuccessStart + SuccessWidth)) {
       Builder.SetCurrentDebugLocation(
           ReducedValsToOps.at(RdxVal).front()->getDebugLoc());
-      VectorizedTree = createOp(Builder, RdxKind, VectorizedTree, RdxVal,
-                                "op.rdx", ReductionOps);
+      VectorizedTree = createOp(Builder, RdxKind, VectorizedTree,
+                                TrackedVals.at(RdxVal), "op.rdx", ReductionOps);
     }
 
     ReductionRoot->replaceAllUsesWith(VectorizedTree);
