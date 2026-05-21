@@ -102,10 +102,7 @@ runs:
       run: |
         artifact_urls=($ARTIFACT_URLS)
         artifact_names=($ARTIFACT_NAMES)
-        echo $artifact_names
-        echo $artifact_urls
         for i in "${!artifact_urls[@]}"; do
-          echo "${artifact_names[$i]}.zip" "${artifact_urls[$i]}"
           curl -L -o "${artifact_names[$i]}.zip" "${artifact_urls[$i]}"
         done
 
@@ -116,6 +113,5 @@ runs:
       run: |
         artifact_names=($ARTIFACT_NAMES)
         for name in "${artifact_names[@]}"; do
-          echo $name
           unzip "${name}.zip"
         done
