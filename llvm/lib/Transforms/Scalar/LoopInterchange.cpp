@@ -1640,17 +1640,17 @@ std::optional<const SCEV *> getAddRecCoefficient(ScalarEvolution &SE,
 }
 
 int LoopInterchangeProfitability::getInstrOrderCost() {
-  unsigned GoodOrder, BadOrder;
-  BadOrder = GoodOrder = 0;
+  SmallPtrSet<const SCEV *, 4> GoodBasePtrs, BadBasePtrs;
   for (BasicBlock *BB : InnerLoop->blocks()) {
     for (Instruction &Ins : *BB) {
       if (!isa<LoadInst, StoreInst>(&Ins))
         continue;
-      const SCEV *Ptr = SE->getSCEV(getLoadStorePointerOperand(&Ins));
+      const SCEV *Access = SE->getSCEV(getLoadStorePointerOperand(&Ins));
+      const SCEV *BasePtr = SE->getPointerBase(Access);
       std::optional<const SCEV *> OuterCoeff =
-          getAddRecCoefficient(*SE, Ptr, OuterLoop);
+          getAddRecCoefficient(*SE, Access, OuterLoop);
       std::optional<const SCEV *> InnerCoeff =
-          getAddRecCoefficient(*SE, Ptr, InnerLoop);
+          getAddRecCoefficient(*SE, Access, InnerLoop);
 
       if (!OuterCoeff.has_value() || !*OuterCoeff || !InnerCoeff.has_value() ||
           !*InnerCoeff)
@@ -1679,12 +1679,18 @@ int LoopInterchangeProfitability::getInstrOrderCost() {
       //       A[j][i] = A[j-1][i-1]+k;
       //
       // then it is a bad order.
+      //
+      // To avoid counting the same base pointers multiple times, we deduplicate
+      // them by using a set of base pointers.
       if (SE->isKnownPredicate(ICmpInst::ICMP_SLT, InnerStep, OuterStep))
-        GoodOrder++;
+        GoodBasePtrs.insert(BasePtr);
       else if (SE->isKnownPredicate(ICmpInst::ICMP_SLT, OuterStep, InnerStep))
-        BadOrder++;
+        BadBasePtrs.insert(BasePtr);
     }
   }
+
+  int GoodOrder = GoodBasePtrs.size();
+  int BadOrder = BadBasePtrs.size();
   return GoodOrder - BadOrder;
 }
 
