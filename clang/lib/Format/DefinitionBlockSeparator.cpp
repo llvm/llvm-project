@@ -202,6 +202,9 @@ void DefinitionBlockSeparator::separateBlocks(
     } else if (CurrentLine->First->closesScope()) {
       if (OpeningLineIndex > Lines.size())
         continue;
+      // A function try block should be together.
+      if (CurrentLine->First->startsSequence(tok::r_brace, tok::kw_catch))
+        continue;
       // Handling the case that opening brace has its own line, with checking
       // whether the last line already had an opening brace to guard against
       // misrecognition.
