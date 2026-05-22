@@ -17934,14 +17934,14 @@ void    __ovld __conv intel_sub_group_block_write2( __local uint* p, uint2 data 
 void    __ovld __conv intel_sub_group_block_write4( __local uint* p, uint4 data );
 void    __ovld __conv intel_sub_group_block_write8( __local uint* p, uint8 data );
 
-uint __ovld __conv intel_sub_group_block_read_ui( const __local uint* p );
-uint2 __ovld __conv intel_sub_group_block_read_ui2( const __local uint* p );
-uint4 __ovld __conv intel_sub_group_block_read_ui4( const __local uint* p );
-uint8 __ovld __conv intel_sub_group_block_read_ui8( const __local uint* p );
+uint __ovld __conv intel_sub_group_block_read_ui(const __local uint *p);
+uint2 __ovld __conv intel_sub_group_block_read_ui2(const __local uint *p);
+uint4 __ovld __conv intel_sub_group_block_read_ui4(const __local uint *p);
+uint8 __ovld __conv intel_sub_group_block_read_ui8(const __local uint *p);
 
-void __ovld __conv intel_sub_group_block_write_ui( __local uint* p, uint data );
-void __ovld __conv intel_sub_group_block_write_ui2( __local uint* p, uint2 data );
-void __ovld __conv intel_sub_group_block_write_ui4( __local uint* p, uint4 data );
+void __ovld __conv intel_sub_group_block_write_ui(__local uint *p, uint data);
+void __ovld __conv intel_sub_group_block_write_ui2(__local uint *p, uint2 data);
+void __ovld __conv intel_sub_group_block_write_ui4(__local uint *p, uint4 data);
 void __ovld __conv intel_sub_group_block_write_ui8(__local uint *p, uint8 data);
 
 #if defined(cl_intel_subgroups_char)
