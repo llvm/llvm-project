@@ -39,7 +39,6 @@
 
 #include "test_macros.h"
 
-namespace {
 template <typename F>
 void test(F&& f) {
   try {
@@ -51,7 +50,6 @@ void test(F&& f) {
     assert(false && "Unexpected");
   }
 }
-} // namespace
 
 int main() {
   float data[1024];
