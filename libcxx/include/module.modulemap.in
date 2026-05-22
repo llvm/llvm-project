@@ -1795,6 +1795,25 @@ module std [system] {
   }
 
   module optional {
+    module fwd { header "__fwd/optional.h" }
+    module hash {
+      header "__optional/hash.h"
+      export std.functional.hash
+    }
+    module common {
+      header "__optional/common.h"
+      export std.iterator.bounded_iter
+      export std.iterator.capacity_aware_iterator
+      export std.format.fwd
+      export std.utility.swap
+    }
+
+    module comparison { header "__optional/comparison.h" }
+    module nullopt_t { header "__optional/nullopt_t.h" }
+    module optional { header "__optional/optional.h" }
+    module optional_ref { header "__optional/optional_ref.h" }
+    module swap { header "__optional/swap.h" }
+
     header "optional"
     export *
   }
