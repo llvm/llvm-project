@@ -1269,9 +1269,6 @@ Error DWARFDebugLine::LineTable::parse(
         " is not terminated",
         DebugLineOffset));
 
-  Rows.shrink_to_fit();
-  Sequences.shrink_to_fit();
-
   // Sort all sequences so that address lookup will work faster.
   if (!Sequences.empty()) {
     llvm::stable_sort(Sequences, Sequence::orderByHighPC);
