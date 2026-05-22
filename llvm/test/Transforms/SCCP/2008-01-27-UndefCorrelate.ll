@@ -19,7 +19,8 @@ define i32 @main(i1 %arg) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i32 [[K]], 10
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[BB_BACKEDGE]], label [[BB12]]
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[K]], 10
+; CHECK-NEXT:    [[K_PREDICATE_PHI:%.*]] = phi i32 [ [[K]], [[COND_FALSE]] ], [ [[K]], [[COND_TRUE]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[K_PREDICATE_PHI]], 10
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[COND_NEXT18:%.*]], label [[COND_TRUE17:%.*]]
 ; CHECK:       cond_true17:
 ; CHECK-NEXT:    tail call void @abort()
