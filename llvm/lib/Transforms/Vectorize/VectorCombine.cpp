@@ -4179,6 +4179,9 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   IntrinsicCostAttributes ICA(ReducedOp, ReduceVecTy, {ReduceVecTy});
   NewCost += TTI.getIntrinsicInstrCost(ICA, CostKind);
 
+  LLVM_DEBUG(dbgs() << "Found reduction shuffle chain: " << I << "\n OldCost : "
+                    << OrigCost << " vs NewCost: " << NewCost << "\n");
+
   if (NewCost >= OrigCost)
     return false;
 
