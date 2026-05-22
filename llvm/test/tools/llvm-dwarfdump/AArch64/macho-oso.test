@@ -21,7 +21,16 @@
 # NO-OSO-NOT: test.o
 # NO-OSO-NOT: DW_TAG_compile_unit
 
+## N_OSO references to archive members are followed.
+# RUN: llvm-ar rcs %t/test.a %t/test.o
+# RUN: yaml2obj %p/Inputs/macho-oso-archive-exe.yaml -o %t/test-ar
+# RUN: cd %t && llvm-dwarfdump test-ar 2>&1 | FileCheck %s --check-prefix=ARCHIVE
+# ARCHIVE: test-ar:{{.*}}file format Mach-O arm64
+# ARCHIVE: test.a(test.o):{{.*}}file format Mach-O arm64
+# ARCHIVE: DW_TAG_compile_unit
+# ARCHIVE: DW_AT_name	("oso-test.c")
+
 ## When the .o file is missing, a warning is emitted.
 # RUN: rm %t/test.o
 # RUN: cd %t && llvm-dwarfdump test 2>&1 | FileCheck %s --check-prefix=MISSING
-# MISSING: warning: unable to open N_OSO referenced file 'test.o'
+# MISSING: warning: test.o:
