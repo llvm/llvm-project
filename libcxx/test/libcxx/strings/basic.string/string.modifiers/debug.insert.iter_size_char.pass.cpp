@@ -16,6 +16,7 @@
 #include <string>
 
 #include "check_assertion.h"
+#include "test_allocator.h"
 
 template <class S>
 void test() {
@@ -27,6 +28,7 @@ void test() {
 
 int main(int, char**) {
   test<std::string>();
+  test<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char> > >();
 
   return 0;
 }
