@@ -201,8 +201,7 @@ SourceMgr::SrcBuffer::getPointerForLineNumber(unsigned LineNo) const {
 
 SourceMgr::SrcBuffer::SrcBuffer(SourceMgr::SrcBuffer &&Other)
     : Buffer(std::move(Other.Buffer)), OffsetCache(Other.OffsetCache),
-      IncludeLoc(Other.IncludeLoc), MacroParentBuf(Other.MacroParentBuf),
-      MacroDefLoc(Other.MacroDefLoc) {
+      IncludeLoc(Other.IncludeLoc), MacroDefLoc(Other.MacroDefLoc) {
   Other.OffsetCache = nullptr;
 }
 
@@ -312,21 +311,14 @@ void SourceMgr::printIncludeStackForDiagnostic(SMLoc Loc,
   }
 }
 
-std::optional<SMDiagnostic>
-SourceMgr::mapDiagnosticFromMacroInstantiation(const SMDiagnostic &Diag) const {
-  SMLoc DiagLoc = Diag.getLoc();
-  unsigned DiagBuf = FindBufferContainingLoc(DiagLoc);
-  if (!DiagBuf || !getMacroParentBuf(DiagBuf))
-    return std::nullopt;
-
-  SMLoc RealLoc = getMacroDefLoc(DiagBuf);
-  unsigned RealBuf = FindBufferContainingLoc(RealLoc);
-  StringRef Filename = getMemoryBuffer(RealBuf)->getBufferIdentifier();
-  int LineNo = FindLineNumber(RealLoc, RealBuf) + Diag.getLineNo() - 1;
-  return SMDiagnostic(*Diag.getSourceMgr(), RealLoc, Filename, LineNo,
-                      Diag.getColumnNo(), Diag.getKind(), Diag.getMessage(),
-                      Diag.getLineContents(), Diag.getRanges(),
-                      Diag.getFixIts());
+SMLoc SourceMgr::getMacroInstantiationLoc(SMLoc Loc) const {
+  while (true) {
+    unsigned BufID = FindBufferContainingLoc(Loc);
+    if (!BufID || !getMacroDefLoc(BufID).isValid())
+      break;
+    Loc = getMacroDefLoc(BufID);
+  }
+  return Loc;
 }
 
 SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,

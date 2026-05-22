@@ -85,9 +85,6 @@ private:
     /// For macro instantiation buffers, this is the macro call location.
     SMLoc IncludeLoc;
 
-    /// The parent buffer ID where this macro was expanded, or 0 if not a macro.
-    unsigned MacroParentBuf = 0;
-
     /// The location in the parent buffer where this macro was defined.
     SMLoc MacroDefLoc;
 
@@ -167,13 +164,20 @@ public:
   }
 
   unsigned getMacroParentBuf(unsigned i) const {
-    assert(isValidBufferID(i));
-    return Buffers[i - 1].MacroParentBuf;
+    if (SMLoc Loc = getMacroDefLoc(i); Loc.isValid())
+      return FindBufferContainingLoc(getParentIncludeLoc(i));
+    return 0;
   }
 
   SMLoc getMacroDefLoc(unsigned i) const {
     assert(isValidBufferID(i));
     return Buffers[i - 1].MacroDefLoc;
+  }
+
+  unsigned getMacroDefBuf(unsigned i) const {
+    if (SMLoc Loc = getMacroDefLoc(i); Loc.isValid())
+      return FindBufferContainingLoc(Loc);
+    return 0;
   }
 
   /// Add a new source buffer to this source manager. This takes ownership of
@@ -188,12 +192,10 @@ public:
   }
 
   unsigned AddMacroInstantiationBuffer(std::unique_ptr<MemoryBuffer> F,
-                                       SMLoc SpellingLoc, unsigned ParentBuf,
-                                       SMLoc CallLoc) {
+                                       SMLoc SpellingLoc, SMLoc CallLoc) {
     SrcBuffer NB;
     NB.Buffer = std::move(F);
     NB.IncludeLoc = CallLoc;
-    NB.MacroParentBuf = ParentBuf;
     NB.MacroDefLoc = SpellingLoc;
     Buffers.push_back(std::move(NB));
     return Buffers.size();
@@ -308,15 +310,9 @@ public:
   LLVM_ABI void printIncludeStackForDiagnostic(SMLoc Loc,
                                                raw_ostream &OS) const;
 
-  /// If the location of the given diagnostic \p Diag is within a macro
-  /// instantiation buffer, this maps it back to the location in the parent
-  /// buffer where the macro was called and returns a new SMDiagnostic with
-  /// the updated location, filename, and adjusted line number.
-  ///
-  /// Returns \c std::nullopt if the diagnostic is not within a macro
-  /// instantiation buffer.
-  LLVM_ABI std::optional<SMDiagnostic>
-  mapDiagnosticFromMacroInstantiation(const SMDiagnostic &Diag) const;
+  /// Map a virtual macro instantiation location back to the physical
+  /// definition/signature location of the macro it was called from.
+  LLVM_ABI SMLoc getMacroInstantiationLoc(SMLoc Loc) const;
 };
 
 /// Represents a single fixit, a replacement of one range of text with another.

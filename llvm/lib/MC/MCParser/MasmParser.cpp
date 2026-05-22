@@ -1008,12 +1008,9 @@ MasmParser::~MasmParser() {
 
 void MasmParser::printMacroInstantiations() {
   // Print the active macro instantiation stack.
-  for (std::vector<MacroInstantiation *>::const_reverse_iterator
-           it = ActiveMacros.rbegin(),
-           ie = ActiveMacros.rend();
-       it != ie; ++it)
-    printMessage((*it)->InstantiationLoc, SourceMgr::DK_Note,
-                 "while in macro instantiation");
+  for (MacroInstantiation *M : reverse(ActiveMacros))
+    printMessage(SrcMgr.getMacroInstantiationLoc(M->InstantiationLoc),
+                 SourceMgr::DK_Note, "while in macro instantiation");
 }
 
 void MasmParser::Note(SMLoc L, const Twine &Msg, SMRange Range) {
@@ -2399,16 +2396,6 @@ void MasmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
   if (!Parser->SavedDiagHandler)
     DiagSrcMgr.printIncludeStackForDiagnostic(DiagLoc, OS);
 
-  // Map macro errors from macro instantiation buffers to the definition line.
-  if (std::optional<SMDiagnostic> NewDiag =
-          DiagSrcMgr.mapDiagnosticFromMacroInstantiation(Diag)) {
-    if (Parser->SavedDiagHandler)
-      Parser->SavedDiagHandler(*NewDiag, Parser->SavedDiagContext);
-    else
-      NewDiag->print(nullptr, OS);
-    return;
-  }
-
   // If we have not parsed a cpp hash line filename comment or the source
   // manager changed or buffer changed (like in a nested include) then just
   // print the normal diagnostic using its Filename and LineNo.
@@ -2791,9 +2778,8 @@ bool MasmParser::handleMacroEntry(const MCAsmMacro *M, SMLoc NameLoc,
 
   // Jump to the macro instantiation and prime the lexer. Use the start of the
   // macro body in the source manager as the IncludeLoc.
-  CurBuffer = SrcMgr.AddMacroInstantiationBuffer(
-      std::move(Instantiation), SMLoc::getFromPointer(M->Body.data()),
-      CurBuffer, NameLoc);
+  CurBuffer = SrcMgr.AddMacroInstantiationBuffer(std::move(Instantiation),
+                                                 M->Loc, NameLoc);
   Lexer.setBuffer(SrcMgr.getMemoryBuffer(CurBuffer)->getBuffer());
   EndStatementAtEOFStack.push_back(true);
   Lex();
@@ -4428,7 +4414,7 @@ bool MasmParser::parseDirectiveMacro(StringRef Name, SMLoc NameLoc) {
   const char *BodyEnd = EndToken.getLoc().getPointer();
   StringRef Body = StringRef(BodyStart, BodyEnd - BodyStart);
   MCAsmMacro Macro(Name, Body, std::move(Parameters), std::move(Locals),
-                   IsMacroFunction);
+                   IsMacroFunction, NameLoc);
   DEBUG_WITH_TYPE("asm-macros", dbgs() << "Defining new macro:\n";
                   Macro.dump());
   getContext().defineMacro(Name.lower(), std::move(Macro));
@@ -5467,9 +5453,8 @@ void MasmParser::instantiateMacroLikeBody(MCAsmMacro *M, SMLoc DirectiveLoc,
   ActiveMacros.push_back(MI);
 
   // Jump to the macro instantiation and prime the lexer.
-  CurBuffer = SrcMgr.AddMacroInstantiationBuffer(
-      std::move(Instantiation), SMLoc::getFromPointer(M->Body.data()),
-      CurBuffer, DirectiveLoc);
+  CurBuffer = SrcMgr.AddMacroInstantiationBuffer(std::move(Instantiation),
+                                                 DirectiveLoc, DirectiveLoc);
   Lexer.setBuffer(SrcMgr.getMemoryBuffer(CurBuffer)->getBuffer());
   EndStatementAtEOFStack.push_back(true);
   Lex();
