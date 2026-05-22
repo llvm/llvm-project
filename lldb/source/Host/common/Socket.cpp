@@ -404,7 +404,11 @@ int Socket::SetOption(NativeSocket sockfd, int level, int option_name,
 }
 
 ssize_t Socket::Send(const void *buf, const size_t num_bytes) {
-  return ::send(m_socket, static_cast<const char *>(buf), num_bytes, 0);
+  int flags = 0;
+#if defined(MSG_NOSIGNAL)
+  flags |= MSG_NOSIGNAL;
+#endif
+  return ::send(m_socket, static_cast<const char *>(buf), num_bytes, flags);
 }
 
 void Socket::SetLastError(Status &error) {
