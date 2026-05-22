@@ -9,7 +9,6 @@
 #define LLVM_CLANG_DRIVER_SANITIZERARGS_H
 
 #include "clang/Basic/Sanitizers.h"
-#include "clang/Driver/Action.h"
 #include "clang/Driver/Types.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -86,9 +85,7 @@ class SanitizerArgs {
 public:
   /// Parses the sanitizer arguments from an argument list.
   SanitizerArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
-                bool DiagnoseErrors = true, bool DiagnoseBoundArchErrors = true,
-                StringRef BoundArch = "",
-                Action::OffloadKind DeviceOffloadKind = Action::OFK_None);
+                bool DiagnoseErrors = true);
 
   bool needsSharedRt() const { return SharedRuntime; }
   bool needsStableAbi() const { return StableABI; }

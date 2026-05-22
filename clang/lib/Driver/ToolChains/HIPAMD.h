@@ -69,7 +69,6 @@ public:
                                         const JobAction &JA,
                                         Compilation &C,
                                         const InputInfoList &Inputs) const override;
-
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
@@ -89,6 +88,10 @@ public:
   llvm::SmallVector<BitCodeLibraryInfo, 12>
   getDeviceLibs(const llvm::opt::ArgList &Args,
                 Action::OffloadKind DeviceOffloadKind) const override;
+
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 
   VersionTuple
   computeMSVCVersion(const Driver *D,

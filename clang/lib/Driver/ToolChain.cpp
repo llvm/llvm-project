@@ -516,15 +516,8 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
 }
 
 SanitizerArgs
-ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs,
-                            StringRef BoundArch,
-                            Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerArgs SanArgs(*this, JobArgs,
-                        /*DiagnoseErrors=*/!SanitizerArgsChecked,
-                        /*DiagnoseBoundArchErrors=*/
-                        BoundArchSanitizerArgsChecked.insert(BoundArch).second,
-                        BoundArch, DeviceOffloadKind);
-
+ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
+  SanitizerArgs SanArgs(*this, JobArgs, !SanitizerArgsChecked);
   SanitizerArgsChecked = true;
   return SanArgs;
 }
