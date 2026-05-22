@@ -30,7 +30,6 @@ on:
 jobs:
   backport-commits-validate-input:
     runs-on: ubuntu-24.04
-    environment: main-branch-only
     if: >-
       (github.repository == 'llvm/llvm-project') &&
       !startswith(github.event.comment.body, '<!--IGNORE-->') &&
