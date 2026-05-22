@@ -1241,12 +1241,10 @@ static bool ldexpSaturatingAddIsSafe(Type *FpTy, Type *ExpTy) {
   int SignedMin =
       static_cast<int>(APInt::getSignedMinValue(ExpBits).getSExtValue());
 
-  APFloat ScaledUp =
-      scalbn(APFloat::getSmallest(FltSem), SignedMax,
-             APFloat::rmNearestTiesToEven);
-  APFloat ScaledDown =
-      scalbn(APFloat::getLargest(FltSem), SignedMin,
-             APFloat::rmNearestTiesToEven);
+  APFloat ScaledUp = scalbn(APFloat::getSmallest(FltSem), SignedMax,
+                            APFloat::rmNearestTiesToEven);
+  APFloat ScaledDown = scalbn(APFloat::getLargest(FltSem), SignedMin,
+                              APFloat::rmNearestTiesToEven);
   return ScaledUp.isInfinity() && ScaledDown.isZero();
 }
 
@@ -3251,9 +3249,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // sign (since then we'd just double down on the over/underflow which would
     // occur anyway).
     //
-    // ldexp can take arbitrary integer types, so we also need to ensure that our
-    // exponent type is wide enough so that if sadd.sat(a, b) saturates, then
-    // ldexp at the saturated exponent saturates to inf or zero as well.
+    // ldexp can take arbitrary integer types, so we also need to ensure that
+    // our exponent type is wide enough so that if sadd.sat(a, b) saturates,
+    // then ldexp at the saturated exponent saturates to inf or zero as well.
     //
     // TODO: Could do better if we had range tracking for the input value
     // exponent. Also could broaden sign check to cover == 0 case.
