@@ -677,8 +677,8 @@ public:
       : SubobjectVisitor<KernelArgsChecker>(SR.getASTContext()),
         SemaSYCLRef(SR) {}
 
-  bool visitBaseSpecifierPre(CXXBaseSpecifier BS) {
-    SubobjectAccessPath.push_back(&BS);
+  bool visitBaseSpecifierPre(CXXBaseSpecifier *BS) {
+    SubobjectAccessPath.push_back(BS);
     return true;
   }
 
@@ -712,7 +712,7 @@ public:
   }
 
   void visitFieldDeclPost(FieldDecl *FD) { SubobjectAccessPath.pop_back(); }
-  void visitBaseSpecifierPost(CXXBaseSpecifier BS) {
+  void visitBaseSpecifierPost(CXXBaseSpecifier *BS) {
     SubobjectAccessPath.pop_back();
   }
 

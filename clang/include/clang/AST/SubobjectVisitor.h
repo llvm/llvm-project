@@ -26,8 +26,6 @@ template <template <typename> class Ptr, typename Derived>
 class SubobjectVisitorBase {
   ASTContext &Ctx;
   template <typename Class> using ptr_t = typename Ptr<Class>::type;
-  template <typename Class>
-  using non_ptr_t = typename std::remove_pointer<ptr_t<Class>>::type;
 
 public:
   SubobjectVisitorBase(ASTContext &Ctx) : Ctx(Ctx) {}
@@ -43,40 +41,39 @@ public:
     if (QT->isArrayType()) {
       QualType ElTy =
           cast<ConstantArrayType>(Ctx.getAsArrayType(QT))->getElementType();
-      visit(ElTy);
+      getDerived().visit(ElTy);
       return;
     }
 
     if (ptr_t<RecordDecl> RD = QT->getAsRecordDecl()) {
-      traverseRecord(RD);
+      getDerived().traverseRecord(RD);
       return;
     }
-
-    visitGenericType(QT.getCanonicalType().getTypePtr());
+    getDerived().visitGenericType(QT.getCanonicalType().getTypePtr());
   }
 
   void traverseRecord(ptr_t<RecordDecl> RD) {
     if (ptr_t<CXXRecordDecl> CRD = dyn_cast<CXXRecordDecl>(RD)) {
-      for (non_ptr_t<CXXBaseSpecifier> BS : CRD->bases()) {
-        if (!static_cast<Derived *>(this)->visitBaseSpecifierPre(BS))
+      for (CXXBaseSpecifier& BS : CRD->bases()) {
+        if (!getDerived().visitBaseSpecifierPre(&BS))
           continue;
-        visit(BS.getType());
-        static_cast<Derived *>(this)->visitBaseSpecifierPost(BS);
+        getDerived().visit(BS.getType());
+        getDerived().visitBaseSpecifierPost(&BS);
       }
     }
     for (ptr_t<FieldDecl> FD : RD->fields()) {
-      if (!static_cast<Derived *>(this)->visitFieldDeclPre(FD))
+      if (!getDerived().visitFieldDeclPre(FD))
         continue;
-      visit(FD->getType());
-      static_cast<Derived *>(this)->visitFieldDeclPost(FD);
+      getDerived().visit(FD->getType());
+      getDerived().visitFieldDeclPost(FD);
     }
   }
 
   // Default base class specifier pre-order visitor.
-  bool visitBaseSpecifierPre(non_ptr_t<CXXBaseSpecifier> BS) { return true; }
+  bool visitBaseSpecifierPre(ptr_t<CXXBaseSpecifier> BS) { return true; }
 
   // Default base class specifier post-order visitor.
-  void visitBaseSpecifierPost(non_ptr_t<CXXBaseSpecifier> BS) {}
+  void visitBaseSpecifierPost(ptr_t<CXXBaseSpecifier> BS) {}
 
   // Default field pre-order visitor.
   bool visitFieldDeclPre(ptr_t<FieldDecl> FD) { return true; }
