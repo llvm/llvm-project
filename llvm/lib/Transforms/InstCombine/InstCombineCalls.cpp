@@ -23,6 +23,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -2007,14 +2008,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return NewCall;
   }
 
-  // Unused constrained FP intrinsic calls may have declared side effect, which
-  // prevents it from being removed. In some cases however the side effect is
-  // actually absent. To detect this case, call SimplifyConstrainedFPCall. If it
-  // returns a replacement, the call may be removed.
-  if (CI.use_empty() && isa<ConstrainedFPIntrinsic>(CI)) {
-    if (simplifyConstrainedFPCall(&CI, SQ.getWithInstruction(&CI)))
-      return eraseInstFromFunction(CI);
-  }
+  // An unused constrained FP intrinsic call can be erased only if either:
+  //  - its exception behavior is not `strict`, or
+  //  - we can prove that it doesn't raise an FP exception.
+  // For the latter case, it's sufficient to check that constant-folding
+  // succeeds, because constant folding is exception-aware.
+  if (auto *FPI = dyn_cast<ConstrainedFPIntrinsic>(&CI);
+      FPI && FPI->use_empty() &&
+      (*FPI->getExceptionBehavior() != fp::ebStrict ||
+       TryConstantFoldCall(FPI, FPI->getCalledFunction(),
+                           to_vector_of<Value *, 4>(FPI->args()),
+                           &TLI) != nullptr))
+    return eraseInstFromFunction(*FPI);
 
   Intrinsic::ID IID = II->getIntrinsicID();
   switch (IID) {

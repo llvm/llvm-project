@@ -59,6 +59,30 @@ entry:
   ret float 1.0
 }
 
+; A fpexcept.strict operation may still be needed for its exception side-effect
+; even if its result would be poison.
+define void @f_unused_strict_nnan_snan() #0 {
+; CHECK-LABEL: @f_unused_strict_nnan_snan(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan double @llvm.experimental.constrained.fadd.f64(double +snan(0x4000000000001), double 1.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %result = call nnan double @llvm.experimental.constrained.fadd.f64(double 0x7FF4000000000001, double 1.0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret void
+}
+
+define void @f_unused_strict_ninf_inf_zero() #0 {
+; CHECK-LABEL: @f_unused_strict_ninf_inf_zero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call ninf double @llvm.experimental.constrained.fmul.f64(double +inf, double 0.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %result = call ninf double @llvm.experimental.constrained.fmul.f64(double 0x7FF0000000000000, double 0.0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret void
+}
+
 ; Constant evaluation.
 
 ; If operation does not raise exceptions, it may be folded even in strict mode.
@@ -118,8 +142,21 @@ entry:
   ret float %result
 }
 
+define double @f_eval_strict_nnan_snan() #0 {
+; CHECK-LABEL: @f_eval_strict_nnan_snan(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan double @llvm.experimental.constrained.fadd.f64(double +snan(0x4000000000001), double 1.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret double poison
+;
+entry:
+  %result = call nnan double @llvm.experimental.constrained.fadd.f64(double 0x7FF4000000000001, double 1.0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
 
 declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
+declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata)
 declare float @llvm.experimental.constrained.fdiv.f32(float, float, metadata, metadata)
+declare double @llvm.experimental.constrained.fmul.f64(double, double, metadata, metadata)
 
 attributes #0 = { strictfp }

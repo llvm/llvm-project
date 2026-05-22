@@ -911,9 +911,52 @@ define float @fma_poison_op2_defaultfp(float %x, float %y) #0 {
   ret float %r
 }
 
+; nnan/ninf still make the result poison under fpexcept.strict, but the
+; constrained call must remain if it would observably raise FE_INVALID.
+
+define double @fadd_nnan_strict_snan() #0 {
+; CHECK-LABEL: @fadd_nnan_strict_snan(
+; CHECK-NEXT:    [[R:%.*]] = call nnan double @llvm.experimental.constrained.fadd.f64(double +snan(0x4000000000001), double 1.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    ret double poison
+;
+  %r = call nnan double @llvm.experimental.constrained.fadd.f64(double 0x7FF4000000000001, double 1.0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret double %r
+}
+
+define double @fmul_ninf_strict_inf() #0 {
+; CHECK-LABEL: @fmul_ninf_strict_inf(
+; CHECK-NEXT:    [[R:%.*]] = call ninf double @llvm.experimental.constrained.fmul.f64(double +inf, double 0.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret double poison
+;
+  %r = call ninf double @llvm.experimental.constrained.fmul.f64(double 0x7FF0000000000000, double 0.0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret double %r
+}
+
+; fpexcept.maytrap does not need to preserve the original exception, so nnan
+; can fold the call's result to poison and leave no side-effecting operation.
+define double @fadd_nnan_maytrap_snan() #0 {
+; CHECK-LABEL: @fadd_nnan_maytrap_snan(
+; CHECK-NEXT:    ret double poison
+;
+  %r = call nnan double @llvm.experimental.constrained.fadd.f64(double 0x7FF4000000000001, double 1.0, metadata !"round.dynamic", metadata !"fpexcept.maytrap") #0
+  ret double %r
+}
+
+; fpexcept.ignore has no observable exception, so nnan can still fold the
+; call's result to poison.
+define double @fadd_nnan_ignore_snan() #0 {
+; CHECK-LABEL: @fadd_nnan_ignore_snan(
+; CHECK-NEXT:    ret double poison
+;
+  %r = call nnan double @llvm.experimental.constrained.fadd.f64(double 0x7FF4000000000001, double 1.0, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  ret double %r
+}
+
 declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
+declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata)
 declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
+declare double @llvm.experimental.constrained.fmul.f64(double, double, metadata, metadata)
 declare float @llvm.experimental.constrained.fdiv.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.frem.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.fma.f32(float, float, float, metadata, metadata)

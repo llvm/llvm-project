@@ -4688,6 +4688,28 @@ Constant *llvm::ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
   return ConstantFoldIntrinsicCall2(ID, Ty, {LHS, RHS}, nullptr);
 }
 
+Constant *llvm::TryConstantFoldCall(const CallBase *Call, Function *F,
+                                    ArrayRef<Value *> Args,
+                                    const TargetLibraryInfo *TLI,
+                                    bool AllowNonDeterministic) {
+  if (!canConstantFoldCallTo(Call, F))
+    return nullptr;
+
+  SmallVector<Constant *, 4> ConstantArgs;
+  ConstantArgs.reserve(Args.size());
+  for (Value *Arg : Args) {
+    Constant *C = dyn_cast<Constant>(Arg);
+    if (!C) {
+      if (isa<MetadataAsValue>(Arg))
+        continue;
+      return nullptr;
+    }
+    ConstantArgs.push_back(C);
+  }
+
+  return ConstantFoldCall(Call, F, ConstantArgs, TLI, AllowNonDeterministic);
+}
+
 Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,
                                  ArrayRef<Constant *> Operands,
                                  const TargetLibraryInfo *TLI,

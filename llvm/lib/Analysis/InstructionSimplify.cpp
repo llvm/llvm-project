@@ -7460,28 +7460,6 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   }
 }
 
-static Value *tryConstantFoldCall(CallBase *Call, Value *Callee,
-                                  ArrayRef<Value *> Args,
-                                  const SimplifyQuery &Q) {
-  auto *F = dyn_cast<Function>(Callee);
-  if (!F || !canConstantFoldCallTo(Call, F))
-    return nullptr;
-
-  SmallVector<Constant *, 4> ConstantArgs;
-  ConstantArgs.reserve(Args.size());
-  for (Value *Arg : Args) {
-    Constant *C = dyn_cast<Constant>(Arg);
-    if (!C) {
-      if (isa<MetadataAsValue>(Arg))
-        continue;
-      return nullptr;
-    }
-    ConstantArgs.push_back(C);
-  }
-
-  return ConstantFoldCall(Call, F, ConstantArgs, Q.TLI);
-}
-
 Value *llvm::simplifyCall(CallBase *Call, Value *Callee, ArrayRef<Value *> Args,
                           const SimplifyQuery &Q) {
   // Args should not contain operand bundle operands.
@@ -7497,24 +7475,15 @@ Value *llvm::simplifyCall(CallBase *Call, Value *Callee, ArrayRef<Value *> Args,
   if (isa<UndefValue>(Callee) || isa<ConstantPointerNull>(Callee))
     return PoisonValue::get(Call->getType());
 
-  if (Value *V = tryConstantFoldCall(Call, Callee, Args, Q))
-    return V;
+  if (auto *F = dyn_cast<Function>(Callee)) {
+    if (Value *V = TryConstantFoldCall(Call, F, Args, Q.TLI))
+      return V;
 
-  auto *F = dyn_cast<Function>(Callee);
-  if (F && F->isIntrinsic())
-    if (Value *Ret = simplifyIntrinsic(Call, Callee, Args, Q))
-      return Ret;
+    if (F->isIntrinsic())
+      if (Value *Ret = simplifyIntrinsic(Call, Callee, Args, Q))
+        return Ret;
+  }
 
-  return nullptr;
-}
-
-Value *llvm::simplifyConstrainedFPCall(CallBase *Call, const SimplifyQuery &Q) {
-  assert(isa<ConstrainedFPIntrinsic>(Call));
-  SmallVector<Value *, 4> Args(Call->args());
-  if (Value *V = tryConstantFoldCall(Call, Call->getCalledOperand(), Args, Q))
-    return V;
-  if (Value *Ret = simplifyIntrinsic(Call, Call->getCalledOperand(), Args, Q))
-    return Ret;
   return nullptr;
 }
 

@@ -40,6 +40,7 @@ class GlobalVariable;
 class Instruction;
 class TargetLibraryInfo;
 class Type;
+class Value;
 
 /// If this constant is a constant offset from a global, return the global and
 /// the constant. Because of constantexprs, this function is recursive.
@@ -168,6 +169,13 @@ LLVM_ABI Constant *ConstantFoldCall(const CallBase *Call, Function *F,
                                     ArrayRef<Constant *> Operands,
                                     const TargetLibraryInfo *TLI = nullptr,
                                     bool AllowNonDeterministic = true);
+
+/// Try to constant fold a call to the specified function.  Fails if the call is
+/// not foldable, or if the arguments are not all constants / metadata values.
+LLVM_ABI Constant *TryConstantFoldCall(const CallBase *Call, Function *Callee,
+                                       ArrayRef<Value *> Args,
+                                       const TargetLibraryInfo *TLI,
+                                       bool AllowNonDeterministic = true);
 
 LLVM_ABI Constant *ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
                                                Constant *RHS, Type *Ty);
