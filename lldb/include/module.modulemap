@@ -46,6 +46,7 @@ module lldb_Host {
   module ProcessLaunchInfo { header "lldb/Host/ProcessLaunchInfo.h" export * }
   module ProcessRunLock { header "lldb/Host/ProcessRunLock.h" export * }
   module PseudoTerminal { header "lldb/Host/PseudoTerminal.h" export * }
+  module PythonRuntimeLoader { header "lldb/Host/PythonRuntimeLoader.h" export * }
   module SafeMachO { header "lldb/Host/SafeMachO.h" export * }
   module SocketAddress { header "lldb/Host/SocketAddress.h" export * }
   module Socket { header "lldb/Host/Socket.h" export * }
