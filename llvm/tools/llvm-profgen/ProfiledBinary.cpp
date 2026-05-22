@@ -1243,10 +1243,11 @@ void ProfiledBinary::loadSymbolsFromPseudoProbe() {
               InlineTreeNode->Parent);
 
         auto TopLevelProbes = InlineTreeNode->getProbes();
-        assert(find_if(TopLevelProbes,
-                       [Start = StartAddr, End = EndAddr](const auto &P) {
-                         return P.getAddress() >= Start && P.getAddress() < End;
-                       }) != TopLevelProbes.end() &&
+        assert(llvm::any_of(TopLevelProbes,
+                            [Start = StartAddr, End = EndAddr](const auto &P) {
+                              return P.getAddress() >= Start &&
+                                     P.getAddress() < End;
+                            }) &&
                "Top level pseudo probe does not match function range");
 
         const auto *ProbeDesc = getFuncDescForGUID(InlineTreeNode->Guid);
