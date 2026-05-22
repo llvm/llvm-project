@@ -2396,32 +2396,16 @@ void MasmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
 
   // Like SourceMgr::printMessage() we need to print the include stack if any
   // before printing the message.
-  unsigned DiagCurBuffer = DiagSrcMgr.FindBufferContainingLoc(DiagLoc);
-  if (!Parser->SavedDiagHandler && DiagCurBuffer &&
-      DiagCurBuffer != DiagSrcMgr.getMainFileID()) {
-    SMLoc ParentIncludeLoc = DiagSrcMgr.getParentIncludeLoc(DiagCurBuffer);
-    // Ignore macro instantiation buffers to avoid redundant include stacks.
-    if (DiagSrcMgr.getMemoryBuffer(DiagCurBuffer)->getBufferIdentifier() !=
-        "<instantiation>")
-      DiagSrcMgr.PrintIncludeStack(ParentIncludeLoc, OS);
-  }
+  if (!Parser->SavedDiagHandler)
+    DiagSrcMgr.printIncludeStackForDiagnostic(DiagLoc, OS);
 
-  // Map macro errors from "<instantiation>" buffer back to the definition line.
-  if (DiagBuf && DiagSrcMgr.getMemoryBuffer(DiagBuf)->getBufferIdentifier() ==
-                     "<instantiation>") {
-    SMLoc RealLoc = DiagSrcMgr.getParentIncludeLoc(DiagBuf);
-    unsigned RealBuf = DiagSrcMgr.FindBufferContainingLoc(RealLoc);
-    StringRef Filename =
-        DiagSrcMgr.getMemoryBuffer(RealBuf)->getBufferIdentifier();
-    int LineNo =
-        DiagSrcMgr.FindLineNumber(RealLoc, RealBuf) + Diag.getLineNo() - 1;
-    SMDiagnostic NewDiag(*Diag.getSourceMgr(), RealLoc, Filename, LineNo,
-                         Diag.getColumnNo(), Diag.getKind(), Diag.getMessage(),
-                         Diag.getLineContents(), Diag.getRanges());
+  // Map macro errors from macro instantiation buffers back to the definition line.
+  if (std::optional<SMDiagnostic> NewDiag =
+          DiagSrcMgr.mapDiagnosticFromMacroInstantiation(Diag)) {
     if (Parser->SavedDiagHandler)
-      Parser->SavedDiagHandler(NewDiag, Parser->SavedDiagContext);
+      Parser->SavedDiagHandler(*NewDiag, Parser->SavedDiagContext);
     else
-      NewDiag.print(nullptr, OS);
+      NewDiag->print(nullptr, OS);
     return;
   }
 
@@ -2807,8 +2791,9 @@ bool MasmParser::handleMacroEntry(const MCAsmMacro *M, SMLoc NameLoc,
 
   // Jump to the macro instantiation and prime the lexer. Use the start of the
   // macro body in the source manager as the IncludeLoc.
-  CurBuffer = SrcMgr.AddNewSourceBuffer(std::move(Instantiation),
-                                        SMLoc::getFromPointer(M->Body.data()));
+  CurBuffer = SrcMgr.AddMacroInstantiationBuffer(
+      std::move(Instantiation), SMLoc::getFromPointer(M->Body.data()),
+      CurBuffer, NameLoc);
   Lexer.setBuffer(SrcMgr.getMemoryBuffer(CurBuffer)->getBuffer());
   EndStatementAtEOFStack.push_back(true);
   Lex();
@@ -5482,8 +5467,9 @@ void MasmParser::instantiateMacroLikeBody(MCAsmMacro *M, SMLoc DirectiveLoc,
   ActiveMacros.push_back(MI);
 
   // Jump to the macro instantiation and prime the lexer.
-  CurBuffer = SrcMgr.AddNewSourceBuffer(std::move(Instantiation),
-                                        SMLoc::getFromPointer(M->Body.data()));
+  CurBuffer = SrcMgr.AddMacroInstantiationBuffer(
+      std::move(Instantiation), SMLoc::getFromPointer(M->Body.data()),
+      CurBuffer, DirectiveLoc);
   Lexer.setBuffer(SrcMgr.getMemoryBuffer(CurBuffer)->getBuffer());
   EndStatementAtEOFStack.push_back(true);
   Lex();

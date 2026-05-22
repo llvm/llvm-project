@@ -5667,6 +5667,7 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
 
   switch (RdxDesc.getRecurrenceKind()) {
   case RecurKind::Sub:
+  case RecurKind::FSub:
   case RecurKind::AddChainWithSubs:
   case RecurKind::FAddChainWithSubs:
   case RecurKind::Add:

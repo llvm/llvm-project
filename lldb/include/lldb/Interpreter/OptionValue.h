@@ -127,7 +127,9 @@ public:
 
   virtual llvm::StringRef GetName() const { return llvm::StringRef(); }
 
-  virtual bool DumpQualifiedName(Stream &strm) const;
+  virtual bool DumpQualifiedName(
+      Stream &strm,
+      std::optional<Stream::HighlightSettings> highlight = std::nullopt) const;
 
   // Subclasses should NOT override these functions as they use the above
   // functions to implement functionality

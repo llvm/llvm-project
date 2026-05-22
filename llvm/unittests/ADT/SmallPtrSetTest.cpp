@@ -476,7 +476,8 @@ TEST(SmallPtrSetTest, Reserve) {
   EXPECT_EQ(Set.size(), 6u);
   EXPECT_THAT(Set, UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2], &Vals[3], &Vals[4], &Vals[5]));
 
-  // Reserving 192 should result in 256 buckets.
+  // Reserving 192 should result in 512 buckets: 192 * 3 / 2 = 288, rounded
+  // up to the next power of two.
   Set.reserve(192);
-  EXPECT_EQ(Set.capacity(), 256u);
+  EXPECT_EQ(Set.capacity(), 512u);
 }

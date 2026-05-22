@@ -201,7 +201,8 @@ SourceMgr::SrcBuffer::getPointerForLineNumber(unsigned LineNo) const {
 
 SourceMgr::SrcBuffer::SrcBuffer(SourceMgr::SrcBuffer &&Other)
     : Buffer(std::move(Other.Buffer)), OffsetCache(Other.OffsetCache),
-      IncludeLoc(Other.IncludeLoc) {
+      IncludeLoc(Other.IncludeLoc), MacroParentBuf(Other.MacroParentBuf),
+      MacroCallLoc(Other.MacroCallLoc) {
   Other.OffsetCache = nullptr;
 }
 
@@ -296,6 +297,36 @@ void SourceMgr::PrintIncludeStack(SMLoc IncludeLoc, raw_ostream &OS) const {
 
   OS << "Included from " << getBufferInfo(CurBuf).Buffer->getBufferIdentifier()
      << ":" << FindLineNumber(IncludeLoc, CurBuf) << ":\n";
+}
+
+void SourceMgr::printIncludeStackForDiagnostic(SMLoc Loc,
+                                               raw_ostream &OS) const {
+  if (!Loc.isValid())
+    return;
+  unsigned DiagCurBuffer = FindBufferContainingLoc(Loc);
+  if (DiagCurBuffer && DiagCurBuffer != getMainFileID()) {
+    SMLoc ParentIncludeLoc = getParentIncludeLoc(DiagCurBuffer);
+    // Ignore macro instantiation buffers to avoid redundant include stacks.
+    if (!getMacroParentBuf(DiagCurBuffer))
+      PrintIncludeStack(ParentIncludeLoc, OS);
+  }
+}
+
+std::optional<SMDiagnostic>
+SourceMgr::mapDiagnosticFromMacroInstantiation(const SMDiagnostic &Diag) const {
+  SMLoc DiagLoc = Diag.getLoc();
+  unsigned DiagBuf = FindBufferContainingLoc(DiagLoc);
+  if (!DiagBuf || !getMacroParentBuf(DiagBuf))
+    return std::nullopt;
+
+  SMLoc RealLoc = getParentIncludeLoc(DiagBuf);
+  unsigned RealBuf = FindBufferContainingLoc(RealLoc);
+  StringRef Filename = getMemoryBuffer(RealBuf)->getBufferIdentifier();
+  int LineNo = FindLineNumber(RealLoc, RealBuf) + Diag.getLineNo() - 1;
+  return SMDiagnostic(*Diag.getSourceMgr(), RealLoc, Filename, LineNo,
+                      Diag.getColumnNo(), Diag.getKind(), Diag.getMessage(),
+                      Diag.getLineContents(), Diag.getRanges(),
+                      Diag.getFixIts());
 }
 
 SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,

@@ -20,6 +20,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -82,6 +83,12 @@ private:
 
     /// This is the location of the parent include, or null if at the top level.
     SMLoc IncludeLoc;
+
+    /// The parent buffer ID where this macro was expanded, or 0 if not a macro.
+    unsigned MacroParentBuf = 0;
+
+    /// The location in the parent buffer where this macro was called.
+    SMLoc MacroCallLoc;
 
     SrcBuffer() = default;
     LLVM_ABI SrcBuffer(SrcBuffer &&);
@@ -158,6 +165,16 @@ public:
     return Buffers[i - 1].IncludeLoc;
   }
 
+  unsigned getMacroParentBuf(unsigned i) const {
+    assert(isValidBufferID(i));
+    return Buffers[i - 1].MacroParentBuf;
+  }
+
+  SMLoc getMacroCallLoc(unsigned i) const {
+    assert(isValidBufferID(i));
+    return Buffers[i - 1].MacroCallLoc;
+  }
+
   /// Add a new source buffer to this source manager. This takes ownership of
   /// the memory buffer.
   unsigned AddNewSourceBuffer(std::unique_ptr<MemoryBuffer> F,
@@ -165,6 +182,18 @@ public:
     SrcBuffer NB;
     NB.Buffer = std::move(F);
     NB.IncludeLoc = IncludeLoc;
+    Buffers.push_back(std::move(NB));
+    return Buffers.size();
+  }
+
+  unsigned AddMacroInstantiationBuffer(std::unique_ptr<MemoryBuffer> F,
+                                       SMLoc SpellingLoc, unsigned ParentBuf,
+                                       SMLoc CallLoc) {
+    SrcBuffer NB;
+    NB.Buffer = std::move(F);
+    NB.IncludeLoc = SpellingLoc;
+    NB.MacroParentBuf = ParentBuf;
+    NB.MacroCallLoc = CallLoc;
     Buffers.push_back(std::move(NB));
     return Buffers.size();
   }
@@ -272,6 +301,21 @@ public:
   /// \param IncludeLoc The location of the include.
   /// \param OS the raw_ostream to print on.
   LLVM_ABI void PrintIncludeStack(SMLoc IncludeLoc, raw_ostream &OS) const;
+
+  /// Prints the include stack of a buffer unless it is a macro instantiation
+  /// buffer.
+  LLVM_ABI void printIncludeStackForDiagnostic(SMLoc Loc,
+                                               raw_ostream &OS) const;
+
+  /// If the location of the given diagnostic \p Diag is within a macro
+  /// instantiation buffer, this maps it back to the location in the parent
+  /// buffer where the macro was called and returns a new SMDiagnostic with
+  /// the updated location, filename, and adjusted line number.
+  ///
+  /// Returns \c std::nullopt if the diagnostic is not within a macro
+  /// instantiation buffer.
+  LLVM_ABI std::optional<SMDiagnostic>
+  mapDiagnosticFromMacroInstantiation(const SMDiagnostic &Diag) const;
 };
 
 /// Represents a single fixit, a replacement of one range of text with another.

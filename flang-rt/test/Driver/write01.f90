@@ -3,7 +3,8 @@
 ! reallocations as the size increases geometrically when certain
 ! threshold is reached
 
-! RUN: %flang %isysroot -L"%libdir" -O3 -g %s -o %t && %t | FileCheck %s
+! RUN: %flang %isysroot -L"%libdir" -O3 -g %s -o %t
+! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t | FileCheck %s
 ! CHECK: PASS
 
 program test_array_write
