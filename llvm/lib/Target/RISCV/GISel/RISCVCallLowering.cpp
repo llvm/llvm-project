@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include <functional>
 
 using namespace llvm;
 
@@ -84,29 +85,32 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     if (NarrowValWideLoc || FixedLenVecInScalableVec) {
       Register PhysReg = VA.getLocReg();
 
-      auto assignFunc = [=]() {
-        if (NarrowValWideLoc) {
+      std::function<void()> AssignFunc;
+      if (NarrowValWideLoc) {
+        AssignFunc = [=]() {
           auto Trunc = MIRBuilder.buildAnyExt(LLT(VA.getLocVT()), Arg.Regs[0]);
           MIRBuilder.buildCopy(PhysReg, Trunc);
           MIB.addUse(PhysReg, RegState::Implicit);
-        } else if (FixedLenVecInScalableVec) {
+        };
+      } else if (FixedLenVecInScalableVec) {
+        AssignFunc = [=]() {
           auto SubVec = MIRBuilder.buildInsertSubvector(
               LLT(VA.getLocVT()), MIRBuilder.buildUndef(LLT(VA.getLocVT())),
               Arg.Regs[0], 0);
           MIRBuilder.buildCopy(PhysReg, SubVec);
           MIB.addUse(PhysReg, RegState::Implicit);
-        } else
-          llvm_unreachable(
-              "A narrower value must be passed in a wider register or a fixed "
-              "length vector in a scalable vector register.");
-      };
+        };
+      } else
+        llvm_unreachable(
+            "A narrower value must be passed in a wider register or a fixed "
+            "length vector in a scalable vector register.");
 
       if (Thunk) {
-        *Thunk = std::move(assignFunc);
+        *Thunk = std::move(AssignFunc);
         return 1;
       }
 
-      assignFunc();
+      AssignFunc();
       return 1;
     }
 
