@@ -9,13 +9,15 @@ define float @fmaf(float %x, float %y, float %z) !dbg !4 {
 !llvm.module.flags = !{!12, !13}
 !llvm.used = !{!5}
 
+; CHECK: define float @fmaf(float %x, float %y, float %z) {
+
 ; CHECK: !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "Some Compiler", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "Some Compiler", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 ; CHECK: !1 = !DIFile(filename: "some-source", directory: "some-path")
 !1 = !DIFile(filename: "some-source", directory: "some-path")
 !2 = !{}
 
-; CHECK: !4 = distinct !DISubprogram(name: "fmaf", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped | 536870912, isOptimized: true, function: float (float, float, float)* @fmaf, variables: !8)
+; CHECK: !4 = !DISubprogram(name: "fmaf", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, function: float (float, float, float)* @fmaf, variables: !8)
 !4 = distinct !DISubprogram(name: "fmaf", scope: !1, file: !1, line: 1, type: !5, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
 
 ; CHECK: !5 = !DISubroutineType(types: !6)

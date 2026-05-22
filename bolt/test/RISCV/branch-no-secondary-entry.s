@@ -1,6 +1,6 @@
 /// Test that no secondary entry points are created for basic block labels used
 /// by branches.
-// RUN: %clang %cflags -o %t %s
+// RUN: %clang %cflags64 -o %t %s
 // RUN: llvm-bolt -print-cfg -o %t.null %t 2>&1 | FileCheck %s
 
 // CHECK: Binary Function "_start" after building cfg {
