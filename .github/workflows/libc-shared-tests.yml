@@ -82,7 +82,7 @@ jobs:
 
       - name: Create QEMU wrapper
         run: |
-          mkdir ${{ github.workspace }}/build
+          mkdir build
           cat << 'EOF' > ${{ github.workspace }}/build/qemu-wrapper.sh
           #!/bin/bash
           exec qemu-${{ matrix.arch }} -L /usr/${{ matrix.target_triple }} "$@"
