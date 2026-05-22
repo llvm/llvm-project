@@ -7,7 +7,7 @@
 // array of resources (unless it is static).
 // CHECK-NOT: @_ZL1A = internal global [3 x %"class.hlsl::RWBuffer"] poison, align 4
 
-// CHECK: @A.str = private unnamed_addr constant [2 x i8] c"A\00", align 1
+// CHECK: [[BufA:@.*]] = private unnamed_addr constant [2 x i8] c"A\00", align 1
 
 RWBuffer<float> A[3] : register(u0);
 RWStructuredBuffer<float> Out : register(u0);
@@ -32,11 +32,11 @@ void main() {
 // Check that the `main` function calls `foo` with a local copy of the array
 // CHECK-NEXT: [[Tmp:%.*]] = alloca [3 x %"class.hlsl::RWBuffer"], align 4
 // CHECK-NEXT: [[TmpPtr0:%.*]] = getelementptr [3 x %"class.hlsl::RWBuffer"], ptr [[Tmp]], i32 0, i32 0
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} [[TmpPtr0]], i32 noundef 0, i32 noundef 0, i32 noundef 3, i32 noundef 0, ptr noundef @A.str)
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} [[TmpPtr0]], i32 noundef 0, i32 noundef 0, i32 noundef 3, i32 noundef 0, ptr noundef [[BufA]])
 // CHECK-NEXT: [[TmpPtr1:%.*]] = getelementptr [3 x %"class.hlsl::RWBuffer"], ptr [[Tmp]], i32 0, i32 1
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} [[TmpPtr1]], i32 noundef 0, i32 noundef 0, i32 noundef 3, i32 noundef 1, ptr noundef @A.str)
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} [[TmpPtr1]], i32 noundef 0, i32 noundef 0, i32 noundef 3, i32 noundef 1, ptr noundef [[BufA]])
 // CHECK-NEXT: [[TmpPtr2:%.*]] = getelementptr [3 x %"class.hlsl::RWBuffer"], ptr [[Tmp]], i32 0, i32 2
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} [[TmpPtr2]], i32 noundef 0, i32 noundef 0, i32 noundef 3, i32 noundef 2, ptr noundef @A.str)
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} [[TmpPtr2]], i32 noundef 0, i32 noundef 0, i32 noundef 3, i32 noundef 2, ptr noundef [[BufA]])
 
 // CHECK-NEXT: %[[ReturnedValue:.*]] = call {{.*}} float @_Z3fooA3_N4hlsl8RWBufferIfEE(ptr {{.*}} [[Tmp]])
 // CHECK-NEXT: %[[OutBufPtr:.*]] = call {{.*}} ptr @_ZNK4hlsl18RWStructuredBufferIfEixEj(ptr {{.*}} @_ZL3Out, i32 noundef 0)
