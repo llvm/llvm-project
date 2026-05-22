@@ -11,6 +11,6 @@
 // CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CHECK: repro.tar
 
-// TAR-DAG: {{.*}}.c
-// TAR-DAG: {{.*}}.sh
-// TAR-DAG: {{.*}}.cache/{{.*}}module.modulemap
+// TAR-DAG: .c
+// TAR-DAG: .sh
+// TAR-DAG: .cache/{{.*}}module.modulemap
