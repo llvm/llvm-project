@@ -36,16 +36,18 @@ define i32 @test_ctselect_extremal_values(i1 %cond) {
 ; M32:       # %bb.0:
 ; M32-NEXT:    andi $1, $4, 1
 ; M32-NEXT:    lui $2, 32768
+; M32-NEXT:    negu $1, $1
 ; M32-NEXT:    jr $ra
-; M32-NEXT:    subu $2, $2, $1
+; M32-NEXT:    xor $2, $1, $2
 ;
 ; M64-LABEL: test_ctselect_extremal_values:
 ; M64:       # %bb.0:
 ; M64-NEXT:    sll $1, $4, 0
 ; M64-NEXT:    lui $2, 32768
 ; M64-NEXT:    andi $1, $1, 1
+; M64-NEXT:    negu $1, $1
 ; M64-NEXT:    jr $ra
-; M64-NEXT:    subu $2, $2, $1
+; M64-NEXT:    xor $2, $1, $2
   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 2147483647, i32 -2147483648)
   ret i32 %result
 }
@@ -155,55 +157,55 @@ define i32 @test_ctselect_deeply_nested(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i32 %a, 
 ; M32-NEXT:    andi $4, $6, 1
 ; M32-NEXT:    lw $6, 28($sp)
 ; M32-NEXT:    negu $3, $3
+; M32-NEXT:    negu $4, $4
 ; M32-NEXT:    xor $2, $2, $1
 ; M32-NEXT:    and $2, $2, $3
 ; M32-NEXT:    andi $3, $5, 1
-; M32-NEXT:    lw $5, 32($sp)
+; M32-NEXT:    andi $5, $7, 1
+; M32-NEXT:    lw $7, 24($sp)
 ; M32-NEXT:    xor $1, $1, $2
-; M32-NEXT:    lw $2, 24($sp)
 ; M32-NEXT:    negu $3, $3
-; M32-NEXT:    xor $1, $1, $2
+; M32-NEXT:    lw $2, 32($sp)
+; M32-NEXT:    negu $5, $5
+; M32-NEXT:    xor $1, $1, $7
 ; M32-NEXT:    and $1, $1, $3
-; M32-NEXT:    andi $3, $7, 1
-; M32-NEXT:    xor $1, $2, $1
-; M32-NEXT:    negu $2, $4
-; M32-NEXT:    negu $3, $3
+; M32-NEXT:    xor $1, $7, $1
 ; M32-NEXT:    xor $1, $1, $6
-; M32-NEXT:    and $1, $1, $2
+; M32-NEXT:    and $1, $1, $4
 ; M32-NEXT:    xor $1, $6, $1
-; M32-NEXT:    xor $1, $1, $5
-; M32-NEXT:    and $1, $1, $3
+; M32-NEXT:    xor $1, $1, $2
+; M32-NEXT:    and $1, $1, $5
 ; M32-NEXT:    jr $ra
-; M32-NEXT:    xor $2, $5, $1
+; M32-NEXT:    xor $2, $2, $1
 ;
 ; M64-LABEL: test_ctselect_deeply_nested:
 ; M64:       # %bb.0:
 ; M64-NEXT:    sll $1, $4, 0
 ; M64-NEXT:    xor $2, $8, $9
-; M64-NEXT:    sll $5, $5, 0
-; M64-NEXT:    sll $3, $6, 0
-; M64-NEXT:    sll $6, $11, 0
+; M64-NEXT:    sll $3, $5, 0
+; M64-NEXT:    sll $5, $11, 0
 ; M64-NEXT:    sll $4, $7, 0
 ; M64-NEXT:    lw $7, 0($sp)
 ; M64-NEXT:    andi $1, $1, 1
 ; M64-NEXT:    sll $2, $2, 0
-; M64-NEXT:    andi $5, $5, 1
 ; M64-NEXT:    andi $3, $3, 1
 ; M64-NEXT:    andi $4, $4, 1
 ; M64-NEXT:    negu $1, $1
-; M64-NEXT:    negu $5, $5
+; M64-NEXT:    negu $3, $3
 ; M64-NEXT:    negu $4, $4
 ; M64-NEXT:    and $1, $2, $1
-; M64-NEXT:    sll $2, $9, 0
-; M64-NEXT:    xor $1, $2, $1
-; M64-NEXT:    sll $2, $10, 0
-; M64-NEXT:    xor $1, $1, $2
-; M64-NEXT:    and $1, $1, $5
-; M64-NEXT:    xor $1, $2, $1
-; M64-NEXT:    negu $2, $3
-; M64-NEXT:    xor $1, $1, $6
-; M64-NEXT:    and $1, $1, $2
+; M64-NEXT:    sll $2, $6, 0
+; M64-NEXT:    sll $6, $9, 0
 ; M64-NEXT:    xor $1, $6, $1
+; M64-NEXT:    sll $6, $10, 0
+; M64-NEXT:    andi $2, $2, 1
+; M64-NEXT:    xor $1, $1, $6
+; M64-NEXT:    negu $2, $2
+; M64-NEXT:    and $1, $1, $3
+; M64-NEXT:    xor $1, $6, $1
+; M64-NEXT:    xor $1, $1, $5
+; M64-NEXT:    and $1, $1, $2
+; M64-NEXT:    xor $1, $5, $1
 ; M64-NEXT:    xor $1, $1, $7
 ; M64-NEXT:    and $1, $1, $4
 ; M64-NEXT:    jr $ra

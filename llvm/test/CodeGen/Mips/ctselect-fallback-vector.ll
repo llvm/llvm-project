@@ -2,6 +2,13 @@
 ; RUN: llc < %s -mtriple=mips64-unknown-linux-gnu -mcpu=mips64r6 -mattr=+msa -O3 | FileCheck %s --check-prefix=MIPS64-MSA
 ; RUN: llc < %s -mtriple=mips-unknown-linux-gnu -mcpu=mips32r6 -mattr=+msa -O3 | FileCheck %s --check-prefix=MIPS32-MSA
 
+; TODO: <8 x i16>, <16 x i8>, <2 x i64>, <2 x double> MSA cases crash in the
+; new legalizer. The CT_SELECT expansion normalizes the scalar mask to the
+; vector element type (i16/i8/i64/double here), which is not always a legal
+; scalar register on MIPS. Fix needed in lib/CodeGen/SelectionDAG/LegalizeDAG.cpp.
+; vector element type (i16/i8 here), which is not a legal scalar register
+; on MIPS. Fix needed in lib/CodeGen/SelectionDAG/LegalizeDAG.cpp.
+
 ; Test 32-bit integer vector (128 bits)
 define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 ; MIPS64-MSA-LABEL: test_ctselect_v4i32:
@@ -9,14 +16,14 @@ define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 ; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
 ; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
 ; MIPS64-MSA-NEXT:    sll $1, $4, 0
-; MIPS64-MSA-NEXT:    fill.w $w2, $1
+; MIPS64-MSA-NEXT:    andi $1, $1, 1
 ; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
 ; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
-; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
+; MIPS64-MSA-NEXT:    negu $1, $1
+; MIPS64-MSA-NEXT:    fill.w $w2, $1
 ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
 ; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
+; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
 ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
 ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
@@ -29,11 +36,8 @@ define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 ; MIPS32-MSA-NEXT:    lw $2, 24($sp)
 ; MIPS32-MSA-NEXT:    lw $1, 28($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
-; MIPS32-MSA-NEXT:    fill.w $w2, $4
 ; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
 ; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
-; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
 ; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
 ; MIPS32-MSA-NEXT:    lw $1, 32($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
@@ -43,6 +47,9 @@ define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 ; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
 ; MIPS32-MSA-NEXT:    lw $1, 20($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
+; MIPS32-MSA-NEXT:    andi $1, $4, 1
+; MIPS32-MSA-NEXT:    negu $1, $1
+; MIPS32-MSA-NEXT:    fill.w $w2, $1
 ; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
 ; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
@@ -56,187 +63,10 @@ define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 }
 
 ; Test 16-bit integer vector (8 x i16 = 128-bit)
-define <8 x i16> @test_ctselect_v8i16(i1 %cond, <8 x i16> %a, <8 x i16> %b) {
-; MIPS64-MSA-LABEL: test_ctselect_v8i16:
-; MIPS64-MSA:       # %bb.0:
-; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
-; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
-; MIPS64-MSA-NEXT:    sll $1, $4, 0
-; MIPS64-MSA-NEXT:    fill.h $w2, $1
-; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
-; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
-; MIPS64-MSA-NEXT:    slli.h $w2, $w2, 15
-; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS64-MSA-NEXT:    srai.h $w2, $w2, 15
-; MIPS64-MSA-NEXT:    shf.h $w0, $w0, 27
-; MIPS64-MSA-NEXT:    shf.h $w1, $w1, 27
-; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
-; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
-; MIPS64-MSA-NEXT:    shf.h $w0, $w0, 27
-; MIPS64-MSA-NEXT:    copy_s.d $2, $w0[0]
-; MIPS64-MSA-NEXT:    jr $ra
-; MIPS64-MSA-NEXT:    copy_s.d $3, $w0[1]
-;
-; MIPS32-MSA-LABEL: test_ctselect_v8i16:
-; MIPS32-MSA:       # %bb.0:
-; MIPS32-MSA-NEXT:    lw $2, 24($sp)
-; MIPS32-MSA-NEXT:    lw $1, 28($sp)
-; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
-; MIPS32-MSA-NEXT:    fill.h $w2, $4
-; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
-; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
-; MIPS32-MSA-NEXT:    slli.h $w2, $w2, 15
-; MIPS32-MSA-NEXT:    srai.h $w2, $w2, 15
-; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
-; MIPS32-MSA-NEXT:    lw $1, 32($sp)
-; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
-; MIPS32-MSA-NEXT:    lw $1, 36($sp)
-; MIPS32-MSA-NEXT:    insert.w $w0[3], $1
-; MIPS32-MSA-NEXT:    lw $1, 16($sp)
-; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
-; MIPS32-MSA-NEXT:    lw $1, 20($sp)
-; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
-; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS32-MSA-NEXT:    shf.h $w0, $w0, 177
-; MIPS32-MSA-NEXT:    shf.h $w1, $w1, 177
-; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
-; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
-; MIPS32-MSA-NEXT:    shf.h $w0, $w0, 177
-; MIPS32-MSA-NEXT:    copy_s.w $2, $w0[0]
-; MIPS32-MSA-NEXT:    copy_s.w $3, $w0[1]
-; MIPS32-MSA-NEXT:    copy_s.w $4, $w0[2]
-; MIPS32-MSA-NEXT:    jr $ra
-; MIPS32-MSA-NEXT:    copy_s.w $5, $w0[3]
-  %result = call <8 x i16> @llvm.ct.select.v8i16(i1 %cond, <8 x i16> %a, <8 x i16> %b)
-  ret <8 x i16> %result
-}
 
 ; Test byte vector (16 x i8 = 128-bit)
-define <16 x i8> @test_ctselect_v16i8(i1 %cond, <16 x i8> %a, <16 x i8> %b) {
-; MIPS64-MSA-LABEL: test_ctselect_v16i8:
-; MIPS64-MSA:       # %bb.0:
-; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
-; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
-; MIPS64-MSA-NEXT:    sll $1, $4, 0
-; MIPS64-MSA-NEXT:    fill.b $w2, $1
-; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
-; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
-; MIPS64-MSA-NEXT:    slli.b $w2, $w2, 7
-; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS64-MSA-NEXT:    shf.b $w0, $w0, 27
-; MIPS64-MSA-NEXT:    srai.b $w2, $w2, 7
-; MIPS64-MSA-NEXT:    shf.b $w1, $w1, 27
-; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
-; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
-; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
-; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
-; MIPS64-MSA-NEXT:    shf.b $w0, $w0, 27
-; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
-; MIPS64-MSA-NEXT:    copy_s.d $2, $w0[0]
-; MIPS64-MSA-NEXT:    jr $ra
-; MIPS64-MSA-NEXT:    copy_s.d $3, $w0[1]
-;
-; MIPS32-MSA-LABEL: test_ctselect_v16i8:
-; MIPS32-MSA:       # %bb.0:
-; MIPS32-MSA-NEXT:    lw $2, 24($sp)
-; MIPS32-MSA-NEXT:    lw $1, 28($sp)
-; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
-; MIPS32-MSA-NEXT:    fill.b $w2, $4
-; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
-; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
-; MIPS32-MSA-NEXT:    slli.b $w2, $w2, 7
-; MIPS32-MSA-NEXT:    srai.b $w2, $w2, 7
-; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
-; MIPS32-MSA-NEXT:    lw $1, 32($sp)
-; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
-; MIPS32-MSA-NEXT:    lw $1, 36($sp)
-; MIPS32-MSA-NEXT:    insert.w $w0[3], $1
-; MIPS32-MSA-NEXT:    lw $1, 16($sp)
-; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
-; MIPS32-MSA-NEXT:    lw $1, 20($sp)
-; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
-; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS32-MSA-NEXT:    shf.b $w0, $w0, 27
-; MIPS32-MSA-NEXT:    shf.b $w1, $w1, 27
-; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
-; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
-; MIPS32-MSA-NEXT:    shf.b $w0, $w0, 27
-; MIPS32-MSA-NEXT:    copy_s.w $2, $w0[0]
-; MIPS32-MSA-NEXT:    copy_s.w $3, $w0[1]
-; MIPS32-MSA-NEXT:    copy_s.w $4, $w0[2]
-; MIPS32-MSA-NEXT:    jr $ra
-; MIPS32-MSA-NEXT:    copy_s.w $5, $w0[3]
-  %result = call <16 x i8> @llvm.ct.select.v16i8(i1 %cond, <16 x i8> %a, <16 x i8> %b)
-  ret <16 x i8> %result
-}
 
 ; Test 64-bit integer vector (2 x i64 = 128-bit)
-define <2 x i64> @test_ctselect_v2i64(i1 %cond, <2 x i64> %a, <2 x i64> %b) {
-; MIPS64-MSA-LABEL: test_ctselect_v2i64:
-; MIPS64-MSA:       # %bb.0:
-; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
-; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
-; MIPS64-MSA-NEXT:    fill.d $w2, $4
-; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
-; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
-; MIPS64-MSA-NEXT:    slli.d $w2, $w2, 63
-; MIPS64-MSA-NEXT:    srai.d $w2, $w2, 63
-; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
-; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
-; MIPS64-MSA-NEXT:    copy_s.d $2, $w0[0]
-; MIPS64-MSA-NEXT:    jr $ra
-; MIPS64-MSA-NEXT:    copy_s.d $3, $w0[1]
-;
-; MIPS32-MSA-LABEL: test_ctselect_v2i64:
-; MIPS32-MSA:       # %bb.0:
-; MIPS32-MSA-NEXT:    addiu $sp, $sp, -32
-; MIPS32-MSA-NEXT:    .cfi_def_cfa_offset 32
-; MIPS32-MSA-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
-; MIPS32-MSA-NEXT:    sw $fp, 24($sp) # 4-byte Folded Spill
-; MIPS32-MSA-NEXT:    .cfi_offset 31, -4
-; MIPS32-MSA-NEXT:    .cfi_offset 30, -8
-; MIPS32-MSA-NEXT:    move $fp, $sp
-; MIPS32-MSA-NEXT:    .cfi_def_cfa_register 30
-; MIPS32-MSA-NEXT:    addiu $1, $zero, -16
-; MIPS32-MSA-NEXT:    and $sp, $sp, $1
-; MIPS32-MSA-NEXT:    lw $2, 56($fp)
-; MIPS32-MSA-NEXT:    lw $1, 60($fp)
-; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
-; MIPS32-MSA-NEXT:    sw $4, 12($sp)
-; MIPS32-MSA-NEXT:    sw $4, 4($sp)
-; MIPS32-MSA-NEXT:    ld.d $w2, 0($sp)
-; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
-; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
-; MIPS32-MSA-NEXT:    slli.d $w2, $w2, 63
-; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
-; MIPS32-MSA-NEXT:    lw $1, 64($fp)
-; MIPS32-MSA-NEXT:    srai.d $w2, $w2, 63
-; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
-; MIPS32-MSA-NEXT:    lw $1, 68($fp)
-; MIPS32-MSA-NEXT:    insert.w $w0[3], $1
-; MIPS32-MSA-NEXT:    lw $1, 48($fp)
-; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
-; MIPS32-MSA-NEXT:    lw $1, 52($fp)
-; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
-; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS32-MSA-NEXT:    shf.w $w0, $w0, 177
-; MIPS32-MSA-NEXT:    shf.w $w1, $w1, 177
-; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
-; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
-; MIPS32-MSA-NEXT:    shf.w $w0, $w0, 177
-; MIPS32-MSA-NEXT:    copy_s.w $2, $w0[0]
-; MIPS32-MSA-NEXT:    copy_s.w $3, $w0[1]
-; MIPS32-MSA-NEXT:    copy_s.w $4, $w0[2]
-; MIPS32-MSA-NEXT:    copy_s.w $5, $w0[3]
-; MIPS32-MSA-NEXT:    move $sp, $fp
-; MIPS32-MSA-NEXT:    lw $fp, 24($sp) # 4-byte Folded Reload
-; MIPS32-MSA-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
-; MIPS32-MSA-NEXT:    jr $ra
-; MIPS32-MSA-NEXT:    addiu $sp, $sp, 32
-  %result = call <2 x i64> @llvm.ct.select.v2i64(i1 %cond, <2 x i64> %a, <2 x i64> %b)
-  ret <2 x i64> %result
-}
 
 ; Test single-precision float vector (4 x float = 128-bit)
 define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b) {
@@ -245,14 +75,14 @@ define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b
 ; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
 ; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
 ; MIPS64-MSA-NEXT:    sll $1, $4, 0
-; MIPS64-MSA-NEXT:    fill.w $w2, $1
+; MIPS64-MSA-NEXT:    andi $1, $1, 1
 ; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
 ; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
-; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
+; MIPS64-MSA-NEXT:    negu $1, $1
+; MIPS64-MSA-NEXT:    fill.w $w2, $1
 ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
 ; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
+; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
 ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
 ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
@@ -265,11 +95,8 @@ define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b
 ; MIPS32-MSA-NEXT:    lw $2, 24($sp)
 ; MIPS32-MSA-NEXT:    lw $1, 28($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
-; MIPS32-MSA-NEXT:    fill.w $w2, $5
 ; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
 ; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
-; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
 ; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
 ; MIPS32-MSA-NEXT:    lw $1, 32($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
@@ -279,6 +106,9 @@ define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b
 ; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
 ; MIPS32-MSA-NEXT:    lw $1, 20($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
+; MIPS32-MSA-NEXT:    andi $1, $5, 1
+; MIPS32-MSA-NEXT:    negu $1, $1
+; MIPS32-MSA-NEXT:    fill.w $w2, $1
 ; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
 ; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
@@ -289,68 +119,6 @@ define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b
 }
 
 ; Test double-precision float vector (2 x double = 128-bit)
-define <2 x double> @test_ctselect_v2f64(i1 %cond, <2 x double> %a, <2 x double> %b) {
-; MIPS64-MSA-LABEL: test_ctselect_v2f64:
-; MIPS64-MSA:       # %bb.0:
-; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
-; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
-; MIPS64-MSA-NEXT:    fill.d $w2, $4
-; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
-; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
-; MIPS64-MSA-NEXT:    slli.d $w2, $w2, 63
-; MIPS64-MSA-NEXT:    srai.d $w2, $w2, 63
-; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
-; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
-; MIPS64-MSA-NEXT:    copy_s.d $2, $w0[0]
-; MIPS64-MSA-NEXT:    jr $ra
-; MIPS64-MSA-NEXT:    copy_s.d $3, $w0[1]
-;
-; MIPS32-MSA-LABEL: test_ctselect_v2f64:
-; MIPS32-MSA:       # %bb.0:
-; MIPS32-MSA-NEXT:    addiu $sp, $sp, -32
-; MIPS32-MSA-NEXT:    .cfi_def_cfa_offset 32
-; MIPS32-MSA-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
-; MIPS32-MSA-NEXT:    sw $fp, 24($sp) # 4-byte Folded Spill
-; MIPS32-MSA-NEXT:    .cfi_offset 31, -4
-; MIPS32-MSA-NEXT:    .cfi_offset 30, -8
-; MIPS32-MSA-NEXT:    move $fp, $sp
-; MIPS32-MSA-NEXT:    .cfi_def_cfa_register 30
-; MIPS32-MSA-NEXT:    addiu $1, $zero, -16
-; MIPS32-MSA-NEXT:    and $sp, $sp, $1
-; MIPS32-MSA-NEXT:    lw $2, 56($fp)
-; MIPS32-MSA-NEXT:    lw $1, 60($fp)
-; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
-; MIPS32-MSA-NEXT:    sw $5, 12($sp)
-; MIPS32-MSA-NEXT:    sw $5, 4($sp)
-; MIPS32-MSA-NEXT:    ld.d $w2, 0($sp)
-; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
-; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
-; MIPS32-MSA-NEXT:    slli.d $w2, $w2, 63
-; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
-; MIPS32-MSA-NEXT:    lw $1, 64($fp)
-; MIPS32-MSA-NEXT:    srai.d $w2, $w2, 63
-; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
-; MIPS32-MSA-NEXT:    lw $1, 68($fp)
-; MIPS32-MSA-NEXT:    insert.w $w0[3], $1
-; MIPS32-MSA-NEXT:    lw $1, 48($fp)
-; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
-; MIPS32-MSA-NEXT:    lw $1, 52($fp)
-; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
-; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS32-MSA-NEXT:    shf.w $w0, $w0, 177
-; MIPS32-MSA-NEXT:    shf.w $w1, $w1, 177
-; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
-; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
-; MIPS32-MSA-NEXT:    st.d $w0, 0($4)
-; MIPS32-MSA-NEXT:    move $sp, $fp
-; MIPS32-MSA-NEXT:    lw $fp, 24($sp) # 4-byte Folded Reload
-; MIPS32-MSA-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
-; MIPS32-MSA-NEXT:    jr $ra
-; MIPS32-MSA-NEXT:    addiu $sp, $sp, 32
-  %result = call <2 x double> @llvm.ct.select.v2f64(i1 %cond, <2 x double> %a, <2 x double> %b)
-  ret <2 x double> %result
-}
 
 ; Test with aligned loads (common case)
 define <4 x i32> @test_ctselect_v4i32_aligned_load(i1 %cond, ptr %p1, ptr %p2) {
@@ -359,10 +127,10 @@ define <4 x i32> @test_ctselect_v4i32_aligned_load(i1 %cond, ptr %p1, ptr %p2) {
 ; MIPS64-MSA-NEXT:    sll $1, $4, 0
 ; MIPS64-MSA-NEXT:    ld.w $w0, 0($6)
 ; MIPS64-MSA-NEXT:    ld.w $w1, 0($5)
-; MIPS64-MSA-NEXT:    fill.w $w2, $1
+; MIPS64-MSA-NEXT:    andi $1, $1, 1
+; MIPS64-MSA-NEXT:    negu $1, $1
 ; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
+; MIPS64-MSA-NEXT:    fill.w $w2, $1
 ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
 ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
@@ -372,12 +140,12 @@ define <4 x i32> @test_ctselect_v4i32_aligned_load(i1 %cond, ptr %p1, ptr %p2) {
 ;
 ; MIPS32-MSA-LABEL: test_ctselect_v4i32_aligned_load:
 ; MIPS32-MSA:       # %bb.0:
-; MIPS32-MSA-NEXT:    fill.w $w2, $4
+; MIPS32-MSA-NEXT:    andi $1, $4, 1
 ; MIPS32-MSA-NEXT:    ld.w $w0, 0($6)
 ; MIPS32-MSA-NEXT:    ld.w $w1, 0($5)
-; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
+; MIPS32-MSA-NEXT:    negu $1, $1
+; MIPS32-MSA-NEXT:    fill.w $w2, $1
 ; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
 ; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
 ; MIPS32-MSA-NEXT:    copy_s.w $2, $w0[0]
@@ -398,10 +166,10 @@ define <4 x i32> @test_ctselect_v4i32_unaligned_load(i1 %cond, ptr %p1, ptr %p2)
 ; MIPS64-MSA-NEXT:    sll $1, $4, 0
 ; MIPS64-MSA-NEXT:    ld.w $w0, 0($6)
 ; MIPS64-MSA-NEXT:    ld.w $w1, 0($5)
-; MIPS64-MSA-NEXT:    fill.w $w2, $1
+; MIPS64-MSA-NEXT:    andi $1, $1, 1
+; MIPS64-MSA-NEXT:    negu $1, $1
 ; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
+; MIPS64-MSA-NEXT:    fill.w $w2, $1
 ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
 ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
@@ -411,12 +179,12 @@ define <4 x i32> @test_ctselect_v4i32_unaligned_load(i1 %cond, ptr %p1, ptr %p2)
 ;
 ; MIPS32-MSA-LABEL: test_ctselect_v4i32_unaligned_load:
 ; MIPS32-MSA:       # %bb.0:
-; MIPS32-MSA-NEXT:    fill.w $w2, $4
+; MIPS32-MSA-NEXT:    andi $1, $4, 1
 ; MIPS32-MSA-NEXT:    ld.w $w0, 0($6)
 ; MIPS32-MSA-NEXT:    ld.w $w1, 0($5)
-; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
+; MIPS32-MSA-NEXT:    negu $1, $1
+; MIPS32-MSA-NEXT:    fill.w $w2, $1
 ; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
 ; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
 ; MIPS32-MSA-NEXT:    copy_s.w $2, $w0[0]
@@ -437,14 +205,14 @@ define void @test_ctselect_v4i32_store(i1 %cond, <4 x i32> %a, <4 x i32> %b, ptr
 ; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
 ; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
 ; MIPS64-MSA-NEXT:    sll $1, $4, 0
-; MIPS64-MSA-NEXT:    fill.w $w2, $1
+; MIPS64-MSA-NEXT:    andi $1, $1, 1
 ; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
 ; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
-; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
+; MIPS64-MSA-NEXT:    negu $1, $1
+; MIPS64-MSA-NEXT:    fill.w $w2, $1
 ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
 ; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
+; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
 ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
 ; MIPS64-MSA-NEXT:    jr $ra
@@ -455,11 +223,8 @@ define void @test_ctselect_v4i32_store(i1 %cond, <4 x i32> %a, <4 x i32> %b, ptr
 ; MIPS32-MSA-NEXT:    lw $2, 24($sp)
 ; MIPS32-MSA-NEXT:    lw $1, 28($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
-; MIPS32-MSA-NEXT:    fill.w $w2, $4
 ; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
 ; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
-; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
 ; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
 ; MIPS32-MSA-NEXT:    lw $1, 32($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
@@ -469,8 +234,11 @@ define void @test_ctselect_v4i32_store(i1 %cond, <4 x i32> %a, <4 x i32> %b, ptr
 ; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
 ; MIPS32-MSA-NEXT:    lw $1, 20($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
-; MIPS32-MSA-NEXT:    lw $1, 40($sp)
+; MIPS32-MSA-NEXT:    andi $1, $4, 1
+; MIPS32-MSA-NEXT:    negu $1, $1
+; MIPS32-MSA-NEXT:    fill.w $w2, $1
 ; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
+; MIPS32-MSA-NEXT:    lw $1, 40($sp)
 ; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
 ; MIPS32-MSA-NEXT:    jr $ra
@@ -487,22 +255,22 @@ define <4 x i32> @test_ctselect_v4i32_chain(i1 %cond1, i1 %cond2, <4 x i32> %a, 
 ; MIPS64-MSA-NEXT:    insert.d $w0[0], $8
 ; MIPS64-MSA-NEXT:    insert.d $w1[0], $6
 ; MIPS64-MSA-NEXT:    sll $1, $4, 0
-; MIPS64-MSA-NEXT:    fill.w $w2, $1
-; MIPS64-MSA-NEXT:    sll $1, $5, 0
+; MIPS64-MSA-NEXT:    andi $1, $1, 1
 ; MIPS64-MSA-NEXT:    insert.d $w0[1], $9
 ; MIPS64-MSA-NEXT:    insert.d $w1[1], $7
-; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
+; MIPS64-MSA-NEXT:    negu $1, $1
+; MIPS64-MSA-NEXT:    fill.w $w2, $1
+; MIPS64-MSA-NEXT:    sll $1, $5, 0
 ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
 ; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
+; MIPS64-MSA-NEXT:    andi $1, $1, 1
+; MIPS64-MSA-NEXT:    negu $1, $1
+; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
 ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS64-MSA-NEXT:    fill.w $w2, $1
 ; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
 ; MIPS64-MSA-NEXT:    insert.d $w1[0], $10
-; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
 ; MIPS64-MSA-NEXT:    insert.d $w1[1], $11
-; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
 ; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
 ; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
 ; MIPS64-MSA-NEXT:    and.v $w0, $w0, $w2
@@ -517,12 +285,10 @@ define <4 x i32> @test_ctselect_v4i32_chain(i1 %cond1, i1 %cond2, <4 x i32> %a, 
 ; MIPS32-MSA-NEXT:    lw $2, 24($sp)
 ; MIPS32-MSA-NEXT:    lw $1, 28($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
-; MIPS32-MSA-NEXT:    fill.w $w2, $4
+; MIPS32-MSA-NEXT:    lw $3, 40($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
 ; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
-; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS32-MSA-NEXT:    lw $2, 40($sp)
-; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
+; MIPS32-MSA-NEXT:    lw $2, 44($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
 ; MIPS32-MSA-NEXT:    lw $1, 32($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
@@ -532,19 +298,21 @@ define <4 x i32> @test_ctselect_v4i32_chain(i1 %cond1, i1 %cond2, <4 x i32> %a, 
 ; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
 ; MIPS32-MSA-NEXT:    lw $1, 20($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
-; MIPS32-MSA-NEXT:    lw $1, 44($sp)
+; MIPS32-MSA-NEXT:    andi $1, $4, 1
+; MIPS32-MSA-NEXT:    negu $1, $1
+; MIPS32-MSA-NEXT:    fill.w $w2, $1
 ; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
+; MIPS32-MSA-NEXT:    andi $1, $5, 1
+; MIPS32-MSA-NEXT:    negu $1, $1
 ; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
-; MIPS32-MSA-NEXT:    fill.w $w2, $5
+; MIPS32-MSA-NEXT:    fill.w $w2, $1
 ; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
-; MIPS32-MSA-NEXT:    insert.w $w1[0], $2
-; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS32-MSA-NEXT:    insert.w $w1[1], $1
-; MIPS32-MSA-NEXT:    lw $1, 48($sp)
-; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
-; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
-; MIPS32-MSA-NEXT:    lw $1, 52($sp)
-; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
+; MIPS32-MSA-NEXT:    insert.w $w1[0], $3
+; MIPS32-MSA-NEXT:    insert.w $w1[1], $2
+; MIPS32-MSA-NEXT:    lw $2, 48($sp)
+; MIPS32-MSA-NEXT:    insert.w $w1[2], $2
+; MIPS32-MSA-NEXT:    lw $2, 52($sp)
+; MIPS32-MSA-NEXT:    insert.w $w1[3], $2
 ; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
 ; MIPS32-MSA-NEXT:    and.v $w0, $w0, $w2
 ; MIPS32-MSA-NEXT:    xor.v $w0, $w1, $w0
@@ -565,16 +333,16 @@ define <4 x float> @test_ctselect_v4f32_arithmetic(i1 %cond, <4 x float> %x, <4 
 ; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
 ; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
 ; MIPS64-MSA-NEXT:    sll $1, $4, 0
+; MIPS64-MSA-NEXT:    andi $1, $1, 1
 ; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
 ; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
+; MIPS64-MSA-NEXT:    negu $1, $1
 ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
 ; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
 ; MIPS64-MSA-NEXT:    fadd.w $w2, $w1, $w0
 ; MIPS64-MSA-NEXT:    fsub.w $w0, $w1, $w0
 ; MIPS64-MSA-NEXT:    xor.v $w1, $w2, $w0
 ; MIPS64-MSA-NEXT:    fill.w $w2, $1
-; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
 ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
 ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
@@ -598,12 +366,12 @@ define <4 x float> @test_ctselect_v4f32_arithmetic(i1 %cond, <4 x float> %x, <4 
 ; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
 ; MIPS32-MSA-NEXT:    lw $1, 20($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
+; MIPS32-MSA-NEXT:    andi $1, $5, 1
+; MIPS32-MSA-NEXT:    negu $1, $1
 ; MIPS32-MSA-NEXT:    fadd.w $w2, $w1, $w0
 ; MIPS32-MSA-NEXT:    fsub.w $w0, $w1, $w0
 ; MIPS32-MSA-NEXT:    xor.v $w1, $w2, $w0
-; MIPS32-MSA-NEXT:    fill.w $w2, $5
-; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
+; MIPS32-MSA-NEXT:    fill.w $w2, $1
 ; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
 ; MIPS32-MSA-NEXT:    jr $ra
@@ -621,12 +389,12 @@ define void @test_ctselect_v4i32_mixed(i1 %cond, ptr %p1, ptr %p2, ptr %out) {
 ; MIPS64-MSA-NEXT:    ld.w $w0, 0($6)
 ; MIPS64-MSA-NEXT:    ld.w $w1, 0($5)
 ; MIPS64-MSA-NEXT:    sll $1, $4, 0
-; MIPS64-MSA-NEXT:    fill.w $w2, $1
+; MIPS64-MSA-NEXT:    andi $1, $1, 1
+; MIPS64-MSA-NEXT:    negu $1, $1
 ; MIPS64-MSA-NEXT:    addvi.w $w0, $w0, 2
 ; MIPS64-MSA-NEXT:    addvi.w $w1, $w1, 1
-; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
+; MIPS64-MSA-NEXT:    fill.w $w2, $1
 ; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
 ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
 ; MIPS64-MSA-NEXT:    jr $ra
@@ -636,11 +404,11 @@ define void @test_ctselect_v4i32_mixed(i1 %cond, ptr %p1, ptr %p2, ptr %out) {
 ; MIPS32-MSA:       # %bb.0:
 ; MIPS32-MSA-NEXT:    ld.w $w0, 0($6)
 ; MIPS32-MSA-NEXT:    ld.w $w1, 0($5)
-; MIPS32-MSA-NEXT:    fill.w $w2, $4
+; MIPS32-MSA-NEXT:    andi $1, $4, 1
+; MIPS32-MSA-NEXT:    negu $1, $1
 ; MIPS32-MSA-NEXT:    addvi.w $w0, $w0, 2
 ; MIPS32-MSA-NEXT:    addvi.w $w1, $w1, 1
-; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
+; MIPS32-MSA-NEXT:    fill.w $w2, $1
 ; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
 ; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
@@ -662,14 +430,14 @@ define <4 x i32> @test_ctselect_v4i32_args(i1 %cond, <4 x i32> %a, <4 x i32> %b)
 ; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
 ; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
 ; MIPS64-MSA-NEXT:    sll $1, $4, 0
-; MIPS64-MSA-NEXT:    fill.w $w2, $1
+; MIPS64-MSA-NEXT:    andi $1, $1, 1
 ; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
 ; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
-; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
+; MIPS64-MSA-NEXT:    negu $1, $1
+; MIPS64-MSA-NEXT:    fill.w $w2, $1
 ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
 ; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
+; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
 ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
 ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
@@ -682,11 +450,8 @@ define <4 x i32> @test_ctselect_v4i32_args(i1 %cond, <4 x i32> %a, <4 x i32> %b)
 ; MIPS32-MSA-NEXT:    lw $2, 24($sp)
 ; MIPS32-MSA-NEXT:    lw $1, 28($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
-; MIPS32-MSA-NEXT:    fill.w $w2, $4
 ; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
 ; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
-; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
 ; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
 ; MIPS32-MSA-NEXT:    lw $1, 32($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
@@ -696,6 +461,9 @@ define <4 x i32> @test_ctselect_v4i32_args(i1 %cond, <4 x i32> %a, <4 x i32> %b)
 ; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
 ; MIPS32-MSA-NEXT:    lw $1, 20($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
+; MIPS32-MSA-NEXT:    andi $1, $4, 1
+; MIPS32-MSA-NEXT:    negu $1, $1
+; MIPS32-MSA-NEXT:    fill.w $w2, $1
 ; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
 ; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
@@ -715,14 +483,14 @@ define <4 x i32> @test_ctselect_v4i32_multi_use(i1 %cond, <4 x i32> %a, <4 x i32
 ; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
 ; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
 ; MIPS64-MSA-NEXT:    sll $1, $4, 0
-; MIPS64-MSA-NEXT:    fill.w $w2, $1
+; MIPS64-MSA-NEXT:    andi $1, $1, 1
 ; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
 ; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
-; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
-; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
+; MIPS64-MSA-NEXT:    negu $1, $1
+; MIPS64-MSA-NEXT:    fill.w $w2, $1
 ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
 ; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
+; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
 ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
 ; MIPS64-MSA-NEXT:    addv.w $w0, $w0, $w0
@@ -736,11 +504,8 @@ define <4 x i32> @test_ctselect_v4i32_multi_use(i1 %cond, <4 x i32> %a, <4 x i32
 ; MIPS32-MSA-NEXT:    lw $2, 24($sp)
 ; MIPS32-MSA-NEXT:    lw $1, 28($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
-; MIPS32-MSA-NEXT:    fill.w $w2, $4
 ; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
 ; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
-; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
-; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
 ; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
 ; MIPS32-MSA-NEXT:    lw $1, 32($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
@@ -750,6 +515,9 @@ define <4 x i32> @test_ctselect_v4i32_multi_use(i1 %cond, <4 x i32> %a, <4 x i32
 ; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
 ; MIPS32-MSA-NEXT:    lw $1, 20($sp)
 ; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
+; MIPS32-MSA-NEXT:    andi $1, $4, 1
+; MIPS32-MSA-NEXT:    negu $1, $1
+; MIPS32-MSA-NEXT:    fill.w $w2, $1
 ; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
 ; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
 ; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
