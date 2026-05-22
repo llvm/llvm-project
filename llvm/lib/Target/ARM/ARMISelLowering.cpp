@@ -641,16 +641,24 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
                       ISD::STRICT_FDIV, ISD::STRICT_FMA, ISD::STRICT_FSQRT})
         setOperationAction(Op, MVT::f64, Legal);
+
+      setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
     }
   }
 
   if (Subtarget->hasFullFP16()) {
+    for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+                    ISD::STRICT_FDIV, ISD::STRICT_FMA, ISD::STRICT_FSQRT})
+      setOperationAction(Op, MVT::f16, Legal);
+
     addRegisterClass(MVT::f16, &ARM::HPRRegClass);
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
     setOperationAction(ISD::BITCAST, MVT::f16, Custom);
 
     setOperationAction(ISD::FMINNUM, MVT::f16, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_FMINNUM, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_FMAXNUM, MVT::f16, Legal);
   }
 
   if (Subtarget->hasBF16()) {
@@ -960,12 +968,13 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FP_TO_SINT, MVT::f64, Custom);
     setOperationAction(ISD::FP_TO_UINT, MVT::f64, Custom);
     setOperationAction(ISD::FP_ROUND,   MVT::f32, Custom);
-    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i32, Custom);
-    setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i32, Custom);
     setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::f64, Custom);
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::f64, Custom);
     setOperationAction(ISD::STRICT_FP_ROUND,   MVT::f32, Custom);
   }
+
+  setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i32, Custom);
+  setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i32, Custom);
 
   if (!Subtarget->hasFP64() || !Subtarget->hasFPARMv8Base()) {
     setOperationAction(ISD::FP_EXTEND,  MVT::f64, Custom);
@@ -974,11 +983,16 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       setOperationAction(ISD::FP_ROUND,  MVT::f16, Custom);
       setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Custom);
     }
+  } else {
+    setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
   }
 
   if (!Subtarget->hasFP16()) {
     setOperationAction(ISD::FP_EXTEND,  MVT::f32, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Custom);
+  } else {
+    setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
   }
 
   computeRegisterProperties(Subtarget->getRegisterInfo());
@@ -1327,8 +1341,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::FSIN,      MVT::f32, Expand);
   setOperationAction(ISD::FCOS,      MVT::f32, Expand);
   setOperationAction(ISD::FCOS,      MVT::f64, Expand);
-  setOperationAction(ISD::FSINCOS,   MVT::f64, Custom);
-  setOperationAction(ISD::FSINCOS,   MVT::f32, Custom);
+  setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
+  setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
   setOperationAction(ISD::FREM, MVT::f64, LibCall);
   setOperationAction(ISD::FREM, MVT::f32, LibCall);
   if (!Subtarget->useSoftFloat() && Subtarget->hasVFP2Base() &&
@@ -1350,16 +1364,16 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     if (!Subtarget->hasFPARMv8Base() || !Subtarget->hasFP64()) {
       setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
       setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
-      setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f64, LibCall);
-      setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f64, LibCall);
+      setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f64, Expand);
+      setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f64, Expand);
     }
 
     // fp16 is a special v7 extension that adds f16 <-> f32 conversions.
     if (!Subtarget->hasFP16()) {
       setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
       setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
-      setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f32, LibCall);
-      setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f32, LibCall);
+      setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f32, Expand);
+      setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f32, Expand);
     }
 
     // Strict floating-point comparisons need custom lowering.
@@ -1548,6 +1562,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       Align(1ULL << Subtarget->getPreferBranchLogAlignment()));
 
   setMinFunctionAlignment(Subtarget->isThumb() ? Align(2) : Align(4));
+
+  IsStrictFPEnabled = true;
 }
 
 bool ARMTargetLowering::useSoftFloat() const {
@@ -2342,9 +2358,44 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     if (isTailCall && VA.isMemLoc() && !AfterFormalArgLoads) {
       Chain = DAG.getStackArgumentTokenFactor(Chain);
-      if (ByValTempChain)
+      if (ByValTempChain) {
+        // In case of large byval copies, re-using the stackframe for tail-calls
+        // can lead to overwriting incoming arguments on the stack. Force
+        // loading these stack arguments before the copy to avoid that.
+        SmallVector<SDValue, 8> IncomingLoad;
+        for (unsigned I = 0; I < OutVals.size(); ++I) {
+          if (Outs[I].Flags.isByVal())
+            continue;
+
+          SDValue OutVal = OutVals[I];
+          LoadSDNode *OutLN = dyn_cast_or_null<LoadSDNode>(OutVal);
+          if (!OutLN)
+            continue;
+
+          FrameIndexSDNode *FIN =
+              dyn_cast_or_null<FrameIndexSDNode>(OutLN->getBasePtr());
+          if (!FIN)
+            continue;
+
+          if (!MFI.isFixedObjectIndex(FIN->getIndex()))
+            continue;
+
+          for (const CCValAssign &VA : ArgLocs) {
+            if (VA.isMemLoc())
+              IncomingLoad.push_back(OutVal.getValue(1));
+          }
+        }
+
+        // Update the chain to force loads for potentially clobbered argument
+        // loads to happen before the byval copy.
+        if (!IncomingLoad.empty()) {
+          IncomingLoad.push_back(Chain);
+          Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, IncomingLoad);
+        }
+
         Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chain,
                             ByValTempChain);
+      }
       AfterFormalArgLoads = true;
     }
 
@@ -9811,8 +9862,8 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
       DAG.getLoad(ArgVT, dl, LoadSin.getValue(1), Add, MachinePointerInfo());
 
   SDVTList Tys = DAG.getVTList(ArgVT, ArgVT);
-  return DAG.getNode(ISD::MERGE_VALUES, dl, Tys,
-                     LoadSin.getValue(0), LoadCos.getValue(0));
+  return DAG.getNode(ISD::MERGE_VALUES, dl, Tys, LoadSin.getValue(0),
+                     LoadCos.getValue(0));
 }
 
 SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
@@ -10732,8 +10783,10 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VECREDUCE_SMAX:
     return LowerVecReduceMinMax(Op, DAG, Subtarget);
   case ISD::ATOMIC_LOAD:
-  case ISD::ATOMIC_STORE:  return LowerAtomicLoadStore(Op, DAG);
-  case ISD::FSINCOS:       return LowerFSINCOS(Op, DAG);
+  case ISD::ATOMIC_STORE:
+    return LowerAtomicLoadStore(Op, DAG);
+  case ISD::FSINCOS:
+    return LowerFSINCOS(Op, DAG);
   case ISD::SDIVREM:
   case ISD::UDIVREM:       return LowerDivRem(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
@@ -10889,8 +10942,8 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue CondNorm = DAG.getNode(ISD::AND, DL, MVT::i32, Cond, One);
 
       // Create i32 ctselect that will go through normal lowering
-      Res =
-          DAG.getNode(ISD::CT_SELECT, DL, MVT::i32, CondNorm, TrueInt, FalseInt);
+      Res = DAG.getNode(ISD::CT_SELECT, DL, MVT::i32, CondNorm, TrueInt,
+                        FalseInt);
     } else {
       // For other types, use existing lowering
       Res = LowerCTSELECT(SDValue(N, 0), DAG);

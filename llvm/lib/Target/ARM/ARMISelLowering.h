@@ -51,7 +51,6 @@ class TargetMachine;
 class TargetRegisterInfo;
 class VectorType;
 
-
   namespace ARM {
   /// Possible values of current rounding mode, which is specified in bits
   /// 23:22 of FPSCR.
