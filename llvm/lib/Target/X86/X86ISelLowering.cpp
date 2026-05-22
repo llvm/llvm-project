@@ -26323,11 +26323,14 @@ SDValue X86TargetLowering::LowerCT_SELECT(SDValue Op, SelectionDAG &DAG) const {
 
     // Perform CT_SELECT on each 32-bit chunk
     SDValue Part0Ops[] = {FalsePart0, TruePart0, CC, ProcessedCond};
-    SDValue Part0Select = DAG.getNode(X86ISD::CT_SELECT, DL, MVT::i32, Part0Ops);
+    SDValue Part0Select =
+        DAG.getNode(X86ISD::CT_SELECT, DL, MVT::i32, Part0Ops);
     SDValue Part1Ops[] = {FalsePart1, TruePart1, CC, ProcessedCond};
-    SDValue Part1Select = DAG.getNode(X86ISD::CT_SELECT, DL, MVT::i32, Part1Ops);
+    SDValue Part1Select =
+        DAG.getNode(X86ISD::CT_SELECT, DL, MVT::i32, Part1Ops);
     SDValue Part2Ops[] = {FalsePart2, TruePart2, CC, ProcessedCond};
-    SDValue Part2Select = DAG.getNode(X86ISD::CT_SELECT, DL, MVT::i32, Part2Ops);
+    SDValue Part2Select =
+        DAG.getNode(X86ISD::CT_SELECT, DL, MVT::i32, Part2Ops);
 
     // Create result stack slot and store the selected parts
     SDValue ResultSlot = DAG.CreateStackTemporary(MVT::f80);
@@ -49580,6 +49583,15 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     if (SDValue V = combineLogicBlendIntoConditionalNegate(VT, Cond, RHS, LHS,
                                                            DL, DAG, Subtarget))
       return V;
+
+  // If the sign bit is known then BLENDV can be folded away.
+  if (N->getOpcode() == X86ISD::BLENDV) {
+    KnownBits KnownCond = DAG.computeKnownBits(Cond);
+    if (KnownCond.isNegative())
+      return LHS;
+    if (KnownCond.isNonNegative())
+      return RHS;
+  }
 
   if (N->getOpcode() == ISD::VSELECT || N->getOpcode() == X86ISD::BLENDV) {
     SmallVector<int, 64> CondMask;
