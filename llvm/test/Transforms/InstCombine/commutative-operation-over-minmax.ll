@@ -88,8 +88,8 @@ define i32 @smul_min_max_assoc(i32 %x, i32 %y, i32 %z) {
 define i32 @smul_min_max_assoc_comm(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i32 @smul_min_max_assoc_comm(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[RET:%.*]] = mul i32 [[Z]], [[MAX]]
+; CHECK-NEXT:    [[LHS:%.*]] = mul i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[RET:%.*]] = mul i32 [[LHS]], [[Z]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %min = call i32 @llvm.smin.i32(i32 %x, i32 %y)
