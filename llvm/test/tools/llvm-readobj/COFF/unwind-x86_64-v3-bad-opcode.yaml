@@ -9,7 +9,7 @@
 ## .xdata hex breakdown:
 ## Byte 0: 0x03  (Version=3, Flags=0)
 ## Byte 1: 0x02  (SizeOfProlog=2)
-## Byte 2: 0x02  (CountOfCodes=2 words -> 4 bytes payload)
+## Byte 2: 0x02  (PayloadWords=2 words -> 4 bytes payload)
 ## Byte 3: 0x02  (NumberOfOps=2, NumberOfEpilogs=0)
 ## +0: 02        Prolog IP offset[0]: +2
 ## +1: 00        Prolog IP offset[1]: +0
@@ -23,7 +23,7 @@
 # CHECK-NEXT:         Flags [ (0x0)
 # CHECK-NEXT:         ]
 # CHECK-NEXT:         SizeOfProlog: 0x2
-# CHECK-NEXT:         CountOfCodes: 2
+# CHECK-NEXT:         PayloadWords: 2
 # CHECK-NEXT:         NumberOfOps: 2
 # CHECK-NEXT:         NumberOfEpilogs: 0
 # CHECK-NEXT:         Prolog [2 ops]:

@@ -1,12 +1,16 @@
 # RUN: yaml2obj %s -o %t.exe
 # RUN: llvm-objdump --unwind-info %t.exe | FileCheck %s
+## --unwind-show-wod-pool appends a raw dump of the WOD pool with byte
+## offsets, useful for seeing how the pool is shared between prolog/epilogs.
+# RUN: llvm-objdump --unwind-info --unwind-show-wod-pool %t.exe \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,POOL
 
 ## T3: V3 with multiple epilogs including inheritance.
 ##
 ## .xdata hex breakdown:
 ## Byte 0: 0x03  (Version=3, Flags=0)
 ## Byte 1: 0x0B  (SizeOfProlog=11)
-## Byte 2: 0x0D  (CountOfCodes=13 words -> 26 bytes payload)
+## Byte 2: 0x0D  (PayloadWords=13 words -> 26 bytes payload)
 ## Byte 3: 0x63  (NumberOfOps=3, NumberOfEpilogs=3: (3<<5)|3)
 ## Payload (26 bytes):
 ##   +0:  07            Prolog IP offset[0]: +7
@@ -18,9 +22,9 @@
 ##   +8:  06            Epilog[0] IpOffsetOfLastInstruction: 6
 ##   +9:  00 04 05      Epilog[0] IP offsets
 ##   +12: 00            Epilog[1] FlagsAndNumOps: nops=0 (inherited, 3 bytes only)
-##   +13: 0A 00         Epilog[1] EpilogOffset: +10
+##   +13: 0A 00         Epilog[1] EpilogOffset: +10 (delta from Epilog[0]; resolves to +30)
 ##   +15: 10            Epilog[2] FlagsAndNumOps: nops=2
-##   +16: 05 00         Epilog[2] EpilogOffset: +5
+##   +16: 05 00         Epilog[2] EpilogOffset: +5 (delta from Epilog[1]; resolves to +35)
 ##   +18: 01 00         Epilog[2] FirstOp: 1
 ##   +20: 03            Epilog[2] IpOffsetOfLastInstruction: 3
 ##   +21: 00 01         Epilog[2] IP offsets
@@ -33,24 +37,28 @@
 # CHECK-NEXT:     End Address: 0x1040
 # CHECK-NEXT:     Unwind Info Address: 0x2000
 # CHECK-NEXT:       Version: 3
-# CHECK-NEXT:       Flags: 0
+# CHECK-NEXT:       Flags: 0x0
 # CHECK-NEXT:       Size of prolog: 0xB
-# CHECK-NEXT:       CountOfCodes: 13
+# CHECK-NEXT:       PayloadWords: 13
 # CHECK-NEXT:       NumberOfOps: 3
 # CHECK-NEXT:       NumberOfEpilogs: 3
 # CHECK-NEXT:       Prolog [3 ops]:
-# CHECK-NEXT:         [0] IP +0x07: WOD_ALLOC_SMALL Size=0x20
-# CHECK-NEXT:         [1] IP +0x02: WOD_PUSH Reg=RSI
-# CHECK-NEXT:         [2] IP +0x00: WOD_PUSH Reg=RDI
+# CHECK-NEXT:         [0] IP +0x0007: WOD_ALLOC_SMALL Size=0x20
+# CHECK-NEXT:         [1] IP +0x0002: WOD_PUSH Reg=RSI
+# CHECK-NEXT:         [2] IP +0x0000: WOD_PUSH Reg=RDI
 # CHECK-NEXT:       Epilog [0] (Flags=0x00, Offset=+0x14, IpOfLast=+0x6) [3 ops, FirstOp=0x0]:
-# CHECK-NEXT:         [0] IP +0x00: WOD_ALLOC_SMALL Size=0x20
-# CHECK-NEXT:         [1] IP +0x04: WOD_PUSH Reg=RSI
-# CHECK-NEXT:         [2] IP +0x05: WOD_PUSH Reg=RDI
-# CHECK-NEXT:       Epilog [1] (Flags=0x00, Offset=+0xA) [inherited]:
-# CHECK-NEXT:         (inherits from previous epilog)
-# CHECK-NEXT:       Epilog [2] (Flags=0x00, Offset=+0x5, IpOfLast=+0x3) [2 ops, FirstOp=0x1]:
-# CHECK-NEXT:         [0] IP +0x00: WOD_PUSH Reg=RSI
-# CHECK-NEXT:         [1] IP +0x01: WOD_PUSH Reg=RDI
+# CHECK-NEXT:         [0] IP +0x0000: WOD_ALLOC_SMALL Size=0x20
+# CHECK-NEXT:         [1] IP +0x0004: WOD_PUSH Reg=RSI
+# CHECK-NEXT:         [2] IP +0x0005: WOD_PUSH Reg=RDI
+# CHECK-NEXT:       Epilog [1] (Flags=0x00, Offset=+0x1E) [inherited]:
+# CHECK-NEXT:         (inherits from previous epilog: FirstOp=0x0, IpOfLast=+0x6, 3 ops)
+# CHECK-NEXT:       Epilog [2] (Flags=0x00, Offset=+0x23, IpOfLast=+0x3) [2 ops, FirstOp=0x1]:
+# CHECK-NEXT:         [0] IP +0x0000: WOD_PUSH Reg=RSI
+# CHECK-NEXT:         [1] IP +0x0001: WOD_PUSH Reg=RDI
+# POOL-NEXT:        WOD pool [3 bytes]:
+# POOL-NEXT:          +0x0000: WOD_ALLOC_SMALL Size=0x20
+# POOL-NEXT:          +0x0001: WOD_PUSH Reg=RSI
+# POOL-NEXT:          +0x0002: WOD_PUSH Reg=RDI
 
 --- !COFF
 OptionalHeader:

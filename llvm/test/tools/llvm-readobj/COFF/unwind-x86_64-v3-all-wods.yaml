@@ -6,7 +6,7 @@
 ## .xdata hex breakdown:
 ## Byte 0: 0x03  (Version=3, Flags=0)
 ## Byte 1: 0x30  (SizeOfProlog=48)
-## Byte 2: 0x17  (CountOfCodes=23 words -> 46 bytes payload)
+## Byte 2: 0x17  (PayloadWords=23 words -> 46 bytes payload)
 ## Byte 3: 0x0C  (NumberOfOps=12, NumberOfEpilogs=0)
 ## Prolog IP offsets (12 bytes):
 ##   +0:  30    IP[0]:  +0x30
@@ -43,22 +43,22 @@
 # CHECK-NEXT:         Flags [ (0x0)
 # CHECK-NEXT:         ]
 # CHECK-NEXT:         SizeOfProlog: 0x30
-# CHECK-NEXT:         CountOfCodes: 23
+# CHECK-NEXT:         PayloadWords: 23
 # CHECK-NEXT:         NumberOfOps: 12
 # CHECK-NEXT:         NumberOfEpilogs: 0
 # CHECK-NEXT:         Prolog [12 ops]:
-# CHECK-NEXT:           [0] IP +0x30: PUSH Reg=RDI
-# CHECK-NEXT:           [1] IP +0x2C: PUSH2 Reg1=RAX, Reg2=RCX
-# CHECK-NEXT:           [2] IP +0x2B: PUSH_CONSECUTIVE_2 Reg=RBX (+RSP)
-# CHECK-NEXT:           [3] IP +0x2A: ALLOC_SMALL Size=0x20
-# CHECK-NEXT:           [4] IP +0x28: ALLOC_LARGE Size=0x1000
-# CHECK-NEXT:           [5] IP +0x24: ALLOC_HUGE Size=0x12345
-# CHECK-NEXT:           [6] IP +0x20: SET_FPREG Reg=RBP, Offset=0x30
-# CHECK-NEXT:           [7] IP +0x1C: SAVE_NONVOL Reg=R12, Disp=0x40
-# CHECK-NEXT:           [8] IP +0x18: SAVE_NONVOL_FAR Reg=R13, Disp=0x100000
-# CHECK-NEXT:           [9] IP +0x14: SAVE_XMM128 Reg=XMM4, Disp=0x100
-# CHECK-NEXT:           [10] IP +0x10: SAVE_XMM128_FAR Reg=XMM7, Disp=0x20000
-# CHECK-NEXT:           [11] IP +0x00: PUSH_CANONICAL_FRAME Type=1
+# CHECK-NEXT:           [0] IP +0x0030: PUSH Reg=RDI
+# CHECK-NEXT:           [1] IP +0x002C: PUSH2 Reg1=RAX, Reg2=RCX
+# CHECK-NEXT:           [2] IP +0x002B: PUSH_CONSECUTIVE_2 Reg=RBX (+RSP)
+# CHECK-NEXT:           [3] IP +0x002A: ALLOC_SMALL Size=0x20
+# CHECK-NEXT:           [4] IP +0x0028: ALLOC_LARGE Size=0x1000
+# CHECK-NEXT:           [5] IP +0x0024: ALLOC_HUGE Size=0x12345
+# CHECK-NEXT:           [6] IP +0x0020: SET_FPREG Reg=RBP, Offset=0x30
+# CHECK-NEXT:           [7] IP +0x001C: SAVE_NONVOL Reg=R12, Disp=0x40
+# CHECK-NEXT:           [8] IP +0x0018: SAVE_NONVOL_FAR Reg=R13, Disp=0x100000
+# CHECK-NEXT:           [9] IP +0x0014: SAVE_XMM128 Reg=XMM4, Disp=0x100
+# CHECK-NEXT:           [10] IP +0x0010: SAVE_XMM128_FAR Reg=XMM7, Disp=0x20000
+# CHECK-NEXT:           [11] IP +0x0000: PUSH_CANONICAL_FRAME Type=1
 # CHECK-NEXT:       }
 # CHECK-NEXT:     }
 # CHECK-NEXT:   ]

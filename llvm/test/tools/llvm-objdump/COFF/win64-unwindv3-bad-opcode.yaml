@@ -11,9 +11,9 @@
 # CHECK-NEXT:     End Address: 0x1010
 # CHECK-NEXT:     Unwind Info Address: 0x2000
 # CHECK-NEXT:       Version: 3
-# CHECK-NEXT:       Flags: 0
+# CHECK-NEXT:       Flags: 0x0
 # CHECK-NEXT:       Size of prolog: 0x2
-# CHECK-NEXT:       CountOfCodes: 2
+# CHECK-NEXT:       PayloadWords: 2
 # CHECK-NEXT:       NumberOfOps: 2
 # CHECK-NEXT:       NumberOfEpilogs: 0
 # CHECK-NEXT:       Prolog [2 ops]:

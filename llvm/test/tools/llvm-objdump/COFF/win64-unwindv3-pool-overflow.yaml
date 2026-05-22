@@ -11,15 +11,15 @@
 # CHECK-NEXT:     End Address: 0x1010
 # CHECK-NEXT:     Unwind Info Address: 0x2000
 # CHECK-NEXT:       Version: 3
-# CHECK-NEXT:       Flags: 0
+# CHECK-NEXT:       Flags: 0x0
 # CHECK-NEXT:       Size of prolog: 0x2
-# CHECK-NEXT:       CountOfCodes: 5
+# CHECK-NEXT:       PayloadWords: 5
 # CHECK-NEXT:       NumberOfOps: 1
 # CHECK-NEXT:       NumberOfEpilogs: 1
 # CHECK-NEXT:       Prolog [1 ops]:
-# CHECK-NEXT:         [0] IP +0x02: WOD_PUSH Reg=RDI
+# CHECK-NEXT:         [0] IP +0x0002: WOD_PUSH Reg=RDI
 # CHECK-NEXT:       Epilog [0] (Flags=0x00, Offset=+0xA, IpOfLast=+0x5) [2 ops, FirstOp=0x0]:
-# CHECK-NEXT:         [0] IP +0x00: WOD_PUSH Reg=RDI
+# CHECK-NEXT:         [0] IP +0x0000: WOD_PUSH Reg=RDI
 # CHECK-EMPTY:
 # WARN: warning: WOD pool overflow at offset 1
 

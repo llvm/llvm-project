@@ -19,10 +19,10 @@ using namespace llvm::object;
 using namespace llvm::Win64EH;
 
 const EnumEntry<unsigned> UnwindFlags[] = {
-  { "ExceptionHandler", UNW_ExceptionHandler },
-  { "TerminateHandler", UNW_TerminateHandler },
-  { "ChainInfo"       , UNW_ChainInfo        }
-};
+    {"ExceptionHandler", UNW_ExceptionHandler},
+    {"TerminateHandler", UNW_TerminateHandler},
+    {"ChainInfo", UNW_ChainInfo},
+    {"Large", UNW_FlagLarge}};
 
 const EnumEntry<unsigned> UnwindOpInfo[] = {
   { "RAX",  0 },
@@ -424,7 +424,6 @@ void Dumper::printRuntimeFunction(const Context &Ctx,
   }
 }
 
-/// Helper to print decoded WOD fields for llvm-readobj.
 static void printDecodedWOD(ScopedPrinter &SW, raw_ostream &OS,
                             const DecodedWOD &W) {
   switch (W.Opcode) {
@@ -469,6 +468,9 @@ static void printDecodedWOD(ScopedPrinter &SW, raw_ostream &OS,
        << format(", Disp=0x%X", W.Displacement);
     break;
   case WOD_PUSH_CANONICAL_FRAME:
+    // TODO: When the Windows x64 Unwind V3 spec is finalized, replace this
+    // raw Type value with a descriptive name. Type values are defined by the
+    // OS (see the Windows SDK headers) but the set is not yet stable.
     OS << "PUSH_CANONICAL_FRAME Type=" << static_cast<unsigned>(W.Type);
     break;
   default:
@@ -481,7 +483,7 @@ static void printDecodedWOD(ScopedPrinter &SW, raw_ostream &OS,
 /// pairing each with the corresponding IP offset from IpOffsets.
 static void printWODSequence(ScopedPrinter &SW, raw_ostream &OS,
                              ArrayRef<uint8_t> WODPool, unsigned PoolOffset,
-                             ArrayRef<uint8_t> IpOffsets, unsigned Count) {
+                             ArrayRef<uint16_t> IpOffsets, unsigned Count) {
   unsigned CurrentOffset = PoolOffset;
   for (unsigned I = 0; I < Count; ++I) {
     Expected<DecodedWOD> WOrErr = decodeWOD(WODPool, CurrentOffset);
@@ -490,7 +492,7 @@ static void printWODSequence(ScopedPrinter &SW, raw_ostream &OS,
       return;
     }
     const DecodedWOD &W = *WOrErr;
-    SW.startLine() << format("[%u] IP +0x%02X: ", I,
+    SW.startLine() << format("[%u] IP +0x%04X: ", I,
                              I < IpOffsets.size() ? IpOffsets[I] : 0);
     printDecodedWOD(SW, OS, W);
     OS << "\n";
@@ -513,7 +515,7 @@ void Dumper::printUnwindInfoV3(const Context &Ctx,
   SW.printNumber("Version", Info.Version);
   SW.printFlags("Flags", Info.Flags, ArrayRef(UnwindFlags));
   SW.printHex("SizeOfProlog", Info.SizeOfProlog);
-  SW.printNumber("CountOfCodes", Info.CountOfCodes);
+  SW.printNumber("PayloadWords", Info.PayloadWords);
   SW.printNumber("NumberOfOps", Info.NumberOfOps);
   SW.printNumber("NumberOfEpilogs", Info.NumberOfEpilogs);
 
@@ -562,13 +564,40 @@ void Dumper::printUnwindInfoV3(const Context &Ctx,
         WithColor::warning(errs())
             << "first epilog cannot inherit (NumberOfOps=0)\n";
       } else {
-        SW.startLine() << "(inherits from previous epilog)\n";
+        // Surface the values inherited from the previous epilog so a
+        // reader can see what the unwinder will actually execute.
+        SW.startLine() << format(
+            "(inherits from previous epilog: FirstOp=0x%X, "
+            "IpOffsetOfLastInstruction=0x%X, %u ops)\n",
+            Epi.FirstOp, static_cast<unsigned>(Epi.IpOffsetOfLastInstruction),
+            static_cast<unsigned>(Epi.IpOffsets.size()));
       }
     } else {
       SW.printHex("FirstOp", Epi.FirstOp);
       SW.printHex("IpOffsetOfLastInstruction", Epi.IpOffsetOfLastInstruction);
       printWODSequence(SW, OS, Info.WODPool, Epi.FirstOp,
                        ArrayRef(Epi.IpOffsets), Epi.NumberOfOps);
+    }
+  }
+
+  // Optionally dump the WOD pool with byte offsets. This is useful for
+  // understanding how WODs are shared between the prolog and epilogs but is
+  // normally redundant with the per-prolog / per-epilog decoded output, so
+  // it's gated behind --unwind-show-wod-pool.
+  if (opts::UnwindShowWODPool) {
+    ListScope WS(SW, formatv("WODPool [{0} bytes]", Info.WODPool.size()).str());
+    unsigned PoolOffset = 0;
+    while (PoolOffset < Info.WODPool.size()) {
+      Expected<DecodedWOD> WOrErr = decodeWOD(Info.WODPool, PoolOffset);
+      if (!WOrErr) {
+        WithColor::warning(errs()) << toString(WOrErr.takeError()) << "\n";
+        break;
+      }
+      const DecodedWOD &W = *WOrErr;
+      SW.startLine() << format("+0x%04X: ", PoolOffset);
+      printDecodedWOD(SW, OS, W);
+      OS << "\n";
+      PoolOffset += W.ByteSize;
     }
   }
 

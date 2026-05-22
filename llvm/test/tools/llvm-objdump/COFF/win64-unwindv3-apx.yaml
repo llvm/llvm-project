@@ -10,14 +10,14 @@
 # CHECK-NEXT:     End Address: 0x1010
 # CHECK-NEXT:     Unwind Info Address: 0x2000
 # CHECK-NEXT:       Version: 3
-# CHECK-NEXT:       Flags: 0
+# CHECK-NEXT:       Flags: 0x0
 # CHECK-NEXT:       Size of prolog: 0x4
-# CHECK-NEXT:       CountOfCodes: 2
+# CHECK-NEXT:       PayloadWords: 2
 # CHECK-NEXT:       NumberOfOps: 2
 # CHECK-NEXT:       NumberOfEpilogs: 0
 # CHECK-NEXT:       Prolog [2 ops]:
-# CHECK-NEXT:         [0] IP +0x04: WOD_PUSH Reg=R16
-# CHECK-NEXT:         [1] IP +0x00: WOD_PUSH Reg=R31
+# CHECK-NEXT:         [0] IP +0x0004: WOD_PUSH Reg=R16
+# CHECK-NEXT:         [1] IP +0x0000: WOD_PUSH Reg=R31
 
 --- !COFF
 OptionalHeader:

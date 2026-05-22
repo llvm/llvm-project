@@ -6,7 +6,7 @@
 ## .xdata hex breakdown:
 ## Byte 0: 0x03  (Version=3, Flags=0)
 ## Byte 1: 0x0B  (SizeOfProlog=11)
-## Byte 2: 0x08  (CountOfCodes=8 words -> 16 bytes payload)
+## Byte 2: 0x08  (PayloadWords=8 words -> 16 bytes payload)
 ## Byte 3: 0x23  (NumberOfOps=3, NumberOfEpilogs=1: (1<<5)|3)
 ## Payload (16 bytes):
 ##   +0: 07        Prolog IP offset[0]: +7
@@ -31,22 +31,22 @@
 # CHECK-NEXT:         Flags [ (0x0)
 # CHECK-NEXT:         ]
 # CHECK-NEXT:         SizeOfProlog: 0xB
-# CHECK-NEXT:         CountOfCodes: 8
+# CHECK-NEXT:         PayloadWords: 8
 # CHECK-NEXT:         NumberOfOps: 3
 # CHECK-NEXT:         NumberOfEpilogs: 1
 # CHECK-NEXT:         Prolog [3 ops]:
-# CHECK-NEXT:           [0] IP +0x07: ALLOC_SMALL Size=0x20
-# CHECK-NEXT:           [1] IP +0x02: PUSH Reg=RSI
-# CHECK-NEXT:           [2] IP +0x00: PUSH Reg=RDI
+# CHECK-NEXT:           [0] IP +0x0007: ALLOC_SMALL Size=0x20
+# CHECK-NEXT:           [1] IP +0x0002: PUSH Reg=RSI
+# CHECK-NEXT:           [2] IP +0x0000: PUSH Reg=RDI
 # CHECK-NEXT:         Epilog [0] {
 # CHECK-NEXT:           Flags: 0x0
 # CHECK-NEXT:           EpilogOffset: -0x14
 # CHECK-NEXT:           NumberOfOps: 3
 # CHECK-NEXT:           FirstOp: 0x0
 # CHECK-NEXT:           IpOffsetOfLastInstruction: 0x6
-# CHECK-NEXT:           [0] IP +0x00: ALLOC_SMALL Size=0x20
-# CHECK-NEXT:           [1] IP +0x04: PUSH Reg=RSI
-# CHECK-NEXT:           [2] IP +0x05: PUSH Reg=RDI
+# CHECK-NEXT:           [0] IP +0x0000: ALLOC_SMALL Size=0x20
+# CHECK-NEXT:           [1] IP +0x0004: PUSH Reg=RSI
+# CHECK-NEXT:           [2] IP +0x0005: PUSH Reg=RDI
 # CHECK-NEXT:         }
 # CHECK-NEXT:       }
 # CHECK-NEXT:     }

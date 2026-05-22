@@ -1,40 +1,39 @@
 # RUN: yaml2obj %s -o %t.exe
 # RUN: llvm-objdump --unwind-info %t.exe | FileCheck %s
 
-## T4: V3 with all WOD types — comprehensive WOD decode coverage.
+## Test V3 unwind info with UNW_FLAG_LARGE set.
+## SizeOfProlog is a 16-bit composite (low byte in the header, high byte in
+## the UNWIND_INFO_LARGE_V3 extension which is part of the payload), and
+## prolog IP offsets are 16-bit.
 ##
 ## .xdata hex breakdown:
-## Byte 0: 0x03  (Version=3, Flags=0)
-## Byte 1: 0x30  (SizeOfProlog=48)
-## Byte 2: 0x17  (PayloadWords=23 words -> 46 bytes payload)
-## Byte 3: 0x0C  (NumberOfOps=12, NumberOfEpilogs=0)
-## See readobj test for full hex breakdown of WOD pool.
+## Byte 0: 0x43  (Version=3, Flags=0x08=UNW_FlagLarge)
+## Byte 1: 0x20  (SizeOfProlog low byte: 0x20)
+## Byte 2: 0x04  (PayloadWords=4 words -> 8 bytes payload, includes LARGE byte)
+## Byte 3: 0x02  (NumberOfOps=2, NumberOfEpilogs=0)
+## Payload (8 bytes):
+## +0:    01     UNWIND_INFO_LARGE_V3: SizeOfPrologHighByte=1 (combined=0x0120=288)
+## +1,+2: 10 01  Prolog IP offset[0]: 0x0110 (16-bit LE)
+## +3,+4: 00 00  Prolog IP offset[1]: 0x0000 (16-bit LE)
+## +5:    38     WOD pool[0]: WOD_ALLOC_SMALL Size=(3+1)*8=32
+## +6:    3C     WOD pool[1]: WOD_PUSH RDI (reg=7: (7<<3)|4=0x3C)
+## +7:    00     Padding to PayloadWords*2 boundary
 
 # CHECK-LABEL:  Unwind info:
 # CHECK-EMPTY:
 # CHECK-NEXT:   Function Table:
 # CHECK-NEXT:     Start Address: 0x1000
-# CHECK-NEXT:     End Address: 0x1050
+# CHECK-NEXT:     End Address: 0x1200
 # CHECK-NEXT:     Unwind Info Address: 0x2000
 # CHECK-NEXT:       Version: 3
-# CHECK-NEXT:       Flags: 0x0
-# CHECK-NEXT:       Size of prolog: 0x30
-# CHECK-NEXT:       PayloadWords: 23
-# CHECK-NEXT:       NumberOfOps: 12
+# CHECK-NEXT:       Flags: 0x8 UNW_FlagLarge
+# CHECK-NEXT:       Size of prolog: 0x120
+# CHECK-NEXT:       PayloadWords: 4
+# CHECK-NEXT:       NumberOfOps: 2
 # CHECK-NEXT:       NumberOfEpilogs: 0
-# CHECK-NEXT:       Prolog [12 ops]:
-# CHECK-NEXT:         [0] IP +0x0030: WOD_PUSH Reg=RDI
-# CHECK-NEXT:         [1] IP +0x002C: WOD_PUSH2 Reg1=RAX, Reg2=RCX
-# CHECK-NEXT:         [2] IP +0x002B: WOD_PUSH_CONSECUTIVE_2 Reg=RBX (+RSP)
-# CHECK-NEXT:         [3] IP +0x002A: WOD_ALLOC_SMALL Size=0x20
-# CHECK-NEXT:         [4] IP +0x0028: WOD_ALLOC_LARGE Size=0x1000
-# CHECK-NEXT:         [5] IP +0x0024: WOD_ALLOC_HUGE Size=0x12345
-# CHECK-NEXT:         [6] IP +0x0020: WOD_SET_FPREG Reg=RBP, Offset=0x30
-# CHECK-NEXT:         [7] IP +0x001C: WOD_SAVE_NONVOL Reg=R12, Disp=0x40
-# CHECK-NEXT:         [8] IP +0x0018: WOD_SAVE_NONVOL_FAR Reg=R13, Disp=0x100000
-# CHECK-NEXT:         [9] IP +0x0014: WOD_SAVE_XMM128 Reg=XMM4, Disp=0x100
-# CHECK-NEXT:         [10] IP +0x0010: WOD_SAVE_XMM128_FAR Reg=XMM7, Disp=0x20000
-# CHECK-NEXT:         [11] IP +0x0000: WOD_PUSH_CANONICAL_FRAME Type=1
+# CHECK-NEXT:       Prolog [2 ops]:
+# CHECK-NEXT:         [0] IP +0x0110: WOD_ALLOC_SMALL Size=0x20
+# CHECK-NEXT:         [1] IP +0x0000: WOD_PUSH Reg=RDI
 
 --- !COFF
 OptionalHeader:
@@ -106,18 +105,18 @@ sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     VirtualAddress:  4096
-    VirtualSize:     80
-    SectionData:     '0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+    VirtualSize:     512
+    SectionData:     '00000000000000000000000000000000'
   - Name:            .xdata
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     VirtualAddress:  8192
-    VirtualSize:     50
-    SectionData:     '0330170C302C2B2A2824201C181410003C20081F38020002014523010000356608006D000010004A10007900000200030100'
+    VirtualSize:     12
+    SectionData:     '432004020110010000383C00'
   - Name:            .pdata
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     VirtualAddress:  12288
     VirtualSize:     12
-    SectionData:     '001000005010000000200000'
+    SectionData:     '001000000012000000200000'
 symbols:
   - Name:            .text
     Value:           0

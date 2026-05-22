@@ -10,14 +10,18 @@
 # CHECK-NEXT:     End Address: 0x1010
 # CHECK-NEXT:     Unwind Info Address: 0x2000
 # CHECK-NEXT:       Version: 3
-# CHECK-NEXT:       Flags: 4 UNW_ChainInfo
+# CHECK-NEXT:       Flags: 0x4 UNW_ChainInfo
 # CHECK-NEXT:       Size of prolog: 0x6
-# CHECK-NEXT:       CountOfCodes: 2
+# CHECK-NEXT:       PayloadWords: 2
 # CHECK-NEXT:       NumberOfOps: 2
 # CHECK-NEXT:       NumberOfEpilogs: 0
 # CHECK-NEXT:       Prolog [2 ops]:
-# CHECK-NEXT:         [0] IP +0x06: WOD_ALLOC_SMALL Size=0x20
-# CHECK-NEXT:         [1] IP +0x00: WOD_PUSH Reg=RDI
+# CHECK-NEXT:         [0] IP +0x0006: WOD_ALLOC_SMALL Size=0x20
+# CHECK-NEXT:         [1] IP +0x0000: WOD_PUSH Reg=RDI
+# CHECK-NEXT:       Chained:
+# CHECK-NEXT:         Start Address: 0x1100
+# CHECK-NEXT:         End Address: 0x1200
+# CHECK-NEXT:         Unwind Info Address: 0x2100
 
 --- !COFF
 OptionalHeader:

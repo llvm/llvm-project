@@ -685,8 +685,7 @@ static void printWin64EHUnwindInfo(const Win64EH::UnwindInfo *UI) {
   outs().flush();
 }
 
-/// Helper to format a decoded WOD for llvm-objdump plain-text output.
-static void printDecodedWODObjdump(const DecodedWOD &W) {
+static void printDecodedWOD(const DecodedWOD &W) {
   switch (W.Opcode) {
   case WOD_PUSH:
     outs() << "WOD_PUSH Reg=" << getRegisterNameV3(W.Register);
@@ -729,6 +728,9 @@ static void printDecodedWODObjdump(const DecodedWOD &W) {
            << format(", Disp=0x%X", W.Displacement);
     break;
   case WOD_PUSH_CANONICAL_FRAME:
+    // TODO: When the Windows x64 Unwind V3 spec is finalized, replace this
+    // raw Type value with a descriptive name. Type values are defined by the
+    // OS (see the Windows SDK headers) but the set is not yet stable.
     outs() << "WOD_PUSH_CANONICAL_FRAME Type=" << static_cast<unsigned>(W.Type);
     break;
   default:
@@ -737,11 +739,9 @@ static void printDecodedWODObjdump(const DecodedWOD &W) {
   }
 }
 
-/// Decode and print N WODs from the pool for llvm-objdump.
-static void printWODSequenceObjdump(ArrayRef<uint8_t> WODPool,
-                                    unsigned PoolOffset,
-                                    ArrayRef<uint8_t> IpOffsets, unsigned Count,
-                                    StringRef Indent) {
+static void printWODSequence(ArrayRef<uint8_t> WODPool, unsigned PoolOffset,
+                             ArrayRef<uint16_t> IpOffsets, unsigned Count,
+                             StringRef Indent) {
   unsigned CurrentOffset = PoolOffset;
   for (unsigned I = 0; I < Count; ++I) {
     Expected<DecodedWOD> WOrErr = decodeWOD(WODPool, CurrentOffset);
@@ -751,9 +751,9 @@ static void printWODSequenceObjdump(ArrayRef<uint8_t> WODPool,
     }
     const DecodedWOD &W = *WOrErr;
     outs() << Indent
-           << format("[%u] IP +0x%02X: ", I,
+           << format("[%u] IP +0x%04X: ", I,
                      I < IpOffsets.size() ? IpOffsets[I] : 0);
-    printDecodedWODObjdump(W);
+    printDecodedWOD(W);
     outs() << "\n";
     CurrentOffset += W.ByteSize;
   }
@@ -768,7 +768,7 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
   const DecodedUnwindInfoV3 &Info = *InfoOrErr;
 
   outs() << "    Version: " << static_cast<int>(Info.Version) << "\n";
-  outs() << "    Flags: " << static_cast<int>(Info.Flags);
+  outs() << format("    Flags: 0x%X", static_cast<unsigned>(Info.Flags));
   if (Info.Flags) {
     if (Info.Flags & UNW_ExceptionHandler)
       outs() << " UNW_ExceptionHandler";
@@ -776,11 +776,13 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
       outs() << " UNW_TerminateHandler";
     if (Info.Flags & UNW_ChainInfo)
       outs() << " UNW_ChainInfo";
+    if (Info.Flags & UNW_FlagLarge)
+      outs() << " UNW_FlagLarge";
   }
   outs() << "\n";
   outs() << format("    Size of prolog: 0x%X\n",
                    static_cast<unsigned>(Info.SizeOfProlog));
-  outs() << "    CountOfCodes: " << static_cast<int>(Info.CountOfCodes) << "\n";
+  outs() << "    PayloadWords: " << static_cast<int>(Info.PayloadWords) << "\n";
   outs() << "    NumberOfOps: " << static_cast<int>(Info.NumberOfOps) << "\n";
   outs() << "    NumberOfEpilogs: " << static_cast<int>(Info.NumberOfEpilogs)
          << "\n";
@@ -795,8 +797,8 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
 
   // Prolog ops
   outs() << format("    Prolog [%u ops]:\n", Info.NumberOfOps);
-  printWODSequenceObjdump(Info.WODPool, 0, ArrayRef(Info.PrologIpOffsets),
-                          Info.NumberOfOps, "      ");
+  printWODSequence(Info.WODPool, 0, ArrayRef(Info.PrologIpOffsets),
+                   Info.NumberOfOps, "      ");
 
   // Epilog descriptors
   for (unsigned I = 0; I < Info.NumberOfEpilogs; ++I) {
@@ -815,11 +817,18 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
       outs() << format(
           "    Epilog [%u] (Flags=0x%02X, Offset=%s0x%X) [inherited]:\n", I,
           Epi.Flags, Sign, AbsOff);
-      if (I == 0)
+      if (I == 0) {
         WithColor::warning(errs())
             << "first epilog cannot inherit (NumberOfOps=0)\n";
-      else
-        outs() << "      (inherits from previous epilog)\n";
+      } else {
+        // Surface the values inherited from the previous epilog so a
+        // reader can see what the unwinder will actually execute.
+        outs() << format("      (inherits from previous epilog: FirstOp=0x%X, "
+                         "IpOfLast=+0x%X, %u ops)\n",
+                         Epi.FirstOp,
+                         static_cast<unsigned>(Epi.IpOffsetOfLastInstruction),
+                         static_cast<unsigned>(Epi.IpOffsets.size()));
+      }
     } else {
       outs() << format(
           "    Epilog [%u] (Flags=0x%02X, Offset=%s0x%X, IpOfLast=+0x%X) "
@@ -827,9 +836,52 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
           I, Epi.Flags, Sign, AbsOff,
           static_cast<unsigned>(Epi.IpOffsetOfLastInstruction), Epi.NumberOfOps,
           Epi.FirstOp);
-      printWODSequenceObjdump(Info.WODPool, Epi.FirstOp,
-                              ArrayRef(Epi.IpOffsets), Epi.NumberOfOps,
-                              "      ");
+      printWODSequence(Info.WODPool, Epi.FirstOp, ArrayRef(Epi.IpOffsets),
+                       Epi.NumberOfOps, "      ");
+    }
+  }
+
+  // Optionally dump the WOD pool with byte offsets. This is useful for
+  // understanding how WODs are shared between the prolog and epilogs but is
+  // normally redundant with the per-prolog / per-epilog decoded output, so
+  // it's gated behind --unwind-show-wod-pool.
+  if (UnwindShowWODPool) {
+    outs() << format("    WOD pool [%zu bytes]:\n", Info.WODPool.size());
+    unsigned PoolOffset = 0;
+    while (PoolOffset < Info.WODPool.size()) {
+      Expected<DecodedWOD> WOrErr = decodeWOD(Info.WODPool, PoolOffset);
+      if (!WOrErr) {
+        WithColor::warning(errs()) << toString(WOrErr.takeError()) << "\n";
+        break;
+      }
+      const DecodedWOD &W = *WOrErr;
+      outs() << format("      +0x%04X: ", PoolOffset);
+      printDecodedWOD(W);
+      outs() << "\n";
+      PoolOffset += W.ByteSize;
+    }
+  }
+
+  // Exception handler RVA or chained RUNTIME_FUNCTION sits immediately after
+  // the payload. Match the readobj output by surfacing it here when the
+  // corresponding flag is set. We don't have symbol-formatting context here
+  // (unlike readobj), so we print the raw RVA / fields.
+  if (Info.Flags & (UNW_ExceptionHandler | UNW_TerminateHandler)) {
+    if (Info.PayloadSize + 4 <= Data.size()) {
+      uint32_t HandlerRVA = support::endian::read32le(&Data[Info.PayloadSize]);
+      outs() << format("    Handler: 0x%X\n", HandlerRVA);
+    }
+  } else if (Info.Flags & UNW_ChainInfo) {
+    if (Info.PayloadSize + sizeof(RuntimeFunction) <= Data.size()) {
+      const auto *Chained =
+          reinterpret_cast<const RuntimeFunction *>(&Data[Info.PayloadSize]);
+      outs() << "    Chained:\n"
+             << format("      Start Address: 0x%X\n",
+                       static_cast<uint32_t>(Chained->StartAddress))
+             << format("      End Address: 0x%X\n",
+                       static_cast<uint32_t>(Chained->EndAddress))
+             << format("      Unwind Info Address: 0x%X\n",
+                       static_cast<uint32_t>(Chained->UnwindInfoOffset));
     }
   }
 
@@ -858,12 +910,42 @@ static void printRuntimeFunction(const COFFObjectFile *Obj,
   const uint8_t *RawBytes = reinterpret_cast<const uint8_t *>(addr);
   uint8_t Version = RawBytes[0] & 0x07;
   if (Version == 3) {
-    // Estimate available size conservatively. The unwind info is terminated
-    // by CountOfCodes * 2 bytes of payload starting at byte 4, plus the
-    // 4-byte header, plus possible handler/chain data.
-    unsigned CountOfCodes = RawBytes[2];
-    unsigned MinSize = 4 + CountOfCodes * 2;
-    printWin64EHUnwindInfoV3(ArrayRef<uint8_t>(RawBytes, MinSize));
+    // Estimate available size conservatively. V3 layout is a 4-byte header
+    // followed by PayloadWords*2 bytes of payload (the optional
+    // UNWIND_INFO_LARGE_V3 byte is part of the payload), plus possible
+    // handler/chain data.
+    //
+    // Clamp the slice we hand to the V3 decoder to the bytes actually
+    // available in the mapped file, so a malformed or truncated record
+    // cannot drive the decoder past the end of the underlying buffer.
+    StringRef FileData = Obj->getData();
+    const uint8_t *FileBegin =
+        reinterpret_cast<const uint8_t *>(FileData.data());
+    const uint8_t *FileEnd = FileBegin + FileData.size();
+    if (RawBytes < FileBegin || RawBytes >= FileEnd) {
+      WithColor::warning(errs())
+          << "unwind info pointer is outside of file bounds\n";
+      return;
+    }
+    size_t Remaining = static_cast<size_t>(FileEnd - RawBytes);
+    if (Remaining < 4) {
+      WithColor::warning(errs()) << "truncated UNWIND_INFO_V3 header\n";
+      return;
+    }
+    unsigned PayloadWords = RawBytes[2];
+    size_t MinSize = 4 + static_cast<size_t>(PayloadWords) * 2;
+    // Include enough trailing bytes for the optional handler RVA (4 bytes)
+    // or chained RUNTIME_FUNCTION (12 bytes) that may follow the payload.
+    size_t ExtraBytes = 0;
+    uint8_t Flags = (RawBytes[0] >> 3) & 0x1F;
+    if (Flags & (UNW_ExceptionHandler | UNW_TerminateHandler))
+      ExtraBytes = 4;
+    else if (Flags & UNW_ChainInfo)
+      ExtraBytes = sizeof(RuntimeFunction);
+    size_t ClampedSize = std::min(MinSize + ExtraBytes, Remaining);
+    if (ClampedSize < MinSize)
+      WithColor::warning(errs()) << "truncated UNWIND_INFO_V3 payload\n";
+    printWin64EHUnwindInfoV3(ArrayRef<uint8_t>(RawBytes, ClampedSize));
   } else {
     printWin64EHUnwindInfo(reinterpret_cast<const Win64EH::UnwindInfo *>(addr));
   }

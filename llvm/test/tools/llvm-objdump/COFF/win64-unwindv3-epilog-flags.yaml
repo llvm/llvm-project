@@ -10,19 +10,19 @@
 # CHECK-NEXT:     End Address: 0x1020
 # CHECK-NEXT:     Unwind Info Address: 0x2000
 # CHECK-NEXT:       Version: 3
-# CHECK-NEXT:       Flags: 0
+# CHECK-NEXT:       Flags: 0x0
 # CHECK-NEXT:       Size of prolog: 0xB
-# CHECK-NEXT:       CountOfCodes: 8
+# CHECK-NEXT:       PayloadWords: 8
 # CHECK-NEXT:       NumberOfOps: 3
 # CHECK-NEXT:       NumberOfEpilogs: 1
 # CHECK-NEXT:       Prolog [3 ops]:
-# CHECK-NEXT:         [0] IP +0x07: WOD_ALLOC_SMALL Size=0x20
-# CHECK-NEXT:         [1] IP +0x02: WOD_PUSH Reg=RSI
-# CHECK-NEXT:         [2] IP +0x00: WOD_PUSH Reg=RDI
+# CHECK-NEXT:         [0] IP +0x0007: WOD_ALLOC_SMALL Size=0x20
+# CHECK-NEXT:         [1] IP +0x0002: WOD_PUSH Reg=RSI
+# CHECK-NEXT:         [2] IP +0x0000: WOD_PUSH Reg=RDI
 # CHECK-NEXT:       Epilog [0] (Flags=0x01, Offset=+0x14, IpOfLast=+0x6) [3 ops, FirstOp=0x0]:
-# CHECK-NEXT:         [0] IP +0x00: WOD_ALLOC_SMALL Size=0x20
-# CHECK-NEXT:         [1] IP +0x04: WOD_PUSH Reg=RSI
-# CHECK-NEXT:         [2] IP +0x05: WOD_PUSH Reg=RDI
+# CHECK-NEXT:         [0] IP +0x0000: WOD_ALLOC_SMALL Size=0x20
+# CHECK-NEXT:         [1] IP +0x0004: WOD_PUSH Reg=RSI
+# CHECK-NEXT:         [2] IP +0x0005: WOD_PUSH Reg=RDI
 
 --- !COFF
 OptionalHeader:
