@@ -43,14 +43,6 @@ public:
     return expand(Base->getAllCompileCommands());
   }
 
-  std::vector<std::string>
-  getRequiredModules(StringRef FilePath) const override {
-    return {};
-  }
-  std::optional<std::string> getModuleName(StringRef FilePath) const override {
-    return std::nullopt;
-  }
-
 private:
   std::vector<CompileCommand> expand(std::vector<CompileCommand> Cmds) const {
     for (auto &Cmd : Cmds)

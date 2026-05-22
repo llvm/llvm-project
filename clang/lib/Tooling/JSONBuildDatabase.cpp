@@ -112,11 +112,11 @@ JSONBuildDatabase::getCompileCommands(StringRef FilePath) const {
   StringRef Match = MatchTrie.findEquivalent(NativeFilePath, ES);
   if (Match.empty())
     return {};
-  const auto CommandsRefI = IndexByFile.find(Match);
-  if (CommandsRefI == IndexByFile.end())
+  const auto TURefI = IndexByFile.find(Match);
+  if (TURefI == IndexByFile.end())
     return {};
   std::vector<CompileCommand> Commands;
-  getCommands(CommandsRefI->getValue(), Commands);
+  getCommands(TURefI->getValue(), Commands);
   return Commands;
 }
 
@@ -133,14 +133,107 @@ std::vector<CompileCommand> JSONBuildDatabase::getAllCompileCommands() const {
   return Commands;
 }
 
+const ModuleManager *JSONBuildDatabase::getModuleManager() const {
+  return this;
+}
+
 std::vector<std::string>
 JSONBuildDatabase::getRequiredModules(StringRef FilePath) const {
-  return {};
+
+  const auto *TURef = getTUForSource(FilePath);
+  std::vector<std::string> RequiredModules;
+  if (TURef) {
+    for (const auto &RequiredModule : TURef->RequiredModules) {
+      SmallString<8> RequiredModuleStorage;
+      RequiredModules.emplace_back(
+          RequiredModule->getValue(RequiredModuleStorage));
+    }
+  }
+  return RequiredModules;
 }
 
 std::optional<std::string>
 JSONBuildDatabase::getModuleName(StringRef FilePath) const {
-  return "tset";
+  const auto *TURef = getTUForSource(FilePath);
+  if (TURef && TURef->ProvidesModuleName) {
+    SmallString<8> ModuleNameStorage;
+    return TURef->ProvidesModuleName->getValue(ModuleNameStorage).str();
+  }
+  return std::nullopt;
+}
+
+ModuleManager::ModuleNameState
+JSONBuildDatabase::getModuleNameState(StringRef ModuleName) const {
+  auto It = ModuleNameToDistinctSources.find(ModuleName);
+  if (It == ModuleNameToDistinctSources.end())
+    return ModuleNameState::Unknown;
+  return It->second.size() > 1 ? ModuleNameState::Multiple
+                               : ModuleNameState::Unique;
+}
+
+std::string
+JSONBuildDatabase::getSourceForModuleName(StringRef ModuleName,
+                                          StringRef RequiredSourceFile) const {
+
+  const auto *RequiredSourceTURef = getTUForSource(RequiredSourceFile);
+  if (RequiredSourceTURef) {
+    SmallString<8> SetNameStorage;
+    SmallString<8> FilenameStorage;
+    auto SetName = RequiredSourceTURef->SetName->getValue(SetNameStorage);
+    // First attempt to find the matching module in the current set
+    const auto *ModuleTURef = getTUForModule(ModuleName, SetName);
+    if (ModuleTURef)
+      return ModuleTURef->Filename->getValue(FilenameStorage).str();
+    // Could not find in current set, check all visible sets
+    const auto TUSetI = IndexBySet.find(SetName);
+    if (TUSetI == IndexBySet.end())
+      return {};
+    for (const auto &VisibleSet : TUSetI->getValue().VisibleSets) {
+      ModuleTURef =
+          getTUForModule(ModuleName, VisibleSet->getValue(SetNameStorage));
+      if (ModuleTURef)
+        return ModuleTURef->Filename->getValue(FilenameStorage).str();
+    }
+  }
+  return {};
+}
+
+const JSONBuildDatabase::TranslationUnitRef *
+JSONBuildDatabase::getTUForSource(StringRef FilePath) const {
+  SmallString<128> NativeFilePath;
+  llvm::sys::path::native(FilePath, NativeFilePath);
+
+  std::string Error;
+  llvm::raw_string_ostream ES(Error);
+  StringRef Match = MatchTrie.findEquivalent(NativeFilePath, ES);
+  if (Match.empty())
+    return {};
+  const auto TURefI = IndexByFile.find(Match);
+  if (TURefI == IndexByFile.end())
+    return {};
+  // Return the first reference in the build database
+  // Not ideal, but without context this is the best we can do
+  for (const auto &TURef : TURefI->getValue()) {
+    return &TURef;
+  }
+  return nullptr;
+}
+
+const JSONBuildDatabase::TranslationUnitRef *
+JSONBuildDatabase::getTUForModule(StringRef ModuleName,
+                                  StringRef SetName) const {
+  const auto TUSetI = IndexBySet.find(SetName);
+  if (TUSetI == IndexBySet.end())
+    return {};
+  // Return the first reference in the build database
+  // Not ideal, but without context this is the best we can do
+  for (const auto &TURef : TUSetI->getValue().TranslationUnits) {
+
+    SmallString<8> ModuleNameStorage;
+    if (TURef.ProvidesModuleName->getValue(ModuleNameStorage) == ModuleName)
+      return &TURef;
+  }
+  return nullptr;
 }
 
 static llvm::StringRef stripExecutableExtension(llvm::StringRef Name) {
@@ -167,8 +260,9 @@ static bool unwrapCommand(std::vector<std::string> &Args) {
     //                     We don't even notice this case, and all is well.
     //
     // We need to distinguish between the first and second case.
-    // The wrappers themselves don't take flags, so Args[1] is a compiler flag,
-    // an input file, or a compiler. Inputs have extensions, compilers don't.
+    // The wrappers themselves don't take flags, so Args[1] is a compiler
+    // flag, an input file, or a compiler. Inputs have extensions, compilers
+    // don't.
     bool HasCompiler =
         (Args[1][0] != '-') &&
         !llvm::sys::path::has_extension(stripExecutableExtension(Args[1]));
@@ -187,24 +281,25 @@ nodeToCommandLine(const std::vector<llvm::yaml::ScalarNode *> &Nodes) {
   std::vector<std::string> Arguments;
   for (const auto *Node : Nodes)
     Arguments.push_back(std::string(Node->getValue(Storage)));
-  // There may be multiple wrappers: using distcc and ccache together is common.
+  // There may be multiple wrappers: using distcc and ccache together is
+  // common.
   while (unwrapCommand(Arguments))
     ;
   return Arguments;
 }
 
 void JSONBuildDatabase::getCommands(
-    ArrayRef<CompileCommandRef> CommandsRef,
+    ArrayRef<TranslationUnitRef> TUsRef,
     std::vector<CompileCommand> &Commands) const {
-  for (const auto &CommandRef : CommandsRef) {
+  for (const auto &TURef : TUsRef) {
     SmallString<8> DirectoryStorage;
     SmallString<32> FilenameStorage;
     SmallString<32> OutputStorage;
-    auto Output = std::get<3>(CommandRef);
-    Commands.emplace_back(std::get<0>(CommandRef)->getValue(DirectoryStorage),
-                          std::get<1>(CommandRef)->getValue(FilenameStorage),
-                          nodeToCommandLine(std::get<2>(CommandRef)),
-                          Output ? Output->getValue(OutputStorage) : "");
+    Commands.emplace_back(TURef.Directory->getValue(DirectoryStorage),
+                          TURef.Filename->getValue(FilenameStorage),
+                          nodeToCommandLine(TURef.CommandLine),
+                          TURef.Output ? TURef.Output->getValue(OutputStorage)
+                                       : "");
   }
 }
 
@@ -305,6 +400,7 @@ bool JSONBuildDatabase::parseSet(std::string &ErrorMessage,
   llvm::yaml::ScalarNode *Name = nullptr;
   llvm::yaml::SequenceNode *VisibleSets = nullptr;
   llvm::yaml::SequenceNode *TUs = nullptr;
+  std::vector<TranslationUnitRef> TURefs = {};
   for (auto &NextKeyValue : *SetObject) {
     auto *KeyString =
         dyn_cast_if_present<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
@@ -355,9 +451,11 @@ bool JSONBuildDatabase::parseSet(std::string &ErrorMessage,
           ErrorMessage = "Expected translation-units item as object.";
           return false;
         }
-        if (!parseTU(ErrorMessage, TUObject)) {
+        TranslationUnitRef TURef = {};
+        if (!parseTU(ErrorMessage, TUObject, TURef)) {
           return false;
         }
+        TURefs.push_back(std::move(TURef));
       }
     } else {
       ErrorMessage =
@@ -382,11 +480,34 @@ bool JSONBuildDatabase::parseSet(std::string &ErrorMessage,
     ErrorMessage = "Missing key in set: \"translation-units\".";
     return false;
   }
+  // Finalize the translation unit refs now that we have all the set info
+  for (auto &TURef : TURefs) {
+    // Attach the parent set name for easy lookups
+    TURef.SetName = Name;
+    // Build up the native file path
+    SmallString<8> FileStorage;
+    StringRef FileName = TURef.Filename->getValue(FileStorage);
+    SmallString<128> NativeFilePath;
+    if (llvm::sys::path::is_relative(FileName)) {
+      SmallString<8> DirectoryStorage;
+      SmallString<128> AbsolutePath(
+          TURef.Directory->getValue(DirectoryStorage));
+      llvm::sys::path::append(AbsolutePath, FileName);
+      llvm::sys::path::native(AbsolutePath, NativeFilePath);
+    } else {
+      llvm::sys::path::native(FileName, NativeFilePath);
+    }
+    llvm::sys::path::remove_dots(NativeFilePath, /*remove_dot_dot=*/true);
+    IndexByFile[NativeFilePath].push_back(TURef);
+    AllCommands.push_back(TURef);
+    MatchTrie.insert(NativeFilePath);
+  }
   return true;
 }
 
 bool JSONBuildDatabase::parseTU(std::string &ErrorMessage,
-                                llvm::yaml::MappingNode *TUObject) {
+                                llvm::yaml::MappingNode *TUObject,
+                                TranslationUnitRef &TURef) {
   llvm::yaml::SequenceNode *Arguments = nullptr;
   std::vector<llvm::yaml::ScalarNode *> Command;
   llvm::yaml::ScalarNode *Language = nullptr;
@@ -396,7 +517,10 @@ bool JSONBuildDatabase::parseTU(std::string &ErrorMessage,
   llvm::yaml::ScalarNode *Source = nullptr;
   llvm::yaml::ScalarNode *Object = nullptr;
   llvm::yaml::MappingNode *Provides = nullptr;
+  llvm::yaml::ScalarNode *ProvidesModuleName = nullptr;
+  llvm::yaml::ScalarNode *ProvidesModulePCM = nullptr;
   llvm::yaml::SequenceNode *Requires = nullptr;
+  std::vector<llvm::yaml::ScalarNode *> RequiredModules;
   for (auto &NextKeyValue : *TUObject) {
     auto *KeyString =
         dyn_cast_if_present<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
@@ -467,11 +591,42 @@ bool JSONBuildDatabase::parseTU(std::string &ErrorMessage,
         ErrorMessage = "Expected object as value for \"provides\".";
         return false;
       }
+      for (auto &NextProvidesKeyValue : *Provides) {
+        // The spec allows multiple of module provide, but C++ only allows one
+        if (ProvidesModuleName) {
+          ErrorMessage = "TU can only provide one module.";
+          return false;
+        }
+
+        auto *ProvidesKeyString = dyn_cast_if_present<llvm::yaml::ScalarNode>(
+            NextProvidesKeyValue.getKey());
+        if (!ProvidesKeyString) {
+          ErrorMessage = "Expected strings as key.";
+          return false;
+        }
+        auto *ProvidesValue = dyn_cast_if_present<llvm::yaml::ScalarNode>(
+            NextProvidesKeyValue.getValue());
+        if (!ProvidesValue) {
+          ErrorMessage = "Expected string as provides value.";
+          return false;
+        }
+
+        ProvidesModuleName = ProvidesKeyString;
+        ProvidesModulePCM = ProvidesValue;
+      }
     } else if (KeyValue == "requires") {
       Requires = dyn_cast<llvm::yaml::SequenceNode>(Value);
       if (!Requires) {
         ErrorMessage = "Expected array as value for \"requires\".";
         return false;
+      }
+      for (auto &RequiredModule : *Requires) {
+        auto *Scalar = dyn_cast<llvm::yaml::ScalarNode>(&RequiredModule);
+        if (!Scalar) {
+          ErrorMessage = "Only strings are allowed in 'requires'.";
+          return false;
+        }
+        RequiredModules.push_back(Scalar);
       }
     } else {
       ErrorMessage = ("Unknown key in translation-unit: \"" +
@@ -493,23 +648,12 @@ bool JSONBuildDatabase::parseTU(std::string &ErrorMessage,
     ErrorMessage = "Missing key in translation-unit: \"arguments\".";
     return false;
   }
-  SmallString<8> FileStorage;
-  StringRef FileName = Source->getValue(FileStorage);
-  SmallString<128> NativeFilePath;
-  if (llvm::sys::path::is_relative(FileName)) {
-    SmallString<8> DirectoryStorage;
-    SmallString<128> AbsolutePath(WorkDirectory->getValue(DirectoryStorage));
-    llvm::sys::path::append(AbsolutePath, FileName);
-    llvm::sys::path::native(AbsolutePath, NativeFilePath);
-  } else {
-    llvm::sys::path::native(FileName, NativeFilePath);
-  }
-  llvm::sys::path::remove_dots(NativeFilePath, /*remove_dot_dot=*/true);
-  auto Cmd = CompileCommandRef(WorkDirectory, Source, Command, Object);
-
-  IndexByFile[NativeFilePath].push_back(Cmd);
-  AllCommands.push_back(Cmd);
-  MatchTrie.insert(NativeFilePath);
-
+  TURef.Directory = WorkDirectory;
+  TURef.Filename = Source;
+  TURef.CommandLine = std::move(Command);
+  TURef.Output = Object;
+  TURef.ProvidesModuleName = ProvidesModuleName;
+  TURef.ProvidesModulePCM = ProvidesModulePCM;
+  TURef.RequiredModules = std::move(RequiredModules);
   return true;
 }

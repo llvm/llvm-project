@@ -79,15 +79,6 @@ std::vector<CompileCommand> ArgumentsAdjustingCompilations::adjustCommands(
   return Commands;
 }
 
-std::vector<std::string>
-ArgumentsAdjustingCompilations::getRequiredModules(StringRef FilePath) const {
-  return {};
-}
-std::optional<std::string>
-ArgumentsAdjustingCompilations::getModuleName(StringRef FilePath) const {
-  return std::nullopt;
-}
-
 llvm::Error CommonOptionsParser::init(
     int &argc, const char **argv, cl::OptionCategory &Category,
     llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {

@@ -36,14 +36,6 @@ public:
     return addLocation(Base->getCompileCommands(FilePath));
   }
 
-  std::vector<std::string>
-  getRequiredModules(StringRef FilePath) const override {
-    return {};
-  }
-  std::optional<std::string> getModuleName(StringRef FilePath) const override {
-    return std::nullopt;
-  }
-
 private:
   std::vector<CompileCommand>
   addLocation(std::vector<CompileCommand> Cmds) const {

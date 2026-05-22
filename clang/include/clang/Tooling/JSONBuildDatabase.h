@@ -20,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
@@ -57,7 +58,7 @@ namespace tooling {
 ///
 /// JSON build databases can for example be generated in CMake projects
 /// by setting the flag -DCMAKE_EXPORT_BUILD_DATABASE.
-class JSONBuildDatabase : public CompilationDatabase {
+class JSONBuildDatabase : public CompilationDatabase, ModuleManager {
 public:
   /// Loads a JSON build database from the specified file.
   ///
@@ -89,15 +90,42 @@ public:
   /// database.
   std::vector<CompileCommand> getAllCompileCommands() const override;
 
+  const ModuleManager *getModuleManager() const override;
+
   std::vector<std::string>
   getRequiredModules(StringRef FilePath) const override;
   std::optional<std::string> getModuleName(StringRef FilePath) const override;
+
+  ModuleNameState getModuleNameState(StringRef ModuleName) const override;
+
+  std::string
+  getSourceForModuleName(StringRef ModuleName,
+                         StringRef RequiredSourceFile) const override;
 
 private:
   /// Constructs a JSON build database on a memory buffer.
   JSONBuildDatabase(std::unique_ptr<llvm::MemoryBuffer> Database)
       : Database(std::move(Database)),
         YAMLStream(this->Database->getBuffer(), SM) {}
+
+  // Container for a compile command references where 'commandline'
+  // points to the corresponding scalar nodes in the YAML stream.
+  // The output field may be a nullptr.
+  struct TranslationUnitRef {
+    llvm::yaml::ScalarNode *SetName;
+    llvm::yaml::ScalarNode *Directory;
+    llvm::yaml::ScalarNode *Filename;
+    std::vector<llvm::yaml::ScalarNode *> CommandLine;
+    llvm::yaml::ScalarNode *Output;
+    llvm::yaml::ScalarNode *ProvidesModuleName;
+    llvm::yaml::ScalarNode *ProvidesModulePCM;
+    std::vector<llvm::yaml::ScalarNode *> RequiredModules;
+  };
+
+  struct TranslationUnitSet {
+    std::vector<llvm::yaml::ScalarNode *> VisibleSets;
+    std::vector<TranslationUnitRef> TranslationUnits;
+  };
 
   /// Parses the database file and creates the index.
   ///
@@ -106,30 +134,28 @@ private:
   bool parse(std::string &ErrorMessage);
   bool parseRoot(std::string &ErrorMessage, llvm::yaml::MappingNode *Object);
   bool parseSet(std::string &ErrorMessage, llvm::yaml::MappingNode *Object);
-  bool parseTU(std::string &ErrorMessage, llvm::yaml::MappingNode *Object);
+  bool parseTU(std::string &ErrorMessage, llvm::yaml::MappingNode *Object,
+               TranslationUnitRef &TURef);
 
-  // Tuple (directory, filename, commandline, output) where 'commandline'
-  // points to the corresponding scalar nodes in the YAML stream.
-  // If the command line contains a single argument, it is a shell-escaped
-  // command line.
-  // Otherwise, each entry in the command line vector is a literal
-  // argument to the compiler.
-  // The output field may be a nullptr.
-  using CompileCommandRef =
-      std::tuple<llvm::yaml::ScalarNode *, llvm::yaml::ScalarNode *,
-                 std::vector<llvm::yaml::ScalarNode *>,
-                 llvm::yaml::ScalarNode *>;
+  const TranslationUnitRef *getTUForSource(StringRef FilePath) const;
+  const TranslationUnitRef *getTUForModule(StringRef ModuleName,
+                                           StringRef SetName) const;
 
-  /// Converts the given array of CompileCommandRefs to CompileCommands.
-  void getCommands(ArrayRef<CompileCommandRef> CommandsRef,
+  /// Converts the given array of TranslationUnitRefs to CompileCommands.
+  void getCommands(ArrayRef<TranslationUnitRef> CommandsRef,
                    std::vector<CompileCommand> &Commands) const;
 
-  // Maps file paths to the compile command lines for that file.
-  llvm::StringMap<std::vector<CompileCommandRef>> IndexByFile;
+  // Maps file paths to the translation units for that file.
+  llvm::StringMap<std::vector<TranslationUnitRef>> IndexByFile;
+  llvm::StringMap<TranslationUnitSet> IndexBySet;
 
   /// All the compile commands in the order that they were provided in the
   /// JSON stream.
-  std::vector<CompileCommandRef> AllCommands;
+  std::vector<TranslationUnitRef> AllCommands;
+
+  // Module name state lookup to track unique names
+  using DistinctSourceSet = llvm::StringSet<>;
+  llvm::StringMap<DistinctSourceSet> ModuleNameToDistinctSources;
 
   FileMatchTrie MatchTrie;
 

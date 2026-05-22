@@ -583,14 +583,6 @@ public:
     return Inner->getAllCompileCommands();
   }
 
-  std::vector<std::string>
-  getRequiredModules(StringRef FilePath) const override {
-    return {};
-  }
-  std::optional<std::string> getModuleName(StringRef FilePath) const override {
-    return std::nullopt;
-  }
-
 private:
   std::unique_ptr<CompilationDatabase> Inner;
   FileIndex Index;
