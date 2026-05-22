@@ -5659,6 +5659,10 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   if (MaxFactors.FixedVF.isVector() || MaxFactors.ScalableVF.isVector())
     Legal->collectUnitStridePredicates();
 
+  auto VPlan1 = tryToBuildVPlan1();
+  if (!VPlan1)
+    return;
+
   ElementCount MaxUserVF =
       UserVF.isScalable() ? MaxFactors.ScalableVF : MaxFactors.FixedVF;
   if (UserVF) {
@@ -5674,15 +5678,11 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       CM.collectNonVectorizedAndSetWideningDecisions(UserVF);
       ElementCount EpilogueUserVF =
           ElementCount::getFixed(EpilogueVectorizationForceVF);
-      bool UseEpilogueUserVF = EpilogueUserVF.isVector() &&
-                               ElementCount::isKnownLT(EpilogueUserVF, UserVF);
-      if (UseEpilogueUserVF)
+      if (EpilogueUserVF.isVector() &&
+          ElementCount::isKnownLT(EpilogueUserVF, UserVF)) {
         CM.collectNonVectorizedAndSetWideningDecisions(EpilogueUserVF);
-      auto VPlan1 = tryToBuildVPlan1();
-      if (!VPlan1)
-        return;
-      if (UseEpilogueUserVF)
         buildVPlans(*VPlan1, EpilogueUserVF, EpilogueUserVF);
+      }
       buildVPlans(*VPlan1, UserVF, UserVF);
       if (!VPlans.empty() && VPlans.back()->getSingleVF() == UserVF) {
         // For scalar VF, skip VPlan cost check as VPlan cost is designed for
@@ -5714,9 +5714,6 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     CM.collectNonVectorizedAndSetWideningDecisions(VF);
   }
 
-  auto VPlan1 = tryToBuildVPlan1();
-  if (!VPlan1)
-    return;
   buildVPlans(*VPlan1, ElementCount::getFixed(1), MaxFactors.FixedVF);
   buildVPlans(*VPlan1, ElementCount::getScalable(1), MaxFactors.ScalableVF);
 

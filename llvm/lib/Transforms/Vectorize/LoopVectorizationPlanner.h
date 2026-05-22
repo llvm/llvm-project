@@ -925,8 +925,8 @@ public:
 
 private:
   /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
-  /// scalar transformations applied. Returns null if an initial VPlan cannot be
-  /// built.
+  /// scalar transformations applied. Returns null if an initial VPlan cannot
+  /// be built.
   VPlanPtr tryToBuildVPlan1();
 
   /// Build a VPlan using VPRecipes according to the information gathered by
