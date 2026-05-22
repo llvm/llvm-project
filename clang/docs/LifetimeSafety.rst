@@ -201,9 +201,10 @@ with ``[[clang::lifetimebound]]`` annotated parameters:
 
 For more details, see `lifetimebound <https://clang.llvm.org/docs/AttributeReference.html#lifetimebound>`_.
 
-.. _Wlifetime-safety-noescape:
 NoEscape
 --------
+
+.. _Wlifetime-safety-noescape:
 
 The ``[[clang::noescape]]`` attribute can be applied to function parameters of
 pointer or reference type. It indicates that the function will not allow the
