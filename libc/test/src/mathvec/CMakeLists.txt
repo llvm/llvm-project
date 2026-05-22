@@ -145,6 +145,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cbrtf_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    cbrtf_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.cbrtf
+    libc.src.mathvec.cbrtf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
   cosf_test
   SUITE
     libc-mathvec-unittests
@@ -192,6 +209,23 @@ add_fp_unittest(
     .unit_test_wrappers
     libc.src.math.cospif
     libc.src.mathvec.cospif
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
+  erff_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    erff_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.erff
+    libc.src.mathvec.erff
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.CPP.simd
   FLAGS
@@ -370,6 +404,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  rsqrtf_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    rsqrtf_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.rsqrtf
+    libc.src.mathvec.rsqrtf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
   sinf_test
   SUITE
     libc-mathvec-unittests
@@ -417,6 +468,23 @@ add_fp_unittest(
     .unit_test_wrappers
     libc.src.math.sinpif
     libc.src.mathvec.sinpif
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
+  sqrtf_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    sqrtf_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.sqrtf
+    libc.src.mathvec.sqrtf
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.CPP.simd
   FLAGS

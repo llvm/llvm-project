@@ -111,6 +111,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  cbrtf
+  SRCS
+    cbrtf.cpp
+  HDRS
+    ../cbrtf.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.cbrtf
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
   cosf
   SRCS
     cosf.cpp
@@ -147,6 +161,20 @@ add_entrypoint_object(
   DEPENDS
     libc.src.mathvec.abi_prefix
     libc.src.__support.mathvec.cospif
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
+  erff
+  SRCS
+    erff.cpp
+  HDRS
+    ../erff.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.erff
   FLAGS
     ROUND_OPT
     FMA_OPT
@@ -293,6 +321,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  rsqrtf
+  SRCS
+    rsqrtf.cpp
+  HDRS
+    ../rsqrtf.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.rsqrtf
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
   sinf
   SRCS
     sinf.cpp
@@ -329,6 +371,20 @@ add_entrypoint_object(
   DEPENDS
     libc.src.mathvec.abi_prefix
     libc.src.__support.mathvec.sinpif
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
+  sqrtf
+  SRCS
+    sqrtf.cpp
+  HDRS
+    ../sqrtf.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.sqrtf
   FLAGS
     ROUND_OPT
     FMA_OPT

@@ -1326,9 +1326,11 @@ if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
     libc.src.mathvec.asinpif
     libc.src.mathvec.atanf
     libc.src.mathvec.atanhf
+    libc.src.mathvec.cbrtf
     libc.src.mathvec.cosf
     libc.src.mathvec.coshf
     libc.src.mathvec.cospif
+    libc.src.mathvec.erff
     libc.src.mathvec.exp2f
     libc.src.mathvec.exp2m1f
     libc.src.mathvec.exp10f
@@ -1339,9 +1341,11 @@ if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
     libc.src.mathvec.log1pf
     libc.src.mathvec.log2f
     libc.src.mathvec.logf
+    libc.src.mathvec.rsqrtf
     libc.src.mathvec.sinf
     libc.src.mathvec.sinhf
     libc.src.mathvec.sinpif
+    libc.src.mathvec.sqrtf
     libc.src.mathvec.tanf
     libc.src.mathvec.tanhf
     libc.src.mathvec.tanpif

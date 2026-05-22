@@ -73,6 +73,15 @@ add_header_library(
 )
 
 add_header_library(
+  cbrtf
+  HDRS
+    cbrtf.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.cbrtf
+)
+
+add_header_library(
   cosf
   HDRS
     cosf.h
@@ -97,6 +106,15 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.simd
     libc.src.__support.math.cospif
+)
+
+add_header_library(
+  erff
+  HDRS
+    erff.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.erff
 )
 
 add_header_library(
@@ -202,6 +220,15 @@ add_header_library(
 )
 
 add_header_library(
+  rsqrtf
+  HDRS
+    rsqrtf.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.rsqrtf
+)
+
+add_header_library(
   sinf
   HDRS
     sinf.h
@@ -226,6 +253,15 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.simd
     libc.src.__support.math.sinpif
+)
+
+add_header_library(
+  sqrtf
+  HDRS
+    sqrtf.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.sqrtf
 )
 
 add_header_library(

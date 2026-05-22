@@ -138,6 +138,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cbrtf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    cbrtf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.cbrtf
+    libc.src.mathvec.cbrtf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   cosf_test
   NO_RUN_POSTBUILD
   SUITE
@@ -180,6 +196,22 @@ add_fp_unittest(
     .exhaustive_test
     libc.src.math.cospif
     libc.src.mathvec.cospif
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  erff_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    erff_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.erff
+    libc.src.mathvec.erff
     libc.src.__support.CPP.simd
   LINK_LIBRARIES
     -lpthread
@@ -346,6 +378,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  rsqrtf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    rsqrtf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.rsqrtf
+    libc.src.mathvec.rsqrtf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   sinf_test
   NO_RUN_POSTBUILD
   SUITE
@@ -388,6 +436,22 @@ add_fp_unittest(
     .exhaustive_test
     libc.src.math.sinpif
     libc.src.mathvec.sinpif
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  sqrtf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    sqrtf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.sqrtf
+    libc.src.mathvec.sqrtf
     libc.src.__support.CPP.simd
   LINK_LIBRARIES
     -lpthread
