@@ -627,9 +627,12 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
         Value *V = PN.getIncomingValueForBlock(L.getLoopLatch());
         PN.addIncoming(V, BI.getParent());
       }
-      DT.applyUpdates(Updates);
-      if (MSSAU)
+      if (MSSAU) {
         MSSAU->applyUpdates(Updates, DT);
+      } else {
+        DT.applyUpdates(Updates);
+      }
+
       ModifiedBranch = true;
     }
   }
