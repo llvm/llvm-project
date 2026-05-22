@@ -79,6 +79,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -4436,6 +4437,282 @@ private:
   }
 };
 
+/// Splits fixed-vector alloca loads into per-lane scalar loads when a smaller
+/// overlapping store exists for the same alloca.
+class VecLoadLaneSplitter : public InstVisitor<VecLoadLaneSplitter, bool> {
+
+  friend class InstVisitor<VecLoadLaneSplitter, bool>;
+
+  const DataLayout &DL;
+  SmallPtrSet<LoadInst *, 4> CandidateLoadSet;
+  SmallPtrSet<StoreInst *, 4> CandidateStoreSet;
+
+  SmallVector<Use *, 4> Queue;
+  SmallPtrSet<Use *, 4> Visited;
+  IRBuilderTy &IRB;
+  Use *U = nullptr;
+
+  bool isLoadLaneExtractOnly(LoadInst &LI) {
+    if (!LI.isSimple() || LI.use_empty())
+      return false;
+
+    FixedVectorType *VTy = dyn_cast<FixedVectorType>(LI.getType());
+    if (!VTy)
+      return false;
+
+    Type *EltTy = VTy->getElementType();
+    if (!DL.typeSizeEqualsStoreSize(EltTy))
+      return false;
+
+    unsigned NumElts = VTy->getNumElements();
+    for (Use &Us : LI.uses()) {
+      auto *EE = dyn_cast<ExtractElementInst>(Us.getUser());
+      if (!EE)
+        return false;
+      auto *CI = dyn_cast<ConstantInt>(EE->getIndexOperand());
+      if (!CI || CI->getValue().uge(NumElts))
+        return false;
+    }
+    return true;
+  }
+
+  bool isStoreCandidate(StoreInst &SI) {
+    if (!SI.isSimple())
+      return false;
+    Type *StoreTy = SI.getValueOperand()->getType();
+    return !isa<ScalableVectorType>(StoreTy);
+  }
+
+  bool isScalarOrSubVectorStore(StoreInst &SI, const Slice &StoreSlice,
+                                const Slice &LoadSlice) {
+    if (!isStoreCandidate(SI))
+      return false;
+
+    Type *StoreTy = SI.getValueOperand()->getType();
+    bool IsContained = StoreSlice.beginOffset() >= LoadSlice.beginOffset() &&
+                       StoreSlice.endOffset() <= LoadSlice.endOffset();
+    if (!isa<FixedVectorType>(StoreTy))
+      return IsContained;
+    uint64_t StoreSize = StoreSlice.endOffset() - StoreSlice.beginOffset();
+    uint64_t LoadSize = LoadSlice.endOffset() - LoadSlice.beginOffset();
+    return IsContained && StoreSize < LoadSize;
+  }
+
+  // Return true if slice S's use is the address operand of the instruction I.
+  bool isAddressOperandSlice(const Slice &S, Instruction &I) {
+    if (S.getUse()->getUser() != &I)
+      return false;
+    if (auto *LI = dyn_cast<LoadInst>(&I))
+      return S.getUse() == &LI->getOperandUse(LI->getPointerOperandIndex());
+    if (auto *SI = dyn_cast<StoreInst>(&I))
+      return S.getUse() == &SI->getOperandUse(SI->getPointerOperandIndex());
+    return false;
+  }
+
+  void enqueueUsers(Instruction &I) {
+    for (Use &U : I.uses())
+      if (Visited.insert(&U).second)
+        Queue.push_back(&U);
+  }
+
+  bool visitInstruction(Instruction &I) { return false; }
+
+  bool visitBitCastInst(BitCastInst &BC) {
+    enqueueUsers(BC);
+    return false;
+  }
+
+  bool visitAddrSpaceCastInst(AddrSpaceCastInst &ASC) {
+    enqueueUsers(ASC);
+    return false;
+  }
+
+  bool visitGetElementPtrInst(GetElementPtrInst &GEPI) {
+    enqueueUsers(GEPI);
+    return false;
+  }
+
+  bool visitSelectInst(SelectInst &SI) {
+    enqueueUsers(SI);
+    return false;
+  }
+
+  bool visitPHINode(PHINode &PN) {
+    enqueueUsers(PN);
+    return false;
+  }
+
+  bool visitStoreInst(StoreInst &SI) {
+    if (!SI.isSimple() || SI.getPointerOperand() != *U)
+      return false;
+    if (isStoreCandidate(SI))
+      CandidateStoreSet.insert(&SI);
+    return false;
+  }
+
+  bool visitLoadInst(LoadInst &LI) {
+    if (!LI.isSimple() || LI.getPointerOperand() != *U)
+      return false;
+
+    if (isLoadLaneExtractOnly(LI))
+      CandidateLoadSet.insert(&LI);
+    return false;
+  }
+
+  bool trySplitVectorLoad(LoadInst &LI) {
+
+    assert(LI.isSimple() && "Load is not simple");
+    // Erase the load if it has no users.
+    if (LI.use_empty()) {
+      LI.eraseFromParent();
+      return true;
+    }
+
+    FixedVectorType *VTy = cast<FixedVectorType>(LI.getType());
+    Type *EltTy = VTy->getElementType();
+
+    // Reject elements where the store size is not equal to the element size.
+    if (!DL.typeSizeEqualsStoreSize(EltTy))
+      return false;
+
+    unsigned NumElts = VTy->getNumElements();
+    LLVM_DEBUG(dbgs() << "Consider load: " << LI << " NumElts=" << NumElts
+                      << " EltTy=" << *EltTy << "\n");
+
+    // Collect the lane users.
+    TypeSize EltSize = DL.getTypeStoreSize(EltTy);
+    SmallVector<SmallVector<ExtractElementInst *, 4>, 4> LaneUsers(NumElts);
+    for (Use &Us : LI.uses()) {
+      auto *EE = dyn_cast<ExtractElementInst>(Us.getUser());
+      if (!EE)
+        return false;
+      auto *CI = dyn_cast<ConstantInt>(EE->getIndexOperand());
+      if (!CI || CI->getValue().uge(NumElts))
+        return false;
+      LaneUsers[CI->getZExtValue()].push_back(EE);
+    }
+
+    // Emit one scalar load per lane.
+    IRB.SetInsertPoint(&LI);
+    Value *BasePtr = LI.getPointerOperand();
+    unsigned IdxBits = DL.getIndexSizeInBits(LI.getPointerAddressSpace());
+    uint64_t Stride = EltSize.getFixedValue();
+    SmallVector<ExtractElementInst *, 4> ToErase;
+    for (auto [Lane, Users] : enumerate(LaneUsers)) {
+      if (Users.empty())
+        continue;
+      uint64_t Offset = Lane * Stride;
+      LLVM_DEBUG(dbgs() << "Lane " << Lane << " Offset=" << Offset
+                        << " NumUsers=" << Users.size() << "\n");
+      Value *LanePtr = getAdjustedPtr(IRB, DL, BasePtr, APInt(IdxBits, Offset),
+                                      LI.getPointerOperandType(),
+                                      BasePtr->getName() + ".lane");
+      auto *NewLI = IRB.CreateAlignedLoad(EltTy, LanePtr,
+                                          getAdjustedAlignment(&LI, Offset),
+                                          LI.getName() + ".lane");
+      copyMetadataForLoad(*NewLI, LI);
+      // Adjust AA metadata for the lane byte offset.
+      if (AAMDNodes AATags = LI.getAAMetadata())
+        NewLI->setAAMetadata(
+            AATags.adjustForAccess(Offset, NewLI->getType(), DL));
+
+      for (ExtractElementInst *EE : Users) {
+        EE->replaceAllUsesWith(NewLI);
+        ToErase.push_back(EE);
+      }
+    }
+
+    for (ExtractElementInst *EE : ToErase)
+      EE->eraseFromParent();
+    LI.eraseFromParent();
+    return true;
+  }
+
+public:
+  explicit VecLoadLaneSplitter(const DataLayout &DL, IRBuilderTy &IRB)
+      : DL(DL), IRB(IRB) {}
+
+  bool rewrite(AllocaInst &AI, AllocaSlices &AS) {
+
+    CandidateLoadSet.clear();
+    CandidateStoreSet.clear();
+    Queue.clear();
+    Visited.clear();
+    U = nullptr;
+
+    // Reject escaped alloca slices. Let runOnAlloca route the escapes.
+    if (AS.isEscaped() || AS.isEscapedReadOnly())
+      return false;
+
+    // Walk all uses and classify.
+    enqueueUsers(AI);
+    while (!Queue.empty()) {
+      U = Queue.pop_back_val();
+      visit(*cast<Instruction>(U->getUser())); // dispatches to visitXxx above
+    }
+
+    LLVM_DEBUG(dbgs() << "CandidateLoads=" << CandidateLoadSet.size()
+                      << " CandidateStoreSet=" << CandidateStoreSet.size()
+                      << "\n");
+
+    if (CandidateLoadSet.empty() || CandidateStoreSet.empty())
+      return false;
+
+    auto SlicesOverlap = [](const Slice &S1, const Slice &S2) {
+      return S1.beginOffset() < S2.endOffset() &&
+             S2.beginOffset() < S1.endOffset();
+    };
+
+    SmallSetVector<LoadInst *, 4> SplitEligibleLoads;
+
+    // For each partition, find eligible loads and stores.
+    for (Partition &P : AS.partitions()) {
+      SmallVector<Slice *, 4> StoreSlices;
+      for (Slice &S : P) {
+        auto *SI = dyn_cast<StoreInst>(S.getUse()->getUser());
+        if (SI && CandidateStoreSet.count(SI) && isAddressOperandSlice(S, *SI))
+          StoreSlices.push_back(&S);
+      }
+      if (StoreSlices.empty()) {
+        LLVM_DEBUG(dbgs() << "Skip partition: no store slices\n");
+        continue;
+      }
+
+      for (Slice &S : P) {
+        auto *LI = dyn_cast<LoadInst>(S.getUse()->getUser());
+        if (!LI || !CandidateLoadSet.count(LI) ||
+            !isAddressOperandSlice(S, *LI))
+          continue;
+
+        // Check if vector loads overlap with any store slices.
+        if (any_of(StoreSlices, [&](const Slice *StoreSlice) {
+              auto *SI = cast<StoreInst>(StoreSlice->getUse()->getUser());
+              return SlicesOverlap(S, *StoreSlice) &&
+                     isScalarOrSubVectorStore(*SI, *StoreSlice, S);
+            })) {
+          if (SplitEligibleLoads.insert(LI)) {
+            LLVM_DEBUG(dbgs() << "Eligible load: " << *LI << "\n");
+          }
+        } else {
+          LLVM_DEBUG(dbgs() << "Skip load: no overlapping store slices\n");
+        }
+      }
+    }
+
+    if (SplitEligibleLoads.empty()) {
+      LLVM_DEBUG(dbgs() << "No eligible loads to split\n");
+      return false;
+    }
+
+    // Split each candidate load.
+    bool Changed = false;
+    for (LoadInst *LI : SplitEligibleLoads)
+      Changed |= trySplitVectorLoad(*LI);
+
+    return Changed;
+  }
+};
+
 } // end anonymous namespace
 
 /// Strip aggregate type wrapping.
@@ -5819,10 +6096,20 @@ SROA::runOnAlloca(AllocaInst &AI) {
   IRBuilderTy IRB(&AI);
   AggLoadStoreRewriter AggRewriter(DL, IRB);
   Changed |= AggRewriter.rewrite(AI);
-
   // Build the slices using a recursive instruction-visiting builder.
   AllocaSlices AS(DL, AI);
   LLVM_DEBUG(AS.print(dbgs()));
+  VecLoadLaneSplitter VecLoadSplitter(DL, IRB);
+
+  // VecLoadSplitter may change IR (erase vector-loads/extractelements)
+  // so AS may have dangling Use pointers. Re-queue for rebuilding the AS
+  // on next iteration.
+  if (VecLoadSplitter.rewrite(AI, AS)) {
+    Changed = true;
+    Worklist.insert(&AI);
+    return {Changed, CFGChanged};
+  }
+
   if (AS.isEscaped())
     return {Changed, CFGChanged};
 
