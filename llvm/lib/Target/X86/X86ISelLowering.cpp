@@ -29,9 +29,9 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -505,10 +505,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // X86 wants to expand cmov itself.
   for (auto VT : { MVT::f32, MVT::f64, MVT::f80, MVT::f128 }) {
     setOperationAction(ISD::SELECT, VT, Custom);
-    setOperationAction(ISD::CT_SELECT, VT, Custom);
     setOperationAction(ISD::SETCC, VT, Custom);
     setOperationAction(ISD::STRICT_FSETCC, VT, Custom);
     setOperationAction(ISD::STRICT_FSETCCS, VT, Custom);
+  }
+  // CT_SELECT for f32/f64/f80: native lowering via LowerCT_SELECT.
+  // f128 has no isel pattern for X86ISD::CT_SELECT; fall through to the
+  // generic legalizer's memory-blend expansion.
+  for (auto VT : {MVT::f32, MVT::f64, MVT::f80}) {
+    setOperationAction(ISD::CT_SELECT, VT, Custom);
   }
   for (auto VT : { MVT::i8, MVT::i16, MVT::i32, MVT::i64 }) {
     if (VT == MVT::i64 && !Subtarget.is64Bit())
@@ -1110,8 +1115,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::VSELECT,            MVT::v4f32, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4f32, Custom);
     setOperationAction(ISD::SELECT,             MVT::v4f32, Custom);
-    setOperationAction(ISD::CT_SELECT,          MVT::v4f32, Custom);
-    setOperationAction(ISD::FCANONICALIZE,      MVT::v4f32, Expand);
+    setOperationAction(ISD::CT_SELECT, MVT::v4f32, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v4f32, Expand);
 
     setOperationAction(ISD::LOAD,               MVT::v2f32, Custom);
     setOperationAction(ISD::STORE,              MVT::v2f32, Custom);
@@ -26115,7 +26120,7 @@ static SDValue LowerSIGN_EXTEND_Mask(SDValue Op, const SDLoc &dl,
 }
 
 SDValue X86TargetLowering::LowerCT_SELECT(SDValue Op, SelectionDAG &DAG) const {
-  SDValue Cond = Op.getOperand(0); // condition
+  SDValue Cond = Op.getOperand(0);    // condition
   SDValue TrueOp = Op.getOperand(1);  // true_value
   SDValue FalseOp = Op.getOperand(2); // false_value
   SDLoc DL(Op);
@@ -26177,7 +26182,8 @@ SDValue X86TargetLowering::LowerCT_SELECT(SDValue Op, SelectionDAG &DAG) const {
     // use the generic X86 CT_SELECT node which will be matched by the patterns
     SDValue CC = DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8);
     SDValue EFLAGS = EmitTest(Cond, X86::COND_NE, DL, DAG, Subtarget);
-    // Create the X86 CT_SELECT node - note operand order: true, false, cc, flags
+    // Create the X86 CT_SELECT node - note operand order: true, false, cc,
+    // flags
     return DAG.getNode(X86ISD::CT_SELECT, DL, VT, FalseOp, TrueOp, CC, EFLAGS);
   }
 
@@ -30804,65 +30810,30 @@ static SDValue LowervXi8MulWithUNPCK(SDValue A, SDValue B, const SDLoc &dl,
                                      const X86Subtarget &Subtarget,
                                      SelectionDAG &DAG,
                                      SDValue *Low = nullptr) {
-  unsigned NumElts = VT.getVectorNumElements();
-
   // For vXi8 we will unpack the low and high half of each 128 bit lane to widen
   // to a vXi16 type. Do the multiplies, shift the results and pack the half
   // lane results back together.
 
   // We'll take different approaches for signed and unsigned.
-  // For unsigned we'll use punpcklbw/punpckhbw to put zero extend the bytes
-  // and use pmullw to calculate the full 16-bit product.
+  // For unsigned we'll use punpcklbw/punpckhbw to zero extend the bytes to
+  // words and use pmullw to calculate the full 16-bit product.
   // For signed we'll use punpcklbw/punpckbw to extend the bytes to words and
   // shift them left into the upper byte of each word. This allows us to use
   // pmulhw to calculate the full 16-bit product. This trick means we don't
   // need to sign extend the bytes to use pmullw.
-
-  MVT ExVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
+  MVT ExVT = MVT::getVectorVT(MVT::i16, VT.getVectorNumElements() / 2);
   SDValue Zero = DAG.getConstant(0, dl, VT);
 
-  SDValue ALo, AHi;
+  SDValue ALo, AHi, BLo, BHi;
   if (IsSigned) {
     ALo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, Zero, A));
-    AHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, Zero, A));
-  } else {
-    ALo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, A, Zero));
-    AHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, A, Zero));
-  }
-
-  SDValue BLo, BHi;
-  if (ISD::isBuildVectorOfConstantSDNodes(B.getNode())) {
-    // If the RHS is a constant, manually unpackl/unpackh and extend.
-    SmallVector<SDValue, 16> LoOps, HiOps;
-    for (unsigned i = 0; i != NumElts; i += 16) {
-      for (unsigned j = 0; j != 8; ++j) {
-        SDValue LoOp = B.getOperand(i + j);
-        SDValue HiOp = B.getOperand(i + j + 8);
-
-        if (IsSigned) {
-          LoOp = DAG.getAnyExtOrTrunc(LoOp, dl, MVT::i16);
-          HiOp = DAG.getAnyExtOrTrunc(HiOp, dl, MVT::i16);
-          LoOp = DAG.getNode(ISD::SHL, dl, MVT::i16, LoOp,
-                             DAG.getConstant(8, dl, MVT::i16));
-          HiOp = DAG.getNode(ISD::SHL, dl, MVT::i16, HiOp,
-                             DAG.getConstant(8, dl, MVT::i16));
-        } else {
-          LoOp = DAG.getZExtOrTrunc(LoOp, dl, MVT::i16);
-          HiOp = DAG.getZExtOrTrunc(HiOp, dl, MVT::i16);
-        }
-
-        LoOps.push_back(LoOp);
-        HiOps.push_back(HiOp);
-      }
-    }
-
-    BLo = DAG.getBuildVector(ExVT, dl, LoOps);
-    BHi = DAG.getBuildVector(ExVT, dl, HiOps);
-  } else if (IsSigned) {
     BLo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, Zero, B));
+    AHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, Zero, A));
     BHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, Zero, B));
   } else {
+    ALo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, A, Zero));
     BLo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, B, Zero));
+    AHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, A, Zero));
     BHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, B, Zero));
   }
 
@@ -30875,7 +30846,7 @@ static SDValue LowervXi8MulWithUNPCK(SDValue A, SDValue B, const SDLoc &dl,
   if (Low)
     *Low = getPack(DAG, Subtarget, dl, VT, RLo, RHi);
 
-  return getPack(DAG, Subtarget, dl, VT, RLo, RHi, /*PackHiHalf*/ true);
+  return getPack(DAG, Subtarget, dl, VT, RLo, RHi, /*PackHiHalf=*/true);
 }
 
 static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
@@ -39044,10 +39015,8 @@ X86TargetLowering::emitPatchableEventCall(MachineInstr &MI,
 /// This approach ensures that when i64 is type-legalized into two i32
 /// operations, both operations share the same condition byte rather than
 /// each independently reading (and destroying) EFLAGS.
-static MachineBasicBlock *
-emitCTSelectI386WithConditionMaterialization(MachineInstr &MI,
-                                              MachineBasicBlock *BB,
-                                              unsigned InternalPseudoOpcode) {
+static MachineBasicBlock *emitCTSelectI386WithConditionMaterialization(
+    MachineInstr &MI, MachineBasicBlock *BB, unsigned InternalPseudoOpcode) {
   const TargetInstrInfo *TII = BB->getParent()->getSubtarget().getInstrInfo();
   const MIMetadata MIMD(MI);
   MachineFunction *MF = BB->getParent();
@@ -39091,12 +39060,12 @@ emitCTSelectI386WithConditionMaterialization(MachineInstr &MI,
   }
 
   BuildMI(*BB, MI, MIMD, TII->get(InternalPseudoOpcode))
-      .addDef(DstReg)         // dst (output)
-      .addDef(TmpByteReg)     // tmp_byte (output)
-      .addDef(TmpMaskReg)     // tmp_mask (output)
-      .addReg(Src1Reg)        // src1 (input)
-      .addReg(Src2Reg)        // src2 (input)
-      .addReg(CondByteReg);   // pre-materialized condition byte (input)
+      .addDef(DstReg)       // dst (output)
+      .addDef(TmpByteReg)   // tmp_byte (output)
+      .addDef(TmpMaskReg)   // tmp_mask (output)
+      .addReg(Src1Reg)      // src1 (input)
+      .addReg(Src2Reg)      // src2 (input)
+      .addReg(CondByteReg); // pre-materialized condition byte (input)
 
   MI.eraseFromParent();
   return BB;
@@ -39122,8 +39091,8 @@ struct FPLoadMemOperands {
 // Check if a virtual register is defined by a simple FP load instruction
 // Returns the memory operands if it's a simple load, otherwise returns invalid
 static FPLoadMemOperands getFPLoadMemOperands(Register Reg,
-                                               MachineRegisterInfo &MRI,
-                                               unsigned ExpectedLoadOpcode) {
+                                              MachineRegisterInfo &MRI,
+                                              unsigned ExpectedLoadOpcode) {
   FPLoadMemOperands Result;
 
   if (!Reg.isVirtual())
@@ -39142,9 +39111,9 @@ static FPLoadMemOperands getFPLoadMemOperands(Register Reg,
   if (DefMI->hasOrderedMemoryRef())
     return Result;
 
-  // The load should have a single def (the destination register) and memory operands
-  // Format: %reg = LD_Fpxxm <fi#N>, 1, %noreg, 0, %noreg
-  // or: %reg = LD_Fpxxm %base, scale, %index, disp, %segment
+  // The load should have a single def (the destination register) and memory
+  // operands Format: %reg = LD_Fpxxm <fi#N>, 1, %noreg, 0, %noreg or: %reg =
+  // LD_Fpxxm %base, scale, %index, disp, %segment
   if (DefMI->getNumOperands() < 6)
     return Result;
 
@@ -39169,9 +39138,8 @@ static FPLoadMemOperands getFPLoadMemOperands(Register Reg,
 
   // Check if this is a constant pool load
   // Format: %reg = LD_Fpxxm $noreg, 1, $noreg, %const.N, $noreg
-  if (BaseMO.isReg() && BaseMO.getReg() == X86::NoRegister &&
-      ScaleMO.isImm() && IndexMO.isReg() &&
-      IndexMO.getReg() == X86::NoRegister &&
+  if (BaseMO.isReg() && BaseMO.getReg() == X86::NoRegister && ScaleMO.isImm() &&
+      IndexMO.isReg() && IndexMO.getReg() == X86::NoRegister &&
       DispMO.isCPI() && SegMO.isReg()) {
     Result.IsValid = true;
     Result.IsConstantPool = true;
@@ -39185,9 +39153,8 @@ static FPLoadMemOperands getFPLoadMemOperands(Register Reg,
 
   // Check if this is a global variable load
   // Format: %reg = LD_Fpxxm $noreg, 1, $noreg, @global_name, $noreg
-  if (BaseMO.isReg() && BaseMO.getReg() == X86::NoRegister &&
-      ScaleMO.isImm() && IndexMO.isReg() &&
-      IndexMO.getReg() == X86::NoRegister &&
+  if (BaseMO.isReg() && BaseMO.getReg() == X86::NoRegister && ScaleMO.isImm() &&
+      IndexMO.isReg() && IndexMO.getReg() == X86::NoRegister &&
       DispMO.isGlobal() && SegMO.isReg()) {
     Result.IsValid = true;
     Result.IsGlobal = true;
@@ -39201,8 +39168,8 @@ static FPLoadMemOperands getFPLoadMemOperands(Register Reg,
   }
 
   // Regular memory operands (e.g., pointer loads)
-  if (BaseMO.isReg() && ScaleMO.isImm() && IndexMO.isReg() &&
-      DispMO.isImm() && SegMO.isReg()) {
+  if (BaseMO.isReg() && ScaleMO.isImm() && IndexMO.isReg() && DispMO.isImm() &&
+      SegMO.isReg()) {
     Result.IsValid = true;
     Result.IsFrameIndex = false;
     Result.IsConstantPool = false;
@@ -39228,7 +39195,8 @@ static MachineBasicBlock *emitCTSelectI386WithFpType(MachineInstr &MI,
   unsigned RegSizeInByte = 4;
 
   // Get operands
-  // MI operands: %result:rfp80 = CT_SELECT_I386 %false:rfp80, %true:rfp80, %cond:i8imm
+  // MI operands: %result:rfp80 = CT_SELECT_I386 %false:rfp80, %true:rfp80,
+  // %cond:i8imm
   unsigned DestReg = MI.getOperand(0).getReg();
   unsigned FalseReg = MI.getOperand(1).getReg();
   unsigned TrueReg = MI.getOperand(2).getReg();
@@ -39246,7 +39214,7 @@ static MachineBasicBlock *emitCTSelectI386WithFpType(MachineInstr &MI,
 
   // Helper to load integer from memory operands
   auto loadIntFromMemOperands = [&](const FPLoadMemOperands &MemOps,
-                                     unsigned Offset) -> unsigned {
+                                    unsigned Offset) -> unsigned {
     unsigned IntReg = MRI.createVirtualRegister(&X86::GR32RegClass);
     MachineInstrBuilder MIB =
         BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), IntReg);
@@ -39262,18 +39230,21 @@ static MachineBasicBlock *emitCTSelectI386WithFpType(MachineInstr &MI,
       // Constant pool: base_reg + scale + index + CP_index + segment
       // MOV32rm format: base, scale, index, displacement, segment
       MIB.addReg(X86::NoRegister)  // Base register
-          .addImm(MemOps.ScaleVal)  // Scale
-          .addReg(MemOps.IndexReg)  // Index register
-          .addConstantPoolIndex(MemOps.ConstantPoolIndex, Offset)  // Displacement (CP index)
-          .addReg(MemOps.SegReg);  // Segment
+          .addImm(MemOps.ScaleVal) // Scale
+          .addReg(MemOps.IndexReg) // Index register
+          .addConstantPoolIndex(MemOps.ConstantPoolIndex,
+                                Offset) // Displacement (CP index)
+          .addReg(MemOps.SegReg);       // Segment
     } else if (MemOps.IsGlobal) {
       // Global variable: base_reg + scale + index + global + segment
       // MOV32rm format: base, scale, index, displacement, segment
       MIB.addReg(X86::NoRegister)  // Base register
-          .addImm(MemOps.ScaleVal)  // Scale
-          .addReg(MemOps.IndexReg)  // Index register
-          .addGlobalAddress(MemOps.Global, MemOps.GlobalOffset + Offset)  // Displacement (global address)
-          .addReg(MemOps.SegReg);  // Segment
+          .addImm(MemOps.ScaleVal) // Scale
+          .addReg(MemOps.IndexReg) // Index register
+          .addGlobalAddress(MemOps.Global,
+                            MemOps.GlobalOffset +
+                                Offset) // Displacement (global address)
+          .addReg(MemOps.SegReg);       // Segment
     } else {
       // Regular memory: base_reg + scale + index + disp + segment
       MIB.addReg(MemOps.BaseReg)
@@ -39288,45 +39259,47 @@ static MachineBasicBlock *emitCTSelectI386WithFpType(MachineInstr &MI,
 
   // Optimized path: load integers directly from memory when both operands are
   // memory loads, avoiding FP register round-trip
-  auto emitCtSelectFromMemory = [&](unsigned NumValues,
-                                     const FPLoadMemOperands &TrueMemOps,
-                                     const FPLoadMemOperands &FalseMemOps,
-                                     int ResultSlot) {
+  auto emitCtSelectFromMemory =
+      [&](unsigned NumValues, const FPLoadMemOperands &TrueMemOps,
+          const FPLoadMemOperands &FalseMemOps, int ResultSlot) {
+        for (unsigned Val = 0; Val < NumValues; ++Val) {
+          unsigned Offset = Val * RegSizeInByte;
+
+          // Load true and false values directly from their memory locations as
+          // integers
+          unsigned TrueIntReg = loadIntFromMemOperands(TrueMemOps, Offset);
+          unsigned FalseIntReg = loadIntFromMemOperands(FalseMemOps, Offset);
+
+          // Use CT_SELECT_I386_INT_GR32 pseudo instruction for constant-time
+          // selection
+          unsigned ResultIntReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+          unsigned TmpByteReg = MRI.createVirtualRegister(&X86::GR8RegClass);
+          unsigned TmpMaskReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+
+          BuildMI(*BB, MI, MIMD, TII->get(X86::CT_SELECT_I386_INT_GR32rr))
+              .addDef(ResultIntReg) // dst (output)
+              .addDef(TmpByteReg)   // tmp_byte (output)
+              .addDef(TmpMaskReg)   // tmp_mask (output)
+              .addReg(FalseIntReg)  // src1 (input) - false value
+              .addReg(TrueIntReg)   // src2 (input) - true value
+              .addReg(CondByteReg); // pre-materialized condition byte (input)
+
+          // Store result back to result slot
+          BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32mr))
+              .addFrameIndex(ResultSlot)
+              .addImm(1)
+              .addReg(0)
+              .addImm(Offset)
+              .addReg(0)
+              .addReg(ResultIntReg, RegState::Kill);
+        }
+      };
+
+  auto emitCtSelectWithPseudo = [&](unsigned NumValues, int TrueSlot,
+                                    int FalseSlot, int ResultSlot) {
     for (unsigned Val = 0; Val < NumValues; ++Val) {
       unsigned Offset = Val * RegSizeInByte;
 
-      // Load true and false values directly from their memory locations as integers
-      unsigned TrueIntReg = loadIntFromMemOperands(TrueMemOps, Offset);
-      unsigned FalseIntReg = loadIntFromMemOperands(FalseMemOps, Offset);
-
-      // Use CT_SELECT_I386_INT_GR32 pseudo instruction for constant-time selection
-      unsigned ResultIntReg = MRI.createVirtualRegister(&X86::GR32RegClass);
-      unsigned TmpByteReg = MRI.createVirtualRegister(&X86::GR8RegClass);
-      unsigned TmpMaskReg = MRI.createVirtualRegister(&X86::GR32RegClass);
-
-      BuildMI(*BB, MI, MIMD, TII->get(X86::CT_SELECT_I386_INT_GR32rr))
-          .addDef(ResultIntReg)    // dst (output)
-          .addDef(TmpByteReg)      // tmp_byte (output)
-          .addDef(TmpMaskReg)      // tmp_mask (output)
-          .addReg(FalseIntReg)     // src1 (input) - false value
-          .addReg(TrueIntReg)      // src2 (input) - true value
-          .addReg(CondByteReg);    // pre-materialized condition byte (input)
-
-      // Store result back to result slot
-      BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32mr))
-          .addFrameIndex(ResultSlot)
-          .addImm(1)
-          .addReg(0)
-          .addImm(Offset)
-          .addReg(0)
-          .addReg(ResultIntReg, RegState::Kill);
-    }
-  };
-
-  auto emitCtSelectWithPseudo = [&](unsigned NumValues, int TrueSlot, int FalseSlot, int ResultSlot) {
-    for (unsigned Val = 0; Val < NumValues; ++Val) {
-      unsigned Offset = Val * RegSizeInByte;
-      
       // Load true and false values from stack as 32-bit integers
       unsigned TrueIntReg = MRI.createVirtualRegister(&X86::GR32RegClass);
       BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), TrueIntReg)
@@ -39344,18 +39317,19 @@ static MachineBasicBlock *emitCTSelectI386WithFpType(MachineInstr &MI,
           .addImm(Offset)
           .addReg(0);
 
-      // Use CT_SELECT_I386_INT_GR32 pseudo instruction for constant-time selection
+      // Use CT_SELECT_I386_INT_GR32 pseudo instruction for constant-time
+      // selection
       unsigned ResultIntReg = MRI.createVirtualRegister(&X86::GR32RegClass);
       unsigned TmpByteReg = MRI.createVirtualRegister(&X86::GR8RegClass);
       unsigned TmpMaskReg = MRI.createVirtualRegister(&X86::GR32RegClass);
-      
+
       BuildMI(*BB, MI, MIMD, TII->get(X86::CT_SELECT_I386_INT_GR32rr))
-          .addDef(ResultIntReg)     // dst (output)
-          .addDef(TmpByteReg)       // tmp_byte (output)
-          .addDef(TmpMaskReg)       // tmp_mask (output)
-          .addReg(FalseIntReg)      // src1 (input) - false value
-          .addReg(TrueIntReg)       // src2 (input) - true value
-          .addReg(CondByteReg);     // pre-materialized condition byte (input)
+          .addDef(ResultIntReg) // dst (output)
+          .addDef(TmpByteReg)   // tmp_byte (output)
+          .addDef(TmpMaskReg)   // tmp_mask (output)
+          .addReg(FalseIntReg)  // src1 (input) - false value
+          .addReg(TrueIntReg)   // src2 (input) - true value
+          .addReg(CondByteReg); // pre-materialized condition byte (input)
 
       // Store result back to result slot
       BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32mr))
@@ -39583,7 +39557,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitCTSelectI386WithFpType(MI, BB, X86::CT_SELECT_I386_FP64rr);
   case X86::CT_SELECT_I386_FP80rr:
     return emitCTSelectI386WithFpType(MI, BB, X86::CT_SELECT_I386_FP80rr);
-    
+
   case X86::FP80_ADDr:
   case X86::FP80_ADDm32: {
     // Change the floating point control register to use double extended
@@ -43599,7 +43573,7 @@ static SDValue combineCommutableSHUFP(SDValue N, MVT VT, const SDLoc &DL,
     if (!X86::mayFoldLoad(peekThroughOneUseBitcasts(N0), Subtarget) ||
         X86::mayFoldLoad(peekThroughOneUseBitcasts(N1), Subtarget))
       return SDValue();
-    Imm = ((Imm & 0x0F) << 4) | ((Imm & 0xF0) >> 4);
+    Imm = llvm::rotl<uint8_t>(Imm, 4);
     return DAG.getNode(X86ISD::SHUFP, DL, VT, N1, N0,
                        DAG.getTargetConstant(Imm, DL, MVT::i8));
   };
@@ -46668,10 +46642,16 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
   }
   case X86ISD::PCMPGT:
     // icmp sgt(0, R) == ashr(R, BitWidth-1).
-    // iff we only need the sign bit then we can use R directly.
-    if (OriginalDemandedBits.isSignMask() &&
-        ISD::isBuildVectorAllZeros(Op.getOperand(0).getNode()))
-      return TLO.CombineTo(Op, Op.getOperand(1));
+    if (ISD::isBuildVectorAllZeros(Op.getOperand(0).getNode())) {
+      // iff we only need the signbit then we can use R directly.
+      if (OriginalDemandedBits.isSignMask())
+        return TLO.CombineTo(Op, Op.getOperand(1));
+      // otherwise we just need R's signbit for the comparison.
+      APInt SignMask = APInt::getSignMask(BitWidth);
+      if (SimplifyDemandedBits(Op.getOperand(1), SignMask, OriginalDemandedElts,
+                               Known, TLO, Depth + 1))
+        return true;
+    }
     break;
   case X86ISD::MOVMSK: {
     SDValue Src = Op.getOperand(0);

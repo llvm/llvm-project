@@ -626,8 +626,7 @@ void X86PassConfig::addPreEmitPass2() {
     return M->getModuleFlag("kcfi") || F.hasFnAttribute("ct-select") ||
            (TT.isOSDarwin() &&
             (M->getFunction("objc_retainAutoreleasedReturnValue") ||
-             M->getFunction("objc_unsafeClaimAutoreleasedReturnValue"))) ||
-             F.hasFnAttribute("ct-select");
+             M->getFunction("objc_unsafeClaimAutoreleasedReturnValue")));
   }));
 
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
