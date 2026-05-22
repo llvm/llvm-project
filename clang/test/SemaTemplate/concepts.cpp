@@ -1568,11 +1568,9 @@ template<generic_range_value<[]<
 void x() {}
 
 // FIXME: Crashes because it produces a template type parameter with invalid depth
-#if 0
 void foo() {
   x<vector<int>>();
 }
-#endif
 }
 
 namespace GH162770 {
