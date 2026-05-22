@@ -1,3 +1,12 @@
+add_header_library(
+  abi_prefix
+  HDRS
+    abi_prefix.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.properties.cpu_features
+)
+
 add_subdirectory(generic)
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
   add_subdirectory(${LIBC_TARGET_ARCHITECTURE})

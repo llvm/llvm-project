@@ -5,7 +5,7 @@ add_entrypoint_object(
   HDRS
     ../expf.h
   DEPENDS
-    libc.src.__support.macros.properties.cpu_features
+    libc.src.mathvec.abi_prefix
     libc.src.__support.mathvec.expf
   FLAGS
     ROUND_OPT
