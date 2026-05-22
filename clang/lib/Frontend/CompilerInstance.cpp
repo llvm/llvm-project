@@ -153,6 +153,11 @@ bool CompilerInstance::createTarget() {
     // FIXME: can we disable FEnvAccess?
   }
 
+  if (!getTarget().hasSignalingNaNs() && getCodeGenOpts().SignalingNans) {
+    getDiagnostics().Report(diag::warn_fe_backend_unsupported_signaling_nans);
+    getCodeGenOpts().SignalingNans = false;
+  }
+
   // We should do it here because target knows nothing about
   // language options when it's being created.
   if (getLangOpts().OpenCL &&
