@@ -3494,7 +3494,8 @@ let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
     Defs = [R0,R4,R5,R6,R7,R8,R9,R10,R11,R12,LR,CTR,CR0,CR1,CR5,CR6,CR7] in
 def GETtlsADDR32 : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$reg, tlsgd32:$sym),
                           [(set i32:$rD,
-                            (PPCgetTlsAddr i32:$reg, tglobaltlsaddr:$sym))]>;
+                            (PPCgetTlsAddr i32:$reg, tglobaltlsaddr:$sym))],
+                          "GETtlsADDR32">;
 // R3 is explicitly defined when this op is created, so not mentioned here.
 // The rest of the Defs are the exact set of registers that will be clobbered by
 // the call.
@@ -3502,10 +3503,12 @@ let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
     Defs = [R0,R4,R5,R11,LR,CR0] in {
 def GETtlsADDR32AIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$offset, gprc:$handle),
                           [(set i32:$rD,
-                            (PPCgetTlsAddr i32:$offset, i32:$handle))]>;
+                            (PPCgetTlsAddr i32:$offset, i32:$handle))],
+                          "GETtlsADDR32AIX">;
 def GETtlsMOD32AIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$handle),
                           [(set i32:$rD,
-                            (PPCgetTlsMod i32:$handle))]>;
+                            (PPCgetTlsMod i32:$handle))],
+                          "GETtlsMOD32AIX">;
 }
 
 // For local-exec accesses on 32-bit AIX, a call to .__get_tpointer is
