@@ -1283,7 +1283,7 @@ define void @flag_mismatch_disjoint(ptr noalias %dst, ptr noalias %src) {
 ; VF2-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP0]]
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
-; VF2-NEXT:    [[TMP2:%.*]] = or disjoint <2 x i64> [[WIDE_LOAD]], splat (i64 1)
+; VF2-NEXT:    [[TMP2:%.*]] = or <2 x i64> [[WIDE_LOAD]], splat (i64 1)
 ; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP0]]
 ; VF2-NEXT:    store <2 x i64> [[TMP2]], ptr [[TMP3]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
