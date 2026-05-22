@@ -282,6 +282,70 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  log10f_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    log10f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.log10f
+    libc.src.mathvec.log10f
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  log1pf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    log1pf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.log1pf
+    libc.src.mathvec.log1pf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  log2f_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    log2f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.log2f
+    libc.src.mathvec.log2f
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  logf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    logf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.logf
+    libc.src.mathvec.logf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   sinf_test
   NO_RUN_POSTBUILD
   SUITE

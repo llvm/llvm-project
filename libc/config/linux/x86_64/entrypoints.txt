@@ -1560,6 +1560,10 @@ list(APPEND TARGET_LIBMVEC_ENTRYPOINTS
     libc.src.mathvec.exp10m1f
     libc.src.mathvec.expf
     libc.src.mathvec.expm1f
+    libc.src.mathvec.log10f
+    libc.src.mathvec.log1pf
+    libc.src.mathvec.log2f
+    libc.src.mathvec.logf
     libc.src.mathvec.sinf
     libc.src.mathvec.sinhf
     libc.src.mathvec.sinpif

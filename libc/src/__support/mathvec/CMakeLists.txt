@@ -166,6 +166,42 @@ add_header_library(
 )
 
 add_header_library(
+  log10f
+  HDRS
+    log10f.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.log10f
+)
+
+add_header_library(
+  log1pf
+  HDRS
+    log1pf.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.log1pf
+)
+
+add_header_library(
+  log2f
+  HDRS
+    log2f.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.log2f
+)
+
+add_header_library(
+  logf
+  HDRS
+    logf.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.logf
+)
+
+add_header_library(
   sinf
   HDRS
     sinf.h

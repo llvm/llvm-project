@@ -302,6 +302,74 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  log10f_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    log10f_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.log10f
+    libc.src.mathvec.log10f
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
+  log1pf_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    log1pf_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.log1pf
+    libc.src.mathvec.log1pf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
+  log2f_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    log2f_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.log2f
+    libc.src.mathvec.log2f
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
+  logf_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    logf_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.logf
+    libc.src.mathvec.logf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
   sinf_test
   SUITE
     libc-mathvec-unittests
