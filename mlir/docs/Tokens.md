@@ -108,6 +108,5 @@ a branch or a loop.
 ```
 
 `scf.if`'s results are declared with `Variadic<AnyType>` and `scf.yield`'s
-operands likewise use `AnyType`. Because `AnyType` excludes tokens, yielding
-(or returning) a token through `scf.if` (or any other op that has not
-explicitly opted in) is rejected.
+operands likewise use `AnyType`. Because `AnyType` excludes tokens, both
+`scf.if` and `scf.yield` fail verification.
