@@ -497,37 +497,10 @@
 # CHECK-NEXT: # error: command failed with exit status: 1
 #      CHECK: ***
 
-# CHECK: FAIL: shtest-shell :: echo-at-redirect-stderr.txt
-# CHECK: *** TEST 'shtest-shell :: echo-at-redirect-stderr.txt' FAILED ***
-# CHECK: @echo 2> {{.*}}
-# CHECK: # executed command: @echo
-# CHECK: # .---command stderr{{-*}}
-# CHECK: # | stdin and stderr redirects not supported for @echo
-# CHECK: error: command failed with exit status:
-
-# CHECK: FAIL: shtest-shell :: echo-at-redirect-stdin.txt
-# CHECK: *** TEST 'shtest-shell :: echo-at-redirect-stdin.txt' FAILED ***
-# CHECK: @echo < {{.*}}
-# CHECK: # executed command: @echo
-# CHECK: # .---command stderr{{-*}}
-# CHECK: # | stdin and stderr redirects not supported for @echo
-# CHECK: error: command failed with exit status:
-
-# CHECK: FAIL: shtest-shell :: echo-redirect-stderr.txt
-# CHECK: *** TEST 'shtest-shell :: echo-redirect-stderr.txt' FAILED ***
-# CHECK: echo 2> {{.*}}
-# CHECK: # executed command: echo
-# CHECK: # .---command stderr{{-*}}
-# CHECK: # | stdin and stderr redirects not supported for echo
-# CHECK: error: command failed with exit status:
-
-# CHECK: FAIL: shtest-shell :: echo-redirect-stdin.txt
-# CHECK: *** TEST 'shtest-shell :: echo-redirect-stdin.txt' FAILED ***
-# CHECK: echo < {{.*}}
-# CHECK: # executed command: echo
-# CHECK: # .---command stderr{{-*}}
-# CHECK: # | stdin and stderr redirects not supported for echo
-# CHECK: error: command failed with exit status:
+# CHECK: PASS: shtest-shell :: echo-at-redirect-stderr.txt
+# CHECK: PASS: shtest-shell :: echo-at-redirect-stdin.txt
+# CHECK: PASS: shtest-shell :: echo-redirect-stderr.txt
+# CHECK: PASS: shtest-shell :: echo-redirect-stdin.txt
 
 # CHECK: FAIL: shtest-shell :: error-0.txt
 # CHECK: *** TEST 'shtest-shell :: error-0.txt' FAILED ***
@@ -634,4 +607,4 @@
 
 # CHECK: PASS: shtest-shell :: valid-shell.txt
 # CHECK: Unresolved Tests (1)
-# CHECK: Failed Tests (37)
+# CHECK: Failed Tests (33)
