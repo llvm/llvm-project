@@ -492,10 +492,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // X86 wants to expand cmov itself.
   for (auto VT : { MVT::f32, MVT::f64, MVT::f80, MVT::f128 }) {
     setOperationAction(ISD::SELECT, VT, Custom);
-    setOperationAction(ISD::CT_SELECT, VT, Custom);
     setOperationAction(ISD::SETCC, VT, Custom);
     setOperationAction(ISD::STRICT_FSETCC, VT, Custom);
     setOperationAction(ISD::STRICT_FSETCCS, VT, Custom);
+  }
+  // CT_SELECT for f32/f64/f80: native lowering via LowerCT_SELECT.
+  // f128 has no isel pattern for X86ISD::CT_SELECT; fall through to the
+  // generic legalizer's memory-blend expansion.
+  for (auto VT : { MVT::f32, MVT::f64, MVT::f80 }) {
+    setOperationAction(ISD::CT_SELECT, VT, Custom);
   }
   for (auto VT : { MVT::i8, MVT::i16, MVT::i32, MVT::i64 }) {
     if (VT == MVT::i64 && !Subtarget.is64Bit())
