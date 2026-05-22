@@ -1231,25 +1231,21 @@ SectionList *Module::GetSectionList() {
 }
 
 LockedPtr<ObjectFile> Module::GetObjectFileLocked() {
-  std::unique_lock<std::recursive_mutex> guard(m_mutex);
-  return LockedPtr<ObjectFile>(std::move(guard), GetObjectFile());
+  return LockedPtr<ObjectFile>(m_mutex, GetObjectFile());
 }
 
 LockedPtr<SectionList> Module::GetSectionListLocked() {
-  std::unique_lock<std::recursive_mutex> guard(m_mutex);
-  return LockedPtr<SectionList>(std::move(guard), GetSectionList());
+  return LockedPtr<SectionList>(m_mutex, GetSectionList());
 }
 
 LockedPtr<SymbolFile> Module::GetSymbolFileLocked(bool can_create,
                                                   Stream *feedback_strm) {
-  std::unique_lock<std::recursive_mutex> guard(m_mutex);
-  return LockedPtr<SymbolFile>(std::move(guard),
+  return LockedPtr<SymbolFile>(m_mutex,
                                GetSymbolFile(can_create, feedback_strm));
 }
 
 LockedPtr<Symtab> Module::GetSymtabLocked(bool can_create) {
-  std::unique_lock<std::recursive_mutex> guard(m_mutex);
-  return LockedPtr<Symtab>(std::move(guard), GetSymtab(can_create));
+  return LockedPtr<Symtab>(m_mutex, GetSymtab(can_create));
 }
 
 void Module::SectionFileAddressesChanged() {
