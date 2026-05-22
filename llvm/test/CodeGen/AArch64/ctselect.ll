@@ -67,16 +67,11 @@ define i128 @ct_i128(i1 %cond, i128 %a, i128 %b) {
 define half @ct_f16(i1 %cond, half %a, half %b) {
 ; NOFP16-LABEL: ct_f16:
 ; NOFP16:       // %bb.0:
-; NOFP16-NEXT:    // kill: def $h1 killed $h1 def $s1
-; NOFP16-NEXT:    // kill: def $h0 killed $h0 def $s0
-; NOFP16-NEXT:    fmov w9, s0
-; NOFP16-NEXT:    fmov w10, s1
-; NOFP16-NEXT:    sbfx w8, w0, #0, #1
-; NOFP16-NEXT:    bic w10, w10, w8
-; NOFP16-NEXT:    and w8, w9, w8
-; NOFP16-NEXT:    orr w8, w8, w10
-; NOFP16-NEXT:    fmov s0, w8
-; NOFP16-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; NOFP16-NEXT:    fcvt s1, h1
+; NOFP16-NEXT:    fcvt s0, h0
+; NOFP16-NEXT:    tst w0, #0x1
+; NOFP16-NEXT:    fcsel s0, s0, s1, ne
+; NOFP16-NEXT:    fcvt h0, s0
 ; NOFP16-NEXT:    ret
 ;
 ; FP16-LABEL: ct_f16:
@@ -111,11 +106,9 @@ define double @ct_f64(i1 %cond, double %a, double %b) {
 define <4 x i32> @ct_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 ; DEFAULT-LABEL: ct_v4i32:
 ; DEFAULT:       // %bb.0:
-; DEFAULT-NEXT:    dup v2.4h, w0
+; DEFAULT-NEXT:    sbfx w8, w0, #0, #1
 ; DEFAULT-NEXT:    eor v0.16b, v0.16b, v1.16b
-; DEFAULT-NEXT:    ushll v2.4s, v2.4h, #0
-; DEFAULT-NEXT:    shl v2.4s, v2.4s, #31
-; DEFAULT-NEXT:    cmlt v2.4s, v2.4s, #0
+; DEFAULT-NEXT:    dup v2.4s, w8
 ; DEFAULT-NEXT:    and v0.16b, v0.16b, v2.16b
 ; DEFAULT-NEXT:    eor v0.16b, v1.16b, v0.16b
 ; DEFAULT-NEXT:    ret
@@ -126,11 +119,9 @@ define <4 x i32> @ct_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 define <4 x float> @ct_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b) {
 ; DEFAULT-LABEL: ct_v4f32:
 ; DEFAULT:       // %bb.0:
-; DEFAULT-NEXT:    dup v2.4h, w0
+; DEFAULT-NEXT:    sbfx w8, w0, #0, #1
 ; DEFAULT-NEXT:    eor v0.16b, v0.16b, v1.16b
-; DEFAULT-NEXT:    ushll v2.4s, v2.4h, #0
-; DEFAULT-NEXT:    shl v2.4s, v2.4s, #31
-; DEFAULT-NEXT:    cmlt v2.4s, v2.4s, #0
+; DEFAULT-NEXT:    dup v2.4s, w8
 ; DEFAULT-NEXT:    and v0.16b, v0.16b, v2.16b
 ; DEFAULT-NEXT:    eor v0.16b, v1.16b, v0.16b
 ; DEFAULT-NEXT:    ret
