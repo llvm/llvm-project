@@ -82,25 +82,27 @@ bool llvm::dxbc::isValidBorderColor(uint32_t V) {
   return false;
 }
 
-bool llvm::dxbc::isValidRootDesciptorFlags(uint32_t V) {
-  using FlagT = dxbc::RootDescriptorFlags;
-  uint32_t LargestValue =
+template <typename FlagT>
+static bool isValidFlags(std::underlying_type_t<FlagT> V) {
+  decltype(V) LargestValue =
       llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
   return V < NextPowerOf2(LargestValue);
+}
+
+bool llvm::dxbc::isValidRootDesciptorFlags(uint32_t V) {
+  return isValidFlags<dxbc::RootDescriptorFlags>(V);
 }
 
 bool llvm::dxbc::isValidDescriptorRangeFlags(uint32_t V) {
-  using FlagT = dxbc::DescriptorRangeFlags;
-  uint32_t LargestValue =
-      llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
-  return V < NextPowerOf2(LargestValue);
+  return isValidFlags<dxbc::DescriptorRangeFlags>(V);
 }
 
 bool llvm::dxbc::isValidStaticSamplerFlags(uint32_t V) {
-  using FlagT = dxbc::StaticSamplerFlags;
-  uint32_t LargestValue =
-      llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
-  return V < NextPowerOf2(LargestValue);
+  return isValidFlags<dxbc::StaticSamplerFlags>(V);
+}
+
+bool llvm::dxbc::isValidCompilerVersionFlags(uint32_t V) {
+  return isValidFlags<dxbc::CompilerVersionFlags>(V);
 }
 
 dxbc::PartType dxbc::parsePartType(StringRef S) {
@@ -108,6 +110,12 @@ dxbc::PartType dxbc::parsePartType(StringRef S) {
   return StringSwitch<dxbc::PartType>(S)
 #include "llvm/BinaryFormat/DXContainerConstants.def"
       .Default(dxbc::PartType::Unknown);
+}
+
+bool dxbc::isDebugProgramPart(PartType PT) { return PT == PartType::ILDB; }
+
+const char *dxbc::getProgramPartName(bool IsDebug) {
+  return IsDebug ? "ILDB" : "DXIL";
 }
 
 bool ShaderHash::isPopulated() {

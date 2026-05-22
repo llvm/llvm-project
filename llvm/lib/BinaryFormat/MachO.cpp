@@ -51,6 +51,12 @@ static MachO::CPUSubTypeARM getARMSubType(const Triple &T) {
     return MachO::CPU_SUBTYPE_ARM_V7M;
   case ARM::ArchKind::ARMV7EM:
     return MachO::CPU_SUBTYPE_ARM_V7EM;
+  case ARM::ArchKind::ARMV8MBaseline:
+    return MachO::CPU_SUBTYPE_ARM_V8M_BASE;
+  case ARM::ArchKind::ARMV8MMainline:
+    return MachO::CPU_SUBTYPE_ARM_V8M_MAIN;
+  case ARM::ArchKind::ARMV8_1MMainline:
+    return MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN;
   }
 }
 

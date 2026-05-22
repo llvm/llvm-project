@@ -23,6 +23,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cmath>
 #include <optional>
@@ -753,6 +754,17 @@ bool APInt::isSubsetOfSlowCase(const APInt &RHS) const {
   return true;
 }
 
+bool APInt::isInverseOfSlowCase(const APInt &RHS) const {
+  const unsigned Last = getNumWords() - 1;
+  for (unsigned I = 0; I != Last; ++I)
+    if ((U.pVal[I] ^ RHS.U.pVal[I]) != WORDTYPE_MAX)
+      return false;
+
+  unsigned TailBits = BitWidth - Last * APINT_BITS_PER_WORD;
+  WordType TailMask = llvm::maskTrailingOnes<WordType>(TailBits);
+  return (U.pVal[Last] ^ RHS.U.pVal[Last]) == TailMask;
+}
+
 APInt APInt::byteSwap() const {
   assert(BitWidth >= 16 && BitWidth % 8 == 0 && "Cannot byteswap!");
   if (BitWidth == 16)
@@ -1290,12 +1302,12 @@ APInt APInt::sqrt() const {
   // floating point representation after 192 bits. There are no discrepancies
   // between this algorithm and pari/gp for bit widths < 192 bits.
   APInt square(x_old * x_old);
-  APInt nextSquare((x_old + 1) * (x_old +1));
   if (this->ult(square))
     return x_old;
-  assert(this->ule(nextSquare) && "Error in APInt::sqrt computation");
-  APInt midpoint((nextSquare - square).udiv(two));
+  APInt delta(2 * x_old + 1);
   APInt offset(*this - square);
+  assert(offset.ule(delta) && "Error in APInt::sqrt computation");
+  APInt midpoint(delta.udiv(two));
   if (offset.ult(midpoint))
     return x_old;
   return x_old + 1;

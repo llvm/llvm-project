@@ -446,7 +446,7 @@ class MetadataLoader::MetadataLoaderImpl {
 
   // Keep mapping of seens pair of old-style CU <-> SP, and update pointers to
   // point from SP to CU after a block is completly parsed.
-  std::vector<std::pair<DICompileUnit *, Metadata *>> CUSubprograms;
+  std::vector<std::pair<DICompileUnit *, unsigned>> CUSubprograms;
 
   /// Functions that need to be matched with subprograms when upgrading old
   /// metadata.
@@ -485,7 +485,8 @@ class MetadataLoader::MetadataLoaderImpl {
   /// Upgrade old-style CU <-> SP pointers to point from SP to CU.
   void upgradeCUSubprograms() {
     for (auto CU_SP : CUSubprograms)
-      if (auto *SPs = dyn_cast_or_null<MDTuple>(CU_SP.second))
+      if (auto *SPs =
+              dyn_cast_or_null<MDTuple>(MetadataList.lookup(CU_SP.second - 1)))
         for (auto &Op : SPs->operands())
           if (auto *SP = dyn_cast_or_null<DISubprogram>(Op))
             SP->replaceUnit(CU_SP.first);
@@ -1333,11 +1334,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return getMD(ID - 1);
     return nullptr;
   };
-  auto getMDOrNullWithoutPlaceholders = [&](unsigned ID) -> Metadata * {
-    if (ID)
-      return MetadataList.getMetadataFwdRef(ID - 1);
-    return nullptr;
-  };
   auto getMDString = [&](unsigned ID) -> MDString * {
     // This requires that the ID is not really a forward reference.  In
     // particular, the MDString must already have been resolved.
@@ -1596,7 +1592,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_BASIC_TYPE: {
-    if (Record.size() < 6 || Record.size() > 9)
+    if (Record.size() < 6 || Record.size() > 12)
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
@@ -1607,11 +1603,19 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     uint32_t NumExtraInhabitants = (Record.size() > 7) ? Record[7] : 0;
     uint32_t DataSizeInBits = (Record.size() > 8) ? Record[8] : 0;
     Metadata *SizeInBits = getMetadataOrConstant(SizeIsMetadata, Record[3]);
+    Metadata *File = nullptr;
+    unsigned LineNo = 0;
+    Metadata *Scope = nullptr;
+    if (Record.size() > 9) {
+      File = getMDOrNull(Record[9]);
+      LineNo = Record[10];
+      Scope = getMDOrNull(Record[11]);
+    }
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIBasicType,
-                        (Context, Record[1], getMDString(Record[2]), SizeInBits,
-                         Record[4], Record[5], NumExtraInhabitants,
-                         DataSizeInBits, Flags)),
+                        (Context, Record[1], getMDString(Record[2]), File,
+                         LineNo, Scope, SizeInBits, Record[4], Record[5],
+                         NumExtraInhabitants, DataSizeInBits, Flags)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1640,14 +1644,22 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     APInt Numerator = ReadWideInt();
     APInt Denominator = ReadWideInt();
 
-    if (Offset != Record.size())
+    Metadata *File = nullptr;
+    unsigned LineNo = 0;
+    Metadata *Scope = nullptr;
+
+    if (Offset + 3 == Record.size()) {
+      File = getMDOrNull(Record[Offset]);
+      LineNo = Record[Offset + 1];
+      Scope = getMDOrNull(Record[Offset + 2]);
+    } else if (Offset != Record.size())
       return error("Invalid record");
 
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIFixedPointType,
-                        (Context, Record[1], getMDString(Record[2]), SizeInBits,
-                         Record[4], Record[5], Flags, Record[7], Record[8],
-                         Numerator, Denominator)),
+                        (Context, Record[1], getMDString(Record[2]), File,
+                         LineNo, Scope, SizeInBits, Record[4], Record[5], Flags,
+                         Record[7], Record[8], Numerator, Denominator)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1959,8 +1971,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     NextMetadataNo++;
 
     // Move the Upgrade the list of subprograms.
-    if (Metadata *SPs = getMDOrNullWithoutPlaceholders(Record[11]))
-      CUSubprograms.push_back({CU, SPs});
+    if (Record[11])
+      CUSubprograms.push_back({CU, Record[11]});
     break;
   }
   case bitc::METADATA_SUBPROGRAM: {
@@ -2582,7 +2594,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
       Instruction *Inst = InstructionList[Record[0]];
       for (unsigned i = 1; i != RecordLength; i = i + 2) {
         unsigned Kind = Record[i];
-        DenseMap<unsigned, unsigned>::iterator I = MDKindMap.find(Kind);
+        auto I = MDKindMap.find(Kind);
         if (I == MDKindMap.end())
           return error("Invalid ID");
         if (I->second == LLVMContext::MD_tbaa && StripTBAA)

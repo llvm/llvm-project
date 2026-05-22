@@ -13,6 +13,7 @@ include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferIntDivisibilityOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -223,6 +224,7 @@ def Arith_ConstantOp : Op<Arith_Dialect, "constant",
     [ConstantLike, Pure,
      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
      AllTypesMatch<["value", "result"]>,
+     DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>,
      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let summary = "integer or floating point constant";
   let description = [{
@@ -270,7 +272,8 @@ def Arith_ConstantOp : Op<Arith_Dialect, "constant",
 // AddIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_AddIOp : Arith_IntBinaryOpWithOverflowFlags<"addi", [Commutative]> {
+def Arith_AddIOp : Arith_IntBinaryOpWithOverflowFlags<"addi",
+    [Commutative, DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
   let summary = "integer addition operation";
   let description = [{
     Performs N-bit addition on the operands. The operands are interpreted as
@@ -360,10 +363,64 @@ def Arith_AddUIExtendedOp : Arith_Op<"addui_extended", [Pure, Commutative,
 }
 
 //===----------------------------------------------------------------------===//
+// SubUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+def Arith_SubUIExtendedOp : Arith_Op<"subui_extended", [Pure,
+    AllTypesMatch<["lhs", "rhs", "diff"]>]> {
+  let summary = [{
+    extended unsigned integer subtraction operation returning difference and
+    borrow bit
+  }];
+
+  let description = [{
+    Performs (N+1)-bit subtraction on zero-extended operands. Returns two
+    results: the N-bit difference (same type as both operands), and the borrow
+    bit (boolean-like), where `1` indicates unsigned subtraction underflow
+    (i.e. `lhs < rhs` when interpreted as unsigned), while `0` indicates no
+    underflow.
+
+    Example:
+
+    ```mlir
+    // Scalar subtraction.
+    %diff, %borrow = arith.subui_extended %b, %c : i64, i1
+
+    // Vector element-wise subtraction.
+    %d:2 = arith.subui_extended %e, %f : vector<4xi32>, vector<4xi1>
+
+    // Tensor element-wise subtraction.
+    %x:2 = arith.subui_extended %y, %z : tensor<4x?xi8>, tensor<4x?xi1>
+    ```
+  }];
+
+  let arguments = (ins Arith_SignlessIntegerOrIndexLike:$lhs, Arith_SignlessIntegerOrIndexLike:$rhs);
+  let results = (outs Arith_SignlessIntegerOrIndexLike:$diff, BoolLike:$borrow);
+  let assemblyFormat = [{
+    $lhs `,` $rhs attr-dict `:` type($diff) `,` type($borrow)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$lhs, "Value":$rhs), [{
+      build($_builder, $_state, lhs.getType(), ::getI1SameShape(lhs.getType()),
+            lhs, rhs);
+    }]>
+  ];
+
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
+
+  let extraClassDeclaration = [{
+    std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // SubIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_SubIOp : Arith_IntBinaryOpWithOverflowFlags<"subi"> {
+def Arith_SubIOp : Arith_IntBinaryOpWithOverflowFlags<"subi",
+    [DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
   let summary = [{
     Integer subtraction operation.
   }];
@@ -408,7 +465,9 @@ def Arith_SubIOp : Arith_IntBinaryOpWithOverflowFlags<"subi"> {
 //===----------------------------------------------------------------------===//
 
 def Arith_MulIOp : Arith_IntBinaryOpWithOverflowFlags<"muli",
-  [Commutative, DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]
+  [Commutative,
+   DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>,
+   DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]
 > {
   let summary = [{
     Integer multiplication operation.
@@ -540,7 +599,8 @@ def Arith_MulUIExtendedOp : Arith_Op<"mului_extended", [Pure, Commutative,
 //===----------------------------------------------------------------------===//
 
 def Arith_DivUIOp : Arith_IntBinaryOpWithExactFlag<"divui",
-                                                   [ConditionallySpeculatable]> {
+    [ConditionallySpeculatable,
+     DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
   let summary = "unsigned integer division operation";
   let description = [{
     Unsigned integer division. Rounds towards zero. Treats the leading bit as
@@ -991,6 +1051,45 @@ def Arith_NegFOp : Arith_FloatUnaryOp<"negf"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FlushDenormalsOp
+//===----------------------------------------------------------------------===//
+
+def Arith_FlushDenormalsOp : Arith_FloatUnaryOp<"flush_denormals"> {
+  let summary = "flush denormal floating-point values to zero";
+  let description = [{
+    The `flush_denormals` operation takes a floating-point value and returns
+    the input value if it is a normal (or zero, infinity, or NaN) value, or
+    a zero of the same type if the input is a denormal (subnormal) value.
+    The sign of zero is preserved when flushing a denormal: negative
+    denormals flush to `-0.0`, positive denormals flush to `+0.0`.
+
+    A denormal number ("subnormal number" in IEEE-754) is a non-zero floating
+    point number that is smaller (closer to zero) than the smallest normal
+    number. Denormals fill the underflow gap around zero in floating-point
+    arithmetics, but may come at a runtime cost on some architectures.
+
+    The input and result are required to be the same type. This type may be
+    a floating-point scalar type, a vector whose element type is a
+    floating-point type, or a tensor of floats. When operating on vectors
+    or tensors, the operation is applied elementwise.
+
+    Example:
+
+    ```mlir
+    // Scalar denormal flushing.
+    %a = arith.flush_denormals %b : f32
+
+    // SIMD vector element-wise denormal flushing.
+    %f = arith.flush_denormals %g : vector<4xf32>
+
+    // Tensor element-wise denormal flushing.
+    %x = arith.flush_denormals %y : tensor<4x?xbf16>
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // AddFOp
 //===----------------------------------------------------------------------===//
 
@@ -1050,6 +1149,7 @@ def Arith_SubFOp : Arith_FloatBinaryOpWithRoundingMode<"subf"> {
     ```
   }];
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1098,7 +1198,8 @@ def Arith_MaxNumFOp : Arith_FloatBinaryOp<"maxnumf", [Commutative]> {
 // MaxSIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MaxSIOp : Arith_TotalIntBinaryOp<"maxsi", [Commutative]> {
+def Arith_MaxSIOp : Arith_TotalIntBinaryOp<"maxsi",
+    [Commutative, DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
   let summary = "signed integer maximum operation";
   let hasFolder = 1;
 }
@@ -1107,7 +1208,8 @@ def Arith_MaxSIOp : Arith_TotalIntBinaryOp<"maxsi", [Commutative]> {
 // MaxUIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MaxUIOp : Arith_TotalIntBinaryOp<"maxui", [Commutative]> {
+def Arith_MaxUIOp : Arith_TotalIntBinaryOp<"maxui",
+    [Commutative, DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
   let summary = "unsigned integer maximum operation";
   let hasFolder = 1;
 }
@@ -1157,7 +1259,8 @@ def Arith_MinNumFOp : Arith_FloatBinaryOp<"minnumf", [Commutative]> {
 // MinSIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MinSIOp : Arith_TotalIntBinaryOp<"minsi", [Commutative]> {
+def Arith_MinSIOp : Arith_TotalIntBinaryOp<"minsi",
+    [Commutative, DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
   let summary = "signed integer minimum operation";
   let hasFolder = 1;
 }
@@ -1166,7 +1269,8 @@ def Arith_MinSIOp : Arith_TotalIntBinaryOp<"minsi", [Commutative]> {
 // MinUIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MinUIOp : Arith_TotalIntBinaryOp<"minui", [Commutative]> {
+def Arith_MinUIOp : Arith_TotalIntBinaryOp<"minui",
+    [Commutative, DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
   let summary = "unsigned integer minimum operation";
   let hasFolder = 1;
 }
@@ -1911,6 +2015,7 @@ class BooleanConditionOrMatchingShape<string condition, string result> :
 def SelectOp : Arith_Op<"select", [Pure,
     AllTypesMatch<["true_value", "false_value", "result"]>,
     BooleanConditionOrMatchingShape<"condition", "result">,
+    DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>,
     DeclareOpInterfaceMethods<SelectLikeOpInterface>]> {
   let summary = "select operation";

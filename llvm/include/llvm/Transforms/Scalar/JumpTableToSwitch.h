@@ -15,7 +15,8 @@ namespace llvm {
 
 class Function;
 
-class JumpTableToSwitchPass : public PassInfoMixin<JumpTableToSwitchPass> {
+class JumpTableToSwitchPass
+    : public OptionalPassInfoMixin<JumpTableToSwitchPass> {
   // Necessary until we switch to GUIDs as metadata, after which we can drop it.
   const bool InLTO;
 

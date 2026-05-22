@@ -1220,7 +1220,10 @@ bool AArch64RegisterInfo::getRegAllocationHints(
                                      const MachineOperand &MO) -> bool {
           // R is a suitable register hint if R can reuse one of the other
           // source operands.
-          if (VRM->getPhys(MO.getReg()) != R)
+          MCPhysReg PhysReg = VRM->getPhys(MO.getReg());
+          if (PhysReg && MO.getSubReg())
+            PhysReg = getSubReg(PhysReg, MO.getSubReg());
+          if (PhysReg != R)
             return false;
           Hints.push_back(R);
           return true;
@@ -1246,6 +1249,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
         case AArch64::DestructiveUnaryPassthru:
           AddHintIfSuitable(R, Def.getOperand(3));
           break;
+        case AArch64::DestructiveBinaryImmUnpred:
         case AArch64::DestructiveBinaryShImmUnpred:
           AddHintIfSuitable(R, Def.getOperand(1));
           break;

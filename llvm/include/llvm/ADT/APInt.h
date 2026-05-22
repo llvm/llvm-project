@@ -1268,6 +1268,14 @@ public:
     return isSubsetOfSlowCase(RHS);
   }
 
+  /// This operation checks if all bits are set in either this or RHS.
+  bool isInverseOf(const APInt &RHS) const {
+    assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
+    if (isSingleWord())
+      return (U.VAL ^ RHS.U.VAL) == llvm::maskTrailingOnes<WordType>(BitWidth);
+    return isInverseOfSlowCase(RHS);
+  }
+
   /// @}
   /// \name Resizing Operators
   /// @{
@@ -2094,6 +2102,9 @@ private:
   /// out-of-line slow case for isSubsetOf.
   LLVM_ABI bool isSubsetOfSlowCase(const APInt &RHS) const LLVM_READONLY;
 
+  /// out-of-line slow case for isInverseOf.
+  LLVM_ABI bool isInverseOfSlowCase(const APInt &RHS) const LLVM_READONLY;
+
   /// out-of-line slow case for setBits.
   LLVM_ABI void setBitsSlowCase(unsigned loBit, unsigned hiBit);
 
@@ -2484,13 +2495,13 @@ LLVM_ABI APInt clmulh(const APInt &LHS, const APInt &RHS);
 // order to compile LLVM with IBM xlC compiler.
 LLVM_ABI hash_code hash_value(const APInt &Arg);
 
-/// StoreIntToMemory - Fills the StoreBytes bytes of memory starting from Dst
-/// with the integer held in IntVal.
+/// Fills the StoreBytes bytes of memory starting from Dst with the integer held
+/// in IntVal.
 LLVM_ABI void StoreIntToMemory(const APInt &IntVal, uint8_t *Dst,
                                unsigned StoreBytes);
 
-/// LoadIntFromMemory - Loads the integer stored in the LoadBytes bytes starting
-/// from Src into IntVal, which is assumed to be wide enough and to hold zero.
+/// Loads the integer stored in the LoadBytes bytes starting from Src into
+/// IntVal, which is assumed to be wide enough and to hold zero.
 LLVM_ABI void LoadIntFromMemory(APInt &IntVal, const uint8_t *Src,
                                 unsigned LoadBytes);
 

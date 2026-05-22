@@ -481,10 +481,6 @@ public:
 
   virtual bool useFastCCForInternalCall(Function &F) const { return true; }
 
-  virtual bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const {
-    return false;
-  }
-
   virtual bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                                   unsigned ScalarOpdIdx) const {
     return false;
@@ -1553,9 +1549,6 @@ public:
                                         OpInfo, I);
     }
     case Instruction::Load: {
-      // FIXME: Arbitary cost which could come from the backend.
-      if (CostKind == TTI::TCK_Latency)
-        return 4;
       auto *LI = cast<LoadInst>(U);
       Type *LoadType = U->getType();
       // If there is a non-register sized type, the cost estimation may expand

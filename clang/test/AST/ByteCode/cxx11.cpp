@@ -377,13 +377,13 @@ namespace GH150709 {
   static_assert((c1.*mp)() == 1, ""); // both-error {{constant expression}}
   static_assert((d1.*mp)() == 1, "");
   static_assert((f.*mp)() == 1, "");
-  static_assert((c2[0].*mp)() == 1, ""); // ref-error {{constant expression}}
+  static_assert((c2[0].*mp)() == 1, ""); // both-error {{constant expression}}
   static_assert((d2[0].*mp)() == 1, "");
 
   // incorrectly undiagnosed before fix of GH150709
-  static_assert((e1.*mp)() == 1, ""); // ref-error {{constant expression}}
-  static_assert((e2[0].*mp)() == 1, ""); // ref-error {{constant expression}}
-  static_assert((g.*mp)() == 1, ""); // ref-error {{constant expression}}
+  static_assert((e1.*mp)() == 1, ""); // both-error {{constant expression}}
+  static_assert((e2[0].*mp)() == 1, ""); // both-error {{constant expression}}
+  static_assert((g.*mp)() == 1, ""); // both-error {{constant expression}}
 }
 
 namespace DiscardedAddrLabel {

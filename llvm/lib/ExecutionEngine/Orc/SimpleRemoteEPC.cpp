@@ -87,6 +87,11 @@ void SimpleRemoteEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
   }
 }
 
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+SimpleRemoteEPC::createDefaultMemoryManager() {
+  return EPCGenericJITLinkMemoryManager::Create(getExecutionSession());
+}
+
 Expected<std::unique_ptr<DylibManager>>
 SimpleRemoteEPC::createDefaultDylibMgr() {
   auto DM = EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(*this);
@@ -278,7 +283,7 @@ Error SimpleRemoteEPC::handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
   return Error::success();
 }
 
-Error SimpleRemoteEPC::setup(Setup S) {
+Error SimpleRemoteEPC::setup() {
   using namespace SimpleRemoteEPCDefaultBootstrapSymbolNames;
 
   std::promise<MSVCPExpected<SimpleRemoteEPCExecutorInfo>> EIP;
@@ -341,16 +346,6 @@ Error SimpleRemoteEPC::setup(Setup S) {
            {RunAsVoidFunctionAddr, rt::RunAsVoidFunctionWrapperName},
            {RunAsIntFunctionAddr, rt::RunAsIntFunctionWrapperName}}))
     return Err;
-
-  // Set a default CreateMemoryManager if none is specified.
-  if (!S.CreateMemoryManager)
-    S.CreateMemoryManager = createDefaultMemoryManager;
-
-  if (auto MemMgr = S.CreateMemoryManager(*this)) {
-    OwnedMemMgr = std::move(*MemMgr);
-    this->MemMgr = OwnedMemMgr.get();
-  } else
-    return MemMgr.takeError();
 
   return Error::success();
 }

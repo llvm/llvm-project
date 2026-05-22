@@ -3,7 +3,7 @@
 // Vefifies that parameter copies are used in the body of the coroutine
 // Verifies that parameter copies are used to construct the promise type, if that type has a matching constructor
 // RUN: %clang_cc1 -std=c++20 -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -disable-llvm-passes -fexceptions | FileCheck %s
-// RUN: %clang_cc1 -std=c++20 -triple=x86_64-pc-win32          -emit-llvm -o - %s -disable-llvm-passes -fexceptions | FileCheck %s --check-prefix=MSABI
+// RUN: %clang_cc1 -std=c++20 -triple=x86_64-pc-win32          -emit-llvm -o - %s -disable-llvm-passes -fexceptions -Wno-coroutines-unsupported-target | FileCheck %s --check-prefix=MSABI
 
 namespace std {
 template <typename... T> struct coroutine_traits;
