@@ -831,12 +831,12 @@ always define a pointer to their "content" type because they describe a
 region of memory, and all :ref:`allocated object<allocatedobjects>` in LLVM are
 accessed through pointers.
 
-Global variables can be marked with ``unnamed_addr`` which indicates
-that the address is not significant, only the content. Constants marked
-like this can be merged with other constants if they have the same
-initializer. Note that a constant with significant address *can* be
-merged with a ``unnamed_addr`` constant, the result being a constant
-whose address is significant.
+Global variables can be marked with ``unnamed_addr`` which indicates that
+the address is not significant, only the content. Constants marked like
+this can be merged with other constants if they have the same initializer,
+and can also be duplicated. Note that a constant with significant address
+*can* be merged with a ``unnamed_addr`` constant, the result being a
+constant whose address is significant.
 
 If the ``local_unnamed_addr`` attribute is given, the address is known to
 not be significant within the module.
