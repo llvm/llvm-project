@@ -18,8 +18,7 @@ define i32 @fold_srem_positive_odd(i32 %x) nounwind {
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    lui a1, 706409
 ; RV32IM-NEXT:    addi a1, a1, 389
-; RV32IM-NEXT:    mulh a1, a0, a1
-; RV32IM-NEXT:    add a1, a1, a0
+; RV32IM-NEXT:    mulhsu a1, a0, a1
 ; RV32IM-NEXT:    srli a2, a1, 31
 ; RV32IM-NEXT:    srai a1, a1, 6
 ; RV32IM-NEXT:    add a1, a1, a2
@@ -233,8 +232,7 @@ define i32 @combine_srem_sdiv(i32 %x) nounwind {
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    lui a1, 706409
 ; RV32IM-NEXT:    addi a1, a1, 389
-; RV32IM-NEXT:    mulh a1, a0, a1
-; RV32IM-NEXT:    add a1, a1, a0
+; RV32IM-NEXT:    mulhsu a1, a0, a1
 ; RV32IM-NEXT:    srli a2, a1, 31
 ; RV32IM-NEXT:    srai a1, a1, 6
 ; RV32IM-NEXT:    add a1, a1, a2
