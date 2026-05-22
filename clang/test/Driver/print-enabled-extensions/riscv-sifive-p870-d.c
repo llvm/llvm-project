@@ -1,5 +1,5 @@
 // REQUIRES: riscv-registered-target
-// RUN: %clang --target=riscv64 -mcpu=sifive-p870 --print-enabled-extensions | FileCheck %s
+// RUN: %clang --target=riscv64 -mcpu=sifive-p870-d --print-enabled-extensions | FileCheck %s
 
 // CHECK: Extensions enabled for the given RISC-V target
 // CHECK-EMPTY:
