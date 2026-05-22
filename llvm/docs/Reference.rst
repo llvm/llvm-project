@@ -66,6 +66,7 @@ LLVM and API reference documentation.
    TransformMetadata
    TypeMetadata
    XRayFDRFormat
+   DaemonMode
 
 API Reference
 -------------

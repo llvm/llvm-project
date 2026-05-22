@@ -1,0 +1,27 @@
+Piping inproc builtin into inproc builtin into normal command.
+RUN: echo "hello" | uppercaser | grep -Fx "HELLO"
+
+Piping normal command into inproc builtin into normal command.
+RUN: echo "abcd" > %t
+RUN: cat %t | uppercaser | grep -Fx "ABCD"
+
+Redirecting stdin for inproc builtin from file.
+RUN: echo "lll" > %t
+RUN: uppercaser < %t | grep -Fx "LLL"
+
+Piping stderr, but not stdout, from normal command into inproc builtin.
+RUN: not cat does_not_exist.txt 2>&1 >/dev/null | uppercaser | streq "[ERRNO 2] NO SUCH FILE OR DIRECTORY: 'DOES_NOT_EXIST.TXT'"
+
+Piping stderr, and but stdout, from inproc builtin into normal command.
+RUN: print_out_err "ignoreme" "err" 2>&1 >/dev/null | grep -Fx "err"
+
+Piping stderr, but not stdout, from inproc builtin into inproc builtin.
+RUN: print_out_err "ignoreme" "err" 2>&1 >/dev/null | streq "err"
+
+Redirecting stderr to stdout for inproc builtin and piping it into another inproc builtin.
+RUN: print_out_err "aaa" "bbb" 2>&1 | streq "aaabbb"
+
+Redirecting stderr to stdout for inproc builtin and piping it into a regular process.
+RUN: print_out_err "aaa" "bbb" 2>&1 | grep "aaabbb"
+
+END.

@@ -1,0 +1,3 @@
+# This test should fail, as the ExampleDaemon is unregistered as a daemon in the
+# Lit config, so %invoke-ExampleDaemon is no longer a known command.
+RUN: %invoke-ExampleDaemon

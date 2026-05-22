@@ -1,0 +1,6 @@
+This is an example tool used for testing the daemon driver functionality.
+The tool reads input from stdin character-by-character and prints
+uppercase letters on `stderr` and everything else on `stdout`. It
+returns the number of times a letter was printed to `stderr`. It also takes
+one command line argument which causes it to print lowercase letters to
+`stderr` instead.

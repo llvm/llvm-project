@@ -6,6 +6,7 @@ import subprocess
 import sys
 import errno
 
+import lit.llvm.daemon_config
 import lit.util
 from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
@@ -911,3 +912,18 @@ class LLVMConfig(object):
         self.add_tool_substitutions(tool_substitutions)
 
         return was_found
+
+    def use_daemon_tool(self, tool_dir: str, tool_name: str) -> bool:
+        """
+        Add in-process built-in for a daemonized tool.
+        This should be called once per daemonized tool.
+
+        Returns true if the daemon tool was added.
+        """
+
+        return lit.llvm.daemon_config.use_daemon_tool(
+            self.config,
+            self.lit_config,
+            tool_dir,
+            tool_name,
+        )

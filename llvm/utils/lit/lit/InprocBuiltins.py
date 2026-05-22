@@ -1,87 +1,307 @@
+from __future__ import annotations
+
+import abc
 import getopt
+import io
 import os
 import pathlib
-import platform
 import shutil
 import stat
 import subprocess
-from io import StringIO
+from dataclasses import dataclass
+from typing import Callable, Optional
 
 import lit.util
+from lit.ShCommands import Command
 from lit.ShellEnvironment import (
     InternalShellError,
-    ShellCommandResult,
-    expand_glob_expressions,
+    ShellEnvironment,
     kIsWindows,
-    processRedirects,
     updateEnv,
 )
 
 
-def executeBuiltinCd(cmd, shenv):
+class InprocBuiltinIOObject(abc.ABC):
+    """
+    Base class for IO streams used for in-process built-ins. This class has two
+    specializations: InprocBuiltinIOFile, wrapping a file open in text mode, and
+    InprocBuiltinIOMemory, wrapping a BytesIO object. These streams provide
+    a text IO interface, but support reading and writing binary data too.
+
+    The main reason that this exists is to solve the conflict that binary IO is
+    required for daemonized testing, as many tests involve tools reading and
+    writing binary files and piping binary data between themselves, but on z/OS
+    files must be opened in text mode so that the character encoding is correct.
+    So we need an IO object that can be both a file open in text mode and a
+    in-memory stream that can store binary data.
+    """
+
+    @abc.abstractmethod
+    def read(self) -> str:
+        raise NotImplemented
+
+    @abc.abstractmethod
+    def read_binary(self) -> bytes:
+        raise NotImplemented
+
+    @abc.abstractmethod
+    def write(self, data: str) -> int:
+        raise NotImplemented
+
+    @abc.abstractmethod
+    def write_binary(self, data: bytes) -> int:
+        raise NotImplemented
+
+    @abc.abstractmethod
+    def seek(self, pos: int):
+        raise NotImplemented
+
+    @abc.abstractmethod
+    def flush(self):
+        raise NotImplemented
+
+    @abc.abstractmethod
+    def get_filename(self) -> str | None:
+        raise NotImplemented
+
+    @abc.abstractmethod
+    def get_encoding(self) -> str | None:
+        raise NotImplemented
+
+
+@dataclass
+class InprocBuiltinIOFile(InprocBuiltinIOObject):
+    """
+    Specialization of InprocBuiltinIOObject wrapping a file which is open in
+    text mode. Files must be opened in text mode so that character encoding
+    tags are correctly handled on z/OS. Binary IO is still supported via the
+    OS APIs (needed for daemonized testing).
+    """
+
+    file: io.TextIOBase
+
+    def read(self) -> str:
+        return self.file.read()
+
+    def read_binary(self) -> bytes:
+        self.file.flush()
+        data = bytearray()
+        chunk_size = 1024
+
+        while True:
+            chunk = os.read(self.file.fileno(), chunk_size)
+            if not chunk:
+                break
+            data.extend(chunk)
+
+        return bytes(data)
+
+    def write(self, data: str) -> int:
+        return self.file.write(data)
+
+    def write_binary(self, data: bytes) -> int:
+        self.file.flush()
+        return os.write(self.file.fileno(), data)
+
+    def seek(self, pos: int):
+        self.file.seek(pos)
+
+    def flush(self):
+        self.file.flush()
+
+    def get_filename(self) -> str | None:
+        if hasattr(self.file, "name") and isinstance(self.file.name, str):
+            return self.file.name
+        return None
+
+    def get_encoding(self) -> str | None:
+        return str(self.file.encoding)
+
+
+@dataclass
+class InprocBuiltinIOMemory(InprocBuiltinIOObject):
+    """
+    Specialization of InprocBuiltinIOObject wrapping an in-memory binary stream.
+    """
+
+    obj: io.BytesIO
+    encoding: str = "utf-8"
+
+    def read(self) -> str:
+        return self.obj.read().decode(self.encoding, errors="replace")
+
+    def read_binary(self) -> bytes:
+        return self.obj.read()
+
+    def write(self, data: str) -> int:
+        return self.obj.write(data.encode(self.encoding, errors="replace"))
+
+    def write_binary(self, data: bytes) -> int:
+        return self.obj.write(data)
+
+    def seek(self, pos: int):
+        self.obj.seek(pos)
+
+    def flush(self):
+        pass
+
+    def get_filename(self) -> str | None:
+        return None
+
+    def get_encoding(self) -> str | None:
+        return self.encoding
+
+
+class InprocBuiltinIO:
+    """
+    Holds IO streams for an inproc builtin invocation.
+
+    NB: If stderr is redirected to be the same stream as stdout, then
+    `stder == stdout` is True.
+    """
+
+    stdin: InprocBuiltinIOObject
+    stdout: InprocBuiltinIOObject
+    stderr: InprocBuiltinIOObject
+
+    def __init__(self, stdin, stdout, stderr):
+        """
+        Configure the IO streams for an in-process builtin command in
+        the same way that IO streams are configured when calling
+        `subprocess.Popen`.
+
+        Each of stdin, stdout and stderr may be:
+        - A file object open in binary mode.
+        - `subprocess.PIPE`
+        - `subprocess.STDOUT` (for stderr)
+        - None
+        """
+
+        # If stderr is redirected to stdout, we make sure to use the same
+        # stream for both so that the order of output is preserved.
+        stderr_redirected_to_stdout = (
+            stdout == subprocess.PIPE and stderr == subprocess.STDOUT
+        )
+
+        # Replace sentinel values with in-memory streams.
+        def resolve_io_obj(stream) -> InprocBuiltinIOObject:
+            if stream == subprocess.PIPE or stream is None:
+                return InprocBuiltinIOMemory(io.BytesIO())
+            elif isinstance(stream, InprocBuiltinIOObject):
+                return stream
+            else:
+                return InprocBuiltinIOFile(stream)
+
+        self.stdin = resolve_io_obj(stdin)
+        self.stdout = resolve_io_obj(stdout)
+        if stderr_redirected_to_stdout:
+            # Make sure stderr and stdout are directed to the same stream.
+            self.stderr = self.stdout
+        else:
+            self.stderr = resolve_io_obj(stderr)
+
+
+InprocBuiltinExecuteFn = Callable[
+    [Command, "list[str]", ShellEnvironment, InprocBuiltinIO],
+    int,
+]
+"""
+Function called by an in-process builtin command.
+Parameters:
+    - `cmd`: The command itself.
+    - `args`: glob-expanded list of arguments (including argv[0] as the program name).
+    - `shenv`: The shell environment.
+    - `io`: Holds the input and output streams for the invocation. These are file-like objects (files, StringIO)
+
+The return value is the exit code.
+"""
+
+
+@dataclass
+class InprocBuiltin:
+    """
+    Represents a command that is run as an in-process builtins.
+    """
+
+    execute: InprocBuiltinExecuteFn
+    # Identifies this in-process built-in as the daemonized replacement for a
+    # LLVM tool. This is used for disabling daemon tools.
+    llvm_daemon_tool_identifier: str | None = None
+
+
+def executeBuiltinCd(
+    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InprocBuiltinIO
+) -> int:
     """executeBuiltinCd - Change the current directory."""
-    if len(cmd.args) != 2:
+    if len(args) != 2:
         raise InternalShellError(cmd, "'cd' supports only one argument")
     # Update the cwd in the parent environment.
-    shenv.change_dir(cmd.args[1])
+    shenv.change_dir(args[1])
     # The cd builtin always succeeds. If the directory does not exist, the
     # following Popen calls will fail instead.
-    return ShellCommandResult(cmd, "", "", 0, False)
+    return 0
 
 
-def executeBuiltinPushd(cmd, shenv):
+def executeBuiltinPushd(
+    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InprocBuiltinIO
+) -> int:
     """executeBuiltinPushd - Change the current dir and save the old."""
-    if len(cmd.args) != 2:
+    if len(args) != 2:
         raise InternalShellError(cmd, "'pushd' supports only one argument")
     shenv.dirStack.append(shenv.cwd)
-    shenv.change_dir(cmd.args[1])
-    return ShellCommandResult(cmd, "", "", 0, False)
+    shenv.change_dir(args[1])
+    return 0
 
 
-def executeBuiltinPopd(cmd, shenv):
+def executeBuiltinPopd(
+    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InprocBuiltinIO
+) -> int:
     """executeBuiltinPopd - Restore a previously saved working directory."""
-    if len(cmd.args) != 1:
+    if len(args) != 1:
         raise InternalShellError(cmd, "'popd' does not support arguments")
     if not shenv.dirStack:
         raise InternalShellError(cmd, "popd: directory stack empty")
     shenv.cwd = shenv.dirStack.pop()
-    return ShellCommandResult(cmd, "", "", 0, False)
+    return 0
 
 
-def executeBuiltinExport(cmd, shenv):
+def executeBuiltinExport(
+    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InprocBuiltinIO
+) -> int:
     """executeBuiltinExport - Set an environment variable."""
-    if len(cmd.args) != 2:
+    if len(args) != 2:
         raise InternalShellError(cmd, "'export' supports only one argument")
-    updateEnv(shenv, cmd.args)
-    return ShellCommandResult(cmd, "", "", 0, False)
+    updateEnv(shenv, args)
+    return 0
 
 
-def executeBuiltinEcho(cmd, shenv):
+def executeBuiltinEcho(
+    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InprocBuiltinIO
+) -> int:
     """Interpret a redirected echo or @echo command"""
     opened_files = []
-    stdin, stdout, stderr = processRedirects(cmd, subprocess.PIPE, shenv, opened_files)
-    if stdin != subprocess.PIPE or stderr != subprocess.PIPE:
-        raise InternalShellError(
-            cmd, f"stdin and stderr redirects not supported for {cmd.args[0]}"
-        )
 
-    # Some tests have un-redirected echo commands to help debug test failures.
-    # Buffer our output and return it to the caller.
-    is_redirected = True
-    if stdout == subprocess.PIPE:
-        is_redirected = False
-        stdout = StringIO()
-    elif kIsWindows:
+    stdout = io.stdout
+    if (
+        kIsWindows
+        and isinstance(io.stdout, InprocBuiltinIOFile)
+        and io.stdout.get_filename()
+    ):
         # Reopen stdout with `newline=""` to avoid CRLF translation.
         # The versions of echo we are replacing on Windows all emit plain LF,
         # and the LLVM tests now depend on this.
-        stdout = open(stdout.name, stdout.mode, encoding="utf-8", newline="")
+        stdout = open(
+            io.stdout.get_filename(),
+            io.stdout.file.mode,
+            encoding="utf-8",
+            newline="",
+        )
         opened_files.append((None, None, stdout, None))
 
     # Implement echo flags. We only support -e and -n, and not yet in
     # combination. We have to ignore unknown flags, because `echo "-D FOO"`
     # prints the dash.
-    args = cmd.args[1:]
+    args = args[1:]
     interpret_escapes = False
     write_newline = True
     while len(args) >= 1 and args[0] in ("-e", "-n"):
@@ -109,15 +329,15 @@ def executeBuiltinEcho(cmd, shenv):
     for name, mode, f, path in opened_files:
         f.close()
 
-    output = "" if is_redirected else stdout.getvalue()
-    return ShellCommandResult(cmd, output, "", 0, False)
+    return 0
 
 
-def executeBuiltinMkdir(cmd, cmd_shenv):
+def executeBuiltinMkdir(
+    cmd: Command, args: list[str], cmd_shenv: ShellEnvironment, io: InprocBuiltinIO
+):
     """executeBuiltinMkdir - Create new directories."""
-    args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
     try:
-        opts, args = getopt.gnu_getopt(args, "p")
+        opts, args = getopt.gnu_getopt(args[1:], "p")
     except getopt.GetoptError as err:
         raise InternalShellError(cmd, "Unsupported: 'mkdir':  %s" % str(err))
 
@@ -131,7 +351,6 @@ def executeBuiltinMkdir(cmd, cmd_shenv):
     if len(args) == 0:
         raise InternalShellError(cmd, "Error: 'mkdir' is missing an operand")
 
-    stderr = StringIO()
     exitCode = 0
     for dir in args:
         dir = pathlib.Path(dir)
@@ -144,16 +363,17 @@ def executeBuiltinMkdir(cmd, cmd_shenv):
             try:
                 dir.mkdir(exist_ok=True)
             except OSError as err:
-                stderr.write("Error: 'mkdir' command failed, %s\n" % str(err))
+                io.stderr.write(("Error: 'mkdir' command failed, %s\n" % str(err)))
                 exitCode = 1
-    return ShellCommandResult(cmd, "", stderr.getvalue(), exitCode, False)
+    return exitCode
 
 
-def executeBuiltinRm(cmd, cmd_shenv):
+def executeBuiltinRm(
+    cmd: Command, args: list[str], cmd_shenv: ShellEnvironment, io: InprocBuiltinIO
+):
     """executeBuiltinRm - Removes (deletes) files or directories."""
-    args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
     try:
-        opts, args = getopt.gnu_getopt(args, "frR", ["--recursive"])
+        opts, args = getopt.gnu_getopt(args[1:], "frR", ["--recursive"])
     except getopt.GetoptError as err:
         raise InternalShellError(cmd, "Unsupported: 'rm':  %s" % str(err))
 
@@ -176,7 +396,6 @@ def executeBuiltinRm(cmd, cmd_shenv):
         os.chmod(path, stat.S_IMODE(os.stat(path).st_mode) | stat.S_IWRITE)
         os.remove(path)
 
-    stderr = StringIO()
     exitCode = 0
     for path in args:
         cwd = cmd_shenv.cwd
@@ -189,9 +408,9 @@ def executeBuiltinRm(cmd, cmd_shenv):
                 os.remove(path)
             elif os.path.isdir(path):
                 if not recursive:
-                    stderr.write("Error: %s is a directory\n" % path)
+                    io.stderr.write(("Error: %s is a directory\n" % path))
                     exitCode = 1
-                if platform.system() == "Windows":
+                if kIsWindows:
                     # NOTE: use ctypes to access `SHFileOperationsW` on Windows to
                     # use the NT style path to get access to long file paths which
                     # cannot be removed otherwise.
@@ -255,26 +474,28 @@ def executeBuiltinRm(cmd, cmd_shenv):
                     os.chmod(path, stat.S_IMODE(os.stat(path).st_mode) | stat.S_IWRITE)
                 os.remove(path)
         except OSError as err:
-            stderr.write("Error: 'rm' command failed, %s" % str(err))
+            io.stderr.write(("Error: 'rm' command failed, %s" % str(err)))
             exitCode = 1
-    return ShellCommandResult(cmd, "", stderr.getvalue(), exitCode, False)
+    return exitCode
 
 
-def executeBuiltinUmask(cmd, shenv):
+def executeBuiltinUmask(
+    cmd: Command, args: list[str], shenv: ShellEnvironment, io: InprocBuiltinIO
+):
     """executeBuiltinUmask - Change the current umask."""
     if os.name != "posix":
         raise InternalShellError(cmd, "'umask' not supported on this system")
-    if len(cmd.args) != 2:
+    if len(args) != 2:
         raise InternalShellError(cmd, "'umask' supports only one argument")
     try:
         # Update the umask in the parent environment.
-        shenv.umask = int(cmd.args[1], 8)
+        shenv.umask = int(args[1], 8)
     except ValueError as err:
         raise InternalShellError(cmd, "Error: 'umask': %s" % str(err))
-    return ShellCommandResult(cmd, "", "", 0, False)
+    return 0
 
 
-def executeBuiltinUlimit(cmd, shenv):
+def executeBuiltinUlimit(cmd: Command, args: list[str], shenv, io: InprocBuiltinIO):
     """executeBuiltinUlimit - Change the current limits."""
     try:
         # Try importing the resource module (available on POSIX systems) and
@@ -282,34 +503,59 @@ def executeBuiltinUlimit(cmd, shenv):
         import resource
     except ImportError:
         raise InternalShellError(cmd, "'ulimit' not supported on this system")
-    if len(cmd.args) != 3:
+    if len(args) != 3:
         raise InternalShellError(cmd, "'ulimit' requires two arguments")
     try:
-        if cmd.args[2] == "unlimited":
+        if args[2] == "unlimited":
             new_limit = resource.RLIM_INFINITY
         else:
-            new_limit = int(cmd.args[2])
+            new_limit = int(args[2])
     except ValueError as err:
         raise InternalShellError(cmd, "Error: 'ulimit': %s" % str(err))
-    if cmd.args[1] == "-v":
+    if args[1] == "-v":
         if new_limit != resource.RLIM_INFINITY:
             new_limit = new_limit * 1024
         shenv.ulimit["RLIMIT_AS"] = new_limit
-    elif cmd.args[1] == "-n":
+    elif args[1] == "-n":
         shenv.ulimit["RLIMIT_NOFILE"] = new_limit
-    elif cmd.args[1] == "-s":
+    elif args[1] == "-s":
         if new_limit != resource.RLIM_INFINITY:
             new_limit = new_limit * 1024
         shenv.ulimit["RLIMIT_STACK"] = new_limit
-    elif cmd.args[1] == "-f":
+    elif args[1] == "-f":
         shenv.ulimit["RLIMIT_FSIZE"] = new_limit
     else:
-        raise InternalShellError(
-            cmd, "'ulimit' does not support option: %s" % cmd.args[1]
-        )
-    return ShellCommandResult(cmd, "", "", 0, False)
+        raise InternalShellError(cmd, "'ulimit' does not support option: %s" % args[1])
+    return 0
 
 
-def executeBuiltinColon(cmd, cmd_shenv):
+def executeBuiltinColon(
+    cmd: Command, args: list[str], cmd_shenv: ShellEnvironment, io: InprocBuiltinIO
+):
     """executeBuiltinColon - Discard arguments and exit with status 0."""
-    return ShellCommandResult(cmd, "", "", 0, False)
+    return 0
+
+
+def get_default_inproc_builtins() -> dict[str, InprocBuiltin]:
+    """
+    get_default_inproc_builtins - Returns the map of command names to Lit's
+    in-process built-in implementations.
+    The entries are a pair of the callable for the builtin and a bool
+    that determines whether this inproc builtin may fall back to a
+    command of the same name in cases where in-proc builtins cannot be
+    used (e.g. as the argument to not --crash).
+    """
+
+    return {
+        "@echo": InprocBuiltin(executeBuiltinEcho),
+        "cd": InprocBuiltin(executeBuiltinCd),
+        "export": InprocBuiltin(executeBuiltinExport),
+        "echo": InprocBuiltin(executeBuiltinEcho),
+        "mkdir": InprocBuiltin(executeBuiltinMkdir),
+        "popd": InprocBuiltin(executeBuiltinPopd),
+        "pushd": InprocBuiltin(executeBuiltinPushd),
+        "rm": InprocBuiltin(executeBuiltinRm),
+        "ulimit": InprocBuiltin(executeBuiltinUlimit),
+        "umask": InprocBuiltin(executeBuiltinUmask),
+        ":": InprocBuiltin(executeBuiltinColon),
+    }

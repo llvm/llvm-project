@@ -19,11 +19,16 @@ class ShTest(FileBasedTest):
     """
 
     def __init__(
-        self, execute_external=False, extra_substitutions=[], preamble_commands=[]
+        self,
+        execute_external=False,
+        extra_substitutions=[],
+        preamble_commands=[],
+        extra_inproc_builtins={},
     ):
         self.execute_external = execute_external
         self.extra_substitutions = extra_substitutions
         self.preamble_commands = preamble_commands
+        self.extra_inproc_builtins = extra_inproc_builtins
 
     def execute(self, test, litConfig):
         return lit.TestRunner.executeShTest(
@@ -32,4 +37,5 @@ class ShTest(FileBasedTest):
             self.execute_external,
             self.extra_substitutions,
             self.preamble_commands,
+            self.extra_inproc_builtins,
         )
