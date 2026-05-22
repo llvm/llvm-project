@@ -698,7 +698,7 @@ void LinkerScript::discard(InputSectionBase &s) {
 }
 
 void LinkerScript::discardSynthetic(OutputSection &outCmd) {
-  ARMExidxSyntheticSection *armExidx = ctx.mainPart->armExidx.get();
+  ARMExidxSyntheticSection *armExidx = ctx.in.armExidx.get();
   if (!armExidx || !armExidx->isLive())
     return;
   SmallVector<InputSectionBase *, 0> secs(armExidx->exidxSections.begin(),
@@ -762,9 +762,7 @@ void LinkerScript::processSectionCommands() {
         s->addralign = subalign;
     }
 
-    // Set the partition field the same way OutputSection::recordSection()
-    // does. Partitions cannot be used with the SECTIONS command, so this is
-    // always 1.
+    // Mark the output section live, like OutputSection::recordSection().
     osec->partition = 1;
     return true;
   };

@@ -28,7 +28,6 @@ class InputFile;
 class Symbol;
 
 class Defined;
-struct Partition;
 class SyntheticSection;
 template <class ELFT> class ObjFile;
 class OutputSection;
@@ -78,8 +77,6 @@ public:
 
   StringRef name;
 
-  elf::Partition &getPartition(Ctx &) const;
-
   // These corresponds to the fields in Elf_Shdr.
   uint64_t flags;
   uint32_t type;
@@ -89,8 +86,7 @@ public:
   uint32_t entsize;
 
   Kind sectionKind;
-  // 0 (dead) or 1 (live). Shim synthetic sections also use this field to
-  // carry their partition number (2..) or 255 for the partEnd marker.
+  // 0 (dead) or 1 (live).
   uint8_t partition = 1;
 
   // The next two bit fields are only used by InputSectionBase, but we
