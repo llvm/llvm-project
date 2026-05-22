@@ -507,16 +507,18 @@ struct InstrumentationOpportunity {
 
   /// Instrument the value \p V using the configuration \p IConf, and
   /// potentially, the caches \p ICaches.
-  virtual Value *instrument(Value *&V, InstrumentationConfig &IConf,
+  virtual Value *instrument(Value *&V, bool &Changed,
+                            InstrumentationConfig &IConf,
                             InstrumentorIRBuilderTy &IIRB,
                             InstrumentationCaches &ICaches) {
     if (CB && !CB(*V))
       return nullptr;
 
     // Check if the filter matches before instrumenting
-    if (!evaluateFilter(*V, *this, IConf, IIRB))
+    if (!evaluateFilter(*V, Changed, *this, IConf, IIRB))
       return nullptr;
 
+    Changed = true;
     const DataLayout &DL = IIRB.IRB.GetInsertBlock()->getDataLayout();
     IRTCallDescription IRTCallDesc(*this, getRetTy(V->getContext()));
     auto *CI = IRTCallDesc.createLLVMCall(V, IConf, IIRB, DL, ICaches);

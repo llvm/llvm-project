@@ -2167,10 +2167,19 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     Address resultPtr = emitPointerWithAlignment(resultArg);
 
     // Extend each operand to the encompassing type, if necessary.
-    if (x.getType() != encompassingCIRTy)
-      x = builder.createCast(cir::CastKind::integral, x, encompassingCIRTy);
-    if (y.getType() != encompassingCIRTy)
-      y = builder.createCast(cir::CastKind::integral, y, encompassingCIRTy);
+    if (x.getType() != encompassingCIRTy) {
+      x = builder.createCast(mlir::isa<cir::BoolType>(x.getType())
+                                 ? cir::CastKind::bool_to_int
+                                 : cir::CastKind::integral,
+                             x, encompassingCIRTy);
+    }
+
+    if (y.getType() != encompassingCIRTy) {
+      y = builder.createCast(mlir::isa<cir::BoolType>(y.getType())
+                                 ? cir::CastKind::bool_to_int
+                                 : cir::CastKind::integral,
+                             y, encompassingCIRTy);
+    }
 
     // Perform the operation on the extended values.
     mlir::Location loc = getLoc(e->getSourceRange());
