@@ -34,7 +34,8 @@ PipeWindows::PipeWindows()
 }
 
 PipeWindows::PipeWindows(pipe_t read, pipe_t write)
-    : m_read((HANDLE)read), m_write((HANDLE)write),
+    : m_read(reinterpret_cast<HANDLE>(read)),
+      m_write(reinterpret_cast<HANDLE>(write)),
       m_read_fd(PipeWindows::kInvalidDescriptor),
       m_write_fd(PipeWindows::kInvalidDescriptor) {
   assert(read != LLDB_INVALID_PIPE || write != LLDB_INVALID_PIPE);

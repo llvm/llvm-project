@@ -6153,7 +6153,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_fno_knr_functions);
 
-  auto SanitizeArgs = TC.getSanitizerArgs(Args);
+  const char *OffloadArch = JA.getOffloadingArch();
+  auto SanitizeArgs = TC.getSanitizerArgs(Args, OffloadArch ? OffloadArch : "",
+                                          JA.getOffloadingDeviceKind());
   Args.AddLastArg(CmdArgs,
                   options::OPT_fallow_runtime_check_skip_hot_cutoff_EQ);
 

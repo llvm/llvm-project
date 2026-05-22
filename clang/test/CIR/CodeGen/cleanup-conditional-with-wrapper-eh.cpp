@@ -331,3 +331,171 @@ void APFixedPoint::add(int x) const {
 // OGCG:   ret void
 // OGCG: [[EH_RESUME]]:
 // OGCG:   resume
+
+struct Path { ~Path(); } g_path;
+
+struct Iter {
+  ~Iter();
+  operator bool();
+};
+
+struct Entry {
+  Entry();
+  Entry(Path);
+};
+
+// A conditional expression whose condition itself produces a temporary that
+// needs cleanup (here, the Iter() temporary destroyed by ~Iter) nests the
+// deferred-conditional cleanup of a temporary in one of the conditional's
+// arms inside that condition's cleanup scope. The alloca for the
+// conditionally-destroyed Path temporary must be hoisted out of the outer
+// (full-expr) cleanup scope, even though in the freshly emitted IR its
+// direct parent cleanup scope is the inner one created for the Iter
+// temporary.
+void makeEntry() {
+  Iter() ? Entry() : g_path;
+}
+
+// CIR: cir.func {{.*}} @_Z9makeEntryv()
+// CIR:   %[[REF_TMP:.*]] = cir.alloca !rec_Iter, !cir.ptr<!rec_Iter>, ["ref.tmp0"]
+// CIR:   %[[CLEANUP_COND:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// CIR:   %[[AGG_TMP0:.*]] = cir.alloca !rec_Path, !cir.ptr<!rec_Path>, ["agg.tmp0"]
+// CIR:   cir.cleanup.scope {
+// CIR:     cir.cleanup.scope {
+// CIR:       %[[CALL:.*]] = cir.call @_ZN4ItercvbEv(%[[REF_TMP]])
+// CIR:       cir.if %[[CALL]] {
+// CIR:         %[[ENSURED_T:.*]] = cir.alloca !rec_Entry, !cir.ptr<!rec_Entry>, ["agg.tmp.ensured"]
+// CIR:         cir.call @_ZN5EntryC1Ev(%[[ENSURED_T]])
+// CIR:       } else {
+// CIR:         %[[ENSURED_F:.*]] = cir.alloca !rec_Entry, !cir.ptr<!rec_Entry>, ["agg.tmp.ensured"]
+// CIR:         %{{.*}} = cir.get_global @g_path
+// CIR:         %[[TRUE:.*]] = cir.const #true
+// CIR:         cir.store %[[TRUE]], %[[CLEANUP_COND]]
+// CIR:         %[[PATH_LOAD:.*]] = cir.load{{.*}} %[[AGG_TMP0]]
+// CIR:         cir.call @_ZN5EntryC1E4Path(%[[ENSURED_F]], %[[PATH_LOAD]])
+// CIR:       }
+// CIR:       cir.yield
+// CIR:     } cleanup all {
+// CIR:       cir.call @_ZN4IterD1Ev(%[[REF_TMP]])
+// CIR:       cir.yield
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   } cleanup all {
+// CIR:     %[[FLAG:.*]] = cir.load{{.*}} %[[CLEANUP_COND]]
+// CIR:     cir.if %[[FLAG]] {
+// CIR:       cir.call @_ZN4PathD1Ev(%[[AGG_TMP0]])
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   }
+// CIR:   cir.return
+
+// LLVM: define {{.*}} void @_Z9makeEntryv(){{.*}} personality ptr @__gxx_personality_v0
+// LLVM:   %[[ENSURED_T:.*]] = alloca %struct.Entry
+// LLVM:   %[[ENSURED_F:.*]] = alloca %struct.Entry
+// LLVM:   %[[REF_TMP:.*]] = alloca %struct.Iter
+// LLVM:   %[[CLEANUP_COND:.*]] = alloca i8
+// LLVM:   %[[AGG_TMP0:.*]] = alloca %struct.Path
+// LLVM:   %[[CALL:.*]] = invoke {{.*}} i1 @_ZN4ItercvbEv(ptr {{.*}} %[[REF_TMP]])
+// LLVM:                     to label %[[CALL_CONT:.*]] unwind label %[[LPAD:.*]]
+// LLVM: [[CALL_CONT]]:
+// LLVM:   br i1 %[[CALL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// LLVM: [[TRUE_BB]]:
+// LLVM:   invoke void @_ZN5EntryC1Ev(ptr {{.*}} %[[ENSURED_T]])
+// LLVM:                     to label %[[TRUE_CONT:.*]] unwind label %[[LPAD]]
+// LLVM: [[TRUE_CONT]]:
+// LLVM:   br label %[[COND_END:.*]]
+// LLVM: [[FALSE_BB]]:
+// LLVM:   store i8 1, ptr %[[CLEANUP_COND]]
+// LLVM:   %[[PATH_LOAD:.*]] = load %struct.Path, ptr %[[AGG_TMP0]]
+// LLVM:   invoke void @_ZN5EntryC1E4Path(ptr {{.*}} %[[ENSURED_F]], %struct.Path %[[PATH_LOAD]])
+// LLVM:                     to label %[[FALSE_CONT:.*]] unwind label %[[LPAD]]
+// LLVM: [[FALSE_CONT]]:
+// LLVM:   br label %[[COND_END]]
+// LLVM: [[COND_END]]:
+// LLVM:   br label %[[AFTER_INNER:.*]]
+// LLVM: [[AFTER_INNER]]:
+// LLVM:   call void @_ZN4IterD1Ev(ptr {{.*}} %[[REF_TMP]])
+// LLVM:   br label %[[INNER_DONE:.*]]
+// LLVM: [[INNER_DONE]]:
+// LLVM:   br label %[[NORMAL_OUTER:.*]]
+// LLVM: [[LPAD]]:
+// LLVM:   landingpad { ptr, i32 }
+// LLVM:     cleanup
+// LLVM:   call void @_ZN4IterD1Ev(ptr {{.*}} %[[REF_TMP]])
+// LLVM:   br label %[[EH_OUTER:.*]]
+// LLVM: [[NORMAL_OUTER]]:
+// LLVM:   store i8 0, ptr %[[CLEANUP_COND]]
+// LLVM:   br label %[[CHECK_FLAG:.*]]
+// LLVM: [[CHECK_FLAG]]:
+// LLVM:   %[[FLAG_BYTE:.*]] = load i8, ptr %[[CLEANUP_COND]]
+// LLVM:   %[[FLAG:.*]] = trunc i8 %[[FLAG_BYTE]] to i1
+// LLVM:   br i1 %[[FLAG]], label %[[DO_PATH_DTOR:.*]], label %[[DONE_PATH:.*]]
+// LLVM: [[DO_PATH_DTOR]]:
+// LLVM:   call void @_ZN4PathD1Ev(ptr {{.*}} %[[AGG_TMP0]])
+// LLVM:   br label %[[DONE_PATH]]
+// LLVM: [[DONE_PATH]]:
+// LLVM:   br label %[[BEFORE_RET:.*]]
+// LLVM: [[BEFORE_RET]]:
+// LLVM:   br label %[[DONE:.*]]
+// LLVM: [[EH_OUTER]]:
+// LLVM:   %[[EH_FLAG_BYTE:.*]] = load i8, ptr %[[CLEANUP_COND]]
+// LLVM:   %[[EH_FLAG:.*]] = trunc i8 %[[EH_FLAG_BYTE]] to i1
+// LLVM:   br i1 %[[EH_FLAG]], label %[[EH_PATH_DTOR:.*]], label %[[EH_RESUME:.*]]
+// LLVM: [[EH_PATH_DTOR]]:
+// LLVM:   call void @_ZN4PathD1Ev(ptr {{.*}} %[[AGG_TMP0]])
+// LLVM:   br label %[[EH_RESUME]]
+// LLVM: [[EH_RESUME]]:
+// LLVM:   resume
+// LLVM: [[DONE]]:
+// LLVM:   ret void
+
+// OGCG: define {{.*}} void @_Z9makeEntryv(){{.*}} personality ptr @__gxx_personality_v0
+// OGCG:   %[[REF_TMP:.*]] = alloca %struct.Iter
+// OGCG:   %[[ENSURED_T:.*]] = alloca %struct.Entry
+// OGCG:   %[[ENSURED_F:.*]] = alloca %struct.Entry
+// OGCG:   %[[AGG_TMP:.*]] = alloca %struct.Path
+// OGCG:   %[[CLEANUP_COND:.*]] = alloca i1
+// OGCG:   store i1 false, ptr %[[CLEANUP_COND]]
+// OGCG:   %[[CALL:.*]] = invoke {{.*}} i1 @_ZN4ItercvbEv(ptr {{.*}} %[[REF_TMP]])
+// OGCG:           to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]]
+// OGCG: [[INVOKE_CONT]]:
+// OGCG:   br i1 %[[CALL]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
+// OGCG: [[COND_TRUE]]:
+// OGCG:   invoke void @_ZN5EntryC1Ev(ptr {{.*}} %[[ENSURED_T]])
+// OGCG:           to label %[[TRUE_CONT:.*]] unwind label %[[LPAD]]
+// OGCG: [[TRUE_CONT]]:
+// OGCG:   br label %[[COND_END:.*]]
+// OGCG: [[COND_FALSE]]:
+// OGCG:   store i1 true, ptr %[[CLEANUP_COND]]
+// OGCG:   invoke void @_ZN5EntryC1E4Path(ptr {{.*}} %[[ENSURED_F]], ptr {{.*}} %[[AGG_TMP]])
+// OGCG:           to label %[[FALSE_CONT:.*]] unwind label %[[LPAD2:.*]]
+// OGCG: [[FALSE_CONT]]:
+// OGCG:   br label %[[COND_END]]
+// OGCG: [[COND_END]]:
+// OGCG:   %[[IS_ACTIVE:.*]] = load i1, ptr %[[CLEANUP_COND]]
+// OGCG:   br i1 %[[IS_ACTIVE]], label %[[CLEANUP_ACTION:.*]], label %[[CLEANUP_DONE:.*]]
+// OGCG: [[CLEANUP_ACTION]]:
+// OGCG:   call void @_ZN4PathD1Ev(ptr {{.*}} %[[AGG_TMP]])
+// OGCG:   br label %[[CLEANUP_DONE]]
+// OGCG: [[CLEANUP_DONE]]:
+// OGCG:   call void @_ZN4IterD1Ev(ptr {{.*}} %[[REF_TMP]])
+// OGCG:   ret void
+// OGCG: [[LPAD]]:
+// OGCG:   landingpad { ptr, i32 }
+// OGCG:     cleanup
+// OGCG:   br label %[[EHCLEANUP:.*]]
+// OGCG: [[LPAD2]]:
+// OGCG:   landingpad { ptr, i32 }
+// OGCG:     cleanup
+// OGCG:   %[[EH_IS_ACTIVE:.*]] = load i1, ptr %[[CLEANUP_COND]]
+// OGCG:   br i1 %[[EH_IS_ACTIVE]], label %[[EH_CLEANUP_ACTION:.*]], label %[[EH_CLEANUP_DONE:.*]]
+// OGCG: [[EH_CLEANUP_ACTION]]:
+// OGCG:   call void @_ZN4PathD1Ev(ptr {{.*}} %[[AGG_TMP]])
+// OGCG:   br label %[[EH_CLEANUP_DONE]]
+// OGCG: [[EH_CLEANUP_DONE]]:
+// OGCG:   br label %[[EHCLEANUP]]
+// OGCG: [[EHCLEANUP]]:
+// OGCG:   call void @_ZN4IterD1Ev(ptr {{.*}} %[[REF_TMP]])
+// OGCG:   br label %[[EH_RESUME:.*]]
+// OGCG: [[EH_RESUME]]:
+// OGCG:   resume
