@@ -454,7 +454,7 @@ CharSourceRange tooling::getAssociatedRange(const Decl &Decl,
   // that are not preceeding the decl, since we've already skipped trailing
   // comments with getEntityEndLoc.
   if (const RawComment *Comment =
-          Decl.getASTContext().getRawCommentForDeclNoCache(&Decl))
+          Decl.getASTContext().getRawCommentNoCache(&Decl))
     // Only include a preceding comment if:
     // * it is *not* separate from the declaration (not including any newline
     //   that immediately follows the comment),

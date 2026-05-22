@@ -771,6 +771,10 @@ AIX Support
   (instead of `all`) which only extracts static init from archive members which
   would otherwise be referenced.
   (See https://www.ibm.com/docs/en/aix/7.2.0?topic=l-ld-command for details).
+- The driver now uses ``-lcompiler_rt`` instead of ``-latomic``, and the compiler-rt
+  archive has been renamed from ``libatomic.a`` to ``libcompiler_rt.a`` to avoid conflicts
+  between the LLVM libatomic and the GNU libatomic from the AIX toolbox as they share
+  the same library name.
 
 NetBSD Support
 ^^^^^^^^^^^^^^
@@ -832,6 +836,7 @@ libclang
 - Visit switch initializer statements (https://bugs.kde.org/show_bug.cgi?id=415537#c2)
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
 - The clang_Module_getASTFile API is deprecated and now always returns nullptr
+- The clang_Cursor_getCommentRange API will now return a comment range for macro definitions that have documentation comments.
 
 Code Completion
 ---------------
