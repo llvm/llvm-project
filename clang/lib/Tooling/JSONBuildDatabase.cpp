@@ -139,7 +139,6 @@ const ModuleManager *JSONBuildDatabase::getModuleManager() const {
 
 std::vector<std::string>
 JSONBuildDatabase::getRequiredModules(StringRef FilePath) const {
-
   const auto *TURef = getTUForSource(FilePath);
   std::vector<std::string> RequiredModules;
   if (TURef) {
@@ -174,7 +173,6 @@ JSONBuildDatabase::getModuleNameState(StringRef ModuleName) const {
 std::string
 JSONBuildDatabase::getSourceForModuleName(StringRef ModuleName,
                                           StringRef RequiredSourceFile) const {
-
   const auto *RequiredSourceTURef = getTUForSource(RequiredSourceFile);
   if (RequiredSourceTURef) {
     SmallString<8> SetNameStorage;
@@ -385,7 +383,8 @@ bool JSONBuildDatabase::parseRoot(std::string &ErrorMessage,
     return false;
   }
   // Check compatible version
-  if (Version->getRawValue() != "1") {
+  SmallString<10> VersionStorage;
+  if (Version->getValue(VersionStorage).str() != "1") {
     ErrorMessage =
         ("Unsupported version: \"" + Version->getRawValue() + "\"").str();
     return false;
@@ -399,6 +398,7 @@ bool JSONBuildDatabase::parseSet(std::string &ErrorMessage,
   llvm::yaml::ScalarNode *FamilyName = nullptr;
   llvm::yaml::ScalarNode *Name = nullptr;
   llvm::yaml::SequenceNode *VisibleSets = nullptr;
+  std::vector<llvm::yaml::ScalarNode *> VisibleSetsRefs = {};
   llvm::yaml::SequenceNode *TUs = nullptr;
   std::vector<TranslationUnitRef> TURefs = {};
   for (auto &NextKeyValue : *SetObject) {
@@ -438,6 +438,14 @@ bool JSONBuildDatabase::parseSet(std::string &ErrorMessage,
       if (!VisibleSets) {
         ErrorMessage = "Expected array as value for \"visible-sets\".";
         return false;
+      }
+      for (auto &VisibleSet : *VisibleSets) {
+        auto *Scalar = dyn_cast<llvm::yaml::ScalarNode>(&VisibleSet);
+        if (!Scalar) {
+          ErrorMessage = "Only strings are allowed in 'visible-sets'.";
+          return false;
+        }
+        VisibleSetsRefs.push_back(Scalar);
       }
     } else if (KeyValue == "translation-units") {
       TUs = dyn_cast<llvm::yaml::SequenceNode>(Value);
@@ -501,7 +509,19 @@ bool JSONBuildDatabase::parseSet(std::string &ErrorMessage,
     IndexByFile[NativeFilePath].push_back(TURef);
     AllCommands.push_back(TURef);
     MatchTrie.insert(NativeFilePath);
+    if (TURef.ProvidesModuleName) {
+      SmallString<8> ModuleNameStorage;
+      ModuleNameToDistinctSources
+          [TURef.ProvidesModuleName->getValue(ModuleNameStorage).str()]
+              .insert(NativeFilePath);
+    }
   }
+  // Generate lookup for each set
+  TranslationUnitSet TUSet = {};
+  TUSet.TranslationUnits = std::move(TURefs);
+  TUSet.VisibleSets = std::move(VisibleSetsRefs);
+  SmallString<8> NameStorage;
+  IndexBySet[Name->getValue(NameStorage)] = std::move(TUSet);
   return true;
 }
 

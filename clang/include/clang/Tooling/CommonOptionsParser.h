@@ -133,6 +133,8 @@ public:
 
   std::vector<CompileCommand> getAllCompileCommands() const override;
 
+  const ModuleManager *getModuleManager() const override { return nullptr; }
+
 private:
   std::unique_ptr<CompilationDatabase> Compilations;
   std::vector<ArgumentsAdjuster> Adjusters;

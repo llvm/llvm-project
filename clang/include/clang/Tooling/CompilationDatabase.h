@@ -180,7 +180,7 @@ public:
   ///
   /// By default, returns nothing. Implementations should override this if they
   /// can enumerate their source files.
-  virtual const ModuleManager *getModuleManager() const { return nullptr; }
+  virtual const ModuleManager *getModuleManager() const = 0;
 };
 
 /// A compilation database that returns a single compile command line.
@@ -242,6 +242,8 @@ public:
   /// and 'FilePath' as positional argument.
   std::vector<CompileCommand>
   getCompileCommands(StringRef FilePath) const override;
+
+  const ModuleManager *getModuleManager() const override { return nullptr; }
 
 private:
   /// This is built up to contain a single entry vector to be returned from

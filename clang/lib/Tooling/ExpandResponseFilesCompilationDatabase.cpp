@@ -43,6 +43,10 @@ public:
     return expand(Base->getAllCompileCommands());
   }
 
+  const ModuleManager *getModuleManager() const override {
+    return Base->getModuleManager();
+  }
+
 private:
   std::vector<CompileCommand> expand(std::vector<CompileCommand> Cmds) const {
     for (auto &Cmd : Cmds)
