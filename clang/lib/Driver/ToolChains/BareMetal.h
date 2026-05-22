@@ -77,7 +77,9 @@ public:
                            llvm::opt::ArgStringList &CC1Args) const override;
   std::string computeSysRoot() const override;
   std::string getCompilerRTPath() const override;
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 
 private:
   std::string SysRoot;

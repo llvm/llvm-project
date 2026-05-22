@@ -14,6 +14,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
@@ -1549,6 +1550,7 @@ std::optional<std::string> Module::RemapSourceFile(llvm::StringRef path) {
 
 void Module::RegisterXcodeSDK(llvm::StringRef sdk_name,
                               llvm::StringRef sysroot) {
+  Progress progress("Looking for Xcode SDK", sdk_name.str());
   auto sdk_path_or_err =
       HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk_name.str()});
 

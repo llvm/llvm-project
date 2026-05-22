@@ -769,9 +769,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   VPValue *StepV = Plan.getConstantInt(CanIVTy, 1);
   auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
       /*IV=*/nullptr, Plan.getZero(CanIVTy), StepV, &Plan.getVF(), ID,
-      VPIRFlags::WrapFlagsTy(/*HasNUW=*/LoopRegion->hasCanonicalIVNUW(),
-                             /*HasNSW=*/false),
-      WideCanIV->getDebugLoc());
+      WideCanIV->getNoWrapFlags(), WideCanIV->getDebugLoc());
   NewWideIV->insertBefore(&*Header->getFirstNonPhi());
   WideCanIV->replaceAllUsesWith(NewWideIV);
   WideCanIV->eraseFromParent();
@@ -3427,12 +3425,17 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
 void VPlanTransforms::replaceSymbolicStrides(
     VPlan &Plan, PredicatedScalarEvolution &PSE,
     const DenseMap<Value *, const SCEV *> &StridesMap) {
-  // Replace VPValues for known constant strides guaranteed by predicate scalar
-  // evolution.
-  auto CanUseVersionedStride = [&Plan](VPUser &U, unsigned) {
+  // Replace VPValues for known constant strides guaranteed by predicated scalar
+  // evolution that are guaranteed to be guarded by the runtime checks; that is,
+  // blocks dominated by the vector preheader.
+  assert(!Plan.getVectorLoopRegion() &&
+         "expected to run before loop regions are created");
+  VPDominatorTree VPDT(Plan);
+  VPBlockBase *Preheader = Plan.getEntry()->getSuccessors()[1];
+  auto CanUseVersionedStride = [&VPDT, Preheader](VPUser &U, unsigned) {
     auto *R = cast<VPRecipeBase>(&U);
-    return R->getRegion() ||
-           R->getParent() == Plan.getVectorLoopRegion()->getSinglePredecessor();
+    VPBlockBase *Parent = R->getParent();
+    return VPDT.dominates(Preheader, Parent);
   };
   ValueToSCEVMapTy RewriteMap;
   for (const SCEV *Stride : StridesMap.values()) {
@@ -4013,7 +4016,8 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         Step = Builder.createAdd(
             Step, Builder.createNaryOp(VPInstruction::StepVector, {}, CanIVTy));
         VPValue *CanVecIV =
-            Builder.createAdd(CanIV, Step, WideCanIV->getDebugLoc(), "vec.iv");
+            Builder.createAdd(CanIV, Step, WideCanIV->getDebugLoc(), "vec.iv",
+                              WideCanIV->getNoWrapFlags());
         WideCanIV->replaceAllUsesWith(CanVecIV);
         ToRemove.push_back(WideCanIV);
         continue;
