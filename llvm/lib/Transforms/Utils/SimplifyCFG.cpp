@@ -7058,6 +7058,40 @@ static bool isSwitchDense(ArrayRef<int64_t> Values) {
   return isSwitchDense(Values.size(), Range);
 }
 
+static std::optional<unsigned>
+getDenseSwitchRangeReductionShift(ArrayRef<int64_t> Values, int64_t Base) {
+  assert(llvm::all_of(Values, [Base](int64_t V) { return V >= Base; }) &&
+         "Base must not exceed any switch case value");
+  assert(Values.size() > 1 && "expected multiple switch cases");
+
+  // First, transform the values by subtracting Base.
+  SmallVector<int64_t, 4> ReducedValues(Values);
+  uint64_t ReducedValuesOr = 0;
+  for (auto &V : ReducedValues) {
+    uint64_t Reduced = (uint64_t)V - (uint64_t)Base;
+    ReducedValuesOr |= Reduced;
+    V = (int64_t)Reduced;
+  }
+
+  // Conceptually, the reduced values are non-negative distances from Base.
+  // Since the rest of the transform is bitwise only, treat them as unsigned
+  // bit patterns from here.
+
+  // countr_zero(0) returns 64. As Values is guaranteed to have more than
+  // one element and LLVM disallows duplicate cases, ReducedValuesOr will
+  // have at least one bit set, so Shift will be less than 64.
+  unsigned Shift = llvm::countr_zero(ReducedValuesOr);
+  assert(Shift < 64);
+  if (Shift > 0)
+    for (auto &V : ReducedValues)
+      V = (int64_t)((uint64_t)V >> Shift);
+
+  if (!isSwitchDense(ReducedValues))
+    return std::nullopt;
+
+  return Shift;
+}
+
 /// Determine whether a lookup table should be built for this switch, based on
 /// the number of cases, size of the table, and the types of the results.
 // TODO: We could support larger than legal types by limiting based on the
@@ -7582,50 +7616,23 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   if (isSwitchDense(Values))
     return false;
 
-  struct RangeReduction {
-    int64_t Base;
-    unsigned Shift;
-  };
+  // Find a Base and corresponding Shift that results in a dense switch range.
+  // Values[0] is the local minimum.
+  int64_t Base = Values[0];
+  std::optional<unsigned> Shift;
+  // Prefer Base=0 when the case values are still dense after shifting out their
+  // common low zero bits without subtracting a base. This avoids creating an
+  // unnecessary `(condition - local_min)` expression.
+  if (Base >= 0) {
+    Shift = getDenseSwitchRangeReductionShift(Values, /*Base=*/0);
+    if (Shift)
+      Base = 0;
+  }
+  // Otherwise, try the local minimum as the base.
+  if (!Shift)
+    Shift = getDenseSwitchRangeReductionShift(Values, Base);
 
-  auto TryGetRangeReductionForBase =
-      [&](int64_t CandidateBase) -> std::optional<RangeReduction> {
-    SmallVector<int64_t, 4> ReducedValues;
-    ReducedValues.reserve(Values.size());
-    uint64_t ReducedBits = 0;
-    for (int64_t V : Values) {
-      uint64_t Reduced = (uint64_t)V - (uint64_t)CandidateBase;
-      ReducedBits |= Reduced;
-      ReducedValues.push_back((int64_t)Reduced);
-    }
-
-    unsigned CandidateShift = llvm::countr_zero(ReducedBits);
-    if (CandidateShift >= 64)
-      return std::nullopt;
-    if (CandidateShift > 0)
-      for (auto &V : ReducedValues)
-        V = (int64_t)((uint64_t)V >> CandidateShift);
-
-    if (!isSwitchDense(ReducedValues))
-      return std::nullopt;
-
-    return RangeReduction{CandidateBase, CandidateShift};
-  };
-
-  auto GetRangeReduction = [&]() -> std::optional<RangeReduction> {
-    // Choose the base to subtract from the switch condition. The default is the
-    // local minimum, but prefer Base=0 when the case values are still dense
-    // after shifting out their common low zero bits without subtracting a base.
-    // This avoids creating an unnecessary `(condition - local_min)` expression.
-    int64_t LocalMin = Values[0];
-    if (LocalMin >= 0) {
-      if (auto Reduction = TryGetRangeReductionForBase(0))
-        return Reduction;
-    }
-    return TryGetRangeReductionForBase(LocalMin);
-  };
-
-  std::optional<RangeReduction> Reduction = GetRangeReduction();
-  if (!Reduction)
+  if (!Shift)
     return false;
 
   // The obvious transform is to shift the switch condition right and emit a
@@ -7637,23 +7644,24 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   // shift and puts the shifted-off bits in the uppermost bits. If any of these
   // are nonzero then the switch condition will be very large and will hit the
   // default case.
+  //
+  // This transform can be done speculatively because it is so cheap - it
+  // results in a single rotate operation being inserted.
 
   auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
   Builder.SetInsertPoint(SI);
   Value *Sub = SI->getCondition();
-  if (Reduction->Base != 0)
-    Sub = Builder.CreateSub(Sub, ConstantInt::getSigned(Ty, Reduction->Base));
+  if (Base != 0)
+    Sub = Builder.CreateSub(Sub, ConstantInt::getSigned(Ty, Base));
   Value *Rot = Builder.CreateIntrinsic(
       Ty, Intrinsic::fshl,
-      {Sub, Sub, ConstantInt::get(Ty, Ty->getBitWidth() - Reduction->Shift)});
+      {Sub, Sub, ConstantInt::get(Ty, Ty->getBitWidth() - *Shift)});
   SI->replaceUsesOfWith(SI->getCondition(), Rot);
 
   for (auto Case : SI->cases()) {
     auto *Orig = Case.getCaseValue();
-    auto Sub =
-        Orig->getValue() - APInt(Ty->getBitWidth(), Reduction->Base, true);
-    Case.setValue(
-        cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(Reduction->Shift))));
+    auto Sub = Orig->getValue() - APInt(Ty->getBitWidth(), Base, true);
+    Case.setValue(cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(*Shift))));
   }
   return true;
 }
