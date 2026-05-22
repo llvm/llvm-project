@@ -838,6 +838,15 @@ and can also be duplicated. Note that a constant with significant address
 *can* be merged with a ``unnamed_addr`` constant, the result being a
 constant whose address is significant.
 
+.. warning::
+
+     Constant duplication currently makes it unsound to compare pointers
+     if either may be ``unnamed_addr``, because each reference to the
+     global in the IR may return a different pointer, and optimization
+     passes may create additional references. This means that the current
+     semantics make it technically incorrect to use ``unnamed_addr``
+     for C string literals, but Clang does it anyway.
+
 If the ``local_unnamed_addr`` attribute is given, the address is known to
 not be significant within the module.
 
