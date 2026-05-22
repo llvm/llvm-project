@@ -75,6 +75,9 @@ jobs:
             gcc_arch: powerpc64le-linux-gnu
 
     steps:
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a
+
       - name: Checkout LLVM
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -102,7 +105,7 @@ jobs:
             -DCMAKE_C_COMPILER=${{ matrix.target_triple }}-gcc \
             -DCMAKE_CXX_COMPILER=${{ matrix.target_triple }}-g++ \
             -DCMAKE_BUILD_TYPE=Release \
-            -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }} \
+            -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }}
 
       - name: Build and Run - gcc
         env:
