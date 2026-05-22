@@ -2011,10 +2011,9 @@ bool Driver::getCrashDiagnosticFile(StringRef ReproCrashFilename,
   return false;
 }
 
-static const char BugReporMsg[] =
+static const char BugReportMsg[] =
     "\n********************\n\n"
-    "PLEASE ATTACH THE FOLLOWING FILES TO THE BUG REPORT:\n"
-    "Preprocessed source(s) and associated run script(s) are located at:";
+    "PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:";
 
 // When clang crashes, produce diagnostic information including the fully
 // preprocessed source file(s).  Request that the developer attach the
@@ -2024,6 +2023,8 @@ void Driver::generateCompilationDiagnostics(
     StringRef AdditionalInformation, CompilationDiagnosticReport *Report) {
   if (C.getArgs().hasArg(options::OPT_fno_crash_diagnostics))
     return;
+
+  bool HasCrashTar = C.getArgs().hasArg(options::OPT_fcrash_diagnostics_tar);
 
   unsigned Level = 1;
   if (Arg *A = C.getArgs().getLastArg(options::OPT_fcrash_diagnostics_EQ)) {
@@ -2085,7 +2086,7 @@ void Driver::generateCompilationDiagnostics(
 
     // Redirect stdout/stderr to /dev/null.
     NewLLDInvocation.Execute({std::nullopt, {""}, {""}}, nullptr, nullptr);
-    Diag(clang::diag::note_drv_command_failed_diag_msg) << BugReporMsg;
+    Diag(clang::diag::note_drv_command_failed_diag_msg) << BugReportMsg;
     Diag(clang::diag::note_drv_command_failed_diag_msg) << TmpName;
     Diag(clang::diag::note_drv_command_failed_diag_msg)
         << "\n\n********************";
@@ -2226,12 +2227,13 @@ void Driver::generateCompilationDiagnostics(
     TempFiles.push_back(std::string(Path.begin(), Path.end()));
   }
 
-  Diag(clang::diag::note_drv_command_failed_diag_msg) << BugReporMsg;
+  Diag(clang::diag::note_drv_command_failed_diag_msg) << BugReportMsg;
 
   SmallString<128> VFS;
   SmallString<128> ReproCrashFilename;
   for (std::string &TempFile : TempFiles) {
-    Diag(clang::diag::note_drv_command_failed_diag_msg) << TempFile;
+    if (!HasCrashTar)
+      Diag(clang::diag::note_drv_command_failed_diag_msg) << TempFile;
     if (Report)
       Report->TemporaryFiles.push_back(TempFile);
     if (ReproCrashFilename.empty()) {
@@ -2275,7 +2277,8 @@ void Driver::generateCompilationDiagnostics(
       Report->TemporaryFiles.push_back(std::string(Script));
     TempFiles.push_back(std::string(Script));
     ScriptOS.close();
-    Diag(clang::diag::note_drv_command_failed_diag_msg) << Script;
+    if (!HasCrashTar)
+      Diag(clang::diag::note_drv_command_failed_diag_msg) << Script;
   }
 
   if (Arg *A = C.getArgs().getLastArg(options::OPT_fcrash_diagnostics_tar)) {
@@ -2332,9 +2335,7 @@ void Driver::generateCompilationDiagnostics(
           }
         }
       }
-      Diag(clang::diag::note_drv_command_failed_diag_msg)
-          << (std::string("Crash reproducer tarball created at: ") +
-              CrashDiagnosticsTar);
+      Diag(clang::diag::note_drv_command_failed_diag_msg) << CrashDiagnosticsTar;
     }
   }
 

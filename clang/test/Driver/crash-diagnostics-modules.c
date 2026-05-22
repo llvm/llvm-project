@@ -8,8 +8,8 @@
 
 #pragma clang __debug parser_crash
 
-// CHECK: Preprocessed source(s) and associated run script(s) are located at:
-// CHECK: Crash reproducer tarball created at:
+// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
+// CHECK: repro.tar
 
 // TAR-DAG: {{.*}}.c
 // TAR-DAG: {{.*}}.sh
