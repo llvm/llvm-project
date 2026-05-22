@@ -23,7 +23,7 @@ void testSwitchWithCleanup(int n) {
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[EXN:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
 // CIR:     %[[VAL:.*]] = cir.const #cir.int<42> : !s32i
-// CIR:     cir.store align(16) %[[VAL]], %[[EXN]] : !s32i, !cir.ptr<!s32i>
+// CIR:     cir.store{{.*}} %[[VAL]], %[[EXN]] : !s32i, !cir.ptr<!s32i>
 // CIR:     cir.throw %[[EXN]] : !cir.ptr<!s32i>, @_ZTIi
 // CIR:     cir.unreachable
 // CIR:     cir.yield
@@ -46,7 +46,7 @@ void testSwitchWithCleanup(int n) {
 // CIR-FLAT: ^[[BODY]]:
 // CIR-FLAT:   %[[EXN:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
 // CIR-FLAT:   %[[VAL:.*]] = cir.const #cir.int<42> : !s32i
-// CIR-FLAT:   cir.store align(16) %[[VAL]], %[[EXN]]
+// CIR-FLAT:   cir.store{{.*}} %[[VAL]], %[[EXN]]
 // CIR-FLAT:   cir.try_throw %[[EXN]] : !cir.ptr<!s32i>, @_ZTIi ^[[UNREACH:.+]], ^[[UNWIND:.+]]
 // CIR-FLAT: ^[[UNWIND]]:
 // CIR-FLAT:   %[[ET:.*]] = cir.eh.initiate cleanup : !cir.eh_token

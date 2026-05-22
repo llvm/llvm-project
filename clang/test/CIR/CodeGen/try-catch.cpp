@@ -1645,7 +1645,7 @@ int init_catch_param_with_ref_to_ptr_to_non_record() {
 // CIR:         cir.store {{.*}} %[[P_VAL]], %[[RV_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:         cir.yield
 // CIR:       } cleanup all {
-// CIR:         cir.end_catch %catch_token : !cir.catch_token
+// CIR:         cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
 // CIR:         cir.yield
 // CIR:       }
 // CIR:       cir.yield
@@ -1785,7 +1785,7 @@ void direct_inside_try_catch_with_exception_type() {
 // CIR:         cir.init_catch_param scalar %[[EXN_PTR]] to %[[E]] : !cir.ptr<!void>, !cir.ptr<!s32i>
 // CIR:         cir.yield
 // CIR:       } cleanup all {
-// CIR:         cir.end_catch %catch_token : !cir.catch_token
+// CIR:         cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
 // CIR:         cir.yield
 // CIR:       }
 // CIR:       cir.yield
