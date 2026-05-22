@@ -860,3 +860,10 @@ namespace GH26540 {
 #undef NOEXCEPT17
 #undef CONSTEXPR17
 }
+
+namespace cwg3035 {
+static union {
+  int x = [] { return 42; }();
+  // FIXME-error@-1 {{lambda expressions are not allowed in anonymous unions}}
+};
+} // namespace cwg3035
