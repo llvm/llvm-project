@@ -1140,7 +1140,8 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
            R->getVPRecipeID() == VPRecipeBase::VPReductionEVLSC ||
            R->getVPRecipeID() == VPRecipeBase::VPReplicateSC ||
            R->getVPRecipeID() == VPRecipeBase::VPVectorEndPointerSC ||
-           R->getVPRecipeID() == VPRecipeBase::VPVectorPointerSC;
+           R->getVPRecipeID() == VPRecipeBase::VPVectorPointerSC ||
+           R->getVPRecipeID() == VPRecipeBase::VPWidenCanonicalIVSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -3968,16 +3969,18 @@ protected:
 /// A Recipe for widening the canonical induction variable of the vector loop.
 /// First operand is the canonical IV recipe, a second step operand  (VF * Part)
 /// is added during unrolling.
-class VPWidenCanonicalIVRecipe : public VPSingleDefRecipe {
+class VPWidenCanonicalIVRecipe : public VPRecipeWithIRFlags {
 public:
-  VPWidenCanonicalIVRecipe(VPRegionValue *CanonicalIV)
-      : VPSingleDefRecipe(VPRecipeBase::VPWidenCanonicalIVSC, {CanonicalIV},
-                          CanonicalIV->getType(), /*UV=*/nullptr) {}
+  VPWidenCanonicalIVRecipe(VPRegionValue *CanonicalIV,
+                           const VPIRFlags::WrapFlagsTy &Flags = {false, false})
+      : VPRecipeWithIRFlags(VPRecipeBase::VPWidenCanonicalIVSC, CanonicalIV,
+                            CanonicalIV->getType(), Flags) {}
 
   ~VPWidenCanonicalIVRecipe() override = default;
 
   VPWidenCanonicalIVRecipe *clone() override {
-    auto *WideCanIV = new VPWidenCanonicalIVRecipe(getCanonicalIV());
+    auto *WideCanIV =
+        new VPWidenCanonicalIVRecipe(getCanonicalIV(), getNoWrapFlags());
     if (VPValue *Step = getStepValue())
       WideCanIV->addOperand(Step);
     return WideCanIV;

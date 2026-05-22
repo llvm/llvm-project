@@ -522,14 +522,29 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
     }
   }
 
+  const int nonScalarRank = llvm::count(filledPositions, false);
+  const bool hasReducedRankIndices =
+      static_cast<int>(idxs.size()) == nonScalarRank;
+  const bool hasFullRankIndices = static_cast<int>(idxs.size()) == rank;
+  if (!hasReducedRankIndices && !hasFullRankIndices)
+    return failure();
+
   int arrayCoorIdx = 0;
   for (int i = 0; i < rank; ++i) {
     if (filledPositions[i])
       continue;
 
-    assert((unsigned int)arrayCoorIdx < idxs.size() &&
-           "empty dimension should be eliminated\n");
-    Value index = canonicalizeIndex(idxs[arrayCoorIdx], rewriter);
+    Value sourceIndex;
+    if (hasFullRankIndices) {
+      // Canonicalized rank-reducing array_coor may carry full-rank indices
+      // (including scalar-sliced dimensions).
+      sourceIndex = idxs[i];
+    } else {
+      assert((unsigned int)arrayCoorIdx < idxs.size() &&
+             "empty dimension should be eliminated\n");
+      sourceIndex = idxs[arrayCoorIdx];
+    }
+    Value index = canonicalizeIndex(sourceIndex, rewriter);
     Type cTy = index.getType();
     if (!llvm::isa<IndexType>(cTy)) {
       assert(cTy.isSignlessInteger() && "expected signless integer type");
@@ -560,7 +575,8 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
     Value finalIndex = arith::AddIOp::create(rewriter, loc, scaled, offset);
 
     indices[i] = finalIndex;
-    arrayCoorIdx++;
+    if (hasReducedRankIndices)
+      arrayCoorIdx++;
   }
 
   std::reverse(indices.begin(), indices.end());
@@ -694,7 +710,25 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   strides.reserve(rank);
 
   SmallVector<Value> &shapeVec = sliceInfo.shapeVec;
-  if (sliceInfo.hasProjectedSlice || shapeVec.empty()) {
+  // Pick how to derive sizes/strides for the reinterpret_cast view:
+  //
+  //   shapeVec path: use the collected fir.shape extents and synthesize
+  //     row-major strides. Valid when those extents describe the underlying
+  //     memref's layout -- shape from a defining embox, a shape_shift that
+  //     carries lower bounds, or no slicing at all.
+  //
+  //   box_dims path: query the descriptor at runtime. Required when:
+  //     (a) the slice is projected (physical layout is owned by the box);
+  //     (b) we have no shape information at all; or
+  //     (c) the array_coor itself carries fir.shape + fir.slice on a
+  //         descriptor-backed memref with no shift -- those extents describe
+  //         the post-slice view, not the source, so they cannot be used to
+  //         compute strides (e.g. rebox sourced array_coor).
+  const bool descriptorOwnsLayout =
+      sliceInfo.hasProjectedSlice || shapeVec.empty() ||
+      (isDescriptor && sliceInfo.shiftVec.empty() && arrayCoorOp.getShape() &&
+       arrayCoorOp.getSlice());
+  if (descriptorOwnsLayout) {
     // Projected slices carry their physical layout in the descriptor. Rebuild
     // the MemRef view from box metadata instead of from slice triplets.
     auto boxElementSize =

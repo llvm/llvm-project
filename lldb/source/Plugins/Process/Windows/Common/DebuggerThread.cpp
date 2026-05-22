@@ -156,7 +156,7 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadAttachRoutine(
   LLDB_LOG(log, "preparing to attach to process '{0}' on background thread.",
            pid);
 
-  if (!DebugActiveProcess((DWORD)pid)) {
+  if (!DebugActiveProcess(static_cast<DWORD>(pid))) {
     Status error(::GetLastError(), eErrorTypeWin32);
     m_debug_delegate->OnDebuggerError(error, 0);
     return {};
