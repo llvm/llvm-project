@@ -202,7 +202,7 @@ define i32 @multi_user_cmp(ptr readonly %a, i64 noundef %n) {
 ; CHECK:  Cost of 0 for VF 32: IR %ec = icmp eq i64 %iv.next, %n
 ; CHECK:  Cost of 0 for VF 32: EMIT vp<[[VP10]]> = compute-reduction-result (or) vp<[[VP8]]>
 ; CHECK:  Cost of 0 for VF 32: EMIT vp<[[VP11]]> = freeze vp<[[VP10]]>
-; CHECK:  Cost of 2 for VF 32: EMIT vp<[[VP12]]> = not vp<[[VP11]]>
+; CHECK:  Cost of 1 for VF 32: EMIT vp<[[VP12]]> = not vp<[[VP11]]>
 ; CHECK:  Cost of 0 for VF 32: EMIT vp<[[VP13]]> = compute-reduction-result (or) vp<[[VP6]]>
 ; CHECK:  Cost of 0 for VF 32: EMIT vp<[[VP14]]> = freeze vp<[[VP13]]>
 ; CHECK:  Cost of 1 for VF 32: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
@@ -243,7 +243,7 @@ define i32 @multi_user_cmp(ptr readonly %a, i64 noundef %n) {
 ; CHECK:  Cost of 0 for VF 64: IR %ec = icmp eq i64 %iv.next, %n
 ; CHECK:  Cost of 0 for VF 64: EMIT vp<[[VP10]]> = compute-reduction-result (or) vp<[[VP8]]>
 ; CHECK:  Cost of 0 for VF 64: EMIT vp<[[VP11]]> = freeze vp<[[VP10]]>
-; CHECK:  Cost of 4 for VF 64: EMIT vp<[[VP12]]> = not vp<[[VP11]]>
+; CHECK:  Cost of 1 for VF 64: EMIT vp<[[VP12]]> = not vp<[[VP11]]>
 ; CHECK:  Cost of 0 for VF 64: EMIT vp<[[VP13]]> = compute-reduction-result (or) vp<[[VP6]]>
 ; CHECK:  Cost of 0 for VF 64: EMIT vp<[[VP14]]> = freeze vp<[[VP13]]>
 ; CHECK:  Cost of 1 for VF 64: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
@@ -284,7 +284,7 @@ define i32 @multi_user_cmp(ptr readonly %a, i64 noundef %n) {
 ; CHECK:  Cost of 0 for VF 128: IR %ec = icmp eq i64 %iv.next, %n
 ; CHECK:  Cost of 0 for VF 128: EMIT vp<[[VP10]]> = compute-reduction-result (or) vp<[[VP8]]>
 ; CHECK:  Cost of 0 for VF 128: EMIT vp<[[VP11]]> = freeze vp<[[VP10]]>
-; CHECK:  Cost of 8 for VF 128: EMIT vp<[[VP12]]> = not vp<[[VP11]]>
+; CHECK:  Cost of 1 for VF 128: EMIT vp<[[VP12]]> = not vp<[[VP11]]>
 ; CHECK:  Cost of 0 for VF 128: EMIT vp<[[VP13]]> = compute-reduction-result (or) vp<[[VP6]]>
 ; CHECK:  Cost of 0 for VF 128: EMIT vp<[[VP14]]> = freeze vp<[[VP13]]>
 ; CHECK:  Cost of 1 for VF 128: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
