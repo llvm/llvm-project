@@ -181,10 +181,8 @@ endif ()
 
 # Check whether modules files are compatible with our version of Flang.
 set(RUNTIMES_FORTRAN_MODULES_default OFF)
-if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+if (RUNTIMES_ENABLE_FORTRAN AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
   set(RUNTIMES_FORTRAN_MODULES_default ON)
-else ()
-  set(RUNTIMES_FORTRAN_MODULES_default OFF)
 endif ()
 option(RUNTIMES_FORTRAN_MODULES "Make Fortran .mod files available to Flang; should only be enabled if compiling with a matching version of Flang" "${RUNTIMES_FORTRAN_MODULES_default}")
 

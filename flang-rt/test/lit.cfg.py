@@ -80,7 +80,9 @@ config.substitutions.append(("%isysroot", " ".join(isysroot_flag)))
 
 flang_args = []
 if not config.llvm_tree_available:
-    flang_args.append(f"-fintrinsic-modules-path={config.flang_rt_output_resource_mod_dir}")
+    flang_args.append(
+        f"-fintrinsic-modules-path={config.flang_rt_output_resource_mod_dir}"
+    )
 
 tools = [
     ToolSubst(
