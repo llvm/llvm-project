@@ -45,64 +45,61 @@ class RMWI<SDPatternOperator load, SDPatternOperator operator,
   : Pat<(store (operator (load mode:$addr), imm:$src), mode:$addr),
         (insn mode:$addr, (UIMM8 imm:$src))>;
 
-// Record that INSN performs binary operation OPERATION on a byte
-// memory location.  IMM is the type of the second operand.
-multiclass RMWIByte<SDPatternOperator operator, AddressingMode mode,
-                    Instruction insn> {
-  def : RMWI<z_anyextloadi8, operator, truncstorei8, mode, imm32, insn>;
-  def : RMWI<z_anyextloadi8, operator, truncstorei8, mode, imm64, insn>;
+// Handle RMW operations on the Least Significant Byte (LSB) of wider types.
+// This allows targeting byte-level logical instructions for i16, i32,
+// and i64 memory locations when only the last byte is modified.
+multiclass RMWIByteLSB<SDPatternOperator operator, 
+                       ComplexPattern mode12_1, ComplexPattern mode20_1,
+                       ComplexPattern mode12_3, ComplexPattern mode20_3,
+                       ComplexPattern mode12_7, ComplexPattern mode20_7,
+                       Instruction insn12, Instruction insn20,
+                       PatLeaf mask> {
+  // i16 LSB (+1 offset)
+  def : Pat<(truncstorei16 (i32 (operator (i32 (anyextloadi16 mode12_1:$addr)),
+             (i32 mask:$imm))), mode12_1:$addr),
+            (insn12 mode12_1:$addr, (as_i8imm $imm))>;
+  def : Pat<(truncstorei16 (i32 (operator (i32 (anyextloadi16 mode20_1:$addr)),
+             (i32 mask:$imm))), mode20_1:$addr),
+            (insn20 mode20_1:$addr, (as_i8imm $imm))>;
+
+
+  // i32 LSB (+3 offset)
+  def : Pat<(store (i32 (operator (i32 (load mode12_3:$addr)),
+             (i32 mask:$imm))), mode12_3:$addr),
+            (insn12 mode12_3:$addr, (as_i8imm $imm))>;
+  def : Pat<(store (i32 (operator (i32 (load mode20_3:$addr)),
+             (i32 mask:$imm))), mode20_3:$addr),
+            (insn20 mode20_3:$addr, (as_i8imm $imm))>;
+
+  // i64 LSB (+7 offset)
+  def : Pat<(store (i64 (operator (i64 (load mode12_7:$addr)),
+             (i64 mask:$imm))), mode12_7:$addr),
+            (insn12 mode12_7:$addr, (as_i8imm $imm))>;
+  def : Pat<(store (i64 (operator (i64 (load mode20_7:$addr)),
+             (i64 mask:$imm))), mode20_7:$addr),
+            (insn20 mode20_7:$addr, (as_i8imm $imm))>;
 }
 
-// Handle RMW operations on the Least Significant Byte (LSB) of wider types.
-// This allows targeting byte-level instructions (NI, NIY, etc.) for i16, i32,
-// and i64 memory locations when only the last byte is modified.
-multiclass RMWIByteLSB<SDPatternOperator operator, AddressingMode mode,
-                       Instruction insn> {
+// Record that INSN performs binary operation OPERATION on a byte
+// memory location.  IMM is the type of the second operand.
+multiclass RMWIByte<SDPatternOperator operator, Instruction insn12,
+                    Instruction insn20> {
+  def : RMWI<z_anyextloadi8, operator, truncstorei8, bdaddr12pair, imm32,
+             insn12>;
+  def : RMWI<z_anyextloadi8, operator, truncstorei8, bdaddr12pair, imm64,
+             insn12>;
+  def : RMWI<z_anyextloadi8, operator, truncstorei8, bdaddr20pair, imm32,
+             insn20>;
+  def : RMWI<z_anyextloadi8, operator, truncstorei8, bdaddr20pair, imm64,
+             insn20>;
 
-  // Base + Displacement.
-  // Uses XForms to adjust the displacement to target the LSB.
-  let AddedComplexity = 20 in {
-    def : Pat<(truncstorei16 (i32 (operator (i32 (anyextloadi16_20bit:$src 
-                                                  mode:$addr)),
-                                            (i32 immLSB8:$imm))),
-                             mode:$addr),
-              (insn (get_base_from_load $src), 
-                    (get_disp_lsb1 $src), 
-                    (as_i32imm $imm))>;
-
-    def : Pat<(store (i32 (operator (i32 (load_20bit:$src mode:$addr)),
-                                    (i32 immLSB8:$imm))),
-                     mode:$addr),
-              (insn (get_base_from_load $src), 
-                    (get_disp_lsb3 $src), 
-                    (as_i32imm $imm))>;
-
-    def : Pat<(store (i64 (operator (i64 (load_20bit:$src mode:$addr)),
-                                    (i64 immLSB8:$imm))),
-                     mode:$addr),
-              (insn (get_base_from_load $src), 
-                    (get_disp_lsb7 $src), 
-                    (as_i32imm $imm))>;
-  }
-
-  // Register-only fallback (for AGFI or legalized addresses).
-  // Targets out-of-range addresses legalized into registers.
-  let AddedComplexity = 15 in {
-    def : Pat<(truncstorei16 (i32 (operator (i32 (anyextloadi16 ADDR64:$base)),
-                                            (i32 immLSB8:$imm))),
-                             ADDR64:$base),
-              (insn ADDR64:$base, 1, (as_i32imm $imm))>;
-
-    def : Pat<(store (i32 (operator (i32 (load ADDR64:$base)),
-                                    (i32 immLSB8:$imm))),
-                     ADDR64:$base),
-              (insn ADDR64:$base, 3, (as_i32imm $imm))>;
-
-    def : Pat<(store (i64 (operator (i64 (load ADDR64:$base)),
-                                    (i64 immLSB8:$imm))),
-                     ADDR64:$base),
-              (insn ADDR64:$base, 7, (as_i32imm $imm))>;
-  }
+  // Conditional folding for wider types.
+  defm : RMWIByteLSB<operator,
+                     bdaddr12off1, bdaddr20off1,
+                     bdaddr12off3, bdaddr20off3,
+                     bdaddr12off7, bdaddr20off7,
+                     insn12, insn20,
+                     !if(!eq(operator, and), immAndLSB8, immLSB8)>;
 }
 
 // Record that INSN performs insertion TYPE into a register of class CLS.

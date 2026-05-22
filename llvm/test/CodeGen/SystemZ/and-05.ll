@@ -16,10 +16,7 @@ define void @f1(ptr %ptr) {
 ; Check lowest useful constant for i16, expressed as a signed integer.
 define void @f1_i16(ptr %ptr) {
 ; CHECK-LABEL: f1_i16:
-; CHECK-NOT: ni 1(%r2)
-; CHECK: lh %r0, 0(%r2)
-; CHECK: nill %r0, 65281
-; CHECK: sth %r0, 0(%r2)
+; CHECK: ni 1(%r2), 1
 ; CHECK: br %r14
   %val = load i16, ptr %ptr
   %and = and i16 %val, -255
@@ -30,10 +27,7 @@ define void @f1_i16(ptr %ptr) {
 ; Check lowest useful constant for i32, expressed as a signed integer.
 define void @f1_i32(ptr %ptr) {
 ; CHECK-LABEL: f1_i32:
-; CHECK-NOT: ni 3(%r2)
-; CHECK: lhi %r0, -255
-; CHECK: n %r0, 0(%r2)
-; CHECK: st %r0, 0(%r2)
+; CHECK: ni 3(%r2), 1
 ; CHECK: br %r14
   %val = load i32, ptr %ptr
   %and = and i32 %val, -255
@@ -44,10 +38,7 @@ define void @f1_i32(ptr %ptr) {
 ; Check lowest useful constant for i64, expressed as a signed integer.
 define void @f1_i64(ptr %ptr) {
 ; CHECK-LABEL: f1_i64:
-; CHECK-NOT: ni 7(%r2)
-; CHECK: lghi %r0, -255
-; CHECK: ng %r0, 0(%r2)
-; CHECK: stg %r0, 0(%r2)
+; CHECK: ni 7(%r2), 1
 ; CHECK: br %r14
   %val = load i64, ptr %ptr
   %and = and i64 %val, -255
@@ -69,10 +60,8 @@ define void @f2(ptr %ptr) {
 ; Check the highest useful constant for i16, expressed as a signed integer.
 define void @f2_i16(ptr %ptr) {
 ; CHECK-LABEL: f2_i16:
-; CHECK-NOT: ni {{[0-9]+}}(%r2), 254
-; CHECK: lh %r0, 0(%r2)
-; CHECK: nilf %r0, 65534
-; CHECK: sth %r0, 0(%r2)
+; CHECK: ni 1(%r2), 254
+; CHECK: br %r14
   %val = load i16, ptr %ptr
   %and = and i16 %val, -2
   store i16 %and, ptr %ptr
@@ -82,10 +71,7 @@ define void @f2_i16(ptr %ptr) {
 ; Check the highest useful constant for i32, expressed as a signed integer.
 define void @f2_i32(ptr %ptr) {
 ; CHECK-LABEL: f2_i32:
-; CHECK-NOT: ni 3(%r2)
-; CHECK: lhi %r0, -2
-; CHECK: n %r0, 0(%r2)
-; CHECK: st %r0, 0(%r2)
+; CHECK: ni 3(%r2), 254
 ; CHECK: br %r14
   %val = load i32, ptr %ptr
   %and = and i32 %val, -2
@@ -93,13 +79,22 @@ define void @f2_i32(ptr %ptr) {
   ret void
 }
 
+; Check i32 with zero-extended i16 pattern (0x0000FFxx).
+define void @f2_i32_zext(ptr %ptr) {
+; CHECK-LABEL: f2_i32_zext:
+; CHECK: ni 3(%r2), 254
+; CHECK: br %r14
+  %val = load i32, ptr %ptr
+  %and = and i32 %val, 65534  ; 0x0000FFFE
+  store i32 %and, ptr %ptr
+  ret void
+}
+
 ; Check the highest useful constant for i64, expressed as a signed integer.
 define void @f2_i64(ptr %ptr) {
 ; CHECK-LABEL: f2_i64:
-; CHECK-NOT: ni 7(%r2)
-; CHECK: lghi %r0, -2
-; CHECK: ng %r0, 0(%r2)
-; CHECK: stg %r0, 0(%r2)
+; CHECK: ni 7(%r2), 254
+; CHECK: br %r14
   %val = load i64, ptr %ptr
   %and = and i64 %val, -2
   store i64 %and, ptr %ptr
@@ -118,9 +113,13 @@ define void @f3(ptr %ptr) {
 }
 
 ; Check the lowest useful constant for i16, expressed as an unsigned integer.
+; Constant 1 should not fold for i16, as it requires clearing the high byte.
 define void @f3_i16(ptr %ptr) {
 ; CHECK-LABEL: f3_i16:
-; CHECK: ni 1(%r2), 1
+; CHECK-NOT: ni 1(%r2), 1
+; CHECK: llh %r0, 0(%r2)
+; CHECK: nilf %r0, 1
+; CHECK: sth %r0, 0(%r2)
 ; CHECK: br %r14
   %val = load i16, ptr %ptr
   %and = and i16 %val, 1
@@ -129,9 +128,13 @@ define void @f3_i16(ptr %ptr) {
 }
 
 ; Check the lowest useful constant for i32, expressed as an unsigned integer.
+; Constant 1 should not fold for i32, as it requires clearing the high bytes.
 define void @f3_i32(ptr %ptr) {
 ; CHECK-LABEL: f3_i32:
-; CHECK: ni 3(%r2), 1
+; CHECK-NOT: ni 3(%r2), 1
+; CHECK: lhi %r0, 1
+; CHECK: n %r0, 0(%r2)
+; CHECK: st %r0, 0(%r2)
 ; CHECK: br %r14
   %val = load i32, ptr %ptr
   %and = and i32 %val, 1
@@ -140,9 +143,13 @@ define void @f3_i32(ptr %ptr) {
 }
 
 ; Check the lowest useful constant for i64, expressed as an unsigned integer.
+; Constant 1 should not fold for i64, as it requires clearing the high bytes.
 define void @f3_i64(ptr %ptr) {
 ; CHECK-LABEL: f3_i64:
-; CHECK: ni 7(%r2), 1
+; CHECK-NOT: ni 7(%r2), 1
+; CHECK: lg %r0, 0(%r2)
+; CHECK: risbg %r0, %r0, 63, 191, 0
+; CHECK: stg %r0, 0(%r2)
 ; CHECK: br %r14
   %val = load i64, ptr %ptr
   %and = and i64 %val, 1
@@ -162,9 +169,14 @@ define void @f4(ptr %ptr) {
 }
 
 ; Check the highest useful constant for i16, expressed as a unsigned integer.
+; Constant 254 (0x00FE) should not fold for i16 because the high byte must be
+; cleared.
 define void @f4_i16(ptr %ptr) {
 ; CHECK-LABEL: f4_i16:
-; CHECK: ni 1(%r2), 254
+; CHECK-NOT: ni 1(%r2), 254
+; CHECK: llh %r0, 0(%r2)
+; CHECK: nilf %r0, 254
+; CHECK: sth %r0, 0(%r2)
 ; CHECK: br %r14
   %val = load i16, ptr %ptr
   %and = and i16 %val, 254
@@ -173,9 +185,13 @@ define void @f4_i16(ptr %ptr) {
 }
 
 ; Check the highest useful constant for i32, expressed as a unsigned integer.
+; Constant 254 should not fold for i32 because the high byte must be cleared.
 define void @f4_i32(ptr %ptr) {
 ; CHECK-LABEL: f4_i32:
-; CHECK: ni 3(%r2), 254
+; CHECK-NOT: ni 3(%r2), 254
+; CHECK: lhi %r0, 254
+; CHECK: n %r0, 0(%r2)
+; CHECK: st %r0, 0(%r2)
 ; CHECK: br %r14
   %val = load i32, ptr %ptr
   %and = and i32 %val, 254
@@ -184,9 +200,13 @@ define void @f4_i32(ptr %ptr) {
 }
 
 ; Check the highest useful constant for i64, expressed as a unsigned integer.
+; Constant 254 should not fold for i64 because the high byte must be cleared.
 define void @f4_i64(ptr %ptr) {
 ; CHECK-LABEL: f4_i64:
-; CHECK: ni 7(%r2), 254
+; CHECK-NOT: ni 7(%r2), 254
+; CHECK: lg %r0, 0(%r2)
+; CHECK: risbg %r0, %r0, 56, 190, 0
+; CHECK: stg %r0, 0(%r2)
 ; CHECK: br %r14
   %val = load i64, ptr %ptr
   %and = and i64 %val, 254
@@ -213,7 +233,7 @@ define void @f5_i16(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 4095
   %val = load i16, ptr %ptr
-  %and = and i16 %val, 127
+  %and = and i16 %val, 65407
   store i16 %and, ptr %ptr
   ret void
 }
@@ -225,7 +245,7 @@ define void @f5_i32(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 4095
   %val = load i32, ptr %ptr
-  %and = and i32 %val, 127
+  %and = and i32 %val, 4294967167
   store i32 %and, ptr %ptr
   ret void
 }
@@ -237,7 +257,7 @@ define void @f5_i64(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 4095
   %val = load i64, ptr %ptr
-  %and = and i64 %val, 127
+  %and = and i64 %val, -129
   store i64 %and, ptr %ptr
   ret void
 }
@@ -261,7 +281,7 @@ define void @f6_i16(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 4096
   %val = load i16, ptr %ptr
-  %and = and i16 %val, 127
+  %and = and i16 %val, 65407
   store i16 %and, ptr %ptr
   ret void
 }
@@ -273,7 +293,7 @@ define void @f6_i32(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 4096
   %val = load i32, ptr %ptr
-  %and = and i32 %val, 127
+  %and = and i32 %val, 4294967167
   store i32 %and, ptr %ptr
   ret void
 }
@@ -285,7 +305,7 @@ define void @f6_i64(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 4096
   %val = load i64, ptr %ptr
-  %and = and i64 %val, 127
+  %and = and i64 %val, -129
   store i64 %and, ptr %ptr
   ret void
 }
@@ -309,7 +329,7 @@ define void @f7_i16(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 524287
   %val = load i16, ptr %ptr
-  %and = and i16 %val, 127
+  %and = and i16 %val, 65407
   store i16 %and, ptr %ptr
   ret void
 }
@@ -321,7 +341,7 @@ define void @f7_i32(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 524287
   %val = load i32, ptr %ptr
-  %and = and i32 %val, 127
+  %and = and i32 %val, 4294967167
   store i32 %and, ptr %ptr
   ret void
 }
@@ -333,7 +353,7 @@ define void @f7_i64(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 524287
   %val = load i64, ptr %ptr
-  %and = and i64 %val, 127
+  %and = and i64 %val, -129
   store i64 %and, ptr %ptr
   ret void
 }
@@ -361,7 +381,7 @@ define void @f8_i16(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 524288
   %val = load i16, ptr %ptr
-  %and = and i16 %val, 127
+  %and = and i16 %val, 65407
   store i16 %and, ptr %ptr
   ret void
 }
@@ -375,7 +395,7 @@ define void @f8_i32(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 524288
   %val = load i32, ptr %ptr
-  %and = and i32 %val, 127
+  %and = and i32 %val, 4294967167
   store i32 %and, ptr %ptr
   ret void
 }
@@ -389,7 +409,7 @@ define void @f8_i64(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 524288
   %val = load i64, ptr %ptr
-  %and = and i64 %val, 127
+  %and = and i64 %val, -129
   store i64 %and, ptr %ptr
   ret void
 }
@@ -413,7 +433,7 @@ define void @f9_i16(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 -1
   %val = load i16, ptr %ptr
-  %and = and i16 %val, 127
+  %and = and i16 %val, 65407
   store i16 %and, ptr %ptr
   ret void
 }
@@ -425,7 +445,7 @@ define void @f9_i32(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 -1
   %val = load i32, ptr %ptr
-  %and = and i32 %val, 127
+  %and = and i32 %val, 4294967167
   store i32 %and, ptr %ptr
   ret void
 }
@@ -437,7 +457,7 @@ define void @f9_i64(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 -1
   %val = load i64, ptr %ptr
-  %and = and i64 %val, 127
+  %and = and i64 %val, -129
   store i64 %and, ptr %ptr
   ret void
 }
@@ -461,7 +481,7 @@ define void @f10_i16(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 -524288
   %val = load i16, ptr %ptr
-  %and = and i16 %val, 127
+  %and = and i16 %val, 65407
   store i16 %and, ptr %ptr
   ret void
 }
@@ -473,7 +493,7 @@ define void @f10_i32(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 -524288
   %val = load i32, ptr %ptr
-  %and = and i32 %val, 127
+  %and = and i32 %val, 4294967167
   store i32 %and, ptr %ptr
   ret void
 }
@@ -485,7 +505,7 @@ define void @f10_i64(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 -524288
   %val = load i64, ptr %ptr
-  %and = and i64 %val, 127
+  %and = and i64 %val, -129
   store i64 %and, ptr %ptr
   ret void
 }
@@ -513,7 +533,7 @@ define void @f11_i16(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 -524289
   %val = load i16, ptr %ptr
-  %and = and i16 %val, 127
+  %and = and i16 %val, 65407
   store i16 %and, ptr %ptr
   ret void
 }
@@ -527,7 +547,7 @@ define void @f11_i32(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 -524289
   %val = load i32, ptr %ptr
-  %and = and i32 %val, 127
+  %and = and i32 %val, 4294967167
   store i32 %and, ptr %ptr
   ret void
 }
@@ -541,7 +561,7 @@ define void @f11_i64(ptr %src) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, ptr %src, i64 -524289
   %val = load i64, ptr %ptr
-  %and = and i64 %val, 127
+  %and = and i64 %val, -129
   store i64 %and, ptr %ptr
   ret void
 }
@@ -571,7 +591,7 @@ define void @f12_i16(i64 %src, i64 %index) {
   %add2 = add i64 %add1, 4095
   %ptr = inttoptr i64 %add2 to ptr
   %val = load i16, ptr %ptr
-  %and = and i16 %val, 127
+  %and = and i16 %val, 65407
   store i16 %and, ptr %ptr
   ret void
 }
@@ -586,7 +606,7 @@ define void @f12_i32(i64 %src, i64 %index) {
   %add2 = add i64 %add1, 4095
   %ptr = inttoptr i64 %add2 to ptr
   %val = load i32, ptr %ptr
-  %and = and i32 %val, 127
+  %and = and i32 %val, 4294967167
   store i32 %and, ptr %ptr
   ret void
 }
@@ -601,7 +621,7 @@ define void @f12_i64(i64 %src, i64 %index) {
   %add2 = add i64 %add1, 4095
   %ptr = inttoptr i64 %add2 to ptr
   %val = load i64, ptr %ptr
-  %and = and i64 %val, 127
+  %and = and i64 %val, -129
   store i64 %and, ptr %ptr
   ret void
 }
@@ -631,7 +651,7 @@ define void @f13_i16(i64 %src, i64 %index) {
   %add2 = add i64 %add1, 4096
   %ptr = inttoptr i64 %add2 to ptr
   %val = load i16, ptr %ptr
-  %and = and i16 %val, 127
+  %and = and i16 %val, 65407
   store i16 %and, ptr %ptr
   ret void
 }
@@ -646,7 +666,7 @@ define void @f13_i32(i64 %src, i64 %index) {
   %add2 = add i64 %add1, 4096
   %ptr = inttoptr i64 %add2 to ptr
   %val = load i32, ptr %ptr
-  %and = and i32 %val, 127
+  %and = and i32 %val, 4294967167
   store i32 %and, ptr %ptr
   ret void
 }
@@ -661,7 +681,126 @@ define void @f13_i64(i64 %src, i64 %index) {
   %add2 = add i64 %add1, 4096
   %ptr = inttoptr i64 %add2 to ptr
   %val = load i64, ptr %ptr
-  %and = and i64 %val, 127
+  %and = and i64 %val, -129
+  store i64 %and, ptr %ptr
+  ret void
+}
+
+; Check folding of multi-byte 'and' operations into byte-immediate memory
+; operation 'ni'.
+; Additional tests for immAndLSB8 PatLeaf logic - preservation of upper bytes
+; for i16, i32, and i64. Low/high constant (signed/unsigned) tests have already
+; been covered (f1 to f4).
+
+; Check i16 - should not fold. High byte has bit cleared.
+define void @f_const_i16_no_fold(ptr %ptr) {
+; CHECK-LABEL: f_const_i16_no_fold:
+; CHECK-NOT: ni 1(%r2)
+; CHECK: llh [[REG:%r[0-5]]], 0(%r2)
+; CHECK: nilf [[REG]], 65278
+; CHECK: sth [[REG]], 0(%r2)
+; CHECK: br %r14
+  %val = load i16, ptr %ptr
+  %and = and i16 %val, 65278  ; 0xFEFE
+  store i16 %and, ptr %ptr
+  ret void
+}
+
+; Check i32 - should not fold. Upper bytes have bit cleared.
+define void @f_const_i32_no_fold(ptr %ptr) {
+; CHECK-LABEL: f_const_i32_no_fold:
+; CHECK-NOT: ni 3(%r2)
+; CHECK: lhi [[REG:%r[0-5]]], -258
+; CHECK: n [[REG]], 0(%r2)
+; CHECK: st [[REG]], 0(%r2)
+; CHECK: br %r14
+  %val = load i32, ptr %ptr
+  %and = and i32 %val, 4294967038  ; 0xFFFFFEFE
+  store i32 %and, ptr %ptr
+  ret void
+}
+
+; Check i64 - should not fold. Upper bytes have bit cleared.
+define void @f_const_i64_no_fold(ptr %ptr) {
+; CHECK-LABEL: f_const_i64_no_fold:
+; CHECK-NOT: ni 7(%r2)
+; CHECK: lghi [[REG:%r[0-5]]], -258
+; CHECK: ng [[REG]], 0(%r2)
+; CHECK: stg [[REG]], 0(%r2)
+; CHECK: br %r14
+  %val = load i64, ptr %ptr
+  %and = and i64 %val, -258  ; 0xFFFFFFFFFFFFFFFE
+  store i64 %and, ptr %ptr
+  ret void
+}
+
+; Check i16 - should not fold. Constant 0xFE00 affects more than just the LSB.
+define void @f_const_i16_multi_byte_no_fold(ptr %ptr) {
+; CHECK-LABEL: f_const_i16_multi_byte_no_fold:
+; CHECK-NOT: ni 1(%r2)
+; CHECK: llh [[REG:%r[0-5]]], 0(%r2)
+; CHECK: nilf [[REG]], 65024
+; CHECK: sth [[REG]], 0(%r2)
+; CHECK: br %r14
+  %val = load i16, ptr %ptr
+  %and = and i16 %val, 65024  ; 0xFE00
+  store i16 %and, ptr %ptr
+  ret void
+}
+
+; Check i32 - should not fold. Constant 0xFFFFFE00 affects more than just the
+; LSB.
+define void @f_const_i32_multi_byte_no_fold(ptr %ptr) {
+; CHECK-LABEL: f_const_i32_multi_byte_no_fold:
+; CHECK-NOT: ni 3(%r2)
+; CHECK: lhi %r0, -512
+; CHECK: n %r0, 0(%r2)
+; CHECK: st %r0, 0(%r2)
+; CHECK: br %r14
+  %val = load i32, ptr %ptr
+  %and = and i32 %val, 4294966784  ; 0xFFFFFE00
+  store i32 %and, ptr %ptr
+  ret void
+}
+
+; Check i32 - should not fold. Constant affects a non-LSB byte.
+define void @f_const_i32_wrong_byte_no_fold(ptr %ptr) {
+; CHECK-LABEL: f_const_i32_wrong_byte_no_fold:
+; CHECK-NOT: ni 3(%r2)
+; CHECK: iilf [[REG:%r[0-5]]], 4294902015
+; CHECK: n [[REG]], 0(%r2)
+; CHECK: st [[REG]], 0(%r2)
+; CHECK: br %r14
+  %val = load i32, ptr %ptr
+  %and = and i32 %val, 4294902015  ; 0xFFFF00FF
+  store i32 %and, ptr %ptr
+  ret void
+}
+
+; Check i64 - should not fold. Constant affects more than just the LSB.
+define void @f_const_i64_multi_byte_no_fold(ptr %ptr) {
+; CHECK-LABEL: f_const_i64_multi_byte_no_fold:
+; CHECK-NOT: ni 7(%r2)
+; CHECK: lghi [[REG:%r[0-5]]], -512
+; CHECK: ng [[REG]], 0(%r2)
+; CHECK: stg [[REG]], 0(%r2)
+; CHECK: br %r14
+  %val = load i64, ptr %ptr
+  %and = and i64 %val, -512  ; 0xFFFFFFFFFFFFFE00
+  store i64 %and, ptr %ptr
+  ret void
+}
+
+; Check i64 - should not fold. Constant affects a non-LSB byte.
+define void @f_const_i64_wrong_byte_no_fold(ptr %ptr) {
+; CHECK-LABEL: f_const_i64_wrong_byte_no_fold:
+; CHECK-NOT: ni 7(%r2)
+; CHECK: lgfi [[REG:%r[0-5]]], -65281
+; CHECK: ng [[REG]], 0(%r2)
+; CHECK: stg [[REG]], 0(%r2)
+; CHECK: br %r14
+  %val = load i64, ptr %ptr
+  %and = and i64 %val, -65281  ; 0xFFFFFFFFFFFF00FF
   store i64 %and, ptr %ptr
   ret void
 }
