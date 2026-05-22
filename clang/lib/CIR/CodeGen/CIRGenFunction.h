@@ -1035,10 +1035,10 @@ public:
                                                 const CXXRecordDecl *baseRD,
                                                 bool isVirtual);
 
+  /// Return a CIR constant for an undefined value of \p cirTy.
+  mlir::Value getUndefConstant(mlir::Location loc, mlir::Type cirTy);
+
   /// Get an appropriate 'undef' rvalue for the given type.
-  /// TODO: What's the equivalent for MLIR? Currently we're only using this for
-  /// void types so it just returns RValue::get(nullptr) but it'll need
-  /// addressed later.
   RValue getUndefRValue(clang::QualType ty);
 
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
@@ -1713,8 +1713,8 @@ public:
   void emitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
                                   mlir::Value numElements, Address arrayBase,
                                   const CXXConstructExpr *e,
-                                  bool newPointerIsChecked,
-                                  bool zeroInitialize);
+                                  bool newPointerIsChecked, bool zeroInitialize,
+                                  Address endOfInit);
   void emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
                               clang::CXXCtorType type, bool forVirtualBase,
                               bool delegating, AggValueSlot thisAVS,
@@ -2286,11 +2286,22 @@ public:
                            mlir::Value arraySize = nullptr,
                            Address *alloca = nullptr,
                            mlir::OpBuilder::InsertPoint ip = {});
+  Address createTempAlloca(mlir::Type ty,
+                           mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
+                           CharUnits align, mlir::Location loc,
+                           const Twine &name = "tmp",
+                           mlir::Value arraySize = nullptr,
+                           Address *alloca = nullptr,
+                           mlir::OpBuilder::InsertPoint ip = {});
   Address createTempAllocaWithoutCast(mlir::Type ty, CharUnits align,
                                       mlir::Location loc,
                                       const Twine &name = "tmp",
                                       mlir::Value arraySize = nullptr,
                                       mlir::OpBuilder::InsertPoint ip = {});
+  Address
+  maybeCastStackAddressSpace(Address alloca,
+                             mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
+                             mlir::Value arraySize);
   Address createDefaultAlignTempAlloca(mlir::Type ty, mlir::Location loc,
                                        const Twine &name);
 
@@ -2303,6 +2314,8 @@ public:
   Address createMemTemp(QualType t, CharUnits align, mlir::Location loc,
                         const Twine &name = "tmp", Address *alloca = nullptr,
                         mlir::OpBuilder::InsertPoint ip = {});
+  Address createMemTempWithoutCast(QualType t, mlir::Location loc,
+                                   const Twine &name = "tmp");
 
   mlir::Value performAddrSpaceCast(mlir::Value v, mlir::Type destTy) const {
     if (cir::GlobalOp globalOp = v.getDefiningOp<cir::GlobalOp>())

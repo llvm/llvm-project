@@ -5,7 +5,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    @skipIfWindows
     def test(self):
         self.build()
         if self.TraceOn():

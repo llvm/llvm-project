@@ -793,8 +793,7 @@
 ; REDEFINE: %{opts} =
 
 ; Verbose diagnostics are suppressed but not errors.
-; SUBST-NEG:{{.*}}error:{{.*}}
-; SUBST-NEG:{{.*}}error:{{.*}}
+; SUBST-NEG-COUNT-2:{{.*}}error:{{.*}}
 
 ;        SUBST-NEG:<<<<<<
 ;   SUBST-NEG-NEXT:              1: def-match1 def-nomatch 
