@@ -234,7 +234,7 @@ class Tool(TestToolBase):
             with open(output_dextIR_path, "wb") as fp:
                 pickle.dump(steps, fp, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def _record_heuristic(self, test_name, heuristic):
+    def _record_dex_command_heuristic_score(self, test_name, heuristic):
         """Write out the test's heuristic score to the results .txt file
         if a results directory has been specified.
         """
@@ -243,7 +243,9 @@ class Tool(TestToolBase):
             with open(output_text_path, "a") as fp:
                 self.context.o.auto(heuristic.verbose_output, stream=Stream(fp))
 
-    def _record_metrics(self, test_name, run_match: DebuggerRunMatch):
+    def _record_structured_script_metric_results(
+        self, test_name, run_match: DebuggerRunMatch
+    ):
         """Write out the test's metrics scores to the results .txt file
         if a results directory has been specified.
         """
@@ -312,11 +314,11 @@ class Tool(TestToolBase):
             self._record_steps(test_name, steps)
             if self.context.options.use_script:
                 run_match = DebuggerRunMatch(self.context, steps)
-                self._record_metrics(test_name, run_match)
+                self._record_structured_script_metric_results(test_name, run_match)
                 self._record_successful_test_match(test_name, steps, run_match)
             else:
                 heuristic_score = Heuristic(self.context, steps)
-                self._record_heuristic(test_name, heuristic_score)
+                self._record_dex_command_heuristic_score(test_name, heuristic_score)
                 self._record_successful_test_heuristic(
                     test_name, steps, heuristic_score
                 )

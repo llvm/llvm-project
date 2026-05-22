@@ -52,9 +52,10 @@ class DebuggerStepMatch:
 
 
 class DebuggerRunMatch(object):
-    """Class used to record the complete match of a debugger session and a DexterScript. Compares debugger steps to the
-    script one-at-a-time, rather than comparing individual variables longtitudinally, as there will exist some shared
-    state across evaluation that is updated step-by-step and can be shared across variables.
+    """Class used to record the complete match of a debugger session and a DexterScript. It is necessary to match
+    step-by-step rather than variable-by-variable (i.e. we evaluate all variables for a step before the evaluating the
+    next step), because there are features (yet to be implemented) which allow the match of one variable at step N to
+    affect the match of another variable at step N+1, thus we go one step at a time.
     """
 
     def __init__(self, context, dext_ir: DextIR):

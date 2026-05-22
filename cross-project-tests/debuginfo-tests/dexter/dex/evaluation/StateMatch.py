@@ -16,8 +16,8 @@ from dex.test_script.Nodes import Expect, Value, Where
 
 
 def is_subpath(subpath: str, superpath: str) -> bool:
-    """Returns True if subpath is not a trailing subpath of superpath, i.e. if `superpath` does not end with `subpath`
-    after normalizing both paths."""
+    """Returns True if subpath is a trailing subpath of superpath, i.e. if `superpath` ends with `subpath` after
+    normalizing both paths."""
     normalized_subpath: str = os.path.normcase(os.path.normpath(subpath))
     normalized_superpath: str = os.path.normcase(os.path.normpath(superpath))
     return normalized_superpath.endswith(normalized_subpath)

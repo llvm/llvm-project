@@ -46,6 +46,9 @@ class ScalarMetric(Metric):
         return float(self.value)
 
     def aggregate(self, other):
+        assert (
+            self.improves_asc == other.improves_asc
+        ), "Trying to aggregate different metrics?"
         return ScalarMetric(self.value + other.value, self.improves_asc)
 
     def __repr__(self):
@@ -59,12 +62,17 @@ class FractionMetric(Metric):
         super().__init__(improves_asc)
 
     def as_scalar(self) -> float:
+        if self.dom == 0:
+            return float("nan")
         return float(self.num) / float(self.dom)
 
     def as_pct(self) -> float:
         return self.as_scalar() * 100
 
     def aggregate(self, other):
+        assert (
+            self.improves_asc == other.improves_asc
+        ), "Trying to aggregate different metrics?"
         return FractionMetric(
             self.num + other.num, self.dom + other.dom, self.improves_asc
         )
@@ -102,7 +110,7 @@ def get_variable_metrics(
             num_missing_var_steps += 1
         else:
             num_unexpected_value_steps += 1
-    num_seen_values = sum(1 for ev in expected_values if ev in seen_expected_values)
+    num_seen_values = sum(ev in seen_expected_values for ev in expected_values)
     # And finally produce the metrics map and add the new result to the list.
     metrics = {
         # The number of steps. Though this is not a useful metric in itself, it may be useful to see in tandem with
