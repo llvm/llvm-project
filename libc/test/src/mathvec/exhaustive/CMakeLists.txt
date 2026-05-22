@@ -74,6 +74,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cospif_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    cospif_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.cospif
+    libc.src.mathvec.cospif
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   exp2f_test
   NO_RUN_POSTBUILD
   SUITE
@@ -186,6 +202,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinpif_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    sinpif_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.sinpif
+    libc.src.mathvec.sinpif
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   tanf_test
   NO_RUN_POSTBUILD
   SUITE
@@ -196,6 +228,22 @@ add_fp_unittest(
     .exhaustive_test
     libc.src.math.tanf
     libc.src.mathvec.tanf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  tanpif_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    tanpif_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.tanpif
+    libc.src.mathvec.tanpif
     libc.src.__support.CPP.simd
   LINK_LIBRARIES
     -lpthread

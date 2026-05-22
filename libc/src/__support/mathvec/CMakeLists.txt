@@ -37,6 +37,15 @@ add_header_library(
 )
 
 add_header_library(
+  cospif
+  HDRS
+    cospif.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.cospif
+)
+
+add_header_library(
   exp2f
   HDRS
     exp2f.h
@@ -112,10 +121,28 @@ add_header_library(
 )
 
 add_header_library(
+  sinpif
+  HDRS
+    sinpif.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.sinpif
+)
+
+add_header_library(
   tanf
   HDRS
     tanf.h
   DEPENDS
     libc.src.__support.CPP.simd
     libc.src.__support.math.tanf
+)
+
+add_header_library(
+  tanpif
+  HDRS
+    tanpif.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.tanpif
 )

@@ -55,6 +55,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  cospif
+  SRCS
+    cospif.cpp
+  HDRS
+    ../cospif.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.cospif
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
   exp2f
   SRCS
     exp2f.cpp
@@ -153,6 +167,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sinpif
+  SRCS
+    sinpif.cpp
+  HDRS
+    ../sinpif.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.sinpif
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
   tanf
   SRCS
     tanf.cpp
@@ -161,6 +189,20 @@ add_entrypoint_object(
   DEPENDS
     libc.src.mathvec.abi_prefix
     libc.src.__support.mathvec.tanf
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
+  tanpif
+  SRCS
+    tanpif.cpp
+  HDRS
+    ../tanpif.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.tanpif
   FLAGS
     ROUND_OPT
     FMA_OPT
