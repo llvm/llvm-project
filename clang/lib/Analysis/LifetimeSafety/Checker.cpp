@@ -339,30 +339,25 @@ public:
     };
 
     const FileID DefFile = GetFile(FDef);
-    llvm::SmallVector<std::pair<FileID, const FunctionDecl *>, 2>
-        EarliestDeclForFile{
-            {GetFile(FDef->getCanonicalDecl()), FDef->getCanonicalDecl()}};
+    const FunctionDecl *CanonicalDecl = FDef->getCanonicalDecl();
+    llvm::SmallVector<std::pair<const FunctionDecl *, WarningScope>, 2> Targets{
+        {CanonicalDecl, GetFile(CanonicalDecl) == DefFile
+                            ? WarningScope::IntraTU
+                            : WarningScope::CrossTU}};
 
     auto AddCrossTUDecl = [&](const FunctionDecl *FD) {
       FileID File = GetFile(FD);
       if (File == DefFile)
         return;
-      for (auto [SeenFile, SeenFD] : EarliestDeclForFile)
-        if (SeenFile == File)
+      for (auto [SeenFD, _] : Targets)
+        if (GetFile(SeenFD) == File)
           return;
-      EarliestDeclForFile.push_back({File, FD});
+      Targets.push_back({FD, WarningScope::CrossTU});
     };
 
     llvm::SmallVector<const FunctionDecl *, 4> Redecls(FDef->redecls());
     for (const FunctionDecl *Redecl : llvm::reverse(Redecls))
       AddCrossTUDecl(Redecl);
-
-    llvm::SmallVector<std::pair<const FunctionDecl *, WarningScope>, 2> Targets;
-    for (auto [File, FD] : EarliestDeclForFile) {
-      WarningScope Scope =
-          File == DefFile ? WarningScope::IntraTU : WarningScope::CrossTU;
-      Targets.push_back({FD, Scope});
-    }
 
     return Targets;
   }
