@@ -53,7 +53,7 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     container:
-      image: 'ghcr.io/llvm/libc-ubuntu-24.04@sha256:aaee1d91e5f09e38530ecf78d1978e8d3bbcecfd6c16b5763b855a1e0c060377'
+      image: 'ghcr.io/llvm/libc-ubuntu-24.04@sha256:d4e8e601d63aeacee9ef00ddce42f53d2c72c0c4d15e516886594a9cd1df5f2d'
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:
