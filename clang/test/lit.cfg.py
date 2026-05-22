@@ -231,6 +231,7 @@ def have_host_clang_repl_cuda():
 
     return False
 
+
 skip_clang_repl_checks = lit.util.pythonize_bool(
     lit_config.params.get(
         "clang_skip_clang_repl_checks",
@@ -238,8 +239,8 @@ skip_clang_repl_checks = lit.util.pythonize_bool(
     )
 )
 
-if not skip_clang_repl_checks and have_host_jit_feature_support('jit'):
-    config.available_features.add('host-supports-jit')
+if not skip_clang_repl_checks and have_host_jit_feature_support("jit"):
+    config.available_features.add("host-supports-jit")
 
     if have_host_clang_repl_cuda():
         config.available_features.add('host-supports-cuda')
