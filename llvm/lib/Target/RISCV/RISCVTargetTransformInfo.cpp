@@ -3418,7 +3418,7 @@ bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy,
 bool RISCVTTIImpl::isLegalBroadcastLoad(Type *ElementTy,
                                         ElementCount NumElements) const {
   // Optimized zero-stride loads can be treated as broadcasts.
-  if (!ST->hasVInstructions() || !ST->hasOptimizedZeroStrideLoad()))
+  if (!ST->hasVInstructions() || !ST->hasOptimizedZeroStrideLoad())
     return false;
 
   return TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, ElementTy));
