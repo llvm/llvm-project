@@ -30730,13 +30730,13 @@ SDValue AArch64TargetLowering::emitStackGuardMixCookie(SelectionDAG &DAG,
   // Mix the cookie value with SP to create a position-dependent guard.
   // Both prologue (stores SP - Cookie) and epilogue (compares SP - Cookie)
   // use the same mixing operation.
-  // For FailureBB=true: Val is the stored mixed value, compute SP - Val to unmix
-  // For FailureBB=false: Val is the fresh cookie, compute SP - Val to mix
-  return DAG.getNode(
-      ISD::SUB, DL, Val.getValueType(),
-      DAG.getCopyFromReg(DAG.getEntryNode(), DL,
-                         getStackPointerRegisterToSaveRestore(), MVT::i64),
-      Val);
+  // For FailureBB=true: Val is the stored mixed value, compute SP - Val to
+  // unmix For FailureBB=false: Val is the fresh cookie, compute SP - Val to mix
+  return DAG.getNode(ISD::SUB, DL, Val.getValueType(),
+                     DAG.getCopyFromReg(DAG.getEntryNode(), DL,
+                                        getStackPointerRegisterToSaveRestore(),
+                                        MVT::i64),
+                     Val);
 }
 
 unsigned AArch64TargetLowering::combineRepeatedFPDivisors() const {
