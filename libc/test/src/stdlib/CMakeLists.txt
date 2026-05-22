@@ -402,6 +402,18 @@ add_libc_test(
 )
 
 add_libc_test(
+  mblen_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    mblen_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.stdlib.mblen
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   mbstowcs_test
   SUITE
     libc-stdlib-tests

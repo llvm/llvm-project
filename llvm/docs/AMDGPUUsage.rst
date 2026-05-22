@@ -1826,6 +1826,100 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
    List AMDGPU intrinsics.
 
+'``llvm.amdgcn.av``' Intrinsics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The '``llvm.amdgcn.av``' intrinsics perform load and store operations on flat or
+global memory, with explicit control on how their side-effects propagate through
+the system. They take a *scope* argument as a string metadata, which indicates
+the scope within which these side-effects are guaranteed to be observable.
+[TODO: The exact semantics as a memory consistency model is a work in progress.]
+
+The pointer argument can be a global pointer (``addrspace(1)``) or a flat
+pointer (``addrspace(0)``). Global pointers select ``global_load``/
+``global_store`` instructions; flat pointers select ``flat_load``/
+``flat_store`` instructions. The cache policy bits are the same in both cases.
+
+.. code-block:: llvm
+
+   <4 x i32> @llvm.amdgcn.av.load.b128.p1(
+       ptr addrspace(1), ; source (global)
+       metadata)         ; scope    - e.g. '!0' where '!0 = !{!"workgroup"}'
+
+   <4 x i32> @llvm.amdgcn.av.load.b128.p0(
+       ptr,              ; source (flat)
+       metadata)         ; scope
+
+   void @llvm.amdgcn.av.store.b128.p1(
+       ptr addrspace(1), ; destination (global)
+       <4 x i32>,        ; value
+       metadata)         ; scope
+
+   void @llvm.amdgcn.av.store.b128.p0(
+       ptr,              ; destination (flat)
+       <4 x i32>,        ; value
+       metadata)         ; scope
+
+Implementation Details
+++++++++++++++++++++++
+
+This section is informational and for **internal reference only**. Users should
+not rely on the expansions described below. The only reliable user-level
+guarantees are those provided by the memory consistency model, which is
+currently a work in progress.
+
+The tables below show the cache policy bits for global pointer variants.
+Flat pointer variants use the corresponding ``flat_load``/``flat_store``
+instructions with the same cache policy bits.
+
+**TODO:** Currently the compiler does not support WGP mode on gfx12+. Hence,
+``"workgroup"`` scope currently maps to CU scope (no bits). When WGP mode is
+enabled this should map to ``scope:SCOPE_SE``.
+
+.. table:: AMDGPU Load-Visible Implementation
+   :class: longtable
+
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | target       | instruction             | wavefront     | workgroup     | cluster       | agent         | system        |
+   +==============+=========================+===============+===============+===============+===============+===============+
+   | gfx90*       | ``global_load_dwordx4`` |               |               | ``glc``       | ``glc``       | ``glc``       |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx942       | ``global_load_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx950       | ``global_load_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx10*       | ``global_load_dwordx4`` |               |               | ``glc dlc``   | ``glc dlc``   | ``glc dlc``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx10* (WGP) | ``global_load_dwordx4`` |               | ``glc``       | ``glc dlc``   | ``glc dlc``   | ``glc dlc``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx11*       | ``global_load_b128``    |               |               | ``glc``       | ``glc``       | ``glc``       |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx11* (WGP) | ``global_load_b128``    |               | ``glc``       | ``glc``       | ``glc``       | ``glc``       |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx12+       | ``global_load_b128``    | ``SCOPE_CU``  | ``SCOPE_CU``  | ``SCOPE_SE``  | ``SCOPE_DEV`` | ``SCOPE_SYS`` |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+
+.. table:: AMDGPU Store-Available Implementation
+   :class: longtable
+
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | target | instruction              | wavefront     | workgroup     | cluster       | agent         | system        |
+   +========+==========================+===============+===============+===============+===============+===============+
+   | gfx90* | ``global_store_dwordx4`` |               |               |               |               |               |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx942 | ``global_store_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx950 | ``global_store_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx10* | ``global_store_dwordx4`` |               |               |               |               |               |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx11* | ``global_store_b128``    |               |               |               |               |               |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx12+ | ``global_store_b128``    | ``SCOPE_CU``  | ``SCOPE_CU``  | ``SCOPE_SE``  | ``SCOPE_DEV`` | ``SCOPE_SYS`` |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+
+**Note:** Cache control bits for Store are not affected by WGP mode.
+
 '``llvm.amdgcn.cooperative.atomic``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
