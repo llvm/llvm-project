@@ -1909,7 +1909,7 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
       return ParseCondition(nullptr, Loc, CK, MissingOK);
     }
 
-    if (Tok.is(tok::semi) && parsedAttrs) {
+    if (Tok.is(tok::semi) && ParsedAttrs) {
       // Parse if ([[...]]; true).
       WarnOnInit();
       if (attrs.empty()) {
