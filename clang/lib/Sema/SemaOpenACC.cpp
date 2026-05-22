@@ -2690,7 +2690,7 @@ Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
 
   } else if (Ty->isArrayType()) {
     // Non-constant arrays (VLAs and incomplete arrays) cannot be statically
-    // enumerated to build an InitListExpr.  
+    // enumerated to build an InitListExpr.
     // Punt the same way we do for pointers below; codegen is responsible for
     // handling these cases (or emitting a NYI). Without this, a variable-length
     // array reduction operand falls through to the scalar branch and trips the
