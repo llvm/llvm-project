@@ -4111,14 +4111,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::vector_reduce_mul: {
     if (IID == Intrinsic::vector_reduce_mul) {
-      // Multiplicative reduction over the vector with (potentially-extended)
-      // i1 element type is actually a (potentially zero-extended)
-      // logical `and` reduction over the original non-extended value:
-      //   vector_reduce_mul(?ext(<n x i1>))
-      //     -->
-      //   zext(vector_reduce_and(<n x i1>))
       Value *Arg = II->getArgOperand(0);
-      Value *Vect;
 
       if (Value *NewOp =
               simplifyReductionOperand(Arg, /*CanReorderLanes=*/true)) {
@@ -4126,13 +4119,37 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return II;
       }
 
-      if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-        if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
-          if (VTy->getElementType() == Builder.getInt1Ty()) {
-            Value *Res = Builder.CreateAndReduce(Vect);
-            Res = Builder.CreateZExt(Res, II->getType());
-            return replaceInstUsesWith(CI, Res);
-          }
+      auto IsI1Vec = [&](Value *V) {
+        auto *VTy = dyn_cast<VectorType>(V->getType());
+        return VTy && VTy->getElementType() == Builder.getInt1Ty();
+      };
+
+      // vector_reduce_mul(zext(<n x i1>)) --> zext(vector_reduce_and(<n x i1>))
+      Value *Vect;
+      if (match(Arg, m_ZExt(m_Value(Vect))) && IsI1Vec(Vect)) {
+        Value *Res = Builder.CreateAndReduce(Vect);
+        return replaceInstUsesWith(CI, Builder.CreateZExt(Res, II->getType()));
+      }
+
+      // vector_reduce_mul(sext(<n x i1>)) -->
+      //   sext(vector_reduce_and(<n x i1>)) if n is odd
+      //   zext(vector_reduce_and(<n x i1>)) if n is even.
+      // This is because if the vector is all `true`, we are multiplying n -1s.
+      // Therefore the answer is -1 if n is odd, or 1 if n is even.
+      if (match(Arg, m_SExt(m_Value(Vect)))) {
+        if (auto *VTy = dyn_cast<FixedVectorType>(Vect->getType());
+            VTy && VTy->getElementType() == Builder.getInt1Ty()) {
+          Value *Res = Builder.CreateAndReduce(Vect);
+          Res = (VTy->getNumElements() & 1)
+                    ? Builder.CreateSExt(Res, II->getType())
+                    : Builder.CreateZExt(Res, II->getType());
+          return replaceInstUsesWith(CI, Res);
+        }
+      }
+
+      // vector_reduce_mul(<n x i1>) --> vector_reduce_and(<n x i1>)
+      if (IsI1Vec(Arg)) {
+        return replaceInstUsesWith(CI, Builder.CreateAndReduce(Arg));
       }
     }
     [[fallthrough]];

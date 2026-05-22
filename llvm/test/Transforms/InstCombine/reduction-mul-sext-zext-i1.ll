@@ -95,8 +95,33 @@ define i64 @reduce_mul_zext_external_use(<8 x i1> %x) {
   ret i64 %res
 }
 
+define i8 @reduce_mul_sext_odd_lanes(<3 x i1> %x) {
+; CHECK-LABEL: @reduce_mul_sext_odd_lanes(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i1> [[X:%.*]] to i3
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i3 [[TMP1]], -1
+; CHECK-NEXT:    [[RES:%.*]] = sext i1 [[TMP2]] to i8
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sext = sext <3 x i1> %x to <3 x i8>
+  %res = call i8 @llvm.vector.reduce.mul.v3i8(<3 x i8> %sext)
+  ret i8 %res
+}
+
+define i8 @reduce_mul_zext_odd_lanes(<3 x i1> %x) {
+; CHECK-LABEL: @reduce_mul_zext_odd_lanes(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i1> [[X:%.*]] to i3
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i3 [[TMP1]], -1
+; CHECK-NEXT:    [[RES:%.*]] = zext i1 [[TMP2]] to i8
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %zext = zext <3 x i1> %x to <3 x i8>
+  %res = call i8 @llvm.vector.reduce.mul.v3i8(<3 x i8> %zext)
+  ret i8 %res
+}
+
 declare i1 @llvm.vector.reduce.mul.v8i32(<8 x i1> %a)
 declare i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %a)
 declare i64 @llvm.vector.reduce.mul.v8i64(<8 x i64> %a)
 declare i16 @llvm.vector.reduce.mul.v16i16(<16 x i16> %a)
 declare i8 @llvm.vector.reduce.mul.v128i8(<128 x i8> %a)
+declare i8 @llvm.vector.reduce.mul.v3i8(<3 x i8> %a)
