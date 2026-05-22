@@ -29,7 +29,7 @@ int main() {
 
 /// Test that we can use functions in !where nodes, and that Dexter steps
 /// through the entirety of those functions. We expect both calls to `assign` to
-/// be stepped through, but only the outermost call of `replace` should be
+/// be stepped through, but only the non-recursive call of `replace` should be
 /// stepped through, as the !where matches to the rootmost applicable frame.
 
 // CHECK:      assign

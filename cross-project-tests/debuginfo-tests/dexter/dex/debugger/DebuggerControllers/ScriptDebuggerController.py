@@ -64,7 +64,7 @@ def get_active_where_expects(
     script: DexterScript, step_info: StepIR
 ) -> Dict[Where, Tuple[int, List[Value]]]:
     """Match the script against the step_info, producing a dict that maps each !where that matches a stack frame to the
-    index of the (outermost) stack frame that it matches, and if the frame that it matches is the current stack frame
+    index of the (rootmost) stack frame that it matches, and if the frame that it matches is the current stack frame
     (i.e. the frame index is 0), also includes a list of every direct child !expect node for that !where.
     """
     active_where_expects: Dict[Where, Tuple[int, List[Value]]] = {}
@@ -74,7 +74,7 @@ def get_active_where_expects(
             raise NotImplementedError(
                 "Support for nested !where nodes currently unimplemented."
             )
-        # For this !where, search for the lowest stack frame (e.g. the outermost call) that matches it.
+        # For this !where, search for the rootmost stack frame that matches it.
         matching_frame_idx = next(
             (
                 frame_idx
