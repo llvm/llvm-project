@@ -57,13 +57,12 @@ void ArgumentsAdjustingCompilations::appendArgumentsAdjuster(
   Adjusters.push_back(std::move(Adjuster));
 }
 
-std::vector<CompileCommand> ArgumentsAdjustingCompilations::getCompileCommands(
-    StringRef FilePath) const {
+std::vector<CompileCommand>
+ArgumentsAdjustingCompilations::getCompileCommands(StringRef FilePath) const {
   return adjustCommands(Compilations->getCompileCommands(FilePath));
 }
 
-std::vector<std::string>
-ArgumentsAdjustingCompilations::getAllFiles() const {
+std::vector<std::string> ArgumentsAdjustingCompilations::getAllFiles() const {
   return Compilations->getAllFiles();
 }
 
@@ -78,6 +77,15 @@ std::vector<CompileCommand> ArgumentsAdjustingCompilations::adjustCommands(
     for (const auto &Adjuster : Adjusters)
       Command.CommandLine = Adjuster(Command.CommandLine, Command.Filename);
   return Commands;
+}
+
+std::vector<std::string>
+ArgumentsAdjustingCompilations::getRequiredModules(StringRef FilePath) const {
+  return {};
+}
+std::optional<std::string>
+ArgumentsAdjustingCompilations::getModuleName(StringRef FilePath) const {
+  return std::nullopt;
 }
 
 llvm::Error CommonOptionsParser::init(
@@ -140,8 +148,7 @@ llvm::Error CommonOptionsParser::init(
     }
   }
   auto AdjustingCompilations =
-      std::make_unique<ArgumentsAdjustingCompilations>(
-          std::move(Compilations));
+      std::make_unique<ArgumentsAdjustingCompilations>(std::move(Compilations));
   Adjuster =
       getInsertArgumentAdjuster(ArgsBefore, ArgumentInsertPosition::BEGIN);
   Adjuster = combineAdjusters(

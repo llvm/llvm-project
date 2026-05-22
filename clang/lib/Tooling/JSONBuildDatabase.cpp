@@ -30,10 +30,8 @@
 #include <cassert>
 #include <memory>
 #include <optional>
-#include <signal.h>
 #include <string>
 #include <system_error>
-#include <thread>
 #include <unistd.h>
 #include <utility>
 #include <vector>
@@ -42,13 +40,13 @@ using namespace clang;
 using namespace tooling;
 
 namespace {
-// This plugin locates a nearby compile_command.json file, and also infers
+// This plugin locates a nearby build_database.json file, and also infers
 // compile commands for files not present in the database.
 class JSONBuildDatabasePlugin : public CompilationDatabasePlugin {
   std::unique_ptr<CompilationDatabase>
   loadFromDirectory(StringRef Directory, std::string &ErrorMessage) override {
     SmallString<1024> JSONDatabasePath(Directory);
-    llvm::sys::path::append(JSONDatabasePath, "compile_commands.json");
+    llvm::sys::path::append(JSONDatabasePath, "build_database.json");
     auto Base = JSONBuildDatabase::loadFromFile(JSONDatabasePath, ErrorMessage);
     return Base ? inferTargetAndDriverMode(
                       inferMissingCompileCommands(expandResponseFiles(
@@ -133,6 +131,16 @@ std::vector<CompileCommand> JSONBuildDatabase::getAllCompileCommands() const {
   std::vector<CompileCommand> Commands;
   getCommands(AllCommands, Commands);
   return Commands;
+}
+
+std::vector<std::string>
+JSONBuildDatabase::getRequiredModules(StringRef FilePath) const {
+  return {};
+}
+
+std::optional<std::string>
+JSONBuildDatabase::getModuleName(StringRef FilePath) const {
+  return "tset";
 }
 
 static llvm::StringRef stripExecutableExtension(llvm::StringRef Name) {

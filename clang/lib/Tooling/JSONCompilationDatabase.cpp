@@ -261,6 +261,16 @@ JSONCompilationDatabase::getAllCompileCommands() const {
   return Commands;
 }
 
+std::vector<std::string>
+JSONCompilationDatabase::getRequiredModules(StringRef FilePath) const {
+  return {};
+}
+
+std::optional<std::string>
+JSONCompilationDatabase::getModuleName(StringRef FilePath) const {
+  return std::nullopt;
+}
+
 static llvm::StringRef stripExecutableExtension(llvm::StringRef Name) {
   Name.consume_back(".exe");
   return Name;

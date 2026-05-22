@@ -89,6 +89,10 @@ public:
   /// database.
   std::vector<CompileCommand> getAllCompileCommands() const override;
 
+  std::vector<std::string>
+  getRequiredModules(StringRef FilePath) const override;
+  std::optional<std::string> getModuleName(StringRef FilePath) const override;
+
 private:
   /// Constructs a JSON build database on a memory buffer.
   JSONBuildDatabase(std::unique_ptr<llvm::MemoryBuffer> Database)

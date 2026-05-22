@@ -126,8 +126,23 @@ public:
   /// $ clang++ -o production a.cc b.cc -DPRODUCTION
   /// A compilation database representing the project would return both command
   /// lines for a.cc and b.cc and only the first command line for t.cc.
-  virtual std::vector<CompileCommand> getCompileCommands(
-      StringRef FilePath) const = 0;
+  virtual std::vector<CompileCommand>
+  getCompileCommands(StringRef FilePath) const = 0;
+
+  // Returns all required modules for the specified file.
+  //
+  // This is the set of imported modules that are required to compile this file.
+  virtual std::vector<std::string>
+  getRequiredModules(StringRef FilePath) const = 0;
+
+  // Returns the module name for the specified file.
+  //
+  // Will return no value when the module information is unknown (not provided)
+  // or unknowable (C). Empty string indicates this file does not produce a
+  // named module. Otherwise returns the name of the module exported by this
+  // file
+  virtual std::optional<std::string>
+  getModuleName(StringRef FilePath) const = 0;
 
   /// Returns the list of all files available in the compilation database.
   ///
@@ -206,6 +221,10 @@ public:
   /// and 'FilePath' as positional argument.
   std::vector<CompileCommand>
   getCompileCommands(StringRef FilePath) const override;
+
+  std::vector<std::string>
+  getRequiredModules(StringRef FilePath) const override;
+  std::optional<std::string> getModuleName(StringRef FilePath) const override;
 
 private:
   /// This is built up to contain a single entry vector to be returned from

@@ -267,6 +267,7 @@ parseBuildDatabaseJSON(PathRef Path, llvm::StringRef Data, std::string &Error) {
   }
   return nullptr;
 }
+// Adapt CDB-loading functions to a common interface for DirectoryCache::load().
 static std::unique_ptr<tooling::CompilationDatabase>
 parseComplilationCommandsJSON(PathRef Path, llvm::StringRef Data,
                               std::string &Error) {

@@ -382,6 +382,15 @@ FixedCompilationDatabase::getCompileCommands(StringRef FilePath) const {
   return Result;
 }
 
+std::vector<std::string>
+FixedCompilationDatabase::getRequiredModules(StringRef FilePath) const {
+  return {};
+}
+std::optional<std::string>
+FixedCompilationDatabase::getModuleName(StringRef FilePath) const {
+  return std::nullopt;
+}
+
 namespace {
 
 class FixedCompilationDatabasePlugin : public CompilationDatabasePlugin {
