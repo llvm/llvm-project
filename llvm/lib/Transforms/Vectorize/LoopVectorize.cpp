@@ -6951,9 +6951,14 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
                  InterleaveGroups, CM.isEpilogueAllowed());
 
   // Convert memory recipes to strided access recipes if the strided access is
-  // legal and profitable.
-  RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
-                 *OrigLoop, CostCtx, Range);
+  // legal and profitable. Use a new VPCostContext to ensure type inference
+  // reflects the current plan state.
+  {
+    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, Config.CostKind, CM.PSE,
+                          OrigLoop);
+    RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
+                   *OrigLoop, CostCtx, Range);
+  }
 
   // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
   if (Range.Start.isScalar())
