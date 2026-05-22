@@ -37,9 +37,10 @@ define i32 @test_ctselect_extremal_values(i1 %cond) {
 ;
 ; RV32-LABEL: test_ctselect_extremal_values:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    slli a0, a0, 31
+; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    lui a1, 524288
-; RV32-NEXT:    sub a0, a1, a0
+; RV32-NEXT:    xor a0, a0, a1
 ; RV32-NEXT:    ret
   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 2147483647, i32 -2147483648)
   ret i32 %result
