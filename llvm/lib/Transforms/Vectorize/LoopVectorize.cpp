@@ -7065,7 +7065,14 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       // is selected if the negated condition is true in any iteration.
       if (TrueValIsPhi)
         Cmp = Builder.createNot(Cmp);
-      VPValue *Or = Builder.createOr(PhiR, Cmp);
+
+      // Convert the reduction phi to operate on bools.
+      auto *NewPhiR =
+          PhiR->cloneWithOperands(Plan->getFalse(), PhiR->getBackedgeValue());
+      NewPhiR->insertBefore(PhiR);
+      PhiR->replaceAllUsesWith(NewPhiR);
+
+      VPValue *Or = Builder.createOr(NewPhiR, Cmp);
       // Only replace uses inside the vector region with Or. External uses
       // (e.g. scalar preheader resume phis) must be replaced by the user
       // update loop below with FinalReductionResult.
@@ -7073,9 +7080,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         return cast<VPRecipeBase>(&U)->getRegion();
       });
       ToDelete.push_back(AnyOfSelect);
-
-      // Convert the reduction phi to operate on bools.
-      PhiR->setOperand(0, Plan->getFalse());
 
       // Update NewExitingVPV if it was pointing to the now-replaced select.
       if (NewExitingVPV == AnyOfSelect)
