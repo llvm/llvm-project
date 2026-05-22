@@ -5479,10 +5479,9 @@ void Driver::BuildJobs(Compilation &C) const {
         continue;
 
       if (isa<PrecompileJobAction>(A) && !A->getInputs().empty()) {
-        const Action *Input = A->getInputs().front();
-        types::ID InputType = Input->getType();
-        if (InputType == types::TY_CXXStdModule ||
-            InputType == types::TY_PP_CXXStdModule)
+        const Action *FirstAction = A->getInputs().front();
+        if (FirstAction->getType() == types::TY_CXXStdModule ||
+            FirstAction->getType() == types::TY_PP_CXXStdModule)
           continue;
       }
 
@@ -6494,8 +6493,8 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     // The non-offloading toolchain on Darwin requires deterministic input
     // file name for binaries to be deterministic, therefore it needs unique
     // directory.
-    llvm::Triple Triple(C.getDriver().getTargetTriple());
-    bool NeedUniqueDirectory =
+    const llvm::Triple Triple(C.getDriver().getTargetTriple());
+    const bool NeedUniqueDirectory =
         (JA.getOffloadingDeviceKind() == Action::OFK_None ||
          JA.getOffloadingDeviceKind() == Action::OFK_Host) &&
         Triple.isOSDarwin();
