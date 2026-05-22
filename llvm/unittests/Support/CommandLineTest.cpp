@@ -42,6 +42,12 @@ MATCHER(StringEquality, "Checks if two char* are equal as strings") {
   return std::string(std::get<0>(arg)) == std::string(std::get<1>(arg));
 }
 
+bool preferForwardSlash() {
+  SmallString<1> Path("/");
+  llvm::sys::path::native(Path);
+  return Path == "/";
+}
+
 class TempEnvVar {
  public:
   TempEnvVar(const char *name, const char *value)
@@ -1015,7 +1021,7 @@ TEST(CommandLineTest, ResponseFiles) {
 TEST(CommandLineTest, RecursiveResponseFiles) {
   vfs::InMemoryFileSystem FS;
 #ifdef _WIN32
-  const char *TestRoot = LLVM_WINDOWS_PREFER_FORWARD_SLASH ? "C:/" : "C:\\";
+  const char *TestRoot = preferForwardSlash() ? "C:/" : "C:\\";
 #else
   const char *TestRoot = "/";
 #endif
@@ -1085,7 +1091,7 @@ TEST(CommandLineTest, RecursiveResponseFiles) {
 TEST(CommandLineTest, ResponseFilesAtArguments) {
   vfs::InMemoryFileSystem FS;
 #ifdef _WIN32
-  const char *TestRoot = LLVM_WINDOWS_PREFER_FORWARD_SLASH ? "C:/" : "C:\\";
+  const char *TestRoot = preferForwardSlash() ? "C:/" : "C:\\";
 #else
   const char *TestRoot = "/";
 #endif
