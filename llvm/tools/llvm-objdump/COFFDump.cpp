@@ -733,9 +733,6 @@ static void printDecodedWOD(const DecodedWOD &W) {
     // OS (see the Windows SDK headers) but the set is not yet stable.
     outs() << "WOD_PUSH_CANONICAL_FRAME Type=" << static_cast<unsigned>(W.Type);
     break;
-  default:
-    outs() << "<unknown WOD opcode " << static_cast<unsigned>(W.Opcode) << ">";
-    break;
   }
 }
 

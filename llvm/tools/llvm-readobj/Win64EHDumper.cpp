@@ -473,9 +473,6 @@ static void printDecodedWOD(ScopedPrinter &SW, raw_ostream &OS,
     // OS (see the Windows SDK headers) but the set is not yet stable.
     OS << "PUSH_CANONICAL_FRAME Type=" << static_cast<unsigned>(W.Type);
     break;
-  default:
-    OS << "<unknown opcode " << static_cast<unsigned>(W.Opcode) << ">";
-    break;
   }
 }
 
