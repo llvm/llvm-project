@@ -108,12 +108,8 @@ set(host_sources
   time-intrinsic.cpp
   trampoline.cpp
   unit-map.cpp
+  io-api-server.cpp
 )
-if (TARGET llvm-libc-common-utilities)
-  list(APPEND host_sources io-api-server.cpp)
-  set_property(SOURCE main.cpp APPEND PROPERTY
-    COMPILE_DEFINITIONS FLANG_RT_HAS_RPC_SERVER)
-endif()
 
 # Sources that can be compiled directly for the GPU.
 set(gpu_sources
