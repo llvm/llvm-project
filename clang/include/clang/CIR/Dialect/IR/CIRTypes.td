@@ -737,12 +737,7 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
     bool isComplete() const { return !isIncomplete(); };
     bool isIncomplete() const;
 
-    mlir::Type getLargestMember(const mlir::DataLayout &dataLayout) const;
-
-    /// Tail-padding member for a padded union (last member appended by
-    /// lowerUnion).  Empty type when the record is not padded.
-    mlir::Type getPadding() const;
-
+    mlir::Type getUnionStorageType(const mlir::DataLayout &dataLayout) const;
     size_t getNumElements() const { return getMembers().size(); };
     std::string getKindAsStr() {
       switch (getKind()) {

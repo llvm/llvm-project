@@ -3297,13 +3297,15 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
       for (mlir::Type ty : type.getMembers())
         llvmMembers.push_back(convertTypeForMemory(converter, dataLayout, ty));
       break;
-    // Unions are lowered as only the largest member.
+    // Unions are lowered as the 'storage' type. Which is the type with the
+    // largest alignment (or, if there are multiples, the largest type with the
+    // largest alignment).
     case cir::RecordType::Union:
       if (type.getMembers().empty())
         break;
-      if (auto largestMember = type.getLargestMember(dataLayout))
+      if (auto storageType = type.getUnionStorageType(dataLayout))
         llvmMembers.push_back(
-            convertTypeForMemory(converter, dataLayout, largestMember));
+            convertTypeForMemory(converter, dataLayout, storageType));
       if (type.getPadded()) {
         auto last = *type.getMembers().rbegin();
         llvmMembers.push_back(

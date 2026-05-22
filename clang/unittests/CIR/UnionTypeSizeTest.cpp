@@ -73,7 +73,7 @@ TEST_F(UnionTypeSizeTest, EmptyUnion) {
   mlir::DataLayout dl(module);
 
   llvm::TypeSize size = dl.getTypeSizeInBits(ty);
-  EXPECT_EQ(size.getFixedValue(), 0u);
+  EXPECT_EQ(size.getFixedValue(), 8u);
 
   module->erase();
 }
