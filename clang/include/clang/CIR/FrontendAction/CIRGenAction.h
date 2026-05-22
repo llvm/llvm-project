@@ -46,7 +46,7 @@ private:
   mlir::MLIRContext *MLIRCtx;
 
   std::unique_ptr<llvm::LLVMContext> Ctx;
-  llvm::SmallVector<::clang::LinkModule, 4> LinkModules;
+  llvm::SmallVector<clang::LinkModule> LinkModules;
 
 protected:
   CIRGenAction(OutputType Action, mlir::MLIRContext *MLIRCtx = nullptr);
