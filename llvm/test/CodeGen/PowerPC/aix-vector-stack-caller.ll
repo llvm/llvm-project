@@ -4,7 +4,7 @@
 ; RUN: FileCheck %s --check-prefixes=32BIT,LITERAL
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+altivec \
-; RUN:     -vec-extabi -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN:     -vec-extabi -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s | \
 ; RUN: FileCheck %s --check-prefixes=64BIT,LITERAL
 
 define dso_local i32 @vec_caller() {
