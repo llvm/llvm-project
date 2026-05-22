@@ -6,6 +6,7 @@ add_header_library(
     exhaustive_test.h
   DEPENDS
     libc.src.__support.CPP.simd
+    libc.src.__support.CPP.limits
 )
 
 add_fp_unittest(

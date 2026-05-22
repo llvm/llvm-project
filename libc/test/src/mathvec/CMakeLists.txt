@@ -1,5 +1,13 @@
 add_custom_target(libc-mathvec-unittests)
 
+add_header_library(
+  unit_test_wrappers
+  HDRS
+    UnitTestWrappers.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+)
+
 add_fp_unittest(
   expf_test
   SUITE
@@ -7,6 +15,7 @@ add_fp_unittest(
   SRCS
     expf_test.cpp
   DEPENDS
+    .unit_test_wrappers
     libc.src.math.expf
     libc.src.mathvec.expf
     libc.src.__support.FPUtil.fp_bits
