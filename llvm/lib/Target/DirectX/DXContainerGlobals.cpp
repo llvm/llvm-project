@@ -149,7 +149,6 @@ void DXContainerGlobals::computeShaderHashAndDebugName(
 
   Digest.update(DXILConstant->getRawDataValues());
   MD5::MD5Result Result = Digest.final();
-  dxbc::ShaderHash HashData = {0, {0}};
 
   memcpy(reinterpret_cast<void *>(&HashData.Digest), Result.data(), 16);
   if (sys::IsBigEndianHost)

@@ -40,4 +40,4 @@ define i32 @add(i32 %a, i32 %b) {
 ; YAML:   Hash:
 ; YAML:     IncludesSource:  true
 ; YAML:     Digest:          [
-; YAML-NOT: Digest:          [ [[HASH]]
+; YAML-NOT: [[HASH]]
