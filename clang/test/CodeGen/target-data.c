@@ -265,6 +265,14 @@
 // RUN: FileCheck %s -check-prefix=SPIRVVULKAN
 // SPIRVVULKAN: target datalayout = "e-ve-i64:64-n8:16:32:64-G10"
 
+// RUN: %clang_cc1 -triple spirv32-unknown-unknown -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=SPIRV32UNKNOWN
+// SPIRV32UNKNOWN: target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1-pu3:32:32"
+
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=SPIRV64UNKNOWN
+// SPIRV64UNKNOWN: target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1-pu3:64:64"
+
 // RUN: %clang_cc1 -triple spirv32-unknown-vulkan -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=SPIRV32VULKAN
 // SPIRV32VULKAN: target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
