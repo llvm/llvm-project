@@ -73,7 +73,7 @@ let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
 }
 
 let Defs = [LR8] in
-  def MovePCtoLR8 : PPCEmitTimePseudo<(outs), (ins), "#MovePCtoLR8", []>,
+  def MovePCtoLR8 : PPCEmitTimePseudo<(outs), (ins)>,
                     PPC970_Unit_BRU;
 
 let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
@@ -433,18 +433,16 @@ let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [RM] in
 def TCRETURNdi8 :PPCEmitTimePseudo< (outs),
                         (ins calltarget:$dst, i32imm:$offset),
-                 "#TC_RETURNd8 $dst $offset",
-                 []>;
+                 [], "#TC_RETURNd8 $dst $offset">;
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [RM] in
 def TCRETURNai8 :PPCEmitTimePseudo<(outs), (ins abscalltarget:$func, i32imm:$offset),
-                 "#TC_RETURNa8 $func $offset",
-                 [(PPCtc_return (i64 imm:$func), imm:$offset)]>;
+                 [(PPCtc_return (i64 imm:$func), imm:$offset)],
+                 "#TC_RETURNa8 $func $offset">;
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [RM] in
 def TCRETURNri8 : PPCEmitTimePseudo<(outs), (ins CTRRC8:$dst, i32imm:$offset),
-                 "#TC_RETURNr8 $dst $offset",
-                 []>;
+                 [], "#TC_RETURNr8 $dst $offset">;
 
 let hasSideEffects = 0 in {
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, isBranch = 1,
@@ -559,7 +557,7 @@ def MTCTR8loop : XFXForm_1_ext<31, 467, 9, (outs), (ins g8rc:$RST),
 
 let hasSideEffects = 1, hasNoSchedulingInfo = 1, isNotDuplicable = 1, Uses = [CTR8], Defs = [CTR8] in
 def DecreaseCTR8loop : PPCEmitTimePseudo<(outs crbitrc:$rT), (ins i64imm:$stride),
-                                        "#DecreaseCTR8loop", [(set i1:$rT, (int_loop_decrement (i64 imm:$stride)))]>;
+                                         [(set i1:$rT, (int_loop_decrement (i64 imm:$stride)))]>;
 
 let Pattern = [(set i64:$RST, readcyclecounter)] in
 def MFTB8 : XFXForm_1_ext<31, 339, 268, (outs g8rc:$RST), (ins),
@@ -571,10 +569,10 @@ def MFTB8 : XFXForm_1_ext<31, 339, 268, (outs g8rc:$RST), (ins),
 // the POWER3.
 
 let Defs = [X1], Uses = [X1] in
-def DYNALLOC8 : PPCEmitTimePseudo<(outs g8rc:$result), (ins g8rc:$negsize, memri:$fpsi),"#DYNALLOC8",
+def DYNALLOC8 : PPCEmitTimePseudo<(outs g8rc:$result), (ins g8rc:$negsize, memri:$fpsi),
                        [(set i64:$result,
                              (PPCdynalloc i64:$negsize, iaddr:$fpsi))]>;
-def DYNAREAOFFSET8 : PPCEmitTimePseudo<(outs i64imm:$result), (ins memri:$fpsi), "#DYNAREAOFFSET8",
+def DYNAREAOFFSET8 : PPCEmitTimePseudo<(outs i64imm:$result), (ins memri:$fpsi),
                        [(set i64:$result, (PPCdynareaoffset iaddr:$fpsi))]>;
 // Probed alloca to support stack clash protection.
 let Defs = [X1], Uses = [X1], hasNoSchedulingInfo = 1 in {
@@ -584,15 +582,13 @@ def PROBED_ALLOCA_64 : PPCCustomInserterPseudo<(outs g8rc:$result),
                              (PPCprobedalloca i64:$negsize, iaddr:$fpsi))]>;
 def PREPARE_PROBED_ALLOCA_64 : PPCEmitTimePseudo<(outs
     g8rc:$fp, g8rc:$actual_negsize),
-    (ins g8rc:$negsize, memri:$fpsi), "#PREPARE_PROBED_ALLOCA_64", []>;
+    (ins g8rc:$negsize, memri:$fpsi)>;
 def PREPARE_PROBED_ALLOCA_NEGSIZE_SAME_REG_64 : PPCEmitTimePseudo<(outs
     g8rc:$fp, g8rc:$actual_negsize),
-    (ins g8rc:$negsize, memri:$fpsi),
-    "#PREPARE_PROBED_ALLOCA_NEGSIZE_SAME_REG_64", []>,
+    (ins g8rc:$negsize, memri:$fpsi)>,
     RegConstraint<"$actual_negsize = $negsize">;
 def PROBED_STACKALLOC_64 : PPCEmitTimePseudo<(outs g8rc:$scratch, g8rc:$temp),
-    (ins i64imm:$stacksize),
-    "#PROBED_STACKALLOC_64", []>;
+    (ins i64imm:$stacksize)>;
 }
 
 let hasSideEffects = 0 in {
@@ -1400,19 +1396,15 @@ def LD   : DSForm_1<58, 0, (outs g8rc:$RST), (ins (memrix $D, $RA):$addr),
 // Otherwise, we need to create two instructions to form a 32-bit offset,
 // so we have a custom matcher for TOC_ENTRY in PPCDAGToDAGIsel::Select().
 def LDtoc: PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc:$reg),
-                  "#LDtoc",
                   [(set i64:$rD,
                      (PPCtoc_entry tglobaladdr:$disp, i64:$reg))]>, isPPC64;
 def LDtocJTI: PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc:$reg),
-                  "#LDtocJTI",
                   [(set i64:$rD,
                      (PPCtoc_entry tjumptable:$disp, i64:$reg))]>, isPPC64;
 def LDtocCPT: PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc:$reg),
-                  "#LDtocCPT",
                   [(set i64:$rD,
                      (PPCtoc_entry tconstpool:$disp, i64:$reg))]>, isPPC64;
 def LDtocBA: PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc:$reg),
-                  "#LDtocCPT",
                   [(set i64:$rD,
                      (PPCtoc_entry tblockaddress:$disp, i64:$reg))]>, isPPC64;
 
@@ -1462,8 +1454,7 @@ def LQ   : DQForm_RTp5_RA17_MEM<56, 0,
 // RA and RB.
 def LQX_PSEUDO : PPCCustomInserterPseudo<(outs g8prc:$RTp), (ins memrr:$src)>;
 
-def RESTORE_QUADWORD : PPCEmitTimePseudo<(outs g8prc:$RTp), (ins memrix:$src),
-                                         "#RESTORE_QUADWORD", []>;
+def RESTORE_QUADWORD : PPCEmitTimePseudo<(outs g8prc:$RTp), (ins memrix:$src)>;
 }
 
 }
@@ -1477,30 +1468,27 @@ def : Pat<(int_ppc_atomic_load_i128 ForceXForm:$src),
 // Support for medium and large code model.
 let hasSideEffects = 0 in {
 let isReMaterializable = 1 in {
-def ADDIStocHA8: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentry:$disp),
-                       "#ADDIStocHA8", []>, isPPC64;
-def ADDItocL8: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentry:$disp),
-                     "#ADDItocL8", []>, isPPC64;
+def ADDIStocHA8: PPCEmitTimePseudo<(outs g8rc:$rD),
+                                   (ins g8rc_nox0:$reg, tocentry:$disp)>, isPPC64;
+def ADDItocL8: PPCEmitTimePseudo<(outs g8rc:$rD),
+                                 (ins g8rc_nox0:$reg, tocentry:$disp)>, isPPC64;
 }
 
 // Local Data Transform
-def ADDItoc8 : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentry:$disp),
-                   "#ADDItoc8",
-                   []>, isPPC64;
+def ADDItoc8 : PPCEmitTimePseudo<(outs g8rc:$rD),
+                                 (ins g8rc_nox0:$reg, tocentry:$disp)>, isPPC64;
 let mayLoad = 1 in
-def LDtocL: PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc_nox0:$reg),
-                   "#LDtocL", []>, isPPC64;
+def LDtocL: PPCEmitTimePseudo<(outs g8rc:$rD),
+                              (ins tocentry:$disp, g8rc_nox0:$reg)>, isPPC64;
 }
 
 // Support for thread-local storage.
 def ADDISgotTprelHA: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm64:$disp),
-                         "#ADDISgotTprelHA",
                          [(set i64:$rD,
                            (PPCaddisGotTprelHA i64:$reg,
                                                tglobaltlsaddr:$disp))]>,
                   isPPC64;
 def LDgotTprelL: PPCEmitTimePseudo<(outs g8rc_nox0:$rD), (ins s16imm64:$disp, g8rc_nox0:$reg),
-                        "#LDgotTprelL",
                         [(set i64:$rD,
                           (PPCldGotTprelL tglobaltlsaddr:$disp, i64:$reg))]>,
                  isPPC64;
@@ -1511,25 +1499,23 @@ def CFENCE8 : PPCPostRAExpPseudo<(outs), (ins g8rc:$cr)>;
 def : Pat<(PPCaddTls i64:$in, tglobaltlsaddr:$g),
           (ADD8TLS $in, tglobaltlsaddr:$g)>;
 def ADDIStlsgdHA: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm64:$disp),
-                         "#ADDIStlsgdHA",
                          [(set i64:$rD,
                            (PPCaddisTlsgdHA i64:$reg, tglobaltlsaddr:$disp))]>,
                   isPPC64;
 def ADDItlsgdL : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm64:$disp),
-                       "#ADDItlsgdL",
                        [(set i64:$rD,
                          (PPCaddiTlsgdL i64:$reg, tglobaltlsaddr:$disp))]>,
                  isPPC64;
 
 class GETtlsADDRPseudo <string asmstr> : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc:$reg, tlsgd:$sym),
-                                             asmstr,
                                              [(set i64:$rD,
-                                               (PPCgetTlsAddr i64:$reg, tglobaltlsaddr:$sym))]>,
+                                               (PPCgetTlsAddr i64:$reg, tglobaltlsaddr:$sym))],
+                                             asmstr>,
                                       isPPC64;
 class GETtlsldADDRPseudo <string asmstr> : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc:$reg, tlsgd:$sym),
-                                             asmstr,
                                              [(set i64:$rD,
-                                               (PPCgetTlsldAddr i64:$reg, tglobaltlsaddr:$sym))]>,
+                                               (PPCgetTlsldAddr i64:$reg, tglobaltlsaddr:$sym))],
+                                             asmstr>,
                                       isPPC64;
 
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1 in {
@@ -1557,15 +1543,15 @@ def GETtlsldADDRPCREL : GETtlsldADDRPseudo <"#GETtlsldADDRPCREL">;
 let Defs = [X0,X4,X5,X11,LR8,CR0] in {
 def GETtlsADDR64AIX :
   PPCEmitTimePseudo<(outs g8rc:$rD),(ins g8rc:$offset, g8rc:$handle),
-                    "GETtlsADDR64AIX",
                     [(set i64:$rD,
-                      (PPCgetTlsAddr i64:$offset, i64:$handle))]>, isPPC64;
+                      (PPCgetTlsAddr i64:$offset, i64:$handle))],
+                    "GETtlsADDR64AIX">, isPPC64;
 // On AIX, the call to .__tls_get_mod needs one input in X3 for the module handle.
 def GETtlsMOD64AIX :
   PPCEmitTimePseudo<(outs g8rc:$rD),(ins g8rc:$handle),
-                    "GETtlsMOD64AIX",
                     [(set i64:$rD,
-                      (PPCgetTlsMod i64:$handle))]>, isPPC64;
+                      (PPCgetTlsMod i64:$handle))],
+                    "GETtlsMOD64AIX">, isPPC64;
 }
 }
 
@@ -1576,19 +1562,16 @@ let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
     in
 def ADDItlsgdLADDR : PPCEmitTimePseudo<(outs g8rc:$rD),
                             (ins g8rc_nox0:$reg, s16imm64:$disp, tlsgd:$sym),
-                            "#ADDItlsgdLADDR",
                             [(set i64:$rD,
                               (PPCaddiTlsgdLAddr i64:$reg,
                                                  tglobaltlsaddr:$disp,
                                                  tglobaltlsaddr:$sym))]>,
                      isPPC64;
 def ADDIStlsldHA: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm64:$disp),
-                         "#ADDIStlsldHA",
                          [(set i64:$rD,
                            (PPCaddisTlsldHA i64:$reg, tglobaltlsaddr:$disp))]>,
                   isPPC64;
 def ADDItlsldL : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm64:$disp),
-                       "#ADDItlsldL",
                        [(set i64:$rD,
                          (PPCaddiTlsldL i64:$reg, tglobaltlsaddr:$disp))]>,
                  isPPC64;
@@ -1596,12 +1579,11 @@ def ADDItlsldL : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm6
 // the region handle in R3 and GETtlsADDR64AIX.
 def TLSGDAIX8 :
   PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc:$offset, g8rc:$handle),
-                     "#TLSGDAIX8",
                      [(set i64:$rD,
                        (PPCTlsgdAIX i64:$offset, i64:$handle))]>;
 // This pseudo is expanded to the call to GETtlsMOD64AIX.
 def TLSLDAIX8 : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc:$handle),
-                     "#TLSLDAIX8", [(set i64:$rD, (PPCTlsldAIX i64:$handle))]>;
+                     [(set i64:$rD, (PPCTlsldAIX i64:$handle))]>;
 // Combined op for ADDItlsldL and GETtlsADDR, late expanded.  X3 and LR8
 // are true defines, while the rest of the Defs are clobbers.
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
@@ -1609,26 +1591,22 @@ let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
     in
 def ADDItlsldLADDR : PPCEmitTimePseudo<(outs g8rc:$rD),
                             (ins g8rc_nox0:$reg, s16imm64:$disp, tlsgd:$sym),
-                            "#ADDItlsldLADDR",
                             [(set i64:$rD,
                               (PPCaddiTlsldLAddr i64:$reg,
                                                  tglobaltlsaddr:$disp,
                                                  tglobaltlsaddr:$sym))]>,
                      isPPC64;
 def ADDISdtprelHA: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm64:$disp),
-                          "#ADDISdtprelHA",
                           [(set i64:$rD,
                             (PPCaddisDtprelHA i64:$reg,
                                               tglobaltlsaddr:$disp))]>,
                    isPPC64;
 def ADDIdtprelL : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm64:$disp),
-                         "#ADDIdtprelL",
                          [(set i64:$rD,
                            (PPCaddiDtprelL i64:$reg, tglobaltlsaddr:$disp))]>,
                   isPPC64;
 let Size = 8 in
 def PADDIdtprel : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm64:$disp),
-                          "#PADDIdtprel",
                           [(set i64:$rD,
                             (PPCpaddiDtprel i64:$reg, tglobaltlsaddr:$disp))]>,
                   isPPC64;
@@ -1684,8 +1662,7 @@ def STQ : DSForm_1<62, 2, (outs), (ins g8prc:$RST, (memrix $D, $RA):$addr),
 
 def STQX_PSEUDO : PPCCustomInserterPseudo<(outs), (ins g8prc:$RSp, memrr:$dst)>;
 
-def SPILL_QUADWORD : PPCEmitTimePseudo<(outs), (ins g8prc:$RSp, memrix:$dst),
-                                       "#SPILL_QUADWORD", []>;
+def SPILL_QUADWORD : PPCEmitTimePseudo<(outs), (ins g8prc:$RSp, memrix:$dst)>;
 }
 
 }

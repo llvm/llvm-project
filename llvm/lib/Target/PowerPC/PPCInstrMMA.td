@@ -520,16 +520,12 @@ let Predicates = [MMA, IsNotISAFuture] in {
                      "xvi8ger4spp $AT, $XA, $XB", IIC_VecGeneral, []>,
     RegConstraint<"$ATi = $AT">;
   let mayStore = 1 in {
-    def SPILL_ACC: PPCEmitTimePseudo<(outs), (ins acc:$AT, memrix16:$dst),
-                                     "#SPILL_ACC", []>;
-    def SPILL_UACC: PPCEmitTimePseudo<(outs), (ins uacc:$AT, memrix16:$dst),
-                                     "#SPILL_UACC", []>;
+    def SPILL_ACC: PPCEmitTimePseudo<(outs), (ins acc:$AT, memrix16:$dst)>;
+    def SPILL_UACC: PPCEmitTimePseudo<(outs), (ins uacc:$AT, memrix16:$dst)>;
   }
   let mayLoad = 1, hasSideEffects = 0 in {
-    def RESTORE_ACC: PPCEmitTimePseudo<(outs acc:$AT), (ins memrix16:$src),
-                                       "#RESTORE_ACC", []>;
-    def RESTORE_UACC: PPCEmitTimePseudo<(outs uacc:$AT), (ins memrix16:$src),
-                                       "#RESTORE_UACC", []>;
+    def RESTORE_ACC: PPCEmitTimePseudo<(outs acc:$AT), (ins memrix16:$src)>;
+    def RESTORE_UACC: PPCEmitTimePseudo<(outs uacc:$AT), (ins memrix16:$src)>;
   }
 }
 
@@ -562,20 +558,14 @@ let Predicates = [MMA, IsISAFuture], isCodeGenOnly = 1 in {
                      RegConstraint<"$ATi = $AT">;
 
   let mayStore = 1 in {
-    def SPILL_WACC: PPCEmitTimePseudo<(outs), (ins wacc:$AT, memrix16:$dst),
-                                      "#SPILL_WACC", []>;
-    def SPILL_DMRP: PPCEmitTimePseudo<(outs), (ins dmrp:$AT, memrix16:$dst),
-                                      "#SPILL_DMRP", []>;
-    def SPILL_DMR: PPCEmitTimePseudo<(outs), (ins dmr:$AT, memrix16:$dst),
-                                      "#SPILL_DMR", []>;
+    def SPILL_WACC: PPCEmitTimePseudo<(outs), (ins wacc:$AT, memrix16:$dst)>;
+    def SPILL_DMRP: PPCEmitTimePseudo<(outs), (ins dmrp:$AT, memrix16:$dst)>;
+    def SPILL_DMR: PPCEmitTimePseudo<(outs), (ins dmr:$AT, memrix16:$dst)>;
   }
   let mayLoad = 1, hasSideEffects = 0 in {
-    def RESTORE_WACC: PPCEmitTimePseudo<(outs wacc:$AT), (ins memrix16:$src),
-                                        "#RESTORE_WACC", []>;
-    def RESTORE_DMRP: PPCEmitTimePseudo<(outs dmrp:$AT), (ins memrix16:$src),
-                                        "#RESTORE_DMRP", []>;
-    def RESTORE_DMR: PPCEmitTimePseudo<(outs dmr:$AT), (ins memrix16:$src),
-                                        "#RESTORE_DMR", []>;
+    def RESTORE_WACC: PPCEmitTimePseudo<(outs wacc:$AT), (ins memrix16:$src)>;
+    def RESTORE_DMRP: PPCEmitTimePseudo<(outs dmrp:$AT), (ins memrix16:$src)>;
+    def RESTORE_DMR: PPCEmitTimePseudo<(outs dmr:$AT), (ins memrix16:$src)>;
   }
 }
 
