@@ -370,7 +370,7 @@ define float @ldexp_ldexp_reassoc(float %x, i32 %a, i32 %b) {
 define float @ldexp_reassoc_ldexp_reassoc(float %x, i32 %a, i32 %b) {
 ; CHECK-LABEL: define float @ldexp_reassoc_ldexp_reassoc
 ; CHECK-SAME: (float [[X:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    [[LDEXP1:%.*]] = call reassoc float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret float [[LDEXP1]]
 ;
@@ -382,7 +382,7 @@ define float @ldexp_reassoc_ldexp_reassoc(float %x, i32 %a, i32 %b) {
 define float @ldexp_reassoc_nsz_ldexp_reassoc_nsz(float %x, i32 %a, i32 %b) {
 ; CHECK-LABEL: define float @ldexp_reassoc_nsz_ldexp_reassoc_nsz
 ; CHECK-SAME: (float [[X:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    [[LDEXP1:%.*]] = call reassoc nsz float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret float [[LDEXP1]]
 ;
@@ -395,7 +395,7 @@ define float @ldexp_reassoc_nsz_ldexp_reassoc_nsz(float %x, i32 %a, i32 %b) {
 define float @ldexp_reassoc_ldexp_reassoc_preserve_flags(float %x, i32 %a, i32 %b) {
 ; CHECK-LABEL: define float @ldexp_reassoc_ldexp_reassoc_preserve_flags
 ; CHECK-SAME: (float [[X:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    [[LDEXP1:%.*]] = call reassoc nnan ninf float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret float [[LDEXP1]]
 ;
@@ -407,7 +407,7 @@ define float @ldexp_reassoc_ldexp_reassoc_preserve_flags(float %x, i32 %a, i32 %
 define <2 x float> @ldexp_reassoc_ldexp_reassoc_vec(<2 x float> %x, <2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: define <2 x float> @ldexp_reassoc_ldexp_reassoc_vec
 ; CHECK-SAME: (<2 x float> [[X:%.*]], <2 x i32> [[A:%.*]], <2 x i32> [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.sadd.sat.v2i32(<2 x i32> [[A]], <2 x i32> [[B]])
 ; CHECK-NEXT:    [[LDEXP1:%.*]] = call reassoc <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[X]], <2 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x float> [[LDEXP1]]
 ;
@@ -500,7 +500,10 @@ define float @ldexp_ldexp_opposite_constants(float %x) {
 define float @ldexp_ldexp_negated_variable_reassoc(float %x, i32 %a) {
 ; CHECK-LABEL: define float @ldexp_ldexp_negated_variable_reassoc
 ; CHECK-SAME: (float [[X:%.*]], i32 [[A:%.*]]) {
-; CHECK-NEXT:    ret float [[X]]
+; CHECK-NEXT:    [[NEG_A:%.*]] = sub i32 0, [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[A]], i32 [[NEG_A]])
+; CHECK-NEXT:    [[LDEXP1:%.*]] = call reassoc float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP1]])
+; CHECK-NEXT:    ret float [[LDEXP1]]
 ;
   %ldexp0 = call reassoc float @llvm.ldexp.f32.i32(float %x, i32 %a)
   %neg.a = sub i32 0, %a

@@ -3198,7 +3198,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::ldexp: {
-    // ldexp(ldexp(x, a), b) -> ldexp(x, a + b)
+    // ldexp(ldexp(x, a), b) -> ldexp(x, add.sat(a, b))
     //
     // The danger is if the first ldexp would overflow to infinity or underflow
     // to zero, but the combined exponent avoids it. We ignore this with
@@ -3238,9 +3238,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       if ((FMF.allowReassoc() && InnerFlags.allowReassoc()) ||
           signBitMustBeTheSame(Exp, InnerExp, SQ.getWithInstruction(II))) {
-        // TODO: Add nsw/nuw probably safe if integer type exceeds exponent
-        // width.
-        Value *NewExp = Builder.CreateAdd(InnerExp, Exp);
+        Value *NewExp =
+            Builder.CreateBinaryIntrinsic(Intrinsic::sadd_sat, InnerExp, Exp);
         II->setArgOperand(1, NewExp);
         II->setFastMathFlags(InnerFlags); // Or the inner flags.
         return replaceOperand(*II, 0, InnerSrc);
