@@ -9,7 +9,7 @@ on:
 
 jobs:
   windows-msvc-shared:
-    name: libc-shared-test with MSVC (${{ matrix.arch }})
+    name: libc-shared-test with MSVC on ${{ matrix.arch }}
     if: github.repository_owner == 'llvm'
     timeout-minutes: 20
     strategy:
@@ -48,7 +48,7 @@ jobs:
         run: cmake --build build --target libc-shared-tests
 
   linux-cross-arch-shared:
-    name: libc-shared-tests on (${{ matrix.arch }})
+    name: libc-shared-tests on ${{ matrix.arch }}
     if: github.repository_owner == 'llvm'
     timeout-minutes: 20
     runs-on: ubuntu-24.04
@@ -122,7 +122,7 @@ jobs:
           cmake --build build/gcc --target libc-shared-tests
 
   linux-gcc-shared:
-    name: libc-shared-tests with (${{ matrix.c_compiler }})
+    name: libc-shared-tests with ${{ matrix.name }}
     if: github.repository_owner == 'llvm'
     timeout-minutes: 20
     runs-on: ubuntu-24.04
@@ -132,15 +132,20 @@ jobs:
       fail-fast: false # If one arch fails, let the other finish
       matrix:
         include:
-          - c_compiler: gcc
+          - name: gcc
+            c_compiler: gcc
             cxx_compiler: g++
-          - c_compiler: gcc-7
-            cxx_compiler: g++-7
-          - c_compiler: gcc-8
-            cxx_compiler: g++-8
-          - c_compiler: gcc-9
+          - name: gcc-7
+            c_compiler: /usr/local/gcc7/bin/gcc
+            cxx_compiler: /usr/local/gcc7/bin/g++
+          - name: gcc-8
+            c_compiler: /usr/local/gcc8/bin/gcc
+            cxx_compiler: /usr/local/gcc8/bin/g++
+          - name: gcc-9
+            c_compiler: gcc-9
             cxx_compiler: g++-9
-          - c_compiler: gcc-11
+          - name: gcc-11
+            c_compiler: gcc-11
             cxx_compiler: g++-11
 
     steps:
