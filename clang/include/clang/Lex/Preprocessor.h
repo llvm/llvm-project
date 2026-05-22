@@ -2398,6 +2398,8 @@ private:
 public:
   void PoisonSEHIdentifiers(bool Poison = true); // Borland
 
+  bool HandleDollarIdentifier(Token &Identifier);
+
   /// Callback invoked when the lexer reads an identifier and has
   /// filled in the tokens IdentifierInfo member.
   ///

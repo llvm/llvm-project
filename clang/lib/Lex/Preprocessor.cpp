@@ -822,6 +822,22 @@ void Preprocessor::updateOutOfDateIdentifier(const IdentifierInfo &II) const {
   getExternalSource()->updateOutOfDateIdentifier(II);
 }
 
+bool Preprocessor::HandleDollarIdentifier(Token &Identifier) {
+  // skip validation in macros
+  if (InMacroArgs || (CurLexer && (CurLexer->ParsingPreprocessorDirective ||
+                                   CurLexer->isLexingRawMode())))
+    return true;
+
+  IdentifierInfo *II = Identifier.getIdentifierInfo();
+
+  // Emit error for $identifiers in configurations that do not allow them to
+  // persist after phase 6
+  if (II && II->isDollarIdentifier() && !getLangOpts().DollarIdents)
+    Diag(Identifier, diag::err_dollar_in_identifier) << II->getName();
+
+  return true;
+}
+
 /// HandleIdentifier - This callback is invoked when the lexer reads an
 /// identifier.  This callback looks up the identifier in the map and/or
 /// potentially macro expands it or turns it into a named token (like 'for').
@@ -870,7 +886,8 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
         // C99 6.10.3p10: If the preprocessing token immediately after the
         // macro name isn't a '(', this macro should not be expanded.
         if (!MI->isFunctionLike() || isNextPPTokenOneOf(tok::l_paren))
-          return HandleMacroExpandedIdentifier(Identifier, MD);
+          return HandleMacroExpandedIdentifier(Identifier, MD) &&
+                 HandleDollarIdentifier(Identifier);
       } else {
         // C99 6.10.3.4p2 says that a disabled macro may never again be
         // expanded, even if it's in a context where it could be expanded in the
@@ -917,7 +934,7 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     return hadModuleLoaderFatalFailure();
   }
 
-  return true;
+  return HandleDollarIdentifier(Identifier);
 }
 
 void Preprocessor::Lex(Token &Result) {

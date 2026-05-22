@@ -55,6 +55,9 @@ def ext_line_comment : Extension<
 def warn_no_newline_eof : Warning<"no newline at end of file">,
   InGroup<NewlineEOF>, DefaultIgnore;
 
+def err_dollar_in_identifier : Error<
+  "identifier '%0' is not supported with the current configuration">;
+
 def ext_dollar_in_identifier : Extension<"'$' in identifier">,
   InGroup<DiagGroup<"dollar-in-identifier-extension">>;
 def ext_charize_microsoft : Extension<
