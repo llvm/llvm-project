@@ -20,7 +20,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
-#include <optional>
 #include <vector>
 
 namespace llvm {
