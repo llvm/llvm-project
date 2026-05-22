@@ -3931,18 +3931,15 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   case Builtin::BI__builtin_ct_select: {
     if (TheCall->getNumArgs() != 3) {
-      // Simple argument count check without complex diagnostics
-      if (TheCall->getNumArgs() < 3) {
+      if (TheCall->getNumArgs() < 3)
         return Diag(TheCall->getEndLoc(),
                     diag::err_typecheck_call_too_few_args_at_least)
                << 0 << 3 << TheCall->getNumArgs() << 0
                << TheCall->getCallee()->getSourceRange();
-      } else {
-        return Diag(TheCall->getEndLoc(),
-                    diag::err_typecheck_call_too_many_args)
-               << 0 << 3 << TheCall->getNumArgs() << 0
-               << TheCall->getCallee()->getSourceRange();
-      }
+      return Diag(TheCall->getEndLoc(),
+                  diag::err_typecheck_call_too_many_args)
+             << 0 << 3 << TheCall->getNumArgs() << 0
+             << TheCall->getCallee()->getSourceRange();
     }
     auto *Cond = TheCall->getArg(0);
     auto *A = TheCall->getArg(1);
