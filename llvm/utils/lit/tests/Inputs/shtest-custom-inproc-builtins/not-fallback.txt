@@ -1,0 +1,2 @@
+# Check that the fallback command is used when calling an in-process built-in with not --crash.
+RUN: echo "Hello" | not not --crash fallback_to_grep "Hello"
