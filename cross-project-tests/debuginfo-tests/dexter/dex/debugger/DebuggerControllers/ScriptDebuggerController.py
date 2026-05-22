@@ -11,7 +11,7 @@ recording debugger output."""
 from enum import Enum
 import os
 import time
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from dex.debugger.DebuggerControllers.DebuggerControllerBase import (
     DebuggerControllerBase,
@@ -26,8 +26,8 @@ from dex.dextIR import DextIR, FrameIR, StepIR
 
 
 def is_subpath(subpath: str, superpath: str) -> bool:
-    """Returns True if subpath is not a trailing subpath of superpath, i.e. if `superpath` does not end with `subpath`
-    after normalizing both paths."""
+    """Returns True if subpath is a trailing subpath of superpath, i.e. if `superpath` ends with `subpath` after
+    normalizing both paths."""
     normalized_subpath: str = os.path.normcase(os.path.normpath(subpath))
     normalized_superpath: str = os.path.normcase(os.path.normpath(superpath))
     return normalized_superpath.endswith(normalized_subpath)
@@ -123,10 +123,11 @@ class ScriptDebuggerController(DebuggerControllerBase):
         self.script: DexterScript = step_collection.script
 
         # We may need to pickle this debugger controller after running the
-        # debugger. Debuggers are not picklable objects, so set to None.
+        # debugger. Debuggers are not picklable objects, so this starts as None
+        # and will be set back to None after we finish running the debugger.
         self.debugger: DebuggerBase = None  # type: ignore
 
-    def add_where_entry_bp(self, where: Where, scope: Scope):
+    def add_where_entry_bp(self, where: Where, default_file: Optional[str] = None):
         """Adds a breakpoint to catch when we enter the given !where node."""
         added_ids = []
         if where.function:
@@ -138,7 +139,7 @@ class ScriptDebuggerController(DebuggerControllerBase):
         elif where.lines:
             # We prefer an explicit file, but we make a special allowance for root !where nodes, which are assumed to
             # refer to the script file if the file is omitted.
-            file = where.file or scope.file
+            file = where.file or default_file
             assert file, "Cannot set line breakpoints without a valid file!"
             # If this Where covers a range of lines, we breakpoint each of them to ensure that we don't miss any lines.
             for line in where.get_lines():
@@ -148,7 +149,7 @@ class ScriptDebuggerController(DebuggerControllerBase):
 
     def _init_bps(self):
         for where in self.script.root_wheres:
-            self.add_where_entry_bp(where, self.script.root_scope)
+            self.add_where_entry_bp(where, self.script.root_scope.file)
 
     def _run_debugger_custom(self, cmdline):
         if not isinstance(self.debugger, DAP):
