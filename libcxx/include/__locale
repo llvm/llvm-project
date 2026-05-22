@@ -145,7 +145,7 @@ protected:
   //    void operator=(const facet&) = delete;
 
 private:
-  void __on_zero_shared() _NOEXCEPT override;
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override;
 };
 
 class _LIBCPP_EXPORTED_FROM_ABI locale::id {

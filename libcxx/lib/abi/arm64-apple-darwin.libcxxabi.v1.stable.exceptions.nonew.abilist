@@ -1491,7 +1491,6 @@
 {'is_defined': True, 'name': '__ZNSt3__117__assoc_sub_state10__sub_waitERNS_11unique_lockINS_5mutexEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117__assoc_sub_state12__make_readyEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117__assoc_sub_state13set_exceptionESt13exception_ptr', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__117__assoc_sub_state16__on_zero_sharedEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117__assoc_sub_state24set_value_at_thread_exitEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117__assoc_sub_state28set_exception_at_thread_exitESt13exception_ptr', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117__assoc_sub_state4copyEv', 'type': 'FUNC'}
@@ -1733,7 +1732,6 @@
 {'is_defined': True, 'name': '__ZNSt3__16locale4noneE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__16locale4timeE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__16locale5ctypeE', 'size': 0, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '__ZNSt3__16locale5facet16__on_zero_sharedEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__16locale5facetD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__16locale5facetD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__16locale5facetD2Ev', 'type': 'FUNC'}

@@ -1383,7 +1383,6 @@
 {'is_defined': True, 'name': '_ZNSt3__16locale4noneE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__16locale4timeE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__16locale5ctypeE', 'size': 4, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZNSt3__16locale5facet16__on_zero_sharedEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16locale5facetD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16locale5facetD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16locale5facetD2Ev', 'type': 'FUNC'}

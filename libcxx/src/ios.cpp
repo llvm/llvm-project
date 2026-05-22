@@ -9,6 +9,7 @@
 #include <__config>
 #include <__locale>
 #include <algorithm>
+#include <atomic>
 #include <ios>
 #include <limits>
 #include <memory>

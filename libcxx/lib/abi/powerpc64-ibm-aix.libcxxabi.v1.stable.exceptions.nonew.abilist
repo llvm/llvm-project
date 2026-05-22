@@ -702,7 +702,6 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16locale4noneE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16locale4timeE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16locale5ctypeE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16locale5facet16__on_zero_sharedEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16locale5facetD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16locale5facetD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16locale5facetD2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
