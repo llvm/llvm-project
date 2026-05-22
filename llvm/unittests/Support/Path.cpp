@@ -2799,9 +2799,8 @@ TEST_F(FileSystemTest, makeLongFormPath) {
 
   // Setup: A test directory longer than 8 characters for which a distinct
   // short 8.3 form name will be created on Windows. Typically, 123456~1.
-  const char *OneDir = PreferForwardSlash
-                           ? "/123456789"
-                           : "\\123456789"; // >8 chars
+  const char *OneDir =
+      PreferForwardSlash ? "/123456789" : "\\123456789"; // >8 chars
 
   // Setup: Create a path where even if all components were reduced to short 8.3
   // form names, the total length would exceed MAX_PATH.

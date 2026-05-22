@@ -40,9 +40,12 @@ namespace {
 
   inline bool prefer_forward_slash() {
     static bool prefer = []() {
-      if (std::optional<std::string> Env = sys::Process::GetEnv("LLVM_WINDOWS_PREFER_FORWARD_SLASH")) {
+      if (std::optional<std::string> Env =
+              sys::Process::GetEnv("LLVM_WINDOWS_PREFER_FORWARD_SLASH")) {
         StringRef Ref(*Env);
-        if (Ref.empty() || Ref.equals_insensitive("0") || Ref.equals_insensitive("false") || Ref.equals_insensitive("off") || Ref.equals_insensitive("no"))
+        if (Ref.empty() || Ref.equals_insensitive("0") ||
+            Ref.equals_insensitive("false") || Ref.equals_insensitive("off") ||
+            Ref.equals_insensitive("no"))
           return false;
         return true;
       }
