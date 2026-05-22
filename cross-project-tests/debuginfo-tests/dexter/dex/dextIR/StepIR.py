@@ -64,6 +64,7 @@ class StepIR:
         if watches is None:
             watches = {}
         self.watches = watches
+        self.hit_fn_bps: List[str] = []
 
     def __str__(self):
         try:
