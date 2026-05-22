@@ -391,6 +391,7 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Tp>
 class valarray;
@@ -3274,6 +3275,7 @@ tanh(const _Expr& __x) {
   return __val_expr<_Op>(_Op(__tanh_expr<value_type>(), __x));
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

@@ -59,12 +59,14 @@ cond.end.i:
 !1 = !DIFile(filename: "q.cpp", directory: "/tmp")
 !7 = !{i32 2, !"Debug Info Version", i32 3}
 !8 = !DILocalVariable(name: "sb", arg: 4, scope: !9)
-!9 = distinct !DISubprogram(name: "color_rgba", unit: !0)
+!9 = distinct !DISubprogram(name: "color_rgba", unit: !0, type: !17)
 !16 = !DILocation(scope: !9)
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META1:![0-9]+]], isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 ; CHECK: [[META1]] = !DIFile(filename: "q.cpp", directory: {{.*}})
 ; CHECK: [[META3]] = !DILocalVariable(name: "sb", arg: 4, scope: [[META4:![0-9]+]])
-; CHECK: [[META4]] = distinct !DISubprogram(name: "color_rgba", scope: null, spFlags: DISPFlagDefinition, unit: [[META0]])
+; CHECK: [[META4]] = distinct !DISubprogram(name: "color_rgba", scope: null, type: [[TYPE:![0-9]+]], spFlags: DISPFlagDefinition, unit: [[META0]])
 ; CHECK: [[META5]] = !DILocation(line: 0, scope: [[META4]])
 ;.
+!17 = !DISubroutineType(types: !18)
+!18 = !{null}

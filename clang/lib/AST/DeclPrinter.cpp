@@ -680,9 +680,8 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
   if (D->isFunctionTemplateSpecialization())
     Out << "template<> ";
   else if (!D->getDescribedFunctionTemplate()) {
-    for (unsigned I = 0, NumTemplateParams = D->getNumTemplateParameterLists();
-         I < NumTemplateParams; ++I)
-      printTemplateParameters(D->getTemplateParameterList(I));
+    for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+      printTemplateParameters(TPL);
   }
 
   CXXConstructorDecl *CDecl = dyn_cast<CXXConstructorDecl>(D);
@@ -1291,11 +1290,9 @@ void DeclPrinter::VisitTemplateDecl(const TemplateDecl *D) {
 void DeclPrinter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   prettyPrintPragmas(D->getTemplatedDecl());
   // Print any leading template parameter lists.
-  if (const FunctionDecl *FD = D->getTemplatedDecl()) {
-    for (unsigned I = 0, NumTemplateParams = FD->getNumTemplateParameterLists();
-         I < NumTemplateParams; ++I)
-      printTemplateParameters(FD->getTemplateParameterList(I));
-  }
+  if (const FunctionDecl *FD = D->getTemplatedDecl())
+    for (TemplateParameterList *TPL : FD->getTemplateParameterLists())
+      printTemplateParameters(TPL);
   VisitRedeclarableTemplateDecl(D);
   // Declare target attribute is special one, natural spelling for the pragma
   // assumes "ending" construct so print it here.
@@ -1349,9 +1346,9 @@ void DeclPrinter::VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D) {
   if (D->getQualifierLoc())
     D->getQualifierLoc().getNestedNameSpecifier().print(NameOS, Policy);
   Spec->printName(NameOS, Policy);
-  if (unsigned NumArgs = D->getNumTemplateArgs()) {
+  if (auto NumArgs = D->getNumTemplateArgs(); NumArgs && *NumArgs > 0) {
     SmallVector<TemplateArgumentLoc, 4> Args;
-    for (unsigned I = 0; I < NumArgs; ++I)
+    for (unsigned I = 0; I < *NumArgs; ++I)
       Args.push_back(D->getTemplateArg(I));
     printTemplateArgumentList(NameOS, Args, Policy);
   }

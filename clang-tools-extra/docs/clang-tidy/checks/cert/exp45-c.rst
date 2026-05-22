@@ -1,5 +1,4 @@
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/assignment-in-selection-statement.html
+.. title:: clang-tidy - cert-exp45-c
 
 cert-exp45-c
 ============

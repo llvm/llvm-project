@@ -1263,6 +1263,10 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, raw_ostream &MainOS,
     OS << "  const TargetRegisterClass *getPhysRegBaseClass(MCRegister Reg) "
           "const override;\n";
   }
+  if (!RegisterClasses.empty()) {
+    OS << "  const TargetRegisterClass *getDefaultMinimalPhysRegClass("
+          "MCRegister Reg) const override;\n";
+  }
 
   OS << "};\n\n";
 
@@ -1718,6 +1722,38 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
     }
   }
 
+  if (!RegisterClasses.empty()) {
+    assert(RegisterClasses.size() < UINT16_MAX &&
+           "Too many minimal register classes");
+
+    OS << "\n// Register to minimal register class mapping\n\n";
+    OS << "const TargetRegisterClass *" << ClassName
+       << "::getDefaultMinimalPhysRegClass(MCRegister Reg)" << " const {\n";
+    OS << "  static const uint16_t InvalidRegClassID = UINT16_MAX;\n\n";
+    OS << "  static const uint16_t Mapping[" << Regs.size() + 1 << "] = {\n";
+    OS << "    InvalidRegClassID,  // NoRegister\n";
+    for (const CodeGenRegister &Reg : Regs) {
+      const CodeGenRegisterClass *MinimalRC = nullptr;
+      for (const auto &RC : RegisterClasses) {
+        if (RC.contains(&Reg) && (!MinimalRC || MinimalRC->hasSubClass(&RC)))
+          MinimalRC = &RC;
+      }
+
+      OS << "    "
+         << (MinimalRC ? MinimalRC->getQualifiedIdName() : "InvalidRegClassID")
+         << ",  // " << Reg.getName() << "\n";
+    }
+    OS << "  };\n\n"
+          "  assert(Reg < ArrayRef(Mapping).size());\n"
+          "  unsigned RCID = Mapping[Reg.id()];\n"
+          "  if (RCID == InvalidRegClassID)\n"
+          "    return nullptr;\n"
+          "  return "
+       << TargetName
+       << "RegisterClasses[RCID];\n"
+          "}\n";
+  }
+
   // Emit the constructor of the class...
   OS << "extern const MCRegisterDesc " << TargetName << "RegDesc[];\n";
   OS << "extern const int16_t " << TargetName << "RegDiffLists[];\n";
@@ -1971,6 +2007,7 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
     OS << "\tCoveredBySubRegs: " << RC.CoveredBySubRegs << '\n';
     OS << "\tAllocatable: " << RC.Allocatable << '\n';
     OS << "\tAllocationPriority: " << unsigned(RC.AllocationPriority) << '\n';
+    OS << "\tWeight: " << RC.getWeight(RegBank) << '\n';
     OS << "\tBaseClassOrder: " << RC.getBaseClassOrder() << '\n';
     OS << "\tRegs:";
     for (const CodeGenRegister *R : RC.getMembers()) {

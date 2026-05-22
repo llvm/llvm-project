@@ -39,11 +39,14 @@ namespace {
 
 MCTargetOptions MCOptions;
 
-std::unique_ptr<MCContext> createMCContext(MCAsmInfo *AsmInfo) {
+std::unique_ptr<MCContext> createMCContext(const MCAsmInfo &AsmInfo) {
   Triple TheTriple(/*ArchStr=*/"", /*VendorStr=*/"", /*OSStr=*/"",
                    /*EnvironmentStr=*/"elf");
-  return std::make_unique<MCContext>(TheTriple, AsmInfo, nullptr, nullptr,
-                                     nullptr, false);
+  static MCRegisterInfo MRI;
+  static const MCSubtargetInfo STI(TheTriple, "", "", "", {}, {}, {}, nullptr,
+                                   nullptr, nullptr, nullptr, nullptr, nullptr);
+  return std::make_unique<MCContext>(TheTriple, AsmInfo, MRI, STI, nullptr,
+                                     false);
 }
 
 // This test makes sure that MachineInstr::isIdenticalTo handles Defs correctly
@@ -271,7 +274,7 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
   auto MAI = MCAsmInfo(MCOptions);
-  auto MC = createMCContext(&MAI);
+  auto MC = createMCContext(MAI);
   auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
                                       MachineMemOperand::MOLoad, 8, Align(8));
   SmallVector<MachineMemOperand *, 2> MMOs;
@@ -352,7 +355,7 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
   auto MAI = MCAsmInfo(MCOptions);
-  auto MC = createMCContext(&MAI);
+  auto MC = createMCContext(MAI);
   auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
                                       MachineMemOperand::MOLoad, 8, Align(8));
   SmallVector<MachineMemOperand *, 2> MMOs;
@@ -407,7 +410,7 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
   auto MAI = MCAsmInfo(MCOptions);
-  auto MC = createMCContext(&MAI);
+  auto MC = createMCContext(MAI);
   auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
                                       MachineMemOperand::MOLoad, 8, Align(8));
   SmallVector<MachineMemOperand *, 2> MMOs;

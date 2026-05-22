@@ -548,7 +548,7 @@ public:
   /// null, we will look for a top-level module.
   ///
   /// \returns The named submodule, if known; otherwose, returns null.
-  Module *lookupModuleQualified(StringRef Name, Module *Context) const;
+  ModuleRef lookupModuleQualified(StringRef Name, Module *Context) const;
 
   /// Find a new module or submodule, or create it if it does not already
   /// exist.

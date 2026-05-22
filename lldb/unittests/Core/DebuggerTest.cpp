@@ -57,7 +57,7 @@ TEST_F(DebuggerTest,
   DebuggerSP debugger_sp = Debugger::CreateInstance();
 
   // No targets have been added, so no target is selected.
-  ASSERT_EQ(debugger_sp->GetSelectedTarget().get(), nullptr);
+  ASSERT_EQ(debugger_sp->GetTargetList().GetSelectedTarget().get(), nullptr);
 
   Target &dummy_target = debugger_sp->GetDummyTarget();
 

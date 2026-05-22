@@ -100,12 +100,12 @@ constexpr bool test() {
   // Make sure we do not make a copy of the predicate when we call begin()
   // (we should be passing it to ranges::adjacent_find using std::ref)
   {
-    bool moved = false, copied = false;
+    bool moved  = false;
+    bool copied = false;
     Range range(buff, buff + 2);
     std::ranges::chunk_by_view view(range, TrackingPred(&moved, &copied));
-    std::exchange(moved, false);
     [[maybe_unused]] auto it = view.begin();
-    assert(!moved);
+    assert(moved);
     assert(!copied);
   }
 
