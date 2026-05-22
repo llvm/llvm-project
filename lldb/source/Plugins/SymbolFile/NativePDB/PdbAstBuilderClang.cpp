@@ -360,6 +360,79 @@ PdbAstBuilderClang::CreateDeclInfoForUndecoratedName(llvm::StringRef name) {
   return {context, std::string(uname)};
 }
 
+std::pair<clang::DeclContext *, std::string>
+PdbAstBuilderClang::CreateDeclInfoForCompilandSymbol(PdbCompilandSymId uid) {
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+  CVSymbol sym = index.ReadSymbolRecord(uid);
+
+  llvm::StringRef symbol_name = getSymbolName(sym);
+
+  std::optional<PdbTypeSymId> func_id = GetFunctionType(sym);
+  if (!func_id || !symbol_name.contains("::"))
+    return CreateDeclInfoForUndecoratedName(symbol_name);
+
+  // Try to get the context from class type of an LF_MFUNCTION.
+  // For some types, we might not find a class type.
+  auto get_member_fn_context = [&]() -> clang::DeclContext * {
+    TypeIndex id = func_id->index;
+
+    if (func_id->is_ipi) {
+      // Type from IPI, for example from S_INLINESITE
+      std::optional<CVType> func_id_type =
+          index.ipi().tryGetType(func_id->index);
+      if (!func_id_type || func_id_type->kind() != LF_MFUNC_ID)
+        return nullptr;
+
+      MemberFuncIdRecord record;
+      llvm::Error err = TypeDeserializer::deserializeAs<MemberFuncIdRecord>(
+          *func_id_type, record);
+      if (err) {
+        llvm::consumeError(std::move(err));
+        return nullptr;
+      }
+
+      id = record.FunctionType;
+    }
+
+    std::optional<CVType> func_type = index.tpi().tryGetType(id);
+    if (!func_type || func_type->kind() != LF_MFUNCTION)
+      return nullptr;
+
+    MemberFunctionRecord mfr(TypeRecordKind::MemberFunction);
+
+    llvm::Error err =
+        TypeDeserializer::deserializeAs<MemberFunctionRecord>(*func_type, mfr);
+    if (err || mfr.ClassType.isNoneType()) {
+      llvm::consumeError(std::move(err));
+      return nullptr;
+    }
+
+    clang::QualType qt = GetOrCreateClangType(mfr.ClassType);
+    if (qt.isNull())
+      return nullptr;
+    clang::TagDecl *tag = qt->getAsTagDecl();
+    if (!tag)
+      return nullptr;
+
+    return clang::TagDecl::castToDeclContext(tag);
+  };
+
+  clang::DeclContext *context = get_member_fn_context();
+  if (!context)
+    return CreateDeclInfoForUndecoratedName(symbol_name);
+
+  MSVCUndecoratedNameParser parser(symbol_name);
+  llvm::ArrayRef<MSVCUndecoratedNameSpecifier> specifiers =
+      parser.GetSpecifiers();
+  if (specifiers.size() < 2) {
+    assert(false && "Member function name with less than two scopes");
+    return CreateDeclInfoForUndecoratedName(symbol_name);
+  }
+  return {context, std::string(specifiers.back().GetFullName())};
+}
+
 clang::DeclContext *
 PdbAstBuilderClang::GetParentClangDeclContext(PdbSymUid uid) {
   // We must do this *without* calling GetOrCreate on the current uid, as
@@ -374,8 +447,7 @@ PdbAstBuilderClang::GetParentClangDeclContext(PdbSymUid uid) {
     if (scope)
       return GetOrCreateClangDeclContextForUid(*scope);
 
-    CVSymbol sym = index.ReadSymbolRecord(uid.asCompilandSym());
-    return CreateDeclInfoForUndecoratedName(getSymbolName(sym)).first;
+    return CreateDeclInfoForCompilandSymbol(uid.asCompilandSym()).first;
   }
   case PdbSymUidKind::Type: {
     // It could be a namespace, class, or global.  We don't support nested
