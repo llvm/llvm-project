@@ -1205,6 +1205,26 @@ define void @experimental_constrained_fpext(float %s, <4 x float> %v) {
   ret void
 }
 
+; CHECK-LABEL: experimental_constrained_fp_call
+define void @experimental_constrained_fp_call(float %s, <4 x float> %v, double %d, i32 %p) {
+  ; Unary constrained intrinsic with rounding mode + exception behavior.
+  ; CHECK: llvm.intr.experimental.constrained_fp_call "llvm.experimental.constrained.cos.f32"(%{{.*}}) towardzero ignore : (f32) -> f32
+  %1 = call float @llvm.experimental.constrained.cos.f32(float %s, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ; Vector variant.
+  ; CHECK: llvm.intr.experimental.constrained_fp_call "llvm.experimental.constrained.sin.v4f32"(%{{.*}}) dynamic maytrap : (vector<4xf32>) -> vector<4xf32>
+  %2 = call <4 x float> @llvm.experimental.constrained.sin.v4f32(<4 x float> %v, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+  ; Constrained intrinsic with no rounding mode operand.
+  ; CHECK: llvm.intr.experimental.constrained_fp_call "llvm.experimental.constrained.maximum.f64"(%{{.*}}, %{{.*}}) strict : (f64, f64) -> f64
+  %3 = call double @llvm.experimental.constrained.maximum.f64(double %d, double %d, metadata !"fpexcept.strict")
+  ; Result type different from operand type and no rounding mode.
+  ; CHECK: llvm.intr.experimental.constrained_fp_call "llvm.experimental.constrained.fptosi.i32.f32"(%{{.*}}) ignore : (f32) -> i32
+  %4 = call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %s, metadata !"fpexcept.ignore")
+  ; Mixed floating-point and integer operands.
+  ; CHECK: llvm.intr.experimental.constrained_fp_call "llvm.experimental.constrained.powi.f32"(%{{.*}}, %{{.*}}) tonearest ignore : (f32, i32) -> f32
+  %5 = call float @llvm.experimental.constrained.powi.f32(float %s, i32 %p, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @ucmp
 define i2 @ucmp(i32 %a, i32 %b) {
   ; CHECK: %{{.*}} = llvm.intr.ucmp(%{{.*}}, %{{.*}}) : (i32, i32) -> i2
@@ -1501,6 +1521,11 @@ declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f64(<4 x doubl
 declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float>, metadata)
 declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
+declare float @llvm.experimental.constrained.cos.f32(float, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.sin.v4f32(<4 x float>, metadata, metadata)
+declare double @llvm.experimental.constrained.maximum.f64(double, double, metadata)
+declare i32 @llvm.experimental.constrained.fptosi.i32.f32(float, metadata)
+declare float @llvm.experimental.constrained.powi.f32(float, i32, metadata, metadata)
 declare i2 @llvm.ucmp.i2.i32(i32, i32)
 declare <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32>, <4 x i32>)
 declare i2 @llvm.scmp.i2.i32(i32, i32)

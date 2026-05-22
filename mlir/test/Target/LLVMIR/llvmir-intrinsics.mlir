@@ -1384,6 +1384,36 @@ llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @experimental_constrained_fp_call
+llvm.func @experimental_constrained_fp_call(%s: f32, %v: vector<4xf32>, %d: f64, %p: i32) {
+  // CHECK: call float @llvm.experimental.constrained.cos.f32(
+  // CHECK-SAME: metadata !"round.towardzero", metadata !"fpexcept.ignore"
+  %0 = llvm.intr.experimental.constrained_fp_call
+       "llvm.experimental.constrained.cos"(%s) towardzero ignore
+       : (f32) -> f32
+  // CHECK: call <4 x float> @llvm.experimental.constrained.sin.v4f32(
+  // CHECK-SAME: metadata !"round.dynamic", metadata !"fpexcept.maytrap"
+  %1 = llvm.intr.experimental.constrained_fp_call
+       "llvm.experimental.constrained.sin"(%v) dynamic maytrap
+       : (vector<4xf32>) -> vector<4xf32>
+  // CHECK: call double @llvm.experimental.constrained.maximum.f64(
+  // CHECK-SAME: metadata !"fpexcept.strict"
+  %2 = llvm.intr.experimental.constrained_fp_call
+       "llvm.experimental.constrained.maximum"(%d, %d) strict
+       : (f64, f64) -> f64
+  // CHECK: call i32 @llvm.experimental.constrained.fptosi.i32.f32(
+  // CHECK-SAME: metadata !"fpexcept.ignore"
+  %3 = llvm.intr.experimental.constrained_fp_call
+       "llvm.experimental.constrained.fptosi"(%s) ignore
+       : (f32) -> i32
+  // CHECK: call float @llvm.experimental.constrained.powi.f32(
+  // CHECK-SAME: metadata !"round.tonearest", metadata !"fpexcept.ignore"
+  %4 = llvm.intr.experimental.constrained_fp_call
+       "llvm.experimental.constrained.powi"(%s, %p) tonearest ignore
+       : (f32, i32) -> f32
+  llvm.return
+}
+
 // CHECK-LABEL: @ucmp
 llvm.func @ucmp(%a: i32, %b: i32) -> i2 {
   // CHECK: call i2 @llvm.ucmp.i2.i32
@@ -1614,6 +1644,11 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f32(<4 x float>, metadata, metadata)
 // CHECK-DAG: declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
 // CHECK-DAG: declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float>, metadata)
+// CHECK-DAG: declare float @llvm.experimental.constrained.cos.f32(float, metadata, metadata)
+// CHECK-DAG: declare <4 x float> @llvm.experimental.constrained.sin.v4f32(<4 x float>, metadata, metadata)
+// CHECK-DAG: declare double @llvm.experimental.constrained.maximum.f64(double, double, metadata)
+// CHECK-DAG: declare i32 @llvm.experimental.constrained.fptosi.i32.f32(float, metadata)
+// CHECK-DAG: declare float @llvm.experimental.constrained.powi.f32(float, i32, metadata, metadata)
 // CHECK-DAG: declare range(i2 -1, -2) i2 @llvm.ucmp.i2.i32(i32, i32)
 // CHECK-DAG: declare range(i32 -1, 2) <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32>, <4 x i32>)
 // CHECK-DAG: declare range(i2 -1, -2) i2 @llvm.scmp.i2.i32(i32, i32)

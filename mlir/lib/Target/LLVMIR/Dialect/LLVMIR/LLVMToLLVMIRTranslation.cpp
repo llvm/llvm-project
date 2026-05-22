@@ -135,6 +135,67 @@ convertOperandBundles(OperandRangeRange bundleOperands,
   return convertOperandBundles(bundleOperands, *bundleTags, moduleTranslation);
 }
 
+/// Builder for LLVM_CallConstrainedFPIntrinsicOp. Resolves the intrinsic
+/// identifier from the `intrin` attribute, infers any overloaded types from the
+/// MLIR operand and result types, and emits an LLVM IR constrained FP call.
+static LogicalResult convertCallConstrainedFPIntrinsicOp(
+    CallConstrainedFPIntrinsicOp op, llvm::IRBuilderBase &builder,
+    LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *module = builder.GetInsertBlock()->getModule();
+  llvm::Intrinsic::ID id = llvm::Intrinsic::lookupIntrinsicID(op.getIntrin());
+  if (!id)
+    return mlir::emitError(op.getLoc(), "could not find LLVM intrinsic: ")
+           << op.getIntrin();
+  if (!llvm::Intrinsic::isConstrainedFPIntrinsic(id))
+    return mlir::emitError(op.getLoc(), "not a constrained FP intrinsic: ")
+           << op.getIntrin();
+  if (id == llvm::Intrinsic::experimental_constrained_fcmp ||
+      id == llvm::Intrinsic::experimental_constrained_fcmps)
+    return mlir::emitError(op.getLoc())
+           << op.getIntrin()
+           << " is a constrained FP compare and is not supported by this op";
+
+  // Build a signature matching what the intrinsic declaration looks like in
+  // LLVM IR, including the trailing metadata operands. This lets
+  // Intrinsic::isSignatureValid resolve all overloaded types.
+  SmallVector<llvm::Type *> argTys;
+  argTys.reserve(op.getArgs().size() + 2);
+  for (Type type : op.getArgs().getTypes())
+    argTys.push_back(moduleTranslation.convertType(type));
+  llvm::Type *metadataTy = llvm::Type::getMetadataTy(module->getContext());
+  if (llvm::Intrinsic::hasConstrainedFPRoundingModeOperand(id))
+    argTys.push_back(metadataTy);
+  argTys.push_back(metadataTy);
+
+  llvm::Type *resultTy = moduleTranslation.convertType(op.getRes().getType());
+  llvm::FunctionType *ft =
+      llvm::FunctionType::get(resultTy, argTys, /*isVarArg=*/false);
+
+  std::string errorMsg;
+  llvm::raw_string_ostream errorOS(errorMsg);
+  SmallVector<llvm::Type *> overloadedTys;
+  if (!llvm::Intrinsic::isSignatureValid(id, ft, overloadedTys, errorOS)) {
+    return mlir::emitError(op.getLoc(), "call intrinsic signature ")
+           << diagStr(ft) << " to constrained FP intrinsic " << op.getIntrin()
+           << " does not match any overload: " << errorMsg;
+  }
+
+  llvm::Function *fn =
+      llvm::Intrinsic::getOrInsertDeclaration(module, id, overloadedTys);
+
+  std::optional<llvm::RoundingMode> rounding;
+  if (auto roundingAttr = op.getRoundingmodeAttr())
+    rounding = moduleTranslation.translateRoundingMode(roundingAttr.getValue());
+  llvm::fp::ExceptionBehavior except =
+      moduleTranslation.translateFPExceptionBehavior(
+          op.getFpExceptionBehavior());
+
+  llvm::Value *result = builder.CreateConstrainedFPCall(
+      fn, moduleTranslation.lookupValues(op.getArgs()), "", rounding, except);
+  moduleTranslation.mapValue(op.getRes()) = result;
+  return success();
+}
+
 /// Builder for LLVM_CallIntrinsicOp
 static LogicalResult
 convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,

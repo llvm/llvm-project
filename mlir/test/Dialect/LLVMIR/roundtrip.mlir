@@ -902,6 +902,23 @@ llvm.func @experimental_constrained_fptrunc(%in: f64) {
   llvm.return
 }
 
+// CHECK-LABEL: @experimental_constrained_fp_call
+llvm.func @experimental_constrained_fp_call(%s: f32, %d: f64, %p: i32) {
+  // CHECK: llvm.intr.experimental.constrained_fp_call "llvm.experimental.constrained.cos.f32"(%{{.*}}) towardzero ignore : (f32) -> f32
+  %0 = llvm.intr.experimental.constrained_fp_call
+       "llvm.experimental.constrained.cos.f32"(%s) towardzero ignore
+       : (f32) -> f32
+  // CHECK: llvm.intr.experimental.constrained_fp_call "llvm.experimental.constrained.maximum.f64"(%{{.*}}, %{{.*}}) strict : (f64, f64) -> f64
+  %1 = llvm.intr.experimental.constrained_fp_call
+       "llvm.experimental.constrained.maximum.f64"(%d, %d) strict
+       : (f64, f64) -> f64
+  // CHECK: llvm.intr.experimental.constrained_fp_call "llvm.experimental.constrained.powi.f32"(%{{.*}}, %{{.*}}) tonearest ignore : (f32, i32) -> f32
+  %2 = llvm.intr.experimental.constrained_fp_call
+       "llvm.experimental.constrained.powi.f32"(%s, %p) tonearest ignore
+       : (f32, i32) -> f32
+  llvm.return
+}
+
 // CHECK: llvm.func @tail_call_target() -> i32
 llvm.func @tail_call_target() -> i32
 

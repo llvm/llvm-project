@@ -456,3 +456,23 @@ bb1:
 !91885 = !{!91886, !91887}
 !91886 = !{i32 10000, i64 86427, i32 1}
 !91887 = !{i32 100000, i64 86427, i32 1}
+
+; // -----
+
+; CHECK: error: constrained FP compare intrinsic 'llvm.experimental.constrained.fcmp.f32' is not supported by the LLVM dialect importer
+define i1 @constrained_fcmp(float %s) {
+  %r = call i1 @llvm.experimental.constrained.fcmp.f32(float %s, float %s, metadata !"oeq", metadata !"fpexcept.ignore")
+  ret i1 %r
+}
+
+declare i1 @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata)
+
+; // -----
+
+; CHECK: error: constrained FP compare intrinsic 'llvm.experimental.constrained.fcmps.f32' is not supported by the LLVM dialect importer
+define i1 @constrained_fcmps(float %s) {
+  %r = call i1 @llvm.experimental.constrained.fcmps.f32(float %s, float %s, metadata !"oeq", metadata !"fpexcept.ignore")
+  ret i1 %r
+}
+
+declare i1 @llvm.experimental.constrained.fcmps.f32(float, float, metadata, metadata)

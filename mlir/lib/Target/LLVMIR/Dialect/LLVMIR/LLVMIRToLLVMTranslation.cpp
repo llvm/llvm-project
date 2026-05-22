@@ -22,6 +22,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 
 using namespace mlir;
@@ -36,22 +37,111 @@ static constexpr StringLiteral reqdWorkGroupSizeMDName = "reqd_work_group_size";
 static constexpr StringLiteral intelReqdSubGroupSizeMDName =
     "intel_reqd_sub_group_size";
 
+/// Returns true if `id` is a constrained FP intrinsic that the generic
+/// LLVM_CallConstrainedFPIntrinsicOp can model (i.e. it has the standard
+/// trailing metadata layout: rounding mode and/or exception behavior, with no
+/// additional predicate metadata).
+static bool isGenericConstrainedFPIntrinsic(llvm::Intrinsic::ID id) {
+  if (!llvm::Intrinsic::isConstrainedFPIntrinsic(id))
+    return false;
+  // fcmp / fcmps carry an extra predicate metadata operand and are not
+  // representable by the generic op.
+  return id != llvm::Intrinsic::experimental_constrained_fcmp &&
+         id != llvm::Intrinsic::experimental_constrained_fcmps;
+}
+
+/// Returns true if `id` is a constrained FP compare intrinsic. These have a
+/// predicate metadata operand in addition to the exception behavior operand
+/// and are not currently importable, but should fail with a clean diagnostic
+/// instead of falling through to the generic intrinsic path and tripping the
+/// metadata assertion in `convertValue`.
+static bool isConstrainedFPCmpIntrinsic(llvm::Intrinsic::ID id) {
+  return id == llvm::Intrinsic::experimental_constrained_fcmp ||
+         id == llvm::Intrinsic::experimental_constrained_fcmps;
+}
+
 /// Returns true if the LLVM IR intrinsic is convertible to an MLIR LLVM dialect
-/// intrinsic. Returns false otherwise.
+/// intrinsic. Returns false otherwise. Constrained FP compare intrinsics are
+/// claimed here so that the import emits a targeted error rather than crashing
+/// in the unregistered-intrinsic fallback.
 static bool isConvertibleIntrinsic(llvm::Intrinsic::ID id) {
   static const DenseSet<unsigned> convertibleIntrinsics = {
 #include "mlir/Dialect/LLVMIR/LLVMConvertibleLLVMIRIntrinsics.inc"
   };
-  return convertibleIntrinsics.contains(id);
+  if (convertibleIntrinsics.contains(id))
+    return true;
+  return isGenericConstrainedFPIntrinsic(id) || isConstrainedFPCmpIntrinsic(id);
 }
 
 /// Returns the list of LLVM IR intrinsic identifiers that are convertible to
 /// MLIR LLVM dialect intrinsics.
 static ArrayRef<unsigned> getSupportedIntrinsicsImpl() {
-  static const SmallVector<unsigned> convertibleIntrinsics = {
+  static const SmallVector<unsigned> convertibleIntrinsics = [] {
+    SmallVector<unsigned> ids = {
 #include "mlir/Dialect/LLVMIR/LLVMConvertibleLLVMIRIntrinsics.inc"
-  };
+    };
+    // Also register the constrained FP intrinsics that fall back to the
+    // generic LLVM_CallConstrainedFPIntrinsicOp. Compare variants are
+    // registered too so the importer can emit a clean error for them instead
+    // of letting them fall through to the unregistered-intrinsic path, which
+    // would trip the metadata assertion in `convertValue`.
+    DenseSet<unsigned> seen(ids.begin(), ids.end());
+    for (unsigned id = 1; id < llvm::Intrinsic::num_intrinsics; ++id) {
+      auto intrinId = static_cast<llvm::Intrinsic::ID>(id);
+      if (seen.contains(id))
+        continue;
+      if (isGenericConstrainedFPIntrinsic(intrinId) ||
+          isConstrainedFPCmpIntrinsic(intrinId))
+        ids.push_back(id);
+    }
+    return ids;
+  }();
   return convertibleIntrinsics;
+}
+
+/// Imports a constrained FP intrinsic call as a generic
+/// LLVM_CallConstrainedFPIntrinsicOp. Splits the call's operands into value
+/// arguments and the trailing rounding-mode/exception-behavior metadata
+/// operands.
+static LogicalResult
+convertConstrainedFPIntrinsicCallOp(OpBuilder &builder, llvm::CallInst *inst,
+                                    LLVM::ModuleImport &moduleImport) {
+  llvm::Intrinsic::ID id = inst->getIntrinsicID();
+  llvm::Function *callee = inst->getCalledFunction();
+  if (!callee)
+    return failure();
+  StringRef intrinName = callee->getName();
+  bool hasRounding = llvm::Intrinsic::hasConstrainedFPRoundingModeOperand(id);
+
+  unsigned numArgs = inst->arg_size();
+  unsigned numMetadata = hasRounding ? 2 : 1;
+  if (numArgs < numMetadata)
+    return failure();
+  unsigned numValueArgs = numArgs - numMetadata;
+
+  SmallVector<Value> args;
+  args.reserve(numValueArgs);
+  for (unsigned i = 0; i < numValueArgs; ++i) {
+    FailureOr<Value> v = moduleImport.convertValue(inst->getArgOperand(i));
+    if (failed(v))
+      return failure();
+    args.push_back(*v);
+  }
+
+  RoundingModeAttr roundingMode;
+  if (hasRounding)
+    roundingMode =
+        moduleImport.matchRoundingModeAttr(inst->getArgOperand(numValueArgs));
+  FPExceptionBehaviorAttr exceptionBehavior =
+      moduleImport.matchFPExceptionBehaviorAttr(
+          inst->getArgOperand(numArgs - 1));
+
+  Type resultType = moduleImport.convertType(inst->getType());
+  auto op = CallConstrainedFPIntrinsicOp::create(
+      builder, moduleImport.translateLoc(inst->getDebugLoc()), resultType,
+      builder.getStringAttr(intrinName), args, roundingMode, exceptionBehavior);
+  moduleImport.mapValue(inst) = op.getRes();
+  return success();
 }
 
 /// Converts the LLVM intrinsic to an MLIR LLVM dialect operation if a
@@ -73,6 +163,24 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
       llvmOpBundles.push_back(inst->getOperandBundleAt(i));
 
 #include "mlir/Dialect/LLVMIR/LLVMIntrinsicFromLLVMIRConversions.inc"
+
+    // Fallback for constrained FP intrinsics without a dedicated MLIR op.
+    if (isGenericConstrainedFPIntrinsic(intrinsicID))
+      return convertConstrainedFPIntrinsicCallOp(odsBuilder, inst,
+                                                 moduleImport);
+
+    // Constrained FP compare intrinsics are claimed here so that we can emit
+    // a targeted error instead of falling through to convertUnregistered-
+    // Intrinsic (which would crash on the predicate metadata operand).
+    if (isConstrainedFPCmpIntrinsic(intrinsicID)) {
+      Location loc = moduleImport.translateLoc(inst->getDebugLoc());
+      StringRef intrinName = inst->getCalledFunction()
+                                 ? inst->getCalledFunction()->getName()
+                                 : StringRef("<unknown>");
+      return emitError(loc)
+             << "constrained FP compare intrinsic '" << intrinName
+             << "' is not supported by the LLVM dialect importer";
+    }
   }
 
   return failure();

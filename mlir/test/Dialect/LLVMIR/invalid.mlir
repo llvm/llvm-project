@@ -1783,6 +1783,46 @@ llvm.func @wrong_number_of_bundle_types_intrin(%arg0: i32) -> i32 {
 
 // -----
 
+llvm.func @constrained_fp_call_unknown_intrinsic(%arg0: f32) -> f32 {
+  // expected-error@+1 {{could not find LLVM intrinsic: llvm.experimental.constrained.bogus.f32}}
+  %0 = llvm.intr.experimental.constrained_fp_call "llvm.experimental.constrained.bogus.f32"(%arg0) towardzero ignore : (f32) -> f32
+  llvm.return %0 : f32
+}
+
+// -----
+
+llvm.func @constrained_fp_call_not_constrained(%arg0: f32) -> f32 {
+  // expected-error@+1 {{intrinsic llvm.cos.f32 is not a constrained FP intrinsic}}
+  %0 = llvm.intr.experimental.constrained_fp_call "llvm.cos.f32"(%arg0) towardzero ignore : (f32) -> f32
+  llvm.return %0 : f32
+}
+
+// -----
+
+llvm.func @constrained_fp_call_fcmp_rejected(%arg0: f32) -> i1 {
+  // expected-error@+1 {{intrinsic llvm.experimental.constrained.fcmp.f32 is a constrained FP compare and is not supported by this op}}
+  %0 = llvm.intr.experimental.constrained_fp_call "llvm.experimental.constrained.fcmp.f32"(%arg0, %arg0) ignore : (f32, f32) -> i1
+  llvm.return %0 : i1
+}
+
+// -----
+
+llvm.func @constrained_fp_call_missing_rounding(%arg0: f32) -> f32 {
+  // expected-error@+1 {{intrinsic llvm.experimental.constrained.cos.f32 requires a rounding mode attribute}}
+  %0 = llvm.intr.experimental.constrained_fp_call "llvm.experimental.constrained.cos.f32"(%arg0) ignore : (f32) -> f32
+  llvm.return %0 : f32
+}
+
+// -----
+
+llvm.func @constrained_fp_call_unexpected_rounding(%arg0: f64) -> f64 {
+  // expected-error@+1 {{intrinsic llvm.experimental.constrained.maximum.f64 does not take a rounding mode attribute}}
+  %0 = llvm.intr.experimental.constrained_fp_call "llvm.experimental.constrained.maximum.f64"(%arg0, %arg0) towardzero ignore : (f64, f64) -> f64
+  llvm.return %0 : f64
+}
+
+// -----
+
 llvm.func @foo()
 llvm.func @wrong_number_of_bundle_tags() {
   %0 = llvm.mlir.constant(0 : i32) : i32

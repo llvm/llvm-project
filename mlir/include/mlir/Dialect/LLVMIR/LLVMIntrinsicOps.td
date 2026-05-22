@@ -596,6 +596,57 @@ def LLVM_ConstrainedFPExtIntr
   }];
 }
 
+// Generic constrained floating-point intrinsic call.
+
+def LLVM_CallConstrainedFPIntrinsicOp
+    : LLVM_Op<"intr.experimental.constrained_fp_call",
+              [Pure,
+               DeclareOpInterfaceMethods<FPExceptionBehaviorOpInterface>,
+               DeclareOpInterfaceMethods<RoundingModeOpInterface>]> {
+  let summary = "Generic call to an LLVM constrained floating-point intrinsic.";
+  let description = [{
+    Calls an LLVM constrained floating-point intrinsic by name. The intrinsic
+    name is given by the `intrin` attribute (for example
+    `"llvm.experimental.constrained.cos.f32"`). Overloaded intrinsics are
+    resolved from the MLIR operand and result types of this op.
+
+    The rounding mode operand is required for intrinsics for which
+    `llvm::Intrinsic::hasConstrainedFPRoundingModeOperand` returns true and is
+    forbidden otherwise. The exception behavior attribute is always required.
+
+    This op handles every constrained FP intrinsic that follows the standard
+    operand layout `(args..., [rounding,] exception)`. The compare variants
+    `llvm.experimental.constrained.fcmp` and
+    `llvm.experimental.constrained.fcmps` carry an additional predicate
+    metadata operand and are not supported.
+
+    Example:
+
+    ```mlir
+    %res = llvm.intr.experimental.constrained_fp_call
+        "llvm.experimental.constrained.cos.f32"(%arg)
+        towardzero ignore : (f32) -> f32
+    ```
+  }];
+
+  let arguments = (ins StrAttr:$intrin,
+                       Variadic<LLVM_Type>:$args,
+                       OptionalAttr<ValidRoundingModeAttr>:$roundingmode,
+                       FPExceptionBehaviorAttr:$fpExceptionBehavior);
+  let results = (outs LLVM_Type:$res);
+
+  let llvmBuilder = [{
+    return convertCallConstrainedFPIntrinsicOp(op, builder, moduleTranslation);
+  }];
+
+  let assemblyFormat = [{
+    $intrin `(` $args `)` ($roundingmode^)? $fpExceptionBehavior
+      attr-dict `:` functional-type($args, $res)
+  }];
+
+  let hasVerifier = 1;
+}
+
 // Intrinsics with multiple returns.
 
 class LLVM_ArithWithOverflowOp<string mnem>

@@ -27,6 +27,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Error.h"
 
 #include "LLVMDialectBytecode.h"
@@ -4009,6 +4010,34 @@ LogicalResult CallIntrinsicOp::verify() {
     return emitOpError() << "intrinsic name must start with 'llvm.'";
   if (failed(verifyOperandBundles(*this)))
     return failure();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// CallConstrainedFPIntrinsicOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult CallConstrainedFPIntrinsicOp::verify() {
+  StringRef name = getIntrin();
+  llvm::Intrinsic::ID id = llvm::Intrinsic::lookupIntrinsicID(name);
+  if (!id)
+    return emitOpError() << "could not find LLVM intrinsic: " << name;
+  if (!llvm::Intrinsic::isConstrainedFPIntrinsic(id))
+    return emitOpError() << "intrinsic " << name
+                         << " is not a constrained FP intrinsic";
+  if (id == llvm::Intrinsic::experimental_constrained_fcmp ||
+      id == llvm::Intrinsic::experimental_constrained_fcmps)
+    return emitOpError() << "intrinsic " << name
+                         << " is a constrained FP compare and is not "
+                            "supported by this op";
+  bool requiresRounding =
+      llvm::Intrinsic::hasConstrainedFPRoundingModeOperand(id);
+  if (requiresRounding && !getRoundingmodeAttr())
+    return emitOpError() << "intrinsic " << name
+                         << " requires a rounding mode attribute";
+  if (!requiresRounding && getRoundingmodeAttr())
+    return emitOpError() << "intrinsic " << name
+                         << " does not take a rounding mode attribute";
   return success();
 }
 
