@@ -273,6 +273,12 @@ void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
   }
 }
 
+bool BasicAAResult::hasReturnsTwiceCall(AAQueryInfo &AAQI) const {
+  if (!AAQI.HasReturnsTwiceCall)
+    AAQI.HasReturnsTwiceCall = F.callsFunctionThatReturnsTwice();
+  return *AAQI.HasReturnsTwiceCall;
+}
+
 //===----------------------------------------------------------------------===//
 // GetElementPtr Instruction Decomposition and Analysis
 //===----------------------------------------------------------------------===//
@@ -1682,14 +1688,25 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     // temporary store the nocapture argument's value in a temporary memory
     // location if that memory location doesn't escape. Or it may pass a
     // nocapture value to other functions as long as they don't capture it.
-    if (isEscapeSource(O1) && capturesNothing(AAQI.CA->getCapturesBefore(
-                                  O2, dyn_cast<Instruction>(O1), /*OrAt=*/true,
-                                  /*ReturnCaptures=*/false)))
-      return AliasResult::NoAlias;
-    if (isEscapeSource(O2) && capturesNothing(AAQI.CA->getCapturesBefore(
-                                  O1, dyn_cast<Instruction>(O2), /*OrAt=*/true,
-                                  /*ReturnCaptures=*/false)))
-      return AliasResult::NoAlias;
+    // After a returns_twice call (e.g. setjmp/longjmp), an alloca's address
+    // saved on an alternate path may be reloaded through an escape source.
+    // Don't conclude NoAlias for an (alloca, escape-source) pair when the
+    // function has such a call. Issue #198967.
+    bool MayLongjmpAlias = (isa<AllocaInst>(O1) || isa<AllocaInst>(O2)) &&
+                           hasReturnsTwiceCall(AAQI);
+
+    if (!MayLongjmpAlias) {
+      if (isEscapeSource(O1) &&
+          capturesNothing(AAQI.CA->getCapturesBefore(
+              O2, dyn_cast<Instruction>(O1), /*OrAt=*/true,
+              /*ReturnCaptures=*/false)))
+        return AliasResult::NoAlias;
+      if (isEscapeSource(O2) &&
+          capturesNothing(AAQI.CA->getCapturesBefore(
+              O1, dyn_cast<Instruction>(O2), /*OrAt=*/true,
+              /*ReturnCaptures=*/false)))
+        return AliasResult::NoAlias;
+    }
   }
 
   // If the size of one access is larger than the entire object on the other

@@ -48,6 +48,8 @@ class BasicAAResult : public AAResultBase {
   /// respect the AAQI.UseDominatorTree option.
   DominatorTree *DT_;
 
+  bool hasReturnsTwiceCall(AAQueryInfo &AAQI) const;
+
   DominatorTree *getDT(const AAQueryInfo &AAQI) const {
     return AAQI.UseDominatorTree ? DT_ : nullptr;
   }

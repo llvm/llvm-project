@@ -307,6 +307,12 @@ public:
   /// passes that lazily update the DT while performing AA queries.
   bool UseDominatorTree = true;
 
+  /// Cached result of Function::callsFunctionThatReturnsTwice() for the
+  /// containing function. Used by BasicAA to gate the (alloca, escape-source)
+  /// NoAlias rule in functions with setjmp/longjmp (issue #198967). Per-query
+  /// (or per-batch) lifetime, so it cannot fall out of date for a fixed IR.
+  std::optional<bool> HasReturnsTwiceCall;
+
   AAQueryInfo(AAResults &AAR, CaptureAnalysis *CA) : AAR(AAR), CA(CA) {}
 };
 
