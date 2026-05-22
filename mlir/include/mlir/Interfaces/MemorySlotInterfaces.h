@@ -57,7 +57,7 @@ struct PromotableSlotAliasInfo {
   OpOperand *aliasedSlotPointerOperand;
 };
 
-/// Maps an alias value (a result of a `PromotableAliaserInterface` op)
+/// Maps an alias slot pointer (a result of a `PromotableAliaserInterface` op)
 /// reachable from a root slot to its `PromotableSlotAliasInfo`.
 using PromotableAliasMap =
     llvm::SmallDenseMap<Value, PromotableSlotAliasInfo, 4>;
@@ -87,19 +87,23 @@ std::optional<MemorySlot> getOpAliasSlot(Operation *op,
 bool referencesAtMostOneAliasOfSlot(Operation *op, const MemorySlot &rootSlot,
                                     const PromotableAliasMap &aliasMap);
 
-/// Projects `slotValue` down to the element type of `aliasPtr` by chaining
-/// `projectSlotValueToAliasValue` calls along the alias chain. Returns a null
-/// value if any projection step fails.
-Value convertSlotValueToAliasValue(Value slotValue, Value aliasPtr,
+/// Walks the alias chain from `rootSlot` down to `aliasSlot`. Calls
+/// `projectSlotValueToAliasValue` at each step to convert `slotValue`
+/// (initially the root slot's value) to `aliasSlot`'s value. Returns a null
+/// value if any projection fails.
+Value convertSlotValueToAliasValue(Value slotValue, const MemorySlot &aliasSlot,
                                    const MemorySlot &rootSlot,
                                    const PromotableAliasMap &aliasMap,
                                    OpBuilder &builder);
 
-/// Projects `aliasValue` back up to `rootSlot.elemType` by chaining
-/// `projectAliasValueToSlotValue` calls backwards along the alias chain.
-/// `rootReachingDef` provides the current slot value, which is projected
-/// down at each step to supply the required reaching definition.
-Value convertAliasValueToSlotValue(Value aliasValue, Value aliasPtr,
+/// Walks the alias chain from `aliasSlot` back up to `rootSlot`. Calls
+/// `projectAliasValueToSlotValue` at each step to convert `aliasValue`
+/// (initially `aliasSlot`'s value) to the root slot's value.
+/// `rootReachingDef` is the current value of the root slot; it is projected
+/// down to each intermediate slot to provide the reaching definition required
+/// by partial sub-aliases.
+Value convertAliasValueToSlotValue(Value aliasValue,
+                                   const MemorySlot &aliasSlot,
                                    Value rootReachingDef,
                                    const MemorySlot &rootSlot,
                                    const PromotableAliasMap &aliasMap,

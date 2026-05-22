@@ -3989,6 +3989,25 @@ def TestTransparentDualAlias : TEST_Op<"transparent_dual_alias",
   let assemblyFormat = "$source attr-dict `:` functional-type($source, results)";
 }
 
+// Partial alias of a memref slot: exposes a sub-value of the parent slot.
+// The slot-to-alias projection is a 1-input `unrealized_conversion_cast`
+// (sub-value extraction). The alias-to-slot projection is a 2-input cast
+// taking both the new alias value and the parent slot's reaching definition
+// (sub-value insertion). This exercises mem2reg's `reachingDef` plumbing
+// for partial sub-aliases.
+def TestPartialAlias : TEST_Op<"partial_alias",
+    [DeclareOpInterfaceMethods<PromotableOpInterface,
+                               ["canUsesBeRemoved",
+                                "removeBlockingUses"]>,
+     DeclareOpInterfaceMethods<PromotableAliaserInterface,
+                               ["getPromotableSlotAliases",
+                                "projectSlotValueToAliasValue",
+                                "projectAliasValueToSlotValue"]>]> {
+  let arguments = (ins AnyMemRef:$source);
+  let results = (outs AnyMemRef:$result);
+  let assemblyFormat = "$source attr-dict `:` functional-type($source, $result)";
+}
+
 //===----------------------------------------------------------------------===//
 // Test allocation Ops
 //===----------------------------------------------------------------------===//

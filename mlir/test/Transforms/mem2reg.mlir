@@ -294,6 +294,40 @@ func.func @promotable_through_alias_across_regions(%cond: i1, %a: i32) {
 
 // -----
 
+// Mirror case: the alias is created *inside* `scf.if`, used to store an
+// `f32` value through a type-changing alias, while the parent `i32` slot
+// is read outside. The alias-to-slot projection (`f32` -> `i32`) must run
+// *inside* the region (where the alias is alive) and the resulting `i32`
+// value must be threaded out of `scf.if` via its `setupPromotion`/
+// `finalizePromotion` hooks to feed the parent load.
+
+// CHECK-LABEL: func.func @alias_inside_region_parent_read_outside
+// CHECK-SAME: (%[[COND:.*]]: i1, %[[A:.*]]: f32, %[[INIT:.*]]: i32) -> i32
+// CHECK-NOT: test.multi_slot_alloca
+// CHECK-NOT: test.transparent_cast_alias
+// CHECK-NOT: memref.store
+// CHECK-NOT: memref.load
+// CHECK: %[[RES:.*]] = scf.if %[[COND]] -> (i32)
+// CHECK:   %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[A]] : f32 to i32
+// CHECK:   scf.yield %[[CAST]] : i32
+// CHECK: } else {
+// CHECK:   scf.yield %[[INIT]] : i32
+// CHECK: }
+// CHECK: return %[[RES]] : i32
+func.func @alias_inside_region_parent_read_outside(%cond: i1, %a: f32,
+                                                   %init: i32) -> i32 {
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  memref.store %init, %slot[] : memref<i32>
+  scf.if %cond {
+    %alias = test.transparent_cast_alias %slot : (memref<i32>) -> memref<f32>
+    memref.store %a, %alias[] : memref<f32>
+  }
+  %v = memref.load %slot[] : memref<i32>
+  return %v : i32
+}
+
+// -----
+
 // Chained aliasers: an identity alias is aliased by a type-changing alias.
 // The alias-map walk must follow both hops and project through each step.
 
@@ -339,4 +373,31 @@ func.func @promotable_through_dual_alias(%a: si32) -> ui32 {
   memref.store %a, %signed[] : memref<si32>
   %v = memref.load %unsigned[] : memref<ui32>
   return %v : ui32
+}
+
+// -----
+
+// Partial aliasing: the parent slot stores a `complex<f32>` (a 2-tuple of
+// `f32`), and the alias exposes one component as a `memref<f32>`.
+// The alias-to-slot projection reconstructs the parent value by consuming the
+// current reaching definition (modelled as a 2-input `unrealized_conversion_cast`:
+// new sub-value + parent reaching def). The slot-to-alias projection extracts
+// a component (1-input cast).
+
+// CHECK-LABEL: func.func @promotable_through_partial_alias
+// CHECK-SAME: (%[[X:.*]]: f32) -> f32
+// CHECK-NOT: memref.alloca
+// CHECK-NOT: test.partial_alias
+// CHECK-NOT: memref.store
+// CHECK-NOT: memref.load
+// CHECK: %[[POISON:.*]] = ub.poison : complex<f32>
+// CHECK: %[[NEW:.*]] = builtin.unrealized_conversion_cast %[[X]], %[[POISON]] : f32, complex<f32> to complex<f32>
+// CHECK: %[[R:.*]] = builtin.unrealized_conversion_cast %[[NEW]] : complex<f32> to f32
+// CHECK: return %[[R]] : f32
+func.func @promotable_through_partial_alias(%x: f32) -> f32 {
+  %slot = memref.alloca() : memref<complex<f32>>
+  %alias = test.partial_alias %slot : (memref<complex<f32>>) -> memref<f32>
+  memref.store %x, %alias[] : memref<f32>
+  %v = memref.load %alias[] : memref<f32>
+  return %v : f32
 }

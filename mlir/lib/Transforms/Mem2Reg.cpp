@@ -534,17 +534,24 @@ MemorySlotPromotionAnalyzer::computeInfo() {
   // inherited from a nested region. As a side effect, `definingBlocks` contains
   // all regions with at least one store.
   //
-  // Iterating `info.userToBlockingUses` lets this also pick up stores that
-  // reach the slot through chains of aliases (`getPromotableSlotAliases`).
+  // Iterate over direct users of the slot pointer and all alias pointers in
+  // `info.aliasMap`. This assumes `PromotableMemOpInterface` operations storing
+  // to the slot use the slot pointer or its aliases directly. Dialects must
+  // implement `PromotableAliaserInterface` for views/aliasing, rather than
+  // manually walking operand definitions in `PromotableMemOpInterface` to find
+  // indirect slot usages.
   DenseMap<Region *, SmallPtrSet<Block *, 16>> definingBlocks;
-  for (auto &[region, opsMap] : info.userToBlockingUses)
-    for (auto &[user, _blockingUses] : opsMap)
-      if (auto storeOp = dyn_cast<PromotableMemOpInterface>(user)) {
-        MemorySlot aliasSlot =
-            getOpAliasSlot(user, slot, info.aliasMap).value_or(slot);
-        if (storeOp.storesTo(aliasSlot))
-          definingBlocks[region].insert(user->getBlock());
-      }
+  auto collectStoringBlocks = [&](Value ptr, const MemorySlot &ptrSlot) {
+    for (OpOperand &use : ptr.getUses()) {
+      Operation *user = use.getOwner();
+      if (auto storeOp = dyn_cast<PromotableMemOpInterface>(user))
+        if (storeOp.storesTo(ptrSlot))
+          definingBlocks[user->getParentRegion()].insert(user->getBlock());
+    }
+  };
+  collectStoringBlocks(slot.ptr, slot);
+  for (auto &[aliasPtr, aliasInfo] : info.aliasMap)
+    collectStoringBlocks(aliasPtr, aliasInfo.slot);
   for (auto &[region, regionInfo] : info.regionsToPromote)
     if (regionInfo.hasValueStores)
       definingBlocks[region->getParentRegion()].insert(
@@ -590,7 +597,7 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
           // reaching definition (at root elem type) before handing it to
           // `getStored`.
           reachingDefAtStore = convertSlotValueToAliasValue(
-              reachingDef, aliasSlot.ptr, slot, info.aliasMap, builder);
+              reachingDef, aliasSlot, slot, info.aliasMap, builder);
           assert(reachingDefAtStore &&
                  "projectSlotValueToAliasValue contract violation");
         }
@@ -603,8 +610,8 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
         // the root slot's elem type, so project `stored` back.
         replacedValuesMap[memOp] = stored;
         if (aliasSlot.ptr != slot.ptr) {
-          stored = convertAliasValueToSlotValue(
-              stored, aliasSlot.ptr, reachingDef, slot, info.aliasMap, builder);
+          stored = convertAliasValueToSlotValue(stored, aliasSlot, reachingDef,
+                                                slot, info.aliasMap, builder);
           assert(stored && "projectAliasValueToSlotValue contract violation");
         }
         reachingDef = stored;
@@ -816,7 +823,7 @@ void MemorySlotPromoter::removeBlockingUses(Region *region) {
         // Project the reaching definition to `aliasSlot.elemType` to match
         // what `toPromoteMemOp` sees.
         reachingDefAtBlockingUse = convertSlotValueToAliasValue(
-            reachingDef, aliasSlot.ptr, slot, info.aliasMap, builder);
+            reachingDef, aliasSlot, slot, info.aliasMap, builder);
         assert(reachingDefAtBlockingUse &&
                "projectSlotValueToAliasValue contract violation");
       }

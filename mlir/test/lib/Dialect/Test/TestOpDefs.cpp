@@ -1901,6 +1901,55 @@ Value TestTransparentDualAlias::projectAliasValueToSlotValue(
       .getResult(0);
 }
 
+//===----------------------------------------------------------------------===//
+// TestPartialAlias
+//===----------------------------------------------------------------------===//
+
+void TestPartialAlias::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot & /*parentSlot*/,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getSource())
+    return;
+  newMemorySlots.push_back(MemorySlot{
+      getResult(), cast<MemRefType>(getResult().getType()).getElementType()});
+}
+
+bool TestPartialAlias::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  for (OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
+}
+
+DeletionKind TestPartialAlias::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+Value TestPartialAlias::projectSlotValueToAliasValue(
+    OpOperand & /*aliasedSlotPointerOperand*/,
+    const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
+    Value slotValue, OpBuilder &builder) {
+  // Sub-value extraction: 1-input cast.
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            aliasSlot.elemType, slotValue)
+      .getResult(0);
+}
+
+Value TestPartialAlias::projectAliasValueToSlotValue(
+    OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
+    const MemorySlot & /*aliasSlot*/, Value aliasValue, Value reachingDef,
+    OpBuilder &builder) {
+  // Sub-value insertion into the current reaching definition: emit a 2-input
+  // cast taking both the new alias value and the existing parent value.
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            parentSlot.elemType,
+                                            ValueRange{aliasValue, reachingDef})
+      .getResult(0);
+}
+
 namespace {
 /// Returns test dialect's memref layout for test dialect's tensor encoding when
 /// applicable.

@@ -79,13 +79,13 @@ struct ChainStep {
 };
 } // namespace
 
-/// Walks from `aliasPtr` back to `rootSlot.ptr` via `aliasMap`. Returns the
-/// leaf-to-root chain, or `nullopt` if `aliasPtr` is not a known alias.
+/// Walks from `aliasSlot` back to `rootSlot` via `aliasMap`. Returns the
+/// leaf-to-root chain, or `nullopt` if `aliasSlot` is not a known alias.
 static std::optional<SmallVector<ChainStep>>
-buildAliasChain(Value aliasPtr, const MemorySlot &rootSlot,
+buildAliasChain(const MemorySlot &aliasSlot, const MemorySlot &rootSlot,
                 const PromotableAliasMap &aliasMap) {
   SmallVector<ChainStep> chain;
-  Value current = aliasPtr;
+  Value current = aliasSlot.ptr;
   while (current != rootSlot.ptr) {
     auto it = aliasMap.find(current);
     if (it == aliasMap.end())
@@ -102,12 +102,13 @@ buildAliasChain(Value aliasPtr, const MemorySlot &rootSlot,
   return chain;
 }
 
-Value mlir::convertSlotValueToAliasValue(Value slotValue, Value aliasPtr,
+Value mlir::convertSlotValueToAliasValue(Value slotValue,
+                                         const MemorySlot &aliasSlot,
                                          const MemorySlot &rootSlot,
                                          const PromotableAliasMap &aliasMap,
                                          OpBuilder &builder) {
   std::optional<SmallVector<ChainStep>> chain =
-      buildAliasChain(aliasPtr, rootSlot, aliasMap);
+      buildAliasChain(aliasSlot, rootSlot, aliasMap);
   if (!chain)
     return {};
   Value current = slotValue;
@@ -122,13 +123,14 @@ Value mlir::convertSlotValueToAliasValue(Value slotValue, Value aliasPtr,
   return current;
 }
 
-Value mlir::convertAliasValueToSlotValue(Value aliasValue, Value aliasPtr,
+Value mlir::convertAliasValueToSlotValue(Value aliasValue,
+                                         const MemorySlot &aliasSlot,
                                          Value rootReachingDef,
                                          const MemorySlot &rootSlot,
                                          const PromotableAliasMap &aliasMap,
                                          OpBuilder &builder) {
   std::optional<SmallVector<ChainStep>> chainOpt =
-      buildAliasChain(aliasPtr, rootSlot, aliasMap);
+      buildAliasChain(aliasSlot, rootSlot, aliasMap);
   if (!chainOpt)
     return {};
   SmallVector<ChainStep> &chain = *chainOpt;
