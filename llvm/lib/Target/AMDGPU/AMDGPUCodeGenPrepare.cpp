@@ -2098,7 +2098,7 @@ bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
 }
 
 bool AMDGPUCodeGenPrepareImpl::visitGetElementPtrInst(GetElementPtrInst &I) {
-  if (!CurrentWaterfall || UA.isUniform(&I))
+  if (!CurrentWaterfall || UA.isUniformAtDef(&I))
     return false;
   if (I.getParent() != CurrentWaterfall->getParent())
     return false;

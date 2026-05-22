@@ -9787,8 +9787,8 @@ define amdgpu_cs void @ds_write_8(i8 %value, i32 %index) #1 {
 ;
 ; GFX9-SDAG-LABEL: ds_write_8:
 ; GFX9-SDAG:       ; %bb.0: ; %.entry
-; GFX9-SDAG-NEXT:    s_mov_b32 s0, Lds@abs32@lo
-; GFX9-SDAG-NEXT:    v_lshl_add_u32 v1, v1, 2, s0
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, Lds@abs32@lo
+; GFX9-SDAG-NEXT:    v_lshl_add_u32 v1, v1, 2, v2
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX9-SDAG-NEXT:  .LBB19_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-SDAG-NEXT:    v_readfirstlane_b32 s0, v1
@@ -11005,10 +11005,10 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_end_1loop_rsrc_
 ;
 ; GFX10-32-GISEL-LABEL: test_waterfall_multi_end_1loop_rsrc_load_inside:
 ; GFX10-32-GISEL:       ; %bb.0:
-; GFX10-32-GISEL-NEXT:    v_mov_b32_e32 v8, v0
-; GFX10-32-GISEL-NEXT:    v_mov_b32_e32 v9, v1
 ; GFX10-32-GISEL-NEXT:    s_mov_b32 s4, exec_lo
 ; GFX10-32-GISEL-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX10-32-GISEL-NEXT:    v_mov_b32_e32 v8, v0
+; GFX10-32-GISEL-NEXT:    v_mov_b32_e32 v9, v1
 ; GFX10-32-GISEL-NEXT:    v_mov_b32_e32 v10, v2
 ; GFX10-32-GISEL-NEXT:    v_mov_b32_e32 v11, v3
 ; GFX10-32-GISEL-NEXT:    s_mov_b32 s6, exec_lo
@@ -11097,10 +11097,10 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_end_1loop_rsrc_
 ;
 ; GFX10-64-GISEL-LABEL: test_waterfall_multi_end_1loop_rsrc_load_inside:
 ; GFX10-64-GISEL:       ; %bb.0:
-; GFX10-64-GISEL-NEXT:    v_mov_b32_e32 v8, v0
-; GFX10-64-GISEL-NEXT:    v_mov_b32_e32 v9, v1
 ; GFX10-64-GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX10-64-GISEL-NEXT:    s_wqm_b64 exec, exec
+; GFX10-64-GISEL-NEXT:    v_mov_b32_e32 v8, v0
+; GFX10-64-GISEL-NEXT:    v_mov_b32_e32 v9, v1
 ; GFX10-64-GISEL-NEXT:    v_mov_b32_e32 v10, v2
 ; GFX10-64-GISEL-NEXT:    v_mov_b32_e32 v11, v3
 ; GFX10-64-GISEL-NEXT:    s_mov_b64 s[8:9], exec
@@ -11194,10 +11194,10 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_end_1loop_rsrc_
 ;
 ; GFX1150-GISEL-LABEL: test_waterfall_multi_end_1loop_rsrc_load_inside:
 ; GFX1150-GISEL:       ; %bb.0:
-; GFX1150-GISEL-NEXT:    v_mov_b32_e32 v8, v0
-; GFX1150-GISEL-NEXT:    v_mov_b32_e32 v9, v1
 ; GFX1150-GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX1150-GISEL-NEXT:    s_wqm_b64 exec, exec
+; GFX1150-GISEL-NEXT:    v_mov_b32_e32 v8, v0
+; GFX1150-GISEL-NEXT:    v_mov_b32_e32 v9, v1
 ; GFX1150-GISEL-NEXT:    v_mov_b32_e32 v10, v2
 ; GFX1150-GISEL-NEXT:    v_mov_b32_e32 v11, v3
 ; GFX1150-GISEL-NEXT:    s_mov_b64 s[8:9], exec
@@ -11295,10 +11295,10 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_end_1loop_rsrc_
 ;
 ; GFX12-GISEL-LABEL: test_waterfall_multi_end_1loop_rsrc_load_inside:
 ; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v8, v0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v9, v1
 ; GFX12-GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX12-GISEL-NEXT:    s_wqm_b64 exec, exec
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v8, v0
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v9, v1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v10, v2
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v11, v3
 ; GFX12-GISEL-NEXT:    s_mov_b64 s[8:9], exec
