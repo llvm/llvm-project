@@ -49,4 +49,6 @@ function(add_vector_math_entrypoint_object name)
   )
 endfunction()
 
+add_vector_math_entrypoint_object(exp2f)
+add_vector_math_entrypoint_object(exp10f)
 add_vector_math_entrypoint_object(expf)

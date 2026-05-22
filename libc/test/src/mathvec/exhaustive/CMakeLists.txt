@@ -10,6 +10,38 @@ add_header_library(
 )
 
 add_fp_unittest(
+  exp2f_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    exp2f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.exp2f
+    libc.src.mathvec.exp2f
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  exp10f_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    exp10f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.exp10f
+    libc.src.mathvec.exp10f
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   expf_test
   NO_RUN_POSTBUILD
   SUITE

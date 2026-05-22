@@ -9,6 +9,40 @@ add_header_library(
 )
 
 add_fp_unittest(
+  exp2f_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    exp2f_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.exp2f
+    libc.src.mathvec.exp2f
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
+  exp10f_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    exp10f_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.exp10f
+    libc.src.mathvec.exp10f
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
   expf_test
   SUITE
     libc-mathvec-unittests
