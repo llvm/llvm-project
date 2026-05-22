@@ -2411,7 +2411,7 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
   if (!Parser->SavedDiagHandler)
     DiagSrcMgr.printIncludeStackForDiagnostic(DiagLoc, OS);
 
-  // Map macro errors from macro instantiation buffers back to the definition line.
+  // Map macro errors from macro instantiation buffers to the definition line.
   if (std::optional<SMDiagnostic> NewDiag =
           DiagSrcMgr.mapDiagnosticFromMacroInstantiation(Diag)) {
     if (Parser->SavedDiagHandler)
