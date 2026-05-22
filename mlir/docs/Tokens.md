@@ -58,6 +58,10 @@ These properties mirror what LLVM IR already documents for its own
 Operations must opt in to producing or consuming tokens with
 `TokenProducerTrait` and `TokenConsumerTrait`.
 
+Note: Because tokens are SSA values, they cannot cross `IsolatedFromAbove`
+region boundaries. Symbols should be used instead when a token-like
+dependency must cross such a boundary.
+
 ## ODS Integration
 
 Tokens are excluded from the default `AnyType` predicate, so an op that has
