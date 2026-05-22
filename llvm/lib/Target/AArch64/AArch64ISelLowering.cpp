@@ -1774,19 +1774,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     // SVE supports truncating stores of 64 and 128-bit vectors
-    auto UseSVE = [&](MVT VT) {
-      return useSVEForFixedLengthVectorVT(
-          VT, /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors());
-    };
-    if (UseSVE(MVT::v2i64)) {
-      setTruncStoreAction(MVT::v2i64, MVT::v2i8, Custom);
-      setTruncStoreAction(MVT::v2i64, MVT::v2i16, Custom);
-      setTruncStoreAction(MVT::v2i64, MVT::v2i32, Custom);
-    }
-    if (UseSVE(MVT::v2i32)) {
-      setTruncStoreAction(MVT::v2i32, MVT::v2i8, Custom);
-      setTruncStoreAction(MVT::v2i32, MVT::v2i16, Custom);
-    }
+    auto VT = MVT::v2i64;
+    if (useSVEForFixedLengthVectorVT(
+            VT, /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors()))
+      setTruncStoreAction(VT, MVT::v2i32, Custom);
+
+    setTruncStoreAction(MVT::v2i64, MVT::v2i8, Custom);
+    setTruncStoreAction(MVT::v2i64, MVT::v2i16, Custom);
+    setTruncStoreAction(MVT::v2i32, MVT::v2i8, Custom);
+    setTruncStoreAction(MVT::v2i32, MVT::v2i16, Custom);
 
     for (auto VT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv8f16, MVT::nxv2f32,
                     MVT::nxv4f32, MVT::nxv2f64}) {
