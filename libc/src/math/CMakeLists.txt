@@ -367,8 +367,8 @@ add_math_entrypoint_object(ilogbbf16)
 
 add_math_entrypoint_object(isnan)
 add_math_entrypoint_object(isnanf)
-add_math_entrypoint_object(isnanl)
 add_math_entrypoint_object(isnanf16)
+add_math_entrypoint_object(isnanl)
 
 add_math_entrypoint_object(issignaling)
 add_math_entrypoint_object(issignalingf)
