@@ -5916,9 +5916,7 @@ X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
               : ISD::FMINIMUM;
   }
 
-  // We use the Intel Architecture Code Analyzer(IACA) to measure the throughput
-  // and make it as the cost.
-
+  // We use llvm-mca across all supported CPUs to measure the cost stats.
   static const CostKindTblEntry SSE2CostTbl[] = {
       {ISD::SMIN, MVT::v2i64, {3, 4, 5, 6}},
       {ISD::UMIN, MVT::v2i64, {3, 4, 5, 6}},
