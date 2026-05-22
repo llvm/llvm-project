@@ -9664,6 +9664,37 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     }
   }
 
+  // For Power8/9, optimize vec splats of small FP values that can be
+  // represented as integers. Use vspltisw + xvcvsxwdp/xvcvsxwsp instead of
+  // loading from constant pool.
+  if (BVNIsConstantSplat && Subtarget.hasVSX() && Subtarget.hasP8Vector() &&
+      !Subtarget.hasP10Vector()) {
+    if ((SplatBitSize == 64 && Op->getValueType(0) == MVT::v2f64) ||
+        (SplatBitSize == 32 && Op->getValueType(0) == MVT::v4f32)) {
+      ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(Op.getOperand(0));
+      if (CN) {
+        APFloat APFloatVal = CN->getValueAPF();
+        bool IsExact;
+        APSInt IntResult(16, false);
+        APFloatVal.convertToInteger(IntResult, APFloat::rmTowardZero, &IsExact);
+        if (IsExact && IntResult <= 15 && IntResult >= -16 &&
+            !APFloatVal.isZero()) {
+          int64_t IntVal = IntResult.getSExtValue();
+          SDValue IntSplat =
+              getCanonicalConstSplat(IntVal, 4, MVT::v4i32, DAG, dl);
+          if (SplatBitSize == 64) {
+            return DAG.getNode(
+                ISD::INTRINSIC_WO_CHAIN, dl, MVT::v2f64,
+                DAG.getConstant(Intrinsic::ppc_vsx_xvcvsxwdp, dl, MVT::i32),
+                IntSplat);
+          } else {
+            return DAG.getNode(PPCISD::XVCVSXWSP, dl, MVT::v4f32, IntSplat);
+          }
+        }
+      }
+    }
+  }
+
   bool IsSplat64 = false;
   uint64_t SplatBits = 0;
   int32_t SextVal = 0;
