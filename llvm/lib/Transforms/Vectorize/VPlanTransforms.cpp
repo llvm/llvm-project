@@ -1811,10 +1811,9 @@ void VPlanTransforms::simplifyReverses(VPlan &Plan) {
                      m_Deferred(EVL)));
   };
 
-  PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
-      Plan.getEntry());
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
-    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       VPValue *X;
       if (match(&R, m_ReverseReverse(m_VPValue(X)))) {
         R.getVPSingleValue()->replaceAllUsesWith(X);
