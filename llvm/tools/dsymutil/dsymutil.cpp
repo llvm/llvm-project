@@ -1042,6 +1042,25 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
         }
       }
     }
+
+    // Bump the .dSYM bundle directory's mtime so macOS Spotlight reimports
+    // the (possibly new) UUID. Rewriting the inner DWARF file alone leaves
+    // the bundle directory mtime frozen, and Spotlight keeps serving the
+    // previous build's UUID, falling through to slow dsymForUUID lookups.
+    {
+      StringRef DWARFFile = OutputLocationOrErr->DWARFFile;
+      auto Pos = DWARFFile.find(".dSYM/");
+      if (Pos == StringRef::npos)
+        Pos = DWARFFile.find(".dSYM");
+      if (Pos != StringRef::npos) {
+        StringRef BundlePath = DWARFFile.substr(0, Pos + 5);
+        auto Now = std::chrono::system_clock::now();
+        if (auto EC =
+                sys::fs::setLastAccessAndModificationTime(BundlePath, Now))
+          WithColor::warning() << "could not update mtime of " << BundlePath
+                               << ": " << EC.message() << '\n';
+      }
+    }
   }
 
   return EXIT_SUCCESS;
