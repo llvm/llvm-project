@@ -94,7 +94,7 @@ public:
 class DirectXMCAsmInfo : public MCAsmInfo {
 public:
   explicit DirectXMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
-      : MCAsmInfo() {}
+      : MCAsmInfo(Options) {}
 };
 
 } // namespace

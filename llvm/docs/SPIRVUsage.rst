@@ -213,6 +213,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Allows to allocate local arrays whose number of elements is unknown at compile time.
    * - ``SPV_INTEL_joint_matrix``
      - Adds few matrix capabilities on top of SPV_KHR_cooperative_matrix extension, such as matrix prefetch, get element coordinate and checked load/store/construct instructions, tensor float 32 and bfloat type interpretations for multiply-add instruction.
+   * - ``SPV_KHR_abort``
+     - Adds a function-termination instruction that signals an abnormal error to the client API. Currently supported in OpenCL environments only.
    * - ``SPV_KHR_bit_instructions``
      - Enables bit instructions to be used by SPIR-V modules without requiring the Shader capability.
    * - ``SPV_KHR_expect_assume``
@@ -223,6 +225,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds instructions for dot product operations on integer vectors with optional accumulation. Integer vectors includes 4-component vector of 8-bit integers and 4-component vectors of 8-bit integers packed into 32-bit integers.
    * - ``SPV_KHR_linkonce_odr``
      - Allows to use the LinkOnceODR linkage type that lets a function or global variable to be merged with other functions or global variables of the same name when linkage occurs.
+   * - ``SPV_AMD_weak_linkage``
+     - Allows to use the Weak linkage type that lets a function or global variable to be replaced by a definition with Export linkage from another module during linking.
    * - ``SPV_KHR_no_integer_wrap_decoration``
      - Adds decorations to indicate that a given instruction does not cause integer wrapping.
    * - ``SPV_KHR_shader_clock``
@@ -257,6 +261,26 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds instructions for arbitrary precision floating-point arithmetic. The extension works without SPV_ALTERA_arbitrary_precision_integers, but together they allow greater flexibility in representing arbitrary precision data types.
    * - ``SPV_KHR_fma``
      - Adds a core fused-multiply-add (fma) instruction to replace the different variants that have existed in extended instruction sets.
+   * - ``SPV_AMD_shader_trinary_minmax_extension``
+     - Adds an extended instruction set providing trinary min and max operations for shaders.
+   * - ``SPV_EXT_relaxed_printf_string_address_space``
+     - Allows printf format strings to reside in address spaces other than constant.
+   * - ``SPV_EXT_shader_image_int64``
+     - Enables 64-bit integer types to be used with image read and write operations.
+   * - ``SPV_INTEL_long_composites``
+     - Adds continued instructions to allow composites with a large number of constituents.
+   * - ``SPV_INTEL_masked_gather_scatter``
+     - Adds masked gather and scatter instructions for vectors of pointers.
+   * - ``SPV_INTEL_tensor_float32_conversion``
+     - Adds an instruction to round a floating-point value to TensorFloat32.
+   * - ``SPV_INTEL_unstructured_loop_controls``
+     - Adds an instruction to control loop execution without structured loop constructs.
+   * - ``SPV_KHR_bfloat16``
+     - Adds a 16-bit bfloat floating-point type, along with dot product and cooperative matrix capabilities using bfloat16.
+   * - ``SPV_KHR_cooperative_matrix``
+     - Adds cooperative matrix types and instructions for matrix multiply-add operations across invocations in a subgroup.
+   * - ``SPV_KHR_vulkan_memory_model``
+     - Adds the Vulkan memory model, which defines memory semantics for the Vulkan API.
 
 
 SPIR-V representation in LLVM IR

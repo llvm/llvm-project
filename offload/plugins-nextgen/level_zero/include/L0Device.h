@@ -75,18 +75,6 @@ struct L0DeviceIdTy {
 };
 
 class L0DeviceTLSTy {
-  /// Command list for each device.
-  ze_command_list_handle_t CmdList = nullptr;
-
-  /// Main copy command list for each device.
-  ze_command_list_handle_t CopyCmdList = nullptr;
-
-  /// Command queue for each device.
-  ze_command_queue_handle_t CmdQueue = nullptr;
-
-  /// Main copy command queue for each device.
-  ze_command_queue_handle_t CopyCmdQueue = nullptr;
-
   /// Immediate command list for each device.
   ze_command_list_handle_t ImmCmdList = nullptr;
 
@@ -96,41 +84,22 @@ class L0DeviceTLSTy {
 public:
   L0DeviceTLSTy() = default;
   ~L0DeviceTLSTy() {
-    // assert all fields are nullptr on destruction.
-    assert(!CmdList && !CopyCmdList && !CmdQueue && !CopyCmdQueue &&
-           !ImmCmdList && !ImmCopyCmdList &&
+    assert(!ImmCmdList && !ImmCopyCmdList &&
            "L0DeviceTLSTy destroyed without clearing resources");
   }
 
   L0DeviceTLSTy(const L0DeviceTLSTy &) = delete;
   L0DeviceTLSTy(L0DeviceTLSTy &&Other) {
-    CmdList = std::exchange(Other.CmdList, nullptr);
-    CopyCmdList = std::exchange(Other.CopyCmdList, nullptr);
-    CmdQueue = std::exchange(Other.CmdQueue, nullptr);
-    CopyCmdQueue = std::exchange(Other.CopyCmdQueue, nullptr);
     ImmCmdList = std::exchange(Other.ImmCmdList, nullptr);
     ImmCopyCmdList = std::exchange(Other.ImmCopyCmdList, nullptr);
   }
 
   Error deinit() {
-    // destroy all lists and queues.
-    if (CmdList)
-      CALL_ZE_RET_ERROR(zeCommandListDestroy, CmdList);
-    if (CopyCmdList)
-      CALL_ZE_RET_ERROR(zeCommandListDestroy, CopyCmdList);
     if (ImmCmdList)
       CALL_ZE_RET_ERROR(zeCommandListDestroy, ImmCmdList);
     if (ImmCopyCmdList)
       CALL_ZE_RET_ERROR(zeCommandListDestroy, ImmCopyCmdList);
-    if (CmdQueue)
-      CALL_ZE_RET_ERROR(zeCommandQueueDestroy, CmdQueue);
-    if (CopyCmdQueue)
-      CALL_ZE_RET_ERROR(zeCommandQueueDestroy, CopyCmdQueue);
 
-    CmdList = nullptr;
-    CopyCmdList = nullptr;
-    CmdQueue = nullptr;
-    CopyCmdQueue = nullptr;
     ImmCmdList = nullptr;
     ImmCopyCmdList = nullptr;
 
@@ -140,14 +109,6 @@ public:
   L0DeviceTLSTy &operator=(const L0DeviceTLSTy &) = delete;
   L0DeviceTLSTy &operator=(L0DeviceTLSTy &&) = delete;
 
-  ze_command_list_handle_t getCmdList() const { return CmdList; }
-  void setCmdList(ze_command_list_handle_t _CmdList) { CmdList = _CmdList; }
-
-  ze_command_list_handle_t getCopyCmdList() const { return CopyCmdList; }
-  void setCopyCmdList(ze_command_list_handle_t _CopyCmdList) {
-    CopyCmdList = _CopyCmdList;
-  }
-
   ze_command_list_handle_t getImmCmdList() const { return ImmCmdList; }
   void setImmCmdList(ze_command_list_handle_t ImmCmdListIn) {
     ImmCmdList = ImmCmdListIn;
@@ -156,16 +117,6 @@ public:
   ze_command_list_handle_t getImmCopyCmdList() const { return ImmCopyCmdList; }
   void setImmCopyCmdList(ze_command_list_handle_t ImmCopyCmdListIn) {
     ImmCopyCmdList = ImmCopyCmdListIn;
-  }
-
-  ze_command_queue_handle_t getCmdQueue() const { return CmdQueue; }
-  void setCmdQueue(ze_command_queue_handle_t CmdQueueIn) {
-    CmdQueue = CmdQueueIn;
-  }
-
-  ze_command_queue_handle_t getCopyCmdQueue() const { return CopyCmdQueue; }
-  void setCopyCmdQueue(ze_command_queue_handle_t CopyCmdQueueIn) {
-    CopyCmdQueue = CopyCmdQueueIn;
   }
 };
 
@@ -188,6 +139,7 @@ class L0DeviceTy final : public GenericDeviceTy {
   ze_device_compute_properties_t ComputeProperties{};
   ze_device_memory_properties_t MemoryProperties{};
   ze_device_cache_properties_t CacheProperties{};
+  ze_device_module_properties_t ModuleProperties{};
 
   /// Devices' default target allocation kind for internal allocation.
   int32_t AllocKind = TARGET_ALLOC_DEVICE;
@@ -217,6 +169,9 @@ class L0DeviceTy final : public GenericDeviceTy {
 
   bool IsAsyncEnabled = false;
 
+  /// Whether the device supports cooperative kernels.
+  bool SupportsCooperativeKernels = false;
+
   /// Lock for this device.
   std::mutex Mutex;
 
@@ -242,6 +197,9 @@ class L0DeviceTy final : public GenericDeviceTy {
   Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
                                  bool IsCtor);
 
+  /// Check if device supports cooperative kernels.
+  bool checkCooperativeKernelSupport();
+
 public:
   L0DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
              ze_device_handle_t zeDevice, L0ContextTy &DriverInfo,
@@ -257,6 +215,8 @@ public:
     MemoryProperties.pNext = nullptr;
     CacheProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_CACHE_PROPERTIES;
     CacheProperties.pNext = nullptr;
+    ModuleProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_MODULE_PROPERTIES;
+    ModuleProperties.pNext = nullptr;
   }
 
   static L0DeviceTy &makeL0Device(GenericDeviceTy &Device) {
@@ -272,6 +232,8 @@ public:
   Error initImpl(GenericPluginTy &Plugin) override;
   Error deinitImpl() override;
   ze_device_handle_t getZeDevice() const { return zeDevice; }
+
+  bool supportsCooperativeKernels() const { return SupportsCooperativeKernels; }
 
   const L0ContextTy &getL0Context() const { return l0Context; }
   L0ContextTy &getL0Context() { return l0Context; }
@@ -385,6 +347,26 @@ public:
     return DeviceProperties.maxMemAllocSize;
   }
 
+  bool supportsFP64() const {
+    return ModuleProperties.flags & ZE_DEVICE_MODULE_FLAG_FP64;
+  }
+
+  bool supportsFP16() const {
+    return ModuleProperties.flags & ZE_DEVICE_MODULE_FLAG_FP16;
+  }
+
+  ze_device_fp_flags_t getFP64Flags() const {
+    return ModuleProperties.fp64flags;
+  }
+
+  ze_device_fp_flags_t getFP16Flags() const {
+    return ModuleProperties.fp16flags;
+  }
+
+  ze_device_fp_flags_t getFP32Flags() const {
+    return ModuleProperties.fp32flags;
+  }
+
   int32_t getAllocKind() const { return AllocKind; }
   DeviceArchTy getDeviceArch() const { return DeviceArch; }
   bool isDeviceArch(DeviceArchTy Arch) const { return DeviceArch == Arch; }
@@ -421,46 +403,9 @@ public:
   bool hasMainCopyEngine() const { return CopyOrdinal.first != MaxOrdinal; }
   uint32_t getMainCopyEngine() const { return CopyOrdinal.first; }
 
-  bool deviceRequiresImmCmdList() const {
-    constexpr uint32_t BMGIP = 0x05004000;
-    return isDeviceIPorNewer(BMGIP);
-  }
   bool asyncEnabled() const { return IsAsyncEnabled; }
-  bool useImmForCompute() const { return true; }
-  bool useImmForCopy() const { return true; }
-  bool useImmForInterop() const { return true; }
 
   void reportDeviceInfo() const;
-
-  // Command queues related functions.
-  /// Create a command list with given ordinal and flags.
-  Expected<ze_command_list_handle_t>
-  createCmdList(ze_context_handle_t Context, ze_device_handle_t Device,
-                uint32_t Ordinal, ze_command_list_flags_t Flags,
-                const std::string_view DeviceIdStr);
-
-  /// Create a command list with default flags.
-  Expected<ze_command_list_handle_t>
-  createCmdList(ze_context_handle_t Context, ze_device_handle_t Device,
-                uint32_t Ordinal, const std::string_view DeviceIdStr);
-
-  Expected<ze_command_list_handle_t> getCmdList();
-
-  /// Create a command queue with given ordinal and flags.
-  Expected<ze_command_queue_handle_t>
-  createCmdQueue(ze_context_handle_t Context, ze_device_handle_t Device,
-                 uint32_t Ordinal, uint32_t Index,
-                 ze_command_queue_flags_t Flags,
-                 const std::string_view DeviceIdStr);
-
-  /// Create a command queue with default flags.
-  Expected<ze_command_queue_handle_t>
-  createCmdQueue(ze_context_handle_t Context, ze_device_handle_t Device,
-                 uint32_t Ordinal, uint32_t Index,
-                 const std::string_view DeviceIdStr, bool InOrder = false);
-
-  /// Create a new command queue for the given OpenMP device ID.
-  Expected<ze_command_queue_handle_t> createCommandQueue(bool InOrder = false);
 
   /// Create an immediate command list.
   Expected<ze_command_list_handle_t>
@@ -473,9 +418,6 @@ public:
 
   /// Create an immediate command list for copying.
   Expected<ze_command_list_handle_t> createImmCopyCmdList();
-  Expected<ze_command_queue_handle_t> getCmdQueue();
-  Expected<ze_command_list_handle_t> getCopyCmdList();
-  Expected<ze_command_queue_handle_t> getCopyCmdQueue();
   Expected<ze_command_list_handle_t> getImmCmdList();
   Expected<ze_command_list_handle_t> getImmCopyCmdList();
 
@@ -610,12 +552,14 @@ public:
     return true;
   }
 
-  Error createEventImpl(void **EventPtrStorage) override {
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
     return Plugin::success();
   }
-  Error destroyEventImpl(void *EventPtr) override { return Plugin::success(); }
-  Error recordEventImpl(void *EventPtr,
-                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
+    return Plugin::success();
+  }
+  Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
+                        bool EnableProfiling) override {
     return Plugin::success();
   }
 

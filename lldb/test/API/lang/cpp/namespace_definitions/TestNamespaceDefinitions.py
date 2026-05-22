@@ -7,6 +7,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class NamespaceDefinitionsTestCase(TestBase):
     # See also llvm.org/pr28948
     @expectedFailureAll(bugnumber="llvm.org/pr50814", compiler="gcc")

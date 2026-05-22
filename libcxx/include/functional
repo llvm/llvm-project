@@ -221,6 +221,8 @@ template <auto f>
 // [func.bind.partial], function templates bind_front and bind_back
 template<class F, class... Args>
   constexpr unspecified bind_front(F&&, Args&&...); // C++20
+template<auto f, class... Args>
+  constexpr unspecified bind_front(Args&&...);      // C++26
 template<class F, class... Args>
   constexpr unspecified bind_back(F&&, Args&&...);  // C++23
 
@@ -540,7 +542,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #  include <__functional/binder1st.h>
 #  include <__functional/binder2nd.h>
 #  include <__functional/hash.h>
-#  include <__functional/mem_fn.h> // TODO: deprecate
+#  include <__functional/mem_fn.h>
 #  include <__functional/mem_fun_ref.h>
 #  include <__functional/operations.h>
 #  include <__functional/pointer_to_binary_function.h>

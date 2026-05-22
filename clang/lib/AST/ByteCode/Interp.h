@@ -16,6 +16,7 @@
 #include "../ExprConstShared.h"
 #include "BitcastBuffer.h"
 #include "Boolean.h"
+#include "Char.h"
 #include "DynamicAllocator.h"
 #include "FixedPoint.h"
 #include "Floating.h"
@@ -81,7 +82,7 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                            AccessKinds AK);
 bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
-                           const Descriptor *Desc, AccessKinds AK);
+                           const Block *B, AccessKinds AK);
 
 /// Checks a direct load of a primitive value from a global or local variable.
 bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B);
@@ -195,6 +196,12 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
 /// Checks if Div/Rem operation on LHS and RHS is valid.
 template <typename T>
 bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!LHS.isNumber() || !RHS.isNumber())
+      return false;
+  }
+
   if (RHS.isZero()) {
     const auto *Op = cast<BinaryOperator>(S.Current->getExpr(OpPC));
     if constexpr (std::is_same_v<T, Floating>) {
@@ -297,6 +304,11 @@ template <typename T, bool (*OpFW)(T, T, unsigned, T *),
           template <typename U> class OpAP>
 bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
                      const T &RHS) {
+  // Should've been handled before.
+  if constexpr (isIntegralOrPointer<T>()) {
+    assert(LHS.isNumber() && RHS.isNumber());
+  }
+
   // Fast path - add the numbers with fixed width.
   T Result;
   if constexpr (needsAlloc<T>())
@@ -339,11 +351,46 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
   return true;
 }
 
+// Add or subtract an integer-thats-actually-a-pointer and one real integer.
+template <typename T, template <typename U> class Op>
+static bool AddSubNonNumber(InterpState &S, CodePtr OpPC, T LHS, T RHS) {
+  assert(!LHS.isNumber() || !RHS.isNumber());
+
+  typename T::ReprT Number;
+  const void *Ptr;
+  typename T::ReprT Offset;
+  IntegralKind Kind;
+  if (LHS.isNumber()) {
+    Number = static_cast<typename T::ReprT>(LHS);
+    Ptr = RHS.getPtr();
+    Offset = RHS.getOffset();
+    Kind = RHS.getKind();
+  } else {
+    assert(RHS.isNumber());
+    Number = static_cast<typename T::ReprT>(RHS);
+    Ptr = LHS.getPtr();
+    Offset = LHS.getOffset();
+    Kind = LHS.getKind();
+  }
+
+  S.Stk.push<T>(Kind, Ptr, Op<int32_t>()(Offset, Number));
+  return true;
+}
+
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Add(InterpState &S, CodePtr OpPC) {
   const T &RHS = S.Stk.pop<T>();
   const T &LHS = S.Stk.pop<T>();
   const unsigned Bits = RHS.bitWidth() + 1;
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (LHS.isNumber() != RHS.isNumber())
+      return AddSubNonNumber<T, std::plus>(S, OpPC, LHS, RHS);
+    else if (LHS.isNumber() && RHS.isNumber())
+      ; // Fall through to proper addition below.
+    else
+      return false; // Reject everything else.
+  }
 
   return AddSubMulHelper<T, T::add, std::plus>(S, OpPC, Bits, LHS, RHS);
 }
@@ -365,6 +412,40 @@ bool Sub(InterpState &S, CodePtr OpPC) {
   const T &LHS = S.Stk.pop<T>();
   const unsigned Bits = RHS.bitWidth() + 1;
 
+  if constexpr (isIntegralOrPointer<T>()) {
+    // Handle (int)&&a - (int)&&b.
+    // Both operands should be integrals that point to labels and the result is
+    // a AddrLabelDiff integral.
+    if (LHS.getKind() == IntegralKind::LabelAddress ||
+        RHS.getKind() == IntegralKind::LabelAddress) {
+      const auto *A = LHS.getKind() == IntegralKind::LabelAddress
+                          ? reinterpret_cast<const Expr *>(LHS.getPtr())
+                          : nullptr;
+      const auto *B = RHS.getKind() == IntegralKind::LabelAddress
+                          ? reinterpret_cast<const Expr *>(RHS.getPtr())
+                          : nullptr;
+      if (!isa_and_nonnull<AddrLabelExpr>(A) ||
+          !isa_and_nonnull<AddrLabelExpr>(B))
+        return false;
+      const auto *LHSAddrExpr = cast<AddrLabelExpr>(A);
+      const auto *RHSAddrExpr = cast<AddrLabelExpr>(B);
+
+      if (LHSAddrExpr->getLabel()->getDeclContext() !=
+          RHSAddrExpr->getLabel()->getDeclContext())
+        return Invalid(S, OpPC);
+
+      S.Stk.push<T>(LHSAddrExpr, RHSAddrExpr);
+      return true;
+    }
+
+    if (!LHS.isNumber() && RHS.isNumber())
+      return AddSubNonNumber<T, std::minus>(S, OpPC, LHS, RHS);
+    else if (LHS.isNumber() && RHS.isNumber())
+      ; // Fall through to proper addition below.
+    else
+      return false; // Reject everything else.
+  }
+
   return AddSubMulHelper<T, T::sub, std::minus>(S, OpPC, Bits, LHS, RHS);
 }
 
@@ -384,6 +465,11 @@ bool Mul(InterpState &S, CodePtr OpPC) {
   const T &RHS = S.Stk.pop<T>();
   const T &LHS = S.Stk.pop<T>();
   const unsigned Bits = RHS.bitWidth() * 2;
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!LHS.isNumber() || !RHS.isNumber())
+      return Invalid(S, OpPC);
+  }
 
   return AddSubMulHelper<T, T::mul, std::multiplies>(S, OpPC, Bits, LHS, RHS);
 }
@@ -568,6 +654,11 @@ bool BitAnd(InterpState &S, CodePtr OpPC) {
   const T &LHS = S.Stk.pop<T>();
   unsigned Bits = RHS.bitWidth();
 
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!LHS.isNumber() || !RHS.isNumber())
+      return false;
+  }
+
   T Result;
   if constexpr (needsAlloc<T>())
     Result = S.allocAP<T>(Bits);
@@ -588,6 +679,11 @@ bool BitOr(InterpState &S, CodePtr OpPC) {
   const T &LHS = S.Stk.pop<T>();
   unsigned Bits = RHS.bitWidth();
 
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!LHS.isNumber() || !RHS.isNumber())
+      return false;
+  }
+
   T Result;
   if constexpr (needsAlloc<T>())
     Result = S.allocAP<T>(Bits);
@@ -606,8 +702,12 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool BitXor(InterpState &S, CodePtr OpPC) {
   const T &RHS = S.Stk.pop<T>();
   const T &LHS = S.Stk.pop<T>();
-
   unsigned Bits = RHS.bitWidth();
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!LHS.isNumber() || !RHS.isNumber())
+      return false;
+  }
 
   T Result;
   if constexpr (needsAlloc<T>())
@@ -774,6 +874,13 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   }
 
   const T &Value = Ptr.deref<T>();
+
+  // Can't inc/dec non-numbers.
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!Value.isNumber())
+      return false;
+  }
+
   T Result;
   if constexpr (needsAlloc<T>())
     Result = S.allocAP<T>(Value.bitWidth());
@@ -1078,6 +1185,12 @@ bool CmpHelper(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   using BoolT = PrimConv<PT_Bool>::T;
   const T &RHS = S.Stk.pop<T>();
   const T &LHS = S.Stk.pop<T>();
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!LHS.isNumber() || !RHS.isNumber())
+      return Invalid(S, OpPC);
+  }
+
   S.Stk.push<BoolT>(BoolT::from(Fn(LHS.compare(RHS))));
   return true;
 }
@@ -1124,8 +1237,8 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     }
   }
 
-  unsigned VL = LHS.getByteOffset();
-  unsigned VR = RHS.getByteOffset();
+  unsigned VL = LHS.computeOffsetForComparison(S.getASTContext());
+  unsigned VR = RHS.computeOffsetForComparison(S.getASTContext());
   S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
   return true;
 }
@@ -1164,6 +1277,15 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     }
   }
 
+  // p == nullptr or nullptr == p.
+  if (RHS.isZero() || LHS.isZero()) {
+    S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Unordered)));
+    return true;
+  }
+
+  assert(!LHS.isZero());
+  assert(!RHS.isZero());
+
   if (!S.inConstantContext()) {
     if (isConstexprUnknown(LHS) || isConstexprUnknown(RHS))
       return false;
@@ -1196,27 +1318,26 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   }
 
   // Otherwise we need to do a bunch of extra checks before returning Unordered.
-  if (LHS.isOnePastEnd() && !RHS.isOnePastEnd() && !RHS.isZero() &&
-      RHS.isBlockPointer() && RHS.getOffset() == 0) {
+  if (LHS.isOnePastEnd() && !RHS.isOnePastEnd() && RHS.isBlockPointer() &&
+      RHS.getOffset() == 0) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
         << LHS.toDiagnosticString(S.getASTContext());
     return false;
   }
-  if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
-      LHS.isBlockPointer() && LHS.getOffset() == 0) {
+  if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && LHS.isBlockPointer() &&
+      LHS.getOffset() == 0) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
         << RHS.toDiagnosticString(S.getASTContext());
     return false;
   }
 
-  bool BothNonNull = !LHS.isZero() && !RHS.isZero();
   // Reject comparisons to literals.
   for (const auto &P : {LHS, RHS}) {
     if (P.isZero())
       continue;
-    if (BothNonNull && P.pointsToLiteral()) {
+    if (P.pointsToLiteral()) {
       const Expr *E = P.getDeclDesc()->asExpr();
       if (isa<StringLiteral>(E)) {
         const SourceInfo &Loc = S.Current->getSource(OpPC);
@@ -1230,7 +1351,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
             << P.toDiagnosticString(S.getASTContext());
         return false;
       }
-    } else if (BothNonNull && P.isIntegralPointer()) {
+    } else if (P.isIntegralPointer()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_pointer_constant_comparison)
           << LHS.toDiagnosticString(S.getASTContext())
@@ -1244,6 +1365,15 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_zero_sized)
         << LHS.toDiagnosticString(S.getASTContext())
         << RHS.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
+  if (LHS.isConstexprUnknown() || RHS.isConstexprUnknown()) {
+    if (!S.checkingPotentialConstantExpression())
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_pointer_comparison_unspecified)
+          << LHS.toDiagnosticString(S.getASTContext())
+          << RHS.toDiagnosticString(S.getASTContext());
     return false;
   }
 
@@ -1405,7 +1535,24 @@ bool Const(InterpState &S, CodePtr OpPC, const T &Arg) {
     S.Stk.push<T>(Result);
     return true;
   }
-  S.Stk.push<T>(Arg);
+
+  if constexpr (std::is_same_v<T, uint16_t>) {
+    S.Stk.push<Integral<16, false>>(Integral<16, false>::from(Arg));
+  } else if constexpr (std::is_same_v<T, int16_t>) {
+    S.Stk.push<Integral<16, true>>(Integral<16, true>::from(Arg));
+  } else if constexpr (std::is_same_v<T, uint32_t>) {
+    S.Stk.push<Integral<32, false>>(Integral<32, false>::from(Arg));
+  } else if constexpr (std::is_same_v<T, int32_t>) {
+    S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Arg));
+  } else if constexpr (std::is_same_v<T, uint64_t>) {
+    S.Stk.push<Integral<64, false>>(Integral<64, false>::from(Arg));
+  } else if constexpr (std::is_same_v<T, int64_t>) {
+    S.Stk.push<Integral<64, true>>(Integral<64, true>::from(Arg));
+  } else {
+    // Bool.
+    S.Stk.push<T>(Arg);
+  }
+
   return true;
 }
 
@@ -1431,7 +1578,9 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 bool EndLifetime(InterpState &S, CodePtr OpPC);
 bool EndLifetimePop(InterpState &S, CodePtr OpPC);
-bool StartLifetime(InterpState &S, CodePtr OpPC);
+bool StartThisLifetime(InterpState &S, CodePtr OpPC);
+bool StartThisLifetime1(InterpState &S, CodePtr OpPC);
+bool MarkDestroyed(InterpState &S, CodePtr OpPC);
 
 /// 1) Pops the value from the stack.
 /// 2) Writes the value to the local variable with the
@@ -1551,8 +1700,7 @@ bool GetGlobalUnchecked(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Block *B = S.P.getGlobal(I);
   const auto &Desc = B->getBlockDesc<GlobalInlineDescriptor>();
   if (Desc.InitState != GlobalInitState::Initialized)
-    return DiagnoseUninitialized(S, OpPC, B->isExtern(), B->getDescriptor(),
-                                 AK_Read);
+    return DiagnoseUninitialized(S, OpPC, B->isExtern(), B, AK_Read);
 
   S.Stk.push<T>(B->deref<T>());
   return true;
@@ -1667,11 +1815,8 @@ bool InitThisFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
-// FIXME: The Field pointer here is too much IMO and we could instead just
-// pass an Offset + BitWidth pair.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool InitThisBitField(InterpState &S, CodePtr OpPC,
-                      uint32_t FieldOffset, // const Record::Field *F,
+bool InitThisBitField(InterpState &S, CodePtr OpPC, uint32_t FieldOffset,
                       uint32_t FieldBitWidth) {
   if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
     return false;
@@ -1684,6 +1829,12 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC,
   const Pointer &Field = This.atField(FieldOffset);
   assert(Field.canBeInitialized());
   const auto &Value = S.Stk.pop<T>();
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!Value.isNumber())
+      return false;
+  }
+
   Field.deref<T>() = Value.truncate(FieldBitWidth);
   Field.initialize();
   return true;
@@ -1703,6 +1854,12 @@ bool InitThisBitFieldActivate(InterpState &S, CodePtr OpPC,
   const Pointer &Field = This.atField(FieldOffset);
   assert(Field.canBeInitialized());
   const auto &Value = S.Stk.pop<T>();
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!Value.isNumber())
+      return false;
+  }
+
   Field.deref<T>() = Value.truncate(FieldBitWidth);
   Field.initialize();
   Field.activate();
@@ -1736,7 +1893,6 @@ bool InitFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!Ptr.isDereferencable())
     return false;
-
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
   if (!CheckArray(S, OpPC, Ptr))
@@ -1757,6 +1913,10 @@ bool InitBitField(InterpState &S, CodePtr OpPC, uint32_t FieldOffset,
   if (!Ptr.isDereferencable())
     return false;
 
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!Value.isNumber())
+      return false;
+  }
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
   if (!CheckArray(S, OpPC, Ptr))
@@ -1790,6 +1950,10 @@ bool InitBitFieldActivate(InterpState &S, CodePtr OpPC, uint32_t FieldOffset,
   if (!Ptr.isDereferencable())
     return false;
 
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!Value.isNumber())
+      return false;
+  }
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
   if (!CheckArray(S, OpPC, Ptr))
@@ -1830,6 +1994,27 @@ inline bool GetRefLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return handleReference(S, OpPC, LocalBlock);
 }
 
+inline bool GetRefGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
+  Block *B = S.P.getGlobal(I);
+
+  if (isConstexprUnknown(B)) {
+    S.Stk.push<Pointer>(B);
+    return true;
+  }
+
+  const auto &Desc = B->getBlockDesc<GlobalInlineDescriptor>();
+  if (Desc.InitState != GlobalInitState::Initialized)
+    return DiagnoseUninitialized(S, OpPC, B->isExtern(), B, AK_Read);
+
+  S.Stk.push<Pointer>(B->deref<Pointer>());
+  return true;
+}
+
+inline bool CheckRefInit(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  return CheckRange(S, OpPC, Ptr, AK_Read);
+}
+
 inline bool GetPtrParam(InterpState &S, CodePtr OpPC, uint32_t Index) {
   if (S.Current->isBottomFrame())
     return false;
@@ -1847,6 +2032,12 @@ inline bool GetPtrGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off);
 bool GetPtrFieldPop(InterpState &S, CodePtr OpPC, uint32_t Off);
 
+bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off);
+bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK);
+
+bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
+                      const Type *TargetType);
+
 inline bool GetPtrThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
     return false;
@@ -1857,92 +2048,8 @@ inline bool GetPtrThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   return true;
 }
 
-inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off,
-                             bool NullOK, const Type *TargetType) {
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!NullOK && !CheckNull(S, OpPC, Ptr, CSK_Derived))
-    return false;
-
-  if (!Ptr.isBlockPointer()) {
-    // FIXME: We don't have the necessary information in integral pointers.
-    // The Descriptor only has a record, but that does of course not include
-    // the potential derived classes of said record.
-    S.Stk.push<Pointer>(Ptr);
-    return true;
-  }
-
-  if (!CheckSubobject(S, OpPC, Ptr, CSK_Derived))
-    return false;
-  if (!CheckDowncast(S, OpPC, Ptr, Off))
-    return false;
-
-  const Record *TargetRecord = Ptr.atFieldSub(Off).getRecord();
-  assert(TargetRecord);
-
-  if (TargetRecord->getDecl()->getCanonicalDecl() !=
-      TargetType->getAsCXXRecordDecl()->getCanonicalDecl()) {
-    QualType MostDerivedType = Ptr.getDeclDesc()->getType();
-    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_downcast)
-        << MostDerivedType << QualType(TargetType, 0);
-    return false;
-  }
-
-  S.Stk.push<Pointer>(Ptr.atFieldSub(Off));
-  return true;
-}
-
-inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
-  const Pointer &Ptr = S.Stk.peek<Pointer>();
-  if (!CheckNull(S, OpPC, Ptr, CSK_Base))
-    return false;
-
-  if (!Ptr.isBlockPointer()) {
-    if (!Ptr.isIntegralPointer())
-      return false;
-    S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
-    return true;
-  }
-
-  if (isConstexprUnknown(Ptr))
-    return false;
-
-  if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
-    return false;
-  const Pointer &Result = Ptr.atField(Off);
-  if (Result.isPastEnd() || !Result.isBaseClass())
-    return false;
-  S.Stk.push<Pointer>(Result);
-  return true;
-}
-
-inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off,
-                          bool NullOK) {
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (!NullOK && !CheckNull(S, OpPC, Ptr, CSK_Base))
-    return false;
-
-  if (!Ptr.isBlockPointer()) {
-    if (!Ptr.isIntegralPointer())
-      return false;
-    S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
-    return true;
-  }
-
-  if (isConstexprUnknown(Ptr))
-    return false;
-
-  if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
-    return false;
-  const Pointer &Result = Ptr.atField(Off);
-  if (Result.isPastEnd() || !Result.isBaseClass())
-    return false;
-  S.Stk.push<Pointer>(Result);
-  return true;
-}
-
 inline bool GetPtrThisBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
-  if (S.checkingPotentialConstantExpression())
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -2002,6 +2109,10 @@ inline bool CheckNull(InterpState &S, CodePtr OpPC) {
 
 inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
                            const Pointer &Ptr) {
+  if (!Ptr.isBlockPointer())
+    return false;
+  if (!Ptr.getFieldDesc()->isRecord())
+    return false;
   Pointer Base = Ptr.stripBaseCasts();
   const Record::Base *VirtBase = Base.getRecord()->getVirtualBase(Decl);
   S.Stk.push<Pointer>(Base.atField(VirtBase->Offset));
@@ -2300,8 +2411,10 @@ inline bool Memcpy(InterpState &S, CodePtr OpPC) {
   const Pointer &Src = S.Stk.pop<Pointer>();
   Pointer &Dest = S.Stk.peek<Pointer>();
 
-  if (!CheckLoad(S, OpPC, Src))
-    return false;
+  if (!Src.getRecord() || !Src.getRecord()->isAnonymousUnion()) {
+    if (!CheckLoad(S, OpPC, Src))
+      return false;
+  }
 
   return DoMemcpy(S, OpPC, Src, Dest);
 }
@@ -2473,7 +2586,7 @@ static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC,
   if (Ptr.isDummy())
     return false;
 
-  using OneT = Integral<8, false>;
+  using OneT = Char<false>;
 
   const Pointer &P = Ptr.deref<Pointer>();
   if (!CheckNull(S, OpPC, P, CSK_ArrayIndex))
@@ -2518,6 +2631,29 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool SubPtr(InterpState &S, CodePtr OpPC, bool ElemSizeIsZero) {
   const Pointer &LHS = S.Stk.pop<Pointer>().expand();
   const Pointer &RHS = S.Stk.pop<Pointer>().expand();
+
+  if (LHS.pointsToLabel() || RHS.pointsToLabel()) {
+    if constexpr (isIntegralOrPointer<T>()) {
+      const AddrLabelExpr *LHSAddrExpr = LHS.getPointedToLabel();
+      const AddrLabelExpr *RHSAddrExpr = RHS.getPointedToLabel();
+      if (!LHSAddrExpr || !RHSAddrExpr) {
+        S.FFDiag(S.Current->getSource(OpPC),
+                 diag::note_constexpr_pointer_arith_unspecified)
+            << LHS.toDiagnosticString(S.getASTContext())
+            << RHS.toDiagnosticString(S.getASTContext());
+        return false;
+      }
+
+      if (LHSAddrExpr->getLabel()->getDeclContext() !=
+          RHSAddrExpr->getLabel()->getDeclContext())
+        return Invalid(S, OpPC);
+
+      S.Stk.push<T>(LHSAddrExpr, RHSAddrExpr);
+      return true;
+    }
+    // Can't represent an address-label-diff in these types.
+    return false;
+  }
 
   if (!Pointer::hasSameBase(LHS, RHS) && S.getLangOpts().CPlusPlus) {
     S.FFDiag(S.Current->getSource(OpPC),
@@ -2588,7 +2724,27 @@ inline bool GetLocalEnabled(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType TIn, PrimType TOut> bool Cast(InterpState &S, CodePtr OpPC) {
   using T = typename PrimConv<TIn>::T;
   using U = typename PrimConv<TOut>::T;
-  S.Stk.push<U>(U::from(S.Stk.pop<T>()));
+
+  auto In = S.Stk.pop<T>();
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (In.getKind() != IntegralKind::Number &&
+        In.getKind() != IntegralKind::AddrLabelDiff) {
+      if (!CheckIntegralAddressCast(S, OpPC, U::bitWidth()))
+        return Invalid(S, OpPC);
+    } else if (In.getKind() == IntegralKind::AddrLabelDiff) {
+      // Allow casts of address-of-label differences if they are no-ops
+      // or narrowing, if the result is at least 32 bits wide.
+      // (The narrowing case isn't actually guaranteed to
+      // be constant-evaluatable except in some narrow cases which are hard
+      // to detect here.  We let it through on the assumption the user knows
+      // what they are doing.)
+      if (!(U::bitWidth() >= 32 && U::bitWidth() <= In.bitWidth()))
+        return false;
+    }
+  }
+
+  S.Stk.push<U>(U::from(In));
   return true;
 }
 
@@ -2622,11 +2778,18 @@ inline bool CastFixedPoint(InterpState &S, CodePtr OpPC, uint32_t FPS) {
 /// to know what bitwidth the result should be.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+  T Source = S.Stk.pop<T>();
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!Source.isNumber())
+      return false;
+  }
+
   auto Result = S.allocAP<IntegralAP<false>>(BitWidth);
   // Copy data.
   {
-    APInt Source = S.Stk.pop<T>().toAPSInt().extOrTrunc(BitWidth);
-    Result.copy(Source);
+    APInt SourceInt = Source.toAPSInt().extOrTrunc(BitWidth);
+    Result.copy(SourceInt);
   }
   S.Stk.push<IntegralAP<false>>(Result);
   return true;
@@ -2634,11 +2797,18 @@ bool CastAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+  T Source = S.Stk.pop<T>();
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!Source.isNumber())
+      return false;
+  }
+
   auto Result = S.allocAP<IntegralAP<true>>(BitWidth);
   // Copy data.
   {
-    APInt Source = S.Stk.pop<T>().toAPSInt().extOrTrunc(BitWidth);
-    Result.copy(Source);
+    APInt SourceInt = Source.toAPSInt().extOrTrunc(BitWidth);
+    Result.copy(SourceInt);
   }
   S.Stk.push<IntegralAP<true>>(Result);
   return true;
@@ -2648,6 +2818,12 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastIntegralFloating(InterpState &S, CodePtr OpPC,
                           const llvm::fltSemantics *Sem, uint32_t FPOI) {
   const T &From = S.Stk.pop<T>();
+
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (!From.isNumber())
+      return false;
+  }
+
   APSInt FromAP = From.toAPSInt();
 
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
@@ -2736,17 +2912,44 @@ static inline bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC,
 
 bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
                                 const Pointer &Ptr, unsigned BitWidth);
+bool CheckIntegralAddressCast(InterpState &S, CodePtr OpPC, unsigned BitWidth);
 bool CastPointerIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth);
 bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
   if (!CheckPointerToIntegralCast(S, OpPC, Ptr, T::bitWidth()))
     return Invalid(S, OpPC);
 
-  S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
+  if constexpr (std::is_same_v<T, Boolean>) {
+    S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
+  } else if constexpr (isIntegralOrPointer<T>()) {
+    if (Ptr.isBlockPointer()) {
+      IntegralKind Kind = IntegralKind::Address;
+      const void *PtrVal;
+      if (Ptr.isDummy()) {
+        if (const Expr *E = Ptr.getDeclDesc()->asExpr()) {
+          PtrVal = E;
+          if (isa<AddrLabelExpr>(E))
+            Kind = IntegralKind::LabelAddress;
+        } else {
+          PtrVal = Ptr.getDeclDesc()->asDecl();
+        }
+      } else {
+        PtrVal = Ptr.block();
+        Kind = IntegralKind::BlockAddress;
+      }
+      S.Stk.push<T>(Kind, PtrVal, /*Offset=*/0);
+    } else if (Ptr.isFunctionPointer()) {
+      const void *FuncDecl = Ptr.asFunctionPointer().Func->getDecl();
+      S.Stk.push<T>(IntegralKind::FunctionAddress, FuncDecl, /*Offset=*/0);
+    } else {
+      S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
+    }
+  } else {
+    S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
+  }
   return true;
 }
 
@@ -3269,6 +3472,12 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
   if (!SrcPtr.isBlockPointer() || !DestPtr.isBlockPointer())
     return false;
 
+  const Descriptor *SrcDesc = SrcPtr.getFieldDesc();
+  const Descriptor *DestDesc = DestPtr.getFieldDesc();
+  if (!SrcDesc->isPrimitiveArray() || !DestDesc->isPrimitiveArray() ||
+      SrcDesc->getPrimType() != Name || DestDesc->getPrimType() != Name)
+    return false;
+
   for (uint32_t I = 0; I != Size; ++I) {
     const Pointer &SP = SrcPtr.atIndex(SrcIndex + I);
 
@@ -3321,34 +3530,38 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
       << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
       << S.getLangOpts().CPlusPlus;
 
-  S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
+  if constexpr (isIntegralOrPointer<T>()) {
+    if (IntVal.getKind() == IntegralKind::Address) {
+      if (IntVal.getOffset() != 0)
+        return Invalid(S, OpPC);
+      const VarDecl *VD = (const VarDecl *)IntVal.getPtr();
+      unsigned GlobalIndex = *S.P.getOrCreateGlobal(VD);
+      S.Stk.push<Pointer>(S.P.getGlobal(GlobalIndex));
+    } else if (IntVal.getKind() == IntegralKind::BlockAddress) {
+      if (IntVal.getOffset() != 0)
+        return Invalid(S, OpPC);
+
+      const Block *B = (const Block *)IntVal.getPtr();
+      S.Stk.push<Pointer>(const_cast<Block *>(B));
+    } else if (IntVal.getKind() == IntegralKind::FunctionAddress) {
+      const Function *F =
+          S.P.getFunction((const FunctionDecl *)IntVal.getPtr());
+      S.Stk.push<Pointer>(F, IntVal.getOffset());
+    } else {
+      S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
+    }
+  } else {
+    S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
+  }
+
   return true;
 }
 
-inline bool GetMemberPtr(InterpState &S, CodePtr OpPC, const ValueDecl *D) {
-  S.Stk.push<MemberPointer>(D);
-  return true;
-}
-
-inline bool GetMemberPtrBase(InterpState &S, CodePtr OpPC) {
-  const auto &MP = S.Stk.pop<MemberPointer>();
-
-  if (!MP.isBaseCastPossible())
-    return false;
-
-  S.Stk.push<Pointer>(MP.getBase());
-  return true;
-}
-
-inline bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC) {
-  const auto &MP = S.Stk.pop<MemberPointer>();
-
-  const auto *FD = cast<FunctionDecl>(MP.getDecl());
-  const auto *Func = S.getContext().getOrCreateFunction(FD);
-
-  S.Stk.push<Pointer>(Func);
-  return true;
-}
+bool GetMemberPtr(InterpState &S, CodePtr OpPC, const ValueDecl *D);
+bool GetMemberPtrBase(InterpState &S, CodePtr OpPC);
+bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC);
+bool CopyMemberPtrPath(InterpState &S, CodePtr OpPC, const RecordDecl *Entry,
+                       bool IsDerived);
 
 /// Just emit a diagnostic. The expression that caused emission of this
 /// op is not valid in a constant context.
@@ -3385,6 +3598,17 @@ inline bool StartSpeculation(InterpState &S, CodePtr OpPC) {
 #ifndef NDEBUG
   ++S.SpeculationDepth;
 #endif
+  return true;
+}
+
+inline bool StartInit(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  S.InitializingBlocks.push_back(Ptr.block());
+  return true;
+}
+
+inline bool EndInit(InterpState &S, CodePtr OpPC) {
+  S.InitializingBlocks.pop_back();
   return true;
 }
 
@@ -3482,7 +3706,8 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool OffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E) {
   llvm::SmallVector<int64_t> ArrayIndices;
   for (size_t I = 0; I != E->getNumExpressions(); ++I)
-    ArrayIndices.emplace_back(S.Stk.pop<int64_t>());
+    ArrayIndices.emplace_back(
+        static_cast<int64_t>(S.Stk.pop<Integral<64, true>>()));
 
   int64_t Result;
   if (!InterpretOffsetOf(S, OpPC, E, ArrayIndices, Result))
@@ -3562,6 +3787,22 @@ inline bool CheckDecl(InterpState &S, CodePtr OpPC, const VarDecl *VD) {
         << (VD->getTSCSpec() == TSCS_unspecified ? 0 : 1) << VD;
     return false;
   }
+  return true;
+}
+
+/// Check if the destination array we're initializing can hold the \p NumElems
+/// elements.
+inline bool CheckArrayDestSize(InterpState &S, CodePtr OpPC, size_t NumElems) {
+  if (!CheckArraySize(S, OpPC, NumElems))
+    return false;
+
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!Ptr.isUnknownSizeArray() && NumElems > Ptr.getNumElems()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_too_small)
+        << Ptr.getNumElems() << NumElems;
+    return false;
+  }
+
   return true;
 }
 
@@ -3753,8 +3994,12 @@ inline bool BitCastPrim(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
 }
 
 inline bool BitCast(InterpState &S, CodePtr OpPC) {
-  const Pointer &FromPtr = S.Stk.pop<Pointer>();
+  Pointer FromPtr = S.Stk.pop<Pointer>();
   Pointer &ToPtr = S.Stk.peek<Pointer>();
+
+  const Descriptor *D = FromPtr.getFieldDesc();
+  if (D->isPrimitiveArray() && FromPtr.isArrayRoot())
+    FromPtr = FromPtr.atIndex(0);
 
   if (!CheckLoad(S, OpPC, FromPtr))
     return false;

@@ -4,7 +4,7 @@
 ; CHECK-LABEL: test_saturate_half
 define noundef half @test_saturate_half(half noundef %p0) {
 entry:
-  ; CHECK: call half @dx.op.unary.f16(i32 7, half %p0) #[[#ATTR:]]
+  ; CHECK: call half @dx.op.unary.f16(i32 7, half %p0)
   %hlsl.saturate = call half @llvm.dx.saturate.f16(half %p0)
   ; CHECK: ret half
   ret half %hlsl.saturate
@@ -13,7 +13,7 @@ entry:
 ; CHECK-LABEL: test_saturate_float
 define noundef float @test_saturate_float(float noundef %p0) {
 entry:
-  ; CHECK: call float @dx.op.unary.f32(i32 7, float %p0) #[[#ATTR]]
+  ; CHECK: call float @dx.op.unary.f32(i32 7, float %p0)
   %hlsl.saturate = call float @llvm.dx.saturate.f32(float %p0)
   ; CHECK: ret float
   ret float %hlsl.saturate
@@ -22,7 +22,7 @@ entry:
 ; CHECK-LABEL: test_saturate_double
 define noundef double @test_saturate_double(double noundef %p0) {
 entry:
-  ; CHECK: call double @dx.op.unary.f64(i32 7, double %p0) #[[#ATTR]]
+  ; CHECK: call double @dx.op.unary.f64(i32 7, double %p0)
   %hlsl.saturate = call double @llvm.dx.saturate.f64(double %p0)
   ; CHECK: ret double
   ret double %hlsl.saturate
@@ -59,4 +59,7 @@ entry:
 }
 
 
-; CHECK: attributes #[[#ATTR]] = {{{.*}} memory(none) {{.*}}}
+; CHECK-DAG: declare half @dx.op.unary.f16(i32, half) #[[#ATTR0:]]
+; CHECK-DAG: declare float @dx.op.unary.f32(i32, float) #[[#ATTR0]]
+; CHECK-DAG: declare double @dx.op.unary.f64(i32, double) #[[#ATTR0]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }

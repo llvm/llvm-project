@@ -80,6 +80,7 @@ static void fixReturns(const FunctionDecl *FuncDecl, DiagnosticBuilder &Diag,
 UseStringViewCheck::UseStringViewCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
+      CheckOverloadedFunctions(Options.get("CheckOverloadedFunctions", false)),
       IgnoredFunctions(utils::options::parseStringList(
           Options.get("IgnoredFunctions", "toString$;ToString$;to_string$"))) {
   parseReplacementStringViewClass(
@@ -87,6 +88,7 @@ UseStringViewCheck::UseStringViewCheck(StringRef Name,
 }
 
 void UseStringViewCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "CheckOverloadedFunctions", CheckOverloadedFunctions);
   Options.store(Opts, "IgnoredFunctions",
                 utils::options::serializeStringList(IgnoredFunctions));
   Options.store(Opts, "ReplacementStringViewClass",
@@ -109,11 +111,13 @@ void UseStringViewCheck::registerMatchers(MatchFinder *Finder) {
       hasFalseExpression(ignoringParenImpCasts(stringLiteral())));
   const auto VirtualOrOperator =
       cxxMethodDecl(anyOf(cxxConversionDecl(), isVirtual()));
+  const auto CheckOverloaded =
+      CheckOverloadedFunctions ? unless(anything()) : isOverloaded();
   Finder->addMatcher(
       functionDecl(
           isDefinition(),
           unless(anyOf(VirtualOrOperator, IgnoredFunctionsMatcher,
-                       isOverloaded(),
+                       CheckOverloaded,
                        ast_matchers::isExplicitTemplateSpecialization())),
           returns(IsStdString), hasDescendant(returnStmt()),
           unless(hasDescendant(returnStmt(hasReturnValue(unless(

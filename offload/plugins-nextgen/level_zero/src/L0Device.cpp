@@ -18,6 +18,7 @@
 #include "L0Trace.h"
 
 #include "GlobalHandler.h"
+#include "OffloadAPI.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Object/ELF.h"
 
@@ -162,6 +163,28 @@ std::pair<uint32_t, uint32_t> L0DeviceTy::findCopyOrdinal(bool LinkCopy) {
   return Ordinal;
 }
 
+/// Check if device supports cooperative kernels by checking if any command
+/// queue group has the cooperative kernels flag set.
+bool L0DeviceTy::checkCooperativeKernelSupport() {
+  uint32_t Count = 0;
+  const auto zeDevice = getZeDevice();
+  CALL_ZE_RET(false, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
+              nullptr);
+
+  std::vector<ze_command_queue_group_properties_t> Properties(
+      Count,
+      {ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES, nullptr, 0, 0, 0});
+  CALL_ZE_RET(false, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
+              Properties.data());
+
+  for (auto &Property : Properties)
+    if (Property.flags &
+        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS)
+      return true;
+
+  return false;
+}
+
 void L0DeviceTy::reportDeviceInfo() const {
   ODBG_OS(OLDT_Device, [&](llvm::raw_ostream &O) {
     O << "Device " << DeviceId << " information\n"
@@ -195,6 +218,7 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
                     &MemoryProperties);
   CALL_ZE_RET_ERROR(zeDeviceGetCacheProperties, zeDevice, &Count,
                     &CacheProperties);
+  CALL_ZE_RET_ERROR(zeDeviceGetModuleProperties, zeDevice, &ModuleProperties);
 
   DeviceName = std::string(DeviceProperties.name);
 
@@ -219,6 +243,8 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   ComputeOrdinal = findComputeOrdinal();
 
   CopyOrdinal = findCopyOrdinal();
+
+  SupportsCooperativeKernels = checkCooperativeKernelSupport();
 
   IsAsyncEnabled =
       isDiscreteDevice() && Options.CommandMode != CommandModeTy::Sync;
@@ -336,11 +362,15 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
     std::copy_n(static_cast<const char *>(std::get<0>(USM2M)),
                 std::get<2>(USM2M), static_cast<char *>(std::get<1>(USM2M)));
   }
+  AsyncQueue->USM2MList.clear();
+
   // Commit delayed H2M copies.
   for (auto &H2M : AsyncQueue->H2MList) {
     std::copy_n(static_cast<char *>(std::get<0>(H2M)), std::get<2>(H2M),
                 static_cast<char *>(std::get<1>(H2M)));
   }
+  AsyncQueue->H2MList.clear();
+
   if (ReleaseQueue) {
     Plugin.releaseAsyncQueue(AsyncQueue);
     getStagingBuffer().reset();
@@ -389,11 +419,14 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
     std::copy_n(static_cast<const char *>(std::get<0>(USM2M)),
                 std::get<2>(USM2M), static_cast<char *>(std::get<1>(USM2M)));
   }
+  AsyncQueue->USM2MList.clear();
   // Commit delayed H2M copies.
   for (auto &H2M : AsyncQueue->H2MList) {
     std::copy_n(static_cast<char *>(std::get<0>(H2M)), std::get<2>(H2M),
                 static_cast<char *>(std::get<1>(H2M)));
   }
+  AsyncQueue->H2MList.clear();
+
   if (ReleaseQueue) {
     Plugin.releaseAsyncQueue(AsyncQueue);
     getStagingBuffer().reset();
@@ -639,6 +672,76 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
            DeviceInfo::MEMORY_CLOCK_RATE);
   Info.add("Memory Address Size", uint64_t{64u}, "bits",
            DeviceInfo::ADDRESS_BITS);
+
+  // FP64 (Double precision).
+  Info.add("Double FP Support", supportsFP64(), "",
+           DeviceInfo::DOUBLE_FP_SUPPORT);
+  ol_device_fp_capability_flags_t DoubleFPCapabilities = 0;
+  ze_device_fp_flags_t ZeDoubleFPFlags = getFP64Flags();
+  if (ZeDoubleFPFlags & ZE_DEVICE_FP_FLAG_DENORM)
+    DoubleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_DENORM;
+  if (ZeDoubleFPFlags & ZE_DEVICE_FP_FLAG_INF_NAN)
+    DoubleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN;
+  if (ZeDoubleFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST)
+    DoubleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST;
+  if (ZeDoubleFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO)
+    DoubleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO;
+  if (ZeDoubleFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_INF)
+    DoubleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF;
+  if (ZeDoubleFPFlags & ZE_DEVICE_FP_FLAG_FMA)
+    DoubleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_FMA;
+  if (ZeDoubleFPFlags & ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT)
+    DoubleFPCapabilities |=
+        OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT;
+  Info.add("Double FP Capabilities", DoubleFPCapabilities, "",
+           DeviceInfo::DOUBLE_FP_CONFIG);
+
+  // FP16 (Half precision).
+  Info.add("Half FP Support", supportsFP16(), "", DeviceInfo::HALF_FP_SUPPORT);
+  ol_device_fp_capability_flags_t HalfFPCapabilities = 0;
+  ze_device_fp_flags_t ZeHalfFPFlags = getFP16Flags();
+  if (ZeHalfFPFlags & ZE_DEVICE_FP_FLAG_DENORM)
+    HalfFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_DENORM;
+  if (ZeHalfFPFlags & ZE_DEVICE_FP_FLAG_INF_NAN)
+    HalfFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN;
+  if (ZeHalfFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST)
+    HalfFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST;
+  if (ZeHalfFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO)
+    HalfFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO;
+  if (ZeHalfFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_INF)
+    HalfFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF;
+  if (ZeHalfFPFlags & ZE_DEVICE_FP_FLAG_FMA)
+    HalfFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_FMA;
+  if (ZeHalfFPFlags & ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT)
+    HalfFPCapabilities |=
+        OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT;
+  Info.add("Half FP Capabilities", HalfFPCapabilities, "",
+           DeviceInfo::HALF_FP_CONFIG);
+
+  // FP32 (Single FP).
+  Info.add("Single FP Support", true, "", DeviceInfo::SINGLE_FP_SUPPORT);
+  ol_device_fp_capability_flags_t SingleFPCapabilities = 0;
+  ze_device_fp_flags_t ZeSingleFPFlags = getFP32Flags();
+  if (ZeSingleFPFlags & ZE_DEVICE_FP_FLAG_DENORM)
+    SingleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_DENORM;
+  if (ZeSingleFPFlags & ZE_DEVICE_FP_FLAG_INF_NAN)
+    SingleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN;
+  if (ZeSingleFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST)
+    SingleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST;
+  if (ZeSingleFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO)
+    SingleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO;
+  if (ZeSingleFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_INF)
+    SingleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF;
+  if (ZeSingleFPFlags & ZE_DEVICE_FP_FLAG_FMA)
+    SingleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_FMA;
+  if (ZeSingleFPFlags & ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT)
+    SingleFPCapabilities |=
+        OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT;
+  Info.add("Single FP Capabilities", SingleFPCapabilities, "",
+           DeviceInfo::SINGLE_FP_CONFIG);
+
+  Info.add("Cooperative launch support", SupportsCooperativeKernels, "",
+           DeviceInfo::COOPERATIVE_LAUNCH_SUPPORT);
   return Info;
 }
 
@@ -715,20 +818,11 @@ Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
 
     bool InOrder = InteropSpec.attrs.inorder;
     Ret->attrs.inorder = InOrder;
-    if (useImmForInterop()) {
-      auto CmdListOrErr = createImmCmdList(InOrder);
-      if (!CmdListOrErr)
-        return CmdListOrErr.takeError();
-      Ret->async_info->Queue = *CmdListOrErr;
-      L0->ImmCmdList = *CmdListOrErr;
-    } else {
-      auto QueueOrErr = createCommandQueue(InOrder);
-      if (!QueueOrErr)
-        return QueueOrErr.takeError();
-      Ret->async_info->Queue = *QueueOrErr;
-      L0->CommandQueue =
-          static_cast<ze_command_queue_handle_t>(Ret->async_info->Queue);
-    }
+    auto CmdListOrErr = createImmCmdList(InOrder);
+    if (!CmdListOrErr)
+      return CmdListOrErr.takeError();
+    Ret->async_info->Queue = *CmdListOrErr;
+    L0->ImmCmdList = *CmdListOrErr;
 
     CleanupOnError.release();
   }
@@ -746,13 +840,8 @@ Error L0DeviceTy::releaseInterop(OmpInteropTy Interop) {
   }
   auto L0 = static_cast<L0Interop::Property *>(Interop->rtl_property);
   if (Interop->async_info && Interop->async_info->Queue) {
-    if (useImmForInterop()) {
-      auto ImmCmdList = L0->ImmCmdList;
-      CALL_ZE_RET_ERROR(zeCommandListDestroy, ImmCmdList);
-    } else {
-      auto CmdQueue = L0->CommandQueue;
-      CALL_ZE_RET_ERROR(zeCommandQueueDestroy, CmdQueue);
-    }
+    auto ImmCmdList = L0->ImmCmdList;
+    CALL_ZE_RET_ERROR(zeCommandListDestroy, ImmCmdList);
   }
   delete L0;
   delete Interop;
@@ -763,49 +852,15 @@ Error L0DeviceTy::releaseInterop(OmpInteropTy Interop) {
 Error L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
                                  __tgt_async_info *AsyncInfo,
                                  bool UseCopyEngine) {
-  ze_command_list_handle_t CmdList = nullptr;
-  ze_command_queue_handle_t CmdQueue = nullptr;
+  auto CmdListOrErr = UseCopyEngine ? getImmCopyCmdList() : getImmCmdList();
+  if (!CmdListOrErr)
+    return CmdListOrErr.takeError();
+  ze_command_list_handle_t CmdList = *CmdListOrErr;
 
-  if (useImmForCopy()) {
-    auto CmdListOrErr = UseCopyEngine ? getImmCopyCmdList() : getImmCmdList();
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    CmdList = *CmdListOrErr;
-    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
-                      nullptr, 0, nullptr);
-    CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, CmdList, L0DefaultTimeout);
-  } else {
-    if (UseCopyEngine) {
-      auto CmdListOrErr = getCopyCmdList();
-      if (!CmdListOrErr)
-        return CmdListOrErr.takeError();
-      CmdList = *CmdListOrErr;
-      auto CmdQueueOrErr = getCopyCmdQueue();
-      if (!CmdQueueOrErr)
-        return CmdQueueOrErr.takeError();
-      CmdQueue = *CmdQueueOrErr;
-    } else {
-      auto CmdListOrErr = getCmdList();
-      if (!CmdListOrErr)
-        return CmdListOrErr.takeError();
-      CmdList = *CmdListOrErr;
-      auto CmdQueueOrErr = getCmdQueue();
-      if (!CmdQueueOrErr)
-        return CmdQueueOrErr.takeError();
-      CmdQueue = *CmdQueueOrErr;
-    }
+  CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
+                    nullptr, 0, nullptr);
+  CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, CmdList, L0DefaultTimeout);
 
-    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
-                      nullptr, 0, nullptr);
-    CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
-    llvm::scope_exit ResetOnExit(
-        [&]() { CALL_ZE_SILENT(zeCommandListReset, CmdList); });
-    CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, getMutex(),
-                          CmdQueue, 1, &CmdList, nullptr);
-    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
-    ResetOnExit.release();
-    CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
-  }
   return Plugin::success();
 }
 
@@ -855,42 +910,23 @@ Error L0DeviceTy::enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
 /// Enqueue memory fill.
 Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
                                  size_t PatternSize, size_t Size) {
-  if (useImmForCopy()) {
-    auto CmdListOrErr = getImmCopyCmdList();
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    const auto CmdList = *CmdListOrErr;
-    auto EventOrErr = getEvent();
-    if (!EventOrErr)
-      return EventOrErr.takeError();
-    Error AllErrors = Error::success();
-    ze_event_handle_t Event = *EventOrErr;
-    CALL_ZE_ACCUM_ERROR(AllErrors, zeCommandListAppendMemoryFill, CmdList, Ptr,
-                        Pattern, PatternSize, Size, Event, 0, nullptr);
-    if (!AllErrors)
-      CALL_ZE_ACCUM_ERROR(AllErrors, zeEventHostSynchronize, Event,
-                          L0DefaultTimeout);
-    if (auto Err = releaseEvent(Event))
-      AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
-    return AllErrors;
-  } else {
-    auto CmdListOrErr = getCopyCmdList();
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    auto CmdList = *CmdListOrErr;
-    auto CmdQueueOrErr = getCopyCmdQueue();
-    if (!CmdQueueOrErr)
-      return CmdQueueOrErr.takeError();
-    const auto CmdQueue = *CmdQueueOrErr;
-    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryFill, CmdList, Ptr, Pattern,
-                      PatternSize, Size, nullptr, 0, nullptr);
-    CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
-    CALL_ZE_RET_ERROR(zeCommandQueueExecuteCommandLists, CmdQueue, 1, &CmdList,
-                      nullptr);
-    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
-    CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
-  }
-  return Plugin::success();
+  auto CmdListOrErr = getImmCopyCmdList();
+  if (!CmdListOrErr)
+    return CmdListOrErr.takeError();
+  const auto CmdList = *CmdListOrErr;
+  auto EventOrErr = getEvent();
+  if (!EventOrErr)
+    return EventOrErr.takeError();
+  Error AllErrors = Error::success();
+  ze_event_handle_t Event = *EventOrErr;
+  CALL_ZE_ACCUM_ERROR(AllErrors, zeCommandListAppendMemoryFill, CmdList, Ptr,
+                      Pattern, PatternSize, Size, Event, 0, nullptr);
+  if (!AllErrors)
+    CALL_ZE_ACCUM_ERROR(AllErrors, zeEventHostSynchronize, Event,
+                        L0DefaultTimeout);
+  if (auto Err = releaseEvent(Event))
+    AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
+  return AllErrors;
 }
 
 Error L0DeviceTy::dataFillImpl(void *TgtPtr, const void *PatternPtr,
@@ -934,89 +970,6 @@ Error L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {
   return Plugin::success();
 }
 
-// Command queues related functions.
-/// Create a command list with given ordinal and flags.
-Expected<ze_command_list_handle_t> L0DeviceTy::createCmdList(
-    ze_context_handle_t Context, ze_device_handle_t Device, uint32_t Ordinal,
-    ze_command_list_flags_t Flags, const std::string_view DeviceIdStr) {
-  ze_command_list_desc_t cmdListDesc = {ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC,
-                                        nullptr, // Extension.
-                                        Ordinal, Flags};
-  ze_command_list_handle_t cmdList;
-  CALL_ZE_RET_ERROR(zeCommandListCreate, Context, Device, &cmdListDesc,
-                    &cmdList);
-  ODBG(OLDT_Device) << "Created a command list " << cmdList
-                    << " (Ordinal: " << Ordinal << ") for device "
-                    << DeviceIdStr.data() << ".";
-  return cmdList;
-}
-
-/// Create a command list with default flags.
-Expected<ze_command_list_handle_t>
-L0DeviceTy::createCmdList(ze_context_handle_t Context,
-                          ze_device_handle_t Device, uint32_t Ordinal,
-                          const std::string_view DeviceIdStr) {
-  return (Ordinal == MaxOrdinal)
-             ? nullptr
-             : createCmdList(Context, Device, Ordinal, 0, DeviceIdStr);
-}
-
-Expected<ze_command_list_handle_t> L0DeviceTy::getCmdList() {
-  auto &TLS = getTLS();
-  auto CmdList = TLS.getCmdList();
-  if (!CmdList) {
-    auto CmdListOrErr = createCmdList(getZeContext(), getZeDevice(),
-                                      getComputeEngine(), getZeId());
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    CmdList = *CmdListOrErr;
-    TLS.setCmdList(CmdList);
-  }
-  return CmdList;
-}
-
-/// Create a command queue with given ordinal and flags.
-Expected<ze_command_queue_handle_t>
-L0DeviceTy::createCmdQueue(ze_context_handle_t Context,
-                           ze_device_handle_t Device, uint32_t Ordinal,
-                           uint32_t Index, ze_command_queue_flags_t Flags,
-                           const std::string_view DeviceIdStr) {
-  ze_command_queue_desc_t cmdQueueDesc = {ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC,
-                                          nullptr, // Extension.
-                                          Ordinal,
-                                          Index,
-                                          Flags,
-                                          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-                                          ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
-  ze_command_queue_handle_t cmdQueue;
-  CALL_ZE_RET_ERROR(zeCommandQueueCreate, Context, Device, &cmdQueueDesc,
-                    &cmdQueue);
-  ODBG(OLDT_Device) << "Created a command queue " << cmdQueue
-                    << " (Ordinal: " << Ordinal << ", Index: " << Index
-                    << ", Flags: " << Flags << ") for device "
-                    << DeviceIdStr.data() << ".";
-  return cmdQueue;
-}
-
-/// Create a command queue with default flags.
-Expected<ze_command_queue_handle_t> L0DeviceTy::createCmdQueue(
-    ze_context_handle_t Context, ze_device_handle_t Device, uint32_t Ordinal,
-    uint32_t Index, const std::string_view DeviceIdStr, bool InOrder) {
-  ze_command_queue_flags_t Flags = InOrder ? ZE_COMMAND_QUEUE_FLAG_IN_ORDER : 0;
-  return (Ordinal == MaxOrdinal) ? nullptr
-                                 : createCmdQueue(Context, Device, Ordinal,
-                                                  Index, Flags, DeviceIdStr);
-}
-
-/// Create a new command queue for the given OpenMP device ID.
-Expected<ze_command_queue_handle_t>
-L0DeviceTy::createCommandQueue(bool InOrder) {
-  auto cmdQueue =
-      createCmdQueue(getZeContext(), getZeDevice(), getComputeEngine(),
-                     getComputeIndex(), getZeId(), InOrder);
-  return cmdQueue;
-}
-
 /// Create an immediate command list.
 Expected<ze_command_list_handle_t>
 L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
@@ -1043,57 +996,6 @@ Expected<ze_command_list_handle_t> L0DeviceTy::createImmCopyCmdList() {
   if (Ordinal == MaxOrdinal)
     Ordinal = getComputeEngine();
   return createImmCmdList(Ordinal, /*Index*/ 0);
-}
-
-Expected<ze_command_queue_handle_t> L0DeviceTy::getCmdQueue() {
-  auto &TLS = getTLS();
-  auto CmdQueue = TLS.getCmdQueue();
-  if (!CmdQueue) {
-    auto CmdQueueOrErr = createCommandQueue();
-    if (!CmdQueueOrErr)
-      return CmdQueueOrErr.takeError();
-    CmdQueue = *CmdQueueOrErr;
-    TLS.setCmdQueue(CmdQueue);
-  }
-  return CmdQueue;
-}
-
-Expected<ze_command_list_handle_t> L0DeviceTy::getCopyCmdList() {
-  // Use main copy engine if available.
-  if (hasMainCopyEngine()) {
-    auto &TLS = getTLS();
-    auto CmdList = TLS.getCopyCmdList();
-    if (!CmdList) {
-      auto CmdListOrErr = createCmdList(getZeContext(), getZeDevice(),
-                                        getMainCopyEngine(), getZeId());
-      if (!CmdListOrErr)
-        return CmdListOrErr.takeError();
-      CmdList = *CmdListOrErr;
-      TLS.setCopyCmdList(CmdList);
-    }
-    return CmdList;
-  }
-  // Use compute engine otherwise.
-  return getCmdList();
-}
-
-Expected<ze_command_queue_handle_t> L0DeviceTy::getCopyCmdQueue() {
-  // Use main copy engine if available.
-  if (hasMainCopyEngine()) {
-    auto &TLS = getTLS();
-    auto CmdQueue = TLS.getCopyCmdQueue();
-    if (!CmdQueue) {
-      auto CmdQueueOrErr = createCmdQueue(getZeContext(), getZeDevice(),
-                                          getMainCopyEngine(), 0, getZeId());
-      if (!CmdQueueOrErr)
-        return CmdQueueOrErr.takeError();
-      CmdQueue = *CmdQueueOrErr;
-      TLS.setCopyCmdQueue(CmdQueue);
-    }
-    return CmdQueue;
-  }
-  // Use compute engine otherwise.
-  return getCmdQueue();
 }
 
 Expected<ze_command_list_handle_t> L0DeviceTy::getImmCmdList() {
@@ -1130,35 +1032,11 @@ Error L0DeviceTy::dataFence(__tgt_async_info *Async) {
   if (Ordered)
     return Plugin::success();
 
-  ze_command_list_handle_t CmdList = nullptr;
-  ze_command_queue_handle_t CmdQueue = nullptr;
-
-  if (useImmForCopy()) {
-    auto CmdListOrErr = getImmCopyCmdList();
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    auto CmdList = *CmdListOrErr;
-    CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, nullptr, 0, nullptr);
-  } else {
-    auto CmdListOrErr = getCopyCmdList();
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    auto CmdQueueOrerr = getCopyCmdQueue();
-    if (!CmdQueueOrerr)
-      return CmdQueueOrerr.takeError();
-
-    CmdList = *CmdListOrErr;
-    CmdQueue = *CmdQueueOrerr;
-    CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, nullptr, 0, nullptr);
-    CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
-    llvm::scope_exit ResetOnExit(
-        [&]() { CALL_ZE_SILENT(zeCommandListReset, CmdList); });
-    CALL_ZE_RET_ERROR(zeCommandQueueExecuteCommandLists, CmdQueue, 1, &CmdList,
-                      nullptr);
-    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
-    ResetOnExit.release();
-    CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
-  }
+  auto CmdListOrErr = getImmCopyCmdList();
+  if (!CmdListOrErr)
+    return CmdListOrErr.takeError();
+  auto CmdList = *CmdListOrErr;
+  CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, nullptr, 0, nullptr);
 
   return Plugin::success();
 }
@@ -1305,10 +1183,7 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
                           KernelArgs, KernelLaunchParamsTy{}, AsyncInfoWrapper);
 
   AsyncInfoWrapper.finalize(Err);
-  if (Err)
-    return CleanupBufferAndErr(std::move(Err));
-
-  return CleanupBufferAndErr(Plugin::success());
+  return CleanupBufferAndErr(std::move(Err));
 }
 
 } // namespace llvm::omp::target::plugin

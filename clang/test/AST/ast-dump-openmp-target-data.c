@@ -6,7 +6,7 @@ void test(int x) {
 }
 
 // CHECK: TranslationUnitDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK: `-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-target-data.c:3:1, line:6:1> line:3:6 test 'void (int)'
+// CHECK: `-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-target-data.c:3:1, line:6:1> line:3:6 test 'void (int)' external-linkage
 // CHECK-NEXT:   |-ParmVarDecl {{.*}} <col:11, col:15> col:15 used x 'int'
 // CHECK-NEXT:   `-CompoundStmt {{.*}} <col:18, line:6:1>
 // CHECK-NEXT:     `-OMPTargetDataDirective {{.*}} <line:4:1, col:31>

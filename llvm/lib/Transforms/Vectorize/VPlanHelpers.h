@@ -30,6 +30,7 @@ namespace llvm {
 
 class AssumptionCache;
 class BasicBlock;
+class CallInst;
 class DominatorTree;
 class InnerLoopVectorizer;
 class IRBuilderBase;
@@ -41,19 +42,14 @@ class VPRegionBlock;
 class VPlan;
 class Value;
 
+namespace Intrinsic {
+typedef unsigned ID;
+}
+
 /// Returns a calculation for the total number of elements for a given \p VF.
 /// For fixed width vectors this value is a constant, whereas for scalable
 /// vectors it is an expression determined at runtime.
 Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF);
-
-/// Compute the transformed value of Index at offset StartValue using step
-/// StepValue.
-/// For integer induction, returns StartValue + Index * StepValue.
-/// For pointer induction, returns StartValue[Index * StepValue].
-Value *emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
-                            Value *Step,
-                            InductionDescriptor::InductionKind InductionKind,
-                            const BinaryOperator *InductionBinOp);
 
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
@@ -203,11 +199,6 @@ struct VPTransformState {
   /// The chosen Vectorization Factor of the loop being vectorized.
   ElementCount VF;
 
-  /// Hold the index to generate specific scalar instructions. Null indicates
-  /// that all instances are to be generated, using either scalar or vector
-  /// instructions.
-  std::optional<VPLane> Lane;
-
   struct DataState {
     // Each value from the original loop, when vectorized, is represented by a
     // vector value in the map.
@@ -332,6 +323,9 @@ struct VPTransformState {
 
 /// Struct to hold various analysis needed for cost computations.
 struct VPCostContext {
+  /// Choice for how to widen a call at a given VF.
+  enum class CallWideningKind { Scalarize, Intrinsic, VectorVariant };
+
   const TargetTransformInfo &TTI;
   const TargetLibraryInfo &TLI;
   VPTypeAnalysis Types;
@@ -360,17 +354,27 @@ struct VPCostContext {
   /// has already been pre-computed.
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
 
+  /// Mark the widening decision for \p I at \p VF as invalidated since a VPlan
+  /// transform replaced the original recipe.
+  void invalidateWideningDecision(Instruction *I, ElementCount VF);
+
   /// \returns how much the cost of a predicated block should be divided by.
   /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
   uint64_t getPredBlockCostDivisor(BasicBlock *BB) const;
 
+  /// Returns true if \p I is known to be scalarized at \p VF.
+  bool willBeScalarized(Instruction *I, ElementCount VF) const;
+
+  /// Forwards to LoopVectorizationCostModel::isMaskRequired.
+  bool isMaskRequired(Instruction *I) const;
+
+  /// Returns the legacy call widening decision for \p CI at \p VF, or
+  /// std::nullopt if none was recorded. Used only in asserts.
+  std::optional<CallWideningKind> getLegacyCallKind(CallInst *CI,
+                                                    ElementCount VF) const;
+
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
-
-  /// Return true if \p I is considered uniform-after-vectorization in the
-  /// legacy cost model for \p VF. Only used to check for additional VPlan
-  /// simplifications.
-  bool isLegacyUniformAfterVectorization(Instruction *I, ElementCount VF) const;
 
   /// Estimate the overhead of scalarizing a recipe with result type \p ResultTy
   /// and \p Operands with \p VF. This is a convenience wrapper for the
@@ -386,6 +390,10 @@ struct VPCostContext {
   /// Returns true if an artificially high cost for emulated masked memrefs
   /// should be used.
   bool useEmulatedMaskMemRefHack(const VPReplicateRecipe *R, ElementCount VF);
+
+  /// Returns true if \p ID is a pseudo intrinsic that is dropped via
+  /// scalarization rather than widened.
+  static bool isFreeScalarIntrinsic(Intrinsic::ID ID);
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without
