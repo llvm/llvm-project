@@ -10,9 +10,9 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown -stop-after=pseudo-probe-inserter %s -o - | FileCheck %s
 
 ; CHECK-LABEL: name: foo_tail
-; CHECK-DAG: PSEUDO_PROBE 3369713592223921200, 1, 0, 0
-; CHECK-DAG: PSEUDO_PROBE 3369713592223921200, 2, 2, 0
-; CHECK: TAILJMPd64 {{.*}} @bar
+; CHECK: PSEUDO_PROBE 3369713592223921200, 1, 0, 0
+; CHECK-NEXT: PSEUDO_PROBE 3369713592223921200, 2, 2, 0
+; CHECK-NEXT: TAILJMPd64 {{.*}} @bar
 
 declare !dbg !26 i32 @bar(i32 noundef) local_unnamed_addr
 
