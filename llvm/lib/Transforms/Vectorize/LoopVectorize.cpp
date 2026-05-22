@@ -6951,9 +6951,15 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
                  InterleaveGroups, CM.isEpilogueAllowed());
 
   // Convert memory recipes to strided access recipes if the strided access is
-  // legal and profitable.
-  RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
-                 *OrigLoop, CostCtx, Range);
+  // legal and profitable. Use a new VPCostContext to ensure type inference
+  // reflects the current plan state.
+  // TODO: Remove this VPCostContext scope once VPTypeAnalysis is removed.
+  {
+    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, Config.CostKind, CM.PSE,
+                          OrigLoop);
+    RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
+                   *OrigLoop, CostCtx, Range);
+  }
 
   // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
   if (Range.Start.isScalar())
@@ -7065,7 +7071,14 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       // is selected if the negated condition is true in any iteration.
       if (TrueValIsPhi)
         Cmp = Builder.createNot(Cmp);
-      VPValue *Or = Builder.createOr(PhiR, Cmp);
+
+      // Convert the reduction phi to operate on bools.
+      auto *NewPhiR =
+          PhiR->cloneWithOperands(Plan->getFalse(), PhiR->getBackedgeValue());
+      NewPhiR->insertBefore(PhiR);
+      PhiR->replaceAllUsesWith(NewPhiR);
+
+      VPValue *Or = Builder.createOr(NewPhiR, Cmp);
       // Only replace uses inside the vector region with Or. External uses
       // (e.g. scalar preheader resume phis) must be replaced by the user
       // update loop below with FinalReductionResult.
@@ -7073,9 +7086,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         return cast<VPRecipeBase>(&U)->getRegion();
       });
       ToDelete.push_back(AnyOfSelect);
-
-      // Convert the reduction phi to operate on bools.
-      PhiR->setOperand(0, Plan->getFalse());
 
       // Update NewExitingVPV if it was pointing to the now-replaced select.
       if (NewExitingVPV == AnyOfSelect)
