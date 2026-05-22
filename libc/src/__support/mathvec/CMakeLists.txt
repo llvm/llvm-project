@@ -1,6 +1,15 @@
 add_header_library(common_constants HDRS common_constants.h)
 
 add_header_library(
+  cosf
+  HDRS
+    cosf.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.cosf
+)
+
+add_header_library(
   exp2f
   HDRS
     exp2f.h
@@ -64,4 +73,22 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.simd
     libc.src.__support.math.expm1f
+)
+
+add_header_library(
+  sinf
+  HDRS
+    sinf.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.sinf
+)
+
+add_header_library(
+  tanf
+  HDRS
+    tanf.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.tanf
 )

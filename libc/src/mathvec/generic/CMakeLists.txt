@@ -1,4 +1,18 @@
 add_entrypoint_object(
+  cosf
+  SRCS
+    cosf.cpp
+  HDRS
+    ../cosf.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.cosf
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
   exp2f
   SRCS
     exp2f.cpp
@@ -77,6 +91,34 @@ add_entrypoint_object(
   DEPENDS
     libc.src.mathvec.abi_prefix
     libc.src.__support.mathvec.expm1f
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
+  sinf
+  SRCS
+    sinf.cpp
+  HDRS
+    ../sinf.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.sinf
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
+  tanf
+  SRCS
+    tanf.cpp
+  HDRS
+    ../tanf.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.tanf
   FLAGS
     ROUND_OPT
     FMA_OPT

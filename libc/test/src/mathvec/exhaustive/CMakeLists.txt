@@ -10,6 +10,22 @@ add_header_library(
 )
 
 add_fp_unittest(
+  cosf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    cosf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.cosf
+    libc.src.mathvec.cosf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   exp2f_test
   NO_RUN_POSTBUILD
   SUITE
@@ -100,6 +116,38 @@ add_fp_unittest(
     .exhaustive_test
     libc.src.math.expm1f
     libc.src.mathvec.expm1f
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  sinf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    sinf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.sinf
+    libc.src.mathvec.sinf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  tanf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    tanf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.tanf
+    libc.src.mathvec.tanf
     libc.src.__support.CPP.simd
   LINK_LIBRARIES
     -lpthread
