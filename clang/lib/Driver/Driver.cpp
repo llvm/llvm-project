@@ -6503,11 +6503,9 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
                           NeedUniqueDirectory);
   };
 
-  const bool IsModulesDriver = C.getArgs().hasArg(options::OPT_fmodules_driver);
-
   // Standard library output in -fmodules-driver?
-  if (IsModulesDriver && isa<PrecompileJobAction>(JA) &&
-      !JA.getInputs().empty() &&
+  if (C.getArgs().hasArg(options::OPT_fmodules_driver) &&
+      isa<PrecompileJobAction>(JA) && !JA.getInputs().empty() &&
       (JA.getInputs().front()->getType() == types::TY_CXXStdModule ||
        JA.getInputs().front()->getType() == types::TY_PP_CXXStdModule)) {
     StringRef Filename = llvm::sys::path::filename(BaseInput);
