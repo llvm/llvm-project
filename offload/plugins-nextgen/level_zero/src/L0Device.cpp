@@ -963,33 +963,6 @@ Error L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {
   return Plugin::success();
 }
 
-// Command queues related functions.
-/// Create a command list with given ordinal and flags.
-Expected<ze_command_list_handle_t> L0DeviceTy::createCmdList(
-    ze_context_handle_t Context, ze_device_handle_t Device, uint32_t Ordinal,
-    ze_command_list_flags_t Flags, const std::string_view DeviceIdStr) {
-  ze_command_list_desc_t cmdListDesc = {ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC,
-                                        nullptr, // Extension.
-                                        Ordinal, Flags};
-  ze_command_list_handle_t cmdList;
-  CALL_ZE_RET_ERROR(zeCommandListCreate, Context, Device, &cmdListDesc,
-                    &cmdList);
-  ODBG(OLDT_Device) << "Created a command list " << cmdList
-                    << " (Ordinal: " << Ordinal << ") for device "
-                    << DeviceIdStr.data() << ".";
-  return cmdList;
-}
-
-/// Create a command list with default flags.
-Expected<ze_command_list_handle_t>
-L0DeviceTy::createCmdList(ze_context_handle_t Context,
-                          ze_device_handle_t Device, uint32_t Ordinal,
-                          const std::string_view DeviceIdStr) {
-  return (Ordinal == MaxOrdinal)
-             ? nullptr
-             : createCmdList(Context, Device, Ordinal, 0, DeviceIdStr);
-}
-
 /// Create an immediate command list.
 Expected<ze_command_list_handle_t>
 L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {

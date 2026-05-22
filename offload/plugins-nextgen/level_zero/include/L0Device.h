@@ -407,18 +407,6 @@ public:
 
   void reportDeviceInfo() const;
 
-  // Command queues related functions.
-  /// Create a command list with given ordinal and flags.
-  Expected<ze_command_list_handle_t>
-  createCmdList(ze_context_handle_t Context, ze_device_handle_t Device,
-                uint32_t Ordinal, ze_command_list_flags_t Flags,
-                const std::string_view DeviceIdStr);
-
-  /// Create a command list with default flags.
-  Expected<ze_command_list_handle_t>
-  createCmdList(ze_context_handle_t Context, ze_device_handle_t Device,
-                uint32_t Ordinal, const std::string_view DeviceIdStr);
-
   /// Create an immediate command list.
   Expected<ze_command_list_handle_t>
   createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder = false);
