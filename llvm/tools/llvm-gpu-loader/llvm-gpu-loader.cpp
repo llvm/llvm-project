@@ -192,7 +192,7 @@ void launchKernel(ol_queue_handle_t Queue, ol_device_handle_t Device,
 
   OFFLOAD_ERR(olLaunchKernel(Queue, Device, Kernel, &KernelArgs,
                              std::is_empty_v<Args> ? 0 : sizeof(Args),
-                             &LaunchArgs));
+                             &LaunchArgs, /*Properties=*/nullptr));
 }
 
 int main(int argc, const char **argv, const char **envp) {

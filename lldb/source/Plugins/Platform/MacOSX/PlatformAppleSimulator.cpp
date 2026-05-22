@@ -15,6 +15,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Target/Process.h"
@@ -285,6 +286,7 @@ static llvm::StringRef GetXcodeSDKDir(std::string preferred,
                                       std::string secondary) {
   llvm::StringRef sdk;
   auto get_sdk = [&](std::string sdk) -> llvm::StringRef {
+    Progress progress("Looking for Xcode SDK", sdk);
     auto sdk_path_or_err =
         HostInfo::GetSDKRoot(HostInfo::SDKOptions{XcodeSDK(std::move(sdk))});
     if (!sdk_path_or_err) {

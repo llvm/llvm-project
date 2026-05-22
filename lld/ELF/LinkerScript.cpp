@@ -698,17 +698,15 @@ void LinkerScript::discard(InputSectionBase &s) {
 }
 
 void LinkerScript::discardSynthetic(OutputSection &outCmd) {
-  for (Partition &part : ctx.partitions) {
-    if (!part.armExidx || !part.armExidx->isLive())
-      continue;
-    SmallVector<InputSectionBase *, 0> secs(
-        part.armExidx->exidxSections.begin(),
-        part.armExidx->exidxSections.end());
-    for (SectionCommand *cmd : outCmd.commands)
-      if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
-        for (InputSectionBase *s : computeInputSections(isd, secs, outCmd))
-          discard(*s);
-  }
+  ARMExidxSyntheticSection *armExidx = ctx.mainPart->armExidx.get();
+  if (!armExidx || !armExidx->isLive())
+    return;
+  SmallVector<InputSectionBase *, 0> secs(armExidx->exidxSections.begin(),
+                                          armExidx->exidxSections.end());
+  for (SectionCommand *cmd : outCmd.commands)
+    if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
+      for (InputSectionBase *s : computeInputSections(isd, secs, outCmd))
+        discard(*s);
 }
 
 SmallVector<InputSectionBase *, 0>

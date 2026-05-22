@@ -78,9 +78,6 @@ public:
 
   StringRef name;
 
-  // The 1-indexed partition that this section is assigned to by the garbage
-  // collector, or 0 if this section is dead. Normally there is only one
-  // partition, so this will either be 0 or 1.
   elf::Partition &getPartition(Ctx &) const;
 
   // These corresponds to the fields in Elf_Shdr.
@@ -92,6 +89,8 @@ public:
   uint32_t entsize;
 
   Kind sectionKind;
+  // 0 (dead) or 1 (live). Shim synthetic sections also use this field to
+  // carry their partition number (2..) or 255 for the partEnd marker.
   uint8_t partition = 1;
 
   // The next two bit fields are only used by InputSectionBase, but we

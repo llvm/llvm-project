@@ -1285,14 +1285,6 @@ public:
   void writeTo(uint8_t *buf) override;
 };
 
-class PartitionIndexSection final : public SyntheticSection {
-public:
-  PartitionIndexSection(Ctx &);
-  size_t getSize() const override;
-  void finalizeContents() override;
-  void writeTo(uint8_t *buf) override;
-};
-
 // See the following link for the Android-specific loader code that operates on
 // this section:
 // https://cs.android.com/android/platform/superproject/+/master:bionic/libc/bionic/libc_init_static.cpp;drc=9425b16978f9c5aa8f2c50c873db470819480d1d;l=192
@@ -1383,9 +1375,8 @@ struct PhdrEntry {
 
 // Linker generated per-partition sections.
 struct Partition {
-  Ctx &ctx;
   StringRef name;
-  uint64_t nameStrTab;
+  unsigned partno = 1;
 
   std::unique_ptr<SyntheticSection> elfHeader;
   std::unique_ptr<SyntheticSection> programHeaders;
@@ -1409,14 +1400,11 @@ struct Partition {
   std::unique_ptr<VersionDefinitionSection> verDef;
   std::unique_ptr<SyntheticSection> verNeed;
   std::unique_ptr<VersionTableSection> verSym;
-
-  Partition(Ctx &ctx) : ctx(ctx) {}
-  unsigned getNumber(Ctx &ctx) const { return this - &ctx.partitions[0] + 1; }
 };
 
 inline Partition &SectionBase::getPartition(Ctx &ctx) const {
   assert(isLive());
-  return ctx.partitions[partition - 1];
+  return *ctx.mainPart;
 }
 
 } // namespace lld::elf

@@ -1197,14 +1197,13 @@ template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
     }
     auto scanEH = [&] {
       RelocScan scanner(ctx);
-      for (Partition &part : ctx.partitions) {
-        for (EhInputSection *sec : part.ehFrame->sections)
-          scanner.scanEhSection(*sec);
-        if (part.armExidx && part.armExidx->isLive())
-          for (InputSection *sec : part.armExidx->exidxSections)
-            if (sec->isLive())
-              ctx.target->scanSection(*sec);
-      }
+      for (EhInputSection *sec : ctx.mainPart->ehFrame->sections)
+        scanner.scanEhSection(*sec);
+      ARMExidxSyntheticSection *armExidx = ctx.mainPart->armExidx.get();
+      if (armExidx && armExidx->isLive())
+        for (InputSection *sec : armExidx->exidxSections)
+          if (sec->isLive())
+            ctx.target->scanSection(*sec);
     };
     if (serial)
       scanEH();
@@ -1793,15 +1792,6 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *os,
   return ts;
 }
 
-static bool isThunkSectionCompatible(InputSection *source,
-                                     SectionBase *target) {
-  // We can't reuse thunks in different loadable partitions because they might
-  // not be loaded. But partition 1 (the main partition) will always be loaded.
-  if (source->partition != target->partition)
-    return target->partition == 1;
-  return true;
-}
-
 std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
                                                 Relocation &rel, uint64_t src) {
   SmallVector<std::unique_ptr<Thunk>, 0> *thunkVec = nullptr;
@@ -1826,8 +1816,7 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
 
   // Check existing Thunks for Sym to see if they can be reused
   for (auto &t : *thunkVec)
-    if (isThunkSectionCompatible(isec, t->getThunkTargetSym()->section) &&
-        t->isCompatibleWith(*isec, rel) &&
+    if (t->isCompatibleWith(*isec, rel) &&
         ctx.target->inBranchRange(rel.type, src,
                                   t->getThunkTargetSym()->getVA(ctx, -pcBias)))
       return std::make_pair(t.get(), false);

@@ -1818,6 +1818,13 @@ def combine_concat_vector : GICombineRule<
         [{ return Helper.matchCombineConcatVectors(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineConcatVectors(*${root}, ${matchinfo}); }])>;
 
+// Combines shuffle operations
+def combine_shuffle_vector : GICombineRule<
+  (defs root:$root, register_vector_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+        [{ return Helper.matchCombineShuffleVector(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineShuffleVector(*${root}, ${matchinfo}); }])>;
+
 // Combines Shuffles of Concats
 // a = G_CONCAT_VECTORS x, y, undef, undef
 // b = G_CONCAT_VECTORS z, undef, undef, undef
@@ -2326,6 +2333,53 @@ def overflow_combines: GICombineGroup<[
   match_subo_no_overflow
 ]>;
 
+
+def avgfloor_u_match : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $ext1, $x),
+         (G_ZEXT $ext2, $y),
+         (G_ADD $sum, $ext1, $ext2),
+         (G_LSHR $dst, $sum, 1):$mi,
+         [{ return Helper.matchAVG(*${mi}, MRI, ${x}.getReg(), ${y}.getReg(), TargetOpcode::G_UAVGFLOOR); }]),
+  (apply (G_UAVGFLOOR $tmp, $x, $y),
+         (G_ZEXT $dst, $tmp))
+>;
+
+def avgfloor_s_match : GICombineRule<
+  (defs root:$dst),
+  (match (G_SEXT $ext1, $x),
+         (G_SEXT $ext2, $y),
+         (G_ADD $sum, $ext1, $ext2),
+         (G_ASHR $dst, $sum, 1):$mi,
+         [{ return Helper.matchAVG(*${mi}, MRI, ${x}.getReg(), ${y}.getReg(), TargetOpcode::G_SAVGFLOOR); }]),
+  (apply (G_SAVGFLOOR $tmp, $x, $y),
+         (G_SEXT $dst, $tmp))
+>;
+
+def avgceil_u_match : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $ext1, $x),
+         (G_ZEXT $ext2, $y),
+         (G_ADD $inner, $ext1, $ext2),
+         (G_ADD $sum, $inner, 1),
+         (G_LSHR $dst, $sum, 1):$mi,
+         [{ return Helper.matchAVG(*${mi}, MRI, ${x}.getReg(), ${y}.getReg(), TargetOpcode::G_UAVGCEIL); }]),
+  (apply (G_UAVGCEIL $tmp, $x, $y),
+         (G_ZEXT $dst, $tmp))
+>;
+
+def avgceil_s_match : GICombineRule<
+  (defs root:$dst),
+  (match (G_SEXT $ext1, $x),
+         (G_SEXT $ext2, $y),
+         (G_ADD $inner, $ext1, $ext2),
+         (G_ADD $sum, $inner, 1),
+         (G_ASHR $dst, $sum, 1):$mi,
+         [{ return Helper.matchAVG(*${mi}, MRI, ${x}.getReg(), ${y}.getReg(), TargetOpcode::G_SAVGCEIL); }]),
+  (apply (G_SAVGCEIL $tmp, $x, $y),
+         (G_SEXT $dst, $tmp))
+>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -2415,7 +2469,9 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines,
     truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, sub_one_from_sub,
-    binop_with_neg, sub_minus_one, sub_of_mul_const]>;
+    binop_with_neg, sub_minus_one, sub_of_mul_const,
+    avgfloor_u_match, avgfloor_s_match,
+    avgceil_u_match, avgceil_s_match]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

@@ -604,7 +604,6 @@ struct InStruct {
   std::unique_ptr<SyntheticSection> mipsReginfo;
   std::unique_ptr<SyntheticSection> mipsRldMap;
   std::unique_ptr<SyntheticSection> partEnd;
-  std::unique_ptr<SyntheticSection> partIndex;
   std::unique_ptr<PltSection> plt;
   std::unique_ptr<IpltSection> iplt;
   std::unique_ptr<SyntheticSection> ppc32Got2;
@@ -639,6 +638,7 @@ struct Ctx : CommonLinkerContext {
   };
   OutSections out;
   SmallVector<OutputSection *, 0> outputSections;
+  // [0] main output; [1..] header-only shims for SHT_LLVM_SYMPART inputs.
   std::vector<Partition> partitions;
 
   InStruct in;
