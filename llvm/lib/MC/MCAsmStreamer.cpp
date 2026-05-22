@@ -2633,33 +2633,31 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
       SMLoc Loc = Inst.getLoc();
       unsigned BufID = SM->FindBufferContainingLoc(Loc);
       bool PrintedSourceLoc = false;
-      // Walk the SourceMgr buffer stack to emit full source location
-      // information. When AsmParser instantiates a macro, it creates a buffer
-      // named "<instantiation>" and attaches the macro call location as its
-      // IncludeLoc. Therefore, walking IncludeLoc cleanly unwinds the macro
-      // expansion stack (emitted as ExpansionLoc) until it reaches the actual
-      // source file (emitted as SourceLoc). Any further IncludeLoc parents
-      // beyond that point represent actual .include directives (emitted as
-      // IncludeLoc).
+
+      auto PrintLoc = [&](StringRef Type, SMLoc L, unsigned Buf) {
+        StringRef Filename = SM->getMemoryBuffer(Buf)->getBufferIdentifier();
+        std::pair<unsigned, unsigned> LineCol = SM->getLineAndColumn(L, Buf);
+        OS << MAI->getCommentString() << " <" << Type << ": " << Filename
+           << ":" << LineCol.first << ":" << LineCol.second << ">\n";
+      };
+
+      // Unwind the macro expansion and inclusion stacks.
       while (BufID) {
-        StringRef Filename =
-            SM->getBufferInfo(BufID).Buffer->getBufferIdentifier();
-        std::pair<unsigned, unsigned> LineCol =
-            SM->getLineAndColumn(Loc, BufID);
-
-        if (Filename == "<instantiation>") {
-          OS << MAI->getCommentString() << " <ExpansionLoc: " << Filename << ":"
-             << LineCol.first << ":" << LineCol.second << ">\n";
-        } else if (!PrintedSourceLoc) {
-          OS << MAI->getCommentString() << " <SourceLoc: " << Filename << ":"
-             << LineCol.first << ":" << LineCol.second << ">\n";
-          PrintedSourceLoc = true;
+        SMLoc ParentLoc = SM->getParentIncludeLoc(BufID);
+        if (SMLoc DefLoc = SM->getMacroDefLoc(BufID); DefLoc.isValid()) {
+          PrintLoc("MacroLoc", DefLoc, SM->FindBufferContainingLoc(DefLoc));
         } else {
-          OS << MAI->getCommentString() << " <IncludeLoc: " << Filename << ":"
-             << LineCol.first << ":" << LineCol.second << ">\n";
+          // First location is the SourceLoc, all others are include stack
+          if (!PrintedSourceLoc) {
+            PrintLoc("SourceLoc", Loc, BufID);
+            PrintedSourceLoc = true;
+          } else {
+            PrintLoc("IncludeLoc", Loc, BufID);
+          }
         }
-
-        Loc = SM->getBufferInfo(BufID).IncludeLoc;
+        // Move up to the parent context (the macro call site or the include site)
+        // for the next iteration of the stack unwinding.
+        Loc = ParentLoc;
         BufID = Loc.isValid() ? SM->FindBufferContainingLoc(Loc) : 0;
       }
     }
