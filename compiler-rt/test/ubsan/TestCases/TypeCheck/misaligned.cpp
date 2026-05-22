@@ -48,7 +48,11 @@ int main(int, char **argv) {
     // CHECK-LOAD-NEXT: {{^ 00 00 00 01 02 03 04  05}}
     // CHECK-LOAD-NEXT: {{^             \^}}
     return *p && 0;
-    // CHECK-STACK-LOAD: #0 {{.*}}main{{.*}}misaligned.cpp
+    // TODO: In the standalone configuration of this test, an optimisation /
+    // debug info emission bug causes the file name associated with the `memset`
+    // call below (`CGBuiltin.cpp`) to appear here (instead of the expected
+    // file `misaligned.cpp`). Restore the file name once that bug is fixed.
+    // CHECK-STACK-LOAD: #0 {{.*}}main
 
   case 'L': {
     int x;
