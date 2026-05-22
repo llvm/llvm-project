@@ -1892,17 +1892,17 @@ void HoistSpillHelper::LRE_DidCloneVirtReg(Register New, Register Old) {
     Matrix->assign(LIS.getInterval(New), PhysReg);
   } else if (VRM.hasPhys(Old)) {
     MCRegister PhysReg = VRM.getPhys(Old);
-    if (Matrix && LIS.hasInterval(Old)) {
-      const LiveInterval &LI = LIS.getInterval(Old);
-      // Drop the stale pre-clone segments before reassigning Old's current LI.
-      Matrix->unassign(LI,
-                       /*ClearAllReferencingSegments=*/true);
-      Matrix->assign(LI, PhysReg);
-    }
-    if (Matrix)
+    if (Matrix) {
+      if (LIS.hasInterval(Old)) {
+        const LiveInterval &LI = LIS.getInterval(Old);
+        // Drop stale pre-clone segments before reassigning Old's current LI.
+        Matrix->unassign(LI, /*ClearAllReferencingSegments=*/true);
+        Matrix->assign(LI, PhysReg);
+      }
       Matrix->assign(LIS.getInterval(New), PhysReg);
-    else
+    } else {
       VRM.assignVirt2Phys(New, PhysReg);
+    }
   } else if (VRM.getStackSlot(Old) != VirtRegMap::NO_STACK_SLOT) {
     VRM.assignVirt2StackSlot(New, VRM.getStackSlot(Old));
   } else {
