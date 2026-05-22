@@ -805,8 +805,11 @@ enum NodeType {
   /// i1 then the high bits must conform to getBooleanContents.
   SELECT,
 
-  /// CT_SELECT(Cond, TrueVal, FalseVal). Cond is i1 and the value operands must
-  /// have the same type. Used to lower the constant-time select intrinsic.
+  /// CT_SELECT(COND, TRUEVAL, FALSEVAL) - Constant-time select: returns TRUEVAL
+  /// if COND (an i1) is true, else FALSEVAL; the value operands and result
+  /// share one type. Unlike SELECT, it must lower to code whose timing is
+  /// independent of COND -- no data-dependent branches, both arms always
+  /// evaluated -- and combines must preserve that. Node for llvm.ct.select.*.
   CT_SELECT,
 
   /// Select with a vector condition (op #0) and two vector operands (ops #1
