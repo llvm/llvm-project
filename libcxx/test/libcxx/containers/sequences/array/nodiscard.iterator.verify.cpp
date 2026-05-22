@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-hardening-mode=none
-
 // <array>
 
 // Check that functions are marked [[nodiscard]]
@@ -25,8 +23,11 @@ void test() {
   ASSERT_SAME_TYPE(Container::iterator, std::__static_bounded_iter<int*, 94>);
 #elif defined(_LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY)
   ASSERT_SAME_TYPE(Container::iterator, std::__wrap_iter<int*>);
+#else
+  ASSERT_SAME_TYPE(Container::iterator, int*);
 #endif
 
+#if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY) || defined(_LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY)
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   *it;
 
@@ -44,6 +45,25 @@ void test() {
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it - it;
+#else
+  // expected-warning@+1 {{expression result unused}}
+  *it;
+
+  // expected-warning@+1 {{expression result unused}}
+  it[0];
+
+  // expected-warning@+1 {{expression result unused}}
+  it + 1;
+
+  // expected-warning@+1 {{expression result unused}}
+  1 + it;
+
+  // expected-warning@+1 {{expression result unused}}
+  it - 1;
+
+  // expected-warning@+1 {{expression result unused}}
+  it - it;
+#endif
 
 #if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
