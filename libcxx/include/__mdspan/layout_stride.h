@@ -31,6 +31,7 @@
 #include <__type_traits/is_same.h>
 #include <__utility/as_const.h>
 #include <__utility/integer_sequence.h>
+#include <__utility/move.h>
 #include <__utility/swap.h>
 #include <array>
 #include <limits>

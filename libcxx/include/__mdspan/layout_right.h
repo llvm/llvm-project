@@ -28,6 +28,7 @@
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__utility/integer_sequence.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
