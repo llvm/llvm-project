@@ -332,7 +332,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     AddRunTimeLibs(TC, TC.getDriver(), CmdArgs, Args);
   }
 
-  const Arg* A = Args.getLastArg(options::OPT_fuse_ld_EQ);
+  const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ);
   StringRef Linker = A ? A->getValue() : TC.getDriver().getPreferredLinker();
 
   if (Linker.empty()) {
