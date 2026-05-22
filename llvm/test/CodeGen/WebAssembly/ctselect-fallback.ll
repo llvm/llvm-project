@@ -191,13 +191,21 @@ define i32 @test_ctselect_const_true(i32 %a, i32 %b) {
 ; W32-LABEL: test_ctselect_const_true:
 ; W32:         .functype test_ctselect_const_true (i32, i32) -> (i32)
 ; W32-NEXT:  # %bb.0:
+; W32-NEXT:    local.get 1
 ; W32-NEXT:    local.get 0
+; W32-NEXT:    local.get 1
+; W32-NEXT:    i32.xor
+; W32-NEXT:    i32.xor
 ; W32-NEXT:    # fallthrough-return
 ;
 ; W64-LABEL: test_ctselect_const_true:
 ; W64:         .functype test_ctselect_const_true (i32, i32) -> (i32)
 ; W64-NEXT:  # %bb.0:
+; W64-NEXT:    local.get 1
 ; W64-NEXT:    local.get 0
+; W64-NEXT:    local.get 1
+; W64-NEXT:    i32.xor
+; W64-NEXT:    i32.xor
 ; W64-NEXT:    # fallthrough-return
   %result = call i32 @llvm.ct.select.i32(i1 true, i32 %a, i32 %b)
   ret i32 %result
@@ -208,12 +216,16 @@ define i32 @test_ctselect_const_false(i32 %a, i32 %b) {
 ; W32:         .functype test_ctselect_const_false (i32, i32) -> (i32)
 ; W32-NEXT:  # %bb.0:
 ; W32-NEXT:    local.get 1
+; W32-NEXT:    i32.const 0
+; W32-NEXT:    i32.xor
 ; W32-NEXT:    # fallthrough-return
 ;
 ; W64-LABEL: test_ctselect_const_false:
 ; W64:         .functype test_ctselect_const_false (i32, i32) -> (i32)
 ; W64-NEXT:  # %bb.0:
 ; W64-NEXT:    local.get 1
+; W64-NEXT:    i32.const 0
+; W64-NEXT:    i32.xor
 ; W64-NEXT:    # fallthrough-return
   %result = call i32 @llvm.ct.select.i32(i1 false, i32 %a, i32 %b)
   ret i32 %result
