@@ -23281,8 +23281,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
         FixedVectorType *StridedStoreTy = SPtrInfo.Ty;
         assert(StridedStoreTy && "Missing StridedPointerInfo for tree entry.");
-        unsigned StridedStoreEC =
-            StridedStoreTy->getElementCount().getKnownMinValue();
+        unsigned StridedStoreEC = getNumElements(StridedStoreTy);
         Value *Stride = SPtrInfo.StrideVal;
         assert(Stride && "Missing StridedPointerInfo for tree entry.");
         Value *StrideVal =
