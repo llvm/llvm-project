@@ -5275,6 +5275,13 @@ Action *Driver::ConstructPhaseAction(
     if (Args.hasArg(options::OPT_extract_api))
       return C.MakeAction<ExtractAPIJobAction>(Input, types::TY_API_INFO);
 
+    // Standard library modules always precompile in -fmodules-driver mode,
+    // even when -fsyntax-only is specified.
+    if (Input->getType() == types::TY_CXXStdModule ||
+        Input->getType() == types::TY_PP_CXXStdModule)
+      return C.MakeAction<PrecompileJobAction>(
+          Input, getPrecompiledType(Input->getType()));
+
     // With 'fmodules-reduced-bmi', we don't want to run the
     // precompile phase unless the user specified '--precompile' or
     // '--precompile-reduced-bmi'. If '--precompile' is specified, we will try
@@ -5470,6 +5477,14 @@ void Driver::BuildJobs(Compilation &C) const {
       if (A->getKind() == clang::driver::Action::BinaryAnalyzeJobClass ||
           A->getKind() == clang::driver::Action::BinaryTranslatorJobClass)
         continue;
+
+      if (isa<PrecompileJobAction>(A) && !A->getInputs().empty()) {
+        const Action *Input = A->getInputs().front();
+        types::ID InputType = Input->getType();
+        if (InputType == types::TY_CXXStdModule ||
+            InputType == types::TY_PP_CXXStdModule)
+          continue;
+      }
 
       if (A->getType() != types::TY_Nothing &&
           !(A->getKind() == Action::IfsMergeJobClass ||
@@ -6472,6 +6487,34 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   std::string BoundArch = sanitizeTargetIDInFileName(OrigBoundArch);
 
   llvm::PrettyStackTraceString CrashInfo("Computing output path");
+
+  auto CreateTempOutputPath = [&](StringRef Prefix) {
+    const char *Suffix =
+        types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode());
+    // The non-offloading toolchain on Darwin requires deterministic input
+    // file name for binaries to be deterministic, therefore it needs unique
+    // directory.
+    llvm::Triple Triple(C.getDriver().getTargetTriple());
+    bool NeedUniqueDirectory =
+        (JA.getOffloadingDeviceKind() == Action::OFK_None ||
+         JA.getOffloadingDeviceKind() == Action::OFK_Host) &&
+        Triple.isOSDarwin();
+    return CreateTempFile(C, Prefix, Suffix, MultipleArchs, BoundArch,
+                          NeedUniqueDirectory);
+  };
+
+  const bool IsModulesDriver = C.getArgs().hasArg(options::OPT_fmodules_driver);
+
+  // Standard library output in -fmodules-driver?
+  if (IsModulesDriver && isa<PrecompileJobAction>(JA) &&
+      !JA.getInputs().empty() &&
+      (JA.getInputs().front()->getType() == types::TY_CXXStdModule ||
+       JA.getInputs().front()->getType() == types::TY_PP_CXXStdModule)) {
+    StringRef Filename = llvm::sys::path::filename(BaseInput);
+    StringRef Stem = llvm::sys::path::stem(Filename);
+    return CreateTempOutputPath(Stem);
+  }
+
   // Output to a user requested destination?
   if (AtTopLevel && !isa<DsymutilJobAction>(JA) && !isa<VerifyJobAction>(JA)) {
     if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o))
@@ -6570,19 +6613,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
        !C.getArgs().hasArg(options::OPT__SLASH_Fo)) ||
       CCGenDiagnostics) {
     StringRef Name = llvm::sys::path::filename(BaseInput);
-    std::pair<StringRef, StringRef> Split = Name.split('.');
-    const char *Suffix =
-        types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode());
-    // The non-offloading toolchain on Darwin requires deterministic input
-    // file name for binaries to be deterministic, therefore it needs unique
-    // directory.
-    llvm::Triple Triple(C.getDriver().getTargetTriple());
-    bool NeedUniqueDirectory =
-        (JA.getOffloadingDeviceKind() == Action::OFK_None ||
-         JA.getOffloadingDeviceKind() == Action::OFK_Host) &&
-        Triple.isOSDarwin();
-    return CreateTempFile(C, Split.first, Suffix, MultipleArchs, BoundArch,
-                          NeedUniqueDirectory);
+    return CreateTempOutputPath(Name.split('.').first);
   }
 
   SmallString<128> BasePath(BaseInput);
