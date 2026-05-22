@@ -23,7 +23,7 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; INITIAL-EMPTY:
 ; INITIAL-NEXT:    vector.body:
 ; INITIAL-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; INITIAL-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP5]]>
+; INITIAL-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP5]]>
 ; INITIAL-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
 ; INITIAL-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = and vp<[[VP7]]>, vp<[[VP4]]>
 ; INITIAL-NEXT:    Successor(s): vector.body.split
@@ -95,7 +95,7 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; FINAL-NEXT:    CLONE ir<%ptr.c> = getelementptr inbounds ir<%c>, vp<%index>
 ; FINAL-NEXT:    WIDEN store ir<%ptr.c>, ir<%add>, vp<[[VP13]]>
 ; FINAL-NEXT:    EMIT vp<%index.next> = add vp<%index>, vp<[[VP3]]>
-; FINAL-NEXT:    EMIT vp<%vec.ind.next> = add vp<[[VP11]]>, vp<[[VP10]]>
+; FINAL-NEXT:    EMIT vp<%vec.ind.next> = add nuw vp<[[VP11]]>, vp<[[VP10]]>
 ; FINAL-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
 ; FINAL-NEXT:    EMIT branch-on-cond vp<[[VP14]]>
 ; FINAL-NEXT:  Successor(s): middle.block, vector.body
