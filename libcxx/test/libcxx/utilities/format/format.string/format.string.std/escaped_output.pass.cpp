@@ -48,13 +48,15 @@ inline constexpr int Cc = 65;
 inline constexpr int Cf = 170;
 inline constexpr int Cs = 2'048;
 inline constexpr int Co = 137'468;
-inline constexpr int Cn = 819'533;
+inline constexpr int Cn = 801'683;
 inline constexpr int C  = Cc + Cf + Cs + Co + Cn;
 
 // This is the final part of the Unicode properties table:
 //
-// 31350..323AF  ; Lo # [4192] CJK UNIFIED IDEOGRAPH-31350..CJK UNIFIED IDEOGRAPH-323AF
-// 323B0..E0000  ; Cn # [711761] <reserved-323B0>..<reserved-E0000>
+// 31350..33479  ; Lo # [8490] CJK UNIFIED IDEOGRAPH-31350..CJK UNIFIED IDEOGRAPH-33479
+// 3347A..3CFFF  ; Cn # [39814] <reserved-3347A>..<reserved-3CFFF>
+// 3D000..3FC3F  ; Lo # [11328] SEAL CHARACTER-3D000..SEAL CHARACTER-3FC3F
+// 3FC40..E0000  ; Cn # [656321] <reserved-3FC40>..<reserved-E0000>
 // E0001         ; Cf #       LANGUAGE TAG
 // E0002..E001F  ; Cn #  [30] <reserved-E0002>..<reserved-E001F>
 // E0020..E007F  ; Cf #  [96] TAG SPACE..CANCEL TAG
@@ -73,7 +75,7 @@ inline constexpr int C  = Cc + Cf + Cs + Co + Cn;
 // [3FC40, 10FFFF] use a hand-crafted algorithm.
 //
 // This means a number of entries are omitted
-inline constexpr int excluded = ((0x10FFFF - 0x3FC40) + 1) - 240;
+inline constexpr int excluded = ((0x10FFFF - 0x3347A) + 1) - 240;
 
 inline constexpr int entries = Z + C - excluded;
 
