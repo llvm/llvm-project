@@ -165,7 +165,7 @@ class SystemZDAGToDAGISel : public SelectionDAGISel {
   // Return true on success, storing the base and displacement in
   // Base and Disp respectively.
   bool selectBDAddr(SystemZAddressingMode::DispRange DR, SDValue Addr,
-                    SDValue &Base, SDValue &Disp) const;
+                    SDValue &Base, SDValue &Disp, int64_t Offset = 0) const;
 
   // Try to match Addr as a FormBDX address with displacement type DR.
   // Return true on success and if the result had no index.  Store the
@@ -267,6 +267,15 @@ class SystemZDAGToDAGISel : public SelectionDAGISel {
   // in Base, Disp and Index respectively.
   bool selectBDVAddr12Only(SDValue Addr, SDValue Elem, SDValue &Base,
                            SDValue &Disp, SDValue &Index) const;
+  // Wrapper functions for LSB access on big-endian multi-byte types.
+  // Selects a Base + Displacement address and applies a fixed byte Offset.
+  // Offsets: i16 LSB = +1, i32 LSB = +3, i64 LSB = +7.
+  bool selectBDAddr12off1(SDValue Addr, SDValue &Base, SDValue &Disp) const;
+  bool selectBDAddr12off3(SDValue Addr, SDValue &Base, SDValue &Disp) const;
+  bool selectBDAddr12off7(SDValue Addr, SDValue &Base, SDValue &Disp) const;
+  bool selectBDAddr20off1(SDValue Addr, SDValue &Base, SDValue &Disp) const;
+  bool selectBDAddr20off3(SDValue Addr, SDValue &Base, SDValue &Disp) const;
+  bool selectBDAddr20off7(SDValue Addr, SDValue &Base, SDValue &Disp) const;
 
   // Check whether (or Op (and X InsertMask)) is effectively an insertion
   // of X into bits InsertMask of some Y != Op.  Return true if so and
@@ -693,12 +702,14 @@ void SystemZDAGToDAGISel::getAddressOperands(const SystemZAddressingMode &AM,
 
 bool SystemZDAGToDAGISel::selectBDAddr(SystemZAddressingMode::DispRange DR,
                                        SDValue Addr, SDValue &Base,
-                                       SDValue &Disp) const {
+                                       SDValue &Disp, int64_t Offset) const {
   SystemZAddressingMode AM(SystemZAddressingMode::FormBD, DR);
   if (!selectAddress(Addr, AM))
     return false;
 
+  AM.Disp += Offset;
   getAddressOperands(AM, Addr.getValueType(), Base, Disp);
+  Disp = CurDAG->getTargetConstant(AM.Disp, SDLoc(Addr), MVT::i64);
   return true;
 }
 
@@ -747,6 +758,32 @@ bool SystemZDAGToDAGISel::selectBDVAddr12Only(SDValue Addr, SDValue Elem,
     }
   }
   return false;
+}
+
+bool SystemZDAGToDAGISel::selectBDAddr12off1(SDValue A, SDValue &B,
+                                             SDValue &D) const {
+  return selectBDAddr(SystemZAddressingMode::Disp12Pair, A, B, D, 1);
+}
+bool SystemZDAGToDAGISel::selectBDAddr12off3(SDValue A, SDValue &B,
+                                             SDValue &D) const {
+  return selectBDAddr(SystemZAddressingMode::Disp12Pair, A, B, D, 3);
+}
+bool SystemZDAGToDAGISel::selectBDAddr12off7(SDValue A, SDValue &B,
+                                             SDValue &D) const {
+  return selectBDAddr(SystemZAddressingMode::Disp12Pair, A, B, D, 7);
+}
+
+bool SystemZDAGToDAGISel::selectBDAddr20off1(SDValue A, SDValue &B,
+                                             SDValue &D) const {
+  return selectBDAddr(SystemZAddressingMode::Disp20Pair, A, B, D, 1);
+}
+bool SystemZDAGToDAGISel::selectBDAddr20off3(SDValue A, SDValue &B,
+                                             SDValue &D) const {
+  return selectBDAddr(SystemZAddressingMode::Disp20Pair, A, B, D, 3);
+}
+bool SystemZDAGToDAGISel::selectBDAddr20off7(SDValue A, SDValue &B,
+                                             SDValue &D) const {
+  return selectBDAddr(SystemZAddressingMode::Disp20Pair, A, B, D, 7);
 }
 
 bool SystemZDAGToDAGISel::detectOrAndInsertion(SDValue &Op,

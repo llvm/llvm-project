@@ -695,45 +695,31 @@ def cond4 : ImmLeaf<i32, [{ return (Imm.getZExtValue() < 16); }],
   let FastIselShouldIgnore = true;
 }
 
-// Extracts the base register from the load node.
-def get_base_from_load : SDNodeXForm<ld, [{
-  SDValue Addr = cast<MemSDNode>(N)->getBasePtr();
-  // If the address is (Base + Disp), return Base.
-  // Otherwise, return the whole Addr.
-  if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1)))
-    return Addr.getOperand(0);
-  return Addr;
-}]>;
+// These patterns target the Least Significant Byte (LSB) of multi-byte 
+// integers (i16, i32, i64). On SystemZ (Big-Endian), the LSB is located at 
+// a fixed positive offset from the base address:
+// i16: offset +1 (byte 1 of 2)
+// i32: offset +3 (byte 3 of 4)
+// i64: offset +7 (byte 7 of 8)
 
-// i16: Target the displacement of the load and add +1 for Big-Endian LSB.
-def get_disp_lsb1 : SDNodeXForm<ld, [{
-  SDValue Addr = cast<MemSDNode>(N)->getBasePtr();
-  int64_t Disp = 0;
-  if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1)))
-    Disp = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-  return CurDAG->getTargetConstant(Disp + 1, SDLoc(N), MVT::i64);
-}]>;
+// 12-bit unsigned displacement variants (for NI, OI, XI)
+def bdaddr12off1 : ComplexPattern<i64, 2, "selectBDAddr12off1">;
+def bdaddr12off3 : ComplexPattern<i64, 2, "selectBDAddr12off3">;
+def bdaddr12off7 : ComplexPattern<i64, 2, "selectBDAddr12off7">;
 
-// i32: Target the displacement of the load and add +3 for Big-Endian LSB.
-def get_disp_lsb3 : SDNodeXForm<ld, [{
-  SDValue Addr = cast<MemSDNode>(N)->getBasePtr();
-  int64_t Disp = 0;
-  if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1)))
-    Disp = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-  return CurDAG->getTargetConstant(Disp + 3, SDLoc(N), MVT::i64);
-}]>;
-
-// i64: Target the displacement of the load and add +7 for Big-Endian LSB.
-def get_disp_lsb7 : SDNodeXForm<ld, [{
-  SDValue Addr = cast<MemSDNode>(N)->getBasePtr();
-  int64_t Disp = 0;
-  if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1)))
-    Disp = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-  return CurDAG->getTargetConstant(Disp + 7, SDLoc(N), MVT::i64);
-}]>;
+// 20-bit signed displacement variants (for NIY, OIY, XIY)
+def bdaddr20off1 : ComplexPattern<i64, 2, "selectBDAddr20off1">;
+def bdaddr20off3 : ComplexPattern<i64, 2, "selectBDAddr20off3">;
+def bdaddr20off7 : ComplexPattern<i64, 2, "selectBDAddr20off7">;
 
 // Normalizes the immediate to i32.
 def as_i32imm : SDNodeXForm<imm, [{
   uint64_t Val = N->getAPIntValue().zextOrTrunc(32).getZExtValue();
+  return CurDAG->getTargetConstant(Val, SDLoc(N), MVT::i32);
+}]>;
+
+// Extracts only the bottom 8 bits.
+def as_i8imm : SDNodeXForm<imm, [{
+  uint64_t Val = N->getZExtValue() & 0xFF;
   return CurDAG->getTargetConstant(Val, SDLoc(N), MVT::i32);
 }]>;

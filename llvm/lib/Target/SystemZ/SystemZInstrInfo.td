@@ -1316,10 +1316,7 @@ let Defs = [CC] in {
   let mayLoad = 1, mayStore = 1 in
     defm NC : MemorySS<"nc", 0xD4, z_nc>;
 }
-defm : RMWIByte<and, bdaddr12pair, NI>;
-defm : RMWIByte<and, bdaddr20pair, NIY>;
-defm : RMWIByteLSB<and, bdaddr12pair, NI>;
-defm : RMWIByteLSB<and, bdaddr20pair, NIY>;
+defm : RMWIByte<and, NI, NIY>;
 
 //===----------------------------------------------------------------------===//
 // OR
@@ -1375,10 +1372,7 @@ let Defs = [CC] in {
   let mayLoad = 1, mayStore = 1 in
     defm OC : MemorySS<"oc", 0xD6, z_oc>;
 }
-defm : RMWIByte<or, bdaddr12pair, OI>;
-defm : RMWIByte<or, bdaddr20pair, OIY>;
-defm : RMWIByteLSB<or,  bdaddr12pair, OI>;
-defm : RMWIByteLSB<or,  bdaddr20pair, OIY>;
+defm : RMWIByte<or,  OI, OIY>;
 
 //===----------------------------------------------------------------------===//
 // XOR
@@ -1417,10 +1411,7 @@ let Defs = [CC] in {
   let mayLoad = 1, mayStore = 1 in
     defm XC : MemorySS<"xc", 0xD7, z_xc>;
 }
-defm : RMWIByte<xor, bdaddr12pair, XI>;
-defm : RMWIByte<xor, bdaddr20pair, XIY>;
-defm : RMWIByteLSB<xor, bdaddr12pair, XI>;
-defm : RMWIByteLSB<xor, bdaddr20pair, XIY>;
+defm : RMWIByte<xor, XI, XIY>;
 
 //===----------------------------------------------------------------------===//
 // Combined logical operations

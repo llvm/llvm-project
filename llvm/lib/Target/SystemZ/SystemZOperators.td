@@ -1368,43 +1368,33 @@ def z_vsei8_by_parts  : z_vse_by_parts<sext8dbl, 7, 15>;
 def z_vsei16_by_parts : z_vse_by_parts<sext16dbl, 3, 7>;
 def z_vsei32_by_parts : z_vse_by_parts<sext32, 1, 3>;
 
-// Matches any integer constant where only the last byte is set.
+// Matches any integer constant where only the last byte is set (0x00...XX).
+// Safe for OR/XOR because x | 0 == x.
 def immLSB8 : PatLeaf<(imm), [{
   return N->getAPIntValue().getActiveBits() <= 8;
 }]>;
 
-// Fragment for i16 any-extending loads with a 20-bit signed displacement check.
-def anyextloadi16_20bit : PatFrag<(ops node:$addr), (anyextloadi16 $addr), [{
-  auto *Load = cast<MemSDNode>(N);
-  SDValue BaseAddr = Load->getBasePtr();
-  if (BaseAddr.getOpcode() == ISD::ADD &&
-      isa<ConstantSDNode>(BaseAddr.getOperand(1))) {
-    int64_t Disp = cast<ConstantSDNode>(BaseAddr.getOperand(1))->getSExtValue();
-    return Disp >= -524288 && Disp <= 524287;
-  }
-  return true;
-}]>;
+// Matches constants where all bits except the last byte are 1 (0xFF...XX).
+def immAndLSB8 : PatLeaf<(imm), [{
+  uint64_t Val = N->getZExtValue();
+  uint64_t Mask = 0;
+  uint64_t Size = N->getValueType(0).getSizeInBits();
 
-// Fragment for i32/i64 loads with a 20-bit signed displacement check.
-def load_20bit : PatFrag<(ops node:$addr), (load $addr), [{
-  auto *Load = cast<MemSDNode>(N);
-  SDValue BaseAddr = Load->getBasePtr();
-  if (BaseAddr.getOpcode() == ISD::ADD &&
-      isa<ConstantSDNode>(BaseAddr.getOperand(1))) {
-    int64_t Disp = cast<ConstantSDNode>(BaseAddr.getOperand(1))->getSExtValue();
-    return Disp >= -524288 && Disp <= 524287;
+  switch (Size) {
+  case 16:
+    Mask = 0xff00ULL;
+    break;
+  case 32:
+    // Support both full i32 and zero-extended i16 constant.
+    Mask = ((Val & 0xffffff00ULL) == 0xffffff00ULL) ? 0xffffff00ULL
+                                                    : 0x0000ff00ULL;
+    break;
+  case 64:
+    Mask = 0xffffffffffffff00ULL;
+    break;
+  default:
+    return false;
   }
-  return true;
-}]>;
 
-// Check if displacement is safe for RMW operations on wider types.
-def load_RMW_safe : PatFrag<(ops node:$addr), (load $addr), [{
-  auto *Load = cast<MemSDNode>(N);
-  SDValue BaseAddr = Load->getBasePtr();
-  if (BaseAddr.getOpcode() == ISD::ADD &&
-      isa<ConstantSDNode>(BaseAddr.getOperand(1))) {
-    int64_t Disp = cast<ConstantSDNode>(BaseAddr.getOperand(1))->getSExtValue();
-    return Disp >= -524288 && Disp <= 524287;
-  }
-  return true;
+  return (Val & Mask) == Mask;
 }]>;
