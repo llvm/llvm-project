@@ -80,6 +80,15 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Create QEMU wrapper
+        run: |
+          mkdir build
+          cat << 'EOF' > build/qemu-wrapper.sh
+          #!/bin/bash
+          exec qemu-${{ matrix.arch }} -L /usr/${{ matrix.target_triple }} "$@"
+          EOF
+          chmod +x ${{ github.workspace }}/qemu-wrapper.sh
+
       - name: Configure CMake - Clang
         run: |
           cmake -B build/clang -S runtimes -G Ninja \
@@ -88,7 +97,7 @@ jobs:
             -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCMAKE_BUILD_TYPE=Release \
             -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }} \
-            -DCMAKE_CROSSCOMPILING_EMULATOR="qemu-${{ matrix.arch }};-L;/usr/${{ matrix.target_triple }}"
+            -DCMAKE_CROSSCOMPILING_EMULATOR=build/qemu-wrapper.sh
 
       - name: Build and Run - Clang
         env:
