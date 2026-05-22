@@ -70,9 +70,6 @@ def initialize(
     # https://noswap.com/blog/python-multiprocessing-keyboardinterrupt
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-def _debug_enabled():
-    return _lit_config is not None and getattr(_lit_config, "debug", False)
-
 
 def _tick_ceiling(now, load1m):
     """Adjust the dynamic concurrency ceiling (proportional controller).
@@ -124,8 +121,6 @@ def _acquire_run_slot():
     if _load_state is None or not _HAS_LOADAVG:
         return
 
-    debug = _debug_enabled()
-
     while True:
         load1m = os.getloadavg()[0]
         now = time.time()
@@ -142,45 +137,16 @@ def _acquire_run_slot():
                 _load_state[_S_RUNNING] = running
                 break
 
-        if debug:
-            _lit_config.dbg(
-                "load-limit: pid=%d running=%d "
-                "ceiling=%d (%.2f) load=%.2f limit=%.2f | waiting"
-                % (
-                    os.getpid(), running, ceiling, ceiling_f,
-                    load1m, _load_limit,
-                )
-            )
         # Jittered sleep so all idle workers don't re-check in lockstep.
         time.sleep(_LOAD_POLL_INTERVAL + random.uniform(0.0, _LOAD_POLL_INTERVAL))
-
-    if debug:
-        _lit_config.dbg(
-            "test start: pid=%d running=%d ceiling=%d (%.2f) load=%.2f"
-            % (
-                os.getpid(), running, ceiling, ceiling_f, load1m,
-            )
-        )
-
 
 def _release_run_slot():
     if _load_state is None or not _HAS_LOADAVG:
         return
 
-    debug = _debug_enabled()
-
     with _load_state.get_lock():
         if _load_state[_S_RUNNING] > 0:
             _load_state[_S_RUNNING] -= 1
-            if debug:
-                running = int(_load_state[_S_RUNNING])
-                ceiling_f = float(_load_state[_S_CEILING])
-    if debug:
-        load1m = os.getloadavg()[0] if _HAS_LOADAVG else 0.0
-        _lit_config.dbg(
-            "test done:  pid=%d running=%d ceiling=%d (%.2f) load=%.2f"
-            % (os.getpid(), running, int(ceiling_f), ceiling_f, load1m)
-        )
 
 def execute(test):
     """Run one test in a multiprocessing.Pool
