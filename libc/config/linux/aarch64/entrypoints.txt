@@ -518,6 +518,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.exp
     libc.src.math.exp10
     libc.src.math.exp10f
+    libc.src.math.exp10m1f
     libc.src.math.exp2
     libc.src.math.exp2f
     libc.src.math.exp2m1f
@@ -1318,8 +1319,11 @@ set(TARGET_LIBMVEC_ENTRYPOINTS)
 if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
   list(APPEND TARGET_LIBMVEC_ENTRYPOINTS
     libc.src.mathvec.exp2f
+    libc.src.mathvec.exp2m1f
     libc.src.mathvec.exp10f
+    libc.src.mathvec.exp10m1f
     libc.src.mathvec.expf
+    libc.src.mathvec.expm1f
   )
 endif()
 

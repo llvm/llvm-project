@@ -26,6 +26,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp2m1f_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    exp2m1f_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.exp2m1f
+    libc.src.mathvec.exp2m1f
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
   exp10f_test
   SUITE
     libc-mathvec-unittests
@@ -43,6 +60,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp10m1f_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    exp10m1f_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.exp10m1f
+    libc.src.mathvec.exp10m1f
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
   expf_test
   SUITE
     libc-mathvec-unittests
@@ -52,6 +86,23 @@ add_fp_unittest(
     .unit_test_wrappers
     libc.src.math.expf
     libc.src.mathvec.expf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
+  expm1f_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    expm1f_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.expm1f
+    libc.src.mathvec.expm1f
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.CPP.simd
   FLAGS

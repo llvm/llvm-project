@@ -26,6 +26,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp2m1f_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    exp2m1f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.exp2m1f
+    libc.src.mathvec.exp2m1f
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   exp10f_test
   NO_RUN_POSTBUILD
   SUITE
@@ -42,6 +58,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp10m1f_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    exp10m1f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.exp10m1f
+    libc.src.mathvec.exp10m1f
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   expf_test
   NO_RUN_POSTBUILD
   SUITE
@@ -52,6 +84,22 @@ add_fp_unittest(
     .exhaustive_test
     libc.src.math.expf
     libc.src.mathvec.expf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  expm1f_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    expm1f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.expm1f
+    libc.src.mathvec.expm1f
     libc.src.__support.CPP.simd
   LINK_LIBRARIES
     -lpthread

@@ -13,6 +13,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  exp2m1f
+  SRCS
+    exp2m1f.cpp
+  HDRS
+    ../exp2m1f.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.exp2m1f
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
   exp10f
   SRCS
     exp10f.cpp
@@ -27,6 +41,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  exp10m1f
+  SRCS
+    exp10m1f.cpp
+  HDRS
+    ../exp10m1f.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.exp10m1f
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
   expf
   SRCS
     expf.cpp
@@ -35,6 +63,20 @@ add_entrypoint_object(
   DEPENDS
     libc.src.mathvec.abi_prefix
     libc.src.__support.mathvec.expf
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
+  expm1f
+  SRCS
+    expm1f.cpp
+  HDRS
+    ../expm1f.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.expm1f
   FLAGS
     ROUND_OPT
     FMA_OPT
