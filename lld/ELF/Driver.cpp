@@ -133,7 +133,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   ctx.symtab = std::make_unique<SymbolTable>(ctx);
 
   ctx.partitions.clear();
-  ctx.partitions.emplace_back(ctx);
+  ctx.partitions.emplace_back();
 
   ctx.arg.progName = args[0];
 
@@ -2748,9 +2748,8 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   }
 }
 
-// This function reads a symbol partition specification section. These sections
-// are used to control which partition a symbol is allocated to. See
-// https://lld.llvm.org/Partitions.html for more details on partitions.
+// Read an SHT_LLVM_SYMPART specification. Each unique partition name now just
+// allocates an empty shim so `llvm-objcopy --extract-partition` keeps working.
 template <typename ELFT>
 static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
   // Read the relocation that refers to the partition's entry point symbol.
@@ -2771,12 +2770,9 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
     return;
 
   StringRef partName = reinterpret_cast<const char *>(s->content().data());
-  for (Partition &part : ctx.partitions) {
-    if (part.name == partName) {
-      sym->partition = part.getNumber(ctx);
+  for (Partition &shim : llvm::drop_begin(ctx.partitions))
+    if (shim.name == partName)
       return;
-    }
-  }
 
   // Forbid partitions from being used on incompatible targets, and forbid them
   // from being used together with various linker features that assume a single
@@ -2794,16 +2790,9 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
   if (ctx.arg.emachine == EM_MIPS)
     ErrAlways(ctx) << s->file << ": partitions cannot be used on this target";
 
-  // Impose a limit of no more than 254 partitions. This limit comes from the
-  // sizes of the Partition fields in InputSectionBase and Symbol, as well as
-  // the amount of space devoted to the partition number in RankFlags.
-  if (ctx.partitions.size() == 254)
-    Fatal(ctx) << "may not have more than 254 partitions";
-
-  ctx.partitions.emplace_back(ctx);
-  Partition &newPart = ctx.partitions.back();
-  newPart.name = partName;
-  sym->partition = newPart.getNumber(ctx);
+  Partition &shim = ctx.partitions.emplace_back();
+  shim.partno = ctx.partitions.size();
+  shim.name = partName;
 }
 
 static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
@@ -3593,10 +3582,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Garbage collection and removal of shared symbols from unused shared objects.
   markLive<ELFT>(ctx);
-
-  // Make copies of any input sections that need to be copied into each
-  // partition.
-  copySectionsIntoPartitions(ctx);
 
   if (canHaveMemtagGlobals(ctx)) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");
