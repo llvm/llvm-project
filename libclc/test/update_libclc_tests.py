@@ -64,10 +64,11 @@ def replace_in_file(path: Path, triple: str, cpu: str, check_prefix: str):
     if cpu:
         content = content.replace(b"%cpu", cpu.encode())
     content = content.replace(b"%check_prefix", check_prefix.encode())
+    content = content.replace(b"%libclc_lib", b"")
     path.write_bytes(content)
 
 
-def revert_in_file(path: Path, triple: str, cpu: str, check_prefix: str):
+def revert_in_file(path: Path, triple: str, cpu: str, check_prefix: str, original: bytes):
     # Only revert in the RUN line context, not in generated CHECK lines.
     content = path.read_bytes()
     content = content.replace(f"--target={triple}".encode(), b"--target=%target")
@@ -76,6 +77,8 @@ def revert_in_file(path: Path, triple: str, cpu: str, check_prefix: str):
     content = content.replace(
         f"--check-prefix={check_prefix}".encode(), b"--check-prefix=%check_prefix"
     )
+    if b"%libclc_lib" in original:
+        content = _restore_libclc_lib(content, original)
     path.write_bytes(content)
 
 
@@ -94,7 +97,25 @@ def file_requires_feature(path: Path, feature: str) -> bool:
     return False
 
 
+def _restore_libclc_lib(content: bytes, original: bytes) -> bytes:
+    RUN_MARKERS = (b"// RUN:", b"; RUN:")
+    orig_run_lines = [
+        l for l in original.splitlines(keepends=True)
+        if any(l.lstrip().startswith(m) for m in RUN_MARKERS)
+    ]
+    curr_lines = content.splitlines(keepends=True)
+    curr_run_indices = [
+        i for i, l in enumerate(curr_lines)
+        if any(l.lstrip().startswith(m) for m in RUN_MARKERS)
+    ]
+    result = list(curr_lines)
+    for idx, orig_line in zip(curr_run_indices, orig_run_lines):
+        result[idx] = orig_line
+    return b"".join(result)
+
+
 def process_file(cl_file: Path, triple: str, cpu: str, check_prefix: str) -> bool:
+    original = cl_file.read_bytes()
     replace_in_file(cl_file, triple, cpu, check_prefix)
     cmd = [
         sys.executable,
@@ -108,7 +129,7 @@ def process_file(cl_file: Path, triple: str, cpu: str, check_prefix: str) -> boo
     ok = result.returncode == 0
     if not ok:
         print(f"  FAILED: {result.stderr.strip()}", file=sys.stderr)
-    revert_in_file(cl_file, triple, cpu, check_prefix)
+    revert_in_file(cl_file, triple, cpu, check_prefix, original)
     return ok
 
 
