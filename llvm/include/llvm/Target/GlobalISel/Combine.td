@@ -1818,6 +1818,13 @@ def combine_concat_vector : GICombineRule<
         [{ return Helper.matchCombineConcatVectors(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineConcatVectors(*${root}, ${matchinfo}); }])>;
 
+// Combines shuffle operations
+def combine_shuffle_vector : GICombineRule<
+  (defs root:$root, register_vector_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+        [{ return Helper.matchCombineShuffleVector(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineShuffleVector(*${root}, ${matchinfo}); }])>;
+
 // Combines Shuffles of Concats
 // a = G_CONCAT_VECTORS x, y, undef, undef
 // b = G_CONCAT_VECTORS z, undef, undef, undef

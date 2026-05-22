@@ -22507,6 +22507,7 @@ TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
   verifyNoCrash("#define a\\\n /**/}");
   verifyNoCrash("        tst     %o5     ! are we doing the gray case?\n"
                 "LY52:                   ! [internal]");
+  verifyNoCrash("operator foo *;");
 }
 
 TEST_F(FormatTest, FormatsTableGenCode) {
