@@ -137,4 +137,3 @@ void test_long_vectors_rejected(long2 value) {
   (void)intel_sub_group_shuffle(value, 0u); // expected-error{{no matching function for call to 'intel_sub_group_shuffle'}}
   // expected-note@-1 0+{{candidate function not viable}}
 }
-

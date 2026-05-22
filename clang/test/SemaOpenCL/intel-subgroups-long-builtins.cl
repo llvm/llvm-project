@@ -62,4 +62,3 @@ void test_block_write_ul(__global ulong *out, write_only image2d_t image,
   intel_sub_group_block_write_ul8(rw, coord, value8);
   intel_sub_group_block_write_ul16(rw, coord, value16);
 }
-

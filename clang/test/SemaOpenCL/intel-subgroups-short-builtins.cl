@@ -104,4 +104,3 @@ void test_broadcast_short16_rejected(short16 value) {
   (void)intel_sub_group_broadcast(value, 0u); // expected-error{{no matching function for call to 'intel_sub_group_broadcast'}}
   // expected-note@-1 0+{{candidate function not viable}}
 }
-
