@@ -3831,6 +3831,29 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
   SDLoc dl(Op);
   switch (IntNo) {
   default: return SDValue();    // Don't custom lower most intrinsics.
+  case Intrinsic::localaddress: {
+    const MachineFunction &MF = DAG.getMachineFunction();
+    const auto *RegInfo = Subtarget->getRegisterInfo();
+    unsigned Reg = RegInfo->getLocalAddressRegister(MF);
+    return DAG.getCopyFromReg(DAG.getEntryNode(), dl, Reg,
+                              Op.getSimpleValueType());
+  }
+  case Intrinsic::eh_recoverfp: {
+    SDValue FnOp = Op.getOperand(1);
+    GlobalAddressSDNode *GSD = dyn_cast<GlobalAddressSDNode>(FnOp);
+    auto *Fn = dyn_cast_or_null<Function>(GSD ? GSD->getGlobal() : nullptr);
+    if (!Fn)
+      report_fatal_error(
+          "llvm.eh.recoverfp must take a function as the first argument");
+    const auto *RegInfo = Subtarget->getRegisterInfo();
+    Register BaseReg = RegInfo->getBaseRegister();
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachineBasicBlock &MBB = *MF.begin();
+    if (!MBB.isLiveIn(BaseReg))
+      MBB.addLiveIn(BaseReg);
+    EVT PtrVT = getPointerTy(DAG.getDataLayout());
+    return DAG.getCopyFromReg(DAG.getEntryNode(), dl, BaseReg, PtrVT);
+  }
   case Intrinsic::thread_pointer: {
     EVT PtrVT = getPointerTy(DAG.getDataLayout());
     return DAG.getNode(ARMISD::THREAD_POINTER, dl, PtrVT);
