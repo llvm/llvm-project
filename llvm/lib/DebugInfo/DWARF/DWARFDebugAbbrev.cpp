@@ -50,6 +50,7 @@ Error DWARFAbbreviationDeclarationSet::extract(DataExtractor Data,
     PrevAbbrCode = AbbrDecl.getCode();
     Decls.push_back(std::move(AbbrDecl));
   }
+  Decls.shrink_to_fit();
   return Error::success();
 }
 

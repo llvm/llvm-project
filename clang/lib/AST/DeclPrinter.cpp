@@ -1346,9 +1346,9 @@ void DeclPrinter::VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D) {
   if (D->getQualifierLoc())
     D->getQualifierLoc().getNestedNameSpecifier().print(NameOS, Policy);
   Spec->printName(NameOS, Policy);
-  if (unsigned NumArgs = D->getNumTemplateArgs()) {
+  if (auto NumArgs = D->getNumTemplateArgs(); NumArgs && *NumArgs > 0) {
     SmallVector<TemplateArgumentLoc, 4> Args;
-    for (unsigned I = 0; I < NumArgs; ++I)
+    for (unsigned I = 0; I < *NumArgs; ++I)
       Args.push_back(D->getTemplateArg(I));
     printTemplateArgumentList(NameOS, Args, Policy);
   }

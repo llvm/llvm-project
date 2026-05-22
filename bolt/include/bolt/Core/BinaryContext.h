@@ -892,7 +892,7 @@ public:
            TheTriple->getArch() == llvm::Triple::x86_64;
   }
 
-  bool isRISCV() const { return TheTriple->getArch() == llvm::Triple::riscv64; }
+  bool isRISCV() const { return TheTriple->isRISCV(); }
 
   // AArch64/RISC-V functions to check if symbol is used to delimit
   // code/data in .text. Code is marked by $x, data by $d.
