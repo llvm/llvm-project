@@ -7,8 +7,6 @@
 ; getLegalMaskAndStepVector() when the implied step-vector type
 ; required TypeSplitVector, causing a null SDValue dereference.
 
-declare i32 @llvm.experimental.cttz.elts.i32.v32i1(<32 x i1>, i1)
-
 ; CHECK-LABEL: ctz_v32i1:
 ; CHECK: .cfi_endproc
 define i32 @ctz_v32i1(<32 x i1> %m) {
