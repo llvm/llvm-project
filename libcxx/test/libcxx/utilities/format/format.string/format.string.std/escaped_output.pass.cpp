@@ -66,11 +66,11 @@ inline constexpr int C  = Cc + Cf + Cs + Co + Cn;
 // 100000..10FFFD; Co # [65534] <private-use-100000>..<private-use-10FFFD>
 // 10FFFE..10FFFF; Cn #   [2] <noncharacter-10FFFE>..<noncharacter-10FFFF>
 //
-// It can be observed all entries in the range 323B0..10FFFF are in the
+// It can be observed all entries in the range 3FC40..10FFFF are in the
 // categories Cf, Co, Cn, except a small range with the property Mn.
 // In order to reduce the size of the table only the entires in the range
-// [0000, 323B0) are stored in the table. The entries in the range
-// [323B0, 10FFFF] use a hand-crafted algorithm.
+// [0000, 3FC40) are stored in the table. The entries in the range
+// [3FC40, 10FFFF] use a hand-crafted algorithm.
 //
 // This means a number of entries are omitted
 inline constexpr int excluded = ((0x10FFFF - 0x3FC40) + 1) - 240;
