@@ -6953,6 +6953,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // Convert memory recipes to strided access recipes if the strided access is
   // legal and profitable. Use a new VPCostContext to ensure type inference
   // reflects the current plan state.
+  // TODO: Remove this VPCostContext scope once VPTypeAnalysis is removed.
   {
     VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, Config.CostKind, CM.PSE,
                           OrigLoop);
