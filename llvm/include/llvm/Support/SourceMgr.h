@@ -82,13 +82,14 @@ private:
     const char *getPointerForLineNumberSpecialized(unsigned LineNo) const;
 
     /// This is the location of the parent include, or null if at the top level.
+    /// For macro instantiation buffers, this is the macro call location.
     SMLoc IncludeLoc;
 
     /// The parent buffer ID where this macro was expanded, or 0 if not a macro.
     unsigned MacroParentBuf = 0;
 
-    /// The location in the parent buffer where this macro was called.
-    SMLoc MacroCallLoc;
+    /// The location in the parent buffer where this macro was defined.
+    SMLoc MacroDefLoc;
 
     SrcBuffer() = default;
     LLVM_ABI SrcBuffer(SrcBuffer &&);
@@ -170,9 +171,9 @@ public:
     return Buffers[i - 1].MacroParentBuf;
   }
 
-  SMLoc getMacroCallLoc(unsigned i) const {
+  SMLoc getMacroDefLoc(unsigned i) const {
     assert(isValidBufferID(i));
-    return Buffers[i - 1].MacroCallLoc;
+    return Buffers[i - 1].MacroDefLoc;
   }
 
   /// Add a new source buffer to this source manager. This takes ownership of
@@ -191,9 +192,9 @@ public:
                                        SMLoc CallLoc) {
     SrcBuffer NB;
     NB.Buffer = std::move(F);
-    NB.IncludeLoc = SpellingLoc;
+    NB.IncludeLoc = CallLoc;
     NB.MacroParentBuf = ParentBuf;
-    NB.MacroCallLoc = CallLoc;
+    NB.MacroDefLoc = SpellingLoc;
     Buffers.push_back(std::move(NB));
     return Buffers.size();
   }

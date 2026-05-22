@@ -202,7 +202,7 @@ SourceMgr::SrcBuffer::getPointerForLineNumber(unsigned LineNo) const {
 SourceMgr::SrcBuffer::SrcBuffer(SourceMgr::SrcBuffer &&Other)
     : Buffer(std::move(Other.Buffer)), OffsetCache(Other.OffsetCache),
       IncludeLoc(Other.IncludeLoc), MacroParentBuf(Other.MacroParentBuf),
-      MacroCallLoc(Other.MacroCallLoc) {
+      MacroDefLoc(Other.MacroDefLoc) {
   Other.OffsetCache = nullptr;
 }
 
@@ -319,7 +319,7 @@ SourceMgr::mapDiagnosticFromMacroInstantiation(const SMDiagnostic &Diag) const {
   if (!DiagBuf || !getMacroParentBuf(DiagBuf))
     return std::nullopt;
 
-  SMLoc RealLoc = getParentIncludeLoc(DiagBuf);
+  SMLoc RealLoc = getMacroDefLoc(DiagBuf);
   unsigned RealBuf = FindBufferContainingLoc(RealLoc);
   StringRef Filename = getMemoryBuffer(RealBuf)->getBufferIdentifier();
   int LineNo = FindLineNumber(RealLoc, RealBuf) + Diag.getLineNo() - 1;
