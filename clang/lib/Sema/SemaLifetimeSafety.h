@@ -298,24 +298,28 @@ public:
             ? diag::warn_lifetime_safety_cross_tu_misplaced_lifetimebound
             : diag::warn_lifetime_safety_intra_tu_misplaced_lifetimebound;
 
-    SourceLocation DiagLoc = Lexer::getLocForEndOfToken(
-        FDecl->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+    const auto MDL = FDecl->getTypeSourceInfo()->getTypeLoc();
+    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
+        MDL.getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
 
-    // Scope so diagnostic emits first.
-    {
-      auto DB = S.Diag(DiagLoc, DiagID);
-
-      SourceLocation FixItLoc;
-      if (const TypeSourceInfo *TSI = FDecl->getTypeSourceInfo())
-        FixItLoc =
-            Lexer::getLocForEndOfToken(TSI->getTypeLoc().getEndLoc(), 0,
-                                       S.getSourceManager(), S.getLangOpts());
-      else
-        FixItLoc = DiagLoc;
-
-      if (FixItLoc.isValid() && !FixItLoc.isMacroID())
-        DB << FixItHint::CreateInsertion(FixItLoc, " [[clang::lifetimebound]]");
+    if (const auto *FPT = FDecl->getType()->getAs<FunctionProtoType>();
+        FPT && FPT->hasTrailingReturn()) {
+      // For trailing return types, 'getEndLoc()' includes the return type
+      // after '->', placing the attribute in an invalid position.
+      // Instead use 'getLocalRangeEnd()' which gives the '->' location
+      // for trailing returns, so find the last token before it.
+      const auto FTL = MDL.getAs<FunctionTypeLoc>();
+      assert(FTL);
+      InsertionPoint = Lexer::getLocForEndOfToken(
+          Lexer::findPreviousToken(FTL.getLocalRangeEnd(), S.getSourceManager(),
+                                   S.getLangOpts(),
+                                   /*IncludeComments=*/false)
+              ->getLocation(),
+          0, S.getSourceManager(), S.getLangOpts());
     }
+
+    S.Diag(InsertionPoint, DiagID) << FixItHint::CreateInsertion(
+        InsertionPoint, " [[clang::lifetimebound]]");
 
     S.Diag(Attr->getLocation(), diag::note_lifetime_safety_lifetimebound_here)
         << Attr->getRange();
@@ -332,26 +336,25 @@ public:
             ? diag::warn_lifetime_safety_cross_tu_misplaced_lifetimebound
             : diag::warn_lifetime_safety_intra_tu_misplaced_lifetimebound;
 
-    // Scope so diagnostic emits first.
-    {
-      auto DB = S.Diag(PVDDecl->getBeginLoc(), DiagID)
-                << PVDDecl->getSourceRange();
+    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
+        PVDDecl->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+    StringRef FixItText = " [[clang::lifetimebound]]";
 
-      SourceLocation FixItLoc;
-      if (PVDDecl->getIdentifier())
-        FixItLoc = Lexer::getLocForEndOfToken(
-            PVDDecl->getLocation(), 0, S.getSourceManager(), S.getLangOpts());
-      else if (const TypeSourceInfo *TSI = PVDDecl->getTypeSourceInfo())
-        FixItLoc =
-            Lexer::getLocForEndOfToken(TSI->getTypeLoc().getEndLoc(), 0,
-                                       S.getSourceManager(), S.getLangOpts());
-      else
-        FixItLoc = Lexer::getLocForEndOfToken(
-            PVDDecl->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
-
-      if (FixItLoc.isValid() && !FixItLoc.isMacroID())
-        DB << FixItHint::CreateInsertion(FixItLoc, " [[clang::lifetimebound]]");
+    if (!PVDDecl->getIdentifier()) {
+      // For unnamed parameters, placing attributes after the type would be
+      // parsed as a type attribute, not a parameter attribute.
+      InsertionPoint = PVDDecl->getBeginLoc();
+      FixItText = "[[clang::lifetimebound]] ";
+    } else if (PVDDecl->hasDefaultArg()) {
+      // If the parameter has a default argument, place the attribute after the
+      // named argument.
+      InsertionPoint = Lexer::getLocForEndOfToken(
+          PVDDecl->getLocation(), 0, S.getSourceManager(), S.getLangOpts());
     }
+
+    S.Diag(PVDDecl->getBeginLoc(), DiagID)
+        << PVDDecl->getSourceRange()
+        << FixItHint::CreateInsertion(InsertionPoint, FixItText);
 
     S.Diag(Attr->getLocation(), diag::note_lifetime_safety_lifetimebound_here)
         << Attr->getRange();

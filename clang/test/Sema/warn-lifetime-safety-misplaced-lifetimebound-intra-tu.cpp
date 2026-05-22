@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wno-dangling -verify %s
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wno-dangling -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: cp %s %t.intra.cpp
+// RUN: %clang_cc1 -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wno-dangling -fixit %t.intra.cpp
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wno-dangling -Werror %t.intra.cpp
 
 struct MyObj {
   ~MyObj() {}
@@ -145,7 +148,7 @@ auto Derived::virtual_get(const MyObj& obj [[clang::lifetimebound]]) const -> co
 #define REF_PARAM MyObj &obj
 
 MyObj &macro_param(REF_PARAM); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
-// Fix-it suppressed for macro.
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:{{[0-9]+}}-[[@LINE-1]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
 
 MyObj &macro_param(MyObj &obj [[clang::lifetimebound]]) { // expected-note {{'lifetimebound' attribute appears here on the definition}}
   return obj;
