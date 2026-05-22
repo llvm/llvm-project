@@ -403,6 +403,8 @@ def LLVM_InvariantEndOp : LLVM_ZeroResultIntrOp<"invariant.end", [2],
 def LLVM_LaunderInvariantGroupOp
     : LLVM_OneResultIntrOp<"launder.invariant.group", [], [0],
         [DeclareOpInterfaceMethods<PromotableOpInterface>,
+         DeclareOpInterfaceMethods<PromotableAliaserInterface,
+                                   ["getPromotableSlotAliases"]>,
          SameOperandsAndResultType]> {
   let arguments = (ins LLVM_AnyPointer:$ptr);
   let results = (outs LLVM_AnyPointer:$res);
@@ -412,6 +414,8 @@ def LLVM_LaunderInvariantGroupOp
 def LLVM_StripInvariantGroupOp
     : LLVM_OneResultIntrOp<"strip.invariant.group", [], [0],
         [DeclareOpInterfaceMethods<PromotableOpInterface>,
+         DeclareOpInterfaceMethods<PromotableAliaserInterface,
+                                   ["getPromotableSlotAliases"]>,
          SameOperandsAndResultType]> {
   let arguments = (ins LLVM_AnyPointer:$ptr);
   let results = (outs LLVM_AnyPointer:$res);

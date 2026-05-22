@@ -536,6 +536,18 @@ DeletionKind LLVM::BitcastOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
+void LLVM::BitcastOp::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot &parentSlot,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  // Only pointer-to-pointer bitcasts alias a memory slot. With opaque
+  // pointers, the alias slot keeps the parent's element type since the
+  // pointer type itself does not carry it.
+  if (!isa<LLVM::LLVMPointerType>(getResult().getType()) ||
+      !isa<LLVM::LLVMPointerType>(getArg().getType()))
+    return;
+  newMemorySlots.push_back(MemorySlot{getResult(), parentSlot.elemType});
+}
+
 bool LLVM::AddrSpaceCastOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses,
@@ -546,6 +558,15 @@ bool LLVM::AddrSpaceCastOp::canUsesBeRemoved(
 DeletionKind LLVM::AddrSpaceCastOp::removeBlockingUses(
     const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
+}
+
+void LLVM::AddrSpaceCastOp::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot &parentSlot,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  // Only the scalar pointer form aliases a memory slot.
+  if (!isa<LLVM::LLVMPointerType>(getResult().getType()))
+    return;
+  newMemorySlots.push_back(MemorySlot{getResult(), parentSlot.elemType});
 }
 
 bool LLVM::LifetimeStartOp::canUsesBeRemoved(
@@ -608,6 +629,12 @@ DeletionKind LLVM::LaunderInvariantGroupOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
+void LLVM::LaunderInvariantGroupOp::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot &parentSlot,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  newMemorySlots.push_back(MemorySlot{getResult(), parentSlot.elemType});
+}
+
 bool LLVM::StripInvariantGroupOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses,
@@ -618,6 +645,12 @@ bool LLVM::StripInvariantGroupOp::canUsesBeRemoved(
 DeletionKind LLVM::StripInvariantGroupOp::removeBlockingUses(
     const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
+}
+
+void LLVM::StripInvariantGroupOp::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot &parentSlot,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  newMemorySlots.push_back(MemorySlot{getResult(), parentSlot.elemType});
 }
 
 bool LLVM::DbgDeclareOp::canUsesBeRemoved(
@@ -692,6 +725,17 @@ bool LLVM::GEPOp::canUsesBeRemoved(
 DeletionKind LLVM::GEPOp::removeBlockingUses(
     const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
+}
+
+void LLVM::GEPOp::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot &parentSlot,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  // Only zero-index GEPs are no-op aliases of the slot pointer; non-zero
+  // indices step into the slot and cannot be projected back generically.
+  if (!hasAllZeroIndices(*this) ||
+      !isa<LLVM::LLVMPointerType>(getResult().getType()))
+    return;
+  newMemorySlots.push_back(MemorySlot{getResult(), parentSlot.elemType});
 }
 
 /// Returns the amount of bytes the provided GEP elements will offset the

@@ -286,6 +286,8 @@ def LLVM_AllocaOp : LLVM_Op<"alloca",
 
 def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     DeclareOpInterfaceMethods<PromotableOpInterface>,
+    DeclareOpInterfaceMethods<PromotableAliaserInterface,
+                              ["getPromotableSlotAliases"]>,
     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
     DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
     DeclareOpInterfaceMethods<ViewLikeOpInterface>
@@ -632,7 +634,10 @@ class LLVM_DereferenceableCastOp<string mnemonic, string instName, Type type,
 }
 
 def LLVM_BitcastOp : LLVM_CastOp<"bitcast", "BitCast", LLVM_AnyNonAggregate,
-    LLVM_AnyNonAggregate, [DeclareOpInterfaceMethods<PromotableOpInterface>]> {
+    LLVM_AnyNonAggregate,
+    [DeclareOpInterfaceMethods<PromotableOpInterface>,
+     DeclareOpInterfaceMethods<PromotableAliaserInterface,
+                               ["getPromotableSlotAliases"]>]> {
   let hasFolder = 1;
   let hasVerifier = 1;
 }
@@ -640,6 +645,8 @@ def LLVM_AddrSpaceCastOp : LLVM_CastOp<"addrspacecast", "AddrSpaceCast",
     LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
     LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
     [DeclareOpInterfaceMethods<PromotableOpInterface>,
+     DeclareOpInterfaceMethods<PromotableAliaserInterface,
+                               ["getPromotableSlotAliases"]>,
      DeclareOpInterfaceMethods<ViewLikeOpInterface>]> {
   let hasFolder = 1;
 }
