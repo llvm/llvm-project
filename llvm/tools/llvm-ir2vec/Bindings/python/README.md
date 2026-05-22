@@ -16,9 +16,7 @@ pip install ir2vec
 import ir2vec
 
 # Symbolic embeddings using a bundled vocabulary
-vocabObj = ir2vec.loadVocab(
-    ir2vec.vocab.seedEmbedding75D
-)
+vocabObj = ir2vec.loadVocab(ir2vec.SEED_EMBEDDING_75D)
 
 emb = ir2vec.initEmbedding (
     filename="file_path.ll",
@@ -42,13 +40,13 @@ The package ships a pre-trained seed embedding vocabulary:
 
 | Attribute | Dimensions |
 |---|---|
-| `ir2vec.vocab.seedEmbedding75D` | 75 |
+| `ir2vec.SEED_EMBEDDING_75D` | 75 |
 
 This pre-packaged vocab file has been taken from `llvm/Analysis/models/seedEmbeddingVocab75D.json` in the LLVM monorepo. Pass this or a vocab of your choice directly to `loadVocab(vocabPath=...)`.
 
 ## Building from source
 
-The bindings are built as part of the LLVM monorepo. From the repo root:
+The bindings can be built as part of the LLVM monorepo. From the repo root:
 
 ```bash
 cmake -G Ninja -B build \
@@ -60,25 +58,24 @@ cmake -G Ninja -B build \
 ninja -C build llvm-ir2vec
 ```
 
-This produces the native extension (e.g. `ir2vec*.so`) under
-`build/tools/llvm-ir2vec/Bindings/`. To build a wheel from it:
+This produces the native extension and a self-contained Python package under
+`build/tools/llvm-ir2vec/Bindings/python/`, with the vocabulary file already in place.
+To build and test a wheel from it:
 
-1. Copy the extension into the package directory:
+1. Build the wheel:
 
-       cp build/tools/llvm-ir2vec/Bindings/ir2vec*.so \
-          llvm/tools/llvm-ir2vec/Bindings/python/ir2vec/
+    ```bash
+    pip wheel build/tools/llvm-ir2vec/Bindings/python/ \
+    --no-build-isolation \
+    --no-deps \
+    --wheel-dir dist/
+    ```
 
-2. Build the wheel:
+2. Install the resulting wheel:
 
-       pip wheel . \
-        --no-build-isolation \
-        --no-deps \
-        --wheel-dir "$DIST_DIR" \
-        --quiet
-
-3. Install the resulting wheel:
-
-       pip install ir2vec-*.whl
+    ```bash
+    pip install dist/ir2vec-*.whl
+    ```
 
 ## License
 

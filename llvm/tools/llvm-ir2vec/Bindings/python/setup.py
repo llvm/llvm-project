@@ -7,20 +7,26 @@ import warnings
 from setuptools import setup
 from setuptools.dist import Distribution
 
-
 class BinaryDistribution(Distribution):
     def has_ext_modules(self):
         return True
 
+def _validate_package_contents():
+    # TODO: When ir2vec python bindings add support for Windows and MacOS,
+    # we should update the expected patterns to include the
+    # appropriate file extensions for each platform, e.g.:
+    # "ir2vec/ir2vec.cpython-*.pyd", "ir2vec/ir2vec.cpython-*.dylib"],
+    _EXPECTED_PACKAGE_CONTENTS = {
+        "bindings module": ["ir2vec/ir2vec.cpython-*.so"],
+        "seed embedding vocabulary file": ["ir2vec/seedEmbeddingVocab75D.json"],
+    }
 
-if not any(
-    glob.glob(pattern)
-    for pattern in ("ir2vec/*.so", "ir2vec/*.pyd", "ir2vec/*.dylib")
-):
-    warnings.warn(
-        "No native module (.so/.pyd/.dylib) found in ir2vec/. "
-        "Run the build step before invoking pip wheel.",
-        stacklevel=1,
-    )
+    for description, patterns in _EXPECTED_PACKAGE_CONTENTS.items():
+        if not any(glob.glob(p) for p in patterns):
+            raise FileNotFoundError(
+                f"Missing {description}: none of {patterns} found in ir2vec/. "
+                "Run the build step before packaging."
+            )
+_validate_package_contents()
 
 setup(distclass=BinaryDistribution)

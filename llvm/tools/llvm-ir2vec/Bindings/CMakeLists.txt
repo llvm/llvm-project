@@ -28,6 +28,7 @@ endif()
 
 find_package(nanobind CONFIG REQUIRED)
 
+message(STATUS "Python bindings for ir2vec will be built with nanobind")
 nanobind_add_module(ir2vec MODULE PyIR2Vec.cpp)
 
 set(LLVM_IR2VEC_BINDINGS_DIR "${CMAKE_CURRENT_BINARY_DIR}" CACHE INTERNAL "")
@@ -45,4 +46,21 @@ target_compile_options(ir2vec PRIVATE -fexceptions -frtti)
 target_link_libraries(ir2vec PRIVATE LLVMIREmbUtils)
 target_include_directories(ir2vec PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
-message(STATUS "Python bindings for ir2vec will be built with nanobind")
+# Stage Python package into build directory so that downstream wheel assembly
+# scripts can operate solely from the build tree, without requiring access to
+# the source tree.
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/python/"
+     DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/python/")
+
+# Copy the seed embedding vocabulary into the build-time Python package
+set(IR2VEC_VOCAB_75D
+    "${LLVM_MAIN_SRC_DIR}/lib/Analysis/models/seedEmbeddingVocab75D.json")
+
+if(NOT EXISTS "${IR2VEC_VOCAB_75D}")
+  message(FATAL_ERROR
+    "IR2Vec vocabulary file not found: ${IR2VEC_VOCAB_75D}")
+endif()
+
+file(COPY "${IR2VEC_VOCAB_75D}"
+     DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/python/ir2vec/")
+message(STATUS "IR2Vec vocabulary copied to ${CMAKE_CURRENT_BINARY_DIR}/python/ir2vec/")
