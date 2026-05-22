@@ -538,13 +538,16 @@ Marker attribute
 ~~~~~~~~~~~~~~~~
 
 ``[[uninitialized]]`` (a standard C++11 attribute, distinct from the Clang
-vendor attribute ``[[clang::uninitialized]]``) marks a ``VarDecl`` as
-intentionally left uninitialized.  Recognised by Clang regardless of
-``-fprofiles``; only carries semantic weight when ``std::init`` is enforced.
+vendor attribute ``[[clang::uninitialized]]``) marks a ``VarDecl`` or
+``FieldDecl`` as intentionally left uninitialized.  Recognised by Clang
+regardless of ``-fprofiles``; only carries semantic weight when
+``std::init`` is enforced.
 
 - TableGen def: ``CXX11Uninitialized`` in ``clang/include/clang/Basic/Attr.td``.
-- Subjects: ``Var`` only.  Field-level support is the framework gap §2.A.2
-  and is deferred.
+- Subjects: ``Var`` and ``Field``.  Field-level placement is accepted but
+  currently inert; rules that consume the field marker (paper §6
+  aggregate-without-ctor, §6.1 ctor-body member-init, classes-exposing-
+  uninitialized-memory) are deferred to later stages.
 - Behaviour:
 
   - Suppresses R2 (``uninit_decl``) on the marked declaration.

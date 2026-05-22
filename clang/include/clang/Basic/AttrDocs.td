@@ -879,10 +879,10 @@ def CXX11UninitializedDocs : Documentation {
   let Category = DocCatVariable;
   let Heading = "uninitialized";
   let Content = [{
-The ``[[uninitialized]]`` attribute marks a variable definition as
-intentionally left uninitialized. It is purely informational: it has no
-effect on code generation and the variable still has the same indeterminate
-value it would have without the attribute.
+The ``[[uninitialized]]`` attribute marks a variable or non-static data
+member definition as intentionally left uninitialized. It is purely
+informational: it has no effect on code generation and the entity still
+has the same indeterminate value it would have without the attribute.
 
 The attribute exists to support the initialization profile (see
 :doc:`ProfilesFramework`). Under that profile, a definition such as
@@ -893,9 +893,15 @@ is intentional. The attribute does **not** suppress diagnostics that fire
 when the variable is later read before being assigned; the read-before-init
 rule still applies.
 
-A declaration that has both ``[[uninitialized]]`` and an initializer is
-ill-formed under the initialization profile (the marker contradicts the
-explicit initialization).
+A declaration or non-static data member with both ``[[uninitialized]]``
+and an initializer is ill-formed under the initialization profile (the
+marker contradicts the explicit initialization).
+
+When placed on a non-static data member, the attribute is currently inert:
+the parser accepts the placement but no diagnostic is tied to it yet. Its
+semantic weight is added by the classes-without-constructors rule, the
+class-exposes-uninitialized-memory rule, and the constructor-body
+member-initialization rule, which are staged separately.
 
 Outside the initialization profile the attribute is silently accepted and
 has no effect, so code that uses it remains valid when compiled without

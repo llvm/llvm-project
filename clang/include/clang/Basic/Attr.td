@@ -1723,7 +1723,7 @@ def CXX11NoReturn : InheritableAttr {
 
 def CXX11Uninitialized : InheritableAttr {
   let Spellings = [CXX11<"", "uninitialized", 202602>];
-  let Subjects = SubjectList<[Var], ErrorDiag>;
+  let Subjects = SubjectList<[Var, Field], ErrorDiag>;
   let Documentation = [CXX11UninitializedDocs];
   let SimpleHandler = 1;
 }
