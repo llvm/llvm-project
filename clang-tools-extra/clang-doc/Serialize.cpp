@@ -203,7 +203,7 @@ StringRef Serializer::getInfoRelativePath(const Decl *D) {
 class ClangDocCommentVisitor
     : public ConstCommentVisitor<ClangDocCommentVisitor> {
 public:
-  ClangDocCommentVisitor(CommentInfo &CI) : CurrentCI(CI) {}
+  explicit ClangDocCommentVisitor(CommentInfo &CI) : CurrentCI(CI) {}
 
   void parseComment(const comments::Comment *C);
 
@@ -1159,7 +1159,7 @@ std::pair<Info *, Info *> Serializer::emitInfo(const RecordDecl *D,
 
   // Records are inserted into the parent by reference, so we need to return
   // both the parent and the record itself.
-  auto Parent = makeAndInsertIntoParent<const RecordInfo &>(*RI);
+  auto *Parent = makeAndInsertIntoParent<const RecordInfo &>(*RI);
   return {std::move(RI), std::move(Parent)};
 }
 
