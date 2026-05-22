@@ -1510,8 +1510,8 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST_F(VPRecipeTest, dumpRecipeInPlan) {
-  // AI must outlive VPlan &Plan
   IntegerType *Int32 = IntegerType::get(C, 32);
+  // AI must outlive VPlan &Plan
   auto *AI = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
                                        PoisonValue::get(Int32));
   AI->setName("a");
@@ -1573,8 +1573,8 @@ TEST_F(VPRecipeTest, dumpRecipeInPlan) {
 }
 
 TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesInPlan) {
-  // AI must outlive VPlan &Plan
   IntegerType *Int32 = IntegerType::get(C, 32);
+  // AI must outlive VPlan &Plan
   auto *AI = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
                                        PoisonValue::get(Int32));
   AI->setName("a");
