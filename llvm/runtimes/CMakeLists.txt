@@ -617,9 +617,9 @@ if(build_runtimes)
     endif()
     # Ensure REAL(16) support in runtimes to be consistent with compiler
     if(FLANG_RUNTIME_F128_MATH_LIB OR HAVE_LDBL_MANT_DIG_113)
-      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=TRUE")
+      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=1")
     else()
-      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=FALSE")
+      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=0")
     endif()
   endif()
 

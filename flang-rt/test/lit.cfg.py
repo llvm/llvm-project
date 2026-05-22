@@ -78,10 +78,15 @@ if config.osx_sysroot:
     isysroot_flag = ["-isysroot", config.osx_sysroot]
 config.substitutions.append(("%isysroot", " ".join(isysroot_flag)))
 
+flang_args = []
+if not config.llvm_tree_available:
+    flang_args.append(f"-fintrinsic-modules-path={config.flang_rt_output_resource_mod_dir}")
+
 tools = [
     ToolSubst(
         "%flang",
         command=config.flang,
+        extra_args=flang_args,
         unresolved="fatal",
     ),
     ToolSubst(
