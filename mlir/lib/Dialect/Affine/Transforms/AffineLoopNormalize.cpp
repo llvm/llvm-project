@@ -47,9 +47,3 @@ struct AffineLoopNormalizePass
 };
 
 } // namespace
-
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::affine::createAffineLoopNormalizePass(bool promoteSingleIter) {
-  AffineLoopNormalizeOptions options{promoteSingleIter};
-  return std::make_unique<AffineLoopNormalizePass>(options);
-}
