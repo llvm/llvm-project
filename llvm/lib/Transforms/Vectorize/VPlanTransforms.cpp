@@ -6795,6 +6795,8 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
   if (Plan.hasScalarVFOnly())
     return;
 
+  Ctx.Types.invalidateCache();
+
   VPTypeAnalysis TypeInfo(Plan);
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
   VPValue *I32VF = nullptr;

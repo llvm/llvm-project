@@ -61,6 +61,9 @@ public:
 
   /// Return the LLVMContext used by the analysis.
   LLVMContext &getContext() { return Ctx; }
+
+  /// Clears the type cache. Use if a value may have been deleted.
+  void invalidateCache() { CachedTypes.clear(); }
 };
 
 // Collect a VPlan's ephemeral recipes (those used only by an assume).
