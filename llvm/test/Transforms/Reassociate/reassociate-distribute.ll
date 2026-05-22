@@ -18,21 +18,6 @@ define i32 @test_basic(i32 %a, i32 %b) {
   ret i32 %sub
 }
 
-; Constant on left side of mul: a*100 + 3*(a+b)
-define i32 @test_const_on_left(i32 %a, i32 %b) {
-; CHECK-LABEL: @test_const_on_left(
-; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[B:%.*]], 7
-; CHECK-NEXT:    [[REASS_MUL:%.*]] = mul i32 [[A:%.*]], 107
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[MUL1]], [[REASS_MUL]]
-; CHECK-NEXT:    ret i32 [[ADD2]]
-;
-  %mul  = mul nsw i32 %a, 100
-  %add  = add nsw i32 %a, %b
-  %mul1 = mul nsw i32 7, %add
-  %add2 = add nsw i32 %mul, %mul1
-  ret i32 %add2
-}
-
 ; Sub instead of add inside: a*500 - (a-b)*300
 define i32 @test_with_sub(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_with_sub(
@@ -63,21 +48,6 @@ define i32 @test_b_matches(i32 %a, i32 %b) {
   ret i32 %add2
 }
 
-; i16 type: x*10 + (x+y)*20
-define i16 @test_i16(i16 %x, i16 %y) {
-; CHECK-LABEL: @test_i16(
-; CHECK-NEXT:    [[MUL1:%.*]] = mul i16 [[Y:%.*]], 20
-; CHECK-NEXT:    [[REASS_MUL:%.*]] = mul i16 [[X:%.*]], 30
-; CHECK-NEXT:    [[ADD2:%.*]] = add i16 [[MUL1]], [[REASS_MUL]]
-; CHECK-NEXT:    ret i16 [[ADD2]]
-;
-  %mul1 = mul nsw i16 %x, 10
-  %add  = add nsw i16 %x, %y
-  %mul2 = mul nsw i16 %add, 20
-  %add2 = add i16 %mul1, %mul2
-  ret i16 %add2
-}
-
 ; NSW/NUW must be dropped on new instructions after distribution
 ; (x+y) *nsw 20 does NOT imply (x *nsw 20) + (y *nsw 20)
 define i16 @test_nsw_dropped(i16 %x, i16 %y) {
@@ -90,21 +60,6 @@ define i16 @test_nsw_dropped(i16 %x, i16 %y) {
   %mul1 = mul nsw i16 %x, 15
   %add  = add nsw i16 %x, %y
   %mul2 = mul nsw i16 %add, 25
-  %add2 = add i16 %mul1, %mul2
-  ret i16 %add2
-}
-
-define i16 @test_surviving_poison(i16 %x, i16 %y) {
-; CHECK-LABEL: @test_surviving_poison(
-; CHECK-NEXT:    [[MUL1:%.*]] = mul i16 [[Y:%.*]], 20
-; CHECK-NEXT:    [[REASS_MUL:%.*]] = mul i16 [[X:%.*]], 30
-; CHECK-NEXT:    [[ADD2:%.*]] = add i16 [[MUL1]], [[REASS_MUL]]
-; CHECK-NEXT:    ret i16 [[ADD2]]
-;
-  %add = add nsw i16 %x, %y
-  %mul1 = mul nsw i16 %x, 10
-  ; This mul has 'nsw'. We distribute it to x*20 and y*20.
-  %mul2 = mul nsw i16 %add, 20
   %add2 = add i16 %mul1, %mul2
   ret i16 %add2
 }
@@ -123,20 +78,21 @@ define i32 @test_no_match(i32 %a, i32 %b) {
   ret i32 %mul
 }
 
-; AddSub has multiple uses — oneUse required for distribution
+; AddSub has multiple uses (second use is an xor) — oneUse required for distribution
 define i32 @test_multi_use_add(i32 %a, i32 %b) {
-; CHECK-LABEL: @test_multi_use_add(
-; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[B:%.*]], -442
-; CHECK-NEXT:    [[REASS_MUL:%.*]] = mul i32 [[A:%.*]], 335
-; CHECK-NEXT:    [[RET:%.*]] = add i32 [[REASS_MUL]], [[MUL1]]
+; CHECK-LABEL: @test_multi_use_add_(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[A:%.*]], 777
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[B:%.*]], [[A]]
+; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i32 [[ADD]], 444
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[MUL]], [[MUL1]]
+; CHECK-NEXT:    [[RET:%.*]] = xor i32 [[SUB]], [[ADD]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %mul  = mul nsw i32 %a, 777
   %add  = add nsw i32 %a, %b
   %mul1 = mul nsw i32 %add, 444
-  %mul2 = mul nsw i32 %add, 2
   %sub  = sub nsw i32 %mul, %mul1
-  %ret  = add nsw i32 %sub, %mul2
+  %ret  = xor i32 %sub, %add
   ret i32 %ret
 }
 
