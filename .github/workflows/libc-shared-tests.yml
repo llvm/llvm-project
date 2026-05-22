@@ -82,12 +82,11 @@ jobs:
 
       - name: Create QEMU wrapper
         run: |
-          mkdir build
-          cat << 'EOF' > build/qemu-wrapper.sh
+          cat << 'EOF' > ${{ github.workspace }}/qemu-wrapper.sh
           #!/bin/bash
           exec qemu-${{ matrix.arch }} -L /usr/${{ matrix.target_triple }} "$@"
           EOF
-          chmod +x build/qemu-wrapper.sh
+          chmod +x ${{ github.workspace }}/qemu-wrapper.sh
 
       - name: Configure CMake - Clang
         run: |
@@ -97,7 +96,7 @@ jobs:
             -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCMAKE_BUILD_TYPE=Release \
             -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }} \
-            -DCMAKE_CROSSCOMPILING_EMULATOR=${{ ... }}/build/qemu-wrapper.sh
+            -DCMAKE_CROSSCOMPILING_EMULATOR=${{ github.workspace }}/qemu-wrapper.sh
 
       - name: Build and Run - Clang
         env:
@@ -113,7 +112,7 @@ jobs:
             -DCMAKE_CXX_COMPILER=${{ matrix.target_triple }}-g++ \
             -DCMAKE_BUILD_TYPE=Release \
             -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }} \
-            -DCMAKE_CROSSCOMPILING_EMULATOR=${{ ... }}/build/qemu-wrapper.sh
+            -DCMAKE_CROSSCOMPILING_EMULATOR=${{ github.workspace }}/qemu-wrapper.sh
 
       - name: Build and Run - gcc
         env:
