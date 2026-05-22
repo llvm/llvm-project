@@ -55,6 +55,8 @@ TextEncoding::setConvertersFromOptions(TextEncoding &TE,
       return ErrorOrLiteralConverter.getError();
   }
 
+   TInfo.ExecStrConverter = TE.ToLiteralEncodingConverter.get();
+
   // The IBM-1047 converters are only needed on z/OS, where the system
   // (assembler/linker) default encoding is IBM-1047 rather than UTF-8.
   if (TInfo.getTriple().getOS() != llvm::Triple::ZOS)
