@@ -3681,6 +3681,55 @@ bool Parser::ParseOpenMPIndirectClause(
   return false;
 }
 
+ExprResult Parser::ParseOMPInteropFrSelector() {
+  ConsumeToken(); // 'fr'
+  BalancedDelimiterTracker FT(*this, tok::l_paren,
+                              tok::annot_pragma_openmp_end);
+  if (FT.expectAndConsume(diag::err_expected_lparen_after, "fr")) {
+    SkipUntil(
+        {tok::comma, tok::r_brace, tok::r_paren, tok::annot_pragma_openmp_end},
+        StopBeforeMatch);
+    return ExprError();
+  }
+  SourceLocation Loc = Tok.getLocation();
+  ExprResult LHS = ParseCastExpression(CastParseKind::AnyCastExpr);
+  ExprResult Arg = ParseRHSOfBinaryExpression(LHS, prec::Conditional);
+  Arg = Actions.ActOnFinishFullExpr(Arg.get(), Loc, /*DiscardedValue=*/false);
+  FT.consumeClose();
+  return Arg;
+}
+
+bool Parser::ParseOMPInteropAttrSelector(SmallVectorImpl<Expr *> &Attrs) {
+  ConsumeToken(); // 'attr'
+  BalancedDelimiterTracker AT(*this, tok::l_paren,
+                              tok::annot_pragma_openmp_end);
+  if (AT.expectAndConsume(diag::err_expected_lparen_after, "attr")) {
+    SkipUntil(
+        {tok::comma, tok::r_brace, tok::r_paren, tok::annot_pragma_openmp_end},
+        StopBeforeMatch);
+    return true;
+  }
+  bool HasError = false;
+  while (Tok.isNot(tok::r_paren) && Tok.isNot(tok::r_brace) &&
+         Tok.isNot(tok::annot_pragma_openmp_end)) {
+    if (Tok.is(tok::string_literal)) {
+      ExprResult S = ParseStringLiteralExpression();
+      if (S.isUsable())
+        Attrs.push_back(S.get());
+      else
+        HasError = true;
+    } else {
+      HasError = true;
+      Diag(Tok, diag::err_expected) << tok::string_literal;
+      ConsumeToken();
+    }
+    if (Tok.is(tok::comma))
+      ConsumeToken();
+  }
+  AT.consumeClose();
+  return HasError;
+}
+
 bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
                                  OpenMPClauseKind Kind) {
   const Token &Tok = getCurToken();
@@ -3725,10 +3774,12 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
 
           while (Tok.isNot(tok::r_brace) &&
                  Tok.isNot(tok::annot_pragma_openmp_end)) {
-            if (Tok.is(tok::identifier) &&
-                Tok.getIdentifierInfo()->isStr("fr")) {
+            if (!Tok.is(tok::identifier)) {
+              HasError = true;
+              Diag(Tok, diag::err_omp_expected_interop_type);
+              ConsumeToken();
+            } else if (Tok.getIdentifierInfo()->isStr("fr")) {
               if (SeenFr) {
-                // Diagnose and skip the duplicate fr(...) entirely
                 Diag(Tok, diag::err_omp_interop_multiple_fr);
                 HasError = true;
                 ConsumeToken(); // 'fr'
@@ -3738,56 +3789,14 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
                 continue;
               }
               SeenFr = true;
-              ConsumeToken(); // 'fr'
-              BalancedDelimiterTracker FT(*this, tok::l_paren,
-                                          tok::annot_pragma_openmp_end);
-              if (FT.expectAndConsume(diag::err_expected_lparen_after, "fr")) {
-                HasError = true;
-                SkipUntil({tok::comma, tok::r_brace, tok::r_paren,
-                           tok::annot_pragma_openmp_end},
-                          StopBeforeMatch);
-                continue;
-              }
-              SourceLocation Loc = Tok.getLocation();
-              ExprResult LHS = ParseCastExpression(CastParseKind::AnyCastExpr);
-              ExprResult Arg =
-                  ParseRHSOfBinaryExpression(LHS, prec::Conditional);
-              Arg = Actions.ActOnFinishFullExpr(Arg.get(), Loc, false);
-              if (Arg.isUsable())
-                FrExpr = Arg.get();
+              ExprResult Fr = ParseOMPInteropFrSelector();
+              if (Fr.isUsable())
+                FrExpr = Fr.get();
               else
                 HasError = true;
-              FT.consumeClose();
-            } else if (Tok.is(tok::identifier) &&
-                       Tok.getIdentifierInfo()->isStr("attr")) {
-              ConsumeToken(); // 'attr'
-              BalancedDelimiterTracker AT(*this, tok::l_paren,
-                                          tok::annot_pragma_openmp_end);
-              if (AT.expectAndConsume(diag::err_expected_lparen_after,
-                                      "attr")) {
+            } else if (Tok.getIdentifierInfo()->isStr("attr")) {
+              if (ParseOMPInteropAttrSelector(AttrExprs))
                 HasError = true;
-                SkipUntil({tok::comma, tok::r_brace, tok::r_paren,
-                           tok::annot_pragma_openmp_end},
-                          StopBeforeMatch);
-                continue;
-              }
-              while (Tok.isNot(tok::r_paren) && Tok.isNot(tok::r_brace) &&
-                     Tok.isNot(tok::annot_pragma_openmp_end)) {
-                if (Tok.is(tok::string_literal)) {
-                  ExprResult StrRes = ParseStringLiteralExpression();
-                  if (!StrRes.isUsable())
-                    HasError = true;
-                  else
-                    AttrExprs.push_back(StrRes.get());
-                } else {
-                  HasError = true;
-                  Diag(Tok, diag::err_expected) << tok::string_literal;
-                  ConsumeToken();
-                }
-                if (Tok.is(tok::comma))
-                  ConsumeToken();
-              }
-              AT.consumeClose();
             } else {
               HasError = true;
               Diag(Tok, diag::err_omp_expected_interop_type);
