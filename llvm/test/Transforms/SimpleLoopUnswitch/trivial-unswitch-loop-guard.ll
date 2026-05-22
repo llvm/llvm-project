@@ -63,9 +63,6 @@ define void @perfect_nest_guard(i32 %M, i32 %N, ptr %A, ptr %B) {
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
-; STATS: 1 simple-loop-unswitch - Number of branches unswitched
-; STATS-NEXT: 1 simple-loop-unswitch - Number of unswitches that are trivial
-;
 entry:
   %cmp.M = icmp sle i32 %M, 0
   br i1 %cmp.M, label %exit, label %outer.preheader
@@ -103,3 +100,78 @@ outer.latch:
 exit:
   ret void
 }
+
+;; This loopnest is similar to @perfect_nest_guard, except that the outer loop
+;; is infinite. So the trivial unswitching of the inner loop guard is not 
+;; legal.
+;;
+;; Source:
+;;   void f(int N, int *A, int *B) {
+;;     while (true) {
+;;       if (N == 0) continue;          // invariant guard branches to latch
+;;       for (int i = 0; i < N; i++)
+;;         A[i] = B[i] + 1;
+;;     }
+;;   }
+define void @perfect_nest_guard2(i32 %M, i32 %N, ptr %A, ptr %B) {
+; CHECK-LABEL: define void @perfect_nest_guard2(
+; CHECK-SAME: i32 [[M:%.*]], i32 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[GUARD:%.*]] = icmp sle i32 [[N]], 0
+; CHECK-NEXT:    br label %[[INNER_PREHEADER:.*]]
+; CHECK:       [[INNER_PREHEADER]]:
+; CHECK-NEXT:    br i1 [[GUARD]], label %[[OUTER_LATCH:.*]], label %[[INNER_PREHEADER1:.*]]
+; CHECK:       [[INNER_PREHEADER1]]:
+; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
+; CHECK:       [[INNER_HEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[INNER_PREHEADER1]] ], [ [[I_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[I]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP_B]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = add i32 [[VAL]], 1
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[I]]
+; CHECK-NEXT:    store i32 [[INC]], ptr [[GEP_A]], align 4
+; CHECK-NEXT:    br label %[[INNER_LATCH]]
+; CHECK:       [[INNER_LATCH]]:
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[EXITCOND_INNER:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_INNER]], label %[[OUTER_LATCH_LOOPEXIT:.*]], label %[[INNER_HEADER]]
+; CHECK:       [[OUTER_LATCH_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[OUTER_LATCH]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    br label %[[INNER_PREHEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %guard = icmp sle i32 %N, 0
+  br label %outer.header
+
+outer.header:
+  br i1 %guard, label %outer.latch, label %inner.preheader
+
+inner.preheader:
+  br label %inner.header
+
+inner.header:
+  %i = phi i32 [ 0, %inner.preheader ], [ %i.next, %inner.latch ]
+  %gep.B = getelementptr inbounds i32, ptr %B, i32 %i
+  %val = load i32, ptr %gep.B, align 4
+  %inc = add i32 %val, 1
+  %gep.A = getelementptr inbounds i32, ptr %A, i32 %i
+  store i32 %inc, ptr %gep.A, align 4
+  br label %inner.latch
+
+inner.latch:
+  %i.next = add nuw i32 %i, 1
+  %exitcond.inner = icmp eq i32 %i.next, %N
+  br i1 %exitcond.inner, label %outer.latch, label %inner.header
+
+outer.latch:
+  br label %outer.header
+
+exit:
+  ret void
+}
+
+; STATS: 1 simple-loop-unswitch - Number of branches unswitched
+; STATS-NEXT: 1 simple-loop-unswitch - Number of unswitches that are trivial
