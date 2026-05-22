@@ -461,6 +461,20 @@ void Invalidate2Use1IsOk() {
     s.strings2.push_back("1");
     *it;
 }
+void ConditionalContainerInvalidatesIterator(bool flag) {
+    // FIXME: Support invalidation through conditional lvalue expressions.
+    std::vector<int> v1, v2;
+    auto it = v1.begin();
+    (flag ? v1 : v2).push_back(42);
+    (void)it;
+}
+void ConditionalFieldInvalidatesIterator(bool flag) {
+    // FIXME: Support conditional invalidation through field expressions.
+    S s;
+    auto it = s.strings1.begin();
+    (flag ? s.strings1 : s.strings2).push_back("1");
+    *it;
+}
 // FIXME: Requires field-sensitive AccessPaths to fix.
 void Invalidate1Use2ViaRefIsOk() {
     S s;
