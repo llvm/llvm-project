@@ -236,7 +236,6 @@ simplifyRedundantMapResults(AffineMap map, SmallVector<Value> operands,
 
   for (int i = mapResults.size() - 1; i >= 0; --i) {
     AffineExpr a = mapResults[i];
-
     AffineMap mapA =
         AffineMap::get(map.getNumDims(), map.getNumSymbols(), a, context);
     ValueBoundsConstraintSet::Variable varA(mapA, operands);
