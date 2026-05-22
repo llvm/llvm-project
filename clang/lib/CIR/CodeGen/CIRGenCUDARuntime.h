@@ -34,7 +34,7 @@ protected:
   CIRGenModule &cgm;
 
 public:
-  CIRGenCUDARuntime(CIRGenModule &cgm);
+  CIRGenCUDARuntime(CIRGenModule &cgm) : cgm(cgm) {}
   virtual ~CIRGenCUDARuntime();
 
   virtual void emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,

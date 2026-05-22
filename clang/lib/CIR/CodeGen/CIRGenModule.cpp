@@ -1069,8 +1069,8 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
   // erased) operation, which would leave them detached from the module.
   if (lastGlobalOp == oldGV)
     lastGlobalOp = newGV;
-  if (cudaRuntime)
-    cudaRuntime->handleGlobalReplace(oldGV, newGV);
+  if (getLangOpts().CUDA)
+    getCUDARuntime().handleGlobalReplace(oldGV, newGV);
   eraseGlobalSymbol(oldGV);
   oldGV.erase();
 }

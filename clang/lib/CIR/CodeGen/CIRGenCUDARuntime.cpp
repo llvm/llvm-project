@@ -15,13 +15,10 @@
 #include "CIRGenCUDARuntime.h"
 #include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
-#include "CIRGenModule.h"
 #include "clang/AST/ExprCXX.h"
 
 using namespace clang;
 using namespace CIRGen;
-
-CIRGenCUDARuntime::CIRGenCUDARuntime(CIRGenModule &cgm) : cgm(cgm) {}
 
 CIRGenCUDARuntime::~CIRGenCUDARuntime() {}
 

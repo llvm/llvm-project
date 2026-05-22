@@ -175,8 +175,8 @@ __global__ void fn() {
 
 // OGCG-DEVICE: define dso_local ptx_kernel void @_Z2fnv()
 // OGCG-DEVICE: entry:
-// OGCG-DEVICE:   %[[ALLOCA:.*]] = alloca i32
-// OGCG-DEVICE:   store i32 0, ptr %[[ALLOCA]]
-// OGCG-DEVICE:   %[[VAL:.*]] = load i32, ptr %[[ALLOCA]]
-// OGCG-DEVICE:   store i32 %[[VAL]], ptr addrspacecast (ptr addrspace(3) @_ZZ2fnvE1j to ptr)
+// OGCG-DEVICE:   %[[ALLOCA:.*]] = alloca i32, align 4
+// OGCG-DEVICE:   store i32 0, ptr %[[ALLOCA]], align 4
+// OGCG-DEVICE:   %[[VAL:.*]] = load i32, ptr %[[ALLOCA]], align 4
+// OGCG-DEVICE:   store i32 %[[VAL]], ptr addrspacecast (ptr addrspace(3) @_ZZ2fnvE1j to ptr), align 4
 // OGCG-DEVICE:   ret void
