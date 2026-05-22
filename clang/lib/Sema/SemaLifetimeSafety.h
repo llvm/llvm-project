@@ -55,6 +55,15 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
   return false;
 }
 
+inline StringRef formatExpr(const Expr *E) {
+  const Expr *PureExpr = E->IgnoreImpCasts();
+  if (const DeclRefExpr *DRExpr = dyn_cast<DeclRefExpr>(PureExpr))
+    return DRExpr->getDecl()->getName();
+
+  // TODO: Add support for more expression types.
+  return "";
+}
+
 class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
 
 public:
@@ -62,17 +71,31 @@ public:
 
   void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
                            const Expr *MovedExpr,
-                           SourceLocation FreeLoc) override {
+                           SourceLocation FreeLoc, llvm::SmallVector<const Expr *> OriginExprChain) override {
     unsigned DiagID = MovedExpr
                           ? diag::warn_lifetime_safety_use_after_scope_moved
                           : diag::warn_lifetime_safety_use_after_scope;
 
     S.Diag(IssueExpr->getExprLoc(), DiagID)
         << getDiagSubjectDescription(IssueExpr) << IssueExpr->getSourceRange();
+
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
     S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
+
+    StringRef IssueStr;
+    for (const Expr *CurrExpr : reverse(OriginExprChain)) {
+      if (IssueStr.empty()) {
+        IssueStr = formatExpr(CurrExpr);
+        continue;
+      }
+
+      S.Diag(CurrExpr->getBeginLoc(),
+             diag::note_lifetime_safety_aliases_storage)
+          << CurrExpr->getSourceRange() << formatExpr(CurrExpr) << IssueStr;
+    }
+
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }

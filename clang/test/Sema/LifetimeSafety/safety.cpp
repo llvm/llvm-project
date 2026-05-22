@@ -92,7 +92,7 @@ void pointer_chain() {
   {
     MyObj s;
     p = &s;     // expected-warning {{does not live long enough}}
-    q = p;
+    q = p;      // expected-note {{p aliases the storage of s}}
   }             // expected-note {{destroyed here}}
   (void)*q;     // expected-note {{later used here}}
 }
@@ -1774,8 +1774,8 @@ void test_temporary() {
   std::string_view z;
   {
     S s;
-    const std::string& zz = s.x(); // expected-warning {{local variable 's' does not live long enough}}
-    z = zz;
+    const std::string& zz = s.x(); // expected-warning {{object whose reference is captured does not live long enough}}
+    z = zz;                        // expected-note {{aliases the storage of s}}
   } // expected-note {{destroyed here}}
   (void)z; // expected-note {{later used here}}
 }

@@ -61,9 +61,10 @@ public:
   LifetimeSafetySemaHelper() = default;
   virtual ~LifetimeSafetySemaHelper() = default;
 
-  virtual void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
-                                   const Expr *MovedExpr,
-                                   SourceLocation FreeLoc) {}
+  virtual void
+  reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
+                      const Expr *MovedExpr, SourceLocation FreeLoc,
+                      llvm::SmallVector<const Expr *> OriginExprChain) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,

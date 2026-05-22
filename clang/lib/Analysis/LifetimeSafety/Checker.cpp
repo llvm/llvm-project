@@ -263,10 +263,25 @@ public:
             SemaHelper->reportUseAfterInvalidation(
                 InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr);
 
-        } else
+        } else {
           // Scope-based expiry (use-after-scope).
+
+          llvm::SmallVector<OriginID> OriginFlowChain;
+
+          for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
+               Cur = Cur->peelOuterOrigin())
+            if (LoanPropagation.getLoans(Cur->getOuterOriginID(), UF)
+                    .contains(LID))
+              OriginFlowChain = LoanPropagation.buildOriginFlowChain(
+                  FactMgr, UF, Cur->getOuterOriginID(), LID);
+
+          const llvm::SmallVector<const Expr *> OriginExprChain =
+              buildExprOrDeclChain(OriginFlowChain);
           SemaHelper->reportUseAfterScope(IssueExpr, UF->getUseExpr(),
-                                          MovedExpr, ExpiryLoc);
+                                          MovedExpr, ExpiryLoc,
+                                          OriginExprChain);
+        }
+
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
         if (Warning.InvalidatedByExpr) {
@@ -489,6 +504,43 @@ public:
               LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
       }
     }
+  }
+
+  /// Retrieve a list of reliable expressions from OriginIFlowChain that
+  /// can be used for Sema warnings.
+  ///
+  /// Although the AST node corresponding to Origin can be either a
+  /// `const Expr *` or a `const ValueDecl *`, `buildOriginFlowChain` only
+  /// collects Origins from RHS expressions. Therefore, we do not need to
+  /// handle non-expression cases here.
+  llvm::SmallVector<const Expr *>
+  buildExprOrDeclChain(llvm::ArrayRef<OriginID> OriginFlowChain) {
+    llvm::SmallVector<const Expr *> rs;
+    const SourceManager &SM = AST.getSourceManager();
+
+    auto InsertOrReplace = [&rs, &SM](const Expr *NewNode) {
+      if (!NewNode)
+        return;
+      SourceLocation NewLocation = NewNode->getExprLoc();
+      if (NewLocation.isInvalid())
+        return;
+
+      const Expr *LastNode = rs.back();
+      SourceLocation LastLocation = LastNode->getExprLoc();
+      if (SM.getSpellingLineNumber(LastLocation) ==
+          SM.getSpellingLineNumber(NewLocation))
+        rs.back() = NewNode;
+      else
+        rs.push_back(NewNode);
+    };
+
+    for (const OriginID CurrOID : OriginFlowChain)
+      if (!rs.empty())
+        InsertOrReplace(FactMgr.getOriginMgr().getOrigin(CurrOID).getExpr());
+      else
+        rs.push_back(FactMgr.getOriginMgr().getOrigin(CurrOID).getExpr());
+
+    return rs;
   }
 };
 } // namespace
