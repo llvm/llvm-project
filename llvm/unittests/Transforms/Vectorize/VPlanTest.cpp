@@ -1510,132 +1510,142 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST_F(VPRecipeTest, dumpRecipeInPlan) {
-  VPlan &Plan = getPlan();
-  VPBasicBlock *VPBB0 = Plan.getEntry();
-  VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
-  VPBlockUtils::connectBlocks(VPBB1, Plan.getScalarHeader());
-  VPBlockUtils::connectBlocks(VPBB0, VPBB1);
-
+  // AI must outlive VPlan &Plan
   IntegerType *Int32 = IntegerType::get(C, 32);
   auto *AI = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
                                        PoisonValue::get(Int32));
   AI->setName("a");
-  SmallVector<VPValue *, 2> Args;
-  VPValue *ExtVPV1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPValue *ExtVPV2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  Args.push_back(ExtVPV1);
-  Args.push_back(ExtVPV2);
-  VPWidenRecipe *WidenR = new VPWidenRecipe(*AI, Args);
-  VPBB1->appendRecipe(WidenR);
 
   {
-    // Use EXPECT_EXIT to capture stderr and compare against expected output.
-    //
-    // Test VPValue::dump().
-    VPValue *VPV = WidenR;
-    EXPECT_EXIT(
-        {
-          VPV->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
+    VPlan &Plan = getPlan();
+    VPBasicBlock *VPBB0 = Plan.getEntry();
+    VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
+    VPBlockUtils::connectBlocks(VPBB1, Plan.getScalarHeader());
+    VPBlockUtils::connectBlocks(VPBB0, VPBB1);
 
-    VPRecipeBase *Def = WidenR;
-    EXPECT_EXIT(
-        {
-          Def->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
+    SmallVector<VPValue *, 2> Args;
+    VPValue *ExtVPV1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    VPValue *ExtVPV2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+    Args.push_back(ExtVPV1);
+    Args.push_back(ExtVPV2);
+    VPWidenRecipe *WidenR = new VPWidenRecipe(*AI, Args);
+    VPBB1->appendRecipe(WidenR);
 
-    EXPECT_EXIT(
-        {
-          WidenR->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
+    {
+      // Use EXPECT_EXIT to capture stderr and compare against expected output.
+      //
+      // Test VPValue::dump().
+      VPValue *VPV = WidenR;
+      EXPECT_EXIT(
+          {
+            VPV->dump();
+            exit(0);
+          },
+          testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
 
-    // Test VPRecipeBase::dump().
-    VPRecipeBase *R = WidenR;
-    EXPECT_EXIT(
-        {
-          R->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
+      VPRecipeBase *Def = WidenR;
+      EXPECT_EXIT(
+          {
+            Def->dump();
+            exit(0);
+          },
+          testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
+
+      EXPECT_EXIT(
+          {
+            WidenR->dump();
+            exit(0);
+          },
+          testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
+
+      // Test VPRecipeBase::dump().
+      VPRecipeBase *R = WidenR;
+      EXPECT_EXIT(
+          {
+            R->dump();
+            exit(0);
+          },
+          testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
+    }
   }
 
   delete AI;
 }
 
 TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesInPlan) {
-  VPlan &Plan = getPlan();
-  VPBasicBlock *VPBB0 = Plan.getEntry();
-  VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
-  VPBlockUtils::connectBlocks(VPBB1, Plan.getScalarHeader());
-  VPBlockUtils::connectBlocks(VPBB0, VPBB1);
-
+  // AI must outlive VPlan &Plan
   IntegerType *Int32 = IntegerType::get(C, 32);
   auto *AI = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
                                        PoisonValue::get(Int32));
   AI->setName("a");
-  SmallVector<VPValue *, 2> Args;
-  VPValue *ExtVPV1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPValue *ExtVPV2 = Plan.getOrAddLiveIn(AI);
-  Args.push_back(ExtVPV1);
-  Args.push_back(ExtVPV2);
-  VPInstruction *I1 =
-      new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2},
-                        VPIRFlags::getDefaultFlags(Instruction::Add));
-  VPInstruction *I2 = new VPInstruction(
-      Instruction::Mul, {I1, I1}, VPIRFlags::getDefaultFlags(Instruction::Mul));
-  VPBB1->appendRecipe(I1);
-  VPBB1->appendRecipe(I2);
 
-  // Check printing I1.
   {
-    // Use EXPECT_EXIT to capture stderr and compare against expected output.
-    //
-    // Test VPValue::dump().
-    VPValue *VPV = I1;
-    EXPECT_EXIT(
-        {
-          VPV->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "EMIT vp<%1> = add ir<1>, ir<%a>");
+    VPlan &Plan = getPlan();
+    VPBasicBlock *VPBB0 = Plan.getEntry();
+    VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
+    VPBlockUtils::connectBlocks(VPBB1, Plan.getScalarHeader());
+    VPBlockUtils::connectBlocks(VPBB0, VPBB1);
 
-    // Test VPRecipeBase::dump().
-    VPRecipeBase *R = I1;
-    EXPECT_EXIT(
-        {
-          R->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "EMIT vp<%1> = add ir<1>, ir<%a>");
-  }
-  // Check printing I2.
-  {
-    // Use EXPECT_EXIT to capture stderr and compare against expected output.
-    //
-    // Test VPValue::dump().
-    VPValue *VPV = I2;
-    EXPECT_EXIT(
-        {
-          VPV->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "EMIT vp<%2> = mul vp<%1>, vp<%1>");
+    SmallVector<VPValue *, 2> Args;
+    VPValue *ExtVPV1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    VPValue *ExtVPV2 = Plan.getOrAddLiveIn(AI);
+    Args.push_back(ExtVPV1);
+    Args.push_back(ExtVPV2);
+    VPInstruction *I1 =
+        new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2},
+                          VPIRFlags::getDefaultFlags(Instruction::Add));
+    VPInstruction *I2 =
+        new VPInstruction(Instruction::Mul, {I1, I1},
+                          VPIRFlags::getDefaultFlags(Instruction::Mul));
+    VPBB1->appendRecipe(I1);
+    VPBB1->appendRecipe(I2);
 
-    // Test VPRecipeBase::dump().
-    VPRecipeBase *R = I2;
-    EXPECT_EXIT(
-        {
-          R->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "EMIT vp<%2> = mul vp<%1>, vp<%1>");
+    // Check printing I1.
+    {
+      // Use EXPECT_EXIT to capture stderr and compare against expected output.
+      //
+      // Test VPValue::dump().
+      VPValue *VPV = I1;
+      EXPECT_EXIT(
+          {
+            VPV->dump();
+            exit(0);
+          },
+          testing::ExitedWithCode(0), "EMIT vp<%1> = add ir<1>, ir<%a>");
+
+      // Test VPRecipeBase::dump().
+      VPRecipeBase *R = I1;
+      EXPECT_EXIT(
+          {
+            R->dump();
+            exit(0);
+          },
+          testing::ExitedWithCode(0), "EMIT vp<%1> = add ir<1>, ir<%a>");
+    }
+    // Check printing I2.
+    {
+      // Use EXPECT_EXIT to capture stderr and compare against expected output.
+      //
+      // Test VPValue::dump().
+      VPValue *VPV = I2;
+      EXPECT_EXIT(
+          {
+            VPV->dump();
+            exit(0);
+          },
+          testing::ExitedWithCode(0), "EMIT vp<%2> = mul vp<%1>, vp<%1>");
+
+      // Test VPRecipeBase::dump().
+      VPRecipeBase *R = I2;
+      EXPECT_EXIT(
+          {
+            R->dump();
+            exit(0);
+          },
+          testing::ExitedWithCode(0), "EMIT vp<%2> = mul vp<%1>, vp<%1>");
+    }
   }
+
   delete AI;
 }
 
