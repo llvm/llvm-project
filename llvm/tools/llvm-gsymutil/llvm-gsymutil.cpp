@@ -617,7 +617,8 @@ static llvm::Error handleFileConversionToGSYM(StringRef Filename,
   std::unique_ptr<MemoryBuffer> SymtabBuffer;
   std::unique_ptr<Binary> SymtabBinary;
   if (!SymtabFilename.empty()) {
-    auto SymtabBufOrErr = MemoryBuffer::getFile(SymtabFilename, /*IsText=*/true);
+    auto SymtabBufOrErr =
+        MemoryBuffer::getFile(SymtabFilename, /*IsText=*/true);
     if (!SymtabBufOrErr)
       return createStringError(SymtabBufOrErr.getError(),
                                "failed to open symbol table file '%s'",
