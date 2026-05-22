@@ -113,6 +113,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  coshf_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    coshf_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.coshf
+    libc.src.mathvec.coshf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
   cospif_test
   SUITE
     libc-mathvec-unittests
@@ -253,6 +270,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinhf_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    sinhf_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.sinhf
+    libc.src.mathvec.sinhf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
   sinpif_test
   SUITE
     libc-mathvec-unittests
@@ -283,6 +317,23 @@ add_fp_unittest(
     .unit_test_wrappers
     libc.src.math.tanf
     libc.src.mathvec.tanf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
+  tanhf_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    tanhf_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.tanhf
+    libc.src.mathvec.tanhf
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.CPP.simd
   FLAGS

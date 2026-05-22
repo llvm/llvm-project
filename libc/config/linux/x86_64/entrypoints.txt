@@ -1549,6 +1549,7 @@ list(APPEND TARGET_LIBMVEC_ENTRYPOINTS
     libc.src.mathvec.asinpif
     libc.src.mathvec.atanf
     libc.src.mathvec.cosf
+    libc.src.mathvec.coshf
     libc.src.mathvec.cospif
     libc.src.mathvec.exp2f
     libc.src.mathvec.exp2m1f
@@ -1557,8 +1558,10 @@ list(APPEND TARGET_LIBMVEC_ENTRYPOINTS
     libc.src.mathvec.expf
     libc.src.mathvec.expm1f
     libc.src.mathvec.sinf
+    libc.src.mathvec.sinhf
     libc.src.mathvec.sinpif
     libc.src.mathvec.tanf
+    libc.src.mathvec.tanhf
     libc.src.mathvec.tanpif
   )
 endif()
