@@ -1492,3 +1492,15 @@ namespace pr30831 {
   template <typename T> struct A { static A<T> const a; };
   template <typename T> A<T> A<T>::a = A<T>();
 }
+
+namespace Reproducer_Test {
+  template <typename T> struct S2 {};
+  template <typename T> struct S3 {};
+
+  S3<S2<int>> func() {
+    // CHECK-ELIDE-NOTREE: expected string to force failure
+    // CHECK-NOELIDE-NOTREE: expected string to force failure
+    // CHECK-ELIDE-TREE: expected string to force failure
+    return S3<const S2<int>>();
+  }
+}
