@@ -1881,7 +1881,7 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
   }
 
   ParsedAttributes attrs(AttrFactory);
-  MaybeParseCXX11Attributes(attrs);
+  bool parsedAttrs = MaybeParseCXX11Attributes(attrs);
 
   const auto WarnOnInit = [this, &CK] {
     if (getLangOpts().CPlusPlus)
@@ -1895,6 +1895,36 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
                                   : diag::ext_c2y_init_statement)
           << (CK == Sema::ConditionKind::Switch);
   };
+
+  if (!getLangOpts().CPlusPlus) {
+    if (isDeclarationStatement() && !isCXXSimpleDeclaration(false)) {
+      WarnOnInit();
+      DeclGroupPtrTy DG;
+      SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
+      ParsedAttributes DeclSpecAttrs(AttrFactory);
+      // C2y replaces the init-statement in C++17 to be a declaration instead.
+      DG = ParseDeclaration(DeclaratorContext::SelectionInit, DeclEnd, attrs,
+                            DeclSpecAttrs);
+      *InitStmt = Actions.ActOnDeclStmt(DG, DeclStart, DeclEnd);
+      return ParseCondition(nullptr, Loc, CK, MissingOK);
+    }
+
+    if (Tok.is(tok::semi) && parsedAttrs) {
+      // Parse if ([[...]]; true).
+      WarnOnInit();
+      if (attrs.empty()) {
+        SourceLocation SemiLoc = Tok.getLocation();
+        Diag(SemiLoc, diag::warn_c2y_empty_declaration_statement)
+            << (CK == Sema::ConditionKind::Switch)
+            << FixItHint::CreateRemoval(SemiLoc);
+        ConsumeToken();
+        InitStmt = nullptr;
+      } else
+        *InitStmt = Actions.ActOnAttributedStmt(
+            attrs, Actions.ActOnNullStmt(ConsumeToken()).get());
+      return ParseCondition(nullptr, Loc, CK, MissingOK);
+    }
+  }
 
   // Determine what kind of thing we have.
   switch (isCXXConditionDeclarationOrInitStatement(InitStmt, FRI)) {

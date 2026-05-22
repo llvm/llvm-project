@@ -10,6 +10,8 @@ bool test_if() {
   if (struct A { int x;} a = {.x = 1}; a.x) {}
   if (int arr[] = {1,2,3}; arr[1]) {}
   if (auto x = 1; x) {}
+  if (static_assert(true); true) {}
+  if ([[clang::assume(1 > 0)]]; true) {}
   return false;
 }
 
@@ -28,6 +30,12 @@ int test_switch() {
   switch (struct A { int x;} a = {.x = 1}; a.x) {}
   switch (int arr[] = {1,2,3}; arr[1]) {}
   switch (auto x = 1; x) {}
+  switch (static_assert(true); 1) {
+  default:
+  }
+  switch ([[clang::assume(1 > 0)]]; 1) {
+  default:
+  }
 
   switch (int x = 1) {
   default:
@@ -47,6 +55,7 @@ bool negative_test_if() {
                                         expected-error {{expected expression}}
                                         expected-warning {{expression result unused}}*/
   if (int x) {} // expected-error {{variable declaration in condition must have an initializer}}
+  if ([[]]; true) {} // expected-warning {{empty declaration statement of 'if' has no effect}}
   return false;
 }
 
@@ -62,6 +71,11 @@ int negative_test_switch() {
   switch (true; ) {} /* expected-error {{first clause in condition must be a declaration}}
                         expected-error {{expected expression}}
                         expected-warning {{expression result unused}} */
+
+  switch ([[]]; 1) { // expected-warning {{empty declaration statement of 'switch' has no effect}}
+  default:
+  }
+
   switch (int x = 1; int y = x) { // expected-error {{expected expression}}
   default:
     return y;
