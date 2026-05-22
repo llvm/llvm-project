@@ -93,7 +93,7 @@ int main(int, char**) {
   for (char32_t c = 0x31350; c <= 0x33479; ++c) // 31350..33479  ; Lo # [8490]
     assert(std::__escaped_output_table::__needs_escape(c) == false);
 
-  for (char32_t c = 0x3347A; c <= 0xE00FF; ++c) // 3347A..E00FF ; C
+  for (char32_t c = 0x3FC40; c <= 0xE00FF; ++c) // 3347A..E00FF ; C
     assert(std::__escaped_output_table::__needs_escape(c) == true);
 
   for (char32_t c = 0xE0100; c <= 0xE01EF; ++c) // E0100..E01EF  ; Mn # [240]
