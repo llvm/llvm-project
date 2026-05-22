@@ -113,7 +113,7 @@ jobs:
             -DCMAKE_CXX_COMPILER=${{ matrix.target_triple }}-g++ \
             -DCMAKE_BUILD_TYPE=Release \
             -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }} \
-            -DCMAKE_CROSSCOMPILING_EMULATOR=${{ ... }}build/qemu-wrapper.sh
+            -DCMAKE_CROSSCOMPILING_EMULATOR=${{ ... }}/build/qemu-wrapper.sh
 
       - name: Build and Run - gcc
         env:
