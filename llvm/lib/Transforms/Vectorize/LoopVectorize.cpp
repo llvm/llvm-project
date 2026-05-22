@@ -7087,8 +7087,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         else
           New = cast<VPInstruction>(Old)->cloneWithOperands(NewOps);
         New->insertBefore(Old);
-        NewExiting = New->getVPSingleValue();
-        Substitutions[Old->getVPSingleValue()] = NewExiting;
+        NewExiting = New;
+        Substitutions[Old] = New;
       };
 
       // If there's an outer Select wrapping a Blend, clone the inner Blend
@@ -7101,16 +7101,13 @@ void LoopVectorizationPlanner::addReductionResultComputation(
             CloneWithSubstitutions(InnerBlend);
         CloneWithSubstitutions(cast<VPSingleDefRecipe>(OrigExitingVPV));
       }
-
       NewPhiR->setOperand(1, NewExiting);
-      PhiR->replaceAllUsesWith(Start);
-      PhiR = NewPhiR;
-      NewExitingVPV = NewExiting;
+      PhiR->replaceAllUsesWith(
+          Plan->getOrAddLiveIn(PoisonValue::get(PhiR->getScalarType())));
 
       Builder.setInsertPoint(MiddleVPBB, IP);
-
       FinalReductionResult =
-          Builder.createAnyOfReduction(NewExitingVPV, NewVal, Start, ExitDL);
+          Builder.createAnyOfReduction(NewExiting, NewVal, Start, ExitDL);
     } else {
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
                       PhiR->getFastMathFlags());
