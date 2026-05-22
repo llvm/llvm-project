@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple mips-unknown-linux-gnu -show-inst --mcpu=mips32r5 %s \
+# RUN: llvm-mc -triple=mips-unknown-linux -show-inst -mcpu=mips32r5 %s \
 # RUN:   | FileCheck --check-prefix=R5 %s
-# RUN: llvm-mc -triple mips-unknown-linux-gnu -show-inst --mcpu=mips32r6 %s \
+# RUN: llvm-mc -triple=mips-unknown-linux -show-inst -mcpu=mips32r6 %s \
 # RUN:   | FileCheck --check-prefix=R6 %s
 
   .text
