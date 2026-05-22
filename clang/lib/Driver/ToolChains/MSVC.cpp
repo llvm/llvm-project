@@ -332,8 +332,10 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     AddRunTimeLibs(TC, TC.getDriver(), CmdArgs, Args);
   }
 
-  StringRef PreferredLinker = TC.getDriver().getPreferredLinker();
-  if (PreferredLinker.empty()) {
+  const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ);
+  StringRef Linker = A ? A->getValue() : TC.getDriver().getPreferredLinker();
+
+  if (Linker.empty()) {
     // If DWARF is requested, use LLD, because MSVC's link.exe will silently
     // truncate the .debug_* sections to eight characters. PE/COFF doesn't allow
     // section names longer than eight bytes in executables - LLD uses the same
@@ -341,15 +343,11 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (Args.hasArg(options::OPT_gdwarf, options::OPT_gdwarf_2,
                     options::OPT_gdwarf_3, options::OPT_gdwarf_4,
                     options::OPT_gdwarf_5, options::OPT_gdwarf_6))
-      PreferredLinker = "lld-link";
+      Linker = "lld-link";
     else
-      PreferredLinker = "link";
+      Linker = "link";
   }
 
-  StringRef Linker =
-      Args.getLastArgValue(options::OPT_fuse_ld_EQ, PreferredLinker);
-  if (Linker.empty())
-    Linker = PreferredLinker;
   // We need to translate 'lld' into 'lld-link'.
   if (Linker.equals_insensitive("lld"))
     Linker = "lld-link";
