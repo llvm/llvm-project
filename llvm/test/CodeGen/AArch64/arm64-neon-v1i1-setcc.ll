@@ -206,8 +206,7 @@ define i64 @test_sext_extr_cmp_half(<1 x half> %v1, <1 x half> %v2) {
 ; CHECK-NEXT:    fcvt s1, h1
 ; CHECK-NEXT:    fcvt s0, h0
 ; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x0, x8, #0, #1
+; CHECK-NEXT:    csetm x0, eq
 ; CHECK-NEXT:    ret
   %1 = fcmp oeq <1 x half> %v1, %v2
   %2 = extractelement <1 x i1> %1, i32 0
