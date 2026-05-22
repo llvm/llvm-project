@@ -916,7 +916,10 @@ VPlan::~VPlan() {
           Def->replaceAllUsesWith(&DummyValue);
 
         for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
-          R.setOperand(I, &DummyValue);
+          // Some operands may have already been deleted prior to the VPlan
+          // destructor being called. Don't attempt to check the operand's type
+          // as that may be use-after-free.
+          R.setOperand(I, &DummyValue, /*CheckOpType=*/false);
       }
     } else if (auto *CanIV = cast<VPRegionBlock>(VPB)->getCanonicalIV()) {
       CanIV->replaceAllUsesWith(&DummyValue);

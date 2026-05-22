@@ -425,10 +425,11 @@ public:
     return Operands[N];
   }
 
-  void setOperand(unsigned I, VPValue *New) {
-    assert((!Operands[I]->getScalarType() || !New->getScalarType() ||
-            Operands[I]->getScalarType() == New->getScalarType()) &&
-           "scalar type of new operand must match the old operand");
+  void setOperand(unsigned I, VPValue *New, bool CheckOpType = true) {
+    if (CheckOpType)
+      assert((!Operands[I]->getScalarType() || !New->getScalarType() ||
+              Operands[I]->getScalarType() == New->getScalarType()) &&
+             "scalar type of new operand must match the old operand");
     Operands[I]->removeUser(*this);
     Operands[I] = New;
     New->addUser(*this);
