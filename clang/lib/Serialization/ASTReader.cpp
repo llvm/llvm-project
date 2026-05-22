@@ -8715,14 +8715,16 @@ bool ASTReader::LoadExternalSpecializationsImpl(
     ArrayRef<TemplateArgument> TemplateArgs) {
   assert(D);
 
-  reader::LazySpecializationInfoLookupTable *LookupTable = nullptr;
-  if (auto It = SpecLookups.find(D); It != SpecLookups.end())
-    LookupTable = &It->getSecond();
-  if (!LookupTable)
+  auto It = SpecLookups.find(D);
+  if (It == SpecLookups.end())
     return false;
 
-  // NOTE: The getNameForDiagnostic usage in the lambda may mutate the
-  // `SpecLookups` object.
+  Deserializing LookupResults(this);
+  auto HashValue = StableHashForTemplateArguments(TemplateArgs);
+
+  llvm::SmallVector<serialization::reader::LazySpecializationInfo, 8> Infos =
+      It->second.Table.find(HashValue);
+
   llvm::TimeTraceScope TimeScope("Load External Specializations for ", [&] {
     std::string Name;
     llvm::raw_string_ostream OS(Name);
@@ -8731,13 +8733,6 @@ bool ASTReader::LoadExternalSpecializationsImpl(
                              /*Qualified=*/true);
     return Name;
   });
-
-  Deserializing LookupResults(this);
-  auto HashValue = StableHashForTemplateArguments(TemplateArgs);
-
-  // Get Decl may violate the iterator from SpecLookups
-  llvm::SmallVector<serialization::reader::LazySpecializationInfo, 8> Infos =
-      LookupTable->Table.find(HashValue);
 
   bool NewSpecsFound = false;
   for (auto &Info : Infos) {
