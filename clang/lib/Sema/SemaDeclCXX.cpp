@@ -689,11 +689,24 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
              (New->isInlineSpecified() ||
               New->getFriendObjectKind() == Decl::FOK_None)) {
     // C++11 [dcl.fcn.spec]p4:
-    //   If the definition of a function appears in a translation unit before its
-    //   first declaration as inline, the program is ill-formed.
-    Diag(New->getLocation(), diag::err_inline_decl_follows_def) << New;
-    Diag(Def->getLocation(), diag::note_previous_definition);
-    Invalid = true;
+    //   If the definition of a function appears in a translation unit before
+    //   its first declaration as inline, the program is ill-formed.
+    //
+    // Exception: a friend inline redeclaration of a function that takes the
+    // enclosing class as a parameter is valid. The class was incomplete at the
+    // point of the original definition, so it could not have been declared
+    // inline there.
+    bool HasEnclosingClassParam = false;
+    if (auto *RD = dyn_cast<CXXRecordDecl>(New->getLexicalDeclContext()))
+      for (const ParmVarDecl *P : New->parameters())
+        if (P->getType().getNonReferenceType()->getAsCXXRecordDecl() == RD)
+          HasEnclosingClassParam = true;
+
+    if (!HasEnclosingClassParam) {
+      Diag(New->getLocation(), diag::err_inline_decl_follows_def) << New;
+      Diag(Def->getLocation(), diag::note_previous_definition);
+      Invalid = true;
+    }
   }
 
   // C++17 [temp.deduct.guide]p3:
