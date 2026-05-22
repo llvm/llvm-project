@@ -10,6 +10,7 @@
 
 #include "Generators.h"
 #include "Representation.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -184,7 +185,7 @@ template <> struct ScalarTraits<SymbolID> {
   static SymbolID stringToSymbol(llvm::StringRef Value) {
     SymbolID USR;
     std::string HexString = fromHex(Value);
-    std::copy(HexString.begin(), HexString.end(), USR.begin());
+    llvm::copy(HexString, USR.begin());
     return SymbolID(USR);
   }
 
