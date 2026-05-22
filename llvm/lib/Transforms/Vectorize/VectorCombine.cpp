@@ -4182,7 +4182,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   LLVM_DEBUG(dbgs() << "Found reduction shuffle chain: " << I << "\n OldCost : "
                     << OrigCost << " vs NewCost: " << NewCost << "\n");
 
-  if (NewCost >= OrigCost)
+  if (VecOpEE->hasOneUse() ? (NewCost > OrigCost) : (NewCost >= OrigCost))
     return false;
 
   Value *ReduceInput = FinalVecV;
