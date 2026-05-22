@@ -63,7 +63,7 @@ LLVM scopes
 
 The LLVM Language Reference defines the following :ref:`scopes<syncscope>`:
 
-*system* scope (empty string "")
+*system scope* (empty string "")
   There exists a single instance of this scope that contains the memory accesses
   and synchronization operations performed by all threads.
 
@@ -77,7 +77,7 @@ AMDGPU scopes
 The AMDGPU backend further refines the LLVM scopes with the following
 target-defined scopes and constraints:
 
-- *system* scope (same as LLVM)
+- *system scope* (same as LLVM)
 - "agent" scope
 - "cluster" scope
 - "workgroup" scope
@@ -300,7 +300,7 @@ The AMDGPU memory model overrides the definition of each byte in the
 
 Every (defined) read operation ``R`` reads a series of bytes written by
 (defined) write operations. Each initialized global is assumed to have an
-initial *system*-scoped atomic write operation that is *location-ordered* before
+initial *system scoped* atomic write operation that is *location-ordered* before
 any other read or write to that same location.
 
 For each byte of a read ``R``, ``R`` may see any write to the same byte, except:
