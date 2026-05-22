@@ -44,21 +44,25 @@ define i32 @test_ctselect_extremal_values(i1 %cond) {
 ; W32-LABEL: test_ctselect_extremal_values:
 ; W32:         .functype test_ctselect_extremal_values (i32) -> (i32)
 ; W32-NEXT:  # %bb.0:
-; W32-NEXT:    i32.const -2147483648
+; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.sub
+; W32-NEXT:    i32.const -2147483648
+; W32-NEXT:    i32.xor
 ; W32-NEXT:    # fallthrough-return
 ;
 ; W64-LABEL: test_ctselect_extremal_values:
 ; W64:         .functype test_ctselect_extremal_values (i32) -> (i32)
 ; W64-NEXT:  # %bb.0:
-; W64-NEXT:    i32.const -2147483648
+; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.sub
+; W64-NEXT:    i32.const -2147483648
+; W64-NEXT:    i32.xor
 ; W64-NEXT:    # fallthrough-return
   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 2147483647, i32 -2147483648)
   ret i32 %result

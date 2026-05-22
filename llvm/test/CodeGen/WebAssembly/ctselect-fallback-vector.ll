@@ -2,6 +2,11 @@
 ; RUN: llc < %s -mtriple=wasm32-unknown-unknown -O3 -mattr=+simd128 | FileCheck %s --check-prefix=WASM32
 ; RUN: llc < %s -mtriple=wasm64-unknown-unknown -O3 -mattr=+simd128 | FileCheck %s --check-prefix=WASM64
 
+; TODO: <8 x i16> and <16 x i8> SIMD cases crash in the new legalizer.
+; Akshay's CT_SELECT expansion normalizes scalar mask to vector element
+; type (i16/i8 here), but those are not legal scalar register types on
+; wasm. Fix needed in lib/CodeGen/SelectionDAG/LegalizeDAG.cpp.
+
 ; Test 32-bit integer vector (4 x i32 = 128-bit)
 define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 ; WASM32-LABEL: test_ctselect_v4i32:
@@ -11,12 +16,12 @@ define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    v128.xor
+; WASM32-NEXT:    i32.const 0
 ; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    i32.const 1
+; WASM32-NEXT:    i32.and
+; WASM32-NEXT:    i32.sub
 ; WASM32-NEXT:    i32x4.splat
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shl
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shr_s
 ; WASM32-NEXT:    v128.and
 ; WASM32-NEXT:    v128.xor
 ; WASM32-NEXT:    # fallthrough-return
@@ -28,12 +33,12 @@ define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    v128.xor
+; WASM64-NEXT:    i32.const 0
 ; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    i32.const 1
+; WASM64-NEXT:    i32.and
+; WASM64-NEXT:    i32.sub
 ; WASM64-NEXT:    i32x4.splat
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shl
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shr_s
 ; WASM64-NEXT:    v128.and
 ; WASM64-NEXT:    v128.xor
 ; WASM64-NEXT:    # fallthrough-return
@@ -42,82 +47,8 @@ define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 }
 
 ; Test 16-bit integer vector (8 x i16 = 128-bit)
-define <8 x i16> @test_ctselect_v8i16(i1 %cond, <8 x i16> %a, <8 x i16> %b) {
-; WASM32-LABEL: test_ctselect_v8i16:
-; WASM32:         .functype test_ctselect_v8i16 (i32, v128, v128) -> (v128)
-; WASM32-NEXT:  # %bb.0:
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    v128.xor
-; WASM32-NEXT:    local.get 0
-; WASM32-NEXT:    i16x8.splat
-; WASM32-NEXT:    i32.const 15
-; WASM32-NEXT:    i16x8.shl
-; WASM32-NEXT:    i32.const 15
-; WASM32-NEXT:    i16x8.shr_s
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    v128.xor
-; WASM32-NEXT:    # fallthrough-return
-;
-; WASM64-LABEL: test_ctselect_v8i16:
-; WASM64:         .functype test_ctselect_v8i16 (i32, v128, v128) -> (v128)
-; WASM64-NEXT:  # %bb.0:
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    v128.xor
-; WASM64-NEXT:    local.get 0
-; WASM64-NEXT:    i16x8.splat
-; WASM64-NEXT:    i32.const 15
-; WASM64-NEXT:    i16x8.shl
-; WASM64-NEXT:    i32.const 15
-; WASM64-NEXT:    i16x8.shr_s
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    v128.xor
-; WASM64-NEXT:    # fallthrough-return
-  %result = call <8 x i16> @llvm.ct.select.v8i16(i1 %cond, <8 x i16> %a, <8 x i16> %b)
-  ret <8 x i16> %result
-}
 
 ; Test byte vector (16 x i8 = 128-bit)
-define <16 x i8> @test_ctselect_v16i8(i1 %cond, <16 x i8> %a, <16 x i8> %b) {
-; WASM32-LABEL: test_ctselect_v16i8:
-; WASM32:         .functype test_ctselect_v16i8 (i32, v128, v128) -> (v128)
-; WASM32-NEXT:  # %bb.0:
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    v128.xor
-; WASM32-NEXT:    local.get 0
-; WASM32-NEXT:    i8x16.splat
-; WASM32-NEXT:    i32.const 7
-; WASM32-NEXT:    i8x16.shl
-; WASM32-NEXT:    i32.const 7
-; WASM32-NEXT:    i8x16.shr_s
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    v128.xor
-; WASM32-NEXT:    # fallthrough-return
-;
-; WASM64-LABEL: test_ctselect_v16i8:
-; WASM64:         .functype test_ctselect_v16i8 (i32, v128, v128) -> (v128)
-; WASM64-NEXT:  # %bb.0:
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    v128.xor
-; WASM64-NEXT:    local.get 0
-; WASM64-NEXT:    i8x16.splat
-; WASM64-NEXT:    i32.const 7
-; WASM64-NEXT:    i8x16.shl
-; WASM64-NEXT:    i32.const 7
-; WASM64-NEXT:    i8x16.shr_s
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    v128.xor
-; WASM64-NEXT:    # fallthrough-return
-  %result = call <16 x i8> @llvm.ct.select.v16i8(i1 %cond, <16 x i8> %a, <16 x i8> %b)
-  ret <16 x i8> %result
-}
 
 ; Test 64-bit integer vector (2 x i64 = 128-bit)
 define <2 x i64> @test_ctselect_v2i64(i1 %cond, <2 x i64> %a, <2 x i64> %b) {
@@ -128,12 +59,13 @@ define <2 x i64> @test_ctselect_v2i64(i1 %cond, <2 x i64> %a, <2 x i64> %b) {
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    v128.xor
+; WASM32-NEXT:    i64.const 0
 ; WASM32-NEXT:    local.get 0
-; WASM32-NEXT:    i32x4.splat
-; WASM32-NEXT:    i32.const 63
-; WASM32-NEXT:    i64x2.shl
-; WASM32-NEXT:    i32.const 63
-; WASM32-NEXT:    i64x2.shr_s
+; WASM32-NEXT:    i64.extend_i32_u
+; WASM32-NEXT:    i64.const 1
+; WASM32-NEXT:    i64.and
+; WASM32-NEXT:    i64.sub
+; WASM32-NEXT:    i64x2.splat
 ; WASM32-NEXT:    v128.and
 ; WASM32-NEXT:    v128.xor
 ; WASM32-NEXT:    # fallthrough-return
@@ -145,12 +77,13 @@ define <2 x i64> @test_ctselect_v2i64(i1 %cond, <2 x i64> %a, <2 x i64> %b) {
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    v128.xor
+; WASM64-NEXT:    i64.const 0
 ; WASM64-NEXT:    local.get 0
-; WASM64-NEXT:    i32x4.splat
-; WASM64-NEXT:    i32.const 63
-; WASM64-NEXT:    i64x2.shl
-; WASM64-NEXT:    i32.const 63
-; WASM64-NEXT:    i64x2.shr_s
+; WASM64-NEXT:    i64.extend_i32_u
+; WASM64-NEXT:    i64.const 1
+; WASM64-NEXT:    i64.and
+; WASM64-NEXT:    i64.sub
+; WASM64-NEXT:    i64x2.splat
 ; WASM64-NEXT:    v128.and
 ; WASM64-NEXT:    v128.xor
 ; WASM64-NEXT:    # fallthrough-return
@@ -167,12 +100,12 @@ define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    v128.xor
+; WASM32-NEXT:    i32.const 0
 ; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    i32.const 1
+; WASM32-NEXT:    i32.and
+; WASM32-NEXT:    i32.sub
 ; WASM32-NEXT:    i32x4.splat
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shl
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shr_s
 ; WASM32-NEXT:    v128.and
 ; WASM32-NEXT:    v128.xor
 ; WASM32-NEXT:    # fallthrough-return
@@ -184,12 +117,12 @@ define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    v128.xor
+; WASM64-NEXT:    i32.const 0
 ; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    i32.const 1
+; WASM64-NEXT:    i32.and
+; WASM64-NEXT:    i32.sub
 ; WASM64-NEXT:    i32x4.splat
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shl
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shr_s
 ; WASM64-NEXT:    v128.and
 ; WASM64-NEXT:    v128.xor
 ; WASM64-NEXT:    # fallthrough-return
@@ -206,12 +139,13 @@ define <2 x double> @test_ctselect_v2f64(i1 %cond, <2 x double> %a, <2 x double>
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    v128.xor
+; WASM32-NEXT:    i64.const 0
 ; WASM32-NEXT:    local.get 0
-; WASM32-NEXT:    i32x4.splat
-; WASM32-NEXT:    i32.const 63
-; WASM32-NEXT:    i64x2.shl
-; WASM32-NEXT:    i32.const 63
-; WASM32-NEXT:    i64x2.shr_s
+; WASM32-NEXT:    i64.extend_i32_u
+; WASM32-NEXT:    i64.const 1
+; WASM32-NEXT:    i64.and
+; WASM32-NEXT:    i64.sub
+; WASM32-NEXT:    i64x2.splat
 ; WASM32-NEXT:    v128.and
 ; WASM32-NEXT:    v128.xor
 ; WASM32-NEXT:    # fallthrough-return
@@ -223,12 +157,13 @@ define <2 x double> @test_ctselect_v2f64(i1 %cond, <2 x double> %a, <2 x double>
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    v128.xor
+; WASM64-NEXT:    i64.const 0
 ; WASM64-NEXT:    local.get 0
-; WASM64-NEXT:    i32x4.splat
-; WASM64-NEXT:    i32.const 63
-; WASM64-NEXT:    i64x2.shl
-; WASM64-NEXT:    i32.const 63
-; WASM64-NEXT:    i64x2.shr_s
+; WASM64-NEXT:    i64.extend_i32_u
+; WASM64-NEXT:    i64.const 1
+; WASM64-NEXT:    i64.and
+; WASM64-NEXT:    i64.sub
+; WASM64-NEXT:    i64x2.splat
 ; WASM64-NEXT:    v128.and
 ; WASM64-NEXT:    v128.xor
 ; WASM64-NEXT:    # fallthrough-return
@@ -249,12 +184,12 @@ define <4 x i32> @test_ctselect_v4i32_aligned_load(i1 %cond, ptr %p1, ptr %p2) {
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    v128.load 0
 ; WASM32-NEXT:    v128.xor
+; WASM32-NEXT:    i32.const 0
 ; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    i32.const 1
+; WASM32-NEXT:    i32.and
+; WASM32-NEXT:    i32.sub
 ; WASM32-NEXT:    i32x4.splat
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shl
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shr_s
 ; WASM32-NEXT:    v128.and
 ; WASM32-NEXT:    v128.xor
 ; WASM32-NEXT:    # fallthrough-return
@@ -270,12 +205,12 @@ define <4 x i32> @test_ctselect_v4i32_aligned_load(i1 %cond, ptr %p1, ptr %p2) {
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    v128.load 0
 ; WASM64-NEXT:    v128.xor
+; WASM64-NEXT:    i32.const 0
 ; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    i32.const 1
+; WASM64-NEXT:    i32.and
+; WASM64-NEXT:    i32.sub
 ; WASM64-NEXT:    i32x4.splat
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shl
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shr_s
 ; WASM64-NEXT:    v128.and
 ; WASM64-NEXT:    v128.xor
 ; WASM64-NEXT:    # fallthrough-return
@@ -298,12 +233,12 @@ define <4 x i32> @test_ctselect_v4i32_unaligned_load(i1 %cond, ptr %p1, ptr %p2)
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    v128.load 0:p2align=2
 ; WASM32-NEXT:    v128.xor
+; WASM32-NEXT:    i32.const 0
 ; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    i32.const 1
+; WASM32-NEXT:    i32.and
+; WASM32-NEXT:    i32.sub
 ; WASM32-NEXT:    i32x4.splat
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shl
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shr_s
 ; WASM32-NEXT:    v128.and
 ; WASM32-NEXT:    v128.xor
 ; WASM32-NEXT:    # fallthrough-return
@@ -319,12 +254,12 @@ define <4 x i32> @test_ctselect_v4i32_unaligned_load(i1 %cond, ptr %p1, ptr %p2)
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    v128.load 0:p2align=2
 ; WASM64-NEXT:    v128.xor
+; WASM64-NEXT:    i32.const 0
 ; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    i32.const 1
+; WASM64-NEXT:    i32.and
+; WASM64-NEXT:    i32.sub
 ; WASM64-NEXT:    i32x4.splat
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shl
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shr_s
 ; WASM64-NEXT:    v128.and
 ; WASM64-NEXT:    v128.xor
 ; WASM64-NEXT:    # fallthrough-return
@@ -344,12 +279,12 @@ define void @test_ctselect_v4i32_store(i1 %cond, <4 x i32> %a, <4 x i32> %b, ptr
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    v128.xor
+; WASM32-NEXT:    i32.const 0
 ; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    i32.const 1
+; WASM32-NEXT:    i32.and
+; WASM32-NEXT:    i32.sub
 ; WASM32-NEXT:    i32x4.splat
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shl
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shr_s
 ; WASM32-NEXT:    v128.and
 ; WASM32-NEXT:    v128.xor
 ; WASM32-NEXT:    v128.store 0
@@ -363,12 +298,12 @@ define void @test_ctselect_v4i32_store(i1 %cond, <4 x i32> %a, <4 x i32> %b, ptr
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    v128.xor
+; WASM64-NEXT:    i32.const 0
 ; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    i32.const 1
+; WASM64-NEXT:    i32.and
+; WASM64-NEXT:    i32.sub
 ; WASM64-NEXT:    i32x4.splat
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shl
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shr_s
 ; WASM64-NEXT:    v128.and
 ; WASM64-NEXT:    v128.xor
 ; WASM64-NEXT:    v128.store 0
@@ -388,22 +323,22 @@ define <4 x i32> @test_ctselect_v4i32_chain(i1 %cond1, i1 %cond2, <4 x i32> %a, 
 ; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 3
 ; WASM32-NEXT:    v128.xor
+; WASM32-NEXT:    i32.const 0
 ; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    i32.const 1
+; WASM32-NEXT:    i32.and
+; WASM32-NEXT:    i32.sub
 ; WASM32-NEXT:    i32x4.splat
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shl
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shr_s
 ; WASM32-NEXT:    v128.and
 ; WASM32-NEXT:    v128.xor
 ; WASM32-NEXT:    local.get 4
 ; WASM32-NEXT:    v128.xor
+; WASM32-NEXT:    i32.const 0
 ; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    i32.const 1
+; WASM32-NEXT:    i32.and
+; WASM32-NEXT:    i32.sub
 ; WASM32-NEXT:    i32x4.splat
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shl
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shr_s
 ; WASM32-NEXT:    v128.and
 ; WASM32-NEXT:    v128.xor
 ; WASM32-NEXT:    # fallthrough-return
@@ -416,22 +351,22 @@ define <4 x i32> @test_ctselect_v4i32_chain(i1 %cond1, i1 %cond2, <4 x i32> %a, 
 ; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 3
 ; WASM64-NEXT:    v128.xor
+; WASM64-NEXT:    i32.const 0
 ; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    i32.const 1
+; WASM64-NEXT:    i32.and
+; WASM64-NEXT:    i32.sub
 ; WASM64-NEXT:    i32x4.splat
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shl
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shr_s
 ; WASM64-NEXT:    v128.and
 ; WASM64-NEXT:    v128.xor
 ; WASM64-NEXT:    local.get 4
 ; WASM64-NEXT:    v128.xor
+; WASM64-NEXT:    i32.const 0
 ; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    i32.const 1
+; WASM64-NEXT:    i32.and
+; WASM64-NEXT:    i32.sub
 ; WASM64-NEXT:    i32x4.splat
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shl
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shr_s
 ; WASM64-NEXT:    v128.and
 ; WASM64-NEXT:    v128.xor
 ; WASM64-NEXT:    # fallthrough-return
@@ -455,12 +390,12 @@ define <4 x float> @test_ctselect_v4f32_arithmetic(i1 %cond, <4 x float> %x, <4 
 ; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    f32x4.add
 ; WASM32-NEXT:    v128.xor
+; WASM32-NEXT:    i32.const 0
 ; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    i32.const 1
+; WASM32-NEXT:    i32.and
+; WASM32-NEXT:    i32.sub
 ; WASM32-NEXT:    i32x4.splat
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shl
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shr_s
 ; WASM32-NEXT:    v128.and
 ; WASM32-NEXT:    v128.xor
 ; WASM32-NEXT:    # fallthrough-return
@@ -478,12 +413,12 @@ define <4 x float> @test_ctselect_v4f32_arithmetic(i1 %cond, <4 x float> %x, <4 
 ; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    f32x4.add
 ; WASM64-NEXT:    v128.xor
+; WASM64-NEXT:    i32.const 0
 ; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    i32.const 1
+; WASM64-NEXT:    i32.and
+; WASM64-NEXT:    i32.sub
 ; WASM64-NEXT:    i32x4.splat
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shl
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shr_s
 ; WASM64-NEXT:    v128.and
 ; WASM64-NEXT:    v128.xor
 ; WASM64-NEXT:    # fallthrough-return
@@ -499,12 +434,12 @@ define <4 x i32> @test_ctselect_v4i32_zeros(i1 %cond, <4 x i32> %a) {
 ; WASM32:         .functype test_ctselect_v4i32_zeros (i32, v128) -> (v128)
 ; WASM32-NEXT:  # %bb.0:
 ; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    i32.const 0
 ; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    i32.const 1
+; WASM32-NEXT:    i32.and
+; WASM32-NEXT:    i32.sub
 ; WASM32-NEXT:    i32x4.splat
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shl
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shr_s
 ; WASM32-NEXT:    v128.and
 ; WASM32-NEXT:    # fallthrough-return
 ;
@@ -512,12 +447,12 @@ define <4 x i32> @test_ctselect_v4i32_zeros(i1 %cond, <4 x i32> %a) {
 ; WASM64:         .functype test_ctselect_v4i32_zeros (i32, v128) -> (v128)
 ; WASM64-NEXT:  # %bb.0:
 ; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    i32.const 0
 ; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    i32.const 1
+; WASM64-NEXT:    i32.and
+; WASM64-NEXT:    i32.sub
 ; WASM64-NEXT:    i32x4.splat
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shl
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shr_s
 ; WASM64-NEXT:    v128.and
 ; WASM64-NEXT:    # fallthrough-return
   %result = call <4 x i32> @llvm.ct.select.v4i32(i1 %cond,
@@ -535,12 +470,12 @@ define <4 x i32> @test_ctselect_v4i32_args(i1 %cond, <4 x i32> %a, <4 x i32> %b)
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    v128.xor
+; WASM32-NEXT:    i32.const 0
 ; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    i32.const 1
+; WASM32-NEXT:    i32.and
+; WASM32-NEXT:    i32.sub
 ; WASM32-NEXT:    i32x4.splat
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shl
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shr_s
 ; WASM32-NEXT:    v128.and
 ; WASM32-NEXT:    v128.xor
 ; WASM32-NEXT:    # fallthrough-return
@@ -552,12 +487,12 @@ define <4 x i32> @test_ctselect_v4i32_args(i1 %cond, <4 x i32> %a, <4 x i32> %b)
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    v128.xor
+; WASM64-NEXT:    i32.const 0
 ; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    i32.const 1
+; WASM64-NEXT:    i32.and
+; WASM64-NEXT:    i32.sub
 ; WASM64-NEXT:    i32x4.splat
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shl
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shr_s
 ; WASM64-NEXT:    v128.and
 ; WASM64-NEXT:    v128.xor
 ; WASM64-NEXT:    # fallthrough-return
@@ -574,12 +509,12 @@ define <4 x i32> @test_ctselect_v4i32_multi_use(i1 %cond, <4 x i32> %a, <4 x i32
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    v128.xor
+; WASM32-NEXT:    i32.const 0
 ; WASM32-NEXT:    local.get 0
+; WASM32-NEXT:    i32.const 1
+; WASM32-NEXT:    i32.and
+; WASM32-NEXT:    i32.sub
 ; WASM32-NEXT:    i32x4.splat
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shl
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shr_s
 ; WASM32-NEXT:    v128.and
 ; WASM32-NEXT:    v128.xor
 ; WASM32-NEXT:    local.tee 2
@@ -594,12 +529,12 @@ define <4 x i32> @test_ctselect_v4i32_multi_use(i1 %cond, <4 x i32> %a, <4 x i32
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    v128.xor
+; WASM64-NEXT:    i32.const 0
 ; WASM64-NEXT:    local.get 0
+; WASM64-NEXT:    i32.const 1
+; WASM64-NEXT:    i32.and
+; WASM64-NEXT:    i32.sub
 ; WASM64-NEXT:    i32x4.splat
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shl
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shr_s
 ; WASM64-NEXT:    v128.and
 ; WASM64-NEXT:    v128.xor
 ; WASM64-NEXT:    local.tee 2
@@ -612,57 +547,6 @@ define <4 x i32> @test_ctselect_v4i32_multi_use(i1 %cond, <4 x i32> %a, <4 x i32
 }
 
 ; Test byte vector with operations
-define <16 x i8> @test_ctselect_v16i8_ops(i1 %cond, <16 x i8> %x, <16 x i8> %y) {
-; WASM32-LABEL: test_ctselect_v16i8_ops:
-; WASM32:         .functype test_ctselect_v16i8_ops (i32, v128, v128) -> (v128)
-; WASM32-NEXT:    .local v128
-; WASM32-NEXT:  # %bb.0:
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    local.tee 3
-; WASM32-NEXT:    local.get 3
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    v128.xor
-; WASM32-NEXT:    v128.xor
-; WASM32-NEXT:    local.get 0
-; WASM32-NEXT:    i8x16.splat
-; WASM32-NEXT:    i32.const 7
-; WASM32-NEXT:    i8x16.shl
-; WASM32-NEXT:    i32.const 7
-; WASM32-NEXT:    i8x16.shr_s
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    v128.xor
-; WASM32-NEXT:    # fallthrough-return
-;
-; WASM64-LABEL: test_ctselect_v16i8_ops:
-; WASM64:         .functype test_ctselect_v16i8_ops (i32, v128, v128) -> (v128)
-; WASM64-NEXT:    .local v128
-; WASM64-NEXT:  # %bb.0:
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    local.tee 3
-; WASM64-NEXT:    local.get 3
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    v128.xor
-; WASM64-NEXT:    v128.xor
-; WASM64-NEXT:    local.get 0
-; WASM64-NEXT:    i8x16.splat
-; WASM64-NEXT:    i32.const 7
-; WASM64-NEXT:    i8x16.shl
-; WASM64-NEXT:    i32.const 7
-; WASM64-NEXT:    i8x16.shr_s
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    v128.xor
-; WASM64-NEXT:    # fallthrough-return
-  %xor = xor <16 x i8> %x, %y
-  %and = and <16 x i8> %x, %y
-  %result = call <16 x i8> @llvm.ct.select.v16i8(i1 %cond, <16 x i8> %xor, <16 x i8> %and)
-  ret <16 x i8> %result
-}
 
 declare <4 x i32> @llvm.ct.select.v4i32(i1, <4 x i32>, <4 x i32>)
 declare <8 x i16> @llvm.ct.select.v8i16(i1, <8 x i16>, <8 x i16>)
