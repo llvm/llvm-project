@@ -1567,7 +1567,6 @@ template<generic_range_value<[]<
    >() {}> T>
 void x() {}
 
-// FIXME: Crashes because it produces a template type parameter with invalid depth
 void foo() {
   x<vector<int>>();
 }
