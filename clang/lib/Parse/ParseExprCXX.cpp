@@ -1881,7 +1881,7 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
   }
 
   ParsedAttributes attrs(AttrFactory);
-  bool parsedAttrs = MaybeParseCXX11Attributes(attrs);
+  bool ParsedAttrs = MaybeParseCXX11Attributes(attrs);
 
   const auto WarnOnInit = [this, &CK] {
     if (getLangOpts().CPlusPlus)
