@@ -125,9 +125,8 @@ define <64 x i8> @test_affine_affine_xor_same_source_no_fold_512_multi_use(<64 x
 define <64 x i8> @test_affine_affine_same_matrix_fold_512(<64 x i8> %src1, <64 x i8> %src2, <64 x i8> %m) nounwind {
 ; CHECK-LABEL: test_affine_affine_same_matrix_fold_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $0, %zmm2, %zmm0, %zmm0
-; CHECK-NEXT:    vgf2p8affineqb $0, %zmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vgf2p8affineqb $0, %zmm2, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %gfni1 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src1, <64 x i8> %m, i8 0)
   %gfni2 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src2, <64 x i8> %m, i8 0)
@@ -138,9 +137,8 @@ define <64 x i8> @test_affine_affine_same_matrix_fold_512(<64 x i8> %src1, <64 x
 define <64 x i8> @test_affine_affine_same_matrix_fold_512_immediate(<64 x i8> %src1, <64 x i8> %src2, <64 x i8> %m) nounwind {
 ; CHECK-LABEL: test_affine_affine_same_matrix_fold_512_immediate:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $183, %zmm2, %zmm0, %zmm0
-; CHECK-NEXT:    vgf2p8affineqb $53, %zmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vgf2p8affineqb $130, %zmm2, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %gfni1 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src1, <64 x i8> %m, i8 183)
   %gfni2 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src2, <64 x i8> %m, i8 53)
