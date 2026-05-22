@@ -597,9 +597,8 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
     if (BI.getSuccessor(0) == L.getLoopLatch() &&
         L.contains(BI.getSuccessor(1))) {
       LatchIdx = 0;
-    }
-    else if (BI.getSuccessor(1) == L.getLoopLatch() &&
-        L.contains(BI.getSuccessor(0))) {
+    } else if (BI.getSuccessor(1) == L.getLoopLatch() &&
+               L.contains(BI.getSuccessor(0))) {
       LatchIdx = 1;
     }
   }
@@ -618,10 +617,10 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
     const SCEV *MaxBECount = SE->getConstantMaxBackedgeTakenCount(&L);
     if (!isa<SCEVCouldNotCompute>(MaxBECount)) {
       SmallVector<cfg::Update<BasicBlock *>, 2> Updates;
-      Updates.push_back(
-          {cfg::UpdateKind::Delete, BI.getParent(), BI.getSuccessor(*LatchIdx)});
-      Updates.push_back(
-          {cfg::UpdateKind::Insert, BI.getParent(), L.getUniqueLatchExitBlock()});
+      Updates.push_back({cfg::UpdateKind::Delete, BI.getParent(),
+                         BI.getSuccessor(*LatchIdx)});
+      Updates.push_back({cfg::UpdateKind::Insert, BI.getParent(),
+                         L.getUniqueLatchExitBlock()});
       L.getLoopLatch()->removePredecessor(BI.getParent());
       BI.setSuccessor(*LatchIdx, L.getUniqueLatchExitBlock());
       for (PHINode &PN : L.getUniqueLatchExitBlock()->phis()) {
