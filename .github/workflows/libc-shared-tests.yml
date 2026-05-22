@@ -53,7 +53,7 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     container:
-      image: 'ghcr.io/llvm/libc-ubuntu-24.04:70cbd7591abe'
+      image: 'ghcr.io/llvm/libc-ubuntu-24.04:d4e8e601d63aeacee9ef00ddce42f53d2c72c0c4d15e516886594a9cd1df5f2d'
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:
@@ -80,20 +80,20 @@ jobs:
         with:
           persist-credentials: false
 
-      # - name: Configure CMake - Clang
-      #   run: |
-      #     cmake -B build/clang -S runtimes -G Ninja \
-      #       -DLLVM_ENABLE_RUNTIMES=libc \
-      #       -DCMAKE_C_COMPILER=clang-23 \
-      #       -DCMAKE_CXX_COMPILER=clang++-23 \
-      #       -DCMAKE_BUILD_TYPE=Release \
-      #       -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }}
+      - name: Configure CMake - Clang
+        run: |
+          cmake -B build/clang -S runtimes -G Ninja \
+            -DLLVM_ENABLE_RUNTIMES=libc \
+            -DCMAKE_C_COMPILER=clang-23 \
+            -DCMAKE_CXX_COMPILER=clang++-23 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }}
 
-      # - name: Build and Run - Clang
-      #   env:
-      #     QEMU_LD_PREFIX: /usr/${{ matrix.target_triple }}
-      #   run: |
-      #     cmake --build build/clang --target libc-shared-tests
+      - name: Build and Run - Clang
+        env:
+          QEMU_LD_PREFIX: /usr/${{ matrix.target_triple }}
+        run: |
+          cmake --build build/clang --target libc-shared-tests
 
       - name: Configure CMake - gcc
         run: |
@@ -103,7 +103,6 @@ jobs:
             -DCMAKE_CXX_COMPILER=${{ matrix.target_triple }}-g++ \
             -DCMAKE_BUILD_TYPE=Release \
             -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }} \
-            -DLIBC_CONF_USE_MEM_BUILTINS=ON
 
       - name: Build and Run - gcc
         env:
