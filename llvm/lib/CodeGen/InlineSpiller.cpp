@@ -1099,9 +1099,21 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   if (CopyMI) {
     SlotIndex CopyIdx = LIS.InsertMachineInstrInMaps(*CopyMI).getRegSlot();
     if (!MRI.isSSA()) {
-      LiveInterval &LI = LIS.getInterval(CopyMI->getOperand(0).getReg());
+      Register DstReg = CopyMI->getOperand(0).getReg();
+      LiveInterval &LI = LIS.getInterval(DstReg);
       VNInfo *VNI = LI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
       LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
+      Register OrigReg = VRM.getOriginal(DstReg);
+      if (OrigReg != DstReg && LIS.hasInterval(OrigReg)) {
+        // Extend the original LI to cover the same range so that the
+        // sub-interval invariant holds: the original must be live wherever
+        // any of its children are live.  Without this, reMaterializeFor()
+        // can query OrigLI at an early-clobber slot that falls inside
+        // [CopyIdx, FoldIdx) and get a null VNI, triggering an assertion.
+        LiveInterval &LI = LIS.getInterval(OrigReg);
+        if (VNInfo *VNI = LI.getVNInfoAt(FoldIdx.getRegSlot()))
+          LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
+      }
     }
   }
   // Update the call info.
