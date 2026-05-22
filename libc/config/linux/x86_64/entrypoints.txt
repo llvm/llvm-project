@@ -1544,7 +1544,9 @@ set(TARGET_LIBMVEC_ENTRYPOINTS)
 if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
 list(APPEND TARGET_LIBMVEC_ENTRYPOINTS
     libc.src.mathvec.acosf
+    libc.src.mathvec.acospif
     libc.src.mathvec.asinf
+    libc.src.mathvec.asinpif
     libc.src.mathvec.atanf
     libc.src.mathvec.cosf
     libc.src.mathvec.cospif

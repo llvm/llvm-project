@@ -13,6 +13,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  acospif
+  SRCS
+    acospif.cpp
+  HDRS
+    ../acospif.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.acospif
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
   asinf
   SRCS
     asinf.cpp
@@ -21,6 +35,20 @@ add_entrypoint_object(
   DEPENDS
     libc.src.mathvec.abi_prefix
     libc.src.__support.mathvec.asinf
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
+  asinpif
+  SRCS
+    asinpif.cpp
+  HDRS
+    ../asinpif.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.asinpif
   FLAGS
     ROUND_OPT
     FMA_OPT

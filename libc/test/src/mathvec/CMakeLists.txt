@@ -26,6 +26,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  acospif_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    acospif_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.acospif
+    libc.src.mathvec.acospif
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
   asinf_test
   SUITE
     libc-mathvec-unittests
@@ -35,6 +52,23 @@ add_fp_unittest(
     .unit_test_wrappers
     libc.src.math.asinf
     libc.src.mathvec.asinf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
+  asinpif_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    asinpif_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.asinpif
+    libc.src.mathvec.asinpif
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.CPP.simd
   FLAGS

@@ -26,6 +26,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  acospif_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    acospif_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.acospif
+    libc.src.mathvec.acospif
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   asinf_test
   NO_RUN_POSTBUILD
   SUITE
@@ -36,6 +52,22 @@ add_fp_unittest(
     .exhaustive_test
     libc.src.math.asinf
     libc.src.mathvec.asinf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  asinpif_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    asinpif_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.asinpif
+    libc.src.mathvec.asinpif
     libc.src.__support.CPP.simd
   LINK_LIBRARIES
     -lpthread

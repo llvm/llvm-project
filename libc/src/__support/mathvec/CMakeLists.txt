@@ -10,12 +10,30 @@ add_header_library(
 )
 
 add_header_library(
+  acospif
+  HDRS
+    acospif.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.acospif
+)
+
+add_header_library(
   asinf
   HDRS
     asinf.h
   DEPENDS
     libc.src.__support.CPP.simd
     libc.src.__support.math.asinf
+)
+
+add_header_library(
+  asinpif
+  HDRS
+    asinpif.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.asinpif
 )
 
 add_header_library(
