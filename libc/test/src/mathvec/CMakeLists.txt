@@ -9,6 +9,57 @@ add_header_library(
 )
 
 add_fp_unittest(
+  acosf_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    acosf_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.acosf
+    libc.src.mathvec.acosf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
+  asinf_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    asinf_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.asinf
+    libc.src.mathvec.asinf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
+  atanf_test
+  SUITE
+    libc-mathvec-unittests
+  SRCS
+    atanf_test.cpp
+  DEPENDS
+    .unit_test_wrappers
+    libc.src.math.atanf
+    libc.src.mathvec.atanf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_fp_unittest(
   cosf_test
   SUITE
     libc-mathvec-unittests

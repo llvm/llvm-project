@@ -1,4 +1,46 @@
 add_entrypoint_object(
+  acosf
+  SRCS
+    acosf.cpp
+  HDRS
+    ../acosf.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.acosf
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
+  asinf
+  SRCS
+    asinf.cpp
+  HDRS
+    ../asinf.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.asinf
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
+  atanf
+  SRCS
+    atanf.cpp
+  HDRS
+    ../atanf.h
+  DEPENDS
+    libc.src.mathvec.abi_prefix
+    libc.src.__support.mathvec.atanf
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
+
+add_entrypoint_object(
   cosf
   SRCS
     cosf.cpp
