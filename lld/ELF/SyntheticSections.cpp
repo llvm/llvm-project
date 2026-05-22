@@ -2111,8 +2111,6 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *buf) {
   bool relocatable = ctx.arg.relocatable;
   for (SymbolTableEntry &ent : symbols) {
     Symbol *sym = ent.sym;
-    bool isDefinedHere = type == SHT_SYMTAB || sym->partition == partition;
-
     // Set st_name, st_info and st_other.
     eSym->st_name = ent.strTabOffset;
     eSym->setBindingAndType(sym->binding, sym->type);
@@ -2126,20 +2124,14 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *buf) {
       eSym->st_size = cast<Defined>(sym)->size;
     } else {
       const uint32_t shndx = getSymSectionIndex(sym);
-      if (isDefinedHere) {
-        eSym->st_shndx = shndx;
-        eSym->st_value = sym->getVA(ctx);
-        // Copy symbol size if it is a defined symbol. st_size is not
-        // significant for undefined symbols, so whether copying it or not is up
-        // to us if that's the case. We'll leave it as zero because by not
-        // setting a value, we can get the exact same outputs for two sets of
-        // input files that differ only in undefined symbol size in DSOs.
-        eSym->st_size = shndx != SHN_UNDEF ? cast<Defined>(sym)->size : 0;
-      } else {
-        eSym->st_shndx = 0;
-        eSym->st_value = 0;
-        eSym->st_size = 0;
-      }
+      eSym->st_shndx = shndx;
+      eSym->st_value = sym->getVA(ctx);
+      // Copy symbol size if it is a defined symbol. st_size is not
+      // significant for undefined symbols, so whether copying it or not is up
+      // to us if that's the case. We'll leave it as zero because by not
+      // setting a value, we can get the exact same outputs for two sets of
+      // input files that differ only in undefined symbol size in DSOs.
+      eSym->st_size = shndx != SHN_UNDEF ? cast<Defined>(sym)->size : 0;
     }
 
     ++eSym;
@@ -2327,7 +2319,7 @@ void GnuHashTableSection::addSymbols(SmallVectorImpl<SymbolTableEntry> &v) {
   // its type correctly.
   auto mid =
       std::stable_partition(v.begin(), v.end(), [&](const SymbolTableEntry &s) {
-        return !s.sym->isDefined() || s.sym->partition != partition;
+        return !s.sym->isDefined();
       });
 
   // We chose load factor 4 for the on-disk hash table. For each hash
@@ -3062,8 +3054,7 @@ DebugNamesSection<ELFT>::DebugNamesSection(Ctx &ctx)
                                       ELFT::Is64Bits ? 8 : 4);
     // .debug_str is needed to get symbol names from string offsets.
     DataExtractor strExtractor(dobj.getStrSection(),
-                               ELFT::Endianness == endianness::little,
-                               ELFT::Is64Bits ? 8 : 4);
+                               ELFT::Endianness == endianness::little);
     inputChunk.section = dobj.getNamesSection();
 
     inputChunk.llvmDebugNames.emplace(namesExtractor, strExtractor);
@@ -3813,14 +3804,17 @@ template <class ELFT> void elf::splitSections(Ctx &ctx) {
     // For non-section Defined symbols in merge sections, pre-resolve the piece
     // index to avoid potentially repeated binary search (MarkLive, RelocScan,
     // includeInSymtab). Encode each non-section Defined symbol's value as
-    // ((pieceIdx + 1) << mergeValueShift) | intraPieceOffset.
+    // ((pieceIdx + 1) << mergeValueShift) | intraPieceOffset. A one-past-end
+    // label is anchored on the last piece.
     auto resolve = [](Defined *d) {
       auto *ms = dyn_cast_or_null<MergeInputSection>(d->section);
       if (!ms || d->isSection())
         return;
-      SectionPiece &piece = ms->getSectionPiece(d->value);
+      uint64_t v = d->value;
+      SectionPiece &piece = v >= ms->content().size() ? ms->pieces.back()
+                                                      : ms->getSectionPiece(v);
       uint32_t idx = &piece - ms->pieces.data();
-      uint64_t off = d->value - piece.inputOff;
+      uint64_t off = v - piece.inputOff;
       d->value = ((uint64_t)(idx + 1) << mergeValueShift) | off;
     };
     for (Symbol *sym : file->getLocalSymbols())
@@ -4261,7 +4255,7 @@ size_t PartitionElfHeaderSection<ELFT>::getSize() const {
 
 template <typename ELFT>
 void PartitionElfHeaderSection<ELFT>::writeTo(uint8_t *buf) {
-  writeEhdr<ELFT>(ctx, buf, getPartition(ctx));
+  writeEhdr<ELFT>(ctx, buf, ctx.partitions[partition - 1]);
 
   // Loadable partitions are always ET_DYN.
   auto *eHdr = reinterpret_cast<typename ELFT::Ehdr *>(buf);
@@ -4274,43 +4268,13 @@ PartitionProgramHeadersSection<ELFT>::PartitionProgramHeadersSection(Ctx &ctx)
 
 template <typename ELFT>
 size_t PartitionProgramHeadersSection<ELFT>::getSize() const {
-  return sizeof(typename ELFT::Phdr) * getPartition(ctx).phdrs.size();
+  return sizeof(typename ELFT::Phdr) *
+         ctx.partitions[partition - 1].phdrs.size();
 }
 
 template <typename ELFT>
 void PartitionProgramHeadersSection<ELFT>::writeTo(uint8_t *buf) {
-  writePhdrs<ELFT>(buf, getPartition(ctx));
-}
-
-PartitionIndexSection::PartitionIndexSection(Ctx &ctx)
-    : SyntheticSection(ctx, ".rodata", SHT_PROGBITS, SHF_ALLOC, 4) {}
-
-size_t PartitionIndexSection::getSize() const {
-  return 12 * (ctx.partitions.size() - 1);
-}
-
-void PartitionIndexSection::finalizeContents() {
-  for (size_t i = 1; i != ctx.partitions.size(); ++i)
-    ctx.partitions[i].nameStrTab =
-        ctx.mainPart->dynStrTab->addString(ctx.partitions[i].name);
-}
-
-void PartitionIndexSection::writeTo(uint8_t *buf) {
-  uint64_t va = getVA();
-  for (size_t i = 1; i != ctx.partitions.size(); ++i) {
-    write32(ctx, buf,
-            ctx.mainPart->dynStrTab->getVA() + ctx.partitions[i].nameStrTab -
-                va);
-    write32(ctx, buf + 4, ctx.partitions[i].elfHeader->getVA() - (va + 4));
-
-    SyntheticSection *next = i == ctx.partitions.size() - 1
-                                 ? ctx.in.partEnd.get()
-                                 : ctx.partitions[i + 1].elfHeader.get();
-    write32(ctx, buf + 8, next->getVA() - ctx.partitions[i].elfHeader->getVA());
-
-    va += 12;
-    buf += 12;
-  }
+  writePhdrs<ELFT>(buf, ctx.partitions[partition - 1]);
 }
 
 static bool needsInterpSection(Ctx &ctx) {
@@ -4457,29 +4421,14 @@ static OutputSection *findSection(Ctx &ctx, StringRef name) {
   return nullptr;
 }
 
-static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
-                                   uint64_t val, uint8_t stOther = STV_HIDDEN) {
-  Symbol *s = ctx.symtab->find(name);
-  if (!s || s->isDefined() || s->isCommon())
-    return nullptr;
-
-  s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
-                          stOther, STT_NOTYPE, val,
-                          /*size=*/0, sec});
-  s->isUsedInRegularObj = true;
-  return cast<Defined>(s);
-}
-
 template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   // Add the .interp section first because it is not a SyntheticSection.
   // The removeUnusedSyntheticSections() function relies on the
   // SyntheticSections coming last.
   if (needsInterpSection(ctx)) {
-    for (size_t i = 1; i <= ctx.partitions.size(); ++i) {
-      InputSection *sec = createInterpSection(ctx);
-      sec->partition = i;
-      ctx.inputSections.push_back(sec);
-    }
+    InputSection *sec = createInterpSection(ctx);
+    sec->partition = 1;
+    ctx.inputSections.push_back(sec);
   }
 
   auto add = [&](SyntheticSection &sec) { ctx.inputSections.push_back(&sec); };
@@ -4516,21 +4465,12 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   StringRef relaDynName = ctx.arg.isRela ? ".rela.dyn" : ".rel.dyn";
 
   const unsigned threadCount = ctx.arg.threadCount;
-  for (Partition &part : ctx.partitions) {
+  do {
+    Partition &part = *ctx.mainPart;
     auto add = [&](SyntheticSection &sec) {
-      sec.partition = part.getNumber(ctx);
+      sec.partition = part.partno;
       ctx.inputSections.push_back(&sec);
     };
-
-    if (!part.name.empty()) {
-      part.elfHeader = std::make_unique<PartitionElfHeaderSection<ELFT>>(ctx);
-      part.elfHeader->name = part.name;
-      add(*part.elfHeader);
-
-      part.programHeaders =
-          std::make_unique<PartitionProgramHeadersSection<ELFT>>(ctx);
-      add(*part.programHeaders);
-    }
 
     if (ctx.arg.buildId != BuildIdKind::None) {
       part.buildId = std::make_unique<BuildIdSection>(ctx);
@@ -4544,7 +4484,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
         std::make_unique<SymbolTableSection<ELFT>>(ctx, *part.dynStrTab);
 
     if (ctx.arg.relocatable)
-      continue;
+      break;
     part.dynamic = std::make_unique<DynamicSection<ELFT>>(ctx);
 
     if (hasMemtag(ctx)) {
@@ -4620,9 +4560,21 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
       part.packageMetadataNote = std::make_unique<PackageMetadataNote>(ctx);
       add(*part.packageMetadataNote);
     }
+  } while (0);
+
+  for (Partition &shim : llvm::drop_begin(ctx.partitions)) {
+    shim.elfHeader = std::make_unique<PartitionElfHeaderSection<ELFT>>(ctx);
+    shim.elfHeader->name = shim.name;
+    shim.elfHeader->partition = shim.partno;
+    ctx.inputSections.push_back(shim.elfHeader.get());
+
+    shim.programHeaders =
+        std::make_unique<PartitionProgramHeadersSection<ELFT>>(ctx);
+    shim.programHeaders->partition = shim.partno;
+    ctx.inputSections.push_back(shim.programHeaders.get());
   }
 
-  if (ctx.partitions.size() != 1) {
+  if (ctx.partitions.size() > 1) {
     // Create the partition end marker. This needs to be in partition number 255
     // so that it is sorted after all other partitions. It also has other
     // special handling (see createPhdrs() and combineEhSections()).
@@ -4630,12 +4582,6 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
         std::make_unique<BssSection>(ctx, ".part.end", ctx.arg.maxPageSize, 1);
     ctx.in.partEnd->partition = 255;
     add(*ctx.in.partEnd);
-
-    ctx.in.partIndex = std::make_unique<PartitionIndexSection>(ctx);
-    addOptionalRegular(ctx, "__part_index_begin", ctx.in.partIndex.get(), 0);
-    addOptionalRegular(ctx, "__part_index_end", ctx.in.partIndex.get(),
-                       ctx.in.partIndex->getSize());
-    add(*ctx.in.partIndex);
   }
 
   // Add .got. MIPS' .got is so different from the other archs,

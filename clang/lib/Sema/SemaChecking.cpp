@@ -3865,13 +3865,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   case Builtin::BI__builtin_stdc_bit_floor:
   case Builtin::BI__builtin_stdc_bit_ceil:
-  case Builtin::BIstdc_bit_floor:
-  case Builtin::BIstdc_bit_ceil:
     if (BuiltinStdCBuiltin(*this, TheCall, QualType()))
       return ExprError();
     break;
   case Builtin::BI__builtin_stdc_has_single_bit:
-  case Builtin::BIstdc_has_single_bit:
     if (BuiltinStdCBuiltin(*this, TheCall, Context.BoolTy))
       return ExprError();
     break;
@@ -3886,17 +3883,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_stdc_count_zeros:
   case Builtin::BI__builtin_stdc_count_ones:
   case Builtin::BI__builtin_stdc_bit_width:
-  case Builtin::BIstdc_leading_zeros:
-  case Builtin::BIstdc_leading_ones:
-  case Builtin::BIstdc_trailing_zeros:
-  case Builtin::BIstdc_trailing_ones:
-  case Builtin::BIstdc_first_leading_zero:
-  case Builtin::BIstdc_first_leading_one:
-  case Builtin::BIstdc_first_trailing_zero:
-  case Builtin::BIstdc_first_trailing_one:
-  case Builtin::BIstdc_count_zeros:
-  case Builtin::BIstdc_count_ones:
-  case Builtin::BIstdc_bit_width:
     if (BuiltinStdCBuiltin(*this, TheCall, Context.UnsignedIntTy))
       return ExprError();
     break;
@@ -4230,6 +4216,8 @@ void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
 
     Expr *Captured = const_cast<Expr *>(GetArgAt(ArgIdx));
     for (int CapturingParamIdx : Attr->params()) {
+      if (CapturingParamIdx == LifetimeCaptureByAttr::Invalid)
+        continue;
       // lifetime_capture_by(this) case is handled in the lifetimebound expr
       // initialization codepath.
       if (CapturingParamIdx == LifetimeCaptureByAttr::This &&
@@ -8707,16 +8695,16 @@ bool DecomposePrintfHandler::HandlePrintfSpecifier(
   const auto &FieldWidth = FS.getFieldWidth();
   if (!FieldWidth.isInvalid() && FieldWidth.hasDataArgument()) {
     FieldWidthIndex = Specs.size();
-    Specs.emplace_back(getSpecifierRange(startSpecifier, specifierLen),
-                       getLocationOfByte(FieldWidth.getStart()),
-                       analyze_format_string::LengthModifier::None, "*",
-                       FieldWidth.getArgType(S.Context),
-                       EquatableFormatArgument::FAR_FieldWidth,
-                       EquatableFormatArgument::SS_None,
-                       FieldWidth.usesPositionalArg()
-                           ? FieldWidth.getPositionalArgIndex() - 1
-                           : FieldWidthIndex,
-                       0);
+    Specs.emplace_back(
+        getSpecifierRange(startSpecifier, specifierLen),
+        getLocationOfByte(FieldWidth.getStart()),
+        analyze_format_string::LengthModifier::None, FieldWidth.getCharacters(),
+        FieldWidth.getArgType(S.Context),
+        EquatableFormatArgument::FAR_FieldWidth,
+        EquatableFormatArgument::SS_None,
+        FieldWidth.usesPositionalArg() ? FieldWidth.getPositionalArgIndex() - 1
+                                       : FieldWidthIndex,
+        0);
   }
   // precision?
   const auto &Precision = FS.getPrecision();
@@ -8725,7 +8713,7 @@ bool DecomposePrintfHandler::HandlePrintfSpecifier(
     Specs.emplace_back(
         getSpecifierRange(startSpecifier, specifierLen),
         getLocationOfByte(Precision.getStart()),
-        analyze_format_string::LengthModifier::None, ".*",
+        analyze_format_string::LengthModifier::None, Precision.getCharacters(),
         Precision.getArgType(S.Context), EquatableFormatArgument::FAR_Precision,
         EquatableFormatArgument::SS_None,
         Precision.usesPositionalArg() ? Precision.getPositionalArgIndex() - 1

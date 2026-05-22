@@ -1408,10 +1408,10 @@ define i32 @test_ctlz_intrinsic_zero_not_undef(i32 %a) {
 }
 
 declare i32 @llvm.cttz.i32(i32, i1)
-define i32 @test_cttz_intrinsic_zero_undef(i32 %a) {
-; CHECK-LABEL: name: test_cttz_intrinsic_zero_undef
+define i32 @test_cttz_intrinsic_zero_poison(i32 %a) {
+; CHECK-LABEL: name: test_cttz_intrinsic_zero_poison
 ; CHECK: [[A:%[0-9]+]]:_(i32) = COPY $w0
-; CHECK: [[RES:%[0-9]+]]:_(i32) = G_CTTZ_ZERO_UNDEF [[A]]
+; CHECK: [[RES:%[0-9]+]]:_(i32) = G_CTTZ_ZERO_POISON [[A]]
 ; CHECK: $w0 = COPY [[RES]]
   %res = call i32 @llvm.cttz.i32(i32 %a, i1 1)
   ret i32 %res
@@ -1828,7 +1828,7 @@ define <16 x i8> @test_shufflevector_v8s8_v16s8(<8 x i8> %arg1, <8 x i8> %arg2) 
 
 ; CHECK-LABEL: test_constant_vector
 ; CHECK: [[UNDEF:%[0-9]+]]:_(f16) = G_IMPLICIT_DEF
-; CHECK: [[F:%[0-9]+]]:_(f16) = G_FCONSTANT half 0xH3C00
+; CHECK: [[F:%[0-9]+]]:_(f16) = G_FCONSTANT half 1.000000e+00
 ; CHECK: [[M:%[0-9]+]]:_(<4 x f16>) = G_BUILD_VECTOR [[UNDEF]](f16), [[UNDEF]](f16), [[UNDEF]](f16), [[F]](f16)
 ; CHECK: $d0 = COPY [[M]](<4 x f16>)
 define <4 x half> @test_constant_vector() {

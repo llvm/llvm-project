@@ -6,8 +6,8 @@
 
 define half @faddsubAssoc1(half %a, half %b) {
 ; CHECK-LABEL: @faddsubAssoc1(
-; CHECK-NEXT:    [[T2_NEG:%.*]] = fmul fast half [[A:%.*]], 0xHC500
-; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast half [[B:%.*]], 0xH4500
+; CHECK-NEXT:    [[T2_NEG:%.*]] = fmul fast half [[A:%.*]], -5.000000e+00
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast half [[B:%.*]], 5.000000e+00
 ; CHECK-NEXT:    [[T5:%.*]] = fadd fast half [[REASS_MUL]], [[T2_NEG]]
 ; CHECK-NEXT:    ret half [[T5]]
 ;
@@ -23,7 +23,7 @@ define half @faddsubAssoc1(half %a, half %b) {
 
 define half @faddsubAssoc2(half %a, half %b) {
 ; CHECK-LABEL: @faddsubAssoc2(
-; CHECK-NEXT:    [[T2:%.*]] = fmul fast half [[A:%.*]], 0xH4500
+; CHECK-NEXT:    [[T2:%.*]] = fmul fast half [[A:%.*]], 5.000000e+00
 ; CHECK-NEXT:    [[T5:%.*]] = fadd fast half [[B:%.*]], [[T2]]
 ; CHECK-NEXT:    ret half [[T5]]
 ;

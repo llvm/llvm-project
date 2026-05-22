@@ -43,11 +43,20 @@ ELF Improvements
 Breaking changes
 ----------------
 
+* The symbol partition feature is now shim-only. Every input section and every
+  symbol stays in the main partition; each loadable partition from input
+  ``SHT_LLVM_SYMPART`` produces an empty ``.so`` shim so the existing
+  ``llvm-objcopy --extract-partition`` extraction pipeline keeps working.
+
 COFF Improvements
 -----------------
 
 MinGW Improvements
 ------------------
+
+* Added ``--push-state`` and ``--pop-state``, offering the same semantics as
+  when used with the ELF linker: The state of ``--Bstatic``/``--Bdynamic`` and
+  ``--whole-archive`` are pushed onto a stack and popped from it.
 
 MachO Improvements
 ------------------

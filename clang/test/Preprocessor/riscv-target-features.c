@@ -101,6 +101,7 @@
 // CHECK-NOT: __riscv_zcmop {{.*$}}
 // CHECK-NOT: __riscv_zcmp {{.*$}}
 // CHECK-NOT: __riscv_zcmt {{.*$}}
+// CHECK-NOT: __riscv_xqccmt {{.*$}}
 // CHECK-NOT: __riscv_zdinx {{.*$}}
 // CHECK-NOT: __riscv_zfa {{.*$}}
 // CHECK-NOT: __riscv_zfbfmin {{.*$}}
@@ -116,6 +117,7 @@
 // CHECK-NOT: __riscv_zicboz {{.*$}}
 // CHECK-NOT: __riscv_ziccamoa {{.*$}}
 // CHECK-NOT: __riscv_ziccamoc {{.*$}}
+// CHECK-NOT: __riscv_ziccid {{.*$}}
 // CHECK-NOT: __riscv_ziccif {{.*$}}
 // CHECK-NOT: __riscv_zicclsm {{.*$}}
 // CHECK-NOT: __riscv_ziccrse {{.*$}}
@@ -792,6 +794,19 @@
 // CHECK-ZCMT-EXT: __riscv_zcmt 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -menable-experimental-extensions \
+// RUN:   -march=rv32i_xqccmt0p1 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XQCCMT-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -menable-experimental-extensions \
+// RUN:   -march=rv64i_xqccmt0p1 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XQCCMT-EXT %s
+// CHECK-XQCCMT-EXT: __riscv_c 2000000{{$}}
+// CHECK-XQCCMT-EXT: __riscv_xqccmt 1000{{$}}
+// CHECK-XQCCMT-EXT: __riscv_zca 1000000{{$}}
+// CHECK-XQCCMT-EXT: __riscv_zicsr 2000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32izdinx1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZDINX-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
@@ -896,6 +911,14 @@
 // RUN:   -march=rv64iziccamoc -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZICCAMOC-EXT %s
 // CHECK-ZICCAMOC-EXT: __riscv_ziccamoc 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32iziccid -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZICCID-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64iziccid -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZICCID-EXT %s
+// CHECK-ZICCID-EXT: __riscv_ziccid 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32iziccif -E -dM %s \

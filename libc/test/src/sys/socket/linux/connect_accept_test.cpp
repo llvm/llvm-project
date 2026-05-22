@@ -11,127 +11,121 @@
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_sockaddr_un.h"
 #include "src/fcntl/fcntl.h"
+#include "src/stdio/remove.h"
 #include "src/sys/socket/accept.h"
 #include "src/sys/socket/accept4.h"
 #include "src/sys/socket/bind.h"
 #include "src/sys/socket/connect.h"
 #include "src/sys/socket/listen.h"
 #include "src/sys/socket/socket.h"
-
-#include "src/stdio/remove.h"
-#include "src/string/strlen.h"
-#include "src/string/strncpy.h"
 #include "src/unistd/close.h"
 
+#include "src/__support/CPP/scope.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include "test/UnitTest/Test.h"
+#include "test/src/sys/socket/linux/socket_test_support.h"
 
+using LIBC_NAMESPACE::testing::make_sockaddr_un;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcConnectAcceptTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
-
-constexpr size_t MAX_SOCKET_PATH =
-    sizeof(struct sockaddr_un) - sizeof(sa_family_t);
-
-struct sockaddr_un make_sockaddr(const char *path) {
-  struct sockaddr_un result;
-  result.sun_family = AF_UNIX;
-  LIBC_NAMESPACE::strncpy(result.sun_path, path, MAX_SOCKET_PATH);
-  return result;
-}
+using LIBC_NAMESPACE::cpp::scope_exit;
 
 TEST_F(LlvmLibcConnectAcceptTest, ConnectLocalSocket) {
   const char *CONNECT_FILE = "connect_file.test";
-  auto CONNECT_PATH = libc_make_test_file_path(CONNECT_FILE);
-  // It's important that the path fits in the struct, if it doesn't then we
-  // can't try to bind to the file.
-  ASSERT_LT(LIBC_NAMESPACE::strlen(CONNECT_PATH), MAX_SOCKET_PATH);
-  const struct sockaddr_un CONNECT_ADDR = make_sockaddr(CONNECT_PATH);
+  const auto CONNECT_PATH = libc_make_test_file_path(CONNECT_FILE);
+  struct sockaddr_un connect_addr;
+  ASSERT_TRUE(make_sockaddr_un(CONNECT_PATH, connect_addr));
 
   const char *ACCEPT_FILE = "accept_file.test";
-  auto ACCEPT_PATH = libc_make_test_file_path(ACCEPT_FILE);
-  ASSERT_LT(LIBC_NAMESPACE::strlen(ACCEPT_PATH), MAX_SOCKET_PATH);
-  const struct sockaddr_un ACCEPT_ADDR = make_sockaddr(ACCEPT_PATH);
+  const auto ACCEPT_PATH = libc_make_test_file_path(ACCEPT_FILE);
+  struct sockaddr_un accept_addr;
+  ASSERT_TRUE(make_sockaddr_un(ACCEPT_PATH, accept_addr));
 
   int accepting_socket = LIBC_NAMESPACE::socket(AF_UNIX, SOCK_STREAM, 0);
   ASSERT_GE(accepting_socket, 0);
   ASSERT_ERRNO_SUCCESS();
+  scope_exit close_accepting_socket([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::close(accepting_socket), Succeeds(0));
+  });
 
   ASSERT_THAT(LIBC_NAMESPACE::bind(
                   accepting_socket,
-                  reinterpret_cast<const struct sockaddr *>(&ACCEPT_ADDR),
+                  reinterpret_cast<const struct sockaddr *>(&accept_addr),
                   sizeof(struct sockaddr_un)),
               Succeeds(0));
+  scope_exit remove_accept_path(
+      [&] { ASSERT_THAT(LIBC_NAMESPACE::remove(ACCEPT_PATH), Succeeds(0)); });
 
+  {
+    int connecting_socket = LIBC_NAMESPACE::socket(AF_UNIX, SOCK_STREAM, 0);
+    ASSERT_GE(connecting_socket, 0);
+    ASSERT_ERRNO_SUCCESS();
+    scope_exit close_connecting_socket([&] {
+      ASSERT_THAT(LIBC_NAMESPACE::close(connecting_socket), Succeeds(0));
+    });
+
+    // These should fail as the other side is not listen()ing yet.
+    ASSERT_THAT(LIBC_NAMESPACE::accept(accepting_socket, nullptr, nullptr),
+                Fails(EINVAL));
+    ASSERT_THAT(LIBC_NAMESPACE::connect(
+                    connecting_socket,
+                    reinterpret_cast<const struct sockaddr *>(&accept_addr),
+                    sizeof(struct sockaddr_un)),
+                Fails(ECONNREFUSED));
+
+    ASSERT_THAT(LIBC_NAMESPACE::listen(accepting_socket, 1), Succeeds(0));
+
+    ASSERT_THAT(LIBC_NAMESPACE::connect(
+                    connecting_socket,
+                    reinterpret_cast<const struct sockaddr *>(&accept_addr),
+                    sizeof(struct sockaddr_un)),
+                Succeeds(0));
+
+    int accepted_socket =
+        LIBC_NAMESPACE::accept(accepting_socket, nullptr, nullptr);
+    ASSERT_GE(accepted_socket, 0);
+    ASSERT_ERRNO_SUCCESS();
+    ASSERT_THAT(LIBC_NAMESPACE::close(accepted_socket), Succeeds(0));
+  }
+
+  // Now try connecting again, but pass a non-nullptr address to accept().
   int connecting_socket = LIBC_NAMESPACE::socket(AF_UNIX, SOCK_STREAM, 0);
   ASSERT_GE(connecting_socket, 0);
   ASSERT_ERRNO_SUCCESS();
 
-  // These should fail as the other side is not listen()ing yet.
-  ASSERT_THAT(LIBC_NAMESPACE::accept(accepting_socket, nullptr, nullptr),
-              Fails(EINVAL));
-  ASSERT_THAT(LIBC_NAMESPACE::connect(
-                  connecting_socket,
-                  reinterpret_cast<const struct sockaddr *>(&ACCEPT_ADDR),
-                  sizeof(struct sockaddr_un)),
-              Fails(ECONNREFUSED));
-
-  ASSERT_THAT(LIBC_NAMESPACE::listen(accepting_socket, 1), Succeeds(0));
-
-  ASSERT_THAT(LIBC_NAMESPACE::connect(
-                  connecting_socket,
-                  reinterpret_cast<const struct sockaddr *>(&ACCEPT_ADDR),
-                  sizeof(struct sockaddr_un)),
-              Succeeds(0));
-
-  int accepted_socket =
-      LIBC_NAMESPACE::accept(accepting_socket, nullptr, nullptr);
-  ASSERT_GE(accepted_socket, 0);
-  ASSERT_ERRNO_SUCCESS();
-  ASSERT_THAT(LIBC_NAMESPACE::close(accepted_socket), Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::close(connecting_socket), Succeeds(0));
-
-  // Now try connecting again, but pass a non-nullptr address to accept().
-  connecting_socket = LIBC_NAMESPACE::socket(AF_UNIX, SOCK_STREAM, 0);
-  ASSERT_GE(connecting_socket, 0);
-  ASSERT_ERRNO_SUCCESS();
-
   ASSERT_THAT(LIBC_NAMESPACE::bind(
                   connecting_socket,
-                  reinterpret_cast<const struct sockaddr *>(&CONNECT_ADDR),
+                  reinterpret_cast<const struct sockaddr *>(&connect_addr),
                   sizeof(struct sockaddr_un)),
               Succeeds(0));
+  scope_exit remove_connect_path(
+      [&] { ASSERT_THAT(LIBC_NAMESPACE::remove(CONNECT_PATH), Succeeds(0)); });
 
   ASSERT_THAT(LIBC_NAMESPACE::connect(
                   connecting_socket,
-                  reinterpret_cast<const struct sockaddr *>(&ACCEPT_ADDR),
+                  reinterpret_cast<const struct sockaddr *>(&accept_addr),
                   sizeof(struct sockaddr_un)),
               Succeeds(0));
 
   struct sockaddr_un accepted_addr;
   socklen_t accepted_addr_len = sizeof(accepted_addr);
-  accepted_socket = LIBC_NAMESPACE::accept(
+  int accepted_socket = LIBC_NAMESPACE::accept(
       accepting_socket, reinterpret_cast<struct sockaddr *>(&accepted_addr),
       &accepted_addr_len);
   ASSERT_GE(accepted_socket, 0);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::close(accepted_socket), Succeeds(0));
-  ASSERT_EQ(accepted_addr.sun_family, static_cast<sa_family_t>(AF_UNIX));
-  for (size_t i = 0; i < accepted_addr_len - sizeof(sa_family_t); ++i)
-    ASSERT_EQ(accepted_addr.sun_path[i], CONNECT_ADDR.sun_path[i]);
-
-  ASSERT_THAT(LIBC_NAMESPACE::close(accepting_socket), Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::close(connecting_socket), Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::remove(ACCEPT_PATH), Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::remove(CONNECT_PATH), Succeeds(0));
+  ASSERT_THAT((LIBC_NAMESPACE::testing::SocketAddress{accepted_addr,
+                                                      accepted_addr_len}),
+              LIBC_NAMESPACE::testing::MatchesAddress(CONNECT_PATH));
 }
 
 TEST_F(LlvmLibcConnectAcceptTest, Accept4Flags) {
   const char *ACCEPT_FILE = "accept4_file.test";
   auto ACCEPT_PATH = libc_make_test_file_path(ACCEPT_FILE);
-  ASSERT_LT(LIBC_NAMESPACE::strlen(ACCEPT_PATH), MAX_SOCKET_PATH);
-  const struct sockaddr_un ACCEPT_ADDR = make_sockaddr(ACCEPT_PATH);
+  struct sockaddr_un accept_addr;
+  ASSERT_TRUE(make_sockaddr_un(ACCEPT_PATH, accept_addr));
 
   int accepting_socket = LIBC_NAMESPACE::socket(AF_UNIX, SOCK_STREAM, 0);
   ASSERT_GE(accepting_socket, 0);
@@ -139,7 +133,7 @@ TEST_F(LlvmLibcConnectAcceptTest, Accept4Flags) {
 
   ASSERT_THAT(LIBC_NAMESPACE::bind(
                   accepting_socket,
-                  reinterpret_cast<const struct sockaddr *>(&ACCEPT_ADDR),
+                  reinterpret_cast<const struct sockaddr *>(&accept_addr),
                   sizeof(struct sockaddr_un)),
               Succeeds(0));
 
@@ -155,7 +149,7 @@ TEST_F(LlvmLibcConnectAcceptTest, Accept4Flags) {
 
   ASSERT_THAT(LIBC_NAMESPACE::connect(
                   connecting_socket,
-                  reinterpret_cast<const struct sockaddr *>(&ACCEPT_ADDR),
+                  reinterpret_cast<const struct sockaddr *>(&accept_addr),
                   sizeof(struct sockaddr_un)),
               Succeeds(0));
 

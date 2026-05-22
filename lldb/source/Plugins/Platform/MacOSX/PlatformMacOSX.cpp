@@ -23,6 +23,7 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -127,8 +128,9 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
   }
 
   // Use the default SDK as a fallback.
-  auto sdk_path_or_err =
-      HostInfo::GetSDKRoot(HostInfo::SDKOptions{XcodeSDK::GetAnyMacOS()});
+  XcodeSDK sdk = XcodeSDK::GetAnyMacOS();
+  Progress progress("Looking for Xcode SDK", sdk.GetString().str());
+  auto sdk_path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
   if (!sdk_path_or_err) {
     Debugger::ReportError("Error while searching for Xcode SDK: " +
                           toString(sdk_path_or_err.takeError()));

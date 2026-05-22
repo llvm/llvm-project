@@ -15,3 +15,7 @@ add_fp_unittest(
     ROUND_OPT
     FMA_OPT
 )
+
+if(NOT LLVM_LIBC_FULL_BUILD)
+  add_subdirectory(exhaustive)
+endif()
