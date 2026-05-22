@@ -6,16 +6,19 @@
 // RUN: ld.lld %t.o %ts.so -o %t --export-dynamic --gc-sections --icf=all
 // RUN: llvm-readelf -S -s %t | FileCheck %s
 
-// CHECK: part1
-// CHECK: [[P1:[0-9]+]]] .text
-// CHECK: part2
-// CHECK: [[P2:[0-9]+]]] .text
+/// Symbols stay in the main partition; ICF folds the identical bodies of
+/// (f1, f2) and (g1, g2) into a single section even though they were tagged
+/// with different SHT_LLVM_SYMPART entries.
 
-// CHECK: Symbol table '.symtab'
-// CHECK:   [[P1]] f1
-// CHECK:   [[P2]] f2
-// CHECK:   [[P1]] g1
-// CHECK:   [[P2]] g2
+// CHECK:      [[MAIN:[0-9]+]]] .text
+// CHECK:      part1 LLVM_PART_EHDR
+// CHECK:      part2 LLVM_PART_EHDR
+
+// CHECK:      Symbol table '.symtab'
+// CHECK-DAG:  [[MAIN]] f1
+// CHECK-DAG:  [[MAIN]] f2
+// CHECK-DAG:  [[MAIN]] g1
+// CHECK-DAG:  [[MAIN]] g2
 
 .section .llvm_sympart.f1,"",@llvm_sympart
 .asciz "part1"

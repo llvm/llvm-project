@@ -122,29 +122,6 @@ removeEmptyPTLoad(Ctx &ctx, SmallVector<std::unique_ptr<PhdrEntry>, 0> &phdrs) {
   phdrs.erase(it, phdrs.end());
 }
 
-void elf::copySectionsIntoPartitions(Ctx &ctx) {
-  SmallVector<InputSectionBase *, 0> newSections;
-  const size_t ehSize = ctx.ehInputSections.size();
-  for (unsigned part = 2; part != ctx.partitions.size() + 1; ++part) {
-    for (InputSectionBase *s : ctx.inputSections) {
-      if (!(s->flags & SHF_ALLOC) || !s->isLive() || s->type != SHT_NOTE)
-        continue;
-      auto *copy = make<InputSection>(cast<InputSection>(*s));
-      copy->partition = part;
-      newSections.push_back(copy);
-    }
-    for (size_t i = 0; i != ehSize; ++i) {
-      assert(ctx.ehInputSections[i]->isLive());
-      auto *copy = make<EhInputSection>(*ctx.ehInputSections[i]);
-      copy->partition = part;
-      ctx.ehInputSections.push_back(copy);
-    }
-  }
-
-  ctx.inputSections.insert(ctx.inputSections.end(), newSections.begin(),
-                           newSections.end());
-}
-
 static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
                                    uint64_t val, uint8_t stOther = STV_HIDDEN) {
   Symbol *s = ctx.symtab->find(name);
@@ -335,16 +312,14 @@ template <class ELFT> void Writer<ELFT>::run() {
   // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
   // 0 sized region. This has to be done late since only after assignAddresses
   // we know the size of the sections.
-  for (Partition &part : ctx.partitions)
-    removeEmptyPTLoad(ctx, part.phdrs);
+  removeEmptyPTLoad(ctx, ctx.mainPart->phdrs);
 
   if (!ctx.arg.oFormatBinary)
     assignFileOffsets();
   else
     assignFileOffsetsBinary();
 
-  for (Partition &part : ctx.partitions)
-    setPhdrs(part);
+  setPhdrs(*ctx.mainPart);
 
   // Handle --print-map(-M)/--Map and --cref. Dump them before checkSections()
   // because the files may be useful in case checkSections() or openFile()
@@ -883,14 +858,12 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   auto isLarge = [&ctx = ctx](OutputSection *osec) {
     return ctx.arg.emachine == EM_X86_64 && osec->flags & SHF_X86_64_LARGE;
   };
-  for (Partition &part : ctx.partitions) {
-    for (auto &p : part.phdrs) {
-      if (p->p_type != PT_LOAD)
-        continue;
-      last = p.get();
-      if (!(p->p_flags & PF_W) && p->lastSec && !isLarge(p->lastSec))
-        lastRO = p->lastSec;
-    }
+  for (auto &p : ctx.mainPart->phdrs) {
+    if (p->p_type != PT_LOAD)
+      continue;
+    last = p.get();
+    if (!(p->p_flags & PF_W) && p->lastSec && !isLarge(p->lastSec))
+      lastRO = p->lastSec;
   }
 
   if (lastRO) {
@@ -1533,8 +1506,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   // increasing. Anything here must be repeatable, since spilling may change
   // section order.
   const auto finalizeOrderDependentContent = [this] {
-    for (Partition &part : ctx.partitions)
-      finalizeSynthetic(ctx, part.armExidx.get());
+    finalizeSynthetic(ctx, ctx.mainPart->armExidx.get());
     resolveShfLinkOrder();
   };
   finalizeOrderDependentContent();
@@ -1575,39 +1547,38 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     if (ctx.in.mipsGot)
       ctx.in.mipsGot->updateAllocSize(ctx);
 
-    for (Partition &part : ctx.partitions) {
-      // The R_AARCH64_AUTH_RELATIVE has a smaller addend field as bits [63:32]
-      // encode the signing schema. We've put relocations in .relr.auth.dyn
-      // during RelocationScanner::processAux, but the target VA for some of
-      // them might be wider than 32 bits. We can only know the final VA at this
-      // point, so move relocations with large values from .relr.auth.dyn to
-      // .rela.dyn. See also AArch64::relocate.
-      if (part.relrAuthDyn) {
-        auto it = llvm::remove_if(
-            part.relrAuthDyn->relocs, [this, &part](const RelativeReloc &elem) {
-              Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
-              if (isInt<32>(reloc.sym->getVA(ctx, reloc.addend)))
-                return false;
-              reloc.expr = R_NONE;
-              part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
-                                      reloc.offset, false, *reloc.sym,
-                                      reloc.addend, R_ABS});
-              return true;
-            });
-        changed |= (it != part.relrAuthDyn->relocs.end());
-        part.relrAuthDyn->relocs.erase(it, part.relrAuthDyn->relocs.end());
-      }
-      if (part.relaDyn)
-        changed |= part.relaDyn->updateAllocSize(ctx);
-      if (part.relrDyn)
-        changed |= part.relrDyn->updateAllocSize(ctx);
-      if (part.relrAuthDyn)
-        changed |= part.relrAuthDyn->updateAllocSize(ctx);
-      if (part.memtagGlobalDescriptors)
-        changed |= part.memtagGlobalDescriptors->updateAllocSize(ctx);
-      if (part.ehFrameHdr && part.ehFrameHdr->isNeeded())
-        changed |= part.ehFrameHdr->updateAllocSize(ctx);
+    Partition &part = *ctx.mainPart;
+    // The R_AARCH64_AUTH_RELATIVE has a smaller addend field as bits [63:32]
+    // encode the signing schema. We've put relocations in .relr.auth.dyn
+    // during RelocationScanner::processAux, but the target VA for some of
+    // them might be wider than 32 bits. We can only know the final VA at this
+    // point, so move relocations with large values from .relr.auth.dyn to
+    // .rela.dyn. See also AArch64::relocate.
+    if (part.relrAuthDyn) {
+      auto it = llvm::remove_if(
+          part.relrAuthDyn->relocs, [this, &part](const RelativeReloc &elem) {
+            Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
+            if (isInt<32>(reloc.sym->getVA(ctx, reloc.addend)))
+              return false;
+            reloc.expr = R_NONE;
+            part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
+                                    reloc.offset, false, *reloc.sym,
+                                    reloc.addend, R_ABS});
+            return true;
+          });
+      changed |= (it != part.relrAuthDyn->relocs.end());
+      part.relrAuthDyn->relocs.erase(it, part.relrAuthDyn->relocs.end());
     }
+    if (part.relaDyn)
+      changed |= part.relaDyn->updateAllocSize(ctx);
+    if (part.relrDyn)
+      changed |= part.relrDyn->updateAllocSize(ctx);
+    if (part.relrAuthDyn)
+      changed |= part.relrAuthDyn->updateAllocSize(ctx);
+    if (part.memtagGlobalDescriptors)
+      changed |= part.memtagGlobalDescriptors->updateAllocSize(ctx);
+    if (part.ehFrameHdr && part.ehFrameHdr->isNeeded())
+      changed |= part.ehFrameHdr->updateAllocSize(ctx);
 
     std::pair<const OutputSection *, const Defined *> changes =
         ctx.script->assignAddresses();
@@ -1889,8 +1860,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // earlier.
     {
       llvm::TimeTraceScope timeScope("Finalize .eh_frame");
-      for (Partition &part : ctx.partitions)
-        finalizeSynthetic(ctx, part.ehFrame.get());
+      finalizeSynthetic(ctx, ctx.mainPart->ehFrame.get());
     }
   }
 
@@ -1988,25 +1958,13 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       // computeBinding might localize a symbol that was considered exported
       // but then synthesized as hidden (e.g. _DYNAMIC).
       if ((sym->isExported || sym->isPreemptible) && !sym->isLocal()) {
-        ctx.partitions[sym->partition - 1].dynSymTab->addSymbol(sym);
+        ctx.mainPart->dynSymTab->addSymbol(sym);
         if (auto *file = dyn_cast<SharedFile>(sym->file))
           if (file->isNeeded && !sym->isUndefined())
             addVerneed(ctx, *sym);
       }
     }
 
-    // We also need to scan the dynamic relocation tables of the other
-    // partitions and add any referenced symbols to the partition's dynsym.
-    for (Partition &part :
-         MutableArrayRef<Partition>(ctx.partitions).slice(1)) {
-      DenseSet<Symbol *> syms;
-      for (const SymbolTableEntry &e : part.dynSymTab->getSymbols())
-        syms.insert(e.sym);
-      for (DynamicReloc &reloc : part.relaDyn->relocs)
-        if (reloc.sym && reloc.needsDynSymIndex() &&
-            syms.insert(reloc.sym).second)
-          part.dynSymTab->addSymbol(reloc.sym);
-    }
   }
 
   if (ctx.in.mipsGot)
@@ -2049,23 +2007,25 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // The headers have to be created before finalize as that can influence the
   // image base and the dynamic section on mips includes the image base.
   if (!ctx.arg.relocatable && !ctx.arg.oFormatBinary) {
-    for (Partition &part : ctx.partitions) {
-      part.phdrs = ctx.script->hasPhdrsCommands() ? ctx.script->createPhdrs()
-                                                  : createPhdrs(part);
-      if (ctx.arg.emachine == EM_ARM) {
-        // PT_ARM_EXIDX is the ARM EHABI equivalent of PT_GNU_EH_FRAME
-        addPhdrForSection(part, SHT_ARM_EXIDX, PT_ARM_EXIDX, PF_R);
-      }
-      if (ctx.arg.emachine == EM_MIPS) {
-        // Add separate segments for MIPS-specific sections.
-        addPhdrForSection(part, SHT_MIPS_REGINFO, PT_MIPS_REGINFO, PF_R);
-        addPhdrForSection(part, SHT_MIPS_OPTIONS, PT_MIPS_OPTIONS, PF_R);
-        addPhdrForSection(part, SHT_MIPS_ABIFLAGS, PT_MIPS_ABIFLAGS, PF_R);
-      }
-      if (ctx.arg.emachine == EM_RISCV)
-        addPhdrForSection(part, SHT_RISCV_ATTRIBUTES, PT_RISCV_ATTRIBUTES,
-                          PF_R);
+    Partition &part = *ctx.mainPart;
+    part.phdrs = ctx.script->hasPhdrsCommands() ? ctx.script->createPhdrs()
+                                                : createPhdrs(part);
+    if (ctx.arg.emachine == EM_ARM) {
+      // PT_ARM_EXIDX is the ARM EHABI equivalent of PT_GNU_EH_FRAME
+      addPhdrForSection(part, SHT_ARM_EXIDX, PT_ARM_EXIDX, PF_R);
     }
+    if (ctx.arg.emachine == EM_MIPS) {
+      // Add separate segments for MIPS-specific sections.
+      addPhdrForSection(part, SHT_MIPS_REGINFO, PT_MIPS_REGINFO, PF_R);
+      addPhdrForSection(part, SHT_MIPS_OPTIONS, PT_MIPS_OPTIONS, PF_R);
+      addPhdrForSection(part, SHT_MIPS_ABIFLAGS, PT_MIPS_ABIFLAGS, PF_R);
+    }
+    if (ctx.arg.emachine == EM_RISCV)
+      addPhdrForSection(part, SHT_RISCV_ATTRIBUTES, PT_RISCV_ATTRIBUTES, PF_R);
+    // Shims only need the basic PT_PHDR/PT_LOAD set; no target-specific
+    // segments since shims hold no input sections.
+    for (Partition &shim : llvm::drop_begin(ctx.partitions))
+      shim.phdrs = createPhdrs(shim);
     ctx.out.programHeaders->size =
         sizeof(Elf_Phdr) * ctx.mainPart->phdrs.size();
 
@@ -2103,24 +2063,22 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     finalizeSynthetic(ctx, ctx.in.plt.get());
     finalizeSynthetic(ctx, ctx.in.iplt.get());
     finalizeSynthetic(ctx, ctx.in.ppc32Got2.get());
-    finalizeSynthetic(ctx, ctx.in.partIndex.get());
 
     // Dynamic section must be the last one in this list and dynamic
     // symbol table section (dynSymTab) must be the first one.
-    for (Partition &part : ctx.partitions) {
-      finalizeSynthetic(ctx, part.relaDyn.get());
-      finalizeSynthetic(ctx, part.relrDyn.get());
-      finalizeSynthetic(ctx, part.relrAuthDyn.get());
+    Partition &part = *ctx.mainPart;
+    finalizeSynthetic(ctx, part.relaDyn.get());
+    finalizeSynthetic(ctx, part.relrDyn.get());
+    finalizeSynthetic(ctx, part.relrAuthDyn.get());
 
-      finalizeSynthetic(ctx, part.dynSymTab.get());
-      finalizeSynthetic(ctx, part.gnuHashTab.get());
-      finalizeSynthetic(ctx, part.hashTab.get());
-      finalizeSynthetic(ctx, part.verDef.get());
-      finalizeSynthetic(ctx, part.ehFrameHdr.get());
-      finalizeSynthetic(ctx, part.verSym.get());
-      finalizeSynthetic(ctx, part.verNeed.get());
-      finalizeSynthetic(ctx, part.dynamic.get());
-    }
+    finalizeSynthetic(ctx, part.dynSymTab.get());
+    finalizeSynthetic(ctx, part.gnuHashTab.get());
+    finalizeSynthetic(ctx, part.hashTab.get());
+    finalizeSynthetic(ctx, part.verDef.get());
+    finalizeSynthetic(ctx, part.ehFrameHdr.get());
+    finalizeSynthetic(ctx, part.verSym.get());
+    finalizeSynthetic(ctx, part.verNeed.get());
+    finalizeSynthetic(ctx, part.dynamic.get());
   }
 
   if (!ctx.script->hasSectionsCommand && !ctx.arg.relocatable)
@@ -2313,7 +2271,7 @@ Writer<ELFT>::createPhdrs(Partition &part) {
     return ret.back().get();
   };
 
-  unsigned partNo = part.getNumber(ctx);
+  unsigned partNo = part.partno;
   bool isMain = partNo == 1;
 
   // Add the first PT_LOAD segment for regular output sections.
@@ -2438,9 +2396,10 @@ Writer<ELFT>::createPhdrs(Partition &part) {
   if (tlsHdr->firstSec)
     ret.push_back(std::move(tlsHdr));
 
-  // Add an entry for .dynamic.
-  if (OutputSection *sec = part.dynamic->getParent())
-    addHdr(PT_DYNAMIC, sec->getPhdrFlags())->add(sec);
+  // Add an entry for .dynamic. Shim partitions don't carry a .dynamic.
+  if (part.dynamic)
+    if (OutputSection *sec = part.dynamic->getParent())
+      addHdr(PT_DYNAMIC, sec->getPhdrFlags())->add(sec);
 
   if (relRo->firstSec)
     ret.push_back(std::move(relRo));
@@ -2513,7 +2472,7 @@ Writer<ELFT>::createPhdrs(Partition &part) {
 template <class ELFT>
 void Writer<ELFT>::addPhdrForSection(Partition &part, unsigned shType,
                                      unsigned pType, unsigned pFlags) {
-  unsigned partNo = part.getNumber(ctx);
+  unsigned partNo = part.partno;
   auto i = llvm::find_if(ctx.outputSections, [=](OutputSection *cmd) {
     return cmd->partition == partNo && cmd->type == shType;
   });
@@ -2583,14 +2542,17 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
     }
   };
 
-  for (Partition &part : ctx.partitions) {
+  auto alignPhdrs = [&](Partition &p) {
     prev = nullptr;
-    for (auto &p : part.phdrs)
-      if (p->p_type == PT_LOAD && p->firstSec) {
-        pageAlign(p.get());
-        prev = p.get();
+    for (auto &ph : p.phdrs)
+      if (ph->p_type == PT_LOAD && ph->firstSec) {
+        pageAlign(ph.get());
+        prev = ph.get();
       }
-  }
+  };
+  alignPhdrs(*ctx.mainPart);
+  for (Partition &shim : llvm::drop_begin(ctx.partitions))
+    alignPhdrs(shim);
 }
 
 // Compute an in-file position for a given section. The file offset must be the
@@ -2649,10 +2611,9 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
   uint64_t off = ctx.out.elfHeader->size + ctx.out.programHeaders->size;
 
   PhdrEntry *lastRX = nullptr;
-  for (Partition &part : ctx.partitions)
-    for (auto &p : part.phdrs)
-      if (p->p_type == PT_LOAD && (p->p_flags & PF_X))
-        lastRX = p.get();
+  for (auto &p : ctx.mainPart->phdrs)
+    if (p->p_type == PT_LOAD && (p->p_flags & PF_X))
+      lastRX = p.get();
 
   // Layout SHF_ALLOC sections before non-SHF_ALLOC sections. A non-SHF_ALLOC
   // will not occupy file offsets contained by a PT_LOAD.
@@ -2961,43 +2922,41 @@ static void fillTrap(std::array<uint8_t, 4> trapInstr, uint8_t *i,
 // boundary. Even though it is not required by any standard, it is in general
 // a good thing to do for security reasons.
 template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
-  for (Partition &part : ctx.partitions) {
-    // Fill gaps between consecutive sections in the same executable segment.
-    OutputSection *prev = nullptr;
-    for (OutputSection *sec : ctx.outputSections) {
-      PhdrEntry *p = sec->ptLoad;
-      if (!p || !(p->p_flags & PF_X))
-        continue;
-      if (prev && prev->ptLoad == p)
-        fillTrap(ctx.target->trapInstr,
-                 ctx.bufferStart + alignDown(prev->offset + prev->size, 4),
-                 ctx.bufferStart + sec->offset);
-      prev = sec;
-    }
+  // Fill gaps between consecutive sections in the same executable segment.
+  OutputSection *prev = nullptr;
+  for (OutputSection *sec : ctx.outputSections) {
+    PhdrEntry *p = sec->ptLoad;
+    if (!p || !(p->p_flags & PF_X))
+      continue;
+    if (prev && prev->ptLoad == p)
+      fillTrap(ctx.target->trapInstr,
+               ctx.bufferStart + alignDown(prev->offset + prev->size, 4),
+               ctx.bufferStart + sec->offset);
+    prev = sec;
+  }
 
-    // Fill the last page.
-    for (std::unique_ptr<PhdrEntry> &p : part.phdrs)
-      if (p->p_type == PT_LOAD && (p->p_flags & PF_X))
-        fillTrap(
-            ctx.target->trapInstr,
-            ctx.bufferStart + alignDown(p->firstSec->offset + p->p_filesz, 4),
-            ctx.bufferStart + alignToPowerOf2(p->firstSec->offset + p->p_filesz,
-                                              ctx.arg.maxPageSize));
+  // Fill the last page.
+  for (std::unique_ptr<PhdrEntry> &p : ctx.mainPart->phdrs)
+    if (p->p_type == PT_LOAD && (p->p_flags & PF_X))
+      fillTrap(
+          ctx.target->trapInstr,
+          ctx.bufferStart + alignDown(p->firstSec->offset + p->p_filesz, 4),
+          ctx.bufferStart + alignToPowerOf2(p->firstSec->offset + p->p_filesz,
+                                            ctx.arg.maxPageSize));
 
-    // Round up the file size of the last segment to the page boundary iff it is
-    // an executable segment to ensure that other tools don't accidentally
-    // trim the instruction padding (e.g. when stripping the file).
-    PhdrEntry *last = nullptr;
-    for (std::unique_ptr<PhdrEntry> &p : part.phdrs)
-      if (p->p_type == PT_LOAD)
-        last = p.get();
+  // Round up the file size of the last segment to the page boundary iff it is
+  // an executable segment to ensure that other tools don't accidentally
+  // trim the instruction padding (e.g. when stripping the file).
+  PhdrEntry *last = nullptr;
+  for (std::unique_ptr<PhdrEntry> &p : ctx.mainPart->phdrs)
+    if (p->p_type == PT_LOAD)
+      last = p.get();
 
-    if (last && (last->p_flags & PF_X)) {
-      last->p_filesz = alignToPowerOf2(last->p_filesz, ctx.arg.maxPageSize);
-      // p_memsz might be larger than the aligned p_filesz due to trailing BSS
-      // sections. Don't decrease it.
-      last->p_memsz = std::max(last->p_memsz, last->p_filesz);
-    }
+  if (last && (last->p_flags & PF_X)) {
+    last->p_filesz = alignToPowerOf2(last->p_filesz, ctx.arg.maxPageSize);
+    // p_memsz might be larger than the aligned p_filesz due to trailing BSS
+    // sections. Don't decrease it.
+    last->p_memsz = std::max(last->p_memsz, last->p_filesz);
   }
 }
 
@@ -3055,8 +3014,7 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
     return;
 
   if (ctx.arg.buildId == BuildIdKind::Hexstring) {
-    for (Partition &part : ctx.partitions)
-      part.buildId->writeBuildId(ctx.arg.buildIdVector);
+    ctx.mainPart->buildId->writeBuildId(ctx.arg.buildIdVector);
     return;
   }
 
@@ -3095,8 +3053,7 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
   default:
     llvm_unreachable("unknown BuildIdKind");
   }
-  for (Partition &part : ctx.partitions)
-    part.buildId->writeBuildId(output);
+  ctx.mainPart->buildId->writeBuildId(output);
 }
 
 template void elf::writeResult<ELF32LE>(Ctx &);
