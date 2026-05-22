@@ -6809,13 +6809,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     assert(A.getValueType() == B.getValueType() &&
            "Operands are of different types");
     assert(!Cond.getValueType().isVector() && "Vector condition not supported");
-
-    // TODO: a follow-up target-specific bundling pass needs to know the
-    // function uses ct.select. When that consumer lands, record it in the
-    // target's MachineFunctionInfo instead of mutating the IR from codegen.
-    // Kept commented for reference until then:
-    //   DAG.getMachineFunction().getFunction().addFnAttr("ct-select");
-
     setValue(&I, DAG.getNode(ISD::CT_SELECT, getCurSDLoc(), A.getValueType(),
                              Cond, A, B));
     return;

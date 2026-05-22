@@ -16364,10 +16364,6 @@ The '``llvm.ct.select``' intrinsic requires three arguments:
 3. The second value argument, which must have the same type as the first
    value argument.
 
-When the value arguments are vectors, the scalar condition is broadcast to
-all vector elements (i.e., all elements are selected from the same source
-vector based on the single condition).
-
 Semantics:
 """"""""""
 
