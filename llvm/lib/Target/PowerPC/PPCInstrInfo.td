@@ -3050,7 +3050,7 @@ let Predicates = [HasFPU] in {
 // Custom inserter instruction to perform FADD in round-to-zero mode.
 let Uses = [RM], mayRaiseFPException = 1 in {
   def FADDrtz: PPCCustomInserterPseudo<(outs f8rc:$FRT), (ins f8rc:$FRA, f8rc:$FRB),
-                      [(set f64:$FRT, (PPCany_faddrtz f64:$FRA, f64:$FRB))]>;
+                      [(set f64:$FRT, (PPCany_faddrtz f64:$FRA, f64:$FRB))], "">;
 }
 
 // The above pseudo gets expanded to make use of the following instructions
