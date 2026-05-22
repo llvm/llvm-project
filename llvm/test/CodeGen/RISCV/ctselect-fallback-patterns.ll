@@ -232,10 +232,14 @@ define i32 @test_ctselect_zero_extend(i32 %x) {
 define i32 @test_ctselect_constant_folding_true(i32 %a, i32 %b) {
 ; RV64-LABEL: test_ctselect_constant_folding_true:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    xor a0, a0, a1
+; RV64-NEXT:    xor a0, a1, a0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_ctselect_constant_folding_true:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    xor a0, a0, a1
+; RV32-NEXT:    xor a0, a1, a0
 ; RV32-NEXT:    ret
   %result = call i32 @llvm.ct.select.i32(i1 true, i32 %a, i32 %b)
   ret i32 %result
