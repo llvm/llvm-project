@@ -23,7 +23,7 @@
 #include "L0Plugin.h"
 #include "L0Program.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 Error L0GlobalHandlerTy::getGlobalMetadataFromDevice(GenericDeviceTy &Device,
                                                      DeviceImageTy &Image,
@@ -609,4 +609,4 @@ Error L0ProgramTy::loadModuleKernels() {
   return Plugin::success();
 }
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin

@@ -23,7 +23,7 @@
 #include "PluginInterface.h"
 #include "TLS.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 using OmpInteropTy = omp_interop_val_t *;
 class LevelZeroPluginTy;
@@ -611,5 +611,5 @@ public:
                                          interop_spec_t *Prefers) override;
 };
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEVICE_H

@@ -17,7 +17,7 @@
 
 #include "llvm/ADT/ScopeExit.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
   const auto &l0Device = L0DeviceTy::makeL0Device(Program.getDevice());
@@ -329,4 +329,4 @@ L0KernelTy::getMaxCooperativeGroupCount(GenericDeviceTy &GenericDevice,
   return MaxCooperativeGroupCount;
 }
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin

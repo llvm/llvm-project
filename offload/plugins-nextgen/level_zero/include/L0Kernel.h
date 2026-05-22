@@ -18,7 +18,7 @@
 #include "L0Trace.h"
 #include "PluginInterface.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 class L0DeviceTy;
 class L0ProgramTy;
@@ -104,6 +104,6 @@ public:
   ze_kernel_handle_t getZeKernel() const { return zeKernel; }
 };
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0KERNEL_H

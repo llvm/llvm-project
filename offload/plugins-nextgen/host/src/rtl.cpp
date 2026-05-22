@@ -50,8 +50,7 @@
 using namespace llvm::offload::debug;
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 namespace plugin {
 
 /// Forward declarations for all specialized data structures.
@@ -576,12 +575,11 @@ static Error Plugin::check(int32_t Code, const char *ErrMsg, ArgsTy... Args) {
 }
 
 } // namespace plugin
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
 extern "C" {
-llvm::omp::target::plugin::GenericPluginTy *createPlugin_host() {
-  return new llvm::omp::target::plugin::GenELF64PluginTy();
+llvm::offload::plugin::GenericPluginTy *createPlugin_host() {
+  return new llvm::offload::plugin::GenELF64PluginTy();
 }
 }

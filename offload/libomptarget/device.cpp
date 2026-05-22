@@ -34,10 +34,10 @@
 #include <thread>
 
 #ifdef OMPT_SUPPORT
-using namespace llvm::omp::target::ompt;
+using namespace llvm::offload::ompt;
 #endif
 
-using namespace llvm::omp::target::plugin;
+using namespace llvm::offload::plugin;
 using namespace llvm::omp::target::debug;
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,

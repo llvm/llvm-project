@@ -80,8 +80,7 @@ using namespace llvm::offload::debug;
 using namespace error;
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 namespace plugin {
 
 /// Forward declarations for all specialized data structures.
@@ -4416,12 +4415,11 @@ void AMDGPUQueueTy::callbackError(hsa_status_t Status, hsa_queue_t *Source,
 }
 
 } // namespace plugin
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
 extern "C" {
-llvm::omp::target::plugin::GenericPluginTy *createPlugin_amdgpu() {
-  return new llvm::omp::target::plugin::AMDGPUPluginTy();
+llvm::offload::plugin::GenericPluginTy *createPlugin_amdgpu() {
+  return new llvm::offload::plugin::AMDGPUPluginTy();
 }
 }

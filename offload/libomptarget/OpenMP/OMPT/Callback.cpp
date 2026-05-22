@@ -29,7 +29,7 @@
 
 // Define OMPT callback functions (bound to actual callbacks later on)
 #define defineOmptCallback(Name, Type, Code)                                   \
-  Name##_t llvm::omp::target::ompt::Name##_fn = nullptr;
+  Name##_t llvm::offload::ompt::Name##_fn = nullptr;
 FOREACH_OMPT_NOEMI_EVENT(defineOmptCallback)
 FOREACH_OMPT_EMI_EVENT(defineOmptCallback)
 #undef defineOmptCallback
@@ -37,7 +37,7 @@ FOREACH_OMPT_EMI_EVENT(defineOmptCallback)
 // See definition in OpenMP (omp.h.var/omp_lib.(F90|h).var)
 #define omp_initial_device -1
 
-using namespace llvm::omp::target::ompt;
+using namespace llvm::offload::ompt;
 using namespace llvm::omp::target::debug;
 
 /// Forward declaration
@@ -46,14 +46,14 @@ class LibomptargetRtlFinalizer;
 /// Object that will maintain the RTL finalizer from the plugin
 LibomptargetRtlFinalizer *LibraryFinalizer = nullptr;
 
-thread_local Interface llvm::omp::target::ompt::RegionInterface;
+thread_local Interface llvm::offload::ompt::RegionInterface;
 
-thread_local void *llvm::omp::target::ompt::ReturnAddress = nullptr;
+thread_local void *llvm::offload::ompt::ReturnAddress = nullptr;
 
-bool llvm::omp::target::ompt::Initialized = false;
+bool llvm::offload::ompt::Initialized = false;
 
-ompt_get_callback_t llvm::omp::target::ompt::lookupCallbackByCode = nullptr;
-ompt_function_lookup_t llvm::omp::target::ompt::lookupCallbackByName = nullptr;
+ompt_get_callback_t llvm::offload::ompt::lookupCallbackByCode = nullptr;
+ompt_function_lookup_t llvm::offload::ompt::lookupCallbackByName = nullptr;
 ompt_get_target_task_data_t ompt_get_target_task_data_fn = nullptr;
 ompt_get_task_data_t ompt_get_task_data_fn = nullptr;
 
@@ -466,9 +466,9 @@ private:
   llvm::SmallVector<ompt_finalize_t> RtlFinalizationFunctions;
 };
 
-int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
-                                               int initial_device_num,
-                                               ompt_data_t *tool_data) {
+int llvm::offload::ompt::initializeLibrary(ompt_function_lookup_t lookup,
+                                           int initial_device_num,
+                                           ompt_data_t *tool_data) {
   ODBG(ODT_Tool) << "Executing initializeLibrary";
 #define bindOmptFunctionName(OmptFunction, DestinationFunction)                \
   if (lookup)                                                                  \
@@ -499,7 +499,7 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
   return 0;
 }
 
-void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t *data) {
+void llvm::offload::ompt::finalizeLibrary(ompt_data_t *data) {
   ODBG(ODT_Tool) << "Executing finalizeLibrary";
   // Before disabling OMPT, call the (plugin) finalizations that were registered
   // with this library
@@ -508,7 +508,7 @@ void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t *data) {
   Initialized = false;
 }
 
-void llvm::omp::target::ompt::connectLibrary() {
+void llvm::offload::ompt::connectLibrary() {
   ODBG(ODT_Tool) << "Entering connectLibrary";
   // Connect with libomp
   static OmptLibraryConnectorTy LibompConnector("libomp");
@@ -527,7 +527,7 @@ void llvm::omp::target::ompt::connectLibrary() {
   if (lookupCallbackByCode)                                                    \
     lookupCallbackByCode(                                                      \
         (ompt_callbacks_t)(Code),                                              \
-        (ompt_callback_t *)&(llvm::omp::target::ompt::Name##_fn));
+        (ompt_callback_t *)&(llvm::offload::ompt::Name##_fn));
   FOREACH_OMPT_NOEMI_EVENT(bindOmptCallback)
   FOREACH_OMPT_EMI_EVENT(bindOmptCallback)
 #undef bindOmptCallback

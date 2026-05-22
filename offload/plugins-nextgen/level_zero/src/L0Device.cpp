@@ -22,7 +22,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Object/ELF.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 L0DeviceTLSTy &L0DeviceTy::getTLS() {
   return getPlugin().getDeviceTLS(getDeviceId());
@@ -1186,4 +1186,4 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   return CleanupBufferAndErr(std::move(Err));
 }
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin

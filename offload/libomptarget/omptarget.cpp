@@ -39,7 +39,7 @@
 
 using llvm::SmallVector;
 #ifdef OMPT_SUPPORT
-using namespace llvm::omp::target::ompt;
+using namespace llvm::offload::ompt;
 #endif
 using namespace llvm::omp::target::debug;
 

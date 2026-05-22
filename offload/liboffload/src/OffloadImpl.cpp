@@ -27,17 +27,17 @@
 // it would be better to allow the plugins to implement callbacks without
 // pulling in details from libomptarget.
 #ifdef OMPT_SUPPORT
-namespace llvm::omp::target {
+namespace llvm::offload {
 namespace ompt {
 bool Initialized = false;
 ompt_get_callback_t lookupCallbackByCode = nullptr;
 ompt_function_lookup_t lookupCallbackByName = nullptr;
 } // namespace ompt
-} // namespace llvm::omp::target
+} // namespace llvm::offload
 #endif
 
-using namespace llvm::omp::target;
-using namespace llvm::omp::target::plugin;
+using namespace llvm::offload;
+using namespace llvm::offload::plugin;
 using namespace error;
 
 struct ol_platform_impl_t {

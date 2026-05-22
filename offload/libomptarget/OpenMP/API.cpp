@@ -37,11 +37,11 @@ EXTERN void ompx_dump_mapping_tables() {
 }
 
 #ifdef OMPT_SUPPORT
-using namespace llvm::omp::target::ompt;
+using namespace llvm::offload::ompt;
 #endif
 using namespace llvm::omp::target::debug;
 
-using GenericDeviceTy = llvm::omp::target::plugin::GenericDeviceTy;
+using GenericDeviceTy = llvm::offload::plugin::GenericDeviceTy;
 
 void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
                           const char *Name);

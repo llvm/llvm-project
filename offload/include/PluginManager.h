@@ -37,7 +37,7 @@
 
 #include "OpenMP/InteropAPI.h"
 
-using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
+using GenericPluginTy = llvm::offload::plugin::GenericPluginTy;
 
 /// Struct for the data required to handle plugins
 struct PluginManager {

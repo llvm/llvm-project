@@ -33,8 +33,7 @@ typedef ompt_data_t *(*ompt_get_task_data_t)();
 typedef ompt_data_t *(*ompt_get_target_task_data_t)();
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 namespace ompt {
 
 /// Function pointers that will be used to track task_data and
@@ -315,12 +314,11 @@ private:
 };
 
 } // namespace ompt
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
 // The getter returns the address stored in the thread local variable.
-#define OMPT_GET_RETURN_ADDRESS llvm::omp::target::ompt::ReturnAddress
+#define OMPT_GET_RETURN_ADDRESS llvm::offload::ompt::ReturnAddress
 
 #else
 #define OMPT_IF_BUILT(stmt)

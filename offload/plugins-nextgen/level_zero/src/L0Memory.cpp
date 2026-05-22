@@ -14,7 +14,7 @@
 #include "L0Device.h"
 #include "L0Plugin.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 static const char *allocKindToStr(int32_t Kind) {
   switch (Kind) {
@@ -746,4 +746,4 @@ Error EventPoolTy::releaseEvent(ze_event_handle_t Event, L0DeviceTy &Device) {
   return Plugin::success();
 }
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin

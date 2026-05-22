@@ -16,6 +16,7 @@
 
 #include "PluginManager.h"
 
+using namespace llvm::offload::debug;
 using namespace llvm::omp::target::debug;
 
 enum kmp_target_offload_kind_t {

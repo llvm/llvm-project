@@ -17,7 +17,7 @@
 #include "Shared/Profile.h"
 
 #ifdef OMPT_SUPPORT
-extern void llvm::omp::target::ompt::connectLibrary();
+extern void llvm::offload::ompt::connectLibrary();
 #endif
 using namespace llvm::omp::target::debug;
 
@@ -50,7 +50,7 @@ void initRuntime() {
     ODBG(ODT_Init) << "Init offload library!";
 #ifdef OMPT_SUPPORT
     // Initialize OMPT first
-    llvm::omp::target::ompt::connectLibrary();
+    llvm::offload::ompt::connectLibrary();
 #endif
 
     PM->init();

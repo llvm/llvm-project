@@ -22,8 +22,7 @@
 #endif
 
 using namespace llvm;
-using namespace omp;
-using namespace target;
+using namespace offload;
 
 template <uint32_t NumLanes>
 rpc::RPCStatus handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
