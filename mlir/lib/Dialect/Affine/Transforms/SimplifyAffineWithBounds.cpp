@@ -224,47 +224,38 @@ struct SimplifyDelinearizeOfLinearizeDisjoint final
 /// using the analysis from `ValueBoundsConstraintSet`. If an expression `a` is
 /// statically proven to be strictly bounded or covered by another expression
 /// `b` (based on the given comparison operator `cmp`), `a` is considered
-/// redundant and is safely pruned from the results. NOTE: We iterate backwards
-/// (from size-1 down to 0) to safely erase elements from the `SmallVector`
-/// without causing iterator invalidation or indexing shifts for upcoming
-/// elements.
+/// redundant and is safely pruned from the results.
 static SmallVector<AffineExpr>
-simplifyRedundantMapResults(AffineMap map, SmallVector<Value> operands,
+simplifyRedundantMapResults(AffineMap map, ValueRange operands,
                             ValueBoundsConstraintSet::ComparisonOperator cmp) {
-  SmallVector<AffineExpr> mapResults(map.getResults());
-  auto *context = map.getContext();
-
-  for (int i = mapResults.size() - 1; i >= 0; --i) {
-    AffineExpr a = mapResults[i];
-    AffineMap mapA =
-        AffineMap::get(map.getNumDims(), map.getNumSymbols(), a, context);
+  llvm::BitVector preservedExprs(map.getNumResults(), true);
+  for (size_t i = 0, e = map.getNumResults(); i < e; ++i) {
+    AffineMap mapA = map.getSubMap(i);
     ValueBoundsConstraintSet::Variable varA(mapA, operands);
-    bool shouldErase = false;
 
-    for (int j = 0, e = mapResults.size(); j < e; ++j) {
-      if (i == j)
+    for (size_t j = 0; j < e; ++j) {
+      if (i == j || !preservedExprs[j])
         continue;
 
-      AffineExpr b = mapResults[j];
-      AffineMap mapB =
-          AffineMap::get(map.getNumDims(), map.getNumSymbols(), b, context);
+      AffineMap mapB = map.getSubMap(j);
       ValueBoundsConstraintSet::Variable varB(mapB, operands);
 
       if (ValueBoundsConstraintSet::compare(varB, cmp, varA)) {
-        shouldErase = true;
+        preservedExprs[i] = false;
         break;
       }
     }
-
-    if (shouldErase)
-      mapResults.erase(mapResults.begin() + i);
   }
 
+  SmallVector<AffineExpr> mapResults;
+  for (size_t i = 0, e = map.getNumResults(); i < e; ++i)
+    if (preservedExprs[i])
+      mapResults.push_back(map.getResult(i));
   return mapResults;
 }
 
-/// A canonicalization pattern that simplifies multi-result lower and upper
-/// bounds of `affine.for` loops by pruning redundant expressions leveraging
+/// A pattern that simplifies multi-result lower and upper bounds of
+/// `affine.for` loops by pruning redundant expressions leveraging
 /// `ValueBoundsConstraintSet`.
 struct SimplifyAffineLoopBoundMap final : OpRewritePattern<AffineForOp> {
   using Base::Base;
@@ -290,21 +281,21 @@ struct SimplifyAffineLoopBoundMap final : OpRewritePattern<AffineForOp> {
     if (!(lowerBoundUpdate || upperBoundUpdate))
       return failure();
 
-    auto *context = forOp->getContext();
+    MLIRContext *context = forOp->getContext();
     if (lowerBoundUpdate) {
-      AffineMap newMap =
-          AffineMap::get(lowerBoundMap.getNumDims(),
-                         lowerBoundMap.getNumSymbols(), lowerMapExprs, context);
       rewriter.modifyOpInPlace(forOp, [&]() {
-        forOp.setLowerBound(forOp.getLowerBoundOperands(), newMap);
+        forOp.setLowerBound(forOp.getLowerBoundOperands(),
+                            AffineMap::get(lowerBoundMap.getNumDims(),
+                                           lowerBoundMap.getNumSymbols(),
+                                           lowerMapExprs, context));
       });
     }
     if (upperBoundUpdate) {
-      AffineMap newMap =
-          AffineMap::get(upperBoundMap.getNumDims(),
-                         upperBoundMap.getNumSymbols(), upperMapExprs, context);
       rewriter.modifyOpInPlace(forOp, [&]() {
-        forOp.setUpperBound(forOp.getUpperBoundOperands(), newMap);
+        forOp.setUpperBound(forOp.getUpperBoundOperands(),
+                            AffineMap::get(upperBoundMap.getNumDims(),
+                                           upperBoundMap.getNumSymbols(),
+                                           upperMapExprs, context));
       });
     }
     return success();
