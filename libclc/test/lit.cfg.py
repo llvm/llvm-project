@@ -17,7 +17,9 @@ config.name = "libclc"
 config.test_format = lit.formats.ShTest()
 
 # suffixes: A list of file extensions to treat as test files.
-config.suffixes = [".cl", ".test"]
+config.suffixes = [".test"]
+if not config.libclc_standalone_build:
+    config.suffixes.append(".cl")
 
 # Exclude certain directories and files from test discovery
 config.excludes = [
