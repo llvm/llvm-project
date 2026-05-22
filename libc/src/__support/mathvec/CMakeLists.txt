@@ -10,6 +10,15 @@ add_header_library(
 )
 
 add_header_library(
+  acoshf
+  HDRS
+    acoshf.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.acoshf
+)
+
+add_header_library(
   acospif
   HDRS
     acospif.h
@@ -28,6 +37,15 @@ add_header_library(
 )
 
 add_header_library(
+  asinhf
+  HDRS
+    asinhf.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.asinhf
+)
+
+add_header_library(
   asinpif
   HDRS
     asinpif.h
@@ -43,6 +61,15 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.simd
     libc.src.__support.math.atanf
+)
+
+add_header_library(
+  atanhf
+  HDRS
+    atanhf.h
+  DEPENDS
+    libc.src.__support.CPP.simd
+    libc.src.__support.math.atanhf
 )
 
 add_header_library(
