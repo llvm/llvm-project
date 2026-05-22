@@ -37,7 +37,7 @@
 #include <string_view>
 #include <cassert>
 
-#include "check_assertion.h"
+#include "test_macros.h"
 
 namespace {
 template <typename F>
