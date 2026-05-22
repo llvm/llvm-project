@@ -669,51 +669,86 @@ OutlinedFunctionDecl *BuildSYCLKernelEntryPointOutline(Sema &SemaRef,
 class KernelArgsChecker : public SubobjectVisitor<KernelArgsChecker> {
   SemaSYCL &SemaSYCLRef;
   bool IsValid = true;
-  using SubobjectAccess = llvm::PointerUnion<CXXBaseSpecifier *, FieldDecl *>;
-  SmallVector<SubobjectAccess, 4> SubobjectAccessPath;
+  using ObjectAccess =
+      llvm::PointerUnion<ParmVarDecl *, CXXBaseSpecifier *, FieldDecl *>;
+  SmallVector<ObjectAccess, 4> ObjectAccessPath;
+
+  void emitObjectAccessPathNotes() {
+    for (auto Parent : ObjectAccessPath) {
+      if (auto *FD = Parent.dyn_cast<FieldDecl *>()) {
+        SemaSYCLRef.Diag(FD->getParent()->getLocation(),
+                         diag::note_within_field_of_type)
+            << FD->getParent();
+      } else if (auto *BS = Parent.dyn_cast<CXXBaseSpecifier *>()) {
+        CXXRecordDecl *RD = BS->getType()->getAsCXXRecordDecl();
+        assert(RD);
+        SemaSYCLRef.Diag(BS->getBeginLoc(), diag::note_within_base_of_type)
+            << RD;
+      } else {
+        // Nothing to emit for ParmVarDecl since its location just points to
+        // skep-attributed function template.
+        assert(isa<ParmVarDecl *>(Parent));
+      }
+    }
+  }
 
 public:
   KernelArgsChecker(SemaSYCL &SR, SourceLocation Loc)
       : SubobjectVisitor<KernelArgsChecker>(SR.getASTContext()),
         SemaSYCLRef(SR) {}
 
+  void checkParameter(ParmVarDecl *PVD) {
+    ObjectAccessPath.push_back(PVD);
+    // Check the immediate type of the parameter.
+    if (checkType(PVD->getType())) {
+      // If type checking wasn't short circuited, visit subobjects to check
+      // them.
+      visit(PVD->getType());
+    }
+    ObjectAccessPath.pop_back();
+    // We either visited everything or we stopped visiting due to invalid kernel
+    // argument type.
+    assert(ObjectAccessPath.empty());
+  }
+
   bool visitBaseSpecifierPre(CXXBaseSpecifier *BS) {
-    SubobjectAccessPath.push_back(BS);
-    return true;
+    ObjectAccessPath.push_back(BS);
+    return checkType(BS->getType());
   }
 
   bool visitFieldDeclPre(FieldDecl *FD) {
-    SubobjectAccessPath.push_back(FD);
-    return true;
+    ObjectAccessPath.push_back(FD);
+    return checkType(FD->getType());
   }
 
-  bool visitReferenceType(const ReferenceType *RT) {
-    // Reference cannot be a base, so just assume we came via a FieldDecl.
-    auto *DirectParent = cast<FieldDecl *>(SubobjectAccessPath.back());
-    SemaSYCLRef.Diag(DirectParent->getLocation(),
-                     diag::err_bad_kernel_param_type)
-        << DirectParent->getType();
-
-    for (auto Parent : SubobjectAccessPath) {
-      if (auto *FD = Parent.dyn_cast<FieldDecl *>()) {
-        SemaSYCLRef.Diag(FD->getParent()->getLocation(),
-                         diag::note_within_field_of_type)
-            << FD->getParent();
-      } else {
-        auto *BS = cast<CXXBaseSpecifier *>(Parent);
-        CXXRecordDecl *RD = BS->getType()->getAsCXXRecordDecl();
-        assert(RD);
-        SemaSYCLRef.Diag(BS->getBeginLoc(), diag::note_within_base_of_type)
-            << RD;
+  // Returns true if subobjects should be visited and false otherwise.
+  bool checkType(QualType Ty) {
+    if (Ty->isReferenceType()) {
+      auto DirectParent = ObjectAccessPath.back();
+      // Reference cannot be a base, so just assume we came via a FieldDecl.
+      if (isa<ParmVarDecl *>(DirectParent)) {
+        // If reference is a kernel argument, there is nothing to do. We allow
+        // references in direct kernel arguments for better performance of the
+        // host code and we eliminate them when building actual kernel.
+        return true;
       }
+
+      auto *DirectFieldParent = cast<FieldDecl *>(DirectParent);
+      SemaSYCLRef.Diag(DirectFieldParent->getLocation(),
+                       diag::err_bad_kernel_param_type)
+          << DirectFieldParent->getType();
+      emitObjectAccessPathNotes();
+
+      IsValid = false;
+      ObjectAccessPath.pop_back();
+      return false;
     }
-    IsValid = false;
     return true;
   }
 
-  void visitFieldDeclPost(FieldDecl *FD) { SubobjectAccessPath.pop_back(); }
+  void visitFieldDeclPost(FieldDecl *FD) { ObjectAccessPath.pop_back(); }
   void visitBaseSpecifierPost(CXXBaseSpecifier *BS) {
-    SubobjectAccessPath.pop_back();
+    ObjectAccessPath.pop_back();
   }
 
   bool isInvalid() { return !IsValid; }
@@ -721,10 +756,8 @@ public:
 
 bool verifyKernelArguments(FunctionDecl *FD, SemaSYCL &SemaSYCLRef) {
   KernelArgsChecker KAC(SemaSYCLRef, FD->getLocation());
-  for (auto Param : FD->parameters()) {
-    if (Param->getType()->isRecordType())
-      KAC.visit(Param->getType());
-  }
+  for (auto Param : FD->parameters())
+    KAC.checkParameter(Param);
   return KAC.isInvalid();
 }
 

@@ -18,10 +18,6 @@
 
 namespace clang {
 
-#define DISPATCH(CLASS)                                                        \
-  return static_cast<Derived *>(this)->visit##CLASS(                           \
-      static_cast<const CLASS *>(T))
-
 template <template <typename> class Ptr, typename Derived>
 class SubobjectVisitorBase {
   ASTContext &Ctx;
@@ -49,7 +45,6 @@ public:
       getDerived().traverseRecord(RD);
       return;
     }
-    getDerived().visitGenericType(QT.getCanonicalType().getTypePtr());
   }
 
   void traverseRecord(ptr_t<RecordDecl> RD) {
@@ -80,27 +75,6 @@ public:
 
   // Default field post-order visitor.
   void visitFieldDeclPost(ptr_t<FieldDecl> FD) {}
-  bool visitGenericType(const Type *T) {
-    // Top switch stmt: dispatch to VisitFooType for each FooType.
-    switch (T->getTypeClass()) {
-#define ABSTRACT_TYPE(CLASS, PARENT)
-#define TYPE(CLASS, PARENT)                                                    \
-  case Type::CLASS:                                                            \
-    DISPATCH(CLASS##Type);
-#include "clang/AST/TypeNodes.inc"
-    }
-    llvm_unreachable("Unknown type class!");
-  }
-
-  // If the implementation chooses not to implement a certain visit method, fall
-  // back on superclass.
-#define TYPE(CLASS, PARENT)                                                    \
-  bool visit##CLASS##Type(const CLASS##Type *T) { DISPATCH(PARENT); }
-#include "clang/AST/TypeNodes.inc"
-
-  /// Method called if \c ImpClass doesn't provide specific handler
-  /// for some type class.
-  bool visitType(const Type *) { return true; }
 };
 
 template <typename Derived>
@@ -118,8 +92,6 @@ public:
   ConstSubobjectVisitor(ASTContext &Ctx)
       : SubobjectVisitorBase<std::add_pointer, Derived>(Ctx) {}
 };
-
-#undef DISPATCH
 
 } // end namespace clang
 
