@@ -7051,12 +7051,23 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0)),
                              getValue(I.getArgOperand(1)), Flags));
     return;
-  case Intrinsic::ldexp:
+  case Intrinsic::ldexp: {
+    // The lowering goes through the C `ldexp` libcall, whose exponent is an
+    // `int`. An IR exponent wider than that would silently lose its high bits
+    // through the calling convention.
+    Type *ExpTy = I.getArgOperand(1)->getType();
+    if (ExpTy->getScalarSizeInBits() > DAG.getLibInfo().getIntSize()) {
+      DAG.getContext()->emitError(&I,
+                                  "ldexp exponent is wider than sizeof(int)");
+      setValue(&I, DAG.getPOISON(getValue(I.getArgOperand(0)).getValueType()));
+      return;
+    }
     setValue(&I, DAG.getNode(ISD::FLDEXP, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
                              getValue(I.getArgOperand(0)),
                              getValue(I.getArgOperand(1)), Flags));
     return;
+  }
   case Intrinsic::modf:
   case Intrinsic::sincos:
   case Intrinsic::sincospi:
@@ -8545,6 +8556,18 @@ void SelectionDAGBuilder::pushFPOpOutChain(SDValue Result,
 void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     const ConstrainedFPIntrinsic &FPI) {
   SDLoc sdl = getCurSDLoc();
+
+  if (FPI.getIntrinsicID() == Intrinsic::experimental_constrained_ldexp) {
+    // See the non-constrained ldexp case in visitIntrinsicCall.
+    Type *ExpTy = FPI.getArgOperand(1)->getType();
+    if (ExpTy->getScalarSizeInBits() > DAG.getLibInfo().getIntSize()) {
+      DAG.getContext()->emitError(&FPI,
+                                  "ldexp exponent is wider than sizeof(int)");
+      setValue(&FPI,
+               DAG.getPOISON(getValue(FPI.getArgOperand(0)).getValueType()));
+      return;
+    }
+  }
 
   // We do not need to serialize constrained FP intrinsics against
   // each other or against (nonvolatile) loads, so they can be
