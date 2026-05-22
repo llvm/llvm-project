@@ -34,8 +34,7 @@ namespace cir {
 /// fall back to an invalid clang::SourceLocation.
 class CIRDiagnosticHandler : public mlir::ScopedDiagnosticHandler {
 public:
-  CIRDiagnosticHandler(mlir::MLIRContext *ctx,
-                       clang::DiagnosticsEngine &diags,
+  CIRDiagnosticHandler(mlir::MLIRContext *ctx, clang::DiagnosticsEngine &diags,
                        clang::SourceManager &srcMgr,
                        clang::FileManager &fileMgr);
 
