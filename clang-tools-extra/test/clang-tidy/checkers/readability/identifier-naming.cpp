@@ -249,8 +249,7 @@ class my_class;
 // CHECK-FIXES: class CMyClass;
 
 class my_forward_declared_class;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for class 'my_forward_declared_class'
-// CHECK-FIXES: class CMyForwardDeclaredClass;
+// CHECK-MESSAGES-NOT: warning:
 
 const int my_class::classConstant = 4;
 // CHECK-FIXES: const int CMyClass::kClassConstant = 4;
@@ -785,20 +784,18 @@ task ImplicitDeclTest(async_obj &a_object) {
   co_await a_object;  // CHECK-MESSAGES-NOT: warning: invalid case style for local variable
 }
 
-// Test scenario when canonical declaration will be a forward declaration
-struct ForwardDeclStruct;
-// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for struct 'ForwardDeclStruct' [readability-identifier-naming]
-// CHECK-FIXES: struct Forward_decl_struct;
-// CHECK-FIXES: struct Forward_decl_struct {
-struct ForwardDeclStruct {
-};
+// Forward declarations should be ignored entirely.
 
-struct forward_declared_as_struct;
-// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for class 'forward_declared_as_struct' [readability-identifier-naming]
-// CHECK-FIXES: struct CForwardDeclaredAsStruct;
-// CHECK-FIXES: class CForwardDeclaredAsStruct {
-class forward_declared_as_struct {
+struct forward_decl_struct;
+
+class forward_declared_class;
+
+// Definitions should still be diagnosed.
+
+struct bad_defined_struct {
 };
+// CHECK-MESSAGES: :[[@LINE-2]]:8: warning: invalid case style for struct 'bad_defined_struct' [readability-identifier-naming]
+// CHECK-FIXES: struct Bad_defined_struct {
 
 namespace pr55156 {
 
