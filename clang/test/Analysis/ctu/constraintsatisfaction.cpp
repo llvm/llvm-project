@@ -12,7 +12,6 @@
 
 //--- main.cpp
 
-// Check that importing this code does not cause crash.
 // expected-no-diagnostics
 
 template <typename T>
@@ -25,9 +24,11 @@ template <bool> struct BoolConstant {};
 using FalseCheck = BoolConstant<Container<int>>;
 
 void importee();
-void caller() { importee(); }
+void caller() { importee(); } // no-crash
 
 //--- import.cpp
+
+// Check that importing this code does not cause crash.
 
 template <typename T>
 concept Sizable = requires(T t) { t.size(); };
