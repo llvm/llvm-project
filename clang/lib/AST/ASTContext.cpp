@@ -13841,21 +13841,21 @@ QualType ASTContext::getStringLiteralArrayType(QualType EltTy,
 
 StringLiteral *
 ASTContext::getPredefinedStringLiteralFromCache(StringRef Key) const {
+  // Apply encoding conversion to the key before cache lookup to ensure
+  // proper deduplication when the same source location is used multiple times
+  SmallString<128> ConvertedKey;
+  llvm::TextEncodingConverter *Converter = getTargetInfo().ExecStrConverter;
+  if (Converter) {
+    Converter->convert(Key, ConvertedKey);
+    Key = ConvertedKey;
+  }
+
   StringLiteral *&Result = StringLiteralCache[Key];
   if (!Result)
     Result = StringLiteral::Create(
         *this, Key, StringLiteralKind::Ordinary,
         /*Pascal*/ false, getStringLiteralArrayType(CharTy, Key.size()),
         SourceLocation());
-
-  llvm::TextEncodingConverter *Converter = getTargetInfo().ExecStrConverter;
-  if (Converter) {
-    SmallString<128> Converted;
-    Converter->convert(Result->getString(), Converted);
-    Result = StringLiteral::Create(
-        *this, Converted, StringLiteralKind::Ordinary, /*Pascal*/ false,
-        getStringLiteralArrayType(CharTy, Converted.size()), SourceLocation());
-  }
 
   return Result;
 }
