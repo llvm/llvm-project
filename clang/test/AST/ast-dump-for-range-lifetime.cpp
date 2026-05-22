@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -std=c++23 -triple x86_64-linux-gnu -fcxx-exceptions -ast-dump %s \
 // RUN: | FileCheck -strict-whitespace %s
 
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-linux-gnu -fcxx-exceptions -ast-dump=json %s \
+// RUN: | FileCheck -strict-whitespace --check-prefix JSON %s
+
 namespace P2718R0 {
 
 // Test basic
@@ -135,6 +138,156 @@ void test4() {
   // CHECK-NEXT:  |           `-ImplicitCastExpr {{.*}} 'const A' <NoOp>
   // CHECK-NEXT:  |             `-CXXBindTemporaryExpr {{.*}} 'A' (CXXTemporary {{.*}})
   // CHECK-NEXT:  |               `-CXXTemporaryObjectExpr {{.*}} 'A' 'void ()'
+
+  // JSON:       "kind": "FunctionDecl",
+  // JSON-LABEL: "name": "test4",
+  // JSON-NEXT:  "mangledName": "_ZN7P2718R05test4Ev",
+  // JSON-NEXT:  "type": {
+  // JSON-NEXT:    "qualType": "void ()"
+  // JSON-NEXT:  },
+  // JSON-NEXT:  "inner": [
+  // JSON-NEXT:    {
+  // JSON-NEXT:      "id": "0x{{.*}}",
+  // JSON-NEXT:      "kind": "CompoundStmt",
+  // JSON:           "inner": [
+  // JSON-NEXT:        {
+  // JSON-NEXT:          "id": "0x{{.*}}",
+  // JSON-NEXT:          "kind": "CXXForRangeStmt",
+  // JSON:               "inner": [
+  // JSON-NEXT:            {},
+  // JSON-NEXT:            {
+  // JSON-NEXT:              "id": "0x{{.*}}",
+  // JSON-NEXT:              "kind": "DeclStmt",
+  // JSON:                   "inner": [
+  // JSON-NEXT:                {
+  // JSON-NEXT:                  "id": "0x{{.*}}",
+  // JSON-NEXT:                  "kind": "VarDecl",
+  // JSON:                       "isImplicit": true,
+  // JSON-NEXT:                  "isUsed": true,
+  // JSON-NEXT:                  "name": "__range1",
+  // JSON-NEXT:                  "type": {
+  // JSON-NEXT:                    "qualType": "int (&)[3]"
+  // JSON-NEXT:                  },
+  // JSON-NEXT:                  "init": "c",
+  // JSON-NEXT:                  "inner": [
+  // JSON-NEXT:                    {
+  // JSON-NEXT:                      "id": "0x{{.*}}",
+  // JSON-NEXT:                      "kind": "ExprWithCleanups",
+  // JSON:                           "type": {
+  // JSON-NEXT:                        "qualType": "int[3]"
+  // JSON-NEXT:                      },
+  // JSON-NEXT:                      "valueCategory": "lvalue",
+  // JSON-NEXT:                      "cleanupsHaveSideEffects": true,
+  // JSON-NEXT:                      "inner": [
+  // JSON-NEXT:                        {
+  // JSON-NEXT:                          "id": "0x{{.*}}",
+  // JSON-NEXT:                          "kind": "CallExpr",
+  // JSON:                               "type": {
+  // JSON-NEXT:                            "qualType": "int[3]"
+  // JSON-NEXT:                          },
+  // JSON-NEXT:                          "valueCategory": "lvalue",
+  // JSON-NEXT:                          "inner": [
+  // JSON-NEXT:                            {
+  // JSON-NEXT:                              "id": "0x{{.*}}",
+  // JSON-NEXT:                              "kind": "ImplicitCastExpr",
+  // JSON:                                   "type": {
+  // JSON-NEXT:                                "qualType": "int (&(*)(const A &))[3]"
+  // JSON-NEXT:                              },
+  // JSON-NEXT:                              "valueCategory": "prvalue",
+  // JSON-NEXT:                              "castKind": "FunctionToPointerDecay",
+  // JSON-NEXT:                              "inner": [
+  // JSON-NEXT:                                {
+  // JSON-NEXT:                                  "id": "0x{{.*}}",
+  // JSON-NEXT:                                  "kind": "DeclRefExpr",
+  // JSON:                                       "type": {
+  // JSON-NEXT:                                    "qualType": "int (&(const A &))[3]"
+  // JSON-NEXT:                                  },
+  // JSON-NEXT:                                  "valueCategory": "lvalue",
+  // JSON-NEXT:                                  "referencedDecl": {
+  // JSON-NEXT:                                    "id": "0x{{.*}}",
+  // JSON-NEXT:                                    "kind": "FunctionDecl",
+  // JSON-NEXT:                                    "name": "default_arg_fn",
+  // JSON-NEXT:                                    "type": {
+  // JSON-NEXT:                                      "qualType": "int (&(const A &))[3]"
+  // JSON-NEXT:                                    }
+  // JSON-NEXT:                                  }
+  // JSON-NEXT:                                }
+  // JSON-NEXT:                              ]
+  // JSON-NEXT:                            },
+  // JSON-NEXT:                            {
+  // JSON-NEXT:                              "id": "0x{{.*}}",
+  // JSON-NEXT:                              "kind": "CXXDefaultArgExpr",
+  // JSON-NEXT:                              "range": {
+  // JSON-NEXT:                                "begin": {},
+  // JSON-NEXT:                                "end": {}
+  // JSON-NEXT:                              },
+  // JSON-NEXT:                              "type": {
+  // JSON-NEXT:                                "qualType": "const A"
+  // JSON-NEXT:                              },
+  // JSON-NEXT:                              "valueCategory": "lvalue",
+  // JSON-NEXT:                              "hasRewrittenInit": true,
+  // JSON-NEXT:                              "inner": [
+  // JSON-NEXT:                                {
+  // JSON-NEXT:                                  "id": "0x{{.*}}",
+  // JSON-NEXT:                                  "kind": "MaterializeTemporaryExpr",
+  // JSON:                                       "type": {
+  // JSON-NEXT:                                    "qualType": "const A"
+  // JSON-NEXT:                                  },
+  // JSON-NEXT:                                  "valueCategory": "lvalue",
+  // JSON-NEXT:                                  "extendingDecl": {
+  // JSON-NEXT:                                    "id": "0x{{.*}}",
+  // JSON-NEXT:                                    "kind": "VarDecl",
+  // JSON-NEXT:                                    "name": "__range1",
+  // JSON-NEXT:                                    "type": {
+  // JSON-NEXT:                                      "qualType": "int (&)[3]"
+  // JSON-NEXT:                                    }
+  // JSON-NEXT:                                  },
+  // JSON-NEXT:                                  "storageDuration": "automatic",
+  // JSON-NEXT:                                  "boundToLValueRef": true,
+  // JSON-NEXT:                                  "inner": [
+  // JSON-NEXT:                                    {
+  // JSON-NEXT:                                      "id": "0x{{.*}}",
+  // JSON-NEXT:                                      "kind": "ImplicitCastExpr",
+  // JSON:                                           "type": {
+  // JSON-NEXT:                                        "qualType": "const A"
+  // JSON-NEXT:                                      },
+  // JSON-NEXT:                                      "valueCategory": "prvalue",
+  // JSON-NEXT:                                      "castKind": "NoOp",
+  // JSON-NEXT:                                      "inner": [
+  // JSON-NEXT:                                        {
+  // JSON-NEXT:                                          "id": "0x{{.*}}",
+  // JSON-NEXT:                                          "kind": "CXXBindTemporaryExpr",
+  // JSON:                                               "type": {
+  // JSON-NEXT:                                            "qualType": "A"
+  // JSON-NEXT:                                          },
+  // JSON-NEXT:                                          "valueCategory": "prvalue",
+  // JSON-NEXT:                                          "temp": "0x{{.*}}",
+  // JSON-NEXT:                                          "dtor": {
+  // JSON-NEXT:                                            "id": "0x{{.*}}",
+  // JSON-NEXT:                                            "kind": "CXXDestructorDecl",
+  // JSON-NEXT:                                            "name": "~A",
+  // JSON-NEXT:                                            "type": {
+  // JSON-NEXT:                                              "qualType": "void () noexcept"
+  // JSON-NEXT:                                            }
+  // JSON-NEXT:                                          },
+  // JSON-NEXT:                                          "inner": [
+  // JSON-NEXT:                                            {
+  // JSON-NEXT:                                              "id": "0x{{.*}}",
+  // JSON-NEXT:                                              "kind": "CXXTemporaryObjectExpr",
+  // JSON:                                                   "type": {
+  // JSON-NEXT:                                                "qualType": "A"
+  // JSON-NEXT:                                              },
+  // JSON-NEXT:                                              "valueCategory": "prvalue",
+  // JSON-NEXT:                                              "ctorType": {
+  // JSON-NEXT:                                                "qualType": "void ()"
+  // JSON-NEXT:                                              },
+  // JSON-NEXT:                                              "hadMultipleCandidates": true,
+  // JSON-NEXT:                                              "constructionKind": "complete"
+  // JSON-NEXT:                                            }
+  // JSON-NEXT:                                          ]
+  // JSON-NEXT:                                        }
+  // JSON-NEXT:                                      ]
+
   for (auto e : default_arg_fn())
     bar(e);
 }
@@ -195,6 +348,8 @@ void test5() {
   // CHECK-NEXT:  |                   `-ImplicitCastExpr {{.*}} 'const DefaultA' <NoOp>
   // CHECK-NEXT:  |                     `-CXXBindTemporaryExpr {{.*}} 'DefaultA' (CXXTemporary {{.*}})
   // CHECK-NEXT:  |                       `-CXXTemporaryObjectExpr {{.*}} 'DefaultA' 'void ()'
+
+  // JSON-LABEL: "name": "test5",
   for (auto e : default_arg_fn(foo(foo(foo(A())))))
     bar(e);
 }
