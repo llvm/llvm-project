@@ -3029,7 +3029,11 @@ void MallocChecker::HandleLeak(SymbolRef Sym, ExplodedNode *N,
   AllocationFamily Family = RS->getAllocationFamily();
 
   if (Family.Kind == AF_Alloca)
+<<<<<<< HEAD
     return;
+=======
+  return;
+>>>>>>> 85c273dfcf50 ([analyzer] Address review feedback)
 
   // --- BEGIN: Suppress leak reports for selected ownership types ---
   if (Family.Kind == AF_Custom && Family.CustomName) {
