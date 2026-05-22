@@ -830,6 +830,10 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
       Info.Name = readString(Ctx);
       if (IsDefined) {
         if ((Info.Flags & wasm::WASM_SYMBOL_BINDING_MASK) == wasm::WASM_SYMBOL_BINDING_COMMON) {
+          if (Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)
+            return make_error<GenericBinaryError>(
+                "common symbols cannot be absolute: " + Info.Name,
+                object_error::parse_failed);
           auto Size = readVaruint64(Ctx);
           auto Alignment = readUint8(Ctx);
           Info.CommonRef = wasm::WasmCommonReference{Size, Alignment};
