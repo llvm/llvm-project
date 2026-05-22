@@ -14,6 +14,10 @@
 
 // NOTE: NO INCLUDE GUARD DESIRED!
 
+// Each entry below defines a single 1-bit flag. New entries MUST be appended
+// to the end of the feature/metadata list. DO NOT insert in the middle or
+// reorder existing entries.
+
 #ifndef HANDLE_BB_ADDR_MAP_FEATURE
 #define HANDLE_BB_ADDR_MAP_FEATURE(Name)
 #endif
