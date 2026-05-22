@@ -1803,17 +1803,20 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
 }
 
 void VPlanTransforms::simplifyReverses(VPlan &Plan) {
-  VPValue *X, *EVL;
+  auto m_ReverseReverse = [](auto X) {
+    VPValue *EVL;
+    return m_CombineOr(
+        m_Reverse(m_Reverse(X)),
+        m_vp_Reverse(m_vp_Reverse(X, m_VPValue(), m_VPValue(EVL)), m_VPValue(),
+                     m_Deferred(EVL)));
+  };
+
   PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
       Plan.getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (match(&R,
-                m_CombineOr(m_Reverse(m_Reverse(m_VPValue(X))),
-                            m_Intrinsic<Intrinsic::experimental_vp_reverse>(
-                                m_Intrinsic<Intrinsic::experimental_vp_reverse>(
-                                    m_VPValue(X), m_VPValue(), m_VPValue(EVL)),
-                                m_VPValue(), m_Deferred(EVL))))) {
+      VPValue *X;
+      if (match(&R, m_ReverseReverse(m_VPValue(X)))) {
         R.getVPSingleValue()->replaceAllUsesWith(X);
         R.eraseFromParent();
       }
