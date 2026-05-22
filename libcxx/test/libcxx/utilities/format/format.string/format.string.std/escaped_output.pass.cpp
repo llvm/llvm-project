@@ -75,7 +75,7 @@ inline constexpr int C  = Cc + Cf + Cs + Co + Cn;
 // [3FC40, 10FFFF] use a hand-crafted algorithm.
 //
 // This means a number of entries are omitted
-inline constexpr int excluded = ((0x10FFFF - 0x3347A) + 1) - 240;
+inline constexpr int excluded = ((0x10FFFF - 0x3FC40) + 1) - 240;
 
 inline constexpr int entries = Z + C - excluded;
 
