@@ -159,4 +159,4 @@ jobs:
 
       - name: Build and Run
         run: |
-          cmake --build build/clang --target libc-shared-tests
+          cmake --build build --target libc-shared-tests
