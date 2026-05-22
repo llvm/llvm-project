@@ -5687,10 +5687,9 @@ static SDValue lowerZvzipVZIP(SDValue Op0, SDValue Op1, const SDLoc &DL,
 static SDValue lowerZvzipVUNZIP(unsigned Opc, SDValue Op, const SDLoc &DL,
                                 SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
-  assert(RISCVISD::VUNZIPE_VL == Opc || RISCVISD::VUNZIPO_VL == Opc);
+  assert(Opc == RISCVISD::VUNZIPE_VL || Opc == RISCVISD::VUNZIPO_VL);
   MVT VT = Op.getSimpleValueType();
-  if (VT.getVectorMinNumElements() < 2)
-    return SDValue();
+  assert(VT.getVectorMinNumElements() >= 2);
 
   MVT IntVT = VT.changeVectorElementTypeToInteger();
   Op = DAG.getBitcast(IntVT, Op);
@@ -6438,15 +6437,15 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
           Op = DAG.getExtractSubvector(DL, NewVT, Src, 0);
         }
         if (Op)
-          if (SDValue Res = lowerZvzipVUNZIP(Opc, Op, DL, DAG, Subtarget))
-            return Res;
+          return lowerZvzipVUNZIP(Opc, Op, DL, DAG, Subtarget);
       }
 
-      if (UsesBothSources) {
+      if (UsesBothSources &&
+          V1.getSimpleValueType().getVectorMinNumElements() >= 2 &&
+          V2.getSimpleValueType().getVectorMinNumElements() >= 2) {
         SDValue Lo = lowerZvzipVUNZIP(Opc, V1, DL, DAG, Subtarget);
         SDValue Hi = lowerZvzipVUNZIP(Opc, V2, DL, DAG, Subtarget);
-        if (Lo && Hi)
-          return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+        return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
       }
     }
 
@@ -12825,12 +12824,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       SDValue V = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, V1, V2);
       SDValue Even =
           lowerZvzipVUNZIP(RISCVISD::VUNZIPE_VL, V, DL, DAG, Subtarget);
-      if (Even) {
-        SDValue Odd =
-            lowerZvzipVUNZIP(RISCVISD::VUNZIPO_VL, V, DL, DAG, Subtarget);
-        if (Odd)
-          return DAG.getMergeValues({Even, Odd}, DL);
-      }
+      SDValue Odd =
+          lowerZvzipVUNZIP(RISCVISD::VUNZIPO_VL, V, DL, DAG, Subtarget);
+      return DAG.getMergeValues({Even, Odd}, DL);
     }
   }
 
