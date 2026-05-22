@@ -2090,17 +2090,21 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
       continue;
 
     // Update IV operands and comparison bound to use new narrower type.
-    auto *NewStart = Plan.getZero(NewIVTy);
-    WideIV->setStartValue(NewStart);
-    auto *NewStep = Plan.getConstantInt(NewIVTy, 1);
-    WideIV->setStepValue(NewStep);
+    assert(!WideIV->getTruncInst() &&
+           "canonical IV is not expected to have a truncation");
+    auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
+        WideIV->getPHINode(), Plan.getZero(NewIVTy),
+        Plan.getConstantInt(NewIVTy, 1), WideIV->getVFValue(),
+        WideIV->getInductionDescriptor(), *WideIV, WideIV->getDebugLoc());
+    NewWideIV->insertBefore(WideIV);
 
     auto *NewBTC = new VPWidenCastRecipe(
         Instruction::Trunc, Plan.getOrCreateBackedgeTakenCount(), NewIVTy,
         nullptr, VPIRFlags::getDefaultFlags(Instruction::Trunc));
     Plan.getVectorPreheader()->appendRecipe(NewBTC);
     auto *Cmp = cast<VPInstruction>(WideIV->getSingleUser());
-    Cmp->setOperand(1, NewBTC);
+    Cmp->replaceAllUsesWith(
+        VPBuilder(Cmp).createICmp(Cmp->getPredicate(), NewWideIV, NewBTC));
 
     MadeChange = true;
   }
@@ -2634,52 +2638,59 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       if (auto *VPW = dyn_cast<VPRecipeWithIRFlags>(&R))
         VPW->dropPoisonGeneratingFlags();
 
-      if (OldResSizeInBits != NewResSizeInBits &&
-          !match(&R, m_ICmp(m_VPValue(), m_VPValue()))) {
-        // Extend result to original width.
-        auto *Ext = new VPWidenCastRecipe(
-            Instruction::ZExt, ResultVPV, OldResTy, nullptr,
-            VPIRFlags::getDefaultFlags(Instruction::ZExt));
-        Ext->insertAfter(&R);
-        ResultVPV->replaceAllUsesWith(Ext);
-        Ext->setOperand(0, ResultVPV);
-        assert(OldResSizeInBits > NewResSizeInBits && "Nothing to shrink?");
-      } else {
-        assert(match(&R, m_ICmp(m_VPValue(), m_VPValue())) &&
-               "Only ICmps should not need extending the result.");
-      }
-
+      assert((OldResSizeInBits != NewResSizeInBits ||
+              match(&R, m_ICmp(m_VPValue(), m_VPValue()))) &&
+             "Only ICmps should not need extending the result.");
       assert(!isa<VPWidenStoreRecipe>(&R) && "stores cannot be narrowed");
-      if (isa<VPWidenLoadRecipe, VPWidenIntrinsicRecipe>(&R))
+
+      // For loads/intrinsics we don't recreate the recipe; just wrap the
+      // original wide result in a ZExt to OldResTy.
+      if (isa<VPWidenLoadRecipe, VPWidenIntrinsicRecipe>(&R)) {
+        if (OldResSizeInBits != NewResSizeInBits) {
+          auto *Ext = VPBuilder::getToInsertAfter(&R).createWidenCast(
+              Instruction::ZExt, ResultVPV, OldResTy);
+          ResultVPV->replaceAllUsesWith(Ext);
+          Ext->setOperand(0, ResultVPV);
+        }
         continue;
+      }
 
       // Shrink operands by introducing truncates as needed.
       unsigned StartIdx =
           match(&R, m_Select(m_VPValue(), m_VPValue(), m_VPValue())) ? 1 : 0;
-      for (unsigned Idx = StartIdx; Idx != R.getNumOperands(); ++Idx) {
-        auto *Op = R.getOperand(Idx);
+      SmallVector<VPValue *> NewOperands(R.operands());
+      for (VPValue *&Op : drop_begin(NewOperands, StartIdx)) {
         unsigned OpSizeInBits =
             TypeInfo.inferScalarType(Op)->getScalarSizeInBits();
         if (OpSizeInBits == NewResSizeInBits)
           continue;
         assert(OpSizeInBits > NewResSizeInBits && "nothing to truncate");
-        auto [ProcessedIter, IterIsEmpty] = ProcessedTruncs.try_emplace(Op);
-        if (!IterIsEmpty) {
-          R.setOperand(Idx, ProcessedIter->second);
-          continue;
+        auto [ProcessedIter, Inserted] = ProcessedTruncs.try_emplace(Op);
+        if (Inserted) {
+          VPBuilder Builder;
+          if (isa<VPIRValue>(Op))
+            Builder.setInsertPoint(PH);
+          else
+            Builder.setInsertPoint(&R);
+          ProcessedIter->second =
+              Builder.createWidenCast(Instruction::Trunc, Op, NewResTy);
         }
-
-        VPBuilder Builder;
-        if (isa<VPIRValue>(Op))
-          Builder.setInsertPoint(PH);
-        else
-          Builder.setInsertPoint(&R);
-        VPWidenCastRecipe *NewOp =
-            Builder.createWidenCast(Instruction::Trunc, Op, NewResTy);
-        ProcessedIter->second = NewOp;
-        R.setOperand(Idx, NewOp);
+        Op = ProcessedIter->second;
       }
 
+      auto *NWR = cast<VPWidenRecipe>(&R)->cloneWithOperands(NewOperands);
+      NWR->insertBefore(&R);
+
+      // Wrap NWR in a ZExt to preserve the original wide type for downstream
+      // users (unless this is an ICmp, which produces i1 regardless).
+      VPValue *Replacement = NWR->getVPSingleValue();
+      if (OldResSizeInBits != NewResSizeInBits)
+        Replacement =
+            VPBuilder::getToInsertAfter(NWR)
+                .createWidenCast(Instruction::ZExt, Replacement, OldResTy)
+                ->getVPSingleValue();
+      ResultVPV->replaceAllUsesWith(Replacement);
+      R.eraseFromParent();
     }
   }
 }
@@ -2936,10 +2947,14 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
   VPValue *Addr, *Mask, *EndPtr;
 
   /// Adjust any end pointers so that they point to the end of EVL lanes not VF.
-  auto AdjustEndPtr = [&CurRecipe, &EVL](VPValue *EndPtr) {
+  auto AdjustEndPtr = [&CurRecipe, &EVL, &TypeInfo](VPValue *EndPtr) {
     auto *EVLEndPtr = cast<VPVectorEndPointerRecipe>(EndPtr)->clone();
     EVLEndPtr->insertBefore(&CurRecipe);
-    EVLEndPtr->setOperand(1, &EVL);
+    // Cast EVL (i32) to match the VF operand's type.
+    VPValue *EVLAsVF = VPBuilder(EVLEndPtr).createScalarZExtOrTrunc(
+        &EVL, TypeInfo.inferScalarType(EVLEndPtr->getOperand(1)),
+        TypeInfo.inferScalarType(&EVL), DebugLoc::getUnknown());
+    EVLEndPtr->setOperand(1, EVLAsVF);
     return EVLEndPtr;
   };
 
@@ -3119,6 +3134,13 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
+  // EVL is i32 but VF/VFxUF are IdxTy. Convert as needed.
+  VPValue *EVLAsIdx =
+      VPBuilder::getToInsertAfter(EVL.getDefiningRecipe())
+          .createScalarZExtOrTrunc(&EVL, Plan.getVF().getType(),
+                                   TypeInfo.inferScalarType(&EVL),
+                                   DebugLoc::getUnknown());
+
   assert(all_of(Plan.getVF().users(),
                 [&Plan](VPUser *U) {
                   auto IsAllowedUser =
@@ -3131,7 +3153,7 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
                   return IsAllowedUser(U);
                 }) &&
          "User of VF that we can't transform to EVL.");
-  Plan.getVF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
+  Plan.getVF().replaceUsesWithIf(EVLAsIdx, [](VPUser &U, unsigned Idx) {
     return isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(U);
   });
 
@@ -3142,7 +3164,7 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
                     m_Isa<VPWidenPointerInductionRecipe>()))) &&
          "Only users of VFxUF should be VPWidenPointerInductionRecipe and the "
          "increment of the canonical induction.");
-  Plan.getVFxUF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
+  Plan.getVFxUF().replaceUsesWithIf(EVLAsIdx, [](VPUser &U, unsigned Idx) {
     // Only replace uses in VPWidenPointerInductionRecipe; The increment of the
     // canonical induction must not be updated.
     return isa<VPWidenPointerInductionRecipe>(U);
@@ -4591,10 +4613,12 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                         *Ext1, Ext1->getDebugLoc());
         NewExt1->insertBefore(Ext1);
       }
-      Mul->setOperand(0, NewExt0);
-      Mul->setOperand(1, NewExt1);
-      Red->setOperand(1, Mul);
-      return new VPExpressionRecipe(NewExt0, NewExt1, Mul, Red);
+      auto *NewMul = Mul->cloneWithOperands({NewExt0, NewExt1});
+      NewMul->insertBefore(Mul);
+      Ext->replaceAllUsesWith(NewMul);
+      Ext->eraseFromParent();
+      Mul->eraseFromParent();
+      return new VPExpressionRecipe(NewExt0, NewExt1, NewMul, Red);
     }
   }
   return nullptr;
@@ -6005,15 +6029,19 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *Op,
         MulLHS->getOpcode() != MulRHS->getOpcode())
       return Op;
     VPBuilder Builder(Mul);
-    Mul->setOperand(0, Builder.createWidenCast(MulLHS->getOpcode(),
-                                               MulLHS->getOperand(0),
-                                               Ext->getScalarType()));
-    Mul->setOperand(1, MulLHS == MulRHS
-                           ? Mul->getOperand(0)
-                           : Builder.createWidenCast(MulRHS->getOpcode(),
-                                                     MulRHS->getOperand(0),
-                                                     Ext->getScalarType()));
-    return Mul;
+    auto *NewLHS = Builder.createWidenCast(
+        MulLHS->getOpcode(), MulLHS->getOperand(0), Ext->getScalarType());
+    auto *NewRHS = MulLHS == MulRHS
+                       ? NewLHS
+                       : Builder.createWidenCast(MulRHS->getOpcode(),
+                                                 MulRHS->getOperand(0),
+                                                 Ext->getScalarType());
+    auto *NewMul = Mul->cloneWithOperands({NewLHS, NewRHS});
+    Builder.insert(NewMul);
+    Op->replaceAllUsesWith(NewMul);
+    Op->eraseFromParent();
+    Mul->eraseFromParent();
+    return NewMul;
   }
 
   return Op;
