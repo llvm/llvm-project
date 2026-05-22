@@ -522,6 +522,17 @@ public:
   /// or commutative.
   bool SimplifyAssociativeOrCommutative(BinaryOperator &I);
 
+  /// If InnerVal1 and OuterVal form a symmetric pair, and "op" is commutative:
+  /// "(InnerVal0 op InnerVal1) op OuterVal" ==> "(X op' Y) op InnerVal0".
+  /// "OuterVal op (InnerVal0 op InnerVal1)" ==> "InnerVal0 op (X op' Y)".
+  /// X and Y are the inputs to the symmetric pair. "op'" indicates that
+  /// InnerOp will have its poison-generating flags dropped. Warning:
+  /// associativity not checked.
+  bool tryReassociateAndFoldSymmetricPair(BinaryOperator &OuterOp,
+                                          BinaryOperator &InnerOp,
+                                          Value *InnerVal0, Value *InnerVal1,
+                                          Value *OuterVal);
+
   /// Tries to simplify binary operations which some other binary
   /// operation distributes over.
   ///

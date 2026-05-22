@@ -517,19 +517,11 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *B = Op0->getOperand(1);
         Value *C = I.getOperand(1);
 
-        // Form "A op V" when "B op C" is a symmetric pair
-        if (I.isCommutative() && Op0->hasOneUse()) {
-          if (auto Pair = matchSymmetricPair(B, C)) {
-            replaceOperand(*Op0, 0, Pair->first);
-            replaceOperand(*Op0, 1, Pair->second);
-            Op0->dropPoisonGeneratingFlags();
-            replaceOperand(I, 1, A);
-            I.swapOperands();
-            ClearSubclassDataAfterReassociation(I);
-            Changed = true;
-            ++NumReassoc;
-            continue;
-          }
+        if (tryReassociateAndFoldSymmetricPair(I, *Op0, A, B, C)) {
+          I.swapOperands();
+          Changed = true;
+          ++NumReassoc;
+          continue;
         }
 
         // Does "B op C" simplify?
@@ -565,6 +557,13 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *B = Op1->getOperand(0);
         Value *C = Op1->getOperand(1);
 
+        if (tryReassociateAndFoldSymmetricPair(I, *Op1, C, A, B)) {
+          I.swapOperands();
+          Changed = true;
+          ++NumReassoc;
+          continue;
+        }
+
         // Does "A op B" simplify?
         if (Value *V = simplifyBinOp(Opcode, A, B, SQ.getWithInstruction(&I))) {
           // It simplifies to V.  Form "V op C".
@@ -593,19 +592,11 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *A = Op0->getOperand(0);
         Value *B = Op0->getOperand(1);
         Value *C = I.getOperand(1);
-        
-        // Form "V op B" when "C op A" is a symmetric pair
-        if (Op0->hasOneUse()) {
-          if (auto Pair = matchSymmetricPair(C, A)) {
-            replaceOperand(*Op0, 0, Pair->first);
-            replaceOperand(*Op0, 1, Pair->second);
-            Op0->dropPoisonGeneratingFlags();
-            replaceOperand(I, 1, B);
-            ClearSubclassDataAfterReassociation(I);
-            Changed = true;
-            ++NumReassoc;
-            continue;
-          }
+
+        if (tryReassociateAndFoldSymmetricPair(I, *Op0, B, C, A)) {
+          Changed = true;
+          ++NumReassoc;
+          continue;
         }
 
         // Does "C op A" simplify?
@@ -629,18 +620,10 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *B = Op1->getOperand(0);
         Value *C = Op1->getOperand(1);
 
-        // Form "B op V" when "C op A" is a symmetric pair.
-        if (Op1->hasOneUse()) {
-          if (auto Pair = matchSymmetricPair(C, A)) {
-            replaceOperand(*Op1, 0, Pair->first);
-            replaceOperand(*Op1, 1, Pair->second);
-            Op1->dropPoisonGeneratingFlags();
-            replaceOperand(I, 0, B);
-            ClearSubclassDataAfterReassociation(I);
-            Changed = true;
-            ++NumReassoc;
-            continue;
-          }
+        if (tryReassociateAndFoldSymmetricPair(I, *Op1, B, C, A)) {
+          Changed = true;
+          ++NumReassoc;
+          continue;
         }
 
         // Does "C op A" simplify?
@@ -1386,6 +1369,28 @@ InstCombinerImpl::matchSymmetricPair(Value *LHS, Value *RHS) {
   default:
     return std::nullopt;
   }
+}
+
+bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
+    BinaryOperator &OuterOp, BinaryOperator &InnerOp, Value *InnerVal0,
+    Value *InnerVal1, Value *OuterVal) {
+  assert(OuterOp.getOpcode() == InnerOp.getOpcode() &&
+         "Outer and inner operation must have same opcode!");
+  if (!OuterOp.isCommutative() || !InnerOp.hasOneUse())
+    return false;
+
+  auto Pair = matchSymmetricPair(InnerVal1, OuterVal);
+  if (Pair) {
+    replaceOperand(InnerOp, 0, Pair->first);
+    replaceOperand(InnerOp, 1, Pair->second);
+    InnerOp.dropPoisonGeneratingFlags();
+    replaceOperand(OuterOp, OuterOp.getOperand(1) == OuterVal ? 1 : 0,
+                   InnerVal0);
+    ClearSubclassDataAfterReassociation(OuterOp);
+    return true;
+  }
+
+  return false;
 }
 
 Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
