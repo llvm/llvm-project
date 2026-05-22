@@ -1070,6 +1070,10 @@ private:
   /// The files that have been included outside of (sub)modules.
   IncludedFilesSet Includes;
 
+  /// Maps from a header file entry to the set of modules that include it.
+  llvm::DenseMap<const FileEntry *, llvm::SmallPtrSet<Module *, 2>>
+      IncludingModules;
+
   /// The set of top-level modules that affected preprocessing, but were not
   /// imported.
   llvm::SmallSetVector<Module *, 2> AffectingClangModules;
@@ -1560,9 +1564,10 @@ public:
     Module *M = BuildingSubmoduleStack.empty()
                     ? getCurrentModule()
                     : BuildingSubmoduleStack.back().M;
-    if (M)
+    if (M) {
       M->Includes.insert(File);
-    else
+      IncludingModules[&File.getFileEntry()].insert(M);
+    } else
       Includes.insert(File);
 
     return !AlreadyIncluded;
@@ -1571,7 +1576,16 @@ public:
   /// Return true if this header has already been included.
   bool alreadyIncluded(FileEntryRef File) const {
     HeaderInfo.getFileInfo(File);
-    return CurSubmoduleState->VisibleIncludedFiles.contains(File);
+    if (CurSubmoduleState->VisibleIncludedFiles.contains(File))
+      return true;
+    auto It = IncludingModules.find(&File.getFileEntry());
+    if (It != IncludingModules.end())
+      for (Module *M : It->second)
+        if (CurSubmoduleState->VisibleModules.isVisible(M)) {
+          CurSubmoduleState->VisibleIncludedFiles.insert(File);
+          return true;
+        }
+    return false;
   }
 
   /// Mark a file as included at the top level (outside any module).
@@ -1583,10 +1597,11 @@ public:
 
   /// Mark a file as included by module \p M.
   /// Called by ASTReader when deserializing header file info.
-  /// The file is added to VisibleIncludedFiles only if \p M is currently
+  /// The File is added to VisibleIncludedFiles only if \p M is currently
   /// visible.
   void markIncludedInModule(Module *M, const FileEntry *File) {
     M->Includes.insert(File);
+    IncludingModules[File].insert(M);
 
     if (CurSubmoduleState->VisibleModules.isVisible(M))
       CurSubmoduleState->VisibleIncludedFiles.insert(File);

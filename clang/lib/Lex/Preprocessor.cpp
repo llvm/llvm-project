@@ -1438,11 +1438,7 @@ void Preprocessor::EnterModuleSuffixTokenStream(ArrayRef<Token> Toks) {
 void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc,
                                      bool IncludeExports) {
   CurSubmoduleState->VisibleModules.setVisible(
-      M, Loc, IncludeExports,
-      [&](Module *Imported) {
-        for (const auto *File : Imported->Includes)
-          CurSubmoduleState->VisibleIncludedFiles.insert(File);
-      },
+      M, Loc, IncludeExports, [](Module *) {},
       [&](ArrayRef<Module *> Path, Module *Conflict, StringRef Message) {
         // FIXME: Include the path in the diagnostic.
         // FIXME: Include the import location for the conflicting module.
