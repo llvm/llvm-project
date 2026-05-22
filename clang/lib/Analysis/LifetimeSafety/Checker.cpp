@@ -331,11 +331,8 @@ public:
 
     const auto &SM = FDef->getASTContext().getSourceManager();
 
-    auto GetLoc = [&SM](const FunctionDecl *FD) {
-      return SM.getExpansionLoc(FD->getLocation());
-    };
-    auto GetFile = [&SM, &GetLoc](const FunctionDecl *FD) {
-      return SM.getFileID(GetLoc(FD));
+    auto GetFile = [&SM](const FunctionDecl *FD) {
+      return SM.getFileID(SM.getExpansionLoc(FD->getLocation()));
     };
 
     const FileID DefFile = GetFile(FDef);
@@ -345,6 +342,8 @@ public:
                             ? WarningScope::IntraTU
                             : WarningScope::CrossTU}};
 
+    // Find the earliest redeclaration in each file other than the definition
+    // file.
     auto AddCrossTUDecl = [&](const FunctionDecl *FD) {
       FileID File = GetFile(FD);
       if (File == DefFile)
@@ -355,8 +354,10 @@ public:
       Targets.push_back({FD, WarningScope::CrossTU});
     };
 
-    llvm::SmallVector<const FunctionDecl *, 4> Redecls(FDef->redecls());
-    for (const FunctionDecl *Redecl : llvm::reverse(Redecls))
+    // We iterate in reverse order (from most recent to oldest) to find
+    // the first declaration in each file.
+    for (const FunctionDecl *Redecl :
+         llvm::reverse(llvm::to_vector(FDef->redecls())))
       AddCrossTUDecl(Redecl);
 
     return Targets;
