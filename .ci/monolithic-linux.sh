@@ -51,6 +51,7 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
       -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
       -G Ninja \
+      -D LLVM_UNITY_BUILD=ON \
       -D CMAKE_PREFIX_PATH="${HOME}/.local" \
       -D CMAKE_BUILD_TYPE=Release \
       -D CLANG_ENABLE_CIR=${enable_cir} \

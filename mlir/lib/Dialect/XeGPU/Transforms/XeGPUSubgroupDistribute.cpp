@@ -105,21 +105,6 @@ static Value resolveDistributedTy(Value orig, T expected,
   return orig;
 }
 
-/// Given a vector type and its distributed vector type, return the list of
-/// dimensions that are distributed.
-static SmallVector<int64_t> getDistributedDims(VectorType originalType,
-                                               VectorType distributedType) {
-  assert(originalType.getRank() == distributedType.getRank() &&
-         "sequential and distributed vector types must have the same rank");
-  SmallVector<int64_t> distributedDims;
-  for (int64_t i = 0; i < originalType.getRank(); ++i) {
-    if (distributedType.getDimSize(i) != originalType.getDimSize(i)) {
-      distributedDims.push_back(i);
-    }
-  }
-  return distributedDims;
-}
-
 /// Given a GPUFuncOp, this pattern creates a new GPUFuncOp and moves the body
 /// of the original GPUFuncOp to the new GPUFuncOp such that entire body is
 /// contained within a WarpExecuteOnLane0Op.
@@ -1654,7 +1639,7 @@ struct VectorExtractStridedSliceDistribution
     // Find the distributed dimensions.
     auto extractResultType = cast<VectorType>(operand->get().getType());
     auto distributedDims =
-        getDistributedDims(extractResultType, distributedType);
+        xegpu::getDistributedDims(extractResultType, distributedType);
     // Collect updated source type, sizes and offsets. They may be adjusted
     // later if the data is distributed to lanes (as opposed to being owned by
     // all lanes uniformly).
@@ -1769,7 +1754,7 @@ struct VectorInsertStridedSliceDistribution
     // Find the distributed dimensions of the dest vector.
     auto insertResultType = cast<VectorType>(operand->get().getType());
     auto destDistributedDims =
-        getDistributedDims(insertResultType, distributedType);
+        xegpu::getDistributedDims(insertResultType, distributedType);
     // Collect updated offsets, source type and dest type. They may be adjusted
     // later if the data is distributed to lanes (as opposed to being owned by
     // all lanes uniformly).

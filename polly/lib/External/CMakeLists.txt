@@ -286,6 +286,7 @@ if (POLLY_BUNDLED_ISL)
   add_polly_library(PollyISL
     ${ISL_FILES}
     )
+  set_target_properties(PollyISL PROPERTIES UNITY_BUILD OFF)
 
 
   if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)

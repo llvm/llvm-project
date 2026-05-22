@@ -1,10 +1,12 @@
 add_llvm_component_library(LLVMLTO
-  LTO.cpp
   LTOBackend.cpp
   LTOModule.cpp
   LTOCodeGenerator.cpp
   UpdateCompilerUsed.cpp
   ThinLTOCodeGenerator.cpp
+  # warning: attribute declaration must precede definition [-Wignored-attributes]
+  # LLVM_ABI extern cl::opt<bool> EnableLTOInternalization
+  LTO.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/LTO

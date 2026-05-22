@@ -98,20 +98,6 @@ static bool isReductionLaneLocal(vector::MultiDimReductionOp op) {
   return resTy != resDistTypeOrFailure.value();
 }
 
-/// Given a vector type and its distributed vector type, return the list of
-/// dimensions that are distributed.
-static SmallVector<int64_t> getDistributedDims(VectorType originalType,
-                                               VectorType distributedType) {
-  assert(originalType.getRank() == distributedType.getRank() &&
-         "original and distributed vector types must have the same rank");
-  SmallVector<int64_t> distributedDims;
-  for (int64_t i = 0; i < originalType.getRank(); ++i) {
-    if (distributedType.getDimSize(i) != originalType.getDimSize(i))
-      distributedDims.push_back(i);
-  }
-  return distributedDims;
-}
-
 /// Distributes a subgroup-level CreateNdDesc op to workitem-level CreateNdDesc
 /// op. This simply drops the layout attribute from the tensor descriptor type.
 struct SgToWiCreateNdDesc : public OpConversionPattern<xegpu::CreateNdDescOp> {
@@ -1188,7 +1174,7 @@ struct SgToWiVectorExtractStridedSlice
     VectorType distResultTy = *distResultTyOrFailure;
 
     SmallVector<int64_t> distributedDims =
-        getDistributedDims(resultType, distResultTy);
+        xegpu::getDistributedDims(resultType, distResultTy);
 
     // Collect updated sizes, offsets, strides. Pad to full source rank.
     int64_t sourceRank = op.getSourceVectorType().getRank();
@@ -1399,7 +1385,7 @@ struct SgToWiVectorInsertStridedSlice
     VectorType distDestTy = *distDestTyOrFailure;
 
     SmallVector<int64_t> destDistributedDims =
-        getDistributedDims(destType, distDestTy);
+        xegpu::getDistributedDims(destType, distDestTy);
 
     SmallVector<Attribute> updatedOffsets = llvm::map_to_vector(
         op.getOffsets(), [](Attribute attr) { return attr; });
