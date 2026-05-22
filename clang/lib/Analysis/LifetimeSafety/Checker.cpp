@@ -316,9 +316,11 @@ public:
     }
   }
 
-  // Returns diagnostic targets for annotations on FDef: the canonical
-  // declaration and the earliest redeclaration in each other file. Each
-  // target is paired with the warning scope appropriate for its file.
+  // Returns declarations that should be annotated with lifetime attributes
+  // in order to annotate FDef: the canonical declaration and the earliest
+  // redeclarations in each other file. This defines the placement policy for
+  // lifetime annotations. Each target is paired with its corresponding warning
+  // scope.
   llvm::SmallVector<std::pair<const FunctionDecl *, WarningScope>, 2>
   getTargetDeclsForAttr(const FunctionDecl *FDef) {
     if (!FDef)
@@ -345,19 +347,15 @@ public:
       FileID File = GetFile(FD);
       if (File == DefFile)
         return;
-      for (auto &[SeenFile, SeenFD] : EarliestDeclForFile) {
-        if (SeenFile != File)
-          continue;
-        if (SM.isBeforeInTranslationUnit(GetLoc(FD), GetLoc(SeenFD)))
-          SeenFD = FD;
-        return;
-      }
+      for (auto [SeenFile, SeenFD] : EarliestDeclForFile)
+        if (SeenFile == File)
+          return;
       EarliestDeclForFile.push_back({File, FD});
     };
 
-    for (const FunctionDecl *Redecl : FDef->redecls()) {
+    llvm::SmallVector<const FunctionDecl *, 4> Redecls(FDef->redecls());
+    for (const FunctionDecl *Redecl : llvm::reverse(Redecls))
       AddCrossTUDecl(Redecl);
-    }
 
     llvm::SmallVector<std::pair<const FunctionDecl *, WarningScope>, 2> Targets;
     for (auto [File, FD] : EarliestDeclForFile) {
