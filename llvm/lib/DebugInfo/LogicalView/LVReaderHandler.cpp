@@ -296,7 +296,7 @@ Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
 
 Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
                                     MemoryBufferRef Buffer) {
-  InputHandle Input = dyn_cast<MemoryBufferRef>(&Buffer);
+  InputHandle Input = cast<MemoryBufferRef>(&Buffer);
   return createReader(Filename, Readers, Input, IRFileFormatName);
 }
 

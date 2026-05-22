@@ -1538,8 +1538,6 @@ void LVIRReader::constructSubrange(LVScopeArray *Array, const DISubrange *SR,
       Count = UI->getSExtValue() - Lowerbound + 1;
     }
 
-    if (Count == -1)
-      Count = 0;
     Subrange->setCount(Count);
   }
 }
