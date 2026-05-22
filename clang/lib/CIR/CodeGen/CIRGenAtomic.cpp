@@ -110,6 +110,10 @@ public:
   /// copy the value across.
   Address convertToAtomicIntPointer(Address addr) const;
 
+  /// Turn an atomic-layout object into an r-value.
+  RValue convertAtomicTempToRValue(Address addr, SourceLocation loc,
+                                   bool asValue) const;
+
   /// Converts a rvalue to integer value.
   mlir::Value convertRValueToInt(RValue rvalue, bool cmpxchg = false) const;
 
@@ -200,6 +204,33 @@ Address AtomicInfo::convertToAtomicIntPointer(Address addr) const {
   }
 
   return castToAtomicIntPointer(addr);
+}
+
+RValue AtomicInfo::convertAtomicTempToRValue(Address addr, SourceLocation loc,
+                                             bool asValue) const {
+  if (lvalue.isSimple()) {
+    if (evaluationKind == TEK_Aggregate) {
+      cgf.cgm.errorNYI(
+          loc,
+          "AtomicInfo::convertAtomicTempToRValue: evaluationKind is aggregate");
+      return RValue::get(nullptr);
+    }
+
+    // Drill into the padding structure if we have one.
+    if (hasPadding()) {
+      cgf.cgm.errorNYI(loc,
+                       "AtomicInfo::convertAtomicTempToRValue: hasPadding");
+      return RValue::get(nullptr);
+    }
+
+    // Otherwise, just convert the temporary to an r-value using the
+    // normal conversion routine.
+    return cgf.convertTempToRValue(addr, getValueType(), loc);
+  }
+
+  cgf.cgm.errorNYI(
+      loc, "AtomicInfo::convertAtomicTempToRValue: lvalue is not simple");
+  return RValue::get(nullptr);
 }
 
 RValue AtomicInfo::emitAtomicLoad(AggValueSlot resultSlot, SourceLocation loc,
@@ -334,8 +365,19 @@ RValue AtomicInfo::convertToValueOrAtomic(mlir::Value intVal,
     return RValue::get(nullptr);
   }
 
-  cgf.cgm.errorNYI("convertToValueOrAtomic: convert through temp");
-  return RValue::get(nullptr);
+  // Create a temporary.  This needs to be big enough to hold the
+  // atomic integer.
+  if (asValue && getEvaluationKind() == TEK_Aggregate) {
+    cgf.cgm.errorNYI("convertToValueOrAtomic: temporary aggregate");
+    return RValue::get(nullptr);
+  }
+
+  Address temp = createTempAlloca();
+
+  // Slam the integer into the temporary.
+  Address castTemp = castToAtomicIntPointer(temp);
+  cgf.getBuilder().createStore(cgf.getLoc(loc), intVal, castTemp);
+  return convertAtomicTempToRValue(temp, loc, asValue);
 }
 
 /// Copy an r-value into memory as part of storing to an atomic type.
