@@ -903,43 +903,26 @@ void PMDataManager::removeNotPreservedAnalysis(Pass *P) {
     return;
 
   const AnalysisUsage::VectorType &PreservedSet = AnUsage->getPreservedSet();
-  SmallVector<AnalysisID> ToRemove;
-  for (auto &Entry : AvailableAnalysis) {
-    if (Entry.second->getAsImmutablePass() == nullptr &&
-        !is_contained(PreservedSet, Entry.first)) {
-      // Remove this analysis
-      if (PassDebugging >= Details) {
-        Pass *S = Entry.second;
-        dbgs() << " -- '" <<  P->getPassName() << "' is not preserving '";
-        dbgs() << S->getPassName() << "'\n";
-      }
-      ToRemove.push_back(Entry.first);
+  auto IsNotPreserved = [&](const auto &Entry) {
+    if (Entry.second->getAsImmutablePass() != nullptr ||
+        is_contained(PreservedSet, Entry.first))
+      return false;
+    // Remove this analysis
+    if (PassDebugging >= Details) {
+      Pass *S = Entry.second;
+      dbgs() << " -- '" << P->getPassName() << "' is not preserving '";
+      dbgs() << S->getPassName() << "'\n";
     }
-  }
-  for (AnalysisID ID : ToRemove)
-    AvailableAnalysis.erase(ID);
+    return true;
+  };
+  AvailableAnalysis.remove_if(IsNotPreserved);
 
   // Check inherited analysis also. If P is not preserving analysis
   // provided by parent manager then remove it here.
   for (DenseMap<AnalysisID, Pass *> *IA : InheritedAnalysis) {
     if (!IA)
       continue;
-
-    ToRemove.clear();
-    for (auto &Entry : *IA) {
-      if (Entry.second->getAsImmutablePass() == nullptr &&
-          !is_contained(PreservedSet, Entry.first)) {
-        // Remove this analysis
-        if (PassDebugging >= Details) {
-          Pass *S = Entry.second;
-          dbgs() << " -- '" <<  P->getPassName() << "' is not preserving '";
-          dbgs() << S->getPassName() << "'\n";
-        }
-        ToRemove.push_back(Entry.first);
-      }
-    }
-    for (AnalysisID ID : ToRemove)
-      IA->erase(ID);
+    IA->remove_if(IsNotPreserved);
   }
 }
 

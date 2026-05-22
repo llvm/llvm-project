@@ -128,14 +128,9 @@ static bool reduceDbgValsForwardScan(MachineBasicBlock &MBB) {
       continue;
 
     // Stop tracking any location that is clobbered by this instruction.
-    SmallVector<DebugVariable> Clobbered;
-    for (auto &Var : VariableMap) {
-      auto &LocOp = Var.second.first;
-      if (MI.modifiesRegister(LocOp->getReg(), TRI))
-        Clobbered.push_back(Var.first);
-    }
-    for (const DebugVariable &Var : Clobbered)
-      VariableMap.erase(Var);
+    VariableMap.remove_if([&](const auto &Var) {
+      return MI.modifiesRegister(Var.second.first->getReg(), TRI);
+    });
   }
 
   for (auto &Instr : DbgValsToBeRemoved) {

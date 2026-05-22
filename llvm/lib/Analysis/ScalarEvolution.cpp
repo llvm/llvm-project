@@ -8775,12 +8775,8 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     forgetBackedgeTakenCounts(CurrL, /* Predicated */ true);
 
     // Drop information about predicated SCEV rewrites for this loop.
-    SmallVector<std::pair<const SCEVUnknown *, const Loop *>> ToRemove;
-    for (const auto &Entry : PredicatedSCEVRewrites)
-      if (Entry.first.second == CurrL)
-        ToRemove.push_back(Entry.first);
-    for (const auto &K : ToRemove)
-      PredicatedSCEVRewrites.erase(K);
+    PredicatedSCEVRewrites.remove_if(
+        [&](const auto &Entry) { return Entry.first.second == CurrL; });
 
     auto LoopUsersItr = LoopUsers.find(CurrL);
     if (LoopUsersItr != LoopUsers.end())
@@ -14566,12 +14562,8 @@ void ScalarEvolution::forgetMemoizedResults(ArrayRef<SCEVUse> SCEVs) {
   for (const auto *S : ToForget)
     forgetMemoizedResultsImpl(S);
 
-  SmallVector<std::pair<const SCEVUnknown *, const Loop *>> ToRemove;
-  for (const auto &Entry : PredicatedSCEVRewrites)
-    if (ToForget.count(Entry.first.first))
-      ToRemove.push_back(Entry.first);
-  for (const auto &K : ToRemove)
-    PredicatedSCEVRewrites.erase(K);
+  PredicatedSCEVRewrites.remove_if(
+      [&](const auto &Entry) { return ToForget.count(Entry.first.first); });
 }
 
 void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {

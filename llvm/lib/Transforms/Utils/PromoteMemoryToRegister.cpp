@@ -929,20 +929,16 @@ void PromoteMem2Reg::run() {
     // simplify and RAUW them as we go.  If it was not, we could add uses to
     // the values we replace with in a non-deterministic order, thus creating
     // non-deterministic def->use chains.
-    SmallVector<std::pair<unsigned, unsigned>> ToRemove;
-    for (auto &Entry : NewPhiNodes) {
+    EliminatedAPHI = NewPhiNodes.remove_if([&](const auto &Entry) {
       PHINode *PN = Entry.second;
-
       // If this PHI node merges one value and/or undefs, get the value.
       if (Value *V = simplifyInstruction(PN, SQ)) {
         PN->replaceAllUsesWith(V);
         PN->eraseFromParent();
-        ToRemove.push_back(Entry.first);
-        EliminatedAPHI = true;
+        return true;
       }
-    }
-    for (auto &K : ToRemove)
-      NewPhiNodes.erase(K);
+      return false;
+    });
   }
 
   // At this point, the renamer has added entries to PHI nodes for all reachable
