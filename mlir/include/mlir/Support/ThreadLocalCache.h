@@ -128,11 +128,8 @@ class ThreadLocalCache {
     /// Clear out any unused entries within the map. This method is not
     /// thread-safe, and should only be called by the same thread as the cache.
     void clearExpiredEntries() {
-      for (auto it = this->begin(), e = this->end(); it != e;) {
-        auto curIt = it++;
-        if (!curIt->second.ptr->second)
-          this->erase(curIt);
-      }
+      this->remove_if(
+          [](const auto &entry) { return !entry.second.ptr->second; });
     }
   };
 
@@ -159,11 +156,12 @@ public:
     }
     threadInstance.keepalive = perInstanceState;
 
-    // Before returning the new instance, take the chance to clear out any used
-    // entries in the static map. The cache is only cleared within the same
-    // thread to remove the need to lock the cache itself.
+    // Capture the value before clearing expired entries: clearExpiredEntries
+    // erases from `staticCache`, and backward-shift deletion can relocate the
+    // bucket referenced by `threadInstance`.
+    ValueT &value = *threadInstance.ptr->first;
     staticCache.clearExpiredEntries();
-    return *threadInstance.ptr->first;
+    return value;
   }
   ValueT &operator*() { return get(); }
   ValueT *operator->() { return &get(); }
