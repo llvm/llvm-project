@@ -21,16 +21,16 @@
 
 namespace cir {
 
-CIRDiagnosticHandler::CIRDiagnosticHandler(
-    mlir::MLIRContext *ctx, clang::DiagnosticsEngine &diags,
-    clang::SourceManager &srcMgr, clang::FileManager &fileMgr)
+CIRDiagnosticHandler::CIRDiagnosticHandler(mlir::MLIRContext *ctx,
+                                           clang::DiagnosticsEngine &diags,
+                                           clang::SourceManager &srcMgr,
+                                           clang::FileManager &fileMgr)
     : mlir::ScopedDiagnosticHandler(ctx), Diags(diags), SrcMgr(srcMgr),
       FileMgr(fileMgr) {
   setHandler([this](mlir::Diagnostic &D) { return handle(D); });
 }
 
-clang::SourceLocation
-CIRDiagnosticHandler::translateLoc(mlir::Location loc) {
+clang::SourceLocation CIRDiagnosticHandler::translateLoc(mlir::Location loc) {
   // Walk common location wrappers to reach a usable file/line/column triple.
   // Anything we can't translate becomes an invalid SourceLocation, which the
   // diagnostics engine renders without a source line.
@@ -42,8 +42,8 @@ CIRDiagnosticHandler::translateLoc(mlir::Location loc) {
     auto fileRef = FileMgr.getOptionalFileRef(file.getFilename().getValue());
     if (!fileRef)
       return clang::SourceLocation();
-    return SrcMgr.translateFileLineCol(&fileRef->getFileEntry(),
-                                       file.getLine(), file.getColumn());
+    return SrcMgr.translateFileLineCol(&fileRef->getFileEntry(), file.getLine(),
+                                       file.getColumn());
   }
   if (auto fused = mlir::dyn_cast<mlir::FusedLoc>(loc)) {
     for (mlir::Location child : fused.getLocations()) {

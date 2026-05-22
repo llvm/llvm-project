@@ -76,8 +76,7 @@ public:
 class CIRDiagnosticHandlerTest : public ::testing::Test {
 protected:
   CIRDiagnosticHandlerTest()
-      : Consumer(new CapturingConsumer),
-        FileMgr(FileMgrOpts),
+      : Consumer(new CapturingConsumer), FileMgr(FileMgrOpts),
         Diags(clang::DiagnosticIDs::create(), DiagOpts, Consumer.get(),
               /*ShouldOwnClient=*/false),
         SrcMgr(Diags, FileMgr) {
@@ -116,8 +115,7 @@ TEST_F(CIRDiagnosticHandlerTest, ErrorRoutedWithSeverityAndLocation) {
   ASSERT_EQ(Consumer->Diags.size(), 1u);
   const CapturedDiag &D = Consumer->Diags.front();
   EXPECT_EQ(D.Level, clang::DiagnosticsEngine::Error);
-  EXPECT_EQ(D.ID,
-            static_cast<unsigned>(clang::diag::err_cir_mlir_diagnostic));
+  EXPECT_EQ(D.ID, static_cast<unsigned>(clang::diag::err_cir_mlir_diagnostic));
   EXPECT_EQ(D.Message, "boom");
   EXPECT_TRUE(D.HasLoc);
   EXPECT_EQ(D.Line, 2u);
@@ -136,9 +134,9 @@ TEST_F(CIRDiagnosticHandlerTest, WarningRoutesToWarningId) {
 
 TEST_F(CIRDiagnosticHandlerTest, RemarkRoutesToRemarkId) {
   // Remarks are off by default. Promote -Rclangir so the consumer sees them.
-  bool unknownGroup = Diags.setSeverityForGroup(
-      clang::diag::Flavor::Remark, "remark-clangir",
-      clang::diag::Severity::Remark);
+  bool unknownGroup =
+      Diags.setSeverityForGroup(clang::diag::Flavor::Remark, "remark-clangir",
+                                clang::diag::Severity::Remark);
   ASSERT_FALSE(unknownGroup) << "remark-clangir group not registered";
   cir::CIRDiagnosticHandler Handler(&MLIRCtx, Diags, SrcMgr, FileMgr);
   mlir::emitRemark(fileLoc(1, 1)) << "fyi";
