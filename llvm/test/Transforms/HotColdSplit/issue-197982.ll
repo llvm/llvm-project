@@ -3,42 +3,13 @@
 
 ; Reproducer for https://github.com/llvm/llvm-project/issues/197982
 
-target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx14.0.0"
+@g = external global ptr
 
-define void @dtor(ptr captures(none) %this) local_unnamed_addr #0 {
-; CHECK-LABEL: define void @dtor(
-; CHECK-SAME: ptr captures(none) [[THIS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[OLD_I:%.*]] = load ptr, ptr [[THIS]], align 8
-; CHECK-NEXT:    store ptr null, ptr [[THIS]], align 8
-; CHECK-NEXT:    store volatile i32 0, ptr [[OLD_I]], align 4
-; CHECK-NEXT:    ret void
-;
-  %old.i = load ptr, ptr %this, align 8
-  store ptr null, ptr %this, align 8
-  store volatile i32 0, ptr %old.i, align 4
-  ret void
-}
+declare void @ext()
 
-define noalias noundef ptr @assign(ptr captures(none) %this) local_unnamed_addr #0 {
-; CHECK-LABEL: define noalias noundef ptr @assign(
-; CHECK-SAME: ptr captures(none) [[THIS:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = load volatile ptr, ptr null, align 4294967296
-; CHECK-NEXT:    [[OLD_I:%.*]] = load ptr, ptr [[THIS]], align 8
-; CHECK-NEXT:    store ptr [[CALL]], ptr [[THIS]], align 8
-; CHECK-NEXT:    store volatile i32 0, ptr [[OLD_I]], align 4
-; CHECK-NEXT:    ret ptr null
-;
-  %call = load volatile ptr, ptr null, align 4294967296
-  %old.i = load ptr, ptr %this, align 8
-  store ptr %call, ptr %this, align 8
-  store volatile i32 0, ptr %old.i, align 4
-  ret ptr null
-}
-
-define void @ctor(ptr writeonly captures(none) initializes((0, 8), (16, 24)) %this) local_unnamed_addr !prof !14 {
+define void @ctor(ptr %this) !prof !14 {
 ; CHECK-LABEL: define void @ctor(
-; CHECK-SAME: ptr writeonly captures(none) initializes((0, 8), (16, 24)) [[THIS:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] !prof [[PROF14:![0-9]+]] {
+; CHECK-SAME: ptr [[THIS:%.*]]) #[[ATTR0:[0-9]+]] !prof [[PROF14:![0-9]+]] {
 ; CHECK-NEXT:    tail call void @ext()
 ; CHECK-NEXT:    store ptr null, ptr [[THIS]], align 16
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[THIS]], i64 16
@@ -58,21 +29,19 @@ define void @ctor(ptr writeonly captures(none) initializes((0, 8), (16, 24)) %th
   ret void
 }
 
-declare void @ext() local_unnamed_addr
-
-define void @writeAsOperandInternal(ptr readonly captures(none) %WriterCtx, i1 %cond) local_unnamed_addr {
+define void @writeAsOperandInternal(ptr %WriterCtx, i1 %cond) {
 ; CHECK-LABEL: define void @writeAsOperandInternal(
-; CHECK-SAME: ptr readonly captures(none) [[WRITERCTX:%.*]], i1 [[COND:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr [[WRITERCTX:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 [[COND]], label %[[CODEREPL:.*]], label %[[IF_END:.*]]
 ; CHECK:       [[CODEREPL]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @writeAsOperandInternal.cold.1() #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @writeAsOperandInternal.cold.1() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    br label %[[IF_END]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[S_SROA_0_0:%.*]] = phi ptr [ [[TMP0]], %[[CODEREPL]] ], [ poison, %[[ENTRY]] ]
-; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[TMP0]], %[[CODEREPL]] ], [ null, %[[ENTRY]] ]
+; CHECK-NEXT:    [[S_SROA_0_0:%.*]] = phi ptr [ [[TMP0]], %[[CODEREPL]] ], [ @g, %[[ENTRY]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[TMP0]], %[[CODEREPL]] ], [ @g, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[FP:%.*]] = load ptr, ptr [[WRITERCTX]], align 8
-; CHECK-NEXT:    [[R:%.*]] = tail call i32 [[FP]](ptr [[P]], ptr null)
+; CHECK-NEXT:    [[R:%.*]] = tail call i32 [[FP]](ptr [[P]], ptr @g)
 ; CHECK-NEXT:    store volatile i32 0, ptr [[S_SROA_0_0]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -80,35 +49,19 @@ entry:
   br i1 %cond, label %if.then, label %if.end
 
 if.then:
-  tail call void @ctor(ptr null)
-  %call.i = load volatile ptr, ptr null, align 4294967296
-  store volatile i32 0, ptr poison, align 4
+  tail call void @ctor(ptr @g)
+  %call.i = load volatile ptr, ptr @g, align 8
+  store volatile i32 0, ptr @g, align 4
   br label %if.end
 
 if.end:
-  %s.sroa.0.0 = phi ptr [ %call.i, %if.then ], [ poison, %entry ]
-  %p = phi ptr [ %call.i, %if.then ], [ null, %entry ]
+  %s.sroa.0.0 = phi ptr [ %call.i, %if.then ], [ @g, %entry ]
+  %p = phi ptr [ %call.i, %if.then ], [ @g, %entry ]
   %fp = load ptr, ptr %WriterCtx, align 8
-  %r = tail call i32 %fp(ptr %p, ptr null)
+  %r = tail call i32 %fp(ptr %p, ptr @g)
   store volatile i32 0, ptr %s.sroa.0.0, align 4
   ret void
 }
-
-define void @reset(ptr captures(none) %this, ptr %p) local_unnamed_addr #0 {
-; CHECK-LABEL: define void @reset(
-; CHECK-SAME: ptr captures(none) [[THIS:%.*]], ptr [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[OLD:%.*]] = load ptr, ptr [[THIS]], align 8
-; CHECK-NEXT:    store ptr [[P]], ptr [[THIS]], align 8
-; CHECK-NEXT:    store volatile i32 0, ptr [[OLD]], align 4
-; CHECK-NEXT:    ret void
-;
-  %old = load ptr, ptr %this, align 8
-  store ptr %p, ptr %this, align 8
-  store volatile i32 0, ptr %old, align 4
-  ret void
-}
-
-attributes #0 = { nofree norecurse nounwind memory(readwrite, target_mem: none) }
 
 !llvm.module.flags = !{!0}
 
