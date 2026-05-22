@@ -259,12 +259,20 @@ public:
 /// whether the address is volatile or not.
 class ReturnValueSlot {
   Address addr = Address::invalid();
+  bool noAggregateStore = false;
 
 public:
   ReturnValueSlot() = default;
   ReturnValueSlot(Address addr) : addr(addr) {}
 
+  static ReturnValueSlot forNoAggregateStore() {
+    ReturnValueSlot slot;
+    slot.noAggregateStore = true;
+    return slot;
+  }
+
   bool isNull() const { return !addr.isValid(); }
+  bool isNoAggregateStore() const { return noAggregateStore; }
   Address getValue() const { return addr; }
 };
 

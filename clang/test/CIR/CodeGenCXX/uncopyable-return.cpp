@@ -93,15 +93,15 @@ struct A {
 A foo();
 A bar() { return foo(); }
 
-// CIR-LABEL: cir.func {{.*}} @_ZN16deleted_by_member3barEv
+// CIR-LABEL: cir.func {{.*}} @_ZN17deleted_by_member3barEv
 // CIR-NOT:     __retval
-// CIR:         %{{[0-9]+}} = cir.call @_ZN16deleted_by_member3fooEv() : () -> !rec{{.*}}
+// CIR:         %{{[0-9]+}} = cir.call @_ZN17deleted_by_member3fooEv() : () -> !rec{{.*}}
 // CIR-NEXT:    cir.return %{{[0-9]+}} : !rec{{.*}}
 
-// LLVM-LABEL: define {{.*}} @_ZN16deleted_by_member3barEv(
+// LLVM-LABEL: define {{.*}} @_ZN17deleted_by_member3barEv(
 
-// OGCG-LABEL: define {{.*}} void @_ZN16deleted_by_member3barEv(
-// OGCG:         call void @_ZN16deleted_by_member3fooEv(ptr
+// OGCG-LABEL: define {{.*}} void @_ZN17deleted_by_member3barEv(
+// OGCG:         call void @_ZN17deleted_by_member3fooEv(ptr
 // OGCG-NEXT:    ret void
 }
 
@@ -121,39 +121,33 @@ struct A : B {
 A foo();
 A bar() { return foo(); }
 
-// CIR-LABEL: cir.func {{.*}} @_ZN14deleted_by_base3barEv
+// CIR-LABEL: cir.func {{.*}} @_ZN15deleted_by_base3barEv
 // CIR-NOT:     __retval
-// CIR:         %{{[0-9]+}} = cir.call @_ZN14deleted_by_base3fooEv() : () -> !rec{{.*}}
+// CIR:         %{{[0-9]+}} = cir.call @_ZN15deleted_by_base3fooEv() : () -> !rec{{.*}}
 // CIR-NEXT:    cir.return %{{[0-9]+}} : !rec{{.*}}
 
-// LLVM-LABEL: define {{.*}} @_ZN14deleted_by_base3barEv(
+// LLVM-LABEL: define {{.*}} @_ZN15deleted_by_base3barEv(
 
-// OGCG-LABEL: define {{.*}} void @_ZN14deleted_by_base3barEv(
-// OGCG:         call void @_ZN14deleted_by_base3fooEv(ptr
+// OGCG-LABEL: define {{.*}} void @_ZN15deleted_by_base3barEv(
+// OGCG:         call void @_ZN15deleted_by_base3fooEv(ptr
 // OGCG-NEXT:    ret void
 }
 
-// --- Test 5: Implicitly deleted copy ctor (struct with reference member) ---
-// A class with a reference member has an implicitly deleted copy
-// constructor and an implicitly deleted move constructor (until C++20).
-// This should also avoid the __retval pattern.
+// --- Test 5: Struct with reference member (trivial copy ctor, not deleted) ---
+// A class with a reference member has a valid trivial copy constructor
+// (reference binding, not copying). The __retval store/load is acceptable.
 namespace implicitly_deleted {
 struct S {
   S();
   int &ref;
   ~S();
 };
-
 S foo();
 S bar() { return foo(); }
-
 // CIR-LABEL: cir.func {{.*}} @_ZN18implicitly_deleted3barEv
-// CIR-NOT:     __retval
-// CIR:         %{{[0-9]+}} = cir.call @_ZN18implicitly_deleted3fooEv() : () -> !rec{{.*}}
-// CIR-NEXT:    cir.return %{{[0-9]+}} : !rec{{.*}}
-
+// CIR:         cir.alloca !rec{{.*}}, !cir.ptr<!rec{{.*}}, ["__retval"]
+// CIR:         cir.return
 // LLVM-LABEL: define {{.*}} @_ZN18implicitly_deleted3barEv(
-
 // OGCG-LABEL: define {{.*}} void @_ZN18implicitly_deleted3barEv(
 // OGCG:         call void @_ZN18implicitly_deleted3fooEv(ptr
 // OGCG-NEXT:    ret void
@@ -197,15 +191,15 @@ struct S {
 S make();
 S use() { return make(); }
 
-// CIR-LABEL: cir.func {{.*}} @_ZN26trivial_copy_non_trivial_dtor3useEv
+// CIR-LABEL: cir.func {{.*}} @_ZN29trivial_copy_non_trivial_dtor3useEv
 // CIR:         cir.alloca !rec{{.*}}, !cir.ptr<!rec{{.*}}, ["__retval"]
 // CIR:         cir.store
 // CIR:         cir.load
 // CIR:         cir.return
 
-// LLVM-LABEL: define {{.*}} @_ZN26trivial_copy_non_trivial_dtor3useEv(
+// LLVM-LABEL: define {{.*}} @_ZN29trivial_copy_non_trivial_dtor3useEv(
 
-// OGCG-LABEL: define {{.*}} @_ZN26trivial_copy_non_trivial_dtor3useEv(
+// OGCG-LABEL: define {{.*}} @_ZN29trivial_copy_non_trivial_dtor3useEv(
 }
 
 // --- Test 8: Non-copyable struct returned via ternary expression ---
@@ -301,13 +295,11 @@ struct Derived : Base {
 
 S caller(Base &b) { return b.foo(); }
 
-// CIR-LABEL: cir.func {{.*}} @_ZN13virtual_return6callerERNS_4BaseE
+// CIR-LABEL: cir.func {{.*}} @_ZN14virtual_return6callerERNS_4BaseE
 // CIR-NOT:     __retval
 // CIR:         cir.return
-
-// LLVM-LABEL: define {{.*}} @_ZN13virtual_return6callerERNS_4BaseE(
-
-// OGCG-LABEL: define {{.*}} void @_ZN13virtual_return6callerERNS_4BaseE(
+// LLVM-LABEL: define {{.*}} @_ZN14virtual_return6callerERNS_4BaseE(
+// OGCG-LABEL: define {{.*}} void @_ZN14virtual_return6callerERNS_4BaseE(
 }
 
 // --- Test 12: Function template returning non-copyable struct ---

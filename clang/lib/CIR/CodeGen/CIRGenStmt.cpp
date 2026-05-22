@@ -598,6 +598,8 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
     rv = ewc->getSubExpr();
     createNewScope = true;
   }
+  mlir::Value directReturnValue = nullptr;
+  Address returnTemp = Address::invalid();
 
   auto handleReturnVal = [&]() {
     if (getContext().getLangOpts().ElideConstructors && s.getNRVOCandidate() &&
@@ -642,11 +644,33 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
                                   /*isInit=*/true);
         break;
       case cir::TEK_Aggregate:
-        assert(!cir::MissingFeatures::aggValueSlotGC());
-        emitAggExpr(rv, AggValueSlot::forAddr(returnValue, Qualifiers(),
-                                              AggValueSlot::IsDestructed,
-                                              AggValueSlot::IsNotAliased,
-                                              getOverlapForReturnValue()));
+        if (fnRetAlloca) {
+          assert(!cir::MissingFeatures::aggValueSlotGC());
+          emitAggExpr(rv, AggValueSlot::forAddr(returnValue, Qualifiers(),
+                                                AggValueSlot::IsDestructed,
+                                                AggValueSlot::IsNotAliased,
+                                                getOverlapForReturnValue()));
+        } else {
+          // Non-trivially-copyable aggregate: emit result directly
+          // without bitwise-copying through __retval.
+          // CXXBindTemporaryExpr wraps the call when the type has a
+          // non-trivial destructor. Unwrap it to find the inner CallExpr.
+          const Expr *unwrapped = rv->IgnoreParens();
+          if (auto *bte = dyn_cast<CXXBindTemporaryExpr>(unwrapped))
+            unwrapped = bte->getSubExpr();
+          if (const auto *ce = dyn_cast<CallExpr>(unwrapped)) {
+            RValue callRV =
+                emitCallExpr(const_cast<CallExpr *>(ce),
+                             ReturnValueSlot::forNoAggregateStore());
+            directReturnValue = callRV.getValue();
+          } else {
+            returnTemp = createMemTemp(rv->getType(), loc, "agg.tmp");
+            emitAggExpr(rv, AggValueSlot::forAddr(returnTemp, Qualifiers(),
+                                                  AggValueSlot::IsDestructed,
+                                                  AggValueSlot::IsNotAliased,
+                                                  getOverlapForReturnValue()));
+          }
+        }
         break;
       }
     }
@@ -666,15 +690,23 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   // during the CFG flattening phase, we can just emit the return statement
   // directly.
   // TODO(cir): Eliminate this redundant load and the store above when we can.
-  if (fnRetAlloca) {
+  if (directReturnValue) {
+    cir::ReturnOp::create(builder, loc, {directReturnValue});
+  } else if (returnTemp.isValid()) {
+    // Load from the temp alloca and return. The load happens after
+    // forceCleanup to avoid SSA dominance issues with scope blocks.
+    auto loaded = builder.createLoad(loc, returnTemp);
+    cir::ReturnOp::create(builder, loc, {loaded});
+  } else if (fnRetAlloca) {
+
     // Load the value from `__retval` and return it via the `cir.return` op.
     cir::AllocaOp retAlloca =
         mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
     auto value = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),
                                      *fnRetAlloca);
-
     cir::ReturnOp::create(builder, loc, {value});
   } else {
+
     cir::ReturnOp::create(builder, loc);
   }
 
@@ -1251,33 +1283,38 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
 
 void CIRGenFunction::emitReturnOfRValue(mlir::Location loc, RValue rv,
                                         QualType ty) {
-  if (rv.isScalar()) {
-    builder.createStore(loc, rv.getValue(), returnValue);
-  } else if (rv.isAggregate()) {
-    Address rvAddr = rv.getAggregateAddress();
-    // If the aggregate is already in the return slot (e.g. a callee was
-    // invoked through a ReturnValueSlot bound to returnValue), the copy is
-    // a no-op.  Calling emitAggregateCopy here would also incorrectly
-    // require the type to have a trivial copy/move.
-    if (rvAddr.getPointer() != returnValue.getPointer()) {
-      LValue dest = makeAddrLValue(returnValue, ty);
-      LValue src = makeAddrLValue(rvAddr, ty);
-      emitAggregateCopy(dest, src, ty, getOverlapForReturnValue());
+  if (returnValue.isValid()) {
+    if (rv.isScalar()) {
+      builder.createStore(loc, rv.getValue(), returnValue);
+    } else if (rv.isAggregate()) {
+      Address rvAddr = rv.getAggregateAddress();
+      if (rvAddr.getPointer() != returnValue.getPointer()) {
+        LValue dest = makeAddrLValue(returnValue, ty);
+        LValue src = makeAddrLValue(rvAddr, ty);
+        emitAggregateCopy(dest, src, ty, getOverlapForReturnValue());
+      }
+    } else {
+      cgm.errorNYI(loc, "emitReturnOfRValue: complex return type");
     }
-  } else {
-    cgm.errorNYI(loc, "emitReturnOfRValue: complex return type");
   }
 
-  // Classic codegen emits a branch through any cleanups before continuing to
-  // a shared return block. Because CIR handles branching through cleanups
-  // during the CFG flattening phase, we can just emit the return statement
-  // directly.
-  // TODO(cir): Eliminate this redundant load and the store above when we can.
-  // Load the value from `__retval` and return it via the `cir.return` op.
-  cir::AllocaOp retAlloca =
-      mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
-  auto value = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),
-                                   *fnRetAlloca);
-
-  cir::ReturnOp::create(builder, loc, {value});
+  if (fnRetAlloca) {
+    // Load the value from `__retval` and return it via the `cir.return` op.
+    cir::AllocaOp retAlloca =
+        mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
+    auto value = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),
+                                     *fnRetAlloca);
+    cir::ReturnOp::create(builder, loc, {value});
+  } else {
+    // Non-trivially-copyable return type with no __retval:
+    // return the RValue directly.
+    if (rv.isScalar() && rv.getValue()) {
+      cir::ReturnOp::create(builder, loc, {rv.getValue()});
+    } else if (rv.isAggregate() && rv.getAggregateAddress().isValid()) {
+      auto loaded = builder.createLoad(loc, rv.getAggregateAddress());
+      cir::ReturnOp::create(builder, loc, {loaded});
+    } else {
+      cir::ReturnOp::create(builder, loc);
+    }
+  }
 }

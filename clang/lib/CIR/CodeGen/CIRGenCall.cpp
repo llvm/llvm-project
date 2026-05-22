@@ -1346,6 +1346,11 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     return getUndefRValue(retTy);
   switch (getEvaluationKind(retTy)) {
   case cir::TEK_Aggregate: {
+    if (returnValue.isNoAggregateStore()) {
+      mlir::ResultRange results = theCall->getOpResults();
+      assert(results.size() <= 1 && "multiple returns from a call");
+      return RValue::get(results[0]);
+    }
     Address destPtr = returnValue.getValue();
 
     if (!destPtr.isValid())

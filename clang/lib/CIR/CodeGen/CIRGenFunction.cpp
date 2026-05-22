@@ -22,6 +22,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/FPEnv.h"
 
 #include <cassert>
@@ -215,10 +216,43 @@ bool CIRGenFunction::constantFoldsToSimpleInteger(const Expr *cond,
   resultInt = intValue;
   return true;
 }
+static bool hasDeletedCopyConstructor(
+    const clang::CXXRecordDecl *rd,
+    llvm::SmallPtrSet<const clang::CXXRecordDecl *, 8> &visited) {
+  if (!visited.insert(rd).second)
+    return false;
+  // Check user-declared copy ctors.
+  if (rd->hasUserDeclaredCopyConstructor()) {
+    for (const auto *ctor : rd->ctors())
+      if (ctor->isCopyConstructor() && ctor->isDeleted())
+        return true;
+  } else if (!rd->needsOverloadResolutionForCopyConstructor() &&
+             rd->defaultedCopyConstructorIsDeleted()) {
+    return true;
+  }
+  // Check fields and bases recursively.
+  for (const auto *field : rd->fields())
+    if (const auto *fieldRD = field->getType()->getAsCXXRecordDecl())
+      if (hasDeletedCopyConstructor(fieldRD, visited))
+        return true;
+  for (const auto &base : rd->bases())
+    if (const auto *baseRD = base.getType()->getAsCXXRecordDecl())
+      if (hasDeletedCopyConstructor(baseRD, visited))
+        return true;
+  return false;
+}
 
 void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
                                             CharUnits alignment) {
   if (!type->isVoidType()) {
+    // Types with non-trivial or deleted copy constructors cannot be
+    // bitwise-copied into __retval.  The return value must flow as an
+    // SSA value directly.
+    if (const auto *rd = type->getAsCXXRecordDecl()) {
+      llvm::SmallPtrSet<const clang::CXXRecordDecl *, 8> visited;
+      if (hasDeletedCopyConstructor(rd, visited))
+        return;
+    }
     Address allocaAddr = Address::invalid();
     returnValue = createMemTemp(type, alignment, loc, "__retval", &allocaAddr);
     fnRetAlloca = allocaAddr.getPointer();
@@ -336,11 +370,21 @@ cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   assert(fn && "emitReturn from non-function");
 
   if (!fn.getFunctionType().hasVoidReturn()) {
-    // Load the value from `__retval` and return it via the `cir.return` op.
-    auto value = cir::LoadOp::create(
-        builder, loc, fn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
-    return cir::ReturnOp::create(builder, loc,
-                                 llvm::ArrayRef(value.getResult()));
+    if (cgf.fnRetAlloca) {
+      // Load the value from `__retval` and return it via the `cir.return` op.
+      auto value = cir::LoadOp::create(
+          builder, loc, fn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
+      return cir::ReturnOp::create(builder, loc,
+                                   llvm::ArrayRef(value.getResult()));
+    }
+    // Non-trivially-copyable return type with no __retval:
+    // falling off the end is UB; emit unreachable/trap.
+    if (cgf.cgm.getCodeGenOpts().OptimizationLevel == 0)
+      cir::TrapOp::create(builder, loc);
+    else
+      cir::UnreachableOp::create(builder, loc);
+    builder.clearInsertionPoint();
+    return cir::ReturnOp();
   }
   return cir::ReturnOp::create(builder, loc);
 }

@@ -752,19 +752,18 @@ void CIRGenFunction::emitCallAndReturnForThunk(cir::FuncOp callee,
   else
     assert(!cir::MissingFeatures::opCallMustTail());
 
-  // Emit return.  For aggregate returns the call has already written the
-  // result through the slot bound to returnValue above; emit the
-  // corresponding load+return here rather than leaving the function to
-  // fall off the end and have LexicalScope::emitImplicitReturn drop a
-  // `cir.trap` / `cir.unreachable` in its place (which would silently
-  // discard the result we just stored).
+  // Route the return through emitReturnOfRValue rather than leaving the
+  // function to fall off the end, where LexicalScope::emitImplicitReturn
+  // would drop a `cir.trap` / `cir.unreachable` and silently discard the
+  // just-computed result.  When the return type has a deleted copy ctor,
+  // returnValue is absent and emitCall materializes a temporary for the
+  // call result; emitReturnOfRValue handles both cases.
   if (!resultType->isVoidType()) {
-    if (slot.isNull())
+    if (slot.isNull() && !hasAggregateEvaluationKind(resultType))
       cgm.getCXXABI().emitReturnFromThunk(*this, rv, resultType);
     else
       emitReturnOfRValue(loc, rv, resultType);
   }
-
   // Disable final ARC autorelease.
   assert(!cir::MissingFeatures::objCLifetime());
 

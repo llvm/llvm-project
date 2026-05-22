@@ -94,7 +94,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
     // unless:
     // - it's an NRVO variable.
     // - we are compiling OpenMP and it's an OpenMP local variable.
-    if (nrvo) {
+    if (nrvo && returnValue.isValid()) {
       // The named return value optimization: allocate this variable in the
       // return slot, so that we can elide the copy when returning this
       // variable (C++0x [class.copy]p34).
