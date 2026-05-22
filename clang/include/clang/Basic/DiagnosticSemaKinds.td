@@ -2602,7 +2602,7 @@ def select_initialized_entity_kind : TextSubstitution<
   "returning object|initializing statement expression result|"
   "throwing object|copying member subobject|copying array element|"
   "allocating object|copying temporary|initializing base subobject|"
-  "initializing vector element|capturing value}0">;
+  "initializing vector element|capturing value|||||||||initializing binding}0">;
 
 def err_temp_copy_no_viable : Error<
   "no viable constructor %sub{select_initialized_entity_kind}0 of type %1">;

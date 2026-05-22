@@ -184,8 +184,10 @@ public:
   void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
 
-  SanitizerMask getSupportedSanitizers() const override;
-  
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
+
   VersionTuple
   computeMSVCVersion(const Driver *D,
                      const llvm::opt::ArgList &Args) const override;

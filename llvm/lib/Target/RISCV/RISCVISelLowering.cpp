@@ -643,6 +643,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::EXTRACT_SUBVECTOR, {MVT::v2i16, MVT::v4i8},
                          Legal);
       setOperationAction(ISD::SELECT, {MVT::v4i16, MVT::v8i8}, Custom);
+      setOperationAction(ISD::SETCC, P64VecVTs, Legal);
+      setCondCodeAction(
+          {ISD::SETGE, ISD::SETUGT, ISD::SETUGE, ISD::SETULE, ISD::SETLE},
+          P64VecVTs, Expand);
+      setCondCodeAction({ISD::SETNE, ISD::SETGT}, P64VecVTs, Custom);
     }
   }
 
@@ -8993,7 +8998,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
           SplatVal = cast<BuildVectorSDNode>(ShAmtVec)->getSplatValue();
 
         if (!SplatVal)
-          return DAG.UnrollVectorOp(Op.getNode());
+          return SDValue();
 
         unsigned Opc;
         switch (Op.getOpcode()) {
