@@ -85,7 +85,7 @@ jobs:
           mkdir build
           cat << 'EOF' > /__w/llvm-project/llvm-project/build/qemu-wrapper.sh
           #!/bin/bash
-          exec qemu-${{ matrix.arch }} -L /usr/${{ matrix.target_triple }} "$@"
+          qemu-${{ matrix.arch }}-static -L /usr/${{ matrix.target_triple }} "$@"
           EOF
           chmod +x /__w/llvm-project/llvm-project/build/qemu-wrapper.sh
 
