@@ -317,7 +317,7 @@ define float @fmaxnum_tailfold(ptr %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP57:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP56]])
 ; CHECK-NEXT:    [[TMP58:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP59:%.*]] = or i1 [[TMP57]], [[TMP58]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    br i1 [[TMP59]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP53:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP51]], <4 x float> [[VEC_PHI]]

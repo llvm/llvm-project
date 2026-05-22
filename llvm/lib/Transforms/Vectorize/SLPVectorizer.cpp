@@ -10632,7 +10632,11 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
           auto *EI = dyn_cast<ExtractElementInst>(V);
           if (!EI)
             return true;
-          return isVectorized(EI->getOperand(0));
+          Value *Op = EI->getOperand(0);
+          if (isVectorized(Op))
+            return true;
+          auto *OpI = dyn_cast<Instruction>(Op);
+          return OpI && OpI->isTerminator();
         }))
       return TreeEntry::NeedToGather;
     [[fallthrough]];
@@ -29582,8 +29586,8 @@ public:
          ArrayRef(Candidates).drop_front(SuccessStart + SuccessWidth)) {
       Builder.SetCurrentDebugLocation(
           ReducedValsToOps.at(RdxVal).front()->getDebugLoc());
-      VectorizedTree = createOp(Builder, RdxKind, VectorizedTree, RdxVal,
-                                "op.rdx", ReductionOps);
+      VectorizedTree = createOp(Builder, RdxKind, VectorizedTree,
+                                TrackedVals.at(RdxVal), "op.rdx", ReductionOps);
     }
 
     ReductionRoot->replaceAllUsesWith(VectorizedTree);
