@@ -6,6 +6,9 @@ declare <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float>, <2 x i32>)
 declare double @llvm.ldexp.f64.i16(double, i16)
 declare float @llvm.ldexp.f32.i64(float, i64)
 declare double @llvm.ldexp.f64.i64(double, i64)
+declare half @llvm.ldexp.f16.i8(half, i8)
+declare float @llvm.ldexp.f32.i8(float, i8)
+declare ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128, i32)
 
 ; select c, (ldexp val, e0), (ldexp val, e1) -> ldexp val, (select c, e0, e1)
 define float @select_ldexp_f32_sameval_differentexp(i1 %cond, float %val, i32 %exp0, i32 %exp1) {
@@ -414,6 +417,54 @@ define <2 x float> @ldexp_reassoc_ldexp_reassoc_vec(<2 x float> %x, <2 x i32> %a
   %ldexp0 = call reassoc <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> %x, <2 x i32> %a)
   %ldexp1 = call reassoc <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> %ldexp0, <2 x i32> %b)
   ret <2 x float> %ldexp1
+}
+
+define float @ldexp_reassoc_ldexp_reassoc_i8_exp_not_safe(float %x, i8 %a, i8 %b) {
+; CHECK-LABEL: define float @ldexp_reassoc_ldexp_reassoc_i8_exp_not_safe
+; CHECK-SAME: (float [[X:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[LDEXP0:%.*]] = call reassoc float @llvm.ldexp.f32.i8(float [[X]], i8 [[A]])
+; CHECK-NEXT:    [[LDEXP1:%.*]] = call reassoc float @llvm.ldexp.f32.i8(float [[LDEXP0]], i8 [[B]])
+; CHECK-NEXT:    ret float [[LDEXP1]]
+;
+  %ldexp0 = call reassoc float @llvm.ldexp.f32.i8(float %x, i8 %a)
+  %ldexp1 = call reassoc float @llvm.ldexp.f32.i8(float %ldexp0, i8 %b)
+  ret float %ldexp1
+}
+
+define float @ldexp_reassoc_ldexp_reassoc_i64_exp_safe(float %x, i64 %a, i64 %b) {
+; CHECK-LABEL: define float @ldexp_reassoc_ldexp_reassoc_i64_exp_safe
+; CHECK-SAME: (float [[X:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.sadd.sat.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    [[LDEXP1:%.*]] = call reassoc float @llvm.ldexp.f32.i64(float [[X]], i64 [[TMP1]])
+; CHECK-NEXT:    ret float [[LDEXP1]]
+;
+  %ldexp0 = call reassoc float @llvm.ldexp.f32.i64(float %x, i64 %a)
+  %ldexp1 = call reassoc float @llvm.ldexp.f32.i64(float %ldexp0, i64 %b)
+  ret float %ldexp1
+}
+
+define half @ldexp_reassoc_ldexp_reassoc_f16_i8_exp_safe(half %x, i8 %a, i8 %b) {
+; CHECK-LABEL: define half @ldexp_reassoc_ldexp_reassoc_f16_i8_exp_safe
+; CHECK-SAME: (half [[X:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    [[LDEXP1:%.*]] = call reassoc half @llvm.ldexp.f16.i8(half [[X]], i8 [[TMP1]])
+; CHECK-NEXT:    ret half [[LDEXP1]]
+;
+  %ldexp0 = call reassoc half @llvm.ldexp.f16.i8(half %x, i8 %a)
+  %ldexp1 = call reassoc half @llvm.ldexp.f16.i8(half %ldexp0, i8 %b)
+  ret half %ldexp1
+}
+
+define ppc_fp128 @ldexp_reassoc_ldexp_reassoc_ppcf128(ppc_fp128 %x, i32 %a, i32 %b) {
+; CHECK-LABEL: define ppc_fp128 @ldexp_reassoc_ldexp_reassoc_ppcf128
+; CHECK-SAME: (ppc_fp128 [[X:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[LDEXP1:%.*]] = call reassoc ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 [[X]], i32 [[TMP1]])
+; CHECK-NEXT:    ret ppc_fp128 [[LDEXP1]]
+;
+  %ldexp0 = call reassoc ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 %x, i32 %a)
+  %ldexp1 = call reassoc ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 %ldexp0, i32 %b)
+  ret ppc_fp128 %ldexp1
 }
 
 define float @ldexp_multi_use_ldexp(float %x, i32 %a, i32 %b, ptr %ptr) {
