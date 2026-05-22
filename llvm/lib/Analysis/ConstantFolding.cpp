@@ -3713,9 +3713,16 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     } else if (auto *Op2C = dyn_cast<ConstantInt>(Operands[1])) {
       switch (IntrinsicID) {
       case Intrinsic::ldexp: {
+        // APFloat::scalbn takes the exponent as `int`. Clamp wider integer
+        // exponents into [INT_MIN, INT_MAX] so values still saturate the
+        // result to +/-inf or +/-0.
+        int64_t Exp = Op2C->getSExtValue();
+        int ClampedExp = static_cast<int>(
+            std::clamp<int64_t>(Exp, std::numeric_limits<int>::min(),
+                                std::numeric_limits<int>::max()));
         return ConstantFP::get(
             Ty->getContext(),
-            scalbn(Op1V, Op2C->getSExtValue(), APFloat::rmNearestTiesToEven));
+            scalbn(Op1V, ClampedExp, APFloat::rmNearestTiesToEven));
       }
       case Intrinsic::is_fpclass: {
         FPClassTest Mask = static_cast<FPClassTest>(Op2C->getZExtValue());
