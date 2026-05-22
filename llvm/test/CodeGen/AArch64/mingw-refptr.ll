@@ -92,12 +92,13 @@ define dso_local void @sspFunc() #0 {
 ; CHECK-SD-NEXT:    sub x8, sp, x8
 ; CHECK-SD-NEXT:    str x8, [sp, #8]
 ; CHECK-SD-NEXT:    bl ptrUser
-; CHECK-SD-NEXT:    adrp x8, .refptr.__stack_chk_guard
-; CHECK-SD-NEXT:    ldr x8, [x8, :lo12:.refptr.__stack_chk_guard]
-; CHECK-SD-NEXT:    ldr x9, [sp, #8]
-; CHECK-SD-NEXT:    ldr x8, [x8]
-; CHECK-SD-NEXT:    sub x8, sp, x8
-; CHECK-SD-NEXT:    cmp x8, x9
+; CHECK-SD-NEXT:    adrp x9, .refptr.__stack_chk_guard
+; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    ldr x9, [x9, :lo12:.refptr.__stack_chk_guard]
+; CHECK-SD-NEXT:    ldr x10, [sp, #8]
+; CHECK-SD-NEXT:    ldr x9, [x9]
+; CHECK-SD-NEXT:    sub x8, x8, x10
+; CHECK-SD-NEXT:    cmp x9, x8
 ; CHECK-SD-NEXT:    b.ne .LBB6_2
 ; CHECK-SD-NEXT:  // %bb.1: // %entry
 ; CHECK-SD-NEXT:    .seh_startepilogue

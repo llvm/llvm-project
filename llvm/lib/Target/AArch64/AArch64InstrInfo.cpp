@@ -2618,8 +2618,9 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     }
   }
   // To match MSVC. Unlike x86_64 which uses xor instruction to mix the cookie,
-  // we use sub instruction to mix the cookie on aarch64 for keeping the
-  // existing inlining logic intact.
+  // we use sub instruction to mix the cookie on aarch64.
+  // The mixing happens here in expandPostRAPseudo (after RA) to ensure we use
+  // the final stack pointer value.
   if (Subtarget.getTargetTriple().isOSMSVCRT())
     BuildMI(MBB, MI, DL, get(AArch64::SUBXrx64), Reg)
         .addReg(AArch64::SP)

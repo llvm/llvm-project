@@ -18,11 +18,12 @@ define void @caller() sspreq {
 ; CHECK-NEXT:    sub x8, sp, x8
 ; CHECK-NEXT:    str x8, [sp, #8]
 ; CHECK-NEXT:    bl callee
-; CHECK-NEXT:    adrp x8, __security_cookie
 ; CHECK-NEXT:    ldr x9, [sp, #8]
-; CHECK-NEXT:    ldr x8, [x8, :lo12:__security_cookie]
-; CHECK-NEXT:    sub x8, sp, x8
-; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    adrp x10, __security_cookie
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    ldr x10, [x10, :lo12:__security_cookie]
+; CHECK-NEXT:    sub x8, x8, x9
+; CHECK-NEXT:    cmp x10, x8
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    .seh_startepilogue

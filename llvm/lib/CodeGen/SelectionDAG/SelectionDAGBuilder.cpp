@@ -3124,6 +3124,10 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), Align,
       MachineMemOperand::MOVolatile);
 
+  // If cookie mixing is enabled, unmix the stored GuardVal to get back the
+  // original cookie for comparison. The prologue stored (SP - Cookie) or
+  // (SP XOR Cookie), so we apply the same operation again to unmix:
+  // SP - (SP - Cookie) = Cookie, or (SP XOR Cookie) XOR SP = Cookie.
   if (TLI.useStackGuardMixCookie())
     GuardVal = TLI.emitStackGuardMixCookie(DAG, GuardVal, dl, false);
 
@@ -3159,12 +3163,12 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
     return;
   }
 
-  // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
-  // Otherwise, emit a volatile load to retrieve the stack guard value.
+  // Load the fresh guard value for comparison.
+  // For targets that mix the cookie in LOAD_STACK_GUARD expansion, we need to
+  // load directly without using LOAD_STACK_GUARD to avoid unwanted mixing.
   SDValue Chain = DAG.getEntryNode();
-  if (TLI.useLoadStackGuardNode(M)) {
-    Guard = getLoadStackGuard(DAG, dl, Chain);
-  } else {
+  if (TLI.useStackGuardMixCookie()) {
+    // Mixing targets: load cookie directly to avoid mixing in LOAD_STACK_GUARD
     if (const Value *IRGuard = TLI.getSDagStackGuard(M, DAG.getLibcalls())) {
       SDValue GuardPtr = getValue(IRGuard);
       Guard = DAG.getLoad(PtrMemTy, dl, Chain, GuardPtr,
@@ -3175,7 +3179,26 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
       Ctx.diagnose(DiagnosticInfoGeneric("unable to lower stackguard"));
       Guard = DAG.getPOISON(PtrMemTy);
     }
+  } else {
+    // Non-mixing targets: use LOAD_STACK_GUARD or direct load as usual
+    if (TLI.useLoadStackGuardNode(M)) {
+      Guard = getLoadStackGuard(DAG, dl, Chain);
+    } else {
+      if (const Value *IRGuard = TLI.getSDagStackGuard(M, DAG.getLibcalls())) {
+        SDValue GuardPtr = getValue(IRGuard);
+        Guard = DAG.getLoad(PtrMemTy, dl, Chain, GuardPtr,
+                            MachinePointerInfo(IRGuard, 0), Align,
+                            MachineMemOperand::MOVolatile);
+      } else {
+        LLVMContext &Ctx = *DAG.getContext();
+        Ctx.diagnose(DiagnosticInfoGeneric("unable to lower stackguard"));
+        Guard = DAG.getPOISON(PtrMemTy);
+      }
+    }
   }
+
+  // Now both Guard (fresh cookie) and GuardVal (unmixed from stored value)
+  // contain unmixed cookie values that can be compared directly.
 
   // Perform the comparison via a getsetcc.
   SDValue Cmp = DAG.getSetCC(
