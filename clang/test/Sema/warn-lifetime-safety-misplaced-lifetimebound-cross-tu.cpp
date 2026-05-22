@@ -1,6 +1,7 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-cross-tu-misplaced-lifetimebound -Wno-dangling -I%t -verify %t/cross.cpp
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-cross-tu-misplaced-lifetimebound -Wno-dangling -I%t -fdiagnostics-parseable-fixits %t/cross.cpp 2>&1 | FileCheck %s
 
 //--- cross.h
 struct HeaderObj {
@@ -8,10 +9,12 @@ struct HeaderObj {
 };
 
 HeaderObj &header_param(HeaderObj &obj); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers in other translation units; add it to the declaration instead}}
+// CHECK: fix-it:"{{.*}}cross.h":{[[#]]:{{[0-9]+}}-[[#]]:{{[0-9]+}}}:" {{\[\[}}clang::lifetimebound{{\]\]}}"
 
 struct HeaderS {
   HeaderObj data;
   HeaderObj &header_this(); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers in other translation units; add it to the declaration instead}}
+  // CHECK: fix-it:"{{.*}}cross.h":{[[#]]:{{[0-9]+}}-[[#]]:{{[0-9]+}}}:" {{\[\[}}clang::lifetimebound{{\]\]}}"
 };
 
 //--- cross.cpp

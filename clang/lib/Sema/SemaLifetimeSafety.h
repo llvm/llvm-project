@@ -297,9 +297,25 @@ public:
         Scope == WarningScope::CrossTU
             ? diag::warn_lifetime_safety_cross_tu_misplaced_lifetimebound
             : diag::warn_lifetime_safety_intra_tu_misplaced_lifetimebound;
-    S.Diag(Lexer::getLocForEndOfToken(FDecl->getEndLoc(), 0,
-                                      S.getSourceManager(), S.getLangOpts()),
-           DiagID);
+
+    SourceLocation DiagLoc = Lexer::getLocForEndOfToken(
+        FDecl->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+
+    // Scope so diagnostic emits first.
+    {
+      auto DB = S.Diag(DiagLoc, DiagID);
+
+      SourceLocation FixItLoc;
+      if (const TypeSourceInfo *TSI = FDecl->getTypeSourceInfo())
+        FixItLoc =
+            Lexer::getLocForEndOfToken(TSI->getTypeLoc().getEndLoc(), 0,
+                                       S.getSourceManager(), S.getLangOpts());
+      else
+        FixItLoc = DiagLoc;
+
+      if (FixItLoc.isValid() && !FixItLoc.isMacroID())
+        DB << FixItHint::CreateInsertion(FixItLoc, " [[clang::lifetimebound]]");
+    }
 
     S.Diag(Attr->getLocation(), diag::note_lifetime_safety_lifetimebound_here)
         << Attr->getRange();
@@ -315,7 +331,27 @@ public:
         Scope == WarningScope::CrossTU
             ? diag::warn_lifetime_safety_cross_tu_misplaced_lifetimebound
             : diag::warn_lifetime_safety_intra_tu_misplaced_lifetimebound;
-    S.Diag(PVDDecl->getBeginLoc(), DiagID) << PVDDecl->getSourceRange();
+
+    // Scope so diagnostic emits first.
+    {
+      auto DB = S.Diag(PVDDecl->getBeginLoc(), DiagID)
+                << PVDDecl->getSourceRange();
+
+      SourceLocation FixItLoc;
+      if (PVDDecl->getIdentifier())
+        FixItLoc = Lexer::getLocForEndOfToken(
+            PVDDecl->getLocation(), 0, S.getSourceManager(), S.getLangOpts());
+      else if (const TypeSourceInfo *TSI = PVDDecl->getTypeSourceInfo())
+        FixItLoc =
+            Lexer::getLocForEndOfToken(TSI->getTypeLoc().getEndLoc(), 0,
+                                       S.getSourceManager(), S.getLangOpts());
+      else
+        FixItLoc = Lexer::getLocForEndOfToken(
+            PVDDecl->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+
+      if (FixItLoc.isValid() && !FixItLoc.isMacroID())
+        DB << FixItHint::CreateInsertion(FixItLoc, " [[clang::lifetimebound]]");
+    }
 
     S.Diag(Attr->getLocation(), diag::note_lifetime_safety_lifetimebound_here)
         << Attr->getRange();
