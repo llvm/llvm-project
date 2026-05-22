@@ -3494,6 +3494,95 @@ TEST(SignatureHelpTest, SkipExplicitObjectParameter) {
   }
 }
 
+TEST(SignatureHelpTest, StaticCallOperator) {
+  Annotations Code(R"cpp(
+    struct Abc {
+      void operator()(bool a) {}
+    };
+    struct AbcStatic {
+      static void operator()(bool a) {}
+    };
+    void test() {
+      Abc abc;
+      AbcStatic abcStatic;
+      abc($c1^);
+      abcStatic($c2^);
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs = {"-std=c++23"};
+  MockFS FS;
+  auto Inputs = TU.inputs(FS);
+  auto Preamble = TU.preamble();
+  ASSERT_TRUE(Preamble);
+  {
+    // Case 1: non-static
+    const auto Result = signatureHelp(testPath(TU.Filename), Code.point("c1"),
+                                      *Preamble, Inputs, MarkupKind::PlainText);
+    EXPECT_EQ(1U, Result.signatures.size());
+    EXPECT_THAT(Result.signatures[0],
+                AllOf(sig("operator()([[bool a]]) -> void")));
+  }
+  {
+    // Case 2: static
+    const auto Result = signatureHelp(testPath(TU.Filename), Code.point("c2"),
+                                      *Preamble, Inputs, MarkupKind::PlainText);
+    EXPECT_EQ(1U, Result.signatures.size());
+    EXPECT_THAT(Result.signatures[0],
+                AllOf(sig("operator()([[bool a]]) -> void")));
+  }
+  {
+    // Case 3: static template operator()
+    Annotations TemplateCode(R"cpp(
+      struct AbcTemplate {
+        template <typename T>
+        static void operator()(T a, bool b) {}
+      };
+      void test() {
+        AbcTemplate abcTemplate;
+        abcTemplate($c3^);
+      }
+    )cpp");
+    auto TU2 = TestTU::withCode(TemplateCode.code());
+    TU2.ExtraArgs = {"-std=c++23"};
+    MockFS FS2;
+    auto Inputs2 = TU2.inputs(FS2);
+    auto Preamble2 = TU2.preamble();
+    ASSERT_TRUE(Preamble2);
+    const auto Result =
+        signatureHelp(testPath(TU2.Filename), TemplateCode.point("c3"),
+                      *Preamble2, Inputs2, MarkupKind::PlainText);
+    EXPECT_EQ(1U, Result.signatures.size());
+    EXPECT_THAT(Result.signatures[0],
+                AllOf(sig("operator()([[T a]], [[bool b]]) -> void")));
+  }
+
+  {
+    Annotations TemplateCode2(R"cpp(
+      struct AbcTemplate2 {
+        template <typename T>
+        static void operator()(bool a, bool b) { T c; }
+      };
+      void test() {
+        AbcTemplate2 abcTemplate2;
+        abcTemplate2($c4^);
+      }
+    )cpp");
+    auto TU3 = TestTU::withCode(TemplateCode2.code());
+    TU3.ExtraArgs = {"-std=c++23"};
+    MockFS FS3;
+    auto Inputs3 = TU3.inputs(FS3);
+    auto Preamble3 = TU3.preamble();
+    ASSERT_TRUE(Preamble3);
+    const auto Result =
+        signatureHelp(testPath(TU3.Filename), TemplateCode2.point("c4"),
+                      *Preamble3, Inputs3, MarkupKind::PlainText);
+    EXPECT_EQ(1U, Result.signatures.size());
+    EXPECT_THAT(Result.signatures[0],
+                AllOf(sig("operator()([[bool a]], [[bool b]]) -> void")));
+  }
+}
+
 TEST(CompletionTest, IncludedCompletionKinds) {
   Annotations Test(R"cpp(#include "^)cpp");
   auto TU = TestTU::withCode(Test.code());

@@ -7867,11 +7867,13 @@ void Sema::AddFunctionCandidates(const UnresolvedSetImpl &Fns,
       // This branch handles both standalone functions and static methods.
 
       // Slice the first argument (which is the base) when we access
-      // static method as non-static.
+      // static operator() as non-static.
       if (Args.size() > 0 &&
-          (!Args[0] || (FirstArgumentIsBase && isa<CXXMethodDecl>(FD) &&
-                        !isa<CXXConstructorDecl>(FD)))) {
-        assert(cast<CXXMethodDecl>(FD)->isStatic());
+          (!Args[0] ||
+           (isa<CXXMethodDecl>(FD) && !isa<CXXConstructorDecl>(FD) &&
+            (FirstArgumentIsBase ||
+             (cast<CXXMethodDecl>(FD)->isStatic() &&
+              FD->getOverloadedOperator() == OO_Call))))) {
         FunctionArgs = Args.slice(1);
       }
       if (FunTmpl) {
