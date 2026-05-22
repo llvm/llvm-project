@@ -3,13 +3,13 @@
 ; Reject a vector reduction with a non-vector argument.
 
 define float @reduce_vector_not_vec_arg(float %x) {
-; CHECK: intrinsic has incorrect argument type!
+; CHECK: intrinsic argument 0 type (overload type 0) expected any vector type, but got float
   %r0 = call float @llvm.vector.reduce.fmax.f32(float %x)
   ret float %r0
 }
 
 define i32 @reduce_vector_not_vec_arg2(i32 %x) {
-; CHECK: intrinsic has incorrect argument type!
+; CHECK: intrinsic argument 0 type (overload type 0) expected any vector type, but got i32
   %r0 = call i32 @llvm.vector.reduce.smax.i32(i32 %x)
   ret i32 %r0
 }
