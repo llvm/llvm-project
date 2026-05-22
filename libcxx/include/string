@@ -637,8 +637,10 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_standard_layout.h>
+#  include <__type_traits/is_trivially_assignable.h>
 #  include <__type_traits/is_trivially_constructible.h>
 #  include <__type_traits/is_trivially_copyable.h>
+#  include <__type_traits/is_trivially_destructible.h>
 #  include <__type_traits/is_trivially_relocatable.h>
 #  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
@@ -746,7 +748,7 @@ public:
   using const_pointer                  = typename __alloc_traits::const_pointer;
 
   // A basic_string contains the following members which may be trivially relocatable:
-  // - pointer: is currently assumed to be trivially relocatable, but is still checked in case that changes
+  // - pointer: may or may not be trivially relocatable, so it's checked
   // - size_type: is always trivially relocatable, since it has to be an integral type
   // - value_type: is always trivially relocatable, since it has to be trivial
   // - unsigned char: is a fundamental type, so it's trivially relocatable
@@ -875,15 +877,94 @@ private:
 
   static_assert(sizeof(__short) == (sizeof(value_type) * (__min_cap + 1)), "__short has an unexpected size.");
 
-  union __rep {
+  template <typename __long_t, typename __t = void>
+  union __rep_t {
     __short __s;
-    __long __l;
+    __long_t __l;
 
-    __rep() = default;
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(__short __r) : __s(__r) {}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(__long __r) : __l(__r) {}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(__uninitialized_tag) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __begin_long_lifetime() {}
+
+    __rep_t() = default;
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t(__short __r) : __s(__r) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t(__long __r) : __l(__r) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t(__uninitialized_tag) {}
   };
+
+  template <typename __long_t>
+  union __rep_t<__long_t,
+                typename std::enable_if<!is_trivially_constructible<__long_t>::value ||
+                                        !is_trivially_copy_assignable<__long_t>::value ||
+                                        !is_trivially_destructible<__long_t>::value >::type> {
+    __short __s;
+    __long_t __l;
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_long() const _NOEXCEPT {
+      if (__libcpp_is_constant_evaluated() && __builtin_constant_p(__l.__is_long_)) {
+        return __l.__is_long_;
+      }
+      return __s.__is_long_;
+    }
+
+    // If __long is not trivially constructible (this occurs if the pointer type inside __long is not trivially
+    // constructible) then the lifetime of __l must be explicitly started with std::__construct_at before it can be
+    // assigned to. If __long is trivially constructible, then the lifetime of __l can be implicitly started with a
+    // simple assignment and therefore does not need to be explicitly initialised here.
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __begin_long_lifetime() {
+#  if _LIBCPP_STD_VER >= 17
+      if constexpr (!__is_trivially_constructible(__long_t)) {
+#  else
+      if (!__is_trivially_constructible(__long_t)) {
+#  endif // _LIBCPP_STD_VER >= 17
+        std::__construct_at(std::addressof(__l));
+      }
+    }
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t() : __s() {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t(__short __r) : __s(__r) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t(__long_t __r) : __l(__r) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t(__uninitialized_tag) : __s() {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t(const __rep_t& __other) {
+      if (__other.__is_long()) {
+        __begin_long_lifetime();
+        __l = __other.__l;
+      } else
+        __s = __other.__s;
+    }
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t(__rep_t&& __other) {
+      if (__other.__is_long()) {
+        __begin_long_lifetime();
+        __l = std::move(__other.__l);
+      } else
+        __s = __other.__s;
+    }
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t& operator=(const __rep_t& __other) {
+      if (__is_long())
+        __l.~__long_t();
+      if (__other.__is_long()) {
+        __begin_long_lifetime();
+        __l = __other.__l;
+      } else
+        __s = __other.__s;
+      return *this;
+    }
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep_t& operator=(__rep_t&& __other) {
+      if (__is_long())
+        __l.~__long_t();
+      if (__other.__is_long()) {
+        __begin_long_lifetime();
+        __l = std::move(__other.__l);
+      } else
+        __s = __other.__s;
+      return *this;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__rep_t() {
+      if (__is_long())
+        __l.~__long_t();
+    }
+  };
+
+  using __rep = __rep_t<__long>;
 
   _LIBCPP_COMPRESSED_PAIR(__rep, __rep_, allocator_type, __alloc_);
 
@@ -932,7 +1013,7 @@ private:
     return std::__make_bounded_iter(__p, __get_pointer(), __get_pointer() + size());
 #  else
     return const_iterator(__p);
-#  endif                    // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
+#  endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
   }
 
 public:
@@ -1172,6 +1253,8 @@ public:
 #  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
   operator=(basic_string&& __str) noexcept(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
+    if (this == std::addressof(__str))
+      return *this;
     __move_assign(__str, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
     return *this;
   }
@@ -2244,6 +2327,7 @@ private:
       __annotate_new(__size);
       return __get_short_pointer();
     } else {
+      __rep_.__begin_long_lifetime();
       __rep_.__l = __allocate_long_buffer(__alloc_, __size);
       __annotate_new(__size);
       return __get_long_pointer();
@@ -2874,31 +2958,10 @@ basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, tr
     }
 #    endif
   }
-  size_type __str_old_size = __str.size();
-  bool __str_was_short     = !__str.__is_long();
 
   __move_assign_alloc(__str);
   __rep_ = __str.__rep_;
-  __str.__set_short_size(0);
-  traits_type::assign(__str.__get_short_pointer()[0], value_type());
-
-  if (__str_was_short && this != std::addressof(__str))
-    __str.__annotate_shrink(__str_old_size);
-  else
-    // ASan annotations: was long, so object memory is unpoisoned as new.
-    // Or is same as *this, and __annotate_delete() was called.
-    __str.__annotate_new(0);
-
-  // ASan annotations: Guard against `std::string s; s = std::move(s);`
-  // You can find more here: https://en.cppreference.com/w/cpp/utility/move
-  // Quote: "Unless otherwise specified, all standard library objects that have been moved
-  // from are placed in a "valid but unspecified state", meaning the object's class
-  // invariants hold (so functions without preconditions, such as the assignment operator,
-  // can be safely used on the object after it was moved from):"
-  // Quote: "v = std::move(v); // the value of v is unspecified"
-  if (!__is_long() && std::addressof(__str) != this)
-    // If it is long string, delete was never called on original __str's buffer.
-    __annotate_new(__get_short_size());
+  __str.__rep_ = __rep();
 }
 
 #  endif
@@ -3375,6 +3438,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocat
   // We're a long string and we're shrinking into the small buffer.
   if (__fits_in_sso(__size)) {
     __annotation_guard __g(*this);
+    __rep_ = __rep();
     __set_short_size(__size);
     traits_type::copy(std::__to_address(__get_short_pointer()), std::__to_address(__ptr), __size + 1);
     __alloc_traits::deallocate(__alloc_, __ptr, __cap);
