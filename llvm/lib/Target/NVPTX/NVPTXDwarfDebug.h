@@ -33,6 +33,11 @@ private:
   /// Used to avoid redundant emission of parent chain .loc directives.
   DenseSet<const DILocation *> EmittedInlinedAtLocs;
 
+  /// Set of compile units that already emitted an unknown dialect warning.
+  /// Used solely to dedup diagnostics; it does not affect emission policy
+  /// (unknown dialects are never emitted as DW_AT_LLVM_language_dialect).
+  DenseSet<const DICompileUnit *> WarnedDialectCUs;
+
 public:
   NVPTXDwarfDebug(AsmPrinter *A);
 
@@ -54,6 +59,8 @@ public:
       const GlobalVariable *GV = nullptr) const override;
 
 protected:
+  void finishTargetUnitAttributes(const DICompileUnit &DIUnit,
+                                  DwarfCompileUnit &NewCU) override;
   void initializeTargetDebugInfo(const MachineFunction &MF) override;
   void recordTargetSourceLine(const DebugLoc &DL, unsigned Flags) override;
   bool shouldAttachCompileUnitRanges() const override;

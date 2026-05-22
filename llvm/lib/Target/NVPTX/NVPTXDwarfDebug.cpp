@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -27,6 +28,9 @@
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
+
+static constexpr uint16_t SimtDialect = dwarf::DW_LLVM_LANG_DIALECT_simt;
+static constexpr uint16_t TileDialect = dwarf::DW_LLVM_LANG_DIALECT_tile;
 
 // Command line option to control inlined_at enhancement to lineinfo support.
 // Valid only when debuginfo emissionkind is DebugDirectivesOnly or
@@ -278,4 +282,36 @@ void NVPTXDwarfDebug::addTargetVariableAttributes(
 
   CU.addUInt(Die, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
              TargetAddrSpace.value_or(DefaultAddrSpace));
+}
+
+void NVPTXDwarfDebug::finishTargetUnitAttributes(const DICompileUnit &DIUnit,
+                                                 DwarfCompileUnit &NewCU) {
+  uint16_t Dialect = DIUnit.getSourceLanguage().getDialect();
+  // A zero dialect means "no dialect specified"; nothing to emit.
+  if (Dialect == 0)
+    return;
+
+  const bool IsKnownDialect = Dialect == SimtDialect || Dialect == TileDialect;
+  if (!IsKnownDialect) {
+    // WarnedDialectCUs only dedups the diagnostic per CU; it does not gate
+    // policy (we always suppress emission of unknown dialects below).
+    if (WarnedDialectCUs.insert(&DIUnit).second) {
+      StringRef DialectName = dwarf::LanguageDialectString(Dialect);
+      std::string DialectString =
+          DialectName.empty() ? Twine(Dialect).str() : DialectName.str();
+      DIUnit.getContext().diagnose(DiagnosticInfoGeneric(
+          Twine("unknown NVPTX language dialect '") + DialectString +
+              "' on DICompileUnit; expected '" +
+              dwarf::LanguageDialectString(SimtDialect) + "' or '" +
+              dwarf::LanguageDialectString(TileDialect) + "'",
+          DS_Warning));
+    }
+    // Do not emit DW_AT_LLVM_language_dialect for unknown dialect values.
+    // This also avoids DW_FORM_data1 truncation when a value happens to
+    // exceed one byte.
+    return;
+  }
+
+  NewCU.addUInt(NewCU.getUnitDie(), dwarf::DW_AT_LLVM_language_dialect,
+                dwarf::DW_FORM_data1, Dialect);
 }
