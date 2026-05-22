@@ -313,8 +313,10 @@ public:
           fir::getKindMapping(doLoop->getParentOfType<mlir::ModuleOp>()));
 
       for (mlir::Value liveIn : loopNestLiveIns) {
+        bool isReductionVar = llvm::find(loop.getReduceVars(), liveIn) !=
+                              loop.getReduceVars().end();
         targetClauseOps.mapVars.push_back(
-            genMapInfoOpForLiveIn(builder, liveIn));
+            genMapInfoOpForLiveIn(builder, liveIn, isReductionVar));
         liveInShapeInfoMap.insert(
             {liveIn, TargetDeclareShapeCreationInfo(liveIn)});
       }
@@ -416,7 +418,7 @@ private:
     mlir::Location loc = loop.getLoc();
     auto parallelOp = mlir::omp::ParallelOp::create(rewriter, loc, parallelOps);
     Fortran::common::openmp::EntryBlockArgs parallelArgs;
-    parallelArgs.priv.vars = parallelOps.privateVars;
+    parallelArgs.privVars = parallelOps.privateVars;
     Fortran::common::openmp::genEntryBlock(rewriter, parallelArgs,
                                            parallelOp.getRegion());
     rewriter.setInsertionPoint(mlir::omp::TerminatorOp::create(rewriter, loc));
@@ -504,8 +506,8 @@ private:
     wsloopOp.setComposite(isComposite);
 
     Fortran::common::openmp::EntryBlockArgs wsloopArgs;
-    wsloopArgs.priv.vars = wsloopClauseOps.privateVars;
-    wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
+    wsloopArgs.privVars = wsloopClauseOps.privateVars;
+    wsloopArgs.reductionVars = wsloopClauseOps.reductionVars;
     Fortran::common::openmp::genEntryBlock(rewriter, wsloopArgs,
                                            wsloopOp.getRegion());
 
@@ -540,8 +542,9 @@ private:
         /*dataExvIsAssumedSize=*/false, rawAddr.getLoc());
   }
 
-  mlir::omp::MapInfoOp genMapInfoOpForLiveIn(fir::FirOpBuilder &builder,
-                                             mlir::Value liveIn) const {
+  mlir::omp::MapInfoOp
+  genMapInfoOpForLiveIn(fir::FirOpBuilder &builder, mlir::Value liveIn,
+                        bool isReductionVar = false) const {
     mlir::Value rawAddr = liveIn;
     llvm::StringRef name;
 
@@ -574,7 +577,10 @@ private:
     mlir::omp::VariableCaptureKind captureKind =
         mlir::omp::VariableCaptureKind::ByRef;
 
-    if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
+    if (isReductionVar) {
+      mapFlag |= mlir::omp::ClauseMapFlags::to;
+      mapFlag |= mlir::omp::ClauseMapFlags::from;
+    } else if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
       captureKind = mlir::omp::VariableCaptureKind::ByCopy;
     } else if (!fir::isa_builtin_cptr_type(eleType)) {
       mapFlag |= mlir::omp::ClauseMapFlags::to;
@@ -775,7 +781,7 @@ private:
     mlir::Location loc = loop.getLoc();
     auto teamsOp = mlir::omp::TeamsOp::create(rewriter, loc, teamsOps);
     Fortran::common::openmp::EntryBlockArgs teamsArgs;
-    teamsArgs.reduction.vars = teamsOps.reductionVars;
+    teamsArgs.reductionVars = teamsOps.reductionVars;
     Fortran::common::openmp::genEntryBlock(rewriter, teamsArgs,
                                            teamsOp.getRegion());
 

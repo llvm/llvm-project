@@ -182,7 +182,6 @@ public:
   static ModuleSpecList
   GetModuleSpecifications(const lldb_private::FileSpec &file,
                           lldb::DataExtractorSP &extractor_sp,
-                          lldb::offset_t data_offset,
                           lldb::offset_t file_offset, lldb::offset_t file_size);
   static bool IsObjectFile(lldb_private::FileSpec file_spec);
   /// Split a path into a file path with object name.
@@ -772,7 +771,10 @@ protected:
   lldb::ProcessWP m_process_wp;
   /// Set if the object file only exists in memory.
   const lldb::addr_t m_memory_addr;
+
   std::unique_ptr<lldb_private::SectionList> m_sections_up;
+  std::recursive_mutex m_sections_mutex;
+
   std::unique_ptr<lldb_private::Symtab> m_symtab_up;
   /// We need a llvm::once_flag that we can use to avoid locking the module
   /// lock and deadlocking LLDB. See comments in ObjectFile::GetSymtab() for

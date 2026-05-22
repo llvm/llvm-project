@@ -9,19 +9,19 @@ entry:
   %cmp12 = icmp eq i32 %N, 0
   br i1 %cmp12, label %for.cond.cleanup, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %N to i64
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   %phitmp = trunc i32 %add4 to i8
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %acc.0.lcssa = phi i8 [ 0, %entry ], [ %phitmp, %for.cond.cleanup.loopexit ]
   ret i8 %acc.0.lcssa
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %acc.013 = phi i32 [ %add4, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i8, ptr %dataA, i64 %indvars.iv
@@ -78,19 +78,19 @@ entry:
   %cmp12 = icmp eq i32 %N, 0
   br i1 %cmp12, label %for.cond.cleanup, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %N to i64
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   %phitmp = trunc i32 %add4 to i16
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %acc.0.lcssa = phi i16 [ 0, %entry ], [ %phitmp, %for.cond.cleanup.loopexit ]
   ret i16 %acc.0.lcssa
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %acc.013 = phi i32 [ %add4, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i16, ptr %dataA, i64 %indvars.iv

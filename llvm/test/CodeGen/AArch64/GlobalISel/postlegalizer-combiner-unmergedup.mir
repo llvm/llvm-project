@@ -10,8 +10,9 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[DUPLANE8_:%[0-9]+]]:_(<8 x s8>) = G_DUPLANE8 [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: [[DUPLANE8_1:%[0-9]+]]:_(<8 x s8>) = G_DUPLANE8 [[COPY]], [[C]](s64)
     ; CHECK-NEXT: $d0 = COPY [[DUPLANE8_]](<8 x s8>)
-    ; CHECK-NEXT: $d1 = COPY [[DUPLANE8_]](<8 x s8>)
+    ; CHECK-NEXT: $d1 = COPY [[DUPLANE8_1]](<8 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(<16 x s8>) = COPY $q0
     %1:_(s64) = G_CONSTANT i64 1
@@ -31,8 +32,9 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[DUPLANE16_:%[0-9]+]]:_(<4 x s16>) = G_DUPLANE16 [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: [[DUPLANE16_1:%[0-9]+]]:_(<4 x s16>) = G_DUPLANE16 [[COPY]], [[C]](s64)
     ; CHECK-NEXT: $d0 = COPY [[DUPLANE16_]](<4 x s16>)
-    ; CHECK-NEXT: $d1 = COPY [[DUPLANE16_]](<4 x s16>)
+    ; CHECK-NEXT: $d1 = COPY [[DUPLANE16_1]](<4 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(s64) = G_CONSTANT i64 1
@@ -52,8 +54,9 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[DUPLANE32_:%[0-9]+]]:_(<2 x s32>) = G_DUPLANE32 [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: [[DUPLANE32_1:%[0-9]+]]:_(<2 x s32>) = G_DUPLANE32 [[COPY]], [[C]](s64)
     ; CHECK-NEXT: $d0 = COPY [[DUPLANE32_]](<2 x s32>)
-    ; CHECK-NEXT: $d1 = COPY [[DUPLANE32_]](<2 x s32>)
+    ; CHECK-NEXT: $d1 = COPY [[DUPLANE32_1]](<2 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(s64) = G_CONSTANT i64 1
@@ -73,10 +76,10 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[DUPLANE64_:%[0-9]+]]:_(<2 x s64>) = G_DUPLANE64 [[COPY]], [[C]](s64)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DUPLANE64_]](<2 x s64>), [[C1]](s64)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[EVEC1:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DUPLANE64_]](<2 x s64>), [[C2]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DUPLANE64_]](<2 x s64>), [[C1]](i64)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[EVEC1:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DUPLANE64_]](<2 x s64>), [[C2]](i64)
     ; CHECK-NEXT: $d0 = COPY [[EVEC]](s64)
     ; CHECK-NEXT: $d1 = COPY [[EVEC1]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0

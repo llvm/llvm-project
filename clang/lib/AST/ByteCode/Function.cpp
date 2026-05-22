@@ -29,7 +29,8 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
     Constexpr = F->isConstexpr();
     if (const auto *CD = dyn_cast<CXXConstructorDecl>(F)) {
       Virtual = CD->isVirtual();
-      Kind = FunctionKind::Ctor;
+      Kind = CD->isCopyOrMoveConstructor() ? FunctionKind::CopyOrMoveCtor
+                                           : FunctionKind::Ctor;
     } else if (const auto *CD = dyn_cast<CXXDestructorDecl>(F)) {
       Virtual = CD->isVirtual();
       Kind = FunctionKind::Dtor;

@@ -76,7 +76,7 @@ class GVNLegacyPass;
 /// Intended use is to create a default object, modify parameters with
 /// additional setters and then pass it to GVN.
 struct GVNOptions {
-  std::optional<bool> AllowPRE;
+  std::optional<bool> AllowScalarPRE;
   std::optional<bool> AllowLoadPRE;
   std::optional<bool> AllowLoadInLoopPRE;
   std::optional<bool> AllowLoadPRESplitBackedge;
@@ -85,9 +85,9 @@ struct GVNOptions {
 
   GVNOptions() = default;
 
-  /// Enables or disables PRE in GVN.
-  GVNOptions &setPRE(bool PRE) {
-    AllowPRE = PRE;
+  /// Enables or disables PRE of scalars in GVN.
+  GVNOptions &setScalarPRE(bool ScalarPRE) {
+    AllowScalarPRE = ScalarPRE;
     return *this;
   }
 
@@ -125,7 +125,7 @@ struct GVNOptions {
 ///
 /// FIXME: We should have a good summary of the GVN algorithm implemented by
 /// this particular pass here.
-class GVNPass : public PassInfoMixin<GVNPass> {
+class GVNPass : public OptionalPassInfoMixin<GVNPass> {
   GVNOptions Options;
 
 public:
@@ -148,7 +148,7 @@ public:
   AAResults *getAliasAnalysis() const { return VN.getAliasAnalysis(); }
   MemoryDependenceResults &getMemDep() const { return *MD; }
 
-  LLVM_ABI bool isPREEnabled() const;
+  LLVM_ABI bool isScalarPREEnabled() const;
   LLVM_ABI bool isLoadPREEnabled() const;
   LLVM_ABI bool isLoadInLoopPREEnabled() const;
   LLVM_ABI bool isLoadPRESplitBackedgeEnabled() const;
@@ -264,14 +264,20 @@ private:
   class LeaderMap {
   public:
     struct LeaderTableEntry {
-      Value *Val;
+      // Use AssertingVH here to catch dangling Value*'s in the leader table.
+      // Will crash if the value gets deleted before the AssertingVH is
+      // destroyed.
+      AssertingVH<Value> Val;
       const BasicBlock *BB;
+      LeaderTableEntry(Value *V, const BasicBlock *BB) : Val(V), BB(BB) {}
     };
 
   private:
     struct LeaderListNode {
       LeaderTableEntry Entry;
       LeaderListNode *Next;
+      LeaderListNode(Value *V, const BasicBlock *BB, LeaderListNode *Next)
+          : Entry(V, BB), Next(Next) {}
     };
     DenseMap<uint32_t, LeaderListNode> NumToLeaders;
     BumpPtrAllocator TableAllocator;
@@ -315,8 +321,18 @@ private:
 
     LLVM_ABI void insert(uint32_t N, Value *V, const BasicBlock *BB);
     LLVM_ABI void erase(uint32_t N, Instruction *I, const BasicBlock *BB);
-    LLVM_ABI void verifyRemoved(const Value *Inst) const;
     void clear() {
+      // Manually destroy non-head nodes (in BumpPtrAllocator) to properly
+      // clean up AssertingVH handles before Reset(). Head nodes are destroyed
+      // by NumToLeaders.clear() below.
+      for (auto &[_, HeadNode] : NumToLeaders) {
+        LeaderListNode *N = HeadNode.Next;
+        while (N) {
+          auto *Next = N->Next;
+          N->~LeaderListNode();
+          N = Next;
+        }
+      }
       NumToLeaders.clear();
       TableAllocator.Reset();
     }
@@ -408,18 +424,19 @@ private:
 };
 
 /// Create a legacy GVN pass.
+LLVM_ABI FunctionPass *createGVNPass(bool ScalarPRE);
 LLVM_ABI FunctionPass *createGVNPass();
 
 /// A simple and fast domtree-based GVN pass to hoist common expressions
 /// from sibling branches.
-struct GVNHoistPass : PassInfoMixin<GVNHoistPass> {
+struct GVNHoistPass : OptionalPassInfoMixin<GVNHoistPass> {
   /// Run the pass over the function.
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Uses an "inverted" value numbering to decide the similarity of
 /// expressions and sinks similar expressions into successors.
-struct GVNSinkPass : PassInfoMixin<GVNSinkPass> {
+struct GVNSinkPass : OptionalPassInfoMixin<GVNSinkPass> {
   /// Run the pass over the function.
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

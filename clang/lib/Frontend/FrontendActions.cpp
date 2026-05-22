@@ -128,7 +128,7 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
   std::string OutputFile;
   std::unique_ptr<raw_pwrite_stream> OS =
-      CreateOutputFile(CI, InFile, /*ref*/ OutputFile);
+      CreateOutputFile(CI, InFile, /*ref*/ OutputFile, SetOnlyIfDifferent);
   if (!OS)
     return nullptr;
 
@@ -142,8 +142,7 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
       CI.getPreprocessor(), CI.getModuleCache(), OutputFile, Sysroot, Buffer,
       CI.getCodeGenOpts(), FrontendOpts.ModuleFileExtensions,
       CI.getPreprocessorOpts().AllowPCHWithCompilerErrors,
-      FrontendOpts.IncludeTimestamps, FrontendOpts.BuildingImplicitModule,
-      +CI.getLangOpts().CacheGeneratedPCH));
+      FrontendOpts.IncludeTimestamps, FrontendOpts.BuildingImplicitModule));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
       CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
 
@@ -163,10 +162,13 @@ bool GeneratePCHAction::ComputeASTConsumerArguments(CompilerInstance &CI,
 
 std::unique_ptr<llvm::raw_pwrite_stream>
 GeneratePCHAction::CreateOutputFile(CompilerInstance &CI, StringRef InFile,
-                                    std::string &OutputFile) {
+                                    std::string &OutputFile,
+                                    bool SetOnlyIfDifferent) {
   // Because this is exposed via libclang we must disable RemoveFileOnSignal.
   std::unique_ptr<raw_pwrite_stream> OS = CI.createDefaultOutputFile(
-      /*Binary=*/true, InFile, /*Extension=*/"", /*RemoveFileOnSignal=*/false);
+      /*Binary=*/true, InFile, /*Extension=*/"", /*RemoveFileOnSignal=*/false,
+      /*CreateMissingDirectories=*/false, /*ForceUseTemporary=*/false,
+      SetOnlyIfDifferent);
   if (!OS)
     return nullptr;
 
@@ -188,7 +190,8 @@ bool GeneratePCHAction::BeginSourceFileAction(CompilerInstance &CI) {
 std::vector<std::unique_ptr<ASTConsumer>>
 GenerateModuleAction::CreateMultiplexConsumer(CompilerInstance &CI,
                                               StringRef InFile) {
-  std::unique_ptr<raw_pwrite_stream> OS = CreateOutputFile(CI, InFile);
+  if (!OS)
+    OS = CreateOutputFile(CI, InFile);
   if (!OS)
     return {};
 
@@ -206,9 +209,7 @@ GenerateModuleAction::CreateMultiplexConsumer(CompilerInstance &CI,
       /*IncludeTimestamps=*/
       +CI.getFrontendOpts().BuildingImplicitModule &&
           +CI.getFrontendOpts().IncludeTimestamps,
-      /*BuildingImplicitModule=*/+CI.getFrontendOpts().BuildingImplicitModule,
-      /*ShouldCacheASTInMemory=*/
-      +CI.getFrontendOpts().BuildingImplicitModule));
+      /*BuildingImplicitModule=*/+CI.getFrontendOpts().BuildingImplicitModule));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
       CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
   return Consumers;
@@ -260,7 +261,8 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
   return CI.createDefaultOutputFile(/*Binary=*/true, InFile, /*Extension=*/"",
                                     /*RemoveFileOnSignal=*/false,
                                     /*CreateMissingDirectories=*/true,
-                                    /*ForceUseTemporary=*/true);
+                                    /*ForceUseTemporary=*/true,
+                                    /*SetOnlyIfDifferent=*/SetOnlyIfDifferent);
 }
 
 bool GenerateModuleInterfaceAction::PrepareToExecuteAction(
@@ -452,8 +454,6 @@ private:
       return "ConstraintsCheck";
     case CodeSynthesisContext::ConstraintSubstitution:
       return "ConstraintSubstitution";
-    case CodeSynthesisContext::ConstraintNormalization:
-      return "ConstraintNormalization";
     case CodeSynthesisContext::RequirementParameterInstantiation:
       return "RequirementParameterInstantiation";
     case CodeSynthesisContext::ParameterMappingSubstitution:
@@ -962,18 +962,18 @@ void DumpModuleInfoAction::ExecuteAction() {
     if (Primary) {
       if (!Primary->submodules().empty())
         Out << "   Sub Modules:\n";
-      for (auto *MI : Primary->submodules()) {
+      for (Module *MI : Primary->submodules()) {
         PrintSubMapEntry(MI->Name, MI->Kind);
       }
       if (!Primary->Imports.empty())
         Out << "   Imports:\n";
-      for (auto *IMP : Primary->Imports) {
+      for (Module *IMP : Primary->Imports) {
         PrintSubMapEntry(IMP->Name, IMP->Kind);
       }
       if (!Primary->Exports.empty())
         Out << "   Exports:\n";
       for (unsigned MN = 0, N = Primary->Exports.size(); MN != N; ++MN) {
-        if (Module *M = Primary->Exports[MN].getPointer()) {
+        if (Module *M = Primary->Exports[MN].first) {
           PrintSubMapEntry(M->Name, M->Kind);
         }
       }

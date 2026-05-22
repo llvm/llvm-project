@@ -150,10 +150,14 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
 
   // The default stream is usually stream 0 (the legacy default stream).
   // For per-thread default stream, we need a different LaunchKernel function.
-  StringRef kernelLaunchAPI = "LaunchKernel";
+  std::string kernelLaunchAPI = "LaunchKernel";
   if (cgm.getLangOpts().GPUDefaultStream ==
-      LangOptions::GPUDefaultStreamKind::PerThread)
-    cgm.errorNYI("CUDA/HIP Stream per thread");
+      LangOptions::GPUDefaultStreamKind::PerThread) {
+    if (cgm.getLangOpts().HIP)
+      kernelLaunchAPI += "_spt";
+    else if (cgm.getLangOpts().CUDA)
+      kernelLaunchAPI += "_ptsz";
+  }
 
   std::string launchKernelName = addPrefixToName(kernelLaunchAPI);
   const IdentifierInfo &launchII =
@@ -329,9 +333,9 @@ mlir::Operation *CIRGenNVCUDARuntime::getKernelHandle(cir::FuncOp fn,
   CIRGenBuilderTy &builder = cgm.getBuilder();
   StringRef globalName = cgm.getMangledName(
       gd.getWithKernelReferenceKind(KernelReferenceKind::Kernel));
-  cir::GlobalOp globalOp = CIRGenModule::createGlobalOp(
-      cgm, fn.getLoc(), globalName, fn.getFunctionType(),
-      /*isConstant=*/true);
+  cir::PointerType fnPtrTy = builder.getPointerTo(fn.getFunctionType());
+  cir::GlobalOp globalOp =
+      cgm.createGlobalOp(fn.getLoc(), globalName, fnPtrTy, /*isConstant=*/true);
 
   globalOp->setAttr("alignment", builder.getI64IntegerAttr(
                                      cgm.getPointerAlign().getQuantity()));

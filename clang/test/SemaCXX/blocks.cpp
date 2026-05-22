@@ -163,3 +163,13 @@ void static_data_member() {
     };
   };
 }
+
+namespace test8{
+  class X{
+    __block static int x; // expected-error {{'__block' is not allowed on a C++ static data member}}
+  };
+}
+
+namespace gh189247 {
+  template<void (^)()> struct A; // expected-error {{a non-type template parameter cannot have type 'void (^)()'}}
+}

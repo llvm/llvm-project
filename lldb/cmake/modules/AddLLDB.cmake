@@ -31,7 +31,90 @@ function(lldb_tablegen)
     add_public_tablegen_target(${LTG_TARGET})
     set_property(GLOBAL APPEND PROPERTY LLDB_TABLEGEN_TARGETS ${LTG_TARGET})
   endif()
+  if("-dump-json" IN_LIST ARGN)
+    set_property(GLOBAL APPEND PROPERTY LLDB_DOCS_JSON_OUTPUTS "${TABLEGEN_OUTPUT}")
+  endif()
 endfunction(lldb_tablegen)
+
+# Returns TRUE in `out_var` if any of `libs` is `liblldb` or already carries
+# the LLDB_LINKS_LIBLLDB property.
+function(_lldb_links_liblldb_check out_var libs)
+  set(${out_var} FALSE PARENT_SCOPE)
+  foreach(lib ${libs})
+    if("${lib}" STREQUAL "liblldb")
+      set(${out_var} TRUE PARENT_SCOPE)
+      return()
+    endif()
+    if(TARGET "${lib}")
+      get_target_property(_p "${lib}" LLDB_LINKS_LIBLLDB)
+      if(_p)
+        set(${out_var} TRUE PARENT_SCOPE)
+        return()
+      endif()
+    endif()
+  endforeach()
+endfunction()
+
+function(_lldb_propagate_links_liblldb name libs)
+  _lldb_links_liblldb_check(_links_liblldb "${libs}")
+  set_target_properties(${name} PROPERTIES LLDB_LINKS_LIBLLDB ${_links_liblldb})
+endfunction()
+
+# Configure-time scan: every #include "lldb/<Module>/..." in <SOURCES> and in
+# PUBLIC_HEADER_DIR (recursive) must reference OWN_MODULE or a name in
+# ALLOWED_MODULES, otherwise FATAL_ERROR. Catches accidental cross-module
+# includes that succeed at link time (e.g. on macOS) without a corresponding
+# CMake LINK_LIBS dependency.
+function(lldb_check_header_layering target)
+  cmake_parse_arguments(HC "" "PUBLIC_HEADER_DIR;OWN_MODULE"
+                          "SOURCES;ALLOWED_MODULES" ${ARGN})
+
+  set(_files)
+  foreach(src ${HC_SOURCES})
+    if(NOT IS_ABSOLUTE "${src}")
+      set(src "${CMAKE_CURRENT_SOURCE_DIR}/${src}")
+    endif()
+    # PARAM_UNPARSED_ARGUMENTS in add_lldb_library carries source files
+    # alongside llvm_add_library keywords like ADDITIONAL_HEADER_DIRS or
+    # LINK_COMPONENTS. Skip anything that isn't an existing file.
+    if(EXISTS "${src}" AND NOT IS_DIRECTORY "${src}")
+      list(APPEND _files "${src}")
+    endif()
+  endforeach()
+
+  if(HC_PUBLIC_HEADER_DIR AND EXISTS "${HC_PUBLIC_HEADER_DIR}")
+    file(GLOB_RECURSE _public_hdrs
+         "${HC_PUBLIC_HEADER_DIR}/*.h" "${HC_PUBLIC_HEADER_DIR}/*.hpp")
+    list(APPEND _files ${_public_hdrs})
+  endif()
+
+  set(_allowed ${HC_ALLOWED_MODULES} ${HC_OWN_MODULE})
+
+  foreach(file ${_files})
+    file(STRINGS "${file}" _includes
+         REGEX "^[ \t]*#[ \t]*include[ \t]+\"lldb/[A-Za-z_][A-Za-z0-9_]*/")
+    foreach(line ${_includes})
+      # Allow Windows system-header wrapper.
+      if(line MATCHES "\"lldb/Host/windows/windows\\.h\"")
+        continue()
+      endif()
+      string(REGEX MATCH
+        "^[ \t]*#[ \t]*include[ \t]+\"lldb/([A-Za-z_][A-Za-z0-9_]*)/"
+        _m "${line}")
+      if(NOT CMAKE_MATCH_1 IN_LIST _allowed)
+        message(FATAL_ERROR
+          "LLDB layering: target '${target}' includes a header from "
+          "module 'lldb/${CMAKE_MATCH_1}/' which is not in its allowlist.\n"
+          "  File:    ${file}\n"
+          "  Include: ${line}\n"
+          "  Own module:      ${HC_OWN_MODULE}\n"
+          "  Allowed modules: ${HC_ALLOWED_MODULES}\n"
+          "Either remove the include or add 'lldb${CMAKE_MATCH_1}' to "
+          "ALLOWED_INTERNAL_DEPENDENCIES.")
+      endif()
+    endforeach()
+  endforeach()
+endfunction()
 
 function(add_lldb_library name)
   include_directories(BEFORE
@@ -41,17 +124,73 @@ function(add_lldb_library name)
   cmake_parse_arguments(PARAM
     "MODULE;SHARED;STATIC;OBJECT;PLUGIN;FRAMEWORK;NO_INTERNAL_DEPENDENCIES;NO_PLUGIN_DEPENDENCIES"
     "INSTALL_PREFIX"
-    "LINK_LIBS;CLANG_LIBS"
+    "LINK_LIBS;CLANG_LIBS;ALLOWED_INTERNAL_DEPENDENCIES"
     ${ARGN})
 
+  set(_check_internal_deps FALSE)
   if(PARAM_NO_INTERNAL_DEPENDENCIES)
+    set(_allowed_internal_deps "")
+    set(_check_internal_deps TRUE)
+  elseif(DEFINED PARAM_ALLOWED_INTERNAL_DEPENDENCIES)
+    set(_allowed_internal_deps "${PARAM_ALLOWED_INTERNAL_DEPENDENCIES}")
+    set(_check_internal_deps TRUE)
+  endif()
+
+  if(_check_internal_deps)
     foreach(link_lib ${PARAM_LINK_LIBS})
-      if (link_lib MATCHES "^lldb")
+      if(link_lib MATCHES "^lldb" AND NOT link_lib IN_LIST _allowed_internal_deps)
         message(FATAL_ERROR
-          "Library ${name} cannot depend on any other lldb libs "
-          "(Found ${link_lib} in LINK_LIBS)")
+          "LLDB layering: target '${name}' has a forbidden internal dependency on '${link_lib}'.\n"
+          "  Allowed internal deps: ${_allowed_internal_deps}\n"
+          "Add '${link_lib}' to ALLOWED_INTERNAL_DEPENDENCIES on the "
+          "add_lldb_library(${name} ...) call, or remove it from LINK_LIBS.")
       endif()
     endforeach()
+
+    # Also scan sources and public headers for forbidden cross-module
+    # #include directives. Catches accidental layering breaks that succeed
+    # at link time on macOS due to static linking, even without a
+    # corresponding LINK_LIBS entry.
+    # Map a target name to its module directory under
+    # ${LLDB_INCLUDE_DIR}/lldb/. Top-level libraries map directly
+    # (lldbCore -> Core); sub-libraries fold into their parent module by
+    # longest-prefix match (lldbHostMacOSXObjCXX -> Host).
+    macro(_lldb_module_for target_name out_var)
+      string(REGEX REPLACE "^lldb" "" _stripped "${target_name}")
+      if(IS_DIRECTORY "${LLDB_INCLUDE_DIR}/lldb/${_stripped}")
+        set(${out_var} "${_stripped}")
+      else()
+        set(${out_var} "${_stripped}")
+        foreach(candidate Utility Host Core Symbol Target Breakpoint
+                Expression Interpreter API DataFormatters Commands
+                Initialization ValueObject Version)
+          string(LENGTH "${candidate}" _clen)
+          string(SUBSTRING "${_stripped}" 0 ${_clen} _prefix)
+          if(_prefix STREQUAL candidate)
+            set(${out_var} "${candidate}")
+            break()
+          endif()
+        endforeach()
+      endif()
+    endmacro()
+
+    _lldb_module_for("${name}" _own_module)
+    set(_allowed_modules)
+    foreach(dep ${_allowed_internal_deps})
+      _lldb_module_for("${dep}" _m)
+      list(APPEND _allowed_modules "${_m}")
+    endforeach()
+    list(REMOVE_DUPLICATES _allowed_modules)
+
+    # PUBLIC_HEADER_DIR uses the unfolded name so sub-libraries
+    # (e.g. lldbHostMacOSXObjCXX) don't redundantly scan their parent
+    # module's headers — those are scanned by the parent's own check.
+    string(REGEX REPLACE "^lldb" "" _own_dir "${name}")
+    lldb_check_header_layering(${name}
+      SOURCES ${PARAM_UNPARSED_ARGUMENTS}
+      PUBLIC_HEADER_DIR "${LLDB_INCLUDE_DIR}/lldb/${_own_dir}"
+      OWN_MODULE ${_own_module}
+      ALLOWED_MODULES ${_allowed_modules})
   endif()
 
   if(PARAM_NO_PLUGIN_DEPENDENCIES)
@@ -73,7 +212,11 @@ function(add_lldb_library name)
   elseif (PARAM_SHARED)
     set(libkind SHARED)
   elseif (PARAM_OBJECT)
-    set(libkind OBJECT)
+    # Pass STATIC alongside OBJECT so that under BUILD_SHARED_LIBS=ON the
+    # secondary library variant llvm_add_library produces is a STATIC archive
+    # rather than a SHARED library. OBJECT consumers in LLDB carry no LINK_LIBS
+    # of their own (consumers add them), so a SHARED variant would fail to link.
+    set(libkind "OBJECT;STATIC")
   else ()
     # PARAM_STATIC or library type unspecified. BUILD_SHARED_LIBS
     # does not control the kind of libraries created for LLDB,
@@ -91,6 +234,9 @@ function(add_lldb_library name)
     LINK_LIBS ${PARAM_LINK_LIBS}
     ${pass_NO_INSTALL_RPATH}
   )
+
+  # Mark whether this library transitively pulls in liblldb.
+  _lldb_propagate_links_liblldb(${name} "${PARAM_LINK_LIBS}")
 
   if(CLANG_LINK_CLANG_DYLIB)
     target_link_libraries(${name} PRIVATE clang-cpp)
@@ -217,6 +363,20 @@ function(add_lldb_executable name)
       add_llvm_install_targets(install-${name}
                                DEPENDS ${name}
                                COMPONENT ${name})
+      # An installed tool that links liblldb won't run without liblldb
+      # installed alongside it. Record it on a global list so other
+      # runtime components (e.g. the Python/Lua script packages) can
+      # attach themselves to the same install targets.
+      _lldb_links_liblldb_check(_links_liblldb "${ARG_LINK_LIBS}")
+      if(_links_liblldb)
+        set_property(GLOBAL APPEND PROPERTY LLDB_TOOLS_LINKING_LIBLLDB ${name})
+        if(TARGET install-liblldb)
+          add_dependencies(install-${name} install-liblldb)
+          if(TARGET install-${name}-stripped AND TARGET install-liblldb-stripped)
+            add_dependencies(install-${name}-stripped install-liblldb-stripped)
+          endif()
+        endif()
+      endif()
     endif()
     if(APPLE AND ARG_INSTALL_PREFIX)
       lldb_add_post_install_steps_darwin(${name} ${ARG_INSTALL_PREFIX})

@@ -40,4 +40,12 @@ T do_nothing(T t) {
   return t;
 }
 
+template <bool IsNoexcept>
+struct MaybeNoexceptFn {
+  bool operator()() const noexcept(IsNoexcept); // not defined
+};
+
+template <int>
+struct Tag {};
+
 #endif // TEST_STD_UTILITIES_FUNCTION_OBJECTS_FUNC_BIND_PARTIAL_TYPES_H

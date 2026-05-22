@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Program.h"
+#include "Char.h"
 #include "Context.h"
 #include "Function.h"
 #include "Integral.h"
@@ -121,7 +122,7 @@ UnsignedOrNone Program::getOrCreateGlobal(const ValueDecl *VD,
   return std::nullopt;
 }
 
-unsigned Program::getOrCreateDummy(const DeclTy &D) {
+unsigned Program::getOrCreateDummy(const DeclTy &D, bool IsConstexprUnknown) {
   assert(D);
   // Dedup blocks since they are immutable and pointers cannot be compared.
   if (auto It = DummyVariables.find(D.getOpaqueValue());
@@ -151,6 +152,8 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
   if (!Desc)
     Desc = allocateDescriptor(D);
 
+  Desc->IsConstexprUnknown = IsConstexprUnknown;
+
   assert(Desc);
 
   // Allocate a block for storage.
@@ -167,7 +170,8 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
   return I;
 }
 
-UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
+UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
+                                     bool IsConstexprUnknown) {
   bool IsStatic, IsExtern;
   bool IsWeak = VD->isWeak();
   if (const auto *Var = dyn_cast<VarDecl>(VD)) {
@@ -184,8 +188,8 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
 
   // Register all previous declarations as well. For extern blocks, just replace
   // the index with the new variable.
-  UnsignedOrNone Idx =
-      createGlobal(VD, VD->getType(), IsStatic, IsExtern, IsWeak, Init);
+  UnsignedOrNone Idx = createGlobal(VD, VD->getType(), IsStatic, IsExtern,
+                                    IsWeak, IsConstexprUnknown, Init);
   if (!Idx)
     return std::nullopt;
 
@@ -213,18 +217,15 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
     }
 
     if (Redecl != VD) {
-      if (Block *RedeclBlock = Globals[Iter->second]->block();
-          RedeclBlock->isExtern()) {
+      Block *RedeclBlock = Globals[Iter->second]->block();
+      // All pointers pointing to the previous extern decl now point to the
+      // new decl.
+      // A previous iteration might've already fixed up the pointers for this
+      // global.
+      if (RedeclBlock != NewGlobal->block())
+        RedeclBlock->movePointersTo(NewGlobal->block());
 
-        // All pointers pointing to the previous extern decl now point to the
-        // new decl.
-        // A previous iteration might've already fixed up the pointers for this
-        // global.
-        if (RedeclBlock != NewGlobal->block())
-          RedeclBlock->movePointersTo(NewGlobal->block());
-
-        Globals[Iter->second] = NewGlobal;
-      }
+      Globals[Iter->second] = NewGlobal;
     }
     Iter->second = *Idx;
   }
@@ -236,7 +237,8 @@ UnsignedOrNone Program::createGlobal(const Expr *E, QualType ExprType) {
   if (auto Idx = getGlobal(E))
     return Idx;
   if (auto Idx = createGlobal(E, ExprType, /*IsStatic=*/true,
-                              /*IsExtern=*/false, /*IsWeak=*/false)) {
+                              /*IsExtern=*/false, /*IsWeak=*/false,
+                              /*IsConstexprUnknown=*/false)) {
     GlobalIndices[E] = *Idx;
     return *Idx;
   }
@@ -245,6 +247,7 @@ UnsignedOrNone Program::createGlobal(const Expr *E, QualType ExprType) {
 
 UnsignedOrNone Program::createGlobal(const DeclTy &D, QualType Ty,
                                      bool IsStatic, bool IsExtern, bool IsWeak,
+                                     bool IsConstexprUnknown,
                                      const Expr *Init) {
   // Create a descriptor for the global.
   Descriptor *Desc;
@@ -260,6 +263,7 @@ UnsignedOrNone Program::createGlobal(const DeclTy &D, QualType Ty,
 
   if (!Desc)
     return std::nullopt;
+  Desc->IsConstexprUnknown = IsConstexprUnknown;
 
   // Allocate a block for storage.
   unsigned I = Globals.size();

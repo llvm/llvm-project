@@ -61,6 +61,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -128,6 +129,9 @@ public:
   // Targets implemented so far all have the same trivial lowering for these
   bool vaEndIsNop() { return true; }
   bool vaCopyIsMemcpy() { return true; }
+
+  // Per-target overrides of special symbols.
+  virtual bool ignoreFunction(const Function *F) { return false; }
 
   // Any additional address spaces used in va intrinsics that should be
   // expanded.
@@ -240,6 +244,9 @@ public:
   bool expansionApplicableToFunction(Module &M, Function *F) {
     if (F->isIntrinsic() || !F->isVarArg() ||
         F->hasFnAttribute(Attribute::Naked))
+      return false;
+
+    if (ABI->ignoreFunction(F))
       return false;
 
     if (!isValidCallingConv(F))
@@ -627,6 +634,9 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   bool Changed = false;
   const DataLayout &DL = M.getDataLayout();
 
+  if (ABI->ignoreFunction(CB->getCalledFunction()))
+    return Changed;
+
   if (!expansionApplicableToFunctionCall(CB)) {
     if (rewriteABI())
       report_fatal_error("Cannot lower callbase instruction");
@@ -938,11 +948,11 @@ struct NVPTX final : public VariadicABIInfo {
   bool vaListPassedInSSARegister() override { return true; }
 
   Type *vaListType(LLVMContext &Ctx) override {
-    return PointerType::getUnqual(Ctx);
+    return PointerType::get(Ctx, NVPTXAS::ADDRESS_SPACE_LOCAL);
   }
 
   Type *vaListParameterType(Module &M) override {
-    return PointerType::getUnqual(M.getContext());
+    return PointerType::get(M.getContext(), NVPTXAS::ADDRESS_SPACE_LOCAL);
   }
 
   Value *initializeVaList(Module &M, LLVMContext &Ctx, IRBuilder<> &Builder,
@@ -982,6 +992,22 @@ struct SPIRV final : public VariadicABIInfo {
     // promoting types to their appropriate size and alignment.
     Align A = DL.getABITypeAlign(Parameter);
     return {A, false};
+  }
+
+  // The SPIR-V backend has special handling for builtins.
+  bool ignoreFunction(const Function *F) override {
+    if (!F->isDeclaration())
+      return false;
+
+    std::string Demangled = llvm::demangle(F->getName());
+    StringRef DemangledName(Demangled);
+
+    // Skip any SPIR-V builtins.
+    if (DemangledName.starts_with("__spirv_") ||
+        DemangledName.starts_with("printf("))
+      return true;
+
+    return false;
   }
 
   // We will likely see va intrinsics in the generic addrspace (4).

@@ -75,12 +75,12 @@ let Attributes = [NoThrow, Const], Features = "crc" in {
 
 // Memory Tagging Extensions (MTE)
 let Attributes = [CustomTypeChecking], Features = "mte" in {
-	def irg  : AArch64TargetBuiltin<"void * (void *, unsigned int)">;
+	def irg  : AArch64TargetBuiltin<"void * (void *, uint64_t)">;
 	def addg : AArch64TargetBuiltin<"void * (void *, unsigned int)">;
-	def gmi  : AArch64TargetBuiltin<"unsigned int (void *, unsigned int)">;
+	def gmi  : AArch64TargetBuiltin<"uint64_t (void *, uint64_t)">;
 	def ldg  : AArch64TargetBuiltin<"void * (void *)">;
 	def stg  : AArch64TargetBuiltin<"void (void *)">;
-	def subp : AArch64TargetBuiltin<"unsigned int (void *, void *)">;
+	def subp : AArch64TargetBuiltin<"int64_t (void *, void *)">;
 }
 
 // SME state function
@@ -169,11 +169,6 @@ let Attributes = [NoThrow], Features = "ls64" in {
 	def st64b   : AArch64TargetBuiltin<"void (void *, uint64_t const *)">;
 	def st64bv  : AArch64TargetBuiltin<"uint64_t (void *, uint64_t const *)">;
 	def st64bv0 : AArch64TargetBuiltin<"uint64_t (void *, uint64_t const *)">;
-}
-
-// Atomic store with PCDPHINT
-let Attributes = [CustomTypeChecking] in {
-	def atomic_store_with_stshh : AArch64TargetBuiltin<"void (...)">;
 }
 
 // Armv9.3-A Guarded Control Stack

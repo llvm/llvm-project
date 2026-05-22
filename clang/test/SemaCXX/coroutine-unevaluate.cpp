@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -std=c++20 -fsyntax-only -verify
+// RUN: %clang_cc1 %s -std=c++20 -fsyntax-only -verify -Wno-coroutines-unsupported-target
 #include "Inputs/std-coroutine.h"
 
 struct MyTask{

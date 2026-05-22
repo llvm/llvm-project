@@ -20,7 +20,8 @@ $ clang -g g.c -c -o g/foo.o
 $ libtool -static f/foo.o g/foo.o -o foo.a
 $ clang main.o foo.a -o main.out
 
-RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/collision/main.out --dump-debug-map 2>&1 | FileCheck %s
+RUN: dsymutil --linker classic -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/collision/main.out --dump-debug-map 2>&1 | FileCheck %s
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/collision/main.out --dump-debug-map 2>&1 | FileCheck %s
 CHECK: skipping debug map object with duplicate name and timestamp: {{.*}} /private/tmp/collision/foo.a(foo.o)
 CHECK-NOT: could not find symbol '_g'
 CHECK-NOT: could not find symbol '_f'

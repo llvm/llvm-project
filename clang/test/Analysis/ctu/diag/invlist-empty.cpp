@@ -3,7 +3,8 @@
 // Note: invocation_list_empty (index_error_code::invocation_list_empty) is
 // dead code: llvm::yaml::Stream::begin() always creates at least one Document,
 // so FirstInvocationFile == InvocationFile.end() is never true. An empty file
-// reaches the !DocumentRoot branch instead, producing invocation_list_wrong_format.
+// produces a NullNode as the document root, which fails the dyn_cast to
+// MappingNode, producing invocation_list_wrong_format at line 1.
 //
 // RUN: rm -rf %t && mkdir %t
 // RUN: echo '11:c:@F@foo#I# simple.cpp' > %t/externalDefMap.txt
@@ -18,6 +19,5 @@
 int foo(int);
 
 void test() {
-  // expected-no-diagnostics
-  foo(1); // no-warning. Ignoring "Invocation list file is in wrong format."
+  foo(1); // expected-error-re{{error parsing invocation list file: '{{.+}}invocations.yaml' line: 1 '<source-file>: [<compiler>, <arg1>, ...]' YAML mapping format expected}}
 }

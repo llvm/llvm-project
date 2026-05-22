@@ -1,8 +1,8 @@
 ! Simple test for lowering of OpenMP Threadprivate Directive with HLFIR.
 ! Test for common block.
 
-!RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir -fopenmp %s -o - | FileCheck %s
-!RUN: bbc -hlfir -emit-hlfir -fopenmp %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
+!RUN: bbc -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 
 !CHECK: %[[CBLK_ADDR:.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<4xi8>>

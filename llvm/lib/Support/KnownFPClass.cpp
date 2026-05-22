@@ -234,15 +234,69 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
   return Known;
 }
 
+KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
+                                   const KnownBits &Bits) {
+  assert(FltSemantics.sizeInBits == Bits.getBitWidth() &&
+         "Bitcast operand has incorrect bit width");
+  KnownFPClass Known;
+
+  // Transfer information from the sign bit.
+  if (Bits.isNonNegative())
+    Known.signBitMustBeZero();
+  else if (Bits.isNegative())
+    Known.signBitMustBeOne();
+
+  if (APFloat::isIEEELikeFP(FltSemantics)) {
+    // IEEE floats are NaN when all bits of the exponent plus at least one of
+    // the fraction bits are 1. This means:
+    //   - If we assume unknown bits are 0 and the value is NaN, it will
+    //     always be NaN
+    //   - If we assume unknown bits are 1 and the value is not NaN, it can
+    //     never be NaN
+    // Note: They do not hold for x86_fp80 format.
+    if (APFloat(FltSemantics, Bits.One).isNaN())
+      Known.KnownFPClasses = fcNan;
+    else if (!APFloat(FltSemantics, ~Bits.Zero).isNaN())
+      Known.knownNot(fcNan);
+
+    // Build KnownBits representing Inf and check if it must be equal or
+    // unequal to this value.
+    auto InfKB =
+        KnownBits::makeConstant(APFloat::getInf(FltSemantics).bitcastToAPInt());
+    InfKB.Zero.clearSignBit();
+    if (const auto InfResult = KnownBits::eq(Bits, InfKB)) {
+      assert(!InfResult.value());
+      Known.knownNot(fcInf);
+    } else if (Bits == InfKB) {
+      Known.KnownFPClasses = fcInf;
+    }
+
+    // Build KnownBits representing Zero and check if it must be equal or
+    // unequal to this value.
+    auto ZeroKB = KnownBits::makeConstant(
+        APFloat::getZero(FltSemantics).bitcastToAPInt());
+    ZeroKB.Zero.clearSignBit();
+    if (const auto ZeroResult = KnownBits::eq(Bits, ZeroKB)) {
+      assert(!ZeroResult.value());
+      Known.knownNot(fcZero);
+    } else if (Bits == ZeroKB) {
+      Known.KnownFPClasses = fcZero;
+    }
+  }
+
+  return Known;
+}
+
 // Handle known sign bit and nan cases for fadd.
 static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
                               const KnownFPClass &KnownRHS, DenormalMode Mode) {
   KnownFPClass Known;
 
-  // Adding positive and negative infinity produces NaN.
-  // TODO: Check sign of infinities.
+  // Adding positive and negative infinity produces NaN, but only if both
+  // opposite-sign infinity combinations are possible.
   if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
-      (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()))
+      (KnownLHS.isKnownNever(fcPosInf) || KnownRHS.isKnownNever(fcNegInf)) &&
+      (KnownLHS.isKnownNever(fcNegInf) || KnownRHS.isKnownNever(fcPosInf)))
     Known.knownNot(fcNan);
 
   if (KnownLHS.cannotBeOrderedLessThanZero() &&
@@ -311,38 +365,24 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
                                 DenormalMode Mode) {
   KnownFPClass Known;
 
-  // xor sign bit.
-  if ((KnownLHS.isKnownNever(fcNegative) &&
-       KnownRHS.isKnownNever(fcNegative)) ||
-      (KnownLHS.isKnownNever(fcPositive) && KnownRHS.isKnownNever(fcPositive)))
-    Known.knownNot(fcNegative);
+  // +X * +Y or -X * -Y => +Q
+  // +X * -Y or -X * +Y => -Q
+  Known.propagateXorSign(KnownLHS, KnownRHS);
 
-  if ((KnownLHS.isKnownNever(fcPositive) &&
-       KnownRHS.isKnownNever(fcNegative)) ||
-      (KnownLHS.isKnownNever(fcNegative) && KnownRHS.isKnownNever(fcPositive)))
-    Known.knownNot(fcPositive);
-
-  // inf * anything => inf or nan
+  // Inf * Y => Inf or NaN
   if (KnownLHS.isKnownAlways(fcInf | fcNan) ||
       KnownRHS.isKnownAlways(fcInf | fcNan))
     Known.knownNot(fcNormal | fcSubnormal | fcZero);
 
-  // 0 * anything => 0 or nan
+  // 0 * Y => 0 or NaN
   if (KnownRHS.isKnownAlways(fcZero | fcNan) ||
       KnownLHS.isKnownAlways(fcZero | fcNan))
     Known.knownNot(fcNormal | fcSubnormal | fcInf);
 
-  // +/-0 * +/-inf = nan
-  if ((KnownLHS.isKnownAlways(fcZero | fcNan) &&
-       KnownRHS.isKnownAlways(fcInf | fcNan)) ||
-      (KnownLHS.isKnownAlways(fcInf | fcNan) &&
-       KnownRHS.isKnownAlways(fcZero | fcNan)))
-    Known.knownNot(~fcNan);
-
   if (!KnownLHS.isKnownNeverNaN() || !KnownRHS.isKnownNeverNaN())
     return Known;
 
-  // If 0 * +/-inf produces NaN.
+  // 0 * +/-inf => NaN
   if ((KnownRHS.isKnownNeverInfinity() ||
        KnownLHS.isKnownNeverLogicalZero(Mode)) &&
       (KnownLHS.isKnownNeverInfinity() ||
@@ -394,24 +434,16 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
     Known.knownNot(fcNan);
   }
 
-  // xor sign bit.
-  // X / -0.0 is -Inf (or NaN).
-  // +X / +X is +X
-  if ((KnownLHS.isKnownNever(fcNegative) &&
-       KnownRHS.isKnownNever(fcNegative)) ||
-      (KnownLHS.isKnownNever(fcPositive) && KnownRHS.isKnownNever(fcPositive)))
-    Known.knownNot(fcNegative);
+  //  X / -0.0 => -Inf (or NaN)
+  // +X / +Y or -X / -Y => +Q
+  // +X / -Y or -X / +Y => -Q
+  Known.propagateXorSign(KnownLHS, KnownRHS);
 
-  if ((KnownLHS.isKnownNever(fcPositive) &&
-       KnownRHS.isKnownNever(fcNegative)) ||
-      (KnownLHS.isKnownNever(fcNegative) && KnownRHS.isKnownNever(fcPositive)))
-    Known.knownNot(fcPositive);
-
-  // 0 / x => 0 or nan
+  // 0 / X => 0 or NaN
   if (KnownLHS.isKnownAlways(fcZero))
     Known.knownNot(fcSubnormal | fcNormal | fcInf);
 
-  // x / 0 => nan or inf
+  // X / 0 => NaN or Inf
   if (KnownRHS.isKnownAlways(fcZero))
     Known.knownNot(fcFinite);
 
@@ -559,6 +591,117 @@ KnownFPClass KnownFPClass::cos(const KnownFPClass &KnownSrc) {
   return sin(KnownSrc);
 }
 
+KnownFPClass KnownFPClass::tan(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // tan never returns Inf (tan(+-Inf) = NaN; tan(finite) = finite).
+  Known.knownNot(fcInf);
+
+  // NaN propagates. tan(+-Inf) is NaN.
+  if (KnownSrc.isKnownNeverNaN() && KnownSrc.isKnownNeverInfinity())
+    Known.knownNot(fcNan);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::sinh(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // sinh is sign-preserving: sinh(x) < 0 iff x < 0.
+  if (KnownSrc.isKnownNever(fcNegative))
+    Known.knownNot(fcNegative);
+
+  Known.propagateNaN(KnownSrc);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::cosh(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // cosh(x) >= 1 for all real x; cosh(+-Inf) = +Inf. Never negative.
+  Known.knownNot(fcNegative);
+
+  Known.propagateNaN(KnownSrc);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::tanh(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // tanh is bounded to (-1, 1), never Inf.
+  Known.knownNot(fcInf);
+
+  // tanh is sign-preserving: tanh(x) < 0 iff x < 0.
+  if (KnownSrc.isKnownNever(fcNegative))
+    Known.knownNot(fcNegative);
+
+  Known.propagateNaN(KnownSrc);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::asin(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // asin is bounded to [-pi/2, pi/2], never Inf.
+  Known.knownNot(fcInf);
+
+  // asin is sign-preserving.
+  if (KnownSrc.isKnownNever(fcNegative))
+    Known.knownNot(fcNegative);
+
+  // NaN propagates. asin(x) is also NaN for |x| > 1, so we cannot rule
+  // out NaN without knowing the source is in [-1, 1].
+  Known.propagateNaN(KnownSrc);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::acos(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // acos is bounded to [0, pi], never Inf or negative.
+  Known.knownNot(fcInf);
+  Known.knownNot(fcNegative);
+
+  // NaN propagates. acos(x) is also NaN for |x| > 1, so we cannot rule
+  // out NaN without knowing the source is in [-1, 1].
+  Known.propagateNaN(KnownSrc);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::atan(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  // atan is bounded to (-pi/2, pi/2), never Inf. atan(+-Inf) = +-pi/2 (finite).
+  Known.knownNot(fcInf);
+
+  // atan is sign-preserving: atan(x) < 0 iff x < 0.
+  if (KnownSrc.isKnownNever(fcNegative))
+    Known.knownNot(fcNegative);
+
+  Known.propagateNaN(KnownSrc);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::atan2(const KnownFPClass &KnownLHS,
+                                 const KnownFPClass &KnownRHS) {
+  KnownFPClass Known;
+
+  // atan2 result is in (-pi, pi], never Inf.
+  Known.knownNot(fcInf);
+
+  // NaN if either operand is NaN.
+  if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN())
+    Known.knownNot(fcNan);
+
+  return Known;
+}
+
 KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,
                                  const fltSemantics &DstTy,
                                  const fltSemantics &SrcTy) {
@@ -697,7 +840,6 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
   return Known;
 }
 
-// TODO: Detect no-infinity cases
 KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
                                 const KnownBits &ExponentKnownBits) {
   KnownFPClass Known;
@@ -713,6 +855,41 @@ KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
 
     Known.knownNot(~(fcPosNormal | fcNan));
     return Known;
+  }
+
+  // powi(x, exp) --> inf
+  // when:
+  //   * powi(inf, exp), exp > 0
+  //   * powi(+/-0, exp), exp < 0
+  //   * powi(finite, exp), |exp| > 1
+  //   * powi(subnormal, -1)
+  // TODO:
+  //   1. This simple all or nothing approach. We can do better
+  //      and cover sign/parity and exp > 1 vs exp < -1 separately.
+  //   2. powi(0/nan, exp), exp > 0 can be refinable
+  //      to fcNan | fcZero | fcPosNormal.
+  {
+    APInt MinExp = ExponentKnownBits.getSignedMinValue();
+    APInt MaxExp = ExponentKnownBits.getSignedMaxValue();
+
+    // powi(inf, exp), exp > 0
+    bool MayInfSrc =
+        !KnownSrc.isKnownNever(fcInf) && MaxExp.isStrictlyPositive();
+
+    // powi(+/-0, exp), exp < 0
+    bool MayDivByZero = !KnownSrc.isKnownNever(fcZero) && MinExp.isNegative();
+
+    // powi(finite, exp), |exp| > 1
+    bool MayFinite = !KnownSrc.isKnownNever(fcNormal | fcSubnormal);
+    bool MayAbsExpGT1 = MinExp.slt(-1) || MaxExp.sgt(1);
+    bool MayFiniteOverflow = MayFinite && MayAbsExpGT1;
+
+    // powi(subnormal, -1)
+    bool MayBeNegOne = ExponentKnownBits.Zero.isZero();
+    bool MaySubnormInv = !KnownSrc.isKnownNever(fcSubnormal) && MayBeNegOne;
+
+    if (!MayInfSrc && !MayDivByZero && !MayFiniteOverflow && !MaySubnormInv)
+      Known.knownNot(fcInf);
   }
 
   if (ExponentKnownBits.isEven()) {
