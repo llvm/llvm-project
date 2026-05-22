@@ -689,3 +689,25 @@ void bad_use_visitor(RefCountable* obj) {
   });
   bad_visit(visitor, obj);
 }
+
+class LambdaInConstructorDestructor {
+public:
+  LambdaInConstructorDestructor() {
+    call([this]() {
+      // expected-warning@-1{{Captured raw-pointer 'this' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+      doWork();
+    });
+  }
+
+  ~LambdaInConstructorDestructor() {
+    call([this]() {
+      // expected-warning@-1{{Captured raw-pointer 'this' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+      doWork();
+    });
+  }
+
+  void ref() const;
+  void deref() const;
+
+  void doWork();
+};
