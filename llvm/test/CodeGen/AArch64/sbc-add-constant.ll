@@ -8,9 +8,9 @@
 define i64 @g_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: g_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-10 // =0xfffffffffffffff6
+; CHECK-NEXT:    mov w8, #9 // =0x9
 ; CHECK-NEXT:    subs x9, x0, x1
-; CHECK-NEXT:    sbc x0, x9, x8
+; CHECK-NEXT:    adc x0, x9, x8
 ; CHECK-NEXT:    ret
   %ov  = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue { i64, i1 } %ov, 0
@@ -25,9 +25,9 @@ define i64 @g_i64(i64 %a, i64 %b) nounwind {
 define i32 @g_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: g_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-10 // =0xfffffff6
+; CHECK-NEXT:    mov w8, #9 // =0x9
 ; CHECK-NEXT:    subs w9, w0, w1
-; CHECK-NEXT:    sbc w0, w9, w8
+; CHECK-NEXT:    adc w0, w9, w8
 ; CHECK-NEXT:    ret
   %ov  = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue { i32, i1 } %ov, 0
