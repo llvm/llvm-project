@@ -18,7 +18,7 @@ using namespace lldb_private;
 ConnectionConPTY::ConnectionConPTY(std::shared_ptr<PseudoConsole> pty)
     : ConnectionGenericFile(pty->GetSTDOUTHandle(), false), m_pty(pty) {}
 
-ConnectionConPTY::~ConnectionConPTY() {}
+ConnectionConPTY::~ConnectionConPTY() = default;
 
 lldb::ConnectionStatus ConnectionConPTY::Connect(llvm::StringRef s,
                                                  Status *error_ptr) {

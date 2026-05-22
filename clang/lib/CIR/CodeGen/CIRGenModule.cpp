@@ -314,6 +314,11 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
     theTargetCIRGenInfo = createAMDGPUTargetCIRGenInfo(genTypes);
     return *theTargetCIRGenInfo;
   }
+  case llvm::Triple::spirv:
+  case llvm::Triple::spirv32:
+  case llvm::Triple::spirv64:
+    theTargetCIRGenInfo = createSPIRVTargetCIRGenInfo(genTypes);
+    return *theTargetCIRGenInfo;
   }
 }
 
@@ -1615,9 +1620,8 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
 
   uint64_t arraySize = arrayTy.getSize();
   unsigned literalSize = e->getLength();
-  assert(arraySize == literalSize + 1 &&
-         "wide string literal array size must be literal length plus null "
-         "terminator");
+  assert(arraySize > literalSize &&
+         "wide string literal array size must have room for null terminator?");
 
   // Check if the string is all null bytes before building the vector.
   // In most non-zero cases, this will break out on the first element.
@@ -1637,8 +1641,6 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
   elements.reserve(arraySize);
   for (unsigned i = 0; i < literalSize; ++i)
     elements.push_back(cir::IntAttr::get(arrayEltTy, e->getCodeUnit(i)));
-  // Add null terminator
-  elements.push_back(cir::IntAttr::get(arrayEltTy, 0));
 
   auto elementsAttr = mlir::ArrayAttr::get(&getMLIRContext(), elements);
   return builder.getConstArray(elementsAttr, arrayTy);
@@ -2184,9 +2186,11 @@ LangAS CIRGenModule::getLangTempAllocaAddressSpace() const {
   if (getLangOpts().CUDAIsDevice)
     return LangAS::Default;
 
-  if (getLangOpts().SYCLIsDevice ||
-      (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice))
-    errorNYI("SYCL or OpenMP temp address space");
+  if (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice)
+    assert(!cir::MissingFeatures::openMP());
+  if (getLangOpts().SYCLIsDevice)
+    errorNYI("SYCL temp address space");
+
   return LangAS::Default;
 }
 

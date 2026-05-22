@@ -92,7 +92,7 @@ set(supported_sources
 
 # List of source not used for GPU offloading.
 set(host_sources
-  ${FLANG_SOURCE_DIR}/module/iso_fortran_env_impl.f90
+  iso_fortran_env_impl.cpp
   command.cpp
   complex-powi.cpp
   complex-reduction.c
@@ -111,6 +111,8 @@ set(host_sources
 )
 if (TARGET llvm-libc-common-utilities)
   list(APPEND host_sources io-api-server.cpp)
+  set_property(SOURCE main.cpp APPEND PROPERTY
+    COMPILE_DEFINITIONS FLANG_RT_HAS_RPC_SERVER)
 endif()
 
 # Sources that can be compiled directly for the GPU.
