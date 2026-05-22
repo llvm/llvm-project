@@ -9,10 +9,7 @@
 #ifndef LLVM_CLANG_LEX_TEXTENCODINGCONFIG_H
 #define LLVM_CLANG_LEX_TEXTENCODINGCONFIG_H
 
-#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/TextEncoding.h"
 

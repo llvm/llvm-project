@@ -1044,9 +1044,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__clang_literal_encoding__",
                         Twine("\"" + LangOpts.ExecEncoding + "\""));
   else
-    Builder.defineMacro(
-        "__clang_literal_encoding__",
-        Twine("\"" + TI.getTriple().getDefaultNarrowTextEncoding() + "\""));
+    Builder.defineMacro("__clang_literal_encoding__",
+                        Twine("\"" + TI.getDefaultNarrowTextEncoding() + "\""));
 
   if (TI.getTypeWidth(TI.getWCharType()) >= 32) {
     // FIXME: 32-bit wchar_t signals UTF-32. This may change
