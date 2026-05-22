@@ -441,10 +441,10 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
   auto BCOrErr = BinaryContext::createBinaryContext(
       TheTriple, std::make_shared<orc::SymbolStringPool>(), File->getFileName(),
       Features.get(), IsPIC,
-      DWARFContext::create(*File, DWARFContext::ProcessDebugRelocations::Ignore,
-                           nullptr, opts::DWPPathName,
-                           WithColor::defaultErrorHandler,
-                           WithColor::defaultWarningHandler),
+      DWARFContext::create(
+          *File, DWARFContext::ProcessDebugRelocations::Ignore, nullptr,
+          opts::DWPPathName, WithColor::defaultErrorHandler,
+          WithColor::defaultWarningHandler, !opts::DWPPathName.empty()),
       JournalingStreams{Stdout, Stderr});
   if (Error E = BCOrErr.takeError()) {
     Err = std::move(E);

@@ -238,6 +238,22 @@ static unsigned int getCUNum(DWARFContext *DwarfContext, bool IsDWO) {
 
 void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
                                 const bool Init) {
+  if (isDWO() && DwarfContext && DwarfContext->isDWP()) {
+    buildTypeUnitsThreadSafe(StrOffsetWriter, Init);
+    return;
+  }
+
+  buildTypeUnitsImpl(StrOffsetWriter, Init);
+}
+
+void DIEBuilder::buildTypeUnitsThreadSafe(
+    DebugStrOffsetsWriter *StrOffsetWriter, const bool Init) {
+  std::unique_lock<std::recursive_mutex> LockGuard(BC.getUnitsMutex());
+  buildTypeUnitsImpl(StrOffsetWriter, Init);
+}
+
+void DIEBuilder::buildTypeUnitsImpl(DebugStrOffsetsWriter *StrOffsetWriter,
+                                    const bool Init) {
   if (Init)
     BuilderState.reset(new State());
 
