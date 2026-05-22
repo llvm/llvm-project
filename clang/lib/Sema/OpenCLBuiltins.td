@@ -1964,10 +1964,10 @@ let Extension = FuncExtIntelSubgroups in {
   def : Builtin<"intel_sub_group_block_read_ui4", [VectorType<UInt, 4>, PointerType<ConstType<UInt>, GlobalAS>], Attr.Convergent>;
   def : Builtin<"intel_sub_group_block_read_ui8", [VectorType<UInt, 8>, PointerType<ConstType<UInt>, GlobalAS>], Attr.Convergent>;
 
-  def : Builtin<"intel_sub_group_block_write_ui", [Void, ImageType<Image2d, "RO">, VectorType<Int, 2>, UInt], Attr.Convergent>;
-  def : Builtin<"intel_sub_group_block_write_ui2", [Void, ImageType<Image2d, "RO">, VectorType<Int, 2>, VectorType<UInt, 2>], Attr.Convergent>;
-  def : Builtin<"intel_sub_group_block_write_ui4", [Void, ImageType<Image2d, "RO">, VectorType<Int, 2>, VectorType<UInt, 4>], Attr.Convergent>;
-  def : Builtin<"intel_sub_group_block_write_ui8", [Void, ImageType<Image2d, "RO">, VectorType<Int, 2>, VectorType<UInt, 8>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_ui", [Void, ImageType<Image2d, "WO">, VectorType<Int, 2>, UInt], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_ui2", [Void, ImageType<Image2d, "WO">, VectorType<Int, 2>, VectorType<UInt, 2>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_ui4", [Void, ImageType<Image2d, "WO">, VectorType<Int, 2>, VectorType<UInt, 4>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_ui8", [Void, ImageType<Image2d, "WO">, VectorType<Int, 2>, VectorType<UInt, 8>], Attr.Convergent>;
 
   def : Builtin<"intel_sub_group_block_write_ui", [Void, PointerType<UInt, GlobalAS>, UInt], Attr.Convergent>;
   def : Builtin<"intel_sub_group_block_write_ui2", [Void, PointerType<UInt, GlobalAS>, VectorType<UInt, 2>], Attr.Convergent>;

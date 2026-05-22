@@ -17553,10 +17553,10 @@ uint4      __ovld __conv intel_sub_group_block_read_ui4( const __global uint* p 
 uint8      __ovld __conv intel_sub_group_block_read_ui8( const __global uint* p );
 
 #if defined(__opencl_c_images)
-void       __ovld __conv intel_sub_group_block_write_ui(read_only image2d_t, int2, uint);
-void       __ovld __conv intel_sub_group_block_write_ui2(read_only image2d_t, int2, uint2);
-void       __ovld __conv intel_sub_group_block_write_ui4(read_only image2d_t, int2, uint4);
-void       __ovld __conv intel_sub_group_block_write_ui8(read_only image2d_t, int2, uint8);
+void       __ovld __conv intel_sub_group_block_write_ui(write_only image2d_t, int2, uint);
+void       __ovld __conv intel_sub_group_block_write_ui2(write_only image2d_t, int2, uint2);
+void       __ovld __conv intel_sub_group_block_write_ui4(write_only image2d_t, int2, uint4);
+void       __ovld __conv intel_sub_group_block_write_ui8(write_only image2d_t, int2, uint8);
 #endif // defined(__opencl_c_images)
 
 #if defined(__opencl_c_read_write_images)
