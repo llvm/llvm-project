@@ -1052,9 +1052,6 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   if (InstTemplate.isInvalid())
     return ExprError();
 
-  llvm::SaveAndRestore PushConceptDecl(
-      ParentConcept, cast<ConceptDecl>(ConceptId->getNamedConcept()));
-
   unsigned Size = Satisfaction.Details.size();
 
   llvm::SaveAndRestore PushConceptDecl(
