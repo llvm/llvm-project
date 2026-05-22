@@ -516,6 +516,12 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
       CmdArgs.push_back(Args.MakeArgString(Twine("-cs-profile-path=") + Path));
     }
   }
+
+  if (Arg *A = getLastProfileSampleUseArg(Args)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-sample-profile-file=") + A->getValue()));
+  }
 }
 
 /// Determine whether we are linking the ObjC runtime.
@@ -4034,10 +4040,13 @@ void Darwin::CheckObjCARC() const {
   getDriver().Diag(diag::err_arc_unsupported_on_toolchain);
 }
 
-SanitizerMask Darwin::getSupportedSanitizers() const {
+SanitizerMask
+Darwin::getSupportedSanitizers(StringRef BoundArch,
+                               Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64;
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
