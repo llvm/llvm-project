@@ -12,6 +12,7 @@
 #include <__algorithm/for_each.h>
 #include <__config>
 #include <__functional/identity.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -22,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _ForwardIterator, class _Predicate, class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 replace_if(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred, const _Tp& __new_value) {
-  auto __apply = [&__pred, &__new_value](auto& __curr) {
+  auto __apply = [&__pred, &__new_value](auto&& __curr) {
     if (__pred(__curr)) {
       __curr = __new_value;
     }
