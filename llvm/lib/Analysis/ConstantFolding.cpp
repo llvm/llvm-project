@@ -3716,7 +3716,8 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         // APFloat::scalbn takes the exponent as `int`. Clamp wider integer
         // exponents into [INT_MIN, INT_MAX] so values still saturate the
         // result to +/-inf or +/-0.
-        APInt Exp = Op2C->getValue().truncSSat(32);
+        APInt Exp = Op2C->getValue();
+        Exp = Exp.getBitWidth() < 32 ? Exp.sext(32) : Exp.truncSSat(32);
         return ConstantFP::get(
             Ty->getContext(),
             scalbn(Op1V, Exp.getSExtValue(), APFloat::rmNearestTiesToEven));
