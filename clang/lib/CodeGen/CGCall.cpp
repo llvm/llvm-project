@@ -5689,8 +5689,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
       // For musttail, forward an incoming Indirect parameter directly. A
       // local alloca would dangle after the tail call. Mirrors the SRet
-      // forwarding above (a96c14eeb8fc).
-      if (IsMustTail) {
+      // forwarding above (a96c14eeb8fc). Limited to Indirect (not
+      // IndirectAliased) so the byval-ness check in the helper does not
+      // assert on getIndirectByVal().
+      if (IsMustTail && ArgInfo.isIndirect()) {
         if (llvm::Argument *FwdArg = getForwardableIncomingMustTailArg(
                 *this, *I, ArgInfo, ForwardedMustTailArgs)) {
           llvm::Value *Val = FwdArg;

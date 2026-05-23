@@ -17,14 +17,16 @@ struct Big {
 };
 
 // Plain forward: caller(B) musttails callee(B). The fix should emit no
-// byval-temp alloca; the call should forward the incoming parameter %a.
+// alloca for the forwarded arg; the call should forward the incoming
+// parameter %a.
 struct Big C1(struct Big a);
 struct Big P1(struct Big a) {
   __attribute__((musttail)) return C1(a);
 }
 // COMMON-LABEL: define {{.*}} @P1(
-// COMMON-NOT: alloca %struct.Big
-// COMMON: musttail call {{.*}} @C1({{.*}} %a
+// COMMON-NOT: = alloca {{.*}}struct.Big
+// COMMON-NOT: = alloca [32 x i8]
+// COMMON: musttail call {{.*}} @C1({{.*}} %a)
 
 // Two indirect args, same forwarding: each forwards its own incoming param.
 struct Big C2(struct Big a, struct Big b);
@@ -32,8 +34,8 @@ struct Big P2(struct Big a, struct Big b) {
   __attribute__((musttail)) return C2(a, b);
 }
 // COMMON-LABEL: define {{.*}} @P2(
-// COMMON-NOT: alloca %struct.Big
-// COMMON: musttail call {{.*}} @C2({{.*}} %a, {{.*}} %b
+// COMMON-NOT: = alloca {{.*}}struct.Big
+// COMMON: musttail call {{.*}} @C2({{.*}} %a, {{.*}} %b)
 
 // Swapped args: caller(a, b) musttails callee(b, a). Each forwarded slot
 // must resolve to the correct incoming Argument, not by position.
@@ -42,8 +44,8 @@ struct Big P3(struct Big a, struct Big b) {
   __attribute__((musttail)) return C3(b, a);
 }
 // COMMON-LABEL: define {{.*}} @P3(
-// COMMON-NOT: alloca %struct.Big
-// COMMON: musttail call {{.*}} @C3({{.*}} %b, {{.*}} %a
+// COMMON-NOT: = alloca {{.*}}struct.Big
+// COMMON: musttail call {{.*}} @C3({{.*}} %b, {{.*}} %a)
 
 // Mixed direct + indirect: only the indirect arg is affected by the fix.
 struct Big C4(int n, struct Big a);
@@ -51,40 +53,66 @@ struct Big P4(int n, struct Big a) {
   __attribute__((musttail)) return C4(n, a);
 }
 // COMMON-LABEL: define {{.*}} @P4(
-// COMMON-NOT: alloca %struct.Big
-// COMMON: musttail call {{.*}} @C4({{.*}} %n, {{.*}} %a
+// COMMON-NOT: = alloca {{.*}}struct.Big
+// COMMON: musttail call {{.*}} @C4({{.*}} %n, {{.*}} %a)
+
+// Caller modifies the parameter before the musttail. Clang lowers the
+// write through the incoming pointer, and the fix forwards the same
+// pointer to the callee. No byval-temp.
+struct Big C5(struct Big a);
+struct Big P5(struct Big a) {
+  a.a += 1;
+  __attribute__((musttail)) return C5(a);
+}
+// COMMON-LABEL: define {{.*}} @P5(
+// COMMON-NOT: = alloca {{.*}}struct.Big
+// COMMON: musttail call {{.*}} @C5({{.*}} %a)
+
+// musttail behind a branch: the forwarded pointer must remain live across
+// the basic block transition. Tests that the helper does not assume the
+// musttail is in the entry block.
+struct Big C6(struct Big a, int cond);
+struct Big P6(struct Big a, int cond) {
+  if (cond)
+    __attribute__((musttail)) return C6(a, cond);
+  return a;
+}
+// COMMON-LABEL: define {{.*}} @P6(
+// COMMON-NOT: = alloca {{.*}}struct.Big
+// COMMON: musttail call {{.*}} @C6({{.*}} %a,
+
+// Same Argument forwarded to two slots: the helper engages for both. The
+// noalias deduplication, if it ever fired, would force the second slot
+// back to a byval-temp; but incoming Indirect params under the Linux C
+// ABI are not noalias, so both slots forward %a directly. This pins the
+// behavior so a future change introducing noalias on Indirect params
+// would surface here. (musttail requires matching prototypes, so caller
+// and callee both take two Big args.)
+struct Big C7(struct Big x, struct Big y);
+struct Big P7(struct Big a, struct Big b) {
+  __attribute__((musttail)) return C7(a, a);
+}
+// COMMON-LABEL: define {{.*}} @P7(
+// COMMON-NOT: = alloca {{.*}}struct.Big
+// COMMON: musttail call {{.*}} @C7({{.*}} %a, {{.*}} %a)
 
 // Negative: local source. Caller takes Big a, but musttails with a LOCAL
 // Big initialized in caller's frame. The byval-temp must remain because the
-// source lives in caller's frame and would dangle if forwarded. The fix
-// must NOT engage in this case.
-struct Big C5(struct Big a);
-struct Big P5(struct Big a) {
+// source lives in caller's frame and would dangle if forwarded.
+struct Big C8(struct Big a);
+struct Big P8(struct Big a) {
   struct Big local = {1, 2, 3, 4};
-  __attribute__((musttail)) return C5(local);
+  __attribute__((musttail)) return C8(local);
 }
-// COMMON-LABEL: define {{.*}} @P5(
-// COMMON: alloca
-// COMMON: musttail call {{.*}} @C5(
-
-// Negative: computed value (caller modifies the parameter then musttails).
-// The IR will use %a directly (Clang lowers writes through the incoming
-// pointer for Indirect params) so the fix does engage on the formal param,
-// but a fresh alloca is not created either way -- existing behavior.
-struct Big C6(struct Big a);
-struct Big P6(struct Big a) {
-  a.a += 1;
-  __attribute__((musttail)) return C6(a);
-}
-// COMMON-LABEL: define {{.*}} @P6(
-// COMMON-NOT: alloca %struct.Big
-// COMMON: musttail call {{.*}} @C6({{.*}} %a
+// COMMON-LABEL: define {{.*}} @P8(
+// COMMON: = alloca
+// COMMON: musttail call {{.*}} @C8(
 
 // Non-musttail tail call: the fix must NOT engage. Existing path emits
-// the byval-temp as before.
-struct Big C7(struct Big a);
-struct Big P7(struct Big a) {
-  return C7(a);
+// the byval-temp as before, no musttail in the IR.
+struct Big C9(struct Big a);
+struct Big P9(struct Big a) {
+  return C9(a);
 }
-// COMMON-LABEL: define {{.*}} @P7(
+// COMMON-LABEL: define {{.*}} @P9(
 // COMMON-NOT: musttail
