@@ -588,15 +588,14 @@ fir::GlobalOp Fortran::lower::defineGlobal(
     if (details && details->init()) {
       auto sym{*details->init()};
       if (sym) // Has a procedure target.
-        createGlobalInitialization(
-            builder, global, [&](fir::FirOpBuilder &b) {
-              Fortran::lower::StatementContext stmtCtx(
-                  /*cleanupProhibited=*/true);
-              auto box{Fortran::lower::convertProcedureDesignatorInitialTarget(
-                  converter, loc, *sym)};
-              auto castTo{builder.createConvert(loc, symTy, box)};
-              fir::HasValueOp::create(b, loc, castTo);
-            });
+        createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
+          Fortran::lower::StatementContext stmtCtx(
+              /*cleanupProhibited=*/true);
+          auto box{Fortran::lower::convertProcedureDesignatorInitialTarget(
+              converter, loc, *sym)};
+          auto castTo{builder.createConvert(loc, symTy, box)};
+          fir::HasValueOp::create(b, loc, castTo);
+        });
       else { // Has NULL() target.
         createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
           auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
@@ -2506,17 +2505,23 @@ void Fortran::lower::mapSymbolAttributes(
   if (!addr) {
     if (arg) {
       mlir::Type argType = arg.getType();
+      mlir::Type symType = converter.genType(sym);
       const bool isCptrByVal = Fortran::semantics::IsBuiltinCPtr(sym) &&
                                Fortran::lower::isCPtrArgByValueType(argType);
-      if (isCptrByVal || !fir::conformsWithPassByRef(argType)) {
+      const bool isCdevptrByVal = fir::isa_builtin_cdevptr_type(symType) &&
+                                  Fortran::lower::isCPtrArgByValueType(argType);
+      if (isCptrByVal || isCdevptrByVal ||
+          !fir::conformsWithPassByRef(argType)) {
         // Dummy argument passed in register. Place the value in memory at that
         // point since lowering expect symbols to be mapped to memory addresses.
-        mlir::Type symType = converter.genType(sym);
         addr = fir::AllocaOp::create(builder, loc, symType);
-        if (isCptrByVal) {
-          // Place the void* address into the CPTR address component.
+        if (isCptrByVal || isCdevptrByVal) {
+          // Place the void* address into the pointer address component.
           mlir::Value addrComponent =
-              fir::factory::genCPtrOrCFunptrAddr(builder, loc, addr, symType);
+              isCdevptrByVal
+                  ? fir::factory::genCDevPtrAddr(builder, loc, addr, symType)
+                  : fir::factory::genCPtrOrCFunptrAddr(builder, loc, addr,
+                                                       symType);
           builder.createStoreWithConvert(loc, arg, addrComponent);
         } else {
           builder.createStoreWithConvert(loc, arg, addr);

@@ -1202,16 +1202,20 @@ private:
       Property prop = Property::BaseAddress;
       if (isValueAttr) {
         bool isBuiltinCptrType = fir::isa_builtin_cptr_type(type);
+        bool isBuiltinCdevptrType = fir::isa_builtin_cdevptr_type(type);
         if (isBindC || (!mlir::isa<fir::SequenceType>(type) &&
                         !obj.attrs.test(Attrs::Optional) &&
                         (dynamicType.category() !=
                              Fortran::common::TypeCategory::Derived ||
-                         isBuiltinCptrType))) {
+                         isBuiltinCptrType || isBuiltinCdevptrType))) {
           passBy = PassEntityBy::Value;
           prop = Property::Value;
-          if (isBuiltinCptrType) {
+          if (isBuiltinCptrType || isBuiltinCdevptrType) {
             auto recTy = mlir::dyn_cast<fir::RecordType>(type);
             mlir::Type fieldTy = recTy.getTypeList()[0].second;
+            if (isBuiltinCdevptrType)
+              fieldTy =
+                  mlir::cast<fir::RecordType>(fieldTy).getTypeList()[0].second;
             passType = fir::ReferenceType::get(fieldTy);
           } else {
             passType = type;

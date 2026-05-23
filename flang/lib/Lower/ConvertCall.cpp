@@ -79,15 +79,15 @@ static fir::ExtendedValue toExtendedValue(mlir::Location loc, mlir::Value base,
   return base;
 }
 
-/// Lower a type(C_PTR/C_FUNPTR) argument with VALUE attribute into a
+/// Lower a type(C_PTR/C_FUNPTR/C_DEVPTR) argument with VALUE attribute into a
 /// reference. A C pointer can correspond to a Fortran dummy argument of type
 /// C_PTR with the VALUE attribute. (see 18.3.6 note 3).
 static mlir::Value genRecordCPtrValueArg(fir::FirOpBuilder &builder,
                                          mlir::Location loc, mlir::Value rec,
-                                         mlir::Type ty) {
-  mlir::Value cAddr = fir::factory::genCPtrOrCFunptrAddr(builder, loc, rec, ty);
-  mlir::Value cVal = fir::LoadOp::create(builder, loc, cAddr);
-  return builder.createConvert(loc, cAddr.getType(), cVal);
+                                         mlir::Type) {
+  mlir::Value cVal = fir::factory::genCPtrOrCFunptrValue(builder, loc, rec);
+  return builder.createConvert(loc, fir::ReferenceType::get(cVal.getType()),
+                               cVal);
 }
 
 // Find the argument that corresponds to the host associations.
@@ -610,7 +610,8 @@ Fortran::lower::genCallOpAndResult(
       }
     } else {
       mlir::Type fromTy = fir::unwrapRefType(fst.getType());
-      if (fir::isa_builtin_cptr_type(fromTy) &&
+      if ((fir::isa_builtin_cptr_type(fromTy) ||
+           fir::isa_builtin_cdevptr_type(fromTy)) &&
           Fortran::lower::isCPtrArgByValueType(snd)) {
         cast = genRecordCPtrValueArg(builder, loc, fst, fromTy);
       } else if (fir::isa_derived(snd) && !fir::isa_derived(fst.getType())) {
@@ -1751,8 +1752,9 @@ void prepareUserCallArguments(
       hlfir::Entity value = hlfir::loadTrivialScalar(loc, builder, actual);
 
       mlir::Type eleTy = value.getFortranElementType();
-      if (fir::isa_builtin_cptr_type(eleTy)) {
-        // Pass-by-value argument of type(C_PTR/C_FUNPTR).
+      if (fir::isa_builtin_cptr_type(eleTy) ||
+          fir::isa_builtin_cdevptr_type(eleTy)) {
+        // Pass-by-value argument of type(C_PTR/C_FUNPTR/C_DEVPTR).
         // Load the __address component and pass it by value.
         if (value.isValue()) {
           auto associate = hlfir::genAssociateExpr(loc, builder, value, eleTy,
