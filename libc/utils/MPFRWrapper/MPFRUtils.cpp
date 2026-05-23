@@ -87,6 +87,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.log10p1();
   case Operation::Log1p:
     return mpfrInput.log1p();
+  case Operation::Lgamma:
+    return mpfrInput.lgamma();
   case Operation::Mod2PI:
     return mpfrInput.mod_2pi();
   case Operation::ModPIOver2:

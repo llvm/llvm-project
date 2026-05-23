@@ -785,7 +785,8 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
 
   EXPECT_FP_EQ(bfloat16(5.0),
                LIBC_NAMESPACE::shared::hypotbf16(bfloat16(4.0), bfloat16(3.0)));
-
+  EXPECT_FP_EQ(bfloat16(0.0f),
+               LIBC_NAMESPACE::shared::lgammabf16(bfloat16(1.0f)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::logbbf16(bfloat16(1.0f)));
 
   bfloat16 setpayloadbf16_res = bfloat16(0.0);

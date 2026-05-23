@@ -6234,6 +6234,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_lgammabf16",
+    hdrs = ["src/__support/math/lgammabf16.h"],
+    deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_llogbbf16",
     hdrs = ["src/__support/math/llogbbf16.h"],
     deps = [
@@ -11394,6 +11410,13 @@ libc_math_function(
     name = "ldexpf16",
     additional_deps = [
         ":__support_math_ldexpf16",
+    ],
+)
+
+libc_math_function(
+    name = "lgammabf16",
+    additional_deps = [
+        ":__support_math_lgammabf16",
     ],
 )
 

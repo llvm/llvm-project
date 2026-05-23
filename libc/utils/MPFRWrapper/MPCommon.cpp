@@ -379,6 +379,13 @@ MPFRNumber MPFRNumber::log1p() const {
   return result;
 }
 
+MPFRNumber MPFRNumber::lgamma() const {
+  MPFRNumber result(*this);
+  int signp;
+  mpfr_lgamma(result.value, &signp, value, mpfr_rounding);
+  return result;
+}
+
 MPFRNumber MPFRNumber::pow(const MPFRNumber &b) {
   MPFRNumber result(*this);
   mpfr_pow(result.value, value, b.value, mpfr_rounding);
