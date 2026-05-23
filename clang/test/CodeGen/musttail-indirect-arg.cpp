@@ -63,11 +63,57 @@ NonTrivial P4(NonTrivial a) {
 // The user-defined copy ctor IS called (the agg.tmp pattern still happens):
 // COMMON: call {{.*}} @_ZN10NonTrivialC1ERKS_
 
-// Non-musttail tail call: trivial-copy elision must NOT engage; the regular
-// agg.tmp copy is still emitted.
+// Caller modifies the parameter before the musttail. The trivial-copy
+// elision still engages because the source LValue is still the parameter;
+// any mutation flowed through the incoming pointer is observed by the
+// forwarded call.
 struct Big C5(struct Big a);
 struct Big P5(struct Big a) {
-  return C5(a);
+  a.a += 1;
+  [[clang::musttail]] return C5(a);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P53Big(
+// COMMON-NOT: = alloca {{.*}}struct.Big
+// COMMON: musttail call {{.*}} @_Z2C53Big({{.*}} %a)
+
+// musttail behind a branch: trivial-copy elision must work across BBs.
+struct Big C6(struct Big a, int cond);
+struct Big P6(struct Big a, int cond) {
+  if (cond)
+    [[clang::musttail]] return C6(a, cond);
+  return a;
+}
+// COMMON-LABEL: define {{.*}} @_Z2P63Bigi(
+// COMMON-NOT: = alloca {{.*}}struct.Big
+// COMMON: musttail call {{.*}} @_Z2C63Bigi({{.*}} %a,
+
+// Same Argument forwarded to two slots: both engage. Incoming Indirect
+// params are not noalias under the Linux C++ ABI so the dedup in the
+// helper does not fire and both slots forward %a directly.
+struct Big C7(struct Big x, struct Big y);
+struct Big P7(struct Big a, struct Big b) {
+  [[clang::musttail]] return C7(a, a);
+}
+// COMMON-LABEL: define {{.*}} @_Z2P73BigS_(
+// COMMON-NOT: = alloca {{.*}}struct.Big
+// COMMON: musttail call {{.*}} @_Z2C73BigS_({{.*}} %a, {{.*}} %a)
+
+// Negative: source is a local, not a parameter. The trivial-copy elision
+// must NOT engage; the byval-temp pattern remains.
+struct Big C8(struct Big a);
+struct Big P8(struct Big a) {
+  struct Big local = {1, 2, 3, 4};
+  [[clang::musttail]] return C8(local);
+}
+// COMMON-LABEL: define {{.*}} @_Z2P83Big(
+// COMMON: = alloca
+// COMMON: musttail call {{.*}} @_Z2C83Big(
+
+// Non-musttail tail call: trivial-copy elision must NOT engage; the regular
+// agg.tmp copy is still emitted.
+struct Big C9(struct Big a);
+struct Big P9(struct Big a) {
+  return C9(a);
+}
+// COMMON-LABEL: define {{.*}} @_Z2P93Big(
 // COMMON-NOT: musttail
