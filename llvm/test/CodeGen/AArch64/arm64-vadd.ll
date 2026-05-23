@@ -1041,7 +1041,7 @@ define <2 x i64> @usubl2_duprhs(<4 x i32> %lhs, i32 %rhs) {
 ; CHECK-GI-LABEL: usubl2_duprhs:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    dup v1.2s, w0
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    usubl v0.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    ret
   %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0

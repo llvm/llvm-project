@@ -176,6 +176,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customIf(typeIsLegalBoolVec(1, BoolVecTys, ST))
       .maxScalar(0, sXLen);
 
+  getActionDefinitionsBuilder(G_TRUNC).alwaysLegal();
+
   getActionDefinitionsBuilder(G_SEXT_INREG)
       .customFor({sXLen})
       .clampScalar(0, sXLen, sXLen)
@@ -432,6 +434,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_INTTOPTR)
       .legalFor({{p0, sXLen}})
       .clampScalar(1, sXLen, sXLen);
+
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
 
   getActionDefinitionsBuilder(G_BRCOND).legalFor({sXLen}).minScalar(0, sXLen);
 
@@ -750,6 +754,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                    InsertVectorEltPred, typeIs(2, sXLen)))
       .legalIf(all(typeIsLegalBoolVec(0, BoolVecTys, ST), InsertVectorEltPred,
                    typeIs(2, sXLen)));
+
+  getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS})
+      .alwaysLegal();
+
+  getActionDefinitionsBuilder(G_FENCE).alwaysLegal();
+
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());

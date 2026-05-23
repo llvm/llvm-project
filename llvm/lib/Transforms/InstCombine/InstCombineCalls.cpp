@@ -3604,21 +3604,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::assume: {
     Value *IIOperand = II->getArgOperand(0);
-    SmallVector<OperandBundleDef, 4> OpBundles;
-    II->getOperandBundlesAsDefs(OpBundles);
 
     // Canonicalize assume(a && b) -> assume(a); assume(b);
     // Note: New assumption intrinsics created here are registered by
     // the InstCombineIRInserter object.
     Value *A, *B;
     if (match(IIOperand, m_LogicalAnd(m_Value(A), m_Value(B)))) {
-      Builder.CreateAssumption(A, OpBundles);
+      Builder.CreateAssumption(A);
       Builder.CreateAssumption(B);
       return eraseInstFromFunction(*II);
     }
     // assume(!(a || b)) -> assume(!a); assume(!b);
     if (match(IIOperand, m_Not(m_LogicalOr(m_Value(A), m_Value(B))))) {
-      Builder.CreateAssumption(Builder.CreateNot(A), OpBundles);
+      Builder.CreateAssumption(Builder.CreateNot(A));
       Builder.CreateAssumption(Builder.CreateNot(B));
       return eraseInstFromFunction(*II);
     }
@@ -4403,6 +4401,8 @@ static Value *optimizeModularFormat(CallInst *CI, IRBuilderBase &B) {
   [[maybe_unused]] bool Error;
   Error = Args[2].getAsInteger(10, FirstArgIdx);
   assert(!Error && "invalid first arg index");
+  if (FirstArgIdx == 0)
+    return nullptr;
   --FirstArgIdx;
   StringRef FnName = Args[3];
   StringRef ImplName = Args[4];
