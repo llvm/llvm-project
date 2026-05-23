@@ -7186,6 +7186,35 @@ static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
   return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE);
 }
 
+/// Check if \p VPI is a bounded (i % 2^N) load we can widen. This requires the
+/// vector factor to divide the bound, so that each VF-wide load stays within a
+/// single 2^N window.
+static bool canCreateBoundedLoad(VPInstruction *VPI, VFRange &Range,
+                                 VPCostContext &Ctx) {
+  if (VPI->getOpcode() != Instruction::Load)
+    return false;
+
+  Type *ScalarTy = VPI->getScalarType();
+  if (hasIrregularType(ScalarTy, Ctx.L->getHeader()->getDataLayout()))
+    return false;
+
+  const SCEV *PtrSCEV =
+      vputils::getSCEVExprForVPValue(VPI->getOperand(0), Ctx.PSE, Ctx.L);
+  std::optional<uint64_t> Bound =
+      getBoundedAccessBound(PtrSCEV, ScalarTy, Ctx.L, *Ctx.PSE.getSE());
+  if (!Bound)
+    return false;
+
+  // Only widen for VFs that divide the bound, so each VF-wide load stays within
+  // a single window and does not wrap.
+  auto DividesBound = [&](ElementCount VF) {
+    return VF.isFixed() && VF.getFixedValue() <= *Bound &&
+           *Bound % VF.getFixedValue() == 0;
+  };
+  return LoopVectorizationPlanner::getDecisionAndClampRange(DividesBound,
+                                                            Range);
+}
+
 void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                                  VPRecipeBuilder &RecipeBuilder,
                                                  VPCostContext &CostCtx) {
@@ -7206,6 +7235,9 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
   }
 
   // Few helpers to process different kinds of memory operations.
+
+  bool LoopHasStore = any_of(
+      MemOps, [](VPInstruction *VPI) { return VPI->mayWriteToMemory(); });
 
   // To be used as argument to `VPlanTransforms::runPass` which explicitly
   // specified pass name, hence `VPlan &` parameter.
@@ -7306,6 +7338,15 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
           return false;
 
         bool IsLoad = VPI->getOpcode() == Instruction::Load;
+        if (IsLoad && !LoopHasStore &&
+            canCreateBoundedLoad(VPI, Range, CostCtx)) {
+          auto *Load = cast<LoadInst>(VPI->getUnderlyingInstr());
+          auto *LoadR = new VPWidenLoadRecipe(
+              *Load, VPI->getOperand(0), /*Mask=*/nullptr,
+              /*Consecutive=*/true, *VPI, Load->getDebugLoc());
+          return ReplaceWith(VPI, LoadR);
+        }
+
         VPValue *Ptr = VPI->getOperand(!IsLoad);
         Type *ScalarTy =
             IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();

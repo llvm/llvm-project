@@ -389,6 +389,10 @@ public:
   /// loop. Do not use after invoking 'createVectorizedLoopSkeleton' (PR34965).
   LLVM_ABI int isConsecutivePtr(Type *AccessTy, Value *Ptr) const;
 
+  /// If \p I is a bounded (i % 2^N) load in a read-only loop, returns its
+  /// bound (2^N).
+  LLVM_ABI std::optional<uint64_t> getBoundedLoadBound(Instruction *I) const;
+
   /// Returns true if \p V is invariant across all loop iterations according to
   /// SCEV.
   LLVM_ABI bool isInvariant(Value *V) const;

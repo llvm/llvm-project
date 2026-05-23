@@ -1706,6 +1706,38 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   return Stride;
 }
 
+std::optional<uint64_t> llvm::getBoundedAccessBound(const SCEV *PtrSCEV,
+                                                    Type *AccessTy,
+                                                    const Loop *L,
+                                                    ScalarEvolution &SE) {
+  if (AccessTy->isScalableTy())
+    return std::nullopt;
+
+  // `A[i % 2^N]` is `Base + ElemSize * zext({0,+,1}<iN>)`. For a byte
+  // element (ElemSize == 1) the multiply folds away.
+  const SCEV *Base, *Start;
+  const APInt *Scale = nullptr;
+  auto Index = m_scev_ZExt(
+      m_scev_AffineAddRec(m_SCEV(Start), m_scev_One(), m_SpecificLoop(L)));
+  if (!match(PtrSCEV, m_scev_Add(m_scev_Mul(m_scev_APInt(Scale), Index),
+                                 m_SCEV(Base))) &&
+      !match(PtrSCEV, m_scev_Add(Index, m_SCEV(Base))))
+    return std::nullopt;
+
+  uint64_t AllocSize = L->getHeader()
+                           ->getDataLayout()
+                           .getTypeAllocSize(AccessTy)
+                           .getFixedValue();
+  if (!Start->isZero() || !SE.isLoopInvariant(Base, L) ||
+      (Scale ? *Scale != AllocSize : AllocSize != 1))
+    return std::nullopt;
+
+  unsigned NarrowWidth = SE.getTypeSizeInBits(Start->getType());
+  if (NarrowWidth == 0 || NarrowWidth >= 64)
+    return std::nullopt;
+  return uint64_t(1) << NarrowWidth;
+}
+
 std::optional<int64_t> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
                                              Type *ElemTyB, Value *PtrB,
                                              const DataLayout &DL,
