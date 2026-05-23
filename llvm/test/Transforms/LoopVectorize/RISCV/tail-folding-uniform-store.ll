@@ -15,6 +15,7 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i64 3, [[SPEC_SELECT]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[REVERSE1:%.*]] = call <vscale x 2 x i64> @llvm.vector.reverse.nxv2i64(<vscale x 2 x i64> zeroinitializer)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -27,7 +28,7 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub nuw nsw i64 [[TMP10]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 0, [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[ARRAYIDX13]], i64 [[TMP7]]
-; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.reverse.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
+; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x i64> @llvm.vector.splice.right.nxv2i64(<vscale x 2 x i64> [[REVERSE1]], <vscale x 2 x i64> poison, i32 [[TMP1]])
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[REVERSE]], ptr align 8 [[TMP9]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP10]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP10]]

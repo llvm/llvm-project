@@ -3032,16 +3032,20 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
                                      StoredVal, EVL, Mask);
 
-  VPValue *ReversedVal;
   if (match(&CurRecipe,
-            m_MaskedStore(m_VPValue(EndPtr), m_Reverse(m_VPValue(ReversedVal)),
+            m_MaskedStore(m_VPValue(EndPtr), m_VPValue(StoredVal),
                           m_Reverse(m_RemoveMask(HeaderMask, Mask)))) &&
       match(EndPtr, m_VecEndPtr(m_VPValue(), m_Specific(&Plan->getVF())))) {
     Mask = GetVPReverse(Mask);
     Addr = AdjustEndPtr(EndPtr);
-    StoredVal = GetVPReverse(ReversedVal);
+    VPValue *Poison = Plan->getOrAddLiveIn(
+        PoisonValue::get(TypeInfo.inferScalarType(StoredVal)));
+    auto *SpliceR = new VPWidenIntrinsicRecipe(
+        Intrinsic::vector_splice_right, {StoredVal, Poison, &EVL},
+        TypeInfo.inferScalarType(StoredVal), {}, {}, DL);
+    SpliceR->insertBefore(&CurRecipe);
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
-                                     StoredVal, EVL, Mask);
+                                     SpliceR, EVL, Mask);
   }
 
   if (auto *Rdx = dyn_cast<VPReductionRecipe>(&CurRecipe))
