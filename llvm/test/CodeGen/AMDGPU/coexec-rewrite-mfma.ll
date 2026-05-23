@@ -65,7 +65,7 @@ define amdgpu_kernel void @v5_local_prefetch() #0 {
   %42 = phi float [ 0.000000e+00, %.lr.ph ], [ %41, %3 ]
   %43 = phi <2 x half> [ %1, %.lr.ph ], [ zeroinitializer, %3 ]
   %44 = phi <2 x half> [ %2, %.lr.ph ], [ zeroinitializer, %3 ]
-  %45 = phi <8 x half> [ zeroinitializer, %.lr.ph ], [ <half 0.000000e+00, half 0.000000e+00, half undef, half undef, half undef, half undef, half undef, half undef>, %3 ]
+  %45 = phi <8 x half> [ zeroinitializer, %.lr.ph ], [ <half 0.000000e+00, half 0.000000e+00, half poison, half poison, half poison, half poison, half poison, half poison>, %3 ]
   %46 = shufflevector <2 x half> %43, <2 x half> %44, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
   %47 = shufflevector <8 x half> %46, <8 x half> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 poison, i32 poison>
   %48 = shufflevector <8 x half> %46, <8 x half> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
