@@ -339,14 +339,14 @@ bool FIRToMemRef::materializeShapeExtents(
 
   if (auto extentsOp = shapeVal.getDefiningOp<fir::ShapeExtentsOp>()) {
     shapeVec.append(extentsOp.getExtents().begin(),
-                   extentsOp.getExtents().end());
+                    extentsOp.getExtents().end());
     return true;
   }
 
   if (mlir::isa<fir::ShapeType>(shapeVal.getType())) {
     auto extentsOp = fir::ShapeExtentsOp::create(rewriter, loc, shapeVal);
     shapeVec.append(extentsOp.getExtents().begin(),
-                   extentsOp.getExtents().end());
+                    extentsOp.getExtents().end());
     return true;
   }
 
@@ -364,7 +364,8 @@ void FIRToMemRef::collectSliceInfoFrom(OpTy op, SliceInfo &info) const {
       if (Operation *shapeValOp = shapeVal.getDefiningOp()) {
         if (auto shapeOp = dyn_cast<fir::ShapeOp>(shapeValOp)) {
           populateShape(info.shapeVec, shapeOp);
-        } else if (auto shapeShiftOp = dyn_cast<fir::ShapeShiftOp>(shapeValOp)) {
+        } else if (auto shapeShiftOp =
+                       dyn_cast<fir::ShapeShiftOp>(shapeValOp)) {
           populateShapeAndShift(info.shapeVec, info.shiftVec, shapeShiftOp);
         } else if (auto shiftOp = dyn_cast<fir::ShiftOp>(shapeValOp)) {
           populateShift(info.shiftVec, shiftOp);

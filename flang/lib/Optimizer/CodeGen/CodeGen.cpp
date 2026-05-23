@@ -4597,15 +4597,16 @@ struct ShapeOpConversion : public fir::FIROpConversion<fir::ShapeOp> {
     for (auto [i, extent] : llvm::enumerate(adaptor.getExtents())) {
       mlir::Value extentI64 =
           integerCast(loc, rewriter, i64Ty, extent, /*fold=*/true);
-      structVal =
-          mlir::LLVM::InsertValueOp::create(rewriter, loc, structVal, extentI64, i);
+      structVal = mlir::LLVM::InsertValueOp::create(rewriter, loc, structVal,
+                                                    extentI64, i);
     }
     rewriter.replaceOp(op, structVal);
     return mlir::success();
   }
 };
 
-struct ShapeExtentsOpConversion : public fir::FIROpConversion<fir::ShapeExtentsOp> {
+struct ShapeExtentsOpConversion
+    : public fir::FIROpConversion<fir::ShapeExtentsOp> {
   using FIROpConversion::FIROpConversion;
 
   llvm::LogicalResult
@@ -4619,8 +4620,8 @@ struct ShapeExtentsOpConversion : public fir::FIROpConversion<fir::ShapeExtentsO
     mlir::Value llvmShape = adaptor.getShape();
     llvm::SmallVector<mlir::Value> results;
     for (unsigned i = 0; i < op.getNumResults(); ++i) {
-      mlir::Value extentI64 =
-          mlir::LLVM::ExtractValueOp::create(rewriter, loc, i64Ty, llvmShape, i);
+      mlir::Value extentI64 = mlir::LLVM::ExtractValueOp::create(
+          rewriter, loc, i64Ty, llvmShape, i);
       mlir::Type resultTy = convertType(op.getExtents()[i].getType());
       results.push_back(
           integerCast(loc, rewriter, resultTy, extentI64, /*fold=*/true));
