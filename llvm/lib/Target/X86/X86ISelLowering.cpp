@@ -32275,11 +32275,11 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
 
   // rotl(x,7) -> pavgb(x, 0 - (x & 1))
   if (EltSizeInBits == 8 && IsCstSplat &&
-      CstSplatValue.urem(EltSizeInBits) == 7 && IsROTL) {
+      CstSplatValue.urem(EltSizeInBits) == 7 && IsROTL &&
+      !Subtarget.hasAVX512()) {
     SDValue One = DAG.getConstant(1, DL, VT);
     SDValue LSB = DAG.getNode(ISD::AND, DL, VT, R, One);
-    SDValue Zero = DAG.getConstant(0, DL, VT);
-    SDValue Neg = DAG.getNode(ISD::SUB, DL, VT, Zero, LSB);
+    SDValue Neg = DAG.getNegative(LSB, DL, VT);
     return DAG.getNode(ISD::AVGCEILU, DL, VT, R, Neg);
   }
 
