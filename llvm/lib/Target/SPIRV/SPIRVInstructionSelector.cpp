@@ -6826,11 +6826,10 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
     // Create new register for the pointer type of alloca variable.
     Register PtrTyReg =
         MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
-    MIRBuilder.getMRI()->setType(
-        PtrTyReg,
-        LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::Function,
-                                                STI.getTargetTriple()),
-                     GR.getPointerSize()));
+    unsigned AS = storageClassToAddressSpace(SPIRV::StorageClass::Function,
+                                             STI.getTargetTriple());
+    MIRBuilder.getMRI()->setType(PtrTyReg,
+                                 LLT::pointer(AS, GR.getPointerSize(AS)));
 
     // Assign SPIR-V type of the pointer type of the alloca variable to the
     // new register.
@@ -6946,9 +6945,8 @@ bool SPIRVInstructionSelector::loadBuiltinInputID(
       MIRBuilder.getMRI()->createVirtualRegister(GR.getRegClass(PtrType));
   unsigned AS = storageClassToAddressSpace(SPIRV::StorageClass::Input,
                                            STI.getTargetTriple());
-  MIRBuilder.getMRI()->setType(
-      NewRegister,
-      LLT::pointer(AS, GR.getPointerSize(AS)));
+  MIRBuilder.getMRI()->setType(NewRegister,
+                               LLT::pointer(AS, GR.getPointerSize(AS)));
   GR.assignSPIRVTypeToVReg(PtrType, NewRegister, MIRBuilder.getMF());
 
   // Build global variable with the necessary decorations for the input ID

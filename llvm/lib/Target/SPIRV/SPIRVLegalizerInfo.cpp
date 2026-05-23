@@ -84,23 +84,58 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST,
   const LLT v2s1 = LLT::fixed_vector(2, 1);
 
   const Triple &TT = TM.getTargetTriple();
-  const LLT p0 = LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::Function, TT), TM.getPointerSizeInBits(0)); // Function
-  const LLT p1 = LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::CrossWorkgroup, TT), TM.getPointerSizeInBits(1)); // CrossWorkgroup
-  const LLT p2 = LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::UniformConstant, TT), TM.getPointerSizeInBits(2)); // UniformConstant
-  const LLT p3 = LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::Workgroup, TT), TM.getPointerSizeInBits(3)); // Workgroup
-  const LLT p4 = LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::Generic, TT), TM.getPointerSizeInBits(4)); // Generic
-  // Input, SPV_INTEL_usm_storage_classes (Device)
-  const LLT p5 = LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::DeviceOnlyINTEL, TT), TM.getPointerSizeInBits(5));
-   // SPV_INTEL_usm_storage_classes (Host)
-  const LLT p6 = LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::HostOnlyINTEL, TT), TM.getPointerSizeInBits(6));
-  const LLT p7 = LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::Input, TT), TM.getPointerSizeInBits(7)); // Input
-  const LLT p8 = LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::Output, TT), TM.getPointerSizeInBits(8)); // Output
-  // CodeSectionINTEL, SPV_INTEL_function_pointers
-  const LLT p9 = LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::CodeSectionINTEL, TT), TM.getPointerSizeInBits(9));
-  const LLT p10 = LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::Private, TT), TM.getPointerSizeInBits(10)); // Private
-  const LLT p11 = LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::StorageBuffer, TT), TM.getPointerSizeInBits(11)); // StorageBuffer
-  const LLT p12 = LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::Uniform, TT), TM.getPointerSizeInBits(12)); // Uniform
-  const LLT p13 = LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::PushConstant, TT), TM.getPointerSizeInBits(13)); // PushConstant
+
+  unsigned FunctionAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Function, TT);
+  unsigned CrossWorkgroupAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::CrossWorkgroup, TT);
+  unsigned UniformConstantAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::UniformConstant, TT);
+  unsigned WorkgroupAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Workgroup, TT);
+  unsigned GenericAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Generic, TT);
+  unsigned DeviceOnlyINTELAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::DeviceOnlyINTEL, TT);
+  unsigned HostOnlyINTELAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::HostOnlyINTEL, TT);
+  unsigned InputAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Input, TT);
+  unsigned OutputAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Output, TT);
+  unsigned CodeSectionINTELAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::CodeSectionINTEL, TT);
+  unsigned PrivateAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Private, TT);
+  unsigned StorageBufferAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::StorageBuffer, TT);
+  unsigned UniformAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Uniform, TT);
+  unsigned PushConstantAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::PushConstant, TT);
+
+  const LLT p0 = LLT::pointer(FunctionAS, TM.getPointerSizeInBits(FunctionAS));
+  const LLT p1 = LLT::pointer(CrossWorkgroupAS,
+                              TM.getPointerSizeInBits(CrossWorkgroupAS));
+  const LLT p2 = LLT::pointer(UniformConstantAS,
+                              TM.getPointerSizeInBits(UniformConstantAS));
+  const LLT p3 = LLT::pointer(WorkgroupAS,
+                              TM.getPointerSizeInBits(WorkgroupAS));
+  const LLT p4 = LLT::pointer(GenericAS, TM.getPointerSizeInBits(GenericAS));
+    const LLT p5 = LLT::pointer(DeviceOnlyINTELAS,
+                                TM.getPointerSizeInBits(DeviceOnlyINTELAS));
+  const LLT p6 = LLT::pointer(HostOnlyINTELAS,
+                              TM.getPointerSizeInBits(HostOnlyINTELAS));
+  const LLT p7 = LLT::pointer(InputAS, TM.getPointerSizeInBits(InputAS));
+  const LLT p8 = LLT::pointer(OutputAS, TM.getPointerSizeInBits(OutputAS));
+  const LLT p9 = LLT::pointer(CodeSectionINTELAS,
+                              TM.getPointerSizeInBits(CodeSectionINTELAS));
+  const LLT p10 = LLT::pointer(PrivateAS, TM.getPointerSizeInBits(PrivateAS));
+  const LLT p11 = LLT::pointer(StorageBufferAS,
+                               TM.getPointerSizeInBits(StorageBufferAS));
+  const LLT p12 = LLT::pointer(UniformAS, TM.getPointerSizeInBits(UniformAS));
+  const LLT p13 = LLT::pointer(PushConstantAS,
+                               TM.getPointerSizeInBits(PushConstantAS));
 
   // TODO: remove copy-pasting here by using concatenation in some way.
   auto allPtrsScalarsAndVectors = {

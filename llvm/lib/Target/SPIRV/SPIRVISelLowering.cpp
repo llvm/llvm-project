@@ -103,12 +103,6 @@ MVT SPIRVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
     else if (VT.getVectorElementType() == MVT::i8)
       return MVT::v4i8;
   }
-  // if (STI.getTargetTriple().getVendor() == Triple::VendorType::AMD) {
-  //   if (VT.isVector() &&
-  //       VT.getVectorElementType().isExtended())
-  //    return MVT::v8i32;
-  // }
-
   return getRegisterType(Context, VT);
 }
 

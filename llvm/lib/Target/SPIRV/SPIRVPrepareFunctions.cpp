@@ -880,7 +880,7 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
   bool Changed = false;
   if (M.functions().empty() ||
       all_of(M, [](auto &&F) { return F.isDeclaration(); })) {
-    // If there are no functions, insert a service
+    // If there are no defined functions, insert a service
     // function so that the global/constant tracking intrinsics
     // will be created. Without these intrinsics the generated SPIR-V
     // will be empty. The service function itself is not emitted.

@@ -1690,7 +1690,8 @@ static bool genWorkgroupQuery(const SPIRV::IncomingCall *Call,
                               uint64_t DefaultValue) {
   Register IndexRegister = Call->Arguments[0];
   const unsigned ResultWidth = Call->ReturnType->getOperand(1).getImm();
-  const unsigned PointerSize = GR->getPointerSize();
+  const unsigned PointerSize = GR->getPointerSize(storageClassToAddressSpace(
+      SPIRV::StorageClass::Generic, GR->CurMF->getTarget().getTargetTriple()));
   const SPIRVTypeInst PointerSizeType =
       GR->getOrCreateSPIRVIntegerType(PointerSize, MIRBuilder);
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
@@ -2828,7 +2829,9 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
 
   // Each nd_range field is an array of <Dimension> integers matching the
   // address model width (32 or 64 bits).
-  const unsigned AddressModelBits = GR->getPointerSize();
+  const unsigned AddressModelBits = GR->getPointerSize(
+      storageClassToAddressSpace(SPIRV::StorageClass::Generic,
+                                 GR->CurMF->getTarget().getTargetTriple()));
   assert(AddressModelBits == 64 || AddressModelBits == 32);
 
   // The dimension is encoded in the function name as "ndrange_XD" where X is

@@ -418,7 +418,7 @@ public:
   getPointerStorageClass(SPIRVTypeInst Type) const;
 
   // Return the number of bits SPIR-V pointers and size_t variables require.
-  unsigned getPointerSize(unsigned AS = 0) const {
+  unsigned getPointerSize(unsigned AS) const {
     return DL.getPointerSizeInBits(AS);
   }
 
