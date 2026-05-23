@@ -29704,6 +29704,15 @@ static SDValue LowerCTTZ(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getNode(X86ISD::CMOV, dl, VT, Ops);
 }
 
+static SDValue peekThroughDemandedElts(SDValue V, const APInt &DemandedElts,
+                                       SelectionDAG &DAG) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  while (SDValue NewV =
+             TLI.SimplifyMultipleUseDemandedVectorElts(V, DemandedElts, DAG))
+    V = NewV;
+  return V;
+}
+
 // Generic x86 vector reduction expansion.
 static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
                               SelectionDAG &DAG, bool AllowScalarization) {
@@ -29718,7 +29727,9 @@ static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(Op);
 
-  if (SrcSVT != ExtractVT || (SrcVT.getSizeInBits() % 128) != 0)
+  // TODO: Pad non-pow2 vectors with identity constants.
+  if (SrcSVT != ExtractVT || SrcVT.getSizeInBits() < 128 ||
+      !isPowerOf2_32(SrcVT.getVectorNumElements()))
     return SDValue();
 
   // Split vector down to 128-bits, performing bin to lo/hi subvectors.
@@ -29745,11 +29756,7 @@ static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
     APInt HiElts = APInt::getBitsSet(NumSrcElts, NumElts / 2, NumElts);
     if (!DAG.isIdentityElement(BinOp, SDNodeFlags(), Src, HiElts, 1)) {
       APInt LoElts = APInt::getLowBitsSet(NumSrcElts, NumElts / 2);
-      SDValue Lo = Src;
-      while (SDValue NewLo =
-                 TLI.SimplifyMultipleUseDemandedVectorElts(Lo, LoElts, DAG))
-        Lo = NewLo;
-
+      SDValue Lo = peekThroughDemandedElts(Src, LoElts, DAG);
       SmallVector<int, 16> Mask(NumSrcElts, -1);
       std::iota(Mask.begin(), Mask.begin() + (NumElts / 2), NumElts / 2);
       SDValue Hi =
@@ -29960,8 +29967,9 @@ static SDValue LowerMINMAX_REDUCE(SDValue Op, const X86Subtarget &Subtarget,
   EVT SrcVT = Src.getValueType();
   EVT SrcSVT = SrcVT.getScalarType();
   ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(Op.getOpcode());
-  if (SrcSVT != ExtractVT || (SrcVT.getSizeInBits() % 128) != 0)
-    return LowerVECREDUCE(Op, Subtarget, DAG, AllowScalarization);
+  if (SrcSVT != ExtractVT || SrcVT.getSizeInBits() < 128 ||
+      !isPowerOf2_32(SrcVT.getVectorNumElements()))
+    return SDValue();
 
   // Bail if at least the upper half elements are identity.
   APInt HiElts = APInt::getHighBitsSet(SrcVT.getVectorNumElements(),
@@ -32269,6 +32277,16 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   // Split 256-bit integers on XOP/pre-AVX2 targets.
   if (VT.is256BitVector() && (Subtarget.hasXOP() || !Subtarget.hasAVX2()))
     return splitVectorIntBinary(Op, DAG, DL);
+
+  // rotl(x,7) -> pavgb(x, 0 - (x & 1))
+  if (EltSizeInBits == 8 && IsCstSplat &&
+      CstSplatValue.urem(EltSizeInBits) == 7 && IsROTL &&
+      !Subtarget.hasAVX512()) {
+    SDValue One = DAG.getConstant(1, DL, VT);
+    SDValue LSB = DAG.getNode(ISD::AND, DL, VT, R, One);
+    SDValue Neg = DAG.getNegative(LSB, DL, VT);
+    return DAG.getNode(ISD::AVGCEILU, DL, VT, R, Neg);
+  }
 
   // Rotate by an uniform constant - expand back to shifts.
   // TODO: Can't use generic expansion as UNDEF amt elements can be converted
@@ -47191,38 +47209,6 @@ static SDValue createPSADBW(SelectionDAG &DAG, SDValue N0, SDValue N1,
                           PSADBWBuilder);
 }
 
-// Attempt to replace an integer min/max horizontal reduction with
-// ISD::VECREDUCE_SMIN/SMAX/UMIN/UMAX.
-static SDValue combineMinMaxReduction(SDNode *Extract, SelectionDAG &DAG,
-                                      const X86Subtarget &Subtarget) {
-  // Check for SMAX/SMIN/UMAX/UMIN horizontal reduction patterns.
-  ISD::NodeType BinOp;
-  SDValue Src = DAG.matchBinOpReduction(
-      Extract, BinOp, {ISD::SMAX, ISD::SMIN, ISD::UMAX, ISD::UMIN}, true);
-  if (!Src)
-    return SDValue();
-
-  ISD::NodeType RdxOp;
-  switch (BinOp) {
-  case ISD::SMAX:
-    RdxOp = ISD::VECREDUCE_SMAX;
-    break;
-  case ISD::SMIN:
-    RdxOp = ISD::VECREDUCE_SMIN;
-    break;
-  case ISD::UMAX:
-    RdxOp = ISD::VECREDUCE_UMAX;
-    break;
-  case ISD::UMIN:
-    RdxOp = ISD::VECREDUCE_UMIN;
-    break;
-  default:
-    llvm_unreachable("Unexpected reduction");
-  }
-
-  return DAG.getNode(RdxOp, SDLoc(Extract), Extract->getValueType(0), Src);
-}
-
 // Attempt to replace an all_of/any_of/parity style horizontal reduction with a MOVMSK.
 static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
                                          const X86Subtarget &Subtarget) {
@@ -48174,11 +48160,6 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   // Attempt to replace an all_of/any_of horizontal reduction with a MOVMSK.
   if (SDValue Cmp = combinePredicateReduction(N, DAG, Subtarget))
     return Cmp;
-
-  // Attempt to replace min/max v8i16/v16i8 reductions with ISD::VECREDUCE.
-  if (DCI.isBeforeLegalizeOps())
-    if (SDValue MinMax = combineMinMaxReduction(N, DAG, Subtarget))
-      return MinMax;
 
   // Attempt to optimize ADD/FADD/MUL reductions with HADD, promotion etc..
   if (SDValue V = combineArithReduction(N, DAG, Subtarget))
@@ -51717,15 +51698,18 @@ static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
           sd_match(Vec, m_OneUse(m_InsertElt(
                             m_Value(InnerVec), m_Value(InnerScl),
                             m_SpecificInt(CIdx->getZExtValue() - 1))))) {
-        if (auto *InnerCst = dyn_cast<ConstantSDNode>(InnerScl)) {
+        if (isa<ConstantSDNode>(InnerScl)) {
           SDLoc DL(N);
-          APInt Pack = InnerCst->getAPIntValue().zext(2 * NumBitsPerElt);
-          Pack.insertBits(Cst->getAPIntValue().trunc(NumBitsPerElt),
-                          NumBitsPerElt);
+          SDValue Lo = DAG.getNode(ISD::ZERO_EXTEND, DL, WideSVT, InnerScl);
+          SDValue Hi = DAG.getNode(ISD::ZERO_EXTEND, DL, WideSVT, Scl);
+          Lo = DAG.getZeroExtendInReg(Lo, DL, VT.getScalarType());
+          Hi = DAG.getNode(
+              ISD::SHL, DL, WideSVT, Hi,
+              DAG.getShiftAmountConstant(NumBitsPerElt, WideSVT, DL));
           unsigned NewIdx = (CIdx->getZExtValue() - 1) / 2;
           SDValue NewInsert = DAG.getInsertVectorElt(
               DL, DAG.getBitcast(WideVT, InnerVec),
-              DAG.getConstant(Pack, DL, WideSVT), NewIdx);
+              DAG.getNode(ISD::OR, DL, WideSVT, Lo, Hi), NewIdx);
           return DAG.getBitcast(VT, NewInsert);
         }
       }
