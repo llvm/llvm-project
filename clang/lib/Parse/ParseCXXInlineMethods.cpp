@@ -761,46 +761,38 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA, bool EnterScope,
     Decl *D = LA.Decls[0];
     bool HasFuncScope =
         EnterScope && LA.Decls.size() == 1 && D->isFunctionOrFunctionTemplate();
-    if (getLangOpts().CPlusPlus) {
-      NamedDecl *ND = dyn_cast<NamedDecl>(D);
-      RecordDecl *RD = dyn_cast_or_null<RecordDecl>(D->getDeclContext());
+    bool IsCPlusPlus = getLangOpts().CPlusPlus;
 
-      // Allow 'this' within late-parsed attributes.
-      Sema::CXXThisScopeRAII ThisScope(Actions, RD, Qualifiers(),
-                                       ND && ND->isCXXInstanceMember());
+    NamedDecl *ND = dyn_cast<NamedDecl>(D);
+    RecordDecl *RD = dyn_cast_or_null<RecordDecl>(D->getDeclContext());
 
-      // If the Decl is templatized, add template parameters to the scope.
-      ReenterTemplateScopeRAII InDeclScope(*this, D, EnterScope);
+    // Allow 'this' within late-parsed attributes.
+    Sema::CXXThisScopeRAII ThisScope(Actions, RD, Qualifiers(),
+                                     IsCPlusPlus && ND &&
+                                         ND->isCXXInstanceMember());
 
-      // If the Decl is on a function, add function parameters to the scope.
-      if (HasFuncScope) {
-        InDeclScope.Scopes.Enter(Scope::FnScope | Scope::DeclScope |
-                                 Scope::CompoundStmtScope);
-        Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
-      }
+    // If the Decl is templatized, add template parameters to the scope.
+    ReenterTemplateScopeRAII InDeclScope(*this, D, IsCPlusPlus && EnterScope);
 
-      ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, nullptr,
-                            nullptr, SourceLocation(), ParsedAttr::Form::GNU(),
-                            nullptr);
-
-      if (HasFuncScope)
-        Actions.ActOnExitFunctionContext();
-
-    } else {
-      ParseScope FnScope(this, Scope::FnScope | Scope::DeclScope, HasFuncScope);
-      if (HasFuncScope)
-        Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
-
-      ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, nullptr,
-                            nullptr, SourceLocation(), ParsedAttr::Form::GNU(),
-                            nullptr);
-
-      if (HasFuncScope)
-        Actions.ActOnExitFunctionContext();
+    // If the Decl is on a function, add function parameters to the scope.
+    if (HasFuncScope) {
+      InDeclScope.Scopes.Enter(Scope::FnScope | Scope::DeclScope |
+                               Scope::CompoundStmtScope);
+      Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
     }
+
+    ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs,
+                          /*EndLoc=*/nullptr, /*ScopeName=*/nullptr,
+                          SourceLocation(), ParsedAttr::Form::GNU(),
+                          /*D=*/nullptr);
+
+    if (HasFuncScope)
+      Actions.ActOnExitFunctionContext();
   } else if (OutAttrs) {
-    ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, nullptr, nullptr,
-                          SourceLocation(), ParsedAttr::Form::GNU(), nullptr);
+    ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs,
+                          /*EndLoc=*/nullptr, /*ScopeName=*/nullptr,
+                          SourceLocation(), ParsedAttr::Form::GNU(),
+                          /*D=*/nullptr);
   } else {
     Diag(Tok, diag::warn_attribute_no_decl) << LA.AttrName.getName();
   }
@@ -810,8 +802,8 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA, bool EnterScope,
     Diag(Tok, diag::warn_attribute_on_function_definition)
       << &LA.AttrName;
 
-  for (unsigned i = 0, ni = LA.Decls.size(); i < ni; ++i)
-    Actions.ActOnFinishDelayedAttribute(getCurScope(), LA.Decls[i], Attrs);
+  for (auto *D : LA.Decls)
+    Actions.ActOnFinishDelayedAttribute(getCurScope(), D, Attrs);
 
   // Due to a parsing error, we either went over the cached tokens or
   // there are still cached tokens left, so we skip the leftover tokens.
