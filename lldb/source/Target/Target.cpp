@@ -52,7 +52,6 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
-#include "lldb/Target/Policy.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterTypeBuilder.h"
 #include "lldb/Target/SectionLoadList.h"
@@ -67,11 +66,13 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/ErrorExtras.h"
@@ -977,13 +978,11 @@ void Target::DescribeBreakpointOverrides(Stream &stream,
     return;
   }
 
-  auto begin = idxs.begin();
-  auto end = idxs.end();
   bool empty = idxs.empty();
   bool print_first = true;
   for (auto const &elem : m_breakpoint_overrides) {
-    auto idx_pos = empty ? end : std::find(begin, end, elem.first);
-    if (empty || idx_pos != end) {
+    auto idx_pos = llvm::find(idxs, elem.first);
+    if (empty || idx_pos != idxs.end()) {
       if (print_first) {
         // FIXME: Is there some good way to flow the description?
         stream << "ID    Description\n";
@@ -4282,7 +4281,7 @@ Target::StopHookCommandLine::HandleStop(ExecutionContext &exc_ctx,
 
 // Target::StopHookScripted
 Status Target::StopHookScripted::SetScriptCallback(
-    std::string class_name, StructuredData::ObjectSP extra_args_sp) {
+    const ScriptedMetadata &scripted_metadata) {
   Status error;
 
   ScriptInterpreter *script_interp =
@@ -4300,11 +4299,8 @@ Status Target::StopHookScripted::SetScriptCallback(
     return error;
   }
 
-  m_class_name = class_name;
-  m_extra_args.SetObjectSP(extra_args_sp);
-
-  auto obj_or_err = m_interface_sp->CreatePluginObject(
-      m_class_name, GetTarget(), m_extra_args);
+  auto obj_or_err =
+      m_interface_sp->CreatePluginObject(scripted_metadata, GetTarget());
   if (!obj_or_err) {
     return Status::FromError(obj_or_err.takeError());
   }
@@ -4343,25 +4339,29 @@ Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
                              : StopHookResult::RequestContinue;
 }
 
+llvm::StringRef Target::StopHookScripted::GetScriptClassName() const {
+  if (m_interface_sp && m_interface_sp->GetScriptedMetadata())
+    return m_interface_sp->GetScriptedMetadata()->GetClassName();
+  return "<unknown>";
+}
+
 void Target::StopHookScripted::GetSubclassDescription(
     Stream &s, lldb::DescriptionLevel level) const {
+  llvm::StringRef class_name = GetScriptClassName();
   if (level == eDescriptionLevelBrief) {
-    s.PutCString(m_class_name);
+    s.PutCString(class_name);
     return;
   }
   s.Indent("Class:");
-  s.Printf("%s\n", m_class_name.c_str());
+  s.Format("{0}\n", class_name);
 
   // Now print the extra args:
-  // FIXME: We should use StructuredData.GetDescription on the m_extra_args
+  // FIXME: We should use StructuredData.GetDescription on the args dict
   // but that seems to rely on some printing plugin that doesn't exist.
-  if (!m_extra_args.IsValid())
-    return;
-  StructuredData::ObjectSP object_sp = m_extra_args.GetObjectSP();
-  if (!object_sp || !object_sp->IsValid())
-    return;
-
-  StructuredData::Dictionary *as_dict = object_sp->GetAsDictionary();
+  StructuredData::DictionarySP as_dict =
+      (m_interface_sp && m_interface_sp->GetScriptedMetadata())
+          ? m_interface_sp->GetScriptedMetadata()->GetArgsSP()
+          : nullptr;
   if (!as_dict || !as_dict->IsValid())
     return;
 
@@ -4595,7 +4595,7 @@ Target::HookCommandLine::HandleStop(ExecutionContext &exc_ctx,
 // HookScripted
 
 Status Target::HookScripted::SetScriptCallback(
-    std::string class_name, StructuredData::ObjectSP extra_args_sp) {
+    const ScriptedMetadata &scripted_metadata) {
   ScriptInterpreter *script_interp =
       GetTarget()->GetDebugger().GetScriptInterpreter();
   if (!script_interp)
@@ -4607,11 +4607,8 @@ Status Target::HookScripted::SetScriptCallback(
         "ScriptedHook::%s () - ERROR: %s", __FUNCTION__,
         "Script interpreter couldn't create Scripted Hook Interface");
 
-  m_class_name = std::move(class_name);
-  m_extra_args.SetObjectSP(extra_args_sp);
-
-  auto obj_or_err = m_interface_sp->CreatePluginObject(
-      m_class_name, GetTarget(), m_extra_args);
+  auto obj_or_err =
+      m_interface_sp->CreatePluginObject(scripted_metadata, GetTarget());
   if (!obj_or_err)
     return Status::FromError(obj_or_err.takeError());
 
@@ -4676,11 +4673,18 @@ Target::HookScripted::HandleStop(ExecutionContext &exc_ctx,
                              : StopHook::StopHookResult::RequestContinue;
 }
 
+llvm::StringRef Target::HookScripted::GetScriptClassName() const {
+  if (m_interface_sp && m_interface_sp->GetScriptedMetadata())
+    return m_interface_sp->GetScriptedMetadata()->GetClassName();
+  return "<unknown>";
+}
+
 void Target::HookScripted::GetDescription(Stream &s,
                                           lldb::DescriptionLevel level) const {
   Hook::GetDescription(s, level);
+  llvm::StringRef class_name = GetScriptClassName();
   if (level == eDescriptionLevelBrief) {
-    s.PutCString(m_class_name);
+    s.PutCString(class_name);
     return;
   }
 
@@ -4688,27 +4692,25 @@ void Target::HookScripted::GetDescription(Stream &s,
   // filters.
   s.IndentMore();
   s.Indent("Class: ");
-  s.Printf("%s\n", m_class_name.c_str());
+  s.Format("{0}\n", class_name);
 
-  if (m_extra_args.IsValid()) {
-    StructuredData::ObjectSP object_sp = m_extra_args.GetObjectSP();
-    if (object_sp && object_sp->IsValid()) {
-      StructuredData::Dictionary *as_dict = object_sp->GetAsDictionary();
-      if (as_dict && as_dict->IsValid() && as_dict->GetSize() > 0) {
-        s.Indent("Args:\n");
-        s.IndentMore();
+  StructuredData::DictionarySP as_dict =
+      (m_interface_sp && m_interface_sp->GetScriptedMetadata())
+          ? m_interface_sp->GetScriptedMetadata()->GetArgsSP()
+          : nullptr;
+  if (as_dict && as_dict->IsValid() && as_dict->GetSize() > 0) {
+    s.Indent("Args:\n");
+    s.IndentMore();
 
-        auto print_one_element = [&s](llvm::StringRef key,
-                                      StructuredData::Object *object) {
-          s.Indent();
-          s.Format("{0} : {1}\n", key, object->GetStringValue());
-          return true;
-        };
+    auto print_one_element = [&s](llvm::StringRef key,
+                                  StructuredData::Object *object) {
+      s.Indent();
+      s.Format("{0} : {1}\n", key, object->GetStringValue());
+      return true;
+    };
 
-        as_dict->ForEach(print_one_element);
-        s.IndentLess();
-      }
-    }
+    as_dict->ForEach(print_one_element);
+    s.IndentLess();
   }
   s.IndentLess();
 
