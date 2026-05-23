@@ -1323,7 +1323,6 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
   }
 }
 
-// Store matrix is a flavor of scattered store for 2D shapes.
 void LayoutInfoPropagation::visitStoreMatrixOp(
     xegpu::StoreMatrixOp storeMatrix, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
