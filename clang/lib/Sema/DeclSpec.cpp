@@ -759,17 +759,7 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation TagKwLoc,
   if (TypeSpecType == TST_error)
     return false;
   if (TypeSpecType != TST_unspecified) {
-    // Store conflicting type specifier for Finish() to detect:
-    // - If 'auto' is already set, store the conflicting type (e.g., "auto int")
-    // - If 'auto' is being set after another type, store TST_auto (e.g., "int
-    // auto")
-    if (TypeSpecType == TST_auto) {
-      ConflictingTypeSpecifier = T;
-      ConflictingTypeSpecifierLoc = TagKwLoc;
-    } else if (T == TST_auto) {
-      ConflictingTypeSpecifier = TST_auto;
-      ConflictingTypeSpecifierLoc = TagKwLoc;
-    }
+    setConflictingTypeSpecifier(T, TagKwLoc, TagNameLoc, Rep);
     PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
     DiagID = diag::err_invalid_decl_spec_combination;
     return true;
@@ -801,17 +791,7 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation Loc,
   if (TypeSpecType == TST_error)
     return false;
   if (TypeSpecType != TST_unspecified) {
-    // Store conflicting type specifier for Finish() to detect:
-    // - If 'auto' is already set, store the conflicting type (e.g., "auto int")
-    // - If 'auto' is being set after another type, store TST_auto (e.g., "int
-    // auto")
-    if (TypeSpecType == TST_auto) {
-      ConflictingTypeSpecifier = T;
-      ConflictingTypeSpecifierLoc = Loc;
-    } else if (T == TST_auto) {
-      ConflictingTypeSpecifier = TST_auto;
-      ConflictingTypeSpecifierLoc = Loc;
-    }
+    setConflictingTypeSpecifier(T, Loc, Rep);
     PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
     DiagID = diag::err_invalid_decl_spec_combination;
     return true;
@@ -844,17 +824,7 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation TagKwLoc,
   if (TypeSpecType == TST_error)
     return false;
   if (TypeSpecType != TST_unspecified) {
-    // Store conflicting type specifier for Finish() to detect:
-    // - If 'auto' is already set, store the conflicting type (e.g., "auto int")
-    // - If 'auto' is being set after another type, store TST_auto (e.g., "int
-    // auto")
-    if (TypeSpecType == TST_auto) {
-      ConflictingTypeSpecifier = T;
-      ConflictingTypeSpecifierLoc = TagKwLoc;
-    } else if (T == TST_auto) {
-      ConflictingTypeSpecifier = TST_auto;
-      ConflictingTypeSpecifierLoc = TagKwLoc;
-    }
+    setConflictingTypeSpecifier(T, TagKwLoc, TagNameLoc, Rep, Owned);
     PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
     DiagID = diag::err_invalid_decl_spec_combination;
     return true;
@@ -885,17 +855,7 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation Loc,
   if (TypeSpecType == TST_error)
     return false;
   if (TypeSpecType != TST_unspecified) {
-    // Store conflicting type specifier for Finish() to detect:
-    // - If 'auto' is already set, store the conflicting type (e.g., "auto int")
-    // - If 'auto' is being set after another type, store TST_auto (e.g., "int
-    // auto")
-    if (TypeSpecType == TST_auto) {
-      ConflictingTypeSpecifier = T;
-      ConflictingTypeSpecifierLoc = Loc;
-    } else if (T == TST_auto) {
-      ConflictingTypeSpecifier = TST_auto;
-      ConflictingTypeSpecifierLoc = Loc;
-    }
+    setConflictingTypeSpecifier(T, Loc);
     PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
     DiagID = diag::err_invalid_decl_spec_combination;
     return true;
