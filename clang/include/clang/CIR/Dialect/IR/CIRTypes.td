@@ -738,6 +738,7 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
     bool isIncomplete() const;
 
     mlir::Type getUnionStorageType(const mlir::DataLayout &dataLayout) const;
+    llvm::ArrayRef<mlir::Type> getMembersWithoutPadding() const;
     size_t getNumElements() const { return getMembers().size(); };
     std::string getKindAsStr() {
       switch (getKind()) {

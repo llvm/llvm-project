@@ -322,6 +322,10 @@ void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
     llvm_unreachable("failed to complete record");
 }
 
+ArrayRef<mlir::Type> RecordType::getMembersWithoutPadding() const {
+  return {getMembers().begin(), std::prev(getMembers().end(), getPadded())};
+}
+
 /// Return the 'storage' type of the union, that is, without padding,
 /// the type that is used to convert to the 'storage' for LLVM-IR.
 Type RecordType::getUnionStorageType(
@@ -333,9 +337,8 @@ Type RecordType::getUnionStorageType(
 
   // If the union is padded, we need to ignore the last member,
   // which is the padding.
-  return *std::max_element(
-      members.begin(), std::prev(members.end(), getPadded()),
-      [&](Type lhs, Type rhs) {
+  return *llvm::max_element(
+      getMembersWithoutPadding(), [&](Type lhs, Type rhs) {
         return dataLayout.getTypeABIAlignment(lhs) <
                    dataLayout.getTypeABIAlignment(rhs) ||
                (dataLayout.getTypeABIAlignment(lhs) ==
@@ -383,9 +386,8 @@ RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
     if (members.empty() || (getPadded() && members.size() == 1))
       return llvm::TypeSize::getFixed(8);
 
-    mlir::Type largestType = *std::max_element(
-        members.begin(), std::prev(members.end(), getPadded()),
-        [&](Type lhs, Type rhs) {
+    mlir::Type largestType =
+        *llvm::max_element(getMembersWithoutPadding(), [&](Type lhs, Type rhs) {
           return dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs);
         });
 
@@ -406,9 +408,8 @@ RecordType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
     if (members.empty() || (getPadded() && members.size() == 1))
       return 1;
 
-    mlir::Type largestAlignType = *std::max_element(
-        members.begin(), std::prev(members.end(), getPadded()),
-        [&](Type lhs, Type rhs) {
+    mlir::Type largestAlignType =
+        *llvm::max_element(getMembersWithoutPadding(), [&](Type lhs, Type rhs) {
           return dataLayout.getTypeABIAlignment(lhs) <
                  dataLayout.getTypeABIAlignment(rhs);
         });

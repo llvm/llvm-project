@@ -36,15 +36,31 @@ struct ContainsHasEmptyUnion {
 // CIR-DAG: !rec_ContainsHasEmptyUnion = !cir.record<struct "ContainsHasEmptyUnion" padded {!cir.array<!u8i x 4>, !s32i}>
 // LLVM-DAG: %struct.ContainsHasEmptyUnion = type { [4 x i8], i32 }
 
+struct SizeAlignmentMismatchUnion {
+  union { char c; int i; };
+};
+// CIR-DAG: !rec_SizeAlignmentMismatchUnion = !cir.record<struct "SizeAlignmentMismatchUnion" {![[ANON_UNION2:.*]]}
+// CIR-DAG: ![[ANON_UNION2]] = !cir.record<union {{.*}} {!s8i, !s32i}>
+// LLVM-DAG: %struct.SizeAlignmentMismatchUnion = type { %[[ANON_UNION2:.*]] }
+// LLVM-DAG: %[[ANON_UNION2]] = type { i32 } 
+struct ContainsSizeAlignmentMismatchUnion {
+  SizeAlignmentMismatchUnion u;
+  int thing;
+};
+// CIR-DAG: !rec_ContainsSizeAlignmentMismatchUnion = !cir.record<struct "ContainsSizeAlignmentMismatchUnion" {!rec_SizeAlignmentMismatchUnion, !s32i}>
+// LLVM-DAG: %struct.ContainsSizeAlignmentMismatchUnion =  type { %struct.SizeAlignmentMismatchUnion, i32 }
 
 void use() {
   ContainsHasAnonUnion u;
   ContainsHasEmptyUnion u2;
+  ContainsSizeAlignmentMismatchUnion u3;
 }
 // CIR: cir.func {{.*}}@_Z3usev()
 // CIR: cir.alloca !rec_ContainsHasAnonUnion, !cir.ptr<!rec_ContainsHasAnonUnion>, ["u"] {alignment = 8 : i64}
 // CIR: cir.alloca !rec_ContainsHasEmptyUnion, !cir.ptr<!rec_ContainsHasEmptyUnion>, ["u2"] {alignment = 4 : i64}
+// CIR: cir.alloca !rec_ContainsSizeAlignmentMismatchUnion, !cir.ptr<!rec_ContainsSizeAlignmentMismatchUnion>, ["u3"] {alignment = 4 : i64}
 
 // LLVM-LABEL: define {{.*}}@_Z3usev()
 // LLVM:   alloca %struct.ContainsHasAnonUnion, {{.*}}align 8
 // LLVM:   alloca %struct.ContainsHasEmptyUnion, {{.*}}align 4
+// LLVM:   alloca %struct.ContainsSizeAlignmentMismatchUnion, {{.*}}align 4
