@@ -1179,7 +1179,6 @@ private:
     } else if (obj.IsPassedByDescriptor(isBindC)) {
       // bind(c) attributes(global): pass assumed-shape arrays by base address
       // (cudaLaunchKernel cannot deliver a CFI descriptor to the device).
-      // corank > 0 is already TODO'd above, so no need to re-check here.
       using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
       constexpr Fortran::evaluate::characteristics::TypeAndShape::Attrs
           shapeOnlyDescriptor{ShapeAttr::AssumedShape, ShapeAttr::DeferredShape,
