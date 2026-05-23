@@ -3,9 +3,9 @@
 ; RUN: llc -O3 -mtriple=amdgcn -mcpu=gfx942 %s -o - | FileCheck %s --check-prefixes=GFX942,DAGISEL-GFX942
 ; RUN: llc -O3 -mtriple=amdgcn -mcpu=gfx1200 %s -o - | FileCheck %s --check-prefixes=GFX12,DAGISEL-GFX12
 
-; RUN: llc -O3 -global-isel -mtriple=amdgcn -mcpu=fiji %s -o - | FileCheck %s --check-prefixes=GFX8,GISEL-GFX8
-; RUN: llc -O3 -global-isel -mtriple=amdgcn -mcpu=gfx942 %s -o - | FileCheck %s --check-prefixes=GFX942,GISEL-GFX942
-; RUN: llc -O3 -global-isel -mtriple=amdgcn -mcpu=gfx1200 %s -o - | FileCheck %s --check-prefixes=GFX12,GISEL-GFX12
+; RUN: llc -O3 -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=fiji %s -o - | FileCheck %s --check-prefixes=GFX8,GISEL-GFX8
+; RUN: llc -O3 -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx942 %s -o - | FileCheck %s --check-prefixes=GFX942,GISEL-GFX942
+; RUN: llc -O3 -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 %s -o - | FileCheck %s --check-prefixes=GFX12,GISEL-GFX12
 
 ; (workitem_id_x | workitem_id_y | workitem_id_z) == 0
 define i1 @workitem_zero() {
@@ -180,8 +180,7 @@ define i1 @workgroup_zero() {
 ; DAGISEL-GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; DAGISEL-GFX8-NEXT:    s_or_b32 s4, s12, s13
 ; DAGISEL-GFX8-NEXT:    s_or_b32 s4, s4, s14
-; DAGISEL-GFX8-NEXT:    s_cmp_eq_u32 s4, 0
-; DAGISEL-GFX8-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; DAGISEL-GFX8-NEXT:    s_cselect_b64 s[4:5], 0, -1
 ; DAGISEL-GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; DAGISEL-GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -190,8 +189,7 @@ define i1 @workgroup_zero() {
 ; DAGISEL-GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; DAGISEL-GFX942-NEXT:    s_or_b32 s0, s12, s13
 ; DAGISEL-GFX942-NEXT:    s_or_b32 s0, s0, s14
-; DAGISEL-GFX942-NEXT:    s_cmp_eq_u32 s0, 0
-; DAGISEL-GFX942-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; DAGISEL-GFX942-NEXT:    s_cselect_b64 s[0:1], 0, -1
 ; DAGISEL-GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; DAGISEL-GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -208,9 +206,7 @@ define i1 @workgroup_zero() {
 ; DAGISEL-GFX12-NEXT:    s_or_b32 s0, ttmp9, s0
 ; DAGISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-GFX12-NEXT:    s_or_b32 s0, s0, s1
-; DAGISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; DAGISEL-GFX12-NEXT:    s_cmp_eq_u32 s0, 0
-; DAGISEL-GFX12-NEXT:    s_cselect_b32 s0, -1, 0
+; DAGISEL-GFX12-NEXT:    s_cselect_b32 s0, 0, -1
 ; DAGISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; DAGISEL-GFX12-NEXT:    s_setpc_b64 s[30:31]

@@ -30,8 +30,8 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -572,6 +572,13 @@ bool llvm::runPassPipeline(
 
   // Now that we have all of the passes ready, run them.
   MPM.run(M, MAM);
+
+  // If a pass reported an error via LLVMContext::emitError, fail without
+  // writing the output module.
+  if (auto *DH = M.getContext().getDiagHandlerPtr()) {
+    if (DH->HasErrors)
+      return false;
+  }
 
   // Declare success.
   if (OK != OK_NoOutput) {

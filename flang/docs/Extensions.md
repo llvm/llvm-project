@@ -159,11 +159,6 @@ end
   to be constant will generate a compilation error. `ieee_support_standard`
   depends in part on `ieee_support_halting`, so this also applies to
   `ieee_support_standard` calls.
-* F'2023 constraint C7108 prohibits the use of a structure constructor
-  that could also be interpreted as a generic function reference.
-  No other Fortran compiler enforces C7108 (to our knowledge);
-  they all resolve the ambiguity by interpreting the call as a function
-  reference.  We do the same, with a portability warning.
 * An override for an inaccessible procedure binding works only within
   the same module; other apparent overrides of inaccessible bindings
   are actually new bindings of the same name.
@@ -478,6 +473,30 @@ end
   to be a pointer so long as it is `INTENT(IN)`.
   (This extension is not yet supported for procedure pointer component
   interfaces.)
+* A data object can be initialized multiple times by `DATA` statements
+  and default component initialization, but only when all initializations
+  are to the same value.  Distinct initializations remain errors.
+* A pointer component that has no default initialization or explicit value
+  in a structure constructor is defaulted to `NULL()`.
+* Multiple specifications of a prefix-spec on the same procedure are allowed,
+  with a warning.  C1552 (F2023) specifies that at most one of each shall be
+  present.
+* An assumed-rank entity is an acceptable `NAMELIST` group item.
+* A named constant (`PARAMETER`) may appear as a `namelist-group-object` in a
+  `NAMELIST` statement.  The Fortran standard requires namelist group objects
+  to be variables, but this usage is accepted by Flang as an extension.
+  When `-pedantic` is enabled, Flang emits a warning for this case.
+  For example:
+```
+program p
+  implicit none
+  integer, parameter :: k = 3
+  namelist /g/ k
+end program
+```
+* When the argument to intrinsic `ALLOCATED(p)` is actually a pointer
+  rather than an allocatable, it is interpreted as `ASSOCIATED(p)` with a
+  stern warning.
 
 ### Extensions supported when enabled by options
 
@@ -508,6 +527,14 @@ end
 * Default exponent of zero, e.g. `3.14159E`, on a READ from a
   fixed-width input field.  Includes the case with only an
   exponent letter for compatibility with other compilers.
+* Allow a data object or function pointer as the `C_LOC()`
+  argument (not just pointers/targets). The compiler will not
+  reason about aliases created through non-target non-pointer
+  arguments and code generated using such aliases may exhibit
+  unexpected behavior. This is for compatibility with
+  legacy code; legacy code should be updated to be correct.
+  This could be removed at any time.
+  [-frelaxed-c-loc-checks]
 
 ### Extensions and legacy features deliberately not supported
 
@@ -975,6 +1002,31 @@ print *, [(j,j=1,10)]
   In this one, truncation is optional; it occurs by default,
   but it can be disabled via `FORT_TRUNCATE_STREAM=0` in the
   environment at execution time.
+
+* Some expression errors, like out-of-range known subscript values,
+  are noted only as warnings when they appear in code known to be
+  dead anyway at compilation time.
+
+## Behavior in cases where the standard is clear but disputed
+
+* Unless one uses `-ffast-math`, directly or by implication,
+  the parentheses in real expressions like `A+(B*C)` will prevent
+  fusing the multiplication with the addition using an "FMA"
+  operation that only rounds the final result.
+  F'2023 10.1.2.4 paragraph 2 reads "Once the interpretation of a
+  numeric intrinsic operation is established, the processor may
+  evaluate any mathematically equivalent expression, provided that
+  the integrity of parentheses is not violated."
+  This compiler honors that long-standing guarantee of the language,
+  because subclause 10.1.8 ("Integrity of parentheses") requires that
+  "any expression in parentheses shall be treated as a data entity".
+  When the calculation of the value of that data entity yields
+  `REAL` or `COMPLEX`, its kind is known, which implies rounding.
+  So one needn't worry about default compilation modes breaking
+  the parentheses in cases like `(X*X)-(Y*Y)` when they're meant
+  to prevent inconsistent rounding from the use of FMA.
+  (Parentheses prevent fusion in only 4 out of 7 other compilers,
+  so this interpretation is not portable.)
 
 ## De Facto Standard Features
 

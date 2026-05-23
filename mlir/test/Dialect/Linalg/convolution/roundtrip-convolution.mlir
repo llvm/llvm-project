@@ -73,6 +73,19 @@ func.func @conv_2d_nhwc_hwcf(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x
 
 // -----
 
+func.func @conv_2d_nhwc_hwcf_i1(%input: tensor<?x?x?x?xi1>, %filter: tensor<?x?x?x?xi1>, %output: tensor<?x?x?x?xi1>) -> tensor<?x?x?x?xi1> {
+  %0 = linalg.conv_2d_nhwc_hwcf
+         {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+         ins (%input, %filter: tensor<?x?x?x?xi1>, tensor<?x?x?x?xi1>)
+         outs (%output: tensor<?x?x?x?xi1>) -> tensor<?x?x?x?xi1>
+  return %0 : tensor<?x?x?x?xi1>
+}
+//      CHECK: @conv_2d_nhwc_hwcf_i1
+//      CHECK:   linalg.conv_2d_nhwc_hwcf
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>
+
+// -----
+
 func.func @conv_2d_nhwc_hwcf_q(%input: tensor<?x?x?x?xi8>, %filter: tensor<?x?x?x?xi8>, %output: tensor<?x?x?x?xi32>, %zp_input: i32, %zp_filter: i32) -> tensor<?x?x?x?xi32> {
   %0 = linalg.conv_2d_nhwc_hwcf_q
          {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
@@ -429,6 +442,19 @@ func.func @pooling_nhwc_max(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?xf32
 
 // -----
 
+func.func @pooling_nhwc_max_i1(%input: tensor<?x?x?x?xi1>, %filter: tensor<?x?xi1>, %output: tensor<?x?x?x?xi1>) -> tensor<?x?x?x?xi1> {
+  %0 = linalg.pooling_nhwc_max
+         {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+         ins (%input, %filter: tensor<?x?x?x?xi1>, tensor<?x?xi1>)
+         outs (%output: tensor<?x?x?x?xi1>) -> tensor<?x?x?x?xi1>
+  return %0 : tensor<?x?x?x?xi1>
+}
+//      CHECK: @pooling_nhwc_max_i1
+//      CHECK:   linalg.pooling_nhwc_max
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>
+
+// -----
+
 func.func @pooling_nhwc_min(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?xf32>, %output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
   %0 = linalg.pooling_nhwc_min
          {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
@@ -477,19 +503,6 @@ func.func @pooling_nhwc_min_unsigned_integer(%input: tensor<?x?x?x?xi32>, %filte
 }
 //      CHECK: @pooling_nhwc_min_unsigned_integer
 //      CHECK:   linalg.pooling_nhwc_min_unsigned
-// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>
-
-// -----
-
-func.func @pooling_nhwc_min_unsigned_float(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?xf32>, %output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
-  %0 = linalg.pooling_nhwc_min_unsigned
-         {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
-         ins (%input, %filter: tensor<?x?x?x?xf32>, tensor<?x?xf32>)
-         outs (%output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
-  return %0 : tensor<?x?x?x?xf32>
-}
-//      CHECK: @pooling_nhwc_min_unsigned_float
-//      CHECK:   linalg.pooling_nhwc_min
 // CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>
 
 // -----

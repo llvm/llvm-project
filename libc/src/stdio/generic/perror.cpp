@@ -12,12 +12,16 @@
 #include "src/__support/StringUtil/error_to_string.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/stderr.h"
+
+#include "hdr/types/FILE.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-static int write_out(cpp::string_view str_view, File *f) {
+static int write_out(cpp::string_view str_view, ::FILE *f) {
   if (str_view.size() > 0) {
-    auto result = f->write_unlocked(str_view.data(), str_view.size());
+    auto result = reinterpret_cast<LIBC_NAMESPACE::File *>(f)->write_unlocked(
+        str_view.data(), str_view.size());
     if (result.has_error())
       return result.error;
   }
@@ -73,9 +77,10 @@ LLVM_LIBC_FUNCTION(void, perror, (const char *str)) {
   cpp::string_view err_str = get_error_string(libc_errno);
 
   // We need to lock the stream to ensure the newline is always appended.
-  LIBC_NAMESPACE::stderr->lock();
+  LIBC_NAMESPACE::File *file = reinterpret_cast<File *>(stderr);
+  file->lock();
   write_sequence(str_view, err_str);
-  LIBC_NAMESPACE::stderr->unlock();
+  file->unlock();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

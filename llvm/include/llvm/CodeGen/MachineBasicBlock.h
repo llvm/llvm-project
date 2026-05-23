@@ -130,7 +130,9 @@ public:
     LaneBitmask LaneMask;
 
     RegisterMaskPair(MCRegister PhysReg, LaneBitmask LaneMask)
-        : PhysReg(PhysReg), LaneMask(LaneMask) {}
+        : PhysReg(PhysReg), LaneMask(LaneMask) {
+      assert(PhysReg.isPhysical());
+    }
 
     bool operator==(const RegisterMaskPair &other) const {
       return PhysReg == other.PhysReg && LaneMask == other.LaneMask;
@@ -187,6 +189,9 @@ private:
   /// as predecessor/successor, a terminator MachineInstr, or a jump table.
   bool MachineBlockAddressTaken = false;
 
+  /// Relatively stable number used for analyses.
+  unsigned AnalysisNumber = 0;
+
   /// If this MachineBasicBlock corresponds to an IR-level "blockaddress"
   /// constant, this contains a pointer to that block.
   BasicBlock *AddressTakenIRBlock = nullptr;
@@ -212,6 +217,8 @@ private:
   /// Fixed unique ID assigned to this basic block upon creation. Used with
   /// basic block sections and basic block labels.
   std::optional<UniqueBBID> BBID;
+
+  SmallVector<unsigned> PrefetchTargets;
 
   /// With basic block sections, this stores the Section ID of the basic block.
   MBBSectionID SectionID{0};
@@ -1267,6 +1274,10 @@ public:
   int getNumber() const { return Number; }
   void setNumber(int N) { Number = N; }
 
+  /// For analyses, blocks have a more stable number.
+  int getAnalysisNumber() const { return AnalysisNumber; }
+  void setAnalysisNumber(int N) { AnalysisNumber = N; }
+
   /// Return the call frame size on entry to this basic block.
   unsigned getCallFrameSize() const { return CallFrameSize; }
   /// Set the call frame size on entry to this basic block.
@@ -1362,8 +1373,8 @@ template <> struct GraphTraits<MachineBasicBlock *> {
   static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
 
   static unsigned getNumber(MachineBasicBlock *BB) {
-    assert(BB->getNumber() >= 0 && "negative block number");
-    return BB->getNumber();
+    assert(BB->getAnalysisNumber() >= 0 && "negative block number");
+    return BB->getAnalysisNumber();
   }
 };
 
@@ -1379,8 +1390,8 @@ template <> struct GraphTraits<const MachineBasicBlock *> {
   static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
 
   static unsigned getNumber(const MachineBasicBlock *BB) {
-    assert(BB->getNumber() >= 0 && "negative block number");
-    return BB->getNumber();
+    assert(BB->getAnalysisNumber() >= 0 && "negative block number");
+    return BB->getAnalysisNumber();
   }
 };
 
@@ -1405,8 +1416,8 @@ template <> struct GraphTraits<Inverse<MachineBasicBlock*>> {
   static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
 
   static unsigned getNumber(MachineBasicBlock *BB) {
-    assert(BB->getNumber() >= 0 && "negative block number");
-    return BB->getNumber();
+    assert(BB->getAnalysisNumber() >= 0 && "negative block number");
+    return BB->getAnalysisNumber();
   }
 };
 
@@ -1425,8 +1436,8 @@ template <> struct GraphTraits<Inverse<const MachineBasicBlock*>> {
   static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
 
   static unsigned getNumber(const MachineBasicBlock *BB) {
-    assert(BB->getNumber() >= 0 && "negative block number");
-    return BB->getNumber();
+    assert(BB->getAnalysisNumber() >= 0 && "negative block number");
+    return BB->getAnalysisNumber();
   }
 };
 

@@ -111,7 +111,7 @@ View the output from {self.name} here.
 
     def update_pr(self, comment_text: str, args: LintArgs, create_new: bool) -> None:
         assert args.repo is not None
-        repo = github.Github(args.token).get_repo(args.repo)
+        repo = github.Github(auth=github.Auth.Token(args.token)).get_repo(args.repo)
         pr = repo.get_issue(args.issue_number).as_pull_request()
 
         comment_text = f"{self.comment_tag}\n\n{comment_text}"
@@ -296,7 +296,7 @@ class Doc8LintHelper(LintHelper):
     friendly_name: Final = "RST documentation linter"
 
     def instructions(self, files_to_lint: Iterable[str], args: LintArgs) -> str:
-        return f"doc8 -q {' '.join(files_to_lint)}"
+        return f"doc8 -q {' '.join(files_to_lint)} --config clang-tools-extra/clang-tidy/doc8.ini"
 
     def create_comment_text(
         self, linter_output: str, files_to_lint: Sequence[str], args: LintArgs
@@ -326,7 +326,12 @@ class Doc8LintHelper(LintHelper):
         if not files_to_lint:
             return ""
 
-        doc8_cmd = [args.doc8_binary, "-q"]
+        doc8_cmd = [
+            args.doc8_binary,
+            "-q",
+            "--config",
+            "clang-tools-extra/clang-tidy/doc8.ini",
+        ]
         doc8_cmd.extend(files_to_lint)
 
         if args.verbose:

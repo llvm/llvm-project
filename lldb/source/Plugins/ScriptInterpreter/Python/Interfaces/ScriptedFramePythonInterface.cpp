@@ -6,15 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lldb-python.h"
+
 #include "lldb/Host/Config.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
-
-#if LLDB_ENABLE_PYTHON
-
-// LLDB Python header must be included first
-#include "../lldb-python.h"
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
@@ -36,9 +33,9 @@ ScriptedFramePythonInterface::CreatePluginObject(
     StructuredData::DictionarySP args_sp, StructuredData::Generic *script_obj) {
   ExecutionContextRefSP exe_ctx_ref_sp =
       std::make_shared<ExecutionContextRef>(exe_ctx);
-  StructuredDataImpl sd_impl(args_sp);
-  return ScriptedPythonInterface::CreatePluginObject(class_name, script_obj,
-                                                     exe_ctx_ref_sp, sd_impl);
+  ScriptedMetadata scripted_metadata(class_name, args_sp);
+  return ScriptedPythonInterface::CreatePluginObject(
+      scripted_metadata, script_obj, exe_ctx_ref_sp, args_sp);
 }
 
 lldb::user_id_t ScriptedFramePythonInterface::GetID() {
@@ -154,4 +151,30 @@ std::optional<std::string> ScriptedFramePythonInterface::GetRegisterContext() {
   return obj->GetAsString()->GetValue().str();
 }
 
-#endif
+lldb::ValueObjectListSP ScriptedFramePythonInterface::GetVariables() {
+  Status error;
+  auto vals = Dispatch<lldb::ValueObjectListSP>("get_variables", error);
+
+  if (error.Fail()) {
+    return ErrorWithMessage<lldb::ValueObjectListSP>(LLVM_PRETTY_FUNCTION,
+                                                     error.AsCString(), error);
+  }
+
+  return vals;
+}
+
+lldb::ValueObjectSP
+ScriptedFramePythonInterface::GetValueObjectForVariableExpression(
+    llvm::StringRef expr, uint32_t options, Status &status) {
+  Status dispatch_error;
+  auto val = Dispatch<lldb::ValueObjectSP>("get_value_for_variable_expression",
+                                           dispatch_error, expr.data(), options,
+                                           status);
+
+  if (dispatch_error.Fail()) {
+    return ErrorWithMessage<lldb::ValueObjectSP>(
+        LLVM_PRETTY_FUNCTION, dispatch_error.AsCString(), dispatch_error);
+  }
+
+  return val;
+}

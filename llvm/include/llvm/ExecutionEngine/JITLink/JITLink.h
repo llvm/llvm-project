@@ -525,7 +525,7 @@ public:
 
   /// Rename this symbol. The client is responsible for updating scope and
   /// linkage if this name-change requires it.
-  void setName(const orc::SymbolStringPtr Name) { this->Name = Name; }
+  void setName(orc::SymbolStringPtr Name) { this->Name = std::move(Name); }
 
   /// Returns true if this Symbol has content (potentially) defined within this
   /// object file (i.e. is anything but an external or absolute symbol).
@@ -879,7 +879,7 @@ private:
 class LinkGraph {
 private:
   using SectionMap = DenseMap<StringRef, std::unique_ptr<Section>>;
-  using ExternalSymbolMap = StringMap<Symbol *>;
+  using ExternalSymbolMap = DenseMap<orc::NonOwningSymbolStringPtr, Symbol *>;
   using AbsoluteSymbolSet = DenseSet<Symbol *>;
   using BlockSet = DenseSet<Block *>;
 
@@ -1293,11 +1293,13 @@ public:
   Symbol &addExternalSymbol(orc::SymbolStringPtr Name,
                             orc::ExecutorAddrDiff Size,
                             bool IsWeaklyReferenced) {
-    assert(!ExternalSymbols.contains(*Name) && "Duplicate external symbol");
+    assert(!ExternalSymbols.contains(orc::NonOwningSymbolStringPtr(Name)) &&
+           "Duplicate external symbol");
     auto &Sym = Symbol::constructExternal(
         Allocator, createAddressable(orc::ExecutorAddr(), false),
         std::move(Name), Size, Linkage::Strong, IsWeaklyReferenced);
-    ExternalSymbols.insert({*Sym.getName(), &Sym});
+    ExternalSymbols.insert(
+        {orc::NonOwningSymbolStringPtr(Sym.getName()), &Sym});
     return Sym;
   }
 
@@ -1468,7 +1470,8 @@ public:
       Sec.removeSymbol(Sym);
       Sym.makeExternal(createAddressable(orc::ExecutorAddr(), false));
     }
-    ExternalSymbols.insert({*Sym.getName(), &Sym});
+    ExternalSymbols.insert(
+        {orc::NonOwningSymbolStringPtr(Sym.getName()), &Sym});
   }
 
   /// Make the given symbol an absolute with the given address (must not already
@@ -1482,10 +1485,11 @@ public:
   void makeAbsolute(Symbol &Sym, orc::ExecutorAddr Address) {
     assert(!Sym.isAbsolute() && "Symbol is already absolute");
     if (Sym.isExternal()) {
-      assert(ExternalSymbols.contains(*Sym.getName()) &&
+      assert(ExternalSymbols.contains(
+                 orc::NonOwningSymbolStringPtr(Sym.getName())) &&
              "Sym is not in the absolute symbols set");
       assert(Sym.getOffset() == 0 && "External is not at offset 0");
-      ExternalSymbols.erase(*Sym.getName());
+      ExternalSymbols.erase(orc::NonOwningSymbolStringPtr(Sym.getName()));
       auto &A = Sym.getAddressable();
       A.setAbsolute(true);
       A.setAddress(Address);
@@ -1510,9 +1514,10 @@ public:
              "Symbol is not in the absolutes set");
       AbsoluteSymbols.erase(&Sym);
     } else {
-      assert(ExternalSymbols.contains(*Sym.getName()) &&
+      assert(ExternalSymbols.contains(
+                 orc::NonOwningSymbolStringPtr(Sym.getName())) &&
              "Symbol is not in the externals set");
-      ExternalSymbols.erase(*Sym.getName());
+      ExternalSymbols.erase(orc::NonOwningSymbolStringPtr(Sym.getName()));
     }
     Addressable &OldBase = *Sym.Base;
     Sym.setBlock(Content);
@@ -1597,9 +1602,10 @@ public:
   void removeExternalSymbol(Symbol &Sym) {
     assert(!Sym.isDefined() && !Sym.isAbsolute() &&
            "Sym is not an external symbol");
-    assert(ExternalSymbols.contains(*Sym.getName()) &&
+    assert(ExternalSymbols.contains(
+               orc::NonOwningSymbolStringPtr(Sym.getName())) &&
            "Symbol is not in the externals set");
-    ExternalSymbols.erase(*Sym.getName());
+    ExternalSymbols.erase(orc::NonOwningSymbolStringPtr(Sym.getName()));
     Addressable &Base = *Sym.Base;
     assert(llvm::none_of(external_symbols(),
                          [&](Symbol *AS) { return AS->Base == &Base; }) &&
@@ -1675,7 +1681,6 @@ private:
   SubtargetFeatures Features;
   GetEdgeKindNameFunction GetEdgeKindName = nullptr;
   DenseMap<StringRef, std::unique_ptr<Section>> Sections;
-  // FIXME(jared): these should become dense maps
   ExternalSymbolMap ExternalSymbols;
   AbsoluteSymbolSet AbsoluteSymbols;
   orc::shared::AllocActions AAs;

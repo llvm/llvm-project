@@ -64,7 +64,7 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, ptr addrspace(3) 
 ; GFX9-NEXT:    v_add_u32_e32 v4, v4, v0
 ; GFX9-NEXT:    v_and_b32_e32 v5, 0xffffff, v6
 ; GFX9-NEXT:    v_lshl_add_u32 v6, v4, 2, v3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v7, v7
+; GFX9-NEXT:    v_rcp_f32_e32 v7, v7
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 2, v2
 ; GFX9-NEXT:    v_add_u32_e32 v9, v17, v12
 ; GFX9-NEXT:    s_mov_b64 s[10:11], 0
@@ -120,7 +120,7 @@ bb19:                                             ; preds = %bb
 bb23:                                             ; preds = %bb19, %bb23
   %tmp24 = phi i32 [ %arg, %bb19 ], [ %tmp47, %bb23 ]
   %tmp25 = uitofp i32 %tmp24 to float
-  %tmp26 = tail call float @llvm.fmuladd.f32(float %tmp25, float %tmp21, float 0x3EE4F8B580000000) #2
+  %tmp26 = tail call float @llvm.fmuladd.f32(float %tmp25, float %tmp21, float 0x3EE4F8B580000000)
   %tmp27 = fptoui float %tmp26 to i32
   %tmp28 = and i32 %tmp27, 16777215
   %tmp29 = mul i32 %tmp28, %tmp22
@@ -263,8 +263,8 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
 declare void @foo(i32) #2
 declare float @llvm.fmuladd.f32(float, float, float) #1
 
-attributes #0 = { nounwind willreturn "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { nounwind willreturn denormal_fpenv(float: preservesign) }
 attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #2 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" denormal_fpenv(float: preservesign) }
 
 !0 = !{float 2.500000e+00}

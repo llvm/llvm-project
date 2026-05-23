@@ -1193,6 +1193,7 @@ static bool isExportedFromModuleInterfaceUnit(const NamedDecl *D) {
   case Decl::ModuleOwnershipKind::Unowned:
   case Decl::ModuleOwnershipKind::ReachableWhenImported:
   case Decl::ModuleOwnershipKind::ModulePrivate:
+  case Decl::ModuleOwnershipKind::VisiblePromoted:
     return false;
   case Decl::ModuleOwnershipKind::Visible:
   case Decl::ModuleOwnershipKind::VisibleWhenImported:
@@ -1791,13 +1792,18 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       }
       else
         OS << *ND;
-    } else if (const auto *RD = dyn_cast<RecordDecl>(DC)) {
-      if (TypedefNameDecl *TD = RD->getTypedefNameForAnonDecl())
-        OS << *TD;
-      else if (!RD->getIdentifier())
-        OS << "(anonymous " << RD->getKindName() << ')';
-      else
-        OS << *RD;
+    } else if (const auto *RD = llvm::dyn_cast<RecordDecl>(DC)) {
+      PrintingPolicy Copy(P);
+      // As part of a scope we want to print anonymous names as:
+      // ..::(anonymous struct)::..
+      //
+      // I.e., suppress tag locations, suppress leading keyword, *don't*
+      // suppress tag in name
+      Copy.SuppressTagKeyword = true;
+      Copy.SuppressTagKeywordInAnonNames = false;
+      Copy.AnonymousTagNameStyle =
+          llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
+      RD->printName(OS, Copy);
     } else if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {
       const FunctionProtoType *FT = nullptr;
       if (FD->hasWrittenPrototype())
@@ -1987,8 +1993,10 @@ bool NamedDecl::isCXXInstanceMember() const {
 
 template <typename DeclT>
 static SourceLocation getTemplateOrInnerLocStart(const DeclT *decl) {
-  if (decl->getNumTemplateParameterLists() > 0)
-    return decl->getTemplateParameterList(0)->getTemplateLoc();
+  if (ArrayRef<TemplateParameterList *> TPLs =
+          decl->getTemplateParameterLists();
+      !TPLs.empty())
+    return TPLs.front()->getTemplateLoc();
   return decl->getInnerLocStart();
 }
 
@@ -2058,48 +2066,12 @@ SourceLocation DeclaratorDecl::getOuterLocStart() const {
   return getTemplateOrInnerLocStart(this);
 }
 
-// Helper function: returns true if QT is or contains a type
-// having a postfix component.
-static bool typeIsPostfix(QualType QT) {
-  while (true) {
-    const Type* T = QT.getTypePtr();
-    switch (T->getTypeClass()) {
-    default:
-      return false;
-    case Type::Pointer:
-      QT = cast<PointerType>(T)->getPointeeType();
-      break;
-    case Type::BlockPointer:
-      QT = cast<BlockPointerType>(T)->getPointeeType();
-      break;
-    case Type::MemberPointer:
-      QT = cast<MemberPointerType>(T)->getPointeeType();
-      break;
-    case Type::LValueReference:
-    case Type::RValueReference:
-      QT = cast<ReferenceType>(T)->getPointeeType();
-      break;
-    case Type::PackExpansion:
-      QT = cast<PackExpansionType>(T)->getPattern();
-      break;
-    case Type::Paren:
-    case Type::ConstantArray:
-    case Type::DependentSizedArray:
-    case Type::IncompleteArray:
-    case Type::VariableArray:
-    case Type::FunctionProto:
-    case Type::FunctionNoProto:
-      return true;
-    }
-  }
-}
-
 SourceRange DeclaratorDecl::getSourceRange() const {
   SourceLocation RangeEnd = getLocation();
   if (TypeSourceInfo *TInfo = getTypeSourceInfo()) {
     // If the declaration has no name or the type extends past the name take the
     // end location of the type.
-    if (!getDeclName() || typeIsPostfix(TInfo->getType()))
+    if (!getDeclName() || TInfo->getType().hasPostfixDeclaratorSyntax())
       RangeEnd = TInfo->getTypeLoc().getSourceRange().getEnd();
   }
   return SourceRange(getOuterLocStart(), RangeEnd);
@@ -2944,6 +2916,33 @@ VarDecl::setInstantiationOfStaticDataMember(VarDecl *VD,
   assert(getASTContext().getTemplateOrSpecializationInfo(this).isNull() &&
          "Previous template or instantiation?");
   getASTContext().setInstantiatedFromStaticDataMember(this, VD, TSK);
+}
+
+void VarDecl::assignAddressSpace(const ASTContext &Ctxt, LangAS AS) {
+  QualType Type = getType();
+  if (Type.hasAddressSpace())
+    return;
+  if (Type->isDependentType())
+    return;
+  if (Type->isSamplerT() || Type->isVoidType())
+    return;
+  assert(isa<ParmVarDecl>(this) || isa<ImplicitParamDecl>(this)
+             ? !Type->isArrayType()
+             : !isa<DecayedType>(Type));
+  Type = Ctxt.getAddrSpaceQualType(Type, AS);
+  // Apply any qualifiers (including address space) from the array type to
+  // the element type. This implements C99 6.7.3p8: "If the specification of
+  // an array type includes any type qualifiers, the element type is so
+  // qualified, not the array type."
+  if (Type->isArrayType())
+    Type = QualType(Ctxt.getAsArrayType(Type), 0);
+  setType(Type);
+}
+
+void VarDecl::deduceParmAddressSpace(const ASTContext &Ctxt) {
+  assert(isa<ParmVarDecl>(this) || isa<ImplicitParamDecl>(this));
+  if (Ctxt.getLangOpts().OpenCL)
+    assignAddressSpace(Ctxt, LangAS::opencl_private);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4956,19 +4955,81 @@ void TagDecl::setQualifierInfo(NestedNameSpecifierLoc QualifierLoc) {
   }
 }
 
+void TagDecl::printAnonymousTagDeclLocation(
+    llvm::raw_ostream &OS, const PrintingPolicy &Policy) const {
+  PresumedLoc PLoc =
+      getASTContext().getSourceManager().getPresumedLoc(getLocation());
+  if (!PLoc.isValid())
+    return;
+
+  OS << " at ";
+  StringRef File = PLoc.getFilename();
+  llvm::SmallString<1024> WrittenFile(File);
+  if (auto *Callbacks = Policy.Callbacks)
+    WrittenFile = Callbacks->remapPath(File);
+  // Fix inconsistent path separator created by
+  // clang::DirectoryLookup::LookupFile when the file path is relative
+  // path.
+  llvm::sys::path::Style Style =
+      llvm::sys::path::is_absolute(WrittenFile)
+          ? llvm::sys::path::Style::native
+          : (Policy.MSVCFormatting ? llvm::sys::path::Style::windows_backslash
+                                   : llvm::sys::path::Style::posix);
+  llvm::sys::path::native(WrittenFile, Style);
+  OS << WrittenFile << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
+}
+
+void TagDecl::printAnonymousTagDecl(llvm::raw_ostream &OS,
+                                    const PrintingPolicy &Policy) const {
+  if (TypedefNameDecl *Typedef = getTypedefNameForAnonDecl()) {
+    assert(Typedef->getIdentifier() && "Typedef without identifier?");
+    OS << Typedef->getIdentifier()->getName();
+    return;
+  }
+
+  bool SuppressTagKeywordInName = Policy.SuppressTagKeywordInAnonNames;
+
+  // Emit leading keyword. Since we printed a leading keyword make sure we
+  // don't print the tag as part of the name too.
+  if (!Policy.SuppressTagKeyword) {
+    OS << getKindName() << ' ';
+    SuppressTagKeywordInName = true;
+  }
+
+  // Make an unambiguous representation for anonymous types, e.g.
+  //   (anonymous enum at /usr/include/string.h:120:9)
+  OS << (Policy.MSVCFormatting ? '`' : '(');
+
+  if (isa<CXXRecordDecl>(this) && cast<CXXRecordDecl>(this)->isLambda()) {
+    OS << "lambda";
+    SuppressTagKeywordInName = true;
+  } else if ((isa<RecordDecl>(this) &&
+              cast<RecordDecl>(this)->isAnonymousStructOrUnion())) {
+    OS << "anonymous";
+  } else {
+    OS << "unnamed";
+  }
+
+  if (!SuppressTagKeywordInName)
+    OS << ' ' << getKindName();
+
+  if (Policy.AnonymousTagNameStyle ==
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::SourceLocation))
+    printAnonymousTagDeclLocation(OS, Policy);
+
+  OS << (Policy.MSVCFormatting ? '\'' : ')');
+}
+
 void TagDecl::printName(raw_ostream &OS, const PrintingPolicy &Policy) const {
   DeclarationName Name = getDeclName();
   // If the name is supposed to have an identifier but does not have one, then
   // the tag is anonymous and we should print it differently.
   if (Name.isIdentifier() && !Name.getAsIdentifierInfo()) {
-    // If the caller wanted to print a qualified name, they've already printed
-    // the scope. And if the caller doesn't want that, the scope information
-    // is already printed as part of the type.
-    PrintingPolicy Copy(Policy);
-    Copy.SuppressScope = true;
-    QualType(getASTContext().getCanonicalTagType(this)).print(OS, Copy);
+    printAnonymousTagDecl(OS, Policy);
+
     return;
   }
+
   // Otherwise, do the normal printing.
   Name.print(OS, Policy);
 }
@@ -5535,14 +5596,19 @@ void ImplicitParamDecl::anchor() {}
 
 ImplicitParamDecl *ImplicitParamDecl::Create(ASTContext &C, DeclContext *DC,
                                              SourceLocation IdLoc,
-                                             IdentifierInfo *Id, QualType Type,
+                                             const IdentifierInfo *Id,
+                                             QualType Type,
                                              ImplicitParamKind ParamKind) {
-  return new (C, DC) ImplicitParamDecl(C, DC, IdLoc, Id, Type, ParamKind);
+  auto *Parm = new (C, DC) ImplicitParamDecl(C, DC, IdLoc, Id, Type, ParamKind);
+  Parm->deduceParmAddressSpace(C);
+  return Parm;
 }
 
 ImplicitParamDecl *ImplicitParamDecl::Create(ASTContext &C, QualType Type,
                                              ImplicitParamKind ParamKind) {
-  return new (C, nullptr) ImplicitParamDecl(C, Type, ParamKind);
+  auto *Parm = new (C, nullptr) ImplicitParamDecl(C, Type, ParamKind);
+  Parm->deduceParmAddressSpace(C);
+  return Parm;
 }
 
 ImplicitParamDecl *ImplicitParamDecl::CreateDeserialized(ASTContext &C,
@@ -5760,7 +5826,7 @@ TypeAliasDecl *TypeAliasDecl::CreateDeserialized(ASTContext &C,
 SourceRange TypedefDecl::getSourceRange() const {
   SourceLocation RangeEnd = getLocation();
   if (TypeSourceInfo *TInfo = getTypeSourceInfo()) {
-    if (typeIsPostfix(TInfo->getType()))
+    if (TInfo->getType().hasPostfixDeclaratorSyntax())
       RangeEnd = TInfo->getTypeLoc().getSourceRange().getEnd();
   }
   return SourceRange(getBeginLoc(), RangeEnd);

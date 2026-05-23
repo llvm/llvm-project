@@ -280,6 +280,9 @@ def parseOptionsAndInitTestdirs():
         configuration.llvm_tools_dir = args.llvm_tools_dir
         configuration.filecheck = shutil.which("FileCheck", path=args.llvm_tools_dir)
         configuration.yaml2obj = shutil.which("yaml2obj", path=args.llvm_tools_dir)
+        configuration.nm = shutil.which(
+            "llvm-nm", path=args.llvm_tools_dir
+        ) or shutil.which("nm", path=args.llvm_tools_dir)
 
     if not configuration.get_filecheck_path():
         logging.warning("No valid FileCheck executable; some tests may fail...")
@@ -335,12 +338,9 @@ def parseOptionsAndInitTestdirs():
     if args.triple:
         configuration.triple = args.triple
 
-    if args.arch:
-        configuration.arch = args.arch
-    elif args.triple:
-        configuration.arch = args.triple.split("-")[0]
-    else:
-        configuration.arch = platform_machine
+    configuration.arch = (
+        configuration.triple.split("-")[0] if configuration.triple else platform_machine
+    )
 
     if args.categories_list:
         configuration.categories_list = set(
@@ -466,6 +466,12 @@ def parseOptionsAndInitTestdirs():
     if args.enabled_plugins:
         configuration.enabled_plugins = args.enabled_plugins
 
+    if args.enable_mte:
+        configuration.mte_enabled = True
+
+    if args.arm64e_debugserver:
+        configuration.arm64e_debugserver = True
+
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
         configuration.testdirs = [
@@ -566,7 +572,9 @@ def setupSysPath():
 
     lldbDir = os.path.dirname(lldbtest_config.lldbExec)
 
-    lldbDAPExec = os.path.join(lldbDir, "lldb-dap")
+    lldbDAPExec = os.path.join(
+        lldbDir, "lldb-dap.exe" if sys.platform == "win32" else "lldb-dap"
+    )
     if is_exe(lldbDAPExec):
         os.environ["LLDBDAP_EXEC"] = lldbDAPExec
 
@@ -1081,8 +1089,8 @@ def run_suite():
             % (configuration.lldb_platform_working_dir)
         )
         error = lldb.remote_platform.MakeDirectory(
-            configuration.lldb_platform_working_dir, 448
-        )  # 448 = 0o700
+            configuration.lldb_platform_working_dir, 0o700
+        )
         if error.Fail():
             raise Exception(
                 "making remote directory '%s': %s"

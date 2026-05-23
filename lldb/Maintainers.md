@@ -195,6 +195,9 @@ jonas@devlieghere.com (email), [jdevlieghere](https://github.com/jdevlieghere) (
 Ed Maste
 emaste@freebsd.org (email), [emaste](https://github.com/emaste) (GitHub), [emaste](https://discourse.llvm.org/u/emaste) (Discourse), emaste (Discord)
 
+Minsoo Choo
+minsoochoo0122@proton.me (email), mchoo7 (GitHub), mchoo (Discourse), minsoochoo (Discord)
+
 #### Linux
 
 Pavel Labath
@@ -207,6 +210,12 @@ david.spickett@arm.com (email), [DavidSpickett](https://github.com/DavidSpickett
 
 Omair Javaid
 omair.javaid@linaro.org (email), [omjavaid](https://github.com/omjavaid) (GitHub), [omjavaid](https://discourse.llvm.org/u/omjavaid) (Discourse), omjavaid#9902 (Discord)
+
+Charles Zablit
+c_zablit@apple.com (email), [charles-zablit](https://github.com/charles-zablit) (GitHub), [charles-zablit](https://discourse.llvm.org/u/charles-zablit/) (Discourse)
+
+Nerixyz
+nerixdev@outlook.de (email), [Nerixyz](https://github.com/Nerixyz) (GitHub), [Nerixyz](https://discourse.llvm.org/u/Nerixyz/) (Discourse)
 
 ### Tools
 
@@ -227,11 +236,14 @@ pavel@labath.sk (email), [labath](https://github.com/labath) (GitHub), [labath](
 
 #### lldb-dap
 
-Greg Clayton
-gclayton@fb.com (email), [clayborg](https://github.com/clayborg) (GitHub), [clayborg](https://discourse.llvm.org/u/clayborg) (Discourse)
-
 Walter Erquinigo
 a20012251@gmail.com (email), [walter-erquinigo](https://github.com/walter-erquinigo) (GitHub), [wallace](https://discourse.llvm.org/u/wallace) (Discourse), werquinigo (Discord)
+
+Ebuka Ezike
+yerimyah1@gmail.com (email), [da-viper](https://github.com/da-viper) (GitHub), [da-viper](https://discourse.llvm.org/u/da-viper) (Discourse)
+
+John Harrison
+harjohn@google.com (email), [ashgti](https://github.com/ashgti) (GitHub), [ashgti](https://discourse.llvm.org/u/ashgti) (Discourse)
 
 ## Former Maintainers
 

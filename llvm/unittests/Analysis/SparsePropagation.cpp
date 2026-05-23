@@ -278,12 +278,12 @@ TEST_F(SparsePropagationTest, MarkBlockExecutable) {
 /// @gv = internal global i64
 ///
 /// define internal void @f() {
-///   store i64 1, i64* @gv
+///   store i64 1, ptr @gv
 ///   ret void
 /// }
 ///
 /// define internal void @g() {
-///   store i64 1, i64* @gv
+///   store i64 1, ptr @gv
 ///   ret void
 /// }
 ///
@@ -319,12 +319,12 @@ TEST_F(SparsePropagationTest, GlobalVariableConstant) {
 /// @gv = internal global i64
 ///
 /// define internal void @f() {
-///   store i64 0, i64* @gv
+///   store i64 0, ptr @gv
 ///   ret void
 /// }
 ///
 /// define internal void @g() {
-///   store i64 1, i64* @gv
+///   store i64 1, ptr @gv
 ///   ret void
 /// }
 ///

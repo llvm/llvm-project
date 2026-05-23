@@ -13,8 +13,6 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 #define LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 
-#include "llvm/Analysis/IVDescriptors.h"
-#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -37,6 +35,7 @@ class MemoryAccess;
 class MemorySSA;
 class MemorySSAUpdater;
 class OptimizationRemarkEmitter;
+struct PointerDiffInfo;
 class PredIteratorCache;
 class ScalarEvolution;
 class SCEV;
@@ -307,6 +306,13 @@ enum TransformationMode {
   TM_SuppressedByUser = TM_Disable | TM_Force
 };
 
+/// Return a short prefix describing the loop's vectorizer origin based on
+/// the \c llvm.loop.vectorize.body and \c llvm.loop.vectorize.epilogue
+/// metadata.  The result is one of \c "vectorized epilogue ", \c "vectorized ",
+/// \c "epilogue ", or \c "" (empty) and is intended to be prepended to
+/// loop-kind tokens in optimization remarks.
+LLVM_ABI StringRef getLoopVectorizeKindPrefix(const Loop *L);
+
 /// @{
 /// Get the mode for LLVM's supported loop transformations.
 LLVM_ABI TransformationMode hasUnrollTransformation(const Loop *L);
@@ -360,7 +366,19 @@ getLoopEstimatedTripCount(Loop *L,
 /// - Set the branch weight metadata of \p L to reflect that \p L has an
 ///   estimated \p EstimatedTripCount iterations and has
 ///   \c *EstimatedLoopInvocationWeight exit weight through the loop's latch.
-/// - If \p EstimatedTripCount is zero, zero the branch weights.
+/// - If \p EstimatedTripCount is zero, set the backedge weight to 0 and exit
+///   edge to 1. The \p EstimatedTripCount is relative to the original loop
+///   entry, but the branch weights are encoding the probabilities of the
+///   true/false edges. The latter cannot validly be 0-0, because *if* the
+///   control flow arrived here, one of the branches *must* be taken. Moreover,
+///   BranchProbabilityInfo treats 0-0 branch weights as if they were 1-1.
+///   Assuming accurate profile information, a 0 \p EstimatedTripCount should
+///   correspond to a very low, or 0, BFI for the loop body. This should mean
+///   that the BPI info leading to the loop also gives a very low, or 0,
+///   probability to arriving there. If that probability is not exactly 0, 0-0
+///   branch weights would raise the BFI of the loop (as it would really be
+///   treated as 1-1). With the 0-1 (i.e. 100% exit) encoding, the BFI stays as
+///   low as the rest of the CFG's BPI dictates.
 ///
 /// TODO: Eventually, once all passes have migrated away from setting branch
 /// weights to indicate estimated trip counts, this function will drop the
@@ -392,15 +410,21 @@ bool setLoopProbability(Loop *L, BranchProbability P);
 /// - The probability \c P that control flows from \p B to its first target
 ///   label such that `1 - P` is the probability of control flowing to its
 ///   second target label, or vice-versa if \p ForFirstTarget is false.
-BranchProbability getBranchProbability(BranchInst *B, bool ForFirstTarget);
+BranchProbability getBranchProbability(CondBrInst *B, bool ForFirstTarget);
+
+/// Calculates the edge probability from Src to Dst.
+/// Dst has to be a successor to Src.
+/// This uses branch_weights metadata directly. If data are missing or
+/// probability cannot be computed, then unknown probability is returned.
+/// This does not use BranchProbabilityInfo and the values computed by this
+/// will vary from BPI because BPI has its own more advanced heuristics to
+/// determine probabilities even without branch_weights metadata.
+BranchProbability getBranchProbability(BasicBlock *Src, BasicBlock *Dst);
 
 /// Set branch weight metadata for \p B to indicate that \p P and `1 - P` are
 /// the probabilities of control flowing to its first and second target labels,
-/// respectively, or vice-versa if \p ForFirstTarget is false.  Return false if
-/// the implementation cannot set the probability (e.g., \p B must have exactly
-/// two target labels, so it must be a conditional branch).  Otherwise, return
-/// true.
-bool setBranchProbability(BranchInst *B, BranchProbability P,
+/// respectively, or vice-versa if \p ForFirstTarget is false.
+void setBranchProbability(CondBrInst *B, BranchProbability P,
                           bool ForFirstTarget);
 
 /// Check inner loop (L) backedge count is known to be invariant on all
@@ -430,6 +454,18 @@ LLVM_ABI bool canSinkOrHoistInst(Instruction &I, AAResults *AA,
                                  bool TargetExecutesOncePerLoop,
                                  SinkAndHoistLICMFlags &LICMFlags,
                                  OptimizationRemarkEmitter *ORE = nullptr);
+
+/// Returns true if it is legal to hoist \p LI out of \p CurLoop. This is the
+/// load-specific subset of \c canSinkOrHoistInst: it rejects volatile or
+/// ordered loads, allows constant-memory / invariant.load / invariant.start-
+/// dominated loads unconditionally, and otherwise queries \p MSSA for an
+/// in-loop clobber. \p TargetExecutesOncePerLoop has the same meaning as in
+/// \c canSinkOrHoistInst (set to true when hoisting to the preheader).
+LLVM_ABI bool canHoistLoad(LoadInst &LI, AAResults *AA, DominatorTree *DT,
+                           Loop *CurLoop, MemorySSA &MSSA,
+                           bool TargetExecutesOncePerLoop,
+                           SinkAndHoistLICMFlags &LICMFlags,
+                           OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Returns the llvm.vector.reduce intrinsic that corresponds to the recurrence
 /// kind.
@@ -474,6 +510,16 @@ LLVM_ABI Value *getOrderedReduction(IRBuilderBase &Builder, Value *Acc,
                                     Value *Src, unsigned Op,
                                     RecurKind MinMaxKind = RecurKind::None);
 
+/// Expand a scalable vector reduction into a runtime loop that applies
+/// \p RdxOpcode element by element, starting from \p Acc as the initial
+/// accumulator value (typically the reduction identity).
+/// If \p DT and/or \p LI are provided, they are updated to reflect the
+/// new basic blocks.
+LLVM_ABI Value *expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
+                                       unsigned RdxOpcode, Value *Acc,
+                                       DominatorTree *DT = nullptr,
+                                       LoopInfo *LI = nullptr);
+
 /// Generates a vector reduction using shufflevectors to reduce the value.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
 LLVM_ABI Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src,
@@ -497,12 +543,6 @@ LLVM_ABI Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
 /// RecurKind::AnyOf. The start value of the reduction is \p InitVal.
 LLVM_ABI Value *createAnyOfReduction(IRBuilderBase &B, Value *Src,
                                      Value *InitVal, PHINode *OrigPhi);
-
-/// Create a reduction of the given vector \p Src for a reduction of the
-/// kind RecurKind::FindLastIV.
-LLVM_ABI Value *createFindLastIVReduction(IRBuilderBase &B, Value *Src,
-                                          RecurKind RdxKind, Value *Start,
-                                          Value *Sentinel);
 
 /// Create an ordered reduction intrinsic using the given recurrence
 /// kind \p RdxKind.

@@ -934,7 +934,7 @@ private:
         __compare_(std::forward<_CompArg>(__comp)...) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool __is_sorted_and_unique(auto&& __key_container) const {
-    auto __greater_or_equal_to = [this](const auto& __x, const auto& __y) { return !__compare_(__x, __y); };
+    auto __greater_or_equal_to = [this](const auto& __x, const auto& __y) -> bool { return !__compare_(__x, __y); };
     return ranges::adjacent_find(__key_container, __greater_or_equal_to) == ranges::end(__key_container);
   }
 
@@ -967,7 +967,7 @@ private:
       auto __zv                  = ranges::views::zip(__containers_.keys, __containers_.values);
       auto __append_start_offset = __containers_.keys.size() - __num_of_appended;
       auto __end                 = __zv.end();
-      auto __compare_key         = [this](const auto& __p1, const auto& __p2) {
+      auto __compare_key         = [this](const auto& __p1, const auto& __p2) -> bool {
         return __compare_(std::get<0>(__p1), std::get<0>(__p2));
       };
       if constexpr (!_WasSorted) {

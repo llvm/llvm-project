@@ -351,6 +351,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
                                                   : "--lto=full");
 
+  if (Args.hasFlag(options::OPT_ffat_lto_objects,
+                   options::OPT_fno_fat_lto_objects, false))
+    CmdArgs.push_back("--fat-lto-objects");
+
   AddLTOFlag("-emit-jump-table-sizes-section");
 
   if (UseJMC)
@@ -556,8 +560,10 @@ Tool *toolchains::PS5CPU::buildLinker() const {
   return new tools::PS5cpu::Linker(*this);
 }
 
-SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers() const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers(
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -565,8 +571,10 @@ SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers() const {
   return Res;
 }
 
-SanitizerMask toolchains::PS5CPU::getSupportedSanitizers() const {
-  SanitizerMask Res = PS4PS5Base::getSupportedSanitizers();
+SanitizerMask toolchains::PS5CPU::getSupportedSanitizers(
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      PS4PS5Base::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Thread;
   return Res;
 }

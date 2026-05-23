@@ -174,8 +174,8 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTPOP, MVT::i32, Custom);
   setOperationAction(ISD::CTTZ, MVT::i32, Expand);
   setOperationAction(ISD::CTLZ, MVT::i32, Expand);
-  setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Expand);
-  setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Expand);
+  setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::i32, Expand);
+  setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::i32, Expand);
 
   setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, MVT::i32,
                      Subtarget.hasMINMAX() ? Legal : Expand);
@@ -964,7 +964,7 @@ SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
         isShiftedInt<8, 8>(Value))
       return Op;
     Type *Ty = Type::getInt32Ty(*DAG.getContext());
-    Constant *CV = ConstantInt::get(Ty, Value);
+    Constant *CV = ConstantInt::getSigned(Ty, Value);
     SDValue CP = DAG.getConstantPool(CV, MVT::i32);
     SDValue Res =
         DAG.getLoad(MVT::i32, DL, DAG.getEntryNode(), CP, MachinePointerInfo());
@@ -1512,7 +1512,7 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
 }
 
 TargetLowering::AtomicExpansionKind
-XtensaTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+XtensaTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   return AtomicExpansionKind::CmpXChg;
 }
 

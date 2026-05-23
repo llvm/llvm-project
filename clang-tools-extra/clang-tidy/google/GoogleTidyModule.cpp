@@ -8,7 +8,8 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
+#include "../misc/AnonymousNamespaceInHeaderCheck.h"
+#include "../misc/ExplicitConstructorCheck.h"
 #include "../modernize/AvoidCStyleCastCheck.h"
 #include "../readability/BracesAroundStatementsCheck.h"
 #include "../readability/FunctionSizeCheck.h"
@@ -17,7 +18,6 @@
 #include "AvoidThrowingObjCExceptionCheck.h"
 #include "AvoidUnderscoreInGoogletestNameCheck.h"
 #include "DefaultArgumentsCheck.h"
-#include "ExplicitConstructorCheck.h"
 #include "ExplicitMakePairCheck.h"
 #include "FloatTypesCheck.h"
 #include "FunctionNamingCheck.h"
@@ -26,7 +26,6 @@
 #include "IntegerTypesCheck.h"
 #include "OverloadedUnaryAndCheck.h"
 #include "TodoCommentCheck.h"
-#include "UnnamedNamespaceInHeaderCheck.h"
 #include "UpgradeGoogletestCaseCheck.h"
 #include "UsingNamespaceDirectiveCheck.h"
 
@@ -41,13 +40,13 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<build::ExplicitMakePairCheck>(
         "google-build-explicit-make-pair");
-    CheckFactories.registerCheck<build::UnnamedNamespaceInHeaderCheck>(
+    CheckFactories.registerCheck<misc::AnonymousNamespaceInHeaderCheck>(
         "google-build-namespaces");
     CheckFactories.registerCheck<build::UsingNamespaceDirectiveCheck>(
         "google-build-using-namespace");
     CheckFactories.registerCheck<DefaultArgumentsCheck>(
         "google-default-arguments");
-    CheckFactories.registerCheck<ExplicitConstructorCheck>(
+    CheckFactories.registerCheck<misc::ExplicitConstructorCheck>(
         "google-explicit-constructor");
     CheckFactories.registerCheck<readability::GlobalNamesInHeadersCheck>(
         "google-global-names-in-headers");

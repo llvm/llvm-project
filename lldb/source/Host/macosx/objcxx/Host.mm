@@ -399,7 +399,7 @@ llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
                       error));
 
   // Deallocate the descriptor on exit.
-  auto on_exit = llvm::make_scope_exit(
+  llvm::scope_exit on_exit(
       [&]() { AEDisposeDesc(&(file_and_line_desc.descContent)); });
 
   if (editor.empty()) {
@@ -458,7 +458,7 @@ llvm::Error Host::OpenURL(llvm::StringRef url) {
       std::error_code(ENOTSUP, std::system_category()));
 #else  // !TARGET_OS_OSX
   if (url.empty())
-    return llvm::createStringError("Cannot open empty URL.");
+    return llvm::createStringError("cannot open empty URL");
 
   LLDB_LOG(GetLog(LLDBLog::Host), "Opening URL: {0}", url);
 
@@ -614,9 +614,14 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
               break;
             ++offset;
           }
-          // Now extract all arguments
+
+          // Skip argv[0] as we already have the file name from the executable path.
+          if (argc > 0)
+            process_info.SetArg0(data.GetCStr(&offset));
+
+          // Now extract the rest of the arguments.
           Args &proc_args = process_info.GetArguments();
-          for (int i = 0; i < static_cast<int>(argc); ++i) {
+          for (int i = 1; i < static_cast<int>(argc); ++i) {
             cstr = data.GetCStr(&offset);
             if (cstr)
               proc_args.AppendArgument(llvm::StringRef(cstr));
@@ -1175,8 +1180,7 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
   }
 
   // Make sure we clean up the posix spawn attributes before exiting this scope.
-  auto cleanup_attr =
-      llvm::make_scope_exit([&]() { posix_spawnattr_destroy(&attr); });
+  llvm::scope_exit cleanup_attr([&]() { posix_spawnattr_destroy(&attr); });
 
   sigset_t no_signals;
   sigset_t all_signals;
@@ -1238,15 +1242,15 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
                      eErrorTypePOSIX);
       if (error.Fail()) {
         LLDB_LOG(log,
-                 "error: {0}, "
+                 "error: {}, "
                  "posix_spawnattr_set_use_sec_transition_shims_np(&attr, 0)",
                  error);
         return error;
       }
     } else {
       LLDB_LOG(log,
-               "error: posix_spawnattr_set_use_sec_transition_shims_np not "
-               "available",
+               "error: {}, posix_spawnattr_set_use_sec_transition_shims_np "
+               "not available",
                error);
     }
   }
@@ -1279,8 +1283,8 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
                        eErrorTypePOSIX);
         if (error.Fail())
           LLDB_LOG(log,
-                   "error: {0}, ::posix_spawnattr_setarchpref_np ( &attr, 1, "
-                   "cpu_type = {1:x}, cpu_subtype = {1:x}, count => {2} )",
+                   "error: {}, ::posix_spawnattr_setarchpref_np ( &attr, 1, "
+                   "cpu_type = {:x}, cpu_subtype = {:x}, count => {} )",
                    error, cpu_type, cpu_subtype, ocount);
 
         if (error.Fail() || ocount != 1)
@@ -1349,7 +1353,7 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
     }
 
     // Make sure we clean up the posix file actions before exiting this scope.
-    auto cleanup_fileact = llvm::make_scope_exit(
+    llvm::scope_exit cleanup_fileact(
         [&]() { posix_spawn_file_actions_destroy(&file_actions); });
 
     for (size_t i = 0; i < num_file_actions; ++i) {
@@ -1531,10 +1535,11 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       }
     }
     bool run_in_shell = true;
-    bool hide_stderr = true;
+    std::string error_output; // Pass stderr string arg so it is not mixed with
+                              // stdout.
     Status e =
         RunShellCommand(expand_command, cwd, &status, nullptr, &output,
-                        std::chrono::seconds(10), run_in_shell, hide_stderr);
+                        &error_output, std::chrono::seconds(10), run_in_shell);
 
     if (e.Fail())
       return e;

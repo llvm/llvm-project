@@ -186,3 +186,18 @@ func.func @materialize_in_destination(%t: tensor<?xf32>, %sz: index) -> tensor<?
   %r = bufferization.materialize_in_destination %buffer in %buffer : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
   return %r : tensor<?xf32>
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/128316.
+// When an op has a user-provided __inplace_operands_attr__ with fewer entries
+// than the op's operand count, setInPlaceOpOperand must not crash.
+
+// CHECK-LABEL: func @shorter_inplace_attr
+// CHECK: return
+// CHECK-SAME: __inplace_operands_attr__ = ["false", "false"]
+func.func @shorter_inplace_attr(%arg0: tensor<4xi32>) -> (tensor<4xi32>, tensor<4xi32>) {
+  // The __inplace_operands_attr__ has only one entry but the return has two
+  // tensor operands.  The analysis must expand the annotation without crashing.
+  return {__inplace_operands_attr__ = ["false"]} %arg0, %arg0 : tensor<4xi32>, tensor<4xi32>
+}

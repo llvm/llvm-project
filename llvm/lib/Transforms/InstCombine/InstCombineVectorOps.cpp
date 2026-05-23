@@ -133,11 +133,21 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
   // just before the current PHI node.
   PHINode *scalarPHI = cast<PHINode>(InsertNewInstWith(
       PHINode::Create(EI.getType(), PN->getNumIncomingValues(), ""), PN->getIterator()));
-  // Scalarize each PHI operand.
+  // Scalarize each PHI operand. A switch may produce multiple edges from the
+  // same predecessor; reuse the scalar instruction for duplicate edges.
+  SmallDenseMap<BasicBlock *, Value *, 4> ScalarizedValues;
   for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
     Value *PHIInVal = PN->getIncomingValue(i);
     BasicBlock *inBB = PN->getIncomingBlock(i);
     Value *Elt = EI.getIndexOperand();
+
+    // Reuse scalar value for duplicate edges from the same predecessor.
+    if (Value *Existing = ScalarizedValues.lookup(inBB)) {
+      scalarPHI->addIncoming(Existing, inBB);
+      continue;
+    }
+
+    Value *ScalarVal;
     // If the operand is the PHI induction variable:
     if (PHIInVal == PHIUser) {
       // Scalarize the binary operation. One operand is the
@@ -153,11 +163,9 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
       // non-commutative operations.
       Value *FirstOp = (B0->getOperand(0) == PN) ? scalarPHI : Op;
       Value *SecondOp = (B0->getOperand(0) == PN) ? Op : scalarPHI;
-      Value *newPHIUser =
-          InsertNewInstWith(BinaryOperator::CreateWithCopiedFlags(
-                                B0->getOpcode(), FirstOp, SecondOp, B0),
-                            B0->getIterator());
-      scalarPHI->addIncoming(newPHIUser, inBB);
+      ScalarVal = InsertNewInstWith(BinaryOperator::CreateWithCopiedFlags(
+                                        B0->getOpcode(), FirstOp, SecondOp, B0),
+                                    B0->getIterator());
     } else {
       // Scalarize PHI input:
       Instruction *newEI = ExtractElementInst::Create(PHIInVal, Elt, "");
@@ -170,10 +178,11 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
         InsertPos = inBB->getFirstInsertionPt();
       }
 
-      InsertNewInstWith(newEI, InsertPos);
-
-      scalarPHI->addIncoming(newEI, inBB);
+      ScalarVal = InsertNewInstWith(newEI, InsertPos);
     }
+
+    ScalarizedValues[inBB] = ScalarVal;
+    scalarPHI->addIncoming(ScalarVal, inBB);
   }
 
   for (auto *E : Extracts) {
@@ -444,11 +453,12 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         unsigned BitWidth = Ty->getIntegerBitWidth();
         Value *Idx;
         // Return index when its value does not exceed the allowed limit
-        // for the element type of the vector, otherwise return undefined.
+        // for the element type of the vector.
+        // TODO: Truncate out-of-range values.
         if (IndexC->getValue().getActiveBits() <= BitWidth)
           Idx = ConstantInt::get(Ty, IndexC->getValue().zextOrTrunc(BitWidth));
         else
-          Idx = PoisonValue::get(Ty);
+          return nullptr;
         return replaceInstUsesWith(EI, Idx);
       }
     }
@@ -593,7 +603,15 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
       // Canonicalize extractelement(cast) -> cast(extractelement).
       // Bitcasts can change the number of vector elements, and they cost
       // nothing.
-      if (CI->hasOneUse() && (CI->getOpcode() != Instruction::BitCast)) {
+      // If the CI has only one use, but that use is inside a loop, this
+      // canonicalization is not profitable because it would turn a vector
+      // operation into scalar operations inside the loop. Apply the transform
+      // when:
+      //  - the index is constant and CI has one use, or
+      //  - the CI and EI are in the same basic block, so the cast won't be sunk
+      //    into a loop.
+      if (CI->hasOneUse() && (CI->getOpcode() != Instruction::BitCast) &&
+          (EI.getParent() == CI->getParent() || isa<ConstantInt>(Index))) {
         Value *EE = Builder.CreateExtractElement(CI->getOperand(0), Index);
         return CastInst::Create(CI->getOpcode(), EE, EI.getType());
       }
@@ -1159,8 +1177,8 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     } else {
       // If UseBB is the single successor of Pred, we can add InsertValue to
       // Pred.
-      auto *BI = dyn_cast<BranchInst>(Pred->getTerminator());
-      if (!BI || !BI->isUnconditional())
+      auto *BI = dyn_cast<UncondBrInst>(Pred->getTerminator());
+      if (!BI)
         return nullptr;
     }
   }

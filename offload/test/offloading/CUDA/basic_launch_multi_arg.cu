@@ -6,6 +6,7 @@
 // clang-format on
 
 // REQUIRES: gpu
+// UNSUPPORTED: intelgpu
 
 #include <stdio.h>
 

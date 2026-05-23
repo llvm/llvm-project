@@ -48,7 +48,7 @@ namespace {
 // The static 'Wrapper' instance ensures olInit() is called once at program
 // startup and olShutDown() is called once at program termination
 struct OffloadInitWrapper {
-  OffloadInitWrapper() { OL_CHECK(olInit()); }
+  OffloadInitWrapper() { OL_CHECK(olInit(nullptr)); }
   ~OffloadInitWrapper() { OL_CHECK(olShutDown()); }
 };
 static OffloadInitWrapper Wrapper{};
@@ -296,7 +296,7 @@ void DeviceContext::launchKernelImpl(
   LaunchSizeArgs.DynSharedMemory = 0;
 
   OL_CHECK(olLaunchKernel(nullptr, DeviceHandle, KernelHandle, KernelArgs,
-                          KernelArgsSize, &LaunchSizeArgs));
+                          KernelArgsSize, &LaunchSizeArgs, nullptr));
 }
 
 [[nodiscard]] llvm::StringRef DeviceContext::getName() const noexcept {

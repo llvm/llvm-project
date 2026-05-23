@@ -63,9 +63,14 @@ static llvm::BitVector computePersistentOrigins(const FactManager &FactMgr,
              Cur = Cur->peelOuterOrigin())
           CheckOrigin(Cur->getOuterOriginID());
         break;
+      case Fact::Kind::KillOrigin:
+        CheckOrigin(F->getAs<KillOriginFact>()->getKilledOrigin());
+        break;
+      case Fact::Kind::MovedOrigin:
       case Fact::Kind::OriginEscapes:
       case Fact::Kind::Expire:
       case Fact::Kind::TestPoint:
+      case Fact::Kind::InvalidateOrigin:
         break;
       }
     }
@@ -179,6 +184,16 @@ public:
     return setLoans(In, DestOID, MergedLoans);
   }
 
+  Lattice transfer(Lattice In, const KillOriginFact &F) {
+    return setLoans(In, F.getKilledOrigin(), LoanSetFactory.getEmptySet());
+  }
+
+  Lattice transfer(Lattice In, const ExpireFact &F) {
+    if (auto OID = F.getOriginID())
+      return setLoans(In, *OID, LoanSetFactory.getEmptySet());
+    return In;
+  }
+
   LoanSet getLoans(OriginID OID, ProgramPoint P) const {
     return getLoans(getState(P), OID);
   }
@@ -231,5 +246,47 @@ LoanPropagationAnalysis::~LoanPropagationAnalysis() = default;
 
 LoanSet LoanPropagationAnalysis::getLoans(OriginID OID, ProgramPoint P) const {
   return PImpl->getLoans(OID, P);
+}
+
+llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
+    const FactManager &FactMgr, ProgramPoint StartPoint,
+    const OriginID StartOID, const LoanID TargetLoan) const {
+  assert(getLoans(StartOID, StartPoint).contains(TargetLoan) &&
+         "TargetLoan must be present in the StartOID at the StartPoint");
+
+  OriginID CurrOID = StartOID;
+  llvm::SmallVector<OriginID> OriginFlowChain;
+  llvm::ArrayRef<const Fact *> Facts = FactMgr.getBlockContaining(StartPoint);
+  const auto *StartIt = llvm::find(Facts, StartPoint);
+  assert(StartIt != Facts.end());
+
+  for (const Fact *F :
+       llvm::reverse(llvm::make_range(Facts.begin(), StartIt))) {
+    if (const auto *IF = F->getAs<IssueFact>())
+      if (IF->getLoanID() == TargetLoan) {
+        assert(IF->getOriginID() == CurrOID);
+        return OriginFlowChain;
+      }
+
+    const auto *OFF = F->getAs<OriginFlowFact>();
+    if (!OFF)
+      continue;
+    if (OFF->getDestOriginID() != CurrOID)
+      continue;
+
+    const OriginID SrcOriginID = OFF->getSrcOriginID();
+    if (!getLoans(SrcOriginID, OFF).contains(TargetLoan))
+      continue;
+    OriginFlowChain.push_back(SrcOriginID);
+    CurrOID = SrcOriginID;
+  }
+
+  // FIXME: Ideally, this return is unreachable and should be an assert because
+  // we expect to always finish at an IssueFact. But since current traversal is
+  // limited to a single CFG block, multi-block OriginFlowChain construction
+  // might miss the IssueFact.
+  // We should add llvm_unreachable here once multi-block support is
+  // implemented.
+  return {};
 }
 } // namespace clang::lifetimes::internal

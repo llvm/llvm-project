@@ -177,7 +177,7 @@ add_libc_test(
 
 if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
     LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
-  list(APPEND strfrom_test_copts "-DLIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
+  libc_set_definition(strfrom_test_copts "LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
 endif()
 
 add_header_library(
@@ -398,6 +398,18 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.src.stdlib.mbtowc
     libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  mblen_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    mblen_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.stdlib.mblen
     libc.test.UnitTest.ErrnoCheckingTest
 )
 

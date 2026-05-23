@@ -47,6 +47,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
@@ -55,8 +56,8 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Error.h"
@@ -70,6 +71,7 @@
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
@@ -272,10 +274,11 @@ bool CodeGenAction::beginSourceFileAction() {
 
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
-    setOffloadModuleInterfaceAttributes(lb.getModule(),
-                                        ci.getInvocation().getLangOpts());
-    setOpenMPVersionAttribute(lb.getModule(),
-                              ci.getInvocation().getLangOpts().OpenMPVersion);
+    mlir::omp::setOffloadModuleInterfaceAttributes(
+        lb.getModule(),
+        makeOffloadModuleOpts(ci.getInvocation().getLangOpts()));
+    mlir::omp::setOpenMPVersionAttribute(
+        lb.getModule(), ci.getInvocation().getLangOpts().OpenMPVersion);
   }
 
   if (ci.getInvocation().getLangOpts().FastRealMod) {
@@ -325,13 +328,6 @@ bool CodeGenAction::beginSourceFileAction() {
         "`do concurrent` loops will be serialized.");
     ci.getDiagnostics().Report(diagID);
     opts.doConcurrentMappingKind = DoConcurrentMappingKind::DCMK_None;
-  }
-
-  if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None) {
-    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Warning,
-        "Mapping `do concurrent` to OpenMP is still experimental.");
-    ci.getDiagnostics().Report(diagID);
   }
 
   if (isOpenMPEnabled) {
@@ -634,8 +630,11 @@ void CodeGenAction::lowerHLFIRToFIR() {
     enableOpenMP = fir::EnableOpenMP::Full;
   if (ci.getInvocation().getLangOpts().OpenMPSimd)
     enableOpenMP = fir::EnableOpenMP::Simd;
+  MLIRToLLVMPassPipelineConfig config(level);
+  config.fpMaxminBehavior =
+      ci.getInvocation().getLoweringOpts().getFPMaxminBehavior();
   // Create the pass pipeline
-  fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, level);
+  fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
   (void)mlir::applyPassManagerCLOptions(pm);
 
   mlir::TimingScope timingScopeMLIRPasses = timingScopeRoot.nest(
@@ -747,6 +746,7 @@ void CodeGenAction::generateLLVMIR() {
   pm.enableVerifier(/*verifyPasses=*/true);
 
   MLIRToLLVMPassPipelineConfig config(level, opts, mathOpts);
+  config.fpMaxminBehavior = invoc.getLoweringOpts().getFPMaxminBehavior();
   llvm::Triple pipelineTriple(invoc.getTargetOpts().triple);
   config.SkipConvertComplexPow = pipelineTriple.isAMDGCN();
   fir::registerDefaultInlinerPass(config);
@@ -882,15 +882,22 @@ getOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
 /// \param [in] llvmModule LLVM module to lower to assembly/machine-code
 /// \param [in] codeGenOpts options configuring codegen pipeline
 /// \param [out] os Output stream to emit the generated code to
-static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
-                                              llvm::TargetMachine &tm,
-                                              BackendActionTy act,
-                                              llvm::Module &llvmModule,
-                                              const CodeGenOptions &codeGenOpts,
-                                              llvm::raw_pwrite_stream &os) {
+static void generateMachineCodeOrAssemblyImpl(
+    CompilerInstance &ci, clang::DiagnosticsEngine &diags,
+    llvm::TargetMachine &tm, BackendActionTy act, llvm::Module &llvmModule,
+    const CodeGenOptions &codeGenOpts, llvm::raw_pwrite_stream &os) {
   assert(((act == BackendActionTy::Backend_EmitObj) ||
           (act == BackendActionTy::Backend_EmitAssembly)) &&
          "Unsupported action");
+  llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
+                                   ? llvm::CodeGenFileType::AssemblyFile
+                                   : llvm::CodeGenFileType::ObjectFile;
+
+  // Invoke pre-codegen callback from plugin, which might want to take over the
+  // entire code generation itself.
+  for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins())
+    if (plugin->invokePreCodeGenCallback(llvmModule, tm, cgft, os))
+      return;
 
   // Set-up the pass manager, i.e create an LLVM code-gen pass pipeline.
   // Currently only the legacy pass manager is supported.
@@ -907,9 +914,6 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
       triple, tm.Options.ExceptionModel, tm.Options.FloatABIType,
       tm.Options.EABIVersion, tm.Options.MCOptions.ABIName, tm.Options.VecLib));
 
-  llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
-                                   ? llvm::CodeGenFileType::AssemblyFile
-                                   : llvm::CodeGenFileType::ObjectFile;
   std::unique_ptr<llvm::ToolOutputFile> dwoOS;
   if (!codeGenOpts.SplitDwarfOutput.empty()) {
     std::error_code ec;
@@ -943,7 +947,6 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   CompilerInstance &ci = getInstance();
   const CodeGenOptions &opts = ci.getInvocation().getCodeGenOpts();
-  clang::DiagnosticsEngine &diags = ci.getDiagnostics();
   llvm::OptimizationLevel level = mapToLevel(opts);
 
   llvm::TargetMachine *targetMachine = &ci.getTargetMachine();
@@ -960,14 +963,14 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   if (opts.hasProfileIRInstr()) {
     // -fprofile-generate.
-    pgoOpt = llvm::PGOOptions(opts.InstrProfileOutput.empty()
-                                  ? llvm::driver::getDefaultProfileGenName()
-                                  : opts.InstrProfileOutput,
-                              "", "", opts.MemoryProfileUsePath,
-                              llvm::PGOOptions::IRInstr,
-                              llvm::PGOOptions::NoCSAction,
-                              llvm::PGOOptions::ColdFuncOpt::Default, false,
-                              /*PseudoProbeForProfiling=*/false, false);
+    pgoOpt = llvm::PGOOptions(
+        opts.InstrProfileOutput.empty()
+            ? llvm::driver::getDefaultProfileGenName()
+            : opts.InstrProfileOutput,
+        "", "", opts.MemoryProfileUsePath, llvm::PGOOptions::IRInstr,
+        llvm::PGOOptions::NoCSAction, llvm::PGOOptions::ColdFuncOpt::Default,
+        opts.DebugInfoForProfiling,
+        /*PseudoProbeForProfiling=*/false, false);
   } else if (opts.hasProfileIRUse()) {
     // -fprofile-use.
     auto CSAction = opts.hasProfileCSIRUse() ? llvm::PGOOptions::CSIRUse
@@ -975,7 +978,19 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
     pgoOpt = llvm::PGOOptions(
         opts.ProfileInstrumentUsePath, "", opts.ProfileRemappingFile,
         opts.MemoryProfileUsePath, llvm::PGOOptions::IRUse, CSAction,
-        llvm::PGOOptions::ColdFuncOpt::Default, false);
+        llvm::PGOOptions::ColdFuncOpt::Default, opts.DebugInfoForProfiling);
+  } else if (opts.DebugInfoForProfiling) {
+    // -fdebug-info-for-profiling
+    pgoOpt = llvm::PGOOptions("", "", "", /*MemoryProfile=*/"",
+                              llvm::PGOOptions::NoAction,
+                              llvm::PGOOptions::NoCSAction,
+                              llvm::PGOOptions::ColdFuncOpt::Default, true);
+  } else if (!opts.SampleProfileFile.empty()) {
+    pgoOpt = llvm::PGOOptions(
+        opts.SampleProfileFile, "", opts.ProfileRemappingFile,
+        opts.MemoryProfileUsePath, llvm::PGOOptions::SampleUse,
+        llvm::PGOOptions::NoCSAction, llvm::PGOOptions::ColdFuncOpt::Default,
+        opts.DebugInfoForProfiling, /*PseudoProbeForProfiling=*/false);
   }
 
   llvm::StandardInstrumentations si(llvmModule->getContext(),
@@ -992,16 +1007,9 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   llvm::PassBuilder pb(targetMachine, pto, pgoOpt, &pic);
 
-  // Attempt to load pass plugins and register their callbacks with PB.
-  for (auto &pluginFile : opts.LLVMPassPlugins) {
-    auto passPlugin = llvm::PassPlugin::Load(pluginFile);
-    if (passPlugin) {
-      passPlugin->registerPassBuilderCallbacks(pb);
-    } else {
-      diags.Report(clang::diag::err_fe_unable_to_load_plugin)
-          << pluginFile << passPlugin.takeError();
-    }
-  }
+  // Register plugin callbacks with PB.
+  for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins())
+    plugin->registerPassBuilderCallbacks(pb);
   // Register static plugin extensions.
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(pb);
@@ -1032,8 +1040,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::ModulePassManager mpm;
   // The module summary should be emitted by default for regular LTO
   // except for ld64 targets.
-  bool emitSummary =
-      opts.PrepareForFullLTO && (triple.getVendor() != llvm::Triple::Apple);
+  bool emitSummary = (opts.PrepareForFullLTO || opts.PrepareForThinLTO) &&
+                     (triple.getVendor() != llvm::Triple::Apple);
   if (opts.PrepareForFatLTO)
     mpm = pb.buildFatLTODefaultPipeline(level, opts.PrepareForThinLTO,
                                         emitSummary);
@@ -1046,22 +1054,23 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   if (action == BackendActionTy::Backend_EmitBC ||
       action == BackendActionTy::Backend_EmitLL || opts.PrepareForFatLTO) {
-    if (opts.PrepareForThinLTO) {
-      // TODO: ThinLTO module summary support is yet to be enabled.
-      if (action == BackendActionTy::Backend_EmitBC)
-        mpm.addPass(llvm::BitcodeWriterPass(os));
-      else if (action == BackendActionTy::Backend_EmitLL)
-        mpm.addPass(llvm::PrintModulePass(os));
-    } else {
-      if (emitSummary && !llvmModule->getModuleFlag("ThinLTO"))
-        llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
-      if (action == BackendActionTy::Backend_EmitBC)
+    // If it is not ThinLTO, emits the module flag and sets it to be off.
+    if (!opts.PrepareForThinLTO && emitSummary &&
+        !llvmModule->getModuleFlag("ThinLTO")) {
+      llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
+    }
+
+    if (action == BackendActionTy::Backend_EmitBC) {
+      if (opts.PrepareForThinLTO) {
+        mpm.addPass(llvm::ThinLTOBitcodeWriterPass(os, nullptr));
+      } else {
         mpm.addPass(llvm::BitcodeWriterPass(
             os, /*ShouldPreserveUseListOrder=*/false, emitSummary));
-      else if (action == BackendActionTy::Backend_EmitLL)
-        mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
-                                          /*ShouldPreserveUseListOrder=*/false,
-                                          emitSummary));
+      }
+    } else if (action == BackendActionTy::Backend_EmitLL) {
+      mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
+                                        /*ShouldPreserveUseListOrder=*/false,
+                                        emitSummary));
     }
   }
 
@@ -1185,6 +1194,29 @@ public:
           clang::diag::remark_fe_backend_optimization_remark_analysis);
   }
 
+  void pluginDiagnosticHandler(const llvm::DiagnosticInfo &di) {
+    unsigned diagID;
+    switch (di.getSeverity()) {
+    case llvm::DS_Error:
+      diagID = clang::diag::err_fe_backend_plugin;
+      break;
+    case llvm::DS_Warning:
+      diagID = clang::diag::warn_fe_backend_plugin;
+      break;
+    case llvm::DS_Remark:
+      diagID = clang::diag::remark_fe_backend_plugin;
+      break;
+    case llvm::DS_Note:
+      diagID = clang::diag::note_fe_backend_plugin;
+      break;
+    }
+    std::string msg;
+    llvm::raw_string_ostream os(msg);
+    llvm::DiagnosticPrinterRawOStream diagPrinter(os);
+    di.print(diagPrinter);
+    diags.Report(diagID) << msg;
+  }
+
   bool handleDiagnostics(const llvm::DiagnosticInfo &di) override {
     switch (di.getKind()) {
     case llvm::DK_OptimizationRemark:
@@ -1210,6 +1242,7 @@ public:
           llvm::cast<llvm::MachineOptimizationRemarkAnalysis>(di));
       break;
     default:
+      pluginDiagnosticHandler(di);
       break;
     }
     return true;
@@ -1307,8 +1340,6 @@ void CodeGenAction::executeAction() {
   clang::DiagnosticsEngine &diags = ci.getDiagnostics();
   const CodeGenOptions &codeGenOpts = ci.getInvocation().getCodeGenOpts();
   const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
-  Fortran::lower::LoweringOptions &loweringOpts =
-      ci.getInvocation().getLoweringOpts();
   mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
   mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
 
@@ -1337,16 +1368,12 @@ void CodeGenAction::executeAction() {
   }
 
   if (action == BackendActionTy::Backend_EmitFIR) {
-    if (loweringOpts.getLowerToHighLevelFIR()) {
-      lowerHLFIRToFIR();
-    }
+    lowerHLFIRToFIR();
     mlirModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     return;
   }
 
   if (action == BackendActionTy::Backend_EmitHLFIR) {
-    assert(loweringOpts.getLowerToHighLevelFIR() &&
-           "Lowering must have been configured to emit HLFIR");
     mlirModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     return;
   }
@@ -1438,7 +1465,7 @@ void CodeGenAction::executeAction() {
   if (action == BackendActionTy::Backend_EmitAssembly ||
       action == BackendActionTy::Backend_EmitObj) {
     generateMachineCodeOrAssemblyImpl(
-        diags, targetMachine, action, *llvmModule, codeGenOpts,
+        ci, diags, targetMachine, action, *llvmModule, codeGenOpts,
         ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     if (timingMgr.isEnabled())
       llvm::reportAndResetTimings(&ci.getTimingStreamCodeGen());

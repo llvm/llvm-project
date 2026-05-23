@@ -154,11 +154,11 @@ void RedundantStringCStrCheck::registerMatchers(
     // Detect redundant 'c_str()' calls in parameters passed to std::format in
     // C++20 onwards and std::print in C++23 onwards.
     Finder->addMatcher(
-        traverse(TK_AsIs,
-                 callExpr(callee(functionDecl(matchers::matchesAnyListedName(
-                              StringParameterFunctions))),
-                          forEachArgumentWithParam(StringCStrCallExpr,
-                                                   parmVarDecl()))),
+        traverse(TK_AsIs, callExpr(callee(functionDecl(
+                                       matchers::matchesAnyListedRegexName(
+                                           StringParameterFunctions))),
+                                   forEachArgumentWithParam(StringCStrCallExpr,
+                                                            parmVarDecl()))),
         this);
   }
 }

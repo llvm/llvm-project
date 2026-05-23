@@ -12,11 +12,6 @@
 
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 
-#include <cassert>
-#include <cstdint>
-#include <functional>
-#include <optional>
-
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -33,7 +28,13 @@
 #include "mlir/IR/TypeUtilities.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/FormatVariadic.h"
+
+#include <cassert>
+#include <cstdint>
+#include <functional>
+#include <optional>
 
 #define DEBUG_TYPE "vector-to-vector"
 
@@ -105,10 +106,10 @@ struct MultiReduceToContract
     rewriter.replaceOpWithNewOp<mlir::vector::ContractionOp>(
         reduceOp, mulOp->getOperand(0), mulOp->getOperand(1), reduceOp.getAcc(),
         rewriter.getAffineMapArrayAttr({srcMap, srcMap, dstMap}),
-        rewriter.getArrayAttr(llvm::to_vector(llvm::map_range(
+        rewriter.getArrayAttr(llvm::map_to_vector(
             iteratorTypes, [&](IteratorType t) -> mlir::Attribute {
               return IteratorTypeAttr::get(rewriter.getContext(), t);
-            }))));
+            })));
     return success();
   }
 };
@@ -554,9 +555,8 @@ struct ReorderElementwiseOpsOnTranspose final
 
 // Returns the values in `arrayAttr` as an integer vector.
 static SmallVector<int64_t> getIntValueVector(ArrayAttr arrayAttr) {
-  return llvm::to_vector<4>(
-      llvm::map_range(arrayAttr.getAsRange<IntegerAttr>(),
-                      [](IntegerAttr attr) { return attr.getInt(); }));
+  return llvm::map_to_vector<4>(arrayAttr.getAsRange<IntegerAttr>(),
+                                [](IntegerAttr attr) { return attr.getInt(); });
 }
 
 // Shuffles vector.bitcast op after vector.extract op.
@@ -1361,6 +1361,16 @@ static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
     indices = arith::AddIOp::create(rewriter, loc, ov, indices);
   }
   // Construct the vector comparison.
+  // When using 32-bit indices, cap `b` at INT32_MAX before casting to prevent
+  // signed overflow for large index values (e.g., 2^51 wrapping to 0 in i32).
+  // Note: for fixed-size vectors, `dim` is a tighter bound (since any b >= dim
+  // already implies all-true), but we use INT32_MAX for uniformity with the
+  // scalable-vector path.
+  if (force32BitVectorIndices) {
+    Value maxBound =
+        arith::ConstantIndexOp::create(rewriter, loc, (1LL << 31) - 1);
+    b = arith::MinSIOp::create(rewriter, loc, b, maxBound);
+  }
   Value bound = getValueOrCreateCastToIndexLike(rewriter, loc, idxType, b);
   Value bounds =
       vector::BroadcastOp::create(rewriter, loc, indices.getType(), bound);
@@ -1563,10 +1573,6 @@ class DropInnerMostUnitDimsTransferRead
     if (readOp.getTransferRank() == 0)
       return failure();
 
-    // TODO: support mask.
-    if (readOp.getMask())
-      return failure();
-
     auto srcType = dyn_cast<MemRefType>(readOp.getBase().getType());
     if (!srcType)
       return failure();
@@ -1614,12 +1620,22 @@ class DropInnerMostUnitDimsTransferRead
                                   readOp.getBase(), offsets, sizes, strides);
     auto permMap = getTransferMinorIdentityMap(
         cast<ShapedType>(rankedReducedView.getType()), resultTargetVecType);
+
+    // If there is a mask, shape_cast it to drop the same inner unit dims.
+    Value mask = readOp.getMask();
+    if (mask) {
+      auto maskType = cast<VectorType>(mask.getType());
+      auto reducedMaskType = VectorType::get(
+          maskType.getShape().drop_back(dimsToDrop), maskType.getElementType(),
+          maskType.getScalableDims().drop_back(dimsToDrop));
+      mask = rewriter.createOrFold<vector::ShapeCastOp>(loc, reducedMaskType,
+                                                        mask);
+    }
+
     Value result = vector::TransferReadOp::create(
         rewriter, loc, resultTargetVecType, rankedReducedView,
         readOp.getIndices().drop_back(dimsToDrop), AffineMapAttr::get(permMap),
-        readOp.getPadding(),
-        // TODO: support mask.
-        /*mask=*/Value(), inBoundsAttr);
+        readOp.getPadding(), mask, inBoundsAttr);
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(readOp, targetType,
                                                      result);
     return success();
@@ -1652,10 +1668,6 @@ class DropInnerMostUnitDimsTransferWrite
                                 PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (writeOp.getTransferRank() == 0)
-      return failure();
-
-    // TODO: support mask.
-    if (writeOp.getMask())
       return failure();
 
     auto srcType = dyn_cast<MemRefType>(writeOp.getBase().getType());
@@ -1709,16 +1721,27 @@ class DropInnerMostUnitDimsTransferWrite
 
     auto shapeCast = rewriter.createOrFold<vector::ShapeCastOp>(
         loc, resultTargetVecType, writeOp.getVector());
+
+    // If there is a mask, shape_cast it to drop the same inner unit dims.
+    Value mask = writeOp.getMask();
+    if (mask) {
+      auto maskType = cast<VectorType>(mask.getType());
+      auto reducedMaskType = VectorType::get(
+          maskType.getShape().drop_back(dimsToDrop), maskType.getElementType(),
+          maskType.getScalableDims().drop_back(dimsToDrop));
+      mask = rewriter.createOrFold<vector::ShapeCastOp>(loc, reducedMaskType,
+                                                        mask);
+    }
+
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
         writeOp, shapeCast, rankedReducedView,
         writeOp.getIndices().drop_back(dimsToDrop), AffineMapAttr::get(permMap),
-        // TODO: support mask.
-        /*mask=*/Value(), inBoundsAttr);
+        mask, inBoundsAttr);
     return success();
   }
 };
 
-/// Canonicalization of a `vector.contraction %a, %b, %c` with row-major matmul
+/// Canonicalization of a `vector.contract %a, %b, %c` with row-major matmul
 /// semantics to a contraction suitable for MMT (matrix matrix multiplication
 /// with the RHS transposed) lowering.
 struct CanonicalizeContractMatmulToMMT final
@@ -1908,12 +1931,12 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
   }
 };
 
-// Helper function dropping unit non-scalable dimension from a VectorType
-// keeping at least 1 dimension to avoid generating 0-D vectors. Scalable unit
-// dimensions are not dropped. Folding such dimensions would require "shifting"
-// the scalable flag onto some other fixed-width dim (e.g. vector<[1]x4xf32> ->
-// vector<[4]xf32>). This could be implemented in the future.
-static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy) {
+// Helper function dropping unit non-scalable dimension from a VectorType.
+// Scalable unit dimensions are not dropped. Folding such dimensions would
+// require "shifting" the scalable flag onto some other fixed-width dim (e.g.
+// vector<[1]x4xf32> -> vector<[4]xf32>).
+static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy,
+                                                 bool zeroDimsAllowed) {
   auto inVecShape = inVecTy.getShape();
   SmallVector<int64_t> newShape;
   SmallVector<bool> newScalableDims;
@@ -1925,8 +1948,8 @@ static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy) {
     newShape.push_back(dim);
     newScalableDims.push_back(isScalable);
   }
-  // All dims have been dropped, return vector<1xeType>.
-  if (newShape.empty()) {
+  // Some vector ops forbid 0-D vectors.
+  if (!zeroDimsAllowed && newShape.empty()) {
     newShape.push_back(1);
     newScalableDims.push_back(false);
   }
@@ -1977,14 +2000,12 @@ struct DropUnitDimFromElementwiseOps final
     auto sourceVectorType = dyn_cast<VectorType>(op->getOperand(0).getType());
     if (!sourceVectorType)
       return failure();
-    if (sourceVectorType.getRank() < 2)
-      return failure();
-
     SmallVector<Value> newOperands;
     auto loc = op->getLoc();
     for (auto operand : op->getOperands()) {
       auto opVectorType = cast<VectorType>(operand.getType());
-      auto newVType = dropNonScalableUnitDimFromType(opVectorType);
+      auto newVType = dropNonScalableUnitDimFromType(opVectorType,
+                                                     /*zeroDimsAllowed=*/true);
       if (newVType == opVectorType)
         return rewriter.notifyMatchFailure(op, "No unit dimension to remove.");
 
@@ -1993,7 +2014,8 @@ struct DropUnitDimFromElementwiseOps final
     }
 
     VectorType newResultVectorType =
-        dropNonScalableUnitDimFromType(resultVectorType);
+        dropNonScalableUnitDimFromType(resultVectorType,
+                                       /*zeroDimsAllowed=*/true);
     // Create an updated elementwise Op without unit dim.
     Operation *elementwiseOp =
         rewriter.create(loc, op->getName().getIdentifier(), newOperands,
@@ -2034,7 +2056,8 @@ struct DropUnitDimsFromTransposeOp final
                                 PatternRewriter &rewriter) const override {
     VectorType sourceType = op.getSourceVectorType();
     VectorType sourceTypeWithoutUnitDims =
-        dropNonScalableUnitDimFromType(sourceType);
+        dropNonScalableUnitDimFromType(sourceType,
+                                       /*zeroDimsAllowed=*/true);
 
     if (sourceType == sourceTypeWithoutUnitDims)
       return failure();
@@ -2059,9 +2082,9 @@ struct DropUnitDimsFromTransposeOp final
     }
 
     // Fixup for `newPerm`. The `sourceTypeWithoutUnitDims` could be vector<1xT>
-    // type when the dimensions are unit dimensions. In this case, the newPerm
-    // should be [0].
-    if (newPerm.empty()) {
+    // type when the dimensions are unit dimensions and 0-D vectors are not
+    // allowed. In this case, the newPerm should be [0].
+    if (newPerm.empty() && sourceTypeWithoutUnitDims.getRank() > 0) {
       newPerm.push_back(0);
     }
 
@@ -2116,7 +2139,9 @@ struct DropUnitDimsFromScfForOp final : OpRewritePattern<scf::ForOp> {
       if (!vectorType)
         continue;
 
-      VectorType newVectorType = dropNonScalableUnitDimFromType(vectorType);
+      VectorType newVectorType =
+          dropNonScalableUnitDimFromType(vectorType,
+                                         /*zeroDimsAllowed=*/true);
       if (vectorType == newVectorType)
         continue;
 

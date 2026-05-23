@@ -121,6 +121,11 @@ enum NodeType {
   /// function calling this intrinsic.
   SPONENTRY,
 
+  /// STACKADDRESS - Represents the llvm.stackaddress intrinsic. Takes no
+  /// argument and returns the starting address of the stack region that may be
+  /// used by called functions.
+  STACKADDRESS,
+
   /// LOCAL_RECOVER - Represents the llvm.localrecover intrinsic.
   /// Materializes the offset from the local object pointer of another
   /// function to a particular local object passed to llvm.localescape. The
@@ -371,11 +376,13 @@ enum NodeType {
 
   /// RESULT = [US]SHLSAT(LHS, RHS) - Perform saturation left shift. The first
   /// operand is the value to be shifted, and the second argument is the amount
-  /// to shift by. Both must be integers of the same bit width (W). If the true
-  /// value of LHS << RHS exceeds the largest value that can be represented by
-  /// W bits, the resulting value is this maximum value, Otherwise, if this
-  /// value is less than the smallest value that can be represented by W bits,
-  /// the resulting value is this minimum value.
+  /// to shift by. Both must be integers. After legalization the type of the
+  /// shift amount is known to be TLI.getShiftAmountTy(). Before legalization
+  /// the shift amount can be any type, but care must be taken to ensure it is
+  /// large enough. If the true value of LHS << RHS exceeds the largest value
+  /// that can be represented by W bits, the resulting value is this maximum
+  /// value, Otherwise, if this value is less than the smallest value that can
+  /// be represented by W bits, the resulting value is this minimum value.
   SSHLSAT,
   USHLSAT,
 
@@ -641,17 +648,13 @@ enum NodeType {
   /// in terms of the element size of VEC1/VEC2, not in terms of bytes.
   VECTOR_SHUFFLE,
 
-  /// VECTOR_SPLICE(VEC1, VEC2, IMM) - Returns a subvector of the same type as
-  /// VEC1/VEC2 from CONCAT_VECTORS(VEC1, VEC2), based on the IMM in two ways.
-  /// Let the result type be T, if IMM is positive it represents the starting
-  /// element number (an index) from which a subvector of type T is extracted
-  /// from CONCAT_VECTORS(VEC1, VEC2). If IMM is negative it represents a count
-  /// specifying the number of trailing elements to extract from VEC1, where the
-  /// elements of T are selected using the following algorithm:
-  ///   RESULT[i] = CONCAT_VECTORS(VEC1,VEC2)[VEC1.ElementCount - ABS(IMM) + i]
-  /// If IMM is not in the range [-VL, VL-1] the result vector is undefined. IMM
-  /// is a constant integer.
-  VECTOR_SPLICE,
+  /// VECTOR_SPLICE_LEFT(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1, VEC2)
+  /// left by OFFSET elements and returns the lower half.
+  VECTOR_SPLICE_LEFT,
+  /// VECTOR_SPLICE_RIGHT(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1,
+  /// VEC2)
+  /// right by OFFSET elements and returns the upper half.
+  VECTOR_SPLICE_RIGHT,
 
   /// SCALAR_TO_VECTOR(VAL) - This represents the operation of loading a
   /// scalar value into element 0 of the resultant vector type.  The top
@@ -743,6 +746,10 @@ enum NodeType {
   /// is performed.
   ABS,
 
+  /// ABS with a poison result for INT_MIN. This corresponds to
+  /// llvm.abs(x, true) where the "int min is poison" flag is set.
+  ABS_MIN_POISON,
+
   /// Shift and rotation operations.  After legalization, the type of the
   /// shift amount is known to be TLI.getShiftAmountTy().  Before legalization
   /// the shift amount can be any type, but care must be taken to ensure it is
@@ -767,6 +774,11 @@ enum NodeType {
   FSHL,
   FSHR,
 
+  /// Carry-less multiplication operations.
+  CLMUL,
+  CLMULR,
+  CLMULH,
+
   /// Byte Swap and Counting operators.
   BSWAP,
   CTTZ,
@@ -775,9 +787,13 @@ enum NodeType {
   BITREVERSE,
   PARITY,
 
-  /// Bit counting operators with an undefined result for zero inputs.
-  CTTZ_ZERO_UNDEF,
-  CTLZ_ZERO_UNDEF,
+  /// Bit counting operators with a poisoned result for zero inputs.
+  CTTZ_ZERO_POISON,
+  CTLZ_ZERO_POISON,
+
+  /// Count leading redundant sign bits. Equivalent to
+  /// (sub (ctlz (x < 0 ? ~x : x)), 1).
+  CTLS,
 
   /// Select(COND, TRUEVAL, FALSEVAL).  If the type of the boolean COND is not
   /// i1 then the high bits must conform to getBooleanContents.
@@ -1001,6 +1017,12 @@ enum NodeType {
   FP_TO_BF16,
   STRICT_BF16_TO_FP,
   STRICT_FP_TO_BF16,
+
+  /// CONVERT_FROM_ARBITRARY_FP - This operator converts from an arbitrary
+  /// floating-point represented as an integer to a native FP type.
+  /// The first operand is the integer containing the source FP bits.
+  /// The second operand is a constant indicating the source FP semantics.
+  CONVERT_FROM_ARBITRARY_FP,
 
   /// Perform various unary floating-point operations inspired by libm. For
   /// FPOWI, the result is undefined if the integer operand doesn't fit into
@@ -1393,6 +1415,8 @@ enum NodeType {
   ATOMIC_LOAD_FMIN,
   ATOMIC_LOAD_FMAXIMUM,
   ATOMIC_LOAD_FMINIMUM,
+  ATOMIC_LOAD_FMAXIMUMNUM,
+  ATOMIC_LOAD_FMINIMUMNUM,
   ATOMIC_LOAD_UINC_WRAP,
   ATOMIC_LOAD_UDEC_WRAP,
   ATOMIC_LOAD_USUB_COND,
@@ -1428,6 +1452,10 @@ enum NodeType {
   /// Its purpose is the extension of the operand's lifetime mainly for
   /// debugging purposes.
   FAKE_USE,
+
+  /// COND_LOOP is a conditional branch to self, used for implementing efficient
+  /// conditional traps.
+  COND_LOOP,
 
   /// GC_TRANSITION_START/GC_TRANSITION_END - These operators mark the
   /// beginning and end of GC transition  sequence, and carry arbitrary
@@ -1555,6 +1583,13 @@ enum NodeType {
   /// Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
 
+  /// Returns the number of number of trailing (least significant) zero elements
+  /// in a vector. Has a single mask vector operand. The result is poison if the
+  /// return type isn't wide enough to hold the maximum number of elements in
+  /// the input vector.
+  CTTZ_ELTS,
+  CTTZ_ELTS_ZERO_POISON,
+
   /// Finds the index of the last active mask element
   /// Operands: Mask
   VECTOR_FIND_LAST_ACTIVE,
@@ -1587,6 +1622,14 @@ enum NodeType {
   LOOP_DEPENDENCE_WAR_MASK,
   LOOP_DEPENDENCE_RAW_MASK,
 
+  /// Masked vector arithmetic that returns poison on disabled lanes. Disabled
+  /// lanes do not have undefined behaviour on division by zero or overflow. The
+  /// first two operands are input vectors, the third operand is the mask.
+  MASKED_UDIV,
+  MASKED_SDIV,
+  MASKED_UREM,
+  MASKED_SREM,
+
   /// llvm.clear_cache intrinsic
   /// Operands: Input Chain, Start Addres, End Address
   /// Outputs: Output Chain
@@ -1606,13 +1649,28 @@ inline bool isBitwiseLogicOp(unsigned Opcode) {
   return Opcode == ISD::AND || Opcode == ISD::OR || Opcode == ISD::XOR;
 }
 
+/// Whether this is an integer absolute-value opcode (ISD::ABS or
+/// ISD::ABS_MIN_POISON).
+inline bool isAbsOpcode(unsigned Opcode) {
+  return Opcode == ISD::ABS || Opcode == ISD::ABS_MIN_POISON;
+}
+
 /// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
 /// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
 LLVM_ABI NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
 
+/// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns the
+/// corresponding opcode with the opposite signedness:
+/// ISD::SMIN <-> ISD::UMIN, ISD::SMAX <-> ISD::UMAX.
+LLVM_ABI NodeType getOppositeSignednessMinMaxOpcode(unsigned MinMaxOpc);
+
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.
 LLVM_ABI NodeType getVecReduceBaseOpcode(unsigned VecReduceOpcode);
+
+/// Given a \p MaskedOpc of ISD::MASKED_(U|S)(DIV|REM), returns the unmasked
+/// ISD::(U|S)(DIV|REM).
+LLVM_ABI NodeType getUnmaskedBinOpOpcode(unsigned MaskedOpc);
 
 /// Whether this is a vector-predicated Opcode.
 LLVM_ABI bool isVPOpcode(unsigned Opcode);

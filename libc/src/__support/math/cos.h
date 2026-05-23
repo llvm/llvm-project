@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC___SUPPORT_MATH_COS_H
-#define LIBC_SRC___SUPPORT_MATH_COS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_COS_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_COS_H
 
 #include "range_reduction_double_common.h"
 #include "sincos_eval.h"
@@ -30,9 +30,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr double cos(double x) {
+LIBC_INLINE double cos(double x) {
   using namespace range_reduction_double_internal;
-  using DoubleDouble = fputil::DoubleDouble;
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -122,7 +121,6 @@ LIBC_INLINE static constexpr double cos(double x) {
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   return rr.hi + rr.lo;
 #else
-  using Float128 = typename fputil::DyadicFloat<128>;
   double rlp = rr.lo + err;
   double rlm = rr.lo - err;
 
@@ -170,4 +168,4 @@ LIBC_INLINE static constexpr double cos(double x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_SRC___SUPPORT_MATH_COS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_COS_H

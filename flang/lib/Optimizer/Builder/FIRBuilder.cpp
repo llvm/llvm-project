@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
@@ -447,7 +448,7 @@ void fir::FirOpBuilder::genStackRestore(mlir::Location loc,
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::StringAttr linkage, mlir::Attribute value, bool isConst,
-    bool isTarget, cuf::DataAttributeAttr dataAttr) {
+    bool isTarget, cuf::DataAttributeAttr dataAttr, bool setDefaultAlignment) {
   if (auto global = getNamedGlobal(name))
     return global;
   auto module = getModule();
@@ -462,6 +463,9 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   }
   auto glob = fir::GlobalOp::create(*this, loc, name, isConst, isTarget, type,
                                     value, linkage, attrs);
+  // Set default alignment for array globals.
+  if (setDefaultAlignment && mlir::isa<fir::SequenceType>(type))
+    glob.setAlignment(fir::defaultArrayGlobalAlignment);
   restoreInsertionPoint(insertPt);
   if (symbolTable)
     symbolTable->insert(glob);
@@ -471,7 +475,8 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name, bool isConst,
     bool isTarget, std::function<void(FirOpBuilder &)> bodyBuilder,
-    mlir::StringAttr linkage, cuf::DataAttributeAttr dataAttr) {
+    mlir::StringAttr linkage, cuf::DataAttributeAttr dataAttr,
+    bool setDefaultAlignment) {
   if (auto global = getNamedGlobal(name))
     return global;
   auto module = getModule();
@@ -479,6 +484,9 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   setInsertionPoint(module.getBody(), module.getBody()->end());
   auto glob = fir::GlobalOp::create(*this, loc, name, isConst, isTarget, type,
                                     mlir::Attribute{}, linkage);
+  // Set default alignment for array globals.
+  if (setDefaultAlignment && mlir::isa<fir::SequenceType>(type))
+    glob.setAlignment(fir::defaultArrayGlobalAlignment);
   auto &region = glob.getRegion();
   region.push_back(new mlir::Block);
   auto &block = glob.getRegion().back();
@@ -859,21 +867,32 @@ mlir::Value fir::FirOpBuilder::genIsNullAddr(mlir::Location loc,
                                   mlir::arith::CmpIPredicate::eq);
 }
 
-mlir::Value fir::FirOpBuilder::genExtentFromTriplet(mlir::Location loc,
-                                                    mlir::Value lb,
-                                                    mlir::Value ub,
-                                                    mlir::Value step,
-                                                    mlir::Type type) {
+template <typename OpTy, typename... Args>
+static mlir::Value createAndMaybeFold(bool fold, fir::FirOpBuilder &builder,
+                                      mlir::Location loc, Args &&...args) {
+  if (fold)
+    return builder.createOrFold<OpTy>(loc, std::forward<Args>(args)...);
+  return OpTy::create(builder, loc, std::forward<Args>(args)...);
+}
+
+mlir::Value
+fir::FirOpBuilder::genExtentFromTriplet(mlir::Location loc, mlir::Value lb,
+                                        mlir::Value ub, mlir::Value step,
+                                        mlir::Type type, bool fold) {
   auto zero = createIntegerConstant(loc, type, 0);
   lb = createConvert(loc, type, lb);
   ub = createConvert(loc, type, ub);
   step = createConvert(loc, type, step);
-  auto diff = mlir::arith::SubIOp::create(*this, loc, ub, lb);
-  auto add = mlir::arith::AddIOp::create(*this, loc, diff, step);
-  auto div = mlir::arith::DivSIOp::create(*this, loc, add, step);
-  auto cmp = mlir::arith::CmpIOp::create(
-      *this, loc, mlir::arith::CmpIPredicate::sgt, div, zero);
-  return mlir::arith::SelectOp::create(*this, loc, cmp, div, zero);
+
+  auto diff = createAndMaybeFold<mlir::arith::SubIOp>(fold, *this, loc, ub, lb);
+  auto add =
+      createAndMaybeFold<mlir::arith::AddIOp>(fold, *this, loc, diff, step);
+  auto div =
+      createAndMaybeFold<mlir::arith::DivSIOp>(fold, *this, loc, add, step);
+  auto cmp = createAndMaybeFold<mlir::arith::CmpIOp>(
+      fold, *this, loc, mlir::arith::CmpIPredicate::sgt, div, zero);
+  return createAndMaybeFold<mlir::arith::SelectOp>(fold, *this, loc, cmp, div,
+                                                   zero);
 }
 
 mlir::Value fir::FirOpBuilder::genAbsentOp(mlir::Location loc,
@@ -1555,8 +1574,15 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
       mlir::isa<fir::BaseBoxType>(fir::getBase(rhs).getType());
   auto recTy = mlir::dyn_cast<fir::RecordType>(baseTy);
   assert(recTy && "must be a record type");
+
+  // Use alias analysis to guard the fast path.
+  fir::AliasAnalysis aa;
+  // Aliased SEQUENCE types must take the conservative (slow) path.
+  bool disjoint = isTemporaryLHS || !recTy.isSequence() ||
+                  (aa.alias(fir::getBase(lhs), fir::getBase(rhs)) ==
+                   mlir::AliasResult::NoAlias);
   if ((needFinalization && mayHaveFinalizer(recTy, builder)) ||
-      hasBoxOperands || !recordTypeCanBeMemCopied(recTy)) {
+      hasBoxOperands || !recordTypeCanBeMemCopied(recTy) || !disjoint) {
     auto to = fir::getBase(builder.createBox(loc, lhs));
     auto from = fir::getBase(builder.createBox(loc, rhs));
     // The runtime entry point may modify the LHS descriptor if it is

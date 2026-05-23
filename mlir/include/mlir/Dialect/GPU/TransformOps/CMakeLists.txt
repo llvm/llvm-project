@@ -3,4 +3,4 @@ mlir_tablegen(GPUTransformOps.h.inc -gen-op-decls)
 mlir_tablegen(GPUTransformOps.cpp.inc -gen-op-defs)
 add_mlir_dialect_tablegen_target(MLIRGPUTransformOpsIncGen)
 
-add_mlir_doc(GPUTransformOps GPUTransformOps Dialects/ -gen-op-doc)
+add_mlir_doc(GPUTransformOps GPUTransformOps Dialects/ -gen-op-doc -dialect=transform)

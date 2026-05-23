@@ -30,6 +30,7 @@ public:
 
 private:
   std::vector<StringRef> InvalidationFunctions;
+  std::vector<StringRef> ReinitializationFunctions;
 };
 
 } // namespace clang::tidy::bugprone

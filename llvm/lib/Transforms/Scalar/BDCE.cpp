@@ -119,7 +119,9 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
       const uint32_t SrcBitSize = SE->getSrcTy()->getScalarSizeInBits();
       auto *const DstTy = SE->getDestTy();
       const uint32_t DestBitSize = DstTy->getScalarSizeInBits();
-      if (Demanded.countl_zero() >= (DestBitSize - SrcBitSize)) {
+      // Avoid incorrect replacement of self-referential values.
+      if (SE != SE->getOperand(0) &&
+          Demanded.countl_zero() >= (DestBitSize - SrcBitSize)) {
         clearAssumptionsOfUsers(SE, DB);
         IRBuilder<> Builder(SE);
         I.replaceAllUsesWith(
@@ -151,7 +153,8 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
             break;
           }
 
-          if (CanBeSimplified) {
+          // Avoid incorrect replacement of self-referential values.
+          if (CanBeSimplified && BO != BO->getOperand(0)) {
             clearAssumptionsOfUsers(BO, DB);
             BO->replaceAllUsesWith(BO->getOperand(0));
             Worklist.push_back(BO);

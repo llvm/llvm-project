@@ -2,7 +2,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -30,7 +30,7 @@ struct LegacyBye : public FunctionPass {
   bool runOnFunction(Function &F) override { return runBye(F); }
 };
 
-struct Bye : PassInfoMixin<Bye> {
+struct Bye : OptionalPassInfoMixin<Bye> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
     if (!runBye(F))
       return PreservedAnalyses::all();

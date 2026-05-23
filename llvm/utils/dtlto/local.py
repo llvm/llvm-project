@@ -20,7 +20,7 @@ from pathlib import Path
 
 if __name__ == "__main__":
     # Load the DTLTO information from the input JSON file.
-    with Path(sys.argv[-1]).open() as f:
+    with Path(sys.argv[-1]).open(encoding="utf-8") as f:
         data = json.load(f)
 
     # Iterate over the jobs and execute the codegen tool.

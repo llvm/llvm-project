@@ -317,8 +317,8 @@ define i1 @test27(ptr %A, ptr %B) {
 
 define <2 x i1> @test27vec(<2 x ptr> %A, <2 x ptr> %B) {
 ; CHECK-LABEL: @test27vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x ptr> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x ptr> [[B:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x ptr> [[A:%.*]], splat (ptr null)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x ptr> [[B:%.*]], splat (ptr null)
 ; CHECK-NEXT:    [[E:%.*]] = and <2 x i1> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[E]]
 ;
@@ -373,8 +373,8 @@ define i1 @test29(ptr %A, ptr %B) {
 
 define <2 x i1> @test29vec(<2 x ptr> %A, <2 x ptr> %B) {
 ; CHECK-LABEL: @test29vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x ptr> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x ptr> [[B:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x ptr> [[A:%.*]], splat (ptr null)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x ptr> [[B:%.*]], splat (ptr null)
 ; CHECK-NEXT:    [[E:%.*]] = or <2 x i1> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[E]]
 ;
@@ -2038,8 +2038,7 @@ define i32 @or_xor_and_commuted3(i32 %x, i32 %y, i32 %z) {
 
 define i1 @or_truncs(i8 %x) {
 ; CHECK-LABEL: @or_truncs(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[OR1:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[OR1:%.*]] = trunc i8 [[X:%.*]] to i1
 ; CHECK-NEXT:    ret i1 [[OR1]]
 ;
   %trunc1 = trunc i8 %x to i1
@@ -2132,10 +2131,9 @@ define i8 @or_positive_minus_non_positive_to_abs(i8 %a){
 ; TODO: Fold to smax https://alive2.llvm.org/ce/z/wDiDh2
 define i8 @or_select_smax_neg_to_abs(i8 %a){
 ; CHECK-LABEL: @or_select_smax_neg_to_abs(
-; CHECK-NEXT:    [[SGT0:%.*]] = icmp sgt i8 [[A:%.*]], 0
+; CHECK-NEXT:    [[A:%.*]] = call i8 @llvm.smin.i8(i8 [[A1:%.*]], i8 0)
 ; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i8 0, [[A]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[SGT0]], i8 0, i8 [[NEG]]
-; CHECK-NEXT:    ret i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[NEG]]
 ;
   %sgt0 = icmp sgt i8 %a, 0
   %neg = sub nsw i8 0, %a

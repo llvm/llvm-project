@@ -44,9 +44,10 @@ public:
   // Populates templates with CSS stylesheets, JS scripts paths.
   Error setupTemplateResources(const ClangDocContext &CDCtx, json::Value &V,
                                SmallString<128> RelativeRootPath);
-  llvm::Error generateDocumentation(
-      StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-      const ClangDocContext &CDCtx, std::string DirName) override;
+  llvm::Error generateDocumentation(StringRef RootDir,
+                                    llvm::StringMap<doc::Info *> Infos,
+                                    const ClangDocContext &CDCtx,
+                                    std::string DirName) override;
 };
 
 Error HTMLGenerator::setupTemplateFiles(const ClangDocContext &CDCtx) {
@@ -74,12 +75,12 @@ Error HTMLGenerator::setupTemplateFiles(const ClangDocContext &CDCtx) {
       ConvertToNative(CDCtx.MustacheTemplates.lookup("head-template"));
   std::string NavbarFilePath =
       ConvertToNative(CDCtx.MustacheTemplates.lookup("navbar-template"));
+  std::string AliasFilePath =
+      ConvertToNative(CDCtx.MustacheTemplates.lookup("alias-template"));
   std::vector<std::pair<StringRef, StringRef>> Partials = {
-      {"Comments", CommentFilePath},
-      {"FunctionPartial", FunctionFilePath},
-      {"EnumPartial", EnumFilePath},
-      {"HeadPartial", HeadFilePath},
-      {"NavbarPartial", NavbarFilePath}};
+      {"Comments", CommentFilePath},     {"FunctionPartial", FunctionFilePath},
+      {"EnumPartial", EnumFilePath},     {"HeadPartial", HeadFilePath},
+      {"NavbarPartial", NavbarFilePath}, {"AliasPartial", AliasFilePath}};
 
   if (Error Err = setupTemplate(NamespaceTemplate, NamespaceFilePath, Partials))
     return Err;
@@ -182,9 +183,10 @@ Error HTMLGenerator::createResources(ClangDocContext &CDCtx) {
   return Error::success();
 }
 
-Error HTMLGenerator::generateDocumentation(
-    StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-    const ClangDocContext &CDCtx, std::string DirName) {
+Error HTMLGenerator::generateDocumentation(StringRef RootDir,
+                                           llvm::StringMap<doc::Info *> Infos,
+                                           const ClangDocContext &CDCtx,
+                                           std::string DirName) {
   return MustacheGenerator::generateDocumentation(RootDir, std::move(Infos),
                                                   CDCtx, "html");
 }
