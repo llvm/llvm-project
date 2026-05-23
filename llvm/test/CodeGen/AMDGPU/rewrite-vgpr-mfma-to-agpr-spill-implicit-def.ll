@@ -10,7 +10,7 @@
 ; When the AGPR rewrite pass unspills such a slot into a vreg, it must insert
 ; IMPLICIT_DEF so the vreg has defs on all paths.
 
-; CHECK: Inserted IMPLICIT_DEF for %{{[0-9]+}} in %bb.{{[0-9]+}}
+; CHECK: some reachable load not jointly dominated by stores
 
 define amdgpu_kernel void @rewrite_vgpr_mfma_to_agpr_spill_implicit_def(i1 %0, <16 x float> %.sroa.366.2) #0 {
 .lr.ph.i:
