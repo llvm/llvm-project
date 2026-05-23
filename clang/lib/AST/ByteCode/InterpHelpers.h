@@ -57,6 +57,10 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK = AK_Read);
 
+/// Checks if a value can be stored in a block.
+bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                bool WillBeActivated = false);
+
 /// Diagnose mismatched new[]/delete or new/delete[] pairs.
 bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
                          DynamicAllocator::Form AllocForm,
@@ -87,7 +91,10 @@ inline bool CheckArraySize(InterpState &S, CodePtr OpPC, uint64_t NumElems) {
   return true;
 }
 
-static inline llvm::RoundingMode getRoundingMode(FPOptions FPO) {
+static inline llvm::RoundingMode getRoundingMode(FPOptions FPO,
+                                                 bool InConstantContext) {
+  if (!InConstantContext && !FPO.getAllowFEnvAccess())
+    return llvm::RoundingMode::NearestTiesToEven;
   auto RM = FPO.getRoundingMode();
   if (RM == llvm::RoundingMode::Dynamic)
     return llvm::RoundingMode::NearestTiesToEven;

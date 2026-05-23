@@ -199,6 +199,79 @@ static llvm::APSInt convertBoolVectorToInt(const Pointer &Val) {
   return Result;
 }
 
+static bool CheckFloatResult(InterpState &S, CodePtr OpPC, const CallExpr *Call,
+                             const APFloat &Result, APFloat::opStatus Status) {
+  FPOptions FPO = Call->getFPFeaturesInEffect(S.getLangOpts());
+
+  if (!S.inConstantContext()) {
+    if ((Status & APFloat::opInexact) &&
+        FPO.getRoundingMode() == llvm::RoundingMode::Dynamic) {
+      const SourceInfo &E = S.Current->getSource(OpPC);
+      S.FFDiag(E, diag::note_constexpr_dynamic_rounding);
+      return false;
+    }
+
+    if ((Status != APFloat::opOK) &&
+        (FPO.getRoundingMode() == llvm::RoundingMode::Dynamic ||
+         FPO.getExceptionMode() != LangOptions::FPE_Ignore ||
+         FPO.getAllowFEnvAccess())) {
+      const SourceInfo &E = S.Current->getSource(OpPC);
+      S.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
+      return false;
+    }
+  }
+
+  // If any of the following exceptions were raised, the operation is not a
+  // constant expression.
+  if (Status & (APFloat::opInvalidOp | APFloat::opOverflow |
+                APFloat::opUnderflow | APFloat::opDivByZero)) {
+    if (!S.checkingPotentialConstantExpression()) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.CCEDiag(Loc, diag::note_constexpr_float_arithmetic) << Result.isNaN();
+    }
+    return false;
+  }
+
+  return true;
+}
+
+static bool CheckBuiltinStore(InterpState &S, CodePtr OpPC,
+                              const Pointer &Ptr) {
+  if (!CheckLive(S, OpPC, Ptr, AK_Assign))
+    return false;
+  if (!Ptr.isBlockPointer())
+    return Invalid(S, OpPC);
+  return CheckStore(S, OpPC, Ptr);
+}
+
+static APFloat::opStatus getScalbnStatus(const APFloat &Arg,
+                                         const APFloat &Result, int Exp) {
+  // APFloat::scalbn returns only the scaled value, so derive the status needed
+  // by strict floating-point evaluation.
+  if (!Arg.isFinite() || Arg.isZero())
+    return APFloat::opOK;
+
+  if (Result.isInfinity())
+    return static_cast<APFloat::opStatus>(APFloat::opOverflow |
+                                          APFloat::opInexact);
+  if (Result.isZero())
+    return static_cast<APFloat::opStatus>(APFloat::opUnderflow |
+                                          APFloat::opInexact);
+  if (Exp == std::numeric_limits<int>::min())
+    return static_cast<APFloat::opStatus>(APFloat::opUnderflow |
+                                          APFloat::opInexact);
+
+  APFloat Inverse = scalbn(Result, -Exp, APFloat::rmNearestTiesToEven);
+  if (Inverse.compare(Arg) == APFloat::cmpEqual)
+    return APFloat::opOK;
+
+  if (Result.isDenormal())
+    return static_cast<APFloat::opStatus>(APFloat::opUnderflow |
+                                          APFloat::opInexact);
+  return static_cast<APFloat::opStatus>(APFloat::opOverflow |
+                                        APFloat::opInexact);
+}
+
 // Strict double -> float conversion used for X86 PD2PS/cvtsd2ss intrinsics.
 // Reject NaN/Inf/Subnormal inputs and any lossy/inexact conversions.
 static bool convertDoubleToFloatStrict(APFloat Src, Floating &Dst,
@@ -715,6 +788,358 @@ static inline Floating abs(InterpState &S, const Floating &In) {
   New.changeSign();
   Output.copy(New);
   return Output;
+}
+
+static bool interp__builtin_roundToIntegral(InterpState &S, CodePtr OpPC,
+                                            const InterpFrame *Frame,
+                                            const CallExpr *Call,
+                                            unsigned BuiltinOp) {
+  const Floating &Val = S.Stk.pop<Floating>();
+  Floating Result = S.allocFloat(Val.getSemantics());
+  APFloat F = Val.getAPFloat();
+
+  llvm::RoundingMode RM;
+  switch (BuiltinOp) {
+  case Builtin::BI__builtin_ceil:
+  case Builtin::BI__builtin_ceilf:
+  case Builtin::BI__builtin_ceill:
+  case Builtin::BI__builtin_ceilf16:
+  case Builtin::BI__builtin_ceilf128:
+    RM = llvm::RoundingMode::TowardPositive;
+    break;
+  case Builtin::BI__builtin_floor:
+  case Builtin::BI__builtin_floorf:
+  case Builtin::BI__builtin_floorl:
+  case Builtin::BI__builtin_floorf16:
+  case Builtin::BI__builtin_floorf128:
+    RM = llvm::RoundingMode::TowardNegative;
+    break;
+  case Builtin::BI__builtin_trunc:
+  case Builtin::BI__builtin_truncf:
+  case Builtin::BI__builtin_truncl:
+  case Builtin::BI__builtin_truncf16:
+  case Builtin::BI__builtin_truncf128:
+    RM = llvm::RoundingMode::TowardZero;
+    break;
+  case Builtin::BI__builtin_round:
+  case Builtin::BI__builtin_roundf:
+  case Builtin::BI__builtin_roundl:
+  case Builtin::BI__builtin_roundf16:
+  case Builtin::BI__builtin_roundf128:
+    RM = llvm::RoundingMode::NearestTiesToAway;
+    break;
+  case Builtin::BI__builtin_roundeven:
+  case Builtin::BI__builtin_roundevenf:
+  case Builtin::BI__builtin_roundevenl:
+  case Builtin::BI__builtin_roundevenf16:
+  case Builtin::BI__builtin_roundevenf128:
+    RM = llvm::RoundingMode::NearestTiesToEven;
+    break;
+  default:
+    llvm_unreachable("invalid builtin ID");
+  }
+
+  // roundToIntegral handles special values (NaN, INF) per IEEE 754.
+  APFloat::opStatus Status = F.roundToIntegral(RM);
+  if (!CheckFloatResult(S, OpPC, Call, F, Status))
+    return false;
+
+  Result.copy(F);
+  S.Stk.push<Floating>(Result);
+  return true;
+}
+
+static bool interp__builtin_fdim(InterpState &S, CodePtr OpPC,
+                                 const InterpFrame *Frame,
+                                 const CallExpr *Call) {
+  const Floating &RHS = S.Stk.pop<Floating>();
+  const Floating &LHS = S.Stk.pop<Floating>();
+  APFloat L = LHS.getAPFloat();
+  APFloat R = RHS.getAPFloat();
+  APFloat Result(L.getSemantics());
+
+  if (L.isNaN()) {
+    Result = L;
+  } else if (R.isNaN()) {
+    Result = R;
+  } else if (L.compare(R) == APFloat::cmpGreaterThan) {
+    llvm::RoundingMode RM = getRoundingMode(
+        Call->getFPFeaturesInEffect(S.getLangOpts()), S.inConstantContext());
+    APFloat::opStatus Status = L.subtract(R, RM);
+    if (!CheckFloatResult(S, OpPC, Call, L, Status))
+      return false;
+    Result = L;
+  } else {
+    Result = APFloat::getZero(L.getSemantics());
+  }
+
+  Floating F = S.allocFloat(Result.getSemantics());
+  F.copy(Result);
+  S.Stk.push<Floating>(F);
+  return true;
+}
+
+static bool interp__builtin_fma(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame,
+                                const CallExpr *Call) {
+  const Floating &Z = S.Stk.pop<Floating>();
+  const Floating &Y = S.Stk.pop<Floating>();
+  const Floating &X = S.Stk.pop<Floating>();
+  APFloat Result = X.getAPFloat();
+
+  llvm::RoundingMode RM = getRoundingMode(
+      Call->getFPFeaturesInEffect(S.getLangOpts()), S.inConstantContext());
+
+  // fusedMultiplyAdd handles special values (NaN, INF) per IEEE 754.
+  APFloat::opStatus Status =
+      Result.fusedMultiplyAdd(Y.getAPFloat(), Z.getAPFloat(), RM);
+  if (!CheckFloatResult(S, OpPC, Call, Result, Status))
+    return false;
+
+  Floating F = S.allocFloat(Result.getSemantics());
+  F.copy(Result);
+  S.Stk.push<Floating>(F);
+  return true;
+}
+
+static bool interp__builtin_frexp(InterpState &S, CodePtr OpPC,
+                                  const InterpFrame *Frame,
+                                  const CallExpr *Call) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  const Floating &Val = S.Stk.pop<Floating>();
+
+  int Exp = 0;
+  // frexp handles special values (NaN, INF) per IEEE 754.
+  APFloat F = frexp(Val.getAPFloat(), Exp, APFloat::rmNearestTiesToEven);
+
+  if (!CheckBuiltinStore(S, OpPC, Ptr))
+    return false;
+
+  QualType ExpType = Call->getArg(1)->getType()->getPointeeType();
+  PrimType ExpT = *S.getContext().classify(ExpType);
+  assignIntegral(S, Ptr, ExpT, APSInt::get(Exp));
+  Ptr.initialize();
+
+  Floating Result = S.allocFloat(F.getSemantics());
+  Result.copy(F);
+  S.Stk.push<Floating>(Result);
+  return true;
+}
+
+static bool interp__builtin_modf(InterpState &S, CodePtr OpPC,
+                                 const InterpFrame *Frame,
+                                 const CallExpr *Call) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  const Floating &Val = S.Stk.pop<Floating>();
+  const APFloat &F = Val.getAPFloat();
+
+  APFloat Integral = F;
+  Integral.roundToIntegral(APFloat::rmTowardZero);
+
+  if (!CheckBuiltinStore(S, OpPC, Ptr))
+    return false;
+
+  Floating I = S.allocFloat(Integral.getSemantics());
+  I.copy(Integral);
+  Ptr.deref<Floating>() = I;
+  Ptr.initialize();
+
+  if (F.isInfinity()) {
+    Floating Fraction = S.allocFloat(F.getSemantics());
+    Fraction.copy(APFloat::getZero(F.getSemantics(), F.isNegative()));
+    S.Stk.push<Floating>(Fraction);
+    return true;
+  }
+
+  APFloat Fraction = F;
+  if (!Fraction.isZero())
+    Fraction.subtract(Integral, APFloat::rmNearestTiesToEven);
+
+  Floating Result = S.allocFloat(Fraction.getSemantics());
+  Result.copy(Fraction);
+  S.Stk.push<Floating>(Result);
+  return true;
+}
+
+static bool interp__builtin_fmod(InterpState &S, CodePtr OpPC,
+                                 const InterpFrame *Frame, const CallExpr *Call,
+                                 unsigned BuiltinOp) {
+  const Floating &RHS = S.Stk.pop<Floating>();
+  const Floating &LHS = S.Stk.pop<Floating>();
+  const APFloat &L = LHS.getAPFloat();
+  const APFloat &R = RHS.getAPFloat();
+  APFloat ResF = L;
+
+  // mod and remainder handle special values (NaN, INF) per IEEE 754.
+  APFloat::opStatus Status;
+  if (BuiltinOp == Builtin::BI__builtin_remainder ||
+      BuiltinOp == Builtin::BI__builtin_remainderf ||
+      BuiltinOp == Builtin::BI__builtin_remainderl ||
+      BuiltinOp == Builtin::BI__builtin_remainderf128)
+    Status = ResF.remainder(R);
+  else
+    Status = ResF.mod(R);
+
+  if (!CheckFloatResult(S, OpPC, Call, ResF, Status))
+    return false;
+
+  Floating F = S.allocFloat(ResF.getSemantics());
+  F.copy(ResF);
+  S.Stk.push<Floating>(F);
+  return true;
+}
+
+static bool interp__builtin_nextafter(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const CallExpr *Call) {
+  const Floating &RHS = S.Stk.pop<Floating>();
+  const Floating &LHS = S.Stk.pop<Floating>();
+  const APFloat &L = LHS.getAPFloat();
+  const APFloat &R = RHS.getAPFloat();
+
+  if (L.isNaN()) {
+    S.Stk.push<Floating>(LHS);
+    return true;
+  }
+
+  // nexttoward(x, y) takes y as long double, so if y is NaN we must
+  // convert it to x's semantics before returning.
+  if (R.isNaN()) {
+    bool LoseInfo = false;
+    APFloat NaN = R;
+    NaN.convert(L.getSemantics(), APFloat::rmNearestTiesToEven, &LoseInfo);
+    Floating Result = S.allocFloat(NaN.getSemantics());
+    Result.copy(NaN);
+    S.Stk.push<Floating>(Result);
+    return true;
+  }
+
+  APFloat LCopy = L;
+  bool LoseInfo = false;
+  LCopy.convert(R.getSemantics(), APFloat::rmNearestTiesToEven, &LoseInfo);
+  APFloat::cmpResult Res = LCopy.compare(R);
+
+  APFloat Next = L;
+  bool Stepped = false;
+  if (Res == APFloat::cmpEqual && L.isZero() && R.isZero() &&
+      L.isNegative() != R.isNegative())
+    Next = APFloat::getZero(L.getSemantics(), R.isNegative());
+  else if (Res != APFloat::cmpEqual) {
+    Next.next(Res == APFloat::cmpGreaterThan);
+    Stepped = true;
+  }
+
+  APFloat::opStatus Status = APFloat::opOK;
+  if (Stepped && Next.isInfinity())
+    Status = static_cast<APFloat::opStatus>(APFloat::opOverflow |
+                                            APFloat::opInexact);
+  else if (Stepped && (Next.isDenormal() || Next.isZero()))
+    Status = static_cast<APFloat::opStatus>(APFloat::opUnderflow |
+                                            APFloat::opInexact);
+
+  if (!CheckFloatResult(S, OpPC, Call, Next, Status))
+    return false;
+
+  Floating Result = S.allocFloat(Next.getSemantics());
+  Result.copy(Next);
+  S.Stk.push<Floating>(Result);
+  return true;
+}
+
+static bool interp__builtin_scalbn(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const CallExpr *Call) {
+  PrimType ExpT = *S.getContext().classify(Call->getArg(1)->getType());
+  APSInt Exp;
+  if (!popToAPSInt(S.Stk, ExpT, Exp))
+    return false;
+  const Floating &Val = S.Stk.pop<Floating>();
+
+  llvm::RoundingMode RM = getRoundingMode(
+      Call->getFPFeaturesInEffect(S.getLangOpts()), S.inConstantContext());
+
+  APFloat ValF = Val.getAPFloat();
+  int ExpVal = (int)Exp.getExtValue();
+  APFloat Scaled = scalbn(ValF, ExpVal, RM);
+  APFloat::opStatus Status = getScalbnStatus(ValF, Scaled, ExpVal);
+  if (!CheckFloatResult(S, OpPC, Call, Scaled, Status))
+    return false;
+
+  Floating Result = S.allocFloat(Val.getSemantics());
+  Result.copy(Scaled);
+  S.Stk.push<Floating>(Result);
+  return true;
+}
+
+static bool interp__builtin_ilogb(InterpState &S, CodePtr OpPC,
+                                  const InterpFrame *Frame,
+                                  const CallExpr *Call) {
+  const Floating &Val = S.Stk.pop<Floating>();
+  pushInteger(S, ilogb(Val.getAPFloat()), Call->getType());
+  return true;
+}
+
+static bool interp__builtin_remquo(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const CallExpr *Call) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  const Floating &RHS = S.Stk.pop<Floating>();
+  const Floating &LHS = S.Stk.pop<Floating>();
+
+  APFloat Q = LHS.getAPFloat();
+  Q.divide(RHS.getAPFloat(), APFloat::rmNearestTiesToEven);
+  Q.roundToIntegral(APFloat::rmNearestTiesToEven);
+
+  if (Ptr.isDummy())
+    return false;
+
+  QualType QuoType = Call->getArg(2)->getType()->getPointeeType();
+  APSInt QuoInt(S.getASTContext().getTypeSize(QuoType), /*IsUnsigned=*/false);
+  bool IsExact = false;
+  APFloat::opStatus ConvSt =
+      Q.convertToInteger(QuoInt, APFloat::rmTowardZero, &IsExact);
+  if (ConvSt & APFloat::opInvalidOp)
+    QuoInt = 0;
+
+  PrimType QuoT = *S.getContext().classify(QuoType);
+  assignIntegral(S, Ptr, QuoT, QuoInt);
+  Ptr.initialize();
+
+  APFloat R = LHS.getAPFloat();
+  // remainder handles special values (NaN, INF) per IEEE 754.
+  APFloat::opStatus Status = R.remainder(RHS.getAPFloat());
+  if (!CheckFloatResult(S, OpPC, Call, R, Status))
+    return false;
+
+  Floating Result = S.allocFloat(R.getSemantics());
+  Result.copy(R);
+  S.Stk.push<Floating>(Result);
+  return true;
+}
+
+static bool interp__builtin_lround(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const CallExpr *Call) {
+  const Floating &Val = S.Stk.pop<Floating>();
+  APFloat F = Val.getAPFloat();
+
+  llvm::RoundingMode RM = llvm::RoundingMode::NearestTiesToAway;
+
+  // roundToIntegral handles special values (NaN, INF) per IEEE 754.
+  F.roundToIntegral(RM);
+
+  APSInt IntVal(S.getASTContext().getTypeSize(Call->getType()),
+                Call->getType()->isUnsignedIntegerOrEnumerationType());
+  bool IsExact = false;
+  APFloat::opStatus Status = F.convertToInteger(IntVal, RM, &IsExact);
+
+  if (Status & APFloat::opInvalidOp) {
+    auto Loc = S.Current->getSource(OpPC);
+    S.CCEDiag(Loc, diag::note_constexpr_float_arithmetic) << F.isNaN();
+  }
+
+  pushInteger(S, IntVal, Call->getType());
+  return true;
 }
 
 // The C standard says "fabs raises no floating-point exceptions,
@@ -3052,7 +3477,7 @@ static bool interp_builtin_horizontal_fp_binop(
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
   FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
-  llvm::RoundingMode RM = getRoundingMode(FPO);
+  llvm::RoundingMode RM = getRoundingMode(FPO, S.inConstantContext());
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
 
   unsigned NumElts = VT->getNumElements();
@@ -3087,7 +3512,7 @@ static bool interp__builtin_ia32_addsub(InterpState &S, CodePtr OpPC,
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
   FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
-  llvm::RoundingMode RM = getRoundingMode(FPO);
+  llvm::RoundingMode RM = getRoundingMode(FPO, S.inConstantContext());
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
   unsigned NumElems = VT->getNumElements();
 
@@ -3177,7 +3602,7 @@ static bool interp__builtin_elementwise_triop_fp(
   assert(Call->getNumArgs() == 3);
 
   FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
-  llvm::RoundingMode RM = getRoundingMode(FPO);
+  llvm::RoundingMode RM = getRoundingMode(FPO, S.inConstantContext());
   QualType Arg1Type = Call->getArg(0)->getType();
   QualType Arg2Type = Call->getArg(1)->getType();
   QualType Arg3Type = Call->getArg(2)->getType();
@@ -4535,6 +4960,119 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case Builtin::BI__builtin_issubnormal:
     return interp__builtin_issubnormal(S, OpPC, Frame, Call);
+
+  case Builtin::BI__builtin_lround:
+  case Builtin::BI__builtin_lroundf:
+  case Builtin::BI__builtin_lroundl:
+  case Builtin::BI__builtin_lroundf128:
+  case Builtin::BI__builtin_llround:
+  case Builtin::BI__builtin_llroundf:
+  case Builtin::BI__builtin_llroundl:
+  case Builtin::BI__builtin_llroundf128:
+    return interp__builtin_lround(S, OpPC, Frame, Call);
+
+  case Builtin::BI__builtin_ceil:
+  case Builtin::BI__builtin_ceilf:
+  case Builtin::BI__builtin_ceill:
+  case Builtin::BI__builtin_ceilf16:
+  case Builtin::BI__builtin_ceilf128:
+  case Builtin::BI__builtin_floor:
+  case Builtin::BI__builtin_floorf:
+  case Builtin::BI__builtin_floorl:
+  case Builtin::BI__builtin_floorf16:
+  case Builtin::BI__builtin_floorf128:
+  case Builtin::BI__builtin_trunc:
+  case Builtin::BI__builtin_truncf:
+  case Builtin::BI__builtin_truncl:
+  case Builtin::BI__builtin_truncf16:
+  case Builtin::BI__builtin_truncf128:
+  case Builtin::BI__builtin_roundeven:
+  case Builtin::BI__builtin_roundevenf:
+  case Builtin::BI__builtin_roundevenl:
+  case Builtin::BI__builtin_roundevenf16:
+  case Builtin::BI__builtin_roundevenf128:
+    return interp__builtin_roundToIntegral(S, OpPC, Frame, Call, BuiltinID);
+
+  case Builtin::BI__builtin_fdim:
+  case Builtin::BI__builtin_fdimf:
+  case Builtin::BI__builtin_fdiml:
+  case Builtin::BI__builtin_fdimf128:
+    return interp__builtin_fdim(S, OpPC, Frame, Call);
+
+  case Builtin::BI__builtin_frexp:
+  case Builtin::BI__builtin_frexpf:
+  case Builtin::BI__builtin_frexpl:
+  case Builtin::BI__builtin_frexpf16:
+  case Builtin::BI__builtin_frexpf128:
+    return interp__builtin_frexp(S, OpPC, Frame, Call);
+
+  case Builtin::BI__builtin_modf:
+  case Builtin::BI__builtin_modff:
+  case Builtin::BI__builtin_modfl:
+  case Builtin::BI__builtin_modff128:
+    return interp__builtin_modf(S, OpPC, Frame, Call);
+
+  case Builtin::BI__builtin_fma:
+  case Builtin::BI__builtin_fmaf:
+  case Builtin::BI__builtin_fmal:
+  case Builtin::BI__builtin_fmaf16:
+  case Builtin::BI__builtin_fmaf128:
+    return interp__builtin_fma(S, OpPC, Frame, Call);
+
+  case Builtin::BI__builtin_fmod:
+  case Builtin::BI__builtin_fmodf:
+  case Builtin::BI__builtin_fmodl:
+  case Builtin::BI__builtin_fmodf16:
+  case Builtin::BI__builtin_fmodf128:
+  case Builtin::BI__builtin_remainder:
+  case Builtin::BI__builtin_remainderf:
+  case Builtin::BI__builtin_remainderl:
+  case Builtin::BI__builtin_remainderf128:
+    return interp__builtin_fmod(S, OpPC, Frame, Call, BuiltinID);
+
+  case Builtin::BI__builtin_nextafter:
+  case Builtin::BI__builtin_nextafterf:
+  case Builtin::BI__builtin_nextafterl:
+  case Builtin::BI__builtin_nextafterf128:
+  case Builtin::BI__builtin_nexttoward:
+  case Builtin::BI__builtin_nexttowardf:
+  case Builtin::BI__builtin_nexttowardl:
+  case Builtin::BI__builtin_nexttowardf128:
+    return interp__builtin_nextafter(S, OpPC, Frame, Call);
+
+  case Builtin::BI__builtin_scalbn:
+  case Builtin::BI__builtin_scalbnf:
+  case Builtin::BI__builtin_scalbnl:
+  case Builtin::BI__builtin_scalbnf128:
+  case Builtin::BI__builtin_scalbln:
+  case Builtin::BI__builtin_scalblnf:
+  case Builtin::BI__builtin_scalblnl:
+  case Builtin::BI__builtin_scalblnf128:
+  case Builtin::BI__builtin_ldexp:
+  case Builtin::BI__builtin_ldexpf:
+  case Builtin::BI__builtin_ldexpl:
+  case Builtin::BI__builtin_ldexpf16:
+  case Builtin::BI__builtin_ldexpf128:
+    return interp__builtin_scalbn(S, OpPC, Frame, Call);
+
+  case Builtin::BI__builtin_ilogb:
+  case Builtin::BI__builtin_ilogbf:
+  case Builtin::BI__builtin_ilogbl:
+  case Builtin::BI__builtin_ilogbf128:
+    return interp__builtin_ilogb(S, OpPC, Frame, Call);
+
+  case Builtin::BI__builtin_remquo:
+  case Builtin::BI__builtin_remquof:
+  case Builtin::BI__builtin_remquol:
+  case Builtin::BI__builtin_remquof128:
+    return interp__builtin_remquo(S, OpPC, Frame, Call);
+
+  case Builtin::BI__builtin_round:
+  case Builtin::BI__builtin_roundf:
+  case Builtin::BI__builtin_roundl:
+  case Builtin::BI__builtin_roundf16:
+  case Builtin::BI__builtin_roundf128:
+    return interp__builtin_roundToIntegral(S, OpPC, Frame, Call, BuiltinID);
 
   case Builtin::BI__builtin_iszero:
     return interp__builtin_iszero(S, OpPC, Frame, Call);

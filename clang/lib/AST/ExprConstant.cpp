@@ -2660,8 +2660,10 @@ static bool HandleFloatToIntCast(EvalInfo &Info, const Expr *E,
 /// expression. If the result is exact, it does not depend on rounding mode.
 /// So return "tonearest" mode instead of "dynamic".
 static llvm::RoundingMode getActiveRoundingMode(EvalInfo &Info, const Expr *E) {
-  llvm::RoundingMode RM =
-      E->getFPFeaturesInEffect(Info.getLangOpts()).getRoundingMode();
+  FPOptions FPO = E->getFPFeaturesInEffect(Info.getLangOpts());
+  if (!Info.InConstantContext && !FPO.getAllowFEnvAccess())
+    return llvm::RoundingMode::NearestTiesToEven;
+  llvm::RoundingMode RM = FPO.getRoundingMode();
   if (RM == llvm::RoundingMode::Dynamic)
     RM = llvm::RoundingMode::NearestTiesToEven;
   return RM;
@@ -2706,6 +2708,34 @@ static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
   //   initializer,
   // the evaluation probably need to be rejected.
   return true;
+}
+
+static APFloat::opStatus getScalbnStatus(const APFloat &Arg,
+                                         const APFloat &Result, int Exp) {
+  // APFloat::scalbn returns only the scaled value, so derive the status needed
+  // by strict floating-point evaluation.
+  if (!Arg.isFinite() || Arg.isZero())
+    return APFloat::opOK;
+
+  if (Result.isInfinity())
+    return static_cast<APFloat::opStatus>(APFloat::opOverflow |
+                                          APFloat::opInexact);
+  if (Result.isZero())
+    return static_cast<APFloat::opStatus>(APFloat::opUnderflow |
+                                          APFloat::opInexact);
+  if (Exp == std::numeric_limits<int>::min())
+    return static_cast<APFloat::opStatus>(APFloat::opUnderflow |
+                                          APFloat::opInexact);
+
+  APFloat Inverse = scalbn(Result, -Exp, APFloat::rmNearestTiesToEven);
+  if (Inverse.compare(Arg) == APFloat::cmpEqual)
+    return APFloat::opOK;
+
+  if (Result.isDenormal())
+    return static_cast<APFloat::opStatus>(APFloat::opUnderflow |
+                                          APFloat::opInexact);
+  return static_cast<APFloat::opStatus>(APFloat::opOverflow |
+                                        APFloat::opInexact);
 }
 
 static bool HandleFloatToFloatCast(EvalInfo &Info, const Expr *E,
@@ -16396,6 +16426,34 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   };
 
   switch (BuiltinOp) {
+  case Builtin::BI__builtin_lround:
+  case Builtin::BI__builtin_lroundf:
+  case Builtin::BI__builtin_lroundl:
+  case Builtin::BI__builtin_lroundf128:
+  case Builtin::BI__builtin_llround:
+  case Builtin::BI__builtin_llroundf:
+  case Builtin::BI__builtin_llroundl:
+  case Builtin::BI__builtin_llroundf128: {
+    APFloat FloatVal(0.0);
+    if (!EvaluateFloat(E->getArg(0), FloatVal, Info))
+      return false;
+
+    llvm::RoundingMode RM = llvm::RoundingMode::NearestTiesToAway;
+
+    FloatVal.roundToIntegral(RM);
+
+    APSInt IntVal(Info.Ctx.getTypeSize(E->getType()),
+                  E->getType()->isUnsignedIntegerOrEnumerationType());
+    bool IsExact = false;
+    APFloat::opStatus Status = FloatVal.convertToInteger(IntVal, RM, &IsExact);
+
+    if (Status & APFloat::opInvalidOp)
+      Info.CCEDiag(E, diag::note_constexpr_float_arithmetic)
+          << (FloatVal.isNaN() ? 1 : 0);
+
+    return Success(IntVal, E);
+  }
+
   default:
     return false;
 
@@ -16863,6 +16921,22 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
 
     return Success(Val.popcount() % 2, E);
+  }
+
+  case Builtin::BI__builtin_ilogb:
+  case Builtin::BI__builtin_ilogbf:
+  case Builtin::BI__builtin_ilogbl:
+  case Builtin::BI__builtin_ilogbf128: {
+    APFloat FloatVal(0.0);
+    if (!EvaluateFloat(E->getArg(0), FloatVal, Info))
+      return false;
+
+    if (FloatVal.isZero() || FloatVal.isNaN() || FloatVal.isInfinity()) {
+      if (!checkFloatingPointResult(Info, E, APFloat::opInvalidOp))
+        return false;
+    }
+
+    return Success(ilogb(FloatVal), E);
   }
 
   case Builtin::BI__builtin_abs:
@@ -19946,6 +20020,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))
       return false;
+    // maxnum handle special values (NaN, INF) per IEEE 754.
     Result = maxnum(Result, RHS);
     return true;
   }
@@ -19959,6 +20034,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))
       return false;
+    // minnum handle special values (NaN, INF) per IEEE 754.
     Result = minnum(Result, RHS);
     return true;
   }
@@ -19972,6 +20048,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))
       return false;
+    // maximumnum handle special values (NaN, INF) per IEEE 754.
     Result = maximumnum(Result, RHS);
     return true;
   }
@@ -19985,8 +20062,289 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))
       return false;
+    // minimumnum handles special values (NaN, INF) per IEEE 754.
     Result = minimumnum(Result, RHS);
     return true;
+  }
+
+  case Builtin::BI__builtin_round:
+  case Builtin::BI__builtin_roundf:
+  case Builtin::BI__builtin_roundl:
+  case Builtin::BI__builtin_roundf16:
+  case Builtin::BI__builtin_roundf128:
+  case Builtin::BI__builtin_ceil:
+  case Builtin::BI__builtin_ceilf:
+  case Builtin::BI__builtin_ceill:
+  case Builtin::BI__builtin_ceilf16:
+  case Builtin::BI__builtin_ceilf128:
+  case Builtin::BI__builtin_floor:
+  case Builtin::BI__builtin_floorf:
+  case Builtin::BI__builtin_floorl:
+  case Builtin::BI__builtin_floorf16:
+  case Builtin::BI__builtin_floorf128:
+  case Builtin::BI__builtin_trunc:
+  case Builtin::BI__builtin_truncf:
+  case Builtin::BI__builtin_truncl:
+  case Builtin::BI__builtin_truncf16:
+  case Builtin::BI__builtin_truncf128:
+  case Builtin::BI__builtin_roundeven:
+  case Builtin::BI__builtin_roundevenf:
+  case Builtin::BI__builtin_roundevenl:
+  case Builtin::BI__builtin_roundevenf16:
+  case Builtin::BI__builtin_roundevenf128: {
+    if (!EvaluateFloat(E->getArg(0), Result, Info))
+      return false;
+    llvm::RoundingMode RM;
+    switch (E->getBuiltinCallee()) {
+
+    case Builtin::BI__builtin_round:
+    case Builtin::BI__builtin_roundf:
+    case Builtin::BI__builtin_roundl:
+    case Builtin::BI__builtin_roundf16:
+    case Builtin::BI__builtin_roundf128:
+      RM = llvm::RoundingMode::NearestTiesToAway;
+      break;
+    case Builtin::BI__builtin_ceil:
+    case Builtin::BI__builtin_ceilf:
+    case Builtin::BI__builtin_ceill:
+    case Builtin::BI__builtin_ceilf16:
+    case Builtin::BI__builtin_ceilf128:
+      RM = llvm::RoundingMode::TowardPositive;
+      break;
+    case Builtin::BI__builtin_floor:
+    case Builtin::BI__builtin_floorf:
+    case Builtin::BI__builtin_floorl:
+    case Builtin::BI__builtin_floorf16:
+    case Builtin::BI__builtin_floorf128:
+      RM = llvm::RoundingMode::TowardNegative;
+      break;
+    case Builtin::BI__builtin_roundeven:
+    case Builtin::BI__builtin_roundevenf:
+    case Builtin::BI__builtin_roundevenl:
+    case Builtin::BI__builtin_roundevenf16:
+    case Builtin::BI__builtin_roundevenf128:
+      RM = llvm::RoundingMode::NearestTiesToEven;
+      break;
+    default:
+      RM = llvm::RoundingMode::TowardZero;
+      break;
+    }
+    // roundToIntegral handles special values (NaN, INF) per IEEE 754.
+    APFloat::opStatus St = Result.roundToIntegral(RM);
+    return checkFloatingPointResult(Info, E, St);
+  }
+
+  case Builtin::BI__builtin_fdim:
+  case Builtin::BI__builtin_fdimf:
+  case Builtin::BI__builtin_fdiml:
+  case Builtin::BI__builtin_fdimf128: {
+    APFloat RHS(0.);
+    if (!EvaluateFloat(E->getArg(0), Result, Info) ||
+        !EvaluateFloat(E->getArg(1), RHS, Info))
+      return false;
+    if (Result.compare(RHS) == APFloat::cmpGreaterThan) {
+      llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
+      APFloat::opStatus St = Result.subtract(RHS, RM);
+      return checkFloatingPointResult(Info, E, St);
+    } else if (Result.isNaN()) {
+      // Result is already the NaN with its payload preserved.
+    } else if (RHS.isNaN()) {
+      Result = RHS;
+    } else {
+      Result = APFloat::getZero(Result.getSemantics());
+    }
+    return true;
+  }
+
+  case Builtin::BI__builtin_fma:
+  case Builtin::BI__builtin_fmaf:
+  case Builtin::BI__builtin_fmal:
+  case Builtin::BI__builtin_fmaf16:
+  case Builtin::BI__builtin_fmaf128: {
+    APFloat RHS(0.), Third(0.);
+    if (!EvaluateFloat(E->getArg(0), Result, Info) ||
+        !EvaluateFloat(E->getArg(1), RHS, Info) ||
+        !EvaluateFloat(E->getArg(2), Third, Info))
+      return false;
+
+    llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
+    // fusedMultiplyAdd handles special values (NaN, INF) per IEEE 754.
+    APFloat::opStatus St = Result.fusedMultiplyAdd(RHS, Third, RM);
+    return checkFloatingPointResult(Info, E, St);
+  }
+
+  case Builtin::BI__builtin_fmod:
+  case Builtin::BI__builtin_fmodf:
+  case Builtin::BI__builtin_fmodl:
+  case Builtin::BI__builtin_fmodf16:
+  case Builtin::BI__builtin_fmodf128: {
+    APFloat RHS(0.);
+    if (!EvaluateFloat(E->getArg(0), Result, Info) ||
+        !EvaluateFloat(E->getArg(1), RHS, Info))
+      return false;
+    // mod handles special values (NaN, INF) per IEEE 754.
+    APFloat::opStatus St = Result.mod(RHS);
+    return checkFloatingPointResult(Info, E, St);
+  }
+
+  case Builtin::BI__builtin_remainder:
+  case Builtin::BI__builtin_remainderf:
+  case Builtin::BI__builtin_remainderl:
+  case Builtin::BI__builtin_remainderf128: {
+    APFloat RHS(0.);
+    if (!EvaluateFloat(E->getArg(0), Result, Info) ||
+        !EvaluateFloat(E->getArg(1), RHS, Info))
+      return false;
+    // remainder handles special values (NaN, INF) per IEEE 754.
+    APFloat::opStatus St = Result.remainder(RHS);
+    return checkFloatingPointResult(Info, E, St);
+  }
+
+  case Builtin::BI__builtin_nextafter:
+  case Builtin::BI__builtin_nextafterf:
+  case Builtin::BI__builtin_nextafterl:
+  case Builtin::BI__builtin_nextafterf128:
+  case Builtin::BI__builtin_nexttoward:
+  case Builtin::BI__builtin_nexttowardf:
+  case Builtin::BI__builtin_nexttowardl:
+  case Builtin::BI__builtin_nexttowardf128: {
+    APFloat RHS(0.);
+    if (!EvaluateFloat(E->getArg(0), Result, Info) ||
+        !EvaluateFloat(E->getArg(1), RHS, Info))
+      return false;
+
+    if (Result.isNaN())
+      return true;
+
+    if (RHS.isNaN()) {
+      bool LoseInfo = false;
+      Result = RHS;
+      Result.convert(Info.Ctx.getFloatTypeSemantics(E->getType()),
+                     APFloat::rmNearestTiesToEven, &LoseInfo);
+      return true;
+    }
+
+    APFloat ResultCopy = Result;
+    bool LoseInfo = false;
+    ResultCopy.convert(RHS.getSemantics(), APFloat::rmNearestTiesToEven,
+                       &LoseInfo);
+    APFloat::cmpResult Res = ResultCopy.compare(RHS);
+
+    if (Res == APFloat::cmpEqual) {
+      if (Result.isZero() && RHS.isZero() &&
+          Result.isNegative() != RHS.isNegative())
+        Result = APFloat::getZero(Result.getSemantics(), RHS.isNegative());
+      return true;
+    }
+
+    Result.next(Res == APFloat::cmpGreaterThan);
+    return true;
+  }
+
+  case Builtin::BI__builtin_scalbn:
+  case Builtin::BI__builtin_scalbnf:
+  case Builtin::BI__builtin_scalbnl:
+  case Builtin::BI__builtin_scalbnf128:
+  case Builtin::BI__builtin_scalbln:
+  case Builtin::BI__builtin_scalblnf:
+  case Builtin::BI__builtin_scalblnl:
+  case Builtin::BI__builtin_scalblnf128:
+  case Builtin::BI__builtin_ldexp:
+  case Builtin::BI__builtin_ldexpf:
+  case Builtin::BI__builtin_ldexpl:
+  case Builtin::BI__builtin_ldexpf16:
+  case Builtin::BI__builtin_ldexpf128: {
+    APSInt Exp;
+    if (!EvaluateFloat(E->getArg(0), Result, Info) ||
+        !EvaluateInteger(E->getArg(1), Exp, Info))
+      return false;
+
+    llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
+    APFloat Arg = Result;
+    int ExpVal = (int)Exp.getExtValue();
+    Result = scalbn(Result, ExpVal, RM);
+    APFloat::opStatus St = getScalbnStatus(Arg, Result, ExpVal);
+    return checkFloatingPointResult(Info, E, St);
+  }
+
+  case Builtin::BI__builtin_frexp:
+  case Builtin::BI__builtin_frexpf:
+  case Builtin::BI__builtin_frexpl:
+  case Builtin::BI__builtin_frexpf16:
+  case Builtin::BI__builtin_frexpf128: {
+    LValue ExpLVal;
+    if (!EvaluateFloat(E->getArg(0), Result, Info) ||
+        !EvaluatePointer(E->getArg(1), ExpLVal, Info))
+      return false;
+
+    int Exp = 0;
+    // frexp handles special values (NaN, INF) per IEEE 754.
+    Result = frexp(Result, Exp, APFloat::rmNearestTiesToEven);
+
+    QualType PointeeType = E->getArg(1)->getType()->getPointeeType();
+    APValue APV{APSInt(Info.Ctx.getTypeSize(PointeeType), false)};
+    APV.getInt() = Exp;
+    if (!handleAssignment(Info, E, ExpLVal, PointeeType, APV))
+      return false;
+    return true;
+  }
+
+  case Builtin::BI__builtin_modf:
+  case Builtin::BI__builtin_modff:
+  case Builtin::BI__builtin_modfl:
+  case Builtin::BI__builtin_modff128: {
+    LValue IptrLVal;
+    if (!EvaluateFloat(E->getArg(0), Result, Info) ||
+        !EvaluatePointer(E->getArg(1), IptrLVal, Info))
+      return false;
+
+    APFloat Integral = Result;
+    Integral.roundToIntegral(APFloat::rmTowardZero);
+
+    QualType PointeeType = E->getArg(1)->getType()->getPointeeType();
+    APValue APV{Integral};
+    if (!handleAssignment(Info, E, IptrLVal, PointeeType, APV))
+      return false;
+
+    if (Result.isInfinity())
+      Result = APFloat::getZero(Result.getSemantics(), Result.isNegative());
+    else if (!Result.isZero())
+      Result.subtract(Integral, APFloat::rmNearestTiesToEven);
+    return true;
+  }
+
+  case Builtin::BI__builtin_remquo:
+  case Builtin::BI__builtin_remquof:
+  case Builtin::BI__builtin_remquol:
+  case Builtin::BI__builtin_remquof128: {
+    APFloat RHS(0.);
+    LValue QuoLVal;
+    if (!EvaluateFloat(E->getArg(0), Result, Info) ||
+        !EvaluateFloat(E->getArg(1), RHS, Info) ||
+        !EvaluatePointer(E->getArg(2), QuoLVal, Info))
+      return false;
+
+    APFloat Q = Result;
+    Q.divide(RHS, APFloat::rmNearestTiesToEven);
+    Q.roundToIntegral(APFloat::rmNearestTiesToEven);
+
+    APSInt QuoInt(
+        Info.Ctx.getTypeSize(E->getArg(2)->getType()->getPointeeType()), false);
+    bool IsExact = false;
+
+    APFloat::opStatus ConvSt =
+        Q.convertToInteger(QuoInt, APFloat::rmTowardZero, &IsExact);
+    if (ConvSt & APFloat::opInvalidOp)
+      QuoInt = 0;
+
+    APValue APV{QuoInt};
+    if (!handleAssignment(Info, E, QuoLVal,
+                          E->getArg(2)->getType()->getPointeeType(), APV))
+      return false;
+
+    // remainder handles special values (NaN, INF) per IEEE 754.
+    APFloat::opStatus St = Result.remainder(RHS);
+    return checkFloatingPointResult(Info, E, St);
   }
 
   case Builtin::BI__builtin_elementwise_fma: {
