@@ -498,10 +498,6 @@ public:
 
   AssumptionCache *getAssumptionCache() const { return AC; }
 
-  /// Returns true if creating new SCEV runtime checks (predicates) is allowed
-  /// during vectorization.
-  bool allowRuntimeSCEVChecks() const { return AllowRuntimeSCEVChecks; }
-
   ScalarEvolution *getScalarEvolution() const { return PSE.getSE(); }
 
   DominatorTree *getDominatorTree() const { return DT; }

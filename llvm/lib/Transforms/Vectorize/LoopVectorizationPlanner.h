@@ -940,8 +940,8 @@ private:
   VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
-  /// according to the information gathered by Legal when it checked if it is
-  /// legal to vectorize the loop.
+  /// based on \p VPlan1 and according to the information gathered by Legal
+  /// when it checked if it is legal to vectorize the loop.
   void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF);
 
   /// Add ComputeReductionResult recipes to the middle block to compute the
