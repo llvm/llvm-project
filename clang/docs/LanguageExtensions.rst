@@ -6842,6 +6842,38 @@ When ``#pragma comment(copyright, ...)`` appears in a C++20 module interface
 unit, the copyright string is embedded only in the object file compiled from
 that interface unit. Importing TUs do not re-emit the string.
 
+LTO Interaction
+-------------------------------
+
+**Full LTO**
+
+During Full LTO all translation units are merged into a single module
+before optimization. ``LowerCommentStringPass`` runs at prelink per
+translation unit, creating ``@__loadtime_comment_str`` and attaching
+``!implicit.ref`` to all defined functions. After merging, both string
+globals survive as ``@__loadtime_comment_str`` and
+``@__loadtime_comment_str.2``. The linker sees ``.ref`` directives from
+all live function csects and retains both copyright strings. Functions
+are inlined normally.
+
+**ThinLTO**
+
+During ThinLTO each module is compiled independently. Because
+``@__loadtime_comment_str`` is an ``internal`` global referenced via
+``!implicit.ref`` metadata, ThinLTO marks functions carrying
+``!implicit.ref`` as ``notEligibleToImport``. This means such functions
+are not inlined across module boundaries by ThinLTO. Both copyright
+strings still appear in the final binary -- each translation unit's
+string is anchored by the ``.ref`` directive emitted from its own
+function csects, and the cross-module call from the importing module
+forces the linker to include the exporting object, which carries the
+``.ref`` and the copyright string.
+
+This is an expected behavior. A function that depends on a translation-unit
+local ``internal`` global cannot be imported into another module without
+bringing that global along, which ThinLTO cannot do for ``internal``
+globals.
+
 Evaluating Object Size
 ======================
 
