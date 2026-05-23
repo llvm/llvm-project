@@ -26,6 +26,7 @@
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_void.h>
+#include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_pointer.h>
 #include <__type_traits/remove_reference.h>
@@ -99,12 +100,22 @@ public:
   template <class _Fn, class _Tp = remove_reference_t<_Fn>>
     requires(!is_same_v<remove_cvref_t<_Fn>, function_ref> && !is_member_pointer_v<_Tp> &&
              __is_invocable_using<_LIBCPP_FUNCTION_REF_CV _Tp&> && !__is_convertible_from_specialization_v<_Tp>)
-  _LIBCPP_HIDE_FROM_ABI constexpr function_ref(_Fn&& __obj) noexcept
-      : __storage_(std::addressof(__obj)),
-        __call_([](__storage_t __storage, __arg_t<_ArgTypes>... __args) static noexcept(__is_noexcept) -> _Rp {
-          _LIBCPP_FUNCTION_REF_CV _Tp& __obj1 = *__storage_t::template __get<_Tp>(__storage);
-          return __obj1(static_cast<__arg_t<_ArgTypes>>(__args)...);
-        }) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr function_ref(_Fn&& __obj) noexcept {
+    using _Dn = remove_cv_t<_Tp>;
+    if constexpr (requires(__arg_t<_ArgTypes>... __args) {
+                    _Dn::operator()(static_cast<__arg_t<_ArgTypes>>(__args)...);
+                  }) {
+      __call_ = [](__storage_t, __arg_t<_ArgTypes>... __args) static noexcept(__is_noexcept) -> _Rp {
+        return _Dn::operator()(static_cast<__arg_t<_ArgTypes>>(__args)...);
+      };
+    } else {
+      __storage_ = __storage_t(std::addressof(__obj)),
+      __call_    = [](__storage_t __storage, __arg_t<_ArgTypes>... __args) static noexcept(__is_noexcept) -> _Rp {
+        _LIBCPP_FUNCTION_REF_CV _Tp& __obj1 = *__storage_t::template __get<_Tp>(__storage);
+        return __obj1(static_cast<__arg_t<_ArgTypes>>(__args)...);
+      };
+    }
+  }
 
   template <class _Fn, class _Tp = remove_reference_t<_Fn>>
     requires(!is_same_v<remove_cvref_t<_Fn>, function_ref> && !is_member_pointer_v<_Tp> &&

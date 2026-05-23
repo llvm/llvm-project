@@ -328,6 +328,34 @@ constexpr bool test() {
       assert(f() == 42);
     }
   }
+  {
+    // static call operator
+    struct StaticCall {
+      static int operator()(int x, int y) { return x + y; }
+    };
+    StaticCall sc;
+    std::function_ref<int(int, int)> f(sc);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert(f(1, 2) == 3);
+    }
+  }
+  {
+    // overload set with static and non-static call operator
+    struct OverloadSet {
+      static int operator()(int x) { return x + 1; }
+      int operator()(long x) const { return x + 2; }
+    };
+    OverloadSet os;
+    std::function_ref<int(int)> f1(os);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert(f1(1) == 2);
+    }
+
+    std::function_ref<int(long)> f2(os);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert(f2(1L) == 3);
+    }
+  }
 
   return true;
 }
