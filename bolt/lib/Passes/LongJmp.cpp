@@ -794,9 +794,9 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
       BinaryFunction *BF = BB->getParent();
 
       // Use branch taken count for optimal relaxation.
-      const uint64_t Count = BB->getBranchInfo(*TargetBB).Count;
-      assert(Count != BinaryBasicBlock::COUNT_NO_PROFILE &&
-             "Expected valid branch execution count");
+      uint64_t Count = BB->getBranchInfo(*TargetBB).Count;
+      if (Count == BinaryBasicBlock::COUNT_NO_PROFILE)
+        Count = 0;
 
       // Try to reuse an existing trampoline without introducing any new code.
       BinaryBasicBlock *TrampolineBB = FragmentTrampolines.lookup(TargetBB);
@@ -832,7 +832,9 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
       // Create a trampoline basic block for the fall-through target of the
       // branch if its condition cannot be inverted.
       if (ShouldReverseBranch && !IsReversibleBranch) {
-        const uint64_t NextCount = BB->getBranchInfo(*NextBB).Count;
+        uint64_t NextCount = BB->getBranchInfo(*NextBB).Count;
+        if (NextCount == BinaryBasicBlock::COUNT_NO_PROFILE)
+          NextCount = 0;
         BinaryBasicBlock *FallThrough =
             addTrampolineAfter(BB, NextBB, NextCount);
         BB->replaceSuccessor(NextBB, FallThrough, NextCount);
@@ -868,10 +870,17 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
           if (!mayNeedStub(BF.getBinaryContext(), Inst))
             continue;
 
+          // Calls target other functions, not basic blocks within this
+          // function, so they cannot be relaxed via trampolines.
+          if (MIB->isCall(Inst))
+            continue;
+
           const size_t BitsAvailable = MIB->getPCRelEncodingSize(Inst);
 
-          // Span of +/-128MB.
-          if (BitsAvailable == LongestJumpBits)
+          // Skip branches whose range is at least as large as a trampoline's
+          // unconditional branch (no benefit from relaxation).
+          if (BitsAvailable >=
+              static_cast<size_t>(MIB->getUncondBranchEncodingSize()))
             continue;
 
           const MCSymbol *TargetSymbol = MIB->getTargetSymbol(Inst);
@@ -929,9 +938,10 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
           opts::SplitStrategy != opts::SplitFunctionsStrategy::CDSplit) &&
          "LongJmp cannot work with functions split in more than two fragments");
 
-  if (opts::CompactCodeModel) {
-    BC.outs()
-        << "BOLT-INFO: relaxing branches for compact code model (<128MB)\n";
+  if (opts::CompactCodeModel || BC.isHexagon()) {
+    if (opts::CompactCodeModel)
+      BC.outs()
+          << "BOLT-INFO: relaxing branches for compact code model (<128MB)\n";
 
     ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
       relaxLocalBranches(BF);

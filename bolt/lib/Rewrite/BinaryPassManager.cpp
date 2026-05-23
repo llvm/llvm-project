@@ -541,6 +541,12 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
         std::make_unique<PointerAuthCFIFixup>(PrintPAuthCFIFixup));
   }
 
+  // Hexagon conditional branches have limited range (e.g. +-1KB for compound
+  // branches, +-64KB for J2_jumpt/f). After function splitting, cold blocks
+  // may be out of range. Insert trampolines using relaxLocalBranches().
+  if (BC.isHexagon())
+    Manager.registerPass(std::make_unique<LongJmpPass>(PrintLongJmp));
+
   // This pass should always run last.*
   Manager.registerPass(std::make_unique<FinalizeFunctions>(PrintFinalized));
 
