@@ -204,3 +204,31 @@ define i32 @sadd_nuw_min_max_assoc(i32 %x, i32 %y, i32 %z) {
   %ret = add i32 %lhs, %max
   ret i32 %ret
 }
+
+define float @fp_inner_no_reassoc_cmp(i1 %c, float %a, float %x, float %y) {
+; CHECK-LABEL: define float @fp_inner_no_reassoc_cmp(
+; CHECK-SAME: i1 [[C:%.*]], float [[A:%.*]], float [[X:%.*]], float [[Y:%.*]]) {
+; CHECK-NEXT:    [[INNER:%.*]] = fadd float [[X]], [[Y]]
+; CHECK-NEXT:    [[RETF:%.*]] = fadd reassoc nsz float [[A]], [[INNER]]
+; CHECK-NEXT:    ret float [[RETF]]
+;
+  %s0 = select i1 %c, float %x, float %y
+  %s1 = select i1 %c, float %y, float %x
+  %inner = fadd float %a, %s0
+  %retf = fadd reassoc nsz float %inner, %s1
+  ret float %retf
+}
+
+define float @fp_mixed_fmf_cmp(i1 %c, float %a, float %x, float %y) {
+; CHECK-LABEL: define float @fp_mixed_fmf_cmp(
+; CHECK-SAME: i1 [[C:%.*]], float [[A:%.*]], float [[X:%.*]], float [[Y:%.*]]) {
+; CHECK-NEXT:    [[INNER:%.*]] = fadd float [[X]], [[Y]]
+; CHECK-NEXT:    [[RETF:%.*]] = fadd reassoc nnan ninf nsz float [[A]], [[INNER]]
+; CHECK-NEXT:    ret float [[RETF]]
+;
+  %s0 = select i1 %c, float %x, float %y
+  %s1 = select i1 %c, float %y, float %x
+  %inner = fadd nnan float %a, %s0
+  %retf = fadd reassoc nsz nnan ninf float %inner, %s1
+  ret float %retf
+}
