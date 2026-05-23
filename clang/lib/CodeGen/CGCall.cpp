@@ -5139,6 +5139,30 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     return;
   }
 
+  // For musttail calls in C++, skip the agg.tmp copy when the source is a
+  // trivially-copyable parameter of the current function. The copy would
+  // live in our frame, which the tail call deallocates before the callee
+  // dereferences it. The companion fix in EmitCall (getForwardableIncoming
+  // MustTailArg) forwards the incoming Indirect Argument; for that to fire
+  // here we must hand it the original parameter LValue, not a fresh temp.
+  if (HasAggregateEvalKind && MustTailCall && type->isRecordType() &&
+      type.isTriviallyCopyableType(getContext())) {
+    if (const auto *CCE = dyn_cast<CXXConstructExpr>(E)) {
+      if (CCE->getConstructor()->isCopyOrMoveConstructor() &&
+          CCE->getConstructor()->isTrivial() && CCE->getNumArgs() == 1) {
+        const Expr *Source = CCE->getArg(0)->IgnoreParenImpCasts();
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(Source))
+          if (const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
+            if (PVD->getDeclContext() == dyn_cast<DeclContext>(CurCodeDecl)) {
+              LValue L = EmitLValue(DRE);
+              assert(L.isSimple());
+              args.addUncopiedAggregate(L, type);
+              return;
+            }
+      }
+    }
+  }
+
   args.add(EmitAnyExprToTemp(E), type);
 }
 
