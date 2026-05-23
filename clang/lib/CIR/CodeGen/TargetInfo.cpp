@@ -121,34 +121,9 @@ public:
 };
 } // namespace
 
-namespace {
-
-class NVPTXABIInfo : public ABIInfo {
-public:
-  NVPTXABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
-};
-
-class NVPTXTargetCIRGenInfo : public TargetCIRGenInfo {
-public:
-  NVPTXTargetCIRGenInfo(CIRGenTypes &cgt)
-      : TargetCIRGenInfo(std::make_unique<NVPTXABIInfo>(cgt)) {}
-
-  mlir::Type getCUDADeviceBuiltinSurfaceDeviceType() const override {
-    // CUDA surface is represented as a 64-bit handle on device
-    return cir::IntType::get(&getABIInfo().cgt.getMLIRContext(), 64,
-                             /*isSigned=*/true);
-  }
-};
-} // namespace
-
 std::unique_ptr<TargetCIRGenInfo>
 clang::CIRGen::createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt) {
   return std::make_unique<AMDGPUTargetCIRGenInfo>(cgt);
-}
-
-std::unique_ptr<TargetCIRGenInfo>
-clang::CIRGen::createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt) {
-  return std::make_unique<NVPTXTargetCIRGenInfo>(cgt);
 }
 
 std::unique_ptr<TargetCIRGenInfo>
