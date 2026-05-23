@@ -37,6 +37,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SourceMgr.h"
 #include <algorithm>
 #include <optional>
 
@@ -60,6 +61,7 @@ class MCAsmStreamer final : public MCAsmBaseStreamer {
 
   bool IsVerboseAsm = false;
   bool ShowInst = false;
+  bool ShowInstSourceLoc = false;
   bool UseDwarfDirectory = false;
 
   void EmitRegisterName(int64_t Register);
@@ -107,6 +109,7 @@ public:
     if (IsVerboseAsm)
       InstPrinter->setCommentStream(CommentStream);
     ShowInst = TO.ShowMCInst;
+    ShowInstSourceLoc = TO.ShowMCInstSourceLoc;
     switch (TO.MCUseDwarfDirectory) {
     case MCTargetOptions::DisableDwarfDirectory:
       UseDwarfDirectory = false;
@@ -2624,6 +2627,41 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
     getCommentOS() << "\n";
 
   EmitEOL();
+
+  if (ShowInstSourceLoc && Inst.getLoc().isValid()) {
+    if (const SourceMgr *SM = getContext().getSourceManager()) {
+      SMLoc Loc = Inst.getLoc();
+      unsigned BufID = SM->FindBufferContainingLoc(Loc);
+      bool PrintedSourceLoc = false;
+
+      auto PrintLoc = [&](StringRef Type, SMLoc L, unsigned Buf) {
+        StringRef Filename = SM->getMemoryBuffer(Buf)->getBufferIdentifier();
+        std::pair<unsigned, unsigned> LineCol = SM->getLineAndColumn(L, Buf);
+        OS << MAI->getCommentString() << " <" << Type << ": " << Filename
+           << ":" << LineCol.first << ":" << LineCol.second << ">\n";
+      };
+
+      // Unwind the macro expansion and inclusion stacks.
+      while (BufID) {
+        SMLoc ParentLoc = SM->getParentIncludeLoc(BufID);
+        if (SMLoc DefLoc = SM->getMacroDefLoc(BufID); DefLoc.isValid()) {
+          PrintLoc("MacroLoc", DefLoc, SM->FindBufferContainingLoc(DefLoc));
+        } else {
+          // First location is the SourceLoc, all others are include stack
+          if (!PrintedSourceLoc) {
+            PrintLoc("SourceLoc", Loc, BufID);
+            PrintedSourceLoc = true;
+          } else {
+            PrintLoc("IncludeLoc", Loc, BufID);
+          }
+        }
+        // Move up to the parent context (the macro call site or the include site)
+        // for the next iteration of the stack unwinding.
+        Loc = ParentLoc;
+        BufID = Loc.isValid() ? SM->FindBufferContainingLoc(Loc) : 0;
+      }
+    }
+  }
 }
 
 void MCAsmStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index,
