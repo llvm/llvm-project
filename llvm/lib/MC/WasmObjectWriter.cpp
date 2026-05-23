@@ -1161,7 +1161,8 @@ void WasmObjectWriter::writeLinkingMetaDataSection(
       case wasm::WASM_SYMBOL_TYPE_DATA:
         writeString(Sym.Name);
         if ((Sym.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0) {
-          if ((Sym.Flags & wasm::WASM_SYMBOL_BINDING_MASK) == wasm::WASM_SYMBOL_BINDING_COMMON) {
+          if ((Sym.Flags & wasm::WASM_SYMBOL_BINDING_MASK) ==
+              wasm::WASM_SYMBOL_BINDING_COMMON) {
             encodeULEB128(Sym.CommonRef.Size, W->OS);
             W->OS << char(Sym.CommonRef.Alignment);
           } else {

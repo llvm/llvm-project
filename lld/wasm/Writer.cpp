@@ -1086,7 +1086,8 @@ void Writer::allocateCommonSymbols() {
     offset = alignTo(offset, 1ULL << alignLog2);
     log(formatv("allocateCommonSymbol: {0} size={1} align={2} offset={3}",
                 c->getName(), size, alignLog2, offset));
-    replaceSymbol<DefinedData>(c, c->getName(), c->flags, c->getFile(), commonSeg, offset, size);
+    replaceSymbol<DefinedData>(c, c->getName(), c->flags, c->getFile(),
+                               commonSeg, offset, size);
     offset += size;
   }
 }

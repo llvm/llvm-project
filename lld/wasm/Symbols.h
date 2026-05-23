@@ -353,9 +353,10 @@ public:
 
 class CommonSymbol : public DataSymbol {
 public:
-  CommonSymbol(StringRef name, uint32_t flags, InputFile *file,
-               uint64_t size, uint32_t alignment)
-      : DataSymbol(name, CommonKind, flags, file), size(size), alignment(alignment) {}
+  CommonSymbol(StringRef name, uint32_t flags, InputFile *file, uint64_t size,
+               uint32_t alignment)
+      : DataSymbol(name, CommonKind, flags, file), size(size),
+        alignment(alignment) {}
 
   static bool classof(const Symbol *s) { return s->kind() == CommonKind; }
 

@@ -523,7 +523,8 @@ void MappingTraits<WasmYAML::SymbolInfo>::mapping(IO &IO,
     IO.mapRequired("Tag", Info.ElementIndex);
   } else if (Info.Kind == wasm::WASM_SYMBOL_TYPE_DATA) {
     if ((Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0) {
-      if ((Info.Flags & wasm::WASM_SYMBOL_BINDING_MASK) == wasm::WASM_SYMBOL_BINDING_COMMON) {
+      if ((Info.Flags & wasm::WASM_SYMBOL_BINDING_MASK) ==
+          wasm::WASM_SYMBOL_BINDING_COMMON) {
         IO.mapRequired("Size", Info.CommonRef.Size);
         IO.mapRequired("Align", Info.CommonRef.Alignment);
       } else {

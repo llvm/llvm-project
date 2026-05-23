@@ -338,10 +338,12 @@ static bool shouldReplace(const Symbol *existing, InputFile *newFile,
   // If existing symbol is common, it can be overridden by a strong definition.
   if (existing->isCommon()) {
     if ((newFlags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_WEAK) {
-      LLVM_DEBUG(dbgs() << "existing common symbol takes precedence over new weak\n");
+      LLVM_DEBUG(
+          dbgs() << "existing common symbol takes precedence over new weak\n");
       return false;
     }
-    LLVM_DEBUG(dbgs() << "replacing existing common symbol with strong definition\n");
+    LLVM_DEBUG(
+        dbgs() << "replacing existing common symbol with strong definition\n");
     return true;
   }
 
@@ -535,10 +537,13 @@ Symbol *SymbolTable::addCommon(StringRef name, uint32_t flags, InputFile *file,
 
   if (s->isDefined()) {
     if (s->isWeak()) {
-       LLVM_DEBUG(dbgs() << "replacing existing weak defined symbol with common\n");
-       replaceSym();
+      LLVM_DEBUG(
+          dbgs() << "replacing existing weak defined symbol with common\n");
+      replaceSym();
     } else {
-       LLVM_DEBUG(dbgs() << "existing strong defined symbol takes precedence over common\n");
+      LLVM_DEBUG(
+          dbgs()
+          << "existing strong defined symbol takes precedence over common\n");
     }
     return s;
   }

@@ -42,16 +42,11 @@ const EnumEntry<uint32_t> WasmSectionTypes[] = {
 const EnumEntry<unsigned> WasmSymbolFlags[] = {
 #define ENUM_ENTRY(X)                                                          \
   { #X, wasm::WASM_SYMBOL_##X }
-  ENUM_ENTRY(BINDING_GLOBAL),
-  ENUM_ENTRY(BINDING_WEAK),
-  ENUM_ENTRY(BINDING_LOCAL),
-  ENUM_ENTRY(BINDING_COMMON),
-  ENUM_ENTRY(VISIBILITY_DEFAULT),
-  ENUM_ENTRY(VISIBILITY_HIDDEN),
-  ENUM_ENTRY(UNDEFINED),
-  ENUM_ENTRY(EXPORTED),
-  ENUM_ENTRY(EXPLICIT_NAME),
-  ENUM_ENTRY(NO_STRIP),
+    ENUM_ENTRY(BINDING_GLOBAL),     ENUM_ENTRY(BINDING_WEAK),
+    ENUM_ENTRY(BINDING_LOCAL),      ENUM_ENTRY(BINDING_COMMON),
+    ENUM_ENTRY(VISIBILITY_DEFAULT), ENUM_ENTRY(VISIBILITY_HIDDEN),
+    ENUM_ENTRY(UNDEFINED),          ENUM_ENTRY(EXPORTED),
+    ENUM_ENTRY(EXPLICIT_NAME),      ENUM_ENTRY(NO_STRIP),
 #undef ENUM_ENTRY
 };
 
@@ -236,7 +231,8 @@ void WasmDumper::printSymbol(const SymbolRef &Sym) {
   if (Symbol.Info.Kind != wasm::WASM_SYMBOL_TYPE_DATA) {
     W.printHex("ElementIndex", Symbol.Info.ElementIndex);
   } else if (!(Symbol.Info.Flags & wasm::WASM_SYMBOL_UNDEFINED)) {
-    if ((Symbol.Info.Flags & wasm::WASM_SYMBOL_BINDING_MASK) == wasm::WASM_SYMBOL_BINDING_COMMON) {
+    if ((Symbol.Info.Flags & wasm::WASM_SYMBOL_BINDING_MASK) ==
+        wasm::WASM_SYMBOL_BINDING_COMMON) {
       W.printHex("Size", Symbol.Info.CommonRef.Size);
       W.printHex("Alignment", Symbol.Info.CommonRef.Alignment);
     } else {
