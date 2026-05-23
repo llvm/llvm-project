@@ -850,6 +850,10 @@ getCompilationDatabase(int argc, char **argv, std::string &ErrorMessage) {
       return {Command};
     }
 
+    const tooling::ModuleManager *getModuleManager() const override {
+      return nullptr;
+    }
+
   private:
     tooling::CompileCommand Command;
   };
