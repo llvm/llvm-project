@@ -522,11 +522,7 @@ def SDT_AArch64vshiftinsert : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisInt<3>,
                                                  SDTCisSameAs<0,1>,
                                                  SDTCisSameAs<0,2>]>;
 
-def SDT_AArch64unvec : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
-def SDT_AArch64fcmpz : SDTypeProfile<1, 1, []>;
 def SDT_AArch64fcmp  : SDTypeProfile<1, 2, [SDTCisSameAs<1,2>]>;
-def SDT_AArch64binvec : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>,
-                                           SDTCisSameAs<0,2>]>;
 def SDT_AArch64trivec : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                            SDTCisSameAs<0,2>,
                                            SDTCisSameAs<0,3>]>;
@@ -535,9 +531,6 @@ def SDT_AArch64PREFETCH : SDTypeProfile<0, 2, [SDTCisVT<0, i32>, SDTCisPtrTy<1>]
 def SDT_AArch64RANGE_PREFETCH: SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisPtrTy<1>, SDTCisVT<2, i64>]>;
 
 def SDT_AArch64ITOF  : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisSameAs<0,1>]>;
-
-def SDT_AArch64TLSDescCall : SDTypeProfile<0, -2, [SDTCisPtrTy<0>,
-                                                 SDTCisPtrTy<1>]>;
 
 def SDT_AArch64uaddlp : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 
@@ -5560,6 +5553,13 @@ def : Pat<(i64 (any_llrint f32:$Rn)),
 def : Pat<(i64 (any_llrint f64:$Rn)),
           (FCVTZSUXDr (FRINTXDr f64:$Rn))>;
 
+let Predicates = [HasFullFP16] in {
+  def : Pat<(bf16 (fabs (bf16 FPR16:$Rn))),
+            (bf16 (FABSHr (bf16 FPR16:$Rn)))>;
+  def : Pat<(bf16 (fneg (bf16 FPR16:$Rn))),
+            (bf16 (FNEGHr (bf16 FPR16:$Rn)))>;
+}
+
 //===----------------------------------------------------------------------===//
 // Floating point two operand instructions.
 //===----------------------------------------------------------------------===//
@@ -5987,6 +5987,17 @@ def : InstAlias<"mvn{ $Vd.8b, $Vn.8b|.8b $Vd, $Vn}",
                 (NOTv8i8 V64:$Vd, V64:$Vn)>;
 def : InstAlias<"mvn{ $Vd.16b, $Vn.16b|.16b $Vd, $Vn}",
                 (NOTv16i8 V128:$Vd, V128:$Vn)>;
+}
+
+let Predicates = [HasFullFP16] in {
+  def : Pat<(v4bf16 (fabs (v4bf16 V64:$Rn))),
+            (v4bf16 (FABSv4f16 (v4bf16 V64:$Rn)))>;
+  def : Pat<(v8bf16 (fabs (v8bf16 V128:$Rn))),
+            (v8bf16 (FABSv8f16 (v8bf16 V128:$Rn)))>;
+  def : Pat<(v4bf16 (fneg (v4bf16 V64:$Rn))),
+            (v4bf16 (FNEGv4f16 (v4bf16 V64:$Rn)))>;
+  def : Pat<(v8bf16 (fneg (v8bf16 V128:$Rn))),
+            (v8bf16 (FNEGv8f16 (v8bf16 V128:$Rn)))>;
 }
 
 def : Pat<(vnot (v4i16 V64:$Rn)),  (NOTv8i8  V64:$Rn)>;
@@ -7983,6 +7994,15 @@ let Predicates = [HasAES] in {
                                 (i64 1),
                                 (v2i64 (PMULLv2i64 $Rn, $Rm)),
                                 (i64 0)))>;
+
+  def : Pat<(clmulh v1i64:$Rn, v1i64:$Rm),
+            (EXTRACT_SUBREG (v2i64 (EXTv16i8 (v2i64 (PMULLv1i64 $Rn, $Rm)),
+                                             (v2i64 (PMULLv1i64 $Rn, $Rm)),
+                                             8)), dsub)>;
+  def : Pat<(clmulh v2i64:$Rn, v2i64:$Rm),
+            (ZIP2v2i64 (v2i64 (PMULLv1i64 (v1i64 (EXTRACT_SUBREG $Rn, dsub)),
+                                          (v1i64 (EXTRACT_SUBREG $Rm, dsub)))),
+                       (v2i64 (PMULLv2i64 $Rn, $Rm)))>;
 }
 
 def : Pat<(v16i8 (vec_ins_or_scal_vec GPR32:$Rn)),
@@ -8659,6 +8679,7 @@ def : Pat<(v2i64 (AArch64saddlv (v2i32 V64:$Rn))),
 def : Pat<(v2i64 (AArch64uaddlv (v2i32 V64:$Rn))),
           (v2i64 (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), (UADDLPv2i32_v1i64 V64:$Rn), dsub))>;
 
+// uaddlp from shuffle + zext
 def : Pat<(add (AArch64bici (v8i16 (bitconvert v16i8:$src)), (i32 255), (i32 8)),
                (AArch64vlshr (v8i16 (AArch64NvCast v16i8:$src)), (i32 8))),
           (UADDLPv16i8_v8i16 V128:$src)>;
@@ -8673,6 +8694,44 @@ def : Pat<(add (v2i64 (zext (v2i32 (AArch64zip1 (v2i32 (extract_subvector v4i32:
                (v2i64 (zext (v2i32 (AArch64zip2 (v2i32 (extract_subvector v4i32:$src, (i64 0))),
                                          (v2i32 (extract_subvector v4i32:$src, (i64 2)))))))),
           (UADDLPv4i32_v2i64 V128:$src)>;
+
+// uaddlp from zext + shuffle
+def : Pat<(add (AArch64uzp1 (v8i16 (zext (v8i8 (extract_subvector v16i8:$src, (i64 0))))),
+                            (v8i16 (zext (v8i8 (extract_subvector v16i8:$src, (i64 8)))))),
+               (AArch64uzp2 (v8i16 (zext (v8i8 (extract_subvector v16i8:$src, (i64 0))))),
+                            (v8i16 (zext (v8i8 (extract_subvector v16i8:$src, (i64 8))))))),
+          (UADDLPv16i8_v8i16 V128:$src)>;
+
+def : Pat<(add (AArch64uzp1 (v4i32 (zext (v4i16 (extract_subvector v8i16:$src, (i64 0))))),
+                            (v4i32 (zext (v4i16 (extract_subvector v8i16:$src, (i64 4)))))),
+               (AArch64uzp2 (v4i32 (zext (v4i16 (extract_subvector v8i16:$src, (i64 0))))),
+                            (v4i32 (zext (v4i16 (extract_subvector v8i16:$src, (i64 4))))))),
+          (UADDLPv8i16_v4i32 V128:$src)>;
+
+def : Pat<(add (AArch64zip1 (v2i64 (zext (v2i32 (extract_subvector v4i32:$src, (i64 0))))),
+                            (v2i64 (zext (v2i32 (extract_subvector v4i32:$src, (i64 2)))))),
+               (AArch64zip2 (v2i64 (zext (v2i32 (extract_subvector v4i32:$src, (i64 0))))),
+                            (v2i64 (zext (v2i32 (extract_subvector v4i32:$src, (i64 2))))))),
+          (UADDLPv4i32_v2i64 V128:$src)>;
+
+// saddlp from sext + shuffle
+def : Pat<(add (AArch64uzp1 (v8i16 (sext (v8i8 (extract_subvector v16i8:$src, (i64 0))))),
+                            (v8i16 (sext (v8i8 (extract_subvector v16i8:$src, (i64 8)))))),
+               (AArch64uzp2 (v8i16 (sext (v8i8 (extract_subvector v16i8:$src, (i64 0))))),
+                            (v8i16 (sext (v8i8 (extract_subvector v16i8:$src, (i64 8))))))),
+          (SADDLPv16i8_v8i16 V128:$src)>;
+
+def : Pat<(add (AArch64uzp1 (v4i32 (sext (v4i16 (extract_subvector v8i16:$src, (i64 0))))),
+                            (v4i32 (sext (v4i16 (extract_subvector v8i16:$src, (i64 4)))))),
+               (AArch64uzp2 (v4i32 (sext (v4i16 (extract_subvector v8i16:$src, (i64 0))))),
+                            (v4i32 (sext (v4i16 (extract_subvector v8i16:$src, (i64 4))))))),
+          (SADDLPv8i16_v4i32 V128:$src)>;
+
+def : Pat<(add (AArch64zip1 (v2i64 (sext (v2i32 (extract_subvector v4i32:$src, (i64 0))))),
+                            (v2i64 (sext (v2i32 (extract_subvector v4i32:$src, (i64 2)))))),
+               (AArch64zip2 (v2i64 (sext (v2i32 (extract_subvector v4i32:$src, (i64 0))))),
+                            (v2i64 (sext (v2i32 (extract_subvector v4i32:$src, (i64 2))))))),
+          (SADDLPv4i32_v2i64 V128:$src)>;
 
 //------------------------------------------------------------------------------
 // AdvSIMD modified immediate instructions

@@ -113,8 +113,8 @@ public:
       // PIC when the relocation uses the full address (not just low page bits).
       if (ieExpr == R_GOT && ctx.arg.isPic &&
           !ctx.target->usesOnlyLowPageBits(type))
-        sec->getPartition(ctx).relaDyn->addRelativeReloc(
-            ctx.target->relativeRel, *sec, offset, sym, addend, type, ieExpr);
+        ctx.in.relaDyn->addRelativeReloc(ctx.target->relativeRel, *sec, offset,
+                                         sym, addend, type, ieExpr);
       else
         sec->addReloc({ieExpr, type, offset, addend, &sym});
     }

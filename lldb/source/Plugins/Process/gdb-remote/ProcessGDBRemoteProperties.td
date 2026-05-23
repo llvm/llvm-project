@@ -21,4 +21,10 @@ let Definition = "processgdbremote", Path = "plugin.process.gdb-remote" in {
     Global,
     DefaultFalse,
     Desc<"Specify if the server should use 'g' packets to read registers.">;
+  def PacketTestDelay
+      : Property<"packet-test-delay", "UInt64">,
+        Global,
+        DefaultUnsignedValue<0>,
+        Desc<"Specify an artificial delay in milliseconds inserted before "
+             "sending each packet, for testing purposes.">;
 }
