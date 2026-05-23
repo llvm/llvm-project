@@ -1,0 +1,122 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test that bind(c) attributes(global) kernels with assumed-shape /
+! deferred-shape / assumed-rank array dummies are lowered to a raw base
+! address (!fir.ref<...>) instead of a CFI descriptor (!fir.box<...>).
+! cudaLaunchKernel cannot deliver a CFI descriptor to the device, so the
+! C-interop ABI of these arguments must be a plain pointer.
+
+module m
+contains
+
+  ! ---- Positive case 1: assumed-shape, 1-D ----------------------------
+  subroutine call_kernel_1d(d)
+    real, device :: d(:)
+    interface
+      attributes(global) subroutine k1d(a, n) bind(c, name='k1d')
+        use iso_c_binding
+        real(c_float), dimension(:), device :: a
+        integer, value :: n
+      end subroutine
+    end interface
+    call k1d<<<8, 128>>>(d, 1024)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMmPcall_kernel_1d
+! CHECK: cuf.kernel_launch @k1d<<<{{.*}}>>>(%{{.*}}, %{{.*}}) : (!fir.ref<!fir.array<?xf32>>, i32)
+
+  ! ---- Positive case 2: assumed-shape, 2-D ----------------------------
+  subroutine call_kernel_2d(d)
+    real, device :: d(:,:)
+    interface
+      attributes(global) subroutine k2d(a) bind(c, name='k2d')
+        use iso_c_binding
+        real(c_float), dimension(:,:), device :: a
+      end subroutine
+    end interface
+    call k2d<<<8, 128>>>(d)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMmPcall_kernel_2d
+! CHECK: cuf.kernel_launch @k2d<<<{{.*}}>>>(%{{.*}}) : (!fir.ref<!fir.array<?x?xf32>>)
+
+  ! ---- Positive case 3: grid_global -----------------------------------
+  subroutine call_kernel_grid_global(d)
+    real, device :: d(:)
+    interface
+      attributes(grid_global) subroutine kgg(a) bind(c, name='kgg')
+        use iso_c_binding
+        real(c_float), dimension(:), device :: a
+      end subroutine
+    end interface
+    call kgg<<<8, 128>>>(d)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMmPcall_kernel_grid_global
+! CHECK: cuf.kernel_launch @kgg<<<{{.*}}>>>(%{{.*}}) : (!fir.ref<!fir.array<?xf32>>)
+
+  ! ---- Negative case 1: attributes(global) without bind(c) -----------
+  ! Pure CUDA Fortran kernel; descriptor ABI preserved.
+  subroutine call_kernel_no_bindc(d)
+    real, device :: d(:)
+    interface
+      attributes(global) subroutine knobindc(a)
+        real, dimension(:), device :: a
+      end subroutine
+    end interface
+    call knobindc<<<8, 128>>>(d)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMmPcall_kernel_no_bindc
+! CHECK: cuf.kernel_launch @_QPknobindc<<<{{.*}}>>>(%{{.*}}) : (!fir.box<!fir.array<?xf32>>)
+
+  ! ---- Negative case 2: bind(c) but not attributes(global) ----------
+  ! Regular C-interop function (host); descriptor ABI preserved.
+  subroutine call_host_bindc(d)
+    real :: d(:)
+    interface
+      subroutine hostfn(a) bind(c, name='hostfn')
+        use iso_c_binding
+        real(c_float), dimension(:) :: a
+      end subroutine
+    end interface
+    call hostfn(d)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMmPcall_host_bindc
+! CHECK: fir.call @hostfn(%{{.*}}) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
+
+  ! ---- Negative case 3: bind(c) attributes(global) + dimension(*) -----
+  ! Already a base-address ABI; just confirm it didn't regress.
+  subroutine call_kernel_assumed_size(d)
+    real, device :: d(*)
+    interface
+      attributes(global) subroutine kstar(a) bind(c, name='kstar')
+        use iso_c_binding
+        real(c_float), dimension(*), device :: a
+      end subroutine
+    end interface
+    call kstar<<<8, 128>>>(d)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMmPcall_kernel_assumed_size
+! CHECK: cuf.kernel_launch @kstar<<<{{.*}}>>>(%{{.*}}) : (!fir.ref<!fir.array<?xf32>>)
+
+  ! ---- Negative case 4: allocatable assumed-shape -------------------
+  ! Allocatable is handled before the descriptor branch; remains MutableBox
+  ! at the kernel-launch site.
+  subroutine call_kernel_allocatable(d)
+    real, allocatable, device :: d(:)
+    interface
+      attributes(global) subroutine kalloc(a) bind(c, name='kalloc')
+        use iso_c_binding
+        real(c_float), dimension(:), allocatable, device :: a
+      end subroutine
+    end interface
+    call kalloc<<<8, 128>>>(d)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMmPcall_kernel_allocatable
+! CHECK: cuf.kernel_launch @kalloc<<<{{.*}}>>>(%{{.*}}) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+
+end module

@@ -873,6 +873,12 @@ public:
   void buildExplicitInterface(
       const Fortran::evaluate::characteristics::Procedure &procedure) {
     bool isBindC = procedure.IsBindC();
+    bool isCudaGlobalKernel =
+        procedure.cudaSubprogramAttrs &&
+        (*procedure.cudaSubprogramAttrs ==
+             Fortran::common::CUDASubprogramAttrs::Global ||
+         *procedure.cudaSubprogramAttrs ==
+             Fortran::common::CUDASubprogramAttrs::Grid_Global);
     // Handle result
     if (const std::optional<Fortran::evaluate::characteristics::FunctionResult>
             &result = procedure.functionResult) {
@@ -899,7 +905,7 @@ public:
                   handleImplicitDummy(&argCharacteristics, dummy, entity);
                 else
                   handleExplicitDummy(&argCharacteristics, dummy, entity,
-                                      isBindC);
+                                      isBindC, isCudaGlobalKernel);
               },
               [&](const Fortran::evaluate::characteristics::DummyProcedure
                       &dummy) {
@@ -1111,7 +1117,7 @@ private:
   void handleExplicitDummy(
       const DummyCharacteristics *characteristics,
       const Fortran::evaluate::characteristics::DummyDataObject &obj,
-      const FortranEntity &entity, bool isBindC) {
+      const FortranEntity &entity, bool isBindC, bool isCudaGlobalKernel) {
     using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
 
     bool isValueAttr = false;
@@ -1171,6 +1177,22 @@ private:
                     attrs);
       addPassedArg(PassEntityBy::MutableBox, entity, characteristics);
     } else if (obj.IsPassedByDescriptor(isBindC)) {
+      // bind(c) attributes(global): pass assumed-shape arrays by base address
+      // (cudaLaunchKernel cannot deliver a CFI descriptor to the device).
+      // corank > 0 is already TODO'd above, so no need to re-check here.
+      using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
+      constexpr Fortran::evaluate::characteristics::TypeAndShape::Attrs
+          shapeOnlyDescriptor{ShapeAttr::AssumedShape, ShapeAttr::DeferredShape,
+                              ShapeAttr::AssumedRank};
+      if (isBindC && isCudaGlobalKernel &&
+          (obj.type.attrs() & shapeOnlyDescriptor).any() &&
+          !obj.type.type().IsPolymorphic()) {
+        mlir::Type passType = fir::ReferenceType::get(type);
+        addFirOperand(passType, nextPassedArgPosition(), Property::BaseAddress,
+                      attrs);
+        addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
+        return;
+      }
       // Pass as fir.box or fir.class
       addFirOperand(boxType, nextPassedArgPosition(), Property::Box, attrs);
       addPassedArg(PassEntityBy::Box, entity, characteristics);
