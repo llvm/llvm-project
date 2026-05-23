@@ -1588,6 +1588,38 @@ functions:
     return_type: int
     arguments:
       - type: long double
+  - name: iscanonical
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: double
+  - name: iscanonicalf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: float
+  - name: iscanonicalf128
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: iscanonicalf16
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: iscanonicall
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: long double
   - name: isnan
     standards:
       - bsd
