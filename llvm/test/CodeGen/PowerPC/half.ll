@@ -1852,7 +1852,7 @@ define half @PR40273(half) nounwind {
 ; SOFT-NEXT:    li r4, 0
 ; SOFT-NEXT:    bl __nesf2
 ; SOFT-NEXT:    nop
-; SOFT-NEXT:    cmplwi r3, 0
+; SOFT-NEXT:    cmpldi r3, 0
 ; SOFT-NEXT:    li r3, 15360
 ; SOFT-NEXT:    iseleq r3, 0, r3
 ; SOFT-NEXT:    addi r1, r1, 32

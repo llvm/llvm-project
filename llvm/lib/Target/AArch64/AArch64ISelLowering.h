@@ -113,6 +113,12 @@ public:
     }
   }
 
+  MVT::SimpleValueType
+  getCmpLibcallReturnType(const DataLayout &DL) const override {
+    // All Arm targets use a 32-bit integer for comparison results.
+    return MVT::i32;
+  }
+
   unsigned getVectorIdxWidth(const DataLayout &DL) const override {
     // The VectorIdx type is i64, with both normal and ilp32.
     return 64;

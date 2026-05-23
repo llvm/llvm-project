@@ -420,7 +420,8 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   }
 
   // Use the target specific return value for comparison lib calls.
-  EVT RetVT = getCmpLibcallReturnType();
+  const DataLayout &DL = DAG.getDataLayout();
+  EVT RetVT = getCmpLibcallReturnType(DL);
   SDValue Ops[2] = {NewLHS, NewRHS};
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[2] = { OldLHS.getValueType(),

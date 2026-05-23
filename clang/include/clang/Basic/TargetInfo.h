@@ -908,6 +908,7 @@ public:
     // Currently we assume the register width on the target matches the pointer
     // width, we can introduce a new variable for this if/when some target wants
     // it.
+    // NOTE: This should match LLVM's `getRegisterWidth`.
     return PointerWidth;
   }
 
