@@ -55,6 +55,23 @@ contains
 ! CHECK-LABEL: func.func @_QMmPcall_kernel_grid_global
 ! CHECK: cuf.kernel_launch @kgg<<<{{.*}}>>>(%{{.*}}) : (!fir.ref<!fir.array<?xf32>>)
 
+  ! ---- Positive case 4: assumed-rank ----------------------------------
+  ! AssumedRank shape attribute requires a descriptor under the standard
+  ! BIND(C) ABI; the override forces a base address for the CUDA-C ABI.
+  subroutine call_kernel_assumed_rank(d)
+    real, device :: d(..)
+    interface
+      attributes(global) subroutine krank(a) bind(c, name='krank')
+        use iso_c_binding
+        real(c_float), dimension(..), device :: a
+      end subroutine
+    end interface
+    call krank<<<8, 128>>>(d)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMmPcall_kernel_assumed_rank
+! CHECK: cuf.kernel_launch @krank<<<{{.*}}>>>(%{{.*}}) : (!fir.ref<{{.*}}>)
+
   ! ---- Negative case 1: attributes(global) without bind(c) -----------
   ! Pure CUDA Fortran kernel; descriptor ABI preserved.
   subroutine call_kernel_no_bindc(d)
@@ -103,8 +120,8 @@ contains
 ! CHECK: cuf.kernel_launch @kstar<<<{{.*}}>>>(%{{.*}}) : (!fir.ref<!fir.array<?xf32>>)
 
   ! ---- Negative case 4: allocatable assumed-shape -------------------
-  ! Allocatable is handled before the descriptor branch; remains MutableBox
-  ! at the kernel-launch site.
+  ! Allocatable goes through the MutableBox branch in handleExplicitDummy
+  ! before the override is reachable.
   subroutine call_kernel_allocatable(d)
     real, allocatable, device :: d(:)
     interface
@@ -118,5 +135,21 @@ contains
 
 ! CHECK-LABEL: func.func @_QMmPcall_kernel_allocatable
 ! CHECK: cuf.kernel_launch @kalloc<<<{{.*}}>>>(%{{.*}}) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+
+  ! ---- Negative case 5: pointer assumed-shape -----------------------
+  ! Pointer also goes through the MutableBox branch, same as allocatable.
+  subroutine call_kernel_pointer(d)
+    real, pointer, device :: d(:)
+    interface
+      attributes(global) subroutine kptr(a) bind(c, name='kptr')
+        use iso_c_binding
+        real(c_float), dimension(:), pointer, device :: a
+      end subroutine
+    end interface
+    call kptr<<<8, 128>>>(d)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMmPcall_kernel_pointer
+! CHECK: cuf.kernel_launch @kptr<<<{{.*}}>>>(%{{.*}}) : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
 
 end module
