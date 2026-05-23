@@ -51,7 +51,6 @@ int main() {}
 
 // RUN: %clang -std=c++23 -stdlib=libc++ \
 // RUN:   -fmodules-driver -Rmodules-driver -Rmodule-import \
-// RUN:   -stdlib=libc++ \
 // RUN:   -resource-dir=%t/FakeSysroot/usr/lib/x86_64-linux-gnu \
 // RUN:   --sysroot=%t/FakeSysroot \
 // RUN:   -L%t/Inputs/usr/lib/x86_64-linux-gnu \
@@ -86,7 +85,6 @@ int main() {}
 // Checks that standard library modules are still precompiled with -emit-llvm.
 // RUN: %clang -std=c++23 -stdlib=libc++ \
 // RUN:   -fmodules-driver -Rmodules-driver -Rmodule-import \
-// RUN:   -stdlib=libc++ \
 // RUN:   -resource-dir=%t/FakeSysroot/usr/lib/x86_64-linux-gnu \
 // RUN:   --sysroot=%t/FakeSysroot \
 // RUN:   -L%t/Inputs/usr/lib/x86_64-linux-gnu \
@@ -111,7 +109,6 @@ int main() {}
 // Checks that standard library modules are still precompiled with -fsyntax-only.
 // RUN: %clang -std=c++23 -stdlib=libc++ \
 // RUN:   -fmodules-driver -Rmodules-driver -Rmodule-import \
-// RUN:   -stdlib=libc++ \
 // RUN:   -resource-dir=%t/FakeSysroot/usr/lib/x86_64-linux-gnu \
 // RUN:   --sysroot=%t/FakeSysroot \
 // RUN:   -L%t/Inputs/usr/lib/x86_64-linux-gnu \
