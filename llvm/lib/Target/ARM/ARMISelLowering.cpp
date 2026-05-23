@@ -743,10 +743,18 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::SINT_TO_FP, MVT::v8i16, Custom);
     setOperationAction(ISD::UINT_TO_FP, MVT::v4i16, Custom);
     setOperationAction(ISD::UINT_TO_FP, MVT::v8i16, Custom);
+    setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v4i16, Custom);
+    setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v8i16, Custom);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v4i16, Custom);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v8i16, Custom);
     setOperationAction(ISD::FP_TO_UINT, MVT::v4i16, Custom);
     setOperationAction(ISD::FP_TO_UINT, MVT::v8i16, Custom);
     setOperationAction(ISD::FP_TO_SINT, MVT::v4i16, Custom);
     setOperationAction(ISD::FP_TO_SINT, MVT::v8i16, Custom);
+    setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v4i16, Custom);
+    setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v8i16, Custom);
+    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v4i16, Custom);
+    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v8i16, Custom);
 
     setOperationAction(ISD::FP_ROUND,   MVT::v2f32, Expand);
     setOperationAction(ISD::FP_EXTEND,  MVT::v2f64, Expand);
@@ -866,6 +874,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FROUNDEVEN, MVT::f64, Expand);
     setOperationAction(ISD::FNEARBYINT, MVT::f64, Expand);
     setOperationAction(ISD::FFLOOR,     MVT::f64, Expand);
+    setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i32, Custom);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i32, Custom);
     setOperationAction(ISD::SINT_TO_FP, MVT::i32, Custom);
     setOperationAction(ISD::UINT_TO_FP, MVT::i32, Custom);
     setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
@@ -5643,11 +5655,13 @@ SDValue ARMTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
 }
 
 static SDValue LowerVectorFP_TO_INT(SDValue Op, SelectionDAG &DAG) {
+  bool IsStrict = Op->isStrictFPOpcode();
   EVT VT = Op.getValueType();
-  SDLoc dl(Op);
-
-  if (Op.getValueType().getVectorElementType() == MVT::i32) {
-    if (Op.getOperand(0).getValueType().getVectorElementType() == MVT::f32)
+  SDLoc DL(Op);
+  SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
+  const EVT OpTy = SrcVal.getValueType();
+  if (VT.getVectorElementType() == MVT::i32) {
+    if (OpTy.getVectorElementType() == MVT::f32)
       return Op;
     return DAG.UnrollVectorOp(Op.getNode());
   }
@@ -5655,7 +5669,6 @@ static SDValue LowerVectorFP_TO_INT(SDValue Op, SelectionDAG &DAG) {
   const bool HasFullFP16 = DAG.getSubtarget<ARMSubtarget>().hasFullFP16();
 
   EVT NewTy;
-  const EVT OpTy = Op.getOperand(0).getValueType();
   if (OpTy == MVT::v4f32)
     NewTy = MVT::v4i32;
   else if (OpTy == MVT::v4f16 && HasFullFP16)
@@ -5668,27 +5681,33 @@ static SDValue LowerVectorFP_TO_INT(SDValue Op, SelectionDAG &DAG) {
   if (VT != MVT::v4i16 && VT != MVT::v8i16)
     return DAG.UnrollVectorOp(Op.getNode());
 
-  Op = DAG.getNode(Op.getOpcode(), dl, NewTy, Op.getOperand(0));
-  return DAG.getNode(ISD::TRUNCATE, dl, VT, Op);
+  if (IsStrict) {
+    SDValue Cvt = DAG.getNode(Op.getOpcode(), DL, {NewTy, MVT::Other},
+                              {Op.getOperand(0), SrcVal});
+    SDValue Trunc =
+        DAG.getNode(ISD::TRUNCATE, DL, VT, SDValue(Cvt.getNode(), 0));
+    return DAG.getMergeValues({Trunc, Cvt.getValue(1)}, DL);
+  }
+  SDValue Cvt = DAG.getNode(Op.getOpcode(), DL, NewTy, SrcVal);
+  return DAG.getNode(ISD::TRUNCATE, DL, VT, Cvt);
 }
 
 SDValue ARMTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
-  EVT VT = Op.getValueType();
-  if (VT.isVector())
-    return LowerVectorFP_TO_INT(Op, DAG);
-
   bool IsStrict = Op->isStrictFPOpcode();
   SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
 
+  if (SrcVal.getValueType().isVector())
+    return LowerVectorFP_TO_INT(Op, DAG);
+
+  bool IsSigned = Op.getOpcode() == ISD::STRICT_FP_TO_SINT ||
+                  Op.getOpcode() == ISD::FP_TO_SINT;
+
   if (isUnsupportedFloatingType(SrcVal.getValueType())) {
     RTLIB::Libcall LC;
-    if (Op.getOpcode() == ISD::FP_TO_SINT ||
-        Op.getOpcode() == ISD::STRICT_FP_TO_SINT)
-      LC = RTLIB::getFPTOSINT(SrcVal.getValueType(),
-                              Op.getValueType());
+    if (IsSigned)
+      LC = RTLIB::getFPTOSINT(SrcVal.getValueType(), Op.getValueType());
     else
-      LC = RTLIB::getFPTOUINT(SrcVal.getValueType(),
-                              Op.getValueType());
+      LC = RTLIB::getFPTOUINT(SrcVal.getValueType(), Op.getValueType());
     SDLoc Loc(Op);
     MakeLibCallOptions CallOptions;
     SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
@@ -5696,16 +5715,6 @@ SDValue ARMTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
     std::tie(Result, Chain) = makeLibCall(DAG, LC, Op.getValueType(), SrcVal,
                                           CallOptions, Loc, Chain);
     return IsStrict ? DAG.getMergeValues({Result, Chain}, Loc) : Result;
-  }
-
-  // FIXME: Remove this when we have strict fp instruction selection patterns
-  if (IsStrict) {
-    SDLoc Loc(Op);
-    SDValue Result =
-        DAG.getNode(Op.getOpcode() == ISD::STRICT_FP_TO_SINT ? ISD::FP_TO_SINT
-                                                             : ISD::FP_TO_UINT,
-                    Loc, Op.getValueType(), SrcVal);
-    return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
   }
 
   return Op;
@@ -5749,17 +5758,19 @@ static SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
 }
 
 static SDValue LowerVectorINT_TO_FP(SDValue Op, SelectionDAG &DAG) {
+  bool IsStrict = Op->isStrictFPOpcode();
   EVT VT = Op.getValueType();
-  SDLoc dl(Op);
+  SDLoc DL(Op);
+  SDValue In = Op.getOperand(IsStrict ? 1 : 0);
+  EVT InVT = In.getValueType();
 
-  if (Op.getOperand(0).getValueType().getVectorElementType() == MVT::i32) {
+  if (InVT.getVectorElementType() == MVT::i32) {
     if (VT.getVectorElementType() == MVT::f32)
       return Op;
     return DAG.UnrollVectorOp(Op.getNode());
   }
 
-  assert((Op.getOperand(0).getValueType() == MVT::v4i16 ||
-          Op.getOperand(0).getValueType() == MVT::v8i16) &&
+  assert((InVT == MVT::v4i16 || InVT == MVT::v8i16) &&
          "Invalid type for custom lowering!");
 
   const bool HasFullFP16 = DAG.getSubtarget<ARMSubtarget>().hasFullFP16();
@@ -5775,38 +5786,49 @@ static SDValue LowerVectorINT_TO_FP(SDValue Op, SelectionDAG &DAG) {
     return DAG.UnrollVectorOp(Op.getNode());
 
   unsigned CastOpc;
-  unsigned Opc;
   switch (Op.getOpcode()) {
-  default: llvm_unreachable("Invalid opcode!");
+  default:
+    llvm_unreachable("Invalid opcode!");
   case ISD::SINT_TO_FP:
+  case ISD::STRICT_SINT_TO_FP:
     CastOpc = ISD::SIGN_EXTEND;
-    Opc = ISD::SINT_TO_FP;
     break;
   case ISD::UINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
     CastOpc = ISD::ZERO_EXTEND;
-    Opc = ISD::UINT_TO_FP;
     break;
   }
 
-  Op = DAG.getNode(CastOpc, dl, DestVecType, Op.getOperand(0));
-  return DAG.getNode(Opc, dl, VT, Op);
+  SDValue Extended = DAG.getNode(CastOpc, DL, DestVecType, In);
+  if (IsStrict)
+    return DAG.getNode(Op.getOpcode(), DL, {VT, MVT::Other},
+                       {Op.getOperand(0), Extended});
+  return DAG.getNode(Op.getOpcode(), DL, VT, Extended);
 }
 
 SDValue ARMTargetLowering::LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   if (VT.isVector())
     return LowerVectorINT_TO_FP(Op, DAG);
+
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
+  bool IsSigned = Op.getOpcode() == ISD::STRICT_SINT_TO_FP ||
+                  Op.getOpcode() == ISD::SINT_TO_FP;
+
   if (isUnsupportedFloatingType(VT)) {
     RTLIB::Libcall LC;
-    if (Op.getOpcode() == ISD::SINT_TO_FP)
-      LC = RTLIB::getSINTTOFP(Op.getOperand(0).getValueType(),
-                              Op.getValueType());
+    if (IsSigned)
+      LC = RTLIB::getSINTTOFP(SrcVal.getValueType(), VT);
     else
-      LC = RTLIB::getUINTTOFP(Op.getOperand(0).getValueType(),
-                              Op.getValueType());
+      LC = RTLIB::getUINTTOFP(SrcVal.getValueType(), VT);
+    SDLoc Loc(Op);
     MakeLibCallOptions CallOptions;
-    return makeLibCall(DAG, LC, Op.getValueType(), Op.getOperand(0),
-                       CallOptions, SDLoc(Op)).first;
+    SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
+    SDValue Result;
+    std::tie(Result, Chain) =
+        makeLibCall(DAG, LC, VT, SrcVal, CallOptions, Loc, Chain);
+    return IsStrict ? DAG.getMergeValues({Result, Chain}, Loc) : Result;
   }
 
   return Op;
@@ -10462,6 +10484,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VASTART:       return LowerVASTART(Op, DAG);
   case ISD::ATOMIC_FENCE:  return LowerATOMIC_FENCE(Op, DAG, Subtarget);
   case ISD::PREFETCH:      return LowerPREFETCH(Op, DAG, Subtarget);
+  case ISD::STRICT_SINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:    return LowerINT_TO_FP(Op, DAG);
   case ISD::STRICT_FP_TO_SINT:
@@ -20984,6 +21008,7 @@ ARMTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const 
 
 SDValue ARMTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
+  SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
   SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
   const unsigned DstSz = Op.getValueType().getSizeInBits();
   const unsigned SrcSz = SrcVal.getValueType().getSizeInBits();
@@ -20997,16 +21022,8 @@ SDValue ARMTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
          "With FP16, 16 to 32 conversion is legal!");
 
   // Converting from 32 -> 64 is valid if we have FP64.
-  if (SrcSz == 32 && DstSz == 64 && Subtarget->hasFP64()) {
-    // FIXME: Remove this when we have strict fp instruction selection patterns
-    if (IsStrict) {
-      SDLoc Loc(Op);
-      SDValue Result = DAG.getNode(ISD::FP_EXTEND,
-                                   Loc, Op.getValueType(), SrcVal);
-      return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
-    }
+  if (SrcSz == 32 && DstSz == 64 && Subtarget->hasFP64())
     return Op;
-  }
 
   // Either we are converting from 16 -> 64, without FP16 and/or
   // FP.double-precision or without Armv8-fp. So we must do it in two
@@ -21016,15 +21033,14 @@ SDValue ARMTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   SDLoc Loc(Op);
   RTLIB::Libcall LC;
   MakeLibCallOptions CallOptions;
-  SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
   for (unsigned Sz = SrcSz; Sz <= 32 && Sz < DstSz; Sz *= 2) {
     bool Supported = (Sz == 16 ? Subtarget->hasFP16() : Subtarget->hasFP64());
     MVT SrcVT = (Sz == 16 ? MVT::f16 : MVT::f32);
     MVT DstVT = (Sz == 16 ? MVT::f32 : MVT::f64);
     if (Supported) {
       if (IsStrict) {
-        SrcVal = DAG.getNode(ISD::STRICT_FP_EXTEND, Loc,
-                             {DstVT, MVT::Other}, {Chain, SrcVal});
+        SrcVal = DAG.getNode(ISD::STRICT_FP_EXTEND, Loc, {DstVT, MVT::Other},
+                             {Chain, SrcVal});
         Chain = SrcVal.getValue(1);
       } else {
         SrcVal = DAG.getNode(ISD::FP_EXTEND, Loc, DstVT, SrcVal);
@@ -21043,13 +21059,12 @@ SDValue ARMTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue ARMTargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
-
+  SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
   SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
-  EVT SrcVT = SrcVal.getValueType();
+  SDValue TruncVal = Op.getOperand(IsStrict ? 2 : 1);
   EVT DstVT = Op.getValueType();
-  const unsigned DstSz = Op.getValueType().getSizeInBits();
-  const unsigned SrcSz = SrcVT.getSizeInBits();
-  (void)DstSz;
+  const unsigned DstSz = DstVT.getSizeInBits();
+  const unsigned SrcSz = SrcVal.getValueType().getSizeInBits();
   assert(DstSz < SrcSz && SrcSz <= 64 && DstSz >= 16 &&
          "Unexpected type for custom-lowering FP_ROUND");
 
@@ -21058,20 +21073,37 @@ SDValue ARMTargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
 
   SDLoc Loc(Op);
 
-  // Instruction from 32 -> 16 if hasFP16 is valid
-  if (SrcSz == 32 && Subtarget->hasFP16())
+  // Direct conversions when hardware provides an instruction.
+  if (SrcSz == 64 && DstSz == 32 && Subtarget->hasFP64())
+    return Op;
+  if (SrcSz == 32 && DstSz == 16 && Subtarget->hasFP16())
     return Op;
 
-  // Lib call from 32 -> 16 / 64 -> [32, 16]
-  RTLIB::Libcall LC = RTLIB::getFPROUND(SrcVT, DstVT);
-  assert(LC != RTLIB::UNKNOWN_LIBCALL &&
-         "Unexpected type for custom-lowering FP_ROUND");
+  // Either we are converting from 64 -> 16 in two steps, or we must libcall.
+  RTLIB::Libcall LC;
   MakeLibCallOptions CallOptions;
-  SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
-  SDValue Result;
-  std::tie(Result, Chain) = makeLibCall(DAG, LC, DstVT, SrcVal, CallOptions,
-                                        Loc, Chain);
-  return IsStrict ? DAG.getMergeValues({Result, Chain}, Loc) : Result;
+  for (unsigned Sz = SrcSz; Sz > DstSz; Sz /= 2) {
+    bool Supported = (Sz == 64 ? Subtarget->hasFP64() : Subtarget->hasFP16());
+    MVT CurDstVT = (Sz == 64 ? MVT::f32 : MVT::f16);
+    if (Supported) {
+      if (IsStrict) {
+        SrcVal = DAG.getNode(ISD::STRICT_FP_ROUND, Loc, {CurDstVT, MVT::Other},
+                             {Chain, SrcVal, TruncVal});
+        Chain = SrcVal.getValue(1);
+      } else {
+        SrcVal = DAG.getNode(ISD::FP_ROUND, Loc, CurDstVT, SrcVal, TruncVal);
+      }
+    } else {
+      MVT CurSrcVT = (Sz == 64 ? MVT::f64 : MVT::f32);
+      LC = RTLIB::getFPROUND(CurSrcVT, CurDstVT);
+      assert(LC != RTLIB::UNKNOWN_LIBCALL &&
+             "Unexpected type for custom-lowering FP_ROUND");
+      std::tie(SrcVal, Chain) =
+          makeLibCall(DAG, LC, CurDstVT, SrcVal, CallOptions, Loc, Chain);
+    }
+  }
+
+  return IsStrict ? DAG.getMergeValues({SrcVal, Chain}, Loc) : SrcVal;
 }
 
 bool

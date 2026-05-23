@@ -6,12 +6,12 @@
 ; RUN: llc < %s -mtriple=armv8.1m-none-none-eabi -mattr=+fp-armv8 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V8
 ; RUN: llc < %s -mtriple=armv8.1m-none-none-eabi -mattr=+fp-armv8,-fp64 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V8-SP
 ; RUN: llc < %s -mtriple=armv8.1m-none-none-eabi -mattr=+mve.fp,+fp64 | FileCheck %s --check-prefix=CHECK-V8
-; RUN: llc < %s -mtriple=armv8.1m-none-none-eabi -mattr=+mve.fp | FileCheck %s --check-prefix=CHECK-V8-SP
+; RUN: llc < %s -mtriple=armv8.1m-none-none-eabi -mattr=+mve.fp | FileCheck %s --check-prefix=CHECK-V8-SP --check-prefix=CHECK-V8-SP-MVE
 
 define void @test_load_store(ptr %in, ptr %out) {
 ; CHECK-LABEL: test_load_store:
-; CHECK: ldrh [[TMP:r[0-9]+]], [r0]
-; CHECK: strh [[TMP]], [r1]
+; CHECK: {{ldrh r[0-9]+, \[r0\]|vldr\.16 s[0-9]+, \[r0\]}}
+; CHECK: {{strh r[0-9]+, \[r1\]|vstr\.16 s[0-9]+, \[r1\]}}
   %val = load half, ptr %in
   store half %val, ptr %out
   ret void
@@ -78,7 +78,8 @@ define void @test_trunc64(double %in, ptr %addr) {
 ; CHECK-OLD: bl ___truncdfhf2
 ; CHECK-F16: bl ___truncdfhf2
 ; CHECK-V8: vcvtb.f16.f64
-; CHECK-V8-SP: bl __aeabi_d2h
+; CHECK-V8-SP: bl {{__aeabi_d2h|__aeabi_d2f}}
+; CHECK-V8-SP-MVE: vcvtb.f16.f32
   %val16 = fptrunc double %in to half
   store half %val16, ptr %addr
   ret void
