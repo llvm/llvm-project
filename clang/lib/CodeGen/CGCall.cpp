@@ -5448,6 +5448,69 @@ static unsigned getMaxVectorWidth(const llvm::Type *Ty) {
   return MaxVectorWidth;
 }
 
+/// For a musttail call argument lowered as ABIArgInfo::Indirect, returns the
+/// incoming llvm::Argument of the current function when the call argument's
+/// source is a forwarded incoming Indirect parameter with a matching ABI
+/// shape. Returns nullptr to fall through to the normal byval-temp path.
+///
+/// Forwarding is safe under musttail's prototype-match invariant: the
+/// incoming pointer points into the caller's caller's frame and stays valid
+/// across the tail call, whereas a local alloca would dangle. This mirrors
+/// the SRet forwarding in the return path (see commit a96c14eeb8fc,
+/// "Always forward sret parameters to musttail calls").
+///
+/// Guards:
+///   - The source LValue must be the IR-level Argument of CurFn (peek through
+///     one AddrSpaceCastInst for non-default alloca address spaces; do NOT
+///     unwrap loads, since a load through a local alloca means the source
+///     IS a local).
+///   - The incoming parameter must be passed indirectly with byval-ness
+///     matching the call slot (Verifier V7).
+///   - The Argument must not already have been forwarded by a sibling call
+///     argument in this same call (noalias deduplication).
+static llvm::Argument *getForwardableIncomingMustTailArg(
+    CodeGenFunction &CGF, const CallArg &CallArgument,
+    const ABIArgInfo &CallSlotInfo,
+    llvm::SmallPtrSetImpl<llvm::Argument *> &AlreadyForwarded) {
+  // The call argument can be either an LValue (DeclRefExpr to a parameter)
+  // or an RValue aggregate (typical for struct args lowered by CGCall). Both
+  // expose the underlying address; we just need the IR-level pointer.
+  Address SrcAddr = Address::invalid();
+  if (CallArgument.hasLValue())
+    SrcAddr = CallArgument.getKnownLValue().getAddress();
+  else if (CallArgument.getKnownRValue().isAggregate())
+    SrcAddr = CallArgument.getKnownRValue().getAggregateAddress();
+  else
+    return nullptr;
+  llvm::Value *SrcPtr = SrcAddr.emitRawPointer(CGF);
+
+  // Peek through one AddrSpaceCastInst. EmitParmDecl wraps incoming Indirect
+  // parameters in addrspacecast on targets whose alloca address space differs
+  // from the parameter's pointer address space (NVPTX / AMDGPU / SPIR).
+  if (auto *ASC = llvm::dyn_cast<llvm::AddrSpaceCastInst>(SrcPtr))
+    SrcPtr = ASC->getOperand(0);
+
+  auto *IncomingArg = llvm::dyn_cast<llvm::Argument>(SrcPtr);
+  if (!IncomingArg || IncomingArg->getParent() != CGF.CurFn)
+    return nullptr;
+
+  // byval-ness must match between the incoming parameter and the call slot.
+  // The Verifier rejects musttail across an ABI-attribute mismatch (V7), so
+  // producing IR with a mismatch is a verification failure. Falling through
+  // to byval-temp is the safe behavior.
+  if (IncomingArg->hasByValAttr() != CallSlotInfo.getIndirectByVal())
+    return nullptr;
+
+  // noalias deduplication: a noalias incoming parameter must not be
+  // forwarded to two slots in the same call. Pre-fix, each slot got its
+  // own byval-temp; we must not regress that aliasing guarantee.
+  if (IncomingArg->hasNoAliasAttr() &&
+      !AlreadyForwarded.insert(IncomingArg).second)
+    return nullptr;
+
+  return IncomingArg;
+}
+
 RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                  const CGCallee &Callee,
                                  ReturnValueSlot ReturnValue,
@@ -5571,6 +5634,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // markers that need to be ended right after the call.
   SmallVector<CallLifetimeEnd, 2> CallLifetimeEndAfterCall;
 
+  // For musttail calls forwarding Indirect parameters: tracks incoming
+  // Arguments already forwarded to a slot in this call, so a noalias
+  // incoming Argument is not forwarded to two slots (see
+  // getForwardableIncomingMustTailArg).
+  llvm::SmallPtrSet<llvm::Argument *, 4> ForwardedMustTailArgs;
+
   // Translate all of the arguments as necessary to match the IR lowering.
   assert(CallInfo.arg_size() == CallArgs.size() &&
          "Mismatch between function signature & arguments.");
@@ -5643,6 +5712,23 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     case ABIArgInfo::Indirect:
     case ABIArgInfo::IndirectAliased: {
       assert(NumIRArgs == 1);
+
+      // For musttail calls, forward an incoming Indirect parameter directly
+      // instead of creating a byval-temp. A local alloca would be deallocated
+      // by the tail call before the callee dereferences the pointer. The
+      // incoming pointer points into the caller's caller's frame, which
+      // remains valid. Mirrors the SRet forwarding above (a96c14eeb8fc).
+      if (IsMustTail) {
+        if (llvm::Argument *FwdArg = getForwardableIncomingMustTailArg(
+                *this, *I, ArgInfo, ForwardedMustTailArgs)) {
+          llvm::Value *Val = FwdArg;
+          if (ArgHasMaybeUndefAttr)
+            Val = Builder.CreateFreeze(Val);
+          IRCallArgs[FirstIRArg] = Val;
+          break;
+        }
+      }
+
       if (I->isAggregate()) {
         // We want to avoid creating an unnecessary temporary+copy here;
         // however, we need one in three cases:
