@@ -736,7 +736,7 @@ void Parser::ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
   LAs.clear();
 }
 
-void Parser::ParseLexedAttribute(LateParsedAttribute &LA, bool EnterScope,
+void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
                                  bool OnDefinition,
                                  ParsedAttributes *OutAttrs) {
   // Create a fake EOF so that attribute parsing won't go off the end of the
@@ -745,33 +745,35 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA, bool EnterScope,
   AttrEnd.startToken();
   AttrEnd.setKind(tok::eof);
   AttrEnd.setLocation(Tok.getLocation());
-  AttrEnd.setEofData(LA.Toks.data());
-  LA.Toks.push_back(AttrEnd);
+  AttrEnd.setEofData(LPA.Toks.data());
+  LPA.Toks.push_back(AttrEnd);
 
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.
-  LA.Toks.push_back(Tok);
-  PP.EnterTokenStream(LA.Toks, true, /*IsReinject=*/true);
+  LPA.Toks.push_back(Tok);
+  PP.EnterTokenStream(LPA.Toks, true, /*IsReinject=*/true);
   // Consume the previously pushed token.
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 
   ParsedAttributes Attrs(AttrFactory);
 
-  if (LA.Decls.size() > 0) {
-    Decl *D = LA.Decls[0];
-    bool HasFuncScope =
-        EnterScope && LA.Decls.size() == 1 && D->isFunctionOrFunctionTemplate();
+  if (LPA.Decls.size() > 0) {
+    Decl *D = LPA.Decls[0];
+    bool HasFuncScope = EnterScope && LPA.Decls.size() == 1 &&
+                        D->isFunctionOrFunctionTemplate();
     bool IsCPlusPlus = getLangOpts().CPlusPlus;
 
     NamedDecl *ND = dyn_cast<NamedDecl>(D);
     RecordDecl *RD = dyn_cast_or_null<RecordDecl>(D->getDeclContext());
 
     // Allow 'this' within late-parsed attributes.
+    // No-ops in C since ND->isCXXInstanceMember() is always false.
     Sema::CXXThisScopeRAII ThisScope(Actions, RD, Qualifiers(),
                                      IsCPlusPlus && ND &&
                                          ND->isCXXInstanceMember());
 
     // If the Decl is templatized, add template parameters to the scope.
+    // No-ops in C mode since Enter is false.
     ReenterTemplateScopeRAII InDeclScope(*this, D, IsCPlusPlus && EnterScope);
 
     // If the Decl is on a function, add function parameters to the scope.
@@ -781,7 +783,7 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA, bool EnterScope,
       Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
     }
 
-    ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs,
+    ParseGNUAttributeArgs(&LPA.AttrName, LPA.AttrNameLoc, Attrs,
                           /*EndLoc=*/nullptr, /*ScopeName=*/nullptr,
                           SourceLocation(), ParsedAttr::Form::GNU(),
                           /*D=*/nullptr);
@@ -789,20 +791,19 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA, bool EnterScope,
     if (HasFuncScope)
       Actions.ActOnExitFunctionContext();
   } else if (OutAttrs) {
-    ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs,
+    ParseGNUAttributeArgs(&LPA.AttrName, LPA.AttrNameLoc, Attrs,
                           /*EndLoc=*/nullptr, /*ScopeName=*/nullptr,
                           SourceLocation(), ParsedAttr::Form::GNU(),
                           /*D=*/nullptr);
   } else {
-    Diag(Tok, diag::warn_attribute_no_decl) << LA.AttrName.getName();
+    Diag(Tok, diag::warn_attribute_no_decl) << LPA.AttrName.getName();
   }
 
   if (OnDefinition && !Attrs.empty() && !Attrs.begin()->isCXX11Attribute() &&
       Attrs.begin()->isKnownToGCC())
-    Diag(Tok, diag::warn_attribute_on_function_definition)
-      << &LA.AttrName;
+    Diag(Tok, diag::warn_attribute_on_function_definition) << &LPA.AttrName;
 
-  for (auto *D : LA.Decls)
+  for (auto *D : LPA.Decls)
     Actions.ActOnFinishDelayedAttribute(getCurScope(), D, Attrs);
 
   // Due to a parsing error, we either went over the cached tokens or

@@ -1342,7 +1342,7 @@ private:
   /// for each LateParsedAttribute. We consume the saved tokens and
   /// create an attribute with the arguments filled in. We add this
   /// to the Attribute list for the decl.
-  void ParseLexedAttribute(LateParsedAttribute &LA, bool EnterScope,
+  void ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
                            bool OnDefinition,
                            ParsedAttributes *OutAttrs = nullptr);
 
