@@ -27,6 +27,12 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: acosh
+    standards:
+      - stdc
+    return_type: double
+    arguements:
+      - type: double
   - name: acoshf
     standards:
       - stdc
@@ -40,6 +46,12 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: acospif
+    standards:
+      - stdc
+    return_type: float
+    arguements:
+      - type: float
   - name: acospif16
     standards:
       - stdc
@@ -66,6 +78,12 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: asinh
+    standards:
+      - stdc
+    return_type: double
+    arguements:
+      - type: double
   - name: asinhf
     standards:
       - stdc
@@ -118,6 +136,14 @@ functions:
     arguments:
       - type: float
       - type: float
+  - name: atan2f16
+    standards:
+      - stdc
+    return_type: float16
+    arguements:
+      - type: float16
+      - type: float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: atan2l
     standards:
       - stdc
@@ -146,6 +172,12 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: atanh
+    standards:
+      - stdc
+    return_type: double
+    arguements:
+      - type: double
   - name: atanhf
     standards:
       - stdc
@@ -303,6 +335,12 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: cosh
+    standards:
+      - stdc
+    return_type: double
+    arguements:
+      - type: double
   - name: coshf
     standards:
       - stdc
@@ -359,6 +397,23 @@ functions:
     arguments:
       - type: long double
       - type: long double
+  - name: dfmaf128
+    standards:
+      - stdc
+    return_type: double
+    arguements:
+      - type: float128
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: dfmal
+    standards:
+      - stdc
+    return_type: double
+    arguements:
+      - type: long double
+      - type: long double
+      - type: long double
   - name: dmulf128
     standards:
       - llvm_libc_ext
@@ -402,6 +457,12 @@ functions:
     arguments:
       - type: long double
       - type: long double
+  - name: erf
+    standards:
+      - stdc
+    return_type: double
+    arguements:
+      - type: double
   - name: erff
     standards:
       - stdc
@@ -1606,6 +1667,38 @@ functions:
     return_type: int
     arguments:
       - type: long double
+  - name: issignaling
+    standards:
+      - stdc
+    return_type: int
+    arguements:
+      - type: double
+  - name: issignalingf
+    standards:
+      - stdc
+    return_type: int
+    arguements:
+      - type: float
+  - name: issignalingf128
+    standards:
+      - stdc
+    return_type: int
+    arguements:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: issignalingf16
+    standards:
+      - stdc
+    return_type: int
+    arguements:
+      - type: float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: issignalingl
+    standards:
+      - stdc
+    return_type: int
+    arguements:
+      - type: long double
   - name: ldexp
     standards:
       - stdc
@@ -2595,6 +2688,12 @@ functions:
       - type: float
       - type: float *
       - type: float *
+  - name: sinh
+    standards:
+      - stdc
+    return_type: double
+    arguements:
+      - type: double
   - name: sinhf
     standards:
       - stdc
@@ -2672,6 +2771,12 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: tanh
+    standards:
+      - stdc
+    return_type: double
+    arguements:
+      - type: double
   - name: tanhf
     standards:
       - stdc
@@ -2698,6 +2803,18 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: tgamma
+    standards:
+      - stdc
+    return_type: double
+    arguements:
+      - type: double
+  - name: tgammaf
+    standards:
+      - stdc
+    return_type: float
+    arguements:
+      - type: float
   - name: totalorder
     standards:
       - stdc
