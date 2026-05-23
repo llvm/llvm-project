@@ -4577,8 +4577,57 @@ struct MustBeDeadConversion : public fir::FIROpConversion<FromOp> {
   }
 };
 
-struct ShapeOpConversion : public MustBeDeadConversion<fir::ShapeOp> {
-  using MustBeDeadConversion::MustBeDeadConversion;
+// Shape can now be lowered into an llvm struct
+struct ShapeOpConversion : public fir::FIROpConversion<fir::ShapeOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::ShapeOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    if (op->use_empty()) {
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
+    auto loc = op.getLoc();
+    auto shapeTy = mlir::cast<fir::ShapeType>(op.getType());
+    mlir::Type llvmShapeTy = convertType(shapeTy);
+    mlir::Type i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
+    mlir::Value structVal =
+        mlir::LLVM::UndefOp::create(rewriter, loc, llvmShapeTy);
+    for (auto [i, extent] : llvm::enumerate(adaptor.getExtents())) {
+      mlir::Value extentI64 =
+          integerCast(loc, rewriter, i64Ty, extent, /*fold=*/true);
+      structVal =
+          mlir::LLVM::InsertValueOp::create(rewriter, loc, structVal, extentI64, i);
+    }
+    rewriter.replaceOp(op, structVal);
+    return mlir::success();
+  }
+};
+
+struct ShapeExtentsOpConversion : public fir::FIROpConversion<fir::ShapeExtentsOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::ShapeExtentsOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    auto shapeTy = mlir::cast<fir::ShapeType>(op.getShape().getType());
+    if (shapeTy.getRank() != op.getNumResults())
+      return mlir::failure();
+    mlir::Type i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
+    mlir::Value llvmShape = adaptor.getShape();
+    llvm::SmallVector<mlir::Value> results;
+    for (unsigned i = 0; i < op.getNumResults(); ++i) {
+      mlir::Value extentI64 =
+          mlir::LLVM::ExtractValueOp::create(rewriter, loc, i64Ty, llvmShape, i);
+      mlir::Type resultTy = convertType(op.getExtents()[i].getType());
+      results.push_back(
+          integerCast(loc, rewriter, resultTy, extentI64, /*fold=*/true));
+    }
+    rewriter.replaceOp(op, results);
+    return mlir::success();
+  }
 };
 
 struct ShapeShiftOpConversion : public MustBeDeadConversion<fir::ShapeShiftOp> {
@@ -4880,14 +4929,14 @@ void fir::populateFIRToLLVMConversionPatterns(
       LogicalOrOpConversion, MulcOpConversion, NegcOpConversion,
       NeqvOpConversion, NoReassocOpConversion, PrefetchOpConversion,
       SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
-      SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
-      ShiftOpConversion, SliceOpConversion, StoreOpConversion,
-      StringLitOpConversion, SubcOpConversion, TypeDescOpConversion,
-      TypeInfoOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
-      UndefOpConversion, UnreachableOpConversion, UseStmtOpConversion,
-      ModuleDebugImportsOpConversion, XArrayCoorOpConversion,
-      XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(converter,
-                                                                options);
+      SelectTypeOpConversion, ShapeOpConversion, ShapeExtentsOpConversion,
+      ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
+      StoreOpConversion, StringLitOpConversion, SubcOpConversion,
+      TypeDescOpConversion, TypeInfoOpConversion, UnboxCharOpConversion,
+      UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
+      UseStmtOpConversion, ModuleDebugImportsOpConversion,
+      XArrayCoorOpConversion, XEmboxOpConversion, XReboxOpConversion,
+      ZeroOpConversion>(converter, options);
 
   // Patterns that are populated without a type converter do not trigger
   // target materializations for the operands of the root op.

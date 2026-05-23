@@ -3,18 +3,6 @@
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" --verify-diagnostics %s
 
 
-// Test `fir.shape` conversion failure because the op has uses.
-
-func.func @shape_not_dead(%arg0: !fir.ref<!fir.array<?x?xf32>>, %i: index, %j: index) {
-  %c0 = arith.constant 1 : index
-  // expected-error@+1{{failed to legalize operation 'fir.shape'}}
-  %0 = fir.shape %c0, %c0 : (index, index) -> !fir.shape<2>
-  %1 = fir.array_coor %arg0(%0) %i, %j : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, index, index) -> !fir.ref<f32>
-  return
-}
-
-// -----
-
 // Test `fir.slice` conversion failure because the op has uses.
 
 func.func @slice_not_dead(%arg0: !fir.ref<!fir.array<?x?xf32>>, %i: index, %j: index) {
