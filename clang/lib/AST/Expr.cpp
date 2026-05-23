@@ -432,6 +432,16 @@ APValue ConstantExpr::getAPValueResult() const {
   llvm_unreachable("invalid ResultKind");
 }
 
+CThisExpr *CThisExpr::Create(const ASTContext &Ctx, SourceLocation L,
+                             QualType Ty) {
+  return new (Ctx) CThisExpr(L, Ty);
+}
+
+CThisExpr *CThisExpr::CreateEmpty(const ASTContext &Ctx) {
+  return new (Ctx) CThisExpr(EmptyShell());
+}
+
+
 DeclRefExpr::DeclRefExpr(const ASTContext &Ctx, ValueDecl *D,
                          bool RefersToEnclosingVariableOrCapture, QualType T,
                          ExprValueKind VK, SourceLocation L,

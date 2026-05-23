@@ -1933,6 +1933,10 @@ void ASTStmtReader::VisitCXXThisExpr(CXXThisExpr *E) {
   E->setCapturedByCopyInLambdaWithExplicitObjectParameter(Record.readInt());
 }
 
+void ASTStmtReader::VisitCThisExpr(CThisExpr *E) {
+  VisitExpr(E);
+}
+
 void ASTStmtReader::VisitCXXThrowExpr(CXXThrowExpr *E) {
   VisitExpr(E);
   E->CXXThrowExprBits.ThrowLoc = readSourceLocation();

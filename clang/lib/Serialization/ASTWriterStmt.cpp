@@ -1951,6 +1951,10 @@ void ASTStmtWriter::VisitCXXThisExpr(CXXThisExpr *E) {
   Code = serialization::EXPR_CXX_THIS;
 }
 
+void ASTStmtWriter::VisitCThisExpr(CThisExpr *E) {
+  VisitExpr(E);
+}
+
 void ASTStmtWriter::VisitCXXThrowExpr(CXXThrowExpr *E) {
   VisitExpr(E);
   Record.AddSourceLocation(E->getThrowLoc());

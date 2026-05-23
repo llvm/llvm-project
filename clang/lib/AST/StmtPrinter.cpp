@@ -2281,6 +2281,10 @@ void StmtPrinter::VisitCXXThisExpr(CXXThisExpr *Node) {
   OS << "this";
 }
 
+void StmtPrinter::VisitCThisExpr(CThisExpr *Node) {
+  OS << "this";
+}
+
 void StmtPrinter::VisitCXXThrowExpr(CXXThrowExpr *Node) {
   if (!Node->getSubExpr())
     OS << "throw";

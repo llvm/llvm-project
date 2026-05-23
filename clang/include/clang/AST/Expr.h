@@ -1510,6 +1510,41 @@ public:
   }
 };
 
+class CThisExpr : public Expr {
+  SourceLocation Loc;
+
+  CThisExpr(SourceLocation L, QualType Ty)
+      : Expr(CThisExprClass, Ty, VK_PRValue, OK_Ordinary), Loc(L) {
+    setDependence(ExprDependence::None); 
+  }
+
+  CThisExpr(EmptyShell Empty) : Expr(CThisExprClass, Empty) {}
+
+public:
+  static CThisExpr *Create(const ASTContext &Ctx, SourceLocation L,
+                           QualType Ty);
+
+  static CThisExpr *CreateEmpty(const ASTContext &Ctx);
+
+  SourceLocation getLocation() const { return Loc; }
+  void setLocation(SourceLocation L) { Loc = L; }
+
+  SourceLocation getBeginLoc() const { return getLocation(); }
+  SourceLocation getEndLoc() const { return getLocation(); }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CThisExprClass;
+  }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
 class IntegerLiteral : public Expr, public APIntStorage {
   SourceLocation Loc;
 

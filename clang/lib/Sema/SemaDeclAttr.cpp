@@ -6993,6 +6993,21 @@ static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (S.CheckCountedByAttrOnField(FD, CountExpr, CountInBytes, OrNull))
     return;
 
+  // --- CThisExpr Interception Block (This block swaps the DeclRefExpr out)---
+  if (auto *DRE = dyn_cast<DeclRefExpr>(CountExpr)) {
+    if (auto *TargetField = dyn_cast<FieldDecl>(DRE->getDecl())) {
+      QualType StructTy = S.Context.getTypeDeclType(cast<TypeDecl>(FD->getParent()));
+      QualType ThisPtrTy = S.Context.getPointerType(StructTy);
+      
+      Expr *CThis = CThisExpr::Create(S.Context, DRE->getBeginLoc(), ThisPtrTy);
+
+      CountExpr = MemberExpr::CreateImplicit(S.Context, CThis, /*IsArrow=*/true,
+                                             TargetField, TargetField->getType(),
+                                             VK_LValue, OK_Ordinary);
+    }
+  }
+  // ------------------------------------
+  
   QualType CAT = S.BuildCountAttributedArrayOrPointerType(
       FD->getType(), CountExpr, CountInBytes, OrNull);
   FD->setType(CAT);
