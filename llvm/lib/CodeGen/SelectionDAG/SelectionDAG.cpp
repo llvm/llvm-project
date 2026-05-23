@@ -366,7 +366,7 @@ bool ISD::matchUnaryPredicateImpl(SDValue Op, const APInt &DemandedElts,
 
   EVT SVT = Op.getValueType().getScalarType();
   for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
-    if (!DemandedElts[i])
+    if (ISD::SPLAT_VECTOR != Op.getOpcode() && !DemandedElts[i])
       continue;
 
     if (AllowUndefs && Op.getOperand(i).isUndef()) {
