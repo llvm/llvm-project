@@ -319,6 +319,8 @@ void LateParsedAttribute::ParseLexedAttributes() {
   Self->ParseLexedAttribute(*this, true, false);
 }
 
+void LateParsedTypeAttribute::ParseLexedAttributes() {}
+
 void Parser::LateParsedPragma::ParseLexedPragmas() {
   Self->ParseLexedPragma(*this);
 }
@@ -767,13 +769,11 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
     RecordDecl *RD = dyn_cast_or_null<RecordDecl>(D->getDeclContext());
 
     // Allow 'this' within late-parsed attributes.
-    // No-ops in C since ND->isCXXInstanceMember() is always false.
     Sema::CXXThisScopeRAII ThisScope(Actions, RD, Qualifiers(),
                                      IsCPlusPlus && ND &&
                                          ND->isCXXInstanceMember());
 
     // If the Decl is templatized, add template parameters to the scope.
-    // No-ops in C mode since Enter is false.
     ReenterTemplateScopeRAII InDeclScope(*this, D, IsCPlusPlus && EnterScope);
 
     // If the Decl is on a function, add function parameters to the scope.

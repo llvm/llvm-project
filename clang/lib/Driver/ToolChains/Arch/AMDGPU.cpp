@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "clang/Basic/TargetID.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Options/Options.h"
-#include "llvm/TargetParser/TargetParser.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -31,8 +29,6 @@ void AMDGPU::setArchNameInTriple(const Driver &D, const ArgList &Args,
 void AMDGPU::getAMDGPUArchCPUFromArgs(const llvm::Triple &Triple,
                                       const llvm::opt::ArgList &Args,
                                       llvm::StringRef &Arch) {
-  if (const Arg *MArch = Args.getLastArg(options::OPT_march_EQ))
-    Arch = MArch->getValue();
-  else if (const Arg *MCPU = Args.getLastArg(options::OPT_mcpu_EQ))
+  if (const Arg *MCPU = Args.getLastArg(options::OPT_mcpu_EQ))
     Arch = MCPU->getValue();
 }

@@ -29,13 +29,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "func-properties-stats"
 
-#define FUNCTION_PROPERTY(Name, Description)                                   \
-  STATISTIC(Num##Name##PreOptimization,                                        \
-            Description " (before optimizations)");                            \
-  STATISTIC(Num##Name, Description);
+#define FUNCTION_PROPERTY(Name, Description) STATISTIC(Num##Name, Description);
 #define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  STATISTIC(Num##Name##PreOptimization,                                        \
-            Description " (before optimizations)");                            \
   STATISTIC(Num##Name, Description);
 #include "llvm/IR/FunctionProperties.def"
 
@@ -109,12 +104,11 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
     else if (SuccessorCount > 2)
       BasicBlocksWithMoreThanTwoSuccessors += Direction;
 
-    unsigned PredecessorCount = pred_size(&BB);
-    if (PredecessorCount == 1)
+    if (BB.hasNPredecessors(1))
       BasicBlocksWithSinglePredecessor += Direction;
-    else if (PredecessorCount == 2)
+    else if (BB.hasNPredecessors(2))
       BasicBlocksWithTwoPredecessors += Direction;
-    else if (PredecessorCount > 2)
+    else if (BB.hasNPredecessorsOrMore(3))
       BasicBlocksWithMoreThanTwoPredecessors += Direction;
 
     if (TotalInstructionCount > BigBasicBlockInstructionThreshold)
@@ -129,7 +123,7 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
     // predecessors, which represent critical edges.
     if (SuccessorCount > 1) {
       for (const auto *Successor : successors(&BB)) {
-        if (pred_size(Successor) > 1)
+        if (Successor->hasNPredecessorsOrMore(2))
           CriticalEdgeCount += Direction;
       }
     }
@@ -163,6 +157,9 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
         ++IntrinsicCount;
 
       if (const auto *Call = dyn_cast<CallInst>(&I)) {
+        if (Call->doesNotReturn())
+          NoReturnCallCount += Direction;
+
         if (Call->isIndirectCall())
           IndirectCallCount += Direction;
         else
@@ -325,6 +322,7 @@ bool FunctionPropertiesInfo::operator==(
       ControlFlowEdgeCount != FPI.ControlFlowEdgeCount ||
       UnconditionalBranchCount != FPI.UnconditionalBranchCount ||
       IntrinsicCount != FPI.IntrinsicCount ||
+      NoReturnCallCount != FPI.NoReturnCallCount ||
       DirectCallCount != FPI.DirectCallCount ||
       IndirectCallCount != FPI.IndirectCallCount ||
       CallReturnsIntegerCount != FPI.CallReturnsIntegerCount ||
@@ -383,22 +381,11 @@ FunctionPropertiesStatisticsPass::run(Function &F,
   LLVM_DEBUG(dbgs() << "STATSCOUNT: running on function " << F.getName()
                     << "\n");
   auto &AnalysisResults = FAM.getResult<FunctionPropertiesAnalysis>(F);
-  if (IsPreOptimization) {
-#define FUNCTION_PROPERTY(Name, Description)                                   \
-  Num##Name##PreOptimization += AnalysisResults.Name;
-#define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  Num##Name##PreOptimization += AnalysisResults.Name;
-#include "llvm/IR/FunctionProperties.def"
-#undef FUNCTION_PROPERTY
-#undef DETAILED_FUNCTION_PROPERTY
-  } else {
+
 #define FUNCTION_PROPERTY(Name, Description) Num##Name += AnalysisResults.Name;
 #define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
   Num##Name += AnalysisResults.Name;
 #include "llvm/IR/FunctionProperties.def"
-#undef FUNCTION_PROPERTY
-#undef DETAILED_FUNCTION_PROPERTY
-  }
 
   return PreservedAnalyses::all();
 }

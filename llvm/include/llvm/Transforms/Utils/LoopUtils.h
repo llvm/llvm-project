@@ -306,6 +306,13 @@ enum TransformationMode {
   TM_SuppressedByUser = TM_Disable | TM_Force
 };
 
+/// Return a short prefix describing the loop's vectorizer origin based on
+/// the \c llvm.loop.vectorize.body and \c llvm.loop.vectorize.epilogue
+/// metadata.  The result is one of \c "vectorized epilogue ", \c "vectorized ",
+/// \c "epilogue ", or \c "" (empty) and is intended to be prepended to
+/// loop-kind tokens in optimization remarks.
+LLVM_ABI StringRef getLoopVectorizeKindPrefix(const Loop *L);
+
 /// @{
 /// Get the mode for LLVM's supported loop transformations.
 LLVM_ABI TransformationMode hasUnrollTransformation(const Loop *L);
@@ -447,6 +454,18 @@ LLVM_ABI bool canSinkOrHoistInst(Instruction &I, AAResults *AA,
                                  bool TargetExecutesOncePerLoop,
                                  SinkAndHoistLICMFlags &LICMFlags,
                                  OptimizationRemarkEmitter *ORE = nullptr);
+
+/// Returns true if it is legal to hoist \p LI out of \p CurLoop. This is the
+/// load-specific subset of \c canSinkOrHoistInst: it rejects volatile or
+/// ordered loads, allows constant-memory / invariant.load / invariant.start-
+/// dominated loads unconditionally, and otherwise queries \p MSSA for an
+/// in-loop clobber. \p TargetExecutesOncePerLoop has the same meaning as in
+/// \c canSinkOrHoistInst (set to true when hoisting to the preheader).
+LLVM_ABI bool canHoistLoad(LoadInst &LI, AAResults *AA, DominatorTree *DT,
+                           Loop *CurLoop, MemorySSA &MSSA,
+                           bool TargetExecutesOncePerLoop,
+                           SinkAndHoistLICMFlags &LICMFlags,
+                           OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Returns the llvm.vector.reduce intrinsic that corresponds to the recurrence
 /// kind.

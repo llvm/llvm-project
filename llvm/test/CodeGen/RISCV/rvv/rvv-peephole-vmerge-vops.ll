@@ -528,7 +528,7 @@ define <vscale x 2 x i32> @vpselect_vpzext(<vscale x 2 x i32> %passthru, <vscale
 define <vscale x 2 x i32> @vpselect_vptrunc(<vscale x 2 x i32> %passthru, <vscale x 2 x i64> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vptrunc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vnsrl.wi v8, v10, 0, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.vp.trunc.nxv2i32.nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i1> splat (i1 -1), i32 %vl)
@@ -1169,4 +1169,26 @@ define <vscale x 2 x float> @commute_vfmadd(<vscale x 2 x float> %passthru, <vsc
   %fadd = fadd contract <vscale x 2 x float> %fmul, %passthru
   %merge = call <vscale x 2 x float> @llvm.vp.merge(<vscale x 2 x i1> %mask, <vscale x 2 x float> %fadd, <vscale x 2 x float> %passthru, i32 %evl)
   ret <vscale x 2 x float> %merge
+}
+
+; Test for crash where we didn't sink to ensure AVL dominated
+define i32 @pr198733(<vscale x 16 x i32> %0, <vscale x 16 x i1> %1, i32 %2) {
+; CHECK-LABEL: pr198733:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    slli a0, a0, 32
+; CHECK-NEXT:    srli a0, a0, 32
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
+; CHECK-NEXT:    vor.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    vsetivli zero, 1, e32, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+entry:
+  %3 = zext <vscale x 16 x i1> %1 to <vscale x 16 x i32>
+  %4 = or <vscale x 16 x i32> %0, %3
+  %5 = zext i32 %2 to i64
+  %6 = add i64 %5, -1
+  %7 = extractelement <vscale x 16 x i32> %4, i64 %6
+  ret i32 %7
 }

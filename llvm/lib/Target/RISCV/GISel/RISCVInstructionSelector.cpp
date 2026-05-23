@@ -422,9 +422,9 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
 
   if (LeftShift.has_value()) {
     if (*LeftShift)
-      Mask &= maskTrailingZeros<uint64_t>(C2.getLimitedValue());
+      Mask &= maskTrailingZeros<uint64_t>(C2.getZExtValue());
     else
-      Mask &= maskTrailingOnes<uint64_t>(XLen - C2.getLimitedValue());
+      Mask &= maskTrailingOnes<uint64_t>(XLen - C2.getZExtValue());
 
     if (Mask.isShiftedMask()) {
       unsigned Leading = XLen - Mask.getActiveBits();
@@ -436,7 +436,7 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
         return {{[=](MachineInstrBuilder &MIB) {
           MachineIRBuilder(*MIB.getInstr())
               .buildInstr(RISCV::SRLI, {DstReg}, {RegY})
-              .addImm(Trailing - C2.getLimitedValue());
+              .addImm(Trailing - C2.getZExtValue());
           MIB.addReg(DstReg);
         }}};
       }
@@ -475,12 +475,12 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
     // Given (shl (and y, mask), c2) in which mask has 32 leading zeros and
     // c3 trailing zeros. If c1 + c3 == ShAmt, we can emit SRLIW + SHXADD.
     bool Cond = *LeftShift && Leading == 32 && Trailing > 0 &&
-                (Trailing + C2.getLimitedValue()) == ShAmt;
+                (Trailing + C2.getZExtValue()) == ShAmt;
     if (!Cond)
       // Given (lshr (and y, mask), c2) in which mask has 32 leading zeros and
       // c3 trailing zeros. If c3 - c1 == ShAmt, we can emit SRLIW + SHXADD.
       Cond = !*LeftShift && Leading == 32 && C2.ult(Trailing) &&
-             (Trailing - C2.getLimitedValue()) == ShAmt;
+             (Trailing - C2.getZExtValue()) == ShAmt;
 
     if (Cond) {
       Register DstReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
@@ -514,7 +514,7 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
           RootReg, *MRI,
           m_OneNonDBGUse(m_GAnd(m_OneNonDBGUse(m_GShl(m_Reg(RegX), m_ICst(C2))),
                                 m_ICst(Mask))))) {
-    Mask &= maskTrailingZeros<uint64_t>(C2.getLimitedValue());
+    Mask &= maskTrailingZeros<uint64_t>(C2.getZExtValue());
 
     if (Mask.isShiftedMask()) {
       unsigned Leading = Mask.countl_zero();
@@ -524,7 +524,7 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
         return {{[=](MachineInstrBuilder &MIB) {
           MachineIRBuilder(*MIB.getInstr())
               .buildInstr(RISCV::SLLI, {DstReg}, {RegX})
-              .addImm(C2.getLimitedValue() - ShAmt);
+              .addImm(C2.getZExtValue() - ShAmt);
           MIB.addReg(DstReg);
         }}};
       }

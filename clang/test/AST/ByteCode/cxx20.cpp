@@ -775,7 +775,7 @@ namespace FailingDestructor {
     }
   };
   template<D d>
-  void f() {} // both-note {{invalid explicitly-specified argument}}
+  void f() {} // both-note {{non-type template argument is not a constant expression}}
 
   void g() {
     f<D{0, false}>(); // both-error {{no matching function}}
@@ -1286,7 +1286,7 @@ namespace PointerCmp {
   };
   constexpr K2 k2{1,2, 3};
   static_assert((void*)(&k2.m.a + 1) != (void*)&k2.m.b);
- /// static_assert((void*)(&k2.m.a + 1) < (void*)&k2.m.b);  FIXME
+  static_assert((void*)(&k2.m.a + 1) < (void*)&k2.m.b);
   static_assert((void*)(&k2.m + 1) == (void*)&k2.c);
   static_assert((void*)(&k2 + 1) == (void*)(&k2.c + 1));
 
