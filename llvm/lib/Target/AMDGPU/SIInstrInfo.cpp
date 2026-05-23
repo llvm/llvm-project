@@ -5463,6 +5463,14 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
+  if (isDPP(MI) && !ST.hasDPPSrc1SGPR() && Src1Idx != -1) {
+    const MachineOperand &Src1MO = MI.getOperand(Src1Idx);
+    if (Src1MO.isReg() && RI.isSGPRReg(MRI, Src1MO.getReg())) {
+      ErrInfo = "DPP src1 cannot be SGPR on this subtarget";
+      return false;
+    }
+  }
+
   // Verify MIMG / VIMAGE / VSAMPLE
   if (isImage(Opcode) && !MI.mayStore()) {
     // Ensure that the return type used is large enough for all the options
@@ -6424,6 +6432,9 @@ bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
     if (Opc == AMDGPU::S_BITCMP0_B64 || Opc == AMDGPU::S_BITCMP1_B64)
       return false;
   }
+  if (!ST.hasDPPSrc1SGPR() && isDPP(MI) && RI.isSGPRReg(MRI, MO.getReg()) &&
+      (int)OpIdx == AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1))
+    return false;
 
   return true;
 }
@@ -7095,7 +7106,18 @@ static void emitLoadScalarOpsFromVGPRLoop(
     unsigned NumSubRegs = RegSize / 32;
     Register VScalarOp = ScalarOp->getReg();
 
+    const TargetRegisterClass *RFLSrcRC =
+        TII.getRegClass(TII.get(AMDGPU::V_READFIRSTLANE_B32), 1);
+
     if (NumSubRegs == 1) {
+      const TargetRegisterClass *VScalarOpRC = MRI.getRegClass(VScalarOp);
+      if (const TargetRegisterClass *Common =
+              TRI->getCommonSubClass(VScalarOpRC, RFLSrcRC);
+          Common != VScalarOpRC) {
+        Register VRReg = MRI.createVirtualRegister(Common);
+        BuildMI(LoopBB, I, DL, TII.get(AMDGPU::COPY), VRReg).addReg(VScalarOp);
+        VScalarOp = VRReg;
+      }
       Register CurReg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
       BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), CurReg)

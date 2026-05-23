@@ -73,15 +73,22 @@ getLifetimeBoundAttrFromFunctionType(const TypeSourceInfo &TSI) {
 }
 
 const LifetimeBoundAttr *
+getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD) {
+  if (const TypeSourceInfo *TSI = FD->getTypeSourceInfo())
+    if (const auto *Attr = getLifetimeBoundAttrFromFunctionType(*TSI))
+      return Attr;
+  return nullptr;
+}
+
+const LifetimeBoundAttr *
 getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   // Attribute merging doesn't work well with attributes on function types (like
   // 'this' param). We need to check all redeclarations.
   auto CheckRedecls = [](const FunctionDecl *F) -> const LifetimeBoundAttr * {
     for (const FunctionDecl *Redecl : F->redecls())
-      if (const TypeSourceInfo *TSI = Redecl->getTypeSourceInfo())
-        if (const auto *Attr = getLifetimeBoundAttrFromFunctionType(*TSI))
-          return Attr;
+      if (const auto *Attr = getDirectImplicitObjectLifetimeBoundAttr(Redecl))
+        return Attr;
     return nullptr;
   };
 
@@ -99,17 +106,18 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
 }
 
 bool isInStlNamespace(const Decl *D) {
-  const DeclContext *DC = D->getDeclContext();
-  if (!DC)
-    return false;
-  if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
-    if (const IdentifierInfo *II = ND->getIdentifier()) {
-      StringRef Name = II->getName();
-      if (Name.size() >= 2 && Name.front() == '_' &&
-          (Name[1] == '_' || isUppercase(Name[1])))
-        return true;
-    }
-  return DC->isStdNamespace();
+  for (const DeclContext *DC = D->getDeclContext(); DC; DC = DC->getParent()) {
+    if (DC->isStdNamespace())
+      return true;
+    if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
+      if (const IdentifierInfo *II = ND->getIdentifier()) {
+        StringRef Name = II->getName();
+        if (Name.size() >= 2 && Name.front() == '_' &&
+            (Name[1] == '_' || isUppercase(Name[1])))
+          return true;
+      }
+  }
+  return false;
 }
 
 bool isPointerLikeType(QualType QT) {
