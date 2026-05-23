@@ -150,7 +150,7 @@ bool MapASTVisitor::VisitVarDecl(const VarDecl *D) {
 
 comments::FullComment *
 MapASTVisitor::getComment(const NamedDecl *D, const ASTContext &Context) const {
-  RawComment *Comment = Context.getRawCommentForDeclNoCache(D);
+  RawComment *Comment = Context.getRawCommentNoCache(D);
   // FIXME: Move setAttached to the initial comment parsing.
   if (Comment) {
     Comment->setAttached();

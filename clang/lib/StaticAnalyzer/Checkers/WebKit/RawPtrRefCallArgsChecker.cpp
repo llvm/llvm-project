@@ -120,6 +120,14 @@ public:
       if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE))
         checkThisArg(MemberCallExpr, D);
 
+      if (ArgIdx) {
+        auto *Arg = CE->getArg(0);
+        QualType ArgType = Arg->getType().getCanonicalType();
+        std::optional<bool> IsUnsafe = isUnsafeType(ArgType);
+        if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Arg))
+          reportBugOnThis(Arg, D);
+      }
+
       for (auto P = F->param_begin();
            P < F->param_end() && ArgIdx < CE->getNumArgs(); ++P, ++ArgIdx) {
         // TODO: attributes.

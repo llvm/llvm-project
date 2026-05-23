@@ -5902,7 +5902,7 @@ def CIR_BitClrsbOp : CIR_BitOpBase<"clrsb", CIR_SIntOfWidths<[32, 64]>> {
 }
 
 def CIR_BitClzOp : CIR_BitZeroCountOpBase<"clz",
-  CIR_UIntOfWidths<[16, 32, 64]>
+  CIR_UIntOfWidths<[8, 16, 32, 64, 128]>
 > {
   let summary = "Get the number of leading 0-bits in the input";
   let description = [{
@@ -5927,7 +5927,7 @@ def CIR_BitClzOp : CIR_BitZeroCountOpBase<"clz",
 }
 
 def CIR_BitCtzOp : CIR_BitZeroCountOpBase<"ctz",
-  CIR_UIntOfWidths<[16, 32, 64]>
+  CIR_UIntOfWidths<[8, 16, 32, 64, 128]>
 > {
   let summary = "Get the number of trailing 0-bits in the input";
   let description = [{
@@ -5993,7 +5993,7 @@ def CIR_BitParityOp : CIR_BitOpBase<"parity", CIR_UIntOfWidths<[32, 64]>> {
 }
 
 def CIR_BitPopcountOp : CIR_BitOpBase<"popcount",
-  CIR_UIntOfWidths<[16, 32, 64]>
+  CIR_UIntOfWidths<[8, 16, 32, 64, 128]>
 > {
   let summary = "Get the number of 1-bits in input";
   let description = [{
@@ -6166,93 +6166,53 @@ def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {
 // Assume Operations
 //===----------------------------------------------------------------------===//
 
+def CIR_AssumeBundleKind : CIR_I32EnumAttr<
+  "AssumeBundleKind", "kind of cir.assume operand bundle", [
+  I32EnumAttrCase<"None", 0>,
+  I32EnumAttrCase<"Align", 1, "align">,
+  I32EnumAttrCase<"SeparateStorage", 2, "separate_storage">,
+  I32EnumAttrCase<"Dereferenceable", 3, "dereferenceable">
+]> {
+}
+
 def CIR_AssumeOp : CIR_Op<"assume"> {
   let summary = "Tell the optimizer that a boolean value is true";
   let description = [{
-    The `cir.assume` operation takes a single boolean prediate as its only
+    The `cir.assume` operation takes a single boolean predicate as its first
     argument and does not have any results. The operation tells the optimizer
     that the predicate is always true.
 
-    This operation corresponds to the `__assume` and the `__builtin_assume`
-    builtin functions.
+    An optional operand bundle carries additional assumption metadata,
+    mirroring MLIR LLVM dialect's `llvm.assume` operand bundles
+    (`mlir/include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.td`).  The bundle
+    kind is a `AssumeBundleKind` enum; bundle operands follow the kind
+    keyword in the assembly form.  For example,
+    `__builtin_assume_dereferenceable(p, n)` lowers to
+    `cir.assume %true dereferenceable(%p, %n : !cir.ptr<!void>, !u64i)
+    : !cir.bool`, which in turn lowers to
+    `call void @llvm.assume(i1 true) [ "dereferenceable"(ptr, i64) ]`.
+
+    This operation corresponds to the `__assume` / `__builtin_assume`
+    builtins (no bundle), as well as `__builtin_assume_aligned`
+    (`align` bundle), `__builtin_assume_separate_storage`
+    (`separate_storage` bundle), and `__builtin_assume_dereferenceable`
+    (`dereferenceable` bundle).
   }];
 
-  let arguments = (ins CIR_BoolType:$predicate);
+  let arguments = (ins
+    CIR_BoolType:$predicate,
+    DefaultValuedAttr<CIR_AssumeBundleKind,
+                      "::cir::AssumeBundleKind::None">:$bundle_kind,
+    Variadic<CIR_AnyType>:$bundle_args
+  );
 
   let assemblyFormat = [{
-    $predicate `:` type($predicate) attr-dict
-  }];
-}
-
-def CIR_AssumeAlignedOp : CIR_Op<"assume_aligned", [
-  Pure, AllTypesMatch<["pointer", "result"]>
-]> {
-  let summary = "Tell the optimizer that a pointer is aligned";
-  let description = [{
-    The `cir.assume_aligned` operation takes two or three arguments. The first
-    argument `pointer` gives the pointer value whose alignment is to be assumed,
-    and the second argument `align` is an integer attribute that gives the
-    assumed alignment.
-
-    The `offset` argument is optional. If given, it represents misalignment
-    offset. When it's present, this operation tells the optimizer that the
-    pointer is always misaligned to the alignment by `offset` bytes, a.k.a. the
-    pointer yielded by `(char *)pointer - offset` is aligned to the specified
-    alignment. Note that the `offset` argument is an SSA value rather than an
-    attribute, which means that you could pass a dynamically determined value
-    as the mialignment offset.
-
-    The result of this operation has the same value as the `pointer` argument,
-    but it additionally carries any alignment information indicated by this
-    operation.
-
-    This operation corresponds to the `__builtin_assume_aligned` builtin
-    function.
-
-    Example:
-
-    ```
-    // Assume that %0 is a CIR pointer value of type !cir.ptr<!s32i>
-    %1 = cir.assume_aligned %0 alignment 16 : !cir.ptr<!s32i>
-
-    // With a misalignment offset of 4 bytes:
-    %2 = cir.const #cir.int<4> : !u64i
-    %3 = cir.assume_aligned %0 alignment 16 [offset %2 : !u64i] : !cir.ptr<!s32i>
-    ```
+    $predicate custom<AssumeBundle>($bundle_kind, $bundle_args,
+                                    type($bundle_args))
+    `:` type($predicate) attr-dict
   }];
 
-  let arguments = (ins CIR_PointerType:$pointer,
-                       I64Attr:$alignment,
-                       Optional<CIR_IntType>:$offset);
-  let results = (outs CIR_PointerType:$result);
-
-  let assemblyFormat = [{
-    $pointer
-    `alignment` $alignment
-    (`[` `offset` $offset^ `:` type($offset) `]`)?
-    `:` qualified(type($pointer)) attr-dict
-  }];
-}
-
-def CIR_AssumeSepStorageOp : CIR_Op<"assume_separate_storage", [
-  SameTypeOperands
-]> {
-  let summary =
-      "Tell the optimizer that two pointers point to different allocations";
-  let description = [{
-    The `cir.assume_separate_storage` operation takes two pointers as arguments,
-    and the operation tells the optimizer that these two pointers point to
-    different allocations.
-
-    This operation corresponds to the `__builtin_assume_separate_storage`
-    builtin function.
-  }];
-
-  let arguments = (ins CIR_VoidPtrType:$ptr1, CIR_VoidPtrType:$ptr2);
-
-  let assemblyFormat = [{
-    $ptr1 `,` $ptr2 `:` qualified(type($ptr1)) attr-dict
-  }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

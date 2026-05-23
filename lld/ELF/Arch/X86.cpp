@@ -106,7 +106,7 @@ RelExpr X86::getRelExpr(RelType type, const Symbol &s,
 }
 
 void X86::writeGotPltHeader(uint8_t *buf) const {
-  write32le(buf, ctx.mainPart->dynamic->getVA());
+  write32le(buf, ctx.in.dynamic->getVA());
 }
 
 void X86::writeGotPlt(uint8_t *buf, const Symbol &s) const {

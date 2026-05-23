@@ -1729,21 +1729,11 @@ public:
 
   static bool NeedsScope(const parser::OmpClause &);
 
-  bool Pre(const parser::OmpRequiresDirective &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
   bool Pre(const parser::OmpBeginDirective &x) {
     return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
-  void Post(const parser::OmpBeginDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
   bool Pre(const parser::OmpEndDirective &x) {
     return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  void Post(const parser::OmpEndDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
 
   void Post(const parser::OmpTypeName &);
@@ -1766,36 +1756,10 @@ public:
     }
   }
 
-  bool Pre(const parser::OmpDeclareMapperDirective &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-
-  bool Pre(const parser::OmpDeclareSimdDirective &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-
-  bool Pre(const parser::OmpDeclareVariantDirective &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-
-  bool Pre(const parser::OmpDeclareReductionDirective &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
   bool Pre(const parser::OmpMapClause &);
   bool Pre(const parser::OmpClause::To &);
   bool Pre(const parser::OmpClause::From &);
 
-  bool Pre(const parser::OmpThreadprivateDirective &) {
-    SkipImplicitTyping(true);
-    return true;
-  }
-  void Post(const parser::OmpThreadprivateDirective &) {
-    SkipImplicitTyping(false);
-  }
   bool Pre(const parser::OmpDeclareTargetDirective &x) {
     auto addObjectName{[&](const parser::OmpObject &object) {
       common::visit(
@@ -1839,32 +1803,6 @@ public:
     SkipImplicitTyping(true);
     return true;
   }
-  void Post(const parser::OmpDeclareTargetDirective &) {
-    SkipImplicitTyping(false);
-  }
-  bool Pre(const parser::OmpAllocateDirective &x) {
-    AddOmpSourceRange(x.source);
-    SkipImplicitTyping(true);
-    return true;
-  }
-  void Post(const parser::OmpAllocateDirective &) {
-    SkipImplicitTyping(false);
-    messageHandler().set_currStmtSource(std::nullopt);
-  }
-  bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
-    AddOmpSourceRange(x.source);
-    // Without skipping implicit typing, declarative constructs
-    // can implicitly declare variables instead of only using the
-    // ones already declared in the Fortran sources.
-    SkipImplicitTyping(true);
-    declaratives_.push_back(&x);
-    return true;
-  }
-  void Post(const parser::OpenMPDeclarativeConstruct &) {
-    declaratives_.pop_back();
-    SkipImplicitTyping(false);
-    messageHandler().set_currStmtSource(std::nullopt);
-  }
   bool Pre(const parser::OmpClause &x) {
     if (NeedsScope(x)) {
       PushScopeWithSource(Scope::Kind::OtherClause, x.source);
@@ -1890,7 +1828,20 @@ public:
   }
 
   bool Pre(const parser::OmpDirectiveSpecification &x);
-  void Post(const parser::OmpDirectiveSpecification &) {
+
+  bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
+    AddOmpSourceRange(x.source);
+    // Without skipping implicit typing, declarative constructs
+    // can implicitly declare variables instead of only using the
+    // ones already declared in the Fortran sources.
+    SkipImplicitTyping(true);
+    declaratives_.push_back(&x);
+    return true;
+  }
+
+  void Post(const parser::OpenMPDeclarativeConstruct &) {
+    declaratives_.pop_back();
+    SkipImplicitTyping(false);
     messageHandler().set_currStmtSource(std::nullopt);
   }
 
@@ -1900,12 +1851,15 @@ public:
 
     auto name{parser::omp::GetOmpDirectiveName(x)};
     if (omp::HasDataEnvironment(name.v)) {
-      std::optional<parser::CharBlock> source{parser::GetSource(x)};
-      assert(source.has_value() && "Expecting directive source");
-      PushScopeWithSource(Scope::Kind::OtherConstruct, *source);
+      PushScope(Scope::Kind::OtherConstruct, nullptr);
     }
+
+    std::optional<parser::CharBlock> source{parser::GetSource(x)};
+    assert(source.has_value() && "Expecting directive source");
+    AddOmpSourceRange(*source);
     return true;
   }
+
   void Post(const parser::OpenMPConstruct &x) {
     // Pop the null pointer.
     declaratives_.pop_back();
@@ -1914,6 +1868,7 @@ public:
     if (omp::HasDataEnvironment(name.v)) {
       PopScope();
     }
+    messageHandler().set_currStmtSource(std::nullopt);
   }
 
 private:

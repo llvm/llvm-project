@@ -873,6 +873,14 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
                                         LT.second, CostKind));
   }
   case TTI::SK_Broadcast: {
+    // Check for broadcast loads, which are synthesized by optimized zero-stride
+    // loads (this is checked in RISCVTTIImpl::isLegalBroadcastLoad).
+    bool IsLoad = !Args.empty() && isa<LoadInst>(Args[0]);
+    if (IsLoad && LT.second.isVector() &&
+        isLegalBroadcastLoad(SrcTy->getElementType(),
+                             LT.second.getVectorElementCount()))
+      return 0;
+
     bool HasScalar = (Args.size() > 0) && (Operator::getOpcode(Args[0]) ==
                                            Instruction::InsertElement);
     if (LT.second.getScalarSizeInBits() == 1) {
@@ -3407,6 +3415,15 @@ bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy,
   if (!isLegalMaskedLoadStore(DataTy, Alignment))
     return false;
   return true;
+}
+
+bool RISCVTTIImpl::isLegalBroadcastLoad(Type *ElementTy,
+                                        ElementCount NumElements) const {
+  // Optimized zero-stride loads can be treated as broadcasts.
+  if (!ST->hasVInstructions() || !ST->hasOptimizedZeroStrideLoad())
+    return false;
+
+  return TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, ElementTy));
 }
 
 /// See if \p I should be considered for address type promotion. We check if \p

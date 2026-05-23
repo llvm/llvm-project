@@ -25,20 +25,21 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 17
 
 template <class _Cont>
+[[nodiscard]]
 _LIBCPP_HIDE_FROM_ABI constexpr auto size(const _Cont& __c) noexcept(noexcept(__c.size())) -> decltype(__c.size()) {
   return __c.size();
 }
 
 template <class _Tp, size_t _Sz>
-_LIBCPP_HIDE_FROM_ABI constexpr size_t size(const _Tp (&)[_Sz]) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr size_t size(const _Tp (&)[_Sz]) noexcept {
   return _Sz;
 }
 
 #  if _LIBCPP_STD_VER >= 20
 template <class _Cont>
-_LIBCPP_HIDE_FROM_ABI constexpr auto
-ssize(const _Cont& __c) noexcept(noexcept(static_cast<common_type_t<ptrdiff_t, make_signed_t<decltype(__c.size())>>>(
-    __c.size()))) -> common_type_t<ptrdiff_t, make_signed_t<decltype(__c.size())>> {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto ssize(const _Cont& __c) noexcept(
+    noexcept(static_cast<common_type_t<ptrdiff_t, make_signed_t<decltype(__c.size())>>>(__c.size())))
+    -> common_type_t<ptrdiff_t, make_signed_t<decltype(__c.size())>> {
   return static_cast<common_type_t<ptrdiff_t, make_signed_t<decltype(__c.size())>>>(__c.size());
 }
 
@@ -47,7 +48,7 @@ ssize(const _Cont& __c) noexcept(noexcept(static_cast<common_type_t<ptrdiff_t, m
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wsign-conversion")
 template <class _Tp, ptrdiff_t _Sz>
-_LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t ssize(const _Tp (&)[_Sz]) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t ssize(const _Tp (&)[_Sz]) noexcept {
   return _Sz;
 }
 _LIBCPP_DIAGNOSTIC_POP

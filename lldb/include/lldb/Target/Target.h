@@ -38,6 +38,7 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/RealpathPrefixes.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
@@ -1680,17 +1681,14 @@ public:
     StopHookResult HandleStop(ExecutionContext &exc_ctx,
                               lldb::StreamSP output) override;
 
-    Status SetScriptCallback(std::string class_name,
-                             StructuredData::ObjectSP extra_args_sp);
+    Status SetScriptCallback(const ScriptedMetadata &scripted_metadata);
 
     void GetSubclassDescription(Stream &s,
                                 lldb::DescriptionLevel level) const override;
 
   private:
-    std::string m_class_name;
-    /// This holds the dictionary of keys & values that can be used to
-    /// parametrize any given callback's behavior.
-    StructuredDataImpl m_extra_args;
+    llvm::StringRef GetScriptClassName() const;
+
     lldb::ScriptedStopHookInterfaceSP m_interface_sp;
 
     /// Use CreateStopHook to make a new empty stop hook. Use SetScriptCallback
@@ -1897,12 +1895,11 @@ public:
     StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
                                         lldb::StreamSP output) override;
 
-    Status SetScriptCallback(std::string class_name,
-                             StructuredData::ObjectSP extra_args_sp);
+    Status SetScriptCallback(const ScriptedMetadata &scripted_metadata);
 
   private:
-    std::string m_class_name;
-    StructuredDataImpl m_extra_args;
+    llvm::StringRef GetScriptClassName() const;
+
     lldb::ScriptedHookInterfaceSP m_interface_sp;
 
     HookScripted(lldb::TargetSP target_sp, lldb::user_id_t uid)

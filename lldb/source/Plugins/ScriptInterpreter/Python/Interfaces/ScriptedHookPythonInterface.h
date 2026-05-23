@@ -22,8 +22,7 @@ public:
 
   llvm::Expected<StructuredData::GenericSP>
   CreatePluginObject(const ScriptedMetadata &scripted_metadata,
-                     lldb::TargetSP target_sp,
-                     const StructuredDataImpl &args_sp) override;
+                     lldb::TargetSP target_sp) override;
 
   /// A hook class must implement at least one callback. All three are
   /// individually optional; hooks that implement none will be rejected

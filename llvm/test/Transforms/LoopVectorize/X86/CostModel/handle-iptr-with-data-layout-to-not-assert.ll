@@ -7,11 +7,8 @@ define ptr @foo(ptr %__first, ptr %__last) #0 {
 ; CHECK-LABEL: 'foo'
 ; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: store ptr %0, ptr %__last, align 8
 ; CHECK:  Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 2 at %0, vp<%next.gep>
-; CHECK:    ir<%0> = load from index 0
 ; CHECK:  Cost of 1 for VF 4: INTERLEAVE-GROUP with factor 2 at %0, vp<%next.gep>
-; CHECK:    ir<%0> = load from index 0
-; CHECK:  Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2 at %0, vp<%next.gep>
-; CHECK:    ir<%0> = load from index 0
+; CHECK:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 2 at %0, vp<%next.gep>
 ;
 entry:
   %cmp.not1 = icmp eq ptr %__first, %__last

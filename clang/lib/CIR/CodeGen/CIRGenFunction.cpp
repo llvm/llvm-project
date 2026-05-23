@@ -1492,8 +1492,15 @@ mlir::Value CIRGenFunction::emitAlignmentAssumption(
     mlir::Value ptrValue, QualType ty, SourceLocation loc,
     SourceLocation assumptionLoc, int64_t alignment, mlir::Value offsetValue) {
   assert(!cir::MissingFeatures::sanitizers());
-  return cir::AssumeAlignedOp::create(builder, getLoc(assumptionLoc), ptrValue,
-                                      alignment, offsetValue);
+  mlir::Location assumeLoc = getLoc(assumptionLoc);
+  mlir::Value alignValue = builder.getUInt64(alignment, assumeLoc);
+  mlir::Value cond = builder.getBool(true, assumeLoc);
+  llvm::SmallVector<mlir::Value> bundleArgs{ptrValue, alignValue};
+  if (offsetValue)
+    bundleArgs.push_back(offsetValue);
+  cir::AssumeOp::create(builder, assumeLoc, cond, cir::AssumeBundleKind::Align,
+                        bundleArgs);
+  return ptrValue;
 }
 
 mlir::Value CIRGenFunction::emitAlignmentAssumption(

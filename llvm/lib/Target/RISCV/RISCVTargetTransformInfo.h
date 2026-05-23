@@ -364,6 +364,9 @@ public:
 
   bool isLegalMaskedCompressStore(Type *DataTy, Align Alignment) const override;
 
+  bool isLegalBroadcastLoad(Type *ElementTy,
+                            ElementCount NumElements) const override;
+
   /// \returns How the target needs this vector-predicated operation to be
   /// transformed.
   TargetTransformInfo::VPLegalization

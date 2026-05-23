@@ -43,6 +43,11 @@ ELF Improvements
 Breaking changes
 ----------------
 
+* The symbol partition feature has been removed. lld no longer recognizes
+  ``SHT_LLVM_SYMPART`` sections, which are now treated as ordinary sections. The
+  feature saw no adoption beyond a Chromium experiment that has since been
+  retired.
+
 COFF Improvements
 -----------------
 

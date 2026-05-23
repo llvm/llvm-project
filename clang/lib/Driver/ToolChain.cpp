@@ -978,7 +978,10 @@ void ToolChain::addFortranRuntimeLibs(const ArgList &Args,
     if ((OMPRuntime == Driver::OMPRT_OMP &&
          RuntimeLib == ToolChain::RLT_Libgcc) &&
         !getTriple().isKnownWindowsMSVCEnvironment()) {
-      CmdArgs.push_back("-latomic");
+      if (getTriple().isOSAIX())
+        CmdArgs.push_back("-lcompiler_rt");
+      else
+        CmdArgs.push_back("-latomic");
     }
   }
 }

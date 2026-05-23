@@ -2853,11 +2853,10 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
 
-  // fmod(x,y) can set errno if y == 0 or x == +/-inf, and returns Nan in those
-  // case. If we know those do not happen, then we can convert the fmod into
-  // frem.
-  bool IsNoNan = CI->hasNoNaNs();
-  if (!IsNoNan) {
+  // fmod(x,y) sets errno if y == 0 or x == +/-inf. frem does not set errno,
+  // so the fold is valid only when we can prove fmod wouldn't either.
+  bool IsNoErrno = CI->hasNoNaNs();
+  if (!IsNoErrno) {
     SimplifyQuery SQ(DL, TLI, DT, AC, CI, true, true, DC);
     KnownFPClass Known0 = computeKnownFPClass(CI->getOperand(0), fcInf, SQ);
     if (Known0.isKnownNeverInfinity()) {
@@ -2866,16 +2865,12 @@ Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
       Function *F = CI->getParent()->getParent();
       const fltSemantics &FltSem =
           CI->getType()->getScalarType()->getFltSemantics();
-      IsNoNan = Known1.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
+      IsNoErrno = Known1.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
     }
   }
 
-  if (IsNoNan) {
-    Value *FRem = B.CreateFRemFMF(CI->getOperand(0), CI->getOperand(1), CI);
-    if (auto *FRemI = dyn_cast<Instruction>(FRem))
-      FRemI->setHasNoNaNs(true);
-    return FRem;
-  }
+  if (IsNoErrno)
+    return B.CreateFRemFMF(CI->getOperand(0), CI->getOperand(1), CI);
   return nullptr;
 }
 
@@ -3194,12 +3189,12 @@ Value *LibCallSimplifier::optimizeFdim(CallInst *CI, IRBuilderBase &B) {
       !match(CI->getArgOperand(1), m_APFloat(Y)))
     return nullptr;
 
+  // C99 fdim(x, y) = (x > y) ? x - y : +0.
+  if (X->compare(*Y) != APFloat::cmpGreaterThan && !X->isNaN() && !Y->isNaN())
+    return ConstantFP::getZero(CI->getType());
   APFloat Difference = *X;
   Difference.subtract(*Y, RoundingMode::NearestTiesToEven);
-
-  APFloat MaxVal =
-      maximum(Difference, APFloat::getZero(CI->getType()->getFltSemantics()));
-  return ConstantFP::get(CI->getType(), MaxVal);
+  return ConstantFP::get(CI->getType(), Difference);
 }
 
 //===----------------------------------------------------------------------===//

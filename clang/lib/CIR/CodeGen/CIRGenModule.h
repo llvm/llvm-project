@@ -741,6 +741,13 @@ public:
   // related attributes.
   bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
 
+  /// Print the postfix for externalized static variable or kernels for single
+  /// source offloading languages CUDA and HIP. The unique postfix is created
+  /// using either the CUID argument, or the file's UniqueID and active macros.
+  /// The fallback method without a CUID requires that the offloading toolchain
+  /// does not define separate macros via the -cc1 options.
+  void printPostfixForExternalizedDecl(llvm::raw_ostream &os, const Decl *d);
+
   /// Replace all uses of the old global with the new global, updating types
   /// and references as needed. Erases the old global when done.
   void replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV);

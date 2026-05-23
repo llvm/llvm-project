@@ -1,6 +1,7 @@
 header: sys/syscall.h
 header_template: syscall.h.def
-standards: Linux
+standards:
+  - linux
 macros: []
 types: []
 enums: []

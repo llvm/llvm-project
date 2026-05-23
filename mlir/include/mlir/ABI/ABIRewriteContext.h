@@ -128,12 +128,12 @@ public:
   ///
   /// \param funcOp  The function to rewrite (via FunctionOpInterface).
   /// \param fc      The ABI classification for this function.
-  /// \param rewriter  The pattern rewriter to use for modifications.
+  /// \param builder  The OpBuilder to use for modifications.
   /// \returns success() if the function was rewritten.
   virtual LogicalResult
   rewriteFunctionDefinition(FunctionOpInterface funcOp,
                             const FunctionClassification &fc,
-                            OpBuilder &rewriter) = 0;
+                            OpBuilder &builder) = 0;
 
   /// Rewrite a call operation to match the callee's ABI-lowered
   /// signature.
@@ -143,11 +143,11 @@ public:
   ///
   /// \param callOp  The call operation to rewrite.
   /// \param fc      The ABI classification for the callee.
-  /// \param rewriter  The pattern rewriter to use for modifications.
+  /// \param builder  The OpBuilder to use for modifications.
   /// \returns success() if the call was rewritten.
   virtual LogicalResult rewriteCallSite(Operation *callOp,
                                         const FunctionClassification &fc,
-                                        OpBuilder &rewriter) = 0;
+                                        OpBuilder &builder) = 0;
 
   /// Return the dialect namespace this context handles (e.g. "cir").
   virtual StringRef getDialectNamespace() const = 0;

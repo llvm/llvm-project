@@ -14,9 +14,9 @@ define void @test() {
 ; CHECK:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 2 at %v0, ir<%in0>
 ; CHECK:  Cost of 3 for VF 4: INTERLEAVE-GROUP with factor 2 at %v0, ir<%in0>
 ; CHECK:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 2 at %v0, ir<%in0>
-; CHECK:  Cost of 5 for VF 16: INTERLEAVE-GROUP with factor 2 at %v0, ir<%in0>
-; CHECK:  Cost of 22 for VF 32: INTERLEAVE-GROUP with factor 2 at %v0, ir<%in0>
-; CHECK:  Cost of 92 for VF 64: INTERLEAVE-GROUP with factor 2 at %v0, ir<%in0>
+; CHECK:  Cost of 7 for VF 16: INTERLEAVE-GROUP with factor 2 at %v0, ir<%in0>
+; CHECK:  Cost of 34 for VF 32: INTERLEAVE-GROUP with factor 2 at %v0, ir<%in0>
+; CHECK:  Cost of 148 for VF 64: INTERLEAVE-GROUP with factor 2 at %v0, ir<%in0>
 ;
 entry:
   br label %for.body

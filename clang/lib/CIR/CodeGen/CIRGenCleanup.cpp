@@ -131,22 +131,13 @@ static void hoistAllocaOutOfCleanupScope(CIRGenFunction &cgf, Address addr,
   if (!alloca)
     return;
 
-  // If the alloca is not contained within a cleanup scope or the cleanup scope
-  // containing the alloca is not the cleanup scope we're currently proccessing
-  // we don't need to hoist it.
-  if (alloca->getParentOfType<cir::CleanupScopeOp>() != scope) {
-    // It shouldn't be possible to get here with a nested cleanup scope.
-    assert(![&]() {
-      auto cur = alloca->getParentOfType<cir::CleanupScopeOp>();
-      while (cur) {
-        if (cur == scope)
-          return true;
-        cur = cur->getParentOfType<cir::CleanupScopeOp>();
-      }
-      return false;
-    }() && "alloca is nested within the current cleanup scope");
+  // If the alloca is not contained within the cleanup scope we're currently
+  // proccessing we don't need to hoist it.
+  auto cur = alloca->getParentOfType<cir::CleanupScopeOp>();
+  while (cur && cur != scope)
+    cur = cur->getParentOfType<cir::CleanupScopeOp>();
+  if (cur != scope)
     return;
-  }
 
   // Place the alloca at the canonical alloca insertion point of the block
   // containing the cleanup scope op, so it groups with any preceding

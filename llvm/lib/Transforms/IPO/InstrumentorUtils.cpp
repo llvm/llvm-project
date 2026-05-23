@@ -410,7 +410,7 @@ private:
 };
 } // anonymous namespace
 
-bool llvm::instrumentor::evaluateFilter(Value &V,
+bool llvm::instrumentor::evaluateFilter(Value &V, bool &Changed,
                                         InstrumentationOpportunity &IO,
                                         InstrumentationConfig &IConf,
                                         InstrumentorIRBuilderTy &IIRB) {
@@ -431,6 +431,10 @@ bool llvm::instrumentor::evaluateFilter(Value &V,
     Value *ArgValue = Arg.GetterCB(V, *Arg.Ty, IConf, IIRB);
     if (!ArgValue)
       continue;
+
+    // TODO: This is likely too broad and we might want GetterCB to indicate
+    // changes.
+    Changed = true;
 
     if (auto *CI = dyn_cast<ConstantInt>(ArgValue)) {
       // Check for constant integer values.

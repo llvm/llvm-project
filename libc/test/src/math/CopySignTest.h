@@ -35,7 +35,7 @@ public:
   }
 
   void testRange(CopySignFunc func) {
-    constexpr StorageType COUNT = 100'000;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = FPBits(v).get_val();

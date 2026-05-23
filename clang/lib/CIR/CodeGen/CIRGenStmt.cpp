@@ -107,7 +107,8 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
           !assumptionExpr->HasSideEffects(getContext())) {
         mlir::Value assumptionValue = emitCheckedArgForAssume(assumptionExpr);
         cir::AssumeOp::create(builder, getLoc(s.getSourceRange()),
-                              assumptionValue);
+                              assumptionValue, cir::AssumeBundleKind::None,
+                              mlir::ValueRange{});
       }
     } break;
     }

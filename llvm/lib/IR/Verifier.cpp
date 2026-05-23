@@ -2714,7 +2714,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     Check(!Args[2].getAsInteger(10, FirstArgIdx),
           "modular-format attribute first arg index is not an integer", V);
     unsigned UpperBound = FT->getNumParams() + (FT->isVarArg() ? 1 : 0);
-    Check(FirstArgIdx > 0 && FirstArgIdx <= UpperBound,
+    Check(FirstArgIdx <= UpperBound,
           "modular-format attribute first arg index is out of bounds", V);
   }
 
@@ -5432,6 +5432,7 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
     for (unsigned I = 3; I < MD->getNumOperands(); I += 2) {
       ConstantInt *ProfileValue =
           mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
+      Check(ProfileValue, "VP !prof value operand is not a const int", MD);
       uint64_t ProfileValueInt = ProfileValue->getZExtValue();
       auto [ValueIt, Inserted] = ProfileValues.insert(ProfileValueInt);
       Check(Inserted, "VP !prof should not have duplicate profile values", MD);

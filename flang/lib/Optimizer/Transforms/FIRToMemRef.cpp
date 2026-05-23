@@ -522,14 +522,29 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
     }
   }
 
+  const int nonScalarRank = llvm::count(filledPositions, false);
+  const bool hasReducedRankIndices =
+      static_cast<int>(idxs.size()) == nonScalarRank;
+  const bool hasFullRankIndices = static_cast<int>(idxs.size()) == rank;
+  if (!hasReducedRankIndices && !hasFullRankIndices)
+    return failure();
+
   int arrayCoorIdx = 0;
   for (int i = 0; i < rank; ++i) {
     if (filledPositions[i])
       continue;
 
-    assert((unsigned int)arrayCoorIdx < idxs.size() &&
-           "empty dimension should be eliminated\n");
-    Value index = canonicalizeIndex(idxs[arrayCoorIdx], rewriter);
+    Value sourceIndex;
+    if (hasFullRankIndices) {
+      // Canonicalized rank-reducing array_coor may carry full-rank indices
+      // (including scalar-sliced dimensions).
+      sourceIndex = idxs[i];
+    } else {
+      assert((unsigned int)arrayCoorIdx < idxs.size() &&
+             "empty dimension should be eliminated\n");
+      sourceIndex = idxs[arrayCoorIdx];
+    }
+    Value index = canonicalizeIndex(sourceIndex, rewriter);
     Type cTy = index.getType();
     if (!llvm::isa<IndexType>(cTy)) {
       assert(cTy.isSignlessInteger() && "expected signless integer type");
@@ -560,7 +575,8 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
     Value finalIndex = arith::AddIOp::create(rewriter, loc, scaled, offset);
 
     indices[i] = finalIndex;
-    arrayCoorIdx++;
+    if (hasReducedRankIndices)
+      arrayCoorIdx++;
   }
 
   std::reverse(indices.begin(), indices.end());

@@ -10,6 +10,7 @@
 
 #include "Generators.h"
 #include "Representation.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -32,8 +33,8 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(BaseRecordInfo)
 namespace llvm {
 
 template <typename T>
-bool operator==(const llvm::simple_ilist<T> &LHS,
-                const llvm::simple_ilist<T> &RHS) {
+static bool operator==(const llvm::simple_ilist<T> &LHS,
+                       const llvm::simple_ilist<T> &RHS) {
   auto LIt = LHS.begin(), LEnd = LHS.end();
   auto RIt = RHS.begin(), REnd = RHS.end();
   for (; LIt != LEnd && RIt != REnd; ++LIt, ++RIt) {
@@ -44,8 +45,8 @@ bool operator==(const llvm::simple_ilist<T> &LHS,
 }
 
 template <typename T>
-bool operator!=(const llvm::simple_ilist<T> &LHS,
-                const llvm::simple_ilist<T> &RHS) {
+static bool operator!=(const llvm::simple_ilist<T> &LHS,
+                       const llvm::simple_ilist<T> &RHS) {
   return !(LHS == RHS);
 }
 
@@ -184,7 +185,7 @@ template <> struct ScalarTraits<SymbolID> {
   static SymbolID stringToSymbol(llvm::StringRef Value) {
     SymbolID USR;
     std::string HexString = fromHex(Value);
-    std::copy(HexString.begin(), HexString.end(), USR.begin());
+    llvm::copy(HexString, USR.begin());
     return SymbolID(USR);
   }
 
@@ -195,8 +196,8 @@ template <> struct ScalarTraits<SymbolID> {
 struct QuotedString {
   StringRef Ref;
   QuotedString() = default;
-  QuotedString(StringRef R) : Ref(R) {}
-  operator StringRef() const { return Ref; }
+  explicit QuotedString(StringRef R) : Ref(R) {}
+  explicit operator StringRef() const { return Ref; }
   bool operator==(const QuotedString &Other) const { return Ref == Other.Ref; }
 };
 

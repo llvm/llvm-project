@@ -15,6 +15,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/SetVector.h"
 
 using namespace llvm;
@@ -473,6 +474,11 @@ public:
 
     ST = &MF.getSubtarget<GCNSubtarget>();
     if (!ST->hasDelayAlu())
+      return false;
+
+    SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+
+    if (MFI.getMaxWavesPerEU() == 1)
       return false;
 
     SII = ST->getInstrInfo();

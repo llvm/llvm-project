@@ -809,14 +809,22 @@ clang::QualType PdbAstBuilderClang::CreateType(PdbTypeSymId type) {
   if (cvt.kind() == LF_PROCEDURE) {
     ProcedureRecord pr;
     llvm::cantFail(TypeDeserializer::deserializeAs<ProcedureRecord>(cvt, pr));
-    return CreateFunctionType(pr.ArgumentList, pr.ReturnType, pr.CallConv);
+    return CreateFunctionType(pr.ArgumentList, pr.ReturnType, pr.CallConv,
+                              /*type_quals=*/0);
   }
 
   if (cvt.kind() == LF_MFUNCTION) {
     MemberFunctionRecord mfr;
     llvm::cantFail(
         TypeDeserializer::deserializeAs<MemberFunctionRecord>(cvt, mfr));
-    return CreateFunctionType(mfr.ArgumentList, mfr.ReturnType, mfr.CallConv);
+    unsigned int type_quals = 0;
+    if (!mfr.ThisType.isNoneType()) {
+      clang::QualType this_type = GetOrCreateClangType(mfr.getThisType());
+      if (!this_type.isNull())
+        type_quals = this_type->getPointeeType().getLocalFastQualifiers();
+    }
+    return CreateFunctionType(mfr.ArgumentList, mfr.ReturnType, mfr.CallConv,
+                              type_quals);
   }
 
   return {};
@@ -1243,7 +1251,8 @@ clang::QualType PdbAstBuilderClang::CreateArrayType(const ArrayRecord &ar) {
 
 clang::QualType PdbAstBuilderClang::CreateFunctionType(
     TypeIndex args_type_idx, TypeIndex return_type_idx,
-    llvm::codeview::CallingConvention calling_convention) {
+    llvm::codeview::CallingConvention calling_convention,
+    unsigned int type_quals) {
   SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
       m_clang.GetSymbolFile()->GetBackingSymbolFile());
   PdbIndex &index = pdb->GetIndex();
@@ -1278,8 +1287,8 @@ clang::QualType PdbAstBuilderClang::CreateFunctionType(
     return {};
 
   CompilerType return_ct = ToCompilerType(return_type);
-  CompilerType func_sig_ast_type =
-      m_clang.CreateFunctionType(return_ct, arg_types, is_variadic, 0, *cc);
+  CompilerType func_sig_ast_type = m_clang.CreateFunctionType(
+      return_ct, arg_types, is_variadic, type_quals, *cc);
 
   return clang::QualType::getFromOpaquePtr(
       func_sig_ast_type.GetOpaqueQualType());

@@ -20,6 +20,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Representation.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
@@ -306,8 +307,7 @@ bool CommentInfo::operator==(const CommentInfo &Other) const {
   if (FirstCI != SecondCI || Children.size() != Other.Children.size())
     return false;
 
-  return std::equal(Children.begin(), Children.end(), Other.Children.begin(),
-                    Other.Children.end());
+  return llvm::equal(Children, Other.Children);
 }
 
 bool CommentInfo::operator<(const CommentInfo &Other) const {

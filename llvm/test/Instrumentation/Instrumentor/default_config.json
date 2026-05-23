@@ -132,6 +132,18 @@
     }
   },
   "instruction_pre": {
+    "alloca": {
+      "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
+      "size": true,
+      "size.replace": true,
+      "size.description": "The allocation size.",
+      "alignment": true,
+      "alignment.description": "The allocation alignment.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    },
     "unreachable": {
       "enabled": true,
       "filter": "",
@@ -163,18 +175,6 @@
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
     },
-    "alloca": {
-      "enabled": true,
-      "filter": "",
-      "filter.description": "Static property filter to exclude instrumentation.",
-      "size": true,
-      "size.replace": true,
-      "size.description": "The allocation size.",
-      "alignment": true,
-      "alignment.description": "The allocation alignment.",
-      "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
-    },
     "store": {
       "enabled": true,
       "filter": "",
@@ -203,6 +203,20 @@
     }
   },
   "instruction_post": {
+    "alloca": {
+      "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
+      "address": true,
+      "address.replace": true,
+      "address.description": "The allocated memory address.",
+      "size": true,
+      "size.description": "The allocation size.",
+      "alignment": true,
+      "alignment.description": "The allocation alignment.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    },
     "load": {
       "enabled": true,
       "filter": "",
@@ -226,20 +240,6 @@
       "sync_scope_id.description": "The sync scope id of the load.",
       "is_volatile": true,
       "is_volatile.description": "Flag indicating a volatile load.",
-      "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
-    },
-    "alloca": {
-      "enabled": true,
-      "filter": "",
-      "filter.description": "Static property filter to exclude instrumentation.",
-      "address": true,
-      "address.replace": true,
-      "address.description": "The allocated memory address.",
-      "size": true,
-      "size.description": "The allocation size.",
-      "alignment": true,
-      "alignment.description": "The allocation alignment.",
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
     },

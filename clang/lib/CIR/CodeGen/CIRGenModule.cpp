@@ -314,6 +314,11 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
     theTargetCIRGenInfo = createAMDGPUTargetCIRGenInfo(genTypes);
     return *theTargetCIRGenInfo;
   }
+  case llvm::Triple::spirv:
+  case llvm::Triple::spirv32:
+  case llvm::Triple::spirv64:
+    theTargetCIRGenInfo = createSPIRVTargetCIRGenInfo(genTypes);
+    return *theTargetCIRGenInfo;
   }
 }
 
@@ -457,6 +462,26 @@ bool CIRGenModule::shouldEmitCUDAGlobalVar(const VarDecl *global) const {
          global->hasAttr<CUDASharedAttr>() ||
          global->getType()->isCUDADeviceBuiltinSurfaceType() ||
          global->getType()->isCUDADeviceBuiltinTextureType();
+}
+
+void CIRGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &os,
+                                                   const Decl *d) {
+  // ptxas does not allow '.' in symbol names. On the other hand, HIP prefers
+  // postfix beginning with '.' since the symbol name can be demangled.
+  if (langOpts.HIP)
+    os << (isa<VarDecl>(d) ? ".static." : ".intern.");
+  else
+    os << (isa<VarDecl>(d) ? "__static__" : "__intern__");
+
+  // If the CUID is not specified we try to generate a unique postfix.
+  if (getLangOpts().CUID.empty()) {
+    // TODO: Once we add 'PreprocessorOpts' into CIRGenModule this part can be
+    // brought in from OG.
+    errorNYI(d->getSourceRange(),
+             "printPostfixForExternalizedDecl: CUID is not specified");
+  } else {
+    os << getASTContext().getCUIDHash();
+  }
 }
 
 void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
@@ -1091,6 +1116,8 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
   // erased) operation, which would leave them detached from the module.
   if (lastGlobalOp == oldGV)
     lastGlobalOp = newGV;
+  if (getLangOpts().CUDA)
+    getCUDARuntime().handleGlobalReplace(oldGV, newGV);
   eraseGlobalSymbol(oldGV);
   oldGV.erase();
 }
@@ -1498,13 +1525,10 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                     cir::CUDAExternallyInitializedAttr::get(&getMLIRContext()));
       }
     } else {
-      // TODO(cir):
       // Adjust linkage of shadow variables in host compilation
-      // getCUDARuntime().internalizeDeviceSideVar(vd, linkage);
+      getCUDARuntime().internalizeDeviceSideVar(vd, linkage);
     }
-    // TODO(cir):
-    // Handle variable registration
-    // getCUDARuntime().handleVarRegistration(vd, gv);
+    getCUDARuntime().handleVarRegistration(vd, gv);
   }
 
   // Set initializer and finalize emission
@@ -1615,9 +1639,8 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
 
   uint64_t arraySize = arrayTy.getSize();
   unsigned literalSize = e->getLength();
-  assert(arraySize == literalSize + 1 &&
-         "wide string literal array size must be literal length plus null "
-         "terminator");
+  assert(arraySize > literalSize &&
+         "wide string literal array size must have room for null terminator?");
 
   // Check if the string is all null bytes before building the vector.
   // In most non-zero cases, this will break out on the first element.
@@ -1637,8 +1660,6 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
   elements.reserve(arraySize);
   for (unsigned i = 0; i < literalSize; ++i)
     elements.push_back(cir::IntAttr::get(arrayEltTy, e->getCodeUnit(i)));
-  // Add null terminator
-  elements.push_back(cir::IntAttr::get(arrayEltTy, 0));
 
   auto elementsAttr = mlir::ArrayAttr::get(&getMLIRContext(), elements);
   return builder.getConstArray(elementsAttr, arrayTy);
@@ -3510,6 +3531,9 @@ void CIRGenModule::release() {
 
     addCompilerUsedGlobal(gv);
   }
+
+  if (astContext.getLangOpts().CUDA && cudaRuntime)
+    getCUDARuntime().finalizeModule();
 
   emitLLVMUsed();
 

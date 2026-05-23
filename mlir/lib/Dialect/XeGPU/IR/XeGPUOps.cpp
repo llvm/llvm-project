@@ -126,9 +126,6 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
       return success();
   }
 
-  if (mdescTy.getRank() < 2)
-    return emitError() << "mem_desc must be 2D or greater.";
-
   ArrayRef<int64_t> dataShape = dataTy.getShape();
   ArrayRef<int64_t> mdescShape = mdescTy.getShape();
 
@@ -163,23 +160,16 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
                     SmallVector<int64_t>(dataShape.begin(), dataShape.end())))
     return emitError() << "Value shape is not distributable with the layout";
 
-  if (dataShape.size() == 2) {
+  if (dataShape.size() == mdescShape.size()) {
     if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
                      [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
       return emitError() << "data shape must not exceed mem_desc shape.";
-  } else {
-    // if the subgroup_block_io attribute is set,  mdescTy must have block
-    // attribute
-    if (subgroup_block_io && !blockShape.size())
-      return emitError() << "mem_desc must have block attribute when "
-                            "subgroup_block_io is set.";
-    // if the subgroup_block_io attribute is set, the memdesc should be row
-    // major
-    if (subgroup_block_io && mdescTy.isColMajor())
-      return emitError() << "mem_desc should be row major when "
-                            "subgroup_block_io is set.";
   }
-
+  // if the subgroup_block_io attribute is set, mdescTy must have block
+  // attribute
+  if (subgroup_block_io && !blockShape.size())
+    return emitError() << "mem_desc must have block attribute when "
+                          "subgroup_block_io is set.";
   return success();
 }
 

@@ -101,7 +101,7 @@ TEST_F(LlvmLibcSinCosfTest, SpecialNumbers) {
   }
 
 TEST_F(LlvmLibcSinCosfTest, InFloatRange) {
-  constexpr uint32_t COUNT = 1'001;
+  constexpr uint32_t COUNT = 1'231;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = FPBits(v).get_val();

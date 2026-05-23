@@ -1303,8 +1303,9 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   Header->splitAt(Header->getFirstNonPhi());
 
   // Create the header mask, insert it in the header and branch on it.
-  auto *IV =
-      new VPWidenCanonicalIVRecipe(Header->getParent()->getCanonicalIV());
+  auto *IV = new VPWidenCanonicalIVRecipe(
+      LoopRegion->getCanonicalIV(),
+      VPIRFlags::WrapFlagsTy(LoopRegion->hasCanonicalIVNUW(), false));
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   Builder.insert(IV);
   VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();

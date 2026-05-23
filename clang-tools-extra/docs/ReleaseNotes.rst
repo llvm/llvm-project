@@ -49,6 +49,10 @@ Major New Features
 Potentially Breaking Changes
 ----------------------------
 
+- The :doc:`modernize-use-using <clang-tidy/checks/modernize/use-using>` check
+  now sets the `IgnoreExternC` option to `true` by default. The check will
+  no longer transform ``typedef``\ s within ``extern "C"`` blocks.
+
 - Deprecated the :program:`clang-tidy` check :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>`. It has been renamed to
   :doc:`performance-prefer-single-char-overloads
@@ -579,6 +583,8 @@ Changes in existing checks
     parentheses.
 
   - Preserve inline comment blocks that appear between the ``typedef``'s parts.
+
+  - The `IgnoreExternC` option is now set to `true` by default.
 
 - Improved :doc:`performance-enum-size
   <clang-tidy/checks/performance/enum-size>` check:

@@ -600,6 +600,35 @@ void atomic_cmpxchg(int *ptr, int *expected, int *desired, int failure) {
   // OGCG:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst seq_cst
 }
 
+void atomic_cmpxchg_fp_to_int_cast(float *ptr, float *expected, float *desired) {
+  // CIR-LABEL: @atomic_cmpxchg_fp_to_int_cast
+  // LLVM-LABEL: @atomic_cmpxchg_fp_to_int_cast
+  // OGCG-LABEL: @atomic_cmpxchg_fp_to_int_cast
+  
+  __atomic_compare_exchange(ptr, expected, desired, 0, __ATOMIC_SEQ_CST,
+                            __ATOMIC_SEQ_CST);
+  // CIR: %[[PTR_CAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.float> -> !cir.ptr<!u32i>
+  // CIR: %[[EXP_CAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.float> -> !cir.ptr<!u32i>
+  // CIR: %[[DES_CAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.float> -> !cir.ptr<!u32i>
+  // CIR: %[[EXP_DEREF:.*]] = cir.load align(4) %[[EXP_CAST]] : !cir.ptr<!u32i>, !u32i
+  // CIR: %[[DES_DEREF:.*]] = cir.load align(4) %[[DES_CAST]] : !cir.ptr<!u32i>, !u32i
+  // CIR: cir.atomic.cmpxchg success(seq_cst) failure(seq_cst) syncscope(system) %[[PTR_CAST]], %[[EXP_DEREF]], %[[DES_DEREF]] align(4) : (!cir.ptr<!u32i>, !u32i, !u32i) -> (!u32i, !cir.bool)
+
+  // LLVM: %[[PTR_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // LLVM: %[[EXP_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // LLVM: %[[DES_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // LLVM: %[[EXP_DEREF:.*]] = load i32, ptr %[[EXP_LOAD]]
+  // LLVM: %[[DES_DEREF:.*]] = load i32, ptr %[[DES_LOAD]]
+  // LLVM: cmpxchg ptr %[[PTR_LOAD]], i32 %[[EXP_DEREF]], i32 %[[DES_DEREF]] seq_cst seq_cst, align 4
+
+  // OGCG: %[[PTR_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // OGCG: %[[EXP_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // OGCG: %[[DES_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // OGCG: %[[EXP_DEREF:.*]] = load i32, ptr %[[EXP_LOAD]]
+  // OGCG: %[[DES_DEREF:.*]] = load i32, ptr %[[DES_LOAD]]
+  // OGCG: cmpxchg ptr %[[PTR_LOAD]], i32 %[[EXP_DEREF]], i32 %[[DES_DEREF]] seq_cst seq_cst, align 4
+}
+
 void atomic_cmpxchg_n(int *ptr, int *expected, int desired, int failure) {
   // CIR-LABEL: @atomic_cmpxchg_n
   // LLVM-LABEL: @atomic_cmpxchg_n

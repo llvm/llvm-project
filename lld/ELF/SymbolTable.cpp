@@ -88,7 +88,6 @@ Symbol *SymbolTable::insert(StringRef name) {
   // make<SymbolUnion>() value-initializes the storage, so the Symbol fields
   // are zero. Set the ones that need a non-zero value.
   sym->setName(name);
-  sym->partition = 1;
   sym->versionId = VER_NDX_GLOBAL;
   if (pos != StringRef::npos)
     sym->hasVersionSuffix = true;

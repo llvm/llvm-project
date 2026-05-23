@@ -14,8 +14,7 @@ using namespace clang;
 using namespace clang::doc;
 using namespace llvm;
 
-namespace clang {
-namespace doc {
+namespace {
 
 // Empty SymbolID for comparison, so we don't have to construct one every time.
 static const SymbolID EmptySID = SymbolID();
@@ -32,71 +31,67 @@ struct RecordIdToIndexFunctor {
   unsigned operator()(unsigned ID) const { return ID - RI_FIRST; }
 };
 
-using AbbrevDsc = void (*)(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev);
+using AbbrevDsc = void (*)(std::shared_ptr<BitCodeAbbrev> &Abbrev);
+} // namespace
 
-static void
-generateAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev,
-               const std::initializer_list<llvm::BitCodeAbbrevOp> Ops) {
+static void generateAbbrev(std::shared_ptr<BitCodeAbbrev> &Abbrev,
+                           const std::initializer_list<BitCodeAbbrevOp> Ops) {
   for (const auto &Op : Ops)
     Abbrev->Add(Op);
 }
 
-static void genBoolAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
-  generateAbbrev(Abbrev,
-                 {// 0. Boolean
-                  llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
-                                        BitCodeConstants::BoolSize)});
+static void genBoolAbbrev(std::shared_ptr<BitCodeAbbrev> &Abbrev) {
+  generateAbbrev(
+      Abbrev,
+      {// 0. Boolean
+       BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, BitCodeConstants::BoolSize)});
 }
 
-static void genIntAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
-  generateAbbrev(Abbrev,
-                 {// 0. Fixed-size integer
-                  llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
-                                        BitCodeConstants::IntSize)});
+static void genIntAbbrev(std::shared_ptr<BitCodeAbbrev> &Abbrev) {
+  generateAbbrev(
+      Abbrev,
+      {// 0. Fixed-size integer
+       BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, BitCodeConstants::IntSize)});
 }
 
-static void genSymbolIdAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
-  generateAbbrev(Abbrev,
-                 {// 0. Fixed-size integer (length of the sha1'd USR)
-                  llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
-                                        BitCodeConstants::USRLengthSize),
-                  // 1. Fixed-size array of Char6 (USR)
-                  llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Array),
-                  llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
-                                        BitCodeConstants::USRBitLengthSize)});
+static void genSymbolIdAbbrev(std::shared_ptr<BitCodeAbbrev> &Abbrev) {
+  generateAbbrev(
+      Abbrev,
+      {// 0. Fixed-size integer (length of the sha1'd USR)
+       BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, BitCodeConstants::USRLengthSize),
+       // 1. Fixed-size array of Char6 (USR)
+       BitCodeAbbrevOp(BitCodeAbbrevOp::Array),
+       BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                       BitCodeConstants::USRBitLengthSize)});
 }
 
-static void genStringAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
+static void genStringAbbrev(std::shared_ptr<BitCodeAbbrev> &Abbrev) {
   generateAbbrev(Abbrev,
                  {// 0. Fixed-size integer (length of the following string)
-                  llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
-                                        BitCodeConstants::StringLengthSize),
+                  BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                                  BitCodeConstants::StringLengthSize),
                   // 1. The string blob
-                  llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob)});
+                  BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)});
 }
 
 // Assumes that the file will not have more than 65535 lines.
-static void genLocationAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
+static void genLocationAbbrev(std::shared_ptr<BitCodeAbbrev> &Abbrev) {
   generateAbbrev(
       Abbrev,
       {// 0. Fixed-size integer (line number)
-       llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
-                             BitCodeConstants::LineNumberSize),
+       BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                       BitCodeConstants::LineNumberSize),
        // 1. Fixed-size integer (start line number)
-       llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
-                             BitCodeConstants::LineNumberSize),
+       BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                       BitCodeConstants::LineNumberSize),
        // 2. Boolean (IsFileInRootDir)
-       llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
-                             BitCodeConstants::BoolSize),
+       BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, BitCodeConstants::BoolSize),
        // 3. Fixed-size integer (length of the following string (filename))
-       llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
-                             BitCodeConstants::StringLengthSize),
+       BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                       BitCodeConstants::StringLengthSize),
        // 4. The string blob
-       llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob)});
+       BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)});
 }
-
-} // namespace doc
-} // namespace clang
 
 namespace {
 struct RecordIdDsc {
@@ -105,7 +100,7 @@ struct RecordIdDsc {
       : Name(Name), Abbrev(Abbrev) {}
 
   // Is this 'description' valid?
-  operator bool() const {
+  explicit operator bool() const {
     return Abbrev != nullptr && Name.data() != nullptr && !Name.empty();
   }
 
@@ -113,9 +108,9 @@ struct RecordIdDsc {
   AbbrevDsc Abbrev = nullptr;
 };
 
-static const llvm::IndexedMap<llvm::StringRef, BlockIdToIndexFunctor>
-    BlockIdNameMap = []() {
-      llvm::IndexedMap<llvm::StringRef, BlockIdToIndexFunctor> BlockIdNameMap;
+static const IndexedMap<StringRef, BlockIdToIndexFunctor> BlockIdNameMap =
+    []() {
+      IndexedMap<StringRef, BlockIdToIndexFunctor> BlockIdNameMap;
       BlockIdNameMap.resize(BlockIdCount);
 
       // There is no init-list constructor for the IndexedMap, so have to
@@ -149,9 +144,9 @@ static const llvm::IndexedMap<llvm::StringRef, BlockIdToIndexFunctor>
       return BlockIdNameMap;
     }();
 
-static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
-    RecordIdNameMap = []() {
-      llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor> RecordIdNameMap;
+static const IndexedMap<RecordIdDsc, RecordIdToIndexFunctor> RecordIdNameMap =
+    []() {
+      IndexedMap<RecordIdDsc, RecordIdToIndexFunctor> RecordIdNameMap;
       RecordIdNameMap.resize(RecordIdCount);
 
       // There is no init-list constructor for the IndexedMap, so have to
@@ -257,7 +252,7 @@ struct BlockToIdList {
   std::initializer_list<RecordId> RIDs;
 };
 
-static constexpr BlockToIdList RecordsByBlock[] = {
+static const BlockToIdList RecordsByBlock[] = {
     // Version Block
     {BI_VERSION_BLOCK_ID, {VERSION}},
     // Comment Block
@@ -358,8 +353,8 @@ void ClangDocBitcodeWriter::emitBlockID(BlockId BID) {
 
   Record.clear();
   Record.push_back(BID);
-  Stream.EmitRecord(llvm::bitc::BLOCKINFO_CODE_SETBID, Record);
-  Stream.EmitRecord(llvm::bitc::BLOCKINFO_CODE_BLOCKNAME,
+  Stream.EmitRecord(bitc::BLOCKINFO_CODE_SETBID, Record);
+  Stream.EmitRecord(bitc::BLOCKINFO_CODE_BLOCKNAME,
                     ArrayRef<unsigned char>(BlockIdName.bytes_begin(),
                                             BlockIdName.bytes_end()));
 }
@@ -370,15 +365,15 @@ void ClangDocBitcodeWriter::emitRecordID(RecordId ID) {
   prepRecordData(ID);
   Record.append(RecordIdNameMap[ID].Name.begin(),
                 RecordIdNameMap[ID].Name.end());
-  Stream.EmitRecord(llvm::bitc::BLOCKINFO_CODE_SETRECORDNAME, Record);
+  Stream.EmitRecord(bitc::BLOCKINFO_CODE_SETRECORDNAME, Record);
 }
 
 // Abbreviations
 
 void ClangDocBitcodeWriter::emitAbbrev(RecordId ID, BlockId Block) {
   assert(RecordIdNameMap[ID] && "Unknown abbreviation.");
-  auto Abbrev = std::make_shared<llvm::BitCodeAbbrev>();
-  Abbrev->Add(llvm::BitCodeAbbrevOp(ID));
+  auto Abbrev = std::make_shared<BitCodeAbbrev>();
+  Abbrev->Add(BitCodeAbbrevOp(ID));
   RecordIdNameMap[ID].Abbrev(Abbrev);
   Abbrevs.add(ID, Stream.EmitBlockInfoAbbrev(Block, std::move(Abbrev)));
 }
@@ -397,7 +392,7 @@ void ClangDocBitcodeWriter::emitRecord(const SymbolID &Sym, RecordId ID) {
   Stream.EmitRecordWithAbbrev(Abbrevs.get(ID), Record);
 }
 
-void ClangDocBitcodeWriter::emitRecord(llvm::StringRef Str, RecordId ID) {
+void ClangDocBitcodeWriter::emitRecord(StringRef Str, RecordId ID) {
   assert(RecordIdNameMap[ID] && "Unknown RecordId.");
   assert(RecordIdNameMap[ID].Abbrev == &genStringAbbrev &&
          "Abbrev type mismatch.");
@@ -565,7 +560,7 @@ void ClangDocBitcodeWriter::emitBlock(const CommentInfo &I) {
   StreamSubBlockGuard Block(Stream, BI_COMMENT_BLOCK_ID);
   // Handle Kind (enum) separately, since it is not a string.
   emitRecord(commentKindToString(I.Kind), COMMENT_KIND);
-  for (const auto &L : std::vector<std::pair<llvm::StringRef, RecordId>>{
+  for (const auto &L : std::vector<std::pair<StringRef, RecordId>>{
            {I.Text, COMMENT_TEXT},
            {I.Name, COMMENT_NAME},
            {I.Direction, COMMENT_DIRECTION},
@@ -773,22 +768,22 @@ void ClangDocBitcodeWriter::emitBlock(const VarInfo &I) {
 bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
   switch (I->IT) {
   case InfoType::IT_namespace:
-    emitBlock(*static_cast<clang::doc::NamespaceInfo *>(I));
+    emitBlock(*static_cast<NamespaceInfo *>(I));
     break;
   case InfoType::IT_record:
-    emitBlock(*static_cast<clang::doc::RecordInfo *>(I));
+    emitBlock(*static_cast<RecordInfo *>(I));
     break;
   case InfoType::IT_enum:
-    emitBlock(*static_cast<clang::doc::EnumInfo *>(I));
+    emitBlock(*static_cast<EnumInfo *>(I));
     break;
   case InfoType::IT_function:
-    emitBlock(*static_cast<clang::doc::FunctionInfo *>(I));
+    emitBlock(*static_cast<FunctionInfo *>(I));
     break;
   case InfoType::IT_typedef:
-    emitBlock(*static_cast<clang::doc::TypedefInfo *>(I));
+    emitBlock(*static_cast<TypedefInfo *>(I));
     break;
   case InfoType::IT_concept:
-    emitBlock(*static_cast<clang::doc::ConceptInfo *>(I));
+    emitBlock(*static_cast<ConceptInfo *>(I));
     break;
   case InfoType::IT_variable:
     emitBlock(*static_cast<VarInfo *>(I));
