@@ -34,7 +34,6 @@
 
 using namespace llvm;
 
-
 // Saves the content of Buffer to Path overwriting any existing file.
 Error lto::DTLTO::save(StringRef Buffer, StringRef Path) {
   std::error_code EC;
@@ -51,7 +50,7 @@ Error lto::DTLTO::save(StringRef Buffer, StringRef Path) {
 }
 
 namespace {
-    // Normalize and save a path. Aside from expanding Windows 8.3 short paths,
+// Normalize and save a path. Aside from expanding Windows 8.3 short paths,
 // no other normalization is currently required here. These paths are
 // machine-local and break distribution systems; other normalization is
 // handled by the DTLTO distributors.

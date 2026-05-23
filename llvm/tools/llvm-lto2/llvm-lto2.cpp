@@ -532,7 +532,7 @@ static int run(int argc, char **argv) {
   if (HasErrors)
     return 1;
 
-  Lto.setBitcodeLibFuncs(
+  Lto->setBitcodeLibFuncs(
       SmallVector<StringRef>(BitcodeLibFuncs.begin(), BitcodeLibFuncs.end()));
 
   FileCache Cache;
