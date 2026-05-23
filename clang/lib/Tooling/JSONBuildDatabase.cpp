@@ -228,7 +228,8 @@ JSONBuildDatabase::getTUForModule(StringRef ModuleName,
   for (const auto &TURef : TUSetI->getValue().TranslationUnits) {
 
     SmallString<8> ModuleNameStorage;
-    if (TURef.ProvidesModuleName->getValue(ModuleNameStorage) == ModuleName)
+    if (TURef.ProvidesModuleName &&
+        TURef.ProvidesModuleName->getValue(ModuleNameStorage) == ModuleName)
       return &TURef;
   }
   return nullptr;
