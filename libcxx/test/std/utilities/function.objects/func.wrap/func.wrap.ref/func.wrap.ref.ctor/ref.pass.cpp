@@ -351,6 +351,7 @@ constexpr bool test() {
       assert(f1(1) == 2);
     }
 
+    LIBCPP_STATIC_ASSERT(!std::__statically_callable<OverloadSet, long>);
     std::function_ref<int(long)> f2(os);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f2(1L) == 3);
