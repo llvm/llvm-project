@@ -82,6 +82,9 @@ public:
   bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
     return false;
   }
+
+  MVT getPointerTy(const DataLayout &DL, unsigned AS) const override;
+  MVT getPointerMemTy(const DataLayout &DL, unsigned AS) const override;
 };
 } // namespace llvm
 

@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 
 #define DEBUG_TYPE "spirv-lower"
 
@@ -102,6 +103,12 @@ MVT SPIRVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
     else if (VT.getVectorElementType() == MVT::i8)
       return MVT::v4i8;
   }
+  // if (STI.getTargetTriple().getVendor() == Triple::VendorType::AMD) {
+  //   if (VT.isVector() &&
+  //       VT.getVectorElementType().isExtended())
+  //    return MVT::v8i32;
+  // }
+
   return getRegisterType(Context, VT);
 }
 
@@ -683,4 +690,34 @@ SPIRVTargetLowering::shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const {
   // TODO: Pointer operand should be cast to integer in atomicrmw xchg, since
   // SPIR-V only supports atomic exchange for integer and floating-point types.
   return AtomicExpansionKind::None;
+}
+
+// These are specific to AMDGCN flavoured SPIR-V, and mirror the AMDGPU
+// implementation; they are required because buffer operations and the machinery
+// around them are somewhat special.
+MVT SPIRVTargetLowering::getPointerTy(const DataLayout &DL, unsigned AS) const {
+  if (STI.getTargetTriple().getVendor() != Triple::VendorType::AMD)
+    return TargetLowering::getPointerTy(DL, AS);
+
+  if (AMDGPUAS::BUFFER_FAT_POINTER == AS && DL.getPointerSizeInBits(AS) == 160)
+    return MVT::amdgpuBufferFatPointer;
+  if (AMDGPUAS::BUFFER_STRIDED_POINTER == AS &&
+      DL.getPointerSizeInBits(AS) == 192)
+    return MVT::amdgpuBufferStridedPointer;
+
+  return TargetLowering::getPointerTy(DL, AS);
+}
+
+MVT SPIRVTargetLowering::getPointerMemTy(const DataLayout &DL,
+                                         unsigned AS) const {
+  if (STI.getTargetTriple().getVendor() != Triple::VendorType::AMD)
+    return TargetLowering::getPointerMemTy(DL, AS);
+
+  if ((AMDGPUAS::BUFFER_FAT_POINTER == AS &&
+       DL.getPointerSizeInBits(AS) == 160) ||
+      (AMDGPUAS::BUFFER_STRIDED_POINTER == AS &&
+       DL.getPointerSizeInBits(AS) == 192))
+    return MVT::v8i32;
+
+  return TargetLowering::getPointerMemTy(DL, AS);
 }

@@ -259,7 +259,7 @@
 
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=AMDGPUSPIRV64
-// AMDGPUSPIRV64: target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n32:64-S32-G1-P4-A0"
+// AMDGPUSPIRV64: target datalayout = "e-m:e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A0-G1-P4-ni:7:8:9"
 
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=SPIRVVULKAN

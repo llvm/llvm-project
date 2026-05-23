@@ -389,9 +389,13 @@ addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
                ? SPIRV::StorageClass::HostOnlyINTEL
                : SPIRV::StorageClass::CrossWorkgroup;
   case 7:
-    return SPIRV::StorageClass::Input;
+    return STI.getTargetTriple().getVendor() == Triple::VendorType::AMD
+               ? SPIRV::StorageClass::DeviceOnlyINTEL
+               : SPIRV::StorageClass::Input;
   case 8:
-    return SPIRV::StorageClass::Output;
+    return STI.getTargetTriple().getVendor() == Triple::VendorType::AMD
+               ? SPIRV::StorageClass::HostOnlyINTEL
+               : SPIRV::StorageClass::Output;
   case 9:
     return SPIRV::StorageClass::CodeSectionINTEL;
   case 10:

@@ -1638,12 +1638,17 @@ void SPIRVEmitIntrinsics::preprocessUndefs(IRBuilder<> &B) {
 // pointer.
 void SPIRVEmitIntrinsics::simplifyNullAddrSpaceCasts() {
   for (Instruction &I : make_early_inc_range(instructions(CurrF)))
-    if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I))
+    if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I)) {
       if (isa<ConstantPointerNull>(ASC->getPointerOperand())) {
-        ASC->replaceAllUsesWith(
-            ConstantPointerNull::get(cast<PointerType>(ASC->getType())));
+        if (ASC->getType()->isVectorTy()) {
+          ASC->replaceAllUsesWith(ConstantVector::getNullValue(ASC->getType()));
+        } else {
+          ASC->replaceAllUsesWith(
+              ConstantPointerNull::get(cast<PointerType>(ASC->getType())));
+        }
         ASC->eraseFromParent();
       }
+    }
 }
 
 void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {

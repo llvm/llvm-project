@@ -763,7 +763,7 @@ SPIRVGlobalRegistry::getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
   if (Res.isValid())
     return Res;
 
-  LLT LLTy = LLT::pointer(AddressSpace, getPointerSize());
+  LLT LLTy = LLT::pointer(AddressSpace, getPointerSize(AddressSpace));
   Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
   CurMF->getRegInfo().setRegClass(Res, &SPIRV::pIDRegClass);
   assignSPIRVTypeToVReg(SpvType, Res, *CurMF);
@@ -863,8 +863,8 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   // Set to Reg the same type as ResVReg has.
   auto MRI = MIRBuilder.getMRI();
   if (Reg != ResVReg) {
-    LLT RegLLTy =
-        LLT::pointer(MRI->getType(ResVReg).getAddressSpace(), getPointerSize());
+    unsigned AS = MRI->getType(ResVReg).getAddressSpace();
+    LLT RegLLTy = LLT::pointer(AS, getPointerSize(AS));
     MRI->setType(Reg, RegLLTy);
     assignSPIRVTypeToVReg(BaseType, Reg, MIRBuilder.getMF());
   } else {
@@ -2033,7 +2033,8 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerTypeInternal(
     SPIRVTypeInst BaseType, MachineIRBuilder &MIRBuilder,
     SPIRV::StorageClass::StorageClass SC) {
   const Type *PointerElementType = getTypeForSPIRVType(BaseType);
-  unsigned AddressSpace = storageClassToAddressSpace(SC);
+  unsigned AddressSpace =
+      storageClassToAddressSpace(SC, CurMF->getTarget().getTargetTriple());
   if (const MachineInstr *MI = findMI(PointerElementType, AddressSpace, CurMF))
     return MI;
   Type *Ty = TypedPointerType::get(const_cast<Type *>(PointerElementType),
@@ -2105,28 +2106,33 @@ SPIRVGlobalRegistry::getRegClass(SPIRVTypeInst SpvType) const {
   return &SPIRV::iIDRegClass;
 }
 
-inline unsigned getAS(SPIRVTypeInst SpvType) {
+inline unsigned getAS(SPIRVTypeInst SpvType, const Triple &TT) {
   return storageClassToAddressSpace(
       static_cast<SPIRV::StorageClass::StorageClass>(
-          SpvType->getOperand(1).getImm()));
+          SpvType->getOperand(1).getImm()), TT);
 }
 
 LLT SPIRVGlobalRegistry::getRegType(SPIRVTypeInst SpvType) const {
   unsigned Opcode = SpvType ? SpvType->getOpcode() : 0;
+  const Triple &TT = CurMF->getTarget().getTargetTriple();
   switch (Opcode) {
   case SPIRV::OpTypeInt:
   case SPIRV::OpTypeFloat:
   case SPIRV::OpTypeBool:
     return LLT::scalar(getScalarOrVectorBitWidth(SpvType));
-  case SPIRV::OpTypePointer:
-    return LLT::pointer(getAS(SpvType), getPointerSize());
+  case SPIRV::OpTypePointer: {
+    unsigned AS = getAS(SpvType, TT);
+    return LLT::pointer(AS, getPointerSize(AS));
+  }
   case SPIRV::OpTypeVector: {
     SPIRVTypeInst ElemType = getScalarOrVectorComponentType(SpvType);
     LLT ET;
     switch (ElemType ? ElemType->getOpcode() : 0) {
-    case SPIRV::OpTypePointer:
-      ET = LLT::pointer(getAS(ElemType), getPointerSize());
+    case SPIRV::OpTypePointer: {
+      unsigned AS = getAS(ElemType, TT);
+      ET = LLT::pointer(AS, getPointerSize(AS));
       break;
+    }
     case SPIRV::OpTypeInt:
     case SPIRV::OpTypeFloat:
     case SPIRV::OpTypeBool:
