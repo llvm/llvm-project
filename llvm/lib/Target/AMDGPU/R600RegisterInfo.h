@@ -14,6 +14,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_R600REGISTERINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_R600REGISTERINFO_H
 
+#include <cstdint> // required by R600GenRegisterInfo.inc
+
 #define GET_REGINFO_HEADER
 #include "R600GenRegisterInfo.inc"
 

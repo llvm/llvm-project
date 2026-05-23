@@ -10,7 +10,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cassert>
 #include <cinttypes>
 #include <cstdint>
 #include <optional>

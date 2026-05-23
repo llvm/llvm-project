@@ -24,7 +24,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
-#include <utility>
 
 namespace llvm {
 namespace memtag {

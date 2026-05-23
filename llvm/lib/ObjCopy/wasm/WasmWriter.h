@@ -10,7 +10,6 @@
 #define LLVM_LIB_OBJCOPY_WASM_WASMWRITER_H
 
 #include "WasmObject.h"
-#include <cstdint>
 #include <vector>
 
 namespace llvm {

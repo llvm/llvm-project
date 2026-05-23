@@ -37,7 +37,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
-#include <cstdlib>
 #include <optional>
 #include <utility>
 

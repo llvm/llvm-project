@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericDomTree.h"
-#include <cassert>
 #include <optional>
 
 namespace llvm {

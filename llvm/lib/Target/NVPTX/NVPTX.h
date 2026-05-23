@@ -21,6 +21,8 @@
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include <cstdint> // required by NVPTXGenInstrInfo.inc
+
 namespace llvm {
 class FunctionPass;
 class MachineFunctionPass;

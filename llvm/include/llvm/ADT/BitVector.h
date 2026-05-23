@@ -22,7 +22,6 @@
 #include <cassert>
 #include <climits>
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 #include <iterator>
 #include <utility>

@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
-#include <cassert>
 
 using namespace llvm;
 

@@ -24,7 +24,6 @@
 #include <cassert>
 #include <cinttypes>
 #include <cstdint>
-#include <cstdio>
 #include <utility>
 
 using namespace llvm;

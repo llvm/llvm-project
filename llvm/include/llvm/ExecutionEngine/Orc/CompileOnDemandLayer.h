@@ -41,7 +41,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
-#include <cassert>
 #include <functional>
 #include <memory>
 #include <utility>

@@ -18,8 +18,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
 
-#include <sstream>
-
 #define DEBUG_TYPE "m68k-asm-parser"
 
 using namespace llvm;

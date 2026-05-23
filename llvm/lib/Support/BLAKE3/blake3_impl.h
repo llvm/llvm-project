@@ -5,7 +5,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 
 #include "llvm-c/blake3.h"
 // For \p LLVM_LIBRARY_VISIBILITY

@@ -25,7 +25,6 @@
 #define LLVM_C_DATATYPES_H
 
 #include <inttypes.h>
-#include <stdint.h>
 
 #ifndef _MSC_VER
 
@@ -50,10 +49,8 @@
 
 #else /* _MSC_VER */
 #ifdef __cplusplus
-#include <cstddef>
 #include <cstdlib>
 #else
-#include <stddef.h>
 #include <stdlib.h>
 #endif
 #include <sys/types.h>

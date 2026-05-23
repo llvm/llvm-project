@@ -18,7 +18,6 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include <algorithm>
-#include <cstdio>
 #include <iterator>
 #include <string>
 #include <type_traits>

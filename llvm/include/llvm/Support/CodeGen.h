@@ -14,7 +14,6 @@
 #ifndef LLVM_SUPPORT_CODEGEN_H
 #define LLVM_SUPPORT_CODEGEN_H
 
-#include <cstdint>
 #include <optional>
 
 namespace llvm {

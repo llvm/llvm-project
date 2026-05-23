@@ -14,7 +14,6 @@
 #ifndef LLVM_ADT_DENSEMAPINFO_H
 #define LLVM_ADT_DENSEMAPINFO_H
 
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <limits>

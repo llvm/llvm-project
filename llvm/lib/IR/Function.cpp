@@ -52,7 +52,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <string>
 
 using namespace llvm;

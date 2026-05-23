@@ -72,7 +72,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
-#include <limits>
 #include <string>
 
 using namespace llvm;

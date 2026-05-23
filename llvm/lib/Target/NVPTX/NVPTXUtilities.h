@@ -22,7 +22,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <cstdarg>
 #include <string>
 
 namespace llvm {

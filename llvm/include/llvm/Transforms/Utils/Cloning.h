@@ -28,7 +28,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
-#include <functional>
 #include <memory>
 #include <vector>
 

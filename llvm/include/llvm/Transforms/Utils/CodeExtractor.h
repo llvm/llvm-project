@@ -20,7 +20,6 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Compiler.h"
-#include <limits>
 
 namespace llvm {
 

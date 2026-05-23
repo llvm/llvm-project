@@ -42,7 +42,6 @@
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cassert>
 #include <cstdint>
-#include <functional>
 #include <utility>
 
 using namespace llvm;

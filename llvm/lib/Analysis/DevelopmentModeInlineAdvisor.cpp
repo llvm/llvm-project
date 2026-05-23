@@ -26,7 +26,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
 
-#include <optional>
 #include <vector>
 
 using namespace llvm;

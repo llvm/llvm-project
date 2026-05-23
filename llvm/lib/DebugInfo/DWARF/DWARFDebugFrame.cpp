@@ -27,7 +27,6 @@
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cassert>
 #include <cinttypes>
 #include <cstdint>
 #include <optional>

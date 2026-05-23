@@ -17,6 +17,8 @@
 #include "NVPTXRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
+#include <cstdint> // required by NVPTXGenInstrInfo.inc
+
 #define GET_INSTRINFO_HEADER
 #include "NVPTXGenInstrInfo.inc"
 

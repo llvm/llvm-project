@@ -13,7 +13,6 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
-#include <cassert>
 
 namespace llvm {
 class MCExpr;

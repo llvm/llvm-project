@@ -33,8 +33,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/MC/MCInstrDesc.h"
 
-#include <cassert>
-
 namespace llvm {
 namespace M68k {
 static inline const MachineInstrBuilder &

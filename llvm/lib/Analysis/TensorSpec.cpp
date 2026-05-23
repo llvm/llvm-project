@@ -22,7 +22,6 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <array>
-#include <cassert>
 #include <numeric>
 
 using namespace llvm;

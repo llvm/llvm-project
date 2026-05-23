@@ -28,7 +28,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
-#include <memory>
 #include <utility>
 
 using namespace llvm;

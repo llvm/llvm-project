@@ -17,10 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <functional>
-#include <iterator>
 #include <string>
-#include <utility>
 #include <vector>
 
 #define DEBUG_TYPE "spirv-commandline"

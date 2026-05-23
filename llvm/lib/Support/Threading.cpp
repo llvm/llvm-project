@@ -16,7 +16,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Jobserver.h"
 
-#include <cassert>
 #include <optional>
 #include <stdlib.h>
 

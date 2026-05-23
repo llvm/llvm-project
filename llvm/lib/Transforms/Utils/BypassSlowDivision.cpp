@@ -35,7 +35,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
-#include <cstdint>
 
 using namespace llvm;
 

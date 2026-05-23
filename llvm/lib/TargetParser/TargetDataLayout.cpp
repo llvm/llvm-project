@@ -10,7 +10,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
-#include <cstring>
 using namespace llvm;
 
 static StringRef getManglingComponent(const Triple &T) {
