@@ -27,6 +27,13 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: acosf128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: acoshf
     standards:
       - stdc
@@ -40,6 +47,13 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: acoshf128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: acospif16
     standards:
       - stdc
@@ -66,6 +80,13 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: asinf128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: asinhf
     standards:
       - stdc
@@ -79,6 +100,13 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: asinhf128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: asinpi
     standards:
       - stdc
@@ -159,6 +187,13 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: atanhf128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: atanpif16
     standards:
       - stdc
@@ -303,6 +338,13 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: cosf128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: coshf
     standards:
       - stdc
@@ -322,6 +364,13 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: cospif128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: coshf16
     standards:
       - stdc
@@ -329,6 +378,13 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: coshf128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: daddf128
     standards:
       - llvm_libc_ext
@@ -2579,6 +2635,13 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: sinf128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: sincos
     standards:
       - gnu
@@ -2608,6 +2671,13 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: sinhf128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: sinpif
     standards:
       - stdc
@@ -2621,6 +2691,13 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: sinpif128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: sqrt
     standards:
       - stdc
@@ -2672,6 +2749,13 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: tanf128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: tanhf
     standards:
       - stdc
@@ -2685,6 +2769,13 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: tanhf128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: tanpif
     standards:
       - stdc
@@ -2698,6 +2789,13 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: tanpif128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: totalorder
     standards:
       - stdc
