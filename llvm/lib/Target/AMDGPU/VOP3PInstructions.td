@@ -628,13 +628,13 @@ defm V_DOT8_U32_U4  : VOP3PInst<"v_dot8_u32_u4",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_udot8, 1>;
 } // End OtherPredicates = [HasDot7Insts]
 
-let SubtargetPredicate = HasDot8Insts in {
+let OtherPredicates = [HasSignedDotInsts] in {
 // Note: On GFX11+, these map to IU8/IU4 hardware with neg_lo bits set
 defm V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_sdot4, 1>;
 defm V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_sdot8, 1>;
-} // End SubtargetPredicate = HasDot8Insts
+} // End OtherPredicates = [HasSignedDotInsts]
 
 def DOT2_BF16_Profile
   : VOP3P_Profile<VOP_F32_V2BF16_V2BF16_F32, VOP3_REGULAR, /*HasDPP*/ 1> {
