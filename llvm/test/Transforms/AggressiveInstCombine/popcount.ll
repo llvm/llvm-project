@@ -90,6 +90,34 @@ define signext i32 @popcount64(i64 %0) {
   ret i32 %14
 }
 
+;int popcount64(unsigned long long i) {
+;  i = i - ((i >> 1) & 0x5555555555555555);
+;  i = i - 3*((i >> 2) & 0x3333333333333333);
+;  i = ((i + (i >> 4)) & 0x0F0F0F0F0F0F0F0F);
+; return (i * 0x0101010101010101) >> 56;
+;}
+define signext i32 @popcount64_alt(i64 %0) {
+; CHECK-LABEL: @popcount64_alt(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %2 = lshr i64 %0, 1
+  %3 = and i64 %2, 6148914691236517205
+  %4 = sub i64 %0, %3
+  %5 = lshr i64 %4, 2
+  %6 = and i64 %5, 3689348814741910323
+  %7 = mul i64 %6, -3
+  %8 = add i64 %7, %4
+  %9 = lshr i64 %8, 4
+  %10 = add i64 %9, %8
+  %11 = and i64 %10, 1085102592571150095
+  %12 = mul i64 %11, 72340172838076673
+  %13 = lshr i64 %12, 56
+  %14 = trunc i64 %13 to i32
+  ret i32 %14
+}
+
 ;int popcount128(__uint128_t i) {
 ;  __uint128_t x = 0x5555555555555555;
 ;  x <<= 64;
@@ -1478,6 +1506,35 @@ define i64 @popcnt2_64(i64 noundef %0) {
   %2 = lshr i64 %0, 1
   %3 = and i64 %2, 6148914691236517205
   %4 = sub i64 %0, %3
+  %5 = and i64 %4, 3689348814741910323
+  %6 = lshr i64 %4, 2
+  %7 = and i64 %6, 3689348814741910323
+  %8 = add nuw nsw i64 %7, %5
+  %9 = lshr i64 %8, 4
+  %10 = add nuw nsw i64 %9, %8
+  %11 = and i64 %10, 1085102592571150095
+  %12 = lshr i64 %11, 8
+  %13 = add nuw nsw i64 %12, %11
+  %14 = lshr i64 %13, 16
+  %15 = add nuw nsw i64 %14, %13
+  %16 = lshr i64 %15, 32
+  %17 = add nuw nsw i64 %16, %15
+  %18 = and i64 %17, 127
+  ret i64 %18
+}
+
+; Test that we match the pattern when the input is zext cause some bits in the
+; first mask to be cleared.
+define i64 @popcnt2_64_zext(i32 noundef %0) {
+; CHECK-LABEL: @popcnt2_64_zext(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[TMP0:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[ZEXT]])
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %zext = zext i32 %0 to i64
+  %2 = lshr i64 %zext, 1
+  %3 = and i64 %2, 1431655765
+  %4 = sub nsw i64 %zext, %3
   %5 = and i64 %4, 3689348814741910323
   %6 = lshr i64 %4, 2
   %7 = and i64 %6, 3689348814741910323
