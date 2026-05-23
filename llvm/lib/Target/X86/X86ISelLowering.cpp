@@ -51688,15 +51688,18 @@ static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
           sd_match(Vec, m_OneUse(m_InsertElt(
                             m_Value(InnerVec), m_Value(InnerScl),
                             m_SpecificInt(CIdx->getZExtValue() - 1))))) {
-        if (auto *InnerCst = dyn_cast<ConstantSDNode>(InnerScl)) {
+        if (isa<ConstantSDNode>(InnerScl)) {
           SDLoc DL(N);
-          APInt Pack = InnerCst->getAPIntValue().zext(2 * NumBitsPerElt);
-          Pack.insertBits(Cst->getAPIntValue().trunc(NumBitsPerElt),
-                          NumBitsPerElt);
+          SDValue Lo = DAG.getNode(ISD::ZERO_EXTEND, DL, WideSVT, InnerScl);
+          SDValue Hi = DAG.getNode(ISD::ZERO_EXTEND, DL, WideSVT, Scl);
+          Lo = DAG.getZeroExtendInReg(Lo, DL, VT.getScalarType());
+          Hi = DAG.getNode(
+              ISD::SHL, DL, WideSVT, Hi,
+              DAG.getShiftAmountConstant(NumBitsPerElt, WideSVT, DL));
           unsigned NewIdx = (CIdx->getZExtValue() - 1) / 2;
           SDValue NewInsert = DAG.getInsertVectorElt(
               DL, DAG.getBitcast(WideVT, InnerVec),
-              DAG.getConstant(Pack, DL, WideSVT), NewIdx);
+              DAG.getNode(ISD::OR, DL, WideSVT, Lo, Hi), NewIdx);
           return DAG.getBitcast(VT, NewInsert);
         }
       }
