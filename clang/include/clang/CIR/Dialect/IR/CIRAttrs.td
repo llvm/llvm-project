@@ -1687,6 +1687,7 @@ def CIR_AnnotationArrayAttr
     : TypedArrayAttrBase<CIR_AnnotationAttr,
                          "array of cir.annotation attributes">;
 
+include "clang/CIR/Dialect/IR/CIROpenCLAttrs.td"
 include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD

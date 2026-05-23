@@ -1,0 +1,27 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+module {
+  cir.func @without_names() attributes {cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<addr_space = [1 : i32, 0 : i32], access_qual = ["none", "none"], type = ["uint*", "int"], base_type = ["uint*", "int"], type_qual = ["restrict", ""]>} {
+    cir.return
+  }
+
+  cir.func @with_names() attributes {cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<addr_space = [1 : i32, 0 : i32], access_qual = ["none", "none"], type = ["uint*", "int"], base_type = ["uint*", "int"], type_qual = ["restrict", ""], name = ["data", "count"]>} {
+    cir.return
+  }
+}
+
+// CHECK-LABEL: cir.func @without_names()
+// CHECK-SAME: cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata
+// CHECK-SAME: addr_space = [1 : i32, 0 : i32]
+// CHECK-SAME: type = ["uint*", "int"]
+// CHECK-SAME: base_type = ["uint*", "int"]
+// CHECK-SAME: type_qual = ["restrict", ""]
+// CHECK-NOT: name =
+
+// CHECK-LABEL: cir.func @with_names()
+// CHECK-SAME: cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata
+// CHECK-SAME: addr_space = [1 : i32, 0 : i32]
+// CHECK-SAME: type = ["uint*", "int"]
+// CHECK-SAME: base_type = ["uint*", "int"]
+// CHECK-SAME: type_qual = ["restrict", ""]
+// CHECK-SAME: name = ["data", "count"]
