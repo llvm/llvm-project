@@ -56,7 +56,7 @@ program test_cray_pointers_01
     ! CHECK:   omp.terminator
     ! CHECK: }
     ! CHECK-LABEL: fir.global @_QMtest_host_assoc_cray_pointerEivar : i64
-    ! CHECK-LABEL: fir.global  @_QMtest_host_assoc_cray_pointerEvar : !fir.array<?xf64>
+    ! CHECK-LABEL: fir.global  @_QMtest_host_assoc_cray_pointerEvar {alignment = 64 : i64} : !fir.array<?xf64>
 
 
   !$omp end parallel

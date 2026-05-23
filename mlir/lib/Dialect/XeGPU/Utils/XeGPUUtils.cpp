@@ -975,6 +975,12 @@ bool xegpu::matchSplitDimExpansion(
     currentDstDims.push_back(dstIdx);
 
     if (accumulatedSize == src[srcIdx]) {
+      // Also collect trailing unit dims in destination, if any.
+      // Leading unit dims were implicitly collected.
+      if (srcIdx == src.size() - 1) {
+        while (++dstIdx < dst.size() && dst[dstIdx] == 1)
+          currentDstDims.push_back(dstIdx);
+      }
       // Record the mapping: srcIdx -> currentDstDims
       splitDimGroups.push_back(currentDstDims);
       // move to next src dim

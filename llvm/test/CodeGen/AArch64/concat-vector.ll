@@ -180,14 +180,23 @@ define <16 x i8> @concat_v16s8_v4s8(ptr %ptr) {
 }
 
 define <16 x i8> @concat_v16s8_v4s8_load(ptr %ptrA, ptr %ptrB, ptr %ptrC, ptr %ptrD) {
-; CHECK-LABEL: concat_v16s8_v4s8_load:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ld1 { v0.s }[1], [x1]
-; CHECK-NEXT:    ldr s1, [x2]
-; CHECK-NEXT:    ld1 { v1.s }[1], [x3]
-; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: concat_v16s8_v4s8_load:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr s0, [x2]
+; CHECK-SD-NEXT:    ldr s1, [x0]
+; CHECK-SD-NEXT:    ld1 { v0.s }[1], [x3]
+; CHECK-SD-NEXT:    ld1 { v1.s }[1], [x1]
+; CHECK-SD-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: concat_v16s8_v4s8_load:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr s0, [x0]
+; CHECK-GI-NEXT:    ldr s1, [x2]
+; CHECK-GI-NEXT:    ld1 { v0.s }[1], [x1]
+; CHECK-GI-NEXT:    ld1 { v1.s }[1], [x3]
+; CHECK-GI-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    ret
     %A = load <4 x i8>, ptr %ptrA
     %B = load <4 x i8>, ptr %ptrB
     %C = load <4 x i8>, ptr %ptrC

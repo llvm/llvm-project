@@ -364,13 +364,12 @@ let mayRaiseFPException = 0 in { // Seems suspicious but manual doesn't say it d
   defm V_DIV_SCALE_F64 : VOP3Inst <"v_div_scale_f64", VOP3b_F64_I1_F64_F64_F64>;
 } // End mayRaiseFPException = 0
 
-let isReMaterializable = 1 in
+let isReMaterializable = 1, SubtargetPredicate = HasMsadInsts in
 defm V_MSAD_U8 : VOP3Inst <"v_msad_u8", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
 
-let Constraints = "@earlyclobber $vdst" in {
+let SubtargetPredicate = HasMqsadPkInsts, Constraints = "@earlyclobber $vdst" in {
 defm V_MQSAD_PK_U16_U8 : VOP3Inst <"v_mqsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64, VOP3_CLAMP>>;
-} // End Constraints = "@earlyclobber $vdst"
-
+} // End SubtargetPredicate = HasMqsadPkInsts, Constraints = "@earlyclobber $vdst"
 
 let isReMaterializable = 1 in {
 let SchedRW = [WriteDouble], IsDPMACCInstruction = 1 in {
@@ -425,13 +424,12 @@ def VOPProfileMQSAD : VOP3_Profile<VOP_V4I32_I64_I32_V4I32, VOP3_CLAMP> {
   let HasModifiers = 0;
 }
 
-let SubtargetPredicate = isGFX7Plus in {
 let Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32] in {
 let SubtargetPredicate = HasQsadInsts in
   defm V_QSAD_PK_U16_U8 : VOP3Inst <"v_qsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64, VOP3_CLAMP>>;
-defm V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOPProfileMQSAD>;
+let SubtargetPredicate = HasMqsadInsts in
+  defm V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOPProfileMQSAD>;
 } // End Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32]
-} // End SubtargetPredicate = isGFX7Plus
 
 let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALUDummy] in {
   let SubtargetPredicate = isGFX7Plus in {
@@ -1072,10 +1070,27 @@ multiclass IMAD32_Pats <VOP3_Pseudo inst> {
         >;
 }
 
+// AMDGPUmul_u24 only consumes the low 24 bits of its operands, and
+// simplifyMul24 may strip outer AND masks. V_MAD_U64_U32 does a full 32x32
+// multiply, so this fold is only valid when both operands are known to fit
+// in 24 unsigned bits at SDAG level.
+def AMDGPUmul_u24_24bit_ops : PatFrag<
+  (ops node:$src0, node:$src1),
+  (AMDGPUmul_u24 node:$src0, node:$src1),
+  [{
+    // AMDGPUmul_u24 is a PatFrags over an intrinsic and an SDNode; skip the
+    // intrinsic ID operand when needed.
+    unsigned BaseIdx = N->getOpcode() == ISD::INTRINSIC_WO_CHAIN ? 1 : 0;
+    return AMDGPUTargetLowering::numBitsUnsigned(N->getOperand(BaseIdx),
+                                                 *CurDAG) <= 24 &&
+           AMDGPUTargetLowering::numBitsUnsigned(N->getOperand(BaseIdx + 1),
+                                                 *CurDAG) <= 24;
+  }]>;
+
 // Handle cases where amdgpu-codegenprepare-mul24 made a mul24 instead of a normal mul.
 // We need to separate this because otherwise OtherPredicates would be overriden.
 class IMAD32_Mul24_Pats_Impl<VOP3_Pseudo inst, SDPatternOperator AddOp> : GCNPat <
-    (i64 (AddOp (i64 (AMDGPUmul_u24 i32:$src0, i32:$src1)), i64:$src2)),
+    (i64 (AddOp (i64 (AMDGPUmul_u24_24bit_ops i32:$src0, i32:$src1)), i64:$src2)),
     (inst $src0, $src1, $src2, 0 /* clamp */)
     >;
 
@@ -1205,8 +1220,8 @@ class PermlaneVarPat<SDPatternOperator permlane,
 >;
 
 class PermlaneNoDppPat3Src<SDPatternOperator permlane,
-  Instruction inst> : GCNPat<
-  (permlane i32:$src0, i32:$src1, i32:$src2),
+  Instruction inst, ValueType vt> : GCNPat<
+  (vt (permlane vt:$src0, i32:$src1, i32:$src2)),
   (inst VGPR_32:$src0, SCSrc_b32:$src1, SCSrc_b32:$src2)
 >;
 
@@ -1611,10 +1626,12 @@ let SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32 in {
   defm V_PERMLANE_IDX_GEN_B32 : VOP3Inst<"v_permlane_idx_gen_b32", VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32>>;
   } // End isConvergent = 1
 
-  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_bcast,   V_PERMLANE_BCAST_B32_e64>;
-  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_up,      V_PERMLANE_UP_B32_e64>;
-  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_down,    V_PERMLANE_DOWN_B32_e64>;
-  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_xor,     V_PERMLANE_XOR_B32_e64>;
+  foreach vt = Reg32Types.types in {
+    def : PermlaneNoDppPat3Src<int_amdgcn_permlane_bcast,   V_PERMLANE_BCAST_B32_e64, vt>;
+    def : PermlaneNoDppPat3Src<int_amdgcn_permlane_up,      V_PERMLANE_UP_B32_e64,    vt>;
+    def : PermlaneNoDppPat3Src<int_amdgcn_permlane_down,    V_PERMLANE_DOWN_B32_e64,  vt>;
+    def : PermlaneNoDppPat3Src<int_amdgcn_permlane_xor,     V_PERMLANE_XOR_B32_e64,   vt>;
+  }
   def : PermlaneNoDppPat2Src<int_amdgcn_permlane_idx_gen, V_PERMLANE_IDX_GEN_B32_e64>;
 } // End SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32
 

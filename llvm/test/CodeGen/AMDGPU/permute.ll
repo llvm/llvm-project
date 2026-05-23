@@ -393,4 +393,43 @@ bb:
   ret void
 }
 
+; Byte 2 of (ashr x, 24) is the sign bit of byte 0, not byte 0 itself, so the
+; v_perm_b32 matcher must not treat it as a source byte.
+define amdgpu_kernel void @sext_i8_to_high_byte_pack(ptr addrspace(1) nocapture %arg) {
+; GCN-LABEL: sext_i8_to_high_byte_pack:
+; GCN:       ; %bb.0: ; %bb
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
+; GCN-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GCN-NEXT:    flat_load_dword v2, v[0:1]
+; GCN-NEXT:    s_mov_b32 s0, 0x702050c
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v3, 0x7f, v2
+; GCN-NEXT:    v_mul_u32_u24_e32 v3, v3, v3
+; GCN-NEXT:    v_bfe_i32 v3, v3, 0, 8
+; GCN-NEXT:    v_perm_b32 v2, v2, v3, s0
+; GCN-NEXT:    v_or_b32_sdwa v2, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_2
+; GCN-NEXT:    flat_store_dword v[0:1], v2
+; GCN-NEXT:    s_endpgm
+bb:
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr i32, ptr addrspace(1) %arg, i32 %id
+  %salt = load i32, ptr addrspace(1) %gep, align 4
+  %byte = and i32 %salt, 127
+  %mul.shl = shl nuw nsw i32 %byte, 24
+  %prod = mul i32 %mul.shl, %byte
+  %sext = ashr exact i32 %prod, 24
+  %lo.shr = lshr i32 %sext, 16
+  %lo = and i32 %lo.shr, 255
+  %mid = and i32 %sext, 16711680        ; 0x00ff0000
+  %salt.b1b3 = and i32 %salt, -16711936 ; 0xff00ff00
+  %or1 = or disjoint i32 %salt.b1b3, %mid
+  %res = or disjoint i32 %or1, %lo
+  store i32 %res, ptr addrspace(1) %gep, align 4
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()

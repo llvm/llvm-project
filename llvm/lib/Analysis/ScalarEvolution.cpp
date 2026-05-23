@@ -1910,6 +1910,20 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
       return getAddExpr(Ops, SCEV::FlagNUW, Depth + 1);
     }
 
+    const APInt *C, *C2;
+    // zext (C + A)<nsw> -> (sext(C) + sext(A))<nsw> if zext (C + A)<nsw> >=s 0.
+    // Currently the non-negative check is done manually, as isKnownNonNegative
+    // is too expensive.
+    if (SA->hasNoSignedWrap() &&
+        match(SA, m_scev_Add(m_scev_APInt(C),
+                             m_scev_SMax(m_scev_APInt(C2), m_SCEV()))) &&
+        C->isNegative() && !C->isMinSignedValue() && C2->sge(C->abs())) {
+      assert(isKnownNonNegative(SA) && "incorrectly determined non-negative");
+      return getAddExpr(getSignExtendExpr(SA->getOperand(0), Ty, Depth + 1),
+                        getSignExtendExpr(SA->getOperand(1), Ty, Depth + 1),
+                        SCEV::FlagNSW, Depth + 1);
+    }
+
     // zext(C + x + y + ...) --> (zext(D) + zext((C - D) + x + y + ...))
     // if D + (C - D + x + y + ...) could be proven to not unsigned wrap
     // where D maximizes the number of trailing zeros of (C - D + x + y + ...)
@@ -9292,7 +9306,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
     bool ControlsOnlyExit, bool AllowPredicates) {
   // Handle BinOp conditions (And, Or).
   if (auto LimitFromBinOp = computeExitLimitFromCondFromBinOp(
-          Cache, L, ExitCond, ExitIfTrue, ControlsOnlyExit, AllowPredicates))
+          Cache, L, ExitCond, ExitIfTrue, AllowPredicates))
     return *LimitFromBinOp;
 
   // With an icmp, it may be feasible to compute an exact backedge-taken count.
@@ -9350,9 +9364,11 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
 }
 
 std::optional<ScalarEvolution::ExitLimit>
-ScalarEvolution::computeExitLimitFromCondFromBinOp(
-    ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, bool ExitIfTrue,
-    bool ControlsOnlyExit, bool AllowPredicates) {
+ScalarEvolution::computeExitLimitFromCondFromBinOp(ExitLimitCacheTy &Cache,
+                                                   const Loop *L,
+                                                   Value *ExitCond,
+                                                   bool ExitIfTrue,
+                                                   bool AllowPredicates) {
   // Check if the controlling expression for this loop is an And or Or.
   Value *Op0, *Op1;
   bool IsAnd;
@@ -9362,14 +9378,6 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
     IsAnd = false;
   else
     return std::nullopt;
-
-  // Be robust against unsimplified IR for the form "op i1 X, NeutralElement".
-  const Constant *NeutralElement = ConstantInt::get(ExitCond->getType(), IsAnd);
-  if (Op0 == NeutralElement)
-    std::swap(Op0, Op1);
-  if (Op1 == NeutralElement)
-    return computeExitLimitFromCondCached(Cache, L, Op0, ExitIfTrue,
-                                          ControlsOnlyExit, AllowPredicates);
 
   // A sub-condition of a non-trivial binop never solely controls the exit,
   // whether we exit always depends on both conditions.
@@ -14230,6 +14238,9 @@ static raw_ostream &operator<<(raw_ostream &OS,
   case ScalarEvolution::LoopInvariant:
     OS << "Invariant";
     break;
+  case ScalarEvolution::LoopUniform:
+    OS << "Uniform";
+    break;
   case ScalarEvolution::LoopComputable:
     OS << "Computable";
     break;
@@ -14369,8 +14380,14 @@ ScalarEvolution::computeLoopDisposition(const SCEV *S, const Loop *L) {
       return LoopVariant;
 
     // Everything that is not defined at loop entry is variant.
-    if (DT.dominates(L->getHeader(), AR->getLoop()->getHeader()))
+    if (DT.dominates(L->getHeader(), AR->getLoop()->getHeader())) {
+      if (L->contains(AR->getLoop()) &&
+          llvm::all_of(AR->operands(),
+                       [&](const SCEV *Op) { return isLoopUniform(Op, L); }))
+        return LoopUniform;
+
       return LoopVariant;
+    }
     assert(!L->contains(AR->getLoop()) && "Containing loop's header does not"
            " dominate the contained loop's header?");
 
@@ -14401,14 +14418,18 @@ ScalarEvolution::computeLoopDisposition(const SCEV *S, const Loop *L) {
   case scSMinExpr:
   case scSequentialUMinExpr: {
     bool HasVarying = false;
+    bool HasUniform = false;
     for (SCEVUse Op : S->operands()) {
       LoopDisposition D = getLoopDisposition(Op, L);
       if (D == LoopVariant)
         return LoopVariant;
       if (D == LoopComputable)
         HasVarying = true;
+      if (D == LoopUniform)
+        HasUniform = true;
     }
-    return HasVarying ? LoopComputable : LoopInvariant;
+    return HasVarying ? (HasUniform ? LoopVariant : LoopComputable)
+                      : (HasUniform ? LoopUniform : LoopInvariant);
   }
   case scUnknown:
     // All non-instruction values are loop invariant.  All instructions are loop
@@ -14422,6 +14443,11 @@ ScalarEvolution::computeLoopDisposition(const SCEV *S, const Loop *L) {
     llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
   }
   llvm_unreachable("Unknown SCEV kind!");
+}
+
+bool ScalarEvolution::isLoopUniform(const SCEV *S, const Loop *L) {
+  LoopDisposition D = getLoopDisposition(S, L);
+  return D == LoopUniform || D == LoopInvariant;
 }
 
 bool ScalarEvolution::isLoopInvariant(const SCEV *S, const Loop *L) {
