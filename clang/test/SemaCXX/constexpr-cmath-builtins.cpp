@@ -161,7 +161,7 @@ static_assert(__builtin_ilogb(__builtin_inf()) == __INT_MAX__);
 // remquo tests
 constexpr double test_remquo(double x, double y) {
   int quo = 0;
-  double rem = __builtin_remquo(x, y, &quo);
+  double rem = __builtin_remquo(x, y, &quo); // new-note {{floating point arithmetic produces a NaN}}
   return rem;
 }
 static_assert(test_remquo(10.0, 3.0) == 1.0);
@@ -234,9 +234,31 @@ static_assert(test_modf_val(__builtin_inf()) == 0.0);
 static_assert(__builtin_isinf(test_modf_iptr(__builtin_inf())));
 
 
-namespace LRoundDiagnostic {
-  constexpr int i = __builtin_lround(1e30); // expected-error {{constexpr variable 'i' must be initialized by a constant expression}} \
-                                            // expected-note {{floating point arithmetic produces an infinity}}
+namespace NonConstantDiagnostics {
+  constexpr double FDimOverflow = // new-error {{constexpr variable 'FDimOverflow' must be initialized by a constant expression}}
+      __builtin_fdim(__DBL_MAX__, -__DBL_MAX__); // new-note {{floating point arithmetic produces an infinity}}
+  constexpr double FMAOverflow = // new-error {{constexpr variable 'FMAOverflow' must be initialized by a constant expression}}
+      __builtin_fma(__DBL_MAX__, 2.0, 0.0); // new-note {{floating point arithmetic produces an infinity}}
+  constexpr double FModInvalid = // new-error {{constexpr variable 'FModInvalid' must be initialized by a constant expression}}
+      __builtin_fmod(1.0, 0.0); // new-note {{floating point arithmetic produces a NaN}}
+  constexpr double RemainderInvalid = // new-error {{constexpr variable 'RemainderInvalid' must be initialized by a constant expression}}
+      __builtin_remainder(1.0, 0.0); // new-note {{floating point arithmetic produces a NaN}}
+  constexpr double RemquoInvalid = // new-error {{constexpr variable 'RemquoInvalid' must be initialized by a constant expression}}
+      test_remquo(1.0, 0.0); // new-note {{in call to 'test_remquo}}
+  constexpr double NextAfterOverflow = // new-error {{constexpr variable 'NextAfterOverflow' must be initialized by a constant expression}}
+      __builtin_nextafter(__DBL_MAX__, __builtin_inf()); // new-note {{floating point arithmetic produces an infinity}}
+  constexpr double NextTowardOverflow = // new-error {{constexpr variable 'NextTowardOverflow' must be initialized by a constant expression}}
+      __builtin_nexttoward(__DBL_MAX__, __builtin_infl()); // new-note {{floating point arithmetic produces an infinity}}
+  constexpr double ScalbnOverflow = // new-error {{constexpr variable 'ScalbnOverflow' must be initialized by a constant expression}}
+      __builtin_scalbn(__DBL_MAX__, 1); // new-note {{floating point arithmetic produces an infinity}}
+  constexpr double ScalblnOverflow = // new-error {{constexpr variable 'ScalblnOverflow' must be initialized by a constant expression}}
+      __builtin_scalbln(__DBL_MAX__, 1L); // new-note {{floating point arithmetic produces an infinity}}
+  constexpr double LdexpOverflow = // new-error {{constexpr variable 'LdexpOverflow' must be initialized by a constant expression}}
+      __builtin_ldexp(__DBL_MAX__, 1); // new-note {{floating point arithmetic produces an infinity}}
+  constexpr long LRoundOverflow = // expected-error {{constexpr variable 'LRoundOverflow' must be initialized by a constant expression}}
+      __builtin_lround(1e30); // expected-note {{floating point arithmetic produces an infinity}}
+  constexpr long long LLRoundOverflow = // expected-error {{constexpr variable 'LLRoundOverflow' must be initialized by a constant expression}}
+      __builtin_llround(1e30); // expected-note {{floating point arithmetic produces an infinity}}
 }
 
 // NaN payload preservation tests.
