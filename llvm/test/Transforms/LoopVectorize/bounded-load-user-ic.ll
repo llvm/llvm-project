@@ -2,16 +2,17 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=4 -S %s | FileCheck %s --check-prefix=IC4
 ; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=3 -S %s | FileCheck %s --check-prefix=IC3
 
+; A user-forced interleave count is honored in full for bounded (i % 2^N) loads,
+; even when VF * IC exceeds the window (here VF=4, IC=4, window=8 => VF*IC=16).
+; This is safe without a cap: each unrolled part re-derives its address as
+; A[(i + Part * VF) % 8], which is a multiple of VF in [0, 8), so no part ever
+; reads past the window regardless of the interleave count.
 define i32 @bounded_user_ic_exceeds_window(ptr %A, i32 %N) {
 ; IC4-LABEL: define i32 @bounded_user_ic_exceeds_window(
 ; IC4-SAME: ptr [[A:%.*]], i32 [[N:%.*]]) {
 ; IC4-NEXT:  [[ENTRY:.*]]:
 ; IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 16
-; IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; IC4:       [[VECTOR_SCEVCHECK]]:
-; IC4-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; IC4-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 7
-; IC4-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC4:       [[VECTOR_PH]]:
 ; IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 16
 ; IC4-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
@@ -22,11 +23,17 @@ define i32 @bounded_user_ic_exceeds_window(ptr %A, i32 %N) {
 ; IC4-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
 ; IC4-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
 ; IC4-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
+; IC4-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 4
+; IC4-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 8
+; IC4-NEXT:    [[TMP13:%.*]] = add i32 [[INDEX]], 12
 ; IC4-NEXT:    [[TMP2:%.*]] = urem i32 [[INDEX]], 8
+; IC4-NEXT:    [[TMP14:%.*]] = urem i32 [[TMP0]], 8
+; IC4-NEXT:    [[TMP15:%.*]] = urem i32 [[TMP1]], 8
+; IC4-NEXT:    [[TMP16:%.*]] = urem i32 [[TMP13]], 8
 ; IC4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP2]]
-; IC4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 4
-; IC4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 8
-; IC4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 12
+; IC4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP14]]
+; IC4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP15]]
+; IC4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP16]]
 ; IC4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; IC4-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
 ; IC4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
@@ -46,8 +53,8 @@ define i32 @bounded_user_ic_exceeds_window(ptr %A, i32 %N) {
 ; IC4-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; IC4-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; IC4:       [[SCALAR_PH]]:
-; IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; IC4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; IC4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; IC4-NEXT:    br label %[[LOOP:.*]]
 ; IC4:       [[LOOP]]:
 ; IC4-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -67,11 +74,7 @@ define i32 @bounded_user_ic_exceeds_window(ptr %A, i32 %N) {
 ; IC3-SAME: ptr [[A:%.*]], i32 [[N:%.*]]) {
 ; IC3-NEXT:  [[ENTRY:.*]]:
 ; IC3-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 12
-; IC3-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; IC3:       [[VECTOR_SCEVCHECK]]:
-; IC3-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; IC3-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 7
-; IC3-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; IC3-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC3:       [[VECTOR_PH]]:
 ; IC3-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 12
 ; IC3-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
@@ -81,10 +84,14 @@ define i32 @bounded_user_ic_exceeds_window(ptr %A, i32 %N) {
 ; IC3-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; IC3-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; IC3-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
+; IC3-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 4
+; IC3-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 8
 ; IC3-NEXT:    [[TMP2:%.*]] = urem i32 [[INDEX]], 8
+; IC3-NEXT:    [[TMP11:%.*]] = urem i32 [[TMP0]], 8
+; IC3-NEXT:    [[TMP12:%.*]] = urem i32 [[TMP1]], 8
 ; IC3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP2]]
-; IC3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 4
-; IC3-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 8
+; IC3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP11]]
+; IC3-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP12]]
 ; IC3-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; IC3-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
 ; IC3-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
@@ -101,8 +108,8 @@ define i32 @bounded_user_ic_exceeds_window(ptr %A, i32 %N) {
 ; IC3-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; IC3-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; IC3:       [[SCALAR_PH]]:
-; IC3-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; IC3-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; IC3-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; IC3-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; IC3-NEXT:    br label %[[LOOP:.*]]
 ; IC3:       [[LOOP]]:
 ; IC3-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]

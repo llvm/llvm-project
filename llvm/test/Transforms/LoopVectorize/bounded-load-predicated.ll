@@ -13,11 +13,7 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 127
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
@@ -80,8 +76,8 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP31]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP31]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
@@ -108,11 +104,7 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; IC4-SAME: ptr [[A:%.*]], i32 [[N:%.*]]) {
 ; IC4-NEXT:  [[ENTRY:.*]]:
 ; IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 16
-; IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; IC4:       [[VECTOR_SCEVCHECK]]:
-; IC4-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; IC4-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 127
-; IC4-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC4:       [[VECTOR_PH]]:
 ; IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 16
 ; IC4-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
@@ -319,8 +311,8 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; IC4-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; IC4-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; IC4:       [[SCALAR_PH]]:
-; IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; IC4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP115]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; IC4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP115]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; IC4-NEXT:    br label %[[LOOP:.*]]
 ; IC4:       [[LOOP]]:
 ; IC4-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
@@ -347,11 +339,7 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; IC8-SAME: ptr [[A:%.*]], i32 [[N:%.*]]) {
 ; IC8-NEXT:  [[ENTRY:.*]]:
 ; IC8-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 32
-; IC8-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; IC8:       [[VECTOR_SCEVCHECK]]:
-; IC8-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; IC8-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 127
-; IC8-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; IC8-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC8:       [[VECTOR_PH]]:
 ; IC8-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 32
 ; IC8-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
@@ -750,8 +738,8 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; IC8-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; IC8-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; IC8:       [[SCALAR_PH]]:
-; IC8-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; IC8-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP227]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; IC8-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; IC8-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP227]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; IC8-NEXT:    br label %[[LOOP:.*]]
 ; IC8:       [[LOOP]]:
 ; IC8-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
@@ -814,11 +802,7 @@ define i32 @clamped_load_predicated_ic_capped(ptr %A, i32 %n) {
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 15
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
@@ -881,8 +865,8 @@ define i32 @clamped_load_predicated_ic_capped(ptr %A, i32 %n) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP31]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP31]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
@@ -909,11 +893,7 @@ define i32 @clamped_load_predicated_ic_capped(ptr %A, i32 %n) {
 ; IC4-SAME: ptr [[A:%.*]], i32 [[N:%.*]]) {
 ; IC4-NEXT:  [[ENTRY:.*]]:
 ; IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 16
-; IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; IC4:       [[VECTOR_SCEVCHECK]]:
-; IC4-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; IC4-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 15
-; IC4-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC4:       [[VECTOR_PH]]:
 ; IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 16
 ; IC4-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
@@ -1120,8 +1100,8 @@ define i32 @clamped_load_predicated_ic_capped(ptr %A, i32 %n) {
 ; IC4-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; IC4-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; IC4:       [[SCALAR_PH]]:
-; IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; IC4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP115]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; IC4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP115]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; IC4-NEXT:    br label %[[LOOP:.*]]
 ; IC4:       [[LOOP]]:
 ; IC4-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
@@ -1148,11 +1128,7 @@ define i32 @clamped_load_predicated_ic_capped(ptr %A, i32 %n) {
 ; IC8-SAME: ptr [[A:%.*]], i32 [[N:%.*]]) {
 ; IC8-NEXT:  [[ENTRY:.*]]:
 ; IC8-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 32
-; IC8-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; IC8:       [[VECTOR_SCEVCHECK]]:
-; IC8-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; IC8-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 15
-; IC8-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; IC8-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC8:       [[VECTOR_PH]]:
 ; IC8-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 32
 ; IC8-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
@@ -1551,8 +1527,8 @@ define i32 @clamped_load_predicated_ic_capped(ptr %A, i32 %n) {
 ; IC8-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; IC8-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; IC8:       [[SCALAR_PH]]:
-; IC8-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; IC8-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP227]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; IC8-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; IC8-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP227]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; IC8-NEXT:    br label %[[LOOP:.*]]
 ; IC8:       [[LOOP]]:
 ; IC8-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
@@ -1605,21 +1581,21 @@ exit:
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ;.
 ; IC4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; IC4: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; IC4: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; IC4: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; IC4: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; IC4: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; IC4: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; IC4: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ;.
 ; IC8: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; IC8: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; IC8: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; IC8: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; IC8: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; IC8: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; IC8: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; IC8: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ;.

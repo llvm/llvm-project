@@ -6,57 +6,101 @@
 define i32 @bounded_load_reduction_bound4(ptr %A) {
 ; VF2-LABEL: define i32 @bounded_load_reduction_bound4(
 ; VF2-SAME: ptr [[A:%.*]]) {
-; VF2-NEXT:  [[ENTRY:.*]]:
-; VF2-NEXT:    br label %[[LOOP:.*]]
-; VF2:       [[LOOP]]:
-; VF2-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; VF2-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; VF2-NEXT:    [[BOUNDED:%.*]] = urem i32 [[IV]], 4
-; VF2-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[BOUNDED]]
-; VF2-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP_A]], align 4
-; VF2-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[LV]]
-; VF2-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; VF2-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], 128
-; VF2-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; VF2-NEXT:  [[ENTRY:.*:]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF2:       [[VECTOR_PH]]:
+; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF2:       [[VECTOR_BODY]]:
+; VF2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[TMP0:%.*]] = urem i32 [[INDEX]], 4
+; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP0]]
+; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
+; VF2-NEXT:    [[TMP2]] = add <2 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; VF2-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
+; VF2-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF2:       [[MIDDLE_BLOCK]]:
+; VF2-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP2]])
+; VF2-NEXT:    br label %[[EXIT:.*]]
 ; VF2:       [[EXIT]]:
-; VF2-NEXT:    [[R:%.*]] = phi i32 [ [[SUM_NEXT]], %[[LOOP]] ]
-; VF2-NEXT:    ret i32 [[R]]
+; VF2-NEXT:    ret i32 [[TMP4]]
 ;
 ; VF4-LABEL: define i32 @bounded_load_reduction_bound4(
 ; VF4-SAME: ptr [[A:%.*]]) {
-; VF4-NEXT:  [[ENTRY:.*]]:
-; VF4-NEXT:    br label %[[LOOP:.*]]
-; VF4:       [[LOOP]]:
-; VF4-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; VF4-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; VF4-NEXT:    [[BOUNDED:%.*]] = urem i32 [[IV]], 4
-; VF4-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[BOUNDED]]
-; VF4-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP_A]], align 4
-; VF4-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[LV]]
-; VF4-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; VF4-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], 128
-; VF4-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; VF4-NEXT:  [[ENTRY:.*:]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF4:       [[VECTOR_PH]]:
+; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF4:       [[VECTOR_BODY]]:
+; VF4-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[TMP0:%.*]] = urem i32 [[INDEX]], 4
+; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP0]]
+; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; VF4-NEXT:    [[TMP2]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
+; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; VF4-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
+; VF4-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF4:       [[MIDDLE_BLOCK]]:
+; VF4-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP2]])
+; VF4-NEXT:    br label %[[EXIT:.*]]
 ; VF4:       [[EXIT]]:
-; VF4-NEXT:    [[R:%.*]] = phi i32 [ [[SUM_NEXT]], %[[LOOP]] ]
-; VF4-NEXT:    ret i32 [[R]]
+; VF4-NEXT:    ret i32 [[TMP4]]
 ;
 ; VF8-LABEL: define i32 @bounded_load_reduction_bound4(
 ; VF8-SAME: ptr [[A:%.*]]) {
-; VF8-NEXT:  [[ENTRY:.*]]:
-; VF8-NEXT:    br label %[[LOOP:.*]]
-; VF8:       [[LOOP]]:
-; VF8-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; VF8-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; VF8-NEXT:    [[BOUNDED:%.*]] = urem i32 [[IV]], 4
-; VF8-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[BOUNDED]]
-; VF8-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP_A]], align 4
-; VF8-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[LV]]
-; VF8-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; VF8-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], 128
-; VF8-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; VF8-NEXT:  [[ENTRY:.*:]]
+; VF8-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF8:       [[VECTOR_PH]]:
+; VF8-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF8:       [[VECTOR_BODY]]:
+; VF8-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF8-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF8-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP33:%.*]], %[[VECTOR_BODY]] ]
+; VF8-NEXT:    [[TMP0:%.*]] = urem <8 x i32> [[VEC_IND]], splat (i32 4)
+; VF8-NEXT:    [[TMP1:%.*]] = extractelement <8 x i32> [[TMP0]], i64 0
+; VF8-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP1]]
+; VF8-NEXT:    [[TMP2:%.*]] = extractelement <8 x i32> [[TMP0]], i64 1
+; VF8-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP2]]
+; VF8-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP0]], i64 2
+; VF8-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP3]]
+; VF8-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[TMP0]], i64 3
+; VF8-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP4]]
+; VF8-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[TMP0]], i64 4
+; VF8-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP5]]
+; VF8-NEXT:    [[TMP6:%.*]] = extractelement <8 x i32> [[TMP0]], i64 5
+; VF8-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP6]]
+; VF8-NEXT:    [[TMP7:%.*]] = extractelement <8 x i32> [[TMP0]], i64 6
+; VF8-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP7]]
+; VF8-NEXT:    [[TMP8:%.*]] = extractelement <8 x i32> [[TMP0]], i64 7
+; VF8-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP8]]
+; VF8-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP9]], align 4
+; VF8-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP10]], align 4
+; VF8-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP11]], align 4
+; VF8-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP12]], align 4
+; VF8-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP13]], align 4
+; VF8-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP14]], align 4
+; VF8-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP15]], align 4
+; VF8-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP16]], align 4
+; VF8-NEXT:    [[TMP25:%.*]] = insertelement <8 x i32> poison, i32 [[TMP17]], i32 0
+; VF8-NEXT:    [[TMP26:%.*]] = insertelement <8 x i32> [[TMP25]], i32 [[TMP18]], i32 1
+; VF8-NEXT:    [[TMP27:%.*]] = insertelement <8 x i32> [[TMP26]], i32 [[TMP19]], i32 2
+; VF8-NEXT:    [[TMP28:%.*]] = insertelement <8 x i32> [[TMP27]], i32 [[TMP20]], i32 3
+; VF8-NEXT:    [[TMP29:%.*]] = insertelement <8 x i32> [[TMP28]], i32 [[TMP21]], i32 4
+; VF8-NEXT:    [[TMP30:%.*]] = insertelement <8 x i32> [[TMP29]], i32 [[TMP22]], i32 5
+; VF8-NEXT:    [[TMP31:%.*]] = insertelement <8 x i32> [[TMP30]], i32 [[TMP23]], i32 6
+; VF8-NEXT:    [[TMP32:%.*]] = insertelement <8 x i32> [[TMP31]], i32 [[TMP24]], i32 7
+; VF8-NEXT:    [[TMP33]] = add <8 x i32> [[VEC_PHI]], [[TMP32]]
+; VF8-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
+; VF8-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND]], splat (i32 8)
+; VF8-NEXT:    [[TMP34:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
+; VF8-NEXT:    br i1 [[TMP34]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF8:       [[MIDDLE_BLOCK]]:
+; VF8-NEXT:    [[TMP35:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP33]])
+; VF8-NEXT:    br label %[[EXIT:.*]]
 ; VF8:       [[EXIT]]:
-; VF8-NEXT:    [[R:%.*]] = phi i32 [ [[SUM_NEXT]], %[[LOOP]] ]
-; VF8-NEXT:    ret i32 [[R]]
+; VF8-NEXT:    ret i32 [[TMP35]]
 ;
 entry:
   br label %loop
@@ -80,57 +124,69 @@ exit:
 define i32 @bounded_load_reduction_bound8(ptr %A) {
 ; VF2-LABEL: define i32 @bounded_load_reduction_bound8(
 ; VF2-SAME: ptr [[A:%.*]]) {
-; VF2-NEXT:  [[ENTRY:.*]]:
-; VF2-NEXT:    br label %[[LOOP:.*]]
-; VF2:       [[LOOP]]:
-; VF2-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; VF2-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; VF2-NEXT:    [[BOUNDED:%.*]] = urem i32 [[IV]], 8
-; VF2-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[BOUNDED]]
-; VF2-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP_A]], align 4
-; VF2-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[LV]]
-; VF2-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; VF2-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], 128
-; VF2-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; VF2-NEXT:  [[ENTRY:.*:]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF2:       [[VECTOR_PH]]:
+; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF2:       [[VECTOR_BODY]]:
+; VF2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[TMP0:%.*]] = urem i32 [[INDEX]], 8
+; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP0]]
+; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
+; VF2-NEXT:    [[TMP2]] = add <2 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; VF2-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
+; VF2-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF2:       [[MIDDLE_BLOCK]]:
+; VF2-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP2]])
+; VF2-NEXT:    br label %[[EXIT:.*]]
 ; VF2:       [[EXIT]]:
-; VF2-NEXT:    [[R:%.*]] = phi i32 [ [[SUM_NEXT]], %[[LOOP]] ]
-; VF2-NEXT:    ret i32 [[R]]
+; VF2-NEXT:    ret i32 [[TMP4]]
 ;
 ; VF4-LABEL: define i32 @bounded_load_reduction_bound8(
 ; VF4-SAME: ptr [[A:%.*]]) {
-; VF4-NEXT:  [[ENTRY:.*]]:
-; VF4-NEXT:    br label %[[LOOP:.*]]
-; VF4:       [[LOOP]]:
-; VF4-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; VF4-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; VF4-NEXT:    [[BOUNDED:%.*]] = urem i32 [[IV]], 8
-; VF4-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[BOUNDED]]
-; VF4-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP_A]], align 4
-; VF4-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[LV]]
-; VF4-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; VF4-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], 128
-; VF4-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; VF4-NEXT:  [[ENTRY:.*:]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF4:       [[VECTOR_PH]]:
+; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF4:       [[VECTOR_BODY]]:
+; VF4-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[TMP0:%.*]] = urem i32 [[INDEX]], 8
+; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP0]]
+; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; VF4-NEXT:    [[TMP2]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
+; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; VF4-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
+; VF4-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF4:       [[MIDDLE_BLOCK]]:
+; VF4-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP2]])
+; VF4-NEXT:    br label %[[EXIT:.*]]
 ; VF4:       [[EXIT]]:
-; VF4-NEXT:    [[R:%.*]] = phi i32 [ [[SUM_NEXT]], %[[LOOP]] ]
-; VF4-NEXT:    ret i32 [[R]]
+; VF4-NEXT:    ret i32 [[TMP4]]
 ;
 ; VF8-LABEL: define i32 @bounded_load_reduction_bound8(
 ; VF8-SAME: ptr [[A:%.*]]) {
-; VF8-NEXT:  [[ENTRY:.*]]:
-; VF8-NEXT:    br label %[[LOOP:.*]]
-; VF8:       [[LOOP]]:
-; VF8-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; VF8-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; VF8-NEXT:    [[BOUNDED:%.*]] = urem i32 [[IV]], 8
-; VF8-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[BOUNDED]]
-; VF8-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP_A]], align 4
-; VF8-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[LV]]
-; VF8-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; VF8-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], 128
-; VF8-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; VF8-NEXT:  [[ENTRY:.*:]]
+; VF8-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF8:       [[VECTOR_PH]]:
+; VF8-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF8:       [[VECTOR_BODY]]:
+; VF8-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF8-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; VF8-NEXT:    [[TMP0:%.*]] = urem i32 [[INDEX]], 8
+; VF8-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP0]]
+; VF8-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP1]], align 4
+; VF8-NEXT:    [[TMP2]] = add <8 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
+; VF8-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
+; VF8-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
+; VF8-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF8:       [[MIDDLE_BLOCK]]:
+; VF8-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
+; VF8-NEXT:    br label %[[EXIT:.*]]
 ; VF8:       [[EXIT]]:
-; VF8-NEXT:    [[R:%.*]] = phi i32 [ [[SUM_NEXT]], %[[LOOP]] ]
-; VF8-NEXT:    ret i32 [[R]]
+; VF8-NEXT:    ret i32 [[TMP4]]
 ;
 entry:
   br label %loop
@@ -154,60 +210,72 @@ exit:
 define i32 @bounded_load_reduction_bound8_i8(ptr %A) {
 ; VF2-LABEL: define i32 @bounded_load_reduction_bound8_i8(
 ; VF2-SAME: ptr [[A:%.*]]) {
-; VF2-NEXT:  [[ENTRY:.*]]:
-; VF2-NEXT:    br label %[[LOOP:.*]]
-; VF2:       [[LOOP]]:
-; VF2-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; VF2-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; VF2-NEXT:    [[BOUNDED:%.*]] = urem i32 [[IV]], 8
-; VF2-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[BOUNDED]]
-; VF2-NEXT:    [[LV:%.*]] = load i8, ptr [[GEP_A]], align 1
-; VF2-NEXT:    [[EXT:%.*]] = zext i8 [[LV]] to i32
-; VF2-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[EXT]]
-; VF2-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; VF2-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], 128
-; VF2-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; VF2-NEXT:  [[ENTRY:.*:]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF2:       [[VECTOR_PH]]:
+; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF2:       [[VECTOR_BODY]]:
+; VF2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[TMP0:%.*]] = urem i32 [[INDEX]], 8
+; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP0]]
+; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP1]], align 1
+; VF2-NEXT:    [[TMP2:%.*]] = zext <2 x i8> [[WIDE_LOAD]] to <2 x i32>
+; VF2-NEXT:    [[TMP3]] = add <2 x i32> [[VEC_PHI]], [[TMP2]]
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; VF2-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
+; VF2-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF2:       [[MIDDLE_BLOCK]]:
+; VF2-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP3]])
+; VF2-NEXT:    br label %[[EXIT:.*]]
 ; VF2:       [[EXIT]]:
-; VF2-NEXT:    [[R:%.*]] = phi i32 [ [[SUM_NEXT]], %[[LOOP]] ]
-; VF2-NEXT:    ret i32 [[R]]
+; VF2-NEXT:    ret i32 [[TMP5]]
 ;
 ; VF4-LABEL: define i32 @bounded_load_reduction_bound8_i8(
 ; VF4-SAME: ptr [[A:%.*]]) {
-; VF4-NEXT:  [[ENTRY:.*]]:
-; VF4-NEXT:    br label %[[LOOP:.*]]
-; VF4:       [[LOOP]]:
-; VF4-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; VF4-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; VF4-NEXT:    [[BOUNDED:%.*]] = urem i32 [[IV]], 8
-; VF4-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[BOUNDED]]
-; VF4-NEXT:    [[LV:%.*]] = load i8, ptr [[GEP_A]], align 1
-; VF4-NEXT:    [[EXT:%.*]] = zext i8 [[LV]] to i32
-; VF4-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[EXT]]
-; VF4-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; VF4-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], 128
-; VF4-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; VF4-NEXT:  [[ENTRY:.*:]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF4:       [[VECTOR_PH]]:
+; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF4:       [[VECTOR_BODY]]:
+; VF4-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[TMP0:%.*]] = urem i32 [[INDEX]], 8
+; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP0]]
+; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
+; VF4-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[WIDE_LOAD]] to <4 x i32>
+; VF4-NEXT:    [[TMP3]] = add <4 x i32> [[VEC_PHI]], [[TMP2]]
+; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; VF4-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
+; VF4-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF4:       [[MIDDLE_BLOCK]]:
+; VF4-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3]])
+; VF4-NEXT:    br label %[[EXIT:.*]]
 ; VF4:       [[EXIT]]:
-; VF4-NEXT:    [[R:%.*]] = phi i32 [ [[SUM_NEXT]], %[[LOOP]] ]
-; VF4-NEXT:    ret i32 [[R]]
+; VF4-NEXT:    ret i32 [[TMP5]]
 ;
 ; VF8-LABEL: define i32 @bounded_load_reduction_bound8_i8(
 ; VF8-SAME: ptr [[A:%.*]]) {
-; VF8-NEXT:  [[ENTRY:.*]]:
-; VF8-NEXT:    br label %[[LOOP:.*]]
-; VF8:       [[LOOP]]:
-; VF8-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; VF8-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; VF8-NEXT:    [[BOUNDED:%.*]] = urem i32 [[IV]], 8
-; VF8-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[BOUNDED]]
-; VF8-NEXT:    [[LV:%.*]] = load i8, ptr [[GEP_A]], align 1
-; VF8-NEXT:    [[EXT:%.*]] = zext i8 [[LV]] to i32
-; VF8-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[EXT]]
-; VF8-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; VF8-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], 128
-; VF8-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; VF8-NEXT:  [[ENTRY:.*:]]
+; VF8-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF8:       [[VECTOR_PH]]:
+; VF8-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF8:       [[VECTOR_BODY]]:
+; VF8-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF8-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
+; VF8-NEXT:    [[TMP0:%.*]] = urem i32 [[INDEX]], 8
+; VF8-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP0]]
+; VF8-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP1]], align 1
+; VF8-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[WIDE_LOAD]] to <8 x i32>
+; VF8-NEXT:    [[TMP3]] = add <8 x i32> [[VEC_PHI]], [[TMP2]]
+; VF8-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
+; VF8-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
+; VF8-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF8:       [[MIDDLE_BLOCK]]:
+; VF8-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP3]])
+; VF8-NEXT:    br label %[[EXIT:.*]]
 ; VF8:       [[EXIT]]:
-; VF8-NEXT:    [[R:%.*]] = phi i32 [ [[SUM_NEXT]], %[[LOOP]] ]
-; VF8-NEXT:    ret i32 [[R]]
+; VF8-NEXT:    ret i32 [[TMP5]]
 ;
 entry:
   br label %loop
@@ -257,7 +325,7 @@ define void @bounded_rmw_vf_capped(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF2-NEXT:    store <2 x i32> [[TMP5]], ptr [[TMP3]], align 4
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; VF2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; VF2-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -275,7 +343,7 @@ define void @bounded_rmw_vf_capped(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF2-NEXT:    store i32 [[SUM]], ptr [[GEP_A]], align 4
 ; VF2-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; VF2-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
-; VF2-NEXT:    br i1 [[COND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF2-NEXT:    br i1 [[COND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF2:       [[EXIT]]:
 ; VF2-NEXT:    ret void
 ;
@@ -303,7 +371,7 @@ define void @bounded_rmw_vf_capped(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF4-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP3]], align 4
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; VF4-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF4-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; VF4-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -321,7 +389,7 @@ define void @bounded_rmw_vf_capped(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF4-NEXT:    store i32 [[SUM]], ptr [[GEP_A]], align 4
 ; VF4-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; VF4-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
-; VF4-NEXT:    br i1 [[COND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF4-NEXT:    br i1 [[COND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF4:       [[EXIT]]:
 ; VF4-NEXT:    ret void
 ;
@@ -349,7 +417,7 @@ define void @bounded_rmw_vf_capped(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF8-NEXT:    store <8 x i32> [[TMP5]], ptr [[TMP3]], align 4
 ; VF8-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; VF8-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; VF8-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF8-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VF8:       [[MIDDLE_BLOCK]]:
 ; VF8-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; VF8-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -367,7 +435,7 @@ define void @bounded_rmw_vf_capped(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF8-NEXT:    store i32 [[SUM]], ptr [[GEP_A]], align 4
 ; VF8-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; VF8-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
-; VF8-NEXT:    br i1 [[COND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF8-NEXT:    br i1 [[COND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF8:       [[EXIT]]:
 ; VF8-NEXT:    ret void
 ;
