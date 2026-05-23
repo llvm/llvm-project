@@ -1120,6 +1120,15 @@ define double @ldexp_i64_neg_input_exp_above_int_max() {
   ret double %r
 }
 
+define double @ldexp_i64_neg_input_exp_above_int64_max() {
+; CHECK-LABEL: define double @ldexp_i64_neg_input_exp_above_int64_max() {
+; CHECK-NEXT:    ret double -inf
+;
+  ; This constant is 2^65, i.e. it exceeds the range of i64.
+  %r = call double @llvm.ldexp.f64.i128(double -1.0, i128 36893488147419103232)
+  ret double %r
+}
+
 attributes #0 = { strictfp }
 
 !0 = !{i32 -127, i32 0}

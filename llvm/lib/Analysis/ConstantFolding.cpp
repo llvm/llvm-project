@@ -3716,13 +3716,10 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         // APFloat::scalbn takes the exponent as `int`. Clamp wider integer
         // exponents into [INT_MIN, INT_MAX] so values still saturate the
         // result to +/-inf or +/-0.
-        int64_t Exp = Op2C->getSExtValue();
-        int ClampedExp = static_cast<int>(
-            std::clamp<int64_t>(Exp, std::numeric_limits<int>::min(),
-                                std::numeric_limits<int>::max()));
+        APInt Exp = Op2C->getValue().truncSSat(32);
         return ConstantFP::get(
             Ty->getContext(),
-            scalbn(Op1V, ClampedExp, APFloat::rmNearestTiesToEven));
+            scalbn(Op1V, Exp.getSExtValue(), APFloat::rmNearestTiesToEven));
       }
       case Intrinsic::is_fpclass: {
         FPClassTest Mask = static_cast<FPClassTest>(Op2C->getZExtValue());
