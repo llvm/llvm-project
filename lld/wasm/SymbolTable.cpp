@@ -510,7 +510,9 @@ Symbol *SymbolTable::addCommon(StringRef name, uint32_t flags, InputFile *file,
                                uint64_t size, uint32_t alignment) {
   LLVM_DEBUG(dbgs() << "addCommon: " << name << " size:" << size
                     << " align:" << alignment << "\n");
-  auto [s, wasInserted] = insert(name, file);
+  auto val = insert(name, file);
+  Symbol *s = val.first;
+  bool wasInserted = val.second;
 
   auto replaceSym = [&]() {
     replaceSymbol<CommonSymbol>(s, name, flags, file, size, alignment);
