@@ -840,12 +840,15 @@ constant whose address is significant.
 
 .. warning::
 
-     Constant duplication currently makes it unsound to compare pointers
-     if either may be ``unnamed_addr``, because each reference to the
-     global in the IR may return a different pointer, and optimization
-     passes may create additional references. This means that the current
-     semantics make it technically incorrect to use ``unnamed_addr``
-     for C string literals, but Clang does it anyway.
+    Constant duplication currently makes it unsound to compare pointers
+    if either may be ``unnamed_addr``, because each reference to the
+    global in the IR may return a different pointer, and optimization
+    passes may create additional references. Optimization passes can also
+    create pointer comparisons with the expectation that the comparison
+    will return true if the object is the same, which theoretically can
+    make any usage of ``unnamed_addr`` unsound, but in practice it is
+    unlikely that input IR that does not explicitly compare pointers
+    will be affected by this issue.
 
 If the ``local_unnamed_addr`` attribute is given, the address is known to
 not be significant within the module.
