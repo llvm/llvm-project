@@ -20,7 +20,9 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "mcplus"
 
@@ -28,6 +30,102 @@ using namespace llvm;
 using namespace bolt;
 
 namespace {
+
+class HexagonBundleEmissionState : public MCPlusBuilder::BundleEmissionState {
+  const MCPlusBuilder &MIB;
+  MCContext &Ctx;
+  SmallVector<MCInst, 4> Packet;
+
+  void doFlush(function_ref<void(const MCInst &)> EmitBundle) {
+    if (Packet.empty())
+      return;
+    LLVM_DEBUG({
+      dbgs() << "BOLT-DEBUG: flushing packet (" << Packet.size()
+             << " instrs)\n";
+    });
+    // Detect hardware loop end markers. In the original encoding,
+    // INST_PARSE_LOOP_END on instruction index 0 means endloop0
+    // (inner loop), on index 1 means endloop1 (outer loop).
+    bool InnerLoop = false;
+    bool OuterLoop = false;
+    for (unsigned I = 0, E = Packet.size(); I < E; ++I) {
+      if (MIB.hasAnnotation(Packet[I], "HexLoopEnd")) {
+        if (I == 0)
+          InnerLoop = true;
+        else if (I == 1)
+          OuterLoop = true;
+      }
+    }
+    MCInst Bundle = MIB.createBundle(Ctx, Packet, InnerLoop, OuterLoop);
+    EmitBundle(Bundle);
+    Packet.clear();
+  }
+
+public:
+  HexagonBundleEmissionState(const MCPlusBuilder &MIB, MCContext &Ctx)
+      : MIB(MIB), Ctx(Ctx) {}
+
+  bool
+  onBeginBasicBlock(const BinaryBasicBlock &BB, const BinaryBasicBlock *PrevBB,
+                    function_ref<void(const MCInst &)> EmitBundle) override {
+    if (Packet.empty())
+      return true;
+    // Carry the pending packet across the BB boundary when the BB is
+    // a pure fallthrough: either unreachable (pred_size == 0) or the
+    // only predecessor is the immediately preceding layout block.
+    // Entry points do not force a flush on Hexagon: the processor
+    // executes entire packets atomically, so a jump to a mid-packet
+    // label still runs all instructions from the packet start.
+    bool CanCarryAcross =
+        BB.pred_size() == 0 ||
+        (BB.pred_size() == 1 && PrevBB && *BB.pred_begin() == PrevBB);
+    if (!CanCarryAcross || Packet.size() >= 4) {
+      // Before flushing, check whether the next BB starts with a
+      // .new value consumer (compare-and-jump or store). If so,
+      // keep the packet open: the producer in the current packet
+      // must stay in the same emitted packet as the consumer.
+      bool NextIsNewValue = false;
+      if (!BB.empty()) {
+        auto First = BB.begin();
+        while (First != BB.end() && MIB.isPseudo(*First))
+          ++First;
+        if (First != BB.end())
+          NextIsNewValue = MIB.isNewValueConsumer(*First);
+      }
+      if (!NextIsNewValue)
+        doFlush(EmitBundle);
+    }
+    return Packet.empty();
+  }
+
+  bool canEmitInstructionLabel() const override { return Packet.empty(); }
+
+  bool
+  processInstruction(MCInst &Inst,
+                     function_ref<void(const MCInst &)> EmitBundle) override {
+    bool IsPacketEnd = MIB.hasAnnotation(Inst, "HexPacketEnd");
+    // Skip MC pseudo instructions (e.g. A2_nop) that the Hexagon code
+    // emitter cannot encode. If the pseudo is at a packet end, flush
+    // the packet without it.
+    if (MIB.isPseudo(Inst)) {
+      if (IsPacketEnd)
+        doFlush(EmitBundle);
+      return true;
+    }
+    // Safety: if the packet already has 4 instructions (Hexagon max),
+    // flush before adding more.
+    if (Packet.size() >= 4)
+      doFlush(EmitBundle);
+    Packet.push_back(Inst);
+    if (IsPacketEnd)
+      doFlush(EmitBundle);
+    return true;
+  }
+
+  void flush(function_ref<void(const MCInst &)> EmitBundle) override {
+    doFlush(EmitBundle);
+  }
+};
 
 class HexagonMCPlusBuilder : public MCPlusBuilder {
   /// Mark an instruction as the end of a Hexagon packet. This helper
@@ -477,6 +575,86 @@ public:
     // All Hexagon instructions are 4 bytes. This avoids the MCCodeEmitter
     // which asserts on non-BUNDLE instructions.
     return 4;
+  }
+
+  std::unique_ptr<BundleEmissionState>
+  createBundleEmissionState(MCContext &Ctx) const override {
+    return std::make_unique<HexagonBundleEmissionState>(*this, Ctx);
+  }
+
+  bool isNewValueConsumer(const MCInst &Inst) const override {
+    return HexagonMCInstrInfo::isNewValue(*Info, Inst);
+  }
+
+  MCInst createBundle(MCContext &Ctx, ArrayRef<MCInst> Instrs,
+                      bool InnerLoop = false,
+                      bool OuterLoop = false) const override {
+    MCInst Bundle;
+    Bundle.setOpcode(Hexagon::BUNDLE);
+    // Immediate operand encoding hardware loop end bits:
+    // bit 0 = inner loop, bit 1 = outer loop.
+    unsigned LoopBits = 0;
+    if (InnerLoop)
+      LoopBits |= 1;
+    if (OuterLoop)
+      LoopBits |= 2;
+    Bundle.addOperand(MCOperand::createImm(LoopBits));
+
+    unsigned RealInstrCount = 0;
+    for (const MCInst &Inst : Instrs) {
+      // Constant extender (immext / A4_ext) instructions must be
+      // included in the bundle. The MC code emitter requires them
+      // to set State.Extended, which tells it to encode only the
+      // lower bits of the next instruction's immediate (the upper
+      // bits come from the immext word). Do not count immext toward
+      // RealInstrCount because it does not occupy a "real" slot for
+      // purposes of hardware-loop NOP padding.
+      if (Inst.getOpcode() == Hexagon::A4_ext) {
+        MCInst *Copy = Ctx.createMCInst();
+        *Copy = Inst;
+        stripAnnotations(*Copy);
+        Bundle.addOperand(MCOperand::createInst(Copy));
+        continue;
+      }
+      MCInst *Copy = Ctx.createMCInst();
+      *Copy = Inst;
+      // Strip BOLT annotations before adding to bundle -- the streamer
+      // and code emitter do not expect them.
+      stripAnnotations(*Copy);
+      // Lower map-to-raw pseudos back to raw forms for encoding.
+      lowerToRaw(*Copy);
+      // The Hexagon MC code emitter expects all immediate operands to be
+      // wrapped in HexagonMCExpr. BOLT passes (e.g. peephole tail-call
+      // traps) may create instructions with raw MCOperand::createImm()
+      // immediates. Wrap them here so encoding succeeds.
+      for (unsigned OpI = 0, OpE = Copy->getNumOperands(); OpI < OpE; ++OpI) {
+        MCOperand &Op = Copy->getOperand(OpI);
+        if (Op.isImm()) {
+          const MCExpr *CE = MCConstantExpr::create(Op.getImm(), Ctx);
+          Op = MCOperand::createExpr(HexagonMCExpr::create(CE, Ctx));
+        }
+      }
+      assert((Copy->getNumOperands() == 0 || !Copy->getOperand(0).isImm()) &&
+             "All operands must be wrapped in HexagonMCExpr");
+      Bundle.addOperand(MCOperand::createInst(Copy));
+      ++RealInstrCount;
+    }
+
+    // Hardware loop end packets require at least 2 instructions because
+    // the loop end is encoded in the parse bits of slot 0 (inner) or
+    // slot 1 (outer), while the packet end is encoded on the last slot.
+    // These parse bits cannot be on the same instruction word. Pad with
+    // a NOP if needed. This can happen when BOLT removes padding NOPs
+    // from the end of a hardware loop body.
+    unsigned MinSize = InnerLoop ? 2 : (OuterLoop ? 3 : 0);
+    while (RealInstrCount < MinSize) {
+      MCInst *Nop = Ctx.createMCInst();
+      Nop->setOpcode(Hexagon::A2_nop);
+      Bundle.addOperand(MCOperand::createInst(Nop));
+      ++RealInstrCount;
+    }
+
+    return Bundle;
   }
 
   /// Lower map-to-raw pseudo instructions back to their real (raw)
