@@ -434,6 +434,46 @@ private:
 
   WrittenBuiltinSpecs writtenBS;
   void SaveWrittenBuiltinSpecs();
+  void setConflictingTypeSpecifier(TST T, SourceLocation Loc) {
+    // Store conflicting type specifier for Finish() to detect:
+    // - If 'auto' is already set, store the conflicting type (e.g., "auto int")
+    // - If 'auto' is being set after another type, store TST_auto
+    //   (e.g., "int auto").
+    if (TypeSpecType == TST_auto) {
+      ConflictingTypeSpecifier = T;
+      ConflictingTypeSpecifierLoc = Loc;
+    } else if (T == TST_auto) {
+      ConflictingTypeSpecifier = TST_auto;
+      ConflictingTypeSpecifierLoc = Loc;
+    }
+  }
+  void setConflictingTypeSpecifier(TST T, SourceLocation Loc,
+                                   SourceLocation NameLoc, ParsedType Rep) {
+    setConflictingTypeSpecifier(T, Loc);
+    if (TypeSpecType == TST_auto) {
+      TypeRep = Rep;
+      TSTNameLoc = NameLoc;
+      TypeSpecOwned = false;
+    }
+  }
+  void setConflictingTypeSpecifier(TST T, SourceLocation Loc, Expr *Rep) {
+    setConflictingTypeSpecifier(T, Loc);
+    if (TypeSpecType == TST_auto) {
+      ExprRep = Rep;
+      TSTNameLoc = Loc;
+      TypeSpecOwned = false;
+    }
+  }
+  void setConflictingTypeSpecifier(TST T, SourceLocation Loc,
+                                   SourceLocation NameLoc, Decl *Rep,
+                                   bool Owned) {
+    setConflictingTypeSpecifier(T, Loc);
+    if (TypeSpecType == TST_auto) {
+      DeclRep = Rep;
+      TSTNameLoc = NameLoc;
+      TypeSpecOwned = Owned && Rep != nullptr;
+    }
+  }
 
   ObjCDeclSpec *ObjCQualifiers;
 
