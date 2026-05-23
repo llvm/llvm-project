@@ -476,7 +476,8 @@ Error RewriteInstance::setProfile(StringRef Filename) {
     if (DataAggregator::checkPerfDataMagic(Filename) &&
         // Poor man's RTTI
         ProfileReader->getReaderName() == StringRef("perf data aggregator")) {
-      static_cast<DataAggregator *>(ProfileReader.get())->addInputFile(Filename);
+      static_cast<DataAggregator *>(ProfileReader.get())
+          ->addInputFile(Filename);
       return Error::success();
     }
     // Already exists
