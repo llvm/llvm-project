@@ -1486,6 +1486,13 @@ maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
 
 ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
                                 const SymbolIndex *Index, bool AddContext) {
+  return findReferences(AST, Pos, Limit, Index, AddContext,
+                        /*ComputeReferenceTags=*/false);
+}
+
+ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
+                                const SymbolIndex *Index, bool AddContext,
+                                bool ComputeReferenceTags) {
   ReferencesResult Results;
   const SourceManager &SM = AST.getSourceManager();
   auto MainFilePath = AST.tuPath();
@@ -1587,6 +1594,12 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
       ReferencesResult::Reference Result;
       Result.Loc.range = Ref.range(SM);
       Result.Loc.uri = URIMainFile;
+      if (ComputeReferenceTags) {
+        if (Ref.Role & static_cast<unsigned>(index::SymbolRole::Write))
+          Result.ReferenceTags.push_back(ReferenceTag::Write);
+        if (Ref.Role & static_cast<unsigned>(index::SymbolRole::Read))
+          Result.ReferenceTags.push_back(ReferenceTag::Read);
+      }
       if (AddContext)
         Result.Loc.containerName =
             stringifyContainerForMainFileRef(Ref.Container);

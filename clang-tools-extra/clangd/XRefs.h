@@ -89,6 +89,7 @@ struct ReferencesResult {
   };
   struct Reference {
     ReferenceLocation Loc;
+    std::vector<ReferenceTag> ReferenceTags;
     unsigned Attributes = 0;
   };
   std::vector<Reference> References;
@@ -115,6 +116,12 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos,
 ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
                                 const SymbolIndex *Index = nullptr,
                                 bool AddContext = false);
+
+/// Returns references and optionally computes read/write tags for main-file
+/// references when \p ComputeReferenceTags is true.
+ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
+                                const SymbolIndex *Index, bool AddContext,
+                                bool ComputeReferenceTags);
 
 /// Get info about symbols at \p Pos.
 std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos);

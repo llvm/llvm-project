@@ -336,7 +336,8 @@ public:
 
   /// Retrieve locations for symbol references.
   void findReferences(PathRef File, Position Pos, uint32_t Limit,
-                      bool AddContainer, Callback<ReferencesResult> CB);
+                      bool AddContainer, bool ComputeReferenceTags,
+                      Callback<ReferencesResult> CB);
 
   /// Run formatting for the \p File with content \p Code.
   /// If \p Rng is non-empty, formats only those regions.

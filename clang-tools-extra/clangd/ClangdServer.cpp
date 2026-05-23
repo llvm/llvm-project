@@ -1026,13 +1026,15 @@ void ClangdServer::findImplementations(
 }
 
 void ClangdServer::findReferences(PathRef File, Position Pos, uint32_t Limit,
-                                  bool AddContainer,
+                                  bool AddContainer, bool ComputeReferenceTags,
                                   Callback<ReferencesResult> CB) {
-  auto Action = [Pos, Limit, AddContainer, CB = std::move(CB),
+  auto Action = [Pos, Limit, AddContainer, ComputeReferenceTags,
+                 CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    CB(clangd::findReferences(InpAST->AST, Pos, Limit, Index, AddContainer));
+    CB(clangd::findReferences(InpAST->AST, Pos, Limit, Index, AddContainer,
+                              ComputeReferenceTags));
   };
 
   WorkScheduler->runWithAST("References", File, std::move(Action));

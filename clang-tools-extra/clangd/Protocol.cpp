@@ -172,6 +172,13 @@ llvm::json::Value toJSON(const ReferenceLocation &P) {
   return Result;
 }
 
+llvm::json::Value toJSON(const Reference &R) {
+  llvm::json::Object Result{{"location", R.location}};
+  if (!R.referenceTags.empty())
+    Result["referenceTags"] = R.referenceTags;
+  return Result;
+}
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const ReferenceLocation &L) {
   return OS << L.range << '@' << L.uri << " (container: " << L.containerName

@@ -133,7 +133,7 @@ private:
                   Callback<std::vector<Location>>);
   void onGoToImplementation(const TextDocumentPositionParams &,
                             Callback<std::vector<Location>>);
-  void onReference(const ReferenceParams &, Callback<std::vector<ReferenceLocation>>);
+  void onReference(const ReferenceParams &, Callback<llvm::json::Value>);
   void onSwitchSourceHeader(const TextDocumentIdentifier &,
                             Callback<std::optional<URIForFile>>);
   void onDocumentHighlight(const TextDocumentPositionParams &,
@@ -301,6 +301,9 @@ private:
   bool SupportsReferenceContainer = false;
   /// Whether the client supports reference tags on hierarchy/reference items.
   bool SupportsReferenceTags = false;
+  /// Whether the client supports and prefers LSP 3.18 Reference[] results
+  /// for textDocument/references.
+  bool SupportsReferenceItems = false;
   /// Which kind of markup should we use in textDocument/hover responses.
   MarkupKind HoverContentFormat = MarkupKind::PlainText;
   /// Whether the client supports offsets for parameter info labels.

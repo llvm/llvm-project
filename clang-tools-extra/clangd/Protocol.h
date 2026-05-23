@@ -44,6 +44,8 @@
 namespace clang {
 namespace clangd {
 
+enum class ReferenceTag;
+
 enum class ErrorCode {
   // Defined by JSON RPC.
   ParseError = -32700,
@@ -237,6 +239,16 @@ struct ReferenceLocation : Location {
 };
 llvm::json::Value toJSON(const ReferenceLocation &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ReferenceLocation &);
+
+/// LSP 3.18 reference item used by textDocument/references when supported.
+struct Reference {
+  /// The location of this reference.
+  Location location;
+
+  /// Optional, one or more tags describing this reference.
+  std::vector<ReferenceTag> referenceTags;
+};
+llvm::json::Value toJSON(const Reference &);
 
 using ChangeAnnotationIdentifier = std::string;
 // A combination of a LSP standard TextEdit and AnnotatedTextEdit.
