@@ -18,6 +18,7 @@
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -36,6 +37,7 @@
 #include <cassert>
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <optional>
 #include <system_error>
 #include <unordered_map>
@@ -2514,6 +2516,55 @@ public:
     // We have to use at least 2-byte alignment for functions because of C++
     // ABI.
     return 2;
+  }
+
+  /// State object for targets that emit instructions as bundles (e.g.
+  /// Hexagon VLIW packets). Created per-function by
+  /// createBundleEmissionState().
+  class BundleEmissionState {
+  public:
+    virtual ~BundleEmissionState() = default;
+
+    /// Called before emitting a BB label. Returns true if the pending
+    /// bundle was flushed (or was empty). Returns false if the bundle
+    /// is being carried across the BB boundary.
+    virtual bool
+    onBeginBasicBlock(const BinaryBasicBlock &BB,
+                      const BinaryBasicBlock *PrevBB,
+                      function_ref<void(const MCInst &)> EmitBundle) = 0;
+
+    /// Returns true if a label can be emitted at this point (i.e. we
+    /// are NOT mid-bundle).
+    virtual bool canEmitInstructionLabel() const = 0;
+
+    /// Process one instruction. Returns true if consumed (emitter
+    /// should not emit it individually).
+    virtual bool
+    processInstruction(MCInst &Inst,
+                       function_ref<void(const MCInst &)> EmitBundle) = 0;
+
+    /// Flush remaining instructions at end of fragment.
+    virtual void flush(function_ref<void(const MCInst &)> EmitBundle) = 0;
+  };
+
+  /// Create a bundle emission state for VLIW targets. Returns nullptr
+  /// for targets that emit instructions individually.
+  virtual std::unique_ptr<BundleEmissionState>
+  createBundleEmissionState(MCContext &Ctx) const {
+    return nullptr;
+  }
+
+  /// Return true if the instruction is a .new value consumer that requires
+  /// its producer to be in the same VLIW packet (e.g. Hexagon .new value
+  /// stores and .new compare-and-jump instructions).
+  virtual bool isNewValueConsumer(const MCInst &Inst) const { return false; }
+
+  /// Create a BUNDLE MCInst from a sequence of individual instructions.
+  /// Used by targets that require bundle emission (e.g. Hexagon).
+  virtual MCInst createBundle(MCContext &Ctx, ArrayRef<MCInst> Instrs,
+                              bool InnerLoop = false,
+                              bool OuterLoop = false) const {
+    llvm_unreachable("not implemented");
   }
 
   // AliasMap caches a mapping of registers to the set of registers that
