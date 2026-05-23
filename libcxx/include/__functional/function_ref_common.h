@@ -19,6 +19,7 @@
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_pointer.h>
 #include <__utility/constant_wrapper.h>
+#include <__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -106,6 +107,9 @@ template <class _Arg>
 struct __function_ref_arg_fwd<_Arg> {
   using type _LIBCPP_NODEBUG = _Arg;
 };
+
+template <class _Fn, class... _Args>
+concept __statically_callable = requires { _Fn::operator()(std::declval<_Args>()...); };
 
 #endif // _LIBCPP_STD_VER >= 26
 

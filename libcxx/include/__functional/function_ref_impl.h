@@ -102,9 +102,7 @@ public:
              __is_invocable_using<_LIBCPP_FUNCTION_REF_CV _Tp&> && !__is_convertible_from_specialization_v<_Tp>)
   _LIBCPP_HIDE_FROM_ABI constexpr function_ref(_Fn&& __obj) noexcept {
     using _Dn = remove_cv_t<_Tp>;
-    if constexpr (requires(__arg_t<_ArgTypes>... __args) {
-                    _Dn::operator()(static_cast<__arg_t<_ArgTypes>>(__args)...);
-                  }) {
+    if constexpr (__statically_callable<_Dn, __arg_t<_ArgTypes>...>) {
       __call_ = [](__storage_t, __arg_t<_ArgTypes>... __args) static noexcept(__is_noexcept) -> _Rp {
         return _Dn::operator()(static_cast<__arg_t<_ArgTypes>>(__args)...);
       };
