@@ -10,11 +10,11 @@
 //
 //     !comment_string.loadtime = !{!"Copyright ..."}
 //
-// into concrete, translation-unit-local globals.
+// into concrete, translation-unit-weak-hidden globals.
 // This Pass is enabled only for AIX.
 // For each module (translation unit), the pass performs the following:
 //
-//   1. Creates a null-terminated, internal constant string global
+//   1. Creates a null-terminated, weak_odr hidden constant string global
 //      (`__loadtime_comment_str`) containing the copyright text. The backend
 //      places this in the .text section of the object file.
 //
@@ -30,12 +30,13 @@
 //  Input IR:
 //     !comment_string.loadtime = !{!"Copyright"}
 //  Output IR:
-//     @__loadtime_comment_str = internal constant [N x i8] c"Copyright\00"
+//     @__loadtime_comment_str_HASH = weak_odr constant [N x i8]
+//     c"Copyright\00"
 //     @llvm.compiler.used = appending global [1 x ptr] [ptr
-//     @__loadtime_comment_str]
+//     @__loadtime_comment_str_HASH]
 //
 //     define i32 @func() !implicit.ref !5 { ... }
-//     !5 = !{ptr @__loadtime_comment_str}
+//     !5 = !{ptr @__loadtime_comment_str_HASH}
 //
 //===----------------------------------------------------------------------===//
 
@@ -57,8 +58,10 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/xxhash.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <string>
 
 #define DEBUG_TYPE "lower-comment-string"
 
@@ -101,15 +104,18 @@ PreservedAnalyses LowerCommentStringPass::run(Module &M,
   if (Text.empty())
     return PreservedAnalyses::all();
 
+  uint64_t Hash = xxh3_64bits(Text);
+  std::string GlobalName =
+      ("__loadtime_comment_str_" + Twine::utohexstr(Hash)).str();
+
   // 1. Create a single null-terminated string global.
   Constant *StrInit = ConstantDataArray::getString(Ctx, Text, /*AddNull=*/true);
 
-  // The global variable should be internal, constant, and TU-local.
-  // This avoids duplicate symbol issues across TUs.
-  auto *StrGV = new GlobalVariable(M, StrInit->getType(),
-                                   /*isConstant=*/true,
-                                   GlobalValue::InternalLinkage, StrInit,
-                                   /*Name=*/"__loadtime_comment_str");
+  // The global variable should be weak_odr, constant, and TU-hidden.
+  auto *StrGV = new GlobalVariable(
+      M, StrInit->getType(),
+      /*isConstant=*/true, GlobalValue::WeakODRLinkage, StrInit, GlobalName);
+  StrGV->setVisibility(GlobalValue::HiddenVisibility);
   // Set unnamed_addr to allow the linker to merge identical strings.
   StrGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   StrGV->setAlignment(Align(1));
