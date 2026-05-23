@@ -1900,10 +1900,19 @@ def FuncExtIntelSubgroups      : FunctionExtension<"cl_intel_subgroups">;
 def FuncExtIntelSubgroupsShort : FunctionExtension<"cl_intel_subgroups_short">;
 def FuncExtIntelSubgroupsChar  : FunctionExtension<"cl_intel_subgroups_char">;
 def FuncExtIntelSubgroupsLong  : FunctionExtension<"cl_intel_subgroups_long">;
+def FuncExtIntelSubgroupBufferPrefetch : FunctionExtension<"cl_intel_subgroup_buffer_prefetch">;
+def FuncExtIntelSubgroupLocalBlockIO : FunctionExtension<"cl_intel_subgroup_local_block_io">;
 def FuncExtIntelSubgroupsRWImages : FunctionExtension<"cl_intel_subgroups __opencl_c_read_write_images">;
 def FuncExtIntelSubgroupsShortRWImages : FunctionExtension<"cl_intel_subgroups_short __opencl_c_read_write_images">;
 def FuncExtIntelSubgroupsCharRWImages : FunctionExtension<"cl_intel_subgroups_char __opencl_c_read_write_images">;
 def FuncExtIntelSubgroupsLongRWImages : FunctionExtension<"cl_intel_subgroups_long __opencl_c_read_write_images">;
+def FuncExtIntelSubgroupsPrefetch : FunctionExtension<"cl_intel_subgroups cl_intel_subgroup_buffer_prefetch">;
+def FuncExtIntelSubgroupsShortPrefetch : FunctionExtension<"cl_intel_subgroups_short cl_intel_subgroup_buffer_prefetch">;
+def FuncExtIntelSubgroupsCharPrefetch : FunctionExtension<"cl_intel_subgroups_char cl_intel_subgroup_buffer_prefetch">;
+def FuncExtIntelSubgroupsLongPrefetch : FunctionExtension<"cl_intel_subgroups_long cl_intel_subgroup_buffer_prefetch">;
+def FuncExtIntelSubgroupsShortLocalBlockIO : FunctionExtension<"cl_intel_subgroups_short cl_intel_subgroup_local_block_io">;
+def FuncExtIntelSubgroupsCharLocalBlockIO : FunctionExtension<"cl_intel_subgroups_char cl_intel_subgroup_local_block_io">;
+def FuncExtIntelSubgroupsLongLocalBlockIO : FunctionExtension<"cl_intel_subgroups_long cl_intel_subgroup_local_block_io">;
 
 // cl_intel_subgroups - shuffle functions
 // intel_sub_group_shuffle(T, uint) for float/int/uint vectors, half/double
@@ -1964,10 +1973,10 @@ let Extension = FuncExtIntelSubgroups in {
   def : Builtin<"intel_sub_group_block_read_ui4", [VectorType<UInt, 4>, PointerType<ConstType<UInt>, GlobalAS>], Attr.Convergent>;
   def : Builtin<"intel_sub_group_block_read_ui8", [VectorType<UInt, 8>, PointerType<ConstType<UInt>, GlobalAS>], Attr.Convergent>;
 
-  def : Builtin<"intel_sub_group_block_write_ui", [Void, ImageType<Image2d, "RO">, VectorType<Int, 2>, UInt], Attr.Convergent>;
-  def : Builtin<"intel_sub_group_block_write_ui2", [Void, ImageType<Image2d, "RO">, VectorType<Int, 2>, VectorType<UInt, 2>], Attr.Convergent>;
-  def : Builtin<"intel_sub_group_block_write_ui4", [Void, ImageType<Image2d, "RO">, VectorType<Int, 2>, VectorType<UInt, 4>], Attr.Convergent>;
-  def : Builtin<"intel_sub_group_block_write_ui8", [Void, ImageType<Image2d, "RO">, VectorType<Int, 2>, VectorType<UInt, 8>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_ui", [Void, ImageType<Image2d, "WO">, VectorType<Int, 2>, UInt], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_ui2", [Void, ImageType<Image2d, "WO">, VectorType<Int, 2>, VectorType<UInt, 2>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_ui4", [Void, ImageType<Image2d, "WO">, VectorType<Int, 2>, VectorType<UInt, 4>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_ui8", [Void, ImageType<Image2d, "WO">, VectorType<Int, 2>, VectorType<UInt, 8>], Attr.Convergent>;
 
   def : Builtin<"intel_sub_group_block_write_ui", [Void, PointerType<UInt, GlobalAS>, UInt], Attr.Convergent>;
   def : Builtin<"intel_sub_group_block_write_ui2", [Void, PointerType<UInt, GlobalAS>, VectorType<UInt, 2>], Attr.Convergent>;
@@ -2165,6 +2174,98 @@ let Extension = FuncExtIntelSubgroupsLongRWImages in {
   def : Builtin<"intel_sub_group_block_write_ul4", [Void, ImageType<Image2d, "RW">, VectorType<Int, 2>, VectorType<ULong, 4>], Attr.Convergent>;
   def : Builtin<"intel_sub_group_block_write_ul8", [Void, ImageType<Image2d, "RW">, VectorType<Int, 2>, VectorType<ULong, 8>], Attr.Convergent>;
   def : Builtin<"intel_sub_group_block_write_ul16", [Void, ImageType<Image2d, "RW">, VectorType<Int, 2>, VectorType<ULong, 16>], Attr.Convergent>;
+}
+
+let Extension = FuncExtIntelSubgroupsPrefetch in {
+  def : Builtin<"intel_sub_group_block_prefetch_ui", [Void, PointerType<ConstType<UInt>, GlobalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_prefetch_ui2", [Void, PointerType<ConstType<UInt>, GlobalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_prefetch_ui4", [Void, PointerType<ConstType<UInt>, GlobalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_prefetch_ui8", [Void, PointerType<ConstType<UInt>, GlobalAS>], Attr.Convergent>;
+}
+
+let Extension = FuncExtIntelSubgroupsShortPrefetch in {
+  def : Builtin<"intel_sub_group_block_prefetch_us", [Void, PointerType<ConstType<UShort>, GlobalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_prefetch_us2", [Void, PointerType<ConstType<UShort>, GlobalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_prefetch_us4", [Void, PointerType<ConstType<UShort>, GlobalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_prefetch_us8", [Void, PointerType<ConstType<UShort>, GlobalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_prefetch_us16", [Void, PointerType<ConstType<UShort>, GlobalAS>], Attr.Convergent>;
+}
+
+let Extension = FuncExtIntelSubgroupsCharPrefetch in {
+  def : Builtin<"intel_sub_group_block_prefetch_uc", [Void, PointerType<ConstType<UChar>, GlobalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_prefetch_uc2", [Void, PointerType<ConstType<UChar>, GlobalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_prefetch_uc4", [Void, PointerType<ConstType<UChar>, GlobalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_prefetch_uc8", [Void, PointerType<ConstType<UChar>, GlobalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_prefetch_uc16", [Void, PointerType<ConstType<UChar>, GlobalAS>], Attr.Convergent>;
+}
+
+let Extension = FuncExtIntelSubgroupsLongPrefetch in {
+  def : Builtin<"intel_sub_group_block_prefetch_ul", [Void, PointerType<ConstType<ULong>, GlobalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_prefetch_ul2", [Void, PointerType<ConstType<ULong>, GlobalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_prefetch_ul4", [Void, PointerType<ConstType<ULong>, GlobalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_prefetch_ul8", [Void, PointerType<ConstType<ULong>, GlobalAS>], Attr.Convergent>;
+}
+
+let Extension = FuncExtIntelSubgroupLocalBlockIO in {
+  def : Builtin<"intel_sub_group_block_read", [UInt, PointerType<ConstType<UInt>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read2", [VectorType<UInt, 2>, PointerType<ConstType<UInt>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read4", [VectorType<UInt, 4>, PointerType<ConstType<UInt>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read8", [VectorType<UInt, 8>, PointerType<ConstType<UInt>, LocalAS>], Attr.Convergent>;
+
+  def : Builtin<"intel_sub_group_block_write", [Void, PointerType<UInt, LocalAS>, UInt], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write2", [Void, PointerType<UInt, LocalAS>, VectorType<UInt, 2>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write4", [Void, PointerType<UInt, LocalAS>, VectorType<UInt, 4>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write8", [Void, PointerType<UInt, LocalAS>, VectorType<UInt, 8>], Attr.Convergent>;
+
+  def : Builtin<"intel_sub_group_block_read_ui", [UInt, PointerType<ConstType<UInt>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read_ui2", [VectorType<UInt, 2>, PointerType<ConstType<UInt>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read_ui4", [VectorType<UInt, 4>, PointerType<ConstType<UInt>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read_ui8", [VectorType<UInt, 8>, PointerType<ConstType<UInt>, LocalAS>], Attr.Convergent>;
+
+  def : Builtin<"intel_sub_group_block_write_ui", [Void, PointerType<UInt, LocalAS>, UInt], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_ui2", [Void, PointerType<UInt, LocalAS>, VectorType<UInt, 2>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_ui4", [Void, PointerType<UInt, LocalAS>, VectorType<UInt, 4>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_ui8", [Void, PointerType<UInt, LocalAS>, VectorType<UInt, 8>], Attr.Convergent>;
+}
+
+let Extension = FuncExtIntelSubgroupsCharLocalBlockIO in {
+  def : Builtin<"intel_sub_group_block_read_uc", [UChar, PointerType<ConstType<UChar>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read_uc2", [VectorType<UChar, 2>, PointerType<ConstType<UChar>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read_uc4", [VectorType<UChar, 4>, PointerType<ConstType<UChar>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read_uc8", [VectorType<UChar, 8>, PointerType<ConstType<UChar>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read_uc16", [VectorType<UChar, 16>, PointerType<ConstType<UChar>, LocalAS>], Attr.Convergent>;
+
+  def : Builtin<"intel_sub_group_block_write_uc", [Void, PointerType<UChar, LocalAS>, UChar], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_uc2", [Void, PointerType<UChar, LocalAS>, VectorType<UChar, 2>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_uc4", [Void, PointerType<UChar, LocalAS>, VectorType<UChar, 4>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_uc8", [Void, PointerType<UChar, LocalAS>, VectorType<UChar, 8>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_uc16", [Void, PointerType<UChar, LocalAS>, VectorType<UChar, 16>], Attr.Convergent>;
+}
+
+let Extension = FuncExtIntelSubgroupsShortLocalBlockIO in {
+  def : Builtin<"intel_sub_group_block_read_us", [UShort, PointerType<ConstType<UShort>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read_us2", [VectorType<UShort, 2>, PointerType<ConstType<UShort>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read_us4", [VectorType<UShort, 4>, PointerType<ConstType<UShort>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read_us8", [VectorType<UShort, 8>, PointerType<ConstType<UShort>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read_us16", [VectorType<UShort, 16>, PointerType<ConstType<UShort>, LocalAS>], Attr.Convergent>;
+
+  def : Builtin<"intel_sub_group_block_write_us", [Void, PointerType<UShort, LocalAS>, UShort], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_us2", [Void, PointerType<UShort, LocalAS>, VectorType<UShort, 2>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_us4", [Void, PointerType<UShort, LocalAS>, VectorType<UShort, 4>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_us8", [Void, PointerType<UShort, LocalAS>, VectorType<UShort, 8>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_us16", [Void, PointerType<UShort, LocalAS>, VectorType<UShort, 16>], Attr.Convergent>;
+}
+
+let Extension = FuncExtIntelSubgroupsLongLocalBlockIO in {
+  def : Builtin<"intel_sub_group_block_read_ul", [ULong, PointerType<ConstType<ULong>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read_ul2", [VectorType<ULong, 2>, PointerType<ConstType<ULong>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read_ul4", [VectorType<ULong, 4>, PointerType<ConstType<ULong>, LocalAS>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_read_ul8", [VectorType<ULong, 8>, PointerType<ConstType<ULong>, LocalAS>], Attr.Convergent>;
+
+  def : Builtin<"intel_sub_group_block_write_ul", [Void, PointerType<ULong, LocalAS>, ULong], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_ul2", [Void, PointerType<ULong, LocalAS>, VectorType<ULong, 2>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_ul4", [Void, PointerType<ULong, LocalAS>, VectorType<ULong, 4>], Attr.Convergent>;
+  def : Builtin<"intel_sub_group_block_write_ul8", [Void, PointerType<ULong, LocalAS>, VectorType<ULong, 8>], Attr.Convergent>;
 }
 
 //--------------------------------------------------------------------
