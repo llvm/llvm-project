@@ -94,7 +94,8 @@ static bool tryToImproveAlign(
   }
 }
 
-using ScopedHT = ScopedHashTable<Value *, Align>;
+using ScopedHT =
+    ScopedHashTable<Value *, Align, DenseMapInfo<Value *>, BumpPtrAllocator>;
 struct AlignmentScope {
   // If BB is nullptr, the BB is processed.
   BasicBlock *BB;
@@ -160,30 +161,26 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
     return LoadStoreAlign;
   };
 
-  BumpPtrAllocator Allocator;
-  SmallVector<AlignmentScope *> Stack;
-  Stack.push_back(new (Allocator)
-                      AlignmentScope(DT.getRootNode(), BestBasePointerAligns));
+  // AlignmentScope is unmovable.
+  std::list<AlignmentScope> Stack;
+  Stack.emplace_back(DT.getRootNode(), BestBasePointerAligns);
   while (!Stack.empty()) {
-    AlignmentScope *Top = Stack.back();
-    if (Top->BB) {
-      for (Instruction &I : *Top->BB) {
+    AlignmentScope &Top = Stack.back();
+    if (Top.BB) {
+      for (Instruction &I : *Top.BB) {
         Changed |= tryToImproveAlign(
             DL, &I, [&](Value *PtrOp, Align OldAlign, Align PrefAlign) {
               return std::max(InferFromKnownBits(I, PtrOp),
                               InferFromBasePointer(PtrOp, OldAlign));
             });
       }
-      Top->BB = nullptr;
+      Top.BB = nullptr;
     }
 
-    if (Top->Iter != Top->End) {
-      Stack.push_back(new (Allocator)
-                          AlignmentScope(*Top->Iter++, BestBasePointerAligns));
-    } else {
-      Top->~AlignmentScope();
+    if (Top.Iter != Top.End)
+      Stack.emplace_back(*Top.Iter++, BestBasePointerAligns);
+    else
       Stack.pop_back();
-    }
   }
 
   return Changed;
