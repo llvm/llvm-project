@@ -3139,6 +3139,97 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
   assert(!cir::MissingFeatures::opFuncColdHotAttr());
 }
 
+void CIRGenModule::emitOpenCLKernelArgMetadata(cir::FuncOp func,
+                                               const clang::FunctionDecl *fd) {
+  assert(fd && "expected a kernel function declaration");
+  const PrintingPolicy &policy = getASTContext().getPrintingPolicy();
+
+  SmallVector<mlir::Attribute> addressQuals;
+  SmallVector<mlir::Attribute> accessQuals;
+  SmallVector<mlir::Attribute> argTypeNames;
+  SmallVector<mlir::Attribute> argBaseTypeNames;
+  SmallVector<mlir::Attribute> argTypeQuals;
+  SmallVector<mlir::Attribute> argNames;
+
+  for (const ParmVarDecl *param : fd->parameters()) {
+    argNames.push_back(builder.getStringAttr(param->getName()));
+
+    QualType type = param->getType();
+    std::string typeQuals;
+
+    if (type->isImageType() || type->isPipeType()) {
+      errorNYI(param->getSourceRange(),
+               "OpenCL kernel argument metadata for image and pipe types");
+      return;
+    }
+
+    accessQuals.push_back(builder.getStringAttr("none"));
+
+    auto getTypeSpelling = [&](QualType paramType) {
+      std::string typeName = paramType.getUnqualifiedType().getAsString(policy);
+
+      if (paramType.isCanonical()) {
+        StringRef typeNameRef = typeName;
+        if (typeNameRef.consume_front("unsigned "))
+          return std::string("u") + typeNameRef.str();
+        if (typeNameRef.consume_front("signed "))
+          return typeNameRef.str();
+      }
+
+      return typeName;
+    };
+
+    if (type->isPointerType()) {
+      QualType pointeeType = type->getPointeeType();
+      if (clang::isTargetAddressSpace(pointeeType.getAddressSpace())) {
+        errorNYI(param->getSourceRange(),
+                 "OpenCL kernel argument metadata for target-specific "
+                 "address_space(N) kernel parameters; classic CodeGen "
+                 "currently accepts this case");
+        return;
+      }
+
+      addressQuals.push_back(cir::LangAddressSpaceAttr::get(
+          &getMLIRContext(),
+          cir::toCIRLangAddressSpace(pointeeType.getAddressSpace())));
+
+      argTypeNames.push_back(
+          builder.getStringAttr(getTypeSpelling(pointeeType) + "*"));
+      argBaseTypeNames.push_back(builder.getStringAttr(
+          getTypeSpelling(pointeeType.getCanonicalType()) + "*"));
+
+      if (type.isRestrictQualified())
+        typeQuals = "restrict";
+      if (pointeeType.isConstQualified() ||
+          pointeeType.getAddressSpace() == LangAS::opencl_constant)
+        typeQuals += typeQuals.empty() ? "const" : " const";
+      if (pointeeType.isVolatileQualified())
+        typeQuals += typeQuals.empty() ? "volatile" : " volatile";
+    } else {
+      addressQuals.push_back(cir::LangAddressSpaceAttr::get(
+          &getMLIRContext(), cir::LangAddressSpace::Default));
+
+      argTypeNames.push_back(builder.getStringAttr(getTypeSpelling(type)));
+      argBaseTypeNames.push_back(
+          builder.getStringAttr(getTypeSpelling(type.getCanonicalType())));
+    }
+
+    argTypeQuals.push_back(builder.getStringAttr(typeQuals));
+  }
+
+  mlir::ArrayAttr names;
+  if (getCodeGenOpts().EmitOpenCLArgMetadata)
+    names = builder.getArrayAttr(argNames);
+
+  mlir::Attribute metadata = cir::OpenCLKernelArgMetadataAttr::get(
+      func.getContext(), builder.getArrayAttr(addressQuals),
+      builder.getArrayAttr(accessQuals), builder.getArrayAttr(argTypeNames),
+      builder.getArrayAttr(argBaseTypeNames),
+      builder.getArrayAttr(argTypeQuals), names);
+  func->setAttr(cir::CIRDialect::getOpenCLKernelArgMetadataAttrName(),
+                metadata);
+}
+
 cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
     StringRef mangledName, mlir::Type funcType, GlobalDecl gd, bool forVTable,
     bool dontDefer, bool isThunk, ForDefinition_t isForDefinition,

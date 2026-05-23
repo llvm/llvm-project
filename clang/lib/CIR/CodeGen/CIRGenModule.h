@@ -658,6 +658,10 @@ public:
   void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
                                              cir::FuncOp f);
 
+  /// Generate OpenCL kernel argument metadata for a kernel function.
+  void emitOpenCLKernelArgMetadata(cir::FuncOp func,
+                                   const clang::FunctionDecl *fd);
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);

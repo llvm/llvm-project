@@ -806,6 +806,9 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
     finishFunction(bodyRange.getEnd());
   }
 
+  if (getLangOpts().OpenCL && funcDecl->hasAttr<DeviceKernelAttr>())
+    cgm.emitOpenCLKernelArgMetadata(fn, funcDecl);
+
   eraseEmptyAndUnusedBlocks(fn);
   return fn;
 }
