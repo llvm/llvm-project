@@ -120,7 +120,7 @@ protected:
   std::string m_sdk_name_primary;
   std::string m_sdk_name_secondary;
   bool m_have_searched_for_sdk = false;
-  llvm::StringRef m_sdk;
+  std::string m_sdk;
   XcodeSDK::Type m_sdk_type;
 
   void LoadCoreSimulator();

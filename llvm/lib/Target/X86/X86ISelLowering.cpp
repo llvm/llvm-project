@@ -29704,6 +29704,15 @@ static SDValue LowerCTTZ(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getNode(X86ISD::CMOV, dl, VT, Ops);
 }
 
+static SDValue peekThroughDemandedElts(SDValue V, const APInt &DemandedElts,
+                                       SelectionDAG &DAG) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  while (SDValue NewV =
+             TLI.SimplifyMultipleUseDemandedVectorElts(V, DemandedElts, DAG))
+    V = NewV;
+  return V;
+}
+
 // Generic x86 vector reduction expansion.
 static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
                               SelectionDAG &DAG, bool AllowScalarization) {
@@ -29747,11 +29756,7 @@ static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
     APInt HiElts = APInt::getBitsSet(NumSrcElts, NumElts / 2, NumElts);
     if (!DAG.isIdentityElement(BinOp, SDNodeFlags(), Src, HiElts, 1)) {
       APInt LoElts = APInt::getLowBitsSet(NumSrcElts, NumElts / 2);
-      SDValue Lo = Src;
-      while (SDValue NewLo =
-                 TLI.SimplifyMultipleUseDemandedVectorElts(Lo, LoElts, DAG))
-        Lo = NewLo;
-
+      SDValue Lo = peekThroughDemandedElts(Src, LoElts, DAG);
       SmallVector<int, 16> Mask(NumSrcElts, -1);
       std::iota(Mask.begin(), Mask.begin() + (NumElts / 2), NumElts / 2);
       SDValue Hi =
@@ -51683,15 +51688,18 @@ static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
           sd_match(Vec, m_OneUse(m_InsertElt(
                             m_Value(InnerVec), m_Value(InnerScl),
                             m_SpecificInt(CIdx->getZExtValue() - 1))))) {
-        if (auto *InnerCst = dyn_cast<ConstantSDNode>(InnerScl)) {
+        if (isa<ConstantSDNode>(InnerScl)) {
           SDLoc DL(N);
-          APInt Pack = InnerCst->getAPIntValue().zext(2 * NumBitsPerElt);
-          Pack.insertBits(Cst->getAPIntValue().trunc(NumBitsPerElt),
-                          NumBitsPerElt);
+          SDValue Lo = DAG.getNode(ISD::ZERO_EXTEND, DL, WideSVT, InnerScl);
+          SDValue Hi = DAG.getNode(ISD::ZERO_EXTEND, DL, WideSVT, Scl);
+          Lo = DAG.getZeroExtendInReg(Lo, DL, VT.getScalarType());
+          Hi = DAG.getNode(
+              ISD::SHL, DL, WideSVT, Hi,
+              DAG.getShiftAmountConstant(NumBitsPerElt, WideSVT, DL));
           unsigned NewIdx = (CIdx->getZExtValue() - 1) / 2;
           SDValue NewInsert = DAG.getInsertVectorElt(
               DL, DAG.getBitcast(WideVT, InnerVec),
-              DAG.getConstant(Pack, DL, WideSVT), NewIdx);
+              DAG.getNode(ISD::OR, DL, WideSVT, Lo, Hi), NewIdx);
           return DAG.getBitcast(VT, NewInsert);
         }
       }

@@ -325,7 +325,7 @@ struct Part {
   std::optional<DXContainerYAML::Signature> Signature;
   std::optional<DXContainerYAML::RootSignatureYamlDesc> RootSignature;
   std::optional<DXContainerYAML::DebugName> DebugName;
-  std::optional<CompilerVersion> CompilerVersion;
+  std::optional<DXContainerYAML::CompilerVersion> CompilerVersion;
 };
 
 struct Object {

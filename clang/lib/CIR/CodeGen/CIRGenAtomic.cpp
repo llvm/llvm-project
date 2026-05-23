@@ -570,26 +570,9 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   cir::AtomicFetchKindAttr fetchAttr;
   bool fetchFirst = true;
 
-  bool fetchRequiredIntCast = false;
-  mlir::Type pointeeType = ptr.getElementType();
   auto handleFetchOp = [&](cir::AtomicFetchKind kind) {
     opName = cir::AtomicFetchOp::getOperationName();
     fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(), kind);
-
-    // The fetch operation only takes int/float as its element type, so
-    // pointer-to-pointer needs to just be cast to a intptr type. Do the first
-    // part here, and we can cast the rest later. Classic codegen has to do a
-    // bit more to handle floating point types for exchange, but this isn't
-    // really necessary for CIR. This mirrors the logic in CIRGenBuiltin for
-    // binary atomic values. Clang type checking enforces that 'val' is a
-    // PtrDiffT, so we cast to that.
-    if (mlir::isa<cir::PointerType>(pointeeType)) {
-      fetchRequiredIntCast = true;
-      mlir::Type ptrSizeInt =
-          cgf.convertType(cgf.getContext().getPointerDiffType());
-
-      ptr = ptr.withElementType(builder, ptrSizeInt);
-    }
   };
 
   switch (expr->getOp()) {
@@ -825,9 +808,6 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     rmwOp->setAttr("fetch_first", builder.getUnitAttr());
 
   mlir::Value result = rmwOp->getResult(0);
-
-  if (fetchRequiredIntCast)
-    result = builder.createIntToPtr(result, pointeeType);
 
   builder.createStore(loc, result, dest);
 }
@@ -1240,6 +1220,8 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
     ptr = atomics.castToAtomicIntPointer(ptr);
     if (val1.isValid())
       val1 = atomics.convertToAtomicIntPointer(val1);
+    if (val2.isValid())
+      val2 = atomics.convertToAtomicIntPointer(val2);
   }
   if (dest.isValid()) {
     if (shouldCastToIntPtrTy)
