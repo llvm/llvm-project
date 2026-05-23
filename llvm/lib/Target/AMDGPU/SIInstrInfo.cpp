@@ -141,13 +141,38 @@ bool SIInstrInfo::isReMaterializableImpl(
     // There is difference to generic method which does not allow
     // rematerialization if there are virtual register uses. We allow this,
     // therefore this method includes SOP instructions as well.
-    if (!MI.hasImplicitDef() &&
-        MI.getNumImplicitOperands() == MI.getDesc().implicit_uses().size() &&
+    // Allow instructions whose only implicit def (if any) is SCC.
+    bool HasUnsafeImplicitDef = false;
+    for (const MachineOperand &MO : MI.implicit_operands())
+      if (MO.isDef() && MO.getReg() != AMDGPU::SCC) {
+        HasUnsafeImplicitDef = true;
+        break;
+      }
+    if (!HasUnsafeImplicitDef &&
+        MI.getNumImplicitOperands() ==
+            MI.getDesc().implicit_defs().size() +
+                MI.getDesc().implicit_uses().size() &&
         !MI.mayRaiseFPException())
       return true;
   }
 
   return TargetInstrInfo::isReMaterializableImpl(MI);
+}
+
+bool SIInstrInfo::isImplicitDefRematerializableAt(const MachineInstr &MI,
+                                                  SlotIndex UseIdx,
+                                                  LiveIntervals &LIS) const {
+
+  // Check if SCC implicit def would clobber a live value.
+  if (MI.modifiesRegister(AMDGPU::SCC, &RI)) {
+    for (MCRegUnit Unit : RI.regunits(AMDGPU::SCC)) {
+      LiveRange &LR = LIS.getRegUnit(Unit);
+      if (LR.liveAt(UseIdx))
+        return false;
+    }
+  }
+
+  return true;
 }
 
 // Returns true if the result of a VALU instruction depends on exec.

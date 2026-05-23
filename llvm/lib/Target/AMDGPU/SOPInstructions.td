@@ -602,6 +602,7 @@ class SOP2_Pseudo<string opName, dag outs, dag ins,
   let SOP2 = 1;
   let SchedRW = [WriteSALU];
   let UseNamedOperandTable = 1;
+  let isReMaterializable = 1;
 
   let has_sdst = 1;
 

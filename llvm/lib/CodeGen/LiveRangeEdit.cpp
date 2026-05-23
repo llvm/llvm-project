@@ -78,6 +78,10 @@ bool LiveRangeEdit::canRematerializeAt(Remat &RM, SlotIndex UseIdx) {
   if (!VirtRegAuxInfo::allUsesAvailableAt(RM.OrigMI, UseIdx, LIS, MRI, TII))
     return false;
 
+  // Verify that implict defs would not clobber live values.
+  if (!TII.isImplicitDefRematerializableAt(*RM.OrigMI, UseIdx, LIS))
+    return false;
+
   return true;
 }
 

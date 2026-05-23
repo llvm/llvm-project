@@ -34,12 +34,8 @@ body:             |
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr1, 2, [[DEF]], implicit $sgpr0_sgpr1
     ; SGPR_SPILLED-NEXT: [[DEF1:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
     ; SGPR_SPILLED-NEXT: [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[DEF1]], 0, 0, implicit $exec, implicit $flat_scr
-    ; SGPR_SPILLED-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) 4, target-flags(amdgpu-rel32-hi) 4, implicit-def dead $scc
-    ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr4, 3, [[DEF]], implicit-def $sgpr4_sgpr5, implicit $sgpr4_sgpr5
-    ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR killed $sgpr5, 4, [[DEF]], implicit killed $sgpr4_sgpr5
     ; SGPR_SPILLED-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
-    ; SGPR_SPILLED-NEXT: $sgpr4 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 3, implicit-def $sgpr4_sgpr5
-    ; SGPR_SPILLED-NEXT: $sgpr5 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 4
+    ; SGPR_SPILLED-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) 4, target-flags(amdgpu-rel32-hi) 4, implicit-def dead $scc
     ; SGPR_SPILLED-NEXT: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, 0, csr_amdgpu, implicit undef $vgpr0
     ; SGPR_SPILLED-NEXT: $sgpr32 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
     ; SGPR_SPILLED-NEXT: $sgpr0 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 1, implicit-def $sgpr0_sgpr1
@@ -49,8 +45,7 @@ body:             |
     ; SGPR_SPILLED-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
     ; SGPR_SPILLED-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
     ; SGPR_SPILLED-NEXT: $vgpr0 = COPY [[FLAT_LOAD_DWORD]]
-    ; SGPR_SPILLED-NEXT: $sgpr4 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 3, implicit-def $sgpr4_sgpr5
-    ; SGPR_SPILLED-NEXT: $sgpr5 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 4
+    ; SGPR_SPILLED-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) 4, target-flags(amdgpu-rel32-hi) 4, implicit-def dead $scc
     ; SGPR_SPILLED-NEXT: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, 0, csr_amdgpu, implicit killed $vgpr0
     ; SGPR_SPILLED-NEXT: $sgpr32 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
     ; SGPR_SPILLED-NEXT: $sgpr2 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 1, implicit-def $sgpr2_sgpr3
@@ -99,12 +94,8 @@ body:             |
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr3, 2, [[DEF]], implicit $sgpr2_sgpr3
     ; SGPR_SPILLED-NEXT: [[DEF1:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
     ; SGPR_SPILLED-NEXT: [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[DEF1]], 0, 0, implicit $exec, implicit $flat_scr
-    ; SGPR_SPILLED-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) 4, target-flags(amdgpu-rel32-hi) 4, implicit-def dead $scc
-    ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr4, 3, [[DEF]], implicit-def $sgpr4_sgpr5, implicit $sgpr4_sgpr5
-    ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR killed $sgpr5, 4, [[DEF]], implicit killed $sgpr4_sgpr5
     ; SGPR_SPILLED-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
-    ; SGPR_SPILLED-NEXT: $sgpr4 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 3, implicit-def $sgpr4_sgpr5
-    ; SGPR_SPILLED-NEXT: $sgpr5 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 4
+    ; SGPR_SPILLED-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) 4, target-flags(amdgpu-rel32-hi) 4, implicit-def dead $scc
     ; SGPR_SPILLED-NEXT: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, 0, csr_amdgpu, implicit undef $vgpr0
     ; SGPR_SPILLED-NEXT: $sgpr32 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
     ; SGPR_SPILLED-NEXT: $sgpr2 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 1, implicit-def $sgpr2_sgpr3
@@ -113,8 +104,7 @@ body:             |
     ; SGPR_SPILLED-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
     ; SGPR_SPILLED-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
     ; SGPR_SPILLED-NEXT: $vgpr0 = COPY [[FLAT_LOAD_DWORD]]
-    ; SGPR_SPILLED-NEXT: $sgpr4 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 3, implicit-def $sgpr4_sgpr5
-    ; SGPR_SPILLED-NEXT: $sgpr5 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 4
+    ; SGPR_SPILLED-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) 4, target-flags(amdgpu-rel32-hi) 4, implicit-def dead $scc
     ; SGPR_SPILLED-NEXT: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, 0, csr_amdgpu, implicit killed $vgpr0
     ; SGPR_SPILLED-NEXT: $sgpr32 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
     ; SGPR_SPILLED-NEXT: $sgpr2 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 1
@@ -161,12 +151,8 @@ body:             |
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr0, 1, [[DEF]]
     ; SGPR_SPILLED-NEXT: [[DEF1:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
     ; SGPR_SPILLED-NEXT: [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[DEF1]], 0, 0, implicit $exec, implicit $flat_scr
-    ; SGPR_SPILLED-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) 4, target-flags(amdgpu-rel32-hi) 4, implicit-def dead $scc
-    ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr4, 3, [[DEF]], implicit-def $sgpr4_sgpr5, implicit $sgpr4_sgpr5
-    ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR killed $sgpr5, 4, [[DEF]], implicit killed $sgpr4_sgpr5
     ; SGPR_SPILLED-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
-    ; SGPR_SPILLED-NEXT: $sgpr4 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 3, implicit-def $sgpr4_sgpr5
-    ; SGPR_SPILLED-NEXT: $sgpr5 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 4
+    ; SGPR_SPILLED-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) 4, target-flags(amdgpu-rel32-hi) 4, implicit-def dead $scc
     ; SGPR_SPILLED-NEXT: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, 0, csr_amdgpu, implicit undef $vgpr0
     ; SGPR_SPILLED-NEXT: $sgpr32 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
     ; SGPR_SPILLED-NEXT: $sgpr0 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 1
@@ -175,8 +161,7 @@ body:             |
     ; SGPR_SPILLED-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
     ; SGPR_SPILLED-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
     ; SGPR_SPILLED-NEXT: $vgpr0 = COPY [[FLAT_LOAD_DWORD]]
-    ; SGPR_SPILLED-NEXT: $sgpr4 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 3, implicit-def $sgpr4_sgpr5
-    ; SGPR_SPILLED-NEXT: $sgpr5 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 4
+    ; SGPR_SPILLED-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) 4, target-flags(amdgpu-rel32-hi) 4, implicit-def dead $scc
     ; SGPR_SPILLED-NEXT: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, 0, csr_amdgpu, implicit killed $vgpr0
     ; SGPR_SPILLED-NEXT: $sgpr32 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
     ; SGPR_SPILLED-NEXT: $sgpr2 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 1, implicit-def $sgpr2_sgpr3

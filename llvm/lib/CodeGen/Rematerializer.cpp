@@ -485,6 +485,14 @@ bool Rematerializer::isMIRematerializable(const MachineInstr &MI) const {
     }
   }
 
+  // Can't remat instructions that define non-reserved physical registers
+  // because updateLiveIntervals only handles virtual registers, so the live
+  // ranges for non-reserved physical register defs can become invalid.
+  // TODO: Update updateLiveIntervals to handle physical registers?
+  for (const MachineOperand &MO : MI.implicit_operands())
+    if (MO.isDef() && MO.getReg().isPhysical() && !MRI.isReserved(MO.getReg()))
+      return false;
+
   return true;
 }
 
