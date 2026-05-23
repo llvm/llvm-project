@@ -17,11 +17,12 @@
 // ADDITIONAL_COMPILE_FLAGS(target=aarch64-w64-windows-gnu): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=armv7-w64-windows-gnu): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=arm64ec-w64-windows-gnu): -fsized-deallocation
-
+// ADDITIONAL_COMPILE_FLAGS(target=powerpc-ibm-aix7.2.5.11): -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS(target=powerpc64-ibm-aix7.2.5.11): -fsized-deallocation
 // UNSUPPORTED: sanitizer-new-delete
 
 // AIX, and z/OS default to -fno-sized-deallocation.
-// XFAIL: target={{.+}}-aix{{.*}}, target={{.+}}-zos{{.*}}
+// XFAIL: target={{.+}}-zos{{.*}}
 
 #if !defined(__cpp_sized_deallocation)
 # error __cpp_sized_deallocation should be defined
