@@ -35,6 +35,7 @@
 #include <cassert>
 #include <mdspan>
 #include <span>
+#include <string_view>
 #include <vector>
 
 #include "assert_macros.h"
@@ -297,7 +298,7 @@ constexpr bool test_cast() {
   return true;
 }
 
-static void test_throws() {
+void test_throws() {
   std::array<int, 100> data{};
   std::mdspan m(data.data(), 10, 10);
 
@@ -312,6 +313,77 @@ static void test_throws() {
 
   [[maybe_unused]] std::array bad_col{0, 10};
   TEST_THROWS_TYPE(std::out_of_range, m.at(std::span{bad_col}));
+
+#ifndef TEST_HAS_NO_EXCEPTIONS
+  auto verify_exception_message = [](auto&& f) {
+    try {
+      f();
+      assert(false && "Unexpected");
+    } catch (const std::out_of_range& e [[maybe_unused]]) {
+      LIBCPP_ASSERT(std::string_view(e.what()) == "mdspan");
+    } catch (...) {
+      assert(false && "Unexpected");
+    }
+  };
+  {
+    float data[1024];
+    // value out of range
+    {
+      std::mdspan m(data, std::extents<unsigned char, 5>());
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(-1); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(-130); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(5); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(256); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(1000); });
+    }
+    {
+      std::mdspan m(data, std::extents<signed char, 5>());
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(-1); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(-130); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(5); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(128); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(1000); });
+    }
+    {
+      std::mdspan m(data, std::dextents<unsigned char, 1>(5));
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(-1); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(-130); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(5); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(256); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(1000); });
+    }
+    {
+      std::mdspan m(data, std::dextents<signed char, 1>(5));
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(-1); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(-130); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(5); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(128); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(1000); });
+    }
+    {
+      std::mdspan m(data, std::dextents<int, 3>(5, 7, 9));
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(-1, -1, -1); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(-1, 0, 0); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(0, -1, 0); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(0, 0, -1); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(5, 3, 3); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(3, 7, 3); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(3, 3, 9); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(5, 7, 9); });
+    }
+    {
+      std::mdspan m(data, std::dextents<unsigned, 3>(5, 7, 9));
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(-1, -1, -1); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(-1, 0, 0); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(0, -1, 0); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(0, 0, -1); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(5, 3, 3); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(3, 7, 3); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(3, 3, 9); });
+      verify_exception_message([&] { TEST_IGNORE_NODISCARD m.at(5, 7, 9); });
+    }
+  }
+#endif
 }
 
 int main(int, char**) {
