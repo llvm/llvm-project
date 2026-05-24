@@ -2936,9 +2936,7 @@ static LogicalResult verifyBarrierIdRange(BarrierLikeOp op) {
   return success();
 }
 
-LogicalResult NVVM::BarrierOp::verify() {
-  return verifyBarrierIdRange(*this);
-}
+LogicalResult NVVM::BarrierOp::verify() { return verifyBarrierIdRange(*this); }
 
 LogicalResult NVVM::BarrierReductionOp::verify() {
   return verifyBarrierIdRange(*this);
