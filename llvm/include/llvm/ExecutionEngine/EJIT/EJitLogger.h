@@ -11,8 +11,10 @@
 
 #include "llvm/ExecutionEngine/EJIT/EJitError.h"
 #include <cstdint>
-#include <mutex>
 #include <vector>
+#ifndef EJIT_BARE_METAL
+#include <mutex>
+#endif
 
 namespace llvm {
 namespace ejit {
@@ -34,7 +36,9 @@ public:
   void clear();
 
 private:
+#ifndef EJIT_BARE_METAL
   mutable std::mutex mutex_;
+#endif
   EJitError errors_[kMaxErrors];
   size_t writeIdx_ = 0;
   size_t count_ = 0;

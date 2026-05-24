@@ -1,6 +1,7 @@
 //===-- EJitRuntimeState.cpp - Activate/Deactivate State ------------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
+#include <mutex>
 
 using namespace llvm::ejit;
 
@@ -53,18 +54,18 @@ PeriodArrayRegistry::getArrayByBaseAddr(void *addr) const {
 
 void EJitRuntimeState::activate(const std::string &periodName,
                                 uint8_t cellIdx) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<decltype(mutex_)> lock(mutex_);
   states_[periodName][cellIdx] = PeriodState::Active;
 }
 
 void EJitRuntimeState::deactivate(const std::string &periodName,
                                   uint8_t cellIdx) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<decltype(mutex_)> lock(mutex_);
   states_[periodName][cellIdx] = PeriodState::Inactive;
 }
 
 void EJitRuntimeState::activateAll(const std::string &periodName) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<decltype(mutex_)> lock(mutex_);
   // Activate all cells of all arrays registered under this period name.
   const auto *arrs = registry_.getArrays(periodName);
   if (arrs) {
@@ -77,7 +78,7 @@ void EJitRuntimeState::activateAll(const std::string &periodName) {
 }
 
 void EJitRuntimeState::deactivateAll(const std::string &periodName) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<decltype(mutex_)> lock(mutex_);
   const auto *arrs = registry_.getArrays(periodName);
   if (arrs) {
     for (const auto &info : *arrs) {
@@ -90,7 +91,7 @@ void EJitRuntimeState::deactivateAll(const std::string &periodName) {
 
 bool EJitRuntimeState::isActive(const std::string &periodName,
                                 uint8_t cellIdx) const {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<decltype(mutex_)> lock(mutex_);
   auto pit = states_.find(periodName);
   if (pit == states_.end())
     return false;

@@ -3,9 +3,27 @@
 #include "llvm/ExecutionEngine/EJIT/EJitCache.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
+#include <mutex>
+#include <shared_mutex>
+#ifndef EJIT_BARE_METAL
 #include <chrono>
+#endif
 
 using namespace llvm::ejit;
+
+namespace {
+
+#ifdef EJIT_BARE_METAL
+uint64_t getTimestamp() { return 0; }
+#else
+uint64_t getTimestamp() {
+  return std::chrono::duration_cast<std::chrono::milliseconds>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
+}
+#endif
+
+} // namespace
 
 EJitCache::EJitCache(size_t maxEntries, size_t maxTotalSize,
                      size_t maxSingleFuncSize)
@@ -13,7 +31,7 @@ EJitCache::EJitCache(size_t maxEntries, size_t maxTotalSize,
       maxSingleFuncSize_(maxSingleFuncSize) {}
 
 void *EJitCache::getOrNull(uint32_t cacheKey) {
-  std::shared_lock<std::shared_mutex> lock(mutex_);
+  std::shared_lock<decltype(mutex_)> lock(mutex_);
   auto it = cache_.find(cacheKey);
   if (it == cache_.end()) {
     misses_++;
@@ -21,10 +39,7 @@ void *EJitCache::getOrNull(uint32_t cacheKey) {
   }
 
   hits_++;
-  it->second.lastAccessTime =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          std::chrono::steady_clock::now().time_since_epoch())
-          .count();
+  it->second.lastAccessTime = getTimestamp();
 
   auto lruIt = lruIter_.find(cacheKey);
   if (lruIt != lruIter_.end()) {
@@ -38,7 +53,7 @@ void *EJitCache::getOrNull(uint32_t cacheKey) {
 bool EJitCache::put(uint32_t cacheKey, void *funcPtr,
                     size_t codeSize,
                     const std::set<std::string> &periodDeps) {
-  std::unique_lock<std::shared_mutex> lock(mutex_);
+  std::unique_lock<decltype(mutex_)> lock(mutex_);
 
   if (codeSize > maxSingleFuncSize_)
     return false;
@@ -48,11 +63,7 @@ bool EJitCache::put(uint32_t cacheKey, void *funcPtr,
           currentTotalSize_ + codeSize > maxTotalSize_))
     evictLRU();
 
-  uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
-                     std::chrono::steady_clock::now().time_since_epoch())
-                     .count();
-
-  Entry entry{cacheKey, funcPtr, codeSize, now, periodDeps};
+  Entry entry{cacheKey, funcPtr, codeSize, getTimestamp(), periodDeps};
   cache_[cacheKey] = entry;
   currentTotalSize_ += codeSize;
 
@@ -67,7 +78,7 @@ bool EJitCache::put(uint32_t cacheKey, void *funcPtr,
 
 void EJitCache::invalidateByPeriod(const std::string &periodName,
                                    uint8_t cellIdx) {
-  std::unique_lock<std::shared_mutex> lock(mutex_);
+  std::unique_lock<decltype(mutex_)> lock(mutex_);
   std::string dep = periodName + "=" + std::to_string(cellIdx);
 
   auto it = periodIndex_.find(dep);
@@ -90,7 +101,7 @@ void EJitCache::invalidateByPeriod(const std::string &periodName,
 }
 
 void EJitCache::clear() {
-  std::unique_lock<std::shared_mutex> lock(mutex_);
+  std::unique_lock<decltype(mutex_)> lock(mutex_);
   cache_.clear();
   lruList_.clear();
   lruIter_.clear();
@@ -99,7 +110,7 @@ void EJitCache::clear() {
 }
 
 EJitCache::Stats EJitCache::getStats() const {
-  std::shared_lock<std::shared_mutex> lock(mutex_);
+  std::shared_lock<decltype(mutex_)> lock(mutex_);
   Stats s;
   s.entryCount = cache_.size();
   s.totalCodeSize = currentTotalSize_;

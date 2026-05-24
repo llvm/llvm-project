@@ -9,11 +9,14 @@
 #ifndef LLVM_EXECUTIONENGINE_EJIT_EJITREGISTRATIONSTORE_H
 #define LLVM_EXECUTIONENGINE_EJIT_EJITREGISTRATIONSTORE_H
 
+#include "llvm/ExecutionEngine/EJIT/EJitBareMetal.h"
 #include <cstddef>
 #include <cstdint>
-#include <mutex>
 #include <string>
 #include <vector>
+#ifndef EJIT_BARE_METAL
+#include <mutex>
+#endif
 
 namespace llvm {
 namespace ejit {
@@ -52,6 +55,11 @@ struct StoredData {
 /// constructor-phase registration callbacks to ejit_init.
 class EJitRegistrationStore {
 public:
+#ifdef EJIT_BARE_METAL
+  using MutexType = BareMetalMutex;
+#else
+  using MutexType = std::mutex;
+#endif
   static EJitRegistrationStore &instance();
 
   void registerBitcode(const std::string &funcName,
@@ -68,7 +76,7 @@ public:
 private:
   EJitRegistrationStore() = default;
 
-  std::mutex mutex_;
+  MutexType mutex_;
   std::vector<BitcodeEntry> bitcodes_;
   std::vector<PeriodArrayEntry> periodArrays_;
   std::vector<StaticVarEntry> staticVars_;

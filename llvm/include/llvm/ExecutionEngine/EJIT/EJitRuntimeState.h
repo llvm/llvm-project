@@ -9,11 +9,14 @@
 #ifndef LLVM_EXECUTIONENGINE_EJIT_EJITRUNTIMESTATE_H
 #define LLVM_EXECUTIONENGINE_EJIT_EJITRUNTIMESTATE_H
 
+#include "llvm/ExecutionEngine/EJIT/EJitBareMetal.h"
 #include <cstdint>
-#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
+#ifndef EJIT_BARE_METAL
+#include <mutex>
+#endif
 
 namespace llvm {
 namespace ejit {
@@ -61,6 +64,11 @@ enum class PeriodState { Inactive, Active };
 /// Manages activate/deactivate state of time-window period instances.
 class EJitRuntimeState {
 public:
+#ifdef EJIT_BARE_METAL
+  using MutexType = BareMetalMutex;
+#else
+  using MutexType = std::mutex;
+#endif
   void activate(const std::string &periodName, uint8_t cellIdx);
   void deactivate(const std::string &periodName, uint8_t cellIdx);
   void activateAll(const std::string &periodName);
@@ -72,7 +80,7 @@ public:
 
 private:
   PeriodArrayRegistry registry_;
-  mutable std::mutex mutex_;
+  mutable MutexType mutex_;
   std::unordered_map<std::string, std::unordered_map<uint8_t, PeriodState>> states_;
 };
 

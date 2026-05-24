@@ -3,7 +3,9 @@
 #include "llvm/ExecutionEngine/EJIT/EJitCompileDriver.h"
 #include "llvm/ExecutionEngine/EJIT/EJitLogger.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
+#ifndef EJIT_BARE_METAL
 #include <chrono>
+#endif
 
 using namespace llvm;
 using namespace llvm::ejit;
@@ -80,7 +82,9 @@ void *EJitCompileDriver::getOrCompile(
     return nullptr;
   }
 
+#ifndef EJIT_BARE_METAL
   auto start = std::chrono::steady_clock::now();
+#endif
 
   syncEngine_->setActiveContext(&ctx);
 
@@ -105,10 +109,6 @@ void *EJitCompileDriver::getOrCompile(
   }
 
   void *funcPtr = *addrOrErr;
-
-  auto end = std::chrono::steady_clock::now();
-  size_t compileTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-                             end - start).count();
 
   // Cache the result.
   // NOTE: codeSize is the bitcode size, not the compiled machine code size.

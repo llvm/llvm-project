@@ -1,7 +1,11 @@
 //===-- EJitLogger.cpp - EmbeddedJIT Error Logger -------------------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitLogger.h"
+
+#ifndef EJIT_BARE_METAL
+
 #include <chrono>
+#include <mutex>
 
 using namespace llvm::ejit;
 
@@ -56,3 +60,16 @@ void EJitLogger::clear() {
   writeIdx_ = 0;
   count_ = 0;
 }
+
+#else // EJIT_BARE_METAL — no-op stubs
+
+using namespace llvm::ejit;
+
+void EJitLogger::log(ErrorCode, const std::string &,
+                     const std::string &, const std::string &, size_t) {}
+const EJitError *EJitLogger::getLastError() const { return nullptr; }
+bool EJitLogger::copyLastError(EJitError &) const { return false; }
+std::vector<EJitError> EJitLogger::getErrors(size_t) const { return {}; }
+void EJitLogger::clear() {}
+
+#endif // EJIT_BARE_METAL

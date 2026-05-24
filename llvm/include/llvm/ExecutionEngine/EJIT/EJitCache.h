@@ -9,14 +9,17 @@
 #ifndef LLVM_EXECUTIONENGINE_EJIT_EJITCACHE_H
 #define LLVM_EXECUTIONENGINE_EJIT_EJITCACHE_H
 
+#include "llvm/ExecutionEngine/EJIT/EJitBareMetal.h"
 #include <cstddef>
 #include <cstdint>
 #include <list>
-#include <mutex>
 #include <set>
-#include <shared_mutex>
 #include <string>
 #include <unordered_map>
+#ifndef EJIT_BARE_METAL
+#include <mutex>
+#include <shared_mutex>
+#endif
 
 namespace llvm {
 namespace ejit {
@@ -25,6 +28,11 @@ namespace ejit {
 /// Cache key: uint32_t = funcIdx(16b) | dim3(4b) | dim2(4b) | dim1(4b) | dim0(4b)
 class EJitCache {
 public:
+#ifdef EJIT_BARE_METAL
+  using MutexType = BareMetalMutex;
+#else
+  using MutexType = std::shared_mutex;
+#endif
   struct Entry {
     uint32_t cacheKey;
     void *funcPtr;
@@ -67,7 +75,7 @@ public:
 private:
   void evictLRU();
 
-  mutable std::shared_mutex mutex_;
+  mutable MutexType mutex_;
   std::unordered_map<uint32_t, Entry> cache_;
   std::list<uint32_t> lruList_;
   std::unordered_map<uint32_t, std::list<uint32_t>::iterator> lruIter_;
