@@ -29,19 +29,28 @@ class EJitOptimizer {
 public:
   EJitOptimizer(PeriodArrayRegistry &reg);
 
+  /// Run the full JIT specialization pipeline:
+  ///   1. Parameter substitution (ejit_period_arr_ind → constants)
+  ///   2. InstCombine (fold GEP chains from substituted params)
+  ///   3. StructFieldPass (may_const loads → constants)
+  ///   4. Core optimization pipeline (L1/L2/L3)
+  ///   5. Cleanup passes (only for L2/L3 which may expose new loads)
+  void runPipeline(Module &M, const SpecializationContext &ctx);
+
+private:
   /// Replace ejit_period_arr_ind parameters with their runtime constants.
   void preReplacePeriodIndices(Module &M, const SpecializationContext &ctx);
 
-  /// Run InstCombine on all functions.
+  /// Run InstCombine on all functions (single pass).
   void runInstCombine(Module &M);
 
-  /// Run the full optimization pipeline at the given level (L1/L2/L3).
+  /// Run EJitStructFieldPass on all functions.
+  void runStructFieldPass(Module &M);
+
+  /// Run core optimization: L1 = SCCP+ADCE+SimplifyCFG,
+  /// L2 = + AlwaysInliner + cleanup, L3 = + LoopUnroll + cleanup.
   void runOptimizationPipeline(Module &M, OptimizationLevel level);
 
-  /// Return the FunctionAnalysisManager (for use by EJitStructFieldPass).
-  FunctionAnalysisManager &getFAM() { return FAM_; }
-
-private:
   PeriodArrayRegistry &registry_;
 
   // Persistent analysis managers — registered once, reused across compilations.

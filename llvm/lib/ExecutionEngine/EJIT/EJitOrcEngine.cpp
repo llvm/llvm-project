@@ -3,7 +3,6 @@
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOptimizer.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
-#include "llvm/ExecutionEngine/EJIT/EJitStructFieldPass.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -94,8 +93,8 @@ EJitOrcEngine::Create(const Config &config,
   }
 
   // Set up IR transform layer: runs the specialization pipeline during
-  // JIT compilation (parameter substitution → InstCombine → Inline →
-  // StructFieldPass → standard optimization).
+  // JIT compilation (parameter substitution → InstCombine → StructFieldPass
+  // → core optimization pipeline).
   engine->P->J->getIRTransformLayer().setTransform(
       [engine = engine.get(), &periodReg](
           orc::ThreadSafeModule TSM,
@@ -110,14 +109,8 @@ EJitOrcEngine::Create(const Config &config,
 
           EJitOptimizer opt(periodReg);
 
-          // 1. Parameter substitution: replace ejit_period_arr_ind args
-          opt.preReplacePeriodIndices(M, *ctx);
-
-          // 2. InstCombine: fold constant chains from substituted params
-          opt.runInstCombine(M);
-
           // Dump pre-optimization IR if configured.
-          if (!engine->P->dumpJITDir.empty() && ctx) {
+          if (!engine->P->dumpJITDir.empty()) {
             std::string path = engine->P->dumpJITDir + "/" +
                                ctx->fnName + "_" +
                                std::to_string(ctx->cacheKey) + "_pre.ll";
@@ -127,31 +120,10 @@ EJitOrcEngine::Create(const Config &config,
               M.print(OS, nullptr);
           }
 
-          // 3. First EJitStructFieldPass: replace ejit_may_const loads
-          //    before the optimization pipeline so SCCP/ADCE can propagate
-          //    the resulting constants.
-          {
-            EJitStructFieldPass structField(periodReg);
-            for (Function &F : M.functions())
-              if (!F.isDeclaration())
-                structField.run(F, opt.getFAM());
-          }
-
-          // 4. Run the standard optimization pipeline at the configured level.
-          opt.runOptimizationPipeline(M, ctx->optLevel);
-
-          // 5. Second EJitStructFieldPass + InstCombine: catch loads exposed
-          //    after loop unrolling (L3) or inlining.
-          {
-            EJitStructFieldPass structField(periodReg);
-            for (Function &F : M.functions())
-              if (!F.isDeclaration())
-                structField.run(F, opt.getFAM());
-          }
-          opt.runInstCombine(M);
+          opt.runPipeline(M, *ctx);
 
           // Dump post-optimization IR if configured.
-          if (!engine->P->dumpJITDir.empty() && ctx) {
+          if (!engine->P->dumpJITDir.empty()) {
             std::string path = engine->P->dumpJITDir + "/" +
                                ctx->fnName + "_" +
                                std::to_string(ctx->cacheKey) + "_opt.ll";
@@ -282,5 +254,3 @@ const SpecializationContext *EJitOrcEngine::getActiveContext() const {
 void EJitOrcEngine::addUserSymbol(const std::string &name, void *addr) {
   P->userSymbols[name] = addr;
 }
-// DEBUG
-#include <cstdio>

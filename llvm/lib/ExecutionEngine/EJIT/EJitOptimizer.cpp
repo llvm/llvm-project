@@ -1,6 +1,7 @@
 //===-- EJitOptimizer.cpp - JIT Optimization Pipeline ---------------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitOptimizer.h"
+#include "llvm/ExecutionEngine/EJIT/EJitStructFieldPass.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
@@ -24,12 +25,27 @@ using namespace llvm::ejit;
 
 EJitOptimizer::EJitOptimizer(PeriodArrayRegistry &reg)
     : registry_(reg) {
-  (void)registry_;
   EJitPassBuilder::registerFunctionAnalyses(FAM_);
   EJitPassBuilder::registerLoopAnalyses(LAM_);
   EJitPassBuilder::registerCGSCCAnalyses(CGAM_);
   EJitPassBuilder::registerModuleAnalyses(MAM_);
   EJitPassBuilder::crossRegisterProxies(LAM_, FAM_, CGAM_, MAM_);
+}
+
+void EJitOptimizer::runPipeline(Module &M,
+                                const SpecializationContext &ctx) {
+  // 1. Parameter substitution: replace ejit_period_arr_ind args with constants
+  preReplacePeriodIndices(M, ctx);
+
+  // 2. InstCombine: fold constant GEP chains from substituted params
+  //    so StructFieldPass can compute correct byte offsets.
+  runInstCombine(M);
+
+  // 3. StructFieldPass: replace may_const loads with runtime constants
+  runStructFieldPass(M);
+
+  // 4. Core optimization at the configured level
+  runOptimizationPipeline(M, ctx.optLevel);
 }
 
 void EJitOptimizer::preReplacePeriodIndices(
@@ -74,17 +90,24 @@ void EJitOptimizer::preReplacePeriodIndices(
 void EJitOptimizer::runInstCombine(Module &M) {
   FunctionPassManager FPM;
   FPM.addPass(InstCombinePass());
-  FPM.addPass(PromotePass());
-  FPM.addPass(InstCombinePass());
 
   for (Function &F : M.functions())
     if (!F.isDeclaration())
       FPM.run(F, FAM_);
 }
 
+void EJitOptimizer::runStructFieldPass(Module &M) {
+  EJitStructFieldPass structField(registry_);
+  for (Function &F : M.functions())
+    if (!F.isDeclaration())
+      structField.run(F, FAM_);
+}
+
 void EJitOptimizer::runOptimizationPipeline(Module &M,
                                             OptimizationLevel level) {
-  // L1: SCCP + ADCE + SimplifyCFG
+  // L1: SCCP + ADCE + SimplifyCFG — constant propagation, dead code
+  // elimination, and CFG cleanup. Captures the vast majority of EJIT
+  // performance gains (may_const load → constant → branch folding).
   {
     FunctionPassManager FPM;
     FPM.addPass(SCCPPass());
@@ -96,20 +119,27 @@ void EJitOptimizer::runOptimizationPipeline(Module &M,
         FPM.run(F, FAM_);
   }
 
+  // L2: Inline always_inline helpers, then clean up + re-run
+  // StructFieldPass for loads exposed by inlining.
   if (static_cast<int>(level) >= 2) {
     ModulePassManager MPM;
     MPM.addPass(AlwaysInlinerPass());
     MPM.run(M, MAM_);
 
-    for (Function &F : M.functions()) {
-      if (!F.isDeclaration()) {
-        FunctionPassManager FPM2;
-        FPM2.addPass(SimplifyCFGPass());
-        FPM2.run(F, FAM_);
-      }
+    {
+      FunctionPassManager FPM;
+      FPM.addPass(SimplifyCFGPass());
+      for (Function &F : M.functions())
+        if (!F.isDeclaration())
+          FPM.run(F, FAM_);
     }
+
+    runStructFieldPass(M);
+    runInstCombine(M);
   }
 
+  // L3: Unroll small loops with may_const-dependent bodies, then clean up
+  // + re-run StructFieldPass for loads exposed by unrolling.
   if (static_cast<int>(level) >= 3) {
     FunctionPassManager FPM3;
     FPM3.addPass(LoopSimplifyPass());
@@ -123,5 +153,8 @@ void EJitOptimizer::runOptimizationPipeline(Module &M,
     for (Function &F : M.functions())
       if (!F.isDeclaration())
         FPM3.run(F, FAM_);
+
+    runStructFieldPass(M);
+    runInstCombine(M);
   }
 }
