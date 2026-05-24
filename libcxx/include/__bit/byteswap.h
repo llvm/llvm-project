@@ -31,6 +31,8 @@ template <integral _Tp>
   // [bit.byteswap]/Mandates: T does not have padding bits.
   // bool is grandfathered: every shipping implementation admits it and the
   // size-1 identity path can't shuffle padding bits into value positions.
+  // LWG 4583 proposes relaxing this to allow byte-aligned padding (e.g.
+  // _BitInt(48) where 2 whole bytes are padding); revisit once it resolves.
   static_assert(is_same_v<remove_cv_t<_Tp>, bool> ||
                     numeric_limits<_Tp>::digits + numeric_limits<_Tp>::is_signed == sizeof(_Tp) * CHAR_BIT,
                 "std::byteswap requires T to have no padding bits");
