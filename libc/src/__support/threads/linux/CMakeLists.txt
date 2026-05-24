@@ -32,9 +32,9 @@ add_header_library(
     .futex_utils
     .futex_word_type
     libc.hdr.errno_macros
+    libc.hdr.types.size_t
     libc.src.__support.OSUtil.osutil
     libc.src.__support.CPP.limits
-    libc.src.__support.CPP.new
     libc.src.__support.CPP.optional
     libc.src.__support.time.monotonicity
     libc.src.__support.macros.attributes

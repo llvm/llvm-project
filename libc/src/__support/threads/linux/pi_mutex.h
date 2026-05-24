@@ -17,7 +17,6 @@
 #include "hdr/errno_macros.h"
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/limits.h"
-#include "src/__support/CPP/new.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/attributes.h"
