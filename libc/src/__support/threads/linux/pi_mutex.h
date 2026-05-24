@@ -15,6 +15,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_PI_MUTEX_H
 
 #include "hdr/errno_macros.h"
+#include "hdr/types/size_t.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/optional.h"

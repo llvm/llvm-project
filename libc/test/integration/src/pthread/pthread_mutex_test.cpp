@@ -36,8 +36,8 @@ static pthread_mutex_t snapshot_mutex(const void *mutex_storage) {
   return snapshot;
 }
 
-static void set_priority_inherit(pthread_mutexattr_t *attr,
-                                 bool priority_inherit) {
+static void enable_priority_inherit_if_needed(pthread_mutexattr_t *attr,
+                                              bool priority_inherit) {
   if (priority_inherit)
     *attr |=
         unsigned(LIBC_NAMESPACE::PThreadMutexAttrPos::PRIORITY_INHERIT_MASK);
@@ -46,7 +46,7 @@ static void set_priority_inherit(pthread_mutexattr_t *attr,
 static void init_mutex(pthread_mutex_t *mutex, bool priority_inherit) {
   pthread_mutexattr_t attr;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_init(&attr), 0);
-  set_priority_inherit(&attr, priority_inherit);
+  enable_priority_inherit_if_needed(&attr, priority_inherit);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(mutex, &attr), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_destroy(&attr), 0);
   pthread_mutex_t snapshot = snapshot_mutex(mutex);
@@ -190,7 +190,7 @@ void recursive_mutex_test(bool priority_inherit) {
   ASSERT_EQ(
       LIBC_NAMESPACE::pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE),
       0);
-  set_priority_inherit(&attr, priority_inherit);
+  enable_priority_inherit_if_needed(&attr, priority_inherit);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&recursive_mutex, &attr), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_destroy(&attr), 0);
 
@@ -265,7 +265,7 @@ void error_checking_mutex_test(bool priority_inherit) {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_settype(&attr,
                                                       PTHREAD_MUTEX_ERRORCHECK),
             0);
-  set_priority_inherit(&attr, priority_inherit);
+  enable_priority_inherit_if_needed(&attr, priority_inherit);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&error_checking_mutex, &attr),
             0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_destroy(&attr), 0);
