@@ -773,6 +773,22 @@ tryToMergePartialOverlappingStores(StoreInst *KillingI, StoreInst *DeadI,
                                    const DataLayout &DL, BatchAAResults &AA,
                                    DominatorTree *DT) {
 
+  // The merge erases KillingI and writes its bytes via DeadI. For that to be
+  // safe:
+  //   - KillingI must be deletable (not volatile, ordering at most unordered),
+  //   - DeadI must be safe to rewrite (likewise), and
+  //   - Their orderings must match, so the bytes originally written by
+  //     KillingI keep the same atomicity after they are folded into DeadI.
+  // This allows merging two simple stores or two unordered-atomic stores with
+  // matching ordering, while leaving volatile and ordered-atomic stores in
+  // place.
+  if (KillingI && DeadI) {
+    if (!KillingI->isUnordered() || !DeadI->isUnordered())
+      return nullptr;
+    if (KillingI->getOrdering() != DeadI->getOrdering())
+      return nullptr;
+  }
+
   if (DeadI && isa<ConstantInt>(DeadI->getValueOperand()) &&
       DL.typeSizeEqualsStoreSize(DeadI->getValueOperand()->getType()) &&
       KillingI && isa<ConstantInt>(KillingI->getValueOperand()) &&
