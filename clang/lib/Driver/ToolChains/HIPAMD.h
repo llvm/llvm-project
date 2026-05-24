@@ -64,6 +64,7 @@ public:
   llvm::opt::DerivedArgList *
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
+
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
@@ -83,8 +84,6 @@ public:
   llvm::SmallVector<BitCodeLibraryInfo, 12>
   getDeviceLibs(const llvm::opt::ArgList &Args,
                 Action::OffloadKind DeviceOffloadKind) const override;
-
-  SanitizerMask getSupportedSanitizers() const override;
 
   VersionTuple
   computeMSVCVersion(const Driver *D,

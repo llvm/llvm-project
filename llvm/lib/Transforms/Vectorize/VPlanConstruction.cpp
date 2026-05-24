@@ -543,13 +543,17 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy,
   // The canonical LatchVPBB has the header block as last successor. If it has
   // another successor, this successor is an exit block - insert middle block on
   // its edge. Otherwise, add middle block as another successor retaining header
-  // as last.
+  // as last. In the latter case, the latch has no conditional terminator yet,
+  // so insert a placeholder BranchOnCond that always continues to the header.
+  // It will be canonicalized to a BranchOnCount later
   if (LatchVPBB->getNumSuccessors() == 2) {
     VPBlockBase *LatchExitVPB = LatchVPBB->getSuccessors()[0];
     VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, MiddleVPBB);
   } else {
     VPBlockUtils::connectBlocks(LatchVPBB, MiddleVPBB);
     LatchVPBB->swapSuccessors();
+    VPBuilder(LatchVPBB).createNaryOp(VPInstruction::BranchOnCond,
+                                      {Plan.getFalse()});
   }
 
   // Create SCEV and VPValue for the trip count.
@@ -1299,8 +1303,9 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   Header->splitAt(Header->getFirstNonPhi());
 
   // Create the header mask, insert it in the header and branch on it.
-  auto *IV =
-      new VPWidenCanonicalIVRecipe(Header->getParent()->getCanonicalIV());
+  auto *IV = new VPWidenCanonicalIVRecipe(
+      LoopRegion->getCanonicalIV(),
+      VPIRFlags::WrapFlagsTy(LoopRegion->hasCanonicalIVNUW(), false));
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   Builder.insert(IV);
   VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();

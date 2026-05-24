@@ -531,6 +531,39 @@ options or configuration.  The dependency direction is: the MLIR ABI pass
 depends on ``llvm/lib/ABI``; there is no reverse dependency from the ABI library
 to MLIR dialects.
 
+CIR Pass Pipeline Position
+--------------------------
+
+For the CIR dialect, the calling-convention lowering pass is named
+``cir-call-conv-lowering`` and runs late in the CIR-to-LLVM pipeline:
+
+1. ``cir-target-lowering`` legalizes target-specific operations (e.g.
+   atomic synchronization scopes).
+2. ``cir-cxxabi-lowering`` lowers C++-specific high-level types (member
+   pointers, vtable lookups, etc.) to ABI-specific representations.
+3. ``cir-call-conv-lowering`` rewrites function signatures and call sites
+   to match the target ABI's calling convention rules.
+
+``cir-call-conv-lowering`` requires a ``dlti.dl_spec`` attribute on the
+module so it can query type sizes and alignments through MLIR's
+``DataLayout``.  When the attribute is missing, the pass emits a
+diagnostic and fails rather than silently using a default layout.
+
+The pass takes one of two driver modes via pass options:
+
+- ``target=<name>`` selects a real ABI target.  The first supported value
+  is ``test`` (the MLIR test target in ``mlir/lib/ABI/Targets/Test/``,
+  used for testing the rewriter without depending on the in-progress
+  LLVM ABI library targets).  Real targets (``x86_64``, ``aarch64``,
+  ...) will be added as the LLVM ABI library ships them.
+- ``classification-attr=<name>`` reads a pre-built ``FunctionClassifica
+  tion`` from a ``DictionaryAttr`` named ``<name>`` on each ``cir.func``
+  and rewrites accordingly.  This driver is for tests that need to
+  exercise rewriter behavior against arbitrary classifications without
+  routing through any real classifier.
+
+Exactly one of the two options must be set.
+
 Open Questions
 ==============
 

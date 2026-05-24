@@ -357,15 +357,18 @@ bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
          TII->isInlineAsmDefInstr(MI);
 }
 
-// This is a special case of a function pointer refering to a possibly
+// This is a special case of a function pointer referring to a possibly
 // forward function declaration. The operand is a dummy OpUndef that
 // requires a special treatment.
+// FunPtrOp is the MachineOperand previously recorded via
+// SPIRVGlobalRegistry::recordFunctionPointer, identifying which Function
+// this placeholder refers to.
 void SPIRVModuleAnalysis::visitFunPtrUse(
-    Register OpReg, InstrGRegsMap &SignatureToGReg,
-    std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF,
-    const MachineInstr &MI) {
-  const MachineOperand *OpFunDef =
-      GR->getFunctionDefinitionByUse(&MI.getOperand(2));
+    Register OpReg, const MachineOperand *FunPtrOp,
+    InstrGRegsMap &SignatureToGReg,
+    std::map<const Value *, unsigned> &GlobalToGReg,
+    const MachineFunction *MF) {
+  const MachineOperand *OpFunDef = GR->getFunctionDefinitionByUse(FunPtrOp);
   assert(OpFunDef && OpFunDef->isReg());
   // find the actual function definition and number it globally in advance
   const MachineInstr *OpDefMI = OpFunDef->getParent();
@@ -401,7 +404,8 @@ void SPIRVModuleAnalysis::visitDecl(
     // Handle function pointers special case
     if (Opcode == SPIRV::OpConstantFunctionPointerINTEL &&
         MRI.getRegClass(OpReg) == &SPIRV::pIDRegClass) {
-      visitFunPtrUse(OpReg, SignatureToGReg, GlobalToGReg, MF, MI);
+      visitFunPtrUse(OpReg, &MI.getOperand(2), SignatureToGReg, GlobalToGReg,
+                     MF);
       continue;
     }
     // Skip already processed instructions
