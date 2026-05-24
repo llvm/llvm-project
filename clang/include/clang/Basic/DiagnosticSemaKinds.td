@@ -14002,6 +14002,9 @@ def note_acc_reduction_type_summary
            "or a "
            "composite of scalars, or an array, sub-array, or element of scalar "
            "types">;
+def err_acc_reduction_vla
+    : Error<"variable length array cannot be used in OpenACC 'reduction' "
+            "clause">;
 def err_acc_loop_not_for_loop
     : Error<"OpenACC '%0' construct can only be applied to a 'for' loop">;
 def note_acc_construct_here : Note<"'%0' construct is here">;

@@ -1898,6 +1898,12 @@ bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
   // array.  The standard isn't clear here whether this is allowed, but
   // array-of-valid-things makes sense.
   if (auto *AT = getASTContext().getAsArrayType(CurType)) {
+    // Reject VLA as reduction type, as we don't have any reasonable IR to generate
+    // See https://github.com/llvm/llvm-project/issues/199162
+    if (isa<VariableArrayType>(AT)) {
+      Diag(VarLoc, diag::err_acc_reduction_vla);
+      return true;
+    }
     // If we're already the array type, peel off the array and leave the element
     // type.
     PartialDiagnostic PD = PDiag(diag::note_acc_reduction_array)

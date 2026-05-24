@@ -2689,14 +2689,6 @@ Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
         return nullptr;
     }
 
-  } else if (Ty->isArrayType()) {
-    // Non-constant arrays (VLAs and incomplete arrays) cannot be statically
-    // enumerated to build an InitListExpr.
-    // Punt the same way we do for pointers below; codegen is responsible for
-    // handling these cases (or emitting a NYI). Without this, a variable-length
-    // array reduction operand falls through to the scalar branch and trips the
-    // 'isScalarType()' assertion (llvm/llvm-project#199162).
-    return nullptr;
   } else if (Ty->isPointerType()) {
     // For now, we are going to punt/not initialize pointer types, as
     // discussions/designs are ongoing on how to express this behavior,
