@@ -22828,37 +22828,26 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
 
     if (SatWidth == 32) {
       if (IsSigned) {
-        // Direct conversion handles in-range and negative overflow correctly.
         SDValue Cvt = DAG.getNode(ISD::FP_TO_SINT, dl, DstVT, Src);
-
-        // Detect positive overflow (src >= 2^31) and saturate to INT_MAX.
         APFloat PosOvfBoundFlt(SrcVT.getScalarType().getFltSemantics());
         PosOvfBoundFlt.convertFromAPInt(APInt::getSignedMinValue(32), /*IsSigned=*/true, APFloat::rmTowardZero);
-        PosOvfBoundFlt.changeSign(); // Flips -2^31 to +2^31
+        PosOvfBoundFlt.changeSign();
         SDValue PosOvfBound = DAG.getConstantFP(PosOvfBoundFlt, dl, SrcVT);
         SDValue PosOvf = DAG.getSetCC(dl, DstVT, Src, PosOvfBound, ISD::SETOGE);
         SDValue IntMax = DAG.getConstant(APInt::getSignedMaxValue(32), dl, DstVT);
         SDValue Fixed = DAG.getSelect(dl, DstVT, PosOvf, IntMax, Cvt);
-
-        // Detect NaN and map to 0.
         SDValue IsNaN = DAG.getSetCC(dl, DstVT, Src, Src, ISD::SETUO);
         SDValue Zero = DAG.getConstant(0, dl, DstVT);
         return DAG.getSelect(dl, DstVT, IsNaN, Zero, Fixed);
       } else {
-        // Clamp negative values and NaN to 0. FMAX maps NaN to 0.0.
         SDValue ZeroFP = DAG.getConstantFP(0.0, dl, SrcVT);
         SDValue Clamped = DAG.getNode(X86ISD::FMAX, dl, SrcVT, Src, ZeroFP);
-
-        // Detect overflow (src >= 2^32) to saturate to UINT_MAX.
         APFloat OvfBoundFlt(SrcVT.getScalarType().getFltSemantics());
         OvfBoundFlt.convertFromAPInt(APInt::getOneBitSet(33, 32), /*IsSigned=*/false, APFloat::rmTowardZero);
         SDValue OvfBound = DAG.getConstantFP(OvfBoundFlt, dl, SrcVT);
         SDValue IsOvf = DAG.getSetCC(dl, DstVT, Clamped, OvfBound, ISD::SETOGE);
-
         SDValue Cvt = DAG.getNode(ISD::FP_TO_UINT, dl, DstVT, Clamped);
         SDValue UintMax = DAG.getConstant(APInt::getMaxValue(32), dl, DstVT);
-
-        // Apply saturation for overflow.
         return DAG.getSelect(dl, DstVT, IsOvf, UintMax, Cvt);
       }
     }
