@@ -31,9 +31,9 @@ find_package(nanobind CONFIG REQUIRED)
 message(STATUS "Python bindings for ir2vec will be built with nanobind")
 nanobind_add_module(ir2vec MODULE PyIR2Vec.cpp)
 
-set(LLVM_IR2VEC_BINDINGS_DIR "${CMAKE_CURRENT_BINARY_DIR}" CACHE INTERNAL "")
+set(LLVM_IR2VEC_BINDINGS_DIR "${CMAKE_CURRENT_BINARY_DIR}/python/ir2vec" CACHE INTERNAL "")
 set_target_properties(ir2vec PROPERTIES
-  LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+  LIBRARY_OUTPUT_DIRECTORY "${LLVM_IR2VEC_BINDINGS_DIR}"
 )
 
 # Python bindings require exception handling and RTTI to convert C++ exceptions
@@ -42,7 +42,6 @@ set_target_properties(ir2vec PROPERTIES
 # This follows the pattern established by MLIR Python bindings
 # (see mlir/cmake/modules/AddMLIRPython.cmake).
 target_compile_options(ir2vec PRIVATE -fexceptions -frtti)
-
 target_link_libraries(ir2vec PRIVATE LLVMIREmbUtils)
 target_include_directories(ir2vec PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
