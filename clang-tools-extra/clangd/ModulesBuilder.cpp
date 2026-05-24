@@ -506,8 +506,7 @@ public:
   }
 
   void setDirectModuleNames(std::vector<std::string> Names) {
-    for (auto &Name : Names)
-      DirectModuleNames.insert(std::move(Name));
+    DirectModuleNames.insert_range(Names);
   }
 
   llvm::StringSet<> getRequiredModuleNames() const override {
