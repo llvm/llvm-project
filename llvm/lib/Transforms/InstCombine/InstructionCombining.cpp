@@ -1384,7 +1384,7 @@ bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
     OuterValIdx = 0;
   else if (OuterOp.getOperand(1) == OuterVal)
     OuterValIdx = 1;
-  else 
+  else
     return false; // OuterVal must be an operand of OuterOp
 
   auto Pair = matchSymmetricPair(InnerVal1, OuterVal);
