@@ -583,7 +583,7 @@ void RTDEF(CshiftVector)(Descriptor &result, const Descriptor &source,
   }
 }
 
-static void CheckBoundaryType(const Descriptor &array,
+static RT_API_ATTRS void CheckBoundaryType(const Descriptor &array,
     const Descriptor &boundary, Terminator &terminator) {
   if (const auto *boundaryAddendum{boundary.Addendum()}) {
     if (const auto *boundaryDT{boundaryAddendum->derivedType()}) {

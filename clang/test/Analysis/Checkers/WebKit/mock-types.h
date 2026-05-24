@@ -13,6 +13,22 @@ typedef T type;
 
 template<typename T> typename remove_reference<T>::type&& move(T&& t);
 
+template<typename T, typename U>
+T exchange(T& t, U&& u)
+{
+  T r = static_cast<T&&>(t);
+  t = static_cast<U&&>(u);
+  return r;
+}
+
+template<typename T>
+T exchange(T& t, decltype(nullptr))
+{
+  T r = static_cast<T&&>(t);
+  t = static_cast<T>(t);
+  return r;
+}
+
 }
 
 #endif
