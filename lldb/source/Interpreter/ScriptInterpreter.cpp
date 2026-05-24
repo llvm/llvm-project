@@ -163,6 +163,11 @@ lldb::StackFrameListSP ScriptInterpreter::GetOpaqueTypeFromSBFrameList(
   return frame_list.m_opaque_sp;
 }
 
+lldb::TargetSP ScriptInterpreter::GetOpaqueTypeFromSBTarget(
+    const lldb::SBTarget &target) const {
+  return target.m_opaque_sp;
+}
+
 lldb::ValueObjectSP
 ScriptInterpreter::GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const {
   if (!value.m_opaque_sp)
@@ -263,7 +268,7 @@ ScriptInterpreterIORedirect::Create(bool enable_io, Debugger &debugger,
   auto nullout = FileSystem::Instance().Open(FileSpec(FileSystem::DEV_NULL),
                                              File::eOpenOptionWriteOnly);
   if (!nullout)
-    return nullin.takeError();
+    return nullout.takeError();
 
   return std::unique_ptr<ScriptInterpreterIORedirect>(
       new ScriptInterpreterIORedirect(std::move(*nullin), std::move(*nullout)));

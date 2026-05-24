@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def GPRIdxMode : CustomOperand<i32>;
+def GPRIdxMode : CustomOperand;
 
 class SOP_Pseudo<string opName, dag outs, dag ins, string asmOps,
                   list<dag> pattern=[]> :
@@ -293,7 +293,7 @@ def S_FLBIT_I32_B64 : SOP1_32_64 <"s_flbit_i32_b64",
   [(set i32:$sdst, (UniformUnaryFrag<AMDGPUffbh_u32> i64:$src0))]
 >;
 def S_FLBIT_I32 : SOP1_32 <"s_flbit_i32",
-  [(set i32:$sdst, (UniformUnaryFrag<AMDGPUffbh_i32> i32:$src0))]
+  [(set i32:$sdst, (UniformUnaryFrag<int_amdgcn_sffbh> i32:$src0))]
 >;
 def S_FLBIT_I32_I64 : SOP1_32_64 <"s_flbit_i32_i64">;
 def S_SEXT_I32_I8 : SOP1_32 <"s_sext_i32_i8",
@@ -907,16 +907,16 @@ let SubtargetPredicate = isGFX9Plus in {
 
   let Defs = [SCC] in {
     def S_LSHL1_ADD_U32 : SOP2_32<"s_lshl1_add_u32",
-      [(set i32:$sdst, (shl1_add SSrc_b32:$src0, SSrc_b32:$src1))]
+      [(set i32:$sdst, (UniformBinFrag<shl1_add> SSrc_b32:$src0, SSrc_b32:$src1))]
     >;
     def S_LSHL2_ADD_U32 : SOP2_32<"s_lshl2_add_u32",
-      [(set i32:$sdst, (shl2_add SSrc_b32:$src0, SSrc_b32:$src1))]
+      [(set i32:$sdst, (UniformBinFrag<shl2_add> SSrc_b32:$src0, SSrc_b32:$src1))]
     >;
     def S_LSHL3_ADD_U32 : SOP2_32<"s_lshl3_add_u32",
-      [(set i32:$sdst, (shl3_add SSrc_b32:$src0, SSrc_b32:$src1))]
+      [(set i32:$sdst, (UniformBinFrag<shl3_add> SSrc_b32:$src0, SSrc_b32:$src1))]
     >;
     def S_LSHL4_ADD_U32 : SOP2_32<"s_lshl4_add_u32",
-      [(set i32:$sdst, (shl4_add SSrc_b32:$src0, SSrc_b32:$src1))]
+      [(set i32:$sdst, (UniformBinFrag<shl4_add> SSrc_b32:$src0, SSrc_b32:$src1))]
     >;
   } // End Defs = [SCC]
 
@@ -1727,14 +1727,17 @@ def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
    let hasSideEffects = 0;
 }
 
-let SubtargetPredicate = HasVMemToLDSLoad in {
+let SubtargetPredicate = HasAsyncMark in {
 def ASYNCMARK : SPseudoInstSI<(outs), (ins),
   [(int_amdgcn_asyncmark)]> {
    let maybeAtomic = 0;
+   let isMeta = 1;
 }
 def WAIT_ASYNCMARK : SOPP_Pseudo <"", (ins s16imm:$simm16), "$simm16",
     [(int_amdgcn_wait_asyncmark timm:$simm16)]> {
     let maybeAtomic = 0;
+    let Size = 0;
+    let isMeta = 1;
 }
 }
 

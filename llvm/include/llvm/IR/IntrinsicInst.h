@@ -1804,6 +1804,21 @@ public:
   CreateLoop(BasicBlock &BB, ConvergenceControlInst *Parent);
 };
 
+class StructuredAllocaInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::structured_alloca;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  Type *getAllocationType() const {
+    return getRetAttr(Attribute::ElementType).getValueAsType();
+  }
+};
+
 class StructuredGEPInst : public IntrinsicInst {
 public:
   static bool classof(const IntrinsicInst *I) {

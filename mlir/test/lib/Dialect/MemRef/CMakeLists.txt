@@ -10,6 +10,7 @@ add_mlir_library(MLIRMemRefTestPasses
   MLIRTestDialect
   )
 mlir_target_link_libraries(MLIRMemRefTestPasses PUBLIC
+  MLIRControlFlowTransforms
   MLIRPass
   MLIRMemRefDialect
   MLIRMemRefTransforms

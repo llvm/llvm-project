@@ -86,6 +86,18 @@ static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
   return maskVec;
 }
 
+static mlir::Value emitX86CompressStore(CIRGenBuilderTy &builder,
+                                        mlir::Location loc,
+                                        ArrayRef<mlir::Value> ops) {
+  auto resultTy = cast<cir::VectorType>(ops[1].getType());
+  mlir::Value maskValue =
+      getMaskVecValue(builder, loc, ops[2], resultTy.getSize());
+
+  return builder.emitIntrinsicCallOp(
+      loc, "masked.compressstore", cir::VoidType::get(builder.getContext()),
+      mlir::ValueRange{ops[1], ops[0], maskValue});
+}
+
 // Builds the VecShuffleOp for pshuflw and pshufhw x86 builtins.
 //
 // The vector is split into lanes of 8 word elements (16 bits). The lower or
@@ -1231,7 +1243,12 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_expandloadhi512_mask:
   case X86::BI__builtin_ia32_expandloadqi128_mask:
   case X86::BI__builtin_ia32_expandloadqi256_mask:
-  case X86::BI__builtin_ia32_expandloadqi512_mask:
+  case X86::BI__builtin_ia32_expandloadqi512_mask: {
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
+  }
   case X86::BI__builtin_ia32_compressstoredf128_mask:
   case X86::BI__builtin_ia32_compressstoredf256_mask:
   case X86::BI__builtin_ia32_compressstoredf512_mask:
@@ -1250,10 +1267,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_compressstoreqi128_mask:
   case X86::BI__builtin_ia32_compressstoreqi256_mask:
   case X86::BI__builtin_ia32_compressstoreqi512_mask:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+    return emitX86CompressStore(builder, getLoc(expr->getExprLoc()), ops);
   case X86::BI__builtin_ia32_expanddf128_mask:
   case X86::BI__builtin_ia32_expanddf256_mask:
   case X86::BI__builtin_ia32_expanddf512_mask:
@@ -2301,18 +2315,24 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vpshufbitqmb512_mask:
   case X86::BI__builtin_ia32_cmpeqps:
   case X86::BI__builtin_ia32_cmpeqpd:
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::eq,
+                          /*shouldInvert=*/false);
   case X86::BI__builtin_ia32_cmpltps:
   case X86::BI__builtin_ia32_cmpltpd:
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::lt,
+                          /*shouldInvert=*/false);
   case X86::BI__builtin_ia32_cmpleps:
   case X86::BI__builtin_ia32_cmplepd:
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::le,
+                          /*shouldInvert=*/false);
   case X86::BI__builtin_ia32_cmpunordps:
   case X86::BI__builtin_ia32_cmpunordpd:
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::uno,
+                          /*shouldInvert=*/false);
   case X86::BI__builtin_ia32_cmpneqps:
   case X86::BI__builtin_ia32_cmpneqpd:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::ne,
+                          /*shouldInvert=*/false);
   case X86::BI__builtin_ia32_cmpnltps:
   case X86::BI__builtin_ia32_cmpnltpd:
     return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::lt,
@@ -2323,6 +2343,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
                           /*shouldInvert=*/true);
   case X86::BI__builtin_ia32_cmpordps:
   case X86::BI__builtin_ia32_cmpordpd:
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::uno,
+                          /*shouldInvert=*/true);
   case X86::BI__builtin_ia32_cmpph128_mask:
   case X86::BI__builtin_ia32_cmpph256_mask:
   case X86::BI__builtin_ia32_cmpph512_mask:

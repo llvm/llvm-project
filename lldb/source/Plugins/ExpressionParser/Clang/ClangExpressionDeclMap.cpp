@@ -620,7 +620,7 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(ConstString name,
   assert(m_parser_vars.get());
 
   if (!m_parser_vars->m_exe_ctx.GetTargetPtr())
-    return false;
+    return LLDB_INVALID_ADDRESS;
 
   return GetSymbolAddress(m_parser_vars->m_exe_ctx.GetTargetRef(),
                           m_parser_vars->m_exe_ctx.GetProcessPtr(), name,
@@ -666,7 +666,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     NameSearchContext &context) {
   assert(m_ast_context);
 
-  const ConstString name(context.m_decl_name.getAsString().c_str());
+  const auto name = context.m_decl_name.getAsString();
 
   Log *log = GetLog(LLDBLog::Expressions);
 
@@ -876,8 +876,11 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
   // creates decls for function templates by attaching them to the TU instead
   // of a class context. So we can actually have template methods scoped
   // outside of a class. Once we fix that, we can remove this code-path.
-
-  VariableList *vars = frame->GetVariableList(false, nullptr);
+  // Additionally, we exclude synthetic variables from here. Clang-based
+  // languages are unlikely candidates for synthetic variables anyway, and
+  // especially in this case, we're looking for something specific to C++.
+  VariableList *vars = frame->GetVariableList(
+      /*get_file_globals=*/false, /*include_synthetic_vars=*/false, nullptr);
 
   lldb::VariableSP this_var = vars->FindVariable(ConstString("this"));
 
@@ -963,7 +966,11 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context) {
   // In that case, just look up the "self" variable in the current scope
   // and use its type.
 
-  VariableList *vars = frame->GetVariableList(false, nullptr);
+  // We exclude synthetic variables from here. Like above, it's highly unlikely
+  // we care about synthetic variables here, and indeed this code is looking for
+  // an obj-C specific construct.
+  VariableList *vars = frame->GetVariableList(
+      /*get_file_globals=*/false, /*include_synthetic_vars=*/false, nullptr);
 
   lldb::VariableSP self_var = vars->FindVariable(ConstString("self"));
 
@@ -1363,7 +1370,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
   Log *log = GetLog(LLDBLog::Expressions);
 
-  const ConstString name(context.m_decl_name.getAsString().c_str());
+  const ConstString name(context.m_decl_name.getAsString());
   if (IgnoreName(name, false))
     return;
 
@@ -1472,7 +1479,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
     if (data_symbol) {
       std::string warning("got name from symbols: ");
-      warning.append(name.AsCString());
+      warning.append(name.GetStringRef());
       const unsigned diag_id =
           m_ast_context->getDiagnostics().getCustomDiagID(
               clang::DiagnosticsEngine::Level::Warning, "%0");
@@ -1594,7 +1601,7 @@ ClangExpressionDeclMap::AddExpressionVariable(NameSearchContext &context,
     var_decl = context.AddVarDecl(pt.GetLValueReferenceType());
 
   std::string decl_name(context.m_decl_name.getAsString());
-  ConstString entity_name(decl_name.c_str());
+  ConstString entity_name(decl_name);
   ClangExpressionVariable *entity(new ClangExpressionVariable(valobj));
   m_found_entities.AddNewlyConstructedVariable(entity);
 
@@ -1741,7 +1748,7 @@ void ClangExpressionDeclMap::AddOneGenericVariable(NameSearchContext &context,
   NamedDecl *var_decl = context.AddVarDecl(parser_type);
 
   std::string decl_name(context.m_decl_name.getAsString());
-  ConstString entity_name(decl_name.c_str());
+  ConstString entity_name(decl_name);
   ClangExpressionVariable *entity(new ClangExpressionVariable(
       m_parser_vars->m_exe_ctx.GetBestExecutionContextScope(), entity_name,
       user_type, m_parser_vars->m_target_info.byte_order,
@@ -1794,7 +1801,7 @@ void ClangExpressionDeclMap::AddOneRegister(NameSearchContext &context,
   m_found_entities.AddNewlyConstructedVariable(entity);
 
   std::string decl_name(context.m_decl_name.getAsString());
-  entity->SetName(ConstString(decl_name.c_str()));
+  entity->SetName(decl_name);
   entity->SetRegisterInfo(reg_info);
   entity->EnableParserVars(GetParserID());
   ClangExpressionVariable::ParserVars *parser_vars =
@@ -1825,7 +1832,8 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
     Type *function_type = function->GetType();
 
     const auto lang = function->GetCompileUnit()->GetLanguage();
-    const auto name = function->GetMangled().GetMangledName().AsCString();
+    const llvm::StringRef name =
+        function->GetMangled().GetMangledName().GetStringRef();
     const bool extern_c =
         (Language::LanguageIsC(lang) && !Mangled::IsMangledName(name)) ||
         (Language::LanguageIsObjC(lang) &&
@@ -1942,7 +1950,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
   m_found_entities.AddNewlyConstructedVariable(entity);
 
   std::string decl_name(context.m_decl_name.getAsString());
-  entity->SetName(ConstString(decl_name.c_str()));
+  entity->SetName(decl_name);
   entity->SetCompilerType(function_clang_type);
   entity->EnableParserVars(GetParserID());
 

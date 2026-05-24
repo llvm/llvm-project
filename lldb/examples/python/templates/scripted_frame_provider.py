@@ -53,6 +53,16 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
 
     You can register your frame provider either via the CLI command ``target frame-provider register`` or
     via the API ``SBThread.RegisterScriptedFrameProvider``.
+
+    .. note::
+
+        Changing the process state either directly (e.g. stepping or resuming)
+        or indirectly (e.g. expression evaluation) within the provider will not
+        trigger reconstructing the input frame list. Expression evaluation is
+        additionally restricted to run only the current thread
+        (``SetStopOthers(true)``, ``SetTryAllThreads(false)``) while a provider
+        is active, to avoid unwanted process state changes during frame
+        construction.
     """
 
     @staticmethod

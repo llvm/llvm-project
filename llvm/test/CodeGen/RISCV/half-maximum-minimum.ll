@@ -11,6 +11,12 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+zhinx \
 ; RUN:   -verify-machineinstrs -target-abi lp64 | \
 ; RUN:   FileCheck -check-prefixes=CHECKIZHINX %s
+; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+zfhmin \
+; RUN:   -verify-machineinstrs -target-abi ilp32f | \
+; RUN:   FileCheck -check-prefixes=CHECKZFHMIN %s
+; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+zfhmin \
+; RUN:   -verify-machineinstrs -target-abi lp64f | \
+; RUN:   FileCheck -check-prefixes=CHECKZFHMIN %s
 
 define half @fminimum_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: fminimum_f16:
@@ -50,6 +56,25 @@ define half @fminimum_f16(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:  .LBB0_4:
 ; CHECKIZHINX-NEXT:    fmin.h a0, a1, a2
 ; CHECKIZHINX-NEXT:    ret
+;
+; CHECKZFHMIN-LABEL: fminimum_f16:
+; CHECKZFHMIN:       # %bb.0:
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa4, fa1
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECKZFHMIN-NEXT:    feq.s a0, fa5, fa5
+; CHECKZFHMIN-NEXT:    fmv.s fa3, fa4
+; CHECKZFHMIN-NEXT:    bnez a0, .LBB0_2
+; CHECKZFHMIN-NEXT:  # %bb.1:
+; CHECKZFHMIN-NEXT:    fmv.s fa3, fa5
+; CHECKZFHMIN-NEXT:  .LBB0_2:
+; CHECKZFHMIN-NEXT:    feq.s a0, fa4, fa4
+; CHECKZFHMIN-NEXT:    bnez a0, .LBB0_4
+; CHECKZFHMIN-NEXT:  # %bb.3:
+; CHECKZFHMIN-NEXT:    fmv.s fa5, fa4
+; CHECKZFHMIN-NEXT:  .LBB0_4:
+; CHECKZFHMIN-NEXT:    fmin.s fa5, fa5, fa3
+; CHECKZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; CHECKZFHMIN-NEXT:    ret
   %1 = call half @llvm.minimum.f16(half %a, half %b)
   ret half %1
 }
@@ -92,6 +117,25 @@ define half @fmaximum_f16(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:  .LBB1_4:
 ; CHECKIZHINX-NEXT:    fmax.h a0, a1, a2
 ; CHECKIZHINX-NEXT:    ret
+;
+; CHECKZFHMIN-LABEL: fmaximum_f16:
+; CHECKZFHMIN:       # %bb.0:
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa4, fa1
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECKZFHMIN-NEXT:    feq.s a0, fa5, fa5
+; CHECKZFHMIN-NEXT:    fmv.s fa3, fa4
+; CHECKZFHMIN-NEXT:    bnez a0, .LBB1_2
+; CHECKZFHMIN-NEXT:  # %bb.1:
+; CHECKZFHMIN-NEXT:    fmv.s fa3, fa5
+; CHECKZFHMIN-NEXT:  .LBB1_2:
+; CHECKZFHMIN-NEXT:    feq.s a0, fa4, fa4
+; CHECKZFHMIN-NEXT:    bnez a0, .LBB1_4
+; CHECKZFHMIN-NEXT:  # %bb.3:
+; CHECKZFHMIN-NEXT:    fmv.s fa5, fa4
+; CHECKZFHMIN-NEXT:  .LBB1_4:
+; CHECKZFHMIN-NEXT:    fmax.s fa5, fa5, fa3
+; CHECKZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; CHECKZFHMIN-NEXT:    ret
   %1 = call half @llvm.maximum.f16(half %a, half %b)
   ret half %1
 }
@@ -106,6 +150,14 @@ define half @fminimum_nnan_f16(half %a, half %b) nounwind {
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fmin.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    ret
+;
+; CHECKZFHMIN-LABEL: fminimum_nnan_f16:
+; CHECKZFHMIN:       # %bb.0:
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECKZFHMIN-NEXT:    fmin.s fa5, fa4, fa5
+; CHECKZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; CHECKZFHMIN-NEXT:    ret
   %1 = call nnan half @llvm.minimum.f16(half %a, half %b)
   ret half %1
 }
@@ -120,6 +172,14 @@ define half @fmaximum_nnan_f16(half %a, half %b) nounwind {
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fmax.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    ret
+;
+; CHECKZFHMIN-LABEL: fmaximum_nnan_f16:
+; CHECKZFHMIN:       # %bb.0:
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECKZFHMIN-NEXT:    fmax.s fa5, fa4, fa5
+; CHECKZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; CHECKZFHMIN-NEXT:    ret
   %1 = call nnan half @llvm.maximum.f16(half %a, half %b)
   ret half %1
 }
@@ -134,6 +194,14 @@ define half @fminimum_nnan_attr_f16(half %a, half %b) nounwind {
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fmin.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    ret
+;
+; CHECKZFHMIN-LABEL: fminimum_nnan_attr_f16:
+; CHECKZFHMIN:       # %bb.0:
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECKZFHMIN-NEXT:    fmin.s fa5, fa4, fa5
+; CHECKZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; CHECKZFHMIN-NEXT:    ret
   %1 = call nnan half @llvm.minimum.f16(half %a, half %b)
   ret half %1
 }
@@ -162,6 +230,23 @@ define half @fminimum_nnan_op_f16(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    fadd.h a1, a0, a0
 ; CHECKIZHINX-NEXT:    fmin.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    ret
+;
+; CHECKZFHMIN-LABEL: fminimum_nnan_op_f16:
+; CHECKZFHMIN:       # %bb.0:
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECKZFHMIN-NEXT:    feq.s a0, fa5, fa5
+; CHECKZFHMIN-NEXT:    bnez a0, .LBB5_2
+; CHECKZFHMIN-NEXT:  # %bb.1:
+; CHECKZFHMIN-NEXT:    fmv.s fa4, fa5
+; CHECKZFHMIN-NEXT:    j .LBB5_3
+; CHECKZFHMIN-NEXT:  .LBB5_2:
+; CHECKZFHMIN-NEXT:    fadd.s fa4, fa5, fa5
+; CHECKZFHMIN-NEXT:    fcvt.h.s fa4, fa4
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa4, fa4
+; CHECKZFHMIN-NEXT:  .LBB5_3:
+; CHECKZFHMIN-NEXT:    fmin.s fa5, fa5, fa4
+; CHECKZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; CHECKZFHMIN-NEXT:    ret
   %c = fadd nnan half %a, %a
   %1 = call half @llvm.minimum.f16(half %a, half %c)
   ret half %1
@@ -181,6 +266,20 @@ define half @fmaximum_nnan_op_f16(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    fsub.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    fmax.h a0, a2, a0
 ; CHECKIZHINX-NEXT:    ret
+;
+; CHECKZFHMIN-LABEL: fmaximum_nnan_op_f16:
+; CHECKZFHMIN:       # %bb.0:
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECKZFHMIN-NEXT:    fadd.s fa3, fa4, fa5
+; CHECKZFHMIN-NEXT:    fsub.s fa5, fa4, fa5
+; CHECKZFHMIN-NEXT:    fcvt.h.s fa4, fa3
+; CHECKZFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa4, fa4
+; CHECKZFHMIN-NEXT:    fmax.s fa5, fa4, fa5
+; CHECKZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; CHECKZFHMIN-NEXT:    ret
   %c = fadd nnan half %a, %b
   %d = fsub nnan half %a, %b
   %1 = call half @llvm.maximum.f16(half %c, half %d)

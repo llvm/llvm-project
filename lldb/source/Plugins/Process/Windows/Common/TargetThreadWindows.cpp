@@ -166,7 +166,7 @@ Status TargetThreadWindows::DoResume() {
       // explicitly compare with -1.
       previous_suspend_count = ::ResumeThread(thread_handle);
 
-      if (previous_suspend_count == (DWORD)-1)
+      if (previous_suspend_count == static_cast<DWORD>(-1))
         return Status(::GetLastError(), eErrorTypeWin32);
 
     } while (previous_suspend_count > 1);

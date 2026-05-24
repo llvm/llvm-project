@@ -15,6 +15,8 @@
 
 #include "Targets.h"
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
@@ -341,17 +343,31 @@ public:
       : BaseSPIRVTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spirv &&
            "Invalid architecture for Logical SPIR-V.");
-    assert(Triple.getOS() == llvm::Triple::Vulkan &&
-           Triple.getVulkanVersion() != llvm::VersionTuple(0) &&
-           "Logical SPIR-V requires a valid Vulkan environment.");
-    assert(Triple.getEnvironment() >= llvm::Triple::Pixel &&
-           Triple.getEnvironment() <= llvm::Triple::Amplification &&
-           "Logical SPIR-V environment must be a valid shader stage.");
     PointerWidth = PointerAlign = 64;
 
     // SPIR-V IDs are represented with a single 32-bit word.
     SizeType = TargetInfo::UnsignedInt;
+    VectorsAreElementAligned = true;
     resetDataLayout();
+  }
+
+  // When targeting Vulkan, require a fully specified Vulkan environment
+  // (version + valid shader stage). Non-Vulkan OS triples (e.g. mesa3d)
+  // could be used for OpenCL SPIR-V.
+  bool validateTarget(DiagnosticsEngine &Diags) const override {
+    if (getTriple().getOS() != llvm::Triple::Vulkan)
+      return true;
+    if (getTriple().getVulkanVersion() == llvm::VersionTuple(0)) {
+      Diags.Report(diag::err_target_spirv_requires_vulkan);
+      return false;
+    }
+    if (getTriple().getEnvironment() != llvm::Triple::UnknownEnvironment &&
+        (getTriple().getEnvironment() < llvm::Triple::Pixel ||
+         getTriple().getEnvironment() > llvm::Triple::Amplification)) {
+      Diags.Report(diag::err_target_spirv_invalid_shader_stage);
+      return false;
+    }
+    return true;
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -365,8 +381,11 @@ public:
     assert(Triple.getArch() == llvm::Triple::spirv32 &&
            "Invalid architecture for 32-bit SPIR-V.");
     assert((getTriple().getOS() == llvm::Triple::UnknownOS ||
-            getTriple().getOS() == llvm::Triple::ChipStar) &&
-           "32-bit SPIR-V target must use unknown or chipstar OS");
+            getTriple().getOS() == llvm::Triple::ChipStar ||
+            getTriple().getOS() == llvm::Triple::Vulkan ||
+            getTriple().getOS() == llvm::Triple::Mesa3D) &&
+           "32-bit SPIR-V target must use unknown, chipstar, vulkan, or mesa3d "
+           "OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "32-bit SPIR-V target must use unknown environment type");
     PointerWidth = PointerAlign = 32;
@@ -389,8 +408,11 @@ public:
     assert(Triple.getArch() == llvm::Triple::spirv64 &&
            "Invalid architecture for 64-bit SPIR-V.");
     assert((getTriple().getOS() == llvm::Triple::UnknownOS ||
-            getTriple().getOS() == llvm::Triple::ChipStar) &&
-           "64-bit SPIR-V target must use unknown or chipstar OS");
+            getTriple().getOS() == llvm::Triple::ChipStar ||
+            getTriple().getOS() == llvm::Triple::Vulkan ||
+            getTriple().getOS() == llvm::Triple::Mesa3D) &&
+           "64-bit SPIR-V target must use unknown, chipstar, vulkan, or mesa3d "
+           "OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "64-bit SPIR-V target must use unknown environment type");
     PointerWidth = PointerAlign = 64;
@@ -477,9 +499,16 @@ public:
   void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
               const TargetInfo *Aux) override {
     TargetInfo::adjust(Diags, Opts, Aux);
+
+    AtomicOpts = AtomicOptions(Opts);
   }
 
   bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }
+
+  // This is only needed for validating arguments passed to
+  // __builtin_amdgcn_processor_is
+  bool isValidCPUName(StringRef Name) const override;
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIRV64IntelTargetInfo final

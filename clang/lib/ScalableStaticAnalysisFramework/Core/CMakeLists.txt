@@ -17,12 +17,14 @@ add_clang_library(clangScalableStaticAnalysisFrameworkCore
   Serialization/JSONFormat/LUSummaryEncoding.cpp
   Serialization/JSONFormat/TUSummary.cpp
   Serialization/JSONFormat/TUSummaryEncoding.cpp
+  Serialization/JSONFormat/WPASuite.cpp
   Serialization/SerializationFormatRegistry.cpp
   SummaryData/LUSummaryConsumer.cpp
   SummaryData/SummaryDataBuilderRegistry.cpp
   Support/ErrorBuilder.cpp
   TUSummary/ExtractorRegistry.cpp
   TUSummary/TUSummaryBuilder.cpp
+  TUSummary/TUSummaryExtractor.cpp
   WholeProgramAnalysis/AnalysisDriver.cpp
   WholeProgramAnalysis/AnalysisName.cpp
   WholeProgramAnalysis/AnalysisRegistry.cpp

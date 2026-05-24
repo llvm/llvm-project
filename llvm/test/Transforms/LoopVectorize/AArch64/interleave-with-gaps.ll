@@ -173,7 +173,7 @@ define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
@@ -181,10 +181,10 @@ define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[GEP_J]], align 8
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i64> [[STRIDED_VEC]] to <4 x i16>
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i16> [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i16> [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i16> [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i16> [[TMP5]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i16> [[TMP5]], i64 2
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i16> [[TMP5]], i64 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i16, ptr [[K]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i16, ptr [[K]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[K]], i64 [[TMP2]]
@@ -261,9 +261,7 @@ exit:
   ret void
 }
 
-declare i32 @llvm.umin.i32(i32, i32)
 
-declare i32 @llvm.abs.i32(i32, i1 immarg)
 
 attributes #0 = { "target-cpu"="neoverse-512tvb" }
 attributes #1 = { "target-cpu"="grace" }

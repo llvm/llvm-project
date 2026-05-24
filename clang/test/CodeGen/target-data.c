@@ -227,11 +227,15 @@
 
 // RUN: %clang_cc1 -triple tce-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=TCE
-// TCE: target datalayout = "E-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:32-v128:32:32-v256:32:32-v512:32:32-v1024:32:32-a0:0:32-n32"
+// TCE: target datalayout = "E-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f16:16:16-f32:32:32-f64:32:32-v64:64:64-i128:128-v128:128:128-v256:256:256-v512:512:512-v1024:1024:1024-v2048:2048:2048-v4096:4096:4096-a0:0:32-n32"
 
 // RUN: %clang_cc1 -triple tcele-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=TCELE
-// TCELE: target datalayout = "e-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:32-v128:32:32-v256:32:32-v512:32:32-v1024:32:32-a0:0:32-n32"
+// TCELE: target datalayout = "e-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f16:16:16-f32:32:32-f64:32:32-v64:64:64-i128:128-v128:128:128-v256:256:256-v512:512:512-v1024:1024:1024-v2048:2048:2048-v4096:4096:4096-a0:0:32-n32"
+
+// RUN: %clang_cc1 -triple tcele64-unknown -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=TCELE64
+// TCELE64: target datalayout = "e-p:64:64:64-i1:8:64-i8:8:64-i16:16:64-i32:32:64-i64:64:64-f16:16:64-f32:32:64-f64:64:64-v64:64:64-i128:128-v128:128:128-v256:256:256-v512:512:512-v1024:1024:1024-v2048:2048:2048-v4096:4096:4096-a0:0:64-n64"
 
 // RUN: %clang_cc1 -triple spir-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=SPIR
@@ -256,3 +260,27 @@
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=AMDGPUSPIRV64
 // AMDGPUSPIRV64: target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n32:64-S32-G1-P4-A0"
+
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=SPIRVVULKAN
+// SPIRVVULKAN: target datalayout = "e-ve-i64:64-n8:16:32:64-G10"
+
+// RUN: %clang_cc1 -triple spirv32-unknown-vulkan -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=SPIRV32VULKAN
+// SPIRV32VULKAN: target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
+
+// RUN: %clang_cc1 -triple spirv64-unknown-vulkan -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=SPIRV64VULKAN
+// SPIRV64VULKAN: target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
+
+// RUN: %clang_cc1 -triple spirv-mesa-mesa3d -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=SPIRVMESA3D
+// SPIRVMESA3D: target datalayout = "e-ve-i64:64-n8:16:32:64-G10"
+
+// RUN: %clang_cc1 -triple spirv32-mesa-mesa3d -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=SPIRV32MESA3D
+// SPIRV32MESA3D: target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
+
+// RUN: %clang_cc1 -triple spirv64-mesa-mesa3d -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=SPIRV64MESA3D
+// SPIRV64MESA3D: target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"

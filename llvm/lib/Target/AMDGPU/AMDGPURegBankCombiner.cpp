@@ -52,8 +52,8 @@ protected:
 
 public:
   AMDGPURegBankCombinerImpl(
-      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+      MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+      GISelCSEInfo *CSEInfo,
       const AMDGPURegBankCombinerImplRuleConfig &RuleConfig,
       const GCNSubtarget &STI, MachineDominatorTree *MDT,
       const LegalizerInfo *LI);
@@ -115,11 +115,11 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 AMDGPURegBankCombinerImpl::AMDGPURegBankCombinerImpl(
-    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+    MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+    GISelCSEInfo *CSEInfo,
     const AMDGPURegBankCombinerImplRuleConfig &RuleConfig,
     const GCNSubtarget &STI, MachineDominatorTree *MDT, const LegalizerInfo *LI)
-    : Combiner(MF, CInfo, TPC, &VT, CSEInfo), RuleConfig(RuleConfig), STI(STI),
+    : Combiner(MF, CInfo, &VT, CSEInfo), RuleConfig(RuleConfig), STI(STI),
       RBI(*STI.getRegBankInfo()), TRI(*STI.getRegisterInfo()),
       TII(*STI.getInstrInfo()),
       Helper(Observer, B, /*IsPreLegalize*/ false, &VT, MDT, LI),
@@ -265,7 +265,7 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToMed3(
   // nodes(max/min) have same behavior when one input is NaN and other isn't.
   // Don't consider max(min(SNaN, K1), K0) since there is no isKnownNeverQNaN,
   // also post-legalizer inputs to min/max are fcanonicalized (never SNaN).
-  if ((getIEEE() && isFminnumIeee(MI)) || isKnownNeverNaN(Dst, MRI)) {
+  if ((getIEEE() && isFminnumIeee(MI)) || VT->isKnownNeverNaN(Dst)) {
     // Don't fold single use constant that can't be inlined.
     if ((!MRI.hasOneNonDBGUse(K0->VReg) || TII.isInlineConstant(K0->Value)) &&
         (!MRI.hasOneNonDBGUse(K1->VReg) || TII.isInlineConstant(K1->Value))) {
@@ -287,7 +287,7 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToClamp(MachineInstr &MI,
   if (!matchMed<GFCstOrSplatGFCstMatch>(MI, MRI, OpcodeTriple, Val, K0, K1))
     return false;
 
-  if (!K0->Value.isExactlyValue(0.0) || !K1->Value.isExactlyValue(1.0))
+  if (!K0->Value.isPosZero() || !K1->Value.isExactlyValue(1.0))
     return false;
 
   // For IEEE=false perform combine only when it's safe to assume that there are
@@ -295,8 +295,8 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToClamp(MachineInstr &MI,
   // For IEEE=true consider NaN inputs. Only min(max(QNaN, 0.0), 1.0) evaluates
   // to 0.0 requires dx10_clamp = true.
   if ((getIEEE() && getDX10Clamp() && isFminnumIeee(MI) &&
-       isKnownNeverSNaN(Val, MRI)) ||
-      isKnownNeverNaN(MI.getOperand(0).getReg(), MRI)) {
+       VT->isKnownNeverSNaN(Val)) ||
+      VT->isKnownNeverNaN(MI.getOperand(0).getReg())) {
     Reg = Val;
     return true;
   }
@@ -335,16 +335,16 @@ bool AMDGPURegBankCombinerImpl::matchFPMed3ToClamp(MachineInstr &MI,
   auto isOp3Zero = [&]() {
     MachineInstr *Op3 = getDefIgnoringCopies(MI.getOperand(3).getReg(), MRI);
     if (Op3->getOpcode() == TargetOpcode::G_FCONSTANT)
-      return Op3->getOperand(1).getFPImm()->isExactlyValue(0.0);
+      return Op3->getOperand(1).getFPImm()->isPosZero();
     return false;
   };
   // For IEEE=false perform combine only when it's safe to assume that there are
   // no NaN inputs. Most often MI is marked with nnan fast math flag.
   // For IEEE=true consider NaN inputs. Requires dx10_clamp = true. Safe to fold
   // when Val could be QNaN. If Val can also be SNaN third input should be 0.0.
-  if (isKnownNeverNaN(MI.getOperand(0).getReg(), MRI) ||
+  if (VT->isKnownNeverNaN(MI.getOperand(0).getReg()) ||
       (getIEEE() && getDX10Clamp() &&
-       (isKnownNeverSNaN(Val, MRI) || isOp3Zero()))) {
+       (VT->isKnownNeverSNaN(Val) || isOp3Zero()))) {
     Reg = Val;
     return true;
   }
@@ -501,8 +501,8 @@ bool AMDGPURegBankCombinerImpl::isClampZeroToOne(MachineInstr *K0,
   if (isFCst(K0) && isFCst(K1)) {
     const ConstantFP *KO_FPImm = K0->getOperand(1).getFPImm();
     const ConstantFP *K1_FPImm = K1->getOperand(1).getFPImm();
-    return (KO_FPImm->isExactlyValue(0.0) && K1_FPImm->isExactlyValue(1.0)) ||
-           (KO_FPImm->isExactlyValue(1.0) && K1_FPImm->isExactlyValue(0.0));
+    return (KO_FPImm->isPosZero() && K1_FPImm->isExactlyValue(1.0)) ||
+           (KO_FPImm->isExactlyValue(1.0) && K1_FPImm->isPosZero());
   }
   return false;
 }
@@ -529,7 +529,6 @@ private:
 } // end anonymous namespace
 
 void AMDGPURegBankCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
@@ -550,7 +549,6 @@ AMDGPURegBankCombiner::AMDGPURegBankCombiner(bool IsOptNone)
 bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
-  auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
@@ -572,7 +570,7 @@ bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
   // RegBankSelect seems not to leave dead instructions, so a full DCE pass is
   // unnecessary.
   CInfo.EnableFullDCE = false;
-  AMDGPURegBankCombinerImpl Impl(MF, CInfo, TPC, *VT, /*CSEInfo*/ nullptr,
+  AMDGPURegBankCombinerImpl Impl(MF, CInfo, *VT, /*CSEInfo*/ nullptr,
                                  RuleConfig, ST, MDT, LI);
   return Impl.combineMachineInstrs();
 }
@@ -581,7 +579,6 @@ char AMDGPURegBankCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(AMDGPURegBankCombiner, DEBUG_TYPE,
                       "Combine AMDGPU machine instrs after regbankselect",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(AMDGPURegBankCombiner, DEBUG_TYPE,
                     "Combine AMDGPU machine instrs after regbankselect", false,

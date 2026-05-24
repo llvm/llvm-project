@@ -130,7 +130,7 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
   case Triple::armeb:
   case Triple::thumb:
   case Triple::thumbeb:
-    if (Ctx.getAsmInfo()->getExceptionHandlingType() == ExceptionHandling::ARM)
+    if (Ctx.getAsmInfo().getExceptionHandlingType() == ExceptionHandling::ARM)
       break;
     // Fallthrough if not using EHABI
     [[fallthrough]];
@@ -634,10 +634,11 @@ static StringRef getSectionPrefixForGlobal(SectionKind Kind, bool IsLarge) {
 static SmallString<128>
 getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
                            Mangler &Mang, const TargetMachine &TM,
-                           unsigned EntrySize, bool UniqueSectionName,
+                           bool UniqueSectionName,
                            const MachineJumpTableEntry *JTE) {
   SmallString<128> Name =
       getSectionPrefixForGlobal(Kind, TM.isLargeGlobalValue(GO));
+  unsigned EntrySize = getEntrySizeForKind(Kind);
   if (Kind.isMergeableCString()) {
     // We also need alignment here.
     // FIXME: this is getting the alignment of the character, not the
@@ -726,8 +727,8 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   if (Retain) {
     if (TM.getTargetTriple().isOSSolaris())
       Flags |= ELF::SHF_SUNW_NODISCARD;
-    else if (Ctx.getAsmInfo()->useIntegratedAssembler() ||
-             Ctx.getAsmInfo()->binutilsIsAtLeast(2, 36))
+    else if (Ctx.getAsmInfo().useIntegratedAssembler() ||
+             Ctx.getAsmInfo().binutilsIsAtLeast(2, 36))
       Flags |= ELF::SHF_GNU_RETAIN;
     return NextUniqueID++;
   }
@@ -738,8 +739,8 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   // the same name. Doing so relies on the ",unique ," assembly feature. This
   // feature is not available until binutils version 2.35
   // (https://sourceware.org/bugzilla/show_bug.cgi?id=25380).
-  const bool SupportsUnique = Ctx.getAsmInfo()->useIntegratedAssembler() ||
-                              Ctx.getAsmInfo()->binutilsIsAtLeast(2, 35);
+  const bool SupportsUnique = Ctx.getAsmInfo().useIntegratedAssembler() ||
+                              Ctx.getAsmInfo().binutilsIsAtLeast(2, 35);
   if (!SupportsUnique) {
     Flags &= ~ELF::SHF_MERGE;
     EntrySize = 0;
@@ -771,8 +772,8 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   // implicitly for this symbol e.g. .rodata.str1.1, then we don't need
   // to unique the section as the entry size for this symbol will be
   // compatible with implicitly created sections.
-  SmallString<128> ImplicitSectionNameStem = getELFSectionNameForGlobal(
-      GO, Kind, Mang, TM, EntrySize, false, /*MJTE=*/nullptr);
+  SmallString<128> ImplicitSectionNameStem =
+      getELFSectionNameForGlobal(GO, Kind, Mang, TM, false, /*MJTE=*/nullptr);
   if (SymbolMergeable &&
       Ctx.isELFImplicitMergeableSectionNamePrefix(SectionName) &&
       SectionName.starts_with(ImplicitSectionNameStem))
@@ -783,8 +784,9 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   return NextUniqueID++;
 }
 
-static std::tuple<StringRef, bool, unsigned>
-getGlobalObjectInfo(const GlobalObject *GO, const TargetMachine &TM) {
+static std::tuple<StringRef, bool, unsigned, unsigned, unsigned>
+getGlobalObjectInfo(const GlobalObject *GO, const TargetMachine &TM,
+                    StringRef SectionName, SectionKind Kind) {
   StringRef Group = "";
   bool IsComdat = false;
   unsigned Flags = 0;
@@ -795,7 +797,23 @@ getGlobalObjectInfo(const GlobalObject *GO, const TargetMachine &TM) {
   }
   if (TM.isLargeGlobalValue(GO))
     Flags |= ELF::SHF_X86_64_LARGE;
-  return {Group, IsComdat, Flags};
+
+  unsigned Type, EntrySize;
+  if (MDNode *MD = GO->getMetadata(LLVMContext::MD_elf_section_properties)) {
+    Type = cast<ConstantAsMetadata>(MD->getOperand(0))
+               ->getValue()
+               ->getUniqueInteger()
+               .getZExtValue();
+    EntrySize = cast<ConstantAsMetadata>(MD->getOperand(1))
+                    ->getValue()
+                    ->getUniqueInteger()
+                    .getZExtValue();
+  } else {
+    Type = getELFSectionType(SectionName, Kind);
+    EntrySize = getEntrySizeForKind(Kind);
+  }
+
+  return {Group, IsComdat, Flags, Type, EntrySize};
 }
 
 static StringRef handlePragmaClangSection(const GlobalObject *GO,
@@ -831,25 +849,25 @@ static MCSection *selectExplicitSectionGlobal(const GlobalObject *GO,
   Kind = getELFKindForNamedSection(SectionName, Kind);
 
   unsigned Flags = getELFSectionFlags(Kind, TM.getTargetTriple());
-  auto [Group, IsComdat, ExtraFlags] = getGlobalObjectInfo(GO, TM);
+  auto [Group, IsComdat, ExtraFlags, Type, EntrySize] =
+      getGlobalObjectInfo(GO, TM, SectionName, Kind);
   Flags |= ExtraFlags;
 
-  unsigned EntrySize = getEntrySizeForKind(Kind);
   const unsigned UniqueID = calcUniqueIDUpdateFlagsAndSize(
       GO, SectionName, Kind, TM, Ctx, Mang, Flags, EntrySize, NextUniqueID,
       Retain, ForceUnique);
 
   const MCSymbolELF *LinkedToSym = getLinkedToSymbol(GO, TM);
-  MCSectionELF *Section = Ctx.getELFSection(
-      SectionName, getELFSectionType(SectionName, Kind), Flags, EntrySize,
-      Group, IsComdat, UniqueID, LinkedToSym);
+  MCSectionELF *Section =
+      Ctx.getELFSection(SectionName, Type, Flags, EntrySize, Group, IsComdat,
+                        UniqueID, LinkedToSym);
   // Make sure that we did not get some other section with incompatible sh_link.
   // This should not be possible due to UniqueID code above.
   assert(Section->getLinkedToSymbol() == LinkedToSym &&
          "Associated symbol mismatch between sections");
 
-  if (!(Ctx.getAsmInfo()->useIntegratedAssembler() ||
-        Ctx.getAsmInfo()->binutilsIsAtLeast(2, 35))) {
+  if (!(Ctx.getAsmInfo().useIntegratedAssembler() ||
+        Ctx.getAsmInfo().binutilsIsAtLeast(2, 35))) {
     // If we are using GNU as before 2.35, then this symbol might have
     // been placed in an incompatible mergeable section. Emit an error if this
     // is the case to avoid creating broken output.
@@ -880,13 +898,6 @@ static MCSectionELF *selectELFSectionForGlobal(
     const TargetMachine &TM, bool EmitUniqueSection, unsigned Flags,
     unsigned *NextUniqueID, const MCSymbolELF *AssociatedSymbol,
     const MachineJumpTableEntry *MJTE = nullptr) {
-
-  auto [Group, IsComdat, ExtraFlags] = getGlobalObjectInfo(GO, TM);
-  Flags |= ExtraFlags;
-
-  // Get the section entry size based on the kind.
-  unsigned EntrySize = getEntrySizeForKind(Kind);
-
   bool UniqueSectionName = false;
   unsigned UniqueID = MCSection::NonUniqueID;
   if (EmitUniqueSection) {
@@ -897,15 +908,18 @@ static MCSectionELF *selectELFSectionForGlobal(
       (*NextUniqueID)++;
     }
   }
-  SmallString<128> Name = getELFSectionNameForGlobal(
-      GO, Kind, Mang, TM, EntrySize, UniqueSectionName, MJTE);
+  SmallString<128> Name =
+      getELFSectionNameForGlobal(GO, Kind, Mang, TM, UniqueSectionName, MJTE);
+
+  auto [Group, IsComdat, ExtraFlags, Type, EntrySize] =
+      getGlobalObjectInfo(GO, TM, Name, Kind);
+  Flags |= ExtraFlags;
 
   // Use 0 as the unique ID for execute-only text.
   if (Kind.isExecuteOnly())
     UniqueID = 0;
-  return Ctx.getELFSection(Name, getELFSectionType(Name, Kind), Flags,
-                           EntrySize, Group, IsComdat, UniqueID,
-                           AssociatedSymbol);
+  return Ctx.getELFSection(Name, Type, Flags, EntrySize, Group, IsComdat,
+                           UniqueID, AssociatedSymbol);
 }
 
 static MCSection *selectELFSectionForGlobal(
@@ -921,12 +935,14 @@ static MCSection *selectELFSectionForGlobal(
     if (TM.getTargetTriple().isOSSolaris()) {
       EmitUniqueSection = true;
       Flags |= ELF::SHF_SUNW_NODISCARD;
-    } else if (Ctx.getAsmInfo()->useIntegratedAssembler() ||
-               Ctx.getAsmInfo()->binutilsIsAtLeast(2, 36)) {
+    } else if (Ctx.getAsmInfo().useIntegratedAssembler() ||
+               Ctx.getAsmInfo().binutilsIsAtLeast(2, 36)) {
       EmitUniqueSection = true;
       Flags |= ELF::SHF_GNU_RETAIN;
     }
   }
+  if (GO->hasMetadata(LLVMContext::MD_elf_section_properties))
+    EmitUniqueSection = true;
 
   MCSectionELF *Section = selectELFSectionForGlobal(
       Ctx, GO, Kind, Mang, TM, EmitUniqueSection, Flags,
@@ -1011,8 +1027,8 @@ MCSection *TargetLoweringObjectFileELF::getSectionForLSDA(
   // Use SHF_LINK_ORDER to facilitate --gc-sections if we can use GNU ld>=2.36
   // or LLD, which support mixed SHF_LINK_ORDER & non-SHF_LINK_ORDER.
   if (TM.getFunctionSections() &&
-      (getContext().getAsmInfo()->useIntegratedAssembler() &&
-       getContext().getAsmInfo()->binutilsIsAtLeast(2, 36))) {
+      (getContext().getAsmInfo().useIntegratedAssembler() &&
+       getContext().getAsmInfo().binutilsIsAtLeast(2, 36))) {
     Flags |= ELF::SHF_LINK_ORDER;
     LinkedToSym = static_cast<const MCSymbolELF *>(&FnSym);
   }
@@ -1305,6 +1321,8 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
                                                        Module &M) const {
   // Emit the linker options if present.
   emitLinkerDirectives(Streamer, M);
+
+  emitPseudoProbeDescMetadata(Streamer, M);
 
   unsigned VersionVal = 0;
   unsigned ImageInfoFlags = 0;
@@ -1635,8 +1653,7 @@ void TargetLoweringObjectFileMachO::getNameWithPrefix(
   if (auto *GO = GV->getAliaseeObject()) {
     SectionKind GOKind = TargetLoweringObjectFile::getKindForGlobal(GO, TM);
     const MCSection *TheSection = SectionForGlobal(GO, GOKind, TM);
-    CannotUsePrivateLabel =
-        !canUsePrivateLabel(*TM.getMCAsmInfo(), *TheSection);
+    CannotUsePrivateLabel = !canUsePrivateLabel(TM.getMCAsmInfo(), *TheSection);
   }
   getMangler().getNameWithPrefix(OutName, GV, CannotUsePrivateLabel);
 }
@@ -2162,7 +2179,7 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
     const Function *F) const {
   if (Kind.isMergeableConst() && C &&
-      getContext().getAsmInfo()->hasCOFFComdatConstants()) {
+      getContext().getAsmInfo().hasCOFFComdatConstants()) {
     // This creates comdat sections with the given symbol name, but unless
     // AsmPrinter::GetCPISymbol actually makes the symbol global, the symbol
     // will be created with a null storage class, which makes GNU binutils

@@ -115,6 +115,7 @@ LLVM_ABI void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                                       ScalarEvolution *SE, DominatorTree *DT,
                                       AssumptionCache *AC,
                                       const TargetTransformInfo *TTI,
+                                      ArrayRef<BasicBlock *> Blocks,
                                       AAResults *AA = nullptr);
 
 LLVM_ABI MDNode *GetUnrollMetadata(MDNode *LoopID, StringRef Name);
@@ -156,12 +157,18 @@ public:
   ConvergenceKind Convergence;
   bool ConvergenceAllowsRuntime;
 
+  /// \param TripCountIsUniform If true, all threads in a convergent execution
+  /// agree on the trip count, so runtime unrolling with a remainder is safe
+  /// even for loops with uncontrolled convergent operations.
   LLVM_ABI UnrollCostEstimator(const Loop *L, const TargetTransformInfo &TTI,
                                const SmallPtrSetImpl<const Value *> &EphValues,
-                               unsigned BEInsns);
+                               unsigned BEInsns,
+                               bool TripCountIsUniform = false);
 
-  /// Whether it is legal to unroll this loop.
-  LLVM_ABI bool canUnroll() const;
+  /// Whether it is legal to unroll this loop. If \p ORE and \p L are provided,
+  /// emit an optimization remark on failure.
+  LLVM_ABI bool canUnroll(OptimizationRemarkEmitter *ORE = nullptr,
+                          const Loop *L = nullptr) const;
 
   uint64_t getRolledLoopSize() const { return LoopSize.getValue(); }
 

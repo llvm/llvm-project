@@ -11,6 +11,7 @@
 
 namespace llvm {
 class StringRef;
+class Triple;
 } // namespace llvm
 
 namespace clang {
@@ -44,16 +45,22 @@ enum class OffloadArch {
   SM_90a,
   SM_100,
   SM_100a,
+  SM_100f,
   SM_101,
   SM_101a,
+  SM_101f,
   SM_103,
   SM_103a,
+  SM_103f,
   SM_110,
   SM_110a,
+  SM_110f,
   SM_120,
   SM_120a,
+  SM_120f,
   SM_121,
   SM_121a,
+  SM_121f,
   GFX600,
   GFX601,
   GFX602,
@@ -103,6 +110,8 @@ enum class OffloadArch {
   GFX1152,
   GFX1153,
   GFX1170,
+  GFX1171,
+  GFX1172,
   GFX12_GENERIC,
   GFX1200,
   GFX1201,
@@ -117,7 +126,7 @@ enum class OffloadArch {
   GRANITERAPIDS,
   // Intel GPUs
   BMG_G21,
-  LAST,
+  LAST = BMG_G21,
 
   CudaDefault = OffloadArch::SM_52,
   HIPDefault = OffloadArch::GFX906,
@@ -137,7 +146,7 @@ static inline bool IsIntelCPUOffloadArch(OffloadArch Arch) {
 }
 
 static inline bool IsIntelGPUOffloadArch(OffloadArch Arch) {
-  return Arch >= OffloadArch::BMG_G21 && Arch < OffloadArch::LAST;
+  return Arch >= OffloadArch::BMG_G21 && Arch <= OffloadArch::LAST;
 }
 
 static inline bool IsIntelOffloadArch(OffloadArch Arch) {
@@ -150,6 +159,9 @@ const char *OffloadArchToVirtualArchString(OffloadArch A);
 // Convert a string to an OffloadArch enum value. Returns
 // OffloadArch::Unknown if the string is not recognized.
 OffloadArch StringToOffloadArch(llvm::StringRef S);
+
+llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
+                                 OffloadArch ID);
 
 } // namespace clang
 

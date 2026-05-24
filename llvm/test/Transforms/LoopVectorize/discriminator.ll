@@ -1,3 +1,4 @@
+; TODO: The non-loop-vectorizer tests should be moved elsewhere.
 ; RUN: opt -S -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPVEC_4_1 %s
 ; RUN: opt -S -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=3 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPVEC_2_3 %s
 ; RUN: opt -S -passes=loop-unroll  -unroll-count=5 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPUNROLL_5 %s
@@ -17,14 +18,13 @@
 
 @a = global ptr null, align 8
 @b = global ptr null, align 8
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 define void @_Z3foov() #0 !dbg !6 {
   %1 = load ptr, ptr @b, align 8, !dbg !8, !tbaa !9
   %2 = load ptr, ptr @a, align 8, !dbg !13, !tbaa !9
   br label %3, !dbg !14
 
-; <label>:3:                                      ; preds = %3, %0
+; <label>:3:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %3 ]
   %4 = getelementptr inbounds i32, ptr %1, i64 %indvars.iv, !dbg !8
   %5 = load i32, ptr %4, align 4, !dbg !8, !tbaa !15
@@ -39,7 +39,7 @@ define void @_Z3foov() #0 !dbg !6 {
   %exitcond = icmp eq i64 %indvars.iv.next, 4096, !dbg !19
   br i1 %exitcond, label %9, label %3, !dbg !14, !llvm.loop !20
 
-; <label>:9:                                      ; preds = %3
+; <label>:9:
   ret void, !dbg !21
 }
 
@@ -57,13 +57,15 @@ define void @_Z3foov() #0 !dbg !6 {
 ;PSEUDO_PROBE: ![[#PROBE]] = !DILocation(line: 6, column: 13, scope: ![[TOP]])
 
 !llvm.dbg.cu = !{!0}
+!23 = !{null}
+!24 = !DISubroutineType(types: !23)
 !llvm.module.flags = !{!3, !4}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, debugInfoForProfiling: true)
 !1 = !DIFile(filename: "a.cc", directory: "/")
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 4, unit: !0)
+!6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 4, type: !24, unit: !0)
 !8 = !DILocation(line: 6, column: 13, scope: !6)
 !9 = !{!10, !10, i64 0}
 !10 = !{!"any pointer", !11, i64 0}

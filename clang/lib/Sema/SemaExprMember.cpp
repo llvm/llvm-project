@@ -12,6 +12,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/TypeBase.h"
@@ -1291,6 +1292,20 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
         BaseExpr.get()->getValueKind(), FPOptionsOverride());
   }
 
+  // In HLSL, the member access on a ConstantBuffer<T> access the members of
+  // through the handle in the ConstantBuffer<T>. If BaseType is a
+  // ConstantBuffer, the conversion function to type T is called before trying
+  // to access the member.
+  if (S.getLangOpts().HLSL && BaseType->isHLSLResourceRecord()) {
+    if (std::optional<ExprResult> ConvBase =
+            S.HLSL().tryPerformConstantBufferConversion(BaseExpr)) {
+      assert(!ConvBase->isInvalid());
+      BaseExpr = *ConvBase;
+      BaseType = BaseExpr.get()->getType();
+      IsArrow = false;
+    }
+  }
+
   // Handle field access to simple records.
   if (BaseType->getAsRecordDecl()) {
     if (LookupMemberExprInRecord(S, R, BaseExpr.get(), BaseType, OpLoc, IsArrow,
@@ -1737,9 +1752,18 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
       Base, Base->getType(), OpLoc, IsArrow, SS, TemplateKWLoc,
       FirstQualifierInScope, NameInfo, TemplateArgs, S, &ExtraArgs);
 
-  if (!Res.isInvalid() && isa<MemberExpr>(Res.get()))
-    CheckMemberAccessOfNoDeref(cast<MemberExpr>(Res.get()));
+  if (!Res.isInvalid()) {
+    if (MemberExpr *ME = dyn_cast<MemberExpr>(Res.get())) {
+      CheckMemberAccessOfNoDeref(ME);
 
+      if (getLangOpts().HLSL) {
+        QualType Ty = Res.get()->getType();
+        if (Ty->isHLSLResourceRecord() || Ty->isHLSLResourceRecordArray())
+          if (!HLSL().ActOnResourceMemberAccessExpr(ME))
+            Res = ExprError();
+      }
+    }
+  }
   return Res;
 }
 

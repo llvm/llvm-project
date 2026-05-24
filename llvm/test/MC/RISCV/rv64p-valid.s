@@ -100,6 +100,12 @@ padd.hs t1, a2, s0
 # CHECK-ASM-AND-OBJ: padd.bs t3, t1, t3
 # CHECK-ASM: encoding: [0x1b,0x2e,0xc3,0x9d]
 padd.bs t3, t1, t3
+# CHECK-ASM-AND-OBJ: psshl.hs a3, a4, a5
+# CHECK-ASM: encoding: [0x9b,0x26,0xf7,0xa8]
+psshl.hs a3, a4, a5
+# CHECK-ASM-AND-OBJ: psshlr.hs a6, a7, a0
+# CHECK-ASM: encoding: [0x1b,0xa8,0xa8,0xb8]
+psshlr.hs a6, a7, a0
 # CHECK-ASM-AND-OBJ: pssha.hs s0, t1, a2
 # CHECK-ASM: encoding: [0x1b,0x24,0xc3,0xe8]
 pssha.hs s0, t1, a2
@@ -112,12 +118,24 @@ psll.ws s0, t1, a0
 # CHECK-ASM-AND-OBJ: padd.ws s2, a2, a0
 # CHECK-ASM: encoding: [0x1b,0x29,0xa6,0x9a]
 padd.ws s2, a2, a0
+# CHECK-ASM-AND-OBJ: psshl.ws a3, a4, a5
+# CHECK-ASM: encoding: [0x9b,0x26,0xf7,0xaa]
+psshl.ws a3, a4, a5
+# CHECK-ASM-AND-OBJ: psshlr.ws a6, a7, a0
+# CHECK-ASM: encoding: [0x1b,0xa8,0xa8,0xba]
+psshlr.ws a6, a7, a0
 # CHECK-ASM-AND-OBJ: pssha.ws a4, a2, t1
 # CHECK-ASM: encoding: [0x1b,0x27,0x66,0xea]
 pssha.ws a4, a2, t1
 # CHECK-ASM-AND-OBJ: psshar.ws a2, a0, a4
 # CHECK-ASM: encoding: [0x1b,0x26,0xe5,0xfa]
 psshar.ws a2, a0, a4
+# CHECK-ASM-AND-OBJ: shl gp, a4, a5
+# CHECK-ASM: encoding: [0x9b,0x21,0xf7,0xae]
+shl gp, a4, a5
+# CHECK-ASM-AND-OBJ: shlr t1, a7, a0
+# CHECK-ASM: encoding: [0x1b,0xa3,0xa8,0xbe]
+shlr t1, a7, a0
 # CHECK-ASM-AND-OBJ: sha a0, t5, t5
 # CHECK-ASM: encoding: [0x1b,0x25,0xef,0xef]
 sha a0, t5, t5
@@ -358,6 +376,15 @@ pabdsumau.b s2, a2, a0
 # CHECK-ASM-AND-OBJ: maccu.w01 a0, a0, t1
 # CHECK-ASM: encoding: [0x3b,0x15,0x65,0xbe]
 maccu.w01 a0, a0, t1
+# CHECK-ASM-AND-OBJ: pnclipup.b a0, a1, a2
+# CHECK-ASM: encoding: [0x3b,0xa5,0xc5,0x80]
+pnclipup.b a0, a1, a2
+# CHECK-ASM-AND-OBJ: pnclipup.h a3, a4, a5
+# CHECK-ASM: encoding: [0xbb,0x26,0xf7,0x82]
+pnclipup.h a3, a4, a5
+# CHECK-ASM-AND-OBJ: pnclipup.w a6, a7, s0
+# CHECK-ASM: encoding: [0x3b,0xa8,0x88,0x86]
+pnclipup.w a6, a7, s0
 # CHECK-ASM-AND-OBJ: psh1add.h a2, a2, t3
 # CHECK-ASM: encoding: [0x3b,0x26,0xc6,0xa1]
 psh1add.h a2, a2, t3
@@ -370,6 +397,15 @@ psh1add.w s2, t5, a2
 # CHECK-ASM-AND-OBJ: pssh1sadd.w a4, t3, s0
 # CHECK-ASM: encoding: [0x3b,0x27,0x8e,0xb2]
 pssh1sadd.w a4, t3, s0
+# CHECK-ASM-AND-OBJ: pnclipp.b s1, s2, s3
+# CHECK-ASM: encoding: [0xbb,0x24,0x39,0xc1]
+pnclipp.b s1, s2, s3
+# CHECK-ASM-AND-OBJ: pnclipp.h s4, s5, s6
+# CHECK-ASM: encoding: [0x3b,0xaa,0x6a,0xc3]
+pnclipp.h s4, s5, s6
+# CHECK-ASM-AND-OBJ: pnclipp.w s7, s8, s9
+# CHECK-ASM: encoding: [0xbb,0x2b,0x9c,0xc7]
+pnclipp.w s7, s8, s9
 # CHECK-ASM-AND-OBJ: unzip8p a4, t3, t1
 # CHECK-ASM: encoding: [0x3b,0x27,0x6e,0xe0]
 unzip8p a4, t3, t1
