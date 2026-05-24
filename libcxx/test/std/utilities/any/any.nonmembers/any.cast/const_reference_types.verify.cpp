@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: std-at-least-c++17
 
 // <any>
 
 // template <class ValueType>
-// ValueType * any_cast(any *) noexcept;
+// ValueType const* any_cast(any const *) noexcept;
 
 #include <any>
 
 void test() {
-  std::any a = 1;
+  std::any a1       = 1;
+  const std::any& a = a1;
 
   // expected-error-re@any:* 1 {{static assertion failed{{.*}}_ValueType may not be a reference.}}
   (void)std::any_cast<int&>(&a); // expected-note {{requested here}}

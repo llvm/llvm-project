@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: std-at-least-c++17
 
 // <any>
 
 // template<class T>
-// T* any_cast(any* operand) noexcept;
+// const T* any_cast(const any* operand) noexcept;
 
 #include <any>
 
 void test() {
-  std::any a = 1;
+  const std::any ca = 1;
 
   // expected-error-re@any:* {{static assertion failed{{.*}}_ValueType may not be void.}}
-  (void)std::any_cast<void>(&a); // expected-note {{requested here}}
+  (void)std::any_cast<void>(&ca); // expected-note {{requested here}}
 }
