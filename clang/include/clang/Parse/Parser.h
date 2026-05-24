@@ -1520,7 +1520,6 @@ private:
                                 const char *&PrevSpec, unsigned &DiagID,
                                 bool &isInvalid);
 
-
   void ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
                                ParsedAttributes &OutAttrs);
 
