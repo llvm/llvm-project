@@ -39,7 +39,9 @@ func.func @nvvm_rcp(%arg0: f32) -> f32 {
 // CHECK-LABEL: @llvm_nvvm_barrier
 // CHECK-SAME: (%[[barId:.*]]: i32, %[[numberOfThreads:.*]]: i32)
 llvm.func @llvm_nvvm_barrier(%barId : i32, %numberOfThreads : i32) {
-  // CHECK: nvvm.barrier{{ *$}}
+  // CHECK: nvvm.barrier
+  // CHECK-NOT: id =
+  // CHECK-NOT: number_of_threads
   nvvm.barrier
   // CHECK: nvvm.barrier id = %[[barId]]
   nvvm.barrier id = %barId
