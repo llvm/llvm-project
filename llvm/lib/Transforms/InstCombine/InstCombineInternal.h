@@ -526,8 +526,7 @@ public:
   /// "(InnerVal0 op InnerVal1) op OuterVal" ==> "(X op' Y) op InnerVal0".
   /// "OuterVal op (InnerVal0 op InnerVal1)" ==> "InnerVal0 op (X op' Y)".
   /// X and Y are the inputs to the symmetric pair. "op'" indicates that
-  /// InnerOp will have its poison-generating flags dropped. Warning:
-  /// associativity not checked.
+  /// InnerOp will have its poison-generating flags dropped.
   bool tryReassociateAndFoldSymmetricPair(BinaryOperator &OuterOp,
                                           BinaryOperator &InnerOp,
                                           Value *InnerVal0, Value *InnerVal1,

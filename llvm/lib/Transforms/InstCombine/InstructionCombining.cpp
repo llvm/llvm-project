@@ -1374,9 +1374,11 @@ InstCombinerImpl::matchSymmetricPair(Value *LHS, Value *RHS) {
 bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
     BinaryOperator &OuterOp, BinaryOperator &InnerOp, Value *InnerVal0,
     Value *InnerVal1, Value *OuterVal) {
-  if (!OuterOp.isCommutative() || !OuterOp.isAssociative() ||
-      !InnerOp.isCommutative() || !InnerOp.isAssociative() ||
-      !InnerOp.hasOneUse() || OuterOp.getOpcode() != InnerOp.getOpcode())
+  assert(OuterOp.isCommutative() && OuterOp.isAssociative() &&
+         "OuterOp must be commutative and associative");
+  assert(OuterOp.getOpcode() == InnerOp.getOpcode() &&
+         "OuterOp and InnerOp must have same opcode");
+  if (!InnerOp.isAssociative() || !InnerOp.hasOneUse())
     return false;
 
   unsigned OuterValIdx;
@@ -1385,19 +1387,18 @@ bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
   else if (OuterOp.getOperand(1) == OuterVal)
     OuterValIdx = 1;
   else
-    return false; // OuterVal must be an operand of OuterOp
+    assert(false && "OuterVal must be an operand of OuterOp");
 
   auto Pair = matchSymmetricPair(InnerVal1, OuterVal);
-  if (Pair) {
-    replaceOperand(InnerOp, 0, Pair->first);
-    replaceOperand(InnerOp, 1, Pair->second);
-    InnerOp.dropPoisonGeneratingFlags();
-    replaceOperand(OuterOp, OuterValIdx, InnerVal0);
-    ClearSubclassDataAfterReassociation(OuterOp);
-    return true;
-  }
+  if (!Pair)
+    return false;
 
-  return false;
+  replaceOperand(InnerOp, 0, Pair->first);
+  replaceOperand(InnerOp, 1, Pair->second);
+  InnerOp.dropPoisonGeneratingFlags();
+  replaceOperand(OuterOp, OuterValIdx, InnerVal0);
+  ClearSubclassDataAfterReassociation(OuterOp);
+  return true;
 }
 
 Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
