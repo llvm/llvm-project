@@ -16,7 +16,7 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Passes/PassBuilder.h"
+#include "llvm/ExecutionEngine/EJIT/EJitPassBuilder.h"
 
 namespace llvm {
 namespace ejit {

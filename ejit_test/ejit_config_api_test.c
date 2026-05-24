@@ -48,6 +48,7 @@ typedef struct {
   size_t maxCacheEntries;
   size_t maxCacheSize;
   bool enableLogger;
+  const char *dumpJITDir;
 } ejit_config_t;
 
 typedef struct {

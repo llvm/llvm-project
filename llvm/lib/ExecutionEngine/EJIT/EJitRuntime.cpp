@@ -4,7 +4,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/EJIT/EJit.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOptions.h"
-#include <cstdio>
 
 using namespace llvm;
 using namespace llvm::ejit;
@@ -35,7 +34,7 @@ extern "C" {
 
 ejit_status_t ejit_init(const ejit_config_t *config) {
   if (gEJIT)
-    return EJIT_OK; // Already initialized
+    return EJIT_OK;
 
   Config cfg;
   parseConfig(config, cfg);

@@ -35,6 +35,7 @@ typedef struct {
   ejit_opt_level_t optLevel;
   size_t maxCodeMemory, maxDataMemory, maxCacheEntries, maxCacheSize;
   bool enableLogger;
+  const char *dumpJITDir;
 } ejit_config_t;
 
 typedef struct {

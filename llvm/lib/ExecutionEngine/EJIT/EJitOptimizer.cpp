@@ -6,13 +6,14 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Passes/PassBuilder.h"
+#include "llvm/ExecutionEngine/EJIT/EJitPassBuilder.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Scalar/LoopUnrollPass.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
@@ -25,12 +26,11 @@ using namespace llvm::ejit;
 EJitOptimizer::EJitOptimizer(PeriodArrayRegistry &reg)
     : registry_(reg) {
   (void)registry_;
-  PassBuilder PB;
-  PB.registerFunctionAnalyses(FAM_);
-  PB.registerLoopAnalyses(LAM_);
-  PB.registerCGSCCAnalyses(CGAM_);
-  PB.registerModuleAnalyses(MAM_);
-  PB.crossRegisterProxies(LAM_, FAM_, CGAM_, MAM_);
+  EJitPassBuilder::registerFunctionAnalyses(FAM_);
+  EJitPassBuilder::registerLoopAnalyses(LAM_);
+  EJitPassBuilder::registerCGSCCAnalyses(CGAM_);
+  EJitPassBuilder::registerModuleAnalyses(MAM_);
+  EJitPassBuilder::crossRegisterProxies(LAM_, FAM_, CGAM_, MAM_);
 }
 
 void EJitOptimizer::preReplacePeriodIndices(

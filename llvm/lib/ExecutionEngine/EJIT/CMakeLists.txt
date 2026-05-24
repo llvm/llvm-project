@@ -33,6 +33,7 @@ add_llvm_component_library(LLVMEJIT
   EJitRegistrationStore.cpp
   EJitStructFieldPass.cpp
   EJitOptimizer.cpp
+  EJitPassBuilder.cpp
 
   LINK_COMPONENTS
   BitReader
@@ -41,7 +42,6 @@ add_llvm_component_library(LLVMEJIT
   OrcJIT
   JITLink
   Support
-  Passes
   Scalar
   InstCombine
   IPO
@@ -70,7 +70,7 @@ endif()
 # Resolve LLVM component names → library names (e.g. "Core" → "LLVMCore")
 llvm_map_components_to_libnames(EJIT_LLVM_LIBS
   BitReader Core ExecutionEngine OrcJIT JITLink Support
-  Passes Scalar InstCombine IPO TransformUtils Analysis
+  Scalar InstCombine IPO TransformUtils Analysis
   ${EJIT_TARGET_COMPONENTS}
   )
 
