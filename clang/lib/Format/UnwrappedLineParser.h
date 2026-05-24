@@ -48,6 +48,8 @@ struct UnwrappedLine {
   bool InPragmaDirective = false;
   /// Whether it is part of a macro body.
   bool InMacroBody = false;
+  /// Whether it is a C++20 module/import declaration.
+  bool IsModuleOrImportDecl = false;
 
   /// Nesting level of unbraced body of a control statement.
   unsigned UnbracedBodyLevel = 0;
@@ -164,7 +166,8 @@ private:
   void parseCaseLabel();
   void parseSwitch(bool IsExpr);
   void parseNamespace();
-  bool parseModuleImport();
+  bool parseModuleDecl();
+  bool parseImportDecl();
   void parseNew();
   void parseAccessSpecifier();
   bool parseEnum();
