@@ -177,29 +177,30 @@ public:
 
   template <class _OtherIndexType>
     requires is_convertible_v<_OtherIndexType, index_type> && is_nothrow_constructible_v<index_type, _OtherIndexType>
-  _LIBCPP_HIDE_FROM_ABI constexpr mapping(const extents_type& __ext, _OtherIndexType __pad) : __extents_(__ext) {
+  _LIBCPP_HIDE_FROM_ABI constexpr mapping(const extents_type& __ext, _OtherIndexType __padding) : __extents_(__ext) {
+    auto __pad = extents_type::__index_cast(std::move(__padding));
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __mdspan_detail::__is_representable_as<index_type>(__pad),
-        "layout_right_padded::mapping(extents, pad): pad must be representable as index_type.");
+        "layout_right_padded::mapping(extents, padding): padding must be representable as index_type.");
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        static_cast<index_type>(__pad) > 0, "layout_right_padded::mapping(extents, pad): pad must be greater than 0.");
+        __pad > 0, "layout_right_padded::mapping(extents, padding): padding must be greater than 0.");
 
     if constexpr (padding_value != dynamic_extent)
-      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(padding_value == static_cast<index_type>(__pad),
-                                          "layout_right_padded::mapping(extents, pad): pad must equal padding_value.");
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          padding_value == __pad, "layout_right_padded::mapping(extents, padding): padding must equal padding_value.");
 
     if constexpr (__rank_ > 1) {
       _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           __mdspan_detail::__least_multiple_at_least_is_representable_as<index_type>(
               static_cast<index_type>(__pad), __ext.extent(__rank_ - 1)),
-          "layout_right_padded::mapping(extents, pad): padded stride must be representable as index_type.");
+          "layout_right_padded::mapping(extents, padding): padded stride must be representable as index_type.");
 
       const index_type __stride_rm2 =
           __mdspan_detail::__least_multiple_at_least(static_cast<index_type>(__pad), __ext.extent(__rank_ - 1));
 
       _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           __padded_product_is_representable(__ext, __stride_rm2),
-          "layout_right_padded::mapping(extents, pad): required span size must be representable as index_type.");
+          "layout_right_padded::mapping(extents, padding): required span size must be representable as index_type.");
 
       if constexpr (__static_padding_stride == dynamic_extent)
         __stride_rm2_ = __stride_rm2_type(__stride_rm2);
@@ -354,11 +355,13 @@ public:
     requires(sizeof...(_Indices) == __rank_) && (is_convertible_v<_Indices, index_type> && ...) &&
             (is_nothrow_constructible_v<index_type, _Indices> && ...)
   _LIBCPP_HIDE_FROM_ABI constexpr index_type operator()(_Indices... __idx) const noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__mdspan_detail::__is_multidimensional_index_in(__extents_, __idx...),
-                                 "layout_right_padded::mapping: out of bounds indexing.");
-    return [&]<size_t... _Pos>(index_sequence<_Pos...>) {
-      return ((static_cast<index_type>(__idx) * stride(_Pos)) + ... + static_cast<index_type>(0));
-    }(make_index_sequence<sizeof...(_Indices)>());
+    return [&]<class... _IndexTypes>(_IndexTypes... __idxs) {
+      _LIBCPP_ASSERT_UNCATEGORIZED(__mdspan_detail::__is_multidimensional_index_in(__extents_, __idxs...),
+                                   "layout_right_padded::mapping: out of bounds indexing.");
+      return [&]<size_t... _Pos>(index_sequence<_Pos...>) {
+        return ((static_cast<index_type>(__idxs) * stride(_Pos)) + ... + static_cast<index_type>(0));
+      }(make_index_sequence<sizeof...(_Indices)>());
+    }(extents_type::__index_cast(std::move(__idx))...);
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_unique() noexcept { return true; }

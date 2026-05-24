@@ -95,6 +95,16 @@ constexpr bool test() {
       std::layout_right_padded<D>::mapping<std::extents<unsigned char, D>>(std::extents<unsigned char, D>(1), 1),
       IntType(0)));
 
+  static_assert(check_operator_constraints(
+      std::layout_right_padded<4>::mapping<std::extents<int, 2, 2>>(std::extents<int, 2, 2>()),
+      RValueInt{1},
+      RValueInt{0}));
+
+  {
+    constexpr std::layout_right_padded<4>::mapping<std::extents<int, 2, 2>> mapping(std::extents<int, 2, 2>{});
+    static_assert(mapping(RValueInt{1}, RValueInt{0}) == 4);
+  }
+
   return true;
 }
 

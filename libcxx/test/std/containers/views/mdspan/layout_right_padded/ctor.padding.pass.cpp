@@ -17,6 +17,8 @@
 #include <cstddef>
 #include <mdspan>
 
+#include "../ConvertibleToIntegral.h"
+
 template <class Extents, class Padding>
 constexpr void test_construction(
     Extents extents, Padding padding, std::array<typename Extents::index_type, Extents::rank()> expected_strides) {
@@ -40,6 +42,8 @@ constexpr bool test() {
   test_construction(std::extents<unsigned, 5, 7>(), 4,             {8, 1});
   test_construction(std::extents<unsigned, D, 7, D>(7, 3), 4,      {28, 4, 1});
   test_construction(std::extents<unsigned, 0, 7>(), 4,             {8, 1});
+
+  test_construction(std::extents<unsigned, 5, 7>(), RValueInt{4},  {8, 1});
   // clang-format on
 
   return true;
