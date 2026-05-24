@@ -2,17 +2,17 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
 // LLVM-LABEL: @llvm_nvvm_barrier(
-// LLVM-SAME: i32 %[[numThreads:.*]], i32 %[[redOperand:.*]])
-llvm.func @llvm_nvvm_barrier(%numberOfThreads : i32, %redOperand : i32) {
+// LLVM-SAME: i32 %[[barId:.*]], i32 %[[numThreads:.*]], i32 %[[redOperand:.*]])
+llvm.func @llvm_nvvm_barrier(%barID : i32, %numberOfThreads : i32, %redOperand : i32) {
   // LLVM: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
   // CHECK: nvvm.barrier
   nvvm.barrier
-  // LLVM: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 5)
-  // CHECK: nvvm.barrier id = 5
-  nvvm.barrier id = 5
-  // LLVM: call void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 5, i32 %[[numThreads]])
-  // CHECK: nvvm.barrier id = 5 number_of_threads = %{{.*}}
-  nvvm.barrier id = 5 number_of_threads = %numberOfThreads
+  // LLVM: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %[[barId]])
+  // CHECK: nvvm.barrier id = %{{.*}}
+  nvvm.barrier id = %barID
+  // LLVM: call void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 %[[barId]], i32 %[[numThreads]])
+  // CHECK: nvvm.barrier id = %{{.*}} number_of_threads = %{{.*}}
+  nvvm.barrier id = %barID number_of_threads = %numberOfThreads
   // LLVM: call void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 0, i32 %[[numThreads]])
   // CHECK: nvvm.barrier number_of_threads = %{{.*}}
   nvvm.barrier number_of_threads = %numberOfThreads
@@ -29,9 +29,9 @@ llvm.func @llvm_nvvm_barrier(%numberOfThreads : i32, %redOperand : i32) {
   // CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<popc> %{{.*}} -> i32
   %2 = nvvm.barrier.reduction #nvvm.reduction<popc> %redOperand -> i32
   // LLVM: %[[redOperandCmp4:.*]] = icmp ne i32 %[[redOperand]], 0
-  // LLVM: %{{.*}} = call i1 @llvm.nvvm.barrier.cta.red.and.aligned.all(i32 3, i1 %[[redOperandCmp4]])
-  // CHECK: %{{.*}} = nvvm.barrier.reduction id = 3 #nvvm.reduction<and> %{{.*}} -> i32
-  %3 = nvvm.barrier.reduction id = 3 #nvvm.reduction<and> %redOperand -> i32
+  // LLVM: %{{.*}} = call i1 @llvm.nvvm.barrier.cta.red.and.aligned.all(i32 %[[barId]], i1 %[[redOperandCmp4]])
+  // CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<and> %{{.*}} id = %{{.*}} -> i32
+  %3 = nvvm.barrier.reduction #nvvm.reduction<and> %redOperand id = %barID -> i32
 
   llvm.return
 }

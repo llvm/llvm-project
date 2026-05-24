@@ -25,6 +25,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Types.h"
@@ -2926,13 +2927,20 @@ LogicalResult NVVM::SetMaxRegisterOp::verify() {
   return success();
 }
 
-/// Common verifier for `nvvm.barrier` and `nvvm.barrier.reduction`: PTX
-/// restricts the logical barrier resource id to the 4-bit range 0..15.
+/// Check the PTX 0..15 range for barrier ids that are present as integer
+/// constants.
 template <typename BarrierLikeOp>
 static LogicalResult verifyBarrierIdRange(BarrierLikeOp op) {
-  if (op.getBarrierId() > 15)
+  Value id = op.getBarrierId();
+  if (!id)
+    return success();
+  APInt cst;
+  if (!matchPattern(id, m_ConstantInt(&cst)))
+    return success();
+  uint64_t value = cst.getZExtValue();
+  if (value > 15)
     return op.emitOpError("barrier id must be in the range [0, 15], got ")
-           << op.getBarrierId();
+           << value;
   return success();
 }
 
@@ -3444,9 +3452,11 @@ void SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::BarrierOp>(op);
-  llvm::SmallVector<llvm::Value *> args = {
-      builder.getInt32(thisOp.getBarrierId())};
+  llvm::Value *barrierId = thisOp.getBarrierId()
+                               ? mt.lookupValue(thisOp.getBarrierId())
+                               : builder.getInt32(0);
   llvm::Intrinsic::ID id;
+  llvm::SmallVector<llvm::Value *> args = {barrierId};
   if (thisOp.getNumberOfThreads()) {
     id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count;
     args.push_back(mt.lookupValue(thisOp.getNumberOfThreads()));
@@ -3471,8 +3481,11 @@ mlir::NVVM::IDArgPair NVVM::BarrierReductionOp::getIntrinsicIDAndArgs(
     id = llvm::Intrinsic::nvvm_barrier_cta_red_popc_aligned_all;
     break;
   }
+  llvm::Value *barrierId = thisOp.getBarrierId()
+                               ? mt.lookupValue(thisOp.getBarrierId())
+                               : builder.getInt32(0);
   llvm::SmallVector<llvm::Value *> args = {
-      builder.getInt32(thisOp.getBarrierId()),
+      barrierId,
       builder.CreateICmpNE(mt.lookupValue(thisOp.getReductionPredicate()),
                            builder.getInt32(0))};
   return {id, std::move(args)};

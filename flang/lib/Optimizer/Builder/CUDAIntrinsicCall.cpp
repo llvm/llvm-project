@@ -1331,8 +1331,7 @@ CUDAIntrinsicLibrary::genMatchAnySync(mlir::Type resultType,
 // SYNCTHREADS
 void CUDAIntrinsicLibrary::genSyncThreads(
     llvm::ArrayRef<fir::ExtendedValue> args) {
-  mlir::NVVM::BarrierOp::create(builder, loc, /*barrierId=*/0,
-                                /*numberOfThreads=*/mlir::Value{});
+  mlir::NVVM::BarrierOp::create(builder, loc);
 }
 
 // SYNCTHREADS_AND
@@ -1341,7 +1340,7 @@ CUDAIntrinsicLibrary::genSyncThreadsAnd(mlir::Type resultType,
                                         llvm::ArrayRef<mlir::Value> args) {
   mlir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
   return mlir::NVVM::BarrierReductionOp::create(
-             builder, loc, resultType, /*barrierId=*/0,
+             builder, loc, resultType, /*barrierId=*/mlir::Value{},
              mlir::NVVM::BarrierReductionAttr::get(
                  builder.getContext(), mlir::NVVM::BarrierReduction::AND),
              arg)
@@ -1354,7 +1353,7 @@ CUDAIntrinsicLibrary::genSyncThreadsCount(mlir::Type resultType,
                                           llvm::ArrayRef<mlir::Value> args) {
   mlir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
   return mlir::NVVM::BarrierReductionOp::create(
-             builder, loc, resultType, /*barrierId=*/0,
+             builder, loc, resultType, /*barrierId=*/mlir::Value{},
              mlir::NVVM::BarrierReductionAttr::get(
                  builder.getContext(), mlir::NVVM::BarrierReduction::POPC),
              arg)
@@ -1367,7 +1366,7 @@ CUDAIntrinsicLibrary::genSyncThreadsOr(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
   mlir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
   return mlir::NVVM::BarrierReductionOp::create(
-             builder, loc, resultType, /*barrierId=*/0,
+             builder, loc, resultType, /*barrierId=*/mlir::Value{},
              mlir::NVVM::BarrierReductionAttr::get(
                  builder.getContext(), mlir::NVVM::BarrierReduction::OR),
              arg)

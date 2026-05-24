@@ -218,14 +218,27 @@ gpu.module @test_module_5 {
     // CHECK: %[[DESC4:.*]] = llvm.insertvalue %[[ID1]], %[[DESC3]][0] : !llvm.struct<(i32, i32)>
     // CHECK: %[[DESC5:.*]] = llvm.insertvalue %[[THREADS1]], %[[DESC4]][1] : !llvm.struct<(i32, i32)>
     %nb1 = gpu.initialize_named_barrier %c2 : i32 -> !gpu.named_barrier
+    // CHECK: %[[BARRIER_ID0:.*]] = llvm.extractvalue %[[DESC2]][0] : !llvm.struct<(i32, i32)>
     // CHECK: %[[BARRIER_THREADS0:.*]] = llvm.extractvalue %[[DESC2]][1] : !llvm.struct<(i32, i32)>
-    // CHECK: nvvm.barrier id = 1 number_of_threads = %[[BARRIER_THREADS0]]
+    // CHECK: nvvm.barrier id = %[[BARRIER_ID0]] number_of_threads = %[[BARRIER_THREADS0]]
     gpu.barrier named(%nb0 : !gpu.named_barrier)
+    // CHECK: %[[BARRIER_ID1:.*]] = llvm.extractvalue %[[DESC5]][0] : !llvm.struct<(i32, i32)>
     // CHECK: %[[BARRIER_THREADS1:.*]] = llvm.extractvalue %[[DESC5]][1] : !llvm.struct<(i32, i32)>
-    // CHECK: nvvm.barrier id = 2 number_of_threads = %[[BARRIER_THREADS1]]
+    // CHECK: nvvm.barrier id = %[[BARRIER_ID1]] number_of_threads = %[[BARRIER_THREADS1]]
     gpu.barrier named(%nb1 : !gpu.named_barrier)
     func.return
   }
+
+  // CHECK-LABEL: func @gpu_named_barrier_arg
+  // CHECK-SAME: (%[[NB:.*]]: !llvm.struct<(i32, i32)>)
+  func.func @gpu_named_barrier_arg(%nb : !gpu.named_barrier) {
+    // CHECK: %[[BARRIER_ID:.*]] = llvm.extractvalue %[[NB]][0] : !llvm.struct<(i32, i32)>
+    // CHECK: %[[BARRIER_THREADS:.*]] = llvm.extractvalue %[[NB]][1] : !llvm.struct<(i32, i32)>
+    // CHECK: nvvm.barrier id = %[[BARRIER_ID]] number_of_threads = %[[BARRIER_THREADS]]
+    gpu.barrier named(%nb : !gpu.named_barrier)
+    func.return
+  }
+
   // CHECK: llvm.mlir.global internal constant @[[$NB0]](1 : i32) {addr_space = 0 : i32} : i32
   // CHECK: llvm.mlir.global internal constant @[[$NB1]](2 : i32) {addr_space = 0 : i32} : i32
 }

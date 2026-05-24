@@ -1123,14 +1123,15 @@ def BarrierReductionAttr
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_BarrierOp : NVVM_VoidIntrinsicOp<"barrier"> {
+def NVVM_BarrierOp : NVVM_VoidIntrinsicOp<"barrier",
+    [AttrSizedOperandSegments]> {
   let summary = "CTA Barrier Synchronization Op";
   let description = [{
     The `nvvm.barrier` operation performs barrier synchronization and communication 
     within a CTA (Cooperative Thread Array). It causes executing threads to wait for 
     all non-exited threads participating in the barrier to arrive.
 
-    The operation takes the following operands and attributes:
+    The operation takes the following optional operands:
 
     - `barrierId`: Specifies a logical barrier resource with value 0 through 15. 
       Each CTA instance has sixteen barriers numbered 0..15. Defaults to 0 if not specified.
@@ -1157,12 +1158,16 @@ def NVVM_BarrierOp : NVVM_VoidIntrinsicOp<"barrier"> {
   }];
 
   let arguments = (ins
-      DefaultValuedAttr<I32Attr, "0">:$barrierId,
+      Optional<I32>:$barrierId,
       Optional<I32>:$numberOfThreads);
 
   let assemblyFormat =
       "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? "
       "attr-dict";
+
+  let builders = [OpBuilder<(ins), [{
+      return build($_builder, $_state, Value{}, Value{});
+    }]>];
 
   let hasVerifier = 1;
 }
@@ -1176,7 +1181,7 @@ def NVVM_BarrierReductionOp :
     in a CTA.
 
     - `barrierId`: Specifies a logical barrier resource with value 0 through 15.
-      Defaults to 0.
+      Optional; defaults to barrier id 0 when not specified.
     - `reductionOp`: The reduction kind (`popc`, `and`, `or`) applied across the
       per-thread predicates.
     - `reductionPredicate`: The per-thread i32 predicate. It is compared against
@@ -1190,14 +1195,14 @@ def NVVM_BarrierReductionOp :
   }];
 
   let arguments = (ins
-      DefaultValuedAttr<I32Attr, "0">:$barrierId,
+      Optional<I32>:$barrierId,
       BarrierReductionAttr:$reductionOp,
       I32:$reductionPredicate);
   let results = (outs I32:$res);
 
   let assemblyFormat =
-      "(`id` `=` $barrierId^)? qualified($reductionOp) $reductionPredicate "
-      "`->` type($res) attr-dict";
+      "qualified($reductionOp) $reductionPredicate "
+      "(`id` `=` $barrierId^)? `->` type($res) attr-dict";
 
   string llvmBuilder = [{
     auto [id, args] = NVVM::BarrierReductionOp::getIntrinsicIDAndArgs(
