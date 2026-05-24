@@ -8,11 +8,13 @@ Intuitively, a *token* value is a pointer to an operation (via an OpResult)
 or a pointer to a region (via an entry block argument). A token cannot be
 forwarded: a token def-use chain cannot be obscured by ops with forwarding
 semantics such as `arith.select` or `cf.br`. This allows you to always walk
-back from a use and say "this token came from *that* specific op". 
+back from a use and say "this token came from *that* specific op". The exact
+structural contract is specified in the
+[LangRef section on tokens](LangRef.md#token-type).
 
 A token is an SSA value that has the builtin token type. The token type is 
-parameterless, opaque and carries no runtime data. A token prints as `token`.
-Apart from the structural contract below, tokens are like any other SSA values.
+parameterless, opaque and carries no runtime data. Apart from the structural
+contract specified in the LangRef, tokens are like any other SSA values.
 
 ## Design Rationale
 
@@ -25,42 +27,6 @@ As with regular use-def chains, a token def-use chain is unidirectional. A
 token use points to the token's definition and not the other way around.
 Transformations can remove the use of a token without having to touch or
 inspect the definition of the token.
-
-## Structural Contract
-
-Given a use of a token SSA value, its definition is guaranteed to be the
-semantic producer of the token. Generic transformations must preserve this
-invariant: they may not introduce a forwarding step between a use and its
-producer, nor retarget a use to a producer with different semantics. New
-uses of a token can be introduced safely. As a consequence:
-
-1. A token must not appear as a forwarded value, e.g.:
-    * a forwarded result/operand of a `CallOpInterface` op,
-    * an argument or result type of a `FunctionOpInterface` op,
-    * a successor operand or successor block argument of a
-      `BranchOpInterface` op,
-    * a forwarded operand to/from any region of a `RegionBranchOpInterface`
-      op (iter-args, region results, yielded values), or
-    * the result of any op that selects or merges values it does not
-      understand (e.g. `arith.select`).
-
-2. A token cannot constant-fold. No constant of token type exists.
-
-3. The presence of tokens has no effect on standard transformations such as
-   CSE, DCE or hoisting.
-
-4. Use of a token is side-effect free: a token user follows the usual
-   `isTriviallyDead()` rules.
-
-These properties mirror what LLVM IR already documents for its own
-[`token` type](https://llvm.org/docs/LangRef.html#token-type).
-
-Operations must opt in to producing or consuming tokens with
-`TokenProducerTrait` and `TokenConsumerTrait`.
-
-Note: Because tokens are SSA values, they cannot cross `IsolatedFromAbove`
-region boundaries. Symbols should be used instead when a token-like
-dependency must cross such a boundary.
 
 ## ODS Integration
 
@@ -94,7 +60,21 @@ arguments in non-entry blocks are rejected.
 
 ## Examples
 
-### Rejected: tokens in `AnyType` positions
+### Non-forwarding Semantics
+
+The [LangRef](LangRef.md#token-type) requires that a token never appears as a
+forwarded value. For example, you cannot use a token like this:
+
+* a forwarded result or operand of a `CallOpInterface` op;
+* an argument or result type of a `FunctionOpInterface` op;
+* a successor operand of a `BranchOpInterface` op;
+* a block argument of a non-entry block;
+* a forwarded operand to or from any region of a `RegionBranchOpInterface`
+  op (iter-args, region results, or yielded values); or
+* the result of any op that selects or merges values it does not understand
+  (e.g. `arith.select`).
+
+### ODS-based Verification: Tokens Rejected in `AnyType` Positions
 
 `scf.yield` operands have forwarding semantics. A token cannot be yielded from
 a branch or a loop.
