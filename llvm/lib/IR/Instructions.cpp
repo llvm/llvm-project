@@ -4259,11 +4259,14 @@ void SwitchInstProfUpdateWrapper::setSuccessorWeight(
 SwitchInstProfUpdateWrapper::CaseWeightOpt
 SwitchInstProfUpdateWrapper::getSuccessorWeight(const SwitchInst &SI,
                                                 unsigned idx) {
-  if (MDNode *ProfileData = getBranchWeightMDNode(SI))
-    if (ProfileData->getNumOperands() == SI.getNumSuccessors() + 1)
-      return mdconst::extract<ConstantInt>(ProfileData->getOperand(idx + 1))
+  if (MDNode *ProfileData = getBranchWeightMDNode(SI)) {
+    unsigned Offset = getBranchWeightOffset(ProfileData);
+    if (ProfileData->getNumOperands() == SI.getNumSuccessors() + Offset)
+      return mdconst::extract<ConstantInt>(
+                 ProfileData->getOperand(idx + Offset))
           ->getValue()
           .getZExtValue();
+  }
 
   return std::nullopt;
 }
