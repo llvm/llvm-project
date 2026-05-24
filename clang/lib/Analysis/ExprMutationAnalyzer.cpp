@@ -404,9 +404,12 @@ ExprMutationAnalyzer::Analyzer::findDirectMutation(const Expr *Exp) {
   const auto NonConstMethod = cxxMethodDecl(unless(isConst()));
 
   const auto AsNonConstThis = expr(anyOf(
+      // For member calls through a pointer, the pointer variable
+      // itself is not mutated but only the pointee is mutated.
       cxxMemberCallExpr(
           on(canResolveToExpr(Exp)),
           unless(anyOf(isConstCallee(), thisPointerType(pointerType())))),
+
       cxxOperatorCallExpr(callee(NonConstMethod),
                           hasArgument(0, canResolveToExpr(Exp))),
       // In case of a templated type, calling overloaded operators is not
