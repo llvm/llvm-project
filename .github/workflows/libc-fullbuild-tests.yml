@@ -133,13 +133,15 @@ jobs:
     
     # Configure libc fullbuild with scudo.
     - name: Configure CMake
+      env:
+        BUILD_OUTPUT_DIR: ${{ steps.strings.outputs.build-output-dir }}
       run: |
         export RUNTIMES="libc"
 
         export CMAKE_FLAGS="
           -G Ninja
           -S /__w/llvm-project/llvm-project/runtimes
-          -B ${{ steps.strings.outputs.build-output-dir }}
+          -B "$BUILD_OUTPUT_DIR"
           -DCMAKE_ASM_COMPILER=${{ matrix.c_compiler }}
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
@@ -176,6 +178,8 @@ jobs:
 
     - name: Build
       shell: bash
+      env:
+        BUILD_OUTPUT_DIR: ${{ steps.strings.outputs.build-output-dir }}
       run: |
         TARGETS="install"
         if [[ "${{ matrix.build_fuzzing_tests }}" == "ON" ]]; then
@@ -183,7 +187,7 @@ jobs:
         fi
 
         cmake \
-          --build ${{ steps.strings.outputs.build-output-dir }} \
+          --build "$BUILD_OUTPUT_DIR" \
           --parallel \
           --target $TARGETS
 
@@ -194,8 +198,10 @@ jobs:
           !endsWith(matrix.target, '-none-eabi') &&
           matrix.target != 'riscv32-unknown-elf'
         }}
+      env:
+        BUILD_OUTPUT_DIR: ${{ steps.strings.outputs.build-output-dir }}
       run: >
         cmake 
-        --build ${{ steps.strings.outputs.build-output-dir }} 
+        --build "$BUILD_OUTPUT_DIR"
         --parallel
         --target check-libc
