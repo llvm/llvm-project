@@ -1748,7 +1748,16 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
               Op = ConstantPointerNull::get(cast<PointerType>(CE->getType()));
             if (HasPoisonExt && isa<PoisonValue>(Op)) {
               PrepareInsert();
-              Op = B.CreateIntrinsic(Intrinsic::spv_poison, {Op->getType()}, {});
+              Type *PoisonTy = Op->getType();
+              if (PoisonTy->isAggregateType()) {
+                auto *Call = B.CreateIntrinsic(Intrinsic::spv_poison,
+                                               {B.getInt32Ty()}, {});
+                AggrConsts[Call] = cast<PoisonValue>(Op);
+                AggrConstTypes[Call] = PoisonTy;
+                Op = Call;
+              } else {
+                Op = B.CreateIntrinsic(Intrinsic::spv_poison, {PoisonTy}, {});
+              }
             }
             Args.push_back(Op);
           }
