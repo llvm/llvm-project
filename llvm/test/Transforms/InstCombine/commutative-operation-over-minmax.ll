@@ -208,8 +208,10 @@ define i32 @sadd_nuw_min_max_assoc(i32 %x, i32 %y, i32 %z) {
 define float @fp_inner_no_reassoc_cmp(i1 %c, float %a, float %x, float %y) {
 ; CHECK-LABEL: define float @fp_inner_no_reassoc_cmp(
 ; CHECK-SAME: i1 [[C:%.*]], float [[A:%.*]], float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[INNER:%.*]] = fadd float [[X]], [[Y]]
-; CHECK-NEXT:    [[RETF:%.*]] = fadd reassoc nsz float [[A]], [[INNER]]
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C]], float [[X]], float [[Y]]
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C]], float [[Y]], float [[X]]
+; CHECK-NEXT:    [[INNER:%.*]] = fadd float [[A]], [[S0]]
+; CHECK-NEXT:    [[RETF:%.*]] = fadd reassoc nsz float [[INNER]], [[S1]]
 ; CHECK-NEXT:    ret float [[RETF]]
 ;
   %s0 = select i1 %c, float %x, float %y
@@ -222,8 +224,10 @@ define float @fp_inner_no_reassoc_cmp(i1 %c, float %a, float %x, float %y) {
 define float @fp_mixed_fmf_cmp(i1 %c, float %a, float %x, float %y) {
 ; CHECK-LABEL: define float @fp_mixed_fmf_cmp(
 ; CHECK-SAME: i1 [[C:%.*]], float [[A:%.*]], float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[INNER:%.*]] = fadd float [[X]], [[Y]]
-; CHECK-NEXT:    [[RETF:%.*]] = fadd reassoc nnan ninf nsz float [[A]], [[INNER]]
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C]], float [[X]], float [[Y]]
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C]], float [[Y]], float [[X]]
+; CHECK-NEXT:    [[INNER:%.*]] = fadd nnan float [[A]], [[S0]]
+; CHECK-NEXT:    [[RETF:%.*]] = fadd reassoc nnan ninf nsz float [[INNER]], [[S1]]
 ; CHECK-NEXT:    ret float [[RETF]]
 ;
   %s0 = select i1 %c, float %x, float %y

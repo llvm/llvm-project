@@ -1374,9 +1374,9 @@ InstCombinerImpl::matchSymmetricPair(Value *LHS, Value *RHS) {
 bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
     BinaryOperator &OuterOp, BinaryOperator &InnerOp, Value *InnerVal0,
     Value *InnerVal1, Value *OuterVal) {
-  assert(OuterOp.getOpcode() == InnerOp.getOpcode() &&
-         "Outer and inner operation must have same opcode!");
-  if (!OuterOp.isCommutative() || !InnerOp.hasOneUse())
+  if (!OuterOp.isCommutative() || !OuterOp.isAssociative() ||
+      !InnerOp.isCommutative() || !InnerOp.isAssociative() ||
+      !InnerOp.hasOneUse() || OuterOp.getOpcode() != InnerOp.getOpcode())
     return false;
 
   unsigned OuterValIdx;
@@ -1384,10 +1384,8 @@ bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
     OuterValIdx = 0;
   else if (OuterOp.getOperand(1) == OuterVal)
     OuterValIdx = 1;
-  else {
-    assert(false && "OuterVal must be an operand of OuterOp");
-    return false;
-  }
+  else 
+    return false; // OuterVal must be an operand of OuterOp
 
   auto Pair = matchSymmetricPair(InnerVal1, OuterVal);
   if (Pair) {
