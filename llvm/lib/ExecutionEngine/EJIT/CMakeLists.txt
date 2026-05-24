@@ -9,6 +9,13 @@ if(EJIT_DEFAULT_TARGET_TRIPLE)
   message(STATUS "EmbeddedJIT: forcing target triple = ${EJIT_DEFAULT_TARGET_TRIPLE}")
 endif()
 
+#===-- Bare-metal configuration -------------------------------------------===#
+option(EJIT_BARE_METAL "Build EJIT for bare-metal (no OS, no threads)" ON)
+if(EJIT_BARE_METAL)
+  message(STATUS "EmbeddedJIT: bare-metal mode enabled")
+  add_definitions(-DEJIT_BARE_METAL)
+endif()
+
 # Build target component list from LLVM_TARGETS_TO_BUILD.
 # Each target needs CodeGen, Desc, and Info for native target initialization.
 # AsmPrinter init lives in CodeGen, so no separate AsmPrinter component needed.
@@ -17,14 +24,11 @@ foreach(_t ${LLVM_TARGETS_TO_BUILD})
   list(APPEND EJIT_TARGET_COMPONENTS ${_t}CodeGen ${_t}Desc ${_t}Info)
 endforeach()
 
-add_llvm_component_library(LLVMEJIT
+set(EJIT_SOURCES
   EJit.cpp
   EJitRuntime.cpp
   EJitRegistration.cpp
   EJitOrcEngine.cpp
-  EJitJITLinkMemoryManager.cpp
-  EJitSyncCompiler.cpp
-  EJitAsyncCompiler.cpp
   EJitCompileDriver.cpp
   EJitCache.cpp
   EJitRuntimeState.cpp
@@ -34,6 +38,20 @@ add_llvm_component_library(LLVMEJIT
   EJitStructFieldPass.cpp
   EJitOptimizer.cpp
   EJitPassBuilder.cpp
+)
+
+# Async/sync compiler — excluded in bare-metal (single-threaded, no std::thread)
+if(NOT EJIT_BARE_METAL)
+  list(APPEND EJIT_SOURCES
+    EJitSyncCompiler.cpp
+    EJitAsyncCompiler.cpp
+  )
+endif()
+
+add_llvm_component_library(LLVMEJIT
+  ${EJIT_SOURCES}
+
+  PARTIAL_SOURCES_INTENDED
 
   LINK_COMPONENTS
   BitReader

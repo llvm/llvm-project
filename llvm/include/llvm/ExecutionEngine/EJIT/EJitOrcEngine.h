@@ -18,7 +18,6 @@
 namespace llvm {
 namespace ejit {
 
-class EJitJITLinkMemoryManager;
 class PeriodArrayRegistry;
 class EJitRuntimeState;
 
@@ -60,8 +59,6 @@ public:
   /// Set the active specialization context (used during compilation).
   void setActiveContext(const SpecializationContext *ctx);
   const SpecializationContext *getActiveContext() const;
-
-  EJitJITLinkMemoryManager *getMemoryManager() const;
 
   /// Register a user-defined external symbol (function or global) that the
   /// JIT can resolve when compiling bitcode modules. Required for bare-metal

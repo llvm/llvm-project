@@ -278,9 +278,6 @@ const SpecializationContext *EJitOrcEngine::getActiveContext() const {
   return P->activeCtx;
 }
 
-EJitJITLinkMemoryManager *EJitOrcEngine::getMemoryManager() const {
-  return nullptr; // Using default LLJIT memory manager
-}
 
 void EJitOrcEngine::addUserSymbol(const std::string &name, void *addr) {
   P->userSymbols[name] = addr;

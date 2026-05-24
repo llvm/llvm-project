@@ -1,5 +1,7 @@
 //===-- EJitAsyncCompiler.cpp - Asynchronous JIT Compiler -----------------===//
 
+#ifndef EJIT_BARE_METAL
+
 #include "llvm/ExecutionEngine/EJIT/EJitAsyncCompiler.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
 #include "llvm/ExecutionEngine/EJIT/EJitSyncCompiler.h"
@@ -103,3 +105,5 @@ void EJitAsyncCompiler::compileOne(const CompileRequest &req) {
     cache_.put(req.ctx.cacheKey, result.funcPtr, result.codeSize, deps);
   }
 }
+
+#endif // EJIT_BARE_METAL
