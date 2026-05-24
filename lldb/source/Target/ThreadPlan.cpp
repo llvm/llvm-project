@@ -16,6 +16,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
+#include <atomic>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -144,7 +146,7 @@ bool ThreadPlan::WillResume(StateType resume_state, bool current_plan) {
 }
 
 lldb::user_id_t ThreadPlan::GetNextID() {
-  static uint32_t g_nextPlanID = 0;
+  static std::atomic<uint32_t> g_nextPlanID{0};
   return ++g_nextPlanID;
 }
 

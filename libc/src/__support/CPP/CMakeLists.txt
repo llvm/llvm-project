@@ -130,11 +130,13 @@ add_header_library(
     type_traits/invoke.h
     type_traits/is_arithmetic.h
     type_traits/is_array.h
+    type_traits/is_assignable.h
     type_traits/is_base_of.h
     type_traits/is_class.h
     type_traits/is_complex.h
     type_traits/is_const.h
     type_traits/is_constant_evaluated.h
+    type_traits/is_constructible.h
     type_traits/is_convertible.h
     type_traits/is_destructible.h
     type_traits/is_enum.h

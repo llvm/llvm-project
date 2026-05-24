@@ -23,7 +23,7 @@ body:             |
     ; GFX6-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
     ; GFX6-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[C1]](s32)
     ; GFX6-NEXT: [[AMDGPU_RCP_IFLAG:%[0-9]+]]:_(s32) = G_AMDGPU_RCP_IFLAG [[UITOFP]](s32)
-    ; GFX6-NEXT: [[C3:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41EFFFFFC0000000
+    ; GFX6-NEXT: [[C3:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F7FFFFE
     ; GFX6-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[AMDGPU_RCP_IFLAG]], [[C3]]
     ; GFX6-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FMUL]](s32)
     ; GFX6-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -61,7 +61,7 @@ body:             |
     ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
     ; GFX8-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[C]](s32)
     ; GFX8-NEXT: [[AMDGPU_RCP_IFLAG:%[0-9]+]]:_(s32) = G_AMDGPU_RCP_IFLAG [[UITOFP]](s32)
-    ; GFX8-NEXT: [[C2:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41EFFFFFC0000000
+    ; GFX8-NEXT: [[C2:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F7FFFFE
     ; GFX8-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[AMDGPU_RCP_IFLAG]], [[C2]]
     ; GFX8-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FMUL]](s32)
     ; GFX8-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -210,7 +210,7 @@ body:             |
     ; GFX-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
     ; GFX-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[C1]](s32)
     ; GFX-NEXT: [[AMDGPU_RCP_IFLAG:%[0-9]+]]:_(s32) = G_AMDGPU_RCP_IFLAG [[UITOFP]](s32)
-    ; GFX-NEXT: [[C3:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41EFFFFFC0000000
+    ; GFX-NEXT: [[C3:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F7FFFFE
     ; GFX-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[AMDGPU_RCP_IFLAG]], [[C3]]
     ; GFX-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FMUL]](s32)
     ; GFX-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0

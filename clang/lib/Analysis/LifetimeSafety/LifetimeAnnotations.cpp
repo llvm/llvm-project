@@ -72,37 +72,52 @@ getLifetimeBoundAttrFromFunctionType(const TypeSourceInfo &TSI) {
   return nullptr;
 }
 
-bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
+const LifetimeBoundAttr *
+getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD) {
+  if (const TypeSourceInfo *TSI = FD->getTypeSourceInfo())
+    if (const auto *Attr = getLifetimeBoundAttrFromFunctionType(*TSI))
+      return Attr;
+  return nullptr;
+}
+
+const LifetimeBoundAttr *
+getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   // Attribute merging doesn't work well with attributes on function types (like
   // 'this' param). We need to check all redeclarations.
-  auto CheckRedecls = [](const FunctionDecl *F) {
-    return llvm::any_of(F->redecls(), [](const FunctionDecl *Redecl) {
-      const TypeSourceInfo *TSI = Redecl->getTypeSourceInfo();
-      return TSI && getLifetimeBoundAttrFromFunctionType(*TSI);
-    });
+  auto CheckRedecls = [](const FunctionDecl *F) -> const LifetimeBoundAttr * {
+    for (const FunctionDecl *Redecl : F->redecls())
+      if (const auto *Attr = getDirectImplicitObjectLifetimeBoundAttr(Redecl))
+        return Attr;
+    return nullptr;
   };
 
-  if (CheckRedecls(FD))
-    return true;
-  if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern();
-      Pattern && CheckRedecls(Pattern))
+  if (const auto *Attr = CheckRedecls(FD))
+    return Attr;
+  if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
+    return CheckRedecls(Pattern);
+  return nullptr;
+}
+
+bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
+  if (getImplicitObjectParamLifetimeBoundAttr(FD))
     return true;
   return isNormalAssignmentOperator(FD);
 }
 
 bool isInStlNamespace(const Decl *D) {
-  const DeclContext *DC = D->getDeclContext();
-  if (!DC)
-    return false;
-  if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
-    if (const IdentifierInfo *II = ND->getIdentifier()) {
-      StringRef Name = II->getName();
-      if (Name.size() >= 2 && Name.front() == '_' &&
-          (Name[1] == '_' || isUppercase(Name[1])))
-        return true;
-    }
-  return DC->isStdNamespace();
+  for (const DeclContext *DC = D->getDeclContext(); DC; DC = DC->getParent()) {
+    if (DC->isStdNamespace())
+      return true;
+    if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
+      if (const IdentifierInfo *II = ND->getIdentifier()) {
+        StringRef Name = II->getName();
+        if (Name.size() >= 2 && Name.front() == '_' &&
+            (Name[1] == '_' || isUppercase(Name[1])))
+          return true;
+      }
+  }
+  return false;
 }
 
 bool isPointerLikeType(QualType QT) {

@@ -831,6 +831,11 @@ Expected<bool> parseLintOptions(StringRef Params) {
                                             "LintPass");
 }
 
+/// Parser of parameters for InstCount pass.
+Expected<bool> parseInstCountOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "pre-opt", "InstCountPass");
+}
+
 /// Parser of parameters for LoopUnroll pass.
 Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
   LoopUnrollOptions UnrollOpts;
@@ -1353,8 +1358,8 @@ Expected<GVNOptions> parseGVNOptions(StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
 
     bool Enable = !ParamName.consume_front("no-");
-    if (ParamName == "pre") {
-      Result.setPRE(Enable);
+    if (ParamName == "scalar-pre") {
+      Result.setScalarPRE(Enable);
     } else if (ParamName == "load-pre") {
       Result.setLoadPRE(Enable);
     } else if (ParamName == "split-backedge-load-pre") {

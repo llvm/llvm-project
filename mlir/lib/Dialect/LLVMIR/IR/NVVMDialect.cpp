@@ -3339,6 +3339,16 @@ LogicalResult NVVM::FmaOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::SqrtOp::verify() {
+  if (getRnd() == NVVM::FPRoundingMode::NONE)
+    return emitOpError("rounding mode cannot be None");
+
+  if (getRes().getType().isF64() && getFtz())
+    return emitOpError("FTZ is not supported for f64");
+
+  return success();
+}
+
 /// Packs the given `field` into the `result`.
 /// The `result` is 64-bits and each `field` can be 32-bits or narrower.
 static llvm::Value *
@@ -3512,6 +3522,74 @@ Ex2Op::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   llvm::Intrinsic::ID id = thisOp.getFtz()
                                ? llvm::Intrinsic::nvvm_ex2_approx_ftz
                                : llvm::Intrinsic::nvvm_ex2_approx;
+  return {id, {mt.lookupValue(thisOp.getSrc())}};
+}
+
+mlir::NVVM::IDArgPair
+RsqrtOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                               llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::RsqrtOp>(op);
+  Type t = thisOp.getRes().getType();
+  bool isFtz = thisOp.getFtz();
+
+  llvm::Intrinsic::ID id = [&] {
+    if (t.isF32()) {
+      return isFtz ? llvm::Intrinsic::nvvm_rsqrt_approx_ftz_f
+                   : llvm::Intrinsic::nvvm_rsqrt_approx_f;
+    }
+    // f64
+    return isFtz ? llvm::Intrinsic::nvvm_rsqrt_approx_ftz_d
+                 : llvm::Intrinsic::nvvm_rsqrt_approx_d;
+  }();
+
+  return {id, {mt.lookupValue(thisOp.getSrc())}};
+}
+
+mlir::NVVM::IDArgPair
+SqrtOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                              llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::SqrtOp>(op);
+  Type t = thisOp.getRes().getType();
+  NVVM::FPRoundingMode rndMode = thisOp.getRnd();
+  bool isFtz = thisOp.getFtz();
+
+  // RM is one of RN/RM/RP/RZ (verifier rejects NONE).
+  // Subtracting 1 maps RN=1..RZ=4 to 0..3.
+  unsigned rndIndex = static_cast<unsigned>(rndMode) - 1;
+
+  static constexpr llvm::Intrinsic::ID f32IDs[] = {
+      llvm::Intrinsic::nvvm_sqrt_rn_f,
+      llvm::Intrinsic::nvvm_sqrt_rm_f,
+      llvm::Intrinsic::nvvm_sqrt_rp_f,
+      llvm::Intrinsic::nvvm_sqrt_rz_f,
+  };
+  static constexpr llvm::Intrinsic::ID f32FTZIDs[] = {
+      llvm::Intrinsic::nvvm_sqrt_rn_ftz_f,
+      llvm::Intrinsic::nvvm_sqrt_rm_ftz_f,
+      llvm::Intrinsic::nvvm_sqrt_rp_ftz_f,
+      llvm::Intrinsic::nvvm_sqrt_rz_ftz_f,
+  };
+  static constexpr llvm::Intrinsic::ID f64IDs[] = {
+      llvm::Intrinsic::nvvm_sqrt_rn_d,
+      llvm::Intrinsic::nvvm_sqrt_rm_d,
+      llvm::Intrinsic::nvvm_sqrt_rp_d,
+      llvm::Intrinsic::nvvm_sqrt_rz_d,
+  };
+
+  llvm::Intrinsic::ID id =
+      t.isF32() ? (isFtz ? f32FTZIDs[rndIndex] : f32IDs[rndIndex])
+                : f64IDs[rndIndex];
+
+  return {id, {mt.lookupValue(thisOp.getSrc())}};
+}
+
+mlir::NVVM::IDArgPair
+SqrtApproxOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                    llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::SqrtApproxOp>(op);
+  llvm::Intrinsic::ID id = thisOp.getFtz()
+                               ? llvm::Intrinsic::nvvm_sqrt_approx_ftz_f
+                               : llvm::Intrinsic::nvvm_sqrt_approx_f;
   return {id, {mt.lookupValue(thisOp.getSrc())}};
 }
 

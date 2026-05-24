@@ -2018,7 +2018,7 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
-  if (E->getType()->isVoidType())
+  if (E->getType()->isVoidType() || E->containsErrors())
     return false;
 
   const Expr *LHS = E->getLHS();
@@ -2178,6 +2178,13 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
              R->getField(InitIndex)->isUnnamedBitField())
         ++InitIndex;
 
+      // If this is a child of a DesignatedInitUpdateExpr, skip elements which
+      // aren't supposed to be modified.
+      if (isa<NoInitExpr>(Init)) {
+        ++InitIndex;
+        continue;
+      }
+
       if (OptPrimType T = classify(Init)) {
         const Record::Field *FieldToInit = R->getField(InitIndex);
         if (!initPrimitiveField(FieldToInit, Init, *T))
@@ -2205,15 +2212,15 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
   }
 
   if (QT->isArrayType()) {
-    if (Inits.size() == 1 && QT == Inits[0]->getType())
-      return this->delegate(Inits[0]);
-
     const ConstantArrayType *CAT =
         Ctx.getASTContext().getAsConstantArrayType(QT);
     uint64_t NumElems = CAT->getZExtSize();
 
-    if (!this->emitCheckArraySize(NumElems, E))
+    if (Initializing && !this->emitCheckArrayDestSize(NumElems, E))
       return false;
+
+    if (Inits.size() == 1 && QT == Inits[0]->getType())
+      return this->delegate(Inits[0]);
 
     OptPrimType InitT = classify(CAT->getElementType());
     unsigned ElementIndex = 0;
@@ -2238,6 +2245,10 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
         };
         if (!EmbedS->doForEachDataElement(Eval, ElementIndex))
           return false;
+      } else if (isa<NoInitExpr>(Init)) {
+        // If this is a child of a DesignatedInitUpdateExpr, skip elements which
+        // aren't supposed to be modified.
+        ++ElementIndex;
       } else {
         if (!this->visitArrayElemInit(ElementIndex, Init, InitT))
           return false;
@@ -2247,7 +2258,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
     // Expand the filler expression.
     // FIXME: This should go away.
-    if (ArrayFiller) {
+    if (ArrayFiller && !isa<NoInitExpr>(ArrayFiller)) {
       for (; ElementIndex != NumElems; ++ElementIndex) {
         if (!this->visitArrayElemInit(ElementIndex, ArrayFiller, InitT))
           return false;
@@ -4756,7 +4767,7 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
     return this->emitFloat(F, E);
   }
   case PT_FixedPoint: {
-    auto Sem = Ctx.getASTContext().getFixedPointSemantics(E->getType());
+    auto Sem = Ctx.getASTContext().getFixedPointSemantics(QT);
     return this->emitConstFixedPoint(FixedPoint::zero(Sem), E);
   }
   }
@@ -5156,6 +5167,15 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::visitLValueExpr(const Expr *E,
+                                        bool DestroyToplevelScope) {
+  OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
+                             /*NewInitializing=*/false, /*ToLValue=*/true);
+
+  return this->visitExpr(E, DestroyToplevelScope);
+}
+
+template <class Emitter>
 VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD) {
 
   auto R = this->visitVarDecl(VD, VD->getInit(), /*Toplevel=*/true);
@@ -5277,7 +5297,8 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
         return checkDecl();
       // The previous attempt at initialization might've been unsuccessful,
       // so let's try this one.
-    } else if ((GlobalIndex = P.createGlobal(VD, Init))) {
+    } else if ((GlobalIndex =
+                    P.createGlobal(VD, Init, VariablesAreConstexprUnknown))) {
     } else {
       return false;
     }
@@ -5297,7 +5318,13 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
     if (!this->emitGetPtrGlobal(*GlobalIndex, Init))
       return false;
 
+    if (!this->emitStartInit(Init))
+      return false;
+
     if (!visitInitializer(Init))
+      return false;
+
+    if (!this->emitEndInit(Init))
       return false;
 
     return this->emitFinishInitGlobal(Init);
@@ -7624,7 +7651,9 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     if (IsReference) {
       if (!Ctx.getLangOpts().CPlusPlus11)
         return this->emitGetGlobal(classifyPrim(E), *GlobalIndex, E);
-      return this->emitGetGlobalUnchecked(classifyPrim(E), *GlobalIndex, E);
+      if (!Ctx.getLangOpts().CPlusPlus23)
+        return this->emitGetGlobalUnchecked(classifyPrim(E), *GlobalIndex, E);
+      return this->emitGetRefGlobal(*GlobalIndex, E);
     }
 
     return this->emitGetPtrGlobal(*GlobalIndex, E);
@@ -7683,8 +7712,9 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
   // For C.
   if (!Ctx.getLangOpts().CPlusPlus) {
-    if (VD->getInit() && DeclType.isConstant(Ctx.getASTContext()) &&
-        !VD->isWeak() && VD->evaluateValue())
+    if (VD->getInit() && !VD->getInit()->isValueDependent() &&
+        DeclType.isConstant(Ctx.getASTContext()) && !VD->isWeak() &&
+        VD->evaluateValue())
       return revisit(VD, /*IsConstexprUnknown=*/false);
     return this->emitDummyPtr(D, E);
   }
@@ -7709,7 +7739,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
                                         true);
       return this->visitDeclRef(D, E);
     }
-    return revisit(VD);
+    return revisit(VD, !VD->isConstexpr() && DeclType->isReferenceType());
   }
 
   // FIXME: The evaluateValue() check here is a little ridiculous, since
@@ -7733,13 +7763,23 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
                                       /*InitializerFailed=*/true, E);
   }
 
-  return this->emitDummyPtr(D, E);
+  return this->emitDummyPtr(
+      D, E, Ctx.getLangOpts().CPlusPlus23 && DeclType->isReferenceType());
 }
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   const auto *D = E->getDecl();
   return this->visitDeclRef(D, E);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitDesignatedInitUpdateExpr(
+    const DesignatedInitUpdateExpr *E) {
+  assert(E->getType()->isRecordType());
+  if (!this->visitInitializer(E->getBase()))
+    return false;
+  return this->visitInitializer(E->getUpdater());
 }
 
 template <class Emitter> bool Compiler<Emitter>::emitCleanup() {
@@ -8041,9 +8081,9 @@ bool Compiler<Emitter>::emitDestructionPop(const Descriptor *Desc,
 /// Create a dummy pointer for the given decl (or expr) and
 /// push a pointer to it on the stack.
 template <class Emitter>
-bool Compiler<Emitter>::emitDummyPtr(const DeclTy &D, const Expr *E) {
+bool Compiler<Emitter>::emitDummyPtr(const DeclTy &D, const Expr *E, bool CU) {
   assert(!DiscardResult && "Should've been checked before");
-  unsigned DummyID = P.getOrCreateDummy(D);
+  unsigned DummyID = P.getOrCreateDummy(D, CU);
 
   if (!this->emitGetPtrGlobal(DummyID, E))
     return false;

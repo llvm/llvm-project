@@ -447,6 +447,127 @@ void ChangingRegionOwnedByContainerIsOk() {
 
 } // namespace ContainersAsFields
 
+namespace InvalidatedField {
+std::string StableString;
+
+struct S {
+  std::string_view FieldFromLocalVector; // expected-note {{this field dangles}}
+  std::string_view FieldFromByValueParamVector; // expected-note {{this field dangles}}
+  std::string_view FieldFromLocalString; // expected-note {{this field dangles}}
+  std::string_view FieldFromByValueParamString; // expected-note {{this field dangles}}
+  std::string_view FieldFromRefParamString; // expected-note {{this field dangles}}
+  int *FieldFromNew; // expected-note {{this field dangles}}
+  int *FieldFromPointerParam; // expected-note {{this field dangles}}
+  std::string_view FieldReassigned;
+
+  void InvalidatedFieldLocalVector() {
+    std::vector<std::string> strings;
+    FieldFromLocalVector = *strings.begin(); // expected-warning {{object whose reference escapes to a field is later invalidated}}
+    strings.push_back("1"); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldByValueParamVector(std::vector<std::string> strings) {
+    FieldFromByValueParamVector = *strings.begin(); // expected-warning {{object whose reference escapes to a field is later invalidated}}
+    strings.push_back("1"); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldLocalString() {
+    std::string s;
+    FieldFromLocalString = s; // expected-warning {{object whose reference escapes to a field is later invalidated}}
+    s.clear(); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldByValueParamString(std::string s) {
+    FieldFromByValueParamString = s; // expected-warning {{object whose reference escapes to a field is later invalidated}}
+    s.clear(); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldRefParamString(std::string &s) { // expected-warning {{parameter which escapes to a field is later invalidated}}
+    FieldFromRefParamString = s;
+    s.~basic_string(); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldDelete() {
+    int *p = new int; // expected-warning {{object whose reference escapes to a field is later invalidated}}
+    FieldFromNew = p;
+    delete p; // expected-note {{freed here}}
+  }
+
+  void InvalidatedFieldDeleteParam(int *p) { // expected-warning {{parameter which escapes to a field is later invalidated}}
+    FieldFromPointerParam = p;
+    delete p; // expected-note {{freed here}}
+  }
+
+  void FieldReassignedBeforeInvalidation() {
+    std::vector<std::string> strings;
+    FieldReassigned = *strings.begin();
+    FieldReassigned = StableString;
+    strings.push_back("1");
+  }
+};
+} // namespace InvalidatedField
+
+namespace InvalidatedGlobal {
+std::string StableString;
+std::string_view GlobalFromLocalVector; // expected-note {{this global dangles}}
+std::string_view GlobalFromByValueParamString; // expected-note {{this global dangles}}
+std::string_view GlobalFromRefParamString; // expected-note {{this global dangles}}
+int *GlobalFromNew; // expected-note {{this global dangles}}
+int *GlobalFromPointerParam; // expected-note {{this global dangles}}
+std::string_view GlobalReassigned;
+
+struct S {
+  static std::string_view StaticMember; // expected-note {{this static storage dangles}}
+};
+
+void InvalidatedGlobalLocalVector() {
+  std::vector<std::string> strings;
+  GlobalFromLocalVector = *strings.begin(); // expected-warning {{object whose reference escapes to global or static storage is later invalidated}}
+  strings.push_back("1"); // expected-note {{invalidated here}}
+}
+
+void InvalidatedGlobalByValueParamString(std::string s) {
+  GlobalFromByValueParamString = s; // expected-warning {{object whose reference escapes to global or static storage is later invalidated}}
+  s.clear(); // expected-note {{invalidated here}}
+}
+
+void InvalidatedGlobalRefParamString(std::string &s) { // expected-warning {{parameter which escapes to global or static storage is later invalidated}}
+  GlobalFromRefParamString = s;
+  s.~basic_string(); // expected-note {{invalidated here}}
+}
+
+void InvalidatedGlobalDelete() {
+  int *p = new int; // expected-warning {{object whose reference escapes to global or static storage is later invalidated}}
+  GlobalFromNew = p;
+  delete p; // expected-note {{freed here}}
+}
+
+void InvalidatedGlobalDeleteParam(int *p) { // expected-warning {{parameter which escapes to global or static storage is later invalidated}}
+  GlobalFromPointerParam = p;
+  delete p; // expected-note {{freed here}}
+}
+
+void InvalidatedStaticLocalString() {
+  static std::string_view StaticFromLocalString; // expected-note {{this static storage dangles}}
+  std::string s;
+  StaticFromLocalString = s; // expected-warning {{object whose reference escapes to global or static storage is later invalidated}}
+  s.clear(); // expected-note {{invalidated here}}
+}
+
+void InvalidatedStaticMemberString() {
+  std::string s;
+  S::StaticMember = s; // expected-warning {{object whose reference escapes to global or static storage is later invalidated}}
+  s.clear(); // expected-note {{invalidated here}}
+}
+
+void GlobalReassignedBeforeInvalidation() {
+  std::vector<std::string> strings;
+  GlobalReassigned = *strings.begin();
+  GlobalReassigned = StableString;
+  strings.push_back("1");
+}
+} // namespace InvalidatedGlobal
+
 namespace AssociativeContainers {
 void SetInsertDoesNotInvalidate() {
   std::set<int> s;

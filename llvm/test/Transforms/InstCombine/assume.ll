@@ -8,6 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @llvm.assume(i1) #1
 declare ptr @get_ptr()
+declare void @use_i64(i64)
 
 ; Check that the assume has not been removed:
 
@@ -78,6 +79,45 @@ entry:
   %trunc = trunc i64 %0 to i63
   %cmp = icmp eq i63 0, %trunc
   call void @llvm.assume(i1 %cmp)
+  ret void
+}
+
+define void @align_with_offset_less_than_align(ptr %ptr) {
+; CHECK-LABEL: @align_with_offset_less_than_align(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 3
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 7
+; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %int = ptrtoint ptr %ptr to i64
+  %add = add i64 %int, 3
+  %and = and i64 %add, 7
+  %cmp = icmp eq i64 0, %and
+  call void @llvm.assume(i1 %cmp)
+  call void @use_i64(i64 %and)
+  ret void
+}
+
+define void @align_with_offset_greater_than_align(ptr %ptr) {
+; CHECK-LABEL: @align_with_offset_greater_than_align(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 6
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 2) ]
+; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %int = ptrtoint ptr %ptr to i64
+  %add = add i64 %int, 14
+  %and = and i64 %add, 7
+  %cmp = icmp eq i64 0, %and
+  call void @llvm.assume(i1 %cmp)
+  call void @use_i64(i64 %and)
   ret void
 }
 

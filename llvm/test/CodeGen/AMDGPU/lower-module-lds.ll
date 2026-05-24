@@ -25,7 +25,7 @@
 
 ; Use in func rewritten to access struct at address zero
 ; CHECK-LABEL: @func()
-; CHECK: %dec = atomicrmw fsub ptr addrspace(3) @llvm.amdgcn.module.lds, float 1.0
+; CHECK: %dec = atomicrmw fsub ptr addrspace(3) @llvm.amdgcn.module.lds, float 1.000000e+00
 ; CHECK: %val0 = load i32, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.module.lds.t, ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 2), align 8
 ; CHECK: %val1 = add i32 %val0, 4
 ; CHECK: store i32 %val1, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.module.lds.t, ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 2), align 8

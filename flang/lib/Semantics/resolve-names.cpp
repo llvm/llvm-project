@@ -1727,33 +1727,14 @@ public:
   void PushScopeWithSource(
       Scope::Kind kind, parser::CharBlock source, Symbol *symbol = nullptr);
 
-  static bool NeedsScope(const parser::OmpBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
-  bool Pre(const parser::OpenMPRequiresConstruct &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-  bool Pre(const parser::OmpBlockConstruct &);
-  void Post(const parser::OmpBlockConstruct &);
   bool Pre(const parser::OmpBeginDirective &x) {
     return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  void Post(const parser::OmpBeginDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
   bool Pre(const parser::OmpEndDirective &x) {
     return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
-  void Post(const parser::OmpEndDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-
-  bool Pre(const parser::OpenMPLoopConstruct &x) {
-    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
-    return true;
-  }
-  void Post(const parser::OpenMPLoopConstruct &) { PopScope(); }
 
   void Post(const parser::OmpTypeName &);
   bool Pre(const parser::OmpStylizedDeclaration &);
@@ -1775,51 +1756,10 @@ public:
     }
   }
 
-  bool Pre(const parser::OmpDeclareMapperDirective &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-
-  bool Pre(const parser::OmpDeclareSimdDirective &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-
-  bool Pre(const parser::OmpDeclareVariantDirective &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-
-  bool Pre(const parser::OmpDeclareReductionDirective &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
   bool Pre(const parser::OmpMapClause &);
   bool Pre(const parser::OmpClause::To &);
   bool Pre(const parser::OmpClause::From &);
 
-  bool Pre(const parser::OpenMPSectionsConstruct &x) {
-    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
-    return true;
-  }
-  void Post(const parser::OpenMPSectionsConstruct &) { PopScope(); }
-  bool Pre(const parser::OmpBeginSectionsDirective &x) {
-    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  void Post(const parser::OmpBeginSectionsDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  bool Pre(const parser::OmpEndSectionsDirective &x) {
-    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  void Post(const parser::OmpEndSectionsDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  bool Pre(const parser::OpenMPThreadprivate &) {
-    SkipImplicitTyping(true);
-    return true;
-  }
-  void Post(const parser::OpenMPThreadprivate &) { SkipImplicitTyping(false); }
   bool Pre(const parser::OmpDeclareTargetDirective &x) {
     auto addObjectName{[&](const parser::OmpObject &object) {
       common::visit(
@@ -1863,46 +1803,6 @@ public:
     SkipImplicitTyping(true);
     return true;
   }
-  void Post(const parser::OmpDeclareTargetDirective &) {
-    SkipImplicitTyping(false);
-  }
-  bool Pre(const parser::OmpAllocateDirective &x) {
-    AddOmpSourceRange(x.source);
-    SkipImplicitTyping(true);
-    return true;
-  }
-  void Post(const parser::OmpAllocateDirective &) {
-    SkipImplicitTyping(false);
-    messageHandler().set_currStmtSource(std::nullopt);
-  }
-  bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
-    AddOmpSourceRange(x.source);
-    // Without skipping implicit typing, declarative constructs
-    // can implicitly declare variables instead of only using the
-    // ones already declared in the Fortran sources.
-    SkipImplicitTyping(true);
-    declaratives_.push_back(&x);
-    return true;
-  }
-  void Post(const parser::OpenMPDeclarativeConstruct &) {
-    declaratives_.pop_back();
-    SkipImplicitTyping(false);
-    messageHandler().set_currStmtSource(std::nullopt);
-  }
-  bool Pre(const parser::OpenMPDepobjConstruct &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-  void Post(const parser::OpenMPDepobjConstruct &x) {
-    messageHandler().set_currStmtSource(std::nullopt);
-  }
-  bool Pre(const parser::OpenMPAtomicConstruct &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-  void Post(const parser::OpenMPAtomicConstruct &) {
-    messageHandler().set_currStmtSource(std::nullopt);
-  }
   bool Pre(const parser::OmpClause &x) {
     if (NeedsScope(x)) {
       PushScopeWithSource(Scope::Kind::OtherClause, x.source);
@@ -1928,18 +1828,47 @@ public:
   }
 
   bool Pre(const parser::OmpDirectiveSpecification &x);
-  void Post(const parser::OmpDirectiveSpecification &) {
+
+  bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
+    AddOmpSourceRange(x.source);
+    // Without skipping implicit typing, declarative constructs
+    // can implicitly declare variables instead of only using the
+    // ones already declared in the Fortran sources.
+    SkipImplicitTyping(true);
+    declaratives_.push_back(&x);
+    return true;
+  }
+
+  void Post(const parser::OpenMPDeclarativeConstruct &) {
+    declaratives_.pop_back();
+    SkipImplicitTyping(false);
     messageHandler().set_currStmtSource(std::nullopt);
   }
 
   bool Pre(const parser::OpenMPConstruct &x) {
     // Indicate that the current directive is not a declarative one.
     declaratives_.push_back(nullptr);
+
+    auto name{parser::omp::GetOmpDirectiveName(x)};
+    if (omp::HasDataEnvironment(name.v)) {
+      PushScope(Scope::Kind::OtherConstruct, nullptr);
+    }
+
+    std::optional<parser::CharBlock> source{parser::GetSource(x)};
+    assert(source.has_value() && "Expecting directive source");
+    AddOmpSourceRange(*source);
     return true;
   }
-  void Post(const parser::OpenMPConstruct &) {
+
+  void Post(const parser::OpenMPConstruct &x) {
     // Pop the null pointer.
     declaratives_.pop_back();
+
+    auto name{parser::omp::GetOmpDirectiveName(x)};
+    if (omp::HasDataEnvironment(name.v)) {
+      PopScope();
+    }
+    messageHandler().set_currStmtSource(std::nullopt);
   }
 
 private:
@@ -1953,16 +1882,6 @@ private:
 
   std::vector<const parser::OpenMPDeclarativeConstruct *> declaratives_;
 };
-
-bool OmpVisitor::NeedsScope(const parser::OmpBlockConstruct &x) {
-  switch (x.BeginDir().DirId()) {
-  case llvm::omp::Directive::OMPD_master:
-  case llvm::omp::Directive::OMPD_ordered:
-    return false;
-  default:
-    return true;
-  }
-}
 
 bool OmpVisitor::NeedsScope(const parser::OmpClause &x) {
   // Iterators contain declarations, whose scope extends until the end
@@ -1979,19 +1898,6 @@ void OmpVisitor::PushScopeWithSource(
     Scope::Kind kind, parser::CharBlock source, Symbol *symbol) {
   PushScope(kind, symbol);
   currScope().AddSourceRange(source);
-}
-
-bool OmpVisitor::Pre(const parser::OmpBlockConstruct &x) {
-  if (NeedsScope(x)) {
-    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
-  }
-  return true;
-}
-
-void OmpVisitor::Post(const parser::OmpBlockConstruct &x) {
-  if (NeedsScope(x)) {
-    PopScope();
-  }
 }
 
 void OmpVisitor::Post(const parser::OmpTypeName &x) {
@@ -4836,6 +4742,11 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
       name.symbol = nullptr;
     } else if (auto *entity{ultimate.detailsIf<EntityDetails>()};
                entity && !ultimate.has<ProcEntityDetails>()) {
+      if (entity->isDummy()) {
+        Say(name,
+            "Dummy argument '%s' may not be used as a statement function"_err_en_US);
+        return false;
+      }
       resultType = entity->type();
       ultimate.details() = UnknownDetails{}; // will be replaced below
     } else {
@@ -9695,7 +9606,8 @@ void ResolveNamesVisitor::HandleProcedureName(
 bool ResolveNamesVisitor::CheckImplicitNoneExternal(
     const SourceName &name, const Symbol &symbol) {
   if (symbol.has<ProcEntityDetails>() && isImplicitNoneExternal() &&
-      !symbol.attrs().test(Attr::EXTERNAL) &&
+      (!symbol.attrs().test(Attr::EXTERNAL) ||
+          symbol.implicitAttrs().test(Attr::EXTERNAL)) &&
       !symbol.attrs().test(Attr::INTRINSIC) && !symbol.HasExplicitInterface()) {
     Say(name,
         "'%s' is an external procedure without the EXTERNAL attribute in a scope with IMPLICIT NONE(EXTERNAL)"_err_en_US);
@@ -9721,7 +9633,7 @@ void ResolveNamesVisitor::NoteExecutablePartCall(
       ConvertToProcEntity(*symbol, name);
       if (auto *details{symbol->detailsIf<ProcEntityDetails>()}) {
         symbol->set(flag);
-        if (IsDummy(*symbol)) {
+        if (IsDummy(*symbol) && !symbol->attrs().test(Attr::EXTERNAL)) {
           SetImplicitAttr(*symbol, Attr::EXTERNAL);
         }
         ApplyImplicitRules(*symbol);
@@ -10176,18 +10088,27 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         SetBindNameOn(symbol);
       }
     }
-    // Implicitly treat allocatable arrays as managed when feature is enabled.
-    // This is done after all explicit CUDA attributes have been processed.
-    // Only applies when CUDA Fortran is enabled; otherwise -gpu=mem:managed
-    // on a non-CUDA-Fortran translation unit (e.g. pure OpenACC) would
-    // incorrectly route every allocatable through the CUDA Fortran managed
-    // descriptor pipeline.
-    if (context().languageFeatures().IsEnabled(
-            common::LanguageFeature::CudaManaged) &&
-        context().languageFeatures().IsEnabled(common::LanguageFeature::CUDA))
-      if (auto *object{symbol.detailsIf<ObjectEntityDetails>()})
-        if (IsAllocatable(symbol) && !object->cudaDataAttr())
+
+    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+      if (IsAllocatable(symbol) && !object->cudaDataAttr()) {
+        // Implicitly treat allocatable arrays as managed when feature is
+        // enabled. This is done after all explicit CUDA attributes have been
+        // processed. Only applies when CUDA Fortran is enabled; otherwise
+        // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
+        // OpenACC) would incorrectly route every allocatable through the CUDA
+        // Fortran managed descriptor pipeline.
+        if (context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CudaManaged) &&
+            context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CUDA))
           object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+        // Implicitly treat allocatable arrays as pinned when feature is
+        // enabled.
+        else if (context().languageFeatures().IsEnabled(
+                     common::LanguageFeature::CudaPinned))
+          object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+      }
+    }
   }
   currScope().InstantiateDerivedTypes();
   for (const auto &decl : decls) {

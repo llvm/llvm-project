@@ -13,7 +13,7 @@
 
 #include "AMDGPUMIRFormatter.h"
 #include "SIMachineFunctionInfo.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 
@@ -91,6 +91,7 @@ void AMDGPUMIRFormatter::printImm(raw_ostream &OS, const MachineInstr &MI,
 
   switch (MI.getOpcode()) {
   case AMDGPU::S_WAITCNT:
+  case AMDGPU::S_WAITCNT_soft:
     printSWaitcntImm(Imm, OS);
     break;
   case AMDGPU::S_WAITCNT_DEPCTR:
@@ -116,6 +117,7 @@ bool AMDGPUMIRFormatter::parseImmMnemonic(const unsigned OpCode,
 
   switch (OpCode) {
   case AMDGPU::S_WAITCNT:
+  case AMDGPU::S_WAITCNT_soft:
     return parseSWaitcntImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
   case AMDGPU::S_WAITCNT_DEPCTR:
     return parseSWaitAluImmMnemonic(OpIdx, Imm, Src, ErrorCallback);

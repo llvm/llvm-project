@@ -43,11 +43,20 @@ ELF Improvements
 Breaking changes
 ----------------
 
+* The symbol partition feature has been removed. lld no longer recognizes
+  ``SHT_LLVM_SYMPART`` sections, which are now treated as ordinary sections. The
+  feature saw no adoption beyond a Chromium experiment that has since been
+  retired.
+
 COFF Improvements
 -----------------
 
 MinGW Improvements
 ------------------
+
+* Added ``--push-state`` and ``--pop-state``, offering the same semantics as
+  when used with the ELF linker: The state of ``--Bstatic``/``--Bdynamic`` and
+  ``--whole-archive`` are pushed onto a stack and popped from it.
 
 MachO Improvements
 ------------------

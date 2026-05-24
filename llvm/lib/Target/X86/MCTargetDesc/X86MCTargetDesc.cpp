@@ -420,24 +420,28 @@ static MCRegisterInfo *createX86MCRegisterInfo(const Triple &TT) {
   return X;
 }
 
-static void populateReservedIdentifiers(StringSet<> &Set,
+static void populateReservedIdentifiers(MCAsmInfo &MAI,
                                         const MCRegisterInfo &MRI) {
-  // Register names: `call rsi` is misassembled as an indirect call.
+  auto &Set = MAI.getReservedIdentifiers();
+  // Register names: `call rsi` is misassembled as an indirect call. Use the
+  // Intel printer's table directly — it's the lowercase asm name in stable
+  // storage. MRI::getName() returns the uppercase enum name and would need
+  // an extra .lower() heap allocation per entry.
   for (unsigned i = 1, e = MRI.getNumRegs(); i < e; ++i)
-    if (const char *Name = MRI.getName(i))
+    if (const char *Name = X86IntelInstPrinter::getRegisterName(i))
       if (Name[0])
-        Set.insert(StringRef(Name).lower());
+        Set.insert(CachedHashStringRef(Name));
   // Keywords that GAS Intel syntax misparses as constants, modifiers, or
   // pseudo-registers instead of symbol references (e.g., `call byte` calls
   // address 1, not symbol "byte"; `call flat` errors out).
   for (StringRef KW : {"byte", "word", "dword", "fword", "qword", "mmword",
                        "tbyte", "oword", "xmmword", "ymmword", "zmmword",
                        "offset", "flat", "near", "far", "short"})
-    Set.insert(KW);
+    Set.insert(CachedHashStringRef(KW));
   // Operator keywords parsed by GAS/X86AsmParser in Intel mode.
   for (StringRef KW : {"and", "eq", "ge", "gt", "le", "lt", "mod", "ne", "not",
                        "or", "shl", "shr", "xor"})
-    Set.insert(KW);
+    Set.insert(CachedHashStringRef(KW));
 }
 
 static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
@@ -447,42 +451,27 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
 
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatMachO()) {
-    if (is64Bit) {
-      auto *P = new X86_64MCAsmInfoDarwin(TheTriple, Options);
-      populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
-      MAI = P;
-    } else {
-      auto *P = new X86MCAsmInfoDarwin(TheTriple, Options);
-      populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
-      MAI = P;
-    }
+    if (is64Bit)
+      MAI = new X86_64MCAsmInfoDarwin(TheTriple, Options);
+    else
+      MAI = new X86MCAsmInfoDarwin(TheTriple, Options);
   } else if (TheTriple.isOSBinFormatELF()) {
     // Force the use of an ELF container.
-    auto *P = new X86ELFMCAsmInfo(TheTriple, Options);
-    populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
-    MAI = P;
+    MAI = new X86ELFMCAsmInfo(TheTriple, Options);
   } else if (TheTriple.isWindowsMSVCEnvironment() ||
              TheTriple.isWindowsCoreCLREnvironment() || TheTriple.isUEFI()) {
-    if (Options.getAssemblyLanguage().equals_insensitive("masm")) {
-      auto *P = new X86MCAsmInfoMicrosoftMASM(TheTriple, Options);
-      populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
-      MAI = P;
-    } else {
-      auto *P = new X86MCAsmInfoMicrosoft(TheTriple, Options);
-      populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
-      MAI = P;
-    }
+    if (Options.getAssemblyLanguage().equals_insensitive("masm"))
+      MAI = new X86MCAsmInfoMicrosoftMASM(TheTriple, Options);
+    else
+      MAI = new X86MCAsmInfoMicrosoft(TheTriple, Options);
   } else if (TheTriple.isOSCygMing() ||
              TheTriple.isWindowsItaniumEnvironment()) {
-    auto *P = new X86MCAsmInfoGNUCOFF(TheTriple, Options);
-    populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
-    MAI = P;
+    MAI = new X86MCAsmInfoGNUCOFF(TheTriple, Options);
   } else {
     // The default is ELF.
-    auto *P = new X86ELFMCAsmInfo(TheTriple, Options);
-    populateReservedIdentifiers(P->ReservedIdentifiers, MRI);
-    MAI = P;
+    MAI = new X86ELFMCAsmInfo(TheTriple, Options);
   }
+  populateReservedIdentifiers(*MAI, MRI);
 
   // Initialize initial frame state.
   // Calculate amount of bytes used for return address storing

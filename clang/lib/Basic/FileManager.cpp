@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -88,11 +89,12 @@ static llvm::Expected<DirectoryEntryRef>
 getDirectoryFromFile(FileManager &FileMgr, StringRef Filename,
                      bool CacheFailure) {
   if (Filename.empty())
-    return llvm::errorCodeToError(
-        make_error_code(std::errc::no_such_file_or_directory));
+    return llvm::createFileError(
+        Filename, make_error_code(std::errc::no_such_file_or_directory));
 
   if (llvm::sys::path::is_separator(Filename[Filename.size() - 1]))
-    return llvm::errorCodeToError(make_error_code(std::errc::is_a_directory));
+    return llvm::createFileError(Filename,
+                                 make_error_code(std::errc::is_a_directory));
 
   StringRef DirName = llvm::sys::path::parent_path(Filename);
   // Use the current directory if file has no path component.
@@ -176,7 +178,8 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
   if (!SeenDirInsertResult.second) {
     if (SeenDirInsertResult.first->second)
       return DirectoryEntryRef(*SeenDirInsertResult.first);
-    return llvm::errorCodeToError(SeenDirInsertResult.first->second.getError());
+    return llvm::createFileError(DirName,
+                                 SeenDirInsertResult.first->second.getError());
   }
 
   // We've not seen this before. Fill it in.
@@ -198,7 +201,7 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
       NamedDirEnt.second = statError;
     else
       SeenDirEntries.erase(DirName);
-    return llvm::errorCodeToError(statError);
+    return llvm::createFileError(DirName, statError);
   }
 
   // It exists.
@@ -219,8 +222,8 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
       SeenFileEntries.insert({Filename, std::errc::no_such_file_or_directory});
   if (!SeenFileInsertResult.second) {
     if (!SeenFileInsertResult.first->second)
-      return llvm::errorCodeToError(
-          SeenFileInsertResult.first->second.getError());
+      return llvm::createFileError(
+          Filename, SeenFileInsertResult.first->second.getError());
     return FileEntryRef(*SeenFileInsertResult.first);
   }
 
@@ -246,7 +249,7 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
     else
       SeenFileEntries.erase(Filename);
 
-    return llvm::errorCodeToError(Err);
+    return llvm::createFileError(Filename, Err);
   }
   DirectoryEntryRef DirInfo = *DirInfoOrErr;
 
@@ -265,7 +268,7 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
     else
       SeenFileEntries.erase(Filename);
 
-    return llvm::errorCodeToError(statError);
+    return llvm::createFileError(Filename, statError);
   }
 
   assert((openFile || !F) && "undesired open file");
@@ -367,7 +370,7 @@ llvm::Expected<FileEntryRef> FileManager::getSTDIN() {
   }();
 
   if (!ContentOrError)
-    return llvm::errorCodeToError(ContentOrError.getError());
+    return llvm::createFileError("-", ContentOrError.getError());
 
   auto Content = std::move(*ContentOrError);
   STDIN = getVirtualFileRef(Content->getBufferIdentifier(),

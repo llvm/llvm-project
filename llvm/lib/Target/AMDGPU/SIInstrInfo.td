@@ -3095,6 +3095,7 @@ def VOP_V2BF16_F32_F32_I32 : VOPProfile <[v2bf16, f32, f32, i32]>;
 def VOP_V2F16_F32_F32_I32 : VOPProfile <[v2f16, f32, f32, i32]>;
 def VOP_V6I32_V32F16_F32 : VOPProfile<[v6i32, v32f16, f32, untyped]>;
 def VOP_V6I32_V32BF16_F32 : VOPProfile<[v6i32, v32bf16, f32, untyped]>;
+def VOP_V6I32_V32F32_F32 : VOPProfile<[v6i32, v32f32, f32, untyped]>;
 def VOP_V3I32_V16F16_F32 : VOPProfile<[v3i32, v16f16, f32, untyped]>;
 def VOP_V3I32_V16BF16_F32 : VOPProfile<[v3i32, v16bf16, f32, untyped]>;
 def VOP_V3I32_V16F32_F32 : VOPProfile<[v3i32, v16f32, f32, untyped]>;
@@ -3564,6 +3565,12 @@ def getVOPDInfoFromComponentOpcodes : SearchIndex {
   let Table = VOPDPairs;
   let Key = ["OpX", "OpY", "SubTgt", "VOPD3"];
 }
+
+def lo16_to_vgpr32 : OutPatFrag<(ops node:$op),
+  (REG_SEQUENCE VGPR_32, $op, lo16, (i16 (IMPLICIT_DEF)), hi16)>;
+
+def hi16_to_vgpr32 : OutPatFrag<(ops node:$op),
+  (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $op, hi16)>;
 
 include "SIInstructions.td"
 

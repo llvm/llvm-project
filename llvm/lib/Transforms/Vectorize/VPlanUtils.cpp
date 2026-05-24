@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanUtils.h"
+#include "LoopVectorizationPlanner.h"
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
@@ -79,8 +80,9 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
     return true;
   }
 
-  return match(V, m_ICmp(m_VPValue(A), m_VPValue(B))) && IsWideCanonicalIV(A) &&
-         B == Plan.getBackedgeTakenCount();
+  auto MaskMatch = m_ICmp(m_VPValue(A), m_VPValue(B));
+  return (match(V, m_CombineOr(MaskMatch, m_Reverse(MaskMatch)))) &&
+         IsWideCanonicalIV(A) && B == Plan.getBackedgeTakenCount();
 }
 
 /// Returns true if \p R propagates poison from any operand to its result.
@@ -112,7 +114,7 @@ static bool poisonGuaranteesUB(const VPValue *V) {
 
     for (VPUser *U : Current->users()) {
       // Check if Current is used as an address operand for load/store.
-      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U)) {
+      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(U))) {
         if (MemR->getAddr() == Current)
           return true;
         continue;
@@ -276,6 +278,13 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
             m_Intrinsic<Intrinsic::smin>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getSMinExpr(Ops[0], Ops[1]);
+    });
+  if (match(V, m_Intrinsic<Intrinsic::abs>(m_VPValue(LHSVal), m_VPValue())))
+    return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
+      // is_int_min_poison is local to this intrinsic: poison on INT_MIN is
+      // not proof that the input is never INT_MIN, nor that poison reaches
+      // UB. Do not translate it to SCEV's global IsNSW flag.
+      return SE.getAbsExpr(Ops[0], /*IsNSW=*/false);
     });
 
   ArrayRef<VPValue *> Ops;
@@ -447,8 +456,13 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
         return preservesUniformity(R->getOpcode()) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
+      .Case([](const VPPhi *) {
+        // Bail out on VPPhi, as we can end up in infinite cycles.
+        return false;
+      })
       .Case([](const VPInstruction *VPI) {
-        return preservesUniformity(VPI->getOpcode()) &&
+        return (VPI->isSingleScalar() || VPI->isVectorToScalar() ||
+                preservesUniformity(VPI->getOpcode())) &&
                all_of(VPI->operands(), isUniformAcrossVFsAndUFs);
       })
       .Case([](const VPWidenCastRecipe *R) {
@@ -695,6 +709,18 @@ bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
          VPBlockUtils::isHeader(VPB->getSuccessors().back(), VPDT);
 }
 
+std::pair<VPBasicBlock *, VPBasicBlock *>
+VPBlockUtils::getPlainCFGHeaderAndLatch(const VPlan &Plan) {
+  auto *Header = cast<VPBasicBlock>(
+      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+  auto *Latch = cast<VPBasicBlock>(Header->getPredecessors()[1]);
+  return {Header, Latch};
+}
+
+VPBasicBlock *VPBlockUtils::getPlainCFGMiddleBlock(const VPlan &Plan) {
+  return cast<VPBasicBlock>(Plan.getScalarPreheader()->getPredecessors()[0]);
+}
+
 std::optional<MemoryLocation>
 vputils::getMemoryLocation(const VPRecipeBase &R) {
   auto *M = dyn_cast<VPIRMetadata>(&R);
@@ -724,7 +750,9 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
 
     VPSymbolicValue &UF = Plan.getUF();
     if (!UF.isMaterialized())
-      return Step == &UF;
+      return Step == &UF ||
+             match(Step, m_c_Mul(m_Specific(&Plan.getUF()),
+                                 m_VPInstruction<VPInstruction::VScale>()));
 
     unsigned ConcreteUF = Plan.getConcreteUF();
     // Fixed VF: step is just the concrete UF.
@@ -779,4 +807,85 @@ VPInstruction *vputils::findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
     return nullptr;
   return vputils::findUserOf<VPInstruction::ComputeReductionResult>(
       cast<VPSingleDefRecipe>(SelR));
+}
+
+bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
+  SmallPtrSet<const VPValue *, 4> Seen;
+  SmallVector<const VPValue *> WorkList = {V};
+
+  while (!WorkList.empty()) {
+    const VPValue *Cur = WorkList.pop_back_val();
+    if (!Seen.insert(Cur).second)
+      continue;
+
+    auto *Blend = dyn_cast<VPBlendRecipe>(Cur);
+    // Skip blends that use V only through a compare by checking if any incoming
+    // value was already visited.
+    if (Blend && none_of(seq<unsigned>(0, Blend->getNumIncomingValues()),
+                         [&](unsigned I) {
+                           return Seen.contains(Blend->getIncomingValue(I));
+                         }))
+      continue;
+
+    for (VPUser *U : Cur->users()) {
+      if (auto *InterleaveR = dyn_cast<VPInterleaveBase>(U))
+        if (InterleaveR->getAddr() == Cur)
+          return true;
+      if (auto *RepR = dyn_cast<VPReplicateRecipe>(U)) {
+        if (RepR->getOpcode() == Instruction::Load &&
+            RepR->getOperand(0) == Cur)
+          return true;
+        if (RepR->getOpcode() == Instruction::Store &&
+            RepR->getOperand(1) == Cur)
+          return true;
+      }
+      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(U))) {
+        if (MemR->getAddr() == Cur && MemR->isConsecutive())
+          return true;
+      }
+    }
+
+    // The legacy cost model only supports scalarization loads/stores with phi
+    // addresses, if the phi is directly used as load/store address. Don't
+    // traverse further for Blends.
+    if (Blend)
+      continue;
+
+    // Only traverse further through users that also define a value (and can
+    // thus have their own users walked).
+    for (VPUser *U : Cur->users())
+      if (auto *SDR = dyn_cast<VPSingleDefRecipe>(U))
+        WorkList.push_back(SDR);
+  }
+  return false;
+}
+
+VPValue *VPBuilder::VPSCEVExpander::tryToExpand(const SCEV *S) {
+  switch (S->getSCEVType()) {
+  case scConstant:
+    return Builder.getPlan().getOrAddLiveIn(cast<SCEVConstant>(S)->getValue());
+  case scUnknown:
+    return Builder.getPlan().getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
+  case scVScale:
+    return Builder.createNaryOp(VPInstruction::VScale, {}, S->getType());
+  case scMulExpr: {
+    auto *Mul = cast<SCEVMulExpr>(S);
+    SmallVector<VPValue *, 2> Ops;
+    for (const SCEVUse &Op : Mul->operands()) {
+      VPValue *OpV = tryToExpand(Op);
+      if (!OpV)
+        return nullptr;
+      Ops.push_back(OpV);
+    }
+    VPIRFlags::WrapFlagsTy WrapFlags(Mul->hasNoUnsignedWrap(),
+                                     Mul->hasNoSignedWrap());
+    VPValue *Result = Ops.front();
+    for (VPValue *Op : drop_begin(Ops))
+      Result = Builder.createOverflowingOp(Instruction::Mul, {Result, Op},
+                                           WrapFlags, DL);
+    return Result;
+  }
+  default:
+    return nullptr;
+  }
 }

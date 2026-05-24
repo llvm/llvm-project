@@ -2351,8 +2351,12 @@ def Tosa_ReshapeBlockScaledOp
 // Operator: reverse
 //===----------------------------------------------------------------------===//
 def Tosa_ReverseOp: Tosa_Op<"reverse", [
-    DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-                              ["inferReturnTypeComponents"]>, Pure]> {
+      DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                                ["inferReturnTypeComponents"]>,
+      SameOperandsAndResultRank,
+      SameOperandsAndResultShape,
+      SameOperandsAndResultElementType,
+      Pure]> {
   let summary = "Reverse operator.";
 
   let description = [{

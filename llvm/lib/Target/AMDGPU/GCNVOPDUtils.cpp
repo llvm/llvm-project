@@ -187,7 +187,7 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
     return std::nullopt;
 
   const GCNSubtarget &ST = TII.getSubtarget();
-  bool AllowSameVGPR = ST.hasGFX1250Insts();
+  bool AllowSameVGPR = ST.hasGFX12Insts();
 
   if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y) {
     if (checkVOPDRegConstraints(TII, FirstMI, SecondMI, IsVOPD3, AllowSameVGPR))

@@ -1445,10 +1445,7 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
     Flags4 |= PPA1Flag4::ProcedureNamePresent; // Add optional name block.
 
   OutStreamer->AddComment("PPA1 Flags 1");
-  if ((Flags1 & PPA1Flag1::DSA64Bit) == PPA1Flag1::DSA64Bit)
-    OutStreamer->AddComment("  Bit 0: 1 = 64-bit DSA");
-  else
-    OutStreamer->AddComment("  Bit 0: 0 = 32-bit DSA");
+  OutStreamer->AddComment("  Bit 0: 1 = 64-bit DSA");
   if ((Flags1 & PPA1Flag1::VarArg) == PPA1Flag1::VarArg)
     OutStreamer->AddComment("  Bit 7: 1 = Vararg function");
   OutStreamer->emitInt8(static_cast<uint8_t>(Flags1)); // Flags 1.

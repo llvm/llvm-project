@@ -71,3 +71,37 @@ outer.latch:
 return:
   ret void
 }
+
+define void @nested_loop2(i16 %.pre.pre) {
+; CHECK-LABEL: Classifying expressions for: @nested_loop2
+
+; CHECK:  %i = phi i16 [ 0, %entry ], [ %i.next, %outer.latch ]
+; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %outer.loop: Computable, %inner.loop: Invariant }
+; CHECK:  %j = phi i16 [ %j.next, %inner.loop ], [ -1, %outer.loop ]
+; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %inner.loop: Computable, %outer.loop: Uniform }
+; CHECK:  %j.next = add nsw i16 %j, 1
+; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %inner.loop: Computable, %outer.loop: Uniform }
+; CHECK:  %smin = call i16 @llvm.smin.i16(i16 %i, i16 %j)
+; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %outer.loop: Variant, %inner.loop: Computable }
+; CHECK:  %i.next = add i16 %i, 1
+; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %outer.loop: Computable, %inner.loop: Invariant }
+
+entry:
+  br label %outer.loop
+
+outer.loop:
+  %i = phi i16 [ 0, %entry ], [ %i.next, %outer.latch ]
+  br label %inner.loop
+
+inner.loop:
+  %j = phi i16 [ %j.next, %inner.loop ], [ -1, %outer.loop ]
+  %cmp = icmp eq i16 %.pre.pre, 0
+  %j.next = add nsw i16 %j, 1
+  br i1 %cmp, label %inner.loop, label %outer.latch
+
+outer.latch:
+  %smin = call i16 @llvm.smin.i16(i16 %i, i16 %j)
+  store i16 %smin, ptr null, align 1
+  %i.next = add i16 %i, 1
+  br label %outer.loop
+}

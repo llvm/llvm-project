@@ -3604,32 +3604,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::assume: {
     Value *IIOperand = II->getArgOperand(0);
-    SmallVector<OperandBundleDef, 4> OpBundles;
-    II->getOperandBundlesAsDefs(OpBundles);
-
-    /// This will remove the boolean Condition from the assume given as
-    /// argument and remove the assume if it becomes useless.
-    /// always returns nullptr for use as a return values.
-    auto RemoveConditionFromAssume = [&](Instruction *Assume) -> Instruction * {
-      assert(isa<AssumeInst>(Assume));
-      if (isAssumeWithEmptyBundle(*cast<AssumeInst>(II)))
-        return eraseInstFromFunction(CI);
-      replaceUse(II->getOperandUse(0), ConstantInt::getTrue(II->getContext()));
-      return nullptr;
-    };
 
     // Canonicalize assume(a && b) -> assume(a); assume(b);
     // Note: New assumption intrinsics created here are registered by
     // the InstCombineIRInserter object.
     Value *A, *B;
     if (match(IIOperand, m_LogicalAnd(m_Value(A), m_Value(B)))) {
-      Builder.CreateAssumption(A, OpBundles);
+      Builder.CreateAssumption(A);
       Builder.CreateAssumption(B);
       return eraseInstFromFunction(*II);
     }
     // assume(!(a || b)) -> assume(!a); assume(!b);
     if (match(IIOperand, m_Not(m_LogicalOr(m_Value(A), m_Value(B))))) {
-      Builder.CreateAssumption(Builder.CreateNot(A), OpBundles);
+      Builder.CreateAssumption(Builder.CreateNot(A));
       Builder.CreateAssumption(Builder.CreateNot(B));
       return eraseInstFromFunction(*II);
     }
@@ -3706,7 +3693,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    Instruction *Next = II->getNextNode();
     // Convert nonnull assume like:
     // %A = icmp ne i32* %PTR, null
     // call void @llvm.assume(i1 %A)
@@ -3740,15 +3726,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           /// offset and alignment.
           /// TODO: we can generate a GEP instead of merging the alignment with
           /// the offset.
-          RetainedKnowledge RK{Attribute::Alignment,
-                               MinAlign(Offset, AlignMask + 1), A};
-          if (auto *Replacement =
-                  buildAssumeFromKnowledge(RK, Next, &AC, &DT)) {
-
-            Replacement->insertAfter(II->getIterator());
-            AC.registerAssumption(Replacement);
-          }
-          return RemoveConditionFromAssume(II);
+          Builder.CreateAlignmentAssumption(getDataLayout(), A,
+                                            MinAlign(Offset, AlignMask + 1));
+          return eraseInstFromFunction(*II);
         }
       }
     }
@@ -4131,14 +4111,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::vector_reduce_mul: {
     if (IID == Intrinsic::vector_reduce_mul) {
-      // Multiplicative reduction over the vector with (potentially-extended)
-      // i1 element type is actually a (potentially zero-extended)
-      // logical `and` reduction over the original non-extended value:
-      //   vector_reduce_mul(?ext(<n x i1>))
-      //     -->
-      //   zext(vector_reduce_and(<n x i1>))
       Value *Arg = II->getArgOperand(0);
-      Value *Vect;
 
       if (Value *NewOp =
               simplifyReductionOperand(Arg, /*CanReorderLanes=*/true)) {
@@ -4146,14 +4119,26 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return II;
       }
 
-      if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-        if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
-          if (VTy->getElementType() == Builder.getInt1Ty()) {
-            Value *Res = Builder.CreateAndReduce(Vect);
-            Res = Builder.CreateZExt(Res, II->getType());
-            return replaceInstUsesWith(CI, Res);
-          }
+      // vector_reduce_mul(zext(<n x i1>)), or
+      // vector_reduce_mul(sext(<n x i1>)) (if n is even) -->
+      //   zext(vector_reduce_and(<n x i1>)).
+      // (The sext case doesn't work if n is odd because multiplying an odd
+      // number of -1's produces -1, not 1.)
+      Value *Vect;
+      bool IsZext = match(Arg, m_ZExt(m_Value(Vect))) &&
+                    Vect->getType()->isIntOrIntVectorTy(1);
+      bool IsSext =
+          match(Arg, m_SExt(m_Value(Vect))) &&
+          Vect->getType()->isIntOrIntVectorTy(1) &&
+          cast<VectorType>(Vect->getType())->getElementCount().isKnownEven();
+      if (IsZext || IsSext) {
+        Value *Res = Builder.CreateAndReduce(Vect);
+        return CastInst::Create(Instruction::ZExt, Res, II->getType());
       }
+
+      // vector_reduce_mul(<n x i1>) --> vector_reduce_and(<n x i1>)
+      if (Arg->getType()->isIntOrIntVectorTy(1))
+        return replaceInstUsesWith(CI, Builder.CreateAndReduce(Arg));
     }
     [[fallthrough]];
   }
@@ -4421,6 +4406,8 @@ static Value *optimizeModularFormat(CallInst *CI, IRBuilderBase &B) {
   [[maybe_unused]] bool Error;
   Error = Args[2].getAsInteger(10, FirstArgIdx);
   assert(!Error && "invalid first arg index");
+  if (FirstArgIdx == 0)
+    return nullptr;
   --FirstArgIdx;
   StringRef FnName = Args[3];
   StringRef ImplName = Args[4];

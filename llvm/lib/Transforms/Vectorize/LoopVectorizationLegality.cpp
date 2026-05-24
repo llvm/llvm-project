@@ -214,9 +214,8 @@ bool LoopVectorizeHints::allowVectorization(
     // vectorize.disable to be used without disabling the pass and errors
     // to differentiate between disabled vectorization and a width of 1.
     ORE.emit([&]() {
-      return OptimizationRemarkAnalysis(vectorizeAnalysisPassName(),
-                                        "AllDisabled", L->getStartLoc(),
-                                        L->getHeader())
+      return OptimizationRemarkAnalysis(LV_NAME, "AllDisabled",
+                                        L->getStartLoc(), L->getHeader())
              << "loop not vectorized: vectorization and interleaving are "
                 "explicitly disabled, or the loop has already been "
                 "vectorized";
@@ -250,16 +249,6 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
     }
     return R;
   });
-}
-
-const char *LoopVectorizeHints::vectorizeAnalysisPassName() const {
-  if (getWidth() == ElementCount::getFixed(1))
-    return LV_NAME;
-  if (getForce() == LoopVectorizeHints::FK_Disabled)
-    return LV_NAME;
-  if (getForce() == LoopVectorizeHints::FK_Undefined && getWidth().isZero())
-    return LV_NAME;
-  return OptimizationRemarkAnalysis::AlwaysPrint;
 }
 
 bool LoopVectorizeHints::allowReordering() const {
@@ -472,9 +461,11 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   // it's collected.  This happens from canVectorizeWithIfConvert, when the
   // pointer is checked to reference consecutive elements suitable for a
   // masked access.
-  const auto &Strides =
-    LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
-
+  // Stride versioning requires adding a SCEV equality predicate; only consult
+  // the symbolic strides when runtime SCEV checks are permitted.
+  const auto &Strides = LAI && AllowRuntimeSCEVChecks
+                            ? LAI->getSymbolicStrides()
+                            : DenseMap<Value *, const SCEV *>();
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides,
                             AllowRuntimeSCEVChecks, false)
                    .value_or(0);
@@ -1227,8 +1218,7 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   const OptimizationRemarkAnalysis *LAR = LAI->getReport();
   if (LAR) {
     ORE->emit([&]() {
-      return OptimizationRemarkAnalysis(Hints->vectorizeAnalysisPassName(),
-                                        "loop not vectorized: ", *LAR);
+      return OptimizationRemarkAnalysis(LV_NAME, "loop not vectorized: ", *LAR);
     });
   }
 

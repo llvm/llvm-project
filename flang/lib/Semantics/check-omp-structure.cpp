@@ -73,7 +73,7 @@ void OmpStructureChecker::Enter(const parser::ProgramUnit &) { //
   ClearLabels();
 }
 
-bool OmpStructureChecker::Enter(const parser::MainProgram &x) {
+void OmpStructureChecker::Enter(const parser::MainProgram &x) {
   using StatementProgramStmt = parser::Statement<parser::ProgramStmt>;
   if (auto &stmt{std::get<std::optional<StatementProgramStmt>>(x.t)}) {
     scopeStack_.push_back(stmt->statement.v.symbol->scope());
@@ -86,14 +86,13 @@ bool OmpStructureChecker::Enter(const parser::MainProgram &x) {
       }
     }
   }
-  return true;
 }
 
 void OmpStructureChecker::Leave(const parser::MainProgram &x) {
   scopeStack_.pop_back();
 }
 
-bool OmpStructureChecker::Enter(const parser::BlockData &x) {
+void OmpStructureChecker::Enter(const parser::BlockData &x) {
   // The BLOCK DATA name is optional, so we need to look for the
   // corresponding scope in the global scope.
   auto &stmt{std::get<parser::Statement<parser::BlockDataStmt>>(x.t)};
@@ -109,29 +108,26 @@ bool OmpStructureChecker::Enter(const parser::BlockData &x) {
       }
     }
   }
-  return true;
 }
 
 void OmpStructureChecker::Leave(const parser::BlockData &x) {
   scopeStack_.pop_back();
 }
 
-bool OmpStructureChecker::Enter(const parser::Module &x) {
+void OmpStructureChecker::Enter(const parser::Module &x) {
   auto &stmt{std::get<parser::Statement<parser::ModuleStmt>>(x.t)};
   const Symbol *sym{stmt.statement.v.symbol};
   scopeStack_.push_back(sym->scope());
-  return true;
 }
 
 void OmpStructureChecker::Leave(const parser::Module &x) {
   scopeStack_.pop_back();
 }
 
-bool OmpStructureChecker::Enter(const parser::Submodule &x) {
+void OmpStructureChecker::Enter(const parser::Submodule &x) {
   auto &stmt{std::get<parser::Statement<parser::SubmoduleStmt>>(x.t)};
   const Symbol *sym{std::get<parser::Name>(stmt.statement.t).symbol};
   scopeStack_.push_back(sym->scope());
-  return true;
 }
 
 void OmpStructureChecker::Leave(const parser::Submodule &x) {
@@ -140,47 +136,40 @@ void OmpStructureChecker::Leave(const parser::Submodule &x) {
 
 // Function/subroutine subprogram nodes don't appear in INTERFACEs, but
 // the subprogram/end statements do.
-bool OmpStructureChecker::Enter(const parser::SubroutineStmt &x) {
+void OmpStructureChecker::Enter(const parser::SubroutineStmt &x) {
   const Symbol *sym{std::get<parser::Name>(x.t).symbol};
   scopeStack_.push_back(sym->scope());
-  return true;
 }
 
-bool OmpStructureChecker::Enter(const parser::EndSubroutineStmt &x) {
+void OmpStructureChecker::Enter(const parser::EndSubroutineStmt &x) {
   scopeStack_.pop_back();
-  return true;
 }
 
-bool OmpStructureChecker::Enter(const parser::FunctionStmt &x) {
+void OmpStructureChecker::Enter(const parser::FunctionStmt &x) {
   const Symbol *sym{std::get<parser::Name>(x.t).symbol};
   scopeStack_.push_back(sym->scope());
-  return true;
 }
 
-bool OmpStructureChecker::Enter(const parser::EndFunctionStmt &x) {
+void OmpStructureChecker::Enter(const parser::EndFunctionStmt &x) {
   scopeStack_.pop_back();
-  return true;
 }
 
-bool OmpStructureChecker::Enter(const parser::BlockConstruct &x) {
-  auto &specPart{std::get<parser::BlockSpecificationPart>(x.t)};
-  auto &execPart{std::get<parser::Block>(x.t)};
-  if (auto &&source{parser::GetSource(specPart)}) {
-    scopeStack_.push_back(&context_.FindScope(*source));
-  } else if (auto &&source{parser::GetSource(execPart)}) {
-    scopeStack_.push_back(&context_.FindScope(*source));
-  }
-  return true;
+void OmpStructureChecker::Enter(const parser::MpSubprogramStmt &x) {
+  const Symbol *sym{x.v.symbol};
+  scopeStack_.push_back(sym->scope());
+}
+
+void OmpStructureChecker::Enter(const parser::EndMpSubprogramStmt &x) {
+  scopeStack_.pop_back();
+}
+
+void OmpStructureChecker::Enter(const parser::BlockConstruct &x) {
+  auto &endBlockStmt{std::get<parser::Statement<parser::EndBlockStmt>>(x.t)};
+  scopeStack_.push_back(&context_.FindScope(endBlockStmt.source));
 }
 
 void OmpStructureChecker::Leave(const parser::BlockConstruct &x) {
-  auto &specPart{std::get<parser::BlockSpecificationPart>(x.t)};
-  auto &execPart{std::get<parser::Block>(x.t)};
-  if (auto &&source{parser::GetSource(specPart)}) {
-    scopeStack_.push_back(&context_.FindScope(*source));
-  } else if (auto &&source{parser::GetSource(execPart)}) {
-    scopeStack_.push_back(&context_.FindScope(*source));
-  }
+  scopeStack_.pop_back();
 }
 
 void OmpStructureChecker::Enter(const parser::InternalSubprogram &) {
@@ -891,7 +880,7 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(GetDirName(x.t).source, Directive::OMPD_allocators);
     return false;
   }
-  bool Pre(const parser::OpenMPGroupprivate &x) {
+  bool Pre(const parser::OmpGroupprivateDirective &x) {
     checker_(x.v.DirName().source, Directive::OMPD_groupprivate);
     return false;
   }
@@ -1284,19 +1273,19 @@ void OmpStructureChecker::CheckMasterNesting(
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPAssumeConstruct &x) {
+void OmpStructureChecker::Enter(const parser::OmpAssumeDirective &x) {
   PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_assume);
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPAssumeConstruct &) {
+void OmpStructureChecker::Leave(const parser::OmpAssumeDirective &) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAssumes &x) {
+void OmpStructureChecker::Enter(const parser::OmpAssumesDirective &x) {
   PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_assumes);
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeAssumes &) {
+void OmpStructureChecker::Leave(const parser::OmpAssumesDirective &) {
   dirContext_.pop_back();
 }
 
@@ -1425,7 +1414,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
 
   const auto &sectionBlocks{std::get<std::list<parser::OpenMPConstruct>>(x.t)};
   for (const parser::OpenMPConstruct &construct : sectionBlocks) {
-    auto &section{std::get<parser::OpenMPSectionConstruct>(construct.u)};
+    auto &section{std::get<parser::OmpSectionDirective>(construct.u)};
     CheckNoBranching(
         std::get<parser::Block>(section.t), beginName.v, beginName.source);
   }
@@ -1574,7 +1563,7 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPGroupprivate &x) {
+void OmpStructureChecker::Enter(const parser::OmpGroupprivateDirective &x) {
   PushContextAndClauseSets(
       x.v.DirName().source, llvm::omp::Directive::OMPD_groupprivate);
 
@@ -1626,16 +1615,16 @@ void OmpStructureChecker::Enter(const parser::OpenMPGroupprivate &x) {
   }
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPGroupprivate &x) {
+void OmpStructureChecker::Leave(const parser::OmpGroupprivateDirective &x) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPThreadprivate &x) {
+void OmpStructureChecker::Enter(const parser::OmpThreadprivateDirective &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
   PushContextAndClauseSets(dirName.source, dirName.v);
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPThreadprivate &x) {
+void OmpStructureChecker::Leave(const parser::OmpThreadprivateDirective &x) {
   const parser::OmpDirectiveSpecification &dirSpec{x.v};
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (auto *object{GetArgumentObject(arg)}) {
@@ -1881,7 +1870,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPDepobjConstruct &x) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPRequiresConstruct &x) {
+void OmpStructureChecker::Enter(const parser::OmpRequiresDirective &x) {
   const auto &dirName{x.v.DirName()};
   PushContextAndClauseSets(dirName.source, dirName.v);
   unsigned version{context_.langOptions().OpenMPVersion};
@@ -1924,7 +1913,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPRequiresConstruct &x) {
   }
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPRequiresConstruct &) {
+void OmpStructureChecker::Leave(const parser::OmpRequiresDirective &) {
   dirContext_.pop_back();
 }
 
@@ -2350,6 +2339,17 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareTargetDirective &x) {
       context_.Say(arg.source,
           "The procedure '%s' in DECLARE TARGET construct cannot be a statement function."_err_en_US,
           symbol->name());
+    }
+  }
+
+  // The bare form (no arguments, no clauses) is only permitted in the
+  // specification part of a subroutine, function, or interface body
+  // (OpenMP 5.2 §7.8.2).
+  if (x.v.Arguments().v.empty() && x.v.Clauses().v.empty()) {
+    const Scope &scope{GetScopingUnit(*scopeStack_.back())};
+    if (scope.kind() != Scope::Kind::Subprogram) {
+      context_.Say(dirName.source,
+          "DECLARE TARGET directive without arguments or clauses must appear in a subroutine or function"_err_en_US);
     }
   }
 

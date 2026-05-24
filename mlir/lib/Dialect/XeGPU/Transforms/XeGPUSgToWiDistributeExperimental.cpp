@@ -1535,6 +1535,153 @@ struct SgToWiConvertLayout
   }
 };
 
+// Trivially distribute `vector.interleave`
+struct SgToWiVectorInterleave
+    : public OpConversionPattern<vector::InterleaveOp> {
+  using OpConversionPattern<vector::InterleaveOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::InterleaveOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    auto newOp = vector::InterleaveOp::create(
+        rewriter, op.getLoc(), adaptor.getLhs(), adaptor.getRhs());
+    rewriter.replaceOp(op, newOp.getResult());
+    return success();
+  }
+};
+
+// Trivially distribute `vector.deinterleave`
+struct SgToWiVectorDeinterleave
+    : public OpConversionPattern<vector::DeinterleaveOp> {
+  using OpConversionPattern<vector::DeinterleaveOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::DeinterleaveOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    auto newOp = vector::DeinterleaveOp::create(rewriter, op.getLoc(),
+                                                adaptor.getSource());
+    rewriter.replaceOp(op, newOp.getResults());
+    return success();
+  }
+};
+
+struct SgToWiDpasMx : public OpConversionPattern<xegpu::DpasMxOp> {
+  using OpConversionPattern<xegpu::DpasMxOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::DpasMxOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    if (!uArch)
+      return failure();
+    if (!uArch->isSupportedInstruction(
+            xegpu::uArch::InstructionKind::SubgroupScaledMatrixMultiplyAcc))
+      return rewriter.notifyMatchFailure(
+          op, "target uArch does not support scaled subgroup mma");
+    // Check if the op has A, B and CD layouts attached.
+    auto layoutA = cast<xegpu::LayoutAttr>(op.getLayoutAAttr());
+    auto layoutB = cast<xegpu::LayoutAttr>(op.getLayoutBAttr());
+    auto layoutCd = cast<xegpu::LayoutAttr>(op.getLayoutCdAttr());
+    if (!layoutA || !layoutB || !layoutCd)
+      return rewriter.notifyMatchFailure(
+          op, "missing required layout attributes for DpasMxOp distribution");
+
+    // Retrieve expected types, according to anchor layouts.
+    auto expected1DTypeResult =
+        xegpu::getDistributedVectorType(op.getType(), layoutCd);
+    auto expected1DTypeA =
+        xegpu::getDistributedVectorType(op.getA().getType(), layoutA);
+    auto expected1DTypeB =
+        xegpu::getDistributedVectorType(op.getB().getType(), layoutB);
+
+    VectorType expected1DTypeScaleA, expected1DTypeScaleB;
+    if (op.getScaleA()) {
+      auto layoutScaleA = cast<xegpu::LayoutAttr>(op.getLayoutAScaleAttr());
+      auto expected1DTypeScaleAOrFailure = xegpu::getDistributedVectorType(
+          cast<VectorType>(op.getScaleA().getType()), layoutScaleA);
+      if (failed(expected1DTypeScaleAOrFailure))
+        return rewriter.notifyMatchFailure(
+            op, "failed to calculate expected 1D vector type for scale A");
+      expected1DTypeScaleA = expected1DTypeScaleAOrFailure.value();
+    }
+    if (op.getScaleB()) {
+      auto layoutScaleB = cast<xegpu::LayoutAttr>(op.getLayoutBScaleAttr());
+      auto expected1DTypeScaleBOrFailure = xegpu::getDistributedVectorType(
+          cast<VectorType>(op.getScaleB().getType()), layoutScaleB);
+      if (failed(expected1DTypeScaleBOrFailure))
+        return rewriter.notifyMatchFailure(
+            op, "failed to calculate expected 1D vector type for scale B");
+      expected1DTypeScaleB = expected1DTypeScaleBOrFailure.value();
+    }
+
+    auto expectedNDTypeResult =
+        xegpu::getDistVecTypeBasedOnLaneLayout(layoutCd, op.getType());
+    if (failed(expected1DTypeResult) || failed(expected1DTypeA) ||
+        failed(expected1DTypeB))
+      return rewriter.notifyMatchFailure(
+          op,
+          "failed to calculate supported workitem 1D vector types for DpasOp "
+          "from layouts");
+    if (failed(expectedNDTypeResult))
+      return rewriter.notifyMatchFailure(
+          op, "unable to compute expected workitem vector type for DpasOp from "
+              "lane layout");
+
+    // Validate bit widths match uArch packed format requirements
+    const auto *uArchInstruction = dyn_cast<
+        xegpu::uArch::SubgroupScaledMatrixMultiplyAcc>(uArch->getInstruction(
+        xegpu::uArch::InstructionKind::SubgroupScaledMatrixMultiplyAcc));
+    assert(uArchInstruction);
+    auto wiAType = expected1DTypeA.value();
+    auto wiBType = expected1DTypeB.value();
+    // Calculate total packed bit width = element bit width * vector size
+    unsigned aPackedBitWidth =
+        wiAType.getElementTypeBitWidth() * wiAType.getNumElements();
+    unsigned bPackedBitWidth =
+        wiBType.getElementTypeBitWidth() * wiBType.getNumElements();
+    if (aPackedBitWidth % uArchInstruction->getPackedFormatBitSizeA())
+      return rewriter.notifyMatchFailure(
+          op, "A operand packed bit width must be a multiple of uArch packed "
+              "format requirement");
+    if (bPackedBitWidth % uArchInstruction->getPackedFormatBitSizeB())
+      return rewriter.notifyMatchFailure(
+          op, "B operand packed bit width must be a multiple of uArch packed "
+              "format requirement");
+
+    auto newOp = xegpu::DpasMxOp::create(
+        rewriter, op->getLoc(), expected1DTypeResult.value(),
+        castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getA()),
+                    expected1DTypeA.value()),
+        castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getB()),
+                    expected1DTypeB.value()),
+        op.getAcc()
+            ? castValueTo(rewriter,
+                          cast<TypedValue<VectorType>>(adaptor.getAcc()),
+                          expected1DTypeResult.value())
+            : nullptr,
+
+        op.getScaleA()
+            ? castValueTo(rewriter,
+                          cast<TypedValue<VectorType>>(adaptor.getScaleA()),
+                          expected1DTypeScaleA)
+            : nullptr,
+        op.getScaleB()
+            ? castValueTo(rewriter,
+                          cast<TypedValue<VectorType>>(adaptor.getScaleB()),
+                          expected1DTypeScaleB)
+            : nullptr,
+        /** layoutA**/ nullptr,
+        /** layoutB**/ nullptr, /** layoutCd**/ nullptr,
+        /** layoutAScale**/ nullptr, /** layoutBScale**/ nullptr);
+    // Explicitly set the new types to enable correct type materializations.
+    rewriter.replaceOp(op, castValueTo(rewriter, newOp.getResult(),
+                                       expectedNDTypeResult.value()));
+    return success();
+  }
+};
+
 struct XeGPUSgToWiDistributeExperimentalPass
     : public xegpu::impl::XeGPUSgToWiDistributeExperimentalBase<
           XeGPUSgToWiDistributeExperimentalPass> {
@@ -1686,6 +1833,8 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
       [&](xegpu::CreateNdDescOp op) { return !op.getType().getLayoutAttr(); });
   // Any anchor XeGPU op is legal only if it has no anchor layout.
   target.addDynamicallyLegalDialect<xegpu::XeGPUDialect>([](Operation *op) {
+    if (isa<xegpu::ConvertLayoutOp>(op))
+      return false;
     auto anchorOp = dyn_cast<AnchorLayoutInterface>(op);
     if (!anchorOp)
       return true;
@@ -1760,6 +1909,10 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
       [=](vector::InsertStridedSliceOp op) -> bool {
         return !xegpu::getTemporaryLayout(op->getOpResult(0));
       });
+  target.addDynamicallyLegalOp<vector::InterleaveOp, vector::DeinterleaveOp>(
+      [=](Operation *op) -> bool {
+        return !xegpu::getTemporaryLayout(op->getOpResult(0));
+      });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
                SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd,
@@ -1770,6 +1923,7 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
                SgToWiVectorTranspose, SgToWiVectorBitcast, SgToWiVectorStep,
                SgToWiVectorShapeCast, SgToWiBroadcast,
                SgToWiCreateMask<vector::CreateMaskOp>,
-               SgToWiCreateMask<vector::ConstantMaskOp>>(typeConverter,
-                                                         patterns.getContext());
+               SgToWiCreateMask<vector::ConstantMaskOp>,
+               SgToWiVectorDeinterleave, SgToWiVectorInterleave, SgToWiDpasMx>(
+      typeConverter, patterns.getContext());
 }

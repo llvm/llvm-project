@@ -170,6 +170,13 @@ if is_configured("shared_libs"):
             "unable to inject shared library path on '{}'".format(platform.system())
         )
 
+# Windows has no rpath: drivers built by API tests link against
+# liblldb.dll and need its directory on PATH at launch.
+if platform.system() == "Windows":
+    config.environment["PATH"] = os.path.pathsep.join(
+        (config.llvm_shlib_dir, config.environment.get("PATH", ""))
+    )
+
 lldb_use_simulator = lit_config.params.get("lldb-run-with-simulator", None)
 if lldb_use_simulator:
     if lldb_use_simulator == "ios":
@@ -357,6 +364,10 @@ if platform.system() == "Windows":
     for v in ["SystemDrive"]:
         if v in os.environ:
             config.environment[v] = os.environ[v]
+
+    if getattr(config, "lldb_use_lldb_server", False):
+        config.environment["LLDB_USE_LLDB_SERVER"] = "1"
+
     # Use anonymous pipes instead of ConPTY for all tests. ConPTY injects VT
     # escape sequences into the output stream, which breaks tests that check
     # for specific stdout/stderr content.

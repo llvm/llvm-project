@@ -16,8 +16,7 @@ define i32 @early_exit_live_out(ptr align 4 dereferenceable(4096) %p) {
 ; RV64-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; RV64-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV64:       [[VECTOR_PH]]:
-; RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; RV64-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; RV64-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; RV64-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; RV64-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -65,8 +64,7 @@ define i32 @early_exit_live_out(ptr align 4 dereferenceable(4096) %p) {
 ; RV32-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; RV32-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV32:       [[VECTOR_PH]]:
-; RV32-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; RV32-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; RV32-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; RV32-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; RV32-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; RV32-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -114,8 +112,7 @@ define i32 @early_exit_live_out(ptr align 4 dereferenceable(4096) %p) {
 ; ZVE32X-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; ZVE32X-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; ZVE32X:       [[VECTOR_PH]]:
-; ZVE32X-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; ZVE32X-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; ZVE32X-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; ZVE32X-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; ZVE32X-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; ZVE32X-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -173,4 +170,159 @@ latch:
 exit:
   %ret = phi i32 [ %ld, %loop.header ], [ 0, %latch ]
   ret i32 %ret
+}
+
+define i64 @strided_search(ptr align 8 dereferenceable(14784) %p) {
+; RV64-LABEL: define i64 @strided_search(
+; RV64-SAME: ptr align 8 dereferenceable(14784) [[P:%.*]]) #[[ATTR0]] {
+; RV64-NEXT:  [[ENTRY:.*]]:
+; RV64-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[P]], i64 88
+; RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; RV64-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
+; RV64-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 132, [[TMP1]]
+; RV64-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; RV64:       [[VECTOR_PH]]:
+; RV64-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 1
+; RV64-NEXT:    [[N_MOD_VF:%.*]] = urem i64 132, [[TMP3]]
+; RV64-NEXT:    [[N_VEC:%.*]] = sub i64 132, [[N_MOD_VF]]
+; RV64-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 112
+; RV64-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP3]] to i32
+; RV64-NEXT:    br label %[[VECTOR_BODY:.*]]
+; RV64:       [[VECTOR_BODY]]:
+; RV64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
+; RV64-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[INDEX]], 112
+; RV64-NEXT:    [[TMP6:%.*]] = getelementptr nuw i8, ptr [[SCEVGEP]], i64 [[TMP5]]
+; RV64-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP6]], i64 112, <vscale x 2 x i1> splat (i1 true), i32 [[TMP7]])
+; RV64-NEXT:    [[TMP10:%.*]] = icmp eq <vscale x 2 x i64> [[WIDE_MASKED_GATHER]], zeroinitializer
+; RV64-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; RV64-NEXT:    [[TMP11:%.*]] = freeze <vscale x 2 x i1> [[TMP10]]
+; RV64-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1> [[TMP11]])
+; RV64-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; RV64-NEXT:    br i1 [[TMP12]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
+; RV64:       [[VECTOR_BODY_INTERIM]]:
+; RV64-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; RV64:       [[MIDDLE_BLOCK]]:
+; RV64-NEXT:    [[CMP_N:%.*]] = icmp eq i64 132, [[N_VEC]]
+; RV64-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; RV64:       [[VECTOR_EARLY_EXIT]]:
+; RV64-NEXT:    [[TMP14:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv2i1(<vscale x 2 x i1> [[TMP10]], i1 false)
+; RV64-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], [[TMP14]]
+; RV64-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 112
+; RV64-NEXT:    br label %[[EXIT]]
+; RV64:       [[SCALAR_PH]]:
+; RV64-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; RV64-NEXT:    br label %[[LOOP_HEADER:.*]]
+; RV64:       [[LOOP_HEADER]]:
+; RV64-NEXT:    [[IDX:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IDX_NEXT:%.*]], %[[LATCH:.*]] ]
+; RV64-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[IDX]]
+; RV64-NEXT:    [[FIELDP:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 88
+; RV64-NEXT:    [[V:%.*]] = load i64, ptr [[FIELDP]], align 8
+; RV64-NEXT:    [[HIT:%.*]] = icmp eq i64 [[V]], 0
+; RV64-NEXT:    br i1 [[HIT]], label %[[EXIT]], label %[[LATCH]]
+; RV64:       [[LATCH]]:
+; RV64-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 112
+; RV64-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IDX_NEXT]], 14784
+; RV64-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; RV64:       [[EXIT]]:
+; RV64-NEXT:    [[RET:%.*]] = phi i64 [ [[IDX]], %[[LOOP_HEADER]] ], [ -1, %[[LATCH]] ], [ -1, %[[MIDDLE_BLOCK]] ], [ [[TMP16]], %[[VECTOR_EARLY_EXIT]] ]
+; RV64-NEXT:    ret i64 [[RET]]
+;
+; RV32-LABEL: define i64 @strided_search(
+; RV32-SAME: ptr align 8 dereferenceable(14784) [[P:%.*]]) #[[ATTR0]] {
+; RV32-NEXT:  [[ENTRY:.*]]:
+; RV32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; RV32-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
+; RV32-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 132, [[TMP1]]
+; RV32-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; RV32:       [[VECTOR_PH]]:
+; RV32-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 1
+; RV32-NEXT:    [[N_MOD_VF:%.*]] = urem i64 132, [[TMP3]]
+; RV32-NEXT:    [[N_VEC:%.*]] = sub i64 132, [[N_MOD_VF]]
+; RV32-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 112
+; RV32-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; RV32-NEXT:    [[TMP6:%.*]] = mul nuw nsw <vscale x 2 x i64> [[TMP5]], splat (i64 112)
+; RV32-NEXT:    [[TMP7:%.*]] = mul nuw nsw i64 112, [[TMP3]]
+; RV32-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP7]], i64 0
+; RV32-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; RV32-NEXT:    br label %[[VECTOR_BODY:.*]]
+; RV32:       [[VECTOR_BODY]]:
+; RV32-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
+; RV32-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP6]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY_INTERIM]] ]
+; RV32-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], <vscale x 2 x i64> [[VEC_IND]]
+; RV32-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, <vscale x 2 x ptr> [[TMP8]], i64 88
+; RV32-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> align 8 [[TMP9]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> poison)
+; RV32-NEXT:    [[TMP10:%.*]] = icmp eq <vscale x 2 x i64> [[WIDE_MASKED_GATHER]], zeroinitializer
+; RV32-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; RV32-NEXT:    [[TMP11:%.*]] = freeze <vscale x 2 x i1> [[TMP10]]
+; RV32-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1> [[TMP11]])
+; RV32-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; RV32-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; RV32-NEXT:    br i1 [[TMP12]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
+; RV32:       [[VECTOR_BODY_INTERIM]]:
+; RV32-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; RV32:       [[MIDDLE_BLOCK]]:
+; RV32-NEXT:    [[CMP_N:%.*]] = icmp eq i64 132, [[N_VEC]]
+; RV32-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; RV32:       [[VECTOR_EARLY_EXIT]]:
+; RV32-NEXT:    [[TMP14:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.nxv2i1(<vscale x 2 x i1> [[TMP10]], i1 false)
+; RV32-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
+; RV32-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], [[TMP15]]
+; RV32-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 112
+; RV32-NEXT:    br label %[[EXIT]]
+; RV32:       [[SCALAR_PH]]:
+; RV32-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; RV32-NEXT:    br label %[[LOOP_HEADER:.*]]
+; RV32:       [[LOOP_HEADER]]:
+; RV32-NEXT:    [[IDX:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IDX_NEXT:%.*]], %[[LATCH:.*]] ]
+; RV32-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[IDX]]
+; RV32-NEXT:    [[FIELDP:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 88
+; RV32-NEXT:    [[V:%.*]] = load i64, ptr [[FIELDP]], align 8
+; RV32-NEXT:    [[HIT:%.*]] = icmp eq i64 [[V]], 0
+; RV32-NEXT:    br i1 [[HIT]], label %[[EXIT]], label %[[LATCH]]
+; RV32:       [[LATCH]]:
+; RV32-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 112
+; RV32-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IDX_NEXT]], 14784
+; RV32-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; RV32:       [[EXIT]]:
+; RV32-NEXT:    [[RET:%.*]] = phi i64 [ [[IDX]], %[[LOOP_HEADER]] ], [ -1, %[[LATCH]] ], [ -1, %[[MIDDLE_BLOCK]] ], [ [[TMP17]], %[[VECTOR_EARLY_EXIT]] ]
+; RV32-NEXT:    ret i64 [[RET]]
+;
+; ZVE32X-LABEL: define i64 @strided_search(
+; ZVE32X-SAME: ptr align 8 dereferenceable(14784) [[P:%.*]]) #[[ATTR0]] {
+; ZVE32X-NEXT:  [[ENTRY:.*]]:
+; ZVE32X-NEXT:    br label %[[LOOP_HEADER:.*]]
+; ZVE32X:       [[LOOP_HEADER]]:
+; ZVE32X-NEXT:    [[IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IDX_NEXT:%.*]], %[[LATCH:.*]] ]
+; ZVE32X-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[IDX]]
+; ZVE32X-NEXT:    [[FIELDP:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 88
+; ZVE32X-NEXT:    [[V:%.*]] = load i64, ptr [[FIELDP]], align 8
+; ZVE32X-NEXT:    [[HIT:%.*]] = icmp eq i64 [[V]], 0
+; ZVE32X-NEXT:    br i1 [[HIT]], label %[[EXIT:.*]], label %[[LATCH]]
+; ZVE32X:       [[LATCH]]:
+; ZVE32X-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 112
+; ZVE32X-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IDX_NEXT]], 14784
+; ZVE32X-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP_HEADER]]
+; ZVE32X:       [[EXIT]]:
+; ZVE32X-NEXT:    [[RET:%.*]] = phi i64 [ [[IDX]], %[[LOOP_HEADER]] ], [ -1, %[[LATCH]] ]
+; ZVE32X-NEXT:    ret i64 [[RET]]
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %idx = phi i64 [ 0, %entry ], [ %idx.next, %latch ]
+  %ptr = getelementptr inbounds nuw i8, ptr %p, i64 %idx
+  %fieldp = getelementptr inbounds nuw i8, ptr %ptr, i64 88
+  %v = load i64, ptr %fieldp, align 8
+  %hit = icmp eq i64 %v, 0
+  br i1 %hit, label %exit, label %latch
+
+latch:
+  %idx.next = add nuw nsw i64 %idx, 112
+  %done = icmp eq i64 %idx.next, 14784
+  br i1 %done, label %exit, label %loop.header
+
+exit:
+  %ret = phi i64 [ %idx, %loop.header ], [ -1, %latch ]
+  ret i64 %ret
 }

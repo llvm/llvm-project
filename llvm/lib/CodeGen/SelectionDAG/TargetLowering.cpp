@@ -821,13 +821,18 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       return Op.getOperand(1);
     break;
   }
-  case ISD::ADD: {
-    RHSKnown = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    if (RHSKnown.isZero())
+  case ISD::ADD:
+  case ISD::MUL:
+  case ISD::SMIN:
+  case ISD::SMAX:
+  case ISD::UMIN:
+  case ISD::UMAX: {
+    if (DAG.isIdentityElement(Op.getOpcode(), Op->getFlags(), Op.getOperand(1),
+                              DemandedElts, 1, Depth + 1))
       return Op.getOperand(0);
 
-    LHSKnown = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    if (LHSKnown.isZero())
+    if (DAG.isIdentityElement(Op.getOpcode(), Op->getFlags(), Op.getOperand(0),
+                              DemandedElts, 0, Depth + 1))
       return Op.getOperand(1);
     break;
   }
@@ -1251,6 +1256,13 @@ bool TargetLowering::SimplifyDemandedBits(
     // Implicitly truncate the bits to match the official semantics of
     // SPLAT_VECTOR.
     Known = KnownScl.trunc(BitWidth);
+    break;
+  }
+  case ISD::FREEZE: {
+    SDValue N0 = Op.getOperand(0);
+    if (TLO.DAG.isGuaranteedNotToBeUndefOrPoison(
+            N0, DemandedElts, UndefPoisonKind::UndefOrPoison, Depth + 1))
+      return TLO.CombineTo(Op, N0);
     break;
   }
   case ISD::LOAD: {
@@ -3374,9 +3386,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   }
   case ISD::FREEZE: {
     SDValue N0 = Op.getOperand(0);
-    if (TLO.DAG.isGuaranteedNotToBeUndefOrPoison(N0, DemandedElts,
-                                                 /*PoisonOnly=*/false,
-                                                 Depth + 1))
+    if (TLO.DAG.isGuaranteedNotToBeUndefOrPoison(
+            N0, DemandedElts, UndefPoisonKind::UndefOrPoison, Depth + 1))
       return TLO.CombineTo(Op, N0);
 
     // TODO: Replace this with the general fold from DAGCombiner::visitFREEZE
@@ -4033,7 +4044,7 @@ const Constant *TargetLowering::getTargetConstantFromLoad(LoadSDNode*) const {
 
 bool TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-    bool PoisonOnly, unsigned Depth) const {
+    UndefPoisonKind Kind, unsigned Depth) const {
   assert(
       (Op.getOpcode() >= ISD::BUILTIN_OP_END ||
        Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
@@ -4044,17 +4055,16 @@ bool TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
 
   // If Op can't create undef/poison and none of its operands are undef/poison
   // then Op is never undef/poison.
-  return !canCreateUndefOrPoisonForTargetNode(Op, DemandedElts, DAG, PoisonOnly,
+  return !canCreateUndefOrPoisonForTargetNode(Op, DemandedElts, DAG, Kind,
                                               /*ConsiderFlags*/ true, Depth) &&
          all_of(Op->ops(), [&](SDValue V) {
-           return DAG.isGuaranteedNotToBeUndefOrPoison(V, PoisonOnly,
-                                                       Depth + 1);
+           return DAG.isGuaranteedNotToBeUndefOrPoison(V, Kind, Depth + 1);
          });
 }
 
 bool TargetLowering::canCreateUndefOrPoisonForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-    bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
+    UndefPoisonKind Kind, bool ConsiderFlags, unsigned Depth) const {
   assert((Op.getOpcode() >= ISD::BUILTIN_OP_END ||
           Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
           Op.getOpcode() == ISD::INTRINSIC_W_CHAIN ||
@@ -9585,7 +9595,7 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
   {
     const unsigned IntVTBits = DstBits;
     SDValue LeadingZeros =
-        DAG.getNode(ISD::CTLZ_ZERO_UNDEF, dl, IntVT, MantField);
+        DAG.getNode(ISD::CTLZ_ZERO_POISON, dl, IntVT, MantField);
 
     const int DenormExpConst =
         (int)IntVTBits + DstBias - SrcBias - (int)SrcMant;
@@ -10649,16 +10659,16 @@ SDValue TargetLowering::expandCTLZ(SDNode *Node, SelectionDAG &DAG) const {
   SDValue Op = Node->getOperand(0);
   unsigned NumBitsPerElt = VT.getScalarSizeInBits();
 
-  // If the non-ZERO_UNDEF version is supported we can use that instead.
-  if (Node->getOpcode() == ISD::CTLZ_ZERO_UNDEF &&
+  // If the non-ZERO_POISON version is supported we can use that instead.
+  if (Node->getOpcode() == ISD::CTLZ_ZERO_POISON &&
       isOperationLegalOrCustom(ISD::CTLZ, VT))
     return DAG.getNode(ISD::CTLZ, dl, VT, Op);
 
-  // If the ZERO_UNDEF version is supported use that and handle the zero case.
-  if (isOperationLegalOrCustom(ISD::CTLZ_ZERO_UNDEF, VT)) {
+  // If the ZERO_POISON version is supported use that and handle the zero case.
+  if (isOperationLegalOrCustom(ISD::CTLZ_ZERO_POISON, VT)) {
     EVT SetCCVT =
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-    SDValue CTLZ = DAG.getNode(ISD::CTLZ_ZERO_UNDEF, dl, VT, Op);
+    SDValue CTLZ = DAG.getNode(ISD::CTLZ_ZERO_POISON, dl, VT, Op);
     SDValue Zero = DAG.getConstant(0, dl, VT);
     SDValue SrcIsZero = DAG.getSetCC(dl, SetCCVT, Op, Zero, ISD::SETEQ);
     return DAG.getSelect(dl, VT, SrcIsZero,
@@ -10733,7 +10743,7 @@ SDValue TargetLowering::expandCTLS(SDNode *Node, SelectionDAG &DAG) const {
   SDValue Shl =
       DAG.getNode(ISD::SHL, dl, VT, Xor, DAG.getShiftAmountConstant(1, VT, dl));
   SDValue Or = DAG.getNode(ISD::OR, dl, VT, Shl, DAG.getConstant(1, dl, VT));
-  return DAG.getNode(ISD::CTLZ_ZERO_UNDEF, dl, VT, Or);
+  return DAG.getNode(ISD::CTLZ_ZERO_POISON, dl, VT, Or);
 }
 
 SDValue TargetLowering::CTTZTableLookup(SDNode *Node, SelectionDAG &DAG,
@@ -10773,7 +10783,7 @@ SDValue TargetLowering::CTTZTableLookup(SDNode *Node, SelectionDAG &DAG,
   SDValue ExtLoad = DAG.getExtLoad(ISD::ZEXTLOAD, DL, VT, DAG.getEntryNode(),
                                    DAG.getMemBasePlusOffset(CPIdx, Lookup, DL),
                                    PtrInfo, MVT::i8);
-  if (Node->getOpcode() == ISD::CTTZ_ZERO_UNDEF)
+  if (Node->getOpcode() == ISD::CTTZ_ZERO_POISON)
     return ExtLoad;
 
   EVT SetCCVT =
@@ -10790,16 +10800,16 @@ SDValue TargetLowering::expandCTTZ(SDNode *Node, SelectionDAG &DAG) const {
   SDValue Op = Node->getOperand(0);
   unsigned NumBitsPerElt = VT.getScalarSizeInBits();
 
-  // If the non-ZERO_UNDEF version is supported we can use that instead.
-  if (Node->getOpcode() == ISD::CTTZ_ZERO_UNDEF &&
+  // If the non-ZERO_POISON version is supported we can use that instead.
+  if (Node->getOpcode() == ISD::CTTZ_ZERO_POISON &&
       isOperationLegalOrCustom(ISD::CTTZ, VT))
     return DAG.getNode(ISD::CTTZ, dl, VT, Op);
 
-  // If the ZERO_UNDEF version is supported use that and handle the zero case.
-  if (isOperationLegalOrCustom(ISD::CTTZ_ZERO_UNDEF, VT)) {
+  // If the ZERO_POISON version is supported use that and handle the zero case.
+  if (isOperationLegalOrCustom(ISD::CTTZ_ZERO_POISON, VT)) {
     EVT SetCCVT =
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-    SDValue CTTZ = DAG.getNode(ISD::CTTZ_ZERO_UNDEF, dl, VT, Op);
+    SDValue CTTZ = DAG.getNode(ISD::CTTZ_ZERO_POISON, dl, VT, Op);
     SDValue Zero = DAG.getConstant(0, dl, VT);
     SDValue SrcIsZero = DAG.getSetCC(dl, SetCCVT, Op, Zero, ISD::SETEQ);
     return DAG.getSelect(dl, VT, SrcIsZero,
@@ -11051,6 +11061,15 @@ SDValue TargetLowering::expandABS(SDNode *N, SelectionDAG &DAG,
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   SDValue Op = N->getOperand(0);
+
+  // If expanding ABS_MIN_POISON, fall back to ABS if the target supports it.
+  if (N->getOpcode() == ISD::ABS_MIN_POISON &&
+      isOperationLegalOrCustom(ISD::ABS, VT)) {
+    SDValue AbsVal = DAG.getNode(ISD::ABS, dl, VT, Op);
+    if (IsNegative)
+      return DAG.getNegative(AbsVal, dl, VT);
+    return AbsVal;
+  }
 
   // abs(x) -> smax(x,sub(0,x))
   if (!IsNegative && isOperationLegal(ISD::SUB, VT) &&

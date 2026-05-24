@@ -262,6 +262,9 @@ class Test:
         # If true, ignore all items in self.xfails.
         self.xfail_not = False
 
+        # If true, ignore all items in self.unsupported.
+        self.unsupported_not = False
+
         # A list of conditions that must be satisfied before running the test.
         # Each condition is a boolean expression of features. All of them
         # must be True for the test to run.
@@ -422,6 +425,9 @@ class Test:
         in the test configuration's features.
         Throws ValueError if an UNSUPPORTED line has a syntax error.
         """
+
+        if self.unsupported_not:
+            return []
 
         features = self.config.available_features
 

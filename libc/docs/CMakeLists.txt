@@ -42,6 +42,7 @@ if (SPHINX_FOUND)
       aio
       arpa/inet
       assert
+      byteswap
       cpio
       ctype
       dirent

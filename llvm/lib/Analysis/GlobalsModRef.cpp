@@ -21,6 +21,7 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -415,9 +416,9 @@ bool GlobalsAAResult::AnalyzeIndirectGlobalMemory(GlobalVariable *GV) {
   // value produced by the noalias call and any casts.
   std::vector<Value *> AllocRelatedValues;
 
-  // If the initializer is a valid pointer, bail.
+  // If the initializer is a non-null pointer, bail.
   if (Constant *C = GV->getInitializer())
-    if (!C->isNullValue())
+    if (!isa<ConstantPointerNull>(C))
       return false;
 
   // Walk the user list of the global.  If we find anything other than a direct
