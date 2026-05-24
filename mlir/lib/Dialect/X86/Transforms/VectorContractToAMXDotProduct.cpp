@@ -1138,15 +1138,29 @@ struct VectorContractToAMXDotProduct
         rhsMapping.map(
             vectorOpRhs->getOperand(
                 getIndexPosition(contractOp.getRhs(), outerLoop) + 1),
-            c0);
+            outerLoop.getLowerBound());
         rhsMapping.map(
             vectorOpRhs->getOperand(
                 getIndexPosition(contractOp.getRhs(), innerLoop) + 1),
-            c0);
+            innerLoop.getLowerBound());
         auto rhsClone = rewriter.clone(*vectorOpRhs, rhsMapping);
 
+        Value quotient_batch = arith::DivUIOp::create(
+            rewriter, outerLoop.getLoc(), outerLoop.getLowerBound(),
+            outerLoop.getStep());
+        Value quotient_k = arith::DivUIOp::create(rewriter, outerLoop.getLoc(),
+                                                  innerLoop.getLowerBound(),
+                                                  innerLoop.getStep());
+
+        Value quotient_add = arith::AddIOp::create(rewriter, outerLoop.getLoc(),
+                                                   quotient_batch, quotient_k);
+        Value c2 =
+            arith::ConstantIndexOp::create(rewriter, outerLoop.getLoc(), 2);
+        Value rem = arith::RemUIOp::create(rewriter, outerLoop.getLoc(),
+                                           quotient_add, c2);
+
         performShuffle(rewriter, outerLoop.getLoc(), rhsClone->getResult(0),
-                       ipType, blockingFactor, packedBuffer, c0);
+                       ipType, blockingFactor, packedBuffer, rem);
 
         // First Set of Loops
         auto newLoopNonSpill = scf::ForOp::create(
@@ -1261,10 +1275,20 @@ struct VectorContractToAMXDotProduct
         rhsMapping.map(
             vectorOpRhs->getOperand(
                 getIndexPosition(contractOp.getRhs(), innerLoop) + 1),
-            c0);
+            innerLoop.getLowerBound());
         auto rhsClone = rewriter.clone(*vectorOpRhs, rhsMapping);
+
+        Value quotient_k = arith::DivUIOp::create(rewriter, innerLoop.getLoc(),
+                                                  innerLoop.getLowerBound(),
+                                                  innerLoop.getStep());
+        Value c2 =
+            arith::ConstantIndexOp::create(rewriter, innerLoop.getLoc(), 2);
+        Value rem = arith::RemUIOp::create(rewriter, innerLoop.getLoc(),
+                                           quotient_k, c2);
+
         performShuffle(rewriter, innerLoop.getLoc(), rhsClone->getResult(0),
-                       ipType, blockingFactor, packedBuffer, c0);
+                       ipType, blockingFactor, packedBuffer, rem);
+
         auto newLoopNonSpill = createLoops(
             rewriter, innerLoop.getLoc(), innerLoop.getLowerBound(),
             spillInnerLoop, innerLoop.getStep(), loopItrArgs, ipType, opType,
