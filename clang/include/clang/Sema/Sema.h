@@ -8264,10 +8264,6 @@ public:
     return currentEvaluationContext().isUnevaluated();
   }
 
-  bool isPotentiallyEvaluatedContext() const {
-    return currentEvaluationContext().isPotentiallyEvaluated();
-  }
-
   bool isImmediateFunctionContext() const {
     return currentEvaluationContext().isImmediateFunctionContext();
   }
@@ -11341,10 +11337,6 @@ private:
   /// Check whether the given statement can have musttail applied to it,
   /// issuing a diagnostic and returning false if not.
   bool checkMustTailAttr(const Stmt *St, const Attr &MTA);
-
-  /// Check if the given expression contains 'break' or 'continue'
-  /// statement that produces control flow different from GCC.
-  void CheckBreakContinueBinding(Expr *E);
 
   ///@}
 

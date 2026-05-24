@@ -1303,6 +1303,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS32, S64}, {{Sgpr32}, {Sgpr64}}})
       .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}, SplitBitCount64To32}});
 
+  addRulesForGOpcs({G_CTPOP})
+      .Any({{UniS32, S32}, {{Sgpr32}, {Sgpr32}}})
+      .Any({{DivS32, S32}, {{Vgpr32}, {Vgpr32}}})
+      .Any({{UniS32, S64}, {{Sgpr32}, {Sgpr64}}})
+      .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}, CtPop64To32}});
+
   addRulesForGOpcs({G_FENCE}).Any({{{}}, {{}, {}}});
 
   addRulesForGOpcs({G_READSTEADYCOUNTER, G_READCYCLECOUNTER}, Standard)
@@ -1431,7 +1437,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S16, {{Sgpr16}, {Sgpr16}}, hasPST)
       .Uni(S16, {{UniInVgprS16}, {Vgpr16}}, !hasPST);
 
-  addRulesForGOpcs({G_FPTOUI, G_FPTOSI})
+  addRulesForGOpcs({G_FPTOUI, G_FPTOSI, G_FPTOUI_SAT, G_FPTOSI_SAT})
       .Any({{UniS16, S16}, {{UniInVgprS16}, {Vgpr16}}})
       .Any({{DivS16, S16}, {{Vgpr16}, {Vgpr16}}})
       .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}}, hasSALUFloat)
