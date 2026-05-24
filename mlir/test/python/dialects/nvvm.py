@@ -144,7 +144,7 @@ def test_barriers():
             nvvm.BarrierReduction.POPC,
         ):
             pred = nvvm.barrier_reduction(
-                res=T.i32(),
+                results=[T.i32()],
                 reduction_op=reduction,
                 reduction_predicate=pred,
             )
