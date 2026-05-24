@@ -115,11 +115,16 @@ MaxSamples("max-samples",
   cl::Hidden,
   cl::cat(AggregatorCategory));
 
-cl::opt<unsigned>
+static cl::opt<unsigned>
     PerfDataJobs("perfdata-jobs",
-                 cl::desc("number of perf data files to process in parallel"),
+                 cl::desc("number of threads to process perf data files in "
+                          "parallel, 0=all available (default 4)"),
                  cl::init(4), cl::cat(AggregatorCategory),
                  cl::sub(cl::SubCommand::getAll()));
+
+static cl::alias PerfDataJobsAlias("pj", cl::desc("Alias for --perfdata-jobs"),
+                                   cl::aliasopt(PerfDataJobs));
+
 extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
 extern cl::opt<bool> ProfileWritePseudoProbes;
 extern cl::opt<std::string> SaveProfile;
