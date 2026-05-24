@@ -876,8 +876,9 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
     // Check for broadcast loads, which are synthesized by optimized zero-stride
     // loads (this is checked in RISCVTTIImpl::isLegalBroadcastLoad).
     bool IsLoad = !Args.empty() && isa<LoadInst>(Args[0]);
-    if (IsLoad && isLegalBroadcastLoad(SrcTy->getElementType(),
-                                       LT.second.getVectorElementCount()))
+    if (IsLoad && LT.second.isVector() &&
+        isLegalBroadcastLoad(SrcTy->getElementType(),
+                             LT.second.getVectorElementCount()))
       return 0;
 
     bool HasScalar = (Args.size() > 0) && (Operator::getOpcode(Args[0]) ==
