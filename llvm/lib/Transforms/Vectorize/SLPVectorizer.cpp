@@ -18964,7 +18964,8 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
       }
     }
     if (!CostIsFree && !Scale) {
-      Scale = IsGatherLike ? getGatherNodeEffectiveScale(TE, RdxRoot)
+      Scale = IsGatherLike ? getGatherNodeEffectiveScale(
+                                 TE, (TE.Idx == 0) ? RdxRoot : nullptr)
                            : getScaleToLoopIterations(TE);
       C *= Scale;
       EntryToScale.try_emplace(&TE, Scale);
