@@ -412,6 +412,36 @@ struct AssertOpToAssertfailLowering
   }
 };
 
+/// Follows the SSA chain `insertvalue[0] -> load -> addressof -> global`
+/// to recover the integer initializer behind field [0] of `namedBarrier`,
+/// since `nvvm.barrier` carries `barrierId` as an `IntegerAttr`.
+static FailureOr<uint32_t>
+extractStaticNamedBarrierId(Operation *contextOp, Value namedBarrier) {
+  auto insertOp = namedBarrier.getDefiningOp<LLVM::InsertValueOp>();
+  while (insertOp && insertOp.getPosition() != ArrayRef<int64_t>{0})
+    insertOp = insertOp.getContainer().getDefiningOp<LLVM::InsertValueOp>();
+  if (!insertOp)
+    return failure();
+  auto loadOp = insertOp.getValue().getDefiningOp<LLVM::LoadOp>();
+  if (!loadOp)
+    return failure();
+  auto addrOf = loadOp.getAddr().getDefiningOp<LLVM::AddressOfOp>();
+  if (!addrOf)
+    return failure();
+  Operation *symbolTableOp =
+      contextOp->getParentWithTrait<OpTrait::SymbolTable>();
+  if (!symbolTableOp)
+    return failure();
+  auto globalOp = dyn_cast_or_null<LLVM::GlobalOp>(
+      SymbolTable::lookupSymbolIn(symbolTableOp, addrOf.getGlobalNameAttr()));
+  if (!globalOp)
+    return failure();
+  auto initAttr = dyn_cast_or_null<IntegerAttr>(globalOp.getValueAttr());
+  if (!initAttr)
+    return failure();
+  return static_cast<uint32_t>(initAttr.getInt());
+}
+
 struct GPUBarrierOpToNVVMLowering final
     : public ConvertOpToLLVMPattern<gpu::BarrierOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
@@ -421,12 +451,15 @@ struct GPUBarrierOpToNVVMLowering final
                   ConversionPatternRewriter &rewriter) const override {
     if (Value namedBarrier = adaptor.getNamedBarrier()) {
       Location loc = op.getLoc();
-      Value barrierId =
-          LLVM::ExtractValueOp::create(rewriter, loc, namedBarrier, 0);
+      FailureOr<uint32_t> barrierId =
+          extractStaticNamedBarrierId(op, namedBarrier);
+      if (failed(barrierId))
+        return rewriter.notifyMatchFailure(
+            op, "could not recover the static barrier id behind the named "
+                "barrier handle");
       Value numberOfThreads =
           LLVM::ExtractValueOp::create(rewriter, loc, namedBarrier, 1);
-      NVVM::BarrierOp::create(rewriter, loc, barrierId, numberOfThreads,
-                              NVVM::BarrierReductionAttr{}, Value{});
+      NVVM::BarrierOp::create(rewriter, loc, *barrierId, numberOfThreads);
       rewriter.eraseOp(op);
       return success();
     }
@@ -434,7 +467,8 @@ struct GPUBarrierOpToNVVMLowering final
     gpu::BarrierScope scope = op.getScope();
     switch (scope) {
     case gpu::BarrierScope::Workgroup:
-      rewriter.replaceOpWithNewOp<NVVM::BarrierOp>(op);
+      rewriter.replaceOpWithNewOp<NVVM::BarrierOp>(op, /*barrierId=*/0,
+                                                   /*numberOfThreads=*/Value{});
       return success();
     case gpu::BarrierScope::Subgroup: {
       // Emit __syncwarp(0xFFFFFFFF) for full-warp sync.

@@ -37,14 +37,30 @@ func.func @nvvm_rcp(%arg0: f32) -> f32 {
 }
 
 // CHECK-LABEL: @llvm_nvvm_barrier
-// CHECK-SAME: (%[[barId:.*]]: i32, %[[numberOfThreads:.*]]: i32)
-llvm.func @llvm_nvvm_barrier(%barId : i32, %numberOfThreads : i32) {
-  // CHECK: nvvm.barrier 
-  nvvm.barrier 
-  // CHECK: nvvm.barrier id = %[[barId]]
-  nvvm.barrier id = %barId
-  // CHECK: nvvm.barrier id = %[[barId]] number_of_threads = %[[numberOfThreads]]
-  nvvm.barrier id = %barId number_of_threads = %numberOfThreads
+// CHECK-SAME: (%[[numberOfThreads:.*]]: i32)
+llvm.func @llvm_nvvm_barrier(%numberOfThreads : i32) {
+  // CHECK: nvvm.barrier{{ *$}}
+  nvvm.barrier
+  // CHECK: nvvm.barrier id = 5
+  nvvm.barrier id = 5
+  // CHECK: nvvm.barrier id = 5 number_of_threads = %[[numberOfThreads]]
+  nvvm.barrier id = 5 number_of_threads = %numberOfThreads
+  // CHECK: nvvm.barrier number_of_threads = %[[numberOfThreads]]
+  nvvm.barrier number_of_threads = %numberOfThreads
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_barrier_reduction
+// CHECK-SAME: (%[[pred:.*]]: i32)
+llvm.func @llvm_nvvm_barrier_reduction(%pred : i32) {
+  // CHECK: nvvm.barrier.reduction #nvvm.reduction<and> %[[pred]] -> i32
+  %0 = nvvm.barrier.reduction #nvvm.reduction<and> %pred -> i32
+  // CHECK: nvvm.barrier.reduction #nvvm.reduction<or> %[[pred]] -> i32
+  %1 = nvvm.barrier.reduction #nvvm.reduction<or> %pred -> i32
+  // CHECK: nvvm.barrier.reduction #nvvm.reduction<popc> %[[pred]] -> i32
+  %2 = nvvm.barrier.reduction #nvvm.reduction<popc> %pred -> i32
+  // CHECK: nvvm.barrier.reduction id = 3 #nvvm.reduction<and> %[[pred]] -> i32
+  %3 = nvvm.barrier.reduction id = 3 #nvvm.reduction<and> %pred -> i32
   llvm.return
 }
 

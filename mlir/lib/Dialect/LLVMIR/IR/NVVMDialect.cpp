@@ -2926,32 +2926,22 @@ LogicalResult NVVM::SetMaxRegisterOp::verify() {
   return success();
 }
 
+/// Common verifier for `nvvm.barrier` and `nvvm.barrier.reduction`: PTX
+/// restricts the logical barrier resource id to the 4-bit range 0..15.
+template <typename BarrierLikeOp>
+static LogicalResult verifyBarrierIdRange(BarrierLikeOp op) {
+  if (op.getBarrierId() > 15)
+    return op.emitOpError("barrier id must be in the range [0, 15], got ")
+           << op.getBarrierId();
+  return success();
+}
+
 LogicalResult NVVM::BarrierOp::verify() {
-  if (getNumberOfThreads() && !getBarrierId())
-    return emitOpError(
-        "barrier id is missing, it should be set between 0 to 15");
-
-  if (getBarrierId() && (getReductionOp() || getReductionPredicate()))
-    return emitOpError("reduction are only available when id is 0");
-
-  if ((getReductionOp() && !getReductionPredicate()) ||
-      (!getReductionOp() && getReductionPredicate()))
-    return emitOpError("reduction predicate and reduction operation must be "
-                       "specified together");
-
-  return success();
+  return verifyBarrierIdRange(*this);
 }
 
-LogicalResult BarrierOp::inferReturnTypes(
-    MLIRContext *context, std::optional<Location> location,
-    BarrierOp::Adaptor adaptor, SmallVectorImpl<Type> &inferredReturnTypes) {
-  if (adaptor.getReductionOp())
-    inferredReturnTypes.push_back(IntegerType::get(context, 32));
-  return success();
-}
-
-bool BarrierOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-  return isCompatibleReturnTypesOptionalResult(l, r);
+LogicalResult NVVM::BarrierReductionOp::verify() {
+  return verifyBarrierIdRange(*this);
 }
 
 LogicalResult NVVM::Tcgen05CpOp::verify() {
@@ -3456,32 +3446,37 @@ void SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::BarrierOp>(op);
-  llvm::Value *barrierId = thisOp.getBarrierId()
-                               ? mt.lookupValue(thisOp.getBarrierId())
-                               : builder.getInt32(0);
+  llvm::SmallVector<llvm::Value *> args = {
+      builder.getInt32(thisOp.getBarrierId())};
   llvm::Intrinsic::ID id;
-  llvm::SmallVector<llvm::Value *> args = {barrierId};
   if (thisOp.getNumberOfThreads()) {
     id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count;
     args.push_back(mt.lookupValue(thisOp.getNumberOfThreads()));
-  } else if (thisOp.getReductionOp()) {
-    switch (*thisOp.getReductionOp()) {
-    case NVVM::BarrierReduction::AND:
-      id = llvm::Intrinsic::nvvm_barrier_cta_red_and_aligned_all;
-      break;
-    case NVVM::BarrierReduction::OR:
-      id = llvm::Intrinsic::nvvm_barrier_cta_red_or_aligned_all;
-      break;
-    case NVVM::BarrierReduction::POPC:
-      id = llvm::Intrinsic::nvvm_barrier_cta_red_popc_aligned_all;
-      break;
-    }
-    args.push_back(builder.CreateICmpNE(
-        mt.lookupValue(thisOp.getReductionPredicate()), builder.getInt32(0)));
   } else {
     id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all;
   }
+  return {id, std::move(args)};
+}
 
+mlir::NVVM::IDArgPair NVVM::BarrierReductionOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::BarrierReductionOp>(op);
+  llvm::Intrinsic::ID id;
+  switch (thisOp.getReductionOp()) {
+  case NVVM::BarrierReduction::AND:
+    id = llvm::Intrinsic::nvvm_barrier_cta_red_and_aligned_all;
+    break;
+  case NVVM::BarrierReduction::OR:
+    id = llvm::Intrinsic::nvvm_barrier_cta_red_or_aligned_all;
+    break;
+  case NVVM::BarrierReduction::POPC:
+    id = llvm::Intrinsic::nvvm_barrier_cta_red_popc_aligned_all;
+    break;
+  }
+  llvm::SmallVector<llvm::Value *> args = {
+      builder.getInt32(thisOp.getBarrierId()),
+      builder.CreateICmpNE(mt.lookupValue(thisOp.getReductionPredicate()),
+                           builder.getInt32(0))};
   return {id, std::move(args)};
 }
 

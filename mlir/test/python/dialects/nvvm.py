@@ -130,12 +130,8 @@ def test_barriers():
 
     @func.FuncOp.from_py_func(i32, i32, f32)
     def barriers(mask, vi32, vf32):
-        c0 = arith.constant(T.i32(), 0)
         cffff = arith.constant(T.i32(), 0xFFFF)
-        nvvm.barrier(
-            barrier_id=c0,
-            number_of_threads=cffff,
-        )
+        nvvm.barrier(number_of_threads=cffff)
 
         pred = arith.constant(T.i32(), 1)
         for reduction in (
@@ -143,7 +139,8 @@ def test_barriers():
             nvvm.BarrierReduction.OR,
             nvvm.BarrierReduction.POPC,
         ):
-            pred = nvvm.barrier(
+            pred = nvvm.barrier_reduction(
+                res=T.i32(),
                 reduction_op=reduction,
                 reduction_predicate=pred,
             )
@@ -163,13 +160,12 @@ def test_barriers():
 
 # CHECK-LABEL:   func.func @barriers(
 # CHECK:           %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: f32) -> i32 {
-# CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 # CHECK:           %[[CONSTANT_1:.*]] = arith.constant 65535 : i32
-# CHECK:           nvvm.barrier id = %[[CONSTANT_0]] number_of_threads = %[[CONSTANT_1]]
+# CHECK:           nvvm.barrier number_of_threads = %[[CONSTANT_1]]
 # CHECK:           %[[PRED:.*]] = arith.constant 1 : i32
-# CHECK:           %[[BARRIER_1:.*]] = nvvm.barrier #nvvm.reduction<and> %[[PRED]] -> i32
-# CHECK:           %[[BARRIER_2:.*]] = nvvm.barrier #nvvm.reduction<or> %[[BARRIER_1]] -> i32
-# CHECK:           %[[BARRIER_3:.*]] = nvvm.barrier #nvvm.reduction<popc> %[[BARRIER_2]] -> i32
+# CHECK:           %[[BARRIER_1:.*]] = nvvm.barrier.reduction #nvvm.reduction<and> %[[PRED]] -> i32
+# CHECK:           %[[BARRIER_2:.*]] = nvvm.barrier.reduction #nvvm.reduction<or> %[[BARRIER_1]] -> i32
+# CHECK:           %[[BARRIER_3:.*]] = nvvm.barrier.reduction #nvvm.reduction<popc> %[[BARRIER_2]] -> i32
 # CHECK:           nvvm.barrier
 # CHECK:           nvvm.bar.warp.sync %[[ARG0]] : i32
 # CHECK:           nvvm.cluster.arrive
