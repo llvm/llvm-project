@@ -1578,7 +1578,12 @@ public:
 private:
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::BOZLiteralConstant &expr) {
-    TODO(getLoc(), "BOZ");
+    // BOZ literals reach lowering only from BGE/BGT/BLE/BLT intrinsics when at
+    // least one operand is not constant (otherwise folds). For all other
+    // intrinsics, semantics converts BOZ to the expected type before lowering.
+    Fortran::evaluate::Constant<Fortran::evaluate::LargestInt> intConstant{
+        expr};
+    return gen(intConstant);
   }
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::NullPointer &expr) {

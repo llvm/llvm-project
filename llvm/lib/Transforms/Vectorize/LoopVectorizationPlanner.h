@@ -74,19 +74,18 @@ class VPBuilder {
 
   /// Lightweight SCEV-to-VPlan expander. Converts SCEVConstant, SCEVUnknown,
   /// SCEVVScale and SCEVMulExpr into VPInstructions. Other SCEV expressions are
-  /// unsupported.
+  /// not yet supported.
   class VPSCEVExpander {
     VPBuilder &Builder;
-    VPlan &Plan;
     DebugLoc DL;
 
   public:
-    VPSCEVExpander(VPBuilder &Builder, VPlan &Plan, DebugLoc DL)
-        : Builder(Builder), Plan(Plan), DL(DL) {}
+    VPSCEVExpander(VPBuilder &Builder, DebugLoc DL)
+        : Builder(Builder), DL(DL) {}
 
-    /// Expand \p S into recipes and live-ins using the builder. Returns nullptr
-    /// if \p S cannot be expanded yet.
-    VPValue *expand(const SCEV *S);
+    /// Try to expand \p S into recipes and live-ins using the builder. Returns
+    /// nullptr if \p S cannot be expanded yet.
+    VPValue *tryToExpand(const SCEV *S);
   };
 
   /// Insert \p VPI in BB at InsertPt if BB is set.
@@ -452,14 +451,28 @@ public:
         FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags(), DL));
   }
 
-  /// Expand \p Expr using VPSCEVExpander. Returns nullptr if \p S cannot be
-  /// expanded yet.
+  /// Try to expand \p Expr using VPSCEVExpander. Returns nullptr if \p Expr
+  /// cannot be expanded yet.
   VPValue *expandSCEV(const SCEV *Expr, DebugLoc DL) {
-    return VPSCEVExpander(*this, getPlan(), DL).expand(Expr);
+    return VPSCEVExpander(*this, DL).tryToExpand(Expr);
   }
 
   VPExpandSCEVRecipe *createExpandSCEV(const SCEV *Expr) {
     return tryInsertInstruction(new VPExpandSCEVRecipe(Expr));
+  }
+
+  VPVectorPointerRecipe *
+  createVectorPointer(VPValue *Ptr, Type *SourceElementTy, VPValue *Stride,
+                      GEPNoWrapFlags GEPFlags, DebugLoc DL) {
+    return tryInsertInstruction(
+        new VPVectorPointerRecipe(Ptr, SourceElementTy, Stride, GEPFlags, DL));
+  }
+
+  VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(
+      Intrinsic::ID VectorIntrinsicID, ArrayRef<VPValue *> CallArguments,
+      Type *Ty, Align Alignment, const VPIRMetadata &MD, DebugLoc DL) {
+    return tryInsertInstruction(new VPWidenMemIntrinsicRecipe(
+        VectorIntrinsicID, CallArguments, Ty, Alignment, MD, DL));
   }
 
   //===--------------------------------------------------------------------===//

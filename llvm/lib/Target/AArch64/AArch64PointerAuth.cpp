@@ -98,7 +98,7 @@ void AArch64PointerAuthImpl::signLR(MachineFunction &MF,
   // Debug location must be unknown, see AArch64FrameLowering::emitPrologue.
   DebugLoc DL;
 
-  if (UseBKey) {
+  if (UseBKey && !MF.getTarget().getTargetTriple().isOSBinFormatMachO()) {
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITBKEY))
         .setMIFlag(MachineInstr::FrameSetup);
   }
@@ -115,8 +115,7 @@ void AArch64PointerAuthImpl::signLR(MachineFunction &MF,
   if (MFnI.branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
     emitPACCFI(MBB, MBBI, MachineInstr::FrameSetup, EmitCFI);
     BuildMI(MBB, MBBI, DL,
-            TII->get(MFnI.shouldSignWithBKey() ? AArch64::PACIBSPPC
-                                               : AArch64::PACIASPPC))
+            TII->get(UseBKey ? AArch64::PACIBSPPC : AArch64::PACIASPPC))
         .setMIFlag(MachineInstr::FrameSetup)
         ->setPreInstrSymbol(MF, MFnI.getSigningInstrLabel());
   } else {
@@ -126,8 +125,7 @@ void AArch64PointerAuthImpl::signLR(MachineFunction &MF,
       emitPACCFI(MBB, MBBI, MachineInstr::FrameSetup, EmitCFI);
     }
     BuildMI(MBB, MBBI, DL,
-            TII->get(MFnI.shouldSignWithBKey() ? AArch64::PACIBSP
-                                               : AArch64::PACIASP))
+            TII->get(UseBKey ? AArch64::PACIBSP : AArch64::PACIASP))
         .setMIFlag(MachineInstr::FrameSetup)
         ->setPreInstrSymbol(MF, MFnI.getSigningInstrLabel());
     if (!MFnI.branchProtectionPAuthLR())

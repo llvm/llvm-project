@@ -44,7 +44,7 @@ objects:
 functions:
   - name: asprintf
     standards:
-      - GNUExtensions
+      - gnu
     return_type: int
     arguments:
       - type: char **__restrict
@@ -60,7 +60,7 @@ functions:
       - type: FILE *
   - name: clearerr_unlocked
     standards:
-      - GNUExtensions
+      - gnu
     return_type: void
     arguments:
       - type: FILE *
@@ -72,7 +72,7 @@ functions:
       - type: FILE *
   - name: fdopen
     standards:
-      - POSIX
+      - posix
     return_type: FILE *
     arguments:
       - type: int
@@ -85,7 +85,7 @@ functions:
       - type: FILE *
   - name: feof_unlocked
     standards:
-      - GNUExtensions
+      - gnu
     return_type: int
     arguments:
       - type: FILE *
@@ -97,7 +97,7 @@ functions:
       - type: FILE *
   - name: ferror_unlocked
     standards:
-      - GNUExtensions
+      - gnu
     return_type: int
     arguments:
       - type: FILE *
@@ -115,7 +115,7 @@ functions:
       - type: FILE *
   - name: fgetc_unlocked
     standards:
-      - GNUExtensions
+      - gnu
     return_type: int
     arguments:
       - type: FILE *
@@ -129,13 +129,13 @@ functions:
       - type: FILE *__restrict
   - name: fileno
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: FILE *
   - name: flockfile
     standards:
-      - POSIX
+      - posix
     return_type: void
     arguments:
       - type: FILE *
@@ -148,7 +148,7 @@ functions:
       - type: const char *
   - name: fopencookie
     standards:
-      - GNUExtensions
+      - gnu
     return_type: FILE *
     arguments:
       - type: void *
@@ -187,7 +187,7 @@ functions:
       - type: FILE *__restrict
   - name: fread_unlocked
     standards:
-      - GNUExtensions
+      - gnu
     return_type: size_t
     arguments:
       - type: void *__restrict
@@ -226,7 +226,7 @@ functions:
       - type: FILE *
   - name: fseeko
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: FILE *
@@ -240,13 +240,13 @@ functions:
       - type: FILE *
   - name: ftello
     standards:
-      - POSIX
+      - posix
     return_type: off_t
     arguments:
       - type: FILE *
   - name: funlockfile
     standards:
-      - POSIX
+      - posix
     return_type: void
     arguments:
       - type: FILE *
@@ -261,7 +261,7 @@ functions:
       - type: FILE *__restrict
   - name: fwrite_unlocked
     standards:
-      - GNUExtensions
+      - gnu
     return_type: size_t
     arguments:
       - type: const void *__restrict
@@ -276,7 +276,7 @@ functions:
       - type: FILE *
   - name: getc_unlocked
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: FILE *
@@ -287,7 +287,7 @@ functions:
     arguments: []
   - name: getchar_unlocked
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments: []
   - name: perror
@@ -405,7 +405,7 @@ functions:
       - type: FILE *
   - name: vasprintf
     standards:
-      - GNUExtensions
+      - gnu
     return_type: int
     arguments:
       - type: char **__restrict

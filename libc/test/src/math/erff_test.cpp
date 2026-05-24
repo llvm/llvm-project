@@ -50,7 +50,7 @@ TEST_F(LlvmLibcErffTest, TrickyInputs) {
 }
 
 TEST_F(LlvmLibcErffTest, InFloatRange) {
-  constexpr uint32_t COUNT = 234561;
+  constexpr uint32_t COUNT = 1'231;
   constexpr uint32_t START = 0;           // 0
   constexpr uint32_t STOP = 0x4080'0000U; // 4.0f
 

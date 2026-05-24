@@ -473,8 +473,11 @@ void Fuchsia::AddCXXStdlibLibArgs(const ArgList &Args,
   }
 }
 
-SanitizerMask Fuchsia::getSupportedSanitizers() const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+SanitizerMask
+Fuchsia::getSupportedSanitizers(StringRef BoundArch,
+                                Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::HWAddress;
   Res |= SanitizerKind::PointerCompare;

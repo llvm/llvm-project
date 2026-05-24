@@ -1303,8 +1303,9 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   Header->splitAt(Header->getFirstNonPhi());
 
   // Create the header mask, insert it in the header and branch on it.
-  auto *IV =
-      new VPWidenCanonicalIVRecipe(Header->getParent()->getCanonicalIV());
+  auto *IV = new VPWidenCanonicalIVRecipe(
+      LoopRegion->getCanonicalIV(),
+      VPIRFlags::WrapFlagsTy(LoopRegion->hasCanonicalIVNUW(), false));
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   Builder.insert(IV);
   VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
@@ -1481,8 +1482,8 @@ void VPlanTransforms::addMinimumIterationCheck(
                                     TripCount, Step)) {
       // Generate the minimum iteration check only if we cannot prove the
       // check is known to be true, or known to be false.
-      // // Try to expand SCEVs to VPInstructions in CheckBlock, or to
-      // VPExpandSCEV in Entry failing that.
+      // Try to expand Step into VPInstructions in CheckBlock; otherwise fall
+      // back to a VPExpandSCEV recipe in the plan's entry block.
       VPValue *MinTripCountVPV = Builder.expandSCEV(Step, DL);
       if (!MinTripCountVPV)
         MinTripCountVPV = VPBuilder(Plan.getEntry()).createExpandSCEV(Step);
