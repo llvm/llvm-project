@@ -264,6 +264,12 @@ MODULE_PASS_WITH_PARAMS(
       return StructuralHashPrinterPass(errs(), Options);
     },
     parseStructuralHashPrinterPassOptions, "detailed;call-target-ignored")
+MODULE_PASS_WITH_PARAMS(
+    "select-function", "SelectFunctionPass",
+    [](SmallVector<std::string, 0> FnNames) {
+      return SelectFunctionPass(std::move(FnNames));
+    },
+    parseSelectFunctionPassOptions, "fn=name")
 
 MODULE_PASS_WITH_PARAMS(
     "default", "", [&](OptimizationLevel L) {

@@ -242,6 +242,7 @@
 #include "llvm/Transforms/IPO/PartialInlining.h"
 #include "llvm/Transforms/IPO/SCCP.h"
 #include "llvm/Transforms/IPO/SampleProfile.h"
+#include "llvm/Transforms/IPO/SelectFunction.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 #include "llvm/Transforms/IPO/StripDeadPrototypes.h"
 #include "llvm/Transforms/IPO/StripSymbols.h"
@@ -1578,6 +1579,28 @@ Expected<SmallVector<std::string, 0>> parseInternalizeGVs(StringRef Params) {
   }
 
   return Expected<SmallVector<std::string, 0>>(std::move(PreservedGVs));
+}
+
+Expected<SmallVector<std::string, 0>>
+parseSelectFunctionPassOptions(StringRef Params) {
+  SmallVector<std::string, 2> FnNames;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName.consume_front("fn=")) {
+      FnNames.push_back(ParamName.str());
+    } else {
+      return make_error<StringError>(
+          formatv("invalid SelectFunction pass parameter '{}'", ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  if (FnNames.empty())
+    return make_error<StringError>("select-function requires fn=<name>",
+                                   inconvertibleErrorCode());
+  return Expected<SmallVector<std::string, 0>>(std::move(FnNames));
 }
 
 Expected<RegAllocFastPass::Options>
