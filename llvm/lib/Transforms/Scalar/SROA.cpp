@@ -4488,14 +4488,14 @@ class VecLoadLaneSplitter : public InstVisitor<VecLoadLaneSplitter, bool> {
     if (!isStoreCandidate(SI))
       return false;
 
-    Type *StoreTy = SI.getValueOperand()->getType();
     bool IsContained = StoreSlice.beginOffset() >= LoadSlice.beginOffset() &&
                        StoreSlice.endOffset() <= LoadSlice.endOffset();
-    if (!isa<FixedVectorType>(StoreTy))
-      return IsContained;
+    if (!IsContained)
+      return false;
+
     uint64_t StoreSize = StoreSlice.endOffset() - StoreSlice.beginOffset();
     uint64_t LoadSize = LoadSlice.endOffset() - LoadSlice.beginOffset();
-    return IsContained && StoreSize < LoadSize;
+    return StoreSize < LoadSize;
   }
 
   // Return true if slice S's use is the address operand of the instruction I.
