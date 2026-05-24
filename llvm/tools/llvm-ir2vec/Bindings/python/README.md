@@ -42,7 +42,7 @@ The package ships a pre-trained seed embedding vocabulary:
 |---|---|
 | `ir2vec.SEED_EMBEDDING_75D` | 75 |
 
-This pre-packaged vocab file has been taken from `llvm/Analysis/models/seedEmbeddingVocab75D.json` in the LLVM monorepo. Pass this or a vocab of your choice directly to `loadVocab(vocabPath=...)`.
+This pre-packaged vocab file has been taken from [`Analysis/models/seedEmbeddingVocab75D.json`](https://github.com/llvm/llvm-project/blob/main/llvm/lib/Analysis/models/seedEmbeddingVocab75D.json) in the LLVM monorepo. Pass this or a vocab of your choice directly to `loadVocab(vocabPath=...)`.
 
 ## Building from source
 
