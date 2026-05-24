@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics \
-// RUN:     --static-memory-planner-analysis
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(static-memory-planner-analysis))" \
+// RUN:     -split-input-file -verify-diagnostics
 
 // -----
 

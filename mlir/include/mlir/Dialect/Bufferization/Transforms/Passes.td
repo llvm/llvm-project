@@ -185,7 +185,7 @@ def OptimizeAllocationLivenessPass
 }
 
 def StaticMemoryPlannerAnalysisPass
-    : Pass<"static-memory-planner-analysis", "func::FuncOp"> {
+    : Pass<"static-memory-planner-analysis"> {
   let summary = "Identifies same-block alloc/dealloc pairs eligible for "
                 "static memory planning";
   let description = [{

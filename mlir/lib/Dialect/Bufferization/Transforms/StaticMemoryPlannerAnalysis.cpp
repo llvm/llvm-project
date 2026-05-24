@@ -99,15 +99,12 @@ public:
   StaticMemoryPlannerAnalysisPass() = default;
 
   void runOnOperation() override {
-    func::FuncOp func = getOperation();
-
-    if (func.isExternal())
-      return;
+    Operation *op = getOperation();
 
     // Collect eligible allocation candidates
     SmallVector<AllocationCandidate> candidates;
 
-    func.walk([&](memref::AllocOp allocOp) {
+    op->walk([&](memref::AllocOp allocOp) {
       MemRefType memrefType = allocOp.getType();
 
       // Skip dynamic shapes
@@ -152,8 +149,7 @@ public:
       }
     }
 
-    LLVM_DEBUG(llvm::dbgs() << "[static-memory-planner] summary for "
-                            << func.getName() << ": eligible="
+    LLVM_DEBUG(llvm::dbgs() << "[static-memory-planner] summary: eligible="
                             << (unsigned)numEligible << " skip-dynamic="
                             << (unsigned)numSkipDynamic << " skip-no-dealloc="
                             << (unsigned)numSkipNoDealloc << " reusable-pairs="
