@@ -3171,6 +3171,10 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
     else
       return InstructionCost::getInvalid();
   }
+  case ExpressionTypes::NegatedMulAccReduction:
+    assert(Opcode == Instruction::Add && "Unexpected opcode");
+    Opcode = Instruction::Sub;
+    [[fallthrough]];
   case ExpressionTypes::MulAccReduction:
     return Ctx.TTI.getMulAccReductionCost(false, Opcode, RedTy, SrcVecTy,
                                           Ctx.CostKind);
@@ -3252,6 +3256,25 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
       Red->getCondOp()->printAsOperand(O, SlotTracker);
     }
     O << ")";
+    break;
+  }
+  case ExpressionTypes::NegatedMulAccReduction: {
+    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
+    O << " + " << (Red->isPartialReduction() ? "partial." : "") << "reduce.";
+    O << Instruction::getOpcodeName(
+             RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
+      << " (sub (0, mul";
+    auto *Mul = cast<VPWidenRecipe>(ExpressionRecipes[0]);
+    Mul->printFlags(O);
+    O << " ";
+    getOperand(0)->printAsOperand(O, SlotTracker);
+    O << ", ";
+    getOperand(1)->printAsOperand(O, SlotTracker);
+    if (Red->isConditional()) {
+      O << ", ";
+      Red->getCondOp()->printAsOperand(O, SlotTracker);
+    }
+    O << "))";
     break;
   }
   case ExpressionTypes::ExtNegatedMulAccReduction: {

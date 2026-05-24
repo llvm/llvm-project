@@ -4571,9 +4571,9 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                       cast<VPWidenRecipe>(Sub), Red);
       return new VPExpressionRecipe(RecipeA, RecipeB, Mul, Red);
     }
-    // TODO: Add an expression type for this variant with a negated mul
-    if (!Sub && IsMulAccValidAndClampRange(Mul, nullptr, nullptr, nullptr))
-      return new VPExpressionRecipe(Mul, Red);
+    if (IsMulAccValidAndClampRange(Mul, nullptr, nullptr, nullptr))
+      return Sub ? new VPExpressionRecipe(Mul, cast<VPWidenRecipe>(Sub), Red)
+                 : new VPExpressionRecipe(Mul, Red);
   }
   // TODO: Add an expression type for negated versions of other expression
   // variants.

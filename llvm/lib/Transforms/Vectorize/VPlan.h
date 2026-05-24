@@ -3452,6 +3452,10 @@ class VPExpressionRecipe : public VPSingleDefRecipe {
     /// the scalar result to a chain.
     MulAccReduction,
     /// Represent an inloop multiply-accumulate reduction, multiplying the
+    /// vector operands, negating the multiplication, performing a reduction.add
+    /// on the result, and adding the scalar result to a chain.
+    NegatedMulAccReduction,
+    /// Represent an inloop multiply-accumulate reduction, multiplying the
     /// extended vector operands, negating the multiplication, performing a
     /// reduction.add on the result, and adding the scalar result to a chain.
     ExtNegatedMulAccReduction,
@@ -3474,6 +3478,18 @@ public:
       : VPExpressionRecipe(ExpressionTypes::ExtendedReduction, {Ext, Red}) {}
   VPExpressionRecipe(VPWidenRecipe *Mul, VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::MulAccReduction, {Mul, Red}) {}
+  VPExpressionRecipe(VPWidenRecipe *Mul, VPWidenRecipe *Sub,
+                     VPReductionRecipe *Red)
+      : VPExpressionRecipe(ExpressionTypes::NegatedMulAccReduction,
+                           {Mul, Sub, Red}) {
+    assert(Mul->getOpcode() == Instruction::Mul && "Expected a mul");
+    assert(Red->getRecurrenceKind() == RecurKind::Add &&
+           "Expected an add reduction");
+    assert(getNumOperands() >= 3 && "Expected at least three operands");
+    [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(2));
+    assert(SubConst && SubConst->isZero() &&
+           Sub->getOpcode() == Instruction::Sub && "Expected a negating sub");
+  }
   VPExpressionRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
                      VPWidenRecipe *Mul, VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::ExtMulAccReduction,
