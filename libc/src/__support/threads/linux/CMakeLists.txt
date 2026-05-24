@@ -40,6 +40,7 @@ add_header_library(
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.null_check
 )
 
 add_object_library(

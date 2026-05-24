@@ -21,6 +21,7 @@
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/threads/identifier.h"
 #include "src/__support/threads/linux/futex_utils.h"
@@ -47,9 +48,12 @@ protected:
   size_t *recursive_count;
 
 public:
-  LIBC_INLINE constexpr PIMutexRef(Futex &owner, Type type,
-                                   size_t *recursive_count = nullptr)
-      : owner(owner), type(type), recursive_count(recursive_count) {}
+  LIBC_INLINE PIMutexRef(Futex &owner, Type type,
+                         size_t *recursive_count = nullptr)
+      : owner(owner), type(type), recursive_count(recursive_count) {
+    if (type == Type::Recursive)
+      LIBC_CRASH_ON_NULLPTR(recursive_count);
+  }
   LIBC_INLINE MutexError try_lock() {
     FutexWordType old_owner = 0;
     auto current = static_cast<FutexWordType>(internal::gettid());

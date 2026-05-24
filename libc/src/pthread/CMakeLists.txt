@@ -467,6 +467,7 @@ add_entrypoint_object(
     libc.hdr.errno_macros
     libc.include.pthread
     libc.src.__support.threads.mutex
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
