@@ -23,4 +23,12 @@ static_assert(SameType<decltype(CPU_COUNT((cpu_set_t *)0)), int>::value, "");
 static_assert(SameType<decltype(CPU_SET(0, (cpu_set_t *)0)), void>::value, "");
 static_assert(SameType<decltype(CPU_ISSET(0, (cpu_set_t *)0)), int>::value, "");
 
+using SchedGetSchedulerT = int(pid_t) noexcept;
+using SchedSetSchedulerT = int(pid_t, int, const struct sched_param *) noexcept;
+
+static_assert(SameType<decltype(sched_getscheduler), SchedGetSchedulerT>::value,
+              "");
+static_assert(SameType<decltype(sched_setscheduler), SchedSetSchedulerT>::value,
+              "");
+
 extern "C" int main() { return 0; }

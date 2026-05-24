@@ -494,6 +494,8 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     OptionalParameter<"DIExpressionAttr">:$rank,
     OptionalParameter<"DIExpressionAttr">:$allocated,
     OptionalParameter<"DIExpressionAttr">:$associated,
+    OptionalParameter<"StringAttr">:$identifier,
+    OptionalParameter<"DIDerivedTypeAttr">:$discriminator,
     OptionalArrayRefParameter<"DINodeAttr">:$elements
   );
   let builders = [
@@ -503,12 +505,13 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
       "DIFlags":$flags, "uint64_t":$sizeInBits, "uint64_t":$alignInBits,
       "DIExpressionAttr":$dataLocation, "DIExpressionAttr":$rank,
       "DIExpressionAttr":$allocated, "DIExpressionAttr":$associated,
+      "StringAttr":$identifier, "DIDerivedTypeAttr":$discriminator,
       "ArrayRef<DINodeAttr>":$elements
     ), [{
-      return $_get($_ctxt, /*recId=*/nullptr, /*isRecSelf=*/nullptr,
+      return $_get($_ctxt, /*recId=*/nullptr, /*isRecSelf=*/false,
                    tag, name, file, line, scope, baseType, flags, sizeInBits,
                    alignInBits, dataLocation, rank, allocated,
-                   associated, elements);
+                   associated, identifier, discriminator, elements);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -547,9 +550,10 @@ def LLVM_DIDerivedTypeAttr : LLVM_Attr<"DIDerivedType", "di_derived_type",
     OptionalParameter<"uint64_t">:$offsetInBits,
     OptionalParameter<"std::optional<unsigned>">:$dwarfAddressSpace,
     OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags,
-    OptionalParameter<"DINodeAttr">:$extraData
+    OptionalParameter<"Attribute">:$extraData
   );
   let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
 
   // Generate mnemonic alias for the attribute.
   let genMnemonicAlias = 1;

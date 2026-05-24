@@ -121,8 +121,8 @@ Serializer::processSpecConstantCompositeOp(spirv::SpecConstantCompositeOp op) {
     operands.push_back(constituentID);
   }
 
-  encodeInstructionInto(typesGlobalValues,
-                        spirv::Opcode::OpSpecConstantComposite, operands);
+  encodeInstructionWithContinuationInto(
+      typesGlobalValues, spirv::Opcode::OpSpecConstantComposite, operands);
   specConstIDMap[op.getSymName()] = resultID;
 
   return processName(resultID, op.getSymName());

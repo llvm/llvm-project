@@ -25,14 +25,17 @@ RUN: dsymutil --linker classic -oso-prepend-path %p/../Inputs %p/../Inputs/priva
 RUN: llvm-dwarfdump %t.omit.dSYM | FileCheck %s --check-prefix OMIT
 RUN: llvm-dwarfdump %t.keep.dSYM | FileCheck %s --check-prefix KEEP
 
-KEEP:     DW_AT_name	("MyDummyVar")
-KEEP:     DW_AT_name	("FOO_VAR_TYPE")
-KEEP:     DW_AT_name	("x1")
-KEEP:     DW_AT_name	("x2")
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/keep_func/main.out -o %t.omit.dSYM
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/keep_func/main.out -o %t.keep.dSYM -keep-function-for-static
+RUN: llvm-dwarfdump %t.omit.dSYM | FileCheck %s --check-prefix OMIT
+RUN: llvm-dwarfdump %t.keep.dSYM | FileCheck %s --check-prefix KEEP
+
+KEEP-DAG:     DW_AT_name	("MyDummyVar")
+KEEP-DAG:     DW_AT_name	("FOO_VAR_TYPE")
+KEEP-DAG:     DW_AT_name	("x1")
+KEEP-DAG:     DW_AT_name	("x2")
 
 OMIT-NOT: DW_AT_name	("MyDummyVar")
 OMIT-NOT: DW_AT_name	("FOO_VAR_TYPE")
 OMIT-NOT: DW_AT_name	("x1")
 OMIT-NOT: DW_AT_name	("x2")
-
-## FIXME: Support --linker parallel

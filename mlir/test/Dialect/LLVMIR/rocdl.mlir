@@ -111,6 +111,12 @@ func.func @rocdl.barrier() {
   llvm.return
 }
 
+func.func @rocdl.wave_barrier() {
+  // CHECK: rocdl.wave.barrier
+  rocdl.wave.barrier
+  llvm.return
+}
+
 func.func @rocdl.sched_barrier() {
   // CHECK: rocdl.sched.barrier
   rocdl.sched.barrier 0

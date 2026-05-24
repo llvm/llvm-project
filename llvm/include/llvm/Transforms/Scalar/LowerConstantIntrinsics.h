@@ -26,8 +26,8 @@ class TargetLibraryInfo;
 bool lowerConstantIntrinsics(Function &F, const TargetLibraryInfo &TLI,
                              DominatorTree *DT);
 
-struct LowerConstantIntrinsicsPass :
-    PassInfoMixin<LowerConstantIntrinsicsPass> {
+struct LowerConstantIntrinsicsPass
+    : OptionalPassInfoMixin<LowerConstantIntrinsicsPass> {
 public:
   explicit LowerConstantIntrinsicsPass() = default;
 
@@ -41,7 +41,6 @@ public:
   /// Instruction Combination passes of the optimized pass chain.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
-
 }
 
 #endif

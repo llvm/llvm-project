@@ -1212,6 +1212,8 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     return processImageType(operands);
   case spirv::Opcode::OpTypeSampler:
     return processSamplerType(operands);
+  case spirv::Opcode::OpTypeNamedBarrier:
+    return processNamedBarrierType(operands);
   case spirv::Opcode::OpTypeSampledImage:
     return processSampledImageType(operands);
   case spirv::Opcode::OpTypeRuntimeArray:
@@ -1705,6 +1707,15 @@ spirv::Deserializer::processSamplerType(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+LogicalResult
+spirv::Deserializer::processNamedBarrierType(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 1)
+    return emitError(unknownLoc, "OpTypeNamedBarrier must have no parameters");
+
+  typeMap[operands[0]] = spirv::NamedBarrierType::get(context);
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Constant
 //===----------------------------------------------------------------------===//
@@ -1901,7 +1912,7 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
     constantMap.try_emplace(resultID, attr, shapedType);
-  } else if (auto arrayType = dyn_cast<spirv::ArrayType>(resultType)) {
+  } else if (isa<spirv::ArrayType, spirv::StructType>(resultType)) {
     auto attr = opBuilder.getArrayAttr(elements);
     constantMap.try_emplace(resultID, attr, resultType);
   } else {

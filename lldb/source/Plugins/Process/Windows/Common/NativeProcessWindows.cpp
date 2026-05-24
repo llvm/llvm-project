@@ -96,6 +96,8 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
              GetDebuggedProcessId(), state);
     LLDB_LOG(log, "resuming {0} threads.", m_threads.size());
 
+    m_pending_library_events = false;
+
     bool failed = false;
     for (uint32_t i = 0; i < m_threads.size(); ++i) {
       auto thread = static_cast<NativeThreadWindows *>(m_threads[i].get());
@@ -408,6 +410,26 @@ NativeProcessWindows::GetFileLoadAddress(const llvm::StringRef &file_name,
       file_spec.GetPath().c_str(), GetID());
 }
 
+llvm::Expected<std::vector<LoadedLibraryInfo>>
+NativeProcessWindows::GetLoadedLibraries() {
+  if (Status error = CacheLoadedModules(); error.Fail())
+    return error.ToError();
+
+  std::vector<LoadedLibraryInfo> libs;
+  libs.reserve(m_loaded_modules.size());
+  for (const auto &[file_spec, base] : m_loaded_modules) {
+    LoadedLibraryInfo info;
+    info.name = file_spec.GetPath();
+    info.base_addr = base;
+    libs.push_back(std::move(info));
+  }
+  return libs;
+}
+
+bool NativeProcessWindows::HasPendingLibraryEvents() {
+  return m_pending_library_events;
+}
+
 void NativeProcessWindows::OnExitProcess(uint32_t exit_code) {
   Log *log = GetLog(WindowsLog::Process);
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
@@ -458,11 +480,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
   ProcessDebugger::OnDebugException(first_chance, record);
 
   static bool initial_stop = false;
-  if (!first_chance) {
-    SetState(eStateStopped, false);
-  }
 
-  ExceptionResult result = ExceptionResult::SendToApplication;
   switch (record.GetExceptionCode()) {
   case DWORD(STATUS_SINGLE_STEP):
   case STATUS_WX86_SINGLE_STEP: {
@@ -496,8 +514,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
     return ExceptionResult::MaskException;
   }
   case DWORD(STATUS_BREAKPOINT):
-  case STATUS_WX86_BREAKPOINT:
-
+  case STATUS_WX86_BREAKPOINT: {
     if (NativeThreadWindows *stop_thread =
             GetThreadByID(record.GetThreadID())) {
       auto &reg_ctx = stop_thread->GetRegisterContext();
@@ -564,36 +581,43 @@ NativeProcessWindows::OnDebugException(bool first_chance,
       return ExceptionResult::BreakInDebugger;
     }
 
-    [[fallthrough]];
-  default:
+    // Any remaining STATUS_BREAKPOINT is a breakpoint instruction in the
+    // program's own code (e.g. `__debugbreak()` or `__builtin_debugtrap()`).
+    // Stop the debugger and let the user decide what to do.
+    std::string desc =
+        formatv("Exception {0:x8} encountered at address {1:x8}",
+                record.GetExceptionCode(), record.GetExceptionAddress())
+            .str();
+    StopThread(record.GetThreadID(), StopReason::eStopReasonException,
+               std::move(desc));
+    SetState(eStateStopped, true);
+
+    return ExceptionResult::MaskException;
+  }
+  default: {
     LLDB_LOG(log,
              "Debugger thread reported exception {0:x} at address {1:x} "
              "(first_chance={2})",
              record.GetExceptionCode(), record.GetExceptionAddress(),
              first_chance);
 
-    {
-      std::string desc;
-      llvm::raw_string_ostream desc_stream(desc);
-      desc_stream << "Exception "
-                  << llvm::format_hex(record.GetExceptionCode(), 8)
-                  << " encountered at address "
-                  << llvm::format_hex(record.GetExceptionAddress(), 8);
-      StopThread(record.GetThreadID(), StopReason::eStopReasonException,
-                 desc.c_str());
-
-      SetState(eStateStopped, true);
-    }
-
-    // For non-breakpoints, give the application a chance to handle the
-    // exception first.
     if (first_chance)
-      result = ExceptionResult::SendToApplication;
-    else
-      result = ExceptionResult::BreakInDebugger;
-  }
+      return ExceptionResult::SendToApplication;
 
-  return result;
+    std::string desc;
+    llvm::raw_string_ostream desc_stream(desc);
+    desc_stream << "Exception "
+                << llvm::format_hex(record.GetExceptionCode(), 8)
+                << " encountered at address "
+                << llvm::format_hex(record.GetExceptionAddress(), 8);
+    StopThread(record.GetThreadID(), StopReason::eStopReasonException,
+               desc.c_str());
+
+    SetState(eStateStopped, true);
+
+    return ExceptionResult::BreakInDebugger;
+  }
+  }
 }
 
 void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
@@ -628,14 +652,13 @@ void NativeProcessWindows::OnExitThread(lldb::tid_t thread_id,
 
 void NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
                                      lldb::addr_t module_addr) {
-  // Simply invalidate the cached loaded modules.
-  if (!m_loaded_modules.empty())
-    m_loaded_modules.clear();
+  m_loaded_modules.clear();
+  m_pending_library_events = true;
 }
 
 void NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
-  if (!m_loaded_modules.empty())
-    m_loaded_modules.clear();
+  m_loaded_modules.clear();
+  m_pending_library_events = true;
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>

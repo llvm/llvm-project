@@ -232,6 +232,7 @@ public:
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
   bool VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E);
   bool VisitObjCArrayLiteral(const ObjCArrayLiteral *E);
+  bool VisitDesignatedInitUpdateExpr(const DesignatedInitUpdateExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
@@ -253,6 +254,7 @@ public:
 protected:
   bool visitStmt(const Stmt *S);
   bool visitExpr(const Expr *E, bool DestroyToplevelScope) override;
+  bool visitLValueExpr(const Expr *E, bool DestroyToplevelScope) override;
   bool visitFunc(const FunctionDecl *F) override;
 
   bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
@@ -417,7 +419,7 @@ private:
                              const BinaryOperator *E);
   bool emitRecordDestructionPop(const Record *R, SourceInfo Loc);
   bool emitDestructionPop(const Descriptor *Desc, SourceInfo Loc);
-  bool emitDummyPtr(const DeclTy &D, const Expr *E);
+  bool emitDummyPtr(const DeclTy &D, const Expr *E, bool CU = false);
   bool emitFloat(const APFloat &F, const Expr *E);
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);

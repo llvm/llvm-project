@@ -966,7 +966,7 @@ void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   StringRef Op = OrShadowOffset ? "or" : "add";
   std::string SymName = ("__asan_check_" + Name + "_" + Op + "_" +
                          Twine(1ULL << AccessInfo.AccessSizeIndex) + "_" +
-                         TM.getMCRegisterInfo()->getName(Reg.asMCReg()))
+                         TM.getMCRegisterInfo().getName(Reg.asMCReg()))
                             .str();
   if (OrShadowOffset)
     report_fatal_error(
