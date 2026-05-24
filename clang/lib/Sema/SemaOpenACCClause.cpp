@@ -1896,7 +1896,7 @@ bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
 
   // Reject VLAs in reduction clauses since lowering is unsupported.
   // See https://github.com/llvm/llvm-project/issues/199162
-  if (CurType->isVariableArrayType()) {
+  if (CurType.isVariableArrayType()) {
     Diag(VarLoc, diag::err_acc_reduction_vla);
     return true;
   }
