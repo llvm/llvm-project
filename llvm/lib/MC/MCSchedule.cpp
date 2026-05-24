@@ -23,7 +23,7 @@
 
 using namespace llvm;
 
-cl::OptionCategory llvm::MCScheduleOptions("Machine model options");
+cl::OptionCategory llvm::MCScheduleOptions("Machine scheduling model options");
 
 static constexpr float DefaultReservationStationScaleFactor = 1.0f;
 
