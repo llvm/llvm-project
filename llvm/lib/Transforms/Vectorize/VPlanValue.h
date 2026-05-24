@@ -49,7 +49,7 @@ class VPSingleDefRecipe;
 /// coming from the input IR, symbolic values and values defined by recipes.
 class LLVM_ABI_FOR_TEST VPValue {
   friend struct VPIRValue;
-  friend struct VPSymbolicValue;
+  friend class VPSymbolicValue;
   friend class VPRecipeValue;
   friend class VPRegionValue;
 
@@ -212,24 +212,54 @@ public:
   }
 };
 
-/// VPValues defined by a VPRegionBlock, like the canonical IV.
-class VPRegionValue : public VPValue {
-  VPRegionBlock *DefiningRegion;
+/// A symbolic live-in VPValue, used for values like vector trip count, VF, and
+/// VFxUF.
+class VPSymbolicValue : public VPValue {
+  /// The scalar type of this symbolic value.
   Type *Ty;
+
+  /// Track whether this value has been materialized (replaced). After
+  /// materialization, accessing users should trigger an assertion.
+  bool Materialized = false;
+
+protected:
+  VPSymbolicValue(unsigned char SC, Type *Ty) : VPValue(SC, nullptr), Ty(Ty) {}
+
+public:
+  VPSymbolicValue(Type *Ty) : VPSymbolicValue(VPVSymbolicSC, Ty) {}
+
+  /// Returns the scalar type of this symbolic value.
+  Type *getType() const { return Ty; }
+
+  /// Returns true if this value has been materialized.
+  bool isMaterialized() const { return Materialized; }
+
+  /// Mark this value as materialized.
+  void markMaterialized() {
+    assert(!Materialized && "VPSymbolicValue already materialized");
+    Materialized = true;
+  }
+
+  static bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPVSymbolicSC ||
+           V->getVPValueID() == VPRegionValueSC;
+  }
+};
+
+/// VPValues defined by a VPRegionBlock, like the canonical IV.
+class VPRegionValue : public VPSymbolicValue {
+  VPRegionBlock *DefiningRegion;
   DebugLoc DL;
 
 public:
   VPRegionValue(Type *Ty, DebugLoc DL, VPRegionBlock *Region)
-      : VPValue(VPValue::VPRegionValueSC), DefiningRegion(Region), Ty(Ty),
+      : VPSymbolicValue(VPValue::VPRegionValueSC, Ty), DefiningRegion(Region),
         DL(DL) {}
 
   ~VPRegionValue() override = default;
 
   /// Returns the region that defines this value.
   VPRegionBlock *getDefiningRegion() const { return DefiningRegion; }
-
-  /// Returns the type of the VPRegionValue.
-  Type *getType() const { return Ty; }
 
   /// Returns the debug location of the VPRegionValue.
   DebugLoc getDebugLoc() const { return DL; }
@@ -280,36 +310,6 @@ struct VPConstantInt : public VPIRValue {
   unsigned getBitWidth() const { return getAPInt().getBitWidth(); }
 
   uint64_t getZExtValue() const { return getAPInt().getZExtValue(); }
-};
-
-/// A symbolic live-in VPValue, used for values like vector trip count, VF, and
-/// VFxUF.
-struct VPSymbolicValue : public VPValue {
-  VPSymbolicValue(Type *Ty) : VPValue(VPVSymbolicSC, nullptr), Ty(Ty) {}
-
-  static bool classof(const VPValue *V) {
-    return V->getVPValueID() == VPVSymbolicSC;
-  }
-
-  /// Returns the scalar type of this symbolic value.
-  Type *getType() const { return Ty; }
-
-  /// Returns true if this symbolic value has been materialized.
-  bool isMaterialized() const { return Materialized; }
-
-  /// Mark this symbolic value as materialized.
-  void markMaterialized() {
-    assert(!Materialized && "VPSymbolicValue already materialized");
-    Materialized = true;
-  }
-
-private:
-  /// The scalar type of this symbolic value.
-  Type *Ty;
-
-  /// Track whether this symbolic value has been materialized (replaced).
-  /// After materialization, accessing users should trigger an assertion.
-  bool Materialized = false;
 };
 
 /// Abstract base class for VPValues defined by a VPRecipeBase.
