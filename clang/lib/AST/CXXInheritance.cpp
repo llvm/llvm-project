@@ -127,6 +127,9 @@ bool CXXRecordDecl::forallBases(ForallBasesCallback BaseMatches) const {
 
   const CXXRecordDecl *Record = this;
   while (true) {
+    if (!Record->hasDefinition())
+      return false;
+
     for (const auto &I : Record->bases()) {
       const auto *Base = I.getType()->getAsCXXRecordDecl();
       if (!Base || !(Base->isBeingDefined() || Base->isCompleteDefinition()))
