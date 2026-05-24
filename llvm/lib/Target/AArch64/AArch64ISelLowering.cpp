@@ -4180,33 +4180,32 @@ static SDValue emitConjunction(SelectionDAG &DAG, SDValue Val,
 
 /// @}
 
+static bool isSupportedExtend(SDValue V) {
+  if (V.getOpcode() == ISD::SIGN_EXTEND_INREG)
+    return true;
+
+  if (V.getOpcode() == ISD::AND)
+    if (ConstantSDNode *MaskCst = dyn_cast<ConstantSDNode>(V.getOperand(1))) {
+      uint64_t Mask = MaskCst->getZExtValue();
+      return (Mask == 0xFF || Mask == 0xFFFF || Mask == 0xFFFFFFFF);
+    }
+  return false;
+}
+
 /// Returns how profitable it is to fold a comparison's operand's shift and/or
 /// extension operations.
-static unsigned getCmpOperandFoldingProfit(SDValue Op) {
-  auto isSupportedExtend = [&](SDValue V) {
-    if (V.getOpcode() == ISD::SIGN_EXTEND_INREG)
-      return true;
-
-    if (V.getOpcode() == ISD::AND)
-      if (ConstantSDNode *MaskCst = dyn_cast<ConstantSDNode>(V.getOperand(1))) {
-        uint64_t Mask = MaskCst->getZExtValue();
-        return (Mask == 0xFF || Mask == 0xFFFF || Mask == 0xFFFFFFFF);
-      }
-
-    return false;
-  };
-
+static unsigned getCmpOperandFoldingProfit(SDValue Op, bool AllowExtend) {
   if (!Op.hasOneUse())
     return 0;
 
-  if (isSupportedExtend(Op))
+  if (AllowExtend && isSupportedExtend(Op))
     return 1;
 
   unsigned Opc = Op.getOpcode();
   if (Opc == ISD::SHL || Opc == ISD::SRL || Opc == ISD::SRA)
     if (ConstantSDNode *ShiftCst = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
       uint64_t Shift = ShiftCst->getZExtValue();
-      if (isSupportedExtend(Op.getOperand(0)))
+      if (AllowExtend && isSupportedExtend(Op.getOperand(0)))
         return (Shift <= 4) ? 2 : 1;
       EVT VT = Op.getValueType();
       if ((VT == MVT::i32 && Shift <= 31) || (VT == MVT::i64 && Shift <= 63))
@@ -4290,7 +4289,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
         }
         break;
       case ISD::SETULE:
-      case ISD::SETUGT: {
+      case ISD::SETUGT:
         if (!C.isAllOnes()) {
           APInt CPlusOne = C + 1;
           if (isLegalCmpImmed(CPlusOne) ||
@@ -4301,7 +4300,10 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
         }
         break;
       }
-      }
+    } else if (C.isZero() && getCmpOperandFoldingProfit(LHS, false) != 0) {
+      // Fold into CMP WZR, reg, shift #amount
+      std::swap(LHS, RHS);
+      CC = ISD::getSetCCSwappedOperands(CC);
     }
   }
 
@@ -4321,8 +4323,8 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     SDValue TheLHS = LHSIsCMN ? LHS.getOperand(1) : LHS;
     SDValue TheRHS = RHSIsCMN ? RHS.getOperand(1) : RHS;
 
-    if (getCmpOperandFoldingProfit(TheLHS) + (LHSIsCMN ? 1 : 0) >
-        getCmpOperandFoldingProfit(TheRHS) + (RHSIsCMN ? 1 : 0)) {
+    if (getCmpOperandFoldingProfit(TheLHS, true) + (LHSIsCMN ? 1 : 0) >
+        getCmpOperandFoldingProfit(TheRHS, true) + (RHSIsCMN ? 1 : 0)) {
       std::swap(LHS, RHS);
       CC = ISD::getSetCCSwappedOperands(CC);
     }
@@ -23412,6 +23414,34 @@ static SDValue performExtBinopLoadFold(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(N->getOpcode(), DL, VT, Ext0, NShift);
 }
 
+// Convert A + zext(B) * C -> A - zext(B) * -C if C can be negated in order to
+// use umsubl.
+static SDValue performAddMulZextCombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI) {
+  EVT VT = N->getValueType(0);
+  if (!DCI.isAfterLegalizeDAG() || N->getOpcode() != ISD::ADD || VT != MVT::i64)
+    return SDValue();
+
+  SDValue Mul = N->getOperand(0);
+  SDValue Other = N->getOperand(1);
+  if (Mul.getOpcode() != ISD::MUL)
+    std::swap(Mul, Other);
+  if (Mul.getOpcode() != ISD::MUL)
+    return SDValue();
+
+  if (!Mul.hasOneUse() || Mul.getOperand(0).getOpcode() != ISD::ZERO_EXTEND ||
+      !isa<ConstantSDNode>(Mul.getOperand(1)))
+    return SDValue();
+  int64_t C = Mul.getConstantOperandVal(1);
+  if (C > 0 || C < -0xffffffffll)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue NMul = DCI.DAG.getNode(ISD::MUL, DL, VT, Mul.getOperand(0),
+                                 DCI.DAG.getConstant(-C, DL, MVT::i64));
+  return DCI.DAG.getNode(ISD::SUB, DL, VT, Other, NMul);
+}
+
 // Attempt to combine the following patterns:
 //   SUB x, (CSET LO, (CMP a, b)) -> SBC x, 0, (CMP a, b)
 //   SUB (SUB x, y), (CSET LO, (CMP a, b)) -> SBC x, y, (CMP a, b)
@@ -23566,6 +23596,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performAddWithSBCCombine(N, DCI.DAG))
     return Val;
   if (SDValue Val = performExtBinopLoadFold(N, DCI.DAG))
+    return Val;
+  if (SDValue Val = performAddMulZextCombine(N, DCI))
     return Val;
 
   return performAddSubLongCombine(N, DCI);
