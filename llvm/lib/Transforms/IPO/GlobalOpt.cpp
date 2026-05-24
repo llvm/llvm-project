@@ -1338,8 +1338,11 @@ deleteIfDead(GlobalValue &GV,
   if (!GV.isDiscardableIfUnused() && !GV.isDeclaration())
     return false;
 
+  // Don't delete the comdat key while the group must be kept: it would strand
+  // the group's associative members. (A local non-key member is removable.)
   if (const Comdat *C = GV.getComdat())
-    if (!GV.hasLocalLinkage() && NotDiscardableComdats.count(C))
+    if (NotDiscardableComdats.count(C) &&
+        (!GV.hasLocalLinkage() || GV.getName() == C->getName()))
       return false;
 
   bool Dead;
@@ -1648,7 +1651,8 @@ static bool
 processGlobal(GlobalValue &GV,
               function_ref<TargetTransformInfo &(Function &)> GetTTI,
               function_ref<TargetLibraryInfo &(Function &)> GetTLI,
-              function_ref<DominatorTree &(Function &)> LookupDomTree) {
+              function_ref<DominatorTree &(Function &)> LookupDomTree,
+              const SmallPtrSetImpl<const Comdat *> &NotDiscardableComdats) {
   if (GV.getName().starts_with("llvm."))
     return false;
 
@@ -1678,6 +1682,12 @@ processGlobal(GlobalValue &GV,
 
   if (GVar->isConstant() || !GVar->hasInitializer())
     return Changed;
+
+  // Don't let processInternalGlobal delete/replace a comdat key while the group
+  // must be kept; that would strand the group's associative members.
+  if (const Comdat *C = GVar->getComdat())
+    if (NotDiscardableComdats.count(C) && GVar->getName() == C->getName())
+      return Changed;
 
   return processInternalGlobal(GVar, GS, GetTTI, GetTLI, LookupDomTree) ||
          Changed;
@@ -1978,7 +1988,8 @@ OptimizeFunctions(Module &M,
       }
     }
 
-    Changed |= processGlobal(F, GetTTI, GetTLI, LookupDomTree);
+    Changed |=
+        processGlobal(F, GetTTI, GetTLI, LookupDomTree, NotDiscardableComdats);
 
     if (!F.hasLocalLinkage())
       continue;
@@ -2077,7 +2088,8 @@ OptimizeGlobalVars(Module &M,
       continue;
     }
 
-    Changed |= processGlobal(GV, GetTTI, GetTLI, LookupDomTree);
+    Changed |= processGlobal(GV, GetTTI, GetTLI, LookupDomTree,
+                             NotDiscardableComdats);
   }
   return Changed;
 }
