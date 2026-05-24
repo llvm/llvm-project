@@ -572,9 +572,7 @@ bool CodeGenPrepare::run(Function &F, FunctionAnalysisManager &AM) {
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   if (!PSI)
     reportFatalUsageError("this pass requires the profile-summary module "
-                          "analysis to be available; when running opt, use "
-                          "-passes='require<profile-summary>,"
-                          "function(codegenprepare)'");
+                          "analysis to be available");
   BBSectionsProfileReader =
       AM.getCachedResult<BasicBlockSectionsProfileReaderAnalysis>(F);
   DomTreeUpdater DTUpdater(&AM.getResult<DominatorTreeAnalysis>(F),
