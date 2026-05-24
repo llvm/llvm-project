@@ -3875,6 +3875,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  acospibf16
+  SRCS
+    acospibf16.cpp
+  HDRS
+    ../acospibf16.h
+  DEPENDS
+    libc.src.__support.math.acospibf16
+)
+
+add_entrypoint_object(
   acospif16
   SRCS
     acospif16.cpp
