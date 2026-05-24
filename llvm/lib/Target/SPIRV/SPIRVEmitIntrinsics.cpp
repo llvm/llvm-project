@@ -29,6 +29,7 @@
 #include "llvm/IR/TypedPointerType.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 #include <cassert>
@@ -56,6 +57,8 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
+
+#define DEBUG_TYPE "spirv-emit-intrinsics"
 
 static cl::opt<bool>
     SpirvEmitOpNames("spirv-emit-op-names",
@@ -1622,6 +1625,9 @@ void SPIRVEmitIntrinsics::preprocessUndefs(IRBuilder<> &B) {
         continue;
       if (HasPoisonExt && isa<PoisonValue>(AggrUndef))
         continue;
+      if (isa<PoisonValue>(AggrUndef))
+        LLVM_DEBUG(dbgs() << "SPV_KHR_poison_freeze is not enabled. Poison is "
+                             "lowered as undef\n");
 
       if (!BPrepared) {
         setInsertPointSkippingPhis(B, I);
