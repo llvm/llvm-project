@@ -74,13 +74,33 @@ public:
         << UseExpr->getSourceRange();
   }
 
-  void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
+  void reportUseAfterReturn(const ValueDecl *VD, const Expr *IssueExpr,
+                            const Expr *ReturnExpr,
                             const Expr *MovedExpr,
-                            SourceLocation ExpiryLoc) override {
-    S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_return_stack_addr_moved
-                     : diag::warn_lifetime_safety_return_stack_addr)
+                            bool IsReference) override {
+    unsigned DiagID = MovedExpr
+                          ? diag::warn_lifetime_safety_return_stack_addr_moved
+                          : diag::warn_lifetime_safety_return_stack_addr;
+
+    S.Diag(IssueExpr->getExprLoc(), DiagID)
+        << IsReference << VD << isa<ParmVarDecl>(VD)
         << IssueExpr->getSourceRange();
+    if (MovedExpr)
+      S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
+          << MovedExpr->getSourceRange();
+    S.Diag(ReturnExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
+        << ReturnExpr->getSourceRange();
+  }
+
+  void reportUseAfterReturn(const MaterializeTemporaryExpr *MTE,
+                            const Expr *ReturnExpr,
+                            const Expr *MovedExpr,
+                            bool IsReference) override {
+    unsigned DiagID =
+        MovedExpr ? diag::warn_lifetime_safety_return_temp_stack_addr_moved
+                  : diag::warn_lifetime_safety_return_temp_stack_addr;
+
+    S.Diag(MTE->getExprLoc(), DiagID) << IsReference << MTE->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();

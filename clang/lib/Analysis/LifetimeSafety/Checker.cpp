@@ -297,11 +297,22 @@ public:
             // FIXME: Diagnose invalidated return escapes separately.
           } else
             llvm_unreachable("Unhandled OriginEscapesFact type");
-        } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
+        } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF)) {
           // Return stack address.
-          SemaHelper->reportUseAfterReturn(
-              IssueExpr, RetEscape->getReturnExpr(), MovedExpr, ExpiryLoc);
-        else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
+          const AccessPath &Path = L->getAccessPath();
+          bool IsReference =
+              cast<FunctionDecl>(FD)->getReturnType()->isReferenceType();
+          if (const auto *VD = Path.getAsValueDecl())
+            SemaHelper->reportUseAfterReturn(VD, IssueExpr,
+                                             RetEscape->getReturnExpr(),
+                                             MovedExpr, IsReference);
+          else if (const auto *MTE = Path.getAsMaterializeTemporaryExpr())
+            SemaHelper->reportUseAfterReturn(MTE, RetEscape->getReturnExpr(),
+                                             MovedExpr, IsReference);
+          else
+            llvm_unreachable(
+                "unexpected loan kind for return stack address warning");
+        } else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
           // Dangling field.
           SemaHelper->reportDanglingField(
               IssueExpr, FieldEscape->getFieldDecl(), MovedExpr, ExpiryLoc);

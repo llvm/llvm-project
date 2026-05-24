@@ -316,7 +316,7 @@ View inference_caller_forwards_callee(View a) { // expected-warning {{parameter 
 
 View inference_top_level_return_stack_view() {
   MyObj local_stack;
-  return inference_caller_forwards_callee(local_stack);     // expected-warning {{address of stack memory is returned later}}
+  return inference_caller_forwards_callee(local_stack);     // expected-warning {{address of stack memory associated with local variable 'local_stack' returned}}
                                                             // expected-note@-1 {{returned here}}
 }
 } // namespace simple_annotation_inference
@@ -334,7 +334,7 @@ View inference_caller_forwards_callee(View a) {   // expected-warning {{paramete
   
 View inference_top_level_return_stack_view() {
   MyObj local_stack;
-  return inference_caller_forwards_callee(local_stack);     // expected-warning {{address of stack memory is returned later}}
+  return inference_caller_forwards_callee(local_stack);     // expected-warning {{address of stack memory associated with local variable 'local_stack' returned}}
                                                             // expected-note@-1 {{returned here}}
 }
 } // namespace inference_in_order_with_redecls
@@ -352,7 +352,7 @@ T* template_caller(T* a) {              // expected-warning {{parameter in intra
 
 MyObj* test_template_inference_with_stack() {
   MyObj local_stack;
-  return template_caller(&local_stack);   // expected-warning {{address of stack memory is returned later}}
+  return template_caller(&local_stack);   // expected-warning {{address of stack memory associated with local variable 'local_stack' returned}}
                                           // expected-note@-1 {{returned here}}                                       
 }
 } // namespace inference_with_templates
@@ -413,7 +413,9 @@ void Foo(int, int*, const MyObj&, View);
 auto implicit_ref_capture(int integer, int* ptr,
                           const MyObj& ref, // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
                           View view) {
-  return [&]() { Foo(integer, ptr, ref, view); }; // expected-warning 3 {{address of stack memory is returned later}} \
+  return [&]() { Foo(integer, ptr, ref, view); }; // expected-warning {{address of stack memory associated with parameter 'ptr' returned}} \
+                                                  // expected-warning {{address of stack memory associated with parameter 'view' returned}} \
+                                                  // expected-warning {{address of stack memory associated with parameter 'integer' returned}} \
                                                   // expected-note 3 {{returned here}} \
                                                   // expected-note {{param returned here}}
 }
@@ -467,7 +469,7 @@ struct CaptureRefToView {
 
 CaptureRefToView test_ref_to_view() {
   MyObj obj;
-  CaptureRefToView x(obj); // expected-warning {{address of stack memory is returned later}}
+  CaptureRefToView x(obj); // expected-warning {{address of stack memory associated with local variable 'obj' returned}}
   return x; // expected-note {{returned here}}
 }
 
@@ -478,7 +480,7 @@ struct CaptureRefToPtr {
 
 CaptureRefToPtr test_ref_to_ptr() {
   MyObj obj;
-  CaptureRefToPtr x(obj); // expected-warning {{address of stack memory is returned later}}
+  CaptureRefToPtr x(obj); // expected-warning {{address of stack memory associated with local variable 'obj' returned}}
   return x; // expected-note {{returned here}}
 }
 
@@ -489,7 +491,7 @@ struct CaptureViewToView {
 
 CaptureViewToView test_view_to_view() {
   MyObj obj;
-  View v(obj); // expected-warning {{address of stack memory is returned later}}
+  View v(obj); // expected-warning {{address of stack memory associated with local variable 'obj' returned}}
   CaptureViewToView x(v);
   return x; // expected-note {{returned here}}
 }
@@ -501,7 +503,7 @@ struct CapturePtrToPtr {
 
 CapturePtrToPtr test_ptr_to_ptr() {
   MyObj obj;
-  CapturePtrToPtr x(&obj); // expected-warning {{address of stack memory is returned later}}
+  CapturePtrToPtr x(&obj); // expected-warning {{address of stack memory associated with local variable 'obj' returned}}
   return x; // expected-note {{returned here}}
 }
 
@@ -512,7 +514,7 @@ struct CaptureRefToRef {
 
 CaptureRefToRef test_ref_to_ref() {
   MyObj obj;
-  CaptureRefToRef x(obj); // expected-warning {{address of stack memory is returned later}}
+  CaptureRefToRef x(obj); // expected-warning {{address of stack memory associated with local variable 'obj' returned}}
   return x; // expected-note {{returned here}}
 }
 
@@ -527,7 +529,7 @@ struct CaptureRefToBaseView : BaseWithView {
 
 CaptureRefToBaseView test_ref_to_base_view() {
   MyObj obj;
-  CaptureRefToBaseView x(obj); // expected-warning {{address of stack memory is returned later}}
+  CaptureRefToBaseView x(obj); // expected-warning {{address of stack memory associated with local variable 'obj' returned}}
   return x; // expected-note {{returned here}}
 }
 } // namespace capturing_constructor
@@ -596,7 +598,7 @@ struct HasCtorField {
 
 HasCtorField test_dangling_field_ctor() {
   MyObj obj;
-  HasCtorField x(obj); // expected-warning {{address of stack memory is returned later}}
+  HasCtorField x(obj); // expected-warning {{address of stack memory associated with local variable 'obj' returned}}
   return x;            // expected-note {{returned here}}
 }
 
