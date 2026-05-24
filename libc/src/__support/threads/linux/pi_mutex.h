@@ -24,6 +24,7 @@
 #include "src/__support/macros/optimization.h"
 #include "src/__support/threads/identifier.h"
 #include "src/__support/threads/linux/futex_utils.h"
+#include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/mutex_common.h"
 
 #include <linux/futex.h>
@@ -34,20 +35,22 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-class PIMutex {
-protected:
-  Futex owner;
-  // Number of recursive locks minus one.
-  size_t recursive_count;
-
+class PIMutexRef {
 public:
   enum class Type { Normal, ErrorChecking, Recursive };
-  LIBC_INLINE static void init(PIMutex *mutex) {
-    mutex->owner.store(0);
-    mutex->recursive_count = 0;
-  }
-  LIBC_INLINE constexpr PIMutex() : owner(0), recursive_count(0) {}
-  LIBC_INLINE MutexError try_lock(Type type) {
+
+protected:
+  Futex &owner;
+  Type type;
+  // Number of recursive locks minus one. This pointer must be provided
+  // if type == Recursive
+  size_t *recursive_count;
+
+public:
+  LIBC_INLINE constexpr PIMutexRef(Futex &owner, Type type,
+                                   size_t *recursive_count = nullptr)
+      : owner(owner), type(type), recursive_count(recursive_count) {}
+  LIBC_INLINE MutexError try_lock() {
     FutexWordType old_owner = 0;
     auto current = static_cast<FutexWordType>(internal::gettid());
     if (owner.compare_exchange_strong(old_owner, current,
@@ -62,10 +65,10 @@ public:
       case Type::ErrorChecking:
         return MutexError::DEADLOCK;
       case Type::Recursive:
-        if (LIBC_UNLIKELY(recursive_count ==
+        if (LIBC_UNLIKELY(*recursive_count ==
                           cpp::numeric_limits<size_t>::max()))
           return MutexError::OVERFLOW;
-        recursive_count++;
+        *recursive_count += 1;
         return MutexError::NONE;
       }
     }
@@ -73,9 +76,9 @@ public:
     return MutexError::BUSY;
   }
   LIBC_INLINE MutexError
-  lock(Type type, cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
+  lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
        bool is_shared = false) {
-    MutexError result = try_lock(type);
+    MutexError result = try_lock();
     if (result != MutexError::BUSY)
       return result;
 
@@ -110,7 +113,7 @@ public:
       }
     }
   }
-  LIBC_INLINE MutexError unlock(Type type, bool is_shared) {
+  LIBC_INLINE MutexError unlock(bool is_shared) {
     FutexWordType current = static_cast<FutexWordType>(internal::gettid());
     FutexWordType old_owner = current;
 
@@ -126,8 +129,8 @@ public:
     if (current != (old_owner & FUTEX_TID_MASK))
       return MutexError::UNLOCK_WITHOUT_LOCK;
 
-    if (type == Type::Recursive && recursive_count != 0) {
-      recursive_count--;
+    if (type == Type::Recursive && *recursive_count != 0) {
+      *recursive_count -= 1;
       return MutexError::NONE;
     }
 
@@ -156,17 +159,17 @@ public:
       return MutexError::BAD_LOCK_STATE;
     }
   }
-  LIBC_INLINE static MutexError destroy(PIMutex *lock) {
+  LIBC_INLINE MutexError destroy() {
     FutexWordType old_owner = 0;
-    if (lock->owner.compare_exchange_strong(old_owner, 0xffffffff,
-                                            cpp::MemoryOrder::RELAXED,
-                                            cpp::MemoryOrder::RELAXED))
+    if (owner.compare_exchange_strong(
+            old_owner, cpp::numeric_limits<FutexWordType>::max(),
+            cpp::MemoryOrder::RELAXED, cpp::MemoryOrder::RELAXED))
       return MutexError::NONE;
     return MutexError::BUSY;
   }
   LIBC_INLINE void reset() {
     owner.store(0);
-    recursive_count = 0;
+    *recursive_count = 0;
   }
 };
 
