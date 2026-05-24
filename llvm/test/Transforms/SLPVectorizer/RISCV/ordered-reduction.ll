@@ -3,19 +3,19 @@
 
 target triple = "riscv64-unknown-linux-gnu"
 
-define void @main(ptr %arrayidx.i60, ptr %24, ptr %arrayidx44.i61, double %.pre117.i70, double %.pre116.i68, double %.pre115.i67, double %.pre114.i65, double %.pre113.i64, double %.pre.i62) {
-; CHECK-LABEL: define void @main(
+define void @test1(ptr %arrayidx.i60, ptr %24, ptr %arrayidx44.i61, double %.pre117.i70, double %.pre116.i68, double %.pre115.i67, double %.pre114.i65, double %.pre113.i64, double %.pre.i62) {
+; CHECK-LABEL: define void @test1(
 ; CHECK-SAME: ptr [[ARRAYIDX_I60:%.*]], ptr [[TMP0:%.*]], ptr [[ARRAYIDX44_I61:%.*]], double [[DOTPRE117_I70:%.*]], double [[DOTPRE116_I68:%.*]], double [[DOTPRE115_I67:%.*]], double [[DOTPRE114_I65:%.*]], double [[DOTPRE113_I64:%.*]], double [[DOTPRE_I62:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[FOR_COND5_PREHEADER_I58:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY8_I71:.*]]
-; CHECK:       [[FOR_BODY8_I71]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[DOTPRE117_I70]], %[[FOR_COND5_PREHEADER_I58]] ], [ [[TMP9:%.*]], %[[FOR_BODY8_I71]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[DOTPRE116_I68]], %[[FOR_COND5_PREHEADER_I58]] ], [ [[TMP1]], %[[FOR_BODY8_I71]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[DOTPRE115_I67]], %[[FOR_COND5_PREHEADER_I58]] ], [ [[TMP8:%.*]], %[[FOR_BODY8_I71]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[DOTPRE114_I65]], %[[FOR_COND5_PREHEADER_I58]] ], [ [[DIV_I86:%.*]], %[[FOR_BODY8_I71]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi double [ [[DOTPRE113_I64]], %[[FOR_COND5_PREHEADER_I58]] ], [ [[TMP7:%.*]], %[[FOR_BODY8_I71]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = phi double [ [[DOTPRE_I62]], %[[FOR_COND5_PREHEADER_I58]] ], [ [[TMP5]], %[[FOR_BODY8_I71]] ]
-; CHECK-NEXT:    [[INDVARS_IV_I72:%.*]] = phi i64 [ 1, %[[FOR_COND5_PREHEADER_I58]] ], [ [[INDVARS_IV_NEXT_I74:%.*]], %[[FOR_BODY8_I71]] ]
+; CHECK-NEXT:  [[FOR_COND_PREHEADER:.*]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[DOTPRE117_I70]], %[[FOR_COND_PREHEADER]] ], [ [[TMP9:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[DOTPRE116_I68]], %[[FOR_COND_PREHEADER]] ], [ [[TMP1]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[DOTPRE115_I67]], %[[FOR_COND_PREHEADER]] ], [ [[TMP8:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[DOTPRE114_I65]], %[[FOR_COND_PREHEADER]] ], [ [[DIV_I86:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi double [ [[DOTPRE113_I64]], %[[FOR_COND_PREHEADER]] ], [ [[TMP7:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi double [ [[DOTPRE_I62]], %[[FOR_COND_PREHEADER]] ], [ [[TMP5]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV_I72:%.*]] = phi i64 [ 1, %[[FOR_COND_PREHEADER]] ], [ [[INDVARS_IV_NEXT_I74:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ADD_I73:%.*]] = fadd double [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_I74]] = add nuw nsw i64 [[INDVARS_IV_I72]], 1
 ; CHECK-NEXT:    [[ARRAYIDX23_I75:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARRAYIDX_I60]], i64 [[INDVARS_IV_NEXT_I74]]
@@ -37,8 +37,8 @@ define void @main(ptr %arrayidx.i60, ptr %24, ptr %arrayidx44.i61, double %.pre1
 ; CHECK-NEXT:    [[DIV_I86]] = fdiv double [[TMP18]], 9.000000e+00
 ; CHECK-NEXT:    store double [[DIV_I86]], ptr [[ARRAYIDX34_I78]], align 8
 ; CHECK-NEXT:    [[EXITCOND_NOT_I87:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_I74]], 1999
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT_I87]], label %[[FOR_INC66_I88:.*]], label %[[FOR_BODY8_I71]]
-; CHECK:       [[FOR_INC66_I88]]:
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT_I87]], label %[[FOR_END:.*]], label %[[FOR_BODY]]
+; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret void
 ;
 for.cond.preheader:
