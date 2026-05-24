@@ -4241,7 +4241,9 @@ private:
   ///         assignment-expression
   ///         simple-expression-list , assignment-expression
   /// \endverbatim
-  bool ParseSimpleExpressionList(SmallVectorImpl<Expr *> &Exprs);
+  bool ParseSimpleExpressionList(
+      SmallVectorImpl<Expr *> &Exprs,
+      SmallVectorImpl<SourceLocation> *CommaLocs = nullptr);
 
   /// This parses the unit that starts with a '(' token, based on what is
   /// allowed by ExprType. The actual thing parsed is returned in ExprType. If

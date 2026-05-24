@@ -7361,7 +7361,8 @@ public:
                                     Scope *UDLScope = nullptr);
   ExprResult ActOnParenExpr(SourceLocation L, SourceLocation R, Expr *E);
   ExprResult ActOnParenListExpr(SourceLocation L, SourceLocation R,
-                                MultiExprArg Val);
+                                MultiExprArg Val,
+                                ArrayRef<SourceLocation> CommaLocs = {});
   ExprResult ActOnCXXParenListInitExpr(ArrayRef<Expr *> Args, QualType T,
                                        unsigned NumUserSpecifiedExprs,
                                        SourceLocation InitLoc,

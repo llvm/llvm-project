@@ -4960,33 +4960,42 @@ SourceLocation DesignatedInitUpdateExpr::getEndLoc() const {
 }
 
 ParenListExpr::ParenListExpr(SourceLocation LParenLoc, ArrayRef<Expr *> Exprs,
-                             SourceLocation RParenLoc)
+                             SourceLocation RParenLoc,
+                             ArrayRef<SourceLocation> CommaLocs)
     : Expr(ParenListExprClass, QualType(), VK_PRValue, OK_Ordinary),
-      LParenLoc(LParenLoc), RParenLoc(RParenLoc) {
+      LParenLoc(LParenLoc), RParenLoc(RParenLoc), NumCommas(CommaLocs.size()) {
+  assert((CommaLocs.empty() || CommaLocs.size() + 1 == Exprs.size()) &&
+         "wrong number of comma locations for paren list");
   ParenListExprBits.NumExprs = Exprs.size();
-  llvm::copy(Exprs, getTrailingObjects());
+  llvm::copy(Exprs, getTrailingObjects<Stmt *>());
+  llvm::copy(CommaLocs, getTrailingObjects<SourceLocation>());
   setDependence(computeDependence(this));
 }
 
-ParenListExpr::ParenListExpr(EmptyShell Empty, unsigned NumExprs)
-    : Expr(ParenListExprClass, Empty) {
+ParenListExpr::ParenListExpr(EmptyShell Empty, unsigned NumExprs,
+                             unsigned NumCommas)
+    : Expr(ParenListExprClass, Empty), NumCommas(NumCommas) {
   ParenListExprBits.NumExprs = NumExprs;
 }
 
 ParenListExpr *ParenListExpr::Create(const ASTContext &Ctx,
                                      SourceLocation LParenLoc,
                                      ArrayRef<Expr *> Exprs,
-                                     SourceLocation RParenLoc) {
-  void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *>(Exprs.size()),
-                           alignof(ParenListExpr));
-  return new (Mem) ParenListExpr(LParenLoc, Exprs, RParenLoc);
+                                     SourceLocation RParenLoc,
+                                     ArrayRef<SourceLocation> CommaLocs) {
+  void *Mem = Ctx.Allocate(
+      totalSizeToAlloc<Stmt *, SourceLocation>(Exprs.size(), CommaLocs.size()),
+      alignof(ParenListExpr));
+  return new (Mem) ParenListExpr(LParenLoc, Exprs, RParenLoc, CommaLocs);
 }
 
 ParenListExpr *ParenListExpr::CreateEmpty(const ASTContext &Ctx,
-                                          unsigned NumExprs) {
-  void *Mem =
-      Ctx.Allocate(totalSizeToAlloc<Stmt *>(NumExprs), alignof(ParenListExpr));
-  return new (Mem) ParenListExpr(EmptyShell(), NumExprs);
+                                          unsigned NumExprs,
+                                          unsigned NumCommas) {
+  void *Mem = Ctx.Allocate(
+      totalSizeToAlloc<Stmt *, SourceLocation>(NumExprs, NumCommas),
+      alignof(ParenListExpr));
+  return new (Mem) ParenListExpr(EmptyShell(), NumExprs, NumCommas);
 }
 
 /// Certain overflow-dependent code patterns can have their integer overflow
