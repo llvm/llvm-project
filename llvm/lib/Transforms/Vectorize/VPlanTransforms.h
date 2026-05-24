@@ -168,7 +168,7 @@ struct VPlanTransforms {
   LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan, bool TailFolded);
 
   // Create a check in \p CheckBlock to see if the vector loop should be
-  // executed.
+  // executed. May create VPExpandSCEV recipes in the plan's entry block.
   static void addMinimumIterationCheck(
       VPlan &Plan, ElementCount VF, unsigned UF,
       ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,

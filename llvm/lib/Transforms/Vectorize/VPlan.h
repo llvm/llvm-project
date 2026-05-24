@@ -1140,7 +1140,8 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
            R->getVPRecipeID() == VPRecipeBase::VPReductionEVLSC ||
            R->getVPRecipeID() == VPRecipeBase::VPReplicateSC ||
            R->getVPRecipeID() == VPRecipeBase::VPVectorEndPointerSC ||
-           R->getVPRecipeID() == VPRecipeBase::VPVectorPointerSC;
+           R->getVPRecipeID() == VPRecipeBase::VPVectorPointerSC ||
+           R->getVPRecipeID() == VPRecipeBase::VPWidenCanonicalIVSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -1396,8 +1397,10 @@ public:
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPInstructionSC)
 
-  VPInstruction *clone() override {
-    auto *New = new VPInstruction(Opcode, operands(), *this, *this,
+  VPInstruction *clone() override { return cloneWithOperands(operands()); }
+
+  VPInstruction *cloneWithOperands(ArrayRef<VPValue *> NewOperands) {
+    auto *New = new VPInstruction(Opcode, NewOperands, *this, *this,
                                   getDebugLoc(), Name);
     if (getUnderlyingValue())
       New->setUnderlyingValue(getUnderlyingInstr());
@@ -1804,11 +1807,13 @@ public:
 
   ~VPWidenRecipe() override = default;
 
-  VPWidenRecipe *clone() override {
+  VPWidenRecipe *clone() override { return cloneWithOperands(operands()); }
+
+  VPWidenRecipe *cloneWithOperands(ArrayRef<VPValue *> NewOperands) {
     if (auto *UV = getUnderlyingValue())
-      return new VPWidenRecipe(*cast<Instruction>(UV), operands(), *this, *this,
-                               getDebugLoc());
-    return new VPWidenRecipe(Opcode, operands(), *this, *this, getDebugLoc());
+      return new VPWidenRecipe(*cast<Instruction>(UV), NewOperands, *this,
+                               *this, getDebugLoc());
+    return new VPWidenRecipe(Opcode, NewOperands, *this, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenSC)
@@ -2391,7 +2396,12 @@ class LLVM_ABI_FOR_TEST VPHeaderPHIRecipe : public VPSingleDefRecipe,
 protected:
   VPHeaderPHIRecipe(unsigned char VPRecipeID, Instruction *UnderlyingInstr,
                     VPValue *Start, DebugLoc DL = DebugLoc::getUnknown())
-      : VPSingleDefRecipe(VPRecipeID, Start, UnderlyingInstr, DL) {}
+      : VPHeaderPHIRecipe(VPRecipeID, UnderlyingInstr, Start,
+                          getScalarTypeOrInfer(Start), DL) {}
+
+  VPHeaderPHIRecipe(unsigned char VPRecipeID, Instruction *UnderlyingInstr,
+                    VPValue *Start, Type *ResultTy, DebugLoc DL)
+      : VPSingleDefRecipe(VPRecipeID, Start, ResultTy, UnderlyingInstr, DL) {}
 
   const VPRecipeBase *getAsRecipe() const override { return this; }
 
@@ -2460,7 +2470,13 @@ public:
   VPWidenInductionRecipe(unsigned char Kind, PHINode *IV, VPValue *Start,
                          VPValue *Step, const InductionDescriptor &IndDesc,
                          DebugLoc DL)
-      : VPHeaderPHIRecipe(Kind, IV, Start, DL), IndDesc(IndDesc) {
+      : VPWidenInductionRecipe(Kind, IV, Start, Step, IndDesc,
+                               getScalarTypeOrInfer(Start), DL) {}
+
+  VPWidenInductionRecipe(unsigned char Kind, PHINode *IV, VPValue *Start,
+                         VPValue *Step, const InductionDescriptor &IndDesc,
+                         Type *ResultTy, DebugLoc DL)
+      : VPHeaderPHIRecipe(Kind, IV, Start, ResultTy, DL), IndDesc(IndDesc) {
     addOperand(Step);
   }
 
@@ -2556,11 +2572,11 @@ public:
                                 TruncInst *Trunc, const VPIRFlags &Flags,
                                 DebugLoc DL)
       : VPWidenInductionRecipe(VPRecipeBase::VPWidenIntOrFpInductionSC, IV,
-                               Start, Step, IndDesc, DL),
+                               Start, Step, IndDesc,
+                               Trunc ? Trunc->getType() : Start->getType(), DL),
         VPIRFlags(Flags), Trunc(Trunc) {
     addOperand(VF);
     SmallVector<std::pair<unsigned, MDNode *>> Metadata;
-    (void)Metadata;
     if (Trunc)
       getMetadataToPropagate(Trunc, Metadata);
     assert(Metadata.empty() && "unexpected metadata on Trunc");
@@ -2604,11 +2620,6 @@ public:
   /// incremented by UF * VF (= the original IV is incremented by 1) and has the
   /// same type as the canonical induction.
   bool isCanonical() const;
-
-  /// Returns the scalar type of the induction.
-  Type *getScalarType() const {
-    return Trunc ? Trunc->getType() : getStartValue()->getType();
-  }
 
   /// Returns the VPValue representing the value of this induction at
   /// the last unrolled part, if it exists. Returns itself if unrolling did not
@@ -2801,11 +2812,15 @@ public:
 
   ~VPReductionPHIRecipe() override = default;
 
-  VPReductionPHIRecipe *clone() override {
+  VPReductionPHIRecipe *cloneWithOperands(VPValue *Start,
+                                          VPValue *BackedgeValue) {
     return new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
-        *getOperand(0), *getBackedgeValue(), Style, *this,
-        HasUsesOutsideReductionChain);
+        *Start, *BackedgeValue, Style, *this, HasUsesOutsideReductionChain);
+  }
+
+  VPReductionPHIRecipe *clone() override {
+    return cloneWithOperands(getOperand(0), getBackedgeValue());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPReductionPHISC)
@@ -2882,9 +2897,11 @@ public:
     setUnderlyingValue(Phi);
   }
 
-  VPBlendRecipe *clone() override {
+  VPBlendRecipe *clone() override { return cloneWithOperands(operands()); }
+
+  VPBlendRecipe *cloneWithOperands(ArrayRef<VPValue *> NewOperands) {
     return new VPBlendRecipe(cast_or_null<PHINode>(getUnderlyingValue()),
-                             operands(), *this, getDebugLoc());
+                             NewOperands, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPBlendSC)
@@ -3968,16 +3985,18 @@ protected:
 /// A Recipe for widening the canonical induction variable of the vector loop.
 /// First operand is the canonical IV recipe, a second step operand  (VF * Part)
 /// is added during unrolling.
-class VPWidenCanonicalIVRecipe : public VPSingleDefRecipe {
+class VPWidenCanonicalIVRecipe : public VPRecipeWithIRFlags {
 public:
-  VPWidenCanonicalIVRecipe(VPRegionValue *CanonicalIV)
-      : VPSingleDefRecipe(VPRecipeBase::VPWidenCanonicalIVSC, {CanonicalIV},
-                          CanonicalIV->getType(), /*UV=*/nullptr) {}
+  VPWidenCanonicalIVRecipe(VPRegionValue *CanonicalIV,
+                           const VPIRFlags::WrapFlagsTy &Flags = {false, false})
+      : VPRecipeWithIRFlags(VPRecipeBase::VPWidenCanonicalIVSC, CanonicalIV,
+                            CanonicalIV->getType(), Flags) {}
 
   ~VPWidenCanonicalIVRecipe() override = default;
 
   VPWidenCanonicalIVRecipe *clone() override {
-    auto *WideCanIV = new VPWidenCanonicalIVRecipe(getCanonicalIV());
+    auto *WideCanIV =
+        new VPWidenCanonicalIVRecipe(getCanonicalIV(), getNoWrapFlags());
     if (VPValue *Step = getStepValue())
       WideCanIV->addOperand(Step);
     return WideCanIV;
@@ -4034,7 +4053,8 @@ public:
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
                     const FPMathOperator *FPBinOp, VPIRValue *Start,
                     VPValue *IV, VPValue *Step)
-      : VPSingleDefRecipe(VPRecipeBase::VPDerivedIVSC, {Start, IV, Step}),
+      : VPSingleDefRecipe(VPRecipeBase::VPDerivedIVSC, {Start, IV, Step},
+                          Start->getScalarType(), nullptr),
         Kind(Kind), FPBinOp(FPBinOp) {}
 
   ~VPDerivedIVRecipe() override = default;
@@ -4056,8 +4076,6 @@ public:
     // TODO: Compute accurate cost after retiring the legacy cost model.
     return 0;
   }
-
-  Type *getScalarType() const { return getStartValue()->getType(); }
 
   VPIRValue *getStartValue() const { return cast<VPIRValue>(getOperand(0)); }
   VPValue *getIndex() const { return getOperand(1); }

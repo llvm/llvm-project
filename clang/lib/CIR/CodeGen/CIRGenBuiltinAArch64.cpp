@@ -2393,8 +2393,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vdupb_lane_mf8:
   case NEON::BI__builtin_neon_vgetq_lane_mf8:
   case NEON::BI__builtin_neon_vdupb_laneq_mf8:
-    return cir::VecExtractOp::create(builder, loc, ops[0],
-                                     emitScalarExpr(expr->getArg(1)));
   case NEON::BI__builtin_neon_vget_lane_i16:
   case NEON::BI__builtin_neon_vduph_lane_i16:
   case NEON::BI__builtin_neon_vgetq_lane_i16:
@@ -2409,8 +2407,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vdupd_lane_f64:
   case NEON::BI__builtin_neon_vgetq_lane_i64:
   case NEON::BI__builtin_neon_vdupd_laneq_i64:
-    return cir::VecExtractOp::create(builder, loc, ops[0],
-                                     emitScalarExpr(expr->getArg(1)));
   case NEON::BI__builtin_neon_vget_lane_f32:
   case NEON::BI__builtin_neon_vget_lane_f64:
   case NEON::BI__builtin_neon_vgetq_lane_f32:
