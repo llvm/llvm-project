@@ -16,42 +16,12 @@ define <4 x i1> @test_signed_v4i1_v4f32(<4 x float> %f) nounwind {
 ; CHECK-LABEL: test_signed_v4i1_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
-; CHECK-NEXT:    movss {{.*#+}} xmm2 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    ucomiss %xmm1, %xmm1
-; CHECK-NEXT:    maxss %xmm2, %xmm1
-; CHECK-NEXT:    xorps %xmm3, %xmm3
-; CHECK-NEXT:    minss %xmm3, %xmm1
-; CHECK-NEXT:    cvttss2si %xmm1, %ecx
-; CHECK-NEXT:    cmovpl %eax, %ecx
-; CHECK-NEXT:    movd %ecx, %xmm1
-; CHECK-NEXT:    movaps %xmm0, %xmm4
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm0[1]
-; CHECK-NEXT:    ucomiss %xmm4, %xmm4
-; CHECK-NEXT:    maxss %xmm2, %xmm4
-; CHECK-NEXT:    minss %xmm3, %xmm4
-; CHECK-NEXT:    cvttss2si %xmm4, %ecx
-; CHECK-NEXT:    cmovpl %eax, %ecx
-; CHECK-NEXT:    movd %ecx, %xmm4
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
-; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    maxss %xmm2, %xmm1
-; CHECK-NEXT:    minss %xmm3, %xmm1
-; CHECK-NEXT:    cvttss2si %xmm1, %ecx
-; CHECK-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-NEXT:    cmovpl %eax, %ecx
-; CHECK-NEXT:    movd %ecx, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; CHECK-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-NEXT:    maxss %xmm2, %xmm0
-; CHECK-NEXT:    minss %xmm3, %xmm0
-; CHECK-NEXT:    cvttss2si %xmm0, %ecx
-; CHECK-NEXT:    cmovpl %eax, %ecx
-; CHECK-NEXT:    movd %ecx, %xmm0
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm4[0]
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    maxps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    xorps %xmm2, %xmm2
+; CHECK-NEXT:    minps %xmm2, %xmm1
+; CHECK-NEXT:    cvttps2dq %xmm1, %xmm1
+; CHECK-NEXT:    cmpunordps %xmm0, %xmm0
+; CHECK-NEXT:    andnps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %x = call <4 x i1> @llvm.fptosi.sat.v4i1.v4f32(<4 x float> %f)
   ret <4 x i1> %x
@@ -61,42 +31,12 @@ define <4 x i1> @test_freeze_signed_v4i1_v4f32(<4 x float> %f) nounwind {
 ; CHECK-LABEL: test_freeze_signed_v4i1_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
-; CHECK-NEXT:    movss {{.*#+}} xmm2 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    ucomiss %xmm1, %xmm1
-; CHECK-NEXT:    maxss %xmm2, %xmm1
-; CHECK-NEXT:    xorps %xmm3, %xmm3
-; CHECK-NEXT:    minss %xmm3, %xmm1
-; CHECK-NEXT:    cvttss2si %xmm1, %ecx
-; CHECK-NEXT:    cmovpl %eax, %ecx
-; CHECK-NEXT:    movd %ecx, %xmm1
-; CHECK-NEXT:    movaps %xmm0, %xmm4
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm0[1]
-; CHECK-NEXT:    ucomiss %xmm4, %xmm4
-; CHECK-NEXT:    maxss %xmm2, %xmm4
-; CHECK-NEXT:    minss %xmm3, %xmm4
-; CHECK-NEXT:    cvttss2si %xmm4, %ecx
-; CHECK-NEXT:    cmovpl %eax, %ecx
-; CHECK-NEXT:    movd %ecx, %xmm4
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
-; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    maxss %xmm2, %xmm1
-; CHECK-NEXT:    minss %xmm3, %xmm1
-; CHECK-NEXT:    cvttss2si %xmm1, %ecx
-; CHECK-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-NEXT:    cmovpl %eax, %ecx
-; CHECK-NEXT:    movd %ecx, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; CHECK-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-NEXT:    maxss %xmm2, %xmm0
-; CHECK-NEXT:    minss %xmm3, %xmm0
-; CHECK-NEXT:    cvttss2si %xmm0, %ecx
-; CHECK-NEXT:    cmovpl %eax, %ecx
-; CHECK-NEXT:    movd %ecx, %xmm0
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm4[0]
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    maxps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    xorps %xmm2, %xmm2
+; CHECK-NEXT:    minps %xmm2, %xmm1
+; CHECK-NEXT:    cvttps2dq %xmm1, %xmm1
+; CHECK-NEXT:    cmpunordps %xmm0, %xmm0
+; CHECK-NEXT:    andnps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %x = call <4 x i1> @llvm.fptosi.sat.v4i1.v4f32(<4 x float> %f)
   %y = freeze <4 x i1> %x
@@ -187,42 +127,15 @@ define <4 x i16> @test_signed_v4i16_v4f32(<4 x float> %f) nounwind {
 define <4 x i32> @test_signed_v4i32_v4f32(<4 x float> %f) nounwind {
 ; CHECK-LABEL: test_signed_v4i32_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
-; CHECK-NEXT:    cvttss2si %xmm1, %edx
-; CHECK-NEXT:    movss {{.*#+}} xmm2 = [2.14748352E+9,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    ucomiss %xmm2, %xmm1
-; CHECK-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; CHECK-NEXT:    cmoval %eax, %edx
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    ucomiss %xmm1, %xmm1
-; CHECK-NEXT:    cmovpl %ecx, %edx
-; CHECK-NEXT:    movd %edx, %xmm1
-; CHECK-NEXT:    movaps %xmm0, %xmm3
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm0[1]
-; CHECK-NEXT:    cvttss2si %xmm3, %edx
-; CHECK-NEXT:    ucomiss %xmm2, %xmm3
-; CHECK-NEXT:    cmoval %eax, %edx
-; CHECK-NEXT:    ucomiss %xmm3, %xmm3
-; CHECK-NEXT:    cmovpl %ecx, %edx
-; CHECK-NEXT:    movd %edx, %xmm3
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
-; CHECK-NEXT:    cvttss2si %xmm0, %edx
-; CHECK-NEXT:    ucomiss %xmm2, %xmm0
-; CHECK-NEXT:    cmoval %eax, %edx
-; CHECK-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-NEXT:    cmovpl %ecx, %edx
-; CHECK-NEXT:    movd %edx, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; CHECK-NEXT:    cvttss2si %xmm0, %edx
-; CHECK-NEXT:    ucomiss %xmm2, %xmm0
-; CHECK-NEXT:    cmoval %eax, %edx
-; CHECK-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-NEXT:    cmovpl %ecx, %edx
-; CHECK-NEXT:    movd %edx, %xmm0
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
+; CHECK-NEXT:    cmpleps %xmm0, %xmm1
+; CHECK-NEXT:    cvttps2dq %xmm0, %xmm2
+; CHECK-NEXT:    movaps %xmm1, %xmm3
+; CHECK-NEXT:    andnps %xmm2, %xmm3
+; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    orps %xmm3, %xmm1
+; CHECK-NEXT:    cmpunordps %xmm0, %xmm0
+; CHECK-NEXT:    andnps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %x = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> %f)
   ret <4 x i32> %x
