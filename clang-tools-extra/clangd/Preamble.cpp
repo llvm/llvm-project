@@ -728,11 +728,21 @@ bool isPreambleCompatible(const PreambleData &Preamble,
   auto Bounds = computePreambleBounds(CI.getLangOpts(), *ContentsBuffer,
                                       Inputs.Opts.SkipPreambleBuild);
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
+  auto ModuleNamesAreEqual = [&]() -> bool {
+    if (!Inputs.ModulesManager || !Preamble.RequiredModules)
+      return true;
+    auto NewNames = Inputs.ModulesManager->getRequiredModuleNames(FileName);
+    llvm::StringSet<> NewNameSet;
+    for (const auto &Name : NewNames)
+      NewNameSet.insert(Name);
+    return NewNameSet == Preamble.RequiredModules->getRequiredModuleNames();
+  };
   return compileCommandsAreEqual(Inputs.CompileCommand,
                                  Preamble.CompileCommand) &&
          Preamble.Preamble.CanReuse(CI, *ContentsBuffer, Bounds, *VFS) &&
          (!Preamble.RequiredModules ||
-          Preamble.RequiredModules->canReuse(CI, VFS));
+          Preamble.RequiredModules->canReuse(CI, VFS)) &&
+         ModuleNamesAreEqual();
 }
 
 void escapeBackslashAndQuotes(llvm::StringRef Text, llvm::raw_ostream &OS) {
