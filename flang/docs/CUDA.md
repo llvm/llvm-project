@@ -14,19 +14,20 @@ local:
 ---
 ```
 
-Catalog of CUDA Fortran lowering decisions in Flang that diverge from the
+List of CUDA Fortran lowering decisions in Flang that diverge from the
 Fortran 2018 standard, for cases the [CUDA Fortran Programming
 Guide](https://docs.nvidia.com/hpc-sdk/compilers/cuda-fortran-prog-guide/index.html)
 does not specify.
 
-## `BIND(C) ATTRIBUTES(GLOBAL)` shape-only dummy arrays
+## `BIND(C) ATTRIBUTES(GLOBAL)` assumed-shape and assumed-rank dummies
 
 For a `BIND(C)` procedure with `ATTRIBUTES(GLOBAL)` or
-`ATTRIBUTES(GRID_GLOBAL)`, dummies whose only descriptor requirement is shape
-(`AssumedShape`, `DeferredShape`, or `AssumedRank`) are passed by base address
-(`!fir.ref<T>`) instead of by `CFI_cdesc_t *` (`!fir.box<T>`). `ALLOCATABLE`,
-`POINTER`, polymorphic, coarray, and `BIND(C)` assumed-length character dummies
-are unaffected and keep the standard Fortran 2018 lowering.
+`ATTRIBUTES(GRID_GLOBAL)`, an assumed-shape (`dimension(:)`) or assumed-rank
+(`dimension(..)`) dummy is passed by base address (`!fir.ref<T>`) instead of by
+`CFI_cdesc_t *` (`!fir.box<T>`). `ALLOCATABLE` and `POINTER` dummies take an
+earlier descriptor-of-mutable path and are unaffected. To deliver a CFI
+descriptor to the kernel, drop `BIND(C)`: a plain `ATTRIBUTES(GLOBAL)` kernel
+keeps the descriptor-passing lowering.
 
 ```fortran
 interface
@@ -44,8 +45,7 @@ attributes under `BIND(C)`, but the
 [`cudaLaunchKernel`](https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__EXECUTION.html)
 ABI requires `args[i]` to point to a value of the type the C kernel declares
 for parameter `i`. A descriptor pointer in `args[0]` would be dereferenced as
-`T *` on the device, accessing host descriptor memory and producing illegal
-accesses.
-
-Implementation: `flang/lib/Lower/CallInterface.cpp` in `handleExplicitDummy`,
-gated on `procedure.cudaSubprogramAttrs` and the dummy's shape attributes.
+`T *` on the device: the kernel reads descriptor metadata bytes (`base_addr`,
+`elem_len`, dim info, ...) as element data, producing wrong results, and when
+the descriptor resides in host memory the device load additionally faults with
+an illegal-access error.

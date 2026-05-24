@@ -1177,12 +1177,12 @@ private:
                     attrs);
       addPassedArg(PassEntityBy::MutableBox, entity, characteristics);
     } else if (obj.IsPassedByDescriptor(isBindC)) {
-      // bind(c) attributes(global): pass assumed-shape arrays by base address
-      // (cudaLaunchKernel cannot deliver a CFI descriptor to the device).
+      // bind(c) attributes(global): pass assumed-shape/assumed-rank dummies by
+      // base address (cudaLaunchKernel cannot deliver a CFI descriptor to the
+      // device).
       using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
       constexpr Fortran::evaluate::characteristics::TypeAndShape::Attrs
-          shapeOnlyDescriptor{ShapeAttr::AssumedShape, ShapeAttr::DeferredShape,
-                              ShapeAttr::AssumedRank};
+          shapeOnlyDescriptor{ShapeAttr::AssumedShape, ShapeAttr::AssumedRank};
       if (isBindC && isCudaGlobalKernel &&
           (obj.type.attrs() & shapeOnlyDescriptor).any() &&
           !obj.type.type().IsPolymorphic()) {
