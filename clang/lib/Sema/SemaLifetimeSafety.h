@@ -75,8 +75,7 @@ public:
   }
 
   void reportUseAfterReturn(const ValueDecl *VD, const Expr *IssueExpr,
-                            const Expr *ReturnExpr,
-                            const Expr *MovedExpr,
+                            const Expr *ReturnExpr, const Expr *MovedExpr,
                             bool IsReference) override {
     unsigned DiagID = MovedExpr
                           ? diag::warn_lifetime_safety_return_stack_addr_moved
@@ -93,8 +92,7 @@ public:
   }
 
   void reportUseAfterReturn(const MaterializeTemporaryExpr *MTE,
-                            const Expr *ReturnExpr,
-                            const Expr *MovedExpr,
+                            const Expr *ReturnExpr, const Expr *MovedExpr,
                             bool IsReference) override {
     unsigned DiagID =
         MovedExpr ? diag::warn_lifetime_safety_return_temp_stack_addr_moved
