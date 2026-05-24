@@ -1609,10 +1609,38 @@ functions:
   - name: isnanf16
     standards:
       - bsd
+  - name: issignaling
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: double
+  - name: issignalingf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: float
+  - name: issignalingf16
+    standards:
+      - stdc
     return_type: int
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: issignalingf128
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: issignalingl
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: long double
   - name: ldexp
     standards:
       - stdc
@@ -2895,42 +2923,3 @@ functions:
       - type: long double
       - type: int
       - type: unsigned int
-  - name: issignaling
-    standards:
-      - stdc
-    return_type: double
-    arguments:
-      - type: int
-  - name: issignalingbf16
-    standards:
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: int
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: issignalingf
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: float
-  - name: issignalingf16
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: _Float
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: issignalingf128
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
-  - name: issignalingl
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: long double
