@@ -319,6 +319,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
       setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
     }
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v4i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v4i32, Custom);
   }
   if (Subtarget.hasAVX10_2()) {
     for (MVT VT : {MVT::v8i8, MVT::v16i8, MVT::v32i8}) {
@@ -22821,7 +22823,22 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
                               dl, VecI16VT, Src);
     return DAG.getNode(ISD::TRUNCATE, dl, DstVT, Res);
   }
+  else if(DstVT == MVT::v4i32 && Subtarget.hasSSE2())
+  {
+    const bool isSigned = Op.getOpcode() == ISD::FP_TO_SINT_SAT;
+    SDValue src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    SDLoc dl(Op);
+    double MaxVal = IsSigned ? 2147483520.0 : 4294967040.0;
+    double MinVal = IsSigned ? -2147483648.0 : 0.0;
+    SDValue MaxC = DAG.getConstantFP(MaxVal, dl, SrcVT);
+    SDValue MinC = DAG.getConstantFP(MinVal, dl, SrcVT);
 
+    SDValue ClampedBottom = DAG.getNode(X86ISD::FMAX, dl, SrcVT, Src, MinC);
+    SDValue ClampedTop = DAG.getNode(X86ISD::FMIN, dl, SrcVT, ClampedBottom, MaxC);
+    unsigned CastOpc = IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
+    return DAG.getNode(CastOpc, dl, DstVT, ClampedTop);
+  }
   // This code is only for floats and doubles. Fall back to generic code for
   // anything else.
   if (!isScalarFPTypeInSSEReg(SrcVT) || isBF16orSoftF16(SrcVT, Subtarget))
