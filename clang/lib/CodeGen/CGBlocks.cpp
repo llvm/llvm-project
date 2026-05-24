@@ -1418,7 +1418,8 @@ void CodeGenFunction::setBlockContextParameter(const ImplicitParamDecl *D,
 
   // Allocate a stack slot like for any local variable to guarantee optimal
   // debug info at -O0. The mem2reg pass will eliminate it when optimizing.
-  RawAddress alloc = CreateMemTemp(D->getType(), D->getName() + ".addr");
+  RawAddress alloc =
+      CreateMemTempWithoutCast(D->getType(), D->getName() + ".addr");
   Builder.CreateStore(arg, alloc);
   if (CGDebugInfo *DI = getDebugInfo()) {
     if (CGM.getCodeGenOpts().hasReducedDebugInfo()) {
@@ -1557,8 +1558,8 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
     if (!capture.isConstant()) continue;
 
     CharUnits align = getContext().getDeclAlign(variable);
-    Address alloca =
-      CreateMemTemp(variable->getType(), align, "block.captured-const");
+    Address alloca = CreateMemTempWithoutCast(variable->getType(), align,
+                                              "block.captured-const");
 
     Builder.CreateStore(capture.getConstant(), alloca);
 

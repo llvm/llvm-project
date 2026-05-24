@@ -3431,7 +3431,7 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
     else
       Base = UnknownVal();
 
-    Bldr.generateNode(Ex, Pred, state->BindExpr(Ex, LCtx, Base));
+    Bldr.generateNode(Ex, Node, state->BindExpr(Ex, LCtx, Base));
   }
 
   getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, Ex, *this);

@@ -209,7 +209,7 @@ void PPC::writeGotHeader(uint8_t *buf) const {
   // _GLOBAL_OFFSET_TABLE_[0] = _DYNAMIC
   // glibc stores _dl_runtime_resolve in _GLOBAL_OFFSET_TABLE_[1],
   // link_map in _GLOBAL_OFFSET_TABLE_[2].
-  write32(ctx, buf, ctx.mainPart->dynamic->getVA());
+  write32(ctx, buf, ctx.in.dynamic->getVA());
 }
 
 void PPC::writeGotPlt(uint8_t *buf, const Symbol &s) const {

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanUtils.h"
+#include "LoopVectorizationPlanner.h"
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
@@ -113,7 +114,7 @@ static bool poisonGuaranteesUB(const VPValue *V) {
 
     for (VPUser *U : Current->users()) {
       // Check if Current is used as an address operand for load/store.
-      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U)) {
+      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(U))) {
         if (MemR->getAddr() == Current)
           return true;
         continue;
@@ -455,8 +456,13 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
         return preservesUniformity(R->getOpcode()) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
+      .Case([](const VPPhi *) {
+        // Bail out on VPPhi, as we can end up in infinite cycles.
+        return false;
+      })
       .Case([](const VPInstruction *VPI) {
-        return preservesUniformity(VPI->getOpcode()) &&
+        return (VPI->isSingleScalar() || VPI->isVectorToScalar() ||
+                preservesUniformity(VPI->getOpcode())) &&
                all_of(VPI->operands(), isUniformAcrossVFsAndUFs);
       })
       .Case([](const VPWidenCastRecipe *R) {
@@ -703,6 +709,18 @@ bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
          VPBlockUtils::isHeader(VPB->getSuccessors().back(), VPDT);
 }
 
+std::pair<VPBasicBlock *, VPBasicBlock *>
+VPBlockUtils::getPlainCFGHeaderAndLatch(const VPlan &Plan) {
+  auto *Header = cast<VPBasicBlock>(
+      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+  auto *Latch = cast<VPBasicBlock>(Header->getPredecessors()[1]);
+  return {Header, Latch};
+}
+
+VPBasicBlock *VPBlockUtils::getPlainCFGMiddleBlock(const VPlan &Plan) {
+  return cast<VPBasicBlock>(Plan.getScalarPreheader()->getPredecessors()[0]);
+}
+
 std::optional<MemoryLocation>
 vputils::getMemoryLocation(const VPRecipeBase &R) {
   auto *M = dyn_cast<VPIRMetadata>(&R);
@@ -732,7 +750,9 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
 
     VPSymbolicValue &UF = Plan.getUF();
     if (!UF.isMaterialized())
-      return Step == &UF;
+      return Step == &UF ||
+             match(Step, m_c_Mul(m_Specific(&Plan.getUF()),
+                                 m_VPInstruction<VPInstruction::VScale>()));
 
     unsigned ConcreteUF = Plan.getConcreteUF();
     // Fixed VF: step is just the concrete UF.
@@ -819,7 +839,7 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
             RepR->getOperand(1) == Cur)
           return true;
       }
-      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U)) {
+      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(U))) {
         if (MemR->getAddr() == Cur && MemR->isConsecutive())
           return true;
       }
@@ -838,4 +858,34 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
         WorkList.push_back(SDR);
   }
   return false;
+}
+
+VPValue *VPBuilder::VPSCEVExpander::tryToExpand(const SCEV *S) {
+  switch (S->getSCEVType()) {
+  case scConstant:
+    return Builder.getPlan().getOrAddLiveIn(cast<SCEVConstant>(S)->getValue());
+  case scUnknown:
+    return Builder.getPlan().getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
+  case scVScale:
+    return Builder.createNaryOp(VPInstruction::VScale, {}, S->getType());
+  case scMulExpr: {
+    auto *Mul = cast<SCEVMulExpr>(S);
+    SmallVector<VPValue *, 2> Ops;
+    for (const SCEVUse &Op : Mul->operands()) {
+      VPValue *OpV = tryToExpand(Op);
+      if (!OpV)
+        return nullptr;
+      Ops.push_back(OpV);
+    }
+    VPIRFlags::WrapFlagsTy WrapFlags(Mul->hasNoUnsignedWrap(),
+                                     Mul->hasNoSignedWrap());
+    VPValue *Result = Ops.front();
+    for (VPValue *Op : drop_begin(Ops))
+      Result = Builder.createOverflowingOp(Instruction::Mul, {Result, Op},
+                                           WrapFlags, DL);
+    return Result;
+  }
+  default:
+    return nullptr;
+  }
 }
