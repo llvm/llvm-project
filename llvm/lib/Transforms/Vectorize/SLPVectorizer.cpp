@@ -2176,7 +2176,8 @@ public:
   /// Calculates the cost of the subtrees, trims non-profitable ones and returns
   /// final cost.
   InstructionCost
-  calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals = {});
+  calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals = {},
+                                        Instruction *RdxRoot = nullptr);
 
   /// \returns the vectorization cost of the subtree that starts at \p VL.
   /// A negative number means that this is profitable.
@@ -3996,7 +3997,8 @@ private:
   /// LICM hoisting that optimizeGatherSequence() performs after vectorization
   /// for inserts with loop-invariant operands. Falls back to the whole-entry
   /// scale when per-lane information is unavailable or the feature is off.
-  uint64_t getGatherNodeEffectiveScale(const TreeEntry &TE);
+  uint64_t getGatherNodeEffectiveScale(const TreeEntry &TE,
+                                       Instruction *U = nullptr);
 
   /// Get the loop nest for the given loop \p L.
   ArrayRef<const Loop *> getLoopNest(const Loop *L);
@@ -16455,14 +16457,15 @@ uint64_t BoUpSLP::getLoopNestScale(const Loop *L) {
   return std::max<uint64_t>(1, Scale);
 }
 
-uint64_t BoUpSLP::getGatherNodeEffectiveScale(const TreeEntry &TE) {
+uint64_t BoUpSLP::getGatherNodeEffectiveScale(const TreeEntry &TE,
+                                              Instruction *U) {
   // Only meaningful for gather/buildvector-like entries; the per-lane
   // insertelements that make up such an entry are LICM-hoistable by
   // optimizeGatherSequence() when their operand is loop-invariant.
   assert((TE.isGather() || TE.State == TreeEntry::SplitVectorize) &&
          "Expected gather/split tree entry.");
 
-  uint64_t BaseScale = getScaleToLoopIterations(TE);
+  uint64_t BaseScale = getScaleToLoopIterations(TE, nullptr, U);
   if (!PerLaneGatherScale || LoopAwareTripCount == 0 || BaseScale <= 1)
     return BaseScale;
 
@@ -16487,7 +16490,8 @@ uint64_t BoUpSLP::getGatherNodeEffectiveScale(const TreeEntry &TE) {
     if (isConstant(V))
       continue;
     ++N;
-    uint64_t LaneScale = std::min(getScaleToLoopIterations(TE, V), BaseScale);
+    uint64_t LaneScale =
+        std::min(getScaleToLoopIterations(TE, V, U), BaseScale);
     Sum = SaturatingAdd(Sum, LaneScale, &Overflow);
     if (Overflow)
       return BaseScale;
@@ -18839,8 +18843,9 @@ static T *performExtractsShuffleAction(
   return Prev;
 }
 
-InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
-    ArrayRef<Value *> VectorizedVals) {
+InstructionCost
+BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
+                                               Instruction *RdxRoot) {
   // FIXME: support buildvector of the gather nodes with struct types.
   if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
         return TE->isGather() &&
@@ -18960,8 +18965,10 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
       }
     }
     if (!CostIsFree && !Scale) {
-      Scale = IsGatherLike ? getGatherNodeEffectiveScale(TE)
-                           : getScaleToLoopIterations(TE);
+      Scale =
+          IsGatherLike
+              ? getGatherNodeEffectiveScale(TE, TE.Idx == 0 ? RdxRoot : nullptr)
+              : getScaleToLoopIterations(TE);
       C *= Scale;
       EntryToScale.try_emplace(&TE, Scale);
       if (!TE.isGather() && TE.hasState()) {
@@ -29837,7 +29844,8 @@ public:
 
       V.transformNodes();
       V.computeMinimumValueSizes();
-      InstructionCost TreeCost = V.calculateTreeCostAndTrimNonProfitable(VL);
+      InstructionCost TreeCost =
+          V.calculateTreeCostAndTrimNonProfitable(VL, RdxRootInst);
       V.buildExternalUses(LocalExternallyUsedValues);
 
       InstructionCost ReductionCost =
