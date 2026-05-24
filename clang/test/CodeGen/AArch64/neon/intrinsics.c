@@ -6437,3 +6437,34 @@ poly64x2_t test_vsriq_n_p64(poly64x2_t a, poly64x2_t b) {
 // LLVM:    ret <2 x i64> [[VSRI_N2]]
   return vsriq_n_p64(a, b, 64);
 }
+
+//===------------------------------------------------------===//
+// 2.1.3.1.6.  Vector shift left and insert (scalar)
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#vector-shift-left-and-insert
+//===------------------------------------------------------===//
+
+// ALL-LABEL: @test_vslid_n_s64(
+int64_t test_vslid_n_s64(int64_t a, int64_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !s32i) -> !cir.vector<1 x !s64i>
+
+// LLVM-SAME: i64 {{.*}} [[A:%.*]], i64 {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast i64 [[A]] to <1 x i64>
+// LLVM: [[TMP1:%.*]] = bitcast i64 [[B]] to <1 x i64>
+// LLVM: [[VSLID:%.*]] = call <1 x i64> @llvm.aarch64.neon.vsli.v1i64(<1 x i64> [[TMP0]], <1 x i64> [[TMP1]], i32 63)
+// LLVM: [[RET:%.*]] = bitcast <1 x i64> [[VSLID]] to i64
+// LLVM: ret i64 [[RET]]
+  return (int64_t)vslid_n_s64(a, b, 63);
+}
+
+// ALL-LABEL: @test_vslid_n_u64(
+uint64_t test_vslid_n_u64(uint64_t a, uint64_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<1 x !u64i>, !cir.vector<1 x !u64i>, !s32i) -> !cir.vector<1 x !u64i>
+
+// LLVM-SAME: i64 {{.*}} [[A:%.*]], i64 {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast i64 [[A]] to <1 x i64>
+// LLVM: [[TMP1:%.*]] = bitcast i64 [[B]] to <1 x i64>
+// LLVM: [[VSLID:%.*]] = call <1 x i64> @llvm.aarch64.neon.vsli.v1i64(<1 x i64> [[TMP0]], <1 x i64> [[TMP1]], i32 63)
+// LLVM: [[RET:%.*]] = bitcast <1 x i64> [[VSLID]] to i64
+// LLVM: ret i64 [[RET]]
+  return (uint64_t)vslid_n_u64(a, b, 63);
+}
