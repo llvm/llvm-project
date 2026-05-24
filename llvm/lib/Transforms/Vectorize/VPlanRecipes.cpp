@@ -3419,7 +3419,8 @@ static bool isPredicatedUniformMemOpAfterTailFolding(const VPReplicateRecipe &R,
                                                      const SCEV *PtrSCEV,
                                                      VPCostContext &Ctx) {
   const VPRegionBlock *ParentRegion = R.getRegion();
-  if (!ParentRegion || !ParentRegion->isReplicator() || !PtrSCEV ||
+  if (R.getOpcode() != Instruction::Store || !ParentRegion ||
+      !ParentRegion->isReplicator() || !PtrSCEV ||
       !Ctx.PSE.getSE()->isLoopInvariant(PtrSCEV, Ctx.L))
     return false;
   auto *BOM =
@@ -3538,8 +3539,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 
     // Check if this is a predicated store with a loop-invariant address only
     // masked by the header mask. If so, return the uniform mem op cost.
-    if (!IsLoad &&
-        isPredicatedUniformMemOpAfterTailFolding(*this, PtrSCEV, Ctx)) {
+    if (isPredicatedUniformMemOpAfterTailFolding(*this, PtrSCEV, Ctx)) {
       InstructionCost UniformCost =
           ScalarMemOpCost +
           Ctx.TTI.getAddressComputationCost(ScalarPtrTy, /*SE=*/nullptr,
