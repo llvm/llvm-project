@@ -1,15 +1,13 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llvm-as < %s | llvm-dis | FileCheck %s
 
 ; Check that remangling code doesn't fail on an intrinsic with wrong signature
+; TODO: This should probably produce an error.
 
-; CHECK: Attribute after last parameter!
-; CHECK-NEXT: ptr @llvm.memset.i64
+; CHECK: declare void @llvm.memset.i64
 declare void @llvm.memset.i64(ptr nocapture, i8, i64) nounwind
 
-; CHECK: Attribute after last parameter!
-; CHECK-NEXT: ptr @llvm.memcpy.i64
+; CHECK: declare void @llvm.memcpy.i64
 declare void @llvm.memcpy.i64(ptr nocapture, i8, i64) nounwind
 
-; CHECK: Attribute after last parameter!
-; CHECK-NEXT: ptr @llvm.memmove.i64
+; CHECK: declare void @llvm.memmove.i64
 declare void @llvm.memmove.i64(ptr nocapture, i8, i64) nounwind

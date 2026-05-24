@@ -2,21 +2,72 @@
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 ; See that we only spilled one value for f
-; CHECK: %f.Frame = type { ptr, ptr, i32, i1 }
-; CHECK: %f_optnone.Frame = type { ptr, ptr, i32, i32, i1 }
 ; Check other variants where different levels of materialization are achieved
-; CHECK: %f_multiple_remat.Frame = type { ptr, ptr, i32, i1 }
-; CHECK: %f_common_def.Frame = type { ptr, ptr, i32, i1 }
-; CHECK: %f_common_def_multi_result.Frame = type { ptr, ptr, i32, i1 }
+
+target datalayout = "e-m:e-p:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
 ; CHECK-LABEL: @f(
+; CHECK: malloc(i32 24)
+; CHECK: store i32 %n
+; CHECK-NOT: store i32 %inc
+
 ; CHECK-LABEL: @f_optnone
+; CHECK: malloc(i32 32)
+; CHECK: store i32 %inc1
+
 ; CHECK-LABEL: @f_multiple_remat(
+; CHECK: malloc(i32 24)
+; CHECK: store i32 %n
+; CHECK-NOT: store i32 %inc
+
 ; CHECK-LABEL: @f_common_def(
+; CHECK: malloc(i32 24)
+; CHECK: store i32 %n
+; CHECK-NOT: store i32 %inc
+
 ; CHECK-LABEL: @f_common_def_multi_result(
+; CHECK: malloc(i32 24)
+; CHECK: store i32 %n
+; CHECK-NOT: store i32 %inc
+
+; CHECK-LABEL: @f.resume(
+; CHECK: %n.reload{{.*}} = load i32
+; CHECK: add i32 %n.reload{{.*}}, 1
+; CHECK: add i32 %{{.*}}, 1
+
+; CHECK-LABEL: @f_optnone.resume(
+; CHECK: %inc1.reload{{.*}} = load i32, ptr
+; CHECK: add i32 %inc1.reload{{.*}}, 1
+
+; CHECK-LABEL: @f_multiple_remat.resume(
+; CHECK: %n.reload{{.*}} = load i32
+; CHECK: add i32 %n.reload{{.*}}, 1
+; CHECK: add i32 %{{.*}}, 2
+; CHECK: add i32 %{{.*}}, 3
+; CHECK: add i32 %{{.*}}, 4
+; CHECK: add i32 %{{.*}}, 5
+; CHECK: add i32 %{{.*}}, 5
+
+; CHECK-LABEL: @f_common_def.resume(
+; CHECK: %n.reload{{.*}} = load i32
+; CHECK: add i32 %n.reload{{.*}}, 3
+; CHECK: add i32 %n.reload{{.*}}, 1
+; CHECK: add i32 %{{.*}}, %{{.*}}
+; CHECK: add i32 %{{.*}}, %{{.*}}
+; CHECK: add i32 %{{.*}}, 5
+
+; CHECK-LABEL: @f_common_def_multi_result.resume(
+; CHECK: %n.reload{{.*}} = load i32
+; CHECK: add i32 %n.reload{{.*}}, 3
+; CHECK: add i32 %n.reload{{.*}}, 1
+; CHECK: add i32 %{{.*}}, %{{.*}}
+; CHECK: add i32 %{{.*}}, %{{.*}}
+; CHECK: add i32 %{{.*}}, 4
+; CHECK: add i32 %{{.*}}, 5
 
 define ptr @f(i32 %n) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @malloc(i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
@@ -41,14 +92,14 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
 ; Checks that we won't transform functions with optnone.
 define ptr @f_optnone(i32 %n) presplitcoroutine optnone noinline {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f_optnone, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @malloc(i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
@@ -73,13 +124,13 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
 define ptr @f_multiple_remat(i32 %n) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f_multiple_remat, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @malloc(i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
@@ -109,13 +160,13 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
 define ptr @f_common_def(i32 %n) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f_common_def, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @malloc(i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
@@ -145,13 +196,13 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
 define ptr @f_common_def_multi_result(i32 %n) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f_common_def_multi_result, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @malloc(i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
@@ -186,7 +237,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
@@ -200,7 +251,7 @@ declare void @llvm.coro.destroy(ptr)
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare noalias ptr @malloc(i32)
 declare void @print(i32)

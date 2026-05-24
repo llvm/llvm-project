@@ -46,18 +46,22 @@
 // TODO TZDB Implement the Windows mapping in tzdb::current_zone
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace chrono {
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmissing-prototypes")
 // This function is weak so it can be overriden in the tests. The
 // declaration is in the test header test/support/test_tzdb.h
-_LIBCPP_WEAK string_view __libcpp_tzdb_directory() {
+[[gnu::weak]] string_view __libcpp_tzdb_directory() {
 #if defined(__linux__)
   return "/usr/share/zoneinfo/";
 #else
 #  error "unknown path to the IANA Time Zone Database"
 #endif
 }
+_LIBCPP_DIAGNOSTIC_POP
 
 //===----------------------------------------------------------------------===//
 //                           Details
@@ -766,7 +770,7 @@ void __init_tzdb(tzdb& __tzdb, __tz::__rules_storage_type& __rules) {
   // On Linux systems it seems /etc/timezone is deprecated and being phased out.
   // This file is used when /etc/localtime does not exist, or when it exists but
   // is not a symlink. For more information and links see
-  // https://github.com/llvm/llvm-project/issues/105634
+  // https://llvm.org/PR105634
 
   string __name = chrono::__current_zone_environment();
 
@@ -821,4 +825,5 @@ _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI string remote_version() {
 
 } // namespace chrono
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

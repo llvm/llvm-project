@@ -20,6 +20,7 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/GenericDomTree.h"
+#include "llvm/Support/GenericDomTreeConstruction.h"
 
 namespace llvm {
 
@@ -38,12 +39,20 @@ class VPDominatorTree : public DominatorTreeBase<VPBlockBase, false> {
   using Base = DominatorTreeBase<VPBlockBase, false>;
 
 public:
-  VPDominatorTree() = default;
   explicit VPDominatorTree(VPlan &Plan) { recalculate(Plan); }
 
   /// Returns true if \p A properly dominates \p B.
   using Base::properlyDominates;
   bool properlyDominates(const VPRecipeBase *A, const VPRecipeBase *B);
+};
+
+/// Template specialization of the standard LLVM post-dominator tree utility for
+/// VPBlockBases.
+class VPPostDominatorTree : public PostDomTreeBase<VPBlockBase> {
+  using Base = PostDomTreeBase<VPBlockBase>;
+
+public:
+  explicit VPPostDominatorTree(VPlan &Plan) { recalculate(Plan); }
 };
 
 using VPDomTreeNode = DomTreeNodeBase<VPBlockBase>;

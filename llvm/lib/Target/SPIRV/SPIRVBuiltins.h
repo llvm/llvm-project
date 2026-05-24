@@ -39,7 +39,7 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
                                  MachineIRBuilder &MIRBuilder,
                                  const Register OrigRet, const Type *OrigRetTy,
                                  const SmallVectorImpl<Register> &Args,
-                                 SPIRVGlobalRegistry *GR);
+                                 SPIRVGlobalRegistry *GR, const CallBase &CB);
 
 /// Helper function for finding a builtin function attributes
 /// by a demangled function name. Defined in SPIRVBuiltins.cpp.
@@ -79,10 +79,10 @@ TargetExtType *parseBuiltinTypeNameToTargetExtType(std::string TypeName,
 /// \return A machine instruction representing the OpType<...> SPIR-V type.
 ///
 /// \p Type is the special opaque/builtin type to be lowered.
-SPIRVType *lowerBuiltinType(const Type *Type,
-                            AccessQualifier::AccessQualifier AccessQual,
-                            MachineIRBuilder &MIRBuilder,
-                            SPIRVGlobalRegistry *GR);
+SPIRVTypeInst lowerBuiltinType(const Type *Type,
+                               AccessQualifier::AccessQualifier AccessQual,
+                               MachineIRBuilder &MIRBuilder,
+                               SPIRVGlobalRegistry *GR);
 } // namespace SPIRV
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVBUILTINS_H

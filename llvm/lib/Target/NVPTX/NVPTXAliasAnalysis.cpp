@@ -45,9 +45,7 @@ ImmutablePass *llvm::createNVPTXExternalAAWrapperPass() {
   return new NVPTXExternalAAWrapper();
 }
 
-NVPTXAAWrapperPass::NVPTXAAWrapperPass() : ImmutablePass(ID) {
-  initializeNVPTXAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+NVPTXAAWrapperPass::NVPTXAAWrapperPass() : ImmutablePass(ID) {}
 
 void NVPTXAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -88,6 +86,12 @@ static AliasResult::Kind getAliasResult(unsigned AS1, unsigned AS2) {
   // TODO: cvta.param is not yet supported. We need to change aliasing
   // rules once it is added.
 
+  // Distributed shared memory aliases with shared memory.
+  if (((AS1 == ADDRESS_SPACE_SHARED) &&
+       (AS2 == ADDRESS_SPACE_SHARED_CLUSTER)) ||
+      ((AS1 == ADDRESS_SPACE_SHARED_CLUSTER) && (AS2 == ADDRESS_SPACE_SHARED)))
+    return AliasResult::MayAlias;
+
   return (AS1 == AS2 ? AliasResult::MayAlias : AliasResult::NoAlias);
 }
 
@@ -105,7 +109,7 @@ AliasResult NVPTXAAResult::alias(const MemoryLocation &Loc1,
 // allow any writes to .param pointers.
 static bool isConstOrParam(unsigned AS) {
   return AS == AddressSpace::ADDRESS_SPACE_CONST ||
-         AS == AddressSpace::ADDRESS_SPACE_PARAM;
+         AS == AddressSpace::ADDRESS_SPACE_ENTRY_PARAM;
 }
 
 ModRefInfo NVPTXAAResult::getModRefInfoMask(const MemoryLocation &Loc,

@@ -225,7 +225,7 @@ define <4 x ptr> @ptr_idx_mix_scalar_vector(){
 
 define <4 x ptr> @vector_idx_scalar() {
 ; CHECK-LABEL: @vector_idx_scalar(
-; CHECK-NEXT:    ret <4 x ptr> getelementptr (i32, <4 x ptr> zeroinitializer, <4 x i64> splat (i64 1))
+; CHECK-NEXT:    ret <4 x ptr> getelementptr (i32, <4 x ptr> splat (ptr null), <4 x i64> splat (i64 1))
 ;
   %gep = getelementptr i32, <4 x ptr> zeroinitializer, i64 1
   ret <4 x ptr> %gep
@@ -233,7 +233,7 @@ define <4 x ptr> @vector_idx_scalar() {
 
 define <4 x ptr> @vector_idx_vector() {
 ; CHECK-LABEL: @vector_idx_vector(
-; CHECK-NEXT:    ret <4 x ptr> getelementptr (i32, <4 x ptr> zeroinitializer, <4 x i64> splat (i64 1))
+; CHECK-NEXT:    ret <4 x ptr> getelementptr (i32, <4 x ptr> splat (ptr null), <4 x i64> splat (i64 1))
 ;
   %gep = getelementptr i32, <4 x ptr> zeroinitializer, <4 x i64> <i64 1, i64 1, i64 1, i64 1>
   ret <4 x ptr> %gep
@@ -242,7 +242,7 @@ define <4 x ptr> @vector_idx_vector() {
 %struct = type { double, float }
 define <4 x ptr> @vector_idx_mix_scalar_vector() {
 ; CHECK-LABEL: @vector_idx_mix_scalar_vector(
-; CHECK-NEXT:    ret <4 x ptr> getelementptr ([[STRUCT:%.*]], <4 x ptr> zeroinitializer, <4 x i64> zeroinitializer, i32 1)
+; CHECK-NEXT:    ret <4 x ptr> getelementptr ([[STRUCT:%.*]], <4 x ptr> splat (ptr null), <4 x i64> zeroinitializer, i32 1)
 ;
   %gep = getelementptr %struct, <4 x ptr> zeroinitializer, i32 0, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x ptr> %gep
@@ -252,7 +252,7 @@ define <4 x ptr> @vector_idx_mix_scalar_vector() {
 
 define <vscale x 4 x ptr> @scalable_idx_scalar() {
 ; CHECK-LABEL: @scalable_idx_scalar(
-; CHECK-NEXT:    ret <vscale x 4 x ptr> getelementptr (i32, <vscale x 4 x ptr> zeroinitializer, <vscale x 4 x i64> splat (i64 1))
+; CHECK-NEXT:    ret <vscale x 4 x ptr> getelementptr (i32, <vscale x 4 x ptr> splat (ptr null), <vscale x 4 x i64> splat (i64 1))
 ;
   %gep = getelementptr i32, <vscale x 4 x ptr> zeroinitializer, i64 1
   ret <vscale x 4 x ptr> %gep
@@ -260,7 +260,7 @@ define <vscale x 4 x ptr> @scalable_idx_scalar() {
 
 define <vscale x 4 x ptr> @scalable_vector_idx_mix_scalar_vector() {
 ; CHECK-LABEL: @scalable_vector_idx_mix_scalar_vector(
-; CHECK-NEXT:    ret <vscale x 4 x ptr> getelementptr ([[STRUCT:%.*]], <vscale x 4 x ptr> zeroinitializer, <vscale x 4 x i64> zeroinitializer, i32 1)
+; CHECK-NEXT:    ret <vscale x 4 x ptr> getelementptr ([[STRUCT:%.*]], <vscale x 4 x ptr> splat (ptr null), <vscale x 4 x i64> zeroinitializer, i32 1)
 ;
   %gep = getelementptr %struct, <vscale x 4 x ptr> zeroinitializer, i32 0, i32 1
   ret <vscale x 4 x ptr> %gep
@@ -268,7 +268,7 @@ define <vscale x 4 x ptr> @scalable_vector_idx_mix_scalar_vector() {
 
 define <vscale x 2 x ptr> @ptr_idx_mix_scalar_scalable_vector() {
 ; CHECK-LABEL: @ptr_idx_mix_scalar_scalable_vector(
-; CHECK-NEXT:    ret <vscale x 2 x ptr> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 2 x ptr> splat (ptr null)
 ;
   %v = getelementptr [2 x i64], ptr null, i64 0, <vscale x 2 x i64> zeroinitializer
   ret <vscale x 2 x ptr> %v
@@ -385,4 +385,67 @@ define i64 @gep_array_of_scalable_vectors_ptrdiff(ptr %ptr) {
   %c2.int = ptrtoint ptr %c2 to i64
   %diff = sub i64 %c2.int, %c1.int
   ret i64 %diff
+}
+
+define ptr @gep_null_inbounds(i64 %idx) {
+; CHECK-LABEL: @gep_null_inbounds(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr null, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr inbounds i8, ptr null, i64 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_null_not_inbounds(i64 %idx) {
+; CHECK-LABEL: @gep_null_not_inbounds(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr null, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr i8, ptr null, i64 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_null_defined(i64 %idx) null_pointer_is_valid {
+; CHECK-LABEL: @gep_null_defined(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr null, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr inbounds i8, ptr null, i64 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_null_inbounds_different_type(i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @gep_null_inbounds_different_type(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [0 x i8], ptr null, i64 [[IDX1:%.*]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr inbounds [0 x i8], ptr null, i64 %idx1, i64 %idx2
+  ret ptr %gep
+}
+
+define <2 x ptr> @gep_inbounds_null_vec(i64 %idx) {
+; CHECK-LABEL: @gep_inbounds_null_vec(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, <2 x ptr> splat (ptr null), i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret <2 x ptr> [[P]]
+;
+  %p = getelementptr inbounds i8, <2 x ptr> zeroinitializer, i64 %idx
+  ret <2 x ptr> %p
+}
+
+define <2 x ptr> @gep_inbounds_null_vec_broadcast(<2 x i64> %idx) {
+; CHECK-LABEL: @gep_inbounds_null_vec_broadcast(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, ptr null, <2 x i64> [[IDX:%.*]]
+; CHECK-NEXT:    ret <2 x ptr> [[P]]
+;
+  %p = getelementptr inbounds i8, ptr null, <2 x i64> %idx
+  ret <2 x ptr> %p
+}
+
+define ptr @gep_noinbounds_null(i64 %idx) {
+; CHECK-LABEL: @gep_noinbounds_null(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr null, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  %p = getelementptr i8, ptr null, i64 %idx
+  ret ptr %p
 }

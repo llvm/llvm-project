@@ -14,7 +14,7 @@ struct S {
 float a;
 
 // CHECK: VarDecl {{.*}} b 'RWBuffer<float>':'hlsl::RWBuffer<float>'
-RWBuffer<float> b; 
+RWBuffer<float> b;
 
 // CHECK: VarDecl {{.*}} c 'EmptyStruct'
 EmptyStruct c;

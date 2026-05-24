@@ -140,11 +140,13 @@ set(LIBUNWIND_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
 set(LIBUNWIND_SHARED_OUTPUT_NAME "unwind" CACHE STRING "Output name for the shared libunwind runtime library.")
 set(LIBUNWIND_STATIC_OUTPUT_NAME "unwind" CACHE STRING "Output name for the static libunwind runtime library.")
 
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBUNWIND_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
   if(LIBUNWIND_LIBDIR_SUBDIR)
     string(APPEND LIBUNWIND_TARGET_SUBDIR /${LIBUNWIND_LIBDIR_SUBDIR})
   endif()
+  cmake_path(NORMAL_PATH LIBUNWIND_TARGET_SUBDIR)
   set(LIBUNWIND_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBUNWIND_TARGET_SUBDIR})
   set(LIBUNWIND_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBUNWIND_TARGET_SUBDIR} CACHE STRING
       "Path where built libunwind libraries should be installed.")
@@ -180,6 +182,8 @@ include(HandleLibunwindFlags)
 
 # Configure compiler.
 include(config-ix)
+
+include(HandleLibC) # Setup the C library flags
 
 if (LIBUNWIND_USE_COMPILER_RT AND NOT LIBUNWIND_HAS_NODEFAULTLIBS_FLAG)
   list(APPEND LIBUNWIND_LINK_FLAGS "-rtlib=compiler-rt")
@@ -328,6 +332,23 @@ if (C_SUPPORTS_COMMENT_LIB_PRAGMA)
     add_definitions(-D_LIBUNWIND_LINK_PTHREAD_LIB)
   endif()
 endif()
+
+if (RUNTIMES_EXECUTE_ONLY_CODE)
+  add_compile_definitions(_LIBUNWIND_EXECUTE_ONLY_CODE)
+endif()
+
+check_symbol_exists(getauxval "sys/auxv.h" HAVE_GETAUXVAL)
+if (HAVE_GETAUXVAL)
+  add_definitions(-D_LIBUNWIND_HAVE_GETAUXVAL)
+endif()
+
+check_symbol_exists(elf_aux_info "sys/auxv.h" HAVE_ELF_AUX_INFO)
+if (HAVE_ELF_AUX_INFO)
+  add_definitions(-D_LIBUNWIND_HAVE_ELF_AUX_INFO)
+endif()
+
+add_custom_target(unwind-test-depends
+  COMMENT "Build dependencies required to run the libunwind test suite.")
 
 #===============================================================================
 # Setup Source Code

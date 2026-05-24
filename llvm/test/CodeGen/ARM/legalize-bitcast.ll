@@ -7,7 +7,7 @@ define i32 @vec_to_int() {
 ; CHECK-LABEL: vec_to_int:
 ; CHECK:       @ %bb.0: @ %bb.0
 ; CHECK-NEXT:    push {r4}
-; CHECK-NEXT:    sub sp, sp, #28
+; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    movw r0, :lower16:vec6_p
 ; CHECK-NEXT:    movt r0, :upper16:vec6_p
 ; CHECK-NEXT:    vld1.8 {d16}, [r0]!
@@ -25,7 +25,7 @@ define i32 @vec_to_int() {
 ; CHECK-NEXT:    vrev32.16 q8, q8
 ; CHECK-NEXT:    vmov.f64 d16, d17
 ; CHECK-NEXT:    vmov.32 r0, d16[0]
-; CHECK-NEXT:    add sp, sp, #28
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    pop {r4}
 ; CHECK-NEXT:    bx lr
 bb.0:
@@ -41,8 +41,6 @@ bb.1:
 define i16 @int_to_vec(i80 %in) {
 ; CHECK-LABEL: int_to_vec:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    @ kill: def $r2 killed $r1
-; CHECK-NEXT:    @ kill: def $r2 killed $r0
 ; CHECK-NEXT:    lsl r0, r0, #16
 ; CHECK-NEXT:    orr r0, r0, r1, lsr #16
 ; CHECK-NEXT:    @ implicit-def: $d18

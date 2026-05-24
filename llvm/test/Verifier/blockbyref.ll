@@ -14,6 +14,8 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DISubprogram()
+!1 = distinct !DISubprogram(type: !5)
 !2 = !DILocalVariable(scope: !1, type: !3)
 !3 = !DICompositeType(tag: DW_TAG_structure_type, flags: DIFlagReservedBit4)
+!4 = !{null}
+!5 = !DISubroutineType(types: !4)

@@ -77,6 +77,10 @@ operator=(const lldb::SBStructuredData &rhs) {
   return *this;
 }
 
+void SBStructuredData::CopyImpl(lldb_private::StructuredDataImpl &new_impl) {
+  new_impl.SetObjectSP(m_impl_up->GetObjectSP());
+}
+
 lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
   LLDB_INSTRUMENT_VA(this, stream);
 
@@ -231,4 +235,48 @@ lldb::SBScriptObject SBStructuredData::GetGenericValue() const {
   LLDB_INSTRUMENT_VA(this);
 
   return {m_impl_up->GetGenericValue(), eScriptLanguageDefault};
+}
+
+void SBStructuredData::SetValueForKey(const char *key,
+                                      SBStructuredData &value) {
+  LLDB_INSTRUMENT_VA(this, key, value);
+
+  if (StructuredData::ObjectSP obj_sp = value.m_impl_up->GetObjectSP())
+    m_impl_up->SetValueForKey(key, obj_sp);
+}
+
+void SBStructuredData::SetUnsignedIntegerValue(uint64_t value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetUnsignedIntegerValue(value);
+}
+
+void SBStructuredData::SetSignedIntegerValue(int64_t value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetSignedIntegerValue(value);
+}
+
+void SBStructuredData::SetFloatValue(double value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetFloatValue(value);
+}
+
+void SBStructuredData::SetBooleanValue(bool value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetBooleanValue(value);
+}
+
+void SBStructuredData::SetStringValue(const char *value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetStringValue(value);
+}
+
+void SBStructuredData::SetGenericValue(SBScriptObject value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  m_impl_up->SetGenericValue(value.GetPointer());
 }

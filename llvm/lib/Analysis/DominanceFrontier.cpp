@@ -23,7 +23,6 @@ namespace llvm {
 
 template class DominanceFrontierBase<BasicBlock, false>;
 template class DominanceFrontierBase<BasicBlock, true>;
-template class ForwardDominanceFrontierBase<BasicBlock>;
 
 } // end namespace llvm
 
@@ -36,9 +35,7 @@ INITIALIZE_PASS_END(DominanceFrontierWrapperPass, "domfrontier",
                 "Dominance Frontier Construction", true, true)
 
 DominanceFrontierWrapperPass::DominanceFrontierWrapperPass()
-    : FunctionPass(ID) {
-  initializeDominanceFrontierWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : FunctionPass(ID) {}
 
 void DominanceFrontierWrapperPass::releaseMemory() {
   DF.releaseMemory();

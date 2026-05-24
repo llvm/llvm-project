@@ -67,41 +67,65 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
   }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *CE) override {
-    if (auto *Ctor = CE->getConstructor()) {
-      if (Ctor->isMoveConstructor() && CE->getNumArgs() == 1) {
-        auto *Arg = CE->getArg(0)->IgnoreParenCasts();
-        if (auto *VarRef = dyn_cast<DeclRefExpr>(Arg)) {
-          if (VarRef->getDecl() == Guardian)
-            return false;
-        }
+    auto *Ctor = CE->getConstructor();
+    if (!Ctor)
+      return false;
+    unsigned ArgIndex = 0;
+    for (auto *Arg : CE->arguments()) {
+      ParmVarDecl *Parm = nullptr;
+      if (ArgIndex < Ctor->getNumParams())
+        Parm = Ctor->getParamDecl(ArgIndex);
+      if (mutatesGuardian(Arg, Parm))
+        return false;
+      ArgIndex++;
+    }
+    return true;
+  }
+
+  bool VisitCallExpr(CallExpr *CE) override {
+    auto *Callee = CE->getDirectCallee();
+    if (!Callee)
+      return false;
+    unsigned ArgIndex = 0;
+    unsigned ArgOffset = isa<CXXOperatorCallExpr>(CE);
+    for (auto *Arg : CE->arguments()) {
+      ParmVarDecl *Parm = nullptr;
+      if (ArgIndex >= ArgOffset) {
+        unsigned ParmIndex = ArgIndex - ArgOffset;
+        if (ParmIndex < Callee->getNumParams())
+          Parm = Callee->getParamDecl(ParmIndex);
       }
+      if (mutatesGuardian(Arg, Parm))
+        return false;
+      ArgIndex++;
     }
     return true;
   }
 
   bool VisitCXXMemberCallExpr(CXXMemberCallExpr *MCE) override {
-    auto MethodName = safeGetName(MCE->getMethodDecl());
-    if (MethodName == "swap" || MethodName == "leakRef" ||
-        MethodName == "releaseNonNull" || MethodName == "clear") {
-      auto *ThisArg = MCE->getImplicitObjectArgument()->IgnoreParenCasts();
-      if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
-        if (VarRef->getDecl() == Guardian)
-          return false;
-      }
+    auto *Method = MCE->getMethodDecl();
+    auto ObjType = MCE->getObjectType();
+    if (ObjType.isConstQualified())
+      return true;
+    auto *ThisArg = MCE->getImplicitObjectArgument()->IgnoreParenCasts();
+    if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
+      if (!isa<CXXConversionDecl>(Method) && VarRef->getDecl() == Guardian)
+        return false;
     }
     return true;
   }
 
-  bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *OCE) override {
-    if (OCE->isAssignmentOp()) {
-      assert(OCE->getNumArgs() == 2);
-      auto *ThisArg = OCE->getArg(0)->IgnoreParenCasts();
-      if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
-        if (VarRef->getDecl() == Guardian)
-          return false;
+private:
+  bool mutatesGuardian(const Expr *Arg, const ParmVarDecl *ParmDecl) {
+    Arg = Arg->IgnoreParenCasts();
+    if (auto *VarRef = dyn_cast<DeclRefExpr>(Arg)) {
+      if (VarRef->getDecl() == Guardian) {
+        auto ArgType = ParmDecl ? ParmDecl->getType() : Arg->getType();
+        if (!ArgType.isConstQualified())
+          return true;
       }
     }
-    return true;
+    return false;
   }
 };
 
@@ -166,10 +190,10 @@ bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
 class RawPtrRefLocalVarsChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
   BugType Bug;
-  mutable BugReporter *BR;
   EnsureFunctionAnalysis EFA;
 
 protected:
+  mutable BugReporter *BR;
   mutable std::optional<RetainTypeChecker> RTC;
 
 public:
@@ -180,6 +204,7 @@ public:
   virtual bool isSafePtr(const CXXRecordDecl *) const = 0;
   virtual bool isSafePtrType(const QualType) const = 0;
   virtual bool isSafeExpr(const Expr *) const { return false; }
+  virtual bool isSafeDecl(const Decl *) const { return false; }
   virtual const char *ptrKind() const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
@@ -233,6 +258,14 @@ public:
       }
 
       bool TraverseIfStmt(IfStmt *IS) override {
+        if (IS->getConditionVariable()) {
+          // This code currently does not explicitly check the "else" statement
+          // since getConditionVariable returns nullptr when there is a
+          // condition defined after ";" as in "if (auto foo = ~; !foo)". If
+          // this semantics change, we should add an explicit check for "else".
+          if (auto *Then = IS->getThen(); !Then || TFA.isTrivial(Then))
+            return true;
+        }
         if (!TFA.isTrivial(IS))
           return DynamicRecursiveASTVisitor::TraverseIfStmt(IS);
         return true;
@@ -261,6 +294,12 @@ public:
           return DynamicRecursiveASTVisitor::TraverseCompoundStmt(CS);
         return true;
       }
+
+      bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) override {
+        if (isSmartPtrClass(safeGetName(Decl)))
+          return true;
+        return DynamicRecursiveASTVisitor::TraverseClassTemplateDecl(Decl);
+      }
     };
 
     LocalVisitor visitor(this);
@@ -282,6 +321,7 @@ public:
                 return isSafePtr(Record);
               },
               [&](const clang::QualType Type) { return isSafePtrType(Type); },
+              [&](const clang::Decl *D) { return isSafeDecl(D); },
               [&](const clang::Expr *InitArgOrigin, bool IsSafe) {
                 if (!InitArgOrigin || IsSafe)
                   return true;
@@ -289,7 +329,7 @@ public:
                 if (isa<CXXThisExpr>(InitArgOrigin))
                   return true;
 
-                if (isa<CXXNullPtrLiteralExpr>(InitArgOrigin))
+                if (isNullPtr(InitArgOrigin))
                   return true;
 
                 if (isa<IntegerLiteral>(InitArgOrigin))
@@ -350,7 +390,7 @@ public:
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    if (dyn_cast<ParmVarDecl>(V)) {
+    if (isa<ParmVarDecl>(V)) {
       Os << "Assignment to an " << ptrKind() << " parameter ";
       printQuotedQualifiedName(Os, V);
       Os << " is unsafe.";
@@ -411,6 +451,9 @@ public:
   bool isSafePtrType(const QualType type) const final {
     return isRefOrCheckedPtrType(type);
   }
+  bool isSafeExpr(const Expr *E) const final {
+    return isExprToGetCheckedPtrCapableMember(E);
+  }
   const char *ptrKind() const final { return "unchecked"; }
 };
 
@@ -422,17 +465,23 @@ public:
     RTC = RetainTypeChecker();
   }
   std::optional<bool> isUnsafePtr(const QualType T) const final {
+    if (T.hasStrongOrWeakObjCLifetime())
+      return false;
     return RTC->isUnretained(T);
   }
   bool isSafePtr(const CXXRecordDecl *Record) const final {
-    return isRetainPtr(Record);
+    return isRetainPtrOrOSPtr(Record);
   }
   bool isSafePtrType(const QualType type) const final {
-    return isRetainPtrType(type);
+    return isRetainPtrOrOSPtrType(type);
   }
   bool isSafeExpr(const Expr *E) const final {
     return ento::cocoa::isCocoaObjectRef(E->getType()) &&
            isa<ObjCMessageExpr>(E);
+  }
+  bool isSafeDecl(const Decl *D) const final {
+    // Treat NS/CF globals in system header as immortal.
+    return BR->getSourceManager().isInSystemHeader(D->getLocation());
   }
   const char *ptrKind() const final { return "unretained"; }
 };

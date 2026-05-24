@@ -59,15 +59,15 @@ somezeroes:
 # CHECK-NEXT:       -       66        b                 write_global
 # CHECK-NEXT:       -       71        f         {{.*}}{{/|\\}}map-file.s.tmp1.o:(_start)
 # CHECK-NEXT:       -       71        f                 _start
-# CHECK-NEXT:       -       82       11 DATA
-# CHECK-NEXT:     400       83        8 .data
-# CHECK-NEXT:     400       89        8         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.data.somedata)
-# CHECK-NEXT:     400       89        8                 somedata
-# CHECK-NEXT:     408       82        4 .bss
-# CHECK-NEXT:     408        0        4         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.bss.somezeroes)
-# CHECK-NEXT:     408        0        4                 somezeroes
-# CHECK-NEXT:       -       93       12 CUSTOM(.debug_info)
-# CHECK-NEXT:       -       a5       61 CUSTOM(name)
+# CHECK-NEXT:       -       82       12 DATA
+# CHECK-NEXT:   10000       83        8 .data
+# CHECK-NEXT:   10000       8a        8         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.data.somedata)
+# CHECK-NEXT:   10000       8a        8                 somedata
+# CHECK-NEXT:   10008       82        4 .bss
+# CHECK-NEXT:   10008        0        4         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.bss.somezeroes)
+# CHECK-NEXT:   10008        0        4                 somezeroes
+# CHECK-NEXT:       -       94       12 CUSTOM(.debug_info)
+# CHECK-NEXT:       -       a6       61 CUSTOM(name)
 
 # RUN: not wasm-ld %t1.o -o /dev/null -Map=/ 2>&1 \
 # RUN:  | FileCheck -check-prefix=FAIL %s

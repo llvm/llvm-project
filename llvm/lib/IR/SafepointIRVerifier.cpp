@@ -138,8 +138,8 @@ public:
 
       // For conditional branches, we can perform simple conditional propagation on
       // the condition value itself.
-      const BranchInst *BI = dyn_cast<BranchInst>(TI);
-      if (!BI || !BI->isConditional() || !isa<Constant>(BI->getCondition()))
+      const CondBrInst *BI = dyn_cast<CondBrInst>(TI);
+      if (!BI || !isa<Constant>(BI->getCondition()))
         continue;
 
       // If a branch has two identical successors, we cannot declare either dead.
@@ -157,7 +157,6 @@ public:
 protected:
   void addDeadBlock(const BasicBlock *BB) {
     SmallVector<const BasicBlock *, 4> NewDead;
-    SmallSetVector<const BasicBlock *, 4> DF;
 
     NewDead.push_back(BB);
     while (!NewDead.empty()) {
@@ -197,7 +196,6 @@ protected:
 static void Verify(const Function &F, const DominatorTree &DT,
                    const CFGDeadness &CD);
 
-namespace llvm {
 PreservedAnalyses SafepointIRVerifierPass::run(Function &F,
                                                FunctionAnalysisManager &AM) {
   const auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
@@ -206,15 +204,12 @@ PreservedAnalyses SafepointIRVerifierPass::run(Function &F,
   Verify(F, DT, CD);
   return PreservedAnalyses::all();
 }
-} // namespace llvm
 
 namespace {
 
 struct SafepointIRVerifier : public FunctionPass {
   static char ID; // Pass identification, replacement for typeid
-  SafepointIRVerifier() : FunctionPass(ID) {
-    initializeSafepointIRVerifierPass(*PassRegistry::getPassRegistry());
-  }
+  SafepointIRVerifier() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();

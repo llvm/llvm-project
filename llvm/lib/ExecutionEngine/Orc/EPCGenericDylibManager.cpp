@@ -39,24 +39,6 @@ public:
   static constexpr bool available = true;
 };
 
-template <>
-class SPSSerializationTraits<SPSRemoteSymbolLookup,
-                             DylibManager::LookupRequest> {
-  using MemberSerialization =
-      SPSArgList<SPSExecutorAddr, SPSRemoteSymbolLookupSet>;
-
-public:
-  static size_t size(const DylibManager::LookupRequest &LR) {
-    return MemberSerialization::size(ExecutorAddr(LR.Handle), LR.Symbols);
-  }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const DylibManager::LookupRequest &LR) {
-    return MemberSerialization::serialize(OB, ExecutorAddr(LR.Handle),
-                                          LR.Symbols);
-  }
-};
-
 } // end namespace shared
 
 Expected<EPCGenericDylibManager>
@@ -66,7 +48,7 @@ EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(
   if (auto Err = EPC.getBootstrapSymbols(
           {{SAs.Instance, rt::SimpleExecutorDylibManagerInstanceName},
            {SAs.Open, rt::SimpleExecutorDylibManagerOpenWrapperName},
-           {SAs.Lookup, rt::SimpleExecutorDylibManagerLookupWrapperName}}))
+           {SAs.Resolve, rt::SimpleExecutorDylibManagerResolveWrapperName}}))
     return std::move(Err);
   return EPCGenericDylibManager(EPC, std::move(SAs));
 }
@@ -84,11 +66,12 @@ Expected<tpctypes::DylibHandle> EPCGenericDylibManager::open(StringRef Path,
 void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
                                          const SymbolLookupSet &Lookup,
                                          SymbolLookupCompleteFn Complete) {
-  EPC.callSPSWrapperAsync<rt::SPSSimpleExecutorDylibManagerLookupSignature>(
-      SAs.Lookup,
+  EPC.callSPSWrapperAsync<rt::SPSSimpleExecutorDylibManagerResolveSignature>(
+      SAs.Resolve,
       [Complete = std::move(Complete)](
           Error SerializationErr,
-          Expected<std::vector<ExecutorSymbolDef>> Result) mutable {
+          Expected<std::vector<std::optional<ExecutorSymbolDef>>>
+              Result) mutable {
         if (SerializationErr) {
           cantFail(Result.takeError());
           Complete(std::move(SerializationErr));
@@ -96,17 +79,18 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
         }
         Complete(std::move(Result));
       },
-      SAs.Instance, H, Lookup);
+      H, Lookup);
 }
 
 void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
                                          const RemoteSymbolLookupSet &Lookup,
                                          SymbolLookupCompleteFn Complete) {
-  EPC.callSPSWrapperAsync<rt::SPSSimpleExecutorDylibManagerLookupSignature>(
-      SAs.Lookup,
+  EPC.callSPSWrapperAsync<rt::SPSSimpleExecutorDylibManagerResolveSignature>(
+      SAs.Resolve,
       [Complete = std::move(Complete)](
           Error SerializationErr,
-          Expected<std::vector<ExecutorSymbolDef>> Result) mutable {
+          Expected<std::vector<std::optional<ExecutorSymbolDef>>>
+              Result) mutable {
         if (SerializationErr) {
           cantFail(Result.takeError());
           Complete(std::move(SerializationErr));
@@ -114,7 +98,18 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
         }
         Complete(std::move(Result));
       },
-      SAs.Instance, H, Lookup);
+      H, Lookup);
+}
+
+Expected<tpctypes::DylibHandle>
+EPCGenericDylibManager::loadDylib(const char *DylibPath) {
+  return open(DylibPath, 0);
+}
+
+void EPCGenericDylibManager::lookupSymbolsAsync(
+    tpctypes::DylibHandle H, const SymbolLookupSet &Symbols,
+    DylibManager::SymbolLookupCompleteFn Complete) {
+  lookupAsync(H, Symbols, std::move(Complete));
 }
 
 } // end namespace orc

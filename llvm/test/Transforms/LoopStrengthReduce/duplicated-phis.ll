@@ -18,9 +18,8 @@ define i64 @test_duplicated_phis(i64 noundef %N) {
 ; CHECK:       [[FOR_BODY_PREHEADER_NEW]]:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[MUL]], -4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[UNROLL_ITER]], -4
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP5]], 1
-; CHECK-NEXT:    [[LSR_IV_NEXT:%.*]] = sub i64 -3, [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 -2, [[TMP3]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I_07:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER_NEW]] ], [ [[INC_3:%.*]], %[[FOR_BODY]] ]
@@ -28,11 +27,11 @@ define i64 @test_duplicated_phis(i64 noundef %N) {
 ; CHECK-NEXT:    [[NITER_NCMP_3_NOT:%.*]] = icmp eq i64 [[UNROLL_ITER]], [[INC_3]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_3_NOT]], label %[[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT:.*]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[LSR_IV_NEXT]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], -1
 ; CHECK-NEXT:    br label %[[FOR_END_LOOPEXIT_UNR_LCSSA]]
 ; CHECK:       [[FOR_END_LOOPEXIT_UNR_LCSSA]]:
-; CHECK-NEXT:    [[RES_1_LCSSA_PH:%.*]] = phi i64 [ undef, %[[FOR_BODY_PREHEADER]] ], [ [[TMP1]], %[[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[RES_09_UNR:%.*]] = phi i64 [ -1, %[[FOR_BODY_PREHEADER]] ], [ [[LSR_IV_NEXT]], %[[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[RES_1_LCSSA_PH:%.*]] = phi i64 [ undef, %[[FOR_BODY_PREHEADER]] ], [ [[TMP5]], %[[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[RES_09_UNR:%.*]] = phi i64 [ -1, %[[FOR_BODY_PREHEADER]] ], [ [[TMP6]], %[[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[TMP2]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[LCMP_MOD_NOT]], i64 [[RES_1_LCSSA_PH]], i64 [[RES_09_UNR]]
@@ -84,3 +83,41 @@ for.end:
   %res.0.lcssa = phi i64 [ 0, %entry ], [ %spec.select, %for.end.loopexit.unr-lcssa ]
   ret i64 %res.0.lcssa
 }
+
+define i64 @duplicated_phis_compare_uses_mul_udiv(i64 %x) {
+; CHECK-LABEL: define i64 @duplicated_phis_compare_uses_mul_udiv(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[MUL_2:%.*]] = shl i64 [[X]], 1
+; CHECK-NEXT:    [[DIV_16:%.*]] = lshr i64 [[MUL_2]], 4
+; CHECK-NEXT:    [[MASKED:%.*]] = and i64 [[DIV_16]], 1152921504606846974
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV_1:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_1_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    [[IV_1_NEXT]] = add i64 [[IV_1]], 2
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[MASKED]], [[IV_1_NEXT]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i64 [[IV_1_NEXT]]
+;
+entry:
+  %mul.2 = shl i64 %x, 1
+  %div.16 = lshr exact i64 %mul.2, 4
+  %masked = and i64 %div.16, 1152921504606846974
+  br label %loop
+
+loop:
+  %iv.1 = phi i64 [ 0, %entry ], [ %iv.1.next, %loop ]
+  %iv.2 = phi i64 [ 0, %entry ], [ %iv.2.next, %loop ]
+  call void @clobber()
+  %iv.1.next = add i64 %iv.1, 2
+  %iv.2.next = add i64 %iv.2, 2
+  %ec = icmp eq i64 %iv.2.next, %masked
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i64 %iv.1.next
+}
+
+declare void @clobber()

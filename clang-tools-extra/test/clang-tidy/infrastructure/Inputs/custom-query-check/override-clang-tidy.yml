@@ -1,0 +1,11 @@
+CustomChecks:
+  - Name: avoid-long-type
+    Query: |
+      match varDecl(
+          hasType(asString("long")),
+          hasTypeLoc(typeLoc().bind("long"))
+      )
+    Diagnostic:
+      - BindName: long
+        Message: use 'int' instead of 'long' override
+        Level: Warning

@@ -461,12 +461,12 @@ int main(int argc, char **argv) {
   {
     foo();
   }
-#endif
 #pragma omp parallel reduction(* : fl) // expected-note {{defined as reduction}}
 #pragma omp sections reduction(+ : fl) // expected-error {{reduction variable must be shared}}
   {
     foo();
   }
+#endif
   static int m;
 #pragma omp sections reduction(+ : m) // OK
   {

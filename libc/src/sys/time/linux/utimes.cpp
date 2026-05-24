@@ -9,12 +9,12 @@
 #include "src/sys/time/utimes.h"
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/types/struct_timespec.h"
 #include "hdr/types/struct_timeval.h"
 
+#include "src/__support/OSUtil/linux/syscall_wrappers/utimensat.h"
 #include "src/__support/OSUtil/syscall.h"
-#include "src/__support/common.h"
-
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 
 #include <sys/syscall.h>
 
@@ -22,12 +22,17 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, utimes,
                    (const char *path, const struct timeval times[2])) {
-  int ret;
-
 #ifdef SYS_utimes
   // No need to define a timespec struct, use the syscall directly.
-  ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_utimes, path, times);
-#elif defined(SYS_utimensat)
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_utimes, path, times);
+
+  if (ret < 0) {
+    libc_errno = -ret;
+    return -1;
+  }
+  return 0;
+#elif defined(SYS_utimensat) || defined(SYS_utimensat_time64)
+
   // the utimensat syscall requires a timespec struct, not timeval.
   struct timespec ts[2];
   struct timespec *ts_ptr = nullptr; // default value if times is nullptr
@@ -48,8 +53,10 @@ LLVM_LIBC_FUNCTION(int, utimes,
     ts[1].tv_sec = times[1].tv_sec;
 
     // convert u-seconds to nanoseconds
-    ts[0].tv_nsec = times[0].tv_usec * 1000;
-    ts[1].tv_nsec = times[1].tv_usec * 1000;
+    ts[0].tv_nsec =
+        static_cast<decltype(ts[0].tv_nsec)>(times[0].tv_usec * 1000);
+    ts[1].tv_nsec =
+        static_cast<decltype(ts[1].tv_nsec)>(times[1].tv_usec * 1000);
 
     ts_ptr = ts;
   }
@@ -58,19 +65,17 @@ LLVM_LIBC_FUNCTION(int, utimes,
   // as setting times to the current time.
 
   // utimensat syscall.
-  // flags=0 means don't follow symlinks (like utimes)
-  ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_utimensat, AT_FDCWD, path, ts_ptr,
-                                          0);
-
-#else
-#error "utimensat and utimes syscalls not available."
-#endif // SYS_utimensat
-
-  if (ret < 0) {
-    libc_errno = -ret;
+  // flags=0 means follow symlinks (same as utimes)
+  auto result = linux_syscalls::utimensat(AT_FDCWD, path, ts_ptr, 0);
+  if (!result.has_value()) {
+    libc_errno = result.error();
     return -1;
   }
 
   return 0;
+
+#else
+#error "utimes, utimensat, utimensat_time64,  syscalls not available."
+#endif // SYS_utimensat
 }
 } // namespace LIBC_NAMESPACE_DECL

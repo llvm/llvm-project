@@ -12,6 +12,7 @@ unittest("FrontendTests") {
     "//clang/lib/Sema",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
+    "//llvm/lib/Target:AllTargetsDescs",
     "//llvm/lib/TargetParser",
   ]
   sources = [
@@ -26,6 +27,7 @@ unittest("FrontendTests") {
     "PCHPreambleTest.cpp",
     "ParsedSourceLocationTest.cpp",
     "ReparseWorkingDirTest.cpp",
+    "SearchPathTest.cpp",
     "TextDiagnosticTest.cpp",
     "UtilsTest.cpp",
   ]

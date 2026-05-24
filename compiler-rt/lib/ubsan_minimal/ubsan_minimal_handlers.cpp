@@ -1,17 +1,43 @@
 #include "sanitizer_common/sanitizer_atomic.h"
 
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
-#ifdef KERNEL_USE
+#if defined(KERNEL_USE)
 extern "C" void ubsan_message(const char *msg);
 static void message(const char *msg) { ubsan_message(msg); }
-#else
-static void message(const char *msg) {
-  (void)write(2, msg, strlen(msg));
+#elif SANITIZER_AMDGPU || SANITIZER_NVPTX
+#include <stdio.h>
+template <typename... Args>
+static void message(const char *msg, Args &&...args) {
+  fprintf(stderr, msg, args...);
 }
+#elif SANITIZER_SPIRV
+extern "C" int printf(const char *fmt, ...);
+template <typename... Args>
+static void message(const char *msg, Args &&...args) {
+  printf(msg, args...);
+}
+#else
+#include <unistd.h>
+static void message(const char *msg) { (void)write(2, msg, strlen(msg)); }
+#endif
+
+// If for some reason we cannot build the runtime with preserve_all, don't
+// emit any symbol. Programs that need them will fail to link, but that is
+// better than randomly corrupted registers.
+// Some architectures don't support preserve_all (but clang still has the)
+// attribute. For now, only support x86-64 and aarch64.
+#if defined(__clang__) && defined(__has_cpp_attribute) &&                      \
+    (defined(__x86_64__) || defined(__aarch64__))
+#if __has_cpp_attribute(clang::preserve_all)
+#define PRESERVE_HANDLERS true
+#else
+#define PRESERVE_HANDLERS false
+#endif
+#else
+#define PRESERVE_HANDLERS false
 #endif
 
 static const int kMaxCallerPcs = 20;
@@ -48,8 +74,18 @@ static void format_msg(const char *kind, uintptr_t caller, char *buf,
   *buf = '\0';
 }
 
-SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *kind,
-                             uintptr_t caller) {
+static void format(const char *kind, uintptr_t caller) {
+#if SANITIZER_AMDGPU || SANITIZER_NVPTX || SANITIZER_SPIRV
+  (void)format_msg;
+  message("ubsan: %s by %p\n", kind, reinterpret_cast<void *>(caller));
+#else
+  char msg_buf[128];
+  format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf));
+  message(msg_buf);
+#endif
+}
+
+[[gnu::cold]] static void report_error(const char *kind, uintptr_t caller) {
   if (caller == 0)
     return;
   while (true) {
@@ -62,16 +98,18 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *kind,
       uintptr_t p;
       for (unsigned i = 0; i < sz; ++i) {
         p = __sanitizer::atomic_load_relaxed(&caller_pcs[i]);
-        if (p == 0) break;  // Concurrent update.
+        if (p == 0)
+          break; // Concurrent update.
         if (p == caller)
           return;
       }
-      if (p == 0) continue;  // FIXME: yield?
+      if (p == 0)
+        continue; // FIXME: yield?
     }
 
     if (!__sanitizer::atomic_compare_exchange_strong(
             &caller_pcs_sz, &sz, sz + 1, __sanitizer::memory_order_seq_cst))
-      continue;  // Concurrent update! Try again from the start.
+      continue; // Concurrent update! Try again from the start.
 
     if (sz == kMaxCallerPcs) {
       message("ubsan: too many errors\n");
@@ -79,10 +117,31 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *kind,
     }
     __sanitizer::atomic_store_relaxed(&caller_pcs[sz], caller);
 
-    char msg_buf[128];
-    format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf));
-    message(msg_buf);
+    format(kind, caller);
   }
+}
+
+SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *kind,
+                             uintptr_t caller) {
+  report_error(kind, caller);
+}
+
+#if PRESERVE_HANDLERS
+SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error_preserve,
+                             const char *kind, uintptr_t caller)
+[[clang::preserve_all]] {
+  // Additional indirection so the user can override this with their own
+  // preserve_all function. This would allow, e.g., a function that reports the
+  // first error only, so for all subsequent calls we can skip the register save
+  // / restore.
+  __ubsan_report_error(kind, caller);
+}
+#endif
+
+SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error_fatal, const char *kind,
+                             uintptr_t caller) {
+  // Use another handlers, in case it's already overriden.
+  __ubsan_report_error(kind, caller);
 }
 
 #if defined(__ANDROID__)
@@ -93,6 +152,10 @@ static void abort_with_message(const char *kind, uintptr_t caller) {
   if (&android_set_abort_message)
     android_set_abort_message(msg_buf);
   abort();
+}
+#elif SANITIZER_AMDGPU || SANITIZER_NVPTX || SANITIZER_SPIRV
+static void abort_with_message(const char *kind, uintptr_t caller) {
+  __builtin_verbose_trap("ubsan", "unrecoverable error");
 }
 #else
 static void abort_with_message(const char *kind, uintptr_t caller) { abort(); }
@@ -113,15 +176,26 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 
 #define INTERFACE extern "C" __attribute__((visibility("default")))
 
+#if PRESERVE_HANDLERS
+#define HANDLER_PRESERVE(name, kind)                                           \
+  INTERFACE void __ubsan_handle_##name##_minimal_preserve()                    \
+      [[clang::preserve_all]] {                                                \
+    __ubsan_report_error_preserve(kind, GET_CALLER_PC());                      \
+  }
+#else
+#define HANDLER_PRESERVE(name, kind)
+#endif
+
 #define HANDLER_RECOVER(name, kind)                                            \
   INTERFACE void __ubsan_handle_##name##_minimal() {                           \
     __ubsan_report_error(kind, GET_CALLER_PC());                               \
-  }
+  }                                                                            \
+  HANDLER_PRESERVE(name, kind)
 
 #define HANDLER_NORECOVER(name, kind)                                          \
   INTERFACE void __ubsan_handle_##name##_minimal_abort() {                     \
     uintptr_t caller = GET_CALLER_PC();                                        \
-    __ubsan_report_error(kind, caller);                                        \
+    __ubsan_report_error_fatal(kind, caller);                                  \
     abort_with_message(kind, caller);                                          \
   }
 

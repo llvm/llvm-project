@@ -18,17 +18,17 @@
 ; CHECK:      Inorder Dominator Tree: DFSNumbers invalid: 0 slow queries.
 ; CHECK-NEXT:   [1] %entry {4294967295,4294967295} [0]
 ; CHECK-NEXT:     [2] %for.cond1 {4294967295,4294967295} [1]
-; CHECK-NEXT:       [3] %for.inc19 {4294967295,4294967295} [2]
 ; CHECK-NEXT:       [3] %if.then {4294967295,4294967295} [2]
 ; CHECK-NEXT:         [4] %for.cond5.preheader {4294967295,4294967295} [3]
+; CHECK-NEXT:           [5] %for.body7 {4294967295,4294967295} [4]
+; CHECK-NEXT:             [6] %for.inc {4294967295,4294967295} [5]
 ; CHECK-NEXT:           [5] %cleanup {4294967295,4294967295} [4]
 ; CHECK-NEXT:             [6] %cleanup16 {4294967295,4294967295} [5]
 ; CHECK-NEXT:               [7] %unreachable {4294967295,4294967295} [6]
 ; CHECK-NEXT:               [7] %for.end21 {4294967295,4294967295} [6]
-; CHECK-NEXT:           [5] %for.body7 {4294967295,4294967295} [4]
-; CHECK-NEXT:             [6] %for.inc {4294967295,4294967295} [5]
 ; CHECK-NEXT:           [5] %return {4294967295,4294967295} [4]
 ; CHECK-NEXT:       [3] %cleanup16.thread {4294967295,4294967295} [2]
+; CHECK-NEXT:       [3] %for.inc19 {4294967295,4294967295} [2]
 ; CHECK-NEXT:     [2] %infinite.loop {4294967295,4294967295} [1]
 ; CHECK-NEXT: Roots: %entry
 

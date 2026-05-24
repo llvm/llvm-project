@@ -38,7 +38,7 @@ define signext i32 @foo() "function-instrument"="xray-always" {
 ; CHECK: 	.space	13
 ; CHECK: .Lxray_sleds_end0:
 ; CHECK: 	.section	xray_fn_idx,"ao",@progbits,foo
-; CHECK: 	.p2align	4
+; CHECK: 	.p2align	3, 0
 ; CHECK: .Lxray_fn_idx0:
 ; CHECK: 	.quad	.Lxray_sleds_start0-.Lxray_fn_idx0
 ; CHECK: 	.quad	2

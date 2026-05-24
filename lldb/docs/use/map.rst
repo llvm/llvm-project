@@ -800,16 +800,24 @@ Print the dynamic type of the result of an expression
   (gdb) p someCPPObjectPtrOrReference
   (Only works for C++ objects)
 
-.. code-block:: shell
-
-  (lldb) expr -d 1 -- [SomeClass returnAnObject]
-  (lldb) expr -d 1 -- someCPPObjectPtrOrReference
-
-or set dynamic type printing to be the default:
+LLDB does this automatically if determining the dynamic type does not require
+running the target (in C++, running the target is never needed). This default is
+controlled by the ``target.prefer-dynamic-value`` setting. If that is disabled, it
+can be re-enabled on a per-command basis:
 
 .. code-block:: shell
 
-  (lldb) settings set target.prefer-dynamic run-target
+  (lldb) settings set target.prefer-dynamic-value no-dynamic-values
+  (lldb) frame variable -d no-run-target someCPPObjectPtrOrReference
+  (lldb) expr -d no-run-target -- someCPPObjectPtr
+
+Note that printing of the dynamic type of references is not possible with the
+``expr`` command. The workaround is to take the address of the reference and
+instruct lldb to print the children of the resulting pointer.
+
+.. code-block:: shell
+
+  (lldb) expr -P1 -d no-run-target -- &someCPPObjectReference
 
 Call a function so you can stop at a breakpoint in it
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1118,6 +1126,20 @@ Save binary memory data starting at ``0x1000`` and ending at ``0x2000`` to a fil
   (lldb) memory read --outfile /tmp/mem.bin --binary 0x1000 0x2000
   (lldb) me r -o /tmp/mem.bin -b 0x1000 0x2000
 
+
+Print information about memory regions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: shell
+
+  (gdb) info proc mappings
+
+.. code-block:: shell
+
+  (lldb) memory region --all
+  (lldb) me reg --all
+
+
 Get information about a specific heap allocation (macOS only)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1342,6 +1364,17 @@ Dump all symbols in ``a.out`` and ``liba.so``
 
   (lldb) image dump symtab a.out liba.so
 
+Save current process as a core file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: shell
+
+  (gdb) gcore filename
+
+.. code-block:: shell
+
+  (lldb) process save-core filename
+
 Miscellaneous
 -------------
 
@@ -1365,7 +1398,7 @@ Echo text to the screen
 
 .. code-block:: shell
 
-  (lldb) script print "Here is some text"
+  (lldb) script print("Here is some text")
 
 Remap source file pathnames for the debug session
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1383,8 +1416,11 @@ file path instead of the build system's file path.
 
   (lldb) settings set target.source-map /buildbot/path /my/path
 
-Supply a catchall directory to search for source files in.
+Supply a catchall directory to search for source files in
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: shell
 
   (gdb) directory /my/path
+
+There is no equivalent LLDB command, use ``target.source-map`` instead.

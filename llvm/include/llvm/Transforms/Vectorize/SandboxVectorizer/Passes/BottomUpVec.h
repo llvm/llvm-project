@@ -34,7 +34,6 @@ namespace llvm::sandboxir {
 /// transaction, depending on the cost.
 class BottomUpVec final : public RegionPass {
   bool Change = false;
-  std::unique_ptr<LegalityAnalysis> Legality;
   /// The original instructions that are potentially dead after vectorization.
   DenseSet<Instruction *> DeadInstrCandidates;
   /// Maps scalars to vectors.
@@ -88,12 +87,15 @@ class BottomUpVec final : public RegionPass {
   /// Recursively try to vectorize \p Bndl and its operands. This populates the
   /// `Actions` vector.
   Action *vectorizeRec(ArrayRef<Value *> Bndl, ArrayRef<Value *> UserBndl,
-                       unsigned Depth);
+                       unsigned Depth, LegalityAnalysis &Legality);
+  /// If the values in \p Bndl have external users, then emit unpacks and
+  /// connect them to the users. \p Vec is the vectorized form of \p Bndl.
+  void emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl, Value *Vec);
   /// Generate vector instructions based on `Actions` and return the last vector
   /// created.
   Value *emitVectors();
   /// Entry point for vectorization starting from \p Seeds.
-  bool tryVectorize(ArrayRef<Value *> Seeds);
+  bool tryVectorize(ArrayRef<Value *> Seeds, LegalityAnalysis &Legality);
 
 public:
   BottomUpVec() : RegionPass("bottom-up-vec") {}

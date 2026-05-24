@@ -3,6 +3,7 @@
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.
 // RUN: mlir-opt --convert-to-llvm="filter-dialects=ub" --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --convert-to-llvm="filter-dialects=ub allow-pattern-rollback=0" --split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: @check_poison
 func.func @check_poison() {
@@ -15,4 +16,10 @@ func.func @check_poison() {
 // CHECK: {{.*}} = llvm.mlir.poison : !llvm.ptr
   %3 = ub.poison : !llvm.ptr
   return
+}
+
+// CHECK-LABEL: @check_unrechable
+func.func @check_unrechable() {
+// CHECK: llvm.unreachable
+  ub.unreachable
 }

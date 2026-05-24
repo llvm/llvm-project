@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class TestOSPluginStepping(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -123,5 +124,5 @@ class TestOSPluginStepping(TestBase):
             os_thread = self.get_os_thread()
             self.assertTrue(os_thread.IsValid(), "The OS thread is back after continue")
             self.assertIn(
-                "step out", os_thread.GetStopDescription(100), "Completed step out plan"
+                "step out", os_thread.stop_description, "Completed step out plan"
             )

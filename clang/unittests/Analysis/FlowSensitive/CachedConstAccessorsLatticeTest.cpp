@@ -42,7 +42,7 @@ using ast_matchers::selectFirst;
 
 using dataflow::DataflowAnalysisContext;
 using dataflow::Environment;
-using dataflow::LatticeJoinEffect;
+using dataflow::LatticeEffect;
 using dataflow::RecordStorageLocation;
 using dataflow::Value;
 using dataflow::WatchedLiteralsSolver;
@@ -80,7 +80,7 @@ struct CommonTestInputs {
   )cpp") {
     auto *SDecl = cast<CXXRecordDecl>(
         lookup("S", *AST.context().getTranslationUnitDecl()));
-    SType = AST.context().getRecordType(SDecl);
+    SType = AST.context().getCanonicalTagType(SDecl);
     CallVal = selectFirst<CallExpr>(
         "call",
         match(cxxMemberCallExpr(callee(functionDecl(hasName("valProperty"))))
@@ -163,7 +163,7 @@ TEST_F(CachedConstAccessorsLatticeTest,
   )cpp");
   auto *SDecl =
       cast<CXXRecordDecl>(lookup("S", *AST.context().getTranslationUnitDecl()));
-  QualType SType = AST.context().getRecordType(SDecl);
+  CanQualType SType = AST.context().getCanonicalTagType(SDecl);
   const CallExpr *CE = selectFirst<CallExpr>(
       "call", match(cxxMemberCallExpr(
                         callee(functionDecl(hasName("structValProperty"))))
@@ -237,7 +237,7 @@ TEST_F(CachedConstAccessorsLatticeTest, DifferentValsFromDifferentLocs) {
   )cpp");
   auto *SDecl =
       cast<CXXRecordDecl>(lookup("S", *AST.context().getTranslationUnitDecl()));
-  QualType SType = AST.context().getRecordType(SDecl);
+  CanQualType SType = AST.context().getCanonicalTagType(SDecl);
   SmallVector<BoundNodes, 1> valPropertyCalls =
       match(cxxMemberCallExpr(callee(functionDecl(hasName("valProperty"))))
                 .bind("call"),
@@ -270,11 +270,11 @@ TEST_F(CachedConstAccessorsLatticeTest, JoinSameNoop) {
 
   LatticeT EmptyLattice;
   LatticeT EmptyLattice2;
-  EXPECT_EQ(EmptyLattice.join(EmptyLattice2), LatticeJoinEffect::Unchanged);
+  EXPECT_EQ(EmptyLattice.join(EmptyLattice2), LatticeEffect::Unchanged);
 
   LatticeT Lattice1;
   Lattice1.getOrCreateConstMethodReturnValue(Loc, CE, Env);
-  EXPECT_EQ(Lattice1.join(Lattice1), LatticeJoinEffect::Unchanged);
+  EXPECT_EQ(Lattice1.join(Lattice1), LatticeEffect::Unchanged);
 }
 
 TEST_F(CachedConstAccessorsLatticeTest, ProducesNewValueAfterJoinDistinct) {
@@ -289,7 +289,7 @@ TEST_F(CachedConstAccessorsLatticeTest, ProducesNewValueAfterJoinDistinct) {
 
   LatticeT EmptyLattice;
 
-  EXPECT_EQ(Lattice1.join(EmptyLattice), LatticeJoinEffect::Changed);
+  EXPECT_EQ(Lattice1.join(EmptyLattice), LatticeEffect::Changed);
   Value *ValAfterJoin =
       Lattice1.getOrCreateConstMethodReturnValue(Loc, CE, Env);
 
@@ -299,7 +299,7 @@ TEST_F(CachedConstAccessorsLatticeTest, ProducesNewValueAfterJoinDistinct) {
   LatticeT Lattice3;
   Value *Val3 = Lattice3.getOrCreateConstMethodReturnValue(Loc, CE, Env);
 
-  EXPECT_EQ(Lattice1.join(Lattice3), LatticeJoinEffect::Changed);
+  EXPECT_EQ(Lattice1.join(Lattice3), LatticeEffect::Changed);
   Value *ValAfterJoin2 =
       Lattice1.getOrCreateConstMethodReturnValue(Loc, CE, Env);
 

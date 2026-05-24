@@ -1,3 +1,4 @@
+# REQUIRES: webassembly-registered-target
 # RUN: llvm-mc %s -filetype obj -triple wasm32-unknown-unknown -o %t.o \
 # RUN:         -split-dwarf-file=%t.dwo -dwarf-version=5
 # RUN: llvm-dwp %t.dwo -o %t.dwp

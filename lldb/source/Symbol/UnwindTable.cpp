@@ -122,6 +122,13 @@ AddressRanges UnwindTable::GetAddressRanges(const Address &addr,
   return {};
 }
 
+static Address GetFunctionOrSymbolAddress(const Address &addr,
+                                          const SymbolContext &sc) {
+  if (Address result = sc.GetFunctionOrSymbolAddress(); result.IsValid())
+    return result;
+  return addr;
+}
+
 FuncUnwindersSP
 UnwindTable::GetFuncUnwindersContainingAddress(const Address &addr,
                                                const SymbolContext &sc) {
@@ -131,25 +138,20 @@ UnwindTable::GetFuncUnwindersContainingAddress(const Address &addr,
 
   // There is an UnwindTable per object file, so we can safely use file handles
   addr_t file_addr = addr.GetFileAddress();
-  iterator end = m_unwinds.end();
-  iterator insert_pos = end;
-  if (!m_unwinds.empty()) {
-    insert_pos = m_unwinds.lower_bound(file_addr);
-    iterator pos = insert_pos;
-    if ((pos == m_unwinds.end()) ||
-        (pos != m_unwinds.begin() &&
-         pos->second->GetFunctionStartAddress() != addr))
-      --pos;
-
+  iterator insert_pos = m_unwinds.upper_bound(file_addr);
+  if (insert_pos != m_unwinds.begin()) {
+    auto pos = std::prev(insert_pos);
     if (pos->second->ContainsAddress(addr))
       return pos->second;
   }
 
+  Address start_addr = GetFunctionOrSymbolAddress(addr, sc);
   AddressRanges ranges = GetAddressRanges(addr, sc);
   if (ranges.empty())
     return nullptr;
 
-  auto func_unwinder_sp = std::make_shared<FuncUnwinders>(*this, addr, ranges);
+  auto func_unwinder_sp =
+      std::make_shared<FuncUnwinders>(*this, start_addr, ranges);
   for (const AddressRange &range : ranges)
     m_unwinds.emplace_hint(insert_pos, range.GetBaseAddress().GetFileAddress(),
                            func_unwinder_sp);
@@ -164,11 +166,12 @@ FuncUnwindersSP UnwindTable::GetUncachedFuncUnwindersContainingAddress(
     const Address &addr, const SymbolContext &sc) {
   Initialize();
 
+  Address start_addr = GetFunctionOrSymbolAddress(addr, sc);
   AddressRanges ranges = GetAddressRanges(addr, sc);
   if (ranges.empty())
     return nullptr;
 
-  return std::make_shared<FuncUnwinders>(*this, addr, std::move(ranges));
+  return std::make_shared<FuncUnwinders>(*this, start_addr, std::move(ranges));
 }
 
 void UnwindTable::Dump(Stream &s) {

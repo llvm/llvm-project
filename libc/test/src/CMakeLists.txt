@@ -34,8 +34,8 @@ function(add_fp_unittest name)
     endif()
     set(test_type UNIT_TEST_ONLY)
     list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper -lmpfr -lgmp)
-    if(NOT(LIBC_TARGET_OS_IS_DARWIN))
-      # macOS does not have libatomic.
+    if(NOT(LIBC_TARGET_OS_IS_DARWIN) AND NOT(LIBC_TARGET_OS_IS_FREEBSD))
+      # macOS/FreeBSD does not have libatomic.
       list(APPEND MATH_UNITTEST_LINK_LIBRARIES -latomic)
     endif()
   endif()
@@ -51,24 +51,31 @@ function(add_fp_unittest name)
     ${test_type}
     LINK_LIBRARIES "${MATH_UNITTEST_LINK_LIBRARIES}"
     "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
-    DEPENDS "${deps}"
+    DEPENDS
+      libc.hdr.stdint_proxy
+      "${deps}"
   )
 endfunction(add_fp_unittest)
 
 add_subdirectory(__support)
+add_subdirectory(arpa)
 add_subdirectory(complex)
 add_subdirectory(ctype)
 add_subdirectory(errno)
 add_subdirectory(fenv)
+add_subdirectory(link)
 add_subdirectory(math)
 add_subdirectory(search)
+add_subdirectory(setjmp)
 add_subdirectory(stdbit)
 add_subdirectory(stdfix)
 add_subdirectory(stdio)
 add_subdirectory(stdlib)
 add_subdirectory(string)
 add_subdirectory(strings)
+add_subdirectory(ucontext)
 add_subdirectory(wchar)
+add_subdirectory(wctype)
 add_subdirectory(time)
 add_subdirectory(unistd)
 
@@ -83,19 +90,24 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(termios)
 endif()
 
+if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
+  add_subdirectory(mathvec)
+endif()
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
 
-add_subdirectory(arpa)
 add_subdirectory(assert)
 add_subdirectory(compiler)
 add_subdirectory(dirent)
 add_subdirectory(locale)
-add_subdirectory(setjmp)
+add_subdirectory(nl_types)
 add_subdirectory(signal)
+add_subdirectory(regex)
 add_subdirectory(spawn)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(pthread)
+  add_subdirectory(semaphore)
 endif()

@@ -1141,10 +1141,10 @@ define i64 @test59(ptr %foo, i64 %i) {
 
 define i64 @test60(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60(
-; CHECK-NEXT:    [[GEP1_IDX:%.*]] = mul nsw i64 [[J:%.*]], 100
-; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nsw i64 [[GEP1_IDX]], [[I:%.*]]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 [[GEP1_OFFS]]
-; CHECK-NEXT:    [[GEPDIFF:%.*]] = add nsw i64 [[GEP1_OFFS]], -4200
+; CHECK-NEXT:    [[GEP1_SPLIT_IDX:%.*]] = mul nsw i64 [[J:%.*]], 100
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[GEP1_SPLIT_IDX]], [[I:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = add nsw i64 [[TMP1]], -4200
 ; CHECK-NEXT:    store ptr [[GEP1]], ptr @dummy_global1, align 8
 ; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
@@ -1160,10 +1160,10 @@ define i64 @test60(ptr %foo, i64 %i, i64 %j) {
 
 define i64 @test60_nuw(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60_nuw(
-; CHECK-NEXT:    [[GEP1_IDX:%.*]] = mul nuw i64 [[J:%.*]], 100
-; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nuw i64 [[GEP1_IDX]], [[I:%.*]]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i8, ptr [[FOO:%.*]], i64 [[GEP1_OFFS]]
-; CHECK-NEXT:    [[GEPDIFF:%.*]] = add i64 [[GEP1_OFFS]], -4200
+; CHECK-NEXT:    [[GEP1_SPLIT_IDX:%.*]] = mul nuw i64 [[J:%.*]], 100
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i64 [[GEP1_SPLIT_IDX]], [[I:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i8, ptr [[FOO:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = add i64 [[TMP1]], -4200
 ; CHECK-NEXT:    store ptr [[GEP1]], ptr @dummy_global1, align 8
 ; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
@@ -1178,10 +1178,10 @@ define i64 @test60_nuw(ptr %foo, i64 %i, i64 %j) {
 
 define i64 @test61(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test61(
-; CHECK-NEXT:    [[GEP2_IDX:%.*]] = mul nsw i64 [[J:%.*]], 100
-; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add nsw i64 [[GEP2_IDX]], [[I:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 [[GEP2_OFFS]]
-; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub nsw i64 4200, [[GEP2_OFFS]]
+; CHECK-NEXT:    [[GEP2_SPLIT_IDX:%.*]] = mul nsw i64 [[J:%.*]], 100
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[GEP2_SPLIT_IDX]], [[I:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub nsw i64 4200, [[TMP1]]
 ; CHECK-NEXT:    store ptr [[GEP2]], ptr @dummy_global2, align 8
 ; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
@@ -2631,6 +2631,39 @@ define i8 @sub_of_adds_2xz_multiuse(i8 %x, i8 %y, i8 %z) {
   ret i8 %r
 }
 
+define i8 @sub_of_adds_2xz_nsw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sub_of_adds_2xz_nsw(
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xz = add nsw i8 %x, %z
+  %yz = add nsw i8 %z, %y
+  %r = sub nsw i8 %xz, %yz
+  ret i8 %r
+}
+
+define i8 @sub_of_adds_2xz_nuw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sub_of_adds_2xz_nuw(
+; CHECK-NEXT:    [[R:%.*]] = sub nuw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xz = add nuw i8 %x, %z
+  %yz = add nuw i8 %z, %y
+  %r = sub nuw i8 %xz, %yz
+  ret i8 %r
+}
+
+define i8 @sub_of_or_disjoint_2xz(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sub_of_or_disjoint_2xz(
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xz = or disjoint i8 %x, %z
+  %yz = or disjoint i8 %z, %y
+  %r = sub i8 %xz, %yz
+  ret i8 %r
+}
+
 define i8 @sub_of_adds_2xc_multiuse2_fail(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_of_adds_2xc_multiuse2_fail(
 ; CHECK-NEXT:    [[XC:%.*]] = add i8 [[X:%.*]], 10
@@ -2862,4 +2895,56 @@ entry:
   %sub = sub i32 63, %x
   %and = and i32 %sub, 127
   ret i32 %and
+}
+
+define i32 @sub_const_or_disjoint(i32 %x) {
+; CHECK-LABEL: @sub_const_or_disjoint(
+; CHECK-NEXT:    [[R:%.*]] = sub i32 90, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or disjoint i32 %x, 10
+  %r = sub i32 100, %a
+  ret i32 %r
+}
+
+define i32 @sub_nsw_const_or_disjoint(i32 %x) {
+; CHECK-LABEL: @sub_nsw_const_or_disjoint(
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i32 90, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or disjoint i32 %x, 10
+  %r = sub nsw i32 100, %a
+  ret i32 %r
+}
+
+define i32 @sub_nuw_const_or_disjoint(i32 %x) {
+; CHECK-LABEL: @sub_nuw_const_or_disjoint(
+; CHECK-NEXT:    [[R:%.*]] = sub nuw i32 100, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or disjoint i32 %x, 0
+  %r = sub nuw i32 100, %a
+  ret i32 %r
+}
+
+define <2 x i32> @sub_const_or_disjoint_vec(<2 x i32> %x) {
+; CHECK-LABEL: @sub_const_or_disjoint_vec(
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i32> splat (i32 90), [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = or disjoint <2 x i32> %x, splat (i32 10)
+  %r = sub <2 x i32> splat (i32 100), %a
+  ret <2 x i32> %r
+}
+
+; negative test
+define i32 @sub_const_or_no_disjoint(i32 %x) {
+; CHECK-LABEL: @sub_const_or_no_disjoint(
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[X:%.*]], 10
+; CHECK-NEXT:    [[R:%.*]] = sub i32 100, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or i32 %x, 10
+  %r = sub i32 100, %a
+  ret i32 %r
 }

@@ -27,7 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <semiregular _Sent>
-class _LIBCPP_TEMPLATE_VIS move_sentinel {
+class move_sentinel {
 public:
   _LIBCPP_HIDE_FROM_ABI move_sentinel() = default;
 
@@ -44,7 +44,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Sent base() const { return __last_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Sent base() const { return __last_; }
 
 private:
   _Sent __last_ = _Sent();

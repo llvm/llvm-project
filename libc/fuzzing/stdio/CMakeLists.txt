@@ -4,6 +4,7 @@ add_libc_fuzzer(
     printf_parser_fuzz.cpp
   DEPENDS
     libc.src.stdio.printf_core.parser
+    libc.src.errno.errno # needed for the strerror conversion
 )
 
 add_libc_fuzzer(

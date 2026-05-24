@@ -880,7 +880,7 @@ define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub(ptr addrspace(1) %out, floa
 ; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub(
 ; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; IEEE-GOODFREXP-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], 0x3810000000000000
+; IEEE-GOODFREXP-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], f0x00800000
 ; IEEE-GOODFREXP-NEXT:    call void @llvm.assume(i1 [[IS_NOT_SUBNORMAL]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
@@ -894,7 +894,7 @@ define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub(ptr addrspace(1) %out, floa
 ; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub(
 ; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; IEEE-BADFREXP-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], 0x3810000000000000
+; IEEE-BADFREXP-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], f0x00800000
 ; IEEE-BADFREXP-NEXT:    call void @llvm.assume(i1 [[IS_NOT_SUBNORMAL]])
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
@@ -908,7 +908,7 @@ define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub(ptr addrspace(1) %out, floa
 ; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub(
 ; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; DAZ-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], 0x3810000000000000
+; DAZ-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], f0x00800000
 ; DAZ-NEXT:    call void @llvm.assume(i1 [[IS_NOT_SUBNORMAL]])
 ; DAZ-NEXT:    [[MD_1ULP_NO_SUB:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[X]])
 ; DAZ-NEXT:    store volatile float [[MD_1ULP_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
@@ -927,7 +927,7 @@ define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub(ptr add
 ; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub(
 ; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; IEEE-GOODFREXP-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], 0x3810000000000000
+; IEEE-GOODFREXP-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], f0x00800000
 ; IEEE-GOODFREXP-NEXT:    call void @llvm.assume(i1 [[IS_NOT_SUBNORMAL]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
@@ -936,7 +936,7 @@ define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub(ptr add
 ; IEEE-GOODFREXP-NEXT:    [[TMP5:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP2]])
 ; IEEE-GOODFREXP-NEXT:    [[MD_1ULP_NO_SUB:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP5]], i32 [[TMP4]])
 ; IEEE-GOODFREXP-NEXT:    [[FABS_RESULT:%.*]] = call float @llvm.fabs.f32(float [[MD_1ULP_NO_SUB]])
-; IEEE-GOODFREXP-NEXT:    [[RESULT_IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_RESULT]], 0x3810000000000000
+; IEEE-GOODFREXP-NEXT:    [[RESULT_IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_RESULT]], f0x00800000
 ; IEEE-GOODFREXP-NEXT:    call void @llvm.assume(i1 [[RESULT_IS_NOT_SUBNORMAL]])
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[MD_1ULP_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
@@ -944,7 +944,7 @@ define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub(ptr add
 ; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub(
 ; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; IEEE-BADFREXP-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], 0x3810000000000000
+; IEEE-BADFREXP-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], f0x00800000
 ; IEEE-BADFREXP-NEXT:    call void @llvm.assume(i1 [[IS_NOT_SUBNORMAL]])
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
@@ -953,7 +953,7 @@ define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub(ptr add
 ; IEEE-BADFREXP-NEXT:    [[TMP5:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP2]])
 ; IEEE-BADFREXP-NEXT:    [[MD_1ULP_NO_SUB:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP5]], i32 [[TMP4]])
 ; IEEE-BADFREXP-NEXT:    [[FABS_RESULT:%.*]] = call float @llvm.fabs.f32(float [[MD_1ULP_NO_SUB]])
-; IEEE-BADFREXP-NEXT:    [[RESULT_IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_RESULT]], 0x3810000000000000
+; IEEE-BADFREXP-NEXT:    [[RESULT_IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_RESULT]], f0x00800000
 ; IEEE-BADFREXP-NEXT:    call void @llvm.assume(i1 [[RESULT_IS_NOT_SUBNORMAL]])
 ; IEEE-BADFREXP-NEXT:    store volatile float [[MD_1ULP_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
@@ -961,11 +961,11 @@ define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub(ptr add
 ; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub(
 ; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; DAZ-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], 0x3810000000000000
+; DAZ-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], f0x00800000
 ; DAZ-NEXT:    call void @llvm.assume(i1 [[IS_NOT_SUBNORMAL]])
 ; DAZ-NEXT:    [[MD_1ULP_NO_SUB:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[X]])
 ; DAZ-NEXT:    [[FABS_RESULT:%.*]] = call float @llvm.fabs.f32(float [[MD_1ULP_NO_SUB]])
-; DAZ-NEXT:    [[RESULT_IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_RESULT]], 0x3810000000000000
+; DAZ-NEXT:    [[RESULT_IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_RESULT]], f0x00800000
 ; DAZ-NEXT:    call void @llvm.assume(i1 [[RESULT_IS_NOT_SUBNORMAL]])
 ; DAZ-NEXT:    store volatile float [[MD_1ULP_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    ret void
@@ -1513,8 +1513,8 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; IEEE-GOODFREXP-NEXT:    [[SQRT_X_NO_MD:%.*]] = call contract float @llvm.sqrt.f32(float [[X]])
 ; IEEE-GOODFREXP-NEXT:    [[NO_MD:%.*]] = fdiv contract float 1.000000e+00, [[SQRT_X_NO_MD]]
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = fcmp contract olt float [[X]], 0x3810000000000000
-; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = fcmp contract olt float [[X]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], float f0x4B800000, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = fmul contract float [[X]], [[TMP2]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP4:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP3]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP5:%.*]] = select contract i1 [[TMP1]], float 4.096000e+03, float 1.000000e+00
@@ -1529,8 +1529,8 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; IEEE-GOODFREXP-NEXT:    [[TMP10:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP7]])
 ; IEEE-GOODFREXP-NEXT:    [[MD_1ULP_MULTI_USE:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP10]], i32 [[TMP9]])
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[MD_1ULP_MULTI_USE]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-GOODFREXP-NEXT:    [[TMP11:%.*]] = fcmp contract olt float [[X]], 0x3810000000000000
-; IEEE-GOODFREXP-NEXT:    [[TMP12:%.*]] = select contract i1 [[TMP11]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP11:%.*]] = fcmp contract olt float [[X]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP12:%.*]] = select contract i1 [[TMP11]], float f0x4B800000, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP13:%.*]] = fmul contract float [[X]], [[TMP12]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP14:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP13]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP15:%.*]] = select contract i1 [[TMP11]], float 4.096000e+03, float 1.000000e+00
@@ -1549,27 +1549,26 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[FAST_NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    [[FAST_25ULP:%.*]] = call fast float @llvm.amdgcn.rsq.f32(float [[X]])
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[FAST_25ULP]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-GOODFREXP-NEXT:    [[TMP16:%.*]] = fcmp contract olt float [[X]], 0x3810000000000000
-; IEEE-GOODFREXP-NEXT:    [[TMP17:%.*]] = select contract i1 [[TMP16]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP16:%.*]] = fcmp contract olt float [[X]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP17:%.*]] = select contract i1 [[TMP16]], float f0x4B800000, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP18:%.*]] = fmul contract float [[X]], [[TMP17]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP19:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP18]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP20:%.*]] = select contract i1 [[TMP16]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[FDIV_OPENCL:%.*]] = fmul contract float [[TMP19]], [[TMP20]]
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[FDIV_OPENCL]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-GOODFREXP-NEXT:    [[TMP21:%.*]] = fcmp contract olt float [[X]], 0x3810000000000000
-; IEEE-GOODFREXP-NEXT:    [[TMP22:%.*]] = select contract i1 [[TMP21]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP21:%.*]] = fcmp contract olt float [[X]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP22:%.*]] = select contract i1 [[TMP21]], float f0x4B800000, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP23:%.*]] = fmul contract float [[X]], [[TMP22]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP24:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP23]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP25:%.*]] = select contract i1 [[TMP21]], float -4.096000e+03, float -1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[NEG_FDIV_OPENCL:%.*]] = fmul contract float [[TMP24]], [[TMP25]]
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[NEG_FDIV_OPENCL]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-GOODFREXP-NEXT:    [[SQRT_X_HALF_ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath [[META1]]
-; IEEE-GOODFREXP-NEXT:    [[TMP26:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[SQRT_X_HALF_ULP]])
-; IEEE-GOODFREXP-NEXT:    [[TMP27:%.*]] = extractvalue { float, i32 } [[TMP26]], 0
-; IEEE-GOODFREXP-NEXT:    [[TMP28:%.*]] = extractvalue { float, i32 } [[TMP26]], 1
-; IEEE-GOODFREXP-NEXT:    [[TMP29:%.*]] = sub i32 0, [[TMP28]]
-; IEEE-GOODFREXP-NEXT:    [[TMP30:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP27]])
-; IEEE-GOODFREXP-NEXT:    [[FDIV_SQRT_MISMATCH_MD0:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP30]], i32 [[TMP29]])
+; IEEE-GOODFREXP-NEXT:    [[TMP26:%.*]] = fcmp contract olt float [[X]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP27:%.*]] = select contract i1 [[TMP26]], float f0x4B800000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP28:%.*]] = fmul contract float [[X]], [[TMP27]]
+; IEEE-GOODFREXP-NEXT:    [[TMP29:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP28]])
+; IEEE-GOODFREXP-NEXT:    [[TMP30:%.*]] = select contract i1 [[TMP26]], float 4.096000e+03, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[FDIV_SQRT_MISMATCH_MD0:%.*]] = fmul contract float [[TMP29]], [[TMP30]]
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[FDIV_SQRT_MISMATCH_MD0]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    [[SQRT_MISMATCH_MD1:%.*]] = call afn float @llvm.sqrt.f32(float [[X]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP31:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[SQRT_MISMATCH_MD1]])
@@ -1579,7 +1578,7 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; IEEE-GOODFREXP-NEXT:    [[TMP35:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP32]])
 ; IEEE-GOODFREXP-NEXT:    [[FDIV_SQRT_MISMATCH_MD1:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP35]], i32 [[TMP34]])
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[FDIV_SQRT_MISMATCH_MD1]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-GOODFREXP-NEXT:    [[TMP36:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-GOODFREXP-NEXT:    [[TMP36:%.*]] = fcmp olt float [[X]], f0x00800000
 ; IEEE-GOODFREXP-NEXT:    [[TMP37:%.*]] = select i1 [[TMP36]], i32 32, i32 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP38:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP37]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP39:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP38]])
@@ -1594,8 +1593,8 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; IEEE-BADFREXP-NEXT:    [[SQRT_X_NO_MD:%.*]] = call contract float @llvm.sqrt.f32(float [[X]])
 ; IEEE-BADFREXP-NEXT:    [[NO_MD:%.*]] = fdiv contract float 1.000000e+00, [[SQRT_X_NO_MD]]
 ; IEEE-BADFREXP-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = fcmp contract olt float [[X]], 0x3810000000000000
-; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = fcmp contract olt float [[X]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], float f0x4B800000, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = fmul contract float [[X]], [[TMP2]]
 ; IEEE-BADFREXP-NEXT:    [[TMP4:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP3]])
 ; IEEE-BADFREXP-NEXT:    [[TMP5:%.*]] = select contract i1 [[TMP1]], float 4.096000e+03, float 1.000000e+00
@@ -1610,8 +1609,8 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; IEEE-BADFREXP-NEXT:    [[TMP10:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP7]])
 ; IEEE-BADFREXP-NEXT:    [[MD_1ULP_MULTI_USE:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP10]], i32 [[TMP9]])
 ; IEEE-BADFREXP-NEXT:    store volatile float [[MD_1ULP_MULTI_USE]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-BADFREXP-NEXT:    [[TMP11:%.*]] = fcmp contract olt float [[X]], 0x3810000000000000
-; IEEE-BADFREXP-NEXT:    [[TMP12:%.*]] = select contract i1 [[TMP11]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP11:%.*]] = fcmp contract olt float [[X]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP12:%.*]] = select contract i1 [[TMP11]], float f0x4B800000, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP13:%.*]] = fmul contract float [[X]], [[TMP12]]
 ; IEEE-BADFREXP-NEXT:    [[TMP14:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP13]])
 ; IEEE-BADFREXP-NEXT:    [[TMP15:%.*]] = select contract i1 [[TMP11]], float 4.096000e+03, float 1.000000e+00
@@ -1630,27 +1629,26 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; IEEE-BADFREXP-NEXT:    store volatile float [[FAST_NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    [[FAST_25ULP:%.*]] = call fast float @llvm.amdgcn.rsq.f32(float [[X]])
 ; IEEE-BADFREXP-NEXT:    store volatile float [[FAST_25ULP]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-BADFREXP-NEXT:    [[TMP16:%.*]] = fcmp contract olt float [[X]], 0x3810000000000000
-; IEEE-BADFREXP-NEXT:    [[TMP17:%.*]] = select contract i1 [[TMP16]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP16:%.*]] = fcmp contract olt float [[X]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP17:%.*]] = select contract i1 [[TMP16]], float f0x4B800000, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP18:%.*]] = fmul contract float [[X]], [[TMP17]]
 ; IEEE-BADFREXP-NEXT:    [[TMP19:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP18]])
 ; IEEE-BADFREXP-NEXT:    [[TMP20:%.*]] = select contract i1 [[TMP16]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[FDIV_OPENCL:%.*]] = fmul contract float [[TMP19]], [[TMP20]]
 ; IEEE-BADFREXP-NEXT:    store volatile float [[FDIV_OPENCL]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-BADFREXP-NEXT:    [[TMP21:%.*]] = fcmp contract olt float [[X]], 0x3810000000000000
-; IEEE-BADFREXP-NEXT:    [[TMP22:%.*]] = select contract i1 [[TMP21]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP21:%.*]] = fcmp contract olt float [[X]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP22:%.*]] = select contract i1 [[TMP21]], float f0x4B800000, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP23:%.*]] = fmul contract float [[X]], [[TMP22]]
 ; IEEE-BADFREXP-NEXT:    [[TMP24:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP23]])
 ; IEEE-BADFREXP-NEXT:    [[TMP25:%.*]] = select contract i1 [[TMP21]], float -4.096000e+03, float -1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[NEG_FDIV_OPENCL:%.*]] = fmul contract float [[TMP24]], [[TMP25]]
 ; IEEE-BADFREXP-NEXT:    store volatile float [[NEG_FDIV_OPENCL]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-BADFREXP-NEXT:    [[SQRT_X_HALF_ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath [[META1]]
-; IEEE-BADFREXP-NEXT:    [[TMP26:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[SQRT_X_HALF_ULP]])
-; IEEE-BADFREXP-NEXT:    [[TMP27:%.*]] = extractvalue { float, i32 } [[TMP26]], 0
-; IEEE-BADFREXP-NEXT:    [[TMP28:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[SQRT_X_HALF_ULP]])
-; IEEE-BADFREXP-NEXT:    [[TMP29:%.*]] = sub i32 0, [[TMP28]]
-; IEEE-BADFREXP-NEXT:    [[TMP30:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP27]])
-; IEEE-BADFREXP-NEXT:    [[FDIV_SQRT_MISMATCH_MD0:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP30]], i32 [[TMP29]])
+; IEEE-BADFREXP-NEXT:    [[TMP26:%.*]] = fcmp contract olt float [[X]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP27:%.*]] = select contract i1 [[TMP26]], float f0x4B800000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP28:%.*]] = fmul contract float [[X]], [[TMP27]]
+; IEEE-BADFREXP-NEXT:    [[TMP29:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP28]])
+; IEEE-BADFREXP-NEXT:    [[TMP30:%.*]] = select contract i1 [[TMP26]], float 4.096000e+03, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[FDIV_SQRT_MISMATCH_MD0:%.*]] = fmul contract float [[TMP29]], [[TMP30]]
 ; IEEE-BADFREXP-NEXT:    store volatile float [[FDIV_SQRT_MISMATCH_MD0]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    [[SQRT_MISMATCH_MD1:%.*]] = call afn float @llvm.sqrt.f32(float [[X]])
 ; IEEE-BADFREXP-NEXT:    [[TMP31:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[SQRT_MISMATCH_MD1]])
@@ -1660,7 +1658,7 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; IEEE-BADFREXP-NEXT:    [[TMP35:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP32]])
 ; IEEE-BADFREXP-NEXT:    [[FDIV_SQRT_MISMATCH_MD1:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP35]], i32 [[TMP34]])
 ; IEEE-BADFREXP-NEXT:    store volatile float [[FDIV_SQRT_MISMATCH_MD1]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-BADFREXP-NEXT:    [[TMP36:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-BADFREXP-NEXT:    [[TMP36:%.*]] = fcmp olt float [[X]], f0x00800000
 ; IEEE-BADFREXP-NEXT:    [[TMP37:%.*]] = select i1 [[TMP36]], i32 32, i32 0
 ; IEEE-BADFREXP-NEXT:    [[TMP38:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP37]])
 ; IEEE-BADFREXP-NEXT:    [[TMP39:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP38]])
@@ -1701,8 +1699,7 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; DAZ-NEXT:    [[TMP1:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[X]])
 ; DAZ-NEXT:    [[NEG_FDIV_OPENCL:%.*]] = fneg contract float [[TMP1]]
 ; DAZ-NEXT:    store volatile float [[NEG_FDIV_OPENCL]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_HALF_ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath [[META1]]
-; DAZ-NEXT:    [[FDIV_SQRT_MISMATCH_MD0:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_HALF_ULP]])
+; DAZ-NEXT:    [[FDIV_SQRT_MISMATCH_MD0:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[X]])
 ; DAZ-NEXT:    store volatile float [[FDIV_SQRT_MISMATCH_MD0]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[SQRT_MISMATCH_MD1:%.*]] = call afn float @llvm.sqrt.f32(float [[X]])
 ; DAZ-NEXT:    [[FDIV_SQRT_MISMATCH_MD1:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_MISMATCH_MD1]])
@@ -1783,43 +1780,43 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 define amdgpu_kernel void @rsq_f32_fpmath_flags(ptr addrspace(1) %out, float %x) {
 ; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_fpmath_flags(
 ; IEEE-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[TMP1:%.*]] = fcmp nnan ninf contract olt float [[X]], 0x3810000000000000
-; IEEE-NEXT:    [[TMP2:%.*]] = select nnan ninf contract i1 [[TMP1]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-NEXT:    [[TMP1:%.*]] = fcmp nnan ninf contract olt float [[X]], f0x00800000
+; IEEE-NEXT:    [[TMP2:%.*]] = select nnan ninf contract i1 [[TMP1]], float f0x4B800000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP3:%.*]] = fmul nnan ninf contract float [[X]], [[TMP2]]
 ; IEEE-NEXT:    [[TMP4:%.*]] = call nnan ninf contract float @llvm.amdgcn.rsq.f32(float [[TMP3]])
 ; IEEE-NEXT:    [[TMP5:%.*]] = select nnan ninf contract i1 [[TMP1]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-NEXT:    [[FDIV_OPENCL_NINF_NNAN:%.*]] = fmul nnan ninf contract float [[TMP4]], [[TMP5]]
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NINF_NNAN]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[TMP6:%.*]] = fcmp ninf contract olt float [[X]], 0x3810000000000000
-; IEEE-NEXT:    [[TMP7:%.*]] = select ninf contract i1 [[TMP6]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-NEXT:    [[TMP6:%.*]] = fcmp ninf contract olt float [[X]], f0x00800000
+; IEEE-NEXT:    [[TMP7:%.*]] = select ninf contract i1 [[TMP6]], float f0x4B800000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP8:%.*]] = fmul ninf contract float [[X]], [[TMP7]]
 ; IEEE-NEXT:    [[TMP9:%.*]] = call ninf contract float @llvm.amdgcn.rsq.f32(float [[TMP8]])
 ; IEEE-NEXT:    [[TMP10:%.*]] = select ninf contract i1 [[TMP6]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-NEXT:    [[FDIV_OPENCL_NINF:%.*]] = fmul ninf contract float [[TMP9]], [[TMP10]]
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NINF]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[TMP11:%.*]] = fcmp nnan contract olt float [[X]], 0x3810000000000000
-; IEEE-NEXT:    [[TMP12:%.*]] = select nnan contract i1 [[TMP11]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-NEXT:    [[TMP11:%.*]] = fcmp nnan contract olt float [[X]], f0x00800000
+; IEEE-NEXT:    [[TMP12:%.*]] = select nnan contract i1 [[TMP11]], float f0x4B800000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP13:%.*]] = fmul nnan contract float [[X]], [[TMP12]]
 ; IEEE-NEXT:    [[TMP14:%.*]] = call nnan contract float @llvm.amdgcn.rsq.f32(float [[TMP13]])
 ; IEEE-NEXT:    [[TMP15:%.*]] = select nnan contract i1 [[TMP11]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-NEXT:    [[FDIV_OPENCL_NNAN:%.*]] = fmul nnan contract float [[TMP14]], [[TMP15]]
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NNAN]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[TMP16:%.*]] = fcmp nsz contract olt float [[X]], 0x3810000000000000
-; IEEE-NEXT:    [[TMP17:%.*]] = select nsz contract i1 [[TMP16]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-NEXT:    [[TMP16:%.*]] = fcmp nsz contract olt float [[X]], f0x00800000
+; IEEE-NEXT:    [[TMP17:%.*]] = select nsz contract i1 [[TMP16]], float f0x4B800000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP18:%.*]] = fmul nsz contract float [[X]], [[TMP17]]
 ; IEEE-NEXT:    [[TMP19:%.*]] = call nsz contract float @llvm.amdgcn.rsq.f32(float [[TMP18]])
 ; IEEE-NEXT:    [[TMP20:%.*]] = select nsz contract i1 [[TMP16]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-NEXT:    [[FDIV_OPENCL_NSZ:%.*]] = fmul nsz contract float [[TMP19]], [[TMP20]]
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NSZ]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[TMP21:%.*]] = fcmp nnan ninf contract olt float [[X]], 0x3810000000000000
-; IEEE-NEXT:    [[TMP22:%.*]] = select nnan ninf contract i1 [[TMP21]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-NEXT:    [[TMP21:%.*]] = fcmp nnan ninf contract olt float [[X]], f0x00800000
+; IEEE-NEXT:    [[TMP22:%.*]] = select nnan ninf contract i1 [[TMP21]], float f0x4B800000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP23:%.*]] = fmul nnan ninf contract float [[X]], [[TMP22]]
 ; IEEE-NEXT:    [[TMP24:%.*]] = call nnan ninf contract float @llvm.amdgcn.rsq.f32(float [[TMP23]])
 ; IEEE-NEXT:    [[TMP25:%.*]] = select nnan ninf contract i1 [[TMP21]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-NEXT:    [[FDIV_OPENCL_NNAN_MIX0:%.*]] = fmul nnan ninf contract float [[TMP24]], [[TMP25]]
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NNAN_MIX0]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[TMP26:%.*]] = fcmp nnan ninf contract olt float [[X]], 0x3810000000000000
-; IEEE-NEXT:    [[TMP27:%.*]] = select nnan ninf contract i1 [[TMP26]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-NEXT:    [[TMP26:%.*]] = fcmp nnan ninf contract olt float [[X]], f0x00800000
+; IEEE-NEXT:    [[TMP27:%.*]] = select nnan ninf contract i1 [[TMP26]], float f0x4B800000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP28:%.*]] = fmul nnan ninf contract float [[X]], [[TMP27]]
 ; IEEE-NEXT:    [[TMP29:%.*]] = call nnan ninf contract float @llvm.amdgcn.rsq.f32(float [[TMP28]])
 ; IEEE-NEXT:    [[TMP30:%.*]] = select nnan ninf contract i1 [[TMP26]], float 4.096000e+03, float 1.000000e+00
@@ -1941,8 +1938,8 @@ define float @rsq_f32_missing_contract1(float %x) {
 define float @rsq_f32_flag_merge(float %x) {
 ; IEEE-LABEL: define float @rsq_f32_flag_merge(
 ; IEEE-SAME: float [[X:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[TMP1:%.*]] = fcmp ninf nsz contract olt float [[X]], 0x3810000000000000
-; IEEE-NEXT:    [[TMP2:%.*]] = select ninf nsz contract i1 [[TMP1]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-NEXT:    [[TMP1:%.*]] = fcmp ninf nsz contract olt float [[X]], f0x00800000
+; IEEE-NEXT:    [[TMP2:%.*]] = select ninf nsz contract i1 [[TMP1]], float f0x4B800000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP3:%.*]] = fmul ninf nsz contract float [[X]], [[TMP2]]
 ; IEEE-NEXT:    [[TMP4:%.*]] = call ninf nsz contract float @llvm.amdgcn.rsq.f32(float [[TMP3]])
 ; IEEE-NEXT:    [[TMP5:%.*]] = select ninf nsz contract i1 [[TMP1]], float 4.096000e+03, float 1.000000e+00
@@ -1962,22 +1959,22 @@ define float @rsq_f32_flag_merge(float %x) {
 define amdgpu_kernel void @rsq_f32_knownfinite(ptr addrspace(1) %out, float nofpclass(nan) %no.nan,
 ; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_knownfinite(
 ; IEEE-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(nan) [[NO_NAN:%.*]], float nofpclass(nan) [[NO_INF:%.*]], float nofpclass(nan inf) [[NO_INF_NAN:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[TMP1:%.*]] = fcmp contract olt float [[NO_NAN]], 0x3810000000000000
-; IEEE-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-NEXT:    [[TMP1:%.*]] = fcmp contract olt float [[NO_NAN]], f0x00800000
+; IEEE-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], float f0x4B800000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP3:%.*]] = fmul contract float [[NO_NAN]], [[TMP2]]
 ; IEEE-NEXT:    [[TMP4:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP3]])
 ; IEEE-NEXT:    [[TMP5:%.*]] = select contract i1 [[TMP1]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-NEXT:    [[FDIV_OPENCL_NO_NAN:%.*]] = fmul contract float [[TMP4]], [[TMP5]]
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_NAN]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[TMP6:%.*]] = fcmp contract olt float [[NO_INF]], 0x3810000000000000
-; IEEE-NEXT:    [[TMP7:%.*]] = select contract i1 [[TMP6]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-NEXT:    [[TMP6:%.*]] = fcmp contract olt float [[NO_INF]], f0x00800000
+; IEEE-NEXT:    [[TMP7:%.*]] = select contract i1 [[TMP6]], float f0x4B800000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP8:%.*]] = fmul contract float [[NO_INF]], [[TMP7]]
 ; IEEE-NEXT:    [[TMP9:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP8]])
 ; IEEE-NEXT:    [[TMP10:%.*]] = select contract i1 [[TMP6]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-NEXT:    [[FDIV_OPENCL_NO_INF:%.*]] = fmul contract float [[TMP9]], [[TMP10]]
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_INF]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[TMP11:%.*]] = fcmp contract olt float [[NO_INF_NAN]], 0x3810000000000000
-; IEEE-NEXT:    [[TMP12:%.*]] = select contract i1 [[TMP11]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-NEXT:    [[TMP11:%.*]] = fcmp contract olt float [[NO_INF_NAN]], f0x00800000
+; IEEE-NEXT:    [[TMP12:%.*]] = select contract i1 [[TMP11]], float f0x4B800000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP13:%.*]] = fmul contract float [[NO_INF_NAN]], [[TMP12]]
 ; IEEE-NEXT:    [[TMP14:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP13]])
 ; IEEE-NEXT:    [[TMP15:%.*]] = select contract i1 [[TMP11]], float 4.096000e+03, float 1.000000e+00
@@ -2015,8 +2012,8 @@ define amdgpu_kernel void @rsq_f32_knownfinite(ptr addrspace(1) %out, float nofp
 define amdgpu_kernel void @rsq_f32_known_nozero(ptr addrspace(1) %out, float nofpclass(zero) %no.zero, float nofpclass(zero sub) %no.zero.sub) {
 ; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_known_nozero(
 ; IEEE-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(zero) [[NO_ZERO:%.*]], float nofpclass(zero sub) [[NO_ZERO_SUB:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[TMP1:%.*]] = fcmp contract olt float [[NO_ZERO]], 0x3810000000000000
-; IEEE-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-NEXT:    [[TMP1:%.*]] = fcmp contract olt float [[NO_ZERO]], f0x00800000
+; IEEE-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], float f0x4B800000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP3:%.*]] = fmul contract float [[NO_ZERO]], [[TMP2]]
 ; IEEE-NEXT:    [[TMP4:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP3]])
 ; IEEE-NEXT:    [[TMP5:%.*]] = select contract i1 [[TMP1]], float 4.096000e+03, float 1.000000e+00
@@ -2050,15 +2047,15 @@ define amdgpu_kernel void @rsq_f32_known_nosub(ptr addrspace(1) %out, float nofp
 ; IEEE-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[NO_SUB:%.*]], float nofpclass(psub) [[NO_PSUB:%.*]], float nofpclass(nsub) [[NO_NSUB:%.*]]) #[[ATTR1]] {
 ; IEEE-NEXT:    [[FDIV_OPENCL_NO_SUB:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[NO_SUB]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[TMP1:%.*]] = fcmp contract olt float [[NO_PSUB]], 0x3810000000000000
-; IEEE-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-NEXT:    [[TMP1:%.*]] = fcmp contract olt float [[NO_PSUB]], f0x00800000
+; IEEE-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], float f0x4B800000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP3:%.*]] = fmul contract float [[NO_PSUB]], [[TMP2]]
 ; IEEE-NEXT:    [[TMP4:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP3]])
 ; IEEE-NEXT:    [[TMP5:%.*]] = select contract i1 [[TMP1]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-NEXT:    [[FDIV_OPENCL_NO_PSUB:%.*]] = fmul contract float [[TMP4]], [[TMP5]]
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_PSUB]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[TMP6:%.*]] = fcmp contract olt float [[NO_NSUB]], 0x3810000000000000
-; IEEE-NEXT:    [[TMP7:%.*]] = select contract i1 [[TMP6]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-NEXT:    [[TMP6:%.*]] = fcmp contract olt float [[NO_NSUB]], f0x00800000
+; IEEE-NEXT:    [[TMP7:%.*]] = select contract i1 [[TMP6]], float f0x4B800000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP8:%.*]] = fmul contract float [[NO_NSUB]], [[TMP7]]
 ; IEEE-NEXT:    [[TMP9:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP8]])
 ; IEEE-NEXT:    [[TMP10:%.*]] = select contract i1 [[TMP6]], float 4.096000e+03, float 1.000000e+00
@@ -2095,7 +2092,7 @@ define amdgpu_kernel void @rsq_f32_assume_nosub(ptr addrspace(1) %out, float %x)
 ; CHECK-LABEL: define amdgpu_kernel void @rsq_f32_assume_nosub(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], f0x00800000
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_NOT_SUBNORMAL]])
 ; CHECK-NEXT:    [[FDIV_OPENCL_NO_SUB:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[X]])
 ; CHECK-NEXT:    store volatile float [[FDIV_OPENCL_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
@@ -2121,14 +2118,14 @@ define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x flo
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP]], i64 1
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[X]], i64 1
-; IEEE-GOODFREXP-NEXT:    [[TMP5:%.*]] = fcmp contract olt float [[TMP3]], 0x3810000000000000
-; IEEE-GOODFREXP-NEXT:    [[TMP6:%.*]] = select contract i1 [[TMP5]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP5:%.*]] = fcmp contract olt float [[TMP3]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP6:%.*]] = select contract i1 [[TMP5]], float f0x4B800000, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP7:%.*]] = fmul contract float [[TMP3]], [[TMP6]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP8:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP7]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP9:%.*]] = select contract i1 [[TMP5]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP10:%.*]] = fmul contract float [[TMP8]], [[TMP9]]
-; IEEE-GOODFREXP-NEXT:    [[TMP11:%.*]] = fcmp contract olt float [[TMP4]], 0x3810000000000000
-; IEEE-GOODFREXP-NEXT:    [[TMP12:%.*]] = select contract i1 [[TMP11]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP11:%.*]] = fcmp contract olt float [[TMP4]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP12:%.*]] = select contract i1 [[TMP11]], float f0x4B800000, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP13:%.*]] = fmul contract float [[TMP4]], [[TMP12]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP14:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP13]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP15:%.*]] = select contract i1 [[TMP11]], float 4.096000e+03, float 1.000000e+00
@@ -2141,8 +2138,8 @@ define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x flo
 ; IEEE-GOODFREXP-NEXT:    [[TMP19:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP_UNDEF]], i64 1
 ; IEEE-GOODFREXP-NEXT:    [[TMP20:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP21:%.*]] = extractelement <2 x float> [[X]], i64 1
-; IEEE-GOODFREXP-NEXT:    [[TMP22:%.*]] = fcmp contract olt float [[TMP20]], 0x3810000000000000
-; IEEE-GOODFREXP-NEXT:    [[TMP23:%.*]] = select contract i1 [[TMP22]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP22:%.*]] = fcmp contract olt float [[TMP20]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP23:%.*]] = select contract i1 [[TMP22]], float f0x4B800000, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP24:%.*]] = fmul contract float [[TMP20]], [[TMP23]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP25:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP24]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP26:%.*]] = select contract i1 [[TMP22]], float 4.096000e+03, float 1.000000e+00
@@ -2160,19 +2157,34 @@ define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x flo
 ; IEEE-GOODFREXP-NEXT:    [[TMP38:%.*]] = insertelement <2 x float> poison, float [[TMP27]], i64 0
 ; IEEE-GOODFREXP-NEXT:    [[MD_1ULP_UNDEF:%.*]] = insertelement <2 x float> [[TMP38]], float [[TMP37]], i64 1
 ; IEEE-GOODFREXP-NEXT:    store volatile <2 x float> [[MD_1ULP_UNDEF]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-GOODFREXP-NEXT:    [[SQRT_X_3ULP:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath [[META3:![0-9]+]]
+; IEEE-GOODFREXP-NEXT:    [[TMP56:%.*]] = extractelement <2 x float> [[X]], i64 0
+; IEEE-GOODFREXP-NEXT:    [[TMP57:%.*]] = extractelement <2 x float> [[X]], i64 1
+; IEEE-GOODFREXP-NEXT:    [[TMP58:%.*]] = fcmp olt float [[TMP56]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP59:%.*]] = select i1 [[TMP58]], i32 32, i32 0
+; IEEE-GOODFREXP-NEXT:    [[TMP60:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP56]], i32 [[TMP59]])
+; IEEE-GOODFREXP-NEXT:    [[TMP61:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP60]])
+; IEEE-GOODFREXP-NEXT:    [[TMP62:%.*]] = select i1 [[TMP58]], i32 -16, i32 0
+; IEEE-GOODFREXP-NEXT:    [[TMP63:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP61]], i32 [[TMP62]])
+; IEEE-GOODFREXP-NEXT:    [[TMP64:%.*]] = fcmp olt float [[TMP57]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP65:%.*]] = select i1 [[TMP64]], i32 32, i32 0
+; IEEE-GOODFREXP-NEXT:    [[TMP66:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP57]], i32 [[TMP65]])
+; IEEE-GOODFREXP-NEXT:    [[TMP67:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP66]])
+; IEEE-GOODFREXP-NEXT:    [[TMP68:%.*]] = select i1 [[TMP64]], i32 -16, i32 0
+; IEEE-GOODFREXP-NEXT:    [[TMP69:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP67]], i32 [[TMP68]])
+; IEEE-GOODFREXP-NEXT:    [[TMP70:%.*]] = insertelement <2 x float> poison, float [[TMP63]], i64 0
+; IEEE-GOODFREXP-NEXT:    [[SQRT_X_3ULP:%.*]] = insertelement <2 x float> [[TMP70]], float [[TMP69]], i64 1
 ; IEEE-GOODFREXP-NEXT:    [[TMP39:%.*]] = extractelement <2 x float> [[SQRT_X_3ULP]], i64 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP40:%.*]] = extractelement <2 x float> [[SQRT_X_3ULP]], i64 1
 ; IEEE-GOODFREXP-NEXT:    [[TMP41:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP42:%.*]] = extractelement <2 x float> [[X]], i64 1
-; IEEE-GOODFREXP-NEXT:    [[TMP43:%.*]] = fcmp contract olt float [[TMP41]], 0x3810000000000000
-; IEEE-GOODFREXP-NEXT:    [[TMP44:%.*]] = select contract i1 [[TMP43]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP43:%.*]] = fcmp contract olt float [[TMP41]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP44:%.*]] = select contract i1 [[TMP43]], float f0x4B800000, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP45:%.*]] = fmul contract float [[TMP41]], [[TMP44]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP46:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP45]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP47:%.*]] = select contract i1 [[TMP43]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP48:%.*]] = fmul contract float [[TMP46]], [[TMP47]]
-; IEEE-GOODFREXP-NEXT:    [[TMP49:%.*]] = fcmp contract olt float [[TMP42]], 0x3810000000000000
-; IEEE-GOODFREXP-NEXT:    [[TMP50:%.*]] = select contract i1 [[TMP49]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP49:%.*]] = fcmp contract olt float [[TMP42]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP50:%.*]] = select contract i1 [[TMP49]], float f0x4B800000, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP51:%.*]] = fmul contract float [[TMP42]], [[TMP50]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP52:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP51]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP53:%.*]] = select contract i1 [[TMP49]], float 4.096000e+03, float 1.000000e+00
@@ -2192,14 +2204,14 @@ define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x flo
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP]], i64 1
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; IEEE-BADFREXP-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[X]], i64 1
-; IEEE-BADFREXP-NEXT:    [[TMP5:%.*]] = fcmp contract olt float [[TMP3]], 0x3810000000000000
-; IEEE-BADFREXP-NEXT:    [[TMP6:%.*]] = select contract i1 [[TMP5]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP5:%.*]] = fcmp contract olt float [[TMP3]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP6:%.*]] = select contract i1 [[TMP5]], float f0x4B800000, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP7:%.*]] = fmul contract float [[TMP3]], [[TMP6]]
 ; IEEE-BADFREXP-NEXT:    [[TMP8:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP7]])
 ; IEEE-BADFREXP-NEXT:    [[TMP9:%.*]] = select contract i1 [[TMP5]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP10:%.*]] = fmul contract float [[TMP8]], [[TMP9]]
-; IEEE-BADFREXP-NEXT:    [[TMP11:%.*]] = fcmp contract olt float [[TMP4]], 0x3810000000000000
-; IEEE-BADFREXP-NEXT:    [[TMP12:%.*]] = select contract i1 [[TMP11]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP11:%.*]] = fcmp contract olt float [[TMP4]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP12:%.*]] = select contract i1 [[TMP11]], float f0x4B800000, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP13:%.*]] = fmul contract float [[TMP4]], [[TMP12]]
 ; IEEE-BADFREXP-NEXT:    [[TMP14:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP13]])
 ; IEEE-BADFREXP-NEXT:    [[TMP15:%.*]] = select contract i1 [[TMP11]], float 4.096000e+03, float 1.000000e+00
@@ -2212,8 +2224,8 @@ define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x flo
 ; IEEE-BADFREXP-NEXT:    [[TMP19:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP_UNDEF]], i64 1
 ; IEEE-BADFREXP-NEXT:    [[TMP20:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; IEEE-BADFREXP-NEXT:    [[TMP21:%.*]] = extractelement <2 x float> [[X]], i64 1
-; IEEE-BADFREXP-NEXT:    [[TMP22:%.*]] = fcmp contract olt float [[TMP20]], 0x3810000000000000
-; IEEE-BADFREXP-NEXT:    [[TMP23:%.*]] = select contract i1 [[TMP22]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP22:%.*]] = fcmp contract olt float [[TMP20]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP23:%.*]] = select contract i1 [[TMP22]], float f0x4B800000, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP24:%.*]] = fmul contract float [[TMP20]], [[TMP23]]
 ; IEEE-BADFREXP-NEXT:    [[TMP25:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP24]])
 ; IEEE-BADFREXP-NEXT:    [[TMP26:%.*]] = select contract i1 [[TMP22]], float 4.096000e+03, float 1.000000e+00
@@ -2231,19 +2243,34 @@ define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x flo
 ; IEEE-BADFREXP-NEXT:    [[TMP38:%.*]] = insertelement <2 x float> poison, float [[TMP27]], i64 0
 ; IEEE-BADFREXP-NEXT:    [[MD_1ULP_UNDEF:%.*]] = insertelement <2 x float> [[TMP38]], float [[TMP37]], i64 1
 ; IEEE-BADFREXP-NEXT:    store volatile <2 x float> [[MD_1ULP_UNDEF]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-BADFREXP-NEXT:    [[SQRT_X_3ULP:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath [[META3:![0-9]+]]
+; IEEE-BADFREXP-NEXT:    [[TMP56:%.*]] = extractelement <2 x float> [[X]], i64 0
+; IEEE-BADFREXP-NEXT:    [[TMP57:%.*]] = extractelement <2 x float> [[X]], i64 1
+; IEEE-BADFREXP-NEXT:    [[TMP58:%.*]] = fcmp olt float [[TMP56]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP59:%.*]] = select i1 [[TMP58]], i32 32, i32 0
+; IEEE-BADFREXP-NEXT:    [[TMP60:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP56]], i32 [[TMP59]])
+; IEEE-BADFREXP-NEXT:    [[TMP61:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP60]])
+; IEEE-BADFREXP-NEXT:    [[TMP62:%.*]] = select i1 [[TMP58]], i32 -16, i32 0
+; IEEE-BADFREXP-NEXT:    [[TMP63:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP61]], i32 [[TMP62]])
+; IEEE-BADFREXP-NEXT:    [[TMP64:%.*]] = fcmp olt float [[TMP57]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP65:%.*]] = select i1 [[TMP64]], i32 32, i32 0
+; IEEE-BADFREXP-NEXT:    [[TMP66:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP57]], i32 [[TMP65]])
+; IEEE-BADFREXP-NEXT:    [[TMP67:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP66]])
+; IEEE-BADFREXP-NEXT:    [[TMP68:%.*]] = select i1 [[TMP64]], i32 -16, i32 0
+; IEEE-BADFREXP-NEXT:    [[TMP69:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP67]], i32 [[TMP68]])
+; IEEE-BADFREXP-NEXT:    [[TMP70:%.*]] = insertelement <2 x float> poison, float [[TMP63]], i64 0
+; IEEE-BADFREXP-NEXT:    [[SQRT_X_3ULP:%.*]] = insertelement <2 x float> [[TMP70]], float [[TMP69]], i64 1
 ; IEEE-BADFREXP-NEXT:    [[TMP39:%.*]] = extractelement <2 x float> [[SQRT_X_3ULP]], i64 0
 ; IEEE-BADFREXP-NEXT:    [[TMP40:%.*]] = extractelement <2 x float> [[SQRT_X_3ULP]], i64 1
 ; IEEE-BADFREXP-NEXT:    [[TMP41:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; IEEE-BADFREXP-NEXT:    [[TMP42:%.*]] = extractelement <2 x float> [[X]], i64 1
-; IEEE-BADFREXP-NEXT:    [[TMP43:%.*]] = fcmp contract olt float [[TMP41]], 0x3810000000000000
-; IEEE-BADFREXP-NEXT:    [[TMP44:%.*]] = select contract i1 [[TMP43]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP43:%.*]] = fcmp contract olt float [[TMP41]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP44:%.*]] = select contract i1 [[TMP43]], float f0x4B800000, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP45:%.*]] = fmul contract float [[TMP41]], [[TMP44]]
 ; IEEE-BADFREXP-NEXT:    [[TMP46:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP45]])
 ; IEEE-BADFREXP-NEXT:    [[TMP47:%.*]] = select contract i1 [[TMP43]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP48:%.*]] = fmul contract float [[TMP46]], [[TMP47]]
-; IEEE-BADFREXP-NEXT:    [[TMP49:%.*]] = fcmp contract olt float [[TMP42]], 0x3810000000000000
-; IEEE-BADFREXP-NEXT:    [[TMP50:%.*]] = select contract i1 [[TMP49]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP49:%.*]] = fcmp contract olt float [[TMP42]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP50:%.*]] = select contract i1 [[TMP49]], float f0x4B800000, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP51:%.*]] = fmul contract float [[TMP42]], [[TMP50]]
 ; IEEE-BADFREXP-NEXT:    [[TMP52:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP51]])
 ; IEEE-BADFREXP-NEXT:    [[TMP53:%.*]] = select contract i1 [[TMP49]], float 4.096000e+03, float 1.000000e+00
@@ -2258,7 +2285,12 @@ define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x flo
 ; DAZ-NEXT:    [[SQRT_X_NO_MD:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
 ; DAZ-NEXT:    [[NO_MD:%.*]] = fdiv contract <2 x float> splat (float 1.000000e+00), [[SQRT_X_NO_MD]]
 ; DAZ-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_MD_1ULP:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath [[META2:![0-9]+]]
+; DAZ-NEXT:    [[TMP39:%.*]] = extractelement <2 x float> [[X]], i64 0
+; DAZ-NEXT:    [[TMP40:%.*]] = extractelement <2 x float> [[X]], i64 1
+; DAZ-NEXT:    [[TMP41:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP39]])
+; DAZ-NEXT:    [[TMP42:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP40]])
+; DAZ-NEXT:    [[TMP43:%.*]] = insertelement <2 x float> poison, float [[TMP41]], i64 0
+; DAZ-NEXT:    [[SQRT_MD_1ULP:%.*]] = insertelement <2 x float> [[TMP43]], float [[TMP42]], i64 1
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP]], i64 0
 ; DAZ-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP]], i64 1
 ; DAZ-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[X]], i64 0
@@ -2276,7 +2308,9 @@ define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x flo
 ; DAZ-NEXT:    [[SQRT_MD_1ULP_UNDEF:%.*]] = insertelement <2 x float> [[TMP12]], float [[TMP11]], i64 1
 ; DAZ-NEXT:    [[TMP13:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP_UNDEF]], i64 0
 ; DAZ-NEXT:    [[TMP14:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP_UNDEF]], i64 1
-; DAZ-NEXT:    [[TMP15:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP13]])
+; DAZ-NEXT:    [[TMP44:%.*]] = extractelement <2 x float> [[X]], i64 0
+; DAZ-NEXT:    [[TMP45:%.*]] = extractelement <2 x float> [[X]], i64 1
+; DAZ-NEXT:    [[TMP15:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP44]])
 ; DAZ-NEXT:    [[TMP16:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP14]])
 ; DAZ-NEXT:    [[TMP17:%.*]] = extractvalue { float, i32 } [[TMP16]], 0
 ; DAZ-NEXT:    [[TMP18:%.*]] = extractvalue { float, i32 } [[TMP16]], 1
@@ -2290,7 +2324,12 @@ define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x flo
 ; DAZ-NEXT:    [[TMP26:%.*]] = insertelement <2 x float> poison, float [[TMP15]], i64 0
 ; DAZ-NEXT:    [[MD_1ULP_UNDEF:%.*]] = insertelement <2 x float> [[TMP26]], float [[TMP25]], i64 1
 ; DAZ-NEXT:    store volatile <2 x float> [[MD_1ULP_UNDEF]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_3ULP:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath [[META3:![0-9]+]]
+; DAZ-NEXT:    [[TMP34:%.*]] = extractelement <2 x float> [[X]], i64 0
+; DAZ-NEXT:    [[TMP35:%.*]] = extractelement <2 x float> [[X]], i64 1
+; DAZ-NEXT:    [[TMP36:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP34]])
+; DAZ-NEXT:    [[TMP37:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP35]])
+; DAZ-NEXT:    [[TMP38:%.*]] = insertelement <2 x float> poison, float [[TMP36]], i64 0
+; DAZ-NEXT:    [[SQRT_X_3ULP:%.*]] = insertelement <2 x float> [[TMP38]], float [[TMP37]], i64 1
 ; DAZ-NEXT:    [[TMP27:%.*]] = extractelement <2 x float> [[SQRT_X_3ULP]], i64 0
 ; DAZ-NEXT:    [[TMP28:%.*]] = extractelement <2 x float> [[SQRT_X_3ULP]], i64 1
 ; DAZ-NEXT:    [[TMP29:%.*]] = extractelement <2 x float> [[X]], i64 0
@@ -2756,7 +2795,7 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp_vector(ptr addrspace(1)
 define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp(ptr addrspace(1) %out, float %x, float %y, float %sqr.denom) {
 ; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp(
 ; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
-; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = fcmp olt float [[SQR_DENOM]], 0x3810000000000000
+; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = fcmp olt float [[SQR_DENOM]], f0x00800000
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 32, i32 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = call float @llvm.ldexp.f32.i32(float [[SQR_DENOM]], i32 [[TMP2]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP3]])
@@ -2782,7 +2821,7 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp(ptr addrspace(1) 
 ;
 ; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp(
 ; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
-; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = fcmp olt float [[SQR_DENOM]], 0x3810000000000000
+; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = fcmp olt float [[SQR_DENOM]], f0x00800000
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 32, i32 0
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = call float @llvm.ldexp.f32.i32(float [[SQR_DENOM]], i32 [[TMP2]])
 ; IEEE-BADFREXP-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP3]])
@@ -2830,13 +2869,13 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp(ptr addrsp
 ; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[SQR_DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[SQR_DENOM]], i64 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[SQR_DENOM]], i64 1
-; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = fcmp olt float [[TMP1]], 0x3810000000000000
+; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = fcmp olt float [[TMP1]], f0x00800000
 ; IEEE-GOODFREXP-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 32, i32 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP5:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[TMP4]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP6:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP5]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP7:%.*]] = select i1 [[TMP3]], i32 -16, i32 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP8:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP6]], i32 [[TMP7]])
-; IEEE-GOODFREXP-NEXT:    [[TMP9:%.*]] = fcmp olt float [[TMP2]], 0x3810000000000000
+; IEEE-GOODFREXP-NEXT:    [[TMP9:%.*]] = fcmp olt float [[TMP2]], f0x00800000
 ; IEEE-GOODFREXP-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 32, i32 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP11:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP2]], i32 [[TMP10]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP12:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP11]])
@@ -2892,13 +2931,13 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp(ptr addrsp
 ; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[SQR_DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[SQR_DENOM]], i64 0
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[SQR_DENOM]], i64 1
-; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = fcmp olt float [[TMP1]], 0x3810000000000000
+; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = fcmp olt float [[TMP1]], f0x00800000
 ; IEEE-BADFREXP-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 32, i32 0
 ; IEEE-BADFREXP-NEXT:    [[TMP5:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[TMP4]])
 ; IEEE-BADFREXP-NEXT:    [[TMP6:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP5]])
 ; IEEE-BADFREXP-NEXT:    [[TMP7:%.*]] = select i1 [[TMP3]], i32 -16, i32 0
 ; IEEE-BADFREXP-NEXT:    [[TMP8:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP6]], i32 [[TMP7]])
-; IEEE-BADFREXP-NEXT:    [[TMP9:%.*]] = fcmp olt float [[TMP2]], 0x3810000000000000
+; IEEE-BADFREXP-NEXT:    [[TMP9:%.*]] = fcmp olt float [[TMP2]], f0x00800000
 ; IEEE-BADFREXP-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 32, i32 0
 ; IEEE-BADFREXP-NEXT:    [[TMP11:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP2]], i32 [[TMP10]])
 ; IEEE-BADFREXP-NEXT:    [[TMP12:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP11]])
@@ -2993,7 +3032,7 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp(ptr addrsp
 define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3(ptr addrspace(1) %out, float %x, float %y, float %z, float %sqr.denom) {
 ; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3(
 ; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
-; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = fcmp olt float [[SQR_DENOM]], 0x3810000000000000
+; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = fcmp olt float [[SQR_DENOM]], f0x00800000
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 32, i32 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = call float @llvm.ldexp.f32.i32(float [[SQR_DENOM]], i32 [[TMP2]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP3]])
@@ -3027,7 +3066,7 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3(ptr addrspace(
 ;
 ; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3(
 ; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
-; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = fcmp olt float [[SQR_DENOM]], 0x3810000000000000
+; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = fcmp olt float [[SQR_DENOM]], f0x00800000
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 32, i32 0
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = call float @llvm.ldexp.f32.i32(float [[SQR_DENOM]], i32 [[TMP2]])
 ; IEEE-BADFREXP-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP3]])
@@ -3095,14 +3134,14 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator(<4 x float> %arg) {
 ; IEEE-GOODFREXP-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[ARG]], i64 1
 ; IEEE-GOODFREXP-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[ARG]], i64 2
 ; IEEE-GOODFREXP-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[ARG]], i64 3
-; IEEE-GOODFREXP-NEXT:    [[TMP9:%.*]] = fcmp contract olt float [[TMP5]], 0x3810000000000000
-; IEEE-GOODFREXP-NEXT:    [[TMP10:%.*]] = select contract i1 [[TMP9]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP9:%.*]] = fcmp contract olt float [[TMP5]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP10:%.*]] = select contract i1 [[TMP9]], float f0x4B800000, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP11:%.*]] = fmul contract float [[TMP5]], [[TMP10]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP12:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP11]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP13:%.*]] = select contract i1 [[TMP9]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP14:%.*]] = fmul contract float [[TMP12]], [[TMP13]]
-; IEEE-GOODFREXP-NEXT:    [[TMP15:%.*]] = fcmp contract olt float [[TMP6]], 0x3810000000000000
-; IEEE-GOODFREXP-NEXT:    [[TMP16:%.*]] = select contract i1 [[TMP15]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP15:%.*]] = fcmp contract olt float [[TMP6]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP16:%.*]] = select contract i1 [[TMP15]], float f0x4B800000, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP17:%.*]] = fmul contract float [[TMP6]], [[TMP16]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP18:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP17]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP19:%.*]] = select contract i1 [[TMP15]], float -4.096000e+03, float -1.000000e+00
@@ -3144,14 +3183,14 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator(<4 x float> %arg) {
 ; IEEE-BADFREXP-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[ARG]], i64 1
 ; IEEE-BADFREXP-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[ARG]], i64 2
 ; IEEE-BADFREXP-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[ARG]], i64 3
-; IEEE-BADFREXP-NEXT:    [[TMP9:%.*]] = fcmp contract olt float [[TMP5]], 0x3810000000000000
-; IEEE-BADFREXP-NEXT:    [[TMP10:%.*]] = select contract i1 [[TMP9]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP9:%.*]] = fcmp contract olt float [[TMP5]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP10:%.*]] = select contract i1 [[TMP9]], float f0x4B800000, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP11:%.*]] = fmul contract float [[TMP5]], [[TMP10]]
 ; IEEE-BADFREXP-NEXT:    [[TMP12:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP11]])
 ; IEEE-BADFREXP-NEXT:    [[TMP13:%.*]] = select contract i1 [[TMP9]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP14:%.*]] = fmul contract float [[TMP12]], [[TMP13]]
-; IEEE-BADFREXP-NEXT:    [[TMP15:%.*]] = fcmp contract olt float [[TMP6]], 0x3810000000000000
-; IEEE-BADFREXP-NEXT:    [[TMP16:%.*]] = select contract i1 [[TMP15]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP15:%.*]] = fcmp contract olt float [[TMP6]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP16:%.*]] = select contract i1 [[TMP15]], float f0x4B800000, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP17:%.*]] = fmul contract float [[TMP6]], [[TMP16]]
 ; IEEE-BADFREXP-NEXT:    [[TMP18:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP17]])
 ; IEEE-BADFREXP-NEXT:    [[TMP19:%.*]] = select contract i1 [[TMP15]], float -4.096000e+03, float -1.000000e+00
@@ -3200,9 +3239,13 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator(<4 x float> %arg) {
 ; DAZ-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
 ; DAZ-NEXT:    [[TMP14:%.*]] = extractelement <4 x float> [[DENOM]], i64 2
 ; DAZ-NEXT:    [[TMP15:%.*]] = extractelement <4 x float> [[DENOM]], i64 3
-; DAZ-NEXT:    [[TMP16:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP12]])
-; DAZ-NEXT:    [[TMP17:%.*]] = fneg contract float [[TMP13]]
-; DAZ-NEXT:    [[TMP18:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP17]])
+; DAZ-NEXT:    [[TMP42:%.*]] = extractelement <4 x float> [[ARG]], i64 0
+; DAZ-NEXT:    [[TMP17:%.*]] = extractelement <4 x float> [[ARG]], i64 1
+; DAZ-NEXT:    [[TMP43:%.*]] = extractelement <4 x float> [[ARG]], i64 2
+; DAZ-NEXT:    [[TMP44:%.*]] = extractelement <4 x float> [[ARG]], i64 3
+; DAZ-NEXT:    [[TMP16:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP42]])
+; DAZ-NEXT:    [[TMP45:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP17]])
+; DAZ-NEXT:    [[TMP18:%.*]] = fneg contract float [[TMP45]]
 ; DAZ-NEXT:    [[TMP19:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP14]])
 ; DAZ-NEXT:    [[TMP20:%.*]] = extractvalue { float, i32 } [[TMP19]], 0
 ; DAZ-NEXT:    [[TMP21:%.*]] = extractvalue { float, i32 } [[TMP19]], 1
@@ -3246,14 +3289,14 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_sqrt(<4 x float>
 ; IEEE-GOODFREXP-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[ARG]], i64 1
 ; IEEE-GOODFREXP-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[ARG]], i64 2
 ; IEEE-GOODFREXP-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[ARG]], i64 3
-; IEEE-GOODFREXP-NEXT:    [[TMP9:%.*]] = fcmp contract afn olt float [[TMP5]], 0x3810000000000000
-; IEEE-GOODFREXP-NEXT:    [[TMP10:%.*]] = select contract afn i1 [[TMP9]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP9:%.*]] = fcmp contract afn olt float [[TMP5]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP10:%.*]] = select contract afn i1 [[TMP9]], float f0x4B800000, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP11:%.*]] = fmul contract afn float [[TMP5]], [[TMP10]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP12:%.*]] = call contract afn float @llvm.amdgcn.rsq.f32(float [[TMP11]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP13:%.*]] = select contract afn i1 [[TMP9]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP14:%.*]] = fmul contract afn float [[TMP12]], [[TMP13]]
-; IEEE-GOODFREXP-NEXT:    [[TMP15:%.*]] = fcmp contract afn olt float [[TMP6]], 0x3810000000000000
-; IEEE-GOODFREXP-NEXT:    [[TMP16:%.*]] = select contract afn i1 [[TMP15]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP15:%.*]] = fcmp contract afn olt float [[TMP6]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP16:%.*]] = select contract afn i1 [[TMP15]], float f0x4B800000, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP17:%.*]] = fmul contract afn float [[TMP6]], [[TMP16]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP18:%.*]] = call contract afn float @llvm.amdgcn.rsq.f32(float [[TMP17]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP19:%.*]] = select contract afn i1 [[TMP15]], float -4.096000e+03, float -1.000000e+00
@@ -3295,14 +3338,14 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_sqrt(<4 x float>
 ; IEEE-BADFREXP-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[ARG]], i64 1
 ; IEEE-BADFREXP-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[ARG]], i64 2
 ; IEEE-BADFREXP-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[ARG]], i64 3
-; IEEE-BADFREXP-NEXT:    [[TMP9:%.*]] = fcmp contract afn olt float [[TMP5]], 0x3810000000000000
-; IEEE-BADFREXP-NEXT:    [[TMP10:%.*]] = select contract afn i1 [[TMP9]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP9:%.*]] = fcmp contract afn olt float [[TMP5]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP10:%.*]] = select contract afn i1 [[TMP9]], float f0x4B800000, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP11:%.*]] = fmul contract afn float [[TMP5]], [[TMP10]]
 ; IEEE-BADFREXP-NEXT:    [[TMP12:%.*]] = call contract afn float @llvm.amdgcn.rsq.f32(float [[TMP11]])
 ; IEEE-BADFREXP-NEXT:    [[TMP13:%.*]] = select contract afn i1 [[TMP9]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP14:%.*]] = fmul contract afn float [[TMP12]], [[TMP13]]
-; IEEE-BADFREXP-NEXT:    [[TMP15:%.*]] = fcmp contract afn olt float [[TMP6]], 0x3810000000000000
-; IEEE-BADFREXP-NEXT:    [[TMP16:%.*]] = select contract afn i1 [[TMP15]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP15:%.*]] = fcmp contract afn olt float [[TMP6]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP16:%.*]] = select contract afn i1 [[TMP15]], float f0x4B800000, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP17:%.*]] = fmul contract afn float [[TMP6]], [[TMP16]]
 ; IEEE-BADFREXP-NEXT:    [[TMP18:%.*]] = call contract afn float @llvm.amdgcn.rsq.f32(float [[TMP17]])
 ; IEEE-BADFREXP-NEXT:    [[TMP19:%.*]] = select contract afn i1 [[TMP15]], float -4.096000e+03, float -1.000000e+00
@@ -3444,19 +3487,22 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_sqrt(<4 x fl
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[DENOM]], i64 2
 ; IEEE-GOODFREXP-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[DENOM]], i64 3
-; IEEE-GOODFREXP-NEXT:    [[TMP5:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP1]])
-; IEEE-GOODFREXP-NEXT:    [[TMP6:%.*]] = extractvalue { float, i32 } [[TMP5]], 0
-; IEEE-GOODFREXP-NEXT:    [[TMP7:%.*]] = extractvalue { float, i32 } [[TMP5]], 1
-; IEEE-GOODFREXP-NEXT:    [[TMP8:%.*]] = sub i32 0, [[TMP7]]
-; IEEE-GOODFREXP-NEXT:    [[TMP9:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP6]])
-; IEEE-GOODFREXP-NEXT:    [[TMP10:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP9]], i32 [[TMP8]])
-; IEEE-GOODFREXP-NEXT:    [[TMP11:%.*]] = fneg contract float [[TMP2]]
-; IEEE-GOODFREXP-NEXT:    [[TMP12:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP11]])
-; IEEE-GOODFREXP-NEXT:    [[TMP13:%.*]] = extractvalue { float, i32 } [[TMP12]], 0
-; IEEE-GOODFREXP-NEXT:    [[TMP14:%.*]] = extractvalue { float, i32 } [[TMP12]], 1
-; IEEE-GOODFREXP-NEXT:    [[TMP15:%.*]] = sub i32 0, [[TMP14]]
-; IEEE-GOODFREXP-NEXT:    [[TMP16:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP13]])
-; IEEE-GOODFREXP-NEXT:    [[TMP17:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP16]], i32 [[TMP15]])
+; IEEE-GOODFREXP-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[ARG]], i64 0
+; IEEE-GOODFREXP-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[ARG]], i64 1
+; IEEE-GOODFREXP-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[ARG]], i64 2
+; IEEE-GOODFREXP-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[ARG]], i64 3
+; IEEE-GOODFREXP-NEXT:    [[TMP9:%.*]] = fcmp contract olt float [[TMP5]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP14:%.*]] = select contract i1 [[TMP9]], float f0x4B800000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP11:%.*]] = fmul contract float [[TMP5]], [[TMP14]]
+; IEEE-GOODFREXP-NEXT:    [[TMP12:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP11]])
+; IEEE-GOODFREXP-NEXT:    [[TMP13:%.*]] = select contract i1 [[TMP9]], float 4.096000e+03, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP10:%.*]] = fmul contract float [[TMP12]], [[TMP13]]
+; IEEE-GOODFREXP-NEXT:    [[TMP15:%.*]] = fcmp contract olt float [[TMP6]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP16:%.*]] = select contract i1 [[TMP15]], float f0x4B800000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP41:%.*]] = fmul contract float [[TMP6]], [[TMP16]]
+; IEEE-GOODFREXP-NEXT:    [[TMP42:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP41]])
+; IEEE-GOODFREXP-NEXT:    [[TMP43:%.*]] = select contract i1 [[TMP15]], float -4.096000e+03, float -1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP17:%.*]] = fmul contract float [[TMP42]], [[TMP43]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP18:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP3]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP19:%.*]] = extractvalue { float, i32 } [[TMP18]], 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP20:%.*]] = extractvalue { float, i32 } [[TMP18]], 1
@@ -3490,19 +3536,22 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_sqrt(<4 x fl
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[DENOM]], i64 2
 ; IEEE-BADFREXP-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[DENOM]], i64 3
-; IEEE-BADFREXP-NEXT:    [[TMP5:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP1]])
-; IEEE-BADFREXP-NEXT:    [[TMP6:%.*]] = extractvalue { float, i32 } [[TMP5]], 0
-; IEEE-BADFREXP-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[TMP1]])
-; IEEE-BADFREXP-NEXT:    [[TMP8:%.*]] = sub i32 0, [[TMP7]]
-; IEEE-BADFREXP-NEXT:    [[TMP9:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP6]])
-; IEEE-BADFREXP-NEXT:    [[TMP10:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP9]], i32 [[TMP8]])
-; IEEE-BADFREXP-NEXT:    [[TMP11:%.*]] = fneg contract float [[TMP2]]
-; IEEE-BADFREXP-NEXT:    [[TMP12:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP11]])
-; IEEE-BADFREXP-NEXT:    [[TMP13:%.*]] = extractvalue { float, i32 } [[TMP12]], 0
-; IEEE-BADFREXP-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[TMP11]])
-; IEEE-BADFREXP-NEXT:    [[TMP15:%.*]] = sub i32 0, [[TMP14]]
-; IEEE-BADFREXP-NEXT:    [[TMP16:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP13]])
-; IEEE-BADFREXP-NEXT:    [[TMP17:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP16]], i32 [[TMP15]])
+; IEEE-BADFREXP-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[ARG]], i64 0
+; IEEE-BADFREXP-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[ARG]], i64 1
+; IEEE-BADFREXP-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[ARG]], i64 2
+; IEEE-BADFREXP-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[ARG]], i64 3
+; IEEE-BADFREXP-NEXT:    [[TMP9:%.*]] = fcmp contract olt float [[TMP5]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP14:%.*]] = select contract i1 [[TMP9]], float f0x4B800000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP11:%.*]] = fmul contract float [[TMP5]], [[TMP14]]
+; IEEE-BADFREXP-NEXT:    [[TMP12:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP11]])
+; IEEE-BADFREXP-NEXT:    [[TMP13:%.*]] = select contract i1 [[TMP9]], float 4.096000e+03, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP10:%.*]] = fmul contract float [[TMP12]], [[TMP13]]
+; IEEE-BADFREXP-NEXT:    [[TMP15:%.*]] = fcmp contract olt float [[TMP6]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP16:%.*]] = select contract i1 [[TMP15]], float f0x4B800000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP41:%.*]] = fmul contract float [[TMP6]], [[TMP16]]
+; IEEE-BADFREXP-NEXT:    [[TMP42:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP41]])
+; IEEE-BADFREXP-NEXT:    [[TMP43:%.*]] = select contract i1 [[TMP15]], float -4.096000e+03, float -1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP17:%.*]] = fmul contract float [[TMP42]], [[TMP43]]
 ; IEEE-BADFREXP-NEXT:    [[TMP18:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP3]])
 ; IEEE-BADFREXP-NEXT:    [[TMP19:%.*]] = extractvalue { float, i32 } [[TMP18]], 0
 ; IEEE-BADFREXP-NEXT:    [[TMP20:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[TMP3]])
@@ -3536,9 +3585,13 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_sqrt(<4 x fl
 ; DAZ-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
 ; DAZ-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[DENOM]], i64 2
 ; DAZ-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[DENOM]], i64 3
-; DAZ-NEXT:    [[TMP5:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP1]])
-; DAZ-NEXT:    [[TMP6:%.*]] = fneg contract float [[TMP2]]
-; DAZ-NEXT:    [[TMP7:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP6]])
+; DAZ-NEXT:    [[TMP31:%.*]] = extractelement <4 x float> [[ARG]], i64 0
+; DAZ-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[ARG]], i64 1
+; DAZ-NEXT:    [[TMP32:%.*]] = extractelement <4 x float> [[ARG]], i64 2
+; DAZ-NEXT:    [[TMP33:%.*]] = extractelement <4 x float> [[ARG]], i64 3
+; DAZ-NEXT:    [[TMP5:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP31]])
+; DAZ-NEXT:    [[TMP34:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP6]])
+; DAZ-NEXT:    [[TMP7:%.*]] = fneg contract float [[TMP34]]
 ; DAZ-NEXT:    [[TMP8:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP3]])
 ; DAZ-NEXT:    [[TMP9:%.*]] = extractvalue { float, i32 } [[TMP8]], 0
 ; DAZ-NEXT:    [[TMP10:%.*]] = extractvalue { float, i32 } [[TMP8]], 1
@@ -3582,14 +3635,14 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp(<4 x float> %ar
 ; IEEE-GOODFREXP-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[ARG]], i64 1
 ; IEEE-GOODFREXP-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[ARG]], i64 2
 ; IEEE-GOODFREXP-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[ARG]], i64 3
-; IEEE-GOODFREXP-NEXT:    [[TMP9:%.*]] = fcmp arcp contract olt float [[TMP5]], 0x3810000000000000
-; IEEE-GOODFREXP-NEXT:    [[TMP10:%.*]] = select arcp contract i1 [[TMP9]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP9:%.*]] = fcmp arcp contract olt float [[TMP5]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP10:%.*]] = select arcp contract i1 [[TMP9]], float f0x4B800000, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP11:%.*]] = fmul arcp contract float [[TMP5]], [[TMP10]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP12:%.*]] = call arcp contract float @llvm.amdgcn.rsq.f32(float [[TMP11]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP13:%.*]] = select arcp contract i1 [[TMP9]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP14:%.*]] = fmul arcp contract float [[TMP12]], [[TMP13]]
-; IEEE-GOODFREXP-NEXT:    [[TMP15:%.*]] = fcmp arcp contract olt float [[TMP6]], 0x3810000000000000
-; IEEE-GOODFREXP-NEXT:    [[TMP16:%.*]] = select arcp contract i1 [[TMP15]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP15:%.*]] = fcmp arcp contract olt float [[TMP6]], f0x00800000
+; IEEE-GOODFREXP-NEXT:    [[TMP16:%.*]] = select arcp contract i1 [[TMP15]], float f0x4B800000, float 1.000000e+00
 ; IEEE-GOODFREXP-NEXT:    [[TMP17:%.*]] = fmul arcp contract float [[TMP6]], [[TMP16]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP18:%.*]] = call arcp contract float @llvm.amdgcn.rsq.f32(float [[TMP17]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP19:%.*]] = select arcp contract i1 [[TMP15]], float -4.096000e+03, float -1.000000e+00
@@ -3625,14 +3678,14 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp(<4 x float> %ar
 ; IEEE-BADFREXP-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[ARG]], i64 1
 ; IEEE-BADFREXP-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[ARG]], i64 2
 ; IEEE-BADFREXP-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[ARG]], i64 3
-; IEEE-BADFREXP-NEXT:    [[TMP9:%.*]] = fcmp arcp contract olt float [[TMP5]], 0x3810000000000000
-; IEEE-BADFREXP-NEXT:    [[TMP10:%.*]] = select arcp contract i1 [[TMP9]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP9:%.*]] = fcmp arcp contract olt float [[TMP5]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP10:%.*]] = select arcp contract i1 [[TMP9]], float f0x4B800000, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP11:%.*]] = fmul arcp contract float [[TMP5]], [[TMP10]]
 ; IEEE-BADFREXP-NEXT:    [[TMP12:%.*]] = call arcp contract float @llvm.amdgcn.rsq.f32(float [[TMP11]])
 ; IEEE-BADFREXP-NEXT:    [[TMP13:%.*]] = select arcp contract i1 [[TMP9]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP14:%.*]] = fmul arcp contract float [[TMP12]], [[TMP13]]
-; IEEE-BADFREXP-NEXT:    [[TMP15:%.*]] = fcmp arcp contract olt float [[TMP6]], 0x3810000000000000
-; IEEE-BADFREXP-NEXT:    [[TMP16:%.*]] = select arcp contract i1 [[TMP15]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP15:%.*]] = fcmp arcp contract olt float [[TMP6]], f0x00800000
+; IEEE-BADFREXP-NEXT:    [[TMP16:%.*]] = select arcp contract i1 [[TMP15]], float f0x4B800000, float 1.000000e+00
 ; IEEE-BADFREXP-NEXT:    [[TMP17:%.*]] = fmul arcp contract float [[TMP6]], [[TMP16]]
 ; IEEE-BADFREXP-NEXT:    [[TMP18:%.*]] = call arcp contract float @llvm.amdgcn.rsq.f32(float [[TMP17]])
 ; IEEE-BADFREXP-NEXT:    [[TMP19:%.*]] = select arcp contract i1 [[TMP15]], float -4.096000e+03, float -1.000000e+00
@@ -3675,9 +3728,13 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp(<4 x float> %ar
 ; DAZ-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
 ; DAZ-NEXT:    [[TMP14:%.*]] = extractelement <4 x float> [[DENOM]], i64 2
 ; DAZ-NEXT:    [[TMP15:%.*]] = extractelement <4 x float> [[DENOM]], i64 3
-; DAZ-NEXT:    [[TMP16:%.*]] = call arcp contract float @llvm.amdgcn.rcp.f32(float [[TMP12]])
-; DAZ-NEXT:    [[TMP17:%.*]] = fneg arcp contract float [[TMP13]]
-; DAZ-NEXT:    [[TMP18:%.*]] = call arcp contract float @llvm.amdgcn.rcp.f32(float [[TMP17]])
+; DAZ-NEXT:    [[TMP26:%.*]] = extractelement <4 x float> [[ARG]], i64 0
+; DAZ-NEXT:    [[TMP17:%.*]] = extractelement <4 x float> [[ARG]], i64 1
+; DAZ-NEXT:    [[TMP27:%.*]] = extractelement <4 x float> [[ARG]], i64 2
+; DAZ-NEXT:    [[TMP28:%.*]] = extractelement <4 x float> [[ARG]], i64 3
+; DAZ-NEXT:    [[TMP16:%.*]] = call arcp contract float @llvm.amdgcn.rsq.f32(float [[TMP26]])
+; DAZ-NEXT:    [[TMP29:%.*]] = call arcp contract float @llvm.amdgcn.rsq.f32(float [[TMP17]])
+; DAZ-NEXT:    [[TMP18:%.*]] = fneg arcp contract float [[TMP29]]
 ; DAZ-NEXT:    [[TMP19:%.*]] = call arcp contract float @llvm.amdgcn.rcp.f32(float [[TMP14]])
 ; DAZ-NEXT:    [[TMP20:%.*]] = fmul arcp contract float 4.000000e+00, [[TMP19]]
 ; DAZ-NEXT:    [[TMP21:%.*]] = call arcp contract float @llvm.amdgcn.rcp.f32(float [[TMP15]])
@@ -3850,19 +3907,9 @@ define <4 x float> @rsq_f32_vector_const_denom(ptr addrspace(1) %out, <2 x float
 ; IEEE-GOODFREXP-NEXT:    [[TMP9:%.*]] = extractelement <4 x float> [[SQRT]], i64 1
 ; IEEE-GOODFREXP-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[SQRT]], i64 2
 ; IEEE-GOODFREXP-NEXT:    [[TMP11:%.*]] = extractelement <4 x float> [[SQRT]], i64 3
-; IEEE-GOODFREXP-NEXT:    [[TMP12:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP8]])
-; IEEE-GOODFREXP-NEXT:    [[TMP13:%.*]] = extractvalue { float, i32 } [[TMP12]], 0
-; IEEE-GOODFREXP-NEXT:    [[TMP14:%.*]] = extractvalue { float, i32 } [[TMP12]], 1
-; IEEE-GOODFREXP-NEXT:    [[TMP15:%.*]] = sub i32 0, [[TMP14]]
-; IEEE-GOODFREXP-NEXT:    [[TMP16:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP13]])
-; IEEE-GOODFREXP-NEXT:    [[TMP17:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP16]], i32 [[TMP15]])
-; IEEE-GOODFREXP-NEXT:    [[TMP18:%.*]] = fneg contract float [[TMP9]]
-; IEEE-GOODFREXP-NEXT:    [[TMP48:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP18]])
-; IEEE-GOODFREXP-NEXT:    [[TMP49:%.*]] = extractvalue { float, i32 } [[TMP48]], 0
-; IEEE-GOODFREXP-NEXT:    [[TMP50:%.*]] = extractvalue { float, i32 } [[TMP48]], 1
-; IEEE-GOODFREXP-NEXT:    [[TMP22:%.*]] = sub i32 0, [[TMP50]]
-; IEEE-GOODFREXP-NEXT:    [[TMP51:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP49]])
-; IEEE-GOODFREXP-NEXT:    [[TMP24:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP51]], i32 [[TMP22]])
+; IEEE-GOODFREXP-NEXT:    [[TMP17:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float 4.000000e+00)
+; IEEE-GOODFREXP-NEXT:    [[TMP13:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float 2.000000e+00)
+; IEEE-GOODFREXP-NEXT:    [[TMP24:%.*]] = fneg contract float [[TMP13]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP29:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP10]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP30:%.*]] = extractvalue { float, i32 } [[TMP29]], 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP31:%.*]] = extractvalue { float, i32 } [[TMP29]], 1
@@ -3903,19 +3950,9 @@ define <4 x float> @rsq_f32_vector_const_denom(ptr addrspace(1) %out, <2 x float
 ; IEEE-BADFREXP-NEXT:    [[TMP9:%.*]] = extractelement <4 x float> [[SQRT]], i64 1
 ; IEEE-BADFREXP-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[SQRT]], i64 2
 ; IEEE-BADFREXP-NEXT:    [[TMP11:%.*]] = extractelement <4 x float> [[SQRT]], i64 3
-; IEEE-BADFREXP-NEXT:    [[TMP12:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP8]])
-; IEEE-BADFREXP-NEXT:    [[TMP13:%.*]] = extractvalue { float, i32 } [[TMP12]], 0
-; IEEE-BADFREXP-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[TMP8]])
-; IEEE-BADFREXP-NEXT:    [[TMP15:%.*]] = sub i32 0, [[TMP14]]
-; IEEE-BADFREXP-NEXT:    [[TMP16:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP13]])
-; IEEE-BADFREXP-NEXT:    [[TMP17:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP16]], i32 [[TMP15]])
-; IEEE-BADFREXP-NEXT:    [[TMP18:%.*]] = fneg contract float [[TMP9]]
-; IEEE-BADFREXP-NEXT:    [[TMP48:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP18]])
-; IEEE-BADFREXP-NEXT:    [[TMP49:%.*]] = extractvalue { float, i32 } [[TMP48]], 0
-; IEEE-BADFREXP-NEXT:    [[TMP21:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[TMP18]])
-; IEEE-BADFREXP-NEXT:    [[TMP22:%.*]] = sub i32 0, [[TMP21]]
-; IEEE-BADFREXP-NEXT:    [[TMP50:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP49]])
-; IEEE-BADFREXP-NEXT:    [[TMP24:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP50]], i32 [[TMP22]])
+; IEEE-BADFREXP-NEXT:    [[TMP17:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float 4.000000e+00)
+; IEEE-BADFREXP-NEXT:    [[TMP13:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float 2.000000e+00)
+; IEEE-BADFREXP-NEXT:    [[TMP24:%.*]] = fneg contract float [[TMP13]]
 ; IEEE-BADFREXP-NEXT:    [[TMP29:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP10]])
 ; IEEE-BADFREXP-NEXT:    [[TMP30:%.*]] = extractvalue { float, i32 } [[TMP29]], 0
 ; IEEE-BADFREXP-NEXT:    [[TMP27:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[TMP10]])
@@ -3956,9 +3993,9 @@ define <4 x float> @rsq_f32_vector_const_denom(ptr addrspace(1) %out, <2 x float
 ; DAZ-NEXT:    [[TMP9:%.*]] = extractelement <4 x float> [[SQRT]], i64 1
 ; DAZ-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[SQRT]], i64 2
 ; DAZ-NEXT:    [[TMP11:%.*]] = extractelement <4 x float> [[SQRT]], i64 3
-; DAZ-NEXT:    [[TMP12:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP8]])
-; DAZ-NEXT:    [[TMP13:%.*]] = fneg contract float [[TMP9]]
-; DAZ-NEXT:    [[TMP14:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP13]])
+; DAZ-NEXT:    [[TMP12:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float 4.000000e+00)
+; DAZ-NEXT:    [[TMP13:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float 2.000000e+00)
+; DAZ-NEXT:    [[TMP14:%.*]] = fneg contract float [[TMP13]]
 ; DAZ-NEXT:    [[TMP15:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP10]])
 ; DAZ-NEXT:    [[TMP16:%.*]] = extractvalue { float, i32 } [[TMP15]], 0
 ; DAZ-NEXT:    [[TMP17:%.*]] = extractvalue { float, i32 } [[TMP15]], 1

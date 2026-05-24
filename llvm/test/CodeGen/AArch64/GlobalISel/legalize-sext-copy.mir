@@ -6,12 +6,14 @@ body: |
   bb.0.entry:
     liveins: $w0, $w1
     ; CHECK-LABEL: name: test_sext_copy
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: $w0 = COPY [[COPY]](s32)
-    ; CHECK: $w0 = COPY [[COPY]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY1]](s32)
-    ; CHECK: $x0 = COPY [[SEXT]](s64)
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY1]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[SEXT]](s64)
     %0:_(s32) = COPY $w1
     $w0 = COPY %0(s32)
     $w0 = COPY %0(s32)

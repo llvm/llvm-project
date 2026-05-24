@@ -13,50 +13,184 @@
 // template <class InputIterator>
 //   void insert(InputIterator first, InputIterator last);
 
-#include <set>
+#include <array>
 #include <cassert>
+#include <set>
 
-#include "test_macros.h"
-#include "test_iterators.h"
 #include "min_allocator.h"
+#include "test_iterators.h"
+
+template <class Iter, class Alloc>
+void test_alloc() {
+  {   // Check that an empty range works correctly
+    { // Without elements in the container
+      using Map = std::multiset<int, std::less<int>, Alloc>;
+
+      std::array<int, 0> arr;
+
+      Map map;
+      map.insert(Iter(arr.data()), Iter(arr.data() + arr.size()));
+      assert(map.size() == 0);
+      assert(map.begin() == map.end());
+    }
+    { // With 1 element in the container
+      using Map = std::multiset<int, std::less<int>, Alloc>;
+
+      std::array<int, 0> arr;
+
+      Map map;
+      map.insert(0);
+      map.insert(Iter(arr.data()), Iter(arr.data() + arr.size()));
+      assert(map.size() == 1);
+      assert(*std::next(map.begin(), 0) == 0);
+      assert(std::next(map.begin(), 1) == map.end());
+    }
+    { // With multiple elements in the container
+      using Map = std::multiset<int, std::less<int>, Alloc>;
+
+      std::array<int, 0> arr;
+
+      Map map;
+      map.insert(0);
+      map.insert(1);
+      map.insert(2);
+      map.insert(Iter(arr.data()), Iter(arr.data() + arr.size()));
+      assert(map.size() == 3);
+      assert(*std::next(map.begin(), 0) == 0);
+      assert(*std::next(map.begin(), 1) == 1);
+      assert(*std::next(map.begin(), 2) == 2);
+      assert(std::next(map.begin(), 3) == map.end());
+    }
+  }
+  {   // Check that 1 element is inserted correctly
+    { // Without elements in the container
+      using Map = std::multiset<int, std::less<int>, Alloc>;
+
+      int arr[] = {1};
+
+      Map map;
+      map.insert(Iter(std::begin(arr)), Iter(std::end(arr)));
+      assert(map.size() == 1);
+      assert(*std::next(map.begin(), 0) == 1);
+      assert(std::next(map.begin(), 1) == map.end());
+    }
+    { // With 1 element in the container - a different key
+      using Map = std::multiset<int, std::less<int>, Alloc>;
+
+      int arr[] = {1};
+
+      Map map;
+      map.insert(0);
+      map.insert(Iter(std::begin(arr)), Iter(std::end(arr)));
+      assert(map.size() == 2);
+      assert(*std::next(map.begin(), 0) == 0);
+      assert(*std::next(map.begin(), 1) == 1);
+      assert(std::next(map.begin(), 2) == map.end());
+    }
+    { // With 1 element in the container - the same key
+      using Map = std::multiset<int, std::less<int>, Alloc>;
+
+      int arr[] = {1};
+
+      Map map;
+      map.insert(1);
+      map.insert(Iter(std::begin(arr)), Iter(std::end(arr)));
+      assert(map.size() == 2);
+      assert(*std::next(map.begin(), 0) == 1);
+      assert(*std::next(map.begin(), 1) == 1);
+      assert(std::next(map.begin(), 2) == map.end());
+    }
+    { // With multiple elements in the container
+      using Map = std::multiset<int, std::less<int>, Alloc>;
+
+      int arr[] = {1};
+
+      Map map;
+      map.insert(0);
+      map.insert(1);
+      map.insert(2);
+      map.insert(Iter(std::begin(arr)), Iter(std::end(arr)));
+      assert(map.size() == 4);
+      assert(*std::next(map.begin(), 0) == 0);
+      assert(*std::next(map.begin(), 1) == 1);
+      assert(*std::next(map.begin(), 2) == 1);
+      assert(*std::next(map.begin(), 3) == 2);
+      assert(std::next(map.begin(), 4) == map.end());
+    }
+  }
+  {   // Check that multiple elements are inserted correctly
+    { // Without elements in the container
+      using Map = std::multiset<int, std::less<int>, Alloc>;
+
+      int arr[] = {1, 1, 3};
+
+      Map map;
+      map.insert(Iter(std::begin(arr)), Iter(std::end(arr)));
+      assert(map.size() == 3);
+      assert(*std::next(map.begin(), 0) == 1);
+      assert(*std::next(map.begin(), 1) == 1);
+      assert(*std::next(map.begin(), 2) == 3);
+      assert(std::next(map.begin(), 3) == map.end());
+    }
+    { // With 1 element in the container - a different key
+      using Map = std::multiset<int, std::less<int>, Alloc>;
+
+      int arr[] = {1, 1, 3};
+
+      Map map;
+      map.insert(0);
+      map.insert(Iter(std::begin(arr)), Iter(std::end(arr)));
+      assert(map.size() == 4);
+      assert(*std::next(map.begin(), 0) == 0);
+      assert(*std::next(map.begin(), 1) == 1);
+      assert(*std::next(map.begin(), 2) == 1);
+      assert(*std::next(map.begin(), 3) == 3);
+      assert(std::next(map.begin(), 4) == map.end());
+    }
+    { // With 1 element in the container - the same key
+      using Map = std::multiset<int, std::less<int>, Alloc>;
+
+      int arr[] = {1, 2, 3};
+
+      Map map;
+      map.insert(1);
+      map.insert(Iter(std::begin(arr)), Iter(std::end(arr)));
+      assert(map.size() == 4);
+      assert(*std::next(map.begin(), 0) == 1);
+      assert(*std::next(map.begin(), 1) == 1);
+      assert(*std::next(map.begin(), 2) == 2);
+      assert(*std::next(map.begin(), 3) == 3);
+      assert(std::next(map.begin(), 4) == map.end());
+    }
+    { // With multiple elements in the container
+      using Map = std::multiset<int, std::less<int>, Alloc>;
+
+      int arr[] = {1, 3, 4};
+
+      Map map;
+      map.insert(0);
+      map.insert(1);
+      map.insert(2);
+      map.insert(Iter(std::begin(arr)), Iter(std::end(arr)));
+      assert(map.size() == 6);
+      assert(*std::next(map.begin(), 0) == 0);
+      assert(*std::next(map.begin(), 1) == 1);
+      assert(*std::next(map.begin(), 2) == 1);
+      assert(*std::next(map.begin(), 3) == 2);
+      assert(*std::next(map.begin(), 4) == 3);
+      assert(*std::next(map.begin(), 5) == 4);
+      assert(std::next(map.begin(), 6) == map.end());
+    }
+  }
+}
+
+void test() {
+  test_alloc<cpp17_input_iterator<int*>, std::allocator<int> >();
+  test_alloc<cpp17_input_iterator<int*>, min_allocator<int> >();
+}
 
 int main(int, char**) {
-  {
-    typedef std::multiset<int> M;
-    typedef int V;
-    V ar[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
-    M m;
-    m.insert(cpp17_input_iterator<const V*>(ar), cpp17_input_iterator<const V*>(ar + sizeof(ar) / sizeof(ar[0])));
-    assert(m.size() == 9);
-    assert(*std::next(m.begin(), 0) == 1);
-    assert(*std::next(m.begin(), 1) == 1);
-    assert(*std::next(m.begin(), 2) == 1);
-    assert(*std::next(m.begin(), 3) == 2);
-    assert(*std::next(m.begin(), 4) == 2);
-    assert(*std::next(m.begin(), 5) == 2);
-    assert(*std::next(m.begin(), 6) == 3);
-    assert(*std::next(m.begin(), 7) == 3);
-    assert(*std::next(m.begin(), 8) == 3);
-  }
-#if TEST_STD_VER >= 11
-  {
-    typedef std::multiset<int, std::less<int>, min_allocator<int>> M;
-    typedef int V;
-    V ar[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
-    M m;
-    m.insert(cpp17_input_iterator<const V*>(ar), cpp17_input_iterator<const V*>(ar + sizeof(ar) / sizeof(ar[0])));
-    assert(m.size() == 9);
-    assert(*std::next(m.begin(), 0) == 1);
-    assert(*std::next(m.begin(), 1) == 1);
-    assert(*std::next(m.begin(), 2) == 1);
-    assert(*std::next(m.begin(), 3) == 2);
-    assert(*std::next(m.begin(), 4) == 2);
-    assert(*std::next(m.begin(), 5) == 2);
-    assert(*std::next(m.begin(), 6) == 3);
-    assert(*std::next(m.begin(), 7) == 3);
-    assert(*std::next(m.begin(), 8) == 3);
-  }
-#endif
+  test();
 
   return 0;
 }

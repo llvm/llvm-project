@@ -307,7 +307,7 @@ hashValueMapping(const RegisterBankInfo::PartialMapping *BreakDown,
   SmallVector<size_t, 8> Hashes(NumBreakDowns);
   for (unsigned Idx = 0; Idx != NumBreakDowns; ++Idx)
     Hashes.push_back(hash_value(BreakDown[Idx]));
-  return hash_combine_range(Hashes.begin(), Hashes.end());
+  return hash_combine_range(Hashes);
 }
 
 const RegisterBankInfo::ValueMapping &
@@ -721,7 +721,7 @@ void RegisterBankInfo::OperandsMapper::createVRegs(unsigned OpIdx) {
     // of the instruction.
     // The rationale is that this generic code cannot guess how the
     // target plans to split the input type.
-    NewVReg = MRI.createGenericVirtualRegister(LLT::scalar(PartMap->Length));
+    NewVReg = MRI.createGenericVirtualRegister(LLT::integer(PartMap->Length));
     MRI.setRegBank(NewVReg, *PartMap->RegBank);
     ++PartMap;
   }

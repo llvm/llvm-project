@@ -81,7 +81,7 @@ CodeAction toCodeAction(const ClangdServer::CodeActionResult::Rename &R,
                         const URIForFile &File) {
   CodeAction CA;
   CA.title = R.FixMessage;
-  CA.kind = std::string(CodeAction::REFACTOR_KIND);
+  CA.kind = std::string(CodeAction::QUICKFIX_KIND);
   CA.command.emplace();
   CA.command->title = R.FixMessage;
   CA.command->command = std::string(ApplyRenameCommand);
@@ -433,7 +433,7 @@ private:
     // When the request ends, we can clean up the entry we just added.
     // The cookie lets us check that it hasn't been overwritten due to ID
     // reuse.
-    return Task.first.derive(llvm::make_scope_exit([this, StrID, Cookie] {
+    return Task.first.derive(llvm::scope_exit([this, StrID, Cookie] {
       std::lock_guard<std::mutex> Lock(RequestCancelersMutex);
       auto It = RequestCancelers.find(StrID);
       if (It != RequestCancelers.end() && It->second.second == Cookie)
@@ -456,7 +456,6 @@ private:
 
   ClangdLSPServer &Server;
 };
-constexpr int ClangdLSPServer::MessageHandler::MaxReplayCallbacks;
 
 // call(), notify(), and reply() wrap the Transport, adding logging and locking.
 void ClangdLSPServer::callMethod(StringRef Method, llvm::json::Value Params,
@@ -494,9 +493,9 @@ static std::vector<llvm::StringRef> semanticTokenModifiers() {
 void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                                    Callback<llvm::json::Value> Reply) {
   // Determine character encoding first as it affects constructed ClangdServer.
-  if (Params.capabilities.offsetEncoding && !Opts.Encoding) {
+  if (Params.capabilities.PositionEncodings && !Opts.Encoding) {
     Opts.Encoding = OffsetEncoding::UTF16; // fallback
-    for (OffsetEncoding Supported : *Params.capabilities.offsetEncoding)
+    for (OffsetEncoding Supported : *Params.capabilities.PositionEncodings)
       if (Supported != OffsetEncoding::UnsupportedEncoding) {
         Opts.Encoding = Supported;
         break;
@@ -519,8 +518,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
 
   Opts.CodeComplete.EnableSnippets = Params.capabilities.CompletionSnippets;
   Opts.CodeComplete.IncludeFixIts = Params.capabilities.CompletionFixes;
-  if (!Opts.CodeComplete.BundleOverloads)
-    Opts.CodeComplete.BundleOverloads = Params.capabilities.HasSignatureHelp;
+  Opts.CodeComplete.EnableInsertReplace = Params.capabilities.InsertReplace;
   Opts.CodeComplete.DocumentationFormat =
       Params.capabilities.CompletionDocumentationFormat;
   Opts.SignatureHelpDocumentationFormat =
@@ -555,6 +553,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     if (const auto &Dir = Params.initializationOptions.compilationDatabasePath)
       CDBOpts.CompileCommandsDir = Dir;
     CDBOpts.ContextProvider = Opts.ContextProvider;
+    if (Opts.StrongWorkspaceMode)
+      CDBOpts.applyFallbackWorkingDirectory(Opts.WorkspaceRoot);
     BaseCDB =
         std::make_unique<DirectoryBasedGlobalCompilationDatabase>(CDBOpts);
   }
@@ -591,7 +591,10 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
            {"save", true},
        }},
       {"documentFormattingProvider", true},
-      {"documentRangeFormattingProvider", true},
+      {"documentRangeFormattingProvider",
+       llvm::json::Object{
+           {"rangesSupport", true},
+       }},
       {"documentOnTypeFormattingProvider",
        llvm::json::Object{
            {"firstTriggerCharacter", "\n"},
@@ -683,6 +686,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   ServerCaps["executeCommandProvider"] =
       llvm::json::Object{{"commands", Commands}};
 
+  if (Opts.Encoding)
+    ServerCaps["positionEncoding"] = *Opts.Encoding;
+
   llvm::json::Object Result{
       {{"serverInfo",
         llvm::json::Object{
@@ -690,6 +696,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
             {"version", llvm::formatv("{0} {1} {2}", versionString(),
                                       featureString(), platformString())}}},
        {"capabilities", std::move(ServerCaps)}}};
+
+  // TODO: offsetEncoding capability is a deprecated clangd extension and should
+  // be deleted.
   if (Opts.Encoding)
     Result["offsetEncoding"] = *Opts.Encoding;
   Reply(std::move(Result));
@@ -799,7 +808,7 @@ void ClangdLSPServer::onCommandApplyEdit(const WorkspaceEdit &WE,
 
 void ClangdLSPServer::onCommandApplyTweak(const TweakArgs &Args,
                                           Callback<llvm::json::Value> Reply) {
-  auto Action = [this, Reply = std::move(Reply)](
+  auto Action = [this, Reply = std::move(Reply), &ServerRef = *Server](
                     llvm::Expected<Tweak::Effect> R) mutable {
     if (!R)
       return Reply(R.takeError());
@@ -816,7 +825,7 @@ void ClangdLSPServer::onCommandApplyTweak(const TweakArgs &Args,
     if (R->ApplyEdits.empty())
       return Reply("Tweak applied.");
 
-    if (auto Err = validateEdits(*Server, R->ApplyEdits))
+    if (auto Err = validateEdits(ServerRef, R->ApplyEdits))
       return Reply(std::move(Err));
 
     WorkspaceEdit WE;
@@ -900,11 +909,11 @@ void ClangdLSPServer::onRename(const RenameParams &Params,
     return Reply(llvm::make_error<LSPError>(
         "onRename called for non-added file", ErrorCode::InvalidParams));
   Server->rename(File, Params.position, Params.newName, Opts.Rename,
-                 [File, Params, Reply = std::move(Reply),
-                  this](llvm::Expected<RenameResult> R) mutable {
+                 [File, Params, Reply = std::move(Reply), &ServerRef = *Server](
+                     llvm::Expected<RenameResult> R) mutable {
                    if (!R)
                      return Reply(R.takeError());
-                   if (auto Err = validateEdits(*Server, R->GlobalChanges))
+                   if (auto Err = validateEdits(ServerRef, R->GlobalChanges))
                      return Reply(std::move(Err));
                    WorkspaceEdit Result;
                    // FIXME: use documentChanges if SupportDocumentChanges is
@@ -952,9 +961,17 @@ void ClangdLSPServer::onDocumentOnTypeFormatting(
 void ClangdLSPServer::onDocumentRangeFormatting(
     const DocumentRangeFormattingParams &Params,
     Callback<std::vector<TextEdit>> Reply) {
+  onDocumentRangesFormatting(
+      DocumentRangesFormattingParams{Params.textDocument, {Params.range}},
+      std::move(Reply));
+}
+
+void ClangdLSPServer::onDocumentRangesFormatting(
+    const DocumentRangesFormattingParams &Params,
+    Callback<std::vector<TextEdit>> Reply) {
   auto File = Params.textDocument.uri.file();
   auto Code = Server->getDraft(File);
-  Server->formatFile(File, Params.range,
+  Server->formatFile(File, Params.ranges,
                      [Code = std::move(Code), Reply = std::move(Reply)](
                          llvm::Expected<tooling::Replacements> Result) mutable {
                        if (Result)
@@ -970,7 +987,7 @@ void ClangdLSPServer::onDocumentFormatting(
   auto File = Params.textDocument.uri.file();
   auto Code = Server->getDraft(File);
   Server->formatFile(File,
-                     /*Rng=*/std::nullopt,
+                     /*Rngs=*/{},
                      [Code = std::move(Code), Reply = std::move(Reply)](
                          llvm::Expected<tooling::Replacements> Result) mutable {
                        if (Result)
@@ -1262,11 +1279,9 @@ void ClangdLSPServer::onHover(const TextDocumentPositionParams &Params,
                       R.contents.kind = HoverContentFormat;
                       R.range = (*H)->SymRange;
                       switch (HoverContentFormat) {
-                      case MarkupKind::PlainText:
-                        R.contents.value = (*H)->present().asPlainText();
-                        return Reply(std::move(R));
                       case MarkupKind::Markdown:
-                        R.contents.value = (*H)->present().asMarkdown();
+                      case MarkupKind::PlainText:
+                        R.contents.value = (*H)->present(HoverContentFormat);
                         return Reply(std::move(R));
                       };
                       llvm_unreachable("unhandled MarkupKind");
@@ -1666,6 +1681,7 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
   Bind.method("shutdown", this, &ClangdLSPServer::onShutdown);
   Bind.method("sync", this, &ClangdLSPServer::onSync);
   Bind.method("textDocument/rangeFormatting", this, &ClangdLSPServer::onDocumentRangeFormatting);
+  Bind.method("textDocument/rangesFormatting", this, &ClangdLSPServer::onDocumentRangesFormatting);
   Bind.method("textDocument/onTypeFormatting", this, &ClangdLSPServer::onDocumentOnTypeFormatting);
   Bind.method("textDocument/formatting", this, &ClangdLSPServer::onDocumentFormatting);
   Bind.method("textDocument/codeAction", this, &ClangdLSPServer::onCodeAction);
@@ -1782,9 +1798,9 @@ bool ClangdLSPServer::shouldRunCompletion(
   auto Offset = positionToOffset(*Code, Params.position,
                                  /*AllowColumnsBeyondLineLength=*/false);
   if (!Offset) {
-    vlog("could not convert position '{0}' to offset for file '{1}'",
-         Params.position, Params.textDocument.uri.file());
-    return true;
+    elog("could not convert position '{0}' to offset for file '{1}': {2}",
+         Params.position, Params.textDocument.uri.file(), Offset.takeError());
+    return false;
   }
   return allowImplicitCompletion(*Code, *Offset);
 }
@@ -1816,7 +1832,7 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,
   // Cache DiagRefMap
   {
     std::lock_guard<std::mutex> Lock(DiagRefMutex);
-    DiagRefMap[File] = LocalDiagMap;
+    DiagRefMap[File] = std::move(LocalDiagMap);
   }
 
   // Send a notification to the LSP client.

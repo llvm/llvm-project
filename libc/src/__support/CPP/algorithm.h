@@ -18,6 +18,12 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
+template <class T = void> struct plus {};
+template <class T = void> struct multiplies {};
+template <class T = void> struct bit_and {};
+template <class T = void> struct bit_or {};
+template <class T = void> struct bit_xor {};
+
 template <class T> LIBC_INLINE constexpr const T &max(const T &a, const T &b) {
   return (a < b) ? b : a;
 }
@@ -41,6 +47,26 @@ LIBC_INLINE constexpr InputIt find_if_not(InputIt first, InputIt last,
 template <class InputIt, class UnaryPred>
 LIBC_INLINE constexpr bool all_of(InputIt first, InputIt last, UnaryPred p) {
   return find_if_not(first, last, p) == last;
+}
+
+template <typename It, typename T, typename Comp>
+LIBC_INLINE constexpr It lower_bound(It first, It last, const T &value,
+                                     Comp comp) {
+  auto count = last - first;
+
+  while (count > 0) {
+    It it = first;
+    auto step = count / 2;
+    it += step;
+
+    if (comp(*it, value)) {
+      first = ++it;
+      count -= step + 1;
+    } else {
+      count = step;
+    }
+  }
+  return first;
 }
 
 } // namespace cpp

@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -fexperimental-late-parse-attributes -DLATE_PARSING %s
 
 #define LOCKABLE            __attribute__ ((lockable))
+#define REENTRANT_CAPABILITY __attribute__ ((reentrant_capability))
 #define SCOPED_LOCKABLE     __attribute__ ((scoped_lockable))
 #define GUARDED_BY(...)     __attribute__ ((guarded_by(__VA_ARGS__)))
 #define GUARDED_VAR         __attribute__ ((guarded_var))
@@ -31,6 +32,10 @@
 // Simplified only for test purpose.
 struct LOCKABLE Mutex {};
 
+struct Task {
+  struct Mutex mu;
+};
+
 struct Foo {
   struct Mutex *mu_;
   int  a_value GUARDED_BY(mu_);
@@ -41,6 +46,10 @@ struct Foo {
   } bar;
 
   int* a_ptr PT_GUARDED_BY(bar.other_mu);
+
+  struct Task *task;
+  int  b_value GUARDED_BY(&task->mu);
+  int* b_ptr PT_GUARDED_BY(&task->mu);
 };
 
 struct LOCKABLE Lock {};
@@ -93,6 +102,7 @@ int get_value(int *p) SHARED_LOCKS_REQUIRED(foo_.mu_){
 }
 
 void unlock_scope(struct Mutex *const *mu) __attribute__((release_capability(**mu)));
+void unlock_scope_type_erased(int **priv) __attribute__((release_capability(*(struct Mutex **)priv)));
 
 // Verify late parsing:
 #ifdef LATE_PARSING
@@ -183,26 +193,50 @@ int main(void) {
   /// Cleanup functions
   {
     struct Mutex* const __attribute__((cleanup(unlock_scope))) scope = &mu1;
-    mutex_exclusive_lock(scope);  // Note that we have to lock through scope, because no alias analysis!
+    mutex_exclusive_lock(scope);  // Lock through scope works.
     // Cleanup happens automatically -> no warning.
   }
+  {
+    struct Mutex* const __attribute__((unused, cleanup(unlock_scope))) scope = &mu1;
+    mutex_exclusive_lock(&mu1);  // With basic alias analysis lock through mu1 also works.
+  }
+  {
+    int i = 0;
+    mutex_exclusive_lock(&mu1);
+    struct Mutex* const __attribute__((unused, cleanup(unlock_scope))) scope = &mu1;
+    i++;
+  }
+  // Cleanup through cast alias pointer in a for-loop; a variant of this pattern
+  // appears in the Linux kernel for generic scoped guard macros.
+  for (int i = (mutex_exclusive_lock(foo_.mu_), 0),
+       *priv __attribute__((cleanup(unlock_scope_type_erased))) = (int *)(__UINTPTR_TYPE__)(foo_.mu_);
+       !i; i++) {
+    a_ = 42;
+  }
 
-  foo_.a_value = 0; // expected-warning {{writing variable 'a_value' requires holding mutex 'mu_' exclusively}}
-  *foo_.a_ptr = 1; // expected-warning {{writing the value pointed to by 'a_ptr' requires holding mutex 'bar.other_mu' exclusively}}
-
+  foo_.a_value = 0; // expected-warning {{writing variable 'a_value' requires holding mutex 'foo_.mu_' exclusively}}
+  *foo_.a_ptr = 1; // expected-warning {{writing the value pointed to by 'a_ptr' requires holding mutex 'foo_.bar.other_mu' exclusively}}
+  foo_.b_value = 0; // expected-warning {{writing variable 'b_value' requires holding mutex 'foo_.task->mu' exclusively}}
+  *foo_.b_ptr = 1; // expected-warning {{writing the value pointed to by 'b_ptr' requires holding mutex 'foo_.task->mu' exclusively}}
 
   mutex_exclusive_lock(foo_.bar.other_mu);
+  *foo_.a_ptr = 1;
   mutex_exclusive_lock(foo_.bar.third_mu); // expected-warning{{mutex 'third_mu' must be acquired before 'other_mu'}}
   mutex_exclusive_lock(foo_.mu_); // expected-warning{{mutex 'mu_' must be acquired before 'other_mu'}}
   mutex_exclusive_unlock(foo_.mu_);
   mutex_exclusive_unlock(foo_.bar.other_mu);
   mutex_exclusive_unlock(foo_.bar.third_mu);
 
+  mutex_exclusive_lock(&foo_.task->mu);
+  foo_.b_value = 0;
+  *foo_.b_ptr = 1;
+  mutex_exclusive_unlock(&foo_.task->mu);
+
 #ifdef LATE_PARSING
-  late_parsing.a_value_defined_before = 1; // expected-warning{{writing variable 'a_value_defined_before' requires holding mutex 'a_mutex_defined_late' exclusively}}
+  late_parsing.a_value_defined_before = 1; // expected-warning{{writing variable 'a_value_defined_before' requires holding mutex 'late_parsing.a_mutex_defined_late' exclusively}}
   late_parsing.a_ptr_defined_before = 0;
   set_value(&late_parsing.a_value_defined_before, 0); // expected-warning{{calling function 'set_value' requires holding mutex 'foo_.mu_' exclusively}}
-                                                      // expected-warning@-1{{passing pointer to variable 'a_value_defined_before' requires holding mutex 'a_mutex_defined_late'}}
+                                                      // expected-warning@-1{{passing pointer to variable 'a_value_defined_before' requires holding mutex 'late_parsing.a_mutex_defined_late'}}
   mutex_exclusive_lock(late_parsing.a_mutex_defined_late);
   mutex_exclusive_lock(late_parsing.a_mutex_defined_early); // expected-warning{{mutex 'a_mutex_defined_early' must be acquired before 'a_mutex_defined_late'}}
   mutex_exclusive_unlock(late_parsing.a_mutex_defined_early);
@@ -216,16 +250,105 @@ int main(void) {
   return 0;
 }
 
+/*** Reentrancy test ***/
+struct LOCKABLE REENTRANT_CAPABILITY ReentrantMutex {};
+void reentrant_mutex_lock(struct ReentrantMutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
+void reentrant_mutex_unlock(struct ReentrantMutex *mu) UNLOCK_FUNCTION(mu);
+
+struct ReentrantMutex rmu;
+int r_ GUARDED_BY(&rmu);
+
+void test_reentrant(void) {
+  reentrant_mutex_lock(&rmu);
+  r_ = 1;
+  reentrant_mutex_lock(&rmu);
+  r_ = 1;
+  reentrant_mutex_unlock(&rmu);
+  r_ = 1;
+  reentrant_mutex_unlock(&rmu);
+  r_ = 1; // expected-warning{{writing variable 'r_' requires holding mutex 'rmu' exclusively}}
+}
+
+// In C code, object construction may want to initialize guarded members
+// alongside a capability (initialization implies exclusive access); to do so,
+// we can assert a capability as part of its initialization. To permit immediate
+// use of the capability, it is necessarily to "promote" the type to a reentrant
+// capability for the rest of the scope. While this avoids the false positive
+// warning on member initialization and immediate use, it does pose the danger
+// of false negatives (no warning on actual double-lock in the same function).
+void mutex_init(struct Mutex *mu) ASSERT_EXCLUSIVE_LOCK((struct ReentrantMutex *)mu);
+
+struct TestInit {
+  struct Mutex mu;
+  int a GUARDED_BY(&mu);
+};
+
+struct TestInit test_init(void) {
+  struct TestInit foo;
+
+  mutex_init(&foo.mu); // initialize capability before guarded members
+  foo.a = 0;           // initialize guarded members normally
+
+  // It should be allowed to immediately use the capability in the same
+  // function, such as after spawning a thread.
+  mutex_exclusive_lock(&foo.mu);
+  mutex_exclusive_unlock(&foo.mu);
+
+  return foo;
+}
+
+// Function pointer struct members.
+struct FPOps {
+  struct Mutex mu;
+  int a GUARDED_BY(&mu);
+  void (*lock)(void) EXCLUSIVE_LOCK_FUNCTION(&mu);
+  void (*unlock)(void) UNLOCK_FUNCTION(&mu);
+  void (*requires_mu)(void) EXCLUSIVE_LOCKS_REQUIRED(&mu);
+};
+
+void test_fp_ops(struct FPOps *ops) {
+  ops->lock();
+  ops->a = 42;
+  ops->requires_mu();
+  ops->unlock();
+}
+
+void test_fp_ops_fail(struct FPOps *ops) {
+  ops->a = 42; // expected-warning {{writing variable 'a' requires holding mutex '&FPOps::mu' exclusively}}
+  ops->requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex '&FPOps::mu' exclusively}}
+}
+
+// Function pointer attributes referring to parameters.
+struct BDev {
+  struct Mutex lock;
+  int a GUARDED_BY(&lock);
+};
+
+struct BDevOps {
+  void (*lock)(struct BDev *bdev) EXCLUSIVE_LOCK_FUNCTION(bdev->lock);
+  void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock);
+};
+
+void test_bdev_ops(struct BDevOps *ops, struct BDev *bdev) {
+  ops->lock(bdev);
+  bdev->a = 42;
+  ops->unlock(bdev);
+}
+
+void test_bdev_ops_fail(struct BDevOps *ops, struct BDev *bdev) {
+  ops->unlock(bdev); // expected-warning {{releasing mutex 'bdev->lock' that was not held}}
+}
+
 // We had a problem where we'd skip all attributes that follow a late-parsed
 // attribute in a single __attribute__.
 void run(void) __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to non-static data members and global variables}}
 
-int value_with_wrong_number_of_args GUARDED_BY(mu1, mu2); // expected-error{{'guarded_by' attribute takes one argument}}
+int value_with_multiple_guarded_args GUARDED_BY(mu1, mu2);
 
-int *ptr_with_wrong_number_of_args PT_GUARDED_BY(mu1, mu2); // expected-error{{'pt_guarded_by' attribute takes one argument}}
+int *ptr_with_multiple_guarded_args PT_GUARDED_BY(mu1, mu2);
 
-int value_with_no_open_brace __attribute__((guarded_by)); // expected-error{{'guarded_by' attribute takes one argument}}
-int *ptr_with_no_open_brace __attribute__((pt_guarded_by)); // expected-error{{'pt_guarded_by' attribute takes one argument}}
+int value_with_no_open_brace __attribute__((guarded_by)); // expected-error{{'guarded_by' attribute takes at least 1 argument}}
+int *ptr_with_no_open_brace __attribute__((pt_guarded_by)); // expected-error{{'pt_guarded_by' attribute takes at least 1 argument}}
 
 int value_with_no_open_brace_on_acquire_after __attribute__((acquired_after)); // expected-error{{'acquired_after' attribute takes at least 1 argument}}
 int value_with_no_open_brace_on_acquire_before __attribute__((acquired_before)); // expected-error{{'acquired_before' attribute takes at least 1 argument}}

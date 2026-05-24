@@ -127,6 +127,10 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
     break;
   }
 
+  case 'M':
+    launch_info.GetFlags().Set(eLaunchFlagMemoryTagging);
+    break;
+
   case 'c':
     if (!option_arg.empty())
       launch_info.SetShell(FileSpec(option_arg));

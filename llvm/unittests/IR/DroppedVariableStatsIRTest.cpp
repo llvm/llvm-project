@@ -16,18 +16,14 @@
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
-#include <gtest/gtest.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
 #include <llvm/IR/PassInstrumentation.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/IR/PassTimingInfo.h>
 #include <llvm/Support/raw_ostream.h>
 
 using namespace llvm;
-namespace llvm {
-void initializePassTest1Pass(PassRegistry &);
 
 static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   SMDiagnostic Err;
@@ -36,7 +32,6 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
     Err.print("AbstractCallSiteTests", errs());
   return Mod;
 }
-} // namespace llvm
 
 namespace {
 

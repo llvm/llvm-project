@@ -33,20 +33,19 @@ namespace {
 class MacroExpansionContextTest : public ::testing::Test {
 protected:
   MacroExpansionContextTest()
-      : InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
+      : InMemoryFileSystem(
+            llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>()),
         FileMgr(FileSystemOptions(), InMemoryFileSystem),
-        DiagID(new DiagnosticIDs()), DiagOpts(new DiagnosticOptions()),
-        Diags(DiagID, DiagOpts.get(), new IgnoringDiagConsumer()),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions()) {
     TargetOpts->Triple = "x86_64-pc-linux-unknown";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
     LangOpts.CPlusPlus20 = 1; // For __VA_OPT__
   }
 
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;

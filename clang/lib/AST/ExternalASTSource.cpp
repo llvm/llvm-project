@@ -129,7 +129,7 @@ uint32_t ExternalASTSource::incrementGeneration(ASTContext &C) {
     // FIXME: Only bump the generation counter if the current generation number
     // has been observed?
     if (!++CurrentGeneration)
-      llvm::report_fatal_error("generation counter overflowed", false);
+      llvm::reportFatalUsageError("generation counter overflowed");
   }
 
   return OldGeneration;

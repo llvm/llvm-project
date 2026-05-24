@@ -26,9 +26,9 @@ declare void @extern_func()
 ; CHECK-NEXT:    .word   0                               # 0x0
 ; CHECK-NEXT:    .word   %pltpcrel(f0)
 ; CHECK-NEXT:    .word   %pltpcrel(f1+4)
-; CHECK-NEXT:    .word   f2-_ZTV1B-8
+; CHECK-NEXT:    .word   %pltpcrel(f2+8)
 ; CHECK-NEXT:    .word   %pltpcrel(f3+12)
-; CHECK-NEXT:    .word   f4-_ZTV1B-8
+; CHECK-NEXT:    .word   %pltpcrel(f4+16)
 ; CHECK-NEXT:    .size   _ZTV1B, 28
 declare void @f0()
 declare void @f1()

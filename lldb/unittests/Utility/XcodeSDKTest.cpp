@@ -27,6 +27,7 @@ TEST(XcodeSDKTest, ParseTest) {
   EXPECT_EQ(XcodeSDK("AppleTVOS.sdk").GetType(), XcodeSDK::AppleTVOS);
   EXPECT_EQ(XcodeSDK("WatchSimulator.sdk").GetType(), XcodeSDK::WatchSimulator);
   EXPECT_EQ(XcodeSDK("WatchOS.sdk").GetType(), XcodeSDK::watchOS);
+  EXPECT_EQ(XcodeSDK("BridgeOS.sdk").GetType(), XcodeSDK::BridgeOS);
   EXPECT_EQ(XcodeSDK("XRSimulator.sdk").GetType(), XcodeSDK::XRSimulator);
   EXPECT_EQ(XcodeSDK("XROS.sdk").GetType(), XcodeSDK::XROS);
   EXPECT_EQ(XcodeSDK("Linux.sdk").GetType(), XcodeSDK::Linux);
@@ -101,17 +102,6 @@ TEST(XcodeSDKTest, SDKSupportsModules) {
       FileSpec(base + "MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk")));
 }
 #endif
-
-TEST(XcodeSDKTest, SDKSupportsSwift) {
-  EXPECT_TRUE(XcodeSDK("iPhoneSimulator12.0.sdk").SupportsSwift());
-  EXPECT_TRUE(XcodeSDK("iPhoneSimulator12.0.Internal.sdk").SupportsSwift());
-  EXPECT_FALSE(XcodeSDK("iPhoneSimulator7.2.sdk").SupportsSwift());
-  EXPECT_TRUE(XcodeSDK("MacOSX10.10.sdk").SupportsSwift());
-  EXPECT_FALSE(XcodeSDK("MacOSX10.9.sdk").SupportsSwift());
-  EXPECT_TRUE(XcodeSDK("Linux.sdk").SupportsSwift());
-  EXPECT_TRUE(XcodeSDK("MacOSX.sdk").SupportsSwift());
-  EXPECT_FALSE(XcodeSDK("EverythingElse.sdk").SupportsSwift());
-}
 
 TEST(XcodeSDKTest, GetCanonicalNameAndConstruct) {
   XcodeSDK::Info info;

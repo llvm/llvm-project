@@ -9,12 +9,9 @@
 #ifndef __CLC_MATH_CLC_EXP_HELPER
 #define __CLC_MATH_CLC_EXP_HELPER
 
-#define __DOUBLE_ONLY
-#define __CLC_BODY <clc/math/clc_exp_helper.inc>
+#define __CLC_DOUBLE_ONLY
+#define __CLC_BODY "clc/math/clc_exp_helper_decl.inc"
 
-#include <clc/math/gentype.inc>
-
-#undef __CLC_BODY
-#undef __DOUBLE_ONLY
+#include "clc/math/gentype.inc"
 
 #endif // __CLC_MATH_CLC_EXP_HELPER

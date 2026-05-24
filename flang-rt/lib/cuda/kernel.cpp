@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/CUDA/kernel.h"
+#include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang/Runtime/CUDA/common.h"
 
@@ -16,7 +18,7 @@ extern "C" {
 
 void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
     intptr_t gridZ, intptr_t blockX, intptr_t blockY, intptr_t blockZ,
-    int32_t smem, void **params, void **extra) {
+    int64_t *stream, int32_t smem, void **params, void **extra) {
   dim3 gridDim;
   gridDim.x = gridX;
   gridDim.y = gridY;
@@ -74,15 +76,21 @@ void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
     Fortran::runtime::Terminator terminator{__FILE__, __LINE__};
     terminator.Crash("Too many invalid grid dimensions");
   }
-  cudaStream_t stream = 0; // TODO stream managment
-  CUDA_REPORT_IF_ERROR(
-      cudaLaunchKernel(kernel, gridDim, blockDim, params, smem, stream));
+  cudaStream_t defaultStream = 0;
+  cudaError_t err = cudaLaunchKernel(kernel, gridDim, blockDim, params, smem,
+      stream != nullptr ? (cudaStream_t)(*stream) : defaultStream);
+  if (Fortran::runtime::executionEnvironment.cudaCheckError &&
+      err != cudaSuccess) {
+    Fortran::runtime::Terminator terminator{__FILE__, __LINE__};
+    terminator.Crash(
+        "cudaLaunchKernel failed with error %s", cudaGetErrorName(err));
+  }
 }
 
 void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
     intptr_t clusterY, intptr_t clusterZ, intptr_t gridX, intptr_t gridY,
     intptr_t gridZ, intptr_t blockX, intptr_t blockY, intptr_t blockZ,
-    int32_t smem, void **params, void **extra) {
+    int64_t *stream, int32_t smem, void **params, void **extra) {
   cudaLaunchConfig_t config;
   config.gridDim.x = gridX;
   config.gridDim.y = gridY;
@@ -140,7 +148,11 @@ void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
     terminator.Crash("Too many invalid grid dimensions");
   }
   config.dynamicSmemBytes = smem;
-  config.stream = 0; // TODO stream managment
+  if (stream != nullptr) {
+    config.stream = (cudaStream_t)(*stream);
+  } else {
+    config.stream = 0;
+  }
   cudaLaunchAttribute launchAttr[1];
   launchAttr[0].id = cudaLaunchAttributeClusterDimension;
   launchAttr[0].val.clusterDim.x = clusterX;
@@ -148,12 +160,19 @@ void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
   launchAttr[0].val.clusterDim.z = clusterZ;
   config.numAttrs = 1;
   config.attrs = launchAttr;
-  CUDA_REPORT_IF_ERROR(cudaLaunchKernelExC(&config, kernel, params));
+  cudaError_t err = cudaLaunchKernelExC(&config, kernel, params);
+  if (Fortran::runtime::executionEnvironment.cudaCheckError &&
+      err != cudaSuccess) {
+    Fortran::runtime::Terminator terminator{__FILE__, __LINE__};
+    terminator.Crash(
+        "cudaLaunchKernelExC failed with error %s", cudaGetErrorName(err));
+  }
 }
 
 void RTDEF(CUFLaunchCooperativeKernel)(const void *kernel, intptr_t gridX,
     intptr_t gridY, intptr_t gridZ, intptr_t blockX, intptr_t blockY,
-    intptr_t blockZ, int32_t smem, void **params, void **extra) {
+    intptr_t blockZ, int64_t *stream, int32_t smem, void **params,
+    void **extra) {
   dim3 gridDim;
   gridDim.x = gridX;
   gridDim.y = gridY;
@@ -211,9 +230,15 @@ void RTDEF(CUFLaunchCooperativeKernel)(const void *kernel, intptr_t gridX,
     Fortran::runtime::Terminator terminator{__FILE__, __LINE__};
     terminator.Crash("Too many invalid grid dimensions");
   }
-  cudaStream_t stream = 0; // TODO stream managment
-  CUDA_REPORT_IF_ERROR(cudaLaunchCooperativeKernel(
-      kernel, gridDim, blockDim, params, smem, stream));
+  cudaStream_t defaultStream = 0;
+  cudaError_t err = cudaLaunchCooperativeKernel(kernel, gridDim, blockDim,
+      params, smem, stream != nullptr ? (cudaStream_t)*stream : defaultStream);
+  if (Fortran::runtime::executionEnvironment.cudaCheckError &&
+      err != cudaSuccess) {
+    Fortran::runtime::Terminator terminator{__FILE__, __LINE__};
+    terminator.Crash("cudaLaunchCooperativeKernel failed with error %s",
+        cudaGetErrorName(err));
+  }
 }
 
 } // extern "C"

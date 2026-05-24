@@ -29,6 +29,9 @@ MachineFunctionInfo *RISCVMachineFunctionInfo::clone(
 
 RISCVMachineFunctionInfo::RISCVMachineFunctionInfo(const Function &F,
                                                    const RISCVSubtarget *STI) {
+  if (const auto *CFB = mdconst::extract_or_null<ConstantInt>(
+          F.getParent()->getModuleFlag("cf-protection-branch")))
+    CFProtectionBranch = CFB->getZExtValue() != 0;
 
   // The default stack probe size is 4096 if the function has no
   // stack-probe-size attribute. This is a safe default because it is the
@@ -67,12 +70,17 @@ RISCVMachineFunctionInfo::getInterruptStackKind(
 
   StringRef InterruptVal =
       MF.getFunction().getFnAttribute("interrupt").getValueAsString();
-  if (InterruptVal == "qci-nest")
-    return InterruptStackKind::QCINest;
-  if (InterruptVal == "qci-nonest")
-    return InterruptStackKind::QCINoNest;
 
-  return InterruptStackKind::None;
+  return StringSwitch<RISCVMachineFunctionInfo::InterruptStackKind>(
+             InterruptVal)
+      .Case("qci-nest", InterruptStackKind::QCINest)
+      .Case("qci-nonest", InterruptStackKind::QCINoNest)
+      .Case("SiFive-CLIC-preemptible",
+            InterruptStackKind::SiFiveCLICPreemptible)
+      .Case("SiFive-CLIC-stack-swap", InterruptStackKind::SiFiveCLICStackSwap)
+      .Case("SiFive-CLIC-preemptible-stack-swap",
+            InterruptStackKind::SiFiveCLICPreemptibleStackSwap)
+      .Default(InterruptStackKind::None);
 }
 
 void yaml::RISCVMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
@@ -85,6 +93,10 @@ RISCVMachineFunctionInfo::getPushPopKind(const MachineFunction &MF) const {
   // function uses a varargs save area.
   // TODO: Use a separate placement for vararg registers to enable Zcmp.
   if (VarArgsSaveSize != 0)
+    return PushPopKind::None;
+
+  // SiFive interrupts are not compatible with push/pop.
+  if (useSiFiveInterrupt(MF))
     return PushPopKind::None;
 
   // Zcmp is not compatible with the frame pointer convention.

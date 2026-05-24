@@ -398,7 +398,7 @@ define amdgpu_kernel void @uniform_fneg_f64(ptr addrspace(1) %out, ptr addrspace
 ; GCN: %[[HI32:[0-9]+]]:sreg_32 = COPY %[[VREG64]].sub1
 ; GCN: %[[SREG_MASK:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
 ; GCN: %[[XOR:[0-9]+]]:sreg_32 = S_XOR_B32 killed %[[HI32]], killed %[[SREG_MASK]]
-; GCN: %[[XOR_COPY:[0-9]+]]:sreg_32 = COPY %[[XOR]]
+; GCN: %[[XOR_COPY:[0-9]+]]:sreg_32 = COPY killed %[[XOR]]
 ; GCN: REG_SEQUENCE killed %[[LO32]], %subreg.sub0, killed %[[XOR_COPY]], %subreg.sub1
 
   %in.gep = getelementptr inbounds double, ptr addrspace(1) %in, i64 %idx
@@ -440,7 +440,7 @@ define amdgpu_kernel void @uniform_fabs_f64(ptr addrspace(1) %out, ptr addrspace
 ; GCN: %[[HI32:[0-9]+]]:sreg_32 = COPY %[[VREG64]].sub1
 ; GCN: %[[SREG_MASK:[0-9]+]]:sreg_32 = S_MOV_B32 2147483647
 ; GCN: %[[AND:[0-9]+]]:sreg_32 = S_AND_B32 killed %[[HI32]], killed %[[SREG_MASK]]
-; GCN: %[[AND_COPY:[0-9]+]]:sreg_32 = COPY %[[AND]]
+; GCN: %[[AND_COPY:[0-9]+]]:sreg_32 = COPY killed %[[AND]]
 ; GCN: REG_SEQUENCE killed %[[LO32]], %subreg.sub0, killed %[[AND_COPY]], %subreg.sub1
 
 
@@ -484,7 +484,7 @@ define amdgpu_kernel void @uniform_fneg_fabs_f64(ptr addrspace(1) %out, ptr addr
 ; GCN: %[[HI32:[0-9]+]]:sreg_32 = COPY %[[VREG64]].sub1
 ; GCN: %[[SREG_MASK:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
 ; GCN: %[[OR:[0-9]+]]:sreg_32 = S_OR_B32 killed %[[HI32]], killed %[[SREG_MASK]]
-; GCN: %[[OR_COPY:[0-9]+]]:sreg_32 = COPY %[[OR]]
+; GCN: %[[OR_COPY:[0-9]+]]:sreg_32 = COPY killed %[[OR]]
 ; GCN: REG_SEQUENCE killed %[[LO32]], %subreg.sub0, killed %[[OR_COPY]], %subreg.sub1
 
 

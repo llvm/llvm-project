@@ -16,7 +16,7 @@
 namespace llvm {
 
 template <typename DerivedT, bool PreRegAlloc>
-class TailDuplicatePassBase : public PassInfoMixin<DerivedT> {
+class TailDuplicatePassBase : public OptionalPassInfoMixin<DerivedT> {
 private:
   std::unique_ptr<MBFIWrapper> MBFIW;
 
@@ -29,8 +29,7 @@ class EarlyTailDuplicatePass
     : public TailDuplicatePassBase<EarlyTailDuplicatePass, true> {
 public:
   MachineFunctionProperties getClearedProperties() const {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 };
 

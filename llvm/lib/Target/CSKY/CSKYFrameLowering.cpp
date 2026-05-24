@@ -476,7 +476,7 @@ bool CSKYFrameLowering::spillCalleeSavedRegisters(
     // Insert the spill to the stack frame.
     MCRegister Reg = CS.getReg();
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.storeRegToStackSlot(MBB, MI, Reg, true, CS.getFrameIdx(), RC, TRI,
+    TII.storeRegToStackSlot(MBB, MI, Reg, true, CS.getFrameIdx(), RC,
                             Register());
   }
 
@@ -498,8 +498,7 @@ bool CSKYFrameLowering::restoreCalleeSavedRegisters(
   for (auto &CS : reverse(CSI)) {
     MCRegister Reg = CS.getReg();
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, TRI,
-                             Register());
+    TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, Register());
     assert(MI != MBB.begin() && "loadRegFromStackSlot didn't insert any code!");
   }
 

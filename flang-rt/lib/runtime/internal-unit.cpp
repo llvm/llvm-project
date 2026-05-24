@@ -72,7 +72,7 @@ RT_API_ATTRS bool InternalDescriptorUnit<DIR>::Emit(
       BlankFill(record + furthestPositionInRecord,
           positionInRecord - furthestPositionInRecord);
     }
-    std::memcpy(record + positionInRecord, data, bytes);
+    runtime::memcpy(record + positionInRecord, data, bytes);
     positionInRecord += bytes;
     furthestPositionInRecord = furthestAfter;
     return ok;

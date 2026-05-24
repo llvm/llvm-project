@@ -318,13 +318,14 @@ lldb::addr_t AllocatedBlock::ReserveBlock(uint32_t size) {
         free_block.SetRangeBase(reserved_block.GetRangeEnd());
         free_block.SetByteSize(bytes_left);
       }
-      LLDB_LOGV(log, "({0}) (size = {1} ({1:x})) => {2:x}", this, size, addr);
+      LLDB_LOG_VERBOSE(log, "({0}) (size = {1} ({1:x})) => {2:x}", this, size,
+                       addr);
       return addr;
     }
   }
 
-  LLDB_LOGV(log, "({0}) (size = {1} ({1:x})) => {2:x}", this, size,
-            LLDB_INVALID_ADDRESS);
+  LLDB_LOG_VERBOSE(log, "({0}) (size = {1} ({1:x})) => {2:x}", this, size,
+                   LLDB_INVALID_ADDRESS);
   return LLDB_INVALID_ADDRESS;
 }
 
@@ -338,7 +339,7 @@ bool AllocatedBlock::FreeBlock(addr_t addr) {
     success = true;
   }
   Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOGV(log, "({0}) (addr = {1:x}) => {2}", this, addr, success);
+  LLDB_LOG_VERBOSE(log, "({0}) (addr = {1:x}) => {2}", this, addr, success);
   return success;
 }
 
@@ -368,13 +369,11 @@ AllocatedMemoryCache::AllocatePage(uint32_t byte_size, uint32_t permissions,
   addr_t addr = m_process.DoAllocateMemory(page_byte_size, permissions, error);
 
   Log *log = GetLog(LLDBLog::Process);
-  if (log) {
-    LLDB_LOGF(log,
-              "Process::DoAllocateMemory (byte_size = 0x%8.8" PRIx32
-              ", permissions = %s) => 0x%16.16" PRIx64,
-              (uint32_t)page_byte_size, GetPermissionsAsCString(permissions),
-              (uint64_t)addr);
-  }
+  LLDB_LOGF(log,
+            "Process::DoAllocateMemory (byte_size = 0x%8.8" PRIx32
+            ", permissions = %s) => 0x%16.16" PRIx64,
+            (uint32_t)page_byte_size, GetPermissionsAsCString(permissions),
+            (uint64_t)addr);
 
   if (addr != LLDB_INVALID_ADDRESS) {
     block_sp = std::make_shared<AllocatedBlock>(addr, page_byte_size,
@@ -432,4 +431,12 @@ bool AllocatedMemoryCache::DeallocateMemory(lldb::addr_t addr) {
             ") => %i",
             (uint64_t)addr, success);
   return success;
+}
+
+bool AllocatedMemoryCache::IsInCache(lldb::addr_t addr) const {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+
+  return llvm::any_of(m_memory_map, [addr](const auto &block) {
+    return block.second->Contains(addr);
+  });
 }

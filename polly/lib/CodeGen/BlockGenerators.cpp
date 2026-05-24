@@ -42,10 +42,11 @@ static cl::opt<bool, true> DebugPrintingX(
     cl::desc("Add printf calls that show the values loaded/stored."),
     cl::location(PollyDebugPrinting), cl::Hidden, cl::cat(PollyCategory));
 
-static cl::opt<bool> TraceStmts(
+bool TraceStmts;
+static cl::opt<bool, true> TraceStmtsX(
     "polly-codegen-trace-stmts",
     cl::desc("Add printf calls that print the statement being executed"),
-    cl::Hidden, cl::cat(PollyCategory));
+    cl::location(TraceStmts), cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> TraceScalars(
     "polly-codegen-trace-scalars",
@@ -87,7 +88,7 @@ Value *BlockGenerator::trySynthesizeNewValue(ScopStmt &Stmt, Value *Old,
          "Only instructions can be insert points for SCEVExpander");
   Value *Expanded = expandCodeFor(
       S, SE, Builder.GetInsertBlock()->getParent(), *GenSE, DL, "polly", Scev,
-      Old->getType(), &*IP, &VTV, &LTS, StartBlock->getSinglePredecessor());
+      Old->getType(), IP, &VTV, &LTS, StartBlock->getSinglePredecessor());
 
   BBMap[Old] = Expanded;
   return Expanded;
@@ -411,7 +412,7 @@ void BlockGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
 
 BasicBlock *BlockGenerator::splitBB(BasicBlock *BB) {
   BasicBlock *CopyBB = SplitBlock(Builder.GetInsertBlock(),
-                                  &*Builder.GetInsertPoint(), GenDT, GenLI);
+                                  Builder.GetInsertPoint(), GenDT, GenLI);
   CopyBB->setName("polly.stmt." + BB->getName());
   return CopyBB;
 }
@@ -420,7 +421,7 @@ BasicBlock *BlockGenerator::copyBB(ScopStmt &Stmt, BasicBlock *BB,
                                    ValueMapT &BBMap, LoopToScevMapT &LTS,
                                    isl_id_to_ast_expr *NewAccesses) {
   BasicBlock *CopyBB = splitBB(BB);
-  Builder.SetInsertPoint(&CopyBB->front());
+  Builder.SetInsertPoint(CopyBB, CopyBB->begin());
   generateScalarLoads(Stmt, LTS, BBMap, NewAccesses);
   generateBeginStmtTrace(Stmt, LTS, BBMap);
 
@@ -622,9 +623,9 @@ void BlockGenerator::generateConditionalExecution(
 
   // Generate the conditional block.
   DomTreeUpdater DTU(GenDT, DomTreeUpdater::UpdateStrategy::Eager);
-  SplitBlockAndInsertIfThen(Cond, &*Builder.GetInsertPoint(), false, nullptr,
+  SplitBlockAndInsertIfThen(Cond, Builder.GetInsertPoint(), false, nullptr,
                             &DTU, GenLI);
-  BranchInst *Branch = cast<BranchInst>(HeadBlock->getTerminator());
+  CondBrInst *Branch = cast<CondBrInst>(HeadBlock->getTerminator());
   BasicBlock *ThenBlock = Branch->getSuccessor(0);
   BasicBlock *TailBlock = Branch->getSuccessor(1);
 
@@ -778,12 +779,12 @@ void BlockGenerator::generateScalarStores(
 
           Val = getNewValue(Stmt, Val, BBMap, LTS, L);
           assert((!isa<Instruction>(Val) ||
-                  DT.dominates(cast<Instruction>(Val)->getParent(),
-                               Builder.GetInsertBlock())) &&
+                  GenDT->dominates(cast<Instruction>(Val)->getParent(),
+                                   Builder.GetInsertBlock())) &&
                  "Domination violation");
           assert((!isa<Instruction>(Address) ||
-                  DT.dominates(cast<Instruction>(Address)->getParent(),
-                               Builder.GetInsertBlock())) &&
+                  GenDT->dominates(cast<Instruction>(Address)->getParent(),
+                                   Builder.GetInsertBlock())) &&
                  "Domination violation");
 
           Builder.CreateStore(Val, Address);
@@ -795,7 +796,7 @@ void BlockGenerator::createScalarInitialization(Scop &S) {
   BasicBlock *ExitBB = S.getExit();
   BasicBlock *PreEntryBB = S.getEnteringBlock();
 
-  Builder.SetInsertPoint(&*StartBlock->begin());
+  Builder.SetInsertPoint(StartBlock, StartBlock->begin());
 
   for (auto &Array : S.arrays()) {
     if (Array->getNumberOfDimensions() != 0)
@@ -850,7 +851,7 @@ void BlockGenerator::createScalarFinalization(Scop &S) {
   if (OptExitBB == ExitBB)
     OptExitBB = *(++pred_begin(MergeBB));
 
-  Builder.SetInsertPoint(OptExitBB->getTerminator());
+  Builder.SetInsertPoint(OptExitBB, OptExitBB->getTerminator()->getIterator());
   for (const auto &EscapeMapping : EscapeMap) {
     // Extract the escaping instruction and the escaping users as well as the
     // alloca the instruction was demoted to.
@@ -921,7 +922,7 @@ void BlockGenerator::createExitPHINodeMerges(Scop &S) {
   if (OptExitBB == ExitBB)
     OptExitBB = *(++pred_begin(MergeBB));
 
-  Builder.SetInsertPoint(OptExitBB->getTerminator());
+  Builder.SetInsertPoint(OptExitBB, OptExitBB->getTerminator()->getIterator());
 
   for (auto &SAI : S.arrays()) {
     auto *Val = SAI->getBasePtr();
@@ -1069,10 +1070,10 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   // Create a dedicated entry for the region where we can reload all demoted
   // inputs.
   BasicBlock *EntryBB = R->getEntry();
-  BasicBlock *EntryBBCopy = SplitBlock(
-      Builder.GetInsertBlock(), &*Builder.GetInsertPoint(), GenDT, GenLI);
+  BasicBlock *EntryBBCopy = SplitBlock(Builder.GetInsertBlock(),
+                                       Builder.GetInsertPoint(), GenDT, GenLI);
   EntryBBCopy->setName("polly.stmt." + EntryBB->getName() + ".entry");
-  Builder.SetInsertPoint(&EntryBBCopy->front());
+  Builder.SetInsertPoint(EntryBBCopy, EntryBBCopy->begin());
 
   ValueMapT &EntryBBMap = RegionMaps[EntryBBCopy];
   generateScalarLoads(Stmt, LTS, EntryBBMap, IdToAstExp);
@@ -1112,7 +1113,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
     ValueMapT &RegionMap = Inserted.first->second;
 
     // Copy the block with the BlockGenerator.
-    Builder.SetInsertPoint(&BBCopy->front());
+    Builder.SetInsertPoint(BBCopy, BBCopy->begin());
     copyBB(Stmt, BB, BBCopy, RegionMap, LTS, IdToAstExp);
 
     // In order to remap PHI nodes we store also basic block mappings.
@@ -1136,7 +1137,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
 
   // Now create a new dedicated region exit block and add it to the region map.
   BasicBlock *ExitBBCopy = SplitBlock(Builder.GetInsertBlock(),
-                                      &*Builder.GetInsertPoint(), GenDT, GenLI);
+                                      Builder.GetInsertPoint(), GenDT, GenLI);
   ExitBBCopy->setName("polly.stmt." + R->getExit()->getName() + ".exit");
   StartBlockMap[R->getExit()] = ExitBBCopy;
   EndBlockMap[R->getExit()] = ExitBBCopy;
@@ -1166,7 +1167,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
     ValueMapT &RegionMap = RegionMaps[BBCopyStart];
     RegionMap.insert_range(StartBlockMap);
 
-    Builder.SetInsertPoint(BICopy);
+    Builder.SetInsertPoint(BBCopyEnd, BICopy->getIterator());
     copyInstScalar(Stmt, TI, RegionMap, LTS);
     BICopy->eraseFromParent();
   }
@@ -1204,7 +1205,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   }
 
   // Continue generating code in the exit block.
-  Builder.SetInsertPoint(&*ExitBBCopy->getFirstInsertionPt());
+  Builder.SetInsertPoint(ExitBBCopy, ExitBBCopy->getFirstInsertionPt());
 
   // Write values visible to other statements.
   generateScalarStores(Stmt, LTS, ValueMap, IdToAstExp);
@@ -1241,7 +1242,8 @@ PHINode *RegionGenerator::buildExitPHI(MemoryAccess *MA, LoopToScevMapT &LTS,
     BasicBlock *OrigIncomingBlock = Pair.first;
     BasicBlock *NewIncomingBlockStart = StartBlockMap.lookup(OrigIncomingBlock);
     BasicBlock *NewIncomingBlockEnd = EndBlockMap.lookup(OrigIncomingBlock);
-    Builder.SetInsertPoint(NewIncomingBlockEnd->getTerminator());
+    Builder.SetInsertPoint(NewIncomingBlockEnd,
+                           NewIncomingBlockEnd->getTerminator()->getIterator());
     assert(RegionMaps.count(NewIncomingBlockStart));
     assert(RegionMaps.count(NewIncomingBlockEnd));
     ValueMapT *LocalBBMap = &RegionMaps[NewIncomingBlockStart];
@@ -1318,12 +1320,12 @@ void RegionGenerator::generateScalarStores(
           Value *Address = getImplicitAddress(*MA, getLoopForStmt(Stmt), LTS,
                                               BBMap, NewAccesses);
           assert((!isa<Instruction>(NewVal) ||
-                  DT.dominates(cast<Instruction>(NewVal)->getParent(),
-                               Builder.GetInsertBlock())) &&
+                  GenDT->dominates(cast<Instruction>(NewVal)->getParent(),
+                                   Builder.GetInsertBlock())) &&
                  "Domination violation");
           assert((!isa<Instruction>(Address) ||
-                  DT.dominates(cast<Instruction>(Address)->getParent(),
-                               Builder.GetInsertBlock())) &&
+                  GenDT->dominates(cast<Instruction>(Address)->getParent(),
+                                   Builder.GetInsertBlock())) &&
                  "Domination violation");
           Builder.CreateStore(NewVal, Address);
         });
@@ -1358,10 +1360,11 @@ void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, PHINode *PHI,
     // change it, otherwise do not.
     auto IP = Builder.GetInsertPoint();
     if (IP->getParent() != BBCopyEnd)
-      Builder.SetInsertPoint(BBCopyEnd->getTerminator());
+      Builder.SetInsertPoint(BBCopyEnd,
+                             BBCopyEnd->getTerminator()->getIterator());
     OpCopy = getNewValue(Stmt, Op, BBCopyMap, LTS, getLoopForStmt(Stmt));
     if (IP->getParent() != BBCopyEnd)
-      Builder.SetInsertPoint(&*IP);
+      Builder.SetInsertPoint(IP);
   } else {
     // All edges from outside the non-affine region become a single edge
     // in the new copy of the non-affine region. Make sure to only add the

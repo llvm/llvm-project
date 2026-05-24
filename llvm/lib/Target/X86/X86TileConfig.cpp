@@ -35,13 +35,13 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "tileconfig"
+#define DEBUG_TYPE "x86-tile-config"
 
 namespace {
 
-struct X86TileConfig : public MachineFunctionPass {
+struct X86TileConfigLegacy : public MachineFunctionPass {
 
-  X86TileConfig() : MachineFunctionPass(ID) {}
+  X86TileConfigLegacy() : MachineFunctionPass(ID) {}
 
   /// Return the pass name.
   StringRef getPassName() const override { return "Tile Register Configure"; }
@@ -55,11 +55,10 @@ struct X86TileConfig : public MachineFunctionPass {
   }
 
   /// Perform register allocation.
-  bool runOnMachineFunction(MachineFunction &mf) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 
   static char ID;
@@ -67,83 +66,28 @@ struct X86TileConfig : public MachineFunctionPass {
 
 } // end anonymous namespace
 
-char X86TileConfig::ID = 0;
+char X86TileConfigLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(X86TileConfig, DEBUG_TYPE, "Tile Register Configure",
-                      false, false)
+INITIALIZE_PASS_BEGIN(X86TileConfigLegacy, DEBUG_TYPE,
+                      "Tile Register Configure", false, false)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
-INITIALIZE_PASS_END(X86TileConfig, DEBUG_TYPE, "Tile Register Configure", false,
-                    false)
+INITIALIZE_PASS_END(X86TileConfigLegacy, DEBUG_TYPE, "Tile Register Configure",
+                    false, false)
 
-unsigned getAMXRegNum(MachineRegisterInfo *MRI, Register Reg) {
-  if (Reg.isVirtual()) {
-    unsigned RegClassID = MRI->getRegClass(Reg)->getID();
-    if (RegClassID == X86::TILERegClassID)
-      return 1;
-    if (RegClassID == X86::TILEPAIRRegClassID)
-      return 2;
-  } else {
-    if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
-      return 1;
-    if (Reg >= X86::TMM0_TMM1 && Reg <= X86::TMM6_TMM7)
-      return 2;
-  }
-  return 0;
-}
-
-static void collectVirtRegShapes(MachineRegisterInfo *MRI, VirtRegMap &VRM,
-                                 Register VirtReg,
-                                 SmallVector<ShapeT, 8> &Phys2Shapes) {
-  unsigned Num = getAMXRegNum(MRI, VirtReg);
-  MCRegister PhysReg = VRM.getPhys(VirtReg);
-  if (!PhysReg)
-    return;
-
-  if (Num == 1) {
-    unsigned Index = PhysReg - X86::TMM0;
-    if (!Phys2Shapes[Index].isValid()) {
-      ShapeT Shape = VRM.getShape(VirtReg);
-      Phys2Shapes[Index] = std::move(Shape);
-      return;
-    }
-  }
-  // Split tile pair shape info to 2 single tile shape info. e.g:
-  // Put TMM0_TMM1's Shape to TMM0's shape + TMM1's Shape in Phys2Shapes.
-  if (Num == 2) {
-    unsigned Index0 = (PhysReg - X86::TMM0_TMM1) * 2;
-    unsigned Index1 = (PhysReg - X86::TMM0_TMM1) * 2 + 1;
-
-    ShapeT Shape = VRM.getShape(VirtReg);
-    assert(Shape.getShapeNum() == 2 && "Unexpected shape number!");
-
-    if (!Phys2Shapes[Index0].isValid()) {
-      ShapeT Shape0(Shape.getRow(0), Shape.getCol(0), MRI);
-      Phys2Shapes[Index0] = std::move(Shape0);
-    }
-
-    if (!Phys2Shapes[Index1].isValid()) {
-      ShapeT Shape1(Shape.getRow(1), Shape.getCol(1), MRI);
-      Phys2Shapes[Index1] = std::move(Shape1);
-    }
-  }
-}
-
-static bool isAMXRegClass(MachineRegisterInfo *MRI, Register Reg) {
-  return getAMXRegNum(MRI, Reg) > 0;
-}
-
-bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
+static bool tileConfig(MachineFunction &MF,
+                       llvm::function_ref<LiveIntervals *()> GetLIs,
+                       llvm::function_ref<VirtRegMap *()> GetVRM) {
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   // Early exit in the common case of non-AMX code.
   if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
     return false;
 
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
-  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+  const X86RegisterInfo *TRI = ST.getRegisterInfo();
   const TargetInstrInfo *TII = ST.getInstrInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  VirtRegMap &VRM = getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
+  LiveIntervals &LIS = *GetLIs();
+  VirtRegMap &VRM = *GetVRM();
 
   if (VRM.isShapeMapEmpty())
     return false;
@@ -177,24 +121,29 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
   assert(ConstMI && "Cannot find an insertion point");
 
   unsigned AMXRegNum = TRI->getRegClass(X86::TILERegClassID)->getNumRegs();
-  SmallVector<ShapeT, 8> Phys2Shapes(AMXRegNum, ShapeT());
+  SmallVector<Register, 8> Phys2Virt(AMXRegNum, 0);
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     Register VirtReg = Register::index2VirtReg(I);
     if (MRI.reg_nodbg_empty(VirtReg))
       continue;
-    if (!isAMXRegClass(&MRI, VirtReg))
+    if (!TRI->isTileRegisterClass(MRI.getRegClass(VirtReg)))
       continue;
-    collectVirtRegShapes(&MRI, VRM, VirtReg, Phys2Shapes);
+    MCRegister PhysReg = VRM.getPhys(VirtReg);
+    if (!PhysReg)
+      continue;
+    unsigned Index = PhysReg - X86::TMM0;
+    if (!Phys2Virt[Index])
+      Phys2Virt[Index] = VirtReg;
   }
 
   // Fill in the shape of each tile physical register.
   for (unsigned I = 0; I < AMXRegNum; ++I) {
-    ShapeT Shape = Phys2Shapes[I];
-    if (!Shape.isValid())
+    if (!Phys2Virt[I])
       continue;
     DebugLoc DL;
     bool IsRow = true;
     MachineInstr *NewMI = nullptr;
+    ShapeT Shape = VRM.getShape(Phys2Virt[I]);
     for (auto &R : {Shape.getRow()->getReg(), Shape.getCol()->getReg()}) {
       // Here is the data format for the tile config.
       // 0      palette
@@ -252,7 +201,7 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
                       BuildMI(MBB, ++Iter, DL,
                               TII->get(IsRow ? X86::MOV8mr : X86::MOV16mr)),
                       SS, Offset)
-                      .addReg(R, 0, SubIdx);
+                      .addReg(R, {}, SubIdx);
           SlotIndex SIdx = LIS.InsertMachineInstrInMaps(*NewMI);
           LIS.extendToIndices(LIS.getInterval(R), {SIdx.getRegSlot()});
         }
@@ -263,4 +212,23 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-FunctionPass *llvm::createX86TileConfigPass() { return new X86TileConfig(); }
+FunctionPass *llvm::createX86TileConfigLegacyPass() {
+  return new X86TileConfigLegacy();
+}
+
+bool X86TileConfigLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return tileConfig(
+      MF,
+      [this]() { return &getAnalysis<LiveIntervalsWrapperPass>().getLIS(); },
+      [this]() { return &getAnalysis<VirtRegMapWrapperLegacy>().getVRM(); });
+}
+
+PreservedAnalyses X86TileConfigPass::run(MachineFunction &MF,
+                                         MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = tileConfig(
+      MF, [&MFAM, &MF]() { return &MFAM.getResult<LiveIntervalsAnalysis>(MF); },
+      [&MFAM, &MF]() { return &MFAM.getResult<VirtRegMapAnalysis>(MF); });
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                       .preserveSet<CFGAnalyses>()
+                 : PreservedAnalyses::all();
+}

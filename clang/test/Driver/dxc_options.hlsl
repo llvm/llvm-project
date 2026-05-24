@@ -4,5 +4,4 @@
 // RUN: -fdiagnostics-color \
 // RUN: -fno-diagnostics-color \
 // RUN: -fdiagnostics-color=auto \
-// RUN: -Tlib_6_7 -Vd -fdriver-only -- %s 2>&1 |count 0
-
+// RUN: -Tlib_6_7 -fdriver-only -- %s 2>&1 |count 0

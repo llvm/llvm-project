@@ -7,31 +7,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUUnitTests.h"
+#include "AMDGPUGenSubtargetInfo.inc"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "gtest/gtest.h"
-
-#include "AMDGPUGenSubtargetInfo.inc"
 
 using namespace llvm;
 
-std::once_flag flag;
-
-void InitializeAMDGPUTarget() {
-  std::call_once(flag, []() {
-    LLVMInitializeAMDGPUTargetInfo();
-    LLVMInitializeAMDGPUTarget();
-    LLVMInitializeAMDGPUTargetMC();
-  });
+static void initializeAMDGPUTarget() {
+  LLVMInitializeAMDGPUTargetInfo();
+  LLVMInitializeAMDGPUTarget();
+  LLVMInitializeAMDGPUTargetMC();
 }
 
-std::unique_ptr<const GCNTargetMachine>
-llvm::createAMDGPUTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
-  InitializeAMDGPUTarget();
+void AMDGPUTestBase::SetUpTestSuite() { initializeAMDGPUTarget(); }
 
+void AMDGPUCodeGenTestBase::SetUpTestSuite() { initializeAMDGPUTarget(); }
+
+std::unique_ptr<GCNTargetMachine>
+createAMDGPUTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
   Triple TT(TStr);
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
@@ -88,21 +85,22 @@ static bool checkMinMax(std::stringstream &OS, unsigned Occ, unsigned MinOcc,
   return MinValid && MaxValid && RangeValid;
 }
 
-static const std::pair<StringRef, StringRef>
-  EmptyFS = {"", ""},
-  W32FS = {"+wavefrontsize32", "w32"},
-  W64FS = {"+wavefrontsize64", "w64"};
+static const std::pair<StringRef, StringRef> EmptyFS = {"", ""},
+                                             W32FS = {"+wavefrontsize32",
+                                                      "w32"},
+                                             W64FS = {"+wavefrontsize64",
+                                                      "w64"};
 
-using TestFuncTy =
-    function_ref<bool(std::stringstream &, unsigned, const GCNSubtarget &)>;
+using TestFuncTy = function_ref<bool(std::stringstream &, unsigned,
+                                     const GCNSubtarget &, bool)>;
 
 static bool testAndRecord(std::stringstream &Table, const GCNSubtarget &ST,
-                          TestFuncTy test) {
+                          TestFuncTy test, unsigned DynamicVGPRBlockSize) {
   bool Success = true;
   unsigned MaxOcc = ST.getMaxWavesPerEU();
   for (unsigned Occ = MaxOcc; Occ > 0; --Occ) {
     Table << std::right << std::setw(3) << Occ << "    ";
-    Success = test(Table, Occ, ST) && Success;
+    Success = test(Table, Occ, ST, DynamicVGPRBlockSize) && Success;
     Table << '\n';
   }
   return Success;
@@ -132,7 +130,7 @@ static void testGPRLimits(const char *RegName, bool TestW32W64,
         FS = &W32FS;
 
       std::stringstream Table;
-      bool Success = testAndRecord(Table, ST, test);
+      bool Success = testAndRecord(Table, ST, test, /*DynamicVGPRBlockSize=*/0);
       if (!Success || PrintCpuRegLimits)
         TablePerCPUs[Table.str()].push_back((CanonCPUName + FS->second).str());
 
@@ -155,40 +153,56 @@ static void testGPRLimits(const char *RegName, bool TestW32W64,
 
 static void testDynamicVGPRLimits(StringRef CPUName, StringRef FS,
                                   TestFuncTy test) {
-  auto TM = createAMDGPUTargetMachine("amdgcn-amd-", CPUName,
-                                      "+dynamic-vgpr," + FS.str());
+  auto TM = createAMDGPUTargetMachine("amdgcn-amd-", CPUName, FS);
   ASSERT_TRUE(TM) << "No target machine";
 
   GCNSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()), *TM);
-  ASSERT_TRUE(ST.getFeatureBits().test(AMDGPU::FeatureDynamicVGPR));
 
-  std::stringstream Table;
-  bool Success = testAndRecord(Table, ST, test);
-  EXPECT_TRUE(Success && !PrintCpuRegLimits)
-      << CPUName << " dynamic VGPR " << FS
-      << ":\nOcc    MinVGPR        MaxVGPR\n"
-      << Table.str() << '\n';
+  auto testWithBlockSize = [&](unsigned DynamicVGPRBlockSize) {
+    std::stringstream Table;
+    bool Success = testAndRecord(Table, ST, test, DynamicVGPRBlockSize);
+    EXPECT_TRUE(Success && !PrintCpuRegLimits)
+        << CPUName << " dynamic VGPR block size " << DynamicVGPRBlockSize
+        << ":\nOcc    MinVGPR        MaxVGPR\n"
+        << Table.str() << '\n';
+    // In dVGPR mode, max VGPR limits do not depend on occupancy:
+    EXPECT_EQ(ST.getMaxNumVGPRs(1, DynamicVGPRBlockSize),
+              ST.getMaxNumVGPRs(ST.getMaxWavesPerEU(), DynamicVGPRBlockSize));
+    EXPECT_EQ(ST.getMinNumVGPRs(1, DynamicVGPRBlockSize), 0u);
+    EXPECT_EQ(ST.getMinNumVGPRs(ST.getMaxWavesPerEU(), DynamicVGPRBlockSize),
+              0u);
+  };
+
+  testWithBlockSize(16);
+  testWithBlockSize(32);
 }
 
-TEST(AMDGPU, TestVGPRLimitsPerOccupancy) {
-  auto test = [](std::stringstream &OS, unsigned Occ, const GCNSubtarget &ST) {
-    unsigned MaxVGPRNum = ST.getAddressableNumVGPRs();
+TEST_F(AMDGPUTestBase, TestVGPRLimitsPerOccupancy) {
+  auto test = [](std::stringstream &OS, unsigned Occ, const GCNSubtarget &ST,
+                 unsigned DynamicVGPRBlockSize) {
+    unsigned MaxVGPRNum = ST.getAddressableNumVGPRs(DynamicVGPRBlockSize);
     return checkMinMax(
-        OS, Occ, ST.getOccupancyWithNumVGPRs(MaxVGPRNum), ST.getMaxWavesPerEU(),
-        [&](unsigned NumGPRs) { return ST.getOccupancyWithNumVGPRs(NumGPRs); },
-        [&](unsigned Occ) { return ST.getMinNumVGPRs(Occ); },
-        [&](unsigned Occ) { return ST.getMaxNumVGPRs(Occ); });
+        OS, Occ, ST.getOccupancyWithNumVGPRs(MaxVGPRNum, DynamicVGPRBlockSize),
+        ST.getMaxWavesPerEU(),
+        [&](unsigned NumGPRs) {
+          return ST.getOccupancyWithNumVGPRs(NumGPRs, DynamicVGPRBlockSize);
+        },
+        [&](unsigned Occ) {
+          return ST.getMinNumVGPRs(Occ, DynamicVGPRBlockSize);
+        },
+        [&](unsigned Occ) {
+          return ST.getMaxNumVGPRs(Occ, DynamicVGPRBlockSize);
+        });
   };
 
   testGPRLimits("VGPR", true, test);
 
   testDynamicVGPRLimits("gfx1200", "+wavefrontsize32", test);
-  testDynamicVGPRLimits("gfx1200",
-                        "+wavefrontsize32,+dynamic-vgpr-block-size-32", test);
 }
 
 static void testAbsoluteLimits(StringRef CPUName, StringRef FS,
+                               unsigned DynamicVGPRBlockSize,
                                unsigned ExpectedMinOcc, unsigned ExpectedMaxOcc,
                                unsigned ExpectedMaxVGPRs) {
   auto TM = createAMDGPUTargetMachine("amdgcn-amd-", CPUName, FS);
@@ -206,11 +220,15 @@ static void testAbsoluteLimits(StringRef CPUName, StringRef FS,
   Func->setCallingConv(CallingConv::AMDGPU_CS_Chain);
   Func->addFnAttr("amdgpu-flat-work-group-size", "1,32");
 
+  std::string DVGPRBlockSize = std::to_string(DynamicVGPRBlockSize);
+  if (DynamicVGPRBlockSize)
+    Func->addFnAttr("amdgpu-dynamic-vgpr-block-size", DVGPRBlockSize);
+
   auto Range = ST.getWavesPerEU(*Func);
   EXPECT_EQ(ExpectedMinOcc, Range.first) << CPUName << ' ' << FS;
   EXPECT_EQ(ExpectedMaxOcc, Range.second) << CPUName << ' ' << FS;
   EXPECT_EQ(ExpectedMaxVGPRs, ST.getMaxNumVGPRs(*Func)) << CPUName << ' ' << FS;
-  EXPECT_EQ(ExpectedMaxVGPRs, ST.getAddressableNumVGPRs())
+  EXPECT_EQ(ExpectedMaxVGPRs, ST.getAddressableNumVGPRs(DynamicVGPRBlockSize))
       << CPUName << ' ' << FS;
 
   // Function with requested 'amdgpu-waves-per-eu' in a valid range.
@@ -220,19 +238,18 @@ static void testAbsoluteLimits(StringRef CPUName, StringRef FS,
   EXPECT_EQ(12u, Range.second) << CPUName << ' ' << FS;
 }
 
-TEST(AMDGPU, TestOccupancyAbsoluteLimits) {
-  testAbsoluteLimits("gfx1200", "+wavefrontsize32", 1, 16, 256);
-  testAbsoluteLimits("gfx1200", "+wavefrontsize32,+dynamic-vgpr", 1, 16, 128);
-  testAbsoluteLimits(
-      "gfx1200", "+wavefrontsize32,+dynamic-vgpr,+dynamic-vgpr-block-size-32",
-      1, 16, 256);
+TEST_F(AMDGPUTestBase, TestOccupancyAbsoluteLimits) {
+  // CPUName, Features, DynamicVGPRBlockSize; Expected MinOcc, MaxOcc, MaxVGPRs
+  testAbsoluteLimits("gfx1200", "+wavefrontsize32", 0, 1, 16, 256);
+  testAbsoluteLimits("gfx1200", "+wavefrontsize32", 16, 1, 16, 128);
+  testAbsoluteLimits("gfx1200", "+wavefrontsize32", 32, 1, 16, 256);
 }
 
 static const char *printSubReg(const TargetRegisterInfo &TRI, unsigned SubReg) {
   return SubReg ? TRI.getSubRegIndexName(SubReg) : "<none>";
 }
 
-TEST(AMDGPU, TestReverseComposeSubRegIndices) {
+TEST_F(AMDGPUTestBase, TestReverseComposeSubRegIndices) {
   auto TM = createAMDGPUTargetMachine("amdgcn-amd-", "gfx900", "");
   if (!TM)
     return;
@@ -304,6 +321,26 @@ TEST(AMDGPU, TestReverseComposeSubRegIndices) {
         unsigned Recompose = TRI->composeSubRegIndices(SubIdx0, ReverseCompose);
         EXPECT_EQ(Recompose, SubIdx1);
       }
+    }
+  }
+}
+
+TEST_F(AMDGPUTestBase, TestGetNamedOperandIdx) {
+  std::unique_ptr<const GCNTargetMachine> TM =
+      createAMDGPUTargetMachine("amdgcn-amd-", "gfx900", "");
+  if (!TM)
+    return;
+  const MCInstrInfo *MCII = TM->getMCInstrInfo();
+
+  for (unsigned Opcode = 0, E = MCII->getNumOpcodes(); Opcode != E; ++Opcode) {
+    const MCInstrDesc &Desc = MCII->get(Opcode);
+    for (unsigned Idx = 0; Idx < Desc.getNumOperands(); ++Idx) {
+      AMDGPU::OpName OpName = AMDGPU::getOperandIdxName(Opcode, Idx);
+      if (OpName == AMDGPU::OpName::NUM_OPERAND_NAMES)
+        continue;
+      int16_t RetrievedIdx = AMDGPU::getNamedOperandIdx(Opcode, OpName);
+      EXPECT_EQ(Idx, static_cast<unsigned>(RetrievedIdx))
+          << "Opcode " << Opcode << " (" << MCII->getName(Opcode) << ')';
     }
   }
 }

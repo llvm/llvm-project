@@ -40,9 +40,9 @@ public:
   ProgramPointTag(void *tagKind = nullptr) : TagKind(tagKind) {}
   virtual ~ProgramPointTag();
 
-  /// The description of this program point which will be displayed when the
-  /// ExplodedGraph is dumped in DOT format for debugging.
-  virtual StringRef getTagDescription() const = 0;
+  /// The description of this program point which will be dumped for debugging
+  /// purposes. Do not use in user-facing output!
+  virtual StringRef getDebugTag() const = 0;
 
   /// Used to implement 'isKind' in subclasses.
   const void *getTagKind() const { return TagKind; }
@@ -55,7 +55,7 @@ class SimpleProgramPointTag : public ProgramPointTag {
   std::string Desc;
 public:
   SimpleProgramPointTag(StringRef MsgProvider, StringRef Msg);
-  StringRef getTagDescription() const override;
+  StringRef getDebugTag() const override;
 };
 
 class ProgramPoint {
@@ -182,7 +182,7 @@ public:
     return L.getPointer();
   }
 
-  const StackFrameContext *getStackFrame() const {
+  const StackFrame *getStackFrame() const {
     return getLocationContext()->getStackFrame();
   }
 
@@ -224,10 +224,14 @@ public:
 
 class BlockEntrance : public ProgramPoint {
 public:
-  BlockEntrance(const CFGBlock *B, const LocationContext *L,
-                const ProgramPointTag *tag = nullptr)
-    : ProgramPoint(B, BlockEntranceKind, L, tag) {
-    assert(B && "BlockEntrance requires non-null block");
+  BlockEntrance(const CFGBlock *PrevBlock, const CFGBlock *CurrBlock,
+                const LocationContext *L, const ProgramPointTag *Tag = nullptr)
+      : ProgramPoint(CurrBlock, PrevBlock, BlockEntranceKind, L, Tag) {
+    assert(CurrBlock && "BlockEntrance requires non-null block");
+  }
+
+  const CFGBlock *getPreviousBlock() const {
+    return reinterpret_cast<const CFGBlock *>(getData2());
   }
 
   const CFGBlock *getBlock() const {
@@ -633,22 +637,22 @@ private:
 /// CallEnter uses the caller's location context.
 class CallEnter : public ProgramPoint {
 public:
-  CallEnter(const Stmt *stmt, const StackFrameContext *calleeCtx,
+  CallEnter(const Stmt *stmt, const StackFrame *CalleeSF,
             const LocationContext *callerCtx)
-    : ProgramPoint(stmt, calleeCtx, CallEnterKind, callerCtx, nullptr) {}
+      : ProgramPoint(stmt, CalleeSF, CallEnterKind, callerCtx, nullptr) {}
 
   const Stmt *getCallExpr() const {
     return static_cast<const Stmt *>(getData1());
   }
 
-  const StackFrameContext *getCalleeContext() const {
-    return static_cast<const StackFrameContext *>(getData2());
+  const StackFrame *getCalleeContext() const {
+    return static_cast<const StackFrame *>(getData2());
   }
 
   /// Returns the entry block in the CFG for the entered function.
   const CFGBlock *getEntry() const {
-    const StackFrameContext *CalleeCtx = getCalleeContext();
-    const CFG *CalleeCFG = CalleeCtx->getCFG();
+    const StackFrame *CalleeSF = getCalleeContext();
+    const CFG *CalleeCFG = CalleeSF->getCFG();
     return &(CalleeCFG->getEntry());
   }
 
@@ -672,8 +676,8 @@ private:
 class CallExitBegin : public ProgramPoint {
 public:
   // CallExitBegin uses the callee's location context.
-  CallExitBegin(const StackFrameContext *L, const ReturnStmt *RS)
-    : ProgramPoint(RS, CallExitBeginKind, L, nullptr) { }
+  CallExitBegin(const StackFrame *SF, const ReturnStmt *RS)
+      : ProgramPoint(RS, CallExitBeginKind, SF, nullptr) {}
 
   const ReturnStmt *getReturnStmt() const {
     return static_cast<const ReturnStmt *>(getData1());
@@ -692,12 +696,11 @@ private:
 class CallExitEnd : public ProgramPoint {
 public:
   // CallExitEnd uses the caller's location context.
-  CallExitEnd(const StackFrameContext *CalleeCtx,
-              const LocationContext *CallerCtx)
-    : ProgramPoint(CalleeCtx, CallExitEndKind, CallerCtx, nullptr) {}
+  CallExitEnd(const StackFrame *CalleeSF, const LocationContext *CallerCtx)
+      : ProgramPoint(CalleeSF, CallExitEndKind, CallerCtx, nullptr) {}
 
-  const StackFrameContext *getCalleeContext() const {
-    return static_cast<const StackFrameContext *>(getData1());
+  const StackFrame *getCalleeContext() const {
+    return static_cast<const StackFrame *>(getData1());
   }
 
 private:
@@ -760,13 +763,15 @@ template <> struct DenseMapInfo<clang::ProgramPoint> {
 static inline clang::ProgramPoint getEmptyKey() {
   uintptr_t x =
    reinterpret_cast<uintptr_t>(DenseMapInfo<void*>::getEmptyKey()) & ~0x7;
-  return clang::BlockEntrance(reinterpret_cast<clang::CFGBlock*>(x), nullptr);
+  return clang::BlockEntrance(nullptr, reinterpret_cast<clang::CFGBlock *>(x),
+                              nullptr);
 }
 
 static inline clang::ProgramPoint getTombstoneKey() {
   uintptr_t x =
    reinterpret_cast<uintptr_t>(DenseMapInfo<void*>::getTombstoneKey()) & ~0x7;
-  return clang::BlockEntrance(reinterpret_cast<clang::CFGBlock*>(x), nullptr);
+  return clang::BlockEntrance(nullptr, reinterpret_cast<clang::CFGBlock *>(x),
+                              nullptr);
 }
 
 static unsigned getHashValue(const clang::ProgramPoint &Loc) {

@@ -78,17 +78,19 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 }
 void ModList() {
   int V1;
-  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
+  // expected-error@+2{{OpenACC 'alwaysin' modifier not valid on 'copyout' clause}}
   // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
 #pragma acc parallel loop copyout(always, alwaysin, alwaysout, zero, readonly: V1)
   for(int i = 0; i < 6;++i);
-  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
-#pragma acc serial loop copyout(alwaysout: V1)
+  // expected-error@+1{{OpenACC 'alwaysin' modifier not valid on 'copyout' clause}}
+#pragma acc serial loop copyout(alwaysin: V1)
   for(int i = 0; i < 6;++i);
   // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
 #pragma acc kernels loop copyout(readonly: V1)
   for(int i = 0; i < 6;++i);
-#pragma acc parallel loop copyout(always, alwaysin, zero: V1)
-  for(int i = 0; i < 6;++i);
+#pragma acc parallel loop copyout(capture:V1)
+  for(int i = 5; i < 10;++i);
+#pragma acc parallel loop copyout(always, alwaysout, zero, capture: V1)
+  for(int i = 5; i < 10;++i);
 }
 

@@ -228,6 +228,75 @@ TEST_F(FileManagerTest, getFileReturnsErrorForNonexistentFile) {
             std::make_error_code(std::errc::not_a_directory));
 }
 
+TEST_F(FileManagerTest, getFileRefErrorIncludesFilename) {
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  auto EmptyBuffer = llvm::MemoryBuffer::getMemBuffer("");
+  ASSERT_TRUE(
+      FS->addFileNoOwn("/MyDirectory/file", 0, EmptyBuffer->getMemBufferRef()));
+  FileSystemOptions Opts;
+  FileManager Mgr(Opts, FS);
+
+  // Build the expected message for a given filename and error code, since the
+  // system-provided message text (and capitalization) for std::errc values
+  // varies by platform.
+  auto ExpectedMsg = [](StringRef Name, std::errc EC) {
+    return ("'" + Name + "': " + std::make_error_code(EC).message()).str();
+  };
+
+  // Nonexistent file.
+  auto Missing = Mgr.getFileRef("/xyz.txt");
+  ASSERT_FALSE(Missing);
+  EXPECT_EQ(ExpectedMsg("/xyz.txt", std::errc::no_such_file_or_directory),
+            llvm::toString(Missing.takeError()));
+
+  // Cached failure
+  auto MissingAgain = Mgr.getFileRef("/xyz.txt");
+  ASSERT_FALSE(MissingAgain);
+  EXPECT_EQ(std::make_error_code(std::errc::no_such_file_or_directory),
+            llvm::errorToErrorCode(MissingAgain.takeError()));
+
+  // Reading a directory as a file.
+  auto DirAsFile = Mgr.getFileRef("/MyDirectory");
+  ASSERT_FALSE(DirAsFile);
+  EXPECT_EQ(ExpectedMsg("/MyDirectory", std::errc::is_a_directory),
+            llvm::toString(DirAsFile.takeError()));
+
+  auto Trailing = Mgr.getFileRef("/some/dir/");
+  ASSERT_FALSE(Trailing);
+  EXPECT_EQ(ExpectedMsg("/some/dir/", std::errc::is_a_directory),
+            llvm::toString(Trailing.takeError()));
+}
+
+TEST_F(FileManagerTest, getDirectoryRefErrorIncludesFilename) {
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  auto EmptyBuffer = llvm::MemoryBuffer::getMemBuffer("");
+  ASSERT_TRUE(FS->addFileNoOwn("/foo.cpp", 0, EmptyBuffer->getMemBufferRef()));
+  FileSystemOptions Opts;
+  FileManager Mgr(Opts, FS);
+
+  auto ExpectedMsg = [](StringRef Name, std::errc EC) {
+    return ("'" + Name + "': " + std::make_error_code(EC).message()).str();
+  };
+
+  // Nonexistent directory.
+  auto Missing = Mgr.getDirectoryRef("/no_such_dir");
+  ASSERT_FALSE(Missing);
+  EXPECT_EQ(ExpectedMsg("/no_such_dir", std::errc::no_such_file_or_directory),
+            llvm::toString(Missing.takeError()));
+
+  // Cached failure
+  auto MissingAgain = Mgr.getDirectoryRef("/no_such_dir");
+  ASSERT_FALSE(MissingAgain);
+  EXPECT_EQ(std::make_error_code(std::errc::no_such_file_or_directory),
+            llvm::errorToErrorCode(MissingAgain.takeError()));
+
+  // Reading a file as a directory.
+  auto FileAsDir = Mgr.getDirectoryRef("/foo.cpp");
+  ASSERT_FALSE(FileAsDir);
+  EXPECT_EQ(ExpectedMsg("/foo.cpp", std::errc::not_a_directory),
+            llvm::toString(FileAsDir.takeError()));
+}
+
 // The following tests apply to Unix-like system only.
 
 #ifndef _WIN32
@@ -454,8 +523,7 @@ TEST_F(FileManagerTest, makeAbsoluteUsesVFS) {
                                                        : StringRef("/");
   llvm::sys::path::append(CustomWorkingDir, "some", "weird", "path");
 
-  auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
-      new llvm::vfs::InMemoryFileSystem);
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   // setCurrentworkingdirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
 
@@ -475,8 +543,7 @@ TEST_F(FileManagerTest, makeAbsoluteUsesVFS) {
 TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
   SmallString<64> CustomWorkingDir = getSystemRoot();
 
-  auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
-      new llvm::vfs::InMemoryFileSystem);
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   // setCurrentworkingdirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
 
@@ -495,14 +562,17 @@ TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
   SmallString<64> ExpectedResult = CustomWorkingDir;
 
   llvm::sys::path::append(ExpectedResult, "tmp", "test");
+  // Normalize to native path style to match tryGetRealPathName()
+  // which uses native style (potentially forward slashes on Windows
+  // if LLVM_WINDOWS_PREFER_FORWARD_SLASH is on).
+  llvm::sys::path::native(ExpectedResult);
   EXPECT_EQ(file.getFileEntry().tryGetRealPathName(), ExpectedResult);
 }
 
 TEST_F(FileManagerTest, getFileDontOpenRealPath) {
   SmallString<64> CustomWorkingDir = getSystemRoot();
 
-  auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
-      new llvm::vfs::InMemoryFileSystem);
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   // setCurrentworkingdirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
 
@@ -522,6 +592,10 @@ TEST_F(FileManagerTest, getFileDontOpenRealPath) {
   SmallString<64> ExpectedResult = CustomWorkingDir;
 
   llvm::sys::path::append(ExpectedResult, "tmp", "test");
+  // Normalize to native path style to match tryGetRealPathName()
+  // which uses native style (potentially forward slashes on Windows
+  // if LLVM_WINDOWS_PREFER_FORWARD_SLASH is on).
+  llvm::sys::path::native(ExpectedResult);
   EXPECT_EQ(file->getFileEntry().tryGetRealPathName(), ExpectedResult);
 }
 
@@ -533,8 +607,7 @@ TEST_F(FileManagerTest, getBypassFile) {
   CustomWorkingDir = "/";
 #endif
 
-  auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
-      new llvm::vfs::InMemoryFileSystem);
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   // setCurrentworkingdirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
 

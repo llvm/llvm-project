@@ -26,7 +26,7 @@ public:
                          uint64_t addr_size)
       : ValueObject(parent), m_func_idx(func_idx), m_addr_size(addr_size) {
     SetFormat(eFormatPointer);
-    SetName(ConstString(llvm::formatv("[{0}]", func_idx).str()));
+    SetName(llvm::formatv("[{0}]", func_idx).str());
   }
 
   ~ValueObjectVTableChild() override = default;
@@ -252,7 +252,7 @@ bool ValueObjectVTable::UpdateValue() {
   m_num_vtable_entries = (vtable_end_addr - vtable_start_addr) / m_addr_size;
 
   m_value.SetValueType(Value::ValueType::LoadAddress);
-  m_value.GetScalar() = parent->GetAddressOf();
+  m_value.GetScalar() = parent->GetAddressOf().address;
   auto type_system_or_err =
       target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (type_system_or_err) {

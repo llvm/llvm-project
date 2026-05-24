@@ -20,8 +20,8 @@
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/Allocator.h"
 
 #include <list>
@@ -60,8 +60,8 @@ public:
     uint32_t UnitLength = 0;
     bool IsConstructed = false;
     // A map of DIE offsets in original DWARF section to DIE ID.
-    // Whih is used to access DieInfoVector.
-    std::unordered_map<uint64_t, uint32_t> DIEIDMap;
+    // Which is used to access DieInfoVector.
+    DenseMap<uint64_t, uint32_t> DIEIDMap;
 
     // Some STL implementations don't have a noexcept move constructor for
     // unordered_map (e.g. https://github.com/microsoft/STL/issues/165 explains
@@ -105,9 +105,9 @@ private:
 
   struct State {
     /// A map of Units to Unit Index.
-    std::unordered_map<uint64_t, uint32_t> UnitIDMap;
+    DenseMap<uint64_t, uint32_t> UnitIDMap;
     /// A map of Type Units to Type DIEs.
-    std::unordered_map<DWARFUnit *, DIE *> TypeDIEMap;
+    DenseMap<DWARFUnit *, DIE *> TypeDIEMap;
     std::list<DWARFUnit *> DUList;
     std::vector<DWARFUnitInfo> CloneUnitCtxMap;
     std::vector<std::pair<DIEInfo *, AddrReferenceInfo>> AddrReferences;
@@ -137,7 +137,7 @@ private:
   std::unordered_map<std::string, uint32_t> NameToIndexMap;
 
   /// Returns current state of the DIEBuilder
-  State &getState() { return *BuilderState.get(); }
+  State &getState() { return *BuilderState; }
 
   /// Resolve the reference in DIE, if target is not loaded into IR,
   /// pre-allocate it. \p RefCU will be updated to the Unit specific by \p
@@ -217,7 +217,8 @@ private:
                                std::optional<BOLTDWARF5AccelTableData *> Parent,
                                uint32_t NumberParentsInChain);
 
-  void registerUnit(DWARFUnit &DU, bool NeedSort);
+  /// Returns true if DWARFUnit is registered successfully.
+  bool registerUnit(DWARFUnit &DU, bool NeedSort);
 
   /// \return the unique ID of \p U if it exists.
   std::optional<uint32_t> getUnitId(const DWARFUnit &DU);

@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <string>
@@ -301,6 +302,16 @@ bool convertWideToUTF8(const std::wstring &Source, std::string &Result) {
     llvm_unreachable(
         "Control should never reach this point; see static_assert further up");
   }
+}
+
+bool IsSingleCodeUnitUTF8Codepoint(unsigned V) { return V <= 0x7F; }
+
+bool IsSingleCodeUnitUTF16Codepoint(unsigned V) {
+  return V <= 0xD7FF || (V >= 0xE000 && V <= 0xFFFF);
+}
+
+bool IsSingleCodeUnitUTF32Codepoint(unsigned V) {
+  return V <= 0xD7FF || (V >= 0xE000 && V <= 0x10FFFF);
 }
 
 } // end namespace llvm

@@ -39,6 +39,7 @@ bool IntrinsicInst::mayLowerToFunctionCall(Intrinsic::ID IID) {
   case Intrinsic::objc_autoreleasePoolPop:
   case Intrinsic::objc_autoreleasePoolPush:
   case Intrinsic::objc_autoreleaseReturnValue:
+  case Intrinsic::objc_claimAutoreleasedReturnValue:
   case Intrinsic::objc_copyWeak:
   case Intrinsic::objc_destroyWeak:
   case Intrinsic::objc_initWeak:
@@ -239,13 +240,13 @@ void DbgAssignIntrinsic::setValue(Value *V) {
 ConstantInt *InstrProfCntrInstBase::getNumCounters() const {
   if (InstrProfValueProfileInst::classof(this))
     llvm_unreachable("InstrProfValueProfileInst does not have counters!");
-  return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
+  return cast<ConstantInt>(getArgOperand(2));
 }
 
 ConstantInt *InstrProfCntrInstBase::getIndex() const {
   if (InstrProfValueProfileInst::classof(this))
     llvm_unreachable("Please use InstrProfValueProfileInst::getIndex()");
-  return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
+  return cast<ConstantInt>(getArgOperand(3));
 }
 
 void InstrProfCntrInstBase::setIndex(uint32_t Idx) {
@@ -255,18 +256,14 @@ void InstrProfCntrInstBase::setIndex(uint32_t Idx) {
 
 Value *InstrProfIncrementInst::getStep() const {
   if (InstrProfIncrementInstStep::classof(this)) {
-    return const_cast<Value *>(getArgOperand(4));
+    return getArgOperand(4);
   }
   const Module *M = getModule();
   LLVMContext &Context = M->getContext();
   return ConstantInt::get(Type::getInt64Ty(Context), 1);
 }
 
-Value *InstrProfCallsite::getCallee() const {
-  if (isa<InstrProfCallsite>(this))
-    return getArgOperand(4);
-  return nullptr;
-}
+Value *InstrProfCallsite::getCallee() const { return getArgOperand(4); }
 
 void InstrProfCallsite::setCallee(Value *Callee) {
   assert(isa<InstrProfCallsite>(this));
@@ -448,6 +445,7 @@ VPIntrinsic::getMemoryPointerParamPos(Intrinsic::ID VPID) {
   case Intrinsic::experimental_vp_strided_store:
     return 1;
   case Intrinsic::vp_load:
+  case Intrinsic::vp_load_ff:
   case Intrinsic::vp_gather:
   case Intrinsic::experimental_vp_strided_load:
     return 0;
@@ -671,6 +669,10 @@ Function *VPIntrinsic::getOrInsertDeclarationForParams(
     VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {ReturnType, Params[0]->getType()});
     break;
+  case Intrinsic::vp_load_ff:
+    VPFunc = Intrinsic::getOrInsertDeclaration(
+        M, VPID, {ReturnType->getStructElementType(0), Params[0]->getType()});
+    break;
   case Intrinsic::experimental_vp_strided_load:
     VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {ReturnType, Params[0]->getType(), Params[1]->getType()});
@@ -691,9 +693,6 @@ Function *VPIntrinsic::getOrInsertDeclarationForParams(
   case Intrinsic::vp_scatter:
     VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {Params[0]->getType(), Params[1]->getType()});
-    break;
-  case Intrinsic::experimental_vp_splat:
-    VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, ReturnType);
     break;
   }
   assert(VPFunc && "Could not declare VP intrinsic");

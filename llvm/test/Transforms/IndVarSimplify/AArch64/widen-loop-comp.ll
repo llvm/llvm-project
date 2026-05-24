@@ -97,7 +97,7 @@ define void @test2(ptr %a, ptr %b, i8 %limit, i1 %arg) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[LIMIT:%.*]] to i32
-; CHECK-NEXT:    br i1 %arg, label [[FOR_COND1_PREHEADER_PREHEADER:%.*]], label [[FOR_COND1_PREHEADER_US_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[FOR_COND1_PREHEADER_PREHEADER:%.*]], label [[FOR_COND1_PREHEADER_US_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader.us.preheader:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[CONV]], i32 1)
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
@@ -237,8 +237,7 @@ define i32 @test4(i32 %a) {
 ; CHECK-NEXT:    [[CONV3:%.*]] = trunc i32 [[OR]] to i8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn1(i8 signext [[CONV3]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i32 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw i32 [[INDVARS_IV_NEXT]] to i8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[TMP0]], -14
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[INDVARS_IV_NEXT]], 242
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i32 0

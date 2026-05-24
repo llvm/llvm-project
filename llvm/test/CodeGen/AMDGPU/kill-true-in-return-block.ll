@@ -7,9 +7,8 @@ define amdgpu_ps float @kill_true(i1 %.not) {
 ; CHECK-NEXT:    s_mov_b64 s[0:1], exec
 ; CHECK-NEXT:    s_wqm_b64 exec, exec
 ; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; CHECK-NEXT:    s_xor_b64 s[4:5], vcc, -1
-; CHECK-NEXT:    s_and_saveexec_b64 s[2:3], s[4:5]
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
+; CHECK-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %if1
 ; CHECK-NEXT:    s_mov_b32 s4, 0

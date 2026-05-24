@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Dialect/Arith/Transforms/Transforms.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -16,6 +18,19 @@
 using namespace mlir;
 using namespace mlir::arith;
 
+[[maybe_unused]] static bool isIndexLikeType(Type type,
+                                             ValueBoundsOptions options) {
+  return type.isIndex() || (options.allowIntegerType && type.isInteger());
+}
+
+static Value castToIndexValue(OpBuilder &b, Location loc, Value value) {
+  if (value.getType().isIndex())
+    return value;
+  assert(value.getType().isSignlessInteger() &&
+         "expected index or signless integer type");
+  return IndexCastOp::create(b, loc, b.getIndexType(), value);
+}
+
 /// Build Arith IR for the given affine map and its operands.
 static Value buildArithValue(OpBuilder &b, Location loc, AffineMap map,
                              ValueRange operands) {
@@ -23,37 +38,39 @@ static Value buildArithValue(OpBuilder &b, Location loc, AffineMap map,
   std::function<Value(AffineExpr)> buildExpr = [&](AffineExpr e) -> Value {
     switch (e.getKind()) {
     case AffineExprKind::Constant:
-      return b.create<ConstantIndexOp>(loc,
-                                       cast<AffineConstantExpr>(e).getValue());
+      return ConstantIndexOp::create(b, loc,
+                                     cast<AffineConstantExpr>(e).getValue());
     case AffineExprKind::DimId:
-      return operands[cast<AffineDimExpr>(e).getPosition()];
+      return castToIndexValue(b, loc,
+                              operands[cast<AffineDimExpr>(e).getPosition()]);
     case AffineExprKind::SymbolId:
-      return operands[cast<AffineSymbolExpr>(e).getPosition() +
-                      map.getNumDims()];
+      return castToIndexValue(
+          b, loc,
+          operands[cast<AffineSymbolExpr>(e).getPosition() + map.getNumDims()]);
     case AffineExprKind::Add: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
-      return b.create<AddIOp>(loc, buildExpr(binaryExpr.getLHS()),
-                              buildExpr(binaryExpr.getRHS()));
+      return AddIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
+                            buildExpr(binaryExpr.getRHS()));
     }
     case AffineExprKind::Mul: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
-      return b.create<MulIOp>(loc, buildExpr(binaryExpr.getLHS()),
-                              buildExpr(binaryExpr.getRHS()));
+      return MulIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
+                            buildExpr(binaryExpr.getRHS()));
     }
     case AffineExprKind::FloorDiv: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
-      return b.create<DivSIOp>(loc, buildExpr(binaryExpr.getLHS()),
-                               buildExpr(binaryExpr.getRHS()));
+      return DivSIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
+                             buildExpr(binaryExpr.getRHS()));
     }
     case AffineExprKind::CeilDiv: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
-      return b.create<CeilDivSIOp>(loc, buildExpr(binaryExpr.getLHS()),
-                                   buildExpr(binaryExpr.getRHS()));
+      return CeilDivSIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
+                                 buildExpr(binaryExpr.getRHS()));
     }
     case AffineExprKind::Mod: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
-      return b.create<RemSIOp>(loc, buildExpr(binaryExpr.getLHS()),
-                               buildExpr(binaryExpr.getRHS()));
+      return RemSIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
+                             buildExpr(binaryExpr.getRHS()));
     }
     }
     llvm_unreachable("unsupported AffineExpr kind");
@@ -64,12 +81,13 @@ static Value buildArithValue(OpBuilder &b, Location loc, AffineMap map,
 FailureOr<OpFoldResult> mlir::arith::reifyValueBound(
     OpBuilder &b, Location loc, presburger::BoundType type,
     const ValueBoundsConstraintSet::Variable &var,
-    ValueBoundsConstraintSet::StopConditionFn stopCondition, bool closedUB) {
+    ValueBoundsConstraintSet::StopConditionFn stopCondition,
+    ValueBoundsOptions options) {
   // Compute bound.
   AffineMap boundMap;
   ValueDimList mapOperands;
   if (failed(ValueBoundsConstraintSet::computeBound(
-          boundMap, mapOperands, type, var, stopCondition, closedUB)))
+          boundMap, mapOperands, type, var, std::move(stopCondition), options)))
     return failure();
 
   // Materialize tensor.dim/memref.dim ops.
@@ -79,8 +97,9 @@ FailureOr<OpFoldResult> mlir::arith::reifyValueBound(
     std::optional<int64_t> dim = valueDim.second;
 
     if (!dim.has_value()) {
-      // This is an index-typed value.
-      assert(value.getType().isIndex() && "expected index type");
+      // This is an index-typed/integer-typed value.
+      assert(isIndexLikeType(value.getType(), options) &&
+             "expected index or integer type");
       operands.push_back(value);
       continue;
     }
@@ -89,10 +108,10 @@ FailureOr<OpFoldResult> mlir::arith::reifyValueBound(
            "expected dynamic dim");
     if (isa<RankedTensorType>(value.getType())) {
       // A tensor dimension is used: generate a tensor.dim.
-      operands.push_back(b.create<tensor::DimOp>(loc, value, *dim));
+      operands.push_back(tensor::DimOp::create(b, loc, value, *dim));
     } else if (isa<MemRefType>(value.getType())) {
       // A memref dimension is used: generate a memref.dim.
-      operands.push_back(b.create<memref::DimOp>(loc, value, *dim));
+      operands.push_back(memref::DimOp::create(b, loc, value, *dim));
     } else {
       llvm_unreachable("cannot generate DimOp for unsupported shaped type");
     }
@@ -106,18 +125,19 @@ FailureOr<OpFoldResult> mlir::arith::reifyValueBound(
   }
   // No arith ops are needed if the bound is a single SSA value.
   if (auto expr = dyn_cast<AffineDimExpr>(boundMap.getResult(0)))
-    return static_cast<OpFoldResult>(operands[expr.getPosition()]);
-  if (auto expr = dyn_cast<AffineSymbolExpr>(boundMap.getResult(0)))
     return static_cast<OpFoldResult>(
-        operands[expr.getPosition() + boundMap.getNumDims()]);
+        castToIndexValue(b, loc, operands[expr.getPosition()]));
+  if (auto expr = dyn_cast<AffineSymbolExpr>(boundMap.getResult(0)))
+    return static_cast<OpFoldResult>(castToIndexValue(
+        b, loc, operands[expr.getPosition() + boundMap.getNumDims()]));
   // General case: build Arith ops.
   return static_cast<OpFoldResult>(buildArithValue(b, loc, boundMap, operands));
 }
 
 FailureOr<OpFoldResult> mlir::arith::reifyShapedValueDimBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
-    int64_t dim, ValueBoundsConstraintSet::StopConditionFn stopCondition,
-    bool closedUB) {
+    int64_t dim, const ValueBoundsConstraintSet::StopConditionFn &stopCondition,
+    ValueBoundsOptions options) {
   auto reifyToOperands = [&](Value v, std::optional<int64_t> d,
                              ValueBoundsConstraintSet &cstr) {
     // We are trying to reify a bound for `value` in terms of the owning op's
@@ -129,17 +149,18 @@ FailureOr<OpFoldResult> mlir::arith::reifyShapedValueDimBound(
   };
   return reifyValueBound(b, loc, type, {value, dim},
                          stopCondition ? stopCondition : reifyToOperands,
-                         closedUB);
+                         options);
 }
 
 FailureOr<OpFoldResult> mlir::arith::reifyIndexValueBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
-    ValueBoundsConstraintSet::StopConditionFn stopCondition, bool closedUB) {
+    const ValueBoundsConstraintSet::StopConditionFn &stopCondition,
+    ValueBoundsOptions options) {
   auto reifyToOperands = [&](Value v, std::optional<int64_t> d,
                              ValueBoundsConstraintSet &cstr) {
     return v != value;
   };
   return reifyValueBound(b, loc, type, value,
                          stopCondition ? stopCondition : reifyToOperands,
-                         closedUB);
+                         options);
 }

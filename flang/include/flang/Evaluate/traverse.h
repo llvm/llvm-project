@@ -146,8 +146,7 @@ public:
     return Combine(x.base(), x.subscript());
   }
   Result operator()(const CoarrayRef &x) const {
-    return Combine(
-        x.base(), x.subscript(), x.cosubscript(), x.stat(), x.team());
+    return Combine(x.base(), x.cosubscript(), x.notify(), x.stat(), x.team());
   }
   Result operator()(const DataRef &x) const { return visitor_(x.u); }
   Result operator()(const Substring &x) const {
@@ -224,6 +223,10 @@ public:
   }
   Result operator()(const StructureConstructor &x) const {
     return visitor_.Combine(visitor_(x.derivedTypeSpec()), CombineContents(x));
+  }
+  // Conditional expressions (Fortran 2023)
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
+    return Combine(x.condition(), x.thenValue(), x.elseValue());
   }
 
   // Operations and wrappers

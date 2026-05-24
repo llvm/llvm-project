@@ -1,6 +1,11 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Bfloat16ConversionINTEL], [SPV_INTEL_bfloat16_conversion]> {
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, Bfloat16ConversionINTEL, Int16], [SPV_INTEL_bfloat16_conversion]> {
   // CHECK-LABEL: @f32_to_bf16
   spirv.func @f32_to_bf16(%arg0 : f32) "None" {
     // CHECK: {{%.*}} = spirv.INTEL.ConvertFToBF16 {{%.*}} : f32 to i16
@@ -33,11 +38,93 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Bfloat16ConversionINTEL]
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.INTEL.RoundFToTF32
+//===----------------------------------------------------------------------===//
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, TensorFloat32RoundingINTEL], [SPV_INTEL_tensor_float32_conversion]> {
+  // CHECK-LABEL: @f32_to_tf32
+  spirv.func @f32_to_tf32(%arg0 : f32) "None" {
+    // CHECK: {{%.*}} = spirv.INTEL.RoundFToTF32 {{%.*}} : f32 to f32
+    %1 = spirv.INTEL.RoundFToTF32 %arg0 : f32 to f32
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @f32_to_tf32_vec
+  spirv.func @f32_to_tf32_vec(%arg0 : vector<2xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.INTEL.RoundFToTF32 {{%.*}} : vector<2xf32> to vector<2xf32>
+    %1 = spirv.INTEL.RoundFToTF32 %arg0 : vector<2xf32> to vector<2xf32>
+    spirv.Return
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.INTEL.MaskedGather / MaskedScatter
+//===----------------------------------------------------------------------===//
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkage, MaskedGatherScatterINTEL], [SPV_INTEL_masked_gather_scatter]> {
+  // CHECK-LABEL: @masked_gather_f32
+  spirv.func @masked_gather_f32(
+      %ptrs : vector<4x!spirv.ptr<f32, CrossWorkgroup>>,
+      %alignment : i32,
+      %mask : vector<4xi1>,
+      %fill : vector<4xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.INTEL.MaskedGather {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xf32> -> vector<4xf32>
+    %0 = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
+         : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
+           vector<4xi1>, vector<4xf32> -> vector<4xf32>
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @masked_gather_i32
+  spirv.func @masked_gather_i32(
+      %ptrs : vector<4x!spirv.ptr<i32, CrossWorkgroup>>,
+      %alignment : i32,
+      %mask : vector<4xi1>,
+      %fill : vector<4xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.INTEL.MaskedGather {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xi32> -> vector<4xi32>
+    %0 = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
+         : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32,
+           vector<4xi1>, vector<4xi32> -> vector<4xi32>
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @masked_scatter_f32
+  spirv.func @masked_scatter_f32(
+      %ptrs : vector<4x!spirv.ptr<f32, CrossWorkgroup>>,
+      %alignment : i32,
+      %mask : vector<4xi1>,
+      %values : vector<4xf32>) "None" {
+    // CHECK: spirv.INTEL.MaskedScatter {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xf32>
+    spirv.INTEL.MaskedScatter %ptrs, %alignment, %mask, %values
+         : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
+           vector<4xi1>, vector<4xf32>
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @masked_scatter_i32
+  spirv.func @masked_scatter_i32(
+      %ptrs : vector<4x!spirv.ptr<i32, CrossWorkgroup>>,
+      %alignment : i32,
+      %mask : vector<4xi1>,
+      %values : vector<4xi32>) "None" {
+    // CHECK: spirv.INTEL.MaskedScatter {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xi32>
+    spirv.INTEL.MaskedScatter %ptrs, %alignment, %mask, %values
+         : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32,
+           vector<4xi1>, vector<4xi32>
+    spirv.Return
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.INTEL.SplitBarrier
 //===----------------------------------------------------------------------===//
 
-// CHECK: spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [SplitBarrierINTEL], [SPV_INTEL_split_barrier]>
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [SplitBarrierINTEL], [SPV_INTEL_split_barrier]> {
+// CHECK: spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, SplitBarrierINTEL], [SPV_INTEL_split_barrier]>
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, SplitBarrierINTEL], [SPV_INTEL_split_barrier]> {
   // CHECK-LABEL: @split_barrier
   spirv.func @split_barrier() "None" {
     // CHECK: spirv.INTEL.ControlBarrierArrive <Workgroup> <Device> <Acquire|UniformMemory>

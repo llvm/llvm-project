@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ScriptedThread.h"
+#include "ScriptedFrame.h"
 
 #include "Plugins/Process/Utility/RegisterContextThreadMemory.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
@@ -56,9 +57,17 @@ ScriptedThread::Create(ScriptedProcess &process,
   }
 
   ExecutionContext exe_ctx(process);
+  // The legacy thread-spawn path (no script_object) needs to instantiate a
+  // *thread* Python class whose name comes from the process plugin, not the
+  // process's own class name. Build a thread-specific metadata for that case;
+  // when script_object is non-null the class name is unused so we just forward
+  // the process's metadata.
+  ScriptedMetadata thread_metadata =
+      script_object ? process.m_scripted_metadata
+                    : ScriptedMetadata(thread_class_name,
+                                       process.m_scripted_metadata.GetArgsSP());
   auto obj_or_err = scripted_thread_interface->CreatePluginObject(
-      thread_class_name, exe_ctx, process.m_scripted_metadata.GetArgsSP(),
-      script_object);
+      thread_metadata, exe_ctx, script_object);
 
   if (!obj_or_err) {
     llvm::consumeError(obj_or_err.takeError());
@@ -93,7 +102,7 @@ const char *ScriptedThread::GetName() {
   std::optional<std::string> thread_name = GetInterface()->GetName();
   if (!thread_name)
     return nullptr;
-  return ConstString(thread_name->c_str()).AsCString();
+  return ConstString(*thread_name).AsCString(nullptr);
 }
 
 const char *ScriptedThread::GetQueueName() {
@@ -101,7 +110,7 @@ const char *ScriptedThread::GetQueueName() {
   std::optional<std::string> queue_name = GetInterface()->GetQueue();
   if (!queue_name)
     return nullptr;
-  return ConstString(queue_name->c_str()).AsCString();
+  return ConstString(*queue_name).AsCString(nullptr);
 }
 
 void ScriptedThread::WillResume(StateType resume_state) {}
@@ -163,59 +172,138 @@ bool ScriptedThread::LoadArtificialStackFrames() {
         error, LLDBLog::Thread);
 
   size_t arr_size = arr_sp->GetSize();
+  if (!arr_size)
+    return ScriptedInterface::ErrorWithMessage<bool>(
+        LLVM_PRETTY_FUNCTION, "StackFrame array is empty.", error,
+        LLDBLog::Thread);
+
   if (arr_size > std::numeric_limits<uint32_t>::max())
     return ScriptedInterface::ErrorWithMessage<bool>(
         LLVM_PRETTY_FUNCTION,
         llvm::Twine(
             "StackFrame array size (" + llvm::Twine(arr_size) +
-            llvm::Twine(
-                ") is greater than maximum authorized for a StackFrameList."))
+            ") is greater than maximum authorized for a StackFrameList.")
             .str(),
         error, LLDBLog::Thread);
 
-  StackFrameListSP frames = GetStackFrameList();
-
-  for (size_t idx = 0; idx < arr_size; idx++) {
+  auto create_frame_from_dict =
+      [this, arr_sp](size_t idx,
+                     uint32_t frame_list_idx) -> llvm::Expected<StackFrameSP> {
+    Status error;
     std::optional<StructuredData::Dictionary *> maybe_dict =
         arr_sp->GetItemAtIndexAsDictionary(idx);
-    if (!maybe_dict)
-      return ScriptedInterface::ErrorWithMessage<bool>(
+    if (!maybe_dict) {
+      ScriptedInterface::ErrorWithMessage<bool>(
           LLVM_PRETTY_FUNCTION,
           llvm::Twine(
               "Couldn't get artificial stackframe dictionary at index (" +
               llvm::Twine(idx) + llvm::Twine(") from stackframe array."))
               .str(),
           error, LLDBLog::Thread);
+      return error.ToError();
+    }
     StructuredData::Dictionary *dict = *maybe_dict;
 
     lldb::addr_t pc;
-    if (!dict->GetValueForKeyAsInteger("pc", pc))
-      return ScriptedInterface::ErrorWithMessage<bool>(
+    if (!dict->GetValueForKeyAsInteger("pc", pc)) {
+      ScriptedInterface::ErrorWithMessage<bool>(
           LLVM_PRETTY_FUNCTION,
           "Couldn't find value for key 'pc' in stackframe dictionary.", error,
           LLDBLog::Thread);
+      return error.ToError();
+    }
 
     Address symbol_addr;
     symbol_addr.SetLoadAddress(pc, &this->GetProcess()->GetTarget());
 
     lldb::addr_t cfa = LLDB_INVALID_ADDRESS;
     bool cfa_is_valid = false;
-    const bool behaves_like_zeroth_frame = false;
+    const bool artificial = false;
+    const bool behaves_like_zeroth_frame = (frame_list_idx == 0);
     SymbolContext sc;
     symbol_addr.CalculateSymbolContext(&sc);
 
-    StackFrameSP synth_frame_sp = std::make_shared<StackFrame>(
-        this->shared_from_this(), idx, idx, cfa, cfa_is_valid, pc,
-        StackFrame::Kind::Artificial, behaves_like_zeroth_frame, &sc);
+    return std::make_shared<StackFrame>(shared_from_this(), frame_list_idx, idx,
+                                        cfa, cfa_is_valid, pc,
+                                        StackFrame::Kind::Synthetic, artificial,
+                                        behaves_like_zeroth_frame, &sc);
+  };
 
-    if (!frames->SetFrameAtIndex(static_cast<uint32_t>(idx), synth_frame_sp))
+  auto create_frame_from_script_object =
+      [this, arr_sp](size_t idx) -> llvm::Expected<StackFrameSP> {
+    Status error;
+    StructuredData::ObjectSP object_sp = arr_sp->GetItemAtIndex(idx);
+    if (!object_sp || !object_sp->GetAsGeneric()) {
+      ScriptedInterface::ErrorWithMessage<bool>(
+          LLVM_PRETTY_FUNCTION,
+          llvm::Twine("Couldn't get artificial stackframe object at index (" +
+                      llvm::Twine(idx) +
+                      llvm::Twine(") from stackframe array."))
+              .str(),
+          error, LLDBLog::Thread);
+      return error.ToError();
+    }
+
+    auto frame_or_error = ScriptedFrame::Create(
+        shared_from_this(), GetInterface(), nullptr, object_sp->GetAsGeneric());
+
+    if (!frame_or_error) {
+      ScriptedInterface::ErrorWithMessage<bool>(
+          LLVM_PRETTY_FUNCTION, toString(frame_or_error.takeError()), error);
+      return error.ToError();
+    }
+
+    StackFrameSP frame_sp = frame_or_error.get();
+    lldbassert(frame_sp && "Couldn't initialize scripted frame.");
+
+    return frame_sp;
+  };
+
+  StackFrameListSP frames = GetStackFrameList();
+  uint32_t frame_list_idx = 0;
+
+  for (size_t idx = 0; idx < arr_size; idx++) {
+    StackFrameSP synth_frame_sp = nullptr;
+
+    auto frame_from_dict_or_err = create_frame_from_dict(idx, frame_list_idx);
+    if (!frame_from_dict_or_err) {
+      auto frame_from_script_obj_or_err = create_frame_from_script_object(idx);
+
+      if (!frame_from_script_obj_or_err) {
+        return ScriptedInterface::ErrorWithMessage<bool>(
+            LLVM_PRETTY_FUNCTION,
+            llvm::Twine(
+                "Couldn't add artificial frame (" + llvm::Twine(idx) +
+                llvm::Twine(") to ScriptedThread StackFrameList: ") +
+                llvm::toString(frame_from_script_obj_or_err.takeError()))
+                .str(),
+            error, LLDBLog::Thread);
+      } else {
+        llvm::consumeError(frame_from_dict_or_err.takeError());
+        synth_frame_sp = *frame_from_script_obj_or_err;
+      }
+    } else {
+      synth_frame_sp = *frame_from_dict_or_err;
+    }
+
+    if (!frames->SetFrameAtIndex(frame_list_idx, synth_frame_sp))
       return ScriptedInterface::ErrorWithMessage<bool>(
           LLVM_PRETTY_FUNCTION,
           llvm::Twine("Couldn't add frame (" + llvm::Twine(idx) +
                       llvm::Twine(") to ScriptedThread StackFrameList."))
               .str(),
           error, LLDBLog::Thread);
+    frame_list_idx++;
+
+    // Synthesize inline frames, mirroring StackFrameList::FetchFramesUpTo().
+    frame_list_idx += frames->SynthesizeInlineFrames(
+        synth_frame_sp, /*cfa=*/LLDB_INVALID_ADDRESS);
   }
+
+  // Mark the stack as fully unwound so the regular unwinder doesn't try to
+  // extend it beyond the artificial frames (e.g. by reading lr/fp from the
+  // register context).
+  frames->SetAllFramesFetched();
 
   return true;
 }
@@ -234,9 +322,10 @@ bool ScriptedThread::CalculateStopInfo() {
   // if we CreateStopReasonWithBreakpointSiteID.
   if (RegisterContextSP reg_ctx_sp = GetRegisterContext()) {
     addr_t pc = reg_ctx_sp->GetPC();
+    ProcessSP proc = GetProcess();
     if (BreakpointSiteSP bp_site_sp =
-            GetProcess()->GetBreakpointSiteList().FindByAddress(pc))
-      if (bp_site_sp->IsEnabled())
+            proc->GetBreakpointSiteList().FindByAddress(pc))
+      if (proc->IsBreakpointSitePhysicallyEnabled(*bp_site_sp))
         SetThreadStoppedAtUnexecutedBP(pc);
   }
 

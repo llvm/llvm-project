@@ -94,7 +94,7 @@ private:
   /// where the C code specifies const char*.
   llvm::Constant *makeConstantString(const std::string &Str,
                                      const std::string &Name = "") {
-    return CGM.GetAddrOfConstantCString(Str, Name.c_str()).getPointer();
+    return CGM.GetAddrOfConstantCString(Str, Name).getPointer();
   }
 
   /// Helper function which generates an initialized constant array from Str,
@@ -230,7 +230,7 @@ CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
   IntTy = CGM.IntTy;
   SizeTy = CGM.SizeTy;
   VoidTy = CGM.VoidTy;
-  PtrTy = CGM.UnqualPtrTy;
+  PtrTy = CGM.DefaultPtrTy;
 
   if (CGM.getLangOpts().OffloadViaLLVM)
     Prefix = "llvm";
@@ -372,7 +372,7 @@ Address CGNVCUDARuntime::prepareKernelArgs(CodeGenFunction &CGF,
   // args, allocate a single pointer so we still have a valid pointer to the
   // argument array that we can pass to runtime, even if it will be unused.
   Address KernelArgs = CGF.CreateTempAlloca(
-      PtrTy, CharUnits::fromQuantity(16), "kernel_args",
+      PtrTy, LangAS::Default, CharUnits::fromQuantity(16), "kernel_args",
       llvm::ConstantInt::get(SizeTy, std::max<size_t>(1, Args.size())));
   // Store pointers to the arguments in a locally allocated launch_args.
   for (unsigned i = 0; i < Args.size(); ++i) {
@@ -433,13 +433,14 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
   // Create temporary dim3 grid_dim, block_dim.
   ParmVarDecl *GridDimParam = cudaLaunchKernelFD->getParamDecl(1);
   QualType Dim3Ty = GridDimParam->getType();
-  Address GridDim =
-      CGF.CreateMemTemp(Dim3Ty, CharUnits::fromQuantity(8), "grid_dim");
-  Address BlockDim =
-      CGF.CreateMemTemp(Dim3Ty, CharUnits::fromQuantity(8), "block_dim");
-  Address ShmemSize =
-      CGF.CreateTempAlloca(SizeTy, CGM.getSizeAlign(), "shmem_size");
-  Address Stream = CGF.CreateTempAlloca(PtrTy, CGM.getPointerAlign(), "stream");
+  Address GridDim = CGF.CreateMemTempWithoutCast(
+      Dim3Ty, CharUnits::fromQuantity(8), "grid_dim");
+  Address BlockDim = CGF.CreateMemTempWithoutCast(
+      Dim3Ty, CharUnits::fromQuantity(8), "block_dim");
+  Address ShmemSize = CGF.CreateTempAlloca(SizeTy, LangAS::Default,
+                                           CGM.getSizeAlign(), "shmem_size");
+  Address Stream = CGF.CreateTempAlloca(PtrTy, LangAS::Default,
+                                        CGM.getPointerAlign(), "stream");
   llvm::FunctionCallee cudaPopConfigFn = CGM.CreateRuntimeFunction(
       llvm::FunctionType::get(IntTy,
                               {/*gridDim=*/GridDim.getType(),
@@ -637,7 +638,7 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
         KernelHandles[I.Kernel->getName()],
         KernelName,
         KernelName,
-        llvm::ConstantInt::get(IntTy, -1),
+        llvm::ConstantInt::getAllOnesValue(IntTy),
         NullPtr,
         NullPtr,
         NullPtr,
@@ -817,10 +818,14 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
   llvm::Constant *FatBinStr;
   unsigned FatMagic;
   if (IsHIP) {
-    FatbinConstantName = ".hip_fatbin";
-    FatbinSectionName = ".hipFatBinSegment";
+    // On macOS (Mach-O), section names must be in "segment,section" format.
+    FatbinConstantName =
+        CGM.getTriple().isMacOSX() ? "__HIP,__hip_fatbin" : ".hip_fatbin";
+    FatbinSectionName =
+        CGM.getTriple().isMacOSX() ? "__HIP,__fatbin" : ".hipFatBinSegment";
 
-    ModuleIDSectionName = "__hip_module_id";
+    ModuleIDSectionName =
+        CGM.getTriple().isMacOSX() ? "__HIP,__module_id" : "__hip_module_id";
     ModuleIDPrefix = "__hip_";
 
     if (CudaGpuBinary) {
@@ -884,6 +889,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
       addUnderscoredPrefixToName("_fatbin_wrapper"), CGM.getPointerAlign(),
       /*constant*/ true);
   FatbinWrapper->setSection(FatbinSectionName);
+  CGM.getSanitizerMetadata()->disableSanitizerForGlobal(FatbinWrapper);
 
   // There is only one HIP fat binary per linked module, however there are
   // multiple constructor functions. Make sure the fat binary is registered
@@ -1131,7 +1137,7 @@ void CGNVCUDARuntime::handleVarRegistration(const VarDecl *D,
     // Builtin surfaces and textures and their template arguments are
     // also registered with CUDA runtime.
     const auto *TD = cast<ClassTemplateSpecializationDecl>(
-        D->getType()->castAs<RecordType>()->getDecl());
+        D->getType()->castAsCXXRecordDecl());
     const TemplateArgumentList &Args = TD->getTemplateArgs();
     if (TD->hasAttr<CUDADeviceBuiltinSurfaceTypeAttr>()) {
       assert(Args.size() == 2 &&
@@ -1194,7 +1200,6 @@ void CGNVCUDARuntime::transformManagedVars() {
 // registered. The linker will provide a pointer to this section so we can
 // register the symbols with the linked device image.
 void CGNVCUDARuntime::createOffloadingEntries() {
-  SmallVector<char, 32> Out;
   llvm::object::OffloadKind Kind = CGM.getLangOpts().HIP
                                        ? llvm::object::OffloadKind::OFK_HIP
                                        : llvm::object::OffloadKind::OFK_Cuda;

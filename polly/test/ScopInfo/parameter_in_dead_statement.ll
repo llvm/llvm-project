@@ -1,7 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output \
-; RUN: -polly-invariant-load-hoisting=true < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly -passes=polly-codegen -S \
-; RUN: -polly-invariant-load-hoisting=true < %s 2>&1 | FileCheck %s --check-prefix=IR
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output -polly-invariant-load-hoisting=true < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S -polly-invariant-load-hoisting=true < %s 2>&1 | FileCheck %s --check-prefix=IR
 ;
 ; Verify we do not create assumptions based on the parameter p_1 which is the
 ; load %0 and due to error-assumptions not "part of the SCoP".

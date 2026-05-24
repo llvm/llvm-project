@@ -7,8 +7,9 @@
 define bfloat @bfloat_imm() nounwind {
 ; CHECK-LABEL: bfloat_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI0_0)
-; CHECK-NEXT:    flh fa0, %lo(.LCPI0_0)(a0)
+; CHECK-NEXT:    lui a0, 4
+; CHECK-NEXT:    addi a0, a0, 64
+; CHECK-NEXT:    fmv.h.x fa0, a0
 ; CHECK-NEXT:    ret
   ret bfloat 3.0
 }

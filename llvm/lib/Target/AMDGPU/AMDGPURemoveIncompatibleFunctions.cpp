@@ -107,6 +107,8 @@ constexpr unsigned FeaturesToCheck[] = {AMDGPU::FeatureGFX11Insts,
                                         AMDGPU::FeatureGFX9Insts,
                                         AMDGPU::FeatureGFX8Insts,
                                         AMDGPU::FeatureDPP,
+                                        AMDGPU::FeatureDPPWavefrontShifts,
+                                        AMDGPU::FeatureDPPBroadcasts,
                                         AMDGPU::Feature16BitInsts,
                                         AMDGPU::FeatureDot1Insts,
                                         AMDGPU::FeatureDot2Insts,
@@ -195,11 +197,15 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
 
   // Delete FeatureWavefrontSize32 functions for
   // gfx9 and below targets that don't support the mode.
-  // gfx10+ is implied to support both wave32 and 64 features.
+  // gfx10, gfx11, gfx12 are implied to support both wave32 and 64 features.
   // They are not in the feature set. So, we need a separate check
-  if (ST->getGeneration() < AMDGPUSubtarget::GFX10 &&
-      ST->hasFeature(AMDGPU::FeatureWavefrontSize32)) {
+  if (!ST->supportsWave32() && ST->hasFeature(AMDGPU::FeatureWavefrontSize32)) {
     reportFunctionRemoved(F, AMDGPU::FeatureWavefrontSize32);
+    return true;
+  }
+  // gfx125x only support FeatureWavefrontSize32.
+  if (!ST->supportsWave64() && ST->hasFeature(AMDGPU::FeatureWavefrontSize64)) {
+    reportFunctionRemoved(F, AMDGPU::FeatureWavefrontSize64);
     return true;
   }
   return false;

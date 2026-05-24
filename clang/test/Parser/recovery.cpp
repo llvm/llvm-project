@@ -24,7 +24,7 @@ struct S {
   int a, b, c;
   S();
   int x // expected-error {{expected ';'}}
-  friend void f()
+  friend void f() // expected-error {{expected ';' at end of declaration list}}
 };
 8S::S() : a{ 5 }, b{ 6 }, c{ 2 } { // expected-error {{unqualified-id}}
   return;
@@ -221,4 +221,22 @@ void func(int);
 void k() {
   func(1, ); // expected-error {{expected expression}}
 }
+}
+
+namespace GH136254 {
+
+void call() {
+  [a(42, )]() {} (); // expected-error {{expected expression}}
+
+  int *b = new int(42, ); // expected-error {{expected expression}}
+
+  struct S {
+    int c;
+
+    S() : c(42, ) {} // expected-error {{expected expression}}
+  };
+
+  int d(42, ); // expected-error {{expected expression}}
+}
+
 }

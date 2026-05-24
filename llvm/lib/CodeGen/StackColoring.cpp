@@ -438,7 +438,7 @@ class StackColoring {
 
 public:
   StackColoring(SlotIndexes *Indexes) : Indexes(Indexes) {}
-  bool run(MachineFunction &Func);
+  bool run(MachineFunction &Func, bool OnlyRemoveMarkers = false);
 
 private:
   /// Used in collectMarkers
@@ -719,6 +719,11 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
             H.CatchObj.FrameIndex >= 0)
           ConservativeSlots.set(H.CatchObj.FrameIndex);
 
+  // Treat all stack slots as conservative if we happen to have calls to
+  // setjmp/sigsetjmp, as longjmp may re-enter the function on a different path.
+  if (MF->exposesReturnsTwice())
+    ConservativeSlots.set();
+
   LLVM_DEBUG(dumpBV("Conservative slots", ConservativeSlots));
 
   // Step 2: compute begin/end sets for each block
@@ -815,13 +820,13 @@ void StackColoring::calculateLocalLiveness() {
       LocalLiveOut |= BlockInfo.Begin;
 
       // Update block LiveIn set, noting whether it has changed.
-      if (LocalLiveIn.test(BlockInfo.LiveIn)) {
+      if (!LocalLiveIn.subsetOf(BlockInfo.LiveIn)) {
         changed = true;
         BlockInfo.LiveIn |= LocalLiveIn;
       }
 
       // Update block LiveOut set, noting whether it has changed.
-      if (LocalLiveOut.test(BlockInfo.LiveOut)) {
+      if (!LocalLiveOut.subsetOf(BlockInfo.LiveOut)) {
         changed = true;
         BlockInfo.LiveOut |= LocalLiveOut;
       }
@@ -1190,22 +1195,19 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
 }
 
 bool StackColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
   StackColoring SC(&getAnalysis<SlotIndexesWrapperPass>().getSI());
-  return SC.run(MF);
+  return SC.run(MF, skipFunction(MF.getFunction()));
 }
 
 PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
   StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF));
   if (SC.run(MF))
-    return PreservedAnalyses::none();
+    return getMachineFunctionPassPreservedAnalyses();
   return PreservedAnalyses::all();
 }
 
-bool StackColoring::run(MachineFunction &Func) {
+bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
   LLVM_DEBUG(dbgs() << "********** Stack Coloring **********\n"
                     << "********** Function: " << Func.getName() << '\n');
   MF = &Func;
@@ -1245,8 +1247,10 @@ bool StackColoring::run(MachineFunction &Func) {
   LLVM_DEBUG(dbgs() << "Total Stack size: " << TotalSize << " bytes\n\n");
 
   // Don't continue because there are not enough lifetime markers, or the
-  // stack is too small, or we are told not to optimize the slots.
-  if (NumMarkers < 2 || TotalSize < 16 || DisableColoring) {
+  // stack is too small, or we are told not to optimize the slots, or
+  // opt-bisect-limit is skipping this pass.
+  if (NumMarkers < 2 || TotalSize < 16 || DisableColoring ||
+      OnlyRemoveMarkers) {
     LLVM_DEBUG(dbgs() << "Will not try to merge slots.\n");
     return removeAllMarkers();
   }

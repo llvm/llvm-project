@@ -28,39 +28,35 @@ define void @f() {
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    br label [[OUTER_HEADER]]
 ; CHECK:       outer.exit.0:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi ptr [ [[TMP0]], [[OUTER_HEADER]] ]
 ; CHECK-NEXT:    br label [[LOOP_PREHEADER:%.*]]
 ; CHECK:       outer.exit.1:
-; CHECK-NEXT:    [[DOTLCSSA1:%.*]] = phi ptr [ [[TMP0]], [[INNER_1_LATCH]] ]
 ; CHECK-NEXT:    br label [[LOOP_PREHEADER]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ [[DOTLCSSA]], [[OUTER_EXIT_0]] ], [ [[DOTLCSSA1]], [[OUTER_EXIT_1]] ]
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 1
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr @f.e, [[SCEVGEP]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TMP1]], getelementptr inbounds nuw (i8, ptr @f.e, i64 4)
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TMP0]], getelementptr inbounds nuw (i8, ptr @f.e, i64 4)
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    store i32 0, ptr @f.e, align 1, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
-; CHECK-NEXT:    store i8 10, ptr [[TMP0]], align 1
+; CHECK-NEXT:    store i8 10, ptr [[TMP0]], align 1, !alias.scope [[META3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 500
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 500, [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[CONV6_US_US_US:%.*]] = zext i1 false to i32
 ; CHECK-NEXT:    store i32 [[CONV6_US_US_US]], ptr @f.e, align 1
-; CHECK-NEXT:    store i8 10, ptr [[TMP1]], align 1
+; CHECK-NEXT:    store i8 10, ptr [[TMP0]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 500
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
@@ -70,30 +66,30 @@ define void @f() {
 entry:
   br label %outer.header
 
-outer.header:                            ; preds = %cleanup, %entry
+outer.header:
   %0 = load ptr, ptr @d, align 1
   %c.0 = call i1 @cond()
   br i1 %c.0, label %outer.exit.0, label %inner.1.header
 
-inner.1.header:                                         ; preds = %if.end, %for.body3.lr.ph.outer
+inner.1.header:
   %c.1 = call i1 @cond()
   br i1 %c.1, label %inner.1.latch, label %outer.latch
 
-inner.1.latch:                                           ; preds = %land.end
+inner.1.latch:
   %c.2 = call i1 @cond()
   br i1 %c.2, label %outer.exit.1, label %inner.1.header
 
-outer.latch:                                          ; preds = %land.end
+outer.latch:
   br label %outer.header
 
 
-outer.exit.0:                                         ; preds = %if.end, %if.end.us.us.us
+outer.exit.0:
   br label %loop
 
-outer.exit.1:                                         ; preds = %if.end, %if.end.us.us.us
+outer.exit.1:
   br label %loop
 
-loop:                                  ; preds = %if.end.us.us.us, %for.body3.lr.ph.outer
+loop:
   %iv = phi i32 [ %iv.next, %loop ], [ 0, %outer.exit.0 ], [ 0, %outer.exit.1 ]
   %conv6.us.us.us = zext i1 false to i32
   store i32 %conv6.us.us.us, ptr @f.e, align 1

@@ -378,9 +378,7 @@ extern "C++" {
 #      include <__math/traits.h>
 #      include <__math/trigonometric_functions.h>
 #      include <__type_traits/enable_if.h>
-#      include <__type_traits/is_floating_point.h>
 #      include <__type_traits/is_integral.h>
-#      include <stdlib.h>
 
 // fpclassify relies on implementation-defined constants, so we can't move it to a detail header
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -431,19 +429,31 @@ using std::__math::isnormal;
 using std::__math::isunordered;
 #      endif // _LIBCPP_MSVCRT
 
-// abs
-//
-// handled in stdlib.h
+#      if defined(_LIBCPP_MSVCRT) && _LIBCPP_STD_VER >= 20
+// MS UCRT incorrectly defines some functions in a way not working with integer types. Until C++20, this was worked
+// around by -fdelayed-template-parsing. Since C++20, we can use standard feature "requires" instead.
 
-// div
-//
-// handled in stdlib.h
+// TODO: Remove the workaround once UCRT fixes these functions. Note that this doesn't seem planned as of 2025-07 per
+// https://developercommunity.visualstudio.com/t/10294165.
+
+using std::__math::__ucrt::isfinite;
+using std::__math::__ucrt::isgreater;
+using std::__math::__ucrt::isgreaterequal;
+using std::__math::__ucrt::isinf;
+using std::__math::__ucrt::isless;
+using std::__math::__ucrt::islessequal;
+using std::__math::__ucrt::islessgreater;
+using std::__math::__ucrt::isnan;
+using std::__math::__ucrt::isnormal;
+using std::__math::__ucrt::isunordered;
+#      endif // defined(_LIBCPP_MSVCRT) && _LIBCPP_STD_VER >= 20
 
 // We have to provide double overloads for <math.h> to work on platforms that don't provide the full set of math
 // functions. To make the overload set work with multiple functions that take the same arguments, we make our overloads
 // templates. Functions are preferred over function templates during overload resolution, which means that our overload
 // will only be selected when the C library doesn't provide one.
 
+using std::__math::abs;
 using std::__math::acos;
 using std::__math::acosh;
 using std::__math::asin;

@@ -1,4 +1,4 @@
-//===--- ReturnConstRefFromParameterCheck.cpp - clang-tidy ----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -65,7 +65,7 @@ static bool hasSameParameterTypes(const FunctionDecl &FD, const FunctionDecl &O,
     const ParmVarDecl *DPD = FD.getParamDecl(I);
     const QualType OPT = O.getParamDecl(I)->getType();
     if (DPD == &PD) {
-      if (!llvm::isa<RValueReferenceType>(OPT) ||
+      if (!isa<RValueReferenceType>(OPT) ||
           !isSameTypeIgnoringConstRef(DPD->getType(), OPT))
         return false;
     } else {
@@ -83,11 +83,10 @@ static const Decl *findRVRefOverload(const FunctionDecl &FD,
   // FIXME:
   // 1. overload in anonymous namespace
   // 2. forward reference
-  DeclContext::lookup_result LookupResult =
+  const DeclContext::lookup_result LookupResult =
       FD.getParent()->lookup(FD.getNameInfo().getName());
-  if (LookupResult.isSingleResult()) {
+  if (LookupResult.isSingleResult())
     return nullptr;
-  }
   for (const Decl *Overload : LookupResult) {
     if (Overload == &FD)
       continue;

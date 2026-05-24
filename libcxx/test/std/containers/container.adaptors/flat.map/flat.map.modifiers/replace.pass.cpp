@@ -33,7 +33,7 @@ static_assert(!CanReplace<Map, std::vector<int>, const std::vector<int>&>);
 static_assert(!CanReplace<Map, const std::vector<int>&, const std::vector<int>&>);
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
@@ -49,13 +49,18 @@ void test() {
   assert(std::ranges::equal(m.values(), expected_values));
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::vector<int>, std::vector<double>>();
-  test<std::deque<int>, std::vector<double>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test<std::deque<int>, std::vector<double>>();
+  }
   test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
   test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     using KeyContainer   = std::vector<int>;
     using ValueContainer = ThrowOnMoveContainer<int>;
@@ -76,5 +81,15 @@ int main(int, char**) {
     }
 #endif
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
+
   return 0;
 }

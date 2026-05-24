@@ -35,12 +35,15 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
         This method checks if it's valid to load a value from the memory space
         with a specific type, alignment, and atomic ordering.
         If `emitError` is non-null then the method is allowed to emit errors.
+        Furthermore, if `emitError` is non-null and the result is `false` an
+        error must have been emitted.
       }],
-      /*returnType=*/  "::mlir::LogicalResult",
+      /*returnType=*/  "bool",
       /*methodName=*/  "isValidLoad",
       /*args=*/        (ins "::mlir::Type":$type,
                             "::mlir::ptr::AtomicOrdering":$ordering,
-                            "::mlir::IntegerAttr":$alignment,
+                            "std::optional<int64_t>":$alignment,
+                            "const ::mlir::DataLayout *":$dataLayout,
                             "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<
@@ -48,12 +51,15 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
         This method checks if it's valid to store a value in the memory space
         with a specific type, alignment, and atomic ordering.
         If `emitError` is non-null then the method is allowed to emit errors.
+        Furthermore, if `emitError` is non-null and the result is `false` an
+        error must have been emitted.
       }],
-      /*returnType=*/  "::mlir::LogicalResult",
+      /*returnType=*/  "bool",
       /*methodName=*/  "isValidStore",
       /*args=*/        (ins "::mlir::Type":$type,
                             "::mlir::ptr::AtomicOrdering":$ordering,
-                            "::mlir::IntegerAttr":$alignment,
+                            "std::optional<int64_t>":$alignment,
+                            "const ::mlir::DataLayout *":$dataLayout,
                             "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<
@@ -61,13 +67,16 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
         This method checks if it's valid to perform an atomic operation in the
         memory space with a specific type, alignment, and atomic ordering.
         If `emitError` is non-null then the method is allowed to emit errors.
+        Furthermore, if `emitError` is non-null and the result is `false` an
+        error must have been emitted.
       }],
-      /*returnType=*/  "::mlir::LogicalResult",
+      /*returnType=*/  "bool",
       /*methodName=*/  "isValidAtomicOp",
       /*args=*/        (ins "::mlir::ptr::AtomicBinOp":$op,
                             "::mlir::Type":$type,
                             "::mlir::ptr::AtomicOrdering":$ordering,
-                            "::mlir::IntegerAttr":$alignment,
+                            "std::optional<int64_t>":$alignment,
+                            "const ::mlir::DataLayout *":$dataLayout,
                             "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<
@@ -76,13 +85,16 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
         in the memory space with a specific type, alignment, and atomic
         orderings.
         If `emitError` is non-null then the method is allowed to emit errors.
+        Furthermore, if `emitError` is non-null and the result is `false` an
+        error must have been emitted.
       }],
-      /*returnType=*/  "::mlir::LogicalResult",
+      /*returnType=*/  "bool",
       /*methodName=*/  "isValidAtomicXchg",
       /*args=*/        (ins "::mlir::Type":$type,
                             "::mlir::ptr::AtomicOrdering":$successOrdering,
                             "::mlir::ptr::AtomicOrdering":$failureOrdering,
-                            "::mlir::IntegerAttr":$alignment,
+                            "std::optional<int64_t>":$alignment,
+                            "const ::mlir::DataLayout *":$dataLayout,
                             "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<
@@ -90,8 +102,10 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
         This method checks if it's valid to perform an `addrspacecast` op
         in the memory space.
         If `emitError` is non-null then the method is allowed to emit errors.
+        Furthermore, if `emitError` is non-null and the result is `false` an
+        error must have been emitted.
       }],
-      /*returnType=*/  "::mlir::LogicalResult",
+      /*returnType=*/  "bool",
       /*methodName=*/  "isValidAddrSpaceCast",
       /*args=*/        (ins "::mlir::Type":$tgt,
                             "::mlir::Type":$src,
@@ -101,11 +115,13 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
       /*desc=*/        [{
         This method checks if it's valid to perform a `ptrtoint` or `inttoptr`
         op in the memory space.
-        The first type is expected to be integer-like, while the second must be a
-        ptr-like type.
+        The first type is expected to be integer-like, while the second must be
+        a ptr-like type.
         If `emitError` is non-null then the method is allowed to emit errors.
+        Furthermore, if `emitError` is non-null and the result is `false` an
+        error must have been emitted.
       }],
-      /*returnType=*/  "::mlir::LogicalResult",
+      /*returnType=*/  "bool",
       /*methodName=*/  "isValidPtrIntCast",
       /*args=*/        (ins "::mlir::Type":$intLikeTy,
                             "::mlir::Type":$ptrLikeTy,

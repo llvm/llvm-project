@@ -1,5 +1,5 @@
-# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=machineverifier -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX11-ERR %s
-# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1100 --passes='machine-function(verify)' -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX11-ERR %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=machineverifier -filetype=null %s 2>&1 | FileCheck -check-prefix=GFX11-ERR %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1100 --passes='machine-function(verify)' -filetype=null %s 2>&1 | FileCheck -check-prefix=GFX11-ERR %s
 
 ---
 name: image_verify

@@ -20,26 +20,19 @@ char MultiplexExternalSemaSource::ID;
 /// given element to it.
 ///
 MultiplexExternalSemaSource::MultiplexExternalSemaSource(
-    ExternalSemaSource *S1, ExternalSemaSource *S2) {
-  S1->Retain();
-  S2->Retain();
-  Sources.push_back(S1);
-  Sources.push_back(S2);
-}
-
-// pin the vtable here.
-MultiplexExternalSemaSource::~MultiplexExternalSemaSource() {
-  for (auto *S : Sources)
-    S->Release();
+    llvm::IntrusiveRefCntPtr<ExternalSemaSource> S1,
+    llvm::IntrusiveRefCntPtr<ExternalSemaSource> S2) {
+  Sources.push_back(std::move(S1));
+  Sources.push_back(std::move(S2));
 }
 
 /// Appends new source to the source list.
 ///
 ///\param[in] source - An ExternalSemaSource.
 ///
-void MultiplexExternalSemaSource::AddSource(ExternalSemaSource *Source) {
-  Source->Retain();
-  Sources.push_back(Source);
+void MultiplexExternalSemaSource::AddSource(
+    llvm::IntrusiveRefCntPtr<ExternalSemaSource> Source) {
+  Sources.push_back(std::move(Source));
 }
 
 //===----------------------------------------------------------------------===//
@@ -92,7 +85,7 @@ CXXBaseSpecifier *MultiplexExternalSemaSource::GetExternalCXXBaseSpecifiers(
 
 CXXCtorInitializer **
 MultiplexExternalSemaSource::GetExternalCXXCtorInitializers(uint64_t Offset) {
-  for (auto *S : Sources)
+  for (auto &S : Sources)
     if (auto *R = S->GetExternalCXXCtorInitializers(Offset))
       return R;
   return nullptr;
@@ -324,6 +317,12 @@ void MultiplexExternalSemaSource::ReadWeakUndeclaredIdentifiers(
     Sources[i]->ReadWeakUndeclaredIdentifiers(WI);
 }
 
+void MultiplexExternalSemaSource::ReadExtnameUndeclaredIdentifiers(
+    SmallVectorImpl<std::pair<IdentifierInfo *, AsmLabelAttr *>> &EI) {
+  for (size_t i = 0; i < Sources.size(); ++i)
+    Sources[i]->ReadExtnameUndeclaredIdentifiers(EI);
+}
+
 void MultiplexExternalSemaSource::ReadUsedVTables(
                                   SmallVectorImpl<ExternalVTableUse> &VTables) {
   for(size_t i = 0; i < Sources.size(); ++i)
@@ -371,6 +370,6 @@ bool MultiplexExternalSemaSource::MaybeDiagnoseMissingCompleteType(
 
 void MultiplexExternalSemaSource::AssignedLambdaNumbering(
     CXXRecordDecl *Lambda) {
-  for (auto *Source : Sources)
+  for (auto &Source : Sources)
     Source->AssignedLambdaNumbering(Lambda);
 }

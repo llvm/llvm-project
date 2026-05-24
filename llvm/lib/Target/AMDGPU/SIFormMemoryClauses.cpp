@@ -33,7 +33,7 @@ MaxClause("amdgpu-max-memory-clause", cl::Hidden, cl::init(15),
 namespace {
 
 class SIFormMemoryClausesImpl {
-  using RegUse = DenseMap<unsigned, std::pair<unsigned, LaneBitmask>>;
+  using RegUse = DenseMap<unsigned, std::pair<RegState, LaneBitmask>>;
 
   bool canBundle(const MachineInstr &MI, const RegUse &Defs,
                  const RegUse &Uses) const;
@@ -61,9 +61,7 @@ class SIFormMemoryClausesLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SIFormMemoryClausesLegacy() : MachineFunctionPass(ID) {
-    initializeSIFormMemoryClausesLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  SIFormMemoryClausesLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -78,8 +76,7 @@ public:
   }
 
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 
@@ -100,7 +97,7 @@ FunctionPass *llvm::createSIFormMemoryClausesLegacyPass() {
 }
 
 static bool isVMEMClauseInst(const MachineInstr &MI) {
-  return SIInstrInfo::isFLAT(MI) || SIInstrInfo::isVMEM(MI);
+  return SIInstrInfo::isVMEM(MI);
 }
 
 static bool isSMEMClauseInst(const MachineInstr &MI) {
@@ -133,8 +130,8 @@ static bool isValidClauseInst(const MachineInstr &MI, bool IsVMEMClause) {
   return true;
 }
 
-static unsigned getMopState(const MachineOperand &MO) {
-  unsigned S = 0;
+static RegState getMopState(const MachineOperand &MO) {
+  RegState S = {};
   if (MO.isImplicit())
     S |= RegState::Implicit;
   if (MO.isDead())
@@ -198,7 +195,9 @@ bool SIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
   // pointer becomes dead and could otherwise be reused for destination.
   RPT.advanceToNext();
   GCNRegPressure MaxPressure = RPT.moveMaxPressure();
-  unsigned Occupancy = MaxPressure.getOccupancy(*ST);
+  unsigned Occupancy = MaxPressure.getOccupancy(
+      *ST,
+      MI.getMF()->getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize());
 
   // Don't push over half the register budget. We don't want to introduce
   // spilling just to form a soft clause.
@@ -233,7 +232,7 @@ void SIFormMemoryClausesImpl::collectRegUses(const MachineInstr &MI,
                            : LaneBitmask::getAll();
     RegUse &Map = MO.isDef() ? Defs : Uses;
 
-    unsigned State = getMopState(MO);
+    RegState State = getMopState(MO);
     auto [Loc, Inserted] = Map.try_emplace(Reg, State, Mask);
     if (!Inserted) {
       Loc->second.first |= State;
@@ -291,7 +290,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
         continue;
 
       if (!RPT.getNext().isValid())
-        RPT.reset(MI);
+        RPT.reset(MI, MBB.end());
       else { // Advance the state to the current MI.
         RPT.advance(MachineBasicBlock::const_iterator(MI));
         RPT.advanceBeforeNext();
@@ -300,7 +299,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
       const GCNRPTracker::LiveRegSet LiveRegsCopy(RPT.getLiveRegs());
       RegUse Defs, Uses;
       if (!processRegUses(MI, Defs, Uses, RPT)) {
-        RPT.reset(MI, &LiveRegsCopy);
+        RPT.reset(MI, MBB.end(), &LiveRegsCopy);
         continue;
       }
 
@@ -324,7 +323,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
         ++Length;
       }
       if (Length < 2) {
-        RPT.reset(MI, &LiveRegsCopy);
+        RPT.reset(MI, MBB.end(), &LiveRegsCopy);
         continue;
       }
 
@@ -348,7 +347,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
           continue;
 
         // Collect the register operands we should extend the live ranges of.
-        SmallVector<std::tuple<unsigned, unsigned>> KillOps;
+        SmallVector<std::tuple<RegState, unsigned>> KillOps;
         const LiveInterval &LI = LIS->getInterval(R.first);
 
         if (!LI.hasSubRanges()) {
@@ -392,7 +391,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
       }
 
       // Restore the state after processing the end of the bundle.
-      RPT.reset(MI, &LiveRegsCopy);
+      RPT.reset(MI, MBB.end(), &LiveRegsCopy);
 
       if (!Kill)
         continue;

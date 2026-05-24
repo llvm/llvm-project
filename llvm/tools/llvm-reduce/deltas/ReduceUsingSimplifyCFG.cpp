@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceUsingSimplifyCFG.h"
+#include "Utils.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
@@ -35,27 +36,32 @@ void llvm::reduceUsingSimplifyCFGDeltaPass(Oracle &O,
 static void reduceConditionals(Oracle &O, ReducerWorkItem &WorkItem,
                                bool Direction) {
   Module &M = WorkItem.getModule();
-  SmallVector<BasicBlock *, 16> ToSimplify;
 
   LLVMContext &Ctx = M.getContext();
   ConstantInt *ConstValToSet =
       Direction ? ConstantInt::getTrue(Ctx) : ConstantInt::getFalse(Ctx);
 
-  for (auto &F : M) {
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    SmallVector<BasicBlock *, 16> ToSimplify;
+
     for (auto &BB : F) {
-      auto *BR = dyn_cast<BranchInst>(BB.getTerminator());
-      if (!BR || !BR->isConditional() || BR->getCondition() == ConstValToSet ||
-          O.shouldKeep())
+      auto *BR = dyn_cast<CondBrInst>(BB.getTerminator());
+      if (!BR || BR->getCondition() == ConstValToSet || O.shouldKeep())
         continue;
 
       BR->setCondition(ConstValToSet);
       ToSimplify.push_back(&BB);
     }
-  }
 
-  TargetTransformInfo TTI(M.getDataLayout());
-  for (auto *BB : ToSimplify)
-    simplifyCFG(BB, TTI);
+    if (!ToSimplify.empty()) {
+      // TODO: Should probably leave MergeBlockIntoPredecessor for a separate
+      // reduction
+      simpleSimplifyCFG(F, ToSimplify);
+    }
+  }
 }
 
 void llvm::reduceConditionalsTrueDeltaPass(Oracle &O,
@@ -66,4 +72,41 @@ void llvm::reduceConditionalsTrueDeltaPass(Oracle &O,
 void llvm::reduceConditionalsFalseDeltaPass(Oracle &O,
                                             ReducerWorkItem &WorkItem) {
   reduceConditionals(O, WorkItem, false);
+}
+
+void llvm::reduceUnconditionalBranchDeltaPass(Oracle &O,
+                                              ReducerWorkItem &WorkItem) {
+  Module &M = WorkItem.getModule();
+  LLVMContext &Ctx = M.getContext();
+
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    SmallVector<BasicBlock *, 16> ToSimplify;
+
+    Type *RetTy = F.getReturnType();
+
+    for (auto &BB : F) {
+      auto *BR = dyn_cast<UncondBrInst>(BB.getTerminator());
+      if (!BR)
+        continue;
+
+      if (O.shouldKeep())
+        continue;
+
+      BasicBlock *Succ = BR->getSuccessor();
+      Succ->removePredecessor(&BB, /*KeepOneInputPHIs=*/true);
+      BR->eraseFromParent();
+      ToSimplify.push_back(&BB);
+
+      if (RetTy->isVoidTy())
+        ReturnInst::Create(Ctx, &BB);
+      else
+        ReturnInst::Create(Ctx, getDefaultValue(RetTy), &BB);
+    }
+
+    if (!ToSimplify.empty())
+      simpleSimplifyCFG(F, ToSimplify);
+  }
 }

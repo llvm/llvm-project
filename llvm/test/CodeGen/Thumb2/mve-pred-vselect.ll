@@ -280,21 +280,23 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @cmpsltz_v2i1(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) {
 ; CHECK-LABEL: cmpsltz_v2i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r2, s9
+; CHECK-NEXT:    vmov r1, s7
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    vmov r0, s1
-; CHECK-NEXT:    vmov r1, s5
+; CHECK-NEXT:    vmov r2, s11
+; CHECK-NEXT:    vmov r0, s3
+; CHECK-NEXT:    vmov r12, s1
+; CHECK-NEXT:    asrs r1, r1, #31
 ; CHECK-NEXT:    cmp.w r3, r2, lsr #31
-; CHECK-NEXT:    vmov r2, s7
-; CHECK-NEXT:    csel r0, r0, r1, ne
-; CHECK-NEXT:    vmov r1, s3
-; CHECK-NEXT:    asr.w r12, r0, #31
-; CHECK-NEXT:    vmov r0, s11
+; CHECK-NEXT:    vmov r2, s5
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    asrne r1, r0, #31
+; CHECK-NEXT:    vmov r0, s9
+; CHECK-NEXT:    asrs r2, r2, #31
 ; CHECK-NEXT:    cmp.w r3, r0, lsr #31
-; CHECK-NEXT:    bfi r3, r12, #0, #8
-; CHECK-NEXT:    csel r0, r1, r2, ne
-; CHECK-NEXT:    asrs r0, r0, #31
-; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    asrne.w r2, r12, #31
+; CHECK-NEXT:    bfi r3, r2, #0, #8
+; CHECK-NEXT:    bfi r3, r1, #8, #8
 ; CHECK-NEXT:    vmsr p0, r3
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
@@ -377,34 +379,30 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @cmpeqz_v2i1_i1(<2 x i64> %a, <2 x i64> %b, i64 %c) {
 ; CHECK-LABEL: cmpeqz_v2i1_i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vmov r2, r3, d2
-; CHECK-NEXT:    orrs r2, r3
-; CHECK-NEXT:    vmov r3, r4, d3
-; CHECK-NEXT:    csetm r12, eq
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    orrs r3, r4
-; CHECK-NEXT:    vmov r4, r3, d0
-; CHECK-NEXT:    csetm r5, eq
-; CHECK-NEXT:    orrs r3, r4
-; CHECK-NEXT:    vmov r3, r4, d1
-; CHECK-NEXT:    csetm lr, eq
-; CHECK-NEXT:    orrs r3, r4
-; CHECK-NEXT:    csetm r4, eq
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    beq .LBB15_2
-; CHECK-NEXT:  @ %bb.1: @ %select.false
-; CHECK-NEXT:    bfi r2, r12, #0, #8
-; CHECK-NEXT:    bfi r2, r5, #8, #8
+; CHECK-NEXT:  @ %bb.1: @ %select.false.sink
+; CHECK-NEXT:    vmov r0, r1, d2
+; CHECK-NEXT:    orrs r0, r1
+; CHECK-NEXT:    mov.w r1, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, r2, d3
 ; CHECK-NEXT:    b .LBB15_3
-; CHECK-NEXT:  .LBB15_2:
-; CHECK-NEXT:    bfi r2, lr, #0, #8
-; CHECK-NEXT:    bfi r2, r4, #8, #8
+; CHECK-NEXT:  .LBB15_2: @ %select.true.sink
+; CHECK-NEXT:    vmov r0, r1, d0
+; CHECK-NEXT:    orrs r0, r1
+; CHECK-NEXT:    mov.w r1, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, r2, d1
 ; CHECK-NEXT:  .LBB15_3: @ %select.end
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    orrs r0, r2
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp eq <2 x i64> %a, zeroinitializer
   %c2 = icmp eq <2 x i64> %b, zeroinitializer

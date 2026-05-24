@@ -40,6 +40,7 @@ def patch_gn_file(gn_file, add, remove):
             gn_contents = gn_contents[:tokloc] + ('"%s",' % a) + gn_contents[tokloc:]
     for r in remove:
         gn_contents = gn_contents.replace('"%s",' % r, "")
+        gn_contents = gn_contents.replace('"%s"' % r, "")
     with open(gn_file, "w") as f:
         f.write(gn_contents)
 
@@ -108,6 +109,12 @@ def sync_source_lists(write):
 
         gn_cpp = get_sources(gn_cpp_re, open(gn_file).read())
         gn_cpp |= get_sources(gn_cpp_re2, open(gn_file).read())
+
+        sources_file = os.path.join(os.path.dirname(gn_file), "sources.gni")
+        if os.path.exists(sources_file):
+            gn_cpp |= get_sources(gn_cpp_re, open(sources_file).read())
+            gn_cpp |= get_sources(gn_cpp_re2, open(sources_file).read())
+
         cmake_cpp = get_sources(cmake_cpp_re, open(cmake_file).read())
 
         if gn_cpp == cmake_cpp:
