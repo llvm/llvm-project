@@ -87,7 +87,9 @@ public:
       ensure_monotonicity(*timeout);
 #endif
 
-    int op = is_shared ? FUTEX_LOCK_PI : FUTEX_LOCK_PI_PRIVATE;
+    int op = is_shared ? FUTEX_LOCK_PI2 : FUTEX_LOCK_PI2_PRIVATE;
+    if (timeout && timeout->is_realtime())
+      op |= FUTEX_CLOCK_REALTIME;
     for (;;) {
       ErrorOr<int> ret = linux_syscalls::syscall_checked<int>(
           /*syscall_number=*/FUTEX_SYSCALL_ID,
@@ -107,6 +109,8 @@ public:
       case ETIMEDOUT:
         return MutexError::TIMEOUT;
       case EDEADLK:
+        if (type == Type::Normal)
+          continue;
         return MutexError::DEADLOCK;
       default:
         return MutexError::BAD_LOCK_STATE;
@@ -169,7 +173,8 @@ public:
   }
   LIBC_INLINE void reset() {
     owner.store(0);
-    *recursive_count = 0;
+    if (recursive_count)
+      *recursive_count = 0;
   }
 };
 
