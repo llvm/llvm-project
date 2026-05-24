@@ -1096,18 +1096,18 @@ InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
 }
 
 VPRegionBlock *VPlan::getVectorLoopRegion() {
-  // TODO: Cache if possible.
+  if (VectorLoopRegion)
+    return VectorLoopRegion;
   for (VPBlockBase *B : vp_depth_first_shallow(getEntry()))
-    if (auto *R = dyn_cast<VPRegionBlock>(B))
-      return R->isReplicator() ? nullptr : R;
+    if (auto *R = dyn_cast<VPRegionBlock>(B)) {
+      VectorLoopRegion = R->isReplicator() ? nullptr : R;
+      return VectorLoopRegion;
+    }
   return nullptr;
 }
 
 const VPRegionBlock *VPlan::getVectorLoopRegion() const {
-  for (const VPBlockBase *B : vp_depth_first_shallow(getEntry()))
-    if (auto *R = dyn_cast<VPRegionBlock>(B))
-      return R->isReplicator() ? nullptr : R;
-  return nullptr;
+  return const_cast<VPlan *>(this)->getVectorLoopRegion();
 }
 
 bool VPlan::isOuterLoop() const {

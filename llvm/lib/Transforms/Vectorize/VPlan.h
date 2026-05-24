@@ -4675,6 +4675,11 @@ class VPlan {
   /// VPlan is destroyed.
   SmallVector<VPBlockBase *> CreatedBlocks;
 
+  /// Cached pointer to the (non-replicator) vector loop region, populated
+  /// lazily by getVectorLoopRegion(). Reset by setEntry() and by
+  /// VPlanTransforms::dissolveLoopRegions() once the loop region is detached.
+  mutable VPRegionBlock *VectorLoopRegion = nullptr;
+
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
   /// wrapping the original header of the scalar loop. The vector loop will have
   /// index type \p IdxTy.
@@ -4706,7 +4711,12 @@ public:
   void setEntry(VPBasicBlock *VPBB) {
     Entry = VPBB;
     VPBB->setPlan(this);
+    invalidateVectorLoopRegionCache();
   }
+
+  /// Reset the cached vector loop region pointer. Must be called by
+  /// transforms that change the top-level region structure.
+  void invalidateVectorLoopRegionCache() { VectorLoopRegion = nullptr; }
 
   /// Generate the IR code for this VPlan.
   void execute(VPTransformState *State);
