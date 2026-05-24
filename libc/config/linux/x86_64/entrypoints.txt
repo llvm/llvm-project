@@ -534,10 +534,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     # math.h entrypoints
     libc.src.math.acos
     libc.src.math.acosf
+    libc.src.math.acosh
     libc.src.math.acoshf
     libc.src.math.acospif
     libc.src.math.asin
     libc.src.math.asinf
+    libc.src.math.asinh
     libc.src.math.asinhf
     libc.src.math.asinpi
     libc.src.math.asinpif
@@ -545,6 +547,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan2f
     libc.src.math.atan
     libc.src.math.atanf
+    libc.src.math.atanh
     libc.src.math.atanhf
     libc.src.math.canonicalize
     libc.src.math.canonicalizef
@@ -560,6 +563,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.copysignl
     libc.src.math.cos
     libc.src.math.cosf
+    libc.src.math.cosh
     libc.src.math.coshf
     libc.src.math.cospif
     libc.src.math.dfmal
@@ -746,6 +750,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sincos
     libc.src.math.sincosf
     libc.src.math.sinf
+    libc.src.math.sinh
     libc.src.math.sinhf
     libc.src.math.sinpif
     libc.src.math.sqrt
@@ -753,6 +758,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sqrtl
     libc.src.math.tan
     libc.src.math.tanf
+    libc.src.math.tanh
     libc.src.math.tanhf
     libc.src.math.tanpif
     libc.src.math.totalorder

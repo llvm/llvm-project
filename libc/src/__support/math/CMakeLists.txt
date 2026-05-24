@@ -55,6 +55,19 @@ add_header_library(
 )
 
 add_header_library(
+  acosh
+  HDRS
+    acosh.h
+  DEPENDS
+    .log
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   acoshf_utils
   HDRS
     acoshf_utils.h
@@ -155,6 +168,20 @@ add_header_library(
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  asinh
+  HDRS
+    asinh.h
+  DEPENDS
+    .log
+    .log1p
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
@@ -351,6 +378,18 @@ add_header_library(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  atanh
+  HDRS
+    atanh.h
+  DEPENDS
+    .log1p
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
     libc.src.__support.macros.optimization
 )
 
@@ -2798,6 +2837,19 @@ add_header_library(
 )
 
 add_header_library(
+  cosh
+  HDRS
+    cosh.h
+  DEPENDS
+    .exp
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   coshf
   HDRS
     coshf.h
@@ -5222,6 +5274,20 @@ add_header_library(
 )
 
 add_header_library(
+  sinh
+  HDRS
+    sinh.h
+  DEPENDS
+    .exp
+    .expm1
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   sinhf
   HDRS
     sinhf.h
@@ -5369,6 +5435,18 @@ add_header_library(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
     libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  tanh
+  HDRS
+    tanh.h
+  DEPENDS
+    .expm1
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(

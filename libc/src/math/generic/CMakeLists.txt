@@ -3632,6 +3632,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  cosh
+  SRCS
+    cosh.cpp
+  HDRS
+    ../cosh.h
+  DEPENDS
+    libc.src.__support.math.cosh
+)
+
+add_entrypoint_object(
   coshf
   SRCS
     coshf.cpp
@@ -3649,6 +3659,16 @@ add_entrypoint_object(
     ../coshf16.h
   DEPENDS
     libc.src.__support.math.coshf16
+)
+
+add_entrypoint_object(
+  sinh
+  SRCS
+    sinh.cpp
+  HDRS
+    ../sinh.h
+  DEPENDS
+    libc.src.__support.math.sinh
 )
 
 add_entrypoint_object(
@@ -3672,6 +3692,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  tanh
+  SRCS
+    tanh.cpp
+  HDRS
+    ../tanh.h
+  DEPENDS
+    libc.src.__support.math.tanh
+)
+
+add_entrypoint_object(
   tanhf
   SRCS
     tanhf.cpp
@@ -3689,6 +3719,16 @@ add_entrypoint_object(
     ../tanhf16.h
   DEPENDS
     libc.src.__support.math.tanhf16
+)
+
+add_entrypoint_object(
+  acosh
+  SRCS
+    acosh.cpp
+  HDRS
+    ../acosh.h
+  DEPENDS
+    libc.src.__support.math.acosh
 )
 
 add_entrypoint_object(
@@ -3720,6 +3760,16 @@ add_entrypoint_object(
     ../acospif.h
   DEPENDS
     libc.src.__support.math.acospif
+)
+
+add_entrypoint_object(
+  asinh
+  SRCS
+    asinh.cpp
+  HDRS
+    ../asinh.h
+  DEPENDS
+    libc.src.__support.math.asinh
 )
 
 add_entrypoint_object(
@@ -3771,6 +3821,16 @@ add_entrypoint_object(
   DEPENDS
     libc.src.errno.errno
     libc.src.__support.math.asinpif16
+)
+
+add_entrypoint_object(
+  atanh
+  SRCS
+    atanh.cpp
+  HDRS
+    ../atanh.h
+  DEPENDS
+    libc.src.__support.math.atanh
 )
 
 add_entrypoint_object(
