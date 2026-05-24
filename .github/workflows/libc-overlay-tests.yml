@@ -13,8 +13,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     timeout-minutes: 30
     runs-on: ${{ matrix.os }}
-    container:
-      image: ${{ matrix.container }}
+    container: ${{ matrix.container || null }}
     strategy:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
       fail-fast: false
@@ -36,14 +35,11 @@ jobs:
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
-            container: null
           - os: windows-2025
-            container: null
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
           - os: macos-15
-            container: null
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
