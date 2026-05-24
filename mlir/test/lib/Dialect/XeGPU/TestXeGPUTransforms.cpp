@@ -94,6 +94,19 @@ struct TestXeGPUUnrollingPatterns
       if (isa<xegpu::DpasOp>(op))
         return SmallVector<int64_t>{8, 16, 16};
 
+      // For vector.multi_reduction, read tile shape from the layout attribute
+      // on the source operand (layout_operand_0).
+      if (isa<vector::MultiDimReductionOp>(op)) {
+        xegpu::DistributeLayoutAttr layout =
+            xegpu::getDistributeLayoutAttr(op->getOpOperand(0));
+        if (layout) {
+          auto instData = layout.getEffectiveInstDataAsInt();
+          if (!instData.empty())
+            return instData;
+        }
+        return std::nullopt;
+      }
+
       return std::nullopt;
     });
 
@@ -409,6 +422,36 @@ struct TestXeGPUResolveLayoutConflicts
   }
 };
 
+struct TestXeGPUArrayLengthOptimization
+    : public PassWrapper<TestXeGPUArrayLengthOptimization,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUArrayLengthOptimization)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-array-length-optimization";
+  }
+
+  StringRef getDescription() const final {
+    return "Test XeGPU 2D block array load optimization patterns in isolation";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<vector::VectorDialect>();
+  }
+
+  TestXeGPUArrayLengthOptimization() = default;
+  TestXeGPUArrayLengthOptimization(const TestXeGPUArrayLengthOptimization &pass)
+      : PassWrapper(pass) {}
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    xegpu::populateXeGPUArrayLengthOptimizationPatterns(patterns);
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+      signalPassFailure();
+  }
+};
+
 struct TestXeGPULayoutInterface
     : public PassWrapper<TestXeGPULayoutInterface,
                          OperationPass<gpu::GPUModuleOp>> {
@@ -478,6 +521,7 @@ void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUMoveFuncBodyToWarpOp>();
   PassRegistration<TestXeGPUPropagateLayouts>();
   PassRegistration<TestXeGPUResolveLayoutConflicts>();
+  PassRegistration<TestXeGPUArrayLengthOptimization>();
 }
 } // namespace test
 } // namespace mlir

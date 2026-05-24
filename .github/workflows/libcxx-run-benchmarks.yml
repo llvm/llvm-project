@@ -23,15 +23,34 @@ env:
   CXX: clang++-22
 
 jobs:
-  run-benchmarks:
-    permissions:
-      pull-requests: write
-
+  permission-check:
     if: >-
       github.event.issue.pull_request &&
       contains(github.event.comment.body, '/libcxx-bot benchmark')
+    runs-on: ubuntu-24.04
+    environment:
+      name: main-branch-only
+      deployment: false
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/workflows/
 
+      - name: Check Permissions
+        uses: ./.github/workflows/require-team-membership
+        with:
+          team-slug: llvm-committers
+          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+
+  run-benchmarks:
+    permissions:
+      pull-requests: write
     runs-on: llvm-premerge-libcxx-next-runners # TODO: This should run on a dedicated set of machines
+    needs:
+      - permission-check
     steps:
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:

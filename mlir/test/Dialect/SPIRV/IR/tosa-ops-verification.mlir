@@ -616,6 +616,34 @@ spirv.ARM.Graph @depthwise_conv2d_input_output_height_width_mismatch(%arg0: !spi
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.TOSA.FFT2D
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @fft2d_input_shapes_must_match(%arg0: !spirv.arm.tensor<1x32x32xf32>, %arg1: !spirv.arm.tensor<1x32x16xf32>) -> (!spirv.arm.tensor<1x32x32xf32>) {
+  // expected-error @+1 {{op failed to verify that all of {input_real, input_imag} have same shape}}
+  %0 = spirv.Tosa.FFT2D inverse = true, local_bound = false, %arg0, %arg1 : !spirv.arm.tensor<1x32x32xf32>, !spirv.arm.tensor<1x32x16xf32> -> !spirv.struct<(!spirv.arm.tensor<1x32x32xf32>, !spirv.arm.tensor<1x32x32xf32>)>
+  spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<1x32x32xf32>
+}
+
+spirv.ARM.Graph @fft2d_output_shapes_must_match_inputs(%arg0: !spirv.arm.tensor<1x32x32xf32>, %arg1: !spirv.arm.tensor<1x32x32xf32>) -> (!spirv.arm.tensor<1x32x32xf32>) {
+  // expected-error @+1 {{op failed to verify that shapes of output_real and output_imag must match the shape of input_real}}
+  %0 = spirv.Tosa.FFT2D inverse = true, local_bound = false, %arg0, %arg1 : !spirv.arm.tensor<1x32x32xf32>, !spirv.arm.tensor<1x32x32xf32> -> !spirv.struct<(!spirv.arm.tensor<1x16x32xf32>, !spirv.arm.tensor<1x32x32xf32>)>
+  spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<1x32x32xf32>
+}
+
+spirv.ARM.Graph @fft2d_height_and_width_must_be_powers_of_two(%arg0: !spirv.arm.tensor<1x30x32xf32>, %arg1: !spirv.arm.tensor<1x30x32xf32>) -> (!spirv.arm.tensor<1x30x32xf32>) {
+  // expected-error @+1 {{op failed to verify that dimensions 1, 2 of input_real must be powers of two}}
+  %0 = spirv.Tosa.FFT2D inverse = true, local_bound = false, %arg0, %arg1 : !spirv.arm.tensor<1x30x32xf32>, !spirv.arm.tensor<1x30x32xf32> -> !spirv.struct<(!spirv.arm.tensor<1x30x32xf32>, !spirv.arm.tensor<1x30x32xf32>)>
+  spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<1x30x32xf32>
+}
+
+spirv.ARM.Graph @fft2d_width_must_be_power_of_two(%arg0: !spirv.arm.tensor<1x32x30xf32>, %arg1: !spirv.arm.tensor<1x32x30xf32>) -> (!spirv.arm.tensor<1x32x30xf32>) {
+  // expected-error @+1 {{op failed to verify that dimensions 1, 2 of input_real must be powers of two}}
+  %0 = spirv.Tosa.FFT2D inverse = true, local_bound = false, %arg0, %arg1 : !spirv.arm.tensor<1x32x30xf32>, !spirv.arm.tensor<1x32x30xf32> -> !spirv.struct<(!spirv.arm.tensor<1x32x30xf32>, !spirv.arm.tensor<1x32x30xf32>)>
+  spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<1x32x30xf32>
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.TOSA.MatMul
 //===----------------------------------------------------------------------===//
 
@@ -677,6 +705,46 @@ spirv.ARM.Graph @matmul_mismatch_result_element_type_f8e5m2_input(%arg0: !spirv.
   // expected-error @+1 {{op failed to verify that if A has type f8E5M2 type then output must have a type in [16-bit float]}}
   %0 = spirv.Tosa.MatMul %arg0, %arg1, %arg2, %arg3 : !spirv.arm.tensor<1x4x4xf8E5M2>, !spirv.arm.tensor<1x4x4xf8E5M2>, !spirv.arm.tensor<1xf8E5M2>, !spirv.arm.tensor<1xf8E5M2> -> !spirv.arm.tensor<1x4x4xf32>
   spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x4x4xf32>
+}
+
+spirv.ARM.Graph @matmul_batch_dimensions_must_match(%arg0: !spirv.arm.tensor<2x4x3xi8>, %arg1: !spirv.arm.tensor<1x3x8xi8>, %arg2: !spirv.arm.tensor<1xi8>, %arg3: !spirv.arm.tensor<1xi8>) -> (!spirv.arm.tensor<2x4x8xi32>) {
+  // expected-error @+1 {{op failed to verify that shapes of A, B, and output must satisfy [N,H,C], [N,C,W], [N,H,W]}}
+  %0 = spirv.Tosa.MatMul %arg0, %arg1, %arg2, %arg3 : !spirv.arm.tensor<2x4x3xi8>, !spirv.arm.tensor<1x3x8xi8>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<2x4x8xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<2x4x8xi32>
+}
+
+spirv.ARM.Graph @matmul_contraction_dimension_must_match(%arg0: !spirv.arm.tensor<1x4x3xi8>, %arg1: !spirv.arm.tensor<1x2x8xi8>, %arg2: !spirv.arm.tensor<1xi8>, %arg3: !spirv.arm.tensor<1xi8>) -> (!spirv.arm.tensor<1x4x8xi32>) {
+  // expected-error @+1 {{op failed to verify that shapes of A, B, and output must satisfy [N,H,C], [N,C,W], [N,H,W]}}
+  %0 = spirv.Tosa.MatMul %arg0, %arg1, %arg2, %arg3 : !spirv.arm.tensor<1x4x3xi8>, !spirv.arm.tensor<1x2x8xi8>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<1x4x8xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x4x8xi32>
+}
+
+spirv.ARM.Graph @matmul_output_shape_must_match_inputs(%arg0: !spirv.arm.tensor<1x4x3xi8>, %arg1: !spirv.arm.tensor<1x3x8xi8>, %arg2: !spirv.arm.tensor<1xi8>, %arg3: !spirv.arm.tensor<1xi8>) -> (!spirv.arm.tensor<1x5x8xi32>) {
+  // expected-error @+1 {{op failed to verify that shapes of A, B, and output must satisfy [N,H,C], [N,C,W], [N,H,W]}}
+  %0 = spirv.Tosa.MatMul %arg0, %arg1, %arg2, %arg3 : !spirv.arm.tensor<1x4x3xi8>, !spirv.arm.tensor<1x3x8xi8>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<1x5x8xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x5x8xi32>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.RFFT2D
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @rfft2d_output_shapes_must_match_input(%arg0: !spirv.arm.tensor<1x32x32xf32>) -> (!spirv.arm.tensor<1x32x32xf32>) {
+  // expected-error @+1 {{op failed to verify that shapes of output_real and output_imag must satisfy [N,H,W/2 + 1] when input_real has shape [N,H,W]}}
+  %0 = spirv.Tosa.RFFT2D local_bound = false, %arg0 : !spirv.arm.tensor<1x32x32xf32> -> !spirv.struct<(!spirv.arm.tensor<1x16x17xf32>, !spirv.arm.tensor<1x32x17xf32>)>
+  spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<1x32x32xf32>
+}
+
+spirv.ARM.Graph @rfft2d_height_and_width_must_be_powers_of_two(%arg0: !spirv.arm.tensor<1x30x32xf32>) -> (!spirv.arm.tensor<1x30x32xf32>) {
+  // expected-error @+1 {{op failed to verify that dimensions 1, 2 of input_real must be powers of two}}
+  %0 = spirv.Tosa.RFFT2D local_bound = false, %arg0 : !spirv.arm.tensor<1x30x32xf32> -> !spirv.struct<(!spirv.arm.tensor<1x30x17xf32>, !spirv.arm.tensor<1x30x17xf32>)>
+  spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<1x30x32xf32>
+}
+
+spirv.ARM.Graph @rfft2d_width_must_be_power_of_two(%arg0: !spirv.arm.tensor<1x32x30xf32>) -> (!spirv.arm.tensor<1x32x30xf32>) {
+  // expected-error @+1 {{op failed to verify that dimensions 1, 2 of input_real must be powers of two}}
+  %0 = spirv.Tosa.RFFT2D local_bound = false, %arg0 : !spirv.arm.tensor<1x32x30xf32> -> !spirv.struct<(!spirv.arm.tensor<1x32x16xf32>, !spirv.arm.tensor<1x32x16xf32>)>
+  spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<1x32x30xf32>
 }
 
 //===----------------------------------------------------------------------===//
@@ -899,6 +967,18 @@ spirv.ARM.Graph @clamp_max_val_different_element_type_wrt_input_output(%arg0: !s
   // expected-error @+1 {{op failed to verify that all of {input, output, min_val, max_val} have same element type}}
   %3 = spirv.Tosa.Clamp min_val = -102 : i8, max_val = -100 : i16, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<27x44x55xi8> -> !spirv.arm.tensor<27x44x55xi8>
   spirv.ARM.GraphOutputs %3 : !spirv.arm.tensor<27x44x55xi8>
+}
+
+spirv.ARM.Graph @clamp_min_val_must_be_less_than_or_equal_to_max_val(%arg0: !spirv.arm.tensor<27x44x55xi8>) -> (!spirv.arm.tensor<27x44x55xi8>) {
+  // expected-error @+1 {{op failed to verify that min_val must be <= max_val}}
+  %3 = spirv.Tosa.Clamp min_val = 7 : i8, max_val = 3 : i8, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<27x44x55xi8> -> !spirv.arm.tensor<27x44x55xi8>
+  spirv.ARM.GraphOutputs %3 : !spirv.arm.tensor<27x44x55xi8>
+}
+
+spirv.ARM.Graph @clamp_min_val_and_max_val_must_not_be_nan(%arg0: !spirv.arm.tensor<18x5x17x6xf32>) -> (!spirv.arm.tensor<18x5x17x6xf32>) {
+  // expected-error @+1 {{op failed to verify that min_val and max_val must not be NaN}}
+  %3 = spirv.Tosa.Clamp min_val = 0x7FC00000 : f32, max_val = 2.38255944E+38 : f32, nan_mode = <Ignore>, %arg0 : !spirv.arm.tensor<18x5x17x6xf32> -> !spirv.arm.tensor<18x5x17x6xf32>
+  spirv.ARM.GraphOutputs %3 : !spirv.arm.tensor<18x5x17x6xf32>
 }
 
 //===----------------------------------------------------------------------===//
@@ -1939,6 +2019,12 @@ spirv.ARM.Graph @reduceall_axis_value_not_in_input_rank_range(%arg0: !spirv.arm.
   spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<18x22x23x12xi1>
 }
 
+spirv.ARM.Graph @reduceall_output_shape_must_match_input_and_axis(%arg0: !spirv.arm.tensor<18x22x23x12xi1>) -> (!spirv.arm.tensor<18x22x23x13xi1>) {
+  // expected-error @+1 {{op failed to verify that shape of output must match the shape of input with the dimension at axis replaced by 1}}
+  %0 = spirv.Tosa.ReduceAll axis = 2, %arg0 : !spirv.arm.tensor<18x22x23x12xi1> -> !spirv.arm.tensor<18x22x23x13xi1>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<18x22x23x13xi1>
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.TOSA.ReduceAny
 //===----------------------------------------------------------------------===//
@@ -1953,6 +2039,12 @@ spirv.ARM.Graph @reduceany_axis_value_not_in_input_rank_range(%arg0: !spirv.arm.
   // expected-error @+1 {{op failed to verify that axis attribute value should be lower than rank(input)}}
   %0 = spirv.Tosa.ReduceAny axis = 4, %arg0 : !spirv.arm.tensor<25x13x30x8xi1> -> !spirv.arm.tensor<25x13x30x8xi1>
   spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<25x13x30x8xi1>
+}
+
+spirv.ARM.Graph @reduceany_output_shape_must_match_input_and_axis(%arg0: !spirv.arm.tensor<25x13x30x8xi1>) -> (!spirv.arm.tensor<25x13x2x8xi1>) {
+  // expected-error @+1 {{op failed to verify that shape of output must match the shape of input with the dimension at axis replaced by 1}}
+  %0 = spirv.Tosa.ReduceAny axis = 2, %arg0 : !spirv.arm.tensor<25x13x30x8xi1> -> !spirv.arm.tensor<25x13x2x8xi1>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<25x13x2x8xi1>
 }
 
 //===----------------------------------------------------------------------===//
@@ -1977,6 +2069,12 @@ spirv.ARM.Graph @reducemax_axis_value_not_in_input_rank_range(%arg0: !spirv.arm.
   spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<8x30x12x3xi8>
 }
 
+spirv.ARM.Graph @reducemax_output_shape_must_match_input_and_axis(%arg0: !spirv.arm.tensor<8x30x12x3xi8>) -> (!spirv.arm.tensor<8x30x2x3xi8>) {
+  // expected-error @+1 {{op failed to verify that shape of output must match the shape of input with the dimension at axis replaced by 1}}
+  %0 = spirv.Tosa.ReduceMax axis = 2, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<8x30x12x3xi8> -> !spirv.arm.tensor<8x30x2x3xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<8x30x2x3xi8>
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.TOSA.ReduceMin
 //===----------------------------------------------------------------------===//
@@ -1997,6 +2095,12 @@ spirv.ARM.Graph @reducemin_axis_value_not_in_input_rank_range(%arg0: !spirv.arm.
   // expected-error @+1 {{op failed to verify that axis attribute value should be lower than rank(input)}}
   %0 = spirv.Tosa.ReduceMin axis = 4, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<27x10x25x9xf16> -> !spirv.arm.tensor<27x10x25x9xf16>
   spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<27x10x25x9xf16>
+}
+
+spirv.ARM.Graph @reducemin_output_shape_must_match_input_and_axis(%arg0: !spirv.arm.tensor<27x10x25x9xf16>) -> (!spirv.arm.tensor<27x10x2x9xf16>) {
+  // expected-error @+1 {{op failed to verify that shape of output must match the shape of input with the dimension at axis replaced by 1}}
+  %0 = spirv.Tosa.ReduceMin axis = 2, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<27x10x25x9xf16> -> !spirv.arm.tensor<27x10x2x9xf16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<27x10x2x9xf16>
 }
 
 //===----------------------------------------------------------------------===//
@@ -2021,6 +2125,12 @@ spirv.ARM.Graph @reduceproduct_axis_value_not_in_input_rank_range(%arg0: !spirv.
   spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<2x16x25xf16>
 }
 
+spirv.ARM.Graph @reduceproduct_output_shape_must_match_input_and_axis(%arg0: !spirv.arm.tensor<2x16x25xf16>) -> (!spirv.arm.tensor<2x17x25xf16>) {
+  // expected-error @+1 {{op failed to verify that shape of output must match the shape of input with the dimension at axis replaced by 1}}
+  %0 = spirv.Tosa.ReduceProduct axis = 1, %arg0 : !spirv.arm.tensor<2x16x25xf16> -> !spirv.arm.tensor<2x17x25xf16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<2x17x25xf16>
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.TOSA.ReduceSum
 //===----------------------------------------------------------------------===//
@@ -2041,6 +2151,12 @@ spirv.ARM.Graph @reducesum_axis_value_not_in_input_rank_range(%arg0: !spirv.arm.
   // expected-error @+1 {{op failed to verify that axis attribute value should be lower than rank(input)}}
   %0 = spirv.Tosa.ReduceSum axis = 3, %arg0 : !spirv.arm.tensor<20x24x22xi32> -> !spirv.arm.tensor<20x24x22xi32>
   spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<20x24x22xi32>
+}
+
+spirv.ARM.Graph @reducesum_output_shape_must_match_input_and_axis(%arg0: !spirv.arm.tensor<20x24x22xi32>) -> (!spirv.arm.tensor<20x25x22xi32>) {
+  // expected-error @+1 {{op failed to verify that shape of output must match the shape of input with the dimension at axis replaced by 1}}
+  %0 = spirv.Tosa.ReduceSum axis = 1, %arg0 : !spirv.arm.tensor<20x24x22xi32> -> !spirv.arm.tensor<20x25x22xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<20x25x22xi32>
 }
 
 //===----------------------------------------------------------------------===//
@@ -2069,6 +2185,18 @@ spirv.ARM.Graph @concat_axis_value_not_in_output_rank_range(%arg0: !spirv.arm.te
   // expected-error @+1 {{op failed to verify that axis attribute value should be lower than rank(output)}}
   %0 = spirv.Tosa.Concat axis = 2, %arg0, %arg1 : !spirv.arm.tensor<4x5xi8>, !spirv.arm.tensor<4x7xi8> -> !spirv.arm.tensor<4x12xi8>
   spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<4x12xi8>
+}
+
+spirv.ARM.Graph @concat_non_axis_dimensions_must_match_output(%arg0: !spirv.arm.tensor<4x5xi8>, %arg1: !spirv.arm.tensor<3x7xi8>) -> (!spirv.arm.tensor<4x12xi8>) {
+  // expected-error @+1 {{op failed to verify that shape of output must match the concatenation of input1 along axis}}
+  %0 = spirv.Tosa.Concat axis = 1, %arg0, %arg1 : !spirv.arm.tensor<4x5xi8>, !spirv.arm.tensor<3x7xi8> -> !spirv.arm.tensor<4x12xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<4x12xi8>
+}
+
+spirv.ARM.Graph @concat_axis_dimension_must_match_sum_of_inputs(%arg0: !spirv.arm.tensor<4x5xi8>, %arg1: !spirv.arm.tensor<4x7xi8>) -> (!spirv.arm.tensor<4x11xi8>) {
+  // expected-error @+1 {{op failed to verify that shape of output must match the concatenation of input1 along axis}}
+  %0 = spirv.Tosa.Concat axis = 1, %arg0, %arg1 : !spirv.arm.tensor<4x5xi8>, !spirv.arm.tensor<4x7xi8> -> !spirv.arm.tensor<4x11xi8>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<4x11xi8>
 }
 
 //===----------------------------------------------------------------------===//
@@ -2297,6 +2425,15 @@ spirv.ARM.Graph @resize_bf16_input_output_element_type_must_be_bf16(%arg0: !spir
   // expected-error @+1 {{op failed to verify that if input has type bfloat16 type then output must have a type in [bfloat16 type]}}
   %4 = spirv.Tosa.Resize mode = <Bilinear>, %arg0, %1, %2, %3 : !spirv.arm.tensor<1x48x33x63xbf16>, !spirv.arm.tensor<4xi32>, !spirv.arm.tensor<2xi32>, !spirv.arm.tensor<2xi32> -> !spirv.arm.tensor<1x753x297x63xf32>
   spirv.ARM.GraphOutputs %4 : !spirv.arm.tensor<1x753x297x63xf32>
+}
+
+spirv.ARM.Graph @resize_input_output_batch_or_channel_mismatch(%arg0: !spirv.arm.tensor<1x48x33x63xf32>) -> (!spirv.arm.tensor<2x753x297x62xf32>) {
+  %1 = spirv.Constant dense<[16, 1, 9, 1]> : !spirv.arm.tensor<4xi32>
+  %2 = spirv.Constant dense<0> : !spirv.arm.tensor<2xi32>
+  %3 = spirv.Constant dense<[0, 8]> : !spirv.arm.tensor<2xi32>
+  // expected-error @+1 {{op failed to verify that shapes of input and output must satisfy [N,*,*,C] and [N,*,*,C]}}
+  %4 = spirv.Tosa.Resize mode = <Bilinear>, %arg0, %1, %2, %3 : !spirv.arm.tensor<1x48x33x63xf32>, !spirv.arm.tensor<4xi32>, !spirv.arm.tensor<2xi32>, !spirv.arm.tensor<2xi32> -> !spirv.arm.tensor<2x753x297x62xf32>
+  spirv.ARM.GraphOutputs %4 : !spirv.arm.tensor<2x753x297x62xf32>
 }
 
 //===----------------------------------------------------------------------===//

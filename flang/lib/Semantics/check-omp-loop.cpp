@@ -484,6 +484,10 @@ void OmpStructureChecker::CheckIterationVariables(
 
   std::vector<parser::Name> ivs;
   for (const parser::DoConstruct *loop : *doLoops) {
+    // Skip DO CONCURRENT, since their iteration variables are local.
+    if (loop->IsDoConcurrent()) {
+      continue;
+    }
     for (auto &control : GetLoopControls(*loop)) {
       if (control.iv.symbol) {
         ivs.push_back(control.iv);
@@ -498,14 +502,18 @@ void OmpStructureChecker::CheckIterationVariables(
           "The DO loop iteration variable must be of integer type"_err_en_US,
           iv.ToString());
     }
-    const Symbol *host{GetHostSymbol(*iv.symbol)};
-    if (!host) {
-      continue;
-    }
-    if (host->test(Symbol::Flag::OmpThreadprivate)) {
+    if (iv.symbol->GetUltimate().test(Symbol::Flag::OmpThreadprivate)) {
       context_.Say(iv.source,
           "Loop iteration variable of an affected loop cannot be THREADPRIVATE"_err_en_US,
           iv.ToString());
+    }
+    // Get the symbol from the variable that was listed in a DSA clause.
+    const Symbol *host{iv.symbol};
+    while (host && !dsa.count(host)) {
+      host = GetHostSymbol(*host);
+    }
+    if (!host) {
+      continue;
     }
     // Check conflict between a predetermined DSA and explicit DSA.
     assert(iv.symbol->test(Symbol::Flag::OmpPreDetermined) &&

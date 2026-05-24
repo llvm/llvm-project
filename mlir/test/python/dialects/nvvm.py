@@ -148,7 +148,7 @@ def test_barriers():
                 reduction_predicate=pred,
             )
 
-        nvvm.barrier0()
+        nvvm.barrier()
         nvvm.bar_warp_sync(mask)
         nvvm.cluster_arrive()
         nvvm.cluster_arrive(aligned=True)
@@ -170,7 +170,7 @@ def test_barriers():
 # CHECK:           %[[BARRIER_1:.*]] = nvvm.barrier #nvvm.reduction<and> %[[PRED]] -> i32
 # CHECK:           %[[BARRIER_2:.*]] = nvvm.barrier #nvvm.reduction<or> %[[BARRIER_1]] -> i32
 # CHECK:           %[[BARRIER_3:.*]] = nvvm.barrier #nvvm.reduction<popc> %[[BARRIER_2]] -> i32
-# CHECK:           nvvm.barrier0
+# CHECK:           nvvm.barrier
 # CHECK:           nvvm.bar.warp.sync %[[ARG0]] : i32
 # CHECK:           nvvm.cluster.arrive
 # CHECK:           nvvm.cluster.arrive {aligned}
