@@ -9447,15 +9447,16 @@ bool CodeGenPrepare::splitBranchCondition(Function &F) {
         scaleWeights(NewTrueWeight, NewFalseWeight);
         Br1->setMetadata(LLVMContext::MD_prof,
                          MDBuilder(Br1->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight,
+                             .createBranchWeights(NewTrueWeight, NewFalseWeight,
                                                   hasBranchWeightOrigin(*Br1)));
 
         NewTrueWeight = TrueWeight;
         NewFalseWeight = 2 * FalseWeight;
         scaleWeights(NewTrueWeight, NewFalseWeight);
-        Br2->setMetadata(LLVMContext::MD_prof,
-                         MDBuilder(Br2->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight));
+        Br2->setMetadata(
+            LLVMContext::MD_prof,
+            MDBuilder(Br2->getContext())
+                .createBranchWeights(NewTrueWeight, NewFalseWeight));
       }
     } else {
       // Codegen X & Y as:
@@ -9481,16 +9482,18 @@ bool CodeGenPrepare::splitBranchCondition(Function &F) {
         uint64_t NewTrueWeight = 2 * TrueWeight + FalseWeight;
         uint64_t NewFalseWeight = FalseWeight;
         scaleWeights(NewTrueWeight, NewFalseWeight);
-        Br1->setMetadata(LLVMContext::MD_prof,
-                         MDBuilder(Br1->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight));
+        Br1->setMetadata(
+            LLVMContext::MD_prof,
+            MDBuilder(Br1->getContext())
+                .createBranchWeights(NewTrueWeight, NewFalseWeight));
 
         NewTrueWeight = 2 * TrueWeight;
         NewFalseWeight = FalseWeight;
         scaleWeights(NewTrueWeight, NewFalseWeight);
-        Br2->setMetadata(LLVMContext::MD_prof,
-                         MDBuilder(Br2->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight));
+        Br2->setMetadata(
+            LLVMContext::MD_prof,
+            MDBuilder(Br2->getContext())
+                .createBranchWeights(NewTrueWeight, NewFalseWeight));
       }
     }
 
