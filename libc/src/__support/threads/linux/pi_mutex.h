@@ -55,7 +55,7 @@ public:
                                       cpp::MemoryOrder::RELAXED))
       return MutexError::NONE;
 
-    if (old_owner == current) {
+    if (current == (old_owner & FUTEX_TID_MASK)) {
       switch (type) {
       case Type::Normal:
         break;
