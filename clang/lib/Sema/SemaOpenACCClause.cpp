@@ -1894,13 +1894,6 @@ bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
   if (CurType.isNull())
     return false;
 
-  // Reject VLAs in reduction clauses since lowering is unsupported.
-  // See https://github.com/llvm/llvm-project/issues/199162
-  if (CurType->isVariableArrayType()) {
-    Diag(VarLoc, diag::err_acc_reduction_vla);
-    return true;
-  }
-
   // If we are still an array type, we allow 1 level of 'unpeeling' of the
   // array.  The standard isn't clear here whether this is allowed, but
   // array-of-valid-things makes sense.

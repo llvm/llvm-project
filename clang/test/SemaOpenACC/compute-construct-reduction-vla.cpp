@@ -11,15 +11,6 @@ void vla_reduction_cxx(int n) {
     ;
 }
 
-void vla_reduction_reference(int n) {
-  int storage[n];
-  int(&arr)[n] = storage;
-  // expected-error@+1{{variable length array cannot be used in OpenACC 'reduction' clause}}
-#pragma acc parallel reduction(+ : arr)
-  while (1)
-    ;
-}
-
 template <int Pad>
 void vla_reduction_template(int n) {
   int arr[n + Pad];

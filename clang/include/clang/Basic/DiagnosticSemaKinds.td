@@ -14002,7 +14002,7 @@ def note_acc_reduction_type_summary
            "or a "
            "composite of scalars, or an array, sub-array, or element of scalar "
            "types">;
-def err_acc_reduction_vla
+def err_acc_reduction_non_const_array
     : Error<"variable length array cannot be used in OpenACC 'reduction' "
             "clause">;
 def err_acc_loop_not_for_loop
