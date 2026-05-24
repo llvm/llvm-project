@@ -109,8 +109,10 @@ public:
       case ETIMEDOUT:
         return MutexError::TIMEOUT;
       case EDEADLK:
-        if (type == Type::Normal)
-          continue;
+        // indefinitely park the thread if type == Type::Normal.
+        // use Futex::wait to avoid burning the CPU time
+        while (type == Type::Normal)
+          owner.wait(owner, /*timeout=*/cpp::nullopt, is_shared);
         return MutexError::DEADLOCK;
       default:
         return MutexError::BAD_LOCK_STATE;
