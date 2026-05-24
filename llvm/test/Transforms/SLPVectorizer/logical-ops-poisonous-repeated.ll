@@ -4,17 +4,14 @@
 define i1 @test(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @test(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x i32> [[X]], i32 0
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[X]], i32 -1
 ; CHECK-NEXT:    [[X2:%.*]] = extractelement <4 x i32> [[X]], i32 2
-; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x i32> [[X]], i32 3
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[X0]], 0
-; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[X1]], 0
 ; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[X2]], 0
-; CHECK-NEXT:    [[C3:%.*]] = icmp slt i32 [[X3]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[C3]]
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP2]], i1 [[C1]], i1 false
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[TMP1]], i1 [[OP_RDX]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <3 x i32> <i32 3, i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <3 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt <3 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <3 x i1> [[TMP2]], <3 x i1> [[TMP3]], <3 x i32> <i32 0, i32 1, i32 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze <3 x i1> [[TMP4]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = call i1 @llvm.vector.reduce.and.v3i1(<3 x i1> [[TMP5]])
 ; CHECK-NEXT:    ret i1 [[OP_RDX1]]
 ;
   %x0 = extractelement <4 x i32> %x, i32 0
