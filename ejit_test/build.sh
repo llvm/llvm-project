@@ -150,9 +150,14 @@ build_one() {
 
   # Show dependency summary on request
   if ${ANALYZE_DEPS}; then
+    local deps
+    deps=$(grep -oP "${BUILD_DIR}/lib/\K[^(]+\.a" "${map_file}" | sort -u)
     local dep_count
-    dep_count=$(grep -oP "${BUILD_DIR}/lib/\K[^(]+\.a" "${map_file}" | sort -u | wc -l)
-    echo "         ${dep_count} LLVM .a files linked (map: ${map_file})"
+    dep_count=$(echo "${deps}" | grep -c '.' || true)
+    echo "         ${dep_count} LLVM .a files linked:"
+    echo "${deps}" | while IFS= read -r lib; do
+      [[ -n "${lib}" ]] && echo "           ${lib}"
+    done
   fi
 }
 
