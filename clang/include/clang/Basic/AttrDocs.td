@@ -9314,8 +9314,8 @@ def HLSLMatrixLayoutDocs : Documentation {
   let Category = DocCatVariable;
   let Heading = "row_major, column_major";
   let Content = [{
-The ``row_major`` and ``column_major`` keywords specify the memory layout 
-of an HLSL matrix type. 
+The ``row_major`` and ``column_major`` keywords specify the memory layout
+of an HLSL matrix type.
 
 * ``row_major``: Matrices are stored in memory row-by-row.
 * ``column_major``: Matrices are stored in memory column-by-column (default).
@@ -10059,11 +10059,11 @@ exceptions according to their own rules.
 def SentinelDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-The ``sentinel`` attribute can only be applied to variadic functions to
-diagnose each function call that do not pass a sentinel value at the end of the
-argument list. It checks if a null pointer constant exists at the end of the
-argument list by default, or at the (N+1)th position starting from the end when
-an argument is provided.
+The ``sentinel`` attribute can be applied to variadic functions and pointers to
+variadic functions, to diagnose each function call that do not pass a sentinel
+value at the end of the argument list. It checks if a null pointer constant
+exists at the end of the argument list by default, or at the (N+1)th position
+starting from the end when an argument is provided.
 
 .. code-block:: c
 
@@ -10080,6 +10080,9 @@ an argument is provided.
     bar(1, 2, NULL, 3);         // OK: sentinel value at the 2nd to last positon
     bar(1, 2, 3, nullptr, 4);   // OK: `nullptr` is valid in C23
     bar(1, 2, 3, 4, NULL);      // Not OK
+
+    void (*ptr) (int arg, ...) __attribute__ ((__sentinel__));
+    ptr(1, 2, 3, NULL);
   }
   }];
 }
