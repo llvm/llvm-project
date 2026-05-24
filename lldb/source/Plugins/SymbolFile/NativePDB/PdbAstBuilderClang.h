@@ -120,7 +120,8 @@ private:
                                  const llvm::codeview::EnumRecord &record);
   clang::QualType
   CreateFunctionType(TypeIndex args_type_idx, TypeIndex return_type_idx,
-                     llvm::codeview::CallingConvention calling_convention);
+                     llvm::codeview::CallingConvention calling_convention,
+                     unsigned int type_quals);
   clang::QualType CreateType(PdbTypeSymId type);
 
   void CreateFunctionParameters(PdbCompilandSymId func_id,
