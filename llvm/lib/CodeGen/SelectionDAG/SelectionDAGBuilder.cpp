@@ -416,10 +416,24 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
     if (ValueVT.getSizeInBits() == PartEVT.getSizeInBits())
       return DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
 
-    // If the parts vector has more elements than the value vector, then we
-    // have a vector widening case (e.g. <2 x float> -> <4 x float>).
-    // Extract the elements we want.
+    // If the parts vector has fewer elements but is wider than the value
+    // vector, drop the padding bits before bitcasting to the value vector.
+    // Otherwise, if the parts vector has more elements than the value vector,
+    // extract the elements we want.
     if (PartEVT.getVectorElementCount() != ValueVT.getVectorElementCount()) {
+      if (!PartEVT.isScalableVector() && !ValueVT.isScalableVector() &&
+          PartEVT.getVectorElementCount().getKnownMinValue() <
+              ValueVT.getVectorElementCount().getKnownMinValue() &&
+          ValueVT.bitsLT(PartEVT)) {
+        EVT PartIntVT =
+            EVT::getIntegerVT(*DAG.getContext(), PartEVT.getFixedSizeInBits());
+        EVT ValueIntVT =
+            EVT::getIntegerVT(*DAG.getContext(), ValueVT.getFixedSizeInBits());
+        Val = DAG.getBitcast(PartIntVT, Val);
+        Val = DAG.getNode(ISD::TRUNCATE, DL, ValueIntVT, Val);
+        return DAG.getBitcast(ValueVT, Val);
+      }
+
       assert((PartEVT.getVectorElementCount().getKnownMinValue() >
               ValueVT.getVectorElementCount().getKnownMinValue()) &&
              (PartEVT.getVectorElementCount().isScalable() ==
