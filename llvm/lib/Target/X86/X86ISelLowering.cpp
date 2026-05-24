@@ -22822,22 +22822,25 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
     SDValue Res = DAG.getNode(IsSigned ? X86ISD::CVTTP2IBS : X86ISD::CVTTP2IUBS,
                               dl, VecI16VT, Src);
     return DAG.getNode(ISD::TRUNCATE, dl, DstVT, Res);
-  }
-  else if(DstVT == MVT::v4i32 && Subtarget.hasSSE2())
-  {
-    const bool isSigned = Op.getOpcode() == ISD::FP_TO_SINT_SAT;
-    SDValue src = Op.getOperand(0);
-    EVT SrcVT = Src.getValueType();
-    SDLoc dl(Op);
-    double MaxVal = IsSigned ? 2147483520.0 : 4294967040.0;
-    double MinVal = IsSigned ? -2147483648.0 : 0.0;
-    SDValue MaxC = DAG.getConstantFP(MaxVal, dl, SrcVT);
-    SDValue MinC = DAG.getConstantFP(MinVal, dl, SrcVT);
+  } else if (DstVT == MVT::v4i32 && Subtarget.hasSSE2()) {
+    unsigned SatWidth = SatVT.getScalarSizeInBits();
+    APInt MinInt = IsSigned ? APInt::getSignedMinValue(SatWidth)
+                            : APInt::getMinValue(SatWidth);
+    APInt MaxInt = IsSigned ? APInt::getSignedMaxValue(SatWidth)
+                            : APInt::getMaxValue(SatWidth);
+
+    const fltSemantics &Sem = SrcVT.getFltSemantics();
+    APFloat MinFloat(Sem);
+    MinFloat.convertFromAPInt(MinInt, IsSigned, APFloat::rmTowardZero);
+    APFloat MaxFloat(Sem);
+    MaxFloat.convertFromAPInt(MaxInt, IsSigned, APFloat::rmTowardZero);
+
+    SDValue MaxC = DAG.getConstantFP(MaxFloat, dl, SrcVT);
+    SDValue MinC = DAG.getConstantFP(MinFloat, dl, SrcVT);
 
     SDValue ClampedBottom = DAG.getNode(X86ISD::FMAX, dl, SrcVT, Src, MinC);
     SDValue ClampedTop = DAG.getNode(X86ISD::FMIN, dl, SrcVT, ClampedBottom, MaxC);
-    unsigned CastOpc = IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
-    return DAG.getNode(CastOpc, dl, DstVT, ClampedTop);
+    return DAG.getNode(FpToIntOpcode, dl, DstVT, ClampedTop);
   }
   // This code is only for floats and doubles. Fall back to generic code for
   // anything else.
