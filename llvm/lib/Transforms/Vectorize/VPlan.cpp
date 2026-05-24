@@ -907,23 +907,15 @@ VPlan::VPlan(Loop *L, Type *IdxTy)
 VPlan::~VPlan() {
   VPSymbolicValue DummyValue(nullptr);
 
-  for (auto *VPB : CreatedBlocks) {
-    if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB)) {
-      // Replace all operands of recipes and all VPValues defined in VPBB with
-      // DummyValue so the block can be deleted.
-      for (VPRecipeBase &R : *VPBB) {
-        for (auto *Def : R.definedValues())
-          Def->replaceAllUsesWith(&DummyValue);
+  // Redirect all recipe operands to DummyValue before deleting blocks.
+  for (VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<VPBasicBlock>(CreatedBlocks))
+    for (VPRecipeBase &R : *VPBB)
+      for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
+        R.setOperand(I, &DummyValue);
 
-        for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
-          R.setOperand(I, &DummyValue);
-      }
-    } else if (auto *CanIV = cast<VPRegionBlock>(VPB)->getCanonicalIV()) {
-      CanIV->replaceAllUsesWith(&DummyValue);
-    }
-
+  for (auto *VPB : CreatedBlocks)
     delete VPB;
-  }
   for (VPValue *VPV : getLiveIns())
     delete VPV;
   delete BackedgeTakenCount;
