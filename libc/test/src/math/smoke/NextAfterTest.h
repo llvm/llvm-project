@@ -31,10 +31,10 @@ using LIBC_NAMESPACE::Sign;
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT)
 
 #define ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected)                          \
-  ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, FE_INEXACT | FE_UNDERFLOW)
+  ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, FE_UNDERFLOW)
 
 #define ASSERT_FP_EQ_WITH_OVERFLOW(result, expected)                           \
-  ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, FE_INEXACT | FE_OVERFLOW)
+  ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, FE_OVERFLOW)
 
 template <typename T>
 class NextAfterTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {

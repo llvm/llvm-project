@@ -32,7 +32,7 @@ namespace math {
 
 namespace expm1_internal {
 
-#if ((LIBC_MATH & LIBC_MATH_SKIP_ACCURATE_PASS) != 0)
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 #define LIBC_MATH_EXPM1_SKIP_ACCURATE_PASS
 #endif
 

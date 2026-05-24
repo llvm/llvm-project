@@ -272,12 +272,15 @@ void MCObjectStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 
 void MCObjectStreamer::emitPendingAssignments(MCSymbol *Symbol) {
   auto Assignments = pendingAssignments.find(Symbol);
-  if (Assignments != pendingAssignments.end()) {
-    for (const PendingAssignment &A : Assignments->second)
-      emitAssignment(A.Symbol, A.Value);
+  if (Assignments == pendingAssignments.end())
+    return;
 
-    pendingAssignments.erase(Assignments);
-  }
+  // emitAssignment can recursively re-enter emitPendingAssignments for
+  // other symbols, so move the list out and erase before iterating.
+  SmallVector<PendingAssignment, 1> Pending = std::move(Assignments->second);
+  pendingAssignments.erase(Assignments);
+  for (const PendingAssignment &A : Pending)
+    emitAssignment(A.Symbol, A.Value);
 }
 
 // Emit a label at a previously emitted fragment/offset position. This must be

@@ -1272,14 +1272,15 @@ bool X86InstructionSelector::selectUAddSub(MachineInstr &I,
         Def->getOpcode() == TargetOpcode::G_UADDO ||
         Def->getOpcode() == TargetOpcode::G_USUBE ||
         Def->getOpcode() == TargetOpcode::G_USUBO) {
-      // carry set by prev ADD/SUB.
-
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::CMP8ri))
-          .addReg(CarryInReg)
-          .addImm(1);
-
+      // The carry-in is a SETB byte (0 or 1) from a chained add/sub.
+      // Materialize EFLAGS.CF from that byte for the following ADC/SBB
+      // by emitting NEG, which sets CF iff its operand is non-zero.
       if (!RBI.constrainGenericRegister(CarryInReg, *CarryRC, MRI))
         return false;
+
+      Register NegDef = MRI.createVirtualRegister(CarryRC);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::NEG8r), NegDef)
+          .addReg(CarryInReg);
 
       Opcode = IsSub ? OpSBB : OpADC;
     } else if (auto val = getIConstantVRegVal(CarryInReg, MRI)) {

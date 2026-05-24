@@ -2133,6 +2133,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  isnanf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    isnanf16_test.cpp
+  HDRS
+    IsNanTest.h
+  DEPENDS
+    libc.src.math.isnanf16
+)
+
+add_fp_unittest(
   llogb_test
   SUITE
     libc-math-smoke-tests

@@ -9,6 +9,12 @@ MyObj &free_param(MyObj &obj [[clang::lifetimebound]]) { // expected-note {{'lif
   return obj;
 }
 
+MyObj &earliest_redecl_param(MyObj &obj); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
+MyObj &earliest_redecl_param(MyObj &obj);
+MyObj &earliest_redecl_param(MyObj &obj [[clang::lifetimebound]]) { // expected-note {{'lifetimebound' attribute appears here on the definition}}
+  return obj;
+}
+
 struct S {
   MyObj data;
   const MyObj &implicit_this_only();         // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}

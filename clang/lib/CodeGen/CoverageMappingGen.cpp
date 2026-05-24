@@ -2260,13 +2260,9 @@ struct CounterCoverageMappingBuilder
     (void)FoundCount;
 
     // Tell CodeGenPGO not to instrument.
-    for (auto I = MCDCState.BranchByStmt.begin(),
-              E = MCDCState.BranchByStmt.end();
-         I != E;) {
-      auto II = I++;
-      if (II->second.DecisionStmt == Decision)
-        MCDCState.BranchByStmt.erase(II);
-    }
+    MCDCState.BranchByStmt.remove_if([&](const auto &Entry) {
+      return Entry.second.DecisionStmt == Decision;
+    });
     MCDCState.DecisionByStmt.erase(Decision);
   }
 
