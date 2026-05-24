@@ -24,8 +24,12 @@ Homepage = "https://llvm.org/"
 [tool.setuptools.dynamic]
 version = {attr = "ir2vec.__version__"}
 
+# TODO: When ir2vec python bindings add support for Windows and MacOS,
+# we should update the expected patterns to include the
+# appropriate file extensions for each platform, e.g.:
+# "*.pyd", "*.dylib",
 [tool.setuptools.package-data]
-ir2vec = ["*.so", "*.pyd", "*.dylib", "*.json"]
+ir2vec = ["*.so", "*.json"]
 
 [tool.setuptools.packages.find]
 include = ["ir2vec*"]
