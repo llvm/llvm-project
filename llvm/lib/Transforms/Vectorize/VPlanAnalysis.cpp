@@ -260,7 +260,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
           VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe, VPWidenCastRecipe,
           VPWidenIntrinsicRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
           VPVectorEndPointerRecipe, VPWidenCallRecipe, VPWidenLoadRecipe,
-          VPWidenLoadEVLRecipe>(V)) {
+          VPWidenLoadEVLRecipe, VPDerivedIVRecipe, VPHeaderPHIRecipe>(V)) {
     Type *Ty = V->getScalarType();
     assert(Ty && "Scalar type must be set by recipe construction");
     return Ty;
@@ -268,17 +268,6 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
 
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
-          .Case<VPActiveLaneMaskPHIRecipe, VPFirstOrderRecurrencePHIRecipe,
-                VPReductionPHIRecipe, VPWidenPointerInductionRecipe,
-                VPCurrentIterationPHIRecipe>([this](const auto *R) {
-            // Handle header phi recipes, except VPWidenIntOrFpInduction
-            // which needs special handling due it being possibly truncated.
-            // TODO: consider inferring/caching type of siblings, e.g.,
-            // backedge value, here and in cases below.
-            return inferScalarType(R->getStartValue());
-          })
-          .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe>(
-              [](const auto *R) { return R->getScalarType(); })
           // VPInstructionWithType must be handled before VPInstruction.
           .Case<VPInstructionWithType>(
               [](const auto *R) { return R->getResultType(); })

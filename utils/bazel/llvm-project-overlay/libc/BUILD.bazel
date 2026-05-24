@@ -5317,6 +5317,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_isnanf16",
+    hdrs = ["src/__support/math/isnanf16.h"],
+    deps = [
+        ":__support_fputil_fp_bits",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_issignaling",
     hdrs = ["src/__support/math/issignaling.h"],
     deps = [
@@ -9928,6 +9938,13 @@ libc_math_function(
     name = "isnanl",
     additional_deps = [
         ":__support_math_isnanl",
+    ],
+)
+
+libc_math_function(
+    name = "isnanf16",
+    additional_deps = [
+        ":__support_math_isnanf16",
     ],
 )
 
