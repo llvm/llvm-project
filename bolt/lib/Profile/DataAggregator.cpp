@@ -117,8 +117,8 @@ MaxSamples("max-samples",
 
 static cl::opt<unsigned>
     PerfDataJobs("perfdata-jobs",
-                 cl::desc("number of threads to process perf data files in "
-                          "parallel, 0=all available (default 4)"),
+                 cl::desc("number of perf data files to process in parallel, "
+                          "0 = all HW threads (default 4)"),
                  cl::init(4), cl::cat(AggregatorCategory),
                  cl::sub(cl::SubCommand::getAll()));
 
