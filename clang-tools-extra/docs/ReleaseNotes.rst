@@ -263,6 +263,12 @@ New checks
   Finds common idioms which can be replaced by standard functions from the
   ``<bit>`` C++20 header.
 
+- New :doc:`modernize-use-shared-ptr-array
+  <clang-tidy/checks/modernize/use-shared-ptr-array>` check.
+
+  Finds ``std::shared_ptr<T>`` constructions managing arrays via explicit
+  array deleters and replaces them with ``std::shared_ptr<T[]>``.
+  
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 

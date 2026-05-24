@@ -1,0 +1,47 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USESHAREDPTRARRAYCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USESHAREDPTRARRAYCHECK_H
+
+#include "../ClangTidyCheck.h"
+
+namespace clang::tidy::modernize {
+
+	/// Transforms pre-C++17 \c shared_ptr<T> array workarounds into
+	/// \c shared_ptr<T[]>.
+	///
+	/// Matches:
+	///   std::shared_ptr<T>(new T[N], std::default_delete<T[]>())
+	///   std::shared_ptr<T>(new T[N], [](T *p) { delete[] p; })
+	///
+	/// Transforms to:
+	///   std::shared_ptr<T[]>(new T[N])
+	///
+	/// For the check to activate, the TU must be compiled in C++17 or later.
+	class UseSharedPtrArrayCheck : public ClangTidyCheck {
+		public:
+		  UseSharedPtrArrayCheck(StringRef Name, ClangTidyContext *Context)
+		        : ClangTidyCheck(Name, Context) {}
+		          void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+		            void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+		              bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+		              	    return LangOpts.CPlusPlus17;
+		              	      }
+
+		              	      private:
+		              	        bool lambdaBodyIsArrayDelete(const LambdaExpr *Lambda) const;
+		              	        };
+
+		              	        } // namespace clang::tidy::modernize
+
+		              	        #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USESHAREDPTRARRAYCHECK_H
+		              	        
+		              }
+	}
+}
