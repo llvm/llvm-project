@@ -172,13 +172,6 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                            PredicatedScalarEvolution &PSE,
                                            const Loop *L) {
   ScalarEvolution &SE = *PSE.getSE();
-  if (isa<VPIRValue, VPSymbolicValue>(V)) {
-    Value *LiveIn = V->getUnderlyingValue();
-    if (LiveIn && SE.isSCEVable(LiveIn->getType()))
-      return SE.getSCEV(LiveIn);
-    return SE.getCouldNotCompute();
-  }
-
   if (auto *RV = dyn_cast<VPRegionValue>(V)) {
     assert(RV == RV->getDefiningRegion()->getCanonicalIV() &&
            "RegionValue must be canonical IV");
@@ -186,6 +179,13 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       return SE.getCouldNotCompute();
     return SE.getAddRecExpr(SE.getZero(RV->getType()), SE.getOne(RV->getType()),
                             L, SCEV::FlagAnyWrap);
+  }
+
+  if (isa<VPIRValue, VPSymbolicValue>(V)) {
+    Value *LiveIn = V->getUnderlyingValue();
+    if (LiveIn && SE.isSCEVable(LiveIn->getType()))
+      return SE.getSCEV(LiveIn);
+    return SE.getCouldNotCompute();
   }
 
   // Helper to create SCEVs for binary and unary operations.
@@ -414,7 +414,7 @@ static bool preservesUniformity(unsigned Opcode) {
 
 bool vputils::isSingleScalar(const VPValue *VPV) {
   // Live-in, symbolic and region-values represent single-scalar values.
-  if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(VPV))
+  if (isa<VPIRValue, VPSymbolicValue>(VPV))
     return true;
 
   if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
@@ -451,7 +451,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
 
 bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
   // Live-ins and region values are uniform.
-  if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(V))
+  if (isa<VPIRValue, VPSymbolicValue>(V))
     return true;
 
   const VPRecipeBase *R = V->getDefiningRecipe();
