@@ -20,6 +20,10 @@
 #include "src/__support/threads/mutex_common.h"
 #include "src/__support/threads/raw_mutex.h"
 
+#ifdef LIBC_TARGET_OS_IS_LINUX
+#include "src/__support/threads/linux/pi_mutex.h"
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 
 // TODO: support shared/recursive/robust mutexes.
@@ -34,11 +38,30 @@ class Mutex final : private RawMutex {
   LIBC_PREFERED_TYPE(bool) unsigned int error_checking : 1;
 
   // TLS address may not work across forked processes. Use thread id instead.
-  cpp::Atomic<pid_t> owner;
-  size_t lock_count;
+  union {
+    struct {
+      cpp::Atomic<pid_t> owner;
+      size_t lock_count;
+    };
+#ifdef LIBC_TARGET_OS_IS_LINUX
+    // Special case, when "priority_inherit" is set, we ignore the base mutex
+    // and use this field.
+    PIMutex pi_mutex;
+#endif
+  };
 
   // CndVar needs to access Mutex as RawMutex
   friend class CndVar;
+
+#ifdef LIBC_TARGET_OS_IS_LINUX
+  LIBC_INLINE PIMutex::Type pi_mutex_type() const {
+    if (is_recursive())
+      return PIMutex::Type::Recursive;
+    if (is_error_checking())
+      return PIMutex::Type::ErrorChecking;
+    return PIMutex::Type::Normal;
+  }
+#endif
 
   template <class LockRoutine>
   LIBC_INLINE MutexError lock_impl(LockRoutine do_lock) {
@@ -70,9 +93,18 @@ public:
                               bool is_error_checking = false)
       : RawMutex(), priority_inherit(is_priority_inherit),
         recursive(is_recursive), robust(is_robust), pshared(is_pshared),
-        error_checking(is_error_checking), owner(0), lock_count(0) {}
+        error_checking(is_error_checking), owner(0), lock_count(0) {
+#ifdef LIBC_TARGET_OS_IS_LINUX
+    if (is_priority_inherit)
+      new (&pi_mutex) PIMutex{};
+#endif
+  }
 
   LIBC_INLINE static MutexError destroy(Mutex *lock) {
+#ifdef LIBC_TARGET_OS_IS_LINUX
+    if (lock->priority_inherit)
+      return PIMutex::destroy(&lock->pi_mutex);
+#endif
     LIBC_ASSERT(lock->owner == 0 && lock->lock_count == 0 &&
                 "Mutex destroyed while being locked.");
     RawMutex::destroy(lock);
@@ -80,6 +112,11 @@ public:
   }
 
   LIBC_INLINE MutexError lock() {
+#ifdef LIBC_TARGET_OS_IS_LINUX
+    if (priority_inherit)
+      return pi_mutex.lock(pi_mutex_type(), /*timeout=*/cpp::nullopt,
+                           this->pshared);
+#endif
     return lock_impl([this] {
       // Since timeout is not specified, we do not need to check the return
       // value.
@@ -90,6 +127,10 @@ public:
   }
 
   LIBC_INLINE MutexError timed_lock(internal::AbsTimeout abs_time) {
+#ifdef LIBC_TARGET_OS_IS_LINUX
+    if (priority_inherit)
+      return pi_mutex.lock(pi_mutex_type(), abs_time, this->pshared);
+#endif
     return lock_impl([this, abs_time] {
       // TODO: check deadlock? POSIX made it optional.
       if (this->RawMutex::lock(abs_time, this->pshared))
@@ -99,6 +140,10 @@ public:
   }
 
   LIBC_INLINE MutexError unlock() {
+#ifdef LIBC_TARGET_OS_IS_LINUX
+    if (priority_inherit)
+      return pi_mutex.unlock(pi_mutex_type(), this->pshared);
+#endif
     if (is_recursive()) {
       // lock_count == 0 can happen if previous unlock is
       // suspended before signal frame
@@ -121,6 +166,10 @@ public:
   }
 
   LIBC_INLINE MutexError try_lock() {
+#ifdef LIBC_TARGET_OS_IS_LINUX
+    if (priority_inherit)
+      return pi_mutex.try_lock(pi_mutex_type());
+#endif
     return lock_impl([this] {
       if (this->RawMutex::try_lock())
         return MutexError::NONE;

@@ -26,8 +26,10 @@ typedef struct {
   unsigned int __pshared : 1;
   unsigned int __error_checking : 1;
 
-  pid_t __owner;
-  size_t __lock_count;
+  struct {
+    pid_t __owner;
+    size_t __lock_count;
+  };
 } __mutex_type;
 
 #endif // LLVM_LIBC_TYPES___MUTEX_TYPE_H

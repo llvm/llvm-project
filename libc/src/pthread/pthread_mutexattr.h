@@ -26,7 +26,10 @@ enum class PThreadMutexAttrPos : unsigned int {
   PSHARED_SHIFT = 3,
   PSHARED_MASK = 0x1 << PSHARED_SHIFT,
 
-  // TODO: Add a mask for protocol and prioceiling when it is supported.
+  PRIORITY_INHERIT_SHIFT = 4,
+  PRIORITY_INHERIT_MASK = 0x1 << PRIORITY_INHERIT_SHIFT,
+
+  // TODO: Add a mask for prioceiling when it is supported.
 };
 
 constexpr pthread_mutexattr_t DEFAULT_MUTEXATTR =
@@ -47,6 +50,10 @@ LIBC_INLINE int get_mutexattr_robust(pthread_mutexattr_t attr) {
 LIBC_INLINE int get_mutexattr_pshared(pthread_mutexattr_t attr) {
   return (attr & unsigned(PThreadMutexAttrPos::PSHARED_MASK)) >>
          unsigned(PThreadMutexAttrPos::PSHARED_SHIFT);
+}
+
+LIBC_INLINE bool get_mutexattr_priority_inherit(pthread_mutexattr_t attr) {
+  return (attr & unsigned(PThreadMutexAttrPos::PRIORITY_INHERIT_MASK)) != 0;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
