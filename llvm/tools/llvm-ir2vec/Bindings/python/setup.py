@@ -7,9 +7,11 @@ import warnings
 from setuptools import setup
 from setuptools.dist import Distribution
 
+
 class BinaryDistribution(Distribution):
     def has_ext_modules(self):
         return True
+
 
 def _validate_package_contents():
     # TODO: When ir2vec python bindings add support for Windows and MacOS,
@@ -27,6 +29,8 @@ def _validate_package_contents():
                 f"Missing {description}: none of {patterns} found in ir2vec/. "
                 "Run the build step before packaging."
             )
+
+
 _validate_package_contents()
 
 setup(distclass=BinaryDistribution)
