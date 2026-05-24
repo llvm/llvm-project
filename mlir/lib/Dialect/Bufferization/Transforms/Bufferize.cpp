@@ -349,8 +349,7 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
   // `foldToBufferToTensorPair` can erase ops, and the rewriter listener
   // mutates `toBufferOps` from inside that call, which would invalidate
   // any DenseSet iterator held across it.
-  SmallVector<Operation *> toBufferOpsSnapshot(toBufferOps.begin(),
-                                               toBufferOps.end());
+  SmallVector<Operation *> toBufferOpsSnapshot = llvm::to_vector(toBufferOps);
   for (Operation *op : toBufferOpsSnapshot) {
     if (erasedOps.contains(op))
       continue;
