@@ -292,19 +292,11 @@ public:
                            const std::string &NewModulePath) const;
 
   // Write sharded indices to SummaryPath, (optionally) imports to disk, and
-  // (optionally) record imports in ImportsFiles. When cache key parameters are
-  // provided and GetCacheKeysListRefFunc is set, also computes and stores the
-  // LTO cache key for the module.
-  LLVM_ABI Error emitFiles(
-      const FunctionImporter::ImportMapTy &ImportList, unsigned Task,
-      StringRef ModulePath, const std::string &NewModulePath,
-      StringRef SummaryPath,
-      std::optional<std::reference_wrapper<ImportsFilesContainer>> ImportsFiles,
-      const FunctionImporter::ExportSetTy *ExportList = nullptr,
-      const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>
-          *ResolvedODR = nullptr,
-      const DenseSet<GlobalValue::GUID> *CfiFunctionDefs = nullptr,
-      const DenseSet<GlobalValue::GUID> *CfiFunctionDecls = nullptr) const;
+  // (optionally) record imports in ImportsFiles.
+  LLVM_ABI Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
+                           unsigned Task, StringRef ModulePath,
+                           const std::string &NewModulePath,
+                           StringRef SummaryPath) const;
 };
 
 /// This callable defines the behavior of a ThinLTO backend after the thin-link

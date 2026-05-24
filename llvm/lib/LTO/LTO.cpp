@@ -1518,20 +1518,13 @@ Error ThinBackendProc::emitFiles(
     const FunctionImporter::ImportMapTy &ImportList, unsigned Task,
     llvm::StringRef ModulePath, const std::string &NewModulePath) const {
   return emitFiles(ImportList, Task, ModulePath, NewModulePath,
-                   NewModulePath + ".thinlto.bc",
-                   /*ImportsFiles=*/std::nullopt, nullptr, nullptr, nullptr,
-                   nullptr);
+                   NewModulePath + ".thinlto.bc");
 }
 
 Error ThinBackendProc::emitFiles(
     const FunctionImporter::ImportMapTy &ImportList, unsigned Task,
     llvm::StringRef ModulePath, const std::string &NewModulePath,
-    StringRef SummaryPath,
-    std::optional<std::reference_wrapper<ImportsFilesContainer>> ImportsFiles,
-    const FunctionImporter::ExportSetTy *ExportList,
-    const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> *ResolvedODR,
-    const DenseSet<GlobalValue::GUID> *CfiFunctionDefs,
-    const DenseSet<GlobalValue::GUID> *CfiFunctionDecls) const {
+    StringRef SummaryPath) const {
   ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
   GVSummaryPtrSet DeclarationSummaries;
 
@@ -1540,53 +1533,33 @@ Error ThinBackendProc::emitFiles(
                                    ImportList, ModuleToSummariesForIndex,
                                    DeclarationSummaries);
 
-  if (Conf.OnSummaryIndexStoreCb) {
-    std::unique_ptr<raw_pwrite_stream> PS = Conf.OnSummaryIndexStoreCb(Task);
-    writeIndexToFile(CombinedIndex, *PS, &ModuleToSummariesForIndex,
-                     &DeclarationSummaries);
-  } else {
+  if (!Conf.OnSummaryIndexStoreCb) {
     raw_fd_ostream OS(SummaryPath, EC, sys::fs::OpenFlags::OF_None);
     if (EC)
       return createFileError("cannot open " + Twine(SummaryPath), EC);
 
     writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
                      &DeclarationSummaries);
-  }
 
-  if (Conf.OnImportsListStoreCb) {
-    std::vector<std::string> &ImportsListRef = Conf.OnImportsListStoreCb(Task);
-    for (const auto &ILI : ModuleToSummariesForIndex) {
-      if (ILI.first != ModulePath)
-        ImportsListRef.push_back(ILI.first);
-    }
-  } else {
     if (ShouldEmitImportsFiles) {
       Error ImportsFilesError = EmitImportsFiles(
           ModulePath, NewModulePath + ".imports", ModuleToSummariesForIndex);
       if (ImportsFilesError)
         return ImportsFilesError;
     }
+  } else {
+    std::unique_ptr<raw_pwrite_stream> OS = Conf.OnSummaryIndexStoreCb(Task);
+    writeIndexToFile(CombinedIndex, *OS, &ModuleToSummariesForIndex,
+                     &DeclarationSummaries);
+
+    if (Conf.OnImportsListStoreCb) {
+      std::vector<std::string> &ImportsListRef =
+          Conf.OnImportsListStoreCb(Task);
+      processImportsFiles(
+          ModulePath, ModuleToSummariesForIndex,
+          [&](StringRef M) { ImportsListRef.push_back(M.str()); });
+    }
   }
-
-  // Optionally, store the imports files.
-  if (ImportsFiles)
-    processImportsFiles(
-        ModulePath, ModuleToSummariesForIndex,
-        [&](StringRef M) { ImportsFiles->get().push_back(M.str()); });
-
-  // Optionally, compute and store the LTO cache key for DTLTO.
-  if (Conf.OnCacheKeyStoreCb && ExportList && ResolvedODR && CfiFunctionDefs &&
-      CfiFunctionDecls) {
-    assert(ModuleToDefinedGVSummaries.count(ModulePath));
-    const GVSummaryMapTy &DefinedGlobals =
-        ModuleToDefinedGVSummaries.find(ModulePath)->second;
-
-    std::string &CacheKeyRef = Conf.OnCacheKeyStoreCb(Task);
-    CacheKeyRef = computeLTOCacheKey(
-        Conf, CombinedIndex, ModulePath, ImportList, *ExportList, *ResolvedODR,
-        DefinedGlobals, *CfiFunctionDefs, *CfiFunctionDecls);
-  }
-
   return Error::success();
 }
 
@@ -2007,16 +1980,23 @@ public:
                const std::string &OldPrefix, const std::string &NewPrefix) {
           std::string NewModulePath =
               getThinLTOOutputFile(ModulePath, OldPrefix, NewPrefix);
-          auto E = emitFiles(ImportList, Task, ModulePath, NewModulePath,
-                             NewModulePath + ".thinlto.bc",
-                             /*ImportsFiles=*/std::nullopt, &ExportList,
-                             &ResolvedODR, &CfiFunctionDefs, &CfiFunctionDecls);
+          auto E = emitFiles(ImportList, Task, ModulePath, NewModulePath);
           if (E) {
             std::unique_lock<std::mutex> L(ErrMu);
             if (Err)
               Err = joinErrors(std::move(*Err), std::move(E));
             else
               Err = std::move(E);
+          }
+          assert(ModuleToDefinedGVSummaries.count(ModulePath));
+          const GVSummaryMapTy &DefinedGlobals =
+              ModuleToDefinedGVSummaries.find(ModulePath)->second;
+
+          if (Conf.OnCacheKeyStoreCb) {
+            std::string &CacheKey = Conf.OnCacheKeyStoreCb(Task);
+            CacheKey = computeLTOCacheKey(
+                Conf, CombinedIndex, ModulePath, ImportList, ExportList,
+                ResolvedODR, DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls);
           }
         },
         Task, ModulePath, ImportList, ExportList, ResolvedODR, OldPrefix,
