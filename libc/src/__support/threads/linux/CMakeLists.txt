@@ -34,10 +34,13 @@ add_header_library(
     libc.hdr.errno_macros
     libc.src.__support.OSUtil.osutil
     libc.src.__support.CPP.limits
+    libc.src.__support.CPP.new
     libc.src.__support.CPP.optional
     libc.src.__support.time.monotonicity
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.threads.identifier
 )
 
 add_object_library(
