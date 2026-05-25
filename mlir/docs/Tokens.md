@@ -23,10 +23,15 @@ parallel def-use system for operations. It reuses the existing def-use
 machinery for SSA. It introduces no changes to the generic op syntax, the
 bytecode infrastructure or core C++ APIs around `Operation`.
 
-As with regular use-def chains, a token def-use chain is unidirectional. A
+As with regular def-use chains, a token def-use chain is unidirectional. A
 token use points to the token's definition and not the other way around.
 Transformations can remove the use of a token without having to touch or
 inspect the definition of the token.
+
+Because tokens are SSA values, they cannot cross `IsolatedFromAbove` region
+boundaries. This is intentional: it allows passes to process isolated regions
+concurrently without racing on def-use chains. When a token-like dependency
+must cross such a boundary, use a symbol instead.
 
 ## ODS Integration
 
