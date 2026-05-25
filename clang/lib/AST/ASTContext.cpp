@@ -15664,7 +15664,7 @@ void ASTContext::recordOffsetOfEvaluation(const OffsetOfExpr *E) {
     PFPFieldsWithEvaluatedOffset.insert(FD);
 }
 
-bool ASTContext::maybeFoldMSConstexpr(
+bool ASTContext::maybeFoldConstexprWithCast(
     APValue &Val, SmallVectorImpl<PartialDiagnosticAt> &Notes) {
   if (Notes.size() != 1 || !getLangOpts().MSVCCompat || Val.isLValue())
     return false;
