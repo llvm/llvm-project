@@ -18,7 +18,6 @@ define void @quux(i64 %n) "aarch64_new_za" "aarch64_pstate_sm_enabled" {
 ; CHECK-NEXT:    .cfi_offset w19, -16
 ; CHECK-NEXT:    .cfi_offset w30, -24
 ; CHECK-NEXT:    .cfi_offset w29, -32
-; CHECK-NEXT:    // kill: def $x1 killed $sp
 ; CHECK-NEXT:    add x8, x0, #15
 ; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
 ; CHECK-NEXT:    sub x8, sp, x8
