@@ -20,20 +20,18 @@ define void @test1(ptr %arrayidx.i60, ptr %24, ptr %arrayidx44.i61, double %.pre
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_I74]] = add nuw nsw i64 [[INDVARS_IV_I72]], 1
 ; CHECK-NEXT:    [[ARRAYIDX23_I75:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARRAYIDX_I60]], i64 [[INDVARS_IV_NEXT_I74]]
 ; CHECK-NEXT:    [[TMP7]] = load double, ptr [[ARRAYIDX23_I75]], align 8
+; CHECK-NEXT:    [[ADD24_I76:%.*]] = fadd double [[ADD_I73]], [[TMP7]]
+; CHECK-NEXT:    [[ADD30_I77:%.*]] = fadd double [[TMP4]], [[ADD24_I76]]
 ; CHECK-NEXT:    [[ARRAYIDX34_I78:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[TMP0]], i64 [[INDVARS_IV_I72]]
+; CHECK-NEXT:    [[ADD35_I79:%.*]] = fadd double [[TMP3]], [[ADD30_I77]]
 ; CHECK-NEXT:    [[ARRAYIDX40_I80:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[TMP0]], i64 [[INDVARS_IV_NEXT_I74]]
 ; CHECK-NEXT:    [[TMP8]] = load double, ptr [[ARRAYIDX40_I80]], align 8
+; CHECK-NEXT:    [[ADD41_I81:%.*]] = fadd double [[TMP8]], [[ADD35_I79]]
+; CHECK-NEXT:    [[ADD48_I82:%.*]] = fadd double [[TMP2]], [[ADD41_I81]]
+; CHECK-NEXT:    [[ADD54_I83:%.*]] = fadd double [[TMP1]], [[ADD48_I82]]
 ; CHECK-NEXT:    [[ARRAYIDX60_I84:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARRAYIDX44_I61]], i64 [[INDVARS_IV_NEXT_I74]]
 ; CHECK-NEXT:    [[TMP9]] = load double, ptr [[ARRAYIDX60_I84]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x double> poison, double [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x double> [[TMP10]], double [[ADD_I73]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x double> [[TMP11]], double [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x double> [[TMP12]], double [[TMP3]], i32 3
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x double> [[TMP13]], double [[TMP8]], i32 4
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x double> [[TMP14]], double [[TMP2]], i32 5
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x double> [[TMP15]], double [[TMP1]], i32 6
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <8 x double> [[TMP16]], double [[TMP9]], i32 7
-; CHECK-NEXT:    [[TMP18:%.*]] = call double @llvm.vector.reduce.fadd.v8f64(double -0.000000e+00, <8 x double> [[TMP17]])
+; CHECK-NEXT:    [[TMP18:%.*]] = fadd double [[TMP9]], [[ADD54_I83]]
 ; CHECK-NEXT:    [[DIV_I86]] = fdiv double [[TMP18]], 9.000000e+00
 ; CHECK-NEXT:    store double [[DIV_I86]], ptr [[ARRAYIDX34_I78]], align 8
 ; CHECK-NEXT:    [[EXITCOND_NOT_I87:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_I74]], 1999

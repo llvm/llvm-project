@@ -372,6 +372,31 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
   return nullptr;
 }
 
+lldb::ValueObjectSP LookupEnumValue(llvm::StringRef name_ref,
+                                    ExecutionContextScope &ctx_scope) {
+  if (name_ref.contains("::")) {
+    llvm::StringRef enum_typename, enumerator_name;
+    // FIXME: Change this to a structured binding for lambda capturing
+    // once we have C++20.
+    std::tie(enum_typename, enumerator_name) = name_ref.rsplit("::");
+    CompilerType enum_type = ResolveTypeByName(enum_typename.str(), ctx_scope);
+    lldb::ValueObjectSP result;
+    enum_type.ForEachEnumerator([&](const CompilerType &integer_type,
+                                    ConstString name,
+                                    const llvm::APSInt &value) -> bool {
+      if (name == enumerator_name) {
+        Scalar scalar(value);
+        result = ValueObject::CreateValueObjectFromScalar(ctx_scope, scalar,
+                                                          enum_type, "result");
+        return false; // Stop iterating
+      }
+      return true;
+    });
+    return result;
+  }
+  return nullptr;
+}
+
 Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
                          std::shared_ptr<StackFrame> frame_sp,
                          lldb::DynamicValueType use_dynamic, uint32_t options)
@@ -431,6 +456,10 @@ Interpreter::Visit(const IdentifierNode &node) {
   if (!identifier && m_allow_globals)
     identifier = LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope,
                                         m_target, use_dynamic);
+
+  if (!identifier)
+    identifier = LookupEnumValue(node.GetName(), *m_exe_ctx_scope);
+
   if (!identifier) {
     std::string errMsg =
         llvm::formatv("use of undeclared identifier '{0}'", node.GetName());

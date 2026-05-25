@@ -9,6 +9,6 @@ define void @main() {
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0 %res = {{sdiv|udiv|srem|urem}} <2 x i32> splat (i32 10), zeroinitializer at @main
+; CHECK-NEXT: #0 %res = {{sdiv|udiv|srem|urem}} <2 x i32> splat (i32 10), zeroinitializer at @main <stdin>:7
 ; CHECK-NEXT: Immediate UB detected: Division by zero.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

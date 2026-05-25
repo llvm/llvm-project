@@ -29,12 +29,12 @@ class TestCommandCache(unittest.TestCase):
     def test_basic(self):
         lit_config = self._lit_config()
 
-        self.assertEqual(lit_config.run_command_cached(["echo", "-n", "hi"]), b"hi")
+        self.assertEqual(lit_config.run_command_cached(["printf", "hi"]), b"hi")
         self.assertNotEqual(lit_config.run_command_cached("ls"), None)
 
         # Test that arguments (e.g. text=True) get forwarded to subprocess.run
         self.assertEqual(
-            lit_config.run_command_cached(["echo", "-n", "hi"], text=True), "hi"
+            lit_config.run_command_cached(["printf", "hi"], text=True), "hi"
         )
 
         # shell=True is not implied

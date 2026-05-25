@@ -732,8 +732,8 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   // in the header, reuse it instead of introducing another wide induction phi.
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
   for (VPRecipeBase &Phi : Header->phis()) {
-    auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-    if (!WidenIV || !WidenIV->isCanonical())
+    VPWidenIntOrFpInductionRecipe *WidenIV;
+    if (!match(&Phi, m_CanonicalWidenIV(WidenIV)))
       continue;
     // The reused wide IV feeds the header mask, whose lanes may extend past
     // the trip count; drop flags that only hold inside the scalar loop.
@@ -1045,7 +1045,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
     EndValue = B.createAdd(EndValue, One, DL);
   }
 
-  if (!WideIntOrFp || !WideIntOrFp->isCanonical()) {
+  if (!match(WideIV, m_CanonicalWidenIV())) {
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
     VPIRValue *Start = WideIV->getStartValue();
     VPValue *Step = WideIV->getStepValue();
@@ -1073,7 +1073,7 @@ static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
   VPValue *Step = WideIV->getStepValue();
   const InductionDescriptor &ID = WideIV->getInductionDescriptor();
   VPValue *EndValue = VectorTC;
-  if (!WideIntOrFp || !WideIntOrFp->isCanonical()) {
+  if (!match(WideIV, m_CanonicalWidenIV())) {
     EndValue = VectorPHBuilder.createDerivedIV(
         ID.getKind(), dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
         Start, VectorTC, Step);
@@ -2070,13 +2070,13 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
 
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
-    auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-
     // Currently only handle canonical IVs as it is trivial to replace the start
     // and stop values, and we currently only perform the optimization when the
     // IV has a single use.
-    if (!WideIV || !WideIV->isCanonical() ||
-        WideIV->hasMoreThanOneUniqueUser() ||
+    VPWidenIntOrFpInductionRecipe *WideIV;
+    if (!match(&Phi, m_CanonicalWidenIV(WideIV)))
+      continue;
+    if (WideIV->hasMoreThanOneUniqueUser() ||
         NewIVTy == WideIV->getScalarType())
       continue;
 

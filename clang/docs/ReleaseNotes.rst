@@ -278,6 +278,10 @@ Non-comprehensive list of changes in this release
   extends bit-reversal support to all standard integers type, including
   ``_BitInt``
 
+- Added ``__builtin_elementwise_clmul`` for carry-less multiplication of
+  integers including ``_BitInt`` types. This includes constexpr evaluation
+  support.
+
 - Deprecated float types support from ``__builtin_elementwise_max`` and
   ``__builtin_elementwise_min``.
 

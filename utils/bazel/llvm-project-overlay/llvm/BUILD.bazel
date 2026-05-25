@@ -4902,6 +4902,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":Analysis",
+        ":AsmParser",
         ":Core",
         ":IRReader",
         ":Support",

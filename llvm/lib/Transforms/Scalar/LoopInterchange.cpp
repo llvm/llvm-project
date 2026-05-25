@@ -182,8 +182,6 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       if (!isa<Instruction>(I))
         return false;
       NumInsts++;
-      if (!isa<Instruction>(I))
-        return false;
       if (auto *Ld = dyn_cast<LoadInst>(&I)) {
         if (!Ld->isSimple())
           return false;

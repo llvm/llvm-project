@@ -628,12 +628,13 @@ defm V_DOT8_U32_U4  : VOP3PInst<"v_dot8_u32_u4",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_udot8, 1>;
 } // End OtherPredicates = [HasDot7Insts]
 
-let OtherPredicates = [HasDot1Insts] in {
+let OtherPredicates = [HasSignedDotInsts] in {
+// Note: On GFX11+, these map to IU8/IU4 hardware with neg_lo bits set
 defm V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_sdot4, 1>;
 defm V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_sdot8, 1>;
-} // End OtherPredicates = [HasDot1Insts]
+} // End OtherPredicates = [HasSignedDotInsts]
 
 def DOT2_BF16_Profile
   : VOP3P_Profile<VOP_F32_V2BF16_V2BF16_F32, VOP3_REGULAR, /*HasDPP*/ 1> {
@@ -2697,10 +2698,21 @@ defm V_DOT8_I32_IU4  : VOP3P_Real_gfx11_gfx12_gfx13<0x18>;
 
 defm V_DOT2_F32_BF16 : VOP3P_Realtriple_gfx11_gfx12<0x1a>;
 
-let AssemblerPredicate = isGFX11Plus in {
-  def : AMDGPUMnemonicAlias<"v_dot4_i32_i8", "v_dot4_i32_iu8">;
-  def : AMDGPUMnemonicAlias<"v_dot8_i32_i4", "v_dot8_i32_iu4">;
+// GFX11+ signed dot products use IU8/IU4 opcodes with neg_lo bits set
+multiclass VOP3P_Real_SignedDot_gfx11<bits<8> op> {
+  def _gfx11 :
+    VOP3P_Real<!cast<VOP3P_Pseudo>(NAME), SIEncodingFamily.GFX11>,
+    VOP3Pe_gfx11_gfx12<op, !cast<VOP3P_Pseudo>(NAME).Pfl> {
+      let AssemblerPredicate = isGFX11Plus;
+      let DecoderNamespace = "GFX11";
+      let Inst{61} = 1;  // neg_lo[0] - src0 signed
+      let Inst{62} = 1;  // neg_lo[1] - src1 signed
+      let Inst{63} = 0;  // neg_lo[2] - src2 unsigned
+    }
 }
+
+defm V_DOT4_I32_I8 : VOP3P_Real_SignedDot_gfx11<0x16>;
+defm V_DOT8_I32_I4 : VOP3P_Real_SignedDot_gfx11<0x18>;
 
 multiclass VOP3P_Real_WMMA <bits<8> op> {
   let WaveSizePredicate = isWave32, DecoderNamespace = "GFX11" in {

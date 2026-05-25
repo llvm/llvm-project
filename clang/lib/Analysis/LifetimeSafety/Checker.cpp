@@ -356,8 +356,11 @@ public:
 
     // We iterate in reverse order (from most recent to oldest) to find
     // the first declaration in each file.
-    for (const FunctionDecl *Redecl :
-         llvm::reverse(llvm::to_vector(FDef->redecls())))
+
+    // Store in temporary variable to manually extend lifetime
+    auto redecls = llvm::to_vector(FDef->redecls());
+
+    for (const FunctionDecl *Redecl : llvm::reverse(redecls))
       AddCrossTUDecl(Redecl);
 
     return Targets;

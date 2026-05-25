@@ -18,6 +18,6 @@ define void @main() {
 ; CHECK-NEXT: Exiting function: stack_object
 ; CHECK-NEXT:   %alloc = call ptr @stack_object() => ptr 0x8 [dangling]
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   {{store i32 0|%res = load i32}}, ptr %alloc, align 4 at @main
+; CHECK-NEXT: #0   {{store i32 0|%res = load i32}}, ptr %alloc, align 4 at @main <stdin>:11
 ; CHECK-NEXT: Immediate UB detected: Try to access a dead memory object at address 0x8.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

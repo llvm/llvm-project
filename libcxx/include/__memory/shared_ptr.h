@@ -333,7 +333,7 @@ public:
   // In C++03 we get errors when trying to do SFINAE with the
   // delete operator, so we always pretend that it's deletable.
   // The same happens on GCC.
-#if !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_COMPILER_GCC)
+#if !defined(_LIBCPP_CXX03_LANG)
                                  ,
                                  _If<is_array<_Tp>::value, __is_array_deletable<_Yp*>, __is_deletable<_Yp*> >
 #endif

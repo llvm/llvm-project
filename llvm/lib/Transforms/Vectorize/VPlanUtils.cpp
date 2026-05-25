@@ -55,12 +55,6 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
   if (isa<VPActiveLaneMaskPHIRecipe>(V))
     return true;
 
-  auto IsWideCanonicalIV = [](VPValue *A) {
-    return isa<VPWidenCanonicalIVRecipe>(A) ||
-           (isa<VPWidenIntOrFpInductionRecipe>(A) &&
-            cast<VPWidenIntOrFpInductionRecipe>(A)->isCanonical());
-  };
-
   VPValue *A, *B;
 
   auto m_CanonicalScalarIVSteps = m_ScalarIVSteps(
@@ -68,9 +62,14 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
                   m_DerivedIV(m_ZeroInt(), m_CanonicalIV(), m_One())),
       m_One(), m_Specific(&Plan.getVF()));
 
+  // A wide canonical IV is either an explicit VPWidenCanonicalIVRecipe or a
+  // canonical VPWidenIntOrFpInductionRecipe.
+  auto m_WideCanonicalIV =
+      m_CombineOr(m_Isa<VPWidenCanonicalIVRecipe>(), m_CanonicalWidenIV());
+
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
     return B == Plan.getTripCount() &&
-           (match(A, m_CanonicalScalarIVSteps) || IsWideCanonicalIV(A));
+           (match(A, m_CanonicalScalarIVSteps) || match(A, m_WideCanonicalIV));
 
   // For scalar plans, the header mask uses the scalar steps.
   if (match(V, m_ICmp(m_CanonicalScalarIVSteps,
@@ -82,7 +81,7 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
 
   auto MaskMatch = m_ICmp(m_VPValue(A), m_VPValue(B));
   return (match(V, m_CombineOr(MaskMatch, m_Reverse(MaskMatch)))) &&
-         IsWideCanonicalIV(A) && B == Plan.getBackedgeTakenCount();
+         match(A, m_WideCanonicalIV) && B == Plan.getBackedgeTakenCount();
 }
 
 /// Returns true if \p R propagates poison from any operand to its result.
@@ -418,7 +417,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
           VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
-    return Expr->isSingleScalar();
+    return Expr->isVectorToScalar();
 
   // VPExpandSCEVRecipes must be placed in the entry and are always uniform.
   return isa<VPExpandSCEVRecipe>(VPV);
@@ -639,9 +638,9 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
   // version of the canonical induction.
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
-    auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-    if (WidenOriginalIV && WidenOriginalIV->isCanonical())
-      WideCanonicalIVs.push_back(WidenOriginalIV);
+    VPWidenIntOrFpInductionRecipe *WidenIV;
+    if (match(&Phi, m_CanonicalWidenIV(WidenIV)))
+      WideCanonicalIVs.push_back(WidenIV);
   }
 
   // Walk users of wide canonical IVs and find the single compare of the form
@@ -860,27 +859,25 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
   return false;
 }
 
-VPValue *VPBuilder::VPSCEVExpander::expand(const SCEV *S) {
+VPValue *VPBuilder::VPSCEVExpander::tryToExpand(const SCEV *S) {
   switch (S->getSCEVType()) {
   case scConstant:
-    return Plan.getOrAddLiveIn(cast<SCEVConstant>(S)->getValue());
+    return Builder.getPlan().getOrAddLiveIn(cast<SCEVConstant>(S)->getValue());
   case scUnknown:
-    return Plan.getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
+    return Builder.getPlan().getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
   case scVScale:
     return Builder.createNaryOp(VPInstruction::VScale, {}, S->getType());
   case scMulExpr: {
     auto *Mul = cast<SCEVMulExpr>(S);
     SmallVector<VPValue *, 2> Ops;
     for (const SCEVUse &Op : Mul->operands()) {
-      VPValue *OpV = expand(Op);
+      VPValue *OpV = tryToExpand(Op);
       if (!OpV)
         return nullptr;
       Ops.push_back(OpV);
     }
     VPIRFlags::WrapFlagsTy WrapFlags(Mul->hasNoUnsignedWrap(),
                                      Mul->hasNoSignedWrap());
-    // Chain the operands with Mul, matching SCEVExpander behavior of applying
-    // wrap flags to all chained multiplies.
     VPValue *Result = Ops.front();
     for (VPValue *Op : drop_begin(Ops))
       Result = Builder.createOverflowingOp(Instruction::Mul, {Result, Op},

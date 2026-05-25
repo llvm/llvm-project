@@ -2176,7 +2176,8 @@ public:
   /// Calculates the cost of the subtrees, trims non-profitable ones and returns
   /// final cost.
   InstructionCost
-  calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals = {});
+  calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals = {},
+                                        Instruction *RdxRoot = nullptr);
 
   /// \returns the vectorization cost of the subtree that starts at \p VL.
   /// A negative number means that this is profitable.
@@ -3996,7 +3997,8 @@ private:
   /// LICM hoisting that optimizeGatherSequence() performs after vectorization
   /// for inserts with loop-invariant operands. Falls back to the whole-entry
   /// scale when per-lane information is unavailable or the feature is off.
-  uint64_t getGatherNodeEffectiveScale(const TreeEntry &TE);
+  uint64_t getGatherNodeEffectiveScale(const TreeEntry &TE,
+                                       Instruction *U = nullptr);
 
   /// Get the loop nest for the given loop \p L.
   ArrayRef<const Loop *> getLoopNest(const Loop *L);
@@ -16455,14 +16457,15 @@ uint64_t BoUpSLP::getLoopNestScale(const Loop *L) {
   return std::max<uint64_t>(1, Scale);
 }
 
-uint64_t BoUpSLP::getGatherNodeEffectiveScale(const TreeEntry &TE) {
+uint64_t BoUpSLP::getGatherNodeEffectiveScale(const TreeEntry &TE,
+                                              Instruction *U) {
   // Only meaningful for gather/buildvector-like entries; the per-lane
   // insertelements that make up such an entry are LICM-hoistable by
   // optimizeGatherSequence() when their operand is loop-invariant.
   assert((TE.isGather() || TE.State == TreeEntry::SplitVectorize) &&
          "Expected gather/split tree entry.");
 
-  uint64_t BaseScale = getScaleToLoopIterations(TE);
+  uint64_t BaseScale = getScaleToLoopIterations(TE, nullptr, U);
   if (!PerLaneGatherScale || LoopAwareTripCount == 0 || BaseScale <= 1)
     return BaseScale;
 
@@ -16487,7 +16490,8 @@ uint64_t BoUpSLP::getGatherNodeEffectiveScale(const TreeEntry &TE) {
     if (isConstant(V))
       continue;
     ++N;
-    uint64_t LaneScale = std::min(getScaleToLoopIterations(TE, V), BaseScale);
+    uint64_t LaneScale =
+        std::min(getScaleToLoopIterations(TE, V, U), BaseScale);
     Sum = SaturatingAdd(Sum, LaneScale, &Overflow);
     if (Overflow)
       return BaseScale;
@@ -17635,13 +17639,22 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // We know that we can merge the stores. Calculate the cost.
       InstructionCost VecStCost;
       if (E->State == TreeEntry::StridedVectorize) {
+        const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
+        FixedVectorType *StridedStoreTy = SPtrInfo.Ty;
+        assert(StridedStoreTy && "Missing StridedPointerInfo for tree entry.");
         Align CommonAlignment =
             computeCommonAlignment<StoreInst>(UniqueValues.getArrayRef());
         VecStCost = TTI->getMemIntrinsicInstrCost(
             MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_store,
-                                       VecTy, BaseSI->getPointerOperand(),
+                                       StridedStoreTy,
+                                       BaseSI->getPointerOperand(),
                                        /*VariableMask=*/false, CommonAlignment),
             CostKind);
+        if (StridedStoreTy != VecTy)
+          VecStCost +=
+              TTI->getCastInstrCost(Instruction::BitCast, VecTy, StridedStoreTy,
+                                    getCastContextHint(*E), CostKind);
+
       } else {
         assert(E->State == TreeEntry::Vectorize &&
                "Expected either strided or consecutive stores.");
@@ -18839,8 +18852,9 @@ static T *performExtractsShuffleAction(
   return Prev;
 }
 
-InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
-    ArrayRef<Value *> VectorizedVals) {
+InstructionCost
+BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
+                                               Instruction *RdxRoot) {
   // FIXME: support buildvector of the gather nodes with struct types.
   if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
         return TE->isGather() &&
@@ -18960,8 +18974,10 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
       }
     }
     if (!CostIsFree && !Scale) {
-      Scale = IsGatherLike ? getGatherNodeEffectiveScale(TE)
-                           : getScaleToLoopIterations(TE);
+      Scale =
+          IsGatherLike
+              ? getGatherNodeEffectiveScale(TE, TE.Idx == 0 ? RdxRoot : nullptr)
+              : getScaleToLoopIterations(TE);
       C *= Scale;
       EntryToScale.try_emplace(&TE, Scale);
       if (!TE.isGather() && TE.hasState()) {
@@ -23598,6 +23614,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         Type *StrideTy = DL->getIndexType(SI->getPointerOperandType());
 
         const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
+        FixedVectorType *StridedStoreTy = SPtrInfo.Ty;
+        assert(StridedStoreTy && "Missing StridedPointerInfo for tree entry.");
+        unsigned StridedStoreEC = getNumElements(StridedStoreTy);
         Value *Stride = SPtrInfo.StrideVal;
         assert(Stride && "Missing StridedPointerInfo for tree entry.");
         Value *StrideVal =
@@ -23607,13 +23626,14 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             StrideVal,
             ConstantInt::getSigned(
                 StrideTy, static_cast<int>(DL->getTypeAllocSize(ScalarTy))));
+        if (StridedStoreTy != VecTy)
+          VecValue = Builder.CreateBitOrPointerCast(VecValue, StridedStoreTy);
         auto *Inst = Builder.CreateIntrinsic(
             Intrinsic::experimental_vp_strided_store,
-            {VecTy, Ptr->getType(), StrideTy},
+            {StridedStoreTy, Ptr->getType(), StrideTy},
             {VecValue, Ptr, StrideVal,
-             Builder.getAllOnesMask(
-                 ElementCount::getFixed(getNumElements(VecTy))),
-             Builder.getInt32(E->Scalars.size())});
+             Builder.getAllOnesMask(ElementCount::getFixed(StridedStoreEC)),
+             Builder.getInt32(StridedStoreEC)});
         Inst->addParamAttr(
             /*ArgNo=*/1,
             Attribute::getWithAlignment(Inst->getContext(), CommonAlignment));
@@ -27402,8 +27422,6 @@ bool StoreChainContext::initializeContext(
     BoUpSLP &R, const DataLayout &DL, const TargetTransformInfo &TTI,
     DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
         &Visited) {
-  assert((Stride == 1 || !SLPReVec) &&
-         "Strided stores not supported for revectorization");
   if (!Visited
            .insert({Operands.front(),
                     cast<StoreInst>(Operands.front())->getValueOperand(),
@@ -29837,7 +29855,8 @@ public:
 
       V.transformNodes();
       V.computeMinimumValueSizes();
-      InstructionCost TreeCost = V.calculateTreeCostAndTrimNonProfitable(VL);
+      InstructionCost TreeCost =
+          V.calculateTreeCostAndTrimNonProfitable(VL, RdxRootInst);
       V.buildExternalUses(LocalExternallyUsedValues);
 
       InstructionCost ReductionCost =

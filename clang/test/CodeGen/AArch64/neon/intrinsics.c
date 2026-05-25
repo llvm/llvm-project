@@ -5265,3 +5265,292 @@ uint64_t test_vaddlvq_u32(uint32x4_t a) {
 // LLVM-NEXT:    ret i64 [[VADDLVQ_U32_I]]
   return vaddlvq_u32(a);
 }
+
+//===------------------------------------------------------===//
+// 2.1.3.1.6.  Vector shift left and insert
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#vector-shift-left-and-insert
+//===------------------------------------------------------===//
+
+// ALL-LABEL: @test_vsli_n_s8(
+int8x8_t test_vsli_n_s8(int8x8_t a, int8x8_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !s32i) -> !cir.vector<8 x !s8i>
+
+// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]])
+// LLVM: [[VSLI:%.*]] = call <8 x i8> @llvm.aarch64.neon.vsli.v8i8(<8 x i8> [[A]], <8 x i8> [[B]], i32 3)
+// LLVM: ret <8 x i8> [[VSLI]]
+  return vsli_n_s8(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsliq_n_s8(
+int8x16_t test_vsliq_n_s8(int8x16_t a, int8x16_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !s32i) -> !cir.vector<16 x !s8i>
+
+// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]])
+// LLVM: [[VSLI:%.*]] = call <16 x i8> @llvm.aarch64.neon.vsli.v16i8(<16 x i8> [[A]], <16 x i8> [[B]], i32 3)
+// LLVM: ret <16 x i8> [[VSLI]]
+  return vsliq_n_s8(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsli_n_s16(
+int16x4_t test_vsli_n_s16(int16x4_t a, int16x4_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !s32i) -> !cir.vector<4 x !s16i>
+
+// LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
+// LLVM: [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+// LLVM: [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
+// LLVM: [[VSLI:%.*]] = call <4 x i16> @llvm.aarch64.neon.vsli.v4i16(<4 x i16> [[VSLI_N]], <4 x i16> [[VSLI_N1]], i32 3)
+// LLVM: ret <4 x i16> [[VSLI]]
+  return vsli_n_s16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsliq_n_s16(
+int16x8_t test_vsliq_n_s16(int16x8_t a, int16x8_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !s32i) -> !cir.vector<8 x !s16i>
+
+// LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <8 x i16> [[B]] to <16 x i8>
+// LLVM: [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
+// LLVM: [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
+// LLVM: [[VSLI:%.*]] = call <8 x i16> @llvm.aarch64.neon.vsli.v8i16(<8 x i16> [[VSLI_N]], <8 x i16> [[VSLI_N1]], i32 3)
+// LLVM: ret <8 x i16> [[VSLI]]
+  return vsliq_n_s16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsli_n_s32(
+int32x2_t test_vsli_n_s32(int32x2_t a, int32x2_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<2 x !s32i>, !cir.vector<2 x !s32i>, !s32i) -> !cir.vector<2 x !s32i>
+
+// LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]], <2 x i32> {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
+// LLVM: [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+// LLVM: [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
+// LLVM: [[VSLI:%.*]] = call <2 x i32> @llvm.aarch64.neon.vsli.v2i32(<2 x i32> [[VSLI_N]], <2 x i32> [[VSLI_N1]], i32 3)
+// LLVM: ret <2 x i32> [[VSLI]]
+  return vsli_n_s32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsliq_n_s32(
+int32x4_t test_vsliq_n_s32(int32x4_t a, int32x4_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !s32i) -> !cir.vector<4 x !s32i>
+
+// LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <4 x i32> {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <4 x i32> [[B]] to <16 x i8>
+// LLVM: [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
+// LLVM: [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
+// LLVM: [[VSLI:%.*]] = call <4 x i32> @llvm.aarch64.neon.vsli.v4i32(<4 x i32> [[VSLI_N]], <4 x i32> [[VSLI_N1]], i32 3)
+// LLVM: ret <4 x i32> [[VSLI]]
+  return vsliq_n_s32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsli_n_s64(
+int64x1_t test_vsli_n_s64(int64x1_t a, int64x1_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !s32i) -> !cir.vector<1 x !s64i>
+
+// LLVM-SAME: <1 x i64> {{.*}} [[A:%.*]], <1 x i64> {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
+// LLVM: [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+// LLVM: [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+// LLVM: [[VSLI:%.*]] = call <1 x i64> @llvm.aarch64.neon.vsli.v1i64(<1 x i64> [[VSLI_N]], <1 x i64> [[VSLI_N1]], i32 1)
+// LLVM: ret <1 x i64> [[VSLI]]
+  return vsli_n_s64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vsliq_n_s64(
+int64x2_t test_vsliq_n_s64(int64x2_t a, int64x2_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !s32i) -> !cir.vector<2 x !s64i>
+
+// LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]], <2 x i64> {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <2 x i64> [[B]] to <16 x i8>
+// LLVM: [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+// LLVM: [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
+// LLVM: [[VSLI:%.*]] = call <2 x i64> @llvm.aarch64.neon.vsli.v2i64(<2 x i64> [[VSLI_N]], <2 x i64> [[VSLI_N1]], i32 3)
+// LLVM: ret <2 x i64> [[VSLI]]
+  return vsliq_n_s64(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsli_n_u8(
+uint8x8_t test_vsli_n_u8(uint8x8_t a, uint8x8_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !s32i) -> !cir.vector<8 x !u8i>
+
+// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]])
+// LLVM: [[VSLI:%.*]] = call <8 x i8> @llvm.aarch64.neon.vsli.v8i8(<8 x i8> [[A]], <8 x i8> [[B]], i32 3)
+// LLVM: ret <8 x i8> [[VSLI]]
+  return vsli_n_u8(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsliq_n_u8(
+uint8x16_t test_vsliq_n_u8(uint8x16_t a, uint8x16_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !s32i) -> !cir.vector<16 x !u8i>
+
+// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]])
+// LLVM: [[VSLI:%.*]] = call <16 x i8> @llvm.aarch64.neon.vsli.v16i8(<16 x i8> [[A]], <16 x i8> [[B]], i32 3)
+// LLVM: ret <16 x i8> [[VSLI]]
+  return vsliq_n_u8(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsli_n_u16(
+uint16x4_t test_vsli_n_u16(uint16x4_t a, uint16x4_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !u16i>, !cir.vector<4 x !u16i>, !s32i) -> !cir.vector<4 x !u16i>
+
+// LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
+// LLVM: [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+// LLVM: [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
+// LLVM: [[VSLI:%.*]] = call <4 x i16> @llvm.aarch64.neon.vsli.v4i16(<4 x i16> [[VSLI_N]], <4 x i16> [[VSLI_N1]], i32 3)
+// LLVM: ret <4 x i16> [[VSLI]]
+  return vsli_n_u16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsliq_n_u16(
+uint16x8_t test_vsliq_n_u16(uint16x8_t a, uint16x8_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<8 x !u16i>, !cir.vector<8 x !u16i>, !s32i) -> !cir.vector<8 x !u16i>
+
+// LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <8 x i16> [[B]] to <16 x i8>
+// LLVM: [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
+// LLVM: [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
+// LLVM: [[VSLI:%.*]] = call <8 x i16> @llvm.aarch64.neon.vsli.v8i16(<8 x i16> [[VSLI_N]], <8 x i16> [[VSLI_N1]], i32 3)
+// LLVM: ret <8 x i16> [[VSLI]]
+  return vsliq_n_u16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsli_n_u32(
+uint32x2_t test_vsli_n_u32(uint32x2_t a, uint32x2_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<2 x !u32i>, !cir.vector<2 x !u32i>, !s32i) -> !cir.vector<2 x !u32i>
+
+// LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]], <2 x i32> {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
+// LLVM: [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+// LLVM: [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
+// LLVM: [[VSLI:%.*]] = call <2 x i32> @llvm.aarch64.neon.vsli.v2i32(<2 x i32> [[VSLI_N]], <2 x i32> [[VSLI_N1]], i32 3)
+// LLVM: ret <2 x i32> [[VSLI]]
+  return vsli_n_u32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsliq_n_u32(
+uint32x4_t test_vsliq_n_u32(uint32x4_t a, uint32x4_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>, !s32i) -> !cir.vector<4 x !u32i>
+
+// LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <4 x i32> {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <4 x i32> [[B]] to <16 x i8>
+// LLVM: [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
+// LLVM: [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
+// LLVM: [[VSLI:%.*]] = call <4 x i32> @llvm.aarch64.neon.vsli.v4i32(<4 x i32> [[VSLI_N]], <4 x i32> [[VSLI_N1]], i32 3)
+// LLVM: ret <4 x i32> [[VSLI]]
+  return vsliq_n_u32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsli_n_u64(
+uint64x1_t test_vsli_n_u64(uint64x1_t a, uint64x1_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<1 x !u64i>, !cir.vector<1 x !u64i>, !s32i) -> !cir.vector<1 x !u64i>
+
+// LLVM-SAME: <1 x i64> {{.*}} [[A:%.*]], <1 x i64> {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
+// LLVM: [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+// LLVM: [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+// LLVM: [[VSLI:%.*]] = call <1 x i64> @llvm.aarch64.neon.vsli.v1i64(<1 x i64> [[VSLI_N]], <1 x i64> [[VSLI_N1]], i32 1)
+// LLVM: ret <1 x i64> [[VSLI]]
+  return vsli_n_u64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vsliq_n_u64(
+uint64x2_t test_vsliq_n_u64(uint64x2_t a, uint64x2_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !s32i) -> !cir.vector<2 x !u64i>
+
+// LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]], <2 x i64> {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <2 x i64> [[B]] to <16 x i8>
+// LLVM: [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+// LLVM: [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
+// LLVM: [[VSLI:%.*]] = call <2 x i64> @llvm.aarch64.neon.vsli.v2i64(<2 x i64> [[VSLI_N]], <2 x i64> [[VSLI_N1]], i32 3)
+// LLVM: ret <2 x i64> [[VSLI]]
+  return vsliq_n_u64(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsli_n_p64(
+poly64x1_t test_vsli_n_p64(poly64x1_t a, poly64x1_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !s32i) -> !cir.vector<1 x !s64i>
+
+// LLVM-SAME: <1 x i64> {{.*}} [[A:%.*]], <1 x i64> {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
+// LLVM: [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+// LLVM: [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+// LLVM: [[VSLI:%.*]] = call <1 x i64> @llvm.aarch64.neon.vsli.v1i64(<1 x i64> [[VSLI_N]], <1 x i64> [[VSLI_N1]], i32 0)
+// LLVM: ret <1 x i64> [[VSLI]]
+  return vsli_n_p64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vsliq_n_p64(
+poly64x2_t test_vsliq_n_p64(poly64x2_t a, poly64x2_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !s32i) -> !cir.vector<2 x !s64i>
+
+// LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]], <2 x i64> {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <2 x i64> [[B]] to <16 x i8>
+// LLVM: [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+// LLVM: [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
+// LLVM: [[VSLI:%.*]] = call <2 x i64> @llvm.aarch64.neon.vsli.v2i64(<2 x i64> [[VSLI_N]], <2 x i64> [[VSLI_N1]], i32 0)
+// LLVM: ret <2 x i64> [[VSLI]]
+  return vsliq_n_p64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vsli_n_p8(
+poly8x8_t test_vsli_n_p8(poly8x8_t a, poly8x8_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !s32i) -> !cir.vector<8 x !s8i>
+
+// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]])
+// LLVM: [[VSLI:%.*]] = call <8 x i8> @llvm.aarch64.neon.vsli.v8i8(<8 x i8> [[A]], <8 x i8> [[B]], i32 3)
+// LLVM: ret <8 x i8> [[VSLI]]
+  return vsli_n_p8(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsliq_n_p8(
+poly8x16_t test_vsliq_n_p8(poly8x16_t a, poly8x16_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !s32i) -> !cir.vector<16 x !s8i>
+
+// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]])
+// LLVM: [[VSLI:%.*]] = call <16 x i8> @llvm.aarch64.neon.vsli.v16i8(<16 x i8> [[A]], <16 x i8> [[B]], i32 3)
+// LLVM: ret <16 x i8> [[VSLI]]
+  return vsliq_n_p8(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsli_n_p16(
+poly16x4_t test_vsli_n_p16(poly16x4_t a, poly16x4_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !s32i) -> !cir.vector<4 x !s16i>
+
+// LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
+// LLVM: [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+// LLVM: [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
+// LLVM: [[VSLI:%.*]] = call <4 x i16> @llvm.aarch64.neon.vsli.v4i16(<4 x i16> [[VSLI_N]], <4 x i16> [[VSLI_N1]], i32 15)
+// LLVM: ret <4 x i16> [[VSLI]]
+  return vsli_n_p16(a, b, 15);
+}
+
+// ALL-LABEL: @test_vsliq_n_p16(
+poly16x8_t test_vsliq_n_p16(poly16x8_t a, poly16x8_t b) {
+// CIR: [[VSLI:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.vsli" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !s32i) -> !cir.vector<8 x !s16i>
+
+// LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <8 x i16> [[B]] to <16 x i8>
+// LLVM: [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
+// LLVM: [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
+// LLVM: [[VSLI:%.*]] = call <8 x i16> @llvm.aarch64.neon.vsli.v8i16(<8 x i16> [[VSLI_N]], <8 x i16> [[VSLI_N1]], i32 15)
+// LLVM: ret <8 x i16> [[VSLI]]
+  return vsliq_n_p16(a, b, 15);
+}

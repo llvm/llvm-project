@@ -100,9 +100,9 @@ jobs:
         with:
           python-version: '3.14'
           cache: 'pip'
-          cache-dependency-path: 'llvm/docs/requirements-hashed.txt'
+          cache-dependency-path: 'llvm/docs/requirements.txt'
       - name: Install python dependencies
-        run: pip install -r llvm/docs/requirements-hashed.txt
+        run: pip install --require-hashes -r llvm/docs/requirements.txt
       - name: Install system dependencies
         run: |
           sudo apt-get update

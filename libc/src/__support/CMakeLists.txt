@@ -453,6 +453,7 @@ add_subdirectory(OSUtil)
 add_subdirectory(StringUtil)
 add_subdirectory(GPU)
 add_subdirectory(RPC)
+add_subdirectory(net)
 
 # Thread support is used by other "File". So, we add the "threads"
 # before "File".

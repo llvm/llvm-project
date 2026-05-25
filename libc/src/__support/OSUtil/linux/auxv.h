@@ -13,6 +13,7 @@
 #include "hdr/sys_auxv_macros.h" // For AT_ macros
 #include "hdr/sys_mman_macros.h" // For mmap flags
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 #include "src/__support/threads/callonce.h"
@@ -118,7 +119,7 @@ LIBC_INLINE void Vector::fallback_initialize_unsync() {
   int fd = syscall_impl<int>(SYS_open, "/proc/self/auxv", O_RDONLY | O_CLOEXEC);
 #endif
   if (fd < 0) {
-    syscall_impl<long>(SYS_munmap, vector, AUXV_MMAP_SIZE);
+    linux_syscalls::munmap(vector, AUXV_MMAP_SIZE);
     return;
   }
   uint8_t *cursor = reinterpret_cast<uint8_t *>(vector);
@@ -136,7 +137,7 @@ LIBC_INLINE void Vector::fallback_initialize_unsync() {
   }
   syscall_impl<long>(SYS_close, fd);
   if (has_error) {
-    syscall_impl<long>(SYS_munmap, vector, AUXV_MMAP_SIZE);
+    linux_syscalls::munmap(vector, AUXV_MMAP_SIZE);
     return;
   }
   entries = vector;
