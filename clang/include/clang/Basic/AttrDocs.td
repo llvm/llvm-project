@@ -158,7 +158,7 @@ On MachO platforms, this attribute also does not control the order of initializa
 across translation units, where it only affects the order within a single TU.
 
 This attribute is only supported for C++ and Objective-C++ and is ignored in
-other language modes. Currently, this attribute is not implemented on z/OS.
+other language modes.
   }];
 }
 
