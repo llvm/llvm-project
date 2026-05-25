@@ -951,4 +951,115 @@ define void @atomic_fsub_zero(ptr %addr) #0 {
   ret void
 }
 
+; Volatile RMWs must not be reduced to a fenced load even when the value is
+; idempotent (or-zero, xor-zero, and-allones).
+
+define i32 @or32_volatile(ptr %p) #0 {
+; X64-LABEL: or32_volatile:
+; X64:       # %bb.0:
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    .p2align 4
+; X64-NEXT:  .LBB23_1: # %atomicrmw.start
+; X64-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-NEXT:    lock cmpxchgl %eax, (%rdi)
+; X64-NEXT:    jne .LBB23_1
+; X64-NEXT:  # %bb.2: # %atomicrmw.end
+; X64-NEXT:    retq
+;
+; X86-LABEL: or32_volatile:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl (%ecx), %eax
+; X86-NEXT:    .p2align 4
+; X86-NEXT:  .LBB23_1: # %atomicrmw.start
+; X86-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-NEXT:    lock cmpxchgl %eax, (%ecx)
+; X86-NEXT:    jne .LBB23_1
+; X86-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-NEXT:    retl
+  %res = atomicrmw volatile or ptr %p, i32 0 seq_cst
+  ret i32 %res
+}
+
+define i32 @xor32_volatile(ptr %p) #0 {
+; X64-LABEL: xor32_volatile:
+; X64:       # %bb.0:
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    .p2align 4
+; X64-NEXT:  .LBB24_1: # %atomicrmw.start
+; X64-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-NEXT:    lock cmpxchgl %eax, (%rdi)
+; X64-NEXT:    jne .LBB24_1
+; X64-NEXT:  # %bb.2: # %atomicrmw.end
+; X64-NEXT:    retq
+;
+; X86-LABEL: xor32_volatile:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl (%ecx), %eax
+; X86-NEXT:    .p2align 4
+; X86-NEXT:  .LBB24_1: # %atomicrmw.start
+; X86-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-NEXT:    lock cmpxchgl %eax, (%ecx)
+; X86-NEXT:    jne .LBB24_1
+; X86-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-NEXT:    retl
+  %res = atomicrmw volatile xor ptr %p, i32 0 release
+  ret i32 %res
+}
+
+define i32 @and32_volatile(ptr %p) #0 {
+; X64-LABEL: and32_volatile:
+; X64:       # %bb.0:
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    .p2align 4
+; X64-NEXT:  .LBB25_1: # %atomicrmw.start
+; X64-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-NEXT:    lock cmpxchgl %eax, (%rdi)
+; X64-NEXT:    jne .LBB25_1
+; X64-NEXT:  # %bb.2: # %atomicrmw.end
+; X64-NEXT:    retq
+;
+; X86-LABEL: and32_volatile:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl (%ecx), %eax
+; X86-NEXT:    .p2align 4
+; X86-NEXT:  .LBB25_1: # %atomicrmw.start
+; X86-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-NEXT:    lock cmpxchgl %eax, (%ecx)
+; X86-NEXT:    jne .LBB25_1
+; X86-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-NEXT:    retl
+  %res = atomicrmw volatile and ptr %p, i32 -1 acq_rel
+  ret i32 %res
+}
+
+; A volatile RMW with no result use already goes through DAG lowering, which
+; preserves the volatile bit.
+define void @or32_volatile_nouse_seq_cst(ptr %p) #0 {
+; X64-LABEL: or32_volatile_nouse_seq_cst:
+; X64:       # %bb.0:
+; X64-NEXT:    lock orl $0, (%rdi)
+; X64-NEXT:    retq
+;
+; X86-GENERIC-LABEL: or32_volatile_nouse_seq_cst:
+; X86-GENERIC:       # %bb.0:
+; X86-GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-GENERIC-NEXT:    lock orl $0, (%eax)
+; X86-GENERIC-NEXT:    retl
+;
+; X86-ATOM-LABEL: or32_volatile_nouse_seq_cst:
+; X86-ATOM:       # %bb.0:
+; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-ATOM-NEXT:    lock orl $0, (%eax)
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    retl
+  atomicrmw volatile or ptr %p, i32 0 seq_cst
+  ret void
+}
+
 attributes #0 = { nounwind }
