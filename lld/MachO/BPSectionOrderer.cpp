@@ -8,6 +8,7 @@
 
 #include "BPSectionOrderer.h"
 #include "InputSection.h"
+#include "OutputSegment.h"
 #include "Relocations.h"
 #include "Symbols.h"
 #include "lld/Common/BPSectionOrdererBase.inc"
