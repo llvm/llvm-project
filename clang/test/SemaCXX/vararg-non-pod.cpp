@@ -173,7 +173,7 @@ void t6b(Foo somearg, ... ) {
 void t7(int n, ...) {
   __builtin_va_list list;
   __builtin_va_start(list, n);
-  (void)__builtin_va_arg(list, C); // expected-warning{{second argument to 'va_arg' is of non-POD type 'C'}}
+  (void)__builtin_va_arg(list, C); // expected-error {{second argument to 'va_arg' is of non-POD type 'C'}}
   __builtin_va_end(list);
 }
 

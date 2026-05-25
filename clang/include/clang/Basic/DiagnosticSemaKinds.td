@@ -11331,9 +11331,8 @@ def err_second_parameter_to_va_arg_incomplete: Error<
   "second argument to 'va_arg' is of incomplete type %0">;
 def err_second_parameter_to_va_arg_abstract: Error<
   "second argument to 'va_arg' is of abstract type %0">;
-def warn_second_parameter_to_va_arg_not_pod : Warning<
-  "second argument to 'va_arg' is of non-POD type %0">,
-  InGroup<NonPODVarargs>, DefaultError;
+def err_second_parameter_to_va_arg_not_pod : Error<
+  "second argument to 'va_arg' is of non-POD type %0">;
 def warn_second_parameter_to_va_arg_ownership_qualified : Warning<
   "second argument to 'va_arg' is of ARC ownership-qualified type %0">,
   InGroup<NonPODVarargs>, DefaultError;
