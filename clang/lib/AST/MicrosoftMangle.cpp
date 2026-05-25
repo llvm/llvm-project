@@ -3098,6 +3098,12 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
 
   mangleCallingConvention(CC, Range);
 
+  if (Proto) {
+    unsigned SMEAttrs = Proto->getAArch64SMEAttributes();
+    if (SMEAttrs)
+      Out << "$$SME" << SMEAttrs;
+  }
+
   // <return-type> ::= <type>
   //               ::= @ # structors (they have no declared return type)
   if (IsStructor) {
