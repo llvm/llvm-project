@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both -std=c++20 %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++20 %s
+// RUN: %clang_cc1                                         -verify=ref,both      -std=c++20 %s
 
 constexpr int a = 12;
 constexpr int f = [c = a]() { return c; }();
@@ -278,6 +278,21 @@ namespace InvalidCapture {
                      both-note {{read of non-const variable 'n' is not allowed in a constant expression}}
     } ();
   }
+
+  class Foo {
+    void a; // both-error {{field has incomplete type 'void'}}
+
+  public:
+    constexpr int bar() {
+      auto *p = &a;
+      *p;
+
+      auto b = [this]() {return 42;};
+      return b();
+    }
+  };
+  Foo FF;
+  static_assert(FF.bar() == 42, ""); // both-error {{not an integral constant expression}}
 }
 
 constexpr int fn() {

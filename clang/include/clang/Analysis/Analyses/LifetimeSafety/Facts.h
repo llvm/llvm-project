@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_FACTS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_FACTS_H
 
+#include "clang/AST/Decl.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
@@ -23,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
+#include <optional>
 
 namespace clang::lifetimes::internal {
 
@@ -51,8 +53,10 @@ public:
     TestPoint,
     /// An origin that escapes the function scope (e.g., via return).
     OriginEscapes,
-    /// An origin is invalidated (e.g. vector resized).
+    /// An origin is invalidated (e.g. vector resized, `delete` called).
     InvalidateOrigin,
+    /// All loans of an origin are cleared.
+    KillOrigin,
   };
 
 private:
@@ -100,21 +104,30 @@ public:
             const OriginManager &OM) const override;
 };
 
+/// When an AccessPath expires (e.g., a variable goes out of scope), all loans
+/// that are associated with this path expire. For example, if `x` expires, then
+/// the loan to `x` expires.
 class ExpireFact : public Fact {
-  LoanID LID;
+  // The access path that expires.
+  AccessPath AP;
+
+  // Expired origin (e.g., its variable goes out of scope).
+  std::optional<OriginID> OID;
   SourceLocation ExpiryLoc;
 
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Expire; }
 
-  ExpireFact(LoanID LID, SourceLocation ExpiryLoc)
-      : Fact(Kind::Expire), LID(LID), ExpiryLoc(ExpiryLoc) {}
+  ExpireFact(AccessPath AP, SourceLocation ExpiryLoc,
+             std::optional<OriginID> OID = std::nullopt)
+      : Fact(Kind::Expire), AP(AP), OID(OID), ExpiryLoc(ExpiryLoc) {}
 
-  LoanID getLoanID() const { return LID; }
+  const AccessPath &getAccessPath() const { return AP; }
+  std::optional<OriginID> getOriginID() const { return OID; }
   SourceLocation getExpiryLoc() const { return ExpiryLoc; }
 
   void dump(llvm::raw_ostream &OS, const LoanManager &LM,
-            const OriginManager &) const override;
+            const OriginManager &OM) const override;
 };
 
 class OriginFlowFact : public Fact {
@@ -151,7 +164,7 @@ public:
   enum class EscapeKind : uint8_t {
     Return, /// Escapes via return statement.
     Field,  /// Escapes via assignment to a field.
-    // FIXME: Add support for escape to global (dangling global ptr).
+    Global, /// Escapes via assignment to global storage.
   } EscKind;
 
   static bool classof(const Fact *F) {
@@ -202,6 +215,25 @@ public:
             const OriginManager &OM) const override;
 };
 
+/// Represents that an origin escapes via assignment to global or static
+/// storage. Example: `global_storage = local_var;`
+class GlobalEscapeFact : public OriginEscapesFact {
+  const VarDecl *Global;
+
+public:
+  GlobalEscapeFact(OriginID OID, const VarDecl *VDecl)
+      : OriginEscapesFact(OID, EscapeKind::Global), Global(VDecl) {}
+
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::OriginEscapes &&
+           static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
+               EscapeKind::Global;
+  }
+  const VarDecl *getGlobal() const { return Global; };
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
+};
+
 class UseFact : public Fact {
   const Expr *UseExpr;
   const OriginList *OList;
@@ -216,6 +248,7 @@ public:
       : Fact(Kind::Use), UseExpr(UseExpr), OList(OList) {}
 
   const OriginList *getUsedOrigins() const { return OList; }
+  void setUsedOrigins(const OriginList *NewList) { OList = NewList; }
   const Expr *getUseExpr() const { return UseExpr; }
   void markAsWritten() { IsWritten = true; }
   bool isWritten() const { return IsWritten; }
@@ -285,10 +318,27 @@ public:
             const OriginManager &) const override;
 };
 
+/// All loans are cleared from an origin (e.g., assigning a callable without
+/// tracked origins to std::function).
+class KillOriginFact : public Fact {
+  OriginID OID;
+
+public:
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::KillOrigin;
+  }
+
+  KillOriginFact(OriginID OID) : Fact(Kind::KillOrigin), OID(OID) {}
+
+  OriginID getKilledOrigin() const { return OID; }
+
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
+};
+
 class FactManager {
 public:
-  FactManager(const AnalysisDeclContext &AC, const CFG &Cfg)
-      : OriginMgr(AC.getASTContext(), AC.getDecl()) {
+  FactManager(const AnalysisDeclContext &AC, const CFG &Cfg) : OriginMgr(AC) {
     BlockToFacts.resize(Cfg.getNumBlockIDs());
   }
 

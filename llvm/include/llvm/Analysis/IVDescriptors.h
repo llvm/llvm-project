@@ -46,6 +46,8 @@ enum class RecurKind {
   UMin,     ///< Unsigned integer min implemented in terms of select(cmp()).
   UMax,     ///< Unsigned integer max implemented in terms of select(cmp()).
   FAdd,     ///< Sum of floats.
+  FAddChainWithSubs, ///< A chain of fadds and fsubs.
+  FSub,     ///< Subtraction of floats.
   FMul,     ///< Product of floats.
   FMin,     ///< FP min implemented in terms of select(cmp()).
   FMax,     ///< FP max implemented in terms of select(cmp()).
@@ -103,6 +105,15 @@ public:
         "Only min/max recurrences are allowed to have multiple uses currently");
   }
 
+  /// Simpler constructor for min/max recurrences that don't track cast
+  /// instructions.
+  RecurrenceDescriptor(Value *Start, Instruction *Exit, StoreInst *Store,
+                       RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
+                       Type *RT, bool IsMultiUse = false)
+      : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
+        Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
+        PhiHasUsesOutsideReductionChain(IsMultiUse) {}
+
   /// This POD struct holds information about a potential recurrence operation.
   class InstDesc {
   public:
@@ -142,9 +153,10 @@ public:
   /// advances the instruction pointer 'I' from the compare instruction to the
   /// select instruction and stores this pointer in 'PatternLastInst' member of
   /// the returned struct.
-  LLVM_ABI static InstDesc
-  isRecurrenceInstr(Loop *L, PHINode *Phi, Instruction *I, RecurKind Kind,
-                    InstDesc &Prev, FastMathFlags FuncFMF, ScalarEvolution *SE);
+  LLVM_ABI static InstDesc isRecurrenceInstr(Loop *L, PHINode *Phi,
+                                             Instruction *I, RecurKind Kind,
+                                             InstDesc &Prev,
+                                             ScalarEvolution *SE);
 
   /// Returns true if instruction I has multiple uses in Insts
   LLVM_ABI static bool hasMultipleUsesOf(Instruction *I,
@@ -154,14 +166,6 @@ public:
   /// Returns true if all uses of the instruction I is within the Set.
   LLVM_ABI static bool areAllUsesIn(Instruction *I,
                                     SmallPtrSetImpl<Instruction *> &Set);
-
-  /// Returns a struct describing if the instruction is a llvm.(s/u)(min/max),
-  /// llvm.minnum/maxnum or a Select(ICmp(X, Y), X, Y) pair of instructions
-  /// corresponding to a min(X, Y) or max(X, Y), matching the recurrence kind \p
-  /// Kind. \p Prev specifies the description of an already processed select
-  /// instruction, so its corresponding cmp can be matched to it.
-  LLVM_ABI static InstDesc isMinMaxPattern(Instruction *I, RecurKind Kind,
-                                           const InstDesc &Prev);
 
   /// Returns a struct describing whether the instruction is either a
   ///   Select(ICmp(A, B), X, Y), or
@@ -194,9 +198,9 @@ public:
   /// computed.
   LLVM_ABI static bool
   AddReductionVar(PHINode *Phi, RecurKind Kind, Loop *TheLoop,
-                  FastMathFlags FuncFMF, RecurrenceDescriptor &RedDes,
-                  DemandedBits *DB = nullptr, AssumptionCache *AC = nullptr,
-                  DominatorTree *DT = nullptr, ScalarEvolution *SE = nullptr);
+                  RecurrenceDescriptor &RedDes, DemandedBits *DB = nullptr,
+                  AssumptionCache *AC = nullptr, DominatorTree *DT = nullptr,
+                  ScalarEvolution *SE = nullptr);
 
   /// Returns true if Phi is a reduction in TheLoop. The RecurrenceDescriptor
   /// is returned in RedDes. If either \p DB is non-null or \p AC and \p DT are
@@ -242,6 +246,9 @@ public:
 
   /// Returns true if the recurrence kind is a floating point kind.
   LLVM_ABI static bool isFloatingPointRecurrenceKind(RecurKind Kind);
+
+  /// Returns true if the recurrence kind is for a sub operation.
+  LLVM_ABI static bool isSubRecurrenceKind(RecurKind Kind);
 
   /// Returns true if the recurrence kind is an integer min/max kind.
   static bool isIntMinMaxRecurrenceKind(RecurKind Kind) {
@@ -378,6 +385,11 @@ public:
   /// Default constructor - creates an invalid induction.
   InductionDescriptor() = default;
 
+  /// Returns the canonical integer induction for type \p Ty with start = 0
+  /// and step = 1.
+  LLVM_ABI static InductionDescriptor
+  getCanonicalIntInduction(Type *Ty, ScalarEvolution &SE);
+
   Value *getStartValue() const { return StartValue; }
   InductionKind getKind() const { return IK; }
   const SCEV *getStep() const { return Step; }
@@ -438,7 +450,8 @@ public:
   ArrayRef<Instruction *> getCastInsts() const { return RedundantCasts; }
 
 private:
-  /// Private constructor - used by \c isInductionPHI.
+  /// Private constructor - used by \c isInductionPHI and
+  /// \c getCanonicalIntInduction.
   InductionDescriptor(Value *Start, InductionKind K, const SCEV *Step,
                       BinaryOperator *InductionBinOp = nullptr,
                       SmallVectorImpl<Instruction *> *Casts = nullptr);

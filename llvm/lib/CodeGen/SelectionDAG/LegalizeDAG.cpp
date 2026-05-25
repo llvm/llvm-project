@@ -352,7 +352,13 @@ SelectionDAGLegalize::ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP) {
       if (ConstantFPSDNode::isValueValidForType(SVT, APF) &&
           // Only do this if the target has a native EXTLOAD instruction from
           // smaller type.
-          TLI.isLoadExtLegal(ISD::EXTLOAD, OrigVT, SVT) &&
+          TLI.isLoadLegal(
+              OrigVT, SVT,
+              Align(DAG.getDataLayout().getPrefTypeAlign(
+                  SVT.getTypeForEVT(*DAG.getContext()))),
+              MachinePointerInfo::getConstantPool(DAG.getMachineFunction())
+                  .getAddrSpace(),
+              ISD::EXTLOAD, false) &&
           TLI.ShouldShrinkFPConstant(OrigVT)) {
         Type *SType = SVT.getTypeForEVT(*DAG.getContext());
         LLVMC = cast<ConstantFP>(ConstantFoldCastOperand(
@@ -617,8 +623,10 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
     SDValue Result = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Lo, Hi);
     ReplaceNode(SDValue(Node, 0), Result);
   } else {
-    switch (TLI.getTruncStoreAction(ST->getValue().getValueType(), StVT)) {
-    default: llvm_unreachable("This action is not supported yet!");
+    switch (TLI.getTruncStoreAction(ST->getValue().getValueType(), StVT,
+                                    ST->getAlign(), ST->getAddressSpace())) {
+    default:
+      llvm_unreachable("This action is not supported yet!");
     case TargetLowering::Legal: {
       EVT MemVT = ST->getMemoryVT();
       // If this is an unaligned store and the target doesn't support it,
@@ -744,8 +752,9 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
       // nice to have an effective generic way of getting these benefits...
       // Until such a way is found, don't insist on promoting i1 here.
       (SrcVT != MVT::i1 ||
-       TLI.getLoadExtAction(ExtType, Node->getValueType(0), MVT::i1) ==
-         TargetLowering::Promote)) {
+       TLI.getLoadAction(Node->getValueType(0), MVT::i1, LD->getAlign(),
+                         LD->getAddressSpace(), ExtType,
+                         false) == TargetLowering::Promote)) {
     // Promote to a byte-sized load if not loading an integral number of
     // bytes.  For example, promote EXTLOAD:i20 -> EXTLOAD:i24.
     unsigned NewWidth = SrcVT.getStoreSizeInBits();
@@ -855,9 +864,11 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
     Chain = Ch;
   } else {
     bool isCustom = false;
-    switch (TLI.getLoadExtAction(ExtType, Node->getValueType(0),
-                                 SrcVT.getSimpleVT())) {
-    default: llvm_unreachable("This action is not supported yet!");
+    switch (TLI.getLoadAction(Node->getValueType(0), SrcVT.getSimpleVT(),
+                              LD->getAlign(), LD->getAddressSpace(), ExtType,
+                              false)) {
+    default:
+      llvm_unreachable("This action is not supported yet!");
     case TargetLowering::Custom:
       isCustom = true;
       [[fallthrough]];
@@ -884,13 +895,15 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
 
     case TargetLowering::Expand: {
       EVT DestVT = Node->getValueType(0);
-      if (!TLI.isLoadExtLegal(ISD::EXTLOAD, DestVT, SrcVT)) {
+      if (!TLI.isLoadLegal(DestVT, SrcVT, LD->getAlign(), LD->getAddressSpace(),
+                           ISD::EXTLOAD, false)) {
         // If the source type is not legal, see if there is a legal extload to
         // an intermediate type that we can then extend further.
         EVT LoadVT = TLI.getRegisterType(SrcVT.getSimpleVT());
         if ((LoadVT.isFloatingPoint() == SrcVT.isFloatingPoint()) &&
             (TLI.isTypeLegal(SrcVT) || // Same as SrcVT == LoadVT?
-             TLI.isLoadExtLegal(ExtType, LoadVT, SrcVT))) {
+             TLI.isLoadLegal(LoadVT, SrcVT, LD->getAlign(),
+                             LD->getAddressSpace(), ExtType, false))) {
           // If we are loading a legal type, this is a non-extload followed by a
           // full extend.
           ISD::LoadExtType MidExtType =
@@ -1267,8 +1280,10 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(
         Node->getOpcode(), Node->getOperand(1).getValueType());
     break;
+  case ISD::CTTZ_ELTS:
+  case ISD::CTTZ_ELTS_ZERO_POISON:
   case ISD::VP_CTTZ_ELTS:
-  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
@@ -1850,10 +1865,13 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
   Align DestAlign = DAG.getDataLayout().getPrefTypeAlign(DestType);
 
   // Don't convert with stack if the load/store is expensive.
-  if ((SrcVT.bitsGT(SlotVT) &&
-       !TLI.isTruncStoreLegalOrCustom(SrcOp.getValueType(), SlotVT)) ||
+  if ((SrcVT.bitsGT(SlotVT) && !TLI.isTruncStoreLegalOrCustom(
+                                   SrcOp.getValueType(), SlotVT, DestAlign,
+                                   DAG.getDataLayout().getAllocaAddrSpace())) ||
       (SlotVT.bitsLT(DestVT) &&
-       !TLI.isLoadExtLegalOrCustom(ISD::EXTLOAD, DestVT, SlotVT)))
+       !TLI.isLoadLegalOrCustom(DestVT, SlotVT, DestAlign,
+                                DAG.getDataLayout().getAllocaAddrSpace(),
+                                ISD::EXTLOAD, false)))
     return SDValue();
 
   // Create the stack frame object.
@@ -3223,6 +3241,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   bool NeedInvert;
   switch (Node->getOpcode()) {
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
     if ((Tmp1 = TLI.expandABS(Node, DAG)))
       Results.push_back(Tmp1);
     break;
@@ -3243,7 +3262,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Results.push_back(Tmp1);
     break;
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
     if ((Tmp1 = TLI.expandCTLZ(Node, DAG)))
       Results.push_back(Tmp1);
     break;
@@ -3252,7 +3271,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Results.push_back(Tmp1);
     break;
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
     if ((Tmp1 = TLI.expandCTTZ(Node, DAG)))
       Results.push_back(Tmp1);
     break;
@@ -3528,27 +3547,23 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Op);
     break;
   }
+  case ISD::CONVERT_FROM_ARBITRARY_FP: {
+    // Expand conversion from arbitrary FP format stored in an integer to a
+    // native IEEE float type using integer bit manipulation.
+    //
+    // TODO: currently only conversions from FP4, FP6 and FP8 formats from OCP
+    // specification are expanded. Remaining arbitrary FP types: Float8E4M3,
+    // Float8E3M4, Float8E5M2FNUZ, Float8E4M3FNUZ, Float8E4M3B11FNUZ,
+    // Float8E8M0FNU.
+    EVT DstVT = Node->getValueType(0);
+    if (SDValue Expanded = TLI.expandCONVERT_FROM_ARBITRARY_FP(Node, DAG))
+      Results.push_back(Expanded);
+    else
+      Results.push_back(DAG.getPOISON(DstVT));
+    break;
+  }
   case ISD::FCANONICALIZE: {
-    // This implements llvm.canonicalize.f* by multiplication with 1.0, as
-    // suggested in
-    // https://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic.
-    // It uses strict_fp operations even outside a strict_fp context in order
-    // to guarantee that the canonicalization is not optimized away by later
-    // passes. The result chain introduced by that is intentionally ignored
-    // since no ordering requirement is intended here.
-
-    // Create strict multiplication by 1.0.
-    SDValue Operand = Node->getOperand(0);
-    EVT VT = Operand.getValueType();
-    SDValue One = DAG.getConstantFP(1.0, dl, VT);
-    SDValue Chain = DAG.getEntryNode();
-    // Propagate existing flags on canonicalize, and additionally set
-    // NoFPExcept.
-    SDNodeFlags CanonicalizeFlags = Node->getFlags();
-    CanonicalizeFlags.setNoFPExcept(true);
-    SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, dl, {VT, MVT::Other},
-                              {Chain, Operand, One}, CanonicalizeFlags);
-
+    SDValue Mul = TLI.expandFCANONICALIZE(Node, DAG);
     Results.push_back(Mul);
     break;
   }
@@ -3755,7 +3770,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::VECTOR_DEINTERLEAVE: {
     unsigned Factor = Node->getNumOperands();
-    if (Factor <= 2 || !isPowerOf2_32(Factor))
+    if (Factor <= 2 || Factor % 2 != 0)
       break;
     SmallVector<SDValue, 8> Ops(Node->ops());
     EVT VecVT = Node->getValueType(0);
@@ -3780,7 +3795,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::VECTOR_INTERLEAVE: {
     unsigned Factor = Node->getNumOperands();
-    if (Factor <= 2 || !isPowerOf2_32(Factor))
+    if (Factor <= 2 || Factor % 2 != 0)
       break;
     EVT VecVT = Node->getValueType(0);
     SmallVector<EVT> HalfVTs(Factor / 2, VecVT);
@@ -4609,7 +4624,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(TLI.expandVecReduce(Node, DAG));
     break;
   case ISD::VP_CTTZ_ELTS:
-  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Results.push_back(TLI.expandVPCTTZElements(Node, DAG));
     break;
   case ISD::CLEAR_CACHE:
@@ -4622,9 +4637,11 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue Arg = Node->getOperand(0);
     EVT ArgVT = Arg.getValueType();
     EVT ResVT = Node->getValueType(0);
-    SDLoc dl(Node);
-    SDValue RoundNode = DAG.getNode(ISD::FRINT, dl, ArgVT, Arg);
-    Results.push_back(DAG.getNode(ISD::FP_TO_SINT, dl, ResVT, RoundNode));
+    SDLoc DL(Node);
+    SDValue RoundNode = DAG.getNode(ISD::FRINT, DL, ArgVT, Arg);
+    SDValue ConvertNode = DAG.getNode(ISD::FP_TO_SINT, DL, ResVT, RoundNode);
+    // Non-deterministic results are equivalent to freeze poison.
+    Results.push_back(DAG.getFreeze(ConvertNode));
     break;
   }
   case ISD::ADDRSPACECAST:
@@ -5359,7 +5376,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                                        RTLIB::MUL_I16, RTLIB::MUL_I32,
                                        RTLIB::MUL_I64, RTLIB::MUL_I128));
     break;
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
     Results.push_back(ExpandBitCountingLibCall(
         Node, RTLIB::CTLZ_I32, RTLIB::CTLZ_I64, RTLIB::CTLZ_I128));
     break;
@@ -5496,12 +5513,12 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   SDValue Tmp1, Tmp2, Tmp3, Tmp4;
   switch (Node->getOpcode()) {
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
   case ISD::CTLZ:
   case ISD::CTPOP: {
     // Zero extend the argument unless its cttz, then use any_extend.
     if (Node->getOpcode() == ISD::CTTZ ||
-        Node->getOpcode() == ISD::CTTZ_ZERO_UNDEF)
+        Node->getOpcode() == ISD::CTTZ_ZERO_POISON)
       Tmp1 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(0));
     else
       Tmp1 = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Node->getOperand(0));
@@ -5515,9 +5532,9 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                                         OVT.getSizeInBits());
       Tmp1 = DAG.getNode(ISD::OR, dl, NVT, Tmp1,
                          DAG.getConstant(TopBit, dl, NVT));
-      NewOpc = ISD::CTTZ_ZERO_UNDEF;
+      NewOpc = ISD::CTTZ_ZERO_POISON;
     }
-    // Perform the larger operation. For CTPOP and CTTZ_ZERO_UNDEF, this is
+    // Perform the larger operation. For CTPOP and CTTZ_ZERO_POISON, this is
     // already the correct result.
     Tmp1 = DAG.getNode(NewOpc, dl, NVT, Tmp1);
     if (NewOpc == ISD::CTLZ) {
@@ -5530,7 +5547,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
         DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1, SDNodeFlags::NoWrap));
     break;
   }
-  case ISD::CTLZ_ZERO_UNDEF: {
+  case ISD::CTLZ_ZERO_POISON: {
     // We know that the argument is unlikely to be zero, hence we can take a
     // different approach as compared to ISD::CTLZ
 

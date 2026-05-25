@@ -86,12 +86,11 @@ IRInstructionData::IRInstructionData(IRInstructionDataList &IDList)
 
 void IRInstructionData::setBranchSuccessors(
     DenseMap<BasicBlock *, unsigned> &BasicBlockToInteger) {
-  assert(isa<BranchInst>(Inst) && "Instruction must be branch");
+  assert((isa<UncondBrInst, CondBrInst>(Inst)) && "Instruction must be branch");
 
-  BranchInst *BI = cast<BranchInst>(Inst);
   DenseMap<BasicBlock *, unsigned>::iterator BBNumIt;
 
-  BBNumIt = BasicBlockToInteger.find(BI->getParent());
+  BBNumIt = BasicBlockToInteger.find(Inst->getParent());
   assert(BBNumIt != BasicBlockToInteger.end() &&
          "Could not find location for BasicBlock!");
 
@@ -110,14 +109,10 @@ void IRInstructionData::setBranchSuccessors(
 }
 
 ArrayRef<Value *> IRInstructionData::getBlockOperVals() {
-  assert((isa<BranchInst>(Inst) ||
-         isa<PHINode>(Inst)) && "Instruction must be branch or PHINode");
-  
-  if (BranchInst *BI = dyn_cast<BranchInst>(Inst))
-    return ArrayRef<Value *>(
-      std::next(OperVals.begin(), BI->isConditional() ? 1 : 0),
-      OperVals.end()
-    );
+  if (isa<UncondBrInst>(Inst))
+    return OperVals;
+  if (isa<CondBrInst>(Inst))
+    return ArrayRef<Value *>(OperVals).drop_front(1);
 
   if (PHINode *PN = dyn_cast<PHINode>(Inst))
     return ArrayRef<Value *>(
@@ -125,7 +120,7 @@ ArrayRef<Value *> IRInstructionData::getBlockOperVals() {
       OperVals.end()
     );
 
-  return ArrayRef<Value *>();
+  llvm_unreachable("Instruction must be branch or PHINode");
 }
 
 void IRInstructionData::setCalleeName(bool MatchByName) {
@@ -277,7 +272,8 @@ bool IRSimilarity::isClose(const IRInstructionData &A,
       return false;
   }
 
-  if (isa<BranchInst>(A.Inst) && isa<BranchInst>(B.Inst) &&
+  if (isa<UncondBrInst, CondBrInst>(A.Inst) &&
+      isa<UncondBrInst, CondBrInst>(B.Inst) &&
       A.RelativeBlockLocations.size() != B.RelativeBlockLocations.size())
     return false;
 
@@ -336,7 +332,7 @@ unsigned IRInstructionMapper::mapToLegalUnsigned(
   IRInstructionData *ID = allocateIRInstructionData(*It, true, *IDL);
   InstrListForBB.push_back(ID);
 
-  if (isa<BranchInst>(*It))
+  if (isa<UncondBrInst, CondBrInst>(*It))
     ID->setBranchSuccessors(BasicBlockToInteger);
 
   if (isa<CallInst>(*It))
@@ -724,7 +720,12 @@ bool IRSimilarityCandidate::compareAssignmentMapping(
   if (!WasInserted && !ValueMappingIt->second.contains(InstValB))
     return false;
   else if (ValueMappingIt->second.size() != 1) {
-    for (unsigned OtherVal : ValueMappingIt->second) {
+    // Snapshot the set before iterating: when InstValA maps to itself the
+    // erase below removes InstValA from the very set being iterated, which
+    // invalidates the range iterator under backward-shift deletion.
+    SmallVector<unsigned> OtherVals(ValueMappingIt->second.begin(),
+                                    ValueMappingIt->second.end());
+    for (unsigned OtherVal : OtherVals) {
       if (OtherVal == InstValB)
         continue;
       auto OtherValIt = ValueNumberMappingA.find(OtherVal);
@@ -857,8 +858,8 @@ bool IRSimilarityCandidate::compareStructure(
     // region.  So, at this point, in each location we target a specific block
     // outside the region, we are targeting a corresponding block in each
     // analagous location in the region we are comparing to.
-    if (!(isa<BranchInst>(IA) && isa<BranchInst>(IB)) &&
-        !(isa<PHINode>(IA) && isa<PHINode>(IB)))
+    if (!isa<UncondBrInst, CondBrInst, PHINode>(IA) ||
+        IA->getOpcode() != IB->getOpcode())
       continue;
 
     SmallVector<int, 4> &RelBlockLocsA = ItA->RelativeBlockLocations;
@@ -1079,9 +1080,8 @@ void IRSimilarityCandidate::createCanonicalRelationFrom(
     // If the basic block is the starting block, then the shared instruction may
     // not be the first instruction in the block, it will be the first
     // instruction in the similarity region.
-    Value *FirstOutlineInst = BB == getStartBB()
-                                  ? frontInstruction()
-                                  : &*BB->instructionsWithoutDebug().begin();
+    Value *FirstOutlineInst =
+        BB == getStartBB() ? frontInstruction() : &*BB->begin();
 
     unsigned FirstInstGVN = *getGVN(FirstOutlineInst);
     unsigned FirstInstCanonNum = *getCanonicalNum(FirstInstGVN);

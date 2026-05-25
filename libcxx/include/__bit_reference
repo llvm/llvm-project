@@ -16,6 +16,7 @@
 #include <__algorithm/copy_n.h>
 #include <__algorithm/equal.h>
 #include <__algorithm/fill_n.h>
+#include <__algorithm/in_out_result.h>
 #include <__algorithm/min.h>
 #include <__algorithm/rotate.h>
 #include <__algorithm/specialized_algorithms.h>
@@ -34,7 +35,6 @@
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_constant_evaluated.h>
-#include <__type_traits/is_same.h>
 #include <__type_traits/is_unsigned.h>
 #include <__type_traits/void_t.h>
 #include <__utility/pair.h>
@@ -165,9 +165,6 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void flip() _NOEXCEPT { *__seg_ ^= __mask_; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cp, false> operator&() const _NOEXCEPT {
-    return __bit_iterator<_Cp, false>(__seg_, static_cast<unsigned>(std::__countr_zero(__mask_)));
-  }
 
 private:
   _LIBCPP_HIDE_FROM_ABI
@@ -708,13 +705,13 @@ struct __specialized_algorithm<_Algorithm::__copy,
   }
 
   _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 static pair<__bit_iterator<_Cp, _IsConst>, __bit_iterator<_Cp, false> >
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 static __in_out_result<__bit_iterator<_Cp, _IsConst>, __bit_iterator<_Cp, false> >
   operator()(__bit_iterator<_Cp, _IsConst> __first,
              __bit_iterator<_Cp, _IsConst> __last,
              __bit_iterator<_Cp, false> __result) {
     if (__first.__ctz_ == __result.__ctz_)
-      return std::make_pair(__last, __aligned_impl(__first, __last, __result));
-    return std::make_pair(__last, __unaligned_impl(__first, __last, __result));
+      return {__last, __aligned_impl(__first, __last, __result)};
+    return {__last, __unaligned_impl(__first, __last, __result)};
   }
 };
 

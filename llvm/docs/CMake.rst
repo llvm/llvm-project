@@ -644,6 +644,11 @@ its enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_ENABLE_WARNINGS**:BOOL
   Enable all compiler warnings. Defaults to ON.
 
+**LLVM_ENABLE_WARNING_SUPPRESSIONS**:BOOL
+  Suppress specific compiler warnings. When disabled, this
+  prevents suppressing warnings with flags such as MSVC's ``-wd`` or GCC/Clang's ``-Wno-...``.
+  Defaults to ON.
+
 **LLVM_ENABLE_WERROR**:BOOL
   Stop and fail the build, if a compiler warning is triggered. Defaults to OFF.
 
@@ -802,6 +807,21 @@ its enabled sub-projects. Nearly all of these variable names begin with
   IDs will be used in the build tree as well. Mainly useful when other CMake
   library ID control variables (e.g., ``CMAKE_INSTALL_NAME_DIR``) are being
   set to non-standard values.
+
+**LLVM_VERSIONED_DYLIB_NAME_ON_DARWIN**:BOOL
+  Defaults to ``ON``. If set to ``ON``, Darwin shared libraries built through
+  LLVM's CMake helpers use versioned dylib filenames and install names, matching
+  the behavior on other Unix platforms more closely. If set to ``OFF``, Darwin
+  keeps the legacy unversioned dylib install name, for compatibility with
+  existing consumers that expect ``@rpath/libLLVM.dylib``.
+
+**LLVM_UNVERSIONED_{LIBLTO,LIBCLANG}_ON_DARWIN**:BOOL
+  Default to ``ON``. When ``LLVM_VERSIONED_DYLIB_NAME_ON_DARWIN`` is ``ON``,
+  these keep ``libLTO`` and ``libclang``'s Darwin dylib identities
+  unversioned. Set ``LLVM_UNVERSIONED_LIBLTO_ON_DARWIN`` to ``OFF`` to
+  version ``libLTO`` using its Darwin ``LTO_VERSION`` policy instead. Set
+  ``LLVM_UNVERSIONED_LIBCLANG_ON_DARWIN`` to ``OFF`` to version
+  ``libclang`` using its existing ABI version policy instead.
 
 **LLVM_OPTIMIZED_TABLEGEN**:BOOL
   If enabled and building a debug or assert build, the CMake build system will

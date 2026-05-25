@@ -409,6 +409,12 @@ void Sema::ApplyAPINotesType(Decl *D, StringRef TypeString) {
                                           property->getType(), Type)) {
           property->setType(Type, TypeInfo);
         }
+      } else if (auto field = dyn_cast<FieldDecl>(D)) {
+        if (!checkAPINotesReplacementType(*this, field->getLocation(),
+                                          field->getType(), Type)) {
+          field->setType(Type);
+          field->setTypeSourceInfo(TypeInfo);
+        }
       } else {
         llvm_unreachable("API notes allowed a type on an unknown declaration");
       }
@@ -570,6 +576,14 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
   // Nullability of return type.
   if (Info.NullabilityAudited)
     applyNullability(S, D, Info.getReturnTypeInfo(), Metadata);
+
+  // Add [[clang::unsafe_buffer_usage]]
+  if (Info.UnsafeBufferUsage && !D->getAttr<UnsafeBufferUsageAttr>()) {
+    handleAPINotedAttribute<UnsafeBufferUsageAttr>(S, D, true, Metadata, [&]() {
+      return UnsafeBufferUsageAttr::Create(S.getASTContext(),
+                                           getPlaceholderAttrInfo());
+    });
+  }
 
   // Parameters.
   unsigned NumParams = FD ? FD->getNumParams() : MD->param_size();
@@ -905,8 +919,8 @@ static void ProcessVersionedAPINotes(
     auto Active = (i == Selected) ? IsActive_t::Active : IsActive_t::Inactive;
     auto Replacement = IsSubstitution_t::Original;
 
-    // When collection all APINotes as version-independent,
-    // capture all as inactive and defer to the client select the
+    // When collecting all APINotes as version-independent,
+    // capture all as inactive and defer to the client to select the
     // right one.
     if (S.captureSwiftVersionIndependentAPINotes()) {
       Active = IsActive_t::Inactive;

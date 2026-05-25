@@ -13,7 +13,6 @@
 !===============================================================================
 
 subroutine test_prefetch_01()
-    ! LLVM: {{.*}} = alloca i32, i64 1, align 4
     ! LLVM: %[[VAR_J:.*]] = alloca i32, i64 1, align 4
     ! LLVM: %[[VAR_I:.*]] = alloca i32, i64 1, align 4
     ! LLVM: %[[VAR_A:.*]] = alloca [256 x i32], i64 1, align 4
@@ -28,7 +27,7 @@ subroutine test_prefetch_01()
 
     ! LLVM: %[[LOAD_I:.*]] = load i32, ptr %[[VAR_I]], align 4
     ! LLVM: %{{.*}} = add nsw i32 %[[LOAD_I]], 64
-    ! LLVM: %[[GEP_A:.*]] = getelementptr i32, ptr %[[VAR_A]], i64 {{.*}}
+    ! LLVM: %[[GEP_A:.*]] = getelementptr nusw nuw i32, ptr %[[VAR_A]], i64 {{.*}}
 
     ! LLVM: call void @llvm.prefetch.p0(ptr %[[GEP_A]], i32 0, i32 3, i32 1)
     ! LLVM: call void @llvm.prefetch.p0(ptr %[[VAR_J]], i32 0, i32 3, i32 1)

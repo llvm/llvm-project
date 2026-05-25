@@ -42,6 +42,16 @@ def TosaInferShapesPass : Pass<"tosa-infer-shapes", "func::FuncOp"> {
     "tensor::TensorDialect",
     "tosa::TosaDialect",
   ];
+
+  let options = [
+    Option<"foldShapeExpressions", "fold-shape-expressions", "bool",
+           /*default=*/"false",
+           "Fold TOSA shape operations when they have known input values">,
+    Option<"convertFunctionBoundaries", "convert-function-boundaries", "bool",
+           /*default=*/"false",
+           "If enabled, the pass will convert function I/O types as well. Otherwise casts will"
+           "be inserted at the I/O boundaries.">
+  ];
 }
 
 def TosaMakeBroadcastablePass
@@ -173,6 +183,17 @@ def TosaAttachTarget : Pass<"tosa-attach-target", "ModuleOp"> {
             "The TOSA extension(s) that operators should conform to. TOSA profile "
             "extensions define optional operation and data type combinations.">
   ];
+}
+
+def TosaDowngrade1p1To1p0Pass
+    : Pass<"tosa-downgrade-1-1-to-1-0", "func::FuncOp"> {
+  let summary = "Downgrade TOSA 1.1 specification constructs to TOSA 1.0";
+  let description = [{
+    Rewrites constructs which are only compatible in TOSA specification 1.1 and
+    above to their TOSA 1.0 counterparts where possible. Downgrading is best-effort
+    and validation should be performed afterwards to ensure compatibility with
+    the TOSA 1.0 specification.
+  }];
 }
 
 def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {

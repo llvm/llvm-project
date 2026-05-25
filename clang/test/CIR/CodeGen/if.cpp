@@ -14,7 +14,7 @@ int if0(bool a) {
 
 }
 
-// CIR: cir.func{{.*}} @_Z3if0b(%arg0: !cir.bool loc({{.*}})) -> (!s32i{{.*}})
+// CIR: cir.func{{.*}} @_Z3if0b(%arg0: !cir.bool {{.*}} loc({{.*}})) -> (!s32i{{.*}})
 // CIR: cir.scope {
 // CIR:   %4 = cir.load{{.*}} %0 : !cir.ptr<!cir.bool>, !cir.bool
 // CIR-NEXT: cir.if %4 {
@@ -26,7 +26,7 @@ int if0(bool a) {
 // CIR-NEXT:  }
 
 
-// LLVM: define{{.*}} i32 @_Z3if0b(i1 %0)
+// LLVM: define{{.*}} i32 @_Z3if0b(i1 noundef %0)
 // LLVM:   br label %[[ENTRY:.*]]
 // LLVM: [[ENTRY]]:
 // LLVM:   %6 = load i8, ptr %2, align 1
@@ -50,7 +50,7 @@ int if0(bool a) {
 // OGCG:   %[[STOREDV:.*]] = zext i1 %a to i8
 // OGCG:   store i8 %[[STOREDV]], ptr %[[A_ADDR]], align 1
 // OGCG:   %[[LOADTMP:.*]] = load i8, ptr %[[A_ADDR]], align 1
-// OGCG:   %[[LOADEDV:.*]] = trunc i8 %[[LOADTMP]] to i1
+// OGCG:   %[[LOADEDV:.*]] = icmp ne i8 %[[LOADTMP]], 0
 // OGCG:   br i1 %[[LOADEDV]], label %[[THEN_LABEL:.*]], label %[[END_LABEL:.*]]
 // OGCG: [[THEN_LABEL]]:
 // OGCG:   store i32 2, ptr %[[RETVAL]], align 4
@@ -71,7 +71,7 @@ void if1(int a) {
   }
 }
 
-// CIR: cir.func{{.*}} @_Z3if1i(%arg0: !s32i loc({{.*}}))
+// CIR: cir.func{{.*}} @_Z3if1i(%arg0: !s32i {{.*}} loc({{.*}}))
 // CIR: cir.scope {
 // CIR:   %3 = cir.load{{.*}} %0 : !cir.ptr<!s32i>, !s32i
 // CIR:   %4 = cir.cast int_to_bool %3 : !s32i -> !cir.bool
@@ -84,7 +84,7 @@ void if1(int a) {
 // CIR-NEXT:   }
 // CIR: }
 
-// LLVM: define{{.*}} void @_Z3if1i(i32 %0)
+// LLVM: define{{.*}} void @_Z3if1i(i32 noundef %0)
 // LLVM: %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM: %[[X:.*]] = alloca i32, i64 1, align 4
 // LLVM: store i32 %0, ptr %[[A]], align 4
@@ -138,7 +138,7 @@ void if2(int a, bool b, bool c) {
   }
 }
 
-// CIR: cir.func{{.*}} @_Z3if2ibb(%arg0: !s32i loc({{.*}}), %arg1: !cir.bool loc({{.*}}), %arg2: !cir.bool loc({{.*}}))
+// CIR: cir.func{{.*}} @_Z3if2ibb(%arg0: !s32i {{.*}} loc({{.*}}), %arg1: !cir.bool {{.*}} loc({{.*}}), %arg2: !cir.bool {{.*}} loc({{.*}}))
 // CIR: cir.scope {
 // CIR:   %5 = cir.load{{.*}} %0 : !cir.ptr<!s32i>, !s32i
 // CIR:   %6 = cir.cast int_to_bool %5 : !s32i -> !cir.bool
@@ -165,7 +165,7 @@ void if2(int a, bool b, bool c) {
 // CIR:   }
 // CIR: }
 
-// LLVM: define{{.*}} void @_Z3if2ibb(i32 %[[A:.*]], i1 %[[B:.*]], i1 %[[C:.*]])
+// LLVM: define{{.*}} void @_Z3if2ibb(i32 noundef %[[A:.*]], i1 noundef %[[B:.*]], i1 noundef %[[C:.*]])
 // LLVM:   %[[VARA:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[VARB:.*]] = alloca i8, i64 1, align 1
 // LLVM:   %[[VARC:.*]] = alloca i8, i64 1, align 1
@@ -232,8 +232,8 @@ void if2(int a, bool b, bool c) {
 // OGCG: [[IF_THEN]]:
 // OGCG:   store i32 3, ptr %[[X]], align 4
 // OGCG:   %[[B_LOAD:.*]] = load i8, ptr %[[B_ADDR]], align 1
-// OGCG:   %[[B_TRUNC:.*]] = trunc i8 %[[B_LOAD]] to i1
-// OGCG:   br i1 %[[B_TRUNC]], label %[[IF_THEN2:.*]], label %[[IF_END:.*]]
+// OGCG:   %[[B_BOOL:.*]] = icmp ne i8 %[[B_LOAD]], 0
+// OGCG:   br i1 %[[B_BOOL]], label %[[IF_THEN2:.*]], label %[[IF_END:.*]]
 // OGCG: [[IF_THEN2]]:
 // OGCG:   store i32 8, ptr %[[X]], align 4
 // OGCG:   br label %[[IF_END]]
@@ -241,8 +241,8 @@ void if2(int a, bool b, bool c) {
 // OGCG:   br label %[[IF_END6:.*]]
 // OGCG: [[IF_ELSE]]:
 // OGCG:   %[[C_LOAD:.*]] = load i8, ptr %[[C_ADDR]], align 1
-// OGCG:   %[[C_TRUNC:.*]] = trunc i8 %[[C_LOAD]] to i1
-// OGCG:   br i1 %[[C_TRUNC]], label %[[IF_THEN4:.*]], label %[[IF_END5:.*]]
+// OGCG:   %[[C_BOOL:.*]] = icmp ne i8 %[[C_LOAD]], 0
+// OGCG:   br i1 %[[C_BOOL]], label %[[IF_THEN4:.*]], label %[[IF_END5:.*]]
 // OGCG: [[IF_THEN4]]:
 // OGCG:   store i32 14, ptr %[[X]], align 4
 // OGCG:   br label %[[IF_END5]]
@@ -271,14 +271,14 @@ int if_init() {
 // CIR:   cir.if %[[COND]] {
 // CIR:     %[[X_IF:.*]] = cir.load{{.*}} %[[X]] : !cir.ptr<!s32i>, !s32i
 // CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:     %[[ADD:.*]] = cir.binop(add, %[[X_IF]], %[[ONE]]) nsw : !s32i
+// CIR:     %[[ADD:.*]] = cir.add nsw %[[X_IF]], %[[ONE]] : !s32i
 // CIR:     cir.store{{.*}} %[[ADD]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
 // CIR:     %[[RETVAL_LOAD1:.*]] = cir.load{{.*}} %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR:     cir.return %[[RETVAL_LOAD1]] : !s32i
 // CIR:   } else {
 // CIR:     %[[X_ELSE:.*]] = cir.load{{.*}} %[[X]] : !cir.ptr<!s32i>, !s32i
 // CIR:     %[[ONE2:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:     %[[SUB:.*]] = cir.binop(sub, %[[X_ELSE]], %[[ONE2]]) nsw : !s32i
+// CIR:     %[[SUB:.*]] = cir.sub nsw %[[X_ELSE]], %[[ONE2]] : !s32i
 // CIR:     cir.store{{.*}} %[[SUB]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
 // CIR:     %[[RETVAL_LOAD2:.*]] = cir.load{{.*}} %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR:     cir.return %[[RETVAL_LOAD2]] : !s32i

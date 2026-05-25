@@ -283,6 +283,9 @@ void SarifDocumentWriter::endRun() {
         {"defaultConfiguration", std::move(Config)}};
     if (!R.HelpURI.empty())
       Rule["helpUri"] = R.HelpURI;
+    if (!R.DeprecatedIds.empty())
+      Rule["deprecatedIds"] = json::Array(R.DeprecatedIds);
+
     Rules.emplace_back(std::move(Rule));
   }
   json::Object &Driver = *Tool.getObject("driver");

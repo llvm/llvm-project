@@ -24,6 +24,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include <optional>
 #include <string_view>
 
@@ -65,8 +66,7 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
 
     for (const OneMethodRecord &method : method_list.Methods) {
       if (method.getType().getIndex() == func_type_index.getIndex())
-        AddMethod(overloaded.Name, method.getAccess(), method.getOptions(),
-                  method.Attrs);
+        AddMethod(overloaded.Name, method.getOptions(), method.Attrs);
     }
 
     return llvm::Error::success();
@@ -74,22 +74,20 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
 
   llvm::Error visitKnownMember(CVMemberRecord &cvr,
                                OneMethodRecord &record) override {
-    AddMethod(record.getName(), record.getAccess(), record.getOptions(),
-              record.Attrs);
+    AddMethod(record.getName(), record.getOptions(), record.Attrs);
     return llvm::Error::success();
   }
 
-  void AddMethod(llvm::StringRef name, MemberAccess access,
-                 MethodOptions options, MemberAttributes attrs) {
+  void AddMethod(llvm::StringRef name, MethodOptions options,
+                 MemberAttributes attrs) {
     if (name != proc_name || function_decl)
       return;
-    lldb::AccessType access_type = TranslateMemberAccess(access);
     bool is_virtual = attrs.isVirtual();
     bool is_static = attrs.isStatic();
     bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
                          MethodOptions::CompilerGenerated;
     function_decl = m_clang.AddMethodToCXXRecordType(
-        parent_ty, proc_name, mangled_name, func_ct, /*access=*/access_type,
+        parent_ty, proc_name, mangled_name, func_ct,
         /*is_virtual=*/is_virtual, /*is_static=*/is_static,
         /*is_inline=*/false, /*is_explicit=*/false,
         /*is_attr_used=*/false, /*is_artificial=*/is_artificial);
@@ -234,6 +232,7 @@ static bool isLocalVariableType(SymbolKind K) {
   switch (K) {
   case S_REGISTER:
   case S_REGREL32:
+  case S_REGREL32_INDIR:
   case S_LOCAL:
     return true;
   default:
@@ -624,16 +623,12 @@ clang::QualType PdbAstBuilderClang::CreateRecordType(PdbTypeSymId id,
     return {};
 
   clang::TagTypeKind ttk = TranslateUdtKind(record);
-  lldb::AccessType access = (ttk == clang::TagTypeKind::Class)
-                                ? lldb::eAccessPrivate
-                                : lldb::eAccessPublic;
-
   ClangASTMetadata metadata;
   metadata.SetUserID(toOpaqueUid(id));
   metadata.SetIsDynamicCXXType(false);
 
   CompilerType ct = m_clang.CreateRecordType(
-      context, OptionalClangModuleID(), access, uname, llvm::to_underlying(ttk),
+      context, OptionalClangModuleID(), uname, llvm::to_underlying(ttk),
       lldb::eLanguageTypeC_plus_plus, metadata);
 
   lldbassert(ct.IsValid());
@@ -814,14 +809,22 @@ clang::QualType PdbAstBuilderClang::CreateType(PdbTypeSymId type) {
   if (cvt.kind() == LF_PROCEDURE) {
     ProcedureRecord pr;
     llvm::cantFail(TypeDeserializer::deserializeAs<ProcedureRecord>(cvt, pr));
-    return CreateFunctionType(pr.ArgumentList, pr.ReturnType, pr.CallConv);
+    return CreateFunctionType(pr.ArgumentList, pr.ReturnType, pr.CallConv,
+                              /*type_quals=*/0);
   }
 
   if (cvt.kind() == LF_MFUNCTION) {
     MemberFunctionRecord mfr;
     llvm::cantFail(
         TypeDeserializer::deserializeAs<MemberFunctionRecord>(cvt, mfr));
-    return CreateFunctionType(mfr.ArgumentList, mfr.ReturnType, mfr.CallConv);
+    unsigned int type_quals = 0;
+    if (!mfr.ThisType.isNoneType()) {
+      clang::QualType this_type = GetOrCreateClangType(mfr.getThisType());
+      if (!this_type.isNull())
+        type_quals = this_type->getPointeeType().getLocalFastQualifiers();
+    }
+    return CreateFunctionType(mfr.ArgumentList, mfr.ReturnType, mfr.CallConv,
+                              type_quals);
   }
 
   return {};
@@ -914,6 +917,9 @@ clang::FunctionDecl *PdbAstBuilderClang::CreateFunctionDecl(
           index.tpi().findFullDeclForForwardRef(class_index);
       if (eti) {
         tag_record = CVTagRecord::create(index.tpi().getType(*eti)).asTag();
+      } else {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), eti.takeError(),
+                       "failed to find full decl for forward ref: {0}");
       }
     }
 
@@ -936,7 +942,6 @@ clang::FunctionDecl *PdbAstBuilderClang::CreateFunctionDecl(
     if (!function_decl) {
       function_decl = m_clang.AddMethodToCXXRecordType(
           parent_opaque_ty, func_name, mangled_name, func_ct,
-          /*access=*/lldb::AccessType::eAccessPublic,
           /*is_virtual=*/false, /*is_static=*/false,
           /*is_inline=*/false, /*is_explicit=*/false,
           /*is_attr_used=*/false, /*is_artificial=*/false);
@@ -1149,6 +1154,14 @@ void PdbAstBuilderClang::CreateFunctionParameters(
       param_name = reg.Name;
       break;
     }
+    case S_REGREL32_INDIR: {
+      RegRelativeIndirSym reg(SymbolRecordKind::RegRelativeIndirSym);
+      cantFail(
+          SymbolDeserializer::deserializeAs<RegRelativeIndirSym>(sym, reg));
+      param_type = reg.Type;
+      param_name = reg.Name;
+      break;
+    }
     case S_REGISTER: {
       RegisterSym reg(SymbolRecordKind::RegisterSym);
       cantFail(SymbolDeserializer::deserializeAs<RegisterSym>(sym, reg));
@@ -1238,7 +1251,8 @@ clang::QualType PdbAstBuilderClang::CreateArrayType(const ArrayRecord &ar) {
 
 clang::QualType PdbAstBuilderClang::CreateFunctionType(
     TypeIndex args_type_idx, TypeIndex return_type_idx,
-    llvm::codeview::CallingConvention calling_convention) {
+    llvm::codeview::CallingConvention calling_convention,
+    unsigned int type_quals) {
   SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
       m_clang.GetSymbolFile()->GetBackingSymbolFile());
   PdbIndex &index = pdb->GetIndex();
@@ -1273,8 +1287,8 @@ clang::QualType PdbAstBuilderClang::CreateFunctionType(
     return {};
 
   CompilerType return_ct = ToCompilerType(return_type);
-  CompilerType func_sig_ast_type =
-      m_clang.CreateFunctionType(return_ct, arg_types, is_variadic, 0, *cc);
+  CompilerType func_sig_ast_type = m_clang.CreateFunctionType(
+      return_ct, arg_types, is_variadic, type_quals, *cc);
 
   return clang::QualType::getFromOpaquePtr(
       func_sig_ast_type.GetOpaqueQualType());

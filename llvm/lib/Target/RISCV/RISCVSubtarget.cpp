@@ -12,6 +12,7 @@
 
 #include "RISCVSubtarget.h"
 #include "GISel/RISCVCallLowering.h"
+#include "GISel/RISCVInlineAsmLowering.h"
 #include "GISel/RISCVLegalizerInfo.h"
 #include "RISCV.h"
 #include "RISCVFrameLowering.h"
@@ -70,12 +71,6 @@ static cl::opt<bool> UseMIPSCCMovInsn("use-riscv-mips-ccmov",
                                       cl::desc("Use 'mips.ccmov' instruction"),
                                       cl::init(true), cl::Hidden);
 
-static cl::opt<bool> EnablePExtSIMDCodeGen(
-    "riscv-enable-p-ext-simd-codegen",
-    cl::desc("Turn on P Extension SIMD codegen(This is a temporary switch "
-             "where only partial codegen is currently supported)"),
-    cl::init(false), cl::Hidden);
-
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &
@@ -133,6 +128,13 @@ const SelectionDAGTargetInfo *RISCVSubtarget::getSelectionDAGInfo() const {
   return TSInfo.get();
 }
 
+const InlineAsmLowering *RISCVSubtarget::getInlineAsmLowering() const {
+  if (!InlineAsmLoweringInfo)
+    InlineAsmLoweringInfo.reset(
+        new RISCVInlineAsmLowering(getTargetLowering()));
+  return InlineAsmLoweringInfo.get();
+}
+
 const CallLowering *RISCVSubtarget::getCallLowering() const {
   if (!CallLoweringInfo)
     CallLoweringInfo.reset(new RISCVCallLowering(*getTargetLowering()));
@@ -164,18 +166,24 @@ bool RISCVSubtarget::useConstantPoolForLargeInts() const {
   return !RISCVDisableUsingConstantPoolForLargeInts;
 }
 
-bool RISCVSubtarget::enablePExtSIMDCodeGen() const {
-  return HasStdExtP && EnablePExtSIMDCodeGen;
-}
-
-// Returns true if VT is a P extension packed SIMD type that fits in XLen.
+// Returns true if VT is a P extension packed SIMD type.
 bool RISCVSubtarget::isPExtPackedType(MVT VT) const {
-  if (!enablePExtSIMDCodeGen())
+  if (!HasStdExtP)
     return false;
 
-  if (is64Bit())
-    return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
-  return VT == MVT::v4i8 || VT == MVT::v2i16;
+  // RV32 supports 32-bit and 64-bit vectors. RV64 only support 64-bit vectors.
+  if (!is64Bit() && (VT == MVT::v4i8 || VT == MVT::v2i16))
+    return true;
+
+  return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
+}
+
+// Returns true if VT is a P extension packed double-wide SIMD type.
+bool RISCVSubtarget::isPExtPackedDoubleType(MVT VT) const {
+  if (!HasStdExtP || is64Bit())
+    return false;
+
+  return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
 }
 
 unsigned RISCVSubtarget::getMaxBuildIntsCost() const {

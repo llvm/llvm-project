@@ -84,7 +84,7 @@ void PlatformMacOSX::Terminate() {
   PlatformDarwinKernel::Terminate();
   PlatformAppleSimulator::Terminate();
 #endif
-  PlatformRemoteMacOSX::Initialize();
+  PlatformRemoteMacOSX::Terminate();
   PlatformRemoteiOS::Terminate();
   PlatformDarwin::Terminate();
 }
@@ -128,18 +128,14 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
 
   // Use the default SDK as a fallback.
   auto sdk_path_or_err =
-      HostInfo::GetSDKRoot(HostInfo::SDKOptions{XcodeSDK::GetAnyMacOS()});
+      PlatformDarwin::ResolveXcodeSDK(XcodeSDK::GetAnyMacOS());
   if (!sdk_path_or_err) {
-    Debugger::ReportError("Error while searching for Xcode SDK: " +
-                          toString(sdk_path_or_err.takeError()));
+    Debugger::ReportError(toString(sdk_path_or_err.takeError()));
     return {};
   }
 
-  FileSpec fspec(*sdk_path_or_err);
-  if (fspec) {
-    if (FileSystem::Instance().Exists(fspec))
-      return ConstString(fspec.GetPath());
-  }
+  if (FileSystem::Instance().Exists(*sdk_path_or_err))
+    return ConstString(sdk_path_or_err->GetPath());
 
   return {};
 }

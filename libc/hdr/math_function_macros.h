@@ -22,6 +22,6 @@
 #endif
 #include <math.h>
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
-#endif // LLVM_LIBC_HDR_MATH_MACROS_H
+#endif // LLVM_LIBC_HDR_MATH_FUNCTION_MACROS_H

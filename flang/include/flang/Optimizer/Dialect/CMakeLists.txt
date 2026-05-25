@@ -40,6 +40,11 @@ mlir_tablegen(FIROperationMoveOpInterface.h.inc -gen-op-interface-decls)
 mlir_tablegen(FIROperationMoveOpInterface.cpp.inc -gen-op-interface-defs)
 add_public_tablegen_target(FIROperationMoveOpInterfaceIncGen)
 
+set(LLVM_TARGET_DEFINITIONS CUDAKernelOpInterface.td)
+mlir_tablegen(CUDAKernelOpInterface.h.inc -gen-op-interface-decls)
+mlir_tablegen(CUDAKernelOpInterface.cpp.inc -gen-op-interface-defs)
+add_public_tablegen_target(CUDAKernelOpInterfaceIncGen)
+
 set(LLVM_TARGET_DEFINITIONS CanonicalizationPatterns.td)
 mlir_tablegen(CanonicalizationPatterns.inc -gen-rewriters)
 add_public_tablegen_target(CanonicalizationPatternsIncGen)
@@ -49,7 +54,7 @@ set_target_properties(flang-doc PROPERTIES FOLDER "Flang/Docs")
 set(dialect_doc_filename "FIRLangRef")
 
 set(LLVM_TARGET_DEFINITIONS FIROps.td)
-tablegen(MLIR ${dialect_doc_filename}.md -gen-op-doc)
+tablegen(MLIR ${dialect_doc_filename}.md -gen-op-doc -dialect=fir)
 set(GEN_DOC_FILE ${FLANG_BINARY_DIR}/docs/Dialect/${dialect_doc_filename}.md)
 add_custom_command(
         OUTPUT ${GEN_DOC_FILE}

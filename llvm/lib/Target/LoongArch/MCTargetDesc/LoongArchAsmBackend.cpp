@@ -136,8 +136,6 @@ static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup, uint8_t *Data,
   unsigned I;
   for (I = 0; Value; ++I, Value >>= 7)
     Data[I] |= uint8_t(Value & 0x7f);
-  if (Value)
-    Ctx.reportError(Fixup.getLoc(), "Invalid uleb128 value!");
 }
 
 void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
@@ -284,7 +282,7 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F) const {
   // value is therefore 65535.  Set a conservative upper bound for relaxation.
   unsigned PCBytes;
   if (Value > 60000) {
-    unsigned PtrSize = C.getAsmInfo()->getCodePointerSize();
+    unsigned PtrSize = C.getAsmInfo().getCodePointerSize();
     assert((PtrSize == 4 || PtrSize == 8) && "Unexpected pointer size");
     PCBytes = PtrSize;
     OS << uint8_t(dwarf::DW_LNS_extended_op) << uint8_t(PtrSize + 1)
@@ -321,7 +319,7 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F) const {
   assert(IsAbsolute && "CFA with invalid expression");
   (void)IsAbsolute;
 
-  assert(getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
+  assert(getContext().getAsmInfo().getMinInstAlignment() == 1 &&
          "expected 1-byte alignment");
   if (Value == 0) {
     F.clearVarContents();
@@ -405,6 +403,11 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   };
   uint64_t FixedValueA, FixedValueB;
   if (Target.getSubSym()) {
+    // It's possible for Target to have (SymB != nullptr && SymA == nullptr).
+    // Go to the fallback path when we encounter this. See also #196927.
+    if (!Target.getAddSym())
+      return Fallback();
+
     assert(Target.getSpecifier() == 0 &&
            "relocatable SymA-SymB cannot have relocation specifier");
     std::pair<MCFixupKind, MCFixupKind> FK;
@@ -429,11 +432,14 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
           isPCRelFixupResolved(Target.getSubSym(), F))
         return Fallback();
 
-      // In SecA == SecB case. If the section is not linker-relaxable, the
-      // FixedValue has already been calculated out in evaluateFixup,
-      // return true and avoid record relocations.
-      if (&SecA == &SecB && !SecA.isLinkerRelaxable())
-        return true;
+      if (&SecA == &SecB) {
+        // If the section is not linker-relaxable, or if the fixup is in a .dwo
+        // section (where relocations are forbidden), we must resolve the
+        // difference directly. The computed Value in evaluateFixup is correct
+        // based on the current layout.
+        if (!SecA.isLinkerRelaxable() || SecCur.getName().ends_with(".dwo"))
+          return true;
+      }
     }
 
     switch (Fixup.getKind()) {

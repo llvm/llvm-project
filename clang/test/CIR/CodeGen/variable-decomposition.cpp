@@ -29,7 +29,7 @@ float function() {
 // CIR:  %[[CAST_A:.+]] = cir.cast int_to_float %[[LOAD_A]] : !s32i -> !cir.float
 // CIR:  %[[MEMBER_B:.+]] = cir.get_member %[[STRUCT]][1] {name = "b"} : !cir.ptr<!rec_some_struct> -> !cir.ptr<!cir.float>
 // CIR:  %[[LOAD_B:.+]] = cir.load align(4) %[[MEMBER_B]] : !cir.ptr<!cir.float>, !cir.float
-// CIR:  %[[ADD:.+]] = cir.binop(add, %[[CAST_A]], %[[LOAD_B]]) : !cir.float
+// CIR:  %[[ADD:.+]] = cir.add %[[CAST_A]], %[[LOAD_B]] : !cir.float
 // CIR:  cir.store %[[ADD]], %[[RETVAL]] : !cir.float, !cir.ptr<!cir.float>
 // CIR:  %[[RET:.+]] = cir.load %[[RETVAL]] : !cir.ptr<!cir.float>, !cir.float
 // CIR:  cir.return %[[RET]] : !cir.float
@@ -38,10 +38,10 @@ float function() {
 // LLVM:  %[[RETVAL:.+]] = alloca float, i64 1
 // LLVM:  %[[STRUCT:.+]] = alloca %struct.some_struct, i64 1
 // LLVM:  call void @llvm.memcpy{{.*}}(ptr %[[STRUCT]], ptr @[[FUNC_CONST]], i64 8, i1 false)
-// LLVM:  %[[GEP_A:.+]] = getelementptr %struct.some_struct, ptr %[[STRUCT]], i32 0, i32 0
+// LLVM:  %[[GEP_A:.+]] = getelementptr inbounds nuw %struct.some_struct, ptr %[[STRUCT]], i32 0, i32 0
 // LLVM:  %[[LOAD_A:.+]] = load i32, ptr %[[GEP_A]]
 // LLVM:  %[[CAST_A:.+]] = sitofp i32 %[[LOAD_A]] to float
-// LLVM:  %[[GEP_B:.+]] = getelementptr %struct.some_struct, ptr %[[STRUCT]], i32 0, i32 1
+// LLVM:  %[[GEP_B:.+]] = getelementptr inbounds nuw %struct.some_struct, ptr %[[STRUCT]], i32 0, i32 1
 // LLVM:  %[[LOAD_B:.+]] = load float, ptr %[[GEP_B]]
 // LLVM:  %[[ADD:.+]] = fadd float %[[CAST_A]], %[[LOAD_B]]
 // LLVM:  store float %[[ADD]], ptr %[[RETVAL]]

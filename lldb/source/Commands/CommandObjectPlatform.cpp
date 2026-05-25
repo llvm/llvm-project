@@ -250,14 +250,12 @@ protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     Stream &ostrm = result.GetOutputStream();
 
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = GetTarget();
     PlatformSP platform_sp;
-    if (target) {
+    if (target)
       platform_sp = target->GetPlatform();
-    }
-    if (!platform_sp) {
+    if (!platform_sp)
       platform_sp = GetDebugger().GetPlatformList().GetSelectedPlatform();
-    }
     if (platform_sp) {
       platform_sp->GetStatus(ostrm);
       result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -297,7 +295,7 @@ protected:
           result.AppendError(error.AsCString());
         }
       } else {
-        result.AppendErrorWithFormat("%s\n", error.AsCString());
+        result.AppendErrorWithFormat("%s", error.AsCString());
       }
     } else {
       result.AppendError("no platform is currently selected\n");
@@ -394,6 +392,7 @@ protected:
       if (m_option_working_dir.GetOptionValue().OptionWasSet())
         platform_sp->SetWorkingDirectory(
             m_option_working_dir.GetOptionValue().GetCurrentValue());
+      result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendError("no platform is currently selected");
     }
@@ -489,7 +488,7 @@ public:
           File::eOpenOptionReadWrite | File::eOpenOptionCanCreate,
           perms, error);
       if (error.Success()) {
-        result.AppendMessageWithFormat("File Descriptor = %" PRIu64 "\n", fd);
+        result.AppendMessageWithFormatv("File Descriptor = {0}", fd);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
         result.AppendError(error.AsCString());
@@ -537,7 +536,7 @@ public:
       Status error;
       bool success = platform_sp->CloseFile(fd, error);
       if (success) {
-        result.AppendMessageWithFormat("file %" PRIu64 " closed.\n", fd);
+        result.AppendMessageWithFormatv("file {0} closed.", fd);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
         result.AppendError(error.AsCString());
@@ -581,8 +580,8 @@ public:
       uint64_t retcode = platform_sp->ReadFile(
           fd, m_options.m_offset, &buffer[0], m_options.m_count, error);
       if (retcode != UINT64_MAX) {
-        result.AppendMessageWithFormat("Return = %" PRIu64 "\n", retcode);
-        result.AppendMessageWithFormat("Data = \"%s\"\n", buffer.c_str());
+        result.AppendMessageWithFormatv("Return = {0}", retcode);
+        result.AppendMessageWithFormatv("Data = \"{0}\"", buffer.c_str());
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
         result.AppendError(error.AsCString());
@@ -675,7 +674,7 @@ public:
           platform_sp->WriteFile(fd, m_options.m_offset, &m_options.m_data[0],
                                  m_options.m_data.size(), error);
       if (retcode != UINT64_MAX) {
-        result.AppendMessageWithFormat("Return = %" PRIu64 "\n", retcode);
+        result.AppendMessageWithFormatv("Return = {0}", retcode);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
         result.AppendError(error.AsCString());
@@ -828,13 +827,13 @@ public:
       Status error = platform_sp->GetFile(FileSpec(remote_file_path),
                                           FileSpec(local_file_path));
       if (error.Success()) {
-        result.AppendMessageWithFormat(
-            "successfully get-file from %s (remote) to %s (host)\n",
+        result.AppendMessageWithFormatv(
+            "successfully get-file from {0} (remote) to {1} (host)",
             remote_file_path, local_file_path);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
-        result.AppendMessageWithFormat("get-file failed: %s\n",
-                                       error.AsCString());
+        result.AppendErrorWithFormatv("get-file failed: {0}",
+                                      error.AsCString());
       }
     } else {
       result.AppendError("no platform currently selected\n");
@@ -875,14 +874,12 @@ public:
       std::string remote_file_path(args.GetArgumentAtIndex(0));
       user_id_t size = platform_sp->GetFileSize(FileSpec(remote_file_path));
       if (size != UINT64_MAX) {
-        result.AppendMessageWithFormat("File size of %s (remote): %" PRIu64
-                                       "\n",
-                                       remote_file_path.c_str(), size);
+        result.AppendMessageWithFormatv("File size of {0} (remote): {1}",
+                                        remote_file_path.c_str(), size);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
-        result.AppendMessageWithFormat(
-            "Error getting file size of %s (remote)\n",
-            remote_file_path.c_str());
+        result.AppendErrorWithFormatv("failed to get file size of {0} (remote)",
+                                      remote_file_path.c_str());
       }
     } else {
       result.AppendError("no platform currently selected\n");
@@ -925,9 +922,9 @@ public:
       Status error = platform_sp->GetFilePermissions(FileSpec(remote_file_path),
                                                      permissions);
       if (error.Success()) {
-        result.AppendMessageWithFormat(
-            "File permissions of %s (remote): 0o%04" PRIo32 "\n",
-            remote_file_path.c_str(), permissions);
+        result.AppendMessageWithFormatv(
+            "File permissions of {0} (remote): 0o{1}", remote_file_path,
+            llvm::format("%04o", permissions));
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else
         result.AppendError(error.AsCString());
@@ -969,9 +966,9 @@ public:
     if (platform_sp) {
       std::string remote_file_path(args.GetArgumentAtIndex(0));
       bool exists = platform_sp->GetFileExists(FileSpec(remote_file_path));
-      result.AppendMessageWithFormat(
-          "File %s (remote) %s\n",
-          remote_file_path.c_str(), exists ? "exists" : "does not exist");
+      result.AppendMessageWithFormatv("File {0} (remote) {1}",
+                                      remote_file_path.c_str(),
+                                      exists ? "exists" : "does not exist");
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendError("no platform currently selected\n");
@@ -1072,11 +1069,9 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
-    PlatformSP platform_sp;
-    if (target) {
-      platform_sp = target->GetPlatform();
-    }
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+    PlatformSP platform_sp = target->GetPlatform();
     if (!platform_sp) {
       platform_sp = GetDebugger().GetPlatformList().GetSelectedPlatform();
     }
@@ -1084,7 +1079,6 @@ protected:
     if (platform_sp) {
       Status error;
       const size_t argc = args.GetArgumentCount();
-      Target *target = m_exe_ctx.GetTargetPtr();
       Module *exe_module = target->GetExecutableModulePointer();
       if (exe_module) {
         m_options.launch_info.GetExecutableFile() = exe_module->GetFileSpec();
@@ -1120,7 +1114,7 @@ protected:
         Debugger &debugger = GetDebugger();
 
         if (argc == 0) {
-          // If no arguments were given to the command, use target.run-args.
+          // If no arguments were given to the command, use target->run-args.
           Args target_run_args;
           target->GetRunArguments(target_run_args);
           m_options.launch_info.GetArguments().AppendArguments(target_run_args);
@@ -1153,6 +1147,7 @@ protected:
         if (rebroadcast_first_stop) {
           assert(first_stop_event_sp);
           process_sp->BroadcastEvent(first_stop_event_sp);
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
           return;
         }
 
@@ -1185,6 +1180,8 @@ protected:
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
           return;
         }
+        if (result.GetStatus() != eReturnStatusFailed)
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
         result.AppendError("'platform process launch' uses the current target "
                            "file and arguments, or the executable and its "
@@ -1221,7 +1218,7 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = GetTarget();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
@@ -1243,8 +1240,8 @@ protected:
                                    m_options.show_args, m_options.verbose);
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          result.AppendErrorWithFormat(
-              "no process found with pid = %" PRIu64 "\n", pid);
+          result.AppendErrorWithFormat("no process found with pid = %" PRIu64,
+                                       pid);
         }
       } else {
         ProcessInstanceInfoList proc_infos;
@@ -1289,10 +1286,11 @@ protected:
           result.AppendMessageWithFormatv(
               "{0} matching process{1} found on \"{2}\"", matches,
               matches > 1 ? "es were" : " was", platform_sp->GetName());
+          Stream &strm = result.GetOutputStream();
           if (match_desc)
-            result.AppendMessageWithFormat(" whose name %s \"%s\"", match_desc,
-                                           match_name);
-          result.AppendMessageWithFormat("\n");
+            strm << llvm::formatv(" whose name {0} \"{1}\"", match_desc,
+                                  match_name);
+          strm.PutChar('\n');
           ProcessInstanceInfo::DumpTableHeader(ostrm, m_options.show_args,
                                                m_options.verbose);
           for (uint32_t i = 0; i < matches; ++i) {
@@ -1300,6 +1298,7 @@ protected:
                 ostrm, platform_sp->GetUserIDResolver(), m_options.show_args,
                 m_options.verbose);
           }
+          result.SetStatus(eReturnStatusSuccessFinishResult);
         }
       }
     } else {
@@ -1466,7 +1465,7 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = GetTarget();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
@@ -1502,6 +1501,8 @@ protected:
               ostrm.EOL();
             }
           }
+          if (result.GetStatus() != eReturnStatusFailed)
+            result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
           // Not connected...
           result.AppendErrorWithFormatv("not connected to '{0}'",
@@ -1708,9 +1709,9 @@ public:
       std::string output;
       int status = -1;
       int signo = -1;
-      error = (platform_sp->RunShellCommand(m_options.m_shell_interpreter, cmd,
-                                            working_dir, &status, &signo,
-                                            &output, m_options.m_timeout));
+      error = (platform_sp->RunShellCommand(
+          m_options.m_shell_interpreter, cmd, working_dir, &status, &signo,
+          &output, nullptr, m_options.m_timeout));
       if (!output.empty())
         result.GetOutputStream().PutCString(output);
       if (status > 0) {

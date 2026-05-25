@@ -1,7 +1,5 @@
-add_custom_target(check-libc)
 add_custom_target(libc-unit-tests)
 add_custom_target(libc-hermetic-tests)
-add_dependencies(check-libc libc-unit-tests libc-hermetic-tests)
 
 add_custom_target(exhaustive-check-libc)
 add_custom_target(libc-long-running-tests)
@@ -9,6 +7,8 @@ add_custom_target(libc-long-running-tests)
 # Build-only targets for lit (don't run tests, just build executables)
 add_custom_target(libc-unit-tests-build)
 add_custom_target(libc-hermetic-tests-build)
+add_custom_target(libc-integration-tests-build)
+add_custom_target(libc_include_tests-build)
 
 # Configure the site config file for lit
 configure_lit_site_cfg(
@@ -23,19 +23,30 @@ configure_lit_site_cfg(
   "LLVM_LIBS_DIR"
   "LIBC_SOURCE_DIR"
   "LIBC_BUILD_DIR"
+  "CMAKE_CROSSCOMPILING_EMULATOR"
 )
 
-add_lit_testsuite(check-libc-lit
+add_lit_testsuite(check-libc
   "Running libc tests via lit"
   ${LIBC_BUILD_DIR}/test
-  DEPENDS libc-unit-tests-build libc-hermetic-tests-build
 )
+
+if (TARGET check-hdrgen)
+  add_dependencies(check-libc check-hdrgen)
+endif()
+
+if(LIBC_ENABLE_UNITTESTS AND NOT LIBC_TEST_HERMETIC_TEST_ONLY)
+  add_dependencies(check-libc libc-unit-tests-build)
+endif()
+if(LIBC_ENABLE_HERMETIC_TESTS AND NOT LIBC_TEST_UNIT_TEST_ONLY)
+  add_dependencies(check-libc libc-hermetic-tests-build)
+endif()
 
 add_subdirectory(UnitTest)
 
 if(LIBC_TARGET_OS_IS_GPU)
-  if(NOT TARGET libc.utils.gpu.loader)
-    message(WARNING "Cannot build libc GPU tests, missing loader.")
+  if(NOT CMAKE_CROSSCOMPILING_EMULATOR)
+    message(WARNING "Cannot build libc GPU tests, set CMAKE_CROSSCOMPILING_EMULATOR.")
     return()
   elseif(LIBC_GPU_TESTS_DISABLED)
     message(WARNING "Cannot build libc GPU tests, missing target architecture.")

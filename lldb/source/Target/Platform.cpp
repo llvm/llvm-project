@@ -24,9 +24,11 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/OptionValueDictionary.h"
 #include "lldb/Interpreter/OptionValueFileSpec.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ModuleCache.h"
 #include "lldb/Target/Platform.h"
@@ -39,8 +41,11 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/lldb-private-enumerations.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 
 // Define these constants from POSIX mman.h rather than include the file so
@@ -155,10 +160,100 @@ Status Platform::GetFileWithUUID(const FileSpec &platform_file,
   return Status();
 }
 
-FileSpecList
+bool Platform::IsSymbolFileTrusted(Module &module) { return false; }
+
+LoadScriptFromSymFile
+Platform::GetScriptLoadStyleForModule(const FileSpec &module_fspec,
+                                      const Target &target) {
+  LoadScriptFromSymFile default_load_style =
+      target.GetLoadScriptFromSymbolFile();
+
+  return target
+      .GetAutoLoadScriptsForModule(module_fspec.GetFileNameStrippingExtension())
+      .value_or(default_load_style);
+}
+
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+Platform::LocateExecutableScriptingResourcesFromSafePaths(
+    Stream &feedback_stream, FileSpec module_spec, const Target &target) {
+  assert(module_spec);
+  assert(target.GetDebugger().GetScriptInterpreter());
+
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs;
+
+  // For now only Python scripts supported for auto-loading.
+  if (target.GetDebugger().GetScriptLanguage() != eScriptLanguagePython)
+    return file_specs;
+
+  ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
+      target.GetDebugger()
+          .GetScriptInterpreter()
+          ->GetSanitizedScriptingModuleName(
+              module_spec.GetFileNameStrippingExtension().GetStringRef());
+
+  FileSpecList paths = target.GetSafeAutoLoadPaths();
+
+  // Iterate in reverse so we consider the latest appended path first.
+  for (FileSpec path : llvm::reverse(paths)) {
+    path.AppendPathComponent(sanitized_name.GetOriginalName());
+
+    // Resolve relative paths and '~'.
+    FileSystem::Instance().Resolve(path);
+
+    if (!FileSystem::Instance().Exists(path))
+      continue;
+
+    FileSpec script_fspec = path;
+    script_fspec.AppendPathComponent(
+        llvm::formatv("{0}.py", sanitized_name.GetSanitizedName()).str());
+
+    FileSpec orig_script_fspec = path;
+    orig_script_fspec.AppendPathComponent(
+        llvm::formatv("{0}.py", sanitized_name.GetOriginalName()).str());
+
+    WarnIfInvalidUnsanitizedScriptExists(feedback_stream, sanitized_name,
+                                         orig_script_fspec, script_fspec);
+
+    if (FileSystem::Instance().Exists(script_fspec)) {
+      LoadScriptFromSymFile load_style =
+          Platform::GetScriptLoadStyleForModule(module_spec, target);
+      file_specs.try_emplace(std::move(script_fspec), load_style);
+    }
+
+    // If we successfully found a directory in a safe auto-load path
+    // stop looking at any other paths.
+    break;
+  }
+
+  return file_specs;
+}
+
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+Platform::LocateExecutableScriptingResourcesForPlatform(
+    Target *target, Module &module, Stream &feedback_stream) {
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> empty;
+  return empty;
+}
+
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
 Platform::LocateExecutableScriptingResources(Target *target, Module &module,
                                              Stream &feedback_stream) {
-  return FileSpecList();
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> empty;
+  if (!target)
+    return empty;
+
+  // Give derived platforms a chance to locate scripting resources.
+  if (auto fspecs = LocateExecutableScriptingResourcesForPlatform(
+          target, module, feedback_stream);
+      !fspecs.empty())
+    return fspecs;
+
+  const FileSpec &module_spec = module.GetFileSpec();
+  if (!module_spec)
+    return empty;
+
+  return LocateExecutableScriptingResourcesFromSafePaths(feedback_stream,
+                                                         module_spec, *target);
 }
 
 Status Platform::GetSharedModule(
@@ -182,14 +277,16 @@ Status Platform::GetSharedModule(
       resolved_spec.GetFileSpec().PrependPathComponent(m_sdk_sysroot);
       // Try to get shared module with resolved spec.
       error = ModuleList::GetSharedModule(resolved_spec, module_sp, old_modules,
-                                          did_create_ptr);
+                                          did_create_ptr,
+                                          /*invoke_locate_callback=*/false);
     }
     // If we don't have sysroot or it didn't work then
     // try original module spec.
     if (!error.Success()) {
       resolved_spec = spec;
       error = ModuleList::GetSharedModule(resolved_spec, module_sp, old_modules,
-                                          did_create_ptr);
+                                          did_create_ptr,
+                                          /*invoke_locate_callback=*/false);
     }
     if (error.Success() && module_sp)
       module_sp->SetPlatformFileSpec(resolved_spec.GetFileSpec());
@@ -202,10 +299,8 @@ Status Platform::GetSharedModule(
 
 bool Platform::GetModuleSpec(const FileSpec &module_file_spec,
                              const ArchSpec &arch, ModuleSpec &module_spec) {
-  ModuleSpecList module_specs;
-  if (ObjectFile::GetModuleSpecifications(module_file_spec, 0, 0,
-                                          module_specs) == 0)
-    return false;
+  ModuleSpecList module_specs =
+      ObjectFile::GetModuleSpecifications(module_file_spec, 0, 0);
 
   ModuleSpec matched_module_spec;
   return module_specs.FindMatchingModuleSpec(ModuleSpec(module_file_spec, arch),
@@ -1010,17 +1105,10 @@ lldb::ProcessSP Platform::DebugProcess(ProcessLaunchInfo &launch_info,
 
   // Allow any StructuredData process-bound plugins to adjust the launch info
   // if needed
-  size_t i = 0;
-  bool iteration_complete = false;
-  // Note iteration can't simply go until a nullptr callback is returned, as it
-  // is valid for a plugin to not supply a filter.
-  auto get_filter_func = PluginManager::GetStructuredDataFilterCallbackAtIndex;
-  for (auto filter_callback = get_filter_func(i, iteration_complete);
-       !iteration_complete;
-       filter_callback = get_filter_func(++i, iteration_complete)) {
-    if (filter_callback) {
+  for (auto &cbs : PluginManager::GetStructuredDataPluginCallbacks()) {
+    if (cbs.filter_callback) {
       // Give this ProcessLaunchInfo filter a chance to adjust the launch info.
-      error = (*filter_callback)(launch_info, &target);
+      error = (*cbs.filter_callback)(launch_info, &target);
       if (!error.Success()) {
         LLDB_LOGF(log,
                   "Platform::%s() StructuredDataPlugin launch "
@@ -1248,9 +1336,12 @@ lldb_private::Status Platform::RunShellCommand(
                     // process to exit
     std::string
         *command_output, // Pass nullptr if you don't want the command output
+    std::string *separated_error_output, // Pass nullptr if you don't want the
+                                         // command error output
     const Timeout<std::micro> &timeout) {
   return RunShellCommand(llvm::StringRef(), command, working_dir, status_ptr,
-                         signo_ptr, command_output, timeout);
+                         signo_ptr, command_output, separated_error_output,
+                         timeout);
 }
 
 lldb_private::Status Platform::RunShellCommand(
@@ -1264,10 +1355,13 @@ lldb_private::Status Platform::RunShellCommand(
                     // process to exit
     std::string
         *command_output, // Pass nullptr if you don't want the command output
+    std::string *separated_error_output, // Pass nullptr if you don't want the
+                                         // command error output
     const Timeout<std::micro> &timeout) {
   if (IsHost())
     return Host::RunShellCommand(shell, command, working_dir, status_ptr,
-                                 signo_ptr, command_output, timeout);
+                                 signo_ptr, command_output,
+                                 separated_error_output, timeout);
   return Status::FromErrorString(
       "unable to run a remote command without a platform");
 }
@@ -1525,6 +1619,10 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
   if (module_spec.GetUUID().IsValid()) {
     resolved_module_spec.GetUUID() = module_spec.GetUUID();
   }
+
+  // Retain the target context from the original module_spec since
+  // process->GetModuleSpec might have cleared it.
+  resolved_module_spec.SetTarget(module_spec.GetTargetSP());
 
   // Call locate module callback if set. This allows users to implement their
   // own module cache system. For example, to leverage build system artifacts,
@@ -1816,7 +1914,7 @@ uint32_t Platform::LoadImage(lldb_private::Process *process,
     // Only local file was specified. Install it to the current working
     // directory.
     FileSpec target_file = GetWorkingDirectory();
-    target_file.AppendPathComponent(local_file.GetFilename().AsCString());
+    target_file.AppendPathComponent(local_file.GetFilename());
     if (IsRemote() || local_file != target_file) {
       error = Install(local_file, target_file);
       if (error.Fail())
@@ -1946,121 +2044,99 @@ size_t Platform::ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
   return 0;
 }
 
-size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
-                                                 BreakpointSite *bp_site) {
-  ArchSpec arch = target.GetArchitecture();
-  assert(arch.IsValid());
-  const uint8_t *trap_opcode = nullptr;
-  size_t trap_opcode_size = 0;
+llvm::ArrayRef<uint8_t> Platform::SoftwareTrapOpcodeBytes(const ArchSpec &arch,
+                                                          size_t size_hint) {
+  llvm::ArrayRef<uint8_t> trap_opcode;
 
   switch (arch.GetMachine()) {
   case llvm::Triple::aarch64_32:
   case llvm::Triple::aarch64: {
     static const uint8_t g_aarch64_opcode[] = {0x00, 0x00, 0x20, 0xd4};
-    trap_opcode = g_aarch64_opcode;
-    trap_opcode_size = sizeof(g_aarch64_opcode);
+    trap_opcode =
+        llvm::ArrayRef<uint8_t>(g_aarch64_opcode, sizeof(g_aarch64_opcode));
   } break;
 
   case llvm::Triple::arc: {
-    static const uint8_t g_hex_opcode[] = { 0xff, 0x7f };
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    static const uint8_t g_hex_opcode[] = {0xff, 0x7f};
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
-  // TODO: support big-endian arm and thumb trap codes.
   case llvm::Triple::arm: {
-    // The ARM reference recommends the use of 0xe7fddefe and 0xdefe but the
-    // linux kernel does otherwise.
+    // ARM CPUs have dedicated BKPT instructions: 0xe7fddefe and 0xdefe.
+    // However, the linux kernel recognizes two different sequences based on
+    // undefined instruction encodings (linux/arch/arm/kernel/ptrace.c)
     static const uint8_t g_arm_breakpoint_opcode[] = {0xf0, 0x01, 0xf0, 0xe7};
     static const uint8_t g_thumb_breakpoint_opcode[] = {0x01, 0xde};
 
-    lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetConstituentAtIndex(0));
-    AddressClass addr_class = AddressClass::eUnknown;
-
-    if (bp_loc_sp) {
-      addr_class = bp_loc_sp->GetAddress().GetAddressClass();
-      if (addr_class == AddressClass::eUnknown &&
-          (bp_loc_sp->GetAddress().GetFileAddress() & 1))
-        addr_class = AddressClass::eCodeAlternateISA;
-    }
-
-    if (addr_class == AddressClass::eCodeAlternateISA) {
-      trap_opcode = g_thumb_breakpoint_opcode;
-      trap_opcode_size = sizeof(g_thumb_breakpoint_opcode);
+    if (size_hint == 2) {
+      trap_opcode = llvm::ArrayRef<uint8_t>(g_thumb_breakpoint_opcode,
+                                            sizeof(g_thumb_breakpoint_opcode));
     } else {
-      trap_opcode = g_arm_breakpoint_opcode;
-      trap_opcode_size = sizeof(g_arm_breakpoint_opcode);
+      trap_opcode = llvm::ArrayRef<uint8_t>(g_arm_breakpoint_opcode,
+                                            sizeof(g_arm_breakpoint_opcode));
     }
   } break;
 
   case llvm::Triple::avr: {
     static const uint8_t g_hex_opcode[] = {0x98, 0x95};
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
   case llvm::Triple::mips:
   case llvm::Triple::mips64: {
     static const uint8_t g_hex_opcode[] = {0x00, 0x00, 0x00, 0x0d};
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64el: {
     static const uint8_t g_hex_opcode[] = {0x0d, 0x00, 0x00, 0x00};
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
   case llvm::Triple::msp430: {
     static const uint8_t g_msp430_opcode[] = {0x43, 0x43};
-    trap_opcode = g_msp430_opcode;
-    trap_opcode_size = sizeof(g_msp430_opcode);
+    trap_opcode =
+        llvm::ArrayRef<uint8_t>(g_msp430_opcode, sizeof(g_msp430_opcode));
   } break;
 
   case llvm::Triple::systemz: {
     static const uint8_t g_hex_opcode[] = {0x00, 0x01};
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
   case llvm::Triple::hexagon: {
     static const uint8_t g_hex_opcode[] = {0x0c, 0xdb, 0x00, 0x54};
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64: {
     static const uint8_t g_ppc_opcode[] = {0x7f, 0xe0, 0x00, 0x08};
-    trap_opcode = g_ppc_opcode;
-    trap_opcode_size = sizeof(g_ppc_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_ppc_opcode, sizeof(g_ppc_opcode));
   } break;
 
   case llvm::Triple::ppc64le: {
     static const uint8_t g_ppc64le_opcode[] = {0x08, 0x00, 0xe0, 0x7f}; // trap
-    trap_opcode = g_ppc64le_opcode;
-    trap_opcode_size = sizeof(g_ppc64le_opcode);
+    trap_opcode =
+        llvm::ArrayRef<uint8_t>(g_ppc64le_opcode, sizeof(g_ppc64le_opcode));
   } break;
 
   case llvm::Triple::x86:
   case llvm::Triple::x86_64: {
     static const uint8_t g_i386_opcode[] = {0xCC};
-    trap_opcode = g_i386_opcode;
-    trap_opcode_size = sizeof(g_i386_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_i386_opcode, sizeof(g_i386_opcode));
   } break;
 
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64: {
     static const uint8_t g_riscv_opcode[] = {0x73, 0x00, 0x10, 0x00}; // ebreak
     static const uint8_t g_riscv_opcode_c[] = {0x02, 0x90}; // c.ebreak
-    if (arch.GetFlags() & ArchSpec::eRISCV_rvc) {
+    if (size_hint == 2) {
       trap_opcode = g_riscv_opcode_c;
-      trap_opcode_size = sizeof(g_riscv_opcode_c);
     } else {
-      trap_opcode = g_riscv_opcode;
-      trap_opcode_size = sizeof(g_riscv_opcode);
+      trap_opcode =
+          llvm::ArrayRef<uint8_t>(g_riscv_opcode, sizeof(g_riscv_opcode));
     }
   } break;
 
@@ -2068,24 +2144,67 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
   case llvm::Triple::loongarch64: {
     static const uint8_t g_loongarch_opcode[] = {0x05, 0x00, 0x2a,
                                                  0x00}; // break 0x5
-    trap_opcode = g_loongarch_opcode;
-    trap_opcode_size = sizeof(g_loongarch_opcode);
+    trap_opcode =
+        llvm::ArrayRef<uint8_t>(g_loongarch_opcode, sizeof(g_loongarch_opcode));
   } break;
 
+  // Unreachable (0x00) triggers an unconditional trap.
   case llvm::Triple::wasm32: {
-    // Unreachable (0x00) triggers an unconditional trap.
     static const uint8_t g_wasm_opcode[] = {0x00};
-    trap_opcode = g_wasm_opcode;
-    trap_opcode_size = sizeof(g_wasm_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_wasm_opcode, sizeof(g_wasm_opcode));
   } break;
+  // The default case should not match against anything, so return empty Array.
+  default: {
+    trap_opcode = llvm::ArrayRef<uint8_t>{};
+  };
+  }
+  return trap_opcode;
+}
 
-  default:
-    return 0;
+size_t Platform::GetTrapOpcodeSizeHint(Target &target, Address addr,
+                                       llvm::ArrayRef<uint8_t> bytes) {
+  ArchSpec arch = target.GetArchitecture();
+  assert(arch.IsValid());
+  const auto &triple = arch.GetTriple();
+
+  if (bytes.size() && triple.isRISCV()) {
+    // RISC-V instructions have the two LSB as 0b11 if they are four-byte.
+    return (bytes[0] & 0b11) == 0b11 ? 4 : 2;
   }
 
-  assert(bp_site);
-  if (bp_site->SetTrapOpcode(trap_opcode, trap_opcode_size))
-    return trap_opcode_size;
+  if (triple.isARM()) {
+    if (auto addr_class = addr.GetAddressClass();
+        addr_class == AddressClass::eCodeAlternateISA) {
+      return 2;
+    } else {
+      return 4;
+    }
+  }
+  return 0;
+}
+
+size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
+                                                 BreakpointSite *bp_site) {
+  ArchSpec arch = target.GetArchitecture();
+  assert(arch.IsValid());
+  AddressClass addr_class = AddressClass::eUnknown;
+  if (bp_site) {
+    // TODO: support big-endian arm and thumb trap codes.
+    lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetConstituentAtIndex(0));
+    if (bp_loc_sp)
+      addr_class = bp_loc_sp->GetAddress().GetAddressClass();
+  }
+
+  size_t size_hint = 0;
+  // Check for either ARM or RISC-V short instruction conditions.
+  if (addr_class == AddressClass::eCodeAlternateISA ||
+      (arch.GetFlags() & ArchSpec::eRISCV_rvc))
+    size_hint = 2;
+  auto trap_opcode = SoftwareTrapOpcodeBytes(arch, size_hint);
+
+  if (bp_site &&
+      bp_site->SetTrapOpcode(trap_opcode.begin(), trap_opcode.size()))
+    return trap_opcode.size();
 
   return 0;
 }
@@ -2104,6 +2223,37 @@ void Platform::SetLocateModuleCallback(LocateModuleCallback callback) {
 
 Platform::LocateModuleCallback Platform::GetLocateModuleCallback() const {
   return m_locate_module_callback;
+}
+
+void Platform::WarnIfInvalidUnsanitizedScriptExists(
+    Stream &os,
+    const ScriptInterpreter::SanitizedScriptingModuleName &sanitized_name,
+    const FileSpec &original_fspec, const FileSpec &fspec) {
+  if (!sanitized_name.RequiredSanitization())
+    return;
+
+  // Path to unsanitized script name doesn't exist. Nothing to warn about.
+  if (!FileSystem::Instance().Exists(original_fspec))
+    return;
+
+  std::string reason_for_complaint =
+      sanitized_name.IsKeyword()
+          ? llvm::formatv("conflicts with the keyword '{0}'",
+                          sanitized_name.GetConflictingKeyword())
+                .str()
+          : "contains reserved characters";
+
+  if (FileSystem::Instance().Exists(fspec))
+    os.Format("debug script '{0}' cannot be loaded because '{1}' {2}. "
+              "Ignoring '{1}' and loading '{3}' instead.\n",
+              original_fspec.GetPath(), original_fspec.GetFilename(),
+              std::move(reason_for_complaint), fspec.GetFilename());
+  else
+    os.Format("debug script '{0}' cannot be loaded because '{1}' {2}. "
+              "If you intend to have this script loaded, please rename it to "
+              "'{3}' and retry.\n",
+              original_fspec.GetPath(), original_fspec.GetFilename(),
+              std::move(reason_for_complaint), fspec.GetFilename());
 }
 
 PlatformSP PlatformList::GetOrCreate(llvm::StringRef name) {
@@ -2135,12 +2285,8 @@ PlatformSP PlatformList::GetOrCreate(const ArchSpec &arch,
       return platform_sp;
   }
 
-  PlatformCreateInstance create_callback;
   // First try exact arch matches across all platform plug-ins
-  uint32_t idx;
-  for (idx = 0;
-       (create_callback = PluginManager::GetPlatformCreateCallbackAtIndex(idx));
-       ++idx) {
+  for (auto create_callback : PluginManager::GetPlatformCreateCallbacks()) {
     PlatformSP platform_sp = create_callback(false, &arch);
     if (platform_sp &&
         platform_sp->IsCompatibleArchitecture(
@@ -2150,9 +2296,7 @@ PlatformSP PlatformList::GetOrCreate(const ArchSpec &arch,
     }
   }
   // Next try compatible arch matches across all platform plug-ins
-  for (idx = 0;
-       (create_callback = PluginManager::GetPlatformCreateCallbackAtIndex(idx));
-       ++idx) {
+  for (auto create_callback : PluginManager::GetPlatformCreateCallbacks()) {
     PlatformSP platform_sp = create_callback(false, &arch);
     if (platform_sp && platform_sp->IsCompatibleArchitecture(
                            arch, process_host_arch, ArchSpec::CompatibleMatch,
@@ -2239,10 +2383,7 @@ bool PlatformList::LoadPlatformBinaryAndSetup(Process *process,
                                               lldb::addr_t addr, bool notify) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  PlatformCreateInstance create_callback;
-  for (int idx = 0;
-       (create_callback = PluginManager::GetPlatformCreateCallbackAtIndex(idx));
-       ++idx) {
+  for (auto create_callback : PluginManager::GetPlatformCreateCallbacks()) {
     ArchSpec arch;
     PlatformSP platform_sp = create_callback(true, &arch);
     if (platform_sp) {

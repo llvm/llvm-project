@@ -92,9 +92,9 @@ define void @test() #0 {
   ; RWBuffer<double> C1 = Array[10];
   ; RWBuffer<double> C2 = Array[20];
   %Array2_10_h = call target("dx.TypedBuffer", double, 1, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 10, ptr @Array2.str)
+            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 0, i32 10, ptr @Array2.str)
   %Array2_20_h = call target("dx.TypedBuffer", double, 1, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 20, ptr @Array2.str)
+            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 0, i32 20, ptr @Array2.str)
 
   ; Same buffer type as Nine - should have the same type in metadata
   ; RWBuffer<double> Ten : register(u2);

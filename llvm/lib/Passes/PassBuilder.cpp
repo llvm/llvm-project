@@ -91,7 +91,6 @@
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/ExpandIRInsts.h"
-#include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/FEntryInserter.h"
@@ -110,6 +109,7 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/KCFI.h"
 #include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -120,13 +120,17 @@
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineCFGPrinter.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
+#include "llvm/CodeGen/MachineDebugify.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -134,6 +138,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineSink.h"
+#include "llvm/CodeGen/MachineStripDebug.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/CodeGen/MachineVerifier.h"
@@ -227,6 +232,7 @@
 #include "llvm/Transforms/IPO/HotColdSplitting.h"
 #include "llvm/Transforms/IPO/IROutliner.h"
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
+#include "llvm/Transforms/IPO/Instrumentor.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO/LoopExtractor.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
@@ -280,6 +286,7 @@
 #include "llvm/Transforms/Scalar/DivRemPairs.h"
 #include "llvm/Transforms/Scalar/DropUnnecessaryAssumes.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
+#include "llvm/Transforms/Scalar/ExpandMemCmp.h"
 #include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/Float2Int.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -373,6 +380,7 @@
 #include "llvm/Transforms/Utils/PredicateInfo.h"
 #include "llvm/Transforms/Utils/ProfileVerify.h"
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
+#include "llvm/Transforms/Utils/StripConvergenceIntrinsics.h"
 #include "llvm/Transforms/Utils/StripGCRelocates.h"
 #include "llvm/Transforms/Utils/StripNonLineTableDebugInfo.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
@@ -400,9 +408,23 @@ AnalysisKey NoOpLoopAnalysis::Key;
 
 namespace {
 
+bool applyMIRDebugify(DIBuilder &DIB, Function &F, ModuleAnalysisManager &AM) {
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
+          .getManager();
+
+  return applyDebugifyMetadataToMachineFunction(
+      DIB, F, [&](Function &Func) -> MachineFunction * {
+        MachineFunctionAnalysis::Result *MFA =
+            FAM.getCachedResult<MachineFunctionAnalysis>(Func);
+        return MFA ? &MFA->getMF() : nullptr;
+      });
+}
+
 // Passes for testing crashes.
 // DO NOT USE THIS EXCEPT FOR TESTING!
-class TriggerCrashModulePass : public PassInfoMixin<TriggerCrashModulePass> {
+class TriggerCrashModulePass
+    : public OptionalPassInfoMixin<TriggerCrashModulePass> {
 public:
   PreservedAnalyses run(Module &, ModuleAnalysisManager &) {
     abort();
@@ -412,7 +434,7 @@ public:
 };
 
 class TriggerCrashFunctionPass
-    : public PassInfoMixin<TriggerCrashFunctionPass> {
+    : public OptionalPassInfoMixin<TriggerCrashFunctionPass> {
 public:
   PreservedAnalyses run(Function &, FunctionAnalysisManager &) {
     abort();
@@ -424,7 +446,7 @@ public:
 // A pass for testing message reporting of -verify-each failures.
 // DO NOT USE THIS EXCEPT FOR TESTING!
 class TriggerVerifierErrorPass
-    : public PassInfoMixin<TriggerVerifierErrorPass> {
+    : public OptionalPassInfoMixin<TriggerVerifierErrorPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
     // Intentionally break the Module by creating an alias without setting the
@@ -458,7 +480,7 @@ public:
 // A pass requires all MachineFunctionProperties.
 // DO NOT USE THIS EXCEPT FOR TESTING!
 class RequireAllMachineFunctionPropertiesPass
-    : public PassInfoMixin<RequireAllMachineFunctionPropertiesPass> {
+    : public OptionalPassInfoMixin<RequireAllMachineFunctionPropertiesPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &) {
     MFPropsModifier _(*this, MF);
@@ -485,13 +507,17 @@ public:
 } // namespace
 
 static std::optional<OptimizationLevel> parseOptLevel(StringRef S) {
+  if (S == "Os" || S == "Oz")
+    reportFatalUsageError(
+        Twine("The optimization level \"") + S +
+        "\" is no longer supported. Use O2 in conjunction with the " +
+        (S == "Os" ? "optsize" : "minsize") + " attribute instead.");
+
   return StringSwitch<std::optional<OptimizationLevel>>(S)
       .Case("O0", OptimizationLevel::O0)
       .Case("O1", OptimizationLevel::O1)
       .Case("O2", OptimizationLevel::O2)
       .Case("O3", OptimizationLevel::O3)
-      .Case("Os", OptimizationLevel::Os)
-      .Case("Oz", OptimizationLevel::Oz)
       .Default(std::nullopt);
 }
 
@@ -805,6 +831,11 @@ Expected<bool> parseLintOptions(StringRef Params) {
                                             "LintPass");
 }
 
+/// Parser of parameters for InstCount pass.
+Expected<bool> parseInstCountOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "pre-opt", "InstCountPass");
+}
+
 /// Parser of parameters for LoopUnroll pass.
 Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
   LoopUnrollOptions UnrollOpts;
@@ -812,8 +843,7 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
     std::optional<OptimizationLevel> OptLevel = parseOptLevel(ParamName);
-    // Don't accept -Os/-Oz.
-    if (OptLevel && !OptLevel->isOptimizingForSize()) {
+    if (OptLevel) {
       UnrollOpts.setOptLevel(OptLevel->getSpeedupLevel());
       continue;
     }
@@ -870,26 +900,6 @@ Expected<bool> parseCoroSplitPassOptions(StringRef Params) {
 Expected<bool> parsePostOrderFunctionAttrsPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(
       Params, "skip-non-recursive-function-attrs", "PostOrderFunctionAttrs");
-}
-
-Expected<CFGuardPass::Mechanism> parseCFGuardPassOptions(StringRef Params) {
-  if (Params.empty())
-    return CFGuardPass::Mechanism::Check;
-
-  auto [Param, RHS] = Params.split(';');
-  if (!RHS.empty())
-    return make_error<StringError>(
-        formatv("too many CFGuardPass parameters '{}'", Params).str(),
-        inconvertibleErrorCode());
-
-  if (Param == "check")
-    return CFGuardPass::Mechanism::Check;
-  if (Param == "dispatch")
-    return CFGuardPass::Mechanism::Dispatch;
-
-  return make_error<StringError>(
-      formatv("invalid CFGuardPass mechanism: '{}'", Param).str(),
-      inconvertibleErrorCode());
 }
 
 Expected<bool> parseEarlyCSEPassOptions(StringRef Params) {
@@ -974,6 +984,26 @@ Expected<HWAddressSanitizerOptions> parseHWASanPassOptions(StringRef Params) {
       return make_error<StringError>(
           formatv("invalid HWAddressSanitizer pass parameter '{}'", ParamName)
               .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
+Expected<lowertypetests::DropTestKind>
+parseDropTypeTestsPassOptions(StringRef Params) {
+  lowertypetests::DropTestKind Result = lowertypetests::DropTestKind::Assume;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "all") {
+      Result = lowertypetests::DropTestKind::All;
+    } else if (ParamName == "assume") {
+      Result = lowertypetests::DropTestKind::Assume;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid DropTypeTestsPass parameter '{}'", ParamName).str(),
           inconvertibleErrorCode());
     }
   }
@@ -1273,17 +1303,25 @@ Expected<LICMOptions> parseLICMOptions(StringRef Params) {
   return Result;
 }
 
-Expected<std::pair<bool, bool>> parseLoopRotateOptions(StringRef Params) {
-  std::pair<bool, bool> Result = {true, false};
+struct LoopRotateOptions {
+  bool EnableHeaderDuplication = true;
+  bool PrepareForLTO = false;
+  bool CheckExitCount = false;
+};
+
+Expected<LoopRotateOptions> parseLoopRotateOptions(StringRef Params) {
+  LoopRotateOptions Result;
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
 
     bool Enable = !ParamName.consume_front("no-");
     if (ParamName == "header-duplication") {
-      Result.first = Enable;
+      Result.EnableHeaderDuplication = Enable;
     } else if (ParamName == "prepare-for-lto") {
-      Result.second = Enable;
+      Result.PrepareForLTO = Enable;
+    } else if (ParamName == "check-exit-count") {
+      Result.CheckExitCount = Enable;
     } else {
       return make_error<StringError>(
           formatv("invalid LoopRotate pass parameter '{}'", ParamName).str(),
@@ -1320,8 +1358,8 @@ Expected<GVNOptions> parseGVNOptions(StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
 
     bool Enable = !ParamName.consume_front("no-");
-    if (ParamName == "pre") {
-      Result.setPRE(Enable);
+    if (ParamName == "scalar-pre") {
+      Result.setScalarPRE(Enable);
     } else if (ParamName == "load-pre") {
       Result.setLoadPRE(Enable);
     } else if (ParamName == "split-backedge-load-pre") {
@@ -1958,11 +1996,8 @@ PassBuilder::parsePipelineText(StringRef Text) {
 
 static void setupOptionsForPipelineAlias(PipelineTuningOptions &PTO,
                                          OptimizationLevel L) {
-  // This is consistent with old pass manager invoked via opt, but
-  // inconsistent with clang. Clang doesn't enable loop vectorization
-  // but does enable slp vectorization at Oz.
-  PTO.LoopVectorization = L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
-  PTO.SLPVectorization = L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
+  PTO.LoopVectorization = L.getSpeedupLevel() > 1;
+  PTO.SLPVectorization = L.getSpeedupLevel() > 1;
 }
 
 Error PassBuilder::parseModulePass(ModulePassManager &MPM,

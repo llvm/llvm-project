@@ -228,8 +228,9 @@ namespace {
 
       // Provide some coverage mapping even for methods that aren't emitted.
       // Don't do this for templated classes though, as they may not be
-      // instantiable.
-      if (!D->getLexicalDeclContext()->isDependentContext())
+      // instantiable. Also skip consteval methods as they are never emitted.
+      if (!D->getLexicalDeclContext()->isDependentContext() &&
+          !D->getAsFunction()->isImmediateFunction())
         Builder->AddDeferredUnusedCoverageMapping(D);
     }
 
@@ -260,6 +261,21 @@ namespace {
           }
         }
       }
+
+      // Emit dllexport inherited constructors. These are synthesized during
+      // Sema (in checkClassLevelDLLAttribute) but have no written definition,
+      // so they must be emitted now while visiting the class definition.
+      if (auto *RD = dyn_cast<CXXRecordDecl>(D);
+          RD && RD->hasAttr<DLLExportAttr>()) {
+        for (Decl *Member : RD->decls()) {
+          if (auto *CD = dyn_cast<CXXConstructorDecl>(Member)) {
+            if (CD->getInheritedConstructor() && CD->hasAttr<DLLExportAttr>() &&
+                !CD->isDeleted())
+              Builder->EmitTopLevelDecl(CD);
+          }
+        }
+      }
+
       // For OpenMP emit declare reduction functions, if required.
       if (Ctx->getLangOpts().OpenMP) {
         for (Decl *Member : D->decls()) {
@@ -393,7 +409,7 @@ namespace clang {
 namespace CodeGen {
 std::optional<std::pair<StringRef, StringRef>>
 DemangleTrapReasonInDebugInfo(StringRef FuncName) {
-  static auto TrapRegex =
+  static const auto TrapRegex =
       llvm::Regex(llvm::formatv("^{0}\\$(.*)\\$(.*)$", ClangTrapPrefix).str());
   llvm::SmallVector<llvm::StringRef, 3> Matches;
   std::string *ErrorPtr = nullptr;

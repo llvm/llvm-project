@@ -39,7 +39,8 @@ constexpr auto Ulong = 1L;
 constexpr auto CompoundLiteral = (int){13};
 constexpr auto DoubleCast = (double)(1 / 3);
 constexpr auto String = "this is a string"; // expected-error {{constexpr pointer initializer is not null}}
-constexpr signed auto Long = 1L; // expected-error {{'auto' cannot be signed or unsigned}}
+constexpr signed auto Long = 1L; // expected-error {{illegal storage class on file-scoped variable}}
+// expected-error@-1 {{cannot combine with previous 'constexpr' declaration specifier}}
 _Static_assert(_Generic(Ulong, long : 1));
 _Static_assert(_Generic(CompoundLiteral, int : 1));
 _Static_assert(_Generic(DoubleCast, double : 1));
@@ -56,7 +57,7 @@ void f3(constexpr register int P1) { // expected-error {{function parameter cann
 constexpr thread_local int V11 = 38; // expected-error {{cannot combine with previous '_Thread_local' declaration specifier}}
 constexpr static thread_local double V12 = 38; // expected-error {{cannot combine with previous '_Thread_local' declaration specifier}}
 constexpr extern thread_local char V13; // expected-error {{cannot combine with previous '_Thread_local' declaration specifier}}
-// expected-error@-1 {{cannot combine with previous 'extern' declaration specifier}}
+// expected-error@-1 {{cannot combine with previous 'constexpr' declaration specifier}}
 // expected-error@-2 {{constexpr variable declaration must be a definition}}
 constexpr thread_local short V14 = 38; // expected-error {{cannot combine with previous '_Thread_local' declaration specifier}}
 
@@ -68,7 +69,7 @@ constexpr volatile int V17 = 0; // expected-error {{constexpr variable cannot ha
 
 constexpr int * restrict V18 = 0; // expected-error {{constexpr variable cannot have type 'int *const restrict'}}
 
-constexpr extern char Oops = 1; // expected-error {{cannot combine with previous 'extern' declaration specifier}} \
+constexpr extern char Oops = 1; // expected-error {{cannot combine with previous 'constexpr' declaration specifier}} \
                                 // expected-warning {{'extern' variable has an initializer}}
 
 constexpr int * restrict * Oops1 = 0;
@@ -313,6 +314,12 @@ constexpr int *V84 = 42;
 constexpr int *V85 = nullptr;
 constexpr int *V91 = 0.0; 
 // expected-error@-1 {{initializing 'int *const' with an expression of incompatible type 'double'}}
+constexpr int *V92 = 0.0f;
+// expected-error@-1 {{initializing 'int *const' with an expression of incompatible type 'float'}}
+constexpr int *V93 = 0e0;
+// expected-error@-1 {{initializing 'int *const' with an expression of incompatible type 'double'}}
+constexpr int *V94 = 0x0p0;
+// expected-error@-1 {{initializing 'int *const' with an expression of incompatible type 'double'}}
 
 // Check that constexpr variables should not be VLAs.
 void f6(const int P1) {
@@ -419,8 +426,23 @@ void gh173847_test() {
 }
 
 int gh173605(int x) {
-  static constexpr int c = c; // expected-error {{constexpr variable 'c' must be initialized by a constant expression}}\
-                              // expected-note {{read of object outside its lifetime is not allowed in a constant expression}}
+  static constexpr int c = c; // expected-error {{constexpr variable 'c' must be initialized by a constant expression}} \
+                              // expected-note {{read of object outside its lifetime is not allowed in a constant expression}} \
+                              // expected-note {{declared here}}
   static int justincase = justincase; // expected-error {{initializer element is not a compile-time constant}}
   return x;
 }
+
+
+struct designated_init_A { int a; int b; int c : 2; double d; int e[5]; };
+struct designated_init_B { struct designated_init_A a; int y; };
+constexpr struct designated_init_A designated_init_a = {1, 2, 3, 4.0, 5, 6, 7, 8, 9};
+constexpr struct designated_init_B designated_init_b =
+  {designated_init_a, .a.a = 10, .a.c = 11, .a.d = 12.0, .a.e[1] = 13, .y = 14}; // expected-warning 4 {{initializer partially overrides prior initialization of this subobject}} // expected-note 4 {{previous initialization}}
+static_assert(designated_init_b.a.a == 10);
+static_assert(designated_init_b.a.b == 2);
+static_assert(designated_init_b.a.c == -1);
+static_assert(designated_init_b.a.d == 12.0); // expected-warning {{folding it to a constant is a GNU extension}}
+static_assert(designated_init_b.a.e[0] == 5); // expected-warning {{folding it to a constant is a GNU extension}}
+static_assert(designated_init_b.a.e[1] == 13); // expected-warning {{folding it to a constant is a GNU extension}}
+static_assert(designated_init_b.y == 14);

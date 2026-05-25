@@ -121,106 +121,7 @@ using std::atomic_signal_fence                         // see below
 #  pragma GCC system_header
 #endif
 
-#if defined(__cplusplus) && false
-
-#  include <__cxx03/atomic>
-#  include <__cxx03/version>
-
-#  ifdef _Atomic
-#    undef _Atomic
-#  endif
-
-#  define _Atomic(_Tp) ::std::atomic<_Tp>
-
-using std::memory_order _LIBCPP_USING_IF_EXISTS;
-using std::memory_order_relaxed _LIBCPP_USING_IF_EXISTS;
-using std::memory_order_consume _LIBCPP_USING_IF_EXISTS;
-using std::memory_order_acquire _LIBCPP_USING_IF_EXISTS;
-using std::memory_order_release _LIBCPP_USING_IF_EXISTS;
-using std::memory_order_acq_rel _LIBCPP_USING_IF_EXISTS;
-using std::memory_order_seq_cst _LIBCPP_USING_IF_EXISTS;
-
-using std::atomic_flag _LIBCPP_USING_IF_EXISTS;
-
-using std::atomic_bool _LIBCPP_USING_IF_EXISTS;
-using std::atomic_char _LIBCPP_USING_IF_EXISTS;
-using std::atomic_schar _LIBCPP_USING_IF_EXISTS;
-using std::atomic_uchar _LIBCPP_USING_IF_EXISTS;
-using std::atomic_short _LIBCPP_USING_IF_EXISTS;
-using std::atomic_ushort _LIBCPP_USING_IF_EXISTS;
-using std::atomic_int _LIBCPP_USING_IF_EXISTS;
-using std::atomic_uint _LIBCPP_USING_IF_EXISTS;
-using std::atomic_long _LIBCPP_USING_IF_EXISTS;
-using std::atomic_ulong _LIBCPP_USING_IF_EXISTS;
-using std::atomic_llong _LIBCPP_USING_IF_EXISTS;
-using std::atomic_ullong _LIBCPP_USING_IF_EXISTS;
-using std::atomic_char8_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_char16_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_char32_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_wchar_t _LIBCPP_USING_IF_EXISTS;
-
-using std::atomic_int8_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_uint8_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_int16_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_uint16_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_int32_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_uint32_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_int64_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_uint64_t _LIBCPP_USING_IF_EXISTS;
-
-using std::atomic_int_least8_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_uint_least8_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_int_least16_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_uint_least16_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_int_least32_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_uint_least32_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_int_least64_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_uint_least64_t _LIBCPP_USING_IF_EXISTS;
-
-using std::atomic_int_fast8_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_uint_fast8_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_int_fast16_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_uint_fast16_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_int_fast32_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_uint_fast32_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_int_fast64_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_uint_fast64_t _LIBCPP_USING_IF_EXISTS;
-
-using std::atomic_intptr_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_uintptr_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_size_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_ptrdiff_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_intmax_t _LIBCPP_USING_IF_EXISTS;
-using std::atomic_uintmax_t _LIBCPP_USING_IF_EXISTS;
-
-using std::atomic_compare_exchange_strong _LIBCPP_USING_IF_EXISTS;
-using std::atomic_compare_exchange_strong_explicit _LIBCPP_USING_IF_EXISTS;
-using std::atomic_compare_exchange_weak _LIBCPP_USING_IF_EXISTS;
-using std::atomic_compare_exchange_weak_explicit _LIBCPP_USING_IF_EXISTS;
-using std::atomic_exchange _LIBCPP_USING_IF_EXISTS;
-using std::atomic_exchange_explicit _LIBCPP_USING_IF_EXISTS;
-using std::atomic_fetch_add _LIBCPP_USING_IF_EXISTS;
-using std::atomic_fetch_add_explicit _LIBCPP_USING_IF_EXISTS;
-using std::atomic_fetch_and _LIBCPP_USING_IF_EXISTS;
-using std::atomic_fetch_and_explicit _LIBCPP_USING_IF_EXISTS;
-using std::atomic_fetch_or _LIBCPP_USING_IF_EXISTS;
-using std::atomic_fetch_or_explicit _LIBCPP_USING_IF_EXISTS;
-using std::atomic_fetch_sub _LIBCPP_USING_IF_EXISTS;
-using std::atomic_fetch_sub_explicit _LIBCPP_USING_IF_EXISTS;
-using std::atomic_flag_clear _LIBCPP_USING_IF_EXISTS;
-using std::atomic_flag_clear_explicit _LIBCPP_USING_IF_EXISTS;
-using std::atomic_flag_test_and_set _LIBCPP_USING_IF_EXISTS;
-using std::atomic_flag_test_and_set_explicit _LIBCPP_USING_IF_EXISTS;
-using std::atomic_is_lock_free _LIBCPP_USING_IF_EXISTS;
-using std::atomic_load _LIBCPP_USING_IF_EXISTS;
-using std::atomic_load_explicit _LIBCPP_USING_IF_EXISTS;
-using std::atomic_store _LIBCPP_USING_IF_EXISTS;
-using std::atomic_store_explicit _LIBCPP_USING_IF_EXISTS;
-
-using std::atomic_signal_fence _LIBCPP_USING_IF_EXISTS;
-using std::atomic_thread_fence _LIBCPP_USING_IF_EXISTS;
-
-#elif defined(_LIBCPP_COMPILER_CLANG_BASED)
+#if defined(_LIBCPP_COMPILER_CLANG_BASED)
 
 // Before C++23, we include the next <stdatomic.h> on the path to avoid hijacking
 // the header. We do this because Clang has historically shipped a <stdatomic.h>
@@ -230,6 +131,6 @@ using std::atomic_thread_fence _LIBCPP_USING_IF_EXISTS;
 #    include_next <stdatomic.h>
 #  endif
 
-#endif // defined(__cplusplus) && false
+#endif // defined(_LIBCPP_COMPILER_CLANG_BASED)
 
 #endif // _LIBCPP___CXX03_STDATOMIC_H

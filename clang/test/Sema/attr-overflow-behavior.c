@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -Winteger-overflow -Wno-unused-value -fexperimental-overflow-behavior-types -Woverflow-behavior-conversion -Wconstant-conversion -verify -fsyntax-only -std=c11 -Wno-pointer-sign
+// RUN: %clang_cc1 %s -Winteger-overflow -Wno-unused-value -fexperimental-overflow-behavior-types -Woverflow-behavior-conversion -Wconstant-conversion -verify -fsyntax-only -std=c11 -Wno-pointer-sign -fexperimental-new-constant-interpreter
 
 typedef int __attribute__((overflow_behavior)) bad_arg_count; // expected-error {{'overflow_behavior' attribute takes one argument}}
 typedef int __attribute__((overflow_behavior(not_real))) bad_arg_spec; // expected-error {{'not_real' is not a valid argument to attribute 'overflow_behavior'}}
@@ -14,9 +15,6 @@ void foo() {
   (2147483647 + 100); // expected-warning {{overflow in expression; result is }}
   (ok_wrap)2147483647 + 100; // no warn
 }
-
-#define __wrap __attribute__((overflow_behavior(wrap)))
-#define __trap __attribute__((overflow_behavior(trap)))
 
 void ptr(int a) {
   int __ob_trap *p = &a; // expected-warning {{initializing '__ob_trap int *' with an expression of type 'int *' discards overflow behavior}}

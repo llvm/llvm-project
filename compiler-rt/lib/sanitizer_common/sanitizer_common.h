@@ -387,8 +387,8 @@ void ReportDeadlySignal(const SignalContext &sig, u32 tid,
                         const void *unwind_context);
 
 // Alternative signal stack (POSIX-only).
-void SetAlternateSignalStack();
-void UnsetAlternateSignalStack();
+void* SetAlternateSignalStack();
+void UnsetAlternateSignalStack(void* altstack_base);
 
 bool IsSignalHandlerFromSanitizer(int signum);
 bool SetSignalHandlerFromSanitizer(int signum, bool new_state);
@@ -906,7 +906,14 @@ class LoadedModule {
 class ListOfModules {
  public:
   ListOfModules() : initialized(false) {}
-  ~ListOfModules() { clear(); }
+  ~ListOfModules() {
+    clear();
+    if (initialized)
+      modules_.Destroy();
+  }
+  ListOfModules(const ListOfModules&) = delete;
+  ListOfModules& operator=(const ListOfModules&) = delete;
+
   void init();
   void fallbackInit();  // Uses fallback init if available, otherwise clears
   const LoadedModule *begin() const { return modules_.begin(); }

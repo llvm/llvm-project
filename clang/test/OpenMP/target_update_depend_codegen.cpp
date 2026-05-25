@@ -110,7 +110,7 @@ void foo(int arg) {
   // CK1: [[GEPP0:%.+]] = getelementptr inbounds [1 x ptr], ptr [[P]], i32 0, i32 0
   // CK1: [[IF_DEVICE:%.+]] = getelementptr inbounds nuw %struct.anon{{.+}}, ptr [[CAPTURES:%.+]], i32 0, i32 0
   // CK1: [[IF:%.+]] = load i8, ptr %{{.+}}
-  // CK1: [[IF_BOOL:%.+]] = trunc i8 [[IF]] to i1
+  // CK1: [[IF_BOOL:%.+]] = icmp ne i8 [[IF]], 0
   // CK1: [[IF:%.+]] = zext i1 [[IF_BOOL]] to i8
   // CK1: store i8 [[IF]], ptr [[IF_DEVICE]],
   // CK1: [[RES:%.+]] = call ptr @__kmpc_omp_task_alloc(ptr {{.+}}, i32 {{.+}}, i32 1, i[[sz]] {{64|36}}, i[[sz]] 1, ptr [[TASK_ENTRY2:@.+]])
@@ -241,8 +241,8 @@ void foo(int arg) {
   //
   // &gb.b[0], &gb.b[0], 3 * sizeof(gb.b[0]), TO
   //
-  // CK1: [[B_LOAD:%.+]] = load ptr, ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1)
-  // CK1: [[B_LOAD1:%.+]] = load ptr, ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1)
+  // CK1: [[B_LOAD:%.+]] = load ptr, ptr getelementptr inbounds nuw (i8, ptr @gb, i{{64|32}} {{8|4}})
+  // CK1: [[B_LOAD1:%.+]] = load ptr, ptr getelementptr inbounds nuw (i8, ptr @gb, i{{64|32}} {{8|4}})
   // CK1: [[B0:%.+]] = getelementptr inbounds nuw double, ptr [[B_LOAD1]], i[[sz]] 0
   // CK1: [[BP0:%.+]] = getelementptr inbounds [1 x ptr], ptr [[BP:%.+]], i32 0, i32 0
   // CK1: store ptr [[B_LOAD]], ptr [[BP0]],
