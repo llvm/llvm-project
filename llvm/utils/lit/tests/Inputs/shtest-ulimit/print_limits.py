@@ -2,7 +2,7 @@ import resource
 
 
 def normalize_limit(limit_value):
-    """Normalize RLIM_INFINITY to -1 for consistency across Python versions.
+    """Normalize RLIM_INFINITY to "infinity" for consistency across Python versions.
 
     Python 3.15+ returns the platform's max value (e.g., 2^64-1) instead of -1.
     """
