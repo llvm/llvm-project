@@ -77,11 +77,13 @@ EJIT_RUNTIME="${BUILD_DIR}/lib/libLLVMEJIT.a"
 
 # Minimal .a set verified by link-then-test on 2026-05-25.
 # Core = EJIT's direct LINK_COMPONENTS + essential transitive deps
-# (OrcJIT needs OrcTargetProcess/RuntimeDyld/BitWriter,
+# (OrcJIT needs OrcTargetProcess/BitWriter,
 #  X86CodeGen needs GlobalISel/CFGuard/IRPrinter/Instrumentation,
 #  CodeGen needs ObjCARCOpts/CGData,
-#  AsmPrinter needs DebugInfoDWARF/MCParser,
+#  AsmPrinter needs MCParser,
 #  X86Desc needs MCDisassembler, JITLink needs Option, Core needs Remarks).
+# RuntimeDyld removed via OrcJIT CMake guard (LLJIT.cpp fallback excluded).
+# DebugInfoDWARF/CodeView/DWARFLowLevel removed via AsmPrinter LINK_COMPONENTS guard.
 _set_min_libs() {
   local _l="${BUILD_DIR}/lib"
   local _common="
@@ -116,7 +118,6 @@ ${_l}/libLLVMGlobalISel.a
 ${_l}/libLLVMIRPrinter.a
 ${_l}/libLLVMCFGuard.a
 ${_l}/libLLVMInstrumentation.a
-${_l}/libLLVMDebugInfoDWARF.a
 ${_l}/libLLVMMCParser.a
 ${_l}/libLLVMCGData.a
 ${_l}/libLLVMObjCARCOpts.a
@@ -204,7 +205,9 @@ build_one() {
   fi
 
   echo "  Compiling ${name}.c ..."
-  "${CLANG}" -O2 ${INCLUDES} -c "${src}" -o "${obj}"
+  "${CLANG}" -O2 ${INCLUDES} \
+    -fno-asynchronous-unwind-tables -fno-unwind-tables \
+    -c "${src}" -o "${obj}"
 
   echo "  Linking ${name} (${ARCH}) ..."
   "${CXX}" -fuse-ld="${LD_LLD}" \
