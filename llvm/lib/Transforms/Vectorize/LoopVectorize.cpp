@@ -374,6 +374,12 @@ static cl::opt<bool> EnableEarlyExitVectorization(
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
 
+static cl::opt<bool> EnableInvariantBoundVersioning(
+    "enable-invariant-bound-versioning", cl::init(false), cl::Hidden,
+    cl::desc("Enable speculative hoisting of loop bound loads via runtime "
+             "versioning to allow vectorization of otherwise uncountable "
+             "loops."));
+
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
@@ -8163,11 +8169,25 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
       Phi.eraseFromParent();
 }
 
-// Profitability stub for speculative bound-load versioning.  Currently always
-// returns true.  Intended to be progressively refined with cost-model
-// heuristics (e.g. minimum trip count, vectorization width threshold) to rule
-// out obvious performance regressions before committing to the IR transform.
-static bool isSpeculativeBoundVersioningProfitable() { return true; }
+// Returns true if it is profitable to emit a runtime-check-dominated versioned
+// loop with the bound load speculatively hoisted.
+//
+// The check uses a conservative heuristic that can be progressively refined:
+//
+//   RTC count threshold: if LAA already requires more runtime pointer checks
+//   than VectorizeMemoryCheckThreshold the additional ivbound checks would
+//   push compile-time and runtime overhead too high.
+// Profile-guided or block-frequency-based heuristics can be added here later.
+static bool isSpeculativeBoundVersioningProfitable(const LoopAccessInfo &LAI) {
+  if (LAI.getNumRuntimePointerChecks() > VectorizeMemoryCheckThreshold) {
+    LLVM_DEBUG(dbgs() << "LV: Skipping speculative bound versioning: too many "
+                         "existing runtime checks ("
+                      << LAI.getNumRuntimePointerChecks() << ")\n");
+    return false;
+  }
+
+  return true;
+}
 
 bool LoopVectorizePass::processLoop(Loop *L) {
   assert((EnableVPlanNativePath || L->isInnermost()) &&
@@ -8221,36 +8241,39 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                 &Requirements, &Hints, DB, AC,
                                 /*AllowRuntimeSCEVChecks=*/!OptForSize, AA);
   if (!LVL.canVectorize(EnableVPlanNativePath)) {
-    bool VisitedSpeculativeHoist = false;
-    if (BasicBlock *Latch = L->getLoopLatch()) {
-      if (MDNode *LoopMD =
-              Latch->getTerminator()->getMetadata(LLVMContext::MD_loop)) {
-        for (unsigned i = 1, e = LoopMD->getNumOperands(); i < e; ++i) {
-          if (auto *Op = dyn_cast<MDNode>(LoopMD->getOperand(i)))
-            if (Op->getNumOperands() > 0)
-              if (auto *S = dyn_cast<MDString>(Op->getOperand(0)))
-                if (S->getString() ==
-                    "llvm.loop.speculative.bound.hoist.versioned")
-                  VisitedSpeculativeHoist = true;
+    if (EnableInvariantBoundVersioning) {
+      bool VisitedSpeculativeHoist = false;
+      if (BasicBlock *Latch = L->getLoopLatch()) {
+        if (MDNode *LoopMD =
+                Latch->getTerminator()->getMetadata(LLVMContext::MD_loop)) {
+          for (unsigned i = 1, e = LoopMD->getNumOperands(); i < e; ++i) {
+            if (auto *Op = dyn_cast<MDNode>(LoopMD->getOperand(i)))
+              if (Op->getNumOperands() > 0)
+                if (auto *S = dyn_cast<MDString>(Op->getOperand(0)))
+                  if (S->getString() ==
+                      "llvm.loop.speculative.bound.hoist.versioned")
+                    VisitedSpeculativeHoist = true;
+          }
         }
       }
-    }
 
-    if (!VisitedSpeculativeHoist) {
-      // 1) Check if the loop qualifies for loop invariant bound load.
-      // 2) Generate the versioned loop with runtime checks using the dynamic
-      // loop bound load. Return this versioned loop to attempt vectorization
-      // again. 3) If the versioned loop is generated successfully, re-try
-      // vectorization on the versioned loop.
-      if (LoadInst *BoundLoad =
-              LVL.tryToFindDynamicBoundLoadCandidate(L, *AA)) {
-        if (isSpeculativeBoundVersioningProfitable())
-          if (Loop *Cand = versionLoopForInvariantBoundLoad(
-                  L, BoundLoad, *DT, *LI, *AA, PSE, AC)) {
-            SE->forgetLoop(L);
-            SE->forgetLoop(Cand);
-            return processLoop(Cand);
-          }
+      if (!VisitedSpeculativeHoist) {
+        // 1) Check if the loop qualifies for loop invariant bound load.
+        // 2) Generate the versioned loop with runtime checks using the dynamic
+        // loop bound load. Return this versioned loop to attempt vectorization
+        // again. 3) If the versioned loop is generated successfully, re-try
+        // vectorization on the versioned loop.
+        if (LoadInst *BoundLoad =
+                LVL.tryToFindDynamicBoundLoadCandidate(L, *AA)) {
+          const LoopAccessInfo &PreLAI = LAIs->getInfo(*L);
+          if (isSpeculativeBoundVersioningProfitable(PreLAI))
+            if (Loop *Cand = versionLoopForInvariantBoundLoad(
+                    L, BoundLoad, *DT, *LI, *AA, PSE, AC)) {
+              SE->forgetLoop(L);
+              SE->forgetLoop(Cand);
+              return processLoop(Cand);
+            }
+        }
       }
     }
     LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Cannot prove legality.\n");
