@@ -1142,6 +1142,7 @@ AtomicRMWInst *AtomicExpandImpl::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
       Op, PMV.AlignedAddr, NewOperand, PMV.AlignedAddrAlignment,
       AI->getOrdering(), AI->getSyncScopeID());
 
+  NewAI->setVolatile(AI->isVolatile());
   copyMetadataForAtomic(*NewAI, *AI);
 
   Value *FinalOldResult = extractMaskedValue(Builder, NewAI, PMV);
