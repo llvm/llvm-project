@@ -15,7 +15,9 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+#include <cstdint>
 #include <optional>
+#include <utility>
 
 namespace mlir {
 class AffineExpr;
@@ -42,6 +44,8 @@ void getTripCountMapAndOperands(AffineForOp forOp, AffineMap *map,
 /// otherwise. This uses affine expression analysis and is able to determine
 /// constant trip count in non-trivial cases.
 std::optional<uint64_t> getConstantTripCount(AffineForOp forOp);
+
+std::optional<std::pair<int64_t, int64_t>> getTripCount(AffineForOp forOp);
 
 /// Returns the greatest known integral divisor of the trip count. Affine
 /// expression analysis is used (indirectly through getTripCount), and

@@ -12,18 +12,27 @@
 
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 
+#include "mlir/Analysis/Presburger/IntegerRelation.h"
+#include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/IR/AffineMap.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/MathExtras.h"
 
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
+#include <cstdint>
 #include <numeric>
 #include <optional>
+#include <utility>
 
 #define DEBUG_TYPE "affine-loop-analysis"
 
@@ -235,6 +244,56 @@ std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
     }
   }
   return tripCount;
+}
+
+static std::optional<uint64_t>
+getKnownTripCountBound(AffineMap map, SmallVectorImpl<Value> &operands,
+                       presburger::BoundType type) {
+  std::optional<uint64_t> tripCount;
+  for (unsigned i = 0, e = map.getResults().size(); i < e; ++i) {
+    AffineMap subMap = map.getSubMap(i);
+    ValueBoundsConstraintSet::Variable var(subMap, operands);
+    auto lbBound = ValueBoundsConstraintSet::computeConstantBound(
+        mlir::presburger::BoundType::LB, var);
+    auto ubBound = ValueBoundsConstraintSet::computeConstantBound(
+        mlir::presburger::BoundType::UB, var, nullptr);
+    if (failed(lbBound) || failed(ubBound))
+      return std::nullopt;
+    if (type == presburger::BoundType::LB) {
+      if (tripCount.has_value())
+        tripCount =
+            std::min(*tripCount, static_cast<uint64_t>(lbBound.value()));
+      else
+        tripCount = lbBound.value();
+    } else if (type == presburger::BoundType::UB) {
+      if (tripCount.has_value())
+        tripCount =
+            std::max(*tripCount, static_cast<uint64_t>(ubBound.value()));
+      else
+        tripCount = ubBound.value();
+    } else {
+      return std::nullopt;
+    }
+  }
+  return tripCount;
+}
+
+std::optional<std::pair<int64_t, int64_t>>
+mlir::affine::getTripCount(AffineForOp forOp) {
+  SmallVector<Value, 4> operands;
+  AffineMap map;
+  getTripCountMapAndOperands(forOp, &map, &operands);
+
+  if (!map)
+    return {};
+
+  std::optional<int64_t> minTrip =
+      getKnownTripCountBound(map, operands, presburger::BoundType::LB);
+  std::optional<int64_t> maxTrip =
+      getKnownTripCountBound(map, operands, presburger::BoundType::UB);
+  if (!minTrip || !maxTrip)
+    return {};
+  return std::make_pair(*minTrip, *maxTrip);
 }
 
 /// Returns the greatest known integral divisor of the trip count. Affine

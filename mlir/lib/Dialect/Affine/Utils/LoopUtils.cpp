@@ -27,7 +27,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 #include <optional>
+#include <utility>
 
 #define DEBUG_TYPE "loop-utils"
 
@@ -877,6 +879,10 @@ LogicalResult mlir::affine::loopUnrollFull(AffineForOp forOp) {
     if (tripCount == 1)
       return promoteIfSingleIteration(forOp);
     return loopUnrollByFactor(forOp, tripCount);
+  }
+  std::optional<std::pair<int64_t, int64_t>> tripCountRange =
+      getTripCount(forOp);
+  if (tripCountRange.has_value()) {
   }
   return failure();
 }
