@@ -42,11 +42,13 @@ MATCHER(StringEquality, "Checks if two char* are equal as strings") {
   return std::string(std::get<0>(arg)) == std::string(std::get<1>(arg));
 }
 
+#ifdef _WIN32
 bool preferForwardSlash() {
   SmallString<1> Path("/");
   llvm::sys::path::native(Path);
   return Path == "/";
 }
+#endif
 
 class TempEnvVar {
  public:
