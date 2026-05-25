@@ -463,7 +463,7 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
 }
 
 void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
-  if (F.isDeclaration() || !AMDGPU::isModuleEntryFunctionCC(F.getCallingConv()))
+  if (F.isDeclaration())
     return;
 
   using RIK = MCResourceInfo::ResourceInfoKind;
@@ -478,6 +478,43 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
     }
     return false;
   };
+
+  // Register allocation normally respects the ABI register budget. Final
+  // resource accounting can still exceed it when the IR names fixed physical
+  // registers, e.g. inline asm clobbers. Check the resolved per-function
+  // resource symbols here so object-linking metadata is not emitted for a
+  // function that cannot satisfy its ABI occupancy.
+  if (AMDGPUTargetMachine::EnableObjectLinking) {
+    const unsigned BudgetVGPR = STM.getMaxNumVGPRs(F);
+    const unsigned BudgetSGPR = STM.getMaxNumSGPRs(F);
+    const unsigned BudgetAGPR = STM.getMaxNumAGPRs(F);
+
+    auto CheckBudget = [&](RIK Kind, unsigned Budget, const char *What) {
+      MCSymbol *Sym = RI.getSymbol(FnSym->getName(), Kind, OutContext);
+      uint64_t Used;
+      if (!Sym->isVariable() ||
+          !TryGetMCExprValue(Sym->getVariableValue(), Used))
+        return false;
+      if (Used <= Budget)
+        return false;
+      F.getContext().diagnose(DiagnosticInfoResourceLimit(
+          F, What, Used, Budget, DS_Error, DK_ResourceLimit));
+      return true;
+    };
+
+    if (CheckBudget(RIK::RIK_NumVGPR, BudgetVGPR,
+                    "VGPRs under object-linking ABI"))
+      return;
+    if (CheckBudget(RIK::RIK_NumAGPR, BudgetAGPR,
+                    "AGPRs under object-linking ABI"))
+      return;
+    if (CheckBudget(RIK::RIK_NumSGPR, BudgetSGPR,
+                    "SGPRs under object-linking ABI"))
+      return;
+  }
+
+  if (!AMDGPU::isModuleEntryFunctionCC(F.getCallingConv()))
+    return;
 
   const uint64_t MaxScratchPerWorkitem =
       STM.getMaxWaveScratchSize() / STM.getWavefrontSize();
@@ -551,20 +588,17 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
         TryGetMCExprValue(NumVgprSymbol->getVariableValue(), NumVgpr) &&
         TryGetMCExprValue(NumAgprSymbol->getVariableValue(), NumAgpr)) {
       const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
-      unsigned MaxWaves = MFI.getMaxWavesPerEU();
+      unsigned MaxWaves = STM.getWavesPerEU(F).second;
       uint64_t TotalNumVgpr =
           getTotalNumVGPRs(STM.hasGFX90AInsts(), NumAgpr, NumVgpr);
-      uint64_t NumVGPRsForWavesPerEU =
-          std::max({TotalNumVgpr, (uint64_t)1,
-                    (uint64_t)STM.getMinNumVGPRs(
-                        MaxWaves, MFI.getDynamicVGPRBlockSize())});
-      uint64_t NumSGPRsForWavesPerEU = std::max(
-          {NumSgpr, (uint64_t)1, (uint64_t)STM.getMinNumSGPRs(MaxWaves)});
-      const MCExpr *OccupancyExpr = createOccupancy(
-          STM.getOccupancyWithWorkGroupSizes(*MF).second,
-          MCConstantExpr::create(NumSGPRsForWavesPerEU, OutContext),
-          MCConstantExpr::create(NumVGPRsForWavesPerEU, OutContext),
-          MFI.getDynamicVGPRBlockSize(), STM, OutContext);
+      auto [EffectiveSGPRs, EffectiveVGPRs] =
+          STM.getEffectiveNumGPRsForWavesPerEU(MaxWaves, NumSgpr, TotalNumVgpr,
+                                               MFI.getDynamicVGPRBlockSize());
+      const MCExpr *OccupancyExpr =
+          createOccupancy(STM.getOccupancyWithWorkGroupSizes(*MF).second,
+                          MCConstantExpr::create(EffectiveSGPRs, OutContext),
+                          MCConstantExpr::create(EffectiveVGPRs, OutContext),
+                          MFI.getDynamicVGPRBlockSize(), STM, OutContext);
       uint64_t Occupancy;
 
       const auto [MinWEU, MaxWEU] = AMDGPU::getIntegerPairAttribute(
@@ -735,29 +769,24 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   // LDS/named-barrier use edges, indirect calls, and address-taken type IDs).
   emitAMDGPUInfo(M);
 
-  // Assign expressions which can only be resolved when all other functions are
-  // known.
-  RI.finalize(OutContext);
-
-  // Switch section and emit all GPR maximums within the processed module.
-  OutStreamer->pushSection();
-  MCSectionELF *MaxGPRSection =
-      OutContext.getELFSection(".AMDGPU.gpr_maximums", ELF::SHT_PROGBITS, 0);
-  OutStreamer->switchSection(MaxGPRSection);
-  getTargetStreamer()->EmitMCResourceMaximums(
-      RI.getMaxVGPRSymbol(OutContext), RI.getMaxAGPRSymbol(OutContext),
-      RI.getMaxSGPRSymbol(OutContext), RI.getMaxNamedBarrierSymbol(OutContext));
-  OutStreamer->popSection();
-
-  // In the object-linking pipeline per-function resource MCExprs reference
-  // external callee symbols that cannot be evaluated here, so cross-TU limit
-  // checks would silently no-op for every non-leaf function. Defer resource
-  // sanity checking to the linker, which re-validates against the aggregated
-  // call graph in the combined .amdgpu.info metadata.
+  // Finalize non-object-linking resource propagation and emit the
+  // `amdgpu.max_num_*` fallback symbols.
   if (!AMDGPUTargetMachine::EnableObjectLinking) {
-    for (Function &F : M.functions())
-      validateMCResourceInfo(F);
+    RI.finalize(OutContext);
+
+    OutStreamer->pushSection();
+    MCSectionELF *MaxGPRSection =
+        OutContext.getELFSection(".AMDGPU.gpr_maximums", ELF::SHT_PROGBITS, 0);
+    OutStreamer->switchSection(MaxGPRSection);
+    getTargetStreamer()->EmitMCResourceMaximums(
+        RI.getMaxVGPRSymbol(OutContext), RI.getMaxAGPRSymbol(OutContext),
+        RI.getMaxSGPRSymbol(OutContext),
+        RI.getMaxNamedBarrierSymbol(OutContext));
+    OutStreamer->popSection();
   }
+
+  for (Function &F : M.functions())
+    validateMCResourceInfo(F);
 
   RI.reset();
 
@@ -921,11 +950,14 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (AMDGPUTargetMachine::EnableObjectLinking) {
     const AMDGPUResourceUsageAnalysisWrapperPass::FunctionResourceInfo &RU =
         *ResourceUsage;
+    uint32_t Occupancy =
+        static_cast<uint32_t>(STM.getWavesPerEU(MF.getFunction()).first);
     FunctionInfos.push_back(
         {/*NumSGPR=*/static_cast<uint32_t>(RU.NumExplicitSGPR),
          /*NumArchVGPR=*/static_cast<uint32_t>(RU.NumVGPR),
          /*NumAccVGPR=*/static_cast<uint32_t>(RU.NumAGPR),
          /*PrivateSegmentSize=*/static_cast<uint32_t>(RU.PrivateSegmentSize),
+         /*Occupancy=*/Occupancy,
          /*UsesVCC=*/RU.UsesVCC,
          /*UsesFlatScratch=*/RU.UsesFlatScratch,
          /*HasDynStack=*/RU.HasDynamicallySizedStack,
@@ -1341,7 +1373,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   // Adjust number of registers used to meet default/requested minimum/maximum
   // number of waves per execution unit request.
-  unsigned MaxWaves = MFI->getMaxWavesPerEU();
+  unsigned MaxWaves = STM.getWavesPerEU(MF.getFunction()).second;
   ProgInfo.NumSGPRsForWavesPerEU =
       AMDGPUMCExpr::createMax({ProgInfo.NumSGPR, CreateExpr(1ul),
                                CreateExpr(STM.getMinNumSGPRs(MaxWaves))},

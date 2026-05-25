@@ -23,6 +23,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AMDGPUGenSubtargetInfo.inc"
@@ -704,6 +705,22 @@ public:
                                                  unsigned LDSSize = 0,
                                                  unsigned NumSGPRs = 0,
                                                  unsigned NumVGPRs = 0) const;
+
+  /// \returns {SGPRs, VGPRs} resource counts for occupancy-adjusted reporting.
+  ///
+  /// This is not the function's literal register usage. It is the count to use
+  /// when resource metadata or kernel descriptor fields need to encode the
+  /// effect of capping occupancy to at most \p MaxWaves waves per EU. If the
+  /// real usage is below the threshold needed to enforce that cap, the returned
+  /// count is inflated to the minimum count that does enforce it.
+  ///
+  /// The result is also clamped to at least one register in each bank. Zero
+  /// means "no register pressure" to the occupancy calculation, so it cannot
+  /// express an occupancy cap even for a function whose literal usage is zero.
+  std::pair<uint64_t, uint64_t>
+  getEffectiveNumGPRsForWavesPerEU(unsigned MaxWaves, uint64_t NumSGPRs,
+                                   uint64_t NumVGPRs,
+                                   unsigned DynamicVGPRBlockSize) const;
 
   /// \returns true if the flat_scratch register should be initialized with the
   /// pointer to the wave's scratch memory rather than a size and offset.

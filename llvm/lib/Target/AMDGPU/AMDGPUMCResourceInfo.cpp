@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMCResourceInfo.h"
+#include "AMDGPUTargetMachine.h"
+#include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringRef.h"
@@ -262,7 +264,8 @@ void MCResourceInfo::gatherResourceInfo(
       MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled();
 
   if (!AMDGPU::isEntryFunctionCC(CC)) {
-    if (!IsDynamicVGPREnabled || !IsChainCC)
+    if ((!IsDynamicVGPREnabled || !IsChainCC) &&
+        !AMDGPUTargetMachine::EnableObjectLinking)
       addMaxVGPRCandidate(FRI.NumVGPR);
     addMaxAGPRCandidate(FRI.NumAGPR);
     addMaxSGPRCandidate(FRI.NumExplicitSGPR);
@@ -285,9 +288,37 @@ void MCResourceInfo::gatherResourceInfo(
   if (AMDGPUTargetMachine::EnableObjectLinking) {
     LLVM_DEBUG(dbgs() << "MCResUse:   object linking enabled, no call-graph "
                          "propagation; emitting local resource values only\n");
-    SetToLocal(FRI.NumVGPR, RIK_NumVGPR);
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+    unsigned MaxWaves = ST.getWavesPerEU(MF.getFunction()).second;
+    unsigned DynamicVGPRBlockSize =
+        AMDGPU::getDynamicVGPRBlockSize(MF.getFunction());
+    if (DynamicVGPRBlockSize == 0 && ST.isDynamicVGPREnabled())
+      DynamicVGPRBlockSize = ST.getDynamicVGPRBlockSize();
+
+    uint64_t TotalVGPR =
+        AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), FRI.NumAGPR, FRI.NumVGPR);
+    unsigned ExtraSGPRs =
+        AMDGPU::IsaInfo::getNumExtraSGPRs(ST, FRI.UsesVCC, FRI.UsesFlatScratch,
+                                          ST.getTargetID().isXnackOnOrAny());
+    uint64_t TotalSGPR = FRI.NumExplicitSGPR + ExtraSGPRs;
+    auto [EffectiveSGPRs, EffectiveVGPRs] = ST.getEffectiveNumGPRsForWavesPerEU(
+        MaxWaves, TotalSGPR, TotalVGPR, DynamicVGPRBlockSize);
+
+    int32_t EffectiveNumVGPR = FRI.NumVGPR;
+    if (EffectiveVGPRs > TotalVGPR) {
+      if (ST.hasGFX90AInsts())
+        EffectiveNumVGPR = static_cast<int32_t>(EffectiveVGPRs - FRI.NumAGPR);
+      else
+        EffectiveNumVGPR = static_cast<int32_t>(EffectiveVGPRs);
+    }
+
+    int32_t EffectiveNumSGPR = FRI.NumExplicitSGPR;
+    if (EffectiveSGPRs > TotalSGPR)
+      EffectiveNumSGPR += static_cast<int32_t>(EffectiveSGPRs - TotalSGPR);
+
+    SetToLocal(EffectiveNumVGPR, RIK_NumVGPR);
     SetToLocal(FRI.NumAGPR, RIK_NumAGPR);
-    SetToLocal(FRI.NumExplicitSGPR, RIK_NumSGPR);
+    SetToLocal(EffectiveNumSGPR, RIK_NumSGPR);
     SetToLocal(FRI.NumNamedBarrier, RIK_NumNamedBarrier);
     SetToLocal(FRI.PrivateSegmentSize, RIK_PrivateSegSize);
     SetToLocal(FRI.UsesVCC, RIK_UsesVCC);
