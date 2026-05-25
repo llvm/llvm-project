@@ -29,21 +29,16 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ vp<[[OTC]]>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; CHECK-NEXT:     EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; CHECK-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[EVL_PHI]]> * ir<-1>
-; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<-1>, vp<[[EVL]]>
 ; CHECK-NEXT:     CLONE ir<[[IDX:%.+]]> = add nsw vp<[[DERIVED_IV]]>, ir<-1>
 ; CHECK-NEXT:     CLONE ir<[[IDX_PROM:%.+]]> = zext ir<[[IDX]]>
 ; CHECK-NEXT:     CLONE ir<[[ARRAY_IDX_B:%.+]]> = getelementptr inbounds ir<[[B:%.+]]>, ir<[[IDX_PROM]]>
 ; CHECK-NEXT:     vp<[[VEC_END_PTR_B:%.+]]> = vector-end-pointer ir<[[ARRAY_IDX_B]]>, vp<[[EVL]]>
 ; CHECK-NEXT:     WIDEN ir<[[LOAD_B:%.+]]> = vp.load vp<[[VEC_END_PTR_B]]>, vp<[[EVL]]>
-; CHECK-NEXT:     WIDEN-INTRINSIC vp<[[SPLICE_B:%.+]]> = call llvm.vector.splice.left(ir<poison>, ir<[[LOAD_B]]>, vp<[[EVL]]>)
 ; CHECK-NEXT:     WIDEN-INTRINSIC vp<[[VP_REVERSE_B:%.+]]> = call llvm.experimental.vp.reverse(ir<[[LOAD_B]]>, ir<true>, vp<[[EVL]]>)
-; CHECK-NEXT:     EMIT vp<[[VAL_B:%.+]]> = reverse vp<[[SPLICE_B]]>
 ; CHECK-NEXT:     WIDEN ir<[[ADD_RESULT:%.+]]> = add vp<[[VP_REVERSE_B]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<[[ARRAY_IDX_A:%.+]]> = getelementptr inbounds ir<[[A:%.+]]>, ir<[[IDX_PROM]]>
-; CHECK-NEXT:     EMIT vp<[[REVERSED_ADD:%.+]]> = reverse ir<[[ADD_RESULT]]>
 ; CHECK-NEXT:     vp<[[VEC_END_PTR_A:%.+]]> = vector-end-pointer ir<[[ARRAY_IDX_A]]>, vp<[[EVL]]>
 ; CHECK-NEXT:     WIDEN-INTRINSIC vp<[[VP_REVERSE_ADD:%.+]]> = call llvm.experimental.vp.reverse(ir<[[ADD_RESULT]]>, ir<true>, vp<[[EVL]]>)
-; CHECK-NEXT:     WIDEN-INTRINSIC vp<[[STORE_VAL:%.+]]> = call llvm.vector.splice.right(vp<[[REVERSED_ADD]]>, ir<poison>, vp<[[EVL]]>)
 ; CHECK-NEXT:     WIDEN vp.store vp<[[VEC_END_PTR_A]]>, vp<[[VP_REVERSE_ADD]]>, vp<[[EVL]]>
 ; CHECK-NEXT:     EMIT vp<[[IV_NEXT]]> = add vp<[[EVL]]>, vp<[[EVL_PHI]]>
 ; CHECK-NEXT:     EMIT vp<[[AVL_NEXT]]> = sub nuw vp<[[AVL]]>, vp<[[EVL]]>
