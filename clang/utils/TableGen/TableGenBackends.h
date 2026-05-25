@@ -181,6 +181,8 @@ void EmitMveBuiltinAliases(const llvm::RecordKeeper &Records,
 void EmitRVVHeader(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitRVVBuiltins(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitRVVBuiltinCG(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitRVVBuiltinCIRCG(const llvm::RecordKeeper &Records,
+                         llvm::raw_ostream &OS);
 void EmitRVVBuiltinSema(const llvm::RecordKeeper &Records,
                         llvm::raw_ostream &OS);
 
