@@ -1071,7 +1071,6 @@ protected:
               size = target->GetArchitecture().GetAddressByteSize();
       } else {
           size = target->GetArchitecture().GetAddressByteSize();
-      } else {
           result.AppendWarning(
               "Cannot infer watchpoint size from expression. "
               "Defaulting to pointer size. \n"
@@ -1113,7 +1112,7 @@ protected:
     if (valobj_size && size != *valobj_size) {
       auto type_system = compiler_type.GetTypeSystem();
       if (type_system) {
-        if (size <= target.GetArchitecture().GetAddressByteSize()) {
+        if (size <= target->GetArchitecture().GetAddressByteSize()) {
           compiler_type = type_system->GetBuiltinTypeForEncodingAndBitSize(
           eEncodingUint, 8 * size);
         } else {
