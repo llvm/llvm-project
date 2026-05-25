@@ -34,6 +34,7 @@
 
 using namespace llvm;
 using namespace PatternMatch;
+using namespace LoopVectorizationUtils;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
@@ -626,8 +627,8 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     // not supported yet.
     Instruction *Term = BB->getTerminator();
     if (!isa<UncondBrInst, CondBrInst>(Term)) {
-      LoopVectorizationUtils::reportVectorizationFailure(
-          Hints, "Unsupported basic block terminator",
+      reportVectorizationFailure(
+          LV_NAME, "Unsupported basic block terminator",
           "loop control flow is not understood by vectorizer",
           "CFGNotUnderstood", ORE, TheLoop);
       if (DoExtraAnalysis)
@@ -646,8 +647,8 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     if (Br && !TheLoop->isLoopInvariant(Br->getCondition()) &&
         !LI->isLoopHeader(Br->getSuccessor(0)) &&
         !LI->isLoopHeader(Br->getSuccessor(1))) {
-      LoopVectorizationUtils::reportVectorizationFailure(
-          Hints, "Unsupported conditional branch",
+      reportVectorizationFailure(
+          LV_NAME, "Unsupported conditional branch",
           "loop control flow is not understood by vectorizer",
           "CFGNotUnderstood", ORE, TheLoop);
       if (DoExtraAnalysis)
@@ -661,8 +662,8 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   // simple outer loops scenarios with uniform nested loops.
   if (!isUniformLoopNest(TheLoop /*loop nest*/,
                          TheLoop /*context outer loop*/)) {
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "Outer loop contains divergent loops",
+    reportVectorizationFailure(
+        LV_NAME, "Outer loop contains divergent loops",
         "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
         ORE, TheLoop);
     if (DoExtraAnalysis)
@@ -673,8 +674,8 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
 
   // Check whether we are able to set up outer loop induction.
   if (!setupOuterLoopInductions()) {
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "Unsupported outer loop Phi(s)", "UnsupportedPhi", ORE, TheLoop);
+    reportVectorizationFailure(LV_NAME, "Unsupported outer loop Phi(s)",
+                               "UnsupportedPhi", ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -805,15 +806,15 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 
   if (!PrimaryInduction) {
     if (Inductions.empty()) {
-      LoopVectorizationUtils::reportVectorizationFailure(
-          Hints, "Did not find one integer induction var",
+      reportVectorizationFailure(
+          LV_NAME, "Did not find one integer induction var",
           "loop induction variable could not be identified",
           "NoInductionVariable", ORE, TheLoop);
       return false;
     }
     if (!WidestIndTy) {
-      LoopVectorizationUtils::reportVectorizationFailure(
-          Hints, "Did not find one integer induction var",
+      reportVectorizationFailure(
+          LV_NAME, "Did not find one integer induction var",
           "integer loop induction variable could not be identified",
           "NoIntegerInductionVariable", ORE, TheLoop);
       return false;
@@ -839,8 +840,8 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     // Check that this PHI type is allowed.
     if (!PhiTy->isIntegerTy() && !PhiTy->isFloatingPointTy() &&
         !PhiTy->isPointerTy()) {
-      LoopVectorizationUtils::reportVectorizationFailure(
-          Hints, "Found a non-int non-pointer PHI",
+      reportVectorizationFailure(
+          LV_NAME, "Found a non-int non-pointer PHI",
           "loop control flow is not understood by vectorizer",
           "CFGNotUnderstood", ORE, TheLoop);
       return false;
@@ -861,8 +862,8 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
 
     // We only allow if-converted PHIs with exactly two incoming values.
     if (Phi->getNumIncomingValues() != 2) {
-      LoopVectorizationUtils::reportVectorizationFailure(
-          Hints, "Found an invalid PHI",
+      reportVectorizationFailure(
+          LV_NAME, "Found an invalid PHI",
           "loop control flow is not understood by vectorizer",
           "CFGNotUnderstood", ORE, TheLoop, Phi);
       return false;
@@ -930,11 +931,11 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       return true;
     }
 
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "Found an unidentified PHI",
-        "value that could not be identified as "
-        "reduction is used outside the loop",
-        "NonReductionValueUsedOutsideLoop", ORE, TheLoop, Phi);
+    reportVectorizationFailure(LV_NAME, "Found an unidentified PHI",
+                               "value that could not be identified as "
+                               "reduction is used outside the loop",
+                               "NonReductionValueUsedOutsideLoop", ORE, TheLoop,
+                               Phi);
     return false;
   } // end of PHI handling
 
@@ -959,17 +960,16 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       // but it's hard to provide meaningful yet generic advice.
       // Also, should this be guarded by allowExtraAnalysis() and/or be part
       // of the returned info from isFunctionVectorizable()?
-      LoopVectorizationUtils::reportVectorizationFailure(
-          Hints, "Found a non-intrinsic callsite",
+      reportVectorizationFailure(
+          LV_NAME, "Found a non-intrinsic callsite",
           "library call cannot be vectorized. "
           "Try compiling with -fno-math-errno, -ffast-math, "
           "or similar flags",
           "CantVectorizeLibcall", ORE, TheLoop, CI);
     } else {
-      LoopVectorizationUtils::reportVectorizationFailure(
-          Hints, "Found a non-intrinsic callsite",
-          "call instruction cannot be vectorized", "CantVectorizeLibcall", ORE,
-          TheLoop, CI);
+      reportVectorizationFailure(LV_NAME, "Found a non-intrinsic callsite",
+                                 "call instruction cannot be vectorized",
+                                 "CantVectorizeLibcall", ORE, TheLoop, CI);
     }
     return false;
   }
@@ -982,8 +982,8 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     for (unsigned Idx = 0; Idx < CI->arg_size(); ++Idx)
       if (isVectorIntrinsicWithScalarOpAtArg(IntrinID, Idx, TTI)) {
         if (!SE->isLoopInvariant(PSE.getSCEV(CI->getOperand(Idx)), TheLoop)) {
-          LoopVectorizationUtils::reportVectorizationFailure(
-              Hints, "Found unvectorizable intrinsic",
+          reportVectorizationFailure(
+              LV_NAME, "Found unvectorizable intrinsic",
               "intrinsic instruction cannot be vectorized",
               "CantVectorizeIntrinsic", ORE, TheLoop, CI);
           return false;
@@ -1015,10 +1015,10 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       (isa<CastInst>(I) &&
        !VectorType::isValidElementType(I.getOperand(0)->getType())) ||
       isa<ExtractElementInst>(I)) {
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "Found unvectorizable type",
-        "instruction return type cannot be vectorized",
-        "CantVectorizeInstructionReturnType", ORE, TheLoop, &I);
+    reportVectorizationFailure(LV_NAME, "Found unvectorizable type",
+                               "instruction return type cannot be vectorized",
+                               "CantVectorizeInstructionReturnType", ORE,
+                               TheLoop, &I);
     return false;
   }
 
@@ -1026,9 +1026,9 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
   if (auto *ST = dyn_cast<StoreInst>(&I)) {
     Type *T = ST->getValueOperand()->getType();
     if (!VectorType::isValidElementType(T)) {
-      LoopVectorizationUtils::reportVectorizationFailure(
-          Hints, "Store instruction cannot be vectorized", "CantVectorizeStore",
-          ORE, TheLoop, ST);
+      reportVectorizationFailure(LV_NAME,
+                                 "Store instruction cannot be vectorized",
+                                 "CantVectorizeStore", ORE, TheLoop, ST);
       return false;
     }
 
@@ -1039,8 +1039,8 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       auto *VecTy = FixedVectorType::get(T, /*NumElts=*/2);
       assert(VecTy && "did not find vectorized version of stored type");
       if (!TTI->isLegalNTStore(VecTy, ST->getAlign())) {
-        LoopVectorizationUtils::reportVectorizationFailure(
-            Hints, "nontemporal store instruction cannot be vectorized",
+        reportVectorizationFailure(
+            LV_NAME, "nontemporal store instruction cannot be vectorized",
             "CantVectorizeNontemporalStore", ORE, TheLoop, ST);
         return false;
       }
@@ -1053,8 +1053,8 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       auto *VecTy = FixedVectorType::get(I.getType(), /*NumElts=*/2);
       assert(VecTy && "did not find vectorized version of load type");
       if (!TTI->isLegalNTLoad(VecTy, LD->getAlign())) {
-        LoopVectorizationUtils::reportVectorizationFailure(
-            Hints, "nontemporal load instruction cannot be vectorized",
+        reportVectorizationFailure(
+            LV_NAME, "nontemporal load instruction cannot be vectorized",
             "CantVectorizeNontemporalLoad", ORE, TheLoop, LD);
         return false;
       }
@@ -1082,9 +1082,8 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       AllowedExit.insert(&I);
       return true;
     }
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "Value cannot be used outside the loop", "ValueUsedOutsideLoop",
-        ORE, TheLoop, &I);
+    reportVectorizationFailure(LV_NAME, "Value cannot be used outside the loop",
+                               "ValueUsedOutsideLoop", ORE, TheLoop, &I);
     return false;
   }
 
@@ -1229,8 +1228,8 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
 
   if (!LAI->canVectorizeMemory()) {
     if (hasUncountableExitWithSideEffects()) {
-      LoopVectorizationUtils::reportVectorizationFailure(
-          Hints,
+      reportVectorizationFailure(
+          LV_NAME,
           "Cannot vectorize unsafe dependencies in uncountable exit loop with "
           "side effects",
           "CantVectorizeUnsafeDependencyForEELoopWithSideEffects", ORE,
@@ -1242,8 +1241,8 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   }
 
   if (LAI->hasLoadStoreDependenceInvolvingLoopInvariantAddress()) {
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "We don't allow storing to uniform addresses",
+    reportVectorizationFailure(
+        LV_NAME, "We don't allow storing to uniform addresses",
         "write to a loop invariant address could not "
         "be vectorized",
         "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
@@ -1262,8 +1261,8 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
         continue;
 
       if (blockNeedsPredication(SI->getParent())) {
-        LoopVectorizationUtils::reportVectorizationFailure(
-            Hints, "We don't allow storing to uniform addresses",
+        reportVectorizationFailure(
+            LV_NAME, "We don't allow storing to uniform addresses",
             "write of conditional recurring variant value to a loop "
             "invariant address could not be vectorized",
             "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
@@ -1275,8 +1274,8 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
       // to overcomplicate vectorization to support this case.
       if (Instruction *Ptr = dyn_cast<Instruction>(SI->getPointerOperand())) {
         if (TheLoop->contains(Ptr)) {
-          LoopVectorizationUtils::reportVectorizationFailure(
-              Hints, "Invariant address is calculated inside the loop",
+          reportVectorizationFailure(
+              LV_NAME, "Invariant address is calculated inside the loop",
               "write to a loop invariant address could not "
               "be vectorized",
               "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
@@ -1318,8 +1317,8 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
       bool IsOK = UnhandledStores.empty();
       // TODO: we should also validate against InvariantMemSets.
       if (!IsOK) {
-        LoopVectorizationUtils::reportVectorizationFailure(
-            Hints, "We don't allow storing to uniform addresses",
+        reportVectorizationFailure(
+            LV_NAME, "We don't allow storing to uniform addresses",
             "write to a loop invariant address could not "
             "be vectorized",
             "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
@@ -1488,9 +1487,8 @@ bool LoopVectorizationLegality::blockCanBePredicated(
 
 bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   if (!EnableIfConversion) {
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "If-conversion is disabled", "IfConversionDisabled", ORE,
-        TheLoop);
+    reportVectorizationFailure(LV_NAME, "If-conversion is disabled",
+                               "IfConversionDisabled", ORE, TheLoop);
     return false;
   }
 
@@ -1580,24 +1578,24 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
     // loop.
     if (isa<SwitchInst>(BB->getTerminator())) {
       if (TheLoop->isLoopExiting(BB)) {
-        LoopVectorizationUtils::reportVectorizationFailure(
-            Hints, "Loop contains an unsupported switch",
+        reportVectorizationFailure(
+            LV_NAME, "Loop contains an unsupported switch",
             "LoopContainsUnsupportedSwitch", ORE, TheLoop, BB->getTerminator());
         return false;
       }
     } else if (!isa<UncondBrInst, CondBrInst>(BB->getTerminator())) {
-      LoopVectorizationUtils::reportVectorizationFailure(
-          Hints, "Loop contains an unsupported terminator",
-          "LoopContainsUnsupportedTerminator", ORE, TheLoop,
-          BB->getTerminator());
+      reportVectorizationFailure(LV_NAME,
+                                 "Loop contains an unsupported terminator",
+                                 "LoopContainsUnsupportedTerminator", ORE,
+                                 TheLoop, BB->getTerminator());
       return false;
     }
 
     // We must be able to predicate all blocks that need to be predicated.
     if (blockNeedsPredication(BB) &&
         !blockCanBePredicated(BB, SafePointers, ConditionallyExecutedOps)) {
-      LoopVectorizationUtils::reportVectorizationFailure(
-          Hints, "Control flow cannot be substituted for a select",
+      reportVectorizationFailure(
+          LV_NAME, "Control flow cannot be substituted for a select",
           "NoCFGForSelect", ORE, TheLoop, BB->getTerminator());
       return false;
     }
@@ -1626,8 +1624,8 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
   // We must have a loop in canonical form. Loops with indirectbr in them cannot
   // be canonicalized.
   if (!Lp->getLoopPreheader()) {
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "Loop doesn't have a legal pre-header",
+    reportVectorizationFailure(
+        LV_NAME, "Loop doesn't have a legal pre-header",
         "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
         ORE, TheLoop);
     if (DoExtraAnalysis)
@@ -1638,8 +1636,8 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
 
   // We must have a single backedge.
   if (Lp->getNumBackEdges() != 1) {
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "The loop must have a single backedge",
+    reportVectorizationFailure(
+        LV_NAME, "The loop must have a single backedge",
         "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
         ORE, TheLoop);
     if (DoExtraAnalysis)
@@ -1651,8 +1649,8 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
   // The latch must be terminated by a branch.
   BasicBlock *Latch = Lp->getLoopLatch();
   if (Latch && !isa<UncondBrInst, CondBrInst>(Latch->getTerminator())) {
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "The loop latch terminator is not a UncondBrInst/CondBrInst",
+    reportVectorizationFailure(
+        LV_NAME, "The loop latch terminator is not a UncondBrInst/CondBrInst",
         "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
         ORE, TheLoop);
     if (DoExtraAnalysis)
@@ -1693,15 +1691,15 @@ bool LoopVectorizationLegality::canVectorizeLoopNestCFG(
 bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   BasicBlock *LatchBB = TheLoop->getLoopLatch();
   if (!LatchBB) {
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "Loop does not have a latch", "Cannot vectorize early exit loop",
-        "NoLatchEarlyExit", ORE, TheLoop);
+    reportVectorizationFailure(LV_NAME, "Loop does not have a latch",
+                               "Cannot vectorize early exit loop",
+                               "NoLatchEarlyExit", ORE, TheLoop);
     return false;
   }
 
   if (Reductions.size() || FixedOrderRecurrences.size()) {
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "Found reductions or recurrences in early-exit loop",
+    reportVectorizationFailure(
+        LV_NAME, "Found reductions or recurrences in early-exit loop",
         "Cannot vectorize early exit loop with reductions or recurrences",
         "RecurrencesInEarlyExitLoop", ORE, TheLoop);
     return false;
@@ -1718,8 +1716,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
         PSE.getSE()->getPredicatedExitCount(TheLoop, BB, &Predicates);
     if (isa<SCEVCouldNotCompute>(EC)) {
       if (size(successors(BB)) != 2) {
-        LoopVectorizationUtils::reportVectorizationFailure(
-            Hints, "Early exiting block does not have exactly two successors",
+        reportVectorizationFailure(
+            LV_NAME, "Early exiting block does not have exactly two successors",
             "Incorrect number of successors from early exiting block",
             "EarlyExitTooManySuccessors", ORE, TheLoop);
         return false;
@@ -1743,8 +1741,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   // The latch block must have a countable exit.
   if (isa<SCEVCouldNotCompute>(
           PSE.getSE()->getPredicatedExitCount(TheLoop, LatchBB, &Predicates))) {
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "Cannot determine exact exit count for latch block",
+    reportVectorizationFailure(
+        LV_NAME, "Cannot determine exact exit count for latch block",
         "Cannot vectorize early exit loop",
         "UnknownLatchExitCountEarlyExitLoop", ORE, TheLoop);
     return false;
@@ -1778,19 +1776,19 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
         }
 
         // We don't support complex writes to memory.
-        LoopVectorizationUtils::reportVectorizationFailure(
-            Hints, "Complex writes to memory unsupported in early exit loops",
+        reportVectorizationFailure(
+            LV_NAME, "Complex writes to memory unsupported in early exit loops",
             "Cannot vectorize early exit loop with complex writes to memory",
             "WritesInEarlyExitLoop", ORE, TheLoop);
         return false;
       }
 
       if (!IsSafeOperation(&I)) {
-        LoopVectorizationUtils::reportVectorizationFailure(
-            Hints,
-            "Early exit loop contains operations that "
-            "cannot be speculatively executed",
-            "UnsafeOperationsEarlyExitLoop", ORE, TheLoop);
+        reportVectorizationFailure(LV_NAME,
+                                   "Early exit loop contains operations that "
+                                   "cannot be speculatively executed",
+                                   "UnsafeOperationsEarlyExitLoop", ORE,
+                                   TheLoop);
         return false;
       }
     }
@@ -1802,8 +1800,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     Predicates.clear();
     if (!isReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC, NonDerefLoads,
                         &Predicates)) {
-      LoopVectorizationUtils::reportVectorizationFailure(
-          Hints, "Loop may fault",
+      reportVectorizationFailure(
+          LV_NAME, "Loop may fault",
           "Cannot vectorize non-read-only early exit loop",
           "NonReadOnlyEarlyExitLoop", ORE, TheLoop);
       return false;
@@ -1821,8 +1819,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     // Only support unit-stride access for now.
     int Stride = isConsecutivePtr(LI->getType(), LI->getPointerOperand());
     if (Stride != 1) {
-      LoopVectorizationUtils::reportVectorizationFailure(
-          Hints, "Loop contains potentially faulting strided load",
+      reportVectorizationFailure(
+          LV_NAME, "Loop contains potentially faulting strided load",
           "Cannot vectorize early exit loop with "
           "strided fault-only-first load",
           "EarlyExitLoopWithStridedFaultOnlyFirstLoad", ORE, TheLoop);
@@ -1862,16 +1860,16 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   if (!match(Br->getCondition(),
              m_OneUse(m_ICmp(m_OneUse(m_Instruction(L, m_Load(m_Value(Ptr)))),
                              m_Value(R))))) {
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "Early exit loop with store but no supported condition load",
+    reportVectorizationFailure(
+        LV_NAME, "Early exit loop with store but no supported condition load",
         "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
     return false;
   }
 
   // FIXME: Don't rely on operand ordering for the comparison.
   if (!TheLoop->isLoopInvariant(R)) {
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "Early exit loop with store but no supported condition load",
+    reportVectorizationFailure(
+        LV_NAME, "Early exit loop with store but no supported condition load",
         "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
     return false;
   }
@@ -1880,8 +1878,8 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   // address calculation that we can rotate to the next vector iteration.
   const auto *AR = dyn_cast<SCEVAddRecExpr>(PSE.getSE()->getSCEV(Ptr));
   if (!AR || AR->getLoop() != TheLoop || !AR->isAffine()) {
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints,
+    reportVectorizationFailure(
+        LV_NAME,
         "Uncountable exit condition depends on load with an address that is "
         "not an add recurrence in the loop",
         "EarlyExitLoadInvariantAddress", ORE, TheLoop);
@@ -1894,8 +1892,8 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   // We need to know that load will be executed before we can hoist a
   // copy out to run just before the first iteration.
   if (!SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop)) {
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "Load for uncountable exit not guaranteed to execute",
+    reportVectorizationFailure(
+        LV_NAME, "Load for uncountable exit not guaranteed to execute",
         "ConditionalUncountableExitLoad", ORE, TheLoop);
     return false;
   }
@@ -1915,8 +1913,8 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
             continue;
         }
 
-        LoopVectorizationUtils::reportVectorizationFailure(
-            Hints,
+        reportVectorizationFailure(
+            LV_NAME,
             "Cannot determine whether critical uncountable exit load address "
             "does not alias with a memory write",
             "CantVectorizeAliasWithCriticalUncountableExitLoad", ORE, TheLoop);
@@ -1955,9 +1953,8 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
     assert(UseVPlanNativePath && "VPlan-native path is not enabled.");
 
     if (!canVectorizeOuterLoop()) {
-      LoopVectorizationUtils::reportVectorizationFailure(
-          Hints, "Unsupported outer loop", "UnsupportedOuterLoop", ORE,
-          TheLoop);
+      reportVectorizationFailure(LV_NAME, "Unsupported outer loop",
+                                 "UnsupportedOuterLoop", ORE, TheLoop);
       // TODO: Implement DoExtraAnalysis when subsequent legal checks support
       // outer loops.
       return false;
@@ -1989,9 +1986,8 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
 
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
     if (TheLoop->getExitingBlock()) {
-      LoopVectorizationUtils::reportVectorizationFailure(
-          Hints, "Cannot vectorize uncountable loop",
-          "UnsupportedUncountableLoop", ORE, TheLoop);
+      reportVectorizationFailure(LV_NAME, "Cannot vectorize uncountable loop",
+                                 "UnsupportedUncountableLoop", ORE, TheLoop);
       if (DoExtraAnalysis)
         Result = false;
       else
@@ -2019,8 +2015,8 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
 
   // Bail out for ReadWrite loops with uncountable exits for now.
   if (UncountableExitType == UncountableExitTrait::ReadWrite) {
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "Writes to memory unsupported in early exit loops",
+    reportVectorizationFailure(
+        LV_NAME, "Writes to memory unsupported in early exit loops",
         "Cannot vectorize early exit loop with writes to memory",
         "WritesInEarlyExitLoop", ORE, TheLoop);
     return false;
@@ -2041,8 +2037,8 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   if (PSE.getPredicate().getComplexity() > SCEVThreshold) {
     LLVM_DEBUG(dbgs() << "LV: Vectorization not profitable "
                          "due to SCEVThreshold");
-    LoopVectorizationUtils::reportVectorizationFailure(
-        Hints, "Too many SCEV checks needed",
+    reportVectorizationFailure(
+        LV_NAME, "Too many SCEV checks needed",
         "Too many SCEV assumptions need to be made and checked at runtime",
         "TooManySCEVRunTimeChecks", ORE, TheLoop);
     if (DoExtraAnalysis)
