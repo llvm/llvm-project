@@ -15,7 +15,7 @@
 
 // DXIL_NATIVE_HALF: define hidden noundef nofpclass(nan inf) half @
 // SPIR_NATIVE_HALF: define hidden spir_func noundef nofpclass(nan inf) half @
-// NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn half 0xH3C00, %{{.*}} 
+// NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn half 1.000000e+00, %{{.*}} 
 // NATIVE_HALF: ret half %hlsl.rcp
 // DXIL_NO_HALF: define hidden noundef nofpclass(nan inf) float @
 // SPIR_NO_HALF: define hidden spir_func noundef nofpclass(nan inf) float @
@@ -25,7 +25,7 @@ half test_rcp_half(half p0) { return rcp(p0); }
 
 // DXIL_NATIVE_HALF: define hidden noundef nofpclass(nan inf) <2 x half> @
 // SPIR_NATIVE_HALF: define hidden spir_func noundef nofpclass(nan inf) <2 x half> @
-// NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn <2 x half> splat (half  0xH3C00), %{{.*}} 
+// NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn <2 x half> splat (half  1.000000e+00), %{{.*}} 
 // NATIVE_HALF: ret <2 x half> %hlsl.rcp
 // DXIL_NO_HALF: define hidden noundef nofpclass(nan inf) <2 x float> @
 // SPIR_NO_HALF: define hidden spir_func noundef nofpclass(nan inf) <2 x float> @
@@ -35,7 +35,7 @@ half2 test_rcp_half2(half2 p0) { return rcp(p0); }
 
 // DXIL_NATIVE_HALF: define hidden noundef nofpclass(nan inf) <3 x half> @
 // SPIR_NATIVE_HALF: define hidden spir_func noundef nofpclass(nan inf) <3 x half> @
-// NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn <3 x half> splat (half  0xH3C00), %{{.*}} 
+// NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn <3 x half> splat (half  1.000000e+00), %{{.*}} 
 // NATIVE_HALF: ret <3 x half> %hlsl.rcp
 // DXIL_NO_HALF: define hidden noundef nofpclass(nan inf) <3 x float> @
 // SPIR_NO_HALF: define hidden spir_func noundef nofpclass(nan inf) <3 x float> @
@@ -45,7 +45,7 @@ half3 test_rcp_half3(half3 p0) { return rcp(p0); }
 
 // DXIL_NATIVE_HALF: define hidden noundef nofpclass(nan inf) <4 x half> @
 // SPIR_NATIVE_HALF: define hidden spir_func noundef nofpclass(nan inf) <4 x half> @
-// NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn <4 x half> splat (half  0xH3C00), %{{.*}} 
+// NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn <4 x half> splat (half  1.000000e+00), %{{.*}} 
 // NATIVE_HALF: ret <4 x half> %hlsl.rcp
 // DXIL_NO_HALF: define hidden noundef nofpclass(nan inf) <4 x float> @
 // SPIR_NO_HALF: define hidden spir_func noundef nofpclass(nan inf) <4 x float> @

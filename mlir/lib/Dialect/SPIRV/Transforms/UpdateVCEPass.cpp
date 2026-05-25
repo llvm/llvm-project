@@ -153,6 +153,25 @@ void UpdateVCEPass::runOnOperation() {
     valueTypes.append(op->operand_type_begin(), op->operand_type_end());
     valueTypes.append(op->result_type_begin(), op->result_type_end());
 
+    // Per the SPIR-V spec Decoration table, the `LinkageAttributes` decoration
+    // requires the `Linkage` capability, and specific linkage types pull in
+    // additional extensions (e.g., `LinkOnceODR` -> `SPV_KHR_linkonce_odr`).
+    auto requireLinkage = [&](spirv::LinkageType linkageType) -> LogicalResult {
+      if (auto caps = spirv::getCapabilities(linkageType)) {
+        SmallVector<ArrayRef<spirv::Capability>, 1> capCandidates = {*caps};
+        if (failed(checkAndUpdateCapabilityRequirements(
+                op, targetEnv, capCandidates, deducedCapabilities)))
+          return failure();
+      }
+      if (auto exts = spirv::getExtensions(linkageType)) {
+        SmallVector<ArrayRef<spirv::Extension>, 1> extCandidates = {*exts};
+        if (failed(checkAndUpdateExtensionRequirements(
+                op, targetEnv, extCandidates, deducedExtensions)))
+          return failure();
+      }
+      return success();
+    };
+
     // Special treatment for global variables, whose type requirements are
     // conveyed by type attributes.
     if (auto globalVar = dyn_cast<spirv::GlobalVariableOp>(op)) {
@@ -168,7 +187,16 @@ void UpdateVCEPass::runOnOperation() {
                                                         deducedCapabilities)))
           return WalkResult::interrupt();
       }
+
+      if (auto linkage = globalVar.getLinkageAttributes())
+        if (failed(requireLinkage(linkage->getLinkageType().getValue())))
+          return WalkResult::interrupt();
     }
+
+    if (auto funcOp = dyn_cast<spirv::FuncOp>(op))
+      if (auto linkage = funcOp.getLinkageAttributes())
+        if (failed(requireLinkage(linkage->getLinkageType().getValue())))
+          return WalkResult::interrupt();
 
     // If the op is FunctionLike make sure to process input and result types.
     if (auto funcOpInterface = dyn_cast<FunctionOpInterface>(op)) {

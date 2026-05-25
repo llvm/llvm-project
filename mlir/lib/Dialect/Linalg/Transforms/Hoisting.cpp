@@ -227,7 +227,8 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
           FailureOr<int64_t> maxLb =
               ValueBoundsConstraintSet::computeConstantBound(
                   presburger::BoundType::UB, lb,
-                  /*stopCondition=*/nullptr, /*closedUB=*/true);
+                  /*stopCondition=*/nullptr,
+                  ValueBoundsOptions{/*closedUB=*/true});
           if (failed(maxLb))
             return;
           FailureOr<int64_t> minUb =

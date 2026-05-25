@@ -17,12 +17,12 @@ xaflag
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     0.13                  U     setf8	w1
-# CHECK-NEXT:  1      1     0.13                  U     setf16	w1
-# CHECK-NEXT:  1      1     0.13                  U     rmif	x0, #0, #0
-# CHECK-NEXT:  1      1     0.10                  U     cfinv
-# CHECK-NEXT:  1      1     0.13                  U     axflag
-# CHECK-NEXT:  1      1     0.13                  U     xaflag
+# CHECK-NEXT:  1      1     1.00                  U     setf8	w1
+# CHECK-NEXT:  1      1     1.00                  U     setf16	w1
+# CHECK-NEXT:  1      1     1.00                  U     rmif	x0, #0, #0
+# CHECK-NEXT:  1      1     1.00                  U     cfinv
+# CHECK-NEXT:  1      1     1.00                  U     axflag
+# CHECK-NEXT:  1      1     1.00                  U     xaflag
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - C1UUnitB
@@ -56,13 +56,13 @@ xaflag
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.63   0.63   0.63   0.63   0.63   0.63   0.63   0.63    -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     6.00   6.00   6.00   6.00   6.00   6.00   6.00   6.00    -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     setf8	w1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     setf16	w1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     rmif	x0, #0, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cfinv
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     axflag
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     xaflag
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00   1.00   1.00   1.00   1.00   1.00   1.00    -      -      -      -      -      -     setf8	w1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00   1.00   1.00   1.00   1.00   1.00   1.00    -      -      -      -      -      -     setf16	w1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00   1.00   1.00   1.00   1.00   1.00   1.00    -      -      -      -      -      -     rmif	x0, #0, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00   1.00   1.00   1.00   1.00   1.00   1.00    -      -      -      -      -      -     cfinv
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00   1.00   1.00   1.00   1.00   1.00   1.00    -      -      -      -      -      -     axflag
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00   1.00   1.00   1.00   1.00   1.00   1.00    -      -      -      -      -      -     xaflag

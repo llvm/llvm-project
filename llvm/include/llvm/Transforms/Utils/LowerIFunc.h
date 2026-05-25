@@ -16,7 +16,7 @@ namespace llvm {
 /// Pass to replace calls to ifuncs with indirect calls. This could be used to
 /// support ifunc on systems where the program loader does not natively support
 /// it. Constant initializer uses of ifuncs are not handled.
-class LowerIFuncPass : public PassInfoMixin<LowerIFuncPass> {
+class LowerIFuncPass : public OptionalPassInfoMixin<LowerIFuncPass> {
 public:
   LowerIFuncPass() = default;
 
