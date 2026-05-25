@@ -144,13 +144,13 @@ public:
 
   /// Return true if this block has a postorder number.
   bool hasPostorder(BasicBlock *BB) const {
-    DenseMap<BasicBlock*, unsigned>::const_iterator I = PostNumbers.find(BB);
+    auto I = PostNumbers.find(BB);
     return I != PostNumbers.end() && I->second;
   }
 
   /// Get a block's postorder number.
   unsigned getPostorder(BasicBlock *BB) const {
-    DenseMap<BasicBlock*, unsigned>::const_iterator I = PostNumbers.find(BB);
+    auto I = PostNumbers.find(BB);
     assert(I != PostNumbers.end() && "block not visited by DFS");
     assert(I->second && "block not finished by DFS");
     return I->second;

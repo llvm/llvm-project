@@ -986,3 +986,31 @@ define void @test() !dbg !3 {
 !12 = !DIFile(filename: "cu.hpp", directory: "/build")
 !13 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !17 = !{i32 2, !"Debug Info Version", i32 3}
+
+; // -----
+
+; CHECK-DAG: #[[DISC:.+]] = #llvm.di_derived_type<{{.*}}name = "discriminator"{{.*}}flags = Artificial>
+; CHECK-DAG: #[[ELEM_INT:.+]] = #llvm.di_derived_type<{{.*}}name = "_int64"{{.*}}extraData = 1 : i8>
+; CHECK-DAG: #[[ELEM_FLOAT:.+]] = #llvm.di_derived_type<{{.*}}name = "_float64"{{.*}}extraData = 2 : i8>
+; CHECK-DAG: #llvm.di_composite_type<{{.*}}tag = DW_TAG_variant_part{{.*}}identifier = "variant-id"{{.*}}discriminator = #[[DISC]]{{.*}}elements = #[[ELEM_INT]], #[[ELEM_FLOAT]]
+
+define void @variant_part_import() !dbg !3 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "foo.mlir", directory: "/tmp")
+!3 = distinct !DISubprogram(name: "variant_part_import", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
+!4 = !DISubroutineType(types: !5)
+!5 = !{!8}
+!6 = !DIBasicType(name: "uint8", size: 8, encoding: DW_ATE_unsigned)
+!7 = !DIDerivedType(tag: DW_TAG_member, name: "discriminator", baseType: !6, size: 8, flags: DIFlagArtificial)
+!8 = !DICompositeType(tag: DW_TAG_variant_part, name: "variant_part", file: !2, size: 64, elements: !9, identifier: "variant-id", discriminator: !7)
+!9 = !{!12, !13}
+!10 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
+!11 = !DIBasicType(name: "float64", size: 64, encoding: DW_ATE_float)
+!12 = !DIDerivedType(tag: DW_TAG_member, name: "_int64", baseType: !10, size: 64, offset: 64, extraData: i8 1)
+!13 = !DIDerivedType(tag: DW_TAG_member, name: "_float64", baseType: !11, size: 64, offset: 64, extraData: i8 2)

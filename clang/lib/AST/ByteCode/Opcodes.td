@@ -181,6 +181,10 @@ def Jf : JumpOpcode;
 def PushIgnoreDiags : Opcode;
 def PopIgnoreDiags : Opcode;
 
+
+def StartInit : Opcode;
+def EndInit : Opcode;
+
 def StartSpeculation : Opcode;
 def EndSpeculation : Opcode;
 def BCP : Opcode {
@@ -325,6 +329,7 @@ def GetPtrLocal : OffsetOpcode {
 def GetRefLocal : OffsetOpcode {
   bit HasCustomEval = 1;
 }
+def GetRefGlobal : OffsetOpcode;
 
 def CheckRefInit : Opcode {}
 
@@ -454,6 +459,7 @@ def CheckLiteralType : Opcode {
 }
 
 def CheckArraySize : Opcode { let Args = [ArgUint64]; }
+def CheckArrayDestSize : Opcode { let Args = [ArgUint64]; }
 def CheckFunctionDecl : Opcode { let Args = [ArgFunctionDecl]; }
 def CheckBitCast : Opcode { let Args = [ArgTypePtr, ArgBool]; }
 
@@ -758,7 +764,7 @@ def CastPointerIntegralAPS : Opcode {
   let Args = [ArgUint32];
 }
 def CastIntegralFixedPoint : Opcode {
-  let Types = [FixedSizeIntegralTypeClass];
+  let Types = [IntegralTypeClass];
   let Args = [ArgUint32];
   let HasGroup = 1;
 }

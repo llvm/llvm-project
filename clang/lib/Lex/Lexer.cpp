@@ -237,7 +237,7 @@ void Lexer::resetExtendedTokenMode() {
 
 /// Create_PragmaLexer: Lexer constructor - Create a new lexer object for
 /// _Pragma expansion.  This has a variety of magic semantics that this method
-/// sets up.  It returns a new'd Lexer that must be delete'd when done.
+/// sets up.
 ///
 /// On entrance to this routine, TokStartLoc is a macro location which has a
 /// spelling loc that indicates the bytes to be lexed for the token and an
@@ -250,16 +250,15 @@ void Lexer::resetExtendedTokenMode() {
 /// interface that could handle this stuff.  This would pull GetMappedTokenLoc
 /// out of the critical path of the lexer!
 ///
-Lexer *Lexer::Create_PragmaLexer(SourceLocation SpellingLoc,
-                                 SourceLocation ExpansionLocStart,
-                                 SourceLocation ExpansionLocEnd,
-                                 unsigned TokLen, Preprocessor &PP) {
+std::unique_ptr<Lexer> Lexer::Create_PragmaLexer(
+    SourceLocation SpellingLoc, SourceLocation ExpansionLocStart,
+    SourceLocation ExpansionLocEnd, unsigned TokLen, Preprocessor &PP) {
   SourceManager &SM = PP.getSourceManager();
 
   // Create the lexer as if we were going to lex the file normally.
   FileID SpellingFID = SM.getFileID(SpellingLoc);
   llvm::MemoryBufferRef InputFile = SM.getBufferOrFake(SpellingFID);
-  Lexer *L = new Lexer(SpellingFID, InputFile, PP);
+  auto L = std::make_unique<Lexer>(SpellingFID, InputFile, PP);
 
   // Now that the lexer is created, change the start/end locations so that we
   // just lex the subsection of the file that we want.  This is lexing from a
@@ -513,6 +512,29 @@ unsigned Lexer::MeasureTokenLength(SourceLocation Loc,
   if (getRawToken(Loc, TheTok, SM, LangOpts))
     return 0;
   return TheTok.getLength();
+}
+
+SourceLocation Lexer::findEndOfIdentifierContinuation(
+    SourceLocation Loc, const SourceManager &SM, const LangOptions &LangOpts) {
+  Loc = SM.getExpansionLoc(Loc);
+  const FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
+  bool Invalid = false;
+  const StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
+  if (Invalid)
+    return Loc;
+
+  const char *StrData = Buffer.data() + LocInfo.second;
+  if (StrData >= Buffer.end())
+    return Loc;
+
+  // Use the lexer continuation rules directly, without requiring identifier
+  // start at Loc.
+  Lexer TheLexer(SM.getLocForStartOfFile(LocInfo.first), LangOpts,
+                 Buffer.begin(), StrData, Buffer.end());
+  Token Tok;
+  Tok.startToken();
+  TheLexer.LexIdentifierContinue(Tok, StrData);
+  return Loc.getLocWithOffset(Tok.getLength());
 }
 
 /// Relex the token at the specified location.

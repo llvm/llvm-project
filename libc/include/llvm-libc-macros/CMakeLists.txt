@@ -49,6 +49,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  byteswap_macros
+  HDR
+    byteswap-macros.h
+)
+
+add_macro_header(
   error_number_macros
   HDR
     error-number-macros.h
@@ -395,6 +401,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  regex_macros
+  HDR
+    regex-macros.h
+)
+
+add_macro_header(
   EFIAPI_macros
   HDR
     EFIAPI-macros.h
@@ -406,7 +418,7 @@ add_macro_header(
     sysexits-macros.h
 )
 
-if (LIBC_CONF_MODULAR_FORMAT)
+if (LIBC_CONF_PRINTF_MODULAR)
   add_macro_header(
     _LIBC_MODULAR_FORMAT_PRINTF
     HDR

@@ -570,6 +570,9 @@ bool CodeGenPrepare::run(Function &F, FunctionAnalysisManager &AM) {
   BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  if (!PSI)
+    reportFatalUsageError("this pass requires the profile-summary module "
+                          "analysis to be available");
   BBSectionsProfileReader =
       AM.getCachedResult<BasicBlockSectionsProfileReaderAnalysis>(F);
   DomTreeUpdater DTUpdater(&AM.getResult<DominatorTreeAnalysis>(F),
@@ -7263,8 +7266,7 @@ bool CodeGenPrepare::performAddressTypePromotion(
   bool AllSeenFirst = true;
   for (auto *I : SpeculativelyMovedExts) {
     Value *HeadOfChain = I->getOperand(0);
-    DenseMap<Value *, Instruction *>::iterator AlreadySeen =
-        SeenChainsForSExt.find(HeadOfChain);
+    auto AlreadySeen = SeenChainsForSExt.find(HeadOfChain);
     // If there is an unhandled SExt which has the same header, try to promote
     // it as well.
     if (AlreadySeen != SeenChainsForSExt.end()) {

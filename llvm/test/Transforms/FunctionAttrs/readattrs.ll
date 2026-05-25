@@ -138,13 +138,13 @@ define void @test6_2(ptr %p, ptr %q) {
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test6_2
-; ATTRIBUTOR-SAME: (ptr nofree nonnull writeonly captures(none) [[P:%.*]], ptr nofree [[Q:%.*]]) {
+; ATTRIBUTOR-SAME: (ptr nofree nonnull writeonly captures(none) [[P:%.*]], ptr [[Q:%.*]]) {
 ; ATTRIBUTOR-NEXT:    store ptr [[Q]], ptr [[P]], align 8
 ; ATTRIBUTOR-NEXT:    call void @test6_1()
 ; ATTRIBUTOR-NEXT:    ret void
 ;
 ; ATTRIBUTOR-CGSCC-LABEL: define {{[^@]+}}@test6_2
-; ATTRIBUTOR-CGSCC-SAME: (ptr nofree nonnull writeonly captures(none) [[P:%.*]], ptr nofree [[Q:%.*]]) {
+; ATTRIBUTOR-CGSCC-SAME: (ptr nofree nonnull writeonly captures(none) [[P:%.*]], ptr [[Q:%.*]]) {
 ; ATTRIBUTOR-CGSCC-NEXT:    store ptr [[Q]], ptr [[P]], align 8
 ; ATTRIBUTOR-CGSCC-NEXT:    call void @test6_1()
 ; ATTRIBUTOR-CGSCC-NEXT:    ret void

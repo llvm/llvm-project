@@ -9,7 +9,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_MOVE_CONSTRUCTIBLE_H
 
 #include "src/__support/CPP/type_traits/add_rvalue_reference.h"
-#include "src/__support/CPP/type_traits/integral_constant.h"
+#include "src/__support/CPP/type_traits/is_constructible.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -18,8 +18,7 @@ namespace cpp {
 // is move constructible
 template <class T>
 struct is_move_constructible
-    : public integral_constant<bool, __is_constructible(
-                                         T, cpp::add_rvalue_reference_t<T>)> {};
+    : public cpp::is_constructible<T, cpp::add_rvalue_reference_t<T>> {};
 
 template <class T>
 LIBC_INLINE_VAR constexpr bool is_move_constructible_v =

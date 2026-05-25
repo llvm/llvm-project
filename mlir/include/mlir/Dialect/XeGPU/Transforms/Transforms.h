@@ -63,6 +63,8 @@ struct UnrollOptions {
 
 /// Appends patterns for optimizing block load operations into `patterns`.
 void populateXeGPUPeepHoleOptimizerPatterns(RewritePatternSet &patterns);
+/// Appends patterns for array length optimization into `patterns`.
+void populateXeGPUArrayLengthOptimizationPatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU SIMT distribution into `patterns`.
 void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
 /// Appends patterns for moving function body into gpu.warp_execute_on_lane0 op.

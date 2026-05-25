@@ -583,7 +583,7 @@ NaryReassociatePass::findClosestMatchingDominator(SCEVUse CandidateExpr,
   return nullptr;
 }
 
-template <typename MaxMinT> static SCEVTypes convertToSCEVype(MaxMinT &MM) {
+template <typename MaxMinT> static SCEVTypes convertToSCEVType(MaxMinT &MM) {
   if (std::is_same_v<smax_pred_ty, typename MaxMinT::PredType>)
     return scSMaxExpr;
   else if (std::is_same_v<umax_pred_ty, typename MaxMinT::PredType>)
@@ -623,7 +623,7 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
   auto tryCombination = [&](Value *A, SCEVUse AExpr, Value *B, SCEVUse BExpr,
                             Value *C, SCEVUse CExpr) -> Value * {
     SmallVector<SCEVUse, 2> Ops1{BExpr, AExpr};
-    const SCEVTypes SCEVType = convertToSCEVype(m_MaxMin);
+    const SCEVTypes SCEVType = convertToSCEVType(m_MaxMin);
     SCEVUse R1Expr = SE->getMinMaxExpr(SCEVType, Ops1);
 
     Instruction *R1MinMax = findClosestMatchingDominator(R1Expr, I);

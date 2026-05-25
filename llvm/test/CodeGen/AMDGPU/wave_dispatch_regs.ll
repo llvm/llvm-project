@@ -1,6 +1,6 @@
-; RUN: llc -global-isel=1 -mtriple=amdgcn--amdpal < %s | FileCheck -check-prefix=GCN -check-prefix=SI -enable-var-scope %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=GCN -check-prefix=VI -enable-var-scope %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -enable-var-scope %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdpal < %s | FileCheck -check-prefix=GCN -check-prefix=SI -enable-var-scope %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=GCN -check-prefix=VI -enable-var-scope %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -enable-var-scope %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn--amdpal < %s | FileCheck -check-prefix=GCN -check-prefix=SI -enable-var-scope %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=GCN -check-prefix=VI -enable-var-scope %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -enable-var-scope %s

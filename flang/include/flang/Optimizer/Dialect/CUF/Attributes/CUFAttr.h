@@ -73,6 +73,9 @@ getDataAttribute(mlir::MLIRContext *mlirContext,
     case Fortran::common::CUDADataAttr::Unified:
       attr = cuf::DataAttribute::Unified;
       break;
+    case Fortran::common::CUDADataAttr::UseDevice:
+      attr = cuf::DataAttribute::Device;
+      break;
     case Fortran::common::CUDADataAttr::Value:
       return {}; // Extension, not a real CUDA Fortran data attribute
     }
