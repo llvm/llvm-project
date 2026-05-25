@@ -132,9 +132,6 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   ctx.symAux.emplace_back();
   ctx.symtab = std::make_unique<SymbolTable>(ctx);
 
-  ctx.partitions.clear();
-  ctx.partitions.emplace_back();
-
   ctx.arg.progName = args[0];
 
   ctx.driver.linkerMain(args);
@@ -2748,53 +2745,6 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   }
 }
 
-// Read an SHT_LLVM_SYMPART specification. Each unique partition name now just
-// allocates an empty shim so `llvm-objcopy --extract-partition` keeps working.
-template <typename ELFT>
-static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
-  // Read the relocation that refers to the partition's entry point symbol.
-  Symbol *sym;
-  const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
-  auto readEntry = [](InputFile *file, const auto &rels) -> Symbol * {
-    for (const auto &rel : rels)
-      return &file->getRelocTargetSym(rel);
-    return nullptr;
-  };
-  if (rels.areRelocsCrel())
-    sym = readEntry(s->file, rels.crels);
-  else if (rels.areRelocsRel())
-    sym = readEntry(s->file, rels.rels);
-  else
-    sym = readEntry(s->file, rels.relas);
-  if (!isa_and_nonnull<Defined>(sym) || !sym->isExported)
-    return;
-
-  StringRef partName = reinterpret_cast<const char *>(s->content().data());
-  for (Partition &shim : llvm::drop_begin(ctx.partitions))
-    if (shim.name == partName)
-      return;
-
-  // Forbid partitions from being used on incompatible targets, and forbid them
-  // from being used together with various linker features that assume a single
-  // set of output sections.
-  if (ctx.script->hasSectionsCommand)
-    ErrAlways(ctx) << s->file
-                   << ": partitions cannot be used with the SECTIONS command";
-  if (ctx.script->hasPhdrsCommands())
-    ErrAlways(ctx) << s->file
-                   << ": partitions cannot be used with the PHDRS command";
-  if (!ctx.arg.sectionStartMap.empty())
-    ErrAlways(ctx) << s->file
-                   << ": partitions cannot be used with "
-                      "--section-start, -Ttext, -Tdata or -Tbss";
-  if (ctx.arg.emachine == EM_MIPS)
-    ErrAlways(ctx) << s->file << ": partitions cannot be used on this target";
-
-  Partition &shim = ctx.partitions.emplace_back();
-  shim.partno = ctx.partitions.size();
-  shim.name = partName;
-}
-
 static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
   // With --thinlto-index-only, all buffers are nearly unused from now on
   // (except symbol/section names used by infrequent passes). Mark input file
@@ -3516,14 +3466,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   {
     llvm::TimeTraceScope timeScope("Strip sections");
-    if (ctx.hasSympart.load(std::memory_order_relaxed)) {
-      llvm::erase_if(ctx.inputSections, [&ctx = ctx](InputSectionBase *s) {
-        if (s->type != SHT_LLVM_SYMPART)
-          return false;
-        readSymbolPartitionSection<ELFT>(ctx, s);
-        return true;
-      });
-    }
     // We do not want to emit debug sections if --strip-all
     // or --strip-debug are given.
     if (ctx.arg.strip != StripPolicy::None) {
@@ -3544,10 +3486,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // a .d file to record build dependencies.
   if (!ctx.arg.dependencyFile.empty())
     writeDependencyFile(ctx);
-
-  // Now that the number of partitions is fixed, save a pointer to the main
-  // partition.
-  ctx.mainPart = &ctx.partitions[0];
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.

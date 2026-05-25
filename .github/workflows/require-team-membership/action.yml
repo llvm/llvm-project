@@ -1,8 +1,12 @@
-name: Require Release Manager
+name: Require Team Membership
 description: >-
   This checks to make sure the person that initiated the workflow is a
-  release manager.
+  a member of the given team.
 inputs:
+  team-slug:
+    description: >-
+      The team name (in slug form) that the github actor must be a member of.
+    requried: true
   LLVM_TOKEN_GENERATOR_CLIENT_ID:
     description: >-
       Client ID for our GitHub App we use for generating access tokens.
@@ -25,11 +29,13 @@ runs:
 
     - name: Check Permissions
       uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      env:
+        TEAM_SLUG: ${{ inputs.team-slug }}
       with:
         github-token: ${{ steps.app-token.outputs.token }}
         script: |
           await github.rest.teams.getMembershipForUserInOrg({
              org: context.repo.owner,
-             team_slug: "llvm-release-managers",
+             team_slug: process.env.TEAM_SLUG,
              username: context.actor
           });
