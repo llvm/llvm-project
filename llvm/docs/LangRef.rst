@@ -2639,7 +2639,8 @@ For example:
     can be produced by an operation (so that the transformation `x + 0 -> x`
     becomes valid), and an operation on such a NaN does not raise the "Invalid"
     exception. This attribute cannot be set if the target architecture does not
-    support IEEE 754 compatible sNaN handling.
+    support IEEE 754 compatible sNaN handling. This attribute requires that the
+    ``strictfp`` attribute also be set.
 ``speculative_load_hardening``
     This attribute indicates that
     `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_
