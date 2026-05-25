@@ -19,7 +19,7 @@ const int x = MODULE_MACRO;
 
 // CRASH_ENV: PLEASE submit a bug report to {{.*}} and include the crash backtrace, preprocessed source, and associated run script.
 // CRASH_ENV: failing because environment variable 'FORCE_CLANG_DIAGNOSTICS_CRASH' is set
-// CRASH_ENV: Preprocessed source(s) and associated run script(s) are located at:
+// CRASH_ENV: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CRASH_ENV-NEXT: note: diagnostic msg: {{.*}}.m
 // CRASH_ENV-NEXT: note: diagnostic msg: {{.*}}.cache
 // CRASH_ENV-NEXT: note: diagnostic msg: {{.*}}.sh
@@ -27,7 +27,7 @@ const int x = MODULE_MACRO;
 // CRASH_ENV-NEXT: note: diagnostic msg: {{.*}}Library/Logs/DiagnosticReports{{.*}}
 
 // CRASH_FLAG: failing because '-gen-reproducer' is used
-// CRASH_FLAG: Preprocessed source(s) and associated run script(s) are located at:
+// CRASH_FLAG: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CRASH_FLAG-NEXT: note: diagnostic msg: {{.*}}.m
 // CRASH_FLAG-NEXT: note: diagnostic msg: {{.*}}.cache
 // CRASH_FLAG-NEXT: note: diagnostic msg: {{.*}}.sh
