@@ -107,6 +107,20 @@ getSrcIndxValue(OpBuilder &rewriter, Location loc, Value operand,
   return std::make_pair(srcBuff, indices);
 }
 
+// Function to validate the loop step value.
+static LogicalResult validateLoopStep(OpBuilder &rewriter, Value step,
+                                      int64_t value) {
+
+  auto cst = step.getDefiningOp<arith::ConstantIndexOp>();
+  if (!cst)
+    return failure();
+
+  if (cst.value() != value && cst.value() != 1)
+    return failure();
+
+  return success();
+}
+
 // Function to validate the vector.contract operation.
 static LogicalResult validateContractOps(OpBuilder &rewriter,
                                          vector::ContractionOp contractOp,
@@ -135,10 +149,10 @@ static LogicalResult validateContractOps(OpBuilder &rewriter,
 
     if (buffRhs != srcBuffRhs)
       return failure();
-
-    if (!contractionUsersAfterYield(contractOp.getResult()))
-      return failure();
   }
+
+  if (!contractionUsersAfterYield(contractOp.getResult()))
+    return failure();
 
   VectorType accTy = dyn_cast<VectorType>(contractOp.getAccType());
   if (!accTy)
@@ -973,10 +987,8 @@ struct VectorContractToAMXDotProduct
           inBounds);
 
       Value resultOp = contractionUsersAfterYield(contractOp.getResult());
-      if (auto vecType = llvm::dyn_cast<VectorType>(resultOp.getType())) {
-        vecRow =
-            mlir::vector::ShapeCastOp::create(rewriter, loc, vecType, vecRow);
-      }
+      if (auto vecType = llvm::dyn_cast<VectorType>(resultOp.getType()))
+        vecRow = vector::ShapeCastOp::create(rewriter, loc, vecType, vecRow);
 
       rewriter.replaceAllUsesWith(resultOp, vecRow);
       return success();
@@ -1075,6 +1087,21 @@ struct VectorContractToAMXDotProduct
     if (loopLists.size() == 2) {
       outerLoop = loopLists[1];
       innerLoop = loopLists[0];
+
+      LogicalResult validateOuterLoopStep =
+          validateLoopStep(rewriter, outerLoop.getStep(), 1);
+      if (failed(validateOuterLoopStep))
+        return rewriter.notifyMatchFailure(contractOp, "Invalid loop step.");
+
+      int64_t stepValue = 16;
+      if (!isVnni)
+        stepValue = stepValue * blockingFactor;
+      LogicalResult validateInnerLoopStep =
+          validateLoopStep(rewriter, innerLoop.getStep(), stepValue);
+      if (failed(validateInnerLoopStep))
+        return rewriter.notifyMatchFailure(
+            contractOp, "Invalid loop step. The step should be 32 for BF16 and "
+                        "64 for Int8/F8.");
 
       SmallVector<Value> loopItrArgs = createTileZeros(
           rewriter, outerLoop.getLoc(), opType, outerLoop, ops.size());
@@ -1221,6 +1248,17 @@ struct VectorContractToAMXDotProduct
     if (loopLists.size() == 1) {
 
       innerLoop = loopLists[0];
+      int64_t stepValue = 16;
+      if (!isVnni)
+        stepValue = stepValue * blockingFactor;
+
+      LogicalResult validateInnerLoopStep =
+          validateLoopStep(rewriter, innerLoop.getStep(), stepValue);
+      if (failed(validateInnerLoopStep))
+        return rewriter.notifyMatchFailure(
+            contractOp, "Invalid loop step. The step should be 32 for BF16 and "
+                        "64 for Int8/F8 or 1 if it is batch loop.");
+
       SmallVector<Value> loopItrArgs = createTileZeros(
           rewriter, innerLoop.getLoc(), opType, innerLoop, ops.size());
 
