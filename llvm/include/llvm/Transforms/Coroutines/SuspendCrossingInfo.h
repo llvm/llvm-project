@@ -22,6 +22,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Transforms/Coroutines/CoroShape.h"
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
 
 namespace llvm {
@@ -104,9 +105,7 @@ public:
 #endif
 
   LLVM_ABI
-  SuspendCrossingInfo(Function &F,
-                      const SmallVectorImpl<AnyCoroSuspendInst *> &CoroSuspends,
-                      const SmallVectorImpl<AnyCoroEndInst *> &CoroEnds);
+  SuspendCrossingInfo(Function &F, const coro::Shape &Shape);
 
   /// Returns true if there is a path from \p From to \p To crossing a suspend
   /// point without crossing \p From a 2nd time.
