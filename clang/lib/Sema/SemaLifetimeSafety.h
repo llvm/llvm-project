@@ -376,8 +376,6 @@ public:
   }
 
 private:
-  Sema &S;
-
   std::pair<SourceLocation, StringRef>
   getLifetimeBoundFixIt(const ParmVarDecl *Decl) {
     SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
@@ -421,6 +419,8 @@ private:
     }
     return {InsertionPoint, " [[clang::lifetimebound]]"};
   }
+
+  Sema &S;
 };
 
 } // namespace clang::lifetimes
