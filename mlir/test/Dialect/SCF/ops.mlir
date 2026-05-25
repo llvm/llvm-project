@@ -441,3 +441,76 @@ func.func @switch(%arg0: index) -> i32 {
 
   return %0 : i32
 }
+
+// CHECK-LABEL: @loop_infinite
+func.func @loop_infinite() {
+  // CHECK: scf.loop {
+  scf.loop {
+    // CHECK-NEXT: "test.foo"
+    "test.foo"() : () -> ()
+    // CHECK-NEXT: scf.continue
+    scf.continue
+  }
+  return
+}
+
+// CHECK-LABEL: @loop_break_no_operands
+func.func @loop_break_no_operands() {
+  // CHECK: scf.loop {
+  scf.loop {
+    // CHECK-NEXT: scf.break
+    scf.break
+  }
+  return
+}
+
+// CHECK-LABEL: @loop_break_single
+func.func @loop_break_single(%v: i32) -> i32 {
+  // CHECK: %{{.*}} = scf.loop -> i32 {
+  %r = scf.loop -> i32 {
+    // CHECK-NEXT: scf.break %{{.*}} : i32
+    scf.break %v : i32
+  }
+  return %r : i32
+}
+
+// CHECK-LABEL: @loop_break_multi
+func.func @loop_break_multi(%v: i32, %w: i64) -> (i32, i64) {
+  // CHECK: %{{.*}}:2 = scf.loop -> (i32, i64) {
+  %r:2 = scf.loop -> (i32, i64) {
+    // CHECK-NEXT: scf.break %{{.*}}, %{{.*}} : i32, i64
+    scf.break %v, %w : i32, i64
+  }
+  return %r#0, %r#1 : i32, i64
+}
+
+// CHECK-LABEL: @loop_iter_single
+func.func @loop_iter_single(%init: i32) {
+  // CHECK: scf.loop iter_args(%{{.*}} = %{{.*}}) : i32 {
+  scf.loop iter_args(%i = %init) : i32 {
+    // CHECK: scf.continue %{{.*}} : i32
+    scf.continue %i : i32
+  }
+  return
+}
+
+// CHECK-LABEL: @loop_iter_multi
+func.func @loop_iter_multi(%init0: i32, %init1: i64) {
+  // CHECK: scf.loop iter_args(%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) : (i32, i64) {
+  scf.loop iter_args(%i = %init0, %j = %init1) : (i32, i64) {
+    // CHECK: scf.continue %{{.*}}, %{{.*}} : i32, i64
+    scf.continue %i, %j : i32, i64
+  }
+  return
+}
+
+// Loop with iter_args of one type and a single result of another type.
+// CHECK-LABEL: @loop_iter_and_result
+func.func @loop_iter_and_result(%init: i32, %v: i64) -> i64 {
+  // CHECK: %{{.*}} = scf.loop iter_args(%{{.*}} = %{{.*}}) : i32 -> i64 {
+  %r = scf.loop iter_args(%i = %init) : i32 -> i64 {
+    // CHECK: scf.break %{{.*}} : i64
+    scf.break %v : i64
+  }
+  return %r : i64
+}

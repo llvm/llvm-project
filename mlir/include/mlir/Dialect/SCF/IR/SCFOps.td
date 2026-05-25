@@ -148,6 +148,156 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
 }
 
 //===----------------------------------------------------------------------===//
+// LoopOp
+//===----------------------------------------------------------------------===//
+
+def LoopOp : SCF_Op<"loop", [
+    AutomaticAllocationScope,
+    RecursiveMemoryEffects,
+    SingleBlock
+  ]> {
+  let summary = "Loop until a break operation";
+  let description = [{
+    The `scf.loop` operation represents an infinite loop that executes until an
+    `scf.break` is reached.
+
+    The loop consists of (1) a set of loop-carried values which are initialized
+    by `initValues` and updated by each iteration of the loop, and (2) a region
+    which represents the loop body.
+
+    The loop body must end with an explicit terminator, which must be one of:
+
+    - `scf.continue`: re-enters the loop, supplying the next iteration's value
+      for each loop-carried variable. Terminator operand types and loop operand
+      types must match. If the loop has op results, its values are undefined.
+    - `scf.break`: terminates the loop, supplying the final values for the
+      `scf.loop` results. Terminator operand types and loop op result types
+      must match.
+
+    Note: This operation will be extended in the future to support breaking and
+    continuing from nested regions. For now, `scf.break` and `scf.continue`
+    must be terminators of the loop body. In practice this means that an
+    `scf.loop` either runs forever (terminator is `scf.continue`) or executes
+    exactly one iteration (terminator is `scf.break`).
+
+    Examples:
+
+    ```mlir
+    // Loop with iteration-carried values updated by `scf.continue`.
+    scf.loop iter_args(%i = %init) : i32 {
+      %v = "some.compute"(%i) : (i32) -> (i32)
+      scf.continue %v : i32
+    }
+    ```
+
+    ```mlir
+    // Loop with both an iteration-carried value and a result. The iter_arg
+    // and result types may differ.
+    %r = scf.loop iter_args(%i = %init) : i32 -> i64 {
+      %v = "some.compute"(%i) : (i32) -> (i64)
+      scf.break %v : i64
+    }
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$initValues);
+  let results = (outs Variadic<AnyType>:$resultValues);
+  let regions = (region SizedRegion<1>:$region);
+
+  let builders = [
+    OpBuilder<(ins
+      CArg<"::mlir::TypeRange", "{}">:$resultTypes,
+      CArg<"::mlir::ValueRange", "{}">:$initValues,
+      CArg<"::llvm::function_ref<void(::mlir::OpBuilder &, ::mlir::Location, "
+           "::mlir::ValueRange)>", "nullptr">:$bodyBuilder)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Return the iteration values of the loop region.
+    Block::BlockArgListType getRegionIterValues() {
+      return getRegion().getArguments();
+    }
+
+    /// Return the `index`-th region iteration value.
+    BlockArgument getRegionIterValue(unsigned index) {
+      return getRegionIterValues()[index];
+    }
+
+    /// Returns the number of region arguments for loop-carried values.
+    unsigned getNumRegionIterValues() { return getRegion().getNumArguments(); }
+
+    /// Returns the loop body block.
+    Block *getBody() { return &getRegion().front(); }
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasRegionVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// BreakOp
+//===----------------------------------------------------------------------===//
+
+def BreakOp : SCF_Op<"break", [
+    Pure, ReturnLike, Terminator, ParentOneOf<["LoopOp"]>
+  ]> {
+  let summary = "Break from an `scf.loop`";
+  let description = [{
+    The `scf.break` operation terminates the immediately enclosing `scf.loop`.
+    Its operands become the loop's result values; their types must match the
+    result types of the enclosing `scf.loop` (verified by the loop).
+
+    Example:
+
+    ```mlir
+    %r = scf.loop -> i32 {
+      ...
+      scf.break %v : i32
+    }
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$operands);
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
+
+  let assemblyFormat = [{
+    attr-dict ($operands^ `:` type($operands))?
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ContinueOp
+//===----------------------------------------------------------------------===//
+
+def ContinueOp : SCF_Op<"continue", [
+    Pure, Terminator, ParentOneOf<["LoopOp"]>
+  ]> {
+  let summary = "Continue to the next iteration of an `scf.loop`";
+  let description = [{
+    The `scf.continue` operation re-enters the immediately enclosing `scf.loop`
+    for its next iteration. Its operands become the loop-carried values
+    (`iter_args`) for the next iteration; their types must match the loop's
+    iter_arg types (verified by the loop).
+
+    Example:
+
+    ```mlir
+    scf.loop iter_args(%i = %init) : i32 {
+      %next = arith.addi %i, %one : i32
+      scf.continue %next : i32
+    }
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$operands);
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
+
+  let assemblyFormat = [{
+    attr-dict ($operands^ `:` type($operands))?
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ForOp
 //===----------------------------------------------------------------------===//
 

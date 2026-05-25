@@ -283,6 +283,168 @@ ValueRange ExecuteRegionOp::getSuccessorInputs(RegionSuccessor successor) {
 }
 
 //===----------------------------------------------------------------------===//
+// LoopOp
+//===----------------------------------------------------------------------===//
+
+void LoopOp::build(
+    OpBuilder &builder, OperationState &result, TypeRange resultTypes,
+    ValueRange initValues,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
+  result.addOperands(initValues);
+  result.addTypes(resultTypes);
+
+  // Build the body region with a single entry block, one argument per init
+  // value. The caller-supplied `bodyBuilder` is responsible for terminating
+  // the block with either `scf.continue` or `scf.break`.
+  Region *bodyRegion = result.addRegion();
+  Block *bodyBlock = builder.createBlock(bodyRegion);
+  SmallVector<Type> argTypes(initValues.getTypes());
+  SmallVector<Location> argLocs(initValues.size(), result.location);
+  bodyBlock->addArguments(argTypes, argLocs);
+
+  if (bodyBuilder) {
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(bodyBlock);
+    bodyBuilder(builder, result.location, bodyBlock->getArguments());
+  }
+}
+
+LogicalResult LoopOp::verifyRegions() {
+  if (getRegion().empty())
+    return emitOpError("region cannot be empty");
+  Block &body = getRegion().front();
+  if (body.getNumArguments() != getNumOperands())
+    return emitOpError(
+        "mismatch in number of loop-carried values and defined values");
+  for (auto [index, regionArg, initOperand] :
+       llvm::enumerate(body.getArguments(), getOperands())) {
+    if (regionArg.getType() != initOperand.getType())
+      return emitOpError() << "type mismatch between " << index
+                           << "th iter operand (" << initOperand.getType()
+                           << ") and region argument (" << regionArg.getType()
+                           << ")";
+  }
+
+  // The loop body must end with an explicit `scf.break` or `scf.continue`.
+  Operation *terminator = body.getTerminator();
+  if (auto breakOp = dyn_cast<BreakOp>(terminator)) {
+    if (breakOp.getNumOperands() != getNumResults())
+      return breakOp.emitOpError()
+             << "has " << breakOp.getNumOperands()
+             << " operands, but enclosing scf.loop returns " << getNumResults()
+             << " result(s)";
+    for (auto [index, operandType, resultType] :
+         llvm::enumerate(breakOp.getOperandTypes(), getResultTypes())) {
+      if (operandType != resultType)
+        return breakOp.emitOpError()
+               << "type mismatch between " << index << "th operand ("
+               << operandType << ") and " << index
+               << "th result of enclosing scf.loop (" << resultType << ")";
+    }
+  } else if (auto continueOp = dyn_cast<ContinueOp>(terminator)) {
+    if (continueOp.getNumOperands() != getNumRegionIterValues())
+      return continueOp.emitOpError()
+             << "has " << continueOp.getNumOperands()
+             << " operands, but enclosing scf.loop has "
+             << getNumRegionIterValues() << " iter_args";
+    for (auto [index, operandType, iterArgType] : llvm::enumerate(
+             continueOp.getOperandTypes(), body.getArgumentTypes())) {
+      if (operandType != iterArgType)
+        return continueOp.emitOpError()
+               << "type mismatch between " << index << "th operand ("
+               << operandType << ") and " << index
+               << "th iter_arg of enclosing scf.loop (" << iterArgType << ")";
+    }
+  } else {
+    return emitOpError("body must be terminated by 'scf.break' or "
+                       "'scf.continue', got '")
+           << terminator->getName() << "'";
+  }
+  return success();
+}
+
+/// Print a type list in functional-return-type style: a single bare type or
+/// a parenthesized comma-separated list.
+static void printFunctionalTypeList(OpAsmPrinter &p, TypeRange types) {
+  if (types.size() == 1) {
+    p << types.front();
+    return;
+  }
+  p << "(";
+  llvm::interleaveComma(types, p);
+  p << ")";
+}
+
+void LoopOp::print(OpAsmPrinter &p) {
+  p << " ";
+  if (!getInitValues().empty()) {
+    p << "iter_args(";
+    llvm::interleaveComma(
+        llvm::zip(getRegionIterValues(), getInitValues()), p, [&](auto it) {
+          p.printRegionArgument(std::get<0>(it), /*argAttrs=*/{},
+                                /*omitType=*/true);
+          p << " = " << std::get<1>(it);
+        });
+    p << ") : ";
+    printFunctionalTypeList(p, getInitValues().getTypes());
+    p << " ";
+  }
+  if (!getResultTypes().empty()) {
+    p << "-> ";
+    printFunctionalTypeList(p, getResultTypes());
+    p << " ";
+  }
+
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/true);
+  p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+ParseResult LoopOp::parse(OpAsmParser &parser, OperationState &result) {
+  SmallVector<OpAsmParser::Argument, 4> regionArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> iterOperands;
+  SmallVector<Type, 4> iterTypes;
+
+  if (failed(parser.parseOptionalKeyword("iter_args"))) {
+    // No iter_args, but may still have a result type list.
+    if (parser.parseOptionalArrowTypeList(result.types))
+      return failure();
+  } else {
+    if (parser.parseAssignmentList(regionArgs, iterOperands) ||
+        parser.parseColon())
+      return failure();
+    if (parser.parseOptionalLParen()) {
+      // Single iter_arg type, no parens.
+      Type type;
+      if (parser.parseType(type))
+        return failure();
+      iterTypes.push_back(type);
+    } else {
+      if (parser.parseTypeList(iterTypes) || parser.parseRParen())
+        return failure();
+    }
+    if (regionArgs.size() != iterTypes.size())
+      return parser.emitError(parser.getCurrentLocation(),
+                              "found different number of iter_args and types");
+    if (parser.parseOptionalArrowTypeList(result.types))
+      return failure();
+    for (auto [regionArg, type] : llvm::zip_equal(regionArgs, iterTypes))
+      regionArg.type = type;
+  }
+
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, regionArgs))
+    return failure();
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  if (parser.resolveOperands(iterOperands, iterTypes, parser.getNameLoc(),
+                             result.operands))
+    return failure();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConditionOp
 //===----------------------------------------------------------------------===//
 
