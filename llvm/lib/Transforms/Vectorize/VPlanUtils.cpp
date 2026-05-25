@@ -418,7 +418,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
           VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
-    return Expr->isSingleScalar();
+    return Expr->isVectorToScalar();
 
   // VPExpandSCEVRecipes must be placed in the entry and are always uniform.
   return isa<VPExpandSCEVRecipe>(VPV);
