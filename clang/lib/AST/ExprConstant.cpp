@@ -8539,7 +8539,9 @@ public:
   }
 
   bool VisitCXXReinterpretCastExpr(const CXXReinterpretCastExpr *E) {
-    CCEDiag(E, diag::note_constexpr_invalid_cast_ptrtoint)
+    bool IsPtrToInt = E->getCastKind() == CK_PointerToIntegral;
+    CCEDiag(E, IsPtrToInt ? diag::note_constexpr_invalid_cast_ptrtoint
+                          : diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::Reinterpret;
     return static_cast<Derived*>(this)->VisitCastExpr(E);
   }

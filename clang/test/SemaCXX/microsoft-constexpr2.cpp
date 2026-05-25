@@ -14,3 +14,9 @@ constexpr long b = FIELD_OFFSET(S, y); // expected-warning {{folding constant ex
 constexpr long b2 = FIELD_OFFSET2(S, y); // expected-warning {{folding constant expression involving reinterpret_cast is a Microsoft extension}}
 constexpr LONG_PTR b3 = (LONG_PTR)&ob; // expected-error {{constexpr variable 'b3' must be initialized by a constant expression}}
 				       // expected-note@-1 {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+constexpr int* b4 = reinterpret_cast<int*>(&ob); // expected-error {{constexpr variable 'b4' must be initialized by a constant expression}}
+						 // expected-note@-1 {{reinterpret_cast is not allowed in a constant expression}}
+constexpr LONG_PTR b5 = (42 - FIELD_OFFSET(S, y)) +       // expected-error {{constexpr variable 'b5' must be initialized by a constant expression}}
+                (8 + reinterpret_cast<LONG_PTR>(&ob));    // expected-note@-1 {{reinterpret_cast is not allowed in a constant expression}}
+constexpr LONG_PTR b6 = -reinterpret_cast<LONG_PTR>(&ob); // expected-error {{constexpr variable 'b6' must be initialized by a constant expression}}
+							  // expected-note@-1 {{reinterpret_cast is not allowed in a constant expression}}

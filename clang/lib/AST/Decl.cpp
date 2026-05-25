@@ -2587,7 +2587,7 @@ VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
   // a constant initializer if we produced notes. In that case, we can't keep
   // the result, because it may only be correct under the assumption that the
   // initializer is a constant context.
-  if (IsConstantInitialization &&
+  if (Result && IsConstantInitialization &&
       (Ctx.getLangOpts().CPlusPlus ||
        (isConstexpr() && Ctx.getLangOpts().C23)) &&
       EStatus.DiagEmitted) {
