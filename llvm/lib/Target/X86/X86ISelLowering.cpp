@@ -1163,15 +1163,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SMIN, VT, VT == MVT::v8i16 ? Legal : Custom);
       setOperationAction(ISD::UMAX, VT, VT == MVT::v16i8 ? Legal : Custom);
       setOperationAction(ISD::UMIN, VT, VT == MVT::v16i8 ? Legal : Custom);
-      setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
     }
 
     // SSE2 can use basic vector unrolling.
     // SSE41 can use PHMINPOS to perform v16i8/v8i16 minmax reductions.
     // Fallback to ReplaceNodeResults for vXi64 reductions on 32-bit targets.
     for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::i64}) {
+      setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
@@ -2799,6 +2799,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::ANY_EXTEND_VECTOR_INREG,
                        ISD::SIGN_EXTEND_VECTOR_INREG,
                        ISD::ZERO_EXTEND_VECTOR_INREG,
+                       ISD::VECREDUCE_AND,
+                       ISD::VECREDUCE_OR,
+                       ISD::VECREDUCE_XOR,
                        ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP,
                        ISD::FP_TO_SINT,
@@ -24065,16 +24068,14 @@ static SDValue MatchVectorAllEqualTest(SDValue OrigLHS, SDValue OrigRHS,
 
   // Match icmp(reduce_or(X),0) anyof reduction patterns.
   // Match icmp(reduce_and(X),-1) allof reduction patterns.
-  if (Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-    ISD::NodeType BinOp;
-    if (SDValue Match =
-            DAG.matchBinOpReduction(Op.getNode(), BinOp, {LogicOp})) {
-      EVT MatchVT = Match.getValueType();
-      return LowerVectorAllEqual(DL, Match,
-                                 CmpNull ? DAG.getConstant(0, DL, MatchVT)
-                                         : DAG.getAllOnesConstant(DL, MatchVT),
-                                 CC, Mask, Subtarget, DAG, X86CC);
-    }
+  if (Op.getOpcode() == ISD::VECREDUCE_AND ||
+      Op.getOpcode() == ISD::VECREDUCE_OR) {
+    SDValue Match = Op.getOperand(0);
+    EVT MatchVT = Match.getValueType();
+    return LowerVectorAllEqual(DL, Match,
+                               CmpNull ? DAG.getConstant(0, DL, MatchVT)
+                                       : DAG.getAllOnesConstant(DL, MatchVT),
+                               CC, Mask, Subtarget, DAG, X86CC);
   }
 
   if (Mask.isAllOnes()) {
@@ -35429,6 +35430,14 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, Lo, Hi);
       Results.push_back(Res);
     }
+    return;
+  }
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR: {
+    assert(N->getValueType(0) == MVT::i64 && "Unexpected vector reduction");
+    if (SDValue Res = LowerVECREDUCE(SDValue(N, 0), Subtarget, DAG, true))
+      Results.push_back(Res);
     return;
   }
   case ISD::VECREDUCE_SMAX:
@@ -47217,146 +47226,6 @@ static SDValue createPSADBW(SelectionDAG &DAG, SDValue N0, SDValue N1,
                           PSADBWBuilder);
 }
 
-// Attempt to replace an all_of/any_of/parity style horizontal reduction with a MOVMSK.
-static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
-                                         const X86Subtarget &Subtarget) {
-  // Bail without SSE2.
-  if (!Subtarget.hasSSE2())
-    return SDValue();
-
-  EVT ExtractVT = Extract->getValueType(0);
-  unsigned BitWidth = ExtractVT.getSizeInBits();
-  if (ExtractVT != MVT::i64 && ExtractVT != MVT::i32 && ExtractVT != MVT::i16 &&
-      ExtractVT != MVT::i8 && ExtractVT != MVT::i1)
-    return SDValue();
-
-  // Check for OR(any_of)/AND(all_of)/XOR(parity) horizontal reduction patterns.
-  ISD::NodeType BinOp;
-  SDValue Match = DAG.matchBinOpReduction(Extract, BinOp, {ISD::OR, ISD::AND});
-  if (!Match && ExtractVT == MVT::i1)
-    Match = DAG.matchBinOpReduction(Extract, BinOp, {ISD::XOR});
-  if (!Match)
-    return SDValue();
-
-  // EXTRACT_VECTOR_ELT can require implicit extension of the vector element
-  // which we can't support here for now.
-  if (Match.getScalarValueSizeInBits() != BitWidth)
-    return SDValue();
-
-  SDValue Movmsk;
-  SDLoc DL(Extract);
-  EVT MatchVT = Match.getValueType();
-  unsigned NumElts = MatchVT.getVectorNumElements();
-  unsigned MaxElts = Subtarget.hasInt256() ? 32 : 16;
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  LLVMContext &Ctx = *DAG.getContext();
-
-  if (ExtractVT == MVT::i1) {
-    // Special case for (pre-legalization) vXi1 reductions.
-    if (NumElts > 64 || !isPowerOf2_32(NumElts))
-      return SDValue();
-    if (Match.getOpcode() == ISD::SETCC) {
-      ISD::CondCode CC = cast<CondCodeSDNode>(Match.getOperand(2))->get();
-      if ((BinOp == ISD::AND && CC == ISD::CondCode::SETEQ) ||
-          (BinOp == ISD::OR && CC == ISD::CondCode::SETNE)) {
-        // For all_of(setcc(x,y,eq)) - use (iX)x == (iX)y.
-        // For any_of(setcc(x,y,ne)) - use (iX)x != (iX)y.
-        X86::CondCode X86CC;
-        SDValue LHS = DAG.getFreeze(Match.getOperand(0));
-        SDValue RHS = DAG.getFreeze(Match.getOperand(1));
-        APInt Mask = APInt::getAllOnes(LHS.getScalarValueSizeInBits());
-        if (SDValue V = LowerVectorAllEqual(DL, LHS, RHS, CC, Mask, Subtarget,
-                                            DAG, X86CC))
-          return DAG.getNode(ISD::TRUNCATE, DL, ExtractVT,
-                             getSETCC(X86CC, V, DL, DAG));
-      }
-    }
-    if (TLI.isTypeLegal(MatchVT)) {
-      // If this is a legal AVX512 predicate type then we can just bitcast.
-      EVT MovmskVT = EVT::getIntegerVT(Ctx, NumElts);
-      Movmsk = DAG.getBitcast(MovmskVT, Match);
-    } else {
-      // Use combineBitcastvxi1 to create the MOVMSK.
-      while (NumElts > MaxElts) {
-        SDValue Lo, Hi;
-        std::tie(Lo, Hi) = DAG.SplitVector(Match, DL);
-        Match = DAG.getNode(BinOp, DL, Lo.getValueType(), Lo, Hi);
-        NumElts /= 2;
-      }
-      EVT MovmskVT = EVT::getIntegerVT(Ctx, NumElts);
-      Movmsk = combineBitcastvxi1(DAG, MovmskVT, Match, DL, Subtarget);
-    }
-    if (!Movmsk)
-      return SDValue();
-    Movmsk = DAG.getZExtOrTrunc(Movmsk, DL, NumElts > 32 ? MVT::i64 : MVT::i32);
-  } else {
-    // FIXME: Better handling of k-registers or 512-bit vectors?
-    unsigned MatchSizeInBits = Match.getValueSizeInBits();
-    if (!(MatchSizeInBits == 128 ||
-          (MatchSizeInBits == 256 && Subtarget.hasAVX())))
-      return SDValue();
-
-    // Make sure this isn't a vector of 1 element. The perf win from using
-    // MOVMSK diminishes with less elements in the reduction, but it is
-    // generally better to get the comparison over to the GPRs as soon as
-    // possible to reduce the number of vector ops.
-    if (Match.getValueType().getVectorNumElements() < 2)
-      return SDValue();
-
-    // Check that we are extracting a reduction of all sign bits.
-    if (DAG.ComputeNumSignBits(Match) != BitWidth)
-      return SDValue();
-
-    if (MatchSizeInBits == 256 && BitWidth < 32 && !Subtarget.hasInt256()) {
-      SDValue Lo, Hi;
-      std::tie(Lo, Hi) = DAG.SplitVector(Match, DL);
-      Match = DAG.getNode(BinOp, DL, Lo.getValueType(), Lo, Hi);
-      MatchSizeInBits = Match.getValueSizeInBits();
-    }
-
-    // For 32/64 bit comparisons use MOVMSKPS/MOVMSKPD, else PMOVMSKB.
-    MVT MaskSrcVT;
-    if (64 == BitWidth || 32 == BitWidth)
-      MaskSrcVT = MVT::getVectorVT(MVT::getFloatingPointVT(BitWidth),
-                                   MatchSizeInBits / BitWidth);
-    else
-      MaskSrcVT = MVT::getVectorVT(MVT::i8, MatchSizeInBits / 8);
-
-    SDValue BitcastLogicOp = DAG.getBitcast(MaskSrcVT, Match);
-    Movmsk = getPMOVMSKB(DL, BitcastLogicOp, DAG, Subtarget);
-    NumElts = MaskSrcVT.getVectorNumElements();
-  }
-  assert((NumElts <= 32 || NumElts == 64) &&
-         "Not expecting more than 64 elements");
-
-  MVT CmpVT = NumElts == 64 ? MVT::i64 : MVT::i32;
-  if (BinOp == ISD::XOR) {
-    // parity -> (PARITY(MOVMSK X))
-    SDValue Result = DAG.getNode(ISD::PARITY, DL, CmpVT, Movmsk);
-    return DAG.getZExtOrTrunc(Result, DL, ExtractVT);
-  }
-
-  SDValue CmpC;
-  ISD::CondCode CondCode;
-  if (BinOp == ISD::OR) {
-    // any_of -> MOVMSK != 0
-    CmpC = DAG.getConstant(0, DL, CmpVT);
-    CondCode = ISD::CondCode::SETNE;
-  } else {
-    // all_of -> MOVMSK == ((1 << NumElts) - 1)
-    CmpC = DAG.getConstant(APInt::getLowBitsSet(CmpVT.getSizeInBits(), NumElts),
-                           DL, CmpVT);
-    CondCode = ISD::CondCode::SETEQ;
-  }
-
-  // The setcc produces an i8 of 0/1, so extend that to the result width and
-  // negate to get the final 0/-1 mask value.
-  EVT SetccVT = TLI.getSetCCResultType(DAG.getDataLayout(), Ctx, CmpVT);
-  SDValue Setcc = DAG.getSetCC(DL, SetccVT, Movmsk, CmpC, CondCode);
-  SDValue Zext = DAG.getZExtOrTrunc(Setcc, DL, ExtractVT);
-  return DAG.getNegative(Zext, DL, ExtractVT);
-}
-
 static SDValue combineVPDPBUSDPattern(SDNode *Extract, SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
   if (!Subtarget.hasVNNI() && !Subtarget.hasAVXVNNI())
@@ -48165,10 +48034,6 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   if (SDValue VPDPBUSD = combineVPDPBUSDPattern(N, DAG, Subtarget))
     return VPDPBUSD;
 
-  // Attempt to replace an all_of/any_of horizontal reduction with a MOVMSK.
-  if (SDValue Cmp = combinePredicateReduction(N, DAG, Subtarget))
-    return Cmp;
-
   // Attempt to optimize ADD/FADD/MUL reductions with HADD, promotion etc..
   if (SDValue V = combineArithReduction(N, DAG, Subtarget))
     return V;
@@ -48256,6 +48121,106 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   }
 
   return SDValue();
+}
+
+static SDValue combineVECREDUCE_LOGIC(SDNode *N, SelectionDAG &DAG,
+                                      const X86Subtarget &Subtarget) {
+  SDValue Src = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  EVT SrcVT = Src.getValueType();
+  EVT SrcSVT = SrcVT.getVectorElementType();
+  unsigned BitWidth = SrcSVT.getSizeInBits();
+  unsigned NumElts = SrcVT.getVectorNumElements();
+  unsigned MaxElts = Subtarget.hasInt256() ? 32 : 16;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  LLVMContext &Ctx = *DAG.getContext();
+  ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(N->getOpcode());
+  SDLoc DL(N);
+
+  if (NumElts == 1 || !isPowerOf2_32(NumElts))
+    return SDValue();
+
+  SDValue Movmsk;
+
+  // Special case for (pre-legalization) vXi1 reductions.
+  if (SrcSVT == MVT::i1) {
+    if (TLI.isTypeLegal(VT) && NumElts >= 8) {
+      // If this is a legal AVX512 predicate type then we can just bitcast.
+      EVT MovmskVT = EVT::getIntegerVT(Ctx, NumElts);
+      Movmsk = DAG.getBitcast(MovmskVT, Src);
+    } else {
+      // Use combineBitcastvxi1 to create the MOVMSK.
+      while (NumElts > MaxElts) {
+        SDValue Lo, Hi;
+        std::tie(Lo, Hi) = DAG.SplitVector(Src, DL);
+        Src = DAG.getNode(BinOp, DL, Lo.getValueType(), Lo, Hi);
+        NumElts /= 2;
+      }
+      EVT MovmskVT = EVT::getIntegerVT(Ctx, NumElts);
+      Movmsk = combineBitcastvxi1(DAG, MovmskVT, Src, DL, Subtarget);
+    }
+  } else if (VT == SrcSVT) {
+    // FIXME: Better handling of k-registers or 512-bit vectors?
+    unsigned SrcSizeInBits = Src.getValueSizeInBits();
+    if (!(SrcSizeInBits == 128 || (SrcSizeInBits == 256 && Subtarget.hasAVX())))
+      return SDValue();
+
+    // Check that we are extracting a reduction of all sign bits.
+    if (DAG.ComputeNumSignBits(Src) != BitWidth)
+      return SDValue();
+
+    if (SrcSizeInBits == 256 && BitWidth < 32 && !Subtarget.hasInt256()) {
+      SDValue Lo, Hi;
+      std::tie(Lo, Hi) = DAG.SplitVector(Src, DL);
+      Src = DAG.getNode(BinOp, DL, Lo.getValueType(), Lo, Hi);
+      SrcSizeInBits = Src.getValueSizeInBits();
+    }
+
+    // For 32/64 bit comparisons use MOVMSKPS/MOVMSKPD, else PMOVMSKB.
+    MVT MaskSrcVT;
+    if (64 == BitWidth || 32 == BitWidth)
+      MaskSrcVT = MVT::getVectorVT(MVT::getFloatingPointVT(BitWidth),
+                                   SrcSizeInBits / BitWidth);
+    else
+      MaskSrcVT = MVT::getVectorVT(MVT::i8, SrcSizeInBits / 8);
+
+    SDValue BitcastLogicOp = DAG.getBitcast(MaskSrcVT, Src);
+    Movmsk = getPMOVMSKB(DL, BitcastLogicOp, DAG, Subtarget);
+    NumElts = MaskSrcVT.getVectorNumElements();
+  }
+  if (!Movmsk)
+    return SDValue();
+
+  assert((NumElts <= 32 || NumElts == 64) &&
+         "Not expecting more than 64 elements");
+  Movmsk = DAG.getZExtOrTrunc(Movmsk, DL, NumElts > 32 ? MVT::i64 : MVT::i32);
+
+  MVT CmpVT = NumElts == 64 ? MVT::i64 : MVT::i32;
+  if (BinOp == ISD::XOR) {
+    // parity -> (PARITY(MOVMSK X))
+    SDValue Result = DAG.getNode(ISD::PARITY, DL, CmpVT, Movmsk);
+    return DAG.getZExtOrTrunc(Result, DL, VT);
+  }
+
+  SDValue CmpC;
+  ISD::CondCode CondCode;
+  if (BinOp == ISD::OR) {
+    // any_of -> MOVMSK != 0
+    CmpC = DAG.getConstant(0, DL, CmpVT);
+    CondCode = ISD::CondCode::SETNE;
+  } else {
+    // all_of -> MOVMSK == ((1 << NumElts) - 1)
+    CmpC = DAG.getConstant(APInt::getLowBitsSet(CmpVT.getSizeInBits(), NumElts),
+                           DL, CmpVT);
+    CondCode = ISD::CondCode::SETEQ;
+  }
+
+  // The setcc produces an i8 of 0/1, so extend that to the result width and
+  // negate to get the final 0/-1 mask value.
+  EVT SetccVT = TLI.getSetCCResultType(DAG.getDataLayout(), Ctx, CmpVT);
+  SDValue Setcc = DAG.getSetCC(DL, SetccVT, Movmsk, CmpC, CondCode);
+  SDValue Zext = DAG.getZExtOrTrunc(Setcc, DL, VT);
+  return DAG.getNegative(Zext, DL, VT);
 }
 
 // Convert (vXiY *ext(vXi1 bitcast(iX))) to extend_in_reg(broadcast(iX)).
@@ -62784,6 +62749,9 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VFCMULC:
   case X86ISD::VFMULC:      return combineFMulcFCMulc(N, DAG, Subtarget);
   case ISD::FNEG:           return combineFneg(N, DAG, DCI, Subtarget);
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:  return combineVECREDUCE_LOGIC(N, DAG, Subtarget);
   case ISD::TRUNCATE:       return combineTruncate(N, DAG, Subtarget);
   case X86ISD::VTRUNC:      return combineVTRUNC(N, DAG, DCI);
   case X86ISD::VTRUNCS:
