@@ -19,7 +19,7 @@ class IsNanTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   DECLARE_SPECIAL_CONSTANTS(T)
 
 public:
-  typedef int (*IsNanFunc)(T);
+  using IsNanFunc = int (*)(T);
 
   void testSpecialNumbers(IsNanFunc func) {
     EXPECT_EQ(func(aNaN), 1);

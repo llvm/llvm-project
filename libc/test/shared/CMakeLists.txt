@@ -287,6 +287,7 @@ add_fp_unittest(
     libc.src.__support.math.isnan
     libc.src.__support.math.isnanf
     libc.src.__support.math.isnanf128
+    libc.src.__support.math.isnanf16
     libc.src.__support.math.isnanl
     libc.src.__support.math.issignaling
     libc.src.__support.math.issignalingbf16
@@ -660,6 +661,7 @@ add_fp_unittest(
     libc.src.__support.math.isnan
     libc.src.__support.math.isnanf
     libc.src.__support.math.isnanf128
+    libc.src.__support.math.isnanf16
     libc.src.__support.math.isnanl
     libc.src.__support.math.issignaling
     libc.src.__support.math.issignalingbf16

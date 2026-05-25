@@ -1613,6 +1613,13 @@ functions:
     return_type: int
     arguments:
       - type: long double
+  - name: isnanf16
+    standards:
+      - bsd
+    return_type: int
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: ldexp
     standards:
       - stdc
