@@ -1159,7 +1159,7 @@ TEST(DenseMapCustomTest, EraseInvalidatesIterators) {
   M.try_emplace(1, 10);
   M.try_emplace(2, 20);
   auto It = M.find(1);
-  M.erase(2);
+  M.erase(M.find(2));
   EXPECT_DEATH((void)It->second, "invalid iterator access");
 }
 #endif
