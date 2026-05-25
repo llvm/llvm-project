@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // Verifies that OPEN(STATUS='SCRATCH') honors the TMPDIR/TMP/TEMP/TEMPDIR
-// environment variables on POSIX, matching llvm::sys::path::system_temp_directory.
+// environment variables on POSIX, matching
+// llvm::sys::path::system_temp_directory.
 //
 //===----------------------------------------------------------------------===//
 
@@ -118,7 +119,8 @@ TEST_F(ScratchTempDirTests, TmpConsulted) {
 TEST_F(ScratchTempDirTests, EmptyTmpdirSkipped) {
   TempDirEnvGuard guard;
   char tmpDir[]{"/tmp/flang-rt-scratch-test-XXXXXX"};
-  ASSERT_NE(::mkdtemp(tmpDir), nullptr) << "mkdtemp failed: " << strerror(errno);
+  ASSERT_NE(::mkdtemp(tmpDir), nullptr)
+      << "mkdtemp failed: " << strerror(errno);
   ::setenv("TMPDIR", "", 1);
   ::setenv("TMP", tmpDir, 1);
   EXPECT_EQ(OpenScratchUnit(), IostatOk)
@@ -133,7 +135,8 @@ TEST_F(ScratchTempDirTests, EmptyTmpdirSkipped) {
 TEST_F(ScratchTempDirTests, FileCreatedInTmpdir) {
   TempDirEnvGuard guard;
   char tmpDir[]{"/tmp/flang-rt-scratch-test-XXXXXX"};
-  ASSERT_NE(::mkdtemp(tmpDir), nullptr) << "mkdtemp failed: " << strerror(errno);
+  ASSERT_NE(::mkdtemp(tmpDir), nullptr)
+      << "mkdtemp failed: " << strerror(errno);
   ::setenv("TMPDIR", tmpDir, 1);
 
   struct stat before{};
