@@ -2849,9 +2849,9 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
 
     auto isExtern = ConstantOp::create(
         builder, loc, IntAttr::get(intTy, regAttr.getIsExtern() ? 1 : 0));
-    llvm::TypeSize size = dataLayout.getTypeSizeInBits(global.getSymType());
+    llvm::TypeSize size = dataLayout.getTypeAllocSize(global.getSymType());
     auto varSize = ConstantOp::create(
-        builder, loc, IntAttr::get(sizeTy, size.getFixedValue() / 8));
+        builder, loc, IntAttr::get(sizeTy, size.getFixedValue()));
     auto isConstant = ConstantOp::create(
         builder, loc, IntAttr::get(intTy, regAttr.getIsConstant() ? 1 : 0));
     auto normalized = ConstantOp::create(builder, loc, IntAttr::get(intTy, 0));
