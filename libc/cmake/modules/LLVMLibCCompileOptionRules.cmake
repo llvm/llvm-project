@@ -147,7 +147,7 @@ function(_get_compile_options_from_config output_var)
   endif()
 
   if(LIBC_CONF_MATH_OPTIMIZATIONS)
-    libc_add_definition(config_options "LIBC_MATH=${LIBC_CONF_MATH_OPTIMIZATIONS}")
+    libc_add_definition(config_options "LIBC_MATH=(${LIBC_CONF_MATH_OPTIMIZATIONS})")
     if(LIBC_CONF_MATH_OPTIMIZATIONS MATCHES "LIBC_MATH_NO_ERRNO")
       list(APPEND config_options "-fno-math-errno")
     endif()
