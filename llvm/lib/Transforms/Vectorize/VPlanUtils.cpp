@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanUtils.h"
+#include "LoopVectorizationPlanner.h"
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
@@ -749,7 +750,9 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
 
     VPSymbolicValue &UF = Plan.getUF();
     if (!UF.isMaterialized())
-      return Step == &UF;
+      return Step == &UF ||
+             match(Step, m_c_Mul(m_Specific(&Plan.getUF()),
+                                 m_VPInstruction<VPInstruction::VScale>()));
 
     unsigned ConcreteUF = Plan.getConcreteUF();
     // Fixed VF: step is just the concrete UF.
@@ -855,4 +858,34 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
         WorkList.push_back(SDR);
   }
   return false;
+}
+
+VPValue *VPBuilder::VPSCEVExpander::tryToExpand(const SCEV *S) {
+  switch (S->getSCEVType()) {
+  case scConstant:
+    return Builder.getPlan().getOrAddLiveIn(cast<SCEVConstant>(S)->getValue());
+  case scUnknown:
+    return Builder.getPlan().getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
+  case scVScale:
+    return Builder.createNaryOp(VPInstruction::VScale, {}, S->getType());
+  case scMulExpr: {
+    auto *Mul = cast<SCEVMulExpr>(S);
+    SmallVector<VPValue *, 2> Ops;
+    for (const SCEVUse &Op : Mul->operands()) {
+      VPValue *OpV = tryToExpand(Op);
+      if (!OpV)
+        return nullptr;
+      Ops.push_back(OpV);
+    }
+    VPIRFlags::WrapFlagsTy WrapFlags(Mul->hasNoUnsignedWrap(),
+                                     Mul->hasNoSignedWrap());
+    VPValue *Result = Ops.front();
+    for (VPValue *Op : drop_begin(Ops))
+      Result = Builder.createOverflowingOp(Instruction::Mul, {Result, Op},
+                                           WrapFlags, DL);
+    return Result;
+  }
+  default:
+    return nullptr;
+  }
 }
