@@ -5070,8 +5070,8 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       if (R && R->getReg() == AArch64::SP && VT == MVT::i64) {
         SDValue N1 = Node->getOperand(1);
         SDValue Ops[] = {N1};
-        SDNode *ResNode = CurDAG->getMachineNode(
-            AArch64::STACK_GUARD_UNMIX, SDLoc(Node), MVT::i64, Ops);
+        SDNode *ResNode = CurDAG->getMachineNode(AArch64::STACK_GUARD_UNMIX,
+                                                 SDLoc(Node), MVT::i64, Ops);
         ReplaceNode(Node, ResNode);
         return;
       }

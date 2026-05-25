@@ -30721,7 +30721,8 @@ bool AArch64TargetLowering::useLoadStackGuardNode(const Module &M) const {
 bool AArch64TargetLowering::useStackGuardMixCookie() const {
   // MSVC CRTs mix the stack pointer into the stack guard value.
   // The prologue mixing is handled via post-RA expansion of LOAD_STACK_GUARD,
-  // but the epilogue unmixing is done at the DAG level via emitStackGuardMixCookie.
+  // but the epilogue unmixing is done at the DAG level via
+  // emitStackGuardMixCookie.
   return Subtarget->getTargetTriple().isOSMSVCRT();
 }
 
