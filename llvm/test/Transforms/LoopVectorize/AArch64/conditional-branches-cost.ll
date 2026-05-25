@@ -1171,11 +1171,13 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; DEFAULT-NEXT:    [[TMP37:%.*]] = mul i64 [[TMP5]], 4
+; DEFAULT-NEXT:    [[TMP93:%.*]] = sub i64 [[TMP37]], 1
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = sub i64 [[C1]], [[A2]]
-; DEFAULT-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP37]]
-; DEFAULT-NEXT:    [[TMP41:%.*]] = mul i64 [[TMP5]], 4
+; DEFAULT-NEXT:    [[TMP92:%.*]] = sub i64 [[TMP6]], 1
+; DEFAULT-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP92]], [[TMP93]]
 ; DEFAULT-NEXT:    [[TMP7:%.*]] = sub i64 [[C1]], [[B3]]
-; DEFAULT-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP7]], [[TMP41]]
+; DEFAULT-NEXT:    [[TMP94:%.*]] = sub i64 [[TMP7]], 1
+; DEFAULT-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP94]], [[TMP93]]
 ; DEFAULT-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; DEFAULT-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
@@ -1323,10 +1325,13 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED:       [[VECTOR_MEMCHECK]]:
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
+; PRED-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP2]], 1
 ; PRED-NEXT:    [[TMP3:%.*]] = sub i64 [[C1]], [[A2]]
-; PRED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP2]]
+; PRED-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP3]], 1
+; PRED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
 ; PRED-NEXT:    [[TMP4:%.*]] = sub i64 [[C1]], [[B3]]
-; PRED-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP4]], [[TMP2]]
+; PRED-NEXT:    [[TMP23:%.*]] = sub i64 [[TMP4]], 1
+; PRED-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP23]], [[TMP5]]
 ; PRED-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; PRED-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:

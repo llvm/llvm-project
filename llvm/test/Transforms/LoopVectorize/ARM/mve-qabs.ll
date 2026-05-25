@@ -16,8 +16,8 @@ define void @arm_abs_q7(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[BLOCKSIZE]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PDST1]], [[PSRC2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PSRC2]], [[PDST1]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ugt i32 [[TMP0]], -16
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -16
@@ -107,8 +107,8 @@ define void @arm_abs_q15(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[BLOCKSIZE]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PDST1]], [[PSRC2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PSRC2]], [[PDST1]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ugt i32 [[TMP0]], -16
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -8
@@ -200,8 +200,8 @@ define void @arm_abs_q31(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[BLOCKSIZE]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PDST1]], [[PSRC2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PSRC2]], [[PDST1]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ugt i32 [[TMP0]], -16
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -4

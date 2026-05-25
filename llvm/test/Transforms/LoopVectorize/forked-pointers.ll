@@ -23,15 +23,15 @@ define void @forked_ptrs_different_base_same_offset(ptr nocapture readonly %Base
 ; CHECK-NEXT:    [[PREDS2:%.*]] = ptrtoaddr ptr [[PREDS:%.*]] to i64
 ; CHECK-NEXT:    [[BASE23:%.*]] = ptrtoaddr ptr [[BASE2:%.*]] to i64
 ; CHECK-NEXT:    [[BASE15:%.*]] = ptrtoaddr ptr [[BASE1:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DEST1]], [[PREDS2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[DEST1]], [[BASE23]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[PREDS2]], [[DEST1]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ugt i64 [[TMP0]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[BASE23]], [[DEST1]]
 ; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i64 [[TMP1]]
-; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[DOTFR]], 16
+; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ugt i64 [[DOTFR]], -16
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DEST1]], [[BASE15]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[BASE15]], [[DEST1]]
 ; CHECK-NEXT:    [[DOTFR10:%.*]] = freeze i64 [[TMP2]]
-; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ult i64 [[DOTFR10]], 16
+; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ugt i64 [[DOTFR10]], -16
 ; CHECK-NEXT:    [[CONFLICT_RDX7:%.*]] = or i1 [[CONFLICT_RDX]], [[DIFF_CHECK6]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX7]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:

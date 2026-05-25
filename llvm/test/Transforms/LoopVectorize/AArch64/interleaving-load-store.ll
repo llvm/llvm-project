@@ -31,7 +31,8 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ; INTERLEAVE-2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; INTERLEAVE-2:       vector.memcheck:
 ; INTERLEAVE-2-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[SRC2]]
-; INTERLEAVE-2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; INTERLEAVE-2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
+; INTERLEAVE-2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 31
 ; INTERLEAVE-2-NEXT:    br i1 [[DIFF_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; INTERLEAVE-2:       vector.main.loop.iter.check:
 ; INTERLEAVE-2-NEXT:    [[MIN_ITERS_CHECK3:%.*]] = icmp ult i64 [[N]], 32
@@ -119,7 +120,8 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ; INTERLEAVE-4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; INTERLEAVE-4:       vector.memcheck:
 ; INTERLEAVE-4-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[SRC2]]
-; INTERLEAVE-4-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 64
+; INTERLEAVE-4-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
+; INTERLEAVE-4-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 63
 ; INTERLEAVE-4-NEXT:    br i1 [[DIFF_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; INTERLEAVE-4:       vector.main.loop.iter.check:
 ; INTERLEAVE-4-NEXT:    [[MIN_ITERS_CHECK3:%.*]] = icmp ult i64 [[N]], 64
