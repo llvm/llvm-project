@@ -60,8 +60,8 @@ public:
 //   Kills: a bit vector which contains a set of indices of blocks that can
 //          reach block 'i' but there is a path crossing a suspend point
 //          not repeating 'i' (path to 'i' without cycles containing 'i').
-//   Suspend: a boolean indicating whether block 'i' contains a suspend point.
-//   End: a boolean indicating whether block 'i' contains a coro.end intrinsic.
+//   AlwaysKill: a boolean indicating whether block 'i' always propagate kills.
+//   NeverKill: a boolean indicating whether block 'i' never propagate kills.
 //   KillLoop: There is a path from 'i' to 'i' not otherwise repeating 'i' that
 //             crosses a suspend point.
 //
@@ -71,8 +71,8 @@ class SuspendCrossingInfo {
   struct BlockData {
     BitVector Consumes;
     BitVector Kills;
-    bool Suspend = false;
-    bool End = false;
+    bool AlwaysKill = false;
+    bool NeverKill = false;
     bool KillLoop = false;
     bool Changed = false;
   };
