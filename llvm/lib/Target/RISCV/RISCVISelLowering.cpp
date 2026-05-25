@@ -643,6 +643,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::EXTRACT_SUBVECTOR, {MVT::v2i16, MVT::v4i8},
                          Legal);
       setOperationAction(ISD::SELECT, {MVT::v4i16, MVT::v8i8}, Custom);
+      setOperationAction(ISD::MUL, {MVT::v4i16, MVT::v8i8}, Custom);
       setOperationAction(ISD::SETCC, P64VecVTs, Legal);
       setCondCodeAction(
           {ISD::SETGE, ISD::SETUGT, ISD::SETUGE, ISD::SETULE, ISD::SETLE},
@@ -8945,7 +8946,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   }
   case ISD::ADD:
   case ISD::SUB:
-  case ISD::MUL:
   case ISD::MULHS:
   case ISD::MULHU:
   case ISD::SDIV:
@@ -8958,9 +8958,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerToScalableOp(Op, DAG);
   case ISD::AND:
   case ISD::OR:
-  case ISD::XOR: {
+  case ISD::XOR:
+  case ISD::MUL: {
     EVT VT = Op.getValueType();
-    // Split 64-bit vector AND/OR/XOR on RV32 with P extension
+    // Split 64-bit vector AND/OR/XOR/MUL on RV32 with P extension
     if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() &&
         (VT == MVT::v4i16 || VT == MVT::v8i8)) {
       SDLoc DL(Op);
