@@ -22886,17 +22886,21 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::TRUNCATE, dl, DstVT, Res);
   } else if (DstVT == MVT::v4i32 && Subtarget.hasSSE2()) {
     unsigned SatWidth = SatVT.getScalarSizeInBits();
-    assert(SatWidth <= 32 && "Expected saturation width no wider than result element");
+    assert(SatWidth <= 32 &&
+           "Expected saturation width no wider than result element");
 
     if (SatWidth == 32) {
       if (IsSigned) {
         SDValue Cvt = DAG.getNode(ISD::FP_TO_SINT, dl, DstVT, Src);
         APFloat PosOvfBoundFlt(SrcVT.getScalarType().getFltSemantics());
-        PosOvfBoundFlt.convertFromAPInt(APInt::getSignedMinValue(32), /*IsSigned=*/true, APFloat::rmTowardZero);
+        PosOvfBoundFlt.convertFromAPInt(APInt::getSignedMinValue(32),
+                                        /*IsSigned=*/true,
+                                        APFloat::rmTowardZero);
         PosOvfBoundFlt.changeSign();
         SDValue PosOvfBound = DAG.getConstantFP(PosOvfBoundFlt, dl, SrcVT);
         SDValue PosOvf = DAG.getSetCC(dl, DstVT, Src, PosOvfBound, ISD::SETOGE);
-        SDValue IntMax = DAG.getConstant(APInt::getSignedMaxValue(32), dl, DstVT);
+        SDValue IntMax =
+            DAG.getConstant(APInt::getSignedMaxValue(32), dl, DstVT);
         SDValue Fixed = DAG.getSelect(dl, DstVT, PosOvf, IntMax, Cvt);
         SDValue IsNaN = DAG.getSetCC(dl, DstVT, Src, Src, ISD::SETUO);
         SDValue Zero = DAG.getConstant(0, dl, DstVT);
@@ -22905,7 +22909,8 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
         SDValue ZeroFP = DAG.getConstantFP(0.0, dl, SrcVT);
         SDValue Clamped = DAG.getNode(X86ISD::FMAX, dl, SrcVT, Src, ZeroFP);
         APFloat OvfBoundFlt(SrcVT.getScalarType().getFltSemantics());
-        OvfBoundFlt.convertFromAPInt(APInt::getOneBitSet(33, 32), /*IsSigned=*/false, APFloat::rmTowardZero);
+        OvfBoundFlt.convertFromAPInt(APInt::getOneBitSet(33, 32),
+                                     /*IsSigned=*/false, APFloat::rmTowardZero);
         SDValue OvfBound = DAG.getConstantFP(OvfBoundFlt, dl, SrcVT);
         SDValue IsOvf = DAG.getSetCC(dl, DstVT, Clamped, OvfBound, ISD::SETOGE);
         SDValue Cvt = DAG.getNode(ISD::FP_TO_UINT, dl, DstVT, Clamped);
@@ -22940,8 +22945,9 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
     // input is NaN, so NaN maps to MinC here.
     SDValue ClampedBottom = DAG.getNode(X86ISD::FMAX, dl, SrcVT, Src, MinC);
     // Clamp from above. NaN (now MinC) is already in range and passes through.
-    SDValue ClampedTop = DAG.getNode(X86ISD::FMIN, dl, SrcVT, ClampedBottom, MaxC);
-    
+    SDValue ClampedTop =
+        DAG.getNode(X86ISD::FMIN, dl, SrcVT, ClampedBottom, MaxC);
+
     // For smaller widths, the max unsigned value fits in a signed 32-bit int.
     // Use FP_TO_SINT instead of FP_TO_UINT to avoid expensive legalization.
     unsigned CastOpc = FpToIntOpcode;
@@ -22952,7 +22958,8 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
 
     // For signed saturation, NaN was mapped to MinC, so FP_TO_SINT produces
     // INT_MIN. ISD::FP_TO_SINT_SAT requires NaN -> 0; fix with a zero-select.
-    // For unsigned saturation, MinC == 0.0, so NaN -> 0.0 -> 0: already correct.
+    // For unsigned saturation, MinC == 0.0, so NaN -> 0.0 -> 0: already
+    // correct.
     if (IsSigned) {
       SDValue Zero = DAG.getConstant(0, dl, DstVT);
       SDValue IsNaN = DAG.getSetCC(dl, DstVT, Src, Src, ISD::SETUO);
