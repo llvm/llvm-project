@@ -3555,7 +3555,7 @@ public:
   /// effects.
   bool mayHaveSideEffects() const;
 
-  /// Returns true if this VPExpressionRecipe produces a scalar.
+  /// Returns true if this VPExpressionRecipe produces a single scalar.
   bool isVectorToScalar() const;
 
 protected:
