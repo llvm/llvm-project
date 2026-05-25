@@ -153,6 +153,18 @@ int (arrayVar)[2];
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in type
 // CHECK-FIXES: int arrayVar[2];
 
+const int (cx) = 0; 
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant parentheses in type 
+// CHECK-FIXES: const int cx = 0;
+
+typedef int (TypedefName); 
+// CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant parentheses in type 
+// CHECK-FIXES: typedef int TypedefName;
+
+void (func)(int); 
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant parentheses in type 
+// CHECK-FIXES: void func(int);
+
 template <class T>
 void templatedParam(T (arg));
 // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: redundant parentheses in type
@@ -165,7 +177,6 @@ struct TemplateStruct {
 // CHECK-FIXES: T member;
 };
 
-// Negative cases.
 int (*functionPtr)(int);
 void (*callback)(int);
 int (*arrayPtr[2])(int);
@@ -180,5 +191,9 @@ void instantiateTemplates() {
 }
 using Fn = void(int);
 Fn (*funcPtr);
-void (func)(int);
 int (*ptr)(int);
+struct T { 
+void method(int); 
+};
+void (T::*memberFunctionPtr)(int);
+int (&arrayRef)[2] = arrayVar;

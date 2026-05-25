@@ -15,6 +15,8 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 
 using namespace clang::ast_matchers;
@@ -74,6 +76,7 @@ void RedundantParenthesesCheck::check(const MatchFinder::MatchResult &Result) {
         << FixItHint::CreateRemoval(PE->getRParen());
     return;
   }
+
   if (const auto *TL = Result.Nodes.getNodeAs<TypeLoc>("parentheses-decl")) {
     const auto ParenType = TL->getAs<ParenTypeLoc>();
     assert(!ParenType.isNull() && "Expected ParenTypeLoc");
@@ -81,9 +84,26 @@ void RedundantParenthesesCheck::check(const MatchFinder::MatchResult &Result) {
     const SourceLocation RParen = ParenType.getRParenLoc();
     if (LParen.isMacroID() || RParen.isMacroID())
       return;
+    const auto Text = Lexer::getSourceText(
+        CharSourceRange::getTokenRange(SourceRange(LParen, RParen)),
+        *Result.SourceManager, getLangOpts());
     const TypeLoc Inner = ParenType.getInnerLoc();
+    if (Text.starts_with("(&") && Inner.getType()->isArrayType())
+      return;
+    if (Inner.getType()->isFunctionType()) {
+      const auto Text = Lexer::getSourceText(
+          CharSourceRange::getTokenRange(SourceRange(LParen, RParen)),
+          *Result.SourceManager, getLangOpts());
+      if (!Text.starts_with("(*") && !Text.contains("::*")) {
+        diag(LParen, "redundant parentheses in type")
+            << FixItHint::CreateRemoval(LParen)
+            << FixItHint::CreateRemoval(RParen);
+        return;
+      }
+    }
     if (Inner.getType()->isFunctionType() ||
-        Inner.getType()->isFunctionPointerType())
+        Inner.getType()->isFunctionPointerType() ||
+        Inner.getType()->isMemberFunctionPointerType())
       return;
     diag(LParen, "redundant parentheses in type")
         << FixItHint::CreateRemoval(LParen) << FixItHint::CreateRemoval(RParen);
