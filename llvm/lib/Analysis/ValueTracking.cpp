@@ -9690,10 +9690,21 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
       return true;
   }
 
-  // a - b == NonZero -> a != b
-  // ptrtoint(a) - ptrtoint(b) == NonZero -> a != b
   const APInt *L1C;
   Value *A, *B;
+  // A != B implies (A | B) != 0 and disproves (A | B) == 0.
+  if (LPred == ICmpInst::ICMP_NE && ICmpInst::isEquality(RPred) &&
+      match(R1, m_Zero()) && match(R0, m_c_Or(m_Specific(L0), m_Specific(L1))))
+    return RPred == ICmpInst::ICMP_NE;
+
+  // (A | B) == 0 implies A == B and disproves A != B.
+  if (LPred == ICmpInst::ICMP_EQ && ICmpInst::isEquality(RPred) &&
+      match(L1, m_Zero()) && match(L0, m_c_Or(m_Value(A), m_Value(B))) &&
+      ((R0 == A && R1 == B) || (R0 == B && R1 == A)))
+    return RPred == ICmpInst::ICMP_EQ;
+
+  // a - b == NonZero -> a != b
+  // ptrtoint(a) - ptrtoint(b) == NonZero -> a != b
   if (LPred == ICmpInst::ICMP_EQ && ICmpInst::isEquality(RPred) &&
       match(L1, m_APInt(L1C)) && !L1C->isZero() &&
       match(L0, m_Sub(m_Value(A), m_Value(B))) &&
