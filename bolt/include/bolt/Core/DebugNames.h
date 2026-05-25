@@ -104,7 +104,7 @@ private:
   /// Track whether AcceleratorTable have been preallocated.
   bool Preallocated = false;
   /// Map from DWO ID to preallocated CU index.
-  DenseMap<uint64_t, uint32_t> DWOIdToCUIndex;
+  std::unordered_map<uint64_t, uint32_t> DWOIdToCUIndex;
   /// Represents a group of entries with identical name (and hence, hash value).
   struct HashData {
     uint64_t StrOffset;
