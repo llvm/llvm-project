@@ -16,6 +16,10 @@ struct Bit { constexpr Bit(): i(1), j(1){}; int i: 2; int j:2;};
 
 struct A { int a : 13; bool b; };
 
+constexpr auto [a0, a1] = A(42, true);
+static_assert(a0 == 42);
+static_assert(a1 == true);
+
 struct B {};
 template<> struct std::tuple_size<B> { enum { value = 2 }; };
 template<> struct std::tuple_size<const B> { enum { value = 2 }; };
@@ -130,3 +134,23 @@ static_assert(d3 == 0);
 // expected-error@-1 {{static assertion expression is not an integral constant expression}} \
 //   expected-note@-1 {{read of non-const variable 'd3' is not allowed in a constant expression}}
 //   expected-note@-4 {{declared here}}
+
+struct E { bool a: 1; };
+template<> struct std::tuple_size<E> { constexpr static auto value = 1; };
+template<> struct std::tuple_size<const E> { constexpr static auto value = 1; };
+template<> struct std::tuple_element<0, E> { using type = bool; };
+template<> struct std::tuple_element<0, const E> { using type = bool const; };
+
+template<int N>
+constexpr auto const& get(E const& obj) {
+  return obj.a; // #E-get
+};
+
+constexpr auto [e1] = E(true);
+// expected-error@#E-get {{returning reference to local temporary object}} \
+// expected-error@-1 {{constexpr variable 'e1' must be initialized by a constant expression}} \
+// expected-note@-1 {{in instantiation of function template specialization 'get<0>' requested here}} \
+// expected-note@-1 {{in implicit initialization of binding declaration 'e1'}} \
+// expected-note@-1 {{in implicit initialization of binding declaration 'e1'}} \
+// expected-note@-1 {{reference to temporary is not a constant expression}} \
+// expected-note@#E-get {{temporary created here}}
