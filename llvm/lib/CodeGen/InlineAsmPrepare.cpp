@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass lowers inline asm calls in LLVM IR in order to to assist
+// This pass lowers inline asm calls in LLVM IR in order to assist
 // SelectionDAG's codegen.
 //
 // CallBrInst:
@@ -76,6 +76,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
   }
   bool runOnFunction(Function &F) override;
 
@@ -215,7 +216,7 @@ static bool insertIntrinsicCalls(CallBrInst *CBR, DominatorTree &DT) {
   return Changed;
 }
 
-static bool processCallBrInst(Function &F, CallBrInst *CBR, DominatorTree &DT) {
+static bool processCallBrInst(CallBrInst *CBR, DominatorTree &DT) {
   bool Changed = false;
 
   Changed |= splitCriticalEdges(CBR, DT);
@@ -228,9 +229,8 @@ static bool processCallBrInst(Function &F, CallBrInst *CBR, DominatorTree &DT) {
 //               Process 'llvm.asm.constraint.br' instructions
 //===----------------------------------------------------------------------===//
 
-static bool processAsmConstraintBrInst(Function &F, CallBrInst &CBR,
-                                       bool IsOptLevelNone, DomTreeUpdater &DTU,
-                                       const TargetMachine *TM) {
+static bool processAsmConstraintBrInst(CallBrInst &CBR, bool IsOptLevelNone,
+                                       DomTreeUpdater &DTU) {
   BasicBlock *BB = CBR.getParent();
   BasicBlock *PrefReg = CBR.getDefaultDest();
   BasicBlock *PrefMem = CBR.getIndirectDest(0);
@@ -271,8 +271,7 @@ static void getCallBrInsts(Function &F,
     }
 }
 
-static bool runImpl(Function &F, bool IsOptLevelNone, DomTreeUpdater &DTU,
-                    const TargetMachine *TM) {
+static bool runImpl(Function &F, bool IsOptLevelNone, DomTreeUpdater &DTU) {
   bool Changed = false;
   SmallVector<CallBrInst *, 4> AsmConstraintBrs;
   SmallVector<CallBrInst *, 4> OtherCallBrs;
@@ -281,11 +280,11 @@ static bool runImpl(Function &F, bool IsOptLevelNone, DomTreeUpdater &DTU,
 
   // Process 'llvm.asm.constraint.br' instructions first.
   for (auto *CBR : AsmConstraintBrs)
-    Changed |= processAsmConstraintBrInst(F, *CBR, IsOptLevelNone, DTU, TM);
+    Changed |= processAsmConstraintBrInst(*CBR, IsOptLevelNone, DTU);
 
   // Process the rest of the 'callbr' instructions.
   for (auto *CBR : OtherCallBrs)
-    Changed |= processCallBrInst(F, CBR, DTU.getDomTree());
+    Changed |= processCallBrInst(CBR, DTU.getDomTree());
 
   return Changed;
 }
@@ -298,7 +297,7 @@ bool InlineAsmPrepare::runOnFunction(Function &F) {
   bool IsOptLevelNone =
       skipFunction(F) ? true : TM->getOptLevel() == CodeGenOptLevel::None;
 
-  return runImpl(F, IsOptLevelNone, DTU, TM);
+  return runImpl(F, IsOptLevelNone, DTU);
 }
 
 PreservedAnalyses InlineAsmPreparePass::run(Function &F,
@@ -308,7 +307,7 @@ PreservedAnalyses InlineAsmPreparePass::run(Function &F,
   bool IsOptLevelNone =
       F.hasOptNone() ? true : TM->getOptLevel() == CodeGenOptLevel::None;
 
-  if (runImpl(F, IsOptLevelNone, DTU, TM)) {
+  if (runImpl(F, IsOptLevelNone, DTU)) {
     PreservedAnalyses PA;
     PA.preserve<DominatorTreeAnalysis>();
     return PA;

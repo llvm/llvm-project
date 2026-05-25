@@ -6042,16 +6042,15 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
     // Use getConstraintType() rather than checking for literal "r"/"m" codes so
     // that target-specific register codes (e.g. "x" for x86 XMM) and memory
     // variants beyond "m" (e.g. "o", "V") are also recognised.
-    bool HasReg = false, HasMem = false;
-    for (StringRef Code : OpInfo.Codes) {
-      ConstraintType CT = getConstraintType(Code);
-      if (CT == C_Register || CT == C_RegisterClass)
-        HasReg = true;
-      else if (CT == C_Memory)
-        HasMem = true;
-    }
-    if (HasReg && HasMem)
-      OpInfo.MayFoldRegister = true;
+    OpInfo.MayFoldRegister =
+        llvm::any_of(OpInfo.Codes,
+                     [&](StringRef Code) {
+                       ConstraintType CT = getConstraintType(Code);
+                       return CT == C_Register || CT == C_RegisterClass;
+                     }) &&
+        llvm::any_of(OpInfo.Codes, [&](StringRef Code) {
+          return getConstraintType(Code) == C_Memory;
+        });
 
     // Compute the value type for each operand.
     switch (OpInfo.Type) {
