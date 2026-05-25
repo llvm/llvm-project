@@ -6729,7 +6729,7 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
     // For -fms-compatibility mode we relax some requirements
     // for constant folding in non-SFINAE contexts
     if (!isSFINAEContext())
-      getASTContext().maybeFoldMSConstexpr(Value, Notes);
+      getASTContext().maybeFoldConstexprWithCast(Value, Notes);
     if (Notes.empty()) {
       // It's a constant expression.
       Expr *E = Result.get();
