@@ -3438,13 +3438,15 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     ///    adrp  x0, :tlsdesc_auth:var
     ///    ldr   x16, [x0, #:tlsdesc_auth_lo12:var]
     ///    add   x0, x0, #:tlsdesc_auth_lo12:var
+    ///    .tlsdescauthcall var
     ///    blraa x16, x0
     ///    (TPIDR_EL0 offset now in x0)
     const MachineOperand &MO_Sym = MI->getOperand(0);
     MachineOperand MO_TLSDESC_LO12(MO_Sym), MO_TLSDESC(MO_Sym);
-    MCOperand SymTLSDescLo12, SymTLSDesc;
+    MCOperand Sym, SymTLSDescLo12, SymTLSDesc;
     MO_TLSDESC_LO12.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGEOFF);
     MO_TLSDESC.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGE);
+    MCInstLowering.lowerOperand(MO_Sym, Sym);
     MCInstLowering.lowerOperand(MO_TLSDESC_LO12, SymTLSDescLo12);
     MCInstLowering.lowerOperand(MO_TLSDESC, SymTLSDesc);
 
@@ -3470,8 +3472,15 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     Add.addOperand(MCOperand::createImm(AArch64_AM::getShiftValue(0)));
     EmitToStreamer(*OutStreamer, Add);
 
-    // Authenticated TLSDESC accesses are not relaxed.
-    // Thus, do not emit .tlsdesccall for AUTH TLSDESC.
+    // Emit a relocation-annotation. This expands to no code, but requests
+    // the following instruction gets an R_AARCH64_AUTH_TLSDESC_CALL.
+    MCInst TLSDescAuthCall;
+    TLSDescAuthCall.setOpcode(AArch64::TLSDESCAUTHCALL);
+    TLSDescAuthCall.addOperand(Sym);
+    EmitToStreamer(*OutStreamer, TLSDescAuthCall);
+#ifndef NDEBUG
+    --InstsEmitted; // no code emitted
+#endif
 
     MCInst Blraa;
     Blraa.setOpcode(AArch64::BLRAA);
