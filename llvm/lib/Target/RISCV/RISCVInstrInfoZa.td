@@ -65,6 +65,7 @@ defm AMOCAS_D_RV32 : AMO_cas_aq_rl<0b00101, 0b011, "amocas.d", GPRPairRV32>;
 
 let Predicates = [HasStdExtZacas, IsRV64] in {
 defm AMOCAS_D_RV64 : AMO_cas_aq_rl<0b00101, 0b011, "amocas.d", GPR>;
+let append Predicates = [HasStdExtZiccamoc] in
 defm AMOCAS_Q : AMO_cas_aq_rl<0b00101, 0b100, "amocas.q", GPRPairRV64>;
 } // Predicates = [HasStdExtZacas, IsRV64]
 

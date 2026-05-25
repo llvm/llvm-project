@@ -15,4 +15,4 @@ amocas.d.aqrl a1, a2, (a1) # CHECK: :[[@LINE]]:15: error: register must be even
 amocas.d.aqrl a0, a1, (a1) # CHECK: :[[@LINE]]:19: error: register must be even
 
 # amocas.q is not supported for RV32.
-amocas.q a0, a0, (a1) # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
+amocas.q a0, a0, (a1) # CHECK: :[[@LINE]]:1: error: instruction requires the following: Main Memory Supports All Atomics in A, RV64I Base Instruction Set{{$}}

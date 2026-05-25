@@ -111,6 +111,9 @@ def FeatureStdExtZiccamoa
 
 def FeatureStdExtZiccamoc
     : RISCVExtension<1, 0, "Main Memory Supports Atomics in Zacas">;
+def HasStdExtZiccamoc : Predicate<"Subtarget->hasStdExtZiccamoc()">,
+                        AssemblerPredicate<(all_of FeatureStdExtZiccamoc),
+                            "Main Memory Supports All Atomics in A">;
 
 def FeatureStdExtZiccif
     : RISCVExtension<1, 0,
