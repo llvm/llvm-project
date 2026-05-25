@@ -755,24 +755,20 @@ bool ODRDiagsEmitter::diagnoseMismatch(
     unsigned SecondNumVBases = SecondDD->NumVBases;
     if (FirstNumBases != SecondNumBases) {
       DiagBaseError(FirstRecord->getLocation(),
-                    GetSourceRange(FirstRecord, FirstDD),
-                    NumBases)
+                    GetSourceRange(FirstRecord, FirstDD), NumBases)
           << FirstNumBases;
       DiagBaseNote(SecondRecord->getLocation(),
-                   GetSourceRange(SecondRecord, SecondDD),
-                   NumBases)
+                   GetSourceRange(SecondRecord, SecondDD), NumBases)
           << SecondNumBases;
       return true;
     }
 
     if (FirstNumVBases != SecondNumVBases) {
       DiagBaseError(FirstRecord->getLocation(),
-                    GetSourceRange(FirstRecord, FirstDD),
-                    NumVBases)
+                    GetSourceRange(FirstRecord, FirstDD), NumVBases)
           << FirstNumVBases;
       DiagBaseNote(SecondRecord->getLocation(),
-                   GetSourceRange(SecondRecord, SecondDD),
-                   NumVBases)
+                   GetSourceRange(SecondRecord, SecondDD), NumVBases)
           << SecondNumVBases;
       return true;
     }

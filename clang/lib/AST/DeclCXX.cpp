@@ -113,14 +113,12 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       IsLambda(false), IsParsingBaseSpecifiers(false),
       ComputedVisibleConversions(false), HasODRHash(false), Definition(D) {}
 
-CXXBaseSpecifier *
-CXXRecordDecl::DefinitionData::getBasesSlowCase(
+CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getBasesSlowCase(
     const ASTContext &Context) const {
   return Bases.get(Context.getExternalSource());
 }
 
-CXXBaseSpecifier *
-CXXRecordDecl::DefinitionData::getVBasesSlowCase(
+CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getVBasesSlowCase(
     const ASTContext &Context) const {
   return VBases.get(Context.getExternalSource());
 }

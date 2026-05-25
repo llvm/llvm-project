@@ -363,7 +363,7 @@ private:
       if (!VBases.isOffset())
         return VBases.get(nullptr);
       return getVBasesSlowCase(Context);
-    }    
+    }
     ArrayRef<CXXBaseSpecifier> bases(const ASTContext &Context) const {
       return {getBases(Context), NumBases};
     }
@@ -372,10 +372,10 @@ private:
       return {getVBases(Context), NumVBases};
     }
 
- private:
+  private:
     CXXBaseSpecifier *getBasesSlowCase(const ASTContext &Context) const;
     CXXBaseSpecifier *getVBasesSlowCase(const ASTContext &Context) const;
-};
+  };
 
   struct DefinitionData *DefinitionData;
 
