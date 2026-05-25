@@ -10,6 +10,39 @@
       "dependencies": []
     },
     {
+      "id": "llvm.remarks.instruction_mix",
+      "name": "Remarks instruction mix",
+      "version": "1",
+      "runner": "builtin.remarks_mix",
+      "summary": "instruction mix requires parsed optimization remarks",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.remarks.summary"
+      ]
+    },
+    {
+      "id": "llvm.remarks.size_diff",
+      "name": "Remarks size diff",
+      "version": "1",
+      "runner": "builtin.remarks_size_diff",
+      "summary": "size diff requires comparable remarks inputs",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.remarks.summary"
+      ]
+    },
+    {
+      "id": "llvm.remarks.relational",
+      "name": "Optimization remarks relational view",
+      "version": "1",
+      "runner": "builtin.remarks_relational",
+      "summary": "relational view requires an optimization remarks artifact",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.remarks.summary"
+      ]
+    },
+    {
       "id": "llvm.remarks.detail",
       "name": "Optimization remarks detail",
       "version": "1",
