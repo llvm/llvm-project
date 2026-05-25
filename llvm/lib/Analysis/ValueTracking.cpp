@@ -2232,6 +2232,29 @@ static void computeKnownBitsFromOperator(const Operator *I,
             I, DemandedElts, Q, Depth, KnownBits::ssub_sat);
         break;
       }
+      case Intrinsic::x86_bmi_bextr_32:
+      case Intrinsic::x86_bmi_bextr_64:
+      case Intrinsic::x86_tbm_bextri_u32:
+      case Intrinsic::x86_tbm_bextri_u64: {
+        Value *Val = I->getOperand(1);
+        unsigned Length = 0, Shift;
+        if (ConstantInt *CI = dyn_cast<ConstantInt>(Val)) {
+          if (CI->getBitWidth() <= BitWidth) {
+            Shift = CI->getValue().extractBitsAsZExtValue(8, 0);
+            Length = CI->getValue().extractBitsAsZExtValue(8, 8);
+          }
+        }
+        if (Length == 0) {
+          Known.setAllZero();
+          break;
+        }
+        if ((Shift + Length) <= BitWidth) {
+          computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
+          Known = Known.extractBits(Length, Shift);
+          Known = Known.zextOrTrunc(BitWidth);
+        }
+        break;
+      }
       case Intrinsic::riscv_vsetvli:
       case Intrinsic::riscv_vsetvlimax: {
         bool HasAVL = II->getIntrinsicID() == Intrinsic::riscv_vsetvli;
