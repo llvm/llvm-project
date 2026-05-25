@@ -405,6 +405,51 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
                                         /*is_scalable=*/true);
       break;
 
+// RISC-V vector types.
+#define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
+                            IsSigned)                                          \
+  case BuiltinType::Id: {                                                      \
+    auto eltTy =                                                               \
+        IsSigned ? builder.getSIntNTy(ElBits) : builder.getUIntNTy(ElBits);    \
+    resultType = cir::VectorType::get(eltTy, NumEls, /*is_scalable=*/true);    \
+    break;                                                                     \
+  }
+#define RVV_VECTOR_TYPE_FLOAT(Name, Id, SingletonId, NumEls, ElBits, NF)       \
+  case BuiltinType::Id: {                                                      \
+    mlir::Type eltTy;                                                          \
+    if (ElBits == 16)                                                          \
+      eltTy = builder.getFp16Ty();                                             \
+    else if (ElBits == 32)                                                     \
+      eltTy = builder.getSingleTy();                                           \
+    else if (ElBits == 64)                                                     \
+      eltTy = builder.getDoubleTy();                                           \
+    else                                                                       \
+      llvm_unreachable("unsupported RVV FP element width");                    \
+    resultType = cir::VectorType::get(eltTy, NumEls, /*is_scalable=*/true);    \
+    break;                                                                     \
+  }
+#define RVV_VECTOR_TYPE_BFLOAT(Name, Id, SingletonId, NumEls, ElBits, NF)      \
+  case BuiltinType::Id: {                                                      \
+    resultType = cir::VectorType::get(builder.getBfloat6Ty(), NumEls,          \
+                                      /*is_scalable=*/true);                   \
+    break;                                                                     \
+  }
+#define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
+  case BuiltinType::Id: {                                                      \
+    resultType = cir::VectorType::get(builder.getUIntNTy(1), NumEls,           \
+                                      /*is_scalable=*/true);                   \
+    break;                                                                     \
+  }
+// RVV_VECTOR_TYPE_OFP8 maps to RVV_VECTOR_TYPE_INT (unsigned)
+#define RVV_VECTOR_TYPE_OFP8(Name, Id, SingletonId, NumEls, E5m2)              \
+  case BuiltinType::Id: {                                                      \
+    resultType = cir::VectorType::get(builder.getUIntNTy(8), NumEls,           \
+                                      /*is_scalable=*/true);                   \
+    break;                                                                     \
+  }
+
+#include "clang/Basic/RISCVVTypes.def"
+
     // Unsigned integral types.
     case BuiltinType::Char8:
     case BuiltinType::Char16:
