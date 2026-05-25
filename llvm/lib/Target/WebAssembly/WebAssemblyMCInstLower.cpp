@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -65,7 +66,11 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
       SmallVector<MVT, 1> VTs;
       computeLegalValueVTs(CurrentFunc, TM, GlobalVT, VTs);
 
-      WebAssembly::wasmSymbolSetType(WasmSym, GlobalVT, VTs);
+      bool Mutable = true;
+      if (const auto *GV = dyn_cast<GlobalVariable>(Global))
+        Mutable = !GV->isConstant();
+
+      WebAssembly::wasmSymbolSetType(WasmSym, GlobalVT, VTs, Mutable);
     }
     return WasmSym;
   }
@@ -99,25 +104,25 @@ MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
   unsigned TargetFlags = MO.getTargetFlags();
 
   switch (TargetFlags) {
-    case WebAssemblyII::MO_NO_FLAG:
-      break;
-    case WebAssemblyII::MO_GOT_TLS:
-      Spec = WebAssembly::S_GOT_TLS;
-      break;
-    case WebAssemblyII::MO_GOT:
-      Spec = WebAssembly::S_GOT;
-      break;
-    case WebAssemblyII::MO_MEMORY_BASE_REL:
-      Spec = WebAssembly::S_MBREL;
-      break;
-    case WebAssemblyII::MO_TLS_BASE_REL:
-      Spec = WebAssembly::S_TLSREL;
-      break;
-    case WebAssemblyII::MO_TABLE_BASE_REL:
-      Spec = WebAssembly::S_TBREL;
-      break;
-    default:
-      llvm_unreachable("Unknown target flag on GV operand");
+  case WebAssemblyII::MO_NO_FLAG:
+    break;
+  case WebAssemblyII::MO_GOT_TLS:
+    Spec = WebAssembly::S_GOT_TLS;
+    break;
+  case WebAssemblyII::MO_GOT:
+    Spec = WebAssembly::S_GOT;
+    break;
+  case WebAssemblyII::MO_MEMORY_BASE_REL:
+    Spec = WebAssembly::S_MBREL;
+    break;
+  case WebAssemblyII::MO_TLS_BASE_REL:
+    Spec = WebAssembly::S_TLSREL;
+    break;
+  case WebAssemblyII::MO_TABLE_BASE_REL:
+    Spec = WebAssembly::S_TBREL;
+    break;
+  default:
+    llvm_unreachable("Unknown target flag on GV operand");
   }
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Spec, Ctx);
