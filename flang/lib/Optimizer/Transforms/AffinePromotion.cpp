@@ -74,13 +74,23 @@ struct AffineFunctionAnalysis {
 };
 } // namespace
 
+/// True iff \p op sits directly in an AffineScope region — the scope an
+/// affine symbol operand must be defined in (e.g. a func.func body).
+static bool isInAffineSymbolScope(mlir::Operation *op) {
+  if (!op)
+    return false;
+  auto *parent = op->getParentOp();
+  return parent && parent->hasTrait<mlir::OpTrait::AffineScope>();
+}
+
 /// Recursively checks whether a value can be expressed as an affine function
 /// of loop induction variables, integer constants, and loop-invariant symbols
-/// (values defined outside the outermost loop of the nest).
+/// (values defined outside the outermost loop of the nest, in a region that
+/// is itself an AffineScope).
 ///
-/// When \p outermost is provided, values defined outside it are accepted as
-/// valid affine symbols.  When nullptr, only loop IVs and constants are
-/// accepted (legacy behavior).
+/// When \p outermost is provided, values defined outside it AND in an
+/// AffineScope region are accepted as valid affine symbols.  When nullptr,
+/// only loop IVs and constants are accepted (legacy behavior).
 static bool isAffineIndex(mlir::Value val, fir::DoLoopOp outermost = nullptr,
                           unsigned depth = 0) {
   if (depth > 16)
@@ -94,7 +104,9 @@ static bool isAffineIndex(mlir::Value val, fir::DoLoopOp outermost = nullptr,
         isa<mlir::affine::AffineForOp>(blockArg.getOwner()->getParentOp()))
       return true;
     if (outermost && !outermost->isAncestor(blockArg.getOwner()->getParentOp()))
-      return true;
+      return blockArg.getOwner()
+          ->getParentOp()
+          ->hasTrait<mlir::OpTrait::AffineScope>();
     return false;
   }
 
@@ -102,7 +114,11 @@ static bool isAffineIndex(mlir::Value val, fir::DoLoopOp outermost = nullptr,
   if (!defOp)
     return false;
 
-  if (isa<mlir::arith::ConstantOp>(defOp))
+  if (auto cst = dyn_cast<mlir::arith::ConstantOp>(defOp))
+    return mlir::isa<mlir::IntegerAttr>(cst.getValue());
+
+  if (outermost && !outermost->isAncestor(defOp) &&
+      isInAffineSymbolScope(defOp))
     return true;
 
   if (auto add = dyn_cast<mlir::arith::AddIOp>(defOp))
@@ -123,13 +139,57 @@ static bool isAffineIndex(mlir::Value val, fir::DoLoopOp outermost = nullptr,
     return false;
   }
 
-  // Value defined outside the outermost loop → valid affine symbol.
-  if (outermost && !outermost->isAncestor(defOp))
-    return true;
-
   LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: index is not an affine "
                              "expression of loop IVs\n";
              defOp->dump());
+  return false;
+}
+
+/// True iff \p val is loop-invariant w.r.t. \p outermost AND legal as an
+/// affine *symbol* operand: an integer constant, a value defined in an
+/// AffineScope region, or a pure arith add/sub/mul of such values.
+static bool isAffineSymbolValue(mlir::Value val, fir::DoLoopOp outermost,
+                                unsigned depth = 0) {
+  if (depth > 16)
+    return false;
+
+  if (auto conv = val.getDefiningOp<fir::ConvertOp>())
+    return isAffineSymbolValue(conv.getValue(), outermost, depth + 1);
+
+  if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(val)) {
+    auto *ownerOp = blockArg.getOwner()->getParentOp();
+    if (!ownerOp)
+      return false;
+    if (mlir::isa<fir::DoLoopOp, mlir::affine::AffineForOp>(ownerOp))
+      return false;
+    if (outermost && outermost->isAncestor(ownerOp))
+      return false;
+    return ownerOp->hasTrait<mlir::OpTrait::AffineScope>();
+  }
+
+  auto *defOp = val.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  if (auto cst = dyn_cast<mlir::arith::ConstantOp>(defOp))
+    return mlir::isa<mlir::IntegerAttr>(cst.getValue());
+
+  if (outermost && !outermost->isAncestor(defOp) &&
+      isInAffineSymbolScope(defOp))
+    return true;
+
+  if (auto add = dyn_cast<mlir::arith::AddIOp>(defOp))
+    return isAffineSymbolValue(add.getLhs(), outermost, depth + 1) &&
+           isAffineSymbolValue(add.getRhs(), outermost, depth + 1);
+
+  if (auto sub = dyn_cast<mlir::arith::SubIOp>(defOp))
+    return isAffineSymbolValue(sub.getLhs(), outermost, depth + 1) &&
+           isAffineSymbolValue(sub.getRhs(), outermost, depth + 1);
+
+  if (auto mul = dyn_cast<mlir::arith::MulIOp>(defOp))
+    return isAffineSymbolValue(mul.getLhs(), outermost, depth + 1) &&
+           isAffineSymbolValue(mul.getRhs(), outermost, depth + 1);
+
   return false;
 }
 
@@ -160,7 +220,10 @@ struct AffineIndexBuilder {
         return mlir::getAffineDimExpr(idx, context);
       }
       if (outermostLoop &&
-          !outermostLoop->isAncestor(blockArg.getOwner()->getParentOp()))
+          !outermostLoop->isAncestor(blockArg.getOwner()->getParentOp()) &&
+          blockArg.getOwner()
+              ->getParentOp()
+              ->hasTrait<mlir::OpTrait::AffineScope>())
         return addSymbol(val);
       return {};
     }
@@ -172,6 +235,10 @@ struct AffineIndexBuilder {
     if (auto op = dyn_cast<mlir::arith::ConstantOp>(defOp))
       if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(op.getValue()))
         return mlir::getAffineConstantExpr(intAttr.getInt(), context);
+
+    if (outermostLoop && !outermostLoop->isAncestor(defOp) &&
+        isInAffineSymbolScope(defOp))
+      return addSymbol(val);
 
     if (auto op = dyn_cast<mlir::arith::AddIOp>(defOp)) {
       auto lhs = build(op.getLhs());
@@ -196,10 +263,6 @@ struct AffineIndexBuilder {
         return *lhs * *rhs;
       return {};
     }
-
-    // Value defined outside the outermost loop → affine symbol.
-    if (outermostLoop && !outermostLoop->isAncestor(defOp))
-      return addSymbol(val);
 
     return {};
   }
@@ -325,6 +388,25 @@ private:
                           "valid MemRef element type, cannot promote\n";
                    op->dump(); acoOp.dump(););
         return false;
+      }
+
+      // For fir.shape_shift, each LB becomes an affine symbol operand —
+      // reject any LB that isn't a valid affine symbol.
+      if (auto ssOp = acoOp.getShape().getDefiningOp<ShapeShiftOp>()) {
+        auto pairs = ssOp.getPairs();
+        for (unsigned i = 0, e = acoOp.getIndices().size(); i < e; ++i) {
+          assert(i * 2 < pairs.size() &&
+                 "fir.array_coor / fir.shape_shift rank mismatch");
+          mlir::Value lb = pairs[i * 2];
+          if (!isAffineSymbolValue(lb, outermost)) {
+            LLVM_DEBUG(llvm::dbgs()
+                           << "AffineLoopAnalysis: cannot promote loop, "
+                              "fir.shape_shift lower bound is not a valid "
+                              "affine symbol\n";
+                       op->dump(); ssOp.dump(); lb.dump(););
+            return false;
+          }
+        }
       }
       bool canPromote = true;
       for (auto coordinate : acoOp.getIndices())

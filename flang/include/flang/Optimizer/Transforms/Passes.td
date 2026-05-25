@@ -54,12 +54,9 @@ def SimplifyDoLoop : Pass<"simplify-fir-loop", "::mlir::func::FuncOp"> {
        Fortran formula: final = lb + ((ub - lb + step) / step) * step.
   }];
   let constructor = "::fir::createSimplifyDoLoopPass()";
-  let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::func::FuncDialect",
-    "mlir::arith::ArithDialect"
-  ];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::func::FuncDialect",
+                           "mlir::arith::ArithDialect"];
 }
-
 
 def AffineDialectPromotion : Pass<"promote-to-affine", "::mlir::func::FuncOp"> {
   let summary = "Promotes `fir.{do_loop,if}` to `affine.{for,if}`.";
