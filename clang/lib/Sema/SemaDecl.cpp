@@ -1489,7 +1489,7 @@ void Sema::EnterTemplatedContext(Scope *S, DeclContext *DC) {
   unsigned ScopeDepth = getTemplateDepth(S);
   for (; S && S->isTemplateParamScope(); S = S->getParent(), --ScopeDepth) {
     DeclContext *SearchDCAfterScope = DC;
-    bool SetLookupEntity = false;
+    bool FoundTemplateContext = false;
     for (; DC; DC = DC->getLookupParent()) {
       if (const TemplateParameterList *TPL =
               cast<Decl>(DC)->getDescribedTemplateParams()) {
@@ -1498,12 +1498,19 @@ void Sema::EnterTemplatedContext(Scope *S, DeclContext *DC) {
           continue;
         if (ScopeDepth == DCDepth)
           SearchDCAfterScope = DC = DC->getLookupParent();
-        SetLookupEntity = true;
+        FoundTemplateContext = true;
         break;
       }
     }
-    if (SetLookupEntity)
-      S->setLookupEntity(SearchDCAfterScope);
+    if (!SearchDCAfterScope)
+      continue;
+
+    if (!FoundTemplateContext && !SearchDCAfterScope->isFileContext()) {
+      if (const auto *RD = dyn_cast<RecordDecl>(SearchDCAfterScope))
+        if (RD->isUnion() && !RD->isTemplateDecl())
+          continue;
+    }
+    S->setLookupEntity(SearchDCAfterScope);
   }
 }
 
