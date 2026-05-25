@@ -903,6 +903,7 @@ void PMDataManager::removeNotPreservedAnalysis(Pass *P) {
     return;
 
   const AnalysisUsage::VectorType &PreservedSet = AnUsage->getPreservedSet();
+  // Ensure a single call site so that the lambda will be inlined.
   auto IsNotPreserved = [&](const auto &Entry) {
     if (Entry.second->getAsImmutablePass() != nullptr ||
         is_contained(PreservedSet, Entry.first))
@@ -915,15 +916,14 @@ void PMDataManager::removeNotPreservedAnalysis(Pass *P) {
     }
     return true;
   };
-  AvailableAnalysis.remove_if(IsNotPreserved);
-
+  SmallVector<DenseMap<AnalysisID, Pass *> *, 8> Maps = {&AvailableAnalysis};
   // Check inherited analysis also. If P is not preserving analysis
   // provided by parent manager then remove it here.
-  for (DenseMap<AnalysisID, Pass *> *IA : InheritedAnalysis) {
-    if (!IA)
-      continue;
-    IA->remove_if(IsNotPreserved);
-  }
+  for (DenseMap<AnalysisID, Pass *> *IA : InheritedAnalysis)
+    if (IA)
+      Maps.push_back(IA);
+  for (DenseMap<AnalysisID, Pass *> *M : Maps)
+    M->remove_if(IsNotPreserved);
 }
 
 /// Remove analysis passes that are not used any longer
