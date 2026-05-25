@@ -2338,11 +2338,8 @@ DataAggregator::writePreAggregatedFile(StringRef OutputFilename) const {
   if (EC)
     return EC;
 
-  for (const auto &[Trace, Info] : Traces) {
-    const bool IsReturn = Returns.find(Trace.Branch) != Returns.end();
-    OS << formatv("{0} {1:x-} {2:x-} {3:x-} {4}\n", IsReturn ? 'R' : 'T',
-                  Trace.Branch, Trace.From, Trace.To, Info.TakenCount);
-  }
+  for (const auto &[Trace, Info] : Traces)
+    OS << Trace << " " << Info.TakenCount << '\n';
   OS << formatv("E {0:$[,]}\n", EventNames.keys());
   for (const auto &[PC, Count] : BasicSamples)
     OS << formatv("S {0:x-} {1}\n", PC, Count);

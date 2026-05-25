@@ -655,21 +655,7 @@ inline raw_ostream &operator<<(raw_ostream &OS,
 
 inline raw_ostream &operator<<(raw_ostream &OS,
                                const DataAggregator::Trace &T) {
-  switch (T.Branch) {
-  case DataAggregator::Trace::FT_ONLY:
-    break;
-  case DataAggregator::Trace::FT_EXTERNAL_ORIGIN:
-    OS << "X:0 -> ";
-    break;
-  case DataAggregator::Trace::FT_EXTERNAL_RETURN:
-    OS << "X:R -> ";
-    break;
-  default:
-    OS << Twine::utohexstr(T.Branch) << " -> ";
-  }
-  OS << Twine::utohexstr(T.From);
-  if (T.To != DataAggregator::Trace::BR_ONLY)
-    OS << " ... " << Twine::utohexstr(T.To);
+  OS << formatv("T {0:x-} {1:x-} {2:x-}", T.Branch, T.From, T.To);
   return OS;
 }
 
