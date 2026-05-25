@@ -5648,6 +5648,12 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   if (CM.foldTailByMasking())
     Legal->prepareToFoldTailByMasking();
 
+  // Cases that may be vectorized may be optimized by unit stride predicates.
+  // TODO: Currently unit stride predicates are added unconditionally, even if
+  // they are not used for the selected VF (e.g. when only interleaving).
+  if (MaxFactors.FixedVF.isVector() || MaxFactors.ScalableVF.isVector())
+    Legal->collectUnitStridePredicates();
+
   ElementCount MaxUserVF =
       UserVF.isScalable() ? MaxFactors.ScalableVF : MaxFactors.FixedVF;
   if (UserVF) {
@@ -7081,10 +7087,11 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       NewPhiR->insertBefore(PhiR);
       VPValue *NewExiting = Builder.createOr(NewPhiR, Cmp);
 
-      // The exiting value may flow through a chain of VPBlendRecipe and/or
-      // VPInstruction::Select recipes before reaching OrigExitingVPV. Clone
-      // each chain link in topological order so each clone refers to the
-      // already-rewritten i1 operands via Substitutions.
+      // The exiting value may flow through a chain of VPBlendRecipes and
+      // select recipes (VPInstruction, VPWidenRecipe or VPReplicateRecipe with
+      // Select opcode) before reaching OrigExitingVPV. Clone each chain link
+      // in topological order so each clone refers to the already-rewritten i1
+      // operands via Substitutions.
       DenseMap<VPValue *, VPValue *> Substitutions = {{AnyOfSelect, NewExiting},
                                                       {PhiR, NewPhiR}};
       std::function<void(VPSingleDefRecipe *)> CloneChain =
@@ -7101,6 +7108,10 @@ void LoopVectorizationPlanner::addReductionResultComputation(
             VPSingleDefRecipe *New;
             if (auto *B = dyn_cast<VPBlendRecipe>(Old))
               New = B->cloneWithOperands(NewOps);
+            else if (auto *W = dyn_cast<VPWidenRecipe>(Old))
+              New = W->cloneWithOperands(NewOps);
+            else if (auto *Rep = dyn_cast<VPReplicateRecipe>(Old))
+              New = Rep->cloneWithOperands(NewOps);
             else
               New = cast<VPInstruction>(Old)->cloneWithOperands(NewOps);
             New->insertBefore(Old);
