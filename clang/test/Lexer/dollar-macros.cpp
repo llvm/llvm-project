@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only -fno-dollar-idents
+// RUN: %clang_cc1 %s -verify -fsyntax-only -fno-dollars-in-identifiers
 
 #define f(x) #x
 #define g(x) f(x)

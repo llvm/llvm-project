@@ -1182,7 +1182,7 @@ StringRef Lexer::getImmediateMacroNameForDiagnostics(
 }
 
 bool Lexer::isAsciiIdentifierContinueChar(char c, const LangOptions &LangOpts) {
-  return isAsciiIdentifierContinue(c, true);
+  return isAsciiIdentifierContinue(c, LangOpts.DollarMacros);
 }
 
 bool Lexer::isNewLineEscaped(const char *BufferStart, const char *Str) {
@@ -1633,7 +1633,7 @@ static bool isAllowedIDChar(uint32_t C, const LangOptions &LangOpts,
                             bool &IsExtension) {
   if (LangOpts.AsmPreprocessor) {
     return false;
-  } else if ('$' == C) {
+  } else if (LangOpts.DollarMacros && '$' == C) {
     return true;
   } else if (LangOpts.CPlusPlus || LangOpts.C23) {
     // A non-leading codepoint must have the XID_Continue property.
@@ -2021,6 +2021,10 @@ bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr,
       continue;
     }
     if (C == '$') {
+      // If we hit a $ and they are not supported in macros, we are done.
+      if (!LangOpts.DollarMacros)
+          break;
+      // Otherwise, emit a diagnostic and continue.
       if (!isLexingRawMode())
         Diag(CurPtr, diag::ext_dollar_in_identifier);
 
@@ -4086,6 +4090,11 @@ LexStart:
     MIOpt.ReadToken();
     return LexIdentifierContinue(Result, CurPtr);
   case '$':   // $ in identifiers.
+    if (!LangOpts.DollarMacros) {
+      Kind = tok::unknown;
+      break;
+    }
+
     if (!isLexingRawMode())
       Diag(CurPtr - 1, diag::ext_dollar_in_identifier);
 
