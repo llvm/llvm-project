@@ -708,8 +708,6 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     for (const auto &[Idx, I] : enumerate(Range)) {
       if (Idx > MaxInstrsToCheckForFree)
         return false;
-      if (I.isVolatile())
-        return false;
 
       if (I.maySynchronize())
         return false;
