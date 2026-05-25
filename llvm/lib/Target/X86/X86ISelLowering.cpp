@@ -22941,7 +22941,14 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
     SDValue ClampedBottom = DAG.getNode(X86ISD::FMAX, dl, SrcVT, Src, MinC);
     // Clamp from above. NaN (now MinC) is already in range and passes through.
     SDValue ClampedTop = DAG.getNode(X86ISD::FMIN, dl, SrcVT, ClampedBottom, MaxC);
-    SDValue Result = DAG.getNode(FpToIntOpcode, dl, DstVT, ClampedTop);
+    
+    // For smaller widths, the max unsigned value fits in a signed 32-bit int.
+    // Use FP_TO_SINT instead of FP_TO_UINT to avoid expensive legalization.
+    unsigned CastOpc = FpToIntOpcode;
+    if (!IsSigned && SatWidth < 32)
+      CastOpc = ISD::FP_TO_SINT;
+
+    SDValue Result = DAG.getNode(CastOpc, dl, DstVT, ClampedTop);
 
     // For signed saturation, NaN was mapped to MinC, so FP_TO_SINT produces
     // INT_MIN. ISD::FP_TO_SINT_SAT requires NaN -> 0; fix with a zero-select.
