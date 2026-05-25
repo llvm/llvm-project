@@ -65,13 +65,9 @@ public:
                                    const Expr *MovedExpr,
                                    SourceLocation FreeLoc) {}
 
-  virtual void reportUseAfterReturn(const ValueDecl *VD, const Expr *IssueExpr,
+  virtual void reportUseAfterReturn(const internal::Loan *L,
                                     const Expr *ReturnExpr,
-                                    const Expr *MovedExpr, bool IsReference) {}
-
-  virtual void reportUseAfterReturn(const MaterializeTemporaryExpr *MTE,
-                                    const Expr *ReturnExpr,
-                                    const Expr *MovedExpr, bool IsReference) {}
+                                    const Expr *MovedExpr) {}
 
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,

@@ -20,6 +20,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/Sema.h"
+#include <string>
 
 namespace clang::lifetimes {
 
@@ -74,31 +75,16 @@ public:
         << UseExpr->getSourceRange();
   }
 
-  void reportUseAfterReturn(const ValueDecl *VD, const Expr *IssueExpr,
-                            const Expr *ReturnExpr, const Expr *MovedExpr,
-                            bool IsReference) override {
+  void reportUseAfterReturn(const internal::Loan *L, const Expr *ReturnExpr,
+                            const Expr *MovedExpr) override {
+    const Expr *IssueExpr = L->getIssuingExpr();
     unsigned DiagID = MovedExpr
                           ? diag::warn_lifetime_safety_return_stack_addr_moved
                           : diag::warn_lifetime_safety_return_stack_addr;
 
     S.Diag(IssueExpr->getExprLoc(), DiagID)
-        << IsReference << VD << isa<ParmVarDecl>(VD)
-        << IssueExpr->getSourceRange();
-    if (MovedExpr)
-      S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
-          << MovedExpr->getSourceRange();
-    S.Diag(ReturnExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
-        << ReturnExpr->getSourceRange();
-  }
+        << getLifetimeDiagSubject(L) << IssueExpr->getSourceRange();
 
-  void reportUseAfterReturn(const MaterializeTemporaryExpr *MTE,
-                            const Expr *ReturnExpr, const Expr *MovedExpr,
-                            bool IsReference) override {
-    unsigned DiagID =
-        MovedExpr ? diag::warn_lifetime_safety_return_temp_stack_addr_moved
-                  : diag::warn_lifetime_safety_return_temp_stack_addr;
-
-    S.Diag(MTE->getExprLoc(), DiagID) << IsReference << MTE->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
@@ -414,6 +400,21 @@ public:
   }
 
 private:
+  static std::string getLifetimeDiagSubject(const internal::Loan *L) {
+    if (L->getAccessPath().getAsMaterializeTemporaryExpr())
+      return "local temporary";
+
+    const auto *DRE = dyn_cast<DeclRefExpr>(L->getIssuingExpr());
+    assert(DRE && "expected lifetime diagnostic loan issued by a DeclRefExpr");
+
+    const ValueDecl *VD = DRE->getDecl();
+    std::string Subject =
+        isa<ParmVarDecl>(VD) ? "parameter '" : "local variable '";
+    Subject += VD->getNameAsString();
+    Subject += "'";
+    return Subject;
+  }
+
   Sema &S;
 };
 

@@ -299,19 +299,8 @@ public:
             llvm_unreachable("Unhandled OriginEscapesFact type");
         } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF)) {
           // Return stack address.
-          const AccessPath &Path = L->getAccessPath();
-          bool IsReference =
-              cast<FunctionDecl>(FD)->getReturnType()->isReferenceType();
-          if (const auto *VD = Path.getAsValueDecl())
-            SemaHelper->reportUseAfterReturn(VD, IssueExpr,
-                                             RetEscape->getReturnExpr(),
-                                             MovedExpr, IsReference);
-          else if (const auto *MTE = Path.getAsMaterializeTemporaryExpr())
-            SemaHelper->reportUseAfterReturn(MTE, RetEscape->getReturnExpr(),
-                                             MovedExpr, IsReference);
-          else
-            llvm_unreachable(
-                "unexpected loan kind for return stack address warning");
+          SemaHelper->reportUseAfterReturn(L, RetEscape->getReturnExpr(),
+                                           MovedExpr);
         } else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
           // Dangling field.
           SemaHelper->reportDanglingField(
