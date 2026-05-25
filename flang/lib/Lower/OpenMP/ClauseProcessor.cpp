@@ -1493,7 +1493,7 @@ bool ClauseProcessor::processGrainsize(
 
 bool ClauseProcessor::processHasDeviceAddr(
     lower::StatementContext &stmtCtx, mlir::omp::HasDeviceAddrClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &hasDeviceSyms) const {
+    llvm::SmallVectorImpl<Object> &hasDeviceObjects) const {
   // For HAS_DEVICE_ADDR objects, implicitly map the top-level entities.
   // Their address (or the whole descriptor, if the entity had one) will be
   // passed to the target region.
@@ -1513,11 +1513,11 @@ bool ClauseProcessor::processHasDeviceAddr(
                         });
         processMapObjects(stmtCtx, location, baseObjects, mapTypeBits,
                           parentMemberIndices, result.hasDeviceAddrVars,
-                          hasDeviceSyms);
+                          hasDeviceObjects);
       });
 
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
-                               result.hasDeviceAddrVars, hasDeviceSyms);
+                               result.hasDeviceAddrVars, hasDeviceObjects);
   return clauseFound;
 }
 
@@ -1541,26 +1541,35 @@ bool ClauseProcessor::processIf(
 }
 
 template <typename T>
-void collectReductionSyms(
-    const T &reduction,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) {
-  const auto &objectList{std::get<omp::ObjectList>(reduction.t)};
-  for (const Object &object : objectList) {
-    const semantics::Symbol *symbol = object.sym();
-    reductionSyms.push_back(symbol);
-  }
+void collectReductionObjects(const T &reduction,
+                             llvm::SmallVectorImpl<Object> &reductionObjects) {
+  const omp::ObjectList &objectList{std::get<omp::ObjectList>(reduction.t)};
+  reductionObjects.reserve(objectList.size());
+  llvm::copy(objectList, std::back_inserter(reductionObjects));
+}
+
+static llvm::SmallVector<const semantics::Symbol *>
+getObjectsSyms(llvm::ArrayRef<Object> objects) {
+  llvm::SmallVector<const semantics::Symbol *> syms;
+  syms.reserve(objects.size());
+  llvm::transform(
+      objects, std::back_inserter(syms),
+      [](const Fortran::lower::omp::Object &object) { return object.sym(); });
+  return syms;
 }
 
 bool ClauseProcessor::processInReduction(
     mlir::Location currentLocation, mlir::omp::InReductionClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const {
+    llvm::SmallVectorImpl<Object> &outReductionObjects) const {
   return findRepeatableClause<omp::clause::InReduction>(
       [&](const omp::clause::InReduction &clause, const parser::CharBlock &) {
         llvm::SmallVector<mlir::Value> inReductionVars;
         llvm::SmallVector<bool> inReduceVarByRef;
         llvm::SmallVector<mlir::Attribute> inReductionDeclSymbols;
-        llvm::SmallVector<const semantics::Symbol *> inReductionSyms;
-        collectReductionSyms(clause, inReductionSyms);
+        llvm::SmallVector<Object> inReductionObjects;
+        collectReductionObjects(clause, inReductionObjects);
+        llvm::SmallVector<const semantics::Symbol *> inReductionSyms =
+            getObjectsSyms(inReductionObjects);
 
         ReductionProcessor rp;
         if (!rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
@@ -1576,13 +1585,13 @@ bool ClauseProcessor::processInReduction(
                    std::back_inserter(result.inReductionByref));
         llvm::copy(inReductionDeclSymbols,
                    std::back_inserter(result.inReductionSyms));
-        llvm::copy(inReductionSyms, std::back_inserter(outReductionSyms));
+        llvm::copy(inReductionObjects, std::back_inserter(outReductionObjects));
       });
 }
 
 bool ClauseProcessor::processIsDevicePtr(
     lower::StatementContext &stmtCtx, mlir::omp::IsDevicePtrClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const {
+    llvm::SmallVectorImpl<Object> &isDeviceObjects) const {
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
   bool clauseFound = findRepeatableClause<omp::clause::IsDevicePtr>(
       [&](const omp::clause::IsDevicePtr &clause,
@@ -1595,11 +1604,11 @@ bool ClauseProcessor::processIsDevicePtr(
             mlir::omp::ClauseMapFlags::to;
         processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
                           parentMemberIndices, result.isDevicePtrVars,
-                          isDeviceSyms);
+                          isDeviceObjects);
       });
 
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
-                               result.isDevicePtrVars, isDeviceSyms);
+                               result.isDevicePtrVars, isDeviceObjects);
   return clauseFound;
 }
 
@@ -1709,9 +1718,8 @@ void ClauseProcessor::processMapObjects(
     const omp::ObjectList &objects, mlir::omp::ClauseMapFlags mapTypeBits,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapVars,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-    llvm::StringRef mapperIdNameRef, bool isMotionModifier,
-    llvm::omp::Directive directive) const {
+    llvm::SmallVectorImpl<Object> &mapObjects, llvm::StringRef mapperIdNameRef,
+    bool isMotionModifier, llvm::omp::Directive directive) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   auto getSymbolDerivedType = [](const semantics::Symbol &symbol)
@@ -1902,7 +1910,7 @@ void ClauseProcessor::processMapObjects(
           object, mapOp, semaCtx);
     } else {
       mapVars.push_back(mapOp);
-      mapSyms.push_back(object.sym());
+      mapObjects.push_back(object);
     }
   }
 }
@@ -1936,13 +1944,13 @@ getMapperIdentifier(lower::AbstractConverter &converter,
 bool ClauseProcessor::processMap(
     mlir::Location currentLocation, lower::StatementContext &stmtCtx,
     mlir::omp::MapClauseOps &result, llvm::omp::Directive directive,
-    llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms) const {
-  // We always require tracking of symbols, even if the caller does not,
-  // so we create an optionally used local set of symbols when the mapSyms
+    llvm::SmallVectorImpl<Object> *mapObjects) const {
+  // We always require tracking of objects, even if the caller does not,
+  // so we create an optionally used local set of objects when the mapObjects
   // argument is not present.
-  llvm::SmallVector<const semantics::Symbol *> localMapSyms;
-  llvm::SmallVectorImpl<const semantics::Symbol *> *ptrMapSyms =
-      mapSyms ? mapSyms : &localMapSyms;
+  llvm::SmallVector<Object> localMapObjects;
+  llvm::SmallVectorImpl<Object> *ptrMapObjects =
+      mapObjects ? mapObjects : &localMapObjects;
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
 
   auto process = [&](const omp::clause::Map &clause,
@@ -2032,13 +2040,13 @@ bool ClauseProcessor::processMap(
     }
     processMapObjects(stmtCtx, clauseLocation,
                       std::get<omp::ObjectList>(clause.t), mapTypeBits,
-                      parentMemberIndices, result.mapVars, *ptrMapSyms,
+                      parentMemberIndices, result.mapVars, *ptrMapObjects,
                       mapperIdName, /*isMotionModifier=*/false, directive);
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::Map>(process);
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
-                               result.mapVars, *ptrMapSyms);
+                               result.mapVars, *ptrMapObjects);
 
   return clauseFound;
 }
@@ -2046,7 +2054,7 @@ bool ClauseProcessor::processMap(
 bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
                                            mlir::omp::MapClauseOps &result) {
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
-  llvm::SmallVector<const semantics::Symbol *> mapSymbols;
+  llvm::SmallVector<Object> mapObjects;
 
   auto callbackFn = [&](const auto &clause, const parser::CharBlock &source) {
     mlir::Location clauseLocation = converter.genLocation(source);
@@ -2067,7 +2075,7 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
     }
 
     processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
-                      parentMemberIndices, result.mapVars, mapSymbols,
+                      parentMemberIndices, result.mapVars, mapObjects,
                       mapperIdName, /*isMotionModifier=*/true);
   };
 
@@ -2076,7 +2084,7 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
       findRepeatableClause<omp::clause::From>(callbackFn) || clauseFound;
 
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
-                               result.mapVars, mapSymbols);
+                               result.mapVars, mapObjects);
 
   return clauseFound;
 }
@@ -2095,7 +2103,7 @@ bool ClauseProcessor::processNontemporal(
 
 bool ClauseProcessor::processReduction(
     mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms,
+    llvm::SmallVectorImpl<Object> &outReductionObjects,
     llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache)
     const {
   return findRepeatableClause<omp::clause::Reduction>(
@@ -2103,8 +2111,10 @@ bool ClauseProcessor::processReduction(
         llvm::SmallVector<mlir::Value> reductionVars;
         llvm::SmallVector<bool> reduceVarByRef;
         llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
-        llvm::SmallVector<const semantics::Symbol *> reductionSyms;
-        collectReductionSyms(clause, reductionSyms);
+        llvm::SmallVector<Object> reductionObjects;
+        collectReductionObjects(clause, reductionObjects);
+        llvm::SmallVector<const semantics::Symbol *> reductionSyms =
+            getObjectsSyms(reductionObjects);
 
         auto mod = std::get<std::optional<ReductionModifier>>(clause.t);
         if (mod.has_value()) {
@@ -2128,20 +2138,22 @@ bool ClauseProcessor::processReduction(
         llvm::copy(reduceVarByRef, std::back_inserter(result.reductionByref));
         llvm::copy(reductionDeclSymbols,
                    std::back_inserter(result.reductionSyms));
-        llvm::copy(reductionSyms, std::back_inserter(outReductionSyms));
+        llvm::copy(reductionObjects, std::back_inserter(outReductionObjects));
       });
 }
 
 bool ClauseProcessor::processTaskReduction(
     mlir::Location currentLocation, mlir::omp::TaskReductionClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const {
+    llvm::SmallVectorImpl<Object> &outReductionObjects) const {
   return findRepeatableClause<omp::clause::TaskReduction>(
       [&](const omp::clause::TaskReduction &clause, const parser::CharBlock &) {
         llvm::SmallVector<mlir::Value> taskReductionVars;
         llvm::SmallVector<bool> taskReduceVarByRef;
         llvm::SmallVector<mlir::Attribute> taskReductionDeclSymbols;
-        llvm::SmallVector<const semantics::Symbol *> taskReductionSyms;
-        collectReductionSyms(clause, taskReductionSyms);
+        llvm::SmallVector<Object> taskReductionObjects;
+        collectReductionObjects(clause, taskReductionObjects);
+        llvm::SmallVector<const semantics::Symbol *> taskReductionSyms =
+            getObjectsSyms(taskReductionObjects);
 
         ReductionProcessor rp;
         if (!rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
@@ -2157,7 +2169,8 @@ bool ClauseProcessor::processTaskReduction(
                    std::back_inserter(result.taskReductionByref));
         llvm::copy(taskReductionDeclSymbols,
                    std::back_inserter(result.taskReductionSyms));
-        llvm::copy(taskReductionSyms, std::back_inserter(outReductionSyms));
+        llvm::copy(taskReductionObjects,
+                   std::back_inserter(outReductionObjects));
       });
 }
 
@@ -2188,7 +2201,7 @@ bool ClauseProcessor::processEnter(
 
 bool ClauseProcessor::processUseDeviceAddr(
     lower::StatementContext &stmtCtx, mlir::omp::UseDeviceAddrClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const {
+    llvm::SmallVectorImpl<Object> &useDeviceObjects) const {
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
   bool clauseFound = findRepeatableClause<omp::clause::UseDeviceAddr>(
       [&](const omp::clause::UseDeviceAddr &clause,
@@ -2198,17 +2211,17 @@ bool ClauseProcessor::processUseDeviceAddr(
             mlir::omp::ClauseMapFlags::return_param;
         processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
                           parentMemberIndices, result.useDeviceAddrVars,
-                          useDeviceSyms);
+                          useDeviceObjects);
       });
 
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
-                               result.useDeviceAddrVars, useDeviceSyms);
+                               result.useDeviceAddrVars, useDeviceObjects);
   return clauseFound;
 }
 
 bool ClauseProcessor::processUseDevicePtr(
     lower::StatementContext &stmtCtx, mlir::omp::UseDevicePtrClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const {
+    llvm::SmallVectorImpl<Object> &useDeviceObjects) const {
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
 
   bool clauseFound = findRepeatableClause<omp::clause::UseDevicePtr>(
@@ -2219,11 +2232,11 @@ bool ClauseProcessor::processUseDevicePtr(
             mlir::omp::ClauseMapFlags::return_param;
         processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
                           parentMemberIndices, result.useDevicePtrVars,
-                          useDeviceSyms);
+                          useDeviceObjects);
       });
 
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
-                               result.useDevicePtrVars, useDeviceSyms);
+                               result.useDevicePtrVars, useDeviceObjects);
   return clauseFound;
 }
 

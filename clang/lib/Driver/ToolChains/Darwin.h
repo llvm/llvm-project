@@ -389,7 +389,7 @@ private:
   void AddDeploymentTarget(llvm::opt::DerivedArgList &Args) const;
 
   void VerifyTripleForSDK(const llvm::opt::ArgList &Args,
-                          const llvm::Triple Triple) const;
+                          const llvm::Triple &Triple) const;
 
 protected:
   /// Lazily initialize the target platform from the triple when
@@ -652,7 +652,9 @@ public:
 
   bool SupportsEmbeddedBitcode() const override;
 
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 };
 
 /// DarwinClang - The Darwin toolchain used by Clang.
