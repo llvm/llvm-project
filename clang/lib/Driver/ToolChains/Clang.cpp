@@ -7998,7 +7998,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // Set the default fexec-charset as the system charset.
     CmdArgs.push_back("-fexec-charset");
     CmdArgs.push_back(
-        Args.MakeArgString(Triple.getDefaultNarrowTextEncoding()));
+        Args.MakeArgString(Triple.isOSzOS() ? "IBM-1047" : "UTF-8"));
   }
 
   RenderDiagnosticsOptions(D, Args, CmdArgs);
