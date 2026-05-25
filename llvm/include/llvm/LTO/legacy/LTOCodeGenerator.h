@@ -249,6 +249,7 @@ private:
   std::string SaveIRBeforeOptPath;
 
   lto::Config Config;
+  llvm::TargetOptions TO;
 };
 
 /// A convenience function that calls cl::ParseCommandLineOptions on the given

@@ -347,11 +347,14 @@ static int run(int argc, char **argv) {
     Conf.TimeTraceGranularity = TimeTraceGranularity;
   }
   Conf.CPU = codegen::getMCPU();
-  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
   Conf.MAttrs = codegen::getMAttrs();
   if (auto RM = codegen::getExplicitRelocModel())
     Conf.RelocModel = *RM;
   Conf.CodeModel = codegen::getExplicitCodeModel();
+
+  Conf.InitTargetOptions = [](const Triple &TT) {
+    return codegen::InitTargetOptionsFromCodeGenFlags(TT);
+  };
 
   Conf.DebugPassManager = DebugPassManager;
 

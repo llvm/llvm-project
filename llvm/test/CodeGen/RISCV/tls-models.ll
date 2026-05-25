@@ -7,10 +7,13 @@
 ; RUN:     | FileCheck -check-prefix=RV64-PIC %s
 ; RUN: llc -mtriple=riscv64 -relocation-model=pic -enable-tlsdesc < %s \
 ; RUN:     | FileCheck -check-prefix=RV64-PIC-TLSDESC %s
+; RUN: llc -mtriple=riscv64-unknown-fuchsia -relocation-model=pic < %s \
+; RUN:     | FileCheck -check-prefix=RV64-PIC-FUCHSIA %s
 ; RUN: llc -mtriple=riscv32 < %s | FileCheck -check-prefix=RV32-NOPIC %s
 ; RUN: llc -mtriple=riscv32 < %s -enable-tlsdesc | FileCheck -check-prefix=RV32-NOPIC-TLSDESC %s
 ; RUN: llc -mtriple=riscv64 < %s | FileCheck -check-prefix=RV64-NOPIC %s
 ; RUN: llc -mtriple=riscv64 < %s -enable-tlsdesc | FileCheck -check-prefix=RV64-NOPIC-TLSDESC %s
+; RUN: llc -mtriple=riscv64-unknown-fuchsia < %s | FileCheck -check-prefix=RV64-NOPIC-FUCHSIA %s
 
 ; Check that TLS symbols are lowered correctly based on the specified
 ; model. Make sure they're external to avoid them all being optimised to Local
@@ -69,6 +72,16 @@ define ptr @f1() nounwind {
 ; RV64-PIC-TLSDESC-NEXT:    add a0, a0, tp
 ; RV64-PIC-TLSDESC-NEXT:    ret
 ;
+; RV64-PIC-FUCHSIA-LABEL: f1:
+; RV64-PIC-FUCHSIA:       # %bb.0: # %entry
+; RV64-PIC-FUCHSIA-NEXT:  .Ltlsdesc_hi0:
+; RV64-PIC-FUCHSIA-NEXT:    auipc a0, %tlsdesc_hi(unspecified)
+; RV64-PIC-FUCHSIA-NEXT:    ld a1, %tlsdesc_load_lo(.Ltlsdesc_hi0)(a0)
+; RV64-PIC-FUCHSIA-NEXT:    addi a0, a0, %tlsdesc_add_lo(.Ltlsdesc_hi0)
+; RV64-PIC-FUCHSIA-NEXT:    jalr t0, 0(a1), %tlsdesc_call(.Ltlsdesc_hi0)
+; RV64-PIC-FUCHSIA-NEXT:    add a0, a0, tp
+; RV64-PIC-FUCHSIA-NEXT:    ret
+;
 ; RV32-NOPIC-LABEL: f1:
 ; RV32-NOPIC:       # %bb.0: # %entry
 ; RV32-NOPIC-NEXT:  .Lpcrel_hi0:
@@ -100,6 +113,14 @@ define ptr @f1() nounwind {
 ; RV64-NOPIC-TLSDESC-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi0)(a0)
 ; RV64-NOPIC-TLSDESC-NEXT:    add a0, a0, tp
 ; RV64-NOPIC-TLSDESC-NEXT:    ret
+;
+; RV64-NOPIC-FUCHSIA-LABEL: f1:
+; RV64-NOPIC-FUCHSIA:       # %bb.0: # %entry
+; RV64-NOPIC-FUCHSIA-NEXT:  .Lpcrel_hi0:
+; RV64-NOPIC-FUCHSIA-NEXT:    auipc a0, %tls_ie_pcrel_hi(unspecified)
+; RV64-NOPIC-FUCHSIA-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi0)(a0)
+; RV64-NOPIC-FUCHSIA-NEXT:    add a0, a0, tp
+; RV64-NOPIC-FUCHSIA-NEXT:    ret
 entry:
   ret ptr @unspecified
 }
@@ -152,6 +173,16 @@ define ptr @f2() nounwind {
 ; RV64-PIC-TLSDESC-NEXT:    add a0, a0, tp
 ; RV64-PIC-TLSDESC-NEXT:    ret
 ;
+; RV64-PIC-FUCHSIA-LABEL: f2:
+; RV64-PIC-FUCHSIA:       # %bb.0: # %entry
+; RV64-PIC-FUCHSIA-NEXT:  .Ltlsdesc_hi1:
+; RV64-PIC-FUCHSIA-NEXT:    auipc a0, %tlsdesc_hi(ld)
+; RV64-PIC-FUCHSIA-NEXT:    ld a1, %tlsdesc_load_lo(.Ltlsdesc_hi1)(a0)
+; RV64-PIC-FUCHSIA-NEXT:    addi a0, a0, %tlsdesc_add_lo(.Ltlsdesc_hi1)
+; RV64-PIC-FUCHSIA-NEXT:    jalr t0, 0(a1), %tlsdesc_call(.Ltlsdesc_hi1)
+; RV64-PIC-FUCHSIA-NEXT:    add a0, a0, tp
+; RV64-PIC-FUCHSIA-NEXT:    ret
+;
 ; RV32-NOPIC-LABEL: f2:
 ; RV32-NOPIC:       # %bb.0: # %entry
 ; RV32-NOPIC-NEXT:  .Lpcrel_hi1:
@@ -183,6 +214,14 @@ define ptr @f2() nounwind {
 ; RV64-NOPIC-TLSDESC-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; RV64-NOPIC-TLSDESC-NEXT:    add a0, a0, tp
 ; RV64-NOPIC-TLSDESC-NEXT:    ret
+;
+; RV64-NOPIC-FUCHSIA-LABEL: f2:
+; RV64-NOPIC-FUCHSIA:       # %bb.0: # %entry
+; RV64-NOPIC-FUCHSIA-NEXT:  .Lpcrel_hi1:
+; RV64-NOPIC-FUCHSIA-NEXT:    auipc a0, %tls_ie_pcrel_hi(ld)
+; RV64-NOPIC-FUCHSIA-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi1)(a0)
+; RV64-NOPIC-FUCHSIA-NEXT:    add a0, a0, tp
+; RV64-NOPIC-FUCHSIA-NEXT:    ret
 entry:
   ret ptr @ld
 }
@@ -223,6 +262,14 @@ define ptr @f3() nounwind {
 ; RV64-PIC-TLSDESC-NEXT:    add a0, a0, tp
 ; RV64-PIC-TLSDESC-NEXT:    ret
 ;
+; RV64-PIC-FUCHSIA-LABEL: f3:
+; RV64-PIC-FUCHSIA:       # %bb.0: # %entry
+; RV64-PIC-FUCHSIA-NEXT:  .Lpcrel_hi0:
+; RV64-PIC-FUCHSIA-NEXT:    auipc a0, %tls_ie_pcrel_hi(ie)
+; RV64-PIC-FUCHSIA-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi0)(a0)
+; RV64-PIC-FUCHSIA-NEXT:    add a0, a0, tp
+; RV64-PIC-FUCHSIA-NEXT:    ret
+;
 ; RV32-NOPIC-LABEL: f3:
 ; RV32-NOPIC:       # %bb.0: # %entry
 ; RV32-NOPIC-NEXT:  .Lpcrel_hi2:
@@ -254,6 +301,14 @@ define ptr @f3() nounwind {
 ; RV64-NOPIC-TLSDESC-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi2)(a0)
 ; RV64-NOPIC-TLSDESC-NEXT:    add a0, a0, tp
 ; RV64-NOPIC-TLSDESC-NEXT:    ret
+;
+; RV64-NOPIC-FUCHSIA-LABEL: f3:
+; RV64-NOPIC-FUCHSIA:       # %bb.0: # %entry
+; RV64-NOPIC-FUCHSIA-NEXT:  .Lpcrel_hi2:
+; RV64-NOPIC-FUCHSIA-NEXT:    auipc a0, %tls_ie_pcrel_hi(ie)
+; RV64-NOPIC-FUCHSIA-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi2)(a0)
+; RV64-NOPIC-FUCHSIA-NEXT:    add a0, a0, tp
+; RV64-NOPIC-FUCHSIA-NEXT:    ret
 entry:
   ret ptr @ie
 }
@@ -290,6 +345,13 @@ define ptr @f4() nounwind {
 ; RV64-PIC-TLSDESC-NEXT:    addi a0, a0, %tprel_lo(le)
 ; RV64-PIC-TLSDESC-NEXT:    ret
 ;
+; RV64-PIC-FUCHSIA-LABEL: f4:
+; RV64-PIC-FUCHSIA:       # %bb.0: # %entry
+; RV64-PIC-FUCHSIA-NEXT:    lui a0, %tprel_hi(le)
+; RV64-PIC-FUCHSIA-NEXT:    add a0, a0, tp, %tprel_add(le)
+; RV64-PIC-FUCHSIA-NEXT:    addi a0, a0, %tprel_lo(le)
+; RV64-PIC-FUCHSIA-NEXT:    ret
+;
 ; RV32-NOPIC-LABEL: f4:
 ; RV32-NOPIC:       # %bb.0: # %entry
 ; RV32-NOPIC-NEXT:    lui a0, %tprel_hi(le)
@@ -317,6 +379,13 @@ define ptr @f4() nounwind {
 ; RV64-NOPIC-TLSDESC-NEXT:    add a0, a0, tp, %tprel_add(le)
 ; RV64-NOPIC-TLSDESC-NEXT:    addi a0, a0, %tprel_lo(le)
 ; RV64-NOPIC-TLSDESC-NEXT:    ret
+;
+; RV64-NOPIC-FUCHSIA-LABEL: f4:
+; RV64-NOPIC-FUCHSIA:       # %bb.0: # %entry
+; RV64-NOPIC-FUCHSIA-NEXT:    lui a0, %tprel_hi(le)
+; RV64-NOPIC-FUCHSIA-NEXT:    add a0, a0, tp, %tprel_add(le)
+; RV64-NOPIC-FUCHSIA-NEXT:    addi a0, a0, %tprel_lo(le)
+; RV64-NOPIC-FUCHSIA-NEXT:    ret
 entry:
   ret ptr @le
 }

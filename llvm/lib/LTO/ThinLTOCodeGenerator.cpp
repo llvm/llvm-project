@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/LTO/legacy/ThinLTOCodeGenerator.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Support/CommandLine.h"
 
 #include "llvm/ADT/ScopeExit.h"
@@ -393,16 +394,18 @@ public:
       return;
 
     llvm::lto::Config Conf;
+    Conf.InitTargetOptions = [](const Triple &TT) {
+      return codegen::InitTargetOptionsFromCodeGenFlags(TT);
+    };
     Conf.OptLevel = OptLevel;
-    Conf.Options = TMBuilder.Options;
     Conf.CPU = TMBuilder.MCpu;
     Conf.MAttrs.push_back(TMBuilder.MAttr);
     Conf.RelocModel = TMBuilder.RelocModel;
     Conf.CGOptLevel = TMBuilder.CGOptLevel;
     Conf.Freestanding = Freestanding;
-    std::string Key =
-        computeLTOCacheKey(Conf, Index, ModuleID, ImportList, ExportList,
-                           ResolvedODR, DefinedGVSummaries);
+    std::string Key = computeLTOCacheKey(
+        Conf, Index, ModuleID, ImportList, ExportList, ResolvedODR,
+        DefinedGVSummaries, TMBuilder.TheTriple);
 
     // This choice of file name allows the cache to be pruned (see pruneCache()
     // in include/llvm/Support/CachePruning.h).
@@ -548,6 +551,9 @@ static void resolvePrevailingInIndex(
 
   // TODO Conf.VisibilityScheme can be lto::Config::ELF for ELF.
   lto::Config Conf;
+  Conf.InitTargetOptions = [](const Triple &TT) {
+    return codegen::InitTargetOptionsFromCodeGenFlags(TT);
+  };
   thinLTOResolvePrevailingInIndex(Conf, Index, isPrevailing, recordNewLinkage,
                                   GUIDPreservedSymbols);
 }
