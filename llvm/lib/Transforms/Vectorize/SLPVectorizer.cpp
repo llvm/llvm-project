@@ -147,7 +147,7 @@ static cl::opt<bool> SplitAlternateInstructions(
     cl::desc("Improve the code quality by splitting alternate instructions"));
 
 static cl::opt<bool> SLPInstCountCheck(
-    "slp-inst-count-check", cl::init(true), cl::Hidden,
+    "slp-inst-count-check", cl::init(false), cl::Hidden,
     cl::desc("Reject vectorization if vector instruction count exceeds "
              "scalar instruction count"));
 
