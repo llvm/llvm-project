@@ -121,3 +121,79 @@ void memberExpr() {
    // CHECK-FIXES:    if (foo.fooBar().z) {
   }
 }
+
+int (x);
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in type
+// CHECK-FIXES: int x;
+
+void f(int (arg));
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant parentheses in type
+// CHECK-FIXES: void f(int arg);
+
+int ((nestedX));
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in type
+// CHECK-MESSAGES: :[[@LINE-2]]:6: warning: redundant parentheses in type
+// CHECK-FIXES: int nestedX;
+
+void nestedParam(int ((arg)));
+// CHECK-MESSAGES: :[[@LINE-1]]:22: warning: redundant parentheses in type
+// CHECK-MESSAGES: :[[@LINE-2]]:23: warning: redundant parentheses in type
+// CHECK-FIXES: void nestedParam(int arg);
+
+int (&referenceVar) = x;
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in type
+// CHECK-FIXES: int &referenceVar = x;
+
+struct S {};
+int (S::*memberPtr);
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in type
+// CHECK-FIXES: int S::*memberPtr;
+
+int (arrayVar)[2];
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in type
+// CHECK-FIXES: int arrayVar[2];
+
+const int (cx) = 0; 
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant parentheses in type 
+// CHECK-FIXES: const int cx = 0;
+
+typedef int (TypedefName); 
+// CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant parentheses in type 
+// CHECK-FIXES: typedef int TypedefName;
+
+void (func)(int); 
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant parentheses in type 
+// CHECK-FIXES: void func(int);
+
+template <class T>
+void templatedParam(T (arg));
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: redundant parentheses in type
+// CHECK-FIXES: void templatedParam(T arg);
+
+template <class T>
+struct TemplateStruct {
+  T (member);
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant parentheses in type
+// CHECK-FIXES: T member;
+};
+
+int (*functionPtr)(int);
+void (*callback)(int);
+int (*arrayPtr[2])(int);
+#define DECL_WITH_PARENS(name) int (name)
+DECL_WITH_PARENS(macroVar);
+#define PAREN_NAME(name) (name)
+int PAREN_NAME(macroName);
+using AliasName = int;
+void instantiateTemplates() {
+  templatedParam<int>(0);
+  TemplateStruct<int> s;
+}
+using Fn = void(int);
+Fn (*funcPtr);
+int (*ptr)(int);
+struct T { 
+void method(int); 
+};
+void (T::*memberFunctionPtr)(int);
+int (&arrayRef)[2] = arrayVar;

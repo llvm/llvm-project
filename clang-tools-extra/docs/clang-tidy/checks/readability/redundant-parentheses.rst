@@ -40,3 +40,10 @@ Options
   Some STL library functions may have the same name as widely used function-like
   macro. For example, ``std::max`` and ``max`` macro. A workaround to distinguish
   them is adding parentheses around functions to prevent function-like macro.
+
+The check also diagnoses redundant parentheses in simple declarations:
+
+.. code-block:: c++
+
+  int (x);           // becomes int x;
+  void f(int (arg)); // becomes void f(int arg);
