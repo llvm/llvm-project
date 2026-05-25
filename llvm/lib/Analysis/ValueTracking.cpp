@@ -9078,12 +9078,18 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
 
   if (isKnownNegation(TrueVal, FalseVal)) {
     // Sign-extending LHS does not change its sign, so TrueVal/FalseVal can
-    // match against either LHS or sext(LHS).
-    auto MaybeSExtCmpLHS =
+    // match against either LHS or sign-preserving operations on LHS, like
+    // sext(LHS), or binary ops that do not wrap in signed sense.
+    auto CmpLHSOrSExt =
         m_CombineOr(m_Specific(CmpLHS), m_SExt(m_Specific(CmpLHS)));
+    auto MaybeSExtOrMulCmpLHS = m_CombineOr(
+        CmpLHSOrSExt,
+        m_CombineOr(m_CombineOr(m_NSWMul(CmpLHSOrSExt, m_StrictlyPositive()),
+                                m_NSWMul(m_StrictlyPositive(), CmpLHSOrSExt)),
+                    m_NSWShl(CmpLHSOrSExt, m_NonNegative())));
     auto ZeroOrAllOnes = m_CombineOr(m_ZeroInt(), m_AllOnes());
     auto ZeroOrOne = m_CombineOr(m_ZeroInt(), m_One());
-    if (match(TrueVal, MaybeSExtCmpLHS)) {
+    if (match(TrueVal, MaybeSExtOrMulCmpLHS)) {
       // Set the return values. If the compare uses the negated value (-X >s 0),
       // swap the return values because the negated value is always 'RHS'.
       LHS = TrueVal;
@@ -9105,7 +9111,7 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
       if (Pred == ICmpInst::ICMP_SLT && match(CmpRHS, ZeroOrOne))
         return {SPF_NABS, SPNB_NA, false};
     }
-    else if (match(FalseVal, MaybeSExtCmpLHS)) {
+    else if (match(FalseVal, MaybeSExtOrMulCmpLHS)) {
       // Set the return values. If the compare uses the negated value (-X >s 0),
       // swap the return values because the negated value is always 'RHS'.
       LHS = FalseVal;
