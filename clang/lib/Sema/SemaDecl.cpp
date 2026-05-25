@@ -1505,10 +1505,11 @@ void Sema::EnterTemplatedContext(Scope *S, DeclContext *DC) {
     if (!SearchDCAfterScope)
       continue;
 
-    if (!FoundTemplateContext && !SearchDCAfterScope->isFileContext()) {
-      if (const auto *RD = dyn_cast<RecordDecl>(SearchDCAfterScope))
-        if (RD->isUnion() && !RD->isTemplateDecl())
-          continue;
+    if (!FoundTemplateContext && !SearchDCAfterScope->isFileContext() &&
+        isa<RecordDecl>(SearchDCAfterScope)) {
+      const auto *RD = cast<RecordDecl>(SearchDCAfterScope);
+      if (RD->isInvalidDecl() && !RD->isTemplateDecl())
+        continue;
     }
     S->setLookupEntity(SearchDCAfterScope);
   }
