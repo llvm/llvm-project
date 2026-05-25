@@ -1668,7 +1668,7 @@ private:
         __dest,
         __src,
         [](value_type& __lhs, value_type& __rhs) { __assign_value(__lhs, std::move(__rhs)); },
-        [this](__node_pointer __nd) { return __move_construct_tree(__nd); });
+        [this](__node_pointer __nd) { return __copy_construct_tree(__nd); });
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer
