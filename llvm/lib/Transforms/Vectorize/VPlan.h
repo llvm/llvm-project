@@ -3323,9 +3323,11 @@ public:
 
   ~VPReplicateRecipe() override = default;
 
-  VPReplicateRecipe *clone() override {
+  VPReplicateRecipe *clone() override { return cloneWithOperands(operands()); }
+
+  VPReplicateRecipe *cloneWithOperands(ArrayRef<VPValue *> NewOperands) {
     auto *Copy = new VPReplicateRecipe(
-        getUnderlyingInstr(), operands(), IsSingleScalar,
+        getUnderlyingInstr(), NewOperands, IsSingleScalar,
         isPredicated() ? getMask() : nullptr, *this, *this, getDebugLoc());
     Copy->transferFlags(*this);
     return Copy;
