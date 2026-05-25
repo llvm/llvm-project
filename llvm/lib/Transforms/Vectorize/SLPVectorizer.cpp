@@ -25839,7 +25839,8 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
     // We can for simple intrinsics
     auto IsCompatibleCall = [](const Instruction *I) -> bool {
       const auto *CI = dyn_cast<CallInst>(I);
-      return CI && (CI->getIntrinsicID() == Intrinsic::fmuladd);
+      return CI && (CI->getIntrinsicID() == Intrinsic::fmuladd ||
+                    CI->getIntrinsicID() == Intrinsic::fma);
     };
     // If the current instruction is a load, update MaxWidth to reflect the
     // width of the loaded value.
