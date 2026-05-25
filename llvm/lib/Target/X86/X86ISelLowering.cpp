@@ -8503,51 +8503,68 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
       ISD::isBuildVectorAllOnes(Op.getNode()))
     return Op;
 
+  uint64_t Undefs = 0;
   uint64_t Immediate = 0;
   SmallVector<unsigned, 16> NonConstIdx;
-  bool IsSplat = true;
+  SmallSet<SDValue, 16> NonConstElts;
   bool HasConstElts = false;
-  int SplatIdx = -1;
   for (unsigned idx = 0, e = Op.getNumOperands(); idx < e; ++idx) {
     SDValue In = Op.getOperand(idx);
-    if (In.isUndef())
+    if (In.isUndef()) {
+      Undefs |= 1ULL << idx;
       continue;
+    }
     if (auto *InC = dyn_cast<ConstantSDNode>(In)) {
       Immediate |= (InC->getZExtValue() & 0x1) << idx;
       HasConstElts = true;
     } else {
       NonConstIdx.push_back(idx);
+      NonConstElts.insert(In);
     }
-    if (SplatIdx < 0)
-      SplatIdx = idx;
-    else if (In != Op.getOperand(SplatIdx))
-      IsSplat = false;
   }
 
-  // for splat use " (select i1 splat_elt, all-ones, all-zeroes)"
-  if (IsSplat) {
+  // for single non-const use " (select i1 elt, imm | elt_mask, imm)"
+  if (NonConstElts.size() == 1) {
     // The build_vector allows the scalar element to be larger than the vector
     // element type. We need to mask it to use as a condition unless we know
     // the upper bits are zero.
     // FIXME: Use computeKnownBits instead of checking specific opcode?
-    SDValue Cond = Op.getOperand(SplatIdx);
+    SDValue Cond = *NonConstElts.begin();
     assert(Cond.getValueType() == MVT::i8 && "Unexpected VT!");
     if (Cond.getOpcode() != ISD::SETCC)
       Cond = DAG.getNode(ISD::AND, dl, MVT::i8, Cond,
                          DAG.getConstant(1, dl, MVT::i8));
 
+    uint64_t NonConstMask = 0;
+    for (unsigned InsertIdx : NonConstIdx)
+      NonConstMask |= 1ULL << InsertIdx;
+
+    uint64_t TrueImm = NonConstMask | Immediate;
+    uint64_t FalseImm = Immediate;
+
     // Perform the select in the scalar domain so we can use cmov.
     if (VT == MVT::v64i1 && !Subtarget.is64Bit()) {
-      SDValue Select = DAG.getSelect(dl, MVT::i32, Cond,
-                                     DAG.getAllOnesConstant(dl, MVT::i32),
-                                     DAG.getConstant(0, dl, MVT::i32));
-      Select = DAG.getBitcast(MVT::v32i1, Select);
-      return DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v64i1, Select, Select);
+      uint64_t TrueLo = (unsigned)TrueImm;
+      uint64_t TrueHi = TrueImm >> 32;
+      uint64_t FalseLo = (unsigned)FalseImm;
+      uint64_t FalseHi = FalseImm >> 32;
+      SDValue Lo = DAG.getSelect(dl, MVT::i32, Cond,
+                                 DAG.getConstant(TrueLo, dl, MVT::i32),
+                                 DAG.getConstant(FalseLo, dl, MVT::i32));
+      SDValue Hi = DAG.getSelect(dl, MVT::i32, Cond,
+                                 DAG.getConstant(TrueHi, dl, MVT::i32),
+                                 DAG.getConstant(FalseHi, dl, MVT::i32));
+      Lo = DAG.getBitcast(MVT::v32i1, Lo);
+      Hi = DAG.getBitcast(MVT::v32i1, Hi);
+      return DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v64i1, Lo, Hi);
     } else {
       MVT ImmVT = MVT::getIntegerVT(std::max((unsigned)VT.getSizeInBits(), 8U));
-      SDValue Select = DAG.getSelect(dl, ImmVT, Cond,
-                                     DAG.getAllOnesConstant(dl, ImmVT),
-                                     DAG.getConstant(0, dl, ImmVT));
+      // Adjust extended value to -1 as it will improve folding.
+      if (llvm::popcount(TrueImm | Undefs) == VT.getSizeInBits())
+          TrueImm = ~0ULL >> (64 - ImmVT.getSizeInBits());
+      SDValue Select =
+          DAG.getSelect(dl, ImmVT, Cond, DAG.getConstant(TrueImm, dl, ImmVT),
+                        DAG.getConstant(FalseImm, dl, ImmVT));
       MVT VecVT = VT.getSizeInBits() >= 8 ? VT : MVT::v8i1;
       Select = DAG.getBitcast(VecVT, Select);
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, Select,
