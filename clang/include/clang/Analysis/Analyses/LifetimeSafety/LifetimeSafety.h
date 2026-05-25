@@ -65,7 +65,7 @@ public:
                                    const Expr *MovedExpr,
                                    SourceLocation FreeLoc) {}
 
-  virtual void reportUseAfterReturn(const internal::Loan *L,
+  virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
                                     const Expr *MovedExpr) {}
 

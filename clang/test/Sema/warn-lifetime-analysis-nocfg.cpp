@@ -120,19 +120,19 @@ MyLongPointerFromConversion daglingGslPtrFromLocalOwnerConv() {
 
 MyIntPointer danglingGslPtrFromTemporary() {
   return MyIntOwner{}; // expected-warning {{returning address of local temporary object}} \
-                       // cfg-warning {{stack memory associated with local temporary is returned}} cfg-note {{returned here}}
+                       // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 MyIntOwner makeTempOwner();
 
 MyIntPointer danglingGslPtrFromTemporary2() {
   return makeTempOwner(); // expected-warning {{returning address of local temporary object}} \
-                          // cfg-warning {{stack memory associated with local temporary is returned}} cfg-note {{returned here}}
+                          // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 MyLongPointerFromConversion danglingGslPtrFromTemporaryConv() {
   return MyLongOwnerWithConversion{}; // expected-warning {{returning address of local temporary object}} \
-                                      // cfg-warning {{stack memory associated with local temporary is returned}} cfg-note {{returned here}}
+                                      // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 int *noFalsePositive(MyIntOwner &o) {
@@ -180,7 +180,7 @@ struct LifetimeBoundCtor {
 };
 
 auto lifetimebound_make_unique_single_param() {
-  return std::make_unique<LifetimeBoundCtor>(MyIntOwner{}); // tu-warning {{stack memory associated with local temporary is returned}} tu-note {{returned here}}
+  return std::make_unique<LifetimeBoundCtor>(MyIntOwner{}); // tu-warning {{stack memory associated with local temporary object is returned}} tu-note {{returned here}}
 }
 
 
@@ -199,17 +199,17 @@ void modelIterators() {
 
 std::vector<int>::iterator modelIteratorReturn() {
   return std::vector<int>().begin(); // expected-warning {{returning address of local temporary object}} \
-                                     // cfg-warning {{stack memory associated with local temporary is returned}} cfg-note {{returned here}}
+                                     // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 const int *modelFreeFunctions() {
   return std::data(std::vector<int>()); // expected-warning {{returning address of local temporary object}} \
-                                        // cfg-warning {{stack memory associated with local temporary is returned}} cfg-note {{returned here}}
+                                        // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 int &modelAnyCast() {
   return std::any_cast<int&>(std::any{}); // expected-warning {{returning reference to local temporary object}} \
-                                          // cfg-warning {{stack memory associated with local temporary is returned}} cfg-note {{returned here}}
+                                          // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 int modelAnyCast2() {
@@ -277,31 +277,31 @@ std::string_view localOptional(int i) {
 
 const char *danglingRawPtrFromTemp() {
   return std::basic_string<char>().c_str(); // expected-warning {{returning address of local temporary object}} \
-                                            // cfg-warning {{stack memory associated with local temporary is returned}} cfg-note {{returned here}}
+                                            // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 std::unique_ptr<int> getUniquePtr();
 
 int *danglingUniquePtrFromTemp() {
   return getUniquePtr().get(); // expected-warning {{returning address of local temporary object}} \
-                               // cfg-warning {{stack memory associated with local temporary is returned}} cfg-note {{returned here}}
+                               // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 int *danglingUniquePtrFromTemp2() {
   return std::unique_ptr<int>().get(); // expected-warning {{returning address of local temporary object}} \
-                                       // cfg-warning {{stack memory associated with local temporary is returned}} cfg-note {{returned here}}
+                                       // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 const int& danglingRefToOptionalFromTemp3() {
   return std::optional<int>().value(); // expected-warning {{returning reference to local temporary object}} \
-                                       // cfg-warning {{stack memory associated with local temporary is returned}} cfg-note {{returned here}}
+                                       // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 std::optional<std::string> getTempOptStr();
 
 std::string_view danglingRefToOptionalFromTemp4() {
   return getTempOptStr().value(); // expected-warning {{returning address of local temporary object}} \
-                                  // cfg-warning {{stack memory associated with local temporary is returned}} cfg-note {{returned here}}
+                                  // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 void danglingReferenceFromTempOwner() {
@@ -353,7 +353,7 @@ int &doNotFollowReferencesForLocalOwner() {
 
 const char *trackThroughMultiplePointer() {
   return std::basic_string_view<char>(std::basic_string<char>()).begin(); // expected-warning {{returning address of local temporary object}} \
-         // cfg-warning {{stack memory associated with local temporary is returned}} cfg-note {{returned here}}
+         // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 struct X {
@@ -451,7 +451,7 @@ std::string_view test_str_local() {
                     v.end(), "42");
 }
 std::string_view test_str_temporary() {
-  return *std::find(GetTemporaryString().begin(), // cfg-warning {{stack memory associated with local temporary is returned}} cfg-note {{returned here}}
+  return *std::find(GetTemporaryString().begin(), // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
                     GetTemporaryString().end(), "42");
 }
 std::string_view test_view() {
@@ -865,7 +865,7 @@ std::string_view test1_1() {
                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
   use(t1);                 // cfg-note {{later used here}}
   return Ref(std::string()); // expected-warning {{returning address}} \
-                             // cfg-warning {{stack memory associated with local temporary is returned}} cfg-note {{returned here}}
+                             // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 std::string_view test1_2() {
@@ -877,7 +877,7 @@ std::string_view test1_2() {
   use(t2);                    // cfg-note {{later used here}}
 
   return TakeSv(std::string()); // expected-warning {{returning address}} \
-                                // cfg-warning {{stack memory associated with local temporary is returned}} cfg-note {{returned here}}
+                                // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 std::string_view test1_3() {
@@ -888,7 +888,7 @@ std::string_view test1_3() {
                                   // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
   use(t3);                        // cfg-note {{later used here}}
   return TakeStrRef(std::string()); // expected-warning {{returning address}} \
-                                    // cfg-warning {{stack memory associated with local temporary is returned}} cfg-note {{returned here}}
+                                    // cfg-warning {{stack memory associated with local temporary object is returned}} cfg-note {{returned here}}
 }
 
 std::string_view test1_4() {

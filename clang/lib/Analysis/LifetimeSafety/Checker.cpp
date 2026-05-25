@@ -299,8 +299,8 @@ public:
             llvm_unreachable("Unhandled OriginEscapesFact type");
         } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
           // Return stack address.
-          SemaHelper->reportUseAfterReturn(L, RetEscape->getReturnExpr(),
-                                           MovedExpr);
+          SemaHelper->reportUseAfterReturn(
+              IssueExpr, RetEscape->getReturnExpr(), MovedExpr);
         else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
           // Dangling field.
           SemaHelper->reportDanglingField(

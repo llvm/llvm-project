@@ -75,15 +75,14 @@ public:
         << UseExpr->getSourceRange();
   }
 
-  void reportUseAfterReturn(const internal::Loan *L, const Expr *ReturnExpr,
+  void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
                             const Expr *MovedExpr) override {
-    const Expr *IssueExpr = L->getIssuingExpr();
     unsigned DiagID = MovedExpr
                           ? diag::warn_lifetime_safety_return_stack_addr_moved
                           : diag::warn_lifetime_safety_return_stack_addr;
 
     S.Diag(IssueExpr->getExprLoc(), DiagID)
-        << getLifetimeDiagSubject(L) << IssueExpr->getSourceRange();
+        << getDiagSubjectDescription(IssueExpr) << IssueExpr->getSourceRange();
 
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
@@ -400,19 +399,24 @@ public:
   }
 
 private:
-  static std::string getLifetimeDiagSubject(const internal::Loan *L) {
-    if (L->getAccessPath().getAsMaterializeTemporaryExpr())
-      return "local temporary";
+  std::string getDiagSubjectDescription(const ValueDecl *VD) {
+    std::string Res;
+    llvm::raw_string_ostream OS(Res);
+    OS << (isa<ParmVarDecl>(VD) ? "parameter" : "local variable");
+    OS << " '";
+    VD->getNameForDiagnostic(OS, S.getPrintingPolicy(), /*Qualified=*/false);
+    OS << "'";
+    return Res;
+  }
 
-    const auto *DRE = dyn_cast<DeclRefExpr>(L->getIssuingExpr());
-    assert(DRE && "expected lifetime diagnostic loan issued by a DeclRefExpr");
+  std::string getDiagSubjectDescription(const Expr *E) {
+    if (isa<MaterializeTemporaryExpr>(E))
+      return "local temporary object";
 
-    const ValueDecl *VD = DRE->getDecl();
-    std::string Subject =
-        isa<ParmVarDecl>(VD) ? "parameter '" : "local variable '";
-    Subject += VD->getNameAsString();
-    Subject += "'";
-    return Subject;
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+      return getDiagSubjectDescription(DRE->getDecl());
+    // TODO: Handle other expression types.
+    return "";
   }
 
   Sema &S;
