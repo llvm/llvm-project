@@ -32,8 +32,13 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 #define LIBC_LOOP_NOUNROLL _Pragma("nounroll")
 #define LIBC_LOOP_UNROLL _Pragma("unroll")
 #elif defined(LIBC_COMPILER_IS_GCC)
+#if LIBC_COMPILER_GCC_VER >= 800
 #define LIBC_LOOP_NOUNROLL _Pragma("GCC unroll 0")
 #define LIBC_LOOP_UNROLL _Pragma("GCC unroll 2048")
+#else
+#define LIBC_LOOP_NOUNROLL
+#define LIBC_LOOP_UNROLL
+#endif
 #elif defined(LIBC_COMPILER_IS_MSVC)
 #define LIBC_LOOP_NOUNROLL
 #define LIBC_LOOP_UNROLL
@@ -56,23 +61,23 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 #define LIBC_MATH 0
 #endif // LIBC_MATH
 
-#if (LIBC_MATH & LIBC_MATH_SKIP_ACCURATE_PASS)
+#if ((LIBC_MATH) & LIBC_MATH_SKIP_ACCURATE_PASS)
 #define LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 #endif
 
-#if (LIBC_MATH & LIBC_MATH_SMALL_TABLES)
+#if ((LIBC_MATH) & LIBC_MATH_SMALL_TABLES)
 #define LIBC_MATH_HAS_SMALL_TABLES
 #endif
 
-#if (LIBC_MATH & LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT)
+#if ((LIBC_MATH) & LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT)
 #define LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT
 #endif
 
-#if (LIBC_MATH & LIBC_MATH_NO_ERRNO)
+#if ((LIBC_MATH) & LIBC_MATH_NO_ERRNO)
 #define LIBC_MATH_HAS_NO_ERRNO
 #endif
 
-#if (LIBC_MATH & LIBC_MATH_NO_EXCEPT)
+#if ((LIBC_MATH) & LIBC_MATH_NO_EXCEPT)
 #define LIBC_MATH_HAS_NO_EXCEPT
 #endif
 
