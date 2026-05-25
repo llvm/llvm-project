@@ -776,6 +776,17 @@ MachineIRBuilder::buildBuildVectorConstant(const DstOp &Res,
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }
 
+MachineInstrBuilder
+MachineIRBuilder::buildBuildVectorFConstant(const DstOp &Res,
+                                            ArrayRef<APFloat> Ops) {
+  SmallVector<SrcOp> TmpVec;
+  TmpVec.reserve(Ops.size());
+  LLT EltTy = Res.getLLTTy(*getMRI()).getElementType();
+  for (const auto &Op : Ops)
+    TmpVec.push_back(buildFConstant(EltTy, Op));
+  return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildSplatBuildVector(const DstOp &Res,
                                                             const SrcOp &Src) {
   SmallVector<SrcOp, 8> TmpVec(Res.getLLTTy(*getMRI()).getNumElements(), Src);
@@ -809,6 +820,8 @@ MachineInstrBuilder MachineIRBuilder::buildShuffleSplat(const DstOp &Res,
 
 MachineInstrBuilder MachineIRBuilder::buildSplatVector(const DstOp &Res,
                                                        const SrcOp &Src) {
+  assert(Res.getLLTTy(*getMRI()).isScalableVector() &&
+         "G_SPLAT_VECTOR is only valid for scalable vectors");
   assert(Src.getLLTTy(*getMRI()) == Res.getLLTTy(*getMRI()).getElementType() &&
          "Expected Src to match Dst elt ty");
   return buildInstr(TargetOpcode::G_SPLAT_VECTOR, Res, Src);
