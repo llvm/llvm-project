@@ -13,8 +13,6 @@
 
 // Verify that vector<bool, Allocator>::reference has no overloaded operator&.
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <cassert>
 #include <memory>
 #include <type_traits>

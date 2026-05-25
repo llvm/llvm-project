@@ -52,7 +52,7 @@ lldb::ValueObjectSP
 lldb_private::formatters::MsvcStlAtomicSyntheticFrontEnd::GetChildAtIndex(
     uint32_t idx) {
   if (idx == 0 && m_storage && m_element_type.IsValid())
-    return m_storage->Cast(m_element_type)->Clone(ConstString("Value"));
+    return m_storage->Cast(m_element_type)->Clone("Value");
   return nullptr;
 }
 
