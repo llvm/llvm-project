@@ -45,6 +45,7 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // existing __cudaRegisterFunction kernel registration.
 __device__ int a;
 __constant__ int b;
+__device__ _BitInt(36) c;
 
 // Check module constructor is registered in module attributes.
 // CIR: cir.global_ctors = [#cir.global_ctor<"__cuda_module_ctor", 65535>]
@@ -68,6 +69,7 @@ __constant__ int b;
 // CIR-DAG: cir.func private @__cudaRegisterVar(!cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>, !s32i, !u64i, !s32i, !s32i)
 // CIR-DAG: cir.global "private" constant cir_private @".stra" = #cir.const_array<"a" : !cir.array<!u8i x 2>, trailing_zeros>
 // CIR-DAG: cir.global "private" constant cir_private @".strb" = #cir.const_array<"b" : !cir.array<!u8i x 2>, trailing_zeros>
+// CIR-DAG: cir.global "private" constant cir_private @".strc" = #cir.const_array<"c" : !cir.array<!u8i x 2>, trailing_zeros>
 
 // Check the __cudaRegisterFunction runtime declaration:
 //   int __cudaRegisterFunction(void**, void*, void*, void*, int,
@@ -107,6 +109,16 @@ __constant__ int b;
 // CIR-NEXT: %[[#CONB:]] = cir.const #cir.int<1> : !s32i
 // CIR-NEXT: %[[#NORMB:]] = cir.const #cir.int<0> : !s32i
 // CIR-NEXT: cir.call @__cudaRegisterVar(%[[FATBIN]], %[[#HOSTB]], %[[#NAMEB]], %[[#NAMEB]], %[[#EXTB]], %[[#SZB]], %[[#CONB]], %[[#NORMB]])
+// Registration for __device__ _BitInt(36)
+// CIR: %[[#NAMEC_RAW:]] = cir.get_global @".strc"
+// CIR-NEXT: %[[#NAMEC:]] = cir.cast bitcast %[[#NAMEC_RAW]]
+// CIR-NEXT: %[[#HOSTC_RAW:]] = cir.get_global @c
+// CIR-NEXT: %[[#HOSTC:]] = cir.cast bitcast %[[#HOSTC_RAW]]
+// CIR-NEXT: %[[#EXTC:]] = cir.const #cir.int<0> : !s32i
+// CIR-NEXT: %[[#SZC:]] = cir.const #cir.int<8> : !u64i
+// CIR-NEXT: %[[#CONC:]] = cir.const #cir.int<0> : !s32i
+// CIR-NEXT: %[[#NORMC:]] = cir.const #cir.int<0> : !s32i
+// CIR-NEXT: cir.call @__cudaRegisterVar(%[[FATBIN]], %[[#HOSTC]], %[[#NAMEC]], %[[#NAMEC]], %[[#EXTC]], %[[#SZC]], %[[#CONC]], %[[#NORMC]])
 // CIR-NEXT: cir.return
 
 // CIR: cir.global "private" constant cir_private @__cuda_fatbin_str = #cir.const_array<"GPU binary would be here." : !cir.array<!u8i x 25>> : !cir.array<!u8i x 25> {alignment = 8 : i64, section = ".nv_fatbin"}
@@ -148,6 +160,7 @@ __constant__ int b;
 // OGCG: call{{.*}}__cudaRegisterFunction(ptr %[[#OGFATBIN]], {{.*}}kernelfunc{{.*}}
 // OGCG: call void @__cudaRegisterVar(ptr %[[#OGFATBIN]], ptr @a, {{.*}}, {{.*}}, i32 0, i64 4, i32 0, i32 0)
 // OGCG: call void @__cudaRegisterVar(ptr %[[#OGFATBIN]], ptr @b, {{.*}}, {{.*}}, i32 0, i64 4, i32 1, i32 0)
+// OGCG: call void @__cudaRegisterVar(ptr %[[#OGFATBIN]], ptr @c, {{.*}}, {{.*}}, i32 0, i64 8, i32 0, i32 0)
 // OGCG: ret void
 
 // OGCG: define internal void @__cuda_module_ctor
@@ -173,6 +186,7 @@ __constant__ int b;
 // LLVM: call{{.*}}@__cudaRegisterFunction(ptr %[[#FATBIN]], ptr @{{.*}}kernelfunc{{.*}}, ptr @{{.*}}, ptr @{{.*}}, i32 -1, ptr null, ptr null, ptr null, ptr null, ptr null)
 // LLVM: call void @__cudaRegisterVar(ptr %[[#FATBIN]], ptr @a, ptr @.stra, ptr @.stra, i32 0, i64 4, i32 0, i32 0)
 // LLVM: call void @__cudaRegisterVar(ptr %[[#FATBIN]], ptr @b, ptr @.strb, ptr @.strb, i32 0, i64 4, i32 1, i32 0)
+// LLVM: call void @__cudaRegisterVar(ptr %[[#FATBIN]], ptr @c, ptr @.strc, ptr @.strc, i32 0, i64 8, i32 0, i32 0)
 // LLVM: ret void
 
 // LLVM: define internal void @__cuda_module_ctor
