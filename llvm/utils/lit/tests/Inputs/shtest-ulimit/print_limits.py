@@ -6,7 +6,7 @@ def normalize_limit(limit_value):
 
     Python 3.15+ returns the platform's max value (e.g., 2^64-1) instead of -1.
     """
-    return -1 if limit_value == resource.RLIM_INFINITY else limit_value
+    return "infinity" if limit_value == resource.RLIM_INFINITY else str(limit_value)
 
 
 print("RLIMIT_AS=" + str(normalize_limit(resource.getrlimit(resource.RLIMIT_AS)[0])))
