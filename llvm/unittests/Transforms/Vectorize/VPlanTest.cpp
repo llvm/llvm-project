@@ -1565,6 +1565,9 @@ TEST_F(VPRecipeTest, dumpRecipeInPlan) {
         testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
   }
 
+  // Avoid use-after-free of AI when the VPlan destructor is called.
+  WidenR->eraseFromParent();
+
   delete AI;
 }
 
@@ -1636,6 +1639,11 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesInPlan) {
         },
         testing::ExitedWithCode(0), "EMIT vp<%2> = mul vp<%1>, vp<%1>");
   }
+
+  // Avoid use-after-free of AI when the VPlan destructor is called.
+  I2->eraseFromParent();
+  I1->eraseFromParent();
+
   delete AI;
 }
 

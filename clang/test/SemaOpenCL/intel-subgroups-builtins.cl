@@ -123,7 +123,7 @@ void test_block_write_ui_global(__global uint *out, uint value, uint2 value2,
   intel_sub_group_block_write_ui8(out, value8);
 }
 
-void test_block_write_ui_image(read_only image2d_t image,
+void test_block_write_ui_image(write_only image2d_t image,
                                read_write image2d_t rw, int2 coord,
                                uint value, uint2 value2, uint4 value4,
                                uint8 value8) {

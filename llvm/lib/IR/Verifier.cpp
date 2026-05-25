@@ -2714,7 +2714,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     Check(!Args[2].getAsInteger(10, FirstArgIdx),
           "modular-format attribute first arg index is not an integer", V);
     unsigned UpperBound = FT->getNumParams() + (FT->isVarArg() ? 1 : 0);
-    Check(FirstArgIdx > 0 && FirstArgIdx <= UpperBound,
+    Check(FirstArgIdx <= UpperBound,
           "modular-format attribute first arg index is out of bounds", V);
   }
 
