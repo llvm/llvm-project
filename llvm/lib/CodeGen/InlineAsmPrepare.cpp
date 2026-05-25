@@ -259,30 +259,30 @@ static bool processAsmConstraintBrInst(CallBrInst &CBR, bool IsOptLevelNone,
   return true;
 }
 
-static void getCallBrInsts(Function &F,
-                           SmallVectorImpl<CallBrInst *> &AsmConstraintBrs,
-                           SmallVectorImpl<CallBrInst *> &OtherCallBrs) {
-  for (auto &BB : F)
-    if (auto *CBR = dyn_cast<CallBrInst>(BB.getTerminator())) {
-      if (CBR->getIntrinsicID() == Intrinsic::asm_constraint_br)
-        AsmConstraintBrs.push_back(CBR);
-      else if (!CBR->getType()->isVoidTy() && !CBR->use_empty())
-        OtherCallBrs.push_back(CBR);
-    }
-}
-
 static bool runImpl(Function &F, bool IsOptLevelNone, DomTreeUpdater &DTU) {
   bool Changed = false;
   SmallVector<CallBrInst *, 4> AsmConstraintBrs;
-  SmallVector<CallBrInst *, 4> OtherCallBrs;
 
-  getCallBrInsts(F, AsmConstraintBrs, OtherCallBrs);
+  // Collect asm_constraint_br instructions first.
+  for (auto &BB : F)
+    if (auto *CBR = dyn_cast<CallBrInst>(BB.getTerminator()))
+      if (CBR->getIntrinsicID() == Intrinsic::asm_constraint_br)
+        AsmConstraintBrs.push_back(CBR);
 
-  // Process 'llvm.asm.constraint.br' instructions first.
+  // Process 'llvm.asm.constraint.br' instructions first. At -O0 this deletes
+  // the PrefReg block (and its callbr) via DeleteDeadBlock, which immediately
+  // removes it from the function's block list. Collect OtherCallBrs only
+  // after this loop to avoid holding dangling pointers into deleted blocks.
   for (auto *CBR : AsmConstraintBrs)
     Changed |= processAsmConstraintBrInst(*CBR, IsOptLevelNone, DTU);
 
-  // Process the rest of the 'callbr' instructions.
+  // Collect and process the remaining 'callbr' instructions.
+  SmallVector<CallBrInst *, 4> OtherCallBrs;
+  for (auto &BB : F)
+    if (auto *CBR = dyn_cast<CallBrInst>(BB.getTerminator()))
+      if (!CBR->getType()->isVoidTy() && !CBR->use_empty())
+        OtherCallBrs.push_back(CBR);
+
   for (auto *CBR : OtherCallBrs)
     Changed |= processCallBrInst(CBR, DTU.getDomTree());
 
