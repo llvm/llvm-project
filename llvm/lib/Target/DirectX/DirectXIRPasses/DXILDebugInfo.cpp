@@ -19,8 +19,7 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-// llvm.dbg.value has an additional "offset" operand in DXIL. Transform
-// llvm.dbg.value it to llvm.dx.dbg.value and add zero offset.
+// llvm.dbg.value has an additional "offset" operand in DXIL.
 static void replaceDbgVariableIntr(DbgVariableIntrinsic *DVI, Function *NewF,
                                    DXILDebugInfoMap &Res) {
   if (DVI->getIntrinsicID() != Intrinsic::dbg_value) {
@@ -37,11 +36,10 @@ static void replaceDbgVariableIntr(DbgVariableIntrinsic *DVI, Function *NewF,
       DVI->getOperand(2),
   };
 
-  CallInst *NewI = CallInst::Create(NewF->getFunctionType(), NewF, NewOps, "",
-                                    std::next(DVI->getIterator()));
+  CallInst *NewI = CallInst::Create(NewF->getFunctionType(), NewF, NewOps);
   NewI->setTailCall(DVI->isTailCall());
   NewI->setDebugLoc(DVI->getDebugLoc());
-  Res.VRemove.insert(DVI);
+  Res.IReplace.insert({DVI, decltype(Res.IReplace)::mapped_type(NewI)});
 }
 
 static void replaceDbgValue(Module &M, DXILDebugInfoMap &Res) {
@@ -49,9 +47,15 @@ static void replaceDbgValue(Module &M, DXILDebugInfoMap &Res) {
   if (!F)
     return;
 
-  Function *NewF = getOrInsertDeclaration(&M, Intrinsic::dx_dbg_value);
-  Res.VRemove.insert(F);
-  Res.VRename.insert({NewF, F});
+  FunctionType *FT = F->getFunctionType();
+  Type *Int64Ty = Type::getInt64Ty(F->getContext());
+  FunctionType *NewFT = FunctionType::get(
+      FT->getReturnType(),
+      {FT->getParamType(0), Int64Ty, FT->getParamType(1), FT->getParamType(2)},
+      /*isVarArg=*/false);
+  Function *NewF = Function::Create(NewFT, F->getLinkage(), F->getName());
+  NewF->copyAttributesFrom(F);
+  Res.FReplace.insert({F, decltype(Res.FReplace)::mapped_type(NewF)});
 
   for (User *U : F->users()) {
     auto *DVI = cast<DbgVariableIntrinsic>(U);

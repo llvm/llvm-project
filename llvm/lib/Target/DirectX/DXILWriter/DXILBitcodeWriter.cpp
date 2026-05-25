@@ -1311,9 +1311,8 @@ void DXILBitcodeWriter::writeModuleInfo() {
   }
 
   // Emit the function proto information.
-  for (const Function &F : M) {
-    if (DebugInfo.VRemove.contains(&F))
-      continue;
+  for (const Function &OrigF : M) {
+    const Function &F = VE.getDXILFunction(OrigF);
 
     // FUNCTION:  [type, callingconv, isproto, linkage, paramattrs, alignment,
     //             section, visibility, gc, unnamed_addr, prologuedata,
@@ -1893,9 +1892,8 @@ void DXILBitcodeWriter::writeFunctionMetadataAttachment(const Function &F) {
   }
 
   for (const BasicBlock &BB : F)
-    for (const Instruction &I : BB) {
-      if (DebugInfo.VRemove.contains(&I))
-        continue;
+    for (const Instruction &OrigI : BB) {
+      const Instruction &I = VE.getDXILInstruction(OrigI);
 
       MDs.clear();
       I.getAllMetadataOtherThanDebugLoc(MDs);
@@ -2605,25 +2603,19 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
   // HLSL Change
   // Read the named values from a sorted list instead of the original list
   // to ensure the binary is the same no matter what values ever existed.
-  SmallVector<std::pair<const ValueName *, const Value *>, 16> SortedTable;
+  SmallVector<const ValueName *, 16> SortedTable;
 
   for (auto &VI : VST) {
-    const Value *V = VI.second;
-    if (DebugInfo.VRemove.contains(V))
-      continue;
-    SortedTable.push_back(
-        {DebugInfo.VRename.lookup_or(V, V)->getValueName(), V});
+    const Value &V = VE.getDXILValue(*VI.second);
+    SortedTable.push_back(V.getValueName());
   }
   // The keys are unique, so there shouldn't be stability issues.
-  llvm::sort(SortedTable,
-             [](const std::pair<const ValueName *, const Value *> &A,
-                const std::pair<const ValueName *, const Value *> &B) {
-               return A.first->first() < B.first->first();
-             });
+  llvm::sort(SortedTable, [](const ValueName *A, const ValueName *B) {
+    return A->first() < B->first();
+  });
 
-  for (std::pair<const ValueName *, const Value *> &SI : SortedTable) {
-    const ValueName &Name = *SI.first;
-    const Value *Value = SI.second;
+  for (const ValueName *SI : SortedTable) {
+    auto &Name = *SI;
 
     // Figure out the encoding to use for the name.
     bool is7Bit = true;
@@ -2643,7 +2635,7 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
     // VST_ENTRY:   [valueid, namechar x N]
     // VST_BBENTRY: [bbid, namechar x N]
     unsigned Code;
-    if (isa<BasicBlock>(Value)) {
+    if (isa<BasicBlock>(SI->getValue())) {
       Code = bitc::VST_CODE_BBENTRY;
       if (isChar6)
         AbbrevToUse = VST_BBENTRY_6_ABBREV;
@@ -2655,7 +2647,7 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
         AbbrevToUse = VST_ENTRY_7_ABBREV;
     }
 
-    NameVals.push_back(VE.getValueID(Value));
+    NameVals.push_back(VE.getValueID(SI->getValue()));
     for (const char *P = Name.getKeyData(),
                     *E = Name.getKeyData() + Name.getKeyLength();
          P != E; ++P)
@@ -2698,21 +2690,20 @@ void DXILBitcodeWriter::writeFunction(const Function &F) {
 
   // Finally, emit all the instructions, in order.
   for (Function::const_iterator BB = F.begin(), E = F.end(); BB != E; ++BB)
-    for (BasicBlock::const_iterator I = BB->begin(), E = BB->end(); I != E;
-         ++I) {
-      if (DebugInfo.VRemove.contains(&*I))
-        continue;
+    for (BasicBlock::const_iterator It = BB->begin(), E = BB->end(); It != E;
+         ++It) {
+      const Instruction &I = VE.getDXILInstruction(*It);
 
-      writeInstruction(*I, InstID, Vals);
+      writeInstruction(I, InstID, Vals);
 
-      if (!I->getType()->isVoidTy())
+      if (!I.getType()->isVoidTy())
         ++InstID;
 
       // If the instruction has metadata, write a metadata attachment later.
-      NeedsMetadataAttachment |= I->hasMetadataOtherThanDebugLoc();
+      NeedsMetadataAttachment |= I.hasMetadataOtherThanDebugLoc();
 
       // If the instruction has a debug location, emit it.
-      DILocation *DL = I->getDebugLoc();
+      DILocation *DL = I.getDebugLoc();
       if (!DL)
         continue;
 

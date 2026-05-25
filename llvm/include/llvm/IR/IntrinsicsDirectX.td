@@ -318,11 +318,4 @@ def int_dx_store_output
                             [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i8_ty,
                              llvm_i32_ty, llvm_any_ty],
                             [IntrConvergent]>;
-
-// int_dx_dbg_value is inserted after attribute legalization is done,
-// so it can only have attributes that are supported by DXIL.
-def int_dx_dbg_value
-    : Intrinsic<[],
-         [llvm_metadata_ty, llvm_i64_ty, llvm_metadata_ty, llvm_metadata_ty],
-         [IntrNoMem]>;
 }
