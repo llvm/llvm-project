@@ -33,8 +33,13 @@ CHECK-WARNING: BOLT-INFO: Functions with density >= 21.7 account for 97.00% tota
 RUN: llvm-bolt %t.exe -data %t -o %t.null | FileCheck %s
 RUN: llvm-bolt %t.exe -data %t.new -o %t.null | FileCheck %s
 RUN: llvm-bolt %t.exe -p %p/Inputs/pre-aggregated.txt --pa -o %t.null | FileCheck %s
+RUN: llvm-bolt %t.exe --pa -perfdata %p/Inputs/pre-aggregated.txt -perfdata %p/Inputs/pre-aggregated.txt -o %t.multi-perfdata.null | FileCheck %s --check-prefix=CHECK-MULTI
+RUN: llvm-bolt %t.exe --pa -p %p/Inputs/pre-aggregated.txt,%p/Inputs/pre-aggregated.txt -o %t.multi-perfdata-comma.null | FileCheck %s --check-prefix=CHECK-MULTI
+RUN: not llvm-bolt %t.exe --pa -p %p/Inputs/pre-aggregated.txt -p %t.missing -o %t.multi-perfdata-missing.null 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING
 
 CHECK: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-empty execution profile
+CHECK-MULTI: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-empty execution profile
+CHECK-MISSING: {{.*}}missing': No such file or directory.
 
 RUN: FileCheck %s -check-prefix=PERF2BOLT --input-file %t
 RUN: FileCheck %s -check-prefix=NEWFORMAT --input-file %t.new

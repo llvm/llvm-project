@@ -51,9 +51,7 @@ class BoltAddressTranslation;
 /// specified by the user.
 class DataAggregator : public DataReader {
 public:
-  explicit DataAggregator(StringRef Filename) : DataReader(Filename) {
-    start();
-  }
+  explicit DataAggregator(StringRef Filename) : DataReader(Filename) {}
 
   ~DataAggregator();
 
@@ -68,6 +66,10 @@ public:
   }
 
   Error readProfile(BinaryContext &BC) override;
+
+  /// Add an additional perf.data or pre-aggregated profile input to be merged
+  /// into this aggregation job.
+  void addInputFile(StringRef Filename);
 
   bool mayHaveProfileData(const BinaryFunction &BF) override;
 
@@ -146,6 +148,10 @@ private:
   std::unordered_map<uint64_t, bool> Returns;
   std::unordered_map<uint64_t, uint64_t> BasicSamples;
   std::vector<PerfMemSample> MemSamples;
+
+  /// Perf.data or pre-aggregated inputs to aggregate and merge into this
+  /// reader.
+  std::vector<std::string> InputFilenames;
 
   /// Filter pre-aggregated entries belonging to a DSO with this buildid.
   /// Set when processing a shared library, empty implies main binary.
@@ -389,7 +395,16 @@ private:
   std::optional<std::pair<StringRef, StringRef>> parseNameBuildIDPair();
 
   /// Coordinate reading and parsing of perf.data file
-  void parsePerfData(BinaryContext &BC);
+  void parsePerfData();
+
+  /// Parse this aggregator's input file.
+  void parseInput();
+
+  /// Merge parsed profile data from another aggregation job.
+  void mergeFrom(const DataAggregator &Other);
+
+  /// Mark binary functions covered by parsed profile data.
+  void markFunctionsWithProfile();
 
   /// Coordinate reading and parsing of pre-aggregated file
   ///
