@@ -12,9 +12,10 @@
 #include "flang/Runtime/magic-numbers.h"
 #include <algorithm>
 #include <cerrno>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
-#include <stdlib.h>
 #include <sys/stat.h>
 #ifdef _WIN32
 #include "flang/Common/windows-include.h"
@@ -29,6 +30,29 @@ void OpenFile::set_path(OwningPtr<char> &&path, std::size_t bytes) {
   path_ = std::move(path);
   pathLength_ = bytes;
 }
+
+#ifndef _WIN32
+// Mirrors the lookup chain used by llvm::sys::path::system_temp_directory on
+// Unix: first the conventional environment variables, then P_tmpdir if the
+// platform defines one, then /tmp as the final fallback. The returned pointer
+// is owned by the environment or points to a string literal; the caller must
+// copy before mutating.
+static const char *GetSystemTempDir() {
+  static const char *const envVars[]{"TMPDIR", "TMP", "TEMP", "TEMPDIR"};
+  for (const char *name : envVars) {
+    const char *value{std::getenv(name)};
+    if (value && *value) {
+      return value;
+    }
+  }
+#ifdef P_tmpdir
+  if (P_tmpdir && *P_tmpdir) {
+    return P_tmpdir;
+  }
+#endif
+  return "/tmp";
+}
+#endif
 
 static int openfile_mkstemp(IoErrorHandler &handler) {
 #ifdef _WIN32
@@ -48,14 +72,26 @@ static int openfile_mkstemp(IoErrorHandler &handler) {
   int fd{::_open(tempFileName, _O_CREAT | _O_BINARY | _O_TEMPORARY | _O_RDWR,
       _S_IREAD | _S_IWRITE)};
 #else
-  char path[]{"/tmp/Fortran-Scratch-XXXXXX"};
-  int fd{::mkstemp(path)};
+  static constexpr char suffix[]{"/Fortran-Scratch-XXXXXX"};
+  const char *dir{GetSystemTempDir()};
+  std::size_t dirLen{std::strlen(dir)};
+  // Drop a single trailing slash so we never produce a "//" in the path.
+  if (dirLen > 1 && dir[dirLen - 1] == '/') {
+    --dirLen;
+  }
+  OwningPtr<char> path{reinterpret_cast<char *>(
+      AllocateMemoryOrCrash(handler, dirLen + sizeof(suffix)))};
+  runtime::memcpy(path.get(), dir, dirLen);
+  runtime::memcpy(path.get() + dirLen, suffix, sizeof(suffix));
+  int fd{::mkstemp(path.get())};
 #endif
   if (fd < 0) {
     handler.SignalErrno();
   }
 #ifndef _WIN32
-  ::unlink(path);
+  if (fd >= 0) {
+    ::unlink(path.get());
+  }
 #endif
   return fd;
 }

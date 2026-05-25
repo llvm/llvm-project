@@ -84,3 +84,20 @@ the pool can hold, the runtime terminates with a diagnostic message that
 includes the current pool capacity.
 
 Example: `export FLANG_TRAMPOLINE_POOL_SIZE=4096`
+
+## `TMPDIR`, `TMP`, `TEMP`, `TEMPDIR`
+
+These conventional POSIX environment variables select the directory in
+which the runtime creates scratch files for `OPEN(STATUS='SCRATCH')`.
+The first one that is set to a non-empty value wins, with the search
+order being `TMPDIR`, then `TMP`, then `TEMP`, then `TEMPDIR`. If none
+are set, the runtime falls back to `P_tmpdir` (typically `/tmp` on
+glibc) and finally to `/tmp`. This lookup order matches
+`llvm::sys::path::system_temp_directory`, so flang agrees with the rest
+of the LLVM toolchain on where temporary files go.
+
+On Windows these variables are not consulted directly; scratch files
+are placed in the directory returned by `GetTempPathA`, which itself
+consults `TMP`, `TEMP`, and `USERPROFILE`.
+
+Example: `export TMPDIR=/var/local/scratch`
