@@ -14,95 +14,108 @@
 // constexpr index_type operator()(Indices...) const noexcept;
 
 #include <cassert>
+#include <concepts>
 #include <cstddef>
 #include <mdspan>
-#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 
 #include "../ConvertibleToIntegral.h"
 
 template <class Mapping, class... Indices>
-concept operator_constraints = requires(Mapping mapping, Indices... idxs) {
-  { std::is_same_v<decltype(mapping(idxs...)), typename Mapping::index_type> };
+concept operator_constraints = requires(const Mapping& mapping, Indices... idxs) {
+  { mapping(idxs...) } noexcept -> std::same_as<typename Mapping::index_type>;
 };
 
 template <class Mapping, class... Indices>
-  requires(operator_constraints<Mapping, Indices...>)
-constexpr bool check_operator_constraints(Mapping mapping, Indices... idxs) {
-  (void)mapping(idxs...);
-  return true;
+constexpr Mapping::index_type expected_result(const Mapping& mapping, Indices... idxs) {
+  using index_type = Mapping::index_type;
+
+  static_assert(sizeof...(Indices) == Mapping::extents_type::rank());
+
+  index_type result = 0;
+  size_t r          = 0;
+
+  ((result = static_cast<index_type>(result + static_cast<index_type>(std::move(idxs)) * mapping.stride(r++))), ...);
+
+  return result;
 }
 
 template <class Mapping, class... Indices>
-constexpr bool check_operator_constraints(Mapping, Indices...) {
-  return false;
-}
-
-template <class Mapping, class... Args>
-constexpr void iterate_right_padded(Mapping mapping, typename Mapping::index_type expected, Args... args) {
-  constexpr size_t r = sizeof...(Args);
-  if constexpr (Mapping::extents_type::rank() == r) {
-    ASSERT_NOEXCEPT(mapping(args...));
-    assert(expected == mapping(args...));
+constexpr void check_operator_result(Mapping mapping, Indices... idxs) {
+  if constexpr (constexpr size_t rank = Mapping::extents_type::rank(); sizeof...(Indices) == rank) {
+    assert(mapping(idxs...) == expected_result(mapping, idxs...));
   } else {
+    constexpr size_t r = rank - 1 - sizeof...(Indices);
     for (typename Mapping::index_type i = 0; i < mapping.extents().extent(r); ++i)
-      iterate_right_padded(
-          mapping, static_cast<typename Mapping::index_type>(expected + i * mapping.stride(r)), args..., i);
+      check_operator_result(mapping, i, idxs...);
   }
 }
 
 template <class Extents, size_t PaddingValue, class... Args>
-constexpr void test_iteration(Args... args) {
-  using Mapping = typename std::layout_right_padded<PaddingValue>::template mapping<Extents>;
+constexpr void test_operator_result(Args... args) {
+  using Mapping = std::layout_right_padded<PaddingValue>::template mapping<Extents>;
+
   Mapping mapping(Extents(args...));
-  iterate_right_padded(mapping, typename Extents::index_type(0));
+  check_operator_result(mapping);
 }
 
 template <class Mapping>
-constexpr void test_iteration(Mapping mapping) {
-  iterate_right_padded(mapping, typename Mapping::index_type(0));
+constexpr void test_operator_result(Mapping mapping) {
+  check_operator_result(mapping);
 }
 
 constexpr bool test() {
   constexpr size_t D = std::dynamic_extent;
 
-  test_iteration<std::extents<int>, 4>();
-  test_iteration<std::extents<unsigned, 7>, 4>();
-  test_iteration<std::extents<unsigned, 5, 7>, 4>();
-  test_iteration<std::extents<signed char, D, 2, 3>, 4>(3);
+  {
+    using Rank0Mapping = std::layout_right_padded<4>::mapping<std::extents<int>>;
+    using Rank1Mapping = std::layout_right_padded<D>::mapping<std::extents<int, D>>;
 
-  test_iteration<std::extents<int>, D>();
-  test_iteration<std::extents<unsigned, D>, D>(7);
-  test_iteration(std::layout_right_padded<D>::mapping<std::extents<unsigned, 5, 7>>(std::extents<unsigned, 5, 7>(), 6));
-  test_iteration(
-      std::layout_right_padded<D>::mapping<std::extents<unsigned, D, 2, 3>>(std::extents<unsigned, D, 2, 3>(3), 4));
+    static_assert(operator_constraints<Rank0Mapping>);
+    static_assert(!operator_constraints<Rank0Mapping, int>);
 
-  // Check operator constraint for number of arguments
-  static_assert(check_operator_constraints(
-      std::layout_right_padded<D>::mapping<std::extents<int, D>>(std::extents<int, D>(1), 1), 0));
-  static_assert(!check_operator_constraints(
-      std::layout_right_padded<D>::mapping<std::extents<int, D>>(std::extents<int, D>(1), 1), 0, 0));
-
-  // Check operator constraint for convertibility of arguments to index_type
-  static_assert(check_operator_constraints(
-      std::layout_right_padded<D>::mapping<std::extents<int, D>>(std::extents<int, D>(1), 1), IntType(0)));
-  static_assert(!check_operator_constraints(
-      std::layout_right_padded<D>::mapping<std::extents<unsigned, D>>(std::extents<unsigned, D>(1), 1), IntType(0)));
-
-  // Check operator constraint for no-throw-constructibility of index_type from arguments
-  static_assert(!check_operator_constraints(
-      std::layout_right_padded<D>::mapping<std::extents<unsigned char, D>>(std::extents<unsigned char, D>(1), 1),
-      IntType(0)));
-
-  static_assert(check_operator_constraints(
-      std::layout_right_padded<4>::mapping<std::extents<int, 2, 2>>(std::extents<int, 2, 2>()),
-      RValueInt{1},
-      RValueInt{0}));
+    static_assert(operator_constraints<Rank1Mapping, int>);
+    static_assert(!operator_constraints<Rank1Mapping>);
+    static_assert(!operator_constraints<Rank1Mapping, int, int>);
+  }
 
   {
-    constexpr std::layout_right_padded<4>::mapping<std::extents<int, 2, 2>> mapping(std::extents<int, 2, 2>{});
-    static_assert(mapping(RValueInt{1}, RValueInt{0}) == 4);
+    using SignedMapping   = std::layout_right_padded<D>::mapping<std::extents<int, D>>;
+    using UnsignedMapping = std::layout_right_padded<D>::mapping<std::extents<unsigned, D>>;
+
+    static_assert(operator_constraints<SignedMapping, IntType>);
+    static_assert(!operator_constraints<UnsignedMapping, IntType>);
+  }
+
+  {
+    using SignedMapping   = std::layout_right_padded<D>::mapping<std::extents<signed char, D>>;
+    using UnsignedMapping = std::layout_right_padded<D>::mapping<std::extents<unsigned char, D>>;
+
+    static_assert(operator_constraints<SignedMapping, IntType>);
+    static_assert(!operator_constraints<UnsignedMapping, IntType>);
+  }
+
+  test_operator_result<std::extents<int>, 4>();
+  test_operator_result<std::extents<unsigned, 7>, 4>();
+  test_operator_result<std::extents<unsigned, 5, 7>, 4>();
+  test_operator_result<std::extents<signed char, D, 2, 3>, 4>(3);
+
+  test_operator_result<std::extents<int>, D>();
+  test_operator_result<std::extents<unsigned, D>, D>(7);
+  test_operator_result(
+      std::layout_right_padded<D>::mapping<std::extents<unsigned, 5, 7>>(std::extents<unsigned, 5, 7>(), 6));
+  test_operator_result(
+      std::layout_right_padded<D>::mapping<std::extents<unsigned, D, 2, 3>>(std::extents<unsigned, D, 2, 3>(3), 4));
+
+  {
+    using Mapping = std::layout_right_padded<4>::mapping<std::extents<int, 2, 2>>;
+
+    static_assert(operator_constraints<Mapping, RValueInt, RValueInt>);
+
+    constexpr Mapping mapping(std::extents<int, 2, 2>{});
+    static_assert(mapping(RValueInt{1}, RValueInt{0}) == expected_result(mapping, RValueInt{1}, RValueInt{0}));
   }
 
   return true;
