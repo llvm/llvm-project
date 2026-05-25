@@ -167,7 +167,8 @@ static bool inThisOrder(const Instruction *Src, const Instruction *Dst) {
 #endif
 
 static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
-                                     Loop *L, DependenceInfo *DI,
+                                     Loop *L, ArrayRef<Loop *> LoopList,
+                                     LoopInfo *LI, DependenceInfo *DI,
                                      ScalarEvolution *SE,
                                      OptimizationRemarkEmitter *ORE) {
   using ValueVector = SmallVector<Value *, 16>;
@@ -175,19 +176,27 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   ValueVector MemInstr;
   unsigned NumInsts = 0;
 
-  // For each block.
-  for (BasicBlock *BB : L->blocks()) {
-    // Scan the BB and collect legal loads and stores.
-    for (Instruction &I : *BB) {
-      NumInsts++;
-      if (auto *Ld = dyn_cast<LoadInst>(&I)) {
-        if (!Ld->isSimple())
+  // Collect memory instructions from the BB which belongs to all loops in the LoopList
+  for (Loop *PathLoop : LoopList) {
+    for (BasicBlock *BB : PathLoop->getBlocksVector()) {
+      // In this iteration we need to handle the BB contained directly by Current Loop 
+      // and all other BB of subloops will be handled in its own in next iterations.
+      if (LI->getLoopFor(BB) != PathLoop)
+        continue;
+      // Scan the BB and collect legal loads and stores.
+      for (Instruction &I : *BB) {
+        if (!isa<Instruction>(I))
           return false;
-        MemInstr.push_back(&I);
-      } else if (auto *St = dyn_cast<StoreInst>(&I)) {
-        if (!St->isSimple())
-          return false;
-        MemInstr.push_back(&I);
+        NumInsts++;
+        if (auto *Ld = dyn_cast<LoadInst>(&I)) {
+          if (!Ld->isSimple())
+            return false;
+          MemInstr.push_back(&I);
+        } else if (auto *St = dyn_cast<StoreInst>(&I)) {
+          if (!St->isSimple())
+            return false;
+          MemInstr.push_back(&I);
+        }
       }
     }
   }
@@ -674,12 +683,59 @@ struct LoopInterchange {
     return processLoopList(LoopList);
   }
 
+  static SmallVector<SmallVector<Loop *, 8>, 4> collectRootToLeafPaths(Loop *Root) {
+    SmallVector<SmallVector<Loop *, 8>, 4> AllPaths;
+    // Stack stores {Loop, CurrentPath} pairs
+    SmallVector<std::pair<Loop *, SmallVector<Loop *, 8>>, 8> Stack;
+    Stack.push_back({Root, {Root}});
+    while (!Stack.empty()) {
+      auto [L, CurrentPath] = Stack.pop_back_val();
+      const auto &SubLoops = L->getSubLoops();
+      if (SubLoops.empty()) {
+        // Leaf node: save the path
+        AllPaths.push_back(CurrentPath);
+      } else {
+        for (Loop *Child : SubLoops) {
+          SmallVector<Loop *, 8> NewPath(CurrentPath);
+          NewPath.push_back(Child);
+          Stack.push_back({Child, NewPath});
+        }
+      }
+    }
+    return AllPaths;
+  }
+
   bool run(LoopNest &LN) {
-    SmallVector<Loop *, 8> LoopList(LN.getLoops());
-    for (unsigned I = 1; I < LoopList.size(); ++I)
-      if (LoopList[I]->getParentLoop() != LoopList[I - 1])
-        return false;
-    return processLoopList(LoopList);
+    auto Paths = collectRootToLeafPaths(&LN.getOutermostLoop());
+    // Consider below kernel
+    // for(int i=0; i<n; i++){  // Loop 1
+    //     for(int j=0; j<m; j++){  // Loop 2
+    //         for(int r=0; r<m; r++){  // Loop 3
+    //         // Do something
+    //         }
+    //     }
+    //     for(int k=0; k<p; k++){  // Loop 4
+    //         for(int l=0; l<p; l++){  // Loop 5
+    //             // Do something
+    //         }
+    //     }
+    // }
+    // Then Paths will contain:
+    // - [Loop1, Loop2, Loop3]
+    // - [Loop1, Loop4, Loop5]
+    bool Changed = false;
+    for (auto &Path : Paths) {
+      // Ensure minimum depth of the loop nest to do the interchange.
+      if (!hasSupportedLoopDepth(Path, *ORE))
+        continue;
+      // Ensure computable loop nest.
+      if (!isComputableLoopNest(&AR->SE, Path)) {
+        LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
+        continue;
+      }
+      Changed |= processLoopList(Path);
+    }
+    return Changed;
   }
 
   unsigned selectLoopForInterchange(ArrayRef<Loop *> LoopList) {
@@ -709,7 +765,7 @@ struct LoopInterchange {
     CharMatrix DependencyMatrix;
     Loop *OuterMostLoop = *(LoopList.begin());
     if (!populateDependencyMatrix(DependencyMatrix, LoopNestDepth,
-                                  OuterMostLoop, DI, SE, ORE)) {
+                                  OuterMostLoop, LoopList, LI, DI, SE, ORE)) {
       LLVM_DEBUG(dbgs() << "Populating dependency matrix failed\n");
       return false;
     }
@@ -2602,18 +2658,8 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
                                            LoopStandardAnalysisResults &AR,
                                            LPMUpdater &U) {
   Function &F = *LN.getParent();
-  SmallVector<Loop *, 8> LoopList(LN.getLoops());
 
   OptimizationRemarkEmitter ORE(&F);
-
-  // Ensure minimum depth of the loop nest to do the interchange.
-  if (!hasSupportedLoopDepth(LoopList, ORE))
-    return PreservedAnalyses::all();
-  // Ensure computable loop nest.
-  if (!isComputableLoopNest(&AR.SE, LoopList)) {
-    LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
-    return PreservedAnalyses::all();
-  }
 
   ORE.emit([&]() {
     return OptimizationRemarkAnalysis(DEBUG_TYPE, "Dependence",
