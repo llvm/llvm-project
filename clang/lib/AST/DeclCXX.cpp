@@ -113,12 +113,16 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       IsLambda(false), IsParsingBaseSpecifiers(false),
       ComputedVisibleConversions(false), HasODRHash(false), Definition(D) {}
 
-CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getBasesSlowCase() const {
-  return Bases.get(Definition->getASTContext().getExternalSource());
+CXXBaseSpecifier *
+CXXRecordDecl::DefinitionData::getBasesSlowCase(
+    const ASTContext &Context) const {
+  return Bases.get(Context.getExternalSource());
 }
 
-CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getVBasesSlowCase() const {
-  return VBases.get(Definition->getASTContext().getExternalSource());
+CXXBaseSpecifier *
+CXXRecordDecl::DefinitionData::getVBasesSlowCase(
+    const ASTContext &Context) const {
+  return VBases.get(Context.getExternalSource());
 }
 
 CXXRecordDecl::CXXRecordDecl(Kind K, TagKind TK, const ASTContext &C,
@@ -186,7 +190,7 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
   ASTContext &C = getASTContext();
 
   if (!data().Bases.isOffset() && data().NumBases > 0)
-    C.Deallocate(data().getBases());
+    C.Deallocate(data().getBases(C));
 
   if (NumBases) {
     if (!C.getLangOpts().CPlusPlus17) {
@@ -209,7 +213,7 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
   data().Bases = new(C) CXXBaseSpecifier [NumBases];
   data().NumBases = NumBases;
   for (unsigned i = 0; i < NumBases; ++i) {
-    data().getBases()[i] = *Bases[i];
+    data().getBases(C)[i] = *Bases[i];
     // Keep track of inherited vbases for this base class.
     const CXXBaseSpecifier *Base = Bases[i];
     QualType BaseType = Base->getType();
@@ -484,7 +488,7 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     QualType Type = VBases[I]->getType();
     if (!Type->isDependentType())
       addedClassSubobject(Type->getAsCXXRecordDecl());
-    data().getVBases()[I] = *VBases[I];
+    data().getVBases(C)[I] = *VBases[I];
   }
 
   data().IsParsingBaseSpecifiers = false;
