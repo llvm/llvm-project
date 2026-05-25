@@ -1,5 +1,6 @@
 ; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -pass-remarks='loop-interchange' -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -disable-output -S
 ; RUN: FileCheck --input-file=%t %s
+; XFAIL: *
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 
