@@ -63,6 +63,7 @@
 #include "llvm/Transforms/Utils/CodeMoverUtils.h"
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include <list>
 
 using namespace llvm;
@@ -665,7 +666,13 @@ private:
                       << " iterations of the first loop. \n");
 
     ValueToValueMapTy VMap;
-    peelLoop(FC0.L, PeelCount, false, &LI, &SE, DT, &AC, true, VMap);
+    // peelLoop can invalidate LCSSA on the surrounding nest; reform it
+    // explicitly below instead of asking peelLoop to preserve it.
+    peelLoop(FC0.L, PeelCount, /*PeelLast=*/false, &LI, &SE, DT, &AC,
+             /*PreserveLCSSA=*/false, VMap);
+    Loop *AffectedNest =
+        FC0.L->getParentLoop() ? FC0.L->getParentLoop() : FC0.L;
+    formLCSSARecursively(*AffectedNest, DT, &LI, &SE);
     FC0.Peeled = true;
     LLVM_DEBUG(dbgs() << "Done Peeling\n");
 
