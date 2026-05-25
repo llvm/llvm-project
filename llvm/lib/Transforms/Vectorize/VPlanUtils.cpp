@@ -860,27 +860,25 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
   return false;
 }
 
-VPValue *VPBuilder::VPSCEVExpander::expand(const SCEV *S) {
+VPValue *VPBuilder::VPSCEVExpander::tryToExpand(const SCEV *S) {
   switch (S->getSCEVType()) {
   case scConstant:
-    return Plan.getOrAddLiveIn(cast<SCEVConstant>(S)->getValue());
+    return Builder.getPlan().getOrAddLiveIn(cast<SCEVConstant>(S)->getValue());
   case scUnknown:
-    return Plan.getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
+    return Builder.getPlan().getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
   case scVScale:
     return Builder.createNaryOp(VPInstruction::VScale, {}, S->getType());
   case scMulExpr: {
     auto *Mul = cast<SCEVMulExpr>(S);
     SmallVector<VPValue *, 2> Ops;
     for (const SCEVUse &Op : Mul->operands()) {
-      VPValue *OpV = expand(Op);
+      VPValue *OpV = tryToExpand(Op);
       if (!OpV)
         return nullptr;
       Ops.push_back(OpV);
     }
     VPIRFlags::WrapFlagsTy WrapFlags(Mul->hasNoUnsignedWrap(),
                                      Mul->hasNoSignedWrap());
-    // Chain the operands with Mul, matching SCEVExpander behavior of applying
-    // wrap flags to all chained multiplies.
     VPValue *Result = Ops.front();
     for (VPValue *Op : drop_begin(Ops))
       Result = Builder.createOverflowingOp(Instruction::Mul, {Result, Op},
