@@ -7,7 +7,6 @@ define void @reverse_predicated_store(i1 %c, ptr %dst, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> zeroinitializer)
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -23,7 +22,7 @@ define void @reverse_predicated_store(i1 %c, ptr %dst, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub nuw nsw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 0, [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr float, ptr [[ARRAYIDX]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP12:%.*]] = call <vscale x 4 x float> @llvm.vector.splice.right.nxv4f32(<vscale x 4 x float> [[REVERSE]], <vscale x 4 x float> poison, i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP12:%.*]] = call <vscale x 4 x float> @llvm.experimental.vp.reverse.nxv4f32(<vscale x 4 x float> zeroinitializer, <vscale x 4 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[TMP12]], ptr align 4 [[TMP9]], <vscale x 4 x i1> [[VP_REVERSE_MASK]], i32 [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP4]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP4]]
