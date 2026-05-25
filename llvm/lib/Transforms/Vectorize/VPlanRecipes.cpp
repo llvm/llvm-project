@@ -461,15 +461,13 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
   assert(!Operands.empty() &&
          "zero-operand VPInstruction opcodes must pass explicit ResultTy");
   // Assert operand \p Idx (if present and typed) has type \p ExpectedTy.
-  auto AssertOperandType = [&Operands]([[maybe_unused]] unsigned Idx,
-                                       [[maybe_unused]] Type *ExpectedTy) {
-#ifndef NDEBUG
+  [[maybe_unused]] auto AssertOperandType = [&Operands](unsigned Idx,
+                                                        Type *ExpectedTy) {
     if (!ExpectedTy || Operands.size() <= Idx)
       return;
     Type *OpTy = getScalarTypeOrInfer(Operands[Idx]);
     assert((!OpTy || OpTy == ExpectedTy) &&
            "different types inferred for different operands");
-#endif
   };
 
   Type *Op0Ty = getScalarTypeOrInfer(Operands[0]);

@@ -226,6 +226,8 @@ public:
   VPInstruction *createFirstActiveLane(ArrayRef<VPValue *> Masks,
                                        DebugLoc DL = DebugLoc::getUnknown(),
                                        const Twine &Name = "") {
+    // Assume that the maximum possible number of elements in a vector fits
+    // within the index type for the default address space.
     VPlan &Plan = getPlan();
     Type *IndexTy = Plan.getDataLayout().getIndexType(Plan.getContext(), 0);
     return tryInsertInstruction(new VPInstruction(
@@ -235,6 +237,8 @@ public:
   VPInstruction *createLastActiveLane(ArrayRef<VPValue *> Masks,
                                       DebugLoc DL = DebugLoc::getUnknown(),
                                       const Twine &Name = "") {
+    // Assume that the maximum possible number of elements in a vector fits
+    // within the index type for the default address space.
     VPlan &Plan = getPlan();
     Type *IndexTy = Plan.getDataLayout().getIndexType(Plan.getContext(), 0);
     return tryInsertInstruction(new VPInstruction(
