@@ -415,7 +415,7 @@ class FLAT_Global_Load_LDS_PseudoImpl <string opName, bit EnableSaddr = 0, bit I
   let VALU = 1;
   let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
   let Uses = !if(IsPreGFX12Async, [M0, EXEC, AsyncMarker],
-                  !if(IsAsync, [EXEC, ASYNCcnt], [M0, EXEC]));
+                  !if(IsAsync, [EXEC, ASYNCcnt, AsyncMarker], [M0, EXEC]));
   let Defs = !if(IsAsync, [ASYNCcnt], []);
   let SchedRW = [WriteVMEM, WriteLDS];
 }
@@ -458,7 +458,7 @@ class FLAT_Global_STORE_LDS_Pseudo <string opName, bit EnableSaddr = 0> : FLAT_P
   let has_saddr = 1;
   let enabled_saddr = EnableSaddr;
   let VALU = 1;
-  let Uses = [EXEC, ASYNCcnt];
+  let Uses = [EXEC, ASYNCcnt, AsyncMarker];
   let Defs = [ASYNCcnt];
   let SchedRW = [WriteVMEM, WriteLDS];
 }
@@ -1254,12 +1254,12 @@ let SubtargetPredicate = isGFX12Plus in {
 
 let SubtargetPredicate = HasMcastLoadInsts in {
 
-let Uses = [M0, EXEC, ASYNCcnt], WaveSizePredicate = isWave32 in {
+let Uses = [M0, EXEC, ASYNCcnt, AsyncMarker], WaveSizePredicate = isWave32 in {
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B8      :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b8",   1>;
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B32     :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b32",  1>;
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B64     :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b64",  1>;
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B128    :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b128", 1>;
-} // End Uses = [M0, EXEC, ASYNCcnt], WaveSizePredicate = isWave32
+} // End Uses = [M0, EXEC, ASYNCcnt, AsyncMarker], WaveSizePredicate = isWave32
 
 def TENSOR_SAVE : FLAT_Global_Tensor_Pseudo<"tensor_save", 1>;
 def TENSOR_STOP : FLAT_Global_Tensor_Pseudo<"tensor_stop">;
