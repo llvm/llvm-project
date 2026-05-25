@@ -73,9 +73,52 @@ LD_LLD="${BUILD_DIR}/bin/ld.lld"
 [[ -x "${LD_LLD}" ]] || { echo "ERROR: lld not found at ${LD_LLD}"; exit 1; }
 
 EJIT_RUNTIME="${BUILD_DIR}/lib/libLLVMEJIT.a"
-OTHER_LIBS=$(ls "${BUILD_DIR}/lib/"*.a 2>/dev/null | grep -v gtest | grep -v libLLVMEJIT || true)
-LINK_LIBS="-lz -lpthread -ldl"
 [[ -f "${EJIT_RUNTIME}" ]] || { echo "ERROR: libLLVMEJIT.a not found in ${BUILD_DIR}/lib/"; exit 1; }
+
+# Minimal .a set verified by link-then-test on 2026-05-25.
+# Core = EJIT's direct LINK_COMPONENTS + essential transitive deps
+# (OrcJIT needs OrcTargetProcess/RuntimeDyld/BitWriter,
+#  X86CodeGen needs GlobalISel/CFGuard/IRPrinter/Instrumentation,
+#  CodeGen needs ObjCARCOpts/CGData,
+#  AsmPrinter needs DebugInfoDWARF/CodeView/DWARFLowLevel/MCParser,
+#  X86Desc needs MCDisassembler, JITLink needs Option, Core needs Remarks).
+_set_min_libs() {
+  local _l="${BUILD_DIR}/lib"
+  # shared across all targets
+  MIN_LIBS_COMMON="
+    ${_l}/libLLVMCore.a ${_l}/libLLVMSupport.a ${_l}/libLLVMDemangle.a
+    ${_l}/libLLVMBinaryFormat.a ${_l}/libLLVMBitReader.a ${_l}/libLLVMBitstreamReader.a
+    ${_l}/libLLVMAnalysis.a ${_l}/libLLVMScalarOpts.a ${_l}/libLLVMInstCombine.a
+    ${_l}/libLLVMipo.a ${_l}/libLLVMTransformUtils.a ${_l}/libLLVMCodeGen.a
+    ${_l}/libLLVMCodeGenTypes.a ${_l}/libLLVMTarget.a ${_l}/libLLVMTargetParser.a
+    ${_l}/libLLVMSelectionDAG.a ${_l}/libLLVMAsmPrinter.a ${_l}/libLLVMMC.a
+    ${_l}/libLLVMObject.a ${_l}/libLLVMProfileData.a ${_l}/libLLVMExecutionEngine.a
+    ${_l}/libLLVMOrcJIT.a ${_l}/libLLVMOrcShared.a ${_l}/libLLVMJITLink.a
+    ${_l}/libLLVMRemarks.a ${_l}/libLLVMOption.a ${_l}/libLLVMMCDisassembler.a
+    ${_l}/libLLVMGlobalISel.a ${_l}/libLLVMIRPrinter.a ${_l}/libLLVMCFGuard.a
+    ${_l}/libLLVMInstrumentation.a
+    ${_l}/libLLVMDebugInfoCodeView.a ${_l}/libLLVMDebugInfoDWARF.a
+    ${_l}/libLLVMDebugInfoDWARFLowLevel.a ${_l}/libLLVMMCParser.a
+    ${_l}/libLLVMCGData.a ${_l}/libLLVMObjCARCOpts.a
+    ${_l}/libLLVMOrcTargetProcess.a ${_l}/libLLVMRuntimeDyld.a
+    ${_l}/libLLVMBitWriter.a
+  "
+  case "$1" in
+    x86)
+      MIN_LIBS="${MIN_LIBS_COMMON}
+        ${_l}/libLLVMX86CodeGen.a ${_l}/libLLVMX86Desc.a ${_l}/libLLVMX86Info.a"
+      ;;
+    aarch64)
+      MIN_LIBS="${MIN_LIBS_COMMON}
+        ${_l}/libLLVMAArch64CodeGen.a ${_l}/libLLVMAArch64Desc.a
+        ${_l}/libLLVMAArch64Info.a ${_l}/libLLVMAArch64Utils.a"
+      ;;
+  esac
+}
+
+_set_min_libs "${ARCH}"
+OTHER_LIBS=$(echo "${MIN_LIBS}" | xargs -n1 | sort)
+LINK_LIBS="-lz -lpthread -ldl"
 
 OUTDIR="${SCRIPT_DIR}/out"
 mkdir -p "${OUTDIR}"
