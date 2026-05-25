@@ -1256,8 +1256,9 @@ struct VectorContractToAMXDotProduct
           validateLoopStep(rewriter, innerLoop.getStep(), stepValue);
       if (failed(validateInnerLoopStep))
         return rewriter.notifyMatchFailure(
-            contractOp, "Invalid loop step. The step should be 32 for BF16 and "
-                        "64 for Int8/F8 or 1 if it is batch loop.");
+            contractOp,
+            "Invalid loop step. The step should be 32 for BF16 and "
+            "64 for Int8/F8 or 1 if it is rduction loop other than K.");
 
       SmallVector<Value> loopItrArgs = createTileZeros(
           rewriter, innerLoop.getLoc(), opType, innerLoop, ops.size());
