@@ -56,16 +56,18 @@ add_llvm_component_library(LLVMEJIT
   LINK_COMPONENTS
   BitReader
   Core
-  ExecutionEngine
   OrcJIT
   JITLink
   Support
-  Scalar
   InstCombine
-  IPO
   TransformUtils
   Analysis
   ${EJIT_TARGET_COMPONENTS}
+  # IPO and Scalar are not listed here — their LINK_COMPONENTS would
+  # recursively pull in BitWriter, Instrumentation, Linker, AsmParser,
+  # and AggressiveInstCombine.  Instead, they are added manually to the
+  # ejit_minimal target below (see §6.5 of EJIT_LIBRARY_TRIMMING.md).
+  # ExecutionEngine is not listed — it's already pulled by OrcJIT.
   )
 
 # Propagate the target triple setting to the C++ code
@@ -87,10 +89,14 @@ endif()
 
 # Resolve LLVM component names → library names (e.g. "Core" → "LLVMCore")
 llvm_map_components_to_libnames(EJIT_LLVM_LIBS
-  BitReader Core ExecutionEngine OrcJIT JITLink Support
-  Scalar InstCombine IPO TransformUtils Analysis
+  BitReader Core OrcJIT JITLink Support
+  InstCombine TransformUtils Analysis
   ${EJIT_TARGET_COMPONENTS}
   )
+# IPO and Scalar are added manually to avoid their LINK_COMPONENTS
+# (BitWriter, Instrumentation, Linker, AsmParser, AggressiveInstCombine).
+# See EJIT_LIBRARY_TRIMMING.md §6.5.
+list(APPEND EJIT_LLVM_LIBS LLVMipo LLVMScalarOpts)
 
 # Build a file listing all .a files to combine (one per line)
 # LLVM_LIBRARY_DIR is the build output directory for static libraries
