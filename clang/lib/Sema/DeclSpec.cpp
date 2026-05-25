@@ -1436,7 +1436,9 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     S.Diag(TSTLoc, diag::warn_cxx98_compat_unicode_type)
       << (TypeSpecType == TST_char16 ? "char16_t" : "char32_t");
   if (getConstexprSpecifier() == ConstexprSpecKind::Constexpr)
-    S.Diag(ConstexprLoc, diag::warn_cxx98_compat_constexpr);
+    S.Diag(ConstexprLoc, S.getLangOpts().CPlusPlus
+                             ? diag::warn_cxx98_compat_constexpr
+                             : diag::warn_c23_compat_constexpr);
   else if (getConstexprSpecifier() == ConstexprSpecKind::Consteval)
     S.Diag(ConstexprLoc, diag::warn_cxx20_compat_consteval);
   else if (getConstexprSpecifier() == ConstexprSpecKind::Constinit)
