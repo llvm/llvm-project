@@ -137,7 +137,11 @@ do_configure() {
     log "Configuring: release ${arch} → ${build_dir}"
     extra_flags+="
       -DLLVM_ENABLE_ZSTD=OFF
-      -DLLVM_ENABLE_ZLIB=OFF"
+      -DLLVM_ENABLE_ZLIB=OFF
+      -DCMAKE_C_FLAGS=\"-ffunction-sections -fdata-sections\"
+      -DCMAKE_CXX_FLAGS=\"-ffunction-sections -fdata-sections\"
+      -DCMAKE_C_FLAGS_RELEASE=\"-Os -DNDEBUG\"
+      -DCMAKE_CXX_FLAGS_RELEASE=\"-Os -DNDEBUG\""
   fi
 
   # shellcheck disable=SC2086
