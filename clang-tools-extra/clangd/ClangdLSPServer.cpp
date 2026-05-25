@@ -136,9 +136,10 @@ CodeAction toCodeAction(const Fix &F, const URIForFile &File,
     Edit.textDocument = VersionedTextDocumentIdentifier{{File}, Version};
     for (const auto &E : F.Edits)
       Edit.edits.push_back(
-          {E.range, E.newText, SupportChangeAnnotation ? E.annotationId : ""});
+          {E.range, E.newText,
+           SupportChangeAnnotation ? E.annotationId : ""});
     if (SupportChangeAnnotation) {
-      for (const auto &[AID, Annotation] : F.Annotations)
+      for (const auto &[AID, Annotation]: F.Annotations)
         Action.edit->changeAnnotations[AID] = Annotation;
     }
   }
@@ -1068,7 +1069,7 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
   std::map<ClangdServer::DiagRef, clangd::Diagnostic> ToLSPDiags;
   ClangdServer::CodeActionInputs Inputs;
 
-  for (const auto &LSPDiag : Params.context.diagnostics) {
+  for (const auto& LSPDiag : Params.context.diagnostics) {
     if (auto DiagRef = getDiagRef(File.file(), LSPDiag)) {
       ToLSPDiags[*DiagRef] = LSPDiag;
       Inputs.Diagnostics.push_back(*DiagRef);
@@ -1077,9 +1078,13 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
   Inputs.File = File.file();
   Inputs.Selection = Params.range;
   Inputs.RequestedActionKinds = Params.context.only;
-  Inputs.TweakFilter = [this](const Tweak &T) { return Opts.TweakFilter(T); };
-  auto CB = [this, Reply = std::move(Reply), ToLSPDiags = std::move(ToLSPDiags),
-             File, Selection = Params.range](
+  Inputs.TweakFilter = [this](const Tweak &T) {
+    return Opts.TweakFilter(T);
+  };
+  auto CB = [this,
+             Reply = std::move(Reply),
+             ToLSPDiags = std::move(ToLSPDiags), File,
+             Selection = Params.range](
                 llvm::Expected<ClangdServer::CodeActionResult> Fixits) mutable {
     if (!Fixits)
       return Reply(Fixits.takeError());
@@ -1088,7 +1093,8 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
     for (const auto &QF : Fixits->QuickFixes) {
       CAs.push_back(toCodeAction(QF.F, File, Version, SupportsDocumentChanges,
                                  SupportsChangeAnnotation));
-      if (auto It = ToLSPDiags.find(QF.Diag); It != ToLSPDiags.end()) {
+      if (auto It = ToLSPDiags.find(QF.Diag);
+          It != ToLSPDiags.end()) {
         CAs.back().diagnostics = {It->second};
       }
     }
