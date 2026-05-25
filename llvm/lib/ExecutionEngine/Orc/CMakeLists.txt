@@ -6,7 +6,7 @@ if( CMAKE_HOST_UNIX AND HAVE_LIBRT )
   set(rt_lib rt)
 endif()
 
-set(ORC_SOURCES
+add_llvm_component_library(LLVMOrcJIT
   AbsoluteSymbols.cpp
   COFF.cpp
   COFFVCRuntimeSupport.cpp
@@ -21,6 +21,7 @@ set(ORC_SOURCES
   EPCDebugObjectRegistrar.cpp
   EPCGenericDylibManager.cpp
   EPCGenericJITLinkMemoryManager.cpp
+  EPCGenericRTDyldMemoryManager.cpp
   EPCIndirectionUtils.cpp
   ExecutionUtils.cpp
   ObjectFileInterface.cpp
@@ -50,6 +51,7 @@ set(ORC_SOURCES
   ObjectTransformLayer.cpp
   OrcABISupport.cpp
   OrcV2CBindings.cpp
+  RTDyldObjectLinkingLayer.cpp
   SectCreate.cpp
   SelfExecutorProcessControl.cpp
   SimpleRemoteEPC.cpp
@@ -62,35 +64,8 @@ set(ORC_SOURCES
   RedirectionManager.cpp
   JITLinkRedirectableSymbolManager.cpp
   ReOptimizeLayer.cpp
-)
-
-set(ORC_RTDYLD_SOURCES
-  EPCGenericRTDyldMemoryManager.cpp
-  RTDyldObjectLinkingLayer.cpp
-)
-
-set(ORC_LINK_COMPS_COMMON
-  BinaryFormat Core ExecutionEngine JITLink Object OrcShared
-  OrcTargetProcess MC Support Target TargetParser
-)
-
-set(ORC_LINK_COMPS_FULL
-  ${ORC_LINK_COMPS_COMMON}
-  RuntimeDyld WindowsDriver Passes TextAPI TransformUtils
-)
-
-if(EJIT_BARE_METAL)
-  set(SOURCES ${ORC_SOURCES})
-  set(LINK_COMPS ${ORC_LINK_COMPS_COMMON})
-else()
-  set(SOURCES ${ORC_SOURCES} ${ORC_RTDYLD_SOURCES})
-  set(LINK_COMPS ${ORC_LINK_COMPS_FULL})
-endif()
-
-add_llvm_component_library(LLVMOrcJIT
-  ${SOURCES}
-
-  PARTIAL_SOURCES_INTENDED
+  ADDITIONAL_HEADER_DIRS
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc
 
   DEPENDS
   intrinsics_gen
@@ -101,7 +76,22 @@ add_llvm_component_library(LLVMOrcJIT
   ${atomic_lib}
 
   LINK_COMPONENTS
-  ${LINK_COMPS}
+  BinaryFormat
+  Core
+  ExecutionEngine
+  JITLink
+  Object
+  OrcShared
+  OrcTargetProcess
+  WindowsDriver
+  MC
+  Passes
+  RuntimeDyld
+  Support
+  Target
+  TargetParser
+  TextAPI
+  TransformUtils
   )
 
 add_subdirectory(Debugging)
@@ -115,7 +105,3 @@ target_link_libraries(LLVMOrcJIT
   LLVMBitWriter
   LLVMPasses
   )
-
-if(EJIT_BARE_METAL)
-  target_compile_definitions(LLVMOrcJIT PRIVATE EJIT_BARE_METAL)
-endif()
