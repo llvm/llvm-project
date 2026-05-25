@@ -2335,7 +2335,8 @@ void Driver::generateCompilationDiagnostics(
           }
         }
       }
-      Diag(clang::diag::note_drv_command_failed_diag_msg) << CrashDiagnosticsTar;
+      Diag(clang::diag::note_drv_command_failed_diag_msg)
+          << CrashDiagnosticsTar;
     }
   }
 
