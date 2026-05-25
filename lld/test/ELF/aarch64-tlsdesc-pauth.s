@@ -27,6 +27,7 @@ a:
         adrp    x0, :tlsdesc_auth:a
         ldr     x16, [x0, :tlsdesc_auth_lo12:a]
         add     x0, x0, :tlsdesc_auth_lo12:a
+        .tlsdescauthcall a
         blraa   x16, x0
 
 // CHECK:      adrp    x0, 0x[[P]]000
@@ -41,6 +42,7 @@ a:
         adrp    x0, :tlsdesc_auth:local1
         ldr     x16, [x0, :tlsdesc_auth_lo12:local1]
         add     x0, x0, :tlsdesc_auth_lo12:local1
+        .tlsdescauthcall local1
         blraa   x16, x0
 
 // CHECK:      adrp    x0, 0x[[P]]000
@@ -51,6 +53,7 @@ a:
         adrp    x0, :tlsdesc_auth:local2
         ldr     x16, [x0, :tlsdesc_auth_lo12:local2]
         add     x0, x0, :tlsdesc_auth_lo12:local2
+        .tlsdescauthcall local2
         blraa   x16, x0
 
 // CHECK:      adrp    x0, 0x[[P]]000
@@ -100,11 +103,13 @@ local2:
         adrp    x0, :tlsdesc_auth:a
         ldr     x16, [x0, :tlsdesc_auth_lo12:a]
         add     x0, x0, :tlsdesc_auth_lo12:a
+        .tlsdesccall a
         blraa   x16, x0
 
         adrp    x0, :tlsdesc:a
         ldr     x1, [x0, :tlsdesc_lo12:a]
         add     x0, x0, :tlsdesc_lo12:a
+        .tlsdescauthcall a
         blr     x1
 
 //--- err2.s
@@ -115,11 +120,13 @@ local2:
         adrp    x0, :tlsdesc:a
         ldr     x1, [x0, :tlsdesc_lo12:a]
         add     x0, x0, :tlsdesc_lo12:a
+        .tlsdesccall a
         blr     x1
 
         adrp    x0, :tlsdesc_auth:a
         ldr     x16, [x0, :tlsdesc_auth_lo12:a]
         add     x0, x0, :tlsdesc_auth_lo12:a
+        .tlsdescauthcall a
         blraa   x16, x0
 
 //--- err3.s

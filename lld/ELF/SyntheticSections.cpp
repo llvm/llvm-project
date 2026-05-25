@@ -507,7 +507,9 @@ void GotSection::addEntry(const Symbol &sym) {
 
 void GotSection::addAuthEntry(const Symbol &sym) {
   authEntries.push_back(
-      {(numEntries - 1) * ctx.target->gotEntrySize, sym.isFunc()});
+      {/*offset=*/(numEntries - 1) * ctx.target->gotEntrySize,
+       /*isSymbolFunc=*/sym.isFunc(),
+       /*isUndefWeakNonPreemptible=*/sym.isUndefWeak() && !sym.isPreemptible});
 }
 
 bool GotSection::addTlsDescEntry(const Symbol &sym) {
@@ -517,9 +519,12 @@ bool GotSection::addTlsDescEntry(const Symbol &sym) {
   return true;
 }
 
-void GotSection::addTlsDescAuthEntry() {
-  authEntries.push_back({(numEntries - 2) * ctx.target->gotEntrySize, true});
-  authEntries.push_back({(numEntries - 1) * ctx.target->gotEntrySize, false});
+void GotSection::addTlsDescAuthEntry(const Symbol &sym) {
+  authEntries.push_back({/*offset=*/(numEntries - 2) * ctx.target->gotEntrySize,
+                         /*isSymbolFunc=*/true,
+                         /*isUndefWeakNonPreemptible=*/false});
+  assert(!sym.isFunc());
+  addAuthEntry(sym);
 }
 
 bool GotSection::addDynTlsEntry(const Symbol &sym) {
@@ -578,6 +583,12 @@ void GotSection::writeTo(uint8_t *buf) {
   ctx.target->writeGotHeader(buf);
   ctx.target->relocateAlloc(*this, buf);
   for (const AuthEntryInfo &authEntry : authEntries) {
+    uint8_t *dest = buf + authEntry.offset;
+
+    if (authEntry.isUndefWeakNonPreemptible) {
+      write64(ctx, dest, 0);
+      continue;
+    }
     // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#default-signing-schema
     //   Signed GOT entries use the IA key for symbols of type STT_FUNC and the
     //   DA key for all other symbol types, with the address of the GOT entry as
@@ -587,7 +598,6 @@ void GotSection::writeTo(uint8_t *buf) {
     // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#encoding-the-signing-schema
     //   If address diversity is set and the discriminator
     //   is 0 then modifier = Place
-    uint8_t *dest = buf + authEntry.offset;
     uint64_t key = authEntry.isSymbolFunc ? /*IA=*/0b00 : /*DA=*/0b10;
     uint64_t addrDiversity = 1;
     write64(ctx, dest, (addrDiversity << 63) | (key << 60));
