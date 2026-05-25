@@ -19,10 +19,10 @@ define dso_local void @arm_add_q7(ptr %pSrcA, ptr %pSrcB, ptr noalias %pDst, i32
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = tail call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[BLOCKSIZE]])
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRCA:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[NEXT_GEP14:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[NEXT_GEP15:%.*]] = getelementptr i8, ptr [[PSRCB:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = tail call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[BLOCKSIZE]])
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[NEXT_GEP]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD16:%.*]] = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[NEXT_GEP15]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[WIDE_MASKED_LOAD]], <16 x i8> [[WIDE_MASKED_LOAD16]])
