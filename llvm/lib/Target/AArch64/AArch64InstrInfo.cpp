@@ -2456,13 +2456,29 @@ bool AArch64InstrInfo::removeCmpToZeroOrOne(
 
 bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   if (MI.getOpcode() != TargetOpcode::LOAD_STACK_GUARD &&
-      MI.getOpcode() != AArch64::CATCHRET)
+      MI.getOpcode() != AArch64::CATCHRET &&
+      MI.getOpcode() != AArch64::STACK_GUARD_UNMIX)
     return false;
 
   MachineBasicBlock &MBB = *MI.getParent();
   auto &Subtarget = MBB.getParent()->getSubtarget<AArch64Subtarget>();
   auto TRI = Subtarget.getRegisterInfo();
   DebugLoc DL = MI.getDebugLoc();
+
+  if (MI.getOpcode() == AArch64::STACK_GUARD_UNMIX) {
+    // Expand STACK_GUARD_UNMIX to: sub Rd, sp, Rs
+    // This computes SP - stored_mixed_value to unmix the cookie
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
+
+    BuildMI(MBB, MI, DL, get(AArch64::SUBXrx64), DstReg)
+        .addReg(AArch64::SP)
+        .addReg(SrcReg)
+        .addImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, 0));
+
+    MBB.erase(MI);
+    return true;
+  }
 
   if (MI.getOpcode() == AArch64::CATCHRET) {
     // Skip to the first instruction before the epilog.

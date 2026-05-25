@@ -190,7 +190,8 @@ define void @vla(i32, ptr, ...) local_unnamed_addr {
 ; CHECK-NEXT:    stp x4, x5, [x29, #40]
 ; CHECK-NEXT:    stp x6, x7, [x29, #56]
 ; CHECK-NEXT:    bl __chkstk
-; CHECK-NEXT:    sub x20, sp, x15, lsl #4
+; CHECK-NEXT:    lsl x8, x15, #4
+; CHECK-NEXT:    sub x20, sp, x8
 ; CHECK-NEXT:    mov sp, x20
 ; CHECK-NEXT:    ldr x21, [x29, #16]
 ; CHECK-NEXT:    sxtw x22, w0

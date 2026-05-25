@@ -18,7 +18,8 @@ declare void @func2(ptr)
 ; CHECK: add [[REG1:x[0-9]+]], x0, #15
 ; CHECK-OPT: lsr x15, [[REG1]], #4
 ; CHECK: bl __chkstk
-; CHECK-OPT: sub [[REG3:x[0-9]+]], sp, x15, lsl #4
+; CHECK-OPT: lsl [[REG2:x[0-9]+]], x15, #4
+; CHECK-OPT: sub [[REG3:x[0-9]+]], sp, [[REG2]]
 ; CHECK-OPT: mov sp, [[REG3]]
 ; CHECK: bl func2
 ; CHECK-ARM64EC: bl "#__chkstk_arm64ec"

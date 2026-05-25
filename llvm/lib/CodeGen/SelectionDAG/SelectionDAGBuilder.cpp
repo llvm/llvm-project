@@ -7562,7 +7562,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                         MachinePointerInfo(Global, 0), Align,
                         MachineMemOperand::MOVolatile);
     }
-    if (TLI.useStackGuardMixCookie())
+    // Mix the cookie with SP/FP if enabled. Skip if using LOAD_STACK_GUARD
+    // with post-RA mixing (AArch64 MSVCRT), as the mixing will be done during
+    // post-RA expansion of LOAD_STACK_GUARD.
+    if (TLI.useStackGuardMixCookie() && !TLI.useLoadStackGuardNode(M))
       Res = TLI.emitStackGuardMixCookie(DAG, Res, sdl, false);
     DAG.setRoot(Chain);
     setValue(&I, Res);

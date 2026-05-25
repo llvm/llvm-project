@@ -5061,6 +5061,24 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       return;
     break;
 
+  case ISD::SUB: {
+    // Check for stack guard unmixing pattern: SUB(CopyFromReg(SP), X)
+    // Select STACK_GUARD_UNMIX pseudo which will be expanded post-RA
+    SDValue N0 = Node->getOperand(0);
+    if (N0.getOpcode() == ISD::CopyFromReg) {
+      RegisterSDNode *R = dyn_cast<RegisterSDNode>(N0.getOperand(1));
+      if (R && R->getReg() == AArch64::SP && VT == MVT::i64) {
+        SDValue N1 = Node->getOperand(1);
+        SDValue Ops[] = {N1};
+        SDNode *ResNode = CurDAG->getMachineNode(
+            AArch64::STACK_GUARD_UNMIX, SDLoc(Node), MVT::i64, Ops);
+        ReplaceNode(Node, ResNode);
+        return;
+      }
+    }
+    break;
+  }
+
   case ISD::EXTRACT_SUBVECTOR: {
     if (trySelectCastScalableToFixedLengthVector(Node))
       return;

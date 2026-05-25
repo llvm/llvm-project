@@ -3449,11 +3449,10 @@ define i32 @sve_stack_object_and_vla(double %d, i64 %sz) "aarch64_pstate_sm_comp
 ; CHECK0-NEXT:    .cfi_offset w28, -16
 ; CHECK0-NEXT:    .cfi_offset w30, -24
 ; CHECK0-NEXT:    .cfi_offset w29, -32
-; CHECK0-NEXT:    lsl x9, x0, #2
-; CHECK0-NEXT:    mov x8, sp
-; CHECK0-NEXT:    add x9, x9, #15
-; CHECK0-NEXT:    and x9, x9, #0xfffffffffffffff0
-; CHECK0-NEXT:    sub x0, x8, x9
+; CHECK0-NEXT:    lsl x8, x0, #2
+; CHECK0-NEXT:    add x8, x8, #15
+; CHECK0-NEXT:    and x8, x8, #0xfffffffffffffff0
+; CHECK0-NEXT:    sub x0, sp, x8
 ; CHECK0-NEXT:    mov sp, x0
 ; CHECK0-NEXT:    mov z0.s, #0 // =0x0
 ; CHECK0-NEXT:    str z0, [x29, #-1, mul vl]
@@ -3478,11 +3477,10 @@ define i32 @sve_stack_object_and_vla(double %d, i64 %sz) "aarch64_pstate_sm_comp
 ; CHECK64-NEXT:    .cfi_offset w28, -16
 ; CHECK64-NEXT:    .cfi_offset w30, -24
 ; CHECK64-NEXT:    .cfi_offset w29, -32
-; CHECK64-NEXT:    lsl x9, x0, #2
-; CHECK64-NEXT:    mov x8, sp
-; CHECK64-NEXT:    add x9, x9, #15
-; CHECK64-NEXT:    and x9, x9, #0xfffffffffffffff0
-; CHECK64-NEXT:    sub x0, x8, x9
+; CHECK64-NEXT:    lsl x8, x0, #2
+; CHECK64-NEXT:    add x8, x8, #15
+; CHECK64-NEXT:    and x8, x8, #0xfffffffffffffff0
+; CHECK64-NEXT:    sub x0, sp, x8
 ; CHECK64-NEXT:    mov sp, x0
 ; CHECK64-NEXT:    mov z0.s, #0 // =0x0
 ; CHECK64-NEXT:    sub x8, x29, #64
@@ -3511,11 +3509,10 @@ define i32 @sve_stack_object_and_vla(double %d, i64 %sz) "aarch64_pstate_sm_comp
 ; CHECK1024-NEXT:    .cfi_offset w28, -16
 ; CHECK1024-NEXT:    .cfi_offset w30, -24
 ; CHECK1024-NEXT:    .cfi_offset w29, -32
-; CHECK1024-NEXT:    lsl x9, x0, #2
-; CHECK1024-NEXT:    mov x8, sp
-; CHECK1024-NEXT:    add x9, x9, #15
-; CHECK1024-NEXT:    and x9, x9, #0xfffffffffffffff0
-; CHECK1024-NEXT:    sub x0, x8, x9
+; CHECK1024-NEXT:    lsl x8, x0, #2
+; CHECK1024-NEXT:    add x8, x8, #15
+; CHECK1024-NEXT:    and x8, x8, #0xfffffffffffffff0
+; CHECK1024-NEXT:    sub x0, sp, x8
 ; CHECK1024-NEXT:    mov sp, x0
 ; CHECK1024-NEXT:    mov z0.s, #0 // =0x0
 ; CHECK1024-NEXT:    sub x8, x29, #1024
@@ -3599,11 +3596,10 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK0-NEXT:    mov w8, w0
 ; CHECK0-NEXT:    bl __arm_sme_state
 ; CHECK0-NEXT:    mov w8, w8
-; CHECK0-NEXT:    mov x9, sp
 ; CHECK0-NEXT:    mov x20, x0
 ; CHECK0-NEXT:    add x8, x8, #15
 ; CHECK0-NEXT:    and x8, x8, #0x1fffffff0
-; CHECK0-NEXT:    sub x8, x9, x8
+; CHECK0-NEXT:    sub x8, sp, x8
 ; CHECK0-NEXT:    mov sp, x8
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
@@ -3737,11 +3733,10 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK64-NEXT:    mov w8, w0
 ; CHECK64-NEXT:    bl __arm_sme_state
 ; CHECK64-NEXT:    mov w8, w8
-; CHECK64-NEXT:    mov x9, sp
 ; CHECK64-NEXT:    mov x20, x0
 ; CHECK64-NEXT:    add x8, x8, #15
 ; CHECK64-NEXT:    and x8, x8, #0x1fffffff0
-; CHECK64-NEXT:    sub x8, x9, x8
+; CHECK64-NEXT:    sub x8, sp, x8
 ; CHECK64-NEXT:    mov sp, x8
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
@@ -3880,11 +3875,10 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK1024-NOSPLITSVE-NEXT:    mov w8, w0
 ; CHECK1024-NOSPLITSVE-NEXT:    bl __arm_sme_state
 ; CHECK1024-NOSPLITSVE-NEXT:    mov w8, w8
-; CHECK1024-NOSPLITSVE-NEXT:    mov x9, sp
 ; CHECK1024-NOSPLITSVE-NEXT:    mov x20, x0
 ; CHECK1024-NOSPLITSVE-NEXT:    add x8, x8, #15
 ; CHECK1024-NOSPLITSVE-NEXT:    and x8, x8, #0x1fffffff0
-; CHECK1024-NOSPLITSVE-NEXT:    sub x8, x9, x8
+; CHECK1024-NOSPLITSVE-NEXT:    sub x8, sp, x8
 ; CHECK1024-NOSPLITSVE-NEXT:    mov sp, x8
 ; CHECK1024-NOSPLITSVE-NEXT:    //APP
 ; CHECK1024-NOSPLITSVE-NEXT:    //NO_APP
@@ -4023,11 +4017,10 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK1024-SPLITSVE-NEXT:    mov w8, w0
 ; CHECK1024-SPLITSVE-NEXT:    bl __arm_sme_state
 ; CHECK1024-SPLITSVE-NEXT:    mov w8, w8
-; CHECK1024-SPLITSVE-NEXT:    mov x9, sp
 ; CHECK1024-SPLITSVE-NEXT:    mov x20, x0
 ; CHECK1024-SPLITSVE-NEXT:    add x8, x8, #15
 ; CHECK1024-SPLITSVE-NEXT:    and x8, x8, #0x1fffffff0
-; CHECK1024-SPLITSVE-NEXT:    sub x8, x9, x8
+; CHECK1024-SPLITSVE-NEXT:    sub x8, sp, x8
 ; CHECK1024-SPLITSVE-NEXT:    mov sp, x8
 ; CHECK1024-SPLITSVE-NEXT:    //APP
 ; CHECK1024-SPLITSVE-NEXT:    //NO_APP
@@ -4694,10 +4687,9 @@ define i32 @svecc_call_dynamic_and_scalable_alloca(<4 x i16> %P0, i32 %P1, i32 %
 ; CHECK0-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d15 @ cfa - 64 * VG - 64
 ; CHECK0-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK0-NEXT:    ubfiz x8, x0, #2, #32
-; CHECK0-NEXT:    mov x9, sp
 ; CHECK0-NEXT:    add x8, x8, #15
 ; CHECK0-NEXT:    and x8, x8, #0x7fffffff0
-; CHECK0-NEXT:    sub x20, x9, x8
+; CHECK0-NEXT:    sub x20, sp, x8
 ; CHECK0-NEXT:    mov sp, x20
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
@@ -4804,10 +4796,9 @@ define i32 @svecc_call_dynamic_and_scalable_alloca(<4 x i16> %P0, i32 %P1, i32 %
 ; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0c, 0x92, 0x2e, 0x00, 0x11, 0xb0, 0x7f, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d15 @ cfa - 80 * VG - 128
 ; CHECK64-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK64-NEXT:    ubfiz x8, x0, #2, #32
-; CHECK64-NEXT:    mov x9, sp
 ; CHECK64-NEXT:    add x8, x8, #15
 ; CHECK64-NEXT:    and x8, x8, #0x7fffffff0
-; CHECK64-NEXT:    sub x20, x9, x8
+; CHECK64-NEXT:    sub x20, sp, x8
 ; CHECK64-NEXT:    mov sp, x20
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
@@ -4919,10 +4910,9 @@ define i32 @svecc_call_dynamic_and_scalable_alloca(<4 x i16> %P0, i32 %P1, i32 %
 ; CHECK1024-NOSPLITSVE-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d15 @ cfa - 64 * VG - 1088
 ; CHECK1024-NOSPLITSVE-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK1024-NOSPLITSVE-NEXT:    ubfiz x8, x0, #2, #32
-; CHECK1024-NOSPLITSVE-NEXT:    mov x9, sp
 ; CHECK1024-NOSPLITSVE-NEXT:    add x8, x8, #15
 ; CHECK1024-NOSPLITSVE-NEXT:    and x8, x8, #0x7fffffff0
-; CHECK1024-NOSPLITSVE-NEXT:    sub x20, x9, x8
+; CHECK1024-NOSPLITSVE-NEXT:    sub x20, sp, x8
 ; CHECK1024-NOSPLITSVE-NEXT:    mov sp, x20
 ; CHECK1024-NOSPLITSVE-NEXT:    //APP
 ; CHECK1024-NOSPLITSVE-NEXT:    //NO_APP
@@ -5035,10 +5025,9 @@ define i32 @svecc_call_dynamic_and_scalable_alloca(<4 x i16> %P0, i32 %P1, i32 %
 ; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4f, 0x0c, 0x92, 0x2e, 0x00, 0x11, 0xb0, 0x7f, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d15 @ cfa - 80 * VG - 1088
 ; CHECK1024-SPLITSVE-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK1024-SPLITSVE-NEXT:    ubfiz x8, x0, #2, #32
-; CHECK1024-SPLITSVE-NEXT:    mov x9, sp
 ; CHECK1024-SPLITSVE-NEXT:    add x8, x8, #15
 ; CHECK1024-SPLITSVE-NEXT:    and x8, x8, #0x7fffffff0
-; CHECK1024-SPLITSVE-NEXT:    sub x20, x9, x8
+; CHECK1024-SPLITSVE-NEXT:    sub x20, sp, x8
 ; CHECK1024-SPLITSVE-NEXT:    mov sp, x20
 ; CHECK1024-SPLITSVE-NEXT:    //APP
 ; CHECK1024-SPLITSVE-NEXT:    //NO_APP

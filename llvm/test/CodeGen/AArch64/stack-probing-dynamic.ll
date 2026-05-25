@@ -17,21 +17,21 @@ define void @dynamic(i64 %size, ptr %out) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    add x9, x0, #15
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
-; CHECK-NEXT:    sub x8, x8, x9
+; CHECK-NEXT:    add [[REG1:x[0-9]+]], x0, #15
+; CHECK-GI-NEXT:    mov x8, sp
+; CHECK-NEXT:    and [[REG1]], [[REG1]], #0xfffffffffffffff0
+; CHECK-NEXT:    sub [[REG2:x[0-9]+]], {{(sp|x8)}}, [[REG1]]
 ; CHECK-NEXT:  .LBB0_1: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
-; CHECK-NEXT:    cmp sp, x8
+; CHECK-NEXT:    cmp sp, [[REG2]]
 ; CHECK-NEXT:    b.le .LBB0_3
 ; CHECK-NEXT:  // %bb.2: // in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    b .LBB0_1
 ; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    mov sp, x8
+; CHECK-NEXT:    mov sp, [[REG2]]
 ; CHECK-NEXT:    ldr xzr, [sp]
-; CHECK-NEXT:    str x8, [x1]
+; CHECK-NEXT:    str [[REG2]], [x1]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -59,24 +59,23 @@ define void @dynamic_fixed(i64 %size, ptr %out1, ptr %out2) #0 {
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ldr xzr, [sp, #-64]!
-; CHECK-NEXT:    add x9, x0, #15
-; CHECK-NEXT:    mov x8, sp
-; CHECK-DAG:     sub x10, x29, #64
-; CHECK-DAG:     and x9, x9, #0xfffffffffffffff0
-; CHECK-NOT:     INVALID_TO_BREAK_UP_CHECK_DAG
-; CHECK-DAG:     str x10, [x1]
-; CHECK-DAG:     sub x8, x8, x9
+; CHECK-NEXT:    add [[REG1:x[0-9]+]], x0, #15
+; CHECK-GI-NEXT:    mov [[REG2:x[0-9]+]], sp
+; CHECK-DAG:     sub [[REG3:x[0-9]+]], x29, #64
+; CHECK-DAG:     and [[REG1]], [[REG1]], #0xfffffffffffffff0
+; CHECK-DAG:     str [[REG3]], [x1]
+; CHECK-DAG:     sub [[REG2]], {{(sp|x[0-9]+)}}, [[REG1]]
 ; CHECK-NEXT:  .LBB1_1: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
-; CHECK-NEXT:    cmp sp, x8
+; CHECK-NEXT:    cmp sp, [[REG2]]
 ; CHECK-NEXT:    b.le .LBB1_3
 ; CHECK-NEXT:  // %bb.2: // in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    b .LBB1_1
 ; CHECK-NEXT:  .LBB1_3:
-; CHECK-NEXT:    mov sp, x8
+; CHECK-NEXT:    mov sp, [[REG2]]
 ; CHECK-NEXT:    ldr xzr, [sp]
-; CHECK-NEXT:    str x8, [x2]
+; CHECK-NEXT:    str [[REG2]], [x2]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -109,25 +108,24 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -32
 ; CHECK-NEXT:    sub x9, sp, #32
 ; CHECK-NEXT:    and sp, x9, #0xffffffffffffffc0
-; CHECK-NEXT:    add x9, x0, #15
-; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    add [[REG1:x[0-9]+]], x0, #15
+; CHECK-GI-NEXT:    mov [[REG2:x[0-9]+]], sp
 ; CHECK-DAG:     ldr xzr, [sp]
-; CHECK-DAG:     and x9, x9, #0xfffffffffffffff0
-; CHECK-NOT:     INVALID_TO_BREAK_UP_CHECK_DAG
+; CHECK-DAG:     and [[REG1]], [[REG1]], #0xfffffffffffffff0
 ; CHECK-DAG:     mov x19, sp
-; CHECK-DAG:     sub x8, x8, x9
-; CHECK-NEXT:    and x8, x8, #0xffffffffffffffc0
+; CHECK-DAG:     sub [[REG2]], {{(sp|x[0-9]+)}}, [[REG1]]
+; CHECK-NEXT:    and [[REG2]], [[REG2]], #0xffffffffffffffc0
 ; CHECK-NEXT:  .LBB2_1: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
-; CHECK-NEXT:    cmp sp, x8
+; CHECK-NEXT:    cmp sp, [[REG2]]
 ; CHECK-NEXT:    b.le .LBB2_3
 ; CHECK-NEXT:  // %bb.2: // in Loop: Header=BB2_1 Depth=1
 ; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    b .LBB2_1
 ; CHECK-NEXT:  .LBB2_3:
-; CHECK-NEXT:    mov sp, x8
+; CHECK-NEXT:    mov sp, [[REG2]]
 ; CHECK-NEXT:    ldr xzr, [sp]
-; CHECK-NEXT:    str x8, [x1]
+; CHECK-NEXT:    str [[REG2]], [x1]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 32
 ; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
@@ -169,25 +167,24 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; CHECK-NEXT:    b .LBB3_1
 ; CHECK-NEXT:  .LBB3_3:
 ; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    add x9, x0, #15
-; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    add [[REG1:x[0-9]+]], x0, #15
+; CHECK-GI-NEXT:    mov [[REG2:x[0-9]+]], sp
 ; CHECK-DAG:     ldr xzr, [sp]
-; CHECK-DAG:     and x9, x9, #0xfffffffffffffff0
-; CHECK-NOT:     INVALID_TO_BREAK_UP_CHECK_DAG
+; CHECK-DAG:     and [[REG1]], [[REG1]], #0xfffffffffffffff0
 ; CHECK-DAG:     mov x19, sp
-; CHECK-DAG:     sub x8, x8, x9
-; CHECK-NEXT:    and x8, x8, #0xffffffffffffe000
+; CHECK-DAG:     sub [[REG2]], {{(sp|x[0-9]+)}}, [[REG1]]
+; CHECK-NEXT:    and [[REG2]], [[REG2]], #0xffffffffffffe000
 ; CHECK-NEXT:  .LBB3_4: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
-; CHECK-NEXT:    cmp sp, x8
+; CHECK-NEXT:    cmp sp, [[REG2]]
 ; CHECK-NEXT:    b.le .LBB3_6
 ; CHECK-NEXT:  // %bb.5: // in Loop: Header=BB3_4 Depth=1
 ; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    b .LBB3_4
 ; CHECK-NEXT:  .LBB3_6:
-; CHECK-NEXT:    mov sp, x8
+; CHECK-NEXT:    mov sp, [[REG2]]
 ; CHECK-NEXT:    ldr xzr, [sp]
-; CHECK-NEXT:    str x8, [x1]
+; CHECK-NEXT:    str [[REG2]], [x1]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 32
 ; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
@@ -213,21 +210,21 @@ define void @dynamic_64k_guard(i64 %size, ptr %out) #0 "stack-probe-size"="65536
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    add x9, x0, #15
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
-; CHECK-NEXT:    sub x8, x8, x9
+; CHECK-NEXT:    add [[REG1:x[0-9]+]], x0, #15
+; CHECK-GI-NEXT:    mov [[REG2:x[0-9]+]], sp
+; CHECK-NEXT:    and [[REG1]], [[REG1]], #0xfffffffffffffff0
+; CHECK-NEXT:    sub [[REG3:x[0-9]+]], {{(sp|x[0-9]+)}}, [[REG1]]
 ; CHECK-NEXT:  .LBB4_1: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #16, lsl #12 // =65536
-; CHECK-NEXT:    cmp sp, x8
+; CHECK-NEXT:    cmp sp, [[REG3]]
 ; CHECK-NEXT:    b.le .LBB4_3
 ; CHECK-NEXT:  // %bb.2: // in Loop: Header=BB4_1 Depth=1
 ; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    b .LBB4_1
 ; CHECK-NEXT:  .LBB4_3:
-; CHECK-NEXT:    mov sp, x8
+; CHECK-NEXT:    mov sp, [[REG3]]
 ; CHECK-NEXT:    ldr xzr, [sp]
-; CHECK-NEXT:    str x8, [x1]
+; CHECK-NEXT:    str [[REG3]], [x1]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -254,11 +251,11 @@ define void @no_reserved_call_frame(i64 %n) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    lsl x9, x0, #2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    add x9, x9, #15
-; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
-; CHECK-NEXT:    sub x0, x8, x9
+; CHECK-NEXT:    lsl [[REG1:x[0-9]+]], x0, #2
+; CHECK-GI-NEXT:    mov x8, sp
+; CHECK-NEXT:    add [[REG1]], [[REG1]], #15
+; CHECK-NEXT:    and [[REG1]], [[REG1]], #0xfffffffffffffff0
+; CHECK-NEXT:    sub x0, {{(sp|x8)}}, [[REG1]]
 ; CHECK-NEXT:  .LBB5_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
@@ -334,23 +331,22 @@ define void @dynamic_sve(i64 %size, ptr %out) #0 "target-features"="+sve" {
 ; CHECK-NEXT:    .cfi_offset w19, -16
 ; CHECK-NEXT:    .cfi_offset w30, -24
 ; CHECK-NEXT:    .cfi_offset w29, -32
-; CHECK-NEXT:    rdvl x9, #1
-; CHECK-NEXT:    mov x10, #15 // =0xf
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    madd x9, x0, x9, x10
-; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
-; CHECK-NEXT:    sub x8, x8, x9
+; CHECK-NEXT:    rdvl [[REG1:x[0-9]+]], #1
+; CHECK-NEXT:    mov [[REG2:x[0-9]+]], #15 // =0xf
+; CHECK-NEXT:    madd [[REG1]], x0, [[REG1]], [[REG2]]
+; CHECK-NEXT:    and [[REG1]], [[REG1]], #0xfffffffffffffff0
+; CHECK-NEXT:    sub [[REG1]], sp, [[REG1]]
 ; CHECK-NEXT:  .LBB7_1: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
-; CHECK-NEXT:    cmp sp, x8
+; CHECK-NEXT:    cmp sp, [[REG1]]
 ; CHECK-NEXT:    b.le .LBB7_3
 ; CHECK-NEXT:  // %bb.2: // in Loop: Header=BB7_1 Depth=1
 ; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    b .LBB7_1
 ; CHECK-NEXT:  .LBB7_3:
-; CHECK-NEXT:    mov sp, x8
+; CHECK-NEXT:    mov sp, [[REG1]]
 ; CHECK-NEXT:    ldr xzr, [sp]
-; CHECK-NEXT:    str x8, [x1]
+; CHECK-NEXT:    str [[REG1]], [x1]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 32
 ; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload

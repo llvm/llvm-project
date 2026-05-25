@@ -15,7 +15,8 @@ define void @test_lazy_save() nounwind "aarch64_inout_za" {
 ; CHECK-NEXT:    mul x9, x8, x8
 ; CHECK-NEXT:    lsr x15, x9, #4
 ; CHECK-NEXT:    bl __chkstk
-; CHECK-NEXT:    sub x9, sp, x15, lsl #4
+; CHECK-NEXT:    lsl x9, x15, #4
+; CHECK-NEXT:    sub x9, sp, x9
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    sub x10, x29, #24
 ; CHECK-NEXT:    stp x9, x8, [x29, #-24]
