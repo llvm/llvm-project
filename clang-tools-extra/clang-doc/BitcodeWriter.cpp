@@ -252,7 +252,7 @@ struct BlockToIdList {
   std::initializer_list<RecordId> RIDs;
 };
 
-static constexpr BlockToIdList RecordsByBlock[] = {
+static const BlockToIdList RecordsByBlock[] = {
     // Version Block
     {BI_VERSION_BLOCK_ID, {VERSION}},
     // Comment Block
