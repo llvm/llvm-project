@@ -3877,11 +3877,7 @@ public:
     AnalyzedReductionVals.insert(hash_value(VL));
   }
   /// Clear the list of the analyzed reduction root instructions.
-  void clearReductionData() {
-    AnalyzedReductionsRoots.clear();
-    AnalyzedReductionVals.clear();
-    AnalyzedMinBWVals.clear();
-  }
+  void clearReductionData();
   /// Checks if the given value is gathered in one of the nodes.
   bool isAnyGathered(const SmallDenseSet<Value *> &Vals) const {
     return any_of(MustGather, [&](Value *V) { return Vals.contains(V); });
@@ -28460,6 +28456,8 @@ class HorizontalReduction {
   ReductionOpsListType ReductionOps;
   /// List of possibly reduced values.
   SmallVector<SmallVector<Value *>> ReducedVals;
+  /// List of values to ignore while collecting reduction values.
+  inline static SmallDenseSet<Value *> IgnoredVals;
   /// Maps reduced value to the corresponding reduction operation.
   SmallDenseMap<Value *, SmallVector<Instruction *>, 16> ReducedValsToOps;
   WeakTrackingVH ReductionRoot;
@@ -29028,6 +29026,8 @@ public:
             Operands.contains(EdgeInst) ||
             (R.isAnalyzedReductionRoot(EdgeInst) &&
              all_of(EdgeInst->operands(), IsaPred<Constant>))) {
+          if (IgnoredVals.contains(EdgeVal))
+            continue;
           PossibleReducedVals.push_back(EdgeVal);
           if (EdgeInst && !isCmpSelMinMax(EdgeInst))
             Operands.insert_range(EdgeInst->operands());
@@ -29035,7 +29035,8 @@ public:
         }
         if (CurrentRK == ReductionOrdering::Ordered)
           RK = ReductionOrdering::Ordered;
-        ReductionOps.push_back(EdgeInst);
+        if (!IgnoredVals.contains(EdgeVal))
+          ReductionOps.push_back(EdgeInst);
       }
     };
     // Try to regroup reduced values so that it gets more profitable to try to
@@ -30249,11 +30250,13 @@ private:
         auto Position = I * DestTyNumElements;
         Value *SubVec =
             createExtractVector(Builder, Vec, DestTyNumElements, Position);
+        IgnoredVals.insert(SubVec);
         if (!Rdx) {
           Rdx = SubVec;
         } else {
           Rdx = createOp(Builder, RdxKind, Rdx, SubVec, "rdx.op", ReductionOps);
         }
+        IgnoredVals.insert(Rdx);
       }
     } else {
       Rdx = emitReduction(Vec, Builder, &TTI, DestTy);
@@ -30353,8 +30356,6 @@ private:
           if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
             assert(SLPReVec && "FixedVectorType is not expected.");
             unsigned ScalarTyNumElements = VecTy->getNumElements();
-            auto *DstTy = FixedVectorType::get(VecTy->getScalarType(),
-                                               ReducedVals.size());
             for (unsigned I : seq<unsigned>(ReducedVals.size() - 1)) {
               VectorCost +=
                   ::getShuffleCost(*TTI, TTI::SK_ExtractSubvector, VectorTy, {},
@@ -30865,6 +30866,14 @@ private:
 static RecurKind getRdxKind(Value *V) {
   return HorizontalReduction::getRdxKind(V);
 }
+
+void BoUpSLP::clearReductionData() {
+  AnalyzedReductionsRoots.clear();
+  AnalyzedReductionVals.clear();
+  AnalyzedMinBWVals.clear();
+  HorizontalReduction::clearReductionData();
+}
+
 static std::optional<unsigned> getAggregateSize(Instruction *InsertInst) {
   if (auto *IE = dyn_cast<InsertElementInst>(InsertInst))
     return cast<FixedVectorType>(IE->getType())->getNumElements();
@@ -31159,9 +31168,6 @@ bool SLPVectorizerPass::vectorizeHorReduction(
       Res = true;
       if (auto *I = dyn_cast<Instruction>(VectorizedV); I && I != Inst) {
         // Try to find another reduction.
-        if (SLPReVec && I->getType()->isVectorTy() &&
-            Inst->getType()->isVectorTy())
-          continue;
         Stack.emplace(I, Level);
         continue;
       }
