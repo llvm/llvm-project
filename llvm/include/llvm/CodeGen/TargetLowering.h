@@ -3342,8 +3342,11 @@ public:
   /// \p Load is the accompanying load instruction.  Can be either a plain load
   /// instruction or a vp.load intrinsic.
   /// \p DI represents the deinterleaveN intrinsic.
+  /// \p GapMask is a mask with zeros for components / fields that may not be
+  /// accessed.
   virtual bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                                IntrinsicInst *DI) const {
+                                                IntrinsicInst *DI,
+                                                const APInt &GapMask) const {
     return false;
   }
 

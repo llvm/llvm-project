@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EnumeratedArray.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -447,7 +448,7 @@ struct InstrumentationConfig {
   /// the instrumentation location kind and then by the opportunity name. Notice
   /// that an instrumentation location may have more than one instrumentation
   /// opportunity registered.
-  EnumeratedArray<StringMap<InstrumentationOpportunity *>,
+  EnumeratedArray<MapVector<StringRef, InstrumentationOpportunity *>,
                   InstrumentationLocation::KindTy>
       IChoices;
 
@@ -477,6 +478,20 @@ struct InstrumentationOpportunity {
   /// Whether the opportunity is enabled.
   bool Enabled = true;
 
+  /// A filter expression to be matched against runtime property values. If the
+  /// filter is non-empty, only instrumentations matching the filter will be
+  /// executed. The filter syntax supports:
+  /// - Integer comparisons: ==, !=, <, >, <=, >=
+  /// - String comparisons: ==, != (with quoted strings)
+  /// - String prefix check: startswith("prefix")
+  /// - Logical operators: &&, ||
+  /// Examples:
+  ///   "sync_scope_id==3 && atomicity_ordering>0"
+  ///   "name==\"foo\" || name.startswith(\"test_\")"
+  /// If a property value is dynamic (not a constant), the filter is assumed to
+  /// pass (true).
+  StringRef Filter;
+
   /// Helpers to cast values, pass them to the runtime, and replace them. To be
   /// used as part of the getter/setter of a InstrumentationOpportunity.
   ///{
@@ -492,12 +507,18 @@ struct InstrumentationOpportunity {
 
   /// Instrument the value \p V using the configuration \p IConf, and
   /// potentially, the caches \p ICaches.
-  virtual Value *instrument(Value *&V, InstrumentationConfig &IConf,
+  virtual Value *instrument(Value *&V, bool &Changed,
+                            InstrumentationConfig &IConf,
                             InstrumentorIRBuilderTy &IIRB,
                             InstrumentationCaches &ICaches) {
     if (CB && !CB(*V))
       return nullptr;
 
+    // Check if the filter matches before instrumenting
+    if (!evaluateFilter(*V, Changed, *this, IConf, IIRB))
+      return nullptr;
+
+    Changed = true;
     const DataLayout &DL = IIRB.IRB.GetInsertBlock()->getDataLayout();
     IRTCallDescription IRTCallDesc(*this, getRetTy(V->getContext()));
     auto *CI = IRTCallDesc.createLLVMCall(V, IConf, IIRB, DL, ICaches);

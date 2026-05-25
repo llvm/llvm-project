@@ -526,7 +526,8 @@ void SBDebugger::HandleCommand(const char *command) {
   LLDB_INSTRUMENT_VA(this, command);
 
   if (m_opaque_sp) {
-    TargetSP target_sp(m_opaque_sp->GetSelectedTarget());
+    TargetSP target_sp(
+        m_opaque_sp->GetCommandInterpreter().GetSelectedTarget());
     std::unique_lock<std::recursive_mutex> lock;
     if (target_sp)
       lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());

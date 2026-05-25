@@ -8,10 +8,12 @@ add_libc_unittest(
     mmap_test.cpp
   DEPENDS
     libc.hdr.sys_mman_macros
-    libc.include.sys_mman
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
+    libc.src.sys.mman.memfd_create
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
+    libc.src.unistd.close
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
