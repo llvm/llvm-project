@@ -8560,7 +8560,7 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
     } else {
       MVT ImmVT = MVT::getIntegerVT(std::max((unsigned)VT.getSizeInBits(), 8U));
       // Adjust extended value to -1 as it will improve folding.
-      if (llvm::popcount(TrueImm | Undefs) == VT.getSizeInBits())
+      if (llvm::popcount(TrueImm | Undefs) == (int)VT.getSizeInBits())
           TrueImm = ~0ULL >> (64 - ImmVT.getSizeInBits());
       SDValue Select =
           DAG.getSelect(dl, ImmVT, Cond, DAG.getConstant(TrueImm, dl, ImmVT),
