@@ -1597,6 +1597,8 @@ private:
     return __construct_from_tree(__src, [this](value_type& __val) {
 
 #if _LIBCPP_STD_VER >= 26
+      // We need to replace the `const key_type` subobject by reconstruction during constant evaluation to avoid
+      // undefined behavior. Currently, there is no constexpr-friend way to replacing a move-only key subobject.
       if constexpr (std::is_copy_constructible_v<decltype(__val.first)>) {
         if consteval {
           return __construct_node(__val.first, std::move(__val.second));
