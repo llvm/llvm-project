@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIINSTRINFO_H
 
 #include "AMDGPUMIRFormatter.h"
+#include "AMDGPUWaitcntUtils.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -728,6 +729,27 @@ public:
 
   /// \returns true for FLAT instructions that can access LDS.
   bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
+
+  /// \returns true iff \p MI increments only VMEM-class counters
+  /// (loadcnt/samplecnt/bvhcnt/storecnt; vmcnt/vscnt on pre-GFX12).
+  /// Includes BUF, image, and segment-specific FLAT; excludes generic FLAT.
+  static bool updateVMCntOnly(const MachineInstr &MI);
+
+  /// \returns the VMEM completion family of \p MI: BVH_CNT for BVH images,
+  /// SAMPLE_CNT for sampler/MSAA images, LOAD_CNT otherwise.
+  /// \pre updateVMCntOnly(MI) must be true.
+  static AMDGPU::InstCounterType getVmemFamily(const MachineInstr &MI);
+
+  /// \returns the VMEM hardware counter \p MI increments under \p ST.
+  /// Pre-GFX12: always LOAD_CNT.  GFX12+: BVH→BVH_CNT,
+  /// sampler/MSAA→SAMPLE_CNT, everything else→LOAD_CNT.
+  static AMDGPU::InstCounterType getVmemLoadCounter(const MachineInstr &MI,
+                                                    const GCNSubtarget &ST);
+
+  /// \returns true iff a VMEM counter alone is sufficient to wait for \p MI's
+  /// result.  This is updateVMCntOnly() plus generic FLAT loads on subtargets
+  /// where \see GCNSubtarget::hasFlatLgkmVMemCountInOrder holds.
+  static bool isVmemCounterLoad(const MachineInstr &MI, const GCNSubtarget &ST);
 
   static bool isBlockLoadStore(uint32_t Opcode) {
     switch (Opcode) {

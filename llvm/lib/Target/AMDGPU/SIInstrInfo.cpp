@@ -4609,6 +4609,58 @@ bool SIInstrInfo::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
   return false;
 }
 
+bool SIInstrInfo::updateVMCntOnly(const MachineInstr &MI) {
+  return (isVMEM(MI) && !isFLAT(MI)) || isFLATGlobal(MI) || isFLATScratch(MI);
+}
+
+AMDGPU::InstCounterType SIInstrInfo::getVmemFamily(const MachineInstr &MI) {
+  assert(updateVMCntOnly(MI));
+  if (!isImage(MI))
+    return AMDGPU::LOAD_CNT;
+
+  const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
+  if (!Info)
+    return AMDGPU::LOAD_CNT;
+  const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
+      AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
+
+  if (BaseInfo->BVH)
+    return AMDGPU::BVH_CNT;
+
+  // isVSAMPLE is included because some instructions don't have a sampler but
+  // are still classified as sampler instructions for waitcnt purposes.
+  if (BaseInfo->Sampler || BaseInfo->MSAA || isVSAMPLE(MI))
+    return AMDGPU::SAMPLE_CNT;
+
+  return AMDGPU::LOAD_CNT;
+}
+
+AMDGPU::InstCounterType
+SIInstrInfo::getVmemLoadCounter(const MachineInstr &MI,
+                                const GCNSubtarget &ST) {
+  if (!ST.hasExtendedWaitCounts())
+    return AMDGPU::LOAD_CNT;
+  // Generic FLAT (admitted by isVmemCounterLoad on GFX10+ via in-order
+  // counter completion) does not satisfy updateVMCntOnly and only ever
+  // increments LOAD_CNT among the VMEM counters; only image instructions
+  // can increment SAMPLE_CNT or BVH_CNT.  Short-circuit here so we don't
+  // enter getVmemFamily with its updateVMCntOnly precondition violated.
+  if (!updateVMCntOnly(MI))
+    return AMDGPU::LOAD_CNT;
+  return getVmemFamily(MI);
+}
+
+bool SIInstrInfo::isVmemCounterLoad(const MachineInstr &MI,
+                                    const GCNSubtarget &ST) {
+  if (updateVMCntOnly(MI))
+    return true;
+  // Generic FLAT increments both vmcnt and lgkmcnt with a shared early-
+  // completion token; a partial vmcnt wait is only a reliable signal that
+  // the load result is observable on subtargets where the two counters
+  // complete in order.
+  return isFLAT(MI) && ST.hasFlatLgkmVMemCountInOrder();
+}
+
 bool SIInstrInfo::modifiesModeRegister(const MachineInstr &MI) {
   // Skip the full operand and register alias search modifiesRegister
   // does. There's only a handful of instructions that touch this, it's only an

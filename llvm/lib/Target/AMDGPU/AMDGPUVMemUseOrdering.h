@@ -1,5 +1,4 @@
-//===- AMDGPUVMemUseOrdering.h - VMEM Use Ordering ---------------*- C++
-//-*-===//
+//===- AMDGPUVMemUseOrdering.h - AMDGPU VMEM Use Ordering -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

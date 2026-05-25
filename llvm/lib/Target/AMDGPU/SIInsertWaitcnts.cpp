@@ -235,11 +235,6 @@ static bool isNonWaitcntMetaInst(const MachineInstr &MI) {
   }
 }
 
-static bool updateVMCntOnly(const MachineInstr &Inst) {
-  return (SIInstrInfo::isVMEM(Inst) && !SIInstrInfo::isFLAT(Inst)) ||
-         SIInstrInfo::isFLATGlobal(Inst) || SIInstrInfo::isFLATScratch(Inst);
-}
-
 #ifndef NDEBUG
 static bool isNormalMode(AMDGPU::InstCounterType MaxCounter) {
   return MaxCounter == AMDGPU::NUM_NORMAL_INST_CNTS;
@@ -247,23 +242,14 @@ static bool isNormalMode(AMDGPU::InstCounterType MaxCounter) {
 #endif // NDEBUG
 
 VmemType getVmemType(const MachineInstr &Inst) {
-  assert(updateVMCntOnly(Inst));
-  if (!SIInstrInfo::isImage(Inst))
-    return VMEM_NOSAMPLER;
-  const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Inst.getOpcode());
-  const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
-      AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
-
-  if (BaseInfo->BVH)
+  switch (SIInstrInfo::getVmemFamily(Inst)) {
+  case AMDGPU::BVH_CNT:
     return VMEM_BVH;
-
-  // We have to make an additional check for isVSAMPLE here since some
-  // instructions don't have a sampler, but are still classified as sampler
-  // instructions for the purposes of e.g. waitcnt.
-  if (BaseInfo->Sampler || BaseInfo->MSAA || SIInstrInfo::isVSAMPLE(Inst))
+  case AMDGPU::SAMPLE_CNT:
     return VMEM_SAMPLER;
-
-  return VMEM_NOSAMPLER;
+  default:
+    return VMEM_NOSAMPLER;
+  }
 }
 
 void addWait(AMDGPU::Waitcnt &Wait, AMDGPU::InstCounterType T, unsigned Count) {
@@ -1246,7 +1232,7 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
           T == AMDGPU::BVH_CNT) {
         if (!TRI.isVectorRegister(MRI, Op.getReg())) // TODO: add wrapper
           continue;
-        if (updateVMCntOnly(Inst)) {
+        if (SIInstrInfo::updateVMCntOnly(Inst)) {
           // updateVMCntOnly should only leave us with VGPRs
           // MUBUF, MTBUF, MIMG, FlatGlobal, and FlatScratch only have VGPR/AGPR
           // defs. That's required for a sane index into `VgprMemTypes` below
@@ -2718,7 +2704,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
           // guaranteed to write their results in order anyway.
           // Additionally check instructions where Point Sample Acceleration
           // might be applied.
-          if (Op.isUse() || !updateVMCntOnly(MI) ||
+          if (Op.isUse() || !SIInstrInfo::updateVMCntOnly(MI) ||
               ScoreBrackets.hasOtherPendingVmemTypes(Reg, getVmemType(MI)) ||
               ScoreBrackets.hasPointSamplePendingVmemTypes(MI, Reg) ||
               !ST.hasVmemWriteVgprInOrder()) {
