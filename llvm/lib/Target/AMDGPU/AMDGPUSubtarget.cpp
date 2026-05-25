@@ -16,6 +16,7 @@
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
+#include "AMDGPUTargetMachine.h"
 #include "R600Subtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -177,32 +178,6 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
   return Requested;
 }
 
-std::pair<unsigned, unsigned> AMDGPUSubtarget::getEffectiveWavesPerEU(
-    std::pair<unsigned, unsigned> RequestedWavesPerEU,
-    std::pair<unsigned, unsigned> FlatWorkGroupSizes, unsigned LDSBytes) const {
-  // Default minimum/maximum number of waves per EU. The range of flat workgroup
-  // sizes limits the achievable maximum, and we aim to support enough waves per
-  // EU so that we can concurrently execute all waves of a single workgroup of
-  // maximum size on a CU.
-  std::pair<unsigned, unsigned> Default = {
-      getWavesPerEUForWorkGroup(FlatWorkGroupSizes.second),
-      getOccupancyWithWorkGroupSizes(LDSBytes, FlatWorkGroupSizes).second};
-  Default.first = std::min(Default.first, Default.second);
-
-  // Make sure requested minimum is within the default range and lower than the
-  // requested maximum. The latter must not violate target specification.
-  if (RequestedWavesPerEU.first < Default.first ||
-      RequestedWavesPerEU.first > Default.second ||
-      RequestedWavesPerEU.first > RequestedWavesPerEU.second ||
-      RequestedWavesPerEU.second > getMaxWavesPerEU())
-    return Default;
-
-  // We cannot exceed maximum occupancy implied by flat workgroup size and LDS.
-  RequestedWavesPerEU.second =
-      std::min(RequestedWavesPerEU.second, Default.second);
-  return RequestedWavesPerEU;
-}
-
 std::pair<unsigned, unsigned>
 AMDGPUSubtarget::getWavesPerEU(const Function &F) const {
   // Default/requested minimum/maximum flat work group sizes.
@@ -218,13 +193,46 @@ AMDGPUSubtarget::getWavesPerEU(const Function &F) const {
 std::pair<unsigned, unsigned>
 AMDGPUSubtarget::getWavesPerEU(std::pair<unsigned, unsigned> FlatWorkGroupSizes,
                                unsigned LDSBytes, const Function &F) const {
-  // Default minimum/maximum number of waves per execution unit.
-  std::pair<unsigned, unsigned> Default(1, getMaxWavesPerEU());
-
   // Requested minimum/maximum number of waves per execution unit.
-  std::pair<unsigned, unsigned> Requested =
-      AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu", Default, true);
-  return getEffectiveWavesPerEU(Requested, FlatWorkGroupSizes, LDSBytes);
+  std::pair<unsigned, unsigned> Requested = AMDGPU::getIntegerPairAttribute(
+      F, "amdgpu-waves-per-eu", {1, getMaxWavesPerEU()},
+      /*OnlyFirstRequired=*/true);
+
+  // Default minimum/maximum number of waves per EU. The range of flat workgroup
+  // sizes limits the achievable maximum, and we aim to support enough waves per
+  // EU so that we can concurrently execute all waves of a single workgroup of
+  // maximum size on a CU.
+  std::pair<unsigned, unsigned> Default = {
+      getWavesPerEUForWorkGroup(FlatWorkGroupSizes.second),
+      getOccupancyWithWorkGroupSizes(LDSBytes, FlatWorkGroupSizes).second};
+
+  // Under object linking the minimum is the ABI occupancy instead, the value
+  // that separately compiled callers and callees agree on. Only the module-wide
+  // override has to be handled here: without an override the ABI occupancy is
+  // the occupancy the maximum flat workgroup size implies, which is the default
+  // above. An explicit "amdgpu-flat-work-group-size" is ABI-significant, so it
+  // wins over the override.
+  if (AMDGPUTargetMachine::EnableObjectLinking &&
+      !F.hasFnAttribute("amdgpu-flat-work-group-size")) {
+    if (unsigned Override = AMDGPU::getAMDGPUABIWavesPerEU(*F.getParent())) {
+      Default.first =
+          std::clamp(Override, getMinWavesPerEU(), getMaxWavesPerEU());
+    }
+  }
+  Default.first = std::min(Default.first, Default.second);
+
+  // Make sure requested minimum is within the default range and lower than the
+  // requested maximum. The latter must not violate target specification. Under
+  // object linking this is what keeps an "amdgpu-waves-per-eu" hint from
+  // lowering the ABI occupancy: a hint below it is rejected.
+  if (Requested.first < Default.first || Requested.first > Default.second ||
+      Requested.first > Requested.second ||
+      Requested.second > getMaxWavesPerEU())
+    return Default;
+
+  // We cannot exceed maximum occupancy implied by flat workgroup size and LDS.
+  Requested.second = std::min(Requested.second, Default.second);
+  return Requested;
 }
 
 std::optional<unsigned>
