@@ -45,9 +45,9 @@ namespace {
 /// Assumes \-escaping for quoted arguments (see the documentation of
 /// unescapeCommandLine(...)).
 class CommandLineArgumentParser {
-public:
+ public:
   CommandLineArgumentParser(StringRef CommandLine)
-      : Input(CommandLine), Position(Input.begin() - 1) {}
+      : Input(CommandLine), Position(Input.begin()-1) {}
 
   std::vector<std::string> parse() {
     bool HasMoreInput = true;
@@ -59,56 +59,46 @@ public:
     return CommandLine;
   }
 
-private:
+ private:
   // All private methods return true if there is more input available.
 
   bool parseStringInto(std::string &String) {
     do {
       if (*Position == '"') {
-        if (!parseDoubleQuotedStringInto(String))
-          return false;
+        if (!parseDoubleQuotedStringInto(String)) return false;
       } else if (*Position == '\'') {
-        if (!parseSingleQuotedStringInto(String))
-          return false;
+        if (!parseSingleQuotedStringInto(String)) return false;
       } else {
-        if (!parseFreeStringInto(String))
-          return false;
+        if (!parseFreeStringInto(String)) return false;
       }
     } while (*Position != ' ');
     return true;
   }
 
   bool parseDoubleQuotedStringInto(std::string &String) {
-    if (!next())
-      return false;
+    if (!next()) return false;
     while (*Position != '"') {
-      if (!skipEscapeCharacter())
-        return false;
+      if (!skipEscapeCharacter()) return false;
       String.push_back(*Position);
-      if (!next())
-        return false;
+      if (!next()) return false;
     }
     return next();
   }
 
   bool parseSingleQuotedStringInto(std::string &String) {
-    if (!next())
-      return false;
+    if (!next()) return false;
     while (*Position != '\'') {
       String.push_back(*Position);
-      if (!next())
-        return false;
+      if (!next()) return false;
     }
     return next();
   }
 
   bool parseFreeStringInto(std::string &String) {
     do {
-      if (!skipEscapeCharacter())
-        return false;
+      if (!skipEscapeCharacter()) return false;
       String.push_back(*Position);
-      if (!next())
-        return false;
+      if (!next()) return false;
     } while (*Position != ' ' && *Position != '"' && *Position != '\'');
     return true;
   }
@@ -122,8 +112,7 @@ private:
 
   bool nextNonWhitespace() {
     do {
-      if (!next())
-        return false;
+      if (!next()) return false;
     } while (*Position == ' ');
     return true;
   }
@@ -183,8 +172,7 @@ class JSONCompilationDatabasePlugin : public CompilationDatabasePlugin {
 // Register the JSONCompilationDatabasePlugin with the
 // CompilationDatabasePluginRegistry using this statically initialized variable.
 static CompilationDatabasePluginRegistry::Add<JSONCompilationDatabasePlugin>
-    X("json-compilation-database",
-      "Reads JSON formatted compilation databases");
+X("json-compilation-database", "Reads JSON formatted compilation databases");
 
 namespace clang {
 namespace tooling {
@@ -247,7 +235,8 @@ JSONCompilationDatabase::getCompileCommands(StringRef FilePath) const {
   return Commands;
 }
 
-std::vector<std::string> JSONCompilationDatabase::getAllFiles() const {
+std::vector<std::string>
+JSONCompilationDatabase::getAllFiles() const {
   std::vector<std::string> Result;
   for (const auto &CommandRef : IndexByFile)
     Result.push_back(CommandRef.first().str());
@@ -323,10 +312,11 @@ void JSONCompilationDatabase::getCommands(
     SmallString<32> FilenameStorage;
     SmallString<32> OutputStorage;
     auto Output = std::get<3>(CommandRef);
-    Commands.emplace_back(std::get<0>(CommandRef)->getValue(DirectoryStorage),
-                          std::get<1>(CommandRef)->getValue(FilenameStorage),
-                          nodeToCommandLine(Syntax, std::get<2>(CommandRef)),
-                          Output ? Output->getValue(OutputStorage) : "");
+    Commands.emplace_back(
+        std::get<0>(CommandRef)->getValue(DirectoryStorage),
+        std::get<1>(CommandRef)->getValue(FilenameStorage),
+        nodeToCommandLine(Syntax, std::get<2>(CommandRef)),
+        Output ? Output->getValue(OutputStorage) : "");
   }
 }
 
@@ -356,7 +346,7 @@ bool JSONCompilationDatabase::parse(std::string &ErrorMessage) {
     std::optional<std::vector<llvm::yaml::ScalarNode *>> Command;
     llvm::yaml::ScalarNode *File = nullptr;
     llvm::yaml::ScalarNode *Output = nullptr;
-    for (auto &NextKeyValue : *Object) {
+    for (auto& NextKeyValue : *Object) {
       auto *KeyString =
           dyn_cast_if_present<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
       if (!KeyString) {

@@ -201,9 +201,10 @@ struct TransferableCommand {
 
       // Strip input and output files.
       if (Opt.matches(OPT_INPUT) || Opt.matches(OPT_o) ||
-          (ClangCLMode &&
-           (Opt.matches(OPT__SLASH_Fa) || Opt.matches(OPT__SLASH_Fe) ||
-            Opt.matches(OPT__SLASH_Fi) || Opt.matches(OPT__SLASH_Fo))))
+          (ClangCLMode && (Opt.matches(OPT__SLASH_Fa) ||
+                           Opt.matches(OPT__SLASH_Fe) ||
+                           Opt.matches(OPT__SLASH_Fi) ||
+                           Opt.matches(OPT__SLASH_Fo))))
         continue;
 
       // ...including when the inputs are passed after --.
@@ -223,8 +224,8 @@ struct TransferableCommand {
         continue;
       }
 
-      Cmd.CommandLine.insert(Cmd.CommandLine.end(), OldArgs.data() + OldPos,
-                             OldArgs.data() + Pos);
+      Cmd.CommandLine.insert(Cmd.CommandLine.end(),
+                             OldArgs.data() + OldPos, OldArgs.data() + Pos);
     }
 
     // Make use of -std iff -x was missing.
@@ -543,7 +544,7 @@ private:
   StringSaver Strings;
   // Indexes of candidates by certain substrings.
   // String is lowercase and sorted, index points into OriginalPaths.
-  std::vector<SubstringAndIndex> Paths; // Full path.
+  std::vector<SubstringAndIndex> Paths;      // Full path.
   // Lang types obtained by guessing on the corresponding path. I-th element is
   // a type for the I-th path.
   std::vector<types::ID> Types;
