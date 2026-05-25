@@ -16317,7 +16317,7 @@ Overview:
 """""""""
 
 The '``llvm.asm.constraint.br``' intrinsic is used when an inline asm
-constriant allows for either register or memory, e.g., '``"rm"``'.
+constraint allows for either register or memory, e.g., '``"rm"``'.
 
 Semantics:
 """"""""""

@@ -10214,6 +10214,7 @@ struct ConstraintDecisionInfo {
   void reset() {
     ConstraintOperands.clear();
     AsmNodeOperands.clear();
+    Buffer.clear();
     Glue = SDValue();
     Chain = SDValue();
     BeginLabel = nullptr;
@@ -10241,8 +10242,11 @@ constructOperandInfo(ConstraintDecisionInfo &Info,
     // Determine if this InlineAsm MayLoad or MayStore based on the constraints.
     // FIXME: Could we compute this on OpInfo rather than T?
 
-    // Compute the constraint code and ConstraintType to use.
-    TLI.ComputeConstraintToUse(T, SDValue());
+    // Compute the constraint code and ConstraintType to use. Skip finalized
+    // operands — their constraint was validated in a previous attempt and must
+    // not advance to the next alternative.
+    if (!T.Finalized)
+      TLI.ComputeConstraintToUse(T, SDValue());
 
     if (T.ConstraintType == TargetLowering::C_Immediate && OpInfo.CallOperand &&
         !isa<ConstantSDNode>(OpInfo.CallOperand)) {
@@ -10680,7 +10684,16 @@ determineConstraints(ConstraintDecisionInfo &Info,
                             TLI.getPointerTy(DAG.getDataLayout())));
 
   // Third pass: Prepare DAG-level operands
-  return prepareDAGLevelOperands(Info, Call, Builder, TLI, DAG);
+  bool Result = prepareDAGLevelOperands(Info, Call, Builder, TLI, DAG);
+
+  // Write back the Finalized state to TargetConstraints. On a non-fatal retry,
+  // operands that were successfully assigned a constraint keep their selection
+  // instead of advancing to the next alternative in constructOperandInfo.
+  for (size_t I = 0, N = Info.ConstraintOperands.size(); I != N; ++I)
+    if (Info.ConstraintOperands[I].Finalized)
+      TargetConstraints[I].Finalized = true;
+
+  return Result;
 }
 
 /// visitInlineAsm - Handle a call to an InlineAsm object.

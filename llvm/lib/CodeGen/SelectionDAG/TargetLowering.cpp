@@ -6037,7 +6037,18 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
     // direct "=rm" output with a matching tied input). The register allocator
     // can fold both the output and its tied input to the same memory slot when
     // under pressure.
-    if (OpInfo.hasRegMemConstraints())
+    // Use getConstraintType() rather than checking for literal "r"/"m" codes so
+    // that target-specific register codes (e.g. "x" for x86 XMM) and memory
+    // variants beyond "m" (e.g. "o", "V") are also recognised.
+    bool HasReg = false, HasMem = false;
+    for (StringRef Code : OpInfo.Codes) {
+      ConstraintType CT = getConstraintType(Code);
+      if (CT == C_Register || CT == C_RegisterClass)
+        HasReg = true;
+      else if (CT == C_Memory)
+        HasMem = true;
+    }
+    if (HasReg && HasMem)
       OpInfo.MayFoldRegister = true;
 
     // Compute the value type for each operand.

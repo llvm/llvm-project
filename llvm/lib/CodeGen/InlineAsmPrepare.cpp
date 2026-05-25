@@ -155,10 +155,10 @@ static void updateSSA(DominatorTree &DT, CallBrInst *CBR, CallInst *Intrinsic,
   }
 }
 
-static bool splitCriticalEdges(CallBrInst *CBR, DominatorTree *DT) {
+static bool splitCriticalEdges(CallBrInst *CBR, DominatorTree &DT) {
   bool Changed = false;
 
-  CriticalEdgeSplittingOptions Options(DT);
+  CriticalEdgeSplittingOptions Options(&DT);
   Options.setMergeIdenticalEdges();
 
   // The indirect destination might be duplicated between another parameter...
@@ -187,7 +187,7 @@ static bool splitCriticalEdges(CallBrInst *CBR, DominatorTree *DT) {
 /// have a location to place the intrinsic. Then remap users of the original
 /// callbr output SSA value to instead point to the appropriate
 /// llvm.callbr.landingpad value.
-static bool insertIntrinsicCalls(CallBrInst *CBR, DominatorTree *DT) {
+static bool insertIntrinsicCalls(CallBrInst *CBR, DominatorTree &DT) {
   bool Changed = false;
   SmallPtrSet<const BasicBlock *, 4> Visited;
   IRBuilder<> Builder(CBR->getContext());
@@ -208,14 +208,14 @@ static bool insertIntrinsicCalls(CallBrInst *CBR, DominatorTree *DT) {
     CallInst *Intrinsic = Builder.CreateIntrinsic(
         CBR->getType(), Intrinsic::callbr_landingpad, {CBR});
     SSAUpdate.AddAvailableValue(IndDest, Intrinsic);
-    updateSSA(*DT, CBR, Intrinsic, SSAUpdate);
+    updateSSA(DT, CBR, Intrinsic, SSAUpdate);
     Changed = true;
   }
 
   return Changed;
 }
 
-static bool processCallBrInst(Function &F, CallBrInst *CBR, DominatorTree *DT) {
+static bool processCallBrInst(Function &F, CallBrInst *CBR, DominatorTree &DT) {
   bool Changed = false;
 
   Changed |= splitCriticalEdges(CBR, DT);
@@ -229,10 +229,8 @@ static bool processCallBrInst(Function &F, CallBrInst *CBR, DominatorTree *DT) {
 //===----------------------------------------------------------------------===//
 
 static bool processAsmConstraintBrInst(Function &F, CallBrInst &CBR,
-                                       bool IsOptLevelNone, DomTreeUpdater *DTU,
+                                       bool IsOptLevelNone, DomTreeUpdater &DTU,
                                        const TargetMachine *TM) {
-  bool Changed = false;
-
   BasicBlock *BB = CBR.getParent();
   BasicBlock *PrefReg = CBR.getDefaultDest();
   BasicBlock *PrefMem = CBR.getIndirectDest(0);
@@ -243,22 +241,22 @@ static bool processAsmConstraintBrInst(Function &F, CallBrInst &CBR,
   CBR.eraseFromParent();
 
   if (IsOptLevelNone) {
-    DeleteDeadBlock(PrefReg, DTU);
+    DeleteDeadBlock(PrefReg, &DTU);
     IRBuilder(BB).CreateBr(PrefMem);
-    MergeBlockIntoPredecessor(PrefMem, DTU);
+    MergeBlockIntoPredecessor(PrefMem, &DTU);
     if (Merge)
-      MergeBlockIntoPredecessor(Merge, DTU);
+      MergeBlockIntoPredecessor(Merge, &DTU);
   } else {
-    DeleteDeadBlock(PrefMem, DTU);
+    DeleteDeadBlock(PrefMem, &DTU);
     IRBuilder(BB).CreateBr(PrefReg);
-    MergeBlockIntoPredecessor(PrefReg, DTU);
+    MergeBlockIntoPredecessor(PrefReg, &DTU);
     if (Merge)
-      MergeBlockIntoPredecessor(Merge, DTU);
+      MergeBlockIntoPredecessor(Merge, &DTU);
   }
 
-  DTU->flush();
+  DTU.flush();
 
-  return Changed;
+  return true;
 }
 
 static void getCallBrInsts(Function &F,
@@ -273,7 +271,7 @@ static void getCallBrInsts(Function &F,
     }
 }
 
-static bool runImpl(Function &F, bool IsOptLevelNone, DomTreeUpdater *DTU,
+static bool runImpl(Function &F, bool IsOptLevelNone, DomTreeUpdater &DTU,
                     const TargetMachine *TM) {
   bool Changed = false;
   SmallVector<CallBrInst *, 4> AsmConstraintBrs;
@@ -287,40 +285,30 @@ static bool runImpl(Function &F, bool IsOptLevelNone, DomTreeUpdater *DTU,
 
   // Process the rest of the 'callbr' instructions.
   for (auto *CBR : OtherCallBrs)
-    if (!CBR->getType()->isVoidTy() && !CBR->use_empty())
-      Changed |= processCallBrInst(F, CBR, DTU ? &DTU->getDomTree() : nullptr);
+    Changed |= processCallBrInst(F, CBR, DTU.getDomTree());
 
   return Changed;
 }
 
 bool InlineAsmPrepare::runOnFunction(Function &F) {
-  // It's highly likely that most programs do not contain CallBrInsts. Follow a
-  // similar pattern from SafeStackLegacyPass::runOnFunction to reuse previous
-  // domtree analysis if available, otherwise compute it lazily. This avoids
-  // forcing Dominator Tree Construction at -O0 for programs that likely do not
-  // contain CallBrInsts. It does pessimize programs with callbr at higher
-  // optimization levels, as the DominatorTree created here is not reused by
-  // subsequent passes.
   const auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-  std::optional<DomTreeUpdater> DTU;
-  std::optional<DominatorTree> LazilyComputedDomTree;
-  if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
-    DTU.emplace(DTWP->getDomTree(), DomTreeUpdater::UpdateStrategy::Lazy);
+  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
   bool IsOptLevelNone =
       skipFunction(F) ? true : TM->getOptLevel() == CodeGenOptLevel::None;
 
-  return runImpl(F, IsOptLevelNone, DTU ? &*DTU : nullptr, TM);
+  return runImpl(F, IsOptLevelNone, DTU, TM);
 }
 
 PreservedAnalyses InlineAsmPreparePass::run(Function &F,
                                             FunctionAnalysisManager &FAM) {
-  auto *DT = &FAM.getResult<DominatorTreeAnalysis>(F);
+  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   bool IsOptLevelNone =
       F.hasOptNone() ? true : TM->getOptLevel() == CodeGenOptLevel::None;
 
-  if (runImpl(F, IsOptLevelNone, DT ? &DTU : nullptr, TM)) {
+  if (runImpl(F, IsOptLevelNone, DTU, TM)) {
     PreservedAnalyses PA;
     PA.preserve<DominatorTreeAnalysis>();
     return PA;

@@ -3319,10 +3319,11 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
                                     InputConstraintInfos))
     return EmitHipStdParUnsupportedAsm(this, S);
 
-  // If any constraints allow for register and memory options, we
-  // need to delay choosing which constraint option to prefer (register or
-  // memory) until ISel, where the 'llvm.asm.constraint.br' intrinsic is
-  // resolved.
+  // If any *output* constraints allow for both register and memory options, we
+  // need to delay choosing which to prefer until ISel, where the
+  // 'llvm.asm.constraint.br' intrinsic is resolved. Input-only "rm"
+  // constraints don't need this: PreferRegs only affects output emission, so
+  // both paths would be identical for pure inputs.
   bool HasRegMemConstraints =
       llvm::all_of(llvm::concat<TargetInfo::ConstraintInfo>(
                        OutputConstraintInfos, InputConstraintInfos),
@@ -3330,8 +3331,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
                      // FIXME: Should we allow for alternative constraints?
                      return !StringRef(Info.getConstraintStr()).contains(",");
                    }) &&
-      llvm::any_of(llvm::concat<TargetInfo::ConstraintInfo>(
-                       OutputConstraintInfos, InputConstraintInfos),
+      llvm::any_of(OutputConstraintInfos,
                    [](const TargetInfo::ConstraintInfo &Info) {
                      return Info.allowsRegister() && Info.allowsMemory();
                    });

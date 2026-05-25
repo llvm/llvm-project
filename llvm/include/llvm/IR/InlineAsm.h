@@ -181,13 +181,6 @@ public:
     bool hasArg() const {
       return Type == isInput || (Type == isOutput && isIndirect);
     }
-
-    /// hasRegMemConstraints - Returns true if the constraint codes have
-    /// register and memory constraints. This is useful to let the register
-    /// allocator that it can use memory under register pressure.
-    bool hasRegMemConstraints() const {
-      return is_contained(Codes, "r") && is_contained(Codes, "m");
-    }
   };
 
   /// ParseConstraints - Split up the constraint string into the specific

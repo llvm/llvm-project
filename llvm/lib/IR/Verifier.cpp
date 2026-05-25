@@ -3583,7 +3583,7 @@ void Verifier::visitCallBrInst(CallBrInst &CBI) {
     }
     case Intrinsic::asm_constraint_br: {
       Check(CBI.getNumIndirectDests() == 1,
-            "Callbr asm_constraint_br only supports only one indirect dest");
+            "Callbr asm_constraint_br only supports one indirect dest");
       Check(CBI.getDefaultDest()->hasNPredecessors(1),
             "Callbr asm_constraint_br default dest must have only one "
             "predecessor");
