@@ -564,7 +564,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_end_node() _NOEXCEPT
 // TODO: Remove the workaround when all supported versions of compilers correctly perform zero-initialization in
 // value-initialization.
-#if defined(_LIBCPP_APPLE_CLANG_VER) || (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 2101)
+#if defined(_LIBCPP_APPLE_CLANG_VER)
       : __left_(nullptr)
 #else
       : __left_()
