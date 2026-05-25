@@ -355,9 +355,9 @@ define i32 @test_select_idx_not_constant3(i1 %c, ptr %p, i64 %arg) {
 
 !0 = !{!"function_entry_count", i32 10}
 ;.
-; CHECK-PRESERVE-CFG: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK-PRESERVE-CFG: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.
-; CHECK-MODIFY-CFG: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK-MODIFY-CFG: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.
 ; CHECK-PRESERVE-CFG: [[META0:![0-9]+]] = !{!"function_entry_count", i32 10}
 ; CHECK-PRESERVE-CFG: [[PROF1]] = !{!"unknown", !"sroa"}

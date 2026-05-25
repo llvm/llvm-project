@@ -97,17 +97,32 @@ int test9_alias() __attribute__((alias("test9")));
 int test10(int x, int y) { return x + y; }
 int test10_alias() __attribute__((alias("test10")));
 
-int test11(int x, int y) { return x + y; }
+// No warning for an alias target with unspecified parameters if the return types match.
+int test11() { return 7; }
+int test11_alias(int x) __attribute__((alias("test11")));
+
+int test12(int x, int y) { return x + y; }
 // expected-note@-1 {{aliasee is declared here}}
-int test11_alias(int x, ...) __attribute__((alias("test11")));
+int test12_alias(int x, ...) __attribute__((alias("test12")));
 // expected-warning@-1 {{alias and aliasee have different types 'int (int, ...)' and 'int (int, int)'}}
 
-// No warnings expected when using typedef equivalents.
+// No warning when using typedef equivalents.
 typedef int Integer;
-Integer test12(int x) { return x; }
-int test12_alias(Integer) __attribute__((alias("test12")));
+Integer test13(int x) { return x; }
+int test13_alias(Integer) __attribute__((alias("test13")));
 
 // Compiler-generated variables are not valid alias targets.
-char *test13 = "asdf";
-extern char test13_alias[5] __attribute__((alias(".str")));
+char *test14 = "asdf";
+extern char test14_alias[5] __attribute__((alias(".str")));
 // expected-error@-1 {{alias must point to a defined variable or function}}
+
+// Unprototyped functions should not alias variadic function and vice versa.
+int test15() { return 9; }
+// expected-note@-1 {{aliasee is declared here}}
+int test15_alias(int x, ...) __attribute__((alias("test15")));
+// expected-warning@-1 {{alias and aliasee have different types 'int (int, ...)' and 'int ()'}}
+
+void test16(int x, ...) { }
+// expected-note@-1 {{aliasee is declared here}}
+void test16_alias() __attribute__((alias("test16")));
+// expected-warning@-1 {{alias and aliasee have different types 'void ()' and 'void (int, ...)'}}

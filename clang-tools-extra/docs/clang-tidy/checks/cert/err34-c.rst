@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-err34-c
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/unchecked-string-to-number-conversion.html
 
 cert-err34-c
 ============

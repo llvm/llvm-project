@@ -231,7 +231,7 @@ define bfloat @fadd_fast_bfloat(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK: %[[FADD2:.*]] = fadd fast <8 x bfloat> %[[LOAD2]]
 ; CHECK: middle.block:
 ; CHECK: %[[RDX:.*]] = fadd fast <8 x bfloat> %[[FADD2]], %[[FADD1]]
-; CHECK: call fast bfloat @llvm.vector.reduce.fadd.v8bf16(bfloat 0xR0000, <8 x bfloat> %[[RDX]])
+; CHECK: call fast bfloat @llvm.vector.reduce.fadd.v8bf16(bfloat 0.000000e+00, <8 x bfloat> %[[RDX]])
 entry:
   br label %for.body
 

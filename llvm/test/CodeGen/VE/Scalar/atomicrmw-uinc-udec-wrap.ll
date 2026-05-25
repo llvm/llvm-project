@@ -10,7 +10,7 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s2, (56)0, %s0
-; CHECK-NEXT:    ldl.sx %s4, (, %s1)
+; CHECK-NEXT:    ldl.zx %s4, (, %s1)
 ; CHECK-NEXT:    xor %s2, -1, %s2
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    and %s3, %s3, (56)0
@@ -47,7 +47,7 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s2, (48)0, %s0
-; CHECK-NEXT:    ldl.sx %s4, (, %s1)
+; CHECK-NEXT:    ldl.zx %s4, (, %s1)
 ; CHECK-NEXT:    xor %s2, -1, %s2
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    and %s3, %s3, (48)0
@@ -79,7 +79,7 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; CHECK-LABEL: atomicrmw_uinc_wrap_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    ldl.sx %s2, (, %s0)
+; CHECK-NEXT:    ldl.zx %s2, (, %s0)
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:  .LBB2_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -127,7 +127,7 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s3, (56)0, %s0
-; CHECK-NEXT:    ldl.sx %s5, (, %s2)
+; CHECK-NEXT:    ldl.zx %s5, (, %s2)
 ; CHECK-NEXT:    xor %s3, -1, %s3
 ; CHECK-NEXT:    and %s3, %s3, (32)0
 ; CHECK-NEXT:    and %s4, %s1, (56)0
@@ -165,7 +165,7 @@ define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s3, (48)0, %s0
-; CHECK-NEXT:    ldl.sx %s5, (, %s2)
+; CHECK-NEXT:    ldl.zx %s5, (, %s2)
 ; CHECK-NEXT:    xor %s3, -1, %s3
 ; CHECK-NEXT:    and %s3, %s3, (32)0
 ; CHECK-NEXT:    and %s4, %s1, (48)0
@@ -198,7 +198,7 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; CHECK-LABEL: atomicrmw_udec_wrap_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    ldl.sx %s2, (, %s0)
+; CHECK-NEXT:    ldl.zx %s2, (, %s0)
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:  .LBB6_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1

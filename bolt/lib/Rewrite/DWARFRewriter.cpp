@@ -235,12 +235,12 @@ private:
     // DWARF v5 reorders the address size and adds a unit type.
     if (Version >= 5) {
       Asm.emitInt8(UT);
-      Asm.emitInt8(Asm.MAI->getCodePointerSize());
+      Asm.emitInt8(Asm.MAI.getCodePointerSize());
     }
 
     Asm.emitInt32(0);
     if (Version <= 4) {
-      Asm.emitInt8(Asm.MAI->getCodePointerSize());
+      Asm.emitInt8(Asm.MAI.getCodePointerSize());
     }
   }
 

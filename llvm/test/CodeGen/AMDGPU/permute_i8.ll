@@ -1503,12 +1503,12 @@ define hidden void @sdiv_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX10-NEXT:    v_cvt_f32_i32_sdwa v2, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
 ; GFX10-NEXT:    v_cvt_f32_i32_sdwa v12, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
 ; GFX10-NEXT:    v_cvt_f32_i32_sdwa v14, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v15, v1
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v16, v10
+; GFX10-NEXT:    v_rcp_f32_e32 v15, v1
+; GFX10-NEXT:    v_rcp_f32_e32 v16, v10
 ; GFX10-NEXT:    v_cvt_f32_i32_sdwa v19, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v17, v12
+; GFX10-NEXT:    v_rcp_f32_e32 v17, v12
 ; GFX10-NEXT:    v_xor_b32_sdwa v0, sext(v9), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_0
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v18, v14
+; GFX10-NEXT:    v_rcp_f32_e32 v18, v14
 ; GFX10-NEXT:    v_xor_b32_sdwa v3, sext(v9), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_1
 ; GFX10-NEXT:    v_xor_b32_sdwa v11, sext(v9), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
 ; GFX10-NEXT:    v_xor_b32_sdwa v13, sext(v4), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_3
@@ -1581,10 +1581,10 @@ define hidden void @sdiv_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX9-NEXT:    v_cvt_f32_i32_sdwa v13, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
 ; GFX9-NEXT:    v_xor_b32_sdwa v14, sext(v4), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_3
 ; GFX9-NEXT:    v_cvt_f32_i32_sdwa v4, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v15, v2
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v16, v12
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v17, v13
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v18, v4
+; GFX9-NEXT:    v_rcp_f32_e32 v15, v2
+; GFX9-NEXT:    v_rcp_f32_e32 v16, v12
+; GFX9-NEXT:    v_rcp_f32_e32 v17, v13
+; GFX9-NEXT:    v_rcp_f32_e32 v18, v4
 ; GFX9-NEXT:    v_mul_f32_e32 v15, v3, v15
 ; GFX9-NEXT:    v_mul_f32_e32 v16, v11, v16
 ; GFX9-NEXT:    v_trunc_f32_e32 v15, v15
@@ -1856,11 +1856,11 @@ define hidden void @srem_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_cvt_f32_i32_sdwa v12, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
 ; GFX10-NEXT:    v_cvt_f32_i32_sdwa v15, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v17, v2
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v18, v13
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v19, v3
+; GFX10-NEXT:    v_rcp_f32_e32 v17, v2
+; GFX10-NEXT:    v_rcp_f32_e32 v18, v13
+; GFX10-NEXT:    v_rcp_f32_e32 v19, v3
 ; GFX10-NEXT:    v_xor_b32_sdwa v1, sext(v4), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_0
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v20, v15
+; GFX10-NEXT:    v_rcp_f32_e32 v20, v15
 ; GFX10-NEXT:    v_xor_b32_sdwa v11, sext(v9), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_1
 ; GFX10-NEXT:    v_cvt_f32_i32_sdwa v21, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
 ; GFX10-NEXT:    v_xor_b32_sdwa v14, sext(v4), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_2
@@ -1938,7 +1938,7 @@ define hidden void @srem_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX9-NEXT:    v_cvt_f32_i32_sdwa v14, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_cvt_f32_i32_sdwa v13, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v17, v3
+; GFX9-NEXT:    v_rcp_f32_e32 v17, v3
 ; GFX9-NEXT:    v_cvt_f32_i32_sdwa v16, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
 ; GFX9-NEXT:    v_xor_b32_sdwa v15, sext(v4), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_2
 ; GFX9-NEXT:    v_perm_b32 v1, v4, v9, s4
@@ -1946,8 +1946,8 @@ define hidden void @srem_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX9-NEXT:    v_trunc_f32_e32 v17, v17
 ; GFX9-NEXT:    v_mad_f32 v19, -v17, v3, v10
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v19|, |v3|
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v3, v14
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v19, v10
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v14
+; GFX9-NEXT:    v_rcp_f32_e32 v19, v10
 ; GFX9-NEXT:    v_xor_b32_sdwa v2, sext(v4), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_0
 ; GFX9-NEXT:    v_xor_b32_sdwa v12, sext(v9), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_1
 ; GFX9-NEXT:    v_mul_f32_e32 v3, v13, v3
@@ -1960,7 +1960,7 @@ define hidden void @srem_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX9-NEXT:    v_mad_f32 v19, -v15, v10, v16
 ; GFX9-NEXT:    v_cvt_f32_i32_sdwa v13, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 s[6:7], |v19|, |v10|
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v10, v16
+; GFX9-NEXT:    v_rcp_f32_e32 v10, v16
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v2, 30, v2
 ; GFX9-NEXT:    v_xor_b32_sdwa v19, sext(v9), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_3
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v17, v17
@@ -2221,11 +2221,11 @@ define hidden void @udiv(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %elt, 
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_cvt_f32_ubyte3_e32 v14, v0
 ; GFX10-NEXT:    v_cvt_f32_ubyte2_e32 v4, v2
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v10, v1
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v11, v3
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v13, v9
+; GFX10-NEXT:    v_rcp_f32_e32 v10, v1
+; GFX10-NEXT:    v_rcp_f32_e32 v11, v3
+; GFX10-NEXT:    v_rcp_f32_e32 v13, v9
 ; GFX10-NEXT:    v_cvt_f32_ubyte0_e32 v15, v0
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v12, v4
+; GFX10-NEXT:    v_rcp_f32_e32 v12, v4
 ; GFX10-NEXT:    v_perm_b32 v0, v0, v2, 0x40207
 ; GFX10-NEXT:    v_mul_f32_e32 v10, v14, v10
 ; GFX10-NEXT:    v_mul_f32_e32 v11, v4, v11
@@ -2274,18 +2274,18 @@ define hidden void @udiv(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %elt, 
 ; GFX9-NEXT:    s_mov_b32 s4, 0x40207
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v2, v4
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v11, v2
+; GFX9-NEXT:    v_rcp_f32_e32 v11, v2
 ; GFX9-NEXT:    v_cvt_f32_ubyte1_e32 v3, v4
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v12, v3
+; GFX9-NEXT:    v_rcp_f32_e32 v12, v3
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_cvt_f32_ubyte3_e32 v1, v9
 ; GFX9-NEXT:    v_cvt_f32_ubyte2_e32 v10, v4
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v13, v10
+; GFX9-NEXT:    v_rcp_f32_e32 v13, v10
 ; GFX9-NEXT:    v_mul_f32_e32 v11, v1, v11
 ; GFX9-NEXT:    v_perm_b32 v0, v9, v4, s4
 ; GFX9-NEXT:    v_cvt_f32_ubyte3_e32 v4, v4
 ; GFX9-NEXT:    v_trunc_f32_e32 v11, v11
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v14, v4
+; GFX9-NEXT:    v_rcp_f32_e32 v14, v4
 ; GFX9-NEXT:    v_mul_f32_e32 v12, v10, v12
 ; GFX9-NEXT:    v_mad_f32 v1, -v11, v2, v1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v11, v11
@@ -2409,10 +2409,10 @@ define hidden void @urem_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX10-NEXT:    v_cvt_f32_ubyte3_e32 v9, v2
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_cvt_f32_ubyte2_e32 v15, v0
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v10, v1
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v11, v3
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v12, v4
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v13, v9
+; GFX10-NEXT:    v_rcp_f32_e32 v10, v1
+; GFX10-NEXT:    v_rcp_f32_e32 v11, v3
+; GFX10-NEXT:    v_rcp_f32_e32 v12, v4
+; GFX10-NEXT:    v_rcp_f32_e32 v13, v9
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v14, 16, v2
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v16, 8, v2
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v17, 24, v2
@@ -2470,15 +2470,15 @@ define hidden void @urem_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX9-NEXT:    s_mov_b32 s4, 0x2050505
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v2, v4
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v15, v2
+; GFX9-NEXT:    v_rcp_f32_e32 v15, v2
 ; GFX9-NEXT:    v_cvt_f32_ubyte1_e32 v3, v4
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v16, v3
+; GFX9-NEXT:    v_rcp_f32_e32 v16, v3
 ; GFX9-NEXT:    v_cvt_f32_ubyte2_e32 v11, v4
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v17, v11
+; GFX9-NEXT:    v_rcp_f32_e32 v17, v11
 ; GFX9-NEXT:    v_mul_f32_e32 v15, v3, v15
 ; GFX9-NEXT:    v_cvt_f32_ubyte3_e32 v14, v4
 ; GFX9-NEXT:    v_trunc_f32_e32 v15, v15
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v18, v14
+; GFX9-NEXT:    v_rcp_f32_e32 v18, v14
 ; GFX9-NEXT:    v_mul_f32_e32 v16, v3, v16
 ; GFX9-NEXT:    v_mad_f32 v19, -v15, v2, v3
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v15, v15

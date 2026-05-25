@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -fblocks -verify -emit-llvm-only %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -fblocks -verify -emit-llvm-only %s
 
 // Compiler-generated functions are not valid alias targets.
 void foo() { void(^myBlock)(void) = ^{ }; }

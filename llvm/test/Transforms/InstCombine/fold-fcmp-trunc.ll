@@ -5,7 +5,7 @@
 define i1 @fcmp_trunc(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge double [[TMP0]], 0x4058FFFFF0000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge double [[TMP0]], f0x4058FFFFF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -16,7 +16,7 @@ define i1 @fcmp_trunc(double %0) {
 define i1 @fcmp_trunc_ult(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_ult(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ult double [[TMP0]], 0x4068FFFFF0000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ult double [[TMP0]], f0x4068FFFFF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -27,7 +27,7 @@ define i1 @fcmp_trunc_ult(double %0) {
 define i1 @fcmp_trunc_ole(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_ole(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ole double [[TMP0]], 0x4072C00010000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ole double [[TMP0]], f0x4072C00010000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -38,7 +38,7 @@ define i1 @fcmp_trunc_ole(double %0) {
 define i1 @fcmp_trunc_ogt(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_ogt(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ogt double [[TMP0]], 0x4079000010000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ogt double [[TMP0]], f0x4079000010000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -49,7 +49,7 @@ define i1 @fcmp_trunc_ogt(double %0) {
 define i1 @fcmp_trunc_zero(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_zero(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge double [[TMP0]], 0xB690000000000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge double [[TMP0]], f0xB690000000000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -106,7 +106,7 @@ define i1 @fcmp_trunc_pair_ord(double %x, double %y) {
 define i1 @fcmp_trunc_with_nnan(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_with_nnan(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp nnan oge double [[TMP0]], 0x4058FFFFF0000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp nnan oge double [[TMP0]], f0x4058FFFFF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -117,7 +117,7 @@ define i1 @fcmp_trunc_with_nnan(double %0) {
 define i1 @fcmp_trunc_with_ninf(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_with_ninf(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ninf oge double [[TMP0]], 0x4058FFFFF0000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ninf oge double [[TMP0]], f0x4058FFFFF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -128,7 +128,7 @@ define i1 @fcmp_trunc_with_ninf(double %0) {
 define i1 @fcmp_trunc_with_nsz(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_with_nsz(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp nsz oge double [[TMP0]], 0x4058FFFFF0000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp nsz oge double [[TMP0]], f0x4058FFFFF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -139,7 +139,7 @@ define i1 @fcmp_trunc_with_nsz(double %0) {
 define i1 @fcmp_trunc_with_reassoc(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_with_reassoc(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp reassoc oge double [[TMP0]], 0x4058FFFFF0000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp reassoc oge double [[TMP0]], f0x4058FFFFF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -150,7 +150,7 @@ define i1 @fcmp_trunc_with_reassoc(double %0) {
 define i1 @fcmp_trunc_with_fast(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_with_fast(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast oge double [[TMP0]], 0x4058FFFFF0000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast oge double [[TMP0]], f0x4058FFFFF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -161,7 +161,7 @@ define i1 @fcmp_trunc_with_fast(double %0) {
 define <4 x i1> @fcmp_vec_trunc(<4 x double> %0) {
 ; CHECK-LABEL: define <4 x i1> @fcmp_vec_trunc(
 ; CHECK-SAME: <4 x double> [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <4 x double> [[TMP0]], splat (double 0x3FEFFFFFF0000000)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <4 x double> [[TMP0]], splat (double f0x3FEFFFFFF0000000)
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %vec = fptrunc <4 x double> %0 to <4 x float>
@@ -172,7 +172,7 @@ define <4 x i1> @fcmp_vec_trunc(<4 x double> %0) {
 define <1 x i1> @fcmp_vec_trunc_scalar(<1 x double> %0) {
 ; CHECK-LABEL: define <1 x i1> @fcmp_vec_trunc_scalar(
 ; CHECK-SAME: <1 x double> [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast olt <1 x double> [[TMP0]], splat (double 0x3FEFFFFFF0000000)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast olt <1 x double> [[TMP0]], splat (double f0x3FEFFFFFF0000000)
 ; CHECK-NEXT:    ret <1 x i1> [[CMP]]
 ;
   %vec = fptrunc <1 x double> %0 to <1 x float>
@@ -183,7 +183,7 @@ define <1 x i1> @fcmp_vec_trunc_scalar(<1 x double> %0) {
 define i1 @fcmp_trunc_fp128(fp128 %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_fp128(
 ; CHECK-SAME: fp128 [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast oge fp128 [[TMP0]], 0xL000000000000000040058FFFFF000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast oge fp128 [[TMP0]], f0x40058FFFFF0000000000000000000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc fp128 %0 to float
@@ -194,7 +194,7 @@ define i1 @fcmp_trunc_fp128(fp128 %0) {
 define i1 @fcmp_trunc_x86_fp80(x86_fp80 %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_x86_fp80(
 ; CHECK-SAME: x86_fp80 [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast oge x86_fp80 [[TMP0]], 0xK4005C7FFFF8000000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast oge x86_fp80 [[TMP0]], f0x4005C7FFFF8000000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc x86_fp80 %0 to float
@@ -205,7 +205,7 @@ define i1 @fcmp_trunc_x86_fp80(x86_fp80 %0) {
 define i1 @fcmp_trunc_ppc_fp128(ppc_fp128 %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_ppc_fp128(
 ; CHECK-SAME: ppc_fp128 [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast oge ppc_fp128 [[TMP0]], 0xM4058FFFFF00000000000000000000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast oge ppc_fp128 [[TMP0]], f0x00000000000000004058FFFFF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc ppc_fp128 %0 to float
@@ -227,7 +227,7 @@ define i1 @fcmp_trunc_nan(double %0) {
 define i1 @fcmp_trunc_d1(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_d1(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge double [[TMP0]], 0x3690000000000001
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge double [[TMP0]], f0x3690000000000001
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -239,7 +239,7 @@ define i1 @fcmp_trunc_d1(double %0) {
 define i1 @fcmp_trunc_d1_ole(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_d1_ole(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ole double [[TMP0]], 0x36A7FFFFFFFFFFFF
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ole double [[TMP0]], f0x36A7FFFFFFFFFFFF
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -251,7 +251,7 @@ define i1 @fcmp_trunc_d1_ole(double %0) {
 define i1 @fcmp_trunc_d2(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_d2(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge double [[TMP0]], 0x36A8000000000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge double [[TMP0]], f0x36A8000000000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -263,7 +263,7 @@ define i1 @fcmp_trunc_d2(double %0) {
 define i1 @fcmp_trunc_d3(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_d3(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ogt double [[TMP0]], 0x380FFFFFDFFFFFFF
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ogt double [[TMP0]], f0x380FFFFFDFFFFFFF
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -275,7 +275,7 @@ define i1 @fcmp_trunc_d3(double %0) {
 define i1 @fcmp_trunc_d4(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_d4(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ogt double [[TMP0]], 0xB690000000000001
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ogt double [[TMP0]], f0xB690000000000001
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -287,7 +287,7 @@ define i1 @fcmp_trunc_d4(double %0) {
 define i1 @fcmp_trunc_d5(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_d5(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp olt double [[TMP0]], 0xB80FFFFFDFFFFFFF
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp olt double [[TMP0]], f0xB80FFFFFDFFFFFFF
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -300,7 +300,7 @@ define i1 @fcmp_trunc_d5(double %0) {
 define i1 @fcmp_trunc_p0(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_p0(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge double [[TMP0]], 0xB690000000000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge double [[TMP0]], f0xB690000000000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -313,7 +313,7 @@ define i1 @fcmp_trunc_p0(double %0) {
 define i1 @fcmp_trunc_n0(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_n0(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ogt double [[TMP0]], 0x3690000000000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ogt double [[TMP0]], f0x3690000000000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -326,7 +326,7 @@ define i1 @fcmp_trunc_n0(double %0) {
 define i1 @fcmp_trunc_mx(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_mx(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ogt double [[TMP0]], 0x47EFFFFFEFFFFFFF
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ogt double [[TMP0]], f0x47EFFFFFEFFFFFFF
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -338,7 +338,7 @@ define i1 @fcmp_trunc_mx(double %0) {
 define i1 @fcmp_trunc_mn(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_mn(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp olt double [[TMP0]], 0xC7EFFFFFEFFFFFFF
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp olt double [[TMP0]], f0xC7EFFFFFEFFFFFFF
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -361,7 +361,7 @@ define i1 @fcmp_trunc_literal_positive_inf(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_literal_positive_inf(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[TMP0]] to float
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oeq float [[TRUNC]], 0x7FF0000000000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oeq float [[TRUNC]], +inf
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -396,7 +396,7 @@ define i1 @fcmp_trunc_inf_uge(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_inf_uge(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[TMP0]] to float
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ueq float [[TRUNC]], 0x7FF0000000000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ueq float [[TRUNC]], +inf
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -419,7 +419,7 @@ define i1 @fcmp_trunc_ninf_olt(double %0) {
 define i1 @fcmp_trunc_uge(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_uge(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp uge double [[TMP0]], 0x405EBFFFF0000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp uge double [[TMP0]], f0x405EBFFFF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -431,7 +431,7 @@ define i1 @fcmp_trunc_uge(double %0) {
 define i1 @fcmp_trunc_neg_uge(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_neg_uge(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp uge double [[TMP0]], 0xC05EC00010000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp uge double [[TMP0]], f0xC05EC00010000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -443,7 +443,7 @@ define i1 @fcmp_trunc_neg_uge(double %0) {
 define i1 @fcmp_trunc_oge(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_oge(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge double [[TMP0]], 0x405EBFFFF0000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge double [[TMP0]], f0x405EBFFFF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -455,7 +455,7 @@ define i1 @fcmp_trunc_oge(double %0) {
 define i1 @fcmp_trunc_neg_oge(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_neg_oge(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge double [[TMP0]], 0xC05EC00010000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge double [[TMP0]], f0xC05EC00010000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -467,7 +467,7 @@ define i1 @fcmp_trunc_neg_oge(double %0) {
 define i1 @fcmp_trunc_ugt(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_ugt(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ugt double [[TMP0]], 0x40FE0F3010000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ugt double [[TMP0]], f0x40FE0F3010000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -479,7 +479,7 @@ define i1 @fcmp_trunc_ugt(double %0) {
 define i1 @fcmp_trunc_neg_ugt(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_neg_ugt(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ugt double [[TMP0]], 0xC0FE1B8FF0000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ugt double [[TMP0]], f0xC0FE1B8FF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -491,7 +491,7 @@ define i1 @fcmp_trunc_neg_ugt(double %0) {
 define i1 @fcmp_trunc_neg_ogt(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_neg_ogt(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ogt double [[TMP0]], 0xC0FE1B8FF0000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ogt double [[TMP0]], f0xC0FE1B8FF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -504,7 +504,7 @@ define i1 @fcmp_trunc_neg_ogt(double %0) {
 define i1 @fcmp_trunc_ule(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_ule(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ule double [[TMP0]], 0x408ED80010000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ule double [[TMP0]], f0x408ED80010000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -517,7 +517,7 @@ define i1 @fcmp_trunc_ule(double %0) {
 define i1 @fcmp_trunc_neg_ule(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_neg_ule(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ule double [[TMP0]], 0xC088A7FFF0000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ule double [[TMP0]], f0xC088A7FFF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -530,7 +530,7 @@ define i1 @fcmp_trunc_neg_ule(double %0) {
 define i1 @fcmp_trunc_neg_ole(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_neg_ole(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ole double [[TMP0]], 0xC088A7FFF0000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ole double [[TMP0]], f0xC088A7FFF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -542,7 +542,7 @@ define i1 @fcmp_trunc_neg_ole(double %0) {
 define i1 @fcmp_trunc_neg_ult(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_neg_ult(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ult double [[TMP0]], 0xC088A80010000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ult double [[TMP0]], f0xC088A80010000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -555,7 +555,7 @@ define i1 @fcmp_trunc_neg_ult(double %0) {
 define i1 @fcmp_trunc_olt(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_olt(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp olt double [[TMP0]], 0x408ED7FFF0000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp olt double [[TMP0]], f0x408ED7FFF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -568,7 +568,7 @@ define i1 @fcmp_trunc_olt(double %0) {
 define i1 @fcmp_trunc_neg_olt(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_neg_olt(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp olt double [[TMP0]], 0xC088A80010000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp olt double [[TMP0]], f0xC088A80010000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -580,7 +580,7 @@ define i1 @fcmp_trunc_neg_olt(double %0) {
 define i1 @fcmp_trunc_neg_nsz_uge(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_neg_nsz_uge(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp nsz uge double [[TMP0]], 0xC05EC00010000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp nsz uge double [[TMP0]], f0xC05EC00010000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -593,7 +593,7 @@ define i1 @fcmp_trunc_neg_nsz_uge(double %0) {
 define i1 @fcmp_trunc_reassoc_ugt(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_reassoc_ugt(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp reassoc ugt double [[TMP0]], 0x40889F8210000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp reassoc ugt double [[TMP0]], f0x40889F8210000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -605,7 +605,7 @@ define i1 @fcmp_trunc_reassoc_ugt(double %0) {
 define i1 @fcmp_trunc_neg_reassoc_ugt(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_neg_reassoc_ugt(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp reassoc ugt double [[TMP0]], 0xC0889F81F0000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp reassoc ugt double [[TMP0]], f0xC0889F81F0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -618,7 +618,7 @@ define i1 @fcmp_trunc_neg_reassoc_ugt(double %0) {
 define i1 @fcmp_trunc_fast_ult(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_fast_ult(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast uge double [[TMP0]], 0x40F8E8E010000001
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast uge double [[TMP0]], f0x40F8E8E010000001
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -630,7 +630,7 @@ define i1 @fcmp_trunc_fast_ult(double %0) {
 define i1 @fcmp_trunc_neg_fast_ult(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_neg_fast_ult(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast uge double [[TMP0]], 0xC0F8E8E02FFFFFFF
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast uge double [[TMP0]], f0xC0F8E8E02FFFFFFF
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -643,7 +643,7 @@ define i1 @fcmp_trunc_neg_fast_ult(double %0) {
 define i1 @fcmp_trunc_mx_fp128(fp128 %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_mx_fp128(
 ; CHECK-SAME: fp128 [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ole fp128 [[TMP0]], 0xLFFFFFFFFFFFFFFFF407EFFFFFEFFFFFF
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ole fp128 [[TMP0]], f0x407EFFFFFEFFFFFFFFFFFFFFFFFFFFFF
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc fp128 %0 to float
@@ -656,7 +656,7 @@ define i1 @fcmp_trunc_mx_fp128(fp128 %0) {
 define i1 @fcmp_trunc_mx_x86_fp80(x86_fp80 %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_mx_x86_fp80(
 ; CHECK-SAME: x86_fp80 [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ule x86_fp80 [[TMP0]], 0xK407EFFFFFF7FFFFFFFFF
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ule x86_fp80 [[TMP0]], f0x407EFFFFFF7FFFFFFFFF
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc x86_fp80 %0 to float
@@ -670,7 +670,7 @@ define i1 @fcmp_trunc_mx_ppc_fp128(ppc_fp128 %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_mx_ppc_fp128(
 ; CHECK-SAME: ppc_fp128 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc ppc_fp128 [[TMP0]] to float
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ole float [[TRUNC]], 0x47EFFFFFE0000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ole float [[TRUNC]], f0x7F7FFFFF
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc ppc_fp128 %0 to float
@@ -683,7 +683,7 @@ define i1 @fcmp_trunc_mx_ppc_fp128(ppc_fp128 %0) {
 define i1 @fcmp_trunc_mn_fp128(fp128 %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_mn_fp128(
 ; CHECK-SAME: fp128 [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp olt fp128 [[TMP0]], 0xL0000000000000000C07EFFFFF1000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp olt fp128 [[TMP0]], f0xC07EFFFFF10000000000000000000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc fp128 %0 to float
@@ -696,7 +696,7 @@ define i1 @fcmp_trunc_mn_fp128(fp128 %0) {
 define i1 @fcmp_trunc_mn_x86_fp80(x86_fp80 %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_mn_x86_fp80(
 ; CHECK-SAME: x86_fp80 [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge x86_fp80 [[TMP0]], 0xKC07EFFFFF88000000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge x86_fp80 [[TMP0]], f0xC07EFFFFF88000000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc x86_fp80 %0 to float
@@ -709,7 +709,7 @@ define i1 @fcmp_trunc_mn_x86_fp80(x86_fp80 %0) {
 define i1 @fcmp_trunc_mn_ppc_fp128(ppc_fp128 %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_mn_ppc_fp128(
 ; CHECK-SAME: ppc_fp128 [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp uge ppc_fp128 [[TMP0]], 0xMC7EFFFFF100000000000000000000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp uge ppc_fp128 [[TMP0]], f0x0000000000000000C7EFFFFF10000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc ppc_fp128 %0 to float

@@ -154,7 +154,7 @@ define i32 @test(ptr %pix1, ptr %pix2, i64 %idx.ext, i64 %idx.ext63, ptr %add.pt
 ; THR15-NEXT:    [[ARRAYIDX3_2:%.*]] = getelementptr i8, ptr [[ADD_PTR_1]], i64 4
 ; THR15-NEXT:    [[ARRAYIDX5_2:%.*]] = getelementptr i8, ptr [[ADD_PTR64_1]], i64 4
 ; THR15-NEXT:    [[ARRAYIDX5_3:%.*]] = getelementptr i8, ptr null, i64 4
-; THR15-NEXT:    [[TMP0:%.*]] = call <2 x i8> @llvm.masked.gather.v2i8.v2p0(<2 x ptr> align 1 zeroinitializer, <2 x i1> splat (i1 true), <2 x i8> poison)
+; THR15-NEXT:    [[TMP0:%.*]] = call <2 x i8> @llvm.masked.gather.v2i8.v2p0(<2 x ptr> align 1 splat (ptr null), <2 x i1> splat (i1 true), <2 x i8> poison)
 ; THR15-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[PIX1]], align 1
 ; THR15-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i32>
 ; THR15-NEXT:    [[TMP4:%.*]] = load <4 x i8>, ptr [[PIX2]], align 1
@@ -289,9 +289,9 @@ define i32 @test(ptr %pix1, ptr %pix2, i64 %idx.ext, i64 %idx.ext63, ptr %add.pt
 ; UNALIGNED_VEC_MEM-NEXT:    [[ARRAYIDX5_4:%.*]] = getelementptr i8, ptr null, i64 4
 ; UNALIGNED_VEC_MEM-NEXT:    [[TMP57:%.*]] = load i8, ptr null, align 1
 ; UNALIGNED_VEC_MEM-NEXT:    [[TMP61:%.*]] = load i8, ptr null, align 1
+; UNALIGNED_VEC_MEM-NEXT:    [[TMP4:%.*]] = load <4 x i8>, ptr [[ARRAYIDX3]], align 1
 ; UNALIGNED_VEC_MEM-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[PIX1]], align 1
 ; UNALIGNED_VEC_MEM-NEXT:    [[TMP3:%.*]] = load <4 x i8>, ptr [[PIX2]], align 1
-; UNALIGNED_VEC_MEM-NEXT:    [[TMP4:%.*]] = load <4 x i8>, ptr [[ARRAYIDX3]], align 1
 ; UNALIGNED_VEC_MEM-NEXT:    [[TMP5:%.*]] = load <4 x i8>, ptr [[ARRAYIDX5]], align 1
 ; UNALIGNED_VEC_MEM-NEXT:    [[TMP6:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i32>
 ; UNALIGNED_VEC_MEM-NEXT:    [[TMP7:%.*]] = zext <4 x i8> [[TMP3]] to <4 x i32>

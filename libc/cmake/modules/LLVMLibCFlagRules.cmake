@@ -241,6 +241,22 @@ function(add_target_with_flags target_name)
     list(APPEND ADD_TO_EXPAND_FLAGS ${ADD_TO_EXPAND_ADD_FLAGS})
   endif()
   list(APPEND ADD_TO_EXPAND_FLAGS ${deps_flag_list})
+
+  # If any flag with the __ONLY modifier is unavailable (i.e. its
+  # SKIP_FLAG_EXPANSION is set), skip this target entirely.  The __ONLY
+  # modifier means the target must only be built with that flag active;
+  # building without it would produce incorrect results.
+  foreach(flag_with_modifier IN LISTS ADD_TO_EXPAND_FLAGS)
+    extract_flag_modifier(${flag_with_modifier} flag modifier)
+    if("${modifier}" STREQUAL "ONLY" AND SKIP_FLAG_EXPANSION_${flag})
+      if(SHOW_INTERMEDIATE_OBJECTS)
+        message(STATUS "Not generating ${fq_target_name} since "
+                       "${flag} is not available on the host.")
+      endif()
+      return()
+    endif()
+  endforeach()
+
   remove_duplicated_flags("${ADD_TO_EXPAND_FLAGS}" flags)
   list(SORT flags)
 

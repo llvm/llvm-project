@@ -5,7 +5,6 @@
 define i64 @test(i32 noundef signext %c, i32 noundef signext %d) {
 ; NOPIC-LABEL: test:
 ; NOPIC:       # %bb.0: # %entry
-; NOPIC-NEXT:    # kill: def $x11 killed $x10
 ; NOPIC-NEXT:    slli a0, a0, 32
 ; NOPIC-NEXT:    srli a1, a0, 32
 ; NOPIC-NEXT:    lui a0, %hi(.LCPI0_0)
@@ -27,7 +26,6 @@ define i64 @test(i32 noundef signext %c, i32 noundef signext %d) {
 ;
 ; PIC-LABEL: test:
 ; PIC:       # %bb.0: # %entry
-; PIC-NEXT:    # kill: def $x11 killed $x10
 ; PIC-NEXT:    slli a0, a0, 32
 ; PIC-NEXT:    srli a1, a0, 32
 ; PIC-NEXT:  .Lpcrel_hi0:

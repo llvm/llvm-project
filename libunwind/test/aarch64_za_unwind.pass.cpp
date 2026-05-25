@@ -29,7 +29,7 @@
 static bool checkHasSME() {
   int has_sme = 0;
   size_t size = sizeof(has_sme);
-  if (!sysctlbyname("hw.optional.arm.FEAT_SME", &has_sme, &size, NULL, 0))
+  if (sysctlbyname("hw.optional.arm.FEAT_SME", &has_sme, &size, NULL, 0))
     return false;
   return has_sme != 0;
 }

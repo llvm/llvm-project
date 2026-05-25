@@ -378,8 +378,7 @@ def OMPC_NoGroup : Clause<[Spelling<"nogroup">]> {
 }
 def OMPC_NonTemporal : Clause<[Spelling<"nontemporal">]> {
   let clangClass = "OMPNontemporalClause";
-  let flangClass = "Name";
-  let isValueList = true;
+  let flangClass = "OmpObjectList";
 }
 def OMPC_Notinbranch : Clause<[Spelling<"notinbranch">]> {
 }
