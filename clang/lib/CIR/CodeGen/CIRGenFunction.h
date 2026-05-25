@@ -1625,6 +1625,25 @@ public:
 
   void instantiateIndirectGotoBlock();
 
+  /// Emit a simple LLVM intrinsic that takes N scalar arguments and whose
+  /// return type matches the type of the first argument. The intrinsic name is
+  /// used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be baked
+  /// into \p Name by the caller.
+  template <uint32_t N>
+  [[maybe_unused]] RValue
+  emitBuiltinWithOneOverloadedType(const CallExpr *E, llvm::StringRef Name) {
+    static_assert(N, "expect non-empty argument");
+    mlir::Type cirTy = convertType(E->getArg(0)->getType());
+    SmallVector<mlir::Value, N> args;
+    for (uint32_t i = 0; i < N; ++i) {
+      args.push_back(emitScalarExpr(E->getArg(i)));
+    }
+    const auto call = cir::LLVMIntrinsicCallOp::create(
+        builder, getLoc(E->getExprLoc()), builder.getStringAttr(Name), cirTy,
+        args);
+    return RValue::get(call->getResult(0));
+  }
+
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, cir::CIRCallOpInterface *callOp,
