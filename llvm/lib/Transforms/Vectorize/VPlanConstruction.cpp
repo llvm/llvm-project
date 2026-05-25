@@ -20,6 +20,7 @@
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -32,7 +33,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
-
 #define DEBUG_TYPE "vplan"
 
 using namespace llvm;
@@ -864,11 +864,13 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
 /// fails.
 static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
                                             VPDominatorTree &VPDT) {
-  for (VPRecipeBase &R : HeaderVPBB->phis()) {
-    auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R);
-    if (!FOR)
-      continue;
-
+  auto FORs =
+      map_to_vector(make_filter_range(HeaderVPBB->phis(),
+                                      IsaPred<VPFirstOrderRecurrencePHIRecipe>),
+                    [](VPRecipeBase &R) {
+                      return cast<VPFirstOrderRecurrencePHIRecipe>(&R);
+                    });
+  for (VPFirstOrderRecurrencePHIRecipe *FOR : FORs) {
     // Follow through FOR phi chains to find the actual Previous recipe.
     // Fixed-order recurrences do not contain cycles, so this loop is
     // guaranteed to terminate.
