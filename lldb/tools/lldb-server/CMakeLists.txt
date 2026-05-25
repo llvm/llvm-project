@@ -46,12 +46,17 @@ if(APPLE_EMBEDDED)
   endif()
 endif()
 
+add_subdirectory(Plugins)
+
+set(LLDB_SERVER_PLUGINS lldbServerPluginMockAccelerator)
+
 add_lldb_tool(lldb-server
     lldb-gdbserver.cpp
     lldb-platform.cpp
     lldb-server.cpp
     LLDBServerUtilities.cpp
     SystemInitializerLLGS.cpp
+    LLDBServerPluginRegistry.cpp
 
     LINK_COMPONENTS
       Option
@@ -61,6 +66,7 @@ add_lldb_tool(lldb-server
       lldbInitialization
       lldbVersion
       ${LLDB_PLUGINS}
+      ${LLDB_SERVER_PLUGINS}
       lldbPluginInstructionARM
       lldbPluginInstructionLoongArch
       lldbPluginInstructionMIPS
@@ -75,4 +81,5 @@ add_dependencies(lldb-server
   ${tablegen_deps}
 )
 target_include_directories(lldb-server PRIVATE "${LLDB_SOURCE_DIR}/source")
+target_include_directories(lldb-server PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(lldb-server PRIVATE ${LLDB_SYSTEM_LIBS})

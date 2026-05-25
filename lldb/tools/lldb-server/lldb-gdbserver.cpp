@@ -16,6 +16,7 @@
 #include <unistd.h>
 #endif
 
+#include "LLDBServerPluginRegistry.h"
 #include "LLDBServerUtilities.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerLLGS.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
@@ -449,6 +450,17 @@ int main_gdbserver(int argc, char *argv[]) {
 
   NativeProcessManager manager(mainloop);
   GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+
+  // Create and activate all accelerator plugins.
+  auto accelerator_plugins =
+      LLDBServerPluginRegistry::Instance().TryInstantiateAllAcceleratorPlugins(
+          gdb_server, mainloop);
+
+  // Ensure plugins are torn down on all exit paths.
+  llvm::scope_exit teardown_plugins([&]() {
+    for (auto &plugin : accelerator_plugins)
+        plugin->Teardown();
+  });
 
   llvm::StringRef host_and_port;
   if (!Inputs.empty() && connection_fd == SharedSocket::kInvalidFD) {
