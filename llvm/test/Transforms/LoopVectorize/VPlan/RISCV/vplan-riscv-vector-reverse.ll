@@ -36,8 +36,9 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:     vp<[[VEC_END_PTR_B:%.+]]> = vector-end-pointer ir<[[ARRAY_IDX_B]]>, vp<[[EVL]]>
 ; CHECK-NEXT:     WIDEN ir<[[LOAD_B:%.+]]> = vp.load vp<[[VEC_END_PTR_B]]>, vp<[[EVL]]>
 ; CHECK-NEXT:     WIDEN-INTRINSIC vp<[[SPLICE_B:%.+]]> = call llvm.vector.splice.left(ir<poison>, ir<[[LOAD_B]]>, vp<[[EVL]]>)
+; CHECK-NEXT:     WIDEN-INTRINSIC vp<[[VP_REVERSE_B:%.+]]> = call llvm.experimental.vp.reverse(ir<[[LOAD_B]]>, ir<true>, vp<[[EVL]]>)
 ; CHECK-NEXT:     EMIT vp<[[VAL_B:%.+]]> = reverse vp<[[SPLICE_B]]>
-; CHECK-NEXT:     WIDEN ir<[[ADD_RESULT:%.+]]> = add vp<[[VAL_B]]>, ir<1>
+; CHECK-NEXT:     WIDEN ir<[[ADD_RESULT:%.+]]> = add vp<[[VP_REVERSE_B]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<[[ARRAY_IDX_A:%.+]]> = getelementptr inbounds ir<[[A:%.+]]>, ir<[[IDX_PROM]]>
 ; CHECK-NEXT:     EMIT vp<[[REVERSED_ADD:%.+]]> = reverse ir<[[ADD_RESULT]]>
 ; CHECK-NEXT:     vp<[[VEC_END_PTR_A:%.+]]> = vector-end-pointer ir<[[ARRAY_IDX_A]]>, vp<[[EVL]]>

@@ -90,13 +90,11 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 0, [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[TMP39]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i64> @llvm.vp.load.nxv4i64.p0(ptr align 8 [[TMP11]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP4]])
-; CHECK-NEXT:    [[TMP13:%.*]] = call <vscale x 4 x i64> @llvm.vector.splice.left.nxv4i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> [[VP_OP_LOAD]], i32 [[TMP4]])
-; CHECK-NEXT:    [[TMP12:%.*]] = call <vscale x 4 x i64> @llvm.vector.reverse.nxv4i64(<vscale x 4 x i64> [[TMP13]])
+; CHECK-NEXT:    [[TMP12:%.*]] = call <vscale x 4 x i64> @llvm.experimental.vp.reverse.nxv4i64(<vscale x 4 x i64> [[VP_OP_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP38]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i64, ptr [[TMP6]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[VP_OP_LOAD4:%.*]] = call <vscale x 4 x i64> @llvm.vp.load.nxv4i64.p0(ptr align 8 [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP4]])
-; CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 4 x i64> @llvm.vector.splice.left.nxv4i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> [[VP_OP_LOAD4]], i32 [[TMP4]])
-; CHECK-NEXT:    [[TMP15:%.*]] = call <vscale x 4 x i64> @llvm.vector.reverse.nxv4i64(<vscale x 4 x i64> [[TMP17]])
+; CHECK-NEXT:    [[TMP15:%.*]] = call <vscale x 4 x i64> @llvm.experimental.vp.reverse.nxv4i64(<vscale x 4 x i64> [[VP_OP_LOAD4]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP4]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp sgt <vscale x 4 x i64> [[TMP12]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP18]] = call <vscale x 4 x i64> @llvm.vp.merge.nxv4i64(<vscale x 4 x i1> [[TMP16]], <vscale x 4 x i64> [[VEC_IND]], <vscale x 4 x i64> [[VEC_PHI]], i32 [[TMP4]])
 ; CHECK-NEXT:    [[TMP19]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> [[TMP16]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[VEC_PHI1]], i32 [[TMP4]])

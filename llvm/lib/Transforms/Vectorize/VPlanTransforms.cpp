@@ -1672,6 +1672,16 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
     return;
   }
 
+  if (match(Def, m_Reverse(m_Intrinsic<Intrinsic::vector_splice_left>(
+                     m_Poison(), m_VPValue(X), m_VPValue(Y)))) &&
+      match(Y, m_EVL(m_VPValue()))) {
+    auto *VPReverse = new VPWidenIntrinsicRecipe(
+        Intrinsic::experimental_vp_reverse, {X, Plan->getTrue(), Y},
+        TypeInfo.inferScalarType(X), {}, {}, Def->getDebugLoc());
+    VPReverse->insertBefore(Def);
+    return Def->replaceAllUsesWith(VPReverse);
+  }
+
   // Simplify MaskedCond with no block mask to its single operand.
   if (match(Def, m_VPInstruction<VPInstruction::MaskedCond>()) &&
       !cast<VPInstruction>(Def)->isMasked())
