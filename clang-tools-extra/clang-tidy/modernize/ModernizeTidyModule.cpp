@@ -46,7 +46,7 @@
 #include "UseOverrideCheck.h"
 #include "UseRangesCheck.h"
 #include "UseScopedLockCheck.h"
-#include "UseSharedPtrArray.h"
+#include "UseSharedPtrArrayCheck.h"
 #include "UseStartsEndsWithCheck.h"
 #include "UseStdBitCheck.h"
 #include "UseStdFormatCheck.h"
