@@ -34,7 +34,7 @@ add_lit_testsuite(check-libc-lit
 add_dependencies(check-libc-lit check-libc-build)
 
 if (TARGET check-hdrgen)
-  add_dependencies(check-libc check-hdrgen)
+  add_dependencies(check-libc-lit check-hdrgen)
 endif()
 
 if(LIBC_ENABLE_UNITTESTS AND NOT LIBC_TEST_HERMETIC_TEST_ONLY)
