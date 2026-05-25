@@ -10,6 +10,7 @@
 // UNSUPPORTED: no-filesystem
 
 // UNSUPPORTED: windows
+// XFAIL: using-built-library-before-llvm-23
 
 // Verify that remove_all reports the correct error (permission_denied)
 // when the parent directory has insufficient permissions.
