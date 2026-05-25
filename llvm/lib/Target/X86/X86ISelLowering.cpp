@@ -2785,6 +2785,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::FMINNUM,
                        ISD::FMAXNUM,
                        ISD::SUB,
+                       ISD::ATOMIC_LOAD,
                        ISD::LOAD,
                        ISD::LRINT,
                        ISD::LLRINT,
@@ -33096,13 +33097,6 @@ X86TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   }
 }
 
-TargetLowering::AtomicExpansionKind
-X86TargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
-  if (LI->getType()->getScalarType()->isFloatingPointTy())
-    return AtomicExpansionKind::CastToInteger;
-  return AtomicExpansionKind::None;
-}
-
 LoadInst *
 X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   unsigned NativeWidth = Subtarget.is64Bit() ? 64 : 32;
@@ -54226,6 +54220,29 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
   return SDValue();
 }
 
+static SDValue combineAtomicLoad(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  auto *AN = cast<AtomicSDNode>(N);
+  EVT VT = AN->getValueType(0);
+  if (!VT.getScalarType().isFloatingPoint())
+    return SDValue();
+
+  unsigned BitWidth = VT.getStoreSizeInBits();
+  if (BitWidth != VT.getSizeInBits())
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), BitWidth);
+  SDValue IntLoad = DAG.getAtomic(
+      ISD::ATOMIC_LOAD, DL, IntVT, DAG.getVTList(IntVT, MVT::Other),
+      {AN->getChain(), AN->getBasePtr()}, AN->getMemOperand());
+  SDValue Cast = DAG.getBitcast(VT, IntLoad);
+  return DAG.getMergeValues({Cast, IntLoad.getValue(1)}, DL);
+}
+
 static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
                            TargetLowering::DAGCombinerInfo &DCI,
                            const X86Subtarget &Subtarget) {
@@ -63004,6 +63021,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::AVGCEILU:
   case ISD::AVGFLOORS:
   case ISD::AVGFLOORU:      return combineAVG(N, DAG, DCI, Subtarget);
+  case ISD::ATOMIC_LOAD:    return combineAtomicLoad(N, DAG, DCI);
   case ISD::LOAD:           return combineLoad(N, DAG, DCI, Subtarget);
   case ISD::MLOAD:          return combineMaskedLoad(N, DAG, DCI, Subtarget);
   case ISD::STORE:          return combineStore(N, DAG, DCI, Subtarget);
