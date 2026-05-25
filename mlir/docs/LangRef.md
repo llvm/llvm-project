@@ -764,8 +764,7 @@ Operations must opt in to producing or consuming tokens with
 `TokenProducerTrait` and `TokenConsumerTrait`.
 
 Note: Because tokens are SSA values, they cannot cross `IsolatedFromAbove`
-region boundaries. Symbols should be used instead when a token-like
-dependency must cross such a boundary.
+region boundaries.
 
 See [Tokens](Tokens.md) for details on ODS integration and examples.
 
