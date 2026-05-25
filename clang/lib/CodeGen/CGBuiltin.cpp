@@ -5663,24 +5663,28 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Order = EmitScalarExpr(E->getArg(0));
     if (isa<llvm::ConstantInt>(Order)) {
       int ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
+      llvm::FenceInst *Fence = nullptr;
       switch (ord) {
       case 0:  // memory_order_relaxed
       default: // invalid order
         break;
       case 1:  // memory_order_consume
       case 2:  // memory_order_acquire
-        Builder.CreateFence(llvm::AtomicOrdering::Acquire, SSID);
+        Fence = Builder.CreateFence(llvm::AtomicOrdering::Acquire, SSID);
         break;
       case 3:  // memory_order_release
-        Builder.CreateFence(llvm::AtomicOrdering::Release, SSID);
+        Fence = Builder.CreateFence(llvm::AtomicOrdering::Release, SSID);
         break;
       case 4:  // memory_order_acq_rel
-        Builder.CreateFence(llvm::AtomicOrdering::AcquireRelease, SSID);
+        Fence = Builder.CreateFence(llvm::AtomicOrdering::AcquireRelease, SSID);
         break;
       case 5:  // memory_order_seq_cst
-        Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent, SSID);
+        Fence = Builder.CreateFence(
+            llvm::AtomicOrdering::SequentiallyConsistent, SSID);
         break;
       }
+      if (Fence)
+        getTargetHooks().setTargetAtomicMetadata(*this, *Fence);
       return RValue::get(nullptr);
     }
 
@@ -5695,23 +5699,29 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::SwitchInst *SI = Builder.CreateSwitch(Order, ContBB);
 
     Builder.SetInsertPoint(AcquireBB);
-    Builder.CreateFence(llvm::AtomicOrdering::Acquire, SSID);
+    getTargetHooks().setTargetAtomicMetadata(
+        *this, *Builder.CreateFence(llvm::AtomicOrdering::Acquire, SSID));
     Builder.CreateBr(ContBB);
     SI->addCase(Builder.getInt32(1), AcquireBB);
     SI->addCase(Builder.getInt32(2), AcquireBB);
 
     Builder.SetInsertPoint(ReleaseBB);
-    Builder.CreateFence(llvm::AtomicOrdering::Release, SSID);
+    getTargetHooks().setTargetAtomicMetadata(
+        *this, *Builder.CreateFence(llvm::AtomicOrdering::Release, SSID));
     Builder.CreateBr(ContBB);
     SI->addCase(Builder.getInt32(3), ReleaseBB);
 
     Builder.SetInsertPoint(AcqRelBB);
-    Builder.CreateFence(llvm::AtomicOrdering::AcquireRelease, SSID);
+    getTargetHooks().setTargetAtomicMetadata(
+        *this,
+        *Builder.CreateFence(llvm::AtomicOrdering::AcquireRelease, SSID));
     Builder.CreateBr(ContBB);
     SI->addCase(Builder.getInt32(4), AcqRelBB);
 
     Builder.SetInsertPoint(SeqCstBB);
-    Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent, SSID);
+    getTargetHooks().setTargetAtomicMetadata(
+        *this, *Builder.CreateFence(
+                   llvm::AtomicOrdering::SequentiallyConsistent, SSID));
     Builder.CreateBr(ContBB);
     SI->addCase(Builder.getInt32(5), SeqCstBB);
 
@@ -5729,40 +5739,43 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       SyncScope SS = ScopeModel->isValid(Scp->getZExtValue())
                          ? ScopeModel->map(Scp->getZExtValue())
                          : ScopeModel->map(ScopeModel->getFallBackValue());
+      llvm::FenceInst *Fence = nullptr;
       switch (Ord->getZExtValue()) {
       case 0:  // memory_order_relaxed
       default: // invalid order
         break;
       case 1: // memory_order_consume
       case 2: // memory_order_acquire
-        Builder.CreateFence(
+        Fence = Builder.CreateFence(
             llvm::AtomicOrdering::Acquire,
             getTargetHooks().getLLVMSyncScopeID(getLangOpts(), SS,
                                                 llvm::AtomicOrdering::Acquire,
                                                 getLLVMContext()));
         break;
       case 3: // memory_order_release
-        Builder.CreateFence(
+        Fence = Builder.CreateFence(
             llvm::AtomicOrdering::Release,
             getTargetHooks().getLLVMSyncScopeID(getLangOpts(), SS,
                                                 llvm::AtomicOrdering::Release,
                                                 getLLVMContext()));
         break;
       case 4: // memory_order_acq_rel
-        Builder.CreateFence(llvm::AtomicOrdering::AcquireRelease,
-                            getTargetHooks().getLLVMSyncScopeID(
-                                getLangOpts(), SS,
-                                llvm::AtomicOrdering::AcquireRelease,
-                                getLLVMContext()));
+        Fence = Builder.CreateFence(llvm::AtomicOrdering::AcquireRelease,
+                                    getTargetHooks().getLLVMSyncScopeID(
+                                        getLangOpts(), SS,
+                                        llvm::AtomicOrdering::AcquireRelease,
+                                        getLLVMContext()));
         break;
       case 5: // memory_order_seq_cst
-        Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
-                            getTargetHooks().getLLVMSyncScopeID(
-                                getLangOpts(), SS,
-                                llvm::AtomicOrdering::SequentiallyConsistent,
-                                getLLVMContext()));
+        Fence = Builder.CreateFence(
+            llvm::AtomicOrdering::SequentiallyConsistent,
+            getTargetHooks().getLLVMSyncScopeID(
+                getLangOpts(), SS, llvm::AtomicOrdering::SequentiallyConsistent,
+                getLLVMContext()));
         break;
       }
+      if (Fence)
+        getTargetHooks().setTargetAtomicMetadata(*this, *Fence);
       return RValue::get(nullptr);
     }
 
@@ -5821,9 +5834,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         SyncScope SS = ScopeModel->isValid(Scp->getZExtValue())
                            ? ScopeModel->map(Scp->getZExtValue())
                            : ScopeModel->map(ScopeModel->getFallBackValue());
-        Builder.CreateFence(Ordering,
-                            getTargetHooks().getLLVMSyncScopeID(
-                                getLangOpts(), SS, Ordering, getLLVMContext()));
+        llvm::FenceInst *Fence = Builder.CreateFence(
+            Ordering, getTargetHooks().getLLVMSyncScopeID(
+                          getLangOpts(), SS, Ordering, getLLVMContext()));
+        getTargetHooks().setTargetAtomicMetadata(*this, *Fence);
         Builder.CreateBr(ContBB);
       } else {
         llvm::DenseMap<unsigned, llvm::BasicBlock *> BBs;
@@ -5837,9 +5851,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           SI->addCase(Builder.getInt32(Scp), B);
 
           Builder.SetInsertPoint(B);
-          Builder.CreateFence(Ordering, getTargetHooks().getLLVMSyncScopeID(
-                                            getLangOpts(), ScopeModel->map(Scp),
-                                            Ordering, getLLVMContext()));
+          llvm::FenceInst *Fence = Builder.CreateFence(
+              Ordering, getTargetHooks().getLLVMSyncScopeID(
+                            getLangOpts(), ScopeModel->map(Scp), Ordering,
+                            getLLVMContext()));
+          getTargetHooks().setTargetAtomicMetadata(*this, *Fence);
           Builder.CreateBr(ContBB);
         }
       }

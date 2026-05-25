@@ -3577,6 +3577,29 @@ An error will be given if:
   }];
 }
 
+def AMDGCNAVDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+This attribute controls MakeAvailable and MakeVisible cache operations on
+AMDGPU synchronization operations. It takes a string argument specifying the
+mode.
+
+When placed on a statement containing a C/C++ atomic builtin call, the
+resulting atomic or fence instruction will carry ``!mmra !{!"amdgcn-av",
+!"<mode>"}`` metadata.
+
+The supported modes are:
+
+- ``"none"``: Skip cache writeback (on release) and cache invalidation (on
+  acquire), while preserving memory ordering (waits).
+
+.. code-block:: c++
+
+  [[clang::amdgcn_av("none")]] __atomic_thread_fence(__ATOMIC_SEQ_CST);
+  [[clang::amdgcn_av("none")]] __atomic_fetch_add(ptr, 1, __ATOMIC_ACQ_REL);
+  }];
+}
+
 def DocCatCallingConvs : DocumentationCategory<"Calling Conventions"> {
   let Content = [{
 Clang supports several different calling conventions, depending on the target
