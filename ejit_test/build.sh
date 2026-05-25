@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Build all EJIT integration tests.
-# Usage: ./build.sh [--run] [--arch=x86|aarch64] [--analyze-deps] [<test>...]
+# Usage: ./build.sh [--run] [--arch=x86|aarch64] [--analyze-deps] [--lipo=FILE] [<test>...]
 #   --run          Build and run all tests
 #   --arch=<arch>  Target architecture (default: auto-detect from build dirs)
 #   --analyze-deps Build & show which LLVM .a files were actually linked
+#   --lipo=<FILE>  Use a single lipo .a (from lipo.py) instead of 44 individual .a
 #   test_name      Build only the named test (without .c extension)
 #
 # Requires a release build (static libs): ./build.sh release x86
@@ -16,6 +17,7 @@ ARCH=""
 SELECTED=()
 DO_RUN=false
 ANALYZE_DEPS=false
+LIPO_FILE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -23,6 +25,8 @@ while [[ $# -gt 0 ]]; do
     --analyze-deps) ANALYZE_DEPS=true ;;
     --arch=*)      ARCH="${1#--arch=}" ;;
     --arch)        ARCH="$2"; shift ;;
+    --lipo=*)      LIPO_FILE="${1#--lipo=}" ;;
+    --lipo)        LIPO_FILE="auto" ;;
     *)             SELECTED+=("$1") ;;
   esac
   shift
@@ -116,8 +120,22 @@ _set_min_libs() {
   esac
 }
 
-_set_min_libs "${ARCH}"
-OTHER_LIBS=$(echo "${MIN_LIBS}" | sed '/^$/d' | tr '\n' ' ')
+if [[ -n "${LIPO_FILE}" ]]; then
+  # Lipo mode: use single pre-built .a instead of 44 individual .a files.
+  # The lipo .a already bundles EJIT + all LLVM dependencies (see lipo.py).
+  # If --lipo is passed without =FILE, auto-detect from build dir + arch.
+  if [[ "${LIPO_FILE}" == "auto" ]]; then
+    LIPO_FILE="${SCRIPT_DIR}/lipo/libejit_lipo_${ARCH}_gc.a"
+  fi
+  [[ -f "${LIPO_FILE}" ]] || { echo "ERROR: lipo file not found: ${LIPO_FILE}"; exit 1; }
+  USE_LIPO=true
+  LIPO_ABS=$(cd "$(dirname "${LIPO_FILE}")" && pwd)/$(basename "${LIPO_FILE}")
+  echo "Lipo mode: ${LIPO_ABS}"
+else
+  USE_LIPO=false
+  _set_min_libs "${ARCH}"
+  OTHER_LIBS=$(echo "${MIN_LIBS}" | sed '/^$/d' | tr '\n' ' ')
+fi
 LINK_LIBS="-lz -lpthread -ldl"
 
 OUTDIR="${SCRIPT_DIR}/out"
@@ -181,26 +199,40 @@ build_one() {
   "${CLANG}" -O2 ${INCLUDES} -c "${src}" -o "${obj}"
 
   echo "  Linking ${name} (${ARCH}) ..."
-  "${CXX}" -fuse-ld="${LD_LLD}" \
-    -Os -Wl,--gc-sections -Wl,--strip-all \
-    -Wl,--whole-archive "${EJIT_RUNTIME}" -Wl,--no-whole-archive \
-    ${OTHER_LIBS} \
-    ${LINK_LIBS} \
-    -Wl,-M \
-    "${obj}" -o "${bin}" > "${map_file}" 2>&1
+  if ${USE_LIPO}; then
+    "${CXX}" -fuse-ld="${LD_LLD}" \
+      -Os -Wl,--gc-sections -Wl,--strip-all \
+      "${LIPO_ABS}" \
+      ${LINK_LIBS} \
+      -Wl,-M \
+      "${obj}" -o "${bin}" > "${map_file}" 2>&1
+  else
+    "${CXX}" -fuse-ld="${LD_LLD}" \
+      -Os -Wl,--gc-sections -Wl,--strip-all \
+      -Wl,--whole-archive "${EJIT_RUNTIME}" -Wl,--no-whole-archive \
+      ${OTHER_LIBS} \
+      ${LINK_LIBS} \
+      -Wl,-M \
+      "${obj}" -o "${bin}" > "${map_file}" 2>&1
+  fi
 
   echo -e "  ${GREEN}OK${NC}: ${bin}"
 
   # Show dependency summary on request
   if ${ANALYZE_DEPS}; then
-    local deps
-    deps=$(grep -oP "${BUILD_DIR}/lib/\K[^(]+\.a" "${map_file}" | sort -u)
-    local dep_count
-    dep_count=$(echo "${deps}" | grep -c '.' || true)
-    echo "         ${dep_count} LLVM .a files linked:"
-    echo "${deps}" | while IFS= read -r lib; do
-      [[ -n "${lib}" ]] && echo "           ${lib}"
-    done
+    if ${USE_LIPO}; then
+      local lipo_sz=$(du -h "${LIPO_ABS}" | cut -f1)
+      echo "         Lipo mode: 1 .a (${lipo_sz}) — ${LIPO_ABS}"
+    else
+      local deps
+      deps=$(grep -oP "${BUILD_DIR}/lib/\K[^(]+\.a" "${map_file}" | sort -u)
+      local dep_count
+      dep_count=$(echo "${deps}" | grep -c '.' || true)
+      echo "         ${dep_count} LLVM .a files linked:"
+      echo "${deps}" | while IFS= read -r lib; do
+        [[ -n "${lib}" ]] && echo "           ${lib}"
+      done
+    fi
   fi
 }
 
