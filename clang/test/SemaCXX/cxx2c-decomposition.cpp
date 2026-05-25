@@ -44,7 +44,7 @@ static_assert(t3 == 2);
 
 constexpr auto [t4] = X();
 // expected-error@-1 {{constexpr variable cannot have non-literal type 'const X'}} \
-// expected-note@#X-decl {{'X' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
+//   expected-note@#X-decl {{'X' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
 
 constexpr auto [t5] = Z();
 static_assert(t5 == 43);
@@ -70,10 +70,11 @@ constexpr auto [a, b] = B {};
 static_assert(a.n == 0);
 
 constinit auto [init1] = Y {42};
-constinit auto [init2] = X {};  // expected-error {{variable does not have a constant initializer}} \
-// expected-note {{required by 'constinit' specifier here}} \
-// expected-note {{non-constexpr constructor 'X' cannot be used in a constant expression}} \
-// expected-note@#X-decl {{declared here}}
+constinit auto [init2] = X {};  
+// expected-error@-1 {{variable does not have a constant initializer}} \
+//   expected-note@-1 {{required by 'constinit' specifier here}} \
+//   expected-note@-1 {{non-constexpr constructor 'X' cannot be used in a constant expression}} \
+//   expected-note@#X-decl {{declared here}}
 
 constexpr auto [init3] = X {}; 
 // expected-error@-1 {{constexpr variable cannot have non-literal type 'const X'}}
@@ -148,9 +149,9 @@ constexpr auto const& get(E const& obj) {
 
 constexpr auto [e1] = E(true);
 // expected-error@#E-get {{returning reference to local temporary object}} \
+//   expected-note@-1 {{in instantiation of function template specialization 'get<0>' requested here}} \
+//   expected-note@-1 {{in implicit initialization of binding declaration 'e1'}} \
 // expected-error@-1 {{constexpr variable 'e1' must be initialized by a constant expression}} \
-// expected-note@-1 {{in instantiation of function template specialization 'get<0>' requested here}} \
-// expected-note@-1 {{in implicit initialization of binding declaration 'e1'}} \
-// expected-note@-1 {{in implicit initialization of binding declaration 'e1'}} \
-// expected-note@-1 {{reference to temporary is not a constant expression}} \
-// expected-note@#E-get {{temporary created here}}
+//   expected-note@-1 {{in implicit initialization of binding declaration 'e1'}} \
+//   expected-note@-1 {{reference to temporary is not a constant expression}} \
+//   expected-note@#E-get {{temporary created here}}
