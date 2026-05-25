@@ -43,7 +43,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-  ; CHECK-NEXT:   ASYNCMARK
+  ; CHECK-NEXT:   ASYNCMARK implicit-def $asynccnt, implicit $asynccnt
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -52,7 +52,7 @@ body:             |
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   WAIT_ASYNCMARK 0
+  ; CHECK-NEXT:   WAIT_ASYNCMARK 0, implicit-def $asynccnt, implicit $asynccnt
   ; CHECK-NEXT:   S_WAIT_ASYNCCNT 0, implicit-def $asynccnt, implicit $asynccnt
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
@@ -66,7 +66,7 @@ body:             |
     liveins: $vgpr0_vgpr1, $vgpr2
 
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK
+    ASYNCMARK implicit-def $asynccnt, implicit $asynccnt
     S_BRANCH %bb.3
 
   ; else branch — sync path, no async operations; OtherMarks is empty at join
@@ -76,7 +76,7 @@ body:             |
   ; join — mergeAsyncMarks sees non-empty AsyncMarks (then) and empty OtherMarks (else).
   ; Before fix: assertion. After fix: returns early, no spurious wait inserted.
   bb.3:
-    WAIT_ASYNCMARK 0
+    WAIT_ASYNCMARK 0, implicit-def $asynccnt, implicit $asynccnt
     S_ENDPGM 0
 ...
 ---
@@ -107,11 +107,11 @@ body:             |
   ; CHECK-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-  ; CHECK-NEXT:   ASYNCMARK
+  ; CHECK-NEXT:   ASYNCMARK implicit-def $asynccnt, implicit $asynccnt
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   WAIT_ASYNCMARK 0
+  ; CHECK-NEXT:   WAIT_ASYNCMARK 0, implicit-def $asynccnt, implicit $asynccnt
   ; CHECK-NEXT:   S_WAIT_ASYNCCNT 0, implicit-def $asynccnt, implicit $asynccnt
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
@@ -129,11 +129,11 @@ body:             |
     liveins: $vgpr0_vgpr1, $vgpr2
 
     GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
-    ASYNCMARK
+    ASYNCMARK implicit-def $asynccnt, implicit $asynccnt
     S_BRANCH %bb.3
 
   ; join block
   bb.3:
-    WAIT_ASYNCMARK 0
+    WAIT_ASYNCMARK 0, implicit-def $asynccnt, implicit $asynccnt
     S_ENDPGM 0
 ...
