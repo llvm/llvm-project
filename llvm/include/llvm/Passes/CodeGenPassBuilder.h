@@ -728,15 +728,16 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
 
   // Run loop strength reduction before anything else.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableLSR) {
-    // These passes do not use MSSA.
-    LoopPassManager LPM;
-    LPM.addPass(CanonicalizeFreezeInLoopsPass());
-    LPM.addPass(LoopStrengthReducePass());
+    addFunctionPass(
+        createFunctionToLoopPassAdaptor(CanonicalizeFreezeInLoopsPass(),
+                                        /*UseMemorySSA=*/false),
+        PMW);
+    addFunctionPass(LoopStrengthReducePass(), PMW);
+
     if (Opt.EnableLoopTermFold)
-      LPM.addPass(LoopTermFoldPass());
-    addFunctionPass(createFunctionToLoopPassAdaptor(std::move(LPM),
-                                                    /*UseMemorySSA=*/false),
-                    PMW);
+      addFunctionPass(createFunctionToLoopPassAdaptor(LoopTermFoldPass(),
+                                                      /*UseMemorySSA=*/false),
+                      PMW);
   }
 
   // Run GC lowering passes for builtin collectors

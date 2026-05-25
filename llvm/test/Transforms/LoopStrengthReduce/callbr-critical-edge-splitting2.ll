@@ -1,4 +1,4 @@
-; RUN: opt -passes='loop(loop-reduce)' %s -o - -S | FileCheck %s
+; RUN: opt -passes='loop-reduce' %s -o - -S | FileCheck %s
 
 ; Required metadata to trigger previously failing assertion.
 target datalayout = "e-m:e-i64:64-n32:64"

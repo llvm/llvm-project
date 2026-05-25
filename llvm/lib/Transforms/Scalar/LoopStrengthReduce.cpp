@@ -57,6 +57,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -7134,16 +7135,48 @@ bool LoopStrengthReduce::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
   return ReduceLoopStrength(L, IU, SE, DT, LI, TTI, AC, TLI, MSSA);
 }
 
-PreservedAnalyses LoopStrengthReducePass::run(Loop &L, LoopAnalysisManager &AM,
-                                              LoopStandardAnalysisResults &AR,
-                                              LPMUpdater &) {
-  if (!ReduceLoopStrength(&L, AM.getResult<IVUsersAnalysis>(L, AR), AR.SE,
-                          AR.DT, AR.LI, AR.TTI, AR.AC, AR.TLI, AR.MSSA))
+PreservedAnalyses LoopStrengthReducePass::run(Function &F,
+                                              FunctionAnalysisManager &FAM) {
+  LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
+
+  if (LI.empty())
     return PreservedAnalyses::all();
 
-  auto PA = getLoopPassPreservedAnalyses();
-  if (AR.MSSA)
+  ScalarEvolution &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
+  DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+  TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
+  TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
+  AssumptionCache &AC = FAM.getResult<AssumptionAnalysis>(F);
+  auto &AA = FAM.getResult<AAManager>(F);
+  auto *MSSA = FAM.getCachedResult<MemorySSAAnalysis>(F);
+
+  LoopStandardAnalysisResults LAR = {
+      AA, AC, DT, LI, SE, TLI, TTI, MSSA ? &MSSA->getMSSA() : nullptr};
+  LoopAnalysisManager &LAM =
+      FAM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
+
+  SmallPriorityWorklist<Loop *, 4> Worklist;
+  appendLoopsToWorklist(LI, Worklist);
+
+  bool Changed = false;
+  do {
+    Loop *L = Worklist.pop_back_val();
+    auto &IU = LAM.getResult<IVUsersAnalysis>(*L, LAR);
+    ReduceLoopStrength(L, IU, SE, DT, LI, TTI, AC, TLI,
+                       MSSA ? &MSSA->getMSSA() : nullptr);
+  } while (!Worklist.empty());
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
+  PA.preserve<ScalarEvolutionAnalysis>();
+
+  if (MSSA)
     PA.preserve<MemorySSAAnalysis>();
+
   return PA;
 }
 

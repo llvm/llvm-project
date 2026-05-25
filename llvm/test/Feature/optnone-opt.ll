@@ -3,7 +3,7 @@
 ; RUN: opt -passes='default<O2>' -S -debug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=NPM-O1 --check-prefix=NPM-O2O3
 ; RUN: opt -passes='default<O3>' -S -debug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=NPM-O1 --check-prefix=NPM-O2O3
 ; RUN: opt -passes='dce,gvn-hoist,lower-atomic' -S -debug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=NPM-MORE
-; RUN: opt -passes='loop(indvars,licm,loop-deletion,loop-idiom,loop-instsimplify,loop-reduce,simple-loop-unswitch),loop-unroll' -S -debug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=NPM-LOOP
+; RUN: opt -passes='loop(indvars,licm,loop-deletion,loop-idiom,loop-instsimplify,simple-loop-unswitch),loop-reduce,loop-unroll' -S -debug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=NPM-LOOP
 ; RUN: opt -passes='instsimplify,verify' -S -debug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=NPM-REQUIRED
 
 ; This test verifies that we don't run target independent IR-level
