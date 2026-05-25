@@ -14,8 +14,7 @@ define i32 @pnot_v4i8(i32 %a) {
 ;
 ; CHECK-RV64-LABEL: pnot_v4i8:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    li a1, -1
-; CHECK-RV64-NEXT:    xor a0, a0, a1
+; CHECK-RV64-NEXT:    not a0, a0
 ; CHECK-RV64-NEXT:    ret
   %bc = bitcast i32 %a to <4 x i8>
   %not = xor <4 x i8> %bc, splat (i8 -1)
@@ -31,8 +30,7 @@ define i32 @pnot_v2i16(i32 %a) {
 ;
 ; CHECK-RV64-LABEL: pnot_v2i16:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    li a1, -1
-; CHECK-RV64-NEXT:    xor a0, a0, a1
+; CHECK-RV64-NEXT:    not a0, a0
 ; CHECK-RV64-NEXT:    ret
   %bc = bitcast i32 %a to <2 x i16>
   %not = xor <2 x i16> %bc, splat (i16 -1)
