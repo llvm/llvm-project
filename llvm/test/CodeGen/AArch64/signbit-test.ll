@@ -6,8 +6,8 @@ define i64 @test_clear_mask_i64_i32(i64 %x) nounwind {
 ; CHECK-SD-LABEL: test_clear_mask_i64_i32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mov w8, #42 // =0x2a
-; CHECK-SD-NEXT:    cmn w0, #1
-; CHECK-SD-NEXT:    csel x0, x8, x0, gt
+; CHECK-SD-NEXT:    cmp w0, #0
+; CHECK-SD-NEXT:    csel x0, x8, x0, pl
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_clear_mask_i64_i32:

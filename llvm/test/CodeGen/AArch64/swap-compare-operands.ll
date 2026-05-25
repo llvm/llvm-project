@@ -771,6 +771,17 @@ define i1 @testSwapCmpWithLSL32_20(i32 %a) {
   ret i1 %cmp
 }
 
+define i1 @testSwapCmpWithLSL32_20_neg1(i32 %a) {
+; CHECK-LABEL: testSwapCmpWithLSL32_20_neg1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp wzr, w0, lsl #20
+; CHECK-NEXT:    cset w0, ge
+; CHECK-NEXT:    ret
+  %shl = shl i32 %a, 20
+  %cmp = icmp slt i32 %shl, 1
+  ret i1 %cmp
+}
+
 define i1 @testSwapCmpWithLSR64_40(i64 %a) {
 ; CHECK-LABEL: testSwapCmpWithLSR64_40:
 ; CHECK:       // %bb.0:
