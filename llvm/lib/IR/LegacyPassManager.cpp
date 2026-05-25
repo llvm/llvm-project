@@ -903,7 +903,6 @@ void PMDataManager::removeNotPreservedAnalysis(Pass *P) {
     return;
 
   const AnalysisUsage::VectorType &PreservedSet = AnUsage->getPreservedSet();
-  // Ensure a single call site so that the lambda will be inlined.
   auto IsNotPreserved = [&](const auto &Entry) {
     if (Entry.second->getAsImmutablePass() != nullptr ||
         is_contained(PreservedSet, Entry.first))
@@ -922,6 +921,8 @@ void PMDataManager::removeNotPreservedAnalysis(Pass *P) {
   for (DenseMap<AnalysisID, Pass *> *IA : InheritedAnalysis)
     if (IA)
       Maps.push_back(IA);
+  // Prune all maps from a single remove_if call site so the DenseMap::remove_if
+  // instantiation is inlined here instead of emitted out of line.
   for (DenseMap<AnalysisID, Pass *> *M : Maps)
     M->remove_if(IsNotPreserved);
 }
