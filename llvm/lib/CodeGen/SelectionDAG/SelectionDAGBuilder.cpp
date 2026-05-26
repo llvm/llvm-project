@@ -434,9 +434,8 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
         const ElementCount CastEltCount = ElementCount::get(
             static_cast<unsigned>(PartSize.getKnownMinValue() / ValueEltSize),
             PartSize.isScalable());
-        EVT CastVT =
-            EVT::getVectorVT(*DAG.getContext(), ValueVT.getVectorElementType(),
-                             CastEltCount);
+        EVT CastVT = EVT::getVectorVT(
+            *DAG.getContext(), ValueVT.getVectorElementType(), CastEltCount);
         Val = DAG.getBitcast(CastVT, Val);
         return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ValueVT, Val,
                            DAG.getVectorIdxConstant(0, DL));
