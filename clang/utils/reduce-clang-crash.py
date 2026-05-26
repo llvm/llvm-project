@@ -122,7 +122,14 @@ def remove_first_line(file_path):
 
 
 class Reduce(object):
-    def __init__(self, crash_script, file_to_reduce, creduce_flags):
+    def __init__(
+        self,
+        crash_script,
+        file_to_reduce,
+        creduce_flags,
+        opt_args=[],
+        llc_args=[],
+    ):
         crash_script_name, crash_script_ext = os.path.splitext(crash_script)
         file_reduce_name, file_reduce_ext = os.path.splitext(file_to_reduce)
 
@@ -138,6 +145,8 @@ class Reduce(object):
         self.creduce_flags = ["--tidy"] + creduce_flags
         self.opt = opt_cmd
         self.llc = llc_cmd
+        self.opt_args = opt_args
+        self.llc_args = llc_args
         self.ir_file = "crash.ll"
 
         self.read_clang_args(crash_script, file_to_reduce)
@@ -248,7 +257,13 @@ class Reduce(object):
             stderr=subprocess.STDOUT,
         )
         crash_output, _ = p.communicate()
-        return all(msg in crash_output.decode("utf-8") for msg in self.expected_output)
+        decoded_output = crash_output.decode("utf-8")
+        cleaned_output = "\n".join(
+            self.clean_prefix(line) for line in decoded_output.splitlines()
+        )
+        return all(
+            self.clean_prefix(msg) in cleaned_output for msg in self.expected_output
+        )
 
     def write_interestingness_test(self, cmd=None, use_llvm_reduce=False):
         print("\nCreating the interestingness test...")
@@ -276,7 +291,9 @@ fi
         )
 
         for msg in self.expected_output:
-            output += "grep -F %s t.log || exit 1\n" % shlex.quote(msg)
+            output += "grep -F %s t.log || exit 1\n" % shlex.quote(
+                self.clean_prefix(msg)
+            )
 
         write_to_script(output, self.testfile)
         self.check_interestingness(cmd, use_llvm_reduce=use_llvm_reduce)
@@ -348,6 +365,27 @@ fi
                 continue
             result.append(arg)
         return result
+
+    def get_clang_args_for_ir_extraction(self):
+        args = list(self.clang_args)
+        if "-emit-obj" in args:
+            idx = args.index("-emit-obj")
+            args[idx] = "-emit-llvm"
+        else:
+            args.append("-emit-llvm")
+        return args
+
+    def clean_prefix(self, s: str) -> str:
+        """Strips common compiler wrapper prefixes to normalize diagnostics."""
+        prefixes = (
+            "fatal error: error in backend: ",
+            "error: error in backend: ",
+            "LLVM ERROR: ",
+        )
+        for prefix in prefixes:
+            if s.startswith(prefix):
+                return s[len(prefix) :].strip()
+        return s.strip()
 
     def try_remove_args(self, args, msg=None, extra_arg=None, **kwargs):
         new_args = self.filter_args(args, **kwargs)
@@ -529,13 +567,14 @@ fi
 
     def check_llc_failure(self) -> bool:
         return self.check_expected_output(
-            self.llc, [self.opt_level, "-filetype=obj"], self.ir_file
+            self.llc, [self.opt_level, "-filetype=obj"] + self.llc_args, self.ir_file
         )
 
     def extract_backend_ir(self) -> bool:
+        args = self.get_clang_args_for_ir_extraction()
         return not self.check_expected_output(
             self.clang,
-            self.clang_args + ["-emit-llvm", "-o", self.ir_file],
+            args + ["-o", self.ir_file],
             self.file_to_reduce,
         )
 
@@ -546,7 +585,11 @@ fi
             print("Checking llc for failure")
             if self.check_llc_failure():
                 print("Found BackEnd Crash")
-                self.new_cmd = [self.llc, self.opt_level, "-filetype=obj"]
+                self.new_cmd = [
+                    self.llc,
+                    self.opt_level,
+                    "-filetype=obj",
+                ] + self.llc_args
                 return FailureType.BackEnd
 
     def extract_crashing_ir(self, use_print_on_crash=False):
@@ -571,10 +614,8 @@ fi
             # The output from --print-on-crash has an invalid first line (pass name).
             remove_first_line(self.ir_file)
             return
-        args = self.clang_args + [
+        args = self.get_clang_args_for_ir_extraction() + [
             "-disable-llvm-passes",
-            "-S",
-            "-emit-llvm",
             "-o",
             self.ir_file,
         ]
@@ -586,7 +627,7 @@ fi
         # TODO: parse the exact pass from the backtrace and set the pass
         # pipeline directly via -passes="...".
         print("Checking opt for failure")
-        args = [self.opt_level, "-disable-output"]
+        args = [self.opt_level, "-disable-output"] + self.opt_args
         if self.check_expected_output(
             self.opt,
             args,
@@ -615,7 +656,8 @@ fi
     def reduce_ir_crash(self, new_cmd: List[str]):
         print("Writing interestingness test...")
         self.write_interestingness_test(cmd=new_cmd, use_llvm_reduce=True)
-        print("Starting llvm-reduce with llc test case")
+        tool_name = os.path.basename(new_cmd[0])
+        print(f"Starting llvm-reduce with {tool_name} test case")
         self.run_llvm_reduce()
         print("Done Reducing IR file.")
 
@@ -682,6 +724,20 @@ def main():
         help="Use auto reduction mode, that uses `creduce`/`cvise`"
         "for frontend crashes and llvm-reduce for middle/backend crashes.",
     )
+    parser.add_argument(
+        "--opt-arg",
+        dest="opt_args",
+        action="append",
+        default=[],
+        help="Additional arguments to pass to opt",
+    )
+    parser.add_argument(
+        "--llc-arg",
+        dest="llc_args",
+        action="append",
+        default=[],
+        help="Additional arguments to pass to llc",
+    )
     parser.add_argument("-v", "--verbose", action="store_true")
     args, creduce_flags = parser.parse_known_args()
     verbose = args.verbose
@@ -692,6 +748,7 @@ def main():
     clang_cmd = check_cmd("clang", llvm_bin, args.clang)
     opt_cmd = check_cmd("opt", llvm_bin, args.opt)
     llc_cmd = check_cmd("llc", llvm_bin, args.llc)
+    llvm_reduce_cmd = check_cmd("llvm-reduce", llvm_bin, args.llvm_reduce)
 
     crash_script = check_file(args.crash_script[0])
     file_to_reduce = check_file(args.file_to_reduce[0])
@@ -699,7 +756,9 @@ def main():
     if "--n" not in creduce_flags:
         creduce_flags += ["--n", str(max(4, multiprocessing.cpu_count() // 2))]
 
-    r = Reduce(crash_script, file_to_reduce, creduce_flags)
+    r = Reduce(
+        crash_script, file_to_reduce, creduce_flags, args.opt_args, args.llc_args
+    )
     if args.auto:
         crash_type = r.classify_crash()
         match crash_type:

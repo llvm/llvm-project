@@ -130,6 +130,8 @@ tools = [
     "clang-scan-deps",
     "clang-installapi",
     "opt",
+    "llvm-reduce",
+    "llc",
     "llvm-ifs",
     "yaml2obj",
     "clang-linker-wrapper",
@@ -297,6 +299,17 @@ config.substitutions.append(
         % (
             config.python_executable,
             os.path.join(config.clang_src_dir, "utils", "module-deps-to-rsp.py"),
+        ),
+    )
+)
+
+config.substitutions.append(
+    (
+        "%reduce-clang-crash",
+        '"%s" "%s"'
+        % (
+            config.python_executable,
+            os.path.join(config.clang_src_dir, "utils", "reduce-clang-crash.py"),
         ),
     )
 )
@@ -484,6 +497,11 @@ if "system-aix" in config.available_features:
 # possibly be present in system and user configuration files, so disable
 # default configs for the test runs.
 config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
+
+if lit.util.which("creduce") or lit.util.which("cvise"):
+    config.available_features.add("reproducer-reduction")
+    creduce_path = lit.util.which("cvise") or lit.util.which("creduce")
+    config.substitutions.append(("%creduce", creduce_path))
 
 if lit_config.update_tests:
     import sys
