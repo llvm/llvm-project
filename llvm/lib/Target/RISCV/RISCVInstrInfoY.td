@@ -31,6 +31,7 @@ def ybndsw_imm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
   let ParserMatchClass = YBNDSWImmOperand;
   let DecoderMethod = "DecodeYBNDSWImm";
   let MIOperandInfo = (ops i32imm);
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm7_srliy : RISCVUImmOp<7>, ImmLeaf<XLenVT, [{
@@ -44,7 +45,7 @@ def uimm7_srliy : RISCVUImmOp<7>, ImmLeaf<XLenVT, [{
       return false;
     return Imm == Subtarget->getXLen()
   }];
-  let OperandType = "OPERAND_UIMM7_SRLIY";
+  let OperandType = "OPERAND_UIMM7_XLEN";
 }
 
 //===----------------------------------------------------------------------===//
