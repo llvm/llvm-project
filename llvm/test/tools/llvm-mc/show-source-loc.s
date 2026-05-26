@@ -50,3 +50,50 @@ inc_macro %edx
 # CHECK: incl %edi
 # CHECK-NEXT: # <MacroLoc: {{.*}}show-source-loc.s:44:1>
 # CHECK-NEXT: # <SourceLoc: {{.*}}show-source-loc.s:[[#@LINE-8]]:1>
+
+## Standard conditional assembly (.if, .else, .endif)
+.if 1
+  nop
+.else
+  addl %eax, %ebx
+.endif
+# CHECK: nop
+# CHECK-NEXT: # <SourceLoc: {{.*}}show-source-loc.s:[[#@LINE-5]]:3>
+
+.if 0
+  nop
+.else
+  subl %eax, %ebx
+.endif
+# CHECK: subl %eax, %ebx
+# CHECK-NEXT: # <SourceLoc: {{.*}}show-source-loc.s:[[#@LINE-3]]:3>
+
+## Nested conditional assembly
+.if 1
+  .if 0
+    nop
+  .else
+    incl %ecx
+  .endif
+.endif
+# CHECK: incl %ecx
+# CHECK-NEXT: # <SourceLoc: {{.*}}show-source-loc.s:[[#@LINE-4]]:5>
+
+## Conditional assembly inside a macro
+.macro macro_with_if cond
+  .if \cond
+    decl %eax
+  .else
+    decl %ebx
+  .endif
+.endm
+
+macro_with_if 1
+# CHECK: decl %eax
+# CHECK-NEXT: # <MacroLoc: {{.*}}show-source-loc.s:[[#@LINE-10]]:1>
+# CHECK-NEXT: # <SourceLoc: {{.*}}show-source-loc.s:[[#@LINE-3]]:1>
+
+macro_with_if 0
+# CHECK: decl %ebx
+# CHECK-NEXT: # <MacroLoc: {{.*}}show-source-loc.s:[[#@LINE-15]]:1>
+# CHECK-NEXT: # <SourceLoc: {{.*}}show-source-loc.s:[[#@LINE-3]]:1>

@@ -841,7 +841,7 @@ struct ClangDocContext {
                   StringRef RepositoryUrl, StringRef RepositoryCodeLinePrefix,
                   StringRef Base, std::vector<std::string> UserStylesheets,
                   clang::DiagnosticsEngine &Diags, OutputFormatTy Format,
-                  bool FTimeTrace = false);
+                  bool FTimeTrace = false, bool Pretty = false);
   tooling::ExecutionContext *ECtx;
   std::string ProjectName;  // Name of project clang-doc is documenting.
   std::string OutDirectory; // Directory for outputting generated files.
@@ -869,6 +869,7 @@ struct ClangDocContext {
   int Granularity; // Granularity of ftime trace
   bool PublicOnly; // Indicates if only public declarations are documented.
   bool FTimeTrace; // Indicates if ftime trace is turned on
+  bool Pretty;     // Indicates if JSON is emitted with whitespace.
 };
 
 // Ensure arena allocated types remain safe to allocate in the arena.
