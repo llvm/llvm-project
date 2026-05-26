@@ -45,21 +45,18 @@ target_compile_options(ir2vec PRIVATE -fexceptions -frtti)
 target_link_libraries(ir2vec PRIVATE LLVMIREmbUtils)
 target_include_directories(ir2vec PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
-# Stage Python package into build directory so that downstream wheel assembly
-# scripts can operate solely from the build tree, without requiring access to
-# the source tree.
-file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/python/"
-     DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/python/")
-
-# Copy the seed embedding vocabulary into the build-time Python package
-set(IR2VEC_VOCAB_75D
-    "${LLVM_MAIN_SRC_DIR}/lib/Analysis/models/seedEmbeddingVocab75D.json")
-
-if(NOT EXISTS "${IR2VEC_VOCAB_75D}")
-  message(FATAL_ERROR
-    "IR2Vec vocabulary file not found: ${IR2VEC_VOCAB_75D}")
-endif()
-
-file(COPY "${IR2VEC_VOCAB_75D}"
-     DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/python/ir2vec/")
-message(STATUS "IR2Vec vocabulary copied to ${CMAKE_CURRENT_BINARY_DIR}/python/ir2vec/")
+# Stage the Python package into the build directory for wheel assembly.
+# Not done at configure time via file(COPY) because that can lead to stale
+# files being consumed by downstream wheel build scripts.
+# Pattern follows llvm/utils/lit/CMakeLists.txt
+# albeit for a different purpose (staging a wheel package instead of lit tests).
+add_custom_target(ir2vec-python-staging
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+      "${CMAKE_CURRENT_SOURCE_DIR}/python"
+      "${CMAKE_CURRENT_BINARY_DIR}/python"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      "${LLVM_MAIN_SRC_DIR}/lib/Analysis/models/seedEmbeddingVocab75D.json"
+      "${CMAKE_CURRENT_BINARY_DIR}/python/ir2vec/seedEmbeddingVocab75D.json"
+  COMMENT "Staging IR2Vec Python package for wheel assembly"
+  DEPENDS ir2vec
+)
