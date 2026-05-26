@@ -2289,9 +2289,9 @@ static int64_t computePaddedElems(int64_t numElems, int srcBW, int dstBW,
   return ceilDiv(padded, step) * step;
 }
 
-/// Canonicalization pattern for nvgpu.convert.fptrunc / nvgpu.convert.fpext: handles
-/// scalar inputs, non-32-bit-aligned vectors, and multi-rank vectors. Runs as
-/// an OpRewritePattern on MLIR types before LLVM type conversion.
+/// Canonicalization pattern for nvgpu.convert.fptrunc / nvgpu.convert.fpext:
+/// handles scalar inputs, non-32-bit-aligned vectors, and multi-rank vectors.
+/// Runs as an OpRewritePattern on MLIR types before LLVM type conversion.
 template <typename CvtOp, bool IsTrunc>
 struct NVGPUFPCanonicalizePattern : public OpRewritePattern<CvtOp> {
   using OpRewritePattern<CvtOp>::OpRewritePattern;
