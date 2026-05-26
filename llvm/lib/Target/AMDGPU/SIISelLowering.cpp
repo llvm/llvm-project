@@ -19914,6 +19914,8 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
     case 'v':
     case 'a':
       return C_RegisterClass;
+    case 'm':
+      return C_Memory;
     }
   } else if (Constraint.size() == 2) {
     if (Constraint == "VA")
@@ -19929,7 +19931,7 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
 
 InlineAsm::ConstraintCode
 SITargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
-  if (ConstraintCode == "RF")
+  if (ConstraintCode == "m" || ConstraintCode == "RF")
     return InlineAsm::ConstraintCode::m;
 
   return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
