@@ -269,7 +269,8 @@ public:
 
   /// Return a reference to the currently registered action handler. Its target
   /// can be used to gain access to the handler's state, if any.
-  const HandlerTy &getActionHandler();
+  const HandlerTy &getActionHandler() const;
+  HandlerTy &getActionHandler();
 
   /// Return true if a valid ActionHandler is set.
   bool hasActionHandler();
