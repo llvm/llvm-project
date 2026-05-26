@@ -123,18 +123,8 @@ foreach( tool IN ITEMS opt llvm-link )
   endif()
 endforeach()
 
-# Determine the clang target triple. Vulkan and SPIR-V backend targets use the
-# triple directly; other SPIR-V targets fall back to the legacy SPIR target.
+# Determine the clang target triple.
 set(clang_triple ${LIBCLC_TARGET})
-if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
-  if(NOT LIBCLC_TARGET_OS STREQUAL vulkan AND NOT LIBCLC_USE_SPIRV_BACKEND)
-    if(LIBCLC_TARGET_ARCH STREQUAL spirv)
-      set(clang_triple spir--)
-    else()
-      set(clang_triple spir64--)
-    endif()
-  endif()
-endif()
 
 # Address space values.
 set(private_addrspace_val 0)
