@@ -166,10 +166,10 @@ define amdgpu_ps <2 x float> @fpext_v2f16_to_v2f32_div(<2 x half> %a) {
 ;
 ; GFX11-TRUE16-LABEL: fpext_v2f16_to_v2f32_div:
 ; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v0.l
-; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.h
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v1.l
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-FAKE16-LABEL: fpext_v2f16_to_v2f32_div:
@@ -182,10 +182,10 @@ define amdgpu_ps <2 x float> @fpext_v2f16_to_v2f32_div(<2 x half> %a) {
 ;
 ; GFX12-TRUE16-LABEL: fpext_v2f16_to_v2f32_div:
 ; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v0.l
-; GFX12-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.h
+; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX12-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
+; GFX12-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v1.l
 ; GFX12-TRUE16-NEXT:    ; return to shader part epilog
   %result = fpext <2 x half> %a to <2 x float>
   ret <2 x float> %result

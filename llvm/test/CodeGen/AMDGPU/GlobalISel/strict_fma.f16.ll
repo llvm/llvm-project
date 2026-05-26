@@ -287,9 +287,11 @@ define void @v_constained_fma_v3f16_fpexcept_strict_div(<3 x half> %x, <3 x half
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_pk_fma_f16 v0, v0, v2, v4
 ; GFX11-NEXT:    v_pk_fma_f16 v1, v1, v3, v5
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX11-NEXT:    s_clause 0x2
 ; GFX11-NEXT:    global_store_b16 v[6:7], v0, off
-; GFX11-NEXT:    global_store_d16_hi_b16 v[6:7], v0, off offset:2
+; GFX11-NEXT:    global_store_b16 v[6:7], v2, off offset:2
 ; GFX11-NEXT:    global_store_b16 v[6:7], v1, off offset:4
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -302,9 +304,11 @@ define void @v_constained_fma_v3f16_fpexcept_strict_div(<3 x half> %x, <3 x half
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_fma_f16 v0, v0, v2, v4
 ; GFX12-NEXT:    v_pk_fma_f16 v1, v1, v3, v5
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX12-NEXT:    s_clause 0x2
 ; GFX12-NEXT:    global_store_b16 v[6:7], v0, off
-; GFX12-NEXT:    global_store_d16_hi_b16 v[6:7], v0, off offset:2
+; GFX12-NEXT:    global_store_b16 v[6:7], v2, off offset:2
 ; GFX12-NEXT:    global_store_b16 v[6:7], v1, off offset:4
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call <3 x half> @llvm.experimental.constrained.fma.v3f16(<3 x half> %x, <3 x half> %y, <3 x half> %z, metadata !"round.tonearest", metadata !"fpexcept.strict")

@@ -178,12 +178,13 @@ define <2 x half> @test_ldexp_v2f16_v2i32(ptr addrspace(1) %out, <2 x half> %a, 
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, 0x7fff
-; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v1, 0xffff8000, v3, v0
-; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v3, 0xffff8000, v4, v0
-; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.l, v2.l, v1.l
+; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v3, 0xffff8000, v3, v0
+; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v4, 0xffff8000, v4, v0
+; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.l, v2.l, v3.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v2.h, v3.l
+; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v1.l, v4.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: test_ldexp_v2f16_v2i32:
@@ -299,14 +300,15 @@ define <3 x half> @test_ldexp_v3f16_v3i32(ptr addrspace(1) %out, <3 x half> %a, 
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, 0x7fff
-; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v1, 0xffff8000, v4, v0
-; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v4, 0xffff8000, v5, v0
-; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v5, 0xffff8000, v6, v0
-; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.l, v2.l, v1.l
+; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v4, 0xffff8000, v4, v0
+; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v5, 0xffff8000, v5, v0
+; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v6, 0xffff8000, v6, v0
+; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.l, v2.l, v4.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v2.h, v4.l
-; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v1.l, v3.l, v5.l
+; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v1.l, v5.l
+; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v1.l, v3.l, v6.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: test_ldexp_v3f16_v3i32:
@@ -445,17 +447,19 @@ define <4 x half> @test_ldexp_v4f16_v4i32(ptr addrspace(1) %out, <4 x half> %a, 
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, 0x7fff
-; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_4)
-; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v1, 0xffff8000, v4, v0
-; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v4, 0xffff8000, v5, v0
-; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v5, 0xffff8000, v6, v0
-; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v6, 0xffff8000, v7, v0
-; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.l, v2.l, v1.l
+; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
+; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v8, 16, v3
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_4)
+; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v4, 0xffff8000, v4, v0
+; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v5, 0xffff8000, v5, v0
+; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v6, 0xffff8000, v6, v0
+; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v7, 0xffff8000, v7, v0
+; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.l, v2.l, v4.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v2.h, v4.l
-; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v1.l, v3.l, v5.l
+; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v1.l, v5.l
+; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v1.l, v3.l, v6.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v1.h, v3.h, v6.l
+; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v1.h, v8.l, v7.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: test_ldexp_v4f16_v4i32:

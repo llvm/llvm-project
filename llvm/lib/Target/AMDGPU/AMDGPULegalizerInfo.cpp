@@ -2077,7 +2077,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     auto &Builder =
         getActionDefinitionsBuilder(Op)
-            .legalIf(all(isRegisterType(ST, 0), isRegisterType(ST, 1)))
             .lowerFor({{S16, V2S16}})
             .lowerIf([=](const LegalityQuery &Query) {
               const LLT BigTy = Query.Types[BigTyIdx];
@@ -2108,7 +2107,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                   return notValidElt(Query, BigTyIdx);
                 },
                 scalarize(1))
-            .clampScalar(BigTyIdx, S32, MaxScalar);
+            .clampScalar(BigTyIdx, S32, MaxScalar)
+            // legalIf must come after other rules because we don't have 16-bit
+            // SGPRs. We expect 16-bit values to already be lowered or widened
+            // by this point.
+            .legalIf(all(isRegisterType(ST, 0), isRegisterType(ST, 1)));
 
     if (Op == G_MERGE_VALUES) {
       Builder.widenScalarIf(
