@@ -34,12 +34,12 @@ subroutine atomic_compare_seq_cst(x, e, d)
   if (x == e) x = d
 end
 
-! acquire ordering → cmpxchg acquire
+! acquire ordering on non-capture compare (update) → demoted to monotonic
 !CHECK-LABEL: define void @atomic_compare_acquire_(
 !CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]])
 !CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]], align 4
 !CHECK: %[[DVAL:.*]] = load i32, ptr %[[D]], align 4
-!CHECK: cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] acquire acquire
+!CHECK: cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] monotonic monotonic
 subroutine atomic_compare_acquire(x, e, d)
   integer :: x, e, d
   !$omp atomic compare acquire
@@ -94,11 +94,11 @@ subroutine atomic_compare_lt_seq_cst(x, e)
   if (x < e) x = e
 end
 
-! Less-than with acquire → atomicrmw max acquire (signed)
+! Less-than with acquire on non-capture compare (update) → demoted to monotonic
 !CHECK-LABEL: define void @atomic_compare_lt_acquire_(
 !CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]])
 !CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]], align 4
-!CHECK: atomicrmw max ptr %[[X]], i32 %[[EVAL]] acquire
+!CHECK: atomicrmw max ptr %[[X]], i32 %[[EVAL]] monotonic
 subroutine atomic_compare_lt_acquire(x, e)
   integer :: x, e
   !$omp atomic compare acquire

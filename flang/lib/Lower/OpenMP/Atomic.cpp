@@ -244,8 +244,15 @@ makeValidForAction(std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
   using Analysis = parser::OpenMPAtomicConstruct::Analysis;
   // Figure out the main action (i.e. disregard a potential capture operation)
   int action = action0;
-  if (action1 != Analysis::None)
+  bool isCapture = action1 != Analysis::None;
+  if (isCapture)
     action = action0 == Analysis::Read ? action1 : action0;
+
+  // All orderings are valid for capture operations per the OpenMP spec.
+  // The individual sub-operations (read/write/update) inside the capture
+  // will have their orderings handled separately.
+  if (isCapture)
+    return memOrder;
 
   // Avaliable orderings: acquire, acq_rel, relaxed, release, seq_cst
 
@@ -259,7 +266,7 @@ makeValidForAction(std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
       return mlir::omp::ClauseMemoryOrderKind::Release;
   }
 
-  if (version > 50) {
+  if (version >= 50) {
     if (action == Analysis::Read) {
       // "release" prohibited
       if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Release)
@@ -269,6 +276,13 @@ makeValidForAction(std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
       // "acquire" prohibited
       if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acquire)
         return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+    }
+    if (action == Analysis::Update) {
+      // "acquire" prohibited, "acq_rel" decays to "release"
+      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acquire)
+        return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
+        return mlir::omp::ClauseMemoryOrderKind::Release;
     }
   } else {
     if (action == Analysis::Read) {
@@ -537,8 +551,7 @@ void Fortran::lower::omp::lowerAtomic(
   unsigned version = semaCtx.langOptions().OpenMPVersion;
   int action0 = analysis.op0.what & analysis.Action;
   int action1 = analysis.op1.what & analysis.Action;
-  if (canOverride)
-    memOrder = makeValidForAction(memOrder, action0, action1, version);
+  memOrder = makeValidForAction(memOrder, action0, action1, version);
 
   if (auto *cond = get(analysis.cond)) {
     // atomic compare: if (x == e) x = d
