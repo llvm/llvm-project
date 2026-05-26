@@ -211,6 +211,7 @@ public:
 private:
   void calculateStubDependentSizes();
   void createSections();
+  void removeDuplicatePdataChunks();
   void createMiscChunks();
   void createImportTables();
   void appendImportThunks();
@@ -1062,9 +1063,91 @@ void Writer::calculateStubDependentSizes() {
   dataDirOffset64 = peHeaderOffset + sizeof(pe32plus_header);
 }
 
+// Mark duplicate COMDAT .pdata chunks as dead. After ICF folds identical
+// code sections, multiple .pdata COMDAT chunks may produce RUNTIME_FUNCTION
+// entries covering the same address range. We detect this by comparing the
+// BeginAddress and EndAddress relocation targets (the first two relocations),
+// and set live = false on duplicates so they are excluded from the output.
+void Writer::removeDuplicatePdataChunks() {
+  // Key: (beginChunk, beginValue, endChunk, endValue) identifying the range.
+  struct PdataKey {
+    Chunk *beginChunk;
+    uint32_t beginValue;
+    Chunk *endChunk;
+    uint32_t endValue;
+  };
+  struct PdataKeyInfo {
+    static PdataKey getEmptyKey() { return {nullptr, 0, nullptr, 0}; }
+    static PdataKey getTombstoneKey() {
+      return {nullptr, ~0u, nullptr, ~0u};
+    }
+    static unsigned getHashValue(const PdataKey &k) {
+      return llvm::hash_combine(k.beginChunk, k.beginValue, k.endChunk,
+                                k.endValue);
+    }
+    static bool isEqual(const PdataKey &lhs, const PdataKey &rhs) {
+      return lhs.beginChunk == rhs.beginChunk &&
+             lhs.beginValue == rhs.beginValue &&
+             lhs.endChunk == rhs.endChunk && lhs.endValue == rhs.endValue;
+    }
+  };
+
+  llvm::DenseSet<PdataKey, PdataKeyInfo> seen;
+
+  for (Chunk *c : ctx.driver.getChunks()) {
+    auto *sc = dyn_cast<SectionChunk>(c);
+    if (!sc || !sc->live || !sc->isCOMDAT())
+      continue;
+    StringRef name = sc->getSectionName().split('$').first;
+    if (name != ".pdata")
+      continue;
+
+    ArrayRef<coff_relocation> relocs = sc->getRelocs();
+    if (relocs.size() != 3)
+      continue;
+
+    ArrayRef<uint8_t> contents = sc->getContents();
+    if (contents.size() != 12)
+      continue;
+
+    // Resolve the BeginAddress (reloc 0) and EndAddress (reloc 1) targets.
+    auto resolve = [&](const coff_relocation &rel)
+        -> std::pair<Chunk *, uint32_t> {
+      Symbol *sym = sc->file->getSymbol(rel.SymbolTableIndex);
+      if (auto *d = dyn_cast<DefinedRegular>(sym))
+        return {d->getChunk(), d->getValue()};
+      if (auto *d = dyn_cast<Defined>(sym))
+        return {d->getChunk(), 0};
+      return {nullptr, 0};
+    };
+
+    auto [beginChunk, beginVal] = resolve(relocs[0]);
+    auto [endChunk, endVal] = resolve(relocs[1]);
+    if (!beginChunk)
+      continue;
+
+    // Account for addends baked into the section data.
+    beginVal += *reinterpret_cast<const ulittle32_t *>(contents.data());
+    endVal += *reinterpret_cast<const ulittle32_t *>(contents.data() + 4);
+
+    PdataKey key{beginChunk, beginVal, endChunk, endVal};
+    if (!seen.insert(key).second) {
+      Log(ctx) << "Removed duplicate .pdata entry in "
+               << sc->getSectionName();
+      sc->live = false;
+    }
+  }
+}
+
 // Create output section objects and add them to OutputSections.
 void Writer::createSections() {
   llvm::TimeTraceScope timeScope("Output sections");
+
+  // Deduplicate .pdata COMDAT chunks whose relocation targets resolve to the
+  // same function after ICF.
+  if (ctx.config.dedupPdata)
+    removeDuplicatePdataChunks();
+
   // First, create the builtin sections.
   const uint32_t data = IMAGE_SCN_CNT_INITIALIZED_DATA;
   const uint32_t bss = IMAGE_SCN_CNT_UNINITIALIZED_DATA;

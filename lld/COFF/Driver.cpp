@@ -2027,6 +2027,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         icfLevel = ICFLevel::Safe;
       } else if (s == "noicf") {
         icfLevel = ICFLevel::None;
+      } else if (s == "deduppdata") {
+        config->dedupPdata = true;
+      } else if (s == "nodeduppdata") {
+        config->dedupPdata = false;
       } else if (s == "lldtailmerge") {
         tailMerge = 2;
       } else if (s == "nolldtailmerge") {
