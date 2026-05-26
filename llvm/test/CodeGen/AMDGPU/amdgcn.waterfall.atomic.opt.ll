@@ -392,7 +392,133 @@ bb:
   ret void
 }
 
-
+; Test that the atomic optimizer correctly skips over a waterfall group
+; with 3 chained waterfall.begin intrinsics and still optimizes the
+; atomic that follows it.
+define dllexport amdgpu_cs void @atomic_add_after_triple_begin(ptr addrspace(1) %arg, i32 inreg %arg1, ptr addrspace(4) inreg noundef %arg2, i32 inreg %arg3) #0 {
+; GFX10-LABEL: atomic_add_after_triple_begin:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_ashr_i32 s4, s0, 31
+; GFX10-NEXT:    v_add_co_u32 v0, vcc, v0, s0
+; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s4, v1, vcc
+; GFX10-NEXT:    s_mov_b64 s[6:7], exec
+; GFX10-NEXT:    s_mov_b64 s[4:5], exec
+; GFX10-NEXT:    global_load_dwordx3 v[0:2], v[0:1], off
+; GFX10-NEXT:  .LBB4_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-NEXT:    v_readfirstlane_b32 s8, v1
+; GFX10-NEXT:    v_readfirstlane_b32 s9, v2
+; GFX10-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
+; GFX10-NEXT:    v_cmpx_eq_u32_e64 s0, v0
+; GFX10-NEXT:    v_cmpx_eq_u32_e64 s8, v1
+; GFX10-NEXT:    v_cmpx_eq_u32_e64 s9, v2
+; GFX10-NEXT:    s_ashr_i32 s8, s0, 31
+; GFX10-NEXT:    s_add_u32 s12, s1, s0
+; GFX10-NEXT:    s_addc_u32 s13, s2, s8
+; GFX10-NEXT:    v_mov_b32_e32 v3, 0
+; GFX10-NEXT:    s_load_dwordx4 s[8:11], s[12:13], 0x0
+; GFX10-NEXT:    v_mov_b32_e32 v0, 1
+; GFX10-NEXT:    s_ashr_i32 s13, s0, 31
+; GFX10-NEXT:    s_add_u32 s12, s1, s0
+; GFX10-NEXT:    s_addc_u32 s13, s2, s13
+; GFX10-NEXT:    v_mov_b32_e32 v4, 1
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    buffer_atomic_add v0, v3, s[8:11], 0 idxen glc
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; GFX10-NEXT:    s_load_dwordx4 s[8:11], s[12:13], 0x0
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, 1
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    buffer_atomic_add v0, v3, s[8:11], 0 idxen glc
+; GFX10-NEXT:    s_andn2_wrexec_b64 s[6:7], s[6:7]
+; GFX10-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2
+; GFX10-NEXT:    s_cbranch_execnz .LBB4_1
+; GFX10-NEXT:  ; %bb.2:
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; GFX10-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX10-NEXT:    s_ashr_i32 s0, s3, 31
+; GFX10-NEXT:    s_add_u32 s4, s1, s3
+; GFX10-NEXT:    s_addc_u32 s5, s2, s0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    buffer_atomic_add v4, v3, s[0:3], 0 idxen
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: atomic_add_after_triple_begin:
+; GFX11:       ; %bb.0: ; %bb
+; GFX11-NEXT:    v_add_co_u32 v0, vcc, v0, s0
+; GFX11-NEXT:    s_ashr_i32 s4, s0, 31
+; GFX11-NEXT:    s_mov_b64 s[6:7], exec
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, s4, v1, vcc
+; GFX11-NEXT:    s_mov_b64 s[4:5], exec
+; GFX11-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX11-NEXT:  .LBB4_1: ; =>This Inner Loop Header: Depth=1
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    v_readfirstlane_b32 s8, v1
+; GFX11-NEXT:    v_readfirstlane_b32 s9, v2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_cmpx_eq_u32_e64 s0, v0
+; GFX11-NEXT:    v_cmpx_eq_u32_e64 s8, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX11-NEXT:    v_cmpx_eq_u32_e64 s9, v2
+; GFX11-NEXT:    s_ashr_i32 s9, s0, 31
+; GFX11-NEXT:    s_add_u32 s8, s1, s0
+; GFX11-NEXT:    s_addc_u32 s9, s2, s9
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    s_load_b128 s[8:11], s[8:9], 0x0
+; GFX11-NEXT:    v_mov_b32_e32 v0, 1
+; GFX11-NEXT:    s_ashr_i32 s13, s0, 31
+; GFX11-NEXT:    s_add_u32 s12, s1, s0
+; GFX11-NEXT:    s_addc_u32 s13, s2, s13
+; GFX11-NEXT:    v_mov_b32_e32 v4, 1
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    buffer_atomic_add_u32 v0, v3, s[8:11], 0 idxen glc
+; GFX11-NEXT:    s_load_b128 s[8:11], s[12:13], 0x0
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, 1
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    buffer_atomic_add_u32 v0, v3, s[8:11], 0 idxen glc
+; GFX11-NEXT:    s_and_not1_wrexec_b64 s[6:7], s[6:7]
+; GFX11-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2
+; GFX11-NEXT:    s_cbranch_execnz .LBB4_1
+; GFX11-NEXT:  ; %bb.2:
+; GFX11-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX11-NEXT:    s_ashr_i32 s4, s3, 31
+; GFX11-NEXT:    s_add_u32 s0, s1, s3
+; GFX11-NEXT:    s_addc_u32 s1, s2, s4
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    buffer_atomic_add_u32 v4, v3, s[0:3], 0 idxen
+; GFX11-NEXT:    s_endpgm
+bb:
+  %getelementptr = getelementptr i8, ptr addrspace(1) %arg, i32 %arg1
+  %load = load <3 x i32>, ptr addrspace(1) %getelementptr, align 16
+  %idx1 = extractelement <3 x i32> %load, i32 0
+  %idx2 = extractelement <3 x i32> %load, i32 1
+  %idx3 = extractelement <3 x i32> %load, i32 2
+  %tok1 = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 %idx1)
+  %tok2 = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 %tok1, i32 %idx2)
+  %tok3 = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 %tok2, i32 %idx3)
+  %rfl = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(i32 %tok3, i32 %idx3)
+  %sext = sext i32 %rfl to i64
+  %gep = getelementptr i8, ptr addrspace(4) %arg2, i64 %sext
+  %rsrc = load <4 x i32>, ptr addrspace(4) %gep, align 4
+  %wf_atomic1 = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 1, <4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %end1 = call i32 @llvm.amdgcn.waterfall.end.i32(i32 %tok3, i32 %wf_atomic1)
+  %rfl2 = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(i32 %tok3, i32 %idx1)
+  %sext2 = sext i32 %rfl2 to i64
+  %gep2 = getelementptr i8, ptr addrspace(4) %arg2, i64 %sext2
+  %rsrc2 = load <4 x i32>, ptr addrspace(4) %gep2, align 4
+  %wf_atomic2 = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 1, <4 x i32> %rsrc2, i32 0, i32 0, i32 0, i32 0)
+  %end2 = call i32 @llvm.amdgcn.waterfall.end.i32(i32 %tok3, i32 %wf_atomic2)
+  %sext3 = sext i32 %arg3 to i64
+  %gep3 = getelementptr i8, ptr addrspace(4) %arg2, i64 %sext3
+  %rsrc3 = load <4 x i32>, ptr addrspace(4) %gep3, align 4
+  %atomic = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 1, <4 x i32> %rsrc3, i32 0, i32 0, i32 0, i32 0)
+  ret void
+}
 
 ; Function Attrs: nocallback nofree nounwind willreturn
 declare i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i32, i32 immarg) #3
