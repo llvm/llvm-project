@@ -110,73 +110,51 @@ jobs:
         --target check-libc
 
   qemu-riscv64:
+    name: qemu - riscv64 - ${{ matrix.c_compiler }}
     runs-on: ubuntu-24.04
-
+    timeout-minutes: 30
+    container: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'
+    strategy:
+      matrix:
+        include:
+          - c_compiler: clang-23
+            cxx_compiler: clang++-23
+          - c_compiler: riscv64-linux-gnu-gcc
+            cxx_compiler: riscv64-linux-gnu-g++
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           persist-credentials: false
 
-      - name: Prepare dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y cmake ninja-build clang lld qemu-user-static \
-            libc6-dev-riscv64-cross libstdc++6-riscv64-cross \
-            gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
+        with:
+          max-size: 1G
+          key: libc_qemu_overlay_riscv64_${{ matrix.c_compiler }}
+          variant: sccache
 
-      # TODO: Need to find a better way for GMP and MPFR instead of downloading
-      # and setting them up every time.
-      # - name: Setup GMP
-      #   run: |
-      #     mkdir build
-      #     cd build
-      #     wget https://gmplib.org/download/gmp/gmp-6.3.0.tar.xz
-      #     tar -xf gmp-6.3.0.tar.xz
-      #     cd gmp-6.3.0
-      #     ./configure --host=riscv64-linux-gnu --prefix=/usr/riscv64-linux-gnu
-      #     make -j8
-      #     sudo make install
-      #     cd ../..
-      
-      # - name: Setup MPFR
-      #   run: |
-      #     cd build
-      #     wget https://www.mpfr.org/mpfr-4.2.1/mpfr-4.2.1.tar.xz
-      #     tar -xf mpfr-4.2.1.tar.xz
-      #     cd mpfr-4.2.1
-      #     ./configure --host=riscv64-linux-gnu --prefix=/usr/riscv64-linux-gnu \
-      #                 --with-gmp=/usr/riscv64-linux-gnu
-      #     make -j8
-      #     sudo make install
-      #     cd ../..
-      
-      - name: Configure CMake - Clang
+      - name: Create QEMU wrapper
         run: |
-          cmake -B build/clang -S runtimes -G Ninja \
+          mkdir build
+          cat << 'EOF' > /__w/llvm-project/llvm-project/build/qemu-wrapper.sh
+          #!/bin/bash
+          qemu-riscv64-static -L /usr/riscv64-linux-gnu "$@"
+          EOF
+          chmod +x /__w/llvm-project/llvm-project/build/qemu-wrapper.sh
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -S runtimes -G Ninja \
             -DLLVM_ENABLE_RUNTIMES=libc \
-            -DCMAKE_C_COMPILER=clang \
-            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cxx_compiler }} \
             -DCMAKE_BUILD_TYPE=Release \
-            -DLIBC_TARGET_TRIPLE=riscv64-linux-gnu
+            -DLIBC_TARGET_TRIPLE=riscv64-linux-gnu \
+            -DLLVM_LIBC_MPFR_INSTALL_PATH=/usr/riscv64-linux-gnu \
+            -DLIBC_MPC_INSTALL_PATH=/usr/riscv64-linux-gnu \
+            -DCMAKE_CROSSCOMPILING_EMULATOR=/__w/llvm-project/llvm-project/build/qemu-wrapper.sh            
 
-      - name: Build and Test - Clang
-        env:
-          QEMU_LD_PREFIX: /usr/riscv64-linux-gnu
+      - name: Build and Test
         run: |
-          cmake --build build/clang --target libc check-libc
-
-      - name: Configure CMake - gcc
-        run: |
-          cmake -B build/gcc -S runtimes -G Ninja \
-            -DLLVM_ENABLE_RUNTIMES=libc \
-            -DCMAKE_C_COMPILER=riscv64-linux-gnu-gcc \
-            -DCMAKE_CXX_COMPILER=riscv64-linux-gnu-g++ \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DLIBC_TARGET_TRIPLE=riscv64-linux-gnu
-
-      - name: Build and Run - gcc
-        env:
-          QEMU_LD_PREFIX: /usr/riscv64-linux-gnu
-        run: |
-          cmake --build build/gcc --target libc check-libc
+          cmake --build build --target libc check-libc
