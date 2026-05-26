@@ -25837,8 +25837,8 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
 
     // Can we propogate widths through a call instruction
     // We can for simple intrinsics
-    auto IsCompatibleCall = [](const Instruction *I) -> bool {
-      const auto *CI = dyn_cast<CallInst>(I);
+    auto IsCompatibleIntrinsic = [](const Instruction *I) -> bool {
+      const auto *CI = dyn_cast<IntrinsicInst>(I);
       if (!CI)
         return false;
       switch (CI->getIntrinsicID()) {
@@ -25862,7 +25862,7 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
     // user or the use is a PHI node, we add it to the worklist.
     else if (isa<PHINode, CastInst, GetElementPtrInst, CmpInst, SelectInst,
                  BinaryOperator, UnaryOperator>(I) ||
-             IsCompatibleCall(I)) {
+             IsCompatibleIntrinsic(I)) {
       for (Use &U : I->operands()) {
         if (auto *J = dyn_cast<Instruction>(U.get()))
           if (Visited.insert(J).second &&
