@@ -40,6 +40,7 @@ public:
                                  bool DestroyToplevelScope = false);
   EvaluationResult interpretDecl(const VarDecl *VD, const Expr *Init,
                                  bool CheckFullyInitialized);
+  EvaluationResult interpretDestructor(const VarDecl *VD, const APValue &Value);
   /// Interpret the given Expr to a Pointer.
   EvaluationResult interpretAsPointer(const Expr *E, PtrCallback PtrCB);
   EvaluationResult interpretAsLValuePointer(const Expr *E, PtrCallback PtrCB);
@@ -65,6 +66,7 @@ protected:
   virtual bool visitLValueExpr(const Expr *E, bool DestroyToplevelScope) = 0;
   virtual bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
                                   bool ConstantContext) = 0;
+  virtual bool visitDtorCall(const VarDecl *VD, const APValue &Value) = 0;
   virtual bool visitFunc(const FunctionDecl *F) = 0;
   virtual bool visit(const Expr *E) = 0;
   virtual bool emitBool(bool V, const Expr *E) = 0;
