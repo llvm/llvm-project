@@ -1830,7 +1830,6 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   APInt RunningGCD = APInt::getZero(BitWidth);
 
   const SCEV *Dummy = nullptr;
-  // Examine Src and dst coefficients.
   const SCEV *SrcConst =
       accumulateCoefficientsGCD(Src, nullptr, Dummy, RunningGCD);
   if (!SrcConst)
