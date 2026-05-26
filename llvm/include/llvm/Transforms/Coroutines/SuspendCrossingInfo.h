@@ -22,8 +22,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Transforms/Coroutines/CoroShape.h"
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
+#include "llvm/Transforms/Coroutines/CoroShape.h"
 
 namespace llvm {
 

@@ -172,8 +172,11 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, const coro::Shape &Shape)
 
   for (auto *InRamp : Shape.CoroIsInRampInsts)
     for (auto *U : InRamp->users())
-      if (auto *Br = dyn_cast<CondBrInst>(U))
-        getBlockData(Br->getSuccessor(0)).NeverKill = true;
+      if (auto *Br = dyn_cast<CondBrInst>(U)) {
+        auto *TrueBB = Br->getSuccessor(0);
+        if (TrueBB->getSinglePredecessor())
+          getBlockData(TrueBB).NeverKill = true;
+      }
 
   // Mark all suspend blocks and indicate that they kill everything they
   // consume. Note, that crossing coro.save also requires a spill, as any code
