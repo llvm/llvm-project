@@ -22,7 +22,6 @@ namespace llvm {
 class LLVMContext;
 class VPValue;
 class VPBlendRecipe;
-class VPInstruction;
 class VPWidenRecipe;
 class VPReplicateRecipe;
 class VPRecipeBase;
@@ -48,7 +47,6 @@ class VPTypeAnalysis {
   const DataLayout &DL;
 
   Type *inferScalarTypeForRecipe(const VPBlendRecipe *R);
-  Type *inferScalarTypeForRecipe(const VPInstruction *R);
   Type *inferScalarTypeForRecipe(const VPWidenRecipe *R);
   Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
 
