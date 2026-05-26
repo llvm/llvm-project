@@ -935,7 +935,11 @@ static Immediate ExtractImmediateOperand(MutableArrayRef<SCEVUse> Ops,
   SCEVUse *Op = nullptr;
   Immediate Result = Immediate::getZero();
 
-  // Constant SCEV operands are always sorted to the LHS.
+  // Ops are sorted by their SCEVType (the order of SCEVTypes enum). So, for an
+  // AddExpr the possible order of operands is:
+  // Constant < VScale < Truncate < ZeroExtend < SignExtend < MulExpr < ...
+
+  // This means fixed-size immediates will always appear on the LHS:
   SCEVUse &S = Ops.front();
   if (match(S, m_scev_APInt(C)) && !C->isZero() &&
       C->getSignificantBits() <= 64) {
@@ -943,9 +947,9 @@ static Immediate ExtractImmediateOperand(MutableArrayRef<SCEVUse> Ops,
     Result = Immediate::getFixed(C->getSExtValue());
   }
 
+  // But scalable immediates, which are MulExpr(Vscale, Constant), can appear
+  // later in the operand list:
   if (EnableVScaleImmediates && (Result.isZero() || PreferScalable)) {
-    // A vscale immediate is a scMulExpr, which when sorted by complexity, can
-    // occur after casted operands (truncate/sext/zext).
     for (SCEVUse &S : Ops) {
       // We know anything past scMulExpr will not be a vscale immediate.
       if (S->getSCEVType() > scMulExpr)
