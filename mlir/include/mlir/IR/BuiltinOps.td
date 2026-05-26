@@ -100,7 +100,7 @@ def ModuleOp : Builtin_Op<"module", [
 //===----------------------------------------------------------------------===//
 
 def UnrealizedConversionCastOp : Builtin_Op<"unrealized_conversion_cast", [
-    Pure, TokenProducerTrait, TokenConsumerTrait
+    Pure
   ]> {
   let summary = "An unrealized conversion from one set of types to another";
   let description = [{
@@ -136,8 +136,8 @@ def UnrealizedConversionCastOp : Builtin_Op<"unrealized_conversion_cast", [
     ```
   }];
 
-  let arguments = (ins Variadic<AnyTypeOrToken>:$inputs);
-  let results = (outs Variadic<AnyTypeOrToken>:$outputs);
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs Variadic<AnyType>:$outputs);
   let assemblyFormat = [{
     ($inputs^ `:` type($inputs))? `to` type($outputs) attr-dict
   }];
