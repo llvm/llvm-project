@@ -38,8 +38,8 @@ typedef struct two_floats {
     float b;
 } two_floats;
 
-// CHECK-LABEL: define{{.*}} %struct.two_floats @return_two_floats(float %x.coerce0, float %x.coerce1)
-// CHECK: ret %struct.two_floats
+// Two floats can be packed into <2 x float> vector
+// CHECK-LABEL: define{{.*}} <2 x float> @return_two_floats(<2 x float> %x.coerce)
 two_floats return_two_floats(two_floats x) {
     return x;
 }
@@ -517,8 +517,8 @@ typedef struct half_struct {
 } half_struct;
 
 // Two halfs = 32 bits, but floats - should NOT be coerced
-// CHECK-LABEL: define{{.*}} %struct.half_struct @return_half_struct(half %x.coerce0, half %x.coerce1)
-// CHECK: ret %struct.half_struct
+// Two halfs = 32 bits - can be packed into <2 x half> vector
+// CHECK-LABEL: define{{.*}} <2 x half> @return_half_struct(<2 x half> %x.coerce)
 half_struct return_half_struct(half_struct x) {
     return x;
 }
@@ -540,8 +540,8 @@ typedef struct four_halfs {
 } four_halfs;
 
 // Four halfs = 64 bits - should NOT be coerced
-// CHECK-LABEL: define{{.*}} %struct.four_halfs @return_four_halfs(half %x.coerce0, half %x.coerce1, half %x.coerce2, half %x.coerce3)
-// CHECK: ret %struct.four_halfs
+// Four halfs = 64 bits - can be packed into <4 x half> vector
+// CHECK-LABEL: define{{.*}} <4 x half> @return_four_halfs(<4 x half> %x.coerce)
 four_halfs return_four_halfs(four_halfs x) {
     return x;
 }
@@ -554,8 +554,8 @@ typedef struct bfloat_struct {
 } bfloat_struct;
 
 // Two bfloats = 32 bits, but floats - should NOT be coerced
-// CHECK-LABEL: define{{.*}} %struct.bfloat_struct @return_bfloat_struct(bfloat %x.coerce0, bfloat %x.coerce1)
-// CHECK: ret %struct.bfloat_struct
+// Two bfloats = 32 bits - can be packed into <2 x bfloat> vector
+// CHECK-LABEL: define{{.*}} <2 x bfloat> @return_bfloat_struct(<2 x bfloat> %x.coerce)
 bfloat_struct return_bfloat_struct(bfloat_struct x) {
     return x;
 }
@@ -577,8 +577,8 @@ typedef struct four_bfloats {
 } four_bfloats;
 
 // Four bfloats = 64 bits - should NOT be coerced
-// CHECK-LABEL: define{{.*}} %struct.four_bfloats @return_four_bfloats(bfloat %x.coerce0, bfloat %x.coerce1, bfloat %x.coerce2, bfloat %x.coerce3)
-// CHECK: ret %struct.four_bfloats
+// Four bfloats = 64 bits - can be packed into <4 x bfloat> vector
+// CHECK-LABEL: define{{.*}} <4 x bfloat> @return_four_bfloats(<4 x bfloat> %x.coerce)
 four_bfloats return_four_bfloats(four_bfloats x) {
     return x;
 }
