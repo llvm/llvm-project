@@ -642,7 +642,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::CONCAT_VECTORS, {MVT::v4i16, MVT::v8i8}, Legal);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, {MVT::v2i16, MVT::v4i8},
                          Legal);
-      setOperationAction(ISD::SELECT, {MVT::v4i16, MVT::v8i8}, Custom);
+      setOperationAction({ISD::SELECT, ISD::VSELECT}, {MVT::v4i16, MVT::v8i8},
+                         Custom);
       setOperationAction(ISD::MUL, {MVT::v4i16, MVT::v8i8}, Custom);
       setOperationAction(ISD::SETCC, P64VecVTs, Legal);
       setCondCodeAction(
@@ -9023,8 +9024,32 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::UREM:
   case ISD::BSWAP:
   case ISD::CTPOP:
-  case ISD::VSELECT:
     return lowerToScalableOp(Op, DAG);
+  case ISD::VSELECT: {
+    EVT VT = Op.getValueType();
+    // Split 64-bit vector VSELECT on RV32 with P extension for v4i16 and v8i8
+    if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() &&
+        (VT == MVT::v4i16 || VT == MVT::v8i8)) {
+      SDLoc DL(Op);
+      SDValue Mask = Op.getOperand(0);
+      SDValue TrueVal = Op.getOperand(1);
+      SDValue FalseVal = Op.getOperand(2);
+
+      // Split all three operands into two halves
+      auto [MaskLo, MaskHi] = DAG.SplitVector(Mask, DL);
+      auto [TrueLo, TrueHi] = DAG.SplitVector(TrueVal, DL);
+      auto [FalseLo, FalseHi] = DAG.SplitVector(FalseVal, DL);
+
+      // Perform VSELECT on each half
+      SDValue ResLo = DAG.getNode(ISD::VSELECT, DL, TrueLo.getValueType(),
+                                  MaskLo, TrueLo, FalseLo);
+      SDValue ResHi = DAG.getNode(ISD::VSELECT, DL, TrueHi.getValueType(),
+                                  MaskHi, TrueHi, FalseHi);
+
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ResLo, ResHi);
+    }
+    return lowerToScalableOp(Op, DAG);
+  }
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
