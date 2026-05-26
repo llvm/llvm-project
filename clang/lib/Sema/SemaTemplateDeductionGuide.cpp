@@ -1120,39 +1120,6 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
                                  QualType ReturnType,
                                  SmallVector<NamedDecl *> TemplateParams) {
   ASTContext &Context = SemaRef.Context;
-  // Constraint AST nodes must use uninstantiated depth.
-  if (auto *PrimaryTemplate =
-          AliasTemplate->getInstantiatedFromMemberTemplate();
-      PrimaryTemplate && TemplateParams.size() > 0) {
-    LocalInstantiationScope Scope(SemaRef);
-
-    // Adjust the depth for TemplateParams.
-    unsigned AdjustDepth = PrimaryTemplate->getTemplateDepth();
-    SmallVector<TemplateArgument> TransformedTemplateArgs;
-    for (auto *TP : TemplateParams) {
-      // Rebuild any internal references to earlier parameters and reindex
-      // as we go.
-      MultiLevelTemplateArgumentList Args;
-      Args.setKind(TemplateSubstitutionKind::Rewrite);
-      Args.addOuterTemplateArguments(TransformedTemplateArgs);
-      NamedDecl *NewParam = transformTemplateParameter(
-          SemaRef, AliasTemplate->getDeclContext(), TP, Args,
-          /*NewIndex=*/TransformedTemplateArgs.size(),
-          getDepthAndIndex(TP).first + AdjustDepth);
-
-      TemplateArgument NewTemplateArgument =
-          Context.getInjectedTemplateArg(NewParam);
-      TransformedTemplateArgs.push_back(NewTemplateArgument);
-    }
-    // Transformed the ReturnType to restore the uninstantiated depth.
-    MultiLevelTemplateArgumentList Args;
-    Args.setKind(TemplateSubstitutionKind::Rewrite);
-    Args.addOuterTemplateArguments(TransformedTemplateArgs);
-    ReturnType = SemaRef.SubstType(
-        ReturnType, Args, AliasTemplate->getLocation(),
-        Context.DeclarationNames.getCXXDeductionGuideName(AliasTemplate));
-  }
-
   SmallVector<TypeSourceInfo *> IsDeducibleTypeTraitArgs = {
       Context.getTrivialTypeSourceInfo(
           Context.getDeducedTemplateSpecializationType(
@@ -1739,4 +1706,73 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
       ->setDeductionCandidateKind(DeductionCandidate::Copy);
 
   SavedContext.pop();
+}
+
+TypeAliasTemplateDecl *Sema::BuildAliasForCTADFromTypeTemplateParameter(
+    TemplateTemplateParmDecl *D, TemplateName Replacement, SourceLocation Loc) {
+
+  // [C++26] [over.match.class.deduct]p3
+  // When resolving a placeholder for a deduced class type where the
+  // template-name designates a type template template parameter P, let A be an
+  // alias template whose template parameter list is that of P and whose
+  // defining-type-id designates the type template template argument with a
+  // simpletemplate-id in which the template-argument-list consists of a list of
+  // identifiers naming each template-parameter of P, with the argument being a
+  // pack expansion if the template-parameter is a pack. A is then used instead
+  // of the original template-name to resolve the placeholder
+
+  LocalInstantiationScope Scope(SemaRef);
+
+  ASTContext &AST = getASTContext();
+  DeclContext *Ctx = CurContext;
+
+  while (Ctx->isRequiresExprBody())
+    Ctx = Ctx->getParent();
+
+  DeclContext *ParentCtx = Ctx;
+  while (isa<FunctionDecl>(ParentCtx))
+    ParentCtx = ParentCtx->isFileContext()
+                    ? ParentCtx
+                    : getLambdaAwareParentOfDeclContext(ParentCtx);
+
+  MultiLevelTemplateArgumentList MLTAL;
+  if (NamedDecl *Func = dyn_cast<NamedDecl>(Ctx))
+    MLTAL = SemaRef.getTemplateInstantiationArgs(
+        Func, nullptr, false, std::nullopt, false, nullptr, true);
+
+  llvm::SmallVector<NamedDecl *> Parameters;
+  llvm::SmallVector<TemplateArgument> Args;
+  for (NamedDecl *P : D->getTemplateParameters()->asArray()) {
+    auto [Depth, Index] = getDepthAndIndex(P);
+    NamedDecl *NewParam = transformTemplateParameter(
+        *this, ParentCtx, P, MLTAL, Index, Depth ? Depth - 1 : 0);
+    if (!NewParam)
+      return nullptr;
+    Parameters.push_back(NewParam);
+    Args.push_back(SemaRef.Context.getInjectedTemplateArg(NewParam));
+  }
+
+  auto *ParamList = TemplateParameterList::Create(
+      AST, SourceLocation(), SourceLocation(), Parameters, SourceLocation(),
+      /*RequiresClause=*/nullptr);
+
+  QualType Type = AST.getCanonicalType(AST.getTemplateSpecializationType(
+      ElaboratedTypeKeyword::Class, Replacement, Args, {}));
+
+  // FIXME: Have a flag to distinguish such special type alias declarations.
+  auto *Alias =
+      TypeAliasDecl::Create(AST, ParentCtx, Loc, /*IdLoc=*/SourceLocation(),
+                            /*Id=*/nullptr, AST.getTrivialTypeSourceInfo(Type));
+  Alias->setImplicit(true);
+
+  auto *Template = TypeAliasTemplateDecl::Create(
+      AST, ParentCtx, Loc, Alias->getDeclName(), ParamList, Alias);
+
+  Alias->setDescribedAliasTemplate(Template);
+
+  Template->setImplicit(true);
+  Template->setLexicalDeclContext(Alias->getDeclContext());
+  ParentCtx->addDecl(Template);
+
+  return Template;
 }

@@ -24,7 +24,7 @@ Out2<double>::AInner t(1.0);
 // Verify that the require-clause of alias deduction guide is transformed correctly:
 //   - Occurrence T should be replaced with `int`;
 //   - Occurrence V should be replaced with the Y with depth 1
-//   - Depth of occurrence Y in the __is_deducible constraint should be 1
+//   - Depth of occurrence Y in the __is_deducible constraint should be 0
 //
 // CHECK:      |   `-FunctionTemplateDecl {{.*}} <deduction guide for AInner>
 // CHECK-NEXT: |     |-TemplateTypeParmDecl {{.*}} typename depth 0 index 0 Y
@@ -45,7 +45,7 @@ Out2<double>::AInner t(1.0);
 // CHECK-NEXT: |     |     `-TemplateArgument type 'Y'
 // CHECK-NEXT: |     |       `-SubstTemplateTypeParmType {{.*}} 'Y'
 // CHECK-NEXT: |     |         |-FunctionTemplate {{.*}} '<deduction guide for Inner>'
-// CHECK-NEXT: |     |         `-TemplateTypeParmType {{.*}} 'Y' dependent depth 1 index 0
+// CHECK-NEXT: |     |         `-TemplateTypeParmType {{.*}} 'Y' dependent depth 0 index 0
 // CHECK-NEXT: |     |           `-TemplateTypeParm {{.*}} 'Y'
 // CHECK-NEXT: |     |-CXXDeductionGuideDecl {{.*}} <deduction guide for AInner> 'auto (Y) -> Inner<Y>'
 // CHECK-NEXT: |     | `-ParmVarDecl {{.*}} 'Y'

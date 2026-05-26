@@ -9141,6 +9141,12 @@ public:
       TypeSourceInfo *TInfo, const InitializedEntity &Entity,
       const InitializationKind &Kind, MultiExprArg Init);
 
+  /// Build an alias for CTAD from type template parameters (C++26).
+  TypeAliasTemplateDecl *
+  BuildAliasForCTADFromTypeTemplateParameter(TemplateTemplateParmDecl *D,
+                                             TemplateName Replacement,
+                                             SourceLocation Loc);
+
   ///@}
 
   //
@@ -13575,7 +13581,7 @@ public:
   /// Retrieve the template argument list(s) that should be used to
   /// instantiate the definition of the given declaration.
   ///
-  /// \param ND the declaration for which we are computing template
+  /// \param D the declaration for which we are computing template
   /// instantiation arguments.
   ///
   /// \param DC In the event we don't HAVE a declaration yet, we instead provide
@@ -13607,7 +13613,7 @@ public:
   /// when encountering a specialized member function template, rather than
   /// returning immediately.
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
-      const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
+      const Decl *D, const DeclContext *DC = nullptr, bool Final = false,
       std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
       bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
       bool ForConstraintInstantiation = false,

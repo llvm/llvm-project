@@ -54,6 +54,7 @@ struct Response {
   const Decl *NextDecl = nullptr;
   bool IsDone = false;
   bool ClearRelativeToPrimary = true;
+  bool EnableSkipForSpecialization = false;
   static Response Done() {
     Response R;
     R.IsDone = true;
@@ -327,6 +328,11 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
         }
       }
     }
+    if (isa<CXXDeductionGuideDecl>(Function)) {
+      auto Response = Response::UseNextDecl(Function);
+      Response.EnableSkipForSpecialization = true;
+      return Response;
+    }
   }
   // If this is a friend or local declaration and it declares an entity at
   // namespace scope, take arguments from its lexical parent
@@ -486,19 +492,19 @@ Response HandleGenericDeclContext(const Decl *CurDecl) {
 } // namespace
 
 MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
-    const NamedDecl *ND, const DeclContext *DC, bool Final,
+    const Decl *CurDecl, const DeclContext *DC, bool Final,
     std::optional<ArrayRef<TemplateArgument>> Innermost, bool RelativeToPrimary,
     const FunctionDecl *Pattern, bool ForConstraintInstantiation,
     bool SkipForSpecialization, bool ForDefaultArgumentSubstitution) {
-  assert((ND || DC) && "Can't find arguments for a decl if one isn't provided");
+  assert((CurDecl || DC) &&
+         "Can't find arguments for a decl if one isn't provided");
   // Accumulate the set of template argument lists in this structure.
   MultiLevelTemplateArgumentList Result;
 
   using namespace TemplateInstArgsHelpers;
-  const Decl *CurDecl = ND;
 
   if (Innermost) {
-    Result.addOuterTemplateArguments(const_cast<NamedDecl *>(ND), *Innermost,
+    Result.addOuterTemplateArguments(const_cast<Decl *>(CurDecl), *Innermost,
                                      Final);
     // Populate placeholder template arguments for TemplateTemplateParmDecls.
     // This is essential for the case e.g.
@@ -555,6 +561,8 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
       return Result;
     if (R.ClearRelativeToPrimary)
       RelativeToPrimary = false;
+    if (R.EnableSkipForSpecialization)
+      SkipForSpecialization = true;
     assert(R.NextDecl);
     CurDecl = R.NextDecl;
   }

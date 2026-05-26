@@ -189,6 +189,9 @@ C++ Language Changes
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `P3865R1 <https://wg21.link/P3865R1>`_ CTAD for type template template parameters.
+  This is implemented as a DR to C++20.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
