@@ -2738,6 +2738,9 @@ const Init *TGParser::ParseOperationListComprehension(Record *CurRec,
   return (TernOpInit::get(Opc, LHS, MHS, RHS, OutType))->Fold(CurRec);
 }
 
+/// Parse the !cond operation. Return null on error.
+///
+/// Cond ::= !cond([cond: val,]+) => val type
 const Init *TGParser::ParseOperationCond(Record *CurRec,
                                          const RecTy *ItemType) {
   Lex.Lex(); // eat the operation 'cond'
