@@ -2300,6 +2300,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cosh_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    cosh_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.cosh
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   coshf_test
   NEED_MPFR
   SUITE
