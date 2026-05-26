@@ -1667,14 +1667,22 @@ void llvm::processImportsFiles(
 bool llvm::convertToDeclaration(GlobalValue &GV) {
   LLVM_DEBUG(dbgs() << "Converting to a declaration: `" << GV.getName()
                     << "\n");
+  MDNode *UniqueID = nullptr;
+  if (auto *GO = dyn_cast<GlobalObject>(&GV))
+    UniqueID = GO->getMetadata(LLVMContext::MD_unique_id);
+
   if (Function *F = dyn_cast<Function>(&GV)) {
     F->deleteBody();
     F->clearMetadata();
+    if (UniqueID)
+      F->setMetadata(LLVMContext::MD_unique_id, UniqueID);
     F->setComdat(nullptr);
   } else if (GlobalVariable *V = dyn_cast<GlobalVariable>(&GV)) {
     V->setInitializer(nullptr);
     V->setLinkage(GlobalValue::ExternalLinkage);
     V->clearMetadata();
+    if (UniqueID)
+      V->setMetadata(LLVMContext::MD_unique_id, UniqueID);
     V->setComdat(nullptr);
   } else {
     GlobalValue *NewGV;
