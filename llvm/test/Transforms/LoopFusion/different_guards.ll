@@ -3,7 +3,9 @@
 ; STAT-NOT: loop-fusion - Loops fused
 
 ; Test reduced from the file diags_on_lat_aux_grid.F90 present in pop2,
-; a program from spec 2017.
+; a program from spec 2017. Two loops have different guards, but otherwise
+; satisfy all conditions for loop fusion, in particular they have the same
+; iteration count. They should not be fused.
 
 define void @diags_on_lat_aux_grid(i1 %cond, i1 %cond1, i1 %0, i1 %1, ptr noalias %b1, ptr noalias %b2, i64 %N) {
 .critedge:

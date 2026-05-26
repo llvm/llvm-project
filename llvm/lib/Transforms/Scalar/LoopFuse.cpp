@@ -1305,12 +1305,12 @@ private:
 
     auto *FC0CmpInst = dyn_cast<Instruction>(FC0.GuardBranch->getCondition());
     auto *FC1CmpInst = dyn_cast<Instruction>(FC1.GuardBranch->getCondition());
-    if (!FC0CmpInst || !FC1CmpInst) {
-      return FC0.GuardBranch->getCondition() == FC1.GuardBranch->getCondition();
-    }
-    if (FC0CmpInst && FC1CmpInst && !FC0CmpInst->isIdenticalTo(FC1CmpInst)) {
+    if ((!FC0CmpInst || !FC1CmpInst) &&
+        FC0.GuardBranch->getCondition() != FC1.GuardBranch->getCondition())
       return false;
-    }
+
+    if (FC0CmpInst && FC1CmpInst && !FC0CmpInst->isIdenticalTo(FC1CmpInst))
+      return false;
 
     // The compare instructions are identical.
     // Now make sure the successor of the guards have the same flow into/around
