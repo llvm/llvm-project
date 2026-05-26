@@ -1609,6 +1609,9 @@ functions:
   - name: isnanf16
     standards:
       - bsd
+    return_type: int
+    arguments:
+      - type: float16
   - name: issignaling
     standards:
       - stdc
