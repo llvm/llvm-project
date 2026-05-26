@@ -687,6 +687,7 @@ Bug Fixes to AST Handling
 - Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
 - Fixed the SourceLocation and SourceRange of reversed rewritten CXXOperatorCallExpr. (#GH192467)
 - Fixed a assertion when ``__block`` is used on global variables in C mode. (#GH183974)
+- Added missing AST nodes representing the ``decltype`` specifiers in destructor call to AST.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
