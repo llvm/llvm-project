@@ -1914,7 +1914,7 @@ bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
     Notes.push_back({VarLoc, PD});
 
     if (!AT->isConstantArrayType()) {
-      // Variable length arrays cannot be used in a reduction clause.
+      // Non-constant length arrays cannot be used in a reduction clause.
       // To fix llvm/llvm-project#199162
       return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
                                    << CurType->getAsRecordDecl()
