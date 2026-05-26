@@ -112,7 +112,8 @@ jobs:
         run: |
           ninja -C "$LLVM_BUILD_DIR/build" \
             check-clang \
-            check-mlir
+            check-mlir \
+            openmp
 
       - name: Show ccache stats
         if: always()
