@@ -22,7 +22,7 @@
 // CHECK-NEXT:    store ptr [[X]], ptr [[TMP1]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 1
 // CHECK-NEXT:    store ptr [[Y]], ptr [[TMP2]], align 8
-// CHECK-NEXT:    call void @__kmpc_taskgraph(ptr @[[GLOB1]], i32 [[TMP0]], ptr @.omp.taskgraph.handle, i32 0, i32 0, i32 0, ptr @taskgraph.omp_outlined., ptr [[AGG_CAPTURED]])
+// CHECK-NEXT:    call void @__kmpc_taskgraph(ptr @[[GLOB1]], i32 [[TMP0]], ptr @.omp.taskgraph.handle, i64 0, i32 0, i32 0, ptr @taskgraph.omp_outlined., ptr [[AGG_CAPTURED]])
 // CHECK-NEXT:    ret i32 0
 //
 int main() {
