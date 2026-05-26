@@ -71,7 +71,8 @@ private:
   bool hasSameEEW(const MachineInstr &User, const MachineInstr &Src) const;
   bool isAllOnesMask(const MachineInstr *MaskDef) const;
   std::optional<unsigned> getConstant(const MachineOperand &VL) const;
-  bool ensureDominates(const MachineOperand &Use, MachineInstr &Src) const;
+  bool ensureDominates(ArrayRef<const MachineOperand *> Defs,
+                       MachineInstr &Use) const;
   Register
   lookThruCopies(Register Reg, bool OneUseOnly = false,
                  SmallVectorImpl<MachineInstr *> *Copies = nullptr) const;
@@ -363,12 +364,19 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
     // If True's passthru is undef see if we can change it to False
     if (TruePassthruReg.isValid() ||
         !MRI->hasOneUse(MI.getOperand(3).getReg()) ||
-        !ensureDominates(MI.getOperand(2), *True))
+        !ensureDominates(&MI.getOperand(2), *True))
       return false;
     True->getOperand(1).setReg(MI.getOperand(2).getReg());
     // If True is masked then its passthru needs to be in VRNoV0.
     MRI->constrainRegClass(True->getOperand(1).getReg(),
                            TII->getRegClass(True->getDesc(), 1));
+  }
+
+  // If True is mask agnostic, we need to make it mask undisturbed.
+  if (RISCVII::hasVecPolicyOp(True->getDesc().TSFlags)) {
+    MachineOperand &PolicyOp =
+        True->getOperand(RISCVII::getVecPolicyOpNum(True->getDesc()));
+    PolicyOp.setImm(PolicyOp.getImm() & ~RISCVVType::MASK_AGNOSTIC);
   }
 
   MI.setDesc(TII->get(NewOpc));
@@ -455,21 +463,28 @@ static bool dominates(MachineBasicBlock::const_iterator A,
   return &*I == A;
 }
 
-/// If the register in \p MO doesn't dominate \p Src, try to move \p Src so it
-/// does. Returns false if doesn't dominate and we can't move. \p MO must be in
-/// the same basic block as \Src.
-bool RISCVVectorPeephole::ensureDominates(const MachineOperand &MO,
-                                          MachineInstr &Src) const {
-  assert(MO.getParent()->getParent() == Src.getParent());
-  if (!MO.isReg() || !MO.getReg().isValid())
-    return true;
+/// If a register in \p Defs doesn't dominate \p Use, try to move Use so it
+/// does. Returns false if any def doesn't dominate and we can't move Use. Each
+/// def must be in the same block as Use.
+bool RISCVVectorPeephole::ensureDominates(ArrayRef<const MachineOperand *> Defs,
+                                          MachineInstr &Use) const {
+  MachineInstr *Dest = &Use;
 
-  MachineInstr *Def = MRI->getVRegDef(MO.getReg());
-  if (Def->getParent() == Src.getParent() && !dominates(Def, Src)) {
-    if (!RISCVInstrInfo::isSafeToMove(Src, *Def->getNextNode()))
-      return false;
-    Src.moveBefore(Def->getNextNode());
+  for (const MachineOperand *MO : Defs) {
+    assert(MO->getParent()->getParent() == Use.getParent());
+    if (!MO->isReg() || !MO->getReg().isValid())
+      continue;
+
+    MachineInstr *Def = MRI->getVRegDef(MO->getReg());
+    if (Def->getParent() == Dest->getParent() && !dominates(Def, *Dest)) {
+      if (!RISCVInstrInfo::isSafeToMove(*Dest, *Def->getNextNode()))
+        return false;
+      Dest = Def->getNextNode();
+    }
   }
+
+  if (Dest != &Use)
+    Use.moveBefore(Dest);
 
   return true;
 }
@@ -563,7 +578,7 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
     return false;
 
   // If the new passthru doesn't dominate Src, try to move Src so it does.
-  if (!ensureDominates(Passthru, *Src))
+  if (!ensureDominates(&Passthru, *Src))
     return false;
 
   if (NeedsCommute) {
@@ -714,15 +729,9 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   assert(RISCVII::hasVecPolicyOp(True.getDesc().TSFlags) &&
          "Foldable unmasked pseudo should have a policy op already");
 
-  // Make sure both mask and false dominate True and its copies, otherwise move
-  // down True so it does. VL will always dominate since if it's a register they
-  // need to be the same.
-  const MachineOperand *DomOp = &MaskOp;
-  MachineInstr *False = MRI->getUniqueVRegDef(FalseReg);
-  if (False && False->getParent() == Mask->getParent() &&
-      dominates(Mask, False))
-    DomOp = &FalseOp;
-  if (!ensureDominates(*DomOp, True))
+  // Make sure Mask, False and MinVL dominate True and its copies, otherwise
+  // move down True so it does.
+  if (!ensureDominates({&MaskOp, &FalseOp, &MinVL}, True))
     return false;
 
   if (NeedsCommute) {

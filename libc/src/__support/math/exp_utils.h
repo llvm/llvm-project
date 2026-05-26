@@ -27,7 +27,8 @@ ziv_test_denorm(int hi, double mid, double lo, double err) {
   using FPBits = typename fputil::FPBits<double>;
 
   // Scaling factor = 1/(min normal number) = 2^1022
-  int64_t exp_hi = static_cast<int64_t>(hi + 1022) << FPBits::FRACTION_LEN;
+  int64_t exp_hi =
+      static_cast<int64_t>(hi + 1022) * (1LL << FPBits::FRACTION_LEN);
   double mid_hi = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(mid));
   double lo_scaled =
       (lo != 0.0) ? cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(lo))

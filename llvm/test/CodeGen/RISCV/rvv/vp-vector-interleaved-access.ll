@@ -494,6 +494,85 @@ define <vscale x 2 x i32> @load_factor5_oneactive(ptr %ptr, i32 zeroext %evl) {
   ret <vscale x 2 x i32> %t3
 }
 
+; mask = all ones, skip the last 2 fields
+define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @gap_mask_load_factor4(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: gap_mask_load_factor4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 16
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlsseg2e32.v v8, (a0), a2
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 4
+  %gap.mask = call <vscale x 8 x i1> @llvm.vector.interleave4(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i1> splat (i1 false), <vscale x 2 x i1> splat (i1 false))
+  %combined.mask = and <vscale x 8 x i1> %gap.mask, splat (i1 true)
+
+  %wide.masked.load = call <vscale x 8 x i32> @llvm.vp.load.nxv8i32.p0(ptr %ptr, <vscale x 8 x i1> %combined.mask, i32 %rvl)
+  %d = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave4.nxv8i32(<vscale x 8 x i32> %wide.masked.load)
+  %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %d, 0
+  %t1 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %d, 1
+  %t2 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %d, 2
+  %t3 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %d, 3
+
+  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> %t0, 0
+  %res1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res0, <vscale x 2 x i32> %t1, 1
+  %res2 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res1, <vscale x 2 x i32> %t2, 2
+  %res3 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res2, <vscale x 2 x i32> %t3, 3
+  ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res3
+}
+
+; mask = %m, skip the last field
+define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @gap_mask_load_factor4_mask(ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: gap_mask_load_factor4_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 16
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlsseg3e32.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 4
+  %actual.mask = call <vscale x 8 x i1> @llvm.vector.interleave4(<vscale x 2 x i1> %m, <vscale x 2 x i1> %m, <vscale x 2 x i1> %m, <vscale x 2 x i1> %m)
+  %gap.mask = call <vscale x 8 x i1> @llvm.vector.interleave4(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i1> splat (i1 false))
+  %combined.mask = and <vscale x 8 x i1> %gap.mask, %actual.mask
+
+  %wide.masked.load = call <vscale x 8 x i32> @llvm.vp.load.nxv8i32.p0(ptr %ptr, <vscale x 8 x i1> %combined.mask, i32 %rvl)
+  %d = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave4.nxv8i32(<vscale x 8 x i32> %wide.masked.load)
+  %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %d, 0
+  %t1 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %d, 1
+  %t2 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %d, 2
+  %t3 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %d, 3
+
+  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> %t0, 0
+  %res1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res0, <vscale x 2 x i32> %t1, 1
+  %res2 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res1, <vscale x 2 x i32> %t2, 2
+  %res3 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res2, <vscale x 2 x i32> %t3, 3
+  ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res3
+}
+
+; mask = %m, skip the last 3 fields. We should not apply the gap-mask optimization here but we can extract only the first field so that it can be turned into a strided load.
+define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @gap_mask_single_field_load_factor4_mask(ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: gap_mask_single_field_load_factor4_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 16
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 4
+  %actual.mask = call <vscale x 8 x i1> @llvm.vector.interleave4(<vscale x 2 x i1> %m, <vscale x 2 x i1> %m, <vscale x 2 x i1> %m, <vscale x 2 x i1> %m)
+  %gap.mask = call <vscale x 8 x i1> @llvm.vector.interleave4(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i1> splat (i1 false), <vscale x 2 x i1> splat (i1 false), <vscale x 2 x i1> splat (i1 false))
+  %combined.mask = and <vscale x 8 x i1> %gap.mask, %actual.mask
+
+  %wide.masked.load = call <vscale x 8 x i32> @llvm.vp.load.nxv8i32.p0(ptr %ptr, <vscale x 8 x i1> %combined.mask, i32 %rvl)
+  %d = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave4.nxv8i32(<vscale x 8 x i32> %wide.masked.load)
+  %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %d, 0
+  %t1 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %d, 1
+  %t2 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %d, 2
+  %t3 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %d, 3
+
+  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> %t0, 0
+  %res1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res0, <vscale x 2 x i32> %t1, 1
+  %res2 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res1, <vscale x 2 x i32> %t2, 2
+  %res3 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res2, <vscale x 2 x i32> %t3, 3
+  ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res3
+}
 
 ; Negative tests
 
@@ -615,4 +694,3 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
   %res3 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res2, <vscale x 2 x i32> %t3, 3
   ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res3
 }
-

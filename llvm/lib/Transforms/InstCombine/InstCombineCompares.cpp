@@ -693,7 +693,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
   }
 
   if (GEPLHS->isInBounds() && ICmpInst::isEquality(Cond) &&
-      isa<Constant>(RHS) && cast<Constant>(RHS)->isNullValue() &&
+      isa<ConstantPointerNull>(RHS) &&
       !NullPointerIsDefined(I.getFunction(),
                             RHS->getType()->getPointerAddressSpace())) {
     // For most address spaces, an allocation can't be placed at null, but null
@@ -4327,12 +4327,16 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
 
   switch (LHSI->getOpcode()) {
   case Instruction::IntToPtr:
-    // icmp pred inttoptr(X), null -> icmp pred X, 0
-    if (RHSC->isNullValue() &&
-        DL.getIntPtrType(RHSC->getType()) == LHSI->getOperand(0)->getType())
-      return new ICmpInst(
-          I.getPredicate(), LHSI->getOperand(0),
-          Constant::getNullValue(LHSI->getOperand(0)->getType()));
+    // icmp pred inttoptr(X), null -> icmp pred X, null pointer value
+    if (isa<ConstantPointerNull>(RHSC)) {
+      Type *IntPtrTy = DL.getIntPtrType(RHSC->getType());
+      if (IntPtrTy == LHSI->getOperand(0)->getType()) {
+        APInt NullPtrValue =
+            DL.getNullPtrValue(RHSC->getType()->getPointerAddressSpace());
+        return new ICmpInst(I.getPredicate(), LHSI->getOperand(0),
+                            Constant::getIntegerValue(IntPtrTy, NullPtrValue));
+      }
+    }
     break;
 
   case Instruction::Load:
@@ -9153,6 +9157,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // fcmp oeq/une (bitcast X), 0.0 --> (and X, SignMaskC) ==/!= 0
   if (match(Op1, m_PosZeroFP()) &&
       match(Op0, m_OneUse(m_ElementWiseBitCast(m_Value(X)))) &&
+      X->getType()->isIntOrIntVectorTy() &&
       !F.getDenormalMode(Op1->getType()->getScalarType()->getFltSemantics())
            .inputsMayBeZero()) {
     ICmpInst::Predicate IntPred = ICmpInst::BAD_ICMP_PREDICATE;

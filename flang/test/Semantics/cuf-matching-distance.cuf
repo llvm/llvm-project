@@ -1,0 +1,90 @@
+! RUN: bbc -emit-hlfir -fcuda            %s -o - | FileCheck %s --check-prefix=NORM
+! RUN: bbc -emit-hlfir -fcuda -gpu=unified %s -o - | FileCheck %s --check-prefix=UNI
+! RUN: bbc -emit-hlfir -fcuda -gpu=managed %s -o - | FileCheck %s --check-prefix=MAN
+
+! Comprehensive coverage of Table 2 ("Attributed Argument Matching
+! Distance Values") from CUDA Fortran Programming Guide §3.2.3.
+!
+! One generic exposes a host, device, managed, and unified specific.
+! Each call site picks the winning specific based on the actual's CUDA
+! attribute (or, for unattributed actuals, the active -gpu=mem mode).
+!
+!                       Actual argument attribute
+!                 None                              gpu=    gpu=
+!   Dummy attr   (Host)  Device  Managed  Unified  unified managed
+!   ----------+--------+-------+--------+--------+--------+--------+
+!   None(host)|    0   |  INF  |   3    |   3    |   3    |   3    |
+!   Device    |   INF  |   0   |   2    |   2    |   2    |   2    |
+!   Managed   |   INF  |  INF  |   0    |   1    |   1    |   0    |
+!   Unified   |   INF  |  INF  |   1    |   0    |   0    |   1    |
+
+module m
+  interface gen
+    module procedure sub_host
+    module procedure sub_device
+    module procedure sub_managed
+    module procedure sub_unified
+  end interface
+contains
+  subroutine sub_host(x)
+    integer :: x(:)
+  end subroutine
+  subroutine sub_device(x)
+    integer, device :: x(:)
+  end subroutine
+  subroutine sub_managed(x)
+    integer, managed :: x(:)
+  end subroutine
+  subroutine sub_unified(x)
+    integer, unified :: x(:)
+  end subroutine
+end module
+
+! Test driver: one call per actual attribute. Each compilation mode
+! (no flag, -gpu=unified, -gpu=managed) yields a different winner for
+! the unattributed allocatable (the "None" actual).
+subroutine driver
+  use m
+  integer, allocatable          :: act_none(:)
+  integer, device, allocatable  :: act_dev(:)
+  integer, managed, allocatable :: act_man(:)
+  integer, unified, allocatable :: act_uni(:)
+  allocate(act_none(4), act_dev(4), act_man(4), act_uni(4))
+
+  call gen(act_none)
+  call gen(act_dev)
+  call gen(act_man)
+  call gen(act_uni)
+end subroutine
+
+! Without any -gpu=mem mode, an unattributed actual matches the host
+! specific (Table 2 column "Actual None (host)"). Explicit Device,
+! Managed and Unified actuals each select their corresponding
+! specific (distance 0 down the diagonal).
+! NORM-LABEL: func.func @_QPdriver
+! NORM:      fir.call @_QMmPsub_host
+! NORM:      fir.call @_QMmPsub_device
+! NORM:      fir.call @_QMmPsub_managed
+! NORM:      fir.call @_QMmPsub_unified
+
+! Under -gpu=mem:unified, an unattributed actual matches the unified
+! specific (Table 2 column "Actual None (gpu=mem:unified)": Unified=0
+! beats Managed=1, Device=2, Host=3). Explicitly attributed actuals
+! still pick their exact-match specific.
+! UNI-LABEL: func.func @_QPdriver
+! UNI:       fir.call @_QMmPsub_unified
+! UNI:       fir.call @_QMmPsub_device
+! UNI:       fir.call @_QMmPsub_managed
+! UNI:       fir.call @_QMmPsub_unified
+
+! Under -gpu=mem:managed, an unattributed actual matches the managed
+! specific (Table 2 column "Actual None (gpu=mem:managed)": Managed=0
+! beats Unified=1, Device=2, Host=3). Explicit Device/Managed/Unified
+! actuals are unaffected by the -gpu mode and pick their exact-match
+! specific -- in particular, an explicit Unified actual still binds
+! to the Unified specific (Unified=0 < Managed=1), matching Table 2.
+! MAN-LABEL: func.func @_QPdriver
+! MAN:       fir.call @_QMmPsub_managed
+! MAN:       fir.call @_QMmPsub_device
+! MAN:       fir.call @_QMmPsub_managed
+! MAN:       fir.call @_QMmPsub_unified

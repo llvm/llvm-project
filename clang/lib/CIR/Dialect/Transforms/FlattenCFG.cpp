@@ -23,6 +23,7 @@
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -682,70 +683,6 @@ static void collectResumeOps(mlir::Region &region,
   region.walk([&](cir::ResumeOp resumeOp) { resumeOps.push_back(resumeOp); });
 }
 
-// Replace a cir.call with a cir.try_call that unwinds to the `unwindDest`
-// block if an exception is thrown.
-static void replaceCallWithTryCall(cir::CallOp callOp, mlir::Block *unwindDest,
-                                   mlir::Location loc,
-                                   mlir::PatternRewriter &rewriter) {
-  mlir::Block *callBlock = callOp->getBlock();
-
-  assert(!callOp.getNothrow() && "call is not expected to throw");
-
-  // Split the block after the call - remaining ops become the normal
-  // destination.
-  mlir::Block *normalDest =
-      rewriter.splitBlock(callBlock, std::next(callOp->getIterator()));
-
-  // Build the try_call to replace the original call.
-  rewriter.setInsertionPoint(callOp);
-  cir::TryCallOp tryCallOp;
-  if (callOp.isIndirect()) {
-    mlir::Value indTarget = callOp.getIndirectCall();
-    auto ptrTy = mlir::cast<cir::PointerType>(indTarget.getType());
-    auto resTy = mlir::cast<cir::FuncType>(ptrTy.getPointee());
-    tryCallOp =
-        cir::TryCallOp::create(rewriter, loc, indTarget, resTy, normalDest,
-                               unwindDest, callOp.getArgOperands());
-  } else {
-    mlir::Type resType = callOp->getNumResults() > 0
-                             ? callOp->getResult(0).getType()
-                             : mlir::Type();
-    tryCallOp =
-        cir::TryCallOp::create(rewriter, loc, callOp.getCalleeAttr(), resType,
-                               normalDest, unwindDest, callOp.getArgOperands());
-  }
-
-  // Copy all attributes from the original call except those already set by
-  // TryCallOp::create or that are operation-specific and should not be copied.
-  llvm::StringRef excludedAttrs[] = {
-      CIRDialect::getCalleeAttrName(), // Set by create()
-      CIRDialect::getOperandSegmentSizesAttrName(),
-  };
-#ifndef NDEBUG
-  // We don't expect to ever see any of these attributes on a call that we
-  // converted to a try_call.
-  llvm::StringRef unexpectedAttrs[] = {
-      CIRDialect::getNoThrowAttrName(),
-      CIRDialect::getNoUnwindAttrName(),
-  };
-#endif
-  for (mlir::NamedAttribute attr : callOp->getAttrs()) {
-    if (llvm::is_contained(excludedAttrs, attr.getName()))
-      continue;
-    assert(!llvm::is_contained(unexpectedAttrs, attr.getName()) &&
-           "unexpected attribute on converted call");
-    tryCallOp->setAttr(attr.getName(), attr.getValue());
-  }
-
-  // Replace uses of the call result with the try_call result.
-  // Use the rewriter API so that the pattern rewriter is notified of the
-  // in-place modifications to each user operation.
-  if (callOp->getNumResults() > 0)
-    rewriter.replaceAllUsesWith(callOp->getResult(0), tryCallOp.getResult());
-
-  rewriter.eraseOp(callOp);
-}
-
 // Create a shared unwind destination block. The block contains a
 // cir.eh.initiate operation (optionally with the cleanup attribute) and a
 // branch to the given destination block, passing the eh_token.
@@ -792,6 +729,25 @@ public:
     CleanupExit(mlir::Operation *op, int id) : exitOp(op), destinationId(id) {}
   };
 
+  // Determine whether a goto operation transfers control to a label that
+  // exists somewhere inside the given region (or any of its nested regions).
+  // Label names are unique within a function, so finding a matching cir.label
+  // inside the region implies that the goto definitely targets that label and
+  // therefore stays within the region. If no match is found, the goto either
+  // exits the region or its target is unknown; in either case the caller must
+  // treat it as exiting the region.
+  static bool gotoTargetsLabelInRegion(cir::GotoOp gotoOp,
+                                       mlir::Region &region) {
+    llvm::StringRef targetLabel = gotoOp.getLabel();
+    return region
+        .walk([&](cir::LabelOp labelOp) {
+          if (labelOp.getLabel() == targetLabel)
+            return mlir::WalkResult::interrupt();
+          return mlir::WalkResult::advance();
+        })
+        .wasInterrupted();
+  }
+
   // Collect all operations that exit a cleanup scope body. Return, goto, break,
   // and continue can all require branches through the cleanup region. When a
   // loop is encountered, only return and goto are collected because break and
@@ -802,9 +758,11 @@ public:
   // any return, goto, break, or continue from the nested cleanup will also
   // branch through the outer cleanup.
   //
-  // Note that goto statements may not necessarily exit the cleanup scope, but
-  // for now we conservatively assume that they do. We'll need more nuanced
-  // handling of that when multi-exit flattening is implemented.
+  // A goto is only treated as an exit if its target label is not somewhere
+  // inside the cleanup body region. Gotos whose target label is within the
+  // cleanup body stay inside the cleanup scope and need no special handling
+  // during flattening; they are simply inlined along with the rest of the
+  // body region.
   //
   // This function assigns unique destination IDs to each exit, which are
   // used when multi-exit cleanup scopes are flattened.
@@ -820,14 +778,26 @@ public:
         exits.emplace_back(terminator, nextId++);
     }
 
+    // Helper to decide whether an op is a goto that needs to be treated as an
+    // exit from the cleanup scope being flattened. If op is a goto and targets
+    // a label inside the cleanup body region, control stays within the cleanup
+    // and we leave the goto in place.
+    auto isGotoThatExitsCleanup = [&](mlir::Operation *op) {
+      auto gotoOp = dyn_cast<cir::GotoOp>(op);
+      return gotoOp && !gotoTargetsLabelInRegion(gotoOp, cleanupBodyRegion);
+    };
+
     // Lambda to walk a loop and collect only returns and gotos.
     // Break and continue inside loops are handled by the loop itself.
     // Loops don't require special handling for nested switch or cleanup scopes
     // because break and continue never branch out of the loop.
     auto collectExitsInLoop = [&](mlir::Operation *loopOp) {
       loopOp->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *nestedOp) {
-        if (isa<cir::ReturnOp, cir::GotoOp>(nestedOp))
+        if (isa<cir::ReturnOp>(nestedOp)) {
           exits.emplace_back(nestedOp, nextId++);
+        } else if (isGotoThatExitsCleanup(nestedOp)) {
+          exits.emplace_back(nestedOp, nextId++);
+        }
         return mlir::WalkResult::advance();
       });
     };
@@ -850,7 +820,9 @@ public:
         } else if (isa<cir::LoopOpInterface>(nestedOp)) {
           collectExitsInLoop(nestedOp);
           return mlir::WalkResult::skip();
-        } else if (isa<cir::ReturnOp, cir::GotoOp, cir::ContinueOp>(nestedOp)) {
+        } else if (isa<cir::ReturnOp, cir::ContinueOp>(nestedOp)) {
+          exits.emplace_back(nestedOp, nextId++);
+        } else if (isGotoThatExitsCleanup(nestedOp)) {
           exits.emplace_back(nestedOp, nextId++);
         }
         return mlir::WalkResult::advance();
@@ -870,7 +842,9 @@ public:
         // the nested cleanup.
         if (!ignoreBreak && isa<cir::BreakOp>(op)) {
           exits.emplace_back(op, nextId++);
-        } else if (isa<cir::ContinueOp, cir::ReturnOp, cir::GotoOp>(op)) {
+        } else if (isa<cir::ContinueOp, cir::ReturnOp>(op)) {
+          exits.emplace_back(op, nextId++);
+        } else if (isGotoThatExitsCleanup(op)) {
           exits.emplace_back(op, nextId++);
         } else if (isa<cir::CleanupScopeOp>(op)) {
           // Recurse into nested cleanup's body region.
@@ -1035,15 +1009,12 @@ public:
           return mlir::success();
         })
         .Case<cir::GotoOp>([&](auto gotoOp) {
-          // Correct goto handling requires determining whether the goto
-          // branches out of the cleanup scope or stays within it.
-          // Although the goto necessarily exits the cleanup scope in the
-          // case where it is the only exit from the scope, it is left
-          // as unimplemented for now so that it can be generalized when
-          // multi-exit flattening is implemented.
-          cir::UnreachableOp::create(rewriter, loc);
-          return gotoOp.emitError(
-              "goto in cleanup scope is not yet implemented");
+          // Gotos that target a label within the cleanup body region are
+          // filtered out by collectExits and never reach this code, so any
+          // goto that does reach here transfers control out of the cleanup
+          // scope. The goto is just moved to the exit block.
+          cir::GotoOp::create(rewriter, loc, gotoOp.getLabel());
+          return mlir::success();
         })
         .Default([&](mlir::Operation *op) {
           cir::UnreachableOp::create(rewriter, loc);
@@ -1431,10 +1402,7 @@ public:
 
     // Always return success because the IR has been modified (blocks split,
     // regions inlined, ops erased, etc.). The MLIR pattern rewriter contract
-    // requires that if a pattern modifies IR, it must return success(). Any
-    // errors from unsupported exit operations (e.g. goto) have already been
-    // reported via emitError and an unreachable terminator was placed as a
-    // placeholder.
+    // requires that if a pattern modifies IR, it must return success().
     return mlir::success();
   }
 

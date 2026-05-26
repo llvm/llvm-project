@@ -105,9 +105,7 @@ public:
     return Pred->getLocationContext();
   }
 
-  const StackFrameContext *getStackFrame() const {
-    return Pred->getStackFrame();
-  }
+  const StackFrame *getStackFrame() const { return Pred->getStackFrame(); }
 
   /// Return true if the current LocationContext has no caller context.
   bool inTopFrame() const { return getLocationContext()->inTopFrame();  }

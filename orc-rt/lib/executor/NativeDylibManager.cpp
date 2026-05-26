@@ -13,6 +13,7 @@
 #include "orc-rt/NativeDylibManager.h"
 #include "orc-rt/Session.h"
 
+#include <algorithm>
 #include <sstream>
 
 #if defined(__APPLE__) || defined(__linux__)

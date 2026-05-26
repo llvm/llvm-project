@@ -441,6 +441,30 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
                             MI.getFlag(MachineInstr::MIFlag::IsExact));
     break;
   }
+  case TargetOpcode::G_UREM: {
+    KnownBits LHSKnown(Known.getBitWidth());
+    KnownBits RHSKnown(Known.getBitWidth());
+
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), LHSKnown, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), RHSKnown, DemandedElts,
+                         Depth + 1);
+
+    Known = KnownBits::urem(LHSKnown, RHSKnown);
+    break;
+  }
+  case TargetOpcode::G_SREM: {
+    KnownBits LHSKnown(Known.getBitWidth());
+    KnownBits RHSKnown(Known.getBitWidth());
+
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), LHSKnown, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), RHSKnown, DemandedElts,
+                         Depth + 1);
+
+    Known = KnownBits::srem(LHSKnown, RHSKnown);
+    break;
+  }
   case TargetOpcode::G_SELECT: {
     computeKnownBitsMin(MI.getOperand(2).getReg(), MI.getOperand(3).getReg(),
                         Known, DemandedElts, Depth + 1);
@@ -781,7 +805,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_CTTZ:
-  case TargetOpcode::G_CTTZ_ZERO_UNDEF: {
+  case TargetOpcode::G_CTTZ_ZERO_POISON: {
     KnownBits SrcOpKnown;
     computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
                          Depth + 1);
@@ -792,7 +816,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_CTLZ:
-  case TargetOpcode::G_CTLZ_ZERO_UNDEF: {
+  case TargetOpcode::G_CTLZ_ZERO_POISON: {
     KnownBits SrcOpKnown;
     computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
                          Depth + 1);
@@ -2197,6 +2221,14 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
         return Tmp - MaxShAmt;
     }
     break;
+  }
+  case TargetOpcode::G_SREM: {
+    // The sign bit is the LHS's sign bit, except when the result of the
+    // remainder is zero. The magnitude of the result should be less than or
+    // equal to the magnitude of the LHS. Therefore, the result should have
+    // at least as many sign bits as the left hand side.
+    Register Src = MI.getOperand(1).getReg();
+    return computeNumSignBits(Src, DemandedElts, Depth + 1);
   }
   case TargetOpcode::G_TRUNC: {
     Register Src = MI.getOperand(1).getReg();
