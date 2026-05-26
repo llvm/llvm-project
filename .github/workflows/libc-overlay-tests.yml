@@ -22,12 +22,12 @@ jobs:
         include:
           # TODO: add linux gcc when it is fixed
           - os: ubuntu-24.04
-            container: 'ghcr.io/llvm/libc-ubuntu-24.04:70cbd7591abe'
+            container: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'
             compiler:
               c_compiler: clang-23
               cpp_compiler: clang++-23
           - os: ubuntu-24.04-arm
-            container: 'ghcr.io/llvm/arm64v8/libc-ubuntu-24.04:70cbd7591abe'
+            container: 'ghcr.io/llvm/arm64v8/libc-ubuntu-24.04:latest@sha256:138636a45bb70f7b51a858b282e66291cb3c5c85371afee09032a5e09b263395'
             compiler:
               c_compiler: clang-23
               cpp_compiler: clang++-23
