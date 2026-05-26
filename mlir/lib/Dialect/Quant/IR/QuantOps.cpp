@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "QuantDialectBytecode.h"
-#include "TypeDetail.h"
+#include "mlir/Dialect/Quant/IR/detail/TypeDetail.h"
 
 #include "mlir/Dialect/Quant/IR/Quant.h"
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
@@ -200,7 +200,8 @@ struct QuantInlinerInterface : public DialectInlinerInterface {
 
 void QuantDialect::initialize() {
   addTypes<AnyQuantizedType, CalibratedQuantizedType, UniformQuantizedType,
-           UniformQuantizedPerAxisType, UniformQuantizedSubChannelType>();
+           UniformQuantizedPerAxisType, UniformQuantizedSubChannelType,
+           QuantileType>();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Quant/IR/QuantOps.cpp.inc"

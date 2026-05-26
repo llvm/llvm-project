@@ -52,7 +52,6 @@ OptionalParseResult Parser::parseOptionalType(Type &type) {
   case Token::kw_f8E8M0FNU:
   case Token::kw_bf16:
   case Token::kw_f16:
-  case Token::kw_quantile:
   case Token::kw_tf32:
   case Token::kw_f32:
   case Token::kw_f64:
@@ -285,8 +284,6 @@ Type Parser::parseNonFunctionType() {
     return parseTensorType();
   case Token::kw_complex:
     return parseComplexType();
-  case Token::kw_quantile:
-    return parseQuantileType();
   case Token::kw_tuple:
     return parseTupleType();
   case Token::kw_vector:
@@ -393,119 +390,6 @@ Type Parser::parseNonFunctionType() {
   }
 }
 
-/// Parse a quantile type.
-///
-///   quantile-type ::= `quantile` `<` type `:` type `,` `{` float-list `}` `>`
-///
-Type Parser::parseQuantileType() {
-  SMLoc typeLoc = getToken().getLoc();
-  consumeToken(Token::kw_quantile);
-
-  if (parseToken(Token::less, "expected '<' in quantile type"))
-    return nullptr;
-
-  // Parse the storage type.
-  Type storageType = parseType();
-  if (!storageType)
-    return nullptr;
-
-  if (parseToken(Token::colon, "expected ':' in quantile type"))
-    return nullptr;
-
-  // Parse the quantile (expressed) type.
-  Type quantileType = parseType();
-  if (!quantileType)
-    return nullptr;
-
-  if (parseToken(Token::comma, "expected ',' in quantile type"))
-    return nullptr;
-
-  if (parseToken(Token::l_brace, "expected '{' in quantile type"))
-    return nullptr;
-
-  // Parse the quantile values as floating point literals.
-  SmallVector<double, 16> quantiles;
-  do {
-    bool isNegative = consumeIf(Token::minus);
-    Token curTok = getToken();
-    std::optional<APFloat> apResult;
-    if (failed(parseFloatFromLiteral(apResult, curTok, isNegative,
-                                     APFloat::IEEEdouble())))
-      return nullptr;
-    consumeToken();
-    quantiles.push_back(apResult->convertToDouble());
-  } while (consumeIf(Token::comma) &&
-           !getToken().is(Token::r_brace));
-
-  if (parseToken(Token::r_brace, "expected '}' in quantile type"))
-    return nullptr;
-
-  if (parseToken(Token::greater, "expected '>' in quantile type"))
-    return nullptr;
-
-  // Optionally parse explicit storage range: `<min:max>`.
-  std::optional<int64_t> storageMin, storageMax;
-  if (consumeIf(Token::less)) {
-    int64_t minVal, maxVal;
-
-    // Parse minimum value (with optional sign).
-    bool minNegative = consumeIf(Token::minus);
-    if (!getToken().is(Token::integer))
-      return (emitWrongTokenError(
-                  "expected integer minimum in quantile storage range"),
-              nullptr);
-    SMLoc minLoc = getToken().getLoc();
-    if (getToken().getSpelling().getAsInteger(10, minVal))
-      return nullptr;
-    consumeToken(Token::integer);
-    minVal = minNegative ? -minVal : minVal;
-
-    if (parseToken(Token::colon, "expected ':' in quantile storage range"))
-      return nullptr;
-
-    // Parse maximum value (with optional sign).
-    bool maxNegative = consumeIf(Token::minus);
-    if (!getToken().is(Token::integer))
-      return (emitWrongTokenError(
-                  "expected integer maximum in quantile storage range"),
-              nullptr);
-    SMLoc maxLoc = getToken().getLoc();
-    if (getToken().getSpelling().getAsInteger(10, maxVal))
-      return nullptr;
-    consumeToken(Token::integer);
-    maxVal = maxNegative ? -maxVal : maxVal;
-
-    if (parseToken(Token::greater, "expected '>' after quantile storage range"))
-      return nullptr;
-
-    // Validate against the underlying storage type's inherent limits.
-    if (auto qsIface = llvm::dyn_cast<QuantStorageTypeInterface>(storageType)) {
-      bool isSigned = qsIface.shouldDefaultToSigned();
-      if (minVal < qsIface.getDefaultMinimum(isSigned))
-        return (emitError(minLoc, "illegal storage type minimum: ") << minVal,
-                nullptr);
-      if (maxVal > qsIface.getDefaultMaximum(isSigned))
-        return (emitError(maxLoc, "illegal storage type maximum: ") << maxVal,
-                nullptr);
-    }
-
-    storageMin = minVal;
-    storageMax = maxVal;
-  }
-
-  auto type = QuantileType::getChecked([&]() { return emitError(typeLoc); },
-                                       storageType, quantileType, quantiles,
-                                       storageMin, storageMax);
-  if (!type)
-    return nullptr;
-  return type;
-}
-
-/// Parse a tensor type.
-///
-///   tensor-type ::= `tensor` `<` dimension-list type `>`
-///   dimension-list ::= dimension-list-ranked | `*x`
-///
 Type Parser::parseTensorType() {
   consumeToken(Token::kw_tensor);
 

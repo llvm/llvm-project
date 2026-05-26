@@ -480,6 +480,60 @@ static Type parseCalibratedType(DialectAsmParser &parser) {
   return parser.getChecked<CalibratedQuantizedType>(expressedType, min, max);
 }
 
+static Type parseQuantileType(DialectAsmParser &parser) {
+  Type storageType;
+  Type quantileType;
+  SmallVector<double, 1> quantiles;
+
+  if (parser.parseLess())
+    return nullptr;
+  if (parser.parseType(storageType))
+    return nullptr;
+  if (parser.parseColon())
+    return nullptr;
+  if (parser.parseType(quantileType))
+    return nullptr;
+  if (parser.parseComma())
+    return nullptr;
+  if (parser.parseLBrace())
+    return nullptr;
+
+  // Allow empty braces `{}` — verify() will catch the empty quantile error.
+  if (failed(parser.parseOptionalRBrace())) {
+    do {
+      quantiles.emplace_back();
+      if (parser.parseFloat(quantiles.back()))
+        return nullptr;
+    } while (succeeded(parser.parseOptionalComma()));
+
+    if (parser.parseRBrace())
+      return nullptr;
+  }
+
+  // Optionally parse explicit storage range: `, min:max` (inside the outer
+  // `<>`).
+  std::optional<int64_t> storageMin, storageMax;
+  if (succeeded(parser.parseOptionalComma())) {
+    if (parser.parseLess())
+      return nullptr;
+    int64_t minVal, maxVal;
+    if (parser.parseInteger(minVal) || parser.parseColon() ||
+        parser.parseInteger(maxVal))
+      return nullptr;
+    storageMin = minVal;
+    storageMax = maxVal;
+    if (parser.parseGreater())
+      return nullptr;
+  }
+
+  if (parser.parseGreater())
+    return nullptr;
+
+  mlir::MLIRContext *ctx = parser.getContext();
+  return parser.getChecked<QuantileType>(ctx, storageType, quantileType,
+                                         quantiles, storageMin, storageMax);
+}
+
 /// Parse a type registered to this dialect.
 Type QuantDialect::parseType(DialectAsmParser &parser) const {
   // All types start with an identifier that we switch on.
@@ -493,6 +547,8 @@ Type QuantDialect::parseType(DialectAsmParser &parser) const {
     return parseAnyType(parser);
   if (typeNameSpelling == "calibrated")
     return parseCalibratedType(parser);
+  if (typeNameSpelling == "quantile")
+    return parseQuantileType(parser);
 
   parser.emitError(parser.getNameLoc(),
                    "unknown quantized type " + typeNameSpelling);
@@ -653,6 +709,23 @@ static void printCalibratedQuantizedType(CalibratedQuantizedType type,
   out << ">";
 }
 
+static void printQuantileType(QuantileType type, DialectAsmPrinter &out) {
+  out << "quantile<";
+  out << type.getStorageType();
+  out << ":";
+  out << type.getQuantileType();
+  out << ", {";
+  ArrayRef<double> quantiles = type.getQuantiles();
+  llvm::interleave(
+      llvm::seq<size_t>(0, quantiles.size()), out,
+      [&](size_t index) { out << quantiles[index]; }, ",");
+  out << "}";
+  if (auto minVal = type.getStorageMin())
+    if (auto maxVal = type.getStorageMax())
+      out << ", <" << *minVal << ":" << *maxVal << ">";
+  out << ">";
+}
+
 /// Print a type registered to this dialect.
 void QuantDialect::printType(Type type, DialectAsmPrinter &os) const {
   if (auto anyType = llvm::dyn_cast<AnyQuantizedType>(type))
@@ -666,6 +739,8 @@ void QuantDialect::printType(Type type, DialectAsmPrinter &os) const {
     printUniformQuantizedSubChannelType(perAxisType, os);
   else if (auto calibratedType = llvm::dyn_cast<CalibratedQuantizedType>(type))
     printCalibratedQuantizedType(calibratedType, os);
+  else if (auto quantileType = llvm::dyn_cast<QuantileType>(type))
+    printQuantileType(quantileType, os);
   else
     llvm_unreachable("Unhandled quantized type");
 }

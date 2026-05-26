@@ -148,65 +148,6 @@ Attribute skipDefaultMemorySpace(Attribute memorySpace);
 /// New `Attribute getMemorySpace()` method should be used instead.
 unsigned getMemorySpaceAsInt(Attribute memorySpace);
 
-/// Quantile Type Storage and Uniquing.
-struct QuantileTypeStorage : public TypeStorage {
-  QuantileTypeStorage(Type storageType, Type quantileType,
-                      ArrayRef<double> quantiles,
-                      std::optional<int64_t> storageMin,
-                      std::optional<int64_t> storageMax)
-      : storageType(storageType), quantileType(quantileType),
-        quantilesData(quantiles.data()), numQuantiles(quantiles.size()),
-        storageMin(storageMin), storageMax(storageMax) {}
-
-  using KeyTy = std::tuple<Type, Type, ArrayRef<double>, std::optional<int64_t>,
-                           std::optional<int64_t>>;
-
-  static llvm::hash_code hashKey(const KeyTy &key) {
-    auto quantiles = std::get<2>(key);
-    auto *quantilesBits = llvm::bit_cast<const int64_t *>(quantiles.data());
-    ArrayRef<int64_t> quantilesAsInts(quantilesBits, quantiles.size());
-    auto hashOptInt = [](std::optional<int64_t> opt) -> llvm::hash_code {
-      return opt ? llvm::hash_combine(true, *opt)
-                 : llvm::hash_combine(false, int64_t{0});
-    };
-    return llvm::hash_combine(std::get<0>(key), std::get<1>(key),
-                              llvm::hash_combine_range(quantilesAsInts.begin(),
-                                                       quantilesAsInts.end()),
-                              hashOptInt(std::get<3>(key)),
-                              hashOptInt(std::get<4>(key)));
-  }
-
-  bool operator==(const KeyTy &key) const {
-    return storageType == std::get<0>(key) &&
-           quantileType == std::get<1>(key) &&
-           getQuantiles() == std::get<2>(key) &&
-           storageMin == std::get<3>(key) && storageMax == std::get<4>(key);
-  }
-
-  static QuantileTypeStorage *construct(TypeStorageAllocator &allocator,
-                                        const KeyTy &key) {
-    ArrayRef<double> quantiles = allocator.copyInto(std::get<2>(key));
-    return new (allocator.allocate<QuantileTypeStorage>())
-        QuantileTypeStorage(std::get<0>(key), std::get<1>(key), quantiles,
-                            std::get<3>(key), std::get<4>(key));
-  }
-
-  Type getStorageType() const { return storageType; }
-  Type getQuantileType() const { return quantileType; }
-  ArrayRef<double> getQuantiles() const {
-    return ArrayRef<double>(quantilesData, numQuantiles);
-  }
-  std::optional<int64_t> getStorageMin() const { return storageMin; }
-  std::optional<int64_t> getStorageMax() const { return storageMax; }
-
-  Type storageType;
-  Type quantileType;
-  const double *quantilesData;
-  unsigned numQuantiles;
-  std::optional<int64_t> storageMin;
-  std::optional<int64_t> storageMax;
-};
-
 } // namespace detail
 } // namespace mlir
 

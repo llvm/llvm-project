@@ -95,123 +95,6 @@ ComplexType::convertFromAttribute(Attribute attr,
 }
 
 //===----------------------------------------------------------------------===//
-/// QuantileType
-//===----------------------------------------------------------------------===//
-
-Type QuantileType::getStorageType() const { return getImpl()->storageType; }
-
-Type QuantileType::getQuantileType() const { return getImpl()->quantileType; }
-
-ArrayRef<double> QuantileType::getQuantiles() const {
-  return getImpl()->getQuantiles();
-}
-
-std::optional<int64_t> QuantileType::getStorageMin() const {
-  return getImpl()->getStorageMin();
-}
-
-std::optional<int64_t> QuantileType::getStorageMax() const {
-  return getImpl()->getStorageMax();
-}
-
-LogicalResult QuantileType::verify(function_ref<InFlightDiagnostic()> emitError,
-                                   Type storageType, Type quantileType,
-                                   ArrayRef<double> quantiles,
-                                   std::optional<int64_t> storageMin,
-                                   std::optional<int64_t> storageMax) {
-  if (!storageType.isIntOrFloat())
-    return emitError() << "storage type must be an integer or float type";
-  if (!llvm::isa<FloatType>(quantileType))
-    return emitError() << "quantile type must be a float type";
-  if (quantiles.empty())
-    return emitError() << "quantile values must not be empty";
-  if (storageMin.has_value() != storageMax.has_value())
-    return emitError()
-           << "storage min and max must both be specified or both omitted";
-
-  // Validate explicit storage range.
-  if (storageMin && storageMax && *storageMin >= *storageMax)
-    return emitError() << "storage min must be less than storage max";
-
-  unsigned width = storageType.getIntOrFloatBitWidth();
-  bool isSigned = !llvm::isa<IntegerType>(storageType) ||
-                  llvm::cast<IntegerType>(storageType).isSigned();
-  auto effectiveMin =
-      storageMin.value_or(isSigned ? -(1LL << (width - 1)) : 0LL);
-  auto effectiveMax = storageMax.value_or(isSigned ? (1LL << (width - 1)) - 1
-                                                   : (1LL << width) - 1);
-  auto expectedSize = effectiveMax - effectiveMin + 1;
-  if (static_cast<decltype(expectedSize)>(quantiles.size()) != expectedSize)
-    return emitError() << "quantile LUT size (" << quantiles.size()
-                       << ") must equal the number of representable storage "
-                          "values ("
-                       << expectedSize << ")";
-
-  // No NaN or infinity allowed in the LUT.
-  for (double v : quantiles)
-    if (std::isnan(v) || std::isinf(v))
-      return emitError() << "quantile values must be finite (no NaN or "
-                            "infinity)";
-
-  return success();
-}
-
-bool QuantileType::shouldDefaultToSigned() const {
-  if (auto intType = llvm::dyn_cast<IntegerType>(getStorageType()))
-    return intType.isSigned();
-  // Float types default to signed.
-  return true;
-}
-
-unsigned QuantileType::getStorageWidth() const {
-  return getStorageType().getIntOrFloatBitWidth();
-}
-
-int64_t QuantileType::getDefaultMaximum(bool isSigned) const {
-  if (auto explicitMax = getStorageMax())
-    return *explicitMax;
-  if (isSigned)
-    return (1LL << (getStorageWidth() - 1)) - 1;
-  return (1LL << getStorageWidth()) - 1;
-}
-
-int64_t QuantileType::getDefaultMinimum(bool isSigned) const {
-  if (auto explicitMin = getStorageMin())
-    return *explicitMin;
-  if (isSigned)
-    return -(1LL << (getStorageWidth() - 1));
-  return 0;
-}
-
-std::string QuantileType::getStorageTypeName(bool isSigned) const {
-  std::string result = "quantile<";
-  llvm::raw_string_ostream os(result);
-  os << getStorageType() << ":" << getQuantileType() << ", {";
-  ArrayRef<double> quantiles = getQuantiles();
-  llvm::interleave(
-      llvm::seq<size_t>(0, quantiles.size()), os,
-      [&](size_t index) { os << quantiles[index]; }, ",");
-  os << "}>";
-  if (auto minVal = getStorageMin())
-    if (auto maxVal = getStorageMax())
-      os << '<' << *minVal << ':' << *maxVal << '>';
-  return result;
-}
-
-bool QuantileType::isPacked() const { return getStorageWidth() <= 4; }
-
-unsigned QuantileType::getLogicalBitWidth() const { return getStorageWidth(); }
-
-unsigned QuantileType::getElementsPerByte() const {
-  unsigned width = getStorageWidth();
-  return width > 0 ? 8 / width : 0;
-}
-
-std::optional<unsigned> QuantileType::getPreferredAlignmentBytes() const {
-  return std::nullopt;
-}
-
-//===----------------------------------------------------------------------===//
 // Integer Type
 //===----------------------------------------------------------------------===//
 
@@ -552,7 +435,7 @@ bool TensorType::isValidElementType(Type type) {
   // types. Dialects are expected to verify that tensor types have a valid
   // element type within that dialect.
   return llvm::isa<ComplexType, FloatType, IntegerType, OpaqueType, VectorType,
-                   IndexType, QuantileType>(type) ||
+                   IndexType>(type) ||
          !llvm::isa<BuiltinDialect>(type.getDialect());
 }
 

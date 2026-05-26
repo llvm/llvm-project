@@ -2900,22 +2900,6 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         printType(complexTy.getElementType());
         os << '>';
       })
-      .Case<QuantileType>([&](QuantileType quantileTy) {
-        os << "quantile<";
-        printType(quantileTy.getStorageType());
-        os << ':';
-        printType(quantileTy.getQuantileType());
-        os << ", {";
-        ArrayRef<double> quantiles = quantileTy.getQuantiles();
-        llvm::interleave(
-            llvm::seq<size_t>(0, quantiles.size()), os,
-            [&](size_t index) { os << quantiles[index]; }, ",");
-        os << "}";
-        os << '>';
-        if (auto minVal = quantileTy.getStorageMin())
-          if (auto maxVal = quantileTy.getStorageMax())
-            os << '<' << *minVal << ':' << *maxVal << '>';
-      })
       .Case([&](TupleType tupleTy) {
         os << "tuple<";
         interleaveComma(tupleTy.getTypes(),

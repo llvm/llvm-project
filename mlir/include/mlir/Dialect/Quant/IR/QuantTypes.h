@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_QUANT_IR_QUANTTYPES_H
 #define MLIR_DIALECT_QUANT_IR_QUANTTYPES_H
 
+#include "mlir/Dialect/Quant/IR/detail/TypeDetail.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -18,6 +19,7 @@
 #include "llvm/Support/MathExtras.h"
 
 namespace mlir {
+
 namespace quant {
 namespace detail {
 
@@ -547,6 +549,87 @@ public:
   double getMax() const;
 };
 
+class QuantileType
+    : public Type::TypeBase<QuantileType, QuantizedType,
+                            detail::QuantileTypeStorage,
+                            mlir::QuantStorageTypeInterface::Trait> {
+public:
+  using ImplType = detail::QuantileTypeStorage;
+  using Base::Base;
+
+  // Get the underlying type used for to store raw values.
+  Type getStorageType() const;
+
+  // Get primitive expressed type of data in quantiles.
+  // Note that we may convert FP8 data to FP16 for storage,
+  // but we should treat its expressed type as FP8 rather than FP16.
+  Type getQuantileType() const;
+
+  /// Return the quantile table of this float type.
+  ArrayRef<double> getQuantiles() const;
+
+  /// Return the explicit storage minimum, if set.
+  std::optional<int64_t> getStorageMin() const;
+
+  /// Return the explicit storage maximum, if set.
+  std::optional<int64_t> getStorageMax() const;
+
+  // Get a quantile float type with specified quantile table.
+  static QuantileType get(mlir::MLIRContext *ctx, Type storageType,
+                          Type quantileType, ArrayRef<double> quantiles = {},
+                          std::optional<int64_t> storageMin = std::nullopt,
+                          std::optional<int64_t> storageMax = std::nullopt);
+
+  static QuantileType
+  getChecked(function_ref<InFlightDiagnostic()> emitError,
+             mlir::MLIRContext *ctx, Type storageType, Type quantileType,
+             ArrayRef<double> quantiles,
+             std::optional<int64_t> storageMin = std::nullopt,
+             std::optional<int64_t> storageMax = std::nullopt);
+
+  static LogicalResult verifyInvariants(
+      function_ref<InFlightDiagnostic()> emitError, Type storageType,
+      Type quantileType, ArrayRef<double> quantiles,
+      std::optional<int64_t> storageMin, std::optional<int64_t> storageMax);
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast.
+  static bool classof(mlir::Type type);
+
+  // Printer
+  void print(mlir::AsmPrinter &printer) const;
+
+  static constexpr llvm::StringLiteral getMnemonic() { return {"quantile"}; }
+
+  static constexpr llvm::StringLiteral name = "quantile";
+
+  // Returns true if the type defaults to signed (e.g., si8, i8 or float types),
+  // false otherwise
+  bool shouldDefaultToSigned() const;
+
+  // Get the bit width of the storage type.
+  unsigned getStorageWidth() const;
+
+  // Get the default minimum and maximum values for the storage type.
+  int64_t getDefaultMinimum([[maybe_unused]] bool isSigned) const;
+  int64_t getDefaultMaximum([[maybe_unused]] bool isSigned) const;
+
+  // Get the string representation of the storage type
+  std::string getStorageTypeName([[maybe_unused]] bool isSigned) const;
+
+  // Get whether the type is a packed quantile float type
+  bool isPacked() const;
+
+  // Get the logical bit width of the quantile float type, which is the bit
+  // width of the represented floating point value.
+  unsigned getLogicalBitWidth() const;
+
+  // Get the number of quantized values stored in one byte for this quantile
+  // float type.
+  unsigned getElementsPerByte() const;
+
+  // Get the preferred alignment in bytes for this quantile float type, if any.
+  std::optional<unsigned> getPreferredAlignmentBytes() const;
+};
 } // namespace quant
 } // namespace mlir
 
