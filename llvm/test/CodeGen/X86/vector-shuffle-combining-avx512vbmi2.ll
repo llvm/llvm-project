@@ -5,11 +5,8 @@
 define <16 x i8> @combine_vpshld_vpshufb(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: combine_vpshld_vpshufb:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
-; CHECK-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vpshldq $8, %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,2,3,4,5,6,7,16,9,10,11,12,13,14,15,24]
+; CHECK-NEXT:    vpermt2b %xmm1, %xmm2, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %rx = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %x, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
   %ry = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %y, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
@@ -24,11 +21,9 @@ define <16 x i8> @combine_vpshld_vpshufb(<16 x i8> %x, <16 x i8> %y) {
 define <16 x i8> @combine_vpshrd_vpshufb(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: combine_vpshrd_vpshufb:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
-; CHECK-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vpshrdd $8, %xmm0, %xmm1, %xmm0
-; CHECK-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [19,0,1,2,23,4,5,6,27,8,9,10,31,12,13,14]
+; CHECK-NEXT:    vpermi2b %xmm0, %xmm1, %xmm2
+; CHECK-NEXT:    vmovdqa %xmm2, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %rx = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %x, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
   %ry = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %y, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
