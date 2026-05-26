@@ -1579,12 +1579,15 @@ public:
     if (CurSubmoduleState->VisibleIncludedFiles.contains(File))
       return true;
     auto It = IncludingModules.find(&File.getFileEntry());
-    if (It != IncludingModules.end())
-      for (Module *M : It->second)
-        if (CurSubmoduleState->VisibleModules.isVisible(M)) {
-          CurSubmoduleState->VisibleIncludedFiles.insert(File);
-          return true;
-        }
+    if (It == IncludingModules.end())
+      return false;
+
+    for (Module *M : It->second)
+      if (CurSubmoduleState->VisibleModules.isVisible(M)) {
+        CurSubmoduleState->VisibleIncludedFiles.insert(File);
+        return true;
+      }
+
     return false;
   }
 

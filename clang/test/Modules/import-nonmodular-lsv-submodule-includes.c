@@ -1,18 +1,5 @@
 // Test that #import correctly skips a non-modular header under local submodule
 // visibility when the header is included by a submodule (not a top-level module).
-//
-// This test exposes a subtle issue: if the implementation only checks
-// top-level modules' Includes sets (e.g., iterating ModuleMap::modules()),
-// it will miss the case where a submodule includes the non-modular header.
-//
-// The scenario:
-//   Module A has submodule A1 (with header A1.h) that #includes Textual.h.
-//   When building A, markIncluded puts Textual.h into A1->Includes (the
-//   submodule), NOT A->Includes (the top-level module).
-//   Module B has submodules B1 and B2, both importing A1 and then Textual.h.
-//
-// A correct implementation must check visibility of submodules (like A1),
-// not just top-level modules (like A).
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
