@@ -53,7 +53,7 @@ define i32 @test3(i32 %a, float %b) {
 
 define i8 @test4(<8 x i8> %V) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[ADD:%.*]] = add <8 x i8> [[V:%.*]], bitcast (<1 x double> splat (double 0x319BEB8FD172E36) to <8 x i8>)
+; CHECK-NEXT:    [[ADD:%.*]] = add <8 x i8> [[V:%.*]], bitcast (<1 x double> splat (double f0x0319BEB8FD172E36) to <8 x i8>)
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <8 x i8> [[ADD]], i32 6
 ; CHECK-NEXT:    ret i8 [[EXTRACT]]
 ;

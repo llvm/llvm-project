@@ -25,7 +25,6 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD1]], splat (i32 10)
 ; VF4IC4-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD2]], splat (i32 10)
 ; VF4IC4-NEXT:    [[TMP14:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD3]], splat (i32 10)
-; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP17:%.*]] = freeze <4 x i1> [[TMP8]]
 ; VF4IC4-NEXT:    [[TMP13:%.*]] = freeze <4 x i1> [[TMP6]]
 ; VF4IC4-NEXT:    [[TMP9:%.*]] = or <4 x i1> [[TMP17]], [[TMP13]]
@@ -34,6 +33,7 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4-NEXT:    [[TMP16:%.*]] = freeze <4 x i1> [[TMP14]]
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = or <4 x i1> [[TMP15]], [[TMP16]]
 ; VF4IC4-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP11]])
+; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; VF4IC4-NEXT:    br i1 [[TMP3]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; VF4IC4:       vector.body.interim:
@@ -106,7 +106,6 @@ define i64 @same_exit_block_pre_inc_use1() {
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD1]], [[WIDE_LOAD5]]
 ; VF4IC4-NEXT:    [[TMP12:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
 ; VF4IC4-NEXT:    [[TMP35:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD4]], [[WIDE_LOAD8]]
-; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP37:%.*]] = freeze <4 x i1> [[TMP13]]
 ; VF4IC4-NEXT:    [[TMP33:%.*]] = freeze <4 x i1> [[TMP11]]
 ; VF4IC4-NEXT:    [[TMP34:%.*]] = or <4 x i1> [[TMP37]], [[TMP33]]
@@ -115,6 +114,7 @@ define i64 @same_exit_block_pre_inc_use1() {
 ; VF4IC4-NEXT:    [[TMP36:%.*]] = freeze <4 x i1> [[TMP35]]
 ; VF4IC4-NEXT:    [[TMP16:%.*]] = or <4 x i1> [[TMP15]], [[TMP36]]
 ; VF4IC4-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP16]])
+; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; VF4IC4:       vector.body.interim:
@@ -192,7 +192,6 @@ define ptr @same_exit_block_pre_inc_use1_ivptr() {
 ; VF4IC4-NEXT:    [[TMP14:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD1]], splat (i8 72)
 ; VF4IC4-NEXT:    [[TMP28:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD2]], splat (i8 72)
 ; VF4IC4-NEXT:    [[TMP29:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD3]], splat (i8 72)
-; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP35:%.*]] = freeze <4 x i1> [[TMP17]]
 ; VF4IC4-NEXT:    [[TMP13:%.*]] = freeze <4 x i1> [[TMP14]]
 ; VF4IC4-NEXT:    [[TMP31:%.*]] = or <4 x i1> [[TMP35]], [[TMP13]]
@@ -201,6 +200,7 @@ define ptr @same_exit_block_pre_inc_use1_ivptr() {
 ; VF4IC4-NEXT:    [[TMP34:%.*]] = freeze <4 x i1> [[TMP29]]
 ; VF4IC4-NEXT:    [[TMP9:%.*]] = or <4 x i1> [[TMP33]], [[TMP34]]
 ; VF4IC4-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP9]])
+; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; VF4IC4-NEXT:    br i1 [[TMP10]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; VF4IC4:       vector.body.interim:
@@ -284,7 +284,6 @@ define i64 @same_exit_block_post_inc_use() {
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD1]], [[WIDE_LOAD5]]
 ; VF4IC4-NEXT:    [[TMP12:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
 ; VF4IC4-NEXT:    [[TMP35:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD4]], [[WIDE_LOAD8]]
-; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP37:%.*]] = freeze <4 x i1> [[TMP13]]
 ; VF4IC4-NEXT:    [[TMP33:%.*]] = freeze <4 x i1> [[TMP11]]
 ; VF4IC4-NEXT:    [[TMP34:%.*]] = or <4 x i1> [[TMP37]], [[TMP33]]
@@ -293,6 +292,7 @@ define i64 @same_exit_block_post_inc_use() {
 ; VF4IC4-NEXT:    [[TMP36:%.*]] = freeze <4 x i1> [[TMP35]]
 ; VF4IC4-NEXT:    [[TMP16:%.*]] = or <4 x i1> [[TMP15]], [[TMP36]]
 ; VF4IC4-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP16]])
+; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; VF4IC4:       vector.body.interim:
@@ -380,7 +380,6 @@ define i64 @diff_exit_block_pre_inc_use1() {
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD1]], [[WIDE_LOAD5]]
 ; VF4IC4-NEXT:    [[TMP12:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
 ; VF4IC4-NEXT:    [[TMP35:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD4]], [[WIDE_LOAD8]]
-; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP37:%.*]] = freeze <4 x i1> [[TMP13]]
 ; VF4IC4-NEXT:    [[TMP33:%.*]] = freeze <4 x i1> [[TMP11]]
 ; VF4IC4-NEXT:    [[TMP34:%.*]] = or <4 x i1> [[TMP37]], [[TMP33]]
@@ -389,6 +388,7 @@ define i64 @diff_exit_block_pre_inc_use1() {
 ; VF4IC4-NEXT:    [[TMP36:%.*]] = freeze <4 x i1> [[TMP35]]
 ; VF4IC4-NEXT:    [[TMP16:%.*]] = or <4 x i1> [[TMP15]], [[TMP36]]
 ; VF4IC4-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP16]])
+; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; VF4IC4:       vector.body.interim:
@@ -481,7 +481,6 @@ define i64 @diff_exit_block_post_inc_use1() {
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD1]], [[WIDE_LOAD5]]
 ; VF4IC4-NEXT:    [[TMP12:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
 ; VF4IC4-NEXT:    [[TMP35:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD4]], [[WIDE_LOAD8]]
-; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP37:%.*]] = freeze <4 x i1> [[TMP13]]
 ; VF4IC4-NEXT:    [[TMP33:%.*]] = freeze <4 x i1> [[TMP11]]
 ; VF4IC4-NEXT:    [[TMP34:%.*]] = or <4 x i1> [[TMP37]], [[TMP33]]
@@ -490,6 +489,7 @@ define i64 @diff_exit_block_post_inc_use1() {
 ; VF4IC4-NEXT:    [[TMP36:%.*]] = freeze <4 x i1> [[TMP35]]
 ; VF4IC4-NEXT:    [[TMP16:%.*]] = or <4 x i1> [[TMP15]], [[TMP36]]
 ; VF4IC4-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP16]])
+; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; VF4IC4:       vector.body.interim:
@@ -592,7 +592,6 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; VF4IC4-NEXT:    [[TMP19:%.*]] = icmp ne <4 x i8> [[REVERSE2]], [[REVERSE10]]
 ; VF4IC4-NEXT:    [[TMP20:%.*]] = icmp ne <4 x i8> [[REVERSE4]], [[REVERSE12]]
 ; VF4IC4-NEXT:    [[TMP43:%.*]] = icmp ne <4 x i8> [[REVERSE6]], [[REVERSE16]]
-; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP48:%.*]] = freeze <4 x i1> [[TMP21]]
 ; VF4IC4-NEXT:    [[TMP22:%.*]] = freeze <4 x i1> [[TMP19]]
 ; VF4IC4-NEXT:    [[TMP23:%.*]] = or <4 x i1> [[TMP48]], [[TMP22]]
@@ -601,6 +600,7 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; VF4IC4-NEXT:    [[TMP47:%.*]] = freeze <4 x i1> [[TMP43]]
 ; VF4IC4-NEXT:    [[TMP24:%.*]] = or <4 x i1> [[TMP45]], [[TMP47]]
 ; VF4IC4-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP24]])
+; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1008
 ; VF4IC4-NEXT:    br i1 [[TMP7]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; VF4IC4:       vector.body.interim:
@@ -702,7 +702,6 @@ define i8 @same_exit_block_use_loaded_value() {
 ; VF4IC4-NEXT:    [[TMP29:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD4]], [[WIDE_LOAD8]]
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD5]], [[WIDE_LOAD9]]
 ; VF4IC4-NEXT:    [[TMP17:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD3]], [[WIDE_LOAD7]]
-; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP43:%.*]] = freeze <4 x i1> [[TMP12]]
 ; VF4IC4-NEXT:    [[TMP18:%.*]] = freeze <4 x i1> [[TMP29]]
 ; VF4IC4-NEXT:    [[TMP13:%.*]] = or <4 x i1> [[TMP43]], [[TMP18]]
@@ -711,6 +710,7 @@ define i8 @same_exit_block_use_loaded_value() {
 ; VF4IC4-NEXT:    [[TMP30:%.*]] = freeze <4 x i1> [[TMP17]]
 ; VF4IC4-NEXT:    [[TMP16:%.*]] = or <4 x i1> [[TMP19]], [[TMP30]]
 ; VF4IC4-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP16]])
+; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; VF4IC4:       vector.body.interim:
@@ -820,7 +820,6 @@ define i8 @same_exit_block_reverse_use_loaded_value() {
 ; VF4IC4-NEXT:    [[TMP19:%.*]] = icmp ne <4 x i8> [[REVERSE2]], [[REVERSE10]]
 ; VF4IC4-NEXT:    [[TMP20:%.*]] = icmp ne <4 x i8> [[REVERSE4]], [[REVERSE12]]
 ; VF4IC4-NEXT:    [[TMP37:%.*]] = icmp ne <4 x i8> [[REVERSE7]], [[REVERSE15]]
-; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP54:%.*]] = freeze <4 x i1> [[TMP21]]
 ; VF4IC4-NEXT:    [[TMP22:%.*]] = freeze <4 x i1> [[TMP19]]
 ; VF4IC4-NEXT:    [[TMP23:%.*]] = or <4 x i1> [[TMP54]], [[TMP22]]
@@ -829,6 +828,7 @@ define i8 @same_exit_block_reverse_use_loaded_value() {
 ; VF4IC4-NEXT:    [[TMP53:%.*]] = freeze <4 x i1> [[TMP37]]
 ; VF4IC4-NEXT:    [[TMP24:%.*]] = or <4 x i1> [[TMP52]], [[TMP53]]
 ; VF4IC4-NEXT:    [[TMP25:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP24]])
+; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1008
 ; VF4IC4-NEXT:    br i1 [[TMP25]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; VF4IC4:       vector.body.interim:

@@ -1,8 +1,8 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +fullfp16 -disable-O0-optnone           -emit-llvm -o - %s | opt -S -passes=mem2reg             | FileCheck %s --check-prefixes=ALL,LLVM
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +fullfp16 -disable-O0-optnone -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,simplifycfg | FileCheck %s --check-prefixes=ALL,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +fullfp16 -disable-O0-optnone -fclangir -emit-cir  -o - %s |                                      FileCheck %s --check-prefixes=ALL,CIR %}
+// RUN:                   %clang_cc1_cg_arm64_neon -target-feature +fullfp16           -emit-llvm  %s -disable-O0-optnone | opt -S -passes=mem2reg             | FileCheck %s --check-prefixes=ALL,LLVM
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +fullfp16 -fclangir -emit-llvm  %s -disable-O0-optnone | opt -S -passes=mem2reg,simplifycfg | FileCheck %s --check-prefixes=ALL,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +fullfp16 -fclangir -emit-cir   %s -disable-O0-optnone |                                      FileCheck %s --check-prefixes=ALL,CIR %}
 
 //=============================================================================
 // NOTES
@@ -96,7 +96,7 @@ uint16_t test_vceqzh_f16(float16_t a) {
 // CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u16i
 
 // LLVM-SAME: (half {{.*}} [[A:%.*]])
-// LLVM:  [[TMP1:%.*]] = fcmp oeq half [[A]], 0xH0000
+// LLVM:  [[TMP1:%.*]] = fcmp oeq half [[A]], 0.000000e+00
 // LLVM:  [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
 // LLVM:  ret i16 [[TMP2]]
   return vceqzh_f16(a);

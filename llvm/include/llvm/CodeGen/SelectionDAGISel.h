@@ -581,7 +581,8 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-class SelectionDAGISelPass : public PassInfoMixin<SelectionDAGISelPass> {
+class SelectionDAGISelPass
+    : public RequiredPassInfoMixin<SelectionDAGISelPass> {
   std::unique_ptr<SelectionDAGISel> Selector;
 
 protected:
@@ -591,7 +592,6 @@ protected:
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 }
 

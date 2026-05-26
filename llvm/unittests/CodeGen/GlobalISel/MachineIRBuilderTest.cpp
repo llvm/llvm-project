@@ -222,18 +222,18 @@ TEST_F(AArch64GISelMITest, BuildBitCounts) {
 
   B.buildCTPOP(S32, Copies[0]);
   B.buildCTLZ(S32, Copies[0]);
-  B.buildCTLZ_ZERO_UNDEF(S32, Copies[1]);
+  B.buildCTLZ_ZERO_POISON(S32, Copies[1]);
   B.buildCTTZ(S32, Copies[0]);
-  B.buildCTTZ_ZERO_UNDEF(S32, Copies[1]);
+  B.buildCTTZ_ZERO_POISON(S32, Copies[1]);
 
   auto CheckStr = R"(
   ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
   ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
   ; CHECK: [[CTPOP:%[0-9]+]]:_(s32) = G_CTPOP [[COPY0]]:_
   ; CHECK: [[CTLZ0:%[0-9]+]]:_(s32) = G_CTLZ [[COPY0]]:_
-  ; CHECK: [[CTLZ_UNDEF0:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[COPY1]]:_
+  ; CHECK: [[CTLZ_POISON0:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_POISON [[COPY1]]:_
   ; CHECK: [[CTTZ:%[0-9]+]]:_(s32) = G_CTTZ [[COPY0]]:_
-  ; CHECK: [[CTTZ_UNDEF0:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[COPY1]]:_
+  ; CHECK: [[CTTZ_POISON0:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_POISON [[COPY1]]:_
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -500,11 +500,15 @@ TEST_F(AArch64GISelMITest, BuildExtractSubvector) {
   auto SBigVec = B.buildUndef(SVec4x32);
   B.buildExtractSubvector(SVec2x32, SBigVec, 0);
 
+  // Mixed: extract fixed-length <2 x s32> from scalable <vscale x 4 x s32>.
+  B.buildExtractSubvector(Vec2x32, SBigVec, 0);
+
   auto CheckStr = R"(
   ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
   ; CHECK: [[EXTRACT:%[0-9]+]]:_(<2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF]]:_(<4 x s32>), 0
   ; CHECK: [[SDEF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
   ; CHECK: [[SEXTRACT:%[0-9]+]]:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR [[SDEF]]:_(<vscale x 4 x s32>), 0
+  ; CHECK: [[MIXEDEXTRACT:%[0-9]+]]:_(<2 x s32>) = G_EXTRACT_SUBVECTOR [[SDEF]]:_(<vscale x 4 x s32>), 0
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -555,6 +559,9 @@ TEST_F(AArch64GISelMITest, BuildInsertSubvector) {
   auto SSubVec = B.buildUndef(SVec2x32);
   B.buildInsertSubvector(SVec4x32, SBigVec, SSubVec, 0);
 
+  // Mixed: insert fixed-length <2 x s32> into scalable <vscale x 4 x s32>.
+  B.buildInsertSubvector(SVec4x32, SBigVec, SubVec, 0);
+
   auto CheckStr = R"(
   ; CHECK: [[DEF0:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
   ; CHECK: [[DEF1:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
@@ -563,6 +570,7 @@ TEST_F(AArch64GISelMITest, BuildInsertSubvector) {
   ; CHECK: [[SDEF0:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
   ; CHECK: [[SDEF1:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
   ; CHECK: {{%[0-9]+}}:_(<vscale x 4 x s32>) = G_INSERT_SUBVECTOR [[SDEF0]]:_, [[SDEF1]]:_(<vscale x 2 x s32>), 0
+  ; CHECK: {{%[0-9]+}}:_(<vscale x 4 x s32>) = G_INSERT_SUBVECTOR [[SDEF0]]:_, [[DEF1]]:_(<2 x s32>), 0
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;

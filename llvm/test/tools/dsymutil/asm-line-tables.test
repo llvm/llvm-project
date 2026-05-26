@@ -5,12 +5,20 @@ $ clang -target arm64-apple-macos26 asm-line-tables.s -o asm-line-tables.o -c -g
 $ clang -target arm64-apple-macos26 -o asm-line-tables.arm64 asm-line-tables.o -nodefaultlibs -nostdlib -static -Wl,-oso_prefix,$PWD
 
 REQUIRES: aarch64-registered-target
-RUN: dsymutil --linker classic -oso-prepend-path %p/Inputs/ %p/Inputs/private/tmp/asm/asm-line-tables.arm64 -o %t.dSYM
+RUN: dsymutil --linker classic --verbose -oso-prepend-path %p/Inputs/ %p/Inputs/private/tmp/asm/asm-line-tables.arm64 -o %t.dSYM | FileCheck %s --check-prefix=VERBOSE
 RUN: llvm-dwarfdump --debug-line %t.dSYM | FileCheck %s
 
-## FIXME: Support --linker parallel
+RUN: dsymutil --linker parallel --verbose -oso-prepend-path %p/Inputs/ %p/Inputs/private/tmp/asm/asm-line-tables.arm64 -o %t.dSYM | FileCheck %s --check-prefix=VERBOSE
+RUN: llvm-dwarfdump --debug-line %t.dSYM | FileCheck %s
 
 CHECK:      0x00000001000002e8      5      0      0   0             0       0  is_stmt
 CHECK-NEXT: 0x00000001000002ec      9      0      0   0             0       0  is_stmt
 CHECK-NEXT: 0x00000001000002f0     10      0      0   0             0       0  is_stmt
 CHECK-NEXT: 0x00000001000002f4     10      0      0   0             0       0  is_stmt end_sequence
+
+VERBOSE:      Keeping subprogram DIE:
+VERBOSE-NEXT: DW_TAG_label
+VERBOSE:      DW_AT_name {{.*}}("foo")
+VERBOSE:      Keeping subprogram DIE:
+VERBOSE-NEXT: DW_TAG_label
+VERBOSE:      DW_AT_name {{.*}}("start")

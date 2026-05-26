@@ -37,6 +37,23 @@ void foo() { S s; }
 // CHECK: 0x[[STRUCT_S]]:{{.*}}DW_TAG_structure_type
 // CHECK-NEXT: DW_AT_name{{.*}}"S"
 
+// CHECK: 0x[[FOO_Ev:[0-9a-f]*]]:{{.*}}DW_TAG_subprogram
+// CHECK: DW_AT_MIPS_linkage_name{{.*}}"_ZN1S3fooEv"
+// CHECK: DW_AT_name{{.*}}"foo"
+
+// CHECK: DW_TAG_formal_parameter
+// CHECK-NEXT: DW_AT_type{{.*}}0x[[PTR_S]] "S *"
+
+// CHECK: 0x[[FOO_Ei:[0-9a-f]*]]:{{.*}}DW_TAG_subprogram
+// CHECK: DW_AT_MIPS_linkage_name{{.*}}"_ZN1S3fooEi"
+// CHECK: DW_AT_name{{.*}}"foo"
+
+// CHECK: DW_TAG_formal_parameter
+// CHECK-NEXT: DW_AT_type{{.*}}0x[[PTR_S]] "S *"
+
+// CHECK: DW_TAG_formal_parameter
+// CHECK-NEXT: DW_AT_type{{.*}}0x[[INT_BASE]] "int"
+
 // CHECK: DW_TAG_subprogram
 // CHECK: DW_AT_MIPS_linkage_name{{.*}}"_ZN1S3barEv"
 // CHECK: DW_AT_name{{.*}}"bar"
@@ -57,23 +74,6 @@ void foo() { S s; }
 // CHECK: DW_TAG_template_type_parameter
 // CHECK-NEXT: DW_AT_type{{.*}}0x[[INT_BASE]] "int"
 // CHECK-NEXT: DW_AT_name{{.*}}"T"
-
-// CHECK: 0x[[FOO_Ei:[0-9a-f]*]]:{{.*}}DW_TAG_subprogram
-// CHECK: DW_AT_MIPS_linkage_name{{.*}}"_ZN1S3fooEi"
-// CHECK: DW_AT_name{{.*}}"foo"
-
-// CHECK: DW_TAG_formal_parameter
-// CHECK-NEXT: DW_AT_type{{.*}}0x[[PTR_S]] "S *"
-
-// CHECK: DW_TAG_formal_parameter
-// CHECK-NEXT: DW_AT_type{{.*}}0x[[INT_BASE]] "int"
-
-// CHECK: 0x[[FOO_Ev:[0-9a-f]*]]:{{.*}}DW_TAG_subprogram
-// CHECK: DW_AT_MIPS_linkage_name{{.*}}"_ZN1S3fooEv"
-// CHECK: DW_AT_name{{.*}}"foo"
-
-// CHECK: DW_TAG_formal_parameter
-// CHECK-NEXT: DW_AT_type{{.*}}0x[[PTR_S]] "S *"
 
 // For the second unit check that it references structure "S"
 

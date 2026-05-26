@@ -745,9 +745,10 @@ protected:
           thread->GetSelectedFrameIndex(DoNoSelectMostRelevantFrame),
           new_plan_status, m_options.m_step_out_avoid_no_debug);
     } else if (m_step_type == eStepTypeScripted) {
+      ScriptedMetadata scripted_metadata(m_class_options.GetName(),
+                                         m_class_options.GetStructuredData());
       new_plan_sp = thread->QueueThreadPlanForStepScripted(
-          abort_other_plans, m_class_options.GetName().c_str(),
-          m_class_options.GetStructuredData(), bool_stop_other_threads,
+          abort_other_plans, scripted_metadata, bool_stop_other_threads,
           new_plan_status);
     } else {
       result.AppendError("step type is not supported");
@@ -782,6 +783,7 @@ protected:
 
       if (!error.Success()) {
         result.AppendMessage(error.AsCString());
+        result.SetStatus(eReturnStatusFailed);
         return;
       }
 
@@ -1067,7 +1069,7 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();
 
-    Target *target = &GetTarget();
+    Target *target = GetTarget();
 
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
