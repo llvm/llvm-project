@@ -104,6 +104,9 @@ ABI Changes in This Version
 - Fixed Itanium mangling for lambdas in instantiated non-static data member
   initializers by preserving the field-name closure-prefix. This changes the
   mangled names for affected lambdas. (#GH190555)
+- Clang now uses MSVC-compatible manglings for supported AArch64 SVE builtin
+  types when targeting the Microsoft ABI. This changes symbol names for
+  affected declarations compared to previous Clang releases. (#GH196170)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
