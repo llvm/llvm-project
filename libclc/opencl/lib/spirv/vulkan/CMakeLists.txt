@@ -5,6 +5,7 @@ libclc_add_sources(${LIBCLC_OPENCL_TARGET} FILES
   conversion/convert_float2int.cl
   conversion/convert_int2float.cl
   conversion/convert_integer.cl
+  math/fma.cl
   shared/vstore_half.cl
 )
 
@@ -35,7 +36,6 @@ libclc_add_sources(${LIBCLC_OPENCL_TARGET}
   math/exp10.cl
   math/expm1.cl
   math/fdim.cl
-  math/fma.cl
   math/fmod.cl
   math/fract.cl
   math/frexp.cl

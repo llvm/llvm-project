@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef __SPIRV__
-
 // This version is derived from the generic fma software implementation
 // (__clc_sw_fma), but avoids the use of ulong in favor of uint2. The logic has
 // been updated as appropriate.
@@ -275,5 +273,3 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
 #define __CLC_FUNCTION __clc_sw_fma
 #define __CLC_BODY "clc/shared/ternary_def_scalarize.inc"
 #include "clc/math/gentype.inc"
-
-#endif // __SPIRV__
