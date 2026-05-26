@@ -7812,8 +7812,10 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     auto *ExpandR = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpandR)
       continue;
-    VPValue *ExpandedVal =
-        Plan.getOrAddLiveIn(ExpandedSCEVs.lookup(ExpandR->getSCEV()));
+    Value *ExpandedSCEV = ExpandedSCEVs.lookup(ExpandR->getSCEV());
+    if (!ExpandedSCEV)
+      continue;
+    VPValue *ExpandedVal = Plan.getOrAddLiveIn(ExpandedSCEV);
     ExpandR->replaceAllUsesWith(ExpandedVal);
     if (Plan.getTripCount() == ExpandR)
       Plan.resetTripCount(ExpandedVal);
