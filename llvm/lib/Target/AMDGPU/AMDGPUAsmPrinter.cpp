@@ -1144,7 +1144,7 @@ void AMDGPUAsmPrinter::emitDVgprSymbol(MachineFunction &MF) {
       unsigned NumBlocks =
           divideCeil(std::max(unsigned(NumVGPRs.getConstant()), 1U), BlockSize);
 
-      if (NumBlocks > 8) {
+      if (NumBlocks > AMDGPU::IsaInfo::MaxDynamicVGPRBlocks) {
         OutContext.reportError(
             {}, "too many DVGPR blocks for _dvgpr$ symbol for '" +
                     Twine(CurrentFnSym->getName()) + "'");

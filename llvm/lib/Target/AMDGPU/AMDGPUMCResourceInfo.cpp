@@ -264,13 +264,13 @@ void MCResourceInfo::gatherResourceInfo(
   MCSymbol *MaxNamedBarrierSym = getMaxNamedBarrierSymbol(OutContext);
 
   CallingConv::ID CC = MF.getFunction().getCallingConv();
-  bool IsDVGPRChain = CC == CallingConv::AMDGPU_CS_Chain ||
-                      CC == CallingConv::AMDGPU_CS_ChainPreserve;
+  bool IsChainCC = AMDGPU::isChainCC(CC);
   bool IsDynamicVGPREnabled =
       MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled();
 
-  if (!AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())) {
-    addMaxVGPRCandidate(FRI.NumVGPR);
+  if (!AMDGPU::isEntryFunctionCC(CC)) {
+    if (!IsDynamicVGPREnabled || !IsChainCC)
+      addMaxVGPRCandidate(FRI.NumVGPR);
     addMaxAGPRCandidate(FRI.NumAGPR);
     addMaxSGPRCandidate(FRI.NumExplicitSGPR);
     if (IsDynamicVGPREnabled && !IsDVGPRChain) {
@@ -339,28 +339,15 @@ void MCResourceInfo::gatherResourceInfo(
   // When DynamicVGPR is enabled, chain functions should not propagate VGPR
   // counts from other chain callees since each chain function can have its own
   // VGPR allocation, but should still propagate from non-chain callees.
-  if (IsDynamicVGPREnabled && (IsDVGPRChain || CC == CallingConv::AMDGPU_CS)) {
+  if (IsDynamicVGPREnabled && (IsChainCC || CC == CallingConv::AMDGPU_CS)) {
     if (FRI.HasNonChainIndirectCall) {
-      // Has indirect calls to non-chain functions. Use max of direct non-chain
-      // callees and module-wide non-chain maximum.
-      SmallVector<const MCExpr *, 8> ArgExprs;
-      ArgExprs.push_back(MCConstantExpr::create(FRI.NumVGPR, OutContext));
-      ArgExprs.push_back(
-          MCSymbolRefExpr::create(MaxNonChainVGPRSym, OutContext));
-
-      SmallPtrSet<const Function *, 8> Seen;
-      for (const Function *Callee : FRI.Callees) {
-        if (AMDGPU::isChainCC(Callee->getCallingConv()))
-          continue;
-        if (!Seen.insert(Callee).second || Callee->isDeclaration())
-          continue;
-        MCSymbol *CalleeFnSym = TM.getSymbol(&Callee->getFunction());
-        MCSymbol *CalleeValSym =
-            getSymbol(CalleeFnSym->getName(), RIK_NumVGPR, OutContext);
-        ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
-      }
+      // Has indirect calls to non-chain functions. Use max of local count and
+      // module-wide non-chain maximum.
       MCSymbol *Sym = getSymbol(FnSym->getName(), RIK_NumVGPR, OutContext);
-      Sym->setVariableValue(AMDGPUMCExpr::createMax(ArgExprs, OutContext));
+      Sym->setVariableValue(AMDGPUMCExpr::createMax(
+          {MCConstantExpr::create(FRI.NumVGPR, OutContext),
+           MCSymbolRefExpr::create(MaxVGPRSym, OutContext)},
+          OutContext));
       SetMaxReg(MaxAGPRSym, FRI.NumAGPR, RIK_NumAGPR);
     } else {
       // No indirect calls to non-chain functions. Propagate from direct callees
