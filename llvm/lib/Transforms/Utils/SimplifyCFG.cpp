@@ -1524,8 +1524,7 @@ enum SkipFlags {
 };
 
 static unsigned skippedInstrFlags(Instruction *I) {
-  // Pseudo probes arm marked IntrInaccessibleMemOnly for profiling correctness,
-  // but other instructions can be hoisted around them.
+  // Pseudo probes don't constrain reordering of other instructions.
   if (isa<PseudoProbeInst>(I))
     return 0;
   unsigned Flags = 0;
@@ -4156,8 +4155,7 @@ bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
     // Ignore the terminator.
     if (isa<UncondBrInst, CondBrInst>(I))
       continue;
-    // Pseudo probes are marked with IntrInaccessibleMemOnly. But it is
-    // profitable to fold and drop the probe.
+    // Pseudo probes aren't speculatable but can be dropped on fold.
     if (isa<PseudoProbeInst>(I))
       continue;
     // I must be safe to execute unconditionally.
