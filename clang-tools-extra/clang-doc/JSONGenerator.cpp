@@ -1,3 +1,19 @@
+//===-- JSONGenerator.cpp - JSON Generator ----------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the implementation of the JSONGenerator, which serializes
+/// the clang-doc internal representation (Info structures) into JSON format.
+/// It handles the mapping of C++ constructs like namespaces, records,
+/// functions, and enums to their JSON equivalents, enabling downstream tools
+/// to consume the structured documentation data.
+///
+//===----------------------------------------------------------------------===//
 #include "Generators.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -27,7 +43,7 @@ class JSONGenerator : public Generator {
   void serializeCommonChildren(
       const ScopeChildren &Children, json::Object &Obj,
       std::optional<ReferenceFunc> MDReferenceLambda = std::nullopt);
-  void serializeContexts(Info *I, llvm::StringMap<OwnedPtr<Info>> &Infos);
+  void serializeContexts(Info *I, llvm::StringMap<Info *> &Infos);
   void serializeInfo(const ConstraintInfo &I, Object &Obj);
   void serializeInfo(const TemplateInfo &Template, Object &Obj);
   void serializeInfo(const ConceptInfo &I, Object &Obj);
@@ -70,7 +86,7 @@ public:
   static const char *Format;
 
   Error generateDocumentation(StringRef RootDir,
-                              llvm::StringMap<OwnedPtr<doc::Info>> Infos,
+                              llvm::StringMap<doc::Info *> Infos,
                               const ClangDocContext &CDCtx,
                               std::string DirName) override;
   Error createResources(ClangDocContext &CDCtx) override;
@@ -920,8 +936,7 @@ Error JSONGenerator::serializeIndex(StringRef RootDir) {
   return Error::success();
 }
 
-void JSONGenerator::serializeContexts(Info *I,
-                                      StringMap<OwnedPtr<Info>> &Infos) {
+void JSONGenerator::serializeContexts(Info *I, StringMap<Info *> &Infos) {
   if (I->USR == GlobalNamespaceID)
     return;
   auto ParentUSR = I->ParentUSR;
@@ -949,14 +964,15 @@ void JSONGenerator::serializeContexts(Info *I,
   }
 }
 
-Error JSONGenerator::generateDocumentation(
-    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
-    const ClangDocContext &CDCtx, std::string DirName) {
+Error JSONGenerator::generateDocumentation(StringRef RootDir,
+                                           llvm::StringMap<doc::Info *> Infos,
+                                           const ClangDocContext &CDCtx,
+                                           std::string DirName) {
   this->CDCtx = &CDCtx;
   StringSet<> CreatedDirs;
   StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
-    Info *Info = getPtr(Group.getValue());
+    Info *Info = Group.getValue();
 
     SmallString<128> Path;
     auto RootDirStr = RootDir.str() + "/json";

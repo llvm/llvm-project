@@ -1910,6 +1910,20 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
       return getAddExpr(Ops, SCEV::FlagNUW, Depth + 1);
     }
 
+    const APInt *C, *C2;
+    // zext (C + A)<nsw> -> (sext(C) + sext(A))<nsw> if zext (C + A)<nsw> >=s 0.
+    // Currently the non-negative check is done manually, as isKnownNonNegative
+    // is too expensive.
+    if (SA->hasNoSignedWrap() &&
+        match(SA, m_scev_Add(m_scev_APInt(C),
+                             m_scev_SMax(m_scev_APInt(C2), m_SCEV()))) &&
+        C->isNegative() && !C->isMinSignedValue() && C2->sge(C->abs())) {
+      assert(isKnownNonNegative(SA) && "incorrectly determined non-negative");
+      return getAddExpr(getSignExtendExpr(SA->getOperand(0), Ty, Depth + 1),
+                        getSignExtendExpr(SA->getOperand(1), Ty, Depth + 1),
+                        SCEV::FlagNSW, Depth + 1);
+    }
+
     // zext(C + x + y + ...) --> (zext(D) + zext((C - D) + x + y + ...))
     // if D + (C - D + x + y + ...) could be proven to not unsigned wrap
     // where D maximizes the number of trailing zeros of (C - D + x + y + ...)
@@ -8749,8 +8763,8 @@ void ScalarEvolution::visitAndClearUsers(
     ValueExprMapType::iterator It =
         ValueExprMap.find_as(static_cast<Value *>(I));
     if (It != ValueExprMap.end()) {
-      eraseValueFromMap(It->first);
       ToForget.push_back(It->second);
+      eraseValueFromMap(It->first);
       if (PHINode *PN = dyn_cast<PHINode>(I))
         ConstantEvolutionLoopExitValue.erase(PN);
     }
@@ -8774,14 +8788,8 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     forgetBackedgeTakenCounts(CurrL, /* Predicated */ true);
 
     // Drop information about predicated SCEV rewrites for this loop.
-    for (auto I = PredicatedSCEVRewrites.begin();
-         I != PredicatedSCEVRewrites.end();) {
-      std::pair<const SCEV *, const Loop *> Entry = I->first;
-      if (Entry.second == CurrL)
-        PredicatedSCEVRewrites.erase(I++);
-      else
-        ++I;
-    }
+    PredicatedSCEVRewrites.remove_if(
+        [&](const auto &Entry) { return Entry.first.second == CurrL; });
 
     auto LoopUsersItr = LoopUsers.find(CurrL);
     if (LoopUsersItr != LoopUsers.end())
@@ -14567,14 +14575,8 @@ void ScalarEvolution::forgetMemoizedResults(ArrayRef<SCEVUse> SCEVs) {
   for (const auto *S : ToForget)
     forgetMemoizedResultsImpl(S);
 
-  for (auto I = PredicatedSCEVRewrites.begin();
-       I != PredicatedSCEVRewrites.end();) {
-    std::pair<const SCEV *, const Loop *> Entry = I->first;
-    if (ToForget.count(Entry.first))
-      PredicatedSCEVRewrites.erase(I++);
-    else
-      ++I;
-  }
+  PredicatedSCEVRewrites.remove_if(
+      [&](const auto &Entry) { return ToForget.count(Entry.first.first); });
 }
 
 void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
